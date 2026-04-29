@@ -1,0 +1,488 @@
+/* BMXt: dedicated extension window — full bleed terminal layout */
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #0d1117;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #0d1117;
+  overflow: hidden;
+}
+
+#__plasmo {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: #0d1117;
+}
+
+.bmxt-root {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.bmxt-scroll {
+  box-sizing: border-box;
+  min-height: 0;
+  flex: 1 1 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: hidden;
+}
+
+.bmxt-scroll--scrollable {
+  overflow-y: auto;
+}
+
+.bmxt-scroll--noscroll {
+  overflow-y: hidden;
+}
+
+.bmxt-scroll--scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bmxt-scroll--scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bmxt-scroll--scrollable::-webkit-scrollbar-thumb {
+  background: rgba(139, 148, 158, 0.45);
+  border-radius: 4px;
+}
+
+.bmxt-scroll--scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 148, 158, 0.45) transparent;
+}
+
+.bmxt-hint {
+  color: #8b949e;
+  margin-bottom: 6px;
+}
+
+.bmxt-out-line {
+  margin: 0;
+  padding: 0;
+}
+
+.bmxt-shell {
+  outline: none;
+}
+
+.bmxt-shell:focus-within {
+  box-shadow: inset 0 0 0 1px #21262d;
+}
+
+.bmxt-isearch {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin-top: 6px;
+  padding: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #8b949e;
+  border-top: 1px solid #21262d;
+  background: #0d1117;
+  word-break: break-all;
+}
+
+.bmxt-isearch-label {
+  color: #58a6ff;
+}
+
+.bmxt-isearch-query {
+  color: #ffa657;
+}
+
+.bmxt-isearch-match {
+  color: #c9d1d9;
+}
+
+.bmxt-isearch-hint {
+  color: #484f58;
+  font-size: 10px;
+}
+
+.bmxt-prompt-line {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-height: 1.35em;
+  line-height: 1.35;
+  margin-top: 4px;
+  padding-bottom: 6px;
+}
+
+.bmxt-prompt-field {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  min-height: 1.35em;
+}
+
+.bmxt-prompt-mirror {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+  color: #c9d1d9;
+  line-height: 1.35;
+}
+
+.bmxt-prompt-ime {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 1.35em;
+  margin: 0;
+  padding: 0;
+  border: none;
+  resize: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: pre;
+  background: transparent;
+  color: transparent;
+  /* Mirror shows the blinking cell; IME composition still draws on the textarea layer. */
+  caret-color: transparent;
+  font: inherit;
+  font-size: inherit;
+  line-height: 1.35;
+  outline: none;
+  vertical-align: top;
+}
+
+.bmxt-prompt-ime:focus {
+  outline: none;
+}
+
+.bmxt-prompt-ime::selection {
+  background: rgba(88, 166, 255, 0.35);
+}
+
+.bmxt-scroll-anchor {
+  height: 0;
+  overflow: hidden;
+}
+
+.bmxt-prompt-glyph {
+  flex-shrink: 0;
+  color: #58a6ff;
+  user-select: none;
+}
+
+.bmxt-prompt-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-cursor-cell {
+  display: inline;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  background: #58a6ff;
+  color: #0d1117;
+  animation: bmxt-cursor-blink 1s step-end infinite;
+}
+
+.bmxt-cursor-cell--eol {
+  display: inline-block;
+  min-width: 0.55ch;
+}
+
+@keyframes bmxt-cursor-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Tab picker (tmux-style) */
+.bmxt-tab-picker {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  padding: 8px 10px 10px;
+  background: #0d1117;
+  color: #c9d1d9;
+  outline: none;
+}
+
+.bmxt-tab-picker:focus-within {
+  box-shadow: inset 0 0 0 1px #21262d;
+}
+
+.bmxt-tab-picker-head {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.bmxt-tab-picker-list {
+  flex: 1 1 0;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.bmxt-tab-picker-empty {
+  color: #8b949e;
+  padding: 8px 0;
+}
+
+.bmxt-tab-picker-row {
+  margin: 0;
+  padding: 2px 0;
+  line-height: 1.4;
+}
+
+.bmxt-tab-picker-row--window {
+  color: #58a6ff;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.bmxt-tab-picker-row--window:first-child {
+  margin-top: 0;
+}
+
+.bmxt-tab-picker-row--group {
+  color: #ffa657;
+  padding-left: 2ch;
+  margin-top: 4px;
+}
+
+.bmxt-tab-picker-row--tab {
+  padding-left: 2ch;
+  border-radius: 2px;
+}
+
+.bmxt-tab-picker-row--marked {
+  background: rgba(63, 185, 80, 0.1);
+  box-shadow: inset 3px 0 0 #3fb950;
+}
+
+.bmxt-tab-picker-row--hi {
+  background: #21262d;
+  outline: 1px solid #388bfd;
+}
+
+.bmxt-tab-picker-row--hi.bmxt-tab-picker-row--marked {
+  background: rgba(47, 110, 181, 0.22);
+  outline: 1px solid #388bfd;
+  box-shadow: inset 3px 0 0 #3fb950;
+}
+
+.bmxt-tab-picker-row--move-dest {
+  box-shadow: inset 0 0 0 1px #a371f7;
+}
+
+.bmxt-tab-picker-row--marked.bmxt-tab-picker-row--move-dest {
+  box-shadow: inset 0 0 0 1px #a371f7, inset 3px 0 0 #3fb950;
+}
+
+.bmxt-tab-picker-tab-title {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-tab-picker-tab-glyph {
+  display: inline-block;
+  width: 1ch;
+  user-select: none;
+}
+
+.bmxt-tab-picker-tab-url {
+  padding-left: 2ch;
+  font-size: 11px;
+  color: #8b949e;
+  word-break: break-all;
+}
+
+.bmxt-tab-picker-filter {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #30363d;
+}
+
+.bmxt-tab-picker-filter-label {
+  color: #58a6ff;
+  user-select: none;
+}
+
+.bmxt-tab-picker-filter-query {
+  flex: 1;
+  min-width: 0;
+  min-height: 1.35em;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #161b22;
+  color: #c9d1d9;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-tab-picker-filter-ime {
+  flex: 1;
+  min-width: 0;
+  min-height: 1.35em;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  resize: none;
+  background: #161b22;
+  color: #c9d1d9;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  outline: none;
+}
+
+.bmxt-tab-picker-filter-ime:focus {
+  border-color: #388bfd;
+}
+
+.bmxt-tab-picker-filter-hint {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #484f58;
+}
+
+.bmxt-tab-picker-group-panel {
+  flex-shrink: 0;
+  max-height: 28%;
+  min-height: 4.5em;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #161b22;
+}
+
+.bmxt-tab-picker-group-head {
+  font-size: 10px;
+  color: #8b949e;
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+.bmxt-tab-picker-group-empty {
+  font-size: 11px;
+  color: #8b949e;
+  padding: 4px 0;
+}
+
+.bmxt-tab-picker-group-row {
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: 2px;
+}
+
+.bmxt-tab-picker-group-row--hi {
+  background: #21262d;
+  outline: 1px solid #a371f7;
+}
+
+.bmxt-tab-picker-new-group-meta {
+  flex-shrink: 0;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #161b22;
+}
+
+.bmxt-tab-picker-new-group-field {
+  margin-bottom: 10px;
+}
+
+.bmxt-tab-picker-new-group-field:last-child {
+  margin-bottom: 0;
+}
+
+.bmxt-tab-picker-new-group-label {
+  display: block;
+  font-size: 10px;
+  color: #8b949e;
+  margin-bottom: 4px;
+  user-select: none;
+}
+
+.bmxt-tab-picker-new-group-input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #0d1117;
+  color: #c9d1d9;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.bmxt-tab-picker-new-group-input:focus {
+  border-color: #388bfd;
+}
+
+.bmxt-tab-picker-color-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.bmxt-tab-picker-color-strip:focus {
+  box-shadow: inset 0 0 0 1px #388bfd;
+}
+
+.bmxt-tab-picker-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.bmxt-tab-picker-color-swatch--hi {
+  border-color: #f0f6fc;
+  box-shadow: 0 0 0 1px #0d1117;
+}

@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible bug / 再現可能な不具合を報告
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this issue.
+        Please include enough detail so we can reproduce it.
+
+        不具合報告ありがとうございます。
+        再現できるよう、できるだけ詳細に記載してください。
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary / 概要
+      description: What happened? / 何が起きましたか？
+      placeholder: Short description of the bug / 不具合の要約
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 再現手順
+      description: Write clear, numbered steps / 番号付きで手順を記載
+      placeholder: |
+        1. Open BMXt
+        2. Run command ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior / 期待する動作
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / 実際の動作
+    validations:
+      required: true
+
+  - type: input
+    id: chrome_version
+    attributes:
+      label: Chrome version / Chrome バージョン
+      placeholder: e.g. 124.0.x
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: e.g. Ubuntu 24.04 / macOS 14 / Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Logs or screenshots (optional) / ログ・スクリーンショット（任意）
+      description: Paste logs or attach images if available / 可能ならログ貼り付けや画像添付をお願いします

@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest an improvement / 改善案・機能提案
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your suggestion.
+        Clear use-cases help us evaluate and prioritize.
+
+        提案ありがとうございます。
+        利用シーンが具体的だと、検討・優先度判断がしやすくなります。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve / 解決したい課題
+      description: What is hard today? / 現在どこが困るか
+      placeholder: It is difficult to ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution / 提案内容
+      description: What should happen? / どうなってほしいか
+      placeholder: Add command ... / Update behavior ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional) / 代替案（任意）
+      description: Any other options you considered? / 他に検討した案があれば記載

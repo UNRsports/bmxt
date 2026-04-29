@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and usage help / 質問・使い方相談
+    url: https://github.com/UNRsports/be-term/discussions
+    about: Please use Discussions for questions / 質問は Discussions を利用してください

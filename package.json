@@ -1,0 +1,30 @@
+{
+  "name": "bmxt",
+  "displayName": "BMXt",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "description": "Dedicated-window command shell for tabs, windows, and groups.",
+  "author": "UNRsports",
+  "scripts": {
+    "dev": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev",
+    "build": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo build",
+    "package": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo package"
+  },
+  "dependencies": {
+    "plasmo": "0.90.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "4.1.1",
+    "@types/chrome": "0.0.258",
+    "@types/node": "20.11.5",
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
+    "prettier": "3.2.4",
+    "typescript": "5.3.3"
+  },
+  "manifest": {
+    "permissions": ["tabs", "tabGroups", "storage", "windows"]
+  }
+}
