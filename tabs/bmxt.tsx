@@ -2,16 +2,14 @@ import "../bmxt-ui.css"
 
 import {
   buildTabPickerRows,
-  resolveInitialTabPickerHighlightIndex,
-  TabPickerOverlay,
-  type TabPickerRow
-} from "../lib/features/tab-picker"
-import {
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
   parseTabsListPickerLine,
-  tabsMoveUrlCompletionZone
-} from "../lib/bmxt-tabs-input"
+  resolveInitialTabPickerHighlightIndex,
+  TabPickerOverlay,
+  tabsMoveUrlCompletionZone,
+  type TabPickerRow
+} from "../lib/features/tabs"
 import { COMPLETION_CANDIDATES } from "../lib/commands-meta"
 
 import {

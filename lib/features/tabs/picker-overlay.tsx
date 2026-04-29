@@ -1,4 +1,4 @@
-import { displayTitle, filterTabRowIndices, type TabPickerRow } from "./lib/tab-picker"
+import { displayTitle, filterTabRowIndices, type TabPickerRow } from "./picker-rows"
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 

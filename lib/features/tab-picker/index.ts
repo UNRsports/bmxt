@@ -1,6 +1,6 @@
-export { TabPickerOverlay } from "../../../tab-picker-overlay"
 export {
+  TabPickerOverlay,
   buildTabPickerRows,
   resolveInitialTabPickerHighlightIndex,
   type TabPickerRow
-} from "../../tab-picker"
+} from "../tabs"
