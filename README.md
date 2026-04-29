@@ -65,7 +65,12 @@ Note: The demo video currently covers the group creation part of the available f
 
 ※デモムービーには全機能のうち、グループ作成に関する部分を収録しています。
 
-https://github.com/user-attachments/assets/42b68190-7a7a-4507-b09d-c632dbd52c84
+
+https://github.com/user-attachments/assets/4664a1bb-71f2-4265-a4d9-18c7eece216e
+
+
+
+
 
 ## ♿️ Universal Design Intent
 
