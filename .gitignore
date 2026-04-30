@@ -8,6 +8,15 @@
 .pnp.*
 
 
+# --- npm（認証トークンやローカル設定の誤コミット防止）---
+.npmrc
+.npm/
+
+
+# --- Cursor（ローカル状態・MCP 等。ルートの .cursorrules は対象外）---
+.cursor/
+
+
 # --- Build / bundler（Plasmo, Parcel, 汎用）---
 out/
 build/

@@ -1,6 +1,10 @@
 //! BMXt コマンドコア（Rust / WASM）。Chrome API は持たず、dispatch 結果は Lines か Effects の JSON。
 
+mod cmd;
 mod dispatch;
+mod line_parse;
+mod meta;
+mod model;
 mod registry;
 mod tabs_man;
 

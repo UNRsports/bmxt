@@ -1,0 +1,17 @@
+//! 組み込みコマンドごとのメタデータ（`CMD`）と `run`。新規コマンドはここにサブモジュールを足す。
+
+pub mod activate;
+pub mod back;
+pub mod clear;
+pub mod close;
+pub mod echo;
+pub mod focus;
+pub mod forward;
+pub mod group;
+pub mod groups;
+pub mod help_cmd;
+pub mod man_page;
+pub mod move_tab;
+pub mod new_tab;
+pub mod tabs;
+pub mod windows;

@@ -1,5 +1,3 @@
 export type { ChromeEffect, DispatchBundle } from "./effect-types"
-export {
-  applyChromeEffects,
-  type DispatchChromeContext
-} from "./apply-effects"
+export type { DispatchChromeContext } from "./dispatch-context"
+export { applyChromeEffects } from "./apply-effects"

@@ -8,7 +8,7 @@ import init, {
 } from "../../../assets/wasm/bmxt-core/bmxt_core.js"
 import type { DispatchBundle } from "../dispatch"
 
-export { FALLBACK_COMPLETION_CANDIDATES } from "./fallback-completion"
+export { FALLBACK_COMPLETION_CANDIDATES } from "../builtin-commands"
 
 /** Parcel がハッシュ付き URL に解決する（MV3 の tabs / service worker の両方で同一資産を指す）。 */
 const wasmModuleUrl = new URL(
