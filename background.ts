@@ -1,12 +1,13 @@
 /** Service worker: BMXt window launch, shared log, command dispatch. */
 
 import {
-  buildHelpLines,
-  getManLines,
-  listManTopics,
-  resolveCommand
-} from "./lib/commands-meta"
-import type { CommandContext } from "./lib/commands/types"
+  applyChromeEffects,
+  type DispatchChromeContext
+} from "./lib/features/dispatch"
+import {
+  ensureBmxtCore,
+  runDispatch
+} from "./lib/features/wasm-core"
 
 const LOG_KEY = "bmxt_log"
 const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
@@ -105,48 +106,50 @@ async function runCommand(line: string): Promise<void> {
   if (!trimmed) {
     return
   }
+  try {
+    await ensureBmxtCore()
+  } catch (e) {
+    if (trimmed.toLowerCase() === "clear") {
+      const out: string[] = [`> ${trimmed}`, "(log cleared)"]
+      await chrome.storage.local.set({ [LOG_KEY]: out.slice(-MAX_LOG_LINES) })
+      return
+    }
+    await appendLog([
+      `> ${trimmed}`,
+      `error: ${e instanceof Error ? e.message : String(e)}`
+    ])
+    return
+  }
   const out: string[] = [`> ${trimmed}`]
   try {
     out.push(...(await dispatch(trimmed)))
   } catch (e) {
     out.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
+  /* clear は clearLog 直後の get が古いログを返すことがあるため、マージせず上書きする */
+  if (trimmed.toLowerCase() === "clear") {
+    await chrome.storage.local.set({
+      [LOG_KEY]: out.slice(-MAX_LOG_LINES)
+    })
+    return
+  }
   await appendLog(out)
 }
 
-function tokenize(line: string): string[] {
-  return line
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-}
-
 async function dispatch(line: string): Promise<string[]> {
-  const urlNav = await tryNavigateUrlLine(line)
-  if (urlNav) {
-    return urlNav
+  const bundle = runDispatch(line)
+  if (bundle.ty === "lines") {
+    return bundle.lines ?? []
   }
-  const args = tokenize(line)
-  const cmd = args[0]?.toLowerCase()
-  if (!cmd) {
-    return []
-  }
-  const command = resolveCommand(cmd)
-  if (!command) {
-    return [`unknown command: ${cmd}. Type help.`]
-  }
-  const ctx: CommandContext = {
+  const ctx: DispatchChromeContext = {
     clearLog: async () => {
       await chrome.storage.local.set({ [LOG_KEY]: [] })
     },
     listWindows,
     focusInfo,
-    resolveTabArg,
-    getHelpLines: buildHelpLines,
-    listManTopics,
-    getManLines
+    resolveTabArg
   }
-  return command.execute(ctx, args, line)
+  return applyChromeEffects(ctx, bundle.effects ?? [])
 }
 
 const DISPLAY_TITLE_MAX = 96
@@ -238,56 +241,6 @@ async function resolveTabArg(
     }
   }
   return activeTabFromGetLastFocused()
-}
-
-function parseHttpUrlCandidate(inner: string): string | null {
-  const t = inner.trim()
-  if (!t || /\s/.test(t)) {
-    return null
-  }
-  if (!/^https?:\/\//i.test(t)) {
-    return null
-  }
-  try {
-    const u = new URL(t)
-    if (u.protocol !== "http:" && u.protocol !== "https:") {
-      return null
-    }
-    return u.href
-  } catch {
-    return null
-  }
-}
-
-/** http(s) URL as a full line: new tab, current tab, or new window. */
-async function tryNavigateUrlLine(line: string): Promise<string[] | null> {
-  const trimmed = line.trim()
-  const nw = /^(.+?)\s+-nw$/i.exec(trimmed)
-  if (nw) {
-    const url = parseHttpUrlCandidate(nw[1] ?? "")
-    if (url) {
-      const w = await chrome.windows.create({ url })
-      return [`opened new window ${w.id}: ${url}`]
-    }
-  }
-  const cur = /^(.+?)\s+\.$/.exec(trimmed)
-  if (cur) {
-    const url = parseHttpUrlCandidate(cur[1] ?? "")
-    if (url) {
-      const tab = await resolveTabArg(undefined)
-      if (!tab?.id) {
-        return ["no target tab for current navigation (focus a normal window with a page)"]
-      }
-      await chrome.tabs.update(tab.id, { url })
-      return [`navigated tab ${tab.id}: ${url}`]
-    }
-  }
-  const bare = parseHttpUrlCandidate(trimmed)
-  if (bare && !/\s/.test(trimmed)) {
-    const t = await chrome.tabs.create({ url: bare })
-    return [`opened new tab ${t.id}: ${bare}`]
-  }
-  return null
 }
 
 chrome.runtime.onMessage.addListener(

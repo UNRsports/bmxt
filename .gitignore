@@ -1,45 +1,95 @@
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# --- Dependencies ---
 /node_modules
 /.pnp
 .pnp.js
+.pnp.*
 
-# testing
+
+# --- Build / bundler（Plasmo, Parcel, 汎用）---
+out/
+build/
+dist/
+.parcel-cache/
+.cache/
+
+# Plasmo
+.plasmo
+
+
+# --- Testing / coverage ---
 /coverage
+.nyc_output
+*.lcov
+*.cov
 
-# misc
-.DS_Store
-*.pem
 
-# debug
+# --- TypeScript ---
+.tsbuildinfo
+*.tsbuildinfo
+
+
+# --- Lint / format caches ---
+.eslintcache
+.prettier-cache
+
+
+# --- Debug / package manager logs ---
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
 
-# local env files
+
+# --- Local env（秘密・個人用）---
 .env
 .env.*
 .env*.local
 !.env.example
 !.env.sample
 
-out/
-build/
-dist/
 
-# plasmo
-.plasmo
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+*.orig
 
-# typescript
-.tsbuildinfo
 
-# local editor settings
+# --- Editor / IDE ---
 .vscode/
+.idea/
+*.swp
+*.swo
 
-# keys and certificates
+
+# --- Keys & certificates（署名・ストア・HTTPS）---
+*.pem
 *.key
 *.p12
 *.pfx
+
+
+# --- Rust / Cargo（wasm 含む。再現可能なビルドツリー）---
+**/target/
+
+
+# --- Rust / LLVM coverage ---
+*.profraw
+*.profdata
+
+
+# --- Browser extension ---
+*.crx
+*.signed.xpi
+web-ext-artifacts/
+
+
+# --- Misc packaged artifacts ---
+*.tgz

@@ -10,7 +10,11 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../lib/features/tabs"
-import { COMPLETION_CANDIDATES } from "../lib/commands-meta"
+import {
+  ensureBmxtCore,
+  FALLBACK_COMPLETION_CANDIDATES,
+  getCompletionCandidates
+} from "../lib/features/wasm-core"
 
 import {
   useCallback,
@@ -47,6 +51,9 @@ function wordBounds(s: string, pos: number): [number, number] {
 }
 
 function IndexBmxtWindow() {
+  const [completionCandidates, setCompletionCandidates] = useState<string[]>(
+    []
+  )
   const [lines, setLines] = useState<string[]>([])
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
@@ -79,6 +86,11 @@ function IndexBmxtWindow() {
   const tabPressSeqRef = useRef(0)
   const lineRef = useRef("")
   const cursorRef = useRef(0)
+  const completionCandidatesRef = useRef<string[]>([])
+
+  useEffect(() => {
+    completionCandidatesRef.current = completionCandidates
+  }, [completionCandidates])
 
   useEffect(() => {
     lineRef.current = line
@@ -86,6 +98,17 @@ function IndexBmxtWindow() {
   useEffect(() => {
     cursorRef.current = cursorPos
   }, [cursorPos])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        await ensureBmxtCore()
+        setCompletionCandidates(getCompletionCandidates())
+      } catch {
+        setCompletionCandidates(FALLBACK_COMPLETION_CANDIDATES)
+      }
+    })()
+  }, [])
 
   const iSearchMatches = useMemo(
     () => matchesForSearch(history, mode === "isearch" ? line : ""),
@@ -476,7 +499,9 @@ function IndexBmxtWindow() {
         if (!w) {
           return
         }
-        const cands = COMPLETION_CANDIDATES.filter((c) => c.startsWith(w))
+        const cands = completionCandidatesRef.current.filter((c) =>
+          c.startsWith(w)
+        )
         if (cands.length === 0) {
           return
         }
@@ -533,6 +558,7 @@ function IndexBmxtWindow() {
     },
     [
       applyHistoryLine,
+      completionCandidates,
       enterISearch,
       exitISearch,
       histDraft,

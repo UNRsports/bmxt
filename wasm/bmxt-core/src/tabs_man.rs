@@ -1,4 +1,4 @@
-export const TABS_MAN_LINES: string[] = [
+pub static TABS_MAN: &[&str] = &[
   "NAME",
   "  tabs - tab list, URL jump, current URL (BMXt window / service worker)",
   "",
@@ -28,14 +28,5 @@ export const TABS_MAN_LINES: string[] = [
   "    [NEW WINDOW]: Enter moves all # tabs into one new browser window (order preserved by window then tab index)",
   "  / start filter (Esc ends filter; @ prefix filters URL substring)",
   "  Enter (when not in [MOVE]/[CLOSE]/[GROUP]/[NEW WINDOW] bulk mode) activates tab and focuses the page; picker stays open",
-  "  Esc: if any # marks exist, clear all marks and stay in picker; else end filter, or end bulk mode, or exit picker"
-]
-
-export const TABS_USAGE_LINES = [
-  "usage: tabs -l|-list [-u]   — tab picker (optional -u: show each tab URL)",
-  "       tabs -mu|-moveurl <url> — go to tab with URL or open new tab (Tab completes URLs in BMXt)",
-  "       tabs -nu|-nowurl       — show current tab URL"
-]
-
-export const TABS_RUN_HINT =
-  "Run:  tabs -l  or  tabs -l -u  (picker).  tabs -nu  (current URL).  tabs -mu <url>  (jump or new tab)."
+  "  Esc: if any # marks exist, clear all marks and stay in picker; else end filter, or end bulk mode, or exit picker",
+];
