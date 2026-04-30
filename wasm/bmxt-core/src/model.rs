@@ -59,4 +59,6 @@ pub enum Effect {
     OpenUrlNewWindow { url: String },
     NavigateCurrentTab { url: String },
     OpenUrlNewTab { url: String },
+    /// Close the BMXt window and clear the on-screen log (`chrome.*` in TS).
+    ExitBmxt,
 }

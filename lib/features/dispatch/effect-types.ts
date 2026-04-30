@@ -2,6 +2,7 @@
 
 export type ChromeEffect =
   | { kind: "clear_log" }
+  | { kind: "exit_bmxt" }
   | { kind: "list_windows" }
   | { kind: "focus_info" }
   | { kind: "activate"; tab_id: number }

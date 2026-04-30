@@ -12,6 +12,7 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "clear",
   "close",
   "echo",
+  "exit",
   "focus",
   "forward",
   "fwd",

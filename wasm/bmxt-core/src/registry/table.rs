@@ -1,7 +1,7 @@
 //! 全組み込みコマンドのメタデータ一覧。新規コマンドは `crate::cmd::*::CMD` をここに 1 行追加する。
 
 use crate::cmd::{
-    activate, back, clear, close, echo, focus, forward, group, groups, help_cmd, man_page,
+    activate, back, clear, close, echo, exit, focus, forward, group, groups, help_cmd, man_page,
     move_tab, new_tab, tabs, windows,
 };
 use crate::meta::Cmd;
@@ -12,6 +12,7 @@ pub static COMMANDS: &[Cmd] = &[
     clear::CMD,
     close::CMD,
     echo::CMD,
+    exit::CMD,
     focus::CMD,
     forward::CMD,
     group::CMD,

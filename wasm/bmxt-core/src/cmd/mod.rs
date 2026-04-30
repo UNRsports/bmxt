@@ -5,6 +5,7 @@ pub mod back;
 pub mod clear;
 pub mod close;
 pub mod echo;
+pub mod exit;
 pub mod focus;
 pub mod forward;
 pub mod group;

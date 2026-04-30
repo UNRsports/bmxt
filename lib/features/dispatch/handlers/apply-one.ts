@@ -15,6 +15,8 @@ export async function applyOne(
     case "clear_log":
       await ctx.clearLog()
       return ["(log cleared)"]
+    case "exit_bmxt":
+      return ctx.exitBmxt()
     case "list_windows":
       return ctx.listWindows()
     case "focus_info":

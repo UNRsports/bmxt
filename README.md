@@ -139,6 +139,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 | `man <topic>` | Command manual |
 | `echo <text>` | Print text |
 | `clear` | Clear logs |
+| `exit` | Close BMXt window and clear the session log |
 | `tabs` | Requires subcommand (`man tabs`) |
 | `tabs -l` / `tabs -list` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -mu` / `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
@@ -154,6 +155,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 | `groups` / `gls` | List tab groups |
 | `group new <tabId> …` | Create group |
 
+**Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears that log and **closes the BMXt window** (via `chrome.windows.remove` on the window the extension tracks). **Neither** clears **command history** (up/down / Ctrl+R).
+
 ### 日本語
 
 `help` または `?` で拡張内ヘルプと同内容が表示されます。概要だけ以下にまとめます。
@@ -164,6 +167,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 | `man <topic>` | 各コマンドの簡易マニュアル |
 | `echo <text>` | そのまま出力 |
 | `clear` | ログをクリア |
+| `exit` | BMXt ウィンドウを閉じ、セッションログを削除 |
 | `tabs` | 単体では使えません。下位コマンドが必要です（`man tabs`）。 |
 | `tabs -l` / `tabs -list` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -mu` / `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
@@ -178,6 +182,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 | `move` / `mv <tabId> <windowId> [index]` | タブを別ウィンドウへ移動 |
 | `groups` / `gls` | タブグループ一覧 |
 | `group new <tabId> …` | グループ作成 |
+
+**補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
 ### `tabs` (`man tabs`)
 
@@ -228,6 +234,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 **Exception — UI-handled first:** some inputs are handled in the BMXt page (`tabs/bmxt.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -l` / `tabs -l -u`** (tab picker) and **interactive `group new`** (no tab ids). Other subcommands and the rest of the command set go through WASM dispatch in the background.
 
+**`exit`:** returns an **`exit_bmxt`** effect; the Service Worker clears the session log and closes the BMXt window it tracks (`chrome.windows.remove`). If WASM fails to load, **`clear`** and **`exit`** still run equivalent logic in `background.ts` (log clear; **`exit`** also closes the window).
+
 ### 日本語
 
 **レジストリ・`help` / `man` 本文・トークン化・URL 専用行**は **`wasm/bmxt-core`（Rust / WASM）** に置いています。Service Worker に送られた行に対して **`dispatchFull`** は **`lines`** か JSON **`effects`** を返し、**`effects`** の `chrome.*` 操作は `lib/features/dispatch/handlers/apply-one.ts`（`apply-effects.ts` 経由）で行います。Tab 補完の**コマンド名候補**は WASM の **`completionCandidatesJson`**（WASM 未ロード時は `lib/features/builtin-commands/` のフォールバック）。
@@ -240,7 +248,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **`lib/features/wasm-core/index.ts`** — `ensureBmxtCore`, `runDispatch`, `getCompletionCandidates`  
 - **`lib/features/dispatch/`** — Effect 型と Chrome 実行（`handlers/` に effect ごとの処理）  
 - **`lib/features/builtin-commands/`** — WASM 失敗時の Tab 補完フォールバックなど  
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_bmxt` でセッションログ削除のあと BMXt ウィンドウを閉じる。WASM 未ロード時は **`clear` / `exit` だけ** `background.ts` 同等処理にフォールバック。詳細は上の英語「**`exit`:**」段落も参照）
 
 Rust を変更したら **`npm run build:wasm`** で再生成してから `npm run build` してください。
 

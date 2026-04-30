@@ -101,6 +101,21 @@ async function appendLog(lines: string[]): Promise<void> {
   await chrome.storage.local.set({ [LOG_KEY]: trimmed })
 }
 
+/** Session log を空にし、BMXt ウィンドウを閉じる（`exit` / WASM 失敗時フォールバック）。 */
+async function exitBmxtWindow(): Promise<string[]> {
+  await chrome.storage.local.set({ [LOG_KEY]: [] })
+  const wid = bmxtWindowId
+  if (wid !== undefined) {
+    try {
+      await chrome.windows.remove(wid)
+    } catch {
+      /* 既に閉じている */
+    }
+    bmxtWindowId = undefined
+  }
+  return ["(BMXt window closed, session log cleared)"]
+}
+
 async function runCommand(line: string): Promise<void> {
   const trimmed = line.trim()
   if (!trimmed) {
@@ -112,6 +127,10 @@ async function runCommand(line: string): Promise<void> {
     if (trimmed.toLowerCase() === "clear") {
       const out: string[] = [`> ${trimmed}`, "(log cleared)"]
       await chrome.storage.local.set({ [LOG_KEY]: out.slice(-MAX_LOG_LINES) })
+      return
+    }
+    if (trimmed.toLowerCase() === "exit") {
+      await exitBmxtWindow()
       return
     }
     await appendLog([
@@ -133,6 +152,9 @@ async function runCommand(line: string): Promise<void> {
     })
     return
   }
+  if (trimmed.toLowerCase() === "exit") {
+    return
+  }
   await appendLog(out)
 }
 
@@ -145,6 +167,7 @@ async function dispatch(line: string): Promise<string[]> {
     clearLog: async () => {
       await chrome.storage.local.set({ [LOG_KEY]: [] })
     },
+    exitBmxt: exitBmxtWindow,
     listWindows,
     focusInfo,
     resolveTabArg

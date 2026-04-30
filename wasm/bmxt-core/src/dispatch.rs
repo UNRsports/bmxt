@@ -1,8 +1,8 @@
 //! URL 行・トークン化・コマンド委譲。本体は `crate::cmd::*::run`。
 
 use crate::cmd::{
-    activate, back, clear, close, echo, focus, forward, group, groups, move_tab, new_tab, tabs,
-    windows,
+    activate, back, clear, close, echo, exit, focus, forward, group, groups, move_tab, new_tab,
+    tabs, windows,
 };
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use crate::model::{DispatchJson, Effect};
@@ -78,6 +78,7 @@ fn handle_command(canonical: &str, args: &[String]) -> DispatchJson {
         }
         "echo" => echo::run(args),
         "clear" => clear::run(args),
+        "exit" => exit::run(args),
         "windows" => windows::run(args),
         "focus" => focus::run(args),
         "groups" => groups::run(args),
