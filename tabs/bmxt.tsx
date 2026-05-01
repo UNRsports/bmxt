@@ -10,7 +10,11 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../lib/features/tabs"
-import { COMPLETION_CANDIDATES } from "../lib/commands-meta"
+import {
+  ensureBmxtCore,
+  FALLBACK_COMPLETION_CANDIDATES,
+  getCompletionCandidates
+} from "../lib/features/wasm-core"
 
 import {
   useCallback,
@@ -47,6 +51,9 @@ function wordBounds(s: string, pos: number): [number, number] {
 }
 
 function IndexBmxtWindow() {
+  const [completionCandidates, setCompletionCandidates] = useState<string[]>(
+    []
+  )
   const [lines, setLines] = useState<string[]>([])
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
@@ -79,6 +86,11 @@ function IndexBmxtWindow() {
   const tabPressSeqRef = useRef(0)
   const lineRef = useRef("")
   const cursorRef = useRef(0)
+  const completionCandidatesRef = useRef<string[]>([])
+
+  useEffect(() => {
+    completionCandidatesRef.current = completionCandidates
+  }, [completionCandidates])
 
   useEffect(() => {
     lineRef.current = line
@@ -86,6 +98,17 @@ function IndexBmxtWindow() {
   useEffect(() => {
     cursorRef.current = cursorPos
   }, [cursorPos])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        await ensureBmxtCore()
+        setCompletionCandidates(getCompletionCandidates())
+      } catch {
+        setCompletionCandidates(FALLBACK_COMPLETION_CANDIDATES)
+      }
+    })()
+  }, [])
 
   const iSearchMatches = useMemo(
     () => matchesForSearch(history, mode === "isearch" ? line : ""),
@@ -167,6 +190,9 @@ function IndexBmxtWindow() {
   }, [tabPicker, lines, syncLogScroll])
 
   useLayoutEffect(() => {
+    if (tabPicker) {
+      return
+    }
     const ta = imeRef.current
     if (!ta || isComposing) {
       return
@@ -174,7 +200,7 @@ function IndexBmxtWindow() {
     if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
       ta.setSelectionRange(cursorPos, cursorPos)
     }
-  }, [line, cursorPos, isComposing])
+  }, [tabPicker, line, cursorPos, isComposing])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
@@ -267,7 +293,7 @@ function IndexBmxtWindow() {
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
             `> ${trimmed}`,
-            "Tab picker — j/k move · Tab # · Space move/close/group/new win · / search · Enter · Esc"
+            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / search · Ctrl+Shift+↑↓ active · Enter · Esc"
           ])
           setTabPicker({ rows, showUrl, initialHi })
         } catch (e) {
@@ -400,6 +426,22 @@ function IndexBmxtWindow() {
         return
       }
 
+      if (tabPickerRef.current) {
+        const blocksTabPickerNav =
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.code === "ArrowUp" ||
+          e.code === "ArrowDown" ||
+          e.key === "j" ||
+          e.key === "J" ||
+          e.key === "k" ||
+          e.key === "K"
+        if (blocksTabPickerNav) {
+          e.preventDefault()
+          return
+        }
+      }
+
       if (e.key !== "Tab") {
         tabPressSeqRef.current = 0
       }
@@ -476,7 +518,9 @@ function IndexBmxtWindow() {
         if (!w) {
           return
         }
-        const cands = COMPLETION_CANDIDATES.filter((c) => c.startsWith(w))
+        const cands = completionCandidatesRef.current.filter((c) =>
+          c.startsWith(w)
+        )
         if (cands.length === 0) {
           return
         }
@@ -533,6 +577,7 @@ function IndexBmxtWindow() {
     },
     [
       applyHistoryLine,
+      completionCandidates,
       enterISearch,
       exitISearch,
       histDraft,

@@ -2,6 +2,6 @@
 
 - Keep the repository root minimal; avoid adding new feature implementation files at root.
 - Place feature code under `lib/features/<feature>/` and colocate related UI, parsing, and domain logic there.
-- Keep command entrypoints under `lib/commands/builtin/<command>/`, and reference feature implementations from `lib/features/*`.
+- Keep command **dispatch and registry** in `wasm/bmxt-core` (Rust); keep Chrome API effects in `lib/features/dispatch/`, and reference other feature code from `lib/features/*`.
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
