@@ -10,7 +10,8 @@ import {
   resolvePickerConfirmPlan,
   resolvePickerMovePlan,
   resolvePickerCreateGroupPlan,
-  resolvePickerHeadline
+  resolvePickerHeadline,
+  type PickerReducerState
 } from "./state-machine"
 import {
   EXECUTION_REGISTRY,
@@ -253,6 +254,48 @@ export function TabPickerOverlay({
       setMarkedWindowIds(next.markedWindowIds)
       setMarkedGroupKeys(next.markedGroupKeys)
       setBulkSubMode(next.bulkSubMode)
+    },
+    [bulkSubMode, hi, markedGroupKeys, markedKind, markedTabIds, markedWindowIds, moveDestHi]
+  )
+
+  /** 同一キー処理内で 2 回以上 reduce するとき、閉包の古い `hi` で 2 回目が走るのを防ぐ */
+  const applyReducedStateSequence = useCallback(
+    (
+      events: Array<
+        | { kind: "moveHi"; delta: number; visibleLen: number }
+        | { kind: "moveDest"; delta: number; visibleLen: number }
+        | { kind: "cycleSubMode"; direction: number }
+        | { kind: "toggleCurrent"; row: { kind: SelectKind; tabId?: number; windowId?: number; groupKey?: string } }
+        | {
+            kind: "selectRange"
+            input: {
+              anchor: number
+              target: number
+              rows: Array<{ kind: SelectKind; tabId?: number; windowId?: number; groupKey?: string }>
+            }
+          }
+        | { kind: "clearMarked" }
+      >
+    ) => {
+      let s: PickerReducerState = {
+        hi,
+        moveDestHi,
+        markedKind,
+        markedTabIds,
+        markedWindowIds,
+        markedGroupKeys,
+        bulkSubMode
+      }
+      for (const ev of events) {
+        s = reducePickerState(s, ev)
+      }
+      setHi(s.hi)
+      setMoveDestHi(s.moveDestHi)
+      setMarkedKind(s.markedKind)
+      setMarkedTabIds(s.markedTabIds)
+      setMarkedWindowIds(s.markedWindowIds)
+      setMarkedGroupKeys(s.markedGroupKeys)
+      setBulkSubMode(s.bulkSubMode)
     },
     [bulkSubMode, hi, markedGroupKeys, markedKind, markedTabIds, markedWindowIds, moveDestHi]
   )
@@ -949,11 +992,6 @@ export function TabPickerOverlay({
         } else {
           newHi = (hi - 1 + n) % n
         }
-        applyReducedState({
-          kind: "moveHi",
-          delta: isPhysicalArrowDown(e) ? 1 : -1,
-          visibleLen: n
-        })
         const lo = Math.min(anchor, newHi)
         const hiVis = Math.max(anchor, newHi)
         const rangeRows = visibleRowIndices.slice(lo, hiVis + 1).map((ri) => {
@@ -972,14 +1010,21 @@ export function TabPickerOverlay({
             groupKey: groupRowKey(row.windowId, row.groupId)
           }
         })
-        applyReducedState({
-          kind: "selectRange",
-          input: {
-            anchor: 0,
-            target: rangeRows.length > 0 ? rangeRows.length - 1 : 0,
-            rows: rangeRows
+        applyReducedStateSequence([
+          {
+            kind: "moveHi",
+            delta: isPhysicalArrowDown(e) ? 1 : -1,
+            visibleLen: n
+          },
+          {
+            kind: "selectRange",
+            input: {
+              anchor: 0,
+              target: rangeRows.length > 0 ? rangeRows.length - 1 : 0,
+              rows: rangeRows
+            }
           }
-        })
+        ])
         return true
       }
 
@@ -1012,6 +1057,7 @@ export function TabPickerOverlay({
     },
     [
       applyReducedState,
+      applyReducedStateSequence,
       bulkSubMode,
       groupChoices.length,
       groupNewPhase,
