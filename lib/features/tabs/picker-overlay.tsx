@@ -78,6 +78,33 @@ function groupRowKey(windowId: number, groupId: number | null): string {
   return `${windowId}:${groupId === null ? "none" : String(groupId)}`
 }
 
+/** `j`/`k` と矢印の共通方向（Ctrl+Shift や Shift+範囲は物理矢印のみ） */
+function verticalNavDirection(e: Pick<KeyboardEvent, "key" | "code">): "up" | "down" | null {
+  const k = e.key
+  if (k === "ArrowDown" || k === "j" || k === "J") {
+    return "down"
+  }
+  if (k === "ArrowUp" || k === "k" || k === "K") {
+    return "up"
+  }
+  /* Some environments leave `key` empty or Unidentified; `code` is stable for arrows */
+  if (e.code === "ArrowDown") {
+    return "down"
+  }
+  if (e.code === "ArrowUp") {
+    return "up"
+  }
+  return null
+}
+
+function isPhysicalArrowDown(e: Pick<KeyboardEvent, "key" | "code">): boolean {
+  return e.key === "ArrowDown" || e.code === "ArrowDown"
+}
+
+function isPhysicalArrowUp(e: Pick<KeyboardEvent, "key" | "code">): boolean {
+  return e.key === "ArrowUp" || e.code === "ArrowUp"
+}
+
 export function TabPickerOverlay({
   rows,
   showUrl,
@@ -446,7 +473,7 @@ export function TabPickerOverlay({
       groupMetaTitleRef.current?.focus()
       return
     }
-    requestAnimationFrame(() => inputRef.current?.focus())
+    inputRef.current?.focus()
   }, [groupNewPhase, searchMode])
 
   useLayoutEffect(() => {
@@ -830,9 +857,187 @@ export function TabPickerOverlay({
     [executeCreateNewGroup]
   )
 
+  /**
+   * ↑/↓/j/k による縦移動。`window` キャプチャ用と、IME 等でキャプチャが握れないときの textarea 用に同一実装を使う。
+   * 処理した場合は true（このとき preventDefault / stopPropagation 済み）。
+   */
+  const runPickerVerticalNav = useCallback(
+    (e: KeyboardEvent): boolean => {
+      const navDir = verticalNavDirection(e)
+      if (navDir === null) {
+        return false
+      }
+      const ev = e as KeyboardEvent & { isComposing?: boolean }
+      if (ev.isComposing) {
+        return false
+      }
+
+      if (groupNewPhase === "meta") {
+        const ae = document.activeElement
+        if (
+          ae === groupMetaTitleRef.current ||
+          groupMetaColorStripRef.current?.contains(ae ?? null)
+        ) {
+          return false
+        }
+      }
+
+      if (bulkSubMode === "move") {
+        e.preventDefault()
+        e.stopPropagation()
+        if (visibleRowIndices.length === 0) {
+          return true
+        }
+        if (navDir === "down") {
+          applyReducedState({ kind: "moveDest", delta: 1, visibleLen: visibleRowIndices.length })
+        } else {
+          applyReducedState({ kind: "moveDest", delta: -1, visibleLen: visibleRowIndices.length })
+        }
+        return true
+      }
+
+      if (
+        e.ctrlKey &&
+        e.shiftKey &&
+        visibleRowIndices.length > 0 &&
+        (isPhysicalArrowDown(e) || isPhysicalArrowUp(e))
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        const delta = isPhysicalArrowDown(e) ? 1 : -1
+        const previewRows = visibleRowIndices.map((ri) => {
+          const r = rows[ri]
+          if (!r) {
+            return { kind: "tab" as const }
+          }
+          if (r.kind === "tab") {
+            return { kind: "tab" as const, tabId: r.tabId }
+          }
+          return { kind: r.kind as "window" | "group" }
+        })
+        const decision = resolvePickerPreview(hi, delta, previewRows)
+        applyReducedState({
+          kind: "moveHi",
+          delta,
+          visibleLen: visibleRowIndices.length
+        })
+        if (decision.activateTabId !== null) {
+          void chrome.tabs.update(decision.activateTabId, { active: true }).catch(() => undefined)
+        }
+        return true
+      }
+
+      const shiftArrowBlocksBulk = bulkSubMode === "group" || groupNewPhase === "meta"
+      if (
+        !shiftArrowBlocksBulk &&
+        e.shiftKey &&
+        (isPhysicalArrowDown(e) || isPhysicalArrowUp(e))
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (visibleRowIndices.length === 0) {
+          return true
+        }
+        const n = visibleRowIndices.length
+        if (shiftRangeAnchorHiRef.current === null) {
+          shiftRangeAnchorHiRef.current = hi
+        }
+        const anchor = shiftRangeAnchorHiRef.current
+        let newHi = hi
+        if (isPhysicalArrowDown(e)) {
+          newHi = (hi + 1) % n
+        } else {
+          newHi = (hi - 1 + n) % n
+        }
+        applyReducedState({
+          kind: "moveHi",
+          delta: isPhysicalArrowDown(e) ? 1 : -1,
+          visibleLen: n
+        })
+        const lo = Math.min(anchor, newHi)
+        const hiVis = Math.max(anchor, newHi)
+        const rangeRows = visibleRowIndices.slice(lo, hiVis + 1).map((ri) => {
+          const row = rows[ri]
+          if (!row) {
+            return { kind: "tab" as const }
+          }
+          if (row.kind === "tab") {
+            return { kind: "tab" as const, tabId: row.tabId }
+          }
+          if (row.kind === "window") {
+            return { kind: "window" as const, windowId: row.windowId }
+          }
+          return {
+            kind: "group" as const,
+            groupKey: groupRowKey(row.windowId, row.groupId)
+          }
+        })
+        applyReducedState({
+          kind: "selectRange",
+          input: {
+            anchor: 0,
+            target: rangeRows.length > 0 ? rangeRows.length - 1 : 0,
+            rows: rangeRows
+          }
+        })
+        return true
+      }
+
+      if (bulkSubMode === "group") {
+        e.preventDefault()
+        e.stopPropagation()
+        if (groupChoices.length === 0) {
+          return true
+        }
+        if (navDir === "down") {
+          setGroupPickIndex((i) => (i + 1) % groupChoices.length)
+        } else {
+          setGroupPickIndex((i) => (i - 1 + groupChoices.length) % groupChoices.length)
+        }
+        return true
+      }
+
+      e.preventDefault()
+      e.stopPropagation()
+      if (visibleRowIndices.length === 0) {
+        return true
+      }
+      shiftRangeAnchorHiRef.current = null
+      applyReducedState({
+        kind: "moveHi",
+        delta: navDir === "down" ? 1 : -1,
+        visibleLen: visibleRowIndices.length
+      })
+      return true
+    },
+    [
+      applyReducedState,
+      bulkSubMode,
+      groupChoices.length,
+      groupNewPhase,
+      hi,
+      rows,
+      visibleRowIndices
+    ]
+  )
+
+  /** Window capture: フォーカスがリストや隠し textarea 以外でも ↑↓/j/k を拾う */
+  useEffect(() => {
+    const wrap = (ev: KeyboardEvent) => {
+      runPickerVerticalNav(ev)
+    }
+    window.addEventListener("keydown", wrap, true)
+    return () => window.removeEventListener("keydown", wrap, true)
+  }, [runPickerVerticalNav])
+
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.nativeEvent.isComposing) {
+        return
+      }
+
+      /** IME やキャプチャが握れない経路でも ↑↓/j/k が効くようにする（window 側と同一ロジック） */
+      if (runPickerVerticalNav(e.nativeEvent)) {
         return
       }
 
@@ -972,120 +1177,6 @@ export function TabPickerOverlay({
         }
       }
 
-      if (bulkSubMode === "move" && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-        e.preventDefault()
-        if (visibleRowIndices.length === 0) {
-          return
-        }
-        if (e.key === "ArrowDown") {
-          applyReducedState({ kind: "moveDest", delta: 1, visibleLen: visibleRowIndices.length })
-        } else {
-          applyReducedState({ kind: "moveDest", delta: -1, visibleLen: visibleRowIndices.length })
-        }
-        return
-      }
-
-      if (
-        e.ctrlKey &&
-        e.shiftKey &&
-        (e.key === "ArrowDown" || e.key === "ArrowUp") &&
-        visibleRowIndices.length > 0
-      ) {
-        e.preventDefault()
-        const delta = e.key === "ArrowDown" ? 1 : -1
-        const previewRows = visibleRowIndices.map((ri) => {
-          const r = rows[ri]
-          if (!r) {
-            return { kind: "tab" as const }
-          }
-          if (r.kind === "tab") {
-            return { kind: "tab" as const, tabId: r.tabId }
-          }
-          return { kind: r.kind as "window" | "group" }
-        })
-        const decision = resolvePickerPreview(hi, delta, previewRows)
-        applyReducedState({
-          kind: "moveHi",
-          delta,
-          visibleLen: visibleRowIndices.length
-        })
-        if (decision.activateTabId !== null) {
-          void chrome.tabs.update(decision.activateTabId, { active: true }).catch(() => undefined)
-        }
-        return
-      }
-
-      const shiftArrowBlocksBulk =
-        bulkSubMode === "move" ||
-        bulkSubMode === "group" ||
-        groupNewPhase === "meta"
-      if (
-        !shiftArrowBlocksBulk &&
-        e.shiftKey &&
-        (e.key === "ArrowDown" || e.key === "ArrowUp")
-      ) {
-        e.preventDefault()
-        if (visibleRowIndices.length === 0) {
-          return
-        }
-        const n = visibleRowIndices.length
-        if (shiftRangeAnchorHiRef.current === null) {
-          shiftRangeAnchorHiRef.current = hi
-        }
-        const anchor = shiftRangeAnchorHiRef.current
-        let newHi = hi
-        if (e.key === "ArrowDown") {
-          newHi = (hi + 1) % n
-        } else {
-          newHi = (hi - 1 + n) % n
-        }
-        applyReducedState({
-          kind: "moveHi",
-          delta: e.key === "ArrowDown" ? 1 : -1,
-          visibleLen: n
-        })
-        const lo = Math.min(anchor, newHi)
-        const hiVis = Math.max(anchor, newHi)
-        const rangeRows = visibleRowIndices.slice(lo, hiVis + 1).map((ri) => {
-          const row = rows[ri]
-          if (!row) {
-            return { kind: "tab" as const }
-          }
-          if (row.kind === "tab") {
-            return { kind: "tab" as const, tabId: row.tabId }
-          }
-          if (row.kind === "window") {
-            return { kind: "window" as const, windowId: row.windowId }
-          }
-          return {
-            kind: "group" as const,
-            groupKey: groupRowKey(row.windowId, row.groupId)
-          }
-        })
-        applyReducedState({
-          kind: "selectRange",
-          input: {
-            anchor: 0,
-            target: rangeRows.length > 0 ? rangeRows.length - 1 : 0,
-            rows: rangeRows
-          }
-        })
-        return
-      }
-
-      if (bulkSubMode === "group" && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-        e.preventDefault()
-        if (groupChoices.length === 0) {
-          return
-        }
-        if (e.key === "ArrowDown") {
-          setGroupPickIndex((i) => (i + 1) % groupChoices.length)
-        } else {
-          setGroupPickIndex((i) => (i - 1 + groupChoices.length) % groupChoices.length)
-        }
-        return
-      }
-
       if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault()
         if (!searchMode) {
@@ -1099,29 +1190,12 @@ export function TabPickerOverlay({
           e.preventDefault()
         }
       }
-
-      if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
-        e.preventDefault()
-        if (visibleRowIndices.length === 0) {
-          return
-        }
-        shiftRangeAnchorHiRef.current = null
-        applyReducedState({ kind: "moveHi", delta: 1, visibleLen: visibleRowIndices.length })
-        return
-      }
-      if (e.key === "k" || e.key === "K" || e.key === "ArrowUp") {
-        e.preventDefault()
-        if (visibleRowIndices.length === 0) {
-          return
-        }
-        shiftRangeAnchorHiRef.current = null
-        applyReducedState({ kind: "moveHi", delta: -1, visibleLen: visibleRowIndices.length })
-      }
     },
     [
       bulkSubMode,
       closeSearch,
       confirmSelection,
+      runPickerVerticalNav,
       executeBulkClose,
       executeBulkGroup,
       executeBulkMove,

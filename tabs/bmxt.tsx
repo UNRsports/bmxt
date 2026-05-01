@@ -190,6 +190,9 @@ function IndexBmxtWindow() {
   }, [tabPicker, lines, syncLogScroll])
 
   useLayoutEffect(() => {
+    if (tabPicker) {
+      return
+    }
     const ta = imeRef.current
     if (!ta || isComposing) {
       return
@@ -197,7 +200,7 @@ function IndexBmxtWindow() {
     if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
       ta.setSelectionRange(cursorPos, cursorPos)
     }
-  }, [line, cursorPos, isComposing])
+  }, [tabPicker, line, cursorPos, isComposing])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
@@ -421,6 +424,22 @@ function IndexBmxtWindow() {
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.nativeEvent.isComposing) {
         return
+      }
+
+      if (tabPickerRef.current) {
+        const blocksTabPickerNav =
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.code === "ArrowUp" ||
+          e.code === "ArrowDown" ||
+          e.key === "j" ||
+          e.key === "J" ||
+          e.key === "k" ||
+          e.key === "K"
+        if (blocksTabPickerNav) {
+          e.preventDefault()
+          return
+        }
       }
 
       if (e.key !== "Tab") {

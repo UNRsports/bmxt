@@ -88,7 +88,7 @@ pub fn build_help_lines() -> Vec<String> {
     lines.push(String::new());
     lines.push("tabs (BMXt window / SW):".to_string());
     lines.push(
-        "  tabs -l [-u]  - tab picker: j/k move, / filter (@... URL), Enter page, Esc exit."
+        "  tabs -l [-u]  - tab picker: ↑↓ move, / filter (@... URL), Enter page, Esc exit."
             .to_string(),
     );
     lines.push(
