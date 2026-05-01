@@ -4,7 +4,18 @@
 
 import init, {
   completionCandidatesJson,
-  dispatchFull
+  dispatchFull,
+  tabsPickerReduce,
+  tabsPickerResolveEnterIntent,
+  tabsPickerResolvePreview,
+  tabsPickerValidateExecute,
+  tabsPickerResolveTarget,
+  tabsPickerResolveGroupTarget,
+  tabsPickerResolveNewWindowOrder,
+  tabsPickerResolveConfirmPlan,
+  tabsPickerResolveMovePlan,
+  tabsPickerResolveCreateGroupPlan,
+  tabsPickerResolveHeadline
 } from "../../../assets/wasm/bmxt-core/bmxt_core.js"
 import type { DispatchBundle } from "../dispatch"
 
@@ -70,4 +81,74 @@ export function getCompletionCandidates(): string[] {
     cachedCompletion = JSON.parse(raw) as string[]
   }
   return cachedCompletion
+}
+
+export function runTabsPickerReduce<TState, TEvent>(state: TState, event: TEvent): TState {
+  assertCoreReady()
+  const next = tabsPickerReduce(JSON.stringify(state), JSON.stringify(event))
+  return JSON.parse(next) as TState
+}
+
+export function resolveTabsPickerEnterIntent<TContext, TIntent>(context: TContext): TIntent {
+  assertCoreReady()
+  const out = tabsPickerResolveEnterIntent(JSON.stringify(context))
+  return JSON.parse(out) as TIntent
+}
+
+export function resolveTabsPickerPreview<TContext, TDecision>(context: TContext): TDecision {
+  assertCoreReady()
+  const out = tabsPickerResolvePreview(JSON.stringify(context))
+  return JSON.parse(out) as TDecision
+}
+
+export function validateTabsPickerExecute<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerValidateExecute(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+export function resolveTabsPickerTarget<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerResolveTarget(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+export function resolveTabsPickerGroupTarget<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerResolveGroupTarget(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+export function resolveTabsPickerNewWindowOrder<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerResolveNewWindowOrder(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+export function resolveTabsPickerConfirmPlan<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerResolveConfirmPlan(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+export function resolveTabsPickerMovePlan<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerResolveMovePlan(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+export function resolveTabsPickerCreateGroupPlan<TContext, TResult>(context: TContext): TResult {
+  assertCoreReady()
+  const out = tabsPickerResolveCreateGroupPlan(JSON.stringify(context))
+  return JSON.parse(out) as TResult
+}
+
+/** ヘッダー一行（Rust がそのまま文字列を返す）。 */
+export function resolveTabsPickerHeadline(context: {
+  bulkSubMode: string | null
+  groupNewPhase: string
+  variant: string
+}): string {
+  assertCoreReady()
+  return tabsPickerResolveHeadline(JSON.stringify(context))
 }

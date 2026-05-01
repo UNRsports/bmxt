@@ -1,4 +1,26 @@
 import { displayTitle, filterTabRowIndices, type TabPickerRow } from "./picker-rows"
+import {
+  reducePickerState,
+  resolvePickerEnterIntent,
+  resolvePickerPreview,
+  validatePickerExecute,
+  resolvePickerTarget,
+  resolvePickerGroupTarget,
+  resolvePickerNewWindowOrder,
+  resolvePickerConfirmPlan,
+  resolvePickerMovePlan,
+  resolvePickerCreateGroupPlan,
+  resolvePickerHeadline
+} from "./state-machine"
+import {
+  EXECUTION_REGISTRY,
+  type ExecutionIntent,
+  executeCloseAction,
+  executeGroupAction,
+  executeMoveAction,
+  executeNewWindowAction
+} from "./controller/execute-actions"
+import { executeCreateNewGroupAction } from "./controller/create-new-group"
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
@@ -31,6 +53,7 @@ const COLOR_SWATCH_BG: Partial<Record<chrome.tabGroups.Color, string>> = {
 const NEW_GROUP_LIST_SENTINEL = -1
 
 type BulkSubMode = "move" | "close" | "group" | "newWindow"
+type SelectKind = "window" | "group" | "tab"
 
 type GroupChoice = {
   id: number
@@ -51,14 +74,8 @@ type Props = {
   onExit: () => void
 }
 
-function toggleMarkedId(prev: number[], tabId: number): number[] {
-  const next = new Set(prev)
-  if (next.has(tabId)) {
-    next.delete(tabId)
-  } else {
-    next.add(tabId)
-  }
-  return [...next].sort((a, b) => a - b)
+function groupRowKey(windowId: number, groupId: number | null): string {
+  return `${windowId}:${groupId === null ? "none" : String(groupId)}`
 }
 
 export function TabPickerOverlay({
@@ -77,7 +94,10 @@ export function TabPickerOverlay({
     const firstActive = rows.find((row) => row.kind === "tab" && row.active)
     return firstActive?.kind === "tab" ? firstActive.tabId : null
   })
+  const [markedKind, setMarkedKind] = useState<SelectKind | null>(null)
   const [markedTabIds, setMarkedTabIds] = useState<number[]>([])
+  const [markedWindowIds, setMarkedWindowIds] = useState<number[]>([])
+  const [markedGroupKeys, setMarkedGroupKeys] = useState<string[]>([])
   const [bulkSubMode, setBulkSubMode] = useState<BulkSubMode | null>(null)
   const [moveDestHi, setMoveDestHi] = useState(initialHi)
   const [groupChoices, setGroupChoices] = useState<GroupChoice[]>([])
@@ -101,12 +121,35 @@ export function TabPickerOverlay({
   /** Fixed visible index anchor for Shift+Arrow range selection (`hi` indices into `tabIndices`). */
   const shiftRangeAnchorHiRef = useRef<number | null>(null)
 
-  const tabIndices = useMemo(
-    () => filterTabRowIndices(rows, filterQuery),
+  const matchedTabSet = useMemo(
+    () => new Set(filterTabRowIndices(rows, filterQuery)),
     [rows, filterQuery]
   )
+  const visibleRowIndices = useMemo(() => {
+    const out: number[] = []
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]
+      if (!r) {
+        continue
+      }
+      if (!searchMode || filterQuery.trim() === "" || r.kind !== "tab" || matchedTabSet.has(i)) {
+        out.push(i)
+      }
+    }
+    return out
+  }, [filterQuery, matchedTabSet, rows, searchMode])
+  const tabIndices = useMemo(
+    () =>
+      visibleRowIndices.filter((rowIndex) => {
+        const r = rows[rowIndex]
+        return r?.kind === "tab"
+      }),
+    [rows, visibleRowIndices]
+  )
 
-  const markedSet = useMemo(() => new Set(markedTabIds), [markedTabIds])
+  const markedTabSet = useMemo(() => new Set(markedTabIds), [markedTabIds])
+  const markedWindowSet = useMemo(() => new Set(markedWindowIds), [markedWindowIds])
+  const markedGroupSet = useMemo(() => new Set(markedGroupKeys), [markedGroupKeys])
 
   const tabIdToWindowId = useMemo(() => {
     const m = new Map<number, number>()
@@ -118,12 +161,85 @@ export function TabPickerOverlay({
     return m
   }, [rows])
 
+  const selectedTabIds = useMemo(() => {
+    if (markedKind === "tab") {
+      return markedTabIds
+    }
+    if (markedKind === "window") {
+      const out: number[] = []
+      for (const r of rows) {
+        if (r.kind === "tab" && markedWindowSet.has(r.windowId)) {
+          out.push(r.tabId)
+        }
+      }
+      return out.sort((a, b) => a - b)
+    }
+    if (markedKind === "group") {
+      const out: number[] = []
+      for (const r of rows) {
+        if (r.kind !== "tab") {
+          continue
+        }
+        const k = groupRowKey(r.windowId, r.groupId)
+        if (markedGroupSet.has(k)) {
+          out.push(r.tabId)
+        }
+      }
+      return out.sort((a, b) => a - b)
+    }
+    return []
+  }, [markedGroupSet, markedKind, markedTabIds, markedWindowSet, rows])
+
+  const applyReducedState = useCallback(
+    (
+      ev:
+        | { kind: "moveHi"; delta: number; visibleLen: number }
+        | { kind: "moveDest"; delta: number; visibleLen: number }
+        | { kind: "cycleSubMode"; direction: number }
+        | { kind: "toggleCurrent"; row: { kind: SelectKind; tabId?: number; windowId?: number; groupKey?: string } }
+        | {
+            kind: "selectRange"
+            input: {
+              anchor: number
+              target: number
+              rows: Array<{ kind: SelectKind; tabId?: number; windowId?: number; groupKey?: string }>
+            }
+          }
+        | { kind: "clearMarked" }
+    ) => {
+      const next = reducePickerState(
+        {
+          hi,
+          moveDestHi,
+          markedKind,
+          markedTabIds,
+          markedWindowIds,
+          markedGroupKeys,
+          bulkSubMode
+        },
+        ev
+      )
+      setHi(next.hi)
+      setMoveDestHi(next.moveDestHi)
+      setMarkedKind(next.markedKind)
+      setMarkedTabIds(next.markedTabIds)
+      setMarkedWindowIds(next.markedWindowIds)
+      setMarkedGroupKeys(next.markedGroupKeys)
+      setBulkSubMode(next.bulkSubMode)
+    },
+    [bulkSubMode, hi, markedGroupKeys, markedKind, markedTabIds, markedWindowIds, moveDestHi]
+  )
+
+  const clearMarkedViaReducer = useCallback(() => {
+    applyReducedState({ kind: "clearMarked" })
+  }, [applyReducedState])
+
   useEffect(() => {
     setHi(initialHi)
   }, [initialHi])
 
   useLayoutEffect(() => {
-    if (tabIndices.length === 0) {
+    if (visibleRowIndices.length === 0) {
       return
     }
 
@@ -138,65 +254,81 @@ export function TabPickerOverlay({
       const tid = anchorTabIdRef.current
       const rowIdx = rows.findIndex((r) => r.kind === "tab" && r.tabId === tid)
       if (rowIdx >= 0) {
-        const mapped = tabIndices.findIndex((ri) => ri === rowIdx)
+        const mapped = visibleRowIndices.findIndex((ri) => ri === rowIdx)
         if (mapped >= 0) {
           targetHi = mapped
         }
       }
     }
 
-    targetHi = Math.min(Math.max(0, targetHi), tabIndices.length - 1)
+    targetHi = Math.min(Math.max(0, targetHi), visibleRowIndices.length - 1)
 
     if (targetHi !== hi) {
       setHi(targetHi)
     }
 
-    const ri = tabIndices[targetHi]
+    const ri = visibleRowIndices[targetHi]
     const row = ri !== undefined ? rows[ri] : undefined
     if (row?.kind === "tab") {
       anchorTabIdRef.current = row.tabId
     }
 
-    setMoveDestHi((d) => Math.min(d, tabIndices.length - 1))
-  }, [filterQuery, rows, tabIndices, hi])
+    setMoveDestHi((d) => Math.min(d, visibleRowIndices.length - 1))
+  }, [filterQuery, rows, visibleRowIndices, hi])
 
   useEffect(() => {
     /* メタ入力中はフィルタで # を外さない（tabIds が空になり tabs.group が失敗するのを防ぐ） */
     if (groupNewPhase === "meta") {
       return
     }
-    const visible = new Set<number>()
-    for (const ri of tabIndices) {
+    const visibleTabs = new Set<number>()
+    const visibleWindows = new Set<number>()
+    const visibleGroups = new Set<string>()
+    for (const ri of visibleRowIndices) {
       const r = rows[ri]
-      if (r?.kind === "tab") {
-        visible.add(r.tabId)
+      if (!r) {
+        continue
+      }
+      if (r.kind === "tab") {
+        visibleTabs.add(r.tabId)
+      } else if (r.kind === "window") {
+        visibleWindows.add(r.windowId)
+      } else if (r.kind === "group") {
+        visibleGroups.add(groupRowKey(r.windowId, r.groupId))
       }
     }
-    setMarkedTabIds((m) => m.filter((id) => visible.has(id)))
-  }, [tabIndices, rows, groupNewPhase])
+    setMarkedTabIds((m) => m.filter((id) => visibleTabs.has(id)))
+    setMarkedWindowIds((m) => m.filter((id) => visibleWindows.has(id)))
+    setMarkedGroupKeys((m) => m.filter((k) => visibleGroups.has(k)))
+  }, [visibleRowIndices, rows, groupNewPhase])
+
+  const markedCount =
+    markedKind === "tab"
+      ? markedTabIds.length
+      : markedKind === "window"
+        ? markedWindowIds.length
+        : markedKind === "group"
+          ? markedGroupKeys.length
+          : 0
 
   useEffect(() => {
-    if (markedTabIds.length === 0) {
+    if (markedCount === 0) {
       setBulkSubMode(null)
-    }
-  }, [markedTabIds.length])
-
-  useEffect(() => {
-    if (markedTabIds.length === 0) {
+      setMarkedKind(null)
       shiftRangeAnchorHiRef.current = null
     }
-  }, [markedTabIds])
+  }, [markedCount])
 
   useEffect(() => {
     if (
       bulkSubMode === "move" &&
       prevBulkSubModeRef.current !== "move" &&
-      tabIndices.length > 0
+      visibleRowIndices.length > 0
     ) {
-      setMoveDestHi(Math.min(hi, tabIndices.length - 1))
+      setMoveDestHi(Math.min(hi, visibleRowIndices.length - 1))
     }
     prevBulkSubModeRef.current = bulkSubMode
-  }, [bulkSubMode, hi, tabIndices.length])
+  }, [bulkSubMode, hi, visibleRowIndices.length])
 
   useEffect(() => {
     if (bulkSubMode !== "group") {
@@ -254,7 +386,10 @@ export function TabPickerOverlay({
         return
       }
       const winId = row.windowId
-      const markedInWin = markedTabIds.filter((id) => tabIdToWindowId.get(id) === winId)
+      const markedInWin =
+        markedKind === "tab"
+          ? markedTabIds.filter((id) => tabIdToWindowId.get(id) === winId)
+          : []
 
       try {
         const tabsInWin = await chrome.tabs.query({ windowId: winId })
@@ -294,16 +429,16 @@ export function TabPickerOverlay({
         /* tab/window may have closed */
       }
     },
-    [markedTabIds, rows, tabIdToWindowId]
+    [markedKind, markedTabIds, rows, tabIdToWindowId]
   )
 
   useEffect(() => {
-    if (tabIndices.length === 0) {
+    if (visibleRowIndices.length === 0) {
       return
     }
-    const rowIndex = tabIndices[hi]!
+    const rowIndex = visibleRowIndices[hi]!
     void syncChromeTabStripPreview(rowIndex)
-  }, [hi, markedTabIds, tabIndices, syncChromeTabStripPreview])
+  }, [hi, markedTabIds, visibleRowIndices, syncChromeTabStripPreview])
 
   useLayoutEffect(() => {
     if (groupNewPhase === "meta") {
@@ -315,25 +450,25 @@ export function TabPickerOverlay({
   }, [groupNewPhase, searchMode])
 
   useLayoutEffect(() => {
-    const rowIndex = tabIndices[hi]
+    const rowIndex = visibleRowIndices[hi]
     if (rowIndex === undefined) {
       return
     }
     const el = rowElRefs.current.get(rowIndex)
     el?.scrollIntoView({ block: "nearest", behavior: "instant" })
-  }, [hi, tabIndices])
+  }, [hi, visibleRowIndices])
 
   useLayoutEffect(() => {
     if (bulkSubMode !== "move") {
       return
     }
-    const rowIndex = tabIndices[moveDestHi]
+    const rowIndex = visibleRowIndices[moveDestHi]
     if (rowIndex === undefined) {
       return
     }
     const el = rowElRefs.current.get(rowIndex)
     el?.scrollIntoView({ block: "nearest", behavior: "instant" })
-  }, [bulkSubMode, moveDestHi, tabIndices])
+  }, [bulkSubMode, moveDestHi, visibleRowIndices])
 
   const groupPanelRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
@@ -347,22 +482,49 @@ export function TabPickerOverlay({
   }, [bulkSubMode, groupChoices.length, groupPickIndex])
 
   const confirmSelection = useCallback(async () => {
-    if (tabIndices.length === 0) {
+    if (visibleRowIndices.length === 0) {
       return
     }
-    const rowIndex = tabIndices[hi]!
-    const row = rows[rowIndex]
-    if (!row || row.kind !== "tab") {
+    const confirmRows = visibleRowIndices
+      .map((ri) => rows[ri])
+      .filter((r): r is TabPickerRow => r !== undefined)
+      .map((r) => {
+        if (r.kind === "tab") {
+          return { kind: "tab" as const, tabId: r.tabId, windowId: r.windowId, groupId: r.groupId }
+        }
+        if (r.kind === "window") {
+          return { kind: "window" as const, windowId: r.windowId }
+        }
+        return { kind: "group" as const, windowId: r.windowId, groupId: r.groupId }
+      })
+    const plan = resolvePickerConfirmPlan(hi, confirmRows)
+    if (!plan) {
       return
     }
     try {
-      await chrome.tabs.update(row.tabId, { active: true })
-      await chrome.windows.update(row.windowId, { focused: true })
-      setActiveTabId(row.tabId)
+      if (plan.kind === "activateTab") {
+        await chrome.tabs.update(plan.tabId, { active: true })
+        await chrome.windows.update(plan.windowId, { focused: true })
+        setActiveTabId(plan.tabId)
+      } else if (plan.kind === "focusWindow") {
+        await chrome.windows.update(plan.windowId, { focused: true })
+      } else if (plan.kind === "activateFromGroup") {
+        const tabs = await chrome.tabs.query({ windowId: plan.windowId })
+        const inGroup = tabs.find((t) =>
+          plan.groupId === null
+            ? t.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE
+            : t.groupId === plan.groupId
+        )
+        if (inGroup?.id !== undefined) {
+          await chrome.tabs.update(inGroup.id, { active: true })
+          await chrome.windows.update(plan.windowId, { focused: true })
+          setActiveTabId(inGroup.id)
+        }
+      }
     } catch {
       /* ignore */
     }
-  }, [hi, rows, tabIndices])
+  }, [hi, rows, visibleRowIndices])
 
   const closeSearch = useCallback(() => {
     setSearchMode(false)
@@ -370,248 +532,243 @@ export function TabPickerOverlay({
   }, [])
 
   const executeBulkClose = useCallback(async () => {
-    if (markedTabIds.length === 0) {
-      return
-    }
     try {
-      await chrome.tabs.remove(markedTabIds)
+      await executeCloseAction({
+        markedKind,
+        markedWindowIds,
+        selectedTabIds
+      })
     } catch {
       /* ignore */
     }
-    setMarkedTabIds([])
-    setBulkSubMode(null)
+    clearMarkedViaReducer()
     await onRefreshRows?.()
-  }, [markedTabIds, onRefreshRows])
+  }, [clearMarkedViaReducer, markedKind, markedWindowIds, onRefreshRows, selectedTabIds])
 
   const executeBulkMove = useCallback(async () => {
-    if (tabIndices.length === 0 || markedTabIds.length === 0) {
+    if (visibleRowIndices.length === 0 || selectedTabIds.length === 0) {
       return
     }
-    const destRowIndex = tabIndices[moveDestHi]
-    const destRow = destRowIndex !== undefined ? rows[destRowIndex] : undefined
-    if (!destRow || destRow.kind !== "tab") {
+    const targetRows = visibleRowIndices
+      .map((ri) => rows[ri])
+      .filter((r): r is TabPickerRow => r !== undefined)
+      .map((r) => {
+        if (r.kind === "tab") {
+          return { kind: "tab" as const, tabId: r.tabId, windowId: r.windowId, groupId: r.groupId }
+        }
+        if (r.kind === "window") {
+          return { kind: "window" as const, windowId: r.windowId }
+        }
+        return { kind: "group" as const, windowId: r.windowId, groupId: r.groupId }
+      })
+    const target = resolvePickerTarget(moveDestHi, targetRows)
+    if (!target) {
       return
     }
-    const toMove = markedTabIds.filter((id) => id !== destRow.tabId)
+    const plan = resolvePickerMovePlan(markedKind, target)
+    if (!plan) {
+      return
+    }
+    const toMove = [...selectedTabIds]
     if (toMove.length === 0) {
       return
     }
     try {
-      const destTab = await chrome.tabs.get(destRow.tabId)
-      const winId = destTab.windowId
-      const idx = destTab.index ?? 0
-      if (winId === undefined) {
-        return
-      }
-      await chrome.tabs.move(toMove, { windowId: winId, index: idx })
+      await executeMoveAction({ plan, selectedTabIds: toMove })
     } catch {
       /* ignore */
     }
-    setMarkedTabIds([])
-    setBulkSubMode(null)
+    clearMarkedViaReducer()
     await onRefreshRows?.()
-  }, [markedTabIds, moveDestHi, onRefreshRows, rows, tabIndices])
+  }, [
+    clearMarkedViaReducer,
+    markedKind,
+    moveDestHi,
+    onRefreshRows,
+    resolvePickerMovePlan,
+    rows,
+    selectedTabIds,
+    visibleRowIndices
+  ])
 
   const executeBulkGroup = useCallback(async () => {
-    if (markedTabIds.length === 0) {
+    if (selectedTabIds.length === 0) {
       return
     }
-    const choice = groupChoices[groupPickIndex]
-    if (!choice) {
-      return
-    }
-    if (choice.id === NEW_GROUP_LIST_SENTINEL) {
-      newGroupTabIdsRef.current = [...markedTabIds]
-      setNewGroupTitle("")
-      setNewGroupColorIndex(0)
-      setGroupNewPhase("meta")
+    const resolved = resolvePickerGroupTarget(
+      groupPickIndex,
+      groupChoices.map((g) => ({ id: g.id })),
+      NEW_GROUP_LIST_SENTINEL
+    )
+    if (!resolved) {
       return
     }
     try {
-      await chrome.tabs.group({ groupId: choice.id, tabIds: markedTabIds })
+      await executeGroupAction({
+        target: resolved,
+        selectedTabIds,
+        onOpenCreateNewMeta: () => {
+          newGroupTabIdsRef.current = [...selectedTabIds]
+          setNewGroupTitle("")
+          setNewGroupColorIndex(0)
+          setGroupNewPhase("meta")
+        }
+      })
     } catch {
       /* e.g. tabs in another window than the group */
     }
-    setMarkedTabIds([])
-    setBulkSubMode(null)
+    if (resolved.createNew) {
+      return
+    }
+    clearMarkedViaReducer()
     setGroupNewPhase("tabs")
     await onRefreshRows?.()
-  }, [groupChoices, groupPickIndex, markedTabIds, onRefreshRows])
+  }, [clearMarkedViaReducer, groupChoices, groupPickIndex, onRefreshRows, selectedTabIds])
 
   const executeBulkNewWindow = useCallback(async () => {
-    if (markedTabIds.length === 0) {
+    if (selectedTabIds.length === 0) {
       return
     }
     try {
-      const tabs = await Promise.all(markedTabIds.map((id) => chrome.tabs.get(id)))
-      tabs.sort((a, b) => {
-        const wa = a.windowId ?? 0
-        const wb = b.windowId ?? 0
-        if (wa !== wb) {
-          return wa - wb
-        }
-        return (a.index ?? 0) - (b.index ?? 0)
-      })
-      const orderedIds = tabs.map((t) => t.id).filter((id): id is number => id !== undefined)
-      const first = orderedIds[0]
-      if (first === undefined) {
-        return
-      }
-      const rest = orderedIds.slice(1)
-      const created = await chrome.windows.create({ tabId: first })
-      const newWinId = created.id
-      if (newWinId === undefined) {
-        return
-      }
-      if (rest.length > 0) {
-        await chrome.tabs.move(rest, { windowId: newWinId, index: -1 })
-      }
+      const tabs = await Promise.all(selectedTabIds.map((id) => chrome.tabs.get(id)))
+      const order = resolvePickerNewWindowOrder(
+        tabs
+          .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
+          .map((t) => ({ id: t.id, windowId: t.windowId ?? 0, index: t.index ?? 0 }))
+      )
+      await executeNewWindowAction({ selectedTabIds, order })
     } catch {
       /* e.g. incognito mismatch, tab already closed */
     }
-    setMarkedTabIds([])
-    setBulkSubMode(null)
+    clearMarkedViaReducer()
     await onRefreshRows?.()
-  }, [markedTabIds, onRefreshRows])
+  }, [clearMarkedViaReducer, onRefreshRows, selectedTabIds])
 
   const executeCreateNewGroup = useCallback(async () => {
     if (groupCreateInFlightRef.current) {
       return
     }
     const tabIds = newGroupTabIdsRef.current
-    if (tabIds.length === 0) {
-      await onAppendLog?.([
-        "error: 選択されたタブがありません（一覧に戻り Tab で選び直してください）。"
-      ])
-      return
-    }
     const color = NEW_GROUP_COLORS[newGroupColorIndex]
     if (color === undefined) {
       return
     }
-    const trimmedTitle = newGroupTitle.trim()
 
     groupCreateInFlightRef.current = true
     try {
-      const tabs = await Promise.all(
-        tabIds.map((id) => chrome.tabs.get(id).catch(() => undefined))
-      )
-      const ok = tabs.filter((t): t is chrome.tabs.Tab => t !== undefined)
-      if (ok.length !== tabIds.length) {
-        await onAppendLog?.(["error: 選択したタブの一部が閉じられています。"])
-        return
-      }
-      const winId = ok[0]?.windowId
-      if (
-        winId === undefined ||
-        ok.some((t) => t.windowId !== winId)
-      ) {
-        await onAppendLog?.([
-          "error: 選択したタブは同じウィンドウ内である必要があります。"
-        ])
-        return
-      }
-
-      /* popup / app / devtools などでは Chromium がタブグループを許可しない */
-      let windowType: chrome.windows.WindowType | undefined
-      try {
-        const win = await chrome.windows.get(winId)
-        windowType = win.type
-      } catch {
-        await onAppendLog?.(["error: ウィンドウ情報を取得できませんでした。"])
-        return
-      }
-      if (windowType !== "normal") {
-        await onAppendLog?.([
-          "error: このウィンドウ種別ではタブグループを使えません（Chrome は通常ウィンドウ normal のみ）。popup・app・devtools などではグループ化できません。ウェブページを開いた通常ブラウザウィンドウのタブを選んでください。"
-        ])
-        return
-      }
-
-      const groupId = await chrome.tabs.group({ tabIds })
-      const updatePayload: chrome.tabGroups.UpdateProperties = { color }
-      if (trimmedTitle.length > 0) {
-        updatePayload.title = trimmedTitle
-      }
-      await chrome.tabGroups.update(groupId, updatePayload)
-
-      /* 新規ウィンドウへ分離（①全タブ移動ならグループ維持の tabGroups.move、②一部のみなら ungroup してから move） */
-      const groupedTabs = await chrome.tabs.query({ groupId })
-      const groupTabCount = groupedTabs.length
-      const groupIdSet = new Set(
-        groupedTabs.map((t) => t.id).filter((id): id is number => id !== undefined)
-      )
-      const ordered = [...groupedTabs].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-      /** 現状はグループ内タブをすべて移動。将来サブセット指定時はここだけ差し替え */
-      const idsToMove = ordered
-        .map((t) => t.id)
-        .filter((id): id is number => id !== undefined)
-      const movingCount = idsToMove.length
-
-      if (idsToMove.some((id) => !groupIdSet.has(id))) {
-        throw new Error("移動対象タブがグループに含まれていません")
-      }
-
-      let newWinId: number
-
-      if (movingCount === groupTabCount) {
-        const created = await chrome.windows.create({ focused: true })
-        const wid = created.id
-        if (wid === undefined) {
-          throw new Error("新しいウィンドウを開けませんでした")
-        }
-        const movedGroup = await chrome.tabGroups.move(groupId, {
-          windowId: wid,
-          index: -1
-        })
-        const effectiveGid = movedGroup?.id ?? groupId
-        const groupedInWin = await chrome.tabs.query({ groupId: effectiveGid })
-        const keepIds = new Set(
-          groupedInWin.map((t) => t.id).filter((id): id is number => id !== undefined)
-        )
-        if (keepIds.size > 0) {
-          const stray = await chrome.tabs.query({ windowId: wid })
-          for (const t of stray) {
-            if (t.id !== undefined && !keepIds.has(t.id)) {
-              await chrome.tabs.remove(t.id)
-            }
-          }
-        }
-        newWinId = wid
-      } else if (movingCount < groupTabCount && movingCount > 0) {
-        await chrome.tabs.ungroup(idsToMove)
-        const firstId = idsToMove[0]
-        if (firstId === undefined) {
-          throw new Error("タブ ID を確定できませんでした")
-        }
-        const restIds = idsToMove.slice(1)
-        const created = await chrome.windows.create({ tabId: firstId, focused: true })
-        const wid = created.id
-        if (wid === undefined) {
-          throw new Error("新しいウィンドウを開けませんでした")
-        }
-        if (restIds.length > 0) {
-          await chrome.tabs.move(restIds, { windowId: wid, index: -1 })
-        }
-        newWinId = wid
-      } else {
-        throw new Error("移動するタブ数が不正です")
-      }
-
-      const label = trimmedTitle || "(無題)"
-      await onAppendLog?.([
-        `created group ${groupId} in new window ${newWinId} · ${color} · "${label}"`
-      ])
+      await executeCreateNewGroupAction({
+        tabIds,
+        title: newGroupTitle,
+        color,
+        onAppendLog,
+        onExit,
+        resolveCreateGroupPlan: resolvePickerCreateGroupPlan
+      })
       newGroupTabIdsRef.current = []
-      onExit()
-    } catch (err) {
-      const detail =
-        err instanceof Error ? err.message : typeof err === "string" ? err : String(err)
-      await onAppendLog?.([`error: グループ作成に失敗しました — ${detail}`])
+    } catch {
+      /* handled in controller */
     } finally {
       groupCreateInFlightRef.current = false
     }
-  }, [newGroupColorIndex, newGroupTitle, onAppendLog, onExit])
+  }, [newGroupColorIndex, newGroupTitle, onAppendLog, onExit, resolvePickerCreateGroupPlan])
+
+  const runExecutionIntent = useCallback(
+    async (intent: ExecutionIntent) => {
+      const v = validatePickerExecute(
+        { hi, moveDestHi, markedKind, markedTabIds, markedWindowIds, markedGroupKeys, bulkSubMode },
+        selectedTabIds.length
+      )
+      if (!v.ok) {
+        void onAppendLog?.([`error: ${v.reason ?? "実行できません。"}`])
+        return
+      }
+      const ctx: Parameters<(typeof EXECUTION_REGISTRY)[ExecutionIntent]>[0] = {
+        markedKind,
+        markedWindowIds,
+        selectedTabIds
+      }
+      if (intent === "executeMove") {
+        const targetRows = visibleRowIndices
+          .map((ri) => rows[ri])
+          .filter((r): r is TabPickerRow => r !== undefined)
+          .map((r) => {
+            if (r.kind === "tab") {
+              return { kind: "tab" as const, tabId: r.tabId, windowId: r.windowId, groupId: r.groupId }
+            }
+            if (r.kind === "window") {
+              return { kind: "window" as const, windowId: r.windowId }
+            }
+            return { kind: "group" as const, windowId: r.windowId, groupId: r.groupId }
+          })
+        const target = resolvePickerTarget(moveDestHi, targetRows)
+        if (!target) {
+          return
+        }
+        const movePlan = resolvePickerMovePlan(markedKind, target)
+        if (!movePlan) {
+          return
+        }
+        ctx.movePlan = movePlan
+      } else if (intent === "executeGroup") {
+        const groupTarget = resolvePickerGroupTarget(
+          groupPickIndex,
+          groupChoices.map((g) => ({ id: g.id })),
+          NEW_GROUP_LIST_SENTINEL
+        )
+        if (!groupTarget) {
+          return
+        }
+        ctx.groupTarget = groupTarget
+        ctx.onOpenCreateNewMeta = () => {
+          newGroupTabIdsRef.current = [...selectedTabIds]
+          setNewGroupTitle("")
+          setNewGroupColorIndex(0)
+          setGroupNewPhase("meta")
+        }
+      } else if (intent === "executeNewWindow") {
+        const tabs = await Promise.all(selectedTabIds.map((id) => chrome.tabs.get(id)))
+        const newWindowOrder = resolvePickerNewWindowOrder(
+          tabs
+            .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
+            .map((t) => ({ id: t.id, windowId: t.windowId ?? 0, index: t.index ?? 0 }))
+        )
+        ctx.newWindowOrder = newWindowOrder
+      }
+      try {
+        await EXECUTION_REGISTRY[intent](ctx)
+      } catch {
+        return
+      }
+      if (intent === "executeGroup" && ctx.groupTarget?.createNew) {
+        return
+      }
+      clearMarkedViaReducer()
+      if (intent === "executeGroup") {
+        setGroupNewPhase("tabs")
+      }
+      await onRefreshRows?.()
+    },
+    [
+      bulkSubMode,
+      clearMarkedViaReducer,
+      groupChoices,
+      groupPickIndex,
+      hi,
+      markedGroupKeys,
+      markedKind,
+      markedTabIds,
+      markedWindowIds,
+      moveDestHi,
+      onAppendLog,
+      onRefreshRows,
+      resolvePickerGroupTarget,
+      resolvePickerMovePlan,
+      resolvePickerNewWindowOrder,
+      resolvePickerTarget,
+      rows,
+      selectedTabIds
+    ]
+  )
 
   const onMetaTitleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -693,9 +850,8 @@ export function TabPickerOverlay({
           requestAnimationFrame(() => inputRef.current?.focus())
           return
         }
-        if (markedTabIds.length > 0) {
-          setMarkedTabIds([])
-          setBulkSubMode(null)
+        if (markedCount > 0) {
+          applyReducedState({ kind: "clearMarked" })
           shiftRangeAnchorHiRef.current = null
           return
         }
@@ -716,14 +872,14 @@ export function TabPickerOverlay({
           e.preventDefault()
           return
         }
-        if (tabIndices.length === 0) {
+        if (visibleRowIndices.length === 0) {
           e.preventDefault()
           e.stopPropagation()
           return
         }
-        const rowIndex = tabIndices[hi]
+        const rowIndex = visibleRowIndices[hi]
         const row = rowIndex !== undefined ? rows[rowIndex] : undefined
-        if (!row || row.kind !== "tab") {
+        if (!row) {
           e.preventDefault()
           e.stopPropagation()
           return
@@ -731,7 +887,15 @@ export function TabPickerOverlay({
         e.preventDefault()
         e.stopPropagation()
         shiftRangeAnchorHiRef.current = null
-        setMarkedTabIds((m) => toggleMarkedId(m, row.tabId))
+        applyReducedState({
+          kind: "toggleCurrent",
+          row:
+            row.kind === "tab"
+              ? { kind: "tab", tabId: row.tabId }
+              : row.kind === "window"
+                ? { kind: "window", windowId: row.windowId }
+                : { kind: "group", groupKey: groupRowKey(row.windowId, row.groupId) }
+        })
         return
       }
 
@@ -747,24 +911,14 @@ export function TabPickerOverlay({
         return
       }
 
-      if (e.key === " " && markedTabIds.length > 0) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault()
         e.stopPropagation()
-        setBulkSubMode((m) => {
-          if (m === null) {
-            return "move"
-          }
-          if (m === "move") {
-            return "close"
-          }
-          if (m === "close") {
-            return "group"
-          }
-          if (m === "group") {
-            return "newWindow"
-          }
-          return "move"
-        })
+        if (markedCount === 0 || markedKind === null) {
+          return
+        }
+        const step = e.key === "ArrowRight" ? 1 : -1
+        applyReducedState({ kind: "cycleSubMode", direction: step })
         return
       }
 
@@ -774,51 +928,89 @@ export function TabPickerOverlay({
         e.key === "Enter" &&
         !e.shiftKey
       ) {
-        e.preventDefault()
-        if (markedTabIds.length === 0) {
-          void confirmSelection()
-          return
+        // handled by resolvePickerEnterIntent below
+      }
+
+      if (e.key === "Enter") {
+        const intent = resolvePickerEnterIntent(
+          {
+            hi,
+            moveDestHi,
+            markedKind,
+            markedTabIds,
+            markedWindowIds,
+            markedGroupKeys,
+            bulkSubMode
+          },
+          variant,
+          groupNewPhase,
+          selectedTabIds.length,
+          e.shiftKey
+        )
+        if (intent !== "none") {
+          e.preventDefault()
+          if (intent === "openGroupMeta") {
+            newGroupTabIdsRef.current = [...selectedTabIds]
+            setGroupNewPhase("meta")
+            setNewGroupTitle("")
+            setNewGroupColorIndex(0)
+            return
+          }
+          if (
+            intent === "executeClose" ||
+            intent === "executeMove" ||
+            intent === "executeGroup" ||
+            intent === "executeNewWindow"
+          ) {
+            void runExecutionIntent(intent)
+            return
+          }
+          if (intent === "confirmSelection") {
+            void confirmSelection()
+            return
+          }
         }
-        newGroupTabIdsRef.current = [...markedTabIds]
-        setGroupNewPhase("meta")
-        setNewGroupTitle("")
-        setNewGroupColorIndex(0)
-        return
-      }
-
-      if (bulkSubMode === "close" && e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        void executeBulkClose()
-        return
-      }
-
-      if (bulkSubMode === "move" && e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        void executeBulkMove()
-        return
-      }
-
-      if (bulkSubMode === "group" && e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        void executeBulkGroup()
-        return
-      }
-
-      if (bulkSubMode === "newWindow" && e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        void executeBulkNewWindow()
-        return
       }
 
       if (bulkSubMode === "move" && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
         e.preventDefault()
-        if (tabIndices.length === 0) {
+        if (visibleRowIndices.length === 0) {
           return
         }
         if (e.key === "ArrowDown") {
-          setMoveDestHi((d) => (d + 1) % tabIndices.length)
+          applyReducedState({ kind: "moveDest", delta: 1, visibleLen: visibleRowIndices.length })
         } else {
-          setMoveDestHi((d) => (d - 1 + tabIndices.length) % tabIndices.length)
+          applyReducedState({ kind: "moveDest", delta: -1, visibleLen: visibleRowIndices.length })
+        }
+        return
+      }
+
+      if (
+        e.ctrlKey &&
+        e.shiftKey &&
+        (e.key === "ArrowDown" || e.key === "ArrowUp") &&
+        visibleRowIndices.length > 0
+      ) {
+        e.preventDefault()
+        const delta = e.key === "ArrowDown" ? 1 : -1
+        const previewRows = visibleRowIndices.map((ri) => {
+          const r = rows[ri]
+          if (!r) {
+            return { kind: "tab" as const }
+          }
+          if (r.kind === "tab") {
+            return { kind: "tab" as const, tabId: r.tabId }
+          }
+          return { kind: r.kind as "window" | "group" }
+        })
+        const decision = resolvePickerPreview(hi, delta, previewRows)
+        applyReducedState({
+          kind: "moveHi",
+          delta,
+          visibleLen: visibleRowIndices.length
+        })
+        if (decision.activateTabId !== null) {
+          void chrome.tabs.update(decision.activateTabId, { active: true }).catch(() => undefined)
         }
         return
       }
@@ -833,10 +1025,10 @@ export function TabPickerOverlay({
         (e.key === "ArrowDown" || e.key === "ArrowUp")
       ) {
         e.preventDefault()
-        if (tabIndices.length === 0) {
+        if (visibleRowIndices.length === 0) {
           return
         }
-        const n = tabIndices.length
+        const n = visibleRowIndices.length
         if (shiftRangeAnchorHiRef.current === null) {
           shiftRangeAnchorHiRef.current = hi
         }
@@ -847,19 +1039,37 @@ export function TabPickerOverlay({
         } else {
           newHi = (hi - 1 + n) % n
         }
-        setHi(newHi)
+        applyReducedState({
+          kind: "moveHi",
+          delta: e.key === "ArrowDown" ? 1 : -1,
+          visibleLen: n
+        })
         const lo = Math.min(anchor, newHi)
         const hiVis = Math.max(anchor, newHi)
-        const ids: number[] = []
-        for (let v = lo; v <= hiVis; v++) {
-          const ri = tabIndices[v]
-          const row = ri !== undefined ? rows[ri] : undefined
-          if (row?.kind === "tab") {
-            ids.push(row.tabId)
+        const rangeRows = visibleRowIndices.slice(lo, hiVis + 1).map((ri) => {
+          const row = rows[ri]
+          if (!row) {
+            return { kind: "tab" as const }
           }
-        }
-        ids.sort((a, b) => a - b)
-        setMarkedTabIds(ids)
+          if (row.kind === "tab") {
+            return { kind: "tab" as const, tabId: row.tabId }
+          }
+          if (row.kind === "window") {
+            return { kind: "window" as const, windowId: row.windowId }
+          }
+          return {
+            kind: "group" as const,
+            groupKey: groupRowKey(row.windowId, row.groupId)
+          }
+        })
+        applyReducedState({
+          kind: "selectRange",
+          input: {
+            anchor: 0,
+            target: rangeRows.length > 0 ? rangeRows.length - 1 : 0,
+            rows: rangeRows
+          }
+        })
         return
       }
 
@@ -873,12 +1083,6 @@ export function TabPickerOverlay({
         } else {
           setGroupPickIndex((i) => (i - 1 + groupChoices.length) % groupChoices.length)
         }
-        return
-      }
-
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        void confirmSelection()
         return
       }
 
@@ -898,20 +1102,20 @@ export function TabPickerOverlay({
 
       if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
         e.preventDefault()
-        if (tabIndices.length === 0) {
+        if (visibleRowIndices.length === 0) {
           return
         }
         shiftRangeAnchorHiRef.current = null
-        setHi((h) => (h + 1) % tabIndices.length)
+        applyReducedState({ kind: "moveHi", delta: 1, visibleLen: visibleRowIndices.length })
         return
       }
       if (e.key === "k" || e.key === "K" || e.key === "ArrowUp") {
         e.preventDefault()
-        if (tabIndices.length === 0) {
+        if (visibleRowIndices.length === 0) {
           return
         }
         shiftRangeAnchorHiRef.current = null
-        setHi((h) => (h - 1 + tabIndices.length) % tabIndices.length)
+        applyReducedState({ kind: "moveHi", delta: -1, visibleLen: visibleRowIndices.length })
       }
     },
     [
@@ -926,49 +1130,29 @@ export function TabPickerOverlay({
       groupChoices.length,
       hi,
       groupNewPhase,
+      markedCount,
+      markedKind,
+      markedGroupKeys,
       markedTabIds,
-      onExit,
       rows,
+      selectedTabIds,
+      visibleRowIndices,
+      onExit,
+      runExecutionIntent,
       searchMode,
-      tabIndices,
-      tabIndices.length,
       variant
     ]
   )
 
-  const headLine = useMemo(() => {
-    if (bulkSubMode === "group" && groupNewPhase === "meta") {
-      return "Tab picker — [GROUP] 新規 · 名前・色 · Enter 確定 · Esc でターゲット一覧へ · Tab 名前↔色"
-    }
-    if (variant === "groupNew" && groupNewPhase === "meta") {
-      return "group new — 名前・色 · Enter 確定 · Esc タブ一覧へ · Tab 名前↔色"
-    }
-    if (variant === "groupNew" && groupNewPhase === "tabs") {
-      return "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc"
-    }
-    const parts = [
-      "j/k move",
-      "Shift+↑↓ range #",
-      "Tab #",
-      "Space move/close/group/new win",
-      "/ search",
-      "Enter page (keep open)",
-      "Esc clear # / exit"
-    ]
-    if (bulkSubMode === "move") {
-      return `Tab picker — [MOVE] ↑↓ dest · Enter apply · ${parts.join(" · ")}`
-    }
-    if (bulkSubMode === "close") {
-      return `Tab picker — [CLOSE] Enter remove # tabs · ${parts.join(" · ")}`
-    }
-    if (bulkSubMode === "group") {
-      return `Tab picker — [GROUP] ↑↓ 既存 or 新規 · Enter · ${parts.join(" · ")}`
-    }
-    if (bulkSubMode === "newWindow") {
-      return `Tab picker — [NEW WINDOW] Enter move # tabs to new window · ${parts.join(" · ")}`
-    }
-    return `Tab picker — ${parts.join(" · ")}`
-  }, [bulkSubMode, groupNewPhase, variant])
+  const headLine = useMemo(
+    () =>
+      resolvePickerHeadline({
+        bulkSubMode,
+        groupNewPhase,
+        variant
+      }),
+    [bulkSubMode, groupNewPhase, variant]
+  )
 
   const setRowRef = useCallback((rowIndex: number, el: HTMLDivElement | null) => {
     if (el) {
@@ -1028,37 +1212,57 @@ export function TabPickerOverlay({
         aria-label="Tabs"
         aria-multiselectable={true}
         aria-activedescendant={
-          tabIndices[hi] !== undefined ? `bmxt-tab-row-${tabIndices[hi]}` : undefined
+          visibleRowIndices[hi] !== undefined ? `bmxt-tab-row-${visibleRowIndices[hi]}` : undefined
         }>
         {rows.length === 0 ? (
           <div className="bmxt-tab-picker-empty">(タブなし)</div>
         ) : (
           rows.map((row, i) => {
+            const hidden = visibleRowIndices.indexOf(i) < 0
+            if (hidden) {
+              return null
+            }
+            const visIndex = visibleRowIndices.indexOf(i)
+            const hiRow = visibleRowIndices[hi] === i
+            const moveDestRow =
+              bulkSubMode === "move" &&
+              visIndex >= 0 &&
+              visibleRowIndices[moveDestHi] === i
             if (row.kind === "window") {
+              const markedRow = markedWindowSet.has(row.windowId)
               return (
-                <div key={i} className="bmxt-tab-picker-row bmxt-tab-picker-row--window">
+                <div
+                  key={i}
+                  id={`bmxt-tab-row-${i}`}
+                  ref={(el) => setRowRef(i, el)}
+                  className={`bmxt-tab-picker-row bmxt-tab-picker-row--window${
+                    hiRow ? " bmxt-tab-picker-row--hi" : ""
+                  }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
+                    moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
+                  }`}>
+                  <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
                   {row.label}
                 </div>
               )
             }
             if (row.kind === "group") {
+              const markedRow = markedGroupSet.has(groupRowKey(row.windowId, row.groupId))
               return (
-                <div key={i} className="bmxt-tab-picker-row bmxt-tab-picker-row--group">
+                <div
+                  key={i}
+                  id={`bmxt-tab-row-${i}`}
+                  ref={(el) => setRowRef(i, el)}
+                  className={`bmxt-tab-picker-row bmxt-tab-picker-row--group${
+                    hiRow ? " bmxt-tab-picker-row--hi" : ""
+                  }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
+                    moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
+                  }`}>
+                  <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
                   {row.label}
                 </div>
               )
             }
-            const hidden = tabIndices.indexOf(i) < 0
-            if (hidden) {
-              return null
-            }
-            const visIndex = tabIndices.indexOf(i)
-            const hiRow = tabIndices[hi] === i
-            const markedRow = markedSet.has(row.tabId)
-            const moveDestRow =
-              bulkSubMode === "move" &&
-              visIndex >= 0 &&
-              tabIndices[moveDestHi] === i
+            const markedRow = markedTabSet.has(row.tabId)
             const rowClass = `bmxt-tab-picker-row bmxt-tab-picker-row--tab${
               hiRow ? " bmxt-tab-picker-row--hi" : ""
             }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
@@ -1077,7 +1281,7 @@ export function TabPickerOverlay({
                     {(activeTabId !== null ? activeTabId === row.tabId : row.active) ? "*" : " "}
                   </span>
                   <span className="bmxt-tab-picker-tab-glyph">
-                    {markedSet.has(row.tabId) ? "#" : " "}
+                    {markedTabSet.has(row.tabId) ? "#" : " "}
                   </span>
                   {displayTitle(row.title)}
                 </div>

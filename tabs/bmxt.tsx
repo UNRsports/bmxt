@@ -290,7 +290,7 @@ function IndexBmxtWindow() {
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
             `> ${trimmed}`,
-            "Tab picker — j/k move · Tab # · Space move/close/group/new win · / search · Enter · Esc"
+            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / search · Ctrl+Shift+↑↓ active · Enter · Esc"
           ])
           setTabPicker({ rows, showUrl, initialHi })
         } catch (e) {

@@ -4,9 +4,17 @@ const DISPLAY_TITLE_MAX = 96
 const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
 export type TabPickerRow =
-  | { kind: "window"; label: string; focused: boolean }
-  | { kind: "group"; label: string }
-  | { kind: "tab"; tabId: number; windowId: number; title: string; url: string; active: boolean }
+  | { kind: "window"; windowId: number; label: string; focused: boolean }
+  | { kind: "group"; windowId: number; groupId: number | null; label: string }
+  | {
+      kind: "tab"
+      tabId: number
+      windowId: number
+      groupId: number | null
+      title: string
+      url: string
+      active: boolean
+    }
 
 export function displayTitle(raw: string | undefined | null): string {
   const t = (raw || "").trim().replace(/\s+/g, " ")
@@ -90,6 +98,7 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
     const f = winFocused.get(wid) ?? false
     rows.push({
       kind: "window",
+      windowId: wid,
       label: `${f ? "*" : " "}[ウィンドウ] ${displayTitle(active?.title)}`,
       focused: f
     })
@@ -99,9 +108,14 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
       const key = groupKey(t)
       if (key !== prevKey) {
         if (key === "none") {
-          rows.push({ kind: "group", label: "(グループなし)" })
+          rows.push({ kind: "group", windowId: wid, groupId: null, label: "(グループなし)" })
         } else {
-          rows.push({ kind: "group", label: formatGroupLabel(groupMeta.get(key)) })
+          rows.push({
+            kind: "group",
+            windowId: wid,
+            groupId: key,
+            label: formatGroupLabel(groupMeta.get(key))
+          })
         }
         prevKey = key
       }
@@ -109,6 +123,7 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
         kind: "tab",
         tabId: t.id!,
         windowId: wid,
+        groupId: key === "none" ? null : key,
         title: t.title || "",
         url: tabUrl(t),
         active: Boolean(t.active)
