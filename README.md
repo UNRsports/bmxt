@@ -204,6 +204,14 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - When one or more tabs have `#`, press `Space` to cycle **[MOVE]** → **[CLOSE]** → **[GROUP]** → **[NEW WINDOW]**.
 - Use `/` for incremental search (`@` prefix for URL match). `Enter` focuses the highlighted tab while keeping picker open; `Esc` exits according to picker state.
 
+#### English: Tab picker — implementation (keyboard & reducer)
+
+- **Global capture**: `TabPickerOverlay` registers a **`window` `keydown` listener in the capture phase** so **↑/↓/j/k** are handled even when focus is not on the picker’s invisible filter `textarea` (e.g. after clicking the list). The same navigation logic also runs from the filter `textarea`’s `onKeyDown` when the event reaches it.
+- **Reducer JSON (WASM)**: Transitions go through **`tabsPickerReduce`** (`lib/features/wasm-core/index.ts` → `wasm/bmxt-core`). State and events are JSON with **camelCase** keys matching Serde `rename_all = "camelCase"` in Rust (e.g. `kind: "moveHi"`, `visibleLen`).
+- **Silent WASM failures**: If the WASM entrypoint fails to deserialize the **event** JSON, it returns the **input state unchanged** (no error surfaced). A **TypeScript fallback** in **`runTabsPickerReduce`** corrects **`moveHi`** and **`moveDest`** when the returned indices clearly did not advance (covers stale/mismatched bundled `.wasm`).
+- **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in `picker-overlay.tsx`). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
+- **Prompt coexisting with picker**: While the tab picker is open, **`tabs/bmxt.tsx`** suppresses **↑/↓/j/k** on the main prompt so they do **not** drive **command history**; navigation is handled only by the picker.
+
 #### 日本語: タブピッカー（`tabs -l` / `tabs -l -u`）
 
 - 起動時は、直前にフォーカスしていた通常ブラウザウィンドウのアクティブタブ位置にハイライトを合わせます。
@@ -213,6 +221,14 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。
 - `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。検索中でも `Tab` の `#` 切替と `Space` のモード切替は有効です。`Esc` は、**いずれかに `#` が付いていればまずすべて解除**（ピッカーは維持）。続いて「検索終了 → バルクサブモード終了 → ピッカー終了」の順です。
 - バルクモードでない `Enter` は、ハイライト中タブをアクティブ化して対象ウィンドウを前面化します（ピッカーは維持）。
+
+#### 日本語: タブピッカー — 実装（キー配信とリデューサ）
+
+- **ウィンドウキャプチャ**: `TabPickerOverlay` は **`window` に `keydown`（キャプチャ）**を登録し、フィルタ用の不可視 `textarea` 以外にフォーカスがあっても **↑/↓/j/k** を拾います。フォーカスが textarea にあるときは `onInputKeyDown` でも同じナビ処理をします。
+- **リデューサ JSON（WASM）**: 状態遷移は **`tabsPickerReduce`**（`lib/features/wasm-core` → `wasm/bmxt-core`）。JSON は Rust 側 Serde の **`rename_all = "camelCase"`** に合わせ、**`kind: "moveHi"`** や **`visibleLen`** など **camelCase** で渡します。
+- **WASM が無言で失敗するとき**: イベント JSON のデシリアライズに失敗すると **入力 state がそのまま返る**ため、同梱 `.wasm` がソースとずれているとハイライトが進みません。**`moveHi` / `moveDest`** については、戻り値の添字が進んでいない場合に限り TypeScript 側で **折り返しと同じ計算**を補います。
+- **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
+- **ピッカー表示中のプロンプト**: `tabs/bmxt.tsx` でピッカー表示中はメイン textarea の **↑/↓/j/k をコマンド履歴に使わない**ようにし、ピッカーと競合しないようにしています。
 
 #### English: URL Lines (`http` / `https`)
 
@@ -232,6 +248,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 **Registry, `help` / `man` text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. For lines sent to the Service Worker, **`dispatchFull`** returns either terminal **`lines`** or JSON **`effects`**. Effects that need **`chrome.*`** are applied in TypeScript (`lib/features/dispatch/handlers/apply-one.ts`, from `apply-effects.ts`). Tab completion candidate **names** come from **`completionCandidatesJson()`** in the same WASM module (with a small TS fallback in `lib/features/builtin-commands/` if WASM fails to load).
 
+The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer events/state; after changing **`wasm/bmxt-core/src/features/tabs_picker/model.rs`**, rebuild **`assets/wasm/bmxt-core`** with **`npm run build:wasm`** (see **Tab picker — implementation** under **`tabs`**). The TS layer includes a narrow fallback for **`moveHi` / `moveDest`** when WASM returns an unchanged state.
+
 **Exception — UI-handled first:** some inputs are handled in the BMXt page (`tabs/bmxt.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -l` / `tabs -l -u`** (tab picker) and **interactive `group new`** (no tab ids). Other subcommands and the rest of the command set go through WASM dispatch in the background.
 
 **`exit`:** returns an **`exit_bmxt`** effect; the Service Worker clears the session log and closes the BMXt window it tracks (`chrome.windows.remove`). If WASM fails to load, **`clear`** and **`exit`** still run equivalent logic in `background.ts` (log clear; **`exit`** also closes the window).
@@ -239,6 +257,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ### 日本語
 
 **レジストリ・`help` / `man` 本文・トークン化・URL 専用行**は **`wasm/bmxt-core`（Rust / WASM）** に置いています。Service Worker に送られた行に対して **`dispatchFull`** は **`lines`** か JSON **`effects`** を返し、**`effects`** の `chrome.*` 操作は `lib/features/dispatch/handlers/apply-one.ts`（`apply-effects.ts` 経由）で行います。Tab 補完の**コマンド名候補**は WASM の **`completionCandidatesJson`**（WASM 未ロード時は `lib/features/builtin-commands/` のフォールバック）。
+
+タブピッカーの **`tabsPickerReduce`** はリデューサのイベント／状態を **camelCase の JSON** でやり取りします。**`wasm/bmxt-core/src/features/tabs_picker/model.rs`** を変えたら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再ビルドしてください（詳細は **`tabs`** の **タブピッカー — 実装**）。**`moveHi` / `moveDest`** については、WASM が入力と同じ状態を返した場合に限り TypeScript 側で狭いフォールバックをかけています。
 
 **例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ページ（`tabs/bmxt.tsx`）で処理します。例: **`tabs -l` / `tabs -l -u`**（タブピッカー）、**対話的な `group new`**（タブ ID なし）。それ以外のサブコマンドと一般コマンドはバックグラウンドで WASM dispatch します。
 
@@ -250,7 +270,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **`lib/features/builtin-commands/`** — WASM 失敗時の Tab 補完フォールバックなど  
 - **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_bmxt` でセッションログ削除のあと BMXt ウィンドウを閉じる。WASM 未ロード時は **`clear` / `exit` だけ** `background.ts` 同等処理にフォールバック。詳細は上の英語「**`exit`:**」段落も参照）
 
-Rust を変更したら **`npm run build:wasm`** で再生成してから `npm run build` してください。
+Rust を変更したら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再生成してから `npm run build` してください。**タブピッカーの JSON 形式（`PickerEvent`）が WASM と一致している必要があります。** `npm run build:wasm` が `wasm-bindgen` の取得で失敗する環境では、`wasm/bmxt-core` で `cargo build --release --target wasm32-unknown-unknown` のあと、インストール済みの **`wasm-bindgen`** で `bmxt_core.wasm` から `assets/wasm/bmxt-core` へ生成し直してください。
 
 ### Add a New Built-in Command
 
