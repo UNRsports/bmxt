@@ -83,25 +83,25 @@ type CreateGroupPlan = {
   strategy: "moveWholeGroup" | "ungroupThenMoveTabs" | null
 }
 
-type CurrentRow = {
+export type PickerCurrentRow = {
   kind: PickerSelectKind
   tabId?: number
   windowId?: number
   groupKey?: string
 }
 
-type RangeSelectInput = {
+export type PickerRangeSelectInput = {
   anchor: number
   target: number
-  rows: CurrentRow[]
+  rows: PickerCurrentRow[]
 }
 
-type PickerReducerEvent =
+export type PickerReducerEvent =
   | { kind: "moveHi"; delta: number; visibleLen: number }
   | { kind: "moveDest"; delta: number; visibleLen: number }
   | { kind: "cycleSubMode"; direction: number; implicitKind?: PickerSelectKind }
-  | { kind: "toggleCurrent"; row: CurrentRow }
-  | { kind: "selectRange"; input: RangeSelectInput }
+  | { kind: "toggleCurrent"; row: PickerCurrentRow }
+  | { kind: "selectRange"; input: PickerRangeSelectInput }
   | { kind: "clearMarked" }
 
 export function reducePickerState(

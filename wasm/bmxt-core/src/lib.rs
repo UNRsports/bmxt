@@ -32,7 +32,14 @@ pub fn tabs_picker_reduce_js(state_json: &str, event_json: &str) -> String {
     };
     let ev: PickerEvent = match serde_json::from_str(event_json) {
         Ok(e) => e,
-        Err(_) => return state_json.to_string(),
+        Err(_) => {
+            if let Some(out) =
+                crate::features::tabs_picker::reducer::reduce_with_loose_event_fallback(state, event_json)
+            {
+                return serde_json::to_string(&out).unwrap_or_else(|_| state_json.to_string());
+            }
+            return state_json.to_string();
+        }
     };
     serde_json::to_string(&reduce(state, ev)).unwrap_or_else(|_| state_json.to_string())
 }

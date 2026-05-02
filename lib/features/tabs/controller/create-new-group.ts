@@ -1,7 +1,8 @@
 type NewGroupCreateParams = {
   tabIds: number[]
   title: string
-  color: chrome.tabGroups.Color
+  /** `tabGroups.Color` 相当の文字列（`NEW_GROUP_COLORS` の要素） */
+  color: string
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onExit: () => void
   resolveCreateGroupPlan: (context: {
@@ -104,7 +105,9 @@ export async function executeCreateNewGroupAction(params: NewGroupCreateParams):
     }
 
     const groupId = await chrome.tabs.group({ tabIds })
-    const updatePayload: chrome.tabGroups.UpdateProperties = { color }
+    const updatePayload: chrome.tabGroups.UpdateProperties = {
+      color: color as chrome.tabGroups.UpdateProperties["color"]
+    }
     if (trimmedTitle.length > 0) {
       updatePayload.title = trimmedTitle
     }

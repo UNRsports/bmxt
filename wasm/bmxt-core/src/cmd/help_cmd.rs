@@ -1,6 +1,8 @@
-//! `help` のレジストリ行。実行ロジックは `dispatch` が `registry::api::build_help_lines` に委譲する。
+//! `help` のレジストリ行と `run`。
 
 use crate::meta::Cmd;
+use crate::model::DispatchJson;
+use crate::registry::api;
 
 pub const CMD: Cmd = Cmd {
     name: "help",
@@ -17,3 +19,7 @@ pub const CMD: Cmd = Cmd {
         "  man(1) for per-command manuals; man url for typed-URL opening",
     ],
 };
+
+pub fn run(_args: &[String]) -> DispatchJson {
+    DispatchJson::lines(api::build_help_lines())
+}

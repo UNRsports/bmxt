@@ -88,61 +88,12 @@ export function getCompletionCandidates(): string[] {
   return cachedCompletion
 }
 
-/**
- * `rem_euclid` と同じ折り返し（Rust `wrap_index` と一致させる）
- */
-function wrapIndexUi(cur: number, delta: number, len: number): number {
-  if (len <= 0) {
-    return 0
-  }
-  const l = len
-  const x = cur + delta
-  return ((x % l) + l) % l
-}
-
-type PickerEventLike = {
-  kind: string
-  delta?: number
-  visibleLen?: number
-}
-
-type PickerStateLike = {
-  hi: number
-  moveDestHi: number
-}
-
-/**
- * WASM 側でイベント JSON のデシリアライズに失敗すると元の state が返る（`lib.rs` の `Err(_) => return state_json`）。
- * 拡張の再読み込みやビルドの食い違いで起き得るため、移動系だけ JS で再計算する。
- */
+/** Tab ピッカーの reducer。移動系のフォールバックは WASM 内（`reduce_with_loose_event_fallback`）で処理 */
 export function runTabsPickerReduce<TState, TEvent>(state: TState, event: TEvent): TState {
   assertCoreReady()
   const stateJson = JSON.stringify(state)
   const eventJson = JSON.stringify(event)
-  const out = JSON.parse(tabsPickerReduce(stateJson, eventJson)) as TState
-
-  const ev = event as PickerEventLike
-  const st = state as PickerStateLike
-  if (ev.kind === "moveHi" && typeof ev.delta === "number" && typeof ev.visibleLen === "number") {
-    if (typeof st.hi === "number" && ev.visibleLen > 0) {
-      const want = wrapIndexUi(st.hi, ev.delta, ev.visibleLen)
-      const o = out as PickerStateLike
-      if (o.hi === st.hi && want !== st.hi) {
-        return { ...out, hi: want } as TState
-      }
-    }
-    return out
-  }
-  if (ev.kind === "moveDest" && typeof ev.delta === "number" && typeof ev.visibleLen === "number") {
-    if (typeof st.moveDestHi === "number" && ev.visibleLen > 0) {
-      const want = wrapIndexUi(st.moveDestHi, ev.delta, ev.visibleLen)
-      const o = out as PickerStateLike
-      if (o.moveDestHi === st.moveDestHi && want !== st.moveDestHi) {
-        return { ...out, moveDestHi: want } as TState
-      }
-    }
-  }
-  return out
+  return JSON.parse(tabsPickerReduce(stateJson, eventJson)) as TState
 }
 
 export function resolveTabsPickerEnterIntent<TContext, TIntent>(context: TContext): TIntent {
