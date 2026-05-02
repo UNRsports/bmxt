@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BMXt — Privacy Policy</title>
+    <link rel="icon" type="image/png" href="icon.png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fafafa;
+        --fg: #1a1a1a;
+        --muted: #555;
+        --border: #ddd;
+        --accent: #2563eb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121212;
+          --fg: #eee;
+          --muted: #aaa;
+          --border: #333;
+          --accent: #60a5fa;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 1rem;
+        line-height: 1.65;
+        color: var(--fg);
+        background: var(--bg);
+      }
+      .wrap {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 4rem;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      header img {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0.25rem 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      nav.lang {
+        margin-bottom: 2rem;
+        font-size: 0.95rem;
+      }
+      nav.lang a {
+        color: var(--accent);
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 2rem 0 0.75rem;
+        padding-top: 0.5rem;
+      }
+      h2:first-of-type {
+        margin-top: 0;
+      }
+      h3 {
+        font-size: 1.05rem;
+        margin: 1.25rem 0 0.5rem;
+      }
+      p,
+      li {
+        margin: 0.5rem 0;
+        color: var(--fg);
+      }
+      ul {
+        padding-left: 1.35rem;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .box {
+        margin: 1rem 0;
+        padding: 1rem 1.1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--bg) 92%, var(--fg));
+      }
+      hr.sep {
+        margin: 3rem 0;
+        border: none;
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <img src="icon.png" width="48" height="48" alt="" />
+        <div>
+          <h1>BMXt — Privacy Policy</h1>
+          <p class="muted">Last updated: May 2, 2026</p>
+        </div>
+      </header>
+
+      <nav class="lang" aria-label="Language">
+        <a href="#english">English</a> · <a href="#japanese">日本語</a>
+      </nav>
+
+      <section id="english" lang="en">
+        <h2>1. Introduction</h2>
+        <p>
+          This Privacy Policy describes how the <strong>BMXt</strong> browser extension (“BMXt”, “the
+          Extension”) processes information when you install and use it. BMXt is published by
+          <strong>UNRsports</strong> (“we”, “us”). This page is hosted on GitHub Pages for transparency and
+          for use in store listings (for example, the Chrome Web Store).
+        </p>
+
+        <h2>2. Scope</h2>
+        <p>
+          This policy applies to the Extension installed from official distribution channels we authorize
+          (such as the Chrome Web Store) and to information processed within your browser as part of using
+          BMXt. It does not cover third-party websites you visit, except where the Extension reads limited
+          browser data through Chrome APIs as described below.
+        </p>
+
+        <h2>3. Summary</h2>
+        <div class="box">
+          <ul>
+            <li>
+              BMXt is a <strong>local productivity tool</strong> for managing tabs, tab groups, and
+              browser windows from a dedicated extension UI.
+            </li>
+            <li>
+              We do <strong>not</strong> sell your personal information. We do <strong>not</strong> run
+              advertising analytics inside the Extension as shipped from our official builds.
+            </li>
+            <li>
+              Data needed for the Extension to function is processed <strong>on your device</strong>,
+              primarily using Chrome extension APIs and <code>chrome.storage.local</code>.
+            </li>
+            <li>
+              We do <strong>not</strong> operate our own backend servers that receive your browsing data or
+              extension state from BMXt for the purposes described in this policy.
+            </li>
+          </ul>
+        </div>
+
+        <h2>4. Information the Extension may access</h2>
+        <p>
+          Depending on how you use BMXt, the Extension may access the following categories of information
+          through Chrome APIs:
+        </p>
+        <h3>4.1 Tabs and browsing context</h3>
+        <p>
+          The Extension uses the <code>tabs</code> permission to query and manage open tabs—for example to
+          list tabs in its picker UI, read tab titles and URLs as presented by the browser for those tabs,
+          activate or move tabs, open or close tabs, and navigate within a tab when you issue supported
+          commands. This processing occurs locally to carry out tab and window management features you
+          initiate.
+        </p>
+        <h3>4.2 Tab groups</h3>
+        <p>
+          The Extension uses the <code>tabGroups</code> permission to read and update tab group metadata and
+          to move groups between windows when you use grouping-related features.
+        </p>
+        <h3>4.3 Browser windows</h3>
+        <p>
+          The Extension uses the <code>windows</code> permission to create, focus, enumerate, or close
+          windows when you run commands that organize tabs and groups across windows.
+        </p>
+        <h3>4.4 Local storage (extension storage)</h3>
+        <p>
+          The Extension uses <code>chrome.storage.local</code> to persist small amounts of data on your
+          device, including:
+        </p>
+        <ul>
+          <li>
+            <strong>Command history</strong> — recent commands you typed in the Extension UI (subject to
+            limits enforced in the Extension).
+          </li>
+          <li>
+            <strong>Session log</strong> — text output shown in the Extension UI (subject to line limits).
+          </li>
+          <li>
+            <strong>Last focused normal window</strong> — a window identifier used to route focus-related
+            behavior within the Extension.
+          </li>
+        </ul>
+        <p>This storage remains on your device under Chrome’s extension storage rules.</p>
+
+        <h2>5. WebAssembly (WASM)</h2>
+        <p>
+          Parts of BMXt may execute WebAssembly modules <strong>bundled inside the Extension package</strong>
+          to perform command handling and related logic. That code runs locally in your browser and is not
+          remotely hosted code as part of the Extension’s normal operation.
+        </p>
+
+        <h2>6. Remote code</h2>
+        <p>
+          The Extension is not designed to download and execute arbitrary JavaScript or WebAssembly from the
+          network for its core behavior. Extension updates are delivered through the browser’s extension update
+          mechanism (for example, via the Chrome Web Store when you install from there).
+        </p>
+
+        <h2>7. Data transmission and third parties</h2>
+        <p>
+          BMXt does not transmit your tab list, tab metadata, command history, or session log to servers
+          operated by UNRsports for collection or profiling as part of using the Extension.
+        </p>
+        <p>
+          When you use the Extension, your browser or operating system may still communicate with Google or
+          other services under their own terms (for example, Chrome Web Store installation and updates, or
+          Chrome itself). This policy does not replace Google’s policies for Chrome or the store.
+        </p>
+        <p>
+          This privacy policy page is hosted on <strong>GitHub Pages</strong>. Viewing this page involves
+          GitHub’s hosting infrastructure; please refer to GitHub’s privacy statement for how GitHub
+          processes technical data related to that access.
+        </p>
+
+        <h2>8. Legal bases and use limitations</h2>
+        <p>
+          We process the information described above solely to provide the Extension’s stated functionality
+          (managing tabs, groups, and windows through user-initiated commands) and to maintain minimal local
+          UI state. We do not use this information for creditworthiness, lending decisions, or unrelated
+          profiling.
+        </p>
+
+        <h2>9. Children’s privacy</h2>
+        <p>
+          BMXt is not directed at children under 13, and we do not knowingly collect personal information from
+          children through the Extension for marketing purposes.
+        </p>
+
+        <h2>10. Changes to this policy</h2>
+        <p>
+          We may update this Privacy Policy when the Extension’s behavior or legal requirements change. The
+          “Last updated” date at the top of this page will be revised when we publish a new version. If the
+          Extension materially changes how it handles data, we will reflect that here and, where required by
+          applicable rules or store policies, in release notes or store disclosures.
+        </p>
+
+        <h2>11. Contact</h2>
+        <p>
+          Questions about this policy or the Extension’s privacy practices may be raised via the project
+          repository:
+        </p>
+        <p>
+          <a href="https://github.com/UNRsports/bmxt">https://github.com/UNRsports/bmxt</a><br />
+          (for example, through GitHub Issues where applicable).
+        </p>
+      </section>
+
+      <hr class="sep" />
+
+      <section id="japanese" lang="ja">
+        <h2>1. はじめに</h2>
+        <p>
+          本プライバシーポリシーは、ブラウザ拡張機能 <strong>BMXt</strong>（以下「本拡張機能」）の利用に
+          際して、どのような情報がどのように扱われるかを説明するものです。本拡張機能は
+          <strong>UNRsports</strong>（以下「当方」）により提供されます。本ページは GitHub Pages 上で公開し、
+          透明性の確保および Chrome ウェブストア等のストア申請におけるプライバシーポリシー URL として利用できる
+          ようにしています。
+        </p>
+
+        <h2>2. 適用範囲</h2>
+        <p>
+          本ポリシーは、当方が正式に配布する経路（Chrome ウェブストア等）からインストールされた本拡張機能と、
+          本拡張機能の利用に伴いブラウザ内で処理される情報に適用されます。ユーザーが閲覧する第三者のウェブサイト
+          そのものの取り扱いは各サイトの方針に従いますが、本拡張機能が Chrome API
+          を通じて限定的にブラウザ情報にアクセスする場合は、以下に記載します。
+        </p>
+
+        <h2>3. 要約</h2>
+        <div class="box">
+          <ul>
+            <li>
+              BMXt は、タブ・タブグループ・ブラウザウィンドウを、<strong>専用の拡張機能 UI
+              から操作する</strong>ためのローカル向け生産性ツールです。
+            </li>
+            <li>
+              当方が提供する公式ビルドにおいて、本拡張機能内に <strong>広告目的の分析ツールを組み込み、利用者の
+              個人情報を販売する</strong>ことは行いません。
+            </li>
+            <li>
+              機能に必要なデータは、主に Chrome の拡張機能 API および
+              <code>chrome.storage.local</code> を用いて <strong>お使いの端末上</strong>で処理されます。
+            </li>
+            <li>
+              本ポリシーに記載する目的で、閲覧データや拡張機能の状態を当方のサーバーに送受信する仕組みは
+              運用していません。
+            </li>
+          </ul>
+        </div>
+
+        <h2>4. 本拡張機能がアクセスし得る情報</h2>
+        <p>利用内容に応じて、本拡張機能は Chrome API を通じて次のカテゴリの情報にアクセスすることがあります。</p>
+
+        <h3>4.1 タブおよび閲覧コンテキスト</h3>
+        <p>
+          ピッカー UI の一覧表示、タイトルや URL
+          による操作、タブの移動・作成・閉鎖、対応するコマンドによるナビゲーション等のため、<code>tabs</code>
+          権限により開いているタブを参照・操作します。これらはユーザーが開始したタブ／ウィンドウ管理機能を
+          端末上で実現するためにのみ用います。
+        </p>
+
+        <h3>4.2 タブグループ</h3>
+        <p>
+          グループ関連の機能のため、<code>tabGroups</code> 権限によりグループ情報の参照・更新や、ウィンドウ間の
+          グループ移動等を行います。
+        </p>
+
+        <h3>4.3 ブラウザウィンドウ</h3>
+        <p>
+          タブやグループをウィンドウ間で整理する操作のため、<code>windows</code> 権限によりウィンドウの作成、
+          フォーカス、列挙、閉鎖等を行うことがあります。
+        </p>
+
+        <h3>4.4 ローカルストレージ（拡張機能ストレージ）</h3>
+        <p>
+          <code>chrome.storage.local</code> を用いて、端末内に限り次のようなデータを保存することがあります。
+        </p>
+        <ul>
+          <li><strong>コマンド履歴</strong> — 本拡張機能 UI に入力されたコマンドの履歴（拡張機能側で上限あり）。</li>
+          <li><strong>セッションログ</strong> — UI に表示するログ出力（行数に上限あり）。</li>
+          <li>
+            <strong>最後にフォーカスした通常ウィンドウ</strong> — フォーカス関連の動作のために用いるウィンドウ ID。
+          </li>
+        </ul>
+        <p>これらは Chrome の拡張機能ストレージの仕組みのもと、ユーザーの端末内に留まります。</p>
+
+        <h2>5. WebAssembly（WASM）</h2>
+        <p>
+          コマンド処理等のために、<strong>拡張機能パッケージに同梱された</strong> WebAssembly
+          をブラウザ内で実行することがあります。通常の利用において、ネットワークから任意のコードを取得して
+          実行する設計にはしていません。
+        </p>
+
+        <h2>6. リモートコード</h2>
+        <p>
+          本拡張機能の中核動作として、ネットワークから任意の JavaScript / WebAssembly を取得して実行することは
+          想定していません。更新は、Chrome ウェブストア等を通じたブラウザの拡張機能更新メカニズムに従います。
+        </p>
+
+        <h2>7. データの送信と第三者</h2>
+        <p>
+          本拡張機能の利用に際し、タブ一覧・タブに関するメタデータ・コマンド履歴・セッションログを、UNRsports
+          が収集・プロファイル目的で運用するサーバーに送信することはありません。
+        </p>
+        <p>
+          一方で、Chrome や OS の動作として、Google 等のサービスとの通信が発生する場合があります（ウェブストア
+          からのインストール・更新等）。その取り扱いは Google のポリシーに従い、本ポリシーは Chrome やストア
+          そのものの条件に取って代わるものではありません。
+        </p>
+        <p>
+          本プライバシーポリシーページは <strong>GitHub Pages</strong> でホストされています。ページ閲覧時に
+          GitHub のインフラを経由する点については、GitHub のプライバシーに関する説明をご参照ください。
+        </p>
+
+        <h2>8. 利用目的の制限</h2>
+        <p>
+          上記の情報は、本拡張機能が明示する機能（ユーザーが開始したタブ・グループ・ウィンドウの管理）および
+          最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、これらと無関係なプロファイル目的には
+          用いません。
+        </p>
+
+        <h2>9. 児童のプライバシー</h2>
+        <p>
+          本拡張機能は 13 歳未満の児童を対象としたものではなく、マーケティング目的で児童から意図的に個人情報を
+          収集することはありません。
+        </p>
+
+        <h2>10. 本ポリシーの変更</h2>
+        <p>
+          本拡張機能の動作や法令・ストア要件の変化に応じて、本プライバシーポリシーを更新することがあります。
+          更新時には本ページ上部の「Last updated / 最終更新」を改めます。データの取り扱いに重要な変更がある場合は、
+          本ページおよび必要に応じてリリースノートやストア上の開示を更新します。
+        </p>
+
+        <h2>11. お問い合わせ</h2>
+        <p>
+          本ポリシーまたは本拡張機能のプライバシーに関する問い合わせは、次のリポジトリから行ってください（GitHub
+          Issues 等）。
+        </p>
+        <p>
+          <a href="https://github.com/UNRsports/bmxt">https://github.com/UNRsports/bmxt</a>
+        </p>
+      </section>
+
+      <p class="muted" style="margin-top: 3rem">
+        © UNRsports · BMXt · <a href="https://github.com/UNRsports/bmxt">GitHub</a>
+      </p>
+    </div>
+  </body>
+</html>
