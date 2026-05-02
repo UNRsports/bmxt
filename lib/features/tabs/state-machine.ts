@@ -12,7 +12,7 @@ import { resolveTabsPickerCreateGroupPlan } from "../wasm-core"
 import { resolveTabsPickerHeadline } from "../wasm-core"
 
 export type PickerSelectKind = "window" | "group" | "tab"
-export type PickerBulkSubMode = "move" | "close" | "group" | "newWindow"
+export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow"
 
 export type PickerReducerState = {
   hi: number
@@ -30,6 +30,7 @@ type EnterIntent =
   | "none"
   | "confirmSelection"
   | "openGroupMeta"
+  | "openNewTabUrlMeta"
   | "executeClose"
   | "executeMove"
   | "executeGroup"
@@ -156,19 +157,22 @@ export function resolvePickerPreview(
 
 export function validatePickerExecute(
   state: PickerReducerState,
-  selectedTabCount: number
+  selectedTabCount: number,
+  implicitWindowId?: number
 ): ExecuteValidation {
   return validateTabsPickerExecute<
     {
       markedKind: PickerReducerState["markedKind"]
       bulkSubMode: PickerReducerState["bulkSubMode"]
       selectedTabCount: number
+      implicitWindowId?: number
     },
     ExecuteValidation
   >({
     markedKind: state.markedKind,
     bulkSubMode: state.bulkSubMode,
-    selectedTabCount
+    selectedTabCount,
+    ...(typeof implicitWindowId === "number" ? { implicitWindowId } : {})
   })
 }
 

@@ -17,6 +17,7 @@ export function useTabPickerSyncAndLayoutEffects({
   setHi,
   setMoveDestHi,
   groupNewPhase,
+  newTabUrlWindowId,
   searchMode,
   inputRef,
   groupMetaTitleRef,
@@ -48,6 +49,7 @@ export function useTabPickerSyncAndLayoutEffects({
   setHi: Dispatch<SetStateAction<number>>
   setMoveDestHi: Dispatch<SetStateAction<number>>
   groupNewPhase: "tabs" | "meta"
+  newTabUrlWindowId: number | null
   searchMode: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
   groupMetaTitleRef: RefObject<HTMLInputElement | null>
@@ -116,7 +118,7 @@ export function useTabPickerSyncAndLayoutEffects({
   }, [filterQuery, rows, visibleRowIndices, hi, setHi, setMoveDestHi, anchorTabIdRef, prevFilterQueryRef, prevRowsRef])
 
   useEffect(() => {
-    if (groupNewPhase === "meta") {
+    if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
       return
     }
     const visibleTabs = new Set<number>()
@@ -138,7 +140,15 @@ export function useTabPickerSyncAndLayoutEffects({
     setMarkedTabIds((m) => m.filter((id) => visibleTabs.has(id)))
     setMarkedWindowIds((m) => m.filter((id) => visibleWindows.has(id)))
     setMarkedGroupKeys((m) => m.filter((k) => visibleGroups.has(k)))
-  }, [visibleRowIndices, rows, groupNewPhase, setMarkedGroupKeys, setMarkedTabIds, setMarkedWindowIds])
+  }, [
+    visibleRowIndices,
+    rows,
+    groupNewPhase,
+    newTabUrlWindowId,
+    setMarkedGroupKeys,
+    setMarkedTabIds,
+    setMarkedWindowIds
+  ])
 
   const markedCount = pickerMarkedCount(
     markedKind,
@@ -148,12 +158,27 @@ export function useTabPickerSyncAndLayoutEffects({
   )
 
   useEffect(() => {
-    if (markedCount === 0) {
+    const ri = visibleRowIndices[hi]
+    const row = ri !== undefined ? rows[ri] : undefined
+    const implicitWindowBulk =
+      row?.kind === "window" &&
+      (bulkSubMode === "close" || bulkSubMode === "newTab")
+
+    if (markedCount === 0 && !implicitWindowBulk) {
       setBulkSubMode(null)
       setMarkedKind(null)
       shiftRangeAnchorHiRef.current = null
     }
-  }, [markedCount, setBulkSubMode, setMarkedKind, shiftRangeAnchorHiRef])
+  }, [
+    markedCount,
+    bulkSubMode,
+    hi,
+    visibleRowIndices,
+    rows,
+    setBulkSubMode,
+    setMarkedKind,
+    shiftRangeAnchorHiRef
+  ])
 
   useEffect(() => {
     if (
@@ -167,13 +192,13 @@ export function useTabPickerSyncAndLayoutEffects({
   }, [bulkSubMode, hi, visibleRowIndices.length, prevBulkSubModeRef, setMoveDestHi])
 
   useLayoutEffect(() => {
-    if (groupNewPhase === "meta") {
+    if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
       inputRef.current?.blur()
       groupMetaTitleRef.current?.focus()
       return
     }
     inputRef.current?.focus()
-  }, [groupNewPhase, searchMode, inputRef, groupMetaTitleRef])
+  }, [groupNewPhase, newTabUrlWindowId, searchMode, inputRef, groupMetaTitleRef])
 
   useLayoutEffect(() => {
     const rowIndex = visibleRowIndices[hi]

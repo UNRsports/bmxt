@@ -11,6 +11,7 @@ import {
 } from "./state-machine"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
+import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import {
   groupRowKey,
   isPhysicalArrowDown,
@@ -56,6 +57,10 @@ export function useTabPickerKeyboard({
   confirmSelection,
   runExecutionIntent,
   executeCreateNewGroup,
+  executeOpenNewTabFromUrl,
+  newTabUrlWindowId,
+  setNewTabUrlWindowId,
+  setNewTabUrl,
   closeSearch,
   onExit
 }: {
@@ -93,6 +98,10 @@ export function useTabPickerKeyboard({
   confirmSelection: () => Promise<void>
   runExecutionIntent: (intent: ExecutionIntent) => Promise<void>
   executeCreateNewGroup: () => Promise<void>
+  executeOpenNewTabFromUrl: (windowId: number, urlRaw: string) => Promise<void>
+  newTabUrlWindowId: number | null
+  setNewTabUrlWindowId: Dispatch<SetStateAction<number | null>>
+  setNewTabUrl: Dispatch<SetStateAction<string>>
   closeSearch: () => void
   onExit: () => void
 }) {
@@ -109,7 +118,7 @@ export function useTabPickerKeyboard({
         return false
       }
 
-      if (groupNewPhase === "meta") {
+      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
         const ae = document.activeElement
         if (
           ae === groupMetaTitleRef.current ||
@@ -169,6 +178,7 @@ export function useTabPickerKeyboard({
       markedCount,
       markedKind,
       markedTabSet,
+      newTabUrlWindowId,
       rows,
       visibleRowIndices
     ]
@@ -181,7 +191,7 @@ export function useTabPickerKeyboard({
         return false
       }
 
-      if (groupNewPhase === "meta") {
+      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
         return false
       }
 
@@ -217,6 +227,21 @@ export function useTabPickerKeyboard({
         setNewGroupColorIndex(0)
         return true
       }
+      if (intent === "openNewTabUrlMeta") {
+        const wid = resolveTargetWindowIdForWindowBulk(
+          markedKind,
+          markedWindowIds,
+          rows,
+          visibleRowIndices,
+          hi
+        )
+        if (wid === null) {
+          return false
+        }
+        setNewTabUrlWindowId(wid)
+        setNewTabUrl("")
+        return true
+      }
       if (
         intent === "executeClose" ||
         intent === "executeMove" ||
@@ -243,18 +268,38 @@ export function useTabPickerKeyboard({
       markedWindowIds,
       moveDestHi,
       newGroupTabIdsRef,
+      newTabUrlWindowId,
       runExecutionIntent,
+      rows,
       selectedTabIds,
+      setNewTabUrl,
+      setNewTabUrlWindowId,
       setGroupNewPhase,
       setNewGroupColorIndex,
       setNewGroupTitle,
-      variant
+      variant,
+      visibleRowIndices
     ]
   )
 
   const onMetaTitleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.nativeEvent.isComposing) {
+        return
+      }
+      if (newTabUrlWindowId !== null) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          setNewTabUrlWindowId(null)
+          setNewTabUrl("")
+          requestAnimationFrame(() => inputRef.current?.focus())
+          return
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          void executeOpenNewTabFromUrl(newTabUrlWindowId, e.currentTarget.value)
+          return
+        }
         return
       }
       if (e.key === "Escape") {
@@ -273,7 +318,16 @@ export function useTabPickerKeyboard({
         requestAnimationFrame(() => groupMetaColorStripRef.current?.focus())
       }
     },
-    [executeCreateNewGroup, groupMetaColorStripRef, inputRef, setGroupNewPhase]
+    [
+      executeCreateNewGroup,
+      executeOpenNewTabFromUrl,
+      groupMetaColorStripRef,
+      inputRef,
+      newTabUrlWindowId,
+      setGroupNewPhase,
+      setNewTabUrl,
+      setNewTabUrlWindowId
+    ]
   )
 
   const onMetaColorKeyDown = useCallback(
@@ -329,7 +383,7 @@ export function useTabPickerKeyboard({
         return false
       }
 
-      if (groupNewPhase === "meta") {
+      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
         const ae = document.activeElement
         if (
           ae === groupMetaTitleRef.current ||
@@ -384,7 +438,8 @@ export function useTabPickerKeyboard({
         return true
       }
 
-      const shiftArrowBlocksBulk = bulkSubMode === "group" || groupNewPhase === "meta"
+      const shiftArrowBlocksBulk =
+        bulkSubMode === "group" || groupNewPhase === "meta" || newTabUrlWindowId !== null
       if (
         !shiftArrowBlocksBulk &&
         e.shiftKey &&
@@ -478,6 +533,7 @@ export function useTabPickerKeyboard({
       groupMetaTitleRef,
       groupNewPhase,
       hi,
+      newTabUrlWindowId,
       rows,
       setGroupPickIndex,
       shiftRangeAnchorHiRef,
@@ -531,6 +587,12 @@ export function useTabPickerKeyboard({
 
       if (e.key === "Escape") {
         e.preventDefault()
+        if (newTabUrlWindowId !== null) {
+          setNewTabUrlWindowId(null)
+          setNewTabUrl("")
+          requestAnimationFrame(() => inputRef.current?.focus())
+          return
+        }
         if (groupNewPhase === "meta") {
           setGroupNewPhase("tabs")
           requestAnimationFrame(() => inputRef.current?.focus())
@@ -554,7 +616,7 @@ export function useTabPickerKeyboard({
       }
 
       if (e.key === "Tab") {
-        if (groupNewPhase === "meta") {
+        if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
           e.preventDefault()
           return
         }
@@ -591,7 +653,7 @@ export function useTabPickerKeyboard({
         return
       }
 
-      if (e.key === " " && groupNewPhase === "meta") {
+      if (e.key === " " && (groupNewPhase === "meta" || newTabUrlWindowId !== null)) {
         e.preventDefault()
         e.stopPropagation()
         return
@@ -626,6 +688,7 @@ export function useTabPickerKeyboard({
       hi,
       markedCount,
       markedTabIds,
+      newTabUrlWindowId,
       onExit,
       runPickerCycleBulkModeKeys,
       runPickerEnterKey,
@@ -634,6 +697,8 @@ export function useTabPickerKeyboard({
       searchMode,
       setBulkSubMode,
       setGroupNewPhase,
+      setNewTabUrl,
+      setNewTabUrlWindowId,
       setSearchMode,
       shiftRangeAnchorHiRef,
       variant,

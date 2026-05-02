@@ -32,6 +32,8 @@ pub enum EnterIntent {
     None,
     ConfirmSelection,
     OpenGroupMeta,
+    /// ウィンドウ行・newTab モード: URL 入力パネルへ（ターゲットウィンドウは UI 側で解決）
+    OpenNewTabUrlMeta,
     ExecuteClose,
     ExecuteMove,
     ExecuteGroup,
@@ -51,6 +53,7 @@ pub fn resolve_enter_intent(ctx: EnterContext) -> EnterIntent {
         return EnterIntent::ConfirmSelection;
     }
     match ctx.state.bulk_sub_mode {
+        Some(BulkSubMode::NewTab) => EnterIntent::OpenNewTabUrlMeta,
         Some(BulkSubMode::Close) => EnterIntent::ExecuteClose,
         Some(BulkSubMode::Move) => EnterIntent::ExecuteMove,
         Some(BulkSubMode::Group) => EnterIntent::ExecuteGroup,
@@ -96,6 +99,22 @@ mod enter_intent_serde_tests {
         assert!(matches!(
             super::resolve_enter_intent(ctx),
             EnterIntent::ExecuteClose
+        ));
+    }
+
+    #[test]
+    fn open_new_tab_url_meta_serializes_as_string() {
+        let s = serde_json::to_string(&super::EnterIntent::OpenNewTabUrlMeta).unwrap();
+        assert_eq!(s, r#""openNewTabUrlMeta""#);
+    }
+
+    #[test]
+    fn bulk_new_tab_returns_open_new_tab_url_meta() {
+        let json = r#"{"state":{"hi":0,"moveDestHi":0,"markedKind":null,"markedTabIds":[],"markedWindowIds":[],"markedGroupKeys":[],"bulkSubMode":"newTab"},"variant":"default","groupNewPhase":"tabs","selectedTabCount":0,"isShift":false}"#;
+        let ctx: EnterContext = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            super::resolve_enter_intent(ctx),
+            EnterIntent::OpenNewTabUrlMeta
         ));
     }
 }

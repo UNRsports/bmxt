@@ -14,6 +14,7 @@ import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-
 import {
   TabPickerGroupTargetPanel,
   TabPickerNewGroupMetaPanel,
+  TabPickerNewTabUrlPanel,
   TabPickerSearchFooter
 } from "./tab-picker-panels"
 import { TabPickerRowList } from "./tab-picker-row-list"
@@ -55,6 +56,8 @@ export function TabPickerOverlay({
   const [groupNewPhase, setGroupNewPhase] = useState<"tabs" | "meta">("tabs")
   const [newGroupTitle, setNewGroupTitle] = useState("")
   const [newGroupColorIndex, setNewGroupColorIndex] = useState(0)
+  const [newTabUrlWindowId, setNewTabUrlWindowId] = useState<number | null>(null)
+  const [newTabUrl, setNewTabUrl] = useState("")
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
@@ -112,6 +115,7 @@ export function TabPickerOverlay({
     setHi,
     setMoveDestHi,
     groupNewPhase,
+    newTabUrlWindowId,
     searchMode,
     inputRef,
     groupMetaTitleRef,
@@ -159,6 +163,7 @@ export function TabPickerOverlay({
     closeSearch,
     confirmSelection,
     executeCreateNewGroup,
+    executeOpenNewTabFromUrl,
     runExecutionIntent
   } = useTabPickerExecution({
     rows,
@@ -186,7 +191,12 @@ export function TabPickerOverlay({
     onExit,
     onRefreshRows,
     setSearchMode,
-    setFilterQuery
+    setFilterQuery,
+    onNewTabUrlPanelDone: () => {
+      setNewTabUrlWindowId(null)
+      setNewTabUrl("")
+      setBulkSubMode(null)
+    }
   })
 
   const { onMetaTitleKeyDown, onMetaColorKeyDown, onWindowKeydownCapture, onInputKeyDown } =
@@ -225,6 +235,10 @@ export function TabPickerOverlay({
       confirmSelection,
       runExecutionIntent,
       executeCreateNewGroup,
+      executeOpenNewTabFromUrl,
+      newTabUrlWindowId,
+      setNewTabUrlWindowId,
+      setNewTabUrl,
       closeSearch,
       onExit
     })
@@ -262,7 +276,7 @@ export function TabPickerOverlay({
         if (t.closest(".bmxt-tab-picker-new-group-meta")) {
           return
         }
-        if (groupNewPhase === "meta") {
+        if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
           return
         }
         requestAnimationFrame(() => inputRef.current?.focus())
@@ -327,7 +341,14 @@ export function TabPickerOverlay({
           groupPickIndex={groupPickIndex}
         />
       ) : null}
-      {groupNewPhase === "meta" ? (
+      {newTabUrlWindowId !== null ? (
+        <TabPickerNewTabUrlPanel
+          groupMetaTitleRef={groupMetaTitleRef}
+          newTabUrl={newTabUrl}
+          onNewTabUrlChange={setNewTabUrl}
+          onKeyDown={onMetaTitleKeyDown}
+        />
+      ) : groupNewPhase === "meta" ? (
         <TabPickerNewGroupMetaPanel
           groupMetaTitleRef={groupMetaTitleRef}
           groupMetaColorStripRef={groupMetaColorStripRef}

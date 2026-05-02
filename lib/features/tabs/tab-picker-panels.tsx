@@ -1,4 +1,4 @@
-import type { RefObject } from "react"
+import type { KeyboardEvent, RefObject } from "react"
 import {
   COLOR_SWATCH_BG,
   NEW_GROUP_COLORS,
@@ -98,6 +98,41 @@ export function TabPickerNewGroupMetaPanel({
             />
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+export function TabPickerNewTabUrlPanel({
+  groupMetaTitleRef,
+  newTabUrl,
+  onNewTabUrlChange,
+  onKeyDown
+}: {
+  groupMetaTitleRef: RefObject<HTMLInputElement | null>
+  newTabUrl: string
+  onNewTabUrlChange: (value: string) => void
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <div className="bmxt-tab-picker-new-group-meta">
+      <div className="bmxt-tab-picker-group-head">新しいタブ</div>
+      <div className="bmxt-tab-picker-new-group-field">
+        <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-new-tab-url">
+          URL
+        </label>
+        <input
+          id="bmxt-new-tab-url"
+          ref={groupMetaTitleRef}
+          className="bmxt-tab-picker-new-group-input"
+          type="text"
+          value={newTabUrl}
+          onChange={(e) => onNewTabUrlChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+        />
       </div>
     </div>
   )

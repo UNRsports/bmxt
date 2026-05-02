@@ -13,6 +13,8 @@ pub enum SelectKind {
 pub enum BulkSubMode {
     Move,
     Close,
+    /// ウィンドウ行のみ: 末尾に新規タブ（URL 入力へ）
+    NewTab,
     Group,
     NewWindow,
 }

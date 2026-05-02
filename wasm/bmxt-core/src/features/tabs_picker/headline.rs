@@ -26,7 +26,7 @@ fn common_parts() -> Vec<&'static str> {
         "↑↓ move",
         "Shift+↑↓ range #",
         "Tab #",
-        "←→ move/close/group/new win",
+        "←→ モード（ウィンドウ行: 閉じる ↔ 新規タブ）",
         "/ search",
         "Ctrl+Shift+↑↓ active preview",
         "Enter confirm",
@@ -49,7 +49,8 @@ pub fn resolve_headline(ctx: HeadlineContext) -> String {
     let parts = common_parts().join(" · ");
     match ctx.bulk_sub_mode.as_deref() {
         Some("move") => format!("Tab picker — [MOVE] ↑↓ dest · Enter apply · {parts}"),
-        Some("close") => format!("Tab picker — [CLOSE] Enter remove # tabs · {parts}"),
+        Some("close") => format!("Tab picker — [CLOSE] Enter でウィンドウを閉じる / タブを閉じる · {parts}"),
+        Some("newTab") => format!("Tab picker — [NEW TAB] Enter で URL 入力 · {parts}"),
         Some("group") => format!("Tab picker — [GROUP] ↑↓ 既存 or 新規 · Enter · {parts}"),
         Some("newWindow") => format!(
             "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {parts}"

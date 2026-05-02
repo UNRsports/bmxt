@@ -13,7 +13,7 @@ fn wrap_index(cur: usize, delta: i32, len: usize) -> usize {
 
 fn allowed_modes(kind: SelectKind) -> &'static [BulkSubMode] {
     match kind {
-        SelectKind::Window => &[BulkSubMode::Close],
+        SelectKind::Window => &[BulkSubMode::Close, BulkSubMode::NewTab],
         SelectKind::Group => &[BulkSubMode::Move, BulkSubMode::Close, BulkSubMode::NewWindow],
         SelectKind::Tab => &[
             BulkSubMode::Move,

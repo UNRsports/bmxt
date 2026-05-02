@@ -24,6 +24,8 @@ import { executeCreateNewGroupAction } from "./controller/create-new-group"
 import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
+import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
+import { normalizePickerOpenUrl } from "./normalize-picker-open-url"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -52,6 +54,7 @@ export type TabPickerExecutionParams = {
   onRefreshRows?: () => Promise<void>
   setSearchMode: (v: boolean) => void
   setFilterQuery: (v: string) => void
+  onNewTabUrlPanelDone?: () => void
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
@@ -81,7 +84,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onExit,
     onRefreshRows,
     setSearchMode,
-    setFilterQuery
+    setFilterQuery,
+    onNewTabUrlPanelDone
   } = p
 
   const closeSearch = useCallback(() => {
@@ -277,19 +281,55 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     }
   }, [groupCreateInFlightRef, newGroupColorIndex, newGroupTabIdsRef, newGroupTitle, onAppendLog, onExit])
 
+  const executeOpenNewTabFromUrl = useCallback(
+    async (windowId: number, urlRaw: string) => {
+      const url = normalizePickerOpenUrl(urlRaw)
+      const props: chrome.tabs.CreateProperties = { windowId, index: -1 }
+      if (url !== undefined) {
+        props.url = url
+      }
+      try {
+        const tab = await chrome.tabs.create(props)
+        if (tab.id !== undefined) {
+          await chrome.tabs.update(tab.id, { active: true })
+          setActiveTabId(tab.id)
+        }
+        await chrome.windows.update(windowId, { focused: true })
+      } catch {
+        /* ignore */
+      }
+      onNewTabUrlPanelDone?.()
+      await onRefreshRows?.()
+    },
+    [onNewTabUrlPanelDone, onRefreshRows, setActiveTabId]
+  )
+
   const runExecutionIntent = useCallback(
     async (intent: ExecutionIntent) => {
+      const implicitWid = implicitWindowIdFromPickerHi(
+        markedKind,
+        rows,
+        visibleRowIndices,
+        hi
+      )
       const v = validatePickerExecute(
         { hi, moveDestHi, markedKind, markedTabIds, markedWindowIds, markedGroupKeys, bulkSubMode },
-        selectedTabIds.length
+        selectedTabIds.length,
+        implicitWid
       )
       if (!v.ok) {
         void onAppendLog?.([`error: ${v.reason ?? "実行できません。"}`])
         return
       }
+      let execMarkedKind = markedKind
+      let execMarkedWindowIds = markedWindowIds
+      if (intent === "executeClose" && markedKind === null && implicitWid !== undefined) {
+        execMarkedKind = "window"
+        execMarkedWindowIds = [implicitWid]
+      }
       const ctx: Parameters<(typeof EXECUTION_REGISTRY)[ExecutionIntent]>[0] = {
-        markedKind,
-        markedWindowIds,
+        markedKind: execMarkedKind,
+        markedWindowIds: execMarkedWindowIds,
         selectedTabIds
       }
       if (intent === "executeMove") {
@@ -298,7 +338,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         if (!target) {
           return
         }
-        const movePlan = resolvePickerMovePlan(markedKind, target, markedGroupKeys)
+        const movePlan = resolvePickerMovePlan(execMarkedKind, target, markedGroupKeys)
         if (!movePlan) {
           return
         }
@@ -364,7 +404,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       selectedTabIds,
       setGroupNewPhase,
       setNewGroupColorIndex,
-      setNewGroupTitle
+      setNewGroupTitle,
+      visibleRowIndices
     ]
   )
 
@@ -376,6 +417,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     executeBulkGroup,
     executeBulkNewWindow,
     executeCreateNewGroup,
+    executeOpenNewTabFromUrl,
     runExecutionIntent
   }
 }
