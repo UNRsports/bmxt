@@ -5,13 +5,14 @@ import {
   type DispatchChromeContext
 } from "./lib/features/dispatch"
 import {
+  SESSION_LOG_KEY,
+  LAST_NORMAL_WINDOW_KEY,
+  MAX_SESSION_LOG_LINES
+} from "./lib/features/extension-storage/keys"
+import {
   ensureBmxtCore,
   runDispatch
 } from "./lib/features/wasm-core"
-
-const LOG_KEY = "bmxt_log"
-const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
-const MAX_LOG_LINES = 500
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"
@@ -95,15 +96,15 @@ chrome.runtime.onStartup.addListener(() => {
 hydrateLastWindowFromStorage()
 
 async function appendLog(lines: string[]): Promise<void> {
-  const prev = await chrome.storage.local.get(LOG_KEY)
-  const arr = [...((prev[LOG_KEY] as string[] | undefined) ?? []), ...lines]
-  const trimmed = arr.slice(-MAX_LOG_LINES)
-  await chrome.storage.local.set({ [LOG_KEY]: trimmed })
+  const prev = await chrome.storage.local.get(SESSION_LOG_KEY)
+  const arr = [...((prev[SESSION_LOG_KEY] as string[] | undefined) ?? []), ...lines]
+  const trimmed = arr.slice(-MAX_SESSION_LOG_LINES)
+  await chrome.storage.local.set({ [SESSION_LOG_KEY]: trimmed })
 }
 
 /** Session log を空にし、BMXt ウィンドウを閉じる（`exit` / WASM 失敗時フォールバック）。 */
 async function exitBmxtWindow(): Promise<string[]> {
-  await chrome.storage.local.set({ [LOG_KEY]: [] })
+  await chrome.storage.local.set({ [SESSION_LOG_KEY]: [] })
   const wid = bmxtWindowId
   if (wid !== undefined) {
     try {
@@ -126,7 +127,9 @@ async function runCommand(line: string): Promise<void> {
   } catch (e) {
     if (trimmed.toLowerCase() === "clear") {
       const out: string[] = [`> ${trimmed}`, "(log cleared)"]
-      await chrome.storage.local.set({ [LOG_KEY]: out.slice(-MAX_LOG_LINES) })
+      await chrome.storage.local.set({
+        [SESSION_LOG_KEY]: out.slice(-MAX_SESSION_LOG_LINES)
+      })
       return
     }
     if (trimmed.toLowerCase() === "exit") {
@@ -148,7 +151,7 @@ async function runCommand(line: string): Promise<void> {
   /* clear は clearLog 直後の get が古いログを返すことがあるため、マージせず上書きする */
   if (trimmed.toLowerCase() === "clear") {
     await chrome.storage.local.set({
-      [LOG_KEY]: out.slice(-MAX_LOG_LINES)
+      [SESSION_LOG_KEY]: out.slice(-MAX_SESSION_LOG_LINES)
     })
     return
   }
@@ -165,7 +168,7 @@ async function dispatch(line: string): Promise<string[]> {
   }
   const ctx: DispatchChromeContext = {
     clearLog: async () => {
-      await chrome.storage.local.set({ [LOG_KEY]: [] })
+      await chrome.storage.local.set({ [SESSION_LOG_KEY]: [] })
     },
     exitBmxt: exitBmxtWindow,
     listWindows,

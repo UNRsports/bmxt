@@ -9,7 +9,8 @@
     "dev": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev",
     "build": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo build",
     "package": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo package",
-    "build:wasm": "wasm-pack build wasm/bmxt-core --target web --out-dir ../../assets/wasm/bmxt-core"
+    "build:wasm": "wasm-pack build wasm/bmxt-core --target web --out-dir ../../assets/wasm/bmxt-core",
+    "dev:fresh": "npm run build:wasm && NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev"
   },
   "dependencies": {
     "plasmo": "0.90.5",

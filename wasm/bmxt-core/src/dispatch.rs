@@ -1,12 +1,11 @@
 //! URL 行・トークン化・コマンド委譲。本体は `crate::cmd::*::run`。
 
 use crate::cmd::{
-    activate, back, clear, close, echo, exit, focus, forward, group, groups, move_tab, new_tab,
-    tabs, windows,
+    activate, back, clear, close, echo, exit, focus, forward, group, groups, help_cmd, man_page,
+    move_tab, new_tab, tabs, windows,
 };
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use crate::model::{DispatchJson, Effect};
-use crate::registry::api;
 
 pub fn dispatch_full(line: &str) -> String {
     let trimmed = line.trim();
@@ -53,46 +52,68 @@ fn try_url_line(trimmed: &str) -> Option<DispatchJson> {
     None
 }
 
+type DispatchCmdFn = fn(&[String]) -> DispatchJson;
+
+/// `registry::table::COMMANDS` と名前集合が一致すること（テストで検証）。
+static COMMAND_RUNNERS: &[(&str, DispatchCmdFn)] = &[
+    ("activate", activate::run),
+    ("back", back::run),
+    ("clear", clear::run),
+    ("close", close::run),
+    ("echo", echo::run),
+    ("exit", exit::run),
+    ("focus", focus::run),
+    ("forward", forward::run),
+    ("group", group::run),
+    ("groups", groups::run),
+    ("help", help_cmd::run),
+    ("man", man_page::run),
+    ("move", move_tab::run),
+    ("new", new_tab::run),
+    ("tabs", tabs::run),
+    ("windows", windows::run),
+];
+
 fn handle_command(canonical: &str, args: &[String]) -> DispatchJson {
-    match canonical {
-        "help" => DispatchJson::lines(api::build_help_lines()),
-        "man" => {
-            let topic = args.get(1).map(|s| s.as_str());
-            if topic.is_none() || topic == Some("") {
-                let topics = api::list_man_topics().join(", ");
-                return DispatchJson::lines(vec![
-                    "USAGE: man <topic>".to_string(),
-                    String::new(),
-                    "Available topics:".to_string(),
-                    format!("  {}", topics),
-                ]);
-            }
-            let topic = topic.unwrap();
-            match api::get_man_lines(topic) {
-                Some(page) => DispatchJson::lines(page),
-                None => DispatchJson::lines(vec![format!(
-                    "no manual entry for \"{}\". Try: man",
-                    topic
-                )]),
-            }
+    COMMAND_RUNNERS
+        .iter()
+        .find(|(name, _)| *name == canonical)
+        .map(|(_, run)| run(args))
+        .unwrap_or_else(|| {
+            DispatchJson::lines(vec![format!(
+                "internal: unhandled command {}",
+                canonical
+            )])
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{dispatch_full, COMMAND_RUNNERS};
+    use crate::registry::table::COMMANDS;
+    use std::collections::HashSet;
+
+    #[test]
+    fn every_registry_command_dispatches_without_internal_unhandled() {
+        for cmd in COMMANDS {
+            let out = dispatch_full(cmd.name);
+            assert!(
+                !out.contains("internal: unhandled command"),
+                "{} -> {}",
+                cmd.name,
+                out
+            );
         }
-        "echo" => echo::run(args),
-        "clear" => clear::run(args),
-        "exit" => exit::run(args),
-        "windows" => windows::run(args),
-        "focus" => focus::run(args),
-        "groups" => groups::run(args),
-        "activate" => activate::run(args),
-        "close" => close::run(args),
-        "back" => back::run(args),
-        "forward" => forward::run(args),
-        "move" => move_tab::run(args),
-        "new" => new_tab::run(args),
-        "group" => group::run(args),
-        "tabs" => tabs::run(args),
-        _ => DispatchJson::lines(vec![format!(
-            "internal: unhandled command {}",
-            canonical
-        )]),
+    }
+
+    #[test]
+    fn command_runners_match_registry_table() {
+        let from_registry: HashSet<&str> = COMMANDS.iter().map(|c| c.name).collect();
+        let from_runners: HashSet<&str> = COMMAND_RUNNERS.iter().map(|(n, _)| *n).collect();
+        assert_eq!(
+            from_registry,
+            from_runners,
+            "COMMAND_RUNNERS と registry::table::COMMANDS の名前集合を一致させてください"
+        );
     }
 }

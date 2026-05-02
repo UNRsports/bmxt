@@ -58,3 +58,44 @@ pub fn resolve_enter_intent(ctx: EnterContext) -> EnterIntent {
         None => EnterIntent::ConfirmSelection,
     }
 }
+
+#[cfg(test)]
+mod enter_intent_serde_tests {
+    use super::{EnterContext, EnterIntent};
+
+    #[test]
+    fn confirm_selection_serializes_as_string_variant() {
+        let s = serde_json::to_string(&EnterIntent::ConfirmSelection).unwrap();
+        assert_eq!(s, r#""confirmSelection""#);
+    }
+
+    #[test]
+    fn no_marks_no_bulk_returns_confirm_selection() {
+        let json = r#"{"state":{"hi":0,"moveDestHi":0,"markedKind":null,"markedTabIds":[],"markedWindowIds":[],"markedGroupKeys":[],"bulkSubMode":null},"variant":"default","groupNewPhase":"tabs","selectedTabCount":0,"isShift":false}"#;
+        let ctx: EnterContext = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            super::resolve_enter_intent(ctx),
+            EnterIntent::ConfirmSelection
+        ));
+    }
+
+    #[test]
+    fn bulk_move_with_marks_returns_execute_move() {
+        let json = r#"{"state":{"hi":2,"moveDestHi":0,"markedKind":"tab","markedTabIds":[10,11],"markedWindowIds":[],"markedGroupKeys":[],"bulkSubMode":"move"},"variant":"default","groupNewPhase":"tabs","selectedTabCount":2,"isShift":false}"#;
+        let ctx: EnterContext = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            super::resolve_enter_intent(ctx),
+            EnterIntent::ExecuteMove
+        ));
+    }
+
+    #[test]
+    fn bulk_close_returns_execute_close_regardless_of_mark_count() {
+        let json = r#"{"state":{"hi":0,"moveDestHi":0,"markedKind":"tab","markedTabIds":[5],"markedWindowIds":[],"markedGroupKeys":[],"bulkSubMode":"close"},"variant":"default","groupNewPhase":"tabs","selectedTabCount":1,"isShift":false}"#;
+        let ctx: EnterContext = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            super::resolve_enter_intent(ctx),
+            EnterIntent::ExecuteClose
+        ));
+    }
+}

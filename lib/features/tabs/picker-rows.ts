@@ -1,5 +1,7 @@
 /** Tab picker: structured rows for interactive UI + same grouping as legacy tabs list. */
 
+import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
+
 const DISPLAY_TITLE_MAX = 96
 const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
@@ -170,9 +172,6 @@ export function filterTabRowIndices(rows: TabPickerRow[], filterQuery: string): 
   return out
 }
 
-/** Same storage key as `background.ts` (last focused normal browser window). */
-const BMXT_LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
-
 /**
  * Index into `filterTabRowIndices(rows, "")` (visible tab order) for the active tab
  * in `anchorWindowId`, or 0 if not found.
@@ -199,8 +198,8 @@ export function initialTabPickerHighlightIndex(
 export async function resolveInitialTabPickerHighlightIndex(
   rows: TabPickerRow[]
 ): Promise<number> {
-  const r = await chrome.storage.local.get(BMXT_LAST_NORMAL_WINDOW_KEY)
-  const wid = r[BMXT_LAST_NORMAL_WINDOW_KEY]
+  const r = await chrome.storage.local.get(LAST_NORMAL_WINDOW_KEY)
+  const wid = r[LAST_NORMAL_WINDOW_KEY]
   const anchorWid =
     typeof wid === "number" && Number.isInteger(wid) ? wid : undefined
   return initialTabPickerHighlightIndex(rows, anchorWid)

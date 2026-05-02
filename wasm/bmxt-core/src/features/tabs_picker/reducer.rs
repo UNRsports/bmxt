@@ -1,4 +1,5 @@
 use super::model::{BulkSubMode, PickerEvent, PickerState, SelectKind};
+use serde_json::Value;
 
 fn wrap_index(cur: usize, delta: i32, len: usize) -> usize {
     if len == 0 {
@@ -64,8 +65,12 @@ pub fn reduce(mut state: PickerState, ev: PickerEvent) -> PickerState {
         PickerEvent::MoveDest { delta, visible_len } => {
             state.move_dest_hi = wrap_index(state.move_dest_hi, delta, visible_len);
         }
-        PickerEvent::CycleSubMode { direction } => {
-            if let Some(kind) = state.marked_kind {
+        PickerEvent::CycleSubMode {
+            direction,
+            implicit_kind,
+        } => {
+            let kind = state.marked_kind.or(implicit_kind);
+            if let Some(kind) = kind {
                 state.bulk_sub_mode = cycle_mode(state.bulk_sub_mode, kind, direction);
             }
         }
@@ -179,4 +184,59 @@ pub fn reduce(mut state: PickerState, ev: PickerEvent) -> PickerState {
         }
     }
     state
+}
+
+/// `PickerEvent` の厳密デシリアライズが失敗したとき、`moveHi` / `moveDest` だけ緩い JSON から適用する。
+pub fn reduce_with_loose_event_fallback(mut state: PickerState, event_json: &str) -> Option<PickerState> {
+    let v: Value = serde_json::from_str(event_json).ok()?;
+    let kind = v.get("kind")?.as_str()?;
+    match kind {
+        "moveHi" => {
+            let delta = v.get("delta")?.as_i64()? as i32;
+            let visible_len = v.get("visibleLen")?.as_u64()? as usize;
+            state.hi = wrap_index(state.hi, delta, visible_len);
+            Some(state)
+        }
+        "moveDest" => {
+            let delta = v.get("delta")?.as_i64()? as i32;
+            let visible_len = v.get("visibleLen")?.as_u64()? as usize;
+            state.move_dest_hi = wrap_index(state.move_dest_hi, delta, visible_len);
+            Some(state)
+        }
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod loose_fallback_tests {
+    use super::{reduce_with_loose_event_fallback, wrap_index};
+    use crate::features::tabs_picker::model::PickerState;
+
+    fn empty_state(hi: usize, move_dest_hi: usize) -> PickerState {
+        PickerState {
+            hi,
+            move_dest_hi,
+            marked_kind: None,
+            marked_tab_ids: vec![],
+            marked_window_ids: vec![],
+            marked_group_keys: vec![],
+            bulk_sub_mode: None,
+        }
+    }
+
+    #[test]
+    fn loose_move_hi_matches_wrap_index() {
+        let state = empty_state(0, 0);
+        let json = r#"{"kind":"moveHi","delta":1,"visibleLen":3}"#;
+        let out = reduce_with_loose_event_fallback(state, json).expect("loose parse");
+        assert_eq!(out.hi, wrap_index(0, 1, 3));
+    }
+
+    #[test]
+    fn loose_move_dest_matches_wrap_index() {
+        let state = empty_state(0, 1);
+        let json = r#"{"kind":"moveDest","delta":2,"visibleLen":4}"#;
+        let out = reduce_with_loose_event_fallback(state, json).expect("loose parse");
+        assert_eq!(out.move_dest_hi, wrap_index(1, 2, 4));
+    }
 }
