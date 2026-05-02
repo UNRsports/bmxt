@@ -10,6 +10,7 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../lib/features/tabs"
+import { logBmxtKey } from "../lib/features/debug/key-log"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -426,7 +427,23 @@ function IndexBmxtWindow() {
         return
       }
 
+      logBmxtKey("prompt", "keydown", {
+        key: e.key,
+        code: e.code,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        mode,
+        tabPickerOpen: Boolean(tabPickerRef.current)
+      })
+
       if (tabPickerRef.current) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault()
+          logBmxtKey("prompt", "Enter → swallowed (picker/window capture が処理)", {})
+          return
+        }
         const blocksTabPickerNav =
           e.key === "ArrowUp" ||
           e.key === "ArrowDown" ||
@@ -438,6 +455,7 @@ function IndexBmxtWindow() {
           e.key === "K"
         if (blocksTabPickerNav) {
           e.preventDefault()
+          logBmxtKey("prompt", "↑↓/jk → swallowed (tab picker)", {})
           return
         }
       }
@@ -449,11 +467,13 @@ function IndexBmxtWindow() {
       if (mode === "isearch") {
         if (e.key === "Escape") {
           e.preventDefault()
+          logBmxtKey("prompt", "Escape → exitISearch", {})
           exitISearch()
           return
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
+          logBmxtKey("prompt", "Enter → submitLine (isearch)", {})
           submitLine()
           return
         }
@@ -487,6 +507,7 @@ function IndexBmxtWindow() {
 
       if (e.ctrlKey && (e.key === "r" || e.key === "R")) {
         e.preventDefault()
+        logBmxtKey("prompt", "Ctrl+R → enterISearch", {})
         enterISearch()
         return
       }
@@ -497,6 +518,7 @@ function IndexBmxtWindow() {
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
         if (muZone) {
           e.preventDefault()
+          logBmxtKey("prompt", "Tab → tabs -mu URL 補完候補", { prefix: muZone.prefix })
           void (async () => {
             const cands = await listTabsMoveUrlCandidates(muZone.prefix)
             if (cands.length === 0) {
@@ -516,17 +538,24 @@ function IndexBmxtWindow() {
         const [l, r] = wordBounds(curLn, pos)
         const w = curLn.slice(l, r)
         if (!w) {
+          logBmxtKey("prompt", "Tab → 補完スキップ（単語なし）", {})
           return
         }
         const cands = completionCandidatesRef.current.filter((c) =>
           c.startsWith(w)
         )
         if (cands.length === 0) {
+          logBmxtKey("prompt", "Tab → 補完候補なし", { word: w })
           return
         }
         const idx = tabPressSeqRef.current % cands.length
         tabPressSeqRef.current += 1
         const rep = cands[idx]!
+        logBmxtKey("prompt", "Tab → コマンド補完適用", {
+          word: w,
+          replacement: rep,
+          candidateIndex: idx
+        })
         const newLine = curLn.slice(0, l) + rep + curLn.slice(r)
         setHistNavIndex(-1)
         setLine(newLine)
@@ -536,6 +565,10 @@ function IndexBmxtWindow() {
 
       if (e.key === "ArrowUp") {
         e.preventDefault()
+        logBmxtKey("prompt", "ArrowUp → history older", {
+          histNavIndex,
+          historyLen: history.length
+        })
         if (history.length === 0) {
           return
         }
@@ -556,6 +589,7 @@ function IndexBmxtWindow() {
 
       if (e.key === "ArrowDown") {
         e.preventDefault()
+        logBmxtKey("prompt", "ArrowDown → history newer", { histNavIndex })
         if (histNavIndex === -1) {
           return
         }
@@ -572,6 +606,7 @@ function IndexBmxtWindow() {
 
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault()
+        logBmxtKey("prompt", "Enter → submitLine", {})
         submitLine()
       }
     },

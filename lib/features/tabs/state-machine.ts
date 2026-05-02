@@ -99,7 +99,7 @@ type RangeSelectInput = {
 type PickerReducerEvent =
   | { kind: "moveHi"; delta: number; visibleLen: number }
   | { kind: "moveDest"; delta: number; visibleLen: number }
-  | { kind: "cycleSubMode"; direction: number }
+  | { kind: "cycleSubMode"; direction: number; implicitKind?: PickerSelectKind }
   | { kind: "toggleCurrent"; row: CurrentRow }
   | { kind: "selectRange"; input: RangeSelectInput }
   | { kind: "clearMarked" }

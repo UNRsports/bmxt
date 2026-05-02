@@ -30,13 +30,18 @@ const wasmModuleUrl = new URL(
 let coreReady = false
 let ensurePromise: Promise<void> | null = null
 
+/** `plasmo dev` の HMR は TS のみ更新し、メモリ上の WASM は替わらない。WASM を更新したらタブを開き直すこと。 */
 export async function ensureBmxtCore(): Promise<void> {
   if (coreReady) {
     return
   }
   if (!ensurePromise) {
     ensurePromise = (async () => {
-      await init(wasmModuleUrl)
+      const isProd = process.env.NODE_ENV === "production"
+      const wasmInput: URL | Request = isProd
+        ? wasmModuleUrl
+        : new Request(wasmModuleUrl.href, { cache: "no-store" })
+      await init(wasmInput)
       coreReady = true
     })()
   }

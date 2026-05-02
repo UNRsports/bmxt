@@ -64,8 +64,12 @@ pub fn reduce(mut state: PickerState, ev: PickerEvent) -> PickerState {
         PickerEvent::MoveDest { delta, visible_len } => {
             state.move_dest_hi = wrap_index(state.move_dest_hi, delta, visible_len);
         }
-        PickerEvent::CycleSubMode { direction } => {
-            if let Some(kind) = state.marked_kind {
+        PickerEvent::CycleSubMode {
+            direction,
+            implicit_kind,
+        } => {
+            let kind = state.marked_kind.or(implicit_kind);
+            if let Some(kind) = kind {
                 state.bulk_sub_mode = cycle_mode(state.bulk_sub_mode, kind, direction);
             }
         }

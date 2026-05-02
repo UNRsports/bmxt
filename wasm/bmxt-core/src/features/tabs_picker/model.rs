@@ -51,7 +51,12 @@ pub struct RangeSelectInput {
 pub enum PickerEvent {
     MoveHi { delta: i32, visible_len: usize },
     MoveDest { delta: i32, visible_len: usize },
-    CycleSubMode { direction: i32 },
+    /// `marked_kind` が無いときの ←/→ 用（ハイライト行の種類でサイクル）
+    CycleSubMode {
+        direction: i32,
+        #[serde(default)]
+        implicit_kind: Option<SelectKind>,
+    },
     ToggleCurrent { row: CurrentRow },
     SelectRange { input: RangeSelectInput },
     ClearMarked,

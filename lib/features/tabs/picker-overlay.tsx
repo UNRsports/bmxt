@@ -1,3 +1,4 @@
+import { logBmxtKey } from "../debug/key-log"
 import { displayTitle, filterTabRowIndices, type TabPickerRow } from "./picker-rows"
 import {
   reducePickerState,
@@ -223,7 +224,7 @@ export function TabPickerOverlay({
       ev:
         | { kind: "moveHi"; delta: number; visibleLen: number }
         | { kind: "moveDest"; delta: number; visibleLen: number }
-        | { kind: "cycleSubMode"; direction: number }
+        | { kind: "cycleSubMode"; direction: number; implicitKind?: SelectKind }
         | { kind: "toggleCurrent"; row: { kind: SelectKind; tabId?: number; windowId?: number; groupKey?: string } }
         | {
             kind: "selectRange"
@@ -264,7 +265,7 @@ export function TabPickerOverlay({
       events: Array<
         | { kind: "moveHi"; delta: number; visibleLen: number }
         | { kind: "moveDest"; delta: number; visibleLen: number }
-        | { kind: "cycleSubMode"; direction: number }
+        | { kind: "cycleSubMode"; direction: number; implicitKind?: SelectKind }
         | { kind: "toggleCurrent"; row: { kind: SelectKind; tabId?: number; windowId?: number; groupKey?: string } }
         | {
             kind: "selectRange"
@@ -569,8 +570,17 @@ export function TabPickerOverlay({
       })
     const plan = resolvePickerConfirmPlan(hi, confirmRows)
     if (!plan) {
+      logBmxtKey("picker", "confirmSelection → no plan", { hi })
       return
     }
+    logBmxtKey("picker", "confirmSelection → execute", {
+      planKind: plan.kind,
+      ...(plan.kind === "activateTab"
+        ? { tabId: plan.tabId, windowId: plan.windowId }
+        : plan.kind === "focusWindow"
+          ? { windowId: plan.windowId }
+          : { windowId: plan.windowId, groupId: plan.groupId })
+    })
     try {
       if (plan.kind === "activateTab") {
         await chrome.tabs.update(plan.tabId, { active: true })
@@ -840,6 +850,140 @@ export function TabPickerOverlay({
     ]
   )
 
+  /** ←/→ で [MOVE]/[CLOSE]/… をサイクル。マーク無し時はハイライト行の種類でサイクル（`implicitKind`）。 */
+  const runPickerCycleBulkModeKeys = useCallback(
+    (e: KeyboardEvent): boolean => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
+        return false
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return false
+      }
+      const ev = e as KeyboardEvent & { isComposing?: boolean }
+      if (ev.isComposing) {
+        return false
+      }
+
+      if (groupNewPhase === "meta") {
+        const ae = document.activeElement
+        if (
+          ae === groupMetaTitleRef.current ||
+          groupMetaColorStripRef.current?.contains(ae ?? null)
+        ) {
+          return false
+        }
+      }
+
+      const step = e.key === "ArrowRight" ? 1 : -1
+      let implicitKind: SelectKind | undefined
+      if (markedCount === 0 || markedKind === null) {
+        const rowIndex = visibleRowIndices[hi]
+        const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+        if (!row) {
+          return false
+        }
+        implicitKind =
+          row.kind === "tab" ? "tab" : row.kind === "window" ? "window" : "group"
+      }
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      applyReducedState({
+        kind: "cycleSubMode",
+        direction: step,
+        ...(implicitKind !== undefined ? { implicitKind } : {})
+      })
+      return true
+    },
+    [
+      applyReducedState,
+      groupNewPhase,
+      hi,
+      markedCount,
+      markedKind,
+      rows,
+      visibleRowIndices
+    ]
+  )
+
+  /**
+   * Enter でタブ確定・一括実行。プロンプト textarea にフォーカスが残っていても window キャプチャで拾う。
+   */
+  const runPickerEnterKey = useCallback(
+    (e: KeyboardEvent): boolean => {
+      const ev = e as KeyboardEvent & { isComposing?: boolean }
+      if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
+        return false
+      }
+
+      if (groupNewPhase === "meta") {
+        return false
+      }
+
+      const intent = resolvePickerEnterIntent(
+        {
+          hi,
+          moveDestHi,
+          markedKind,
+          markedTabIds,
+          markedWindowIds,
+          markedGroupKeys,
+          bulkSubMode
+        },
+        variant,
+        groupNewPhase,
+        selectedTabIds.length,
+        false
+      )
+      if (intent === "none") {
+        logBmxtKey("picker", "Enter → intent none (Shift+Enter 等)", {})
+        return false
+      }
+
+      logBmxtKey("picker", "Enter", { intent })
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (intent === "openGroupMeta") {
+        newGroupTabIdsRef.current = [...selectedTabIds]
+        setGroupNewPhase("meta")
+        setNewGroupTitle("")
+        setNewGroupColorIndex(0)
+        return true
+      }
+      if (
+        intent === "executeClose" ||
+        intent === "executeMove" ||
+        intent === "executeGroup" ||
+        intent === "executeNewWindow"
+      ) {
+        void runExecutionIntent(intent)
+        return true
+      }
+      if (intent === "confirmSelection") {
+        void confirmSelection()
+        return true
+      }
+      return false
+    },
+    [
+      bulkSubMode,
+      confirmSelection,
+      groupNewPhase,
+      hi,
+      markedGroupKeys,
+      markedKind,
+      markedTabIds,
+      markedWindowIds,
+      moveDestHi,
+      runExecutionIntent,
+      selectedTabIds,
+      variant
+    ]
+  )
+
   const onMetaTitleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.nativeEvent.isComposing) {
@@ -1067,14 +1211,32 @@ export function TabPickerOverlay({
     ]
   )
 
-  /** Window capture: フォーカスがリストや隠し textarea 以外でも ↑↓/j/k を拾う */
+  /** Window capture: プロンプト textarea 等にフォーカスが残っていても ↑↓/Enter/←→ を拾う */
   useEffect(() => {
     const wrap = (ev: KeyboardEvent) => {
-      runPickerVerticalNav(ev)
+      if (runPickerVerticalNav(ev)) {
+        logBmxtKey("picker", "handled", {
+          handler: "verticalNav",
+          key: ev.key,
+          code: ev.code
+        })
+        return
+      }
+      if (runPickerCycleBulkModeKeys(ev)) {
+        logBmxtKey("picker", "handled", {
+          handler: "cycleBulkMode",
+          key: ev.key,
+          code: ev.code
+        })
+        return
+      }
+      if (runPickerEnterKey(ev)) {
+        return
+      }
     }
     window.addEventListener("keydown", wrap, true)
     return () => window.removeEventListener("keydown", wrap, true)
-  }, [runPickerVerticalNav])
+  }, [runPickerCycleBulkModeKeys, runPickerEnterKey, runPickerVerticalNav])
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1084,6 +1246,9 @@ export function TabPickerOverlay({
 
       /** IME やキャプチャが握れない経路でも ↑↓/j/k が効くようにする（window 側と同一ロジック） */
       if (runPickerVerticalNav(e.nativeEvent)) {
+        return
+      }
+      if (runPickerCycleBulkModeKeys(e.nativeEvent)) {
         return
       }
 
@@ -1162,64 +1327,9 @@ export function TabPickerOverlay({
         return
       }
 
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        e.preventDefault()
-        e.stopPropagation()
-        if (markedCount === 0 || markedKind === null) {
-          return
-        }
-        const step = e.key === "ArrowRight" ? 1 : -1
-        applyReducedState({ kind: "cycleSubMode", direction: step })
-        return
-      }
-
-      if (
-        variant === "groupNew" &&
-        groupNewPhase === "tabs" &&
-        e.key === "Enter" &&
-        !e.shiftKey
-      ) {
-        // handled by resolvePickerEnterIntent below
-      }
-
       if (e.key === "Enter") {
-        const intent = resolvePickerEnterIntent(
-          {
-            hi,
-            moveDestHi,
-            markedKind,
-            markedTabIds,
-            markedWindowIds,
-            markedGroupKeys,
-            bulkSubMode
-          },
-          variant,
-          groupNewPhase,
-          selectedTabIds.length,
-          e.shiftKey
-        )
-        if (intent !== "none") {
-          e.preventDefault()
-          if (intent === "openGroupMeta") {
-            newGroupTabIdsRef.current = [...selectedTabIds]
-            setGroupNewPhase("meta")
-            setNewGroupTitle("")
-            setNewGroupColorIndex(0)
-            return
-          }
-          if (
-            intent === "executeClose" ||
-            intent === "executeMove" ||
-            intent === "executeGroup" ||
-            intent === "executeNewWindow"
-          ) {
-            void runExecutionIntent(intent)
-            return
-          }
-          if (intent === "confirmSelection") {
-            void confirmSelection()
-            return
-          }
+        if (runPickerEnterKey(e.nativeEvent)) {
+          return
         }
       }
 
@@ -1238,10 +1348,9 @@ export function TabPickerOverlay({
       }
     },
     [
+      applyReducedState,
       bulkSubMode,
       closeSearch,
-      confirmSelection,
-      runPickerVerticalNav,
       executeBulkClose,
       executeBulkGroup,
       executeBulkMove,
@@ -1254,13 +1363,14 @@ export function TabPickerOverlay({
       markedKind,
       markedGroupKeys,
       markedTabIds,
-      rows,
-      selectedTabIds,
-      visibleRowIndices,
       onExit,
-      runExecutionIntent,
+      runPickerCycleBulkModeKeys,
+      runPickerEnterKey,
+      runPickerVerticalNav,
+      rows,
       searchMode,
-      variant
+      variant,
+      visibleRowIndices
     ]
   )
 

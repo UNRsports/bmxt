@@ -50,11 +50,35 @@ pub fn resolve_enter_intent(ctx: EnterContext) -> EnterIntent {
         }
         return EnterIntent::ConfirmSelection;
     }
+    if ctx.selected_tab_count == 0 {
+        return EnterIntent::ConfirmSelection;
+    }
     match ctx.state.bulk_sub_mode {
         Some(BulkSubMode::Close) => EnterIntent::ExecuteClose,
         Some(BulkSubMode::Move) => EnterIntent::ExecuteMove,
         Some(BulkSubMode::Group) => EnterIntent::ExecuteGroup,
         Some(BulkSubMode::NewWindow) => EnterIntent::ExecuteNewWindow,
         None => EnterIntent::ConfirmSelection,
+    }
+}
+
+#[cfg(test)]
+mod enter_intent_serde_tests {
+    use super::{EnterContext, EnterIntent};
+
+    #[test]
+    fn confirm_selection_serializes_as_string_variant() {
+        let s = serde_json::to_string(&EnterIntent::ConfirmSelection).unwrap();
+        assert_eq!(s, r#""confirmSelection""#);
+    }
+
+    #[test]
+    fn enter_context_matches_tabs_ts_json_shape() {
+        let json = r#"{"state":{"hi":0,"moveDestHi":0,"markedKind":null,"markedTabIds":[],"markedWindowIds":[],"markedGroupKeys":[],"bulkSubMode":null},"variant":"default","groupNewPhase":"tabs","selectedTabCount":0,"isShift":false}"#;
+        let ctx: EnterContext = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            super::resolve_enter_intent(ctx),
+            EnterIntent::ConfirmSelection
+        ));
     }
 }
