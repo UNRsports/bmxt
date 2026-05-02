@@ -49,15 +49,22 @@ pub struct RangeSelectInput {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PickerEvent {
+    /// serde enum-level rename_all はバリアント名のみ改名する。
+    /// struct variant のフィールドは各バリアントに個別に指定する。
+    #[serde(rename_all = "camelCase")]
     MoveHi { delta: i32, visible_len: usize },
+    #[serde(rename_all = "camelCase")]
     MoveDest { delta: i32, visible_len: usize },
     /// `marked_kind` が無いときの ←/→ 用（ハイライト行の種類でサイクル）
+    #[serde(rename_all = "camelCase")]
     CycleSubMode {
         direction: i32,
         #[serde(default)]
         implicit_kind: Option<SelectKind>,
     },
+    #[serde(rename_all = "camelCase")]
     ToggleCurrent { row: CurrentRow },
+    #[serde(rename_all = "camelCase")]
     SelectRange { input: RangeSelectInput },
     ClearMarked,
 }
