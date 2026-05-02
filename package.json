@@ -36,6 +36,16 @@
     ],
     "content_security_policy": {
       "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+    },
+    "commands": {
+      "launch-bmxt": {
+        "suggested_key": {
+          "default": "Shift+Alt+C",
+          "mac": "Shift+Alt+C"
+        },
+        "description": "Open or focus BMXt",
+        "global": true
+      }
     }
   }
 }

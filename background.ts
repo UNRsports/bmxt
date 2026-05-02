@@ -5,6 +5,7 @@ import {
   type DispatchChromeContext
 } from "./lib/features/dispatch"
 import {
+  BMXT_WINDOW_ID_KEY,
   SESSION_LOG_KEY,
   LAST_NORMAL_WINDOW_KEY,
   MAX_SESSION_LOG_LINES
@@ -20,38 +21,73 @@ const BMXT_PAGE = "tabs/bmxt.html"
 let lastFocusedNormalWindow: number | undefined
 let bmxtWindowId: number | undefined
 
+async function persistBmxtWindowId(id: number | undefined): Promise<void> {
+  if (id === undefined) {
+    await chrome.storage.local.remove(BMXT_WINDOW_ID_KEY)
+    return
+  }
+  await chrome.storage.local.set({ [BMXT_WINDOW_ID_KEY]: id })
+}
+
+/** SW が sleep しても既存 BMXt 窓を追えるよう、保存済み ID をメモリに戻す。 */
+async function hydrateBmxtWindowIdFromStorage(): Promise<void> {
+  if (bmxtWindowId !== undefined) {
+    return
+  }
+  const r = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
+  const id = r[BMXT_WINDOW_ID_KEY]
+  if (typeof id === "number" && Number.isInteger(id)) {
+    bmxtWindowId = id
+  }
+}
+
 function openOrFocusBmxtWindow() {
+  void openOrFocusBmxtWindowAsync()
+}
+
+async function openOrFocusBmxtWindowAsync(): Promise<void> {
+  await hydrateBmxtWindowIdFromStorage()
   const url = chrome.runtime.getURL(BMXT_PAGE)
   if (bmxtWindowId === undefined) {
     /* normal: タブグループ API が popup ウィンドウでは無効なため（chrome.tabs.group） */
-    chrome.windows.create(
-      { url, type: "normal", width: 780, height: 580, focused: true },
-      (w) => {
-        if (w?.id !== undefined) {
-          bmxtWindowId = w.id
-        }
-      }
-    )
+    const w = await chrome.windows.create({
+      url,
+      type: "normal",
+      width: 780,
+      height: 580,
+      focused: true
+    })
+    if (w.id !== undefined) {
+      bmxtWindowId = w.id
+      await persistBmxtWindowId(w.id)
+    }
     return
   }
-  chrome.windows.get(bmxtWindowId, (win) => {
-    if (chrome.runtime.lastError || !win) {
-      bmxtWindowId = undefined
-      openOrFocusBmxtWindow()
-      return
-    }
-    void chrome.windows.update(bmxtWindowId!, { focused: true })
-  })
+  try {
+    await chrome.windows.get(bmxtWindowId)
+    await chrome.windows.update(bmxtWindowId, { focused: true })
+  } catch {
+    bmxtWindowId = undefined
+    await persistBmxtWindowId(undefined)
+    await openOrFocusBmxtWindowAsync()
+  }
 }
 
 chrome.windows.onRemoved.addListener((windowId) => {
   if (windowId === bmxtWindowId) {
     bmxtWindowId = undefined
+    void persistBmxtWindowId(undefined)
   }
 })
 
 chrome.action.onClicked.addListener(() => {
   openOrFocusBmxtWindow()
+})
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "launch-bmxt") {
+    openOrFocusBmxtWindow()
+  }
 })
 
 function rememberNormalWindow(windowId: number) {
@@ -87,13 +123,16 @@ function hydrateLastWindowFromStorage() {
 
 chrome.runtime.onInstalled.addListener(() => {
   hydrateLastWindowFromStorage()
+  void hydrateBmxtWindowIdFromStorage()
 })
 
 chrome.runtime.onStartup.addListener(() => {
   hydrateLastWindowFromStorage()
+  void hydrateBmxtWindowIdFromStorage()
 })
 
 hydrateLastWindowFromStorage()
+void hydrateBmxtWindowIdFromStorage()
 
 async function appendLog(lines: string[]): Promise<void> {
   const prev = await chrome.storage.local.get(SESSION_LOG_KEY)
@@ -113,6 +152,7 @@ async function exitBmxtWindow(): Promise<string[]> {
       /* 既に閉じている */
     }
     bmxtWindowId = undefined
+    await persistBmxtWindowId(undefined)
   }
   return ["(BMXt window closed, session log cleared)"]
 }
