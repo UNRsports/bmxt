@@ -850,7 +850,11 @@ export function TabPickerOverlay({
     ]
   )
 
-  /** ←/→ で [MOVE]/[CLOSE]/… をサイクル。マーク無し時はハイライト行の種類でサイクル（`implicitKind`）。 */
+  /**
+   * ←/→ で [MOVE]/[CLOSE]/… をサイクル。
+   * ハイライトが未マークのタブ行なら、先に Tab と同等で `#` を付けてからサイクルする。
+   * ウィンドウ／グループ行などでは従来どおり `implicitKind` のみ。
+   */
   const runPickerCycleBulkModeKeys = useCallback(
     (e: KeyboardEvent): boolean => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
@@ -874,20 +878,38 @@ export function TabPickerOverlay({
         }
       }
 
-      const step = e.key === "ArrowRight" ? 1 : -1
-      let implicitKind: SelectKind | undefined
-      if (markedCount === 0 || markedKind === null) {
-        const rowIndex = visibleRowIndices[hi]
-        const row = rowIndex !== undefined ? rows[rowIndex] : undefined
-        if (!row) {
-          return false
-        }
-        implicitKind =
-          row.kind === "tab" ? "tab" : row.kind === "window" ? "window" : "group"
+      const rowIndex = visibleRowIndices[hi]
+      const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+      if (!row) {
+        return false
       }
+
+      const step = e.key === "ArrowRight" ? 1 : -1
+      const shouldAutoMarkTab =
+        row.kind === "tab" && !markedTabSet.has(row.tabId)
 
       e.preventDefault()
       e.stopPropagation()
+
+      if (shouldAutoMarkTab) {
+        applyReducedStateSequence([
+          {
+            kind: "toggleCurrent",
+            row: { kind: "tab", tabId: row.tabId }
+          },
+          {
+            kind: "cycleSubMode",
+            direction: step
+          }
+        ])
+        return true
+      }
+
+      let implicitKind: SelectKind | undefined
+      if (markedCount === 0 || markedKind === null) {
+        implicitKind =
+          row.kind === "tab" ? "tab" : row.kind === "window" ? "window" : "group"
+      }
 
       applyReducedState({
         kind: "cycleSubMode",
@@ -898,10 +920,12 @@ export function TabPickerOverlay({
     },
     [
       applyReducedState,
+      applyReducedStateSequence,
       groupNewPhase,
       hi,
       markedCount,
       markedKind,
+      markedTabSet,
       rows,
       visibleRowIndices
     ]
