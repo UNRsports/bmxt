@@ -5,6 +5,7 @@ type MovePlan = {
   targetGroupId: number | null
   shouldUngroupAfterMove: boolean
   shouldGroupToTargetAfterMove: boolean
+  tabGroupIdsToMoveAsUnits: number[]
 }
 
 export type ExecutionIntent = "executeClose" | "executeMove" | "executeGroup" | "executeNewWindow"
@@ -16,6 +17,8 @@ type GroupTarget = {
 
 type NewWindowOrder = {
   orderedIds: number[]
+  /** グループ行選択時: `chrome.tabGroups.move` でまとめて持ち込むタブグループ ID */
+  tabGroupIdsToMoveAsUnits: number[]
 }
 
 export async function executeCloseAction(params: {
@@ -58,10 +61,26 @@ export async function executeMoveAction(params: {
     return
   }
   if (plan.targetKind === "window" && plan.targetWindowId !== null) {
-    await chrome.tabs.move(toMove, { windowId: plan.targetWindowId, index: -1 })
-    if (plan.shouldUngroupAfterMove) {
-      await chrome.tabs.ungroup(toMove)
+    const winId = plan.targetWindowId
+    const groupIds = plan.tabGroupIdsToMoveAsUnits ?? []
+    if (groupIds.length > 0) {
+      const movedTabIds = new Set<number>()
+      for (const gid of groupIds) {
+        const tabsInGroup = await chrome.tabs.query({ groupId: gid })
+        for (const t of tabsInGroup) {
+          if (t.id !== undefined) {
+            movedTabIds.add(t.id)
+          }
+        }
+        await chrome.tabGroups.move(gid, { windowId: winId, index: -1 })
+      }
+      const rest = toMove.filter((id) => !movedTabIds.has(id))
+      if (rest.length > 0) {
+        await chrome.tabs.move(rest, { windowId: winId, index: -1 })
+      }
+      return
     }
+    await chrome.tabs.move(toMove, { windowId: winId, index: -1 })
     return
   }
   if (plan.targetKind === "group" && plan.targetWindowId !== null) {
@@ -96,7 +115,40 @@ export async function executeNewWindowAction(params: {
   if (params.selectedTabIds.length === 0) {
     return
   }
-  const orderedIds = params.order.orderedIds
+  const { selectedTabIds, order } = params
+  const orderedIds = order.orderedIds
+  const groupIds = order.tabGroupIdsToMoveAsUnits ?? []
+
+  if (groupIds.length > 0) {
+    const created = await chrome.windows.create({ focused: true })
+    const newWinId = created.id
+    if (newWinId === undefined) {
+      return
+    }
+    const keepIds = new Set(selectedTabIds)
+    const movedTabIds = new Set<number>()
+    for (const gid of groupIds) {
+      const tabsInGroup = await chrome.tabs.query({ groupId: gid })
+      for (const t of tabsInGroup) {
+        if (t.id !== undefined) {
+          movedTabIds.add(t.id)
+        }
+      }
+      await chrome.tabGroups.move(gid, { windowId: newWinId, index: -1 })
+    }
+    const rest = orderedIds.filter((id) => !movedTabIds.has(id))
+    if (rest.length > 0) {
+      await chrome.tabs.move(rest, { windowId: newWinId, index: -1 })
+    }
+    const stray = await chrome.tabs.query({ windowId: newWinId })
+    for (const t of stray) {
+      if (t.id !== undefined && !keepIds.has(t.id)) {
+        await chrome.tabs.remove(t.id)
+      }
+    }
+    return
+  }
+
   const first = orderedIds[0]
   if (first === undefined) {
     return

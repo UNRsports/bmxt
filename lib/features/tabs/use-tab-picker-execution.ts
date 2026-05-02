@@ -23,6 +23,7 @@ import {
 import { executeCreateNewGroupAction } from "./controller/create-new-group"
 import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
+import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -154,7 +155,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (!target) {
       return
     }
-    const plan = resolvePickerMovePlan(markedKind, target)
+    const plan = resolvePickerMovePlan(markedKind, target, markedGroupKeys)
     if (!plan) {
       return
     }
@@ -172,6 +173,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
   }, [
     clearMarkedViaReducer,
     markedKind,
+    markedGroupKeys,
     moveDestHi,
     onRefreshRows,
     rows,
@@ -229,18 +231,23 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     }
     try {
       const tabs = await Promise.all(selectedTabIds.map((id) => chrome.tabs.get(id)))
-      const order = resolvePickerNewWindowOrder(
+      const base = resolvePickerNewWindowOrder(
         tabs
           .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
           .map((t) => ({ id: t.id, windowId: t.windowId ?? 0, index: t.index ?? 0 }))
       )
+      const order = {
+        orderedIds: base.orderedIds,
+        tabGroupIdsToMoveAsUnits:
+          markedKind === "group" ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys) : []
+      }
       await executeNewWindowAction({ selectedTabIds, order })
     } catch {
       /* e.g. incognito mismatch, tab already closed */
     }
     clearMarkedViaReducer()
     await onRefreshRows?.()
-  }, [clearMarkedViaReducer, onRefreshRows, selectedTabIds])
+  }, [clearMarkedViaReducer, markedGroupKeys, markedKind, onRefreshRows, selectedTabIds])
 
   const executeCreateNewGroup = useCallback(async () => {
     if (groupCreateInFlightRef.current) {
@@ -291,7 +298,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         if (!target) {
           return
         }
-        const movePlan = resolvePickerMovePlan(markedKind, target)
+        const movePlan = resolvePickerMovePlan(markedKind, target, markedGroupKeys)
         if (!movePlan) {
           return
         }
@@ -314,12 +321,16 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         }
       } else if (intent === "executeNewWindow") {
         const tabs = await Promise.all(selectedTabIds.map((id) => chrome.tabs.get(id)))
-        const newWindowOrder = resolvePickerNewWindowOrder(
+        const base = resolvePickerNewWindowOrder(
           tabs
             .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
             .map((t) => ({ id: t.id, windowId: t.windowId ?? 0, index: t.index ?? 0 }))
         )
-        ctx.newWindowOrder = newWindowOrder
+        ctx.newWindowOrder = {
+          orderedIds: base.orderedIds,
+          tabGroupIdsToMoveAsUnits:
+            markedKind === "group" ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys) : []
+        }
       }
       try {
         await EXECUTION_REGISTRY[intent](ctx)

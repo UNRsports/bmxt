@@ -7,6 +7,7 @@ import { resolveTabsPickerGroupTarget } from "../wasm-core"
 import { resolveTabsPickerNewWindowOrder } from "../wasm-core"
 import { resolveTabsPickerConfirmPlan } from "../wasm-core"
 import { resolveTabsPickerMovePlan } from "../wasm-core"
+import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { resolveTabsPickerCreateGroupPlan } from "../wasm-core"
 import { resolveTabsPickerHeadline } from "../wasm-core"
 
@@ -74,6 +75,7 @@ type MovePlan =
       targetGroupId: number | null
       shouldUngroupAfterMove: boolean
       shouldGroupToTargetAfterMove: boolean
+      tabGroupIdsToMoveAsUnits: number[]
     }
   | null
 
@@ -227,8 +229,10 @@ export function resolvePickerConfirmPlan(
 
 export function resolvePickerMovePlan(
   markedKind: PickerReducerState["markedKind"],
-  target: Exclude<ResolvedTarget, null>
+  target: Exclude<ResolvedTarget, null>,
+  markedGroupKeys: string[]
 ): MovePlan {
+  const sourceTabGroupIds = chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
   return resolveTabsPickerMovePlan<
     {
       markedKind: PickerReducerState["markedKind"]
@@ -236,6 +240,7 @@ export function resolvePickerMovePlan(
       targetTabId: number | null
       targetWindowId: number | null
       targetGroupId: number | null
+      sourceTabGroupIds: number[]
     },
     MovePlan
   >({
@@ -243,7 +248,8 @@ export function resolvePickerMovePlan(
     targetKind: target.kind,
     targetTabId: target.tabId,
     targetWindowId: target.windowId,
-    targetGroupId: target.groupId
+    targetGroupId: target.groupId,
+    sourceTabGroupIds
   })
 }
 
