@@ -3,6 +3,43 @@
 > Language guide: This README starts with **English**, followed by **Japanese**.  
 > 言語案内: この README は **英語**を先に、その後に**日本語**を掲載しています。
 
+## Table of contents / 目次
+
+_Jump links use explicit anchors; language-only subheadings (`English` / `日本語`) are omitted here._  
+_ジャンプ先は明示アンカーです。言語だけの小見出し（`English` / `日本語`）は目次に含めていません。_
+
+- [Introduction](#introduction)
+- [🛠 Seed Project](#seed-project)
+- [📺 Demo Video](#demo-video)
+- [♿️ Universal Design Intent](#universal-design-intent)
+- [☕️ Support this Journey](#support-this-journey)
+- [Technical Overview](#technical-overview)
+- [Key Specs](#key-specs)
+  - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
+- [Command List](#command-list)
+  - [`tabs` (`man tabs`)](#tabs-man-tabs)
+  - [English: Tab Picker (`tabs -l` / `tabs -l -u`)](#tabs-tab-picker-en)
+  - [English: Tab picker — implementation (keyboard & reducer)](#tabs-tab-picker-impl-en)
+  - [日本語: タブピッカー（`tabs -l` / `tabs -l -u`）](#tabs-tab-picker-ja)
+  - [日本語: タブピッカー — 実装（キー配信とリデューサ）](#tabs-tab-picker-impl-ja)
+  - [English: URL Lines (`http` / `https`)](#url-lines-en)
+  - [日本語: URL（行全体が `http` / `https` で始まる場合）](#url-lines-ja)
+- [Command Execution Architecture (Current)](#command-execution-architecture)
+  - [Add a New Built-in Command](#add-new-built-in-command)
+- [Prompt Key Bindings](#prompt-key-bindings)
+- [Development](#development)
+  - [Rust toolchain (WASM builds)](#rust-toolchain-wasm)
+  - [Development startup (step-by-step)](#development-startup)
+  - [日本語（開発時の起動）](#development-startup-ja)
+  - [Main Sources / 主なソース](#main-sources)
+- [Production Build](#production-build)
+- [Store Submission (Reference)](#store-submission)
+- [License](#license)
+- [Roadmap](#roadmap)
+
+
+<a id="introduction"></a>
+
 ## Introduction
 
 ### English
@@ -49,6 +86,8 @@ Please also take a look at the demo video.
 ではまず、いまできることをご説明します。
 ぜひ動作デモのビデオもご覧になってください。
 
+<a id="seed-project"></a>
+
 ## 🛠 Seed Project
 
 ### English
@@ -58,6 +97,8 @@ This repository is a dedicated shell built with **Chrome Extension (Manifest V3)
 ### 日本語
 
 このリポジトリは **Chrome 拡張（Manifest V3）＋ [Plasmo](https://docs.plasmo.com/)** で動く専用シェルです。タブグループ操作に対応するため、BMXt は popup ではなく **独立した通常ブラウザウィンドウ**で動作します。技術選定の判断と確認／設計／テストは作者自身が、実装には AI アシスタント（Cursor）を100%使用して進めており、現段階では「動作の破綻をなくし、手触りを磨く」ための検証・種まきのフェーズと位置づけています。
+
+<a id="demo-video"></a>
 
 ## 📺 Demo Video
 
@@ -75,6 +116,8 @@ https://github.com/user-attachments/assets/2e418356-cfce-479a-9880-185e542c5fad
 
 
 
+<a id="universal-design-intent"></a>
+
 ## ♿️ Universal Design Intent
 
 ### English
@@ -84,6 +127,8 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 ### 日本語
 
 BMXt は、エンジニア向けの効率ツールであるとともに、**できるだけ軽い操作負担で確実に操作できる導線**（マウス指向 UI への依存を減らす、キー操作の一貫性、IME との両立など）を重ねていくことを目指しています。
+
+<a id="support-this-journey"></a>
 
 ## ☕️ Support this Journey
 
@@ -96,6 +141,8 @@ I have currently applied for GitHub Sponsors. Once there is progress and the sup
 現在 GitHub Sponsors に申請中です。進展があり、支援ページの準備が整い次第、正式なリンクをここに掲載します。
 
 ---
+
+<a id="technical-overview"></a>
 
 ## Technical Overview
 
@@ -111,6 +158,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 **配置:** コマンドのレジストリとディスパッチは **`wasm/bmxt-core`**、Chrome API の実行や機能別 UI は **`lib/features/<feature>/`** に置く方針です（リポジトリ直下の **`.cursorrules`** も参照）。
 
+<a id="key-specs"></a>
+
 ## Key Specs
 
 ### English
@@ -125,6 +174,8 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **状態**: コマンド出力ログとコマンド履歴は `chrome.storage.local` に保持。キーと上限は **`lib/features/extension-storage/keys.ts`** で定義（**ログ 500 行** `bmxt_log`、**履歴 300 件** `bmxt_cmd_history`）。
 - **バックグラウンド**: Service Worker（`background.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
 
+<a id="permissions-manifest"></a>
+
 ### Permissions (`manifest` in `package.json`)
 
 ### English
@@ -138,6 +189,8 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 `tabs`, `tabGroups`, `storage`, `windows`
 
 拡張ページの CSP（**`content_security_policy.extension_pages`**）では、WASM 用に **`wasm-unsafe-eval`** を許可し、開発時は **`http://localhost`** からのスクリプトも許可しています（詳細は **`package.json`**）。
+<a id="command-list"></a>
+
 ## Command List
 
 ### English
@@ -196,6 +249,8 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
+<a id="tabs-man-tabs"></a>
+
 ### `tabs` (`man tabs`)
 
 #### English
@@ -208,12 +263,16 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 - **`tabs -nu`**（**`-nowurl`**）：現在タブの URL を表示。
 - **`tabs -mu <url>`**（**`-moveurl`**）：該当 http(s) タブをアクティブにしウィンドウを前面化。一致がなければ新規タブで開く。プロンプト上で `tabs -mu ` の直後に **Tab** を押すと、開いている http(s) タブの URL を補完候補として循環します。
 
+<a id="tabs-tab-picker-en"></a>
+
 #### English: Tab Picker (`tabs -l` / `tabs -l -u`)
 
 - On launch, highlight starts at the active tab of the last focused normal browser window.
 - Move with `j`/`k` (or `↑`/`↓`), toggle `#` on highlighted tab with `Tab` (multi-select supported).
 - When one or more tabs have `#`, press `Space` to cycle **[MOVE]** → **[CLOSE]** → **[GROUP]** → **[NEW WINDOW]**.
 - Use `/` for incremental search (`@` prefix for URL match). `Enter` focuses the highlighted tab while keeping picker open; `Esc` exits according to picker state.
+
+<a id="tabs-tab-picker-impl-en"></a>
 
 #### English: Tab picker — implementation (keyboard & reducer)
 
@@ -222,6 +281,8 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 - **Silent WASM failures**: If the WASM entrypoint fails to deserialize the **event** JSON, it returns the **input state unchanged** (no error surfaced). A **TypeScript fallback** in **`runTabsPickerReduce`** corrects **`moveHi`** and **`moveDest`** when the returned indices clearly did not advance (covers stale/mismatched bundled `.wasm`).
 - **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in `picker-overlay.tsx`). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
 - **Prompt coexisting with picker**: While the tab picker is open, **`lib/features/bmxt-window/bmxt-terminal.tsx`** suppresses **↑/↓/j/k** on the main prompt so they do **not** drive **command history**; navigation is handled only by the picker.
+
+<a id="tabs-tab-picker-ja"></a>
 
 #### 日本語: タブピッカー（`tabs -l` / `tabs -l -u`）
 
@@ -233,6 +294,8 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 - `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。検索中でも `Tab` の `#` 切替と `Space` のモード切替は有効です。`Esc` は、**いずれかに `#` が付いていればまずすべて解除**（ピッカーは維持）。続いて「検索終了 → バルクサブモード終了 → ピッカー終了」の順です。
 - バルクモードでない `Enter` は、ハイライト中タブをアクティブ化して対象ウィンドウを前面化します（ピッカーは維持）。
 
+<a id="tabs-tab-picker-impl-ja"></a>
+
 #### 日本語: タブピッカー — 実装（キー配信とリデューサ）
 
 - **ウィンドウキャプチャ**: `TabPickerOverlay` は **`window` に `keydown`（キャプチャ）**を登録し、フィルタ用の不可視 `textarea` 以外にフォーカスがあっても **↑/↓/j/k** を拾います。フォーカスが textarea にあるときは `onInputKeyDown` でも同じナビ処理をします。
@@ -241,17 +304,23 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 - **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
 - **ピッカー表示中のプロンプト**: **`lib/features/bmxt-window/bmxt-terminal.tsx`** でピッカー表示中はメイン textarea の **↑/↓/j/k をコマンド履歴に使わない**ようにし、ピッカーと競合しないようにしています。
 
+<a id="url-lines-en"></a>
+
 #### English: URL Lines (`http` / `https`)
 
 - `https://example.com` — Open in a new tab
 - `https://example.com .` — Open in current tab (active tab in front window)
 - `https://example.com -nw` — Open in a new window
 
+<a id="url-lines-ja"></a>
+
 #### 日本語: URL（行全体が `http` / `https` で始まる場合）
 
 - `https://example.com` — 新規タブで開く  
 - `https://example.com .` — 現在のタブ（前面ウィンドウのアクティブタブ）で開く  
 - `https://example.com -nw` — 新しいウィンドウで開く  
+
+<a id="command-execution-architecture"></a>
 
 ## Command Execution Architecture (Current)
 
@@ -297,6 +366,8 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 Rust を変更したら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再生成してから `npm run build` してください。**タブピッカーの JSON 形式（`PickerEvent`）が WASM と一致している必要があります。** `npm run build:wasm` が `wasm-bindgen` の取得で失敗する環境では、`wasm/bmxt-core` で `cargo build --release --target wasm32-unknown-unknown` のあと、インストール済みの **`wasm-bindgen`** で `bmxt_core.wasm` から `assets/wasm/bmxt-core` へ生成し直してください。
 
+<a id="add-new-built-in-command"></a>
+
 ### Add a New Built-in Command
 
 Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
@@ -314,6 +385,8 @@ Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
 2. ブラウザ操作が要る場合は **`lib/features/dispatch/handlers/apply-one.ts`**（新しい JSON 形なら **`effect-types.ts`** も）。  
 3. コマンド名・別名を増やしたら、Rust の補完トークンと揃えるため **`lib/features/builtin-commands/completion-fallback.ts`** も更新。  
 4. **`npm run build:wasm`** のあと `help` / `man` / 補完を確認。
+
+<a id="prompt-key-bindings"></a>
 
 ## Prompt Key Bindings
 
@@ -345,7 +418,11 @@ During IME composition, composition events are prioritized to avoid conflicts wi
 
 変換中は IME 用の `composition` イベントを優先し、変換確定までショートカットと競合しないようにしています。
 
+<a id="development"></a>
+
 ## Development
+
+<a id="rust-toolchain-wasm"></a>
 
 ### Rust toolchain (WASM builds)
 
@@ -423,6 +500,8 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 
 `npm run dev` は **`plasmo dev`**（ウォッチ付き開発ビルド）で、**`build/chrome-mv3-dev`** を更新します。作業中はターミナル上のプロセスを止めずに置いておきます。**`npm run dev:fresh`** は先に **`npm run build:wasm`** を実行してから **`plasmo dev`** を起動します。**`assets/wasm/bmxt-core/`** が無いときや **`wasm/bmxt-core/`** を編集した直後に便利です。
 
+<a id="development-startup"></a>
+
 ### Development startup (step-by-step)
 
 #### English
@@ -434,6 +513,8 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 5. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
 6. **After edits:** When Plasmo finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
 
+<a id="development-startup-ja"></a>
+
 #### 日本語（開発時の起動）
 
 1. **依存関係:** リポジトリ直下で `npm install`（または `pnpm` / `yarn`）。
@@ -442,6 +523,8 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`build/chrome-mv3-dev`** を指定する（Plasmo dev が出力するディレクトリ）。
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
 6. **変更の反映:** 保存後、Plasmo の再ビルドが終わったら、拡張機能カードの **「再読み込み」**、または BMXt のタブ／ウィンドウの再読み込みで Service Worker・UI の変更を取り込む。
+
+<a id="main-sources"></a>
 
 ### Main Sources / 主なソース
 
@@ -466,6 +549,8 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
+<a id="production-build"></a>
+
 ## Production Build
 
 ```bash
@@ -480,6 +565,8 @@ Artifacts are output under `build/chrome-mv3-prod`. For store submission zip, yo
 
 成果物は `build/chrome-mv3-prod` 配下に出力されます。ストア提出用に zip する場合は `npm run package`（Plasmo のパッケージコマンド）も利用できます。
 
+<a id="store-submission"></a>
+
 ## Store Submission (Reference)
 
 ### English
@@ -490,6 +577,8 @@ You can automate submission with the [Plasmo workflow](https://docs.plasmo.com/f
 
 [Plasmo の提出ワークフロー](https://docs.plasmo.com/framework/workflows/submit)や [bpp](https://bpp.browser.market) などの自動化を利用できます。初回はストア側で拡張を登録し、資格情報を整えてから CI 連携するのが一般的です。
 
+<a id="license"></a>
+
 ## License
 
 ### English
@@ -499,6 +588,8 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 ### 日本語
 
 このプロジェクトは [Apache License 2.0](./LICENSE) の下で公開しています。
+
+<a id="roadmap"></a>
 
 ## Roadmap
 
