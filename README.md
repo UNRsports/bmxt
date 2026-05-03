@@ -347,6 +347,56 @@ During IME composition, composition events are prioritized to avoid conflicts wi
 
 ## Development
 
+### Rust toolchain (WASM builds)
+
+#### English
+
+Command dispatch and core logic live in **`wasm/bmxt-core`** and compile to WebAssembly via **`wasm-pack`** (`npm run build:wasm`). Install Rust with **[rustup](https://rustup.rs/)**:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"   # or restart your shell
+rustc --version && cargo --version
+```
+
+Add the WebAssembly target:
+
+```bash
+rustup target add wasm32-unknown-unknown
+```
+
+This repo lists **`wasm-pack`** as a devDependency; after **`npm install`**, **`npm run build:wasm`** uses that local binary. To install **`wasm-pack`** globally: **`cargo install wasm-pack`**.
+
+Verify from the repo root: **`npm install`** then **`npm run build:wasm`**.
+
+If **`npm run build:wasm`** fails while fetching **`wasm-bindgen`**, build with **`cargo build --release --target wasm32-unknown-unknown`** under **`wasm/bmxt-core`**, then regenerate **`assets/wasm/bmxt-core`** with your installed **`wasm-bindgen`** CLI (same layout as **`wasm-pack`**). The **Command Execution Architecture** section above also describes this fallback.
+
+Optional: install the **rust-analyzer** extension in your editor for Rust editing.
+
+#### 日本語
+
+コマンドのディスパッチやコアロジックは **`wasm/bmxt-core`** にあり、**`wasm-pack`** で WebAssembly にビルドします（**`npm run build:wasm`**）。Rust は **[rustup](https://rustup.rs/)** で入れるのが一般的です。
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"   # またはシェルを開き直す
+rustc --version && cargo --version
+```
+
+WASM 用ターゲットを追加します。
+
+```bash
+rustup target add wasm32-unknown-unknown
+```
+
+**`wasm-pack`** は本リポジトリの devDependency です。**`npm install`** のあと **`npm run build:wasm`** でローカルのバイナリが使われます。グローバルに入れる場合は **`cargo install wasm-pack`** でも構いません。
+
+リポジトリ直下で **`npm install`** → **`npm run build:wasm`** まで通れば、このプロジェクト向けの Rust / WASM 準備は一通り揃います。
+
+**`npm run build:wasm`** が **`wasm-bindgen`** の取得で失敗する場合は、`wasm/bmxt-core` で **`cargo build --release --target wasm32-unknown-unknown`** のあと、インストール済みの **`wasm-bindgen`** で **`assets/wasm/bmxt-core`** を生成し直してください（上の **Command Execution Architecture** / 日本語段落の説明と同じ回避策です）。
+
+任意: エディタでは **rust-analyzer** 拡張があると Rust の編集が楽です。
+
 ### English
 
 After installing dependencies, start the development build (see **Development startup** below for the full flow).
@@ -378,7 +428,7 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 #### English
 
 1. **Install JS dependencies:** `npm install` (or `pnpm install` / `yarn`).
-2. **Rust / WASM (when needed):** If `assets/wasm/bmxt-core/` is missing or you changed `wasm/bmxt-core/`, run **`npm run build:wasm`** once so `bmxt_core.js` / `.wasm` exist before or alongside dev. Alternatively, **`npm run dev:fresh`** runs **`build:wasm`** and then **`plasmo dev`** in one step.
+2. **Rust / WASM (when needed):** On a fresh machine, install the **Rust toolchain** and **`wasm32-unknown-unknown`** (see **Rust toolchain (WASM builds)** above). If `assets/wasm/bmxt-core/` is missing or you changed `wasm/bmxt-core/`, run **`npm run build:wasm`** once so `bmxt_core.js` / `.wasm` exist before or alongside dev. Alternatively, **`npm run dev:fresh`** runs **`build:wasm`** and then **`plasmo dev`** in one step.
 3. **Start dev:** From the repo root, run **`npm run dev`**. Leave this process running; it rebuilds the extension on file changes.
 4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`build/chrome-mv3-dev`** (created by Plasmo dev).
 5. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
@@ -387,7 +437,7 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 #### 日本語（開発時の起動）
 
 1. **依存関係:** リポジトリ直下で `npm install`（または `pnpm` / `yarn`）。
-2. **Rust / WASM:** `assets/wasm/bmxt-core/` が無い場合や `wasm/bmxt-core/` を編集した場合は、**`npm run build:wasm`** を実行して `bmxt_core.js` / `.wasm` を生成する（初回や Rust 変更後に実施）。まとめて行うなら **`npm run dev:fresh`**（**`build:wasm`** のあと **`plasmo dev`**）。
+2. **Rust / WASM:** 初回環境では **Rust** と **`wasm32-unknown-unknown`** を入れる（**Rust toolchain (WASM builds)** を参照）。`assets/wasm/bmxt-core/` が無い場合や `wasm/bmxt-core/` を編集した場合は、**`npm run build:wasm`** を実行して `bmxt_core.js` / `.wasm` を生成する（初回や Rust 変更後に実施）。まとめて行うなら **`npm run dev:fresh`**（**`build:wasm`** のあと **`plasmo dev`**）。
 3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`plasmo dev`** で、`build/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
 4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`build/chrome-mv3-dev`** を指定する（Plasmo dev が出力するディレクトリ）。
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
