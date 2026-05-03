@@ -39,7 +39,8 @@ export function useTabPickerSyncAndLayoutEffects({
   anchorTabIdRef,
   prevFilterQueryRef,
   prevRowsRef,
-  prevBulkSubModeRef
+  prevBulkSubModeRef,
+  skipNextInitialHiRef
 }: {
   initialHi: number
   filterQuery: string
@@ -72,12 +73,18 @@ export function useTabPickerSyncAndLayoutEffects({
   prevFilterQueryRef: MutableRefObject<string>
   prevRowsRef: MutableRefObject<TabPickerRow[]>
   prevBulkSubModeRef: MutableRefObject<BulkSubMode | null>
+  /** 新規タブ直後の行は anchor 同期に任せ、親の initialHi 上書きを 1 回避ける */
+  skipNextInitialHiRef: MutableRefObject<boolean>
 }): { groupPanelRef: RefObject<HTMLDivElement | null> } {
   const groupPanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (skipNextInitialHiRef.current) {
+      skipNextInitialHiRef.current = false
+      return
+    }
     setHi(initialHi)
-  }, [initialHi, setHi])
+  }, [initialHi, setHi, skipNextInitialHiRef])
 
   useLayoutEffect(() => {
     if (visibleRowIndices.length === 0) {

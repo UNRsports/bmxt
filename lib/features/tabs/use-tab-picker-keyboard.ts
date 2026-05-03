@@ -1,6 +1,6 @@
 import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 import { logBmxtKey } from "../debug/key-log"
 import type { TabPickerRow } from "./picker-rows"
 import type { ExecutionIntent } from "./controller/execute-actions"
@@ -58,6 +58,7 @@ export function useTabPickerKeyboard({
   runExecutionIntent,
   executeCreateNewGroup,
   executeOpenNewTabFromUrl,
+  newTabUrl,
   newTabUrlWindowId,
   setNewTabUrlWindowId,
   setNewTabUrl,
@@ -98,13 +99,20 @@ export function useTabPickerKeyboard({
   confirmSelection: () => Promise<void>
   runExecutionIntent: (intent: ExecutionIntent) => Promise<void>
   executeCreateNewGroup: () => Promise<void>
-  executeOpenNewTabFromUrl: (windowId: number, urlRaw: string) => Promise<void>
+  executeOpenNewTabFromUrl: (windowId: number, urlRaw: string) => void | Promise<void>
+  newTabUrl: string
   newTabUrlWindowId: number | null
   setNewTabUrlWindowId: Dispatch<SetStateAction<number | null>>
   setNewTabUrl: Dispatch<SetStateAction<string>>
   closeSearch: () => void
   onExit: () => void
 }) {
+  /** window capture のリスナーが useEffect 更新より古いクロージャのときでも Enter で確実に参照できるようにする */
+  const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
+  const newTabUrlRef = useRef(newTabUrl)
+  newTabUrlWindowIdRef.current = newTabUrlWindowId
+  newTabUrlRef.current = newTabUrl
+
   const runPickerCycleBulkModeKeys = useCallback(
     (e: KeyboardEvent): boolean => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
@@ -191,7 +199,16 @@ export function useTabPickerKeyboard({
         return false
       }
 
-      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+      if (newTabUrlWindowIdRef.current !== null) {
+        e.preventDefault()
+        e.stopPropagation()
+        const wid = newTabUrlWindowIdRef.current
+        const raw = groupMetaTitleRef.current?.value ?? newTabUrlRef.current
+        void executeOpenNewTabFromUrl(wid, raw)
+        return true
+      }
+
+      if (groupNewPhase === "meta") {
         return false
       }
 
@@ -260,6 +277,8 @@ export function useTabPickerKeyboard({
     [
       bulkSubMode,
       confirmSelection,
+      executeOpenNewTabFromUrl,
+      groupMetaTitleRef,
       groupNewPhase,
       hi,
       markedGroupKeys,
@@ -268,7 +287,6 @@ export function useTabPickerKeyboard({
       markedWindowIds,
       moveDestHi,
       newGroupTabIdsRef,
-      newTabUrlWindowId,
       runExecutionIntent,
       rows,
       selectedTabIds,
@@ -287,7 +305,7 @@ export function useTabPickerKeyboard({
       if (e.nativeEvent.isComposing) {
         return
       }
-      if (newTabUrlWindowId !== null) {
+      if (newTabUrlWindowIdRef.current !== null) {
         if (e.key === "Escape") {
           e.preventDefault()
           setNewTabUrlWindowId(null)
@@ -297,7 +315,10 @@ export function useTabPickerKeyboard({
         }
         if (e.key === "Enter") {
           e.preventDefault()
-          void executeOpenNewTabFromUrl(newTabUrlWindowId, e.currentTarget.value)
+          const wid = newTabUrlWindowIdRef.current
+          if (wid !== null) {
+            void executeOpenNewTabFromUrl(wid, e.currentTarget.value)
+          }
           return
         }
         return
@@ -323,7 +344,6 @@ export function useTabPickerKeyboard({
       executeOpenNewTabFromUrl,
       groupMetaColorStripRef,
       inputRef,
-      newTabUrlWindowId,
       setGroupNewPhase,
       setNewTabUrl,
       setNewTabUrlWindowId

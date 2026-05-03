@@ -66,6 +66,7 @@ export function TabPickerOverlay({
   const groupCreateInFlightRef = useRef(false)
   const rowElRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
   const anchorTabIdRef = useRef<number | null>(null)
+  const skipNextInitialHiRef = useRef(false)
   const prevFilterQueryRef = useRef(filterQuery)
   const prevRowsRef = useRef(rows)
   const prevBulkSubModeRef = useRef<BulkSubMode | null>(null)
@@ -137,7 +138,8 @@ export function TabPickerOverlay({
     anchorTabIdRef,
     prevFilterQueryRef,
     prevRowsRef,
-    prevBulkSubModeRef
+    prevBulkSubModeRef,
+    skipNextInitialHiRef
   })
 
   useLoadGroupChoicesWhenBulkGroup(bulkSubMode, setGroupChoices, setGroupPickIndex)
@@ -158,6 +160,11 @@ export function TabPickerOverlay({
     markedWindowIds,
     markedGroupKeys
   )
+
+  const onPickerHighlightCreatedTab = useCallback((tabId: number) => {
+    anchorTabIdRef.current = tabId
+    skipNextInitialHiRef.current = true
+  }, [])
 
   const {
     closeSearch,
@@ -196,7 +203,8 @@ export function TabPickerOverlay({
       setNewTabUrlWindowId(null)
       setNewTabUrl("")
       setBulkSubMode(null)
-    }
+    },
+    onPickerHighlightCreatedTab
   })
 
   const { onMetaTitleKeyDown, onMetaColorKeyDown, onWindowKeydownCapture, onInputKeyDown } =
@@ -236,6 +244,7 @@ export function TabPickerOverlay({
       runExecutionIntent,
       executeCreateNewGroup,
       executeOpenNewTabFromUrl,
+      newTabUrl,
       newTabUrlWindowId,
       setNewTabUrlWindowId,
       setNewTabUrl,

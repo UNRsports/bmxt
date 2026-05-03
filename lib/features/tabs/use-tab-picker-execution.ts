@@ -55,6 +55,8 @@ export type TabPickerExecutionParams = {
   setSearchMode: (v: boolean) => void
   setFilterQuery: (v: string) => void
   onNewTabUrlPanelDone?: () => void
+  /** URL からタブ作成後、ピッカーでそのタブ行をハイライトする（refresh 前に呼ぶ） */
+  onPickerHighlightCreatedTab?: (tabId: number) => void
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
@@ -85,7 +87,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
-    onNewTabUrlPanelDone
+    onNewTabUrlPanelDone,
+    onPickerHighlightCreatedTab
   } = p
 
   const closeSearch = useCallback(() => {
@@ -282,26 +285,71 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
   }, [groupCreateInFlightRef, newGroupColorIndex, newGroupTabIdsRef, newGroupTitle, onAppendLog, onExit])
 
   const executeOpenNewTabFromUrl = useCallback(
-    async (windowId: number, urlRaw: string) => {
+    (windowId: number, urlRaw: string) => {
       const url = normalizePickerOpenUrl(urlRaw)
-      const props: chrome.tabs.CreateProperties = { windowId, index: -1 }
+      // tabs.create の index は 0 以上のみ（-1 は無効）。末尾追加は index を省略する。
+      const props: chrome.tabs.CreateProperties = { windowId }
       if (url !== undefined) {
         props.url = url
       }
-      try {
-        const tab = await chrome.tabs.create(props)
-        if (tab.id !== undefined) {
-          await chrome.tabs.update(tab.id, { active: true })
-          setActiveTabId(tab.id)
-        }
-        await chrome.windows.update(windowId, { focused: true })
-      } catch {
-        /* ignore */
+
+      const finish = (tabId: number) => {
+        chrome.tabs.update(tabId, { active: true }, () => void chrome.runtime.lastError)
+        setActiveTabId(tabId)
+        chrome.windows.update(windowId, { focused: true }, () => void chrome.runtime.lastError)
+        onPickerHighlightCreatedTab?.(tabId)
+        onNewTabUrlPanelDone?.()
+        void onRefreshRows?.()
       }
-      onNewTabUrlPanelDone?.()
-      await onRefreshRows?.()
+
+      const abortLogged = (lines: string[]) => {
+        void onAppendLog?.(lines)
+        onNewTabUrlPanelDone?.()
+        void onRefreshRows?.()
+      }
+
+      chrome.tabs.create(props, (tab) => {
+        const err = chrome.runtime.lastError
+        if (!err && tab?.id !== undefined) {
+          finish(tab.id)
+          return
+        }
+
+        const primaryReason = err?.message ?? "tabs.create が応答しませんでした"
+        logBmxtKey("picker", "tabs.create(windowId) fallback", { primaryReason })
+
+        const fallbackCreate: chrome.tabs.CreateProperties =
+          url !== undefined ? { url, active: false } : { active: false }
+        chrome.tabs.create(fallbackCreate, (tab2) => {
+          const err2 = chrome.runtime.lastError
+          if (err2 || tab2?.id === undefined) {
+            abortLogged([
+              `新規タブ: ${primaryReason}`,
+              err2?.message ? `フォールバック: ${err2.message}` : "フォールバックにも失敗しました。"
+            ])
+            return
+          }
+          chrome.tabs.move(tab2.id, { windowId, index: -1 }, (moved) => {
+            const err3 = chrome.runtime.lastError
+            if (err3 || moved?.id === undefined) {
+              abortLogged([
+                `新規タブ: ${primaryReason}`,
+                `別ウィンドウへ移動できませんでした: ${err3?.message ?? "unknown"}`
+              ])
+              return
+            }
+            finish(moved.id)
+          })
+        })
+      })
     },
-    [onNewTabUrlPanelDone, onRefreshRows, setActiveTabId]
+    [
+      onAppendLog,
+      onNewTabUrlPanelDone,
+      onPickerHighlightCreatedTab,
+      onRefreshRows,
+      setActiveTabId
+    ]
   )
 
   const runExecutionIntent = useCallback(
