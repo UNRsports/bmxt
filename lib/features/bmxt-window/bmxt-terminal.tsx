@@ -595,7 +595,15 @@ export function BmxtTerminal() {
         className={`bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`}
         style={tabPicker ? { display: "none" } : undefined}>
         {lines.length === 0 ? (
-          <div className="bmxt-hint">Type help and press Enter. Tab completes commands.</div>
+          <div className="bmxt-hint">
+            Welcome to BMXt! This program is a test version. Development currently
+            focuses on behavior with <code>tabs -l</code>.
+            <br />
+            BMXtへようこそ！本プログラムはテストバージョンです。現在は{" "}
+            <code>tabs -l</code> での動作を中心に開発しています。
+            <br />
+            Type help and press Enter. Tab completes commands.
+          </div>
         ) : (
           lines.map((ln, i) => (
             <div key={i} className="bmxt-out-line">

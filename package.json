@@ -1,7 +1,7 @@
 {
-  "name": "bmxt",
-  "displayName": "BMXt",
-  "version": "0.0.1",
+  "name": "bmxt_demo",
+  "displayName": "BMXt_Demo",
+  "version": "0.0.2",
   "license": "Apache-2.0",
   "description": "Dedicated-window command shell for tabs, windows, and groups.",
   "author": "UNRsports",
