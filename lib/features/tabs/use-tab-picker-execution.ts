@@ -50,7 +50,6 @@ export type TabPickerExecutionParams = {
   setGroupNewPhase: (v: "tabs" | "meta") => void
   clearMarkedViaReducer: () => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
-  onExit: () => void
   onRefreshRows?: () => Promise<void>
   setSearchMode: (v: boolean) => void
   setFilterQuery: (v: string) => void
@@ -83,7 +82,6 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     setGroupNewPhase,
     clearMarkedViaReducer,
     onAppendLog,
-    onExit,
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
@@ -268,21 +266,34 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
 
     groupCreateInFlightRef.current = true
     try {
-      await executeCreateNewGroupAction({
+      const ok = await executeCreateNewGroupAction({
         tabIds,
         title: newGroupTitle,
         color,
         onAppendLog,
-        onExit,
         resolveCreateGroupPlan: resolvePickerCreateGroupPlan
       })
       newGroupTabIdsRef.current = []
+      if (ok) {
+        clearMarkedViaReducer()
+        setGroupNewPhase("tabs")
+        await onRefreshRows?.()
+      }
     } catch {
       /* handled in controller */
     } finally {
       groupCreateInFlightRef.current = false
     }
-  }, [groupCreateInFlightRef, newGroupColorIndex, newGroupTabIdsRef, newGroupTitle, onAppendLog, onExit])
+  }, [
+    clearMarkedViaReducer,
+    groupCreateInFlightRef,
+    newGroupColorIndex,
+    newGroupTabIdsRef,
+    newGroupTitle,
+    onAppendLog,
+    onRefreshRows,
+    setGroupNewPhase
+  ])
 
   const executeOpenNewTabFromUrl = useCallback(
     (windowId: number, urlRaw: string) => {

@@ -4,7 +4,6 @@ type NewGroupCreateParams = {
   /** `tabGroups.Color` 相当の文字列（`NEW_GROUP_COLORS` の要素） */
   color: string
   onAppendLog?: (lines: string[]) => void | Promise<void>
-  onExit: () => void
   resolveCreateGroupPlan: (context: {
     tabCount: number
     resolvedTabCount: number
@@ -67,14 +66,17 @@ const CREATE_GROUP_STRATEGY_EXECUTORS: Record<
   }
 }
 
-export async function executeCreateNewGroupAction(params: NewGroupCreateParams): Promise<void> {
-  const { tabIds, color, onAppendLog, onExit } = params
+/** 成功時は true（呼び出し側でタブピッカーを維持したまま UI を戻す） */
+export async function executeCreateNewGroupAction(
+  params: NewGroupCreateParams
+): Promise<boolean> {
+  const { tabIds, color, onAppendLog } = params
   const trimmedTitle = params.title.trim()
   if (tabIds.length === 0) {
     await onAppendLog?.([
       "error: 選択されたタブがありません（一覧に戻り Tab で選び直してください）。"
     ])
-    return
+    return false
   }
 
   try {
@@ -83,7 +85,7 @@ export async function executeCreateNewGroupAction(params: NewGroupCreateParams):
     const resolvedTabCount = ok.length
     if (resolvedTabCount !== tabIds.length) {
       await onAppendLog?.(["error: 選択したタブの一部が閉じられています。"])
-      return
+      return false
     }
     const winId = ok[0]?.windowId
     const sameWindow =
@@ -92,7 +94,7 @@ export async function executeCreateNewGroupAction(params: NewGroupCreateParams):
       await onAppendLog?.([
         "error: 選択したタブは同じウィンドウ内である必要があります。"
       ])
-      return
+      return false
     }
 
     const win = await chrome.windows.get(winId!).catch(() => undefined)
@@ -101,7 +103,7 @@ export async function executeCreateNewGroupAction(params: NewGroupCreateParams):
       await onAppendLog?.([
         "error: このウィンドウ種別ではタブグループを使えません（Chrome は通常ウィンドウ normal のみ）。popup・app・devtools などではグループ化できません。ウェブページを開いた通常ブラウザウィンドウのタブを選んでください。"
       ])
-      return
+      return false
     }
 
     const groupId = await chrome.tabs.group({ tabIds })
@@ -137,7 +139,7 @@ export async function executeCreateNewGroupAction(params: NewGroupCreateParams):
     }
     if (!plan.ok || !plan.strategy) {
       await onAppendLog?.([`error: ${plan.error ?? "グループ作成計画に失敗しました。"}`])
-      return
+      return false
     }
 
     const strategy = plan.strategy as CreateGroupStrategy
@@ -149,9 +151,10 @@ export async function executeCreateNewGroupAction(params: NewGroupCreateParams):
 
     const label = trimmedTitle || "(無題)"
     await onAppendLog?.([`created group ${groupId} in new window ${newWinId} · ${color} · "${label}"`])
-    onExit()
+    return true
   } catch (err) {
     const detail = err instanceof Error ? err.message : typeof err === "string" ? err : String(err)
     await onAppendLog?.([`error: グループ作成に失敗しました — ${detail}`])
+    return false
   }
 }

@@ -195,7 +195,6 @@ export function TabPickerOverlay({
     setGroupNewPhase,
     clearMarkedViaReducer,
     onAppendLog,
-    onExit,
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
