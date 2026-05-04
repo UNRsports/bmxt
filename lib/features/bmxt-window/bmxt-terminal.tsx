@@ -8,6 +8,7 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
+import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import { logBmxtKey } from "../debug/key-log"
 import { useSessionLogAndHistory } from "./use-session-log-and-history"
 import { matchesForSearch, wordBounds } from "./text-utils"
@@ -170,17 +171,18 @@ export function BmxtTerminal() {
     }
     try {
       const rows = await buildTabPickerRows(prev.showUrl)
-      const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
       setTabPicker({
         rows,
         showUrl: prev.showUrl,
-        initialHi,
+        initialHi: prev.initialHi,
         variant: prev.variant
       })
     } catch {
       /* keep previous rows */
     }
   }, [])
+
+  useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
   useEffect(() => {
     if (tabPicker) {
