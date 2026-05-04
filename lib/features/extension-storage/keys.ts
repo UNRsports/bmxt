@@ -4,6 +4,8 @@
  */
 
 export const SESSION_LOG_KEY = "bmxt_log"
+/** マルチペインのレイアウト＋各ペインログ（`lib/features/split`）。 */
+export const SPLIT_SESSION_KEY = "bmxt_split_session"
 export const CMD_HISTORY_KEY = "bmxt_cmd_history"
 export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 

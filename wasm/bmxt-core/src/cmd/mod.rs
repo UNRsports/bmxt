@@ -14,5 +14,7 @@ pub mod help_cmd;
 pub mod man_page;
 pub mod move_tab;
 pub mod new_tab;
+pub mod split_col;
+pub mod split_row;
 pub mod tabs;
 pub mod windows;

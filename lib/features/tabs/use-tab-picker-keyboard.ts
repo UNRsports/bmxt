@@ -394,6 +394,10 @@ export function useTabPickerKeyboard({
 
   const runPickerVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
+      /* Alt+矢印はペイン間フォーカス移動用（親で処理）— ハイライト移動に使わない */
+      if (e.altKey) {
+        return false
+      }
       const navDir = verticalNavDirection(e)
       if (navDir === null) {
         return false

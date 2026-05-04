@@ -59,6 +59,10 @@ pub enum Effect {
     OpenUrlNewWindow { url: String },
     NavigateCurrentTab { url: String },
     OpenUrlNewTab { url: String },
-    /// Close the BMXt window and clear the on-screen log (`chrome.*` in TS).
-    ExitBmxt,
+    /// Close focused pane, or the whole BMXt window when it is the last pane.
+    ExitPane,
+    /// Split the focused pane horizontally (new pane below).
+    SplitRow,
+    /// Split the focused pane vertically (new pane to the right).
+    SplitCol,
 }

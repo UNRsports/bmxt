@@ -2,7 +2,7 @@
 
 use crate::cmd::{
     activate, back, clear, close, echo, exit, focus, forward, group, groups, help_cmd, man_page,
-    move_tab, new_tab, tabs, windows,
+    move_tab, new_tab, split_col, split_row, tabs, windows,
 };
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use crate::model::{DispatchJson, Effect};
@@ -70,6 +70,8 @@ static COMMAND_RUNNERS: &[(&str, DispatchCmdFn)] = &[
     ("man", man_page::run),
     ("move", move_tab::run),
     ("new", new_tab::run),
+    ("split-col", split_col::run),
+    ("split-row", split_row::run),
     ("tabs", tabs::run),
     ("windows", windows::run),
 ];

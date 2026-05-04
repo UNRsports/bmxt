@@ -24,6 +24,8 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "move",
   "mv",
   "new",
+  "split-col",
+  "split-row",
   "tabs",
   "windows",
   "wins"

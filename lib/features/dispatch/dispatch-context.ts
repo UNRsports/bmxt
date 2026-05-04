@@ -2,8 +2,10 @@
 
 export type DispatchChromeContext = {
   clearLog: () => Promise<void>
-  /** Clear session log and close the BMXt window. */
-  exitBmxt: () => Promise<string[]>
+  /** 最後のペインならウィンドウを閉じる。 */
+  exitPane: () => Promise<string[]>
+  splitRow: () => Promise<string[]>
+  splitCol: () => Promise<string[]>
   listWindows: () => Promise<string[]>
   focusInfo: () => Promise<string[]>
   resolveTabArg: (tabIdStr: string | undefined) => Promise<chrome.tabs.Tab | undefined>

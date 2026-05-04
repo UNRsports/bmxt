@@ -8,8 +8,17 @@ import {
   BMXT_WINDOW_ID_KEY,
   SESSION_LOG_KEY,
   LAST_NORMAL_WINDOW_KEY,
-  MAX_SESSION_LOG_LINES
+  SPLIT_SESSION_KEY
 } from "./lib/features/extension-storage/keys"
+import {
+  applySplitDirection,
+  appendLinesToPane,
+  clearPaneLog,
+  loadOrMigrateSplitSession,
+  paneCount,
+  removePaneFromSession,
+  setPaneLog
+} from "./lib/features/split"
 import {
   ensureBmxtCore,
   runDispatch
@@ -134,16 +143,9 @@ chrome.runtime.onStartup.addListener(() => {
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
 
-async function appendLog(lines: string[]): Promise<void> {
-  const prev = await chrome.storage.local.get(SESSION_LOG_KEY)
-  const arr = [...((prev[SESSION_LOG_KEY] as string[] | undefined) ?? []), ...lines]
-  const trimmed = arr.slice(-MAX_SESSION_LOG_LINES)
-  await chrome.storage.local.set({ [SESSION_LOG_KEY]: trimmed })
-}
-
-/** Session log を空にし、BMXt ウィンドウを閉じる（`exit` / WASM 失敗時フォールバック）。 */
+/** Session log（マルチペイン）を閉じたウィンドウと揃えて消し、BMXt ウィンドウを閉じる。 */
 async function exitBmxtWindow(): Promise<string[]> {
-  await chrome.storage.local.set({ [SESSION_LOG_KEY]: [] })
+  await chrome.storage.local.remove([SPLIT_SESSION_KEY, SESSION_LOG_KEY])
   const wid = bmxtWindowId
   if (wid !== undefined) {
     try {
@@ -157,60 +159,80 @@ async function exitBmxtWindow(): Promise<string[]> {
   return ["(BMXt window closed, session log cleared)"]
 }
 
-async function runCommand(line: string): Promise<void> {
+async function exitPaneOrWindow(paneId: string): Promise<string[]> {
+  const n = await paneCount()
+  if (n <= 1) {
+    return exitBmxtWindow()
+  }
+  await removePaneFromSession(paneId)
+  return ["(ペインを閉じました)"]
+}
+
+async function runCommand(line: string, paneIdMaybe?: string): Promise<void> {
   const trimmed = line.trim()
   if (!trimmed) {
     return
   }
+  const session = await loadOrMigrateSplitSession()
+  const paneId = paneIdMaybe ?? session.focusedPaneId
   try {
     await ensureBmxtCore()
   } catch (e) {
     if (trimmed.toLowerCase() === "clear") {
       const out: string[] = [`> ${trimmed}`, "(log cleared)"]
-      await chrome.storage.local.set({
-        [SESSION_LOG_KEY]: out.slice(-MAX_SESSION_LOG_LINES)
-      })
+      await setPaneLog(paneId, out)
       return
     }
     if (trimmed.toLowerCase() === "exit") {
-      await exitBmxtWindow()
+      const lastPane = (await paneCount()) <= 1
+      if (lastPane) {
+        await exitBmxtWindow()
+      } else {
+        await removePaneFromSession(paneId)
+      }
       return
     }
-    await appendLog([
+    await appendLinesToPane(paneId, [
       `> ${trimmed}`,
       `error: ${e instanceof Error ? e.message : String(e)}`
     ])
     return
   }
   const out: string[] = [`> ${trimmed}`]
+  const isExit = trimmed.toLowerCase() === "exit"
+  const exitWasLastPane = isExit && (await paneCount()) <= 1
   try {
-    out.push(...(await dispatch(trimmed)))
+    out.push(...(await dispatch(trimmed, paneId)))
   } catch (e) {
     out.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
-  /* clear は clearLog 直後の get が古いログを返すことがあるため、マージせず上書きする */
   if (trimmed.toLowerCase() === "clear") {
-    await chrome.storage.local.set({
-      [SESSION_LOG_KEY]: out.slice(-MAX_SESSION_LOG_LINES)
-    })
+    await setPaneLog(paneId, out)
     return
   }
-  if (trimmed.toLowerCase() === "exit") {
+  if (isExit) {
+    if (exitWasLastPane) {
+      return
+    }
+    const sess = await loadOrMigrateSplitSession()
+    await appendLinesToPane(sess.focusedPaneId, out)
     return
   }
-  await appendLog(out)
+  await appendLinesToPane(paneId, out)
 }
 
-async function dispatch(line: string): Promise<string[]> {
+async function dispatch(line: string, paneId: string): Promise<string[]> {
   const bundle = runDispatch(line)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
   }
   const ctx: DispatchChromeContext = {
     clearLog: async () => {
-      await chrome.storage.local.set({ [SESSION_LOG_KEY]: [] })
+      await clearPaneLog(paneId)
     },
-    exitBmxt: exitBmxtWindow,
+    exitPane: async () => exitPaneOrWindow(paneId),
+    splitRow: async () => applySplitDirection(paneId, "row"),
+    splitCol: async () => applySplitDirection(paneId, "col"),
     listWindows,
     focusInfo,
     resolveTabArg
@@ -310,9 +332,10 @@ async function resolveTabArg(
 }
 
 chrome.runtime.onMessage.addListener(
-  (message: { type?: string; line?: string }, _sender, sendResponse) => {
+  (message: { type?: string; line?: string; paneId?: string }, _sender, sendResponse) => {
     if (message?.type === "RUN_CMD" && typeof message.line === "string") {
-      runCommand(message.line)
+      const pid = typeof message.paneId === "string" ? message.paneId : undefined
+      runCommand(message.line, pid)
         .then(() => sendResponse({ ok: true }))
         .catch((e) =>
           sendResponse({

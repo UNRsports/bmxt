@@ -2,7 +2,7 @@
 
 use crate::cmd::{
     activate, back, clear, close, echo, exit, focus, forward, group, groups, help_cmd, man_page,
-    move_tab, new_tab, tabs, windows,
+    move_tab, new_tab, split_col, split_row, tabs, windows,
 };
 use crate::meta::Cmd;
 
@@ -21,6 +21,8 @@ pub static COMMANDS: &[Cmd] = &[
     man_page::CMD,
     move_tab::CMD,
     new_tab::CMD,
+    split_col::CMD,
+    split_row::CMD,
     tabs::CMD,
     windows::CMD,
 ];
