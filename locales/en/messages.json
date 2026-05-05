@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "BMXt_Demo",
+    "description": "Name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Dedicated-window command shell for tabs, windows, and groups.",
+    "description": "Description of the extension."
+  },
+  "commandLaunchBmxt": {
+    "message": "Open or focus BMXt",
+    "description": "Label for the global keyboard shortcut that opens BMXt."
+  }
+}

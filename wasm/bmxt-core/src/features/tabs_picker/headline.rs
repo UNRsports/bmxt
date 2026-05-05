@@ -26,7 +26,7 @@ fn common_parts() -> Vec<&'static str> {
         "↑↓ move",
         "Shift+↑↓ range #",
         "Tab #",
-        "←→ モード（ウィンドウ行: 閉じる ↔ 新規タブ）",
+        ": コマンド（move/close/group/nw/nt · Tab 補完）",
         "/ search",
         "Ctrl+Shift+↑↓ active preview",
         "Enter confirm",

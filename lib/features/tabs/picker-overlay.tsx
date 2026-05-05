@@ -12,6 +12,7 @@ import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
 import { NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import {
+  TabPickerCommandFooter,
   TabPickerGroupTargetPanel,
   TabPickerNewGroupMetaPanel,
   TabPickerNewTabUrlPanel,
@@ -27,6 +28,7 @@ type Props = {
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
   onExit: () => void
+  isHostPaneFocused: boolean
 }
 
 export function TabPickerOverlay({
@@ -36,7 +38,8 @@ export function TabPickerOverlay({
   variant = "default",
   onAppendLog,
   onRefreshRows,
-  onExit
+  onExit,
+  isHostPaneFocused
 }: Props) {
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
@@ -58,6 +61,8 @@ export function TabPickerOverlay({
   const [newGroupColorIndex, setNewGroupColorIndex] = useState(0)
   const [newTabUrlWindowId, setNewTabUrlWindowId] = useState<number | null>(null)
   const [newTabUrl, setNewTabUrl] = useState("")
+  const [commandMode, setCommandMode] = useState(false)
+  const [commandBuffer, setCommandBuffer] = useState("")
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
@@ -139,7 +144,8 @@ export function TabPickerOverlay({
     prevFilterQueryRef,
     prevRowsRef,
     prevBulkSubModeRef,
-    skipNextInitialHiRef
+    skipNextInitialHiRef,
+    isHostPaneFocused
   })
 
   useLoadGroupChoicesWhenBulkGroup(bulkSubMode, setGroupChoices, setGroupPickIndex)
@@ -248,8 +254,13 @@ export function TabPickerOverlay({
       setNewTabUrlWindowId,
       setNewTabUrl,
       closeSearch,
-      onExit
-    })
+      onExit,
+    commandMode,
+    commandBuffer,
+    setCommandMode,
+    setCommandBuffer,
+    isHostPaneFocused
+  })
 
   useWindowKeydownCapture(onWindowKeydownCapture)
 
@@ -270,6 +281,12 @@ export function TabPickerOverlay({
       rowElRefs.current.delete(rowIndex)
     }
   }, [])
+
+  useLayoutEffect(() => {
+    if (commandMode && isHostPaneFocused) {
+      inputRef.current?.focus()
+    }
+  }, [commandMode, isHostPaneFocused])
 
   useLayoutEffect(() => {
     prevFilterQueryRef.current = filterQuery
@@ -299,11 +316,13 @@ export function TabPickerOverlay({
         autoCorrect="off"
         autoComplete="off"
         wrap="off"
-        aria-label={searchMode ? "Filter tabs" : "Tab picker key input"}
-        value={searchMode ? filterQuery : ""}
+        aria-label={searchMode ? "Filter tabs" : commandMode ? "Command input" : "Tab picker key input"}
+        value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
           if (searchMode) {
             setFilterQuery(e.target.value)
+          } else if (commandMode) {
+            setCommandBuffer(e.target.value)
           }
         }}
         onKeyDown={onInputKeyDown}
@@ -368,6 +387,7 @@ export function TabPickerOverlay({
         />
       ) : null}
       {searchMode ? <TabPickerSearchFooter filterQuery={filterQuery} /> : null}
+      {commandMode ? <TabPickerCommandFooter commandBuffer={commandBuffer} /> : null}
     </div>
   )
 }

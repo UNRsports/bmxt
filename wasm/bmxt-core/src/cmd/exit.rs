@@ -7,16 +7,17 @@ pub const CMD: Cmd = Cmd {
     usage_primary: "exit",
     man: &[
         "NAME",
-        "  exit - close the BMXt window and clear the session log",
+        "  exit - close the BMXt window",
         "",
         "SYNOPSIS",
         "  exit",
         "",
         "NOTE",
-        "  Does not clear command history (up/down or Ctrl+R). Same as clear for history.",
+        "  Closes the window and clears the session log.",
+        "  Does not clear command history (up/down or Ctrl+R).",
     ],
 };
 
 pub fn run(_args: &[String]) -> DispatchJson {
-    DispatchJson::effects(vec![Effect::ExitBmxt])
+    DispatchJson::effects(vec![Effect::ExitPane])
 }

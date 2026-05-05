@@ -40,7 +40,8 @@ export function useTabPickerSyncAndLayoutEffects({
   prevFilterQueryRef,
   prevRowsRef,
   prevBulkSubModeRef,
-  skipNextInitialHiRef
+  skipNextInitialHiRef,
+  isHostPaneFocused
 }: {
   initialHi: number
   filterQuery: string
@@ -75,6 +76,7 @@ export function useTabPickerSyncAndLayoutEffects({
   prevBulkSubModeRef: MutableRefObject<BulkSubMode | null>
   /** 新規タブ直後の行は anchor 同期に任せ、親の initialHi 上書きを 1 回避ける */
   skipNextInitialHiRef: MutableRefObject<boolean>
+  isHostPaneFocused: boolean
 }): { groupPanelRef: RefObject<HTMLDivElement | null> } {
   const groupPanelRef = useRef<HTMLDivElement>(null)
 
@@ -199,13 +201,16 @@ export function useTabPickerSyncAndLayoutEffects({
   }, [bulkSubMode, hi, visibleRowIndices.length, prevBulkSubModeRef, setMoveDestHi])
 
   useLayoutEffect(() => {
+    if (!isHostPaneFocused) {
+      return
+    }
     if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
       inputRef.current?.blur()
       groupMetaTitleRef.current?.focus()
       return
     }
     inputRef.current?.focus()
-  }, [groupNewPhase, newTabUrlWindowId, searchMode, inputRef, groupMetaTitleRef])
+  }, [groupNewPhase, newTabUrlWindowId, searchMode, inputRef, groupMetaTitleRef, isHostPaneFocused])
 
   useLayoutEffect(() => {
     const rowIndex = visibleRowIndices[hi]
