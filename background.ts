@@ -7,18 +7,13 @@ import {
 import {
   BMXT_WINDOW_ID_KEY,
   SESSION_LOG_KEY,
-  LAST_NORMAL_WINDOW_KEY,
-  SPLIT_SESSION_KEY
+  LAST_NORMAL_WINDOW_KEY
 } from "./lib/features/extension-storage/keys"
 import {
-  applySplitDirection,
-  appendLinesToPane,
-  clearPaneLog,
-  loadOrMigrateSplitSession,
-  paneCount,
-  removePaneFromSession,
-  setPaneLog
-} from "./lib/features/split"
+  appendLines,
+  clearLog,
+  setLog
+} from "./lib/features/bmxt-window/session-log"
 import {
   ensureBmxtCore,
   runDispatch
@@ -143,9 +138,9 @@ chrome.runtime.onStartup.addListener(() => {
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
 
-/** Session log（マルチペイン）を閉じたウィンドウと揃えて消し、BMXt ウィンドウを閉じる。 */
+/** セッションログをクリアし、BMXt ウィンドウを閉じる。 */
 async function exitBmxtWindow(): Promise<string[]> {
-  await chrome.storage.local.remove([SPLIT_SESSION_KEY, SESSION_LOG_KEY])
+  await chrome.storage.local.remove(SESSION_LOG_KEY)
   const wid = bmxtWindowId
   if (wid !== undefined) {
     try {
@@ -159,40 +154,23 @@ async function exitBmxtWindow(): Promise<string[]> {
   return ["(BMXt window closed, session log cleared)"]
 }
 
-async function exitPaneOrWindow(paneId: string): Promise<string[]> {
-  const n = await paneCount()
-  if (n <= 1) {
-    return exitBmxtWindow()
-  }
-  await removePaneFromSession(paneId)
-  return ["(ペインを閉じました)"]
-}
-
-async function runCommand(line: string, paneIdMaybe?: string): Promise<void> {
+async function runCommand(line: string): Promise<void> {
   const trimmed = line.trim()
   if (!trimmed) {
     return
   }
-  const session = await loadOrMigrateSplitSession()
-  const paneId = paneIdMaybe ?? session.focusedPaneId
   try {
     await ensureBmxtCore()
   } catch (e) {
     if (trimmed.toLowerCase() === "clear") {
-      const out: string[] = [`> ${trimmed}`, "(log cleared)"]
-      await setPaneLog(paneId, out)
+      await setLog([`> ${trimmed}`, "(log cleared)"])
       return
     }
     if (trimmed.toLowerCase() === "exit") {
-      const lastPane = (await paneCount()) <= 1
-      if (lastPane) {
-        await exitBmxtWindow()
-      } else {
-        await removePaneFromSession(paneId)
-      }
+      await exitBmxtWindow()
       return
     }
-    await appendLinesToPane(paneId, [
+    await appendLines([
       `> ${trimmed}`,
       `error: ${e instanceof Error ? e.message : String(e)}`
     ])
@@ -200,39 +178,31 @@ async function runCommand(line: string, paneIdMaybe?: string): Promise<void> {
   }
   const out: string[] = [`> ${trimmed}`]
   const isExit = trimmed.toLowerCase() === "exit"
-  const exitWasLastPane = isExit && (await paneCount()) <= 1
   try {
-    out.push(...(await dispatch(trimmed, paneId)))
+    out.push(...(await dispatch(trimmed)))
   } catch (e) {
     out.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
   if (trimmed.toLowerCase() === "clear") {
-    await setPaneLog(paneId, out)
+    await setLog(out)
     return
   }
   if (isExit) {
-    if (exitWasLastPane) {
-      return
-    }
-    const sess = await loadOrMigrateSplitSession()
-    await appendLinesToPane(sess.focusedPaneId, out)
     return
   }
-  await appendLinesToPane(paneId, out)
+  await appendLines(out)
 }
 
-async function dispatch(line: string, paneId: string): Promise<string[]> {
+async function dispatch(line: string): Promise<string[]> {
   const bundle = runDispatch(line)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
   }
   const ctx: DispatchChromeContext = {
     clearLog: async () => {
-      await clearPaneLog(paneId)
+      await clearLog()
     },
-    exitPane: async () => exitPaneOrWindow(paneId),
-    splitRow: async () => applySplitDirection(paneId, "row"),
-    splitCol: async () => applySplitDirection(paneId, "col"),
+    exitPane: async () => exitBmxtWindow(),
     listWindows,
     focusInfo,
     resolveTabArg
@@ -332,10 +302,9 @@ async function resolveTabArg(
 }
 
 chrome.runtime.onMessage.addListener(
-  (message: { type?: string; line?: string; paneId?: string }, _sender, sendResponse) => {
+  (message: { type?: string; line?: string }, _sender, sendResponse) => {
     if (message?.type === "RUN_CMD" && typeof message.line === "string") {
-      const pid = typeof message.paneId === "string" ? message.paneId : undefined
-      runCommand(message.line, pid)
+      runCommand(message.line)
         .then(() => sendResponse({ ok: true }))
         .catch((e) =>
           sendResponse({

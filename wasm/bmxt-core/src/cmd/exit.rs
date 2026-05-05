@@ -7,13 +7,13 @@ pub const CMD: Cmd = Cmd {
     usage_primary: "exit",
     man: &[
         "NAME",
-        "  exit - close the current pane (last pane closes the BMXt window)",
+        "  exit - close the BMXt window",
         "",
         "SYNOPSIS",
         "  exit",
         "",
         "NOTE",
-        "  Last pane: closes the window and clears session logs (same as before).",
+        "  Closes the window and clears the session log.",
         "  Does not clear command history (up/down or Ctrl+R).",
     ],
 };

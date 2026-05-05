@@ -1,12 +1,6 @@
 import { buildTabPickerRows } from "../tabs"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
-import {
-  neighborPane,
-  SplitLayout,
-  type TabPickerState,
-  useSplitSession,
-  type BmxtPaneShellSharedProps
-} from "../split"
+import { type TabPickerState, BmxtShell } from "./bmxt-shell"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -16,26 +10,17 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useCommandHistory } from "./use-command-history"
+import { useSessionLog } from "./use-session-log"
 
 export function BmxtTerminal() {
-  const { session, appendLogForPane, setFocusedPane } = useSplitSession()
+  const { lines, appendLogLines } = useSessionLog()
   const { history, appendCommandToHistory } = useCommandHistory()
-  const [completionCandidates, setCompletionCandidates] = useState<string[]>(
-    []
-  )
+  const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
   const [tabPicker, setTabPicker] = useState<TabPickerState | null>(null)
-  const [tabPickerHostPaneId, setTabPickerHostPaneId] = useState<string | null>(
-    null
-  )
   const tabPickerRef = useRef<TabPickerState | null>(null)
-  useEffect(() => {
-    tabPickerRef.current = tabPicker
-  }, [tabPicker])
 
   useEffect(() => {
-    if (!tabPicker) {
-      setTabPickerHostPaneId(null)
-    }
+    tabPickerRef.current = tabPicker
   }, [tabPicker])
 
   useEffect(() => {
@@ -69,46 +54,7 @@ export function BmxtTerminal() {
 
   useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
-  const sessionRef = useRef(session)
-  useEffect(() => {
-    sessionRef.current = session
-  }, [session])
-
-  /** プロンプト／tabs ピッカー表示中どちらでも Alt+矢印または Ctrl+矢印でペイン移動（キャプチャで先に処理） */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const isAltOnly = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
-      const isCtrlOnly = e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
-      if (!isAltOnly && !isCtrlOnly) {
-        return
-      }
-      const map = {
-        ArrowUp: "up",
-        ArrowDown: "down",
-        ArrowLeft: "left",
-        ArrowRight: "right"
-      } as const
-      const dir = map[e.key as keyof typeof map]
-      if (dir === undefined) {
-        return
-      }
-      const s = sessionRef.current
-      if (!s) {
-        return
-      }
-      const next = neighborPane(s.root, s.focusedPaneId, dir)
-      if (next === null) {
-        return
-      }
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      setFocusedPane(next)
-    }
-    window.addEventListener("keydown", onKey, true)
-    return () => window.removeEventListener("keydown", onKey, true)
-  }, [setFocusedPane])
-
-  if (!session) {
+  if (lines === null) {
     return (
       <div
         className="bmxt-root"
@@ -122,21 +68,6 @@ export function BmxtTerminal() {
         }}
       />
     )
-  }
-
-  const shell: BmxtPaneShellSharedProps = {
-    history,
-    completionCandidates,
-    appendLogForPane,
-    appendCommandToHistory,
-    tabPicker,
-    tabPickerHostPaneId,
-    setTabPicker,
-    tabPickerRef,
-    refreshTabPickerRows,
-    setTabPickerSourcePane: (paneId) => {
-      setTabPickerHostPaneId(paneId)
-    }
   }
 
   return (
@@ -154,12 +85,16 @@ export function BmxtTerminal() {
         color: "#c9d1d9"
       }}>
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <SplitLayout
-          node={session.root}
-          paneLogs={session.paneLogs}
-          focusedPaneId={session.focusedPaneId}
-          setFocusedPane={setFocusedPane}
-          shell={shell}
+        <BmxtShell
+          lines={lines}
+          history={history}
+          completionCandidates={completionCandidates}
+          appendLogLines={appendLogLines}
+          appendCommandToHistory={appendCommandToHistory}
+          tabPicker={tabPicker}
+          setTabPicker={setTabPicker}
+          tabPickerRef={tabPickerRef}
+          refreshTabPickerRows={refreshTabPickerRows}
         />
       </div>
     </div>

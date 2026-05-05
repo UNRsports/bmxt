@@ -3,8 +3,6 @@
 export type ChromeEffect =
   | { kind: "clear_log" }
   | { kind: "exit_pane" }
-  | { kind: "split_row" }
-  | { kind: "split_col" }
   | { kind: "list_windows" }
   | { kind: "focus_info" }
   | { kind: "activate"; tab_id: number }

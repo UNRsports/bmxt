@@ -59,10 +59,6 @@ pub enum Effect {
     OpenUrlNewWindow { url: String },
     NavigateCurrentTab { url: String },
     OpenUrlNewTab { url: String },
-    /// Close focused pane, or the whole BMXt window when it is the last pane.
+    /// Close the BMXt window and clear session log.
     ExitPane,
-    /// Split the focused pane horizontally (new pane below).
-    SplitRow,
-    /// Split the focused pane vertically (new pane to the right).
-    SplitCol,
 }

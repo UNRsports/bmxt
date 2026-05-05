@@ -10,7 +10,7 @@ import {
 } from "../tabs"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import { logBmxtKey } from "../debug/key-log"
-import { matchesForSearch, wordBounds } from "../bmxt-window/text-utils"
+import { matchesForSearch, wordBounds } from "./text-utils"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -33,50 +33,30 @@ export type TabPickerState = {
   variant?: "default" | "groupNew"
 }
 
-export type BmxtPaneShellSharedProps = {
+type Props = {
+  lines: string[]
   history: string[]
   completionCandidates: string[]
-  appendLogForPane: (paneId: string, lines: string[]) => Promise<void>
+  appendLogLines: (newLines: string[]) => Promise<void>
   appendCommandToHistory: (cmd: string) => void
   tabPicker: TabPickerState | null
-  /** `tabs -l` 等でピッカーを開いたペイン ID（このペインだけオーバーレイ表示） */
-  tabPickerHostPaneId: string | null
   setTabPicker: (v: TabPickerState | null) => void
   tabPickerRef: MutableRefObject<TabPickerState | null>
   refreshTabPickerRows: () => Promise<void>
-  /** タブピッカー起動前に、ホストペイン ID を登録 */
-  setTabPickerSourcePane: (paneId: string) => void
 }
 
-type Props = BmxtPaneShellSharedProps & {
-  paneId: string
-  isFocused: boolean
-  lines: string[]
-  onActivatePane: () => void
-}
-
-export function BmxtPaneShell({
-  paneId,
-  isFocused,
+export function BmxtShell({
   lines,
-  onActivatePane,
   history,
   completionCandidates,
-  appendLogForPane,
+  appendLogLines,
   appendCommandToHistory,
   tabPicker,
-  tabPickerHostPaneId,
   setTabPicker,
   tabPickerRef,
-  refreshTabPickerRows,
-  setTabPickerSourcePane
+  refreshTabPickerRows
 }: Props) {
-  const pickerOpenHere =
-    tabPicker !== null && tabPickerHostPaneId === paneId
-  const appendLogLines = useCallback(
-    (newLines: string[]) => appendLogForPane(paneId, newLines),
-    [appendLogForPane, paneId]
-  )
+  const pickerOpen = tabPicker !== null
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
   const [cursorPos, setCursorPos] = useState(0)
@@ -85,7 +65,6 @@ export function BmxtPaneShell({
   const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const endRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
 
   const [histNavIndex, setHistNavIndex] = useState(-1)
@@ -111,6 +90,7 @@ export function BmxtPaneShell({
   useEffect(() => {
     lineRef.current = line
   }, [line])
+
   useEffect(() => {
     cursorRef.current = cursorPos
   }, [cursorPos])
@@ -150,14 +130,14 @@ export function BmxtPaneShell({
   }, [])
 
   useLayoutEffect(() => {
-    if (pickerOpenHere) {
+    if (pickerOpen) {
       return
     }
     syncLogScroll()
-  }, [pickerOpenHere, lines, mode, line, syncLogScroll])
+  }, [pickerOpen, lines, mode, line, syncLogScroll])
 
   useEffect(() => {
-    if (pickerOpenHere) {
+    if (pickerOpen) {
       return
     }
     const el = scrollRef.current
@@ -167,10 +147,10 @@ export function BmxtPaneShell({
     const ro = new ResizeObserver(() => syncLogScroll())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [pickerOpenHere, syncLogScroll])
+  }, [pickerOpen, syncLogScroll])
 
   useLayoutEffect(() => {
-    if (pickerOpenHere) {
+    if (pickerOpen) {
       return
     }
     const el = scrollRef.current
@@ -179,10 +159,10 @@ export function BmxtPaneShell({
     }
     el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
     requestAnimationFrame(() => syncLogScroll())
-  }, [pickerOpenHere, lines, syncLogScroll])
+  }, [pickerOpen, lines, syncLogScroll])
 
   useLayoutEffect(() => {
-    if (pickerOpenHere || !isFocused) {
+    if (pickerOpen) {
       return
     }
     const ta = imeRef.current
@@ -192,26 +172,26 @@ export function BmxtPaneShell({
     if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
       ta.setSelectionRange(cursorPos, cursorPos)
     }
-  }, [pickerOpenHere, isFocused, line, cursorPos, isComposing])
+  }, [pickerOpen, line, cursorPos, isComposing])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
   useEffect(() => {
-    if (isFocused && !pickerOpenHere) {
+    if (!pickerOpen) {
       focusPrompt()
     }
-  }, [isFocused, pickerOpenHere, focusPrompt])
+  }, [pickerOpen, focusPrompt])
 
   useEffect(() => {
-    if (pickerOpenHere || !isFocused) {
+    if (pickerOpen) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [pickerOpenHere, isFocused, focusPrompt])
+  }, [pickerOpen, focusPrompt])
 
   useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
@@ -243,7 +223,6 @@ export function BmxtPaneShell({
       tabPressSeqRef.current = 0
       void (async () => {
         try {
-          setTabPickerSourcePane(paneId)
           const rows = await buildTabPickerRows(showUrl)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
@@ -269,7 +248,6 @@ export function BmxtPaneShell({
       tabPressSeqRef.current = 0
       void (async () => {
         try {
-          setTabPickerSourcePane(paneId)
           const rows = await buildTabPickerRows(false)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
@@ -292,12 +270,9 @@ export function BmxtPaneShell({
     setCursorPos(0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
-    chrome.runtime.sendMessage(
-      { type: "RUN_CMD", line: trimmed, paneId },
-      () => {
-        void chrome.runtime.lastError
-      }
-    )
+    chrome.runtime.sendMessage({ type: "RUN_CMD", line: trimmed }, () => {
+      void chrome.runtime.lastError
+    })
     focusPrompt()
   }, [
     appendCommandToHistory,
@@ -307,9 +282,7 @@ export function BmxtPaneShell({
     iSearchMatches,
     iSearchSnapshot,
     mode,
-    paneId,
-    setTabPicker,
-    setTabPickerSourcePane
+    setTabPicker
   ])
 
   const exitISearch = useCallback(() => {
@@ -399,11 +372,10 @@ export function BmxtPaneShell({
         altKey: e.altKey,
         metaKey: e.metaKey,
         mode,
-        tabPickerOpen: Boolean(tabPickerRef.current && pickerOpenHere),
-        paneId
+        tabPickerOpen: Boolean(tabPickerRef.current)
       })
 
-      if (tabPickerRef.current && pickerOpenHere) {
+      if (tabPickerRef.current) {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
           return
@@ -486,7 +458,8 @@ export function BmxtPaneShell({
             const idx = tabPressSeqRef.current % cands.length
             tabPressSeqRef.current += 1
             const rep = cands[idx]!
-            const newLine = curLn.slice(0, muZone.urlStart) + rep + curLn.slice(muZone.tokenEnd)
+            const newLine =
+              curLn.slice(0, muZone.urlStart) + rep + curLn.slice(muZone.tokenEnd)
             setHistNavIndex(-1)
             setLine(newLine)
             setCursorPos(muZone.urlStart + rep.length)
@@ -563,8 +536,7 @@ export function BmxtPaneShell({
       history,
       iSearchMatches,
       mode,
-      paneId,
-      pickerOpenHere,
+      pickerOpen,
       submitLine,
       tabPickerRef
     ]
@@ -577,10 +549,6 @@ export function BmxtPaneShell({
 
   return (
     <div
-      className="bmxt-split-pane"
-      onMouseDownCapture={() => {
-        onActivatePane()
-      }}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -588,13 +556,12 @@ export function BmxtPaneShell({
         minHeight: 0,
         minWidth: 0,
         boxSizing: "border-box",
-        position: "relative",
-        border: isFocused ? "1px solid #30363d" : "1px solid transparent"
+        position: "relative"
       }}>
       <div
         ref={scrollRef}
         className={`bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`}
-        style={pickerOpenHere ? { display: "none" } : undefined}>
+        style={pickerOpen ? { display: "none" } : undefined}>
         {lines.length === 0 ? (
           <div className="bmxt-hint">
             Welcome to BMXt! This program is a test version. Development currently
@@ -603,8 +570,7 @@ export function BmxtPaneShell({
             BMXtへようこそ！本プログラムはテストバージョンです。現在は{" "}
             <code>tabs -l</code> での動作を中心に開発しています。
             <br />
-            Type help and press Enter. Tab completes commands.{" "}
-            <code>split-row</code> / <code>split-col</code> でペイン分割。
+            Type help and press Enter. Tab completes commands.
           </div>
         ) : (
           lines.map((ln, i) => (
@@ -649,7 +615,7 @@ export function BmxtPaneShell({
               autoCorrect="off"
               autoComplete="off"
               wrap="off"
-              tabIndex={isFocused ? 0 : -1}
+              tabIndex={0}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
               value={line}
               onChange={onImeInput}
@@ -665,9 +631,9 @@ export function BmxtPaneShell({
             />
           </div>
         </div>
-        <div ref={endRef} className="bmxt-scroll-anchor" aria-hidden />
+        <div className="bmxt-scroll-anchor" aria-hidden />
       </div>
-      {pickerOpenHere && tabPicker ? (
+      {pickerOpen && tabPicker ? (
         <div
           style={{
             position: "absolute",
@@ -687,7 +653,7 @@ export function BmxtPaneShell({
             onAppendLog={appendLogLines}
             onRefreshRows={refreshTabPickerRows}
             onExit={() => setTabPicker(null)}
-            isHostPaneFocused={isFocused}
+            isHostPaneFocused={true}
           />
         </div>
       ) : null}
