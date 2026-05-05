@@ -22,6 +22,32 @@ import {
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
 
+const COMMAND_COMPLETIONS = ["move", "close", "group", "newwindow", "newtab"] as const
+
+function parsePickerCommand(cmd: string): BulkSubMode | null {
+  switch (cmd.trim().toLowerCase()) {
+    case "move":
+    case "m":
+      return "move"
+    case "close":
+    case "c":
+      return "close"
+    case "group":
+    case "g":
+      return "group"
+    case "newwindow":
+    case "nw":
+    case "new-window":
+      return "newWindow"
+    case "newtab":
+    case "nt":
+    case "new-tab":
+      return "newTab"
+    default:
+      return null
+  }
+}
+
 export function useTabPickerKeyboard({
   rows,
   visibleRowIndices,
@@ -63,7 +89,11 @@ export function useTabPickerKeyboard({
   setNewTabUrlWindowId,
   setNewTabUrl,
   closeSearch,
-  onExit
+  onExit,
+  commandMode,
+  commandBuffer,
+  setCommandMode,
+  setCommandBuffer
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -106,6 +136,10 @@ export function useTabPickerKeyboard({
   setNewTabUrl: Dispatch<SetStateAction<string>>
   closeSearch: () => void
   onExit: () => void
+  commandMode: boolean
+  commandBuffer: string
+  setCommandMode: Dispatch<SetStateAction<boolean>>
+  setCommandBuffer: Dispatch<SetStateAction<string>>
 }) {
   /** window capture のリスナーが useEffect 更新より古いクロージャのときでも Enter で確実に参照できるようにする */
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
@@ -113,81 +147,47 @@ export function useTabPickerKeyboard({
   newTabUrlWindowIdRef.current = newTabUrlWindowId
   newTabUrlRef.current = newTabUrl
 
-  const runPickerCycleBulkModeKeys = useCallback(
+  /** Tab 補完の起点文字列・候補・現在インデックスを管理する ref */
+  const commandCompletionRef = useRef<{
+    base: string
+    completions: readonly string[]
+    idx: number
+  } | null>(null)
+
+  const runPickerCommandEnter = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
-        return false
-      }
-      if (e.ctrlKey || e.metaKey || e.altKey) {
-        return false
-      }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing) {
+      if (!commandMode || e.key !== "Enter" || ev.isComposing || e.shiftKey) {
         return false
       }
-
-      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
-        const ae = document.activeElement
-        if (
-          ae === groupMetaTitleRef.current ||
-          groupMetaColorStripRef.current?.contains(ae ?? null)
-        ) {
-          return false
-        }
-      }
-
-      const rowIndex = visibleRowIndices[hi]
-      const row = rowIndex !== undefined ? rows[rowIndex] : undefined
-      if (!row) {
-        return false
-      }
-
-      const step = e.key === "ArrowRight" ? 1 : -1
-      const shouldAutoMarkTab =
-        row.kind === "tab" && !markedTabSet.has(row.tabId)
-
       e.preventDefault()
       e.stopPropagation()
 
-      if (shouldAutoMarkTab) {
-        applyReducedStateSequence([
-          {
-            kind: "toggleCurrent",
-            row: { kind: "tab", tabId: row.tabId }
-          },
-          {
-            kind: "cycleSubMode",
-            direction: step
-          }
-        ])
-        return true
-      }
+      const mode = parsePickerCommand(commandBuffer)
+      commandCompletionRef.current = null
+      setCommandMode(false)
+      setCommandBuffer("")
 
-      let implicitKind: SelectKind | undefined
-      if (markedCount === 0 || markedKind === null) {
-        implicitKind =
-          row.kind === "tab" ? "tab" : row.kind === "window" ? "window" : "group"
+      if (mode !== null) {
+        const rowIndex = visibleRowIndices[hi]
+        const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+        if (row && markedCount === 0 && row.kind === "tab") {
+          applyReducedState({ kind: "toggleCurrent", row: { kind: "tab", tabId: row.tabId } })
+        }
+        setBulkSubMode(mode)
       }
-
-      applyReducedState({
-        kind: "cycleSubMode",
-        direction: step,
-        ...(implicitKind !== undefined ? { implicitKind } : {})
-      })
       return true
     },
     [
       applyReducedState,
-      applyReducedStateSequence,
-      groupMetaColorStripRef,
-      groupMetaTitleRef,
-      groupNewPhase,
+      commandBuffer,
+      commandMode,
       hi,
       markedCount,
-      markedKind,
-      markedTabSet,
-      newTabUrlWindowId,
       rows,
+      setBulkSubMode,
+      setCommandBuffer,
+      setCommandMode,
       visibleRowIndices
     ]
   )
@@ -575,19 +575,14 @@ export function useTabPickerKeyboard({
         })
         return
       }
-      if (runPickerCycleBulkModeKeys(ev)) {
-        logBmxtKey("picker", "handled", {
-          handler: "cycleBulkMode",
-          key: ev.key,
-          code: ev.code
-        })
+      if (runPickerCommandEnter(ev)) {
         return
       }
       if (runPickerEnterKey(ev)) {
         return
       }
     },
-    [runPickerCycleBulkModeKeys, runPickerEnterKey, runPickerVerticalNav]
+    [runPickerCommandEnter, runPickerEnterKey, runPickerVerticalNav]
   )
 
   const onInputKeyDown = useCallback(
@@ -597,9 +592,6 @@ export function useTabPickerKeyboard({
       }
 
       if (runPickerVerticalNav(e.nativeEvent)) {
-        return
-      }
-      if (runPickerCycleBulkModeKeys(e.nativeEvent)) {
         return
       }
 
@@ -615,6 +607,12 @@ export function useTabPickerKeyboard({
           setNewTabUrlWindowId(null)
           setNewTabUrl("")
           requestAnimationFrame(() => inputRef.current?.focus())
+          return
+        }
+        if (commandMode) {
+          commandCompletionRef.current = null
+          setCommandMode(false)
+          setCommandBuffer("")
           return
         }
         if (groupNewPhase === "meta") {
@@ -639,7 +637,27 @@ export function useTabPickerKeyboard({
         return
       }
 
+      if (commandMode && e.key !== "Tab") {
+        commandCompletionRef.current = null
+      }
+
       if (e.key === "Tab") {
+        if (commandMode) {
+          e.preventDefault()
+          e.stopPropagation()
+          if (commandCompletionRef.current === null) {
+            const base = commandBuffer
+            const candidates = COMMAND_COMPLETIONS.filter((c) =>
+              c.startsWith(base.toLowerCase())
+            )
+            if (candidates.length === 0) return
+            commandCompletionRef.current = { base, completions: candidates, idx: 0 }
+          }
+          const { completions, idx } = commandCompletionRef.current
+          setCommandBuffer(completions[idx % completions.length])
+          commandCompletionRef.current = { ...commandCompletionRef.current, idx: idx + 1 }
+          return
+        }
         if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
           e.preventDefault()
           return
@@ -684,9 +702,19 @@ export function useTabPickerKeyboard({
       }
 
       if (e.key === "Enter") {
+        if (commandMode) {
+          return
+        }
         if (runPickerEnterKey(e.nativeEvent)) {
           return
         }
+      }
+
+      if (e.key === ":" && !e.ctrlKey && !e.metaKey && !e.altKey && !searchMode && !commandMode && groupNewPhase !== "meta" && newTabUrlWindowId === null) {
+        e.preventDefault()
+        setCommandMode(true)
+        setCommandBuffer("")
+        return
       }
 
       if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -697,7 +725,7 @@ export function useTabPickerKeyboard({
         return
       }
 
-      if (!searchMode) {
+      if (!searchMode && !commandMode) {
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
           e.preventDefault()
         }
@@ -707,6 +735,8 @@ export function useTabPickerKeyboard({
       applyReducedState,
       bulkSubMode,
       closeSearch,
+      commandBuffer,
+      commandMode,
       executeCreateNewGroup,
       groupNewPhase,
       hi,
@@ -714,12 +744,13 @@ export function useTabPickerKeyboard({
       markedTabIds,
       newTabUrlWindowId,
       onExit,
-      runPickerCycleBulkModeKeys,
       runPickerEnterKey,
       runPickerVerticalNav,
       rows,
       searchMode,
       setBulkSubMode,
+      setCommandBuffer,
+      setCommandMode,
       setGroupNewPhase,
       setNewTabUrl,
       setNewTabUrlWindowId,

@@ -147,3 +147,13 @@ export function TabPickerSearchFooter({ filterQuery }: { filterQuery: string }) 
     </div>
   )
 }
+
+export function TabPickerCommandFooter({ commandBuffer }: { commandBuffer: string }) {
+  return (
+    <div className="bmxt-tab-picker-filter">
+      <span className="bmxt-tab-picker-filter-label">:</span>
+      <span className="bmxt-tab-picker-filter-query">{commandBuffer || " "}</span>
+      <span className="bmxt-tab-picker-filter-hint">Enter 実行  Esc キャンセル</span>
+    </div>
+  )
+}
