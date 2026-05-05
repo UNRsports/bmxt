@@ -73,8 +73,6 @@ export function BmxtPaneShell({
 }: Props) {
   const pickerOpenHere =
     tabPicker !== null && tabPickerHostPaneId === paneId
-  const pickerOpenAnywhere = tabPicker !== null
-
   const appendLogLines = useCallback(
     (newLines: string[]) => appendLogForPane(paneId, newLines),
     [appendLogForPane, paneId]
@@ -201,19 +199,19 @@ export function BmxtPaneShell({
   }, [])
 
   useEffect(() => {
-    if (isFocused && !pickerOpenAnywhere) {
+    if (isFocused && !pickerOpenHere) {
       focusPrompt()
     }
-  }, [isFocused, pickerOpenAnywhere, focusPrompt])
+  }, [isFocused, pickerOpenHere, focusPrompt])
 
   useEffect(() => {
-    if (pickerOpenAnywhere || !isFocused) {
+    if (pickerOpenHere || !isFocused) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [pickerOpenAnywhere, isFocused, focusPrompt])
+  }, [pickerOpenHere, isFocused, focusPrompt])
 
   useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
@@ -689,6 +687,7 @@ export function BmxtPaneShell({
             onAppendLog={appendLogLines}
             onRefreshRows={refreshTabPickerRows}
             onExit={() => setTabPicker(null)}
+            isHostPaneFocused={isFocused}
           />
         </div>
       ) : null}

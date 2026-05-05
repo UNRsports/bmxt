@@ -93,7 +93,8 @@ export function useTabPickerKeyboard({
   commandMode,
   commandBuffer,
   setCommandMode,
-  setCommandBuffer
+  setCommandBuffer,
+  isHostPaneFocused
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -140,6 +141,7 @@ export function useTabPickerKeyboard({
   commandBuffer: string
   setCommandMode: Dispatch<SetStateAction<boolean>>
   setCommandBuffer: Dispatch<SetStateAction<string>>
+  isHostPaneFocused: boolean
 }) {
   /** window capture のリスナーが useEffect 更新より古いクロージャのときでも Enter で確実に参照できるようにする */
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
@@ -567,6 +569,9 @@ export function useTabPickerKeyboard({
 
   const onWindowKeydownCapture = useCallback(
     (ev: KeyboardEvent) => {
+      if (!isHostPaneFocused) {
+        return
+      }
       if (runPickerVerticalNav(ev)) {
         logBmxtKey("picker", "handled", {
           handler: "verticalNav",
@@ -582,7 +587,7 @@ export function useTabPickerKeyboard({
         return
       }
     },
-    [runPickerCommandEnter, runPickerEnterKey, runPickerVerticalNav]
+    [isHostPaneFocused, runPickerCommandEnter, runPickerEnterKey, runPickerVerticalNav]
   )
 
   const onInputKeyDown = useCallback(

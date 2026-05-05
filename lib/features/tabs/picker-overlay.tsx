@@ -28,6 +28,7 @@ type Props = {
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
   onExit: () => void
+  isHostPaneFocused: boolean
 }
 
 export function TabPickerOverlay({
@@ -37,7 +38,8 @@ export function TabPickerOverlay({
   variant = "default",
   onAppendLog,
   onRefreshRows,
-  onExit
+  onExit,
+  isHostPaneFocused
 }: Props) {
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
@@ -142,7 +144,8 @@ export function TabPickerOverlay({
     prevFilterQueryRef,
     prevRowsRef,
     prevBulkSubModeRef,
-    skipNextInitialHiRef
+    skipNextInitialHiRef,
+    isHostPaneFocused
   })
 
   useLoadGroupChoicesWhenBulkGroup(bulkSubMode, setGroupChoices, setGroupPickIndex)
@@ -252,11 +255,12 @@ export function TabPickerOverlay({
       setNewTabUrl,
       closeSearch,
       onExit,
-      commandMode,
-      commandBuffer,
-      setCommandMode,
-      setCommandBuffer
-    })
+    commandMode,
+    commandBuffer,
+    setCommandMode,
+    setCommandBuffer,
+    isHostPaneFocused
+  })
 
   useWindowKeydownCapture(onWindowKeydownCapture)
 
@@ -279,10 +283,10 @@ export function TabPickerOverlay({
   }, [])
 
   useLayoutEffect(() => {
-    if (commandMode) {
+    if (commandMode && isHostPaneFocused) {
       inputRef.current?.focus()
     }
-  }, [commandMode])
+  }, [commandMode, isHostPaneFocused])
 
   useLayoutEffect(() => {
     prevFilterQueryRef.current = filterQuery

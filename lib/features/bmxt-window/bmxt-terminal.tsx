@@ -74,10 +74,12 @@ export function BmxtTerminal() {
     sessionRef.current = session
   }, [session])
 
-  /** プロンプト／tabs ピッカー表示中どちらでも Alt+矢印でペイン移動（キャプチャで先に処理） */
+  /** プロンプト／tabs ピッカー表示中どちらでも Alt+矢印または Ctrl+矢印でペイン移動（キャプチャで先に処理） */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+      const isAltOnly = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+      const isCtrlOnly = e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
+      if (!isAltOnly && !isCtrlOnly) {
         return
       }
       const map = {
@@ -101,13 +103,10 @@ export function BmxtTerminal() {
       e.preventDefault()
       e.stopImmediatePropagation()
       setFocusedPane(next)
-      if (tabPickerRef.current) {
-        setTabPicker(null)
-      }
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
-  }, [setFocusedPane, setTabPicker])
+  }, [setFocusedPane])
 
   if (!session) {
     return (
