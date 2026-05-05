@@ -26,6 +26,9 @@ pub fn build_help_lines() -> Vec<String> {
     let mut names: Vec<&str> = table::COMMANDS.iter().map(|c| c.name).collect();
     names.sort();
     let mut lines = vec!["BMXt - browser command shell".to_string()];
+    lines.push("Quick start: type `tabs` and press Enter, then continue with the shown options.".to_string());
+    lines.push(String::new());
+    lines.push("Built-in commands:".to_string());
     for name in names {
         let cmd = cmd_by_name(name).unwrap();
         let aliases = if cmd.aliases.is_empty() {
@@ -35,13 +38,24 @@ pub fn build_help_lines() -> Vec<String> {
         };
         lines.push(format!("  {}{}", cmd.usage_primary, aliases));
     }
+    lines.push(String::new());
     lines.push("tabs (BMXt window / SW):".to_string());
     lines.push(
-        "  tabs -list [-u]  - tab picker: ↑↓ move, / filter (@... URL), Enter page, Esc exit."
+        "  tabs              - show available options, then restore prompt to `tabs ` for continuation."
             .to_string(),
     );
     lines.push(
-        "  tabs -nowurl      - print current tab URL   tabs -moveurl <url>  - jump to URL tab or open new tab"
+        "  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title)."
+            .to_string(),
+    );
+    lines.push(
+        "  tabs -nowurl      - print current tab URL from active tab in focused window.".to_string(),
+    );
+    lines.push(
+        "  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.".to_string(),
+    );
+    lines.push(
+        "  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
             .to_string(),
     );
     lines.push(String::new());

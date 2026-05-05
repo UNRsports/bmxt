@@ -255,6 +255,7 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
   - Tab rows: `move` (`m`), `close` (`c`), `group` (`g`), `newwindow` (`nw`)
   - Window rows: `close` (`c`), `newtab` (`nt`)
   - Group rows: `move` (`m`), `close` (`c`), `newwindow` (`nw`)
+- In `:` command mode, pressing `Tab` or `Enter` with an empty command shows a dim placeholder of available commands for the current target (tab/window/group).
 - **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter`. **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute.
 - Use `/` for incremental search (`@` prefix for URL match). `Enter` focuses the highlighted tab while keeping picker open; `Esc` order: clear `#` → cancel command mode → end search → exit bulk mode → close picker.
 
@@ -279,6 +280,7 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
   - タブ行: `move`（`m`）、`close`（`c`）、`group`（`g`）、`newwindow`（`nw`）
   - ウィンドウ行: `close`（`c`）、`newtab`（`nt`）
   - グループ行: `move`（`m`）、`close`（`c`）、`newwindow`（`nw`）
+- `:` コマンドモードでは、コマンド未入力のまま `Tab` または `Enter` を押すと、現在の対象（タブ／ウィンドウ／グループ）に応じた利用可能コマンドを薄いプレースホルダーで表示します。
 - **[MOVE]** は `↑`/`↓` で移動先タブを選び、`Enter` で `#` タブを一括移動します。
 - **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
 - `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。`Esc` の解除順は `#` 全解除 → コマンドモード終了 → 検索終了 → バルクモード終了 → ピッカー終了です。
