@@ -1,10 +1,12 @@
 import {
   buildTabPickerRows,
+  listTabsOptionCandidates,
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
   parseTabsListPickerLine,
   resolveInitialTabPickerHighlightIndex,
   TabPickerOverlay,
+  tabsOptionCompletionZone,
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
@@ -43,6 +45,18 @@ type Props = {
   setTabPicker: (v: TabPickerState | null) => void
   tabPickerRef: MutableRefObject<TabPickerState | null>
   refreshTabPickerRows: () => Promise<void>
+}
+
+const CONTINUATION_PROMPT_BY_COMMAND: Record<string, string> = {
+  tabs: "tabs "
+}
+
+function continuationPromptFor(trimmed: string): string | null {
+  if (trimmed.includes(" ")) {
+    return null
+  }
+  const key = trimmed.toLowerCase()
+  return CONTINUATION_PROMPT_BY_COMMAND[key] ?? null
 }
 
 export function BmxtShell({
@@ -266,6 +280,7 @@ export function BmxtShell({
     }
 
     appendCommandToHistory(trimmed)
+    const continuationPrompt = continuationPromptFor(trimmed)
     setLine("")
     setCursorPos(0)
     setHistNavIndex(-1)
@@ -273,6 +288,10 @@ export function BmxtShell({
     chrome.runtime.sendMessage({ type: "RUN_CMD", line: trimmed }, () => {
       void chrome.runtime.lastError
     })
+    if (continuationPrompt) {
+      setLine(continuationPrompt)
+      setCursorPos(continuationPrompt.length)
+    }
     focusPrompt()
   }, [
     appendCommandToHistory,
@@ -447,6 +466,24 @@ export function BmxtShell({
       if (e.key === "Tab") {
         const curLn = lineRef.current
         const pos = cursorRef.current
+        const optionZone = tabsOptionCompletionZone(curLn, pos)
+        if (optionZone) {
+          e.preventDefault()
+          const cands = listTabsOptionCandidates(optionZone.prefix)
+          if (cands.length === 0) {
+            return
+          }
+          const idx = tabPressSeqRef.current % cands.length
+          tabPressSeqRef.current += 1
+          const rep = cands[idx]!
+          const suffix = optionZone.optionEnd === curLn.length ? " " : ""
+          const newLine =
+            curLn.slice(0, optionZone.optionStart) + rep + suffix + curLn.slice(optionZone.optionEnd)
+          setHistNavIndex(-1)
+          setLine(newLine)
+          setCursorPos(optionZone.optionStart + rep.length + suffix.length)
+          return
+        }
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
         if (muZone) {
           e.preventDefault()
@@ -565,10 +602,10 @@ export function BmxtShell({
         {lines.length === 0 ? (
           <div className="bmxt-hint">
             Welcome to BMXt! This program is a test version. Development currently
-            focuses on behavior with <code>tabs -l</code>.
+            focuses on behavior with <code>tabs -list</code>.
             <br />
             BMXtへようこそ！本プログラムはテストバージョンです。現在は{" "}
-            <code>tabs -l</code> での動作を中心に開発しています。
+            <code>tabs -list</code> での動作を中心に開発しています。
             <br />
             Type help and press Enter. Tab completes commands.
           </div>

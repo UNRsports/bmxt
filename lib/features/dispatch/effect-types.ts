@@ -3,15 +3,7 @@
 export type ChromeEffect =
   | { kind: "clear_log" }
   | { kind: "exit_pane" }
-  | { kind: "list_windows" }
-  | { kind: "focus_info" }
-  | { kind: "activate"; tab_id: number }
   | { kind: "close_tab"; tab_id: number }
-  | { kind: "go_back"; tab_id_arg: string | null }
-  | { kind: "go_forward"; tab_id_arg: string | null }
-  | { kind: "move_tab"; tab_id: number; window_id: number; index: number | null }
-  | { kind: "new_tab"; url: string | null }
-  | { kind: "list_tab_groups" }
   | { kind: "group_new"; tab_ids: number[] }
   | { kind: "tabs_nu" }
   | { kind: "tabs_move_url"; url: string }

@@ -1,5 +1,5 @@
 /**
- * 複数の Effect ハンドラで共有する URL 正規化と tabs -mu 相当のジャンプ。
+ * 複数の Effect ハンドラで共有する URL 正規化と tabs -moveurl 相当のジャンプ。
  */
 
 function parseHttpUrl(urlStr: string): string | null {

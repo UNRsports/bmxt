@@ -1,26 +1,7 @@
-//! help / man / 補完トークンなど、レジストリテーブルを読む API。
+//! help / 補完トークンなど、レジストリテーブルを読む API。
 
 use crate::meta::Cmd;
 use super::table;
-
-pub static URL_MAN: &[&str] = &[
-    "NAME",
-    "  URL line - open http(s) addresses without a command name",
-    "",
-    "SYNOPSIS",
-    "  https://example.com",
-    "  https://example.com .",
-    "  https://example.com -nw",
-    "",
-    "DESCRIPTION",
-    "  Bare URL on one line (no spaces in the URL) opens a new tab.",
-    "  A trailing space and period ( . ) navigates the current active tab.",
-    "  A trailing space and -nw opens a new browser window.",
-    "",
-    "NOTE",
-    "  Current tab uses the same target resolution as back/forward (focused window).",
-    "  Only http: and https: schemes are accepted.",
-];
 
 pub fn resolve_canonical(cmd: &str) -> Option<&'static str> {
     let k = cmd.to_lowercase();
@@ -41,40 +22,13 @@ pub fn cmd_by_name(name: &str) -> Option<&'static Cmd> {
     table::COMMANDS.iter().find(|c| c.name == name)
 }
 
-pub fn list_man_topics() -> Vec<String> {
-    let mut v: Vec<String> = table::COMMANDS.iter().map(|c| c.name.to_string()).collect();
-    v.push("url".to_string());
-    v.sort();
-    v
-}
-
-pub fn get_man_lines(topic_raw: &str) -> Option<Vec<String>> {
-    let key = topic_raw.trim().to_lowercase();
-    if key == "url" {
-        let mut page = vec![format!("{}(1)", key.to_uppercase())];
-        page.extend(URL_MAN.iter().map(|s| (*s).to_string()));
-        return Some(page);
-    }
-    if let Some(cmd) = table::COMMANDS.iter().find(|c| c.name == key) {
-        let mut page = vec![format!("{}(1)", key.to_uppercase())];
-        page.extend(cmd.man.iter().map(|s| (*s).to_string()));
-        return Some(page);
-    }
-    let canon = resolve_canonical(&key)?;
-    let cmd = cmd_by_name(canon)?;
-    let mut page = vec![format!(
-        "{}(1)  (same as {})",
-        key.to_uppercase(),
-        cmd.name
-    )];
-    page.extend(cmd.man.iter().map(|s| (*s).to_string()));
-    Some(page)
-}
-
 pub fn build_help_lines() -> Vec<String> {
     let mut names: Vec<&str> = table::COMMANDS.iter().map(|c| c.name).collect();
     names.sort();
     let mut lines = vec!["BMXt - browser command shell".to_string()];
+    lines.push("Quick start: type `tabs` and press Enter, then continue with the shown options.".to_string());
+    lines.push(String::new());
+    lines.push("Built-in commands:".to_string());
     for name in names {
         let cmd = cmd_by_name(name).unwrap();
         let aliases = if cmd.aliases.is_empty() {
@@ -84,15 +38,24 @@ pub fn build_help_lines() -> Vec<String> {
         };
         lines.push(format!("  {}{}", cmd.usage_primary, aliases));
     }
-    lines.push("  man [topic]  - manual page for a command".to_string());
     lines.push(String::new());
     lines.push("tabs (BMXt window / SW):".to_string());
     lines.push(
-        "  tabs -l [-u]  - tab picker: ↑↓ move, / filter (@... URL), Enter page, Esc exit."
+        "  tabs              - show available options, then restore prompt to `tabs ` for continuation."
             .to_string(),
     );
     lines.push(
-        "  tabs -nu        - print current tab URL   tabs -mu <url>  - jump to URL tab or open new tab"
+        "  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title)."
+            .to_string(),
+    );
+    lines.push(
+        "  tabs -nowurl      - print current tab URL from active tab in focused window.".to_string(),
+    );
+    lines.push(
+        "  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.".to_string(),
+    );
+    lines.push(
+        "  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
             .to_string(),
     );
     lines.push(String::new());

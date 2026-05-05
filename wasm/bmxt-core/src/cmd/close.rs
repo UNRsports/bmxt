@@ -5,14 +5,6 @@ pub const CMD: Cmd = Cmd {
     name: "close",
     aliases: &["c"],
     usage_primary: "close <tabId>",
-    man: &[
-        "NAME",
-        "  close, c - close a tab",
-        "",
-        "SYNOPSIS",
-        "  close <tabId>",
-        "  c <tabId>",
-    ],
 };
 
 pub fn run(args: &[String]) -> DispatchJson {

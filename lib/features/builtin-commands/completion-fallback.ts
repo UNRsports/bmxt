@@ -4,27 +4,10 @@
  */
 export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "?",
-  "a",
-  "activate",
-  "b",
-  "back",
-  "c",
   "clear",
   "close",
-  "echo",
   "exit",
-  "focus",
-  "forward",
-  "fwd",
-  "gls",
   "group",
-  "groups",
   "help",
-  "man",
-  "move",
-  "mv",
-  "new",
-  "tabs",
-  "windows",
-  "wins"
+  "tabs"
 ]

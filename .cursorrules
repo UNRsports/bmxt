@@ -5,3 +5,8 @@
 - Keep command **dispatch and registry** in `wasm/bmxt-core` (Rust); keep Chrome API effects in `lib/features/dispatch/`, and reference other feature code from `lib/features/*`.
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
+
+# Command UX rules
+
+- For commands that require additional tokens/options, pressing Enter with only the first command token must show usage/options guidance and then restore the prompt with the command plus trailing space (for example: `tabs `) so the user can continue immediately.
+- Implement this as a reusable continuation mechanism (not one-off per command), so future second/third-token command families can opt in consistently.

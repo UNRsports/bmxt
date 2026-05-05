@@ -27,3 +27,27 @@ export const COLOR_SWATCH_BG: Partial<Record<NewGroupPaletteColor, string>> = {
 
 /** 既存グループ一覧の「新規グループ」行（Chrome のグループ ID とは別物） */
 export const NEW_GROUP_LIST_SENTINEL = -1
+
+/** `:` コマンドモードの Tab 補完候補（`use-tab-picker-keyboard` と一致させること） */
+export const TAB_PICKER_COMMAND_COMPLETIONS = [
+  "move",
+  "close",
+  "group",
+  "newwindow",
+  "newtab"
+] as const
+
+export const TAB_PICKER_COMMANDS_FOR_TAB = [
+  "move",
+  "close",
+  "group",
+  "newwindow"
+] as const
+
+export const TAB_PICKER_COMMANDS_FOR_WINDOW = ["close", "newtab"] as const
+
+export const TAB_PICKER_COMMANDS_FOR_GROUP = [
+  "move",
+  "close",
+  "newwindow"
+] as const
