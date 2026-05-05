@@ -5,21 +5,6 @@ pub const CMD: Cmd = Cmd {
     name: "group",
     aliases: &[],
     usage_primary: "group new",
-    man: &[
-        "NAME",
-        "  group - create a tab group from tab ids",
-        "",
-        "SYNOPSIS",
-        "  group new",
-        "  group new <tabId> [tabId ...]",
-        "",
-        "INTERACTIVE",
-        "  Run  group new  alone (Enter) in the BMXt window to open the picker:",
-        "  arrow keys move highlight, Tab toggles selection, Enter sets name and color.",
-        "",
-        "NOTE",
-        "  Tabs must belong to the same window.",
-    ],
 };
 
 pub fn run(args: &[String]) -> DispatchJson {

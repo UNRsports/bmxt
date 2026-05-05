@@ -17,10 +17,10 @@ _ジャンプ先は明示アンカーです。言語だけの小見出し（`Eng
 - [Key Specs](#key-specs)
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
 - [Command List](#command-list)
-  - [`tabs` (`man tabs`)](#tabs-man-tabs)
-  - [English: Tab Picker (`tabs -l` / `tabs -l -u`)](#tabs-tab-picker-en)
+  - [`tabs` (subcommands)](#tabs-man-tabs)
+  - [English: Tab Picker (`tabs -list` / `tabs -list -u`)](#tabs-tab-picker-en)
   - [English: Tab picker — implementation (keyboard & reducer)](#tabs-tab-picker-impl-en)
-  - [日本語: タブピッカー（`tabs -l` / `tabs -l -u`）](#tabs-tab-picker-ja)
+  - [日本語: タブピッカー（`tabs -list` / `tabs -list -u`）](#tabs-tab-picker-ja)
   - [日本語: タブピッカー — 実装（キー配信とリデューサ）](#tabs-tab-picker-impl-ja)
   - [English: URL Lines (`http` / `https`)](#url-lines-en)
   - [日本語: URL（行全体が `http` / `https` で始まる場合）](#url-lines-ja)
@@ -200,23 +200,13 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 | Command | Description |
 |----------|------|
 | `help` / `?` | Show help |
-| `man <topic>` | Command manual |
-| `echo <text>` | Print text |
 | `clear` | Clear logs |
 | `exit` | Close BMXt window and clear the session log |
-| `tabs` | Requires subcommand (`man tabs`) |
-| `tabs -l` / `tabs -list` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
-| `tabs -mu` / `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
-| `tabs -nu` / `tabs -nowurl` | Print current tab URL |
-| `windows` / `wins` | List windows |
-| `focus` | Show focus debug info |
-| `activate` / `a <tabId>` | Activate tab and focus its window |
+| `tabs` | Show available options, then restore prompt to `tabs ` for option input |
+| `tabs -list [-u]` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
+| `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
+| `tabs -nowurl` | Print current tab URL |
 | `close` / `c <tabId>` | Close tab |
-| `new [url]` | Open new tab |
-| `back` / `b [tabId]` | Go back |
-| `forward` / `fwd [tabId]` | Go forward |
-| `move` / `mv <tabId> <windowId> [index]` | Move tab to another window |
-| `groups` / `gls` | List tab groups |
 | `group new <tabId> …` | Create group |
 
 **Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears that log and **closes the BMXt window** (via `chrome.windows.remove` on the window the extension tracks). **Neither** clears **command history** (up/down / Ctrl+R).
@@ -228,44 +218,36 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 | コマンド | 説明 |
 |----------|------|
 | `help` / `?` | ヘルプ |
-| `man <topic>` | 各コマンドの簡易マニュアル |
-| `echo <text>` | そのまま出力 |
 | `clear` | ログをクリア |
 | `exit` | BMXt ウィンドウを閉じ、セッションログを削除 |
-| `tabs` | 単体では使えません。下位コマンドが必要です（`man tabs`）。 |
-| `tabs -l` / `tabs -list` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
-| `tabs -mu` / `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
-| `tabs -nu` / `tabs -nowurl` | 現在タブの URL を表示。 |
-| `windows` / `wins` | ウィンドウ一覧 |
-| `focus` | フォーカス情報（デバッグ） |
-| `activate` / `a <tabId>` | タブをアクティブにして前面化 |
+| `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
+| `tabs -list [-u]` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
+| `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
+| `tabs -nowurl` | 現在タブの URL を表示。 |
 | `close` / `c <tabId>` | タブを閉じる |
-| `new [url]` | 新規タブ |
-| `back` / `b [tabId]` | 戻る |
-| `forward` / `fwd [tabId]` | 進む |
-| `move` / `mv <tabId> <windowId> [index]` | タブを別ウィンドウへ移動 |
-| `groups` / `gls` | タブグループ一覧 |
 | `group new <tabId> …` | グループ作成 |
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
 <a id="tabs-man-tabs"></a>
 
-### `tabs` (`man tabs`)
+### `tabs` (subcommands)
 
 #### English
-- `tabs` alone returns an error (subcommand required). Use `tabs -l` (`tabs -list`) for tab picker. Add `-u` to include URL rows.
-- `tabs -nu` (`-nowurl`): print current tab URL.
-- `tabs -mu <url>` (`-moveurl`): activate matching http(s) tab and bring its window to front, or open a new tab if none matches.
+- `tabs` alone prints available options and restores the prompt to `tabs ` so users can continue with the next token.
+- `tabs -list [-u]`: open tab picker (`-u` includes URL rows).
+- `tabs -nowurl`: print current tab URL.
+- `tabs -moveurl <url>`: activate matching http(s) tab and bring its window to front, or open a new tab if none matches.
 
 #### 日本語
-- **`tabs` 単体**はエラー（サブコマンド必須）。**`tabs -l`**（または **`tabs -list`**）でタブピッカー。URL 行付きは **`tabs -l -u`**。
-- **`tabs -nu`**（**`-nowurl`**）：現在タブの URL を表示。
-- **`tabs -mu <url>`**（**`-moveurl`**）：該当 http(s) タブをアクティブにしウィンドウを前面化。一致がなければ新規タブで開く。プロンプト上で `tabs -mu ` の直後に **Tab** を押すと、開いている http(s) タブの URL を補完候補として循環します。
+- **`tabs` 単体**は利用可能オプションを表示し、続けて **`tabs `**（末尾スペース付き）へ入力を復元します。
+- **`tabs -list [-u]`**：タブピッカーを開きます（`-u` で URL 行付き）。
+- **`tabs -nowurl`**：現在タブの URL を表示します。
+- **`tabs -moveurl <url>`**：該当 http(s) タブをアクティブにしウィンドウを前面化。一致がなければ新規タブで開く。プロンプト上で `tabs -moveurl ` の直後に **Tab** を押すと、開いている http(s) タブの URL を補完候補として循環します。
 
 <a id="tabs-tab-picker-en"></a>
 
-#### English: Tab Picker (`tabs -l` / `tabs -l -u`)
+#### English: Tab Picker (`tabs -list` / `tabs -list -u`)
 
 - On launch, highlight starts at the active tab of the last focused normal browser window.
 - Move with `j`/`k` (or `↑`/`↓`), toggle `#` on highlighted tab with `Tab` (multi-select supported). **Shift + `↑`/`↓`** extends a range selection anchored at the first mark.
@@ -289,7 +271,7 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 
 <a id="tabs-tab-picker-ja"></a>
 
-#### 日本語: タブピッカー（`tabs -l` / `tabs -l -u`）
+#### 日本語: タブピッカー（`tabs -list` / `tabs -list -u`）
 
 - 起動時は、直前にフォーカスしていた通常ブラウザウィンドウのアクティブタブ位置にハイライトを合わせます。
 - `j`/`k`（または `↑`/`↓`）で移動、ピッカー内の `Tab` でハイライト中タブの `#` を付け外しします（複数選択可）。**Shift + `↑`/`↓`** で、ハイライトの移動に合わせて**連続したタブ行に `#` を一括付与**します（一覧上でアンカー行から現在行までの範囲）。**`#` が付いたタブは、同一ウィンドウ内では Chrome 本体のタブバー上でも複数選択（`chrome.tabs.highlight`）に合わせて表示**されます（BMXt を前面にしたまま操作できます）。
@@ -335,11 +317,11 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 
 ### English
 
-**Registry, `help` / `man` text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. For lines sent to the Service Worker, **`dispatchFull`** returns either terminal **`lines`** or JSON **`effects`**. Effects that need **`chrome.*`** are applied in TypeScript (`lib/features/dispatch/handlers/apply-one.ts`, from `apply-effects.ts`). Tab completion candidate **names** come from **`completionCandidatesJson()`** in the same WASM module (with a small TS fallback in `lib/features/builtin-commands/` if WASM fails to load).
+**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. For lines sent to the Service Worker, **`dispatchFull`** returns either terminal **`lines`** or JSON **`effects`**. Effects that need **`chrome.*`** are applied in TypeScript (`lib/features/dispatch/handlers/apply-one.ts`, from `apply-effects.ts`). Tab completion candidate **names** come from **`completionCandidatesJson()`** in the same WASM module (with a small TS fallback in `lib/features/builtin-commands/` if WASM fails to load).
 
 The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer events/state; after changing **`wasm/bmxt-core/src/features/tabs_picker/model.rs`**, rebuild **`assets/wasm/bmxt-core`** with **`npm run build:wasm`** (see **Tab picker — implementation** under **`tabs`**). The TS layer includes a narrow fallback for **`moveHi` / `moveDest`** when WASM returns an unchanged state.
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-terminal.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -l` / `tabs -l -u`** (tab picker) and **interactive `group new`** (no tab ids). Other subcommands and the rest of the command set go through WASM dispatch in the background.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-terminal.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`** (tab picker) and **interactive `group new`** (no tab ids). Other subcommands and the rest of the command set go through WASM dispatch in the background.
 
 **`exit`:** returns an **`exit_bmxt`** effect; the Service Worker clears the session log and closes the BMXt window it tracks (`chrome.windows.remove`). If WASM fails to load, **`clear`** and **`exit`** still run equivalent logic in `background.ts` (log clear; **`exit`** also closes the window).
 
@@ -348,7 +330,7 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, tab picker launch)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; listed in **`registry/table.rs`**)
-- **`wasm/bmxt-core`** — `dispatch`, `registry`, `model` (Effect JSON), `tabs_man`
+- **`wasm/bmxt-core`** — `dispatch`, `registry`, `model` (Effect JSON)
 - **`assets/wasm/bmxt-core`** — `wasm-pack --target web` output (bundled with the extension)
 - **`lib/features/wasm-core/index.ts`** — `ensureBmxtCore`, `runDispatch`, `getCompletionCandidates`
 - **`lib/features/dispatch/`** — Effect types and Chrome handlers (`handlers/` per effect)
@@ -357,16 +339,16 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 ### 日本語
 
-**レジストリ・`help` / `man` 本文・トークン化・URL 専用行**は **`wasm/bmxt-core`（Rust / WASM）** に置いています。Service Worker に送られた行に対して **`dispatchFull`** は **`lines`** か JSON **`effects`** を返し、**`effects`** の `chrome.*` 操作は `lib/features/dispatch/handlers/apply-one.ts`（`apply-effects.ts` 経由）で行います。Tab 補完の**コマンド名候補**は WASM の **`completionCandidatesJson`**（WASM 未ロード時は `lib/features/builtin-commands/` のフォールバック）。
+**レジストリ・`help` 本文・トークン化・URL 専用行**は **`wasm/bmxt-core`（Rust / WASM）** に置いています。Service Worker に送られた行に対して **`dispatchFull`** は **`lines`** か JSON **`effects`** を返し、**`effects`** の `chrome.*` 操作は `lib/features/dispatch/handlers/apply-one.ts`（`apply-effects.ts` 経由）で行います。Tab 補完の**コマンド名候補**は WASM の **`completionCandidatesJson`**（WASM 未ロード時は `lib/features/builtin-commands/` のフォールバック）。
 
 タブピッカーの **`tabsPickerReduce`** はリデューサのイベント／状態を **camelCase の JSON** でやり取りします。**`wasm/bmxt-core/src/features/tabs_picker/model.rs`** を変えたら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再ビルドしてください（詳細は **`tabs`** の **タブピッカー — 実装**）。**`moveHi` / `moveDest`** については、WASM が入力と同じ状態を返した場合に限り TypeScript 側で狭いフォールバックをかけています。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-terminal.tsx`**）で処理します。例: **`tabs -l` / `tabs -l -u`**（タブピッカー）、**対話的な `group new`**（タブ ID なし）。それ以外のサブコマンドと一般コマンドはバックグラウンドで WASM dispatch します。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-terminal.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**（タブピッカー）、**対話的な `group new`**（タブ ID なし）。それ以外のサブコマンドと一般コマンドはバックグラウンドで WASM dispatch します。
 
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI（ログ・プロンプト・IME・タブピッカー起動など）
 - **`lib/features/extension-storage/`** — `chrome.storage.local` のキー名とログ／履歴の上限定数
 - **`wasm/bmxt-core/src/cmd/`** — 組み込みコマンドごとに `CMD` + `run`（`registry/table.rs` で一覧へ登録）  
-- **`wasm/bmxt-core`** — `dispatch`, `registry`, `model`（Effect JSON）, `tabs_man`  
+- **`wasm/bmxt-core`** — `dispatch`, `registry`, `model`（Effect JSON）  
 - **`assets/wasm/bmxt-core`** — `wasm-pack --target web` の生成物（ビルドに同梱）  
 - **`lib/features/wasm-core/index.ts`** — `ensureBmxtCore`, `runDispatch`, `getCompletionCandidates`  
 - **`lib/features/dispatch/`** — Effect 型と Chrome 実行（`handlers/` に effect ごとの処理）  
@@ -386,14 +368,14 @@ Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
 1. In **`wasm/bmxt-core/src/cmd/`**, add a module with `CMD` + `run`, register it in **`cmd/mod.rs`**, and append **`your_module::CMD`** to **`registry/table.rs`**. Add a **`dispatch.rs`** arm calling `run` (and `model::Effect` if needed).  
 2. If the command uses the browser, implement the effect in **`lib/features/dispatch/handlers/apply-one.ts`** (and **`effect-types.ts`** for a new JSON shape).  
 3. If you add command names or aliases, update **`lib/features/builtin-commands/completion-fallback.ts`** so it stays aligned with Rust completion tokens.  
-4. Run **`npm run build:wasm`**, then verify `help`, `man`, and Tab completion.
+4. Run **`npm run build:wasm`**, then verify `help` and Tab completion.
 
 #### 日本語
 
 1. **`wasm/bmxt-core/src/cmd/`** に `CMD` と `run` を持つモジュールを追加し、**`cmd/mod.rs`** に登録、**`registry/table.rs`** の `COMMANDS` に **`your_module::CMD`** を追加。必要なら **`model::Effect`** と **`dispatch.rs`** の分岐を追加。  
 2. ブラウザ操作が要る場合は **`lib/features/dispatch/handlers/apply-one.ts`**（新しい JSON 形なら **`effect-types.ts`** も）。  
 3. コマンド名・別名を増やしたら、Rust の補完トークンと揃えるため **`lib/features/builtin-commands/completion-fallback.ts`** も更新。  
-4. **`npm run build:wasm`** のあと `help` / `man` / 補完を確認。
+4. **`npm run build:wasm`** のあと `help` / 補完を確認。
 
 <a id="prompt-key-bindings"></a>
 

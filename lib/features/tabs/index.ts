@@ -18,8 +18,10 @@ export {
   type TabPickerRow
 } from "./picker-rows"
 export {
+  listTabsOptionCandidates,
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
   parseTabsListPickerLine,
+  tabsOptionCompletionZone,
   tabsMoveUrlCompletionZone
 } from "./input"

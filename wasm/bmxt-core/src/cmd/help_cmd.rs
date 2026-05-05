@@ -8,13 +8,6 @@ pub const CMD: Cmd = Cmd {
     name: "help",
     aliases: &["?"],
     usage_primary: "help",
-    man: &[
-        "NAME",
-        "  help, ? - list commands and BMXt window keys",
-        "",
-        "SYNOPSIS",
-        "  help",
-    ],
 };
 
 pub fn run(_args: &[String]) -> DispatchJson {

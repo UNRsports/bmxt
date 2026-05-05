@@ -17,57 +17,9 @@ export async function applyOne(
       return ["(log cleared)"]
     case "exit_pane":
       return ctx.exitPane()
-    case "list_windows":
-      return ctx.listWindows()
-    case "focus_info":
-      return ctx.focusInfo()
-    case "activate": {
-      const tab = await chrome.tabs.get(e.tab_id)
-      await chrome.tabs.update(e.tab_id, { active: true })
-      await chrome.windows.update(tab.windowId, { focused: true })
-      return [`activated tab ${e.tab_id} (window ${tab.windowId})`]
-    }
     case "close_tab":
       await chrome.tabs.remove(e.tab_id)
       return [`closed tab ${e.tab_id}`]
-    case "go_back": {
-      const tab = await ctx.resolveTabArg(e.tab_id_arg ?? undefined)
-      if (!tab?.id) {
-        return ["no target tab (set focus window or pass tabId)"]
-      }
-      await chrome.tabs.goBack(tab.id)
-      return [`goBack tab ${tab.id}`]
-    }
-    case "go_forward": {
-      const tab = await ctx.resolveTabArg(e.tab_id_arg ?? undefined)
-      if (!tab?.id) {
-        return ["no target tab (set focus window or pass tabId)"]
-      }
-      await chrome.tabs.goForward(tab.id)
-      return [`goForward tab ${tab.id}`]
-    }
-    case "move_tab":
-      await chrome.tabs.move(e.tab_id, {
-        windowId: e.window_id,
-        index: e.index ?? -1
-      })
-      return [`moved tab ${e.tab_id} -> window ${e.window_id}`]
-    case "new_tab": {
-      const tab = await chrome.tabs.create({
-        url: e.url || "chrome://newtab"
-      })
-      return [`created tab ${tab.id}: ${tab.pendingUrl || tab.url || ""}`]
-    }
-    case "list_tab_groups": {
-      const groups = await chrome.tabGroups.query({})
-      if (groups.length === 0) {
-        return ["(no tab groups)"]
-      }
-      return groups.map(
-        (g) =>
-          `${g.id}\twin=${g.windowId}\tcolor=${g.color}\t"${g.title || ""}"\ttabs...`
-      )
-    }
     case "group_new": {
       const groupId = await chrome.tabs.group({ tabIds: e.tab_ids })
       return [`created group ${groupId}`]
@@ -85,7 +37,7 @@ export async function applyOne(
     case "tabs_move_url": {
       const normalized = parseHttpUrlForEffect(e.url)
       if (!normalized) {
-        return ["usage: tabs -mu|-moveurl <http(s)-url>"]
+        return ["usage: tabs -moveurl <http(s)-url>"]
       }
       return tabsMoveUrl(normalized)
     }

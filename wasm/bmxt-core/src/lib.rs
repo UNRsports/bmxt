@@ -7,7 +7,6 @@ mod line_parse;
 mod meta;
 mod model;
 mod registry;
-mod tabs_man;
 
 use wasm_bindgen::prelude::*;
 

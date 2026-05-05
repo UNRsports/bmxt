@@ -32,25 +32,7 @@ impl DispatchJson {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Effect {
     ClearLog,
-    ListWindows,
-    FocusInfo,
-    Activate { tab_id: i32 },
     CloseTab { tab_id: i32 },
-    GoBack {
-        tab_id_arg: Option<String>,
-    },
-    GoForward {
-        tab_id_arg: Option<String>,
-    },
-    MoveTab {
-        tab_id: i32,
-        window_id: i32,
-        index: Option<i32>,
-    },
-    NewTab {
-        url: Option<String>,
-    },
-    ListTabGroups,
     GroupNew {
         tab_ids: Vec<i32>,
     },
