@@ -268,9 +268,13 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 #### English: Tab Picker (`tabs -l` / `tabs -l -u`)
 
 - On launch, highlight starts at the active tab of the last focused normal browser window.
-- Move with `j`/`k` (or `↑`/`↓`), toggle `#` on highlighted tab with `Tab` (multi-select supported).
-- When one or more tabs have `#`, press `Space` to cycle **[MOVE]** → **[CLOSE]** → **[GROUP]** → **[NEW WINDOW]**.
-- Use `/` for incremental search (`@` prefix for URL match). `Enter` focuses the highlighted tab while keeping picker open; `Esc` exits according to picker state.
+- Move with `j`/`k` (or `↑`/`↓`), toggle `#` on highlighted tab with `Tab` (multi-select supported). **Shift + `↑`/`↓`** extends a range selection anchored at the first mark.
+- **Bulk operations** — press `:` to open the command line, type a command, and press `Enter` to confirm. `Tab` cycles through completions from the current prefix. If no tab is marked yet, the highlighted tab is auto-marked when the command is confirmed.
+  - Tab rows: `move` (`m`), `close` (`c`), `group` (`g`), `newwindow` (`nw`)
+  - Window rows: `close` (`c`), `newtab` (`nt`)
+  - Group rows: `move` (`m`), `close` (`c`), `newwindow` (`nw`)
+- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter`. **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute.
+- Use `/` for incremental search (`@` prefix for URL match). `Enter` focuses the highlighted tab while keeping picker open; `Esc` order: clear `#` → cancel command mode → end search → exit bulk mode → close picker.
 
 <a id="tabs-tab-picker-impl-en"></a>
 
@@ -280,6 +284,7 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 - **Reducer JSON (WASM)**: Transitions go through **`tabsPickerReduce`** (`lib/features/wasm-core/index.ts` → `wasm/bmxt-core`). State and events are JSON with **camelCase** keys matching Serde `rename_all = "camelCase"` in Rust (e.g. `kind: "moveHi"`, `visibleLen`).
 - **Silent WASM failures**: If the WASM entrypoint fails to deserialize the **event** JSON, it returns the **input state unchanged** (no error surfaced). A **TypeScript fallback** in **`runTabsPickerReduce`** corrects **`moveHi`** and **`moveDest`** when the returned indices clearly did not advance (covers stale/mismatched bundled `.wasm`).
 - **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in `picker-overlay.tsx`). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
+- **`:` command mode**: `:` opens a command-line footer (same layout as `/` search). `parsePickerCommand` in `use-tab-picker-keyboard.ts` maps short aliases (e.g. `m` → `move`) to `BulkSubMode`. `Tab` completion is handled by `commandCompletionRef` — a ref that stores the base string, candidate list, and current index, and resets on any non-`Tab` key or when command mode exits. `runPickerCommandEnter` fires in the window capture phase (before `runPickerEnterKey`) and auto-marks the highlighted tab if nothing is selected. The previous left/right arrow `cycleSubMode` path has been removed entirely.
 - **Prompt coexisting with picker**: While the tab picker is open, **`lib/features/bmxt-window/bmxt-terminal.tsx`** suppresses **↑/↓/j/k** on the main prompt so they do **not** drive **command history**; navigation is handled only by the picker.
 
 <a id="tabs-tab-picker-ja"></a>
@@ -288,10 +293,13 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 
 - 起動時は、直前にフォーカスしていた通常ブラウザウィンドウのアクティブタブ位置にハイライトを合わせます。
 - `j`/`k`（または `↑`/`↓`）で移動、ピッカー内の `Tab` でハイライト中タブの `#` を付け外しします（複数選択可）。**Shift + `↑`/`↓`** で、ハイライトの移動に合わせて**連続したタブ行に `#` を一括付与**します（一覧上でアンカー行から現在行までの範囲）。**`#` が付いたタブは、同一ウィンドウ内では Chrome 本体のタブバー上でも複数選択（`chrome.tabs.highlight`）に合わせて表示**されます（BMXt を前面にしたまま操作できます）。
-- `#` が1つ以上あるとき、`Space` で **[MOVE]** → **[CLOSE]** → **[GROUP]** → **[NEW WINDOW]** を循環します。
+- **バルク操作の選択**: `:` を押してコマンドラインを開き、コマンドを入力して `Enter` で確定します。`Tab` でプレフィックスに一致する候補を循環補完できます。`#` が付いたタブがない場合、コマンド確定時にハイライト中のタブが自動的に `#` でマークされます。
+  - タブ行: `move`（`m`）、`close`（`c`）、`group`（`g`）、`newwindow`（`nw`）
+  - ウィンドウ行: `close`（`c`）、`newtab`（`nt`）
+  - グループ行: `move`（`m`）、`close`（`c`）、`newwindow`（`nw`）
 - **[MOVE]** は `↑`/`↓` で移動先タブを選び、`Enter` で `#` タブを一括移動します。
-- **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。
-- `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。検索中でも `Tab` の `#` 切替と `Space` のモード切替は有効です。`Esc` は、**いずれかに `#` が付いていればまずすべて解除**（ピッカーは維持）。続いて「検索終了 → バルクサブモード終了 → ピッカー終了」の順です。
+- **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
+- `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。`Esc` の解除順は `#` 全解除 → コマンドモード終了 → 検索終了 → バルクモード終了 → ピッカー終了です。
 - バルクモードでない `Enter` は、ハイライト中タブをアクティブ化して対象ウィンドウを前面化します（ピッカーは維持）。
 
 <a id="tabs-tab-picker-impl-ja"></a>
@@ -302,6 +310,7 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 - **リデューサ JSON（WASM）**: 状態遷移は **`tabsPickerReduce`**（`lib/features/wasm-core` → `wasm/bmxt-core`）。JSON は Rust 側 Serde の **`rename_all = "camelCase"`** に合わせ、**`kind: "moveHi"`** や **`visibleLen`** など **camelCase** で渡します。
 - **WASM が無言で失敗するとき**: イベント JSON のデシリアライズに失敗すると **入力 state がそのまま返る**ため、同梱 `.wasm` がソースとずれているとハイライトが進みません。**`moveHi` / `moveDest`** については、戻り値の添字が進んでいない場合に限り TypeScript 側で **折り返しと同じ計算**を補います。
 - **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
+- **`:` コマンドモード**: `:` で `/` 検索と同レイアウトのコマンドラインフッタを開きます。`use-tab-picker-keyboard.ts` の `parsePickerCommand` が短縮エイリアス（例: `m` → `move`）を `BulkSubMode` に変換します。`Tab` 補完は `commandCompletionRef`（起点文字列・候補リスト・現在インデックスを保持する ref）で管理し、非 `Tab` キー入力またはコマンドモード終了時にリセットされます。`runPickerCommandEnter` はウィンドウキャプチャフェーズで `runPickerEnterKey` より先に実行され、未マーク時はハイライト中タブを自動マークします。従来の左右矢印による `cycleSubMode` パスは完全に削除されています。
 - **ピッカー表示中のプロンプト**: **`lib/features/bmxt-window/bmxt-terminal.tsx`** でピッカー表示中はメイン textarea の **↑/↓/j/k をコマンド履歴に使わない**ようにし、ピッカーと競合しないようにしています。
 
 <a id="url-lines-en"></a>
