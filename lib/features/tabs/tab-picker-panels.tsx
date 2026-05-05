@@ -148,11 +148,28 @@ export function TabPickerSearchFooter({ filterQuery }: { filterQuery: string }) 
   )
 }
 
-export function TabPickerCommandFooter({ commandBuffer }: { commandBuffer: string }) {
+export function TabPickerCommandFooter({
+  commandBuffer,
+  showListingHint,
+  listingHintText
+}: {
+  commandBuffer: string
+  showListingHint: boolean
+  listingHintText: string
+}) {
+  const empty = commandBuffer.trim() === ""
   return (
     <div className="bmxt-tab-picker-filter">
       <span className="bmxt-tab-picker-filter-label">:</span>
-      <span className="bmxt-tab-picker-filter-query">{commandBuffer || " "}</span>
+      <span className="bmxt-tab-picker-filter-query">
+        {empty && showListingHint ? (
+          <span className="bmxt-tab-picker-command-listing-hint">
+            {listingHintText}
+          </span>
+        ) : (
+          commandBuffer || " "
+        )}
+      </span>
       <span className="bmxt-tab-picker-filter-hint">Enter 実行  Esc キャンセル</span>
     </div>
   )

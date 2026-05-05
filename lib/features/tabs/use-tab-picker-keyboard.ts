@@ -9,7 +9,10 @@ import {
   resolvePickerPreview,
   type PickerReducerEvent
 } from "./state-machine"
-import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
+import {
+  NEW_GROUP_COLORS,
+  TAB_PICKER_COMMAND_COMPLETIONS
+} from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import {
@@ -21,8 +24,6 @@ import {
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
-
-const COMMAND_COMPLETIONS = ["move", "close", "group", "newwindow", "newtab"] as const
 
 function parsePickerCommand(cmd: string): BulkSubMode | null {
   switch (cmd.trim().toLowerCase()) {
@@ -94,6 +95,7 @@ export function useTabPickerKeyboard({
   commandBuffer,
   setCommandMode,
   setCommandBuffer,
+  setCommandListingHint,
   isHostPaneFocused
 }: {
   rows: TabPickerRow[]
@@ -141,6 +143,7 @@ export function useTabPickerKeyboard({
   commandBuffer: string
   setCommandMode: Dispatch<SetStateAction<boolean>>
   setCommandBuffer: Dispatch<SetStateAction<string>>
+  setCommandListingHint: Dispatch<SetStateAction<boolean>>
   isHostPaneFocused: boolean
 }) {
   /** window capture のリスナーが useEffect 更新より古いクロージャのときでも Enter で確実に参照できるようにする */
@@ -165,10 +168,16 @@ export function useTabPickerKeyboard({
       e.preventDefault()
       e.stopPropagation()
 
+      if (commandBuffer.trim() === "") {
+        setCommandListingHint(true)
+        return true
+      }
+
       const mode = parsePickerCommand(commandBuffer)
       commandCompletionRef.current = null
       setCommandMode(false)
       setCommandBuffer("")
+      setCommandListingHint(false)
 
       if (mode !== null) {
         const rowIndex = visibleRowIndices[hi]
@@ -189,6 +198,7 @@ export function useTabPickerKeyboard({
       rows,
       setBulkSubMode,
       setCommandBuffer,
+      setCommandListingHint,
       setCommandMode,
       visibleRowIndices
     ]
@@ -618,6 +628,7 @@ export function useTabPickerKeyboard({
           commandCompletionRef.current = null
           setCommandMode(false)
           setCommandBuffer("")
+          setCommandListingHint(false)
           return
         }
         if (groupNewPhase === "meta") {
@@ -650,9 +661,12 @@ export function useTabPickerKeyboard({
         if (commandMode) {
           e.preventDefault()
           e.stopPropagation()
+          if (commandBuffer.trim() === "") {
+            setCommandListingHint(true)
+          }
           if (commandCompletionRef.current === null) {
             const base = commandBuffer
-            const candidates = COMMAND_COMPLETIONS.filter((c) =>
+            const candidates = TAB_PICKER_COMMAND_COMPLETIONS.filter((c) =>
               c.startsWith(base.toLowerCase())
             )
             if (candidates.length === 0) return
@@ -719,6 +733,7 @@ export function useTabPickerKeyboard({
         e.preventDefault()
         setCommandMode(true)
         setCommandBuffer("")
+        setCommandListingHint(false)
         return
       }
 
@@ -755,6 +770,7 @@ export function useTabPickerKeyboard({
       searchMode,
       setBulkSubMode,
       setCommandBuffer,
+      setCommandListingHint,
       setCommandMode,
       setGroupNewPhase,
       setNewTabUrl,

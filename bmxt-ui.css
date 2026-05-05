@@ -381,6 +381,12 @@ body {
   color: #484f58;
 }
 
+.bmxt-tab-picker-command-listing-hint {
+  color: #484f58;
+  opacity: 0.75;
+  user-select: none;
+}
+
 .bmxt-tab-picker-group-panel {
   flex-shrink: 0;
   max-height: 28%;

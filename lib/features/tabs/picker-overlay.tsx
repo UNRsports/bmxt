@@ -9,7 +9,12 @@ import { useWindowKeydownCapture } from "./use-window-keydown-capture"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
-import { NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
+import {
+  NEW_GROUP_LIST_SENTINEL,
+  TAB_PICKER_COMMANDS_FOR_GROUP,
+  TAB_PICKER_COMMANDS_FOR_TAB,
+  TAB_PICKER_COMMANDS_FOR_WINDOW
+} from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import {
   TabPickerCommandFooter,
@@ -63,6 +68,7 @@ export function TabPickerOverlay({
   const [newTabUrl, setNewTabUrl] = useState("")
   const [commandMode, setCommandMode] = useState(false)
   const [commandBuffer, setCommandBuffer] = useState("")
+  const [commandListingHint, setCommandListingHint] = useState(false)
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
@@ -259,6 +265,7 @@ export function TabPickerOverlay({
     commandBuffer,
     setCommandMode,
     setCommandBuffer,
+    setCommandListingHint,
     isHostPaneFocused
   })
 
@@ -273,6 +280,36 @@ export function TabPickerOverlay({
       }),
     [bulkSubMode, groupNewPhase, variant]
   )
+
+  const commandListingHintText = useMemo(() => {
+    const targetKind: SelectKind | null = (() => {
+      if (markedKind) {
+        return markedKind
+      }
+      const rowIndex = visibleRowIndices[hi]
+      const row = rowIndex === undefined ? undefined : rows[rowIndex]
+      if (!row) {
+        return null
+      }
+      if (row.kind === "tab") {
+        return "tab"
+      }
+      if (row.kind === "window") {
+        return "window"
+      }
+      return "group"
+    })()
+
+    const commands =
+      targetKind === "tab"
+        ? TAB_PICKER_COMMANDS_FOR_TAB
+        : targetKind === "window"
+          ? TAB_PICKER_COMMANDS_FOR_WINDOW
+          : targetKind === "group"
+            ? TAB_PICKER_COMMANDS_FOR_GROUP
+            : TAB_PICKER_COMMANDS_FOR_TAB
+    return commands.join(" · ")
+  }, [hi, markedKind, rows, visibleRowIndices])
 
   const setRowRef = useCallback((rowIndex: number, el: HTMLDivElement | null) => {
     if (el) {
@@ -322,7 +359,11 @@ export function TabPickerOverlay({
           if (searchMode) {
             setFilterQuery(e.target.value)
           } else if (commandMode) {
-            setCommandBuffer(e.target.value)
+            const v = e.target.value
+            setCommandBuffer(v)
+            if (v.trim() !== "") {
+              setCommandListingHint(false)
+            }
           }
         }}
         onKeyDown={onInputKeyDown}
@@ -387,7 +428,13 @@ export function TabPickerOverlay({
         />
       ) : null}
       {searchMode ? <TabPickerSearchFooter filterQuery={filterQuery} /> : null}
-      {commandMode ? <TabPickerCommandFooter commandBuffer={commandBuffer} /> : null}
+      {commandMode ? (
+        <TabPickerCommandFooter
+          commandBuffer={commandBuffer}
+          showListingHint={commandListingHint}
+          listingHintText={commandListingHintText}
+        />
+      ) : null}
     </div>
   )
 }
