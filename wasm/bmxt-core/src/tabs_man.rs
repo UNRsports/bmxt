@@ -5,7 +5,7 @@ pub static TABS_MAN: &[&str] = &[
   "SYNOPSIS",
   "  tabs -l | --list              tab picker (titles; add -u for URLs under each title)",
   "  tabs -mu | --moveurl <url>   activate tab with that URL, or open a new tab if none match",
-  "  tabs -nu | --nowurl          print the current tab URL (same target rules as back/forward)",
+  "  tabs -nu | --nowurl          print the current tab URL from the active tab in the focused window",
   "",
   "DESCRIPTION",
   "  tabs alone is invalid; use a subcommand.",

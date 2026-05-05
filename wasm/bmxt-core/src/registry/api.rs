@@ -1,26 +1,7 @@
-//! help / man / 補完トークンなど、レジストリテーブルを読む API。
+//! help / 補完トークンなど、レジストリテーブルを読む API。
 
 use crate::meta::Cmd;
 use super::table;
-
-pub static URL_MAN: &[&str] = &[
-    "NAME",
-    "  URL line - open http(s) addresses without a command name",
-    "",
-    "SYNOPSIS",
-    "  https://example.com",
-    "  https://example.com .",
-    "  https://example.com -nw",
-    "",
-    "DESCRIPTION",
-    "  Bare URL on one line (no spaces in the URL) opens a new tab.",
-    "  A trailing space and period ( . ) navigates the current active tab.",
-    "  A trailing space and -nw opens a new browser window.",
-    "",
-    "NOTE",
-    "  Current tab uses the same target resolution as back/forward (focused window).",
-    "  Only http: and https: schemes are accepted.",
-];
 
 pub fn resolve_canonical(cmd: &str) -> Option<&'static str> {
     let k = cmd.to_lowercase();
@@ -43,18 +24,12 @@ pub fn cmd_by_name(name: &str) -> Option<&'static Cmd> {
 
 pub fn list_man_topics() -> Vec<String> {
     let mut v: Vec<String> = table::COMMANDS.iter().map(|c| c.name.to_string()).collect();
-    v.push("url".to_string());
     v.sort();
     v
 }
 
 pub fn get_man_lines(topic_raw: &str) -> Option<Vec<String>> {
     let key = topic_raw.trim().to_lowercase();
-    if key == "url" {
-        let mut page = vec![format!("{}(1)", key.to_uppercase())];
-        page.extend(URL_MAN.iter().map(|s| (*s).to_string()));
-        return Some(page);
-    }
     if let Some(cmd) = table::COMMANDS.iter().find(|c| c.name == key) {
         let mut page = vec![format!("{}(1)", key.to_uppercase())];
         page.extend(cmd.man.iter().map(|s| (*s).to_string()));
@@ -84,8 +59,6 @@ pub fn build_help_lines() -> Vec<String> {
         };
         lines.push(format!("  {}{}", cmd.usage_primary, aliases));
     }
-    lines.push("  man [topic]  - manual page for a command".to_string());
-    lines.push(String::new());
     lines.push("tabs (BMXt window / SW):".to_string());
     lines.push(
         "  tabs -l [-u]  - tab picker: ↑↓ move, / filter (@... URL), Enter page, Esc exit."

@@ -14,9 +14,6 @@ pub const CMD: Cmd = Cmd {
         "",
         "SYNOPSIS",
         "  help",
-        "",
-        "SEE ALSO",
-        "  man(1) for per-command manuals; man url for typed-URL opening",
     ],
 };
 

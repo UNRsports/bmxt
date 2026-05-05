@@ -1,8 +1,7 @@
 //! URL 行・トークン化・コマンド委譲。本体は `crate::cmd::*::run`。
 
 use crate::cmd::{
-    activate, back, clear, close, echo, exit, focus, forward, group, groups, help_cmd, man_page,
-    move_tab, new_tab, tabs, windows,
+    clear, close, exit, group, help_cmd, tabs,
 };
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use crate::model::{DispatchJson, Effect};
@@ -56,22 +55,12 @@ type DispatchCmdFn = fn(&[String]) -> DispatchJson;
 
 /// `registry::table::COMMANDS` と名前集合が一致すること（テストで検証）。
 static COMMAND_RUNNERS: &[(&str, DispatchCmdFn)] = &[
-    ("activate", activate::run),
-    ("back", back::run),
     ("clear", clear::run),
     ("close", close::run),
-    ("echo", echo::run),
     ("exit", exit::run),
-    ("focus", focus::run),
-    ("forward", forward::run),
     ("group", group::run),
-    ("groups", groups::run),
     ("help", help_cmd::run),
-    ("man", man_page::run),
-    ("move", move_tab::run),
-    ("new", new_tab::run),
     ("tabs", tabs::run),
-    ("windows", windows::run),
 ];
 
 fn handle_command(canonical: &str, args: &[String]) -> DispatchJson {
