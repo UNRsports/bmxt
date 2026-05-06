@@ -5,7 +5,7 @@
 
 ☕️ **Support** — *This is still an early-stage dev demo,* but if you’re curious about **BMXt** and the future it’s aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it’s ready.
 
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。✨ GitHub Sponsors も申請中で、整い次第ここに公式リンクを載せます。
+☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
 
 ## Table of contents / 目次
 
@@ -593,4 +593,4 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 
 ☕️ **Support** — *This is still an early-stage dev demo,* but if you’re curious about **BMXt** and the future it’s aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it’s ready.
 
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。✨ GitHub Sponsors も申請中で、整い次第ここに公式リンクを載せます。
+☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
