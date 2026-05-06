@@ -173,26 +173,41 @@ export function filterTabRowIndices(rows: TabPickerRow[], filterQuery: string): 
 }
 
 /**
- * Index into `filterTabRowIndices(rows, "")` (visible tab order) for the active tab
- * in `anchorWindowId`, or 0 if not found.
+ * Initial `hi` when all picker rows are visible (launch with empty filter).
+ * `hi` indexes `visibleRowIndices` → index into `rows`; with every row visible that is
+ * the tab row index in `rows`, **not** the index among tab-only rows (which omitted headers).
  */
 export function initialTabPickerHighlightIndex(
   rows: TabPickerRow[],
   anchorWindowId: number | undefined
 ): number {
   const tabIndices = filterTabRowIndices(rows, "")
-  if (tabIndices.length === 0 || anchorWindowId === undefined) {
+  if (tabIndices.length === 0) {
     return 0
   }
-  const idx = tabIndices.findIndex((rowIdx) => {
-    const r = rows[rowIdx]
-    return (
-      r?.kind === "tab" &&
-      r.windowId === anchorWindowId &&
-      r.active
-    )
-  })
-  return idx >= 0 ? idx : 0
+
+  const pickTabRowIdx = (): number => {
+    if (anchorWindowId !== undefined) {
+      const hit = tabIndices.find((rowIdx) => {
+        const r = rows[rowIdx]
+        return (
+          r?.kind === "tab" &&
+          r.windowId === anchorWindowId &&
+          r.active
+        )
+      })
+      if (hit !== undefined) {
+        return hit
+      }
+    }
+    const anyActive = tabIndices.find((rowIdx) => {
+      const r = rows[rowIdx]
+      return r?.kind === "tab" && r.active
+    })
+    return anyActive ?? tabIndices[0]!
+  }
+
+  return pickTabRowIdx()
 }
 
 export async function resolveInitialTabPickerHighlightIndex(

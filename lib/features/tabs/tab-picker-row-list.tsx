@@ -97,7 +97,7 @@ export function TabPickerRowList({
             aria-selected={hiRow || markedRow}>
             <div className="bmxt-tab-picker-tab-title">
               <span className="bmxt-tab-picker-tab-glyph">
-                {(activeTabId !== null ? activeTabId === row.tabId : row.active) ? "*" : " "}
+                {(row.active || activeTabId === row.tabId) ? "*" : " "}
               </span>
               <span className="bmxt-tab-picker-tab-glyph">
                 {markedTabSet.has(row.tabId) ? "#" : " "}

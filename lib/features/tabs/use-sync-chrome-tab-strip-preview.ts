@@ -33,7 +33,16 @@ export function useSyncChromeTabStripPreview({
 
       try {
         const tabsInWin = await chrome.tabs.query({ windowId: winId })
+        const targetTab = tabsInWin.find((t) => t.id === row.tabId)
+        if (!targetTab) {
+          return
+        }
+
         if (markedInWin.length === 0) {
+          if (targetTab.active) {
+            setActiveTabId(row.tabId)
+            return
+          }
           await chrome.tabs.update(row.tabId, { active: true })
           setActiveTabId(row.tabId)
           return
@@ -41,6 +50,10 @@ export function useSyncChromeTabStripPreview({
 
         const hiInMarked = markedInWin.includes(row.tabId)
         if (!hiInMarked) {
+          if (targetTab.active) {
+            setActiveTabId(row.tabId)
+            return
+          }
           await chrome.tabs.update(row.tabId, { active: true })
           setActiveTabId(row.tabId)
           return
@@ -52,6 +65,10 @@ export function useSyncChromeTabStripPreview({
           .sort((a, b) => a - b)
 
         if (indices.length === 0) {
+          if (targetTab.active) {
+            setActiveTabId(row.tabId)
+            return
+          }
           await chrome.tabs.update(row.tabId, { active: true })
           setActiveTabId(row.tabId)
           return

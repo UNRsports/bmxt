@@ -3,6 +3,7 @@ import type { TabPickerRow } from "./picker-rows"
 import { resolvePickerHeadline } from "./state-machine"
 import { usePickerReducerBridge } from "./use-picker-reducer-bridge"
 import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
+import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
 import { useWindowKeydownCapture } from "./use-window-keydown-capture"
@@ -50,6 +51,10 @@ export function TabPickerOverlay({
   const [searchMode, setSearchMode] = useState(false)
   const [hi, setHi] = useState(initialHi)
   const [activeTabId, setActiveTabId] = useState<number | null>(() => {
+    const atHi = rows[initialHi]
+    if (atHi?.kind === "tab") {
+      return atHi.tabId
+    }
     const firstActive = rows.find((row) => row.kind === "tab" && row.active)
     return firstActive?.kind === "tab" ? firstActive.tabId : null
   })
@@ -172,6 +177,27 @@ export function TabPickerOverlay({
     markedWindowIds,
     markedGroupKeys
   )
+
+  const mirrorBlocked =
+    markedCount > 0 ||
+    bulkSubMode !== null ||
+    groupNewPhase !== "tabs" ||
+    newTabUrlWindowId !== null ||
+    commandMode
+
+  useMirrorBrowserActiveTab({
+    enabled: variant === "default",
+    blocked: mirrorBlocked,
+    rows,
+    visibleRowIndices,
+    setHi,
+    setMoveDestHi,
+    setActiveTabId,
+    setFilterQuery,
+    setSearchMode,
+    anchorTabIdRef,
+    onRefreshRows
+  })
 
   const onPickerHighlightCreatedTab = useCallback((tabId: number) => {
     anchorTabIdRef.current = tabId
