@@ -3,6 +3,10 @@
 > Language guide: This README starts with **English**, followed by **Japanese**.  
 > 言語案内: この README は **英語**を先に、その後に**日本語**を掲載しています。
 
+☕️ **Support** — *This is still an early-stage dev demo,* but if you’re curious about **BMXt** and the future it’s aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it’s ready.
+
+☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。✨ GitHub Sponsors も申請中で、整い次第ここに公式リンクを載せます。
+
 ## Table of contents / 目次
 
 _Jump links use explicit anchors; language-only subheadings (`English` / `日本語`) are omitted here._  
@@ -12,7 +16,6 @@ _ジャンプ先は明示アンカーです。言語だけの小見出し（`Eng
 - [🛠 Seed Project](#seed-project)
 - [📺 Demo Video](#demo-video)
 - [♿️ Universal Design Intent](#universal-design-intent)
-- [☕️ Support this Journey](#support-this-journey)
 - [Technical Overview](#technical-overview)
 - [Key Specs](#key-specs)
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
@@ -127,20 +130,6 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 ### 日本語
 
 BMXt は、エンジニア向けの効率ツールであるとともに、**できるだけ軽い操作負担で確実に操作できる導線**（マウス指向 UI への依存を減らす、キー操作の一貫性、IME との両立など）を重ねていくことを目指しています。
-
-<a id="support-this-journey"></a>
-
-## ☕️ Support this Journey
-
-### English
-
-I have currently applied for GitHub Sponsors. Once there is progress and the support page is ready, I will add the official link here.
-
-### 日本語
-
-現在 GitHub Sponsors に申請中です。進展があり、支援ページの準備が整い次第、正式なリンクをここに掲載します。
-
----
 
 <a id="technical-overview"></a>
 
@@ -587,13 +576,21 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 ## Roadmap
 
 ### English
-1. Refine key operations in the core tabs mode
-2. Add history and bookmark operations
-3. Improve multi-terminal behavior
-4. Support pure command-line operation and additional automation flows
+1. UI and behavior: design, implementation, and testing
+2. Refine key operations in the core tabs mode
+3. Add history and bookmark operations
+4. Improve multi-terminal behavior
+5. Support pure command-line operation and additional automation flows
 
 ### 日本語
-1. 基本となる tabs モードでのキー操作見直し
-2. 履歴、ブックマーク操作
-3. 複数ターミナルでの動作
-4. 純粋なコマンドラインでの動作や各種自動処理系への対応など
+1. UI および動作の設計／実装／テスト
+2. 基本となる tabs モードでのキー操作見直し
+3. 履歴、ブックマーク操作
+4. 複数ターミナルでの動作
+5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
+
+---
+
+☕️ **Support** — *This is still an early-stage dev demo,* but if you’re curious about **BMXt** and the future it’s aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it’s ready.
+
+☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。✨ GitHub Sponsors も申請中で、整い次第ここに公式リンクを載せます。
