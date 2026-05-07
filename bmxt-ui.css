@@ -86,6 +86,33 @@ body {
   color: #79c0ff;
 }
 
+.bmxt-version-upgrade {
+  color: #8b949e;
+  margin: 10px 0 12px;
+  padding: 10px 0 0;
+  border-top: 1px solid #21262d;
+}
+
+.bmxt-version-upgrade-title {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.bmxt-version-upgrade-notes {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-version-upgrade-notes--ja {
+  margin-top: 4px;
+}
+
+.bmxt-version-upgrade-notes--en {
+  margin-top: 8px;
+}
+
 .bmxt-out-line {
   margin: 0;
   padding: 0;

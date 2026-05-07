@@ -27,6 +27,7 @@ import {
   useState,
   type MutableRefObject
 } from "react"
+import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type TabPickerState = {
   rows: TabPickerRow[]
@@ -45,6 +46,8 @@ type Props = {
   setTabPicker: (v: TabPickerState | null) => void
   tabPickerRef: MutableRefObject<TabPickerState | null>
   refreshTabPickerRows: () => Promise<void>
+  /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
+  postUpgradeBanner: PostUpgradeBanner | null
 }
 
 const CONTINUATION_PROMPT_BY_COMMAND: Record<string, string> = {
@@ -68,7 +71,8 @@ export function BmxtShell({
   tabPicker,
   setTabPicker,
   tabPickerRef,
-  refreshTabPickerRows
+  refreshTabPickerRows,
+  postUpgradeBanner
 }: Props) {
   const pickerOpen = tabPicker !== null
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
@@ -148,7 +152,7 @@ export function BmxtShell({
       return
     }
     syncLogScroll()
-  }, [pickerOpen, lines, mode, line, syncLogScroll])
+  }, [pickerOpen, lines, mode, line, syncLogScroll, postUpgradeBanner])
 
   useEffect(() => {
     if (pickerOpen) {
@@ -173,7 +177,7 @@ export function BmxtShell({
     }
     el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
     requestAnimationFrame(() => syncLogScroll())
-  }, [pickerOpen, lines, syncLogScroll])
+  }, [pickerOpen, lines, syncLogScroll, postUpgradeBanner])
 
   useLayoutEffect(() => {
     if (pickerOpen) {
@@ -599,7 +603,7 @@ export function BmxtShell({
         ref={scrollRef}
         className={`bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`}
         style={pickerOpen ? { display: "none" } : undefined}>
-        {lines.length === 0 ? (
+        {lines.length === 0 || postUpgradeBanner ? (
           <div className="bmxt-hint">
             Welcome to BMXt! This program is a test version. Development currently
             focuses on behavior with <code>tabs -list</code>.
@@ -608,25 +612,42 @@ export function BmxtShell({
             <code>tabs -list</code> での動作を中心に開発しています。
             <br />
             <br />
+            ☕️ Support — This is still a demo in active development. If you are
+            interested in BMXt and the future it can bring, you can support
+            development with a one-time or monthly contribution.
+            <br />
             ☕️ 支援 — いまはまだ開発段階のデモです。 BMXt
-            とそれがもたらす未来にご興味があれば、
+            とそれがもたらす未来にご興味があれば、ワンタイム／月額で開発を支援いただけます。
+            <br />
             <a
               href="https://buymeacoffee.com/unrsports"
               target="_blank"
               rel="noopener noreferrer">
               Buy Me a Coffee
             </a>
-            からワンタイム／月額で開発を支援いただけます。
+            <br />
             <br />
             Type help and press Enter. Tab completes commands.
           </div>
-        ) : (
-          lines.map((ln, i) => (
-            <div key={i} className="bmxt-out-line">
-              {ln}
+        ) : null}
+        {postUpgradeBanner ? (
+          <div className="bmxt-version-upgrade">
+            <div className="bmxt-version-upgrade-title">
+              ◆バージョンアップ / Version upgrade — {postUpgradeBanner.version}
             </div>
-          ))
-        )}
+            <div className="bmxt-version-upgrade-notes bmxt-version-upgrade-notes--ja">
+              {postUpgradeBanner.ja}
+            </div>
+            <div className="bmxt-version-upgrade-notes bmxt-version-upgrade-notes--en">
+              {postUpgradeBanner.en}
+            </div>
+          </div>
+        ) : null}
+        {lines.map((ln, i) => (
+          <div key={i} className="bmxt-out-line">
+            {ln}
+          </div>
+        ))}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">
             <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>

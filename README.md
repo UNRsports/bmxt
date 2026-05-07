@@ -35,6 +35,7 @@ _ジャンプ先は明示アンカーです。言語だけの小見出し（`Eng
   - [Development startup (step-by-step)](#development-startup)
   - [日本語（開発時の起動）](#development-startup-ja)
   - [Main Sources / 主なソース](#main-sources)
+  - [Version upgrade banner & release notes](#version-upgrade-banner)
 - [Production Build](#production-build)
 - [Store Submission (Reference)](#store-submission)
 - [License](#license)
@@ -513,6 +514,7 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 - `tabs/bmxt.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
 - `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`tabs/bmxt.tsx` から import）
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
+- `lib/features/bmxt-window/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー・tabs 入力パースなど（`picker-overlay.tsx`、`picker-rows.ts`、`input.ts`、各種 hooks）
 - `background.ts` — Service Worker（ウィンドウ起動・WASM dispatch・Effect 実行）
@@ -530,6 +532,48 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 ### 日本語
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
+
+<a id="version-upgrade-banner"></a>
+
+### Version upgrade banner & release notes
+
+#### English
+
+When the extension **`version`** in **`package.json`** (and the built manifest) **does not match** the value stored in **`chrome.storage.local`** under **`bmxt_last_seen_extension_version`** (**`LAST_SEEN_EXTENSION_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`), the BMXt window shows **once**, on the **first open after that upgrade**:
+
+1. The usual **welcome** copy (unchanged).
+2. A **version upgrade** block with the version number and bilingual release notes.
+
+Existing **session log** lines are still rendered **below** that block.
+
+**Maintainer workflow**
+
+1. Bump **`package.json`** → **`version`**.
+2. Add a matching entry to **`lib/features/bmxt-window/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** strings (multi-line text is fine; use `\n` in JSON or rely on `white-space: pre-wrap` in CSS).
+3. Build and ship.
+
+If no entry exists for the current version, placeholder copy is shown that points maintainers at **`release-notes.json`**.
+
+**Implementation:** `lib/features/bmxt-window/use-version-upgrade-banner.ts` compares versions and updates storage; `bmxt-terminal.tsx` waits until the check finishes before rendering the shell (avoids a flash of log-only UI); `bmxt-shell.tsx` renders the blocks; styles live in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+
+#### 日本語
+
+拡張機能の **`version`**（**`package.json`**／ビルド後の manifest）が、**`chrome.storage.local`** の **`bmxt_last_seen_extension_version`**（定数 **`LAST_SEEN_EXTENSION_VERSION_KEY`**、`lib/features/extension-storage/keys.ts`）に保存されている「前回リリースノートを見た版」と **一致しない** とき、BMXt を開いた **そのバージョンへアップデートしたあとの初回だけ**、次を表示します。
+
+1. 既存どおりの **ウェルカム** 文言（内容は変更しない運用）。
+2. **バージョンアップ** 見出しと、**日英の変更説明**。
+
+既存の **セッションログ** は、その **下** に続きます。
+
+**リリース時の作業**
+
+1. **`package.json`** の **`version`** を上げる。
+2. **`lib/features/bmxt-window/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** と **`en`**）。本文は複数行にしてよい（JSON 内の `\n` または CSS の `white-space: pre-wrap` で折り返し表示）。
+3. ビルドして配布する。
+
+該当キーが無い場合は、**`release-notes.json`** を更新するよう促すプレースホルダが表示されます。
+
+**実装:** バージョン比較とストレージ更新は **`use-version-upgrade-banner.ts`**、ちらつき防止の描画待ちは **`bmxt-terminal.tsx`**、UI は **`bmxt-shell.tsx`**、スタイルは **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
 
 <a id="production-build"></a>
 

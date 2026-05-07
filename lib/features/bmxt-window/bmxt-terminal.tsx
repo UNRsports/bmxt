@@ -11,9 +11,11 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useCommandHistory } from "./use-command-history"
 import { useSessionLog } from "./use-session-log"
+import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 
 export function BmxtTerminal() {
   const { lines, appendLogLines } = useSessionLog()
+  const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
   const [tabPicker, setTabPicker] = useState<TabPickerState | null>(null)
@@ -54,7 +56,7 @@ export function BmxtTerminal() {
 
   useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
-  if (lines === null) {
+  if (lines === null || !upgradeBannerReady) {
     return (
       <div
         className="bmxt-root"
@@ -95,6 +97,7 @@ export function BmxtTerminal() {
           setTabPicker={setTabPicker}
           tabPickerRef={tabPickerRef}
           refreshTabPickerRows={refreshTabPickerRows}
+          postUpgradeBanner={postUpgradeBanner}
         />
       </div>
     </div>
