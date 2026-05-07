@@ -5,6 +5,10 @@
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UNRsports/bmxt.git"
+  },
   "scripts": {
     "dev": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev",
     "build": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo build",

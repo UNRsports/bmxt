@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Command shell core for BMXt (WASM): dispatch, registry, pure logic"
 license = "Apache-2.0"
+repository = "https://github.com/UNRsports/bmxt"
 
 [lib]
 crate-type = ["cdylib"]
