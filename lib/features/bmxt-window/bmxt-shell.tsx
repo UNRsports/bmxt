@@ -607,6 +607,17 @@ export function BmxtShell({
             BMXtへようこそ！本プログラムはテストバージョンです。現在は{" "}
             <code>tabs -list</code> での動作を中心に開発しています。
             <br />
+            <br />
+            ☕️ 支援 — いまはまだ開発段階のデモです。 BMXt
+            とそれがもたらす未来にご興味があれば、
+            <a
+              href="https://buymeacoffee.com/unrsports"
+              target="_blank"
+              rel="noopener noreferrer">
+              Buy Me a Coffee
+            </a>
+            からワンタイム／月額で開発を支援いただけます。
+            <br />
             Type help and press Enter. Tab completes commands.
           </div>
         ) : (

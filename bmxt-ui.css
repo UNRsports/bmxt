@@ -76,6 +76,16 @@ body {
   margin-bottom: 6px;
 }
 
+.bmxt-hint a {
+  color: #58a6ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bmxt-hint a:hover {
+  color: #79c0ff;
+}
+
 .bmxt-out-line {
   margin: 0;
   padding: 0;
