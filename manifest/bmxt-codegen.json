@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "commands": [
+    {
+      "module": "clear",
+      "canonicalName": "clear",
+      "aliases": [],
+      "usagePrimary": "clear"
+    },
+    {
+      "module": "close",
+      "canonicalName": "close",
+      "aliases": ["c"],
+      "usagePrimary": "close <tabId>"
+    },
+    {
+      "module": "exit",
+      "canonicalName": "exit",
+      "aliases": [],
+      "usagePrimary": "exit"
+    },
+    {
+      "module": "group",
+      "canonicalName": "group",
+      "aliases": [],
+      "usagePrimary": "group new"
+    },
+    {
+      "module": "help_cmd",
+      "canonicalName": "help",
+      "aliases": ["?"],
+      "usagePrimary": "help"
+    },
+    {
+      "module": "tabs",
+      "canonicalName": "tabs",
+      "aliases": [],
+      "usagePrimary": "tabs -list [-u]"
+    },
+    {
+      "module": "notes",
+      "canonicalName": "notes",
+      "aliases": [],
+      "usagePrimary": "notes"
+    }
+  ],
+  "effects": [
+    {
+      "kind": "clear_log",
+      "rustVariant": "ClearLog",
+      "shape": "unit",
+      "tsHandlerFile": "clear-log",
+      "tsHandlerExport": "applyClearLogEffect"
+    },
+    {
+      "kind": "close_tab",
+      "rustVariant": "CloseTab",
+      "shape": "record",
+      "fields": { "tab_id": "i32" },
+      "tsHandlerFile": "close-tab",
+      "tsHandlerExport": "applyCloseTabEffect"
+    },
+    {
+      "kind": "group_new",
+      "rustVariant": "GroupNew",
+      "shape": "record",
+      "fields": { "tab_ids": "vec_i32" },
+      "tsHandlerFile": "group-new",
+      "tsHandlerExport": "applyGroupNewEffect"
+    },
+    {
+      "kind": "tabs_nu",
+      "rustVariant": "TabsNu",
+      "shape": "unit",
+      "tsHandlerFile": "tabs-nu",
+      "tsHandlerExport": "applyTabsNuEffect"
+    },
+    {
+      "kind": "tabs_move_url",
+      "rustVariant": "TabsMoveUrl",
+      "shape": "record",
+      "fields": { "url": "string" },
+      "tsHandlerFile": "tabs-move-url",
+      "tsHandlerExport": "applyTabsMoveUrlEffect"
+    },
+    {
+      "kind": "open_url_new_window",
+      "rustVariant": "OpenUrlNewWindow",
+      "shape": "record",
+      "fields": { "url": "string" },
+      "tsHandlerFile": "open-url-new-window",
+      "tsHandlerExport": "applyOpenUrlNewWindowEffect"
+    },
+    {
+      "kind": "navigate_current_tab",
+      "rustVariant": "NavigateCurrentTab",
+      "shape": "record",
+      "fields": { "url": "string" },
+      "tsHandlerFile": "navigate-current-tab",
+      "tsHandlerExport": "applyNavigateCurrentTabEffect"
+    },
+    {
+      "kind": "open_url_new_tab",
+      "rustVariant": "OpenUrlNewTab",
+      "shape": "record",
+      "fields": { "url": "string" },
+      "tsHandlerFile": "open-url-new-tab",
+      "tsHandlerExport": "applyOpenUrlNewTabEffect"
+    },
+    {
+      "kind": "exit_pane",
+      "rustVariant": "ExitPane",
+      "shape": "unit",
+      "tsHandlerFile": "exit-pane",
+      "tsHandlerExport": "applyExitPaneEffect"
+    },
+    {
+      "kind": "release_notes_current",
+      "rustVariant": "ReleaseNotesCurrent",
+      "shape": "unit",
+      "tsHandlerFile": "release-notes-current",
+      "tsHandlerExport": "applyReleaseNotesCurrentEffect"
+    },
+    {
+      "kind": "release_notes_version",
+      "rustVariant": "ReleaseNotesVersion",
+      "shape": "record",
+      "fields": { "version": "string" },
+      "tsHandlerFile": "release-notes-version",
+      "tsHandlerExport": "applyReleaseNotesVersionEffect"
+    },
+    {
+      "kind": "release_notes_list",
+      "rustVariant": "ReleaseNotesList",
+      "shape": "unit",
+      "tsHandlerFile": "release-notes-list",
+      "tsHandlerExport": "applyReleaseNotesListEffect"
+    }
+  ]
+}

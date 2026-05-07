@@ -10,3 +10,21 @@
 
 - For commands that require additional tokens/options, pressing Enter with only the first command token must show usage/options guidance and then restore the prompt with the command plus trailing space (for example: `tabs `) so the user can continue immediately.
 - Implement this as a reusable continuation mechanism (not one-off per command), so future second/third-token command families can opt in consistently.
+
+# Adding built-in commands / 組み込みコマンドの追加
+
+**EN — Single source:** `manifest/bmxt-codegen.json`. Run `npm run codegen` (or `npm run build:wasm`, which runs codegen first). Do **not** hand-edit generated files: `wasm/bmxt-core/src/registry/table.rs`, `wasm/bmxt-core/src/generated/*`, `lib/features/dispatch/effect-types.ts`, `lib/features/dispatch/handlers/apply-dispatch.gen.ts`, `lib/features/builtin-commands/completion-fallback.ts`.
+
+**JA — 単一ソース:** **`manifest/bmxt-codegen.json`**。再生成は **`npm run codegen`**（**`npm run build:wasm`** の先頭でも実行）。次は**手で編集しない**: **`registry/table.rs`**、**`wasm/bmxt-core/src/generated/`**、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**。
+
+**EN — Typical flow:** (1) `npm run new:command -- <rust_module> <canonical_name> [aliases...]` *or* edit manifest `commands[]`, add `wasm/bmxt-core/src/cmd/<module>.rs`, `pub mod` in `cmd/mod.rs`, then codegen. (2) Implement `run`; keep `pub const CMD` aligned with manifest (`npm run verify:manifest`). (3) New Chrome effects: extend manifest `effects[]`, codegen, implement `lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts` (`tsHandlerExport`), return `Effect::…` from `run` as needed. (4) Run `npm run verify:manifest`, `npm run check:generated`, then tests / `build:wasm`. Details: `wasm/bmxt-core/src/cmd/ADD_COMMAND.md`, README § Command add procedure.
+
+**JA — 通常の流れ:** (1) **`npm run new:command -- <rust_module> <canonical_name> [aliases...]`** または manifest の **`commands[]`** を編集し **`cmd/<module>.rs`**・**`cmd/mod.rs`** を整えて **codegen**。 (2) **`run`** を実装、**`pub const CMD`** を manifest と一致（**`npm run verify:manifest`**）。 (3) 新 Effect: manifest の **`effects[]`** → **codegen** → **`handlers/effects/<tsHandlerFile>.ts`** に **`tsHandlerExport`** を実装し、**`run`** から **`DispatchJson::effects`** で返す。 (4) **`verify:manifest`** / **`check:generated`**、テスト・**`build:wasm`**。詳細は **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`** と README の **コマンド追加手順**。
+
+**EN — Hand-written `handlers/effects/*.ts`:** Not overwritten by codegen or Rust builds. After changing **`effects[]`** and running codegen, update the matching handler so types/exports stay in sync with generated **`ChromeEffect`** / **`apply-dispatch.gen.ts`**—that is **consistency**, not a file conflict between `cargo` and `tsc`.
+
+**JA — `handlers/effects/*.ts`:** codegen ・WASM ビルドの**上書き対象外**。manifest の **`effects[]`** 変更後は、対応するハンドラを生成済みの型・ディスパッチに**合わせる**（**ビルドの競合ではなく整合の問題**）。
+
+**EN — Ease vs old workflow:** Less duplicate editing across Rust registry, TS types, completion fallback, and switch; more upfront **manifest + codegen** discipline.
+
+**JA — 負担の変化:** 複数箇所の手同期が減り、**manifest と codegen** に寄せた分、初見の学習コストはあるが抜け漏れは減りやすい。

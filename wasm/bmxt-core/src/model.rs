@@ -1,4 +1,7 @@
 //! dispatch の JSON 形と Effect（serde で TS と共有）。
+//! `Effect` 本体は **`manifest/bmxt-codegen.json`** から生成（`generated/effect_enum.rs`）。
+
+pub use crate::generated::Effect;
 
 use serde::Serialize;
 
@@ -26,25 +29,4 @@ impl DispatchJson {
             effects: Some(effects),
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum Effect {
-    ClearLog,
-    CloseTab { tab_id: i32 },
-    GroupNew {
-        tab_ids: Vec<i32>,
-    },
-    TabsNu,
-    TabsMoveUrl { url: String },
-    OpenUrlNewWindow { url: String },
-    NavigateCurrentTab { url: String },
-    OpenUrlNewTab { url: String },
-    /// Close the BMXt window and clear session log.
-    ExitPane,
-    /// Body from `lib/features/release-notes` (current manifest version).
-    ReleaseNotesCurrent,
-    ReleaseNotesVersion { version: String },
-    ReleaseNotesList,
 }

@@ -13,7 +13,14 @@
     "dev": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev",
     "build": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo build",
     "package": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo package",
-    "build:wasm": "wasm-pack build wasm/bmxt-core --target web --out-dir ../../assets/wasm/bmxt-core",
+    "codegen": "node scripts/codegen/run.mjs",
+    "verify:manifest": "node scripts/verify-manifest.mjs",
+    "check:generated": "npm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json wasm/bmxt-core/src/generated wasm/bmxt-core/src/registry/table.rs lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts",
+    "sync:completion-fallback": "npm run codegen",
+    "sync:effect-types": "npm run codegen",
+    "sync:generated-ts": "npm run codegen",
+    "new:command": "node scripts/scaffold-command.mjs",
+    "build:wasm": "npm run codegen && wasm-pack build wasm/bmxt-core --target web --out-dir ../../assets/wasm/bmxt-core",
     "dev:fresh": "npm run build:wasm && NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev"
   },
   "dependencies": {

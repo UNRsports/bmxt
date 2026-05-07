@@ -1,19 +1,38 @@
 # Adding a built-in shell command
 
-## Rust (`wasm/bmxt-core`)
+真実は **`manifest/bmxt-codegen.json`**。**`npm run codegen`** が `registry/table.rs`・補完フォールバック・Effect 型・`apply-dispatch.gen.ts` を再生成する。
 
-1. Copy `_template/command_stub.rs` to `src/cmd/<canonical_name>.rs` (or start fresh) with `pub const CMD: Cmd` and `pub fn run(args: &[String]) -> DispatchJson`.
-   - For `help` / `man`-style registry-only rows, only `CMD` is needed; dispatch stays in `dispatch.rs`.
-2. Register the module in `src/cmd/mod.rs` (`pub mod <name>;`).
-3. Append `your_module` to `command_registry! { ... }` in `src/registry/table.rs` (this updates both `COMMANDS` and `COMMAND_RUNNERS`; do not edit `dispatch.rs` for listing).
-4. If Chrome is needed, add an `Effect` variant in `src/model.rs`, return it from `run`, then mirror JSON in TS (`effect-types.ts`, `handlers/apply-one.ts`).
-5. Run `npm run build:wasm`.
+## クイック（スキャフォールド）
 
-## TypeScript (Chrome effects)
+```bash
+npm run new:command -- <rust_module> <canonical_name> [aliases...]
+# 例: npm run new:command -- probe probe p
+```
 
-- New effect kinds: `lib/features/dispatch/effect-types.ts`, `handlers/apply-one.ts` (or small helpers under `lib/features/builtin-commands/`).
-- Tab completion fallback (WASM load failure): `lib/features/builtin-commands/completion-fallback.ts` — keep tokens in sync with Rust tokens.
+`cmd/<module>.rs`・`manifest` の `commands[]`・`cmd/mod.rs` を更新し **codegen** する。`run` の中身と **manifest の `usagePrimary`** を仕上げる。
 
-## Interactive-only flows
+## 手動
 
-- Picker / UI-only entry points may still live in `tabs/bmxt.tsx`; they are outside this `cmd/` pipeline.
+1. **`manifest/bmxt-codegen.json`** の **`commands`** に `{ module, canonicalName, aliases, usagePrimary }` を追加（**`module`** は `cmd/*.rs` のファイル名と一致させる）。
+2. **`wasm/bmxt-core/src/cmd/<module>.rs`** を追加。`pub const CMD` の `name` / `aliases` / `usage_primary` を manifest と一致させる。
+3. **`cmd/mod.rs`** に `pub mod <module>;`。
+4. **`npm run codegen`** — **`registry/table.rs`** が生成され `command_registry!` が埋まる。
+5. 振る舞いを `run` に実装。Chrome が要るときは下記 **Effect** も参照。
+
+## Chrome Effect を足す場合
+
+1. **`manifest/bmxt-codegen.json`** の **`effects`** に 1 エントリ（`kind`, `rustVariant`, `shape`, `fields`, `tsHandlerFile`, `tsHandlerExport`）。
+2. **`npm run codegen`**。
+3. **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** を新規作成し、**`tsHandlerExport`** 関数を実装（引数は `Extract<ChromeEffect, { kind: ... }>`）。
+4. **`cargo test`** / **`npx tsc --noEmit`**。
+
+## 検証
+
+- **`npm run verify:manifest`** — manifest の各コマンドと `cmd/*.rs` の `CMD` が一致するか。
+- **`npm run check:generated`** — codegen 後に生成物に未コミット差分がないか（CI でも実行）。
+
+## Interactive-only（このパイプ外）
+
+タブピッカーなど、`cmd/` 経由しない UI 処理は引き続き `lib/features/bmxt-window/` 等。
+
+**English:** The single source of truth is **`manifest/bmxt-codegen.json`**. Run **`npm run codegen`** after edits. **`npm run new:command`** scaffolds a command module and manifest entry.

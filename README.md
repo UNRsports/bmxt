@@ -29,6 +29,7 @@ _ジャンプ先は明示アンカーです。言語だけの小見出し（`Eng
   - [日本語: URL（行全体が `http` / `https` で始まる場合）](#url-lines-ja)
 - [Command Execution Architecture (Current)](#command-execution-architecture)
   - [Add a New Built-in Command](#add-new-built-in-command)
+  - [Command add procedure / コマンド追加手順](#command-add-procedure)
 - [Prompt Key Bindings](#prompt-key-bindings)
 - [Development](#development)
   - [Rust toolchain (WASM builds)](#rust-toolchain-wasm)
@@ -309,7 +310,7 @@ The manifest also sets **`content_security_policy.extension_pages`** so extensio
 
 ### English
 
-**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. For lines sent to the Service Worker, **`dispatchFull`** returns either terminal **`lines`** or JSON **`effects`**. Effects that need **`chrome.*`** are applied in TypeScript (`lib/features/dispatch/handlers/apply-one.ts`, from `apply-effects.ts`). Tab completion candidate **names** come from **`completionCandidatesJson()`** in the same WASM module (with a small TS fallback in `lib/features/builtin-commands/` if WASM fails to load).
+**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`npm run codegen`** (also run at the start of **`npm run build:wasm`**) regenerates **`registry/table.rs`**, Rust **`Effect`** (`generated/effect_enum.rs`), **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, and **`completion-fallback.ts`**. Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`dispatchFull`** returns terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion **names** come from **`completionCandidatesJson()`** in WASM; if WASM fails to load, the **`completion-fallback.ts`** list (from the same manifest) is used.
 
 The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer events/state; after changing **`wasm/bmxt-core/src/features/tabs_picker/model.rs`**, rebuild **`assets/wasm/bmxt-core`** with **`npm run build:wasm`** (see **Tab picker — implementation** under **`tabs`**). The TS layer includes a narrow fallback for **`moveHi` / `moveDest`** when WASM returns an unchanged state.
 
@@ -319,31 +320,33 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 **Main directories:**
 
+- **`manifest/bmxt-codegen.json`** — single source for command registry + Effect schema + TS handler wiring (see **`npm run codegen`**)
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, tab picker launch)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
-- **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; registered in **`registry/table.rs`** via **`command_registry!`**)
+- **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; **`registry/table.rs`** is **generated**)
 - **`wasm/bmxt-core`** — `dispatch`, `registry`, `model` (Effect JSON)
 - **`assets/wasm/bmxt-core`** — `wasm-pack --target web` output (bundled with the extension)
 - **`lib/features/wasm-core/index.ts`** — `ensureBmxtCore`, `runDispatch`, `getCompletionCandidates`
-- **`lib/features/dispatch/`** — Effect types and Chrome handlers (`handlers/` per effect)
-- **`lib/features/builtin-commands/`** — Tab completion fallback when WASM is unavailable
+- **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
+- **`lib/features/builtin-commands/`** — Tab completion fallback when WASM is unavailable（**`completion-fallback.ts`** は **`npm run codegen`** / **`build:wasm`** で manifest から生成）
 - **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_bmxt` then closes the tracked window; WASM missing → **`clear` / `exit`** handled in `background.ts` only—see **`exit`** paragraph above)
 
 ### 日本語
 
-**レジストリ・`help` 本文・トークン化・URL 専用行**は **`wasm/bmxt-core`（Rust / WASM）** に置いています。Service Worker に送られた行に対して **`dispatchFull`** は **`lines`** か JSON **`effects`** を返し、**`effects`** の `chrome.*` 操作は `lib/features/dispatch/handlers/apply-one.ts`（`apply-effects.ts` 経由）で行います。Tab 補完の**コマンド名候補**は WASM の **`completionCandidatesJson`**（WASM 未ロード時は `lib/features/builtin-commands/` のフォールバック）。
+**一覧の真実**は **`manifest/bmxt-codegen.json`**です。**`npm run codegen`**（**`build:wasm`** の先頭でも実行）で **`registry/table.rs`**・Rust **`Effect`**（**`generated/effect_enum.rs`**）・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`** を再生成します。個別の副作用実装は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果を **`handlers/effects`** に振り分けます。Tab 補完は WASM の **`completionCandidatesJson`**、WASM 未ロード時は manifest 由来の **`completion-fallback.ts`**。
 
 タブピッカーの **`tabsPickerReduce`** はリデューサのイベント／状態を **camelCase の JSON** でやり取りします。**`wasm/bmxt-core/src/features/tabs_picker/model.rs`** を変えたら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再ビルドしてください（詳細は **`tabs`** の **タブピッカー — 実装**）。**`moveHi` / `moveDest`** については、WASM が入力と同じ状態を返した場合に限り TypeScript 側で狭いフォールバックをかけています。
 
 **例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-terminal.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**（タブピッカー）、**対話的な `group new`**（タブ ID なし）。それ以外のサブコマンドと一般コマンドはバックグラウンドで WASM dispatch します。
 
+- **`manifest/bmxt-codegen.json`** — コマンド一覧・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI（ログ・プロンプト・IME・タブピッカー起動など）
 - **`lib/features/extension-storage/`** — `chrome.storage.local` のキー名とログ／履歴の上限定数
-- **`wasm/bmxt-core/src/cmd/`** — 組み込みコマンドごとに `CMD` + `run`（`registry/table.rs` で一覧へ登録）  
+- **`wasm/bmxt-core/src/cmd/`** — 組み込みコマンドごとに `CMD` + `run`（**`registry/table.rs`** は生成）  
 - **`wasm/bmxt-core`** — `dispatch`, `registry`, `model`（Effect JSON）  
 - **`assets/wasm/bmxt-core`** — `wasm-pack --target web` の生成物（ビルドに同梱）  
 - **`lib/features/wasm-core/index.ts`** — `ensureBmxtCore`, `runDispatch`, `getCompletionCandidates`  
-- **`lib/features/dispatch/`** — Effect 型と Chrome 実行（`handlers/` に effect ごとの処理）  
+- **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`**（生成）・**`handlers/effects/`**（実装）  
 - **`lib/features/builtin-commands/`** — WASM 失敗時の Tab 補完フォールバックなど  
 - **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_bmxt` でセッションログ削除のあと BMXt ウィンドウを閉じる。WASM 未ロード時は **`clear` / `exit` だけ** `background.ts` 同等処理にフォールバック。詳細は上の英語「**`exit`:**」段落も参照）
 
@@ -353,21 +356,53 @@ Rust を変更したら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`**
 
 ### Add a New Built-in Command
 
-Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
+Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**. For a consolidated checklist (scaffold, manifest, new effects, verification), see **[Command add procedure / コマンド追加手順](#command-add-procedure)** below.
 
 #### English
 
-1. In **`wasm/bmxt-core/src/cmd/`**, add a module with `CMD` + `run`, register it in **`cmd/mod.rs`**, and append **`your_module::CMD`** to **`registry/table.rs`**. Add a **`dispatch.rs`** arm calling `run` (and `model::Effect` if needed).  
-2. If the command uses the browser, implement the effect in **`lib/features/dispatch/handlers/apply-one.ts`** (and **`effect-types.ts`** for a new JSON shape).  
-3. If you add command names or aliases, update **`lib/features/builtin-commands/completion-fallback.ts`** so it stays aligned with Rust completion tokens.  
-4. Run **`npm run build:wasm`**, then verify `help` and Tab completion.
+1. Edit **`manifest/bmxt-codegen.json`** (`commands` / `effects` as needed). Optionally run **`npm run new:command -- <module> <name> [aliases...]`** to scaffold `cmd/<module>.rs` and manifest rows.
+2. Implement **`run`** in **`wasm/bmxt-core/src/cmd/*.rs`**. Keep **`pub const CMD`** in sync with the manifest (**`npm run verify:manifest`**).
+3. For new Chrome effects, add a **`handlers/effects/<file>.ts`** implementation and **`npm run codegen`**, then fill the handler referenced in the manifest.
+4. Run **`npm run build:wasm`**, then **`npm run verify:manifest`** and **`npm run check:generated`** (CI runs both).
 
 #### 日本語
 
-1. **`wasm/bmxt-core/src/cmd/`** に `CMD` と `run` を持つモジュールを追加し、**`cmd/mod.rs`** に登録、**`registry/table.rs`** の `COMMANDS` に **`your_module::CMD`** を追加。必要なら **`model::Effect`** と **`dispatch.rs`** の分岐を追加。  
-2. ブラウザ操作が要る場合は **`lib/features/dispatch/handlers/apply-one.ts`**（新しい JSON 形なら **`effect-types.ts`** も）。  
-3. コマンド名・別名を増やしたら、Rust の補完トークンと揃えるため **`lib/features/builtin-commands/completion-fallback.ts`** も更新。  
-4. **`npm run build:wasm`** のあと `help` / 補完を確認。
+1. **`manifest/bmxt-codegen.json`** を編集する。必要なら **`npm run new:command -- <module> <name> [aliases...]`** で `cmd/*.rs` と manifest を追加。
+2. **`cmd/*.rs`** の **`run`** を実装。`pub const CMD` を manifest と一致させる（**`npm run verify:manifest`**）。
+3. Chrome 用の新 Effect なら manifest の **`effects`** を足し **`npm run codegen`** のあと **`handlers/effects/`** に **`tsHandlerFile`** 相当の実装を置く。
+4. **`npm run build:wasm`** のあと **`verify:manifest`** / **`check:generated`** で確認（CI でも実行）。
+
+<a id="command-add-procedure"></a>
+
+### Command add procedure / コマンド追加手順
+
+#### English
+
+- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`wasm/bmxt-core/src/registry/table.rs`**, files under **`wasm/bmxt-core/src/generated/`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**. Regenerate them with **`npm run codegen`** (also runs at the start of **`npm run build:wasm`**).
+- **Recommended:** `npm run new:command -- <rust_module> <canonical_name> [aliases...]` — creates **`wasm/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`** in the manifest and **`cmd/mod.rs`**, then runs **codegen**. Replace the stub in **`run`** and align **`usagePrimary`** (manifest) with **`usage_primary`** (Rust) if the usage line should differ from the canonical name.
+- **Manual path:** Add a row under **`commands[]`** in the manifest, add **`cmd/<module>.rs`**, add **`pub mod <module>;`** in **`cmd/mod.rs`**, then **`npm run codegen`**.
+- **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`npm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return **`Effect::…`** from **`run`** via **`DispatchJson::effects`** as needed.
+- **Checks:** **`npm run verify:manifest`** (manifest vs every **`pub const CMD`**) and **`npm run check:generated`** (no uncommitted drift in generated paths). CI runs both. Then **`cargo test`** / **`npx tsc --noEmit`** and **`npm run build:wasm`** for a full extension build.
+
+Field-level detail (`effects[]` shapes, scaffolder behaviour) lives in **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
+
+**Hand-written browser logic (`handlers/effects/*.ts`) vs builds:** Edits there do **not** conflict with **`cargo` / `wasm-pack`** (different outputs) or with **`npm run codegen`**—those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports; otherwise **`tsc`** or runtime behaviour will drift. This is a **consistency** requirement, not a file-lock conflict.
+
+#### 日本語
+
+- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない（いずれも **`npm run codegen`**／**`build:wasm`** 先頭で再生成）: **`registry/table.rs`**、**`wasm/bmxt-core/src/generated/`** 以下、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**。
+- **手順（推奨）:** **`npm run new:command -- <rust_module> <canonical_name> [aliases...]`** — `cmd/<module>.rs`・manifest の **`commands[]`**・**`cmd/mod.rs`** を更新し **codegen** まで実行。**`run`** の実装へ差し替え、ヘルプ一行が名前と違う場合は manifest の **`usagePrimary`** と Rust の **`usage_primary`** を揃える。
+- **手動で足す場合:** manifest の **`commands[]`** に追記 → **`cmd/<module>.rs`**（**`CMD` + `run`**）→ **`cmd/mod.rs`** に **`pub mod`** → **`npm run codegen`**。
+- **ブラウザ連携（新しい `Effect`）:** manifest の **`effects[]`** に追記 → **`npm run codegen`** → **`handlers/effects/<tsHandlerFile>.ts`** に manifest の **`tsHandlerExport`** を実装 → **`run`** から **`DispatchJson::effects`** で **`Effect::…`** を返す。
+- **検証:** **`npm run verify:manifest`**（manifest と各 **`cmd/*.rs`** の **`CMD` ブロックが一致するか）、**`npm run check:generated`**（生成物の git 差分なし）。CI でも両方実行。続けて **`cargo test`** / **`npx tsc --noEmit`**、拡張全体は **`npm run build:wasm`** → **`npm run build`**。
+
+**`effects[]` のフィールドやスキャフォールダの挙動など**は **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`** を参照。
+
+**手書きのブラウザ実装（`handlers/effects/*.ts`）とビルド:** ここを編集しても **`cargo` / `wasm-pack`** や **`npm run codegen`** と**ファイルの上書き競合は起きない**（codegen の対象外）。一方、manifest の **`effects[]`** を変えて **codegen** したあとは、対応する **`tsHandlerFile` / `tsHandlerExport`** の実装を、生成された **`ChromeEffect`** 型・**`apply-dispatch.gen.ts`** の import に**揃える**必要がある（型エラーや実行時の食い違いを防ぐ）。これは**手順の整合**の話で、ビルドツール同士の競合ではない。
+
+**Compared with the pre-refactor workflow:** Registering commands, completion tokens, `Effect` shapes, TS unions, and the apply-one **switch** no longer require editing multiple lists by hand—**one manifest + codegen** keeps them aligned. You still write **`run`** in Rust and **Chrome logic** in `handlers/effects/*.ts`, but duplicate bookkeeping is reduced; the first-time cost is learning **manifest + codegen + verify scripts**.
+
+**リファクタ前との比較:** コマンド登録・補完・Effect・TS の union・ディスパッチを**別々に手で同期**しなくてよくなり、**manifest と codegen** がその重複を担う。**`run`**（Rust）と **`handlers/effects/`**（TS）は従来どおり手書き**。最初に **manifest／codegen／検証コマンド** を覚えるコストはあるが、運用では**手戻りと抜け漏れは減りやすい**。
 
 <a id="prompt-key-bindings"></a>
 
@@ -520,8 +555,8 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 - `background.ts` — Service Worker（ウィンドウ起動・WASM dispatch・Effect 実行）
 - `wasm/bmxt-core/` — Rust コア（`cmd/` にコマンド単位、`registry/table.rs` で一覧）
 - `lib/features/wasm-core/` — WASM 初期化・`runDispatch`・補完候補
-- `lib/features/dispatch/` — Effect 型・`handlers/apply-one.ts` で Chrome 実行
-- `lib/features/builtin-commands/` — 補完フォールバック（WASM 未初期化時）
+- `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
+- `lib/features/builtin-commands/` — 補完フォールバック（WASM 未初期化時・**`completion-fallback.ts`** は **`build:wasm`** で Rust から生成）
 - `lib/tab-picker.ts` — 互換レイヤ（`lib/features/tabs/picker-rows.ts` を再エクスポート）
 - `lib/bmxt-tabs-input.ts` — 互換レイヤ（`lib/features/tabs/input.ts` を再エクスポート）
 

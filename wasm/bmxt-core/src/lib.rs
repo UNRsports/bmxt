@@ -1,5 +1,7 @@
 //! BMXt コマンドコア（Rust / WASM）。Chrome API は持たず、dispatch 結果は Lines か Effects の JSON。
+//! `Effect` / レジストリ表は **`manifest/bmxt-codegen.json`** から生成（`npm run codegen`）。
 
+mod generated;
 mod cmd;
 mod dispatch;
 mod features;
