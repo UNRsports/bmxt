@@ -1,10 +1,8 @@
 //! URL 行・トークン化・コマンド委譲。本体は `crate::cmd::*::run`。
 
-use crate::cmd::{
-    clear, close, exit, group, help_cmd, tabs,
-};
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use crate::model::{DispatchJson, Effect};
+use crate::registry::table::COMMAND_RUNNERS;
 
 pub fn dispatch_full(line: &str) -> String {
     let trimmed = line.trim();
@@ -51,18 +49,6 @@ fn try_url_line(trimmed: &str) -> Option<DispatchJson> {
     None
 }
 
-type DispatchCmdFn = fn(&[String]) -> DispatchJson;
-
-/// `registry::table::COMMANDS` と名前集合が一致すること（テストで検証）。
-static COMMAND_RUNNERS: &[(&str, DispatchCmdFn)] = &[
-    ("clear", clear::run),
-    ("close", close::run),
-    ("exit", exit::run),
-    ("group", group::run),
-    ("help", help_cmd::run),
-    ("tabs", tabs::run),
-];
-
 fn handle_command(canonical: &str, args: &[String]) -> DispatchJson {
     COMMAND_RUNNERS
         .iter()
@@ -78,8 +64,8 @@ fn handle_command(canonical: &str, args: &[String]) -> DispatchJson {
 
 #[cfg(test)]
 mod tests {
-    use super::{dispatch_full, COMMAND_RUNNERS};
-    use crate::registry::table::COMMANDS;
+    use super::dispatch_full;
+    use crate::registry::table::{COMMANDS, COMMAND_RUNNERS};
     use std::collections::HashSet;
 
     #[test]

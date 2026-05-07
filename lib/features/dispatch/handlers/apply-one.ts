@@ -5,6 +5,11 @@
 
 import type { ChromeEffect } from "../effect-types"
 import type { DispatchChromeContext } from "../dispatch-context"
+import {
+  linesForCurrentVersion,
+  linesForVersionKey,
+  linesVersionList
+} from "../../release-notes/format-terminal"
 import { parseHttpUrlForEffect, tabsMoveUrl } from "./shared"
 
 export async function applyOne(
@@ -59,6 +64,14 @@ export async function applyOne(
       const t = await chrome.tabs.create({ url: e.url })
       return [`opened new tab ${t.id}: ${e.url}`]
     }
+    case "release_notes_current": {
+      const v = chrome.runtime.getManifest().version
+      return linesForCurrentVersion(v)
+    }
+    case "release_notes_version":
+      return linesForVersionKey(e.version)
+    case "release_notes_list":
+      return linesVersionList()
     default: {
       const _x: never = e
       return [`internal: unknown effect ${JSON.stringify(_x)}`]

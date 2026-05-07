@@ -321,7 +321,7 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, tab picker launch)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
-- **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; listed in **`registry/table.rs`**)
+- **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; registered in **`registry/table.rs`** via **`command_registry!`**)
 - **`wasm/bmxt-core`** — `dispatch`, `registry`, `model` (Effect JSON)
 - **`assets/wasm/bmxt-core`** — `wasm-pack --target web` output (bundled with the extension)
 - **`lib/features/wasm-core/index.ts`** — `ensureBmxtCore`, `runDispatch`, `getCompletionCandidates`
@@ -514,7 +514,7 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 - `tabs/bmxt.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
 - `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`tabs/bmxt.tsx` から import）
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
-- `lib/features/bmxt-window/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
+- `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知・**`notes`** ターミナルコマンドの変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー・tabs 入力パースなど（`picker-overlay.tsx`、`picker-rows.ts`、`input.ts`、各種 hooks）
 - `background.ts` — Service Worker（ウィンドウ起動・WASM dispatch・Effect 実行）
@@ -549,7 +549,7 @@ Existing **session log** lines are still rendered **below** that block.
 **Maintainer workflow**
 
 1. Bump **`package.json`** → **`version`**.
-2. Add a matching entry to **`lib/features/bmxt-window/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** strings (multi-line text is fine; use `\n` in JSON or rely on `white-space: pre-wrap` in CSS).
+2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** strings (multi-line text is fine; use `\n` in JSON or rely on `white-space: pre-wrap` in CSS). Users can also print notes in the BMXt shell with **`notes`**, **`notes <version>`**, or **`notes --list`**.
 3. Build and ship.
 
 If no entry exists for the current version, placeholder copy is shown that points maintainers at **`release-notes.json`**.
@@ -568,7 +568,7 @@ If no entry exists for the current version, placeholder copy is shown that point
 **リリース時の作業**
 
 1. **`package.json`** の **`version`** を上げる。
-2. **`lib/features/bmxt-window/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** と **`en`**）。本文は複数行にしてよい（JSON 内の `\n` または CSS の `white-space: pre-wrap` で折り返し表示）。
+2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** と **`en`**）。本文は複数行にしてよい（JSON 内の `\n` または CSS の `white-space: pre-wrap` で折り返し表示）。BMXt シェルでは **`notes`** / **`notes <version>`** / **`notes --list`** でも参照できる。
 3. ビルドして配布する。
 
 該当キーが無い場合は、**`release-notes.json`** を更新するよう促すプレースホルダが表示されます。

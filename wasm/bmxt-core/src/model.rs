@@ -43,4 +43,8 @@ pub enum Effect {
     OpenUrlNewTab { url: String },
     /// Close the BMXt window and clear session log.
     ExitPane,
+    /// Body from `lib/features/release-notes` (current manifest version).
+    ReleaseNotesCurrent,
+    ReleaseNotesVersion { version: String },
+    ReleaseNotesList,
 }

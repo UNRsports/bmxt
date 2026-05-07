@@ -10,6 +10,9 @@ export type ChromeEffect =
   | { kind: "open_url_new_window"; url: string }
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_new_tab"; url: string }
+  | { kind: "release_notes_current" }
+  | { kind: "release_notes_version"; version: string }
+  | { kind: "release_notes_list" }
 
 export type DispatchBundle = {
   ty: "lines" | "effects"
