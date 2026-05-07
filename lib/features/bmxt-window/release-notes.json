@@ -1,6 +1,6 @@
 {
   "0.0.8": {
-    "ja": "・ブラウザでのタブ切り替えを、BMXt ターミナル内 tabs モード一覧にリアルタイムで反映する仕様を実装しました。\n・拡張機能をアップデートしたあとの初回起動時に、ウェルカムに続けてバージョン番号と変更内容を表示する仕様を追加しました。変更文は lib/features/bmxt-window/release-notes.json でバージョンごとにメンテナンスします。",
-    "en": "· Tab switches in the browser are now reflected in real time in the tabs-mode list inside the BMXt terminal.\n· On the first BMXt launch after an extension update, a version-upgrade notice now appears below the welcome text with the version number and release notes. Maintain per-version copy in lib/features/bmxt-window/release-notes.json."
+    "ja": "・ブラウザのタブ切り替えを、BMXt ターミナル内 tabs モード一覧へリアルタイム反映\n・アップデート後の初回起動で、ウェルカム以下にバージョンと変更内容を表示",
+    "en": "· Browser tab changes synced in real time to the tabs-mode list in the BMXt terminal\n· First launch after an update: version + release notes below welcome"
   }
 }

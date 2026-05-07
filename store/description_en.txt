@@ -31,7 +31,9 @@ If you are even a little curious about a future where the browser feels differen
 
 
 ◆Version history
-0.0.8: Tab switches in the browser are reflected in real time in the tabs-mode list inside the BMXt terminal.
+0.0.8:
+· Browser tab changes synced in real time to the tabs-mode list in the BMXt terminal
+· First launch after an update: version + release notes below welcome
 
 ◆Commands
 
