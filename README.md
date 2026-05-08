@@ -112,7 +112,9 @@ Note: The demo video currently covers the group creation part of the available f
 
 
 
-https://github.com/user-attachments/assets/2e418356-cfce-479a-9880-185e542c5fad
+
+https://github.com/user-attachments/assets/72249bfe-50bc-4a00-b149-fd8ffb90dbdb
+
 
 
 
