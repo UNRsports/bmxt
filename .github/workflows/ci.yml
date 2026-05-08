@@ -37,6 +37,9 @@ jobs:
       - name: Generated TS / Rust matches manifest (codegen + git diff)
         run: npm run check:generated
 
+      - name: Build WASM artifacts
+        run: npm run build:wasm
+
       - name: Typecheck
         run: npx tsc --noEmit
 
