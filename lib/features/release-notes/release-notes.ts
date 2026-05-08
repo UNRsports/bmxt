@@ -5,7 +5,12 @@ export type ReleaseNotesEntry = {
   en: string
 }
 
-type NotesMap = Record<string, ReleaseNotesEntry>
+type ReleaseNotesText = string | string[]
+type ReleaseNotesRawEntry = {
+  ja: ReleaseNotesText
+  en: ReleaseNotesText
+}
+type NotesMap = Record<string, ReleaseNotesRawEntry>
 
 const MAP = raw as NotesMap
 
@@ -16,7 +21,13 @@ const PLACEHOLDER_EN =
 
 export function getReleaseNotesForVersion(version: string): ReleaseNotesEntry | null {
   const e = MAP[version]
-  return e ?? null
+  if (!e) {
+    return null
+  }
+  return {
+    ja: normalizeText(e.ja),
+    en: normalizeText(e.en)
+  }
 }
 
 export function placeholderTexts(): ReleaseNotesEntry {
@@ -43,4 +54,8 @@ export function listRegisteredVersions(): string[] {
 
 export function getRawMap(): Readonly<NotesMap> {
   return MAP
+}
+
+function normalizeText(text: ReleaseNotesText): string {
+  return Array.isArray(text) ? text.join("\n") : text
 }
