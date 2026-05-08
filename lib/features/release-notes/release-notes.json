@@ -5,6 +5,10 @@
       "・TypeScriptとRustの構造設計を変更",
       "・検索機能実装"
     ],
-    "en": []
+    "en": [
+      "• Added an extension icon",
+      "• Updated the architecture design for TypeScript and Rust",
+      "• Implemented search functionality"
+    ]
   }
 }
