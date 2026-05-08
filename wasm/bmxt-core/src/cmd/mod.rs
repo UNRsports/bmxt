@@ -3,6 +3,7 @@
 pub mod clear;
 pub mod close;
 pub mod exit;
+pub mod find;
 pub mod group;
 pub mod help_cmd;
 pub mod notes;

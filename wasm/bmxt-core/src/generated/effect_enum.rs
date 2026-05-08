@@ -10,6 +10,18 @@ pub enum Effect {
     CloseTab {
         tab_id: i32,
     },
+    FindPageText {
+        query: String,
+    },
+    FindPageTitle {
+        query: String,
+    },
+    FindWindowTitle {
+        query: String,
+    },
+    FindGroup {
+        query: String,
+    },
     GroupNew {
         tab_ids: Vec<i32>,
     },

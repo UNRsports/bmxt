@@ -20,6 +20,12 @@
       "usagePrimary": "exit"
     },
     {
+      "module": "find",
+      "canonicalName": "find",
+      "aliases": [],
+      "usagePrimary": "find -pagetitle <query>"
+    },
+    {
       "module": "group",
       "canonicalName": "group",
       "aliases": [],
@@ -59,6 +65,38 @@
       "fields": { "tab_id": "i32" },
       "tsHandlerFile": "close-tab",
       "tsHandlerExport": "applyCloseTabEffect"
+    },
+    {
+      "kind": "find_page_text",
+      "rustVariant": "FindPageText",
+      "shape": "record",
+      "fields": { "query": "string" },
+      "tsHandlerFile": "find-page-text",
+      "tsHandlerExport": "applyFindPageTextEffect"
+    },
+    {
+      "kind": "find_page_title",
+      "rustVariant": "FindPageTitle",
+      "shape": "record",
+      "fields": { "query": "string" },
+      "tsHandlerFile": "find-page-title",
+      "tsHandlerExport": "applyFindPageTitleEffect"
+    },
+    {
+      "kind": "find_window_title",
+      "rustVariant": "FindWindowTitle",
+      "shape": "record",
+      "fields": { "query": "string" },
+      "tsHandlerFile": "find-window-title",
+      "tsHandlerExport": "applyFindWindowTitleEffect"
+    },
+    {
+      "kind": "find_group",
+      "rustVariant": "FindGroup",
+      "shape": "record",
+      "fields": { "query": "string" },
+      "tsHandlerFile": "find-group",
+      "tsHandlerExport": "applyFindGroupEffect"
     },
     {
       "kind": "group_new",

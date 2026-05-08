@@ -11,6 +11,10 @@ pub fn effect_samples_for_ts_generation() -> Vec<Effect> {
     vec![
         Effect::ClearLog,
         Effect::CloseTab { tab_id: 0 },
+        Effect::FindPageText { query: String::new() },
+        Effect::FindPageTitle { query: String::new() },
+        Effect::FindWindowTitle { query: String::new() },
+        Effect::FindGroup { query: String::new() },
         Effect::GroupNew { tab_ids: vec![0] },
         Effect::TabsNu,
         Effect::TabsMoveUrl { url: String::new() },

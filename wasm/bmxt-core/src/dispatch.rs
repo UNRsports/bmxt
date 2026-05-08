@@ -29,13 +29,16 @@ pub fn dispatch_full(line: &str) -> String {
 }
 
 fn try_url_line(trimmed: &str) -> Option<DispatchJson> {
-    if trimmed.len() >= 4 {
-        let suf = &trimmed[trimmed.len() - 4..];
-        if suf.eq_ignore_ascii_case(" -nw") {
-            let inner = trimmed[..trimmed.len() - 4].trim_end();
-            let url = parse_http_url_candidate(inner)?;
-            return Some(DispatchJson::effects(vec![Effect::OpenUrlNewWindow { url }]));
-        }
+    if trimmed.len() >= 4 && trimmed.to_ascii_lowercase().ends_with(" -nw") {
+        let inner = trimmed
+            .strip_suffix(" -nw")
+            .or_else(|| trimmed.strip_suffix(" -NW"))
+            .or_else(|| trimmed.strip_suffix(" -nW"))
+            .or_else(|| trimmed.strip_suffix(" -Nw"))
+            .unwrap_or(trimmed)
+            .trim_end();
+        let url = parse_http_url_candidate(inner)?;
+        return Some(DispatchJson::effects(vec![Effect::OpenUrlNewWindow { url }]));
     }
     if trimmed.ends_with(" .") && trimmed.len() >= 2 {
         let inner = trimmed[..trimmed.len() - 2].trim_end();
@@ -66,6 +69,7 @@ fn handle_command(canonical: &str, args: &[String]) -> DispatchJson {
 mod tests {
     use super::dispatch_full;
     use crate::registry::table::{COMMANDS, COMMAND_RUNNERS};
+    use serde_json::Value;
     use std::collections::HashSet;
 
     #[test]
@@ -90,5 +94,16 @@ mod tests {
             from_runners,
             "COMMAND_RUNNERS と registry::table::COMMANDS の名前集合を一致させてください"
         );
+    }
+
+    #[test]
+    fn non_ascii_query_does_not_panic_and_returns_find_effect() {
+        let out = dispatch_full("find -pagetext 翻訳");
+        let v: Value = serde_json::from_str(&out).expect("dispatch output must be valid JSON");
+        assert_eq!(v["ty"], "effects");
+        let effects = v["effects"].as_array().expect("effects must be an array");
+        assert!(!effects.is_empty(), "effects should not be empty");
+        assert_eq!(effects[0]["kind"], "find_page_text");
+        assert_eq!(effects[0]["query"], "翻訳");
     }
 }

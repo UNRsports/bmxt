@@ -7,6 +7,10 @@ export type ChromeEffect =
   | { kind: "clear_log" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }
+  | { kind: "find_group"; query: string }
+  | { kind: "find_page_text"; query: string }
+  | { kind: "find_page_title"; query: string }
+  | { kind: "find_window_title"; query: string }
   | { kind: "group_new"; tab_ids: number[] }
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_new_tab"; url: string }

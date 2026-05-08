@@ -10,6 +10,7 @@
 
 - For commands that require additional tokens/options, pressing Enter with only the first command token must show usage/options guidance and then restore the prompt with the command plus trailing space (for example: `tabs `) so the user can continue immediately.
 - Implement this as a reusable continuation mechanism (not one-off per command), so future second/third-token command families can opt in consistently.
+- Do not display internal IDs (tabId/windowId/groupId or similar) in user-facing command output unless the user explicitly requests an ID display option.
 
 # Adding built-in commands / 組み込みコマンドの追加
 

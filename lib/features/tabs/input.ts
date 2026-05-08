@@ -4,6 +4,12 @@
 const GROUP_NEW_INTERACTIVE_RE = /^\s*group\s+new\s*$/i
 
 export const TABS_OPTION_CANDIDATES = ["-list", "-moveurl", "-nowurl"] as const
+export const FIND_OPTION_CANDIDATES = [
+  "-pagetext",
+  "-pagetitle",
+  "-windowtitle",
+  "-group"
+] as const
 
 const TABS_LIST_RE =
   /^\s*tabs\s+-list(?:\s+-[uU])?\s*$/i
@@ -51,6 +57,34 @@ export function tabsOptionCompletionZone(
 export function listTabsOptionCandidates(prefix: string): string[] {
   const p = prefix.toLowerCase()
   return TABS_OPTION_CANDIDATES.filter((opt) => opt.startsWith(p))
+}
+
+export function findOptionCompletionZone(
+  line: string,
+  cursor: number
+): { optionStart: number; prefix: string; optionEnd: number } | null {
+  const m = /^\s*find\s+/.exec(line)
+  if (!m) {
+    return null
+  }
+  const optionStart = m.index + m[0].length
+  if (cursor < optionStart) {
+    return null
+  }
+  const optionEnd = optionStart + (line.slice(optionStart).match(/^[^\s]*/)?.[0].length ?? 0)
+  if (cursor > optionEnd) {
+    return null
+  }
+  const prefix = line.slice(optionStart, cursor)
+  if (/\s/.test(prefix)) {
+    return null
+  }
+  return { optionStart, prefix, optionEnd }
+}
+
+export function listFindOptionCandidates(prefix: string): string[] {
+  const p = prefix.toLowerCase()
+  return FIND_OPTION_CANDIDATES.filter((opt) => opt.startsWith(p))
 }
 
 function urlTokenEnd(line: string, urlStart: number): number {

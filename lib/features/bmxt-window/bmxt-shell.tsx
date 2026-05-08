@@ -1,5 +1,7 @@
 import {
   buildTabPickerRows,
+  findOptionCompletionZone,
+  listFindOptionCandidates,
   listTabsOptionCandidates,
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
@@ -51,6 +53,7 @@ type Props = {
 }
 
 const CONTINUATION_PROMPT_BY_COMMAND: Record<string, string> = {
+  find: "find ",
   tabs: "tabs "
 }
 
@@ -486,6 +489,27 @@ export function BmxtShell({
           setHistNavIndex(-1)
           setLine(newLine)
           setCursorPos(optionZone.optionStart + rep.length + suffix.length)
+          return
+        }
+        const findOptionZone = findOptionCompletionZone(curLn, pos)
+        if (findOptionZone) {
+          e.preventDefault()
+          const cands = listFindOptionCandidates(findOptionZone.prefix)
+          if (cands.length === 0) {
+            return
+          }
+          const idx = tabPressSeqRef.current % cands.length
+          tabPressSeqRef.current += 1
+          const rep = cands[idx]!
+          const suffix = findOptionZone.optionEnd === curLn.length ? " " : ""
+          const newLine =
+            curLn.slice(0, findOptionZone.optionStart) +
+            rep +
+            suffix +
+            curLn.slice(findOptionZone.optionEnd)
+          setHistNavIndex(-1)
+          setLine(newLine)
+          setCursorPos(findOptionZone.optionStart + rep.length + suffix.length)
           return
         }
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)

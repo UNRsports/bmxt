@@ -8,6 +8,10 @@ import type { DispatchChromeContext } from "../dispatch-context"
 import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseTabEffect } from "./effects/close-tab"
 import { applyExitPaneEffect } from "./effects/exit-pane"
+import { applyFindGroupEffect } from "./effects/find-group"
+import { applyFindPageTextEffect } from "./effects/find-page-text"
+import { applyFindPageTitleEffect } from "./effects/find-page-title"
+import { applyFindWindowTitleEffect } from "./effects/find-window-title"
 import { applyGroupNewEffect } from "./effects/group-new"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
@@ -29,6 +33,14 @@ export async function applyOne(
       return applyCloseTabEffect(ctx, e)
     case "exit_pane":
       return applyExitPaneEffect(ctx, e)
+    case "find_group":
+      return applyFindGroupEffect(ctx, e)
+    case "find_page_text":
+      return applyFindPageTextEffect(ctx, e)
+    case "find_page_title":
+      return applyFindPageTitleEffect(ctx, e)
+    case "find_window_title":
+      return applyFindWindowTitleEffect(ctx, e)
     case "group_new":
       return applyGroupNewEffect(ctx, e)
     case "navigate_current_tab":
