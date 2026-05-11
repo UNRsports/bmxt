@@ -31,9 +31,9 @@ If you are even a little curious about a future where the browser feels differen
 
 
 ◆Version history
-0.0.8:
-· Browser tab changes synced in real time to the tabs-mode list in the BMXt terminal
-· First launch after an update: version + release notes below welcome
+0.0.9:
+- Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)
+- Improved how release notes are specified and shown
 
 ◆Commands
 
