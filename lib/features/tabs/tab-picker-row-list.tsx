@@ -1,6 +1,24 @@
-import { displayTitle, type TabPickerRow } from "./picker-rows"
+import type { ReactNode } from "react"
+import {
+  displayTitle,
+  parseTabPickerSearchNeedle,
+  splitTextHighlightSegments,
+  type TabPickerRow
+} from "./picker-rows"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { BulkSubMode } from "./tab-picker-overlay-types"
+
+function renderHighlighted(text: string, needle: string, keyPrefix: string): ReactNode {
+  return splitTextHighlightSegments(text, needle).map((seg, i) =>
+    seg.match ? (
+      <mark key={`${keyPrefix}-${i}`} className="bmxt-tab-picker-search-hl">
+        {seg.text}
+      </mark>
+    ) : (
+      <span key={`${keyPrefix}-${i}`}>{seg.text}</span>
+    )
+  )
+}
 
 export type TabPickerRowListProps = {
   rows: TabPickerRow[]
@@ -14,6 +32,8 @@ export type TabPickerRowListProps = {
   markedTabSet: Set<number>
   activeTabId: number | null
   showUrl: boolean
+  /** `/` 入力中または確定後の検索語（`@` で URL 側のみハイライト） */
+  searchHighlightQuery: string
   setRowRef: (rowIndex: number, el: HTMLDivElement | null) => void
 }
 
@@ -28,6 +48,7 @@ export function TabPickerRowList({
   markedTabSet,
   activeTabId,
   showUrl,
+  searchHighlightQuery,
   setRowRef
 }: TabPickerRowListProps) {
   if (rows.length === 0) {
@@ -87,6 +108,8 @@ export function TabPickerRowList({
         }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
           moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
         }`
+        const { byUrl, needle } = parseTabPickerSearchNeedle(searchHighlightQuery)
+        const titleShown = displayTitle(row.title)
         return (
           <div
             key={i}
@@ -102,10 +125,14 @@ export function TabPickerRowList({
               <span className="bmxt-tab-picker-tab-glyph">
                 {markedTabSet.has(row.tabId) ? "#" : " "}
               </span>
-              {displayTitle(row.title)}
+              {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}
             </div>
             {showUrl ? (
-              <div className="bmxt-tab-picker-tab-url">{row.url || "(no url)"}</div>
+              <div className="bmxt-tab-picker-tab-url">
+                {byUrl
+                  ? renderHighlighted(row.url || "(no url)", needle, `u-${i}`)
+                  : row.url || "(no url)"}
+              </div>
             ) : null}
           </div>
         )

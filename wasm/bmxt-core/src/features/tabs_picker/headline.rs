@@ -27,7 +27,7 @@ fn common_parts() -> Vec<&'static str> {
         "Shift+↑↓ range #",
         "Tab #",
         ": コマンド（move/close/group/nw/nt · Tab 補完）",
-        "/ search",
+        "/ highlight · Enter commit · :nohlsearch clears",
         "Ctrl+Shift+↑↓ active preview",
         "Enter confirm",
         "Esc clear # / exit",
@@ -43,7 +43,7 @@ pub fn resolve_headline(ctx: HeadlineContext) -> String {
         return "group new — 名前・色 · Enter 確定 · Esc タブ一覧へ · Tab 名前↔色".to_string();
     }
     if ctx.variant == "groupNew" && ctx.group_new_phase == "tabs" {
-        return "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc".to_string();
+        return "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 文字ハイライト · Esc".to_string();
     }
 
     let parts = common_parts().join(" · ");

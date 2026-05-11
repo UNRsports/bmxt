@@ -245,7 +245,7 @@ export function BmxtShell({
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
             `> ${trimmed}`,
-            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / search · Ctrl+Shift+↑↓ active · Enter · Esc"
+            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc"
           ])
           setTabPicker({ rows, showUrl, initialHi })
         } catch (e) {

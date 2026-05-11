@@ -14,7 +14,8 @@ import {
   NEW_GROUP_LIST_SENTINEL,
   TAB_PICKER_COMMANDS_FOR_GROUP,
   TAB_PICKER_COMMANDS_FOR_TAB,
-  TAB_PICKER_COMMANDS_FOR_WINDOW
+  TAB_PICKER_COMMANDS_FOR_WINDOW,
+  filterTabPickerCommandCompletions
 } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import {
@@ -49,6 +50,8 @@ export function TabPickerOverlay({
 }: Props) {
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
+  /** `/` で確定したあとも維持するハイライト用クエリ（`:nohlsearch` で消す） */
+  const [hlSearchPattern, setHlSearchPattern] = useState("")
   const [hi, setHi] = useState(initialHi)
   const [activeTabId, setActiveTabId] = useState<number | null>(() => {
     const atHi = rows[initialHi]
@@ -95,15 +98,7 @@ export function TabPickerOverlay({
     markedGroupSet,
     tabIdToWindowId,
     selectedTabIds
-  } = useTabPickerDerivedState(
-    rows,
-    filterQuery,
-    searchMode,
-    markedKind,
-    markedTabIds,
-    markedWindowIds,
-    markedGroupKeys
-  )
+  } = useTabPickerDerivedState(rows, markedKind, markedTabIds, markedWindowIds, markedGroupKeys)
 
   const { applyReducedState, applyReducedStateSequence, clearMarkedViaReducer } =
     usePickerReducerBridge(
@@ -259,6 +254,7 @@ export function TabPickerOverlay({
       variant,
       groupNewPhase,
       searchMode,
+      filterQuery,
       groupChoices,
       groupPickIndex,
       selectedTabIds,
@@ -271,6 +267,7 @@ export function TabPickerOverlay({
       applyReducedStateSequence,
       setSearchMode,
       setFilterQuery,
+      setHlSearchPattern,
       setBulkSubMode,
       setGroupNewPhase,
       setNewGroupTitle,
@@ -307,6 +304,8 @@ export function TabPickerOverlay({
     [bulkSubMode, groupNewPhase, variant]
   )
 
+  const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
+
   const commandListingHintText = useMemo(() => {
     const targetKind: SelectKind | null = (() => {
       if (markedKind) {
@@ -336,6 +335,18 @@ export function TabPickerOverlay({
             : TAB_PICKER_COMMANDS_FOR_TAB
     return commands.join(" · ")
   }, [hi, markedKind, rows, visibleRowIndices])
+
+  const commandAmbiguousPlaceholder = useMemo(() => {
+    if (!commandMode || commandBuffer.trim() === "") {
+      return null
+    }
+    const matches = filterTabPickerCommandCompletions(commandBuffer)
+    const uniq = [...new Set(matches)]
+    if (uniq.length < 2) {
+      return null
+    }
+    return `Tab で循環: ${uniq.join(" · ")}`
+  }, [commandBuffer, commandMode])
 
   const setRowRef = useCallback((rowIndex: number, el: HTMLDivElement | null) => {
     if (el) {
@@ -379,7 +390,9 @@ export function TabPickerOverlay({
         autoCorrect="off"
         autoComplete="off"
         wrap="off"
-        aria-label={searchMode ? "Filter tabs" : commandMode ? "Command input" : "Tab picker key input"}
+        aria-label={
+          searchMode ? "Search highlight" : commandMode ? "Command input" : "Tab picker key input"
+        }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
           if (searchMode) {
@@ -425,6 +438,7 @@ export function TabPickerOverlay({
           markedTabSet={markedTabSet}
           activeTabId={activeTabId}
           showUrl={showUrl}
+          searchHighlightQuery={searchHighlightQuery}
           setRowRef={setRowRef}
         />
       </div>
@@ -459,6 +473,7 @@ export function TabPickerOverlay({
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
           listingHintText={commandListingHintText}
+          ambiguousPlaceholder={commandAmbiguousPlaceholder}
         />
       ) : null}
     </div>

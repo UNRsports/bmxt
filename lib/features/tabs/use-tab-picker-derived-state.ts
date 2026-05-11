@@ -1,12 +1,10 @@
 import { useMemo } from "react"
-import { filterTabRowIndices, type TabPickerRow } from "./picker-rows"
+import type { TabPickerRow } from "./picker-rows"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { SelectKind } from "./tab-picker-overlay-types"
 
 export function useTabPickerDerivedState(
   rows: TabPickerRow[],
-  filterQuery: string,
-  searchMode: boolean,
   markedKind: SelectKind | null,
   markedTabIds: number[],
   markedWindowIds: number[],
@@ -19,24 +17,7 @@ export function useTabPickerDerivedState(
   tabIdToWindowId: Map<number, number>
   selectedTabIds: number[]
 } {
-  const matchedTabSet = useMemo(
-    () => new Set(filterTabRowIndices(rows, filterQuery)),
-    [rows, filterQuery]
-  )
-
-  const visibleRowIndices = useMemo(() => {
-    const out: number[] = []
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i]
-      if (!r) {
-        continue
-      }
-      if (!searchMode || filterQuery.trim() === "" || r.kind !== "tab" || matchedTabSet.has(i)) {
-        out.push(i)
-      }
-    }
-    return out
-  }, [filterQuery, matchedTabSet, rows, searchMode])
+  const visibleRowIndices = useMemo(() => rows.map((_, i) => i), [rows])
 
   const markedTabSet = useMemo(() => new Set(markedTabIds), [markedTabIds])
   const markedWindowSet = useMemo(() => new Set(markedWindowIds), [markedWindowIds])

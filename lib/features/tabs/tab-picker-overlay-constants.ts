@@ -34,20 +34,29 @@ export const TAB_PICKER_COMMAND_COMPLETIONS = [
   "close",
   "group",
   "newwindow",
-  "newtab"
+  "newtab",
+  "nohlsearch"
 ] as const
+
+/** `commandBuffer` の先頭一致で候補を絞る（大文字小文字無視）。 */
+export function filterTabPickerCommandCompletions(commandBuffer: string): string[] {
+  const p = commandBuffer.toLowerCase()
+  return TAB_PICKER_COMMAND_COMPLETIONS.filter((c) => c.startsWith(p))
+}
 
 export const TAB_PICKER_COMMANDS_FOR_TAB = [
   "move",
   "close",
   "group",
-  "newwindow"
+  "newwindow",
+  "nohlsearch"
 ] as const
 
-export const TAB_PICKER_COMMANDS_FOR_WINDOW = ["close", "newtab"] as const
+export const TAB_PICKER_COMMANDS_FOR_WINDOW = ["close", "newtab", "nohlsearch"] as const
 
 export const TAB_PICKER_COMMANDS_FOR_GROUP = [
   "move",
   "close",
-  "newwindow"
+  "newwindow",
+  "nohlsearch"
 ] as const

@@ -11,7 +11,7 @@ import {
 } from "./state-machine"
 import {
   NEW_GROUP_COLORS,
-  TAB_PICKER_COMMAND_COMPLETIONS
+  filterTabPickerCommandCompletions
 } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
@@ -63,6 +63,7 @@ export function useTabPickerKeyboard({
   variant,
   groupNewPhase,
   searchMode,
+  filterQuery,
   groupChoices,
   groupPickIndex,
   selectedTabIds,
@@ -75,6 +76,7 @@ export function useTabPickerKeyboard({
   applyReducedStateSequence,
   setSearchMode,
   setFilterQuery,
+  setHlSearchPattern,
   setBulkSubMode,
   setGroupNewPhase,
   setNewGroupTitle,
@@ -111,6 +113,7 @@ export function useTabPickerKeyboard({
   variant: "default" | "groupNew"
   groupNewPhase: "tabs" | "meta"
   searchMode: boolean
+  filterQuery: string
   groupChoices: GroupChoice[]
   groupPickIndex: number
   selectedTabIds: number[]
@@ -123,6 +126,7 @@ export function useTabPickerKeyboard({
   applyReducedStateSequence: ApplyReducedSeq
   setSearchMode: Dispatch<SetStateAction<boolean>>
   setFilterQuery: Dispatch<SetStateAction<string>>
+  setHlSearchPattern: Dispatch<SetStateAction<string>>
   setBulkSubMode: Dispatch<SetStateAction<BulkSubMode | null>>
   setGroupNewPhase: Dispatch<SetStateAction<"tabs" | "meta">>
   setNewGroupTitle: Dispatch<SetStateAction<string>>
@@ -173,6 +177,15 @@ export function useTabPickerKeyboard({
         return true
       }
 
+      if (commandBuffer.trim().toLowerCase() === "nohlsearch") {
+        commandCompletionRef.current = null
+        setCommandMode(false)
+        setCommandBuffer("")
+        setCommandListingHint(false)
+        setHlSearchPattern("")
+        return true
+      }
+
       const mode = parsePickerCommand(commandBuffer)
       commandCompletionRef.current = null
       setCommandMode(false)
@@ -200,6 +213,7 @@ export function useTabPickerKeyboard({
       setCommandBuffer,
       setCommandListingHint,
       setCommandMode,
+      setHlSearchPattern,
       visibleRowIndices
     ]
   )
@@ -209,6 +223,15 @@ export function useTabPickerKeyboard({
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
         return false
+      }
+
+      if (searchMode) {
+        e.preventDefault()
+        e.stopPropagation()
+        setHlSearchPattern(filterQuery)
+        setSearchMode(false)
+        setFilterQuery("")
+        return true
       }
 
       if (newTabUrlWindowIdRef.current !== null) {
@@ -290,6 +313,7 @@ export function useTabPickerKeyboard({
       bulkSubMode,
       confirmSelection,
       executeOpenNewTabFromUrl,
+      filterQuery,
       groupMetaTitleRef,
       groupNewPhase,
       hi,
@@ -307,6 +331,10 @@ export function useTabPickerKeyboard({
       setGroupNewPhase,
       setNewGroupColorIndex,
       setNewGroupTitle,
+      searchMode,
+      setFilterQuery,
+      setHlSearchPattern,
+      setSearchMode,
       variant,
       visibleRowIndices
     ]
@@ -666,9 +694,7 @@ export function useTabPickerKeyboard({
           }
           if (commandCompletionRef.current === null) {
             const base = commandBuffer
-            const candidates = TAB_PICKER_COMMAND_COMPLETIONS.filter((c) =>
-              c.startsWith(base.toLowerCase())
-            )
+            const candidates = filterTabPickerCommandCompletions(base)
             if (candidates.length === 0) return
             commandCompletionRef.current = { base, completions: candidates, idx: 0 }
           }
@@ -758,6 +784,7 @@ export function useTabPickerKeyboard({
       commandBuffer,
       commandMode,
       executeCreateNewGroup,
+      filterQuery,
       groupNewPhase,
       hi,
       markedCount,
@@ -773,6 +800,7 @@ export function useTabPickerKeyboard({
       setCommandListingHint,
       setCommandMode,
       setGroupNewPhase,
+      setHlSearchPattern,
       setNewTabUrl,
       setNewTabUrlWindowId,
       setSearchMode,

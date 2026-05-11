@@ -352,6 +352,11 @@ body {
   user-select: none;
 }
 
+.bmxt-tab-picker-search-hl {
+  background: #f5e942;
+  color: inherit;
+}
+
 .bmxt-tab-picker-tab-url {
   padding-left: 2ch;
   font-size: 11px;
@@ -367,6 +372,31 @@ body {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid #30363d;
+}
+
+.bmxt-tab-picker-filter--command-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.bmxt-tab-picker-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bmxt-tab-picker-command-ambiguous-placeholder {
+  margin: 0 0 0 1.1ch;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px dashed #30363d;
+  background: #0d1117;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #6e7681;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .bmxt-tab-picker-filter-label {
