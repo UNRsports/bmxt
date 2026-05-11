@@ -1,11 +1,11 @@
 {
   "0.0.9": {
     "ja": [
-      "tabsモードでのタブ名検索とハイライトのリセットをvim形式に変更",
+      "tabsモードでのタブ名検索とハイライトのリセットをvim形式に変更（ハイライトされた検索単語は:nohlsearchでリセット）",
       "リリースノート表示に関する仕様を改善"
     ],
     "en": [
-      "Tab name search and highlight reset in tabs mode now follow Vim-style key behavior",
+      "Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)",
       "Improved how release notes are specified and shown"
     ]
   }
