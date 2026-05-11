@@ -4,16 +4,20 @@ import {
   placeholderTexts
 } from "./release-notes"
 
+function withBulletPrefix(lines: string[], marker: string): string[] {
+  return lines.map((s) => `${marker}${s}`)
+}
+
 /** ターミナルログ用：現在のマニフェストバージョンのノート（ja / en）。 */
 export function linesForCurrentVersion(manifestVersion: string): string[] {
   const entry = getReleaseNotesForVersion(manifestVersion)
   const text = entry ?? placeholderTexts()
   const out: string[] = [`Release notes — ${manifestVersion}`, ""]
   out.push("[ja]")
-  out.push(text.ja)
+  out.push(...withBulletPrefix(text.ja, "・"))
   out.push("")
   out.push("[en]")
-  out.push(text.en)
+  out.push(...withBulletPrefix(text.en, "· "))
   return out
 }
 
@@ -23,10 +27,10 @@ export function linesForVersionKey(version: string): string[] {
   const text = entry ?? placeholderTexts()
   const out: string[] = [`Release notes — ${version}`, ""]
   out.push("[ja]")
-  out.push(text.ja)
+  out.push(...withBulletPrefix(text.ja, "・"))
   out.push("")
   out.push("[en]")
-  out.push(text.en)
+  out.push(...withBulletPrefix(text.en, "· "))
   return out
 }
 

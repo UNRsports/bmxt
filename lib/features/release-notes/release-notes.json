@@ -1,6 +1,12 @@
 {
-  "0.0.8": {
-    "ja": "・ブラウザのタブ切り替えを、BMXt ターミナル内 tabs モード一覧へリアルタイム反映\n・アップデート後の初回起動で、ウェルカム以下にバージョンと変更内容を表示",
-    "en": "· Browser tab changes synced in real time to the tabs-mode list in the BMXt terminal\n· First launch after an update: version + release notes below welcome"
+  "0.0.9": {
+    "ja": [
+      "tabsモードでのタブ名検索とハイライトのリセットをvim形式に変更",
+      "リリースノート表示に関する仕様を改善"
+    ],
+    "en": [
+      "Tab name search and highlight reset in tabs mode now follow Vim-style key behavior",
+      "Improved how release notes are specified and shown"
+    ]
   }
 }

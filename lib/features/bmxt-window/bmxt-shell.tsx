@@ -636,10 +636,14 @@ export function BmxtShell({
               ◆バージョンアップ / Version upgrade — {postUpgradeBanner.version}
             </div>
             <div className="bmxt-version-upgrade-notes bmxt-version-upgrade-notes--ja">
-              {postUpgradeBanner.ja}
+              {postUpgradeBanner.ja.map((line, i) => (
+                <div key={i}>・{line}</div>
+              ))}
             </div>
             <div className="bmxt-version-upgrade-notes bmxt-version-upgrade-notes--en">
-              {postUpgradeBanner.en}
+              {postUpgradeBanner.en.map((line, i) => (
+                <div key={i}>· {line}</div>
+              ))}
             </div>
           </div>
         ) : null}
