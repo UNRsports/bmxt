@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.0.9",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",

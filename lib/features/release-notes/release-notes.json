@@ -1,5 +1,5 @@
 {
-  "0.1.0": {
+  "0.1.1": {
     "ja": [
       "splitコマンドを追加し、exitで増減可能",
       "コマンド動作ルールの整理",
@@ -7,8 +7,10 @@
       "tabsモードでの「/」検索で探したい語句を入れてエンターキーを押せばハイライトされるので、nキーでジャンプ可能に実装"
     ],
     "en": [
-      "Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)",
-      "Improved how release notes are specified and shown"
+      "Added the split command; add panes with split and remove them with exit (closes the window when the last pane exits)",
+      "Clarified command behavior rules",
+      "Added an assist menu while typing commands (type \"tabs\" and press Enter to try it)",
+      "In tabs mode, \"/\" search: type a phrase and press Enter to highlight matches; press n to jump between them"
     ]
   }
 }
