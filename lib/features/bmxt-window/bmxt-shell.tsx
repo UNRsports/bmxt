@@ -37,6 +37,8 @@ export type TabPickerState = {
 }
 
 type Props = {
+  /** コマンド実行・ログ追記のスコープ（複数ターミナル）。 */
+  sessionId: string
   lines: string[]
   history: string[]
   completionCandidates: string[]
@@ -63,6 +65,7 @@ function continuationPromptFor(trimmed: string): string | null {
 }
 
 export function BmxtShell({
+  sessionId,
   lines,
   history,
   completionCandidates,
@@ -289,9 +292,12 @@ export function BmxtShell({
     setCursorPos(0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
-    chrome.runtime.sendMessage({ type: "RUN_CMD", line: trimmed }, () => {
-      void chrome.runtime.lastError
-    })
+    chrome.runtime.sendMessage(
+      { type: "RUN_CMD", line: trimmed, sessionId },
+      () => {
+        void chrome.runtime.lastError
+      }
+    )
     if (continuationPrompt) {
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
@@ -305,6 +311,7 @@ export function BmxtShell({
     iSearchMatches,
     iSearchSnapshot,
     mode,
+    sessionId,
     setTabPicker
   ])
 
@@ -708,15 +715,19 @@ export function BmxtShell({
       </div>
       {pickerOpen && tabPicker ? (
         <div
+          className="bmxt-tab-picker-host"
           style={{
             position: "absolute",
-            inset: 0,
-            zIndex: 10,
+            inset: 6,
+            zIndex: 1,
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
             overflow: "hidden",
-            background: "#0d1117"
+            background: "#0d1117",
+            borderRadius: 8,
+            boxShadow:
+              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
           }}>
           <TabPickerOverlay
             rows={tabPicker.rows}

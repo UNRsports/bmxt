@@ -10,20 +10,39 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useCommandHistory } from "./use-command-history"
-import { useSessionLog } from "./use-session-log"
+import { SessionTabStrip } from "./terminal-sessions/session-tab-strip"
+import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 
 export function BmxtTerminal() {
-  const { lines, appendLogLines } = useSessionLog()
+  const {
+    state,
+    activeSessionId,
+    activeLines,
+    appendLogLines,
+    selectSession,
+    addSession,
+    closeSession
+  } = useTerminalSessions()
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
   const [tabPicker, setTabPicker] = useState<TabPickerState | null>(null)
   const tabPickerRef = useRef<TabPickerState | null>(null)
+  const prevActiveSessionIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     tabPickerRef.current = tabPicker
   }, [tabPicker])
+
+  /** ターミナルセッション切替時は tabs モードを閉じ、このセッション内の UI に閉じる。 */
+  useEffect(() => {
+    const prev = prevActiveSessionIdRef.current
+    if (prev !== null && prev !== activeSessionId) {
+      setTabPicker(null)
+    }
+    prevActiveSessionIdRef.current = activeSessionId
+  }, [activeSessionId])
 
   useEffect(() => {
     void (async () => {
@@ -56,7 +75,12 @@ export function BmxtTerminal() {
 
   useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
-  if (lines === null || !upgradeBannerReady) {
+  if (
+    activeLines === null ||
+    activeSessionId === null ||
+    state === null ||
+    !upgradeBannerReady
+  ) {
     return (
       <div
         className="bmxt-root"
@@ -86,9 +110,26 @@ export function BmxtTerminal() {
         background: "#0d1117",
         color: "#c9d1d9"
       }}>
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+      <SessionTabStrip
+        order={state.order}
+        activeId={state.activeId}
+        onSelect={(id) => void selectSession(id)}
+        onAdd={() => void addSession()}
+        onClose={(id) => void closeSession(id)}
+      />
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          flex: 1,
+          minHeight: 0,
+          isolation: "isolate",
+          overflow: "hidden"
+        }}>
         <BmxtShell
-          lines={lines}
+          key={activeSessionId}
+          sessionId={activeSessionId}
+          lines={activeLines}
           history={history}
           completionCandidates={completionCandidates}
           appendLogLines={appendLogLines}

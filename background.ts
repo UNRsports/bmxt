@@ -1,19 +1,20 @@
-/** Service worker: BMXt window launch, shared log, command dispatch. */
+/** Service worker: BMXt window launch, per-session logs, command dispatch. */
 
 import {
   applyChromeEffects,
   type DispatchChromeContext
 } from "./lib/features/dispatch"
+import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "./lib/features/extension-storage/keys"
 import {
-  BMXT_WINDOW_ID_KEY,
-  SESSION_LOG_KEY,
-  LAST_NORMAL_WINDOW_KEY
-} from "./lib/features/extension-storage/keys"
-import {
-  appendLines,
-  clearLog,
-  setLog
-} from "./lib/features/bmxt-window/session-log"
+  appendLinesToSession,
+  clearSessionLines,
+  exitOrCloseSessionInStorage,
+  readTerminalSessionsIfPresent,
+  removeAllTerminalSessionsFromStorage,
+  setSessionLines,
+  ensureTerminalSessionsState,
+  resolveSessionId
+} from "./lib/features/bmxt-window/terminal-sessions/state-storage"
 import {
   ensureBmxtCore,
   runDispatch
@@ -138,9 +139,7 @@ chrome.runtime.onStartup.addListener(() => {
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
 
-/** セッションログをクリアし、BMXt ウィンドウを閉じる。 */
-async function exitBmxtWindow(): Promise<string[]> {
-  await chrome.storage.local.remove(SESSION_LOG_KEY)
+async function closeBmxtWindowOnly(): Promise<void> {
   const wid = bmxtWindowId
   if (wid !== undefined) {
     try {
@@ -151,26 +150,37 @@ async function exitBmxtWindow(): Promise<string[]> {
     bmxtWindowId = undefined
     await persistBmxtWindowId(undefined)
   }
+}
+
+/** 全セッションを消して BMXt ウィンドウを閉じる（WASM 未ロード時の exit など）。 */
+async function exitBmxtWindowFull(): Promise<string[]> {
+  await removeAllTerminalSessionsFromStorage()
+  await closeBmxtWindowOnly()
   return ["(BMXt window closed, session log cleared)"]
 }
 
-async function runCommand(line: string): Promise<void> {
+async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
   const trimmed = line.trim()
   if (!trimmed) {
     return
   }
+  const st0 = await ensureTerminalSessionsState()
+  const sessionId = resolveSessionId(st0, sessionIdRaw)
+
+  const exitOutcome = { fullClose: false as boolean }
+
   try {
     await ensureBmxtCore()
   } catch (e) {
     if (trimmed.toLowerCase() === "clear") {
-      await setLog([`> ${trimmed}`, "(log cleared)"])
+      await setSessionLines(sessionId, [`> ${trimmed}`, "(log cleared)"])
       return
     }
     if (trimmed.toLowerCase() === "exit") {
-      await exitBmxtWindow()
+      await exitBmxtWindowFull()
       return
     }
-    await appendLines([
+    await appendLinesToSession(sessionId, [
       `> ${trimmed}`,
       `error: ${e instanceof Error ? e.message : String(e)}`
     ])
@@ -179,30 +189,47 @@ async function runCommand(line: string): Promise<void> {
   const out: string[] = [`> ${trimmed}`]
   const isExit = trimmed.toLowerCase() === "exit"
   try {
-    out.push(...(await dispatch(trimmed)))
+    out.push(...(await dispatch(trimmed, sessionId, exitOutcome)))
   } catch (e) {
     out.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
   if (trimmed.toLowerCase() === "clear") {
-    await setLog(out)
+    await setSessionLines(sessionId, out)
     return
   }
   if (isExit) {
+    if (!exitOutcome.fullClose) {
+      const peek = await readTerminalSessionsIfPresent()
+      if (peek) {
+        await appendLinesToSession(peek.activeId, out)
+      }
+    }
     return
   }
-  await appendLines(out)
+  await appendLinesToSession(sessionId, out)
 }
 
-async function dispatch(line: string): Promise<string[]> {
+async function dispatch(
+  line: string,
+  sessionId: string,
+  exitOutcome: { fullClose: boolean }
+): Promise<string[]> {
   const bundle = runDispatch(line)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
   }
   const ctx: DispatchChromeContext = {
     clearLog: async () => {
-      await clearLog()
+      await clearSessionLines(sessionId)
     },
-    exitPane: async () => exitBmxtWindow(),
+    exitPane: async () => {
+      const r = await exitOrCloseSessionInStorage(sessionId)
+      exitOutcome.fullClose = r.fullClose
+      if (r.fullClose) {
+        await closeBmxtWindowOnly()
+      }
+      return []
+    },
     listWindows,
     focusInfo,
     resolveTabArg
@@ -302,9 +329,9 @@ async function resolveTabArg(
 }
 
 chrome.runtime.onMessage.addListener(
-  (message: { type?: string; line?: string }, _sender, sendResponse) => {
+  (message: { type?: string; line?: string; sessionId?: string }, _sender, sendResponse) => {
     if (message?.type === "RUN_CMD" && typeof message.line === "string") {
-      runCommand(message.line)
+      runCommand(message.line, message.sessionId)
         .then(() => sendResponse({ ok: true }))
         .catch((e) =>
           sendResponse({
