@@ -490,7 +490,7 @@ Add the WebAssembly target:
 rustup target add wasm32-unknown-unknown
 ```
 
-This repo lists **`wasm-pack`** as a devDependency; after **`npm install`**, **`npm run build:wasm`** uses that local binary. To install **`wasm-pack`** globally: **`cargo install wasm-pack`**.
+Install **`wasm-pack`** on your **`PATH`** (usual choice: **`cargo install wasm-pack`**). **`npm run build:wasm`** invokes that binary.
 
 Verify from the repo root: **`npm install`** then **`npm run build:wasm`**.
 
@@ -514,7 +514,7 @@ WASM 用ターゲットを追加します。
 rustup target add wasm32-unknown-unknown
 ```
 
-**`wasm-pack`** は本リポジトリの devDependency です。**`npm install`** のあと **`npm run build:wasm`** でローカルのバイナリが使われます。グローバルに入れる場合は **`cargo install wasm-pack`** でも構いません。
+**`wasm-pack`** は **`PATH`** 上にある必要があります（代表的には **`cargo install wasm-pack`**）。
 
 リポジトリ直下で **`npm install`** → **`npm run build:wasm`** まで通れば、このプロジェクト向けの Rust / WASM 準備は一通り揃います。
 
