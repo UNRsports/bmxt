@@ -2,12 +2,14 @@
   "0.1.1": {
     "ja": [
       "splitコマンドを追加し、exitで増減可能",
+      "splitで複数ペインのとき、Ctrl+矢印でペイン間を移動可能",
       "コマンド動作ルールの整理",
       "コマンド記入時の補助メニュー追加（「tabs」と記入してからエンターキーを押してみて！）",
       "tabsモードでの「/」検索で探したい語句を入れてエンターキーを押せばハイライトされるので、nキーでジャンプ可能に実装"
     ],
     "en": [
       "Added the split command; add panes with split and remove them with exit (closes the window when the last pane exits)",
+      "With multiple split panes, Ctrl+Arrow moves focus between panes",
       "Clarified command behavior rules",
       "Added an assist menu while typing commands (type \"tabs\" and press Enter to try it)",
       "In tabs mode, \"/\" search: type a phrase and press Enter to highlight matches; press n to jump between them"

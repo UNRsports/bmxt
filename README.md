@@ -219,6 +219,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `help` / `?` | Show help |
 | `clear` | Clear logs |
 | `exit` | Close BMXt window and clear the session log |
+| `split` | Pane layout: `split -col` / `split -row`; bare `split` + Enter restores `split ` (see in-app help); **Ctrl+Arrow** moves focus between panes when multiple are open |
 | `tabs` | Show available options, then restore prompt to `tabs ` for option input |
 | `tabs -list [-u]` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
@@ -227,6 +228,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `group new <tabId> …` | Create group |
 
 **Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears that log and **closes the BMXt window** (via `chrome.windows.remove` on the window the extension tracks). **Neither** clears **command history** (up/down / Ctrl+R).
+
+**0.1.1 — split panes:** With more than one pane open, **Ctrl+Arrow** moves keyboard focus between panes.
 
 ### 日本語
 
@@ -237,6 +240,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `help` / `?` | ヘルプ |
 | `clear` | ログをクリア |
 | `exit` | BMXt ウィンドウを閉じ、セッションログを削除 |
+| `split` | ペイン分割: `split -col` / `split -row`。単独 `split`＋Enter で `split ` へ復元（詳細はアプリ内ヘルプ）。複数ペイン時は **Ctrl+矢印** でフォーカス移動 |
 | `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
 | `tabs -list [-u]` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
@@ -245,6 +249,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `group new <tabId> …` | グループ作成 |
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
+
+**0.1.1 — split ペイン:** 複数ペインが開いているとき、**Ctrl+矢印**でキーボードフォーカスをペイン間で移動できます。
 
 <a id="tabs-man-tabs"></a>
 

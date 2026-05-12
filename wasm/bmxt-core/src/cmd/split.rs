@@ -11,6 +11,8 @@ fn split_usage_lines() -> Vec<String> {
     vec![
         "usage: split -col   — vertical split (new pane beside current)".to_string(),
         "       split -row   — horizontal split (new pane below current)".to_string(),
+        "       Ctrl+Arrow   — move keyboard focus between panes when more than one is open"
+            .to_string(),
     ]
 }
 

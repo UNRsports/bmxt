@@ -66,6 +66,10 @@ pub fn build_help_lines() -> Vec<String> {
     );
     lines.push("  split -col          - vertical split (new pane beside current).".to_string());
     lines.push("  split -row          - horizontal split (new pane below current).".to_string());
+    lines.push(
+        "  Ctrl+Arrow          - move keyboard focus between panes when more than one is open."
+            .to_string(),
+    );
     lines.push(String::new());
     lines.push("URL (http/https, typed as a whole line):".to_string());
     lines.push("  <url>           - new tab".to_string());
