@@ -281,15 +281,12 @@ export function BmxtTerminal() {
       const next = adjacentLeafByRect(state.layout.root, fromId, dir)
       if (next) {
         e.preventDefault()
-        if (pickerBySessionRef.current[fromId] != null) {
-          setTabPickerForSession(fromId, null)
-        }
         void setFocusedLeaf(next)
       }
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
-  }, [state, setFocusedLeaf, setTabPickerForSession])
+  }, [state, setFocusedLeaf])
 
   if (state === null || !upgradeBannerReady) {
     return (
