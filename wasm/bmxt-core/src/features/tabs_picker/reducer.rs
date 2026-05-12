@@ -1,13 +1,14 @@
 use super::model::{BulkSubMode, PickerEvent, PickerState, SelectKind};
 use serde_json::Value;
 
-fn wrap_index(cur: usize, delta: i32, len: usize) -> usize {
+/// 上下端でループせず止まる（clamp）。`delta` を加えた値を `[0, len - 1]` に丸める。
+fn clamp_index(cur: usize, delta: i32, len: usize) -> usize {
     if len == 0 {
         return 0;
     }
-    let l = len as i32;
+    let max = (len - 1) as i32;
     let base = cur as i32;
-    let next = (base + delta).rem_euclid(l);
+    let next = (base + delta).clamp(0, max);
     next as usize
 }
 
@@ -60,10 +61,10 @@ fn sort_dedup_string(v: &mut Vec<String>) {
 pub fn reduce(mut state: PickerState, ev: PickerEvent) -> PickerState {
     match ev {
         PickerEvent::MoveHi { delta, visible_len } => {
-            state.hi = wrap_index(state.hi, delta, visible_len);
+            state.hi = clamp_index(state.hi, delta, visible_len);
         }
         PickerEvent::MoveDest { delta, visible_len } => {
-            state.move_dest_hi = wrap_index(state.move_dest_hi, delta, visible_len);
+            state.move_dest_hi = clamp_index(state.move_dest_hi, delta, visible_len);
         }
         PickerEvent::CycleSubMode {
             direction,
@@ -194,13 +195,13 @@ pub fn reduce_with_loose_event_fallback(mut state: PickerState, event_json: &str
         "moveHi" => {
             let delta = v.get("delta")?.as_i64()? as i32;
             let visible_len = v.get("visibleLen")?.as_u64()? as usize;
-            state.hi = wrap_index(state.hi, delta, visible_len);
+            state.hi = clamp_index(state.hi, delta, visible_len);
             Some(state)
         }
         "moveDest" => {
             let delta = v.get("delta")?.as_i64()? as i32;
             let visible_len = v.get("visibleLen")?.as_u64()? as usize;
-            state.move_dest_hi = wrap_index(state.move_dest_hi, delta, visible_len);
+            state.move_dest_hi = clamp_index(state.move_dest_hi, delta, visible_len);
             Some(state)
         }
         _ => None,
@@ -209,7 +210,7 @@ pub fn reduce_with_loose_event_fallback(mut state: PickerState, event_json: &str
 
 #[cfg(test)]
 mod loose_fallback_tests {
-    use super::{reduce_with_loose_event_fallback, wrap_index};
+    use super::{clamp_index, reduce_with_loose_event_fallback};
     use crate::features::tabs_picker::model::PickerState;
 
     fn empty_state(hi: usize, move_dest_hi: usize) -> PickerState {
@@ -225,18 +226,35 @@ mod loose_fallback_tests {
     }
 
     #[test]
-    fn loose_move_hi_matches_wrap_index() {
+    fn loose_move_hi_matches_clamp_index() {
         let state = empty_state(0, 0);
         let json = r#"{"kind":"moveHi","delta":1,"visibleLen":3}"#;
         let out = reduce_with_loose_event_fallback(state, json).expect("loose parse");
-        assert_eq!(out.hi, wrap_index(0, 1, 3));
+        assert_eq!(out.hi, clamp_index(0, 1, 3));
     }
 
     #[test]
-    fn loose_move_dest_matches_wrap_index() {
+    fn loose_move_dest_matches_clamp_index() {
         let state = empty_state(0, 1);
         let json = r#"{"kind":"moveDest","delta":2,"visibleLen":4}"#;
         let out = reduce_with_loose_event_fallback(state, json).expect("loose parse");
-        assert_eq!(out.move_dest_hi, wrap_index(1, 2, 4));
+        assert_eq!(out.move_dest_hi, clamp_index(1, 2, 4));
+    }
+
+    #[test]
+    fn clamp_index_stops_at_top() {
+        assert_eq!(clamp_index(0, -1, 3), 0);
+        assert_eq!(clamp_index(0, -10, 3), 0);
+    }
+
+    #[test]
+    fn clamp_index_stops_at_bottom() {
+        assert_eq!(clamp_index(2, 1, 3), 2);
+        assert_eq!(clamp_index(2, 10, 3), 2);
+    }
+
+    #[test]
+    fn clamp_index_handles_empty() {
+        assert_eq!(clamp_index(0, 1, 0), 0);
     }
 }

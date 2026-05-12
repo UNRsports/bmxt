@@ -10,7 +10,8 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
-import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
+import { listSplitOptionCandidates, splitOptionCompletionZone } from "./split-command-input"
+import { SecondCommandPickerPanel } from "./second-command-picker"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch, wordBounds } from "./text-utils"
 import {
@@ -24,9 +25,9 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
-  type MutableRefObject
+  useState
 } from "react"
+import type { CSSProperties } from "react"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type TabPickerState = {
@@ -36,21 +37,32 @@ export type TabPickerState = {
   variant?: "default" | "groupNew"
 }
 
+type SubCommandPickerState = {
+  continuation: string
+  candidates: string[]
+  hi: number
+}
+
 type Props = {
+  /** コマンド実行・ログ追記のスコープ（複数ターミナル）。 */
+  sessionId: string
+  /** split 複数ペイン時、キーボード入力を受け取るのはこれが true のペインだけ。 */
+  isFocusedPane: boolean
   lines: string[]
   history: string[]
   completionCandidates: string[]
   appendLogLines: (newLines: string[]) => Promise<void>
   appendCommandToHistory: (cmd: string) => void
   tabPicker: TabPickerState | null
-  setTabPicker: (v: TabPickerState | null) => void
-  tabPickerRef: MutableRefObject<TabPickerState | null>
+  /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
+  setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
 }
 
 const CONTINUATION_PROMPT_BY_COMMAND: Record<string, string> = {
+  split: "split ",
   tabs: "tabs "
 }
 
@@ -62,7 +74,24 @@ function continuationPromptFor(trimmed: string): string | null {
   return CONTINUATION_PROMPT_BY_COMMAND[key] ?? null
 }
 
+/** 第一トークンだけのとき、continuation 用の第二コマンド候補（正式トークン一覧）。 */
+function secondCommandCandidatesForFirstToken(trimmed: string): string[] {
+  if (trimmed.includes(" ")) {
+    return []
+  }
+  const key = trimmed.toLowerCase()
+  if (key === "tabs") {
+    return listTabsOptionCandidates("")
+  }
+  if (key === "split") {
+    return listSplitOptionCandidates("")
+  }
+  return []
+}
+
 export function BmxtShell({
+  sessionId,
+  isFocusedPane,
   lines,
   history,
   completionCandidates,
@@ -70,11 +99,19 @@ export function BmxtShell({
   appendCommandToHistory,
   tabPicker,
   setTabPicker,
-  tabPickerRef,
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
   const pickerOpen = tabPicker !== null
+  const tabPickerRef = useRef<TabPickerState | null>(null)
+  useEffect(() => {
+    tabPickerRef.current = tabPicker
+  }, [tabPicker])
+  const [subCmdPicker, setSubCmdPicker] = useState<SubCommandPickerState | null>(null)
+  const subCmdPickerRef = useRef<SubCommandPickerState | null>(null)
+  useEffect(() => {
+    subCmdPickerRef.current = subCmdPicker
+  }, [subCmdPicker])
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
   const [cursorPos, setCursorPos] = useState(0)
@@ -84,6 +121,9 @@ export function BmxtShell({
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
+  const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
+  const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
+  const [subCmdPickerHostStyle, setSubCmdPickerHostStyle] = useState<CSSProperties>({})
 
   const [histNavIndex, setHistNavIndex] = useState(-1)
   const [histDraft, setHistDraft] = useState("")
@@ -127,6 +167,15 @@ export function BmxtShell({
   const iSearchMatches = useMemo(
     () => matchesForSearch(history, mode === "isearch" ? line : ""),
     [history, line, mode]
+  )
+
+  /** `hi` 変更では変わらない — 第二コマンドピッカーの位置再計算はこれが変わったときだけ行う */
+  const subCmdPickerAnchorEpisode = useMemo(
+    () =>
+      subCmdPicker === null
+        ? null
+        : `${subCmdPicker.continuation}\0${subCmdPicker.candidates.join("\0")}`,
+    [subCmdPicker]
   )
 
   useEffect(() => {
@@ -192,26 +241,86 @@ export function BmxtShell({
     }
   }, [pickerOpen, line, cursorPos, isComposing])
 
+  useLayoutEffect(() => {
+    if (!subCmdPicker || pickerOpen) {
+      setSubCmdPickerHostStyle({})
+      return
+    }
+    const measure = () => {
+      const cell = cursorMirrorCellRef.current
+      const host = subCmdPickerHostRef.current
+      if (!cell) {
+        return
+      }
+      const cr = cell.getBoundingClientRect()
+      const gap = 2
+      const hostW = host?.offsetWidth ?? 260
+      const hostH = host?.offsetHeight ?? 140
+      let left = cr.right + gap
+      const maxLeft = window.innerWidth - hostW - 8
+      if (left > maxLeft) {
+        left = Math.max(8, maxLeft)
+      } else {
+        left = Math.max(8, left)
+      }
+      let top = cr.bottom + gap
+      if (top + hostH > window.innerHeight - 8 && cr.top - gap - hostH >= 8) {
+        top = cr.top - gap - hostH
+      }
+      if (top + hostH > window.innerHeight - 8) {
+        top = Math.max(8, window.innerHeight - hostH - 8)
+      } else {
+        top = Math.max(8, top)
+      }
+      setSubCmdPickerHostStyle((prev) => {
+        const next: CSSProperties = {
+          position: "fixed",
+          left,
+          top,
+          zIndex: 50
+        }
+        if (
+          prev.position === next.position &&
+          prev.left === next.left &&
+          prev.top === next.top &&
+          prev.zIndex === next.zIndex
+        ) {
+          return prev
+        }
+        return next
+      })
+    }
+    measure()
+    const raf = requestAnimationFrame(measure)
+    const sc = scrollRef.current
+    sc?.addEventListener("scroll", measure, { passive: true })
+    window.addEventListener("resize", measure)
+    return () => {
+      cancelAnimationFrame(raf)
+      sc?.removeEventListener("scroll", measure)
+      window.removeEventListener("resize", measure)
+    }
+  }, [subCmdPickerAnchorEpisode, pickerOpen, line, cursorPos, mode])
+
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
-  useEffect(() => {
-    if (!pickerOpen) {
-      focusPrompt()
+  useLayoutEffect(() => {
+    if (pickerOpen || !isFocusedPane) {
+      return
     }
-  }, [pickerOpen, focusPrompt])
+    focusPrompt()
+  }, [pickerOpen, isFocusedPane, focusPrompt])
 
   useEffect(() => {
-    if (pickerOpen) {
+    if (pickerOpen || !isFocusedPane) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [pickerOpen, focusPrompt])
-
-  useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
+  }, [pickerOpen, isFocusedPane, focusPrompt])
 
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
@@ -247,7 +356,7 @@ export function BmxtShell({
             `> ${trimmed}`,
             "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc"
           ])
-          setTabPicker({ rows, showUrl, initialHi })
+          setTabPicker(sessionId, { rows, showUrl, initialHi })
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -272,7 +381,12 @@ export function BmxtShell({
             `> ${trimmed}`,
             "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc"
           ])
-          setTabPicker({ rows, showUrl: false, initialHi, variant: "groupNew" })
+          setTabPicker(sessionId, {
+            rows,
+            showUrl: false,
+            initialHi,
+            variant: "groupNew"
+          })
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -289,12 +403,19 @@ export function BmxtShell({
     setCursorPos(0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
-    chrome.runtime.sendMessage({ type: "RUN_CMD", line: trimmed }, () => {
-      void chrome.runtime.lastError
-    })
+    chrome.runtime.sendMessage(
+      { type: "RUN_CMD", line: trimmed, sessionId },
+      () => {
+        void chrome.runtime.lastError
+      }
+    )
     if (continuationPrompt) {
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
+      const cands = secondCommandCandidatesForFirstToken(trimmed)
+      if (cands.length > 0) {
+        setSubCmdPicker({ continuation: continuationPrompt, candidates: cands, hi: 0 })
+      }
     }
     focusPrompt()
   }, [
@@ -305,8 +426,30 @@ export function BmxtShell({
     iSearchMatches,
     iSearchSnapshot,
     mode,
+    sessionId,
     setTabPicker
   ])
+
+  const applySubCmdPickIndex = useCallback(
+    (idx: number) => {
+      const s = subCmdPickerRef.current
+      if (!s) {
+        return
+      }
+      const tok = s.candidates[idx]
+      if (!tok) {
+        return
+      }
+      setSubCmdPicker(null)
+      const nextLine = s.continuation + tok + " "
+      setLine(nextLine)
+      setCursorPos(nextLine.length)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      focusPrompt()
+    },
+    [focusPrompt]
+  )
 
   const exitISearch = useCallback(() => {
     setMode("normal")
@@ -351,6 +494,10 @@ export function BmxtShell({
     }
     setLine(ta.value)
     setCursorPos(ta.selectionStart)
+    const sub = subCmdPickerRef.current
+    if (sub && ta.value !== sub.continuation) {
+      setSubCmdPicker(null)
+    }
   }, [mode])
 
   const onImeSelect = useCallback(() => {
@@ -377,6 +524,10 @@ export function BmxtShell({
       }
       setLine(next)
       setCursorPos(start + t.length)
+      const sub = subCmdPickerRef.current
+      if (sub && next !== sub.continuation) {
+        setSubCmdPicker(null)
+      }
     },
     [mode]
   )
@@ -395,7 +546,8 @@ export function BmxtShell({
         altKey: e.altKey,
         metaKey: e.metaKey,
         mode,
-        tabPickerOpen: Boolean(tabPickerRef.current)
+        tabPickerOpen: Boolean(tabPickerRef.current),
+        subCmdPickerOpen: Boolean(subCmdPickerRef.current)
       })
 
       if (tabPickerRef.current) {
@@ -414,6 +566,46 @@ export function BmxtShell({
           e.key === "K"
         if (blocksTabPickerNav) {
           e.preventDefault()
+          return
+        }
+      }
+
+      const subPick = subCmdPickerRef.current
+      if (subPick) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          setSubCmdPicker(null)
+          return
+        }
+        if (e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          const n = subPick.candidates.length
+          if (n > 0) {
+            setSubCmdPicker((s) =>
+              s ? { ...s, hi: (s.hi - 1 + n) % n } : null
+            )
+          }
+          return
+        }
+        if (e.key === "ArrowDown" && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          const n = subPick.candidates.length
+          if (n > 0) {
+            setSubCmdPicker((s) => (s ? { ...s, hi: (s.hi + 1) % n } : null))
+          }
+          return
+        }
+        if (e.key === "Tab") {
+          e.preventDefault()
+          const n = subPick.candidates.length
+          if (n > 0) {
+            setSubCmdPicker((s) => (s ? { ...s, hi: (s.hi + 1) % n } : null))
+          }
+          return
+        }
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault()
+          applySubCmdPickIndex(subPick.hi)
           return
         }
       }
@@ -440,14 +632,14 @@ export function BmxtShell({
           }
           return
         }
-        if (e.key === "ArrowUp") {
+        if (e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           if (iSearchMatches.length > 0) {
             setISearchCycle((c) => (c - 1 + iSearchMatches.length) % iSearchMatches.length)
           }
           return
         }
-        if (e.key === "ArrowDown") {
+        if (e.key === "ArrowDown" && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           if (iSearchMatches.length > 0) {
             setISearchCycle((c) => (c + 1) % iSearchMatches.length)
@@ -470,6 +662,27 @@ export function BmxtShell({
       if (e.key === "Tab") {
         const curLn = lineRef.current
         const pos = cursorRef.current
+        const splitZone = splitOptionCompletionZone(curLn, pos)
+        if (splitZone) {
+          e.preventDefault()
+          const cands = listSplitOptionCandidates(splitZone.prefix)
+          if (cands.length === 0) {
+            return
+          }
+          const idx = tabPressSeqRef.current % cands.length
+          tabPressSeqRef.current += 1
+          const rep = cands[idx]!
+          const suffix = splitZone.optionEnd === curLn.length ? " " : ""
+          const newLine =
+            curLn.slice(0, splitZone.optionStart) +
+            rep +
+            suffix +
+            curLn.slice(splitZone.optionEnd)
+          setHistNavIndex(-1)
+          setLine(newLine)
+          setCursorPos(splitZone.optionStart + rep.length + suffix.length)
+          return
+        }
         const optionZone = tabsOptionCompletionZone(curLn, pos)
         if (optionZone) {
           e.preventDefault()
@@ -527,6 +740,17 @@ export function BmxtShell({
         return
       }
 
+      if (e.ctrlKey || e.metaKey) {
+        if (
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight"
+        ) {
+          return
+        }
+      }
+
       if (e.key === "ArrowUp") {
         e.preventDefault()
         if (history.length === 0) {
@@ -578,8 +802,9 @@ export function BmxtShell({
       iSearchMatches,
       mode,
       pickerOpen,
+      applySubCmdPickIndex,
       submitLine,
-      tabPickerRef
+      tabPicker
     ]
   )
 
@@ -674,7 +899,8 @@ export function BmxtShell({
             <div className="bmxt-prompt-mirror" aria-hidden>
               <span>{before}</span>
               <span
-                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}`}>
+                ref={cursorMirrorCellRef}
+                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}${isFocusedPane ? "" : " bmxt-cursor-cell--inactive"}`}>
                 {cur || "\u00a0"}
               </span>
               <span>{after}</span>
@@ -698,25 +924,46 @@ export function BmxtShell({
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={(ev) => {
                 setIsComposing(false)
-                setLine(ev.currentTarget.value)
+                const v = ev.currentTarget.value
+                setLine(v)
                 setCursorPos(ev.currentTarget.selectionStart)
+                const sub = subCmdPickerRef.current
+                if (sub && v !== sub.continuation) {
+                  setSubCmdPicker(null)
+                }
               }}
             />
+            {subCmdPicker && !pickerOpen ? (
+              <div
+                ref={subCmdPickerHostRef}
+                className="bmxt-subcmd-picker-host"
+                style={subCmdPickerHostStyle}>
+                <SecondCommandPickerPanel
+                  model={subCmdPicker}
+                  onHighlight={(hi) => setSubCmdPicker((s) => (s ? { ...s, hi } : null))}
+                  onPickIndex={applySubCmdPickIndex}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="bmxt-scroll-anchor" aria-hidden />
       </div>
       {pickerOpen && tabPicker ? (
         <div
+          className="bmxt-tab-picker-host"
           style={{
             position: "absolute",
-            inset: 0,
-            zIndex: 10,
+            inset: 6,
+            zIndex: 1,
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
             overflow: "hidden",
-            background: "#0d1117"
+            background: "#0d1117",
+            borderRadius: 8,
+            boxShadow:
+              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
           }}>
           <TabPickerOverlay
             rows={tabPicker.rows}
@@ -725,8 +972,8 @@ export function BmxtShell({
             variant={tabPicker.variant ?? "default"}
             onAppendLog={appendLogLines}
             onRefreshRows={refreshTabPickerRows}
-            onExit={() => setTabPicker(null)}
-            isHostPaneFocused={true}
+            onExit={() => setTabPicker(sessionId, null)}
+            isHostPaneFocused={isFocusedPane}
           />
         </div>
       ) : null}

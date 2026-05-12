@@ -15,6 +15,8 @@ import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyReleaseNotesCurrentEffect } from "./effects/release-notes-current"
 import { applyReleaseNotesListEffect } from "./effects/release-notes-list"
 import { applyReleaseNotesVersionEffect } from "./effects/release-notes-version"
+import { applySplitColEffect } from "./effects/split-col"
+import { applySplitRowEffect } from "./effects/split-row"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
 import { applyTabsNuEffect } from "./effects/tabs-nu"
 
@@ -43,6 +45,10 @@ export async function applyOne(
       return applyReleaseNotesListEffect(ctx, e)
     case "release_notes_version":
       return applyReleaseNotesVersionEffect(ctx, e)
+    case "split_col":
+      return applySplitColEffect(ctx, e)
+    case "split_row":
+      return applySplitRowEffect(ctx, e)
     case "tabs_move_url":
       return applyTabsMoveUrlEffect(ctx, e)
     case "tabs_nu":

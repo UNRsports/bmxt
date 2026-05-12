@@ -3,7 +3,17 @@
  * Service Worker（background）と BMXt タブ UI の両方から参照する。
  */
 
+/** 旧単一ログキー（`TERMINAL_SESSIONS_KEY` へ移行後は未使用）。 */
 export const SESSION_LOG_KEY = "bmxt_log"
+
+/** 複数ターミナル: ログ本体（v3: logsById のみ。分割とフォーカスは `SPLIT_LAYOUT_KEY`）。 */
+export const TERMINAL_SESSIONS_KEY = "bmxt_terminal_sessions_v1"
+
+/** 移行のみ: 旧 v2 と併用していたフォーカス ID。 */
+export const ACTIVE_TERMINAL_SESSION_KEY = "bmxt_active_terminal_session"
+
+/** ターミナル分割ツリー + フォーカス中リーフ ID。 */
+export const SPLIT_LAYOUT_KEY = "bmxt_split_layout_v1"
 export const CMD_HISTORY_KEY = "bmxt_cmd_history"
 export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 

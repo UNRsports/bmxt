@@ -42,6 +42,12 @@
       "canonicalName": "notes",
       "aliases": [],
       "usagePrimary": "notes"
+    },
+    {
+      "module": "split",
+      "canonicalName": "split",
+      "aliases": [],
+      "usagePrimary": "split -col | split -row"
     }
   ],
   "effects": [
@@ -135,6 +141,20 @@
       "shape": "unit",
       "tsHandlerFile": "release-notes-list",
       "tsHandlerExport": "applyReleaseNotesListEffect"
+    },
+    {
+      "kind": "split_col",
+      "rustVariant": "SplitCol",
+      "shape": "unit",
+      "tsHandlerFile": "split-col",
+      "tsHandlerExport": "applySplitColEffect"
+    },
+    {
+      "kind": "split_row",
+      "rustVariant": "SplitRow",
+      "shape": "unit",
+      "tsHandlerFile": "split-row",
+      "tsHandlerExport": "applySplitRowEffect"
     }
   ]
 }

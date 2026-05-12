@@ -6,4 +6,5 @@ pub mod exit;
 pub mod group;
 pub mod help_cmd;
 pub mod notes;
+pub mod split;
 pub mod tabs;

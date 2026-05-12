@@ -26,6 +26,20 @@ export function isPhysicalArrowUp(e: Pick<KeyboardEvent, "key" | "code">): boole
   return e.key === "ArrowUp" || e.code === "ArrowUp"
 }
 
+/**
+ * Ctrl/Meta + 物理 ↑↓（Shift なし）。split ペイン間移動用のためピッカー縦ナビでは扱わない。
+ * Ctrl+Shift+↑↓（プレビュー用）は shift ありのためここに該当しない。
+ */
+export function isReservedSplitPaneVerticalNav(
+  e: Pick<KeyboardEvent, "ctrlKey" | "metaKey" | "shiftKey" | "key" | "code">
+): boolean {
+  return (
+    (e.ctrlKey || e.metaKey) &&
+    !e.shiftKey &&
+    (isPhysicalArrowDown(e) || isPhysicalArrowUp(e))
+  )
+}
+
 export function groupRowKey(windowId: number, groupId: number | null): string {
   return `${windowId}:${groupId === null ? "none" : String(groupId)}`
 }

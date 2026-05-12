@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.0.9",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -35,8 +35,7 @@
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
     "prettier": "3.2.4",
-    "typescript": "5.3.3",
-    "wasm-pack": "^0.14.0"
+    "typescript": "5.3.3"
   },
   "manifest": {
     "name": "__MSG_extensionName__",

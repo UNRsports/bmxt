@@ -14,6 +14,8 @@ export type ChromeEffect =
   | { kind: "release_notes_current" }
   | { kind: "release_notes_list" }
   | { kind: "release_notes_version"; version: string }
+  | { kind: "split_col" }
+  | { kind: "split_row" }
   | { kind: "tabs_move_url"; url: string }
   | { kind: "tabs_nu" }
 

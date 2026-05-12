@@ -2,7 +2,7 @@ import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useRef } from "react"
 import { logBmxtKey } from "../debug/key-log"
-import type { TabPickerRow } from "./picker-rows"
+import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
 import type { ExecutionIntent } from "./controller/execute-actions"
 import {
   resolvePickerEnterIntent,
@@ -19,6 +19,7 @@ import {
   groupRowKey,
   isPhysicalArrowDown,
   isPhysicalArrowUp,
+  isReservedSplitPaneVerticalNav,
   verticalNavDirection
 } from "./tab-picker-keyboard"
 
@@ -74,8 +75,10 @@ export function useTabPickerKeyboard({
   shiftRangeAnchorHiRef,
   applyReducedState,
   applyReducedStateSequence,
+  setHi,
   setSearchMode,
   setFilterQuery,
+  hlSearchPattern,
   setHlSearchPattern,
   setBulkSubMode,
   setGroupNewPhase,
@@ -124,8 +127,10 @@ export function useTabPickerKeyboard({
   shiftRangeAnchorHiRef: MutableRefObject<number | null>
   applyReducedState: ApplyReduced
   applyReducedStateSequence: ApplyReducedSeq
+  setHi: Dispatch<SetStateAction<number>>
   setSearchMode: Dispatch<SetStateAction<boolean>>
   setFilterQuery: Dispatch<SetStateAction<string>>
+  hlSearchPattern: string
   setHlSearchPattern: Dispatch<SetStateAction<string>>
   setBulkSubMode: Dispatch<SetStateAction<BulkSubMode | null>>
   setGroupNewPhase: Dispatch<SetStateAction<"tabs" | "meta">>
@@ -432,10 +437,95 @@ export function useTabPickerKeyboard({
     ]
   )
 
+  const runPickerSearchJump = useCallback(
+    (e: KeyboardEvent): boolean => {
+      const ev = e as KeyboardEvent & { isComposing?: boolean }
+      if (ev.isComposing) {
+        return false
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return false
+      }
+      if (searchMode || commandMode) {
+        return false
+      }
+      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+        return false
+      }
+      if (bulkSubMode === "move" || bulkSubMode === "group") {
+        return false
+      }
+      if (hlSearchPattern === "") {
+        return false
+      }
+      let forward: boolean
+      if (e.key === "n" && !e.shiftKey) {
+        forward = true
+      } else if (e.key === "N" && e.shiftKey) {
+        forward = false
+      } else {
+        return false
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      const len = visibleRowIndices.length
+      if (len === 0) {
+        return true
+      }
+      const matches = tabPickerVisibleHiIndicesMatching(
+        rows,
+        visibleRowIndices,
+        hlSearchPattern
+      )
+      if (matches.length === 0) {
+        return true
+      }
+      /* vim と同様、上下端ではループする（通常の `j`/`k`/矢印は clamp で止まるのと別ルート） */
+      let target: number
+      if (forward) {
+        const nextAhead = matches.find((vi) => vi > hi)
+        target = nextAhead ?? matches[0]!
+      } else {
+        let prevBehind: number | undefined
+        for (const vi of matches) {
+          if (vi < hi) {
+            prevBehind = vi
+          } else {
+            break
+          }
+        }
+        target = prevBehind ?? matches[matches.length - 1]!
+      }
+      if (target === hi) {
+        return true
+      }
+      shiftRangeAnchorHiRef.current = null
+      /* reducer は clamp 動作のため bypass し、setHi で直接ジャンプ先へ移動する */
+      setHi(target)
+      return true
+    },
+    [
+      bulkSubMode,
+      commandMode,
+      groupNewPhase,
+      hi,
+      hlSearchPattern,
+      newTabUrlWindowId,
+      rows,
+      searchMode,
+      setHi,
+      shiftRangeAnchorHiRef,
+      visibleRowIndices
+    ]
+  )
+
   const runPickerVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
       /* Alt+矢印はペイン間フォーカス移動用（親で処理）— ハイライト移動に使わない */
       if (e.altKey) {
+        return false
+      }
+      if (isReservedSplitPaneVerticalNav(e)) {
         return false
       }
       const navDir = verticalNavDirection(e)
@@ -519,12 +609,9 @@ export function useTabPickerKeyboard({
           shiftRangeAnchorHiRef.current = hi
         }
         const anchor = shiftRangeAnchorHiRef.current
-        let newHi = hi
-        if (isPhysicalArrowDown(e)) {
-          newHi = (hi + 1) % n
-        } else {
-          newHi = (hi - 1 + n) % n
-        }
+        const newHi = isPhysicalArrowDown(e)
+          ? Math.min(n - 1, hi + 1)
+          : Math.max(0, hi - 1)
         const lo = Math.min(anchor, newHi)
         const hiVis = Math.max(anchor, newHi)
         const rangeRows = visibleRowIndices.slice(lo, hiVis + 1).map((ri) => {
@@ -618,6 +705,14 @@ export function useTabPickerKeyboard({
         })
         return
       }
+      if (runPickerSearchJump(ev)) {
+        logBmxtKey("picker", "handled", {
+          handler: "searchJump",
+          key: ev.key,
+          code: ev.code
+        })
+        return
+      }
       if (runPickerCommandEnter(ev)) {
         return
       }
@@ -625,7 +720,13 @@ export function useTabPickerKeyboard({
         return
       }
     },
-    [isHostPaneFocused, runPickerCommandEnter, runPickerEnterKey, runPickerVerticalNav]
+    [
+      isHostPaneFocused,
+      runPickerCommandEnter,
+      runPickerEnterKey,
+      runPickerSearchJump,
+      runPickerVerticalNav
+    ]
   )
 
   const onInputKeyDown = useCallback(
@@ -634,7 +735,15 @@ export function useTabPickerKeyboard({
         return
       }
 
+      if (!isHostPaneFocused) {
+        return
+      }
+
       if (runPickerVerticalNav(e.nativeEvent)) {
+        return
+      }
+
+      if (runPickerSearchJump(e.nativeEvent)) {
         return
       }
 
@@ -787,11 +896,13 @@ export function useTabPickerKeyboard({
       filterQuery,
       groupNewPhase,
       hi,
+      isHostPaneFocused,
       markedCount,
       markedTabIds,
       newTabUrlWindowId,
       onExit,
       runPickerEnterKey,
+      runPickerSearchJump,
       runPickerVerticalNav,
       rows,
       searchMode,
