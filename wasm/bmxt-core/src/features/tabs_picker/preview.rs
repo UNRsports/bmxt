@@ -23,18 +23,19 @@ pub struct PreviewDecision {
     pub activate_tab_id: Option<i32>,
 }
 
-fn wrap_index(cur: usize, delta: i32, len: usize) -> usize {
+/// 上下端でループせず止まる（clamp）。`delta` を加えた値を `[0, len - 1]` に丸める。
+fn clamp_index(cur: usize, delta: i32, len: usize) -> usize {
     if len == 0 {
         return 0;
     }
-    let l = len as i32;
+    let max = (len - 1) as i32;
     let base = cur as i32;
-    let next = (base + delta).rem_euclid(l);
+    let next = (base + delta).clamp(0, max);
     next as usize
 }
 
 pub fn resolve_preview(ctx: PreviewContext) -> PreviewDecision {
-    let next_hi = wrap_index(ctx.hi, ctx.delta, ctx.visible_len);
+    let next_hi = clamp_index(ctx.hi, ctx.delta, ctx.visible_len);
     let activate_tab_id = ctx
         .rows
         .get(next_hi)

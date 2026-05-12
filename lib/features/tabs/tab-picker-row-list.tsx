@@ -68,6 +68,7 @@ export function TabPickerRowList({
           bulkSubMode === "move" &&
           visIndex >= 0 &&
           visibleRowIndices[moveDestHi] === i
+        const { byUrl, needle } = parseTabPickerSearchNeedle(searchHighlightQuery)
         if (row.kind === "window") {
           const markedRow = markedWindowSet.has(row.windowId)
           return (
@@ -81,7 +82,7 @@ export function TabPickerRowList({
                 moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
               }`}>
               <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
-              {row.label}
+              {byUrl ? row.label : renderHighlighted(row.label, needle, `w-${i}`)}
             </div>
           )
         }
@@ -98,7 +99,7 @@ export function TabPickerRowList({
                 moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
               }`}>
               <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
-              {row.label}
+              {byUrl ? row.label : renderHighlighted(row.label, needle, `g-${i}`)}
             </div>
           )
         }
@@ -108,7 +109,6 @@ export function TabPickerRowList({
         }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
           moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
         }`
-        const { byUrl, needle } = parseTabPickerSearchNeedle(searchHighlightQuery)
         const titleShown = displayTitle(row.title)
         return (
           <div

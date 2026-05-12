@@ -184,6 +184,55 @@ export function splitTextHighlightSegments(
   return out
 }
 
+/**
+ * `searchHighlightQuery` にマッチする可視行の `hi` 位置（`visibleRowIndices` 内の index）を返す。
+ * - 非 `@` モード: タブ（title / displayTitle）・ウィンドウ・グループの label を対象に部分一致（大小無視）
+ * - `@` モード: タブの URL のみを対象に部分一致（ウィンドウ/グループは URL を持たないため対象外）
+ * - 空クエリは空配列を返す（`n`/`N` ジャンプ対象なし）
+ */
+export function tabPickerVisibleHiIndicesMatching(
+  rows: TabPickerRow[],
+  visibleRowIndices: number[],
+  searchHighlightQuery: string
+): number[] {
+  const { byUrl, needle } = parseTabPickerSearchNeedle(searchHighlightQuery)
+  if (needle === "") {
+    return []
+  }
+  const lc = needle.toLowerCase()
+  const out: number[] = []
+  for (let vi = 0; vi < visibleRowIndices.length; vi++) {
+    const ri = visibleRowIndices[vi]
+    if (ri === undefined) {
+      continue
+    }
+    const r = rows[ri]
+    if (!r) {
+      continue
+    }
+    if (r.kind === "tab") {
+      if (byUrl) {
+        if ((r.url || "").toLowerCase().includes(lc)) {
+          out.push(vi)
+        }
+      } else {
+        const plain = (r.title || "").trim()
+        if (
+          plain.toLowerCase().includes(lc) ||
+          displayTitle(r.title).toLowerCase().includes(lc)
+        ) {
+          out.push(vi)
+        }
+      }
+    } else if (!byUrl) {
+      if (r.label.toLowerCase().includes(lc)) {
+        out.push(vi)
+      }
+    }
+  }
+  return out
+}
+
 /** Indices into `rows` of tab rows matching the filter. Empty query matches all. `@` prefix -> URL substring (after @). */
 export function filterTabRowIndices(rows: TabPickerRow[], filterQuery: string): number[] {
   const { byUrl, needle } = parseTabPickerSearchNeedle(filterQuery)

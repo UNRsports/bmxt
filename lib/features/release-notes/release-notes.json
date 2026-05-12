@@ -2,7 +2,9 @@
   "0.1.0": {
     "ja": [
       "splitコマンドを追加し、exitで増減可能",
-      "コマンド動作ルールの整理"
+      "コマンド動作ルールの整理",
+      "コマンド記入時の補助メニュー追加（「tabs」と記入してからエンターキーを押してみて！）",
+      "tabsモードでの「/」検索で探したい語句を入れてエンターキーを押せばハイライトされるので、nキーでジャンプ可能に実装"
     ],
     "en": [
       "Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)",
