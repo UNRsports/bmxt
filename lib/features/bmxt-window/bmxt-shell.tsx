@@ -37,6 +37,8 @@ export type TabPickerState = {
 type Props = {
   /** コマンド実行・ログ追記のスコープ（複数ターミナル）。 */
   sessionId: string
+  /** split 複数ペイン時、キーボード入力を受け取るのはこれが true のペインだけ。 */
+  isFocusedPane: boolean
   lines: string[]
   history: string[]
   completionCandidates: string[]
@@ -64,6 +66,7 @@ function continuationPromptFor(trimmed: string): string | null {
 
 export function BmxtShell({
   sessionId,
+  isFocusedPane,
   lines,
   history,
   completionCandidates,
@@ -200,20 +203,21 @@ export function BmxtShell({
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
-  useEffect(() => {
-    if (!pickerOpen) {
-      focusPrompt()
+  useLayoutEffect(() => {
+    if (pickerOpen || !isFocusedPane) {
+      return
     }
-  }, [pickerOpen, focusPrompt])
+    focusPrompt()
+  }, [pickerOpen, isFocusedPane, focusPrompt])
 
   useEffect(() => {
-    if (pickerOpen) {
+    if (pickerOpen || !isFocusedPane) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [pickerOpen, focusPrompt])
+  }, [pickerOpen, isFocusedPane, focusPrompt])
 
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
@@ -451,14 +455,14 @@ export function BmxtShell({
           }
           return
         }
-        if (e.key === "ArrowUp") {
+        if (e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           if (iSearchMatches.length > 0) {
             setISearchCycle((c) => (c - 1 + iSearchMatches.length) % iSearchMatches.length)
           }
           return
         }
-        if (e.key === "ArrowDown") {
+        if (e.key === "ArrowDown" && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           if (iSearchMatches.length > 0) {
             setISearchCycle((c) => (c + 1) % iSearchMatches.length)
@@ -536,6 +540,17 @@ export function BmxtShell({
         setLine(newLine)
         setCursorPos(l + rep.length)
         return
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight"
+        ) {
+          return
+        }
       }
 
       if (e.key === "ArrowUp") {
@@ -685,7 +700,7 @@ export function BmxtShell({
             <div className="bmxt-prompt-mirror" aria-hidden>
               <span>{before}</span>
               <span
-                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}`}>
+                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}${isFocusedPane ? "" : " bmxt-cursor-cell--inactive"}`}>
                 {cur || "\u00a0"}
               </span>
               <span>{after}</span>
@@ -741,7 +756,7 @@ export function BmxtShell({
             onAppendLog={appendLogLines}
             onRefreshRows={refreshTabPickerRows}
             onExit={() => setTabPicker(sessionId, null)}
-            isHostPaneFocused={true}
+            isHostPaneFocused={isFocusedPane}
           />
         </div>
       ) : null}

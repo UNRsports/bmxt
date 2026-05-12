@@ -17,6 +17,19 @@ import { useCommandHistory } from "./use-command-history"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 
+function leafIdFromKeyEventTarget(root: HTMLElement, target: EventTarget | null): string | null {
+  let el: Element | null =
+    target instanceof Element ? target : target instanceof Text ? target.parentElement : null
+  while (el && el !== root) {
+    const sid = el.getAttribute("data-bmxt-session-id")
+    if (typeof sid === "string" && sid.length > 0) {
+      return sid
+    }
+    el = el.parentElement
+  }
+  return null
+}
+
 type SplitTreeProps = {
   node: SplitNode
   logsById: Record<string, string[]>
@@ -49,6 +62,7 @@ function SplitTreeView({
     const tabPicker = pickerBySession[node.id] ?? null
     return (
       <div
+        data-bmxt-session-id={node.id}
         onMouseDown={() => {
           setFocusedLeaf(node.id)
         }}
@@ -65,6 +79,7 @@ function SplitTreeView({
         }}>
         <BmxtShell
           sessionId={node.id}
+          isFocusedPane={focusedLeafId === node.id}
           lines={lines}
           history={history}
           completionCandidates={completionCandidates}
@@ -151,11 +166,6 @@ export function BmxtTerminal() {
   pickerBySessionRef.current = pickerBySession
 
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const anyPickerOpenRef = useRef(false)
-
-  useEffect(() => {
-    anyPickerOpenRef.current = Object.values(pickerBySession).some((v) => v != null)
-  }, [pickerBySession])
 
   useEffect(() => {
     const order = state ? listLeafIds(state.layout.root) : null
@@ -261,22 +271,25 @@ export function BmxtTerminal() {
       if (!dir) {
         return
       }
-      if (anyPickerOpenRef.current) {
-        return
-      }
       const t = e.target as Node | null
       if (!t || !rootRef.current?.contains(t)) {
         return
       }
-      e.preventDefault()
-      const next = adjacentLeafByRect(state.layout.root, state.layout.focusedLeafId, dir)
+      const fromId =
+        (rootRef.current && leafIdFromKeyEventTarget(rootRef.current, e.target)) ??
+        state.layout.focusedLeafId
+      const next = adjacentLeafByRect(state.layout.root, fromId, dir)
       if (next) {
+        e.preventDefault()
+        if (pickerBySessionRef.current[fromId] != null) {
+          setTabPickerForSession(fromId, null)
+        }
         void setFocusedLeaf(next)
       }
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
-  }, [state, setFocusedLeaf])
+  }, [state, setFocusedLeaf, setTabPickerForSession])
 
   if (state === null || !upgradeBannerReady) {
     return (

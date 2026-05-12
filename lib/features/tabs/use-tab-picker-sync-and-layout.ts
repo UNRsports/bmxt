@@ -202,6 +202,8 @@ export function useTabPickerSyncAndLayoutEffects({
 
   useLayoutEffect(() => {
     if (!isHostPaneFocused) {
+      inputRef.current?.blur()
+      groupMetaTitleRef.current?.blur()
       return
     }
     if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {

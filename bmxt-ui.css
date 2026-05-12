@@ -246,6 +246,12 @@ body {
   min-width: 0.55ch;
 }
 
+/* split: アクティブでないペインはミラー上のカーソルセルを点滅させない */
+.bmxt-cursor-cell--inactive {
+  animation: none;
+  opacity: 1;
+}
+
 @keyframes bmxt-cursor-blink {
   50% {
     opacity: 0.35;

@@ -634,6 +634,10 @@ export function useTabPickerKeyboard({
         return
       }
 
+      if (!isHostPaneFocused) {
+        return
+      }
+
       if (runPickerVerticalNav(e.nativeEvent)) {
         return
       }
@@ -787,6 +791,7 @@ export function useTabPickerKeyboard({
       filterQuery,
       groupNewPhase,
       hi,
+      isHostPaneFocused,
       markedCount,
       markedTabIds,
       newTabUrlWindowId,
