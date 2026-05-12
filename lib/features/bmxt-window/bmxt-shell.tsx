@@ -45,7 +45,8 @@ type Props = {
   appendLogLines: (newLines: string[]) => Promise<void>
   appendCommandToHistory: (cmd: string) => void
   tabPicker: TabPickerState | null
-  setTabPicker: (v: TabPickerState | null) => void
+  /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
+  setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
   tabPickerRef: MutableRefObject<TabPickerState | null>
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
@@ -250,7 +251,7 @@ export function BmxtShell({
             `> ${trimmed}`,
             "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc"
           ])
-          setTabPicker({ rows, showUrl, initialHi })
+          setTabPicker(sessionId, { rows, showUrl, initialHi })
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -275,7 +276,12 @@ export function BmxtShell({
             `> ${trimmed}`,
             "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc"
           ])
-          setTabPicker({ rows, showUrl: false, initialHi, variant: "groupNew" })
+          setTabPicker(sessionId, {
+            rows,
+            showUrl: false,
+            initialHi,
+            variant: "groupNew"
+          })
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -736,7 +742,7 @@ export function BmxtShell({
             variant={tabPicker.variant ?? "default"}
             onAppendLog={appendLogLines}
             onRefreshRows={refreshTabPickerRows}
-            onExit={() => setTabPicker(null)}
+            onExit={() => setTabPicker(sessionId, null)}
             isHostPaneFocused={true}
           />
         </div>

@@ -7,7 +7,7 @@ import {
   getCompletionCandidates
 } from "../wasm-core"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { useCommandHistory } from "./use-command-history"
 import { SessionTabStrip } from "./terminal-sessions/session-tab-strip"
@@ -27,22 +27,39 @@ export function BmxtTerminal() {
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
-  const [tabPicker, setTabPicker] = useState<TabPickerState | null>(null)
+  /** セッションごとに tabs / group-new ピッカーを保持（切替でも明示終了まで維持）。 */
+  const [pickerBySession, setPickerBySession] = useState<
+    Record<string, TabPickerState | null>
+  >({})
+  const pickerBySessionRef = useRef(pickerBySession)
+  pickerBySessionRef.current = pickerBySession
+
+  const tabPicker =
+    activeSessionId !== null ? (pickerBySession[activeSessionId] ?? null) : null
   const tabPickerRef = useRef<TabPickerState | null>(null)
-  const prevActiveSessionIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     tabPickerRef.current = tabPicker
   }, [tabPicker])
 
-  /** ターミナルセッション切替時は tabs モードを閉じ、このセッション内の UI に閉じる。 */
+  /** 削除されたセッションのピッカー状態を掃除。 */
   useEffect(() => {
-    const prev = prevActiveSessionIdRef.current
-    if (prev !== null && prev !== activeSessionId) {
-      setTabPicker(null)
+    const order = state?.order
+    if (!order) {
+      return
     }
-    prevActiveSessionIdRef.current = activeSessionId
-  }, [activeSessionId])
+    setPickerBySession((prev) => {
+      let changed = false
+      const next: Record<string, TabPickerState | null> = { ...prev }
+      for (const k of Object.keys(next)) {
+        if (!order.includes(k)) {
+          delete next[k]
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [state?.order])
 
   useEffect(() => {
     void (async () => {
@@ -55,25 +72,62 @@ export function BmxtTerminal() {
     })()
   }, [])
 
-  const refreshTabPickerRows = useCallback(async () => {
-    const prev = tabPickerRef.current
-    if (!prev) {
-      return
-    }
-    try {
-      const rows = await buildTabPickerRows(prev.showUrl)
-      setTabPicker({
-        rows,
-        showUrl: prev.showUrl,
-        initialHi: prev.initialHi,
-        variant: prev.variant
-      })
-    } catch {
-      /* keep previous rows */
-    }
+  const setTabPickerForSession = useCallback((forSessionId: string, next: TabPickerState | null) => {
+    setPickerBySession((prev) => {
+      if (next === null) {
+        if (!(forSessionId in prev)) {
+          return prev
+        }
+        const { [forSessionId]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [forSessionId]: next }
+    })
   }, [])
 
-  useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
+  const refreshTabPickerRows = useCallback(async () => {
+    const map = pickerBySessionRef.current
+    const sids = Object.keys(map).filter((k) => map[k] != null)
+    if (sids.length === 0) {
+      return
+    }
+    const updates: Record<string, TabPickerState> = {}
+    for (const sid of sids) {
+      const prev = map[sid]
+      if (!prev) {
+        continue
+      }
+      try {
+        const rows = await buildTabPickerRows(prev.showUrl)
+        updates[sid] = {
+          rows,
+          showUrl: prev.showUrl,
+          initialHi: prev.initialHi,
+          variant: prev.variant
+        }
+      } catch {
+        /* keep previous */
+      }
+    }
+    if (Object.keys(updates).length === 0) {
+      return
+    }
+    setPickerBySession((p) => {
+      const next = { ...p }
+      for (const [sid, st] of Object.entries(updates)) {
+        if (next[sid]) {
+          next[sid] = st
+        }
+      }
+      return next
+    })
+  }, [])
+
+  const anyPickerOpen = useMemo(
+    () => Object.values(pickerBySession).some((v) => v != null),
+    [pickerBySession]
+  )
+  useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
 
   if (
     activeLines === null ||
@@ -135,7 +189,7 @@ export function BmxtTerminal() {
           appendLogLines={appendLogLines}
           appendCommandToHistory={appendCommandToHistory}
           tabPicker={tabPicker}
-          setTabPicker={setTabPicker}
+          setTabPicker={setTabPickerForSession}
           tabPickerRef={tabPickerRef}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
