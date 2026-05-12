@@ -2,7 +2,7 @@
   "0.1.0": {
     "ja": [
       "splitコマンドを追加し、exitで増減可能",
-      ""
+      "コマンド動作ルールの整理"
     ],
     "en": [
       "Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)",
