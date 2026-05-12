@@ -2,8 +2,22 @@ import {
   ACTIVE_TERMINAL_SESSION_KEY,
   MAX_SESSION_LOG_LINES,
   SESSION_LOG_KEY,
+  SPLIT_LAYOUT_KEY,
   TERMINAL_SESSIONS_KEY
 } from "../../extension-storage/keys"
+import {
+  colChainFromLeafIds,
+  containsLeaf,
+  countLeaves,
+  listLeafIds,
+  removeLeafFromTree,
+  singleLeafLayout,
+  splitColAtLeaf,
+  splitRowAtLeaf,
+  ensureFocusedInTree,
+  isValidLayout
+} from "../split-layout/tree"
+import type { SplitLayoutV1 } from "../split-layout/types"
 import type { TerminalSessionsStateV1 } from "./types"
 
 /** 旧マルチペインセッションキー（移行のみ）。 */
@@ -15,18 +29,23 @@ type LegacySplitSession = {
   focusedPaneId: string
 }
 
-/** `TERMINAL_SESSIONS_KEY` に保存する本体（activeId は別キー）。 */
+/** `TERMINAL_SESSIONS_KEY` に保存する本体（v2: タブ時代）。 */
 type StoredSessionsBodyV2 = {
   v: 2
   logsById: Record<string, string[]>
   order: string[]
 }
 
+type StoredLogsV3 = {
+  v: 3
+  logsById: Record<string, string[]>
+}
+
 function trimLog(lines: string[]): string[] {
   return lines.slice(-MAX_SESSION_LOG_LINES)
 }
 
-function newSessionId(): string {
+export function newSessionId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID()
   }
@@ -38,17 +57,23 @@ function emptyState(): TerminalSessionsStateV1 {
   return {
     v: 1,
     logsById: { [id]: [] },
-    order: [id],
-    activeId: id
+    layout: singleLeafLayout(id)
   }
 }
 
-/** ストレージ上の旧形式（1 キーに activeId まで含む）。 */
-function isCombinedV1Stored(x: unknown): x is TerminalSessionsStateV1 {
+/** 旧: 単一キーに order + activeId を含むブロブ。 */
+type LegacyCombinedV1 = {
+  v: 1
+  logsById: Record<string, string[]>
+  order: string[]
+  activeId: string
+}
+
+function isCombinedV1Stored(x: unknown): x is LegacyCombinedV1 {
   if (!x || typeof x !== "object") {
     return false
   }
-  const o = x as TerminalSessionsStateV1
+  const o = x as LegacyCombinedV1
   if (o.v !== 1 || typeof o.logsById !== "object" || !Array.isArray(o.order)) {
     return false
   }
@@ -85,21 +110,15 @@ function isBodyV2Stored(x: unknown): x is StoredSessionsBodyV2 {
   return true
 }
 
-async function migrateV1StoredToV2(s: TerminalSessionsStateV1): Promise<void> {
-  const body: StoredSessionsBodyV2 = { v: 2, logsById: s.logsById, order: s.order }
-  await chrome.storage.local.set({
-    [TERMINAL_SESSIONS_KEY]: body,
-    [ACTIVE_TERMINAL_SESSION_KEY]: s.activeId
-  })
-}
-
-/**
- * 単一キーの変更イベント用。v2 本体だけでは active が分からないので null を返し得る。
- */
-export function terminalSessionsStateFromUnknown(
-  x: unknown
-): TerminalSessionsStateV1 | null {
-  return isCombinedV1Stored(x) ? x : null
+function isBodyV3Stored(x: unknown): x is StoredLogsV3 {
+  if (!x || typeof x !== "object") {
+    return false
+  }
+  const o = x as StoredLogsV3
+  if (o.v !== 3 || typeof o.logsById !== "object") {
+    return false
+  }
+  return true
 }
 
 async function legacyLinesFromSplitOrLog(): Promise<string[] | null> {
@@ -119,45 +138,100 @@ async function removeLegacyKeys(): Promise<void> {
   await chrome.storage.local.remove([SESSION_LOG_KEY, LEGACY_SPLIT_KEY])
 }
 
-/**
- * ストレージに保存済みの状態のみ返す（無ければ null）。v1 単一ブロブは読み込み時に v2+active へ移行する。
- */
-export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsStateV1 | null> {
+function inferLayoutFromLogs(logsById: Record<string, string[]>): SplitLayoutV1 {
+  const keys = Object.keys(logsById).sort()
+  if (keys.length === 0) {
+    const id = newSessionId()
+    return singleLeafLayout(id)
+  }
+  const focus = keys[0]
+  return {
+    v: 1,
+    root: colChainFromLeafIds(keys),
+    focusedLeafId: focus
+  }
+}
+
+async function migrateStorageShapes(): Promise<void> {
   const r = await chrome.storage.local.get([
     TERMINAL_SESSIONS_KEY,
+    SPLIT_LAYOUT_KEY,
     ACTIVE_TERMINAL_SESSION_KEY
   ])
   const raw = r[TERMINAL_SESSIONS_KEY]
-  const activeRaw = r[ACTIVE_TERMINAL_SESSION_KEY]
+  const layoutRaw = r[SPLIT_LAYOUT_KEY]
 
   if (isBodyV2Stored(raw)) {
+    const activeRaw = r[ACTIVE_TERMINAL_SESSION_KEY]
     const activeId =
       typeof activeRaw === "string" && raw.order.includes(activeRaw)
         ? activeRaw
         : raw.order[0]
-    return {
+    const layout: SplitLayoutV1 = {
       v: 1,
-      logsById: raw.logsById,
-      order: [...raw.order],
-      activeId
+      root: colChainFromLeafIds([...raw.order]),
+      focusedLeafId: activeId
     }
+    const body: StoredLogsV3 = { v: 3, logsById: raw.logsById }
+    await chrome.storage.local.set({
+      [TERMINAL_SESSIONS_KEY]: body,
+      [SPLIT_LAYOUT_KEY]: layout
+    })
+    await chrome.storage.local.remove(ACTIVE_TERMINAL_SESSION_KEY)
+    return
   }
 
   if (isCombinedV1Stored(raw)) {
-    await migrateV1StoredToV2(raw)
-    return {
+    const layout: SplitLayoutV1 = {
       v: 1,
-      logsById: { ...raw.logsById },
-      order: [...raw.order],
-      activeId: raw.activeId
+      root: colChainFromLeafIds([...raw.order]),
+      focusedLeafId: raw.activeId
     }
+    const body: StoredLogsV3 = { v: 3, logsById: raw.logsById }
+    await chrome.storage.local.set({
+      [TERMINAL_SESSIONS_KEY]: body,
+      [SPLIT_LAYOUT_KEY]: layout
+    })
+    await chrome.storage.local.remove(ACTIVE_TERMINAL_SESSION_KEY)
+    return
   }
 
+  if (isBodyV3Stored(raw) && !isValidLayout(layoutRaw)) {
+    const layout = inferLayoutFromLogs(raw.logsById)
+    await chrome.storage.local.set({ [SPLIT_LAYOUT_KEY]: layout })
+  }
+}
+
+/**
+ * 単一キーの変更イベント用（v2 ブロブのみのとき）。
+ */
+export function terminalSessionsStateFromUnknown(
+  x: unknown
+): TerminalSessionsStateV1 | null {
   return null
 }
 
 /**
- * 有効な `TerminalSessionsStateV1` を返す。未移行データがあれば移行し、無ければ空の 1 セッションを生成する。
+ * ストレージに保存済みの状態のみ返す（無ければ null）。
+ */
+export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsStateV1 | null> {
+  await migrateStorageShapes()
+  const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY, SPLIT_LAYOUT_KEY])
+  const rawLogs = r[TERMINAL_SESSIONS_KEY]
+  const rawLayout = r[SPLIT_LAYOUT_KEY]
+  if (!isBodyV3Stored(rawLogs) || !isValidLayout(rawLayout)) {
+    return null
+  }
+  const layout = ensureFocusedInTree(rawLayout)
+  return {
+    v: 1,
+    logsById: rawLogs.logsById,
+    layout
+  }
+}
+
+/**
+ * 有効な状態を返す。未移行データがあれば移行し、無ければ空の 1 リーフを生成する。
  */
 export async function ensureTerminalSessionsState(): Promise<TerminalSessionsStateV1> {
   const cur = await readTerminalSessionsIfPresent()
@@ -170,8 +244,7 @@ export async function ensureTerminalSessionsState(): Promise<TerminalSessionsSta
     const state: TerminalSessionsStateV1 = {
       v: 1,
       logsById: { [id]: migrated },
-      order: [id],
-      activeId: id
+      layout: singleLeafLayout(id)
     }
     await persistTerminalSessionsState(state)
     await removeLegacyKeys()
@@ -185,14 +258,11 @@ export async function ensureTerminalSessionsState(): Promise<TerminalSessionsSta
 export async function persistTerminalSessionsState(
   state: TerminalSessionsStateV1
 ): Promise<void> {
-  const body: StoredSessionsBodyV2 = {
-    v: 2,
-    logsById: state.logsById,
-    order: state.order
-  }
+  const body: StoredLogsV3 = { v: 3, logsById: state.logsById }
+  const layout = ensureFocusedInTree(state.layout)
   await chrome.storage.local.set({
     [TERMINAL_SESSIONS_KEY]: body,
-    [ACTIVE_TERMINAL_SESSION_KEY]: state.activeId
+    [SPLIT_LAYOUT_KEY]: layout
   })
 }
 
@@ -200,15 +270,12 @@ export function resolveSessionId(
   state: TerminalSessionsStateV1,
   requested: string | undefined
 ): string {
-  if (requested && state.order.includes(requested)) {
+  if (requested && containsLeaf(state.layout.root, requested)) {
     return requested
   }
-  return state.activeId
+  return state.layout.focusedLeafId
 }
 
-/**
- * 書き込み直前に使う最新スナップショット。
- */
 async function readFreshSessionsOrEnsure(): Promise<TerminalSessionsStateV1> {
   await ensureTerminalSessionsState()
   const s = await readTerminalSessionsIfPresent()
@@ -228,8 +295,7 @@ export async function appendLinesToSession(
   const merged = trimLog([...prev, ...newLines])
   await persistTerminalSessionsState({
     v: 1,
-    order: [...fresh.order],
-    activeId: fresh.activeId,
+    layout: fresh.layout,
     logsById: { ...fresh.logsById, [id]: merged }
   })
 }
@@ -239,8 +305,7 @@ export async function setSessionLines(sessionId: string, lines: string[]): Promi
   const id = resolveSessionId(fresh, sessionId)
   await persistTerminalSessionsState({
     v: 1,
-    order: [...fresh.order],
-    activeId: fresh.activeId,
+    layout: fresh.layout,
     logsById: { ...fresh.logsById, [id]: trimLog(lines) }
   })
 }
@@ -253,64 +318,67 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
+    SPLIT_LAYOUT_KEY,
     ACTIVE_TERMINAL_SESSION_KEY,
     SESSION_LOG_KEY,
     LEGACY_SPLIT_KEY
   ])
 }
 
-/**
- * フォーカス中セッションのみ更新。ログ本体キーを触らないため、追記処理と競合しない。
- */
-export async function setActiveSession(sessionId: string): Promise<TerminalSessionsStateV1 | null> {
+export async function setFocusedLeafSession(
+  sessionId: string
+): Promise<TerminalSessionsStateV1 | null> {
   const fresh = await readTerminalSessionsIfPresent()
-  if (!fresh || !fresh.order.includes(sessionId)) {
+  if (!fresh || !containsLeaf(fresh.layout.root, sessionId)) {
     return null
   }
-  await chrome.storage.local.set({ [ACTIVE_TERMINAL_SESSION_KEY]: sessionId })
-  return { ...fresh, activeId: sessionId }
-}
-
-export async function addTerminalSession(): Promise<TerminalSessionsStateV1> {
-  const fresh = await readFreshSessionsOrEnsure()
-  const id = newSessionId()
   const next: TerminalSessionsStateV1 = {
     v: 1,
-    logsById: { ...fresh.logsById, [id]: [] },
-    order: [...fresh.order, id],
-    activeId: id
+    logsById: fresh.logsById,
+    layout: { ...fresh.layout, focusedLeafId: sessionId }
   }
   await persistTerminalSessionsState(next)
   return next
 }
 
-function removeSessionFromState(
-  state: TerminalSessionsStateV1,
-  sessionId: string
-): TerminalSessionsStateV1 {
-  const order = state.order.filter((x) => x !== sessionId)
-  const { [sessionId]: _removed, ...rest } = state.logsById
-  let activeId = state.activeId
-  if (!order.includes(activeId)) {
-    activeId = order[0] ?? state.activeId
-  }
-  return {
-    v: 1,
-    logsById: rest,
-    order,
-    activeId
-  }
-}
-
-/** UI からセッションを閉じる（最後の 1 つは閉じない）。 */
-export async function closeTerminalSessionUi(sessionId: string): Promise<TerminalSessionsStateV1 | null> {
-  const fresh = await readTerminalSessionsIfPresent()
-  if (!fresh || fresh.order.length <= 1 || !fresh.order.includes(sessionId)) {
+export async function splitColForLeaf(leafId: string): Promise<TerminalSessionsStateV1 | null> {
+  const fresh = await readFreshSessionsOrEnsure()
+  if (!containsLeaf(fresh.layout.root, leafId)) {
     return null
   }
-  const next = removeSessionFromState(fresh, sessionId)
-  await persistTerminalSessionsState(next)
-  return next
+  const newId = newSessionId()
+  const root = splitColAtLeaf(fresh.layout.root, leafId, newId)
+  const layout: SplitLayoutV1 = {
+    v: 1,
+    root,
+    focusedLeafId: newId
+  }
+  await persistTerminalSessionsState({
+    v: 1,
+    logsById: { ...fresh.logsById, [newId]: [] },
+    layout
+  })
+  return readTerminalSessionsIfPresent()
+}
+
+export async function splitRowForLeaf(leafId: string): Promise<TerminalSessionsStateV1 | null> {
+  const fresh = await readFreshSessionsOrEnsure()
+  if (!containsLeaf(fresh.layout.root, leafId)) {
+    return null
+  }
+  const newId = newSessionId()
+  const root = splitRowAtLeaf(fresh.layout.root, leafId, newId)
+  const layout: SplitLayoutV1 = {
+    v: 1,
+    root,
+    focusedLeafId: newId
+  }
+  await persistTerminalSessionsState({
+    v: 1,
+    logsById: { ...fresh.logsById, [newId]: [] },
+    layout
+  })
+  return readTerminalSessionsIfPresent()
 }
 
 export type ExitOrCloseResult =
@@ -318,15 +386,29 @@ export type ExitOrCloseResult =
   | { fullClose: false; activeIdAfter: string }
 
 /**
- * `exit` / exit_pane: 最後のセッションならストレージ掃除＋ウィンドウは呼び出し側で閉じる。複数あれば当該セッションのみ削除。
+ * `exit` / exit_pane: 最後のリーフならウィンドウ終了。複数なら当該 split のみ閉じる。
  */
 export async function exitOrCloseSessionInStorage(sessionId: string): Promise<ExitOrCloseResult> {
   const fresh = await readFreshSessionsOrEnsure()
-  if (fresh.order.length <= 1) {
+  if (countLeaves(fresh.layout.root) <= 1) {
     await removeAllTerminalSessionsFromStorage()
     return { fullClose: true }
   }
-  const next = removeSessionFromState(fresh, sessionId)
-  await persistTerminalSessionsState(next)
-  return { fullClose: false, activeIdAfter: next.activeId }
+  const { root, focusHint } = removeLeafFromTree(fresh.layout.root, sessionId)
+  if (!root || !focusHint) {
+    await removeAllTerminalSessionsFromStorage()
+    return { fullClose: true }
+  }
+  const { [sessionId]: _removed, ...restLogs } = fresh.logsById
+  let focus = focusHint
+  if (!containsLeaf(root, focus)) {
+    focus = listLeafIds(root)[0] ?? focus
+  }
+  const layout: SplitLayoutV1 = { v: 1, root, focusedLeafId: focus }
+  await persistTerminalSessionsState({
+    v: 1,
+    logsById: restLogs,
+    layout
+  })
+  return { fullClose: false, activeIdAfter: focus }
 }

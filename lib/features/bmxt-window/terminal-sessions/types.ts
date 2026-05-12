@@ -1,13 +1,11 @@
 /**
- * 複数ターミナル（セッション）のログ状態。表示・永続化は TS、コマンド処理は Rust/WASM。
+ * 複数ターミナル（プロセス）のログ + 分割レイアウト。表示は TS、コマンド処理は Rust/WASM。
  */
+
+import type { SplitLayoutV1 } from "../split-layout/types"
 
 export type TerminalSessionsStateV1 = {
   v: 1
-  /** セッション ID → ログ行（末尾トリム済みを維持） */
   logsById: Record<string, string[]>
-  /** 左から右のタブ順 */
-  order: string[]
-  /** フォーカス中のセッション */
-  activeId: string
+  layout: SplitLayoutV1
 }

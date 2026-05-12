@@ -13,7 +13,9 @@ import {
   removeAllTerminalSessionsFromStorage,
   setSessionLines,
   ensureTerminalSessionsState,
-  resolveSessionId
+  resolveSessionId,
+  splitColForLeaf,
+  splitRowForLeaf
 } from "./lib/features/bmxt-window/terminal-sessions/state-storage"
 import {
   ensureBmxtCore,
@@ -180,6 +182,16 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
       await exitBmxtWindowFull()
       return
     }
+    if (trimmed.toLowerCase() === "split-col") {
+      await splitColForLeaf(sessionId)
+      await appendLinesToSession(sessionId, [`> ${trimmed}`])
+      return
+    }
+    if (trimmed.toLowerCase() === "split-row") {
+      await splitRowForLeaf(sessionId)
+      await appendLinesToSession(sessionId, [`> ${trimmed}`])
+      return
+    }
     await appendLinesToSession(sessionId, [
       `> ${trimmed}`,
       `error: ${e instanceof Error ? e.message : String(e)}`
@@ -201,7 +213,7 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
     if (!exitOutcome.fullClose) {
       const peek = await readTerminalSessionsIfPresent()
       if (peek) {
-        await appendLinesToSession(peek.activeId, out)
+        await appendLinesToSession(peek.layout.focusedLeafId, out)
       }
     }
     return
@@ -232,7 +244,8 @@ async function dispatch(
     },
     listWindows,
     focusInfo,
-    resolveTabArg
+    resolveTabArg,
+    commandSessionId: sessionId
   }
   return applyChromeEffects(ctx, bundle.effects ?? [])
 }

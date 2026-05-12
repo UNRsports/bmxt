@@ -42,6 +42,18 @@
       "canonicalName": "notes",
       "aliases": [],
       "usagePrimary": "notes"
+    },
+    {
+      "module": "split_col",
+      "canonicalName": "split-col",
+      "aliases": [],
+      "usagePrimary": "split-col"
+    },
+    {
+      "module": "split_row",
+      "canonicalName": "split-row",
+      "aliases": [],
+      "usagePrimary": "split-row"
     }
   ],
   "effects": [
@@ -135,6 +147,20 @@
       "shape": "unit",
       "tsHandlerFile": "release-notes-list",
       "tsHandlerExport": "applyReleaseNotesListEffect"
+    },
+    {
+      "kind": "split_col",
+      "rustVariant": "SplitCol",
+      "shape": "unit",
+      "tsHandlerFile": "split-col",
+      "tsHandlerExport": "applySplitColEffect"
+    },
+    {
+      "kind": "split_row",
+      "rustVariant": "SplitRow",
+      "shape": "unit",
+      "tsHandlerFile": "split-row",
+      "tsHandlerExport": "applySplitRowEffect"
     }
   ]
 }

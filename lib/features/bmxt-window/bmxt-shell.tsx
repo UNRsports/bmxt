@@ -10,7 +10,6 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
-import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch, wordBounds } from "./text-utils"
 import {
@@ -24,8 +23,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
-  type MutableRefObject
+  useState
 } from "react"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
@@ -47,7 +45,6 @@ type Props = {
   tabPicker: TabPickerState | null
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
   setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
-  tabPickerRef: MutableRefObject<TabPickerState | null>
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
@@ -74,11 +71,14 @@ export function BmxtShell({
   appendCommandToHistory,
   tabPicker,
   setTabPicker,
-  tabPickerRef,
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
   const pickerOpen = tabPicker !== null
+  const tabPickerRef = useRef<TabPickerState | null>(null)
+  useEffect(() => {
+    tabPickerRef.current = tabPicker
+  }, [tabPicker])
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
   const [cursorPos, setCursorPos] = useState(0)
@@ -214,8 +214,6 @@ export function BmxtShell({
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
   }, [pickerOpen, focusPrompt])
-
-  useTabPickerChromeSync(refreshTabPickerRows, tabPicker !== null)
 
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
@@ -592,7 +590,7 @@ export function BmxtShell({
       mode,
       pickerOpen,
       submitLine,
-      tabPickerRef
+      tabPicker
     ]
   )
 

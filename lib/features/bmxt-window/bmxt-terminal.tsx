@@ -1,6 +1,10 @@
 import { buildTabPickerRows } from "../tabs"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import { type TabPickerState, BmxtShell } from "./bmxt-shell"
+import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
+import type { SplitNode } from "./split-layout/types"
+import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
+import { appendLinesToSession } from "./terminal-sessions/state-storage"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -10,41 +14,151 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { useCommandHistory } from "./use-command-history"
-import { SessionTabStrip } from "./terminal-sessions/session-tab-strip"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 
+type SplitTreeProps = {
+  node: SplitNode
+  logsById: Record<string, string[]>
+  focusedLeafId: string
+  history: string[]
+  completionCandidates: string[]
+  pickerBySession: Record<string, TabPickerState | null>
+  setTabPickerForSession: (forSessionId: string, next: TabPickerState | null) => void
+  refreshTabPickerRows: () => Promise<void>
+  postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
+  appendCommandToHistory: (cmd: string) => void
+  setFocusedLeaf: (sessionId: string) => void
+}
+
+function SplitTreeView({
+  node,
+  logsById,
+  focusedLeafId,
+  history,
+  completionCandidates,
+  pickerBySession,
+  setTabPickerForSession,
+  refreshTabPickerRows,
+  postUpgradeBanner,
+  appendCommandToHistory,
+  setFocusedLeaf
+}: SplitTreeProps) {
+  if (isLeaf(node)) {
+    const lines = logsById[node.id] ?? []
+    const tabPicker = pickerBySession[node.id] ?? null
+    return (
+      <div
+        onMouseDown={() => {
+          setFocusedLeaf(node.id)
+        }}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          boxSizing: "border-box",
+          outline: focusedLeafId === node.id ? "1px solid #58a6ff" : "1px solid transparent",
+          outlineOffset: -1
+        }}>
+        <BmxtShell
+          sessionId={node.id}
+          lines={lines}
+          history={history}
+          completionCandidates={completionCandidates}
+          appendLogLines={(newLines) => appendLinesToSession(node.id, newLines)}
+          appendCommandToHistory={appendCommandToHistory}
+          tabPicker={tabPicker}
+          setTabPicker={setTabPickerForSession}
+          refreshTabPickerRows={refreshTabPickerRows}
+          postUpgradeBanner={postUpgradeBanner}
+        />
+      </div>
+    )
+  }
+  const isRow = node.kind === "row"
+  const r = node.ratio
+  const rest = 1 - r
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isRow ? "column" : "row",
+        flex: 1,
+        minHeight: 0,
+        minWidth: 0,
+        overflow: "hidden"
+      }}>
+      <div
+        style={{
+          flex: r,
+          minHeight: 0,
+          minWidth: 0,
+          display: "flex",
+          overflow: "hidden"
+        }}>
+        <SplitTreeView
+          node={node.a}
+          logsById={logsById}
+          focusedLeafId={focusedLeafId}
+          history={history}
+          completionCandidates={completionCandidates}
+          pickerBySession={pickerBySession}
+          setTabPickerForSession={setTabPickerForSession}
+          refreshTabPickerRows={refreshTabPickerRows}
+          postUpgradeBanner={postUpgradeBanner}
+          appendCommandToHistory={appendCommandToHistory}
+          setFocusedLeaf={setFocusedLeaf}
+        />
+      </div>
+      <div
+        style={{
+          flex: rest,
+          minHeight: 0,
+          minWidth: 0,
+          display: "flex",
+          overflow: "hidden"
+        }}>
+        <SplitTreeView
+          node={node.b}
+          logsById={logsById}
+          focusedLeafId={focusedLeafId}
+          history={history}
+          completionCandidates={completionCandidates}
+          pickerBySession={pickerBySession}
+          setTabPickerForSession={setTabPickerForSession}
+          refreshTabPickerRows={refreshTabPickerRows}
+          postUpgradeBanner={postUpgradeBanner}
+          appendCommandToHistory={appendCommandToHistory}
+          setFocusedLeaf={setFocusedLeaf}
+        />
+      </div>
+    </div>
+  )
+}
+
 export function BmxtTerminal() {
-  const {
-    state,
-    activeSessionId,
-    activeLines,
-    appendLogLines,
-    selectSession,
-    addSession,
-    closeSession
-  } = useTerminalSessions()
+  const { state, setFocusedLeaf } = useTerminalSessions()
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
-  /** セッションごとに tabs / group-new ピッカーを保持（切替でも明示終了まで維持）。 */
   const [pickerBySession, setPickerBySession] = useState<
     Record<string, TabPickerState | null>
   >({})
   const pickerBySessionRef = useRef(pickerBySession)
   pickerBySessionRef.current = pickerBySession
 
-  const tabPicker =
-    activeSessionId !== null ? (pickerBySession[activeSessionId] ?? null) : null
-  const tabPickerRef = useRef<TabPickerState | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const anyPickerOpenRef = useRef(false)
 
   useEffect(() => {
-    tabPickerRef.current = tabPicker
-  }, [tabPicker])
+    anyPickerOpenRef.current = Object.values(pickerBySession).some((v) => v != null)
+  }, [pickerBySession])
 
-  /** 削除されたセッションのピッカー状態を掃除。 */
   useEffect(() => {
-    const order = state?.order
+    const order = state ? listLeafIds(state.layout.root) : null
     if (!order) {
       return
     }
@@ -59,7 +173,7 @@ export function BmxtTerminal() {
       }
       return changed ? next : prev
     })
-  }, [state?.order])
+  }, [state?.layout.root])
 
   useEffect(() => {
     void (async () => {
@@ -129,12 +243,42 @@ export function BmxtTerminal() {
   )
   useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
 
-  if (
-    activeLines === null ||
-    activeSessionId === null ||
-    state === null ||
-    !upgradeBannerReady
-  ) {
+  useEffect(() => {
+    if (!state || countLeaves(state.layout.root) <= 1) {
+      return
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.metaKey || e.altKey) {
+        return
+      }
+      const keyMap: Record<string, RectDir> = {
+        ArrowLeft: "left",
+        ArrowRight: "right",
+        ArrowUp: "up",
+        ArrowDown: "down"
+      }
+      const dir = keyMap[e.key]
+      if (!dir) {
+        return
+      }
+      if (anyPickerOpenRef.current) {
+        return
+      }
+      const t = e.target as Node | null
+      if (!t || !rootRef.current?.contains(t)) {
+        return
+      }
+      e.preventDefault()
+      const next = adjacentLeafByRect(state.layout.root, state.layout.focusedLeafId, dir)
+      if (next) {
+        void setFocusedLeaf(next)
+      }
+    }
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
+  }, [state, setFocusedLeaf])
+
+  if (state === null || !upgradeBannerReady) {
     return (
       <div
         className="bmxt-root"
@@ -152,7 +296,9 @@ export function BmxtTerminal() {
 
   return (
     <div
+      ref={rootRef}
       className="bmxt-root"
+      tabIndex={-1}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -162,15 +308,9 @@ export function BmxtTerminal() {
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
         fontSize: 12,
         background: "#0d1117",
-        color: "#c9d1d9"
+        color: "#c9d1d9",
+        outline: "none"
       }}>
-      <SessionTabStrip
-        order={state.order}
-        activeId={state.activeId}
-        onSelect={(id) => void selectSession(id)}
-        onAdd={() => void addSession()}
-        onClose={(id) => void closeSession(id)}
-      />
       <div
         style={{
           position: "relative",
@@ -180,19 +320,18 @@ export function BmxtTerminal() {
           isolation: "isolate",
           overflow: "hidden"
         }}>
-        <BmxtShell
-          key={activeSessionId}
-          sessionId={activeSessionId}
-          lines={activeLines}
+        <SplitTreeView
+          node={state.layout.root}
+          logsById={state.logsById}
+          focusedLeafId={state.layout.focusedLeafId}
           history={history}
           completionCandidates={completionCandidates}
-          appendLogLines={appendLogLines}
-          appendCommandToHistory={appendCommandToHistory}
-          tabPicker={tabPicker}
-          setTabPicker={setTabPickerForSession}
-          tabPickerRef={tabPickerRef}
+          pickerBySession={pickerBySession}
+          setTabPickerForSession={setTabPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
+          appendCommandToHistory={appendCommandToHistory}
+          setFocusedLeaf={(id) => void setFocusedLeaf(id)}
         />
       </div>
     </div>

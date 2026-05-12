@@ -20,7 +20,9 @@ pub fn effect_samples_for_ts_generation() -> Vec<Effect> {
         Effect::ExitPane,
         Effect::ReleaseNotesCurrent,
         Effect::ReleaseNotesVersion { version: String::new() },
-        Effect::ReleaseNotesList
+        Effect::ReleaseNotesList,
+        Effect::SplitCol,
+        Effect::SplitRow
     ]
 }
 

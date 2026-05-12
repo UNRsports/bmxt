@@ -32,4 +32,6 @@ pub enum Effect {
         version: String,
     },
     ReleaseNotesList,
+    SplitCol,
+    SplitRow,
 }
