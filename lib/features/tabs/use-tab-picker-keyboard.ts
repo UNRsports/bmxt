@@ -19,6 +19,7 @@ import {
   groupRowKey,
   isPhysicalArrowDown,
   isPhysicalArrowUp,
+  isReservedSplitPaneVerticalNav,
   verticalNavDirection
 } from "./tab-picker-keyboard"
 
@@ -436,6 +437,9 @@ export function useTabPickerKeyboard({
     (e: KeyboardEvent): boolean => {
       /* Alt+矢印はペイン間フォーカス移動用（親で処理）— ハイライト移動に使わない */
       if (e.altKey) {
+        return false
+      }
+      if (isReservedSplitPaneVerticalNav(e)) {
         return false
       }
       const navDir = verticalNavDirection(e)

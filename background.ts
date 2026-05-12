@@ -182,12 +182,12 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
       await exitBmxtWindowFull()
       return
     }
-    if (trimmed.toLowerCase() === "split-col") {
+    if (/^\s*split\s+-col\s*$/i.test(trimmed)) {
       await splitColForLeaf(sessionId)
       await appendLinesToSession(sessionId, [`> ${trimmed}`])
       return
     }
-    if (trimmed.toLowerCase() === "split-row") {
+    if (/^\s*split\s+-row\s*$/i.test(trimmed)) {
       await splitRowForLeaf(sessionId)
       await appendLinesToSession(sessionId, [`> ${trimmed}`])
       return

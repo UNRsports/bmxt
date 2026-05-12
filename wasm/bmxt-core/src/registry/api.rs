@@ -59,6 +59,14 @@ pub fn build_help_lines() -> Vec<String> {
             .to_string(),
     );
     lines.push(String::new());
+    lines.push("split (terminal panes):".to_string());
+    lines.push(
+        "  split               - show -col / -row, then restore prompt to `split ` for continuation."
+            .to_string(),
+    );
+    lines.push("  split -col          - vertical split (new pane beside current).".to_string());
+    lines.push("  split -row          - horizontal split (new pane below current).".to_string());
+    lines.push(String::new());
     lines.push("URL (http/https, typed as a whole line):".to_string());
     lines.push("  <url>           - new tab".to_string());
     lines.push("  <url> .         - current tab (active tab in focused window)".to_string());

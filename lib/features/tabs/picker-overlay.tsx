@@ -182,7 +182,7 @@ export function TabPickerOverlay({
 
   useMirrorBrowserActiveTab({
     enabled: variant === "default",
-    blocked: mirrorBlocked || !isHostPaneFocused,
+    blocked: mirrorBlocked,
     rows,
     visibleRowIndices,
     setHi,

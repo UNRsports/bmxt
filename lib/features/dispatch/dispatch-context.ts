@@ -7,6 +7,6 @@ export type DispatchChromeContext = {
   listWindows: () => Promise<string[]>
   focusInfo: () => Promise<string[]>
   resolveTabArg: (tabIdStr: string | undefined) => Promise<chrome.tabs.Tab | undefined>
-  /** `RUN_CMD` を出したペイン（split-col / split-row / exit のスコープ）。 */
+  /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
 }

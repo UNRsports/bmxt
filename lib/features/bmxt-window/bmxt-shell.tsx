@@ -10,6 +10,7 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
+import { listSplitOptionCandidates, splitOptionCompletionZone } from "./split-command-input"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch, wordBounds } from "./text-utils"
 import {
@@ -53,6 +54,7 @@ type Props = {
 }
 
 const CONTINUATION_PROMPT_BY_COMMAND: Record<string, string> = {
+  split: "split ",
   tabs: "tabs "
 }
 
@@ -485,6 +487,27 @@ export function BmxtShell({
       if (e.key === "Tab") {
         const curLn = lineRef.current
         const pos = cursorRef.current
+        const splitZone = splitOptionCompletionZone(curLn, pos)
+        if (splitZone) {
+          e.preventDefault()
+          const cands = listSplitOptionCandidates(splitZone.prefix)
+          if (cands.length === 0) {
+            return
+          }
+          const idx = tabPressSeqRef.current % cands.length
+          tabPressSeqRef.current += 1
+          const rep = cands[idx]!
+          const suffix = splitZone.optionEnd === curLn.length ? " " : ""
+          const newLine =
+            curLn.slice(0, splitZone.optionStart) +
+            rep +
+            suffix +
+            curLn.slice(splitZone.optionEnd)
+          setHistNavIndex(-1)
+          setLine(newLine)
+          setCursorPos(splitZone.optionStart + rep.length + suffix.length)
+          return
+        }
         const optionZone = tabsOptionCompletionZone(curLn, pos)
         if (optionZone) {
           e.preventDefault()

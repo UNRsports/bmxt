@@ -44,16 +44,10 @@
       "usagePrimary": "notes"
     },
     {
-      "module": "split_col",
-      "canonicalName": "split-col",
+      "module": "split",
+      "canonicalName": "split",
       "aliases": [],
-      "usagePrimary": "split-col"
-    },
-    {
-      "module": "split_row",
-      "canonicalName": "split-row",
-      "aliases": [],
-      "usagePrimary": "split-row"
+      "usagePrimary": "split -col | split -row"
     }
   ],
   "effects": [

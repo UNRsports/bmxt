@@ -1,5 +1,5 @@
 /**
- * ターミナル分割（split-col / split-row）。永続化は split-layout-storage。
+ * ターミナル分割（`split -col` / `split -row`）。永続化は split-layout-storage。
  */
 
 export type SplitLeaf = { kind: "leaf"; id: string }
