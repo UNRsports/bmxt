@@ -1,8 +1,8 @@
 {
-  "0.0.9": {
+  "0.1.0": {
     "ja": [
-      "tabsモードでのタブ名検索とハイライトのリセットをvim形式に変更（ハイライトされた検索単語は:nohlsearchでリセット）",
-      "リリースノート表示に関する仕様を改善"
+      "splitコマンドを追加し、exitで増減可能",
+      ""
     ],
     "en": [
       "Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)",

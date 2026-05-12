@@ -6,10 +6,19 @@
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
 
-# Command UX rules
+# Command-line model / コマンドラインの考え方（実装時は必ず守る）
 
-- For commands that require additional tokens/options, pressing Enter with only the first command token must show usage/options guidance and then restore the prompt with the command plus trailing space (for example: `tabs `) so the user can continue immediately.
-- Implement this as a reusable continuation mechanism (not one-off per command), so future second/third-token command families can opt in consistently.
+**EN — Terminology:** Treat the prompt as a **token sequence**. The **first command** is the initial keyword (e.g. `tabs`, `split`). A **second command** is the next fixed token when the feature is split into a subcommand or flag-style token (e.g. `-list`, `-row`). Document and implement them **in that order** (first, then second).
+
+**JA — 用語:** プロンプト入力を **トークン列** とみなす。**第一コマンド**は先頭のキーワード（例: `tabs`, `split`）。機能を分割するときの次トークンを **第二コマンド**と呼ぶ（例: `-list`, `-row`）。仕様・実装・説明は **第一 → 第二** の順で表記する。
+
+**EN — No abbreviations for first/second commands:** Do **not** register shortened spellings for either tier in this model (e.g. do **not** accept or complete `-l` for `-list`). **Tab completion** must target the **canonical full** first and second tokens only. Older top-level aliases documented in the README (e.g. `help`/`?`) may remain for backward compatibility; **do not** add new short aliases when introducing **new** first/second command families.
+
+**JA — 短縮形なし:** 第一コマンド・第二コマンドのいずれにも **短縮別名を設けない**（例: `-list` を `-l` のように書かせない・補完させない）。**Tab キーによる補完**は **正式表記のトークン**のみを候補とする。README にある従来のトップレベル別名（例: `help`/`?`）は後方互換で残りうるが、**新規**の第一＋第二コマンド族では第一・第二いずれにも短縮を増やさない。
+
+**EN — Enter when a second command is required:** If a first command **does nothing useful** without a configured second command, **Enter** after typing **only** the first command must: (1) print usage / a **placeholder** that shows the expected second-command shape, and (2) **restore the prompt** to `firstCommand ` (first command plus one ASCII space) with the **cursor at the end**, waiting for the rest of the input. Implement this via the shared **continuation** mechanism, not ad hoc per command.
+
+**JA — 第二コマンド必須時の Enter:** 第二コマンドが **ないと第一コマンドを実質動かせない** 設計のとき、**第一コマンドだけ**の状態で **Enter** を押したら、(1) 利用案内または **第二コマンドのプレースホルダ**を表示し、(2) プロンプトを **`第一コマンド `**（末尾に半角スペース 1 つ）に戻し、**末尾にカーソル**を置いて続きの入力を待つ。これは **再利用可能な continuation** で実装し、コマンドごとの one-off にしない。
 
 # Adding built-in commands / 組み込みコマンドの追加
 
