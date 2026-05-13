@@ -14,6 +14,9 @@ export {
 } from "./state-machine"
 export {
   buildTabPickerRows,
+  displayTitle,
+  filterTabRowIndices,
+  initialTabPickerHighlightIndex,
   resolveInitialTabPickerHighlightIndex,
   type TabPickerRow
 } from "./picker-rows"

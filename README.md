@@ -587,14 +587,12 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知・**`notes`** ターミナルコマンドの変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
-- `lib/features/tabs/` — タブピッカー・tabs 入力パースなど（`picker-overlay.tsx`、`picker-rows.ts`、`input.ts`、各種 hooks）
+- `lib/features/tabs/` — タブピッカー・tabs 入力パース・ピッカー行生成など（`index.ts` から主要シンボルを再エクスポート。実装は `picker-overlay.tsx`、`picker-rows.ts`、`input.ts`、各種 hooks）
 - `background.ts` — Service Worker（ウィンドウ起動・WASM dispatch・Effect 実行）
 - `wasm/bmxt-core/` — Rust コア（`cmd/` にコマンド単位、`registry/table.rs` で一覧）
 - `lib/features/wasm-core/` — WASM 初期化・`runDispatch`・補完候補
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — 補完フォールバック（WASM 未初期化時・**`completion-fallback.ts`** は **`build:wasm`** で Rust から生成）
-- `lib/tab-picker.ts` — 互換レイヤ（`lib/features/tabs/picker-rows.ts` を再エクスポート）
-- `lib/bmxt-tabs-input.ts` — 互換レイヤ（`lib/features/tabs/input.ts` を再エクスポート）
 
 ### English
 

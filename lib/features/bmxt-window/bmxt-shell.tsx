@@ -1,4 +1,8 @@
 import {
+  continuationPromptForFirstTokenOnly,
+  secondCommandCandidatesForFirstTokenOnly
+} from "../command-line/first-command-continuation"
+import {
   buildTabPickerRows,
   listTabsOptionCandidates,
   listTabsMoveUrlCandidates,
@@ -59,34 +63,6 @@ type Props = {
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
-}
-
-const CONTINUATION_PROMPT_BY_COMMAND: Record<string, string> = {
-  split: "split ",
-  tabs: "tabs "
-}
-
-function continuationPromptFor(trimmed: string): string | null {
-  if (trimmed.includes(" ")) {
-    return null
-  }
-  const key = trimmed.toLowerCase()
-  return CONTINUATION_PROMPT_BY_COMMAND[key] ?? null
-}
-
-/** 第一トークンだけのとき、continuation 用の第二コマンド候補（正式トークン一覧）。 */
-function secondCommandCandidatesForFirstToken(trimmed: string): string[] {
-  if (trimmed.includes(" ")) {
-    return []
-  }
-  const key = trimmed.toLowerCase()
-  if (key === "tabs") {
-    return listTabsOptionCandidates("")
-  }
-  if (key === "split") {
-    return listSplitOptionCandidates("")
-  }
-  return []
 }
 
 export function BmxtShell({
@@ -398,7 +374,7 @@ export function BmxtShell({
     }
 
     appendCommandToHistory(trimmed)
-    const continuationPrompt = continuationPromptFor(trimmed)
+    const continuationPrompt = continuationPromptForFirstTokenOnly(trimmed)
     setLine("")
     setCursorPos(0)
     setHistNavIndex(-1)
@@ -412,7 +388,7 @@ export function BmxtShell({
     if (continuationPrompt) {
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
-      const cands = secondCommandCandidatesForFirstToken(trimmed)
+      const cands = secondCommandCandidatesForFirstTokenOnly(trimmed)
       if (cands.length > 0) {
         setSubCmdPicker({ continuation: continuationPrompt, candidates: cands, hi: 0 })
       }
