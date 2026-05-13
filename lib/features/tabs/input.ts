@@ -1,5 +1,7 @@
 /** BMXt prompt parsing for `tabs` subcommands (picker line, move-URL Tab completion). */
 
+import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
+
 /** `group new` with no tab ids - opens interactive new-group picker. */
 const GROUP_NEW_INTERACTIVE_RE = /^\s*group\s+new\s*$/i
 
@@ -9,6 +11,8 @@ const TABS_LIST_RE =
   /^\s*tabs\s+-list(?:\s+-[uU])?\s*$/i
 
 const TABS_MOVE_URL_PREFIX_RE = /^\s*tabs\s+-moveurl\s*/i
+
+const TABS_OPTION_LEAD_RE = /^\s*tabs\s+/i
 
 /** `tabs -list` / optional `-u` - full line must match (no extra args). */
 export function parseTabsListPickerLine(trimmed: string): { showUrl: boolean } | null {
@@ -29,23 +33,7 @@ export function tabsOptionCompletionZone(
   line: string,
   cursor: number
 ): { optionStart: number; prefix: string; optionEnd: number } | null {
-  const m = /^\s*tabs\s+/.exec(line)
-  if (!m) {
-    return null
-  }
-  const optionStart = m.index + m[0].length
-  if (cursor < optionStart) {
-    return null
-  }
-  const optionEnd = optionStart + (line.slice(optionStart).match(/^[^\s]*/)?.[0].length ?? 0)
-  if (cursor > optionEnd) {
-    return null
-  }
-  const prefix = line.slice(optionStart, cursor)
-  if (/\s/.test(prefix)) {
-    return null
-  }
-  return { optionStart, prefix, optionEnd }
+  return optionTokenZoneAfterLead(line, cursor, TABS_OPTION_LEAD_RE)
 }
 
 export function listTabsOptionCandidates(prefix: string): string[] {

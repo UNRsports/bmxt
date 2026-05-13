@@ -1,8 +1,10 @@
 /** Tab picker: structured rows for interactive UI + same grouping as legacy tabs list. */
 
+import { displayTitle } from "../format/display-title"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
 
-const DISPLAY_TITLE_MAX = 96
+export { displayTitle }
+
 const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
 export type TabPickerRow =
@@ -17,14 +19,6 @@ export type TabPickerRow =
       url: string
       active: boolean
     }
-
-export function displayTitle(raw: string | undefined | null): string {
-  const t = (raw || "").trim().replace(/\s+/g, " ")
-  if (!t) {
-    return "(無題)"
-  }
-  return t.length > DISPLAY_TITLE_MAX ? `${t.slice(0, DISPLAY_TITLE_MAX)}…` : t
-}
 
 function groupKey(tab: chrome.tabs.Tab): number | "none" {
   const g = tab.groupId
