@@ -4,9 +4,9 @@
       "第二・第三コマンドの語彙を manifest の subcommands に集約し、codegen で command-subcommands.gen.ts と Rust の is_second_token を生成",
       "第一トークンのみ Enter 時の continuation と第二トークン Tab 補完を生成物に揃え、verify-manifest で各 head が cmd/*.rs にリテラルで存在するか検証",
       "README / .cursorrules に subcommands の追記手順（チェックリスト）を明記",
-      "`dom` コマンド（-select / -hide と -html|-react、CSS セレクタ列）で対象タブに一時的な表示フィルタを注入（再読み込みで解除）",
       "`grep` コマンド（-history / -bookmark / -page）でメモリ内検索。共有ロジックは lib/features/search、取得は grep-sources に分離",
-      "`dom -show -html|-react` で対象タブの DOM をターミナルに表示（HTML は outerHTML、-react は要素木＋検出時 react-internal マーカー）",
+      "`dom -list [--html|--react] [<pattern>]` で DOM を `grep -list` と同じピッカーに表示。第二コマンドは `-list` のみ（-show / -select / -hide はいったん廃止）。`--html` がデフォルト、`--react` も第三トークンのプルダウンで選択可能。pattern は部分一致の行フィルタ",
+      "picker 直結経路（`grep -list` / `dom -list`）の対象タブ解決を background `resolveTabArg(undefined)` と同じロジックに揃える共有ユーティリティ `page-dom/resolve-target-tab.ts` を追加。これまで `dom -list --html` で常に「no target tab」になっていた回帰を修正",
       "`grep` の第二トークンを `is_second_token` と同じ ASCII 折りたたみ＋不可視文字除去で正規化し、`-page` 等で日本語パターン時の WASM 不整合を防止",
       "`dispatch::try_url_line` の末尾判定をバイトスライスから `strip_suffix` に変更（日本語入力行で UTF-8 境界パニック→WASM unreachable になっていた）"
     ],
@@ -14,9 +14,9 @@
       "Second/third command tokens live in manifest `subcommands`; codegen emits `command-subcommands.gen.ts` and Rust `is_second_token`",
       "Lone-first-token continuation and second-token Tab completion read from generated code; `verify:manifest` checks each `head` appears as a literal in `cmd/*.rs`",
       "README and `.cursorrules` document the `subcommands` add checklist",
-      "`dom` command (`-select` / `-hide`, `-html` or `-react`, CSS selector list) injects a temporary view filter on the target tab (cleared on reload)",
       "`grep` command (`-history` / `-bookmark` / `-page`) searches in memory only; shared logic under `lib/features/search`, data adapters under `grep-sources`",
-      "`dom -show -html|-react` prints the target tab DOM to the terminal (`-html`: outerHTML; `-react`: element tree outline with optional react-internal markers)",
+      "`dom -list [--html|--react] [<pattern>]` opens the DOM in the same picker chrome as `grep -list`; the only second token is `-list` (the previous `-show` / `-select` / `-hide` are dropped for now). The flavor pull-down is `--html` (default) / `--react`, and `<pattern>` is a case-insensitive substring line filter.",
+      "New shared `page-dom/resolve-target-tab.ts` resolves the target tab for picker-direct dispatch (`grep -list` / `dom -list`) the same way as background `resolveTabArg(undefined)`; fixes a regression where `dom -list --html` always reported \"no target tab\"",
       "`grep` second token is normalized the same way as `is_second_token` (ASCII fold + strip invisible format chars) so `-page` with Japanese patterns cannot diverge and trap WASM",
       "`dispatch::try_url_line` suffix checks use `strip_suffix` instead of byte slicing (UTF-8 mid-char panic → WASM `unreachable` when the line contained Japanese)"
     ]

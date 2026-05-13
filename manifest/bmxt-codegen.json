@@ -19,22 +19,12 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -show (-html|-react) | dom -select | dom -hide …",
+      "usagePrimary": "dom -list [--html|--react] [<pattern>]",
       "subcommands": [
         {
-          "head": "-select",
-          "trailingTokens": ["-html", "-react"],
+          "head": "-list",
+          "trailingTokens": ["--html", "--react"],
           "tail": "rest"
-        },
-        {
-          "head": "-hide",
-          "trailingTokens": ["-html", "-react"],
-          "tail": "rest"
-        },
-        {
-          "head": "-show",
-          "trailingTokens": ["-html", "-react"],
-          "tail": "none"
         }
       ]
     },
@@ -150,24 +140,12 @@
       "tsHandlerExport": "applyCloseTabEffect"
     },
     {
-      "kind": "dom_apply_filters",
-      "rustVariant": "DomApplyFilters",
+      "kind": "dom_list",
+      "rustVariant": "DomList",
       "shape": "record",
-      "fields": {
-        "flavor": "string",
-        "op": "string",
-        "selectors": "string"
-      },
-      "tsHandlerFile": "dom-apply-filters",
-      "tsHandlerExport": "applyDomApplyFiltersEffect"
-    },
-    {
-      "kind": "dom_show",
-      "rustVariant": "DomShow",
-      "shape": "record",
-      "fields": { "flavor": "string" },
-      "tsHandlerFile": "dom-show",
-      "tsHandlerExport": "applyDomShowEffect"
+      "fields": { "flavor": "string", "pattern": "string" },
+      "tsHandlerFile": "dom-list",
+      "tsHandlerExport": "applyDomListEffect"
     },
     {
       "kind": "exit_pane",

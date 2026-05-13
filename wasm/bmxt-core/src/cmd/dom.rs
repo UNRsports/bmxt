@@ -1,26 +1,74 @@
-//! `dom` — visibility filters (`-select` / `-hide`) or **structure dump** (`-show`) on the target tab.
-//! EN: No browsing data is persisted by these commands; `-show` prints to the terminal session only.
-//! JA: 閲覧データの永続化は行いません。`-show` はターミナル表示のみです。
+//! `dom` — `-list` picker (DOM read-only browse).
+//! EN: No browsing data is persisted by this module; the picker prints to the terminal session only.
+//! JA: 本モジュールは閲覧データの永続化を行いません。picker はターミナル表示のみです。
 
+use crate::line_parse::strip_invisible_format_chars;
 use crate::meta::Cmd;
 use crate::model::{DispatchJson, Effect};
 
 pub const CMD: Cmd = Cmd {
     name: "dom",
     aliases: &[],
-    usage_primary: "dom -show (-html|-react) | dom -select | dom -hide …",
+    usage_primary: "dom -list [--html|--react] [<pattern>]",
 };
 
 fn usage_lines() -> Vec<String> {
     vec![
-        "usage: dom -show    -html|-react   — print DOM structure of the target tab to the terminal".to_string(),
-        "       dom -select  -html|-react <css-selector> [<selector> …]".to_string(),
-        "       dom -hide    -html|-react <css-selector> [<selector> …]".to_string(),
-        "EN: -select keeps only matched nodes visible; -hide hides matched nodes (reload to clear).".to_string(),
-        "JA: -select / -hide は表示フィルタ（再読み込みで解除）。-show は構造の表示のみ。".to_string(),
-        "EN: -html prints serialized documentElement; -react prints an element-tree outline (Fiber names when detectable).".to_string(),
-        "JA: -html は document の HTML。-react は要素木の概要（検出できれば Fiber 系キーを表示）。".to_string(),
+        "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)".to_string(),
+        "EN: -list opens a picker (same chrome as grep -list); flavor pull-down: --html (default) | --react.".to_string(),
+        "JA: -list は picker（grep -list と同じクロム）。flavor プルダウン: --html (default) | --react。".to_string(),
+        "EN: <pattern> is a case-insensitive substring filter on the output lines (no regex).".to_string(),
+        "JA: <pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。".to_string(),
     ]
+}
+
+/// EN: Same ASCII fold as `is_second_token` in generated `command_subcommands.rs`.
+/// JA: 生成コードの `is_second_token` と同じ ASCII 大小折りたたみ。
+fn normalize_dom_token(tok: &str) -> String {
+    strip_invisible_format_chars(tok.trim()).to_ascii_lowercase()
+}
+
+/// Trim outer `"…"` / `'…'` once so pasted quoted pattern still matches DOM lines.
+fn normalize_dom_pattern(raw: String) -> String {
+    let t = strip_invisible_format_chars(raw.trim());
+    let chs: Vec<char> = t.chars().collect();
+    if chs.len() >= 2 {
+        let a = chs[0];
+        let b = chs[chs.len() - 1];
+        if (a == '"' && b == '"') || (a == '\'' && b == '\'') {
+            return strip_invisible_format_chars(
+                &chs[1..chs.len() - 1].iter().collect::<String>().trim(),
+            )
+            .to_string();
+        }
+    }
+    t.to_string()
+}
+
+/// `dom -list` — optional flavor token then pattern (`--html` default).
+fn run_list(args: &[String]) -> DispatchJson {
+    if args.len() == 2 {
+        return DispatchJson::effects(vec![Effect::DomList {
+            flavor: "--html".to_string(),
+            pattern: String::new(),
+        }]);
+    }
+    let tok2 = normalize_dom_token(args[2].as_str());
+    let (flavor, pattern_start_idx): (&str, usize) = match tok2.as_str() {
+        "--html" | "--react" => (tok2.as_str(), 3),
+        _ => ("--html", 2),
+    };
+    let pattern_raw = args
+        .iter()
+        .skip(pattern_start_idx)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let pattern = normalize_dom_pattern(pattern_raw);
+    DispatchJson::effects(vec![Effect::DomList {
+        flavor: flavor.to_string(),
+        pattern,
+    }])
 }
 
 pub fn run(args: &[String]) -> DispatchJson {
@@ -35,59 +83,9 @@ pub fn run(args: &[String]) -> DispatchJson {
         lines.extend(usage_lines());
         return DispatchJson::lines(lines);
     }
-    let first_lc = first.to_ascii_lowercase();
+    let first_lc = normalize_dom_token(first);
     match first_lc.as_str() {
-        "-show" => {
-            if args.len() != 3 {
-                let mut lines = vec!["error: dom -show requires exactly: dom -show -html   or   dom -show -react".to_string()];
-                lines.extend(usage_lines());
-                return DispatchJson::lines(lines);
-            }
-            let flavor_tok = args[2].as_str();
-            let flavor_l = flavor_tok.to_ascii_lowercase();
-            let flavor = match flavor_l.as_str() {
-                "-html" | "-react" => flavor_l,
-                _ => {
-                    let mut lines = vec!["error: dom -show needs third token -html or -react".to_string()];
-                    lines.extend(usage_lines());
-                    return DispatchJson::lines(lines);
-                }
-            };
-            DispatchJson::effects(vec![Effect::DomShow { flavor }])
-        }
-        "-select" | "-hide" => {
-            let flavor_tok = args.get(2).map(|s| s.as_str()).unwrap_or("");
-            let flavor_l = flavor_tok.to_ascii_lowercase();
-            let flavor = match flavor_l.as_str() {
-                "-html" | "-react" => flavor_l,
-                _ => {
-                    let mut lines = vec!["error: dom requires -html or -react after -select / -hide".to_string()];
-                    lines.extend(usage_lines());
-                    return DispatchJson::lines(lines);
-                }
-            };
-            let selectors: Vec<String> = args.iter().skip(3).cloned().collect();
-            if selectors.is_empty() {
-                let mut lines = vec!["error: dom needs at least one CSS selector after the mode token".to_string()];
-                lines.extend(usage_lines());
-                return DispatchJson::lines(lines);
-            }
-            let op = match first_lc.as_str() {
-                "-select" => "select",
-                "-hide" => "hide",
-                _ => {
-                    let mut lines = vec![format!("error: unknown dom option (internal): {first}")];
-                    lines.extend(usage_lines());
-                    return DispatchJson::lines(lines);
-                }
-            };
-            let selectors_json = serde_json::to_string(&selectors).unwrap_or_else(|_| "[]".to_string());
-            DispatchJson::effects(vec![Effect::DomApplyFilters {
-                op: op.to_string(),
-                flavor,
-                selectors: selectors_json,
-            }])
-        }
+        "-list" => run_list(args),
         _ => {
             let mut lines = vec![format!("error: unknown dom option (internal): {first}")];
             lines.extend(usage_lines());
@@ -102,9 +100,69 @@ mod tests {
     use crate::model::Effect;
 
     #[test]
-    fn dom_show_emits_dom_show_effect() {
-        let out = run(&["dom".into(), "-show".into(), "-html".into()]);
+    fn dom_bare_prints_usage() {
+        let out = run(&["dom".into()]);
+        assert!(out.effects.is_none());
+        let lines = out.lines.expect("lines");
+        assert!(lines[0].starts_with("dom:"));
+    }
+
+    #[test]
+    fn dom_list_defaults_to_html_flavor() {
+        let out = run(&["dom".into(), "-list".into()]);
         let ef = out.effects.expect("effects");
-        assert!(matches!(&ef[0], Effect::DomShow { flavor } if flavor == "-html"));
+        assert_eq!(ef.len(), 1);
+        assert!(matches!(
+            &ef[0],
+            Effect::DomList { flavor, pattern } if flavor == "--html" && pattern.is_empty()
+        ));
+    }
+
+    #[test]
+    fn dom_list_with_react_flavor_and_pattern() {
+        let out = run(&[
+            "dom".into(),
+            "-list".into(),
+            "--React".into(),
+            "header".into(),
+        ]);
+        let ef = out.effects.expect("effects");
+        assert!(matches!(
+            &ef[0],
+            Effect::DomList { flavor, pattern } if flavor == "--react" && pattern == "header"
+        ));
+    }
+
+    #[test]
+    fn dom_list_pattern_without_flavor_defaults_to_html() {
+        let out = run(&["dom".into(), "-list".into(), "main-content".into()]);
+        let ef = out.effects.expect("effects");
+        assert!(matches!(
+            &ef[0],
+            Effect::DomList { flavor, pattern } if flavor == "--html" && pattern == "main-content"
+        ));
+    }
+
+    #[test]
+    fn dom_list_strips_outer_double_quotes_from_pattern() {
+        let out = run(&[
+            "dom".into(),
+            "-list".into(),
+            "--html".into(),
+            "\"app-root\"".into(),
+        ]);
+        let ef = out.effects.expect("effects");
+        assert!(matches!(
+            &ef[0],
+            Effect::DomList { pattern, .. } if pattern == "app-root"
+        ));
+    }
+
+    #[test]
+    fn dom_unknown_second_token_is_rejected() {
+        let out = run(&["dom".into(), "-show".into()]);
+        assert!(out.effects.is_none());
+        let lines = out.lines.expect("lines");
+        assert!(lines[0].starts_with("error: unknown dom option"));
     }
 }

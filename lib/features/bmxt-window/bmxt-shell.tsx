@@ -23,6 +23,13 @@ import {
   parseGrepListPickerLine,
   type GrepListPickerState
 } from "../grep/grep-list-picker-input"
+import { DomListPickerOverlay } from "../dom/dom-list-picker-overlay"
+import {
+  domListFlavorCompletionZone,
+  listDomListFlavorCandidates,
+  parseDomListPickerLine,
+  type DomListPickerState
+} from "../dom/dom-list-picker-input"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch, wordBounds } from "./text-utils"
 import {
@@ -74,6 +81,8 @@ type Props = {
   setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
   grepListPicker: GrepListPickerState | null
   setGrepListPicker: (forSessionId: string, v: GrepListPickerState | null) => void
+  domListPicker: DomListPickerState | null
+  setDomListPicker: (forSessionId: string, v: DomListPickerState | null) => void
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
@@ -91,11 +100,13 @@ export function BmxtShell({
   setTabPicker,
   grepListPicker,
   setGrepListPicker,
+  domListPicker,
+  setDomListPicker,
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
   const tabPickerOpen = tabPicker !== null
-  const overlayOpen = tabPickerOpen || grepListPicker !== null
+  const overlayOpen = tabPickerOpen || grepListPicker !== null || domListPicker !== null
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -428,6 +439,44 @@ export function BmxtShell({
       return
     }
 
+    const domListLine = parseDomListPickerLine(trimmed)
+    if (domListLine !== null) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      setSubCmdPicker(null)
+      void (async () => {
+        try {
+          await ensureBmxtCore()
+          const bundle = runDispatch(domListLine)
+          if (bundle.ty === "lines") {
+            await appendLogLines([`> ${trimmed}`, ...(bundle.lines ?? [])])
+            return
+          }
+          const ctx: DispatchChromeContext = {
+            clearLog: async () => {},
+            exitPane: async () => [],
+            listWindows: async () => [],
+            focusInfo: async () => [],
+            resolveTabArg: async () => undefined,
+            commandSessionId: sessionId
+          }
+          const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+          await appendLogLines([`> ${trimmed}`, "dom -list — picker (Esc)"])
+          setDomListPicker(sessionId, { lines: linesOut })
+        } catch (e) {
+          await appendLogLines([
+            `> ${trimmed}`,
+            `error: ${e instanceof Error ? e.message : String(e)}`
+          ])
+        }
+      })()
+      focusPrompt()
+      return
+    }
+
     appendCommandToHistory(trimmed)
     const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
     setLine("")
@@ -459,7 +508,8 @@ export function BmxtShell({
     mode,
     sessionId,
     setTabPicker,
-    setGrepListPicker
+    setGrepListPicker,
+    setDomListPicker
   ])
 
   const applySubCmdPickIndex = useCallback(
@@ -734,6 +784,27 @@ export function BmxtShell({
           setHistNavIndex(-1)
           setLine(newLine)
           setCursorPos(glScopeZone.optionStart + rep.length + suffix.length)
+          return
+        }
+        const dlFlavorZone = domListFlavorCompletionZone(curLn, pos)
+        if (dlFlavorZone) {
+          e.preventDefault()
+          const cands = listDomListFlavorCandidates(dlFlavorZone.prefix)
+          if (cands.length === 0) {
+            return
+          }
+          const idx = tabPressSeqRef.current % cands.length
+          tabPressSeqRef.current += 1
+          const rep = cands[idx]!
+          const suffix = dlFlavorZone.optionEnd === curLn.length ? " " : ""
+          const newLine =
+            curLn.slice(0, dlFlavorZone.optionStart) +
+            rep +
+            suffix +
+            curLn.slice(dlFlavorZone.optionEnd)
+          setHistNavIndex(-1)
+          setLine(newLine)
+          setCursorPos(dlFlavorZone.optionStart + rep.length + suffix.length)
           return
         }
         const optionZone = tabsOptionCompletionZone(curLn, pos)
@@ -1049,6 +1120,28 @@ export function BmxtShell({
           <GrepListPickerOverlay
             lines={grepListPicker.lines}
             onExit={() => setGrepListPicker(sessionId, null)}
+          />
+        </div>
+      ) : null}
+      {domListPicker ? (
+        <div
+          className="bmxt-dom-list-picker-host"
+          style={{
+            position: "absolute",
+            inset: 6,
+            zIndex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            overflow: "hidden",
+            background: "#0d1117",
+            borderRadius: 8,
+            boxShadow:
+              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
+          }}>
+          <DomListPickerOverlay
+            lines={domListPicker.lines}
+            onExit={() => setDomListPicker(sessionId, null)}
           />
         </div>
       ) : null}

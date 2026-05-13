@@ -8,7 +8,7 @@ pub fn is_second_token(canonical_cmd: &str, token: &str) -> bool {
         "close" => false,
         "dom" => {
             let lower = token.to_ascii_lowercase();
-            matches!(lower.as_str(), "-select" | "-hide" | "-show")
+            matches!(lower.as_str(), "-list")
         },
         "exit" => false,
         "grep" => {

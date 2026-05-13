@@ -1,6 +1,7 @@
 import { buildTabPickerRows } from "../tabs"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import { type GrepListPickerState } from "../grep/grep-list-picker-input"
+import { type DomListPickerState } from "../dom/dom-list-picker-input"
 import { type TabPickerState, BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
 import type { SplitNode } from "./split-layout/types"
@@ -41,6 +42,8 @@ type SplitTreeProps = {
   setTabPickerForSession: (forSessionId: string, next: TabPickerState | null) => void
   grepListBySession: Record<string, GrepListPickerState | null>
   setGrepListPickerForSession: (forSessionId: string, next: GrepListPickerState | null) => void
+  domListBySession: Record<string, DomListPickerState | null>
+  setDomListPickerForSession: (forSessionId: string, next: DomListPickerState | null) => void
   refreshTabPickerRows: () => Promise<void>
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
@@ -57,6 +60,8 @@ function SplitTreeView({
   setTabPickerForSession,
   grepListBySession,
   setGrepListPickerForSession,
+  domListBySession,
+  setDomListPickerForSession,
   refreshTabPickerRows,
   postUpgradeBanner,
   appendCommandToHistory,
@@ -66,6 +71,7 @@ function SplitTreeView({
     const lines = logsById[node.id] ?? []
     const tabPicker = pickerBySession[node.id] ?? null
     const grepListPicker = grepListBySession[node.id] ?? null
+    const domListPicker = domListBySession[node.id] ?? null
     return (
       <div
         data-bmxt-session-id={node.id}
@@ -95,6 +101,8 @@ function SplitTreeView({
           setTabPicker={setTabPickerForSession}
           grepListPicker={grepListPicker}
           setGrepListPicker={setGrepListPickerForSession}
+          domListPicker={domListPicker}
+          setDomListPicker={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
         />
@@ -132,6 +140,8 @@ function SplitTreeView({
           setTabPickerForSession={setTabPickerForSession}
           grepListBySession={grepListBySession}
           setGrepListPickerForSession={setGrepListPickerForSession}
+          domListBySession={domListBySession}
+          setDomListPickerForSession={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
@@ -156,6 +166,8 @@ function SplitTreeView({
           setTabPickerForSession={setTabPickerForSession}
           grepListBySession={grepListBySession}
           setGrepListPickerForSession={setGrepListPickerForSession}
+          domListBySession={domListBySession}
+          setDomListPickerForSession={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
@@ -176,6 +188,9 @@ export function BmxtTerminal() {
   >({})
   const [grepListBySession, setGrepListBySession] = useState<
     Record<string, GrepListPickerState | null>
+  >({})
+  const [domListBySession, setDomListBySession] = useState<
+    Record<string, DomListPickerState | null>
   >({})
   const pickerBySessionRef = useRef(pickerBySession)
   pickerBySessionRef.current = pickerBySession
@@ -201,6 +216,17 @@ export function BmxtTerminal() {
     setGrepListBySession((prev) => {
       let changed = false
       const next: Record<string, GrepListPickerState | null> = { ...prev }
+      for (const k of Object.keys(next)) {
+        if (!order.includes(k)) {
+          delete next[k]
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+    setDomListBySession((prev) => {
+      let changed = false
+      const next: Record<string, DomListPickerState | null> = { ...prev }
       for (const k of Object.keys(next)) {
         if (!order.includes(k)) {
           delete next[k]
@@ -238,6 +264,22 @@ export function BmxtTerminal() {
   const setGrepListPickerForSession = useCallback(
     (forSessionId: string, next: GrepListPickerState | null) => {
       setGrepListBySession((prev) => {
+        if (next === null) {
+          if (!(forSessionId in prev)) {
+            return prev
+          }
+          const { [forSessionId]: _, ...rest } = prev
+          return rest
+        }
+        return { ...prev, [forSessionId]: next }
+      })
+    },
+    []
+  )
+
+  const setDomListPickerForSession = useCallback(
+    (forSessionId: string, next: DomListPickerState | null) => {
+      setDomListBySession((prev) => {
         if (next === null) {
           if (!(forSessionId in prev)) {
             return prev
@@ -292,8 +334,9 @@ export function BmxtTerminal() {
   const anyPickerOpen = useMemo(
     () =>
       Object.values(pickerBySession).some((v) => v != null) ||
-      Object.values(grepListBySession).some((v) => v != null),
-    [pickerBySession, grepListBySession]
+      Object.values(grepListBySession).some((v) => v != null) ||
+      Object.values(domListBySession).some((v) => v != null),
+    [pickerBySession, grepListBySession, domListBySession]
   )
   useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
 
@@ -384,6 +427,8 @@ export function BmxtTerminal() {
           setTabPickerForSession={setTabPickerForSession}
           grepListBySession={grepListBySession}
           setGrepListPickerForSession={setGrepListPickerForSession}
+          domListBySession={domListBySession}
+          setDomListPickerForSession={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}

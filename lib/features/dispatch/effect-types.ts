@@ -4,8 +4,7 @@
  */
 
 export type ChromeEffect =
-  | { flavor: string; kind: "dom_apply_filters"; op: string; selectors: string }
-  | { flavor: string; kind: "dom_show" }
+  | { flavor: string; kind: "dom_list"; pattern: string }
   | { kind: "clear_log" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }

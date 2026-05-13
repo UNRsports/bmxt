@@ -10,13 +10,9 @@ pub enum Effect {
     CloseTab {
         tab_id: i32,
     },
-    DomApplyFilters {
+    DomList {
         flavor: String,
-        op: String,
-        selectors: String,
-    },
-    DomShow {
-        flavor: String,
+        pattern: String,
     },
     ExitPane,
     GrepBookmark {

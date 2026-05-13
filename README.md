@@ -241,6 +241,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -list [-u]` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
+| `dom -list [--html\|--react] [<pattern>]` | Open DOM in the same picker chrome as `grep -list` (flavor pull-down: `--html` default / `--react`; optional substring filter) |
 | `close` / `c <tabId>` | Close tab |
 | `group new <tabId> …` | Create group |
 
@@ -262,6 +263,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -list [-u]` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
+| `dom -list [--html\|--react] [<pattern>]` | `grep -list` と同じピッカーで DOM を表示。flavor プルダウン: `--html` (default) / `--react`、任意の部分一致フィルタ |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
 
