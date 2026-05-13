@@ -1,11 +1,10 @@
 /** BMXt prompt parsing for `tabs` subcommands (picker line, move-URL Tab completion). */
 
+import { listSecondTokenCandidatesByCommand } from "../builtin-commands/command-subcommands.gen"
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
 
 /** `group new` with no tab ids - opens interactive new-group picker. */
 const GROUP_NEW_INTERACTIVE_RE = /^\s*group\s+new\s*$/i
-
-export const TABS_OPTION_CANDIDATES = ["-list", "-moveurl", "-nowurl"] as const
 
 const TABS_LIST_RE =
   /^\s*tabs\s+-list(?:\s+-[uU])?\s*$/i
@@ -37,8 +36,7 @@ export function tabsOptionCompletionZone(
 }
 
 export function listTabsOptionCandidates(prefix: string): string[] {
-  const p = prefix.toLowerCase()
-  return TABS_OPTION_CANDIDATES.filter((opt) => opt.startsWith(p))
+  return listSecondTokenCandidatesByCommand("tabs", prefix)
 }
 
 function urlTokenEnd(line: string, urlStart: number): number {

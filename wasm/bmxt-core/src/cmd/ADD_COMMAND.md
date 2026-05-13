@@ -1,6 +1,13 @@
 # Adding a built-in shell command
 
-真実は **`manifest/bmxt-codegen.json`**。**`npm run codegen`** が `registry/table.rs`・補完フォールバック・Effect 型・`apply-dispatch.gen.ts` を再生成する。
+真実は **`manifest/bmxt-codegen.json`**。**`npm run codegen`** が `registry/table.rs`・`generated/command_subcommands.rs`・補完フォールバック・**`command-subcommands.gen.ts`**・Effect 型・`apply-dispatch.gen.ts` を再生成する。
+
+## `commands[].subcommands`（第二・第三トークン）
+
+- 各コマンド行に **`subcommands`** 配列を必ず含める（第二トークン族が無い場合は **`[]`**）。
+- 要素は **`head`**（`-` で始まる正式第二トークン）、任意 **`trailingTokens`**（その **`head`** の直後に続けられる固定第三トークン）、任意 **`tail`**: `none` | `rest_http_url` | `rest`。
+- **`npm run verify:manifest`** は各 **`head`** が **`cmd/{module}.rs`** 内に同じ文字列リテラルで現れることを検査する（dispatch 実装と manifest のズレ防止）。
+- 雛形: **`manifest/templates/command-with-subcommands.example.json`** を参照。
 
 ## クイック（スキャフォールド）
 
@@ -13,7 +20,7 @@ npm run new:command -- <rust_module> <canonical_name> [aliases...]
 
 ## 手動
 
-1. **`manifest/bmxt-codegen.json`** の **`commands`** に `{ module, canonicalName, aliases, usagePrimary }` を追加（**`module`** は `cmd/*.rs` のファイル名と一致させる）。
+1. **`manifest/bmxt-codegen.json`** の **`commands`** に `{ module, canonicalName, aliases, usagePrimary, subcommands }` を追加（**`module`** は `cmd/*.rs` のファイル名と一致させる）。**`subcommands`** は `[]` か `{ head, trailingTokens?, tail? }[]`。
 2. **`wasm/bmxt-core/src/cmd/<module>.rs`** を追加。`pub const CMD` の `name` / `aliases` / `usage_primary` を manifest と一致させる。
 3. **`cmd/mod.rs`** に `pub mod <module>;`。
 4. **`npm run codegen`** — **`registry/table.rs`** が生成され `command_registry!` が埋まる。

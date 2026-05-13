@@ -5,49 +5,80 @@
       "module": "clear",
       "canonicalName": "clear",
       "aliases": [],
-      "usagePrimary": "clear"
+      "usagePrimary": "clear",
+      "subcommands": []
     },
     {
       "module": "close",
       "canonicalName": "close",
       "aliases": ["c"],
-      "usagePrimary": "close <tabId>"
+      "usagePrimary": "close <tabId>",
+      "subcommands": []
     },
     {
       "module": "exit",
       "canonicalName": "exit",
       "aliases": [],
-      "usagePrimary": "exit"
+      "usagePrimary": "exit",
+      "subcommands": []
     },
     {
       "module": "group",
       "canonicalName": "group",
       "aliases": [],
-      "usagePrimary": "group new"
+      "usagePrimary": "group new",
+      "subcommands": []
     },
     {
       "module": "help_cmd",
       "canonicalName": "help",
       "aliases": ["?"],
-      "usagePrimary": "help"
+      "usagePrimary": "help",
+      "subcommands": []
     },
     {
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u]"
+      "usagePrimary": "tabs -list [-u]",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["-u"],
+          "tail": "none"
+        },
+        {
+          "head": "-moveurl",
+          "tail": "rest_http_url"
+        },
+        {
+          "head": "-nowurl",
+          "tail": "none"
+        }
+      ]
     },
     {
       "module": "notes",
       "canonicalName": "notes",
       "aliases": [],
-      "usagePrimary": "notes"
+      "usagePrimary": "notes",
+      "subcommands": []
     },
     {
       "module": "split",
       "canonicalName": "split",
       "aliases": [],
-      "usagePrimary": "split -col | split -row"
+      "usagePrimary": "split -col | split -row",
+      "subcommands": [
+        {
+          "head": "-col",
+          "tail": "none"
+        },
+        {
+          "head": "-row",
+          "tail": "none"
+        }
+      ]
     }
   ],
   "effects": [

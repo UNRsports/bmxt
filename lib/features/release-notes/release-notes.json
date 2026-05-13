@@ -1,10 +1,14 @@
 {
-  "0.1.1": {
+  "0.1.5": {
     "ja": [
-      "splitコマンドを追加し、exitで増減可能"
+      "第二・第三コマンドの語彙を manifest の subcommands に集約し、codegen で command-subcommands.gen.ts と Rust の is_second_token を生成",
+      "第一トークンのみ Enter 時の continuation と第二トークン Tab 補完を生成物に揃え、verify-manifest で各 head が cmd/*.rs にリテラルで存在するか検証",
+      "README / .cursorrules に subcommands の追記手順（チェックリスト）を明記"
     ],
     "en": [
-      "Added the split command; add panes with split and remove them with exit (closes the window when the last pane"
+      "Second/third command tokens live in manifest `subcommands`; codegen emits `command-subcommands.gen.ts` and Rust `is_second_token`",
+      "Lone-first-token continuation and second-token Tab completion read from generated code; `verify:manifest` checks each `head` appears as a literal in `cmd/*.rs`",
+      "README and `.cursorrules` document the `subcommands` add checklist"
     ]
   }
 }

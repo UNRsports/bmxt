@@ -1,7 +1,7 @@
 import {
-  continuationPromptForFirstTokenOnly,
-  secondCommandCandidatesForFirstTokenOnly
-} from "../command-line/first-command-continuation"
+  continuationPromptAfterLoneFirstToken,
+  secondTokenCandidatesAfterLoneFirstToken
+} from "../builtin-commands/command-subcommands.gen"
 import {
   buildTabPickerRows,
   listTabsOptionCandidates,
@@ -374,7 +374,7 @@ export function BmxtShell({
     }
 
     appendCommandToHistory(trimmed)
-    const continuationPrompt = continuationPromptForFirstTokenOnly(trimmed)
+    const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
     setLine("")
     setCursorPos(0)
     setHistNavIndex(-1)
@@ -388,7 +388,7 @@ export function BmxtShell({
     if (continuationPrompt) {
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
-      const cands = secondCommandCandidatesForFirstTokenOnly(trimmed)
+      const cands = secondTokenCandidatesAfterLoneFirstToken(trimmed)
       if (cands.length > 0) {
         setSubCmdPicker({ continuation: continuationPrompt, candidates: cands, hi: 0 })
       }

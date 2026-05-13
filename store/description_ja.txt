@@ -30,6 +30,9 @@ https://buymeacoffee.com/unrsports
 などなど、少しでも「今までとは違う感触でブラウザを操作する」という未来にご興味があれば、ご支援いただけると嬉しいです。
 
 ◆バージョン履歴
+0.1.5：
+・第二・第三トークンを manifest の `subcommands` に集約し、codegen で補完・continuation・Rust 検証を同期
+
 0.1.1：
 ・splitコマンドを追加し、exitで増減可能
 ・splitで複数ペインのとき、Ctrl+矢印でペイン間を移動可能

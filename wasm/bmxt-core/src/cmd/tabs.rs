@@ -32,21 +32,19 @@ fn norm_tabs_flag(arg: Option<&String>) -> Option<char> {
 }
 
 pub fn run(args: &[String]) -> DispatchJson {
-    let sub = norm_tabs_flag(args.get(1));
-    if sub.is_none() {
-        if args.get(1).is_none() {
-            let mut lines = vec!["tabs: available options".to_string()];
-            lines.extend(tabs_usage_lines());
-            return DispatchJson::lines(lines);
-        }
-        let mut lines = vec![format!(
-            "error: unknown tabs option: {}",
-            args.get(1).map(|s| s.as_str()).unwrap_or("")
-        )];
+    if args.get(1).is_none() {
+        let mut lines = vec!["tabs: available options".to_string()];
         lines.extend(tabs_usage_lines());
         return DispatchJson::lines(lines);
     }
-    match sub.unwrap() {
+    let first = args[1].as_str();
+    if !crate::generated::command_subcommands::is_second_token("tabs", first) {
+        let mut lines = vec![format!("error: unknown tabs option: {first}")];
+        lines.extend(tabs_usage_lines());
+        return DispatchJson::lines(lines);
+    }
+    let sub = norm_tabs_flag(args.get(1)).expect("manifest subcommands must match cmd/tabs.rs norm_tabs_flag");
+    match sub {
         'l' => {
             if args.len() > 3 || (args.len() == 3 && args[2].to_lowercase() != "-u") {
                 let mut lines = vec!["error: invalid tabs -list usage".to_string()];

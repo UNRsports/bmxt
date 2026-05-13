@@ -1,8 +1,7 @@
 /** BMXt プロンプト上の `split` サブオプション Tab 補完。 */
 
+import { listSecondTokenCandidatesByCommand } from "../builtin-commands/command-subcommands.gen"
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
-
-export const SPLIT_OPTION_CANDIDATES = ["-col", "-row"] as const
 
 const SPLIT_OPTION_LEAD_RE = /^\s*split\s+/i
 
@@ -17,6 +16,5 @@ export function splitOptionCompletionZone(
 }
 
 export function listSplitOptionCandidates(prefix: string): string[] {
-  const p = prefix.toLowerCase()
-  return SPLIT_OPTION_CANDIDATES.filter((opt) => opt.startsWith(p))
+  return listSecondTokenCandidatesByCommand("split", prefix)
 }

@@ -342,7 +342,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### English
 
-**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`npm run codegen`** (also run at the start of **`npm run build:wasm`**) regenerates **`registry/table.rs`**, Rust **`Effect`** (`generated/effect_enum.rs`), **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, and **`completion-fallback.ts`**. Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`dispatchFull`** returns terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion **names** come from **`completionCandidatesJson()`** in WASM; if WASM fails to load, the **`completion-fallback.ts`** list (from the same manifest) is used.
+**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`npm run codegen`** (also run at the start of **`npm run build:wasm`**) regenerates **`registry/table.rs`**, Rust **`Effect`** (`generated/effect_enum.rs`), **`generated/command_subcommands.rs`** (second-token vocabulary + `is_second_token`), **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, **`completion-fallback.ts`**, and **`command-subcommands.gen.ts`** (TS completion + continuation helpers). Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`dispatchFull`** returns terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion **names** come from **`completionCandidatesJson()`** in WASM; if WASM fails to load, the **`completion-fallback.ts`** list (from the same manifest) is used.
 
 The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer events/state; after changing **`wasm/bmxt-core/src/features/tabs_picker/model.rs`**, rebuild **`assets/wasm/bmxt-core`** with **`npm run build:wasm`** (see **Tab picker — implementation** under **`tabs`**). The TS layer includes a narrow fallback for **`moveHi` / `moveDest`** when WASM returns an unchanged state.
 
@@ -352,7 +352,7 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 **Main directories:**
 
-- **`manifest/bmxt-codegen.json`** — single source for command registry + Effect schema + TS handler wiring (see **`npm run codegen`**)
+- **`manifest/bmxt-codegen.json`** — single source for command registry + **`commands[].subcommands`** (second/third fixed tokens, tail kinds) + Effect schema + TS handler wiring (see **`npm run codegen`**)
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, tab picker launch)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; **`registry/table.rs`** is **generated**)
@@ -365,13 +365,13 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 ### 日本語
 
-**一覧の真実**は **`manifest/bmxt-codegen.json`**です。**`npm run codegen`**（**`build:wasm`** の先頭でも実行）で **`registry/table.rs`**・Rust **`Effect`**（**`generated/effect_enum.rs`**）・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`** を再生成します。個別の副作用実装は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果を **`handlers/effects`** に振り分けます。Tab 補完は WASM の **`completionCandidatesJson`**、WASM 未ロード時は manifest 由来の **`completion-fallback.ts`**。
+**一覧の真実**は **`manifest/bmxt-codegen.json`**です。**`npm run codegen`**（**`build:wasm`** の先頭でも実行）で **`registry/table.rs`**・Rust **`Effect`**（**`generated/effect_enum.rs`**）・**`generated/command_subcommands.rs`**・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`**・**`command-subcommands.gen.ts`** を再生成します。個別の副作用実装は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果を **`handlers/effects`** に振り分けます。Tab 補完は WASM の **`completionCandidatesJson`**、WASM 未ロード時は manifest 由来の **`completion-fallback.ts`**。
 
 タブピッカーの **`tabsPickerReduce`** はリデューサのイベント／状態を **camelCase の JSON** でやり取りします。**`wasm/bmxt-core/src/features/tabs_picker/model.rs`** を変えたら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再ビルドしてください（詳細は **`tabs`** の **タブピッカー — 実装**）。**`moveHi` / `moveDest`** については、WASM が入力と同じ状態を返した場合に限り TypeScript 側で狭いフォールバックをかけています。
 
 **例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-terminal.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**（タブピッカー）、**対話的な `group new`**（タブ ID なし）。それ以外のサブコマンドと一般コマンドはバックグラウンドで WASM dispatch します。
 
-- **`manifest/bmxt-codegen.json`** — コマンド一覧・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
+- **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**（第二／第三固定トークン・`tail` 種別）・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI（ログ・プロンプト・IME・タブピッカー起動など）
 - **`lib/features/extension-storage/`** — `chrome.storage.local` のキー名とログ／履歴の上限定数
 - **`wasm/bmxt-core/src/cmd/`** — 組み込みコマンドごとに `CMD` + `run`（**`registry/table.rs`** は生成）  
@@ -410,9 +410,9 @@ Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**. For a consol
 
 #### English
 
-- **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Use the shared **continuation** mechanism for (3).
+- **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Continuation and second-token Tab lists come from generated **`command-subcommands.gen.ts`** (from manifest **`subcommands`**).
 
-- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`wasm/bmxt-core/src/registry/table.rs`**, files under **`wasm/bmxt-core/src/generated/`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**. Regenerate them with **`npm run codegen`** (also runs at the start of **`npm run build:wasm`**).
+- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`wasm/bmxt-core/src/registry/table.rs`**, files under **`wasm/bmxt-core/src/generated/`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**, **`lib/features/builtin-commands/command-subcommands.gen.ts`**. Regenerate them with **`npm run codegen`** (also runs at the start of **`npm run build:wasm`**).
 - **Recommended:** `npm run new:command -- <rust_module> <canonical_name> [aliases...]` — creates **`wasm/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`** in the manifest and **`cmd/mod.rs`**, then runs **codegen**. Replace the stub in **`run`** and align **`usagePrimary`** (manifest) with **`usage_primary`** (Rust) if the usage line should differ from the canonical name.
 - **Manual path:** Add a row under **`commands[]`** in the manifest, add **`cmd/<module>.rs`**, add **`pub mod <module>;`** in **`cmd/mod.rs`**, then **`npm run codegen`**.
 - **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`npm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return **`Effect::…`** from **`run`** via **`DispatchJson::effects`** as needed.
@@ -420,19 +420,47 @@ Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**. For a consol
 
 Field-level detail (`effects[]` shapes, scaffolder behaviour) lives in **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
 
+#### Manifest `commands[].subcommands` (second / third tokens) / `subcommands`（第二・第三トークン）
+
+Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics and argument parsing remain in **`cmd/<module>.rs`**; keep literals in sync—**`npm run verify:manifest`** checks each `head` appears in the Rust file).
+
+**`npm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + lone-first-token continuation) and **`wasm/bmxt-core/src/generated/command_subcommands.rs`** (`is_second_token`). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
+
+##### How to add second/third tokens (checklist)
+
+1. Edit **`manifest/bmxt-codegen.json`**: set **`subcommands`** to **`[]`** or a list of **`{ head, trailingTokens?, tail? }`** (see **`manifest/templates/command-with-subcommands.example.json`**).
+2. Run **`npm run codegen`** (regenerates **`command-subcommands.gen.ts`** and **`generated/command_subcommands.rs`**).
+3. In **`wasm/bmxt-core/src/cmd/<module>.rs`**, implement **`run`** and reference **each `head` as the same string literal** as in the manifest (required for **`npm run verify:manifest`**).
+4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
+5. Run **`npm run verify:manifest`**, **`npm run check:generated`**, **`cargo test`** (under **`wasm/bmxt-core`**), **`npx tsc --noEmit`**, then **`npm run build:wasm`** as needed.
+
 **Hand-written browser logic (`handlers/effects/*.ts`) vs builds:** Edits there do **not** conflict with **`cargo` / `wasm-pack`** (different outputs) or with **`npm run codegen`**—those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports; otherwise **`tsc`** or runtime behaviour will drift. This is a **consistency** requirement, not a file-lock conflict.
 
 #### 日本語
 
-- **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model)** と **`.cursorrules`** に従う（第一→第二の順、第一・第二に短縮別名を設けない、第二必須時は **Enter** で案内／プレースホルダ表示のあと **`第一コマンド `** へ復帰）。(3) は **continuation** の共通経路で実装する。
+- **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model)** と **`.cursorrules`** に従う（第一→第二の順、第一・第二に短縮別名を設けない、第二必須時は **Enter** で案内／プレースホルダ表示のあと **`第一コマンド `** へ復帰）。continuation と第二トークン Tab 候補は manifest の **`subcommands`** から生成される **`command-subcommands.gen.ts`** を経由する。
 
-- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない（いずれも **`npm run codegen`**／**`build:wasm`** 先頭で再生成）: **`registry/table.rs`**、**`wasm/bmxt-core/src/generated/`** 以下、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**。
+- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない（いずれも **`npm run codegen`**／**`build:wasm`** 先頭で再生成）: **`registry/table.rs`**、**`wasm/bmxt-core/src/generated/`** 以下、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**、**`command-subcommands.gen.ts`**。
 - **手順（推奨）:** **`npm run new:command -- <rust_module> <canonical_name> [aliases...]`** — `cmd/<module>.rs`・manifest の **`commands[]`**・**`cmd/mod.rs`** を更新し **codegen** まで実行。**`run`** の実装へ差し替え、ヘルプ一行が名前と違う場合は manifest の **`usagePrimary`** と Rust の **`usage_primary`** を揃える。
 - **手動で足す場合:** manifest の **`commands[]`** に追記 → **`cmd/<module>.rs`**（**`CMD` + `run`**）→ **`cmd/mod.rs`** に **`pub mod`** → **`npm run codegen`**。
 - **ブラウザ連携（新しい `Effect`）:** manifest の **`effects[]`** に追記 → **`npm run codegen`** → **`handlers/effects/<tsHandlerFile>.ts`** に manifest の **`tsHandlerExport`** を実装 → **`run`** から **`DispatchJson::effects`** で **`Effect::…`** を返す。
 - **検証:** **`npm run verify:manifest`**（manifest と各 **`cmd/*.rs`** の **`CMD` ブロックが一致するか）、**`npm run check:generated`**（生成物の git 差分なし）。CI でも両方実行。続けて **`cargo test`** / **`npx tsc --noEmit`**、拡張全体は **`npm run build:wasm`** → **`npm run build`**。
 
 **`effects[]` のフィールドやスキャフォールダの挙動など**は **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`** を参照。
+
+#### Manifest `commands[].subcommands`（第二・第三トークン）
+
+各 **`commands[]`** 行に **`subcommands`** を必ず含める（第二トークン族が無いコマンドは **`[]`**）。空でないときは **`head`**（`-` で始まる正式第二トークン）、任意の **`trailingTokens`**（その直後に続けられる固定第三トークン。例: `tabs -list` の `-u`）、任意の **`tail`**（**`none`** / **`rest_http_url`** / **`rest`**。dispatch の意味論・引数パースは **`cmd/<module>.rs`** に書き、各 **`head`** を Rust 内の同じ文字列リテラルで参照すること。**`npm run verify:manifest`** がその対応を検査する。
+
+**`npm run codegen`** が **`command-subcommands.gen.ts`**（補完・continuation）と **`generated/command_subcommands.rs`**（`is_second_token`）を出す。新しい第一＋第二族の雛形は **`manifest/templates/command-with-subcommands.example.json`** をコピーして足す。
+
+##### 第二・第三トークンを足す手順（チェックリスト）
+
+1. **`manifest/bmxt-codegen.json`** を編集し、**`subcommands`** を **`[]`** または **`{ head, trailingTokens?, tail? }[]`** にする（雛形は **`manifest/templates/command-with-subcommands.example.json`**）。
+2. **`npm run codegen`** を実行する（**`command-subcommands.gen.ts`** と **`generated/command_subcommands.rs`** が更新される）。
+3. **`wasm/bmxt-core/src/cmd/<module>.rs`** の **`run`** を実装し、manifest の **各 `head` と同じ文字列リテラル**を Rust に書く（**`npm run verify:manifest`** の前提）。
+4. プロンプトで **第三トークン**まで Tab 補完させる場合は、生成の **`listThirdTokenCandidates`** を使い、必要ならシェル側に補完ゾーンを足す。
+5. **`npm run verify:manifest`** → **`npm run check:generated`** → **`wasm/bmxt-core`** で **`cargo test`** → **`npx tsc --noEmit`** → 必要に応じて **`npm run build:wasm`**。
 
 **手書きのブラウザ実装（`handlers/effects/*.ts`）とビルド:** ここを編集しても **`cargo` / `wasm-pack`** や **`npm run codegen`** と**ファイルの上書き競合は起きない**（codegen の対象外）。一方、manifest の **`effects[]`** を変えて **codegen** したあとは、対応する **`tsHandlerFile` / `tsHandlerExport`** の実装を、生成された **`ChromeEffect`** 型・**`apply-dispatch.gen.ts`** の import に**揃える**必要がある（型エラーや実行時の食い違いを防ぐ）。これは**手順の整合**の話で、ビルドツール同士の競合ではない。
 

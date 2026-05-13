@@ -31,6 +31,9 @@ If you are even a little curious about a future where the browser feels differen
 
 
 ◆Version history
+0.1.5:
+- Second/third tokens: single source in manifest (`subcommands`); codegen updates TS completion, continuation, and Rust `is_second_token`; verify step keeps Rust literals aligned.
+
 0.1.1:
 - Added the split command; add panes with split and remove them with exit (closes the window when the last pane exits)
 - With multiple panes from split, Ctrl+Arrow moves focus between panes

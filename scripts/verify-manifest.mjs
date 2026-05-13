@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * `manifest/bmxt-codegen.json` の `commands` が各 `cmd/{module}.rs` の `pub const CMD` と一致するか検証する。
+ * `manifest/bmxt-codegen.json` の `commands` が各 `cmd/{module}.rs` の `pub const CMD` と一致するか、
+ * かつ `subcommands[].head` が Rust ソース内に同じ文字列リテラルで現れるか検証する。
  */
 
 import { readFileSync } from "node:fs"
@@ -42,6 +43,27 @@ function extractCmdMeta(rs) {
   }
 }
 
+/** Each manifest `subcommands[].head` must appear as the same string literal in `cmd/{module}.rs`. */
+function verifySubcommandHeadsInSource(c, rs) {
+  if (!Array.isArray(c.subcommands)) {
+    throw new Error(`${c.module}: missing or invalid subcommands[]`)
+  }
+  if (c.subcommands.length === 0) {
+    return
+  }
+  for (const br of c.subcommands) {
+    if (!br || typeof br.head !== "string") {
+      throw new Error(`${c.module}: invalid subcommand entry`)
+    }
+    const literal = JSON.stringify(br.head)
+    if (!rs.includes(literal)) {
+      throw new Error(
+        `${c.module}: subcommand head ${JSON.stringify(br.head)} must appear as literal ${literal} in cmd/${c.module}.rs`
+      )
+    }
+  }
+}
+
 function main() {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
   const cmds = manifest.commands
@@ -72,6 +94,7 @@ function main() {
         `${c.module}: usagePrimary manifest="${c.usagePrimary}" rs="${meta.usagePrimary}"`
       )
     }
+    verifySubcommandHeadsInSource(c, rs)
   }
 
   console.log(`verify-manifest ok (${cmds.length} commands)`)
