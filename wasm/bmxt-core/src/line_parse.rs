@@ -51,8 +51,8 @@ mod tests {
 
     #[test]
     fn tokenize_strips_zwsp_glued_to_flag() {
-        let v = tokenize(concat!("grep -page", "\u{200b}", " 変わる"));
-        assert_eq!(v, vec!["grep", "-page", "変わる"]);
+        let v = tokenize(concat!("grep --page", "\u{200b}", " 変わる"));
+        assert_eq!(v, vec!["grep", "--page", "変わる"]);
     }
 
     #[test]

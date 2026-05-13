@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn grep_page_plain_japanese_does_not_panic() {
-        let out = dispatch_full("grep -page 変わる");
+        let out = dispatch_full("grep --page 変わる");
         assert!(
             !out.to_ascii_lowercase().contains("unreachable"),
             "unexpected trap: {out}"
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn grep_page_japanese_no_unreachable_with_zwsp_on_flag() {
-        let line = format!("grep -page\u{200b} 変わる");
+        let line = format!("grep --page\u{200b} 変わる");
         let out = dispatch_full(&line);
         assert!(
             !out.to_ascii_lowercase().contains("unreachable"),

@@ -16,12 +16,24 @@ import {
 } from "../tabs"
 import { listSplitOptionCandidates, splitOptionCompletionZone } from "./split-command-input"
 import { SecondCommandPickerPanel } from "./second-command-picker"
+import { GrepListPickerOverlay } from "../grep/grep-list-picker-overlay"
+import {
+  grepListScopeCompletionZone,
+  listGrepListScopeCandidates,
+  parseGrepListPickerLine,
+  type GrepListPickerState
+} from "../grep/grep-list-picker-input"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch, wordBounds } from "./text-utils"
 import {
+  applyChromeEffects,
+  type DispatchChromeContext
+} from "../dispatch"
+import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
-  getCompletionCandidates
+  getCompletionCandidates,
+  runDispatch
 } from "../wasm-core"
 import {
   useCallback,
@@ -60,6 +72,8 @@ type Props = {
   tabPicker: TabPickerState | null
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
   setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
+  grepListPicker: GrepListPickerState | null
+  setGrepListPicker: (forSessionId: string, v: GrepListPickerState | null) => void
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
@@ -75,10 +89,13 @@ export function BmxtShell({
   appendCommandToHistory,
   tabPicker,
   setTabPicker,
+  grepListPicker,
+  setGrepListPicker,
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
-  const pickerOpen = tabPicker !== null
+  const tabPickerOpen = tabPicker !== null
+  const overlayOpen = tabPickerOpen || grepListPicker !== null
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -173,14 +190,14 @@ export function BmxtShell({
   }, [])
 
   useLayoutEffect(() => {
-    if (pickerOpen) {
+    if (overlayOpen) {
       return
     }
     syncLogScroll()
-  }, [pickerOpen, lines, mode, line, syncLogScroll, postUpgradeBanner])
+  }, [overlayOpen, lines, mode, line, syncLogScroll, postUpgradeBanner])
 
   useEffect(() => {
-    if (pickerOpen) {
+    if (overlayOpen) {
       return
     }
     const el = scrollRef.current
@@ -190,10 +207,10 @@ export function BmxtShell({
     const ro = new ResizeObserver(() => syncLogScroll())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [pickerOpen, syncLogScroll])
+  }, [overlayOpen, syncLogScroll])
 
   useLayoutEffect(() => {
-    if (pickerOpen) {
+    if (overlayOpen) {
       return
     }
     const el = scrollRef.current
@@ -202,10 +219,10 @@ export function BmxtShell({
     }
     el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
     requestAnimationFrame(() => syncLogScroll())
-  }, [pickerOpen, lines, syncLogScroll, postUpgradeBanner])
+  }, [overlayOpen, lines, syncLogScroll, postUpgradeBanner])
 
   useLayoutEffect(() => {
-    if (pickerOpen) {
+    if (overlayOpen) {
       return
     }
     const ta = imeRef.current
@@ -215,10 +232,10 @@ export function BmxtShell({
     if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
       ta.setSelectionRange(cursorPos, cursorPos)
     }
-  }, [pickerOpen, line, cursorPos, isComposing])
+  }, [overlayOpen, line, cursorPos, isComposing])
 
   useLayoutEffect(() => {
-    if (!subCmdPicker || pickerOpen) {
+    if (!subCmdPicker || overlayOpen) {
       setSubCmdPickerHostStyle({})
       return
     }
@@ -276,27 +293,27 @@ export function BmxtShell({
       sc?.removeEventListener("scroll", measure)
       window.removeEventListener("resize", measure)
     }
-  }, [subCmdPickerAnchorEpisode, pickerOpen, line, cursorPos, mode])
+  }, [subCmdPickerAnchorEpisode, overlayOpen, line, cursorPos, mode])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
   useLayoutEffect(() => {
-    if (pickerOpen || !isFocusedPane) {
+    if (overlayOpen || !isFocusedPane) {
       return
     }
     focusPrompt()
-  }, [pickerOpen, isFocusedPane, focusPrompt])
+  }, [overlayOpen, isFocusedPane, focusPrompt])
 
   useEffect(() => {
-    if (pickerOpen || !isFocusedPane) {
+    if (overlayOpen || !isFocusedPane) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [pickerOpen, isFocusedPane, focusPrompt])
+  }, [overlayOpen, isFocusedPane, focusPrompt])
 
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
@@ -373,6 +390,44 @@ export function BmxtShell({
       return
     }
 
+    const grepListLine = parseGrepListPickerLine(trimmed)
+    if (grepListLine !== null) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      setSubCmdPicker(null)
+      void (async () => {
+        try {
+          await ensureBmxtCore()
+          const bundle = runDispatch(grepListLine)
+          if (bundle.ty === "lines") {
+            await appendLogLines([`> ${trimmed}`, ...(bundle.lines ?? [])])
+            return
+          }
+          const ctx: DispatchChromeContext = {
+            clearLog: async () => {},
+            exitPane: async () => [],
+            listWindows: async () => [],
+            focusInfo: async () => [],
+            resolveTabArg: async () => undefined,
+            commandSessionId: sessionId
+          }
+          const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+          await appendLogLines([`> ${trimmed}`, "grep -list — picker (Esc)"])
+          setGrepListPicker(sessionId, { lines: linesOut })
+        } catch (e) {
+          await appendLogLines([
+            `> ${trimmed}`,
+            `error: ${e instanceof Error ? e.message : String(e)}`
+          ])
+        }
+      })()
+      focusPrompt()
+      return
+    }
+
     appendCommandToHistory(trimmed)
     const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
     setLine("")
@@ -403,7 +458,8 @@ export function BmxtShell({
     iSearchSnapshot,
     mode,
     sessionId,
-    setTabPicker
+    setTabPicker,
+    setGrepListPicker
   ])
 
   const applySubCmdPickIndex = useCallback(
@@ -659,6 +715,27 @@ export function BmxtShell({
           setCursorPos(splitZone.optionStart + rep.length + suffix.length)
           return
         }
+        const glScopeZone = grepListScopeCompletionZone(curLn, pos)
+        if (glScopeZone) {
+          e.preventDefault()
+          const cands = listGrepListScopeCandidates(glScopeZone.prefix)
+          if (cands.length === 0) {
+            return
+          }
+          const idx = tabPressSeqRef.current % cands.length
+          tabPressSeqRef.current += 1
+          const rep = cands[idx]!
+          const suffix = glScopeZone.optionEnd === curLn.length ? " " : ""
+          const newLine =
+            curLn.slice(0, glScopeZone.optionStart) +
+            rep +
+            suffix +
+            curLn.slice(glScopeZone.optionEnd)
+          setHistNavIndex(-1)
+          setLine(newLine)
+          setCursorPos(glScopeZone.optionStart + rep.length + suffix.length)
+          return
+        }
         const optionZone = tabsOptionCompletionZone(curLn, pos)
         if (optionZone) {
           e.preventDefault()
@@ -777,7 +854,7 @@ export function BmxtShell({
       history,
       iSearchMatches,
       mode,
-      pickerOpen,
+      overlayOpen,
       applySubCmdPickIndex,
       submitLine,
       tabPicker
@@ -803,7 +880,7 @@ export function BmxtShell({
       <div
         ref={scrollRef}
         className={`bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`}
-        style={pickerOpen ? { display: "none" } : undefined}>
+        style={overlayOpen ? { display: "none" } : undefined}>
         {lines.length === 0 || postUpgradeBanner ? (
           <div className="bmxt-hint">
             Welcome to BMXt! This program is a test version. Development currently
@@ -909,7 +986,7 @@ export function BmxtShell({
                 }
               }}
             />
-            {subCmdPicker && !pickerOpen ? (
+            {subCmdPicker && !overlayOpen ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host"
@@ -925,7 +1002,7 @@ export function BmxtShell({
         </div>
         <div className="bmxt-scroll-anchor" aria-hidden />
       </div>
-      {pickerOpen && tabPicker ? (
+      {tabPickerOpen && tabPicker ? (
         <div
           className="bmxt-tab-picker-host"
           style={{
@@ -950,6 +1027,28 @@ export function BmxtShell({
             onRefreshRows={refreshTabPickerRows}
             onExit={() => setTabPicker(sessionId, null)}
             isHostPaneFocused={isFocusedPane}
+          />
+        </div>
+      ) : null}
+      {grepListPicker ? (
+        <div
+          className="bmxt-grep-list-picker-host"
+          style={{
+            position: "absolute",
+            inset: 6,
+            zIndex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            overflow: "hidden",
+            background: "#0d1117",
+            borderRadius: 8,
+            boxShadow:
+              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
+          }}>
+          <GrepListPickerOverlay
+            lines={grepListPicker.lines}
+            onExit={() => setGrepListPicker(sessionId, null)}
           />
         </div>
       ) : null}

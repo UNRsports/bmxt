@@ -49,18 +49,27 @@
       "module": "grep",
       "canonicalName": "grep",
       "aliases": [],
-      "usagePrimary": "grep -history | grep -bookmark | grep -page <pattern>",
+      "usagePrimary": "grep -list [--none|--history|--bookmark|--page] <pattern> | grep --none|… <pattern>",
       "subcommands": [
         {
-          "head": "-history",
+          "head": "-list",
+          "trailingTokens": ["--none", "--history", "--bookmark", "--page"],
           "tail": "rest"
         },
         {
-          "head": "-bookmark",
+          "head": "--none",
           "tail": "rest"
         },
         {
-          "head": "-page",
+          "head": "--history",
+          "tail": "rest"
+        },
+        {
+          "head": "--bookmark",
+          "tail": "rest"
+        },
+        {
+          "head": "--page",
           "tail": "rest"
         }
       ]

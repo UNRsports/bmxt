@@ -3,7 +3,7 @@
  * JA: ブックマーク木をメモリ上のみ平坦化。永続化しません。
  */
 
-import { formatGrepLine, matchesNeedle, MAX_BOOKMARK_ROWS } from "../search"
+import { linesForGrepElement, matchesNeedle, MAX_BOOKMARK_ROWS } from "../search"
 
 function walkBookmarks(
   nodes: chrome.bookmarks.BookmarkTreeNode[],
@@ -29,19 +29,27 @@ export async function grepBookmarkLines(pattern: string): Promise<string[]> {
   const tree = await chrome.bookmarks.getTree()
   const flat: { title: string; url: string }[] = []
   walkBookmarks(tree, flat)
+  const matchAll = !pattern.trim()
   const matches: string[] = []
+  let hitCount = 0
   for (const b of flat) {
     const blob = `${b.title} ${b.url}`
-    if (!matchesNeedle(blob, pattern)) {
+    if (!matchAll && !matchesNeedle(blob, pattern)) {
       continue
     }
-    matches.push(formatGrepLine("bookmark", b.url, b.title || "(untitled)"))
+    hitCount += 1
+    matches.push(
+      ...linesForGrepElement("bookmark", {
+        title: b.title || "(untitled)",
+        url: b.url
+      })
+    )
   }
   if (matches.length === 0) {
-    return ["(no bookmark matches — pattern is case-insensitive substring)"]
+    return ["(no bookmark matches — pattern is case-insensitive substring, or empty pattern for all)"]
   }
   return [
-    `(${matches.length} match(es) from bookmarks, scan capped at ${MAX_BOOKMARK_ROWS} nodes)`,
+    `(${hitCount} element(s) from bookmarks, scan capped at ${MAX_BOOKMARK_ROWS} nodes)`,
     ...matches
   ]
 }

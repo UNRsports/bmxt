@@ -24,9 +24,11 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "exit": [] as const,
   "grep": [
-    { head: "-history", trailingTokens: [] as const, tail: "rest" },
-    { head: "-bookmark", trailingTokens: [] as const, tail: "rest" },
-    { head: "-page", trailingTokens: [] as const, tail: "rest" }
+    { head: "-list", trailingTokens: ["--none","--history","--bookmark","--page"] as const, tail: "rest" },
+    { head: "--none", trailingTokens: [] as const, tail: "rest" },
+    { head: "--history", trailingTokens: [] as const, tail: "rest" },
+    { head: "--bookmark", trailingTokens: [] as const, tail: "rest" },
+    { head: "--page", trailingTokens: [] as const, tail: "rest" }
   ] as const,
   "group": [] as const,
   "help": [] as const,

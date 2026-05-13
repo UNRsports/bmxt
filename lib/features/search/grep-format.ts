@@ -1,14 +1,19 @@
 /**
- * EN: One terminal line per hit (tab-separated for easy copy).
- * JA: ヒット1行1レコード（タブ区切りでコピーしやすく）。
+ * EN: Pretty-print grep hits (multi-line blocks per element).
+ * JA: grep ヒットを要素ごと複数行で整形。
  */
 
 export type GrepScopeLabel = "history" | "bookmark" | "page"
 
-export function formatGrepLine(
+/** One logical element → several terminal lines (each rendered as one row). */
+export function linesForGrepElement(
   scope: GrepScopeLabel,
-  source: string,
-  detail: string
-): string {
-  return `${scope}\t${source}\t${detail}`
+  fields: Record<string, string>
+): string[] {
+  const out: string[] = [`[${scope}]`]
+  for (const [k, v] of Object.entries(fields)) {
+    out.push(`${k}: ${v}`)
+  }
+  out.push("")
+  return out
 }

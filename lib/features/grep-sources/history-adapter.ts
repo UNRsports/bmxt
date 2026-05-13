@@ -3,7 +3,12 @@
  * JA: chrome.history をメモリ上のみ参照。拡張の storage には書き込みません。
  */
 
-import { formatGrepLine, matchesNeedle, HISTORY_LOOKBACK_MS, MAX_HISTORY_RESULTS } from "../search"
+import {
+  HISTORY_LOOKBACK_MS,
+  linesForGrepElement,
+  matchesNeedle,
+  MAX_HISTORY_RESULTS
+} from "../search"
 
 export async function grepHistoryLines(pattern: string): Promise<string[]> {
   const items = await chrome.history.search({
@@ -11,21 +16,29 @@ export async function grepHistoryLines(pattern: string): Promise<string[]> {
     maxResults: MAX_HISTORY_RESULTS,
     startTime: Date.now() - HISTORY_LOOKBACK_MS
   })
+  const matchAll = !pattern.trim()
   const matches: string[] = []
+  let hitCount = 0
   for (const it of items) {
     const title = it.title ?? ""
     const url = it.url ?? ""
     const blob = `${title} ${url}`
-    if (!matchesNeedle(blob, pattern)) {
+    if (!matchAll && !matchesNeedle(blob, pattern)) {
       continue
     }
-    matches.push(formatGrepLine("history", url || "(no url)", title || "(no title)"))
+    hitCount += 1
+    matches.push(
+      ...linesForGrepElement("history", {
+        title: title || "(no title)",
+        url: url || "(no url)"
+      })
+    )
   }
   if (matches.length === 0) {
-    return ["(no history matches — pattern is case-insensitive substring)"]
+    return ["(no history matches — pattern is case-insensitive substring, or empty pattern for all)"]
   }
   return [
-    `(${matches.length} match(es) from recent history, capped at ${MAX_HISTORY_RESULTS} rows)`,
+    `(${hitCount} element(s) from recent history, capped at ${MAX_HISTORY_RESULTS} rows)`,
     ...matches
   ]
 }

@@ -3,7 +3,7 @@
  * JA: メモリ内 grep / ページ走査の上限（永続化なし。メモリ・ログ量の抑制）。
  */
 
-/** EN: Max chrome.history.search rows per grep -history. JA: grep -history の最大件数。 */
+/** EN: Max chrome.history.search rows per grep --history. JA: grep --history の最大件数。 */
 export const MAX_HISTORY_RESULTS = 10000
 
 /** EN: How far back history.search spans (ms). JA: 履歴検索の遡及期間（ミリ秒）。 */
