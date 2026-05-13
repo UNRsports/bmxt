@@ -33,7 +33,8 @@ https://buymeacoffee.com/unrsports
 
 ◆バージョン履歴
 0.1.5：
-・第二・第三トークンを manifest の `subcommands` に集約し、codegen で補完・continuation・Rust 検証を同期
+・`dom` コマンドを追加し、ページソースを閲覧可能に実装
+・`grep` コマンドを追加し、履歴／ブックマーク／オープン済みタブなど各種内部を横断検索できるよう実装
 
 0.1.1：
 ・splitコマンドを追加し、exitで増減可能
