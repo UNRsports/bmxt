@@ -74,7 +74,18 @@ export function parseDispatchJson(raw: string): DispatchBundle {
 /** 1 行を解決し、Lines または Effects を返す（dispatch の結果パース済み）。 */
 export function runDispatch(line: string): DispatchBundle {
   assertCoreReady()
-  return parseDispatchJson(dispatchFull(line))
+  try {
+    return parseDispatchJson(dispatchFull(line))
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return {
+      ty: "lines",
+      lines: [
+        `error: wasm dispatch failed (${msg})`,
+        "Reload the BMXt window / extension, or run `npm run build:wasm` and reload."
+      ]
+    }
+  }
 }
 
 let cachedCompletion: string[] | null = null

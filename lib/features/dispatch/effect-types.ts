@@ -4,9 +4,13 @@
  */
 
 export type ChromeEffect =
+  | { flavor: string; kind: "dom_list"; pattern: string }
   | { kind: "clear_log" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }
+  | { kind: "grep_bookmark"; pattern: string }
+  | { kind: "grep_history"; pattern: string }
+  | { kind: "grep_page"; pattern: string }
   | { kind: "group_new"; tab_ids: number[] }
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_new_tab"; url: string }

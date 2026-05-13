@@ -71,6 +71,32 @@ pub fn build_help_lines() -> Vec<String> {
             .to_string(),
     );
     lines.push(String::new());
+    lines.push("dom (page view filter on the active target tab):".to_string());
+    lines.push(
+        "  dom -show   -html|-react       — print DOM structure to the terminal (HTML or React-style outline)."
+            .to_string(),
+    );
+    lines.push(
+        "  dom -select -html|-react <css…>  — show only matched nodes (reload page to clear)."
+            .to_string(),
+    );
+    lines.push(
+        "  dom -hide   -html|-react <css…>  — hide matched nodes (reload page to clear)."
+            .to_string(),
+    );
+    lines.push(String::new());
+    lines.push("grep (in-memory search; nothing persisted by these commands):".to_string());
+    lines.push(
+        "  grep -list [--none|--history|--bookmark|--page] <pattern> — UI float form (--none = all scopes)."
+            .to_string(),
+    );
+    lines.push("  grep --none <pattern>   — all scopes (same defaults as -list without scope token).".to_string());
+    lines.push("  grep --history <pattern>  — titles/URLs in recent history.".to_string());
+    lines.push("  grep --bookmark <pattern>  — bookmark titles/URLs.".to_string());
+    lines.push(
+        "  grep --page <pattern>      — innerText lines in non-discarded http(s) tabs.".to_string(),
+    );
+    lines.push(String::new());
     lines.push("URL (http/https, typed as a whole line):".to_string());
     lines.push("  <url>           - new tab".to_string());
     lines.push("  <url> .         - current tab (active tab in focused window)".to_string());

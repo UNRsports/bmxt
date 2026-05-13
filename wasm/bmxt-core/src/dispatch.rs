@@ -4,41 +4,51 @@ use crate::line_parse::{parse_http_url_candidate, tokenize};
 use crate::model::{DispatchJson, Effect};
 use crate::registry::table::COMMAND_RUNNERS;
 
+fn dispatch_json_string(out: &DispatchJson) -> String {
+    serde_json::to_string(out).unwrap_or_else(|e| {
+        serde_json::to_string(&DispatchJson::lines(vec![format!(
+            "error: internal dispatch json: {e}"
+        )]))
+        .unwrap_or_else(|_| {
+            "{\"ty\":\"lines\",\"lines\":[\"error: internal dispatch json (fallback)\"]}".to_string()
+        })
+    })
+}
+
 pub fn dispatch_full(line: &str) -> String {
     let trimmed = line.trim();
     if trimmed.is_empty() {
-        return serde_json::to_string(&DispatchJson::lines(vec![])).unwrap();
+        return dispatch_json_string(&DispatchJson::lines(vec![]));
     }
     if let Some(out) = try_url_line(trimmed) {
-        return serde_json::to_string(&out).unwrap();
+        return dispatch_json_string(&out);
     }
     let args = tokenize(trimmed);
     if args.is_empty() {
-        return serde_json::to_string(&DispatchJson::lines(vec![])).unwrap();
+        return dispatch_json_string(&DispatchJson::lines(vec![]));
     }
     let cmd_token = args[0].to_lowercase();
     let Some(canonical) = crate::registry::resolve_canonical(&cmd_token) else {
-        return serde_json::to_string(&DispatchJson::lines(vec![format!(
+        return dispatch_json_string(&DispatchJson::lines(vec![format!(
             "unknown command: {}. Type help.",
             cmd_token
-        )]))
-        .unwrap();
+        )]));
     };
     let out = handle_command(canonical, &args);
-    serde_json::to_string(&out).unwrap()
+    dispatch_json_string(&out)
 }
 
 fn try_url_line(trimmed: &str) -> Option<DispatchJson> {
-    if trimmed.len() >= 4 {
-        let suf = &trimmed[trimmed.len() - 4..];
-        if suf.eq_ignore_ascii_case(" -nw") {
-            let inner = trimmed[..trimmed.len() - 4].trim_end();
+    const NW_SUFFIXES: [&str; 4] = [" -nw", " -nW", " -Nw", " -NW"];
+    for suf in NW_SUFFIXES {
+        if let Some(inner) = trimmed.strip_suffix(suf) {
+            let inner = inner.trim_end();
             let url = parse_http_url_candidate(inner)?;
             return Some(DispatchJson::effects(vec![Effect::OpenUrlNewWindow { url }]));
         }
     }
-    if trimmed.ends_with(" .") && trimmed.len() >= 2 {
-        let inner = trimmed[..trimmed.len() - 2].trim_end();
+    if let Some(inner) = trimmed.strip_suffix(" .") {
+        let inner = inner.trim_end();
         let url = parse_http_url_candidate(inner)?;
         return Some(DispatchJson::effects(vec![Effect::NavigateCurrentTab { url }]));
     }
@@ -89,6 +99,30 @@ mod tests {
             from_registry,
             from_runners,
             "COMMAND_RUNNERS と registry::table::COMMANDS の名前集合を一致させてください"
+        );
+    }
+
+    #[test]
+    fn grep_page_plain_japanese_does_not_panic() {
+        let out = dispatch_full("grep --page 変わる");
+        assert!(
+            !out.to_ascii_lowercase().contains("unreachable"),
+            "unexpected trap: {out}"
+        );
+        assert!(out.contains("grep_page"), "expected grep_page: {out}");
+    }
+
+    #[test]
+    fn grep_page_japanese_no_unreachable_with_zwsp_on_flag() {
+        let line = format!("grep --page\u{200b} 変わる");
+        let out = dispatch_full(&line);
+        assert!(
+            !out.to_ascii_lowercase().contains("unreachable"),
+            "unexpected trap: {out}"
+        );
+        assert!(
+            out.contains("grep_page") && out.contains("変わる"),
+            "expected grep_page effect: {out}"
         );
     }
 }

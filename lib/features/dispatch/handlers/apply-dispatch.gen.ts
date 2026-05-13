@@ -7,7 +7,11 @@ import type { ChromeEffect } from "../effect-types"
 import type { DispatchChromeContext } from "../dispatch-context"
 import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseTabEffect } from "./effects/close-tab"
+import { applyDomListEffect } from "./effects/dom-list"
 import { applyExitPaneEffect } from "./effects/exit-pane"
+import { applyGrepBookmarkEffect } from "./effects/grep-bookmark"
+import { applyGrepHistoryEffect } from "./effects/grep-history"
+import { applyGrepPageEffect } from "./effects/grep-page"
 import { applyGroupNewEffect } from "./effects/group-new"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
@@ -29,8 +33,16 @@ export async function applyOne(
       return applyClearLogEffect(ctx, e)
     case "close_tab":
       return applyCloseTabEffect(ctx, e)
+    case "dom_list":
+      return applyDomListEffect(ctx, e)
     case "exit_pane":
       return applyExitPaneEffect(ctx, e)
+    case "grep_bookmark":
+      return applyGrepBookmarkEffect(ctx, e)
+    case "grep_history":
+      return applyGrepHistoryEffect(ctx, e)
+    case "grep_page":
+      return applyGrepPageEffect(ctx, e)
     case "group_new":
       return applyGroupNewEffect(ctx, e)
     case "navigate_current_tab":

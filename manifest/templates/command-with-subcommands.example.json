@@ -1,0 +1,18 @@
+{
+  "_comment": "Copy one object into manifest/bmxt-codegen.json commands[]. Omit _comment in real manifest.",
+  "module": "my_cmd",
+  "canonicalName": "mycmd",
+  "aliases": [],
+  "usagePrimary": "mycmd -alpha | mycmd -beta",
+  "subcommands": [
+    {
+      "head": "-alpha",
+      "trailingTokens": ["-verbose"],
+      "tail": "none"
+    },
+    {
+      "head": "-beta",
+      "tail": "rest"
+    }
+  ]
+}

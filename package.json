@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -15,7 +15,8 @@
     "package": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo package",
     "codegen": "node scripts/codegen/run.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
-    "check:generated": "npm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json wasm/bmxt-core/src/generated wasm/bmxt-core/src/registry/table.rs lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts",
+    "check:generated": "npm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json wasm/bmxt-core/src/generated wasm/bmxt-core/src/registry/table.rs lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",
+    "check:no-fetch": "node scripts/check-no-fetch.mjs",
     "sync:completion-fallback": "npm run codegen",
     "sync:effect-types": "npm run codegen",
     "sync:generated-ts": "npm run codegen",
@@ -44,10 +45,14 @@
       "tabs",
       "tabGroups",
       "storage",
-      "windows"
+      "windows",
+      "scripting",
+      "history",
+      "bookmarks"
     ],
+    "optional_host_permissions": ["http://*/*", "https://*/*"],
     "content_security_policy": {
-      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+      "extension_pages": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' http://127.0.0.1:* http://localhost:*; object-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
     },
     "commands": {
       "launch-bmxt": {

@@ -1,4 +1,4 @@
-use crate::line_parse::parse_http_url_candidate;
+use crate::line_parse::{parse_http_url_candidate, strip_invisible_format_chars};
 use crate::meta::Cmd;
 use crate::model::{DispatchJson, Effect};
 
@@ -22,7 +22,7 @@ fn tabs_run_hint_line() -> String {
 }
 
 fn norm_tabs_flag(arg: Option<&String>) -> Option<char> {
-    let a = arg?.to_lowercase();
+    let a = strip_invisible_format_chars(arg?.trim()).to_lowercase();
     match a.as_str() {
         "-list" => Some('l'),
         "-moveurl" => Some('m'),
@@ -32,21 +32,23 @@ fn norm_tabs_flag(arg: Option<&String>) -> Option<char> {
 }
 
 pub fn run(args: &[String]) -> DispatchJson {
-    let sub = norm_tabs_flag(args.get(1));
-    if sub.is_none() {
-        if args.get(1).is_none() {
-            let mut lines = vec!["tabs: available options".to_string()];
-            lines.extend(tabs_usage_lines());
-            return DispatchJson::lines(lines);
-        }
-        let mut lines = vec![format!(
-            "error: unknown tabs option: {}",
-            args.get(1).map(|s| s.as_str()).unwrap_or("")
-        )];
+    if args.get(1).is_none() {
+        let mut lines = vec!["tabs: available options".to_string()];
         lines.extend(tabs_usage_lines());
         return DispatchJson::lines(lines);
     }
-    match sub.unwrap() {
+    let first = args[1].as_str();
+    if !crate::generated::command_subcommands::is_second_token("tabs", first) {
+        let mut lines = vec![format!("error: unknown tabs option: {first}")];
+        lines.extend(tabs_usage_lines());
+        return DispatchJson::lines(lines);
+    }
+    let Some(sub) = norm_tabs_flag(args.get(1)) else {
+        let mut lines = vec!["error: internal: tabs option out of sync (re-run npm run codegen)".to_string()];
+        lines.extend(tabs_usage_lines());
+        return DispatchJson::lines(lines);
+    };
+    match sub {
         'l' => {
             if args.len() > 3 || (args.len() == 3 && args[2].to_lowercase() != "-u") {
                 let mut lines = vec!["error: invalid tabs -list usage".to_string()];
@@ -82,6 +84,10 @@ pub fn run(args: &[String]) -> DispatchJson {
             };
             DispatchJson::effects(vec![Effect::TabsMoveUrl { url }])
         }
-        _ => unreachable!(),
+        _ => {
+            let mut lines = vec!["error: internal: tabs dispatch out of sync".to_string()];
+            lines.extend(tabs_usage_lines());
+            DispatchJson::lines(lines)
+        }
     }
 }

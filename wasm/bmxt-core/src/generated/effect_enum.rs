@@ -10,15 +10,22 @@ pub enum Effect {
     CloseTab {
         tab_id: i32,
     },
+    DomList {
+        flavor: String,
+        pattern: String,
+    },
+    ExitPane,
+    GrepBookmark {
+        pattern: String,
+    },
+    GrepHistory {
+        pattern: String,
+    },
+    GrepPage {
+        pattern: String,
+    },
     GroupNew {
         tab_ids: Vec<i32>,
-    },
-    TabsNu,
-    TabsMoveUrl {
-        url: String,
-    },
-    OpenUrlNewWindow {
-        url: String,
     },
     NavigateCurrentTab {
         url: String,
@@ -26,12 +33,18 @@ pub enum Effect {
     OpenUrlNewTab {
         url: String,
     },
-    ExitPane,
+    OpenUrlNewWindow {
+        url: String,
+    },
     ReleaseNotesCurrent,
+    ReleaseNotesList,
     ReleaseNotesVersion {
         version: String,
     },
-    ReleaseNotesList,
     SplitCol,
     SplitRow,
+    TabsMoveUrl {
+        url: String,
+    },
+    TabsNu,
 }

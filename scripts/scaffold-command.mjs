@@ -72,7 +72,8 @@ pub fn run(_args: &[String]) -> DispatchJson {
     module: rustModule,
     canonicalName,
     aliases,
-    usagePrimary: canonicalName
+    usagePrimary: canonicalName,
+    subcommands: []
   })
 
   writeFileSync(

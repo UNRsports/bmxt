@@ -5,49 +5,122 @@
       "module": "clear",
       "canonicalName": "clear",
       "aliases": [],
-      "usagePrimary": "clear"
+      "usagePrimary": "clear",
+      "subcommands": []
     },
     {
       "module": "close",
       "canonicalName": "close",
       "aliases": ["c"],
-      "usagePrimary": "close <tabId>"
+      "usagePrimary": "close <tabId>",
+      "subcommands": []
+    },
+    {
+      "module": "dom",
+      "canonicalName": "dom",
+      "aliases": [],
+      "usagePrimary": "dom -list [--html|--react] [<pattern>]",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["--html", "--react"],
+          "tail": "rest"
+        }
+      ]
     },
     {
       "module": "exit",
       "canonicalName": "exit",
       "aliases": [],
-      "usagePrimary": "exit"
+      "usagePrimary": "exit",
+      "subcommands": []
+    },
+    {
+      "module": "grep",
+      "canonicalName": "grep",
+      "aliases": [],
+      "usagePrimary": "grep -list [--none|--history|--bookmark|--page] <pattern> | grep --none|… <pattern>",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["--none", "--history", "--bookmark", "--page"],
+          "tail": "rest"
+        },
+        {
+          "head": "--none",
+          "tail": "rest"
+        },
+        {
+          "head": "--history",
+          "tail": "rest"
+        },
+        {
+          "head": "--bookmark",
+          "tail": "rest"
+        },
+        {
+          "head": "--page",
+          "tail": "rest"
+        }
+      ]
     },
     {
       "module": "group",
       "canonicalName": "group",
       "aliases": [],
-      "usagePrimary": "group new"
+      "usagePrimary": "group new",
+      "subcommands": []
     },
     {
       "module": "help_cmd",
       "canonicalName": "help",
       "aliases": ["?"],
-      "usagePrimary": "help"
+      "usagePrimary": "help",
+      "subcommands": []
     },
     {
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u]"
+      "usagePrimary": "tabs -list [-u]",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["-u"],
+          "tail": "none"
+        },
+        {
+          "head": "-moveurl",
+          "tail": "rest_http_url"
+        },
+        {
+          "head": "-nowurl",
+          "tail": "none"
+        }
+      ]
     },
     {
       "module": "notes",
       "canonicalName": "notes",
       "aliases": [],
-      "usagePrimary": "notes"
+      "usagePrimary": "notes",
+      "subcommands": []
     },
     {
       "module": "split",
       "canonicalName": "split",
       "aliases": [],
-      "usagePrimary": "split -col | split -row"
+      "usagePrimary": "split -col | split -row",
+      "subcommands": [
+        {
+          "head": "-col",
+          "tail": "none"
+        },
+        {
+          "head": "-row",
+          "tail": "none"
+        }
+      ]
     }
   ],
   "effects": [
@@ -67,35 +140,51 @@
       "tsHandlerExport": "applyCloseTabEffect"
     },
     {
+      "kind": "dom_list",
+      "rustVariant": "DomList",
+      "shape": "record",
+      "fields": { "flavor": "string", "pattern": "string" },
+      "tsHandlerFile": "dom-list",
+      "tsHandlerExport": "applyDomListEffect"
+    },
+    {
+      "kind": "exit_pane",
+      "rustVariant": "ExitPane",
+      "shape": "unit",
+      "tsHandlerFile": "exit-pane",
+      "tsHandlerExport": "applyExitPaneEffect"
+    },
+    {
+      "kind": "grep_bookmark",
+      "rustVariant": "GrepBookmark",
+      "shape": "record",
+      "fields": { "pattern": "string" },
+      "tsHandlerFile": "grep-bookmark",
+      "tsHandlerExport": "applyGrepBookmarkEffect"
+    },
+    {
+      "kind": "grep_history",
+      "rustVariant": "GrepHistory",
+      "shape": "record",
+      "fields": { "pattern": "string" },
+      "tsHandlerFile": "grep-history",
+      "tsHandlerExport": "applyGrepHistoryEffect"
+    },
+    {
+      "kind": "grep_page",
+      "rustVariant": "GrepPage",
+      "shape": "record",
+      "fields": { "pattern": "string" },
+      "tsHandlerFile": "grep-page",
+      "tsHandlerExport": "applyGrepPageEffect"
+    },
+    {
       "kind": "group_new",
       "rustVariant": "GroupNew",
       "shape": "record",
       "fields": { "tab_ids": "vec_i32" },
       "tsHandlerFile": "group-new",
       "tsHandlerExport": "applyGroupNewEffect"
-    },
-    {
-      "kind": "tabs_nu",
-      "rustVariant": "TabsNu",
-      "shape": "unit",
-      "tsHandlerFile": "tabs-nu",
-      "tsHandlerExport": "applyTabsNuEffect"
-    },
-    {
-      "kind": "tabs_move_url",
-      "rustVariant": "TabsMoveUrl",
-      "shape": "record",
-      "fields": { "url": "string" },
-      "tsHandlerFile": "tabs-move-url",
-      "tsHandlerExport": "applyTabsMoveUrlEffect"
-    },
-    {
-      "kind": "open_url_new_window",
-      "rustVariant": "OpenUrlNewWindow",
-      "shape": "record",
-      "fields": { "url": "string" },
-      "tsHandlerFile": "open-url-new-window",
-      "tsHandlerExport": "applyOpenUrlNewWindowEffect"
     },
     {
       "kind": "navigate_current_tab",
@@ -114,11 +203,12 @@
       "tsHandlerExport": "applyOpenUrlNewTabEffect"
     },
     {
-      "kind": "exit_pane",
-      "rustVariant": "ExitPane",
-      "shape": "unit",
-      "tsHandlerFile": "exit-pane",
-      "tsHandlerExport": "applyExitPaneEffect"
+      "kind": "open_url_new_window",
+      "rustVariant": "OpenUrlNewWindow",
+      "shape": "record",
+      "fields": { "url": "string" },
+      "tsHandlerFile": "open-url-new-window",
+      "tsHandlerExport": "applyOpenUrlNewWindowEffect"
     },
     {
       "kind": "release_notes_current",
@@ -128,19 +218,19 @@
       "tsHandlerExport": "applyReleaseNotesCurrentEffect"
     },
     {
+      "kind": "release_notes_list",
+      "rustVariant": "ReleaseNotesList",
+      "shape": "unit",
+      "tsHandlerFile": "release-notes-list",
+      "tsHandlerExport": "applyReleaseNotesListEffect"
+    },
+    {
       "kind": "release_notes_version",
       "rustVariant": "ReleaseNotesVersion",
       "shape": "record",
       "fields": { "version": "string" },
       "tsHandlerFile": "release-notes-version",
       "tsHandlerExport": "applyReleaseNotesVersionEffect"
-    },
-    {
-      "kind": "release_notes_list",
-      "rustVariant": "ReleaseNotesList",
-      "shape": "unit",
-      "tsHandlerFile": "release-notes-list",
-      "tsHandlerExport": "applyReleaseNotesListEffect"
     },
     {
       "kind": "split_col",
@@ -155,6 +245,21 @@
       "shape": "unit",
       "tsHandlerFile": "split-row",
       "tsHandlerExport": "applySplitRowEffect"
+    },
+    {
+      "kind": "tabs_move_url",
+      "rustVariant": "TabsMoveUrl",
+      "shape": "record",
+      "fields": { "url": "string" },
+      "tsHandlerFile": "tabs-move-url",
+      "tsHandlerExport": "applyTabsMoveUrlEffect"
+    },
+    {
+      "kind": "tabs_nu",
+      "rustVariant": "TabsNu",
+      "shape": "unit",
+      "tsHandlerFile": "tabs-nu",
+      "tsHandlerExport": "applyTabsNuEffect"
     }
   ]
 }

@@ -1,0 +1,44 @@
+/**
+ * EN: Reads chrome.history in memory only; nothing is written to extension storage.
+ * JA: chrome.history をメモリ上のみ参照。拡張の storage には書き込みません。
+ */
+
+import {
+  HISTORY_LOOKBACK_MS,
+  linesForGrepElement,
+  matchesNeedle,
+  MAX_HISTORY_RESULTS
+} from "../search"
+
+export async function grepHistoryLines(pattern: string): Promise<string[]> {
+  const items = await chrome.history.search({
+    text: "",
+    maxResults: MAX_HISTORY_RESULTS,
+    startTime: Date.now() - HISTORY_LOOKBACK_MS
+  })
+  const matchAll = !pattern.trim()
+  const matches: string[] = []
+  let hitCount = 0
+  for (const it of items) {
+    const title = it.title ?? ""
+    const url = it.url ?? ""
+    const blob = `${title} ${url}`
+    if (!matchAll && !matchesNeedle(blob, pattern)) {
+      continue
+    }
+    hitCount += 1
+    matches.push(
+      ...linesForGrepElement("history", {
+        title: title || "(no title)",
+        url: url || "(no url)"
+      })
+    )
+  }
+  if (matches.length === 0) {
+    return ["(no history matches — pattern is case-insensitive substring, or empty pattern for all)"]
+  }
+  return [
+    `(${hitCount} element(s) from recent history, capped at ${MAX_HISTORY_RESULTS} rows)`,
+    ...matches
+  ]
+}

@@ -27,6 +27,11 @@ pub fn run(args: &[String]) -> DispatchJson {
         return DispatchJson::lines(lines);
     }
     let sub = args[1].to_lowercase();
+    if !crate::generated::command_subcommands::is_second_token("split", args[1].as_str()) {
+        let mut lines = vec![format!("error: unknown split option: {}", args[1])];
+        lines.extend(split_usage_lines());
+        return DispatchJson::lines(lines);
+    }
     if args.len() > 2 {
         let mut lines = vec!["error: split takes only one option (-col or -row)".to_string()];
         lines.extend(split_usage_lines());
@@ -36,7 +41,7 @@ pub fn run(args: &[String]) -> DispatchJson {
         "-col" => DispatchJson::effects(vec![Effect::SplitCol]),
         "-row" => DispatchJson::effects(vec![Effect::SplitRow]),
         _ => {
-            let mut lines = vec![format!("error: unknown split option: {}", args[1])];
+            let mut lines = vec!["error: internal: split option out of sync".to_string()];
             lines.extend(split_usage_lines());
             DispatchJson::lines(lines)
         }

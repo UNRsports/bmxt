@@ -17,6 +17,7 @@ import {
   splitColForLeaf,
   splitRowForLeaf
 } from "./lib/features/bmxt-window/terminal-sessions/state-storage"
+import { displayTitle } from "./lib/features/format/display-title"
 import {
   ensureBmxtCore,
   runDispatch
@@ -141,6 +142,33 @@ chrome.runtime.onStartup.addListener(() => {
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
 
+/**
+ * WASM 未ロード時でも効かせるコマンド（レイアウト・終了・ログ消去）。
+ * 他はエラー行を出す。
+ */
+async function tryRunCommandWithoutWasm(sessionId: string, trimmed: string): Promise<boolean> {
+  const lower = trimmed.toLowerCase()
+  if (lower === "clear") {
+    await setSessionLines(sessionId, [`> ${trimmed}`, "(log cleared)"])
+    return true
+  }
+  if (lower === "exit") {
+    await exitBmxtWindowFull()
+    return true
+  }
+  if (/^\s*split\s+-col\s*$/i.test(trimmed)) {
+    await splitColForLeaf(sessionId)
+    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    return true
+  }
+  if (/^\s*split\s+-row\s*$/i.test(trimmed)) {
+    await splitRowForLeaf(sessionId)
+    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    return true
+  }
+  return false
+}
+
 async function closeBmxtWindowOnly(): Promise<void> {
   const wid = bmxtWindowId
   if (wid !== undefined) {
@@ -174,22 +202,7 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
   try {
     await ensureBmxtCore()
   } catch (e) {
-    if (trimmed.toLowerCase() === "clear") {
-      await setSessionLines(sessionId, [`> ${trimmed}`, "(log cleared)"])
-      return
-    }
-    if (trimmed.toLowerCase() === "exit") {
-      await exitBmxtWindowFull()
-      return
-    }
-    if (/^\s*split\s+-col\s*$/i.test(trimmed)) {
-      await splitColForLeaf(sessionId)
-      await appendLinesToSession(sessionId, [`> ${trimmed}`])
-      return
-    }
-    if (/^\s*split\s+-row\s*$/i.test(trimmed)) {
-      await splitRowForLeaf(sessionId)
-      await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    if (await tryRunCommandWithoutWasm(sessionId, trimmed)) {
       return
     }
     await appendLinesToSession(sessionId, [
@@ -248,16 +261,6 @@ async function dispatch(
     commandSessionId: sessionId
   }
   return applyChromeEffects(ctx, bundle.effects ?? [])
-}
-
-const DISPLAY_TITLE_MAX = 96
-
-function displayTitle(raw: string | undefined | null): string {
-  const t = (raw || "").trim().replace(/\s+/g, " ")
-  if (!t) {
-    return "(無題)"
-  }
-  return t.length > DISPLAY_TITLE_MAX ? `${t.slice(0, DISPLAY_TITLE_MAX)}…` : t
 }
 
 /** All windows; label is the active tab title only (no window ids). */

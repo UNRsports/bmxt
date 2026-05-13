@@ -19,6 +19,7 @@ _ジャンプ先は明示アンカーです。言語だけの小見出し（`Eng
 - [Technical Overview](#technical-overview)
 - [Key Specs](#key-specs)
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
+  - [Reproducible builds / 再現可能なビルド](#reproducible-builds)
 - [Command-line token model (first / second commands) / コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model)
 - [Command List](#command-list)
   - [`tabs` (subcommands)](#tabs-man-tabs)
@@ -176,15 +177,31 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 ### English
 
-`tabs`, `tabGroups`, `storage`, `windows`
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `grep -page`, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
-The manifest also sets **`content_security_policy.extension_pages`** so extension pages can load WASM (**`wasm-unsafe-eval`**) and, for local development, scripts from **`http://localhost`** (see `package.json`).
+**Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`npm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`** plus localhost endpoints for Plasmo dev) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
+
+The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self' 'wasm-unsafe-eval'`** (plus localhost for local development), **`connect-src 'self'`** (plus localhost / WebSocket for dev), **`object-src 'self'`**, **`style-src 'self' 'unsafe-inline'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. See **`package.json`** for the exact string.
 
 ### 日本語
 
-`tabs`, `tabGroups`, `storage`, `windows`
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`grep -page` 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
-拡張ページの CSP（**`content_security_policy.extension_pages`**）では、WASM 用に **`wasm-unsafe-eval`** を許可し、開発時は **`http://localhost`** からのスクリプトも許可しています（詳細は **`package.json`**）。
+**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`npm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** ＋ Plasmo 開発用 localhost 等）は補助線です（ストア配信・ブラウザ更新は別）。
+
+**`content_security_policy.extension_pages`** では **`default-src 'self'`**、WASM 用 **`script-src 'self' 'wasm-unsafe-eval'`**（開発時は localhost を追加）、**`connect-src 'self'`**（開発時は localhost / WebSocket）、**`object-src 'self'`**、**`style-src 'self' 'unsafe-inline'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。正確な文字列は **`package.json`** を参照してください。
+
+<a id="reproducible-builds"></a>
+
+### Reproducible builds / 再現可能なビルド
+
+### English
+
+Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**) then **`npm run build:wasm`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply.
+
+### 日本語
+
+公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定）のあと **`npm run build:wasm`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。
 
 <a id="command-line-token-model"></a>
 
@@ -224,6 +241,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -list [-u]` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
+| `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
+| `dom -list [--html\|--react] [<pattern>]` | Open a read-only DOM picker for the active tab (same picker chrome as `grep -list`); flavor `--html` (default) or `--react`; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
+| `grep` | Print usage and restore the prompt to `grep ` for `-list` or a `--none` / `--history` / `--bookmark` / `--page` form |
+| `grep -list [--none\|--history\|--bookmark\|--page] <pattern>` | Open a cross-search picker; default `--none` searches browsing history, bookmarks, and visible http(s) tab text together; optional flag limits to one scope; case-insensitive substring (no regex in v1) |
+| `grep --none <pattern>` | Run all three scopes without the picker (log lines; empty pattern returns capped “all” hits) |
+| `grep --history <pattern>` | Recent history titles/URLs only |
+| `grep --bookmark <pattern>` | Bookmark titles/URLs only |
+| `grep --page <pattern>` | Visible text in non-discarded http(s) tabs only; may request optional host permission at runtime |
 | `close` / `c <tabId>` | Close tab |
 | `group new <tabId> …` | Create group |
 
@@ -245,12 +270,52 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -list [-u]` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
+| `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
+| `dom -list [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカーで閲覧（`grep -list` と同系 UI）。`--html`（既定）／`--react`。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
+| `grep` | 利用案内を表示し、続けて `grep ` へ入力復元（`-list` または `--none` 等） |
+| `grep -list [--none\|--history\|--bookmark\|--page] <pattern>` | 横断検索ピッカー。既定 `--none` は履歴・ブックマーク・http(s) タブ表示テキストをまとめて検索。フラグでスコープを1つに限定可。部分一致（v1 正規表現なし） |
+| `grep --none <pattern>` | 3スコープをピッカーなしで一括実行（ログ出力。空パターンは件数上限付き一覧） |
+| `grep --history <pattern>` | 閲覧履歴のタイトル／URL のみ |
+| `grep --bookmark <pattern>` | ブックマークのタイトル／URL のみ |
+| `grep --page <pattern>` | 非破棄 http(s) タブの表示テキストのみ（実行時にオプションのサイト権限を求めることがある） |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
 **0.1.1 — split ペイン:** 複数ペインが開いているとき、**Ctrl+矢印**でキーボードフォーカスをペイン間で移動できます。
+
+### `dom`
+
+#### English
+
+- Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
+- **`dom -list`** resolves the **active tab of the last-focused normal browser window**, injects a read-only helper via `chrome.scripting`, and streams a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
+- **`--html`** (default) vs **`--react`** only changes how nodes are labeled in the picker UI.
+- Any tokens after the optional flavor flag are joined into a single **substring** filter on the printed lines (ASCII case fold); **not** a regular expression. ASCII `"…"` / `'…'` around the pattern are stripped once.
+
+#### 日本語
+
+- **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
+- **`dom -list`** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`grep --page` 系と同じ系統）。
+- **`--html`**（既定）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
+- flavor の後ろのトークンはすべて連結され、出力行に対する**部分一致**フィルタになる（大文字小文字は ASCII 範囲で折りたたみ）。**正規表現ではない**。パターンを ASCII の `"` / `'` で1重に囲んだ場合は外側を1回だけ除去する。
+
+### `grep`
+
+#### English
+
+- Bare `grep` + **Enter** prints the usage block and restores **`grep `**.
+- **`grep -list …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** (default when omitted) fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
+- One-shot forms **`grep --none`**, **`grep --history`**, **`grep --bookmark`**, and **`grep --page`** skip the picker and append results as log lines. An **empty** pattern with **`--none`** (including bare `grep -list`) still runs all three effects with empty filters, which the host implements as capped “show many rows” behavior.
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`--page`** / **`grep -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
+
+#### 日本語
+
+- **`grep` 単体 + Enter** で利用案内を表示し、**`grep `** へ復帰する。
+- **`grep -list …`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--none`**（省略時の既定）は履歴・ブックマーク・ページ表示テキストをまとめて対象にする。**`--history`** / **`--bookmark`** / **`--page`** でスコープを1つに絞れる。
+- **`grep --none`** など直接形はピッカーを経由せずログ行として結果を出す。**`--none`** でパターン空（`grep -list` 単体を含む）は3系統すべて空パターンで走り、実装側で件数上限付きの一覧になる。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`--page`** 系は非破棄の **http(s)** タブを走査し、初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs"></a>
 
@@ -342,7 +407,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### English
 
-**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`npm run codegen`** (also run at the start of **`npm run build:wasm`**) regenerates **`registry/table.rs`**, Rust **`Effect`** (`generated/effect_enum.rs`), **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, and **`completion-fallback.ts`**. Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`dispatchFull`** returns terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion **names** come from **`completionCandidatesJson()`** in WASM; if WASM fails to load, the **`completion-fallback.ts`** list (from the same manifest) is used.
+**Registry, help text, tokenization, and URL-only lines** are implemented in **`wasm/bmxt-core` (Rust / WASM)**. Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`npm run codegen`** (also run at the start of **`npm run build:wasm`**) regenerates **`registry/table.rs`**, Rust **`Effect`** (`generated/effect_enum.rs`), **`generated/command_subcommands.rs`** (second-token vocabulary + `is_second_token`), **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, **`completion-fallback.ts`**, and **`command-subcommands.gen.ts`** (TS completion + continuation helpers). Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`dispatchFull`** returns terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion **names** come from **`completionCandidatesJson()`** in WASM; if WASM fails to load, the **`completion-fallback.ts`** list (from the same manifest) is used.
 
 The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer events/state; after changing **`wasm/bmxt-core/src/features/tabs_picker/model.rs`**, rebuild **`assets/wasm/bmxt-core`** with **`npm run build:wasm`** (see **Tab picker — implementation** under **`tabs`**). The TS layer includes a narrow fallback for **`moveHi` / `moveDest`** when WASM returns an unchanged state.
 
@@ -352,7 +417,7 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 **Main directories:**
 
-- **`manifest/bmxt-codegen.json`** — single source for command registry + Effect schema + TS handler wiring (see **`npm run codegen`**)
+- **`manifest/bmxt-codegen.json`** — single source for command registry + **`commands[].subcommands`** (second/third fixed tokens, tail kinds) + Effect schema + TS handler wiring (see **`npm run codegen`**)
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, tab picker launch)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`wasm/bmxt-core/src/cmd/`** — one module per built-in command (`CMD` + `run`; **`registry/table.rs`** is **generated**)
@@ -365,13 +430,13 @@ The tab picker’s **`tabsPickerReduce`** uses **camelCase JSON** for reducer ev
 
 ### 日本語
 
-**一覧の真実**は **`manifest/bmxt-codegen.json`**です。**`npm run codegen`**（**`build:wasm`** の先頭でも実行）で **`registry/table.rs`**・Rust **`Effect`**（**`generated/effect_enum.rs`**）・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`** を再生成します。個別の副作用実装は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果を **`handlers/effects`** に振り分けます。Tab 補完は WASM の **`completionCandidatesJson`**、WASM 未ロード時は manifest 由来の **`completion-fallback.ts`**。
+**一覧の真実**は **`manifest/bmxt-codegen.json`**です。**`npm run codegen`**（**`build:wasm`** の先頭でも実行）で **`registry/table.rs`**・Rust **`Effect`**（**`generated/effect_enum.rs`**）・**`generated/command_subcommands.rs`**・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`**・**`command-subcommands.gen.ts`** を再生成します。個別の副作用実装は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果を **`handlers/effects`** に振り分けます。Tab 補完は WASM の **`completionCandidatesJson`**、WASM 未ロード時は manifest 由来の **`completion-fallback.ts`**。
 
 タブピッカーの **`tabsPickerReduce`** はリデューサのイベント／状態を **camelCase の JSON** でやり取りします。**`wasm/bmxt-core/src/features/tabs_picker/model.rs`** を変えたら **`npm run build:wasm`** で **`assets/wasm/bmxt-core`** を再ビルドしてください（詳細は **`tabs`** の **タブピッカー — 実装**）。**`moveHi` / `moveDest`** については、WASM が入力と同じ状態を返した場合に限り TypeScript 側で狭いフォールバックをかけています。
 
 **例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-terminal.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**（タブピッカー）、**対話的な `group new`**（タブ ID なし）。それ以外のサブコマンドと一般コマンドはバックグラウンドで WASM dispatch します。
 
-- **`manifest/bmxt-codegen.json`** — コマンド一覧・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
+- **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**（第二／第三固定トークン・`tail` 種別）・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI（ログ・プロンプト・IME・タブピッカー起動など）
 - **`lib/features/extension-storage/`** — `chrome.storage.local` のキー名とログ／履歴の上限定数
 - **`wasm/bmxt-core/src/cmd/`** — 組み込みコマンドごとに `CMD` + `run`（**`registry/table.rs`** は生成）  
@@ -410,9 +475,9 @@ Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**. For a consol
 
 #### English
 
-- **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Use the shared **continuation** mechanism for (3).
+- **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Continuation and second-token Tab lists come from generated **`command-subcommands.gen.ts`** (from manifest **`subcommands`**).
 
-- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`wasm/bmxt-core/src/registry/table.rs`**, files under **`wasm/bmxt-core/src/generated/`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**. Regenerate them with **`npm run codegen`** (also runs at the start of **`npm run build:wasm`**).
+- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`wasm/bmxt-core/src/registry/table.rs`**, files under **`wasm/bmxt-core/src/generated/`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**, **`lib/features/builtin-commands/command-subcommands.gen.ts`**. Regenerate them with **`npm run codegen`** (also runs at the start of **`npm run build:wasm`**).
 - **Recommended:** `npm run new:command -- <rust_module> <canonical_name> [aliases...]` — creates **`wasm/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`** in the manifest and **`cmd/mod.rs`**, then runs **codegen**. Replace the stub in **`run`** and align **`usagePrimary`** (manifest) with **`usage_primary`** (Rust) if the usage line should differ from the canonical name.
 - **Manual path:** Add a row under **`commands[]`** in the manifest, add **`cmd/<module>.rs`**, add **`pub mod <module>;`** in **`cmd/mod.rs`**, then **`npm run codegen`**.
 - **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`npm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return **`Effect::…`** from **`run`** via **`DispatchJson::effects`** as needed.
@@ -420,19 +485,47 @@ Step-by-step template: **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**. For a consol
 
 Field-level detail (`effects[]` shapes, scaffolder behaviour) lives in **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`**.
 
+#### Manifest `commands[].subcommands` (second / third tokens) / `subcommands`（第二・第三トークン）
+
+Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics and argument parsing remain in **`cmd/<module>.rs`**; keep literals in sync—**`npm run verify:manifest`** checks each `head` appears in the Rust file).
+
+**`npm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + lone-first-token continuation) and **`wasm/bmxt-core/src/generated/command_subcommands.rs`** (`is_second_token`). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
+
+##### How to add second/third tokens (checklist)
+
+1. Edit **`manifest/bmxt-codegen.json`**: set **`subcommands`** to **`[]`** or a list of **`{ head, trailingTokens?, tail? }`** (see **`manifest/templates/command-with-subcommands.example.json`**).
+2. Run **`npm run codegen`** (regenerates **`command-subcommands.gen.ts`** and **`generated/command_subcommands.rs`**).
+3. In **`wasm/bmxt-core/src/cmd/<module>.rs`**, implement **`run`** and reference **each `head` as the same string literal** as in the manifest (required for **`npm run verify:manifest`**).
+4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
+5. Run **`npm run verify:manifest`**, **`npm run check:generated`**, **`cargo test`** (under **`wasm/bmxt-core`**), **`npx tsc --noEmit`**, then **`npm run build:wasm`** as needed.
+
 **Hand-written browser logic (`handlers/effects/*.ts`) vs builds:** Edits there do **not** conflict with **`cargo` / `wasm-pack`** (different outputs) or with **`npm run codegen`**—those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports; otherwise **`tsc`** or runtime behaviour will drift. This is a **consistency** requirement, not a file-lock conflict.
 
 #### 日本語
 
-- **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model)** と **`.cursorrules`** に従う（第一→第二の順、第一・第二に短縮別名を設けない、第二必須時は **Enter** で案内／プレースホルダ表示のあと **`第一コマンド `** へ復帰）。(3) は **continuation** の共通経路で実装する。
+- **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model)** と **`.cursorrules`** に従う（第一→第二の順、第一・第二に短縮別名を設けない、第二必須時は **Enter** で案内／プレースホルダ表示のあと **`第一コマンド `** へ復帰）。continuation と第二トークン Tab 候補は manifest の **`subcommands`** から生成される **`command-subcommands.gen.ts`** を経由する。
 
-- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない（いずれも **`npm run codegen`**／**`build:wasm`** 先頭で再生成）: **`registry/table.rs`**、**`wasm/bmxt-core/src/generated/`** 以下、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**。
+- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない（いずれも **`npm run codegen`**／**`build:wasm`** 先頭で再生成）: **`registry/table.rs`**、**`wasm/bmxt-core/src/generated/`** 以下、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**、**`command-subcommands.gen.ts`**。
 - **手順（推奨）:** **`npm run new:command -- <rust_module> <canonical_name> [aliases...]`** — `cmd/<module>.rs`・manifest の **`commands[]`**・**`cmd/mod.rs`** を更新し **codegen** まで実行。**`run`** の実装へ差し替え、ヘルプ一行が名前と違う場合は manifest の **`usagePrimary`** と Rust の **`usage_primary`** を揃える。
 - **手動で足す場合:** manifest の **`commands[]`** に追記 → **`cmd/<module>.rs`**（**`CMD` + `run`**）→ **`cmd/mod.rs`** に **`pub mod`** → **`npm run codegen`**。
 - **ブラウザ連携（新しい `Effect`）:** manifest の **`effects[]`** に追記 → **`npm run codegen`** → **`handlers/effects/<tsHandlerFile>.ts`** に manifest の **`tsHandlerExport`** を実装 → **`run`** から **`DispatchJson::effects`** で **`Effect::…`** を返す。
 - **検証:** **`npm run verify:manifest`**（manifest と各 **`cmd/*.rs`** の **`CMD` ブロックが一致するか）、**`npm run check:generated`**（生成物の git 差分なし）。CI でも両方実行。続けて **`cargo test`** / **`npx tsc --noEmit`**、拡張全体は **`npm run build:wasm`** → **`npm run build`**。
 
 **`effects[]` のフィールドやスキャフォールダの挙動など**は **`wasm/bmxt-core/src/cmd/ADD_COMMAND.md`** を参照。
+
+#### Manifest `commands[].subcommands`（第二・第三トークン）
+
+各 **`commands[]`** 行に **`subcommands`** を必ず含める（第二トークン族が無いコマンドは **`[]`**）。空でないときは **`head`**（`-` で始まる正式第二トークン）、任意の **`trailingTokens`**（その直後に続けられる固定第三トークン。例: `tabs -list` の `-u`）、任意の **`tail`**（**`none`** / **`rest_http_url`** / **`rest`**。dispatch の意味論・引数パースは **`cmd/<module>.rs`** に書き、各 **`head`** を Rust 内の同じ文字列リテラルで参照すること。**`npm run verify:manifest`** がその対応を検査する。
+
+**`npm run codegen`** が **`command-subcommands.gen.ts`**（補完・continuation）と **`generated/command_subcommands.rs`**（`is_second_token`）を出す。新しい第一＋第二族の雛形は **`manifest/templates/command-with-subcommands.example.json`** をコピーして足す。
+
+##### 第二・第三トークンを足す手順（チェックリスト）
+
+1. **`manifest/bmxt-codegen.json`** を編集し、**`subcommands`** を **`[]`** または **`{ head, trailingTokens?, tail? }[]`** にする（雛形は **`manifest/templates/command-with-subcommands.example.json`**）。
+2. **`npm run codegen`** を実行する（**`command-subcommands.gen.ts`** と **`generated/command_subcommands.rs`** が更新される）。
+3. **`wasm/bmxt-core/src/cmd/<module>.rs`** の **`run`** を実装し、manifest の **各 `head` と同じ文字列リテラル**を Rust に書く（**`npm run verify:manifest`** の前提）。
+4. プロンプトで **第三トークン**まで Tab 補完させる場合は、生成の **`listThirdTokenCandidates`** を使い、必要ならシェル側に補完ゾーンを足す。
+5. **`npm run verify:manifest`** → **`npm run check:generated`** → **`wasm/bmxt-core`** で **`cargo test`** → **`npx tsc --noEmit`** → 必要に応じて **`npm run build:wasm`**。
 
 **手書きのブラウザ実装（`handlers/effects/*.ts`）とビルド:** ここを編集しても **`cargo` / `wasm-pack`** や **`npm run codegen`** と**ファイルの上書き競合は起きない**（codegen の対象外）。一方、manifest の **`effects[]`** を変えて **codegen** したあとは、対応する **`tsHandlerFile` / `tsHandlerExport`** の実装を、生成された **`ChromeEffect`** 型・**`apply-dispatch.gen.ts`** の import に**揃える**必要がある（型エラーや実行時の食い違いを防ぐ）。これは**手順の整合**の話で、ビルドツール同士の競合ではない。
 
@@ -587,14 +680,12 @@ npm run dev:fresh   # build:wasm のあと plasmo dev
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知・**`notes`** ターミナルコマンドの変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
-- `lib/features/tabs/` — タブピッカー・tabs 入力パースなど（`picker-overlay.tsx`、`picker-rows.ts`、`input.ts`、各種 hooks）
+- `lib/features/tabs/` — タブピッカー・tabs 入力パース・ピッカー行生成など（`index.ts` から主要シンボルを再エクスポート。実装は `picker-overlay.tsx`、`picker-rows.ts`、`input.ts`、各種 hooks）
 - `background.ts` — Service Worker（ウィンドウ起動・WASM dispatch・Effect 実行）
 - `wasm/bmxt-core/` — Rust コア（`cmd/` にコマンド単位、`registry/table.rs` で一覧）
 - `lib/features/wasm-core/` — WASM 初期化・`runDispatch`・補完候補
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — 補完フォールバック（WASM 未初期化時・**`completion-fallback.ts`** は **`build:wasm`** で Rust から生成）
-- `lib/tab-picker.ts` — 互換レイヤ（`lib/features/tabs/picker-rows.ts` を再エクスポート）
-- `lib/bmxt-tabs-input.ts` — 互換レイヤ（`lib/features/tabs/input.ts` を再エクスポート）
 
 ### English
 
