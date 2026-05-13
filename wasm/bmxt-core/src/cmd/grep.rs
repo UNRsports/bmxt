@@ -2,6 +2,7 @@
 //! EN: No persistence is added by this module; results are printed to the terminal session.
 //! JA: 本モジュールは永続化を行いません。結果はターミナル表示のみです。
 
+use crate::line_parse::strip_invisible_format_chars;
 use crate::meta::Cmd;
 use crate::model::{DispatchJson, Effect};
 
@@ -22,15 +23,24 @@ fn usage_lines() -> Vec<String> {
     ]
 }
 
+/// EN: Same ASCII fold as `is_second_token` in generated `command_subcommands.rs`.
+/// JA: 生成コードの `is_second_token` と同じ ASCII 大小折りたたみ。
+fn normalize_grep_second_token(head: &str) -> String {
+    strip_invisible_format_chars(head.trim()).to_ascii_lowercase()
+}
+
 /// Trim outer `"…"` / `'…'` once so pasted quoted Japanese still matches titles.
 fn normalize_grep_pattern(raw: String) -> String {
-    let t = raw.trim();
+    let t = strip_invisible_format_chars(raw.trim());
     let chs: Vec<char> = t.chars().collect();
     if chs.len() >= 2 {
         let a = chs[0];
         let b = chs[chs.len() - 1];
         if (a == '"' && b == '"') || (a == '\'' && b == '\'') {
-            return chs[1..chs.len() - 1].iter().collect::<String>().trim().to_string();
+            return strip_invisible_format_chars(
+                &chs[1..chs.len() - 1].iter().collect::<String>().trim(),
+            )
+            .to_string();
         }
     }
     t.to_string()
@@ -42,13 +52,13 @@ pub fn run(args: &[String]) -> DispatchJson {
         lines.extend(usage_lines());
         return DispatchJson::lines(lines);
     }
-    let head = args[1].as_str();
-    if !crate::generated::command_subcommands::is_second_token("grep", head) {
-        let mut lines = vec![format!("error: unknown grep option: {head}")];
+    let head_raw = args[1].as_str();
+    let head_key = normalize_grep_second_token(head_raw);
+    if !crate::generated::command_subcommands::is_second_token("grep", &head_key) {
+        let mut lines = vec![format!("error: unknown grep option: {head_raw}")];
         lines.extend(usage_lines());
         return DispatchJson::lines(lines);
     }
-    let head_lc = head.to_lowercase();
     let pattern_raw = args.iter().skip(2).cloned().collect::<Vec<_>>().join(" ");
     let pattern = normalize_grep_pattern(pattern_raw);
     if pattern.is_empty() {
@@ -56,12 +66,14 @@ pub fn run(args: &[String]) -> DispatchJson {
         lines.extend(usage_lines());
         return DispatchJson::lines(lines);
     }
-    let effect = match head_lc.as_str() {
+    let effect = match head_key.as_str() {
         "-history" => Effect::GrepHistory { pattern },
         "-bookmark" => Effect::GrepBookmark { pattern },
         "-page" => Effect::GrepPage { pattern },
         _ => {
-            let mut lines = vec![format!("error: internal: unrecognized grep head after validation ({head_lc})")];
+            let mut lines = vec![format!(
+                "error: internal: unrecognized grep head after validation ({head_key})"
+            )];
             lines.extend(usage_lines());
             return DispatchJson::lines(lines);
         }
@@ -86,5 +98,19 @@ mod tests {
         let out = run(&["grep".into(), "-history".into(), "\"クソゲー\"".into()]);
         let ef = out.effects.expect("effects");
         assert!(matches!(&ef[0], Effect::GrepHistory { pattern } if pattern == "クソゲー"));
+    }
+
+    #[test]
+    fn grep_page_emits_effect_with_hiragana_pattern() {
+        let out = run(&["grep".into(), "-page".into(), "変わる".into()]);
+        let ef = out.effects.expect("effects");
+        assert!(matches!(&ef[0], Effect::GrepPage { pattern } if pattern == "変わる"));
+    }
+
+    #[test]
+    fn grep_page_accepts_leading_bom_on_flag() {
+        let out = run(&["grep".into(), format!("\u{feff}-page"), "変わる".into()]);
+        let ef = out.effects.expect("effects");
+        assert!(matches!(&ef[0], Effect::GrepPage { pattern } if pattern == "変わる"));
     }
 }

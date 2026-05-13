@@ -19,7 +19,8 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "close": [] as const,
   "dom": [
     { head: "-select", trailingTokens: ["-html","-react"] as const, tail: "rest" },
-    { head: "-hide", trailingTokens: ["-html","-react"] as const, tail: "rest" }
+    { head: "-hide", trailingTokens: ["-html","-react"] as const, tail: "rest" },
+    { head: "-show", trailingTokens: ["-html","-react"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
   "grep": [

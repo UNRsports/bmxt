@@ -19,7 +19,7 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -select | dom -hide (-html|-react) <selectors…>",
+      "usagePrimary": "dom -show (-html|-react) | dom -select | dom -hide …",
       "subcommands": [
         {
           "head": "-select",
@@ -30,6 +30,11 @@
           "head": "-hide",
           "trailingTokens": ["-html", "-react"],
           "tail": "rest"
+        },
+        {
+          "head": "-show",
+          "trailingTokens": ["-html", "-react"],
+          "tail": "none"
         }
       ]
     },
@@ -146,6 +151,14 @@
       },
       "tsHandlerFile": "dom-apply-filters",
       "tsHandlerExport": "applyDomApplyFiltersEffect"
+    },
+    {
+      "kind": "dom_show",
+      "rustVariant": "DomShow",
+      "shape": "record",
+      "fields": { "flavor": "string" },
+      "tsHandlerFile": "dom-show",
+      "tsHandlerExport": "applyDomShowEffect"
     },
     {
       "kind": "exit_pane",

@@ -1,13 +1,19 @@
 /**
- * EN: Normalize for substring search (NFKC unifies compat chars; toLowerCase for ASCII case).
- * JA: 部分一致用の正規化（NFKC で互換文字を揃え、ASCII 大小は toLowerCase）。
+ * EN: Strip invisible directional / format chars (IME / copy-paste), then NFKC + lowercase.
+ * JA: IME・コピペ由来の不可視文字を除き、NFKC と小文字化で揃える。
  */
 
+/** EN: Align with Rust `grep` token cleanup. JA: Rust の grep トークン正規化と同種。 */
+export function stripInvisibleFormatChars(s: string): string {
+  return s.replace(/[\uFEFF\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, "")
+}
+
 export function normalizeForMatch(s: string): string {
+  const t = stripInvisibleFormatChars(s)
   try {
-    return s.normalize("NFKC").toLowerCase()
+    return t.normalize("NFKC").toLowerCase()
   } catch {
-    return s.toLowerCase()
+    return t.toLowerCase()
   }
 }
 

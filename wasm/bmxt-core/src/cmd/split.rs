@@ -40,7 +40,11 @@ pub fn run(args: &[String]) -> DispatchJson {
     match sub.as_str() {
         "-col" => DispatchJson::effects(vec![Effect::SplitCol]),
         "-row" => DispatchJson::effects(vec![Effect::SplitRow]),
-        _ => unreachable!("is_second_token and match must stay in sync with manifest"),
+        _ => {
+            let mut lines = vec!["error: internal: split option out of sync".to_string()];
+            lines.extend(split_usage_lines());
+            DispatchJson::lines(lines)
+        }
     }
 }
 

@@ -8,6 +8,7 @@ import type { DispatchChromeContext } from "../dispatch-context"
 import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseTabEffect } from "./effects/close-tab"
 import { applyDomApplyFiltersEffect } from "./effects/dom-apply-filters"
+import { applyDomShowEffect } from "./effects/dom-show"
 import { applyExitPaneEffect } from "./effects/exit-pane"
 import { applyGrepBookmarkEffect } from "./effects/grep-bookmark"
 import { applyGrepHistoryEffect } from "./effects/grep-history"
@@ -35,6 +36,8 @@ export async function applyOne(
       return applyCloseTabEffect(ctx, e)
     case "dom_apply_filters":
       return applyDomApplyFiltersEffect(ctx, e)
+    case "dom_show":
+      return applyDomShowEffect(ctx, e)
     case "exit_pane":
       return applyExitPaneEffect(ctx, e)
     case "grep_bookmark":

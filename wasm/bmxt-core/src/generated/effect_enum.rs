@@ -15,6 +15,9 @@ pub enum Effect {
         op: String,
         selectors: String,
     },
+    DomShow {
+        flavor: String,
+    },
     ExitPane,
     GrepBookmark {
         pattern: String,

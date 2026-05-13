@@ -1,4 +1,4 @@
-use crate::line_parse::parse_http_url_candidate;
+use crate::line_parse::{parse_http_url_candidate, strip_invisible_format_chars};
 use crate::meta::Cmd;
 use crate::model::{DispatchJson, Effect};
 
@@ -22,7 +22,7 @@ fn tabs_run_hint_line() -> String {
 }
 
 fn norm_tabs_flag(arg: Option<&String>) -> Option<char> {
-    let a = arg?.to_lowercase();
+    let a = strip_invisible_format_chars(arg?.trim()).to_lowercase();
     match a.as_str() {
         "-list" => Some('l'),
         "-moveurl" => Some('m'),
@@ -43,7 +43,11 @@ pub fn run(args: &[String]) -> DispatchJson {
         lines.extend(tabs_usage_lines());
         return DispatchJson::lines(lines);
     }
-    let sub = norm_tabs_flag(args.get(1)).expect("manifest subcommands must match cmd/tabs.rs norm_tabs_flag");
+    let Some(sub) = norm_tabs_flag(args.get(1)) else {
+        let mut lines = vec!["error: internal: tabs option out of sync (re-run npm run codegen)".to_string()];
+        lines.extend(tabs_usage_lines());
+        return DispatchJson::lines(lines);
+    };
     match sub {
         'l' => {
             if args.len() > 3 || (args.len() == 3 && args[2].to_lowercase() != "-u") {
@@ -80,6 +84,10 @@ pub fn run(args: &[String]) -> DispatchJson {
             };
             DispatchJson::effects(vec![Effect::TabsMoveUrl { url }])
         }
-        _ => unreachable!(),
+        _ => {
+            let mut lines = vec!["error: internal: tabs dispatch out of sync".to_string()];
+            lines.extend(tabs_usage_lines());
+            DispatchJson::lines(lines)
+        }
     }
 }

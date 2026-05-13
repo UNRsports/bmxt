@@ -5,14 +5,20 @@
       "第一トークンのみ Enter 時の continuation と第二トークン Tab 補完を生成物に揃え、verify-manifest で各 head が cmd/*.rs にリテラルで存在するか検証",
       "README / .cursorrules に subcommands の追記手順（チェックリスト）を明記",
       "`dom` コマンド（-select / -hide と -html|-react、CSS セレクタ列）で対象タブに一時的な表示フィルタを注入（再読み込みで解除）",
-      "`grep` コマンド（-history / -bookmark / -page）でメモリ内検索。共有ロジックは lib/features/search、取得は grep-sources に分離"
+      "`grep` コマンド（-history / -bookmark / -page）でメモリ内検索。共有ロジックは lib/features/search、取得は grep-sources に分離",
+      "`dom -show -html|-react` で対象タブの DOM をターミナルに表示（HTML は outerHTML、-react は要素木＋検出時 react-internal マーカー）",
+      "`grep` の第二トークンを `is_second_token` と同じ ASCII 折りたたみ＋不可視文字除去で正規化し、`-page` 等で日本語パターン時の WASM 不整合を防止",
+      "`dispatch::try_url_line` の末尾判定をバイトスライスから `strip_suffix` に変更（日本語入力行で UTF-8 境界パニック→WASM unreachable になっていた）"
     ],
     "en": [
       "Second/third command tokens live in manifest `subcommands`; codegen emits `command-subcommands.gen.ts` and Rust `is_second_token`",
       "Lone-first-token continuation and second-token Tab completion read from generated code; `verify:manifest` checks each `head` appears as a literal in `cmd/*.rs`",
       "README and `.cursorrules` document the `subcommands` add checklist",
       "`dom` command (`-select` / `-hide`, `-html` or `-react`, CSS selector list) injects a temporary view filter on the target tab (cleared on reload)",
-      "`grep` command (`-history` / `-bookmark` / `-page`) searches in memory only; shared logic under `lib/features/search`, data adapters under `grep-sources`"
+      "`grep` command (`-history` / `-bookmark` / `-page`) searches in memory only; shared logic under `lib/features/search`, data adapters under `grep-sources`",
+      "`dom -show -html|-react` prints the target tab DOM to the terminal (`-html`: outerHTML; `-react`: element tree outline with optional react-internal markers)",
+      "`grep` second token is normalized the same way as `is_second_token` (ASCII fold + strip invisible format chars) so `-page` with Japanese patterns cannot diverge and trap WASM",
+      "`dispatch::try_url_line` suffix checks use `strip_suffix` instead of byte slicing (UTF-8 mid-char panic → WASM `unreachable` when the line contained Japanese)"
     ]
   }
 }

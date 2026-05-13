@@ -73,6 +73,10 @@ pub fn build_help_lines() -> Vec<String> {
     lines.push(String::new());
     lines.push("dom (page view filter on the active target tab):".to_string());
     lines.push(
+        "  dom -show   -html|-react       — print DOM structure to the terminal (HTML or React-style outline)."
+            .to_string(),
+    );
+    lines.push(
         "  dom -select -html|-react <css…>  — show only matched nodes (reload page to clear)."
             .to_string(),
     );

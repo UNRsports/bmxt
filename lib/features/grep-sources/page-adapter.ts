@@ -23,6 +23,16 @@ function bmxtExtractPageInnerText(max: number): string {
 }
 
 export async function grepPageLines(pattern: string): Promise<string[]> {
+  let activeTabId: number | undefined
+  try {
+    const [active] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    if (typeof active?.id === "number") {
+      activeTabId = active.id
+    }
+  } catch {
+    activeTabId = undefined
+  }
+
   const all = await chrome.tabs.query({})
   const candidates = all.filter(
     (t) => !t.discarded && typeof t.id === "number" && isHttpUrl(t.url)
@@ -32,7 +42,21 @@ export async function grepPageLines(pattern: string): Promise<string[]> {
     const lb = (b as { lastAccessed?: number }).lastAccessed ?? 0
     return lb - la
   })
-  const tabs = candidates.slice(0, MAX_PAGE_TABS)
+
+  const prioritized: typeof candidates = []
+  if (activeTabId !== undefined) {
+    const active = candidates.find((t) => t.id === activeTabId)
+    if (active) {
+      prioritized.push(active)
+    }
+  }
+  for (const t of candidates) {
+    if (t.id !== activeTabId) {
+      prioritized.push(t)
+    }
+  }
+
+  const tabs = prioritized.slice(0, MAX_PAGE_TABS)
   const out: string[] = []
   let totalHits = 0
   let scanned = 0

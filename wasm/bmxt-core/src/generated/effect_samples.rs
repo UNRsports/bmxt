@@ -12,6 +12,7 @@ pub fn effect_samples_for_ts_generation() -> Vec<Effect> {
         Effect::ClearLog,
         Effect::CloseTab { tab_id: 0 },
         Effect::DomApplyFilters { flavor: String::new(), op: String::new(), selectors: String::new() },
+        Effect::DomShow { flavor: String::new() },
         Effect::ExitPane,
         Effect::GrepBookmark { pattern: String::new() },
         Effect::GrepHistory { pattern: String::new() },
