@@ -26,6 +26,8 @@ import {
 import { DomListPickerOverlay } from "../dom/dom-list-picker-overlay"
 import {
   domListFlavorCompletionZone,
+  isDomListAwaitingFlavor,
+  isRetryableDomListOutput,
   listDomListFlavorCandidates,
   parseDomListPickerLine,
   type DomListPickerState
@@ -326,6 +328,58 @@ export function BmxtShell({
     return () => window.removeEventListener("focus", onWinFocus)
   }, [overlayOpen, isFocusedPane, focusPrompt])
 
+  const runDomListAndShow = useCallback(
+    async (
+      domListLine: string,
+      displayLine: string,
+      announce: boolean
+    ): Promise<void> => {
+      try {
+        await ensureBmxtCore()
+        const bundle = runDispatch(domListLine)
+        if (bundle.ty === "lines") {
+          await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
+          setDomListPicker(sessionId, null)
+          return
+        }
+        const ctx: DispatchChromeContext = {
+          clearLog: async () => {},
+          exitPane: async () => [],
+          listWindows: async () => [],
+          focusInfo: async () => [],
+          resolveTabArg: async () => undefined,
+          commandSessionId: sessionId
+        }
+        const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+        if (isRetryableDomListOutput(linesOut)) {
+          if (announce) {
+            await appendLogLines([
+              `> ${displayLine}`,
+              "dom -list — permission / target check (Enter=許可 / Esc=拒否)"
+            ])
+          }
+          setDomListPicker(sessionId, {
+            kind: "prompt",
+            message: linesOut,
+            commandLine: domListLine
+          })
+          return
+        }
+        if (announce) {
+          await appendLogLines([`> ${displayLine}`, "dom -list — picker (Esc)"])
+        }
+        setDomListPicker(sessionId, { kind: "lines", lines: linesOut })
+      } catch (e) {
+        await appendLogLines([
+          `> ${displayLine}`,
+          `error: ${e instanceof Error ? e.message : String(e)}`
+        ])
+        setDomListPicker(sessionId, null)
+      }
+    },
+    [appendLogLines, sessionId, setDomListPicker]
+  )
+
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
       const pick = iSearchMatches[iSearchCycle]
@@ -439,6 +493,23 @@ export function BmxtShell({
       return
     }
 
+    if (isDomListAwaitingFlavor(trimmed)) {
+      const continuation = "dom -list "
+      const cands = listDomListFlavorCandidates("")
+      appendCommandToHistory(trimmed)
+      setLine(continuation)
+      setCursorPos(continuation.length)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      if (cands.length > 0) {
+        setSubCmdPicker({ continuation, candidates: cands, hi: 0 })
+      } else {
+        setSubCmdPicker(null)
+      }
+      focusPrompt()
+      return
+    }
+
     const domListLine = parseDomListPickerLine(trimmed)
     if (domListLine !== null) {
       appendCommandToHistory(trimmed)
@@ -447,32 +518,7 @@ export function BmxtShell({
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       setSubCmdPicker(null)
-      void (async () => {
-        try {
-          await ensureBmxtCore()
-          const bundle = runDispatch(domListLine)
-          if (bundle.ty === "lines") {
-            await appendLogLines([`> ${trimmed}`, ...(bundle.lines ?? [])])
-            return
-          }
-          const ctx: DispatchChromeContext = {
-            clearLog: async () => {},
-            exitPane: async () => [],
-            listWindows: async () => [],
-            focusInfo: async () => [],
-            resolveTabArg: async () => undefined,
-            commandSessionId: sessionId
-          }
-          const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-          await appendLogLines([`> ${trimmed}`, "dom -list — picker (Esc)"])
-          setDomListPicker(sessionId, { lines: linesOut })
-        } catch (e) {
-          await appendLogLines([
-            `> ${trimmed}`,
-            `error: ${e instanceof Error ? e.message : String(e)}`
-          ])
-        }
-      })()
+      void runDomListAndShow(domListLine, trimmed, /*announce*/ true)
       focusPrompt()
       return
     }
@@ -509,7 +555,7 @@ export function BmxtShell({
     sessionId,
     setTabPicker,
     setGrepListPicker,
-    setDomListPicker
+    runDomListAndShow
   ])
 
   const applySubCmdPickIndex = useCallback(
@@ -528,6 +574,14 @@ export function BmxtShell({
       setCursorPos(nextLine.length)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
+      // EN: Auto-chain into the flavor pull-down when the new line is exactly `dom -list `.
+      // JA: 新しい行が `dom -list ` ならそのまま flavor プルダウンを開く（2 段の選択を 1 動線に）。
+      if (isDomListAwaitingFlavor(nextLine)) {
+        const cands = listDomListFlavorCandidates("")
+        if (cands.length > 0) {
+          setSubCmdPicker({ continuation: "dom -list ", candidates: cands, hi: 0 })
+        }
+      }
       focusPrompt()
     },
     [focusPrompt]
@@ -1140,8 +1194,19 @@ export function BmxtShell({
               "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
           }}>
           <DomListPickerOverlay
-            lines={domListPicker.lines}
+            state={domListPicker}
             onExit={() => setDomListPicker(sessionId, null)}
+            onApprove={() => {
+              if (domListPicker.kind !== "prompt") {
+                return
+              }
+              const cl = domListPicker.commandLine
+              setDomListPicker(sessionId, {
+                kind: "lines",
+                lines: ["dom -list — retrying after permission grant…"]
+              })
+              void runDomListAndShow(cl, cl, false)
+            }}
           />
         </div>
       ) : null}

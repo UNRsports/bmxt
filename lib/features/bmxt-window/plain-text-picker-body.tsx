@@ -87,12 +87,26 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
+  const refocusIfNoSelection = useCallback(() => {
+    const sel = window.getSelection()
+    if (!sel || sel.toString().length === 0) {
+      inputRef.current?.focus()
+    }
+  }, [])
+
   return (
     <div
       className="bmxt-tab-picker"
-      onMouseDown={() => {
+      onMouseDown={(e) => {
+        const t = e.target as HTMLElement | null
+        // EN: Don't steal focus while the user is starting a drag-selection inside a row.
+        // JA: 行内でドラッグ選択を始めるときは textarea にフォーカスを奪わない。
+        if (t && t.closest(".bmxt-plain-picker-row-text")) {
+          return
+        }
         requestAnimationFrame(() => inputRef.current?.focus())
-      }}>
+      }}
+      onMouseUp={refocusIfNoSelection}>
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={inputRef}
@@ -137,7 +151,11 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
                 <div className="bmxt-tab-picker-tab-title">
                   <span className="bmxt-tab-picker-tab-glyph"> </span>
                   <span className="bmxt-tab-picker-tab-glyph"> </span>
-                  <span>{ln || "\u00a0"}</span>
+                  <span
+                    className="bmxt-plain-picker-row-text"
+                    style={{ userSelect: "text", cursor: "text" }}>
+                    {ln || "\u00a0"}
+                  </span>
                 </div>
               </div>
             )
