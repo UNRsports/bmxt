@@ -33,7 +33,7 @@ If you are even a little curious about a future where the browser feels differen
 
 
 ◆Version history
-0.1.5:
+0.2.1:
 - Added the `dom` command so you can inspect the page source.
 - Added the `grep` command to search across internal data such as history, bookmarks, and open tabs.
 
