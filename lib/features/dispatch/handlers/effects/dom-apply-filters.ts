@@ -1,6 +1,11 @@
 import type { ChromeEffect } from "../../effect-types"
 import type { DispatchChromeContext } from "../../dispatch-context"
+import {
+  ensureOptionalHttpHostAccess,
+  OPTIONAL_HOST_DENIED_LINES
+} from "../../../extension-permissions/optional-http-hosts"
 import { bmxtDomFilterInjected } from "../../../page-dom/injected-dom-filter"
+import { isHttpUrl } from "../../../url/is-http-url"
 
 type E = Extract<ChromeEffect, { kind: "dom_apply_filters" }>
 
@@ -29,6 +34,16 @@ export async function applyDomApplyFiltersEffect(
   if (!Array.isArray(selectors) || selectors.length === 0) {
     return ["error: no selectors"]
   }
+  if (!isHttpUrl(tab.url)) {
+    return [
+      "error: dom needs an http(s) page in the target tab.",
+      "EN/JA: 対象タブが http(s) の通常ページである必要があります。"
+    ]
+  }
+  const access = await ensureOptionalHttpHostAccess()
+  if (access === "denied") {
+    return [...OPTIONAL_HOST_DENIED_LINES]
+  }
   const op = e.op === "hide" ? "hide" : "select"
   const payload = { op, selectors }
   try {
@@ -46,8 +61,8 @@ export async function applyDomApplyFiltersEffect(
   } catch (err) {
     return [
       `error: executeScript failed — ${err instanceof Error ? err.message : String(err)}`,
-      "EN: Ensure the tab is http(s) and the extension has scripting + host access.",
-      "JA: 対象が http(s) か、scripting / host 権限を確認してください。"
+      "EN: Ensure the tab is http(s), scripting is allowed, and optional site access is granted.",
+      "JA: 対象が http(s) か、scripting とオプションのサイトアクセス許可を確認してください。"
     ]
   }
 }

@@ -113,7 +113,7 @@
         <img src="icon.png" width="48" height="48" alt="" />
         <div>
           <h1>BMXt — Privacy Policy</h1>
-          <p class="muted">Last updated: May 2, 2026</p>
+          <p class="muted">Last updated: May 13, 2026</p>
         </div>
       </header>
 
@@ -156,6 +156,15 @@
             <li>
               We do <strong>not</strong> operate our own backend servers that receive your browsing data or
               extension state from BMXt for the purposes described in this policy.
+            </li>
+            <li>
+              Command output and typed history are handled primarily <strong>in memory</strong> for the UI;
+              only capped fields are written to <code>chrome.storage.local</code>. The Extension UI and
+              service worker are not designed to call <code>fetch()</code> against arbitrary third-party
+              HTTPS URLs; <code>connect-src</code> in the packaged manifest reinforces that (Chrome Web Store
+              delivery and browser updates are separate). Optional <code>http://*/*</code> and
+              <code>https://*/*</code> access is requested <strong>at runtime</strong> only when you run
+              commands that inject into web pages.
             </li>
           </ul>
         </div>
@@ -207,11 +216,11 @@
         <p>
           If you run supported commands, the Extension may use the <code>history</code> and
           <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
-          stores, and the <code>scripting</code> permission together with <code>http://*/*</code> and
-          <code>https://*/*</code> host access to read page text or apply temporary in-page display filters.
-          That processing is intended to occur <strong>on your device</strong> in response to commands you
-          run, and the Extension is not designed to add new persistent stores for those results as part of
-          these commands.
+          stores, and the <code>scripting</code> permission together with <strong>optional</strong>
+          <code>http://*/*</code> and <code>https://*/*</code> host access (granted when prompted, or in
+          extension settings) to read page text or apply temporary in-page display filters. That processing
+          is intended to occur <strong>on your device</strong> in response to commands you run, and the
+          Extension is not designed to add new persistent stores for those results as part of these commands.
         </p>
 
         <h2>5. WebAssembly (WASM)</h2>
@@ -226,6 +235,11 @@
           The Extension is not designed to download and execute arbitrary JavaScript or WebAssembly from the
           network for its core behavior. Extension updates are delivered through the browser’s extension update
           mechanism (for example, via the Chrome Web Store when you install from there).
+        </p>
+        <p class="muted">
+          The packaged manifest’s Content Security Policy (including <code>connect-src</code>) is an extra
+          guardrail alongside that design; local Plasmo development may allow localhost script and WebSocket
+          endpoints in the same policy string.
         </p>
 
         <h2>7. Data transmission and third parties</h2>
@@ -316,6 +330,14 @@
               本ポリシーに記載する目的で、閲覧データや拡張機能の状態を当方のサーバーに送受信する仕組みは
               運用していません。
             </li>
+            <li>
+              コマンド出力・入力履歴は主に UI 用の<strong>メモリ</strong>で扱い、永続化は上限付きの
+              <code>chrome.storage.local</code> のみです。拡張ページ・サービスワーカーから
+              <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest
+              の CSP（<code>connect-src</code> 等）はその補助線です（ストア配信・ブラウザ更新は別）。ページへの
+              スクリプト注入が要るコマンドのときだけ、オプションの <code>http://*/*</code> /
+              <code>https://*/*</code> を<strong>実行時</strong>に求めます。
+            </li>
           </ul>
         </div>
 
@@ -355,6 +377,16 @@
         </ul>
         <p>これらは Chrome の拡張機能ストレージの仕組みのもと、ユーザーの端末内に留まります。</p>
 
+        <h3>4.5 履歴・ブックマーク・ページテキスト（対応コマンド時）</h3>
+        <p>
+          対応するコマンドを実行した場合、<code>history</code> および <code>bookmarks</code> 権限により
+          Chrome の履歴・ブックマークからタイトルや URL を読み取ったり、<code>scripting</code> 権限と
+          <strong>オプション</strong>の <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは
+          拡張機能の詳細設定で許可されたとき）によりページテキストの読み取りや一時的なページ内表示の変更を
+          行うことがあります。これらはユーザーが開始した操作に応じて<strong>端末上</strong>で行う想定であり、
+          当該コマンドの結果を新たな永続ストアに蓄える設計にはしていません。
+        </p>
+
         <h2>5. WebAssembly（WASM）</h2>
         <p>
           コマンド処理等のために、<strong>拡張機能パッケージに同梱された</strong> WebAssembly
@@ -366,6 +398,10 @@
         <p>
           本拡張機能の中核動作として、ネットワークから任意の JavaScript / WebAssembly を取得して実行することは
           想定していません。更新は、Chrome ウェブストア等を通じたブラウザの拡張機能更新メカニズムに従います。
+        </p>
+        <p class="muted">
+          パッケージ manifest の CSP（<code>connect-src</code> 等）はその設計に沿った補助線です。ローカルで
+          Plasmo 開発する場合、同一ポリシー文字列内で localhost のスクリプト・WebSocket を許可しています。
         </p>
 
         <h2>7. データの送信と第三者</h2>

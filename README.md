@@ -19,6 +19,7 @@ _ジャンプ先は明示アンカーです。言語だけの小見出し（`Eng
 - [Technical Overview](#technical-overview)
 - [Key Specs](#key-specs)
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
+  - [Reproducible builds / 再現可能なビルド](#reproducible-builds)
 - [Command-line token model (first / second commands) / コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model)
 - [Command List](#command-list)
   - [`tabs` (subcommands)](#tabs-man-tabs)
@@ -176,15 +177,31 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 ### English
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`, and host access `http://*/*`, `https://*/*` (for `scripting` on ordinary web pages when you run supported commands).
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `grep -page`, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
-The manifest also sets **`content_security_policy.extension_pages`** so extension pages can load WASM (**`wasm-unsafe-eval`**) and, for local development, scripts from **`http://localhost`** (see `package.json`).
+**Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`npm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`** plus localhost endpoints for Plasmo dev) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
+
+The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self' 'wasm-unsafe-eval'`** (plus localhost for local development), **`connect-src 'self'`** (plus localhost / WebSocket for dev), **`object-src 'self'`**, **`style-src 'self' 'unsafe-inline'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. See **`package.json`** for the exact string.
 
 ### 日本語
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks` に加え、対応コマンドで通常ページへ `scripting` するための **`http://*/*` / `https://*/*`** のホスト権限。
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`grep -page` 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
-拡張ページの CSP（**`content_security_policy.extension_pages`**）では、WASM 用に **`wasm-unsafe-eval`** を許可し、開発時は **`http://localhost`** からのスクリプトも許可しています（詳細は **`package.json`**）。
+**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`npm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** ＋ Plasmo 開発用 localhost 等）は補助線です（ストア配信・ブラウザ更新は別）。
+
+**`content_security_policy.extension_pages`** では **`default-src 'self'`**、WASM 用 **`script-src 'self' 'wasm-unsafe-eval'`**（開発時は localhost を追加）、**`connect-src 'self'`**（開発時は localhost / WebSocket）、**`object-src 'self'`**、**`style-src 'self' 'unsafe-inline'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。正確な文字列は **`package.json`** を参照してください。
+
+<a id="reproducible-builds"></a>
+
+### Reproducible builds / 再現可能なビルド
+
+### English
+
+Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**) then **`npm run build:wasm`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply.
+
+### 日本語
+
+公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定）のあと **`npm run build:wasm`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。
 
 <a id="command-line-token-model"></a>
 

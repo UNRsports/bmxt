@@ -3,14 +3,12 @@
  * JA: 破棄されていない http(s) タブのみ。chrome-extension:// 等は除外。
  */
 
+import {
+  ensureOptionalHttpHostAccess,
+  OPTIONAL_HOST_DENIED_LINES
+} from "../extension-permissions/optional-http-hosts"
+import { isHttpUrl } from "../url/is-http-url"
 import { formatGrepLine, matchesNeedle, MAX_PAGE_TABS, MAX_PAGE_TEXT_CHARS } from "../search"
-
-function isHttpUrl(url: string | undefined): boolean {
-  if (!url) {
-    return false
-  }
-  return url.startsWith("http://") || url.startsWith("https://")
-}
 
 /** EN: Isolated-world snippet; keep self-contained for chrome.scripting.executeScript. */
 function bmxtExtractPageInnerText(max: number): string {
@@ -61,6 +59,13 @@ export async function grepPageLines(pattern: string): Promise<string[]> {
   let totalHits = 0
   let scanned = 0
   let skipped = 0
+
+  if (tabs.length > 0) {
+    const access = await ensureOptionalHttpHostAccess()
+    if (access === "denied") {
+      return [...OPTIONAL_HOST_DENIED_LINES]
+    }
+  }
 
   for (const tab of tabs) {
     const tabId = tab.id

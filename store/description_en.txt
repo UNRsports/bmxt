@@ -3,6 +3,8 @@ It exists because the author is not satisfied with today’s out-of-the-box brow
 
 It has a terminal-style prompt and log, but rather than being a classic terminal emulator alone, it is designed as a broad command surface for steering the whole browser—so you can keep your hands on the keyboard in a relaxed posture and cut down on how often you reach for tabs and windows.
 
+Command output and typed command history are handled primarily in memory for the UI; only capped fields are persisted in chrome.storage.local. The extension page and service worker are not designed to call fetch() against arbitrary third-party HTTPS URLs (the packaged manifest’s CSP, including connect-src, reinforces this). Optional http(s) site access is requested at runtime only when you run commands that inject scripts into web pages.
+
 ◆About the name — a play on Browser Manipulator X Terminal:
 
 - X
