@@ -11,18 +11,22 @@ pub fn effect_samples_for_ts_generation() -> Vec<Effect> {
     vec![
         Effect::ClearLog,
         Effect::CloseTab { tab_id: 0 },
+        Effect::DomApplyFilters { flavor: String::new(), op: String::new(), selectors: String::new() },
+        Effect::ExitPane,
+        Effect::GrepBookmark { pattern: String::new() },
+        Effect::GrepHistory { pattern: String::new() },
+        Effect::GrepPage { pattern: String::new() },
         Effect::GroupNew { tab_ids: vec![0] },
-        Effect::TabsNu,
-        Effect::TabsMoveUrl { url: String::new() },
-        Effect::OpenUrlNewWindow { url: String::new() },
         Effect::NavigateCurrentTab { url: String::new() },
         Effect::OpenUrlNewTab { url: String::new() },
-        Effect::ExitPane,
+        Effect::OpenUrlNewWindow { url: String::new() },
         Effect::ReleaseNotesCurrent,
-        Effect::ReleaseNotesVersion { version: String::new() },
         Effect::ReleaseNotesList,
+        Effect::ReleaseNotesVersion { version: String::new() },
         Effect::SplitCol,
-        Effect::SplitRow
+        Effect::SplitRow,
+        Effect::TabsMoveUrl { url: String::new() },
+        Effect::TabsNu
     ]
 }
 

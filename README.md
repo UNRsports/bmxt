@@ -176,13 +176,13 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 ### English
 
-`tabs`, `tabGroups`, `storage`, `windows`
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`, and host access `http://*/*`, `https://*/*` (for `scripting` on ordinary web pages when you run supported commands).
 
 The manifest also sets **`content_security_policy.extension_pages`** so extension pages can load WASM (**`wasm-unsafe-eval`**) and, for local development, scripts from **`http://localhost`** (see `package.json`).
 
 ### 日本語
 
-`tabs`, `tabGroups`, `storage`, `windows`
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks` に加え、対応コマンドで通常ページへ `scripting` するための **`http://*/*` / `https://*/*`** のホスト権限。
 
 拡張ページの CSP（**`content_security_policy.extension_pages`**）では、WASM 用に **`wasm-unsafe-eval`** を許可し、開発時は **`http://localhost`** からのスクリプトも許可しています（詳細は **`package.json`**）。
 

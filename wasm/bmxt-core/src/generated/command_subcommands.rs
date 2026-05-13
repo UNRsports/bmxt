@@ -6,7 +6,15 @@ pub fn is_second_token(canonical_cmd: &str, token: &str) -> bool {
     match canonical_cmd {
         "clear" => false,
         "close" => false,
+        "dom" => {
+            let lower = token.to_ascii_lowercase();
+            matches!(lower.as_str(), "-select" | "-hide")
+        },
         "exit" => false,
+        "grep" => {
+            let lower = token.to_ascii_lowercase();
+            matches!(lower.as_str(), "-history" | "-bookmark" | "-page")
+        },
         "group" => false,
         "help" => false,
         "tabs" => {

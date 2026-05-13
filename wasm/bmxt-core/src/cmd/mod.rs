@@ -2,7 +2,9 @@
 
 pub mod clear;
 pub mod close;
+pub mod dom;
 pub mod exit;
+pub mod grep;
 pub mod group;
 pub mod help_cmd;
 pub mod notes;

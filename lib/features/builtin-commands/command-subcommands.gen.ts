@@ -17,7 +17,16 @@ const EMPTY_BRANCHES: readonly CommandSubcommandBranch[] = []
 export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcommandBranch[]> = {
   "clear": [] as const,
   "close": [] as const,
+  "dom": [
+    { head: "-select", trailingTokens: ["-html","-react"] as const, tail: "rest" },
+    { head: "-hide", trailingTokens: ["-html","-react"] as const, tail: "rest" }
+  ] as const,
   "exit": [] as const,
+  "grep": [
+    { head: "-history", trailingTokens: [] as const, tail: "rest" },
+    { head: "-bookmark", trailingTokens: [] as const, tail: "rest" },
+    { head: "-page", trailingTokens: [] as const, tail: "rest" }
+  ] as const,
   "group": [] as const,
   "help": [] as const,
   "tabs": [

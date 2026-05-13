@@ -1,0 +1,95 @@
+/**
+ * EN: Scans non-discarded http(s) tabs only; skips chrome-extension:// etc.
+ * JA: 破棄されていない http(s) タブのみ。chrome-extension:// 等は除外。
+ */
+
+import { formatGrepLine, matchesNeedle, MAX_PAGE_TABS, MAX_PAGE_TEXT_CHARS } from "../search"
+
+function isHttpUrl(url: string | undefined): boolean {
+  if (!url) {
+    return false
+  }
+  return url.startsWith("http://") || url.startsWith("https://")
+}
+
+/** EN: Isolated-world snippet; keep self-contained for chrome.scripting.executeScript. */
+function bmxtExtractPageInnerText(max: number): string {
+  try {
+    const t = document.body?.innerText ?? ""
+    return t.length > max ? t.slice(0, max) : t
+  } catch {
+    return ""
+  }
+}
+
+export async function grepPageLines(pattern: string): Promise<string[]> {
+  const all = await chrome.tabs.query({})
+  const candidates = all.filter(
+    (t) => !t.discarded && typeof t.id === "number" && isHttpUrl(t.url)
+  )
+  candidates.sort((a, b) => {
+    const la = (a as { lastAccessed?: number }).lastAccessed ?? 0
+    const lb = (b as { lastAccessed?: number }).lastAccessed ?? 0
+    return lb - la
+  })
+  const tabs = candidates.slice(0, MAX_PAGE_TABS)
+  const out: string[] = []
+  let totalHits = 0
+  let scanned = 0
+  let skipped = 0
+
+  for (const tab of tabs) {
+    const tabId = tab.id
+    if (tabId === undefined) {
+      continue
+    }
+    try {
+      const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: bmxtExtractPageInnerText,
+        args: [MAX_PAGE_TEXT_CHARS]
+      })
+      scanned += 1
+      const text = typeof result === "string" ? result : ""
+      if (!matchesNeedle(text, pattern)) {
+        continue
+      }
+      const lines = text.split(/\r?\n/)
+      let lineNo = 0
+      for (const line of lines) {
+        lineNo += 1
+        if (matchesNeedle(line, pattern)) {
+          const url = tab.url ?? ""
+          const title = tab.title ?? ""
+          out.push(
+            formatGrepLine(
+              "page",
+              `${tabId} ${url}`,
+              `L${lineNo}: ${line.trim().slice(0, 500)}${line.length > 500 ? "…" : ""} — ${title}`
+            )
+          )
+          totalHits += 1
+          if (totalHits >= 500) {
+            out.unshift(
+              `(stopped at ${totalHits} line hit(s) across tabs; raise limits in lib/features/search/limits.ts if needed)`
+            )
+            return out
+          }
+        }
+      }
+    } catch {
+      skipped += 1
+    }
+  }
+
+  if (out.length === 0) {
+    return [
+      "(no page matches in scanned tabs — pattern is case-insensitive substring per line)",
+      `scanned ${scanned} tab(s), skipped ${skipped} (permissions or unreadable), max ${MAX_PAGE_TABS} tabs`
+    ]
+  }
+  out.unshift(
+    `(${totalHits} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}; cap ${MAX_PAGE_TABS} tabs)`
+  )
+  return out
+}

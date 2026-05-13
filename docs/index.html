@@ -203,6 +203,17 @@
         </ul>
         <p>This storage remains on your device under Chrome’s extension storage rules.</p>
 
+        <h3>4.5 History, bookmarks, and page text (optional commands)</h3>
+        <p>
+          If you run supported commands, the Extension may use the <code>history</code> and
+          <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
+          stores, and the <code>scripting</code> permission together with <code>http://*/*</code> and
+          <code>https://*/*</code> host access to read page text or apply temporary in-page display filters.
+          That processing is intended to occur <strong>on your device</strong> in response to commands you
+          run, and the Extension is not designed to add new persistent stores for those results as part of
+          these commands.
+        </p>
+
         <h2>5. WebAssembly (WASM)</h2>
         <p>
           Parts of BMXt may execute WebAssembly modules <strong>bundled inside the Extension package</strong>
