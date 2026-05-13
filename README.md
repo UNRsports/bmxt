@@ -241,7 +241,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -list [-u]` | Open tab picker; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
-| `dom -list [--html\|--react] [<pattern>]` | Open DOM in the same picker chrome as `grep -list` (flavor pull-down: `--html` default / `--react`; optional substring filter) |
+| `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
+| `dom -list [--html\|--react] [<pattern>]` | Open a read-only DOM picker for the active tab (same picker chrome as `grep -list`); flavor `--html` (default) or `--react`; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
+| `grep` | Print usage and restore the prompt to `grep ` for `-list` or a `--none` / `--history` / `--bookmark` / `--page` form |
+| `grep -list [--none\|--history\|--bookmark\|--page] <pattern>` | Open a cross-search picker; default `--none` searches browsing history, bookmarks, and visible http(s) tab text together; optional flag limits to one scope; case-insensitive substring (no regex in v1) |
+| `grep --none <pattern>` | Run all three scopes without the picker (log lines; empty pattern returns capped “all” hits) |
+| `grep --history <pattern>` | Recent history titles/URLs only |
+| `grep --bookmark <pattern>` | Bookmark titles/URLs only |
+| `grep --page <pattern>` | Visible text in non-discarded http(s) tabs only; may request optional host permission at runtime |
 | `close` / `c <tabId>` | Close tab |
 | `group new <tabId> …` | Create group |
 
@@ -263,13 +270,52 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -list [-u]` | タブピッカーを開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
-| `dom -list [--html\|--react] [<pattern>]` | `grep -list` と同じピッカーで DOM を表示。flavor プルダウン: `--html` (default) / `--react`、任意の部分一致フィルタ |
+| `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
+| `dom -list [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカーで閲覧（`grep -list` と同系 UI）。`--html`（既定）／`--react`。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
+| `grep` | 利用案内を表示し、続けて `grep ` へ入力復元（`-list` または `--none` 等） |
+| `grep -list [--none\|--history\|--bookmark\|--page] <pattern>` | 横断検索ピッカー。既定 `--none` は履歴・ブックマーク・http(s) タブ表示テキストをまとめて検索。フラグでスコープを1つに限定可。部分一致（v1 正規表現なし） |
+| `grep --none <pattern>` | 3スコープをピッカーなしで一括実行（ログ出力。空パターンは件数上限付き一覧） |
+| `grep --history <pattern>` | 閲覧履歴のタイトル／URL のみ |
+| `grep --bookmark <pattern>` | ブックマークのタイトル／URL のみ |
+| `grep --page <pattern>` | 非破棄 http(s) タブの表示テキストのみ（実行時にオプションのサイト権限を求めることがある） |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
 **0.1.1 — split ペイン:** 複数ペインが開いているとき、**Ctrl+矢印**でキーボードフォーカスをペイン間で移動できます。
+
+### `dom`
+
+#### English
+
+- Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
+- **`dom -list`** resolves the **active tab of the last-focused normal browser window**, injects a read-only helper via `chrome.scripting`, and streams a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
+- **`--html`** (default) vs **`--react`** only changes how nodes are labeled in the picker UI.
+- Any tokens after the optional flavor flag are joined into a single **substring** filter on the printed lines (ASCII case fold); **not** a regular expression. ASCII `"…"` / `'…'` around the pattern are stripped once.
+
+#### 日本語
+
+- **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
+- **`dom -list`** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`grep --page` 系と同じ系統）。
+- **`--html`**（既定）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
+- flavor の後ろのトークンはすべて連結され、出力行に対する**部分一致**フィルタになる（大文字小文字は ASCII 範囲で折りたたみ）。**正規表現ではない**。パターンを ASCII の `"` / `'` で1重に囲んだ場合は外側を1回だけ除去する。
+
+### `grep`
+
+#### English
+
+- Bare `grep` + **Enter** prints the usage block and restores **`grep `**.
+- **`grep -list …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** (default when omitted) fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
+- One-shot forms **`grep --none`**, **`grep --history`**, **`grep --bookmark`**, and **`grep --page`** skip the picker and append results as log lines. An **empty** pattern with **`--none`** (including bare `grep -list`) still runs all three effects with empty filters, which the host implements as capped “show many rows” behavior.
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`--page`** / **`grep -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
+
+#### 日本語
+
+- **`grep` 単体 + Enter** で利用案内を表示し、**`grep `** へ復帰する。
+- **`grep -list …`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--none`**（省略時の既定）は履歴・ブックマーク・ページ表示テキストをまとめて対象にする。**`--history`** / **`--bookmark`** / **`--page`** でスコープを1つに絞れる。
+- **`grep --none`** など直接形はピッカーを経由せずログ行として結果を出す。**`--none`** でパターン空（`grep -list` 単体を含む）は3系統すべて空パターンで走り、実装側で件数上限付きの一覧になる。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`--page`** 系は非破棄の **http(s)** タブを走査し、初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs"></a>
 
