@@ -2,11 +2,13 @@
   "0.3.1": {
     "ja": [
       "rust採用を廃止し、ファイルサイズを縮小",
-      "tabsモードに:editサブコマンドを追加してタブグループとウィンドウ名の編集を行えるようにした"
+      "tabsモードに:editサブコマンドを追加してタブグループとウィンドウ名の編集を行えるようにした",
+      "日本語IME風の入力補助機能実装"
     ],
     "en": [
       "Removed Rust to reduce package size",
-      "Added the `:edit` subcommand in tabs mode for editing tab groups and window names"
+      "Added the `:edit` subcommand in tabs mode for editing tab groups and window names",
+      "Implemented IME-style input assistance while typing commands"
     ]
   }
 }

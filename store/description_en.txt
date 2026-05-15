@@ -36,6 +36,7 @@ If you are even a little curious about a future where the browser feels differen
 0.3.1:
 - Removed Rust to reduce package size
 - Added the `:edit` subcommand in tabs mode for editing tab groups and window names
+- Implemented IME-style input assistance while typing commands
 
 0.2.1:
 - Added the `dom` command so you can inspect the page source.
