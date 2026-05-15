@@ -1,10 +1,12 @@
 {
   "0.3.1": {
     "ja": [
-      "rust採用を廃止し、ファイルサイズを縮小"
+      "rust採用を廃止し、ファイルサイズを縮小",
+      "tabsモードに:editサブコマンドを追加してタブグループとウィンドウ名の編集を行えるようにした"
     ],
     "en": [
-      ""
+      "Removed Rust to reduce package size",
+      "Added the `:edit` subcommand in tabs mode for editing tab groups and window names"
     ]
   }
 }
