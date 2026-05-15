@@ -5,12 +5,12 @@
 
 import {
   HISTORY_LOOKBACK_MS,
-  linesForGrepElement,
+  linesForFindElement,
   matchesNeedle,
   MAX_HISTORY_RESULTS
 } from "../search"
 
-export async function grepHistoryLines(pattern: string): Promise<string[]> {
+export async function findHistoryLines(pattern: string): Promise<string[]> {
   const items = await chrome.history.search({
     text: "",
     maxResults: MAX_HISTORY_RESULTS,
@@ -28,7 +28,7 @@ export async function grepHistoryLines(pattern: string): Promise<string[]> {
     }
     hitCount += 1
     matches.push(
-      ...linesForGrepElement("history", {
+      ...linesForFindElement("history", {
         title: title || "(no title)",
         url: url || "(no url)"
       })

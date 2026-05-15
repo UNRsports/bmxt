@@ -21,7 +21,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" }
   ] as const,
   "exit": [] as const,
-  "grep": [
+  "find": [
     { head: "-list", trailingTokens: ["--none","--history","--bookmark","--page"] as const, tail: "rest" },
     { head: "--none", trailingTokens: [] as const, tail: "rest" },
     { head: "--history", trailingTokens: [] as const, tail: "rest" },
@@ -98,7 +98,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "exit":
       return false
-    case "grep": {
+    case "find": {
       const lower = token.toLowerCase()
       return lower === "-list" || lower === "--none" || lower === "--history" || lower === "--bookmark" || lower === "--page"
     }

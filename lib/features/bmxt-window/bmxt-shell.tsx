@@ -16,13 +16,13 @@ import {
 } from "../tabs"
 import { listSplitOptionCandidates, splitOptionCompletionZone } from "./split-command-input"
 import { SecondCommandPickerPanel } from "./second-command-picker"
-import { GrepListPickerOverlay } from "../grep/grep-list-picker-overlay"
+import { FindListPickerOverlay } from "../find/find-list-picker-overlay"
 import {
-  grepListScopeCompletionZone,
-  listGrepListScopeCandidates,
-  parseGrepListPickerLine,
-  type GrepListPickerState
-} from "../grep/grep-list-picker-input"
+  findListScopeCompletionZone,
+  listFindListScopeCandidates,
+  parseFindListPickerLine,
+  type FindListPickerState
+} from "../find/find-list-picker-input"
 import { DomListPickerOverlay } from "../dom/dom-list-picker-overlay"
 import {
   domListFlavorCompletionZone,
@@ -81,8 +81,8 @@ type Props = {
   tabPicker: TabPickerState | null
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
   setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
-  grepListPicker: GrepListPickerState | null
-  setGrepListPicker: (forSessionId: string, v: GrepListPickerState | null) => void
+  findListPicker: FindListPickerState | null
+  setFindListPicker: (forSessionId: string, v: FindListPickerState | null) => void
   domListPicker: DomListPickerState | null
   setDomListPicker: (forSessionId: string, v: DomListPickerState | null) => void
   refreshTabPickerRows: () => Promise<void>
@@ -100,15 +100,15 @@ export function BmxtShell({
   appendCommandToHistory,
   tabPicker,
   setTabPicker,
-  grepListPicker,
-  setGrepListPicker,
+  findListPicker,
+  setFindListPicker,
   domListPicker,
   setDomListPicker,
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
   const tabPickerOpen = tabPicker !== null
-  const overlayOpen = tabPickerOpen || grepListPicker !== null || domListPicker !== null
+  const overlayOpen = tabPickerOpen || findListPicker !== null || domListPicker !== null
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -455,8 +455,8 @@ export function BmxtShell({
       return
     }
 
-    const grepListLine = parseGrepListPickerLine(trimmed)
-    if (grepListLine !== null) {
+    const findListLine = parseFindListPickerLine(trimmed)
+    if (findListLine !== null) {
       appendCommandToHistory(trimmed)
       setLine("")
       setCursorPos(0)
@@ -466,7 +466,7 @@ export function BmxtShell({
       void (async () => {
         try {
           await ensureBmxtCore()
-          const bundle = runDispatch(grepListLine)
+          const bundle = runDispatch(findListLine)
           if (bundle.ty === "lines") {
             await appendLogLines([`> ${trimmed}`, ...(bundle.lines ?? [])])
             return
@@ -480,8 +480,8 @@ export function BmxtShell({
             commandSessionId: sessionId
           }
           const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-          await appendLogLines([`> ${trimmed}`, "grep -list — picker (Esc)"])
-          setGrepListPicker(sessionId, { lines: linesOut })
+          await appendLogLines([`> ${trimmed}`, "find -list — picker (Esc)"])
+          setFindListPicker(sessionId, { lines: linesOut })
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -554,7 +554,7 @@ export function BmxtShell({
     mode,
     sessionId,
     setTabPicker,
-    setGrepListPicker,
+    setFindListPicker,
     runDomListAndShow
   ])
 
@@ -819,10 +819,10 @@ export function BmxtShell({
           setCursorPos(splitZone.optionStart + rep.length + suffix.length)
           return
         }
-        const glScopeZone = grepListScopeCompletionZone(curLn, pos)
+        const glScopeZone = findListScopeCompletionZone(curLn, pos)
         if (glScopeZone) {
           e.preventDefault()
-          const cands = listGrepListScopeCandidates(glScopeZone.prefix)
+          const cands = listFindListScopeCandidates(glScopeZone.prefix)
           if (cands.length === 0) {
             return
           }
@@ -1155,9 +1155,9 @@ export function BmxtShell({
           />
         </div>
       ) : null}
-      {grepListPicker ? (
+      {findListPicker ? (
         <div
-          className="bmxt-grep-list-picker-host"
+          className="bmxt-find-list-picker-host"
           style={{
             position: "absolute",
             inset: 6,
@@ -1171,9 +1171,9 @@ export function BmxtShell({
             boxShadow:
               "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
           }}>
-          <GrepListPickerOverlay
-            lines={grepListPicker.lines}
-            onExit={() => setGrepListPicker(sessionId, null)}
+          <FindListPickerOverlay
+            lines={findListPicker.lines}
+            onExit={() => setFindListPicker(sessionId, null)}
           />
         </div>
       ) : null}

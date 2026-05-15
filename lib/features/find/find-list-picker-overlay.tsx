@@ -6,13 +6,13 @@ type Props = {
 }
 
 /**
- * EN: `grep -list` results in the same picker chrome as tabs (`PlainTextPickerBody` = shared with tab row CSS).
+ * EN: `find -list` results in the same picker chrome as tabs (`PlainTextPickerBody` = shared with tab row CSS).
  * JA: tabs と同一ピッカークロム（`PlainTextPickerBody` でタブ行と同系 CSS を共有）。
  */
-export function GrepListPickerOverlay({ onExit, lines }: Props) {
+export function FindListPickerOverlay({ onExit, lines }: Props) {
   return (
     <PlainTextPickerBody
-      headline="grep -list · ↑↓ · j/k · Esc / close with Esc"
+      headline="find -list · ↑↓ · j/k · Esc / close with Esc"
       lines={lines}
       onExit={onExit}
     />

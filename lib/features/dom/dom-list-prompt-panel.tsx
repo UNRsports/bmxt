@@ -26,12 +26,12 @@ const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
  * EN: Confirmation panel shown when `dom -list` returned a retryable error.
  *     "Approve" calls `chrome.permissions.request` (if optional host access is missing) within
  *     the user gesture from the click/key event, then triggers `onApprove` to re-dispatch.
- *     "Decline" closes the picker. Uses the same `bmxt-tab-picker` chrome as grep-list /
+ *     "Decline" closes the picker. Uses the same `bmxt-tab-picker` chrome as find-list /
  *     dom-list rows so the styling stays consistent.
  * JA: `dom -list` がリトライ可能なエラーを返したときに表示する確認パネル。
  *     「許可」はクリック／キーのユーザージェスチャ内で `chrome.permissions.request` を呼び、
  *     許可が取れたら `onApprove` で再ディスパッチする。
- *     「拒否」はピッカーを閉じる。チューブ表示は grep-list / dom-list と同じクロムで統一。
+ *     「拒否」はピッカーを閉じる。チューブ表示は find-list / dom-list と同じクロムで統一。
  */
 export function DomListPromptPanel({
   message,

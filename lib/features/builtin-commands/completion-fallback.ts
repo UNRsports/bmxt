@@ -9,7 +9,7 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "close",
   "dom",
   "exit",
-  "grep",
+  "find",
   "group",
   "help",
   "notes",

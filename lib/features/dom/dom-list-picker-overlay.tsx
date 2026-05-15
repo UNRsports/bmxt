@@ -10,9 +10,9 @@ type Props = {
 }
 
 /**
- * EN: `dom -list` results in the same picker chrome as grep -list (`PlainTextPickerBody`).
+ * EN: `dom -list` results in the same picker chrome as find -list (`PlainTextPickerBody`).
  *     If the handler returned a retryable error, render the permission/retry prompt instead.
- * JA: `grep -list` と同一クロムでの一覧表示。リトライ可能なエラー時は確認パネルに切り替える。
+ * JA: `find -list` と同一クロムでの一覧表示。リトライ可能なエラー時は確認パネルに切り替える。
  */
 export function DomListPickerOverlay({ state, onExit, onApprove }: Props) {
   if (state.kind === "prompt") {

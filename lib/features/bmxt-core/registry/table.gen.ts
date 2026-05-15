@@ -9,7 +9,7 @@ import * as clear from "../cmd/clear"
 import * as close from "../cmd/close"
 import * as dom from "../cmd/dom"
 import * as exit from "../cmd/exit"
-import * as grep from "../cmd/grep"
+import * as find from "../cmd/find"
 import * as group from "../cmd/group"
 import * as help_cmd from "../cmd/help_cmd"
 import * as tabs from "../cmd/tabs"
@@ -21,7 +21,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   close.CMD,
   dom.CMD,
   exit.CMD,
-  grep.CMD,
+  find.CMD,
   group.CMD,
   help_cmd.CMD,
   tabs.CMD,
@@ -37,7 +37,7 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: close.CMD.name, run: close.run },
   { name: dom.CMD.name, run: dom.run },
   { name: exit.CMD.name, run: exit.run },
-  { name: grep.CMD.name, run: grep.run },
+  { name: find.CMD.name, run: find.run },
   { name: group.CMD.name, run: group.run },
   { name: help_cmd.CMD.name, run: help_cmd.run },
   { name: tabs.CMD.name, run: tabs.run },

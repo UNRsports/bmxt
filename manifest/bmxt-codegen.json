@@ -36,10 +36,10 @@
       "subcommands": []
     },
     {
-      "module": "grep",
-      "canonicalName": "grep",
+      "module": "find",
+      "canonicalName": "find",
       "aliases": [],
-      "usagePrimary": "grep -list [--none|--history|--bookmark|--page] <pattern> | grep --none|… <pattern>",
+      "usagePrimary": "find -list [--none|--history|--bookmark|--page] <pattern> | find --none|… <pattern>",
       "subcommands": [
         {
           "head": "-list",
@@ -155,28 +155,28 @@
       "tsHandlerExport": "applyExitPaneEffect"
     },
     {
-      "kind": "grep_bookmark",
-      "rustVariant": "GrepBookmark",
+      "kind": "find_bookmark",
+      "rustVariant": "FindBookmark",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "grep-bookmark",
-      "tsHandlerExport": "applyGrepBookmarkEffect"
+      "tsHandlerFile": "find-bookmark",
+      "tsHandlerExport": "applyFindBookmarkEffect"
     },
     {
-      "kind": "grep_history",
-      "rustVariant": "GrepHistory",
+      "kind": "find_history",
+      "rustVariant": "FindHistory",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "grep-history",
-      "tsHandlerExport": "applyGrepHistoryEffect"
+      "tsHandlerFile": "find-history",
+      "tsHandlerExport": "applyFindHistoryEffect"
     },
     {
-      "kind": "grep_page",
-      "rustVariant": "GrepPage",
+      "kind": "find_page",
+      "rustVariant": "FindPage",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "grep-page",
-      "tsHandlerExport": "applyGrepPageEffect"
+      "tsHandlerFile": "find-page",
+      "tsHandlerExport": "applyFindPageEffect"
     },
     {
       "kind": "group_new",

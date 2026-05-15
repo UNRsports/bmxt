@@ -1,6 +1,6 @@
 import { buildTabPickerRows } from "../tabs"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
-import { type GrepListPickerState } from "../grep/grep-list-picker-input"
+import { type FindListPickerState } from "../find/find-list-picker-input"
 import { type DomListPickerState } from "../dom/dom-list-picker-input"
 import { type TabPickerState, BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
@@ -40,8 +40,8 @@ type SplitTreeProps = {
   completionCandidates: string[]
   pickerBySession: Record<string, TabPickerState | null>
   setTabPickerForSession: (forSessionId: string, next: TabPickerState | null) => void
-  grepListBySession: Record<string, GrepListPickerState | null>
-  setGrepListPickerForSession: (forSessionId: string, next: GrepListPickerState | null) => void
+  findListBySession: Record<string, FindListPickerState | null>
+  setFindListPickerForSession: (forSessionId: string, next: FindListPickerState | null) => void
   domListBySession: Record<string, DomListPickerState | null>
   setDomListPickerForSession: (forSessionId: string, next: DomListPickerState | null) => void
   refreshTabPickerRows: () => Promise<void>
@@ -58,8 +58,8 @@ function SplitTreeView({
   completionCandidates,
   pickerBySession,
   setTabPickerForSession,
-  grepListBySession,
-  setGrepListPickerForSession,
+  findListBySession,
+  setFindListPickerForSession,
   domListBySession,
   setDomListPickerForSession,
   refreshTabPickerRows,
@@ -70,7 +70,7 @@ function SplitTreeView({
   if (isLeaf(node)) {
     const lines = logsById[node.id] ?? []
     const tabPicker = pickerBySession[node.id] ?? null
-    const grepListPicker = grepListBySession[node.id] ?? null
+    const findListPicker = findListBySession[node.id] ?? null
     const domListPicker = domListBySession[node.id] ?? null
     return (
       <div
@@ -99,8 +99,8 @@ function SplitTreeView({
           appendCommandToHistory={appendCommandToHistory}
           tabPicker={tabPicker}
           setTabPicker={setTabPickerForSession}
-          grepListPicker={grepListPicker}
-          setGrepListPicker={setGrepListPickerForSession}
+          findListPicker={findListPicker}
+          setFindListPicker={setFindListPickerForSession}
           domListPicker={domListPicker}
           setDomListPicker={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
@@ -138,8 +138,8 @@ function SplitTreeView({
           completionCandidates={completionCandidates}
           pickerBySession={pickerBySession}
           setTabPickerForSession={setTabPickerForSession}
-          grepListBySession={grepListBySession}
-          setGrepListPickerForSession={setGrepListPickerForSession}
+          findListBySession={findListBySession}
+          setFindListPickerForSession={setFindListPickerForSession}
           domListBySession={domListBySession}
           setDomListPickerForSession={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
@@ -164,8 +164,8 @@ function SplitTreeView({
           completionCandidates={completionCandidates}
           pickerBySession={pickerBySession}
           setTabPickerForSession={setTabPickerForSession}
-          grepListBySession={grepListBySession}
-          setGrepListPickerForSession={setGrepListPickerForSession}
+          findListBySession={findListBySession}
+          setFindListPickerForSession={setFindListPickerForSession}
           domListBySession={domListBySession}
           setDomListPickerForSession={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}
@@ -186,8 +186,8 @@ export function BmxtTerminal() {
   const [pickerBySession, setPickerBySession] = useState<
     Record<string, TabPickerState | null>
   >({})
-  const [grepListBySession, setGrepListBySession] = useState<
-    Record<string, GrepListPickerState | null>
+  const [findListBySession, setFindListBySession] = useState<
+    Record<string, FindListPickerState | null>
   >({})
   const [domListBySession, setDomListBySession] = useState<
     Record<string, DomListPickerState | null>
@@ -213,9 +213,9 @@ export function BmxtTerminal() {
       }
       return changed ? next : prev
     })
-    setGrepListBySession((prev) => {
+    setFindListBySession((prev) => {
       let changed = false
-      const next: Record<string, GrepListPickerState | null> = { ...prev }
+      const next: Record<string, FindListPickerState | null> = { ...prev }
       for (const k of Object.keys(next)) {
         if (!order.includes(k)) {
           delete next[k]
@@ -261,9 +261,9 @@ export function BmxtTerminal() {
     })
   }, [])
 
-  const setGrepListPickerForSession = useCallback(
-    (forSessionId: string, next: GrepListPickerState | null) => {
-      setGrepListBySession((prev) => {
+  const setFindListPickerForSession = useCallback(
+    (forSessionId: string, next: FindListPickerState | null) => {
+      setFindListBySession((prev) => {
         if (next === null) {
           if (!(forSessionId in prev)) {
             return prev
@@ -334,9 +334,9 @@ export function BmxtTerminal() {
   const anyPickerOpen = useMemo(
     () =>
       Object.values(pickerBySession).some((v) => v != null) ||
-      Object.values(grepListBySession).some((v) => v != null) ||
+      Object.values(findListBySession).some((v) => v != null) ||
       Object.values(domListBySession).some((v) => v != null),
-    [pickerBySession, grepListBySession, domListBySession]
+    [pickerBySession, findListBySession, domListBySession]
   )
   useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
 
@@ -425,8 +425,8 @@ export function BmxtTerminal() {
           completionCandidates={completionCandidates}
           pickerBySession={pickerBySession}
           setTabPickerForSession={setTabPickerForSession}
-          grepListBySession={grepListBySession}
-          setGrepListPickerForSession={setGrepListPickerForSession}
+          findListBySession={findListBySession}
+          setFindListPickerForSession={setFindListPickerForSession}
           domListBySession={domListBySession}
           setDomListPickerForSession={setDomListPickerForSession}
           refreshTabPickerRows={refreshTabPickerRows}

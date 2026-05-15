@@ -12,8 +12,8 @@ export const CMD: CmdMeta = {
 function usageLines(): string[] {
   return [
     "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)",
-    "EN: -list opens a picker (same chrome as grep -list); flavor pull-down: --html (default) | --react.",
-    "JA: -list は picker（grep -list と同じクロム）。flavor プルダウン: --html (default) | --react。",
+    "EN: -list opens a picker (same chrome as find -list); flavor pull-down: --html (default) | --react.",
+    "JA: -list は picker（find -list と同じクロム）。flavor プルダウン: --html (default) | --react。",
     "EN: <pattern> is a case-insensitive substring filter on the output lines (no regex).",
     "JA: <pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。"
   ]

@@ -8,7 +8,7 @@ import {
   OPTIONAL_HOST_DENIED_LINES
 } from "../extension-permissions/optional-http-hosts"
 import { isHttpUrl } from "../url/is-http-url"
-import { linesForGrepElement, matchesNeedle, MAX_PAGE_TABS, MAX_PAGE_TEXT_CHARS } from "../search"
+import { linesForFindElement, matchesNeedle, MAX_PAGE_TABS, MAX_PAGE_TEXT_CHARS } from "../search"
 
 /** EN: Isolated-world snippet; keep self-contained for chrome.scripting.executeScript. */
 function bmxtExtractPageInnerText(max: number): string {
@@ -23,7 +23,7 @@ function bmxtExtractPageInnerText(max: number): string {
 const MAX_EMPTY_PREVIEW_LINES = 24
 const MAX_LINE_HITS = 500
 
-export async function grepPageLines(pattern: string): Promise<string[]> {
+export async function findPageLines(pattern: string): Promise<string[]> {
   let activeTabId: number | undefined
   try {
     const [active] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
@@ -121,7 +121,7 @@ export async function grepPageLines(pattern: string): Promise<string[]> {
         const trimmed = line.trim().slice(0, 500)
         const suffix = line.length > 500 ? "…" : ""
         out.push(
-          ...linesForGrepElement("page", {
+          ...linesForFindElement("page", {
             title: title || "(untitled)",
             url: url || "(no url)",
             line: `L${lineNo}: ${trimmed}${suffix}`

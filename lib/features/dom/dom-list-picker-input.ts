@@ -1,6 +1,6 @@
 /**
- * EN: Prompt parsing / Tab zone for `dom -list` (grep-list と同型の picker 起動フロー).
- * JA: `dom -list` のプロンプト解析・Tab 補完（`grep -list` と同型の段取り）。
+ * EN: Prompt parsing / Tab zone for `dom -list` (find-list と同型の picker 起動フロー).
+ * JA: `dom -list` のプロンプト解析・Tab 補完（`find -list` と同型の段取り）。
  */
 
 import { listThirdTokenCandidates } from "../builtin-commands/command-subcommands.gen"
