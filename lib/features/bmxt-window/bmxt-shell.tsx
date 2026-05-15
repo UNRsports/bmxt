@@ -380,6 +380,11 @@ export function BmxtShell({
     [appendLogLines, sessionId, setDomListPicker]
   )
 
+  const promptLine = useCallback(
+    () => imeRef.current?.value ?? lineRef.current,
+    []
+  )
+
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
       const pick = iSearchMatches[iSearchCycle]
@@ -393,7 +398,7 @@ export function BmxtShell({
       focusPrompt()
       return
     }
-    const trimmed = lineRef.current.trim()
+    const trimmed = promptLine().trim()
     if (!trimmed) {
       return
     }
@@ -471,6 +476,10 @@ export function BmxtShell({
             await appendLogLines([`> ${trimmed}`, ...(bundle.lines ?? [])])
             return
           }
+          await appendLogLines([
+            `> ${trimmed}`,
+            "find -list — searching (history · bookmarks · pages)…"
+          ])
           const ctx: DispatchChromeContext = {
             clearLog: async () => {},
             exitPane: async () => [],
@@ -480,7 +489,7 @@ export function BmxtShell({
             commandSessionId: sessionId
           }
           const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-          await appendLogLines([`> ${trimmed}`, "find -list — picker (Esc)"])
+          await appendLogLines(["find -list — picker (Esc)"])
           setFindListPicker(sessionId, { lines: linesOut })
         } catch (e) {
           await appendLogLines([
@@ -552,6 +561,7 @@ export function BmxtShell({
     iSearchMatches,
     iSearchSnapshot,
     mode,
+    promptLine,
     sessionId,
     setTabPicker,
     setFindListPicker,
@@ -570,6 +580,7 @@ export function BmxtShell({
       }
       setSubCmdPicker(null)
       const nextLine = s.continuation + tok + " "
+      lineRef.current = nextLine
       setLine(nextLine)
       setCursorPos(nextLine.length)
       setHistNavIndex(-1)
@@ -581,10 +592,23 @@ export function BmxtShell({
         if (cands.length > 0) {
           setSubCmdPicker({ continuation: "dom -list ", candidates: cands, hi: 0 })
         }
+        focusPrompt()
+        return
+      }
+      // EN: `find -list` / `tabs -list` etc. — second-token pick should run, not wait for another Enter.
+      // JA: 第二コマンド確定でそのまま実行（もう一度 Enter は不要）。
+      const trimmedNext = nextLine.trim()
+      if (
+        parseFindListPickerLine(trimmedNext) !== null ||
+        parseTabsListPickerLine(trimmedNext) !== null ||
+        parseGroupNewInteractiveLine(trimmedNext)
+      ) {
+        queueMicrotask(() => submitLine())
+        return
       }
       focusPrompt()
     },
-    [focusPrompt]
+    [focusPrompt, submitLine]
   )
 
   const exitISearch = useCallback(() => {
@@ -628,6 +652,7 @@ export function BmxtShell({
     if (mode === "isearch") {
       setISearchCycle(0)
     }
+    lineRef.current = ta.value
     setLine(ta.value)
     setCursorPos(ta.selectionStart)
     const sub = subCmdPickerRef.current
@@ -1103,6 +1128,7 @@ export function BmxtShell({
               onCompositionEnd={(ev) => {
                 setIsComposing(false)
                 const v = ev.currentTarget.value
+                lineRef.current = v
                 setLine(v)
                 setCursorPos(ev.currentTarget.selectionStart)
                 const sub = subCmdPickerRef.current
