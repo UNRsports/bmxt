@@ -85,3 +85,39 @@ export function secondTokenCandidatesAfterLoneFirstToken(trimmedSingleToken: str
   return listSecondTokenCandidatesByCommand(key, "")
 }
 
+/** True when `token` is a manifest-declared second token (ASCII case-folding on `token`). */
+export function isSecondToken(canonicalCmd: string, token: string): boolean {
+  switch (canonicalCmd) {
+    case "clear":
+      return false
+    case "close":
+      return false
+    case "dom": {
+      const lower = token.toLowerCase()
+      return lower === "-list"
+    }
+    case "exit":
+      return false
+    case "grep": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "--none" || lower === "--history" || lower === "--bookmark" || lower === "--page"
+    }
+    case "group":
+      return false
+    case "help":
+      return false
+    case "tabs": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "-moveurl" || lower === "-nowurl"
+    }
+    case "notes":
+      return false
+    case "split": {
+      const lower = token.toLowerCase()
+      return lower === "-col" || lower === "-row"
+    }
+    default:
+      return false
+  }
+}
+

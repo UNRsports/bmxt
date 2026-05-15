@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * `manifest/bmxt-codegen.json` の `commands` が各 `cmd/{module}.rs` の `pub const CMD` と一致するか、
- * かつ `subcommands[].head` が Rust ソース内に同じ文字列リテラルで現れるか検証する。
+ * `manifest/bmxt-codegen.json` の `commands` が各 `cmd/{module}.ts` の `export const CMD` と一致するか、
+ * かつ `subcommands[].head` が TS ソース内に同じ文字列リテラルで現れるか検証する。
  */
 
 import { readFileSync } from "node:fs"
@@ -24,15 +24,15 @@ function parseAliases(aliasesStr) {
   return out
 }
 
-function extractCmdMeta(rs) {
-  const idx = rs.indexOf("pub const CMD: Cmd")
+function extractCmdMeta(ts) {
+  const idx = ts.indexOf("export const CMD")
   if (idx < 0) {
-    throw new Error("pub const CMD block not found")
+    throw new Error("export const CMD block not found")
   }
-  const slice = rs.slice(idx, idx + 800)
+  const slice = ts.slice(idx, idx + 800)
   const nameM = slice.match(/name:\s*"([^"]*)"/)
-  const uM = slice.match(/usage_primary:\s*"([^"]*)"/)
-  const aM = slice.match(/aliases:\s*&\[(.*?)\]\s*,/s)
+  const uM = slice.match(/usagePrimary:\s*"([^"]*)"/)
+  const aM = slice.match(/aliases:\s*\[([^\]]*)\]/)
   if (!nameM || !uM || !aM) {
     throw new Error("could not parse CMD block")
   }
@@ -43,8 +43,7 @@ function extractCmdMeta(rs) {
   }
 }
 
-/** Each manifest `subcommands[].head` must appear as the same string literal in `cmd/{module}.rs`. */
-function verifySubcommandHeadsInSource(c, rs) {
+function verifySubcommandHeadsInSource(c, ts) {
   if (!Array.isArray(c.subcommands)) {
     throw new Error(`${c.module}: missing or invalid subcommands[]`)
   }
@@ -56,9 +55,9 @@ function verifySubcommandHeadsInSource(c, rs) {
       throw new Error(`${c.module}: invalid subcommand entry`)
     }
     const literal = JSON.stringify(br.head)
-    if (!rs.includes(literal)) {
+    if (!ts.includes(literal)) {
       throw new Error(
-        `${c.module}: subcommand head ${JSON.stringify(br.head)} must appear as literal ${literal} in cmd/${c.module}.rs`
+        `${c.module}: subcommand head ${JSON.stringify(br.head)} must appear as literal ${literal} in cmd/${c.module}.ts`
       )
     }
   }
@@ -69,14 +68,14 @@ function main() {
   const cmds = manifest.commands
 
   for (const c of cmds) {
-    const p = join(root, "wasm", "bmxt-core", "src", "cmd", `${c.module}.rs`)
-    let rs
+    const p = join(root, "lib", "features", "bmxt-core", "cmd", `${c.module}.ts`)
+    let ts
     try {
-      rs = readFileSync(p, "utf8")
+      ts = readFileSync(p, "utf8")
     } catch {
       throw new Error(`cmd file missing for module ${c.module}: ${p}`)
     }
-    const meta = extractCmdMeta(rs)
+    const meta = extractCmdMeta(ts)
     if (meta.name !== c.canonicalName) {
       throw new Error(
         `${c.module}: CMD.name is "${meta.name}" but manifest canonicalName is "${c.canonicalName}"`
@@ -86,15 +85,15 @@ function main() {
     const ex = [...c.aliases].sort().join("|")
     if (em !== ex) {
       throw new Error(
-        `${c.module}: aliases mismatch manifest=[${c.aliases}] rs=[${meta.aliases}]`
+        `${c.module}: aliases mismatch manifest=[${c.aliases}] ts=[${meta.aliases}]`
       )
     }
     if (meta.usagePrimary !== c.usagePrimary) {
       throw new Error(
-        `${c.module}: usagePrimary manifest="${c.usagePrimary}" rs="${meta.usagePrimary}"`
+        `${c.module}: usagePrimary manifest="${c.usagePrimary}" ts="${meta.usagePrimary}"`
       )
     }
-    verifySubcommandHeadsInSource(c, rs)
+    verifySubcommandHeadsInSource(c, ts)
   }
 
   console.log(`verify-manifest ok (${cmds.length} commands)`)

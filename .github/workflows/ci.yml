@@ -24,15 +24,6 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      # Avoid npm's wasm-pack postinstall (binary-install can pick linux-musl and 404 on releases).
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-pack@0.14.0
-
       - name: Install dependencies
         run: npm ci
 
@@ -42,15 +33,11 @@ jobs:
       - name: No fetch() in extension pages / SW sources
         run: npm run check:no-fetch
 
-      - name: Generated TS / Rust matches manifest (codegen + git diff)
+      - name: Generated TS matches manifest (codegen + git diff)
         run: npm run check:generated
-
-      - name: Build WASM artifacts
-        run: npm run build:wasm
 
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Rust tests (bmxt-core)
-        run: cargo test
-        working-directory: wasm/bmxt-core
+      - name: Build extension
+        run: npm run build

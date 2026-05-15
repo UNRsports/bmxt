@@ -21,7 +21,7 @@ import { displayTitle } from "./lib/features/format/display-title"
 import {
   ensureBmxtCore,
   runDispatch
-} from "./lib/features/wasm-core"
+} from "./lib/features/bmxt-core"
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"

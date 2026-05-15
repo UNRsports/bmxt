@@ -11,7 +11,7 @@ import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
   getCompletionCandidates
-} from "../wasm-core"
+} from "../bmxt-core"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 

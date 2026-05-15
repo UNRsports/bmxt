@@ -43,7 +43,7 @@ import {
   FALLBACK_COMPLETION_CANDIDATES,
   getCompletionCandidates,
   runDispatch
-} from "../wasm-core"
+} from "../bmxt-core"
 import {
   useCallback,
   useEffect,
