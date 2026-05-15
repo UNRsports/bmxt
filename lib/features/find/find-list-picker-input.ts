@@ -48,6 +48,62 @@ export function isFindListReadyToRun(trimmed: string): boolean {
   return isFindListScopeToken(parts[2]!)
 }
 
+/** EN: Pattern text after `find -list <scope>` (may be empty). */
+export function findListPatternFromLine(trimmed: string): string {
+  const parts = findListParts(trimmed)
+  if (parts.length <= 3) {
+    return ""
+  }
+  return parts.slice(3).join(" ")
+}
+
+function tokenBoundsAt(s: string, pos: number): [number, number] {
+  let l = pos
+  while (l > 0 && !/\s/.test(s[l - 1]!)) {
+    l--
+  }
+  let r = pos
+  while (r < s.length && !/\s/.test(s[r]!)) {
+    r++
+  }
+  return [l, r]
+}
+
+/**
+ * EN: Cursor still editing the scope token (`--history` …) — show scope menu, not pattern placeholder.
+ * JA: スコープトークン入力中 — スコープメニューを表示し、パターン案内は出さない。
+ */
+export function isEditingFindListScopeToken(line: string, cursor: number): boolean {
+  const trimmed = line.trim()
+  if (!trimmed.toLowerCase().startsWith("find ")) {
+    return false
+  }
+  const parts = findListParts(trimmed)
+  if (parts.length < 3) {
+    return true
+  }
+  if (!isFindListScopeToken(parts[2]!)) {
+    return true
+  }
+  const scope = parts[2]!
+  const scopeStart = line.toLowerCase().indexOf(scope.toLowerCase())
+  if (scopeStart < 0) {
+    return false
+  }
+  const scopeEnd = scopeStart + scope.length
+  const [l, r] = tokenBoundsAt(line, cursor)
+  return l >= scopeStart && r <= scopeEnd
+}
+
+/** EN: Show pattern placeholder; suppress scope IME menu. */
+export function shouldShowFindListPatternPlaceholder(line: string, cursor: number): boolean {
+  return isFindListReadyToRun(line.trim()) && !isEditingFindListScopeToken(line, cursor)
+}
+
+/** EN: Prompt placeholder after scope is chosen on `find -list`. */
+export const FIND_LIST_PATTERN_PLACEHOLDER =
+  "絞り込み語を入力 · Enter で実行 — type a filter or press Enter to run"
+
 /** EN: Enter opens find list picker when the line is a completed `find -list …` dispatch. */
 export function parseFindListPickerLine(trimmed: string): string | null {
   const t = trimmed.trim()

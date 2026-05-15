@@ -13,9 +13,11 @@ import {
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import { FindListPickerOverlay } from "../find/find-list-picker-overlay"
 import {
+  FIND_LIST_PATTERN_PLACEHOLDER,
   isFindListAwaitingScope,
   isFindListReadyToRun,
   parseFindListPickerLine,
+  shouldShowFindListPatternPlaceholder,
   type FindListPickerState
 } from "../find/find-list-picker-input"
 import { DomListPickerOverlay } from "../dom/dom-list-picker-overlay"
@@ -54,9 +56,11 @@ export type TabPickerState = {
   variant?: "default" | "groupNew"
 }
 
+/** EN: Delay before showing find -list progress spinner (avoid flash on fast runs). */
+const FIND_LIST_SPINNER_DELAY_MS = 450
+
 function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
   return (
-    isFindListReadyToRun(trimmed) ||
     parseDomListPickerLine(trimmed) !== null ||
     parseTabsListPickerLine(trimmed) !== null ||
     parseGroupNewInteractiveLine(trimmed)
@@ -137,6 +141,10 @@ export function BmxtShell({
   const lineRef = useRef("")
   const cursorRef = useRef(0)
   const completionCandidatesRef = useRef<string[]>([])
+  const findListBusyRef = useRef(false)
+  const findListSpinnerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [findListBusy, setFindListBusy] = useState(false)
+  const [findListShowSpinner, setFindListShowSpinner] = useState(false)
 
   useEffect(() => {
     setLocalCompletion(completionCandidates)
@@ -181,7 +189,7 @@ export function BmxtShell({
 
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
-      if (mode === "isearch" || overlayOpen) {
+      if (mode === "isearch" || overlayOpen || findListBusyRef.current) {
         setSubCmdPicker(null)
         return
       }
@@ -421,6 +429,70 @@ export function BmxtShell({
     []
   )
 
+  const showFindListPatternPlaceholder = useMemo(
+    () =>
+      !findListBusy &&
+      !findListShowSpinner &&
+      shouldShowFindListPatternPlaceholder(line, cursorPos),
+    [line, cursorPos, findListBusy, findListShowSpinner]
+  )
+
+  const runFindListSearch = useCallback(
+    async (displayLine: string, findListLine: string) => {
+      if (findListBusyRef.current) {
+        return
+      }
+      findListBusyRef.current = true
+      setFindListBusy(true)
+      setSubCmdPicker(null)
+      setFindListShowSpinner(false)
+      if (findListSpinnerTimerRef.current !== null) {
+        clearTimeout(findListSpinnerTimerRef.current)
+      }
+      findListSpinnerTimerRef.current = setTimeout(() => {
+        setFindListShowSpinner(true)
+      }, FIND_LIST_SPINNER_DELAY_MS)
+
+      try {
+        await ensureBmxtCore()
+        const bundle = runDispatch(findListLine)
+        if (bundle.ty === "lines") {
+          await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
+          return
+        }
+        await appendLogLines([
+          `> ${displayLine}`,
+          "find -list — searching (history · bookmarks · pages)…"
+        ])
+        const ctx: DispatchChromeContext = {
+          clearLog: async () => {},
+          exitPane: async () => [],
+          listWindows: async () => [],
+          focusInfo: async () => [],
+          resolveTabArg: async () => undefined,
+          commandSessionId: sessionId
+        }
+        const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+        await appendLogLines(["find -list — picker (Esc)"])
+        setFindListPicker(sessionId, { lines: linesOut })
+      } catch (e) {
+        await appendLogLines([
+          `> ${displayLine}`,
+          `error: ${e instanceof Error ? e.message : String(e)}`
+        ])
+      } finally {
+        if (findListSpinnerTimerRef.current !== null) {
+          clearTimeout(findListSpinnerTimerRef.current)
+          findListSpinnerTimerRef.current = null
+        }
+        findListBusyRef.current = false
+        setFindListBusy(false)
+        setFindListShowSpinner(false)
+      }
+    },
+    [appendLogLines, sessionId, setFindListPicker]
+  )
+
   const submitLine = useCallback(() => {
     if (mode === "isearch") {
       const pick = iSearchMatches[iSearchCycle]
@@ -498,6 +570,10 @@ export function BmxtShell({
 
     const findListLine = parseFindListPickerLine(trimmed)
     if (findListLine !== null) {
+      if (findListBusyRef.current) {
+        focusPrompt()
+        return
+      }
       if (isFindListAwaitingScope(trimmed)) {
         appendCommandToHistory(trimmed)
         const next = trimmed.endsWith(" ") ? trimmed : `${trimmed} `
@@ -510,42 +586,17 @@ export function BmxtShell({
         focusPrompt()
         return
       }
+      if (!isFindListReadyToRun(trimmed)) {
+        focusPrompt()
+        return
+      }
       appendCommandToHistory(trimmed)
       setLine("")
       setCursorPos(0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       setSubCmdPicker(null)
-      void (async () => {
-        try {
-          await ensureBmxtCore()
-          const bundle = runDispatch(findListLine)
-          if (bundle.ty === "lines") {
-            await appendLogLines([`> ${trimmed}`, ...(bundle.lines ?? [])])
-            return
-          }
-          await appendLogLines([
-            `> ${trimmed}`,
-            "find -list — searching (history · bookmarks · pages)…"
-          ])
-          const ctx: DispatchChromeContext = {
-            clearLog: async () => {},
-            exitPane: async () => [],
-            listWindows: async () => [],
-            focusInfo: async () => [],
-            resolveTabArg: async () => undefined,
-            commandSessionId: sessionId
-          }
-          const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-          await appendLogLines(["find -list — picker (Esc)"])
-          setFindListPicker(sessionId, { lines: linesOut })
-        } catch (e) {
-          await appendLogLines([
-            `> ${trimmed}`,
-            `error: ${e instanceof Error ? e.message : String(e)}`
-          ])
-        }
-      })()
+      void runFindListSearch(trimmed, findListLine)
       focusPrompt()
       return
     }
@@ -594,6 +645,7 @@ export function BmxtShell({
     setTabPicker,
     setFindListPicker,
     runDomListAndShow,
+    runFindListSearch,
     syncImeTokenPicker
   ])
 
@@ -783,6 +835,11 @@ export function BmxtShell({
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
           const trimmed = promptLine().trim()
+          if (isFindListReadyToRun(trimmed)) {
+            setSubCmdPicker(null)
+            submitLine()
+            return
+          }
           if (shouldAutoSubmitAfterTokenPick(trimmed)) {
             setSubCmdPicker(null)
             submitLine()
@@ -1040,6 +1097,9 @@ export function BmxtShell({
           </div>
         ) : null}
         <div className="bmxt-prompt-line">
+          {findListShowSpinner ? (
+            <span className="bmxt-prompt-spinner" aria-label="Searching" role="status" />
+          ) : null}
           <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
           <div className="bmxt-prompt-field">
             <div className="bmxt-prompt-mirror" aria-hidden>
@@ -1062,7 +1122,11 @@ export function BmxtShell({
               wrap="off"
               tabIndex={0}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
+              placeholder={
+                showFindListPatternPlaceholder ? FIND_LIST_PATTERN_PLACEHOLDER : undefined
+              }
               value={line}
+              readOnly={findListBusy}
               onChange={onImeInput}
               onSelect={onImeSelect}
               onKeyDown={onKeyDown}
@@ -1077,7 +1141,7 @@ export function BmxtShell({
                 syncImeTokenPicker(v, ev.currentTarget.selectionStart)
               }}
             />
-            {subCmdPicker && !overlayOpen ? (
+            {subCmdPicker && !overlayOpen && !findListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host"

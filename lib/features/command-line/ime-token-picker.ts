@@ -10,6 +10,10 @@ import {
   listThirdTokenCandidates
 } from "../builtin-commands/command-subcommands.gen"
 import { resolveCanonical } from "../bmxt-core/registry"
+import {
+  isFindListReadyToRun,
+  isEditingFindListScopeToken
+} from "../find/find-list-picker-input"
 
 export type ImeTokenTier = "first" | "second" | "third"
 
@@ -50,6 +54,11 @@ export function resolveImeTokenPicker(
   cursor: number,
   firstCommandTokens: readonly string[]
 ): ImeTokenPickerModel | null {
+  const trimmed = line.trim()
+  if (isFindListReadyToRun(trimmed) && !isEditingFindListScopeToken(line, cursor)) {
+    return null
+  }
+
   const [l, r] = tokenBounds(line, cursor)
   const left = line.slice(0, l)
   const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
