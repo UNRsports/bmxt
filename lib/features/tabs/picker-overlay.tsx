@@ -17,9 +17,13 @@ import {
   TAB_PICKER_COMMANDS_FOR_WINDOW,
   filterTabPickerCommandCompletions
 } from "./tab-picker-overlay-constants"
-import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
+import type { BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
+import { useTabPickerEdit } from "./use-tab-picker-edit"
 import {
   TabPickerCommandFooter,
+  TabPickerEditGroupMenuPanel,
+  TabPickerEditGroupRenamePanel,
+  TabPickerEditWindowRenamePanel,
   TabPickerGroupTargetPanel,
   TabPickerNewGroupMetaPanel,
   TabPickerNewTabUrlPanel,
@@ -77,8 +81,11 @@ export function TabPickerOverlay({
   const [commandMode, setCommandMode] = useState(false)
   const [commandBuffer, setCommandBuffer] = useState("")
   const [commandListingHint, setCommandListingHint] = useState(false)
+  const [editPanel, setEditPanel] = useState<EditPanel | null>(null)
+  const [editTitle, setEditTitle] = useState("")
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const editPanelRef = useRef<HTMLDivElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
   const groupMetaColorStripRef = useRef<HTMLDivElement>(null)
   const newGroupTabIdsRef = useRef<number[]>([])
@@ -151,7 +158,9 @@ export function TabPickerOverlay({
     prevRowsRef,
     prevBulkSubModeRef,
     skipNextInitialHiRef,
-    isHostPaneFocused
+    isHostPaneFocused,
+    editPanel,
+    editPanelRef
   })
 
   useLoadGroupChoicesWhenBulkGroup(bulkSubMode, setGroupChoices, setGroupPickIndex)
@@ -172,6 +181,33 @@ export function TabPickerOverlay({
     markedWindowIds,
     markedGroupKeys
   )
+
+  const {
+    openEditFromPicker,
+    closeEdit,
+    confirmWindowRename,
+    confirmGroupRename,
+    confirmGroupMenuPick,
+    cycleGroupMenuPick,
+    backFromGroupRename
+  } = useTabPickerEdit({
+    rows,
+    visibleRowIndices,
+    hi,
+    markedKind,
+    markedWindowIds,
+    markedGroupKeys,
+    markedCount,
+    editPanel,
+    editTitle,
+    setEditPanel,
+    setEditTitle,
+    setBulkSubMode,
+    applyReducedState,
+    clearMarkedViaReducer,
+    onAppendLog,
+    onRefreshRows
+  })
 
   const mirrorBlocked =
     markedCount > 0 ||
@@ -291,7 +327,16 @@ export function TabPickerOverlay({
     setCommandMode,
     setCommandBuffer,
     setCommandListingHint,
-    isHostPaneFocused
+    isHostPaneFocused,
+    editPanel,
+    editPanelRef,
+    openEditFromPicker,
+    closeEdit,
+    confirmWindowRename,
+    confirmGroupRename,
+    confirmGroupMenuPick,
+    cycleGroupMenuPick,
+    backFromGroupRename
   })
 
   useWindowKeydownCapture(onWindowKeydownCapture)
@@ -301,9 +346,10 @@ export function TabPickerOverlay({
       resolvePickerHeadline({
         bulkSubMode,
         groupNewPhase,
-        variant
+        variant,
+        editPanelKind: editPanel?.kind ?? null
       }),
-    [bulkSubMode, groupNewPhase, variant]
+    [bulkSubMode, editPanel?.kind, groupNewPhase, variant]
   )
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
@@ -377,7 +423,11 @@ export function TabPickerOverlay({
         if (t.closest(".bmxt-tab-picker-new-group-meta")) {
           return
         }
-        if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+        if (
+          groupNewPhase === "meta" ||
+          newTabUrlWindowId !== null ||
+          editPanel !== null
+        ) {
           return
         }
         requestAnimationFrame(() => inputRef.current?.focus())
@@ -467,6 +517,25 @@ export function TabPickerOverlay({
           newGroupColorIndex={newGroupColorIndex}
           onMetaTitleKeyDown={onMetaTitleKeyDown}
           onMetaColorKeyDown={onMetaColorKeyDown}
+        />
+      ) : editPanel?.kind === "windowRename" ? (
+        <TabPickerEditWindowRenamePanel
+          titleRef={groupMetaTitleRef}
+          editTitle={editTitle}
+          onEditTitleChange={setEditTitle}
+          onKeyDown={onMetaTitleKeyDown}
+        />
+      ) : editPanel?.kind === "groupRename" ? (
+        <TabPickerEditGroupRenamePanel
+          titleRef={groupMetaTitleRef}
+          editTitle={editTitle}
+          onEditTitleChange={setEditTitle}
+          onKeyDown={onMetaTitleKeyDown}
+        />
+      ) : editPanel?.kind === "groupMenu" ? (
+        <TabPickerEditGroupMenuPanel
+          panelRef={editPanelRef}
+          pickIndex={editPanel.pickIndex}
         />
       ) : null}
       {searchMode ? <TabPickerSearchFooter filterQuery={filterQuery} /> : null}

@@ -4,6 +4,7 @@ import {
   NEW_GROUP_COLORS,
   type NewGroupPaletteColor
 } from "./tab-picker-overlay-constants"
+import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import type { GroupChoice } from "./tab-picker-overlay-types"
 
 export function TabPickerGroupTargetPanel({
@@ -98,6 +99,100 @@ export function TabPickerNewGroupMetaPanel({
             />
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+export function TabPickerEditWindowRenamePanel({
+  titleRef,
+  editTitle,
+  onEditTitleChange,
+  onKeyDown
+}: {
+  titleRef: RefObject<HTMLInputElement | null>
+  editTitle: string
+  onEditTitleChange: (value: string) => void
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <div className="bmxt-tab-picker-new-group-meta">
+      <div className="bmxt-tab-picker-group-head">ウィンドウ名</div>
+      <div className="bmxt-tab-picker-new-group-field">
+        <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-edit-window-title">
+          名前
+        </label>
+        <input
+          id="bmxt-edit-window-title"
+          ref={titleRef}
+          className="bmxt-tab-picker-new-group-input"
+          type="text"
+          value={editTitle}
+          onChange={(e) => onEditTitleChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+        />
+      </div>
+    </div>
+  )
+}
+
+export function TabPickerEditGroupMenuPanel({
+  panelRef,
+  pickIndex
+}: {
+  panelRef: RefObject<HTMLDivElement | null>
+  pickIndex: number
+}) {
+  return (
+    <div ref={panelRef} className="bmxt-tab-picker-group-panel bmxt-scroll">
+      <div className="bmxt-tab-picker-group-head">タブグループの編集</div>
+      {GROUP_EDIT_MENU_ITEMS.map((item, idx) => (
+        <div
+          key={item.id}
+          data-bmxt-edit-pick={idx}
+          className={`bmxt-tab-picker-group-row${
+            idx === pickIndex ? " bmxt-tab-picker-group-row--hi" : ""
+          }`}>
+          {item.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function TabPickerEditGroupRenamePanel({
+  titleRef,
+  editTitle,
+  onEditTitleChange,
+  onKeyDown
+}: {
+  titleRef: RefObject<HTMLInputElement | null>
+  editTitle: string
+  onEditTitleChange: (value: string) => void
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <div className="bmxt-tab-picker-new-group-meta">
+      <div className="bmxt-tab-picker-group-head">グループ名</div>
+      <div className="bmxt-tab-picker-new-group-field">
+        <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-edit-group-title">
+          名前
+        </label>
+        <input
+          id="bmxt-edit-group-title"
+          ref={titleRef}
+          className="bmxt-tab-picker-new-group-input"
+          type="text"
+          value={editTitle}
+          onChange={(e) => onEditTitleChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+        />
       </div>
     </div>
   )

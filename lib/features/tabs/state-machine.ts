@@ -12,7 +12,7 @@ import { resolveTabsPickerCreateGroupPlan } from "../bmxt-core"
 import { resolveTabsPickerHeadline } from "../bmxt-core"
 
 export type PickerSelectKind = "window" | "group" | "tab"
-export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow"
+export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit"
 
 export type PickerReducerState = {
   hi: number
@@ -261,11 +261,13 @@ export function resolvePickerHeadline(context: {
   bulkSubMode: PickerReducerState["bulkSubMode"]
   groupNewPhase: GroupNewPhase
   variant: PickerVariant
+  editPanelKind?: string | null
 }): string {
   return resolveTabsPickerHeadline({
     bulkSubMode: context.bulkSubMode,
     groupNewPhase: context.groupNewPhase,
-    variant: context.variant
+    variant: context.variant,
+    editPanelKind: context.editPanelKind ?? null
   })
 }
 

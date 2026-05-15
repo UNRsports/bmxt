@@ -2,6 +2,10 @@
 
 import { displayTitle } from "../format/display-title"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
+import {
+  getWindowDisplayNamesMap,
+  pruneWindowDisplayNames
+} from "../extension-storage/window-display-names"
 
 export { displayTitle }
 
@@ -56,11 +60,15 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
   }
   const winsMeta = await chrome.windows.getAll({ populate: false })
   const winFocused = new Map<number, boolean>()
+  const openWindowIds: number[] = []
   for (const w of winsMeta) {
     if (w.id !== undefined) {
       winFocused.set(w.id, Boolean(w.focused))
+      openWindowIds.push(w.id)
     }
   }
+  await pruneWindowDisplayNames(openWindowIds)
+  const windowDisplayNames = await getWindowDisplayNamesMap()
 
   const sorted = [...tabs].sort((a, b) => {
     const wa = a.windowId ?? 0
@@ -92,10 +100,13 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
     }
     const active = wTabs.find((t) => t.active) ?? wTabs[0]
     const f = winFocused.get(wid) ?? false
+    const customName = windowDisplayNames.get(wid)
+    const windowTitle =
+      customName !== undefined ? customName : displayTitle(active?.title ?? "")
     rows.push({
       kind: "window",
       windowId: wid,
-      label: `${f ? "*" : " "}[ウィンドウ] ${displayTitle(active?.title)}`,
+      label: `${f ? "*" : " "}[ウィンドウ] ${windowTitle}`,
       focused: f
     })
 

@@ -15,11 +15,11 @@ export type ExecuteValidation = {
 function allowed(kind: SelectKind, mode: BulkSubMode): boolean {
   switch (kind) {
     case "window":
-      return mode === "close" || mode === "newTab"
+      return mode === "close" || mode === "newTab" || mode === "edit"
     case "group":
-      return mode === "move" || mode === "close" || mode === "newWindow"
+      return mode === "move" || mode === "close" || mode === "newWindow" || mode === "edit"
     case "tab":
-      return true
+      return mode !== "edit"
   }
 }
 
@@ -52,7 +52,9 @@ export function validateExecute(ctx: ExecuteValidateContext): ExecuteValidation 
   if (ctx.selectedTabCount === 0) {
     const allowWithoutTabs =
       (kind === "window" && ctx.bulkSubMode === "close") ||
-      (kind === "window" && ctx.bulkSubMode === "newTab")
+      (kind === "window" && ctx.bulkSubMode === "newTab") ||
+      (kind === "window" && ctx.bulkSubMode === "edit") ||
+      (kind === "group" && ctx.bulkSubMode === "edit")
     if (!allowWithoutTabs) {
       return {
         ok: false,

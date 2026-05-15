@@ -2,7 +2,7 @@ import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { groupRowKey } from "./tab-picker-keyboard"
-import type { BulkSubMode, SelectKind } from "./tab-picker-overlay-types"
+import type { BulkSubMode, EditPanel, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
 
@@ -41,7 +41,9 @@ export function useTabPickerSyncAndLayoutEffects({
   prevRowsRef,
   prevBulkSubModeRef,
   skipNextInitialHiRef,
-  isHostPaneFocused
+  isHostPaneFocused,
+  editPanel,
+  editPanelRef
 }: {
   initialHi: number
   filterQuery: string
@@ -77,6 +79,8 @@ export function useTabPickerSyncAndLayoutEffects({
   /** 新規タブ直後の行は anchor 同期に任せ、親の initialHi 上書きを 1 回避ける */
   skipNextInitialHiRef: MutableRefObject<boolean>
   isHostPaneFocused: boolean
+  editPanel: EditPanel | null
+  editPanelRef: RefObject<HTMLDivElement | null>
 }): { groupPanelRef: RefObject<HTMLDivElement | null> } {
   const groupPanelRef = useRef<HTMLDivElement>(null)
 
@@ -127,7 +131,7 @@ export function useTabPickerSyncAndLayoutEffects({
   }, [filterQuery, rows, visibleRowIndices, hi, setHi, setMoveDestHi, anchorTabIdRef, prevFilterQueryRef, prevRowsRef])
 
   useEffect(() => {
-    if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+    if (groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null) {
       return
     }
     const visibleTabs = new Set<number>()
@@ -152,6 +156,7 @@ export function useTabPickerSyncAndLayoutEffects({
   }, [
     visibleRowIndices,
     rows,
+    editPanel,
     groupNewPhase,
     newTabUrlWindowId,
     setMarkedGroupKeys,
@@ -173,7 +178,7 @@ export function useTabPickerSyncAndLayoutEffects({
       row?.kind === "window" &&
       (bulkSubMode === "close" || bulkSubMode === "newTab")
 
-    if (markedCount === 0 && !implicitWindowBulk) {
+    if (markedCount === 0 && !implicitWindowBulk && bulkSubMode !== "edit") {
       setBulkSubMode(null)
       setMarkedKind(null)
       shiftRangeAnchorHiRef.current = null
@@ -206,13 +211,26 @@ export function useTabPickerSyncAndLayoutEffects({
       groupMetaTitleRef.current?.blur()
       return
     }
-    if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+    if (
+      groupNewPhase === "meta" ||
+      newTabUrlWindowId !== null ||
+      editPanel?.kind === "windowRename" ||
+      editPanel?.kind === "groupRename"
+    ) {
       inputRef.current?.blur()
       groupMetaTitleRef.current?.focus()
       return
     }
     inputRef.current?.focus()
-  }, [groupNewPhase, newTabUrlWindowId, searchMode, inputRef, groupMetaTitleRef, isHostPaneFocused])
+  }, [
+    editPanel,
+    groupNewPhase,
+    newTabUrlWindowId,
+    searchMode,
+    inputRef,
+    groupMetaTitleRef,
+    isHostPaneFocused
+  ])
 
   useLayoutEffect(() => {
     const rowIndex = visibleRowIndices[hi]
@@ -244,6 +262,16 @@ export function useTabPickerSyncAndLayoutEffects({
     )
     row?.scrollIntoView({ block: "nearest", behavior: "instant" })
   }, [bulkSubMode, groupChoices.length, groupPickIndex])
+
+  useLayoutEffect(() => {
+    if (editPanel?.kind !== "groupMenu") {
+      return
+    }
+    const row = editPanelRef.current?.querySelector<HTMLElement>(
+      `[data-bmxt-edit-pick="${editPanel.pickIndex}"]`
+    )
+    row?.scrollIntoView({ block: "nearest", behavior: "instant" })
+  }, [editPanel, editPanelRef])
 
   return { groupPanelRef }
 }

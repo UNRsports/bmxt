@@ -13,7 +13,12 @@ import {
   NEW_GROUP_COLORS,
   filterTabPickerCommandCompletions
 } from "./tab-picker-overlay-constants"
-import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
+import type {
+  BulkSubMode,
+  EditPanel,
+  GroupChoice,
+  SelectKind
+} from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import {
   groupRowKey,
@@ -45,6 +50,8 @@ function parsePickerCommand(cmd: string): BulkSubMode | null {
     case "nt":
     case "new-tab":
       return "newTab"
+    case "edit":
+      return "edit"
     default:
       return null
   }
@@ -101,7 +108,16 @@ export function useTabPickerKeyboard({
   setCommandMode,
   setCommandBuffer,
   setCommandListingHint,
-  isHostPaneFocused
+  isHostPaneFocused,
+  editPanel,
+  editPanelRef,
+  openEditFromPicker,
+  closeEdit,
+  confirmWindowRename,
+  confirmGroupRename,
+  confirmGroupMenuPick,
+  cycleGroupMenuPick,
+  backFromGroupRename
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -154,6 +170,15 @@ export function useTabPickerKeyboard({
   setCommandBuffer: Dispatch<SetStateAction<string>>
   setCommandListingHint: Dispatch<SetStateAction<boolean>>
   isHostPaneFocused: boolean
+  editPanel: EditPanel | null
+  editPanelRef: RefObject<HTMLDivElement | null>
+  openEditFromPicker: () => void | Promise<void>
+  closeEdit: () => void
+  confirmWindowRename: () => void | Promise<void>
+  confirmGroupRename: () => void | Promise<void>
+  confirmGroupMenuPick: () => void | Promise<void>
+  cycleGroupMenuPick: (delta: number) => void
+  backFromGroupRename: () => void
 }) {
   /** window capture のリスナーが useEffect 更新より古いクロージャのときでも Enter で確実に参照できるようにする */
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
@@ -197,11 +222,27 @@ export function useTabPickerKeyboard({
       setCommandBuffer("")
       setCommandListingHint(false)
 
+      if (mode === "edit") {
+        void openEditFromPicker()
+        return true
+      }
       if (mode !== null) {
         const rowIndex = visibleRowIndices[hi]
         const row = rowIndex !== undefined ? rows[rowIndex] : undefined
-        if (row && markedCount === 0 && row.kind === "tab") {
-          applyReducedState({ kind: "toggleCurrent", row: { kind: "tab", tabId: row.tabId } })
+        if (row && markedCount === 0) {
+          if (row.kind === "tab") {
+            applyReducedState({ kind: "toggleCurrent", row: { kind: "tab", tabId: row.tabId } })
+          } else if (row.kind === "window") {
+            applyReducedState({
+              kind: "toggleCurrent",
+              row: { kind: "window", windowId: row.windowId }
+            })
+          } else if (row.kind === "group" && row.groupId !== null) {
+            applyReducedState({
+              kind: "toggleCurrent",
+              row: { kind: "group", groupKey: groupRowKey(row.windowId, row.groupId) }
+            })
+          }
         }
         setBulkSubMode(mode)
       }
@@ -213,6 +254,7 @@ export function useTabPickerKeyboard({
       commandMode,
       hi,
       markedCount,
+      openEditFromPicker,
       rows,
       setBulkSubMode,
       setCommandBuffer,
@@ -245,6 +287,25 @@ export function useTabPickerKeyboard({
         const wid = newTabUrlWindowIdRef.current
         const raw = groupMetaTitleRef.current?.value ?? newTabUrlRef.current
         void executeOpenNewTabFromUrl(wid, raw)
+        return true
+      }
+
+      if (editPanel?.kind === "windowRename") {
+        e.preventDefault()
+        e.stopPropagation()
+        void confirmWindowRename()
+        return true
+      }
+      if (editPanel?.kind === "groupRename") {
+        e.preventDefault()
+        e.stopPropagation()
+        void confirmGroupRename()
+        return true
+      }
+      if (editPanel?.kind === "groupMenu") {
+        e.preventDefault()
+        e.stopPropagation()
+        void confirmGroupMenuPick()
         return true
       }
 
@@ -317,6 +378,10 @@ export function useTabPickerKeyboard({
     [
       bulkSubMode,
       confirmSelection,
+      confirmGroupMenuPick,
+      confirmGroupRename,
+      confirmWindowRename,
+      editPanel,
       executeOpenNewTabFromUrl,
       filterQuery,
       groupMetaTitleRef,
@@ -368,6 +433,34 @@ export function useTabPickerKeyboard({
         }
         return
       }
+      if (editPanel?.kind === "windowRename") {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          closeEdit()
+          requestAnimationFrame(() => inputRef.current?.focus())
+          return
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          void confirmWindowRename()
+          return
+        }
+        return
+      }
+      if (editPanel?.kind === "groupRename") {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          backFromGroupRename()
+          requestAnimationFrame(() => groupMetaTitleRef.current?.focus())
+          return
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          void confirmGroupRename()
+          return
+        }
+        return
+      }
       if (e.key === "Escape") {
         e.preventDefault()
         setGroupNewPhase("tabs")
@@ -385,9 +478,15 @@ export function useTabPickerKeyboard({
       }
     },
     [
+      backFromGroupRename,
+      closeEdit,
+      confirmGroupRename,
+      confirmWindowRename,
+      editPanel,
       executeCreateNewGroup,
       executeOpenNewTabFromUrl,
       groupMetaColorStripRef,
+      groupMetaTitleRef,
       inputRef,
       setGroupNewPhase,
       setNewTabUrl,
@@ -449,7 +548,7 @@ export function useTabPickerKeyboard({
       if (searchMode || commandMode) {
         return false
       }
-      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+      if (groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null) {
         return false
       }
       if (bulkSubMode === "move" || bulkSubMode === "group") {
@@ -537,7 +636,12 @@ export function useTabPickerKeyboard({
         return false
       }
 
-      if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+      if (
+        groupNewPhase === "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel?.kind === "windowRename" ||
+        editPanel?.kind === "groupRename"
+      ) {
         const ae = document.activeElement
         if (
           ae === groupMetaTitleRef.current ||
@@ -545,6 +649,13 @@ export function useTabPickerKeyboard({
         ) {
           return false
         }
+      }
+
+      if (editPanel?.kind === "groupMenu") {
+        e.preventDefault()
+        e.stopPropagation()
+        cycleGroupMenuPick(navDir === "down" ? 1 : -1)
+        return true
       }
 
       if (bulkSubMode === "move") {
@@ -593,7 +704,10 @@ export function useTabPickerKeyboard({
       }
 
       const shiftArrowBlocksBulk =
-        bulkSubMode === "group" || groupNewPhase === "meta" || newTabUrlWindowId !== null
+        bulkSubMode === "group" ||
+        groupNewPhase === "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel !== null
       if (
         !shiftArrowBlocksBulk &&
         e.shiftKey &&
@@ -761,6 +875,16 @@ export function useTabPickerKeyboard({
           requestAnimationFrame(() => inputRef.current?.focus())
           return
         }
+        if (editPanel?.kind === "groupRename") {
+          backFromGroupRename()
+          requestAnimationFrame(() => inputRef.current?.focus())
+          return
+        }
+        if (editPanel !== null) {
+          closeEdit()
+          requestAnimationFrame(() => inputRef.current?.focus())
+          return
+        }
         if (commandMode) {
           commandCompletionRef.current = null
           setCommandMode(false)
@@ -812,7 +936,11 @@ export function useTabPickerKeyboard({
           commandCompletionRef.current = { ...commandCompletionRef.current, idx: idx + 1 }
           return
         }
-        if (groupNewPhase === "meta" || newTabUrlWindowId !== null) {
+        if (
+          groupNewPhase === "meta" ||
+          newTabUrlWindowId !== null ||
+          editPanel !== null
+        ) {
           e.preventDefault()
           return
         }
@@ -849,7 +977,10 @@ export function useTabPickerKeyboard({
         return
       }
 
-      if (e.key === " " && (groupNewPhase === "meta" || newTabUrlWindowId !== null)) {
+      if (
+        e.key === " " &&
+        (groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null)
+      ) {
         e.preventDefault()
         e.stopPropagation()
         return
@@ -864,7 +995,17 @@ export function useTabPickerKeyboard({
         }
       }
 
-      if (e.key === ":" && !e.ctrlKey && !e.metaKey && !e.altKey && !searchMode && !commandMode && groupNewPhase !== "meta" && newTabUrlWindowId === null) {
+      if (
+        e.key === ":" &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        !searchMode &&
+        !commandMode &&
+        groupNewPhase !== "meta" &&
+        newTabUrlWindowId === null &&
+        editPanel === null
+      ) {
         e.preventDefault()
         setCommandMode(true)
         setCommandBuffer("")
@@ -888,10 +1029,13 @@ export function useTabPickerKeyboard({
     },
     [
       applyReducedState,
+      backFromGroupRename,
       bulkSubMode,
+      closeEdit,
       closeSearch,
       commandBuffer,
       commandMode,
+      editPanel,
       executeCreateNewGroup,
       filterQuery,
       groupNewPhase,

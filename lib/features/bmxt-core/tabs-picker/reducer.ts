@@ -10,9 +10,9 @@ function clampIndex(cur: number, delta: number, len: number): number {
 function allowedModes(kind: SelectKind): readonly BulkSubMode[] {
   switch (kind) {
     case "window":
-      return ["close", "newTab"]
+      return ["close", "newTab", "edit"]
     case "group":
-      return ["move", "close", "newWindow"]
+      return ["move", "close", "newWindow", "edit"]
     case "tab":
       return ["move", "close", "group", "newWindow"]
   }
