@@ -18,11 +18,13 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "clear": [] as const,
   "close": [] as const,
   "dom": [
-    { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" }
+    { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
   "find": [
     { head: "-list", trailingTokens: ["--none","--history","--bookmark","--page"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "--none", trailingTokens: [] as const, tail: "rest" },
     { head: "--history", trailingTokens: [] as const, tail: "rest" },
     { head: "--bookmark", trailingTokens: [] as const, tail: "rest" },
@@ -32,6 +34,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "help": [] as const,
   "tabs": [
     { head: "-list", trailingTokens: ["-u"] as const, tail: "none" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" }
   ] as const,
@@ -94,13 +97,13 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "dom": {
       const lower = token.toLowerCase()
-      return lower === "-list"
+      return lower === "-list" || lower === "-exit"
     }
     case "exit":
       return false
     case "find": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "--none" || lower === "--history" || lower === "--bookmark" || lower === "--page"
+      return lower === "-list" || lower === "-exit" || lower === "--none" || lower === "--history" || lower === "--bookmark" || lower === "--page"
     }
     case "group":
       return false
@@ -108,7 +111,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "tabs": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-moveurl" || lower === "-nowurl"
+      return lower === "-list" || lower === "-exit" || lower === "-moveurl" || lower === "-nowurl"
     }
     case "notes":
       return false

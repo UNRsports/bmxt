@@ -19,12 +19,17 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--html|--react] [<pattern>]",
+      "usagePrimary": "dom -list [--html|--react] [<pattern>] | dom -exit -list",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["--html", "--react"],
           "tail": "rest"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
+          "tail": "none"
         }
       ]
     },
@@ -39,12 +44,17 @@
       "module": "find",
       "canonicalName": "find",
       "aliases": [],
-      "usagePrimary": "find -list [--none|--history|--bookmark|--page] <pattern> | find --none|… <pattern>",
+      "usagePrimary": "find -list [--none|--history|--bookmark|--page] <pattern> | find -exit -list | find --none|… <pattern>",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["--none", "--history", "--bookmark", "--page"],
           "tail": "rest"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
+          "tail": "none"
         },
         {
           "head": "--none",
@@ -82,11 +92,16 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u]",
+      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["-u"],
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
           "tail": "none"
         },
         {

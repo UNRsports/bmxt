@@ -1,4 +1,11 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject
+} from "react"
 import type { TabPickerRow } from "./picker-rows"
 import { resolvePickerHeadline } from "./state-machine"
 import { usePickerReducerBridge } from "./use-picker-reducer-bridge"
@@ -38,8 +45,13 @@ type Props = {
   variant?: "default" | "groupNew"
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
-  onExit: () => void
+  /** EN: Esc at top level — return focus to BMXt prompt; picker stays open. */
+  onReturnToPrompt: () => void
+  /** EN: Pane has keyboard focus (Ctrl+←→ or click); when false, display-only. */
   isHostPaneFocused: boolean
+  pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
+  /** EN: Session leaf id for Ctrl+←→ pane-strip navigation. */
+  sessionId: string
 }
 
 export function TabPickerOverlay({
@@ -49,8 +61,10 @@ export function TabPickerOverlay({
   variant = "default",
   onAppendLog,
   onRefreshRows,
-  onExit,
-  isHostPaneFocused
+  onReturnToPrompt,
+  isHostPaneFocused,
+  pickerInputRef,
+  sessionId
 }: Props) {
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
@@ -85,6 +99,15 @@ export function TabPickerOverlay({
   const [editTitle, setEditTitle] = useState("")
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const setInputEl = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      inputRef.current = el
+      if (pickerInputRef) {
+        pickerInputRef.current = el
+      }
+    },
+    [pickerInputRef]
+  )
   const editPanelRef = useRef<HTMLDivElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
   const groupMetaColorStripRef = useRef<HTMLDivElement>(null)
@@ -321,13 +344,14 @@ export function TabPickerOverlay({
       setNewTabUrlWindowId,
       setNewTabUrl,
       closeSearch,
-      onExit,
+      onReturnToPrompt,
     commandMode,
     commandBuffer,
     setCommandMode,
     setCommandBuffer,
     setCommandListingHint,
     isHostPaneFocused,
+    sessionId,
     editPanel,
     editPanelRef,
     openEditFromPicker,
@@ -405,10 +429,10 @@ export function TabPickerOverlay({
   }, [])
 
   useLayoutEffect(() => {
-    if (commandMode && isHostPaneFocused) {
+    if (isHostPaneFocused) {
       inputRef.current?.focus()
     }
-  }, [commandMode, isHostPaneFocused])
+  }, [isHostPaneFocused])
 
   useLayoutEffect(() => {
     prevFilterQueryRef.current = filterQuery
@@ -430,11 +454,14 @@ export function TabPickerOverlay({
         ) {
           return
         }
+        if (!isHostPaneFocused) {
+          return
+        }
         requestAnimationFrame(() => inputRef.current?.focus())
       }}>
       <div className="bmxt-tab-picker-head">{headLine}</div>
       <textarea
-        ref={inputRef}
+        ref={setInputEl}
         className="bmxt-tab-picker-filter-ime"
         rows={1}
         spellCheck={false}

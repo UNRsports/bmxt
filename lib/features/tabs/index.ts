@@ -25,6 +25,7 @@ export {
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
   parseTabsListPickerLine,
+  parseTabsExitListLine,
   tabsOptionCompletionZone,
   tabsMoveUrlCompletionZone
 } from "./input"

@@ -9,6 +9,8 @@ import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
 /** After `find -list ` — optional scope token `--none` | `--history` | … */
 const FIND_LIST_LEAD_RE = /^\s*find\s+-list\s+/i
 
+const FIND_EXIT_LIST_RE = /^\s*find\s+-exit\s+-list\s*$/i
+
 const FIND_LIST_SCOPE = new Set(["--none", "--history", "--bookmark", "--page"])
 
 function findListParts(trimmed: string): string[] {
@@ -103,6 +105,11 @@ export function shouldShowFindListPatternPlaceholder(line: string, cursor: numbe
 /** EN: Prompt placeholder after scope is chosen on `find -list`. */
 export const FIND_LIST_PATTERN_PLACEHOLDER =
   "絞り込み語を入力 · Enter で実行 — type a filter or press Enter to run"
+
+/** `find -exit -list` — close find list picker in this pane (full line must match). */
+export function parseFindExitListLine(trimmed: string): boolean {
+  return FIND_EXIT_LIST_RE.test(trimmed.trim())
+}
 
 /** EN: Enter opens find list picker when the line is a completed `find -list …` dispatch. */
 export function parseFindListPickerLine(trimmed: string): string | null {

@@ -1,14 +1,16 @@
 {
-  "0.3.1": {
+  "0.3.5": {
     "ja": [
       "rust採用を廃止し、ファイルサイズを縮小",
       "tabsモードに:editサブコマンドを追加してタブグループとウィンドウ名の編集を行えるようにした",
-      "日本語IME風の入力補助機能実装"
+      "日本語IME風の入力補助機能実装",
+      "各コマンドで表示されるピッカー（リスト表示）をサイドパネル方式に変更し、操作面も見直し"
     ],
     "en": [
       "Removed Rust to reduce package size",
       "Added the `:edit` subcommand in tabs mode for editing tab groups and window names",
-      "Implemented IME-style input assistance while typing commands"
+      "Implemented IME-style input assistance while typing commands",
+      "Moved list pickers for all commands to side columns beside the terminal and revised picker interaction (`Esc` returns to the prompt; close a column with `<cmd> -exit -list`)"
     ]
   }
 }

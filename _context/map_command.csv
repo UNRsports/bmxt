@@ -1,11 +1,13 @@
 第一コマンド,第二コマンド,第三トークン,manifest tail,別名（トップレベル）,usage（参照）,処理概要（実装）,備考
 clear,,,,,clear,Effect: clear_log（ログクリア）,
 close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。,第二トークン相当は可変の tabId（manifest subcommands なし）
-dom,-list,,rest,,dom -list [--html|--react] [<pattern>],第二が -list のみ: Effect dom_list（flavor=--html pattern 空）。第三以降で --html|--react を選び残りを pattern（引用符剥がし・大小無視部分一致）として dom_list。,
+dom,-list,,rest,,dom -list [--html|--react] [<pattern>],第二が -list: BMXt ウィンドウ UI で DOM ピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは dom -exit -list。第三 --html|--react 必須（`dom -list` のみ Enter 時は flavor プルダウン）。,
 dom,-list,--html,rest,,（同上）,trailingTokens の一つ。pattern 省略可（空文字）。,
 dom,-list,--react,rest,,（同上）,trailingTokens の一つ。,
+dom,-exit,-list,none,,dom -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session の DOM ピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
 exit,,,,,exit,Effect: exit_pane,
-find,-list,,rest,,find -list [--none|--history|--bookmark|--page] <pattern>,第二が -list のみ: dispatchForScope(--none 空 pattern)＝ find_history + find_bookmark + find_page を同時に空 pattern で。,
+find,-list,,rest,,find -list [--none|--history|--bookmark|--page] <pattern>,第二が -list: BMXt ウィンドウ UI で find ピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは find -exit -list。,
+find,-exit,-list,none,,find -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session の find ピッカー列を閉じる（検索中はキャンセル。未表示なら案内行）。SW の run は案内行のみ。,
 find,-list,--none,rest,,（同上）,scope --none: 上記3種の Effect を同一 pattern で同時発火。,
 find,-list,--history,rest,,（同上）,Effect: find_history。,
 find,-list,--bookmark,rest,,（同上）,Effect: find_bookmark。,
@@ -22,7 +24,8 @@ notes,-l,,,,notes -l,Effect: release_notes_list（--list と同効）。,実装�
 notes,<version>,,,,notes <version>,Effect: release_notes_version。単一トークンで先頭 - でないこと。,可変引数は第二列に表記（バージョンキー）
 split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）
 split,-row,,none,,（同上）,Effect: split_row。,（同上）
-tabs,-list,,none,,tabs -list [-u],第三なし、または第三が -u のみ許可。いずれも Effect ではなく案内行（タブピッカー起動手順）を linesDispatch。,-u は trailingTokens（Tab 補完対象）
+tabs,-list,,none,,tabs -list [-u],第三なし、または第三が -u のみ許可。BMXt ウィンドウ UI でタブピッカー列を開く（同一 sessionId）。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。,-u は trailingTokens（Tab 補完対象）
 tabs,-list,-u,none,,（同上）,（同上）。,
+tabs,-exit,-list,none,,tabs -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session のタブピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
 tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,args[2] 以降を結合して http(s) URL 解析。成功時 Effect: tabs_move_url。空/不正なら usage。,
 tabs,-nowurl,,none,,tabs -nowurl,追加引数不可。Effect: tabs_nu（現在タブ URL 表示系）。,

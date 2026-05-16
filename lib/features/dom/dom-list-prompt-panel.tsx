@@ -3,7 +3,8 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState
+  useState,
+  type MutableRefObject
 } from "react"
 import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
 
@@ -12,21 +13,23 @@ type Props = {
   message: string[]
   /** Approve: request host permission (if missing), then re-run the original command line. */
   onApprove: () => void
-  /** Decline: close the picker. */
-  onDecline: () => void
+  /** EN: Esc / N — return focus to BMXt prompt; picker column stays open. */
+  onReturnToPrompt: () => void
   /** Notify parent that a permission grant succeeded (so it can re-dispatch). */
   onPermissionGranted?: () => void
+  keyboardActive?: boolean
+  pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
 }
 
 const HEADLINE =
-  "dom -list — permission / target check · Enter=許可 / Y · Esc=拒否 / N"
+  "dom -list — permission / target check · Enter=許可 / Y · Esc/N → prompt"
 const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 
 /**
  * EN: Confirmation panel shown when `dom -list` returned a retryable error.
  *     "Approve" calls `chrome.permissions.request` (if optional host access is missing) within
  *     the user gesture from the click/key event, then triggers `onApprove` to re-dispatch.
- *     "Decline" closes the picker. Uses the same `bmxt-tab-picker` chrome as find-list /
+ *     Esc/N returns to the BMXt prompt (picker stays open). Uses the same `bmxt-tab-picker` chrome as find-list /
  *     dom-list rows so the styling stays consistent.
  * JA: `dom -list` がリトライ可能なエラーを返したときに表示する確認パネル。
  *     「許可」はクリック／キーのユーザージェスチャ内で `chrome.permissions.request` を呼び、
@@ -36,17 +39,30 @@ const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 export function DomListPromptPanel({
   message,
   onApprove,
-  onDecline,
-  onPermissionGranted
+  onReturnToPrompt,
+  onPermissionGranted,
+  keyboardActive = false,
+  pickerInputRef
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const setInputEl = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      inputRef.current = el
+      if (pickerInputRef) {
+        pickerInputRef.current = el
+      }
+    },
+    [pickerInputRef]
+  )
   const [hi, setHi] = useState(0)
   const [busy, setBusy] = useState(false)
   const [extra, setExtra] = useState<string[]>([])
 
   useLayoutEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (keyboardActive) {
+      inputRef.current?.focus()
+    }
+  }, [keyboardActive])
 
   useLayoutEffect(() => {
     document.getElementById(`${ROW_ID_PREFIX}-${hi}`)?.scrollIntoView({ block: "nearest" })
@@ -74,7 +90,7 @@ export function DomListPromptPanel({
         }
         setExtra([
           "EN: Permission was not granted by the browser; keeping the picker open so you can retry.",
-          "JA: ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc で終了。"
+          "JA: ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc でプロンプトへ。"
         ])
       } catch (err) {
         setExtra([
@@ -87,24 +103,30 @@ export function DomListPromptPanel({
   }, [busy, onApprove, onPermissionGranted])
 
   useEffect(() => {
+    if (!keyboardActive) {
+      return
+    }
     const onWin = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") {
         ev.preventDefault()
-        onDecline()
+        onReturnToPrompt()
       }
     }
     window.addEventListener("keydown", onWin, true)
     return () => window.removeEventListener("keydown", onWin, true)
-  }, [onDecline])
+  }, [keyboardActive, onReturnToPrompt])
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (!keyboardActive) {
+        return
+      }
       if (e.nativeEvent.isComposing) {
         return
       }
       if (e.key === "Escape" || e.key === "n" || e.key === "N") {
         e.preventDefault()
-        onDecline()
+        onReturnToPrompt()
         return
       }
       if (e.key === "Enter" || e.key === "y" || e.key === "Y") {
@@ -123,7 +145,7 @@ export function DomListPromptPanel({
         return
       }
     },
-    [approve, message.length, onDecline]
+    [keyboardActive, approve, message.length, onReturnToPrompt]
   )
 
   const allLines = [...message, ...(extra.length > 0 ? ["", ...extra] : [])]
@@ -136,7 +158,7 @@ export function DomListPromptPanel({
       }}>
       <div className="bmxt-tab-picker-head">{HEADLINE}</div>
       <textarea
-        ref={inputRef}
+        ref={setInputEl}
         className="bmxt-tab-picker-filter-ime"
         rows={1}
         readOnly
@@ -206,7 +228,7 @@ export function DomListPromptPanel({
         </button>
         <button
           type="button"
-          onClick={onDecline}
+          onClick={onReturnToPrompt}
           disabled={busy}
           style={{
             cursor: busy ? "wait" : "pointer",
@@ -217,7 +239,7 @@ export function DomListPromptPanel({
             padding: "4px 10px",
             font: "inherit"
           }}>
-          拒否 (Esc / N)
+          プロンプトへ (Esc / N)
         </button>
         <span style={{ flex: 1, textAlign: "right", color: "#8b949e" }}>
           ↑↓ / j k でメッセージをスクロール

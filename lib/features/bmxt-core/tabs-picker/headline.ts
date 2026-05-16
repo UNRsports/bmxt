@@ -14,7 +14,7 @@ function commonParts(): string[] {
     "/ highlight · Enter commit · :nohlsearch clears",
     "Ctrl+Shift+↑↓ active preview",
     "Enter confirm",
-    "Esc clear # / exit"
+    "Esc clear # · prompt"
   ]
 }
 
