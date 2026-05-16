@@ -23,7 +23,7 @@ export function FindListPickerOverlay({
 }: Props) {
   return (
     <PlainTextPickerBody
-      headline="find -list · ↑↓ · j/k · Ctrl+←→ · Esc → prompt"
+      headline="find -list · ↑↓ · j/k · / highlight · n/N · Ctrl+←→ · Esc → prompt"
       lines={lines}
       onReturnToPrompt={onReturnToPrompt}
       keyboardActive={keyboardActive}

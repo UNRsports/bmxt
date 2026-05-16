@@ -40,7 +40,7 @@ export function DomListPickerOverlay({
   }
   return (
     <PlainTextPickerBody
-      headline="dom -list · ↑↓ · j/k · Ctrl+←→ · Esc → prompt"
+      headline="dom -list · ↑↓ · j/k · / highlight · n/N · Ctrl+←→ · Esc → prompt"
       lines={state.lines}
       onReturnToPrompt={onReturnToPrompt}
       keyboardActive={keyboardActive}
