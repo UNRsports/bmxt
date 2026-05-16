@@ -1,0 +1,18 @@
+第一コマンド,第二コマンド,第三トークン候補（任意・Tab補完等）,モジュール,別名（トップレベル）,usagePrimary,subcommandのtail（manifest）,備考
+clear,,,clear,,clear,
+close,,,close,c,close <tabId>,
+dom,-list,"--html, --react",dom,,dom -list [--html|--react] [<pattern>],rest,
+exit,,,exit,,exit,
+find,-list,"--none, --history, --bookmark, --page",find,,find -list [--none|--history|--bookmark|--page] <pattern> | find --none|… <pattern>,rest,
+find,--none,,find,,（同上）,rest,
+find,--history,,find,,（同上）,rest,
+find,--bookmark,,find,,（同上）,rest,
+find,--page,,find,,（同上）,rest,
+group,,,group,,group new,,実装では第二トークンに new が必須だが manifest の subcommands は空
+help,,,help_cmd,"help, ?",help,
+notes,,,notes,,notes,
+split,-col,,split,,split -col | split -row,none,
+split,-row,,split,,split -col | split -row,none,
+tabs,-list,-u,tabs,,tabs -list [-u],none,
+tabs,-moveurl,,tabs,,tabs -list [-u],rest_http_url,
+tabs,-nowurl,,tabs,,tabs -list [-u],none,
