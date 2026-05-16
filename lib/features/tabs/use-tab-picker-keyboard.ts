@@ -1,7 +1,7 @@
 import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useRef } from "react"
-import { tryNavigatePaneStrip } from "../bmxt-window/pane-focus-nav"
+import { tryNavigatePaneStrip } from "../side-picker/panel/pane-focus-nav"
 import { logBmxtKey } from "../debug/key-log"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
 import type { ExecutionIntent } from "./controller/execute-actions"

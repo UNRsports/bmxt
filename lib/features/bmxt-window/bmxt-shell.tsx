@@ -12,12 +12,21 @@ import {
 } from "../tabs"
 import {
   openEntryEffects,
+  openPickerSlots,
   pickerEntriesFromFindLines,
   SessionPickerColumns,
   type PickerEntry,
   type PickerSlotId,
   type SessionPickerState
 } from "../side-picker"
+import {
+  navigatePaneStripHoriz,
+  paneStripHorizAtEdge,
+  registerPaneStrip,
+  tryNavigatePaneStrip,
+  type PaneFocusTarget,
+  type PaneStripActions
+} from "../side-picker/panel/pane-focus-nav"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
   FIND_LIST_PATTERN_PLACEHOLDER,
@@ -56,14 +65,6 @@ import {
 } from "react"
 import type { CSSProperties } from "react"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
-import {
-  navigatePaneStripHoriz,
-  paneStripHorizAtEdge,
-  registerPaneStrip,
-  type PaneFocusTarget,
-  type PaneStripOpen,
-  type PaneStripActions
-} from "./pane-focus-nav"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
 import type { TabPickerState } from "../side-picker/session/tab-picker-state"
@@ -144,31 +145,20 @@ export function BmxtShell({
   const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
   const paneFocusRef = useRef<PaneFocusTarget>("terminal")
   const isFocusedPaneRef = useRef(isFocusedPane)
-  const openPickersRef = useRef<readonly PaneStripOpen[]>([])
+  const openPickersRef = useRef<readonly PickerSlotId[]>([])
   const paneStripActionsRef = useRef<PaneStripActions>({
     setFocus: () => {},
     focusTerminal: () => {},
-    focusTabsPicker: () => {},
-    focusFindPicker: () => {},
-    focusDomPicker: () => {}
+    focusPicker: () => {}
   })
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const findPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
-  const openPickers = useMemo((): PaneStripOpen[] => {
-    const open: PaneStripOpen[] = []
-    if (tabPicker !== null) {
-      open.push("tabs")
-    }
-    if (findListPicker !== null) {
-      open.push("find")
-    }
-    if (domListPicker !== null) {
-      open.push("dom")
-    }
-    return open
-  }, [tabPicker, findListPicker, domListPicker])
+  const openPickers = useMemo(
+    () => openPickerSlots(sessionPickers),
+    [sessionPickers]
+  )
 
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const findPickerKeyboardActive = paneFocus === "find" && isFocusedPane
@@ -448,18 +438,28 @@ export function BmxtShell({
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
-  const activatePaneFocus = useCallback((target: PaneFocusTarget) => {
-    setPaneFocus(target)
-    if (target === "terminal") {
-      focusPrompt()
-    } else if (target === "tabs") {
-      tabPickerInputRef.current?.focus()
-    } else if (target === "find") {
-      findPickerInputRef.current?.focus()
-    } else if (target === "dom") {
-      domPickerInputRef.current?.focus()
+  const pickerInputRefForSlot = useCallback((slot: PickerSlotId) => {
+    switch (slot) {
+      case "tabs":
+        return tabPickerInputRef
+      case "find":
+        return findPickerInputRef
+      case "dom":
+        return domPickerInputRef
     }
-  }, [focusPrompt])
+  }, [])
+
+  const activatePaneFocus = useCallback(
+    (target: PaneFocusTarget) => {
+      setPaneFocus(target)
+      if (target === "terminal") {
+        focusPrompt()
+      } else {
+        pickerInputRefForSlot(target).current?.focus()
+      }
+    },
+    [focusPrompt, pickerInputRefForSlot]
+  )
 
   /** EN: When a picker column newly appears, move pane focus + blue border to match keyboard target. */
   const prevSidePickersOpenRef = useRef({ tabs: false, find: false, dom: false })
@@ -474,7 +474,7 @@ export function BmxtShell({
       return
     }
 
-    let opened: PaneFocusTarget | null = null
+    let opened: PickerSlotId | null = null
     if (!prev.dom && nowDom) {
       opened = "dom"
     } else if (!prev.find && nowFind) {
@@ -488,25 +488,17 @@ export function BmxtShell({
 
     setPaneFocus(opened)
     requestAnimationFrame(() => {
-      if (opened === "tabs") {
-        tabPickerInputRef.current?.focus()
-      } else if (opened === "find") {
-        findPickerInputRef.current?.focus()
-      } else {
-        domPickerInputRef.current?.focus()
-      }
+      pickerInputRefForSlot(opened).current?.focus()
     })
-  }, [tabPicker, findListPicker, domListPicker, isFocusedPane])
+  }, [tabPicker, findListPicker, domListPicker, isFocusedPane, pickerInputRefForSlot])
 
   useEffect(() => {
     paneStripActionsRef.current = {
       setFocus: activatePaneFocus,
       focusTerminal: focusPrompt,
-      focusTabsPicker: () => tabPickerInputRef.current?.focus(),
-      focusFindPicker: () => findPickerInputRef.current?.focus(),
-      focusDomPicker: () => domPickerInputRef.current?.focus()
+      focusPicker: (slot) => pickerInputRefForSlot(slot).current?.focus()
     }
-  }, [activatePaneFocus, focusPrompt])
+  }, [activatePaneFocus, focusPrompt, pickerInputRefForSlot])
 
   useEffect(() => {
     return registerPaneStrip(

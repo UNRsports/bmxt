@@ -1,9 +1,11 @@
-/** EN: Horizontal focus chain within one session leaf: terminal → tabs → find → dom pickers. */
-/** JA: 1 セッション内の横フォーカス列（ターミナル → 各ピッカー）。 */
+/** EN: Horizontal focus chain within one session leaf: terminal → open picker slots. */
+/** JA: 1 セッション内の横フォーカス列（ターミナル → 開いているピッカー列）。 */
 
-export type PaneFocusTarget = "terminal" | "tabs" | "find" | "dom"
+import type { PickerSlotId } from "../session/session-pickers"
 
-export type PaneStripOpen = Exclude<PaneFocusTarget, "terminal">
+export type PaneFocusTarget = "terminal" | PickerSlotId
+
+export type PaneStripOpen = PickerSlotId
 
 export type PaneStripSnapshot = {
   open: readonly PaneStripOpen[]
@@ -14,9 +16,7 @@ export type PaneStripSnapshot = {
 export type PaneStripActions = {
   setFocus: (next: PaneFocusTarget) => void
   focusTerminal: () => void
-  focusTabsPicker: () => void
-  focusFindPicker: () => void
-  focusDomPicker: () => void
+  focusPicker: (slot: PickerSlotId) => void
 }
 
 type PaneStripEntry = {
@@ -43,19 +43,10 @@ export function focusChain(open: readonly PaneStripOpen[]): PaneFocusTarget[] {
 
 function applyFocus(actions: PaneStripActions, target: PaneFocusTarget): void {
   actions.setFocus(target)
-  switch (target) {
-    case "terminal":
-      actions.focusTerminal()
-      break
-    case "tabs":
-      actions.focusTabsPicker()
-      break
-    case "find":
-      actions.focusFindPicker()
-      break
-    case "dom":
-      actions.focusDomPicker()
-      break
+  if (target === "terminal") {
+    actions.focusTerminal()
+  } else {
+    actions.focusPicker(target)
   }
 }
 

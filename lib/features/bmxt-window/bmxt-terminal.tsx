@@ -12,7 +12,7 @@ import {
 } from "../side-picker"
 import { BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
-import { paneStripAtHorizontalEdge } from "./pane-focus-nav"
+import { paneStripAtHorizontalEdge } from "../side-picker/panel/pane-focus-nav"
 import type { SplitNode } from "./split-layout/types"
 import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
 import { appendLinesToSession } from "./terminal-sessions/state-storage"

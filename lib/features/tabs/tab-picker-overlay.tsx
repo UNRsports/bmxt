@@ -13,7 +13,7 @@ import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
-import { useWindowKeydownCapture } from "./use-window-keydown-capture"
+import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
@@ -26,15 +26,15 @@ import {
 } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
+import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
+import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import {
-  TabPickerCommandFooter,
   TabPickerEditGroupMenuPanel,
   TabPickerEditGroupRenamePanel,
   TabPickerEditWindowRenamePanel,
   TabPickerGroupTargetPanel,
   TabPickerNewGroupMetaPanel,
-  TabPickerNewTabUrlPanel,
-  TabPickerSearchFooter
+  TabPickerNewTabUrlPanel
 } from "./tab-picker-panels"
 import { TabPickerRowList } from "./tab-picker-row-list"
 
@@ -565,9 +565,9 @@ export function TabPickerOverlay({
           pickIndex={editPanel.pickIndex}
         />
       ) : null}
-      {searchMode ? <TabPickerSearchFooter filterQuery={filterQuery} /> : null}
+      {searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
       {commandMode ? (
-        <TabPickerCommandFooter
+        <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
           listingHintText={commandListingHintText}

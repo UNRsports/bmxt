@@ -146,11 +146,6 @@ import {
   splitTextHighlightSegments
 } from "../side-picker/search/picker-search-needle"
 
-export {
-  parsePickerSearchNeedle as parseTabPickerSearchNeedle,
-  parsePickerSearchNeedle,
-  splitTextHighlightSegments
-}
 
 /**
  * `searchHighlightQuery` にマッチする可視行の `hi` 位置（`visibleRowIndices` 内の index）を返す。

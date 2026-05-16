@@ -181,15 +181,15 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 
 - [x] `SessionPickerColumns`（列レンダリング registry）
 - [x] `bmxt-terminal` の `pickersBySession` + `setSessionPickerSlot` 一本化
-- [ ] `pane-focus-nav` を動的 `open[]` 対応（固定 union 縮小）
-- [ ] README Picker UI 節のパス・仕様更新
+- [x] `pane-focus-nav` を動的 `open[]` + `focusPicker(slot)` 対応
+- [x] README Picker UI 節のパス・仕様更新
 
 ### フェーズ 6 — 仕上げ
 
-- [ ] 一時 re-export シム削除
+- [x] 一時 re-export シム削除
 - [x] CSS 部分 alias（`.bmxt-side-picker` ルート、`PlainTextPickerBody` に両クラス）
-- [x] `tab-picker-overlay.tsx` 追加、`picker-overlay.tsx` は shim
-- [x] `dom-prompt-render.tsx`（④）、`dom-list-prompt-panel` は shim
+- [x] `tab-picker-overlay.tsx` 追加、`picker-overlay.tsx` shim 削除済み
+- [x] `dom-prompt-render.tsx`（④）、`dom-list-prompt-panel` / `dom-list-picker-overlay` shim 削除済み
 
 ---
 
@@ -226,13 +226,13 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 |------|------|
 | Shell 配置 | `lib/features/bmxt-window/bmxt-shell.tsx` |
 | Session 状態 | `lib/features/bmxt-window/bmxt-terminal.tsx` |
-| ペインストリップ | `lib/features/bmxt-window/pane-focus-nav.ts` |
+| ペインストリップ | `lib/features/side-picker/panel/pane-focus-nav.ts` |
 | find 薄ラッパ | `lib/features/find/find-list-picker-overlay.tsx` |
-| dom 薄ラッパ | `lib/features/dom/dom-list-picker-overlay.tsx` |
-| プレーン一覧 | `lib/features/bmxt-window/plain-text-picker-body.tsx` |
-| tabs 本体 | `lib/features/tabs/picker-overlay.tsx`, `use-tab-picker-keyboard.ts` |
+| dom ラッパ | `lib/features/side-picker/wrappers/dom-picker-wrapper.tsx` |
+| プレーン一覧 | `lib/features/side-picker/plain/plain-text-picker-body.tsx` |
+| tabs 本体 | `lib/features/tabs/tab-picker-overlay.tsx`, `use-tab-picker-keyboard.ts` |
 | find 行形式 | `lib/features/search/find-format.ts` |
-| URL 正規化 | `lib/features/tabs/normalize-picker-open-url.ts` |
+| URL 正規化 | `lib/features/side-picker/model/normalize-picker-open-url.ts` |
 | Effects | `lib/features/dispatch/effect-types.ts` |
 | ドキュメント | `README.md` — Picker UI (side columns) |
 

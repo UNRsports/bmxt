@@ -27,7 +27,7 @@ import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
-import { normalizePickerOpenUrl } from "./normalize-picker-open-url"
+import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]

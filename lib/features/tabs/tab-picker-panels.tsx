@@ -232,5 +232,3 @@ export function TabPickerNewTabUrlPanel({
     </div>
   )
 }
-
-export { TabPickerSearchFooter, TabPickerCommandFooter } from "../side-picker"
