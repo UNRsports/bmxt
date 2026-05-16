@@ -107,7 +107,9 @@ export function BmxtShell({
   postUpgradeBanner
 }: Props) {
   const tabPickerOpen = tabPicker !== null
-  const overlayOpen = tabPickerOpen || findListPicker !== null || domListPicker !== null
+  /** find / dom のオーバーレイ時のみターミナル全体を隠す（tabs は左半分分割でターミナル継続表示）。 */
+  const blockingOverlayOpen = findListPicker !== null || domListPicker !== null
+  const suppressPromptAutofocus = tabPickerOpen || blockingOverlayOpen
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -191,7 +193,7 @@ export function BmxtShell({
 
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
-      if (mode === "isearch" || overlayOpen || findListBusyRef.current) {
+      if (mode === "isearch" || blockingOverlayOpen || findListBusyRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
         return
@@ -224,7 +226,7 @@ export function BmxtShell({
         }
       })
     },
-    [mode, overlayOpen]
+    [mode, blockingOverlayOpen]
   )
 
   useEffect(() => {
@@ -253,14 +255,14 @@ export function BmxtShell({
   }, [])
 
   useLayoutEffect(() => {
-    if (overlayOpen) {
+    if (blockingOverlayOpen) {
       return
     }
     syncLogScroll()
-  }, [overlayOpen, lines, mode, line, syncLogScroll, postUpgradeBanner])
+  }, [blockingOverlayOpen, lines, mode, line, syncLogScroll, postUpgradeBanner])
 
   useEffect(() => {
-    if (overlayOpen) {
+    if (blockingOverlayOpen) {
       return
     }
     const el = scrollRef.current
@@ -270,10 +272,10 @@ export function BmxtShell({
     const ro = new ResizeObserver(() => syncLogScroll())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [overlayOpen, syncLogScroll])
+  }, [blockingOverlayOpen, syncLogScroll])
 
   useLayoutEffect(() => {
-    if (overlayOpen) {
+    if (blockingOverlayOpen) {
       return
     }
     const el = scrollRef.current
@@ -282,10 +284,10 @@ export function BmxtShell({
     }
     el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
     requestAnimationFrame(() => syncLogScroll())
-  }, [overlayOpen, lines, syncLogScroll, postUpgradeBanner])
+  }, [blockingOverlayOpen, lines, syncLogScroll, postUpgradeBanner])
 
   useLayoutEffect(() => {
-    if (overlayOpen) {
+    if (blockingOverlayOpen) {
       return
     }
     const ta = imeRef.current
@@ -295,10 +297,10 @@ export function BmxtShell({
     if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
       ta.setSelectionRange(cursorPos, cursorPos)
     }
-  }, [overlayOpen, line, cursorPos, isComposing])
+  }, [blockingOverlayOpen, line, cursorPos, isComposing])
 
   useLayoutEffect(() => {
-    if (!subCmdPicker || overlayOpen) {
+    if (!subCmdPicker || blockingOverlayOpen) {
       setSubCmdPickerHostStyle({})
       return
     }
@@ -356,27 +358,27 @@ export function BmxtShell({
       sc?.removeEventListener("scroll", measure)
       window.removeEventListener("resize", measure)
     }
-  }, [subCmdPickerAnchorEpisode, overlayOpen, line, cursorPos, mode])
+  }, [subCmdPickerAnchorEpisode, blockingOverlayOpen, line, cursorPos, mode])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
   useLayoutEffect(() => {
-    if (overlayOpen || !isFocusedPane) {
+    if (suppressPromptAutofocus || !isFocusedPane) {
       return
     }
     focusPrompt()
-  }, [overlayOpen, isFocusedPane, focusPrompt])
+  }, [suppressPromptAutofocus, isFocusedPane, focusPrompt])
 
   useEffect(() => {
-    if (overlayOpen || !isFocusedPane) {
+    if (suppressPromptAutofocus || !isFocusedPane) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [overlayOpen, isFocusedPane, focusPrompt])
+  }, [suppressPromptAutofocus, isFocusedPane, focusPrompt])
 
   const runDomListAndShow = useCallback(
     async (
@@ -1024,7 +1026,7 @@ export function BmxtShell({
       history,
       iSearchMatches,
       mode,
-      overlayOpen,
+      blockingOverlayOpen,
       applyTokenPickIndex,
       promptLine,
       submitLine,
@@ -1037,22 +1039,12 @@ export function BmxtShell({
   const cur = line[cursorPos] ?? ""
   const after = line.slice(cursorPos + 1)
   const iSearchPreview = iSearchMatches[iSearchCycle]
+  const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
+  const tabPickerSplitLayout =
+    tabPickerOpen && tabPicker !== null && !blockingOverlayOpen
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        boxSizing: "border-box",
-        position: "relative"
-      }}>
-      <div
-        ref={scrollRef}
-        className={`bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`}
-        style={overlayOpen ? { display: "none" } : undefined}>
+  const shellContent = (
+    <>
         {lines.length === 0 || postUpgradeBanner ? (
           <div className="bmxt-hint">
             Welcome to BMXt! This program is a test version. Development currently
@@ -1168,7 +1160,7 @@ export function BmxtShell({
                 syncImeTokenPicker(v, ev.currentTarget.selectionStart)
               }}
             />
-            {subCmdPicker && !overlayOpen && !findListBusy ? (
+            {subCmdPicker && !blockingOverlayOpen && !findListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host"
@@ -1183,35 +1175,48 @@ export function BmxtShell({
           </div>
         </div>
         <div className="bmxt-scroll-anchor" aria-hidden />
-      </div>
-      {tabPickerOpen && tabPicker ? (
-        <div
-          className="bmxt-tab-picker-host"
-          style={{
-            position: "absolute",
-            inset: 6,
-            zIndex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-            background: "#0d1117",
-            borderRadius: 8,
-            boxShadow:
-              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
-          }}>
-          <TabPickerOverlay
-            rows={tabPicker.rows}
-            showUrl={tabPicker.showUrl}
-            initialHi={tabPicker.initialHi}
-            variant={tabPicker.variant ?? "default"}
-            onAppendLog={appendLogLines}
-            onRefreshRows={refreshTabPickerRows}
-            onExit={() => setTabPicker(sessionId, null)}
-            isHostPaneFocused={isFocusedPane}
-          />
+    </>
+  )
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        minWidth: 0,
+        boxSizing: "border-box",
+        position: "relative"
+      }}>
+      {tabPickerSplitLayout ? (
+        <div className="bmxt-tab-terminal-split">
+          <div className="bmxt-tab-split-terminal-pane">
+            <div ref={scrollRef} className={shellScrollClassName}>
+              {shellContent}
+            </div>
+          </div>
+          <div className="bmxt-tab-picker-host bmxt-tab-picker-host--split-right">
+            <TabPickerOverlay
+              rows={tabPicker.rows}
+              showUrl={tabPicker.showUrl}
+              initialHi={tabPicker.initialHi}
+              variant={tabPicker.variant ?? "default"}
+              onAppendLog={appendLogLines}
+              onRefreshRows={refreshTabPickerRows}
+              onExit={() => setTabPicker(sessionId, null)}
+              isHostPaneFocused={isFocusedPane}
+            />
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <div
+          ref={scrollRef}
+          className={shellScrollClassName}
+          style={blockingOverlayOpen ? { display: "none" } : undefined}>
+          {shellContent}
+        </div>
+      )}
       {findListPicker ? (
         <div
           className="bmxt-find-list-picker-host"

@@ -327,6 +327,39 @@ body {
   color: #79c0ff;
 }
 
+/* tabs ピッカー — 拡張ウィンドウ内で右半分（左にターミナルログ＋プロンプト） */
+.bmxt-tab-terminal-split {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: row;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bmxt-tab-picker-host--split-right {
+  flex: 1 1 50%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #0d1117;
+  border-left: 1px solid #30363d;
+}
+
+.bmxt-tab-split-terminal-pane {
+  flex: 1 1 50%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #0d1117;
+}
+
 /* Tab picker (tmux-style) */
 .bmxt-tab-picker {
   box-sizing: border-box;
@@ -414,6 +447,29 @@ body {
 
 .bmxt-tab-picker-row--marked.bmxt-tab-picker-row--move-dest {
   box-shadow: inset 0 0 0 1px #a371f7, inset 3px 0 0 #3fb950;
+}
+
+/* find/dom plain picker: one row per line (fixed height for virtual window) */
+.bmxt-plain-picker-row-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+  cursor: text;
+}
+
+.bmxt-plain-picker-virtual-track {
+  position: relative;
+  width: 100%;
+}
+
+.bmxt-plain-picker-virtual-window {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  will-change: transform;
 }
 
 .bmxt-tab-picker-tab-title {
