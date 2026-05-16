@@ -1,4 +1,4 @@
-export { TabPickerOverlay } from "./picker-overlay"
+export { TabPickerOverlay } from "./tab-picker-overlay"
 export {
   reducePickerState,
   resolvePickerEnterIntent,

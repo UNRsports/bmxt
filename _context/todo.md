@@ -172,24 +172,24 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 
 ### フェーズ 4 — tabs を URL 主線に寄せる
 
-- [ ] `TabPickerRow` → `PickerEntry` マッピング
-- [ ] `confirmSelection` を `openEntry`（default = 既存タブフォーカス）に接続
-- [ ] `TabsPickerWrapper` または `UrlListPickerWrapper` + `capabilities: { marks, bulk, edit }`
-- [ ] bulk / edit / reducer は `tabs` + `bmxt-core/tabs-picker` のまま
-- [ ] 検証: `tabs -list`, `group new`, `:edit`, Enter
+- [x] `TabPickerRow` → `PickerEntry` マッピング（`pickerEntryFromTabRow` / `pickerEntryAtVisibleHi`）
+- [x] `confirmSelection` → `executePickerFocusPlan`（共有フォーカス実行）
+- [x] `TabsPickerWrapper` 経由（bulk/edit は tabs + `bmxt-core/tabs-picker` のまま）
+- [ ] 検証: 手動 `tabs -list`, `group new`, `:edit`, Enter
 
 ### フェーズ 5 — shell レジストリ・状態集約
 
-- [ ] `PICKER_WRAPPERS` registry（slot kind → ③）
-- [ ] `bmxt-terminal` の session map 一本化
+- [x] `SessionPickerColumns`（列レンダリング registry）
+- [x] `bmxt-terminal` の `pickersBySession` + `setSessionPickerSlot` 一本化
 - [ ] `pane-focus-nav` を動的 `open[]` 対応（固定 union 縮小）
 - [ ] README Picker UI 節のパス・仕様更新
 
 ### フェーズ 6 — 仕上げ
 
 - [ ] 一時 re-export シム削除
-- [ ] CSS リネーム（`bmxt-side-picker` + 旧クラス alias）
-- [ ] `picker-overlay.tsx` → `tab-picker-overlay.tsx` 等の rename（任意・別 PR 可）
+- [x] CSS 部分 alias（`.bmxt-side-picker` ルート、`PlainTextPickerBody` に両クラス）
+- [x] `tab-picker-overlay.tsx` 追加、`picker-overlay.tsx` は shim
+- [x] `dom-prompt-render.tsx`（④）、`dom-list-prompt-panel` は shim
 
 ---
 

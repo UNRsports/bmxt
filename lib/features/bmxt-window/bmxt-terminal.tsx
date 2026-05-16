@@ -1,8 +1,16 @@
 import { buildTabPickerRows } from "../tabs"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
-import { type FindListPickerState } from "../find/find-list-picker-input"
-import { type DomListPickerState } from "../dom/dom-list-picker-input"
-import { type TabPickerState, BmxtShell } from "./bmxt-shell"
+import {
+  anyLeafHasPickerOpen,
+  pruneSessionPickersMap,
+  sessionPickersOrEmpty,
+  setSessionPickerSlot as applySessionPickerSlot,
+  type PickerSlotId,
+  type SessionPickerState,
+  type SessionPickersByLeaf,
+  type TabPickerState
+} from "../side-picker"
+import { BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
 import { paneStripAtHorizontalEdge } from "./pane-focus-nav"
 import type { SplitNode } from "./split-layout/types"
@@ -39,12 +47,12 @@ type SplitTreeProps = {
   focusedLeafId: string
   history: string[]
   completionCandidates: string[]
-  pickerBySession: Record<string, TabPickerState | null>
-  setTabPickerForSession: (forSessionId: string, next: TabPickerState | null) => void
-  findListBySession: Record<string, FindListPickerState | null>
-  setFindListPickerForSession: (forSessionId: string, next: FindListPickerState | null) => void
-  domListBySession: Record<string, DomListPickerState | null>
-  setDomListPickerForSession: (forSessionId: string, next: DomListPickerState | null) => void
+  pickersBySession: SessionPickersByLeaf
+  setSessionPickerSlot: <K extends PickerSlotId>(
+    forSessionId: string,
+    slot: K,
+    value: SessionPickerState[K]
+  ) => void
   refreshTabPickerRows: () => Promise<void>
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
@@ -57,12 +65,8 @@ function SplitTreeView({
   focusedLeafId,
   history,
   completionCandidates,
-  pickerBySession,
-  setTabPickerForSession,
-  findListBySession,
-  setFindListPickerForSession,
-  domListBySession,
-  setDomListPickerForSession,
+  pickersBySession,
+  setSessionPickerSlot,
   refreshTabPickerRows,
   postUpgradeBanner,
   appendCommandToHistory,
@@ -70,11 +74,11 @@ function SplitTreeView({
 }: SplitTreeProps) {
   if (isLeaf(node)) {
     const lines = logsById[node.id] ?? []
-    const tabPicker = pickerBySession[node.id] ?? null
-    const findListPicker = findListBySession[node.id] ?? null
-    const domListPicker = domListBySession[node.id] ?? null
+    const sessionPickers = sessionPickersOrEmpty(pickersBySession, node.id)
     const hasColumnPickers =
-      tabPicker !== null || findListPicker !== null || domListPicker !== null
+      sessionPickers.tabs !== null ||
+      sessionPickers.find !== null ||
+      sessionPickers.dom !== null
     const leafHasKeyboardFocus = focusedLeafId === node.id
     return (
       <div
@@ -104,12 +108,8 @@ function SplitTreeView({
           completionCandidates={completionCandidates}
           appendLogLines={(newLines) => appendLinesToSession(node.id, newLines)}
           appendCommandToHistory={appendCommandToHistory}
-          tabPicker={tabPicker}
-          setTabPicker={setTabPickerForSession}
-          findListPicker={findListPicker}
-          setFindListPicker={setFindListPickerForSession}
-          domListPicker={domListPicker}
-          setDomListPicker={setDomListPickerForSession}
+          sessionPickers={sessionPickers}
+          setSessionPickerSlot={setSessionPickerSlot}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
         />
@@ -143,12 +143,8 @@ function SplitTreeView({
           focusedLeafId={focusedLeafId}
           history={history}
           completionCandidates={completionCandidates}
-          pickerBySession={pickerBySession}
-          setTabPickerForSession={setTabPickerForSession}
-          findListBySession={findListBySession}
-          setFindListPickerForSession={setFindListPickerForSession}
-          domListBySession={domListBySession}
-          setDomListPickerForSession={setDomListPickerForSession}
+          pickersBySession={pickersBySession}
+          setSessionPickerSlot={setSessionPickerSlot}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
@@ -169,12 +165,8 @@ function SplitTreeView({
           focusedLeafId={focusedLeafId}
           history={history}
           completionCandidates={completionCandidates}
-          pickerBySession={pickerBySession}
-          setTabPickerForSession={setTabPickerForSession}
-          findListBySession={findListBySession}
-          setFindListPickerForSession={setFindListPickerForSession}
-          domListBySession={domListBySession}
-          setDomListPickerForSession={setDomListPickerForSession}
+          pickersBySession={pickersBySession}
+          setSessionPickerSlot={setSessionPickerSlot}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
@@ -190,17 +182,9 @@ export function BmxtTerminal() {
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
-  const [pickerBySession, setPickerBySession] = useState<
-    Record<string, TabPickerState | null>
-  >({})
-  const [findListBySession, setFindListBySession] = useState<
-    Record<string, FindListPickerState | null>
-  >({})
-  const [domListBySession, setDomListBySession] = useState<
-    Record<string, DomListPickerState | null>
-  >({})
-  const pickerBySessionRef = useRef(pickerBySession)
-  pickerBySessionRef.current = pickerBySession
+  const [pickersBySession, setPickersBySession] = useState<SessionPickersByLeaf>({})
+  const pickersBySessionRef = useRef(pickersBySession)
+  pickersBySessionRef.current = pickersBySession
 
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -209,39 +193,7 @@ export function BmxtTerminal() {
     if (!order) {
       return
     }
-    setPickerBySession((prev) => {
-      let changed = false
-      const next: Record<string, TabPickerState | null> = { ...prev }
-      for (const k of Object.keys(next)) {
-        if (!order.includes(k)) {
-          delete next[k]
-          changed = true
-        }
-      }
-      return changed ? next : prev
-    })
-    setFindListBySession((prev) => {
-      let changed = false
-      const next: Record<string, FindListPickerState | null> = { ...prev }
-      for (const k of Object.keys(next)) {
-        if (!order.includes(k)) {
-          delete next[k]
-          changed = true
-        }
-      }
-      return changed ? next : prev
-    })
-    setDomListBySession((prev) => {
-      let changed = false
-      const next: Record<string, DomListPickerState | null> = { ...prev }
-      for (const k of Object.keys(next)) {
-        if (!order.includes(k)) {
-          delete next[k]
-          changed = true
-        }
-      }
-      return changed ? next : prev
-    })
+    setPickersBySession((prev) => pruneSessionPickersMap(prev, order))
   }, [state?.layout.root])
 
   useEffect(() => {
@@ -255,60 +207,18 @@ export function BmxtTerminal() {
     })()
   }, [])
 
-  const setTabPickerForSession = useCallback((forSessionId: string, next: TabPickerState | null) => {
-    setPickerBySession((prev) => {
-      if (next === null) {
-        if (!(forSessionId in prev)) {
-          return prev
-        }
-        const { [forSessionId]: _, ...rest } = prev
-        return rest
-      }
-      return { ...prev, [forSessionId]: next }
-    })
-  }, [])
-
-  const setFindListPickerForSession = useCallback(
-    (forSessionId: string, next: FindListPickerState | null) => {
-      setFindListBySession((prev) => {
-        if (next === null) {
-          if (!(forSessionId in prev)) {
-            return prev
-          }
-          const { [forSessionId]: _, ...rest } = prev
-          return rest
-        }
-        return { ...prev, [forSessionId]: next }
-      })
-    },
-    []
-  )
-
-  const setDomListPickerForSession = useCallback(
-    (forSessionId: string, next: DomListPickerState | null) => {
-      setDomListBySession((prev) => {
-        if (next === null) {
-          if (!(forSessionId in prev)) {
-            return prev
-          }
-          const { [forSessionId]: _, ...rest } = prev
-          return rest
-        }
-        return { ...prev, [forSessionId]: next }
-      })
+  const setSessionPickerSlot = useCallback(
+    <K extends PickerSlotId>(forSessionId: string, slot: K, value: SessionPickerState[K]) => {
+      setPickersBySession((prev) => applySessionPickerSlot(prev, forSessionId, slot, value))
     },
     []
   )
 
   const refreshTabPickerRows = useCallback(async () => {
-    const map = pickerBySessionRef.current
-    const sids = Object.keys(map).filter((k) => map[k] != null)
-    if (sids.length === 0) {
-      return
-    }
+    const map = pickersBySessionRef.current
     const updates: Record<string, TabPickerState> = {}
-    for (const sid of sids) {
-      const prev = map[sid]
+    for (const [sid, pickers] of Object.entries(map)) {
+      const prev = pickers.tabs
       if (!prev) {
         continue
       }
@@ -327,11 +237,12 @@ export function BmxtTerminal() {
     if (Object.keys(updates).length === 0) {
       return
     }
-    setPickerBySession((p) => {
-      const next = { ...p }
+    setPickersBySession((p) => {
+      let next = p
       for (const [sid, st] of Object.entries(updates)) {
-        if (next[sid]) {
-          next[sid] = st
+        const cur = sessionPickersOrEmpty(next, sid)
+        if (cur.tabs) {
+          next = applySessionPickerSlot(next, sid, "tabs", st)
         }
       }
       return next
@@ -339,11 +250,8 @@ export function BmxtTerminal() {
   }, [])
 
   const anyPickerOpen = useMemo(
-    () =>
-      Object.values(pickerBySession).some((v) => v != null) ||
-      Object.values(findListBySession).some((v) => v != null) ||
-      Object.values(domListBySession).some((v) => v != null),
-    [pickerBySession, findListBySession, domListBySession]
+    () => anyLeafHasPickerOpen(pickersBySession),
+    [pickersBySession]
   )
   useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
 
@@ -438,12 +346,8 @@ export function BmxtTerminal() {
           focusedLeafId={state.layout.focusedLeafId}
           history={history}
           completionCandidates={completionCandidates}
-          pickerBySession={pickerBySession}
-          setTabPickerForSession={setTabPickerForSession}
-          findListBySession={findListBySession}
-          setFindListPickerForSession={setFindListPickerForSession}
-          domListBySession={domListBySession}
-          setDomListPickerForSession={setDomListPickerForSession}
+          pickersBySession={pickersBySession}
+          setSessionPickerSlot={setSessionPickerSlot}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}

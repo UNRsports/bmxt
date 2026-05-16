@@ -360,8 +360,9 @@ body {
   outline-offset: -3px;
 }
 
-/* Tab picker (tmux-style) */
-.bmxt-tab-picker {
+/* Tab picker / side-picker list chrome (tmux-style) */
+.bmxt-tab-picker,
+.bmxt-side-picker {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

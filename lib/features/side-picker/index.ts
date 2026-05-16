@@ -34,6 +34,22 @@ export { PickerPanelHost } from "./panel/picker-panel-host"
 export { UrlListPickerWrapper, type UrlListPickerWrapperProps } from "./wrappers/url-list-picker-wrapper"
 export { DomPickerWrapper, type DomPickerWrapperProps } from "./wrappers/dom-picker-wrapper"
 export { TabsPickerWrapper, type TabsPickerWrapperProps } from "./wrappers/tabs-picker-wrapper"
+export { SessionPickerColumns, type SessionPickerColumnsProps } from "./wrappers/session-picker-columns"
+export {
+  EMPTY_SESSION_PICKERS,
+  anyLeafHasPickerOpen,
+  anySessionPickerOpen,
+  openPickerSlots,
+  pruneSessionPickersMap,
+  sessionPickersOrEmpty,
+  setSessionPickerSlot,
+  type PickerSlotId,
+  type SessionPickerState,
+  type SessionPickersByLeaf
+} from "./session/session-pickers"
+export type { TabPickerState } from "./session/tab-picker-state"
+export { pickerEntryFromTabRow, pickerEntryAtVisibleHi } from "./model/from-tab-row"
+export { executePickerFocusPlan, type PickerFocusPlan } from "./model/focus-picker-entry"
 export { type PickerEntry, type PickerSource, entryDisplayLine } from "./model/picker-entry"
 export { pickerEntriesFromFindLines } from "./model/from-find-lines"
 export { normalizePickerOpenUrl } from "./model/normalize-picker-open-url"

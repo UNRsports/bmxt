@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react"
-import { DomListPromptPanel } from "../../dom/dom-list-prompt-panel"
+import { DomPromptRender } from "../../dom/dom-prompt-render"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { PlainTextPickerBody } from "../plain/plain-text-picker-body"
 
@@ -23,7 +23,7 @@ export function DomPickerWrapper({
 }: DomPickerWrapperProps) {
   if (state.kind === "prompt") {
     return (
-      <DomListPromptPanel
+      <DomPromptRender
         message={state.message}
         onApprove={onApprove}
         onReturnToPrompt={onReturnToPrompt}

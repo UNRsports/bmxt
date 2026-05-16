@@ -579,7 +579,7 @@ export function PlainTextPickerBody({
 
   return (
     <div
-      className="bmxt-tab-picker"
+      className="bmxt-tab-picker bmxt-side-picker"
       onMouseDown={(e) => {
         if (!keyboardActive) {
           return

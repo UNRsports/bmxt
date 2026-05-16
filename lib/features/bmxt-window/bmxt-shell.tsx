@@ -10,14 +10,13 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
-import { FindListPickerOverlay } from "../find/find-list-picker-overlay"
 import {
-  DomPickerWrapper,
   openEntryEffects,
   pickerEntriesFromFindLines,
-  PickerPanelHost,
-  TabsPickerWrapper,
-  type PickerEntry
+  SessionPickerColumns,
+  type PickerEntry,
+  type PickerSlotId,
+  type SessionPickerState
 } from "../side-picker"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
@@ -66,12 +65,8 @@ import {
   type PaneStripActions
 } from "./pane-focus-nav"
 
-export type TabPickerState = {
-  rows: TabPickerRow[]
-  showUrl: boolean
-  initialHi: number
-  variant?: "default" | "groupNew"
-}
+export type { TabPickerState } from "../side-picker/session/tab-picker-state"
+import type { TabPickerState } from "../side-picker/session/tab-picker-state"
 
 /** EN: Delay before showing find -list progress spinner (avoid flash on fast runs). */
 const FIND_LIST_SPINNER_DELAY_MS = 450
@@ -97,13 +92,13 @@ type Props = {
   completionCandidates: string[]
   appendLogLines: (newLines: string[]) => Promise<void>
   appendCommandToHistory: (cmd: string) => void
-  tabPicker: TabPickerState | null
+  sessionPickers: SessionPickerState
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
-  setTabPicker: (forSessionId: string, v: TabPickerState | null) => void
-  findListPicker: FindListPickerState | null
-  setFindListPicker: (forSessionId: string, v: FindListPickerState | null) => void
-  domListPicker: DomListPickerState | null
-  setDomListPicker: (forSessionId: string, v: DomListPickerState | null) => void
+  setSessionPickerSlot: <K extends PickerSlotId>(
+    forSessionId: string,
+    slot: K,
+    value: SessionPickerState[K]
+  ) => void
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
@@ -117,15 +112,32 @@ export function BmxtShell({
   completionCandidates,
   appendLogLines,
   appendCommandToHistory,
-  tabPicker,
-  setTabPicker,
-  findListPicker,
-  setFindListPicker,
-  domListPicker,
-  setDomListPicker,
+  sessionPickers,
+  setSessionPickerSlot,
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
+  const tabPicker = sessionPickers.tabs
+  const findListPicker = sessionPickers.find
+  const domListPicker = sessionPickers.dom
+  const setTabPicker = useCallback(
+    (forSessionId: string, v: TabPickerState | null) => {
+      setSessionPickerSlot(forSessionId, "tabs", v)
+    },
+    [setSessionPickerSlot]
+  )
+  const setFindListPicker = useCallback(
+    (forSessionId: string, v: FindListPickerState | null) => {
+      setSessionPickerSlot(forSessionId, "find", v)
+    },
+    [setSessionPickerSlot]
+  )
+  const setDomListPicker = useCallback(
+    (forSessionId: string, v: DomListPickerState | null) => {
+      setSessionPickerSlot(forSessionId, "dom", v)
+    },
+    [setSessionPickerSlot]
+  )
   /** tabs / find / dom — 左ターミナル・右にピッカー列（複数可）。 */
   const sidePickerOpen =
     tabPicker !== null || findListPicker !== null || domListPicker !== null
@@ -1466,65 +1478,34 @@ export function BmxtShell({
               {shellContent}
             </div>
           </div>
-          {tabPicker ? (
-            <PickerPanelHost
-              focusTarget="tabs"
-              paneFocus={paneFocus}
-              onActivateFocus={() => activatePaneFocus("tabs")}>
-              <TabsPickerWrapper
-                rows={tabPicker.rows}
-                showUrl={tabPicker.showUrl}
-                initialHi={tabPicker.initialHi}
-                variant={tabPicker.variant ?? "default"}
-                onAppendLog={appendLogLines}
-                onRefreshRows={refreshTabPickerRows}
-                onReturnToPrompt={() => activatePaneFocus("terminal")}
-                isHostPaneFocused={tabsPickerKeyboardActive}
-                pickerInputRef={tabPickerInputRef}
-                sessionId={sessionId}
-              />
-            </PickerPanelHost>
-          ) : null}
-          {findListPicker ? (
-            <PickerPanelHost
-              focusTarget="find"
-              paneFocus={paneFocus}
-              onActivateFocus={() => activatePaneFocus("find")}>
-              <FindListPickerOverlay
-                entries={findListPicker.entries}
-                onReturnToPrompt={() => activatePaneFocus("terminal")}
-                onOpenEntry={(entry) => void openFindPickerEntry(entry)}
-                keyboardActive={findPickerKeyboardActive}
-                pickerInputRef={findPickerInputRef}
-                sessionId={sessionId}
-              />
-            </PickerPanelHost>
-          ) : null}
-          {domListPicker ? (
-            <PickerPanelHost
-              focusTarget="dom"
-              paneFocus={paneFocus}
-              onActivateFocus={() => activatePaneFocus("dom")}>
-              <DomPickerWrapper
-                state={domListPicker}
-                onReturnToPrompt={() => activatePaneFocus("terminal")}
-                keyboardActive={domPickerKeyboardActive}
-                pickerInputRef={domPickerInputRef}
-                sessionId={sessionId}
-                onApprove={() => {
-                  if (domListPicker.kind !== "prompt") {
-                    return
-                  }
-                  const cl = domListPicker.commandLine
-                  setDomListPicker(sessionId, {
-                    kind: "lines",
-                    lines: ["dom -list — retrying after permission grant…"]
-                  })
-                  void runDomListAndShow(cl, cl, false)
-                }}
-              />
-            </PickerPanelHost>
-          ) : null}
+          <SessionPickerColumns
+            sessionId={sessionId}
+            paneFocus={paneFocus}
+            activatePaneFocus={activatePaneFocus}
+            tabPicker={tabPicker}
+            findListPicker={findListPicker}
+            domListPicker={domListPicker}
+            tabsPickerKeyboardActive={tabsPickerKeyboardActive}
+            findPickerKeyboardActive={findPickerKeyboardActive}
+            domPickerKeyboardActive={domPickerKeyboardActive}
+            tabPickerInputRef={tabPickerInputRef}
+            findPickerInputRef={findPickerInputRef}
+            domPickerInputRef={domPickerInputRef}
+            onAppendLog={appendLogLines}
+            onRefreshTabPickerRows={refreshTabPickerRows}
+            onOpenFindEntry={(entry) => void openFindPickerEntry(entry)}
+            onDomApprove={() => {
+              if (domListPicker?.kind !== "prompt") {
+                return
+              }
+              const cl = domListPicker.commandLine
+              setDomListPicker(sessionId, {
+                kind: "lines",
+                lines: ["dom -list — retrying after permission grant…"]
+              })
+              void runDomListAndShow(cl, cl, false)
+            }}
+          />
         </div>
       ) : (
         <div

@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react"
-import { TabPickerOverlay } from "../../tabs/picker-overlay"
+import { TabPickerOverlay } from "../../tabs/tab-picker-overlay"
 import type { TabPickerRow } from "../../tabs/picker-rows"
 
 export type TabsPickerWrapperProps = {

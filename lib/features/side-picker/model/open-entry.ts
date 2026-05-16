@@ -4,13 +4,19 @@ import { normalizePickerOpenUrl } from "./normalize-picker-open-url"
 
 export type OpenUrlMode = "default" | "new_tab" | "new_window" | "current_tab"
 
-/** EN: Chrome effects to open/navigate the entry URL (tabs focus uses separate path when tabId set). */
+/**
+ * EN: Chrome effects to open/navigate the entry URL.
+ * Tab rows with `tabId` use focus-in-place when `mode === "default"` (see `executePickerFocusPlan`).
+ */
 export function openEntryEffects(
   entry: PickerEntry,
   mode: OpenUrlMode = "new_tab"
 ): ChromeEffect[] {
   const url = normalizePickerOpenUrl(entry.url)
   if (!url) {
+    return []
+  }
+  if (mode === "default" && entry.source === "tab" && entry.tabId != null) {
     return []
   }
   switch (mode) {
