@@ -36,3 +36,8 @@ export function allCompletionTokens(): string[] {
   }
   return [...s].sort()
 }
+
+/** EN: Canonical first-command names only (IME menu / Tab list; no aliases). */
+export function canonicalCommandNames(): string[] {
+  return COMMANDS.map((c) => c.name).sort((a, b) => a.localeCompare(b))
+}

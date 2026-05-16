@@ -17,6 +17,17 @@ import {
 
 export type ImeTokenTier = "first" | "second" | "third"
 
+export type ResolveImeTokenPickerOptions = {
+  /**
+   * EN: When true, an empty prefix on the first command token still yields all first-command
+   * candidates (used for Tab cycling on an empty line). Default sync omits the menu until the
+   * user types or presses Tab.
+   * JA: 第一トークンで接頭辞が空でも全第一コマンド候補を返す（空行での Tab 巡回用）。既定の
+   * 同期では、タイプまたは Tab までメニューを出さない。
+   */
+  emptyFirstPrefixShowsAll?: boolean
+}
+
 export type ImeTokenPickerModel = {
   tokenStart: number
   tokenEnd: number
@@ -52,7 +63,8 @@ export function imeTokenPickerHint(tier: ImeTokenTier): string {
 export function resolveImeTokenPicker(
   line: string,
   cursor: number,
-  firstCommandTokens: readonly string[]
+  firstCommandTokens: readonly string[],
+  opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
   const trimmed = line.trim()
   if (isFindListReadyToRun(trimmed) && !isEditingFindListScopeToken(line, cursor)) {
@@ -67,9 +79,12 @@ export function resolveImeTokenPicker(
 
   if (tokenIndex === 0) {
     const p = prefix.toLowerCase()
-    const cands = firstCommandTokens.filter((c) => c.toLowerCase().startsWith(p))
-    if (cands.length > 0) {
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "first" }
+    const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
+    if (prefix.length > 0 || allowEmptyFirstAll) {
+      const cands = firstCommandTokens.filter((c) => c.toLowerCase().startsWith(p))
+      if (cands.length > 0) {
+        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "first" }
+      }
     }
     const cmdWord = line.slice(l, r)
     const canonical0 = resolveCanonical(cmdWord)

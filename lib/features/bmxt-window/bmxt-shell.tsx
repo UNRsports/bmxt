@@ -141,6 +141,8 @@ export function BmxtShell({
   const lineRef = useRef("")
   const cursorRef = useRef(0)
   const completionCandidatesRef = useRef<string[]>([])
+  /** EN: Tab on empty line opened the first-command menu — keep showing until input/Esc/submit. */
+  const allowEmptyFirstPickerSyncRef = useRef(false)
   const findListBusyRef = useRef(false)
   const findListSpinnerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [findListBusy, setFindListBusy] = useState(false)
@@ -191,11 +193,15 @@ export function BmxtShell({
     (ln: string, pos: number) => {
       if (mode === "isearch" || overlayOpen || findListBusyRef.current) {
         setSubCmdPicker(null)
+        allowEmptyFirstPickerSyncRef.current = false
         return
       }
-      const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current)
+      const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
+        emptyFirstPrefixShowsAll: allowEmptyFirstPickerSyncRef.current
+      })
       if (!resolved) {
         setSubCmdPicker(null)
+        allowEmptyFirstPickerSyncRef.current = false
         return
       }
       setSubCmdPicker((prev) => {
@@ -226,7 +232,7 @@ export function BmxtShell({
       return
     }
     syncImeTokenPicker(line, cursorPos)
-  }, [line, cursorPos, isComposing, syncImeTokenPicker])
+  }, [line, cursorPos, isComposing, syncImeTokenPicker, localCompletion])
 
   useEffect(() => {
     if (iSearchCycle >= iSearchMatches.length && iSearchMatches.length > 0) {
@@ -494,6 +500,7 @@ export function BmxtShell({
   )
 
   const submitLine = useCallback(() => {
+    allowEmptyFirstPickerSyncRef.current = false
     if (mode === "isearch") {
       const pick = iSearchMatches[iSearchCycle]
       const next = pick !== undefined ? pick : iSearchSnapshot
@@ -651,6 +658,7 @@ export function BmxtShell({
 
   const applyTokenPickIndex = useCallback(
     (idx: number) => {
+      allowEmptyFirstPickerSyncRef.current = false
       const s = subCmdPickerRef.current
       if (!s) {
         return
@@ -683,6 +691,7 @@ export function BmxtShell({
   )
 
   const exitISearch = useCallback(() => {
+    allowEmptyFirstPickerSyncRef.current = false
     setMode("normal")
     setLine(iSearchSnapshot)
     setCursorPos(iSearchSnapshot.length)
@@ -693,6 +702,7 @@ export function BmxtShell({
   }, [focusPrompt, iSearchSnapshot])
 
   const enterISearch = useCallback(() => {
+    allowEmptyFirstPickerSyncRef.current = false
     setISearchSnapshot(lineRef.current)
     setMode("isearch")
     setLine("")
@@ -703,6 +713,7 @@ export function BmxtShell({
   }, [focusPrompt])
 
   const applyHistoryLine = useCallback((text: string) => {
+    allowEmptyFirstPickerSyncRef.current = false
     skipHistResetRef.current = true
     tabPressSeqRef.current = 0
     setLine(text)
@@ -714,6 +725,7 @@ export function BmxtShell({
     if (!ta) {
       return
     }
+    allowEmptyFirstPickerSyncRef.current = false
     if (skipHistResetRef.current) {
       skipHistResetRef.current = false
     } else {
@@ -742,6 +754,7 @@ export function BmxtShell({
   const onPaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       e.preventDefault()
+      allowEmptyFirstPickerSyncRef.current = false
       const ta = e.currentTarget
       const start = ta.selectionStart
       const end = ta.selectionEnd
@@ -803,6 +816,7 @@ export function BmxtShell({
       if (subPick) {
         if (e.key === "Escape") {
           e.preventDefault()
+          allowEmptyFirstPickerSyncRef.current = false
           setSubCmdPicker(null)
           return
         }
@@ -921,7 +935,15 @@ export function BmxtShell({
           })()
           return
         }
-        const imePick = resolveImeTokenPicker(curLn, pos, completionCandidatesRef.current)
+        if (curLn.trim() === "" && !findListBusyRef.current) {
+          e.preventDefault()
+          allowEmptyFirstPickerSyncRef.current = true
+          syncImeTokenPicker(curLn, pos)
+          return
+        }
+        const imePick = resolveImeTokenPicker(curLn, pos, completionCandidatesRef.current, {
+          emptyFirstPrefixShowsAll: true
+        })
         if (imePick && imePick.candidates.length > 0) {
           e.preventDefault()
           const idx = tabPressSeqRef.current % imePick.candidates.length
@@ -1123,7 +1145,11 @@ export function BmxtShell({
               tabIndex={0}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
               placeholder={
-                showFindListPatternPlaceholder ? FIND_LIST_PATTERN_PLACEHOLDER : undefined
+                showFindListPatternPlaceholder
+                  ? FIND_LIST_PATTERN_PLACEHOLDER
+                  : mode === "normal" && line.trim() === "" && !findListBusy && !findListShowSpinner
+                    ? "type or use TAB key"
+                    : undefined
               }
               value={line}
               readOnly={findListBusy}
@@ -1134,6 +1160,7 @@ export function BmxtShell({
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={(ev) => {
                 setIsComposing(false)
+                allowEmptyFirstPickerSyncRef.current = false
                 const v = ev.currentTarget.value
                 lineRef.current = v
                 setLine(v)

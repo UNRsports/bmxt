@@ -174,9 +174,6 @@ function emitCompletionFallback(commands) {
   const set = new Set()
   for (const c of commands) {
     set.add(c.canonicalName)
-    for (const a of c.aliases) {
-      set.add(a)
-    }
   }
   const tokens = [...set].sort()
   const arr = tokens.map((t) => `  ${JSON.stringify(t)}`).join(",\n")

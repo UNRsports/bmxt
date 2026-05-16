@@ -4,7 +4,7 @@
 
 export { FALLBACK_COMPLETION_CANDIDATES } from "../builtin-commands"
 export { runDispatch, dispatchFull, parseDispatchJson } from "./dispatch"
-export { allCompletionTokens, resolveCanonical } from "./registry"
+export { allCompletionTokens, canonicalCommandNames, resolveCanonical } from "./registry"
 export { runTabsPickerReduce } from "./tabs-picker/reducer"
 export { resolveTabsPickerEnterIntent } from "./tabs-picker/intent"
 export { resolveTabsPickerPreview } from "./tabs-picker/preview"
@@ -16,7 +16,7 @@ export { resolveTabsPickerConfirmPlan, resolveTabsPickerMovePlan } from "./tabs-
 export { resolveTabsPickerCreateGroupPlan } from "./tabs-picker/create-group-plan"
 export { resolveTabsPickerHeadline } from "./tabs-picker/headline"
 
-import { allCompletionTokens } from "./registry"
+import { canonicalCommandNames } from "./registry"
 
 let cachedCompletion: string[] | null = null
 
@@ -25,7 +25,7 @@ export async function ensureBmxtCore(): Promise<void> {}
 
 export function getCompletionCandidates(): string[] {
   if (!cachedCompletion) {
-    cachedCompletion = allCompletionTokens()
+    cachedCompletion = canonicalCommandNames()
   }
   return cachedCompletion
 }
