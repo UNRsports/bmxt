@@ -9,6 +9,13 @@ import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
 /** After `dom -list ` — optional flavor token `--html` | `--react` */
 const DOM_LIST_LEAD_RE = /^\s*dom\s+-list\s+/i
 
+const DOM_EXIT_LIST_RE = /^\s*dom\s+-exit\s+-list\s*$/i
+
+/** `dom -exit -list` — close DOM list picker in this pane (full line must match). */
+export function parseDomExitListLine(trimmed: string): boolean {
+  return DOM_EXIT_LIST_RE.test(trimmed.trim())
+}
+
 /**
  * EN: Enter opens dom -list picker when the line specifies the flavor as a third token
  *     (`dom -list --html …` / `dom -list --react …`). With only `dom -list` typed, the shell

@@ -3,7 +3,7 @@ import { PlainTextPickerBody } from "../bmxt-window/plain-text-picker-body"
 import type { MutableRefObject } from "react"
 
 type Props = {
-  onExit: () => void
+  onReturnToPrompt: () => void
   lines: string[]
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
@@ -15,7 +15,7 @@ type Props = {
  * JA: tabs と同一ピッカークロム（`PlainTextPickerBody` でタブ行と同系 CSS を共有）。
  */
 export function FindListPickerOverlay({
-  onExit,
+  onReturnToPrompt,
   lines,
   keyboardActive = false,
   pickerInputRef,
@@ -23,9 +23,9 @@ export function FindListPickerOverlay({
 }: Props) {
   return (
     <PlainTextPickerBody
-      headline="find -list · ↑↓ · j/k · Ctrl+←→ · Esc"
+      headline="find -list · ↑↓ · j/k · Ctrl+←→ · Esc → prompt"
       lines={lines}
-      onExit={onExit}
+      onReturnToPrompt={onReturnToPrompt}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}

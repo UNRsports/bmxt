@@ -6,12 +6,13 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "dom",
   aliases: [],
-  usagePrimary: "dom -list [--html|--react] [<pattern>]"
+  usagePrimary: "dom -list [--html|--react] [<pattern>] | dom -exit -list"
 }
 
 function usageLines(): string[] {
   return [
     "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)",
+    "       dom -exit -list — close DOM list picker in this BMXt pane",
     "EN: -list opens a picker (same chrome as find -list); flavor pull-down: --html (default) | --react.",
     "JA: -list は picker（find -list と同じクロム）。flavor プルダウン: --html (default) | --react。",
     "EN: <pattern> is a case-insensitive substring filter on the output lines (no regex).",
@@ -63,6 +64,16 @@ export function run(args: string[]) {
   const firstLc = normalizeDomToken(first)
   if (firstLc === "-list") {
     return runList(args)
+  }
+  if (firstLc === "-exit") {
+    if (args.length !== 3 || normalizeDomToken(args[2]) !== "-list") {
+      return linesDispatch(["error: usage: dom -exit -list", ...usageLines()])
+    }
+    return linesDispatch([
+      "DOM list picker is closed from the BMXt prompt with:  dom -exit -list",
+      "EN: Run that line in the BMXt window while the DOM picker column is open.",
+      "JA: DOM ピッカー列表示中に BMXt プロンプトで実行してください。"
+    ])
   }
   return linesDispatch([`error: unknown dom option (internal): ${first}`, ...usageLines()])
 }

@@ -20,7 +20,8 @@ export type PlainTextPickerBodyProps = {
   headline: string
   /** EN: Each string is one logical row (same row chrome as tab rows). */
   lines: string[]
-  onExit: () => void
+  /** EN: Esc at top level — return focus to BMXt prompt; picker stays open. */
+  onReturnToPrompt: () => void
   /** EN: When false, display-only (no key capture / autofocus). */
   keyboardActive?: boolean
   /** EN: Optional sink for the hidden IME textarea (pane focus navigation). */
@@ -64,7 +65,7 @@ function PlainTextPickerRow({
 export function PlainTextPickerBody({
   headline,
   lines,
-  onExit,
+  onReturnToPrompt,
   keyboardActive = false,
   pickerInputRef,
   sessionId
@@ -192,12 +193,12 @@ export function PlainTextPickerBody({
       }
       if (ev.key === "Escape") {
         ev.preventDefault()
-        onExit()
+        onReturnToPrompt()
       }
     }
     window.addEventListener("keydown", onWin, true)
     return () => window.removeEventListener("keydown", onWin, true)
-  }, [keyboardActive, onExit, sessionId])
+  }, [keyboardActive, onReturnToPrompt, sessionId])
 
   const onListScroll = useCallback(() => {
     syncWindowFromScroll()
@@ -213,7 +214,7 @@ export function PlainTextPickerBody({
       }
       if (e.key === "Escape") {
         e.preventDefault()
-        onExit()
+        onReturnToPrompt()
         return
       }
       if (lines.length === 0) {
@@ -230,7 +231,7 @@ export function PlainTextPickerBody({
         setHi((h) => Math.max(h - 1, 0))
       }
     },
-    [keyboardActive, lines.length, onExit]
+    [keyboardActive, lines.length, onReturnToPrompt]
   )
 
   const activeRowId =

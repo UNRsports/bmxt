@@ -13,8 +13,8 @@ type Props = {
   message: string[]
   /** Approve: request host permission (if missing), then re-run the original command line. */
   onApprove: () => void
-  /** Decline: close the picker. */
-  onDecline: () => void
+  /** EN: Esc / N — return focus to BMXt prompt; picker column stays open. */
+  onReturnToPrompt: () => void
   /** Notify parent that a permission grant succeeded (so it can re-dispatch). */
   onPermissionGranted?: () => void
   keyboardActive?: boolean
@@ -22,14 +22,14 @@ type Props = {
 }
 
 const HEADLINE =
-  "dom -list — permission / target check · Enter=許可 / Y · Esc=拒否 / N"
+  "dom -list — permission / target check · Enter=許可 / Y · Esc/N → prompt"
 const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 
 /**
  * EN: Confirmation panel shown when `dom -list` returned a retryable error.
  *     "Approve" calls `chrome.permissions.request` (if optional host access is missing) within
  *     the user gesture from the click/key event, then triggers `onApprove` to re-dispatch.
- *     "Decline" closes the picker. Uses the same `bmxt-tab-picker` chrome as find-list /
+ *     Esc/N returns to the BMXt prompt (picker stays open). Uses the same `bmxt-tab-picker` chrome as find-list /
  *     dom-list rows so the styling stays consistent.
  * JA: `dom -list` がリトライ可能なエラーを返したときに表示する確認パネル。
  *     「許可」はクリック／キーのユーザージェスチャ内で `chrome.permissions.request` を呼び、
@@ -39,7 +39,7 @@ const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 export function DomListPromptPanel({
   message,
   onApprove,
-  onDecline,
+  onReturnToPrompt,
   onPermissionGranted,
   keyboardActive = false,
   pickerInputRef
@@ -90,7 +90,7 @@ export function DomListPromptPanel({
         }
         setExtra([
           "EN: Permission was not granted by the browser; keeping the picker open so you can retry.",
-          "JA: ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc で終了。"
+          "JA: ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc でプロンプトへ。"
         ])
       } catch (err) {
         setExtra([
@@ -109,12 +109,12 @@ export function DomListPromptPanel({
     const onWin = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") {
         ev.preventDefault()
-        onDecline()
+        onReturnToPrompt()
       }
     }
     window.addEventListener("keydown", onWin, true)
     return () => window.removeEventListener("keydown", onWin, true)
-  }, [keyboardActive, onDecline])
+  }, [keyboardActive, onReturnToPrompt])
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -126,7 +126,7 @@ export function DomListPromptPanel({
       }
       if (e.key === "Escape" || e.key === "n" || e.key === "N") {
         e.preventDefault()
-        onDecline()
+        onReturnToPrompt()
         return
       }
       if (e.key === "Enter" || e.key === "y" || e.key === "Y") {
@@ -145,7 +145,7 @@ export function DomListPromptPanel({
         return
       }
     },
-    [keyboardActive, approve, message.length, onDecline]
+    [keyboardActive, approve, message.length, onReturnToPrompt]
   )
 
   const allLines = [...message, ...(extra.length > 0 ? ["", ...extra] : [])]
@@ -228,7 +228,7 @@ export function DomListPromptPanel({
         </button>
         <button
           type="button"
-          onClick={onDecline}
+          onClick={onReturnToPrompt}
           disabled={busy}
           style={{
             cursor: busy ? "wait" : "pointer",
@@ -239,7 +239,7 @@ export function DomListPromptPanel({
             padding: "4px 10px",
             font: "inherit"
           }}>
-          拒否 (Esc / N)
+          プロンプトへ (Esc / N)
         </button>
         <span style={{ flex: 1, textAlign: "right", color: "#8b949e" }}>
           ↑↓ / j k でメッセージをスクロール

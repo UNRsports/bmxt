@@ -17,6 +17,7 @@ import {
   FIND_LIST_PATTERN_PLACEHOLDER,
   isFindListAwaitingScope,
   isFindListReadyToRun,
+  parseFindExitListLine,
   parseFindListPickerLine,
   shouldShowFindListPatternPlaceholder,
   type FindListPickerState
@@ -24,6 +25,7 @@ import {
 import { DomListPickerOverlay } from "../dom/dom-list-picker-overlay"
 import {
   isRetryableDomListOutput,
+  parseDomExitListLine,
   parseDomListPickerLine,
   type DomListPickerState
 } from "../dom/dom-list-picker-input"
@@ -73,6 +75,8 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
     parseDomListPickerLine(trimmed) !== null ||
     parseTabsListPickerLine(trimmed) !== null ||
     parseTabsExitListLine(trimmed) ||
+    parseFindExitListLine(trimmed) ||
+    parseDomExitListLine(trimmed) ||
     parseGroupNewInteractiveLine(trimmed)
   )
 }
@@ -178,6 +182,16 @@ export function BmxtShell({
   useEffect(() => {
     tabPickerRef.current = tabPicker
   }, [tabPicker])
+  const findListPickerRef = useRef<FindListPickerState | null>(null)
+  useEffect(() => {
+    findListPickerRef.current = findListPicker
+  }, [findListPicker])
+  const domListPickerRef = useRef<DomListPickerState | null>(null)
+  useEffect(() => {
+    domListPickerRef.current = domListPicker
+  }, [domListPicker])
+  const findListDismissRef = useRef(false)
+  const domListDismissRef = useRef(false)
   const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
   const subCmdPickerRef = useRef<TokenPickerModel | null>(null)
   useEffect(() => {
@@ -429,15 +443,52 @@ export function BmxtShell({
     }
   }, [focusPrompt])
 
+  /** EN: When a picker column newly appears, move pane focus + blue border to match keyboard target. */
+  const prevSidePickersOpenRef = useRef({ tabs: false, find: false, dom: false })
+  useLayoutEffect(() => {
+    const nowTabs = tabPicker !== null
+    const nowFind = findListPicker !== null
+    const nowDom = domListPicker !== null
+    const prev = prevSidePickersOpenRef.current
+    prevSidePickersOpenRef.current = { tabs: nowTabs, find: nowFind, dom: nowDom }
+
+    if (!isFocusedPane) {
+      return
+    }
+
+    let opened: PaneFocusTarget | null = null
+    if (!prev.dom && nowDom) {
+      opened = "dom"
+    } else if (!prev.find && nowFind) {
+      opened = "find"
+    } else if (!prev.tabs && nowTabs) {
+      opened = "tabs"
+    }
+    if (opened === null) {
+      return
+    }
+
+    setPaneFocus(opened)
+    requestAnimationFrame(() => {
+      if (opened === "tabs") {
+        tabPickerInputRef.current?.focus()
+      } else if (opened === "find") {
+        findPickerInputRef.current?.focus()
+      } else {
+        domPickerInputRef.current?.focus()
+      }
+    })
+  }, [tabPicker, findListPicker, domListPicker, isFocusedPane])
+
   useEffect(() => {
     paneStripActionsRef.current = {
-      setFocus: setPaneFocus,
+      setFocus: activatePaneFocus,
       focusTerminal: focusPrompt,
       focusTabsPicker: () => tabPickerInputRef.current?.focus(),
       focusFindPicker: () => findPickerInputRef.current?.focus(),
       focusDomPicker: () => domPickerInputRef.current?.focus()
     }
-  })
+  }, [activatePaneFocus, focusPrompt])
 
   useEffect(() => {
     return registerPaneStrip(
@@ -507,6 +558,7 @@ export function BmxtShell({
       displayLine: string,
       announce: boolean
     ): Promise<void> => {
+      domListDismissRef.current = false
       try {
         await ensureBmxtCore()
         const bundle = runDispatch(domListLine)
@@ -524,11 +576,15 @@ export function BmxtShell({
           commandSessionId: sessionId
         }
         const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+        if (domListDismissRef.current) {
+          domListDismissRef.current = false
+          return
+        }
         if (isRetryableDomListOutput(linesOut)) {
           if (announce) {
             await appendLogLines([
               `> ${displayLine}`,
-              "dom -list — permission / target check (Enter=許可 / Esc=拒否)"
+              "dom -list — permission / target check (Enter=許可 / Esc → prompt)"
             ])
           }
           setDomListPicker(sessionId, {
@@ -539,7 +595,7 @@ export function BmxtShell({
           return
         }
         if (announce) {
-          await appendLogLines([`> ${displayLine}`, "dom -list — picker (Esc)"])
+          await appendLogLines([`> ${displayLine}`, "dom -list — picker (Esc → prompt)"])
         }
         setDomListPicker(sessionId, { kind: "lines", lines: linesOut })
       } catch (e) {
@@ -571,6 +627,7 @@ export function BmxtShell({
       if (findListBusyRef.current) {
         return
       }
+      findListDismissRef.current = false
       findListBusyRef.current = true
       setFindListBusy(true)
       setSubCmdPicker(null)
@@ -602,7 +659,11 @@ export function BmxtShell({
           commandSessionId: sessionId
         }
         const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-        await appendLogLines(["find -list — picker (Esc)"])
+        if (findListDismissRef.current) {
+          findListDismissRef.current = false
+          return
+        }
+        await appendLogLines(["find -list — picker (Esc → prompt)"])
         setFindListPicker(sessionId, { lines: linesOut })
       } catch (e) {
         await appendLogLines([
@@ -682,6 +743,62 @@ export function BmxtShell({
           logLines.push("Tab picker closed.")
         } else {
           logLines.push("Tab picker is not open in this pane.")
+        }
+        await appendLogLines(logLines)
+        focusPrompt()
+      })()
+      return
+    }
+
+    if (parseFindExitListLine(trimmed)) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      void (async () => {
+        const logLines = [`> ${trimmed}`]
+        const wasBusy = findListBusyRef.current
+        if (wasBusy) {
+          findListDismissRef.current = true
+          findListBusyRef.current = false
+          setFindListBusy(false)
+          setFindListShowSpinner(false)
+          if (findListSpinnerTimerRef.current !== null) {
+            clearTimeout(findListSpinnerTimerRef.current)
+            findListSpinnerTimerRef.current = null
+          }
+        }
+        if (findListPickerRef.current !== null) {
+          setFindListPicker(sessionId, null)
+          activatePaneFocus("terminal")
+          logLines.push("Find list picker closed.")
+        } else if (wasBusy) {
+          logLines.push("Find list search cancelled.")
+        } else {
+          logLines.push("Find list picker is not open in this pane.")
+        }
+        await appendLogLines(logLines)
+        focusPrompt()
+      })()
+      return
+    }
+
+    if (parseDomExitListLine(trimmed)) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      void (async () => {
+        const logLines = [`> ${trimmed}`]
+        domListDismissRef.current = true
+        if (domListPickerRef.current !== null) {
+          setDomListPicker(sessionId, null)
+          activatePaneFocus("terminal")
+          logLines.push("DOM list picker closed.")
+        } else {
+          logLines.push("DOM list picker is not open in this pane.")
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1341,7 +1458,7 @@ export function BmxtShell({
               onMouseDown={() => activatePaneFocus("find")}>
               <FindListPickerOverlay
                 lines={findListPicker.lines}
-                onExit={() => setFindListPicker(sessionId, null)}
+                onReturnToPrompt={() => activatePaneFocus("terminal")}
                 keyboardActive={findPickerKeyboardActive}
                 pickerInputRef={findPickerInputRef}
                 sessionId={sessionId}
@@ -1354,7 +1471,7 @@ export function BmxtShell({
               onMouseDown={() => activatePaneFocus("dom")}>
               <DomListPickerOverlay
                 state={domListPicker}
-                onExit={() => setDomListPicker(sessionId, null)}
+                onReturnToPrompt={() => activatePaneFocus("terminal")}
                 keyboardActive={domPickerKeyboardActive}
                 pickerInputRef={domPickerInputRef}
                 sessionId={sessionId}

@@ -6,7 +6,7 @@ import type { MutableRefObject } from "react"
 
 type Props = {
   state: DomListPickerState
-  onExit: () => void
+  onReturnToPrompt: () => void
   /** Called when user approved a retry (permission obtained or already granted). */
   onApprove: () => void
   keyboardActive?: boolean
@@ -21,7 +21,7 @@ type Props = {
  */
 export function DomListPickerOverlay({
   state,
-  onExit,
+  onReturnToPrompt,
   onApprove,
   keyboardActive = false,
   pickerInputRef,
@@ -32,7 +32,7 @@ export function DomListPickerOverlay({
       <DomListPromptPanel
         message={state.message}
         onApprove={onApprove}
-        onDecline={onExit}
+        onReturnToPrompt={onReturnToPrompt}
         keyboardActive={keyboardActive}
         pickerInputRef={pickerInputRef}
       />
@@ -40,9 +40,9 @@ export function DomListPickerOverlay({
   }
   return (
     <PlainTextPickerBody
-      headline="dom -list · ↑↓ · j/k · Ctrl+←→ · Esc"
+      headline="dom -list · ↑↓ · j/k · Ctrl+←→ · Esc → prompt"
       lines={state.lines}
-      onExit={onExit}
+      onReturnToPrompt={onReturnToPrompt}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}

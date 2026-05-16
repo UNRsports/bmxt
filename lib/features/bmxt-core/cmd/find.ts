@@ -8,12 +8,13 @@ export const CMD: CmdMeta = {
   name: "find",
   aliases: [],
   usagePrimary:
-    "find -list [--none|--history|--bookmark|--page] <pattern> | find --none|… <pattern>"
+    "find -list [--none|--history|--bookmark|--page] <pattern> | find -exit -list | find --none|… <pattern>"
 }
 
 function usageLines(): string[] {
   return [
     "usage: find -list [--none|--history|--bookmark|--page] <pattern>   — -list form (default scope: --none)",
+    "       find -exit -list — close find list picker in this BMXt pane",
     "       find --none <pattern>   — all scopes (history + bookmark + page); empty pattern = all entries (capped)",
     "       find --history <pattern>  — recent history titles/URLs",
     "       find --bookmark <pattern>  — bookmark titles/URLs",
@@ -92,6 +93,16 @@ export function run(args: string[]) {
   }
   if (headKey === "-list") {
     return runList(args)
+  }
+  if (headKey === "-exit") {
+    if (args.length !== 3 || normalizeFindSecondToken(args[2]) !== "-list") {
+      return linesDispatch(["error: usage: find -exit -list", ...usageLines()])
+    }
+    return linesDispatch([
+      "Find list picker is closed from the BMXt prompt with:  find -exit -list",
+      "EN: Run that line in the BMXt window while the find picker column is open.",
+      "JA: find ピッカー列表示中に BMXt プロンプトで実行してください。"
+    ])
   }
   const patternRaw = args.slice(2).join(" ")
   const pattern = normalizeFindPattern(patternRaw)
