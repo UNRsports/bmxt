@@ -1,31 +1,30 @@
-import { PlainTextPickerBody } from "../bmxt-window/plain-text-picker-body"
-
 import type { MutableRefObject } from "react"
+import type { PickerEntry } from "../side-picker/model/picker-entry"
+import { UrlListPickerWrapper } from "../side-picker/wrappers/url-list-picker-wrapper"
 
 type Props = {
+  entries: PickerEntry[]
   onReturnToPrompt: () => void
-  lines: string[]
+  onOpenEntry: (entry: PickerEntry) => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
 }
 
-/**
- * EN: `find -list` results in the same picker chrome as tabs (`PlainTextPickerBody` = shared with tab row CSS).
- * JA: tabs と同一ピッカークロム（`PlainTextPickerBody` でタブ行と同系 CSS を共有）。
- */
 export function FindListPickerOverlay({
   onReturnToPrompt,
-  lines,
+  entries,
+  onOpenEntry,
   keyboardActive = false,
   pickerInputRef,
   sessionId
 }: Props) {
   return (
-    <PlainTextPickerBody
-      headline="find -list · ↑↓ · j/k · / highlight · n/N · Ctrl+←→ · Esc → prompt"
-      lines={lines}
+    <UrlListPickerWrapper
+      headline="find -list · ↑↓ · j/k · / · :nohlsearch · n/N · Enter open · Ctrl+←→ · Esc → prompt"
+      entries={entries}
       onReturnToPrompt={onReturnToPrompt}
+      onOpenEntry={onOpenEntry}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}

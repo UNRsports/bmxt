@@ -7,12 +7,19 @@ import {
   parseTabsExitListLine,
   parseTabsListPickerLine,
   resolveInitialTabPickerHighlightIndex,
-  TabPickerOverlay,
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
-import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import { FindListPickerOverlay } from "../find/find-list-picker-overlay"
+import {
+  DomPickerWrapper,
+  openEntryEffects,
+  pickerEntriesFromFindLines,
+  PickerPanelHost,
+  TabsPickerWrapper,
+  type PickerEntry
+} from "../side-picker"
+import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
   FIND_LIST_PATTERN_PLACEHOLDER,
   isFindListAwaitingScope,
@@ -22,7 +29,6 @@ import {
   shouldShowFindListPatternPlaceholder,
   type FindListPickerState
 } from "../find/find-list-picker-input"
-import { DomListPickerOverlay } from "../dom/dom-list-picker-overlay"
 import {
   isRetryableDomListOutput,
   parseDomExitListLine,
@@ -664,7 +670,7 @@ export function BmxtShell({
           return
         }
         await appendLogLines(["find -list — picker (Esc → prompt)"])
-        setFindListPicker(sessionId, { lines: linesOut })
+        setFindListPicker(sessionId, { entries: pickerEntriesFromFindLines(linesOut) })
       } catch (e) {
         await appendLogLines([
           `> ${displayLine}`,
@@ -681,6 +687,32 @@ export function BmxtShell({
       }
     },
     [appendLogLines, sessionId, setFindListPicker]
+  )
+
+  const openFindPickerEntry = useCallback(
+    async (entry: PickerEntry) => {
+      const effects = openEntryEffects(entry, "new_tab")
+      if (effects.length === 0) {
+        return
+      }
+      const ctx: DispatchChromeContext = {
+        clearLog: async () => {},
+        exitPane: async () => [],
+        listWindows: async () => [],
+        focusInfo: async () => [],
+        resolveTabArg: async () => undefined,
+        commandSessionId: sessionId
+      }
+      try {
+        const logLines = await applyChromeEffects(ctx, effects)
+        if (logLines.length > 0) {
+          await appendLogLines(logLines)
+        }
+      } catch (e) {
+        await appendLogLines([`error: ${e instanceof Error ? e.message : String(e)}`])
+      }
+    },
+    [appendLogLines, sessionId]
   )
 
   const submitLine = useCallback(() => {
@@ -1435,10 +1467,11 @@ export function BmxtShell({
             </div>
           </div>
           {tabPicker ? (
-            <div
-              className={`bmxt-picker-host--split${paneFocus === "tabs" ? " bmxt-split-pane--focused" : ""}`}
-              onMouseDown={() => activatePaneFocus("tabs")}>
-              <TabPickerOverlay
+            <PickerPanelHost
+              focusTarget="tabs"
+              paneFocus={paneFocus}
+              onActivateFocus={() => activatePaneFocus("tabs")}>
+              <TabsPickerWrapper
                 rows={tabPicker.rows}
                 showUrl={tabPicker.showUrl}
                 initialHi={tabPicker.initialHi}
@@ -1450,26 +1483,29 @@ export function BmxtShell({
                 pickerInputRef={tabPickerInputRef}
                 sessionId={sessionId}
               />
-            </div>
+            </PickerPanelHost>
           ) : null}
           {findListPicker ? (
-            <div
-              className={`bmxt-picker-host--split${paneFocus === "find" ? " bmxt-split-pane--focused" : ""}`}
-              onMouseDown={() => activatePaneFocus("find")}>
+            <PickerPanelHost
+              focusTarget="find"
+              paneFocus={paneFocus}
+              onActivateFocus={() => activatePaneFocus("find")}>
               <FindListPickerOverlay
-                lines={findListPicker.lines}
+                entries={findListPicker.entries}
                 onReturnToPrompt={() => activatePaneFocus("terminal")}
+                onOpenEntry={(entry) => void openFindPickerEntry(entry)}
                 keyboardActive={findPickerKeyboardActive}
                 pickerInputRef={findPickerInputRef}
                 sessionId={sessionId}
               />
-            </div>
+            </PickerPanelHost>
           ) : null}
           {domListPicker ? (
-            <div
-              className={`bmxt-picker-host--split${paneFocus === "dom" ? " bmxt-split-pane--focused" : ""}`}
-              onMouseDown={() => activatePaneFocus("dom")}>
-              <DomListPickerOverlay
+            <PickerPanelHost
+              focusTarget="dom"
+              paneFocus={paneFocus}
+              onActivateFocus={() => activatePaneFocus("dom")}>
+              <DomPickerWrapper
                 state={domListPicker}
                 onReturnToPrompt={() => activatePaneFocus("terminal")}
                 keyboardActive={domPickerKeyboardActive}
@@ -1487,7 +1523,7 @@ export function BmxtShell({
                   void runDomListAndShow(cl, cl, false)
                 }}
               />
-            </div>
+            </PickerPanelHost>
           ) : null}
         </div>
       ) : (

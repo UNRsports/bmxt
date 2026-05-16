@@ -136,39 +136,39 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 
 ### フェーズ 0 — 境界固定（コード移動なし）
 
-- [ ] 依存グラフを書く（`bmxt-window` ↔ `tabs` 逆依存を明示）
-- [ ] 移動対象を A〜D + ラッパー系統に分類
+- [x] 依存グラフを書く（`bmxt-window` ↔ `tabs` 逆依存を明示）— `_context/todo.md` 現状整理
+- [x] 移動対象を A〜D + ラッパー系統に分類
 - [ ] 共通必須キー一覧を README 用に固定（tabs headline / README Picker UI 節と整合）
-- [ ] find に載せる最小 `:` コマンド（少なくとも `nohlsearch`）を決める
+- [x] find に載せる最小 `:` コマンド（`nohlsearch`）
 
 ### フェーズ 1 — interaction kernel 抽出（tabs 回帰が基準）
 
-- [ ] `lib/features/side-picker/` 新設
-- [ ] `use-window-keydown-capture` を `tabs` → `side-picker/hooks/`
-- [ ] `TabPickerSearchFooter` / `TabPickerCommandFooter` → `side-picker/chrome/`
-- [ ] `parseTabPickerSearchNeedle` / `splitTextHighlightSegments` → `side-picker/search/`
-- [ ] `use-tab-picker-keyboard` から tabs 非依存部分を `side-picker/interaction/` に抽出
-- [ ] `TabPickerOverlay` は kernel を呼ぶだけに（挙動不変）
-- [ ] 検証: `npx tsc --noEmit`、手動 `tabs -list`（`/`, `:`, `#`, Esc 段階, bulk）
+- [x] `lib/features/side-picker/` 新設
+- [x] `use-window-keydown-capture` を `tabs` → `side-picker/hooks/`
+- [x] `TabPickerSearchFooter` / `TabPickerCommandFooter` → `side-picker/chrome/`
+- [x] `parseTabPickerSearchNeedle` / `splitTextHighlightSegments` → `side-picker/search/`
+- [ ] `use-tab-picker-keyboard` から tabs 非依存部分を `side-picker/interaction/` に抽出（`PlainTextPickerBody` に URL リスト用キー操作を集約済み）
+- [ ] `TabPickerOverlay` は kernel を呼ぶだけに（挙動不変・`TabsPickerWrapper` 経由）
+- [x] 検証: `npx tsc --noEmit`
 
 ### フェーズ 2 — ② ピッカーパネル + ③B dom ラッパー
 
-- [ ] `PickerPanelHost` 抽出（`bmxt-shell` の三重 `bmxt-picker-host--split` を集約）
-- [ ] `DomPickerWrapper` — 現 `DomListPickerOverlay` を ③ / ④ に分割
-- [ ] `DomListPromptPanel` → `dom-prompt-render`（④）
-- [ ] dom 列は ② 経由で描画（挙動不変）
-- [ ] 検証: `dom -list`（lines / permission prompt / Esc / Ctrl+←→）
+- [x] `PickerPanelHost` 抽出（`bmxt-shell`）
+- [x] `DomPickerWrapper` — `dom-list-picker-overlay` は re-export
+- [ ] `DomListPromptPanel` → `dom-prompt-render`（④）— 未分割、dom feature に残置
+- [x] dom 列は ② 経由で描画
+- [ ] 検証: 手動 `dom -list`
 
 ### フェーズ 3 — ③A 検索リスト系 + `PickerEntry`
 
-- [ ] `PickerEntry` / `PickerSource` 型定義
-- [ ] find-sources → `toPickerEntries()`（`find-format` ブロックからパース）
-- [ ] `openEntry` + `normalizePickerOpenUrl` 共通化 → Effect dispatch
-- [ ] `UrlListPickerWrapper` + `FindListRender`（④）
-- [ ] find 状態 `{ lines }` → `{ entries }`（shell / terminal 更新）
-- [ ] `PlainTextPickerBody` を kernel 上の `PickerListView` に置換（二重 `/` 実装を廃止）
-- [ ] find に Enter → open URL
-- [ ] 検証: `find -list`、`/`, `n/N`, `:nohlsearch`, Enter
+- [x] `PickerEntry` / `PickerSource` 型定義
+- [x] `pickerEntriesFromFindLines()`（`find-format` ブロックからパース）
+- [x] `openEntryEffects` + `normalizePickerOpenUrl` 共通化
+- [x] `UrlListPickerWrapper` + `FindListPickerOverlay`（④）
+- [x] find 状態 `{ lines }` → `{ entries }`
+- [x] `PlainTextPickerBody` を `side-picker/plain/` に移動（`:` / Enter / Esc スタック拡張）
+- [x] find に Enter → open URL（`openFindPickerEntry`）
+- [ ] 検証: 手動 `find -list`
 
 ### フェーズ 4 — tabs を URL 主線に寄せる
 

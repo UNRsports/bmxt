@@ -138,6 +138,8 @@ export function listFindListScopeCandidates(prefix: string): string[] {
   return listThirdTokenCandidates("find", "-list", prefix)
 }
 
+import type { PickerEntry } from "../side-picker/model/picker-entry"
+
 export type FindListPickerState = {
-  lines: string[]
+  entries: PickerEntry[]
 }
