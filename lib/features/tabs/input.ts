@@ -9,6 +9,8 @@ const GROUP_NEW_INTERACTIVE_RE = /^\s*group\s+new\s*$/i
 const TABS_LIST_RE =
   /^\s*tabs\s+-list(?:\s+-[uU])?\s*$/i
 
+const TABS_EXIT_LIST_RE = /^\s*tabs\s+-exit\s+-list\s*$/i
+
 const TABS_MOVE_URL_PREFIX_RE = /^\s*tabs\s+-moveurl\s*/i
 
 const TABS_OPTION_LEAD_RE = /^\s*tabs\s+/i
@@ -21,6 +23,11 @@ export function parseTabsListPickerLine(trimmed: string): { showUrl: boolean } |
   }
   const showUrl = /\s+-[uU]\s*$/i.test(t)
   return { showUrl }
+}
+
+/** `tabs -exit -list` — close tab picker in this pane (full line must match). */
+export function parseTabsExitListLine(trimmed: string): boolean {
+  return TABS_EXIT_LIST_RE.test(trimmed.trim())
 }
 
 /** Line is exactly `group new` (interactive new tab group UI). */

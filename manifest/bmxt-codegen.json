@@ -82,11 +82,16 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u]",
+      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["-u"],
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
           "tail": "none"
         },
         {

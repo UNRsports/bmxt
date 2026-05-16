@@ -20,6 +20,7 @@ export function buildHelpLines(): string[] {
     "tabs (BMXt window / SW):",
     "  tabs              - show available options, then restore prompt to `tabs ` for continuation.",
     "  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).",
+    "  tabs -exit -list  - close tab picker in this BMXt pane.",
     "  tabs -nowurl      - print current tab URL from active tab in focused window.",
     "  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.",
     "  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group).",

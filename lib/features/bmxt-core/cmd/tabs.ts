@@ -6,25 +6,27 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "tabs",
   aliases: [],
-  usagePrimary: "tabs -list [-u]"
+  usagePrimary: "tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl"
 }
 
 function tabsUsageLines(): string[] {
   return [
     "usage: tabs -list [-u]   — tab picker (optional -u: show each tab URL)",
+    "       tabs -exit -list — close tab picker in this BMXt pane",
     "       tabs -moveurl <url> — go to tab with URL or open new tab (Tab completes URLs in BMXt)",
     "       tabs -nowurl       — show current tab URL"
   ]
 }
 
 function tabsRunHintLine(): string {
-  return "Run:  tabs -list  or  tabs -list -u  (picker).  tabs -nowurl  (current URL).  tabs -moveurl <url>  (jump or new tab)."
+  return "Run:  tabs -list  or  tabs -list -u  (open picker).  tabs -exit -list  (close picker).  tabs -nowurl  (current URL).  tabs -moveurl <url>  (jump or new tab)."
 }
 
-function normTabsFlag(arg: string | undefined): "l" | "m" | "n" | null {
+function normTabsFlag(arg: string | undefined): "l" | "e" | "m" | "n" | null {
   if (!arg) return null
   const a = stripInvisibleFormatChars(arg.trim()).toLowerCase()
   if (a === "-list") return "l"
+  if (a === "-exit") return "e"
   if (a === "-moveurl") return "m"
   if (a === "-nowurl") return "n"
   return null
@@ -52,6 +54,15 @@ export function run(args: string[]) {
       }
       return linesDispatch([
         "Tab picker is opened from the BMXt prompt with:  tabs -list   or   tabs -list -u",
+        tabsRunHintLine()
+      ])
+    }
+    case "e": {
+      if (args.length !== 3 || args[2].toLowerCase() !== "-list") {
+        return linesDispatch(["error: usage: tabs -exit -list", ...tabsUsageLines()])
+      }
+      return linesDispatch([
+        "Tab picker is closed from the BMXt prompt with:  tabs -exit -list",
         tabsRunHintLine()
       ])
     }

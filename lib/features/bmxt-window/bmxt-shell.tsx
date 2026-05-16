@@ -4,6 +4,7 @@ import {
   buildTabPickerRows,
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
+  parseTabsExitListLine,
   parseTabsListPickerLine,
   resolveInitialTabPickerHighlightIndex,
   TabPickerOverlay,
@@ -71,6 +72,7 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
   return (
     parseDomListPickerLine(trimmed) !== null ||
     parseTabsListPickerLine(trimmed) !== null ||
+    parseTabsExitListLine(trimmed) ||
     parseGroupNewInteractiveLine(trimmed)
   )
 }
@@ -666,6 +668,27 @@ export function BmxtShell({
       return
     }
 
+    if (parseTabsExitListLine(trimmed)) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      void (async () => {
+        const logLines = [`> ${trimmed}`]
+        if (tabPickerRef.current !== null) {
+          setTabPicker(sessionId, null)
+          activatePaneFocus("terminal")
+          logLines.push("Tab picker closed.")
+        } else {
+          logLines.push("Tab picker is not open in this pane.")
+        }
+        await appendLogLines(logLines)
+        focusPrompt()
+      })()
+      return
+    }
+
     if (parseGroupNewInteractiveLine(trimmed)) {
       appendCommandToHistory(trimmed)
       setLine("")
@@ -770,6 +793,7 @@ export function BmxtShell({
     mode,
     promptLine,
     sessionId,
+    activatePaneFocus,
     setTabPicker,
     setFindListPicker,
     runDomListAndShow,
