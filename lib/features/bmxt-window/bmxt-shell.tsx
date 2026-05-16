@@ -48,6 +48,14 @@ import {
 } from "react"
 import type { CSSProperties } from "react"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
+import {
+  navigatePaneStripHoriz,
+  paneStripHorizAtEdge,
+  registerPaneStrip,
+  type PaneFocusTarget,
+  type PaneStripOpen,
+  type PaneStripActions
+} from "./pane-focus-nav"
 
 export type TabPickerState = {
   rows: TabPickerRow[]
@@ -106,10 +114,64 @@ export function BmxtShell({
   refreshTabPickerRows,
   postUpgradeBanner
 }: Props) {
-  const tabPickerOpen = tabPicker !== null
-  /** find / dom のオーバーレイ時のみターミナル全体を隠す（tabs は左半分分割でターミナル継続表示）。 */
-  const blockingOverlayOpen = findListPicker !== null || domListPicker !== null
-  const suppressPromptAutofocus = tabPickerOpen || blockingOverlayOpen
+  /** tabs / find / dom — 左ターミナル・右にピッカー列（複数可）。 */
+  const sidePickerOpen =
+    tabPicker !== null || findListPicker !== null || domListPicker !== null
+  const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
+  const paneFocusRef = useRef<PaneFocusTarget>("terminal")
+  const isFocusedPaneRef = useRef(isFocusedPane)
+  const openPickersRef = useRef<readonly PaneStripOpen[]>([])
+  const paneStripActionsRef = useRef<PaneStripActions>({
+    setFocus: () => {},
+    focusTerminal: () => {},
+    focusTabsPicker: () => {},
+    focusFindPicker: () => {},
+    focusDomPicker: () => {}
+  })
+  const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const findPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const openPickers = useMemo((): PaneStripOpen[] => {
+    const open: PaneStripOpen[] = []
+    if (tabPicker !== null) {
+      open.push("tabs")
+    }
+    if (findListPicker !== null) {
+      open.push("find")
+    }
+    if (domListPicker !== null) {
+      open.push("dom")
+    }
+    return open
+  }, [tabPicker, findListPicker, domListPicker])
+
+  const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
+  const findPickerKeyboardActive = paneFocus === "find" && isFocusedPane
+  const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
+
+  useEffect(() => {
+    paneFocusRef.current = paneFocus
+  }, [paneFocus])
+
+  isFocusedPaneRef.current = isFocusedPane
+  openPickersRef.current = openPickers
+
+  useEffect(() => {
+    if (paneFocus === "tabs" && tabPicker === null) {
+      setPaneFocus("terminal")
+    } else if (paneFocus === "find" && findListPicker === null) {
+      setPaneFocus("terminal")
+    } else if (paneFocus === "dom" && domListPicker === null) {
+      setPaneFocus("terminal")
+    }
+  }, [paneFocus, tabPicker, findListPicker, domListPicker])
+
+  useEffect(() => {
+    if (!sidePickerOpen) {
+      setPaneFocus("terminal")
+    }
+  }, [sidePickerOpen])
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -193,7 +255,7 @@ export function BmxtShell({
 
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
-      if (mode === "isearch" || blockingOverlayOpen || findListBusyRef.current) {
+      if (mode === "isearch" || findListBusyRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
         return
@@ -226,7 +288,7 @@ export function BmxtShell({
         }
       })
     },
-    [mode, blockingOverlayOpen]
+    [mode]
   )
 
   useEffect(() => {
@@ -255,16 +317,10 @@ export function BmxtShell({
   }, [])
 
   useLayoutEffect(() => {
-    if (blockingOverlayOpen) {
-      return
-    }
     syncLogScroll()
-  }, [blockingOverlayOpen, lines, mode, line, syncLogScroll, postUpgradeBanner])
+  }, [lines, mode, line, syncLogScroll, postUpgradeBanner])
 
   useEffect(() => {
-    if (blockingOverlayOpen) {
-      return
-    }
     const el = scrollRef.current
     if (!el) {
       return
@@ -272,24 +328,18 @@ export function BmxtShell({
     const ro = new ResizeObserver(() => syncLogScroll())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [blockingOverlayOpen, syncLogScroll])
+  }, [syncLogScroll])
 
   useLayoutEffect(() => {
-    if (blockingOverlayOpen) {
-      return
-    }
     const el = scrollRef.current
     if (!el) {
       return
     }
     el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
     requestAnimationFrame(() => syncLogScroll())
-  }, [blockingOverlayOpen, lines, syncLogScroll, postUpgradeBanner])
+  }, [lines, syncLogScroll, postUpgradeBanner])
 
   useLayoutEffect(() => {
-    if (blockingOverlayOpen) {
-      return
-    }
     const ta = imeRef.current
     if (!ta || isComposing) {
       return
@@ -297,10 +347,10 @@ export function BmxtShell({
     if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
       ta.setSelectionRange(cursorPos, cursorPos)
     }
-  }, [blockingOverlayOpen, line, cursorPos, isComposing])
+  }, [line, cursorPos, isComposing])
 
   useLayoutEffect(() => {
-    if (!subCmdPicker || blockingOverlayOpen) {
+    if (!subCmdPicker) {
       setSubCmdPickerHostStyle({})
       return
     }
@@ -358,27 +408,96 @@ export function BmxtShell({
       sc?.removeEventListener("scroll", measure)
       window.removeEventListener("resize", measure)
     }
-  }, [subCmdPickerAnchorEpisode, blockingOverlayOpen, line, cursorPos, mode])
+  }, [subCmdPickerAnchorEpisode, line, cursorPos, mode])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
+  const activatePaneFocus = useCallback((target: PaneFocusTarget) => {
+    setPaneFocus(target)
+    if (target === "terminal") {
+      focusPrompt()
+    } else if (target === "tabs") {
+      tabPickerInputRef.current?.focus()
+    } else if (target === "find") {
+      findPickerInputRef.current?.focus()
+    } else if (target === "dom") {
+      domPickerInputRef.current?.focus()
+    }
+  }, [focusPrompt])
+
+  useEffect(() => {
+    paneStripActionsRef.current = {
+      setFocus: setPaneFocus,
+      focusTerminal: focusPrompt,
+      focusTabsPicker: () => tabPickerInputRef.current?.focus(),
+      focusFindPicker: () => findPickerInputRef.current?.focus(),
+      focusDomPicker: () => domPickerInputRef.current?.focus()
+    }
+  })
+
+  useEffect(() => {
+    return registerPaneStrip(
+      sessionId,
+      () => ({
+        open: openPickersRef.current,
+        focus: paneFocusRef.current,
+        isFocusedLeaf: isFocusedPaneRef.current
+      }),
+      paneStripActionsRef.current
+    )
+  }, [sessionId])
+
   useLayoutEffect(() => {
-    if (suppressPromptAutofocus || !isFocusedPane) {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing) {
+        return
+      }
+      if (!e.ctrlKey || e.metaKey || e.altKey) {
+        return
+      }
+      const horiz =
+        e.key === "ArrowLeft" || e.code === "ArrowLeft"
+          ? "left"
+          : e.key === "ArrowRight" || e.code === "ArrowRight"
+            ? "right"
+            : null
+      if (!horiz) {
+        return
+      }
+      if (!isFocusedPaneRef.current || openPickersRef.current.length === 0) {
+        return
+      }
+      const open = openPickersRef.current
+      const focus = paneFocusRef.current
+      if (paneStripHorizAtEdge(open, focus, horiz)) {
+        return
+      }
+      if (navigatePaneStripHoriz(open, focus, horiz, paneStripActionsRef.current)) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+      }
+    }
+    window.addEventListener("keydown", onKey, true)
+    return () => window.removeEventListener("keydown", onKey, true)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!isFocusedPane || paneFocus !== "terminal") {
       return
     }
     focusPrompt()
-  }, [suppressPromptAutofocus, isFocusedPane, focusPrompt])
+  }, [isFocusedPane, paneFocus, focusPrompt])
 
   useEffect(() => {
-    if (suppressPromptAutofocus || !isFocusedPane) {
+    if (!isFocusedPane || paneFocus !== "terminal") {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [suppressPromptAutofocus, isFocusedPane, focusPrompt])
+  }, [isFocusedPane, paneFocus, focusPrompt])
 
   const runDomListAndShow = useCallback(
     async (
@@ -534,7 +653,7 @@ export function BmxtShell({
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
             `> ${trimmed}`,
-            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc"
+            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc → prompt"
           ])
           setTabPicker(sessionId, { rows, showUrl, initialHi })
         } catch (e) {
@@ -559,7 +678,7 @@ export function BmxtShell({
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([
             `> ${trimmed}`,
-            "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc"
+            "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc → prompt"
           ])
           setTabPicker(sessionId, {
             rows,
@@ -794,26 +913,6 @@ export function BmxtShell({
         subCmdPickerOpen: Boolean(subCmdPickerRef.current)
       })
 
-      if (tabPickerRef.current) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault()
-          return
-        }
-        const blocksTabPickerNav =
-          e.key === "ArrowUp" ||
-          e.key === "ArrowDown" ||
-          e.code === "ArrowUp" ||
-          e.code === "ArrowDown" ||
-          e.key === "j" ||
-          e.key === "J" ||
-          e.key === "k" ||
-          e.key === "K"
-        if (blocksTabPickerNav) {
-          e.preventDefault()
-          return
-        }
-      }
-
       const subPick = subCmdPickerRef.current
       if (subPick) {
         if (e.key === "Escape") {
@@ -965,13 +1064,8 @@ export function BmxtShell({
         }
       }
 
-      if (e.ctrlKey || e.metaKey) {
-        if (
-          e.key === "ArrowUp" ||
-          e.key === "ArrowDown" ||
-          e.key === "ArrowLeft" ||
-          e.key === "ArrowRight"
-        ) {
+      if (e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") {
           return
         }
       }
@@ -1026,12 +1120,14 @@ export function BmxtShell({
       history,
       iSearchMatches,
       mode,
-      blockingOverlayOpen,
       applyTokenPickIndex,
       promptLine,
       submitLine,
       syncImeTokenPicker,
-      tabPicker
+      tabPicker,
+      sessionId,
+      sidePickerOpen,
+      isFocusedPane
     ]
   )
 
@@ -1040,8 +1136,7 @@ export function BmxtShell({
   const after = line.slice(cursorPos + 1)
   const iSearchPreview = iSearchMatches[iSearchCycle]
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
-  const tabPickerSplitLayout =
-    tabPickerOpen && tabPicker !== null && !blockingOverlayOpen
+  const splitPickerLayout = sidePickerOpen
 
   const shellContent = (
     <>
@@ -1160,7 +1255,7 @@ export function BmxtShell({
                 syncImeTokenPicker(v, ev.currentTarget.selectionStart)
               }}
             />
-            {subCmdPicker && !blockingOverlayOpen && !findListBusy ? (
+            {subCmdPicker && !findListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host"
@@ -1189,89 +1284,78 @@ export function BmxtShell({
         boxSizing: "border-box",
         position: "relative"
       }}>
-      {tabPickerSplitLayout ? (
-        <div className="bmxt-tab-terminal-split">
-          <div className="bmxt-tab-split-terminal-pane">
+      {splitPickerLayout ? (
+        <div className="bmxt-terminal-split" data-bmxt-session-id={sessionId}>
+          <div
+            className={`bmxt-split-terminal-pane${paneFocus === "terminal" ? " bmxt-split-pane--focused" : ""}`}
+            onMouseDown={() => activatePaneFocus("terminal")}>
             <div ref={scrollRef} className={shellScrollClassName}>
               {shellContent}
             </div>
           </div>
-          <div className="bmxt-tab-picker-host bmxt-tab-picker-host--split-right">
-            <TabPickerOverlay
-              rows={tabPicker.rows}
-              showUrl={tabPicker.showUrl}
-              initialHi={tabPicker.initialHi}
-              variant={tabPicker.variant ?? "default"}
-              onAppendLog={appendLogLines}
-              onRefreshRows={refreshTabPickerRows}
-              onExit={() => setTabPicker(sessionId, null)}
-              isHostPaneFocused={isFocusedPane}
-            />
-          </div>
+          {tabPicker ? (
+            <div
+              className={`bmxt-picker-host--split${paneFocus === "tabs" ? " bmxt-split-pane--focused" : ""}`}
+              onMouseDown={() => activatePaneFocus("tabs")}>
+              <TabPickerOverlay
+                rows={tabPicker.rows}
+                showUrl={tabPicker.showUrl}
+                initialHi={tabPicker.initialHi}
+                variant={tabPicker.variant ?? "default"}
+                onAppendLog={appendLogLines}
+                onRefreshRows={refreshTabPickerRows}
+                onReturnToPrompt={() => activatePaneFocus("terminal")}
+                isHostPaneFocused={tabsPickerKeyboardActive}
+                pickerInputRef={tabPickerInputRef}
+                sessionId={sessionId}
+              />
+            </div>
+          ) : null}
+          {findListPicker ? (
+            <div
+              className={`bmxt-picker-host--split${paneFocus === "find" ? " bmxt-split-pane--focused" : ""}`}
+              onMouseDown={() => activatePaneFocus("find")}>
+              <FindListPickerOverlay
+                lines={findListPicker.lines}
+                onExit={() => setFindListPicker(sessionId, null)}
+                keyboardActive={findPickerKeyboardActive}
+                pickerInputRef={findPickerInputRef}
+                sessionId={sessionId}
+              />
+            </div>
+          ) : null}
+          {domListPicker ? (
+            <div
+              className={`bmxt-picker-host--split${paneFocus === "dom" ? " bmxt-split-pane--focused" : ""}`}
+              onMouseDown={() => activatePaneFocus("dom")}>
+              <DomListPickerOverlay
+                state={domListPicker}
+                onExit={() => setDomListPicker(sessionId, null)}
+                keyboardActive={domPickerKeyboardActive}
+                pickerInputRef={domPickerInputRef}
+                sessionId={sessionId}
+                onApprove={() => {
+                  if (domListPicker.kind !== "prompt") {
+                    return
+                  }
+                  const cl = domListPicker.commandLine
+                  setDomListPicker(sessionId, {
+                    kind: "lines",
+                    lines: ["dom -list — retrying after permission grant…"]
+                  })
+                  void runDomListAndShow(cl, cl, false)
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       ) : (
         <div
           ref={scrollRef}
-          className={shellScrollClassName}
-          style={blockingOverlayOpen ? { display: "none" } : undefined}>
+          className={`${shellScrollClassName}${isFocusedPane && paneFocus === "terminal" ? " bmxt-split-pane--focused" : ""}`}>
           {shellContent}
         </div>
       )}
-      {findListPicker ? (
-        <div
-          className="bmxt-find-list-picker-host"
-          style={{
-            position: "absolute",
-            inset: 6,
-            zIndex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-            background: "#0d1117",
-            borderRadius: 8,
-            boxShadow:
-              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
-          }}>
-          <FindListPickerOverlay
-            lines={findListPicker.lines}
-            onExit={() => setFindListPicker(sessionId, null)}
-          />
-        </div>
-      ) : null}
-      {domListPicker ? (
-        <div
-          className="bmxt-dom-list-picker-host"
-          style={{
-            position: "absolute",
-            inset: 6,
-            zIndex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-            background: "#0d1117",
-            borderRadius: 8,
-            boxShadow:
-              "inset 0 0 0 1px #30363d, 0 4px 18px rgba(0, 0, 0, 0.45)"
-          }}>
-          <DomListPickerOverlay
-            state={domListPicker}
-            onExit={() => setDomListPicker(sessionId, null)}
-            onApprove={() => {
-              if (domListPicker.kind !== "prompt") {
-                return
-              }
-              const cl = domListPicker.commandLine
-              setDomListPicker(sessionId, {
-                kind: "lines",
-                lines: ["dom -list — retrying after permission grant…"]
-              })
-              void runDomListAndShow(cl, cl, false)
-            }}
-          />
-        </div>
-      ) : null}
     </div>
   )
 }

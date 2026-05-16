@@ -3,7 +3,8 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState
+  useState,
+  type MutableRefObject
 } from "react"
 import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
 
@@ -16,6 +17,8 @@ type Props = {
   onDecline: () => void
   /** Notify parent that a permission grant succeeded (so it can re-dispatch). */
   onPermissionGranted?: () => void
+  keyboardActive?: boolean
+  pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
 }
 
 const HEADLINE =
@@ -37,16 +40,29 @@ export function DomListPromptPanel({
   message,
   onApprove,
   onDecline,
-  onPermissionGranted
+  onPermissionGranted,
+  keyboardActive = false,
+  pickerInputRef
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const setInputEl = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      inputRef.current = el
+      if (pickerInputRef) {
+        pickerInputRef.current = el
+      }
+    },
+    [pickerInputRef]
+  )
   const [hi, setHi] = useState(0)
   const [busy, setBusy] = useState(false)
   const [extra, setExtra] = useState<string[]>([])
 
   useLayoutEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (keyboardActive) {
+      inputRef.current?.focus()
+    }
+  }, [keyboardActive])
 
   useLayoutEffect(() => {
     document.getElementById(`${ROW_ID_PREFIX}-${hi}`)?.scrollIntoView({ block: "nearest" })
@@ -87,6 +103,9 @@ export function DomListPromptPanel({
   }, [busy, onApprove, onPermissionGranted])
 
   useEffect(() => {
+    if (!keyboardActive) {
+      return
+    }
     const onWin = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") {
         ev.preventDefault()
@@ -95,10 +114,13 @@ export function DomListPromptPanel({
     }
     window.addEventListener("keydown", onWin, true)
     return () => window.removeEventListener("keydown", onWin, true)
-  }, [onDecline])
+  }, [keyboardActive, onDecline])
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (!keyboardActive) {
+        return
+      }
       if (e.nativeEvent.isComposing) {
         return
       }
@@ -123,7 +145,7 @@ export function DomListPromptPanel({
         return
       }
     },
-    [approve, message.length, onDecline]
+    [keyboardActive, approve, message.length, onDecline]
   )
 
   const allLines = [...message, ...(extra.length > 0 ? ["", ...extra] : [])]
@@ -136,7 +158,7 @@ export function DomListPromptPanel({
       }}>
       <div className="bmxt-tab-picker-head">{HEADLINE}</div>
       <textarea
-        ref={inputRef}
+        ref={setInputEl}
         className="bmxt-tab-picker-filter-ime"
         rows={1}
         readOnly

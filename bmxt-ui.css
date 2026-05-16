@@ -327,8 +327,8 @@ body {
   color: #79c0ff;
 }
 
-/* tabs ピッカー — 拡張ウィンドウ内で右半分（左にターミナルログ＋プロンプト） */
-.bmxt-tab-terminal-split {
+/* 各種ピッカー（tabs / find / dom）— ターミナル左・ピッカー列を右へ */
+.bmxt-terminal-split {
   display: flex;
   flex: 1 1 0;
   flex-direction: row;
@@ -337,8 +337,9 @@ body {
   overflow: hidden;
 }
 
-.bmxt-tab-picker-host--split-right {
-  flex: 1 1 50%;
+.bmxt-split-terminal-pane,
+.bmxt-picker-host--split {
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -346,18 +347,17 @@ body {
   overflow: hidden;
   box-sizing: border-box;
   background: #0d1117;
+}
+
+.bmxt-picker-host--split {
   border-left: 1px solid #30363d;
 }
 
-.bmxt-tab-split-terminal-pane {
-  flex: 1 1 50%;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-sizing: border-box;
-  background: #0d1117;
+.bmxt-split-pane--focused {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid #58a6ff;
+  outline-offset: -3px;
 }
 
 /* Tab picker (tmux-style) */

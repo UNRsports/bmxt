@@ -1,6 +1,7 @@
 import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useRef } from "react"
+import { tryNavigatePaneStrip } from "../bmxt-window/pane-focus-nav"
 import { logBmxtKey } from "../debug/key-log"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
 import type { ExecutionIntent } from "./controller/execute-actions"
@@ -102,13 +103,14 @@ export function useTabPickerKeyboard({
   setNewTabUrlWindowId,
   setNewTabUrl,
   closeSearch,
-  onExit,
+  onReturnToPrompt,
   commandMode,
   commandBuffer,
   setCommandMode,
   setCommandBuffer,
   setCommandListingHint,
   isHostPaneFocused,
+  sessionId,
   editPanel,
   editPanelRef,
   openEditFromPicker,
@@ -163,13 +165,14 @@ export function useTabPickerKeyboard({
   setNewTabUrlWindowId: Dispatch<SetStateAction<number | null>>
   setNewTabUrl: Dispatch<SetStateAction<string>>
   closeSearch: () => void
-  onExit: () => void
+  onReturnToPrompt: () => void
   commandMode: boolean
   commandBuffer: string
   setCommandMode: Dispatch<SetStateAction<boolean>>
   setCommandBuffer: Dispatch<SetStateAction<string>>
   setCommandListingHint: Dispatch<SetStateAction<boolean>>
   isHostPaneFocused: boolean
+  sessionId: string
   editPanel: EditPanel | null
   editPanelRef: RefObject<HTMLDivElement | null>
   openEditFromPicker: () => void | Promise<void>
@@ -811,6 +814,19 @@ export function useTabPickerKeyboard({
       if (!isHostPaneFocused) {
         return
       }
+      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.shiftKey) {
+        const horiz =
+          ev.key === "ArrowLeft" || ev.code === "ArrowLeft"
+            ? "left"
+            : ev.key === "ArrowRight" || ev.code === "ArrowRight"
+              ? "right"
+              : null
+        if (horiz && tryNavigatePaneStrip(sessionId, horiz)) {
+          ev.preventDefault()
+          ev.stopImmediatePropagation()
+          return
+        }
+      }
       if (runPickerVerticalNav(ev)) {
         logBmxtKey("picker", "handled", {
           handler: "verticalNav",
@@ -836,6 +852,7 @@ export function useTabPickerKeyboard({
     },
     [
       isHostPaneFocused,
+      sessionId,
       runPickerCommandEnter,
       runPickerEnterKey,
       runPickerSearchJump,
@@ -910,7 +927,7 @@ export function useTabPickerKeyboard({
           setBulkSubMode(null)
           return
         }
-        onExit()
+        onReturnToPrompt()
         return
       }
 
@@ -1044,7 +1061,7 @@ export function useTabPickerKeyboard({
       markedCount,
       markedTabIds,
       newTabUrlWindowId,
-      onExit,
+      onReturnToPrompt,
       runPickerEnterKey,
       runPickerSearchJump,
       runPickerVerticalNav,

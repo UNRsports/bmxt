@@ -4,6 +4,7 @@ import { type FindListPickerState } from "../find/find-list-picker-input"
 import { type DomListPickerState } from "../dom/dom-list-picker-input"
 import { type TabPickerState, BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
+import { paneStripAtHorizontalEdge } from "./pane-focus-nav"
 import type { SplitNode } from "./split-layout/types"
 import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
 import { appendLinesToSession } from "./terminal-sessions/state-storage"
@@ -72,6 +73,9 @@ function SplitTreeView({
     const tabPicker = pickerBySession[node.id] ?? null
     const findListPicker = findListBySession[node.id] ?? null
     const domListPicker = domListBySession[node.id] ?? null
+    const hasColumnPickers =
+      tabPicker !== null || findListPicker !== null || domListPicker !== null
+    const leafHasKeyboardFocus = focusedLeafId === node.id
     return (
       <div
         data-bmxt-session-id={node.id}
@@ -86,8 +90,11 @@ function SplitTreeView({
           flexDirection: "column",
           overflow: "hidden",
           boxSizing: "border-box",
-          outline: focusedLeafId === node.id ? "1px solid #58a6ff" : "1px solid transparent",
-          outlineOffset: -1
+          outline:
+            leafHasKeyboardFocus && !hasColumnPickers
+              ? "3px solid #58a6ff"
+              : undefined,
+          outlineOffset: leafHasKeyboardFocus && !hasColumnPickers ? -3 : undefined
         }}>
         <BmxtShell
           sessionId={node.id}
@@ -341,7 +348,7 @@ export function BmxtTerminal() {
   useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
 
   useEffect(() => {
-    if (!state || countLeaves(state.layout.root) <= 1) {
+    if (!state) {
       return
     }
     const onKey = (e: KeyboardEvent) => {
@@ -365,9 +372,17 @@ export function BmxtTerminal() {
       const fromId =
         (rootRef.current && leafIdFromKeyEventTarget(rootRef.current, e.target)) ??
         state.layout.focusedLeafId
+      const horiz = dir === "left" || dir === "right" ? dir : null
+      if (horiz && !paneStripAtHorizontalEdge(fromId, horiz)) {
+        return
+      }
+      if (countLeaves(state.layout.root) <= 1) {
+        return
+      }
       const next = adjacentLeafByRect(state.layout.root, fromId, dir)
       if (next) {
         e.preventDefault()
+        e.stopPropagation()
         void setFocusedLeaf(next)
       }
     }

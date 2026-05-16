@@ -4,8 +4,10 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode
 } from "react"
+import { tryNavigatePaneStrip } from "./pane-focus-nav"
 import {
   computePlainPickerWindow,
   PLAIN_PICKER_ROW_HEIGHT_FALLBACK,
@@ -19,6 +21,11 @@ export type PlainTextPickerBodyProps = {
   /** EN: Each string is one logical row (same row chrome as tab rows). */
   lines: string[]
   onExit: () => void
+  /** EN: When false, display-only (no key capture / autofocus). */
+  keyboardActive?: boolean
+  /** EN: Optional sink for the hidden IME textarea (pane focus navigation). */
+  pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
+  sessionId?: string
 }
 
 const ROW_ID_PREFIX = "bmxt-plain-row"
@@ -54,8 +61,24 @@ function PlainTextPickerRow({
  * EN: Read-only list using the same DOM/CSS as `TabPickerOverlay` (shared chrome with tabs mode).
  * JA: `TabPickerOverlay` と同一の `bmxt-tab-picker` 系クラスで読み取り専用リストを出す（tabs と共有）。
  */
-export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPickerBodyProps) {
+export function PlainTextPickerBody({
+  headline,
+  lines,
+  onExit,
+  keyboardActive = false,
+  pickerInputRef,
+  sessionId
+}: PlainTextPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const setInputEl = useCallback(
+    (el: HTMLTextAreaElement | null) => {
+      inputRef.current = el
+      if (pickerInputRef) {
+        pickerInputRef.current = el
+      }
+    },
+    [pickerInputRef]
+  )
   const listRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
   const [hi, setHi] = useState(0)
@@ -144,11 +167,29 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
   }, [useVirtual, syncWindowFromScroll, effectiveRowHeight, lines.length])
 
   useLayoutEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (keyboardActive) {
+      inputRef.current?.focus()
+    }
+  }, [keyboardActive])
 
   useEffect(() => {
+    if (!keyboardActive) {
+      return
+    }
     const onWin = (ev: KeyboardEvent) => {
+      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.shiftKey && sessionId) {
+        const horiz =
+          ev.key === "ArrowLeft" || ev.code === "ArrowLeft"
+            ? "left"
+            : ev.key === "ArrowRight" || ev.code === "ArrowRight"
+              ? "right"
+              : null
+        if (horiz && tryNavigatePaneStrip(sessionId, horiz)) {
+          ev.preventDefault()
+          ev.stopImmediatePropagation()
+          return
+        }
+      }
       if (ev.key === "Escape") {
         ev.preventDefault()
         onExit()
@@ -156,7 +197,7 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
     }
     window.addEventListener("keydown", onWin, true)
     return () => window.removeEventListener("keydown", onWin, true)
-  }, [onExit])
+  }, [keyboardActive, onExit, sessionId])
 
   const onListScroll = useCallback(() => {
     syncWindowFromScroll()
@@ -164,6 +205,9 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (!keyboardActive) {
+        return
+      }
       if (e.nativeEvent.isComposing) {
         return
       }
@@ -186,18 +230,21 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
         setHi((h) => Math.max(h - 1, 0))
       }
     },
-    [lines.length, onExit]
+    [keyboardActive, lines.length, onExit]
   )
 
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
   const refocusIfNoSelection = useCallback(() => {
+    if (!keyboardActive) {
+      return
+    }
     const sel = window.getSelection()
     if (!sel || sel.toString().length === 0) {
       inputRef.current?.focus()
     }
-  }, [])
+  }, [keyboardActive])
 
   const renderRows = (start: number, end: number) => {
     const slice: ReactNode[] = []
@@ -215,6 +262,9 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
     <div
       className="bmxt-tab-picker"
       onMouseDown={(e) => {
+        if (!keyboardActive) {
+          return
+        }
         const t = e.target as HTMLElement | null
         if (t && t.closest(".bmxt-plain-picker-row-text")) {
           return
@@ -224,7 +274,7 @@ export function PlainTextPickerBody({ headline, lines, onExit }: PlainTextPicker
       onMouseUp={refocusIfNoSelection}>
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
-        ref={inputRef}
+        ref={setInputEl}
         className="bmxt-tab-picker-filter-ime"
         rows={1}
         readOnly
