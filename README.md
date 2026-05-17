@@ -209,8 +209,31 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 - Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / find / dom** picker column **suspends** nav keys until you return focus to the prompt.
 - Each **Alt** press toggles overlay **ON** or **OFF**.
-- **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **↑ / ↓ / ← / →** move the virtual cursor (default **12px** per step; configurable later in `lib/features/nav/nav-config.ts`). **Enter** performs a **left-click** on the element under the cursor.
+- **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **↑ / ↓ / ← / →** move the virtual cursor (default **12px** per step; configurable later in `lib/features/nav/nav-config.ts`). **Enter** performs a **left-click** on the element under the cursor, or enters **typing mode** when the target is an editable field (see below).
 - **OFF:** removes the overlay from the current tab; nav stays **armed** until **`nav -exit`**.
+
+**Overlay keys (ON, terminal prompt focused)**
+
+| Key | Effect |
+|-----|--------|
+| **↑ / ↓ / ← / →** | Move virtual cursor (viewport auto-scrolls near edges) |
+| **Enter** | Left-click at cursor; on **input**, **textarea**, or **contenteditable**, open **typing mode** instead (type on the BMXt command line) |
+| **Ctrl** (tap) | Open the on-page **context menu** at the cursor |
+| **Alt** (tap) | Toggle overlay **OFF** (ignored while **typing mode** is active) |
+
+**Context menu** (**Ctrl**): **↑ / ↓** choose a row, **Enter** run, **← / →** browser **back** / **forward**, **Ctrl** or **Esc** close without running.
+
+| Item | Action |
+|------|--------|
+| Select text | Range pick: **↑ / ↓** move, **Enter** set **start**, move again, **Enter** set **end**; selection is applied and a **Copy** row appears |
+| Save image under cursor | Download the image at the pointer (http(s) URL) |
+| Reload page | Reload the target tab |
+
+After text selection, **Copy** + **Enter** writes the selection to the system clipboard. **Esc** clears the selection (and closes the copy menu when open).
+
+**Typing mode** (after **Enter** on an editable field): the BMXt prompt shows a typing hint; text is mirrored into the page field. **Alt** **hold** (~500ms) **commits**; **Esc** **hold** **cancels** and restores the previous value. Multiline fields allow newlines (**Shift+Enter** on the prompt). Short **Alt** does not toggle the overlay while typing.
+
+The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **typing**, **menu**, **sel-start** / **sel-end**, **copy**, plus the target tab title or a short error.
 
 **Tab changes while armed**
 
@@ -294,6 +317,7 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 - **`:`** then **`nohlsearch`** — clear filter and search highlight.
 - **`n`** / **`N`** — jump among matches (same rules as the tab picker search highlight).
 - **`Ctrl+Left` / `Ctrl+Right`** — move along the pane strip (see above).
+- **dom only:** **`↑` / `↓`** (or **`j` / `k`**) move focus among **jumpable** element rows; the **target tab scrolls** to the highlighted node (debounced). Header/metadata lines without a DOM path are skipped.
 
 **Common picker keys (authoritative)**
 
@@ -483,9 +507,11 @@ Applies when the prompt `textarea` is focused.
 
 **While nav is armed** (`nav -enter`):
 
-- **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (BMXt window active; terminal prompt column focused).
+- **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (BMXt window active; terminal prompt column focused). Short **Alt** is ignored during **typing mode**; **Alt hold** (~500ms) commits typed text instead.
 - **↑ / ↓ / ← / →** — When overlay is **ON**, move the virtual cursor (not command history). When a **tabs / find / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
-- **Enter** — When overlay is **ON**, left-click at the virtual cursor on the page.
+- **Enter** — When overlay is **ON**, left-click at the virtual cursor, or enter **typing mode** on editable fields.
+- **Ctrl** (tap, overlay **ON**) — Open the nav **context menu** at the cursor (**↑ / ↓** choose, **Enter** run, **← / →** history, **Ctrl** / **Esc** close). See **[Nav mode](#nav-mode)**.
+- **Esc hold** (~500ms, **typing mode**) — Cancel typing and restore the previous field value.
 
 During IME composition, composition events are prioritized to avoid conflicts with shortcuts until commit.
 
@@ -804,8 +830,31 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 - **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / find / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
 - **Alt** のたびにオーバーレイを **ON** / **OFF** 切替。
-- **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。**↑ / ↓ / ← / →** で仮想カーソルを移動（既定 **12px**／ステップ。`lib/features/nav/nav-config.ts` で将来調整可）。**Enter** でカーソル下の要素を **左クリック**相当。
+- **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。**↑ / ↓ / ← / →** で仮想カーソルを移動（既定 **12px**／ステップ。`lib/features/nav/nav-config.ts` で将来調整可）。**Enter** でカーソル下を **左クリック**相当、または編集可能要素なら **typing モード**へ（下記）。
 - **OFF:** 当該タブのオーバーレイを除去。nav は **armed** のまま **`nav -exit`** まで継続。
+
+**オーバーレイ ON 時のキー（ターミナル列・プロンプトにフォーカス）**
+
+| キー | 動作 |
+|------|------|
+| **↑ / ↓ / ← / →** | 仮想カーソル移動（端付近でビューポート自動スクロール） |
+| **Enter** | カーソル位置で左クリック相当。**input** / **textarea** / **contenteditable** では **typing モード**（BMXt コマンドラインから入力） |
+| **Ctrl**（タップ） | カーソル位置に **コンテキストメニュー**を表示 |
+| **Alt**（タップ） | オーバーレイ **OFF**（**typing** 中は無視） |
+
+**コンテキストメニュー**（**Ctrl**）: **↑ / ↓** で項目選択、**Enter** で実行、**← / →** でブラウザ **戻る** / **進む**、**Ctrl** または **Esc** で閉じる。
+
+| 項目 | 動作 |
+|------|------|
+| テキスト選択 | **↑ / ↓** で移動、**Enter** で **開始**、再度移動して **Enter** で **終了** → 範囲選択後 **コピー** 行 |
+| カーソル下の画像を保存 | ポインタ下の画像をダウンロード（http(s) URL） |
+| ページを再読み込み | 対象タブを再読み込み |
+
+テキスト選択後は **コピー** + **Enter** でクリップボードへ。**Esc** で選択解除（コピーメニュー表示中も同様）。
+
+**typing モード**（編集可能要素で **Enter** 後）: BMXt プロンプトにヒント表示。入力はページ側フィールドへ反映。**Alt 長押し**（約 500ms）で **確定**、**Esc 長押し**で **取消**（元の値に戻す）。複数行フィールドは **Shift+Enter** で改行可。typing 中の短い **Alt** はオーバーレイ切替にならない。
+
+プロンプト下のステータス帯は **`nav`**・**ON/OFF**・**typing**・**menu**・**sel-start** / **sel-end**・**copy** などと、対象タブ名または短いエラーを表示。
 
 **armed 中のタブ切替**
 
@@ -889,6 +938,7 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 - **`:`** → **`nohlsearch`** — フィルタと検索ハイライトを解除。
 - **`n`** / **`N`** — マッチ行へジャンプ（タブピッカーの検索ハイライトと同系）。
 - **`Ctrl+←` / `Ctrl+→`** — ペイン内の列ストリップ移動（上記フォーカス節）。
+- **dom のみ:** **`↑` / `↓`**（または **`j` / `k`**）で **ジャンプ可能な要素行**にフォーカスを移すと、**対象タブがハイライトノードへスクロール**（debounce）。DOM path のない行はスキップ。
 
 **共通キー（正）**
 
@@ -1081,9 +1131,11 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 
 **nav 起動中**（`nav -enter` 後）:
 
-- **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（BMXt ウィンドウがアクティブで、ターミナル列にフォーカス）。
+- **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（BMXt ウィンドウがアクティブで、ターミナル列にフォーカス）。**typing** 中の短い **Alt** は無視。**Alt 長押し**（約 500ms）は入力確定。
 - **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は仮想カーソル移動（コマンド履歴ではない）。**tabs / find / dom** ピッカー列にフォーカスがあるときはピッカー操作。
-- **Enter** — オーバーレイ **ON** 時、仮想カーソル位置で左クリック相当。
+- **Enter** — オーバーレイ **ON** 時、左クリック相当、または編集可能要素で **typing モード**。
+- **Ctrl**（タップ、オーバーレイ **ON**）— カーソル位置の **コンテキストメニュー**（**↑ / ↓** 選択、**Enter** 実行、**← / →** 履歴、**Ctrl** / **Esc** で閉じる）。詳細は **[Nav モード](#nav-mode-ja)**。
+- **Esc 長押し**（約 500ms、**typing** 中）— 入力取消（フィールドを元に戻す）。
 
 変換中は IME 用の `composition` イベントを優先し、変換確定までショートカットと競合しないようにしています。
 

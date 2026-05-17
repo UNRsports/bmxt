@@ -12,7 +12,9 @@
       "Removed Rust to reduce package size",
       "Added the `:edit` subcommand in tabs mode for editing tab groups and window names",
       "Implemented IME-style input assistance while typing commands",
-      "Moved list pickers for all commands to side columns beside the terminal and revised picker interaction (`Esc` returns to the prompt; close a column with `<cmd> -exit -list`)"
+      "Moved list pickers for all commands to side columns beside the terminal and revised picker interaction (`Esc` returns to the prompt; close a column with `<cmd> -exit -list`)",
+      "DOM list picker: focus rows with ↑/↓ and scroll the target page to the matching element",
+      "Added nav mode: virtual cursor overlay on the active tab (`nav -enter`; Alt toggles ON/OFF; arrows move; Enter click/type; Ctrl context menu for text selection, image save, and reload)"
     ]
   }
 }

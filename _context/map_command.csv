@@ -1,7 +1,7 @@
 第一コマンド,第二コマンド,第三トークン,manifest tail,別名（トップレベル）,usage（参照）,処理概要（実装）,備考
 clear,,,,,clear,Effect: clear_log（ログクリア）,
 close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。,第二トークン相当は可変の tabId（manifest subcommands なし）
-dom,-list,,rest,,dom -list [--html|--react] [<pattern>],第二が -list: BMXt ウィンドウ UI で DOM ピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは dom -exit -list。第三 --html|--react 必須（`dom -list` のみ Enter 時は flavor プルダウン）。,
+dom,-list,,rest,,dom -list [--html|--react] [<pattern>],第二が -list: BMXt ウィンドウ UI で DOM ピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは dom -exit -list。第三 --html|--react 必須（`dom -list` のみ Enter 時は flavor プルダウン）。↑↓/j/k でジャンプ可能行にフォーカスすると対象タブが該当 DOM へスクロール（debounce）。path のない行はスキップ。,
 dom,-list,--html,rest,,（同上）,trailingTokens の一つ。pattern 省略可（空文字）。,
 dom,-list,--react,rest,,（同上）,trailingTokens の一つ。,
 dom,-exit,-list,none,,dom -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session の DOM ピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
@@ -24,8 +24,8 @@ notes,-l,,,,notes -l,Effect: release_notes_list（--list と同効）。,実装�
 notes,<version>,,,,notes <version>,Effect: release_notes_version。単一トークンで先頭 - でないこと。,可変引数は第二列に表記（バージョンキー）
 split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）
 split,-row,,none,,（同上）,Effect: split_row。,（同上）
-nav,-enter,,none,,nav -enter | nav -exit,第二が -enter: BMXt ウィンドウ UI で nav モードを起動（armed）。オーバーレイ表示は Alt で ON/OFF（プロンプト・ターミナル列フォーカス時）。SW の run は案内行のみ。,第二コマンドは -enter / -exit の二択。単独 nav + Enter は continuation（`nav `）と usage。
-nav,-exit,,none,,（同上）,第二が -exit: Alt で OFF のあと当該ペインで nav を完全終了（位置記憶クリア・オーバーレイ除去）。未起動なら案内行。SW の run は案内行のみ。,nav -exit は Alt OFF 必須（navActive 中はエラー）。
+nav,-enter,,none,,nav -enter | nav -exit,第二が -enter: BMXt ウィンドウ UI で nav を armed（直前フォーカス通常ウィンドウのアクティブタブが対象。dom -list と同系のタブ解決・オプション http(s) 権限）。オーバーレイは Alt で ON/OFF（ターミナル列フォーカス時のみ）。ON 後: ↑↓←→ 移動・Enter クリック/typing・Ctrl メニュー（テキスト選択・画像保存・再読込・履歴←→）。タブごと位置記憶。SW run は案内行のみ。,第二は -enter / -exit のみ（短縮なし）。単独 nav + Enter は continuation（`nav `）と usage。nav -exit は Alt OFF 必須。
+nav,-exit,,none,,（同上）,第二が -exit: Alt で OFF のあと当該ペインで nav 完全終了（位置記憶クリア・全タブのオーバーレイ除去）。未 armed なら案内行。SW run は案内行のみ。,navActive（オーバーレイ ON）中の -exit はエラー。ピッカー列フォーカス中は nav キー無効。
 tabs,-list,,none,,tabs -list [-u],第三なし、または第三が -u のみ許可。BMXt ウィンドウ UI でタブピッカー列を開く（同一 sessionId）。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。,-u は trailingTokens（Tab 補完対象）
 tabs,-list,-u,none,,（同上）,（同上）。,
 tabs,-exit,-list,none,,tabs -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session のタブピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
