@@ -1,5 +1,6 @@
 import type { MutableRefObject } from "react"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
+import { FIND_LIST_PICKER_HEADLINE } from "../side-picker/interaction/picker-headlines"
 import { UrlListPickerWrapper } from "../side-picker/wrappers/url-list-picker-wrapper"
 
 type Props = {
@@ -21,7 +22,7 @@ export function FindListPickerOverlay({
 }: Props) {
   return (
     <UrlListPickerWrapper
-      headline="find -list · ↑↓ · j/k · / · :nohlsearch · n/N · Enter open · Ctrl+←→ · Esc → prompt"
+      headline={FIND_LIST_PICKER_HEADLINE}
       entries={entries}
       onReturnToPrompt={onReturnToPrompt}
       onOpenEntry={onOpenEntry}

@@ -252,6 +252,26 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 - **`n`** / **`N`** — jump among matches (same rules as the tab picker search highlight).
 - **`Ctrl+Left` / `Ctrl+Right`** — move along the pane strip (see above).
 
+**Common picker keys (authoritative)**
+
+Headline strings in the UI come from **`lib/features/side-picker/interaction/picker-headlines.ts`** (find/dom) and **`lib/features/bmxt-core/tabs-picker/headline.ts`** (tabs, mode-dependent). Keep this table aligned when changing shortcuts.
+
+| Key / gesture | find / dom lines | Tab picker (`tabs -list`) |
+|---------------|------------------|---------------------------|
+| `j` / `k`, `↑` / `↓` | Move highlight | Move highlight (reducer `moveHi`) |
+| `/` | Search mode; `@` prefix matches URL substring | Same; filters visible rows |
+| `Enter` in `/` mode | End search (commit highlight pattern) | End search |
+| `Enter` in normal mode | find: open URL in new tab | Focus highlighted tab (picker stays open) |
+| `:` → `nohlsearch` | Clear filter + highlight | Clear search highlight |
+| `n` / `N` | Next / previous match row | Next / previous match row |
+| `Ctrl+←` / `Ctrl+→` | Pane strip (terminal ↔ open columns) | Same |
+| `Esc` | Prompt (column stays open) | Unwind `#` → `:` → `/` → bulk → prompt |
+| `#` / `Tab` | — | Toggle mark / multi-select |
+| `:` + bulk commands | — | `move`, `close`, `group`, `nw`, `nt`, `edit` (see [Tab Picker](#tabs-tab-picker)) |
+| `Shift+↑` / `Shift+↓` | — | Extend `#` range on tab rows |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Preview active tab in browser |
+| Close column | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
+
 <a id="tabs-man-tabs"></a>
 
 ### `tabs` (subcommands)
@@ -762,6 +782,26 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 - **`:`** → **`nohlsearch`** — フィルタと検索ハイライトを解除。
 - **`n`** / **`N`** — マッチ行へジャンプ（タブピッカーの検索ハイライトと同系）。
 - **`Ctrl+←` / `Ctrl+→`** — ペイン内の列ストリップ移動（上記フォーカス節）。
+
+**共通キー（正）**
+
+UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headlines.ts`**（find/dom）と **`lib/features/bmxt-core/tabs-picker/headline.ts`**（tabs・モード別）。ショートカットを変えたらこの表も更新する。
+
+| キー / 操作 | find / dom 行一覧 | タブピッカー（`tabs -list`） |
+|-------------|-------------------|------------------------------|
+| `j` / `k`, `↑` / `↓` | ハイライト移動 | ハイライト移動（`moveHi`） |
+| `/` | 検索モード（`@` で URL 部分一致） | 同左（可視行を絞る） |
+| `/` 中の `Enter` | 検索終了（ハイライト確定） | 検索終了 |
+| 通常時の `Enter` | find: 新規タブで URL を開く | ハイライトタブをアクティブ化（列は開いたまま） |
+| `:` → `nohlsearch` | フィルタ・ハイライト解除 | 検索ハイライト解除 |
+| `n` / `N` | 次／前のマッチ行 | 次／前のマッチ行 |
+| `Ctrl+←` / `Ctrl+→` | 列ストリップ（ターミナル ↔ 開列） | 同左 |
+| `Esc` | プロンプトへ（列は閉じない） | `#` → `:` → `/` → バルク → プロンプト |
+| `#` / `Tab` | — | マーク付け／複数選択 |
+| `:` + バルク | — | `move`, `close`, `group`, `nw`, `nt`, `edit`（[タブピッカー](#tabs-tab-picker-ja)） |
+| `Shift+↑` / `Shift+↓` | — | タブ行の `#` 範囲拡張 |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ブラウザ側アクティブタブのプレビュー |
+| 列を閉じる | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
 ### `dom`
 

@@ -1,3 +1,18 @@
+export {
+  FIND_LIST_PICKER_HEADLINE,
+  DOM_LIST_PICKER_HEADLINE
+} from "./interaction/picker-headlines"
+export {
+  verticalNavDirection,
+  isPhysicalArrowDown,
+  isPhysicalArrowUp,
+  isReservedSplitPaneVerticalNav
+} from "./interaction/picker-vertical-nav"
+export {
+  URL_LIST_PICKER_COMMANDS,
+  filterUrlListCommandCompletions,
+  URL_LIST_COMMAND_LISTING_HINT
+} from "./interaction/url-list-commands"
 export { useWindowKeydownCapture } from "./hooks/use-window-keydown-capture"
 export { PickerSearchFooter, TabPickerSearchFooter } from "./chrome/picker-search-footer"
 export { PickerCommandFooter, TabPickerCommandFooter } from "./chrome/picker-command-footer"

@@ -14,6 +14,7 @@ import {
   filterUrlListCommandCompletions,
   URL_LIST_COMMAND_LISTING_HINT
 } from "../interaction/url-list-commands"
+import { verticalNavDirection } from "../interaction/picker-vertical-nav"
 import { tryNavigatePaneStrip } from "../panel/pane-focus-nav"
 import {
   plainPickerHiIndicesMatching,
@@ -241,13 +242,14 @@ export function PlainTextPickerBody({
       if (n === 0) {
         return false
       }
-      if (e.key === "j" || e.key === "ArrowDown") {
+      const dir = verticalNavDirection(e)
+      if (dir === "down") {
         e.preventDefault()
         e.stopPropagation()
         setHi((h) => Math.min(h + 1, n - 1))
         return true
       }
-      if (e.key === "k" || e.key === "ArrowUp") {
+      if (dir === "up") {
         e.preventDefault()
         e.stopPropagation()
         setHi((h) => Math.max(h - 1, 0))

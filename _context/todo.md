@@ -18,17 +18,18 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 - tabs の実行計画・reducer: `lib/features/bmxt-core/tabs-picker/*`（UI とは分離）
 - プロンプト付近の**第二コマンドピッカー**（`TokenPickerPanel` 等）: サイド列ピッカーと**別系統**（混ぜない）
 
-### 1.3 現状の整理（2025 時点）
+### 1.3 現状の整理（リファク後）
 
 | 層 | 現状 |
 |----|------|
-| シェル | `bmxt-shell.tsx` — ターミナル \| tabs \| find \| dom の横並び、`pane-focus-nav.ts` |
-| find / dom 一覧 | `PlainTextPickerBody`（`bmxt-window`）— `/`・`n/N` のみ、**`:`・`#` なし** |
-| tabs | `TabPickerOverlay` + `use-tab-picker-keyboard` — フル仕様 |
-| 逆依存 | `plain-text-picker-body` → `tabs/tab-picker-panels`, `tabs/use-window-keydown-capture`, `tabs/picker-rows` |
-| find 状態 | `{ lines: string[] }`（表示用文字列） |
-| dom 状態 | `DomListPickerState` = `lines` \| `prompt`（`dom-list-picker-overlay` で分岐） |
-| 列追加コスト | `PaneFocusTarget` union、`bmxt-terminal` の session map が**ピッカー種別ごとに増殖** |
+| シェル | `bmxt-shell.tsx` + `SessionPickerColumns` — `sessionPickers` / `openPickerSlots` |
+| ②③ 共有 | `lib/features/side-picker/` — `PickerPanelHost`, `pane-focus-nav`, ラッパー, `PlainTextPickerBody` |
+| find | `{ entries: PickerEntry[] }` → `UrlListPickerWrapper` / `FindListPickerOverlay` |
+| dom | `DomPickerWrapper` — `lines` \| `prompt`（`dom-prompt-render.tsx`） |
+| tabs | `TabsPickerWrapper` → `TabPickerOverlay` + `use-tab-picker-keyboard`（bulk/edit は tabs + `bmxt-core/tabs-picker`） |
+| 逆依存 | 解消（`side-picker` は tabs の row 型・`TabPickerOverlay` のみ参照） |
+| 列フォーカス | `PaneFocusTarget` = `terminal` \| `PickerSlotId`；`focusPicker(slot)` |
+| キー表・headline | `side-picker/interaction/picker-headlines.ts` + README Picker UI 節 |
 
 ---
 
@@ -138,7 +139,7 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 
 - [x] 依存グラフを書く（`bmxt-window` ↔ `tabs` 逆依存を明示）— `_context/todo.md` 現状整理
 - [x] 移動対象を A〜D + ラッパー系統に分類
-- [ ] 共通必須キー一覧を README 用に固定（tabs headline / README Picker UI 節と整合）
+- [x] 共通必須キー一覧を README 用に固定（`picker-headlines.ts` + README キー表）
 - [x] find に載せる最小 `:` コマンド（`nohlsearch`）
 
 ### フェーズ 1 — interaction kernel 抽出（tabs 回帰が基準）
@@ -147,7 +148,8 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 - [x] `use-window-keydown-capture` を `tabs` → `side-picker/hooks/`
 - [x] `TabPickerSearchFooter` / `TabPickerCommandFooter` → `side-picker/chrome/`
 - [x] `parseTabPickerSearchNeedle` / `splitTextHighlightSegments` → `side-picker/search/`
-- [ ] `use-tab-picker-keyboard` から tabs 非依存部分を `side-picker/interaction/` に抽出（`PlainTextPickerBody` に URL リスト用キー操作を集約済み）
+- [x] 縦ナビ（`verticalNavDirection` 等）を `side-picker/interaction/picker-vertical-nav.ts` に抽出
+- [ ] `use-tab-picker-keyboard` の残りを `side-picker/interaction/` へ（大規模・任意）
 - [ ] `TabPickerOverlay` は kernel を呼ぶだけに（挙動不変・`TabsPickerWrapper` 経由）
 - [x] 検証: `npx tsc --noEmit`
 
@@ -155,7 +157,7 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 
 - [x] `PickerPanelHost` 抽出（`bmxt-shell`）
 - [x] `DomPickerWrapper` — `dom-list-picker-overlay` は re-export
-- [ ] `DomListPromptPanel` → `dom-prompt-render`（④）— 未分割、dom feature に残置
+- [x] `DomListPromptPanel` → `dom-prompt-render.tsx`（④、`dom` feature に配置）
 - [x] dom 列は ② 経由で描画
 - [ ] 検証: 手動 `dom -list`
 
@@ -224,6 +226,8 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 
 | 用途 | パス |
 |------|------|
+| キー表・headline 定数 | `lib/features/side-picker/interaction/picker-headlines.ts` |
+| 縦ナビ共有 | `lib/features/side-picker/interaction/picker-vertical-nav.ts` |
 | Shell 配置 | `lib/features/bmxt-window/bmxt-shell.tsx` |
 | Session 状態 | `lib/features/bmxt-window/bmxt-terminal.tsx` |
 | ペインストリップ | `lib/features/side-picker/panel/pane-focus-nav.ts` |

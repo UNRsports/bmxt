@@ -1,6 +1,7 @@
 import type { MutableRefObject } from "react"
 import { DomPromptRender } from "../../dom/dom-prompt-render"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
+import { DOM_LIST_PICKER_HEADLINE } from "../interaction/picker-headlines"
 import { PlainTextPickerBody } from "../plain/plain-text-picker-body"
 
 export type DomPickerWrapperProps = {
@@ -34,7 +35,7 @@ export function DomPickerWrapper({
   }
   return (
     <PlainTextPickerBody
-      headline="dom -list · ↑↓ · j/k · / · :nohlsearch · n/N · Ctrl+←→ · Esc → prompt"
+      headline={DOM_LIST_PICKER_HEADLINE}
       lines={state.lines}
       onReturnToPrompt={onReturnToPrompt}
       enableCommandMode
