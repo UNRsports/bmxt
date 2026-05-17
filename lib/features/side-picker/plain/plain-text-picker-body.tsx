@@ -9,17 +9,9 @@ import {
 } from "react"
 import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
-import { useWindowKeydownCapture } from "../hooks/use-window-keydown-capture"
-import {
-  filterUrlListCommandCompletions,
-  URL_LIST_COMMAND_LISTING_HINT
-} from "../interaction/url-list-commands"
-import { verticalNavDirection } from "../interaction/picker-vertical-nav"
-import { tryNavigatePaneStrip } from "../panel/pane-focus-nav"
-import {
-  plainPickerHiIndicesMatching,
-  plainPickerLineHighlightSegments
-} from "../search/plain-picker-search"
+import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"
+import { URL_LIST_COMMAND_LISTING_HINT } from "../interaction/url-list-commands"
+import { plainPickerLineHighlightSegments } from "../search/plain-picker-search"
 import {
   computePlainPickerWindow,
   PLAIN_PICKER_ROW_HEIGHT_FALLBACK,
@@ -120,20 +112,10 @@ export function PlainTextPickerBody({
   const [commandMode, setCommandMode] = useState(false)
   const [commandBuffer, setCommandBuffer] = useState("")
   const [commandListingHint, setCommandListingHint] = useState(false)
-  const commandCompletionRef = useRef<{
-    base: string
-    completions: string[]
-    idx: number
-  } | null>(null)
   const [rowHeight, setRowHeight] = useState<number | null>(null)
   const [windowRange, setWindowRange] = useState({ start: 0, end: 0 })
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
-
-  const closeSearch = useCallback(() => {
-    setSearchMode(false)
-    setFilterQuery("")
-  }, [])
 
   const useVirtual = lines.length >= PLAIN_PICKER_VIRTUALIZE_MIN
   const effectiveRowHeight = rowHeight ?? PLAIN_PICKER_ROW_HEIGHT_FALLBACK
@@ -161,7 +143,6 @@ export function PlainTextPickerBody({
     setCommandMode(false)
     setCommandBuffer("")
     setCommandListingHint(false)
-    commandCompletionRef.current = null
     if (listRef.current) {
       listRef.current.scrollTop = 0
     }
@@ -229,322 +210,32 @@ export function PlainTextPickerBody({
     }
   }, [keyboardActive])
 
-  const runPickerVerticalNav = useCallback(
-    (e: KeyboardEvent): boolean => {
-      if (!keyboardActive) {
-        return false
-      }
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing || e.ctrlKey || e.metaKey || e.altKey) {
-        return false
-      }
-      const n = lines.length
-      if (n === 0) {
-        return false
-      }
-      const dir = verticalNavDirection(e)
-      if (dir === "down") {
-        e.preventDefault()
-        e.stopPropagation()
-        setHi((h) => Math.min(h + 1, n - 1))
-        return true
-      }
-      if (dir === "up") {
-        e.preventDefault()
-        e.stopPropagation()
-        setHi((h) => Math.max(h - 1, 0))
-        return true
-      }
-      return false
-    },
-    [keyboardActive, lines.length]
-  )
-
-  const runPickerCommandEnter = useCallback(
-    (e: KeyboardEvent): boolean => {
-      if (!keyboardActive || !enableCommandMode || !commandMode) {
-        return false
-      }
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
-        return false
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      if (commandBuffer.trim().toLowerCase() === "nohlsearch") {
-        setHlSearchPattern("")
-        setSearchMode(false)
-        setFilterQuery("")
-      }
-      commandCompletionRef.current = null
-      setCommandMode(false)
-      setCommandBuffer("")
-      setCommandListingHint(false)
-      return true
-    },
-    [commandBuffer, commandMode, enableCommandMode, keyboardActive]
-  )
-
-  const runPickerNormalEnter = useCallback(
-    (e: KeyboardEvent): boolean => {
-      if (!keyboardActive || searchMode || commandMode) {
-        return false
-      }
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
-        return false
-      }
-      if (!onConfirmLineIndex || lines.length === 0) {
-        return false
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      onConfirmLineIndex(hi)
-      return true
-    },
-    [commandMode, hi, keyboardActive, lines.length, onConfirmLineIndex, searchMode]
-  )
-
-  const runPickerSearchJump = useCallback(
-    (e: KeyboardEvent): boolean => {
-      if (!keyboardActive || searchMode || commandMode) {
-        return false
-      }
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing || e.ctrlKey || e.metaKey || e.altKey) {
-        return false
-      }
-      if (hlSearchPattern === "") {
-        return false
-      }
-      let forward: boolean
-      if (e.key === "n" && !e.shiftKey) {
-        forward = true
-      } else if (e.key === "N" && e.shiftKey) {
-        forward = false
-      } else {
-        return false
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      const matches = plainPickerHiIndicesMatching(lines, hlSearchPattern)
-      if (matches.length === 0) {
-        return true
-      }
-      let target: number
-      if (forward) {
-        const nextAhead = matches.find((i) => i > hi)
-        target = nextAhead ?? matches[0]!
-      } else {
-        let prevBehind: number | undefined
-        for (const i of matches) {
-          if (i < hi) {
-            prevBehind = i
-          } else {
-            break
-          }
-        }
-        target = prevBehind ?? matches[matches.length - 1]!
-      }
-      if (target !== hi) {
-        setHi(target)
-      }
-      return true
-    },
-    [hi, hlSearchPattern, keyboardActive, lines, searchMode]
-  )
-
-  const runPickerSearchEnter = useCallback(
-    (e: KeyboardEvent): boolean => {
-      if (!keyboardActive || !searchMode) {
-        return false
-      }
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
-        return false
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      setHlSearchPattern(filterQuery)
-      setSearchMode(false)
-      setFilterQuery("")
-      return true
-    },
-    [filterQuery, keyboardActive, searchMode]
-  )
-
-  const onWindowKeydownCapture = useCallback(
-    (ev: KeyboardEvent) => {
-      if (!keyboardActive) {
-        return
-      }
-      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.shiftKey && sessionId) {
-        const horiz =
-          ev.key === "ArrowLeft" || ev.code === "ArrowLeft"
-            ? "left"
-            : ev.key === "ArrowRight" || ev.code === "ArrowRight"
-              ? "right"
-              : null
-        if (horiz && tryNavigatePaneStrip(sessionId, horiz)) {
-          ev.preventDefault()
-          ev.stopImmediatePropagation()
-          return
-        }
-      }
-      if (runPickerVerticalNav(ev)) {
-        return
-      }
-      if (runPickerSearchJump(ev)) {
-        return
-      }
-      if (runPickerSearchEnter(ev)) {
-        return
-      }
-      if (runPickerCommandEnter(ev)) {
-        return
-      }
-      if (runPickerNormalEnter(ev)) {
-        return
-      }
-      if (ev.key === "Escape") {
-        ev.preventDefault()
-        ev.stopPropagation()
-        if (commandMode) {
-          commandCompletionRef.current = null
-          setCommandMode(false)
-          setCommandBuffer("")
-          setCommandListingHint(false)
-          return
-        }
-        if (searchMode) {
-          closeSearch()
-          return
-        }
-        onReturnToPrompt()
-      }
-    },
-    [
-      closeSearch,
-      commandMode,
-      keyboardActive,
-      onReturnToPrompt,
-      runPickerCommandEnter,
-      runPickerNormalEnter,
-      runPickerSearchEnter,
-      runPickerSearchJump,
-      runPickerVerticalNav,
-      searchMode,
-      sessionId
-    ]
-  )
-
-  useWindowKeydownCapture(onWindowKeydownCapture)
+  const { onInputKeyDown } = usePlainPickerKeyboard({
+    lineCount: lines.length,
+    keyboardActive,
+    sessionId,
+    enableCommandMode,
+    onReturnToPrompt,
+    onConfirmLineIndex,
+    hi,
+    setHi,
+    searchMode,
+    setSearchMode,
+    filterQuery,
+    setFilterQuery,
+    hlSearchPattern,
+    setHlSearchPattern,
+    commandMode,
+    setCommandMode,
+    commandBuffer,
+    setCommandBuffer,
+    setCommandListingHint,
+    matchLines: lines
+  })
 
   const onListScroll = useCallback(() => {
     syncWindowFromScroll()
   }, [syncWindowFromScroll])
-
-  const onInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (!keyboardActive) {
-        return
-      }
-      if (e.nativeEvent.isComposing) {
-        return
-      }
-      if (runPickerVerticalNav(e.nativeEvent)) {
-        return
-      }
-      if (runPickerSearchJump(e.nativeEvent)) {
-        return
-      }
-      if (runPickerSearchEnter(e.nativeEvent)) {
-        return
-      }
-      if (runPickerCommandEnter(e.nativeEvent)) {
-        return
-      }
-      if (runPickerNormalEnter(e.nativeEvent)) {
-        return
-      }
-      if (e.key === "Escape") {
-        e.preventDefault()
-        if (commandMode) {
-          commandCompletionRef.current = null
-          setCommandMode(false)
-          setCommandBuffer("")
-          setCommandListingHint(false)
-          return
-        }
-        if (searchMode) {
-          closeSearch()
-          return
-        }
-        onReturnToPrompt()
-        return
-      }
-      if (
-        enableCommandMode &&
-        e.key === ":" &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey &&
-        !searchMode &&
-        !commandMode
-      ) {
-        e.preventDefault()
-        setCommandMode(true)
-        setCommandBuffer("")
-        setCommandListingHint(false)
-        return
-      }
-      if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !commandMode) {
-        e.preventDefault()
-        if (!searchMode) {
-          setSearchMode(true)
-        }
-        return
-      }
-      if (commandMode && e.key === "Tab") {
-        e.preventDefault()
-        if (commandBuffer.trim() === "") {
-          setCommandListingHint(true)
-        }
-        if (commandCompletionRef.current === null) {
-          const base = commandBuffer
-          const candidates = filterUrlListCommandCompletions(base)
-          if (candidates.length === 0) {
-            return
-          }
-          commandCompletionRef.current = { base, completions: candidates, idx: 0 }
-        }
-        const { completions, idx } = commandCompletionRef.current
-        setCommandBuffer(completions[idx % completions.length]!)
-        commandCompletionRef.current = { ...commandCompletionRef.current, idx: idx + 1 }
-        return
-      }
-      if (commandMode && e.key !== "Tab") {
-        commandCompletionRef.current = null
-      }
-      if (!searchMode && !commandMode && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault()
-      }
-    },
-    [
-      closeSearch,
-      commandBuffer,
-      commandMode,
-      enableCommandMode,
-      keyboardActive,
-      onReturnToPrompt,
-      runPickerCommandEnter,
-      runPickerNormalEnter,
-      runPickerSearchEnter,
-      runPickerSearchJump,
-      runPickerVerticalNav,
-      searchMode
-    ]
-  )
 
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined

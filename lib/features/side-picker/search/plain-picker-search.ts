@@ -22,7 +22,7 @@ export function plainPickerLineMatches(line: string, filterQuery: string): boole
 
 /** Indices into `lines` matching `searchHighlightQuery` (empty needle → none). */
 export function plainPickerHiIndicesMatching(
-  lines: string[],
+  lines: readonly string[],
   searchHighlightQuery: string
 ): number[] {
   const { needle } = parsePickerSearchNeedle(searchHighlightQuery)

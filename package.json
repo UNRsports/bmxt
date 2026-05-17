@@ -20,7 +20,8 @@
     "sync:completion-fallback": "npm run codegen",
     "sync:effect-types": "npm run codegen",
     "sync:generated-ts": "npm run codegen",
-    "new:command": "node scripts/scaffold-command.mjs"
+    "new:command": "node scripts/scaffold-command.mjs",
+    "test": "node --experimental-strip-types --test lib/features/side-picker/model/from-find-lines.test.ts && node --test scripts/picker-search-jump.test.mjs"
   },
   "dependencies": {
     "plasmo": "0.90.5",

@@ -44,6 +44,8 @@ export {
   type PickerWindowCaptureHandlers
 } from "./interaction/picker-list-kernel"
 export { useWindowKeydownCapture } from "./hooks/use-window-keydown-capture"
+export { usePlainPickerKeyboard, type UsePlainPickerKeyboardOptions } from "./hooks/use-plain-picker-keyboard"
+export { renderPickerSlot, PICKER_SLOT_ORDER, type PickerColumnHostContext } from "./wrappers/picker-slot-registry"
 export { PickerSearchFooter, TabPickerSearchFooter } from "./chrome/picker-search-footer"
 export { PickerCommandFooter, TabPickerCommandFooter } from "./chrome/picker-command-footer"
 export {

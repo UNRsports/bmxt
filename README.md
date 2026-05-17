@@ -272,6 +272,14 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Preview active tab in browser |
 | Close column | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
+**Adding a new side picker column**
+
+1. Add a slot id to `PickerSlotId` in `lib/features/side-picker/session/session-pickers.ts` and session state fields.
+2. Register a renderer in `lib/features/side-picker/wrappers/picker-slot-registry.tsx` (order in `PICKER_SLOT_ORDER`).
+3. Add manifest subcommands: `<command> -list` to open, `<command> -exit -list` to close (UI-handled in `bmxt-shell.tsx`; Service Worker prints hints only).
+4. Wire open/close in `bmxt-shell.tsx` and `setSessionPickerSlot` in `bmxt-terminal.tsx`.
+5. Add a headline constant in `picker-headlines.ts` when using `PlainTextPickerBody` / `UrlListPickerWrapper`.
+
 <a id="tabs-man-tabs"></a>
 
 ### `tabs` (subcommands)
@@ -802,6 +810,14 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | `Shift+↑` / `Shift+↓` | — | タブ行の `#` 範囲拡張 |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ブラウザ側アクティブタブのプレビュー |
 | 列を閉じる | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
+
+**新しいサイド列ピッカーの追加**
+
+1. `lib/features/side-picker/session/session-pickers.ts` の `PickerSlotId` とセッション状態にスロットを追加。
+2. `lib/features/side-picker/wrappers/picker-slot-registry.tsx` にレンダラを登録（`PICKER_SLOT_ORDER` の順序）。
+3. manifest に `<command> -list`（開く）と `<command> -exit -list`（閉じる）を追加（閉じる処理は `bmxt-shell.tsx` が実行；SW は案内のみ）。
+4. `bmxt-shell.tsx` の起動処理と `bmxt-terminal.tsx` の `setSessionPickerSlot` を配線。
+5. `PlainTextPickerBody` / `UrlListPickerWrapper` を使う場合は `picker-headlines.ts` に headline 定数を追加。
 
 ### `dom`
 
