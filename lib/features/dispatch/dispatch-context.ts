@@ -1,3 +1,5 @@
+import type { DomListCapture } from "../dom/dom-list-capture"
+
 /** `applyChromeEffects` が Chrome 操作のために使うコールバック。 */
 
 export type DispatchChromeContext = {
@@ -7,6 +9,13 @@ export type DispatchChromeContext = {
   listWindows: () => Promise<string[]>
   focusInfo: () => Promise<string[]>
   resolveTabArg: (tabIdStr: string | undefined) => Promise<chrome.tabs.Tab | undefined>
+  /**
+   * EN: Optional override for `dom -list` target tab (tabs picker focus or active window).
+   * JA: `dom -list` の対象タブ上書き（tabs ピッカーのフォーカス行またはアクティブタブ）。
+   */
+  resolveDomListTargetTabId?: () => Promise<number | undefined>
+  /** EN: Receives structured DOM picker rows when `dom_list` runs (picker-direct path). */
+  onDomListCapture?: (capture: DomListCapture) => void
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
 }

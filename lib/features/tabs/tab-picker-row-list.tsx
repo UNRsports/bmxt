@@ -1,10 +1,9 @@
 import type { ReactNode } from "react"
 import {
-  displayTitle,
-  parseTabPickerSearchNeedle,
-  splitTextHighlightSegments,
-  type TabPickerRow
-} from "./picker-rows"
+  parsePickerSearchNeedle,
+  splitTextHighlightSegments
+} from "../side-picker/search/picker-search-needle"
+import { displayTitle, type TabPickerRow } from "./picker-rows"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { BulkSubMode } from "./tab-picker-overlay-types"
 
@@ -68,7 +67,7 @@ export function TabPickerRowList({
           bulkSubMode === "move" &&
           visIndex >= 0 &&
           visibleRowIndices[moveDestHi] === i
-        const { byUrl, needle } = parseTabPickerSearchNeedle(searchHighlightQuery)
+        const { byUrl, needle } = parsePickerSearchNeedle(searchHighlightQuery)
         if (row.kind === "window") {
           const markedRow = markedWindowSet.has(row.windowId)
           return (

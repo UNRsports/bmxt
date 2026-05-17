@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.2.1",
+  "version": "0.3.5",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -15,14 +15,13 @@
     "package": "NODE_OPTIONS=--disable-warning=DEP0040 plasmo package",
     "codegen": "node scripts/codegen/run.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
-    "check:generated": "npm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json wasm/bmxt-core/src/generated wasm/bmxt-core/src/registry/table.rs lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",
+    "check:generated": "npm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json lib/features/bmxt-core/registry/table.gen.ts lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",
     "check:no-fetch": "node scripts/check-no-fetch.mjs",
     "sync:completion-fallback": "npm run codegen",
     "sync:effect-types": "npm run codegen",
     "sync:generated-ts": "npm run codegen",
     "new:command": "node scripts/scaffold-command.mjs",
-    "build:wasm": "npm run codegen && wasm-pack build wasm/bmxt-core --target web --out-dir ../../assets/wasm/bmxt-core",
-    "dev:fresh": "npm run build:wasm && NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev"
+    "test": "node --experimental-strip-types --test lib/features/side-picker/model/from-find-lines.test.ts lib/features/nav/nav-parse.test.ts lib/features/nav/nav-prompt-input.test.ts && node --test scripts/picker-search-jump.test.mjs"
   },
   "dependencies": {
     "plasmo": "0.90.5",
@@ -52,7 +51,7 @@
     ],
     "optional_host_permissions": ["http://*/*", "https://*/*"],
     "content_security_policy": {
-      "extension_pages": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' http://127.0.0.1:* http://localhost:*; object-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
+      "extension_pages": "default-src 'self'; script-src 'self' http://127.0.0.1:* http://localhost:*; object-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
     },
     "commands": {
       "launch-bmxt": {

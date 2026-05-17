@@ -18,11 +18,13 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "clear": [] as const,
   "close": [] as const,
   "dom": [
-    { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" }
+    { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
-  "grep": [
+  "find": [
     { head: "-list", trailingTokens: ["--none","--history","--bookmark","--page"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "--none", trailingTokens: [] as const, tail: "rest" },
     { head: "--history", trailingTokens: [] as const, tail: "rest" },
     { head: "--bookmark", trailingTokens: [] as const, tail: "rest" },
@@ -32,8 +34,13 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "help": [] as const,
   "tabs": [
     { head: "-list", trailingTokens: ["-u"] as const, tail: "none" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" }
+  ] as const,
+  "nav": [
+    { head: "-enter", trailingTokens: [] as const, tail: "none" },
+    { head: "-exit", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "notes": [] as const,
   "split": [
@@ -83,5 +90,45 @@ export function secondTokenCandidatesAfterLoneFirstToken(trimmedSingleToken: str
   if (trimmedSingleToken.includes(" ")) return []
   const key = trimmedSingleToken.toLowerCase()
   return listSecondTokenCandidatesByCommand(key, "")
+}
+
+/** True when `token` is a manifest-declared second token (ASCII case-folding on `token`). */
+export function isSecondToken(canonicalCmd: string, token: string): boolean {
+  switch (canonicalCmd) {
+    case "clear":
+      return false
+    case "close":
+      return false
+    case "dom": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "-exit"
+    }
+    case "exit":
+      return false
+    case "find": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "-exit" || lower === "--none" || lower === "--history" || lower === "--bookmark" || lower === "--page"
+    }
+    case "group":
+      return false
+    case "help":
+      return false
+    case "tabs": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "-exit" || lower === "-moveurl" || lower === "-nowurl"
+    }
+    case "nav": {
+      const lower = token.toLowerCase()
+      return lower === "-enter" || lower === "-exit"
+    }
+    case "notes":
+      return false
+    case "split": {
+      const lower = token.toLowerCase()
+      return lower === "-col" || lower === "-row"
+    }
+    default:
+      return false
+  }
 }
 

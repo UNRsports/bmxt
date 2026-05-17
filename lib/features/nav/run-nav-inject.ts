@@ -1,0 +1,118 @@
+/**
+ * EN: Run nav overlay control via the service worker (reliable `executeScript` host).
+ * JA: SW 経由でページへ注入（BMXt タブ UI から直接注入しない）。
+ */
+
+import { ensureOptionalHttpHostAccess } from "../extension-permissions/optional-http-hosts"
+import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
+import {
+  bmxtNavControlInjected,
+  NAV_OVERLAY_CHANNEL,
+  type NavInjectAction,
+  type NavInjectResult,
+  type NavOverlayMessage
+} from "./nav-overlay-inject-fn"
+
+export type NavControlResult = NavInjectResult
+export type { NavOverlayMessage }
+
+export type NavKeyForward = {
+  key: string
+  code: string
+  ctrlKey: boolean
+  shiftKey: boolean
+  altKey: boolean
+  metaKey: boolean
+}
+
+async function tabUrlOk(tabId: number): Promise<boolean> {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    return isScriptablePageUrl(tab.url)
+  } catch {
+    return false
+  }
+}
+
+async function ensureHostAccess(): Promise<"ok" | "denied" | "not-scriptable"> {
+  const access = await ensureOptionalHttpHostAccess()
+  if (access === "denied") {
+    return "denied"
+  }
+  return "ok"
+}
+
+/** EN: Try content-script message first, then `executeScript` in this SW context. */
+export async function runNavControlOnTab(
+  tabId: number,
+  action: NavInjectAction,
+  useCenter: boolean,
+  x: number,
+  y: number,
+  dx = 0,
+  dy = 0,
+  keyForward?: NavKeyForward,
+  text?: string
+): Promise<NavControlResult> {
+  if (!(await tabUrlOk(tabId))) {
+    return { ok: false, reason: "not-scriptable" }
+  }
+  const gate = await ensureHostAccess()
+  if (gate === "denied") {
+    return { ok: false, reason: "permission-denied" }
+  }
+
+  const k = keyForward?.key ?? ""
+  const code = keyForward?.code ?? ""
+  const payload: NavOverlayMessage = {
+    channel: NAV_OVERLAY_CHANNEL,
+    action,
+    useCenter,
+    x,
+    y,
+    dx,
+    dy,
+    key: k,
+    code,
+    ctrlKey: keyForward?.ctrlKey,
+    shiftKey: keyForward?.shiftKey,
+    altKey: keyForward?.altKey,
+    metaKey: keyForward?.metaKey,
+    text
+  }
+
+  try {
+    const viaCs = await chrome.tabs.sendMessage<NavOverlayMessage, NavInjectResult>(tabId, payload)
+    if (viaCs && typeof viaCs === "object" && "ok" in viaCs) {
+      return viaCs
+    }
+  } catch {
+    /* content script not loaded — fall through */
+  }
+
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: bmxtNavControlInjected,
+      args: [
+        action,
+        useCenter ? 1 : 0,
+        x,
+        y,
+        dx,
+        dy,
+        k,
+        code,
+        keyForward?.ctrlKey ? 1 : 0,
+        keyForward?.shiftKey ? 1 : 0,
+        keyForward?.altKey ? 1 : 0,
+        keyForward?.metaKey ? 1 : 0,
+        text ?? ""
+      ]
+    })
+    return (result as NavInjectResult | undefined) ?? { ok: false, reason: "no-result" }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    return { ok: false, reason: `inject-failed:${detail}` }
+  }
+}

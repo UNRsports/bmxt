@@ -1,18 +1,18 @@
-import { runTabsPickerReduce } from "../wasm-core"
-import { resolveTabsPickerEnterIntent } from "../wasm-core"
-import { resolveTabsPickerPreview } from "../wasm-core"
-import { validateTabsPickerExecute } from "../wasm-core"
-import { resolveTabsPickerTarget } from "../wasm-core"
-import { resolveTabsPickerGroupTarget } from "../wasm-core"
-import { resolveTabsPickerNewWindowOrder } from "../wasm-core"
-import { resolveTabsPickerConfirmPlan } from "../wasm-core"
-import { resolveTabsPickerMovePlan } from "../wasm-core"
+import { runTabsPickerReduce } from "../bmxt-core"
+import { resolveTabsPickerEnterIntent } from "../bmxt-core"
+import { resolveTabsPickerPreview } from "../bmxt-core"
+import { validateTabsPickerExecute } from "../bmxt-core"
+import { resolveTabsPickerTarget } from "../bmxt-core"
+import { resolveTabsPickerGroupTarget } from "../bmxt-core"
+import { resolveTabsPickerNewWindowOrder } from "../bmxt-core"
+import { resolveTabsPickerConfirmPlan } from "../bmxt-core"
+import { resolveTabsPickerMovePlan } from "../bmxt-core"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
-import { resolveTabsPickerCreateGroupPlan } from "../wasm-core"
-import { resolveTabsPickerHeadline } from "../wasm-core"
+import { resolveTabsPickerCreateGroupPlan } from "../bmxt-core"
+import { resolveTabsPickerHeadline } from "../bmxt-core"
 
 export type PickerSelectKind = "window" | "group" | "tab"
-export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow"
+export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit"
 
 export type PickerReducerState = {
   hi: number
@@ -261,11 +261,13 @@ export function resolvePickerHeadline(context: {
   bulkSubMode: PickerReducerState["bulkSubMode"]
   groupNewPhase: GroupNewPhase
   variant: PickerVariant
+  editPanelKind?: string | null
 }): string {
   return resolveTabsPickerHeadline({
     bulkSubMode: context.bulkSubMode,
     groupNewPhase: context.groupNewPhase,
-    variant: context.variant
+    variant: context.variant,
+    editPanelKind: context.editPanelKind ?? null
   })
 }
 

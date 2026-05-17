@@ -25,7 +25,9 @@ import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
-import { normalizePickerOpenUrl } from "./normalize-picker-open-url"
+import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
+import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
+import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -104,36 +106,20 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       logBmxtKey("picker", "confirmSelection → no plan", { hi })
       return
     }
+    const entry = pickerEntryAtVisibleHi(rows, visibleRowIndices, hi)
     logBmxtKey("picker", "confirmSelection → execute", {
       planKind: plan.kind,
+      entrySource: entry?.source ?? null,
+      entryUrl: entry?.url ?? null,
       ...(plan.kind === "activateTab"
         ? { tabId: plan.tabId, windowId: plan.windowId }
         : plan.kind === "focusWindow"
           ? { windowId: plan.windowId }
           : { windowId: plan.windowId, groupId: plan.groupId })
     })
-    try {
-      if (plan.kind === "activateTab") {
-        await chrome.tabs.update(plan.tabId, { active: true })
-        await chrome.windows.update(plan.windowId, { focused: true })
-        setActiveTabId(plan.tabId)
-      } else if (plan.kind === "focusWindow") {
-        await chrome.windows.update(plan.windowId, { focused: true })
-      } else if (plan.kind === "activateFromGroup") {
-        const tabs = await chrome.tabs.query({ windowId: plan.windowId })
-        const inGroup = tabs.find((t) =>
-          plan.groupId === null
-            ? t.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE
-            : t.groupId === plan.groupId
-        )
-        if (inGroup?.id !== undefined) {
-          await chrome.tabs.update(inGroup.id, { active: true })
-          await chrome.windows.update(plan.windowId, { focused: true })
-          setActiveTabId(inGroup.id)
-        }
-      }
-    } catch {
-      /* ignore */
+    const activeId = await executePickerFocusPlan(plan)
+    if (activeId !== null) {
+      setActiveTabId(activeId)
     }
   }, [hi, rows, setActiveTabId, visibleRowIndices])
 

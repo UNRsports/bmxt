@@ -5,32 +5,20 @@
 
 export type DomShowMode = "html" | "react"
 
-type ShowPayload = { kind: string; body: string }
+type DomTreeEntryPayload = { line: string; path: number[] }
 
-/** EN: `-html`: documentElement.outerHTML. `-react`: indented element tree + optional react-internal markers. */
+type ShowPayload = { kind: string; body: string; entries?: DomTreeEntryPayload[] }
+
+/** EN: `-html`: per-element HTML snippets + paths; `body` keeps full documentElement.outerHTML for logs. */
 export function bmxtDomShowInjected(mode: DomShowMode): ShowPayload {
   const MAX = 200000
-  if (mode === "html") {
-    const doc = document.documentElement
-    const html = doc ? doc.outerHTML : ""
-    const body = html.length > MAX ? html.slice(0, MAX) + "\n…(truncated)" : html
-    return { kind: "html", body }
-  }
-
-  const lines: string[] = []
-  let count = 0
   const maxNodes = 2500
   const maxDepth = 48
+  const htmlSnippetMax = 220
+  const entries: DomTreeEntryPayload[] = []
+  let count = 0
 
-  function walk(node: Node, depth: number): void {
-    if (!node || count >= maxNodes || depth > maxDepth) {
-      return
-    }
-    if (node.nodeType !== 1) {
-      return
-    }
-    const el = node as Element
-    count += 1
+  function formatReactLine(el: Element, depth: number): string {
     let fiber = ""
     const keys = Object.keys(el as unknown as Record<string, unknown>)
     for (let i = 0; i < keys.length; i += 1) {
@@ -50,10 +38,32 @@ export function bmxtDomShowInjected(mode: DomShowMode): ShowPayload {
       }
     }
     const indent = "  ".repeat(depth)
-    lines.push(indent + el.tagName.toLowerCase() + id + cls + fiber)
+    return indent + el.tagName.toLowerCase() + id + cls + fiber
+  }
+
+  function formatHtmlLine(el: Element, depth: number): string {
+    const indent = "  ".repeat(depth)
+    let snippet = el.outerHTML.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
+    if (snippet.length > htmlSnippetMax) {
+      snippet = snippet.slice(0, htmlSnippetMax) + "…"
+    }
+    return indent + snippet
+  }
+
+  function walk(node: Node, depth: number, path: number[]): void {
+    if (!node || count >= maxNodes || depth > maxDepth) {
+      return
+    }
+    if (node.nodeType !== 1) {
+      return
+    }
+    const el = node as Element
+    count += 1
+    const line = mode === "html" ? formatHtmlLine(el, depth) : formatReactLine(el, depth)
+    entries.push({ line, path: path.slice() })
     const kids = el.children
     for (let j = 0; j < kids.length; j += 1) {
-      walk(kids[j], depth + 1)
+      walk(kids[j], depth + 1, [...path, j])
       if (count >= maxNodes) {
         return
       }
@@ -62,11 +72,19 @@ export function bmxtDomShowInjected(mode: DomShowMode): ShowPayload {
 
   const bodyEl = document.body
   if (bodyEl) {
-    walk(bodyEl, 0)
+    walk(bodyEl, 0, [])
   }
-  let out = lines.join("\n")
-  if (out.length > MAX) {
-    out = out.slice(0, MAX) + "\n…(truncated)"
+
+  if (mode === "html") {
+    const doc = document.documentElement
+    const html = doc ? doc.outerHTML : ""
+    const body = html.length > MAX ? html.slice(0, MAX) + "\n…(truncated)" : html
+    return { kind: "html", body, entries }
   }
-  return { kind: "react", body: out }
+
+  let body = entries.map((e) => e.line).join("\n")
+  if (body.length > MAX) {
+    body = body.slice(0, MAX) + "\n…(truncated)"
+  }
+  return { kind: "react", body, entries }
 }

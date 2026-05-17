@@ -20,6 +20,9 @@ export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 /** BMXt UI ウィンドウ ID（SW 再起動後もフォーカスできるよう background が保持）。 */
 export const BMXT_WINDOW_ID_KEY = "bmxt_shell_window_id"
 
+/** タブピッカー用: Chrome ウィンドウ ID → ユーザー定義の表示名。 */
+export const WINDOW_DISPLAY_NAMES_KEY = "bmxt_window_display_names_v1"
+
 /** ユーザーが最後にリリースノートを見た拡張機能バージョン（`manifest.json` / package の version と一致）。 */
 export const LAST_SEEN_EXTENSION_VERSION_KEY = "bmxt_last_seen_extension_version"
 

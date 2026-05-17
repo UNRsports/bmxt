@@ -21,7 +21,9 @@ import { displayTitle } from "./lib/features/format/display-title"
 import {
   ensureBmxtCore,
   runDispatch
-} from "./lib/features/wasm-core"
+} from "./lib/features/bmxt-core"
+import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
+import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"
@@ -344,8 +346,30 @@ async function resolveTabArg(
   return activeTabFromGetLastFocused()
 }
 
+type NavControlRequest = {
+  type?: string
+  tabId?: number
+  action?: NavInjectAction
+  useCenter?: boolean
+  x?: number
+  y?: number
+  dx?: number
+  dy?: number
+  key?: string
+  code?: string
+  ctrlKey?: boolean
+  shiftKey?: boolean
+  altKey?: boolean
+  metaKey?: boolean
+  text?: string
+}
+
 chrome.runtime.onMessage.addListener(
-  (message: { type?: string; line?: string; sessionId?: string }, _sender, sendResponse) => {
+  (
+    message: { type?: string; line?: string; sessionId?: string } & NavControlRequest,
+    _sender,
+    sendResponse
+  ) => {
     if (message?.type === "RUN_CMD" && typeof message.line === "string") {
       runCommand(message.line, message.sessionId)
         .then(() => sendResponse({ ok: true }))
@@ -353,6 +377,37 @@ chrome.runtime.onMessage.addListener(
           sendResponse({
             ok: false,
             error: e instanceof Error ? e.message : String(e)
+          })
+        )
+      return true
+    }
+    if (message?.type === "NAV_CONTROL" && typeof message.tabId === "number") {
+      const action = message.action ?? "start"
+      void runNavControlOnTab(
+        message.tabId,
+        action,
+        Boolean(message.useCenter),
+        message.x ?? -1,
+        message.y ?? -1,
+        message.dx ?? 0,
+        message.dy ?? 0,
+        message.key != null
+          ? {
+              key: String(message.key),
+              code: String(message.code ?? message.key),
+              ctrlKey: Boolean(message.ctrlKey),
+              shiftKey: Boolean(message.shiftKey),
+              altKey: Boolean(message.altKey),
+              metaKey: Boolean(message.metaKey)
+            }
+          : undefined,
+        typeof message.text === "string" ? message.text : undefined
+      )
+        .then((result) => sendResponse(result))
+        .catch((e) =>
+          sendResponse({
+            ok: false,
+            reason: e instanceof Error ? e.message : String(e)
           })
         )
       return true

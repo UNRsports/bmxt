@@ -19,12 +19,17 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--html|--react] [<pattern>]",
+      "usagePrimary": "dom -list [--html|--react] [<pattern>] | dom -exit -list",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["--html", "--react"],
           "tail": "rest"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
+          "tail": "none"
         }
       ]
     },
@@ -36,15 +41,20 @@
       "subcommands": []
     },
     {
-      "module": "grep",
-      "canonicalName": "grep",
+      "module": "find",
+      "canonicalName": "find",
       "aliases": [],
-      "usagePrimary": "grep -list [--none|--history|--bookmark|--page] <pattern> | grep --none|… <pattern>",
+      "usagePrimary": "find -list [--none|--history|--bookmark|--page] <pattern> | find -exit -list | find --none|… <pattern>",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["--none", "--history", "--bookmark", "--page"],
           "tail": "rest"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
+          "tail": "none"
         },
         {
           "head": "--none",
@@ -82,11 +92,16 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u]",
+      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": ["-u"],
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
           "tail": "none"
         },
         {
@@ -95,6 +110,22 @@
         },
         {
           "head": "-nowurl",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "nav",
+      "canonicalName": "nav",
+      "aliases": [],
+      "usagePrimary": "nav -enter | nav -exit",
+      "subcommands": [
+        {
+          "head": "-enter",
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
           "tail": "none"
         }
       ]
@@ -155,28 +186,28 @@
       "tsHandlerExport": "applyExitPaneEffect"
     },
     {
-      "kind": "grep_bookmark",
-      "rustVariant": "GrepBookmark",
+      "kind": "find_bookmark",
+      "rustVariant": "FindBookmark",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "grep-bookmark",
-      "tsHandlerExport": "applyGrepBookmarkEffect"
+      "tsHandlerFile": "find-bookmark",
+      "tsHandlerExport": "applyFindBookmarkEffect"
     },
     {
-      "kind": "grep_history",
-      "rustVariant": "GrepHistory",
+      "kind": "find_history",
+      "rustVariant": "FindHistory",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "grep-history",
-      "tsHandlerExport": "applyGrepHistoryEffect"
+      "tsHandlerFile": "find-history",
+      "tsHandlerExport": "applyFindHistoryEffect"
     },
     {
-      "kind": "grep_page",
-      "rustVariant": "GrepPage",
+      "kind": "find_page",
+      "rustVariant": "FindPage",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "grep-page",
-      "tsHandlerExport": "applyGrepPageEffect"
+      "tsHandlerFile": "find-page",
+      "tsHandlerExport": "applyFindPageEffect"
     },
     {
       "kind": "group_new",
