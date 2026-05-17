@@ -13,6 +13,12 @@ export {
   NAV_TYPING_PLACEHOLDER_MULTILINE
 } from "./nav-typing-prompt"
 export {
+  NAV_MENU_ITEMS,
+  NAV_MENU_COPY_ITEMS,
+  NAV_MENU_HISTORY_ROWS,
+  type NavTextSelPhase
+} from "./nav-menu-items"
+export {
   resolveActiveTargetTabId,
   resolveTabDisplayTitle,
   startNavOverlayOnTab,

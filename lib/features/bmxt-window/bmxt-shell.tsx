@@ -252,10 +252,13 @@ export function BmxtShell({
     overlayError: navOverlayError,
     typingMode: navPageTyping,
     typingMultiline: navTypingMultiline,
+    menuOpen: navMenuOpen,
+    textSelPhase: navTextSelPhase,
     toggleActive: toggleNavActive,
     teardownAll: teardownNav,
     navKeyboardEnabled,
-    navTypingMode
+    navTypingMode,
+    textSelPicking: navTextSelPicking
   } = useNavMode({
     armed: navArmed,
     active: navActive,
@@ -265,6 +268,8 @@ export function BmxtShell({
     positionsRef: navPositionsRef,
     getTypingBuffer: () => imeRef.current?.value ?? lineRef.current
   })
+
+  const navTextSelDone = navTextSelPhase === "done"
 
   const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
   const subCmdPickerRef = useRef<TokenPickerModel | null>(null)
@@ -1415,7 +1420,7 @@ export function BmxtShell({
         return
       }
 
-      if (navKeyboardEnabled || navTypingMode) {
+      if (navKeyboardEnabled || navTypingMode || navMenuOpen || navTextSelPicking || navTextSelDone) {
         if (
           e.key === "Enter" ||
           e.key === "ArrowUp" ||
@@ -1525,7 +1530,15 @@ export function BmxtShell({
         return
       }
 
-      if (e.key === "Enter" && !e.shiftKey && !navKeyboardEnabled && !navTypingMode) {
+      if (
+        e.key === "Enter" &&
+        !e.shiftKey &&
+        !navKeyboardEnabled &&
+        !navTypingMode &&
+        !navMenuOpen &&
+        !navTextSelPicking &&
+        !navTextSelDone
+      ) {
         e.preventDefault()
         submitLine()
       }
@@ -1552,6 +1565,10 @@ export function BmxtShell({
       navPageTyping,
       navTypingMode,
       navTypingMultiline,
+      navMenuOpen,
+      navTextSelPicking,
+      navTextSelDone,
+      navTextSelPhase,
       paneFocus,
       toggleNavActive
     ]
@@ -1708,6 +1725,8 @@ export function BmxtShell({
           active={navActive}
           typingMode={navPageTyping}
           typingMultiline={navTypingMultiline}
+          menuOpen={navMenuOpen}
+          textSelPhase={navTextSelPhase}
           tabTitle={navCurrentTabTitle}
           overlayError={navOverlayError}
         />

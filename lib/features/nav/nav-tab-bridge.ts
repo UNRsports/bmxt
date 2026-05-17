@@ -78,6 +78,27 @@ export async function forwardNavKeyOnTab(
   return runNavControlViaBackground(tabId, "forwardKey", false, 0, 0, 0, 0, forward)
 }
 
+export async function toggleNavMenuOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "toggleMenu", false, 0, 0)
+}
+
+export type NavMenuInput = "up" | "down" | "left" | "right" | "activate" | "close"
+
+export async function navMenuInputOnTab(
+  tabId: number,
+  input: NavMenuInput
+): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "menuInput", false, 0, 0, 0, 0, undefined, input)
+}
+
+export async function textSelMarkOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "textSelMark", false, 0, 0)
+}
+
+export async function textSelCancelOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "textSelCancel", false, 0, 0)
+}
+
 async function runNavControlViaBackground(
   tabId: number,
   action: Parameters<typeof runNavControlOnTab>[1],

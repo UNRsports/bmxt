@@ -16,6 +16,13 @@ export type NavInjectAction =
   | "clearTyping"
   | "applyTyping"
   | "revertTyping"
+  | "toggleMenu"
+  | "menuInput"
+  | "textSelMark"
+  | "textSelCancel"
+
+export type NavInjectTextSelPhase = "idle" | "start" | "end" | "done"
+export type NavInjectMenuVariant = "default" | "copy"
 
 export type NavInjectResult =
   | {
@@ -25,6 +32,11 @@ export type NavInjectResult =
       editableFocused?: boolean
       typingMultiline?: boolean
       initialValue?: string
+      menuOpen?: boolean
+      textSelPhase?: NavInjectTextSelPhase
+      menuVariant?: NavInjectMenuVariant
+      /** EN: Plain text to copy in BMXt (user gesture); set by copy menu action. */
+      navCopiedText?: string
     }
   | { ok: false; reason?: string }
 
@@ -65,6 +77,17 @@ export function bmxtNavControlInjected(
 ): NavInjectResult {
   const ROOT_ID = "__bmxt_nav_cursor_root__"
   const NAV_CURSOR_SCALE = 1.1
+  const NAV_SCROLL_MARGIN = 32
+  const NAV_MENU_TOP_PX = Math.round(22 * NAV_CURSOR_SCALE) + 6
+  /** EN: Keep in sync with `nav-menu-items.ts` (`NAV_MENU_ITEMS` order). */
+  const MENU_ITEM_IDS = ["selectText", "saveImage", "reloadPage"]
+  const COPY_MENU_ITEM_IDS = ["copySelection"]
+  const MENU_ITEM_LABELS: Record<string, string> = {
+    selectText: "テキスト選択",
+    saveImage: "カーソル下の画像を保存",
+    reloadPage: "ページを再読み込み",
+    copySelection: "コピー"
+  }
   const TEXT_INPUT_TYPES = new Set([
     "text",
     "search",
@@ -83,10 +106,44 @@ export function bmxtNavControlInjected(
     typingSnapshot: string | null
     typingMultiline: boolean
     typingActive: boolean
+    menuOpen: boolean
+    menuIndex: number
+    menuVariant: NavInjectMenuVariant
+    textSelPhase: NavInjectTextSelPhase
+    textSelStartX: number
+    textSelStartY: number
   }
 
   function sessionWin(): { bmxtNav?: NavSession } {
     return window as unknown as { bmxtNav?: NavSession }
+  }
+
+  function normalizeSession(sess: NavSession): void {
+    if (sess.menuVariant !== "copy" && sess.menuVariant !== "default") {
+      sess.menuVariant = "default"
+    }
+    if (
+      sess.textSelPhase !== "idle" &&
+      sess.textSelPhase !== "start" &&
+      sess.textSelPhase !== "end" &&
+      sess.textSelPhase !== "done"
+    ) {
+      sess.textSelPhase = "idle"
+    }
+    if (typeof sess.textSelStartX !== "number") {
+      sess.textSelStartX = 0
+    }
+    if (typeof sess.textSelStartY !== "number") {
+      sess.textSelStartY = 0
+    }
+  }
+
+  function getSession(): NavSession | null {
+    const sess = sessionWin().bmxtNav ?? null
+    if (sess) {
+      normalizeSession(sess)
+    }
+    return sess
   }
 
   function isEditable(el: Element | null): el is HTMLElement {
@@ -158,6 +215,346 @@ export function bmxtNavControlInjected(
     }
   }
 
+  function scrollCursorIntoView(cx: number, cy: number): void {
+    const margin = NAV_SCROLL_MARGIN
+    let dx = 0
+    let dy = 0
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    if (cx < margin) {
+      dx = cx - margin
+    } else if (cx > vw - margin) {
+      dx = cx - (vw - margin)
+    }
+    if (cy < margin) {
+      dy = cy - margin
+    } else if (cy > vh - margin) {
+      dy = cy - (vh - margin)
+    }
+    if (dx !== 0 || dy !== 0) {
+      window.scrollBy(dx, dy)
+    }
+    const hit = document.elementFromPoint(
+      clampCoord(cx, Math.max(0, vw - 1)),
+      clampCoord(cy, Math.max(0, vh - 1))
+    )
+    let node: Element | null = hit
+    while (node && node !== document.documentElement) {
+      if (!(node instanceof HTMLElement)) {
+        node = node.parentElement
+        continue
+      }
+      const st = getComputedStyle(node)
+      const scrollableY =
+        (st.overflowY === "auto" || st.overflowY === "scroll") &&
+        node.scrollHeight > node.clientHeight + 1
+      const scrollableX =
+        (st.overflowX === "auto" || st.overflowX === "scroll") &&
+        node.scrollWidth > node.clientWidth + 1
+      if (scrollableY || scrollableX) {
+        const rect = node.getBoundingClientRect()
+        if (scrollableY) {
+          if (cy < rect.top + margin) {
+            node.scrollTop += cy - rect.top - margin
+          } else if (cy > rect.bottom - margin) {
+            node.scrollTop += cy - (rect.bottom - margin)
+          }
+        }
+        if (scrollableX) {
+          if (cx < rect.left + margin) {
+            node.scrollLeft += cx - rect.left - margin
+          } else if (cx > rect.right - margin) {
+            node.scrollLeft += cx - (rect.right - margin)
+          }
+        }
+      }
+      node = node.parentElement
+    }
+  }
+
+  function activeMenuItemIds(sess: NavSession): string[] {
+    return sess.menuVariant === "copy" ? COPY_MENU_ITEM_IDS : MENU_ITEM_IDS
+  }
+
+  function navOk(sess: NavSession, extra: Record<string, unknown> = {}): NavInjectResult {
+    return {
+      ok: true,
+      x: sess.x,
+      y: sess.y,
+      menuOpen: sess.menuOpen,
+      textSelPhase: sess.textSelPhase,
+      menuVariant: sess.menuVariant,
+      ...extra
+    }
+  }
+
+  function menuMarkup(sess: NavSession): string {
+    if (!sess.menuOpen) {
+      return ""
+    }
+    const rowBase =
+      "display:flex;justify-content:space-between;gap:10px;padding:5px 8px;" +
+      "font:500 11px/1.35 system-ui,sans-serif;color:#e6edf3;cursor:default;"
+    const hintStyle = "font-size:10px;color:#8b949e;font-weight:400;white-space:nowrap"
+    const itemIds = activeMenuItemIds(sess)
+    let rows = ""
+    for (let i = 0; i < itemIds.length; i++) {
+      const id = itemIds[i]!
+      const selected = i === sess.menuIndex
+      const bg = selected ? "background:rgba(88,166,255,0.28);" : ""
+      const hint = sess.menuVariant === "copy" ? "Enter" : "↑↓ · Enter"
+      rows +=
+        '<div data-bmxt-nav-menu-item="' +
+        id +
+        '" style="' +
+        rowBase +
+        bg +
+        '"><span>' +
+        (MENU_ITEM_LABELS[id] ?? id) +
+        '</span><span style="' +
+        hintStyle +
+        '">' +
+        hint +
+        "</span></div>"
+    }
+    const historyBlock =
+      sess.menuVariant === "copy"
+        ? ""
+        : '<div style="border-top:1px solid rgba(255,255,255,0.15);margin-top:2px;padding-top:2px">' +
+          '<div style="' +
+          rowBase +
+          '"><span>履歴を戻る</span><span style="' +
+          hintStyle +
+          '">←</span></div>' +
+          '<div style="' +
+          rowBase +
+          '"><span>履歴を進む</span><span style="' +
+          hintStyle +
+          '">→</span></div>' +
+          "</div>"
+    return (
+      '<div data-bmxt-nav-menu="1" style="position:absolute;left:0;top:' +
+      NAV_MENU_TOP_PX +
+      "px;min-width:200px;max-width:280px;padding:4px 0;" +
+      "font:600 11px system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.95);" +
+      'border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.4);' +
+      'pointer-events:none">' +
+      rows +
+      historyBlock +
+      "</div>"
+    )
+  }
+
+  function clearPageSelection(): void {
+    const sel = window.getSelection()
+    if (sel) {
+      sel.removeAllRanges()
+    }
+  }
+
+  function textSelHintMarkup(phase: "start" | "end"): string {
+    const label =
+      phase === "start"
+        ? "選択開始: Enter · Esc 取消"
+        : "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消"
+    return (
+      '<div data-bmxt-nav-textsel-hint="1" style="margin-top:4px;padding:4px 8px;max-width:220px;' +
+      "font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(88,166,255,0.2);" +
+      'border:1px solid rgba(88,166,255,0.45);border-radius:6px;pointer-events:none">' +
+      label +
+      "</div>"
+    )
+  }
+
+  function rangeAtPoint(cx: number, cy: number): Range | null {
+    if (typeof document.caretRangeFromPoint === "function") {
+      return document.caretRangeFromPoint(cx, cy)
+    }
+    const doc = document as Document & {
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
+    }
+    if (typeof doc.caretPositionFromPoint === "function") {
+      const pos = doc.caretPositionFromPoint(cx, cy)
+      if (pos) {
+        const range = document.createRange()
+        range.setStart(pos.offsetNode, pos.offset)
+        range.collapse(true)
+        return range
+      }
+    }
+    return null
+  }
+
+  function selectBetweenPoints(sx: number, sy: number, ex: number, ey: number): boolean {
+    const r1 = rangeAtPoint(sx, sy)
+    const r2 = rangeAtPoint(ex, ey)
+    const sel = window.getSelection()
+    if (!sel) {
+      return false
+    }
+    sel.removeAllRanges()
+    if (r1 && r2) {
+      const range = document.createRange()
+      if (r1.compareBoundaryPoints(Range.START_TO_START, r2) <= 0) {
+        range.setStart(r1.startContainer, r1.startOffset)
+        range.setEnd(r2.endContainer, r2.endOffset)
+      } else {
+        range.setStart(r2.startContainer, r2.startOffset)
+        range.setEnd(r1.endContainer, r1.endOffset)
+      }
+      sel.addRange(range)
+      return true
+    }
+    const el = document.elementFromPoint(ex, ey) ?? document.elementFromPoint(sx, sy)
+    if (el) {
+      try {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        sel.addRange(range)
+        return true
+      } catch {
+        return false
+      }
+    }
+    return false
+  }
+
+  function readSelectionPlainText(): string {
+    return window.getSelection()?.toString() ?? ""
+  }
+
+  function resetTextSel(sess: NavSession): void {
+    sess.textSelPhase = "idle"
+    sess.textSelStartX = 0
+    sess.textSelStartY = 0
+    sess.menuVariant = "default"
+  }
+
+  function beginTextSelect(sess: NavSession): void {
+    resetTextSel(sess)
+    sess.textSelPhase = "start"
+    sess.menuOpen = false
+    sess.menuIndex = 0
+    renderOverlayRoot(sess)
+  }
+
+  function markTextSelPoint(sess: NavSession): void {
+    if (sess.textSelPhase === "start") {
+      sess.textSelStartX = sess.x
+      sess.textSelStartY = sess.y
+      sess.textSelPhase = "end"
+      previewTextSelection(sess)
+      renderOverlayRoot(sess)
+      return
+    }
+    if (sess.textSelPhase === "end") {
+      selectBetweenPoints(sess.textSelStartX, sess.textSelStartY, sess.x, sess.y)
+      sess.textSelPhase = "done"
+      sess.menuVariant = "copy"
+      sess.menuOpen = true
+      sess.menuIndex = 0
+      renderOverlayRoot(sess)
+    }
+  }
+
+  function previewTextSelection(sess: NavSession): void {
+    if (sess.textSelPhase !== "end") {
+      return
+    }
+    selectBetweenPoints(sess.textSelStartX, sess.textSelStartY, sess.x, sess.y)
+  }
+
+  function cancelTextSelect(sess: NavSession): void {
+    clearPageSelection()
+    resetTextSel(sess)
+    sess.menuOpen = false
+    sess.menuIndex = 0
+    renderOverlayRoot(sess)
+  }
+
+  function saveImageAtPoint(cx: number, cy: number): boolean {
+    const hit = document.elementFromPoint(cx, cy)
+    if (!hit) {
+      return false
+    }
+    const img =
+      hit instanceof HTMLImageElement ? hit : hit.closest("img")
+    if (!img || !(img instanceof HTMLImageElement)) {
+      return false
+    }
+    const src = img.currentSrc || img.src
+    if (!src) {
+      return false
+    }
+    void (async () => {
+      try {
+        const res = await fetch(src)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        const tail = src.split("/").pop()?.split("?")[0] ?? ""
+        a.download = tail.length > 0 ? tail : "bmxt-nav-image.png"
+        a.style.display = "none"
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+      } catch {
+        window.open(src, "_blank", "noopener,noreferrer")
+      }
+    })()
+    return true
+  }
+
+  type MenuActionOutcome = {
+    disposition: "keepOpen" | "closed"
+    navCopiedText?: string
+  }
+
+  function runMenuAction(sess: NavSession, itemId: string): MenuActionOutcome {
+    if (itemId === "selectText") {
+      beginTextSelect(sess)
+      return { disposition: "keepOpen" }
+    }
+    if (itemId === "copySelection") {
+      const text = readSelectionPlainText()
+      cancelTextSelect(sess)
+      return { disposition: "closed", navCopiedText: text.length > 0 ? text : undefined }
+    }
+    if (itemId === "saveImage") {
+      saveImageAtPoint(sess.x, sess.y)
+      return { disposition: "closed" }
+    }
+    if (itemId === "reloadPage") {
+      window.location.reload()
+      return { disposition: "closed" }
+    }
+    return { disposition: "closed" }
+  }
+
+  function closeMenu(sess: NavSession): void {
+    if (sess.menuVariant === "copy" || sess.textSelPhase !== "idle") {
+      cancelTextSelect(sess)
+      return
+    }
+    sess.menuOpen = false
+    sess.menuIndex = 0
+    renderOverlayRoot(sess)
+  }
+
+  function openMenu(sess: NavSession): void {
+    if (sess.typingActive) {
+      endTypingUi(sess)
+    }
+    if (sess.textSelPhase !== "idle") {
+      cancelTextSelect(sess)
+    }
+    sess.menuOpen = true
+    sess.menuIndex = 0
+    renderOverlayRoot(sess)
+  }
+
   function removeSession(): void {
     const w = sessionWin()
     const cur = w.bmxtNav
@@ -206,8 +603,14 @@ export function bmxtNavControlInjected(
   }
 
   function renderOverlayRoot(sess: NavSession): void {
-    const hint = sess.typingActive ? typingHintMarkup(sess.typingMultiline) : ""
-    sess.root.innerHTML = pointerSvgMarkup() + hint
+    let hint = ""
+    if (sess.typingActive) {
+      hint = typingHintMarkup(sess.typingMultiline)
+    } else if (sess.textSelPhase === "start" || sess.textSelPhase === "end") {
+      hint = textSelHintMarkup(sess.textSelPhase)
+    }
+    const menu = menuMarkup(sess)
+    sess.root.innerHTML = pointerSvgMarkup() + hint + menu
   }
 
   function readEditableValue(target: HTMLElement): string {
@@ -307,12 +710,19 @@ export function bmxtNavControlInjected(
       typingEl: null,
       typingSnapshot: null,
       typingMultiline: false,
-      typingActive: false
+      typingActive: false,
+      menuOpen: false,
+      menuIndex: 0,
+      menuVariant: "default",
+      textSelPhase: "idle",
+      textSelStartX: 0,
+      textSelStartY: 0
     }
     if (prevTyping) {
       prevTyping.blur()
     }
-    return { ok: true, x: cx, y: cy }
+    scrollCursorIntoView(cx, cy)
+    return navOk(sessionWin().bmxtNav!, { menuOpen: false })
   }
 
   function focusEditableAt(target: HTMLElement, cx: number, cy: number): void {
@@ -578,7 +988,7 @@ export function bmxtNavControlInjected(
       return installAt(x, y)
     }
 
-    let sess = sessionWin().bmxtNav
+    let sess = getSession()
     if (!sess) {
       const c = viewportCenter()
       return installAt(c.x, c.y)
@@ -594,7 +1004,79 @@ export function bmxtNavControlInjected(
       sess.y = clampCoord(sess.y + dy, maxY)
       sess.root.style.left = sess.x + "px"
       sess.root.style.top = sess.y + "px"
-      return { ok: true, x: sess.x, y: sess.y }
+      scrollCursorIntoView(sess.x, sess.y)
+      if (sess.textSelPhase === "end") {
+        previewTextSelection(sess)
+      }
+      return navOk(sess)
+    }
+
+    if (action === "toggleMenu") {
+      if (sess.menuOpen) {
+        closeMenu(sess)
+      } else {
+        openMenu(sess)
+      }
+      return navOk(sess)
+    }
+
+    if (action === "textSelMark") {
+      if (sess.textSelPhase !== "start" && sess.textSelPhase !== "end") {
+        return { ok: false, reason: "text-sel-inactive" }
+      }
+      markTextSelPoint(sess)
+      return navOk(sess)
+    }
+
+    if (action === "textSelCancel") {
+      cancelTextSelect(sess)
+      return navOk(sess, { menuOpen: false })
+    }
+
+    if (action === "menuInput") {
+      const input = text
+      if (input === "close") {
+        closeMenu(sess)
+        return navOk(sess, { menuOpen: sess.menuOpen })
+      }
+      if (!sess.menuOpen) {
+        return { ok: false, reason: "menu-closed" }
+      }
+      const items = activeMenuItemIds(sess)
+      if (input === "up") {
+        sess.menuIndex = (sess.menuIndex - 1 + items.length) % items.length
+        renderOverlayRoot(sess)
+        return navOk(sess, { menuOpen: true })
+      }
+      if (input === "down") {
+        sess.menuIndex = (sess.menuIndex + 1) % items.length
+        renderOverlayRoot(sess)
+        return navOk(sess, { menuOpen: true })
+      }
+      if (input === "left" && sess.menuVariant === "default") {
+        window.history.back()
+        return navOk(sess, { menuOpen: true })
+      }
+      if (input === "right" && sess.menuVariant === "default") {
+        window.history.forward()
+        return navOk(sess, { menuOpen: true })
+      }
+      if (input === "activate") {
+        const itemId = items[sess.menuIndex]
+        let navCopiedText: string | undefined
+        if (itemId) {
+          const outcome = runMenuAction(sess, itemId)
+          navCopiedText = outcome.navCopiedText
+          if (outcome.disposition === "keepOpen") {
+            return navOk(sess, { menuOpen: sess.menuOpen })
+          }
+        }
+        if (sess.menuOpen) {
+          closeMenu(sess)
+        }
+        return navOk(sess, { menuOpen: sess.menuOpen, navCopiedText })
+      }
+      return { ok: false, reason: "unknown-menu-input" }
     }
 
     if (action === "click") {
