@@ -24,6 +24,8 @@ notes,-l,,,,notes -l,Effect: release_notes_list（--list と同効）。,実装�
 notes,<version>,,,,notes <version>,Effect: release_notes_version。単一トークンで先頭 - でないこと。,可変引数は第二列に表記（バージョンキー）
 split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）
 split,-row,,none,,（同上）,Effect: split_row。,（同上）
+nav,-enter,,none,,nav -enter | nav -exit,第二が -enter: BMXt ウィンドウ UI で nav モードを起動（armed）。オーバーレイ表示は Alt で ON/OFF（プロンプト・ターミナル列フォーカス時）。SW の run は案内行のみ。,第二コマンドは -enter / -exit の二択。単独 nav + Enter は continuation（`nav `）と usage。
+nav,-exit,,none,,（同上）,第二が -exit: Alt で OFF のあと当該ペインで nav を完全終了（位置記憶クリア・オーバーレイ除去）。未起動なら案内行。SW の run は案内行のみ。,nav -exit は Alt OFF 必須（navActive 中はエラー）。
 tabs,-list,,none,,tabs -list [-u],第三なし、または第三が -u のみ許可。BMXt ウィンドウ UI でタブピッカー列を開く（同一 sessionId）。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。,-u は trailingTokens（Tab 補完対象）
 tabs,-list,-u,none,,（同上）,（同上）。,
 tabs,-exit,-list,none,,tabs -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session のタブピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,

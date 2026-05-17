@@ -15,7 +15,8 @@
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
   - [Reproducible builds](#reproducible-builds)
 - [Command-line token model (first / second commands)](#command-line-token-model)
-- [Command List](#command-list)
+  - [Command List](#command-list)
+  - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
   - [`tabs` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tabs -list` / `tabs -list -u`)](#tabs-tab-picker)
@@ -116,7 +117,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ### Permissions (`manifest` in `package.json`)
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `find -page`, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `find -page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
 **Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`npm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`** plus localhost endpoints for Plasmo dev) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
@@ -168,6 +169,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `find --history <pattern>` | Recent history titles/URLs only |
 | `find --bookmark <pattern>` | Bookmark titles/URLs only |
 | `find --page <pattern>` | Visible text in non-discarded http(s) tabs only; may request optional host permission at runtime |
+| `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
+| `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
+| `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
 | `close` / `c <tabId>` | Close tab |
 | `group new <tabId> …` | Create group |
 
@@ -186,6 +190,43 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 - **`find -list …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** (default when omitted) fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
 - One-shot forms **`find --none`**, **`find --history`**, **`find --bookmark`**, and **`find --page`** skip the picker and append results as log lines. An **empty** pattern with **`--none`** (including bare `find -list`) still runs all three effects with empty filters, which the host implements as capped “show many rows” behavior.
 - Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`--page`** / **`find -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
+
+<a id="nav-mode"></a>
+
+### Nav mode (`nav -enter` / `nav -exit`)
+
+**Nav mode** drives a **virtual pointer overlay** on the **active tab of the last-focused normal browser window** (same target resolution as **`dom -list`**). It is **not** a side picker column; state lives in the BMXt window UI and a **tmux-style status strip** under the prompt shows **`nav`**, **ON/OFF**, and the **target tab title**.
+
+**Commands (second token required)**
+
+| Input | Effect |
+|-------|--------|
+| Bare `nav` + **Enter** | Prints usage and restores the prompt to **`nav `** (continuation; Tab completes **`-enter`** / **`-exit`** only — no short aliases). |
+| **`nav -enter`** | **Arms** nav in this session pane. May request **optional http(s) host permission** (same family as `dom -list`). The page overlay is **not** shown yet. |
+| **`nav -exit`** | **Disarms** nav (clears per-tab position memory and removes overlays). Fails with an error if the overlay is still **ON** — press **Alt** to turn it **OFF** first. |
+
+**After `nav -enter` — Alt toggles overlay ON/OFF**
+
+- Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / find / dom** picker column **suspends** nav keys until you return focus to the prompt.
+- Each **Alt** press toggles overlay **ON** or **OFF**.
+- **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **↑ / ↓ / ← / →** move the virtual cursor (default **12px** per step; configurable later in `lib/features/nav/nav-config.ts`). **Enter** performs a **left-click** on the element under the cursor.
+- **OFF:** removes the overlay from the current tab; nav stays **armed** until **`nav -exit`**.
+
+**Tab changes while armed**
+
+- Switching the active tab in the normal browser window **keeps nav armed**. The overlay is recreated on the new tab. **Position is remembered per tab**; switching back restores the last position. **Alt ON** on a tab always starts from the **center** again.
+
+**Pages and permissions**
+
+- **Scriptable http(s)** only (`chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
+- After installing or reloading the extension, **reload the target page once** so the Plasmo **content script** (`contents/bmxt-nav-overlay.ts`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
+
+**Implementation**
+
+- **`lib/features/nav/`** — prompt parsing, status bar, session hook (`useNavMode`), inject snippet, Service Worker runner (`run-nav-inject.ts`).
+- **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; **Alt** / nav **Enter** / arrow keys on the prompt.
+- **`background.ts`** — `NAV_CONTROL` message runs inject on the target tab.
+- **`contents/bmxt-nav-overlay.ts`** — content script listener on http(s) pages.
 
 <a id="picker-ui"></a>
 
@@ -366,7 +407,7 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, and **interactive `group new`** (no tab ids). Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`**, arming and overlay control are UI-side; the Service Worker **`run`** for **`nav`** only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**.
 
 **`exit`:** returns an **`exit_bmxt`** effect; the Service Worker clears the session log and closes the BMXt window it tracks (`chrome.windows.remove`).
 
@@ -378,6 +419,8 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/side-picker/`** — shared side-column picker UI (panel host, `PickerListShell`, `usePlainPickerKeyboard`, interaction kernel, wrappers)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
+- **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
+- **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_bmxt` then closes the tracked window)
@@ -434,9 +477,15 @@ Applies when the prompt `textarea` is focused.
 - **Tab** — Command completion (cycle candidates)
 - **Up / Down** — Command history
 - **Ctrl+R** — Reverse incremental search
-- **Enter** — Execute command
+- **Enter** — Execute command (when **nav** overlay is **ON** and the terminal prompt column has focus, **Enter** sends a **click** to the page instead — see **[Nav mode](#nav-mode)**)
 - **Shift+Enter** — Insert newline
 - **Esc** — Cancel reverse search
+
+**While nav is armed** (`nav -enter`):
+
+- **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (BMXt window active; terminal prompt column focused).
+- **↑ / ↓ / ← / →** — When overlay is **ON**, move the virtual cursor (not command history). When a **tabs / find / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
+- **Enter** — When overlay is **ON**, left-click at the virtual cursor on the page.
 
 During IME composition, composition events are prioritized to avoid conflicts with shortcuts until commit.
 
@@ -483,6 +532,8 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
+- `lib/features/nav/` — Nav overlay feature package
+- `contents/bmxt-nav-overlay.ts` — Nav content script (http(s))
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
 
@@ -571,6 +622,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [再現可能なビルド](#reproducible-builds-ja)
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
 - [コマンド一覧](#command-list-ja)
+  - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
   - [`tabs`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tabs -list` / `tabs -list -u`）](#tabs-tab-picker-ja)
@@ -672,7 +724,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 権限（`package.json` の manifest）
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`find -page` 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`find -page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
 **データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`npm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** ＋ Plasmo 開発用 localhost 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
@@ -724,12 +776,52 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `find --history <pattern>` | 閲覧履歴のタイトル／URL のみ |
 | `find --bookmark <pattern>` | ブックマークのタイトル／URL のみ |
 | `find --page <pattern>` | 非破棄 http(s) タブの表示テキストのみ（実行時にオプションのサイト権限を求めることがある） |
+| `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
+| `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
+| `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
 **split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → find → dom**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
+
+<a id="nav-mode-ja"></a>
+
+### Nav モード（`nav -enter` / `nav -exit`）
+
+**Nav モード**は、**直前にフォーカスした通常ウィンドウのアクティブタブ**上に **仮想ポインタのオーバーレイ**を出し、キーで操作します（タブ解決は **`dom -list`** と同系）。横並びのピッカー列ではなく、BMXt ウィンドウ UI 内の状態と、プロンプト下の **tmux 風ステータス帯**（**`nav`**・**ON/OFF**・対象タブ名）で状態を示します。
+
+**コマンド（第二トークン必須）**
+
+| 入力 | 動作 |
+|------|------|
+| 単独 `nav` + **Enter** | 利用案内を表示し、プロンプトを **`nav `** に復元（continuation）。Tab 補完は **`-enter`** / **`-exit`** のみ（短縮別名なし）。 |
+| **`nav -enter`** | 当該セッションペインで nav を **起動（armed）**。**オプションの http(s) ホスト権限**を求めることがある（`dom -list` と同系）。この時点ではページ上にオーバーレイは出ない。 |
+| **`nav -exit`** | nav を **完全終了**（タブごとの位置記憶を消し、オーバーレイを除去）。オーバーレイがまだ **ON** のときはエラー — 先に **Alt** で **OFF** にする。 |
+
+**`nav -enter` 後 — Alt でオーバーレイ ON/OFF**
+
+- **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / find / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
+- **Alt** のたびにオーバーレイを **ON** / **OFF** 切替。
+- **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。**↑ / ↓ / ← / →** で仮想カーソルを移動（既定 **12px**／ステップ。`lib/features/nav/nav-config.ts` で将来調整可）。**Enter** でカーソル下の要素を **左クリック**相当。
+- **OFF:** 当該タブのオーバーレイを除去。nav は **armed** のまま **`nav -exit`** まで継続。
+
+**armed 中のタブ切替**
+
+- 通常ウィンドウでアクティブタブを変えても **armed は維持**。新タブにオーバーレイを再作成。**タブごとに位置を記憶**し、戻ったタブでは最後の位置を復元。**Alt で ON** したときはそのタブでは毎回 **中央**から開始。
+
+**ページと権限**
+
+- **scriptable な http(s)** のみ（`chrome://`・ウェブストア・`chrome-extension://` 等は拒否）。注入失敗時はステータス帯に短い理由（例: **`site access denied`**）。
+- 拡張のインストール／再読み込み後は、対象ページを **一度再読み込み**して Plasmo **コンテンツスクリプト**（`contents/bmxt-nav-overlay.ts`）を登録することを推奨。未登録時は Service Worker が **`chrome.scripting.executeScript`** にフォールバック。
+
+**実装**
+
+- **`lib/features/nav/`** — プロンプト解析、ステータス帯、セッションフック（`useNavMode`）、注入スニペット、SW ランナー（`run-nav-inject.ts`）。
+- **`lib/features/bmxt-window/bmxt-shell.tsx`** — **`nav -enter` / `nav -exit`** を `RUN_CMD` より前に処理。**Alt** / nav 用 **Enter** / 矢印キー。
+- **`background.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
+- **`contents/bmxt-nav-overlay.ts`** — http(s) ページ上のリスナー。
 
 <a id="picker-ui-ja"></a>
 
@@ -927,13 +1019,15 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**対話的な `group new`**（タブ ID なし）。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列のレイアウト・フォーカス・**`Esc` → プロンプト**・**`-exit -list`** は **[ピッカー UI（横並び列）](#picker-ui-ja)** を参照。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** の起動とオーバーレイ制御は UI 側；Service Worker の **`nav` の `run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav オーバーレイは **[Nav モード](#nav-mode-ja)** を参照。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI
 - **`lib/features/extension-storage/`** — ストレージキーと上限
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
+- **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
+- **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
 - **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_bmxt` でウィンドウを閉じる）
@@ -981,9 +1075,15 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 - **Tab** — コマンド補完（繰り返しで候補循環）
 - **↑ / ↓** — コマンド履歴
 - **Ctrl+R** — 逆方向インクリメンタルサーチ（続けて押すと古い一致へ）
-- **Enter** — コマンド実行（逆検索モードでは確定）
+- **Enter** — コマンド実行（逆検索モードでは確定）。**nav** オーバーレイが **ON** でターミナル列にフォーカスがあるときは、ページ上の **クリック**（**[Nav モード](#nav-mode-ja)**）
 - **Shift+Enter** — 改行を入力可能
 - **Esc** — 逆検索のキャンセル
+
+**nav 起動中**（`nav -enter` 後）:
+
+- **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（BMXt ウィンドウがアクティブで、ターミナル列にフォーカス）。
+- **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は仮想カーソル移動（コマンド履歴ではない）。**tabs / find / dom** ピッカー列にフォーカスがあるときはピッカー操作。
+- **Enter** — オーバーレイ **ON** 時、仮想カーソル位置で左クリック相当。
 
 変換中は IME 用の `composition` イベントを優先し、変換確定までショートカットと競合しないようにしています。
 
@@ -1030,6 +1130,8 @@ npm run dev   # または pnpm dev
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
+- `lib/features/nav/` — Nav オーバーレイ機能パッケージ
+- `contents/bmxt-nav-overlay.ts` — Nav 用コンテンツスクリプト（http(s)）
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
