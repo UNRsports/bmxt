@@ -51,6 +51,14 @@ export async function clearNavTypingOnTab(tabId: number): Promise<NavControlResu
   return runNavControlViaBackground(tabId, "clearTyping", false, 0, 0)
 }
 
+export async function applyNavTypingOnTab(tabId: number, text: string): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "applyTyping", false, 0, 0, 0, 0, undefined, text)
+}
+
+export async function revertNavTypingOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "revertTyping", false, 0, 0)
+}
+
 export async function insertNavTextOnTab(tabId: number, text: string): Promise<NavControlResult> {
   return runNavControlViaBackground(tabId, "insertText", false, 0, 0, 0, 0, undefined, text)
 }

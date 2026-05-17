@@ -47,11 +47,15 @@ import type { DomListCapture } from "../dom/dom-list-capture"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
 import {
-  NAV_RESTORE_PROMPT_EVENT,
+  NAV_ENTER_TYPING_EVENT,
+  NAV_EXIT_TYPING_EVENT,
+  NAV_TYPING_PLACEHOLDER,
+  NAV_TYPING_PLACEHOLDER_MULTILINE,
   NavStatusBar,
   parseNavEnterLine,
   parseNavExitLine,
   useNavMode,
+  type NavEnterTypingDetail,
   type NavPositionsByTab
 } from "../nav"
 import { ensureOptionalHttpHostAccess } from "../extension-permissions/optional-http-hosts"
@@ -247,6 +251,7 @@ export function BmxtShell({
     currentTabTitle: navCurrentTabTitle,
     overlayError: navOverlayError,
     typingMode: navPageTyping,
+    typingMultiline: navTypingMultiline,
     toggleActive: toggleNavActive,
     teardownAll: teardownNav,
     navKeyboardEnabled,
@@ -257,7 +262,8 @@ export function BmxtShell({
     setActive: setNavActive,
     isFocusedPane,
     paneFocus,
-    positionsRef: navPositionsRef
+    positionsRef: navPositionsRef,
+    getTypingBuffer: () => imeRef.current?.value ?? lineRef.current
   })
 
   const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
@@ -328,27 +334,6 @@ export function BmxtShell({
     setLine(snap.line)
     setCursorPos(snap.cursor)
   }, [])
-
-  useEffect(() => {
-    if (!navPageTyping) {
-      navPromptSnapRef.current = null
-      return
-    }
-    const ta = imeRef.current
-    navPromptSnapRef.current = {
-      line: ta?.value ?? lineRef.current,
-      cursor: ta?.selectionStart ?? cursorRef.current
-    }
-  }, [navPageTyping])
-
-  useEffect(() => {
-    if (!navPageTyping) {
-      return
-    }
-    const onRestore = () => restoreNavPromptSnap()
-    window.addEventListener(NAV_RESTORE_PROMPT_EVENT, onRestore)
-    return () => window.removeEventListener(NAV_RESTORE_PROMPT_EVENT, onRestore)
-  }, [navPageTyping, restoreNavPromptSnap])
 
   useEffect(() => {
     void (async () => {
@@ -535,6 +520,37 @@ export function BmxtShell({
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
+
+  useEffect(() => {
+    const onEnter = (ev: Event) => {
+      const detail = (ev as CustomEvent<NavEnterTypingDetail>).detail
+      if (!detail) {
+        return
+      }
+      const ta = imeRef.current
+      navPromptSnapRef.current = {
+        line: ta?.value ?? lineRef.current,
+        cursor: ta?.selectionStart ?? cursorRef.current
+      }
+      skipHistResetRef.current = true
+      tabPressSeqRef.current = 0
+      setHistNavIndex(-1)
+      lineRef.current = detail.initialValue
+      setLine(detail.initialValue)
+      setCursorPos(detail.initialValue.length)
+      focusPrompt()
+    }
+    const onExit = () => {
+      restoreNavPromptSnap()
+      navPromptSnapRef.current = null
+    }
+    window.addEventListener(NAV_ENTER_TYPING_EVENT, onEnter)
+    window.addEventListener(NAV_EXIT_TYPING_EVENT, onExit)
+    return () => {
+      window.removeEventListener(NAV_ENTER_TYPING_EVENT, onEnter)
+      window.removeEventListener(NAV_EXIT_TYPING_EVENT, onExit)
+    }
+  }, [focusPrompt, restoreNavPromptSnap])
 
   const pickerInputRefForSlot = useCallback((slot: PickerSlotId) => {
     switch (slot) {
@@ -1207,10 +1223,6 @@ export function BmxtShell({
     if (!ta) {
       return
     }
-    if (navPageTyping) {
-      restoreNavPromptSnap()
-      return
-    }
     allowEmptyFirstPickerSyncRef.current = false
     if (skipHistResetRef.current) {
       skipHistResetRef.current = false
@@ -1225,7 +1237,7 @@ export function BmxtShell({
     setLine(ta.value)
     setCursorPos(ta.selectionStart)
     syncImeTokenPicker(ta.value, ta.selectionStart)
-  }, [mode, navPageTyping, restoreNavPromptSnap, syncImeTokenPicker])
+  }, [mode, syncImeTokenPicker])
 
   const onImeSelect = useCallback(() => {
     const ta = imeRef.current
@@ -1244,7 +1256,8 @@ export function BmxtShell({
       const ta = e.currentTarget
       const start = ta.selectionStart
       const end = ta.selectionEnd
-      const t = e.clipboardData.getData("text/plain").replace(/[\r\n]+/g, " ")
+      const raw = e.clipboardData.getData("text/plain")
+      const t = navPageTyping && navTypingMultiline ? raw : raw.replace(/[\r\n]+/g, " ")
       const curLn = lineRef.current
       const next = curLn.slice(0, start) + t + curLn.slice(end)
       setHistNavIndex(-1)
@@ -1257,13 +1270,20 @@ export function BmxtShell({
       setCursorPos(start + t.length)
       syncImeTokenPicker(next, start + t.length)
     },
-    [mode, syncImeTokenPicker]
+    [mode, navPageTyping, navTypingMultiline, syncImeTokenPicker]
   )
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (navPageTyping) {
-        e.preventDefault()
+        if (
+          !navTypingMultiline &&
+          e.key === "Enter" &&
+          !e.shiftKey &&
+          !e.nativeEvent.isComposing
+        ) {
+          e.preventDefault()
+        }
         return
       }
 
@@ -1386,6 +1406,9 @@ export function BmxtShell({
 
       if (e.key === "Alt" && navArmed && isFocusedPane && paneFocus === "terminal") {
         e.preventDefault()
+        if (navTypingMode) {
+          return
+        }
         if (!e.repeat) {
           toggleNavActive()
         }
@@ -1528,6 +1551,7 @@ export function BmxtShell({
       navKeyboardEnabled,
       navPageTyping,
       navTypingMode,
+      navTypingMultiline,
       paneFocus,
       toggleNavActive
     ]
@@ -1607,7 +1631,8 @@ export function BmxtShell({
             </span>
           </div>
         ) : null}
-        <div className="bmxt-prompt-line">
+        <div
+          className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}`}>
           {findListShowSpinner ? (
             <span className="bmxt-prompt-spinner" aria-label="Searching" role="status" />
           ) : null}
@@ -1634,11 +1659,18 @@ export function BmxtShell({
               tabIndex={0}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
               placeholder={
-                showFindListPatternPlaceholder
-                  ? FIND_LIST_PATTERN_PLACEHOLDER
-                  : mode === "normal" && line.trim() === "" && !findListBusy && !findListShowSpinner
-                    ? "type or use TAB key"
-                    : undefined
+                navPageTyping
+                  ? navTypingMultiline
+                    ? NAV_TYPING_PLACEHOLDER_MULTILINE
+                    : NAV_TYPING_PLACEHOLDER
+                  : showFindListPatternPlaceholder
+                    ? FIND_LIST_PATTERN_PLACEHOLDER
+                    : mode === "normal" &&
+                        line.trim() === "" &&
+                        !findListBusy &&
+                        !findListShowSpinner
+                      ? "type or use TAB key"
+                      : undefined
               }
               value={line}
               readOnly={findListBusy}
@@ -1675,6 +1707,7 @@ export function BmxtShell({
           armed={navArmed}
           active={navActive}
           typingMode={navPageTyping}
+          typingMultiline={navTypingMultiline}
           tabTitle={navCurrentTabTitle}
           overlayError={navOverlayError}
         />

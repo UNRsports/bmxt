@@ -207,6 +207,17 @@ body {
   font-size: 10px;
 }
 
+.bmxt-prompt-line--nav-typing .bmxt-prompt-field {
+  outline: 1px solid #58a6ff;
+  outline-offset: 1px;
+  border-radius: 4px;
+  background: rgba(88, 166, 255, 0.06);
+}
+
+.bmxt-prompt-line--nav-typing .bmxt-prompt-glyph {
+  color: #58a6ff;
+}
+
 .bmxt-prompt-line {
   display: flex;
   align-items: stretch;

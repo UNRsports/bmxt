@@ -14,9 +14,18 @@ export type NavInjectAction =
   | "deleteBackward"
   | "deleteForward"
   | "clearTyping"
+  | "applyTyping"
+  | "revertTyping"
 
 export type NavInjectResult =
-  | { ok: true; x: number; y: number; editableFocused?: boolean }
+  | {
+      ok: true
+      x: number
+      y: number
+      editableFocused?: boolean
+      typingMultiline?: boolean
+      initialValue?: string
+    }
   | { ok: false; reason?: string }
 
 /** Keep in sync with `contents/bmxt-nav-overlay.ts`. */
@@ -71,6 +80,9 @@ export function bmxtNavControlInjected(
     y: number
     root: HTMLDivElement
     typingEl: HTMLElement | null
+    typingSnapshot: string | null
+    typingMultiline: boolean
+    typingActive: boolean
   }
 
   function sessionWin(): { bmxtNav?: NavSession } {
@@ -176,6 +188,93 @@ export function bmxtNavControlInjected(
     )
   }
 
+  function typingHintMarkup(multiline: boolean): string {
+    const sub = multiline
+      ? '<span style="display:block;margin-top:2px;opacity:0.85">改行可能</span>'
+      : ""
+    return (
+      '<div data-bmxt-nav-hint="1" style="margin-top:4px;padding:4px 8px;max-width:220px;' +
+      "font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.92);" +
+      'border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.35);' +
+      'white-space:normal;pointer-events:none;line-height:1.35">' +
+      '<span style="display:block">type on bmxt window</span>' +
+      '<span style="display:block;margin-top:2px;font-weight:500;opacity:0.9;font-size:10px">' +
+      "text typed in BMXt goes here</span>" +
+      sub +
+      "</div>"
+    )
+  }
+
+  function renderOverlayRoot(sess: NavSession): void {
+    const hint = sess.typingActive ? typingHintMarkup(sess.typingMultiline) : ""
+    sess.root.innerHTML = pointerSvgMarkup() + hint
+  }
+
+  function readEditableValue(target: HTMLElement): string {
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return target.value
+    }
+    if (target.isContentEditable) {
+      return target.innerText
+    }
+    return ""
+  }
+
+  function writeEditableValue(target: HTMLElement, value: string): boolean {
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      target.value = value
+      try {
+        const len = value.length
+        target.setSelectionRange(len, len)
+      } catch {
+        /* ignore */
+      }
+      dispatchInputEvent(target, "insertReplacementText", value)
+      target.dispatchEvent(new Event("change", { bubbles: true }))
+      return true
+    }
+    if (target.isContentEditable) {
+      target.focus()
+      target.innerText = value
+      dispatchInputEvent(target, "insertReplacementText", value)
+      return true
+    }
+    return false
+  }
+
+  function isMultilineEditable(target: HTMLElement): boolean {
+    if (target instanceof HTMLTextAreaElement) {
+      return true
+    }
+    if (target.isContentEditable) {
+      return true
+    }
+    return false
+  }
+
+  function endTypingUi(sess: NavSession): void {
+    if (sess.typingEl) {
+      sess.typingEl.blur()
+    }
+    sess.typingEl = null
+    sess.typingSnapshot = null
+    sess.typingMultiline = false
+    sess.typingActive = false
+    renderOverlayRoot(sess)
+  }
+
+  function beginTypingUi(sess: NavSession, target: HTMLElement): {
+    typingMultiline: boolean
+    initialValue: string
+  } {
+    sess.typingEl = target
+    sess.typingSnapshot = readEditableValue(target)
+    sess.typingMultiline = isMultilineEditable(target)
+    sess.typingActive = true
+    renderOverlayRoot(sess)
+    return { typingMultiline: sess.typingMultiline, initialValue: sess.typingSnapshot }
+  }
+
   function installAt(px: number, py: number): NavInjectResult {
     const prevTyping = sessionWin().bmxtNav?.typingEl ?? null
     removeSession()
@@ -201,7 +300,15 @@ export function bmxtNavControlInjected(
 
     const mount = document.body || document.documentElement
     mount.appendChild(root)
-    sessionWin().bmxtNav = { x: cx, y: cy, root, typingEl: null }
+    sessionWin().bmxtNav = {
+      x: cx,
+      y: cy,
+      root,
+      typingEl: null,
+      typingSnapshot: null,
+      typingMultiline: false,
+      typingActive: false
+    }
     if (prevTyping) {
       prevTyping.blur()
     }
@@ -232,7 +339,11 @@ export function bmxtNavControlInjected(
     }
   }
 
-  function clickAt(cx: number, cy: number): { editableFocused: boolean } {
+  function clickAt(cx: number, cy: number): {
+    editableFocused: boolean
+    typingMultiline?: boolean
+    initialValue?: string
+  } {
     const top = document.elementFromPoint(cx, cy)
     if (!top) {
       return { editableFocused: false }
@@ -260,17 +371,18 @@ export function bmxtNavControlInjected(
       target.click()
     }
     const focusTarget = editable ?? resolveEditable(document.activeElement)
-    if (focusTarget) {
-      focusEditableAt(focusTarget, cx, cy)
-      const sess = sessionWin().bmxtNav
-      if (sess) {
-        sess.typingEl = focusTarget
-      }
-      return { editableFocused: true }
-    }
     const sess = sessionWin().bmxtNav
+    if (focusTarget && sess) {
+      const info = beginTypingUi(sess, focusTarget)
+      focusTarget.blur()
+      return {
+        editableFocused: true,
+        typingMultiline: info.typingMultiline,
+        initialValue: info.initialValue
+      }
+    }
     if (sess) {
-      sess.typingEl = null
+      endTypingUi(sess)
     }
     return { editableFocused: false }
   }
@@ -417,11 +529,45 @@ export function bmxtNavControlInjected(
 
     if (action === "clearTyping") {
       const sess = sessionWin().bmxtNav
-      if (sess?.typingEl) {
-        sess.typingEl.blur()
-        sess.typingEl = null
+      if (sess) {
+        endTypingUi(sess)
       }
       return { ok: true, x: sess?.x ?? 0, y: sess?.y ?? 0 }
+    }
+
+    if (action === "revertTyping") {
+      const sess = sessionWin().bmxtNav
+      if (!sess) {
+        return { ok: false, reason: "no-session" }
+      }
+      const target = typingTarget(sess)
+      const snap = sess.typingSnapshot
+      if (!target || snap === null) {
+        endTypingUi(sess)
+        return { ok: false, reason: "no-typing-target" }
+      }
+      if (!writeEditableValue(target, snap)) {
+        return { ok: false, reason: "revert-failed" }
+      }
+      endTypingUi(sess)
+      return { ok: true, x: sess.x, y: sess.y }
+    }
+
+    if (action === "applyTyping") {
+      const sess = sessionWin().bmxtNav
+      if (!sess) {
+        return { ok: false, reason: "no-session" }
+      }
+      const target = typingTarget(sess)
+      if (!target) {
+        endTypingUi(sess)
+        return { ok: false, reason: "no-typing-target" }
+      }
+      if (!writeEditableValue(target, text)) {
+        return { ok: false, reason: "apply-failed" }
+      }
+      endTypingUi(sess)
+      return { ok: true, x: sess.x, y: sess.y, editableFocused: false }
     }
 
     if (action === "start") {
@@ -439,7 +585,9 @@ export function bmxtNavControlInjected(
     }
 
     if (action === "move") {
-      sess.typingEl = null
+      if (!sess.typingActive) {
+        sess.typingEl = null
+      }
       const maxX = Math.max(0, window.innerWidth - 1)
       const maxY = Math.max(0, window.innerHeight - 1)
       sess.x = clampCoord(sess.x + dx, maxX)
@@ -451,7 +599,14 @@ export function bmxtNavControlInjected(
 
     if (action === "click") {
       const clickRes = clickAt(sess.x, sess.y)
-      return { ok: true, x: sess.x, y: sess.y, editableFocused: clickRes.editableFocused }
+      return {
+        ok: true,
+        x: sess.x,
+        y: sess.y,
+        editableFocused: clickRes.editableFocused,
+        typingMultiline: clickRes.typingMultiline,
+        initialValue: clickRes.initialValue
+      }
     }
 
     if (action === "insertText") {
