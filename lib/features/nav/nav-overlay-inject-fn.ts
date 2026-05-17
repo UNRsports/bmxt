@@ -486,20 +486,54 @@ export function bmxtNavControlInjected(
     if (!src) {
       return false
     }
+    const tail = src.split("/").pop()?.split("?")[0] ?? ""
+    const filename = tail.length > 0 ? tail : "bmxt-nav-image.png"
     void (async () => {
-      try {
-        const res = await fetch(src)
-        const blob = await res.blob()
+      const downloadBlob = (blob: Blob): void => {
         const url = URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        const tail = src.split("/").pop()?.split("?")[0] ?? ""
-        a.download = tail.length > 0 ? tail : "bmxt-nav-image.png"
+        a.download = filename
         a.style.display = "none"
         document.body.appendChild(a)
         a.click()
         a.remove()
         URL.revokeObjectURL(url)
+      }
+      try {
+        if (!img.complete) {
+          await new Promise<void>((resolve, reject) => {
+            img.addEventListener("load", () => resolve(), { once: true })
+            img.addEventListener("error", () => reject(new Error("img-load")), { once: true })
+          })
+        }
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          const canvas = document.createElement("canvas")
+          canvas.width = img.naturalWidth
+          canvas.height = img.naturalHeight
+          const ctx = canvas.getContext("2d")
+          if (ctx) {
+            ctx.drawImage(img, 0, 0)
+            const blob = await new Promise<Blob | null>((resolve) => {
+              canvas.toBlob((b) => resolve(b), "image/png")
+            })
+            if (blob) {
+              downloadBlob(blob)
+              return
+            }
+          }
+        }
+      } catch {
+        /* tainted canvas or load failed */
+      }
+      try {
+        const a = document.createElement("a")
+        a.href = src
+        a.download = filename
+        a.style.display = "none"
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
       } catch {
         window.open(src, "_blank", "noopener,noreferrer")
       }
