@@ -54,19 +54,20 @@ export async function applyDomListEffect(
   const tabId = tab?.id
   if (tabId === undefined) {
     return [
-      "(no target tab — focus a normal browser window with a page, then run dom -list again)",
-      "EN/JA: BMXt は「最後にフォーカスした通常ウィンドウ」のアクティブタブを対象にします。"
+      "dom -list — 表示不可",
+      "JA: 対象タブがありません。通常のブラウザウィンドウでページを開いてください。",
+      "EN: No target tab — focus a normal browser window with a page."
     ]
   }
   if (!isScriptablePageUrl(tab.url)) {
-    const reason = describeNonScriptableReason(tab.url) ?? "(unknown)"
+    const reason = describeNonScriptableReason(tab.url)
     return [
-      "error: dom -list cannot inject into this page (Chrome restricts scripting here).",
+      "dom -list — 表示不可",
+      "JA: 権限のないページのため、本拡張機能では DOM を表示できません。",
+      "EN: This extension cannot show DOM on pages Chrome blocks from scripting (chrome://, Web Store, extension pages, etc.).",
       `target: ${displayTitle(tab.title)}`,
       `url: ${tab.url ?? "(no url)"}`,
-      `reason: ${reason}`,
-      "EN: Switch to an ordinary http(s) site (not Chrome Web Store / chrome:// / chrome-extension://) and retry.",
-      "JA: 通常の http(s) ページ（Chrome ウェブストアや chrome:// 系ではないもの）に切り替えてから再試行してください。"
+      ...(reason ? [`detail: ${reason}`] : [])
     ]
   }
   const access = await ensureOptionalHttpHostAccess()
@@ -99,11 +100,12 @@ export async function applyDomListEffect(
     return [head, urlLine, "---", ...filtered]
   } catch (err) {
     return [
-      `error: executeScript failed — ${err instanceof Error ? err.message : String(err)}`,
+      "dom -list — 表示不可",
+      "JA: このページでは DOM を取得できませんでした。",
+      "EN: Could not capture DOM on this page.",
+      `detail: ${err instanceof Error ? err.message : String(err)}`,
       `target: ${displayTitle(tab.title)}`,
-      `url: ${tab.url ?? "(no url)"}`,
-      "EN: Ensure the tab is http(s), scripting is allowed, and optional site access is granted.",
-      "JA: 対象が http(s) か、scripting とオプションのサイトアクセス許可を確認してください。"
+      `url: ${tab.url ?? "(no url)"}`
     ]
   }
 }
