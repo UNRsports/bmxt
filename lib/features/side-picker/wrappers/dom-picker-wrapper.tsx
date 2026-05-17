@@ -1,8 +1,8 @@
 import type { MutableRefObject } from "react"
+import { DomListPickerBody } from "../../dom/dom-list-picker-body"
 import { DomPromptRender } from "../../dom/dom-prompt-render"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { DOM_LIST_PICKER_HEADLINE } from "../interaction/picker-headlines"
-import { PlainTextPickerBody } from "../plain/plain-text-picker-body"
 
 export type DomPickerWrapperProps = {
   state: DomListPickerState
@@ -33,12 +33,15 @@ export function DomPickerWrapper({
       />
     )
   }
+  const jumpPaths = state.jumpPaths ?? state.lines.map(() => null)
   return (
-    <PlainTextPickerBody
+    <DomListPickerBody
       headline={DOM_LIST_PICKER_HEADLINE}
       lines={state.lines}
+      jumpPaths={jumpPaths}
+      headerLineCount={state.headerLineCount ?? state.lines.length}
+      targetTabId={state.targetTabId}
       onReturnToPrompt={onReturnToPrompt}
-      enableCommandMode
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}

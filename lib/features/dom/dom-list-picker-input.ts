@@ -81,6 +81,13 @@ export function listDomListFlavorCandidates(prefix: string): string[] {
  * JA: ピッカー状態 — DOM 行、または http(s) オプション権限が拒否されたときの許可プロンプト。
  */
 export type DomListPickerState =
-  | { kind: "lines"; lines: string[]; commandLine: string; targetTabId?: number }
+  | {
+      kind: "lines"
+      lines: string[]
+      commandLine: string
+      targetTabId?: number
+      jumpPaths?: (readonly number[] | null)[]
+      headerLineCount?: number
+    }
   | { kind: "prompt"; message: string[]; commandLine: string }
 

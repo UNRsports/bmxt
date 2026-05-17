@@ -43,6 +43,7 @@ import {
   parseDomListPickerLine,
   type DomListPickerState
 } from "../dom/dom-list-picker-input"
+import type { DomListCapture } from "../dom/dom-list-capture"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
 import { logBmxtKey } from "../debug/key-log"
@@ -596,6 +597,7 @@ export function BmxtShell({
           setDomListPicker(sessionId, null)
           return
         }
+        let domCapture: DomListCapture | undefined
         const ctx: DispatchChromeContext = {
           clearLog: async () => {},
           exitPane: async () => [],
@@ -603,6 +605,9 @@ export function BmxtShell({
           focusInfo: async () => [],
           resolveTabArg: async () => undefined,
           resolveDomListTargetTabId,
+          onDomListCapture: (capture) => {
+            domCapture = capture
+          },
           commandSessionId: sessionId
         }
         const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
@@ -632,7 +637,9 @@ export function BmxtShell({
           kind: "lines",
           lines: linesOut,
           commandLine: domListLine,
-          targetTabId
+          targetTabId,
+          jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
+          headerLineCount: domCapture?.headerLineCount ?? linesOut.length
         })
       } catch (e) {
         await appendLogLines([

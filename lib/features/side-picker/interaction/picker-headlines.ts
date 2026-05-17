@@ -7,4 +7,4 @@ export const FIND_LIST_PICKER_HEADLINE =
 
 /** dom -list lines column (`DomPickerWrapper` + `PlainTextPickerBody`). */
 export const DOM_LIST_PICKER_HEADLINE =
-  "dom -list · ↑↓ · j/k · / · :nohlsearch · n/N · Ctrl+←→ · Esc → prompt"
+  "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · Ctrl+←→ · Esc → prompt"

@@ -1,4 +1,4 @@
-import { OPTIONAL_HOST_DENIED_LINES } from "../extension-permissions/optional-http-hosts.ts"
+import { OPTIONAL_HOST_DENIED_LINES } from "../extension-permissions/optional-http-hosts"
 
 /**
  * EN: True only when optional http(s) host permission was denied — show approve UI.

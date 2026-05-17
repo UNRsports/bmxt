@@ -473,6 +473,102 @@ body {
   will-change: transform;
 }
 
+/* dom -list picker */
+.bmxt-dom-picker .bmxt-tab-picker-head {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.bmxt-dom-picker-list {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.bmxt-dom-picker-row {
+  margin: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-dom-picker-row--meta {
+  color: #e6edf3;
+  font-weight: 600;
+  padding-top: 6px;
+  padding-bottom: 4px;
+  line-height: 1.45;
+}
+
+.bmxt-dom-picker-row--meta:first-of-type {
+  padding-top: 2px;
+  color: #8b949e;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.bmxt-dom-picker-row--notice {
+  color: #8b949e;
+  line-height: 1.5;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.bmxt-dom-picker-row--plain {
+  color: #c9d1d9;
+  line-height: 1.5;
+}
+
+.bmxt-dom-picker-row--tree {
+  color: #c9d1d9;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.bmxt-dom-picker-row--hi.bmxt-dom-picker-row--tree,
+.bmxt-dom-picker-row--hi.bmxt-dom-picker-row--plain {
+  background: #21262d;
+  outline: 1px solid #388bfd;
+}
+
+.bmxt-dom-picker-row--hi.bmxt-dom-picker-row--meta,
+.bmxt-dom-picker-row--hi.bmxt-dom-picker-row--notice {
+  background: rgba(33, 38, 45, 0.85);
+  outline: 1px solid #388bfd;
+}
+
+.bmxt-dom-picker-guide {
+  color: #484f58;
+  user-select: none;
+}
+
+.bmxt-dom-picker-tag {
+  color: #7ee787;
+}
+
+.bmxt-dom-picker-id {
+  color: #79c0ff;
+}
+
+.bmxt-dom-picker-class {
+  color: #ffa657;
+}
+
+.bmxt-dom-picker-suffix {
+  color: #8b949e;
+}
+
+.bmxt-dom-picker-plain {
+  color: #c9d1d9;
+}
+
+.bmxt-dom-picker-html {
+  color: #c9d1d9;
+  word-break: break-all;
+}
+
 .bmxt-tab-picker-tab-title {
   white-space: pre-wrap;
   word-break: break-word;
