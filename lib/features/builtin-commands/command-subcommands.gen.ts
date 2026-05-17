@@ -38,6 +38,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" }
   ] as const,
+  "nav": [
+    { head: "-enter", trailingTokens: [] as const, tail: "none" },
+    { head: "-exit", trailingTokens: [] as const, tail: "none" }
+  ] as const,
   "notes": [] as const,
   "split": [
     { head: "-col", trailingTokens: [] as const, tail: "none" },
@@ -112,6 +116,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     case "tabs": {
       const lower = token.toLowerCase()
       return lower === "-list" || lower === "-exit" || lower === "-moveurl" || lower === "-nowurl"
+    }
+    case "nav": {
+      const lower = token.toLowerCase()
+      return lower === "-enter" || lower === "-exit"
     }
     case "notes":
       return false

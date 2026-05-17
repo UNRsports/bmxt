@@ -13,6 +13,7 @@ import * as find from "../cmd/find"
 import * as group from "../cmd/group"
 import * as help_cmd from "../cmd/help_cmd"
 import * as tabs from "../cmd/tabs"
+import * as nav from "../cmd/nav"
 import * as notes from "../cmd/notes"
 import * as split from "../cmd/split"
 
@@ -25,6 +26,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   group.CMD,
   help_cmd.CMD,
   tabs.CMD,
+  nav.CMD,
   notes.CMD,
   split.CMD
 ]
@@ -41,6 +43,7 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: group.CMD.name, run: group.run },
   { name: help_cmd.CMD.name, run: help_cmd.run },
   { name: tabs.CMD.name, run: tabs.run },
+  { name: nav.CMD.name, run: nav.run },
   { name: notes.CMD.name, run: notes.run },
   { name: split.CMD.name, run: split.run }
 ]

@@ -46,6 +46,14 @@ import {
 import type { DomListCapture } from "../dom/dom-list-capture"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
+import {
+  NavStatusBar,
+  parseNavEnterLine,
+  parseNavExitLine,
+  useNavMode,
+  type NavPositionsByTab
+} from "../nav"
+import { ensureOptionalHttpHostAccess } from "../extension-permissions/optional-http-hosts"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch } from "./text-utils"
 import {
@@ -78,6 +86,8 @@ const FIND_LIST_SPINNER_DELAY_MS = 450
 function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
   return (
     parseDomListPickerLine(trimmed) !== null ||
+    parseNavEnterLine(trimmed) ||
+    parseNavExitLine(trimmed) ||
     parseTabsListPickerLine(trimmed) !== null ||
     parseTabsExitListLine(trimmed) ||
     parseFindExitListLine(trimmed) ||
@@ -220,6 +230,35 @@ export function BmxtShell({
       tabPickerOpenRef.current
     )
   }, [])
+  const [navArmed, setNavArmed] = useState(false)
+  const [navActive, setNavActive] = useState(false)
+  const navPositionsRef = useRef<NavPositionsByTab>({})
+  const navArmedRef = useRef(false)
+  const navActiveRef = useRef(false)
+  useEffect(() => {
+    navArmedRef.current = navArmed
+  }, [navArmed])
+  useEffect(() => {
+    navActiveRef.current = navActive
+  }, [navActive])
+
+  const {
+    currentTabTitle: navCurrentTabTitle,
+    overlayError: navOverlayError,
+    toggleActive: toggleNavActive,
+    teardownAll: teardownNav
+  } =
+    useNavMode({
+      armed: navArmed,
+      active: navActive,
+      setActive: setNavActive,
+      isFocusedPane,
+      paneFocus,
+      positionsRef: navPositionsRef
+    })
+  const navKeyboardEnabled =
+    navArmed && navActive && isFocusedPane && paneFocus === "terminal"
+
   const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
   const subCmdPickerRef = useRef<TokenPickerModel | null>(null)
   useEffect(() => {
@@ -872,6 +911,59 @@ export function BmxtShell({
       return
     }
 
+    if (parseNavEnterLine(trimmed)) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      setNavArmed(true)
+      setNavActive(false)
+      void (async () => {
+        const access = await ensureOptionalHttpHostAccess()
+        const logLines = [
+          `> ${trimmed}`,
+          "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click · nav -exit to quit)"
+        ]
+        if (access === "denied") {
+          logLines.push(
+            "warning: http(s) site access was not granted — allow it before Alt ON, or enable site access under chrome://extensions."
+          )
+        }
+        await appendLogLines(logLines)
+        focusPrompt()
+      })()
+      return
+    }
+
+    if (parseNavExitLine(trimmed)) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      void (async () => {
+        const logLines = [`> ${trimmed}`]
+        if (navActiveRef.current) {
+          logLines.push(
+            "error: turn nav off with Alt on the prompt first, then run nav -exit.",
+            "JA: 先に Alt で nav を OFF にしてから nav -exit を実行してください。"
+          )
+        } else if (!navArmedRef.current) {
+          logLines.push("nav is not armed in this pane.")
+        } else {
+          await teardownNav()
+          navPositionsRef.current = {}
+          setNavArmed(false)
+          setNavActive(false)
+          logLines.push("nav disarmed.")
+        }
+        await appendLogLines(logLines)
+        focusPrompt()
+      })()
+      return
+    }
+
     if (parseDomExitListLine(trimmed)) {
       appendCommandToHistory(trimmed)
       setLine("")
@@ -1003,7 +1095,8 @@ export function BmxtShell({
     setFindListPicker,
     runDomListAndShow,
     runFindListSearch,
-    syncImeTokenPicker
+    syncImeTokenPicker,
+    teardownNav
   ])
 
   const applyTokenPickIndex = useCallback(
@@ -1243,6 +1336,26 @@ export function BmxtShell({
         return
       }
 
+      if (e.key === "Alt" && navArmed && isFocusedPane && paneFocus === "terminal") {
+        e.preventDefault()
+        if (!e.repeat) {
+          toggleNavActive()
+        }
+        return
+      }
+
+      if (navKeyboardEnabled) {
+        if (
+          e.key === "Enter" ||
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight"
+        ) {
+          return
+        }
+      }
+
       if (e.key === "Tab") {
         const curLn = lineRef.current
         const pos = cursorRef.current
@@ -1299,7 +1412,7 @@ export function BmxtShell({
         }
       }
 
-      if (e.key === "ArrowUp") {
+      if (e.key === "ArrowUp" && !navKeyboardEnabled) {
         e.preventDefault()
         if (history.length === 0) {
           return
@@ -1319,7 +1432,7 @@ export function BmxtShell({
         return
       }
 
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" && !navKeyboardEnabled) {
         e.preventDefault()
         if (histNavIndex === -1) {
           return
@@ -1335,7 +1448,7 @@ export function BmxtShell({
         return
       }
 
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey && !navKeyboardEnabled) {
         e.preventDefault()
         submitLine()
       }
@@ -1356,7 +1469,11 @@ export function BmxtShell({
       tabPicker,
       sessionId,
       sidePickerOpen,
-      isFocusedPane
+      isFocusedPane,
+      navArmed,
+      navKeyboardEnabled,
+      paneFocus,
+      toggleNavActive
     ]
   )
 
@@ -1498,6 +1615,12 @@ export function BmxtShell({
             ) : null}
           </div>
         </div>
+        <NavStatusBar
+          armed={navArmed}
+          active={navActive}
+          tabTitle={navCurrentTabTitle}
+          overlayError={navOverlayError}
+        />
         <div className="bmxt-scroll-anchor" aria-hidden />
     </>
   )

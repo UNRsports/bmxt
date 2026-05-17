@@ -156,6 +156,57 @@ body {
   font-size: 10px;
 }
 
+/* nav mode — tmux-style status strip under the prompt */
+.bmxt-nav-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  background: #161b22;
+  border-top: 1px solid #30363d;
+  border-bottom: 1px solid #21262d;
+  color: #8b949e;
+  user-select: none;
+}
+
+.bmxt-nav-status-seg {
+  padding: 0 8px;
+  border-right: 1px solid #30363d;
+}
+
+.bmxt-nav-status-seg:last-child {
+  border-right: none;
+}
+
+.bmxt-nav-status-seg--label {
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+.bmxt-nav-status-seg--state {
+  color: #8b949e;
+}
+
+.bmxt-nav-status-seg--state.bmxt-nav-status-seg--on {
+  color: #3fb950;
+}
+
+.bmxt-nav-status-seg--meta {
+  color: #c9d1d9;
+}
+
+.bmxt-nav-status-seg--hint {
+  flex: 1;
+  min-width: 12rem;
+  color: #484f58;
+  font-size: 10px;
+}
+
 .bmxt-prompt-line {
   display: flex;
   align-items: stretch;

@@ -115,6 +115,22 @@
       ]
     },
     {
+      "module": "nav",
+      "canonicalName": "nav",
+      "aliases": [],
+      "usagePrimary": "nav -enter | nav -exit",
+      "subcommands": [
+        {
+          "head": "-enter",
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "tail": "none"
+        }
+      ]
+    },
+    {
       "module": "notes",
       "canonicalName": "notes",
       "aliases": [],
