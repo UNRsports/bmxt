@@ -23,19 +23,39 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 | 層 | 現状 |
 |----|------|
 | シェル | `bmxt-shell.tsx` + `SessionPickerColumns` — `sessionPickers` / `openPickerSlots` |
-| ②③ 共有 | `lib/features/side-picker/` — `PickerPanelHost`, `pane-focus-nav`, `picker-slot-registry`, ラッパー, `PlainTextPickerBody` + `usePlainPickerKeyboard` |
-| find | `{ entries: PickerEntry[] }` → `UrlListPickerWrapper` / `FindListPickerOverlay` |
-| dom | `DomPickerWrapper` — `lines` \| `prompt`（`dom-prompt-render.tsx`）— **Enter 仕様は未決** |
-| tabs | `TabsPickerWrapper` → `TabsUrlListPicker`（`PickerListShell` + `usePlainPickerKeyboard` + bulk/edit 拡張） |
-| 逆依存 | 解消（`side-picker` は tabs の row 型・オーバーレイのみ参照） |
+| ②③ 共有 | `lib/features/side-picker/` — `PickerPanelHost`, `pane-focus-nav`, `picker-slot-registry`, interaction kernel, `usePlainPickerKeyboard` |
+| リスト chrome | **`PickerListShell`**（headline / IME / list スロット / footers）— tabs はここ経由。find / dom 行一覧は **`PlainTextPickerBody`**（自前 chrome・仮想スクロールあり） |
+| find | `PickerEntry[]` → **`UrlListPickerWrapper`** → `PlainTextPickerBody` |
+| dom | **`DomPickerWrapper`** — `lines` \| `prompt`（`dom-prompt-render.tsx`）— **Enter 仕様は未決** |
+| tabs | **`TabsPickerWrapper`** → `useTabPickerController` → **`TabsUrlListPicker`**（`PickerListShell` + 階層 `TabPickerRowList` + bulk/edit パネル） |
+| キーボード | **`usePlainPickerKeyboard`**（`/`, `:`, Esc→prompt, `n`/`N`, Enter, 縦移動, pane strip）+ tabs だけ **`useTabPickerPlainExtensions`**（`#`/Shift 範囲, bulk/edit, 段階 Esc, `:` バルクコマンド） |
+| 逆依存 | 解消（`side-picker` は tabs の row 型・ラッパーからのみ参照） |
 | 列フォーカス | `PaneFocusTarget` = `terminal` \| `PickerSlotId`；`focusPicker(slot)` |
 | キー表・headline | `picker-headlines.ts` + README キー表 + 列追加手順 |
+
+**後方互換:** `TabPickerOverlay` は `TabsUrlListPicker` への薄い re-export（`@deprecated`）。新規コードは `TabsPickerWrapper` を使う。
 
 ---
 
 ## 2. 目標アーキテクチャ
 
-（§2.1–2.5 は設計メモとして維持。tabs の完全 `UrlListPickerWrapper` 統合は将来。）
+（§2.1–2.5 は設計メモとして維持。）
+
+**キーボード（実装済み）**
+
+```
+window capture + IME textarea
+  └ usePlainPickerKeyboard  ← interaction/picker-*.ts kernel
+       ├ find / dom lines（extensions なし）
+       └ tabs: PlainPickerKeyboardExtensions ← useTabPickerPlainExtensions
+            （bulk/edit / # / Shift 範囲は tabs モジュールに残存）
+```
+
+**リスト UI（実装済み）**
+
+- find: フラット行 → `PlainTextPickerBody`
+- tabs: 階層行 + サブパネル → `TabsUrlListPicker` + `PickerListShell`
+- 将来: find / dom を `PickerListShell` に寄せると DOM がさらに揃う（任意）
 
 ### 2.6 スケール（列が増えるとき）
 
@@ -55,9 +75,9 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 ### フェーズ 1 — interaction kernel
 
 - [x] `side-picker/` 新設・共有モジュール移設
-- [x] `use-tab-picker-keyboard` → kernel（search/command/pane strip/capture chain）
-- [x] tabs → `UrlListPickerWrapper` 系シェル統合（`TabsUrlListPicker` + `useTabPickerPlainExtensions`）
-- [x] `usePlainPickerKeyboard`（find 系プレーンリスト）
+- [x] `use-tab-picker-keyboard` → kernel 経由（search/command/pane strip/capture chain）
+- [x] tabs → UrlList 系シェル統合（`TabsUrlListPicker` + `useTabPickerPlainExtensions`）
+- [x] `usePlainPickerKeyboard`（find / dom プレーンリスト）
 - [x] `npx tsc --noEmit` / `npm test`（kernel 単体）
 
 ### フェーズ 2 — ② ピッカーパネル + ③B dom
@@ -75,12 +95,13 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 
 - [x] `PickerEntry` マッピング / `executePickerFocusPlan`
 - [x] window 行 Enter → `focusWindow`、group 行 → `activateFromGroup`（`bmxt-core/tabs-picker/execute-plan.ts`）
-- [ ] 検証: 手動 tabs（手動点検除外）
+- [x] 検証: 手動 tabs（軽いスモーク — 問題なし）
 
 ### フェーズ 5–6 — shell・仕上げ
 
 - [x] `SessionPickerColumns` / `pickersBySession` / `pane-focus-nav` 動的化
 - [x] README・shim 削除・CSS ルート alias（`.bmxt-side-picker` on roots）
+- [x] README / 本ファイルを現行アーキテクチャに同期
 
 ---
 
@@ -94,8 +115,8 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 
 | 操作 | tabs | find | dom |
 |------|------|------|-----|
-| 列を開く | 未検証 | 未検証 | 未検証 |
-| キー操作 | 未検証 | 未検証 | 未検証 |
+| 列を開く | 軽く確認済み | 未検証 | 未検証 |
+| キー操作（`/`, Esc, Enter, bulk 等） | 軽く確認済み | 未検証 | 未検証 |
 
 ---
 
@@ -104,11 +125,13 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 | 用途 | パス |
 |------|------|
 | 列レジストリ | `lib/features/side-picker/wrappers/picker-slot-registry.tsx` |
+| 共有リスト chrome | `lib/features/side-picker/chrome/picker-list-shell.tsx` |
 | プレーン keyboard hook | `lib/features/side-picker/hooks/use-plain-picker-keyboard.ts` |
+| tabs keyboard 拡張 | `lib/features/tabs/use-tab-picker-plain-extensions.ts` |
 | リスト kernel | `lib/features/side-picker/interaction/picker-*.ts` |
-| tabs コントローラ / ビュー | `use-tab-picker-controller.ts`, `tabs-url-list-picker.tsx`, `tabs-picker-wrapper.tsx` |
-| find パース | `lib/features/side-picker/model/from-find-lines.ts` |
-| テスト | `lib/features/side-picker/**/*.test.ts` — `npm test` |
+| tabs ラッパ / ビュー / コントローラ | `tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts` |
+| find ラッパ / パース | `url-list-picker-wrapper.tsx`, `model/from-find-lines.ts` |
+| テスト | `lib/features/side-picker/**/*.test.ts`, `scripts/picker-search-jump.test.mjs` — `npm test` |
 
 ---
 
@@ -119,7 +142,13 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 - [x] tabs window/group Enter（`focusWindow` / `activateFromGroup` — 既存 `resolveConfirmPlan`）
 - [x] 新ピッカー列の manifest / `*-exit -list` 命名（README 手順）
 - [x] kernel 単体テスト（`npm test`）；E2E は未導入
-- [x] tabs を `UrlListPickerWrapper` 系へ完全統合（bulk/edit 込み・`usePlainPickerKeyboard` 一本化）
+- [x] tabs を UrlList 系へ完全統合（bulk/edit 込み・`usePlainPickerKeyboard` 一本化）
+
+**任意の仕上げ（ブロッカーではない）**
+
+- [ ] find / dom の行一覧を `PickerListShell` に寄せる（`PlainTextPickerBody` の chrome 重複解消）
+- [ ] `TabPickerOverlay` / `tab-picker-view-types` 名の整理・削除（呼び出し元がなければ）
+- [ ] find / dom の手動スモーク記録
 
 ---
 

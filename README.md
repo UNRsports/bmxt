@@ -203,10 +203,12 @@ Several picker columns may be open at once in the same pane. Session state is **
 |-------|------|------------|
 | ① Parent terminal | Log, prompt, picker launch/close | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② Panel host | Column chrome, blue focus border, click-to-activate | `lib/features/side-picker/panel/picker-panel-host.tsx` |
-| ③ Command wrapper | URL list vs dom vs tabs (transitional) | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
-| ④ Command body | Tab rows, find entries, dom lines/prompt | `lib/features/tabs/tab-picker-overlay.tsx`, `find/find-list-picker-overlay.tsx`, `dom/dom-prompt-render.tsx` |
+| ③ Command wrapper | Slot entry + keyboard wiring | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
+| ④ Command body | Flat lines vs hierarchical tab rows vs dom prompt | `PlainTextPickerBody` (find/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), `dom/dom-prompt-render.tsx` |
 
-Shared list chrome (**`PlainTextPickerBody`**, search footers, pane strip navigation) lives under **`lib/features/side-picker/`**. **find** / **dom** line lists use the same `/`, `n`/`N`, `:nohlsearch`, and **`Esc` → prompt** behavior as documented below.
+**Shared keyboard:** **`usePlainPickerKeyboard`** in `lib/features/side-picker/hooks/` drives `/`, `:`, `n`/`N`, **`Esc` → prompt**, vertical navigation, and **Ctrl+←/→** pane-strip navigation via the interaction kernel (`lib/features/side-picker/interaction/picker-*.ts`). **find** and **dom** line columns use it directly; **tabs** adds **`useTabPickerPlainExtensions`** (`lib/features/tabs/use-tab-picker-plain-extensions.ts`) for bulk/edit, `#` / `Tab`, Shift range, and layered **`Esc`**.
+
+**Shared list chrome:** **`PickerListShell`** (`chrome/picker-list-shell.tsx`) — headline, invisible IME `textarea`, list slot, search/command footers. **tabs** render through **`TabsUrlListPicker`** on this shell. **find** / **dom** line lists still use **`PlainTextPickerBody`** (same CSS classes, optional virtualization; may move to `PickerListShell` later).
 
 **`PickerEntry` (find)**
 
@@ -278,7 +280,8 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 2. Register a renderer in `lib/features/side-picker/wrappers/picker-slot-registry.tsx` (order in `PICKER_SLOT_ORDER`).
 3. Add manifest subcommands: `<command> -list` to open, `<command> -exit -list` to close (UI-handled in `bmxt-shell.tsx`; Service Worker prints hints only).
 4. Wire open/close in `bmxt-shell.tsx` and `setSessionPickerSlot` in `bmxt-terminal.tsx`.
-5. Add a headline constant in `picker-headlines.ts` when using `PlainTextPickerBody` / `UrlListPickerWrapper`.
+5. Add a headline constant in `picker-headlines.ts` when using `PlainTextPickerBody` / `UrlListPickerWrapper` / `PickerListShell`.
+6. For tabs-like bulk modes, extend **`PlainPickerKeyboardExtensions`** and keep reducer/execute logic in the feature module (see `use-tab-picker-plain-extensions.ts`).
 
 <a id="tabs-man-tabs"></a>
 
@@ -337,10 +340,12 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 ### Tab picker — implementation (keyboard & reducer)
 
-- **Global capture**: `TabPickerOverlay` registers a **`window` `keydown` listener in the capture phase** so **↑/↓/j/k** are handled even when focus is not on the picker’s invisible filter `textarea` (e.g. after clicking the list). The same navigation logic also runs from the filter `textarea`’s `onKeyDown` when the event reaches it.
+**Entry:** **`TabsPickerWrapper`** → **`useTabPickerController`** → **`TabsUrlListPicker`** (`PickerListShell` + **`TabPickerRowList`** + bulk/edit panels). **`TabPickerOverlay`** remains a deprecated alias of the same stack.
+
+- **Global capture**: **`usePlainPickerKeyboard`** registers **`useWindowKeydownCapture`** so **↑/↓/j/k**, `/`, `:`, `n`/`N`, and **Enter** work even when focus is not on the picker’s invisible IME `textarea` (e.g. after clicking the list). The same chain runs from the textarea’s **`onInputKeyDown`** when the event reaches it.
+- **Tabs-only keys**: **`useTabPickerPlainExtensions`** supplies **`PlainPickerKeyboardExtensions`** — custom vertical nav (bulk move/group, Shift range, Ctrl+Shift preview), layered **`Esc`**, **`Tab`** / `#` toggle, **`:`** bulk commands (`parsePickerCommand` in `use-tab-picker-plain-extensions.ts`; short aliases e.g. `m` → `move`; **`edit`** has no alias), and tab-specific **Enter** intents. Wired from **`use-tab-picker-keyboard.ts`**.
 - **Reducer (TypeScript)**: Transitions go through **`runTabsPickerReduce`** in **`lib/features/bmxt-core/tabs-picker/reducer.ts`**. State and events use **camelCase** keys (e.g. `kind: "moveHi"`, `visibleLen`).
-- **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in `tab-picker-overlay.tsx`). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
-- **`:` command mode**: `:` opens a command-line footer (same layout as `/` search). `parsePickerCommand` in `use-tab-picker-keyboard.ts` maps short aliases (e.g. `m` → `move`) to `BulkSubMode`; **`edit`** has no alias and is handled separately from bulk move/close flows. `Tab` completion is handled by `commandCompletionRef` — a ref that stores the base string, candidate list, and current index, and resets on any non-`Tab` key or when command mode exits. `runPickerCommandEnter` fires in the window capture phase (before `runPickerEnterKey`) and auto-marks the highlighted tab if nothing is selected. The previous left/right arrow `cycleSubMode` path has been removed entirely.
+- **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in the controller/keyboard path). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
 - **`:edit` UI**: target resolution and error messages live in **`lib/features/tabs/resolve-edit-entry.ts`**; panels and Chrome/storage effects in **`use-tab-picker-edit.ts`**, **`controller/edit-actions.ts`**, and **`extension-storage/window-display-names.ts`** (see [Tab picker `:edit`](#tabs-tab-picker-edit)).
 - **Prompt coexisting with picker**: While the tab picker is open, **`lib/features/bmxt-window/bmxt-terminal.tsx`** suppresses **↑/↓/j/k** on the main prompt so they do **not** drive **command history**; navigation is handled only by the picker.
 
@@ -370,7 +375,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`manifest/bmxt-codegen.json`** — single source for command registry + **`commands[].subcommands`** (second/third fixed tokens, tail kinds) + Effect schema + TS handler wiring (see **`npm run codegen`**)
 - **`lib/features/bmxt-core/`** — `dispatch.ts`, `registry/`, `cmd/*.ts` (one module per built-in command: **`export const CMD`** + **`run`**; **`registry/table.gen.ts`** is **generated**), `tabs-picker/` (reducer and picker domain logic)
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, picker launch)
-- **`lib/features/side-picker/`** — shared side-column picker UI (panel host, plain list body, pane focus strip, wrappers)
+- **`lib/features/side-picker/`** — shared side-column picker UI (panel host, `PickerListShell`, `usePlainPickerKeyboard`, interaction kernel, wrappers)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
@@ -472,7 +477,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner and **`notes`** command text (keys must match `package.json` `version`)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
-- `lib/features/tabs/` — Tab picker (`tab-picker-overlay.tsx`, `picker-rows.ts`, hooks, etc.)
+- `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
 - `background.ts` — Service Worker (window launch, `runDispatch`, effects)
 - `lib/features/bmxt-core/` — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
 - `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
@@ -742,10 +747,12 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 |----|------|----------|
 | ① 親ターミナル | ログ・プロンプト・ピッカー起動／閉じる | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② パネルホスト | 列クロム・青枠・クリックでアクティブ化 | `lib/features/side-picker/panel/picker-panel-host.tsx` |
-| ③ コマンドラッパ | URL リスト / dom / tabs（過渡） | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
-| ④ コマンド本体 | タブ行・find エントリ・dom 行／確認 | `lib/features/tabs/tab-picker-overlay.tsx`, `find/find-list-picker-overlay.tsx`, `dom/dom-prompt-render.tsx` |
+| ③ コマンドラッパ | スロット入口・keyboard 配線 | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
+| ④ コマンド本体 | フラット行 / 階層タブ行 / dom 確認 | `PlainTextPickerBody`（find/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, `dom/dom-prompt-render.tsx` |
 
-共有リスト UI（**`PlainTextPickerBody`**、検索フッタ、列間フォーカス **`pane-focus-nav`**）は **`lib/features/side-picker/`** に集約されています。
+**共有 keyboard:** **`usePlainPickerKeyboard`**（`lib/features/side-picker/hooks/`）が `/`, `:`, `n`/`N`, **`Esc` → プロンプト**, 縦移動, **Ctrl+←/→** 列ストリップを interaction kernel 経由で処理。**find** / **dom** 行一覧はそのまま利用。**tabs** は **`useTabPickerPlainExtensions`**（`lib/features/tabs/use-tab-picker-plain-extensions.ts`）で bulk/edit・`#` / `Tab`・Shift 範囲・段階 **`Esc`** を追加。
+
+**共有リスト chrome:** **`PickerListShell`**（`chrome/picker-list-shell.tsx`）— headline・不可視 IME・リストスロット・検索/コマンドフッタ。**tabs** は **`TabsUrlListPicker`** 経由。**find** / **dom** 行一覧は現状 **`PlainTextPickerBody`**（同一 CSS・仮想スクロールあり。将来 `PickerListShell` に寄せ可能）。
 
 **`PickerEntry`（find）**
 
@@ -817,7 +824,8 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 2. `lib/features/side-picker/wrappers/picker-slot-registry.tsx` にレンダラを登録（`PICKER_SLOT_ORDER` の順序）。
 3. manifest に `<command> -list`（開く）と `<command> -exit -list`（閉じる）を追加（閉じる処理は `bmxt-shell.tsx` が実行；SW は案内のみ）。
 4. `bmxt-shell.tsx` の起動処理と `bmxt-terminal.tsx` の `setSessionPickerSlot` を配線。
-5. `PlainTextPickerBody` / `UrlListPickerWrapper` を使う場合は `picker-headlines.ts` に headline 定数を追加。
+5. `PlainTextPickerBody` / `UrlListPickerWrapper` / `PickerListShell` を使う場合は `picker-headlines.ts` に headline 定数を追加。
+6. tabs 相当の bulk サブモードが要る列は **`PlainPickerKeyboardExtensions`** を拡張し、reducer/実行は機能モジュール側に置く（`use-tab-picker-plain-extensions.ts` 参照）。
 
 ### `dom`
 
@@ -893,10 +901,12 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 ### タブピッカー — 実装（キー配信とリデューサ）
 
-- **ウィンドウキャプチャ**: `TabPickerOverlay` は **`window` に `keydown`（キャプチャ）**を登録し、フィルタ用の不可視 `textarea` 以外にフォーカスがあっても **↑/↓/j/k** を拾います。フォーカスが textarea にあるときは `onInputKeyDown` でも同じナビ処理をします。
-- **リデューサ（TypeScript）**: 状態遷移は **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**。イベント／状態は **`kind: "moveHi"`** や **`visibleLen`** など **camelCase** の JSON 形で渡します。
+**入口:** **`TabsPickerWrapper`** → **`useTabPickerController`** → **`TabsUrlListPicker`**（`PickerListShell` + **`TabPickerRowList`** + bulk/edit パネル）。**`TabPickerOverlay`** は同一スタックの非推奨エイリアス。
+
+- **ウィンドウキャプチャ**: **`usePlainPickerKeyboard`** が **`useWindowKeydownCapture`** で **↑/↓/j/k**, `/`, `:`, `n`/`N`, **Enter** を拾います（リストクリック後など IME `textarea` 以外にフォーカスがあっても動作）。textarea の **`onInputKeyDown`** でも同じチェーンを実行します。
+- **tabs 固有キー**: **`useTabPickerPlainExtensions`** が **`PlainPickerKeyboardExtensions`** を供給 — バルク時の縦移動、Shift 範囲、Ctrl+Shift プレビュー、段階 **`Esc`**, **`Tab`** / `#`, **`:`** バルクコマンド（`use-tab-picker-plain-extensions.ts` の `parsePickerCommand`、短縮例 `m` → `move`、**`edit`** はエイリアスなし）、tabs 向け **Enter** 意図。配線は **`use-tab-picker-keyboard.ts`**。
+- **リデューサ（TypeScript）**: 状態遷移は **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**。イベント／状態は **`kind: "moveHi"`** や **`visibleLen`** など **camelCase**。
 - **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
-- **`:` コマンドモード**: `:` で `/` 検索と同レイアウトのコマンドラインフッタを開きます。`use-tab-picker-keyboard.ts` の `parsePickerCommand` が短縮エイリアス（例: `m` → `move`）を `BulkSubMode` に変換します（**`edit`** は別経路・エイリアスなし）。`Tab` 補完は `commandCompletionRef`（起点文字列・候補リスト・現在インデックスを保持する ref）で管理し、非 `Tab` キー入力またはコマンドモード終了時にリセットされます。`runPickerCommandEnter` はウィンドウキャプチャフェーズで `runPickerEnterKey` より先に実行され、未マーク時はハイライト中タブを自動マークします。従来の左右矢印による `cycleSubMode` パスは完全に削除されています。
 - **`:edit` UI**: 対象判定・エラー文は **`lib/features/tabs/resolve-edit-entry.ts`**。パネルと Chrome／storage 副作用は **`use-tab-picker-edit.ts`**、**`controller/edit-actions.ts`**、**`extension-storage/window-display-names.ts`**（仕様は [タブピッカー `:edit`](#tabs-tab-picker-edit-ja)）。
 - **ピッカー表示中のプロンプト**: **`lib/features/bmxt-window/bmxt-terminal.tsx`** でピッカー表示中はメイン textarea の **↑/↓/j/k をコマンド履歴に使わない**ようにし、ピッカーと競合しないようにしています。
 
@@ -1011,10 +1021,10 @@ npm run dev   # または pnpm dev
 - `tabs/bmxt.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
 - `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`tabs/bmxt.tsx` から import）
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
-- `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・プレーンリスト・列フォーカス・ラッパ）
+- `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知・**`notes`** ターミナルコマンドの変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
-- `lib/features/tabs/` — タブピッカー（`tab-picker-overlay.tsx`、`picker-rows.ts`、各種 hooks）
+- `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
 - `background.ts` — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
 - `lib/features/bmxt-core/` — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
