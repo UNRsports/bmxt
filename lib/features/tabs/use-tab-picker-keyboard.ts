@@ -1,7 +1,30 @@
 import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
-import { useCallback, useRef } from "react"
-import { tryNavigatePaneStrip } from "../side-picker/panel/pane-focus-nav"
+import { useCallback, useMemo, useRef } from "react"
+import {
+  cyclePickerCommandCompletion,
+  type PickerCommandCompletionState
+} from "../side-picker/interaction/picker-command-completion"
+import {
+  runPickerCommandEnter as runPickerCommandEnterKernel,
+  type RunPickerCommandEnterOptions
+} from "../side-picker/interaction/picker-command-enter"
+import {
+  pickerOpenCommandChord,
+  pickerOpenSearchChord,
+  pickerPlainTypingKey,
+  pickerStopEvent
+} from "../side-picker/interaction/picker-key-event"
+import { runPickerWindowCaptureChain } from "../side-picker/interaction/picker-list-kernel"
+import { runPickerSearchEnter } from "../side-picker/interaction/picker-search-enter"
+import { runPickerSearchJump } from "../side-picker/interaction/picker-search-jump"
+import {
+  groupRowKey,
+  isPhysicalArrowDown,
+  isPhysicalArrowUp,
+  isReservedSplitPaneVerticalNav,
+  verticalNavDirection
+} from "./tab-picker-keyboard"
 import { logBmxtKey } from "../debug/key-log"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
 import type { ExecutionIntent } from "./controller/execute-actions"
@@ -21,13 +44,6 @@ import type {
   SelectKind
 } from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
-import {
-  groupRowKey,
-  isPhysicalArrowDown,
-  isPhysicalArrowUp,
-  isReservedSplitPaneVerticalNav,
-  verticalNavDirection
-} from "./tab-picker-keyboard"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -183,51 +199,27 @@ export function useTabPickerKeyboard({
   cycleGroupMenuPick: (delta: number) => void
   backFromGroupRename: () => void
 }) {
-  /** window capture のリスナーが useEffect 更新より古いクロージャのときでも Enter で確実に参照できるようにする */
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
   newTabUrlWindowIdRef.current = newTabUrlWindowId
   newTabUrlRef.current = newTabUrl
 
-  /** Tab 補完の起点文字列・候補・現在インデックスを管理する ref */
-  const commandCompletionRef = useRef<{
-    base: string
-    completions: readonly string[]
-    idx: number
-  } | null>(null)
+  const commandCompletionRef = useRef<PickerCommandCompletionState | null>(null)
 
-  const runPickerCommandEnter = useCallback(
-    (e: KeyboardEvent): boolean => {
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (!commandMode || e.key !== "Enter" || ev.isComposing || e.shiftKey) {
-        return false
-      }
-      e.preventDefault()
-      e.stopPropagation()
+  const clearCommandMode = useCallback(() => {
+    commandCompletionRef.current = null
+    setCommandMode(false)
+    setCommandBuffer("")
+    setCommandListingHint(false)
+  }, [setCommandBuffer, setCommandListingHint, setCommandMode])
 
-      if (commandBuffer.trim() === "") {
-        setCommandListingHint(true)
-        return true
-      }
-
-      if (commandBuffer.trim().toLowerCase() === "nohlsearch") {
-        commandCompletionRef.current = null
-        setCommandMode(false)
-        setCommandBuffer("")
-        setCommandListingHint(false)
-        setHlSearchPattern("")
-        return true
-      }
-
-      const mode = parsePickerCommand(commandBuffer)
-      commandCompletionRef.current = null
-      setCommandMode(false)
-      setCommandBuffer("")
-      setCommandListingHint(false)
-
+  const commitTabPickerCommand = useCallback(
+    (buffer: string) => {
+      const mode = parsePickerCommand(buffer)
+      clearCommandMode()
       if (mode === "edit") {
         void openEditFromPicker()
-        return true
+        return
       }
       if (mode !== null) {
         const rowIndex = visibleRowIndices[hi]
@@ -249,44 +241,50 @@ export function useTabPickerKeyboard({
         }
         setBulkSubMode(mode)
       }
-      return true
     },
     [
       applyReducedState,
-      commandBuffer,
-      commandMode,
+      clearCommandMode,
       hi,
       markedCount,
       openEditFromPicker,
       rows,
       setBulkSubMode,
-      setCommandBuffer,
-      setCommandListingHint,
-      setCommandMode,
-      setHlSearchPattern,
       visibleRowIndices
     ]
   )
 
-  const runPickerEnterKey = useCallback(
+  const tabPickerCommandEnterOptions = useMemo(
+    (): RunPickerCommandEnterOptions => ({
+      commandMode,
+      commandBuffer,
+      onEmptyEnter: () => setCommandListingHint(true),
+      onNohlsearch: () => {
+        clearCommandMode()
+        setHlSearchPattern("")
+      },
+      onCommand: (buffer) => {
+        commitTabPickerCommand(buffer)
+        return true
+      }
+    }),
+    [clearCommandMode, commandBuffer, commandMode, commitTabPickerCommand, setCommandListingHint, setHlSearchPattern]
+  )
+
+  const runPickerCommandEnter = useCallback(
+    (e: KeyboardEvent) => runPickerCommandEnterKernel(e, tabPickerCommandEnterOptions),
+    [tabPickerCommandEnterOptions]
+  )
+
+  const runPickerTabEnterKey = useCallback(
     (e: KeyboardEvent): boolean => {
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
         return false
       }
 
-      if (searchMode) {
-        e.preventDefault()
-        e.stopPropagation()
-        setHlSearchPattern(filterQuery)
-        setSearchMode(false)
-        setFilterQuery("")
-        return true
-      }
-
       if (newTabUrlWindowIdRef.current !== null) {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         const wid = newTabUrlWindowIdRef.current
         const raw = groupMetaTitleRef.current?.value ?? newTabUrlRef.current
         void executeOpenNewTabFromUrl(wid, raw)
@@ -294,20 +292,17 @@ export function useTabPickerKeyboard({
       }
 
       if (editPanel?.kind === "windowRename") {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         void confirmWindowRename()
         return true
       }
       if (editPanel?.kind === "groupRename") {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         void confirmGroupRename()
         return true
       }
       if (editPanel?.kind === "groupMenu") {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         void confirmGroupMenuPick()
         return true
       }
@@ -337,9 +332,7 @@ export function useTabPickerKeyboard({
       }
 
       logBmxtKey("picker", "Enter", { intent })
-
-      e.preventDefault()
-      e.stopPropagation()
+      pickerStopEvent(e)
 
       if (intent === "openGroupMeta") {
         newGroupTabIdsRef.current = [...selectedTabIds]
@@ -386,7 +379,6 @@ export function useTabPickerKeyboard({
       confirmWindowRename,
       editPanel,
       executeOpenNewTabFromUrl,
-      filterQuery,
       groupMetaTitleRef,
       groupNewPhase,
       hi,
@@ -404,10 +396,6 @@ export function useTabPickerKeyboard({
       setGroupNewPhase,
       setNewGroupColorIndex,
       setNewGroupTitle,
-      searchMode,
-      setFilterQuery,
-      setHlSearchPattern,
-      setSearchMode,
       variant,
       visibleRowIndices
     ]
@@ -539,91 +527,59 @@ export function useTabPickerKeyboard({
     ]
   )
 
-  const runPickerSearchJump = useCallback(
-    (e: KeyboardEvent): boolean => {
-      const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing) {
-        return false
+  const searchJumpEnabled =
+    !searchMode &&
+    !commandMode &&
+    groupNewPhase !== "meta" &&
+    newTabUrlWindowId === null &&
+    editPanel === null &&
+    bulkSubMode !== "move" &&
+    bulkSubMode !== "group" &&
+    hlSearchPattern !== ""
+
+  const searchJumpOptions = useMemo(
+    () => ({
+      enabled: searchJumpEnabled,
+      hi,
+      highlightPattern: hlSearchPattern,
+      matchIndices: () =>
+        tabPickerVisibleHiIndicesMatching(rows, visibleRowIndices, hlSearchPattern),
+      onJump: (target: number) => {
+        shiftRangeAnchorHiRef.current = null
+        setHi(target)
       }
-      if (e.ctrlKey || e.metaKey || e.altKey) {
-        return false
-      }
-      if (searchMode || commandMode) {
-        return false
-      }
-      if (groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null) {
-        return false
-      }
-      if (bulkSubMode === "move" || bulkSubMode === "group") {
-        return false
-      }
-      if (hlSearchPattern === "") {
-        return false
-      }
-      let forward: boolean
-      if (e.key === "n" && !e.shiftKey) {
-        forward = true
-      } else if (e.key === "N" && e.shiftKey) {
-        forward = false
-      } else {
-        return false
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      const len = visibleRowIndices.length
-      if (len === 0) {
-        return true
-      }
-      const matches = tabPickerVisibleHiIndicesMatching(
-        rows,
-        visibleRowIndices,
-        hlSearchPattern
-      )
-      if (matches.length === 0) {
-        return true
-      }
-      /* vim と同様、上下端ではループする（通常の `j`/`k`/矢印は clamp で止まるのと別ルート） */
-      let target: number
-      if (forward) {
-        const nextAhead = matches.find((vi) => vi > hi)
-        target = nextAhead ?? matches[0]!
-      } else {
-        let prevBehind: number | undefined
-        for (const vi of matches) {
-          if (vi < hi) {
-            prevBehind = vi
-          } else {
-            break
-          }
-        }
-        target = prevBehind ?? matches[matches.length - 1]!
-      }
-      if (target === hi) {
-        return true
-      }
-      shiftRangeAnchorHiRef.current = null
-      /* reducer は clamp 動作のため bypass し、setHi で直接ジャンプ先へ移動する */
-      setHi(target)
-      return true
-    },
+    }),
     [
-      bulkSubMode,
-      commandMode,
-      groupNewPhase,
       hi,
       hlSearchPattern,
-      newTabUrlWindowId,
       rows,
-      searchMode,
+      searchJumpEnabled,
       setHi,
       shiftRangeAnchorHiRef,
       visibleRowIndices
     ]
   )
 
+  const runPickerSearchJumpHandler = useCallback(
+    (e: KeyboardEvent) => runPickerSearchJump(e, searchJumpOptions),
+    [searchJumpOptions]
+  )
+
+  const searchEnterOptions = useMemo(
+    () => ({
+      searchMode,
+      filterQuery,
+      onCommit: (pattern: string) => {
+        setHlSearchPattern(pattern)
+        setSearchMode(false)
+        setFilterQuery("")
+      }
+    }),
+    [filterQuery, searchMode, setFilterQuery, setHlSearchPattern, setSearchMode]
+  )
+
   const runPickerVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      /* Alt+矢印はペイン間フォーカス移動用（親で処理）— ハイライト移動に使わない */
       if (e.altKey) {
         return false
       }
@@ -655,15 +611,13 @@ export function useTabPickerKeyboard({
       }
 
       if (editPanel?.kind === "groupMenu") {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         cycleGroupMenuPick(navDir === "down" ? 1 : -1)
         return true
       }
 
       if (bulkSubMode === "move") {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         if (visibleRowIndices.length === 0) {
           return true
         }
@@ -681,8 +635,7 @@ export function useTabPickerKeyboard({
         visibleRowIndices.length > 0 &&
         (isPhysicalArrowDown(e) || isPhysicalArrowUp(e))
       ) {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         const delta = isPhysicalArrowDown(e) ? 1 : -1
         const previewRows = visibleRowIndices.map((ri) => {
           const r = rows[ri]
@@ -716,8 +669,7 @@ export function useTabPickerKeyboard({
         e.shiftKey &&
         (isPhysicalArrowDown(e) || isPhysicalArrowUp(e))
       ) {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         if (visibleRowIndices.length === 0) {
           return true
         }
@@ -766,8 +718,7 @@ export function useTabPickerKeyboard({
       }
 
       if (bulkSubMode === "group") {
-        e.preventDefault()
-        e.stopPropagation()
+        pickerStopEvent(e)
         if (groupChoices.length === 0) {
           return true
         }
@@ -779,8 +730,7 @@ export function useTabPickerKeyboard({
         return true
       }
 
-      e.preventDefault()
-      e.stopPropagation()
+      pickerStopEvent(e)
       if (visibleRowIndices.length === 0) {
         return true
       }
@@ -796,6 +746,8 @@ export function useTabPickerKeyboard({
       applyReducedState,
       applyReducedStateSequence,
       bulkSubMode,
+      cycleGroupMenuPick,
+      editPanel,
       groupChoices.length,
       groupMetaColorStripRef,
       groupMetaTitleRef,
@@ -814,49 +766,31 @@ export function useTabPickerKeyboard({
       if (!isHostPaneFocused) {
         return
       }
-      if (ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.shiftKey) {
-        const horiz =
-          ev.key === "ArrowLeft" || ev.code === "ArrowLeft"
-            ? "left"
-            : ev.key === "ArrowRight" || ev.code === "ArrowRight"
-              ? "right"
-              : null
-        if (horiz && tryNavigatePaneStrip(sessionId, horiz)) {
-          ev.preventDefault()
-          ev.stopImmediatePropagation()
-          return
-        }
-      }
-      if (runPickerVerticalNav(ev)) {
-        logBmxtKey("picker", "handled", {
-          handler: "verticalNav",
-          key: ev.key,
-          code: ev.code
-        })
-        return
-      }
-      if (runPickerSearchJump(ev)) {
-        logBmxtKey("picker", "handled", {
-          handler: "searchJump",
-          key: ev.key,
-          code: ev.code
-        })
-        return
-      }
-      if (runPickerCommandEnter(ev)) {
-        return
-      }
-      if (runPickerEnterKey(ev)) {
-        return
+      const handled = runPickerWindowCaptureChain(ev, sessionId, {
+        verticalNav: runPickerVerticalNav,
+        searchJump: searchJumpOptions,
+        searchEnter: searchEnterOptions,
+        commandEnter: tabPickerCommandEnterOptions,
+        customEnter: runPickerTabEnterKey
+      })
+      if (handled) {
+        const handler =
+          ev.key === "n" || ev.key === "N"
+            ? "searchJump"
+            : ev.key === "j" || ev.key === "k" || ev.key.startsWith("Arrow")
+              ? "verticalNav"
+              : "capture"
+        logBmxtKey("picker", "handled", { handler, key: ev.key, code: ev.code })
       }
     },
     [
       isHostPaneFocused,
+      runPickerTabEnterKey,
+      runPickerVerticalNav,
+      searchEnterOptions,
+      searchJumpOptions,
       sessionId,
-      runPickerCommandEnter,
-      runPickerEnterKey,
-      runPickerSearchJump,
-      runPickerVerticalNav
+      tabPickerCommandEnterOptions
     ]
   )
 
@@ -874,7 +808,11 @@ export function useTabPickerKeyboard({
         return
       }
 
-      if (runPickerSearchJump(e.nativeEvent)) {
+      if (runPickerSearchJumpHandler(e.nativeEvent)) {
+        return
+      }
+
+      if (runPickerSearchEnter(e.nativeEvent, searchEnterOptions)) {
         return
       }
 
@@ -903,10 +841,7 @@ export function useTabPickerKeyboard({
           return
         }
         if (commandMode) {
-          commandCompletionRef.current = null
-          setCommandMode(false)
-          setCommandBuffer("")
-          setCommandListingHint(false)
+          clearCommandMode()
           return
         }
         if (groupNewPhase === "meta") {
@@ -942,15 +877,16 @@ export function useTabPickerKeyboard({
           if (commandBuffer.trim() === "") {
             setCommandListingHint(true)
           }
-          if (commandCompletionRef.current === null) {
-            const base = commandBuffer
-            const candidates = filterTabPickerCommandCompletions(base)
-            if (candidates.length === 0) return
-            commandCompletionRef.current = { base, completions: candidates, idx: 0 }
+          const cycled = cyclePickerCommandCompletion(
+            commandCompletionRef.current,
+            commandBuffer,
+            filterTabPickerCommandCompletions(commandBuffer)
+          )
+          if (cycled === null) {
+            return
           }
-          const { completions, idx } = commandCompletionRef.current
-          setCommandBuffer(completions[idx % completions.length])
-          commandCompletionRef.current = { ...commandCompletionRef.current, idx: idx + 1 }
+          commandCompletionRef.current = cycled.state
+          setCommandBuffer(cycled.value)
           return
         }
         if (
@@ -1005,18 +941,17 @@ export function useTabPickerKeyboard({
 
       if (e.key === "Enter") {
         if (commandMode) {
-          return
+          if (runPickerCommandEnter(e.nativeEvent)) {
+            return
+          }
         }
-        if (runPickerEnterKey(e.nativeEvent)) {
+        if (runPickerTabEnterKey(e.nativeEvent)) {
           return
         }
       }
 
       if (
-        e.key === ":" &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.altKey &&
+        pickerOpenCommandChord(e.nativeEvent) &&
         !searchMode &&
         !commandMode &&
         groupNewPhase !== "meta" &&
@@ -1030,7 +965,7 @@ export function useTabPickerKeyboard({
         return
       }
 
-      if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (pickerOpenSearchChord(e.nativeEvent)) {
         e.preventDefault()
         if (!searchMode) {
           setSearchMode(true)
@@ -1038,32 +973,32 @@ export function useTabPickerKeyboard({
         return
       }
 
-      if (!searchMode && !commandMode) {
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          e.preventDefault()
-        }
+      if (!searchMode && !commandMode && pickerPlainTypingKey(e.nativeEvent)) {
+        e.preventDefault()
       }
     },
     [
       applyReducedState,
       backFromGroupRename,
       bulkSubMode,
+      clearCommandMode,
       closeEdit,
       closeSearch,
       commandBuffer,
       commandMode,
       editPanel,
       executeCreateNewGroup,
-      filterQuery,
       groupNewPhase,
+      searchEnterOptions,
       hi,
       isHostPaneFocused,
       markedCount,
       markedTabIds,
       newTabUrlWindowId,
       onReturnToPrompt,
-      runPickerEnterKey,
-      runPickerSearchJump,
+      runPickerCommandEnter,
+      runPickerSearchJumpHandler,
+      runPickerTabEnterKey,
       runPickerVerticalNav,
       rows,
       searchMode,
@@ -1072,6 +1007,7 @@ export function useTabPickerKeyboard({
       setCommandListingHint,
       setCommandMode,
       setGroupNewPhase,
+      setFilterQuery,
       setHlSearchPattern,
       setNewTabUrl,
       setNewTabUrlWindowId,

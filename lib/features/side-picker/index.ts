@@ -13,6 +13,36 @@ export {
   filterUrlListCommandCompletions,
   URL_LIST_COMMAND_LISTING_HINT
 } from "./interaction/url-list-commands"
+export {
+  pickerEnterKey,
+  pickerEventIsComposing,
+  pickerOpenCommandChord,
+  pickerOpenSearchChord,
+  pickerPlainTypingKey,
+  pickerStopEvent
+} from "./interaction/picker-key-event"
+export {
+  runPickerCommandEnter,
+  isPickerNohlsearchCommand,
+  PICKER_NOHLSEARCH_COMMAND,
+  type RunPickerCommandEnterOptions
+} from "./interaction/picker-command-enter"
+export {
+  cyclePickerCommandCompletion,
+  type PickerCommandCompletionState
+} from "./interaction/picker-command-completion"
+export { runPickerPaneStripKeydown } from "./interaction/picker-pane-strip"
+export { runPickerSearchEnter, type RunPickerSearchEnterOptions } from "./interaction/picker-search-enter"
+export {
+  runPickerSearchJump,
+  computePickerSearchJumpTarget,
+  pickerSearchJumpDirection,
+  type RunPickerSearchJumpOptions
+} from "./interaction/picker-search-jump"
+export {
+  runPickerWindowCaptureChain,
+  type PickerWindowCaptureHandlers
+} from "./interaction/picker-list-kernel"
 export { useWindowKeydownCapture } from "./hooks/use-window-keydown-capture"
 export { PickerSearchFooter, TabPickerSearchFooter } from "./chrome/picker-search-footer"
 export { PickerCommandFooter, TabPickerCommandFooter } from "./chrome/picker-command-footer"

@@ -149,8 +149,8 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 - [x] `TabPickerSearchFooter` / `TabPickerCommandFooter` → `side-picker/chrome/`
 - [x] `parseTabPickerSearchNeedle` / `splitTextHighlightSegments` → `side-picker/search/`
 - [x] 縦ナビ（`verticalNavDirection` 等）を `side-picker/interaction/picker-vertical-nav.ts` に抽出
-- [ ] `use-tab-picker-keyboard` の残りを `side-picker/interaction/` へ（大規模・任意）
-- [ ] `TabPickerOverlay` は kernel を呼ぶだけに（挙動不変・`TabsPickerWrapper` 経由）
+- [x] `use-tab-picker-keyboard` の共有部分を `side-picker/interaction/` kernel へ（search jump/enter、command enter、pane strip、capture chain）
+- [ ] `TabPickerOverlay` は kernel を呼ぶだけに（縦ナビ bulk/edit は tabs 側に残置）
 - [x] 検証: `npx tsc --noEmit`
 
 ### フェーズ 2 — ② ピッカーパネル + ③B dom ラッパー
@@ -227,6 +227,7 @@ CSS: 段階的に `.bmxt-tab-picker*` → `.bmxt-side-picker*`（移行期は旧
 | 用途 | パス |
 |------|------|
 | キー表・headline 定数 | `lib/features/side-picker/interaction/picker-headlines.ts` |
+| リスト keyboard kernel | `side-picker/interaction/picker-{search-jump,search-enter,command-enter,pane-strip,list-kernel,key-event}.ts` |
 | 縦ナビ共有 | `lib/features/side-picker/interaction/picker-vertical-nav.ts` |
 | Shell 配置 | `lib/features/bmxt-window/bmxt-shell.tsx` |
 | Session 状態 | `lib/features/bmxt-window/bmxt-terminal.tsx` |
