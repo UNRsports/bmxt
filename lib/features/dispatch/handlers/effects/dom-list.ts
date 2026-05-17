@@ -34,11 +34,23 @@ function displayTitle(t: string | undefined): string {
  *     stub なので、background と同等の共有ユーティリティで対象タブを引く。
  *     Chrome 内部 ID は UI には出さず、タイトルと URL のみを表示する。
  */
+async function resolveTabForDomList(ctx: DispatchChromeContext): Promise<chrome.tabs.Tab | undefined> {
+  const overrideId = await ctx.resolveDomListTargetTabId?.()
+  if (overrideId !== undefined) {
+    try {
+      return await chrome.tabs.get(overrideId)
+    } catch {
+      /* tab may have closed — fall through */
+    }
+  }
+  return resolveTargetTabForActiveWindow()
+}
+
 export async function applyDomListEffect(
-  _ctx: DispatchChromeContext,
+  ctx: DispatchChromeContext,
   e: E
 ): Promise<string[]> {
-  const tab = await resolveTargetTabForActiveWindow()
+  const tab = await resolveTabForDomList(ctx)
   const tabId = tab?.id
   if (tabId === undefined) {
     return [

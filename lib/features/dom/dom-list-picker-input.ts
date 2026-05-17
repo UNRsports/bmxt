@@ -82,7 +82,7 @@ export function listDomListFlavorCandidates(prefix: string): string[] {
  *     （host 権限未許可、保護ページ等の executeScript 失敗、対象タブ無し、など）。
  */
 export type DomListPickerState =
-  | { kind: "lines"; lines: string[] }
+  | { kind: "lines"; lines: string[]; commandLine: string; targetTabId?: number }
   | { kind: "prompt"; message: string[]; commandLine: string }
 
 /** Heuristic: the first line is an error/notice we can retry after user approval. */

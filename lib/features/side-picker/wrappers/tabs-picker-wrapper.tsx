@@ -14,6 +14,7 @@ export type TabsPickerWrapperProps = {
   isHostPaneFocused: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
+  onFocusTabIdChange?: (tabId: number | null) => void
 }
 
 /** EN: Layer ③C — tabs on UrlList picker shell (`usePlainPickerKeyboard` + bulk/edit extensions). */

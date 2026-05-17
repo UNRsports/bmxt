@@ -43,6 +43,8 @@ import {
   parseDomListPickerLine,
   type DomListPickerState
 } from "../dom/dom-list-picker-input"
+import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../dom/resolve-dom-list-target-tab"
+import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch } from "./text-utils"
 import {
@@ -200,6 +202,23 @@ export function BmxtShell({
   }, [domListPicker])
   const findListDismissRef = useRef(false)
   const domListDismissRef = useRef(false)
+  const tabsPickerFocusTabIdRef = useRef<number | null>(null)
+  const tabPickerOpenRef = useRef(false)
+  useEffect(() => {
+    tabPickerOpenRef.current = tabPicker !== null
+  }, [tabPicker])
+  useEffect(() => {
+    if (tabPicker === null) {
+      tabsPickerFocusTabIdRef.current = null
+    }
+  }, [tabPicker])
+
+  const resolveDomListTargetTabId = useCallback(async (): Promise<number | undefined> => {
+    return resolveDomListTargetTabIdFromSources(
+      tabsPickerFocusTabIdRef.current,
+      tabPickerOpenRef.current
+    )
+  }, [])
   const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
   const subCmdPickerRef = useRef<TokenPickerModel | null>(null)
   useEffect(() => {
@@ -583,6 +602,7 @@ export function BmxtShell({
           listWindows: async () => [],
           focusInfo: async () => [],
           resolveTabArg: async () => undefined,
+          resolveDomListTargetTabId,
           commandSessionId: sessionId
         }
         const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
@@ -607,7 +627,13 @@ export function BmxtShell({
         if (announce) {
           await appendLogLines([`> ${displayLine}`, "dom -list — picker (Esc → prompt)"])
         }
-        setDomListPicker(sessionId, { kind: "lines", lines: linesOut })
+        const targetTabId = await resolveDomListTargetTabId()
+        setDomListPicker(sessionId, {
+          kind: "lines",
+          lines: linesOut,
+          commandLine: domListLine,
+          targetTabId
+        })
       } catch (e) {
         await appendLogLines([
           `> ${displayLine}`,
@@ -616,7 +642,26 @@ export function BmxtShell({
         setDomListPicker(sessionId, null)
       }
     },
-    [appendLogLines, sessionId, setDomListPicker]
+    [appendLogLines, sessionId, setDomListPicker, resolveDomListTargetTabId]
+  )
+
+  const refreshDomListPicker = useCallback(
+    (commandLine: string) => runDomListAndShow(commandLine, commandLine, false),
+    [runDomListAndShow]
+  )
+
+  const { onTabsPickerFocusTabId: queueDomListFollowRefresh } = useDomListFollowTab({
+    domListPicker,
+    resolveTargetTabId: resolveDomListTargetTabId,
+    refreshDomList: refreshDomListPicker
+  })
+
+  const onTabsPickerFocusTabId = useCallback(
+    (tabId: number | null) => {
+      tabsPickerFocusTabIdRef.current = tabId
+      queueDomListFollowRefresh(tabId)
+    },
+    [queueDomListFollowRefresh]
   )
 
   const promptLine = useCallback(
@@ -1493,10 +1538,12 @@ export function BmxtShell({
               const cl = domListPicker.commandLine
               setDomListPicker(sessionId, {
                 kind: "lines",
-                lines: ["dom -list — retrying after permission grant…"]
+                lines: ["dom -list — retrying after permission grant…"],
+                commandLine: cl
               })
               void runDomListAndShow(cl, cl, false)
             }}
+            onTabsPickerFocusTabId={onTabsPickerFocusTabId}
           />
         </div>
       ) : (

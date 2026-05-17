@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -41,6 +42,8 @@ type Props = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   /** EN: Session leaf id for Ctrl+←→ pane-strip navigation. */
   sessionId: string
+  /** EN: Fires when hi moves to a tab row (or off tab rows). Used by dom -list follow. */
+  onFocusTabIdChange?: (tabId: number | null) => void
 }
 
 export type TabPickerOverlayProps = Props
@@ -55,7 +58,8 @@ export function useTabPickerController({
   onReturnToPrompt,
   isHostPaneFocused,
   pickerInputRef,
-  sessionId
+  sessionId,
+  onFocusTabIdChange
 }: Props) {
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
@@ -188,6 +192,23 @@ export function useTabPickerController({
     tabIdToWindowId,
     setActiveTabId
   })
+
+  useEffect(() => {
+    if (!onFocusTabIdChange) {
+      return
+    }
+    if (visibleRowIndices.length === 0) {
+      onFocusTabIdChange(null)
+      return
+    }
+    const rowIndex = visibleRowIndices[hi]
+    if (rowIndex === undefined) {
+      onFocusTabIdChange(null)
+      return
+    }
+    const row = rows[rowIndex]
+    onFocusTabIdChange(row?.kind === "tab" ? row.tabId : null)
+  }, [hi, visibleRowIndices, rows, onFocusTabIdChange])
 
   const markedCount = pickerMarkedCount(
     markedKind,

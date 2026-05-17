@@ -29,6 +29,7 @@ export type PickerColumnHostContext = {
   onRefreshTabPickerRows: () => Promise<void>
   onOpenFindEntry: (entry: PickerEntry) => void
   onDomApprove: () => void
+  onTabsPickerFocusTabId?: (tabId: number | null) => void
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -51,6 +52,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           isHostPaneFocused={ctx.tabsPickerKeyboardActive}
           pickerInputRef={ctx.tabPickerInputRef}
           sessionId={ctx.sessionId}
+          onFocusTabIdChange={ctx.onTabsPickerFocusTabId}
         />
       </PickerPanelHost>
     ) : null,
