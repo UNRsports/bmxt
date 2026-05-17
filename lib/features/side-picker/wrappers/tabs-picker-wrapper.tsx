@@ -1,5 +1,6 @@
 import type { MutableRefObject } from "react"
-import { TabPickerOverlay } from "../../tabs/tab-picker-overlay"
+import { TabsUrlListPicker } from "../../tabs/tabs-url-list-picker"
+import { useTabPickerController } from "../../tabs/use-tab-picker-controller"
 import type { TabPickerRow } from "../../tabs/picker-rows"
 
 export type TabsPickerWrapperProps = {
@@ -15,7 +16,7 @@ export type TabsPickerWrapperProps = {
   sessionId: string
 }
 
-/** EN: Layer ③C — interactive tab picker (bulk/edit remain in tabs feature). */
+/** EN: Layer ③C — tabs on UrlList picker shell (`usePlainPickerKeyboard` + bulk/edit extensions). */
 export function TabsPickerWrapper(props: TabsPickerWrapperProps) {
-  return <TabPickerOverlay {...props} />
+  return <TabsUrlListPicker {...useTabPickerController(props)} />
 }

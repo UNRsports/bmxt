@@ -13,6 +13,7 @@ import {
   pickerPlainTypingKey
 } from "../interaction/picker-key-event"
 import { runPickerWindowCaptureChain } from "../interaction/picker-list-kernel"
+import type { PlainPickerKeyboardExtensions } from "../interaction/plain-picker-keyboard-extensions"
 import { runPickerSearchEnter, type RunPickerSearchEnterOptions } from "../interaction/picker-search-enter"
 import { runPickerSearchJump, type RunPickerSearchJumpOptions } from "../interaction/picker-search-jump"
 import { verticalNavDirection } from "../interaction/picker-vertical-nav"
@@ -40,8 +41,8 @@ export type UsePlainPickerKeyboardOptions = {
   commandBuffer: string
   setCommandBuffer: Dispatch<SetStateAction<string>>
   setCommandListingHint: Dispatch<SetStateAction<boolean>>
-  /** EN: Lines used for n/N match (defaults to index list 0..n-1 via matchLines). */
   matchLines?: readonly string[]
+  extensions?: PlainPickerKeyboardExtensions
 }
 
 export type UsePlainPickerKeyboardResult = {
@@ -69,7 +70,8 @@ export function usePlainPickerKeyboard({
   commandBuffer,
   setCommandBuffer,
   setCommandListingHint,
-  matchLines
+  matchLines,
+  extensions
 }: UsePlainPickerKeyboardOptions): UsePlainPickerKeyboardResult {
   const commandCompletionRef = useRef<PickerCommandCompletionState | null>(null)
 
@@ -85,7 +87,7 @@ export function usePlainPickerKeyboard({
     setFilterQuery("")
   }, [setFilterQuery, setSearchMode])
 
-  const runPickerVerticalNav = useCallback(
+  const runDefaultVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
       if (!keyboardActive || e.ctrlKey || e.metaKey || e.altKey) {
         return false
@@ -112,25 +114,43 @@ export function usePlainPickerKeyboard({
     [keyboardActive, lineCount, setHi]
   )
 
-  const searchJumpEnabled =
-    keyboardActive && !searchMode && !commandMode && hlSearchPattern !== ""
+  const runPickerVerticalNav = useCallback(
+    (e: KeyboardEvent): boolean => {
+      if (extensions?.customVerticalNav) {
+        return extensions.customVerticalNav(e)
+      }
+      return runDefaultVerticalNav(e)
+    },
+    [extensions, runDefaultVerticalNav]
+  )
 
-  const linesForMatch = matchLines
+  const defaultSearchJumpEnabled =
+    keyboardActive && !searchMode && !commandMode && hlSearchPattern !== ""
 
   const searchJumpOptions = useMemo(
     (): RunPickerSearchJumpOptions => ({
-      enabled: searchJumpEnabled,
+      enabled: extensions?.isSearchJumpEnabled?.() ?? defaultSearchJumpEnabled,
       hi,
       highlightPattern: hlSearchPattern,
       matchIndices: () => {
-        if (linesForMatch) {
-          return plainPickerHiIndicesMatching(linesForMatch, hlSearchPattern)
+        if (extensions?.matchIndices) {
+          return extensions.matchIndices()
+        }
+        if (matchLines) {
+          return plainPickerHiIndicesMatching(matchLines, hlSearchPattern)
         }
         return []
       },
       onJump: (target) => setHi(target)
     }),
-    [hi, hlSearchPattern, linesForMatch, searchJumpEnabled, setHi]
+    [
+      defaultSearchJumpEnabled,
+      extensions,
+      hi,
+      hlSearchPattern,
+      matchLines,
+      setHi
+    ]
   )
 
   const searchEnterOptions = useMemo(
@@ -146,17 +166,32 @@ export function usePlainPickerKeyboard({
     [filterQuery, searchMode, setFilterQuery, setHlSearchPattern, setSearchMode]
   )
 
+  const filterCompletions = extensions?.filterCommandCompletions ?? filterUrlListCommandCompletions
+
   const commandEnterOptions = useMemo((): RunPickerCommandEnterOptions | undefined => {
-    if (!enableCommandMode) {
+    if (!enableCommandMode && !extensions?.onCommandEnter) {
       return undefined
     }
     return {
       commandMode,
       commandBuffer,
+      onEmptyEnter: extensions?.onCommandEmptyEnter,
       onNohlsearch: () => {
         clearCommandMode()
         setHlSearchPattern("")
         closeSearch()
+      },
+      onCommand: (buffer) => {
+        if (extensions?.onCommandEnter) {
+          return extensions.onCommandEnter(buffer)
+        }
+        if (!enableCommandMode) {
+          return false
+        }
+        clearCommandMode()
+        setHlSearchPattern("")
+        closeSearch()
+        return true
       }
     }
   }, [
@@ -165,11 +200,15 @@ export function usePlainPickerKeyboard({
     commandBuffer,
     commandMode,
     enableCommandMode,
+    extensions,
     setHlSearchPattern
   ])
 
   const runPickerNormalEnter = useCallback(
     (e: KeyboardEvent): boolean => {
+      if (extensions?.onNormalEnter) {
+        return extensions.onNormalEnter(e)
+      }
       if (!keyboardActive || searchMode || commandMode) {
         return false
       }
@@ -185,13 +224,16 @@ export function usePlainPickerKeyboard({
       onConfirmLineIndex(hi)
       return true
     },
-    [commandMode, hi, keyboardActive, lineCount, onConfirmLineIndex, searchMode]
+    [commandMode, extensions, hi, keyboardActive, lineCount, onConfirmLineIndex, searchMode]
   )
 
   const runPlainEsc = useCallback(
     (e: KeyboardEvent): boolean => {
       if (e.key !== "Escape") {
         return false
+      }
+      if (extensions?.onEsc?.(e)) {
+        return true
       }
       e.preventDefault()
       e.stopPropagation()
@@ -206,12 +248,15 @@ export function usePlainPickerKeyboard({
       onReturnToPrompt()
       return true
     },
-    [clearCommandMode, closeSearch, commandMode, onReturnToPrompt, searchMode]
+    [clearCommandMode, closeSearch, commandMode, extensions, onReturnToPrompt, searchMode]
   )
 
   const onWindowKeydownCapture = useCallback(
     (ev: KeyboardEvent) => {
       if (!keyboardActive) {
+        return
+      }
+      if (extensions?.onCaptureBefore?.(ev)) {
         return
       }
       if (
@@ -226,10 +271,14 @@ export function usePlainPickerKeyboard({
       ) {
         return
       }
+      if (extensions?.onCaptureAfter?.(ev)) {
+        return
+      }
       runPlainEsc(ev)
     },
     [
       commandEnterOptions,
+      extensions,
       keyboardActive,
       runPickerNormalEnter,
       runPickerVerticalNav,
@@ -248,6 +297,9 @@ export function usePlainPickerKeyboard({
         return
       }
       const native = e.nativeEvent
+      if (extensions?.onInputBeforePlain?.(e)) {
+        return
+      }
       if (runPickerVerticalNav(native)) {
         return
       }
@@ -264,6 +316,10 @@ export function usePlainPickerKeyboard({
         return
       }
       if (e.key === "Escape") {
+        if (extensions?.onEsc?.(native)) {
+          e.preventDefault()
+          return
+        }
         e.preventDefault()
         if (commandMode) {
           clearCommandMode()
@@ -280,7 +336,8 @@ export function usePlainPickerKeyboard({
         enableCommandMode &&
         pickerOpenCommandChord(native) &&
         !searchMode &&
-        !commandMode
+        !commandMode &&
+        !(extensions?.blockOpenChords?.() ?? false)
       ) {
         e.preventDefault()
         setCommandMode(true)
@@ -288,7 +345,11 @@ export function usePlainPickerKeyboard({
         setCommandListingHint(false)
         return
       }
-      if (pickerOpenSearchChord(native) && !commandMode) {
+      if (
+        pickerOpenSearchChord(native) &&
+        !commandMode &&
+        !(extensions?.blockOpenChords?.() ?? false)
+      ) {
         e.preventDefault()
         if (!searchMode) {
           setSearchMode(true)
@@ -303,7 +364,7 @@ export function usePlainPickerKeyboard({
         const cycled = cyclePickerCommandCompletion(
           commandCompletionRef.current,
           commandBuffer,
-          filterUrlListCommandCompletions(commandBuffer)
+          filterCompletions(commandBuffer)
         )
         if (cycled === null) {
           return
@@ -315,7 +376,15 @@ export function usePlainPickerKeyboard({
       if (commandMode && e.key !== "Tab") {
         commandCompletionRef.current = null
       }
-      if (!searchMode && !commandMode && pickerPlainTypingKey(native)) {
+      if (extensions?.onInputAfterPlain?.(e)) {
+        return
+      }
+      if (
+        !searchMode &&
+        !commandMode &&
+        pickerPlainTypingKey(native) &&
+        !(extensions?.blockPlainTyping?.() ?? false)
+      ) {
         e.preventDefault()
       }
     },
@@ -326,6 +395,8 @@ export function usePlainPickerKeyboard({
       commandEnterOptions,
       commandMode,
       enableCommandMode,
+      extensions,
+      filterCompletions,
       keyboardActive,
       onReturnToPrompt,
       runPickerNormalEnter,

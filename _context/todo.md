@@ -26,7 +26,7 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 | ②③ 共有 | `lib/features/side-picker/` — `PickerPanelHost`, `pane-focus-nav`, `picker-slot-registry`, ラッパー, `PlainTextPickerBody` + `usePlainPickerKeyboard` |
 | find | `{ entries: PickerEntry[] }` → `UrlListPickerWrapper` / `FindListPickerOverlay` |
 | dom | `DomPickerWrapper` — `lines` \| `prompt`（`dom-prompt-render.tsx`）— **Enter 仕様は未決** |
-| tabs | `TabsPickerWrapper` → `TabPickerOverlay`（`useTabPickerController` + `TabPickerView`） |
+| tabs | `TabsPickerWrapper` → `TabsUrlListPicker`（`PickerListShell` + `usePlainPickerKeyboard` + bulk/edit 拡張） |
 | 逆依存 | 解消（`side-picker` は tabs の row 型・オーバーレイのみ参照） |
 | 列フォーカス | `PaneFocusTarget` = `terminal` \| `PickerSlotId`；`focusPicker(slot)` |
 | キー表・headline | `picker-headlines.ts` + README キー表 + 列追加手順 |
@@ -56,7 +56,7 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 
 - [x] `side-picker/` 新設・共有モジュール移設
 - [x] `use-tab-picker-keyboard` → kernel（search/command/pane strip/capture chain）
-- [x] `TabPickerOverlay` 薄化（`useTabPickerController` + `TabPickerView`）
+- [x] tabs → `UrlListPickerWrapper` 系シェル統合（`TabsUrlListPicker` + `useTabPickerPlainExtensions`）
 - [x] `usePlainPickerKeyboard`（find 系プレーンリスト）
 - [x] `npx tsc --noEmit` / `npm test`（kernel 単体）
 
@@ -106,7 +106,7 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 | 列レジストリ | `lib/features/side-picker/wrappers/picker-slot-registry.tsx` |
 | プレーン keyboard hook | `lib/features/side-picker/hooks/use-plain-picker-keyboard.ts` |
 | リスト kernel | `lib/features/side-picker/interaction/picker-*.ts` |
-| tabs コントローラ / ビュー | `use-tab-picker-controller.ts`, `tab-picker-view.tsx`, `tab-picker-overlay.tsx` |
+| tabs コントローラ / ビュー | `use-tab-picker-controller.ts`, `tabs-url-list-picker.tsx`, `tabs-picker-wrapper.tsx` |
 | find パース | `lib/features/side-picker/model/from-find-lines.ts` |
 | テスト | `lib/features/side-picker/**/*.test.ts` — `npm test` |
 
@@ -119,7 +119,7 @@ BMXt のリストピッカー（`tabs` / `find` / `dom` ほか将来拡張）を
 - [x] tabs window/group Enter（`focusWindow` / `activateFromGroup` — 既存 `resolveConfirmPlan`）
 - [x] 新ピッカー列の manifest / `*-exit -list` 命名（README 手順）
 - [x] kernel 単体テスト（`npm test`）；E2E は未導入
-- [ ] tabs を `UrlListPickerWrapper` へ完全統合（bulk/edit 込み・将来）
+- [x] tabs を `UrlListPickerWrapper` 系へ完全統合（bulk/edit 込み・`usePlainPickerKeyboard` 一本化）
 
 ---
 

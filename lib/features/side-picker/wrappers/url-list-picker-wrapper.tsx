@@ -13,7 +13,7 @@ export type UrlListPickerWrapperProps = {
   sessionId?: string
 }
 
-/** EN: Layer ③A — URL/list picker (find, future sources). */
+/** EN: Layer ③A — flat URL/list picker (find). Tabs use `TabsUrlListPicker` on the same `PickerListShell`. */
 export function UrlListPickerWrapper({
   headline,
   entries,

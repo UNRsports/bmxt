@@ -13,7 +13,6 @@ import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
-import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
@@ -290,8 +289,7 @@ export function useTabPickerController({
     onPickerHighlightCreatedTab
   })
 
-  const { onMetaTitleKeyDown, onMetaColorKeyDown, onWindowKeydownCapture, onInputKeyDown } =
-    useTabPickerKeyboard({
+  const { onMetaTitleKeyDown, onMetaColorKeyDown, onInputKeyDown } = useTabPickerKeyboard({
       rows,
       visibleRowIndices,
       hi,
@@ -301,7 +299,6 @@ export function useTabPickerController({
       markedWindowIds,
       markedGroupKeys,
       bulkSubMode,
-      markedTabSet,
       variant,
       groupNewPhase,
       searchMode,
@@ -345,7 +342,6 @@ export function useTabPickerController({
     isHostPaneFocused,
     sessionId,
     editPanel,
-    editPanelRef,
     openEditFromPicker,
     closeEdit,
     confirmWindowRename,
@@ -354,8 +350,6 @@ export function useTabPickerController({
     cycleGroupMenuPick,
     backFromGroupRename
   })
-
-  useWindowKeydownCapture(onWindowKeydownCapture)
 
   const headLine = useMemo(
     () =>

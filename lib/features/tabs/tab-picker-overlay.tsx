@@ -1,9 +1,9 @@
-import { TabPickerView } from "./tab-picker-view"
+import { TabsUrlListPicker } from "./tabs-url-list-picker"
 import { useTabPickerController, type TabPickerOverlayProps } from "./use-tab-picker-controller"
 
 export type { TabPickerOverlayProps }
 
-/** EN: Layer ④ entry — wires controller (keyboard kernel + tabs reducer) to presentation. */
+/** @deprecated Use `TabsPickerWrapper` — thin re-export for callers not yet on side-picker wrapper. */
 export function TabPickerOverlay(props: TabPickerOverlayProps) {
-  return <TabPickerView {...useTabPickerController(props)} />
+  return <TabsUrlListPicker {...useTabPickerController(props)} />
 }
