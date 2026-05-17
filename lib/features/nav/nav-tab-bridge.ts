@@ -1,10 +1,10 @@
 import { displayTitle } from "../format/display-title"
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab"
-import { runNavControlOnTab, type NavControlResult } from "./run-nav-inject"
+import { runNavControlOnTab, type NavControlResult, type NavKeyForward } from "./run-nav-inject"
 
 export type NavPoint = { x: number; y: number }
 
-export type { NavControlResult }
+export type { NavControlResult, NavKeyForward }
 
 export async function resolveActiveTargetTabId(): Promise<number | undefined> {
   const tab = await resolveTargetTabForActiveWindow()
@@ -47,14 +47,39 @@ export async function clickNavOverlayOnTab(tabId: number): Promise<NavControlRes
   return runNavControlViaBackground(tabId, "click", false, 0, 0)
 }
 
+export async function clearNavTypingOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "clearTyping", false, 0, 0)
+}
+
+export async function insertNavTextOnTab(tabId: number, text: string): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "insertText", false, 0, 0, 0, 0, undefined, text)
+}
+
+export async function deleteNavBackwardOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "deleteBackward", false, 0, 0)
+}
+
+export async function deleteNavForwardOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "deleteForward", false, 0, 0)
+}
+
+export async function forwardNavKeyOnTab(
+  tabId: number,
+  forward: NavKeyForward
+): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "forwardKey", false, 0, 0, 0, 0, forward)
+}
+
 async function runNavControlViaBackground(
   tabId: number,
-  action: "start" | "stop" | "move" | "click",
+  action: Parameters<typeof runNavControlOnTab>[1],
   useCenter: boolean,
   x: number,
   y: number,
   dx = 0,
-  dy = 0
+  dy = 0,
+  keyForward?: NavKeyForward,
+  text?: string
 ): Promise<NavControlResult> {
   try {
     const res = await chrome.runtime.sendMessage({
@@ -65,7 +90,14 @@ async function runNavControlViaBackground(
       x,
       y,
       dx,
-      dy
+      dy,
+      key: keyForward?.key,
+      code: keyForward?.code,
+      ctrlKey: keyForward?.ctrlKey,
+      shiftKey: keyForward?.shiftKey,
+      altKey: keyForward?.altKey,
+      metaKey: keyForward?.metaKey,
+      text
     })
     if (res && typeof res === "object" && "ok" in res) {
       return res as NavControlResult

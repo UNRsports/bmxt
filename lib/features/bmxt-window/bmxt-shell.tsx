@@ -47,6 +47,7 @@ import type { DomListCapture } from "../dom/dom-list-capture"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
 import {
+  NAV_RESTORE_PROMPT_EVENT,
   NavStatusBar,
   parseNavEnterLine,
   parseNavExitLine,
@@ -245,19 +246,19 @@ export function BmxtShell({
   const {
     currentTabTitle: navCurrentTabTitle,
     overlayError: navOverlayError,
+    typingMode: navPageTyping,
     toggleActive: toggleNavActive,
-    teardownAll: teardownNav
-  } =
-    useNavMode({
-      armed: navArmed,
-      active: navActive,
-      setActive: setNavActive,
-      isFocusedPane,
-      paneFocus,
-      positionsRef: navPositionsRef
-    })
-  const navKeyboardEnabled =
-    navArmed && navActive && isFocusedPane && paneFocus === "terminal"
+    teardownAll: teardownNav,
+    navKeyboardEnabled,
+    navTypingMode
+  } = useNavMode({
+    armed: navArmed,
+    active: navActive,
+    setActive: setNavActive,
+    isFocusedPane,
+    paneFocus,
+    positionsRef: navPositionsRef
+  })
 
   const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
   const subCmdPickerRef = useRef<TokenPickerModel | null>(null)
@@ -287,6 +288,7 @@ export function BmxtShell({
   const tabPressSeqRef = useRef(0)
   const lineRef = useRef("")
   const cursorRef = useRef(0)
+  const navPromptSnapRef = useRef<{ line: string; cursor: number } | null>(null)
   const completionCandidatesRef = useRef<string[]>([])
   /** EN: Tab on empty line opened the first-command menu — keep showing until input/Esc/submit. */
   const allowEmptyFirstPickerSyncRef = useRef(false)
@@ -310,6 +312,43 @@ export function BmxtShell({
   useEffect(() => {
     cursorRef.current = cursorPos
   }, [cursorPos])
+
+  const restoreNavPromptSnap = useCallback(() => {
+    const snap = navPromptSnapRef.current
+    if (!snap) {
+      return
+    }
+    const ta = imeRef.current
+    if (ta) {
+      ta.value = snap.line
+      ta.selectionStart = snap.cursor
+      ta.selectionEnd = snap.cursor
+    }
+    lineRef.current = snap.line
+    setLine(snap.line)
+    setCursorPos(snap.cursor)
+  }, [])
+
+  useEffect(() => {
+    if (!navPageTyping) {
+      navPromptSnapRef.current = null
+      return
+    }
+    const ta = imeRef.current
+    navPromptSnapRef.current = {
+      line: ta?.value ?? lineRef.current,
+      cursor: ta?.selectionStart ?? cursorRef.current
+    }
+  }, [navPageTyping])
+
+  useEffect(() => {
+    if (!navPageTyping) {
+      return
+    }
+    const onRestore = () => restoreNavPromptSnap()
+    window.addEventListener(NAV_RESTORE_PROMPT_EVENT, onRestore)
+    return () => window.removeEventListener(NAV_RESTORE_PROMPT_EVENT, onRestore)
+  }, [navPageTyping, restoreNavPromptSnap])
 
   useEffect(() => {
     void (async () => {
@@ -923,7 +962,7 @@ export function BmxtShell({
         const access = await ensureOptionalHttpHostAccess()
         const logLines = [
           `> ${trimmed}`,
-          "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click · nav -exit to quit)"
+          "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · nav -exit to quit)"
         ]
         if (access === "denied") {
           logLines.push(
@@ -1168,6 +1207,10 @@ export function BmxtShell({
     if (!ta) {
       return
     }
+    if (navPageTyping) {
+      restoreNavPromptSnap()
+      return
+    }
     allowEmptyFirstPickerSyncRef.current = false
     if (skipHistResetRef.current) {
       skipHistResetRef.current = false
@@ -1182,7 +1225,7 @@ export function BmxtShell({
     setLine(ta.value)
     setCursorPos(ta.selectionStart)
     syncImeTokenPicker(ta.value, ta.selectionStart)
-  }, [mode, syncImeTokenPicker])
+  }, [mode, navPageTyping, restoreNavPromptSnap, syncImeTokenPicker])
 
   const onImeSelect = useCallback(() => {
     const ta = imeRef.current
@@ -1219,6 +1262,11 @@ export function BmxtShell({
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (navPageTyping) {
+        e.preventDefault()
+        return
+      }
+
       if (e.nativeEvent.isComposing) {
         return
       }
@@ -1344,13 +1392,19 @@ export function BmxtShell({
         return
       }
 
-      if (navKeyboardEnabled) {
+      if (navKeyboardEnabled || navTypingMode) {
         if (
           e.key === "Enter" ||
           e.key === "ArrowUp" ||
           e.key === "ArrowDown" ||
           e.key === "ArrowLeft" ||
-          e.key === "ArrowRight"
+          e.key === "ArrowRight" ||
+          e.key === "Backspace" ||
+          e.key === "Delete" ||
+          e.key === "Tab" ||
+          e.key === "Home" ||
+          e.key === "End" ||
+          (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey)
         ) {
           return
         }
@@ -1412,7 +1466,7 @@ export function BmxtShell({
         }
       }
 
-      if (e.key === "ArrowUp" && !navKeyboardEnabled) {
+      if (e.key === "ArrowUp" && !navKeyboardEnabled && !navTypingMode) {
         e.preventDefault()
         if (history.length === 0) {
           return
@@ -1432,7 +1486,7 @@ export function BmxtShell({
         return
       }
 
-      if (e.key === "ArrowDown" && !navKeyboardEnabled) {
+      if (e.key === "ArrowDown" && !navKeyboardEnabled && !navTypingMode) {
         e.preventDefault()
         if (histNavIndex === -1) {
           return
@@ -1448,7 +1502,7 @@ export function BmxtShell({
         return
       }
 
-      if (e.key === "Enter" && !e.shiftKey && !navKeyboardEnabled) {
+      if (e.key === "Enter" && !e.shiftKey && !navKeyboardEnabled && !navTypingMode) {
         e.preventDefault()
         submitLine()
       }
@@ -1472,6 +1526,8 @@ export function BmxtShell({
       isFocusedPane,
       navArmed,
       navKeyboardEnabled,
+      navPageTyping,
+      navTypingMode,
       paneFocus,
       toggleNavActive
     ]
@@ -1618,6 +1674,7 @@ export function BmxtShell({
         <NavStatusBar
           armed={navArmed}
           active={navActive}
+          typingMode={navPageTyping}
           tabTitle={navCurrentTabTitle}
           overlayError={navOverlayError}
         />

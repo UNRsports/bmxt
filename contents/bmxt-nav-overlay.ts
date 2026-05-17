@@ -27,7 +27,14 @@ chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
     msg.x,
     msg.y,
     msg.dx,
-    msg.dy
+    msg.dy,
+    msg.key ?? "",
+    msg.code ?? "",
+    msg.ctrlKey ? 1 : 0,
+    msg.shiftKey ? 1 : 0,
+    msg.altKey ? 1 : 0,
+    msg.metaKey ? 1 : 0,
+    msg.text ?? ""
   )
   sendResponse(result)
   return true

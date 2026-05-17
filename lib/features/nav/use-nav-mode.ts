@@ -3,14 +3,21 @@ import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import { NAV_ARROW_STEP_PX } from "./nav-config"
 import {
+  clearNavTypingOnTab,
   clickNavOverlayOnTab,
+  deleteNavBackwardOnTab,
+  deleteNavForwardOnTab,
+  forwardNavKeyOnTab,
+  insertNavTextOnTab,
   moveNavOverlayOnTab,
   resolveActiveTargetTabId,
   resolveTabDisplayTitle,
   startNavOverlayOnTab,
   stopNavOverlayOnTab,
+  type NavKeyForward,
   type NavPoint
 } from "./nav-tab-bridge"
+import { isNavPromptTextarea, navBeforeInputAction } from "./nav-prompt-input"
 
 export type NavPositionsByTab = Record<number, NavPoint>
 
@@ -57,6 +64,45 @@ function arrowDelta(key: string): { dx: number; dy: number } | null {
   }
 }
 
+const TYPING_FORWARD_KEYS = new Set([
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Tab",
+  "Enter"
+])
+
+function shouldForwardTypingKey(e: KeyboardEvent): boolean {
+  if (e.key === "Escape" || e.key === "Alt") {
+    return false
+  }
+  if (e.ctrlKey || e.metaKey) {
+    return false
+  }
+  if (e.key.length === 1) {
+    return true
+  }
+  return TYPING_FORWARD_KEYS.has(e.key)
+}
+
+function keyForwardFromEvent(e: KeyboardEvent): NavKeyForward {
+  return {
+    key: e.key,
+    code: e.code,
+    ctrlKey: e.ctrlKey,
+    shiftKey: e.shiftKey,
+    altKey: e.altKey,
+    metaKey: e.metaKey
+  }
+}
+
+export const NAV_RESTORE_PROMPT_EVENT = "bmxt-nav-restore-prompt"
+
 export function useNavMode({
   armed,
   active,
@@ -67,23 +113,38 @@ export function useNavMode({
 }: UseNavModeOptions): {
   currentTabTitle: string | null
   overlayError: string | null
+  typingMode: boolean
   toggleActive: () => void
   teardownAll: () => Promise<void>
   navKeyboardEnabled: boolean
+  navTypingMode: boolean
 } {
   const [currentTabTitle, setCurrentTabTitle] = useState<string | null>(null)
   const [overlayError, setOverlayError] = useState<string | null>(null)
+  const [typingMode, setTypingMode] = useState(false)
   const activeRef = useRef(active)
   const armedRef = useRef(armed)
+  const typingModeRef = useRef(typingMode)
   const lastOverlayTabRef = useRef<number | null>(null)
   /** EN: Alt ON → center; tab switch → remembered position. */
   const useCenterOnNextShowRef = useRef(true)
 
   activeRef.current = active
   armedRef.current = armed
+  typingModeRef.current = typingMode
 
   const navKeyboardEnabled =
-    armed && active && isFocusedPane && paneFocus === "terminal"
+    armed && active && isFocusedPane && paneFocus === "terminal" && !typingMode
+
+  const navTypingMode =
+    armed && active && isFocusedPane && paneFocus === "terminal" && typingMode
+
+  const exitTypingMode = useCallback((tabId: number | null) => {
+    setTypingMode(false)
+    if (tabId !== null) {
+      void clearNavTypingOnTab(tabId)
+    }
+  }, [])
 
   const savePosition = useCallback(
     (tabId: number, point: NavPoint) => {
@@ -96,15 +157,18 @@ export function useNavMode({
     async (tabId: number | undefined, show: boolean, useCenter: boolean) => {
       const prev = lastOverlayTabRef.current
       if (prev !== null && prev !== tabId) {
+        exitTypingMode(prev)
         await stopNavOverlayOnTab(prev)
       }
       if (!show || tabId === undefined) {
         if (prev !== null) {
+          exitTypingMode(prev)
           await stopNavOverlayOnTab(prev)
         }
         lastOverlayTabRef.current = null
         setCurrentTabTitle(null)
         setOverlayError(null)
+        setTypingMode(false)
         return
       }
       const pos = useCenter ? null : (positionsRef.current[tabId] ?? null)
@@ -119,7 +183,7 @@ export function useNavMode({
       lastOverlayTabRef.current = tabId
       setCurrentTabTitle(await resolveTabDisplayTitle(tabId))
     },
-    [positionsRef, savePosition]
+    [exitTypingMode, positionsRef, savePosition]
   )
 
   const teardownAll = useCallback(async () => {
@@ -130,6 +194,7 @@ export function useNavMode({
     for (const id of Object.keys(positionsRef.current)) {
       tabs.add(Number(id))
     }
+    setTypingMode(false)
     await Promise.all([...tabs].map((id) => stopNavOverlayOnTab(id)))
     lastOverlayTabRef.current = null
     setCurrentTabTitle(null)
@@ -155,6 +220,8 @@ export function useNavMode({
     const next = !activeRef.current
     if (next) {
       useCenterOnNextShowRef.current = true
+    } else {
+      setTypingMode(false)
     }
     setActive(next)
     if (next) {
@@ -168,15 +235,18 @@ export function useNavMode({
     if (!armed) {
       void teardownAll()
       setActive(false)
+      setTypingMode(false)
     }
   }, [armed, setActive, teardownAll])
 
   useEffect(() => {
     if (!armed || !active) {
+      setTypingMode(false)
       return
     }
     const onActivated = (info: chrome.tabs.TabActiveInfo) => {
       useCenterOnNextShowRef.current = false
+      setTypingMode(false)
       void syncOverlayForTab(info.tabId, true, false)
     }
     chrome.tabs.onActivated.addListener(onActivated)
@@ -199,28 +269,129 @@ export function useNavMode({
     return () => chrome.tabs.onUpdated.removeListener(onUpdated)
   }, [armed, active])
 
+  useEffect(() => {
+    if (!navTypingMode) {
+      return
+    }
+
+    const onBeforeInput = (e: Event) => {
+      if (!typingModeRef.current || !(e instanceof InputEvent)) {
+        return
+      }
+      if (!isNavPromptTextarea(e.target)) {
+        return
+      }
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      const tabId = lastOverlayTabRef.current
+      if (tabId === null) {
+        return
+      }
+      const action = navBeforeInputAction(e.inputType, e.data)
+      if (action === "backward") {
+        void deleteNavBackwardOnTab(tabId)
+      } else if (action === "forward") {
+        void deleteNavForwardOnTab(tabId)
+      } else if (action === "insert" && e.data) {
+        void insertNavTextOnTab(tabId, e.data).then(() => {
+          window.dispatchEvent(new Event(NAV_RESTORE_PROMPT_EVENT))
+        })
+      }
+    }
+
+    const onCompositionEnd = (e: Event) => {
+      if (!typingModeRef.current || !(e instanceof CompositionEvent)) {
+        return
+      }
+      if (!isNavPromptTextarea(e.target)) {
+        return
+      }
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      const tabId = lastOverlayTabRef.current
+      if (tabId === null || !e.data) {
+        return
+      }
+      void insertNavTextOnTab(tabId, e.data).then(() => {
+        window.dispatchEvent(new Event(NAV_RESTORE_PROMPT_EVENT))
+      })
+    }
+
+    window.addEventListener("beforeinput", onBeforeInput, true)
+    window.addEventListener("compositionend", onCompositionEnd, true)
+    return () => {
+      window.removeEventListener("beforeinput", onBeforeInput, true)
+      window.removeEventListener("compositionend", onCompositionEnd, true)
+    }
+  }, [navTypingMode])
+
   const onWindowKeydownCapture = useCallback(
     (e: KeyboardEvent) => {
       if (!armed || !active || !isFocusedPane || paneFocus !== "terminal") {
         return
       }
-      if (e.ctrlKey || e.metaKey || e.altKey) {
+      if (e.key === "Alt") {
         return
       }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing) {
+      const tabId = lastOverlayTabRef.current
+      if (tabId === null) {
         return
       }
 
-      const tabId = lastOverlayTabRef.current
-      if (tabId === null) {
+      if (typingModeRef.current) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          exitTypingMode(tabId)
+          return
+        }
+        if (ev.isComposing) {
+          e.preventDefault()
+          e.stopPropagation()
+          return
+        }
+        if (e.key === "Backspace") {
+          e.preventDefault()
+          e.stopPropagation()
+          void deleteNavBackwardOnTab(tabId)
+          return
+        }
+        if (e.key === "Delete") {
+          e.preventDefault()
+          e.stopPropagation()
+          void deleteNavForwardOnTab(tabId)
+          return
+        }
+        if (!shouldForwardTypingKey(e)) {
+          return
+        }
+        e.preventDefault()
+        e.stopPropagation()
+        if (e.key.length === 1) {
+          void insertNavTextOnTab(tabId, e.key)
+          return
+        }
+        void forwardNavKeyOnTab(tabId, keyForwardFromEvent(e))
+        return
+      }
+
+      if (ev.isComposing && e.key !== "Escape") {
+        return
+      }
+
+      if (e.ctrlKey || e.metaKey) {
         return
       }
 
       if (e.key === "Enter") {
         e.preventDefault()
         e.stopPropagation()
-        void clickNavOverlayOnTab(tabId)
+        void clickNavOverlayOnTab(tabId).then((res) => {
+          if (res.ok && res.editableFocused) {
+            setTypingMode(true)
+          }
+        })
         return
       }
 
@@ -236,7 +407,7 @@ export function useNavMode({
         }
       })
     },
-    [armed, active, isFocusedPane, paneFocus, savePosition]
+    [armed, active, exitTypingMode, isFocusedPane, paneFocus, savePosition]
   )
 
   useWindowKeydownCapture(onWindowKeydownCapture)
@@ -244,8 +415,10 @@ export function useNavMode({
   return {
     currentTabTitle,
     overlayError,
+    typingMode,
     toggleActive,
     teardownAll,
-    navKeyboardEnabled
+    navKeyboardEnabled,
+    navTypingMode
   }
 }

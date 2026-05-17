@@ -16,6 +16,15 @@ import {
 export type NavControlResult = NavInjectResult
 export type { NavOverlayMessage }
 
+export type NavKeyForward = {
+  key: string
+  code: string
+  ctrlKey: boolean
+  shiftKey: boolean
+  altKey: boolean
+  metaKey: boolean
+}
+
 async function tabUrlOk(tabId: number): Promise<boolean> {
   try {
     const tab = await chrome.tabs.get(tabId)
@@ -41,7 +50,9 @@ export async function runNavControlOnTab(
   x: number,
   y: number,
   dx = 0,
-  dy = 0
+  dy = 0,
+  keyForward?: NavKeyForward,
+  text?: string
 ): Promise<NavControlResult> {
   if (!(await tabUrlOk(tabId))) {
     return { ok: false, reason: "not-scriptable" }
@@ -51,6 +62,8 @@ export async function runNavControlOnTab(
     return { ok: false, reason: "permission-denied" }
   }
 
+  const k = keyForward?.key ?? ""
+  const code = keyForward?.code ?? ""
   const payload: NavOverlayMessage = {
     channel: NAV_OVERLAY_CHANNEL,
     action,
@@ -58,7 +71,14 @@ export async function runNavControlOnTab(
     x,
     y,
     dx,
-    dy
+    dy,
+    key: k,
+    code,
+    ctrlKey: keyForward?.ctrlKey,
+    shiftKey: keyForward?.shiftKey,
+    altKey: keyForward?.altKey,
+    metaKey: keyForward?.metaKey,
+    text
   }
 
   try {
@@ -74,7 +94,21 @@ export async function runNavControlOnTab(
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId },
       func: bmxtNavControlInjected,
-      args: [action, useCenter ? 1 : 0, x, y, dx, dy]
+      args: [
+        action,
+        useCenter ? 1 : 0,
+        x,
+        y,
+        dx,
+        dy,
+        k,
+        code,
+        keyForward?.ctrlKey ? 1 : 0,
+        keyForward?.shiftKey ? 1 : 0,
+        keyForward?.altKey ? 1 : 0,
+        keyForward?.metaKey ? 1 : 0,
+        text ?? ""
+      ]
     })
     return (result as NavInjectResult | undefined) ?? { ok: false, reason: "no-result" }
   } catch (err) {

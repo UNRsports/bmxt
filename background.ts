@@ -355,6 +355,13 @@ type NavControlRequest = {
   y?: number
   dx?: number
   dy?: number
+  key?: string
+  code?: string
+  ctrlKey?: boolean
+  shiftKey?: boolean
+  altKey?: boolean
+  metaKey?: boolean
+  text?: string
 }
 
 chrome.runtime.onMessage.addListener(
@@ -383,7 +390,18 @@ chrome.runtime.onMessage.addListener(
         message.x ?? -1,
         message.y ?? -1,
         message.dx ?? 0,
-        message.dy ?? 0
+        message.dy ?? 0,
+        message.key != null
+          ? {
+              key: String(message.key),
+              code: String(message.code ?? message.key),
+              ctrlKey: Boolean(message.ctrlKey),
+              shiftKey: Boolean(message.shiftKey),
+              altKey: Boolean(message.altKey),
+              metaKey: Boolean(message.metaKey)
+            }
+          : undefined,
+        typeof message.text === "string" ? message.text : undefined
       )
         .then((result) => sendResponse(result))
         .catch((e) =>

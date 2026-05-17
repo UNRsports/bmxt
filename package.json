@@ -21,7 +21,7 @@
     "sync:effect-types": "npm run codegen",
     "sync:generated-ts": "npm run codegen",
     "new:command": "node scripts/scaffold-command.mjs",
-    "test": "node --experimental-strip-types --test lib/features/side-picker/model/from-find-lines.test.ts lib/features/nav/nav-parse.test.ts && node --test scripts/picker-search-jump.test.mjs"
+    "test": "node --experimental-strip-types --test lib/features/side-picker/model/from-find-lines.test.ts lib/features/nav/nav-parse.test.ts lib/features/nav/nav-prompt-input.test.ts && node --test scripts/picker-search-jump.test.mjs"
   },
   "dependencies": {
     "plasmo": "0.90.5",
