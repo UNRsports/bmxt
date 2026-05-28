@@ -46,6 +46,35 @@
   margin-top: 12px;
 }
 
+.bmxt-welcome__images {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.bmxt-welcome__image-figure {
+  margin: 0;
+  padding: 8px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #0d1117;
+}
+
+.bmxt-welcome__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+
+.bmxt-welcome__image-caption {
+  margin-top: 8px;
+  color: #8b949e;
+  font-size: 11px;
+  word-break: break-all;
+}
+
 .bmxt-welcome__lang {
   margin: 14px 0 6px;
   color: #58a6ff;

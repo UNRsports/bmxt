@@ -1,8 +1,16 @@
-import { getReleaseNotesForVersion, placeholderTexts } from "../release-notes"
+import {
+  getWelcomeContentForVersion,
+  placeholderWelcomeContent,
+  resolveWelcomeImageUrl
+} from "./welcome-content"
 
 export function WelcomePage() {
   const version = chrome.runtime.getManifest().version
-  const entry = getReleaseNotesForVersion(version) ?? placeholderTexts()
+  const entry = getWelcomeContentForVersion(version) ?? placeholderWelcomeContent()
+  const imagePaths = [
+    ...(entry.heroImage ? [entry.heroImage] : []),
+    ...(entry.additionalImages ?? [])
+  ]
 
   return (
     <main className="bmxt-welcome">
@@ -17,6 +25,21 @@ export function WelcomePage() {
 
         <section className="bmxt-welcome__section">
           <h2 className="bmxt-welcome__heading">Version {version}</h2>
+          {imagePaths.length > 0 ? (
+            <div className="bmxt-welcome__images" aria-label="welcome images">
+              {imagePaths.map((path, i) => (
+                <figure key={`${path}-${i}`} className="bmxt-welcome__image-figure">
+                  <img
+                    className="bmxt-welcome__image"
+                    src={resolveWelcomeImageUrl(path)}
+                    alt={`Welcome image ${i + 1}`}
+                    loading="lazy"
+                  />
+                  <figcaption className="bmxt-welcome__image-caption">{path}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
           <div className="bmxt-welcome__notes">
             <h3 className="bmxt-welcome__lang">[ja]</h3>
             <ul>
