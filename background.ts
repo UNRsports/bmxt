@@ -24,6 +24,7 @@ import {
 } from "./lib/features/bmxt-core"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
+import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"
@@ -131,9 +132,10 @@ function hydrateLastWindowFromStorage() {
   })
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
+  void openWelcomePageOnUpdateIfNeeded(details)
 })
 
 chrome.runtime.onStartup.addListener(() => {
