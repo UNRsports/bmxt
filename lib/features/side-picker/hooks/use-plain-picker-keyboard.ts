@@ -116,12 +116,16 @@ export function usePlainPickerKeyboard({
 
   const runPickerVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
+      // IME textarea shows filter/command text; j/k and arrows must reach the input, not hi.
+      if (searchMode || commandMode) {
+        return false
+      }
       if (extensions?.customVerticalNav) {
         return extensions.customVerticalNav(e)
       }
       return runDefaultVerticalNav(e)
     },
-    [extensions, runDefaultVerticalNav]
+    [commandMode, extensions, runDefaultVerticalNav, searchMode]
   )
 
   const defaultSearchJumpEnabled =
