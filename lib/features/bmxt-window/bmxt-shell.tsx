@@ -1768,21 +1768,6 @@ export function BmxtShell({
             <code>tabs -list</code> での動作を中心に開発しています。
             <br />
             <br />
-            ☕️ Support — This is still a demo in active development. If you are
-            interested in BMXt and the future it can bring, you can support
-            development with a one-time or monthly contribution.
-            <br />
-            ☕️ 支援 — いまはまだ開発段階のデモです。 BMXt
-            とそれがもたらす未来にご興味があれば、ワンタイム／月額で開発を支援いただけます。
-            <br />
-            <a
-              href="https://buymeacoffee.com/unrsports"
-              target="_blank"
-              rel="noopener noreferrer">
-              Buy Me a Coffee
-            </a>
-            <br />
-            <br />
             Type help and press Enter. Tab completes commands.
           </div>
         ) : null}

@@ -2,8 +2,6 @@
 
 > **English** documentation is first; the complete **Japanese** version follows below ([jump to 日本語](#japanese)).
 
-☕️ **Support** — *This is still an early-stage dev demo,* but if you're curious about **BMXt** and the future it's aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it's ready.
-
 ## Table of contents
 
 - [Introduction](#introduction)
@@ -631,12 +629,6 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
 
-
----
-
-☕️ **Support** — *This is still an early-stage dev demo,* but if you're curious about **BMXt** and the future it's aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it's ready.
-
-
 ---
 
 <a id="japanese"></a>
@@ -644,8 +636,6 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 # BMXt（日本語）
 
 > 英語版は上記 [English](#introduction) セクションを参照してください。
-
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
 
 ## 目次
 
@@ -1265,14 +1255,3 @@ npm run build
 3. 履歴、ブックマーク操作
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
-
----
-
-☕️ **Support** — *This is still an early-stage dev demo,* but if you’re curious about **BMXt** and the future it’s aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it’s ready.
-
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
-
----
-
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
-
