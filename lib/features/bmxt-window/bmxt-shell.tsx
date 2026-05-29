@@ -1761,11 +1761,9 @@ export function BmxtShell({
     <>
         {lines.length === 0 || postUpgradeBanner ? (
           <div className="bmxt-hint">
-            Welcome to BMXt! This program is a test version. Development currently
-            focuses on behavior with <code>tabs -list</code>.
+            Welcome to BMXt! This program is a test version.
             <br />
-            BMXtへようこそ！本プログラムはテストバージョンです。現在は{" "}
-            <code>tabs -list</code> での動作を中心に開発しています。
+            BMXtへようこそ！本プログラムはテストバージョンです。
             <br />
             <br />
             Type help and press Enter. Tab completes commands.
