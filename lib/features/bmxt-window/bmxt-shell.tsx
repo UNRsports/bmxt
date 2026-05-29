@@ -58,13 +58,16 @@ import {
   type NavEnterTypingDetail,
   type NavPositionsByTab
 } from "../nav"
-import { ensureOptionalHttpHostAccess } from "../extension-permissions/optional-http-hosts"
+import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
+import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch } from "./text-utils"
 import {
   applyChromeEffects,
   type DispatchChromeContext
 } from "../dispatch"
+import type { ChromeEffect } from "../dispatch/effect-types"
+import { findPageProgressLabel } from "../find-sources/page-progress"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -87,6 +90,15 @@ import type { TabPickerState } from "../side-picker/session/tab-picker-state"
 
 /** EN: Delay before showing find -list progress spinner (avoid flash on fast runs). */
 const FIND_LIST_SPINNER_DELAY_MS = 450
+
+const FIND_PAGE_SCAN_HINT_LINES = [
+  "EN: Page scan may take 30–60s when many tabs are open.",
+  "JA: タブが多いと数十秒かかることがあります。"
+] as const
+
+function effectsIncludeFindPage(effects: ChromeEffect[]): boolean {
+  return effects.some((e) => e.kind === "find_page")
+}
 
 function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
   return (
@@ -817,15 +829,23 @@ export function BmxtShell({
           `> ${displayLine}`,
           "find -list — searching (history · bookmarks · pages)…"
         ])
+        const effects = bundle.effects ?? []
+        if (effectsIncludeFindPage(effects)) {
+          await appendLogLines([...FIND_PAGE_SCAN_HINT_LINES])
+        }
         const ctx: DispatchChromeContext = {
           clearLog: async () => {},
           exitPane: async () => [],
           listWindows: async () => [],
           focusInfo: async () => [],
           resolveTabArg: async () => undefined,
-          commandSessionId: sessionId
+          commandSessionId: sessionId,
+          findPageProgressLabel: findPageProgressLabel(findListLine),
+          onFindPageProgress: async (message) => {
+            await appendLogLines([message])
+          }
         }
-        const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+        const linesOut = await applyChromeEffects(ctx, effects)
         if (findListDismissRef.current) {
           findListDismissRef.current = false
           return
@@ -848,6 +868,79 @@ export function BmxtShell({
       }
     },
     [appendLogLines, sessionId, setFindListPicker]
+  )
+
+  const runFindDirectDispatch = useCallback(
+    async (displayLine: string, dispatchLine: string) => {
+      if (findListBusyRef.current) {
+        return
+      }
+      let pageScanBusy = false
+      const startPageScanBusy = () => {
+        findListDismissRef.current = false
+        findListBusyRef.current = true
+        setFindListBusy(true)
+        setFindListShowSpinner(false)
+        if (findListSpinnerTimerRef.current !== null) {
+          clearTimeout(findListSpinnerTimerRef.current)
+        }
+        findListSpinnerTimerRef.current = setTimeout(() => {
+          setFindListShowSpinner(true)
+        }, FIND_LIST_SPINNER_DELAY_MS)
+        pageScanBusy = true
+      }
+      const stopPageScanBusy = () => {
+        if (!pageScanBusy) {
+          return
+        }
+        if (findListSpinnerTimerRef.current !== null) {
+          clearTimeout(findListSpinnerTimerRef.current)
+          findListSpinnerTimerRef.current = null
+        }
+        findListBusyRef.current = false
+        setFindListBusy(false)
+        setFindListShowSpinner(false)
+        pageScanBusy = false
+      }
+      try {
+        await ensureBmxtCore()
+        await appendLogLines([`> ${displayLine}`])
+        const bundle = runDispatch(dispatchLine)
+        if (bundle.ty === "lines") {
+          const lines = bundle.lines ?? []
+          if (lines.length > 0) {
+            await appendLogLines(lines)
+          }
+          return
+        }
+        const effects = bundle.effects ?? []
+        if (effectsIncludeFindPage(effects)) {
+          startPageScanBusy()
+          await appendLogLines([...FIND_PAGE_SCAN_HINT_LINES])
+        }
+        const ctx: DispatchChromeContext = {
+          clearLog: async () => {},
+          exitPane: async () => [],
+          listWindows: async () => [],
+          focusInfo: async () => [],
+          resolveTabArg: async () => undefined,
+          commandSessionId: sessionId,
+          findPageProgressLabel: findPageProgressLabel(dispatchLine),
+          onFindPageProgress: async (message) => {
+            await appendLogLines([message])
+          }
+        }
+        const linesOut = await applyChromeEffects(ctx, effects)
+        if (linesOut.length > 0) {
+          await appendLogLines(linesOut)
+        }
+      } catch (e) {
+        await appendLogLines([`error: ${e instanceof Error ? e.message : String(e)}`])
+      } finally {
+        stopPageScanBusy()
+      }
+    },
+    [appendLogLines, sessionId]
   )
 
   const openFindPickerEntry = useCallback(
@@ -987,12 +1080,12 @@ export function BmxtShell({
       setNavArmed(true)
       setNavActive(false)
       void (async () => {
-        const access = await ensureOptionalHttpHostAccess()
+        const canPage = await canScriptHttpHostPages()
         const logLines = [
           `> ${trimmed}`,
           "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · nav -exit to quit)"
         ]
-        if (access === "denied") {
+        if (!canPage) {
           logLines.push(
             "warning: http(s) site access was not granted — allow it before Alt ON, or enable site access under chrome://extensions."
           )
@@ -1129,6 +1222,23 @@ export function BmxtShell({
       return
     }
 
+    const findDirectLine = parseFindDirectDispatchLine(trimmed)
+    if (findDirectLine !== null) {
+      if (findListBusyRef.current) {
+        focusPrompt()
+        return
+      }
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      setSubCmdPicker(null)
+      void runFindDirectDispatch(trimmed, findDirectLine)
+      focusPrompt()
+      return
+    }
+
     appendCommandToHistory(trimmed)
     const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
     setLine("")
@@ -1137,8 +1247,22 @@ export function BmxtShell({
     tabPressSeqRef.current = 0
     chrome.runtime.sendMessage(
       { type: "RUN_CMD", line: trimmed, sessionId },
-      () => {
-        void chrome.runtime.lastError
+      (response) => {
+        const err = chrome.runtime.lastError
+        if (err) {
+          void appendLogLines([
+            `> ${trimmed}`,
+            `error: command dispatch failed — ${err.message}`
+          ])
+          return
+        }
+        if (response && typeof response === "object" && "ok" in response && response.ok === false) {
+          const msg =
+            "error" in response && typeof response.error === "string"
+              ? response.error
+              : "unknown error"
+          void appendLogLines([`> ${trimmed}`, `error: ${msg}`])
+        }
       }
     )
     if (continuationPrompt) {
@@ -1162,6 +1286,7 @@ export function BmxtShell({
     setFindListPicker,
     runDomListAndShow,
     runFindListSearch,
+    runFindDirectDispatch,
     syncImeTokenPicker,
     teardownNav
   ])

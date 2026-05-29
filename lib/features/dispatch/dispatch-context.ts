@@ -16,6 +16,10 @@ export type DispatchChromeContext = {
   resolveDomListTargetTabId?: () => Promise<number | undefined>
   /** EN: Receives structured DOM picker rows when `dom_list` runs (picker-direct path). */
   onDomListCapture?: (capture: DomListCapture) => void
+  /** EN: Throttled progress while `find_page` scans open tabs. */
+  onFindPageProgress?: (message: string) => Promise<void>
+  /** EN: Label prefix for progress lines (e.g. `find --page`). */
+  findPageProgressLabel?: string
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
 }

@@ -3,7 +3,7 @@ import type { DispatchChromeContext } from "../../dispatch-context"
 import { captureDomListForTab } from "../../../dom/dom-list-capture"
 import { resolveTargetTabForActiveWindow } from "../../../page-dom/resolve-target-tab"
 import {
-  ensureOptionalHttpHostAccess,
+  canScriptHttpHostPages,
   OPTIONAL_HOST_DENIED_LINES
 } from "../../../extension-permissions/optional-http-hosts"
 import {
@@ -70,8 +70,7 @@ export async function applyDomListEffect(
     })
     return lines
   }
-  const access = await ensureOptionalHttpHostAccess()
-  if (access === "denied") {
+  if (!(await canScriptHttpHostPages())) {
     return [...OPTIONAL_HOST_DENIED_LINES]
   }
   try {

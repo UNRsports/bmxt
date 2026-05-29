@@ -5,6 +5,10 @@
 
 import type { PlasmoCSConfig } from "plasmo"
 import {
+  bmxtExtractPageInnerTextInPage,
+  isPageExtractRequest
+} from "../lib/features/page-extract/page-extract-message"
+import {
   bmxtNavControlInjected,
   NAV_OVERLAY_CHANNEL,
   type NavOverlayMessage
@@ -17,6 +21,10 @@ export const config: PlasmoCSConfig = {
 }
 
 chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
+  if (isPageExtractRequest(raw)) {
+    sendResponse(bmxtExtractPageInnerTextInPage(raw.maxChars))
+    return true
+  }
   const msg = raw as NavOverlayMessage
   if (!msg || msg.channel !== NAV_OVERLAY_CHANNEL) {
     return false

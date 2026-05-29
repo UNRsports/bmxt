@@ -3,7 +3,7 @@
  * JA: SW 経由でページへ注入（BMXt タブ UI から直接注入しない）。
  */
 
-import { ensureOptionalHttpHostAccess } from "../extension-permissions/optional-http-hosts"
+import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import {
   bmxtNavControlInjected,
@@ -35,8 +35,7 @@ async function tabUrlOk(tabId: number): Promise<boolean> {
 }
 
 async function ensureHostAccess(): Promise<"ok" | "denied" | "not-scriptable"> {
-  const access = await ensureOptionalHttpHostAccess()
-  if (access === "denied") {
+  if (!(await canScriptHttpHostPages())) {
     return "denied"
   }
   return "ok"
