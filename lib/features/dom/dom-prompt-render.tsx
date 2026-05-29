@@ -28,11 +28,11 @@ const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 /**
  * EN: Confirmation panel shown when `dom -list` returned a retryable error.
  *     "Approve" calls `chrome.permissions.request` (if optional host access is missing) within
- *     the user gesture from the click/key event, then triggers `onApprove` to re-dispatch.
+ *     the user gesture from the key event, then triggers `onApprove` to re-dispatch.
  *     Esc/N returns to the BMXt prompt (picker stays open). Uses the same `bmxt-tab-picker` chrome as find-list /
  *     dom-list rows so the styling stays consistent.
  * JA: `dom -list` がリトライ可能なエラーを返したときに表示する確認パネル。
- *     「許可」はクリック／キーのユーザージェスチャ内で `chrome.permissions.request` を呼び、
+ *     「許可」はキーのユーザージェスチャ内で `chrome.permissions.request` を呼び、
  *     許可が取れたら `onApprove` で再ディスパッチする。
  *     「拒否」はピッカーを閉じる。チューブ表示は find-list / dom-list と同じクロムで統一。
  */
@@ -151,11 +151,7 @@ export function DomPromptRender({
   const allLines = [...message, ...(extra.length > 0 ? ["", ...extra] : [])]
 
   return (
-    <div
-      className="bmxt-tab-picker"
-      onMouseDown={() => {
-        requestAnimationFrame(() => inputRef.current?.focus())
-      }}>
+    <div className="bmxt-tab-picker">
       <div className="bmxt-tab-picker-head">{HEADLINE}</div>
       <textarea
         ref={setInputEl}
@@ -211,36 +207,30 @@ export function DomPromptRender({
           background: "#0d1117",
           alignItems: "center"
         }}>
-        <button
-          type="button"
-          onClick={approve}
-          disabled={busy}
+        <span
+          className="bmxt-dom-prompt-action-label"
           style={{
-            cursor: busy ? "wait" : "pointer",
             background: "#1f6feb",
             color: "white",
-            border: "none",
             borderRadius: 4,
             padding: "4px 10px",
-            font: "inherit"
+            font: "inherit",
+            opacity: busy ? 0.65 : 1
           }}>
           {busy ? "Requesting…" : "許可 (Enter / Y)"}
-        </button>
-        <button
-          type="button"
-          onClick={onReturnToPrompt}
-          disabled={busy}
+        </span>
+        <span
+          className="bmxt-dom-prompt-action-label"
           style={{
-            cursor: busy ? "wait" : "pointer",
-            background: "transparent",
             color: "#c9d1d9",
             border: "1px solid #30363d",
             borderRadius: 4,
             padding: "4px 10px",
-            font: "inherit"
+            font: "inherit",
+            opacity: busy ? 0.65 : 1
           }}>
           プロンプトへ (Esc / N)
-        </button>
+        </span>
         <span style={{ flex: 1, textAlign: "right", color: "#8b949e" }}>
           ↑↓ / j k でメッセージをスクロール
         </span>

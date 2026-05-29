@@ -1726,11 +1726,7 @@ export function BmxtShell({
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host"
                 style={subCmdPickerHostStyle}>
-                <TokenPickerPanel
-                  model={subCmdPicker}
-                  onHighlight={(hi) => setSubCmdPicker((s) => (s ? { ...s, hi } : null))}
-                  onPickIndex={applyTokenPickIndex}
-                />
+                <TokenPickerPanel model={subCmdPicker} />
               </div>
             ) : null}
           </div>
@@ -1763,8 +1759,7 @@ export function BmxtShell({
       {splitPickerLayout ? (
         <div className="bmxt-terminal-split" data-bmxt-session-id={sessionId}>
           <div
-            className={`bmxt-split-terminal-pane${paneFocus === "terminal" ? " bmxt-split-pane--focused" : ""}`}
-            onMouseDown={() => activatePaneFocus("terminal")}>
+            className={`bmxt-split-terminal-pane${paneFocus === "terminal" ? " bmxt-split-pane--focused" : ""}`}>
             <div ref={scrollRef} className={shellScrollClassName}>
               {shellContent}
             </div>

@@ -37,10 +37,7 @@ type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
 const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
   tabs: (ctx) =>
     ctx.tabPicker ? (
-      <PickerPanelHost
-        focusTarget="tabs"
-        paneFocus={ctx.paneFocus}
-        onActivateFocus={() => ctx.activatePaneFocus("tabs")}>
+      <PickerPanelHost focusTarget="tabs" paneFocus={ctx.paneFocus}>
         <TabsPickerWrapper
           rows={ctx.tabPicker.rows}
           showUrl={ctx.tabPicker.showUrl}
@@ -58,10 +55,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   find: (ctx) =>
     ctx.findListPicker ? (
-      <PickerPanelHost
-        focusTarget="find"
-        paneFocus={ctx.paneFocus}
-        onActivateFocus={() => ctx.activatePaneFocus("find")}>
+      <PickerPanelHost focusTarget="find" paneFocus={ctx.paneFocus}>
         <FindListPickerOverlay
           entries={ctx.findListPicker.entries}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
@@ -74,10 +68,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   dom: (ctx) =>
     ctx.domListPicker ? (
-      <PickerPanelHost
-        focusTarget="dom"
-        paneFocus={ctx.paneFocus}
-        onActivateFocus={() => ctx.activatePaneFocus("dom")}>
+      <PickerPanelHost focusTarget="dom" paneFocus={ctx.paneFocus}>
         <DomPickerWrapper
           state={ctx.domListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}

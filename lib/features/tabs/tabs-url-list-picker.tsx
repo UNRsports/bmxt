@@ -167,23 +167,6 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
         ) : null
       }
       inputRef={inputRef}
-      onShellMouseDown={(ev) => {
-        const t = ev.target as HTMLElement
-        if (t.closest(".bmxt-tab-picker-new-group-meta")) {
-          return
-        }
-        if (
-          groupNewPhase === "meta" ||
-          newTabUrlWindowId !== null ||
-          editPanel !== null
-        ) {
-          return
-        }
-        if (!isHostPaneFocused) {
-          return
-        }
-        requestAnimationFrame(() => inputRef.current?.focus())
-      }}
     />
   )
 }

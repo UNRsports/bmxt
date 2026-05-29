@@ -240,16 +240,6 @@ export function PlainTextPickerBody({
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
-  const refocusIfNoSelection = useCallback(() => {
-    if (!keyboardActive) {
-      return
-    }
-    const sel = window.getSelection()
-    if (!sel || sel.toString().length === 0) {
-      inputRef.current?.focus()
-    }
-  }, [keyboardActive])
-
   const renderRows = (start: number, end: number) => {
     const slice: ReactNode[] = []
     for (let i = start; i < end; i++) {
@@ -271,19 +261,7 @@ export function PlainTextPickerBody({
   const virtualEnd = useVirtual ? windowRange.end : lines.length
 
   return (
-    <div
-      className="bmxt-tab-picker bmxt-side-picker"
-      onMouseDown={(e) => {
-        if (!keyboardActive) {
-          return
-        }
-        const t = e.target as HTMLElement | null
-        if (t && t.closest(".bmxt-plain-picker-row-text")) {
-          return
-        }
-        requestAnimationFrame(() => inputRef.current?.focus())
-      }}
-      onMouseUp={refocusIfNoSelection}>
+    <div className="bmxt-tab-picker bmxt-side-picker">
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}

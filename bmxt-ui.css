@@ -422,6 +422,31 @@ body {
   outline-offset: -3px;
 }
 
+/* EN: Mouse — select displayed text; links stay clickable. Keyboard drives extension state. */
+.bmxt-tab-picker-list,
+.bmxt-tab-picker-head,
+.bmxt-tab-picker-tab-title,
+.bmxt-tab-picker-tab-url,
+.bmxt-tab-picker-filter-query,
+.bmxt-tab-picker-command-ambiguous-placeholder,
+.bmxt-plain-picker-row-text,
+.bmxt-dom-picker-row,
+.bmxt-subcmd-picker-item,
+.bmxt-dom-prompt-action-label,
+.bmxt-shell .bmxt-out-line,
+.bmxt-shell .bmxt-hint,
+.bmxt-shell .bmxt-isearch,
+.bmxt-version-upgrade {
+  user-select: text;
+  cursor: text;
+}
+
+.bmxt-hint a,
+.bmxt-out-line a,
+.bmxt-version-upgrade a {
+  cursor: pointer;
+}
+
 /* Tab picker / side-picker list chrome (tmux-style) */
 .bmxt-tab-picker,
 .bmxt-side-picker {

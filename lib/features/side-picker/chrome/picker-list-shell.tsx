@@ -21,7 +21,6 @@ export type PickerListShellProps = {
   commandFooter?: ReactNode
   extraFooter?: ReactNode
   inputRef?: RefObject<HTMLTextAreaElement | null>
-  onShellMouseDown?: (ev: React.MouseEvent) => void
 }
 
 /** EN: Shared picker column chrome (headline, IME, list slot, footers). */
@@ -43,13 +42,10 @@ export function PickerListShell({
   listBody,
   searchFooter,
   commandFooter,
-  extraFooter,
-  onShellMouseDown
+  extraFooter
 }: PickerListShellProps) {
   return (
-    <div
-      className="bmxt-tab-picker bmxt-side-picker"
-      onMouseDown={onShellMouseDown}>
+    <div className="bmxt-tab-picker bmxt-side-picker">
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}

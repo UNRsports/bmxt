@@ -56,7 +56,6 @@ type SplitTreeProps = {
   refreshTabPickerRows: () => Promise<void>
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
-  setFocusedLeaf: (sessionId: string) => void
 }
 
 function SplitTreeView({
@@ -69,8 +68,7 @@ function SplitTreeView({
   setSessionPickerSlot,
   refreshTabPickerRows,
   postUpgradeBanner,
-  appendCommandToHistory,
-  setFocusedLeaf
+  appendCommandToHistory
 }: SplitTreeProps) {
   if (isLeaf(node)) {
     const lines = logsById[node.id] ?? []
@@ -83,9 +81,6 @@ function SplitTreeView({
     return (
       <div
         data-bmxt-session-id={node.id}
-        onMouseDown={() => {
-          setFocusedLeaf(node.id)
-        }}
         style={{
           flex: 1,
           minWidth: 0,
@@ -148,7 +143,6 @@ function SplitTreeView({
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
-          setFocusedLeaf={setFocusedLeaf}
         />
       </div>
       <div
@@ -170,7 +164,6 @@ function SplitTreeView({
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
-          setFocusedLeaf={setFocusedLeaf}
         />
       </div>
     </div>
@@ -351,7 +344,6 @@ export function BmxtTerminal() {
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
-          setFocusedLeaf={(id) => void setFocusedLeaf(id)}
         />
       </div>
     </div>

@@ -17,11 +17,9 @@ export type TokenPickerModel = {
 
 type Props = {
   model: TokenPickerModel
-  onHighlight: (hi: number) => void
-  onPickIndex: (hi: number) => void
 }
 
-export function TokenPickerPanel({ model, onHighlight, onPickIndex }: Props) {
+export function TokenPickerPanel({ model }: Props) {
   const listRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -46,10 +44,7 @@ export function TokenPickerPanel({ model, onHighlight, onPickIndex }: Props) {
             id={`${ITEM_ID_PREFIX}-${i}`}
             role="option"
             aria-selected={i === model.hi}
-            className={`bmxt-subcmd-picker-item${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}`}
-            onMouseEnter={() => onHighlight(i)}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onPickIndex(i)}>
+            className={`bmxt-subcmd-picker-item${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}`}>
             {c}
           </div>
         ))}
