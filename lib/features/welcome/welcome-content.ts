@@ -1,14 +1,23 @@
 import raw from "./welcome-content.json"
 
+export {
+  WELCOME_NONE_HERO_IMAGE,
+  isRenderableWelcomeImagePath,
+  listWelcomeImagePaths
+} from "./welcome-image-paths"
+
 export type WelcomeContentEntry = {
-  /** ヒーロー画像（拡張機能ルートからの相対パス）。 */
+  /**
+   * ヒーロー画像（拡張機能ルートからの相対パス）。
+   * 画像を出さない版は {@link WELCOME_NONE_HERO_IMAGE} を指定する（キーは省略しない）。
+   */
   heroImage?: string
-  /** 追加画像（任意件数）。 */
+  /** 追加画像（任意件数）。`_none_` で始まるトークンは表示しない。 */
   additionalImages?: string[]
+  /** 英語の箇条書き（任意件数）。表示は en → ja の順。 */
+  en: string[]
   /** 日本語の箇条書き（任意件数）。 */
   ja: string[]
-  /** 英語の箇条書き（任意件数）。 */
-  en: string[]
 }
 
 type WelcomeContentMap = Record<string, WelcomeContentEntry>
@@ -21,6 +30,10 @@ const PLACEHOLDER_JA = [
 const PLACEHOLDER_EN = [
   "(No welcome content for this version. Add an entry to lib/features/welcome/welcome-content.json.)"
 ]
+
+export function listWelcomeContentVersions(): string[] {
+  return Object.keys(MAP)
+}
 
 export function getWelcomeContentForVersion(version: string): WelcomeContentEntry | null {
   const e = MAP[version]

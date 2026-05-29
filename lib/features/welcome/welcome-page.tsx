@@ -1,27 +1,40 @@
 import {
   getWelcomeContentForVersion,
+  listWelcomeContentVersions,
+  listWelcomeImagePaths,
   placeholderWelcomeContent,
   resolveWelcomeImageUrl
 } from "./welcome-content"
+import { resolveWelcomeDisplayVersion } from "./welcome-version-resolve"
 
 export function WelcomePage() {
-  const version = chrome.runtime.getManifest().version
+  const manifestVersion = chrome.runtime.getManifest().version
+  const params =
+    typeof location !== "undefined"
+      ? new URLSearchParams(location.search)
+      : new URLSearchParams()
+  const { version, fromUrlQuery } = resolveWelcomeDisplayVersion(
+    params,
+    manifestVersion,
+    listWelcomeContentVersions()
+  )
   const entry = getWelcomeContentForVersion(version) ?? placeholderWelcomeContent()
-  const imagePaths = [
-    ...(entry.heroImage ? [entry.heroImage] : []),
-    ...(entry.additionalImages ?? [])
-  ]
+  const imagePaths = listWelcomeImagePaths(entry)
 
   return (
     <main className="bmxt-welcome">
       <div className="bmxt-welcome__card">
         <h1 className="bmxt-welcome__title">Welcome to BMXt</h1>
-        <p className="bmxt-welcome__subtitle">
-          This page appears once after each extension update.
-        </p>
-        <p className="bmxt-welcome__subtitle">
-          拡張機能アップデート後、初回のみこのページを表示しています。
-        </p>
+        {fromUrlQuery ? (
+          <>
+            <p className="bmxt-welcome__subtitle">
+              Preview: welcome content for <code>?version={version}</code> (URL query).
+            </p>
+            <p className="bmxt-welcome__subtitle">
+              プレビュー: URL の <code>?version={version}</code> で指定した版のウェルカム内容を表示しています。
+            </p>
+          </>
+        ) : null}
 
         <section className="bmxt-welcome__section">
           <h2 className="bmxt-welcome__heading">Version {version}</h2>
@@ -35,22 +48,21 @@ export function WelcomePage() {
                     alt={`Welcome image ${i + 1}`}
                     loading="lazy"
                   />
-                  <figcaption className="bmxt-welcome__image-caption">{path}</figcaption>
                 </figure>
               ))}
             </div>
           ) : null}
           <div className="bmxt-welcome__notes">
-            <h3 className="bmxt-welcome__lang">[ja]</h3>
-            <ul>
-              {entry.ja.map((line, i) => (
-                <li key={`ja-${i}`}>{line}</li>
-              ))}
-            </ul>
             <h3 className="bmxt-welcome__lang">[en]</h3>
             <ul>
               {entry.en.map((line, i) => (
                 <li key={`en-${i}`}>{line}</li>
+              ))}
+            </ul>
+            <h3 className="bmxt-welcome__lang">[ja]</h3>
+            <ul>
+              {entry.ja.map((line, i) => (
+                <li key={`ja-${i}`}>{line}</li>
               ))}
             </ul>
           </div>

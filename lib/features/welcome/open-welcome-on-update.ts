@@ -1,4 +1,5 @@
 import { LAST_SEEN_WELCOME_VERSION_KEY } from "../extension-storage/keys"
+import { shouldOpenWelcomePageOnUpdate } from "./should-open-welcome-on-update"
 
 const WELCOME_PAGE_PATH = "tabs/welcome.html"
 
@@ -8,14 +9,16 @@ const WELCOME_PAGE_PATH = "tabs/welcome.html"
 export async function openWelcomePageOnUpdateIfNeeded(
   details: chrome.runtime.InstalledDetails
 ): Promise<void> {
-  if (details.reason !== "update") {
-    return
-  }
-
   const version = chrome.runtime.getManifest().version
   const r = await chrome.storage.local.get(LAST_SEEN_WELCOME_VERSION_KEY)
   const lastShown = r[LAST_SEEN_WELCOME_VERSION_KEY] as string | undefined
-  if (lastShown === version) {
+  if (
+    !shouldOpenWelcomePageOnUpdate(
+      details.reason as "install" | "update" | "chrome_update",
+      version,
+      lastShown
+    )
+  ) {
     return
   }
 
