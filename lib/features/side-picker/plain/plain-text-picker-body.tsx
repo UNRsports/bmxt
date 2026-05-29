@@ -225,6 +225,8 @@ export function PlainTextPickerBody({
   useLayoutEffect(() => {
     if (keyboardActive) {
       inputRef.current?.focus()
+    } else {
+      inputRef.current?.blur()
     }
   }, [keyboardActive])
 

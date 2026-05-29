@@ -683,21 +683,24 @@ export function BmxtShell({
     return () => window.removeEventListener("keydown", onKey, true)
   }, [])
 
+  const terminalPaneActive = isFocusedPane && paneFocus === "terminal"
+
   useLayoutEffect(() => {
-    if (!isFocusedPane || paneFocus !== "terminal") {
+    if (!terminalPaneActive) {
+      imeRef.current?.blur()
       return
     }
     focusPrompt()
-  }, [isFocusedPane, paneFocus, focusPrompt])
+  }, [terminalPaneActive, focusPrompt])
 
   useEffect(() => {
-    if (!isFocusedPane || paneFocus !== "terminal") {
+    if (!terminalPaneActive) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [isFocusedPane, paneFocus, focusPrompt])
+  }, [terminalPaneActive, focusPrompt])
 
   const runDomListAndShow = useCallback(
     async (
@@ -1816,7 +1819,7 @@ export function BmxtShell({
               <span>{before}</span>
               <span
                 ref={cursorMirrorCellRef}
-                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}${isFocusedPane ? "" : " bmxt-cursor-cell--inactive"}`}>
+                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}${terminalPaneActive ? "" : " bmxt-cursor-cell--inactive"}`}>
                 {cur || "\u00a0"}
               </span>
               <span>{after}</span>
@@ -1900,15 +1903,19 @@ export function BmxtShell({
         position: "relative"
       }}>
       {splitPickerLayout ? (
-        <div className="bmxt-terminal-split" data-bmxt-session-id={sessionId}>
+        <div
+          className="bmxt-terminal-split"
+          data-bmxt-session-id={sessionId}
+          data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
           <div
-            className={`bmxt-split-terminal-pane${paneFocus === "terminal" ? " bmxt-split-pane--focused" : ""}`}>
+            className={`bmxt-split-terminal-pane${terminalPaneActive ? " bmxt-split-pane--focused" : ""}`}>
             <div ref={scrollRef} className={shellScrollClassName}>
               {shellContent}
             </div>
           </div>
           <SessionPickerColumns
             sessionId={sessionId}
+            isFocusedPane={isFocusedPane}
             paneFocus={paneFocus}
             activatePaneFocus={activatePaneFocus}
             tabPicker={tabPicker}
@@ -1941,7 +1948,8 @@ export function BmxtShell({
       ) : (
         <div
           ref={scrollRef}
-          className={`${shellScrollClassName}${isFocusedPane && paneFocus === "terminal" ? " bmxt-split-pane--focused" : ""}`}>
+          data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}
+          className={`${shellScrollClassName}${terminalPaneActive ? " bmxt-split-pane--focused" : ""}`}>
           {shellContent}
         </div>
       )}

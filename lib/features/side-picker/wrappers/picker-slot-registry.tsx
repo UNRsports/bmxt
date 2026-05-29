@@ -14,6 +14,8 @@ export type SessionPickerColumnsProps = PickerColumnHostContext
 
 export type PickerColumnHostContext = {
   sessionId: string
+  /** EN: This split leaf receives keyboard input (only one leaf at a time). */
+  isFocusedPane: boolean
   paneFocus: PaneFocusTarget
   activatePaneFocus: (target: PaneFocusTarget) => void
   tabPicker: TabPickerState | null
@@ -37,7 +39,10 @@ type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
 const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
   tabs: (ctx) =>
     ctx.tabPicker ? (
-      <PickerPanelHost focusTarget="tabs" paneFocus={ctx.paneFocus}>
+      <PickerPanelHost
+        focusTarget="tabs"
+        paneFocus={ctx.paneFocus}
+        isFocusedPane={ctx.isFocusedPane}>
         <TabsPickerWrapper
           rows={ctx.tabPicker.rows}
           showUrl={ctx.tabPicker.showUrl}
@@ -55,7 +60,10 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   find: (ctx) =>
     ctx.findListPicker ? (
-      <PickerPanelHost focusTarget="find" paneFocus={ctx.paneFocus}>
+      <PickerPanelHost
+        focusTarget="find"
+        paneFocus={ctx.paneFocus}
+        isFocusedPane={ctx.isFocusedPane}>
         <FindListPickerOverlay
           entries={ctx.findListPicker.entries}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
@@ -68,7 +76,10 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   dom: (ctx) =>
     ctx.domListPicker ? (
-      <PickerPanelHost focusTarget="dom" paneFocus={ctx.paneFocus}>
+      <PickerPanelHost
+        focusTarget="dom"
+        paneFocus={ctx.paneFocus}
+        isFocusedPane={ctx.isFocusedPane}>
         <DomPickerWrapper
           state={ctx.domListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}

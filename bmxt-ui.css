@@ -308,10 +308,29 @@ body {
   min-width: 0.55ch;
 }
 
-/* split: アクティブでないペインはミラー上のカーソルセルを点滅させない */
-.bmxt-cursor-cell--inactive {
+/* split: 青枠のないペインはプロンプトのミラーカーソルを点滅させない */
+.bmxt-cursor-cell--inactive,
+.bmxt-split-terminal-pane:not(.bmxt-split-pane--focused) .bmxt-cursor-cell {
   animation: none;
   opacity: 1;
+}
+
+/* キーボードフォーカスのない split リーフ — 青枠・キャレットを出さない */
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-split-pane--focused {
+  outline: none;
+}
+
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-cursor-cell {
+  animation: none;
+  opacity: 1;
+}
+
+/* 青枠のないペインでは IME のネイティブキャレットも非表示 */
+.bmxt-split-terminal-pane:not(.bmxt-split-pane--focused) .bmxt-prompt-ime,
+.bmxt-picker-host--split:not(.bmxt-split-pane--focused) .bmxt-tab-picker-filter-ime,
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-prompt-ime,
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-tab-picker-filter-ime {
+  caret-color: transparent;
 }
 
 @keyframes bmxt-cursor-blink {
