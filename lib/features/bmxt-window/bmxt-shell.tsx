@@ -92,8 +92,8 @@ import type { TabPickerState } from "../side-picker/session/tab-picker-state"
 const FIND_LIST_SPINNER_DELAY_MS = 450
 
 const FIND_PAGE_SCAN_HINT_LINES = [
-  "EN: Page scan may take 30–60s when many tabs are open.",
-  "JA: タブが多いと数十秒かかることがあります。"
+  "EN: Page scan may take a while when many tabs are open. Ctrl+C cancels.",
+  "JA: タブが多いと時間がかかります。Ctrl+C で中断できます。"
 ] as const
 
 function effectsIncludeFindPage(effects: ChromeEffect[]): boolean {
@@ -843,11 +843,15 @@ export function BmxtShell({
           findPageProgressLabel: findPageProgressLabel(findListLine),
           onFindPageProgress: async (message) => {
             await appendLogLines([message])
-          }
+          },
+          shouldCancelFindPage: () => findListDismissRef.current
         }
         const linesOut = await applyChromeEffects(ctx, effects)
         if (findListDismissRef.current) {
           findListDismissRef.current = false
+          if (linesOut.length > 0) {
+            await appendLogLines(linesOut)
+          }
           return
         }
         await appendLogLines(["find -list — picker (Esc → prompt)"])
@@ -928,7 +932,8 @@ export function BmxtShell({
           findPageProgressLabel: findPageProgressLabel(dispatchLine),
           onFindPageProgress: async (message) => {
             await appendLogLines([message])
-          }
+          },
+          shouldCancelFindPage: () => findListDismissRef.current
         }
         const linesOut = await applyChromeEffects(ctx, effects)
         if (linesOut.length > 0) {
@@ -942,6 +947,17 @@ export function BmxtShell({
     },
     [appendLogLines, sessionId]
   )
+
+  const cancelFindPageScan = useCallback(() => {
+    if (!findListBusyRef.current || findListDismissRef.current) {
+      return
+    }
+    findListDismissRef.current = true
+    void appendLogLines([
+      "find — cancelled (Ctrl+C)",
+      "JA: ページ走査を中断しました。"
+    ])
+  }, [appendLogLines])
 
   const openFindPickerEntry = useCallback(
     async (entry: PickerEntry) => {
@@ -1433,6 +1449,18 @@ export function BmxtShell({
         return
       }
 
+      if (
+        findListBusyRef.current &&
+        e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        (e.key === "c" || e.key === "C")
+      ) {
+        e.preventDefault()
+        cancelFindPageScan()
+        return
+      }
+
       logBmxtKey("prompt", "keydown", {
         key: e.key,
         code: e.code,
@@ -1694,6 +1722,7 @@ export function BmxtShell({
       applyTokenPickIndex,
       promptLine,
       submitLine,
+      cancelFindPageScan,
       syncImeTokenPicker,
       tabPicker,
       sessionId,

@@ -5,7 +5,7 @@
 
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
 import { isHttpUrl } from "../url/is-http-url"
-import { linesForFindElement, matchesNeedle, MAX_PAGE_TABS, MAX_PAGE_TEXT_CHARS } from "../search"
+import { linesForFindElement, matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../search"
 import {
   formatFindPageProgress,
   shouldEmitFindPageProgress,
@@ -18,7 +18,8 @@ const MAX_LINE_HITS = 500
 export async function findPageLines(
   pattern: string,
   onProgress?: (message: string) => Promise<void>,
-  progressLabel = "find --page"
+  progressLabel = "find --page",
+  shouldCancel?: () => boolean
 ): Promise<string[]> {
   const emit = async (p: FindPageProgress) => {
     if (!onProgress) {
@@ -62,29 +63,41 @@ export async function findPageLines(
     }
   }
 
-  const tabs = prioritized.slice(0, MAX_PAGE_TABS)
+  const tabs = prioritized
   const out: string[] = []
   let totalHits = 0
   let scanned = 0
   let skipped = 0
+  let tabsChecked = 0
+  let cancelled = false
   const matchAll = !pattern.trim()
   const tabTotal = tabs.length
 
   await emit({ phase: "start", tabIndex: 0, tabTotal, scanned: 0, skipped: 0 })
 
   for (let tabIndex = 0; tabIndex < tabs.length; tabIndex += 1) {
+    if (shouldCancel?.()) {
+      cancelled = true
+      tabsChecked = tabIndex
+      break
+    }
     const tab = tabs[tabIndex]!
     const tabId = tab.id
     if (tabId === undefined) {
       continue
     }
+    tabsChecked = tabIndex + 1
     const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
+    if (shouldCancel?.()) {
+      cancelled = true
+      break
+    }
     if (text === null) {
       skipped += 1
     } else {
       scanned += 1
     }
-    await emit({ phase: "tick", tabIndex: tabIndex + 1, tabTotal, scanned, skipped })
+    await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
     if (text === null) {
       continue
     }
@@ -142,25 +155,34 @@ export async function findPageLines(
     }
   }
 
-  await emit({ phase: "done", tabIndex: tabTotal, tabTotal, scanned, skipped })
+  await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
+
+  if (cancelled) {
+    const summary = `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped)`
+    if (out.length === 0) {
+      return [summary]
+    }
+    out.unshift(summary)
+    return out
+  }
 
   if (scanned === 0 && tabs.length > 0) {
     return [
       "(no page text could be read from open http(s) tabs)",
       "EN: With site access enabled, reload the pages you want to search (F5), then run find --page again.",
       "JA: サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから find --page を再実行してください。",
-      `scanned ${scanned} tab(s), skipped ${skipped}, max ${MAX_PAGE_TABS} tabs`
+      `scanned ${scanned} tab(s), skipped ${skipped}, ${tabTotal} http(s) tab(s) open`
     ]
   }
 
   if (out.length === 0) {
     return [
       "(no page matches in scanned tabs — pattern is case-insensitive substring per line, or empty pattern for tab summaries)",
-      `scanned ${scanned} tab(s), skipped ${skipped} (permissions or unreadable), max ${MAX_PAGE_TABS} tabs`
+      `scanned ${scanned} tab(s), skipped ${skipped} (permissions or unreadable), ${tabTotal} tab(s) checked`
     ]
   }
   out.unshift(
-    `(${matchAll ? scanned : totalHits} page block(s); scanned ${scanned} tab(s), skipped ${skipped}; cap ${MAX_PAGE_TABS} tabs)`
+    `(${matchAll ? scanned : totalHits} page block(s); scanned ${scanned} tab(s), skipped ${skipped}; ${tabTotal} tab(s) checked)`
   )
   return out
 }

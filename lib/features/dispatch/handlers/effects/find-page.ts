@@ -11,6 +11,7 @@ export async function applyFindPageEffect(
   return findPageLines(
     e.pattern,
     ctx.onFindPageProgress,
-    ctx.findPageProgressLabel ?? "find --page"
+    ctx.findPageProgressLabel ?? "find --page",
+    ctx.shouldCancelFindPage
   )
 }

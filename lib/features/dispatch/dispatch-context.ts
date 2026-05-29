@@ -20,6 +20,8 @@ export type DispatchChromeContext = {
   onFindPageProgress?: (message: string) => Promise<void>
   /** EN: Label prefix for progress lines (e.g. `find --page`). */
   findPageProgressLabel?: string
+  /** EN: When true, `find_page` stops after the current tab (Ctrl+C / find -exit -list). */
+  shouldCancelFindPage?: () => boolean
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
 }
