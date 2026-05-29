@@ -9,11 +9,9 @@ export type SubCommandPickerModel = {
 
 type Props = {
   model: SubCommandPickerModel
-  onHighlight: (hi: number) => void
-  onPickIndex: (hi: number) => void
 }
 
-export function SecondCommandPickerPanel({ model, onHighlight, onPickIndex }: Props) {
+export function SecondCommandPickerPanel({ model }: Props) {
   return (
     <div
       className="bmxt-subcmd-picker"
@@ -27,10 +25,7 @@ export function SecondCommandPickerPanel({ model, onHighlight, onPickIndex }: Pr
           key={c}
           role="option"
           aria-selected={i === model.hi}
-          className={`bmxt-subcmd-picker-item${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}`}
-          onMouseEnter={() => onHighlight(i)}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onPickIndex(i)}>
+          className={`bmxt-subcmd-picker-item${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}`}>
           {c}
         </div>
       ))}

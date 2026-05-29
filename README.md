@@ -2,8 +2,6 @@
 
 > **English** documentation is first; the complete **Japanese** version follows below ([jump to 日本語](#japanese)).
 
-☕️ **Support** — *This is still an early-stage dev demo,* but if you're curious about **BMXt** and the future it's aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it's ready.
-
 ## Table of contents
 
 - [Introduction](#introduction)
@@ -108,7 +106,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ## Key Specs
 
 - **UI**: Extension page opened in a dedicated normal browser window (Plasmo route `tabs/bmxt`), not a popup. The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`tabs/bmxt.tsx`** is a thin entry that mounts it.
-- **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit while keeping logs selectable/copyable with normal text nodes.
+- **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
 - **State**: Command output logs and command history are stored in `chrome.storage.local`. Keys and caps are defined in **`lib/features/extension-storage/keys.ts`**: **500** log lines (`bmxt_log`), **300** history entries (`bmxt_cmd_history`).
 - **Background**: Service Worker (`background.ts`) opens the window on icon click and handles command execution and tab operations.
 
@@ -370,7 +368,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
   - Group rows: `move` (`m`), `close` (`c`), `newwindow` (`nw`), `edit`
 - In `:` command mode, pressing `Tab` or `Enter` with an empty command shows a dim placeholder of available commands for the current target (tab/window/group).
 - **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter`. **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
-- Use `/` for incremental search (`@` prefix for URL match). `Enter` focuses the highlighted tab while keeping the picker column open. **`Esc`** unwinds submodes in order: clear `#` → cancel `:` command mode → end `/` search → exit bulk submode → **return to the BMXt prompt** (column stays open). Close the column with **`tabs -exit -list`**.
+- Use `/` for incremental search (`@` prefix for URL match). While filtering, **keyboard focus stays on the filter field**; the list highlights matches without taking typing focus. `Enter` focuses the highlighted tab while keeping the picker column open. **`Esc`** unwinds submodes in order: clear `#` → cancel `:` command mode → end `/` search → exit bulk submode → **return to the BMXt prompt** (column stays open). Close the column with **`tabs -exit -list`**.
 
 
 <a id="tabs-tab-picker-edit"></a>
@@ -498,7 +496,7 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 Applies when the prompt `textarea` is focused.
 
 - **Left / Right / Home / End** — Move cursor in line
-- **Tab** — Command completion (cycle candidates)
+- **Tab** — Command completion (cycle candidates; IME-style token picker when applicable)
 - **Up / Down** — Command history
 - **Ctrl+R** — Reverse incremental search
 - **Enter** — Execute command (when **nav** overlay is **ON** and the terminal prompt column has focus, **Enter** sends a **click** to the page instead — see **[Nav mode](#nav-mode)**)
@@ -551,6 +549,8 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `bmxt-ui.css` — Window styles at repo root (imported from `tabs/bmxt.tsx`)
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner and **`notes`** command text (keys must match `package.json` `version`)
+- `lib/features/welcome/` — Post-update welcome page (`tabs/welcome.html`; content in **`welcome-content.json`**)
+- `tabs/welcome.tsx` — Welcome page entry
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
 - `background.ts` — Service Worker (window launch, `runDispatch`, effects)
@@ -568,22 +568,31 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 ### Version upgrade banner & release notes
 
 
-When the extension **`version`** in **`package.json`** (and the built manifest) **does not match** the value stored in **`chrome.storage.local`** under **`bmxt_last_seen_extension_version`** (**`LAST_SEEN_EXTENSION_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`), the BMXt window shows **once**, on the **first open after that upgrade**:
+**Welcome page on extension update** (normal browser tab, separate from the in-window block)
+
+When Chrome reports an **`update`** install, **`background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
+
+**Manual / preview URL:** `chrome-extension://<extension-id>/tabs/welcome.html?version=0.3.8` shows that entry from **`welcome-content.json`** (query omitted → current manifest version, same as before). Invalid `version` strings are ignored. Auto-open on update does not append query parameters.
+
+**In-window upgrade block** (first BMXt open after upgrade)
+
+When the extension **`version`** in **`package.json`** (and the built manifest) **does not match** the value stored in **`chrome.storage.local`** under **`bmxt_last_seen_extension_version`** (**`LAST_SEEN_EXTENSION_VERSION_KEY`**), the BMXt window shows **once**, on the **first open after that upgrade**:
 
 1. The usual **welcome** copy (unchanged).
-2. A **version upgrade** block with the version number and bilingual release notes.
+2. A **version upgrade** block with the version number and bilingual release notes from **`release-notes.json`**.
 
 Existing **session log** lines are still rendered **below** that block.
 
 **Maintainer workflow**
 
 1. Bump **`package.json`** → **`version`**.
-2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** strings (multi-line text is fine; use `\n` in JSON or rely on `white-space: pre-wrap` in CSS). Users can also print notes in the BMXt shell with **`notes`**, **`notes <version>`**, or **`notes --list`**.
-3. Build and ship.
+2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays. Users can also print notes in the BMXt shell with **`notes`**, **`notes <version>`**, or **`notes --list`**.
+3. Optionally add **`lib/features/welcome/welcome-content.json`** for the post-update welcome tab (`ja` / `en` bullet arrays; **`heroImage`** / **`additionalImages`**). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. Plasmo copies that folder via **`web_accessible_resources`** in **`package.json`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
+4. Build and ship.
 
-If no entry exists for the current version, placeholder copy is shown that points maintainers at **`release-notes.json`**.
+If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
 
-**Implementation:** `lib/features/bmxt-window/use-version-upgrade-banner.ts` compares versions and updates storage; `bmxt-terminal.tsx` waits until the check finishes before rendering the shell (avoids a flash of log-only UI); `bmxt-shell.tsx` renders the blocks; styles live in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+**Implementation:** welcome tab — **`lib/features/welcome/open-welcome-on-update.ts`**, **`welcome-page.tsx`**. In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
 
 <a id="production-build"></a>
 
@@ -620,12 +629,6 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
 
-
----
-
-☕️ **Support** — *This is still an early-stage dev demo,* but if you're curious about **BMXt** and the future it's aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it's ready.
-
-
 ---
 
 <a id="japanese"></a>
@@ -633,8 +636,6 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 # BMXt（日本語）
 
 > 英語版は上記 [English](#introduction) セクションを参照してください。
-
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
 
 ## 目次
 
@@ -741,7 +742,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ## 主要仕様
 
 - **UI**: 独立した通常ブラウザウィンドウで動く拡張ページ（Plasmo のルート **`tabs/bmxt`**、popup ではない）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`tabs/bmxt.tsx`** はそれをマウントする薄いエントリです。
-- **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応しつつ、**ログ領域は通常のテキストノード**のため、マウスでの**範囲選択・コピー**を妨げない構成にしています。
+- **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
 - **状態**: コマンド出力ログとコマンド履歴は `chrome.storage.local` に保持。キーと上限は **`lib/features/extension-storage/keys.ts`** で定義（**ログ 500 行** `bmxt_log`、**履歴 300 件** `bmxt_cmd_history`）。
 - **バックグラウンド**: Service Worker（`background.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
 
@@ -1037,7 +1038,7 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 - `:` コマンドモードでは、コマンド未入力のまま `Tab` または `Enter` を押すと、現在の対象（タブ／ウィンドウ／グループ）に応じた利用可能コマンドを薄いプレースホルダーで表示します。
 - **[MOVE]** は `↑`/`↓` で移動先タブを選び、`Enter` で `#` タブを一括移動します。
 - **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
-- `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。**`Esc`** の解除順は `#` 全解除 → `:` コマンドモード終了 → `/` 検索終了 → バルクサブモード終了 → **BMXt プロンプトへ**（列は開いたまま）。列を閉じるには **`tabs -exit -list`**。
+- `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。絞り込み中は **フィルタ欄にキーボードフォーカスが残り**、一覧側に入力フォーカスが移らない。**`Esc`** の解除順は `#` 全解除 → `:` コマンドモード終了 → `/` 検索終了 → バルクサブモード終了 → **BMXt プロンプトへ**（列は開いたまま）。列を閉じるには **`tabs -exit -list`**。
 - バルクモードでない `Enter` は、ハイライト中タブをアクティブ化して対象ウィンドウを前面化します（ピッカーは維持）。
 
 
@@ -1122,7 +1123,7 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 プロンプトの **`textarea` にフォーカス**があるときの操作です。
 
 - **← / → / Home / End** — 行内カーソル移動（ブラウザ標準の挙動）
-- **Tab** — コマンド補完（繰り返しで候補循環）
+- **Tab** — コマンド補完（繰り返しで候補循環。IME 風トークンピッカーが使える場合あり）
 - **↑ / ↓** — コマンド履歴
 - **Ctrl+R** — 逆方向インクリメンタルサーチ（続けて押すと古い一致へ）
 - **Enter** — コマンド実行（逆検索モードでは確定）。**nav** オーバーレイが **ON** でターミナル列にフォーカスがあるときは、ページ上の **クリック**（**[Nav モード](#nav-mode-ja)**）
@@ -1175,6 +1176,8 @@ npm run dev   # または pnpm dev
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知・**`notes`** ターミナルコマンドの変更内容（キーは `package.json` の `version` と一致させてメンテ）
+- `lib/features/welcome/` — 更新後ウェルカムページ（`tabs/welcome.html`、本文は **`welcome-content.json`**）
+- `tabs/welcome.tsx` — ウェルカムページのエントリ
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
 - `background.ts` — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
@@ -1192,22 +1195,31 @@ npm run dev   # または pnpm dev
 ### バージョンアップバナーとリリースノート
 
 
-拡張機能の **`version`**（**`package.json`**／ビルド後の manifest）が、**`chrome.storage.local`** の **`bmxt_last_seen_extension_version`**（定数 **`LAST_SEEN_EXTENSION_VERSION_KEY`**、`lib/features/extension-storage/keys.ts`）に保存されている「前回リリースノートを見た版」と **一致しない** とき、BMXt を開いた **そのバージョンへアップデートしたあとの初回だけ**、次を表示します。
+**拡張機能更新時のウェルカムページ**（通常タブ。ウィンドウ内ブロックとは別）
+
+Chrome が **`update`** インストールを報告したとき、**`background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
+
+**手動・プレビュー URL:** `chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.3.8` で JSON の該当版を表示（クエリなし → manifest の現行版、従来どおり）。不正な `version` 文字列は無視。更新時の自動表示ではクエリは付けない。
+
+**ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
+
+拡張機能の **`version`**（**`package.json`**／ビルド後の manifest）が、**`chrome.storage.local`** の **`bmxt_last_seen_extension_version`**（**`LAST_SEEN_EXTENSION_VERSION_KEY`**）と **一致しない** とき、BMXt を開いた **そのバージョンへアップデートしたあとの初回だけ**、次を表示します。
 
 1. 既存どおりの **ウェルカム** 文言（内容は変更しない運用）。
-2. **バージョンアップ** 見出しと、**日英の変更説明**。
+2. **バージョンアップ** 見出しと、**`release-notes.json`** の日英変更説明。
 
 既存の **セッションログ** は、その **下** に続きます。
 
 **リリース時の作業**
 
 1. **`package.json`** の **`version`** を上げる。
-2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** と **`en`**）。本文は複数行にしてよい（JSON 内の `\n` または CSS の `white-space: pre-wrap` で折り返し表示）。BMXt シェルでは **`notes`** / **`notes <version>`** / **`notes --list`** でも参照できる。
-3. ビルドして配布する。
+2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列）。BMXt シェルでは **`notes`** / **`notes <version>`** / **`notes --list`** でも参照できる。
+3. 任意で **`lib/features/welcome/welcome-content.json`** に更新後ウェルカムタブ用のエントリを追加する（**`ja`** / **`en`** の配列。**`heroImage`** / **`additionalImages`** はキーを残す）。画像は **`assets/welcome/`** に置き、JSON では `assets/welcome/<ファイル名>` と書く（WebP 可）。**`package.json`** の **`web_accessible_resources`**（`assets/welcome/*`）経由でビルドに同梱される。追加・変更後はビルドと拡張の再読み込みが必要。画像なしは **`heroImage": "_none_heroImage"`**。
+4. ビルドして配布する。
 
-該当キーが無い場合は、**`release-notes.json`** を更新するよう促すプレースホルダが表示されます。
+**`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
 
-**実装:** バージョン比較とストレージ更新は **`use-version-upgrade-banner.ts`**、ちらつき防止の描画待ちは **`bmxt-terminal.tsx`**、UI は **`bmxt-shell.tsx`**、スタイルは **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
+**実装:** ウェルカムタブ — **`open-welcome-on-update.ts`**、**`welcome-page.tsx`**。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
 
 <a id="production-build-ja"></a>
 
@@ -1243,14 +1255,3 @@ npm run build
 3. 履歴、ブックマーク操作
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
-
----
-
-☕️ **Support** — *This is still an early-stage dev demo,* but if you’re curious about **BMXt** and the future it’s aiming for, you can back the journey on [**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) (one-time or monthly). ✨ GitHub Sponsors is also pending—the official link will land here once it’s ready.
-
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
-
----
-
-☕️ **支援** — *いまはまだ開発段階のデモです。* **BMXt** とそれがもたらす未来にご興味があれば、[**Buy Me a Coffee**](https://buymeacoffee.com/unrsports) からワンタイム／月額で開発を支援いただけます。
-

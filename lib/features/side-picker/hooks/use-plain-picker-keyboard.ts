@@ -116,12 +116,16 @@ export function usePlainPickerKeyboard({
 
   const runPickerVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
+      // IME textarea shows filter/command text; j/k and arrows must reach the input, not hi.
+      if (searchMode || commandMode) {
+        return false
+      }
       if (extensions?.customVerticalNav) {
         return extensions.customVerticalNav(e)
       }
       return runDefaultVerticalNav(e)
     },
-    [extensions, runDefaultVerticalNav]
+    [commandMode, extensions, runDefaultVerticalNav, searchMode]
   )
 
   const defaultSearchJumpEnabled =
@@ -206,15 +210,17 @@ export function usePlainPickerKeyboard({
 
   const runPickerNormalEnter = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (extensions?.onNormalEnter) {
-        return extensions.onNormalEnter(e)
-      }
       if (!keyboardActive || searchMode || commandMode) {
         return false
       }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
         return false
+      }
+      if (extensions?.onNormalEnter) {
+        e.preventDefault()
+        e.stopPropagation()
+        return extensions.onNormalEnter(e)
       }
       if (!onConfirmLineIndex || lineCount === 0) {
         return false

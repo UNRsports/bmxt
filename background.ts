@@ -24,6 +24,7 @@ import {
 } from "./lib/features/bmxt-core"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
+import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"
@@ -131,9 +132,10 @@ function hydrateLastWindowFromStorage() {
   })
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
+  void openWelcomePageOnUpdateIfNeeded(details)
 })
 
 chrome.runtime.onStartup.addListener(() => {
@@ -213,27 +215,33 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
     ])
     return
   }
-  const out: string[] = [`> ${trimmed}`]
+  const isClear = trimmed.toLowerCase() === "clear"
   const isExit = trimmed.toLowerCase() === "exit"
-  try {
-    out.push(...(await dispatch(trimmed, sessionId, exitOutcome)))
-  } catch (e) {
-    out.push(`error: ${e instanceof Error ? e.message : String(e)}`)
+  if (!isClear) {
+    await appendLinesToSession(sessionId, [`> ${trimmed}`])
   }
-  if (trimmed.toLowerCase() === "clear") {
-    await setSessionLines(sessionId, out)
+  const more: string[] = []
+  try {
+    more.push(...(await dispatch(trimmed, sessionId, exitOutcome)))
+  } catch (e) {
+    more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
+  }
+  if (isClear) {
+    await setSessionLines(sessionId, [`> ${trimmed}`, ...more])
     return
   }
   if (isExit) {
     if (!exitOutcome.fullClose) {
       const peek = await readTerminalSessionsIfPresent()
       if (peek) {
-        await appendLinesToSession(peek.layout.focusedLeafId, out)
+        await appendLinesToSession(peek.layout.focusedLeafId, [`> ${trimmed}`, ...more])
       }
     }
     return
   }
-  await appendLinesToSession(sessionId, out)
+  if (more.length > 0) {
+    await appendLinesToSession(sessionId, more)
+  }
 }
 
 async function dispatch(

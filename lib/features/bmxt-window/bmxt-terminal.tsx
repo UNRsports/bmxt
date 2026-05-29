@@ -45,6 +45,7 @@ type SplitTreeProps = {
   node: SplitNode
   logsById: Record<string, string[]>
   focusedLeafId: string
+  onFocusLeaf: (sessionId: string) => void
   history: string[]
   completionCandidates: string[]
   pickersBySession: SessionPickersByLeaf
@@ -56,21 +57,20 @@ type SplitTreeProps = {
   refreshTabPickerRows: () => Promise<void>
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
-  setFocusedLeaf: (sessionId: string) => void
 }
 
 function SplitTreeView({
   node,
   logsById,
   focusedLeafId,
+  onFocusLeaf,
   history,
   completionCandidates,
   pickersBySession,
   setSessionPickerSlot,
   refreshTabPickerRows,
   postUpgradeBanner,
-  appendCommandToHistory,
-  setFocusedLeaf
+  appendCommandToHistory
 }: SplitTreeProps) {
   if (isLeaf(node)) {
     const lines = logsById[node.id] ?? []
@@ -83,8 +83,11 @@ function SplitTreeView({
     return (
       <div
         data-bmxt-session-id={node.id}
-        onMouseDown={() => {
-          setFocusedLeaf(node.id)
+        data-bmxt-leaf-focused={leafHasKeyboardFocus ? "" : undefined}
+        onPointerDownCapture={() => {
+          if (!leafHasKeyboardFocus) {
+            onFocusLeaf(node.id)
+          }
         }}
         style={{
           flex: 1,
@@ -141,6 +144,7 @@ function SplitTreeView({
           node={node.a}
           logsById={logsById}
           focusedLeafId={focusedLeafId}
+          onFocusLeaf={onFocusLeaf}
           history={history}
           completionCandidates={completionCandidates}
           pickersBySession={pickersBySession}
@@ -148,7 +152,6 @@ function SplitTreeView({
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
-          setFocusedLeaf={setFocusedLeaf}
         />
       </div>
       <div
@@ -163,6 +166,7 @@ function SplitTreeView({
           node={node.b}
           logsById={logsById}
           focusedLeafId={focusedLeafId}
+          onFocusLeaf={onFocusLeaf}
           history={history}
           completionCandidates={completionCandidates}
           pickersBySession={pickersBySession}
@@ -170,7 +174,6 @@ function SplitTreeView({
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
-          setFocusedLeaf={setFocusedLeaf}
         />
       </div>
     </div>
@@ -344,6 +347,7 @@ export function BmxtTerminal() {
           node={state.layout.root}
           logsById={state.logsById}
           focusedLeafId={state.layout.focusedLeafId}
+          onFocusLeaf={(sessionId) => void setFocusedLeaf(sessionId)}
           history={history}
           completionCandidates={completionCandidates}
           pickersBySession={pickersBySession}
@@ -351,7 +355,6 @@ export function BmxtTerminal() {
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
-          setFocusedLeaf={(id) => void setFocusedLeaf(id)}
         />
       </div>
     </div>

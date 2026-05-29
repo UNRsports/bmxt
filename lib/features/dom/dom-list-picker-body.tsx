@@ -273,16 +273,6 @@ export function DomListPickerBody({
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
-  const refocusIfNoSelection = useCallback(() => {
-    if (!keyboardActive) {
-      return
-    }
-    const sel = window.getSelection()
-    if (!sel || sel.toString().length === 0) {
-      inputRef.current?.focus()
-    }
-  }, [keyboardActive])
-
   const renderRows = (start: number, end: number) => {
     const slice: ReactNode[] = []
     for (let i = start; i < end; i++) {
@@ -301,19 +291,7 @@ export function DomListPickerBody({
   }
 
   return (
-    <div
-      className="bmxt-tab-picker bmxt-side-picker bmxt-dom-picker"
-      onMouseDown={(e) => {
-        if (!keyboardActive) {
-          return
-        }
-        const t = e.target as HTMLElement | null
-        if (t?.closest(".bmxt-dom-picker-row")) {
-          return
-        }
-        requestAnimationFrame(() => inputRef.current?.focus())
-      }}
-      onMouseUp={refocusIfNoSelection}>
+    <div className="bmxt-tab-picker bmxt-side-picker bmxt-dom-picker">
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}

@@ -14,6 +14,8 @@ export type SessionPickerColumnsProps = PickerColumnHostContext
 
 export type PickerColumnHostContext = {
   sessionId: string
+  /** EN: This split leaf receives keyboard input (only one leaf at a time). */
+  isFocusedPane: boolean
   paneFocus: PaneFocusTarget
   activatePaneFocus: (target: PaneFocusTarget) => void
   tabPicker: TabPickerState | null
@@ -27,7 +29,7 @@ export type PickerColumnHostContext = {
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
-  onOpenFindEntry: (entry: PickerEntry) => void
+  onOpenFindEntry: (entry: PickerEntry, matchIndex: number) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
 }
@@ -40,7 +42,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
       <PickerPanelHost
         focusTarget="tabs"
         paneFocus={ctx.paneFocus}
-        onActivateFocus={() => ctx.activatePaneFocus("tabs")}>
+        isFocusedPane={ctx.isFocusedPane}>
         <TabsPickerWrapper
           rows={ctx.tabPicker.rows}
           showUrl={ctx.tabPicker.showUrl}
@@ -61,11 +63,11 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
       <PickerPanelHost
         focusTarget="find"
         paneFocus={ctx.paneFocus}
-        onActivateFocus={() => ctx.activatePaneFocus("find")}>
+        isFocusedPane={ctx.isFocusedPane}>
         <FindListPickerOverlay
           entries={ctx.findListPicker.entries}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
-          onOpenEntry={ctx.onOpenFindEntry}
+          onOpenEntry={(entry, matchIndex) => ctx.onOpenFindEntry(entry, matchIndex)}
           keyboardActive={ctx.findPickerKeyboardActive}
           pickerInputRef={ctx.findPickerInputRef}
           sessionId={ctx.sessionId}
@@ -77,7 +79,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
       <PickerPanelHost
         focusTarget="dom"
         paneFocus={ctx.paneFocus}
-        onActivateFocus={() => ctx.activatePaneFocus("dom")}>
+        isFocusedPane={ctx.isFocusedPane}>
         <DomPickerWrapper
           state={ctx.domListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}

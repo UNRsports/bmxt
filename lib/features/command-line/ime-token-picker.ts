@@ -17,6 +17,8 @@ import {
 
 export type ImeTokenTier = "first" | "second" | "third"
 
+export type CandidateMatchMode = "prefix" | "contains"
+
 export type ResolveImeTokenPickerOptions = {
   /**
    * EN: When true, an empty prefix on the first command token still yields all first-command
@@ -26,6 +28,12 @@ export type ResolveImeTokenPickerOptions = {
    * 同期では、タイプまたは Tab までメニューを出さない。
    */
   emptyFirstPrefixShowsAll?: boolean
+  /**
+   * EN: `prefix` — token starts with typed text; `contains` — typed text appears anywhere in the
+   * candidate (used while the completion menu is visible).
+   * JA: `prefix` は先頭一致、`contains` は候補文字列内の部分一致（メニュー表示中）。
+   */
+  candidateMatch?: CandidateMatchMode
 }
 
 export type ImeTokenPickerModel = {
@@ -34,6 +42,21 @@ export type ImeTokenPickerModel = {
   prefix: string
   candidates: string[]
   tier: ImeTokenTier
+}
+
+function matchCandidates(
+  candidates: readonly string[],
+  prefix: string,
+  mode: CandidateMatchMode
+): string[] {
+  if (!prefix) {
+    return [...candidates]
+  }
+  const p = prefix.toLowerCase()
+  if (mode === "contains") {
+    return candidates.filter((c) => c.toLowerCase().includes(p))
+  }
+  return candidates.filter((c) => c.toLowerCase().startsWith(p))
 }
 
 function tokenBounds(s: string, pos: number): [number, number] {
@@ -76,12 +99,12 @@ export function resolveImeTokenPicker(
   const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
   const tokenIndex = tokensBefore.length
   const prefix = line.slice(l, cursor)
+  const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
 
   if (tokenIndex === 0) {
-    const p = prefix.toLowerCase()
     const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
     if (prefix.length > 0 || allowEmptyFirstAll) {
-      const cands = firstCommandTokens.filter((c) => c.toLowerCase().startsWith(p))
+      const cands = matchCandidates(firstCommandTokens, prefix, matchMode)
       if (cands.length > 0) {
         return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "first" }
       }
@@ -116,7 +139,11 @@ export function resolveImeTokenPicker(
   }
 
   if (tokenIndex === 1) {
-    const cands = listSecondTokenCandidatesByCommand(canonical, prefix)
+    const rawSecond =
+      matchMode === "contains"
+        ? listSecondTokenCandidatesByCommand(canonical, "")
+        : listSecondTokenCandidatesByCommand(canonical, prefix)
+    const cands = matchCandidates(rawSecond, prefix, matchMode)
     if (cands.length > 0) {
       return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
     }
@@ -138,7 +165,11 @@ export function resolveImeTokenPicker(
 
   if (tokenIndex === 2) {
     const second = tokensBefore[1]!.toLowerCase()
-    const cands = listThirdTokenCandidates(canonical, second, prefix)
+    const rawThird =
+      matchMode === "contains"
+        ? listThirdTokenCandidates(canonical, second, "")
+        : listThirdTokenCandidates(canonical, second, prefix)
+    const cands = matchCandidates(rawThird, prefix, matchMode)
     if (cands.length === 0) {
       return null
     }

@@ -308,10 +308,29 @@ body {
   min-width: 0.55ch;
 }
 
-/* split: アクティブでないペインはミラー上のカーソルセルを点滅させない */
-.bmxt-cursor-cell--inactive {
+/* split: 青枠のないペインはプロンプトのミラーカーソルを点滅させない */
+.bmxt-cursor-cell--inactive,
+.bmxt-split-terminal-pane:not(.bmxt-split-pane--focused) .bmxt-cursor-cell {
   animation: none;
   opacity: 1;
+}
+
+/* キーボードフォーカスのない split リーフ — 青枠・キャレットを出さない */
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-split-pane--focused {
+  outline: none;
+}
+
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-cursor-cell {
+  animation: none;
+  opacity: 1;
+}
+
+/* 青枠のないペインでは IME のネイティブキャレットも非表示 */
+.bmxt-split-terminal-pane:not(.bmxt-split-pane--focused) .bmxt-prompt-ime,
+.bmxt-picker-host--split:not(.bmxt-split-pane--focused) .bmxt-tab-picker-filter-ime,
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-prompt-ime,
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-tab-picker-filter-ime {
+  caret-color: transparent;
 }
 
 @keyframes bmxt-cursor-blink {
@@ -420,6 +439,31 @@ body {
   z-index: 1;
   outline: 3px solid #58a6ff;
   outline-offset: -3px;
+}
+
+/* EN: Mouse — select displayed text; links stay clickable. Keyboard drives extension state. */
+.bmxt-tab-picker-list,
+.bmxt-tab-picker-head,
+.bmxt-tab-picker-tab-title,
+.bmxt-tab-picker-tab-url,
+.bmxt-tab-picker-filter-query,
+.bmxt-tab-picker-command-ambiguous-placeholder,
+.bmxt-plain-picker-row-text,
+.bmxt-dom-picker-row,
+.bmxt-subcmd-picker-item,
+.bmxt-dom-prompt-action-label,
+.bmxt-shell .bmxt-out-line,
+.bmxt-shell .bmxt-hint,
+.bmxt-shell .bmxt-isearch,
+.bmxt-version-upgrade {
+  user-select: text;
+  cursor: text;
+}
+
+.bmxt-hint a,
+.bmxt-out-line a,
+.bmxt-version-upgrade a {
+  cursor: pointer;
 }
 
 /* Tab picker / side-picker list chrome (tmux-style) */
