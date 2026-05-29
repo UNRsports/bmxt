@@ -1,6 +1,7 @@
-import type { PickerEntry, PickerSource } from "./picker-entry"
+import type { FindPageMatch, PickerEntry, PickerSource } from "./picker-entry"
 
 const SCOPE_RE = /^\[(none|history|bookmark|page)\]$/i
+const MATCH_LINE_RE = /^L(\d+):\s*(.*)$/s
 
 function parseScope(label: string): PickerSource | null {
   const m = SCOPE_RE.exec(label.trim())
@@ -22,6 +23,19 @@ function parseFieldLine(line: string): { key: string; value: string } | null {
   return { key: kv[1]!.trim().toLowerCase(), value: kv[2]! }
 }
 
+function parseMatchField(value: string): FindPageMatch | null {
+  const legacy = MATCH_LINE_RE.exec(value.trim())
+  if (!legacy) {
+    return null
+  }
+  const lineNo = Number.parseInt(legacy[1]!, 10)
+  const snippet = legacy[2]!.trim()
+  if (!snippet) {
+    return null
+  }
+  return { lineNo: Number.isFinite(lineNo) ? lineNo : 0, snippet, occurrence: 0 }
+}
+
 function isOpenableUrl(url: string): boolean {
   const trimmed = url.trim()
   return (
@@ -31,18 +45,22 @@ function isOpenableUrl(url: string): boolean {
   )
 }
 
+function assignSnippetOccurrences(matches: FindPageMatch[]): FindPageMatch[] {
+  const counts = new Map<string, number>()
+  return matches.map((m) => {
+    const key = m.snippet.toLowerCase()
+    const occurrence = counts.get(key) ?? 0
+    counts.set(key, occurrence + 1)
+    return { ...m, occurrence }
+  })
+}
+
 /**
- * EN: Parse `find -list` terminal blocks (`linesForFindElement` output) into URL entries.
+ * EN: Parse `find -list` terminal blocks into picker entries.
  * JA: find ピッカー用の行ブロックを `PickerEntry` 列に変換する。
  *
- * Block shape:
- * ```
- * [history]
- * title: Example
- * url: https://example.com
- *
- * ```
- * `[none]` blocks use `source: "history"` for display (aggregated scope).
+ * Page blocks are one row per tab (`tabId` + repeated `match:` lines).
+ * Legacy one-line-per-hit blocks (`line:` without `tabId`) are still accepted.
  */
 export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
   const entries: PickerEntry[] = []
@@ -55,6 +73,9 @@ export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
     }
     let title = ""
     let url = ""
+    let tabId: number | undefined
+    let windowId: number | undefined
+    const pageMatches: FindPageMatch[] = []
     i++
     while (i < lines.length && lines[i]!.trim() !== "") {
       const field = parseFieldLine(lines[i]!)
@@ -63,20 +84,73 @@ export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
           title = field.value
         } else if (field.key === "url") {
           url = field.value
+        } else if (field.key === "tabid") {
+          const n = Number.parseInt(field.value, 10)
+          if (Number.isFinite(n)) {
+            tabId = n
+          }
+        } else if (field.key === "windowid") {
+          const n = Number.parseInt(field.value, 10)
+          if (Number.isFinite(n)) {
+            windowId = n
+          }
+        } else if (field.key === "match" || field.key === "line") {
+          const parsed = parseMatchField(field.value)
+          if (parsed) {
+            pageMatches.push(parsed)
+          }
         }
       }
       i++
     }
     const trimmedUrl = url.trim()
-    if (isOpenableUrl(trimmedUrl)) {
-      entries.push({
-        id: `${scope}-${entries.length}-${trimmedUrl}`,
-        source: scope,
-        title: title.trim() || trimmedUrl,
-        url: trimmedUrl
-      })
+    if (!isOpenableUrl(trimmedUrl)) {
+      i++
+      continue
     }
+    const normalizedMatches =
+      scope === "page" && pageMatches.length > 0
+        ? assignSnippetOccurrences(pageMatches)
+        : undefined
+    entries.push({
+      id:
+        scope === "page" && tabId != null
+          ? `page-tab-${tabId}`
+          : `${scope}-${entries.length}-${trimmedUrl}`,
+      source: scope,
+      title: title.trim() || trimmedUrl,
+      url: trimmedUrl,
+      tabId: scope === "page" ? tabId : undefined,
+      windowId: scope === "page" ? windowId : undefined,
+      pageMatches: normalizedMatches
+    })
     i++
   }
-  return entries
+  return mergePageEntriesByTab(entries)
+}
+
+/** EN: Legacy logs used one block per line hit; merge into one row per tab. */
+function mergePageEntriesByTab(entries: PickerEntry[]): PickerEntry[] {
+  const rest: PickerEntry[] = []
+  const byTab = new Map<number, PickerEntry>()
+  for (const e of entries) {
+    if (e.source !== "page" || e.tabId == null) {
+      rest.push(e)
+      continue
+    }
+    const prev = byTab.get(e.tabId)
+    if (!prev) {
+      byTab.set(e.tabId, {
+        ...e,
+        pageMatches: e.pageMatches ? [...e.pageMatches] : undefined
+      })
+      continue
+    }
+    const combined = [...(prev.pageMatches ?? []), ...(e.pageMatches ?? [])]
+    prev.pageMatches = assignSnippetOccurrences(combined)
+    if (!prev.windowId && e.windowId) {
+      prev.windowId = e.windowId
+    }
+  }
+  return [...rest, ...byTab.values()]
 }

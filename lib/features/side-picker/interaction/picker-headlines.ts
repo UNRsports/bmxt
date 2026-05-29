@@ -3,7 +3,7 @@
 
 /** find -list column (`FindListPickerOverlay` / `UrlListPickerWrapper`). */
 export const FIND_LIST_PICKER_HEADLINE =
-  "find -list · ↑↓ · j/k · / · :nohlsearch · n/N · Enter open · Ctrl+←→ · Esc → prompt"
+  "find -list · ↑↓ · j/k · n/N hit (page) · Enter focus tab · Ctrl+←→ · Esc → prompt"
 
 /** dom -list lines column (`DomPickerWrapper` + `PlainTextPickerBody`). */
 export const DOM_LIST_PICKER_HEADLINE =

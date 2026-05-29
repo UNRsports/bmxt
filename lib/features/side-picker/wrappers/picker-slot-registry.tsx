@@ -27,7 +27,7 @@ export type PickerColumnHostContext = {
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
-  onOpenFindEntry: (entry: PickerEntry) => void
+  onOpenFindEntry: (entry: PickerEntry, matchIndex: number) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
 }
@@ -59,7 +59,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         <FindListPickerOverlay
           entries={ctx.findListPicker.entries}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
-          onOpenEntry={ctx.onOpenFindEntry}
+          onOpenEntry={(entry, matchIndex) => ctx.onOpenFindEntry(entry, matchIndex)}
           keyboardActive={ctx.findPickerKeyboardActive}
           pickerInputRef={ctx.findPickerInputRef}
           sessionId={ctx.sessionId}

@@ -5,11 +5,13 @@ import {
   useRef,
   useState,
   type MutableRefObject,
-  type ReactNode
+  type ReactNode,
+  type SetStateAction
 } from "react"
 import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"
+import type { PlainPickerKeyboardExtensions } from "../interaction/plain-picker-keyboard-extensions"
 import { URL_LIST_COMMAND_LISTING_HINT } from "../interaction/url-list-commands"
 import { plainPickerLineHighlightSegments } from "../search/plain-picker-search"
 import {
@@ -35,6 +37,10 @@ export type PlainTextPickerBodyProps = {
   /** EN: Optional sink for the hidden IME textarea (pane focus navigation). */
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
+  /** EN: Optional hooks (find page hit cycling, …). */
+  extensions?: PlainPickerKeyboardExtensions
+  /** EN: Notified when the highlighted row index changes. */
+  onHiChange?: (hi: number) => void
 }
 
 const ROW_ID_PREFIX = "bmxt-plain-row"
@@ -91,7 +97,9 @@ export function PlainTextPickerBody({
   enableCommandMode = false,
   keyboardActive = false,
   pickerInputRef,
-  sessionId
+  sessionId,
+  extensions,
+  onHiChange
 }: PlainTextPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
@@ -105,7 +113,17 @@ export function PlainTextPickerBody({
   )
   const listRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
-  const [hi, setHi] = useState(0)
+  const [hi, setHiState] = useState(0)
+  const setHi = useCallback(
+    (action: SetStateAction<number>) => {
+      setHiState((prev) => {
+        const next = typeof action === "function" ? action(prev) : action
+        onHiChange?.(next)
+        return next
+      })
+    },
+    [onHiChange]
+  )
   const [searchMode, setSearchMode] = useState(false)
   const [filterQuery, setFilterQuery] = useState("")
   const [hlSearchPattern, setHlSearchPattern] = useState("")
@@ -230,7 +248,8 @@ export function PlainTextPickerBody({
     commandBuffer,
     setCommandBuffer,
     setCommandListingHint,
-    matchLines: lines
+    matchLines: lines,
+    extensions
   })
 
   const onListScroll = useCallback(() => {

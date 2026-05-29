@@ -10,8 +10,8 @@ import {
   tabsMoveUrlCompletionZone,
   type TabPickerRow
 } from "../tabs"
+import { openFindPickerEntry } from "../find/open-find-picker-entry"
 import {
-  openEntryEffects,
   openPickerSlots,
   pickerEntriesFromFindLines,
   SessionPickerColumns,
@@ -959,12 +959,8 @@ export function BmxtShell({
     ])
   }, [appendLogLines])
 
-  const openFindPickerEntry = useCallback(
-    async (entry: PickerEntry) => {
-      const effects = openEntryEffects(entry, "new_tab")
-      if (effects.length === 0) {
-        return
-      }
+  const onOpenFindPickerEntry = useCallback(
+    async (entry: PickerEntry, matchIndex: number) => {
       const ctx: DispatchChromeContext = {
         clearLog: async () => {},
         exitPane: async () => [],
@@ -973,14 +969,7 @@ export function BmxtShell({
         resolveTabArg: async () => undefined,
         commandSessionId: sessionId
       }
-      try {
-        const logLines = await applyChromeEffects(ctx, effects)
-        if (logLines.length > 0) {
-          await appendLogLines(logLines)
-        }
-      } catch (e) {
-        await appendLogLines([`error: ${e instanceof Error ? e.message : String(e)}`])
-      }
+      await openFindPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines))
     },
     [appendLogLines, sessionId]
   )
@@ -1933,7 +1922,7 @@ export function BmxtShell({
             domPickerInputRef={domPickerInputRef}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
-            onOpenFindEntry={(entry) => void openFindPickerEntry(entry)}
+            onOpenFindEntry={(entry, matchIndex) => void onOpenFindPickerEntry(entry, matchIndex)}
             onDomApprove={() => {
               if (domListPicker?.kind !== "prompt") {
                 return

@@ -3,9 +3,11 @@
  * JA: 破棄されていない http(s) タブのみ。chrome-extension:// 等は除外。
  */
 
+import type { FindPageMatch } from "../side-picker/model/picker-entry"
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
 import { isHttpUrl } from "../url/is-http-url"
-import { linesForFindElement, matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../search"
+import { matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../search"
+import { linesForFindPageTab } from "./page-find-blocks"
 import {
   formatFindPageProgress,
   shouldEmitFindPageProgress,
@@ -104,23 +106,31 @@ export async function findPageLines(
     const url = tab.url ?? ""
     const title = tab.title ?? ""
 
+    const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
+
     if (matchAll) {
       const previewLines = text
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
         .slice(0, MAX_EMPTY_PREVIEW_LINES)
-      out.push("[page]")
-      out.push(`title: ${title || "(untitled)"}`)
-      out.push(`url: ${url || "(no url)"}`)
-      if (previewLines.length > 0) {
-        for (const pl of previewLines) {
-          out.push(`text: ${pl}`)
-        }
-      } else {
-        out.push("text: (no visible text in body.innerText)")
-      }
-      out.push("")
+      const matches: FindPageMatch[] =
+        previewLines.length > 0
+          ? previewLines.map((pl, i) => ({
+              lineNo: i + 1,
+              snippet: pl.slice(0, 500),
+              occurrence: 0
+            }))
+          : [{ lineNo: 0, snippet: "(no visible text in body.innerText)", occurrence: 0 }]
+      out.push(
+        ...linesForFindPageTab({
+          tabId,
+          windowId,
+          title: title || "(untitled)",
+          url: url || "(no url)",
+          matches
+        })
+      )
       totalHits += 1
       continue
     }
@@ -129,6 +139,8 @@ export async function findPageLines(
       continue
     }
     const lines = text.split(/\r?\n/)
+    const tabMatches: FindPageMatch[] = []
+    const snippetOccurrence = new Map<string, number>()
     let lineNo = 0
     for (const line of lines) {
       lineNo += 1
@@ -137,21 +149,34 @@ export async function findPageLines(
       }
       const trimmed = line.trim().slice(0, 500)
       const suffix = line.length > 500 ? "…" : ""
-      out.push(
-        ...linesForFindElement("page", {
-          title: title || "(untitled)",
-          url: url || "(no url)",
-          line: `L${lineNo}: ${trimmed}${suffix}`
-        })
-      )
+      const snippet = `${trimmed}${suffix}`
+      const key = snippet.toLowerCase()
+      const occurrence = snippetOccurrence.get(key) ?? 0
+      snippetOccurrence.set(key, occurrence + 1)
+      tabMatches.push({ lineNo, snippet, occurrence })
       totalHits += 1
       if (totalHits >= MAX_LINE_HITS) {
-        await emit({ phase: "done", tabIndex: tabTotal, tabTotal, scanned, skipped })
-        out.unshift(
-          `(stopped at ${totalHits} hit block(s) across tabs; raise limits in lib/features/search/limits.ts if needed)`
-        )
-        return out
+        break
       }
+    }
+    if (tabMatches.length === 0) {
+      continue
+    }
+    out.push(
+      ...linesForFindPageTab({
+        tabId,
+        windowId,
+        title: title || "(untitled)",
+        url: url || "(no url)",
+        matches: tabMatches
+      })
+    )
+    if (totalHits >= MAX_LINE_HITS) {
+      await emit({ phase: "done", tabIndex: tabTotal, tabTotal, scanned, skipped })
+      out.unshift(
+        `(stopped at ${totalHits} line hit(s) across tabs; raise limits in lib/features/search/limits.ts if needed)`
+      )
+      return out
     }
   }
 
@@ -181,8 +206,9 @@ export async function findPageLines(
       `scanned ${scanned} tab(s), skipped ${skipped} (permissions or unreadable), ${tabTotal} tab(s) checked`
     ]
   }
+  const pageCount = out.filter((l) => l === "[page]").length
   out.unshift(
-    `(${matchAll ? scanned : totalHits} page block(s); scanned ${scanned} tab(s), skipped ${skipped}; ${tabTotal} tab(s) checked)`
+    `(${matchAll ? scanned : pageCount} page(s), ${totalHits} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}; ${tabTotal} tab(s) checked)`
   )
   return out
 }

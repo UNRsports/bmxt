@@ -35,4 +35,23 @@ describe("pickerEntriesFromFindLines", () => {
     assert.equal(entries.length, 1)
     assert.equal(entries[0]!.source, "history")
   })
+
+  it("groups page matches per tab with tabId", () => {
+    const entries = pickerEntriesFromFindLines([
+      "[page]",
+      "tabId: 42",
+      "windowId: 7",
+      "title: Login",
+      "url: https://example.com/app",
+      "match: L10: please ログイン here",
+      "match: L22: ログイン form",
+      ""
+    ])
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0]!.tabId, 42)
+    assert.equal(entries[0]!.windowId, 7)
+    assert.equal(entries[0]!.pageMatches?.length, 2)
+    assert.equal(entries[0]!.pageMatches![0]!.lineNo, 10)
+    assert.equal(entries[0]!.pageMatches![1]!.occurrence, 0)
+  })
 })

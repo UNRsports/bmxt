@@ -210,15 +210,17 @@ export function usePlainPickerKeyboard({
 
   const runPickerNormalEnter = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (extensions?.onNormalEnter) {
-        return extensions.onNormalEnter(e)
-      }
       if (!keyboardActive || searchMode || commandMode) {
         return false
       }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
         return false
+      }
+      if (extensions?.onNormalEnter) {
+        e.preventDefault()
+        e.stopPropagation()
+        return extensions.onNormalEnter(e)
       }
       if (!onConfirmLineIndex || lineCount === 0) {
         return false
