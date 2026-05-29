@@ -379,6 +379,12 @@ export function BmxtShell({
     [subCmdPicker]
   )
 
+  const dismissImeTokenPicker = useCallback(() => {
+    allowEmptyFirstPickerSyncRef.current = false
+    imeTokenPickerDismissedRef.current = true
+    setSubCmdPicker(null)
+  }, [])
+
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
       if (mode === "isearch" || findListBusyRef.current) {
@@ -391,7 +397,8 @@ export function BmxtShell({
         return
       }
       const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
-        emptyFirstPrefixShowsAll: allowEmptyFirstPickerSyncRef.current
+        emptyFirstPrefixShowsAll: allowEmptyFirstPickerSyncRef.current,
+        candidateMatch: subCmdPickerRef.current !== null ? "contains" : "prefix"
       })
       if (!resolved) {
         setSubCmdPicker(null)
@@ -1372,7 +1379,6 @@ export function BmxtShell({
       return
     }
     allowEmptyFirstPickerSyncRef.current = false
-    imeTokenPickerDismissedRef.current = false
     if (skipHistResetRef.current) {
       skipHistResetRef.current = false
     } else {
@@ -1402,7 +1408,6 @@ export function BmxtShell({
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       e.preventDefault()
       allowEmptyFirstPickerSyncRef.current = false
-      imeTokenPickerDismissedRef.current = false
       const ta = e.currentTarget
       const start = ta.selectionStart
       const end = ta.selectionEnd
@@ -1469,19 +1474,20 @@ export function BmxtShell({
       if (subPick) {
         if (e.key === "Escape") {
           e.preventDefault()
-          allowEmptyFirstPickerSyncRef.current = false
-          imeTokenPickerDismissedRef.current = true
-          setSubCmdPicker(null)
+          dismissImeTokenPicker()
           return
         }
         if (e.key === "ArrowUp" && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           const n = subPick.candidates.length
-          if (n > 0) {
-            setSubCmdPicker((s) =>
-              s ? { ...s, hi: (s.hi - 1 + n) % n } : null
-            )
+          if (n === 0) {
+            return
           }
+          if (subPick.hi === 0) {
+            dismissImeTokenPicker()
+            return
+          }
+          setSubCmdPicker((s) => (s ? { ...s, hi: s.hi - 1 } : null))
           return
         }
         if (e.key === "ArrowDown" && !e.ctrlKey && !e.metaKey) {
@@ -1514,6 +1520,15 @@ export function BmxtShell({
             return
           }
           applyTokenPickIndex(subPick.hi)
+          return
+        }
+        if (
+          e.key.length === 1 &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          subPick.candidates.some((tok) => tok.toLowerCase().includes(e.key.toLowerCase()))
+        ) {
           return
         }
       }
@@ -1712,6 +1727,7 @@ export function BmxtShell({
       iSearchMatches,
       mode,
       applyTokenPickIndex,
+      dismissImeTokenPicker,
       promptLine,
       submitLine,
       cancelFindPageScan,
@@ -1859,7 +1875,6 @@ export function BmxtShell({
               onCompositionEnd={(ev) => {
                 setIsComposing(false)
                 allowEmptyFirstPickerSyncRef.current = false
-                imeTokenPickerDismissedRef.current = false
                 const v = ev.currentTarget.value
                 lineRef.current = v
                 setLine(v)
