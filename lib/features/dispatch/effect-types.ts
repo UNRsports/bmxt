@@ -15,9 +15,7 @@ export type ChromeEffect =
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_new_tab"; url: string }
   | { kind: "open_url_new_window"; url: string }
-  | { kind: "release_notes_current" }
-  | { kind: "release_notes_list" }
-  | { kind: "release_notes_version"; version: string }
+  | { kind: "open_welcome_page" }
   | { kind: "split_col" }
   | { kind: "split_row" }
   | { kind: "tabs_move_url"; url: string }

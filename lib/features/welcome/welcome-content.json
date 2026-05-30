@@ -18,7 +18,8 @@
     ]
   },
   "0.3.8": {
-    "heroImage": "assets/welcome/bmxt_img20260529.webp",
+    "heroImage": "assets/welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
     "additionalImages": [],
     "en": [
       "Show a welcome page when the extension version is upgraded",

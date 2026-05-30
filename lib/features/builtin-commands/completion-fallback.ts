@@ -3,6 +3,7 @@
  * Do not edit by hand; run `npm run codegen`.
  */
 export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
+  "aboutbmxt",
   "clear",
   "close",
   "dom",
@@ -11,7 +12,6 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "group",
   "help",
   "nav",
-  "notes",
   "split",
   "tabs"
 ]

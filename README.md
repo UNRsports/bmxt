@@ -548,7 +548,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `tabs/bmxt.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
 - `bmxt-ui.css` — Window styles at repo root (imported from `tabs/bmxt.tsx`)
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
-- `lib/features/release-notes/release-notes.json` — In-app upgrade banner and **`notes`** command text (keys must match `package.json` `version`)
+- `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
 - `lib/features/welcome/` — Post-update welcome page (`tabs/welcome.html`; content in **`welcome-content.json`**)
 - `tabs/welcome.tsx` — Welcome page entry
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
@@ -586,7 +586,7 @@ Existing **session log** lines are still rendered **below** that block.
 **Maintainer workflow**
 
 1. Bump **`package.json`** → **`version`**.
-2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays. Users can also print notes in the BMXt shell with **`notes`**, **`notes <version>`**, or **`notes --list`**.
+2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays. Users can also open the welcome page anytime with **`aboutbmxt`** (new browser window).
 3. Optionally add **`lib/features/welcome/welcome-content.json`** for the post-update welcome tab (`ja` / `en` bullet arrays; **`heroImage`** / **`additionalImages`**). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. Plasmo copies that folder via **`web_accessible_resources`** in **`package.json`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
 4. Build and ship.
 
@@ -1175,7 +1175,7 @@ npm run dev   # または pnpm dev
 - `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`tabs/bmxt.tsx` から import）
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
-- `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知・**`notes`** ターミナルコマンドの変更内容（キーは `package.json` の `version` と一致させてメンテ）
+- `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/welcome/` — 更新後ウェルカムページ（`tabs/welcome.html`、本文は **`welcome-content.json`**）
 - `tabs/welcome.tsx` — ウェルカムページのエントリ
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
@@ -1213,7 +1213,7 @@ Chrome が **`update`** インストールを報告したとき、**`background.
 **リリース時の作業**
 
 1. **`package.json`** の **`version`** を上げる。
-2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列）。BMXt シェルでは **`notes`** / **`notes <version>`** / **`notes --list`** でも参照できる。
+2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列）。BMXt シェルでは **`aboutbmxt`** でウェルカムページを新しいウィンドウで開ける。
 3. 任意で **`lib/features/welcome/welcome-content.json`** に更新後ウェルカムタブ用のエントリを追加する（**`ja`** / **`en`** の配列。**`heroImage`** / **`additionalImages`** はキーを残す）。画像は **`assets/welcome/`** に置き、JSON では `assets/welcome/<ファイル名>` と書く（WebP 可）。**`package.json`** の **`web_accessible_resources`**（`assets/welcome/*`）経由でビルドに同梱される。追加・変更後はビルドと拡張の再読み込みが必要。画像なしは **`heroImage": "_none_heroImage"`**。
 4. ビルドして配布する。
 

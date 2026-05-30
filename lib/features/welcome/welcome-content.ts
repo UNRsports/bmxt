@@ -3,7 +3,8 @@ import raw from "./welcome-content.json"
 export {
   WELCOME_NONE_HERO_IMAGE,
   isRenderableWelcomeImagePath,
-  listWelcomeImagePaths
+  listWelcomeImagePaths,
+  resolveHeroImageMaxWidthCss
 } from "./welcome-image-paths"
 
 export type WelcomeContentEntry = {
@@ -12,6 +13,8 @@ export type WelcomeContentEntry = {
    * 画像を出さない版は {@link WELCOME_NONE_HERO_IMAGE} を指定する（キーは省略しない）。
    */
   heroImage?: string
+  /** hero 画像の CSS max-width（数値は px、文字列は `640px` / `80%` など）。 */
+  heroImageMaxWidth?: number | string
   /** 追加画像（任意件数）。`_none_` で始まるトークンは表示しない。 */
   additionalImages?: string[]
   /** 英語の箇条書き（任意件数）。表示は en → ja の順。 */

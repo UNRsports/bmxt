@@ -18,10 +18,7 @@ find,--bookmark,,rest,,find --bookmark <pattern>,Effect: find_bookmark のみ。
 find,--page,,rest,,find --page <pattern>,Effect: find_page のみ。,
 group,new,,,,group new,args[1] が new でないと usage。tabId 無しなら対話案内の行のみ。tabId 列挙ありなら Effect: group_new。,manifest の subcommands は空だが実装は第二トークン new が必須
 help,,,,,"help, ?",help,linesDispatch(buildHelpLines())（組み込みコマンド一覧等）。Effect なし。,
-notes,,,,,notes,args なし: Effect: release_notes_current。,manifest の subcommands なし（実装は自由引数）
-notes,--list,,,,notes --list,Effect: release_notes_list。,
-notes,-l,,,,notes -l,Effect: release_notes_list（--list と同効）。,実装のみの別表記（manifest の trailingTokens ではない）
-notes,<version>,,,,notes <version>,Effect: release_notes_version。単一トークンで先頭 - でないこと。,可変引数は第二列に表記（バージョンキー）
+aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page（新しいブラウザウィンドウで tabs/welcome.html を開く）。,
 split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）
 split,-row,,none,,（同上）,Effect: split_row。,（同上）
 nav,-enter,,none,,nav -enter | nav -exit,第二が -enter: BMXt ウィンドウ UI で nav を armed（直前フォーカス通常ウィンドウのアクティブタブが対象。dom -list と同系のタブ解決・オプション http(s) 権限）。オーバーレイは Alt で ON/OFF（ターミナル列フォーカス時のみ）。ON 後: ↑↓←→ 移動・Enter クリック/typing・Ctrl メニュー（テキスト選択・画像保存・再読込・履歴←→）。タブごと位置記憶。SW run は案内行のみ。,第二は -enter / -exit のみ（短縮なし）。単独 nav + Enter は continuation（`nav `）と usage。nav -exit は Alt OFF 必須。

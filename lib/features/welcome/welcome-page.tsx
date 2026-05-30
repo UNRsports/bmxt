@@ -1,11 +1,26 @@
 import {
   getWelcomeContentForVersion,
   listWelcomeContentVersions,
-  listWelcomeImagePaths,
   placeholderWelcomeContent,
   resolveWelcomeImageUrl
 } from "./welcome-content"
+import {
+  isRenderableWelcomeImagePath,
+  resolveHeroImageMaxWidthCss
+} from "./welcome-image-paths"
 import { resolveWelcomeDisplayVersion } from "./welcome-version-resolve"
+
+function listAdditionalImagePaths(
+  entry: { heroImage?: string; additionalImages?: string[] }
+): string[] {
+  const paths: string[] = []
+  for (const path of entry.additionalImages ?? []) {
+    if (isRenderableWelcomeImagePath(path)) {
+      paths.push(path)
+    }
+  }
+  return paths
+}
 
 export function WelcomePage() {
   const manifestVersion = chrome.runtime.getManifest().version
@@ -19,7 +34,12 @@ export function WelcomePage() {
     listWelcomeContentVersions()
   )
   const entry = getWelcomeContentForVersion(version) ?? placeholderWelcomeContent()
-  const imagePaths = listWelcomeImagePaths(entry)
+  const heroPath = isRenderableWelcomeImagePath(entry.heroImage)
+    ? entry.heroImage
+    : null
+  const heroMaxWidth = resolveHeroImageMaxWidthCss(entry.heroImageMaxWidth)
+  const heroStyle = heroMaxWidth ? { maxWidth: heroMaxWidth } : undefined
+  const additionalImagePaths = listAdditionalImagePaths(entry)
 
   return (
     <main className="bmxt-welcome">
@@ -38,9 +58,20 @@ export function WelcomePage() {
 
         <section className="bmxt-welcome__section">
           <h2 className="bmxt-welcome__heading">Version {version}</h2>
-          {imagePaths.length > 0 ? (
+          {heroPath || additionalImagePaths.length > 0 ? (
             <div className="bmxt-welcome__images" aria-label="welcome images">
-              {imagePaths.map((path, i) => (
+              {heroPath ? (
+                <figure className="bmxt-welcome__hero-figure">
+                  <img
+                    className="bmxt-welcome__hero-image"
+                    style={heroStyle}
+                    src={resolveWelcomeImageUrl(heroPath)}
+                    alt="Welcome hero image"
+                    loading="eager"
+                  />
+                </figure>
+              ) : null}
+              {additionalImagePaths.map((path, i) => (
                 <figure key={`${path}-${i}`} className="bmxt-welcome__image-figure">
                   <img
                     className="bmxt-welcome__image"

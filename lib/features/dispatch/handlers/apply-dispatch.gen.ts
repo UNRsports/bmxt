@@ -16,9 +16,7 @@ import { applyGroupNewEffect } from "./effects/group-new"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
 import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
-import { applyReleaseNotesCurrentEffect } from "./effects/release-notes-current"
-import { applyReleaseNotesListEffect } from "./effects/release-notes-list"
-import { applyReleaseNotesVersionEffect } from "./effects/release-notes-version"
+import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
 import { applySplitColEffect } from "./effects/split-col"
 import { applySplitRowEffect } from "./effects/split-row"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
@@ -51,12 +49,8 @@ export async function applyOne(
       return applyOpenUrlNewTabEffect(ctx, e)
     case "open_url_new_window":
       return applyOpenUrlNewWindowEffect(ctx, e)
-    case "release_notes_current":
-      return applyReleaseNotesCurrentEffect(ctx, e)
-    case "release_notes_list":
-      return applyReleaseNotesListEffect(ctx, e)
-    case "release_notes_version":
-      return applyReleaseNotesVersionEffect(ctx, e)
+    case "open_welcome_page":
+      return applyOpenWelcomePageEffect(ctx, e)
     case "split_col":
       return applySplitColEffect(ctx, e)
     case "split_row":

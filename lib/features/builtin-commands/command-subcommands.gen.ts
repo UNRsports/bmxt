@@ -42,7 +42,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-enter", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: [] as const, tail: "none" }
   ] as const,
-  "notes": [] as const,
+  "aboutbmxt": [] as const,
   "split": [
     { head: "-col", trailingTokens: [] as const, tail: "none" },
     { head: "-row", trailingTokens: [] as const, tail: "none" }
@@ -121,7 +121,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-enter" || lower === "-exit"
     }
-    case "notes":
+    case "aboutbmxt":
       return false
     case "split": {
       const lower = token.toLowerCase()

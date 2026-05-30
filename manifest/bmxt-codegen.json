@@ -131,10 +131,10 @@
       ]
     },
     {
-      "module": "notes",
-      "canonicalName": "notes",
+      "module": "aboutbmxt",
+      "canonicalName": "aboutbmxt",
       "aliases": [],
-      "usagePrimary": "notes",
+      "usagePrimary": "aboutbmxt",
       "subcommands": []
     },
     {
@@ -242,26 +242,11 @@
       "tsHandlerExport": "applyOpenUrlNewWindowEffect"
     },
     {
-      "kind": "release_notes_current",
-      "rustVariant": "ReleaseNotesCurrent",
+      "kind": "open_welcome_page",
+      "rustVariant": "OpenWelcomePage",
       "shape": "unit",
-      "tsHandlerFile": "release-notes-current",
-      "tsHandlerExport": "applyReleaseNotesCurrentEffect"
-    },
-    {
-      "kind": "release_notes_list",
-      "rustVariant": "ReleaseNotesList",
-      "shape": "unit",
-      "tsHandlerFile": "release-notes-list",
-      "tsHandlerExport": "applyReleaseNotesListEffect"
-    },
-    {
-      "kind": "release_notes_version",
-      "rustVariant": "ReleaseNotesVersion",
-      "shape": "record",
-      "fields": { "version": "string" },
-      "tsHandlerFile": "release-notes-version",
-      "tsHandlerExport": "applyReleaseNotesVersionEffect"
+      "tsHandlerFile": "open-welcome-page",
+      "tsHandlerExport": "applyOpenWelcomePageEffect"
     },
     {
       "kind": "split_col",

@@ -1,7 +1,6 @@
 import { LAST_SEEN_WELCOME_VERSION_KEY } from "../extension-storage/keys"
 import { shouldOpenWelcomePageOnUpdate } from "./should-open-welcome-on-update"
-
-const WELCOME_PAGE_PATH = "tabs/welcome.html"
+import { WELCOME_PAGE_PATH } from "./welcome-page-path"
 
 /**
  * 拡張機能アップデート後の初回だけ、拡張機能内 welcome ページを通常タブで開く。

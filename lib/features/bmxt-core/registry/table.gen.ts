@@ -14,7 +14,7 @@ import * as group from "../cmd/group"
 import * as help_cmd from "../cmd/help_cmd"
 import * as tabs from "../cmd/tabs"
 import * as nav from "../cmd/nav"
-import * as notes from "../cmd/notes"
+import * as aboutbmxt from "../cmd/aboutbmxt"
 import * as split from "../cmd/split"
 
 export const COMMANDS: readonly CmdMeta[] = [
@@ -27,7 +27,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   help_cmd.CMD,
   tabs.CMD,
   nav.CMD,
-  notes.CMD,
+  aboutbmxt.CMD,
   split.CMD
 ]
 
@@ -44,7 +44,7 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: help_cmd.CMD.name, run: help_cmd.run },
   { name: tabs.CMD.name, run: tabs.run },
   { name: nav.CMD.name, run: nav.run },
-  { name: notes.CMD.name, run: notes.run },
+  { name: aboutbmxt.CMD.name, run: aboutbmxt.run },
   { name: split.CMD.name, run: split.run }
 ]
 

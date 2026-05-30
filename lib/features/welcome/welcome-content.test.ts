@@ -3,7 +3,8 @@ import assert from "node:assert/strict"
 import {
   WELCOME_NONE_HERO_IMAGE,
   isRenderableWelcomeImagePath,
-  listWelcomeImagePaths
+  listWelcomeImagePaths,
+  resolveHeroImageMaxWidthCss
 } from "./welcome-image-paths.ts"
 
 describe("welcome-content images", () => {
@@ -34,5 +35,15 @@ describe("welcome-content images", () => {
       }),
       ["assets/welcome/a.png", "assets/welcome/b.png"]
     )
+  })
+
+  it("resolveHeroImageMaxWidthCss normalizes numbers and unit strings", () => {
+    assert.equal(resolveHeroImageMaxWidthCss(undefined), undefined)
+    assert.equal(resolveHeroImageMaxWidthCss(840), "840px")
+    assert.equal(resolveHeroImageMaxWidthCss("720"), "720px")
+    assert.equal(resolveHeroImageMaxWidthCss("80%"), "80%")
+    assert.equal(resolveHeroImageMaxWidthCss("640px"), "640px")
+    assert.equal(resolveHeroImageMaxWidthCss(0), undefined)
+    assert.equal(resolveHeroImageMaxWidthCss("not-a-size"), undefined)
   })
 })
