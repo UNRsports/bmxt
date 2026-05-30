@@ -41,6 +41,8 @@ export type UseNavModeOptions = {
   paneFocus: PaneFocusTarget
   positionsRef: React.MutableRefObject<NavPositionsByTab>
   getTypingBuffer: () => string
+  /** EN: When set, Alt-hold commit uses this instead of `getTypingBuffer` (e.g. English from Translator). */
+  resolveTypingCommitText?: () => Promise<string>
 }
 
 function overlayErrorLabel(reason: string | undefined): string {
@@ -198,7 +200,8 @@ export function useNavMode({
   isFocusedPane,
   paneFocus,
   positionsRef,
-  getTypingBuffer
+  getTypingBuffer,
+  resolveTypingCommitText
 }: UseNavModeOptions): {
   currentTabTitle: string | null
   overlayError: string | null
@@ -224,6 +227,7 @@ export function useNavMode({
   const menuOpenRef = useRef(false)
   const textSelPhaseRef = useRef<NavInjectTextSelPhase | null>(null)
   const getTypingBufferRef = useRef(getTypingBuffer)
+  const resolveTypingCommitTextRef = useRef(resolveTypingCommitText)
   const lastOverlayTabRef = useRef<number | null>(null)
   const useCenterOnNextShowRef = useRef(true)
 
@@ -234,6 +238,7 @@ export function useNavMode({
   armedRef.current = armed
   typingModeRef.current = typingMode
   getTypingBufferRef.current = getTypingBuffer
+  resolveTypingCommitTextRef.current = resolveTypingCommitText
 
   const textSelPicking = isTextSelPickingPhase(textSelPhase)
 
@@ -357,8 +362,14 @@ export function useNavMode({
     if (tabId === null || !typingModeRef.current) {
       return
     }
-    await applyNavTypingOnTab(tabId, getTypingBufferRef.current())
-    exitTypingMode(tabId)
+    try {
+      const resolve = resolveTypingCommitTextRef.current
+      const text = resolve ? await resolve() : getTypingBufferRef.current()
+      await applyNavTypingOnTab(tabId, text)
+      exitTypingMode(tabId)
+    } catch {
+      /* EN: e.g. Translator commit failed — stay in typing mode. */
+    }
   }, [exitTypingMode])
 
   const cancelTyping = useCallback(async () => {

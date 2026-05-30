@@ -59,11 +59,13 @@ import {
   type NavPositionsByTab
 } from "../nav"
 import {
+  buildEnglishCommitText,
   loadTypingTranslateSettings,
   parseNavTranslateLine,
   saveTypingTranslateEnabled,
   TypingTranslateStrip,
-  useTypingTranslate
+  useTypingTranslate,
+  type TypingTranslateBlock
 } from "../typing-translate"
 import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
@@ -257,6 +259,10 @@ export function BmxtShell({
   const [navArmed, setNavArmed] = useState(false)
   const [navActive, setNavActive] = useState(false)
   const [typingTranslateEnabled, setTypingTranslateEnabled] = useState(false)
+  const typingTranslateEnabledRef = useRef(false)
+  const typingTranslateBlocksRef = useRef<readonly TypingTranslateBlock[]>([])
+  const flushTypingTranslateRef = useRef<() => Promise<void>>(async () => {})
+  const setTypingTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
   const navPositionsRef = useRef<NavPositionsByTab>({})
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
@@ -286,7 +292,22 @@ export function BmxtShell({
     isFocusedPane,
     paneFocus,
     positionsRef: navPositionsRef,
-    getTypingBuffer: () => imeRef.current?.value ?? lineRef.current
+    getTypingBuffer: () => imeRef.current?.value ?? lineRef.current,
+    resolveTypingCommitText: async () => {
+      const raw = imeRef.current?.value ?? lineRef.current
+      if (!typingTranslateEnabledRef.current) {
+        return raw
+      }
+      await flushTypingTranslateRef.current()
+      try {
+        setTypingTranslateCommitErrorRef.current(null)
+        return await buildEnglishCommitText(raw, typingTranslateBlocksRef.current)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setTypingTranslateCommitErrorRef.current(`commit failed: ${msg}`)
+        throw e
+      }
+    }
   })
 
   const navTextSelDone = navTextSelPhase === "done"
@@ -307,12 +328,30 @@ export function BmxtShell({
     blocks: typingTranslateBlocks,
     busy: typingTranslateBusy,
     statusNote: typingTranslateStatus,
-    resetSession: resetTypingTranslateSession
+    resetSession: resetTypingTranslateSession,
+    flushPendingTranslations,
+    setCommitError: setTypingTranslateCommitError
   } = useTypingTranslate({
     active: navPageTyping && typingTranslateEnabled,
     buffer: line,
     isComposing
   })
+
+  useEffect(() => {
+    typingTranslateEnabledRef.current = typingTranslateEnabled
+  }, [typingTranslateEnabled])
+
+  useEffect(() => {
+    typingTranslateBlocksRef.current = typingTranslateBlocks
+  }, [typingTranslateBlocks])
+
+  useEffect(() => {
+    flushTypingTranslateRef.current = flushPendingTranslations
+  }, [flushPendingTranslations])
+
+  useEffect(() => {
+    setTypingTranslateCommitErrorRef.current = setTypingTranslateCommitError
+  }, [setTypingTranslateCommitError])
 
   useEffect(() => {
     void loadTypingTranslateSettings().then((s) => setTypingTranslateEnabled(s.enabled))
@@ -1148,8 +1187,8 @@ export function BmxtShell({
         void appendLogLines([
           `> ${trimmed}`,
           "usage: nav -translate -on | nav -translate -off",
-          "EN: Enables Chrome built-in Translator during nav typing (sentence-end trigger).",
-          "JA: nav typing 中、句点で原文・英訳・再訳を表示します（Chrome 内蔵・初回モデル取得あり）。"
+          "EN: Enables Chrome built-in Translator; Alt-hold commit sends English to the page.",
+          "JA: nav typing 中は句点で原文・英訳・再訳を表示し、Alt 長押し確定でページへ英訳を送ります。"
         ])
         focusPrompt()
         return
@@ -1164,7 +1203,7 @@ export function BmxtShell({
         await appendLogLines([
           `> ${trimmed}`,
           on
-            ? "nav typing translate: ON (Chrome built-in Translator · ja→en→ja on 。 . ! ? …)"
+            ? "nav typing translate: ON (preview ja/EN/再訳 · Alt-hold commit sends English)"
             : "nav typing translate: OFF"
         ])
         focusPrompt()

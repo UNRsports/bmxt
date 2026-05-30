@@ -22,6 +22,8 @@ export function useTypingTranslate({ active, buffer, isComposing }: Options): {
   busy: boolean
   statusNote: string | null
   resetSession: () => void
+  flushPendingTranslations: () => Promise<void>
+  setCommitError: (message: string | null) => void
 } {
   const [blocks, setBlocks] = useState<TypingTranslateBlock[]>([])
   const [busy, setBusy] = useState(false)
@@ -31,6 +33,14 @@ export function useTypingTranslate({ active, buffer, isComposing }: Options): {
   const nextIdRef = useRef(1)
   const queueRef = useRef(Promise.resolve())
   const abortRef = useRef<AbortController | null>(null)
+
+  const setCommitError = useCallback((message: string | null) => {
+    setStatusNote(message)
+  }, [])
+
+  const flushPendingTranslations = useCallback(async () => {
+    await queueRef.current
+  }, [])
 
   const resetSession = useCallback(() => {
     abortRef.current?.abort()
@@ -116,5 +126,5 @@ export function useTypingTranslate({ active, buffer, isComposing }: Options): {
     queueRef.current = queueRef.current.then(run, run)
   }, [active, buffer, isComposing])
 
-  return { blocks, busy, statusNote, resetSession }
+  return { blocks, busy, statusNote, resetSession, flushPendingTranslations, setCommitError }
 }

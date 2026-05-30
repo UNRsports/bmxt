@@ -1,5 +1,6 @@
+export { buildEnglishCommitText } from "./build-english-commit"
 export { parseNavTranslateLine } from "./parse-nav-translate-line"
 export { loadTypingTranslateSettings, saveTypingTranslateEnabled } from "./settings"
-export { TypingTranslateStrip } from "./typing-translate-strip"
+export { TypingTranslateStrip, type TypingTranslateBlock } from "./typing-translate-strip"
 export { useTypingTranslate } from "./use-typing-translate"
 export { isBuiltInTranslatorSupported } from "./translator-service"

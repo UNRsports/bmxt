@@ -39,6 +39,15 @@ export function resetTranslatorInstances(): void {
   enToJa = null
 }
 
+/** EN: ja → en (nav typing commit). */
+export async function translateJaToEn(sentence: string, signal?: AbortSignal): Promise<string> {
+  if (!isBuiltInTranslatorSupported()) {
+    throw new Error("Translator API is not available in this Chrome build.")
+  }
+  const fwd = await getJaToEn()
+  return fwd.translate(sentence, { signal })
+}
+
 /** EN: ja → en → ja (back-translation for review). */
 export async function translateJaEnJa(
   sentence: string,
@@ -47,8 +56,7 @@ export async function translateJaEnJa(
   if (!isBuiltInTranslatorSupported()) {
     throw new Error("Translator API is not available in this Chrome build.")
   }
-  const fwd = await getJaToEn()
-  const forward = await fwd.translate(sentence, { signal })
+  const forward = await translateJaToEn(sentence, signal)
   const backTr = await getEnToJa()
   const back = await backTr.translate(forward, { signal })
   return { source: sentence, forward, back }

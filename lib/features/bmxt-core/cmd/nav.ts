@@ -48,8 +48,8 @@ export function run(args: string[]) {
     return linesDispatch([
       "nav -translate — toggle from the BMXt prompt",
       "usage: nav -translate -on | nav -translate -off",
-      "EN: When on, each sentence ending (。 . ! ? etc.) during nav typing shows ja / EN / back-translation via Chrome’s on-device Translator.",
-      "JA: ON 時、nav typing で句点まで入力すると Chrome 内蔵 Translator で原文・英訳・再訳を表示します（初回はモデル取得あり）。"
+      "EN: When on, nav typing shows ja / EN / back-translation per sentence; Alt-hold commit sends English to the page field.",
+      "JA: ON 時、句点で原文・英訳・再訳を表示し、Alt 長押し確定でページへ英訳を送信します（初回はモデル取得あり）。"
     ])
   }
   return linesDispatch([`error: unknown nav option (internal): ${first}`, ...usageLines()])
