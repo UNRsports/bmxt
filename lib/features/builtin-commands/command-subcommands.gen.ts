@@ -40,8 +40,11 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "nav": [
     { head: "-enter", trailingTokens: [] as const, tail: "none" },
-    { head: "-exit", trailingTokens: [] as const, tail: "none" },
-    { head: "-translate", trailingTokens: ["-on","-off"] as const, tail: "none" }
+    { head: "-exit", trailingTokens: [] as const, tail: "none" }
+  ] as const,
+  "translate": [
+    { head: "-on", trailingTokens: [] as const, tail: "none" },
+    { head: "-off", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "aboutbmxt": [] as const,
   "split": [
@@ -120,7 +123,11 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "nav": {
       const lower = token.toLowerCase()
-      return lower === "-enter" || lower === "-exit" || lower === "-translate"
+      return lower === "-enter" || lower === "-exit"
+    }
+    case "translate": {
+      const lower = token.toLowerCase()
+      return lower === "-on" || lower === "-off"
     }
     case "aboutbmxt":
       return false

@@ -1,14 +1,14 @@
 import type { TranslationTriplet } from "./translator-service"
 
-export type TypingTranslateBlock = TranslationTriplet & { id: number }
+export type TranslationBlock = TranslationTriplet & { id: number }
 
 type Props = {
-  blocks: readonly TypingTranslateBlock[]
+  blocks: readonly TranslationBlock[]
   busy: boolean
   statusNote: string | null
 }
 
-export function TypingTranslateStrip({ blocks, busy, statusNote }: Props) {
+export function TranslationStrip({ blocks, busy, statusNote }: Props) {
   if (blocks.length === 0 && !busy && !statusNote) {
     return null
   }

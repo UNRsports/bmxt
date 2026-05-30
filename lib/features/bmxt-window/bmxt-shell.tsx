@@ -60,13 +60,15 @@ import {
 } from "../nav"
 import {
   buildEnglishCommitText,
-  loadTypingTranslateSettings,
-  parseNavTranslateLine,
-  saveTypingTranslateEnabled,
-  TypingTranslateStrip,
-  useTypingTranslate,
-  type TypingTranslateBlock
-} from "../typing-translate"
+  EMPTY_TRANSLATE_PICKER,
+  loadTranslateSettings,
+  parseTranslateCommandLine,
+  saveTranslateEnabled,
+  TranslationStrip,
+  useSentenceTranslate,
+  type TranslationBlock,
+  type TranslatePickerState
+} from "../translate"
 import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
 import { logBmxtKey } from "../debug/key-log"
@@ -160,6 +162,7 @@ export function BmxtShell({
   const tabPicker = sessionPickers.tabs
   const findListPicker = sessionPickers.find
   const domListPicker = sessionPickers.dom
+  const translatePicker = sessionPickers.translate
   const setTabPicker = useCallback(
     (forSessionId: string, v: TabPickerState | null) => {
       setSessionPickerSlot(forSessionId, "tabs", v)
@@ -178,9 +181,18 @@ export function BmxtShell({
     },
     [setSessionPickerSlot]
   )
-  /** tabs / find / dom — 左ターミナル・右にピッカー列（複数可）。 */
+  const setTranslatePicker = useCallback(
+    (forSessionId: string, v: TranslatePickerState | null) => {
+      setSessionPickerSlot(forSessionId, "translate", v)
+    },
+    [setSessionPickerSlot]
+  )
+  /** tabs / find / dom / translate — 左ターミナル・右にピッカー列（複数可）。 */
   const sidePickerOpen =
-    tabPicker !== null || findListPicker !== null || domListPicker !== null
+    tabPicker !== null ||
+    findListPicker !== null ||
+    domListPicker !== null ||
+    translatePicker !== null
   const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
   const paneFocusRef = useRef<PaneFocusTarget>("terminal")
   const isFocusedPaneRef = useRef(isFocusedPane)
@@ -193,6 +205,7 @@ export function BmxtShell({
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const findPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const translatePickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const openPickers = useMemo(
     () => openPickerSlots(sessionPickers),
@@ -202,6 +215,7 @@ export function BmxtShell({
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const findPickerKeyboardActive = paneFocus === "find" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
+  const translatePickerKeyboardActive = paneFocus === "translate" && isFocusedPane
 
   useEffect(() => {
     paneFocusRef.current = paneFocus
@@ -217,8 +231,10 @@ export function BmxtShell({
       setPaneFocus("terminal")
     } else if (paneFocus === "dom" && domListPicker === null) {
       setPaneFocus("terminal")
+    } else if (paneFocus === "translate" && translatePicker === null) {
+      setPaneFocus("terminal")
     }
-  }, [paneFocus, tabPicker, findListPicker, domListPicker])
+  }, [paneFocus, tabPicker, findListPicker, domListPicker, translatePicker])
 
   useEffect(() => {
     if (!sidePickerOpen) {
@@ -237,6 +253,10 @@ export function BmxtShell({
   useEffect(() => {
     domListPickerRef.current = domListPicker
   }, [domListPicker])
+  const translatePickerRef = useRef<TranslatePickerState | null>(null)
+  useEffect(() => {
+    translatePickerRef.current = translatePicker
+  }, [translatePicker])
   const findListDismissRef = useRef(false)
   const domListDismissRef = useRef(false)
   const tabsPickerFocusTabIdRef = useRef<number | null>(null)
@@ -258,11 +278,11 @@ export function BmxtShell({
   }, [])
   const [navArmed, setNavArmed] = useState(false)
   const [navActive, setNavActive] = useState(false)
-  const [typingTranslateEnabled, setTypingTranslateEnabled] = useState(false)
-  const typingTranslateEnabledRef = useRef(false)
-  const typingTranslateBlocksRef = useRef<readonly TypingTranslateBlock[]>([])
-  const flushTypingTranslateRef = useRef<() => Promise<void>>(async () => {})
-  const setTypingTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
+  const [translateEnabled, setTranslateEnabled] = useState(false)
+  const translateEnabledRef = useRef(false)
+  const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
+  const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
+  const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
   const navPositionsRef = useRef<NavPositionsByTab>({})
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
@@ -295,16 +315,16 @@ export function BmxtShell({
     getTypingBuffer: () => imeRef.current?.value ?? lineRef.current,
     resolveTypingCommitText: async () => {
       const raw = imeRef.current?.value ?? lineRef.current
-      if (!typingTranslateEnabledRef.current) {
+      if (!translateEnabledRef.current) {
         return raw
       }
-      await flushTypingTranslateRef.current()
+      await flushNavTranslateRef.current()
       try {
-        setTypingTranslateCommitErrorRef.current(null)
-        return await buildEnglishCommitText(raw, typingTranslateBlocksRef.current)
+        setNavTranslateCommitErrorRef.current(null)
+        return await buildEnglishCommitText(raw, navTranslateBlocksRef.current)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
-        setTypingTranslateCommitErrorRef.current(`commit failed: ${msg}`)
+        setNavTranslateCommitErrorRef.current(`commit failed: ${msg}`)
         throw e
       }
     }
@@ -325,36 +345,36 @@ export function BmxtShell({
   const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
 
   const {
-    blocks: typingTranslateBlocks,
-    busy: typingTranslateBusy,
-    statusNote: typingTranslateStatus,
-    resetSession: resetTypingTranslateSession,
-    flushPendingTranslations,
-    setCommitError: setTypingTranslateCommitError
-  } = useTypingTranslate({
-    active: navPageTyping && typingTranslateEnabled,
+    blocks: navTranslateBlocks,
+    busy: navTranslateBusy,
+    statusNote: navTranslateStatus,
+    resetSession: resetNavTranslateSession,
+    flushPendingTranslations: flushNavTranslatePending,
+    setCommitError: setNavTranslateCommitError
+  } = useSentenceTranslate({
+    active: navPageTyping && translateEnabled,
     buffer: line,
     isComposing
   })
 
   useEffect(() => {
-    typingTranslateEnabledRef.current = typingTranslateEnabled
-  }, [typingTranslateEnabled])
+    translateEnabledRef.current = translateEnabled
+  }, [translateEnabled])
 
   useEffect(() => {
-    typingTranslateBlocksRef.current = typingTranslateBlocks
-  }, [typingTranslateBlocks])
+    navTranslateBlocksRef.current = navTranslateBlocks
+  }, [navTranslateBlocks])
 
   useEffect(() => {
-    flushTypingTranslateRef.current = flushPendingTranslations
-  }, [flushPendingTranslations])
+    flushNavTranslateRef.current = flushNavTranslatePending
+  }, [flushNavTranslatePending])
 
   useEffect(() => {
-    setTypingTranslateCommitErrorRef.current = setTypingTranslateCommitError
-  }, [setTypingTranslateCommitError])
+    setNavTranslateCommitErrorRef.current = setNavTranslateCommitError
+  }, [setNavTranslateCommitError])
 
   useEffect(() => {
-    void loadTypingTranslateSettings().then((s) => setTypingTranslateEnabled(s.enabled))
+    void loadTranslateSettings().then((s) => setTranslateEnabled(s.enabled))
   }, [])
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -635,7 +655,7 @@ export function BmxtShell({
     const onExit = () => {
       restoreNavPromptSnap()
       navPromptSnapRef.current = null
-      resetTypingTranslateSession()
+      resetNavTranslateSession()
     }
     window.addEventListener(NAV_ENTER_TYPING_EVENT, onEnter)
     window.addEventListener(NAV_EXIT_TYPING_EVENT, onExit)
@@ -643,7 +663,14 @@ export function BmxtShell({
       window.removeEventListener(NAV_ENTER_TYPING_EVENT, onEnter)
       window.removeEventListener(NAV_EXIT_TYPING_EVENT, onExit)
     }
-  }, [focusPrompt, restoreNavPromptSnap, resetTypingTranslateSession])
+  }, [focusPrompt, restoreNavPromptSnap, resetNavTranslateSession])
+
+  const onTranslateTextChange = useCallback(
+    (text: string) => {
+      setTranslatePicker(sessionId, { text })
+    },
+    [sessionId, setTranslatePicker]
+  )
 
   const pickerInputRefForSlot = useCallback((slot: PickerSlotId) => {
     switch (slot) {
@@ -653,6 +680,8 @@ export function BmxtShell({
         return findPickerInputRef
       case "dom":
         return domPickerInputRef
+      case "translate":
+        return translatePickerInputRef
     }
   }, [])
 
@@ -669,20 +698,33 @@ export function BmxtShell({
   )
 
   /** EN: When a picker column newly appears, move pane focus + blue border to match keyboard target. */
-  const prevSidePickersOpenRef = useRef({ tabs: false, find: false, dom: false })
+  const prevSidePickersOpenRef = useRef({
+    tabs: false,
+    find: false,
+    dom: false,
+    translate: false
+  })
   useLayoutEffect(() => {
     const nowTabs = tabPicker !== null
     const nowFind = findListPicker !== null
     const nowDom = domListPicker !== null
+    const nowTranslate = translatePicker !== null
     const prev = prevSidePickersOpenRef.current
-    prevSidePickersOpenRef.current = { tabs: nowTabs, find: nowFind, dom: nowDom }
+    prevSidePickersOpenRef.current = {
+      tabs: nowTabs,
+      find: nowFind,
+      dom: nowDom,
+      translate: nowTranslate
+    }
 
     if (!isFocusedPane) {
       return
     }
 
     let opened: PickerSlotId | null = null
-    if (!prev.dom && nowDom) {
+    if (!prev.translate && nowTranslate) {
+      opened = "translate"
+    } else if (!prev.dom && nowDom) {
       opened = "dom"
     } else if (!prev.find && nowFind) {
       opened = "find"
@@ -697,7 +739,14 @@ export function BmxtShell({
     requestAnimationFrame(() => {
       pickerInputRefForSlot(opened).current?.focus()
     })
-  }, [tabPicker, findListPicker, domListPicker, isFocusedPane, pickerInputRefForSlot])
+  }, [
+    tabPicker,
+    findListPicker,
+    domListPicker,
+    translatePicker,
+    isFocusedPane,
+    pickerInputRefForSlot
+  ])
 
   useEffect(() => {
     paneStripActionsRef.current = {
@@ -1174,21 +1223,21 @@ export function BmxtShell({
       return
     }
 
-    const navTranslate = parseNavTranslateLine(trimmed)
-    if (navTranslate !== null) {
+    const translateCmd = parseTranslateCommandLine(trimmed)
+    if (translateCmd !== null) {
       appendCommandToHistory(trimmed)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
-      if (navTranslate.kind === "incomplete") {
-        const cont = "nav -translate "
+      if (translateCmd.kind === "incomplete") {
+        const cont = "translate "
         setLine(cont)
         setCursorPos(cont.length)
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          "usage: nav -translate -on | nav -translate -off",
-          "EN: Enables Chrome built-in Translator; Alt-hold commit sends English to the page.",
-          "JA: nav typing 中は句点で原文・英訳・再訳を表示し、Alt 長押し確定でページへ英訳を送ります。"
+          "usage: translate -on | translate -off",
+          "EN: `-on` opens the translate editor picker and moves focus there.",
+          "JA: `-on` で翻訳エディタ列を開き、フォーカスを移します。"
         ])
         focusPrompt()
         return
@@ -1197,16 +1246,22 @@ export function BmxtShell({
       setCursorPos(0)
       lineRef.current = ""
       void (async () => {
-        const on = navTranslate.kind === "on"
-        await saveTypingTranslateEnabled(on)
-        setTypingTranslateEnabled(on)
-        await appendLogLines([
-          `> ${trimmed}`,
-          on
-            ? "nav typing translate: ON (preview ja/EN/再訳 · Alt-hold commit sends English)"
-            : "nav typing translate: OFF"
-        ])
-        focusPrompt()
+        if (translateCmd.kind === "on") {
+          await saveTranslateEnabled(true)
+          setTranslateEnabled(true)
+          const priorText = translatePickerRef.current?.text ?? EMPTY_TRANSLATE_PICKER.text
+          setTranslatePicker(sessionId, { text: priorText })
+          await appendLogLines([
+            `> ${trimmed}`,
+            "translate: ON — editor column open (Esc → prompt · long-form input · 句点で ja/EN/再訳)"
+          ])
+        } else {
+          await saveTranslateEnabled(false)
+          setTranslateEnabled(false)
+          setTranslatePicker(sessionId, null)
+          await appendLogLines([`> ${trimmed}`, "translate: OFF"])
+          activatePaneFocus("terminal")
+        }
       })()
       return
     }
@@ -1745,19 +1800,8 @@ export function BmxtShell({
         })
         if (imePick && imePick.candidates.length > 0) {
           e.preventDefault()
-          const idx = tabPressSeqRef.current % imePick.candidates.length
-          tabPressSeqRef.current += 1
-          const rep = imePick.candidates[idx]!
-          const addSpace = imePick.tokenEnd >= curLn.length
-          const newLine = addSpace
-            ? curLn.slice(0, imePick.tokenStart) + rep + " " + curLn.slice(imePick.tokenEnd)
-            : curLn.slice(0, imePick.tokenStart) + rep + curLn.slice(imePick.tokenEnd)
-          const newPos = imePick.tokenStart + rep.length + (addSpace ? 1 : 0)
-          lineRef.current = newLine
-          setHistNavIndex(-1)
-          setLine(newLine)
-          setCursorPos(newPos)
-          syncImeTokenPicker(newLine, newPos)
+          tabPressSeqRef.current = 0
+          syncImeTokenPicker(curLn, pos)
           return
         }
       }
@@ -1975,11 +2019,11 @@ export function BmxtShell({
             ) : null}
           </div>
         </div>
-        {navPageTyping && typingTranslateEnabled ? (
-          <TypingTranslateStrip
-            blocks={typingTranslateBlocks}
-            busy={typingTranslateBusy}
-            statusNote={typingTranslateStatus}
+        {navPageTyping && translateEnabled ? (
+          <TranslationStrip
+            blocks={navTranslateBlocks}
+            busy={navTranslateBusy}
+            statusNote={navTranslateStatus}
           />
         ) : null}
         <NavStatusBar
@@ -1987,7 +2031,7 @@ export function BmxtShell({
           active={navActive}
           typingMode={navPageTyping}
           typingMultiline={navTypingMultiline}
-          typingTranslateOn={typingTranslateEnabled}
+          typingTranslateOn={translateEnabled}
           menuOpen={navMenuOpen}
           textSelPhase={navTextSelPhase}
           tabTitle={navCurrentTabTitle}
@@ -2027,15 +2071,19 @@ export function BmxtShell({
             tabPicker={tabPicker}
             findListPicker={findListPicker}
             domListPicker={domListPicker}
+            translatePicker={translatePicker}
             tabsPickerKeyboardActive={tabsPickerKeyboardActive}
             findPickerKeyboardActive={findPickerKeyboardActive}
             domPickerKeyboardActive={domPickerKeyboardActive}
+            translatePickerKeyboardActive={translatePickerKeyboardActive}
             tabPickerInputRef={tabPickerInputRef}
             findPickerInputRef={findPickerInputRef}
             domPickerInputRef={domPickerInputRef}
+            translatePickerInputRef={translatePickerInputRef}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
             onOpenFindEntry={(entry, matchIndex) => void onOpenFindPickerEntry(entry, matchIndex)}
+            onTranslateTextChange={onTranslateTextChange}
             onDomApprove={() => {
               if (domListPicker?.kind !== "prompt") {
                 return

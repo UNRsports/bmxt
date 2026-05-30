@@ -1,4 +1,4 @@
-/** EN: Sentence-ending punctuation that triggers translation after nav typing input. */
+/** EN: Sentence-ending punctuation that triggers translation after input. */
 const SENTENCE_END_RE = /[。．.!?！？]/
 
 /**

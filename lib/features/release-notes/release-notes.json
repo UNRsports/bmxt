@@ -1,18 +1,11 @@
 {
-  "0.3.8": {
+  "0.4.0": {
     "ja": [
-      "バージョンアップ時のウェルカムページ表示を実装",
-      "tabsモードでの絞り込み時に一覧に操作フォーカスがいかないよう修正",
-      "マウス操作を見直してプロンプト内のテキストを選択可能にするとともに、基本的にキーボードのみでの操作に重点を移動",
-      "ブラウザ内の横断検索機能を改善",
-      "補完メニューの動作を改善"
+      "翻訳機能実装",
+      "候補メニュー動作の調整"
     ],
     "en": [
-      "Show a welcome page when the extension version is upgraded",
-      "Fixed tabs mode filtering so keyboard focus no longer jumps to the list unexpectedly",
-      "Revised mouse interaction: text in the prompt and log can be selected while keeping keyboard-first operation as the default",
-      "Improved in-browser cross-search (`find`)",
-      "Improved Tab completion menu behavior"
+      ""
     ]
   }
 }

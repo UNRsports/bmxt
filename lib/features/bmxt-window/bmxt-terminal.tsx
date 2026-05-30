@@ -78,7 +78,8 @@ function SplitTreeView({
     const hasColumnPickers =
       sessionPickers.tabs !== null ||
       sessionPickers.find !== null ||
-      sessionPickers.dom !== null
+      sessionPickers.dom !== null ||
+      sessionPickers.translate !== null
     const leafHasKeyboardFocus = focusedLeafId === node.id
     return (
       <div

@@ -7,7 +7,7 @@ import {
   translateJaEnJa,
   type TranslationTriplet
 } from "./translator-service"
-import type { TypingTranslateBlock } from "./typing-translate-strip"
+import type { TranslationBlock } from "./translation-strip"
 
 const MAX_BLOCKS = 8
 
@@ -17,15 +17,15 @@ type Options = {
   isComposing: boolean
 }
 
-export function useTypingTranslate({ active, buffer, isComposing }: Options): {
-  blocks: readonly TypingTranslateBlock[]
+export function useSentenceTranslate({ active, buffer, isComposing }: Options): {
+  blocks: readonly TranslationBlock[]
   busy: boolean
   statusNote: string | null
   resetSession: () => void
   flushPendingTranslations: () => Promise<void>
   setCommitError: (message: string | null) => void
 } {
-  const [blocks, setBlocks] = useState<TypingTranslateBlock[]>([])
+  const [blocks, setBlocks] = useState<TranslationBlock[]>([])
   const [busy, setBusy] = useState(false)
   const [statusNote, setStatusNote] = useState<string | null>(null)
   const lastTranslatedEndRef = useRef(0)

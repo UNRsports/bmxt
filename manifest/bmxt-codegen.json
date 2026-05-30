@@ -118,7 +118,7 @@
       "module": "nav",
       "canonicalName": "nav",
       "aliases": [],
-      "usagePrimary": "nav -enter | nav -exit | nav -translate -on | nav -translate -off",
+      "usagePrimary": "nav -enter | nav -exit",
       "subcommands": [
         {
           "head": "-enter",
@@ -127,10 +127,21 @@
         {
           "head": "-exit",
           "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "translate",
+      "canonicalName": "translate",
+      "aliases": [],
+      "usagePrimary": "translate -on | translate -off",
+      "subcommands": [
+        {
+          "head": "-on",
+          "tail": "none"
         },
         {
-          "head": "-translate",
-          "trailingTokens": ["-on", "-off"],
+          "head": "-off",
           "tail": "none"
         }
       ]

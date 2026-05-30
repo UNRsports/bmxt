@@ -1,12 +1,12 @@
 import { TYPING_TRANSLATE_KEY } from "../extension-storage/keys"
 
-export type TypingTranslateSettings = {
+export type TranslateSettings = {
   enabled: boolean
 }
 
-const DEFAULT_SETTINGS: TypingTranslateSettings = { enabled: false }
+const DEFAULT_SETTINGS: TranslateSettings = { enabled: false }
 
-export async function loadTypingTranslateSettings(): Promise<TypingTranslateSettings> {
+export async function loadTranslateSettings(): Promise<TranslateSettings> {
   const r = await chrome.storage.local.get(TYPING_TRANSLATE_KEY)
   const raw = r[TYPING_TRANSLATE_KEY]
   if (!raw || typeof raw !== "object") {
@@ -18,8 +18,8 @@ export async function loadTypingTranslateSettings(): Promise<TypingTranslateSett
   }
 }
 
-export async function saveTypingTranslateEnabled(enabled: boolean): Promise<void> {
+export async function saveTranslateEnabled(enabled: boolean): Promise<void> {
   await chrome.storage.local.set({
-    [TYPING_TRANSLATE_KEY]: { enabled } satisfies TypingTranslateSettings
+    [TYPING_TRANSLATE_KEY]: { enabled } satisfies TranslateSettings
   })
 }

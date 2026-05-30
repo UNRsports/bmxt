@@ -265,6 +265,42 @@ body {
   word-break: break-word;
 }
 
+/* translate — standalone editor picker column */
+.bmxt-translate-editor {
+  min-height: 0;
+}
+
+.bmxt-translate-editor-input {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-height: 8em;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  resize: vertical;
+  border: none;
+  border-top: 1px solid #21262d;
+  border-bottom: 1px solid #21262d;
+  background: #0d1117;
+  color: #c9d1d9;
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+}
+
+.bmxt-translate-editor-input:focus {
+  background: rgba(88, 166, 255, 0.04);
+}
+
+.bmxt-translate-editor .bmxt-typing-translate {
+  flex: 0 0 auto;
+  max-height: 40%;
+  overflow-y: auto;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
 .bmxt-prompt-line {
   display: flex;
   align-items: stretch;
@@ -496,6 +532,7 @@ body {
 .bmxt-tab-picker-filter-query,
 .bmxt-tab-picker-command-ambiguous-placeholder,
 .bmxt-plain-picker-row-text,
+.bmxt-translate-editor-input,
 .bmxt-dom-picker-row,
 .bmxt-subcmd-picker-item,
 .bmxt-dom-prompt-action-label,
