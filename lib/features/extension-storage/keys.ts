@@ -29,5 +29,8 @@ export const LAST_SEEN_EXTENSION_VERSION_KEY = "bmxt_last_seen_extension_version
 /** 更新時 welcome ページを最後に表示した拡張機能バージョン。 */
 export const LAST_SEEN_WELCOME_VERSION_KEY = "bmxt_last_seen_welcome_version"
 
+/** Nav typing 時の Chrome 内蔵 Translator（ja↔en 往復表示）。 */
+export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
+
 export const MAX_SESSION_LOG_LINES = 500
 export const MAX_CMD_HISTORY_LINES = 300

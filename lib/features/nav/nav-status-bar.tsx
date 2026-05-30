@@ -3,6 +3,7 @@ type Props = {
   active: boolean
   typingMode?: boolean
   typingMultiline?: boolean
+  typingTranslateOn?: boolean
   menuOpen?: boolean
   textSelPhase?: "start" | "end" | "done" | "idle" | null
   tabTitle: string | null
@@ -14,6 +15,7 @@ export function NavStatusBar({
   active,
   typingMode = false,
   typingMultiline = false,
+  typingTranslateOn = false,
   menuOpen = false,
   textSelPhase = null,
   tabTitle,
@@ -51,8 +53,12 @@ export function NavStatusBar({
       <span className="bmxt-nav-status-seg bmxt-nav-status-seg--hint">
         {typingMode
           ? typingMultiline
-            ? "BMXt コマンドラインで入力 · 改行可能 · Alt 長押しで送信 · Esc 長押しでキャンセル"
-            : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+            ? typingTranslateOn
+              ? "BMXt で入力 · 句点で ja/EN/再訳 · 改行可 · Alt 送信 · Esc 取消"
+              : "BMXt コマンドラインで入力 · 改行可能 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+            : typingTranslateOn
+              ? "BMXt で入力 · 句点で ja/EN/再訳 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+              : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"
           : textSelPicking
             ? textSelPhase === "start"
               ? "↑↓ 移動 · Enter で選択開始 · Esc/Ctrl で取消"

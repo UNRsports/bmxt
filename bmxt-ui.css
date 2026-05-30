@@ -218,6 +218,53 @@ body {
   color: #58a6ff;
 }
 
+/* nav typing — Chrome Translator assist (ja / EN / back-translation) */
+.bmxt-typing-translate {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #8b949e;
+}
+
+.bmxt-typing-translate-status {
+  color: #d29922;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.bmxt-typing-translate-block + .bmxt-typing-translate-block {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #21262d;
+}
+
+.bmxt-typing-translate-line {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-top: 2px;
+}
+
+.bmxt-typing-translate-label {
+  flex: 0 0 2.2em;
+  color: #58a6ff;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.bmxt-typing-translate-text {
+  flex: 1;
+  min-width: 0;
+  color: #c9d1d9;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .bmxt-prompt-line {
   display: flex;
   align-items: stretch;

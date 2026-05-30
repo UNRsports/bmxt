@@ -118,7 +118,7 @@
       "module": "nav",
       "canonicalName": "nav",
       "aliases": [],
-      "usagePrimary": "nav -enter | nav -exit",
+      "usagePrimary": "nav -enter | nav -exit | nav -translate -on | nav -translate -off",
       "subcommands": [
         {
           "head": "-enter",
@@ -126,6 +126,11 @@
         },
         {
           "head": "-exit",
+          "tail": "none"
+        },
+        {
+          "head": "-translate",
+          "trailingTokens": ["-on", "-off"],
           "tail": "none"
         }
       ]

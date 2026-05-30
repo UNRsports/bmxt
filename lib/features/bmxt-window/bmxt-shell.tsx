@@ -58,6 +58,13 @@ import {
   type NavEnterTypingDetail,
   type NavPositionsByTab
 } from "../nav"
+import {
+  loadTypingTranslateSettings,
+  parseNavTranslateLine,
+  saveTypingTranslateEnabled,
+  TypingTranslateStrip,
+  useTypingTranslate
+} from "../typing-translate"
 import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
 import { logBmxtKey } from "../debug/key-log"
@@ -249,6 +256,7 @@ export function BmxtShell({
   }, [])
   const [navArmed, setNavArmed] = useState(false)
   const [navActive, setNavActive] = useState(false)
+  const [typingTranslateEnabled, setTypingTranslateEnabled] = useState(false)
   const navPositionsRef = useRef<NavPositionsByTab>({})
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
@@ -294,6 +302,21 @@ export function BmxtShell({
   const [logScrollable, setLogScrollable] = useState(false)
   const [isComposing, setIsComposing] = useState(false)
   const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
+
+  const {
+    blocks: typingTranslateBlocks,
+    busy: typingTranslateBusy,
+    statusNote: typingTranslateStatus,
+    resetSession: resetTypingTranslateSession
+  } = useTypingTranslate({
+    active: navPageTyping && typingTranslateEnabled,
+    buffer: line,
+    isComposing
+  })
+
+  useEffect(() => {
+    void loadTypingTranslateSettings().then((s) => setTypingTranslateEnabled(s.enabled))
+  }, [])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
@@ -573,6 +596,7 @@ export function BmxtShell({
     const onExit = () => {
       restoreNavPromptSnap()
       navPromptSnapRef.current = null
+      resetTypingTranslateSession()
     }
     window.addEventListener(NAV_ENTER_TYPING_EVENT, onEnter)
     window.addEventListener(NAV_EXIT_TYPING_EVENT, onExit)
@@ -580,7 +604,7 @@ export function BmxtShell({
       window.removeEventListener(NAV_ENTER_TYPING_EVENT, onEnter)
       window.removeEventListener(NAV_EXIT_TYPING_EVENT, onExit)
     }
-  }, [focusPrompt, restoreNavPromptSnap])
+  }, [focusPrompt, restoreNavPromptSnap, resetTypingTranslateSession])
 
   const pickerInputRefForSlot = useCallback((slot: PickerSlotId) => {
     switch (slot) {
@@ -1106,6 +1130,43 @@ export function BmxtShell({
           )
         }
         await appendLogLines(logLines)
+        focusPrompt()
+      })()
+      return
+    }
+
+    const navTranslate = parseNavTranslateLine(trimmed)
+    if (navTranslate !== null) {
+      appendCommandToHistory(trimmed)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      if (navTranslate.kind === "incomplete") {
+        const cont = "nav -translate "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          "usage: nav -translate -on | nav -translate -off",
+          "EN: Enables Chrome built-in Translator during nav typing (sentence-end trigger).",
+          "JA: nav typing 中、句点で原文・英訳・再訳を表示します（Chrome 内蔵・初回モデル取得あり）。"
+        ])
+        focusPrompt()
+        return
+      }
+      setLine("")
+      setCursorPos(0)
+      lineRef.current = ""
+      void (async () => {
+        const on = navTranslate.kind === "on"
+        await saveTypingTranslateEnabled(on)
+        setTypingTranslateEnabled(on)
+        await appendLogLines([
+          `> ${trimmed}`,
+          on
+            ? "nav typing translate: ON (Chrome built-in Translator · ja→en→ja on 。 . ! ? …)"
+            : "nav typing translate: OFF"
+        ])
         focusPrompt()
       })()
       return
@@ -1875,11 +1936,19 @@ export function BmxtShell({
             ) : null}
           </div>
         </div>
+        {navPageTyping && typingTranslateEnabled ? (
+          <TypingTranslateStrip
+            blocks={typingTranslateBlocks}
+            busy={typingTranslateBusy}
+            statusNote={typingTranslateStatus}
+          />
+        ) : null}
         <NavStatusBar
           armed={navArmed}
           active={navActive}
           typingMode={navPageTyping}
           typingMultiline={navTypingMultiline}
+          typingTranslateOn={typingTranslateEnabled}
           menuOpen={navMenuOpen}
           textSelPhase={navTextSelPhase}
           tabTitle={navCurrentTabTitle}
