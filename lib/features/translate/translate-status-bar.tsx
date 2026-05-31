@@ -1,4 +1,7 @@
+import { getTranslationPairDef, type TranslationPairId } from "./translation-pair"
+
 type Props = {
+  pairId: TranslationPairId
   editorOpen: boolean
   editorFocused: boolean
   navTypingAssist: boolean
@@ -7,7 +10,17 @@ type Props = {
   statusNote?: string | null
 }
 
+function navCommitHint(pairId: TranslationPairId, multiline: boolean): string {
+  const commitHint =
+    getTranslationPairDef(pairId).commitLanguage === "en"
+      ? "Alt 長押しで英訳を送信"
+      : "Alt 長押しで和訳を送信"
+  const base = `nav typing · 入力停止500msで 訳/再訳 · ${commitHint}`
+  return multiline ? `${base} · Shift+Enter で改行` : base
+}
+
 export function TranslateStatusBar({
+  pairId,
   editorOpen,
   editorFocused,
   navTypingAssist,
@@ -15,6 +28,8 @@ export function TranslateStatusBar({
   busy = false,
   statusNote = null
 }: Props) {
+  const pairLabel = getTranslationPairDef(pairId).statusLabel
+
   const meta =
     statusNote !== null && statusNote.length > 0
       ? statusNote
@@ -29,14 +44,12 @@ export function TranslateStatusBar({
               : "assist ON"
 
   const hint = navTypingAssist
-    ? navTypingMultiline
-      ? "nav typing · 入力停止500msで 訳/再訳 · Shift+Enter で改行 · Alt 長押しで英訳を送信"
-      : "nav typing · 入力停止500msで 訳/再訳 · Alt 長押しで英訳を送信"
+    ? navCommitHint(pairId, navTypingMultiline)
     : editorFocused
-      ? "Esc → prompt · translate -off to close · 入力停止500msで 訳/再訳"
+      ? `Esc → prompt · translate -off to close · ${pairLabel} · 入力停止500msで 訳/再訳`
       : editorOpen
-        ? "Ctrl+←/→ で editor · Esc → prompt · translate -off to close"
-        : "translate -off to disable · nav typing でもアシスト · 入力停止500msで 訳/再訳"
+        ? `Ctrl+←/→ で editor · Esc → prompt · translate -off to close · ${pairLabel}`
+        : `translate -off to disable · ${pairLabel} · nav typing でもアシスト · 入力停止500msで 訳/再訳`
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
@@ -46,6 +59,7 @@ export function TranslateStatusBar({
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--state bmxt-mode-status-seg--on">
         ON
       </span>
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{pairLabel}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{meta}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">{hint}</span>
     </div>

@@ -1,3 +1,9 @@
+import {
+  DEFAULT_TRANSLATION_PAIR_ID,
+  getTranslationPairDef,
+  type TranslationPairId
+} from "./translation-pair"
+
 export type TranslationTriplet = {
   source: string
   forward: string
@@ -8,62 +14,77 @@ export function isBuiltInTranslatorSupported(): boolean {
   return typeof Translator !== "undefined"
 }
 
-export async function jaEnPairAvailability(): Promise<TranslatorAvailability | "unsupported"> {
+export async function pairAvailability(
+  pairId: TranslationPairId = DEFAULT_TRANSLATION_PAIR_ID
+): Promise<TranslatorAvailability | "unsupported"> {
   if (!isBuiltInTranslatorSupported()) {
     return "unsupported"
   }
-  return Translator.availability({ sourceLanguage: "ja", targetLanguage: "en" })
+  const { sourceLanguage, targetLanguage } = getTranslationPairDef(pairId)
+  return Translator.availability({ sourceLanguage, targetLanguage })
 }
 
-let jaToEn: Translator | null = null
-let enToJa: Translator | null = null
-
-async function getJaToEn(): Promise<Translator> {
-  if (!jaToEn) {
-    jaToEn = await Translator.create({ sourceLanguage: "ja", targetLanguage: "en" })
-  }
-  return jaToEn
+/** @deprecated Use `pairAvailability(pairId)` — kept for call sites migrating gradually. */
+export async function jaEnPairAvailability(): Promise<TranslatorAvailability | "unsupported"> {
+  return pairAvailability("ja-en")
 }
 
-async function getEnToJa(): Promise<Translator> {
-  if (!enToJa) {
-    enToJa = await Translator.create({ sourceLanguage: "en", targetLanguage: "ja" })
+const translatorCache = new Map<string, Translator>()
+
+function translatorCacheKey(sourceLanguage: string, targetLanguage: string): string {
+  return `${sourceLanguage}\t${targetLanguage}`
+}
+
+async function getTranslator(sourceLanguage: string, targetLanguage: string): Promise<Translator> {
+  const key = translatorCacheKey(sourceLanguage, targetLanguage)
+  let instance = translatorCache.get(key)
+  if (!instance) {
+    instance = await Translator.create({ sourceLanguage, targetLanguage })
+    translatorCache.set(key, instance)
   }
-  return enToJa
+  return instance
 }
 
 export function resetTranslatorInstances(): void {
-  jaToEn?.destroy()
-  enToJa?.destroy()
-  jaToEn = null
-  enToJa = null
+  for (const instance of translatorCache.values()) {
+    instance.destroy()
+  }
+  translatorCache.clear()
 }
 
-/** EN: ja → en (nav typing commit). */
-export async function translateJaToEn(sentence: string, signal?: AbortSignal): Promise<string> {
+/** EN: First hop: source language → target language for the pair. */
+export async function translateForward(
+  pairId: TranslationPairId,
+  sentence: string,
+  signal?: AbortSignal
+): Promise<string> {
   if (!isBuiltInTranslatorSupported()) {
     throw new Error("Translator API is not available in this Chrome build.")
   }
-  const fwd = await getJaToEn()
-  return fwd.translate(sentence, { signal })
+  const { sourceLanguage, targetLanguage } = getTranslationPairDef(pairId)
+  const translator = await getTranslator(sourceLanguage, targetLanguage)
+  return translator.translate(sentence, { signal })
 }
 
-/** EN: ja → en → ja (back-translation for review). */
-export async function translateJaEnJa(
+/** EN: forward → back (target → source) for review. */
+export async function translateRoundTrip(
+  pairId: TranslationPairId,
   sentence: string,
   signal?: AbortSignal
 ): Promise<TranslationTriplet> {
   if (!isBuiltInTranslatorSupported()) {
     throw new Error("Translator API is not available in this Chrome build.")
   }
-  const forward = await translateJaToEn(sentence, signal)
-  const backTr = await getEnToJa()
-  const back = await backTr.translate(forward, { signal })
+  const { sourceLanguage, targetLanguage } = getTranslationPairDef(pairId)
+  const forward = await translateForward(pairId, sentence, signal)
+  const backTranslator = await getTranslator(targetLanguage, sourceLanguage)
+  const back = await backTranslator.translate(forward, { signal })
   return { source: sentence, forward, back }
 }
 
-/** EN: ja → en → ja for each newline-delimited row; preserves `\n` layout. */
-export async function translateJaEnJaMultiline(
+/** EN: Round-trip per newline-delimited row; preserves `\n` layout. */
+export async function translateRoundTripMultiline(
+  pairId: TranslationPairId,
   source: string,
   signal?: AbortSignal
 ): Promise<TranslationTriplet> {
@@ -79,7 +100,7 @@ export async function translateJaEnJaMultiline(
       backParts.push("")
       continue
     }
-    const triplet = await translateJaEnJa(line, signal)
+    const triplet = await translateRoundTrip(pairId, line, signal)
     forwardParts.push(triplet.forward)
     backParts.push(triplet.back)
   }
@@ -88,4 +109,25 @@ export async function translateJaEnJaMultiline(
     forward: forwardParts.join("\n"),
     back: backParts.join("\n")
   }
+}
+
+/** EN: ja → en (nav typing commit helper for default pair). */
+export async function translateJaToEn(sentence: string, signal?: AbortSignal): Promise<string> {
+  return translateForward("ja-en", sentence, signal)
+}
+
+/** EN: ja → en → ja (back-translation for review). */
+export async function translateJaEnJa(
+  sentence: string,
+  signal?: AbortSignal
+): Promise<TranslationTriplet> {
+  return translateRoundTrip("ja-en", sentence, signal)
+}
+
+/** EN: ja → en → ja for each newline-delimited row; preserves `\n` layout. */
+export async function translateJaEnJaMultiline(
+  source: string,
+  signal?: AbortSignal
+): Promise<TranslationTriplet> {
+  return translateRoundTripMultiline("ja-en", source, signal)
 }

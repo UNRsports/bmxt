@@ -5,10 +5,15 @@ import {
   reconcileBlocksInBuffer
 } from "./translation-segments"
 import {
+  DEFAULT_TRANSLATION_PAIR_ID,
+  getTranslationPairDef,
+  type TranslationPairId
+} from "./translation-pair"
+import {
   isBuiltInTranslatorSupported,
-  jaEnPairAvailability,
+  pairAvailability,
   resetTranslatorInstances,
-  translateJaEnJaMultiline
+  translateRoundTripMultiline
 } from "./translator-service"
 import type { TranslationBlock } from "./translation-strip"
 
@@ -19,6 +24,7 @@ type Options = {
   active: boolean
   buffer: string
   isComposing: boolean
+  pairId?: TranslationPairId
 }
 
 function trimBlocks(blocks: readonly TranslationBlock[]): TranslationBlock[] {
@@ -28,7 +34,12 @@ function trimBlocks(blocks: readonly TranslationBlock[]): TranslationBlock[] {
   return blocks.slice(-MAX_BLOCKS)
 }
 
-export function useSentenceTranslate({ active, buffer, isComposing }: Options): {
+export function useSentenceTranslate({
+  active,
+  buffer,
+  isComposing,
+  pairId = DEFAULT_TRANSLATION_PAIR_ID
+}: Options): {
   blocks: readonly TranslationBlock[]
   busy: boolean
   statusNote: string | null
@@ -74,6 +85,14 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
       resetTranslatorInstances()
     }
   }, [active, resetSession])
+
+  useEffect(() => {
+    if (!active) {
+      return
+    }
+    resetSession()
+    resetTranslatorInstances()
+  }, [active, pairId, resetSession])
 
   useEffect(() => {
     if (!active) {
@@ -131,12 +150,13 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
           inFlightKeyRef.current = null
           return
         }
-        const avail = await jaEnPairAvailability()
+        const pairDef = getTranslationPairDef(pairId)
+        const avail = await pairAvailability(pairId)
         if (avail === "unsupported" || avail === "unavailable") {
           setStatusNote(
             avail === "unsupported"
               ? "Translator API unavailable (Chrome 138+ desktop)."
-              : "ja→en language pack unavailable on this device."
+              : `${pairDef.sourceLanguage}→${pairDef.targetLanguage} language pack unavailable on this device.`
           )
           inFlightKeyRef.current = null
           return
@@ -162,7 +182,7 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
         abortRef.current = ac
 
         try {
-          const triplet = await translateJaEnJaMultiline(pending.source, ac.signal)
+          const triplet = await translateRoundTripMultiline(pairId, pending.source, ac.signal)
           if (ac.signal.aborted) {
             return
           }
@@ -224,7 +244,7 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
     }, DEBOUNCE_MS)
 
     return () => window.clearTimeout(timer)
-  }, [active, buffer, isComposing, nextBlockId])
+  }, [active, buffer, isComposing, nextBlockId, pairId])
 
   return { blocks, busy, statusNote, resetSession, flushPendingTranslations, setCommitError }
 }

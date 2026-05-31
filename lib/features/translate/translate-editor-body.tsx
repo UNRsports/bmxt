@@ -5,6 +5,8 @@ import {
   useState,
   type MutableRefObject
 } from "react"
+import { getTranslationFieldLabels, type TranslationPairId } from "./translation-pair"
+import { TranslationPanelHeading } from "./translation-panel-heading"
 import { useSentenceTranslate } from "./use-sentence-translate"
 import { setsEqual } from "./sentence-highlight"
 import { listBufferLines, lineSelectionRange } from "./translation-segments"
@@ -15,6 +17,7 @@ export const TRANSLATE_EDITOR_HEADLINE =
   "translate — editor · Esc → prompt · translate -off to close · 入力停止500msで 訳/再訳"
 
 export type TranslateEditorBodyProps = {
+  pairId: TranslationPairId
   text: string
   onTextChange: (text: string) => void
   onReturnToPrompt: () => void
@@ -24,6 +27,7 @@ export type TranslateEditorBodyProps = {
 }
 
 export function TranslateEditorBody({
+  pairId,
   text,
   onTextChange,
   onReturnToPrompt,
@@ -38,9 +42,11 @@ export function TranslateEditorBody({
   const { blocks, busy, statusNote } = useSentenceTranslate({
     active: true,
     buffer: text,
-    isComposing: keyboardActive && isComposing
+    isComposing: keyboardActive && isComposing,
+    pairId
   })
 
+  const fieldLabels = useMemo(() => getTranslationFieldLabels(pairId), [pairId])
   const lines = useMemo(() => listBufferLines(text), [text])
 
   const onHighlightedLineIndicesChange = useCallback((next: ReadonlySet<number>) => {
@@ -88,7 +94,10 @@ export function TranslateEditorBody({
       ) : null}
       <div className="bmxt-translate-editor-panels">
         <section className="bmxt-translate-editor-panel">
-          <div className="bmxt-translate-editor-panel-heading">原文</div>
+          <TranslationPanelHeading
+            label={fieldLabels.source}
+            className="bmxt-translate-editor-panel-heading"
+          />
           <div className="bmxt-translate-editor-panel-body">
             <TranslateSourceInput
               text={text}
@@ -105,7 +114,7 @@ export function TranslateEditorBody({
           </div>
         </section>
         <TranslateHighlightPanel
-          label="訳"
+          label={fieldLabels.forward}
           buffer={text}
           blocks={blocks}
           field="forward"
@@ -116,7 +125,7 @@ export function TranslateEditorBody({
           panelLayout
         />
         <TranslateHighlightPanel
-          label="再訳"
+          label={fieldLabels.back}
           buffer={text}
           blocks={blocks}
           field="back"

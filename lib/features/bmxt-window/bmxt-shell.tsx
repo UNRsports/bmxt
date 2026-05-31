@@ -75,13 +75,18 @@ import {
 } from "../nav/nav-prompt-input"
 import {
   buildEnglishCommitText,
+  DEFAULT_TRANSLATION_PAIR_ID,
   EMPTY_TRANSLATE_PICKER,
+  listTranslationPairSettingTokens,
   loadTranslateSettings,
   parseTranslateCommandLine,
   saveTranslateEnabled,
+  saveTranslatePair,
+  settingTokenForPairId,
   TranslationStrip,
   useSentenceTranslate,
   type TranslationBlock,
+  type TranslationPairId,
   type TranslatePickerState
 } from "../translate"
 import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
@@ -294,7 +299,11 @@ export function BmxtShell({
   const [navArmed, setNavArmed] = useState(false)
   const [navActive, setNavActive] = useState(false)
   const [translateEnabled, setTranslateEnabled] = useState(false)
+  const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
+    DEFAULT_TRANSLATION_PAIR_ID
+  )
   const translateEnabledRef = useRef(false)
+  const translatePairIdRef = useRef<TranslationPairId>(DEFAULT_TRANSLATION_PAIR_ID)
   const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
@@ -338,7 +347,11 @@ export function BmxtShell({
       await flushNavTranslateRef.current()
       try {
         setNavTranslateCommitErrorRef.current(null)
-        return await buildEnglishCommitText(raw, navTranslateBlocksRef.current)
+        return await buildEnglishCommitText(
+          raw,
+          navTranslateBlocksRef.current,
+          translatePairIdRef.current
+        )
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         setNavTranslateCommitErrorRef.current(`commit failed: ${msg}`)
@@ -372,12 +385,17 @@ export function BmxtShell({
   } = useSentenceTranslate({
     active: navPageTyping && translateEnabled,
     buffer: line,
-    isComposing
+    isComposing,
+    pairId: translatePairId
   })
 
   useEffect(() => {
     translateEnabledRef.current = translateEnabled
   }, [translateEnabled])
+
+  useEffect(() => {
+    translatePairIdRef.current = translatePairId
+  }, [translatePairId])
 
   useEffect(() => {
     navTranslateBlocksRef.current = navTranslateBlocks
@@ -394,6 +412,7 @@ export function BmxtShell({
   useEffect(() => {
     void loadTranslateSettings().then((s) => {
       setTranslateEnabled(s.enabled)
+      setTranslatePairId(s.pair)
       if (s.enabled) {
         setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
       }
@@ -1269,9 +1288,23 @@ export function BmxtShell({
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          "usage: translate -on | translate -off",
+          "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
           "EN: `-on` opens the translate editor picker and moves focus there.",
-          "JA: `-on` で翻訳エディタ列を開き、フォーカスを移します。"
+          "JA: `-on` で翻訳エディタ列を開き、フォーカスを移します。`-setting` でペアを選びます。"
+        ])
+        focusPrompt()
+        return
+      }
+      if (translateCmd.kind === "setting-incomplete") {
+        const cont = "translate -setting "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        const options = listTranslationPairSettingTokens().join(" | ")
+        void appendLogLines([
+          `> ${trimmed}`,
+          `translate -setting: choose pair — ${options}`,
+          `current: ${settingTokenForPairId(translatePairIdRef.current)}`
         ])
         focusPrompt()
         return
@@ -1288,15 +1321,21 @@ export function BmxtShell({
           setTranslatePicker(sessionId, { text: priorText })
           await appendLogLines([
             `> ${trimmed}`,
-            "translate: ON — editor column open (Esc → prompt · long-form input · 入力停止500msで 訳/再訳)"
+            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — editor column open (Esc → prompt · 入力停止500msで 訳/再訳)`
           ])
-        } else {
+        } else if (translateCmd.kind === "off") {
           await saveTranslateEnabled(false)
           setTranslateEnabled(false)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "translate"))
           setTranslatePicker(sessionId, null)
           await appendLogLines([`> ${trimmed}`, "translate: OFF"])
           activatePaneFocus("terminal")
+        } else if (translateCmd.kind === "setting") {
+          await saveTranslatePair(translateCmd.pair)
+          setTranslatePairId(translateCmd.pair)
+          resetNavTranslateSession()
+          const token = settingTokenForPairId(translateCmd.pair)
+          await appendLogLines([`> ${trimmed}`, `translate: pair set to ${token}`])
         }
       })()
       return
@@ -2220,6 +2259,7 @@ export function BmxtShell({
         </div>
         {navPageTyping && translateEnabled ? (
           <TranslationStrip
+            pairId={translatePairId}
             buffer={line}
             blocks={navTranslateBlocks}
             busy={navTranslateBusy}
@@ -2239,6 +2279,7 @@ export function BmxtShell({
             overlayError: navOverlayError
           }}
           translate={{
+            pairId: translatePairId,
             enabled: translateEnabled,
             editorOpen: translatePicker !== null,
             editorFocused: translatePickerKeyboardActive,
@@ -2283,6 +2324,7 @@ export function BmxtShell({
             findListPicker={findListPicker}
             domListPicker={domListPicker}
             translatePicker={translatePicker}
+            translatePairId={translatePairId}
             tabsPickerKeyboardActive={tabsPickerKeyboardActive}
             findPickerKeyboardActive={findPickerKeyboardActive}
             domPickerKeyboardActive={domPickerKeyboardActive}

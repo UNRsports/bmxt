@@ -1,4 +1,5 @@
 import { NavStatusBar } from "../nav"
+import type { TranslationPairId } from "../translate/translation-pair"
 import { TranslateStatusBar } from "../translate/translate-status-bar"
 import type { ModeToolbarId } from "./mode-toolbar-order"
 
@@ -14,6 +15,7 @@ type NavProps = {
 }
 
 type TranslateProps = {
+  pairId: TranslationPairId
   enabled: boolean
   editorOpen: boolean
   editorFocused: boolean
@@ -55,6 +57,7 @@ export function ModeStatusBarStack({ order, nav, translate }: Props) {
     return [
       <TranslateStatusBar
         key="translate"
+        pairId={translate.pairId}
         editorOpen={translate.editorOpen}
         editorFocused={translate.editorFocused}
         navTypingAssist={translate.navTypingAssist}

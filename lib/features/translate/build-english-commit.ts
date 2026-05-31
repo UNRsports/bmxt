@@ -1,4 +1,5 @@
-import { translateJaToEn } from "./translator-service"
+import { DEFAULT_TRANSLATION_PAIR_ID, type TranslationPairId } from "./translation-pair"
+import { translateForward } from "./translator-service"
 
 export type CommitTranslationBlock = {
   source: string
@@ -11,7 +12,8 @@ export type CommitTranslationBlock = {
  */
 export async function buildEnglishCommitText(
   buffer: string,
-  blocks: readonly CommitTranslationBlock[]
+  blocks: readonly CommitTranslationBlock[],
+  pairId: TranslationPairId = DEFAULT_TRANSLATION_PAIR_ID
 ): Promise<string> {
   const trimmed = buffer.trim()
   if (!trimmed) {
@@ -28,7 +30,7 @@ export async function buildEnglishCommitText(
     }
     const gap = buffer.slice(searchFrom, idx).trim()
     if (gap) {
-      parts.push(await translateJaToEn(gap))
+      parts.push(await translateForward(pairId, gap))
     }
     const en = block.forward.trim()
     if (en) {
@@ -42,11 +44,11 @@ export async function buildEnglishCommitText(
 
   const tail = buffer.slice(searchFrom).trim()
   if (tail) {
-    parts.push(await translateJaToEn(tail))
+    parts.push(await translateForward(pairId, tail))
   }
 
   if (parts.length === 0) {
-    return translateJaToEn(trimmed)
+    return translateForward(pairId, trimmed)
   }
   return parts.join(" ")
 }

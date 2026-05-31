@@ -5,16 +5,17 @@ import { linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "translate",
   aliases: [],
-  usagePrimary: "translate -on | translate -off"
+  usagePrimary: "translate -on | translate -off | translate -setting"
 }
 
 function usageLines(): string[] {
   return [
-    "usage: translate -on   — open translate editor picker (ja→en→ja per sentence)",
+    "usage: translate -on   — open translate editor picker (原文 / 訳 / 再訳 per sentence)",
     "       translate -off  — close editor and disable translate assist",
+    "       translate -setting --ja-en | --en-ja  — set translation pair (saved)",
     "EN: `-on` opens the side editor column and moves focus there (long-form input).",
-    "EN: While enabled, nav typing also shows translation preview and sends English on Alt-hold commit.",
-    "JA: `-on` で右列エディタを開きフォーカスを移します。nav typing 中も翻訳プレビューが有効です。"
+    "EN: While enabled, nav typing shows 原文/訳/再訳 preview; Alt-hold commit sends the pair target language.",
+    "JA: `-on` で右列エディタを開きフォーカスを移します。`-setting` で `--ja-en` / `--en-ja` を選べます。"
   ]
 }
 
@@ -39,6 +40,13 @@ export function run(args: string[]) {
       "translate -off — run from the BMXt prompt",
       "EN: Closes the translate editor picker and disables translation assist.",
       "JA: 翻訳エディタ列を閉じ、翻訳アシストを OFF にします。"
+    ])
+  }
+  if (firstLc === "-setting") {
+    return linesDispatch([
+      "translate -setting — run from the BMXt prompt",
+      "EN: `translate -setting --ja-en` or `translate -setting --en-ja` (Tab completes third token).",
+      "JA: 第三トークンに `--ja-en` / `--en-ja` を指定して翻訳ペアを保存します。"
     ])
   }
   return linesDispatch([`error: unknown translate option (internal): ${first}`, ...usageLines()])

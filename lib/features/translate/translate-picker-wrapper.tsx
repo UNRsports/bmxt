@@ -1,8 +1,10 @@
 import type { MutableRefObject } from "react"
 import { TranslateEditorBody } from "./translate-editor-body"
+import type { TranslationPairId } from "./translation-pair"
 import type { TranslatePickerState } from "./translate-picker-state"
 
 export type TranslatePickerWrapperProps = {
+  pairId: TranslationPairId
   state: TranslatePickerState
   onTextChange: (text: string) => void
   onReturnToPrompt: () => void
@@ -12,6 +14,7 @@ export type TranslatePickerWrapperProps = {
 }
 
 export function TranslatePickerWrapper({
+  pairId,
   state,
   onTextChange,
   onReturnToPrompt,
@@ -21,6 +24,7 @@ export function TranslatePickerWrapper({
 }: TranslatePickerWrapperProps) {
   return (
     <TranslateEditorBody
+      pairId={pairId}
       text={state.text}
       onTextChange={onTextChange}
       onReturnToPrompt={onReturnToPrompt}

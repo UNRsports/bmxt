@@ -2,6 +2,7 @@ import type { MutableRefObject, ReactNode } from "react"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import type { FindListPickerState } from "../../find/find-list-picker-input"
 import { FindListPickerOverlay } from "../../find/find-list-picker-overlay"
+import type { TranslationPairId } from "../../translate/translation-pair"
 import { TranslatePickerWrapper } from "../../translate/translate-picker-wrapper"
 import type { TranslatePickerState } from "../../translate/translate-picker-state"
 import type { PickerEntry } from "../model/picker-entry"
@@ -24,6 +25,7 @@ export type PickerColumnHostContext = {
   findListPicker: FindListPickerState | null
   domListPicker: DomListPickerState | null
   translatePicker: TranslatePickerState | null
+  translatePairId: TranslationPairId
   tabsPickerKeyboardActive: boolean
   findPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
@@ -103,6 +105,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         paneFocus={ctx.paneFocus}
         isFocusedPane={ctx.isFocusedPane}>
         <TranslatePickerWrapper
+          pairId={ctx.translatePairId}
           state={ctx.translatePicker}
           onTextChange={ctx.onTranslateTextChange}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}

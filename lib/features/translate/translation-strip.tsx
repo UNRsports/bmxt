@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
-import type { TranslationTriplet } from "./translator-service"
 import { lineIndicesFromSelection, sentenceIndicesFromSelection } from "./sentence-highlight"
 import { buildTranslateLineRows, assembleTranslationFieldForBuffer } from "./translation-segments"
+import { TranslationPanelHeading } from "./translation-panel-heading"
+import {
+  getTranslationFieldLabels,
+  type BilingualUiLabel,
+  type TranslationPairId
+} from "./translation-pair"
+import type { TranslationTriplet } from "./translator-service"
 
 export type TranslationBlock = TranslationTriplet & {
   id: number
@@ -18,6 +24,7 @@ export type SentenceHighlightProps = {
 }
 
 type Props = {
+  pairId: TranslationPairId
   /** EN: Source buffer — display newlines follow `\n` in this text only. */
   buffer: string
   blocks: readonly TranslationBlock[]
@@ -35,10 +42,10 @@ function displayText(value: string, pending: boolean): string {
   return pending ? PENDING_TEXT : ""
 }
 
-function PlainSection({ label, text }: { label: string; text: string }) {
+function PlainSection({ label, text }: { label: BilingualUiLabel; text: string }) {
   return (
     <section className="bmxt-typing-translate-section">
-      <div className="bmxt-typing-translate-heading">{label}</div>
+      <TranslationPanelHeading label={label} className="bmxt-typing-translate-heading" />
       <div className="bmxt-typing-translate-body">{text}</div>
     </section>
   )
@@ -55,7 +62,7 @@ export function TranslateHighlightPanel({
   onLineSelect,
   panelLayout = false
 }: {
-  label: string
+  label: BilingualUiLabel
   buffer: string
   blocks: readonly TranslationBlock[]
   field: "forward" | "back"
@@ -113,7 +120,7 @@ export function TranslateHighlightPanel({
 
   return (
     <section className={sectionClass}>
-      <div className={headingClass}>{label}</div>
+      <TranslationPanelHeading label={label} className={headingClass} />
       <div ref={bodyRef} className={bodyClass} onMouseUp={onMouseUp}>
         {rows.length === 0 ? (
           <span className="bmxt-translate-line">{busy ? PENDING_TEXT : ""}</span>
@@ -150,7 +157,7 @@ function TranslateHighlightPanelLegacy({
   onSentenceSelect,
   panelLayout = false
 }: {
-  label: string
+  label: BilingualUiLabel
   blocks: readonly TranslationBlock[]
   field: "forward" | "back"
   busy: boolean
@@ -194,7 +201,7 @@ function TranslateHighlightPanelLegacy({
 
   return (
     <section className={sectionClass}>
-      <div className={headingClass}>{label}</div>
+      <TranslationPanelHeading label={label} className={headingClass} />
       <div ref={bodyRef} className={bodyClass} onMouseUp={onMouseUp}>
         {blocks.length === 0 ? (
           <span className="bmxt-translate-line">{busy ? PENDING_TEXT : ""}</span>
@@ -223,6 +230,7 @@ function TranslateHighlightPanelLegacy({
 }
 
 export function TranslationStrip({
+  pairId,
   buffer,
   blocks,
   busy,
@@ -230,6 +238,8 @@ export function TranslationStrip({
   alwaysVisible = false,
   sentenceHighlight
 }: Props) {
+  const fieldLabels = useMemo(() => getTranslationFieldLabels(pairId), [pairId])
+
   if (!alwaysVisible && blocks.length === 0 && !busy && !statusNote) {
     return null
   }
@@ -253,7 +263,7 @@ export function TranslationStrip({
       {sentenceHighlight ? (
         <>
           <TranslateHighlightPanelLegacy
-            label="訳"
+            label={fieldLabels.forward}
             blocks={blocks}
             field="forward"
             busy={busy}
@@ -263,7 +273,7 @@ export function TranslationStrip({
           />
           <div className="bmxt-typing-translate-rule" aria-hidden />
           <TranslateHighlightPanelLegacy
-            label="再訳"
+            label={fieldLabels.back}
             blocks={blocks}
             field="back"
             busy={busy}
@@ -274,9 +284,9 @@ export function TranslationStrip({
         </>
       ) : (
         <>
-          <PlainSection label="訳" text={forward} />
+          <PlainSection label={fieldLabels.forward} text={forward} />
           <div className="bmxt-typing-translate-rule" aria-hidden />
-          <PlainSection label="再訳" text={back} />
+          <PlainSection label={fieldLabels.back} text={back} />
         </>
       )}
     </div>
