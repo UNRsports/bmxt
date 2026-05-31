@@ -1,9 +1,9 @@
 import { LAST_SEEN_WELCOME_VERSION_KEY } from "../extension-storage/keys"
+import { openWelcomePageTab } from "./open-welcome-page-tab"
 import { shouldOpenWelcomePageOnUpdate } from "./should-open-welcome-on-update"
-import { WELCOME_PAGE_PATH } from "./welcome-page-path"
 
 /**
- * 拡張機能アップデート後の初回だけ、拡張機能内 welcome ページを通常タブで開く。
+ * インストールまたは拡張機能更新後、当該バージョンで未表示なら welcome を通常タブで開く。
  */
 export async function openWelcomePageOnUpdateIfNeeded(
   details: chrome.runtime.InstalledDetails
@@ -21,9 +21,6 @@ export async function openWelcomePageOnUpdateIfNeeded(
     return
   }
 
-  await chrome.tabs.create({
-    url: chrome.runtime.getURL(WELCOME_PAGE_PATH),
-    active: true
-  })
+  await openWelcomePageTab()
   await chrome.storage.local.set({ [LAST_SEEN_WELCOME_VERSION_KEY]: version })
 }

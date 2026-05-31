@@ -1,4 +1,5 @@
 export { openWelcomePageOnUpdateIfNeeded } from "./open-welcome-on-update"
+export { openWelcomePageTab } from "./open-welcome-page-tab"
 export { shouldOpenWelcomePageOnUpdate } from "./should-open-welcome-on-update"
 export { WelcomePage } from "./welcome-page"
 export {

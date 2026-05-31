@@ -150,7 +150,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | Command | Description |
 |----------|------|
 | `help` / `?` | Show help |
-| `aboutbmxt` | Open the BMXt welcome page in a **new browser window** (see **[`aboutbmxt`](#aboutbmxt)**) |
+| `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
 | `clear` | Clear logs |
 | `exit` | Close BMXt window and clear the session log |
 | `split` | Pane layout: `split -col` / `split -row`; bare `split` + Enter restores `split ` (see in-app help); **Ctrl+Arrow** moves focus between panes when multiple are open |
@@ -183,20 +183,20 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 ### `aboutbmxt`
 
-**`aboutbmxt`** is a single-token built-in command (no second command). Run it from the BMXt prompt to open the extension **welcome page** (`tabs/welcome.html`) in a **new browser window**.
+**`aboutbmxt`** is a single-token built-in command (no second command). Run it from the BMXt prompt to open the extension **welcome page** (`tabs/welcome.html`) in a **new browser tab** (same URL and tab behavior as install/update auto-open).
 
 | Input | Effect |
 |-------|--------|
-| **`aboutbmxt`** | Opens **`tabs/welcome.html`** via **`open_welcome_page`** (Service Worker → **`chrome.windows.create`**). The terminal logs a short confirmation line. |
+| **`aboutbmxt`** | Opens **`tabs/welcome.html`** via **`open_welcome_page`** (Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**). The terminal logs a short confirmation line. |
 
-**Page content** comes from **`lib/features/welcome/welcome-content.json`** for the **current manifest version** (same source as the post-update welcome tab). Each version entry may include:
+**Page content** comes from **`lib/features/welcome/welcome-content.json`** for the **current manifest version** (same source as install/update auto-open). Each version entry may include:
 
 - **`ja`** / **`en`** — bullet lists shown on the page
 - **`heroImage`** — hero screenshot path under **`assets/welcome/`** (use **`"_none_heroImage"`** when there is no hero image)
 - **`heroImageMaxWidth`** — optional CSS **`max-width`** for the hero image (number → px, or a string such as **`"640px"`** / **`"80%"`**); layout is **width-based** (`width: 100%`, `height: auto`)
 - **`additionalImages`** — optional extra screenshots (paths starting with **`_none_`** are skipped)
 
-**Related behavior (not this command):** on extension **update**, **`openWelcomePageOnUpdateIfNeeded`** may open the same welcome URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview of a specific JSON key, use **`chrome-extension://<extension-id>/tabs/welcome.html?version=0.3.8`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same welcome URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview of a specific JSON key, use **`chrome-extension://<extension-id>/tabs/welcome.html?version=0.3.8`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, page UI **`lib/features/welcome/welcome-page.tsx`**.
 
@@ -592,7 +592,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 **Welcome page on extension update** (normal browser tab, separate from the in-window block)
 
-When Chrome reports an **`update`** install, **`background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
+When Chrome reports **`install`** or **`update`**, **`background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
 
 **Manual / preview URL:** `chrome-extension://<extension-id>/tabs/welcome.html?version=0.3.8` shows that entry from **`welcome-content.json`** (query omitted → current manifest version, same as before). Invalid `version` strings are ignored. Auto-open on update does not append query parameters.
 
@@ -609,12 +609,12 @@ Existing **session log** lines are still rendered **below** that block.
 
 1. Bump **`package.json`** → **`version`**.
 2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays (used by the in-window upgrade banner).
-3. Optionally add **`lib/features/welcome/welcome-content.json`** for the welcome page (`ja` / `en` bullet arrays; **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**). Users can open that page anytime with **`aboutbmxt`** (new browser window). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. Plasmo copies that folder via **`web_accessible_resources`** in **`package.json`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
+3. Optionally add **`lib/features/welcome/welcome-content.json`** for the welcome page (`ja` / `en` bullet arrays; **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**). Users can open that page anytime with **`aboutbmxt`** (same tab as install/update auto-open). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. Plasmo copies that folder via **`web_accessible_resources`** in **`package.json`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
 4. Build and ship.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
 
-**Implementation:** welcome tab — **`lib/features/welcome/open-welcome-on-update.ts`**, **`welcome-page.tsx`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`**. In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-page.tsx`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
 
 <a id="production-build"></a>
 
@@ -808,7 +808,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | コマンド | 説明 |
 |----------|------|
 | `help` / `?` | ヘルプ |
-| `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザウィンドウ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
+| `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
 | `clear` | ログをクリア |
 | `exit` | BMXt ウィンドウを閉じ、セッションログを削除 |
 | `split` | ペイン分割: `split -col` / `split -row`。単独 `split`＋Enter で `split ` へ復元（詳細はアプリ内ヘルプ）。複数ペイン時は **Ctrl+矢印** でフォーカス移動 |
@@ -841,20 +841,20 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### `aboutbmxt`
 
-**`aboutbmxt`** は第一コマンドのみの組み込みコマンド（第二コマンドなし）です。BMXt プロンプトから実行すると、拡張機能の **ウェルカムページ**（`tabs/welcome.html`）を **新しいブラウザウィンドウ** で開きます。
+**`aboutbmxt`** は第一コマンドのみの組み込みコマンド（第二コマンドなし）です。BMXt プロンプトから実行すると、拡張機能の **ウェルカムページ**（`tabs/welcome.html`）を **新しいブラウザタブ** で開きます（インストール／更新時の自動表示と同じ URL・タブ）。
 
 | 入力 | 動作 |
 |------|------|
-| **`aboutbmxt`** | **`tabs/welcome.html`** を **`open_welcome_page`** 経由で開く（Service Worker → **`chrome.windows.create`**）。ターミナルには短い確認行が出る。 |
+| **`aboutbmxt`** | **`tabs/welcome.html`** を **`open_welcome_page`** 経由で開く（Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**）。ターミナルには短い確認行が出る。 |
 
-**ページ内容**は **manifest の現行バージョン** に対応する **`lib/features/welcome/welcome-content.json`** のエントリから読み込みます（更新後に自動表示されるウェルカムタブと同じデータ源）。各版のオブジェクトには次を書けます。
+**ページ内容**は **manifest の現行バージョン** に対応する **`lib/features/welcome/welcome-content.json`** のエントリから読み込みます（インストール／更新時の自動表示と同じデータ源）。各版のオブジェクトには次を書けます。
 
 - **`ja`** / **`en`** — ページ上の箇条書き
 - **`heroImage`** — **`assets/welcome/`** 配下の hero 画像パス（画像なしは **`"_none_heroImage"`**）
 - **`heroImageMaxWidth`** — hero 画像の CSS **`max-width`**（数値は px、文字列は **`"640px"`** / **`"80%"`** など）。表示は **幅ベース**（`width: 100%`、`height: auto`）
 - **`additionalImages`** — 追加スクリーンショット（**`_none_`** で始まるパスはスキップ）
 
-**関連（本コマンド以外）:** 拡張機能 **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開くことがあります（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。JSON の特定版を手動プレビューする場合は **`chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.3.8`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。JSON の特定版を手動プレビューする場合は **`chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.3.8`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、ページ UI **`lib/features/welcome/welcome-page.tsx`**。
 
@@ -1242,7 +1242,7 @@ npm run dev   # または pnpm dev
 
 **拡張機能更新時のウェルカムページ**（通常タブ。ウィンドウ内ブロックとは別）
 
-Chrome が **`update`** インストールを報告したとき、**`background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
+Chrome が **`install`** または **`update`** を報告したとき、**`background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
 
 **手動・プレビュー URL:** `chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.3.8` で JSON の該当版を表示（クエリなし → manifest の現行版、従来どおり）。不正な `version` 文字列は無視。更新時の自動表示ではクエリは付けない。
 
@@ -1259,12 +1259,12 @@ Chrome が **`update`** インストールを報告したとき、**`background.
 
 1. **`package.json`** の **`version`** を上げる。
 2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列。ウィンドウ内アップグレードバナー用）。
-3. 任意で **`lib/features/welcome/welcome-content.json`** にウェルカムページ用エントリを追加する（**`ja`** / **`en`** の配列。**`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**）。ユーザーは **`aboutbmxt`** でいつでもそのページを **新しいウィンドウ** で開ける。画像は **`assets/welcome/`** に置き、JSON では `assets/welcome/<ファイル名>` と書く（WebP 可）。**`package.json`** の **`web_accessible_resources`**（`assets/welcome/*`）経由でビルドに同梱される。追加・変更後はビルドと拡張の再読み込みが必要。画像なしは **`heroImage": "_none_heroImage"`**。
+3. 任意で **`lib/features/welcome/welcome-content.json`** にウェルカムページ用エントリを追加する（**`ja`** / **`en`** の配列。**`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**）。ユーザーは **`aboutbmxt`** でいつでもそのページを開ける（インストール／更新時の自動表示と同じタブ）。画像は **`assets/welcome/`** に置き、JSON では `assets/welcome/<ファイル名>` と書く（WebP 可）。**`package.json`** の **`web_accessible_resources`**（`assets/welcome/*`）経由でビルドに同梱される。追加・変更後はビルドと拡張の再読み込みが必要。画像なしは **`heroImage": "_none_heroImage"`**。
 4. ビルドして配布する。
 
 **`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
 
-**実装:** ウェルカムタブ — **`open-welcome-on-update.ts`**、**`welcome-page.tsx`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
+**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-page.tsx`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
 
 <a id="production-build-ja"></a>
 

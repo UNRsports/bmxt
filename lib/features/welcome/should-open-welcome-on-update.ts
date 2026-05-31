@@ -2,15 +2,15 @@
 export type WelcomeInstallReason = "install" | "update" | "chrome_update"
 
 /**
- * 拡張機能のバージョンアップ後にウェルカムタブを自動で開くべきか。
- * 初回インストール・Chrome 本体更新・同一版の再読み込みでは false。
+ * インストールまたは拡張機能更新時にウェルカムタブを自動で開くべきか。
+ * Chrome 本体更新・同一版の再表示済みでは false。
  */
 export function shouldOpenWelcomePageOnUpdate(
   reason: WelcomeInstallReason,
   manifestVersion: string,
   lastSeenWelcomeVersion: string | undefined
 ): boolean {
-  if (reason !== "update") {
+  if (reason !== "install" && reason !== "update") {
     return false
   }
   if (lastSeenWelcomeVersion === manifestVersion) {

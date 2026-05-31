@@ -3,7 +3,11 @@ import assert from "node:assert/strict"
 import { shouldOpenWelcomePageOnUpdate } from "./should-open-welcome-on-update.ts"
 
 describe("shouldOpenWelcomePageOnUpdate", () => {
-  it("opens only on extension update to a not-yet-shown version", () => {
+  it("opens on install or update when this version was not yet shown", () => {
+    assert.equal(
+      shouldOpenWelcomePageOnUpdate("install", "0.3.8", undefined),
+      true
+    )
     assert.equal(
       shouldOpenWelcomePageOnUpdate("update", "0.3.8", undefined),
       true
@@ -14,11 +18,7 @@ describe("shouldOpenWelcomePageOnUpdate", () => {
     )
   })
 
-  it("does not open on install or chrome_update", () => {
-    assert.equal(
-      shouldOpenWelcomePageOnUpdate("install", "0.3.8", undefined),
-      false
-    )
+  it("does not open on chrome_update", () => {
     assert.equal(
       shouldOpenWelcomePageOnUpdate("chrome_update", "0.3.8", undefined),
       false
