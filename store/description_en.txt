@@ -26,6 +26,12 @@ https://x.com/ny0n150226
 
 
 ◆Version history
+0.4.0:
+- Fixed bugs in nav mode behavior
+- Added translation assist (`translate -on` / `translate -off`)
+- Adjusted Tab completion menu behavior
+- Fixed welcome page open behavior
+
 0.3.8:
 - Show a welcome page on install and when the extension version is upgraded
 - Fixed tabs mode filtering so keyboard focus no longer jumps to the list unexpectedly

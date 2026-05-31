@@ -153,7 +153,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
 | `clear` | Clear logs |
-| `exit` | Close BMXt window and clear the session log |
+| `exit` | Close the focused split pane; if it is the last pane, close the BMXt window (that pane’s session log is cleared) |
 | `split` | Pane layout: `split -col` / `split -row`; bare `split` + Enter restores `split ` (see in-app help); **Ctrl+Arrow** moves focus between panes when multiple are open |
 | `tabs` | Show available options, then restore prompt to `tabs ` for option input |
 | `tabs -list [-u]` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
@@ -177,9 +177,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -on` | Open the translate editor side column and enable translation assist (see **[`translate`](#translate)**) |
 | `translate -off` | Close the editor column and disable translation assist |
 | `close` / `c <tabId>` | Close tab |
-| `group new <tabId> …` | Create group |
+| `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears that log and **closes the BMXt window** (via `chrome.windows.remove` on the window the extension tracks). **Neither** clears **command history** (up/down / Ctrl+R).
+**Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears the focused pane’s log and **closes that split pane**; when only one pane remains, it **closes the BMXt window** (`exit_pane` → `chrome.windows.remove` on the tracked window). **Neither** clears **command history** (up/down / Ctrl+R).
 
 **Split panes and picker columns:** With more than one **split terminal pane** open, **Ctrl+Arrow** moves keyboard focus between panes at the layout edges. Inside a pane that has picker columns, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → find → dom → translate** (only among open columns). See **[Picker UI (side columns)](#picker-ui)**.
 
@@ -209,7 +209,8 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 ### `dom`
 
 - Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
-- **`dom -list`** resolves the **active tab of the last-focused normal browser window**, injects a read-only helper via `chrome.scripting`, and streams a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
+- **`dom -list` only** + **Enter** opens the **`--html` / `--react` flavor menu** (third token required before the picker runs); see **[How columns open](#picker-ui)**.
+- **`dom -list --html` …** / **`dom -list --react` …** resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and stream a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
 - **`--html`** (default) vs **`--react`** only changes how nodes are labeled in the picker UI.
 - Any tokens after the optional flavor flag are joined into a single **substring** filter on the printed lines (ASCII case fold); **not** a regular expression. ASCII `"…"` / `'…'` around the pattern are stripped once.
 
@@ -218,8 +219,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 ### `find`
 
 - Bare `find` + **Enter** prints the usage block and restores **`find `**.
-- **`find -list …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** (default when omitted) fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
-- One-shot forms **`find --none`**, **`find --history`**, **`find --bookmark`**, and **`find --page`** skip the picker and append results as log lines. An **empty** pattern with **`--none`** (including bare `find -list`) still runs all three effects with empty filters, which the host implements as capped “show many rows” behavior.
+- **`find -list` only** + **Enter** opens the scope token menu (`--none`, `--history`, …); a scope must be chosen before the picker runs (see **[How columns open](#picker-ui)**).
+- **`find -list <scope> …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
+- One-shot forms **`find --none`**, **`find --history`**, **`find --bookmark`**, and **`find --page`** skip the picker and append results as log lines (handled in the BMXt window UI, not Service Worker `RUN_CMD`). An **empty** pattern with **`--none`** (for example **`find -list --none`** with no pattern) runs all three scopes with empty filters, which the host implements as capped “show many rows” behavior.
 - Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`--page`** / **`find -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
 
 <a id="nav-mode"></a>
@@ -494,9 +496,9 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`translate -on` / `translate -off`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on`**, arming / editor open and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`find --none` / `--history` / `--bookmark` / `--page`**, **`translate -on` / `translate -off`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on`**, arming / editor open and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
 
-**`exit`:** returns an **`exit_bmxt`** effect; the Service Worker clears the session log and closes the BMXt window it tracks (`chrome.windows.remove`).
+**`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the focused split pane (or the whole BMXt window when it is the last pane).
 
 **Main directories:**
 
@@ -511,7 +513,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_bmxt` then closes the tracked window)
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane)
 
 <a id="add-new-built-in-command"></a>
 
@@ -856,7 +858,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
 | `clear` | ログをクリア |
-| `exit` | BMXt ウィンドウを閉じ、セッションログを削除 |
+| `exit` | フォーカス中の split ペインを閉じる。最後の 1 ペインなら BMXt ウィンドウごと閉じる（当該ペインのセッションログも消える） |
 | `split` | ペイン分割: `split -col` / `split -row`。単独 `split`＋Enter で `split ` へ復元（詳細はアプリ内ヘルプ）。複数ペイン時は **Ctrl+矢印** でフォーカス移動 |
 | `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
 | `tabs -list [-u]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。 |
@@ -880,9 +882,9 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -on` | 翻訳エディタ列を開き、翻訳アシストを有効化（**[`translate`](#translate-ja)** 参照） |
 | `translate -off` | エディタ列を閉じ、翻訳アシストを無効化 |
 | `close` / `c <tabId>` | タブを閉じる |
-| `group new <tabId> …` | グループ作成 |
+| `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
+**補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はフォーカス中ペインのログを消したうえで **当該 split ペインを閉じます**；残り 1 ペインだけのときは **BMXt ウィンドウごと閉じます**（`exit_pane` → 追跡ウィンドウに `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
 **split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → find → dom → translate**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
 
@@ -1100,7 +1102,8 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
-- **`dom -list`** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`find --page` 系と同じ系統）。
+- **`dom -list` のみ** + **Enter** では **`--html` / `--react` の flavor メニュー**を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
+- **`dom -list --html` …** / **`dom -list --react` …** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`find --page` 系と同じ系統）。
 - **`--html`**（既定）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
 - flavor の後ろのトークンはすべて連結され、出力行に対する**部分一致**フィルタになる（大文字小文字は ASCII 範囲で折りたたみ）。**正規表現ではない**。パターンを ASCII の `"` / `'` で1重に囲んだ場合は外側を1回だけ除去する。
 
@@ -1108,8 +1111,9 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`find` 単体 + Enter** で利用案内を表示し、**`find `** へ復帰する。
-- **`find -list …`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--none`**（省略時の既定）は履歴・ブックマーク・ページ表示テキストをまとめて対象にする。**`--history`** / **`--bookmark`** / **`--page`** でスコープを1つに絞れる。
-- **`find --none`** など直接形はピッカーを経由せずログ行として結果を出す。**`--none`** でパターン空（`find -list` 単体を含む）は3系統すべて空パターンで走り、実装側で件数上限付きの一覧になる。
+- **`find -list` のみ** + **Enter** ではスコープトークンメニュー（`--none` 等）を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
+- **`find -list <scope> …`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--none`** は履歴・ブックマーク・ページ表示テキストをまとめて対象にする。**`--history`** / **`--bookmark`** / **`--page`** でスコープを1つに絞れる。
+- **`find --none`** など直接形はピッカーを経由せずログ行として結果を出す（BMXt ウィンドウ UI で処理。Service Worker の `RUN_CMD` ではない）。**`--none`** でパターン空（例: **`find -list --none`** のみ）は3系統すべて空パターンで走り、実装側で件数上限付きの一覧になる。
 - パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`--page`** 系は非破棄の **http(s)** タブを走査し、初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs-ja"></a>
@@ -1196,7 +1200,9 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`translate -on` / `translate -off`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on`** の起動・オーバーレイ／エディタ制御は UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`find --none` / `--history` / `--bookmark` / `--page`**、**`translate -on` / `translate -off`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on`** の起動・オーバーレイ／エディタ制御は UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
+
+**`exit`:** **`exit_pane`** Effect を返す。Service Worker はフォーカス中の split ペインを閉じる（最後の 1 ペインなら BMXt ウィンドウごと閉じる）。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
@@ -1208,7 +1214,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_bmxt` でウィンドウを閉じる）
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じる）
 
 manifest やコマンド実装を変えたら **`npm run codegen`** のあと **`npm run verify:manifest`** / **`npm run check:generated`** を実行し、必要なら **`npm run build`** してください。
 

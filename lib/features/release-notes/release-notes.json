@@ -7,7 +7,10 @@
       "ウェルカムページのオープン動作修正"
     ],
     "en": [
-      ""
+      "Fixed bugs in nav mode behavior",
+      "Added translation assist (`translate -on` / `translate -off`)",
+      "Adjusted Tab completion menu behavior",
+      "Fixed welcome page open behavior"
     ]
   }
 }

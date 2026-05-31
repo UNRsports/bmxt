@@ -1,30 +1,32 @@
 第一コマンド,第二コマンド,第三トークン,manifest tail,別名（トップレベル）,usage（参照）,処理概要（実装）,備考
 clear,,,,,clear,Effect: clear_log（ログクリア）,
-close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。,第二トークン相当は可変の tabId（manifest subcommands なし）
-dom,-list,,rest,,dom -list [--html|--react] [<pattern>],第二が -list: BMXt ウィンドウ UI で DOM ピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは dom -exit -list。第三 --html|--react 必須（`dom -list` のみ Enter 時は flavor プルダウン）。↑↓/j/k でジャンプ可能行にフォーカスすると対象タブが該当 DOM へスクロール（debounce）。path のない行はスキップ。,
-dom,-list,--html,rest,,（同上）,trailingTokens の一つ。pattern 省略可（空文字）。,
+close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。,第二トークン相当は可変 tabId（manifest subcommands なし）
+dom,-list,,rest,,dom -list [--html|--react] [<pattern>] | dom -exit -list,BMXt ウィンドウ UI（RUN_CMD 前）で picker 起動。`dom -list` のみ Enter 時は第三 flavor プルダウン（`--html`/`--react` 選択後に実行）。flavor 確定後: 直前フォーカス通常ウィンドウのアクティブ tab へ注入し DOM ピッカー列を開く（scriptable http(s) のみ・optional host permission）。Esc は閉じずプロンプトへ。閉じるは dom -exit -list。↑↓/j/k でジャンプ可能行にフォーカスすると対象タブの該当 DOM へ scroll（120ms debounce）。path のない行はスキップ。pattern は大文字小文字無視部分一致。,
+dom,-list,--html,rest,,（同上）,trailingTokens の一つ。第三 `--html` 確定で picker 実行（SW 側 default flavor も `--html`）。pattern 省略可。,
 dom,-list,--react,rest,,（同上）,trailingTokens の一つ。,
-dom,-exit,-list,none,,dom -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session の DOM ピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
+dom,-exit,-list,none,,dom -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session の DOM ピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
 exit,,,,,exit,Effect: exit_pane,
-find,-list,,rest,,find -list [--none|--history|--bookmark|--page] <pattern>,第二が -list: BMXt ウィンドウ UI で find ピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは find -exit -list。,
-find,-exit,-list,none,,find -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session の find ピッカー列を閉じる（検索中はキャンセル。未表示なら案内行）。SW の run は案内行のみ。,
-find,-list,--none,rest,,（同上）,scope --none: 上記3種の Effect を同一 pattern で同時発火。,
-find,-list,--history,rest,,（同上）,Effect: find_history。,
-find,-list,--bookmark,rest,,（同上）,Effect: find_bookmark。,
-find,-list,--page,rest,,（同上）,Effect: find_page。,
-find,--none,,rest,,find --none <pattern>,args[2] 以降を pattern として上記3 Effect 同時。,
-find,--history,,rest,,find --history <pattern>,Effect: find_history のみ。,
-find,--bookmark,,rest,,find --bookmark <pattern>,Effect: find_bookmark のみ。,
-find,--page,,rest,,find --page <pattern>,Effect: find_page のみ。,
-group,new,,,,group new,args[1] が new でないと usage。tabId 無しなら対話案内の行のみ。tabId 列挙ありなら Effect: group_new。,manifest の subcommands は空だが実装は第二トークン new が必須
-help,,,,,"help, ?",help,linesDispatch(buildHelpLines())（組み込みコマンド一覧等）。Effect なし。,
-aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page（通常タブで tabs/welcome.html を開く。install/update 自動表示と同じ URL）。
-split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）
-split,-row,,none,,（同上）,Effect: split_row。,（同上）
-nav,-enter,,none,,nav -enter | nav -exit,第二が -enter: BMXt ウィンドウ UI で nav を armed（直前フォーカス通常ウィンドウのアクティブタブが対象。dom -list と同系のタブ解決・オプション http(s) 権限）。オーバーレイは Alt で ON/OFF（ターミナル列フォーカス時のみ）。ON 後: ↑↓←→ 移動・Enter クリック/typing・Ctrl メニュー（テキスト選択・画像保存・再読込・履歴←→）。タブごと位置記憶。SW run は案内行のみ。,第二は -enter / -exit のみ（短縮なし）。単独 nav + Enter は continuation（`nav `）と usage。nav -exit は Alt OFF 必須。
-nav,-exit,,none,,（同上）,第二が -exit: Alt で OFF のあと当該ペインで nav 完全終了（位置記憶クリア・全タブのオーバーレイ除去）。未 armed なら案内行。SW run は案内行のみ。,navActive（オーバーレイ ON）中の -exit はエラー。ピッカー列フォーカス中は nav キー無効。
-tabs,-list,,none,,tabs -list [-u],第三なし、または第三が -u のみ許可。BMXt ウィンドウ UI でタブピッカー列を開く（同一 sessionId）。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。,-u は trailingTokens（Tab 補完対象）
-tabs,-list,-u,none,,（同上）,（同上）。,
-tabs,-exit,-list,none,,tabs -exit -list,第三が -list のみ。BMXt ウィンドウ UI で当該 session のタブピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
+find,-list,,rest,,find -list [--none|--history|--bookmark|--page] <pattern> | find -exit -list | find --none|… <pattern>,BMXt ウィンドウ UI（RUN_CMD 前）。`find -list` のみ Enter 時は scope プルダウン（第三 `--none`|`--history`|`--bookmark`|`--page` 選択後に実行）。scope 確定後: find ピッカー列を開く（横断検索）。Esc は閉じずプロンプトへ。閉じるは find -exit -list。pattern 空可（capped 全件表示）。大文字小文字無視部分一致（v1 正規表現なし）。,
+find,-list,--none,rest,,（同上）,scope `--none`: history + bookmark + page を同一 pattern で並列検索（picker 内）。,
+find,-list,--history,rest,,（同上）,scope `--history`: 履歴タイトル/URL のみ。,
+find,-list,--bookmark,rest,,（同上）,scope `--bookmark`: ブックマークのみ。,
+find,-list,--page,rest,,（同上）,scope `--page`: 非 discarded http(s) タブの可視テキスト（optional host permission ありうる）。,
+find,-exit,-list,none,,find -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session の find ピッカー列を閉じる（検索中はキャンセル。未表示なら案内行）。SW の run は案内行のみ。,
+find,--none,,rest,,find --none <pattern>,BMXt ウィンドウ UI（RUN_CMD 前）。history + bookmark + page を log 行として出力（picker なし）。pattern 空は capped 全件。,
+find,--history,,rest,,find --history <pattern>,BMXt ウィンドウ UI。find_history のみ log 出力。,
+find,--bookmark,,rest,,find --bookmark <pattern>,BMXt ウィンドウ UI。find_bookmark のみ log 出力。,
+find,--page,,rest,,find --page <pattern>,BMXt ウィンドウ UI。find_page のみ log 出力（optional host permission ありうる）。,
+group,new,,,,group new | group new <tabId> [tabId …],第二トークン `new` 必須（manifest subcommands 空・continuation なし）。tabId 無し: BMXt ウィンドウ UI が group-new variant のタブピッカー列を開く（対話的）。tabId 列挙あり: SW で Effect: group_new。,
+help,,,,?,"help, ?",linesDispatch(buildHelpLines())（組み込みコマンド一覧等）。Effect なし。,
+tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。Ctrl+←/→ で terminal↔tabs↔find↔dom↔translate 列フォーカス。,-u は trailingTokens（Tab 補完対象）
+tabs,-list,-u,none,,（同上）,`-u`: 各行にタブ URL も表示。,
+tabs,-exit,-list,none,,tabs -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session のタブピッカー列を閉じる（group new 含む。未表示なら案内行）。SW run は案内行のみ。,
 tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,args[2] 以降を結合して http(s) URL 解析。成功時 Effect: tabs_move_url。空/不正なら usage。,
-tabs,-nowurl,,none,,tabs -nowurl,追加引数不可。Effect: tabs_nu（現在タブ URL 表示系）。,
+tabs,-nowurl,,none,,tabs -nowurl,追加引数不可。Effect: tabs_nu（現在タブ URL 表示）。,
+nav,-enter,,none,,nav -enter | nav -exit,第二 `-enter`: BMXt ウィンドウ UI で nav を armed（直前フォーカス通常ウィンドウのアクティブ tab が対象。dom -list と同系のタブ解決・optional http(s) 権限）。オーバーレイは Alt で ON/OFF（ターミナル列フォーカス時のみ）。ON 後: ↑↓←→ 移動・Enter クリック/typing・Ctrl メニュー。typing 時の翻訳プレビューは translate -on 連動。SW run は案内行のみ。,第二は -enter / -exit のみ（短縮なし）。単独 nav + Enter は continuation（`nav `）。Ctrl+←/→ で picker 列フォーカス中は nav キー無効。
+nav,-exit,,none,,（同上）,第二 `-exit`: Alt OFF 必須のうえ nav 完全終了（位置記憶クリア・全タブオーバーレイ除去）。未 armed なら案内行。SW run は案内行のみ。,navActive（オーバーレイ ON）中の -exit はエラー。
+translate,-on,,none,,translate -on | translate -off,第二 `-on`: BMXt ウィンドウ UI。translate エディタ side 列を開き chrome.storage.local（TYPING_TRANSLATE_KEY）で assist ON。キーボードフォーカスをエディタ列へ。Chrome Translator API（ja↔en）。SW run は案内行のみ。,単独 translate + Enter は continuation（`translate `）。Tab 補完は -on/-off のみ（短縮なし）。
+translate,-off,,none,,（同上）,第二 `-off`: エディタ列を閉じ assist OFF。SW run は案内行のみ。,
+aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page（通常タブで tabs/welcome.html を開く。install/update 自動表示と同じ URL）。,
+split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）。単独 split + Enter は continuation（`split `）
+split,-row,,none,,（同上）,Effect: split_row。,（同上）
