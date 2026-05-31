@@ -228,6 +228,7 @@ export function useNavMode({
   const activeRef = useRef(active)
   const armedRef = useRef(armed)
   const typingModeRef = useRef(typingMode)
+  const typingMultilineRef = useRef(typingMultiline)
   const menuOpenRef = useRef(false)
   const textSelPhaseRef = useRef<NavInjectTextSelPhase | null>(null)
   const getTypingBufferRef = useRef(getTypingBuffer)
@@ -241,6 +242,7 @@ export function useNavMode({
   activeRef.current = active
   armedRef.current = armed
   typingModeRef.current = typingMode
+  typingMultilineRef.current = typingMultiline
   getTypingBufferRef.current = getTypingBuffer
   resolveTypingCommitTextRef.current = resolveTypingCommitText
 
@@ -480,6 +482,13 @@ export function useNavMode({
           return
         }
         if (e.key === "Enter") {
+          const ev = e as KeyboardEvent & { isComposing?: boolean }
+          if (ev.isComposing) {
+            return
+          }
+          if (e.shiftKey && typingMultilineRef.current) {
+            return
+          }
           e.preventDefault()
           e.stopPropagation()
           return

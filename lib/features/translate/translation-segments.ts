@@ -234,6 +234,59 @@ function fieldLineAt(text: string, lineIndex: number): string {
   return parts[lineIndex] ?? ""
 }
 
+/**
+ * EN: Build forward/back display for nav typing — `\n` only where the source buffer has a line break.
+ * JA: デバウンス分割ブロックを同一行内では空白で連結し、原文の改行位置でのみ改行する。
+ */
+export function assembleTranslationFieldForBuffer(
+  buffer: string,
+  blocks: readonly { source: string; start: number; end: number; forward: string; back: string }[],
+  field: "forward" | "back",
+  busy: boolean
+): string {
+  const lines = listBufferLines(buffer)
+  if (lines.length === 0) {
+    return ""
+  }
+
+  const pendingStart = pendingSliceStart(blocks)
+  const lineTexts: string[] = []
+
+  for (const line of lines) {
+    const { start: selStart, end: selEnd } = lineSelectionRange(line, buffer)
+    const overlapping = blocks
+      .filter((block) => block.end > selStart && block.start < selEnd)
+      .sort((a, b) => a.start - b.start)
+
+    const parts: string[] = []
+    for (const block of overlapping) {
+      const blockLineStart = Math.max(selStart, block.start)
+      const lineIndex = lineIndexInBlockSource(block, blockLineStart)
+      const segment = fieldLineAt(block[field], lineIndex).trim()
+      if (segment) {
+        parts.push(segment)
+      }
+    }
+
+    let lineText = parts.join(" ")
+    const sourceOnLine = buffer.slice(selStart, selEnd).trim()
+    const pendingOnLine =
+      sourceOnLine.length > 0 &&
+      Math.max(pendingStart, selStart) < selEnd &&
+      buffer.slice(Math.max(pendingStart, selStart), selEnd).trim().length > 0
+
+    if (lineText.length === 0 && busy && pendingOnLine) {
+      lineText = "…"
+    } else if (lineText.length > 0 && busy && pendingOnLine) {
+      lineText = `${lineText} …`
+    }
+
+    lineTexts.push(lineText)
+  }
+
+  return lineTexts.join("\n")
+}
+
 /** EN: One display row per source line with aligned translation field text. */
 export function buildTranslateLineRows(
   buffer: string,

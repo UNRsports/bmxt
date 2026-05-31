@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
+  assembleTranslationFieldForBuffer,
   blockIndicesInRange,
   buildTranslateLineRows,
   extractPendingSource,
@@ -122,5 +123,27 @@ describe("buildTranslateLineRows", () => {
     assert.equal(rows.length, 2)
     assert.equal(rows[0]!.displayText, "A")
     assert.equal(rows[1]!.displayText, "B")
+  })
+})
+
+describe("assembleTranslationFieldForBuffer", () => {
+  it("joins debounced blocks on one source line with spaces", () => {
+    const blocks = [
+      { source: "こんな", start: 0, end: 3, forward: "Like this", back: "このように" },
+      { source: "感じで", start: 3, end: 6, forward: "Test", back: "テスト" },
+      { source: "テスト", start: 6, end: 9, forward: "The", back: "という" }
+    ]
+    assert.equal(
+      assembleTranslationFieldForBuffer("こんな感じでテスト", blocks, "forward", false),
+      "Like this Test The"
+    )
+  })
+
+  it("inserts newlines only when the source buffer has them", () => {
+    const blocks = [
+      { source: "a", start: 0, end: 1, forward: "A", back: "a" },
+      { source: "b", start: 2, end: 3, forward: "B", back: "b" }
+    ]
+    assert.equal(assembleTranslationFieldForBuffer("a\nb", blocks, "forward", false), "A\nB")
   })
 })

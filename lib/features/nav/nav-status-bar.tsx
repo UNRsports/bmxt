@@ -54,8 +54,8 @@ export function NavStatusBar({
         {typingMode
           ? typingMultiline
             ? typingTranslateOn
-              ? "BMXt で入力 · 入力停止500msで 訳/再訳 · 改行可 · Alt 長押しで英訳を送信 · Esc 取消"
-              : "BMXt コマンドラインで入力 · 改行可能 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+              ? "BMXt で入力 · 入力停止500msで 訳/再訳 · Shift+Enter で改行 · Alt 長押しで英訳を送信 · Esc 取消"
+              : "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル"
             : typingTranslateOn
               ? "BMXt で入力 · 入力停止500msで 訳/再訳 · Alt 長押しで英訳を送信 · Esc 長押しでキャンセル"
               : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"

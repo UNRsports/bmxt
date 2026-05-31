@@ -59,6 +59,16 @@ import {
   type NavPositionsByTab
 } from "../nav"
 import {
+  navBeforeInputAction,
+  navTypingDeleteBackward,
+  navTypingDeleteForward,
+  navTypingInsert,
+  navTypingShouldPreventLineBreakInput,
+  promptMirrorSegments,
+  sanitizeNavTypingDomValueWithCursor,
+  sanitizeNavTypingInsertText
+} from "../nav/nav-prompt-input"
+import {
   buildEnglishCommitText,
   EMPTY_TRANSLATE_PICKER,
   loadTranslateSettings,
@@ -342,6 +352,7 @@ export function BmxtShell({
   const [cursorPos, setCursorPos] = useState(0)
   const [logScrollable, setLogScrollable] = useState(false)
   const [isComposing, setIsComposing] = useState(false)
+  const [compositionAnchor, setCompositionAnchor] = useState(0)
   const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
 
   const {
@@ -379,6 +390,8 @@ export function BmxtShell({
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
+  const isComposingRef = useRef(false)
+  const compositionStartSnapshotRef = useRef("")
   const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
   const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
   const [subCmdPickerHostStyle, setSubCmdPickerHostStyle] = useState<CSSProperties>({})
@@ -647,12 +660,20 @@ export function BmxtShell({
       skipHistResetRef.current = true
       tabPressSeqRef.current = 0
       setHistNavIndex(-1)
+      isComposingRef.current = false
+      compositionStartSnapshotRef.current = ""
+      setCompositionAnchor(0)
+      setIsComposing(false)
       lineRef.current = detail.initialValue
       setLine(detail.initialValue)
       setCursorPos(detail.initialValue.length)
       focusPrompt()
     }
     const onExit = () => {
+      isComposingRef.current = false
+      compositionStartSnapshotRef.current = ""
+      setCompositionAnchor(0)
+      setIsComposing(false)
       restoreNavPromptSnap()
       navPromptSnapRef.current = null
       resetNavTranslateSession()
@@ -1528,26 +1549,66 @@ export function BmxtShell({
     setCursorPos(text.length)
   }, [])
 
-  const onImeInput = useCallback(() => {
-    const ta = imeRef.current
-    if (!ta) {
-      return
-    }
-    allowEmptyFirstPickerSyncRef.current = false
-    if (skipHistResetRef.current) {
-      skipHistResetRef.current = false
-    } else {
-      setHistNavIndex(-1)
-    }
-    tabPressSeqRef.current = 0
-    if (mode === "isearch") {
-      setISearchCycle(0)
-    }
-    lineRef.current = ta.value
-    setLine(ta.value)
-    setCursorPos(ta.selectionStart)
-    syncImeTokenPicker(ta.value, ta.selectionStart)
-  }, [mode, syncImeTokenPicker])
+  const applyPromptLine = useCallback(
+    (nextLine: string, nextCursor: number, ta?: HTMLTextAreaElement | null) => {
+      lineRef.current = nextLine
+      setLine(nextLine)
+      setCursorPos(nextCursor)
+      syncImeTokenPicker(nextLine, nextCursor)
+      if (ta) {
+        queueMicrotask(() => {
+          ta.setSelectionRange(nextCursor, nextCursor)
+        })
+      }
+    },
+    [syncImeTokenPicker]
+  )
+
+  const syncPromptFromTextarea = useCallback(
+    (ta: HTMLTextAreaElement, opts?: { composing?: boolean; newlineSnapshot?: string }) => {
+      let v = ta.value
+      let pos = ta.selectionEnd
+      if (navPageTyping) {
+        const snapshot =
+          opts?.newlineSnapshot ??
+          (opts?.composing ? compositionStartSnapshotRef.current : lineRef.current)
+        const sanitized = sanitizeNavTypingDomValueWithCursor(
+          v,
+          pos,
+          navTypingMultiline,
+          snapshot
+        )
+        v = sanitized.value
+        pos = sanitized.cursor
+        if (v !== ta.value) {
+          ta.value = v
+          ta.setSelectionRange(pos, pos)
+        }
+      }
+      applyPromptLine(v, pos)
+    },
+    [applyPromptLine, navPageTyping, navTypingMultiline]
+  )
+
+  const onImeInput = useCallback(
+    (e: React.FormEvent<HTMLTextAreaElement>) => {
+      if (navPageTyping && !isComposingRef.current) {
+        return
+      }
+      allowEmptyFirstPickerSyncRef.current = false
+      if (skipHistResetRef.current) {
+        skipHistResetRef.current = false
+      } else {
+        setHistNavIndex(-1)
+      }
+      tabPressSeqRef.current = 0
+      if (mode === "isearch") {
+        setISearchCycle(0)
+      }
+      syncPromptFromTextarea(e.currentTarget, { composing: isComposingRef.current })
+    },
+    [mode, navPageTyping, syncPromptFromTextarea]
+  )
 
   const onImeSelect = useCallback(() => {
     const ta = imeRef.current
@@ -1558,6 +1619,66 @@ export function BmxtShell({
     setCursorPos(pos)
     syncImeTokenPicker(ta.value, pos)
   }, [isComposing, syncImeTokenPicker])
+
+  const applyNavTypingMutation = useCallback(
+    (ta: HTMLTextAreaElement, nextLine: string, nextCursor: number) => {
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      applyPromptLine(nextLine, nextCursor, ta)
+    },
+    [applyPromptLine]
+  )
+
+  const onBeforeInput = useCallback(
+    (e: React.FormEvent<HTMLTextAreaElement>) => {
+      if (!navPageTyping || isComposingRef.current) {
+        return
+      }
+      const ta = e.currentTarget
+      const native = e.nativeEvent as InputEvent
+      const shift = (native as InputEvent & { getModifierState(key: string): boolean }).getModifierState(
+        "Shift"
+      )
+      if (navTypingShouldPreventLineBreakInput(native.inputType, shift, navTypingMultiline)) {
+        e.preventDefault()
+        return
+      }
+      if (
+        native.inputType === "insertLineBreak" ||
+        native.inputType === "insertParagraph"
+      ) {
+        e.preventDefault()
+        const chunk = sanitizeNavTypingInsertText("\n", shift, navTypingMultiline)
+        if (!chunk) {
+          return
+        }
+        const { next, cursor } = navTypingInsert(
+          lineRef.current,
+          ta.selectionStart,
+          ta.selectionEnd,
+          chunk
+        )
+        applyNavTypingMutation(ta, next, cursor)
+        return
+      }
+      const action = navBeforeInputAction(native.inputType, native.data)
+      if (action === "insert" && native.data) {
+        e.preventDefault()
+        const chunk = sanitizeNavTypingInsertText(native.data, shift, navTypingMultiline)
+        if (!chunk) {
+          return
+        }
+        const { next, cursor } = navTypingInsert(
+          lineRef.current,
+          ta.selectionStart,
+          ta.selectionEnd,
+          chunk
+        )
+        applyNavTypingMutation(ta, next, cursor)
+      }
+    },
+    [applyNavTypingMutation, navPageTyping, navTypingMultiline]
+  )
 
   const onPaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -1583,14 +1704,79 @@ export function BmxtShell({
     [mode, navPageTyping, navTypingMultiline, syncImeTokenPicker]
   )
 
+  const onCompositionStart = useCallback(
+    (ev: React.CompositionEvent<HTMLTextAreaElement>) => {
+      isComposingRef.current = true
+      compositionStartSnapshotRef.current = lineRef.current
+      setIsComposing(true)
+      setCompositionAnchor(ev.currentTarget.selectionStart)
+      syncPromptFromTextarea(ev.currentTarget, {
+        composing: true,
+        newlineSnapshot: compositionStartSnapshotRef.current
+      })
+    },
+    [syncPromptFromTextarea]
+  )
+
+  const onCompositionUpdate = useCallback(
+    (ev: React.CompositionEvent<HTMLTextAreaElement>) => {
+      syncPromptFromTextarea(ev.currentTarget, {
+        composing: true,
+        newlineSnapshot: compositionStartSnapshotRef.current
+      })
+    },
+    [syncPromptFromTextarea]
+  )
+
+  const onCompositionEnd = useCallback(
+    (ev: React.CompositionEvent<HTMLTextAreaElement>) => {
+      isComposingRef.current = false
+      setIsComposing(false)
+      setCompositionAnchor(0)
+      allowEmptyFirstPickerSyncRef.current = false
+      syncPromptFromTextarea(ev.currentTarget, {
+        composing: false,
+        newlineSnapshot: compositionStartSnapshotRef.current
+      })
+      compositionStartSnapshotRef.current = lineRef.current
+    },
+    [syncPromptFromTextarea]
+  )
+
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (navPageTyping) {
+        if (!e.nativeEvent.isComposing) {
+          const ta = e.currentTarget
+          if (e.key === "Backspace") {
+            e.preventDefault()
+            const result = navTypingDeleteBackward(
+              lineRef.current,
+              ta.selectionStart,
+              ta.selectionEnd
+            )
+            if (result) {
+              applyNavTypingMutation(ta, result.next, result.cursor)
+            }
+            return
+          }
+          if (e.key === "Delete") {
+            e.preventDefault()
+            const result = navTypingDeleteForward(
+              lineRef.current,
+              ta.selectionStart,
+              ta.selectionEnd
+            )
+            if (result) {
+              applyNavTypingMutation(ta, result.next, result.cursor)
+            }
+            return
+          }
+        }
         if (
-          !navTypingMultiline &&
           e.key === "Enter" &&
-          !e.shiftKey &&
-          !e.nativeEvent.isComposing
+          !e.nativeEvent.isComposing &&
+          !(e.shiftKey && navTypingMultiline)
         ) {
           e.preventDefault()
         }
@@ -1885,6 +2071,7 @@ export function BmxtShell({
       navPageTyping,
       navTypingMode,
       navTypingMultiline,
+      applyNavTypingMutation,
       navMenuOpen,
       navTextSelPicking,
       navTextSelDone,
@@ -1894,9 +2081,7 @@ export function BmxtShell({
     ]
   )
 
-  const before = line.slice(0, cursorPos)
-  const cur = line[cursorPos] ?? ""
-  const after = line.slice(cursorPos + 1)
+  const mirror = promptMirrorSegments(line, cursorPos, isComposing, compositionAnchor)
   const iSearchPreview = iSearchMatches[iSearchCycle]
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
   const splitPickerLayout = sidePickerOpen
@@ -1959,13 +2144,17 @@ export function BmxtShell({
           <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
           <div className="bmxt-prompt-field">
             <div className="bmxt-prompt-mirror" aria-hidden>
-              <span>{before}</span>
-              <span
-                ref={cursorMirrorCellRef}
-                className={`bmxt-cursor-cell${cur ? "" : " bmxt-cursor-cell--eol"}${terminalPaneActive ? "" : " bmxt-cursor-cell--inactive"}`}>
-                {cur || "\u00a0"}
-              </span>
-              <span>{after}</span>
+              <span>{mirror.before}</span>
+              {mirror.composition ? (
+                <span className="bmxt-prompt-composition">{mirror.composition}</span>
+              ) : (
+                <span
+                  ref={cursorMirrorCellRef}
+                  className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${terminalPaneActive ? "" : " bmxt-cursor-cell--inactive"}`}>
+                  {mirror.cur || "\u00a0"}
+                </span>
+              )}
+              <span>{mirror.after}</span>
             </div>
             <textarea
               ref={imeRef}
@@ -1994,20 +2183,14 @@ export function BmxtShell({
               }
               value={line}
               readOnly={findListBusy}
-              onChange={onImeInput}
+              onInput={onImeInput}
+              onBeforeInput={onBeforeInput}
               onSelect={onImeSelect}
               onKeyDown={onKeyDown}
               onPaste={onPaste}
-              onCompositionStart={() => setIsComposing(true)}
-              onCompositionEnd={(ev) => {
-                setIsComposing(false)
-                allowEmptyFirstPickerSyncRef.current = false
-                const v = ev.currentTarget.value
-                lineRef.current = v
-                setLine(v)
-                setCursorPos(ev.currentTarget.selectionStart)
-                syncImeTokenPicker(v, ev.currentTarget.selectionStart)
-              }}
+              onCompositionStart={onCompositionStart}
+              onCompositionUpdate={onCompositionUpdate}
+              onCompositionEnd={onCompositionEnd}
             />
             {subCmdPicker && !findListBusy ? (
               <div
@@ -2021,6 +2204,7 @@ export function BmxtShell({
         </div>
         {navPageTyping && translateEnabled ? (
           <TranslationStrip
+            buffer={line}
             blocks={navTranslateBlocks}
             busy={navTranslateBusy}
             statusNote={navTranslateStatus}

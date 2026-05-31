@@ -446,6 +446,12 @@ body {
   background: rgba(88, 166, 255, 0.35);
 }
 
+.bmxt-prompt-composition {
+  text-decoration: underline;
+  text-decoration-color: #58a6ff;
+  text-underline-offset: 2px;
+}
+
 .bmxt-scroll-anchor {
   height: 0;
   overflow: hidden;

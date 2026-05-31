@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import type { TranslationTriplet } from "./translator-service"
 import { lineIndicesFromSelection, sentenceIndicesFromSelection } from "./sentence-highlight"
-import { buildTranslateLineRows } from "./translation-segments"
+import { buildTranslateLineRows, assembleTranslationFieldForBuffer } from "./translation-segments"
 
 export type TranslationBlock = TranslationTriplet & {
   id: number
@@ -18,19 +18,14 @@ export type SentenceHighlightProps = {
 }
 
 type Props = {
+  /** EN: Source buffer — display newlines follow `\n` in this text only. */
+  buffer: string
   blocks: readonly TranslationBlock[]
   busy: boolean
   statusNote: string | null
   /** EN: Keep the two-section shell visible even before the first translation. */
   alwaysVisible?: boolean
   sentenceHighlight?: SentenceHighlightProps
-}
-
-function joinField(blocks: readonly TranslationBlock[], field: keyof TranslationTriplet): string {
-  return blocks
-    .map((b) => b[field])
-    .filter((line) => line.length > 0)
-    .join("\n")
 }
 
 function displayText(value: string, pending: boolean): string {
@@ -228,6 +223,7 @@ function TranslateHighlightPanelLegacy({
 }
 
 export function TranslationStrip({
+  buffer,
   blocks,
   busy,
   statusNote,
@@ -238,8 +234,14 @@ export function TranslationStrip({
     return null
   }
 
-  const forward = displayText(joinField(blocks, "forward"), busy)
-  const back = displayText(joinField(blocks, "back"), busy)
+  const forward = displayText(
+    assembleTranslationFieldForBuffer(buffer, blocks, "forward", busy),
+    busy
+  )
+  const back = displayText(
+    assembleTranslationFieldForBuffer(buffer, blocks, "back", busy),
+    busy
+  )
 
   return (
     <div className="bmxt-typing-translate" role="region" aria-label="Translation assist">
