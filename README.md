@@ -16,6 +16,7 @@
   - [Command List](#command-list)
   - [`aboutbmxt`](#aboutbmxt)
   - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
+  - [`translate` (`translate -on` / `translate -off`)](#translate)
   - [`tabs` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tabs -list` / `tabs -list -u`)](#tabs-tab-picker)
@@ -172,12 +173,15 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
 | `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
+| `translate` | Print usage and restore the prompt to `translate ` for `-on` or `-off` |
+| `translate -on` | Open the translate editor side column and enable translation assist (see **[`translate`](#translate)**) |
+| `translate -off` | Close the editor column and disable translation assist |
 | `close` / `c <tabId>` | Close tab |
 | `group new <tabId> …` | Create group |
 
 **Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears that log and **closes the BMXt window** (via `chrome.windows.remove` on the window the extension tracks). **Neither** clears **command history** (up/down / Ctrl+R).
 
-**Split panes and picker columns:** With more than one **split terminal pane** open, **Ctrl+Arrow** moves keyboard focus between panes at the layout edges. Inside a pane that has picker columns, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → find → dom** (only among open columns). See **[Picker UI (side columns)](#picker-ui)**.
+**Split panes and picker columns:** With more than one **split terminal pane** open, **Ctrl+Arrow** moves keyboard focus between panes at the layout edges. Inside a pane that has picker columns, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → find → dom → translate** (only among open columns). See **[Picker UI (side columns)](#picker-ui)**.
 
 <a id="aboutbmxt"></a>
 
@@ -200,11 +204,18 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, page UI **`lib/features/welcome/welcome-page.tsx`**.
 
+<a id="dom-command"></a>
+
+### `dom`
+
 - Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
 - **`dom -list`** resolves the **active tab of the last-focused normal browser window**, injects a read-only helper via `chrome.scripting`, and streams a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
 - **`--html`** (default) vs **`--react`** only changes how nodes are labeled in the picker UI.
 - Any tokens after the optional flavor flag are joined into a single **substring** filter on the printed lines (ASCII case fold); **not** a regular expression. ASCII `"…"` / `'…'` around the pattern are stripped once.
 
+<a id="find-command"></a>
+
+### `find`
 
 - Bare `find` + **Enter** prints the usage block and restores **`find `**.
 - **`find -list …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** (default when omitted) fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
@@ -227,7 +238,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **After `nav -enter` — Alt toggles overlay ON/OFF**
 
-- Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / find / dom** picker column **suspends** nav keys until you return focus to the prompt.
+- Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / find / dom / translate** picker column **suspends** nav keys until you return focus to the prompt.
 - Each **Alt** press toggles overlay **ON** or **OFF**.
 - **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **↑ / ↓ / ← / →** move the virtual cursor (default **12px** per step; configurable later in `lib/features/nav/nav-config.ts`). **Enter** performs a **left-click** on the element under the cursor, or enters **typing mode** when the target is an editable field (see below).
 - **OFF:** removes the overlay from the current tab; nav stays **armed** until **`nav -exit`**.
@@ -253,6 +264,8 @@ After text selection, **Copy** + **Enter** writes the selection to the system cl
 
 **Typing mode** (after **Enter** on an editable field): the BMXt prompt shows a typing hint; text is mirrored into the page field. **Alt** **hold** (~500ms) **commits**; **Esc** **hold** **cancels** and restores the previous value. Multiline fields allow newlines (**Shift+Enter** on the prompt). Short **Alt** does not toggle the overlay while typing.
 
+When **`translate -on`** is active, typing mode also shows a **ja → en → ja** preview strip under the prompt (completed sentences end with `。` `.` `!` `?` `！` `？`, etc.). **Alt hold** commit sends **English** assembled from those blocks (see **[`translate`](#translate)**), not the raw buffer.
+
 The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **typing**, **menu**, **sel-start** / **sel-end**, **copy**, plus the target tab title or a short error.
 
 **Tab changes while armed**
@@ -271,15 +284,39 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 - **`background.ts`** — `NAV_CONTROL` message runs inject on the target tab.
 - **`contents/bmxt-nav-overlay.ts`** — content script listener on http(s) pages.
 
+<a id="translate"></a>
+
+### `translate` (`translate -on` / `translate -off`)
+
+**`translate`** enables Chrome’s built-in **`Translator` API** (Japanese ↔ English) for a **side editor column** and optional assist during **nav typing mode**.
+
+| Input | Effect |
+|-------|--------|
+| Bare `translate` + **Enter** | Prints usage and restores **`translate `** (continuation). Tab completes **`-on`** / **`-off`** only — no short aliases. |
+| **`translate -on`** | Opens the **translate editor** side column, enables translation assist (saved in **`chrome.storage.local`** under **`TYPING_TRANSLATE_KEY`**). Keyboard focus moves to the editor. |
+| **`translate -off`** | Closes the editor column and disables assist. |
+
+**Editor column**
+
+- Same horizontal strip as other pickers: **Terminal** | **tabs** | **find** | **dom** | **translate** (open slots only). **`Esc`** returns focus to the prompt; the column stays open until **`translate -off`**.
+- Long-form **`textarea`**. While the column is focused, each **completed sentence** (closing punctuation such as `。` `.` `!` `?` `！` `？`) triggers **ja → en → ja** preview blocks below the editor.
+- Requires a Chrome build with the **`Translator`** API and **ja↔en** pair availability; otherwise a short status line is shown.
+
+**Nav typing**
+
+- With assist **ON**, **nav typing mode** reuses the same preview under the BMXt prompt. **Alt hold** commit injects **English** built from completed sentence translations (see **`buildEnglishCommitText`** in **`lib/features/translate/`**).
+
+**Implementation:** **`lib/features/translate/`**, **`lib/features/bmxt-core/cmd/translate.ts`**, UI in **`bmxt-shell.tsx`** (handled before `RUN_CMD`, like other picker launches).
+
 <a id="picker-ui"></a>
 
 ### Picker UI (side columns)
 
 When a list picker is opened from the prompt, **`lib/features/bmxt-window/bmxt-shell.tsx`** lays out the focused session leaf as a horizontal strip:
 
-**Terminal (log + prompt)** | **tabs** (if open) | **find** (if open) | **dom** (if open)
+**Terminal (log + prompt)** | **tabs** (if open) | **find** (if open) | **dom** (if open) | **translate** (if open)
 
-Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `find` / `dom` slots); **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns.
+Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `find` / `dom` / `translate` slots); **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → find → dom → translate).
 
 **Four layers (side picker)**
 
@@ -287,8 +324,8 @@ Several picker columns may be open at once in the same pane. Session state is **
 |-------|------|------------|
 | ① Parent terminal | Log, prompt, picker launch/close | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② Panel host | Column chrome, blue focus border, click-to-activate | `lib/features/side-picker/panel/picker-panel-host.tsx` |
-| ③ Command wrapper | Slot entry + keyboard wiring | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
-| ④ Command body | Flat lines vs hierarchical tab rows vs dom prompt | `PlainTextPickerBody` (find/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), `dom/dom-prompt-render.tsx` |
+| ③ Command wrapper | Slot entry + keyboard wiring | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx`, `translate-picker-wrapper.tsx` |
+| ④ Command body | Flat lines vs hierarchical tab rows vs dom prompt vs translate editor | `PlainTextPickerBody` (find/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), `dom/dom-prompt-render.tsx`, `translate-editor-body.tsx` |
 
 **Shared keyboard:** **`usePlainPickerKeyboard`** in `lib/features/side-picker/hooks/` drives `/`, `:`, `n`/`N`, **`Esc` → prompt**, vertical navigation, and **Ctrl+←/→** pane-strip navigation via the interaction kernel (`lib/features/side-picker/interaction/picker-*.ts`). **find** and **dom** line columns use it directly; **tabs** adds **`useTabPickerPlainExtensions`** (`lib/features/tabs/use-tab-picker-plain-extensions.ts`) for bulk/edit, `#` / `Tab`, Shift range, and layered **`Esc`**.
 
@@ -300,7 +337,7 @@ Find hits are normalized to **`PickerEntry`** (`url`, `source`, display line) be
 
 **Focus and blue border**
 
-- **`paneFocus`** selects the active column: `terminal` → `tabs` → `find` → `dom` (skipping columns that are not open).
+- **`paneFocus`** selects the active column: `terminal` → `tabs` → `find` → `dom` → `translate` (skipping columns that are not open).
 - The active column gets a **blue outline** (`.bmxt-split-pane--focused`).
 - When a column **newly opens**, keyboard focus and the outline move to that column.
 - **Ctrl+Left / Ctrl+Right** walk the strip inside the focused session leaf. At the strip ends, **Ctrl+Arrow** may delegate to **split-pane** navigation when multiple terminal leaves exist.
@@ -330,6 +367,7 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 | `find -list <scope> …` + **Enter** | Runs the search, then opens the find column |
 | `dom -list` only + **Enter** | Shows the `--html` / `--react` flavor menu |
 | `dom -list --html` or `--react` … + **Enter** | Fetches DOM output, opens the dom column |
+| `translate -on` + **Enter** | Opens the translate editor column and moves focus there |
 
 **Plain list columns (find / dom lines)**
 
@@ -359,6 +397,11 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Preview active tab in browser |
 | Close column | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
+**Translate editor column**
+
+- **`translate -on`** opens the column; **`translate -off`** closes it (no `translate -exit -list` token).
+- **`Esc`** returns focus to the prompt (column stays open). Long-form input; sentence-ending punctuation triggers live **ja / EN / 再訳** blocks. See **[`translate`](#translate)**.
+
 **Adding a new side picker column**
 
 1. Add a slot id to `PickerSlotId` in `lib/features/side-picker/session/session-pickers.ts` and session state fields.
@@ -376,7 +419,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 - `tabs -list [-u]`: open tab picker column (`-u` includes URL rows).
 - `tabs -exit -list`: close tab picker column in this session.
 - `tabs -nowurl`: print current tab URL.
-- `tabs -moveurl <url>`: activate matching http(s) tab and bring its window to front, or open a new tab if none matches.
+- `tabs -moveurl <url>`: activate matching http(s) tab and bring its window to front, or open a new tab if none matches. After `tabs -moveurl ` (trailing space), **Tab** cycles open http(s) tab URLs as completion candidates.
 
 <a id="tabs-tab-picker"></a>
 
@@ -451,7 +494,7 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`**, arming and overlay control are UI-side; the Service Worker **`run`** for **`nav`** only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`translate -on` / `translate -off`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on`**, arming / editor open and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
 
 **`exit`:** returns an **`exit_bmxt`** effect; the Service Worker clears the session log and closes the BMXt window it tracks (`chrome.windows.remove`).
 
@@ -464,6 +507,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
+- **`lib/features/translate/`** — translation assist (`translate -on` / `-off`, editor column, nav typing commit); see **[`translate`](#translate)**
 - **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
@@ -518,7 +562,7 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 Applies when the prompt `textarea` is focused.
 
 - **Left / Right / Home / End** — Move cursor in line
-- **Tab** — Command completion (cycle candidates; IME-style token picker when applicable)
+- **Tab** — Command completion (cycle candidates; IME-style token picker for fixed tokens; after **Enter** leaves a lone first command such as `tabs `, a **second-command candidate list** may appear — ↑/↓, Tab, Enter, Esc)
 - **Up / Down** — Command history
 - **Ctrl+R** — Reverse incremental search
 - **Enter** — Execute command (when **nav** overlay is **ON** and the terminal prompt column has focus, **Enter** sends a **click** to the page instead — see **[Nav mode](#nav-mode)**)
@@ -581,6 +625,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/nav/` — Nav overlay feature package
+- `lib/features/translate/` — Translation assist (`translate -on` / `-off`, editor column)
 - `contents/bmxt-nav-overlay.ts` — Nav content script (http(s))
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
@@ -673,6 +718,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [コマンド一覧](#command-list-ja)
   - [`aboutbmxt`](#aboutbmxt-ja)
   - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
+  - [`translate`（`translate -on` / `translate -off`）](#translate-ja)
   - [`tabs`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tabs -list` / `tabs -list -u`）](#tabs-tab-picker-ja)
@@ -830,12 +876,15 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
 | `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |
+| `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` または `-off` 用） |
+| `translate -on` | 翻訳エディタ列を開き、翻訳アシストを有効化（**[`translate`](#translate-ja)** 参照） |
+| `translate -off` | エディタ列を閉じ、翻訳アシストを無効化 |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
 
 **補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はそのログを消したうえで **BMXt ウィンドウを閉じます**（拡張が追跡しているウィンドウに対して `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
 
-**split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → find → dom**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
+**split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → find → dom → translate**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
 
 <a id="aboutbmxt-ja"></a>
 
@@ -874,7 +923,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **`nav -enter` 後 — Alt でオーバーレイ ON/OFF**
 
-- **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / find / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
+- **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / find / dom / translate** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
 - **Alt** のたびにオーバーレイを **ON** / **OFF** 切替。
 - **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。**↑ / ↓ / ← / →** で仮想カーソルを移動（既定 **12px**／ステップ。`lib/features/nav/nav-config.ts` で将来調整可）。**Enter** でカーソル下を **左クリック**相当、または編集可能要素なら **typing モード**へ（下記）。
 - **OFF:** 当該タブのオーバーレイを除去。nav は **armed** のまま **`nav -exit`** まで継続。
@@ -900,6 +949,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **typing モード**（編集可能要素で **Enter** 後）: BMXt プロンプトにヒント表示。入力はページ側フィールドへ反映。**Alt 長押し**（約 500ms）で **確定**、**Esc 長押し**で **取消**（元の値に戻す）。複数行フィールドは **Shift+Enter** で改行可。typing 中の短い **Alt** はオーバーレイ切替にならない。
 
+**`translate -on`** 中は typing でもプロンプト下に **ja → en → ja** のプレビューが出ます（文の終わりは `。` `.` `!` `?` `！` `？` など）。**Alt 長押し**確定では生の日本語ではなく、翻訳ブロックから組み立てた **英語**をページへ送ります（**[`translate`](#translate-ja)**）。
+
 プロンプト下のステータス帯は **`nav`**・**ON/OFF**・**typing**・**menu**・**sel-start** / **sel-end**・**copy** などと、対象タブ名または短いエラーを表示。
 
 **armed 中のタブ切替**
@@ -918,15 +969,39 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 - **`background.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
 - **`contents/bmxt-nav-overlay.ts`** — http(s) ページ上のリスナー。
 
+<a id="translate-ja"></a>
+
+### `translate`（`translate -on` / `translate -off`）
+
+**`translate`** は Chrome 内蔵の **`Translator` API**（日本語 ↔ 英語）を、**横並びの翻訳エディタ列**と **nav typing** 向けアシストに使います。
+
+| 入力 | 動作 |
+|------|------|
+| 単独 `translate` + **Enter** | 利用案内を表示し、**`translate `** に復元（continuation）。Tab 補完は **`-on`** / **`-off`** のみ（短縮別名なし）。 |
+| **`translate -on`** | **翻訳エディタ**列を開き、アシストを有効化（**`chrome.storage.local`** の **`TYPING_TRANSLATE_KEY`** に保存）。キーボードフォーカスはエディタ列へ。 |
+| **`translate -off`** | エディタ列を閉じ、アシストを無効化。 |
+
+**エディタ列**
+
+- 他ピッカーと同じ横並び: **ターミナル** | **tabs** | **find** | **dom** | **translate**（開いているスロットのみ）。**`Esc`** でプロンプトへ戻る（列は **`translate -off`** まで開いたまま）。
+- 長文用 **`textarea`**。列にフォーカスがあるとき、**文が完結**（`。` `.` `!` `?` `！` `？` などで終わる）ごとに **ja → en → ja** のプレビューブロックを下に表示。
+- **`Translator` API** と **ja↔en** の利用可否が必要。未対応の Chrome では短いステータス行を表示。
+
+**nav typing**
+
+- アシスト **ON** 時、**nav typing** でも同様のプレビューをプロンプト下に表示。**Alt 長押し**確定では **`lib/features/translate/`** の **`buildEnglishCommitText`** により英語文を組み立てて注入。
+
+**実装:** **`lib/features/translate/`**、**`lib/features/bmxt-core/cmd/translate.ts`**、UI は **`bmxt-shell.tsx`**（`RUN_CMD` より前に処理）。
+
 <a id="picker-ui-ja"></a>
 
 ### ピッカー UI（横並び列）
 
 プロンプトからリストピッカーを開いたとき、**`lib/features/bmxt-window/bmxt-shell.tsx`** はフォーカス中のセッションリーフを次の横並びにします。
 
-**ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **find**（表示時） | **dom**（表示時）
+**ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **find**（表示時） | **dom**（表示時） | **translate**（表示時）
 
-同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `find` / `dom` スロット）で、列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`** が担います。
+同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `find` / `dom` / `translate` スロット）で、列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`** が担います（**`PICKER_SLOT_ORDER`**: tabs → find → dom → translate）。
 
 **4 層（サイドピッカー）**
 
@@ -934,8 +1009,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 |----|------|----------|
 | ① 親ターミナル | ログ・プロンプト・ピッカー起動／閉じる | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② パネルホスト | 列クロム・青枠・クリックでアクティブ化 | `lib/features/side-picker/panel/picker-panel-host.tsx` |
-| ③ コマンドラッパ | スロット入口・keyboard 配線 | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
-| ④ コマンド本体 | フラット行 / 階層タブ行 / dom 確認 | `PlainTextPickerBody`（find/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, `dom/dom-prompt-render.tsx` |
+| ③ コマンドラッパ | スロット入口・keyboard 配線 | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx`, `translate-picker-wrapper.tsx` |
+| ④ コマンド本体 | フラット行 / 階層タブ行 / dom 確認 / 翻訳エディタ | `PlainTextPickerBody`（find/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, `dom/dom-prompt-render.tsx`, `translate-editor-body.tsx` |
 
 **共有 keyboard:** **`usePlainPickerKeyboard`**（`lib/features/side-picker/hooks/`）が `/`, `:`, `n`/`N`, **`Esc` → プロンプト**, 縦移動, **Ctrl+←/→** 列ストリップを interaction kernel 経由で処理。**find** / **dom** 行一覧はそのまま利用。**tabs** は **`useTabPickerPlainExtensions`**（`lib/features/tabs/use-tab-picker-plain-extensions.ts`）で bulk/edit・`#` / `Tab`・Shift 範囲・段階 **`Esc`** を追加。
 
@@ -947,7 +1022,7 @@ find のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示行�
 
 **フォーカスと青枠**
 
-- **`paneFocus`** がキー入力を受け取る列を表します: `terminal` → `tabs` → `find` → `dom`（未表示の列は飛ばす）。
+- **`paneFocus`** がキー入力を受け取る列を表します: `terminal` → `tabs` → `find` → `dom` → `translate`（未表示の列は飛ばす）。
 - フォーカス中の列に **青い枠**（`.bmxt-split-pane--focused`）が付きます。
 - 列が **新しく開いた** とき、キーボードフォーカスと青枠がその列へ移ります。
 - **Ctrl+← / Ctrl+→** でセッションリーフ内の列を移動します。strip の端では、split 複数ペイン時に **Ctrl+矢印** が **別リーフ** への移動に委譲されることがあります。
@@ -977,6 +1052,7 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 | `find -list <scope> …` + **Enter** | 検索実行後、find 列を開く |
 | `dom -list` のみ + **Enter** | `--html` / `--react` の flavor メニュー |
 | `dom -list --html` または `--react` … + **Enter** | DOM 取得後、dom 列を開く |
+| `translate -on` + **Enter** | 翻訳エディタ列を開き、フォーカスを移す |
 
 **プレーンリスト列（find / dom の行一覧）**
 
@@ -1005,6 +1081,11 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | `Shift+↑` / `Shift+↓` | — | タブ行の `#` 範囲拡張 |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ブラウザ側アクティブタブのプレビュー |
 | 列を閉じる | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
+
+**翻訳エディタ列**
+
+- **`translate -on`** で開く。**`translate -off`** で閉じる（`translate -exit -list` のような第三トークンはない）。
+- **`Esc`** でプロンプトへ（列は開いたまま）。長文入力。句点などで **原文 / EN / 再訳** ブロックが更新される。詳細は **[`translate`](#translate-ja)**。
 
 **新しいサイド列ピッカーの追加**
 
@@ -1043,31 +1124,31 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 <a id="tabs-tab-picker-edit-ja"></a>
 
-### Tab picker `:edit` (window & tab group)
+### タブピッカー `:edit`（ウィンドウ名・タブグループ）
 
-`:edit` runs only inside the tab picker opened by **`tabs -list`** / **`tabs -list -u`**. Press **`:`**, type **`edit`**, then **`Enter`** (no short alias; `Tab` cycles completions including `edit` when the current target is a window or tab group row).
+`:edit` は **`tabs -list`** / **`tabs -list -u`** で開いたタブピッカー内でのみ使えます。**`:`** → **`edit`** → **`Enter`**（短縮別名なし。`Tab` で補完候補を循環し、対象がウィンドウ行またはタブグループ行のとき `edit` が候補に入る）。
 
-**Valid targets**
+**有効な対象**
 
-- Exactly **one window row** or **one tab group row** (a real Chrome tab group, not the ungrouped “(no group)” row).
-- **Tab rows** are not supported.
-- Either mark the row with **`#`** on the window/group header, or highlight that row with **no `#` marks** — on confirm, the highlighted window/group row is auto-marked if needed.
+- **ウィンドウ行 1 つ**、または **タブグループ行 1 つ**（Chrome の実グループ。未グループの「(no group)」行は不可）。
+- **タブ行**は対象外。
+- ウィンドウ／グループ見出しに **`#`** を付けるか、**`#` なし**でその行をハイライトして確定（未マーク時はハイライト行が自動マーク）。
 
-If the selection is invalid (tabs only, multiple windows/groups, ungrouped group row, etc.), an **`error:`** line is appended to the BMXt log and edit mode does not open.
+選択が不正（タブのみ、複数ウィンドウ／グループ、未グループ行など）のときはログに **`error:`** 行が出て edit モードは開きません。
 
-**Window — custom display name**
+**ウィンドウ — 表示名**
 
-- Opens **[EDIT] window name**. The field is prefilled with the saved custom name, or the **active tab title** in that window when no custom name exists.
-- **`Enter`** saves to **`chrome.storage.local`** (per-window display names; empty string clears the custom name and the list falls back to Chrome’s default title).
-- **`Esc`** cancels and returns to the picker list.
+- **[EDIT] window name** を開く。保存済みのカスタム名、なければそのウィンドウの **アクティブタブタイトル** を初期値にする。
+- **`Enter`** で **`chrome.storage.local`** に保存（ウィンドウごとの表示名。空文字でカスタム名を消し、一覧は Chrome 既定に戻る）。
+- **`Esc`** でキャンセルし一覧へ戻る。
 
-**Tab group — menu, then rename or Chrome actions**
+**タブグループ — メニュー → リネームまたは Chrome 操作**
 
-- Opens **[EDIT] operation menu** with **`↑`/`↓`** and **`Enter`**:
-  - **Rename** — title field; **`Enter`** applies via **`chrome.tabGroups.update`**; **`Esc`** returns to the menu.
-  - **Ungroup tabs** — runs immediately on **`Enter`** (`chrome.tabGroups.ungroup`).
-  - **Delete tab group** — runs immediately on **`Enter`** (closes tabs in the group).
-- After a successful save or group action, marks are cleared, edit mode ends, and the picker rows refresh.
+- **[EDIT] operation menu** を **`↑`/`↓`** + **`Enter`** で操作:
+  - **Rename** — タイトル欄。**`Enter`** で **`chrome.tabGroups.update`**。**`Esc`** でメニューへ戻る。
+  - **Ungroup tabs** — **`Enter`** で即実行（`chrome.tabGroups.ungroup`）。
+  - **Delete tab group** — **`Enter`** で即実行（グループ内タブを閉じる）。
+- 成功後はマーク解除、edit 終了、行を再取得。
 
 <a id="tabs-tab-picker-ja"></a>
 <a id="tabs-tab-picker-impl-ja"></a>
@@ -1115,7 +1196,7 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** の起動とオーバーレイ制御は UI 側；Service Worker の **`nav` の `run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav オーバーレイは **[Nav モード](#nav-mode-ja)** を参照。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`translate -on` / `translate -off`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on`** の起動・オーバーレイ／エディタ制御は UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
@@ -1123,6 +1204,7 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 - **`lib/features/extension-storage/`** — ストレージキーと上限
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
+- **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
 - **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
@@ -1168,7 +1250,7 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 プロンプトの **`textarea` にフォーカス**があるときの操作です。
 
 - **← / → / Home / End** — 行内カーソル移動（ブラウザ標準の挙動）
-- **Tab** — コマンド補完（繰り返しで候補循環。IME 風トークンピッカーが使える場合あり）
+- **Tab** — コマンド補完（繰り返しで候補循環。固定トークン用 IME 風ピッカー。`tabs ` など第一コマンドのみで **Enter** したあとは **第二コマンド候補リスト** が出ることあり — ↑/↓・Tab・Enter・Esc）
 - **↑ / ↓** — コマンド履歴
 - **Ctrl+R** — 逆方向インクリメンタルサーチ（続けて押すと古い一致へ）
 - **Enter** — コマンド実行（逆検索モードでは確定）。**nav** オーバーレイが **ON** でターミナル列にフォーカスがあるときは、ページ上の **クリック**（**[Nav モード](#nav-mode-ja)**）
@@ -1231,6 +1313,7 @@ npm run dev   # または pnpm dev
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
+- `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off`、エディタ列）
 - `contents/bmxt-nav-overlay.ts` — Nav 用コンテンツスクリプト（http(s)）
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
