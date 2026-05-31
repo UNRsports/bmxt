@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  canScriptHttpHostPages,
+  requestOptionalHttpHostAccess
+} from "../extension-permissions/optional-http-hosts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import { NAV_ARROW_STEP_PX } from "./nav-config"
@@ -274,7 +278,11 @@ export function useNavMode({
   )
 
   const syncOverlayForTab = useCallback(
-    async (tabId: number | undefined, show: boolean, useCenter: boolean) => {
+    async (
+      tabId: number | undefined,
+      show: boolean,
+      useCenter: boolean
+    ): Promise<string | undefined> => {
       const prev = lastOverlayTabRef.current
       if (prev !== null && prev !== tabId) {
         exitTypingMode(prev)
@@ -292,7 +300,7 @@ export function useNavMode({
         setTypingMode(false)
         setTypingMultiline(false)
         resetNavUiState(navUiRefs, navUiSetters)
-        return
+        return undefined
       }
       const pos = useCenter ? null : (positionsRef.current[tabId] ?? null)
       const res = await startNavOverlayOnTab(tabId, pos, useCenter)
@@ -306,6 +314,7 @@ export function useNavMode({
       }
       lastOverlayTabRef.current = tabId
       setCurrentTabTitle(await resolveTabDisplayTitle(tabId))
+      return res.ok ? undefined : "reason" in res ? res.reason : undefined
     },
     [exitTypingMode, positionsRef, savePosition]
   )
@@ -335,7 +344,13 @@ export function useNavMode({
     }
     const useCenter = useCenterOnNextShowRef.current
     useCenterOnNextShowRef.current = false
-    await syncOverlayForTab(tabId, true, useCenter)
+    const reason = await syncOverlayForTab(tabId, true, useCenter)
+    if (reason === "permission-denied" && !(await canScriptHttpHostPages())) {
+      const granted = await requestOptionalHttpHostAccess()
+      if (granted) {
+        await syncOverlayForTab(tabId, true, useCenter)
+      }
+    }
   }, [syncOverlayForTab])
 
   const toggleActive = useCallback(() => {
