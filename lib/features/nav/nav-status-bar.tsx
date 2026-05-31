@@ -3,7 +3,6 @@ type Props = {
   active: boolean
   typingMode?: boolean
   typingMultiline?: boolean
-  typingTranslateOn?: boolean
   menuOpen?: boolean
   textSelPhase?: "start" | "end" | "done" | "idle" | null
   tabTitle: string | null
@@ -15,7 +14,6 @@ export function NavStatusBar({
   active,
   typingMode = false,
   typingMultiline = false,
-  typingTranslateOn = false,
   menuOpen = false,
   textSelPhase = null,
   tabTitle,
@@ -43,22 +41,20 @@ export function NavStatusBar({
           ? "ON"
           : "OFF (Alt toggles)"
   return (
-    <div className="bmxt-nav-status" role="status" aria-live="polite">
-      <span className="bmxt-nav-status-seg bmxt-nav-status-seg--label">nav</span>
+    <div className="bmxt-mode-status" role="status" aria-live="polite">
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--label bmxt-mode-status-seg--label-nav">
+        nav
+      </span>
       <span
-        className={`bmxt-nav-status-seg bmxt-nav-status-seg--state${active ? " bmxt-nav-status-seg--on" : ""}`}>
+        className={`bmxt-mode-status-seg bmxt-mode-status-seg--state${active ? " bmxt-mode-status-seg--on" : ""}`}>
         {modeLabel}
       </span>
-      <span className="bmxt-nav-status-seg bmxt-nav-status-seg--meta">{tabLabel}</span>
-      <span className="bmxt-nav-status-seg bmxt-nav-status-seg--hint">
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{tabLabel}</span>
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
         {typingMode
           ? typingMultiline
-            ? typingTranslateOn
-              ? "BMXt で入力 · 入力停止500msで 訳/再訳 · Shift+Enter で改行 · Alt 長押しで英訳を送信 · Esc 取消"
-              : "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル"
-            : typingTranslateOn
-              ? "BMXt で入力 · 入力停止500msで 訳/再訳 · Alt 長押しで英訳を送信 · Esc 長押しでキャンセル"
-              : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+            ? "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+            : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"
           : textSelPicking
             ? textSelPhase === "start"
               ? "↑↓ 移動 · Enter で選択開始 · Esc/Ctrl で取消"

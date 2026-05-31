@@ -156,14 +156,21 @@ body {
   font-size: 10px;
 }
 
-/* nav mode — tmux-style status strip under the prompt */
-.bmxt-nav-status {
+/* mode status — tmux-style strips under the prompt (nav / translate) */
+.bmxt-mode-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.bmxt-mode-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0;
-  margin-top: 2px;
-  margin-bottom: 4px;
+  margin: 0;
   padding: 3px 8px;
   font-size: 11px;
   line-height: 1.35;
@@ -174,33 +181,44 @@ body {
   user-select: none;
 }
 
-.bmxt-nav-status-seg {
+.bmxt-mode-status-stack .bmxt-mode-status + .bmxt-mode-status {
+  border-top: none;
+}
+
+.bmxt-mode-status-seg {
   padding: 0 8px;
   border-right: 1px solid #30363d;
 }
 
-.bmxt-nav-status-seg:last-child {
+.bmxt-mode-status-seg:last-child {
   border-right: none;
 }
 
-.bmxt-nav-status-seg--label {
-  color: #58a6ff;
+.bmxt-mode-status-seg--label {
   font-weight: 600;
 }
 
-.bmxt-nav-status-seg--state {
+.bmxt-mode-status-seg--label-nav {
+  color: #58a6ff;
+}
+
+.bmxt-mode-status-seg--label-translate {
+  color: #d2a8ff;
+}
+
+.bmxt-mode-status-seg--state {
   color: #8b949e;
 }
 
-.bmxt-nav-status-seg--state.bmxt-nav-status-seg--on {
+.bmxt-mode-status-seg--state.bmxt-mode-status-seg--on {
   color: #3fb950;
 }
 
-.bmxt-nav-status-seg--meta {
+.bmxt-mode-status-seg--meta {
   color: #c9d1d9;
 }
 
-.bmxt-nav-status-seg--hint {
+.bmxt-mode-status-seg--hint {
   flex: 1;
   min-width: 12rem;
   color: #484f58;

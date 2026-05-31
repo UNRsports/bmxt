@@ -10,3 +10,4 @@ export {
 } from "./translate-picker-state"
 export { TranslateEditorBody, TRANSLATE_EDITOR_HEADLINE } from "./translate-editor-body"
 export { TranslatePickerWrapper, type TranslatePickerWrapperProps } from "./translate-picker-wrapper"
+export { TranslateStatusBar } from "./translate-status-bar"

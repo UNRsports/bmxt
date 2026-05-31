@@ -51,13 +51,18 @@ import {
   NAV_EXIT_TYPING_EVENT,
   NAV_TYPING_PLACEHOLDER,
   NAV_TYPING_PLACEHOLDER_MULTILINE,
-  NavStatusBar,
   parseNavEnterLine,
   parseNavExitLine,
   useNavMode,
   type NavEnterTypingDetail,
   type NavPositionsByTab
 } from "../nav"
+import { ModeStatusBarStack } from "./mode-status-bar-stack"
+import {
+  activateModeToolbar,
+  deactivateModeToolbar,
+  type ModeToolbarId
+} from "./mode-toolbar-order"
 import {
   navBeforeInputAction,
   navTypingDeleteBackward,
@@ -290,6 +295,7 @@ export function BmxtShell({
   const [navActive, setNavActive] = useState(false)
   const [translateEnabled, setTranslateEnabled] = useState(false)
   const translateEnabledRef = useRef(false)
+  const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -385,7 +391,12 @@ export function BmxtShell({
   }, [setNavTranslateCommitError])
 
   useEffect(() => {
-    void loadTranslateSettings().then((s) => setTranslateEnabled(s.enabled))
+    void loadTranslateSettings().then((s) => {
+      setTranslateEnabled(s.enabled)
+      if (s.enabled) {
+        setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
+      }
+    })
   }, [])
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -1227,6 +1238,7 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       setNavArmed(true)
       setNavActive(false)
+      setModeToolbarOrder((prev) => activateModeToolbar(prev, "nav"))
       void (async () => {
         const canPage = await canScriptHttpHostPages()
         const logLines = [
@@ -1270,6 +1282,7 @@ export function BmxtShell({
         if (translateCmd.kind === "on") {
           await saveTranslateEnabled(true)
           setTranslateEnabled(true)
+          setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
           const priorText = translatePickerRef.current?.text ?? EMPTY_TRANSLATE_PICKER.text
           setTranslatePicker(sessionId, { text: priorText })
           await appendLogLines([
@@ -1279,6 +1292,7 @@ export function BmxtShell({
         } else {
           await saveTranslateEnabled(false)
           setTranslateEnabled(false)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "translate"))
           setTranslatePicker(sessionId, null)
           await appendLogLines([`> ${trimmed}`, "translate: OFF"])
           activatePaneFocus("terminal")
@@ -1307,6 +1321,7 @@ export function BmxtShell({
           navPositionsRef.current = {}
           setNavArmed(false)
           setNavActive(false)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "nav"))
           logLines.push("nav disarmed.")
         }
         await appendLogLines(logLines)
@@ -2210,16 +2225,27 @@ export function BmxtShell({
             statusNote={navTranslateStatus}
           />
         ) : null}
-        <NavStatusBar
-          armed={navArmed}
-          active={navActive}
-          typingMode={navPageTyping}
-          typingMultiline={navTypingMultiline}
-          typingTranslateOn={translateEnabled}
-          menuOpen={navMenuOpen}
-          textSelPhase={navTextSelPhase}
-          tabTitle={navCurrentTabTitle}
-          overlayError={navOverlayError}
+        <ModeStatusBarStack
+          order={modeToolbarOrder}
+          nav={{
+            armed: navArmed,
+            active: navActive,
+            typingMode: navPageTyping,
+            typingMultiline: navTypingMultiline,
+            menuOpen: navMenuOpen,
+            textSelPhase: navTextSelPhase,
+            tabTitle: navCurrentTabTitle,
+            overlayError: navOverlayError
+          }}
+          translate={{
+            enabled: translateEnabled,
+            editorOpen: translatePicker !== null,
+            editorFocused: translatePickerKeyboardActive,
+            navTypingAssist: navPageTyping && translateEnabled,
+            navTypingMultiline: navTypingMultiline,
+            busy: navTranslateBusy,
+            statusNote: navTranslateStatus
+          }}
         />
         <div className="bmxt-scroll-anchor" aria-hidden />
     </>
