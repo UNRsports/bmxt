@@ -56,7 +56,7 @@ It has a **terminal-style** prompt and log, but it is designed as a **command su
   - **T**erminal (first letter)
   - The extension as a **plus** layered on your browser (the idea in the letter **t**)
 
-The project is still in its early days, but **BMXt is available on the [Chrome Web Store](https://chromewebstore.google.com/)** (search for **BMXt**). The author believes the keyboard can take you “anywhere,” will keep adding features, and wants to keep building BMXt as a **tool that stays human-centered**.
+The project is still in its early days, but **BMXt is available on the [Chrome Web Store](https://chromewebstore.google.com/detail/bmxtdemo/ljadfdncbodcdkmhfneeopomipanafil)**. The author believes the keyboard can take you “anywhere,” will keep adding features, and wants to keep building BMXt as a **tool that stays human-centered**.
 
 The sections below describe what BMXt can do today.
 Please also take a look at the demo video.
@@ -760,7 +760,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - **T**erminal の頭文字
   - ユーザーのブラウザにプラスされる拡張機能、という意味を **t** に込める
 
-いまはまだ道を作り始めたばかりですが、**[Chrome ウェブストア](https://chromewebstore.google.com/)** からインストールできます（ストア内で **BMXt** を検索してください）。
+いまはまだ道を作り始めたばかりですが、**[Chrome ウェブストア](https://chromewebstore.google.com/detail/bmxtdemo/ljadfdncbodcdkmhfneeopomipanafil)** からインストールできます。
 目の前のキーボードから「どこへでも行ける」と信じ、これからも機能を積み上げて、しかし人間に寄り添う道具として作り続けていきたいと考えています。
 
 ではまず、いまできることをご説明します。

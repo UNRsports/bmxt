@@ -25,6 +25,10 @@ https://github.com/UNRsports/bmxt/issues
 https://x.com/ny0n150226
 
 
+◆Disclaimer
+BMXt is an experimental / trial implementation. UNRsports (the developer) is not liable for any incidents, loss, or damage arising from your use of the extension. You use BMXt at your own discretion and risk.
+
+
 ◆Version history
 0.4.0:
 - Fixed bugs in nav mode behavior
