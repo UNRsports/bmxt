@@ -113,7 +113,7 @@
         <img src="icon.png" width="48" height="48" alt="" />
         <div>
           <h1>BMXt — Privacy Policy</h1>
-          <p class="muted">Last updated: May 17, 2026</p>
+          <p class="muted">Last updated: May 31, 2026</p>
         </div>
       </header>
 
@@ -144,7 +144,8 @@
             <li>
               BMXt is a <strong>local productivity tool</strong>: a command-style UI for tabs, tab groups,
               browser windows, and related tasks you initiate (including optional page inspection, search
-              across history or bookmarks or open pages, and an optional keyboard nav overlay).
+              across history or bookmarks or open pages, an optional keyboard nav overlay, and optional
+              translation assist when you run <code>translate -on</code>).
             </li>
             <li>
               We do <strong>not</strong> sell your personal information. We do <strong>not</strong> run
@@ -160,12 +161,18 @@
             </li>
             <li>
               Command output and typed history are handled primarily <strong>in memory</strong> for the UI;
-              only capped fields are written to <code>chrome.storage.local</code>. The Extension UI and
-              service worker are not designed to call <code>fetch()</code> against arbitrary third-party
-              HTTPS URLs; <code>connect-src</code> in the packaged manifest reinforces that (Chrome Web Store
-              delivery and browser updates are separate). Optional <code>http://*/*</code> and
-              <code>https://*/*</code> access is requested <strong>at runtime</strong> only when you run
-              commands that inject into web pages.
+              only capped fields are written to <code>chrome.storage.local</code>. Translate editor text stays
+              in session memory and is not persisted to storage. The Extension UI and service worker are not
+              designed to call <code>fetch()</code> against arbitrary third-party HTTPS URLs;
+              <code>connect-src</code> in the packaged manifest reinforces that (Chrome Web Store delivery and
+              browser updates are separate). Optional <code>http://*/*</code> and <code>https://*/*</code>
+              access is requested <strong>at runtime</strong> only when you run commands that inject into web
+              pages.
+            </li>
+            <li>
+              When translation assist is on, text you type may be processed by Chrome’s built-in
+              <strong>Translator API</strong> on your device (Japanese ↔ English). BMXt does not send that
+              text to UNRsports servers for translation.
             </li>
           </ul>
         </div>
@@ -225,7 +232,19 @@
             <strong>Last seen extension version</strong> — used only to show an in-UI release-notes notice
             after updates.
           </li>
+          <li>
+            <strong>Last welcome page version shown</strong> — used only to control welcome-page display
+            after install or update.
+          </li>
+          <li>
+            <strong>Translation assist enabled flag</strong> — whether <code>translate -on</code> /
+            <code>translate -off</code> is active (<code>bmxt_typing_translate_v1</code>).
+          </li>
         </ul>
+        <p>
+          Text in the translate editor column is kept in session memory only and is not written to this
+          storage when you close the column.
+        </p>
         <p>This storage remains on your device under Chrome’s extension storage rules.</p>
 
         <h3>4.5 History, bookmarks, and page interaction (optional commands)</h3>
@@ -241,8 +260,10 @@
           extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>.
           Examples: <code>find --page</code> (visible text in open tabs), <code>dom -list</code> (page structure
           and scrolling to an element you pick in the list), and <code>nav -enter</code> (a keyboard nav overlay
-          on the active tab for move, click, type, and related actions you control from the Extension UI). Nav
-          may use a lightweight content script registered for http(s) pages, with
+          on the active tab for move, click, type, and related actions you control from the Extension UI). When
+          translation assist is enabled, text you enter during nav typing in the Extension UI may also be
+          processed as described in section 4.7. Nav may use a lightweight content script registered for
+          http(s) pages, with
           <code>chrome.scripting.executeScript</code> as a fallback when that script is not loaded. That
           processing is intended to occur <strong>on your device</strong>; the Extension is not designed to add
           new persistent stores for those results or to upload page content to UNRsports servers as part of
@@ -256,6 +277,22 @@
           specific DOM elements on pages where you have granted appropriate script access. We do not intend
           these additions to introduce UNRsports-operated remote collection of that data for their core
           behavior. When shipped, we will update this policy, release notes, and store disclosures as needed.
+        </p>
+        <h3>4.7 Translation assist (Chrome built-in Translator API)</h3>
+        <p>
+          If you run <code>translate -on</code>, the Extension enables optional translation assist within its
+          UI. Text you type in the translate editor column and, while assist is enabled, text entered during
+          nav typing mode in the Extension UI may be passed to Chrome’s built-in <strong>Translator API</strong>
+          (Japanese ↔ English) for on-device translation and back-translation previews. The Extension does not
+          send that text to UNRsports servers for translation.
+        </p>
+        <p>
+          Translation runs in the Extension page context only (not in injected page scripts or the service
+          worker). No additional manifest permission is declared for this feature; existing
+          <code>storage</code> permission covers the on/off preference. On first use, Chrome may download
+          language models for the requested language pair to your device. That download and on-device
+          processing are handled by Chrome (Google) under Chrome’s own terms. Translation assist requires a
+          supported desktop Chrome version (138 or newer) and availability of the ja↔en pair on your device.
         </p>
 
         <h2>5. Extension code</h2>
@@ -280,8 +317,15 @@
 
         <h2>7. Data transmission and third parties</h2>
         <p>
-          BMXt does not transmit your tab list, tab metadata, command history, or session log to servers
-          operated by UNRsports for collection or profiling as part of using the Extension.
+          BMXt does not transmit your tab list, tab metadata, command history, session log, or text you submit
+          for translation assist to servers operated by UNRsports for collection or profiling as part of using
+          the Extension.
+        </p>
+        <p>
+          When translation assist is enabled, Chrome’s built-in Translator API may process text you enter as
+          described in section 4.7. BMXt does not receive copies of that processing on UNRsports servers. How
+          Chrome handles on-device AI models, language-pack downloads, and any related telemetry is governed by
+          Google’s policies for Chrome, not by the Extension’s own code.
         </p>
         <p>
           When you use the Extension, your browser or operating system may still communicate with Google or
@@ -297,9 +341,9 @@
         <h2>8. Legal bases and use limitations</h2>
         <p>
           We process the information described above solely to provide the Extension’s stated functionality
-          (managing tabs, groups, and windows; optional page inspection, search, and nav overlay through
-          user-initiated commands) and to maintain minimal local UI state. We do not use this information for
-          creditworthiness, lending decisions, or unrelated profiling.
+          (managing tabs, groups, and windows; optional page inspection, search, nav overlay, and translation
+          assist through user-initiated commands) and to maintain minimal local UI state. We do not use this
+          information for creditworthiness, lending decisions, or unrelated profiling.
         </p>
 
         <h2>9. Children’s privacy</h2>
@@ -353,7 +397,8 @@
             <li>
               BMXt は、タブ・タブグループ・ブラウザウィンドウ等を<strong>専用のコマンド UI
               から操作する</strong>ローカル向け生産性ツールです（ページ構造の参照・履歴／ブックマーク／ページ内検索、
-              任意のキーボードナビオーバーレイなど、ユーザーが起動した機能を含みます）。
+              任意のキーボードナビオーバーレイ、<code>translate -on</code> 実行時の任意の翻訳アシストなど、
+              ユーザーが起動した機能を含みます）。
             </li>
             <li>
               当方が提供する公式ビルドにおいて、本拡張機能内に <strong>広告目的の分析ツールを組み込み、利用者の
@@ -369,11 +414,15 @@
             </li>
             <li>
               コマンド出力・入力履歴は主に UI 用の<strong>メモリ</strong>で扱い、永続化は上限付きの
-              <code>chrome.storage.local</code> のみです。拡張ページ・サービスワーカーから
-              <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest
-              の CSP（<code>connect-src</code> 等）はその補助線です（ストア配信・ブラウザ更新は別）。ページへの
-              スクリプト注入が要るコマンドのときだけ、オプションの <code>http://*/*</code> /
-              <code>https://*/*</code> を<strong>実行時</strong>に求めます。
+              <code>chrome.storage.local</code> のみです。翻訳エディタ列の入力本文はセッション内メモリに留まり、
+              storage には保存しません。拡張ページ・サービスワーカーから <code>fetch()</code> で任意の第三者
+              HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP（<code>connect-src</code>
+              等）はその補助線です（ストア配信・ブラウザ更新は別）。ページへのスクリプト注入が要るコマンドのときだけ、
+              オプションの <code>http://*/*</code> / <code>https://*/*</code> を<strong>実行時</strong>に求めます。
+            </li>
+            <li>
+              翻訳アシストが ON のとき、入力テキストは Chrome 内蔵の <strong>Translator API</strong> により
+              端末上で処理されます（日本語 ↔ 英語）。当方のサーバーへ翻訳目的で送信することはありません。
             </li>
           </ul>
         </div>
@@ -423,7 +472,18 @@
           <li>
             <strong>最後に確認した拡張機能バージョン</strong> — 更新後のリリースノート案内用のみ。
           </li>
+          <li>
+            <strong>最後に表示したウェルカムページのバージョン</strong> — インストール／更新後のウェルカムページ
+            表示制御用のみ。
+          </li>
+          <li>
+            <strong>翻訳アシストの ON/OFF</strong> — <code>translate -on</code> / <code>translate -off</code>
+            の状態（<code>bmxt_typing_translate_v1</code>）。
+          </li>
         </ul>
+        <p>
+          翻訳エディタ列の入力本文はセッション内メモリのみで扱い、列を閉じてもこの storage には書き込みません。
+        </p>
         <p>これらは Chrome の拡張機能ストレージの仕組みのもと、ユーザーの端末内に留まります。</p>
 
         <h3>4.5 履歴・ブックマーク・ページ操作（対応コマンド時）</h3>
@@ -439,7 +499,8 @@
           同梱の小さなヘルパースクリプトを実行します。例:
           <code>find --page</code>（開いているタブの可視テキスト）、<code>dom -list</code>（ページ構造の一覧と、
           一覧で選んだ要素へのスクロール）、<code>nav -enter</code>（アクティブタブ上のキーボードナビオーバーレイによる
-          移動・クリック・入力など、本拡張機能 UI からの操作）。<code>nav</code> では http(s) 向けの軽量コンテンツスクリプトを
+          移動・クリック・入力など、本拡張機能 UI からの操作）。翻訳アシストが ON のとき、本拡張機能 UI での nav
+          typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では http(s) 向けの軽量コンテンツスクリプトを
           用い、未読み込み時は <code>chrome.scripting.executeScript</code> にフォールバックします。これらは
           <strong>端末上</strong>で行う想定であり、当該結果を新たな永続ストアに蓄えたり、ページ内容を UNRsports の
           サーバーに送信したりする設計にはしていません。
@@ -451,6 +512,20 @@
           新規作成・編集・削除、スクリプトアクセスを許可したページにおける特定 DOM 要素の表示／非表示の切り替え。
           これらの中核動作として、当該データを UNRsports のサーバーに収集目的で送る仕組みを新設する意図はありません。
           実装時には本ポリシー、リリースノート、ストア上の説明を必要に応じて更新します。
+        </p>
+        <h3>4.7 翻訳アシスト（Chrome 内蔵 Translator API）</h3>
+        <p>
+          <code>translate -on</code> を実行すると、本拡張機能 UI 内で任意の翻訳アシストが有効になります。翻訳エディタ列に
+          入力したテキスト、およびアシスト ON 中の nav typing モードで本拡張機能 UI に入力したテキストは、Chrome 内蔵の
+          <strong>Translator API</strong>（日本語 ↔ 英語）に渡され、端末上で訳文・再訳プレビューが生成されます。当方の
+          サーバーへ翻訳目的で送信することはありません。
+        </p>
+        <p>
+          翻訳処理は拡張ページのコンテキスト内でのみ行い、注入したページスクリプトやサービスワーカーでは行いません。
+          この機能のための追加 manifest 権限は宣言しておらず、ON/OFF 設定には既存の <code>storage</code> 権限を用います。
+          初回利用時、Chrome が要求する言語ペアのモデルを端末にダウンロードする場合があります。そのダウンロードと
+          端末上の処理は Chrome（Google）が Chrome 自身の条件に従って行います。翻訳アシストには、対応するデスクトップ版
+          Chrome（138 以降）および端末上で ja↔en ペアが利用可能であることが必要です。
         </p>
 
         <h2>5. 拡張機能のコード</h2>
@@ -473,8 +548,13 @@
 
         <h2>7. データの送信と第三者</h2>
         <p>
-          本拡張機能の利用に際し、タブ一覧・タブに関するメタデータ・コマンド履歴・セッションログを、UNRsports
-          が収集・プロファイル目的で運用するサーバーに送信することはありません。
+          本拡張機能の利用に際し、タブ一覧・タブに関するメタデータ・コマンド履歴・セッションログ、および翻訳アシストに
+          入力したテキストを、UNRsports が収集・プロファイル目的で運用するサーバーに送信することはありません。
+        </p>
+        <p>
+          翻訳アシストが ON のとき、4.7 に記載のとおり Chrome 内蔵 Translator API が入力テキストを端末上で処理する場合が
+          あります。当方のサーバーはその処理結果を受け取りません。端末内 AI モデル・言語パックのダウンロードおよび関連する
+          テレメトリの取り扱いは、本拡張機能のコードではなく Google の Chrome に関するポリシーに従います。
         </p>
         <p>
           一方で、Chrome や OS の動作として、Google 等のサービスとの通信が発生する場合があります（ウェブストア
@@ -489,8 +569,8 @@
         <h2>8. 利用目的の制限</h2>
         <p>
           上記の情報は、本拡張機能が明示する機能（ユーザーが開始したタブ・グループ・ウィンドウの管理、任意のページ参照・
-          検索・ナビオーバーレイ）および最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、これらと無関係な
-          プロファイル目的には用いません。
+          検索・ナビオーバーレイ・翻訳アシスト）および最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、
+          これらと無関係なプロファイル目的には用いません。
         </p>
 
         <h2>9. 児童のプライバシー</h2>
