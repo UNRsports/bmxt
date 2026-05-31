@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   type KeyboardEvent,
@@ -7,19 +8,15 @@ import {
   type SyntheticEvent,
   type UIEvent
 } from "react"
-import {
-  listCompleteSentenceSpans,
-  sentenceIndicesInRange,
-  splitBufferForHighlight
-} from "./sentence-boundary"
 import { indicesToSet } from "./sentence-highlight"
+import { lineIndicesInRange, listBufferLines, lineSelectionRange } from "./translation-segments"
 
 type Props = {
   text: string
   onTextChange: (text: string) => void
   onReturnToPrompt: () => void
-  highlightedIndices: ReadonlySet<number>
-  onHighlightedIndicesChange: (indices: ReadonlySet<number>) => void
+  highlightedLineIndices: ReadonlySet<number>
+  onHighlightedLineIndicesChange: (indices: ReadonlySet<number>) => void
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   keyboardActive?: boolean
   isComposing: boolean
@@ -31,8 +28,8 @@ export function TranslateSourceInput({
   text,
   onTextChange,
   onReturnToPrompt,
-  highlightedIndices,
-  onHighlightedIndicesChange,
+  highlightedLineIndices,
+  onHighlightedLineIndicesChange,
   pickerInputRef,
   keyboardActive = false,
   isComposing,
@@ -40,19 +37,18 @@ export function TranslateSourceInput({
   onCompositionEnd
 }: Props) {
   const mirrorRef = useRef<HTMLDivElement>(null)
-  const sentenceSpans = useMemo(() => listCompleteSentenceSpans(text), [text])
-  const mirrorSegments = useMemo(() => splitBufferForHighlight(text), [text])
+  const lines = useMemo(() => listBufferLines(text), [text])
 
   const syncHighlightFromTextarea = useCallback(
     (textarea: HTMLTextAreaElement) => {
-      const indices = sentenceIndicesInRange(
-        sentenceSpans,
+      const indices = lineIndicesInRange(
+        lines,
         textarea.selectionStart,
         textarea.selectionEnd
       )
-      onHighlightedIndicesChange(indicesToSet(indices))
+      onHighlightedLineIndicesChange(indicesToSet(indices))
     },
-    [onHighlightedIndicesChange, sentenceSpans]
+    [lines, onHighlightedLineIndicesChange]
   )
 
   const assignTextareaRef = useCallback(
@@ -90,19 +86,30 @@ export function TranslateSourceInput({
     }
   }, [])
 
+  useEffect(() => {
+    if (highlightedLineIndices.size === 0) {
+      return
+    }
+    const firstLineIndex = Math.min(...highlightedLineIndices)
+    const el = mirrorRef.current?.querySelector(`[data-line-index="${firstLineIndex}"]`)
+    el?.scrollIntoView({ block: "nearest" })
+  }, [highlightedLineIndices])
+
   return (
     <div className="bmxt-translate-editor-input-wrap">
       <div ref={mirrorRef} className="bmxt-translate-editor-mirror" aria-hidden>
-        {mirrorSegments.map((segment) => {
-          if (segment.kind === "plain") {
-            return <span key={`plain-${segment.start}`}>{segment.text}</span>
-          }
-          const highlighted = highlightedIndices.has(segment.index)
+        {lines.map((line) => {
+          const highlighted = highlightedLineIndices.has(line.index)
           return (
             <span
-              key={`sentence-${segment.start}`}
-              className={highlighted ? "bmxt-translate-sentence-highlight" : undefined}>
-              {segment.text}
+              key={`line-${line.start}`}
+              data-line-index={line.index}
+              className={
+                highlighted
+                  ? "bmxt-translate-line bmxt-translate-sentence-highlight"
+                  : "bmxt-translate-line"
+              }>
+              {text.slice(line.start, line.end)}
             </span>
           )
         })}
@@ -112,7 +119,7 @@ export function TranslateSourceInput({
         className="bmxt-translate-editor-input"
         value={text}
         spellCheck={false}
-        aria-label="Translate editor"
+        aria-label="Translate editor source"
         onChange={(e) => onTextChange(e.target.value)}
         onCompositionStart={onCompositionStart}
         onCompositionEnd={onCompositionEnd}

@@ -1,3 +1,38 @@
+/** EN: Line indices from a DOM selection inside a highlight root. */
+export function lineIndicesFromSelection(root: HTMLElement | null): readonly number[] {
+  const sel = window.getSelection()
+  if (!root || !sel || sel.rangeCount === 0) {
+    return []
+  }
+
+  if (sel.isCollapsed) {
+    const anchor = sel.anchorNode
+    if (!anchor) {
+      return []
+    }
+    const el =
+      anchor instanceof Element
+        ? anchor.closest("[data-line-index]")
+        : anchor.parentElement?.closest("[data-line-index]")
+    if (!el || !root.contains(el)) {
+      return []
+    }
+    const index = Number((el as HTMLElement).dataset.lineIndex)
+    return Number.isFinite(index) ? [index] : []
+  }
+
+  const indices = new Set<number>()
+  root.querySelectorAll("[data-line-index]").forEach((node) => {
+    if (sel.containsNode(node, true)) {
+      const index = Number((node as HTMLElement).dataset.lineIndex)
+      if (Number.isFinite(index)) {
+        indices.add(index)
+      }
+    }
+  })
+  return [...indices].sort((a, b) => a - b)
+}
+
 /** EN: Sentence indices from a DOM selection inside a highlight root. */
 export function sentenceIndicesFromSelection(root: HTMLElement | null): readonly number[] {
   const sel = window.getSelection()

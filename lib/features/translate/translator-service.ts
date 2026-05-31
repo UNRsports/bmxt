@@ -61,3 +61,31 @@ export async function translateJaEnJa(
   const back = await backTr.translate(forward, { signal })
   return { source: sentence, forward, back }
 }
+
+/** EN: ja → en → ja for each newline-delimited row; preserves `\n` layout. */
+export async function translateJaEnJaMultiline(
+  source: string,
+  signal?: AbortSignal
+): Promise<TranslationTriplet> {
+  const lines = source.split("\n")
+  const forwardParts: string[] = []
+  const backParts: string[] = []
+  for (const line of lines) {
+    if (signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError")
+    }
+    if (line.trim().length === 0) {
+      forwardParts.push("")
+      backParts.push("")
+      continue
+    }
+    const triplet = await translateJaEnJa(line, signal)
+    forwardParts.push(triplet.forward)
+    backParts.push(triplet.back)
+  }
+  return {
+    source,
+    forward: forwardParts.join("\n"),
+    back: backParts.join("\n")
+  }
+}
