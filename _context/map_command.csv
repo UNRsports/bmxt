@@ -25,8 +25,11 @@ tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,args[2] 以降を結合して 
 tabs,-nowurl,,none,,tabs -nowurl,追加引数不可。Effect: tabs_nu（現在タブ URL 表示）。,
 nav,-enter,,none,,nav -enter | nav -exit,第二 `-enter`: BMXt ウィンドウ UI で nav を armed（直前フォーカス通常ウィンドウのアクティブ tab が対象。dom -list と同系のタブ解決・optional http(s) 権限）。オーバーレイは Alt で ON/OFF（ターミナル列フォーカス時のみ）。ON 後: ↑↓←→ 移動・Enter クリック/typing・Ctrl メニュー。typing 時の翻訳プレビューは translate -on 連動。SW run は案内行のみ。,第二は -enter / -exit のみ（短縮なし）。単独 nav + Enter は continuation（`nav `）。Ctrl+←/→ で picker 列フォーカス中は nav キー無効。
 nav,-exit,,none,,（同上）,第二 `-exit`: Alt OFF 必須のうえ nav 完全終了（位置記憶クリア・全タブオーバーレイ除去）。未 armed なら案内行。SW run は案内行のみ。,navActive（オーバーレイ ON）中の -exit はエラー。
-translate,-on,,none,,translate -on | translate -off,第二 `-on`: BMXt ウィンドウ UI。translate エディタ side 列を開き chrome.storage.local（TYPING_TRANSLATE_KEY）で assist ON。キーボードフォーカスをエディタ列へ。Chrome Translator API（ja↔en）。SW run は案内行のみ。,単独 translate + Enter は continuation（`translate `）。Tab 補完は -on/-off のみ（短縮なし）。
+translate,-on,,none,,translate -on | translate -off | translate -setting,第二 `-on`: BMXt ウィンドウ UI。translate エディタ side 列を開き chrome.storage.local（TYPING_TRANSLATE_KEY）で assist ON。キーボードフォーカスをエディタ列へ。Chrome Translator API（設定ペアで source→target→source 往復）。SW run は案内行のみ。,単独 translate + Enter は continuation（`translate `）。Tab 補完は -on / -off / -setting（短縮なし）。`-setting` のみ Enter は continuation（`translate -setting `）→ 第三 `--ja-en` / `--en-ja`。
 translate,-off,,none,,（同上）,第二 `-off`: エディタ列を閉じ assist OFF。SW run は案内行のみ。,
+translate,-setting,,none,,（同上）,第二 `-setting` のみ Enter: 第三トークン候補を表示しプロンプトを `translate -setting ` に復帰。Tab 補完で `--ja-en` / `--en-ja`。
+translate,-setting,--ja-en,none,,translate -setting --ja-en,第三 `--ja-en`: ペア ja-en を TYPING_TRANSLATE_KEY に保存（原文 JA・訳 EN・再訳 JA）。UI 見出しは日英併記。nav Alt 確定は英語（forward）。進行中の翻訳ブロックはリセット。SW run は案内行のみ。,
+translate,-setting,--en-ja,none,,translate -setting --en-ja,第三 `--en-ja`: ペア en-ja を保存（原文 EN・訳 JA・再訳 EN）。nav Alt 確定は日本語（forward）。,
 aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page（通常タブで tabs/welcome.html を開く。install/update 自動表示と同じ URL）。,
 split,-col,,none,,split -col | split -row,Effect: split_col。追加トークン不可。,第二トークンは大小無視（isSecondToken）。単独 split + Enter は continuation（`split `）
 split,-row,,none,,（同上）,Effect: split_row。,（同上）

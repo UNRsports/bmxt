@@ -16,7 +16,7 @@
   - [Command List](#command-list)
   - [`aboutbmxt`](#aboutbmxt)
   - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
-  - [`translate` (`translate -on` / `translate -off`)](#translate)
+  - [`translate` (`translate -on` / `translate -off` / `translate -setting`)](#translate)
   - [`tabs` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tabs -list` / `tabs -list -u`)](#tabs-tab-picker)
@@ -173,9 +173,12 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
 | `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
-| `translate` | Print usage and restore the prompt to `translate ` for `-on` or `-off` |
+| `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Open the translate editor side column and enable translation assist (see **[`translate`](#translate)**) |
 | `translate -off` | Close the editor column and disable translation assist |
+| `translate -setting` | Restore `translate -setting ` and show `--ja-en` / `--en-ja` choices (Tab menu) |
+| `translate -setting --ja-en` | Save **ja → en** pair (default); round-trip preview and nav commit use English on Alt hold |
+| `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `close` / `c <tabId>` | Close tab |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
@@ -266,7 +269,7 @@ After text selection, **Copy** + **Enter** writes the selection to the system cl
 
 **Typing mode** (after **Enter** on an editable field): the BMXt prompt shows a typing hint; text is mirrored into the page field. **Alt** **hold** (~500ms) **commits**; **Esc** **hold** **cancels** and restores the previous value. Multiline fields allow newlines (**Shift+Enter** on the prompt). Short **Alt** does not toggle the overlay while typing.
 
-When **`translate -on`** is active, typing mode also shows a **ja → en → ja** preview strip under the prompt (completed sentences end with `。` `.` `!` `?` `！` `？`, etc.). **Alt hold** commit sends **English** assembled from those blocks (see **[`translate`](#translate)**), not the raw buffer.
+When **`translate -on`** is active, typing mode also shows a **source → target → source** round-trip preview strip under the prompt (completed sentences end with `。` `.` `!` `?` `！` `？`, etc.). **Alt hold** commit sends the **target language** for the saved pair (**English** with **`--ja-en`**, **Japanese** with **`--en-ja`**) assembled from translation blocks (see **[`translate`](#translate)**), not the raw buffer.
 
 The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **typing**, **menu**, **sel-start** / **sel-end**, **copy**, plus the target tab title or a short error.
 
@@ -288,27 +291,44 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 
 <a id="translate"></a>
 
-### `translate` (`translate -on` / `translate -off`)
+### `translate` (`translate -on` / `translate -off` / `translate -setting`)
 
-**`translate`** enables Chrome’s built-in **`Translator` API** (Japanese ↔ English) for a **side editor column** and optional assist during **nav typing mode**.
+**`translate`** enables Chrome’s built-in **`Translator` API** (Japanese ↔ English) for a **side editor column** and optional assist during **nav typing mode**. The active direction is stored as a **translation pair** in **`chrome.storage.local`** (**`TYPING_TRANSLATE_KEY`**: `{ enabled, pair }`).
 
 | Input | Effect |
 |-------|--------|
-| Bare `translate` + **Enter** | Prints usage and restores **`translate `** (continuation). Tab completes **`-on`** / **`-off`** only — no short aliases. |
-| **`translate -on`** | Opens the **translate editor** side column, enables translation assist (saved in **`chrome.storage.local`** under **`TYPING_TRANSLATE_KEY`**). Keyboard focus moves to the editor. |
+| Bare `translate` + **Enter** | Prints usage and restores **`translate `** (continuation). Tab completes **`-on`** / **`-off`** / **`-setting`** only — no short aliases. |
+| **`translate -on`** | Opens the **translate editor** side column, enables translation assist. Keyboard focus moves to the editor. Log line includes the current pair token (e.g. **`--ja-en`**). |
 | **`translate -off`** | Closes the editor column and disables assist. |
+| **`translate -setting`** + **Enter** | Prints pair choices and restores **`translate -setting `** (continuation). Tab completes third tokens **`--ja-en`** / **`--en-ja`**. |
+| **`translate -setting --ja-en`** | Saves pair **`ja-en`** (source **JA** → target **EN**, back-translation to **JA**). Resets in-flight translation blocks. |
+| **`translate -setting --en-ja`** | Saves pair **`en-ja`** (source **EN** → target **JA**, back-translation to **EN**). Resets in-flight translation blocks. |
+
+**Translation pair (`-setting`)**
+
+- Pairs are defined in **`lib/features/translate/translation-pair.ts`** (`TRANSLATION_PAIRS`). Adding a language later means extending that table and manifest **`trailingTokens`** — not hard-coding ja/en in UI components.
+- **`--ja-en`** (default): round-trip **ja → en → ja**; nav **Alt hold** commit sends **English** (`forward` field).
+- **`--en-ja`**: round-trip **en → ja → en**; nav **Alt hold** commit sends **Japanese**.
+
+**Panel labels (原文 / 訳 / 再訳)**
+
+- Editor column and nav preview use the same three sections: **source**, **forward** (訳), **back** (再訳). Headings are **bilingual** (Japanese line + English subline) and reflect the active pair, e.g. **`原文（JA）`** / **`Source (Japanese)`**, **`訳（EN）`** / **`Translation (English)`**, **`再訳（JA）`** / **`Back-translation (Japanese)`** for **`--ja-en`**; tags swap for **`--en-ja`** (`getTranslationFieldLabels`).
+
+**Status bar**
+
+- While assist is **ON**, the translate status strip shows the current pair token (e.g. **`--ja-en`**) plus mode hints (editor / nav typing / busy). Commit hint text follows the pair (English vs Japanese on Alt hold).
 
 **Editor column**
 
 - Same horizontal strip as other pickers: **Terminal** | **tabs** | **find** | **dom** | **translate** (open slots only). **`Esc`** returns focus to the prompt; the column stays open until **`translate -off`**.
-- Long-form **`textarea`**. While the column is focused, each **completed sentence** (closing punctuation such as `。` `.` `!` `?` `！` `？`) triggers **ja → en → ja** preview blocks below the editor.
-- Requires a Chrome build with the **`Translator`** API and **ja↔en** pair availability; otherwise a short status line is shown.
+- Long-form **`textarea`**. While the column is focused, each **completed sentence** (closing punctuation such as `。` `.` `!` `?` `！` `？`) triggers **round-trip** preview blocks (訳 / 再訳) for the saved pair.
+- Requires a Chrome build with the **`Translator`** API and availability for the pair’s **source→target** languages; otherwise a short status line is shown.
 
 **Nav typing**
 
-- With assist **ON**, **nav typing mode** reuses the same preview under the BMXt prompt. **Alt hold** commit injects **English** built from completed sentence translations (see **`buildEnglishCommitText`** in **`lib/features/translate/`**).
+- With assist **ON**, **nav typing mode** reuses the same preview under the BMXt prompt. **Alt hold** commit injects text built from completed blocks via **`buildEnglishCommitText`** (uses **`translateForward`** for the active pair — target language on commit).
 
-**Implementation:** **`lib/features/translate/`**, **`lib/features/bmxt-core/cmd/translate.ts`**, UI in **`bmxt-shell.tsx`** (handled before `RUN_CMD`, like other picker launches).
+**Implementation:** **`lib/features/translate/`** (`translation-pair.ts`, `translator-service.ts`, `parse-translate-command.ts`), **`lib/features/bmxt-core/cmd/translate.ts`**, UI in **`bmxt-shell.tsx`** (handled before `RUN_CMD`, like other picker launches).
 
 <a id="picker-ui"></a>
 
@@ -402,7 +422,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 **Translate editor column**
 
 - **`translate -on`** opens the column; **`translate -off`** closes it (no `translate -exit -list` token).
-- **`Esc`** returns focus to the prompt (column stays open). Long-form input; sentence-ending punctuation triggers live **ja / EN / 再訳** blocks. See **[`translate`](#translate)**.
+- **`Esc`** returns focus to the prompt (column stays open). Long-form input; sentence-ending punctuation triggers live **原文 / 訳 / 再訳** blocks (bilingual headings; language tags follow **`translate -setting`**). See **[`translate`](#translate)**.
 
 **Adding a new side picker column**
 
@@ -496,7 +516,7 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`find --none` / `--history` / `--bookmark` / `--page`**, **`translate -on` / `translate -off`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on`**, arming / editor open and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`find --none` / `--history` / `--bookmark` / `--page`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on` / `-setting`**, arming / editor open / pair save and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
 
 **`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the focused split pane (or the whole BMXt window when it is the last pane).
 
@@ -509,7 +529,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
-- **`lib/features/translate/`** — translation assist (`translate -on` / `-off`, editor column, nav typing commit); see **[`translate`](#translate)**
+- **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, editor column, nav typing commit); see **[`translate`](#translate)**
 - **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
@@ -627,7 +647,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/nav/` — Nav overlay feature package
-- `lib/features/translate/` — Translation assist (`translate -on` / `-off`, editor column)
+- `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, editor column, `translation-pair.ts`)
 - `contents/bmxt-nav-overlay.ts` — Nav content script (http(s))
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
@@ -720,7 +740,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [コマンド一覧](#command-list-ja)
   - [`aboutbmxt`](#aboutbmxt-ja)
   - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
-  - [`translate`（`translate -on` / `translate -off`）](#translate-ja)
+  - [`translate`（`translate -on` / `translate -off` / `translate -setting`）](#translate-ja)
   - [`tabs`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tabs -list` / `tabs -list -u`）](#tabs-tab-picker-ja)
@@ -878,9 +898,12 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
 | `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |
-| `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` または `-off` 用） |
+| `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` / `-off` / `-setting` 用） |
 | `translate -on` | 翻訳エディタ列を開き、翻訳アシストを有効化（**[`translate`](#translate-ja)** 参照） |
 | `translate -off` | エディタ列を閉じ、翻訳アシストを無効化 |
+| `translate -setting` | `translate -setting ` に復帰し、`--ja-en` / `--en-ja` を案内（Tab 補完） |
+| `translate -setting --ja-en` | ペア **ja-en** を保存（既定）。往復プレビュー・nav Alt 確定は英語 |
+| `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
@@ -951,7 +974,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **typing モード**（編集可能要素で **Enter** 後）: BMXt プロンプトにヒント表示。入力はページ側フィールドへ反映。**Alt 長押し**（約 500ms）で **確定**、**Esc 長押し**で **取消**（元の値に戻す）。複数行フィールドは **Shift+Enter** で改行可。typing 中の短い **Alt** はオーバーレイ切替にならない。
 
-**`translate -on`** 中は typing でもプロンプト下に **ja → en → ja** のプレビューが出ます（文の終わりは `。` `.` `!` `?` `！` `？` など）。**Alt 長押し**確定では生の日本語ではなく、翻訳ブロックから組み立てた **英語**をページへ送ります（**[`translate`](#translate-ja)**）。
+**`translate -on`** 中は typing でもプロンプト下に **原文 → 訳 → 再訳** の往復プレビューが出ます（文の終わりは `。` `.` `!` `?` `！` `？` など）。**Alt 長押し**確定では生の入力ではなく、保存ペアの **訳（target 言語）** をブロックから組み立てて送ります（**`--ja-en`** は英語、**`--en-ja`** は日本語。詳細は **[`translate`](#translate-ja)**）。
 
 プロンプト下のステータス帯は **`nav`**・**ON/OFF**・**typing**・**menu**・**sel-start** / **sel-end**・**copy** などと、対象タブ名または短いエラーを表示。
 
@@ -973,27 +996,44 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 <a id="translate-ja"></a>
 
-### `translate`（`translate -on` / `translate -off`）
+### `translate`（`translate -on` / `translate -off` / `translate -setting`）
 
-**`translate`** は Chrome 内蔵の **`Translator` API**（日本語 ↔ 英語）を、**横並びの翻訳エディタ列**と **nav typing** 向けアシストに使います。
+**`translate`** は Chrome 内蔵の **`Translator` API**（日本語 ↔ 英語）を、**横並びの翻訳エディタ列**と **nav typing** 向けアシストに使います。向きは **翻訳ペア** として **`chrome.storage.local`** の **`TYPING_TRANSLATE_KEY`**（`{ enabled, pair }`）に保存します。
 
 | 入力 | 動作 |
 |------|------|
-| 単独 `translate` + **Enter** | 利用案内を表示し、**`translate `** に復元（continuation）。Tab 補完は **`-on`** / **`-off`** のみ（短縮別名なし）。 |
-| **`translate -on`** | **翻訳エディタ**列を開き、アシストを有効化（**`chrome.storage.local`** の **`TYPING_TRANSLATE_KEY`** に保存）。キーボードフォーカスはエディタ列へ。 |
+| 単独 `translate` + **Enter** | 利用案内を表示し、**`translate `** に復元（continuation）。Tab 補完は **`-on`** / **`-off`** / **`-setting`** のみ（短縮別名なし）。 |
+| **`translate -on`** | **翻訳エディタ**列を開き、アシストを有効化。キーボードフォーカスはエディタ列へ。ログに現在のペア（例 **`--ja-en`**）を表示。 |
 | **`translate -off`** | エディタ列を閉じ、アシストを無効化。 |
+| **`translate -setting`** + **Enter** | ペア候補を表示し、**`translate -setting `** に復帰。Tab で第三トークン **`--ja-en`** / **`--en-ja`** を補完。 |
+| **`translate -setting --ja-en`** | ペア **`ja-en`** を保存（原文 **JA** → 訳 **EN** → 再訳 **JA**）。進行中ブロックをリセット。 |
+| **`translate -setting --en-ja`** | ペア **`en-ja`** を保存（原文 **EN** → 訳 **JA** → 再訳 **EN**）。進行中ブロックをリセット。 |
+
+**翻訳ペア（`-setting`）**
+
+- 定義は **`lib/features/translate/translation-pair.ts`**（`TRANSLATION_PAIRS`）。言語追加時は同テーブルと manifest の **`trailingTokens`** を拡張する想定。
+- **`--ja-en`**（既定）: 往復 **ja → en → ja**。**nav Alt 長押し**確定は **英語**（`forward`）。
+- **`--en-ja`**: 往復 **en → ja → en**。**nav Alt 長押し**確定は **日本語**。
+
+**パネル見出し（原文 / 訳 / 再訳）**
+
+- エディタ列・nav 下プレビューとも **原文・訳・再訳** の3段。見出しは **日英併記**（日本語行＋英語サブ行）で、ペアに応じた言語タグ（例 **`--ja-en`**: **`原文（JA）`** / **`Source (Japanese)`**、`getTranslationFieldLabels`）。
+
+**ステータスバー**
+
+- アシスト **ON** 中、translate 帯に現在ペア（例 **`--ja-en`**）とモード（editor / nav typing 等）を表示。Alt 確定のヒントはペアに追従（英訳送信 / 和訳送信）。
 
 **エディタ列**
 
 - 他ピッカーと同じ横並び: **ターミナル** | **tabs** | **find** | **dom** | **translate**（開いているスロットのみ）。**`Esc`** でプロンプトへ戻る（列は **`translate -off`** まで開いたまま）。
-- 長文用 **`textarea`**。列にフォーカスがあるとき、**文が完結**（`。` `.` `!` `?` `！` `？` などで終わる）ごとに **ja → en → ja** のプレビューブロックを下に表示。
-- **`Translator` API** と **ja↔en** の利用可否が必要。未対応の Chrome では短いステータス行を表示。
+- 長文用 **`textarea`**。列にフォーカスがあるとき、**文が完結**（`。` `.` `!` `?` `！` `？` など）ごとに、保存ペアに応じた **訳 / 再訳** プレビューを表示。
+- **`Translator` API** と、ペアの **source→target** の利用可否が必要。未対応の Chrome では短いステータス行を表示。
 
 **nav typing**
 
-- アシスト **ON** 時、**nav typing** でも同様のプレビューをプロンプト下に表示。**Alt 長押し**確定では **`lib/features/translate/`** の **`buildEnglishCommitText`** により英語文を組み立てて注入。
+- アシスト **ON** 時、**nav typing** でも同様のプレビューをプロンプト下に表示。**Alt 長押し**確定では **`buildEnglishCommitText`**（内部で **`translateForward`**）により、ペアの target 言語文を組み立てて注入。
 
-**実装:** **`lib/features/translate/`**、**`lib/features/bmxt-core/cmd/translate.ts`**、UI は **`bmxt-shell.tsx`**（`RUN_CMD` より前に処理）。
+**実装:** **`lib/features/translate/`**（`translation-pair.ts`、`translator-service.ts`、`parse-translate-command.ts`）、**`lib/features/bmxt-core/cmd/translate.ts`**、UI は **`bmxt-shell.tsx`**（`RUN_CMD` より前に処理）。
 
 <a id="picker-ui-ja"></a>
 
@@ -1087,7 +1127,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 **翻訳エディタ列**
 
 - **`translate -on`** で開く。**`translate -off`** で閉じる（`translate -exit -list` のような第三トークンはない）。
-- **`Esc`** でプロンプトへ（列は開いたまま）。長文入力。句点などで **原文 / EN / 再訳** ブロックが更新される。詳細は **[`translate`](#translate-ja)**。
+- **`Esc`** でプロンプトへ（列は開いたまま）。長文入力。句点などで **原文 / 訳 / 再訳** ブロックが更新される（見出しは日英併記・ペアに応じた言語タグ）。詳細は **[`translate`](#translate-ja)**。
 
 **新しいサイド列ピッカーの追加**
 
@@ -1200,7 +1240,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`find --none` / `--history` / `--bookmark` / `--page`**、**`translate -on` / `translate -off`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on`** の起動・オーバーレイ／エディタ制御は UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`find --none` / `--history` / `--bookmark` / `--page`**、**`translate -on` / `translate -off` / `translate -setting`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on` / `-setting`** の起動・ペア保存・オーバーレイ／エディタ制御は UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
 
 **`exit`:** **`exit_pane`** Effect を返す。Service Worker はフォーカス中の split ペインを閉じる（最後の 1 ペインなら BMXt ウィンドウごと閉じる）。
 
@@ -1319,7 +1359,7 @@ npm run dev   # または pnpm dev
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
-- `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off`、エディタ列）
+- `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、エディタ列、`translation-pair.ts`）
 - `contents/bmxt-nav-overlay.ts` — Nav 用コンテンツスクリプト（http(s)）
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
