@@ -328,6 +328,7 @@ export function BmxtShell({
     isFocusedPane,
     paneFocus,
     positionsRef: navPositionsRef,
+    translateAssistActive: translateEnabled,
     getTypingBuffer: () => imeRef.current?.value ?? lineRef.current,
     resolveTypingCommitText: async () => {
       const raw = imeRef.current?.value ?? lineRef.current
