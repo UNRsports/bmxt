@@ -32,3 +32,18 @@ export function takeNewCompleteSentence(
   }
   return { sentence: raw, end: offset + tail }
 }
+
+/** EN: All complete sentences in `buffer` (in order). */
+export function listCompleteSentences(buffer: string): readonly string[] {
+  const sentences: string[] = []
+  let offset = 0
+  for (;;) {
+    const found = takeNewCompleteSentence(buffer, offset)
+    if (!found) {
+      break
+    }
+    sentences.push(found.sentence)
+    offset = found.end
+  }
+  return sentences
+}

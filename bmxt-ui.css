@@ -218,7 +218,7 @@ body {
   color: #58a6ff;
 }
 
-/* nav typing — Chrome Translator assist (ja / EN / back-translation) */
+/* nav typing — Chrome Translator assist (訳 / 最訳) */
 .bmxt-typing-translate {
   margin-top: 2px;
   margin-bottom: 2px;
@@ -234,32 +234,29 @@ body {
 .bmxt-typing-translate-status {
   color: #d29922;
   font-size: 10px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
-.bmxt-typing-translate-block + .bmxt-typing-translate-block {
+.bmxt-typing-translate-section + .bmxt-typing-translate-rule {
   margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid #21262d;
 }
 
-.bmxt-typing-translate-line {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-  margin-top: 2px;
+.bmxt-typing-translate-rule {
+  border: none;
+  border-top: 1px solid #30363d;
+  margin: 6px 0;
 }
 
-.bmxt-typing-translate-label {
-  flex: 0 0 2.2em;
+.bmxt-typing-translate-heading {
   color: #58a6ff;
   font-weight: 600;
   font-size: 10px;
+  line-height: 1.3;
 }
 
-.bmxt-typing-translate-text {
-  flex: 1;
-  min-width: 0;
+.bmxt-typing-translate-body {
+  margin-top: 2px;
+  min-height: 1.4em;
   color: #c9d1d9;
   white-space: pre-wrap;
   word-break: break-word;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { takeNewCompleteSentence } from "./sentence-boundary"
+import { listCompleteSentences } from "./sentence-boundary"
 import {
   isBuiltInTranslatorSupported,
   jaEnPairAvailability,
@@ -17,6 +17,19 @@ type Options = {
   isComposing: boolean
 }
 
+function sentencesKey(sentences: readonly string[]): string {
+  return sentences.join("\0")
+}
+
+function pendingBlocks(sentences: readonly string[], nextId: () => number): TranslationBlock[] {
+  return sentences.map((source) => ({
+    id: nextId(),
+    source,
+    forward: "",
+    back: ""
+  }))
+}
+
 export function useSentenceTranslate({ active, buffer, isComposing }: Options): {
   blocks: readonly TranslationBlock[]
   busy: boolean
@@ -28,11 +41,12 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
   const [blocks, setBlocks] = useState<TranslationBlock[]>([])
   const [busy, setBusy] = useState(false)
   const [statusNote, setStatusNote] = useState<string | null>(null)
-  const lastTranslatedEndRef = useRef(0)
-  const prefixAtLastEndRef = useRef("")
+  const lastSentencesKeyRef = useRef("")
   const nextIdRef = useRef(1)
   const queueRef = useRef(Promise.resolve())
   const abortRef = useRef<AbortController | null>(null)
+
+  const nextBlockId = useCallback(() => nextIdRef.current++, [])
 
   const setCommitError = useCallback((message: string | null) => {
     setStatusNote(message)
@@ -45,8 +59,7 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
   const resetSession = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
-    lastTranslatedEndRef.current = 0
-    prefixAtLastEndRef.current = ""
+    lastSentencesKeyRef.current = ""
     setBlocks([])
     setBusy(false)
     setStatusNote(null)
@@ -64,20 +77,21 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
       return
     }
 
-    const prefix = buffer.slice(0, lastTranslatedEndRef.current)
-    if (prefix !== prefixAtLastEndRef.current) {
-      lastTranslatedEndRef.current = 0
-      prefixAtLastEndRef.current = ""
-    }
+    const sentences = listCompleteSentences(buffer).slice(-MAX_BLOCKS)
+    const key = sentencesKey(sentences)
 
-    const found = takeNewCompleteSentence(buffer, lastTranslatedEndRef.current)
-    if (!found) {
+    if (sentences.length === 0) {
+      if (lastSentencesKeyRef.current !== "") {
+        lastSentencesKeyRef.current = ""
+        setBlocks([])
+      }
       return
     }
 
-    const { sentence, end } = found
-    lastTranslatedEndRef.current = end
-    prefixAtLastEndRef.current = buffer.slice(0, end)
+    if (key === lastSentencesKeyRef.current) {
+      return
+    }
+    lastSentencesKeyRef.current = key
 
     const run = async () => {
       if (!isBuiltInTranslatorSupported()) {
@@ -99,16 +113,23 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
           : null
       )
       setBusy(true)
+      setBlocks(pendingBlocks(sentences, nextBlockId))
       abortRef.current?.abort()
       const ac = new AbortController()
       abortRef.current = ac
       try {
-        const triplet: TranslationTriplet = await translateJaEnJa(sentence, ac.signal)
+        const results: TranslationBlock[] = []
+        for (const sentence of sentences) {
+          if (ac.signal.aborted) {
+            return
+          }
+          const triplet: TranslationTriplet = await translateJaEnJa(sentence, ac.signal)
+          results.push({ ...triplet, id: nextBlockId() })
+        }
         if (ac.signal.aborted) {
           return
         }
-        const id = nextIdRef.current++
-        setBlocks((prev) => [...prev.slice(-(MAX_BLOCKS - 1)), { ...triplet, id }])
+        setBlocks(results)
         setStatusNote(null)
       } catch (e) {
         if (ac.signal.aborted) {
@@ -124,7 +145,7 @@ export function useSentenceTranslate({ active, buffer, isComposing }: Options): 
     }
 
     queueRef.current = queueRef.current.then(run, run)
-  }, [active, buffer, isComposing])
+  }, [active, buffer, isComposing, nextBlockId])
 
   return { blocks, busy, statusNote, resetSession, flushPendingTranslations, setCommitError }
 }

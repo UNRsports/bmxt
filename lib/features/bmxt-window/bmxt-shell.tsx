@@ -1253,7 +1253,7 @@ export function BmxtShell({
           setTranslatePicker(sessionId, { text: priorText })
           await appendLogLines([
             `> ${trimmed}`,
-            "translate: ON — editor column open (Esc → prompt · long-form input · 句点で ja/EN/再訳)"
+            "translate: ON — editor column open (Esc → prompt · long-form input · 句点で 訳/最訳)"
           ])
         } else {
           await saveTranslateEnabled(false)

@@ -9,7 +9,7 @@ import { useSentenceTranslate } from "./use-sentence-translate"
 import { TranslationStrip } from "./translation-strip"
 
 export const TRANSLATE_EDITOR_HEADLINE =
-  "translate — editor · Esc → prompt · translate -off to close · 句点で ja/EN/再訳"
+  "translate — editor · Esc → prompt · translate -off to close · 句点で 訳/最訳"
 
 export type TranslateEditorBodyProps = {
   text: string
@@ -30,9 +30,9 @@ export function TranslateEditorBody({
   const [isComposing, setIsComposing] = useState(false)
 
   const { blocks, busy, statusNote } = useSentenceTranslate({
-    active: keyboardActive,
+    active: true,
     buffer: text,
-    isComposing
+    isComposing: keyboardActive && isComposing
   })
 
   useEffect(() => {
@@ -69,7 +69,12 @@ export function TranslateEditorBody({
         onCompositionEnd={() => setIsComposing(false)}
         onKeyDown={onKeyDown}
       />
-      <TranslationStrip blocks={blocks} busy={busy} statusNote={statusNote} />
+      <TranslationStrip
+        blocks={blocks}
+        busy={busy}
+        statusNote={statusNote}
+        alwaysVisible
+      />
     </div>
   )
 }
