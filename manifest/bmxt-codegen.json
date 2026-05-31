@@ -131,6 +131,22 @@
       ]
     },
     {
+      "module": "translate",
+      "canonicalName": "translate",
+      "aliases": [],
+      "usagePrimary": "translate -on | translate -off",
+      "subcommands": [
+        {
+          "head": "-on",
+          "tail": "none"
+        },
+        {
+          "head": "-off",
+          "tail": "none"
+        }
+      ]
+    },
+    {
       "module": "aboutbmxt",
       "canonicalName": "aboutbmxt",
       "aliases": [],

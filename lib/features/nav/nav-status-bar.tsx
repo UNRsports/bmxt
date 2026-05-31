@@ -41,17 +41,19 @@ export function NavStatusBar({
           ? "ON"
           : "OFF (Alt toggles)"
   return (
-    <div className="bmxt-nav-status" role="status" aria-live="polite">
-      <span className="bmxt-nav-status-seg bmxt-nav-status-seg--label">nav</span>
+    <div className="bmxt-mode-status" role="status" aria-live="polite">
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--label bmxt-mode-status-seg--label-nav">
+        nav
+      </span>
       <span
-        className={`bmxt-nav-status-seg bmxt-nav-status-seg--state${active ? " bmxt-nav-status-seg--on" : ""}`}>
+        className={`bmxt-mode-status-seg bmxt-mode-status-seg--state${active ? " bmxt-mode-status-seg--on" : ""}`}>
         {modeLabel}
       </span>
-      <span className="bmxt-nav-status-seg bmxt-nav-status-seg--meta">{tabLabel}</span>
-      <span className="bmxt-nav-status-seg bmxt-nav-status-seg--hint">
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{tabLabel}</span>
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
         {typingMode
           ? typingMultiline
-            ? "BMXt コマンドラインで入力 · 改行可能 · Alt 長押しで送信 · Esc 長押しでキャンセル"
+            ? "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル"
             : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"
           : textSelPicking
             ? textSelPhase === "start"

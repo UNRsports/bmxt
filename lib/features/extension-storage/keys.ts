@@ -26,8 +26,11 @@ export const WINDOW_DISPLAY_NAMES_KEY = "bmxt_window_display_names_v1"
 /** ユーザーが最後にリリースノートを見た拡張機能バージョン（`manifest.json` / package の version と一致）。 */
 export const LAST_SEEN_EXTENSION_VERSION_KEY = "bmxt_last_seen_extension_version"
 
-/** 更新時 welcome ページを最後に表示した拡張機能バージョン。 */
+/** インストール／更新時に welcome ページを最後に自動表示した拡張機能バージョン。 */
 export const LAST_SEEN_WELCOME_VERSION_KEY = "bmxt_last_seen_welcome_version"
+
+/** Nav typing / translate editor — Chrome 内蔵 Translator（ja↔en 往復表示）。 */
+export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
 
 export const MAX_SESSION_LOG_LINES = 500
 export const MAX_CMD_HISTORY_LINES = 300

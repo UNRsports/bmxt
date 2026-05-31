@@ -13,5 +13,6 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "help",
   "nav",
   "split",
-  "tabs"
+  "tabs",
+  "translate"
 ]

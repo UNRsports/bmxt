@@ -13,6 +13,7 @@ function usageLines(): string[] {
     "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on prompt toggles overlay on/off)",
     "       nav -exit        — disarm nav (turn Alt off first)",
     "EN: While armed, Alt toggles the page overlay when this pane’s prompt has focus.",
+    "EN: Nav typing translation: use `translate -on` (see translate command).",
     "JA: 起動後はプロンプトで Alt がオーバーレイ ON/OFF。↑↓←→ で移動、Enter で左クリック相当。"
   ]
 }

@@ -156,14 +156,21 @@ body {
   font-size: 10px;
 }
 
-/* nav mode — tmux-style status strip under the prompt */
-.bmxt-nav-status {
+/* mode status — tmux-style strips under the prompt (nav / translate) */
+.bmxt-mode-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.bmxt-mode-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0;
-  margin-top: 2px;
-  margin-bottom: 4px;
+  margin: 0;
   padding: 3px 8px;
   font-size: 11px;
   line-height: 1.35;
@@ -174,33 +181,44 @@ body {
   user-select: none;
 }
 
-.bmxt-nav-status-seg {
+.bmxt-mode-status-stack .bmxt-mode-status + .bmxt-mode-status {
+  border-top: none;
+}
+
+.bmxt-mode-status-seg {
   padding: 0 8px;
   border-right: 1px solid #30363d;
 }
 
-.bmxt-nav-status-seg:last-child {
+.bmxt-mode-status-seg:last-child {
   border-right: none;
 }
 
-.bmxt-nav-status-seg--label {
-  color: #58a6ff;
+.bmxt-mode-status-seg--label {
   font-weight: 600;
 }
 
-.bmxt-nav-status-seg--state {
+.bmxt-mode-status-seg--label-nav {
+  color: #58a6ff;
+}
+
+.bmxt-mode-status-seg--label-translate {
+  color: #d2a8ff;
+}
+
+.bmxt-mode-status-seg--state {
   color: #8b949e;
 }
 
-.bmxt-nav-status-seg--state.bmxt-nav-status-seg--on {
+.bmxt-mode-status-seg--state.bmxt-mode-status-seg--on {
   color: #3fb950;
 }
 
-.bmxt-nav-status-seg--meta {
+.bmxt-mode-status-seg--meta {
   color: #c9d1d9;
 }
 
-.bmxt-nav-status-seg--hint {
+.bmxt-mode-status-seg--hint {
   flex: 1;
   min-width: 12rem;
   color: #484f58;
@@ -216,6 +234,176 @@ body {
 
 .bmxt-prompt-line--nav-typing .bmxt-prompt-glyph {
   color: #58a6ff;
+}
+
+/* nav typing — Chrome Translator assist (訳 / 再訳) */
+.bmxt-typing-translate {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #8b949e;
+}
+
+.bmxt-typing-translate-status {
+  color: #d29922;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+
+.bmxt-typing-translate-section + .bmxt-typing-translate-rule {
+  margin-top: 6px;
+}
+
+.bmxt-typing-translate-rule {
+  border: none;
+  border-top: 1px solid #30363d;
+  margin: 6px 0;
+}
+
+.bmxt-typing-translate-heading {
+  color: #58a6ff;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.bmxt-typing-translate-body {
+  margin-top: 2px;
+  min-height: 1.4em;
+  color: #c9d1d9;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* translate — standalone editor picker column */
+.bmxt-translate-editor {
+  min-height: 0;
+}
+
+.bmxt-translate-editor-status {
+  flex-shrink: 0;
+  color: #d29922;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+
+.bmxt-translate-editor-panels {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bmxt-translate-editor-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #21262d;
+}
+
+.bmxt-translate-editor-panel:first-child {
+  border-top: none;
+}
+
+.bmxt-translate-editor-panel-heading {
+  flex-shrink: 0;
+  color: #58a6ff;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 6px 0 2px;
+}
+
+.bmxt-translate-editor-panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.bmxt-translate-editor-input-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+}
+
+.bmxt-translate-editor-mirror {
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 8px 10px;
+  border: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  line-height: 1.5;
+  color: transparent;
+  pointer-events: none;
+}
+
+.bmxt-translate-sentence-highlight {
+  background: rgba(88, 166, 255, 0.28);
+  border-radius: 2px;
+}
+
+.bmxt-translate-line {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1.5em;
+}
+
+.bmxt-translate-editor-mirror .bmxt-translate-line {
+  box-sizing: border-box;
+}
+
+.bmxt-translate-editor-input {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: #c9d1d9;
+  font: inherit;
+  line-height: 1.5;
+  outline: none;
+  position: relative;
+  z-index: 1;
+}
+
+.bmxt-translate-editor-input:focus {
+  background: rgba(88, 166, 255, 0.04);
+}
+
+.bmxt-typing-translate-body-sentences .bmxt-translate-line + .bmxt-translate-line {
+  margin-top: 0;
+}
+
+.bmxt-translate-editor-panel-body.bmxt-typing-translate-body-sentences {
+  margin-top: 0;
+  padding: 0 0 8px;
+  color: #c9d1d9;
+  font-size: inherit;
+  line-height: 1.5;
+}
+
+.bmxt-translate-editor-panel-body.bmxt-typing-translate-body-sentences .bmxt-translate-line {
+  padding: 0 10px;
+  cursor: pointer;
 }
 
 .bmxt-prompt-line {
@@ -274,6 +462,12 @@ body {
 
 .bmxt-prompt-ime::selection {
   background: rgba(88, 166, 255, 0.35);
+}
+
+.bmxt-prompt-composition {
+  text-decoration: underline;
+  text-decoration-color: #58a6ff;
+  text-underline-offset: 2px;
 }
 
 .bmxt-scroll-anchor {
@@ -449,6 +643,7 @@ body {
 .bmxt-tab-picker-filter-query,
 .bmxt-tab-picker-command-ambiguous-placeholder,
 .bmxt-plain-picker-row-text,
+.bmxt-translate-editor-input,
 .bmxt-dom-picker-row,
 .bmxt-subcmd-picker-item,
 .bmxt-dom-prompt-action-label,

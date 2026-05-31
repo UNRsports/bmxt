@@ -1,6 +1,7 @@
 /**
- * EN: Run nav overlay control via the service worker (reliable `executeScript` host).
- * JA: SW 経由でページへ注入（BMXt タブ UI から直接注入しない）。
+ * EN: Run nav overlay control via the service worker — prefer persistent content script,
+ *     fall back to `executeScript` when CS is not loaded.
+ * JA: SW 経由で nav オーバーレイを制御（常駐 CS 優先、未注入時のみ executeScript）。
  */
 
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
@@ -41,7 +42,11 @@ async function ensureHostAccess(): Promise<"ok" | "denied" | "not-scriptable"> {
   return "ok"
 }
 
-/** EN: Try content-script message first, then `executeScript` in this SW context. */
+/**
+ * EN: Prefer the registered content script (works without optional host permission on http(s));
+ *     fall back to `executeScript` when CS is not loaded and host access is granted.
+ * JA: 常駐 CS を優先（optional host 未許可でも http(s) で可）。CS 未注入時のみ executeScript。
+ */
 export async function runNavControlOnTab(
   tabId: number,
   action: NavInjectAction,
@@ -55,10 +60,6 @@ export async function runNavControlOnTab(
 ): Promise<NavControlResult> {
   if (!(await tabUrlOk(tabId))) {
     return { ok: false, reason: "not-scriptable" }
-  }
-  const gate = await ensureHostAccess()
-  if (gate === "denied") {
-    return { ok: false, reason: "permission-denied" }
   }
 
   const k = keyForward?.key ?? ""
@@ -87,6 +88,11 @@ export async function runNavControlOnTab(
     }
   } catch {
     /* content script not loaded — fall through */
+  }
+
+  const gate = await ensureHostAccess()
+  if (gate === "denied") {
+    return { ok: false, reason: "permission-denied" }
   }
 
   try {

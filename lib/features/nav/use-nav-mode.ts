@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  canScriptHttpHostPages,
+  requestOptionalHttpHostAccess
+} from "../extension-permissions/optional-http-hosts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import { NAV_ARROW_STEP_PX } from "./nav-config"
@@ -41,6 +45,10 @@ export type UseNavModeOptions = {
   paneFocus: PaneFocusTarget
   positionsRef: React.MutableRefObject<NavPositionsByTab>
   getTypingBuffer: () => string
+  /** EN: When set, Alt-hold commit uses this instead of `getTypingBuffer` (e.g. English from Translator). */
+  resolveTypingCommitText?: () => Promise<string>
+  /** EN: `translate -on` assist — suspend nav Ctrl menu while BMXt focus is outside nav. */
+  translateAssistActive?: boolean
 }
 
 function overlayErrorLabel(reason: string | undefined): string {
@@ -88,6 +96,7 @@ function dispatchExitTyping(): void {
 type NavInjectStateRefs = {
   menuOpenRef: React.MutableRefObject<boolean>
   textSelPhaseRef: React.MutableRefObject<NavInjectTextSelPhase | null>
+  menuSuspendedRef: React.MutableRefObject<boolean>
 }
 
 type NavUiSetters = {
@@ -122,6 +131,9 @@ function setNavUiState(
   patch: { menuOpen?: boolean; textSelPhase?: NavInjectTextSelPhase | null }
 ): void {
   if (patch.menuOpen !== undefined) {
+    if (!patch.menuOpen) {
+      refs.menuSuspendedRef.current = false
+    }
     refs.menuOpenRef.current = patch.menuOpen
     setters.setMenuOpen(patch.menuOpen)
   }
@@ -132,6 +144,7 @@ function setNavUiState(
 }
 
 function resetNavUiState(refs: NavInjectStateRefs, setters: NavUiSetters): void {
+  refs.menuSuspendedRef.current = false
   setNavUiState(refs, setters, { menuOpen: false, textSelPhase: null })
 }
 
@@ -198,7 +211,9 @@ export function useNavMode({
   isFocusedPane,
   paneFocus,
   positionsRef,
-  getTypingBuffer
+  getTypingBuffer,
+  resolveTypingCommitText,
+  translateAssistActive = false
 }: UseNavModeOptions): {
   currentTabTitle: string | null
   overlayError: string | null
@@ -221,19 +236,24 @@ export function useNavMode({
   const activeRef = useRef(active)
   const armedRef = useRef(armed)
   const typingModeRef = useRef(typingMode)
+  const typingMultilineRef = useRef(typingMultiline)
   const menuOpenRef = useRef(false)
+  const menuSuspendedRef = useRef(false)
   const textSelPhaseRef = useRef<NavInjectTextSelPhase | null>(null)
   const getTypingBufferRef = useRef(getTypingBuffer)
+  const resolveTypingCommitTextRef = useRef(resolveTypingCommitText)
   const lastOverlayTabRef = useRef<number | null>(null)
   const useCenterOnNextShowRef = useRef(true)
 
-  const navUiRefs: NavInjectStateRefs = { menuOpenRef, textSelPhaseRef }
+  const navUiRefs: NavInjectStateRefs = { menuOpenRef, textSelPhaseRef, menuSuspendedRef }
   const navUiSetters: NavUiSetters = { setMenuOpen, setTextSelPhase }
 
   activeRef.current = active
   armedRef.current = armed
   typingModeRef.current = typingMode
+  typingMultilineRef.current = typingMultiline
   getTypingBufferRef.current = getTypingBuffer
+  resolveTypingCommitTextRef.current = resolveTypingCommitText
 
   const textSelPicking = isTextSelPickingPhase(textSelPhase)
 
@@ -269,7 +289,11 @@ export function useNavMode({
   )
 
   const syncOverlayForTab = useCallback(
-    async (tabId: number | undefined, show: boolean, useCenter: boolean) => {
+    async (
+      tabId: number | undefined,
+      show: boolean,
+      useCenter: boolean
+    ): Promise<string | undefined> => {
       const prev = lastOverlayTabRef.current
       if (prev !== null && prev !== tabId) {
         exitTypingMode(prev)
@@ -287,7 +311,7 @@ export function useNavMode({
         setTypingMode(false)
         setTypingMultiline(false)
         resetNavUiState(navUiRefs, navUiSetters)
-        return
+        return undefined
       }
       const pos = useCenter ? null : (positionsRef.current[tabId] ?? null)
       const res = await startNavOverlayOnTab(tabId, pos, useCenter)
@@ -301,6 +325,7 @@ export function useNavMode({
       }
       lastOverlayTabRef.current = tabId
       setCurrentTabTitle(await resolveTabDisplayTitle(tabId))
+      return res.ok ? undefined : "reason" in res ? res.reason : undefined
     },
     [exitTypingMode, positionsRef, savePosition]
   )
@@ -330,7 +355,13 @@ export function useNavMode({
     }
     const useCenter = useCenterOnNextShowRef.current
     useCenterOnNextShowRef.current = false
-    await syncOverlayForTab(tabId, true, useCenter)
+    const reason = await syncOverlayForTab(tabId, true, useCenter)
+    if (reason === "permission-denied" && !(await canScriptHttpHostPages())) {
+      const granted = await requestOptionalHttpHostAccess()
+      if (granted) {
+        await syncOverlayForTab(tabId, true, useCenter)
+      }
+    }
   }, [syncOverlayForTab])
 
   const toggleActive = useCallback(() => {
@@ -357,8 +388,14 @@ export function useNavMode({
     if (tabId === null || !typingModeRef.current) {
       return
     }
-    await applyNavTypingOnTab(tabId, getTypingBufferRef.current())
-    exitTypingMode(tabId)
+    try {
+      const resolve = resolveTypingCommitTextRef.current
+      const text = resolve ? await resolve() : getTypingBufferRef.current()
+      await applyNavTypingOnTab(tabId, text)
+      exitTypingMode(tabId)
+    } catch {
+      /* EN: e.g. Translator commit failed — stay in typing mode. */
+    }
   }, [exitTypingMode])
 
   const cancelTyping = useCallback(async () => {
@@ -439,6 +476,47 @@ export function useNavMode({
     applyNavInjectState(res, navUiSetters, navUiRefs)
   }, [])
 
+  const navProcessFocused = isFocusedPane && paneFocus === "terminal"
+
+  useEffect(() => {
+    if (!armed || !active) {
+      menuSuspendedRef.current = false
+      return
+    }
+    const tabId = lastOverlayTabRef.current
+    if (tabId === null) {
+      return
+    }
+
+    if (
+      translateAssistActive &&
+      menuOpen &&
+      !navProcessFocused &&
+      !menuSuspendedRef.current
+    ) {
+      menuSuspendedRef.current = true
+      void navMenuInputOnTab(tabId, "close").then((res) => {
+        applyNavInjectState(res, navUiSetters, navUiRefs)
+        if (menuSuspendedRef.current && menuOpenRef.current) {
+          setNavUiState(navUiRefs, navUiSetters, { menuOpen: true })
+        }
+      })
+      return
+    }
+
+    if (menuSuspendedRef.current && navProcessFocused && menuOpen) {
+      menuSuspendedRef.current = false
+      void toggleNavMenuOnTab(tabId).then(applyNavResult)
+    }
+  }, [
+    armed,
+    active,
+    translateAssistActive,
+    navProcessFocused,
+    menuOpen,
+    applyNavResult
+  ])
+
   const onWindowKeydownCapture = useCallback(
     (e: KeyboardEvent) => {
       if (!armed || !active || !isFocusedPane || paneFocus !== "terminal") {
@@ -454,6 +532,13 @@ export function useNavMode({
           return
         }
         if (e.key === "Enter") {
+          const ev = e as KeyboardEvent & { isComposing?: boolean }
+          if (ev.isComposing) {
+            return
+          }
+          if (e.shiftKey && typingMultilineRef.current) {
+            return
+          }
           e.preventDefault()
           e.stopPropagation()
           return

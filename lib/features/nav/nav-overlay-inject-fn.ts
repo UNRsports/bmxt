@@ -621,7 +621,7 @@ export function bmxtNavControlInjected(
 
   function typingHintMarkup(multiline: boolean): string {
     const sub = multiline
-      ? '<span style="display:block;margin-top:2px;opacity:0.85">改行可能</span>'
+      ? '<span style="display:block;margin-top:2px;opacity:0.85">Shift+Enter で改行</span>'
       : ""
     return (
       '<div data-bmxt-nav-hint="1" style="margin-top:4px;padding:4px 8px;max-width:220px;' +

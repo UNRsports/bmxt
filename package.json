@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -21,7 +21,7 @@
     "sync:effect-types": "npm run codegen",
     "sync:generated-ts": "npm run codegen",
     "new:command": "node scripts/scaffold-command.mjs",
-    "test": "node --experimental-strip-types --test lib/features/side-picker/model/from-find-lines.test.ts lib/features/nav/nav-parse.test.ts lib/features/nav/nav-prompt-input.test.ts lib/features/welcome/welcome-content.test.ts lib/features/welcome/welcome-version-resolve.test.ts lib/features/welcome/should-open-welcome-on-update.test.ts && node --test scripts/picker-search-jump.test.mjs"
+    "test": "node --experimental-strip-types --test lib/features/side-picker/model/from-find-lines.test.ts lib/features/nav/nav-parse.test.ts lib/features/nav/nav-prompt-input.test.ts lib/features/translate/sentence-boundary.test.ts lib/features/translate/translation-segments.test.ts lib/features/welcome/welcome-content.test.ts lib/features/welcome/welcome-version-resolve.test.ts lib/features/welcome/should-open-welcome-on-update.test.ts && node --test scripts/picker-search-jump.test.mjs"
   },
   "dependencies": {
     "plasmo": "0.90.5",

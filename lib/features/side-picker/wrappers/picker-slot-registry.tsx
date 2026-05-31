@@ -2,6 +2,8 @@ import type { MutableRefObject, ReactNode } from "react"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import type { FindListPickerState } from "../../find/find-list-picker-input"
 import { FindListPickerOverlay } from "../../find/find-list-picker-overlay"
+import { TranslatePickerWrapper } from "../../translate/translate-picker-wrapper"
+import type { TranslatePickerState } from "../../translate/translate-picker-state"
 import type { PickerEntry } from "../model/picker-entry"
 import type { PaneFocusTarget } from "../panel/pane-focus-nav"
 import { PickerPanelHost } from "../panel/picker-panel-host"
@@ -21,17 +23,21 @@ export type PickerColumnHostContext = {
   tabPicker: TabPickerState | null
   findListPicker: FindListPickerState | null
   domListPicker: DomListPickerState | null
+  translatePicker: TranslatePickerState | null
   tabsPickerKeyboardActive: boolean
   findPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
+  translatePickerKeyboardActive: boolean
   tabPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   findPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  translatePickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
   onOpenFindEntry: (entry: PickerEntry, matchIndex: number) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
+  onTranslateTextChange: (text: string) => void
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -89,6 +95,22 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           onApprove={ctx.onDomApprove}
         />
       </PickerPanelHost>
+    ) : null,
+  translate: (ctx) =>
+    ctx.translatePicker ? (
+      <PickerPanelHost
+        focusTarget="translate"
+        paneFocus={ctx.paneFocus}
+        isFocusedPane={ctx.isFocusedPane}>
+        <TranslatePickerWrapper
+          state={ctx.translatePicker}
+          onTextChange={ctx.onTranslateTextChange}
+          onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          keyboardActive={ctx.translatePickerKeyboardActive}
+          pickerInputRef={ctx.translatePickerInputRef}
+          sessionId={ctx.sessionId}
+        />
+      </PickerPanelHost>
     ) : null
 }
 
@@ -97,4 +119,4 @@ export function renderPickerSlot(slot: PickerSlotId, ctx: PickerColumnHostContex
   return PICKER_SLOT_RENDERERS[slot](ctx)
 }
 
-export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "find", "dom"]
+export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "find", "dom", "translate"]

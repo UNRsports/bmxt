@@ -35,5 +35,22 @@
       "ブラウザ内の横断検索機能を改善",
       "補完メニューの動作を改善"
     ]
+  },
+  "0.4.0": {
+    "heroImage": "assets/welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
+    "en": [
+      "Fixed bugs in nav mode behavior",
+      "Added translation assist (`translate -on` / `translate -off`)",
+      "Adjusted Tab completion menu behavior",
+      "Fixed welcome page open behavior"
+    ],
+    "ja": [
+      "navモードの動作不具合修正",
+      "翻訳機能実装",
+      "候補メニュー動作の調整",
+      "ウェルカムページのオープン動作修正"
+    ]
   }
 }
