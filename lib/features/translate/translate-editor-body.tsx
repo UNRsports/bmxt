@@ -2,10 +2,11 @@ import {
   useCallback,
   useEffect,
   useState,
-  type KeyboardEvent,
   type MutableRefObject
 } from "react"
 import { useSentenceTranslate } from "./use-sentence-translate"
+import { setsEqual } from "./sentence-highlight"
+import { TranslateSourceInput } from "./translate-source-input"
 import { TranslationStrip } from "./translation-strip"
 
 export const TRANSLATE_EDITOR_HEADLINE =
@@ -28,6 +29,9 @@ export function TranslateEditorBody({
   pickerInputRef
 }: TranslateEditorBodyProps) {
   const [isComposing, setIsComposing] = useState(false)
+  const [highlightedIndices, setHighlightedIndices] = useState<ReadonlySet<number>>(
+    () => new Set()
+  )
 
   const { blocks, busy, statusNote } = useSentenceTranslate({
     active: true,
@@ -35,45 +39,51 @@ export function TranslateEditorBody({
     isComposing: keyboardActive && isComposing
   })
 
+  const onHighlightedIndicesChange = useCallback((next: ReadonlySet<number>) => {
+    setHighlightedIndices((prev) => (setsEqual(prev, next) ? prev : next))
+  }, [])
+
   useEffect(() => {
-    if (!keyboardActive) {
-      return
+    if (keyboardActive) {
+      pickerInputRef?.current?.focus()
     }
-    pickerInputRef?.current?.focus()
   }, [keyboardActive, pickerInputRef])
 
-  const onKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.nativeEvent.isComposing) {
-        return
+  useEffect(() => {
+    setHighlightedIndices((prev) => {
+      if (prev.size === 0) {
+        return prev
       }
-      if (e.key === "Escape") {
-        e.preventDefault()
-        onReturnToPrompt()
-      }
-    },
-    [onReturnToPrompt]
-  )
+      const maxIndex = blocks.length - 1
+      const next = new Set([...prev].filter((index) => index >= 0 && index <= maxIndex))
+      return next.size === prev.size ? prev : next
+    })
+  }, [blocks.length])
 
   return (
     <div className="bmxt-translate-editor bmxt-tab-picker">
       <div className="bmxt-tab-picker-head">{TRANSLATE_EDITOR_HEADLINE}</div>
-      <textarea
-        ref={pickerInputRef}
-        className="bmxt-translate-editor-input"
-        value={text}
-        spellCheck={false}
-        aria-label="Translate editor"
-        onChange={(e) => onTextChange(e.target.value)}
+      <TranslateSourceInput
+        text={text}
+        onTextChange={onTextChange}
+        onReturnToPrompt={onReturnToPrompt}
+        highlightedIndices={highlightedIndices}
+        onHighlightedIndicesChange={onHighlightedIndicesChange}
+        pickerInputRef={pickerInputRef}
+        keyboardActive={keyboardActive}
+        isComposing={isComposing}
         onCompositionStart={() => setIsComposing(true)}
         onCompositionEnd={() => setIsComposing(false)}
-        onKeyDown={onKeyDown}
       />
       <TranslationStrip
         blocks={blocks}
         busy={busy}
         statusNote={statusNote}
         alwaysVisible
+        sentenceHighlight={{
+          highlightedIndices,
+          onHighlightedIndicesChange
+        }}
       />
     </div>
   )
