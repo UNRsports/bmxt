@@ -288,61 +288,75 @@ export function bmxtNavControlInjected(
     }
   }
 
-  function menuMarkup(sess: NavSession): string {
+  function createMenuElement(sess: NavSession): HTMLElement | null {
     if (!sess.menuOpen) {
-      return ""
+      return null
     }
+
+    const container = document.createElement("div")
+    container.setAttribute("data-bmxt-nav-menu", "1")
+    container.style.cssText = "position:absolute;left:0;top:" + NAV_MENU_TOP_PX + "px;min-width:200px;max-width:280px;padding:4px 0;font:600 11px system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.95);border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.4);pointer-events:none"
+
     const rowBase =
       "display:flex;justify-content:space-between;gap:10px;padding:5px 8px;" +
       "font:500 11px/1.35 system-ui,sans-serif;color:#e6edf3;cursor:default;"
     const hintStyle = "font-size:10px;color:#8b949e;font-weight:400;white-space:nowrap"
+
     const itemIds = activeMenuItemIds(sess)
-    let rows = ""
     for (let i = 0; i < itemIds.length; i++) {
       const id = itemIds[i]!
       const selected = i === sess.menuIndex
-      const bg = selected ? "background:rgba(88,166,255,0.28);" : ""
       const hint = sess.menuVariant === "copy" ? "Enter" : "↑↓ · Enter"
-      rows +=
-        '<div data-bmxt-nav-menu-item="' +
-        id +
-        '" style="' +
-        rowBase +
-        bg +
-        '"><span>' +
-        (MENU_ITEM_LABELS[id] ?? id) +
-        '</span><span style="' +
-        hintStyle +
-        '">' +
-        hint +
-        "</span></div>"
+
+      const row = document.createElement("div")
+      row.setAttribute("data-bmxt-nav-menu-item", id)
+      row.style.cssText = rowBase
+      if (selected) {
+        row.style.background = "rgba(88,166,255,0.28)"
+      }
+
+      const labelSpan = document.createElement("span")
+      labelSpan.textContent = MENU_ITEM_LABELS[id] ?? id
+      row.appendChild(labelSpan)
+
+      const hintSpan = document.createElement("span")
+      hintSpan.style.cssText = hintStyle
+      hintSpan.textContent = hint
+      row.appendChild(hintSpan)
+
+      container.appendChild(row)
     }
-    const historyBlock =
-      sess.menuVariant === "copy"
-        ? ""
-        : '<div style="border-top:1px solid rgba(255,255,255,0.15);margin-top:2px;padding-top:2px">' +
-          '<div style="' +
-          rowBase +
-          '"><span>履歴を戻る</span><span style="' +
-          hintStyle +
-          '">←</span></div>' +
-          '<div style="' +
-          rowBase +
-          '"><span>履歴を進む</span><span style="' +
-          hintStyle +
-          '">→</span></div>' +
-          "</div>"
-    return (
-      '<div data-bmxt-nav-menu="1" style="position:absolute;left:0;top:' +
-      NAV_MENU_TOP_PX +
-      "px;min-width:200px;max-width:280px;padding:4px 0;" +
-      "font:600 11px system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.95);" +
-      'border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.4);' +
-      'pointer-events:none">' +
-      rows +
-      historyBlock +
-      "</div>"
-    )
+
+    if (sess.menuVariant !== "copy") {
+      const historyBlock = document.createElement("div")
+      historyBlock.style.cssText = "border-top:1px solid rgba(255,255,255,0.15);margin-top:2px;padding-top:2px"
+
+      const backRow = document.createElement("div")
+      backRow.style.cssText = rowBase
+      const backLabelSpan = document.createElement("span")
+      backLabelSpan.textContent = "履歴を戻る"
+      backRow.appendChild(backLabelSpan)
+      const backHintSpan = document.createElement("span")
+      backHintSpan.style.cssText = hintStyle
+      backHintSpan.textContent = "←"
+      backRow.appendChild(backHintSpan)
+      historyBlock.appendChild(backRow)
+
+      const fwdRow = document.createElement("div")
+      fwdRow.style.cssText = rowBase
+      const fwdLabelSpan = document.createElement("span")
+      fwdLabelSpan.textContent = "履歴を進む"
+      fwdRow.appendChild(fwdLabelSpan)
+      const fwdHintSpan = document.createElement("span")
+      fwdHintSpan.style.cssText = hintStyle
+      fwdHintSpan.textContent = "→"
+      fwdRow.appendChild(fwdHintSpan)
+      historyBlock.appendChild(fwdRow)
+
+      container.appendChild(historyBlock)
+    }
+
+    return container
   }
 
   function clearPageSelection(): void {
@@ -352,18 +366,18 @@ export function bmxtNavControlInjected(
     }
   }
 
-  function textSelHintMarkup(phase: "start" | "end"): string {
+  function createTextSelHintElement(phase: "start" | "end"): HTMLElement {
     const label =
       phase === "start"
         ? "選択開始: Enter · Esc 取消"
         : "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消"
-    return (
-      '<div data-bmxt-nav-textsel-hint="1" style="margin-top:4px;padding:4px 8px;max-width:220px;' +
-      "font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(88,166,255,0.2);" +
-      'border:1px solid rgba(88,166,255,0.45);border-radius:6px;pointer-events:none">' +
-      label +
-      "</div>"
-    )
+
+    const div = document.createElement("div")
+    div.setAttribute("data-bmxt-nav-textsel-hint", "1")
+    div.style.cssText = "margin-top:4px;padding:4px 8px;max-width:220px;font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(88,166,255,0.2);border:1px solid rgba(88,166,255,0.45);border-radius:6px;pointer-events:none"
+    div.textContent = label
+
+    return div
   }
 
   function rangeAtPoint(cx: number, cy: number): Range | null {
@@ -605,46 +619,67 @@ export function bmxtNavControlInjected(
     }
   }
 
-  function pointerSvgMarkup(): string {
+  function createPointerSvgElement(): SVGElement {
     const w = Math.round(16 * NAV_CURSOR_SCALE)
     const h = Math.round(22 * NAV_CURSOR_SCALE)
-    return (
-      '<svg xmlns="http://www.w3.org/2000/svg" width="' +
-      w +
-      '" height="' +
-      h +
-      '" viewBox="0 0 16 22" aria-hidden="true" style="display:block;filter:drop-shadow(0 0 2px #000)">' +
-      '<path fill="#fff" stroke="#111" stroke-width="1.1" d="M1 1 L1 19 L5.5 14.5 L9 21 L11.5 19.5 L8 13 L14 13 Z"/>' +
-      "</svg>"
-    )
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    svg.setAttribute("width", String(w))
+    svg.setAttribute("height", String(h))
+    svg.setAttribute("viewBox", "0 0 16 22")
+    svg.setAttribute("aria-hidden", "true")
+    svg.style.display = "block"
+    svg.style.filter = "drop-shadow(0 0 2px #000)"
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+    path.setAttribute("fill", "#fff")
+    path.setAttribute("stroke", "#111")
+    path.setAttribute("stroke-width", "1.1")
+    path.setAttribute("d", "M1 1 L1 19 L5.5 14.5 L9 21 L11.5 19.5 L8 13 L14 13 Z")
+
+    svg.appendChild(path)
+    return svg
   }
 
-  function typingHintMarkup(multiline: boolean): string {
-    const sub = multiline
-      ? '<span style="display:block;margin-top:2px;opacity:0.85">Shift+Enter で改行</span>'
-      : ""
-    return (
-      '<div data-bmxt-nav-hint="1" style="margin-top:4px;padding:4px 8px;max-width:220px;' +
-      "font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.92);" +
-      'border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.35);' +
-      'white-space:normal;pointer-events:none;line-height:1.35">' +
-      '<span style="display:block">type on bmxt window</span>' +
-      '<span style="display:block;margin-top:2px;font-weight:500;opacity:0.9;font-size:10px">' +
-      "text typed in BMXt goes here</span>" +
-      sub +
-      "</div>"
-    )
+  function createTypingHintElement(multiline: boolean): HTMLElement {
+    const div = document.createElement("div")
+    div.setAttribute("data-bmxt-nav-hint", "1")
+    div.style.cssText = "margin-top:4px;padding:4px 8px;max-width:220px;font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.92);border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.35);white-space:normal;pointer-events:none;line-height:1.35"
+
+    const span1 = document.createElement("span")
+    span1.style.display = "block"
+    span1.textContent = "type on bmxt window"
+    div.appendChild(span1)
+
+    const span2 = document.createElement("span")
+    span2.style.cssText = "display:block;margin-top:2px;font-weight:500;opacity:0.9;font-size:10px"
+    span2.textContent = "text typed in BMXt goes here"
+    div.appendChild(span2)
+
+    if (multiline) {
+      const span3 = document.createElement("span")
+      span3.style.cssText = "display:block;margin-top:2px;opacity:0.85"
+      span3.textContent = "Shift+Enter で改行"
+      div.appendChild(span3)
+    }
+
+    return div
   }
 
   function renderOverlayRoot(sess: NavSession): void {
-    let hint = ""
+    sess.root.textContent = ""
+    sess.root.appendChild(createPointerSvgElement())
+
     if (sess.typingActive) {
-      hint = typingHintMarkup(sess.typingMultiline)
+      sess.root.appendChild(createTypingHintElement(sess.typingMultiline))
     } else if (sess.textSelPhase === "start" || sess.textSelPhase === "end") {
-      hint = textSelHintMarkup(sess.textSelPhase)
+      sess.root.appendChild(createTextSelHintElement(sess.textSelPhase))
     }
-    const menu = menuMarkup(sess)
-    sess.root.innerHTML = pointerSvgMarkup() + hint + menu
+
+    const menu = createMenuElement(sess)
+    if (menu) {
+      sess.root.appendChild(menu)
+    }
   }
 
   function readEditableValue(target: HTMLElement): string {
@@ -733,7 +768,7 @@ export function bmxtNavControlInjected(
     root.style.pointerEvents = "none"
     root.style.zIndex = "2147483647"
     root.style.lineHeight = "0"
-    root.innerHTML = pointerSvgMarkup()
+    root.appendChild(createPointerSvgElement())
 
     const mount = document.body || document.documentElement
     mount.appendChild(root)
