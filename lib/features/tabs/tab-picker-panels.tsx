@@ -1,9 +1,5 @@
 import type { KeyboardEvent, RefObject } from "react"
-import {
-  COLOR_SWATCH_BG,
-  NEW_GROUP_COLORS,
-  type NewGroupPaletteColor
-} from "./tab-picker-overlay-constants"
+import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import type { GroupChoice } from "./tab-picker-overlay-types"
 
@@ -89,12 +85,9 @@ export function TabPickerNewGroupMetaPanel({
             <span
               key={c}
               id={`bmxt-color-${c}`}
-              className={`bmxt-tab-picker-color-swatch${
+              className={`bmxt-tab-picker-color-swatch bmxt-tab-picker-color-swatch--${c}${
                 i === newGroupColorIndex ? " bmxt-tab-picker-color-swatch--hi" : ""
               }`}
-              style={{
-                background: COLOR_SWATCH_BG[c as NewGroupPaletteColor] ?? "#484f58"
-              }}
               title={c}
             />
           ))}

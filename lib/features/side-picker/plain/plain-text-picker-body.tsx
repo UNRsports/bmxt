@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -8,6 +9,10 @@ import {
   type ReactNode,
   type SetStateAction
 } from "react"
+import {
+  CSP_DYNAMIC_SCOPE_ATTR,
+  useCspDynamicStyle
+} from "../../bmxt-window/csp-dynamic-stylesheet"
 import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"
@@ -280,13 +285,25 @@ export function PlainTextPickerBody({
   const totalHeight = useVirtual ? lines.length * effectiveRowHeight : undefined
   const virtualStart = useVirtual ? windowRange.start : 0
   const virtualEnd = useVirtual ? windowRange.end : lines.length
+  const virtualTrackScopeId = useId()
+  const virtualWindowScopeId = useId()
+  useCspDynamicStyle(
+    useVirtual ? virtualTrackScopeId : null,
+    useVirtual && totalHeight !== undefined ? { height: `${totalHeight}px` } : null
+  )
+  useCspDynamicStyle(
+    useVirtual ? virtualWindowScopeId : null,
+    useVirtual
+      ? { transform: `translateY(${virtualStart * effectiveRowHeight}px)` }
+      : null
+  )
 
   return (
     <div className="bmxt-tab-picker bmxt-side-picker">
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}
-        className="bmxt-tab-picker-filter-ime"
+        className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
         rows={1}
         spellCheck={false}
         autoCapitalize="off"
@@ -312,13 +329,6 @@ export function PlainTextPickerBody({
             setCommandBuffer(e.currentTarget.value)
           }
         }}
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          opacity: 0,
-          pointerEvents: "none"
-        }}
       />
       <div
         ref={listRef}
@@ -330,15 +340,8 @@ export function PlainTextPickerBody({
         {lines.length >= PLAIN_PICKER_VIRTUALIZE_MIN ? (
           <div
             ref={measureRef}
-            className="bmxt-tab-picker-row bmxt-tab-picker-row--tab"
-            aria-hidden
-            style={{
-              position: "absolute",
-              visibility: "hidden",
-              pointerEvents: "none",
-              left: 0,
-              right: 0
-            }}>
+            className="bmxt-tab-picker-row bmxt-tab-picker-row--tab bmxt-plain-picker-measure-row"
+            aria-hidden>
             <div className="bmxt-tab-picker-tab-title">
               <span className="bmxt-tab-picker-tab-glyph"> </span>
               <span className="bmxt-tab-picker-tab-glyph"> </span>
@@ -351,10 +354,10 @@ export function PlainTextPickerBody({
         ) : useVirtual ? (
           <div
             className="bmxt-plain-picker-virtual-track"
-            style={{ height: totalHeight }}>
+            {...{ [CSP_DYNAMIC_SCOPE_ATTR]: virtualTrackScopeId }}>
             <div
               className="bmxt-plain-picker-virtual-window"
-              style={{ transform: `translateY(${virtualStart * effectiveRowHeight}px)` }}>
+              {...{ [CSP_DYNAMIC_SCOPE_ATTR]: virtualWindowScopeId }}>
               {renderRows(virtualStart, virtualEnd)}
             </div>
           </div>

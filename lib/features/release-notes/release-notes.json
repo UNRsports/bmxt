@@ -1,16 +1,10 @@
 {
-  "0.4.0": {
+  "0.4.1": {
     "ja": [
-      "navモードの動作不具合修正",
-      "翻訳機能実装",
-      "候補メニュー動作の調整",
-      "ウェルカムページのオープン動作修正"
+      "コード内修正"
     ],
     "en": [
-      "Fixed bugs in nav mode behavior",
-      "Added translation assist (`translate -on` / `translate -off`)",
-      "Adjusted Tab completion menu behavior",
-      "Fixed welcome page open behavior"
+      ""
     ]
   }
 }

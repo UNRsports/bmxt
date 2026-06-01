@@ -9,6 +9,8 @@ import {
   resolveHeroImageMaxWidthCss
 } from "./welcome-image-paths"
 import { resolveWelcomeDisplayVersion } from "./welcome-version-resolve"
+import { CSP_DYNAMIC_SCOPE_ATTR, useCspDynamicStyle } from "../bmxt-window/csp-dynamic-stylesheet"
+import { useId } from "react"
 
 function listAdditionalImagePaths(
   entry: { heroImage?: string; additionalImages?: string[] }
@@ -38,7 +40,11 @@ export function WelcomePage() {
     ? entry.heroImage
     : null
   const heroMaxWidth = resolveHeroImageMaxWidthCss(entry.heroImageMaxWidth)
-  const heroStyle = heroMaxWidth ? { maxWidth: heroMaxWidth } : undefined
+  const heroScopeId = useId()
+  useCspDynamicStyle(
+    heroPath && heroMaxWidth ? heroScopeId : null,
+    heroMaxWidth ? { maxWidth: heroMaxWidth } : null
+  )
   const additionalImagePaths = listAdditionalImagePaths(entry)
 
   return (
@@ -64,7 +70,7 @@ export function WelcomePage() {
                 <figure className="bmxt-welcome__hero-figure">
                   <img
                     className="bmxt-welcome__hero-image"
-                    style={heroStyle}
+                    {...(heroMaxWidth ? { [CSP_DYNAMIC_SCOPE_ATTR]: heroScopeId } : {})}
                     src={resolveWelcomeImageUrl(heroPath)}
                     alt="Welcome hero image"
                     loading="eager"

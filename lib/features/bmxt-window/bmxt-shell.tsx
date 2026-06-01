@@ -113,7 +113,10 @@ import {
   useRef,
   useState
 } from "react"
-import type { CSSProperties } from "react"
+import {
+  CSP_DYNAMIC_SCOPE_ATTR,
+  useCspDynamicStyle
+} from "./csp-dynamic-stylesheet"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
@@ -425,7 +428,19 @@ export function BmxtShell({
   const compositionStartSnapshotRef = useRef("")
   const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
   const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
-  const [subCmdPickerHostStyle, setSubCmdPickerHostStyle] = useState<CSSProperties>({})
+  const [subCmdPickerPos, setSubCmdPickerPos] = useState<{ left: number; top: number } | null>(
+    null
+  )
+  const subCmdPickerScopeId = `subcmd-picker-${sessionId}`
+  useCspDynamicStyle(
+    subCmdPicker && subCmdPickerPos ? subCmdPickerScopeId : null,
+    subCmdPickerPos
+      ? {
+          left: `${subCmdPickerPos.left}px`,
+          top: `${subCmdPickerPos.top}px`
+        }
+      : null
+  )
 
   const [histNavIndex, setHistNavIndex] = useState(-1)
   const [histDraft, setHistDraft] = useState("")
@@ -614,7 +629,7 @@ export function BmxtShell({
 
   useLayoutEffect(() => {
     if (!subCmdPicker) {
-      setSubCmdPickerHostStyle({})
+      setSubCmdPickerPos(null)
       return
     }
     const measure = () => {
@@ -643,19 +658,9 @@ export function BmxtShell({
       } else {
         top = Math.max(8, top)
       }
-      setSubCmdPickerHostStyle((prev) => {
-        const next: CSSProperties = {
-          position: "fixed",
-          left,
-          top,
-          zIndex: 50
-        }
-        if (
-          prev.position === next.position &&
-          prev.left === next.left &&
-          prev.top === next.top &&
-          prev.zIndex === next.zIndex
-        ) {
+      setSubCmdPickerPos((prev) => {
+        const next = { left, top }
+        if (prev && prev.left === next.left && prev.top === next.top) {
           return prev
         }
         return next
@@ -2250,8 +2255,8 @@ export function BmxtShell({
             {subCmdPicker && !findListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
-                className="bmxt-subcmd-picker-host"
-                style={subCmdPickerHostStyle}>
+                className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
+                {...{ [CSP_DYNAMIC_SCOPE_ATTR]: subCmdPickerScopeId }}>
                 <TokenPickerPanel model={subCmdPicker} />
               </div>
             ) : null}
@@ -2294,16 +2299,7 @@ export function BmxtShell({
   )
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        boxSizing: "border-box",
-        position: "relative"
-      }}>
+    <div className="bmxt-shell-root">
       {splitPickerLayout ? (
         <div
           className="bmxt-terminal-split"

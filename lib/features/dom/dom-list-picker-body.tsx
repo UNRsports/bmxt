@@ -295,7 +295,7 @@ export function DomListPickerBody({
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}
-        className="bmxt-tab-picker-filter-ime"
+        className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
         rows={1}
         spellCheck={false}
         autoCapitalize="off"
@@ -320,13 +320,6 @@ export function DomListPickerBody({
           } else if (commandMode) {
             setCommandBuffer(e.currentTarget.value)
           }
-        }}
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          opacity: 0,
-          pointerEvents: "none"
         }}
       />
       <div

@@ -57,7 +57,7 @@
       }
     ],
     "content_security_policy": {
-      "extension_pages": "default-src 'self'; script-src 'self' http://127.0.0.1:* http://localhost:*; object-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
+      "extension_pages": "default-src 'self'; script-src 'self'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
     },
     "commands": {
       "launch-bmxt": {
