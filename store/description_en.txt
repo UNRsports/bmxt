@@ -30,6 +30,11 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.4.1:
+- Miscellaneous internal fixes
+- Fixed a bug affecting text input in nav mode
+- Removed the translation side picker; translate assist is now prompt preview and nav typing only
+
 0.4.0:
 - Fixed bugs in nav mode behavior
 - Added translation assist (`translate -on` / `translate -off`)

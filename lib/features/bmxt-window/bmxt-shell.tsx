@@ -84,8 +84,7 @@ import {
   TranslationStrip,
   useSentenceTranslate,
   type TranslationBlock,
-  type TranslationPairId,
-  type TranslatePickerState
+  type TranslationPairId
 } from "../translate"
 import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
@@ -183,7 +182,6 @@ export function BmxtShell({
   const tabPicker = sessionPickers.tabs
   const findListPicker = sessionPickers.find
   const domListPicker = sessionPickers.dom
-  const translatePicker = sessionPickers.translate
   const setTabPicker = useCallback(
     (forSessionId: string, v: TabPickerState | null) => {
       setSessionPickerSlot(forSessionId, "tabs", v)
@@ -202,18 +200,9 @@ export function BmxtShell({
     },
     [setSessionPickerSlot]
   )
-  const setTranslatePicker = useCallback(
-    (forSessionId: string, v: TranslatePickerState | null) => {
-      setSessionPickerSlot(forSessionId, "translate", v)
-    },
-    [setSessionPickerSlot]
-  )
-  /** tabs / find / dom / translate — 左ターミナル・右にピッカー列（複数可）。 */
+  /** tabs / find / dom — 左ターミナル・右にピッカー列（複数可）。 */
   const sidePickerOpen =
-    tabPicker !== null ||
-    findListPicker !== null ||
-    domListPicker !== null ||
-    translatePicker !== null
+    tabPicker !== null || findListPicker !== null || domListPicker !== null
   const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
   const paneFocusRef = useRef<PaneFocusTarget>("terminal")
   const isFocusedPaneRef = useRef(isFocusedPane)
@@ -226,7 +215,6 @@ export function BmxtShell({
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const findPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const translatePickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const openPickers = useMemo(
     () => openPickerSlots(sessionPickers),
@@ -236,7 +224,6 @@ export function BmxtShell({
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const findPickerKeyboardActive = paneFocus === "find" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
-  const translatePickerKeyboardActive = paneFocus === "translate" && isFocusedPane
 
   useEffect(() => {
     paneFocusRef.current = paneFocus
@@ -252,10 +239,8 @@ export function BmxtShell({
       setPaneFocus("terminal")
     } else if (paneFocus === "dom" && domListPicker === null) {
       setPaneFocus("terminal")
-    } else if (paneFocus === "translate" && translatePicker === null) {
-      setPaneFocus("terminal")
     }
-  }, [paneFocus, tabPicker, findListPicker, domListPicker, translatePicker])
+  }, [paneFocus, tabPicker, findListPicker, domListPicker])
 
   useEffect(() => {
     if (!sidePickerOpen) {
@@ -274,10 +259,6 @@ export function BmxtShell({
   useEffect(() => {
     domListPickerRef.current = domListPicker
   }, [domListPicker])
-  const translatePickerRef = useRef<TranslatePickerState | null>(null)
-  useEffect(() => {
-    translatePickerRef.current = translatePicker
-  }, [translatePicker])
   const findListDismissRef = useRef(false)
   const domListDismissRef = useRef(false)
   const tabsPickerFocusTabIdRef = useRef<number | null>(null)
@@ -740,13 +721,6 @@ export function BmxtShell({
     }
   }, [focusPrompt, restoreNavPromptSnap, resetNavTranslateSession])
 
-  const onTranslateTextChange = useCallback(
-    (text: string) => {
-      setTranslatePicker(sessionId, { text })
-    },
-    [sessionId, setTranslatePicker]
-  )
-
   const pickerInputRefForSlot = useCallback((slot: PickerSlotId) => {
     switch (slot) {
       case "tabs":
@@ -755,8 +729,6 @@ export function BmxtShell({
         return findPickerInputRef
       case "dom":
         return domPickerInputRef
-      case "translate":
-        return translatePickerInputRef
     }
   }, [])
 
@@ -776,20 +748,17 @@ export function BmxtShell({
   const prevSidePickersOpenRef = useRef({
     tabs: false,
     find: false,
-    dom: false,
-    translate: false
+    dom: false
   })
   useLayoutEffect(() => {
     const nowTabs = tabPicker !== null
     const nowFind = findListPicker !== null
     const nowDom = domListPicker !== null
-    const nowTranslate = translatePicker !== null
     const prev = prevSidePickersOpenRef.current
     prevSidePickersOpenRef.current = {
       tabs: nowTabs,
       find: nowFind,
-      dom: nowDom,
-      translate: nowTranslate
+      dom: nowDom
     }
 
     if (!isFocusedPane) {
@@ -797,9 +766,7 @@ export function BmxtShell({
     }
 
     let opened: PickerSlotId | null = null
-    if (!prev.translate && nowTranslate) {
-      opened = "translate"
-    } else if (!prev.dom && nowDom) {
+    if (!prev.dom && nowDom) {
       opened = "dom"
     } else if (!prev.find && nowFind) {
       opened = "find"
@@ -814,14 +781,7 @@ export function BmxtShell({
     requestAnimationFrame(() => {
       pickerInputRefForSlot(opened).current?.focus()
     })
-  }, [
-    tabPicker,
-    findListPicker,
-    domListPicker,
-    translatePicker,
-    isFocusedPane,
-    pickerInputRefForSlot
-  ])
+  }, [tabPicker, findListPicker, domListPicker, isFocusedPane, pickerInputRefForSlot])
 
   useEffect(() => {
     paneStripActionsRef.current = {
@@ -1339,7 +1299,6 @@ export function BmxtShell({
         if (translateCmd.kind === "on") {
           await saveTranslateEnabled(true)
           setTranslateEnabled(true)
-          setTranslatePicker(sessionId, null)
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
           await appendLogLines([
             `> ${trimmed}`,
@@ -1350,7 +1309,6 @@ export function BmxtShell({
           await saveTranslateEnabled(false)
           setTranslateEnabled(false)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "translate"))
-          setTranslatePicker(sessionId, null)
           await appendLogLines([`> ${trimmed}`, "translate: OFF"])
           activatePaneFocus("terminal")
         } else if (translateCmd.kind === "setting") {
@@ -2356,20 +2314,15 @@ export function BmxtShell({
             tabPicker={tabPicker}
             findListPicker={findListPicker}
             domListPicker={domListPicker}
-            translatePicker={translatePicker}
-            translatePairId={translatePairId}
             tabsPickerKeyboardActive={tabsPickerKeyboardActive}
             findPickerKeyboardActive={findPickerKeyboardActive}
             domPickerKeyboardActive={domPickerKeyboardActive}
-            translatePickerKeyboardActive={translatePickerKeyboardActive}
             tabPickerInputRef={tabPickerInputRef}
             findPickerInputRef={findPickerInputRef}
             domPickerInputRef={domPickerInputRef}
-            translatePickerInputRef={translatePickerInputRef}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
             onOpenFindEntry={(entry, matchIndex) => void onOpenFindPickerEntry(entry, matchIndex)}
-            onTranslateTextChange={onTranslateTextChange}
             onDomApprove={() => {
               if (domListPicker?.kind !== "prompt") {
                 return

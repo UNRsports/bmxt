@@ -1,22 +1,19 @@
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import type { FindListPickerState } from "../../find/find-list-picker-input"
-import type { TranslatePickerState } from "../../translate/translate-picker-state"
 import type { TabPickerState } from "./tab-picker-state"
 
-export type PickerSlotId = "tabs" | "find" | "dom" | "translate"
+export type PickerSlotId = "tabs" | "find" | "dom"
 
 export type SessionPickerState = {
   tabs: TabPickerState | null
   find: FindListPickerState | null
   dom: DomListPickerState | null
-  translate: TranslatePickerState | null
 }
 
 export const EMPTY_SESSION_PICKERS: SessionPickerState = {
   tabs: null,
   find: null,
-  dom: null,
-  translate: null
+  dom: null
 }
 
 export type SessionPickersByLeaf = Record<string, SessionPickerState>
@@ -29,12 +26,7 @@ export function sessionPickersOrEmpty(
 }
 
 export function anySessionPickerOpen(pickers: SessionPickerState): boolean {
-  return (
-    pickers.tabs !== null ||
-    pickers.find !== null ||
-    pickers.dom !== null ||
-    pickers.translate !== null
-  )
+  return pickers.tabs !== null || pickers.find !== null || pickers.dom !== null
 }
 
 export function anyLeafHasPickerOpen(map: SessionPickersByLeaf): boolean {
@@ -51,9 +43,6 @@ export function openPickerSlots(pickers: SessionPickerState): PickerSlotId[] {
   }
   if (pickers.dom !== null) {
     open.push("dom")
-  }
-  if (pickers.translate !== null) {
-    open.push("translate")
   }
   return open
 }
@@ -86,10 +75,7 @@ export function setSessionPickerSlot<K extends PickerSlotId>(
     }
     const nextSlot = { ...cur, [slot]: null }
     const allClosed =
-      nextSlot.tabs === null &&
-      nextSlot.find === null &&
-      nextSlot.dom === null &&
-      nextSlot.translate === null
+      nextSlot.tabs === null && nextSlot.find === null && nextSlot.dom === null
     if (allClosed) {
       if (!(sessionId in prev)) {
         return prev
