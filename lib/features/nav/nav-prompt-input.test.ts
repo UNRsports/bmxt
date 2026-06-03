@@ -8,6 +8,7 @@ import {
   navTypingLineBreakAllowed,
   navTypingShouldPreventLineBreakInput,
   promptMirrorSegments,
+  isDirectLatinText,
   normalizeNavTypingInitialValue,
   sanitizeNavTypingBuffer,
   sanitizeNavTypingDomValueWithCursor,
@@ -53,6 +54,14 @@ describe("nav-prompt-input", () => {
     assert.equal(normalizeNavTypingInitialValue("  \n  ", false), "")
     assert.equal(normalizeNavTypingInitialValue("a\nb", true), "a\nb")
     assert.equal(normalizeNavTypingInitialValue("  hello ", false), "  hello ")
+  })
+
+  it("isDirectLatinText", () => {
+    assert.equal(isDirectLatinText(""), false)
+    assert.equal(isDirectLatinText("ab"), true)
+    assert.equal(isDirectLatinText("a "), true)
+    assert.equal(isDirectLatinText("あ"), false)
+    assert.equal(isDirectLatinText("aあ"), false)
   })
 
   it("stripNewlinesBeyondSnapshot", () => {

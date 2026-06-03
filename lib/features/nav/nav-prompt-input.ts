@@ -58,6 +58,19 @@ export function normalizeNavTypingInitialValue(value: string, multiline: boolean
   return sanitized
 }
 
+/** EN: True when every code unit is ASCII (half-width Latin / direct keyboard). */
+export function isDirectLatinText(text: string): boolean {
+  if (text.length === 0) {
+    return false
+  }
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) {
+      return false
+    }
+  }
+  return true
+}
+
 /**
  * EN: Keep only the first N `\n` already present in `snapshot` (Shift+Enter); drop IME / Enter artifacts.
  * JA: 原文にない改行（IME 確定 Enter など）を除去し、意図した改行だけ残す。
