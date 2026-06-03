@@ -7,8 +7,8 @@ export type CommitTranslationBlock = {
 }
 
 /**
- * EN: Build English text for nav typing commit from buffer + completed sentence blocks.
- * JA: 確定送信用に、翻訳済みブロックと未翻訳の末尾を組み立てる。
+ * EN: Build target-language text for nav typing commit from the full-buffer translation block.
+ * JA: 全文翻訳ブロックから nav 確定送信用の訳文を返す。
  */
 export async function buildEnglishCommitText(
   buffer: string,
@@ -20,35 +20,10 @@ export async function buildEnglishCommitText(
     return ""
   }
 
-  const parts: string[] = []
-  let searchFrom = 0
-
-  for (const block of blocks) {
-    const idx = buffer.indexOf(block.source, searchFrom)
-    if (idx < 0) {
-      continue
-    }
-    const gap = buffer.slice(searchFrom, idx).trim()
-    if (gap) {
-      parts.push(await translateForward(pairId, gap))
-    }
-    const en = block.forward.trim()
-    if (en) {
-      parts.push(en)
-    }
-    searchFrom = idx + block.source.length
-    while (searchFrom < buffer.length && /\s/.test(buffer[searchFrom]!)) {
-      searchFrom++
-    }
+  const block = blocks[0]
+  if (block && block.source === buffer && block.forward.trim()) {
+    return block.forward.trim()
   }
 
-  const tail = buffer.slice(searchFrom).trim()
-  if (tail) {
-    parts.push(await translateForward(pairId, tail))
-  }
-
-  if (parts.length === 0) {
-    return translateForward(pairId, trimmed)
-  }
-  return parts.join(" ")
+  return translateForward(pairId, trimmed)
 }

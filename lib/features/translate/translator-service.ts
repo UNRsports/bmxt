@@ -4,10 +4,9 @@ import {
   type TranslationPairId
 } from "./translation-pair"
 
-export type TranslationTriplet = {
+export type TranslationResult = {
   source: string
   forward: string
-  back: string
 }
 
 export function isBuiltInTranslatorSupported(): boolean {
@@ -66,68 +65,31 @@ export async function translateForward(
   return translator.translate(sentence, { signal })
 }
 
-/** EN: forward → back (target → source) for review. */
-export async function translateRoundTrip(
-  pairId: TranslationPairId,
-  sentence: string,
-  signal?: AbortSignal
-): Promise<TranslationTriplet> {
-  if (!isBuiltInTranslatorSupported()) {
-    throw new Error("Translator API is not available in this Chrome build.")
-  }
-  const { sourceLanguage, targetLanguage } = getTranslationPairDef(pairId)
-  const forward = await translateForward(pairId, sentence, signal)
-  const backTranslator = await getTranslator(targetLanguage, sourceLanguage)
-  const back = await backTranslator.translate(forward, { signal })
-  return { source: sentence, forward, back }
-}
-
-/** EN: Round-trip per newline-delimited row; preserves `\n` layout. */
-export async function translateRoundTripMultiline(
+/** EN: Forward translation per newline-delimited row; preserves `\n` layout. */
+export async function translateForwardMultiline(
   pairId: TranslationPairId,
   source: string,
   signal?: AbortSignal
-): Promise<TranslationTriplet> {
+): Promise<TranslationResult> {
   const lines = source.split("\n")
   const forwardParts: string[] = []
-  const backParts: string[] = []
   for (const line of lines) {
     if (signal?.aborted) {
       throw new DOMException("Aborted", "AbortError")
     }
     if (line.trim().length === 0) {
       forwardParts.push("")
-      backParts.push("")
       continue
     }
-    const triplet = await translateRoundTrip(pairId, line, signal)
-    forwardParts.push(triplet.forward)
-    backParts.push(triplet.back)
+    forwardParts.push(await translateForward(pairId, line, signal))
   }
   return {
     source,
-    forward: forwardParts.join("\n"),
-    back: backParts.join("\n")
+    forward: forwardParts.join("\n")
   }
 }
 
 /** EN: ja → en (nav typing commit helper for default pair). */
 export async function translateJaToEn(sentence: string, signal?: AbortSignal): Promise<string> {
   return translateForward("ja-en", sentence, signal)
-}
-
-/** EN: ja → en → ja (back-translation for review). */
-export async function translateJaEnJa(
-  sentence: string,
-  signal?: AbortSignal
-): Promise<TranslationTriplet> {
-  return translateRoundTrip("ja-en", sentence, signal)
-}
-
-/** EN: ja → en → ja for each newline-delimited row; preserves `\n` layout. */
-export async function translateJaEnJaMultiline(
-  source: string,
-  signal?: AbortSignal
-): Promise<TranslationTriplet> {
-  return translateRoundTripMultiline("ja-en", source, signal)
 }

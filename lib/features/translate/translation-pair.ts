@@ -80,7 +80,6 @@ export type BilingualUiLabel = {
 export type TranslationFieldLabels = {
   readonly source: BilingualUiLabel
   readonly forward: BilingualUiLabel
-  readonly back: BilingualUiLabel
 }
 
 const LANGUAGE_UI_TAG: Record<string, { ja: string; en: string }> = {
@@ -96,7 +95,7 @@ function languageUiTag(code: string): { ja: string; en: string } {
   return tag
 }
 
-/** EN: 原文 / 訳 / 再訳 headings for the active `-setting` pair. */
+/** EN: 原文 / 訳 headings for the active `-setting` pair. */
 export function getTranslationFieldLabels(pairId: TranslationPairId): TranslationFieldLabels {
   const { sourceLanguage, targetLanguage } = getTranslationPairDef(pairId)
   const src = languageUiTag(sourceLanguage)
@@ -109,10 +108,6 @@ export function getTranslationFieldLabels(pairId: TranslationPairId): Translatio
     forward: {
       ja: `訳（${tgt.ja}）`,
       en: `Translation (${tgt.en})`
-    },
-    back: {
-      ja: `再訳（${src.ja}）`,
-      en: `Back-translation (${src.en})`
     }
   }
 }

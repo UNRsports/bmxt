@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { lineIndicesFromSelection, sentenceIndicesFromSelection } from "./sentence-highlight"
-import { buildTranslateLineRows, assembleTranslationFieldForBuffer } from "./translation-segments"
+import {
+  buildTranslateLineRows,
+  resolveForwardDisplayText,
+  TRANSLATE_PENDING_TEXT
+} from "./translation-segments"
 import { TranslationPanelHeading } from "./translation-panel-heading"
 import {
   getTranslationFieldLabels,
   type BilingualUiLabel,
   type TranslationPairId
 } from "./translation-pair"
-import type { TranslationTriplet } from "./translator-service"
+import type { TranslationResult } from "./translator-service"
 
-export type TranslationBlock = TranslationTriplet & {
+export type TranslationBlock = TranslationResult & {
   id: number
   start: number
   end: number
 }
-
-const PENDING_TEXT = "…"
 
 export type SentenceHighlightProps = {
   highlightedIndices: ReadonlySet<number>
@@ -25,28 +27,33 @@ export type SentenceHighlightProps = {
 
 type Props = {
   pairId: TranslationPairId
-  /** EN: Source buffer — display newlines follow `\n` in this text only. */
+  /** EN: Source buffer (shown in the prompt / editor input — not duplicated here). */
   buffer: string
   blocks: readonly TranslationBlock[]
   busy: boolean
+  translatePending: boolean
   statusNote: string | null
-  /** EN: Keep the two-section shell visible even before the first translation. */
+  /** EN: Keep the shell visible even before the first translation. */
   alwaysVisible?: boolean
   sentenceHighlight?: SentenceHighlightProps
 }
 
-function displayText(value: string, pending: boolean): string {
-  if (value) {
-    return value
-  }
-  return pending ? PENDING_TEXT : ""
-}
-
-function PlainSection({ label, text }: { label: BilingualUiLabel; text: string }) {
+function PlainSection({
+  label,
+  text,
+  pendingAnimated = false
+}: {
+  label: BilingualUiLabel
+  text: string
+  pendingAnimated?: boolean
+}) {
+  const bodyClass = pendingAnimated
+    ? "bmxt-typing-translate-body bmxt-translate-pending"
+    : "bmxt-typing-translate-body"
   return (
     <section className="bmxt-typing-translate-section">
       <TranslationPanelHeading label={label} className="bmxt-typing-translate-heading" />
-      <div className="bmxt-typing-translate-body">{text}</div>
+      <div className={bodyClass}>{text}</div>
     </section>
   )
 }
@@ -55,8 +62,8 @@ export function TranslateHighlightPanel({
   label,
   buffer,
   blocks,
-  field,
   busy,
+  translatePending,
   highlightedLineIndices,
   onHighlightedLineIndicesChange,
   onLineSelect,
@@ -65,8 +72,8 @@ export function TranslateHighlightPanel({
   label: BilingualUiLabel
   buffer: string
   blocks: readonly TranslationBlock[]
-  field: "forward" | "back"
   busy: boolean
+  translatePending: boolean
   highlightedLineIndices: ReadonlySet<number>
   onHighlightedLineIndicesChange: (indices: ReadonlySet<number>) => void
   onLineSelect?: (lineIndex: number) => void
@@ -74,8 +81,8 @@ export function TranslateHighlightPanel({
 }) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const rows = useMemo(
-    () => buildTranslateLineRows(buffer, blocks, field, busy),
-    [buffer, blocks, busy, field]
+    () => buildTranslateLineRows(buffer, blocks, busy, translatePending),
+    [buffer, blocks, busy, translatePending]
   )
 
   const applyHighlight = useCallback(
@@ -109,7 +116,7 @@ export function TranslateHighlightPanel({
   }, [highlightedLineIndices])
 
   const sectionClass = panelLayout
-    ? "bmxt-translate-editor-panel"
+    ? "bmxt-translate-editor-panel bmxt-translate-editor-panel--forward"
     : "bmxt-typing-translate-section"
   const headingClass = panelLayout
     ? "bmxt-translate-editor-panel-heading"
@@ -123,18 +130,26 @@ export function TranslateHighlightPanel({
       <TranslationPanelHeading label={label} className={headingClass} />
       <div ref={bodyRef} className={bodyClass} onMouseUp={onMouseUp}>
         {rows.length === 0 ? (
-          <span className="bmxt-translate-line">{busy ? PENDING_TEXT : ""}</span>
+          <span
+            className={
+              translatePending
+                ? "bmxt-translate-line bmxt-translate-pending"
+                : "bmxt-translate-line"
+            }>
+            {translatePending ? TRANSLATE_PENDING_TEXT : ""}
+          </span>
         ) : (
           rows.map((row) => {
             const highlighted = highlightedLineIndices.has(row.lineIndex)
+            const pendingClass = row.pending && translatePending ? " bmxt-translate-pending" : ""
             return (
               <span
                 key={`line-${row.lineIndex}`}
                 data-line-index={row.lineIndex}
                 className={
                   highlighted
-                    ? "bmxt-translate-line bmxt-translate-sentence-highlight"
-                    : "bmxt-translate-line"
+                    ? `bmxt-translate-line bmxt-translate-sentence-highlight${pendingClass}`
+                    : `bmxt-translate-line${pendingClass}`
                 }
                 onClick={() => onLineClick(row.lineIndex)}>
                 {row.displayText}
@@ -150,8 +165,8 @@ export function TranslateHighlightPanel({
 function TranslateHighlightPanelLegacy({
   label,
   blocks,
-  field,
   busy,
+  translatePending,
   highlightedIndices,
   onHighlightedIndicesChange,
   onSentenceSelect,
@@ -159,8 +174,8 @@ function TranslateHighlightPanelLegacy({
 }: {
   label: BilingualUiLabel
   blocks: readonly TranslationBlock[]
-  field: "forward" | "back"
   busy: boolean
+  translatePending: boolean
   highlightedIndices: ReadonlySet<number>
   onHighlightedIndicesChange: (indices: ReadonlySet<number>) => void
   onSentenceSelect?: (blockIndex: number) => void
@@ -199,27 +214,42 @@ function TranslateHighlightPanelLegacy({
     ? "bmxt-translate-editor-panel-body bmxt-typing-translate-body bmxt-typing-translate-body-sentences"
     : "bmxt-typing-translate-body bmxt-typing-translate-body-sentences"
 
+  const block = blocks[0]
+  const text =
+    busy && translatePending
+      ? TRANSLATE_PENDING_TEXT
+      : block?.forward
+        ? block.forward
+        : ""
+
   return (
     <section className={sectionClass}>
       <TranslationPanelHeading label={label} className={headingClass} />
       <div ref={bodyRef} className={bodyClass} onMouseUp={onMouseUp}>
         {blocks.length === 0 ? (
-          <span className="bmxt-translate-line">{busy ? PENDING_TEXT : ""}</span>
+          <span
+            className={
+              translatePending
+                ? "bmxt-translate-line bmxt-translate-pending"
+                : "bmxt-translate-line"
+            }>
+            {translatePending ? TRANSLATE_PENDING_TEXT : ""}
+          </span>
         ) : (
-          blocks.map((block, index) => {
-            const text = displayText(block[field], busy && !block[field])
+          blocks.map((entry, index) => {
             const highlighted = highlightedIndices.has(index)
+            const pendingClass = translatePending ? " bmxt-translate-pending" : ""
             return (
               <span
-                key={block.id}
+                key={entry.id}
                 data-sentence-index={index}
                 className={
                   highlighted
-                    ? "bmxt-translate-line bmxt-translate-sentence-highlight"
-                    : "bmxt-translate-line"
+                    ? `bmxt-translate-line bmxt-translate-sentence-highlight${pendingClass}`
+                    : `bmxt-translate-line${pendingClass}`
                 }
                 onClick={() => onSentenceClick(index)}>
-                {text}
+                {index === 0 ? text : ""}
               </span>
             )
           })
@@ -234,60 +264,42 @@ export function TranslationStrip({
   buffer,
   blocks,
   busy,
+  translatePending,
   statusNote,
   alwaysVisible = false,
   sentenceHighlight
 }: Props) {
   const fieldLabels = useMemo(() => getTranslationFieldLabels(pairId), [pairId])
 
-  if (!alwaysVisible && blocks.length === 0 && !busy && !statusNote) {
+  if (!alwaysVisible && buffer.length === 0 && !busy && !statusNote) {
     return null
   }
 
-  const forward = displayText(
-    assembleTranslationFieldForBuffer(buffer, blocks, "forward", busy),
-    busy
-  )
-  const back = displayText(
-    assembleTranslationFieldForBuffer(buffer, blocks, "back", busy),
-    busy
-  )
+  const forward = resolveForwardDisplayText(buffer, blocks, busy, translatePending)
 
   return (
-    <div className="bmxt-typing-translate" role="region" aria-label="Translation assist">
+    <div className="bmxt-typing-translate" role="region" aria-label="Translation preview">
       {statusNote ? (
         <div className="bmxt-typing-translate-status" role="status">
           {statusNote}
         </div>
       ) : null}
       {sentenceHighlight ? (
-        <>
-          <TranslateHighlightPanelLegacy
-            label={fieldLabels.forward}
-            blocks={blocks}
-            field="forward"
-            busy={busy}
-            highlightedIndices={sentenceHighlight.highlightedIndices}
-            onHighlightedIndicesChange={sentenceHighlight.onHighlightedIndicesChange}
-            onSentenceSelect={sentenceHighlight.onSentenceSelect}
-          />
-          <div className="bmxt-typing-translate-rule" aria-hidden />
-          <TranslateHighlightPanelLegacy
-            label={fieldLabels.back}
-            blocks={blocks}
-            field="back"
-            busy={busy}
-            highlightedIndices={sentenceHighlight.highlightedIndices}
-            onHighlightedIndicesChange={sentenceHighlight.onHighlightedIndicesChange}
-            onSentenceSelect={sentenceHighlight.onSentenceSelect}
-          />
-        </>
+        <TranslateHighlightPanelLegacy
+          label={fieldLabels.forward}
+          blocks={blocks}
+          busy={busy}
+          translatePending={translatePending}
+          highlightedIndices={sentenceHighlight.highlightedIndices}
+          onHighlightedIndicesChange={sentenceHighlight.onHighlightedIndicesChange}
+          onSentenceSelect={sentenceHighlight.onSentenceSelect}
+        />
       ) : (
-        <>
-          <PlainSection label={fieldLabels.forward} text={forward} />
-          <div className="bmxt-typing-translate-rule" aria-hidden />
-          <PlainSection label={fieldLabels.back} text={back} />
-        </>
+        <PlainSection
+          label={fieldLabels.forward}
+          text={forward}
+          pendingAnimated={translatePending && forward === TRANSLATE_PENDING_TEXT}
+        />
       )}
     </div>
   )

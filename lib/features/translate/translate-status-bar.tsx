@@ -15,7 +15,7 @@ function navCommitHint(pairId: TranslationPairId, multiline: boolean): string {
     getTranslationPairDef(pairId).commitLanguage === "en"
       ? "Alt 長押しで英訳を送信"
       : "Alt 長押しで和訳を送信"
-  const base = `nav typing · 入力停止500msで 訳/再訳 · ${commitHint}`
+  const base = `nav typing · 入力停止500msで 訳 · ${commitHint}`
   return multiline ? `${base} · Shift+Enter で改行` : base
 }
 
@@ -46,10 +46,10 @@ export function TranslateStatusBar({
   const hint = navTypingAssist
     ? navCommitHint(pairId, navTypingMultiline)
     : editorFocused
-      ? `Esc → prompt · translate -off to close · ${pairLabel} · 入力停止500msで 訳/再訳`
+      ? `Esc → prompt · translate -off to close · ${pairLabel} · 入力停止500msで 訳`
       : editorOpen
         ? `Ctrl+←/→ で editor · Esc → prompt · translate -off to close · ${pairLabel}`
-        : `translate -off to disable · ${pairLabel} · nav typing でもアシスト · 入力停止500msで 訳/再訳`
+        : `translate -off to disable · ${pairLabel} · nav typing でもアシスト · 入力停止500msで 訳`
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">

@@ -10,11 +10,11 @@ export const CMD: CmdMeta = {
 
 function usageLines(): string[] {
   return [
-    "usage: translate -on   — open translate editor picker (原文 / 訳 / 再訳 per sentence)",
+    "usage: translate -on   — open translate editor picker (原文 / 訳)",
     "       translate -off  — close editor and disable translate assist",
     "       translate -setting --ja-en | --en-ja  — set translation pair (saved)",
     "EN: `-on` opens the side editor column and moves focus there (long-form input).",
-    "EN: While enabled, nav typing shows 原文/訳/再訳 preview; Alt-hold commit sends the pair target language.",
+    "EN: While enabled, nav typing shows a 訳 preview under the prompt (source = prompt input); Alt-hold commit sends the pair target language.",
     "JA: `-on` で右列エディタを開きフォーカスを移します。`-setting` で `--ja-en` / `--en-ja` を選べます。"
   ]
 }

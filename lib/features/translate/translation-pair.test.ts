@@ -32,12 +32,9 @@ describe("translation-pair", () => {
     assert.equal(jaEn.source.en, "Source (Japanese)")
     assert.equal(jaEn.forward.ja, "訳（EN）")
     assert.equal(jaEn.forward.en, "Translation (English)")
-    assert.equal(jaEn.back.ja, "再訳（JA）")
-    assert.equal(jaEn.back.en, "Back-translation (Japanese)")
 
     const enJa = getTranslationFieldLabels("en-ja")
     assert.equal(enJa.source.ja, "原文（EN）")
     assert.equal(enJa.forward.ja, "訳（JA）")
-    assert.equal(enJa.back.ja, "再訳（EN）")
   })
 })

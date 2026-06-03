@@ -14,7 +14,7 @@ import { TranslateSourceInput } from "./translate-source-input"
 import { TranslateHighlightPanel } from "./translation-strip"
 
 export const TRANSLATE_EDITOR_HEADLINE =
-  "translate — editor · Esc → prompt · translate -off to close · 入力停止500msで 訳/再訳"
+  "translate — editor · Esc → prompt · translate -off to close · 入力停止500msで 訳"
 
 export type TranslateEditorBodyProps = {
   pairId: TranslationPairId
@@ -39,7 +39,7 @@ export function TranslateEditorBody({
     () => new Set()
   )
 
-  const { blocks, busy, statusNote } = useSentenceTranslate({
+  const { blocks, busy, translatePending, statusNote } = useSentenceTranslate({
     active: true,
     buffer: text,
     isComposing: keyboardActive && isComposing,
@@ -93,7 +93,7 @@ export function TranslateEditorBody({
         </div>
       ) : null}
       <div className="bmxt-translate-editor-panels">
-        <section className="bmxt-translate-editor-panel">
+        <section className="bmxt-translate-editor-panel bmxt-translate-editor-panel--source">
           <TranslationPanelHeading
             label={fieldLabels.source}
             className="bmxt-translate-editor-panel-heading"
@@ -117,19 +117,8 @@ export function TranslateEditorBody({
           label={fieldLabels.forward}
           buffer={text}
           blocks={blocks}
-          field="forward"
           busy={busy}
-          highlightedLineIndices={highlightedLineIndices}
-          onHighlightedLineIndicesChange={onHighlightedLineIndicesChange}
-          onLineSelect={onLineSelect}
-          panelLayout
-        />
-        <TranslateHighlightPanel
-          label={fieldLabels.back}
-          buffer={text}
-          blocks={blocks}
-          field="back"
-          busy={busy}
+          translatePending={translatePending}
           highlightedLineIndices={highlightedLineIndices}
           onHighlightedLineIndicesChange={onHighlightedLineIndicesChange}
           onLineSelect={onLineSelect}

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   type KeyboardEvent,
@@ -81,10 +82,20 @@ export function TranslateSourceInput({
   )
 
   const onScroll = useCallback((e: UIEvent<HTMLTextAreaElement>) => {
-    if (mirrorRef.current) {
-      mirrorRef.current.scrollTop = e.currentTarget.scrollTop
+    const mirror = mirrorRef.current
+    if (mirror) {
+      mirror.scrollTop = e.currentTarget.scrollTop
     }
   }, [])
+
+  useLayoutEffect(() => {
+    const textarea = pickerInputRef?.current
+    const mirror = mirrorRef.current
+    if (!textarea || !mirror) {
+      return
+    }
+    mirror.style.minHeight = `${textarea.scrollHeight}px`
+  }, [text, lines, pickerInputRef])
 
   useEffect(() => {
     if (highlightedLineIndices.size === 0) {
@@ -119,6 +130,7 @@ export function TranslateSourceInput({
         className="bmxt-translate-editor-input"
         value={text}
         spellCheck={false}
+        wrap="soft"
         aria-label="Translate editor source"
         onChange={(e) => onTextChange(e.target.value)}
         onCompositionStart={onCompositionStart}

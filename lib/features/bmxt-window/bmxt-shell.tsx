@@ -381,6 +381,7 @@ export function BmxtShell({
   const {
     blocks: navTranslateBlocks,
     busy: navTranslateBusy,
+    translatePending: navTranslatePending,
     statusNote: navTranslateStatus,
     resetSession: resetNavTranslateSession,
     flushPendingTranslations: flushNavTranslatePending,
@@ -1326,7 +1327,7 @@ export function BmxtShell({
           setTranslatePicker(sessionId, { text: priorText })
           await appendLogLines([
             `> ${trimmed}`,
-            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — editor column open (Esc → prompt · 入力停止500msで 訳/再訳)`
+            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — editor column open (Esc → prompt · 入力停止500msで 訳)`
           ])
         } else if (translateCmd.kind === "off") {
           await saveTranslateEnabled(false)
@@ -2268,6 +2269,7 @@ export function BmxtShell({
             buffer={line}
             blocks={navTranslateBlocks}
             busy={navTranslateBusy}
+            translatePending={navTranslatePending}
             statusNote={navTranslateStatus}
           />
         ) : null}
