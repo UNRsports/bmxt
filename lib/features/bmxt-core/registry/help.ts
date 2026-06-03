@@ -37,7 +37,7 @@ export function buildHelpLines(): string[] {
     "",
     "translate (Chrome built-in Translator API, ja↔en):",
     "  translate            - show -on / -off / -setting, then restore prompt to `translate ` for continuation.",
-    "  translate -on        - open translate editor side column and enable assist (nav typing too).",
+    "  translate -on        - enable translation assist (nav typing preview under prompt).",
     "  translate -off       - close editor column and disable assist.",
     "  translate -setting   - then `--ja-en` or `--en-ja` (Tab menu); saves pair to storage.",
     "",

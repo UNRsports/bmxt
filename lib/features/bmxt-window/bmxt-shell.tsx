@@ -75,7 +75,6 @@ import {
 import {
   buildEnglishCommitText,
   DEFAULT_TRANSLATION_PAIR_ID,
-  EMPTY_TRANSLATE_PICKER,
   listTranslationPairSettingTokens,
   loadTranslateSettings,
   parseTranslateCommandLine,
@@ -1313,8 +1312,8 @@ export function BmxtShell({
         void appendLogLines([
           `> ${trimmed}`,
           "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
-          "EN: `-on` opens the translate editor picker and moves focus there.",
-          "JA: `-on` で翻訳エディタ列を開き、フォーカスを移します。`-setting` でペアを選びます。"
+          "EN: `-on` enables translation assist (nav typing preview under the prompt).",
+          "JA: `-on` で翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。`-setting` でペアを選びます。"
         ])
         focusPrompt()
         return
@@ -1340,13 +1339,13 @@ export function BmxtShell({
         if (translateCmd.kind === "on") {
           await saveTranslateEnabled(true)
           setTranslateEnabled(true)
+          setTranslatePicker(sessionId, null)
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
-          const priorText = translatePickerRef.current?.text ?? EMPTY_TRANSLATE_PICKER.text
-          setTranslatePicker(sessionId, { text: priorText })
           await appendLogLines([
             `> ${trimmed}`,
-            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — editor column open (Esc → prompt · 入力停止500msで 訳)`
+            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — nav typing でプロンプト下に訳プレビュー · Alt 長押しで送信`
           ])
+          focusPrompt()
         } else if (translateCmd.kind === "off") {
           await saveTranslateEnabled(false)
           setTranslateEnabled(false)
@@ -2326,8 +2325,6 @@ export function BmxtShell({
           translate={{
             pairId: translatePairId,
             enabled: translateEnabled,
-            editorOpen: translatePicker !== null,
-            editorFocused: translatePickerKeyboardActive,
             navTypingAssist: navPageTyping && translateEnabled,
             navTypingMultiline: navTypingMultiline,
             busy: navTranslateBusy,

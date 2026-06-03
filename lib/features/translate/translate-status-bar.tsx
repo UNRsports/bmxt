@@ -2,8 +2,6 @@ import { getTranslationPairDef, type TranslationPairId } from "./translation-pai
 
 type Props = {
   pairId: TranslationPairId
-  editorOpen: boolean
-  editorFocused: boolean
   navTypingAssist: boolean
   navTypingMultiline?: boolean
   busy?: boolean
@@ -21,8 +19,6 @@ function navCommitHint(pairId: TranslationPairId, multiline: boolean): string {
 
 export function TranslateStatusBar({
   pairId,
-  editorOpen,
-  editorFocused,
   navTypingAssist,
   navTypingMultiline = false,
   busy = false,
@@ -35,21 +31,13 @@ export function TranslateStatusBar({
       ? statusNote
       : busy
         ? "translating…"
-        : editorFocused
-          ? "editor · focused"
-          : editorOpen
-            ? "editor open"
-            : navTypingAssist
-              ? "nav typing assist"
-              : "assist ON"
+        : navTypingAssist
+          ? "nav typing assist"
+          : "assist ON"
 
   const hint = navTypingAssist
     ? navCommitHint(pairId, navTypingMultiline)
-    : editorFocused
-      ? `Esc → prompt · translate -off to close · ${pairLabel} · 入力停止500msで 訳`
-      : editorOpen
-        ? `Ctrl+←/→ で editor · Esc → prompt · translate -off to close · ${pairLabel}`
-        : `translate -off to disable · ${pairLabel} · nav typing でもアシスト · 入力停止500msで 訳`
+    : `translate -off to disable · ${pairLabel} · nav typing で訳 · 入力停止500msで 訳`
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
