@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom"
 import { continuationPromptAfterLoneFirstToken } from "../builtin-commands/command-subcommands.gen"
 import { resolveImeTokenPicker } from "../command-line/ime-token-picker"
 import {
@@ -64,11 +65,9 @@ import {
   type ModeToolbarId
 } from "./mode-toolbar-order"
 import {
-  navBeforeInputAction,
-  navTypingDeleteBackward,
-  navTypingDeleteForward,
   navTypingInsert,
   navTypingShouldPreventLineBreakInput,
+  normalizeNavTypingInitialValue,
   promptMirrorSegments,
   sanitizeNavTypingDomValueWithCursor,
   sanitizeNavTypingInsertText
@@ -76,7 +75,6 @@ import {
 import {
   buildEnglishCommitText,
   DEFAULT_TRANSLATION_PAIR_ID,
-  EMPTY_TRANSLATE_PICKER,
   listTranslationPairSettingTokens,
   loadTranslateSettings,
   parseTranslateCommandLine,
@@ -86,8 +84,7 @@ import {
   TranslationStrip,
   useSentenceTranslate,
   type TranslationBlock,
-  type TranslationPairId,
-  type TranslatePickerState
+  type TranslationPairId
 } from "../translate"
 import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
@@ -113,7 +110,10 @@ import {
   useRef,
   useState
 } from "react"
-import type { CSSProperties } from "react"
+import {
+  CSP_DYNAMIC_SCOPE_ATTR,
+  useCspDynamicStyle
+} from "./csp-dynamic-stylesheet"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
@@ -182,7 +182,6 @@ export function BmxtShell({
   const tabPicker = sessionPickers.tabs
   const findListPicker = sessionPickers.find
   const domListPicker = sessionPickers.dom
-  const translatePicker = sessionPickers.translate
   const setTabPicker = useCallback(
     (forSessionId: string, v: TabPickerState | null) => {
       setSessionPickerSlot(forSessionId, "tabs", v)
@@ -201,18 +200,9 @@ export function BmxtShell({
     },
     [setSessionPickerSlot]
   )
-  const setTranslatePicker = useCallback(
-    (forSessionId: string, v: TranslatePickerState | null) => {
-      setSessionPickerSlot(forSessionId, "translate", v)
-    },
-    [setSessionPickerSlot]
-  )
-  /** tabs / find / dom / translate — 左ターミナル・右にピッカー列（複数可）。 */
+  /** tabs / find / dom — 左ターミナル・右にピッカー列（複数可）。 */
   const sidePickerOpen =
-    tabPicker !== null ||
-    findListPicker !== null ||
-    domListPicker !== null ||
-    translatePicker !== null
+    tabPicker !== null || findListPicker !== null || domListPicker !== null
   const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
   const paneFocusRef = useRef<PaneFocusTarget>("terminal")
   const isFocusedPaneRef = useRef(isFocusedPane)
@@ -225,7 +215,6 @@ export function BmxtShell({
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const findPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const translatePickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const openPickers = useMemo(
     () => openPickerSlots(sessionPickers),
@@ -235,7 +224,6 @@ export function BmxtShell({
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const findPickerKeyboardActive = paneFocus === "find" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
-  const translatePickerKeyboardActive = paneFocus === "translate" && isFocusedPane
 
   useEffect(() => {
     paneFocusRef.current = paneFocus
@@ -251,10 +239,8 @@ export function BmxtShell({
       setPaneFocus("terminal")
     } else if (paneFocus === "dom" && domListPicker === null) {
       setPaneFocus("terminal")
-    } else if (paneFocus === "translate" && translatePicker === null) {
-      setPaneFocus("terminal")
     }
-  }, [paneFocus, tabPicker, findListPicker, domListPicker, translatePicker])
+  }, [paneFocus, tabPicker, findListPicker, domListPicker])
 
   useEffect(() => {
     if (!sidePickerOpen) {
@@ -273,10 +259,6 @@ export function BmxtShell({
   useEffect(() => {
     domListPickerRef.current = domListPicker
   }, [domListPicker])
-  const translatePickerRef = useRef<TranslatePickerState | null>(null)
-  useEffect(() => {
-    translatePickerRef.current = translatePicker
-  }, [translatePicker])
   const findListDismissRef = useRef(false)
   const domListDismissRef = useRef(false)
   const tabsPickerFocusTabIdRef = useRef<number | null>(null)
@@ -378,6 +360,7 @@ export function BmxtShell({
   const {
     blocks: navTranslateBlocks,
     busy: navTranslateBusy,
+    translatePending: navTranslatePending,
     statusNote: navTranslateStatus,
     resetSession: resetNavTranslateSession,
     flushPendingTranslations: flushNavTranslatePending,
@@ -425,7 +408,19 @@ export function BmxtShell({
   const compositionStartSnapshotRef = useRef("")
   const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
   const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
-  const [subCmdPickerHostStyle, setSubCmdPickerHostStyle] = useState<CSSProperties>({})
+  const [subCmdPickerPos, setSubCmdPickerPos] = useState<{ left: number; top: number } | null>(
+    null
+  )
+  const subCmdPickerScopeId = `subcmd-picker-${sessionId}`
+  useCspDynamicStyle(
+    subCmdPicker && subCmdPickerPos ? subCmdPickerScopeId : null,
+    subCmdPickerPos
+      ? {
+          left: `${subCmdPickerPos.left}px`,
+          top: `${subCmdPickerPos.top}px`
+        }
+      : null
+  )
 
   const [histNavIndex, setHistNavIndex] = useState(-1)
   const [histDraft, setHistDraft] = useState("")
@@ -513,6 +508,11 @@ export function BmxtShell({
 
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
+      if (navPageTyping) {
+        setSubCmdPicker(null)
+        allowEmptyFirstPickerSyncRef.current = false
+        return
+      }
       if (mode === "isearch" || findListBusyRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
@@ -551,15 +551,15 @@ export function BmxtShell({
         }
       })
     },
-    [mode]
+    [mode, navPageTyping]
   )
 
   useEffect(() => {
-    if (isComposing) {
+    if (isComposing || navPageTyping) {
       return
     }
     syncImeTokenPicker(line, cursorPos)
-  }, [line, cursorPos, isComposing, syncImeTokenPicker, localCompletion])
+  }, [line, cursorPos, isComposing, navPageTyping, syncImeTokenPicker, localCompletion])
 
   useEffect(() => {
     if (iSearchCycle >= iSearchMatches.length && iSearchMatches.length > 0) {
@@ -614,7 +614,7 @@ export function BmxtShell({
 
   useLayoutEffect(() => {
     if (!subCmdPicker) {
-      setSubCmdPickerHostStyle({})
+      setSubCmdPickerPos(null)
       return
     }
     const measure = () => {
@@ -643,19 +643,9 @@ export function BmxtShell({
       } else {
         top = Math.max(8, top)
       }
-      setSubCmdPickerHostStyle((prev) => {
-        const next: CSSProperties = {
-          position: "fixed",
-          left,
-          top,
-          zIndex: 50
-        }
-        if (
-          prev.position === next.position &&
-          prev.left === next.left &&
-          prev.top === next.top &&
-          prev.zIndex === next.zIndex
-        ) {
+      setSubCmdPickerPos((prev) => {
+        const next = { left, top }
+        if (prev && prev.left === next.left && prev.top === next.top) {
           return prev
         }
         return next
@@ -691,13 +681,27 @@ export function BmxtShell({
       skipHistResetRef.current = true
       tabPressSeqRef.current = 0
       setHistNavIndex(-1)
+      setSubCmdPicker(null)
+      allowEmptyFirstPickerSyncRef.current = false
+      imeTokenPickerDismissedRef.current = false
       isComposingRef.current = false
       compositionStartSnapshotRef.current = ""
-      setCompositionAnchor(0)
-      setIsComposing(false)
-      lineRef.current = detail.initialValue
-      setLine(detail.initialValue)
-      setCursorPos(detail.initialValue.length)
+      const initial = normalizeNavTypingInitialValue(
+        detail.initialValue,
+        detail.multiline
+      )
+      const applyEnter = () => {
+        setCompositionAnchor(0)
+        setIsComposing(false)
+        lineRef.current = initial
+        setLine(initial)
+        setCursorPos(initial.length)
+      }
+      flushSync(applyEnter)
+      if (ta) {
+        ta.value = initial
+        ta.setSelectionRange(initial.length, initial.length)
+      }
       focusPrompt()
     }
     const onExit = () => {
@@ -717,13 +721,6 @@ export function BmxtShell({
     }
   }, [focusPrompt, restoreNavPromptSnap, resetNavTranslateSession])
 
-  const onTranslateTextChange = useCallback(
-    (text: string) => {
-      setTranslatePicker(sessionId, { text })
-    },
-    [sessionId, setTranslatePicker]
-  )
-
   const pickerInputRefForSlot = useCallback((slot: PickerSlotId) => {
     switch (slot) {
       case "tabs":
@@ -732,8 +729,6 @@ export function BmxtShell({
         return findPickerInputRef
       case "dom":
         return domPickerInputRef
-      case "translate":
-        return translatePickerInputRef
     }
   }, [])
 
@@ -753,20 +748,17 @@ export function BmxtShell({
   const prevSidePickersOpenRef = useRef({
     tabs: false,
     find: false,
-    dom: false,
-    translate: false
+    dom: false
   })
   useLayoutEffect(() => {
     const nowTabs = tabPicker !== null
     const nowFind = findListPicker !== null
     const nowDom = domListPicker !== null
-    const nowTranslate = translatePicker !== null
     const prev = prevSidePickersOpenRef.current
     prevSidePickersOpenRef.current = {
       tabs: nowTabs,
       find: nowFind,
-      dom: nowDom,
-      translate: nowTranslate
+      dom: nowDom
     }
 
     if (!isFocusedPane) {
@@ -774,9 +766,7 @@ export function BmxtShell({
     }
 
     let opened: PickerSlotId | null = null
-    if (!prev.translate && nowTranslate) {
-      opened = "translate"
-    } else if (!prev.dom && nowDom) {
+    if (!prev.dom && nowDom) {
       opened = "dom"
     } else if (!prev.find && nowFind) {
       opened = "find"
@@ -791,14 +781,7 @@ export function BmxtShell({
     requestAnimationFrame(() => {
       pickerInputRefForSlot(opened).current?.focus()
     })
-  }, [
-    tabPicker,
-    findListPicker,
-    domListPicker,
-    translatePicker,
-    isFocusedPane,
-    pickerInputRefForSlot
-  ])
+  }, [tabPicker, findListPicker, domListPicker, isFocusedPane, pickerInputRefForSlot])
 
   useEffect(() => {
     paneStripActionsRef.current = {
@@ -1289,8 +1272,8 @@ export function BmxtShell({
         void appendLogLines([
           `> ${trimmed}`,
           "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
-          "EN: `-on` opens the translate editor picker and moves focus there.",
-          "JA: `-on` で翻訳エディタ列を開き、フォーカスを移します。`-setting` でペアを選びます。"
+          "EN: `-on` enables translation assist (nav typing preview under the prompt).",
+          "JA: `-on` で翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。`-setting` でペアを選びます。"
         ])
         focusPrompt()
         return
@@ -1317,17 +1300,15 @@ export function BmxtShell({
           await saveTranslateEnabled(true)
           setTranslateEnabled(true)
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
-          const priorText = translatePickerRef.current?.text ?? EMPTY_TRANSLATE_PICKER.text
-          setTranslatePicker(sessionId, { text: priorText })
           await appendLogLines([
             `> ${trimmed}`,
-            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — editor column open (Esc → prompt · 入力停止500msで 訳/再訳)`
+            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — nav typing でプロンプト下に訳プレビュー · Alt 長押しで送信`
           ])
+          focusPrompt()
         } else if (translateCmd.kind === "off") {
           await saveTranslateEnabled(false)
           setTranslateEnabled(false)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "translate"))
-          setTranslatePicker(sessionId, null)
           await appendLogLines([`> ${trimmed}`, "translate: OFF"])
           activatePaneFocus("terminal")
         } else if (translateCmd.kind === "setting") {
@@ -1605,12 +1586,17 @@ export function BmxtShell({
   }, [])
 
   const applyPromptLine = useCallback(
-    (nextLine: string, nextCursor: number, ta?: HTMLTextAreaElement | null) => {
+    (
+      nextLine: string,
+      nextCursor: number,
+      ta?: HTMLTextAreaElement | null,
+      opts?: { preserveSelection?: boolean }
+    ) => {
       lineRef.current = nextLine
       setLine(nextLine)
       setCursorPos(nextCursor)
       syncImeTokenPicker(nextLine, nextCursor)
-      if (ta) {
+      if (ta && !opts?.preserveSelection) {
         queueMicrotask(() => {
           ta.setSelectionRange(nextCursor, nextCursor)
         })
@@ -1637,32 +1623,53 @@ export function BmxtShell({
         pos = sanitized.cursor
         if (v !== ta.value) {
           ta.value = v
-          ta.setSelectionRange(pos, pos)
+          if (!opts?.composing) {
+            ta.setSelectionRange(pos, pos)
+          }
         }
       }
-      applyPromptLine(v, pos)
+      applyPromptLine(v, pos, ta, { preserveSelection: opts?.composing })
     },
     [applyPromptLine, navPageTyping, navTypingMultiline]
   )
 
+  const syncPromptFromTextareaForComposition = useCallback(
+    (ta: HTMLTextAreaElement, opts: { composing: boolean; newlineSnapshot?: string }) => {
+      const run = () => {
+        syncPromptFromTextarea(ta, opts)
+      }
+      if (navPageTyping) {
+        flushSync(run)
+      } else {
+        run()
+      }
+    },
+    [navPageTyping, syncPromptFromTextarea]
+  )
+
   const onImeInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
-      if (navPageTyping && !isComposingRef.current) {
-        return
-      }
       allowEmptyFirstPickerSyncRef.current = false
       if (skipHistResetRef.current) {
         skipHistResetRef.current = false
-      } else {
+      } else if (!navPageTyping || isComposingRef.current) {
         setHistNavIndex(-1)
       }
       tabPressSeqRef.current = 0
       if (mode === "isearch") {
         setISearchCycle(0)
       }
+      if (navPageTyping) {
+        if (isComposingRef.current) {
+          syncPromptFromTextareaForComposition(e.currentTarget, { composing: true })
+        } else {
+          syncPromptFromTextarea(e.currentTarget, { composing: false })
+        }
+        return
+      }
       syncPromptFromTextarea(e.currentTarget, { composing: isComposingRef.current })
     },
-    [mode, navPageTyping, syncPromptFromTextarea]
+    [mode, navPageTyping, syncPromptFromTextarea, syncPromptFromTextareaForComposition]
   )
 
   const onImeSelect = useCallback(() => {
@@ -1714,22 +1721,6 @@ export function BmxtShell({
           chunk
         )
         applyNavTypingMutation(ta, next, cursor)
-        return
-      }
-      const action = navBeforeInputAction(native.inputType, native.data)
-      if (action === "insert" && native.data) {
-        e.preventDefault()
-        const chunk = sanitizeNavTypingInsertText(native.data, shift, navTypingMultiline)
-        if (!chunk) {
-          return
-        }
-        const { next, cursor } = navTypingInsert(
-          lineRef.current,
-          ta.selectionStart,
-          ta.selectionEnd,
-          chunk
-        )
-        applyNavTypingMutation(ta, next, cursor)
       }
     },
     [applyNavTypingMutation, navPageTyping, navTypingMultiline]
@@ -1761,72 +1752,78 @@ export function BmxtShell({
 
   const onCompositionStart = useCallback(
     (ev: React.CompositionEvent<HTMLTextAreaElement>) => {
+      const ta = ev.currentTarget
+      const snapshot = lineRef.current
+      if (navPageTyping && ev.data === "" && ta.value === snapshot) {
+        setCompositionAnchor(ta.selectionStart)
+        return
+      }
       isComposingRef.current = true
-      compositionStartSnapshotRef.current = lineRef.current
-      setIsComposing(true)
-      setCompositionAnchor(ev.currentTarget.selectionStart)
-      syncPromptFromTextarea(ev.currentTarget, {
-        composing: true,
-        newlineSnapshot: compositionStartSnapshotRef.current
-      })
+      compositionStartSnapshotRef.current = snapshot
+      const anchor = ta.selectionStart
+      const run = () => {
+        setIsComposing(true)
+        setCompositionAnchor(anchor)
+        syncPromptFromTextarea(ta, { composing: true, newlineSnapshot: snapshot })
+      }
+      if (navPageTyping) {
+        flushSync(run)
+      } else {
+        run()
+      }
     },
-    [syncPromptFromTextarea]
+    [navPageTyping, syncPromptFromTextarea]
   )
 
   const onCompositionUpdate = useCallback(
     (ev: React.CompositionEvent<HTMLTextAreaElement>) => {
-      syncPromptFromTextarea(ev.currentTarget, {
+      const ta = ev.currentTarget
+      if (navPageTyping && !isComposingRef.current && ev.data.length > 0) {
+        isComposingRef.current = true
+        compositionStartSnapshotRef.current = lineRef.current
+        const snapshot = compositionStartSnapshotRef.current
+        flushSync(() => {
+          setIsComposing(true)
+          setCompositionAnchor(ta.selectionStart)
+          syncPromptFromTextarea(ta, { composing: true, newlineSnapshot: snapshot })
+        })
+        return
+      }
+      syncPromptFromTextareaForComposition(ta, {
         composing: true,
         newlineSnapshot: compositionStartSnapshotRef.current
       })
     },
-    [syncPromptFromTextarea]
+    [navPageTyping, syncPromptFromTextarea, syncPromptFromTextareaForComposition]
   )
 
   const onCompositionEnd = useCallback(
     (ev: React.CompositionEvent<HTMLTextAreaElement>) => {
-      isComposingRef.current = false
-      setIsComposing(false)
-      setCompositionAnchor(0)
-      allowEmptyFirstPickerSyncRef.current = false
-      syncPromptFromTextarea(ev.currentTarget, {
-        composing: false,
-        newlineSnapshot: compositionStartSnapshotRef.current
-      })
-      compositionStartSnapshotRef.current = lineRef.current
+      const ta = ev.currentTarget
+      const snapshot = compositionStartSnapshotRef.current
+      const run = () => {
+        isComposingRef.current = false
+        syncPromptFromTextarea(ta, { composing: false, newlineSnapshot: snapshot })
+        compositionStartSnapshotRef.current = lineRef.current
+        setIsComposing(false)
+        setCompositionAnchor(0)
+        allowEmptyFirstPickerSyncRef.current = false
+      }
+      if (navPageTyping) {
+        flushSync(run)
+      } else {
+        run()
+      }
     },
-    [syncPromptFromTextarea]
+    [navPageTyping, syncPromptFromTextarea]
   )
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (navPageTyping) {
-        if (!e.nativeEvent.isComposing) {
-          const ta = e.currentTarget
-          if (e.key === "Backspace") {
-            e.preventDefault()
-            const result = navTypingDeleteBackward(
-              lineRef.current,
-              ta.selectionStart,
-              ta.selectionEnd
-            )
-            if (result) {
-              applyNavTypingMutation(ta, result.next, result.cursor)
-            }
-            return
-          }
-          if (e.key === "Delete") {
-            e.preventDefault()
-            const result = navTypingDeleteForward(
-              lineRef.current,
-              ta.selectionStart,
-              ta.selectionEnd
-            )
-            if (result) {
-              applyNavTypingMutation(ta, result.next, result.cursor)
-            }
-            return
-          }
+        if (e.key === "Tab") {
+          e.preventDefault()
+          return
         }
         if (
           e.key === "Enter" &&
@@ -1866,7 +1863,7 @@ export function BmxtShell({
         subCmdPickerOpen: Boolean(subCmdPickerRef.current)
       })
 
-      const subPick = subCmdPickerRef.current
+      const subPick = navPageTyping ? null : subCmdPickerRef.current
       if (subPick) {
         if (e.key === "Escape") {
           e.preventDefault()
@@ -2136,6 +2133,10 @@ export function BmxtShell({
     ]
   )
 
+  /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
+  const navPromptValueControlled = !navPageTyping
+  const showNavTypingPlaceholder =
+    navPageTyping && line.trim() === "" && !isComposing
   const mirror = promptMirrorSegments(line, cursorPos, isComposing, compositionAnchor)
   const iSearchPreview = iSearchMatches[iSearchCycle]
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
@@ -2223,7 +2224,7 @@ export function BmxtShell({
               tabIndex={0}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
               placeholder={
-                navPageTyping
+                showNavTypingPlaceholder
                   ? navTypingMultiline
                     ? NAV_TYPING_PLACEHOLDER_MULTILINE
                     : NAV_TYPING_PLACEHOLDER
@@ -2236,7 +2237,7 @@ export function BmxtShell({
                       ? "type or use TAB key"
                       : undefined
               }
-              value={line}
+              value={navPromptValueControlled ? line : undefined}
               readOnly={findListBusy}
               onInput={onImeInput}
               onBeforeInput={onBeforeInput}
@@ -2250,8 +2251,8 @@ export function BmxtShell({
             {subCmdPicker && !findListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
-                className="bmxt-subcmd-picker-host"
-                style={subCmdPickerHostStyle}>
+                className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
+                {...{ [CSP_DYNAMIC_SCOPE_ATTR]: subCmdPickerScopeId }}>
                 <TokenPickerPanel model={subCmdPicker} />
               </div>
             ) : null}
@@ -2263,6 +2264,7 @@ export function BmxtShell({
             buffer={line}
             blocks={navTranslateBlocks}
             busy={navTranslateBusy}
+            translatePending={navTranslatePending}
             statusNote={navTranslateStatus}
           />
         ) : null}
@@ -2281,8 +2283,6 @@ export function BmxtShell({
           translate={{
             pairId: translatePairId,
             enabled: translateEnabled,
-            editorOpen: translatePicker !== null,
-            editorFocused: translatePickerKeyboardActive,
             navTypingAssist: navPageTyping && translateEnabled,
             navTypingMultiline: navTypingMultiline,
             busy: navTranslateBusy,
@@ -2294,16 +2294,7 @@ export function BmxtShell({
   )
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        boxSizing: "border-box",
-        position: "relative"
-      }}>
+    <div className="bmxt-shell-root">
       {splitPickerLayout ? (
         <div
           className="bmxt-terminal-split"
@@ -2323,20 +2314,15 @@ export function BmxtShell({
             tabPicker={tabPicker}
             findListPicker={findListPicker}
             domListPicker={domListPicker}
-            translatePicker={translatePicker}
-            translatePairId={translatePairId}
             tabsPickerKeyboardActive={tabsPickerKeyboardActive}
             findPickerKeyboardActive={findPickerKeyboardActive}
             domPickerKeyboardActive={domPickerKeyboardActive}
-            translatePickerKeyboardActive={translatePickerKeyboardActive}
             tabPickerInputRef={tabPickerInputRef}
             findPickerInputRef={findPickerInputRef}
             domPickerInputRef={domPickerInputRef}
-            translatePickerInputRef={translatePickerInputRef}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
             onOpenFindEntry={(entry, matchIndex) => void onOpenFindPickerEntry(entry, matchIndex)}
-            onTranslateTextChange={onTranslateTextChange}
             onDomApprove={() => {
               if (domListPicker?.kind !== "prompt") {
                 return

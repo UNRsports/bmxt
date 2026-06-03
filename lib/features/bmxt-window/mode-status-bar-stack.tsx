@@ -17,8 +17,6 @@ type NavProps = {
 type TranslateProps = {
   pairId: TranslationPairId
   enabled: boolean
-  editorOpen: boolean
-  editorFocused: boolean
   navTypingAssist: boolean
   navTypingMultiline: boolean
   busy: boolean
@@ -58,8 +56,6 @@ export function ModeStatusBarStack({ order, nav, translate }: Props) {
       <TranslateStatusBar
         key="translate"
         pairId={translate.pairId}
-        editorOpen={translate.editorOpen}
-        editorFocused={translate.editorFocused}
         navTypingAssist={translate.navTypingAssist}
         navTypingMultiline={translate.navTypingMultiline}
         busy={translate.busy}

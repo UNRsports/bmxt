@@ -21,8 +21,9 @@ import {
   FALLBACK_COMPLETION_CANDIDATES,
   getCompletionCandidates
 } from "../bmxt-core"
+import { CSP_DYNAMIC_SCOPE_ATTR, useCspDynamicStyle } from "./csp-dynamic-stylesheet"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react"
 
 import { useCommandHistory } from "./use-command-history"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
@@ -59,7 +60,7 @@ type SplitTreeProps = {
   appendCommandToHistory: (cmd: string) => void
 }
 
-function SplitTreeView({
+function SplitLeafView({
   node,
   logsById,
   focusedLeafId,
@@ -71,76 +72,67 @@ function SplitTreeView({
   refreshTabPickerRows,
   postUpgradeBanner,
   appendCommandToHistory
-}: SplitTreeProps) {
-  if (isLeaf(node)) {
-    const lines = logsById[node.id] ?? []
-    const sessionPickers = sessionPickersOrEmpty(pickersBySession, node.id)
-    const hasColumnPickers =
-      sessionPickers.tabs !== null ||
-      sessionPickers.find !== null ||
-      sessionPickers.dom !== null ||
-      sessionPickers.translate !== null
-    const leafHasKeyboardFocus = focusedLeafId === node.id
-    return (
-      <div
-        data-bmxt-session-id={node.id}
-        data-bmxt-leaf-focused={leafHasKeyboardFocus ? "" : undefined}
-        onPointerDownCapture={() => {
-          if (!leafHasKeyboardFocus) {
-            onFocusLeaf(node.id)
-          }
-        }}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          boxSizing: "border-box",
-          outline:
-            leafHasKeyboardFocus && !hasColumnPickers
-              ? "3px solid #58a6ff"
-              : undefined,
-          outlineOffset: leafHasKeyboardFocus && !hasColumnPickers ? -3 : undefined
-        }}>
-        <BmxtShell
-          sessionId={node.id}
-          isFocusedPane={focusedLeafId === node.id}
-          lines={lines}
-          history={history}
-          completionCandidates={completionCandidates}
-          appendLogLines={(newLines) => appendLinesToSession(node.id, newLines)}
-          appendCommandToHistory={appendCommandToHistory}
-          sessionPickers={sessionPickers}
-          setSessionPickerSlot={setSessionPickerSlot}
-          refreshTabPickerRows={refreshTabPickerRows}
-          postUpgradeBanner={postUpgradeBanner}
-        />
-      </div>
-    )
-  }
+}: SplitTreeProps & { node: Extract<SplitNode, { kind: "leaf" }> }) {
+  const lines = logsById[node.id] ?? []
+  const sessionPickers = sessionPickersOrEmpty(pickersBySession, node.id)
+  const hasColumnPickers =
+    sessionPickers.tabs !== null ||
+    sessionPickers.find !== null ||
+    sessionPickers.dom !== null
+  const leafHasKeyboardFocus = focusedLeafId === node.id
+  return (
+    <div
+      data-bmxt-session-id={node.id}
+      data-bmxt-leaf-focused={leafHasKeyboardFocus ? "" : undefined}
+      className={`bmxt-split-leaf${
+        leafHasKeyboardFocus && !hasColumnPickers ? " bmxt-split-leaf--focused" : ""
+      }`}
+      onPointerDownCapture={() => {
+        if (!leafHasKeyboardFocus) {
+          onFocusLeaf(node.id)
+        }
+      }}>
+      <BmxtShell
+        sessionId={node.id}
+        isFocusedPane={focusedLeafId === node.id}
+        lines={lines}
+        history={history}
+        completionCandidates={completionCandidates}
+        appendLogLines={(newLines) => appendLinesToSession(node.id, newLines)}
+        appendCommandToHistory={appendCommandToHistory}
+        sessionPickers={sessionPickers}
+        setSessionPickerSlot={setSessionPickerSlot}
+        refreshTabPickerRows={refreshTabPickerRows}
+        postUpgradeBanner={postUpgradeBanner}
+      />
+    </div>
+  )
+}
+
+function SplitBranchView({
+  node,
+  logsById,
+  focusedLeafId,
+  onFocusLeaf,
+  history,
+  completionCandidates,
+  pickersBySession,
+  setSessionPickerSlot,
+  refreshTabPickerRows,
+  postUpgradeBanner,
+  appendCommandToHistory
+}: SplitTreeProps & { node: Extract<SplitNode, { kind: "row" | "col" }> }) {
   const isRow = node.kind === "row"
   const r = node.ratio
   const rest = 1 - r
+  const paneAScopeId = useId()
+  const paneBScopeId = useId()
+  useCspDynamicStyle(paneAScopeId, { flex: r })
+  useCspDynamicStyle(paneBScopeId, { flex: rest })
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: isRow ? "column" : "row",
-        flex: 1,
-        minHeight: 0,
-        minWidth: 0,
-        overflow: "hidden"
-      }}>
-      <div
-        style={{
-          flex: r,
-          minHeight: 0,
-          minWidth: 0,
-          display: "flex",
-          overflow: "hidden"
-        }}>
+      className={`bmxt-split-branch ${isRow ? "bmxt-split-branch--row" : "bmxt-split-branch--col"}`}>
+      <div className="bmxt-split-pane" {...{ [CSP_DYNAMIC_SCOPE_ATTR]: paneAScopeId }}>
         <SplitTreeView
           node={node.a}
           logsById={logsById}
@@ -155,14 +147,7 @@ function SplitTreeView({
           appendCommandToHistory={appendCommandToHistory}
         />
       </div>
-      <div
-        style={{
-          flex: rest,
-          minHeight: 0,
-          minWidth: 0,
-          display: "flex",
-          overflow: "hidden"
-        }}>
+      <div className="bmxt-split-pane" {...{ [CSP_DYNAMIC_SCOPE_ATTR]: paneBScopeId }}>
         <SplitTreeView
           node={node.b}
           logsById={logsById}
@@ -179,6 +164,14 @@ function SplitTreeView({
       </div>
     </div>
   )
+}
+
+function SplitTreeView(props: SplitTreeProps) {
+  const { node } = props
+  if (isLeaf(node)) {
+    return <SplitLeafView {...props} node={node} />
+  }
+  return <SplitBranchView {...props} node={node} />
 }
 
 export function BmxtTerminal() {
@@ -303,47 +296,12 @@ export function BmxtTerminal() {
   }, [state, setFocusedLeaf])
 
   if (state === null || !upgradeBannerReady) {
-    return (
-      <div
-        className="bmxt-root"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-          minHeight: 0,
-          margin: 0,
-          background: "#0d1117"
-        }}
-      />
-    )
+    return <div className="bmxt-root bmxt-root--terminal-placeholder" />
   }
 
   return (
-    <div
-      ref={rootRef}
-      className="bmxt-root"
-      tabIndex={-1}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-        margin: 0,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
-        fontSize: 12,
-        background: "#0d1117",
-        color: "#c9d1d9",
-        outline: "none"
-      }}>
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          flex: 1,
-          minHeight: 0,
-          isolation: "isolate",
-          overflow: "hidden"
-        }}>
+    <div ref={rootRef} className="bmxt-root bmxt-root--terminal" tabIndex={-1}>
+      <div className="bmxt-split-viewport">
         <SplitTreeView
           node={state.layout.root}
           logsById={state.logsById}

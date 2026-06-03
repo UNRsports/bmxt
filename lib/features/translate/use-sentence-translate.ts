@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
-  extractPendingSource,
-  pendingSegmentKey,
-  reconcileBlocksInBuffer
-} from "./translation-segments"
-import {
   DEFAULT_TRANSLATION_PAIR_ID,
   getTranslationPairDef,
   type TranslationPairId
@@ -13,12 +8,12 @@ import {
   isBuiltInTranslatorSupported,
   pairAvailability,
   resetTranslatorInstances,
-  translateRoundTripMultiline
+  translateForwardMultiline
 } from "./translator-service"
 import type { TranslationBlock } from "./translation-strip"
 
-const MAX_BLOCKS = 8
 const DEBOUNCE_MS = 500
+export const TRANSLATE_PENDING_INDICATOR_MS = 100
 
 type Options = {
   active: boolean
@@ -27,11 +22,18 @@ type Options = {
   pairId?: TranslationPairId
 }
 
-function trimBlocks(blocks: readonly TranslationBlock[]): TranslationBlock[] {
-  if (blocks.length <= MAX_BLOCKS) {
-    return [...blocks]
+function bufferNeedsTranslation(
+  buffer: string,
+  blocks: readonly TranslationBlock[]
+): boolean {
+  if (buffer.trim().length === 0) {
+    return false
   }
-  return blocks.slice(-MAX_BLOCKS)
+  const block = blocks[0]
+  if (!block || block.source !== buffer) {
+    return true
+  }
+  return block.forward.length === 0
 }
 
 export function useSentenceTranslate({
@@ -42,6 +44,7 @@ export function useSentenceTranslate({
 }: Options): {
   blocks: readonly TranslationBlock[]
   busy: boolean
+  translatePending: boolean
   statusNote: string | null
   resetSession: () => void
   flushPendingTranslations: () => Promise<void>
@@ -49,10 +52,12 @@ export function useSentenceTranslate({
 } {
   const [blocks, setBlocks] = useState<TranslationBlock[]>([])
   const [busy, setBusy] = useState(false)
+  const [translatePending, setTranslatePending] = useState(false)
   const [statusNote, setStatusNote] = useState<string | null>(null)
   const nextIdRef = useRef(1)
   const queueRef = useRef(Promise.resolve())
   const abortRef = useRef<AbortController | null>(null)
+  const pendingTimerRef = useRef<number | null>(null)
   const bufferRef = useRef(buffer)
   const blocksRef = useRef(blocks)
   const inFlightKeyRef = useRef<string | null>(null)
@@ -61,6 +66,13 @@ export function useSentenceTranslate({
   blocksRef.current = blocks
 
   const nextBlockId = useCallback(() => nextIdRef.current++, [])
+
+  const clearPendingIndicatorTimer = useCallback(() => {
+    if (pendingTimerRef.current !== null) {
+      window.clearTimeout(pendingTimerRef.current)
+      pendingTimerRef.current = null
+    }
+  }, [])
 
   const setCommitError = useCallback((message: string | null) => {
     setStatusNote(message)
@@ -74,10 +86,12 @@ export function useSentenceTranslate({
     abortRef.current?.abort()
     abortRef.current = null
     inFlightKeyRef.current = null
+    clearPendingIndicatorTimer()
     setBlocks([])
     setBusy(false)
+    setTranslatePending(false)
     setStatusNote(null)
-  }, [])
+  }, [clearPendingIndicatorTimer])
 
   useEffect(() => {
     if (!active) {
@@ -98,22 +112,9 @@ export function useSentenceTranslate({
     if (!active) {
       return
     }
-    setBlocks((prev) => {
-      const next = trimBlocks(reconcileBlocksInBuffer(buffer, prev))
-      if (next.length === prev.length && next.every((block, index) => {
-        const prior = prev[index]
-        return (
-          prior !== undefined &&
-          prior.id === block.id &&
-          prior.start === block.start &&
-          prior.end === block.end &&
-          prior.source === block.source
-        )
-      })) {
-        return prev
-      }
-      return next
-    })
+    if (buffer.trim().length === 0) {
+      setBlocks([])
+    }
   }, [active, buffer])
 
   useEffect(() => {
@@ -122,23 +123,16 @@ export function useSentenceTranslate({
     }
 
     const timer = window.setTimeout(() => {
-      const matched = trimBlocks(reconcileBlocksInBuffer(bufferRef.current, blocksRef.current))
-      const pending = extractPendingSource(bufferRef.current, matched)
-      if (!pending) {
+      const sourceSnapshot = bufferRef.current
+      if (sourceSnapshot.trim().length === 0) {
+        setBlocks([])
+        return
+      }
+      if (!bufferNeedsTranslation(sourceSnapshot, blocksRef.current)) {
         return
       }
 
-      const last = matched[matched.length - 1]
-      if (
-        last &&
-        last.start === pending.start &&
-        last.end === pending.end &&
-        last.source === pending.source
-      ) {
-        return
-      }
-
-      const key = pendingSegmentKey(pending)
+      const key = sourceSnapshot
       if (inFlightKeyRef.current === key) {
         return
       }
@@ -167,49 +161,34 @@ export function useSentenceTranslate({
             : null
         )
 
-        const optimistic: TranslationBlock = {
-          id: nextBlockId(),
-          source: pending.source,
-          start: pending.start,
-          end: pending.end,
-          forward: "",
-          back: ""
-        }
-        setBlocks(trimBlocks([...matched, optimistic]))
         setBusy(true)
+        setTranslatePending(false)
+        clearPendingIndicatorTimer()
+        pendingTimerRef.current = window.setTimeout(() => {
+          setTranslatePending(true)
+        }, TRANSLATE_PENDING_INDICATOR_MS)
+
         abortRef.current?.abort()
         const ac = new AbortController()
         abortRef.current = ac
 
         try {
-          const triplet = await translateRoundTripMultiline(pairId, pending.source, ac.signal)
+          const result = await translateForwardMultiline(pairId, sourceSnapshot, ac.signal)
           if (ac.signal.aborted) {
             return
           }
-          setBlocks((current) => {
-            const reconciled = trimBlocks(reconcileBlocksInBuffer(bufferRef.current, current))
-            const index = reconciled.findIndex(
-              (block) =>
-                block.start === pending.start &&
-                block.end === pending.end &&
-                block.source === pending.source
-            )
-            if (index < 0) {
-              return trimBlocks([
-                ...reconciled,
-                { ...triplet, id: nextBlockId(), start: pending.start, end: pending.end }
-              ])
+          if (bufferRef.current !== sourceSnapshot) {
+            return
+          }
+          setBlocks([
+            {
+              id: nextBlockId(),
+              start: 0,
+              end: sourceSnapshot.length,
+              source: sourceSnapshot,
+              forward: result.forward
             }
-            return reconciled.map((block, blockIndex) =>
-              blockIndex === index
-                ? {
-                    ...block,
-                    forward: triplet.forward,
-                    back: triplet.back
-                  }
-                : block
-            )
-          })
+          ])
           setStatusNote(null)
         } catch (e) {
           if (ac.signal.aborted) {
@@ -217,22 +196,11 @@ export function useSentenceTranslate({
           }
           const msg = e instanceof Error ? e.message : String(e)
           setStatusNote(`translation failed: ${msg}`)
-          setBlocks((current) =>
-            trimBlocks(
-              reconcileBlocksInBuffer(bufferRef.current, current).filter(
-                (block) =>
-                  !(
-                    block.start === pending.start &&
-                    block.end === pending.end &&
-                    block.source === pending.source &&
-                    block.forward === ""
-                  )
-              )
-            )
-          )
         } finally {
+          clearPendingIndicatorTimer()
           if (!ac.signal.aborted) {
             setBusy(false)
+            setTranslatePending(false)
           }
           if (inFlightKeyRef.current === key) {
             inFlightKeyRef.current = null
@@ -244,7 +212,15 @@ export function useSentenceTranslate({
     }, DEBOUNCE_MS)
 
     return () => window.clearTimeout(timer)
-  }, [active, buffer, isComposing, nextBlockId, pairId])
+  }, [active, buffer, clearPendingIndicatorTimer, isComposing, nextBlockId, pairId])
 
-  return { blocks, busy, statusNote, resetSession, flushPendingTranslations, setCommitError }
+  return {
+    blocks,
+    busy,
+    translatePending,
+    statusNote,
+    resetSession,
+    flushPendingTranslations,
+    setCommitError
+  }
 }

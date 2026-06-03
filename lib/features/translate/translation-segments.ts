@@ -234,88 +234,97 @@ function fieldLineAt(text: string, lineIndex: number): string {
   return parts[lineIndex] ?? ""
 }
 
+export const TRANSLATE_PENDING_TEXT = "…"
+
 /**
- * EN: Build forward/back display for nav typing — `\n` only where the source buffer has a line break.
- * JA: デバウンス分割ブロックを同一行内では空白で連結し、原文の改行位置でのみ改行する。
+ * EN: Resolve forward translation text for display (full-buffer re-translate model).
+ * JA: 全文再翻訳モデル向けの訳文表示。100ms 超の処理中は "…"、それ以外は確定訳または直前の訳（stale）。
+ */
+export function resolveForwardDisplayText(
+  buffer: string,
+  blocks: readonly { source: string; forward: string }[],
+  busy: boolean,
+  showPending: boolean
+): string {
+  if (buffer.length === 0) {
+    return ""
+  }
+  if (busy && showPending) {
+    return TRANSLATE_PENDING_TEXT
+  }
+  const block = blocks[0]
+  if (!block?.forward) {
+    return ""
+  }
+  if (block.source === buffer || !busy) {
+    return block.forward
+  }
+  return block.forward
+}
+
+/**
+ * EN: Build forward display for nav typing — one full-buffer translation per pause.
  */
 export function assembleTranslationFieldForBuffer(
   buffer: string,
-  blocks: readonly { source: string; start: number; end: number; forward: string; back: string }[],
-  field: "forward" | "back",
-  busy: boolean
+  blocks: readonly { source: string; forward: string }[],
+  busy: boolean,
+  showPending: boolean
 ): string {
-  const lines = listBufferLines(buffer)
-  if (lines.length === 0) {
-    return ""
-  }
-
-  const pendingStart = pendingSliceStart(blocks)
-  const lineTexts: string[] = []
-
-  for (const line of lines) {
-    const { start: selStart, end: selEnd } = lineSelectionRange(line, buffer)
-    const overlapping = blocks
-      .filter((block) => block.end > selStart && block.start < selEnd)
-      .sort((a, b) => a.start - b.start)
-
-    const parts: string[] = []
-    for (const block of overlapping) {
-      const blockLineStart = Math.max(selStart, block.start)
-      const lineIndex = lineIndexInBlockSource(block, blockLineStart)
-      const segment = fieldLineAt(block[field], lineIndex).trim()
-      if (segment) {
-        parts.push(segment)
-      }
-    }
-
-    let lineText = parts.join(" ")
-    const sourceOnLine = buffer.slice(selStart, selEnd).trim()
-    const pendingOnLine =
-      sourceOnLine.length > 0 &&
-      Math.max(pendingStart, selStart) < selEnd &&
-      buffer.slice(Math.max(pendingStart, selStart), selEnd).trim().length > 0
-
-    if (lineText.length === 0 && busy && pendingOnLine) {
-      lineText = "…"
-    } else if (lineText.length > 0 && busy && pendingOnLine) {
-      lineText = `${lineText} …`
-    }
-
-    lineTexts.push(lineText)
-  }
-
-  return lineTexts.join("\n")
+  return resolveForwardDisplayText(buffer, blocks, busy, showPending)
 }
 
 /** EN: One display row per source line with aligned translation field text. */
 export function buildTranslateLineRows(
   buffer: string,
-  blocks: readonly { source: string; start: number; end: number; forward: string; back: string }[],
-  field: "forward" | "back",
-  busy: boolean
+  blocks: readonly { source: string; start: number; end: number; forward: string }[],
+  busy: boolean,
+  showPending: boolean
 ): readonly TranslateLineRow[] {
-  const pendingStart = pendingSliceStart(blocks)
-  return listBufferLines(buffer).map((line) => {
-    const block = blocks.find((entry) => line.start >= entry.start && line.start < entry.end)
-    if (!block) {
-      const isPendingTail = line.start >= pendingStart
+  const lines = listBufferLines(buffer)
+  if (lines.length === 0) {
+    return []
+  }
+  if (busy && showPending) {
+    return lines.map((line) => ({
+      lineIndex: line.index,
+      start: line.start,
+      end: line.end,
+      displayText: TRANSLATE_PENDING_TEXT,
+      pending: true
+    }))
+  }
+
+  const block = blocks[0]
+  if (!block?.forward) {
+    return lines.map((line) => ({
+      lineIndex: line.index,
+      start: line.start,
+      end: line.end,
+      displayText: "",
+      pending: busy
+    }))
+  }
+
+  const stale = block.source !== buffer
+  return lines.map((line) => {
+    if (stale && line.start >= block.end) {
       return {
         lineIndex: line.index,
         start: line.start,
         end: line.end,
-        displayText: isPendingTail && busy ? "…" : "",
-        pending: isPendingTail
+        displayText: "",
+        pending: busy
       }
     }
-    const lineInBlock = lineIndexInBlockSource(block, line.start)
-    const translated = block[field]
-    const hasTranslation = translated.length > 0
+    const anchor = stale ? Math.min(line.start, Math.max(block.start, block.end - 1)) : line.start
+    const lineInBlock = lineIndexInBlockSource(block, anchor)
     return {
       lineIndex: line.index,
       start: line.start,
       end: line.end,
-      displayText: hasTranslation ? fieldLineAt(translated, lineInBlock) : busy ? "…" : "",
-      pending: !hasTranslation
+      displayText: fieldLineAt(block.forward, lineInBlock),
+      pending: busy && stale
     }
   })
 }

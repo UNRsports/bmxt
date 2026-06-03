@@ -8,8 +8,10 @@ import {
   lineIndicesInRange,
   listBufferLines,
   reconcileBlocksInBuffer,
+  resolveForwardDisplayText,
   spanForTrimmedSlice,
-  splitBufferForBlockHighlight
+  splitBufferForBlockHighlight,
+  TRANSLATE_PENDING_TEXT
 } from "./translation-segments.ts"
 
 describe("spanForTrimmedSlice", () => {
@@ -25,18 +27,18 @@ describe("spanForTrimmedSlice", () => {
 describe("reconcileBlocksInBuffer", () => {
   it("drops blocks that no longer appear in order", () => {
     const blocks = [
-      { source: "A", start: 0, end: 1, forward: "a", back: "A" },
-      { source: "B", start: 1, end: 2, forward: "b", back: "B" }
+      { source: "A", start: 0, end: 1, forward: "a" },
+      { source: "B", start: 1, end: 2, forward: "b" }
     ]
     assert.deepEqual(reconcileBlocksInBuffer("A X", blocks), [
-      { source: "A", start: 0, end: 1, forward: "a", back: "A" }
+      { source: "A", start: 0, end: 1, forward: "a" }
     ])
   })
 
   it("refreshes start/end when text is inserted before later blocks", () => {
-    const blocks = [{ source: "B", start: 1, end: 2, forward: "b", back: "B" }]
+    const blocks = [{ source: "B", start: 1, end: 2, forward: "b" }]
     assert.deepEqual(reconcileBlocksInBuffer("AB", blocks), [
-      { source: "B", start: 1, end: 2, forward: "b", back: "B" }
+      { source: "B", start: 1, end: 2, forward: "b" }
     ])
   })
 })
@@ -108,6 +110,27 @@ describe("lineIndicesInRange", () => {
   })
 })
 
+describe("resolveForwardDisplayText", () => {
+  it("shows pending indicator after 100ms threshold", () => {
+    assert.equal(resolveForwardDisplayText("hello", [], true, true), TRANSLATE_PENDING_TEXT)
+  })
+
+  it("returns full-buffer translation when source matches", () => {
+    const blocks = [{ source: "こんな感じで", forward: "Like this" }]
+    assert.equal(resolveForwardDisplayText("こんな感じで", blocks, false, false), "Like this")
+  })
+
+  it("keeps stale translation while debouncing further input", () => {
+    const blocks = [{ source: "こんな", forward: "Like this" }]
+    assert.equal(resolveForwardDisplayText("こんな感じで", blocks, false, false), "Like this")
+  })
+
+  it("shows stale translation during the first 100ms of a refresh", () => {
+    const blocks = [{ source: "こんな", forward: "Like this" }]
+    assert.equal(resolveForwardDisplayText("こんな感じで", blocks, true, false), "Like this")
+  })
+})
+
 describe("buildTranslateLineRows", () => {
   it("aligns translation rows with source newlines", () => {
     const blocks = [
@@ -115,35 +138,34 @@ describe("buildTranslateLineRows", () => {
         source: "a\nb",
         start: 0,
         end: 3,
-        forward: "A\nB",
-        back: "a\nb"
+        forward: "A\nB"
       }
     ]
-    const rows = buildTranslateLineRows("a\nb", blocks, "forward", false)
+    const rows = buildTranslateLineRows("a\nb", blocks, false, false)
     assert.equal(rows.length, 2)
     assert.equal(rows[0]!.displayText, "A")
     assert.equal(rows[1]!.displayText, "B")
   })
+
+  it("shows pending text on every line after the indicator threshold", () => {
+    const rows = buildTranslateLineRows("a\nb", [], true, true)
+    assert.equal(rows.length, 2)
+    assert.equal(rows[0]!.displayText, TRANSLATE_PENDING_TEXT)
+    assert.equal(rows[1]!.displayText, TRANSLATE_PENDING_TEXT)
+  })
 })
 
 describe("assembleTranslationFieldForBuffer", () => {
-  it("joins debounced blocks on one source line with spaces", () => {
-    const blocks = [
-      { source: "こんな", start: 0, end: 3, forward: "Like this", back: "このように" },
-      { source: "感じで", start: 3, end: 6, forward: "Test", back: "テスト" },
-      { source: "テスト", start: 6, end: 9, forward: "The", back: "という" }
-    ]
+  it("returns the full-buffer translation", () => {
+    const blocks = [{ source: "こんな感じでテスト", forward: "A test like this" }]
     assert.equal(
-      assembleTranslationFieldForBuffer("こんな感じでテスト", blocks, "forward", false),
-      "Like this Test The"
+      assembleTranslationFieldForBuffer("こんな感じでテスト", blocks, false, false),
+      "A test like this"
     )
   })
 
   it("inserts newlines only when the source buffer has them", () => {
-    const blocks = [
-      { source: "a", start: 0, end: 1, forward: "A", back: "a" },
-      { source: "b", start: 2, end: 3, forward: "B", back: "b" }
-    ]
-    assert.equal(assembleTranslationFieldForBuffer("a\nb", blocks, "forward", false), "A\nB")
+    const blocks = [{ source: "a\nb", forward: "A\nB" }]
+    assert.equal(assembleTranslationFieldForBuffer("a\nb", blocks, false, false), "A\nB")
   })
 })

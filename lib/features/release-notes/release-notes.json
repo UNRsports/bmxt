@@ -1,16 +1,14 @@
 {
-  "0.4.0": {
+  "0.4.1": {
     "ja": [
-      "navモードの動作不具合修正",
-      "翻訳機能実装",
-      "候補メニュー動作の調整",
-      "ウェルカムページのオープン動作修正"
+      "コード内修正",
+      "navモードでの文字入力に関する不具合修正",
+      "翻訳モードからピッカーを廃し、シンプルな仕様に改善"
     ],
     "en": [
-      "Fixed bugs in nav mode behavior",
-      "Added translation assist (`translate -on` / `translate -off`)",
-      "Adjusted Tab completion menu behavior",
-      "Fixed welcome page open behavior"
+      "Miscellaneous internal fixes",
+      "Fixed a bug affecting text input in nav mode",
+      "Removed the translation side picker; translate assist is now prompt preview and nav typing only"
     ]
   }
 }

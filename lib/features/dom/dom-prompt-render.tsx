@@ -155,7 +155,7 @@ export function DomPromptRender({
       <div className="bmxt-tab-picker-head">{HEADLINE}</div>
       <textarea
         ref={setInputEl}
-        className="bmxt-tab-picker-filter-ime"
+        className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
         rows={1}
         readOnly
         spellCheck={false}
@@ -166,13 +166,6 @@ export function DomPromptRender({
         aria-label="Permission prompt / 許可ダイアログ"
         value=""
         onKeyDown={onInputKeyDown}
-        style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          opacity: 0,
-          pointerEvents: "none"
-        }}
       />
       <div
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
@@ -198,42 +191,20 @@ export function DomPromptRender({
           )
         })}
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          padding: "6px 8px",
-          borderTop: "1px solid #30363d",
-          background: "#0d1117",
-          alignItems: "center"
-        }}>
+      <div className="bmxt-dom-prompt-footer">
         <span
-          className="bmxt-dom-prompt-action-label"
-          style={{
-            background: "#1f6feb",
-            color: "white",
-            borderRadius: 4,
-            padding: "4px 10px",
-            font: "inherit",
-            opacity: busy ? 0.65 : 1
-          }}>
+          className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--primary${
+            busy ? " bmxt-dom-prompt-action-label--busy" : ""
+          }`}>
           {busy ? "Requesting…" : "許可 (Enter / Y)"}
         </span>
         <span
-          className="bmxt-dom-prompt-action-label"
-          style={{
-            color: "#c9d1d9",
-            border: "1px solid #30363d",
-            borderRadius: 4,
-            padding: "4px 10px",
-            font: "inherit",
-            opacity: busy ? 0.65 : 1
-          }}>
+          className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--secondary${
+            busy ? " bmxt-dom-prompt-action-label--busy" : ""
+          }`}>
           プロンプトへ (Esc / N)
         </span>
-        <span style={{ flex: 1, textAlign: "right", color: "#8b949e" }}>
-          ↑↓ / j k でメッセージをスクロール
-        </span>
+        <span className="bmxt-dom-prompt-footer-hint">↑↓ / j k でメッセージをスクロール</span>
       </div>
     </div>
   )
