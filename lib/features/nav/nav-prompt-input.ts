@@ -47,6 +47,18 @@ export function sanitizeNavTypingBuffer(value: string, multiline: boolean): stri
 }
 
 /**
+ * EN: Page-field snapshot for nav typing — drop whitespace-only noise (e.g. accidental Tab).
+ * JA: ページ編集欄のスナップショットを BMXt 用に整える。空白のみは空として扱う。
+ */
+export function normalizeNavTypingInitialValue(value: string, multiline: boolean): string {
+  const sanitized = sanitizeNavTypingBuffer(value, multiline)
+  if (sanitized.trim() === "") {
+    return ""
+  }
+  return sanitized
+}
+
+/**
  * EN: Keep only the first N `\n` already present in `snapshot` (Shift+Enter); drop IME / Enter artifacts.
  * JA: 原文にない改行（IME 確定 Enter など）を除去し、意図した改行だけ残す。
  */

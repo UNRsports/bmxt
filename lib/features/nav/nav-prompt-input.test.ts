@@ -8,6 +8,7 @@ import {
   navTypingLineBreakAllowed,
   navTypingShouldPreventLineBreakInput,
   promptMirrorSegments,
+  normalizeNavTypingInitialValue,
   sanitizeNavTypingBuffer,
   sanitizeNavTypingDomValueWithCursor,
   sanitizeNavTypingInsertText,
@@ -45,6 +46,13 @@ describe("nav-prompt-input", () => {
   it("sanitizeNavTypingBuffer", () => {
     assert.equal(sanitizeNavTypingBuffer("a\nb", false), "ab")
     assert.equal(sanitizeNavTypingBuffer("a\nb", true), "a\nb")
+  })
+
+  it("normalizeNavTypingInitialValue", () => {
+    assert.equal(normalizeNavTypingInitialValue("\t", false), "")
+    assert.equal(normalizeNavTypingInitialValue("  \n  ", false), "")
+    assert.equal(normalizeNavTypingInitialValue("a\nb", true), "a\nb")
+    assert.equal(normalizeNavTypingInitialValue("  hello ", false), "  hello ")
   })
 
   it("stripNewlinesBeyondSnapshot", () => {
