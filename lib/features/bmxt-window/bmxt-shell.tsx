@@ -1063,6 +1063,7 @@ export function BmxtShell({
 
   const onOpenSearchPickerEntry = useCallback(
     async (entry: PickerEntry, matchIndex: number) => {
+      const pattern = searchListPickerRef.current?.pattern ?? ""
       const ctx: DispatchChromeContext = {
         clearLog: async () => {},
         exitPane: async () => [],
@@ -1071,7 +1072,7 @@ export function BmxtShell({
         resolveTabArg: async () => undefined,
         commandSessionId: sessionId
       }
-      await openSearchPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines))
+      await openSearchPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines), pattern)
     },
     [appendLogLines, sessionId]
   )

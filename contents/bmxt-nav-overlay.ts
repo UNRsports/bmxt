@@ -8,6 +8,8 @@ import {
   bmxtExtractPageInnerTextInPage,
   isPageExtractRequest
 } from "../lib/features/page-extract/page-extract-message"
+import { bmxtScrollToSearchNeedleInjected } from "../lib/features/page-dom/injected-scroll-to-search-needle"
+import { isPageScrollNeedleRequest } from "../lib/features/page-dom/page-scroll-needle-message"
 import {
   bmxtNavControlInjected,
   NAV_OVERLAY_CHANNEL,
@@ -23,6 +25,12 @@ export const config: PlasmoCSConfig = {
 chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
   if (isPageExtractRequest(raw)) {
     sendResponse(bmxtExtractPageInnerTextInPage(raw.maxChars))
+    return true
+  }
+  if (isPageScrollNeedleRequest(raw)) {
+    sendResponse(
+      bmxtScrollToSearchNeedleInjected(raw.searchNeedle, raw.lineNo, raw.snippetHint)
+    )
     return true
   }
   const msg = raw as NavOverlayMessage
