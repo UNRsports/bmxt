@@ -4,6 +4,7 @@ import {
   splitTextHighlightSegments
 } from "../side-picker/search/picker-search-needle"
 import { displayTitle, type TabPickerRow } from "./picker-rows"
+import { formatWindowPickerLabel } from "./tab-picker-window-label"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { BulkSubMode } from "./tab-picker-overlay-types"
 
@@ -30,6 +31,8 @@ export type TabPickerRowListProps = {
   markedGroupSet: Set<string>
   markedTabSet: Set<number>
   activeTabId: number | null
+  trackedWindowId: number | undefined
+  trackedWindowTitle: string | null
   showUrl: boolean
   /** `/` 入力中または確定後の検索語（`@` で URL 側のみハイライト） */
   searchHighlightQuery: string
@@ -48,6 +51,8 @@ export function TabPickerRowList({
   markedGroupSet,
   markedTabSet,
   activeTabId,
+  trackedWindowId,
+  trackedWindowTitle,
   showUrl,
   searchHighlightQuery,
   setRowRef,
@@ -75,6 +80,7 @@ export function TabPickerRowList({
         if (row.kind === "window") {
           const markedRow = markedWindowSet.has(row.windowId)
           const expanded = isWindowExpanded(row.windowId)
+          const windowLabel = formatWindowPickerLabel(row, trackedWindowId, trackedWindowTitle)
           return (
             <div
               key={i}
@@ -89,7 +95,7 @@ export function TabPickerRowList({
                 {expanded ? "▼" : "▶"}
               </span>
               <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
-              {byUrl ? row.label : renderHighlighted(row.label, needle, `w-${i}`)}
+              {byUrl ? windowLabel : renderHighlighted(windowLabel, needle, `w-${i}`)}
             </div>
           )
         }
@@ -131,7 +137,7 @@ export function TabPickerRowList({
             aria-selected={hiRow || markedRow}>
             <div className="bmxt-tab-picker-tab-title">
               <span className="bmxt-tab-picker-tab-glyph">
-                {(row.active || activeTabId === row.tabId) ? "*" : " "}
+                {activeTabId === row.tabId ? "*" : " "}
               </span>
               <span className="bmxt-tab-picker-tab-glyph">
                 {markedTabSet.has(row.tabId) ? "#" : " "}

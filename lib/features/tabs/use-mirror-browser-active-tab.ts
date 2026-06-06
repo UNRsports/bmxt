@@ -1,14 +1,29 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
 import type { MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
+import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys"
 
 type Reason = "activated" | "focus"
 
+function resolveVisibleHi(
+  rows: TabPickerRow[],
+  visibleRowIndices: number[],
+  rowIdx: number
+): number {
+  const fromProp = visibleRowIndices.findIndex((ri) => ri === rowIdx)
+  if (fromProp >= 0) {
+    return fromProp
+  }
+  const visibleNow = computeTabPickerVisibleRowIndices(rows)
+  return visibleNow.findIndex((ri) => ri === rowIdx)
+}
+
 /**
  * Chrome 側のアクティブタブをピッカーの hi / activeTabId に反映する（ブラウザ → BMXt の一方通行）。
  * 最前面のブラウザウィンドウ（BMXt 以外がフォーカスならそれ、BMXt フォーカス時は storage の last normal）に合わせる。
+ * アクティブタブが折りたたみ内にある場合はツリーを展開する（ブラウザ操作優先）。
  */
 export function useMirrorBrowserActiveTab({
   enabled,
@@ -21,7 +36,10 @@ export function useMirrorBrowserActiveTab({
   setFilterQuery,
   setSearchMode,
   anchorTabIdRef,
-  onRefreshRows
+  expandForTabId,
+  mirrorHiPendingRef,
+  onRefreshRows,
+  scheduleRefreshRows
 }: {
   enabled: boolean
   blocked: boolean
@@ -33,9 +51,15 @@ export function useMirrorBrowserActiveTab({
   setFilterQuery: (q: string) => void
   setSearchMode: (v: boolean) => void
   anchorTabIdRef: MutableRefObject<number | null>
+  expandForTabId: (tabId: number) => boolean
+  /** EN: True while browser-side active tab changed but hi has not caught up yet. */
+  mirrorHiPendingRef: MutableRefObject<boolean>
   onRefreshRows?: () => Promise<void>
+  /** EN: Debounced row rebuild for browser event mirroring (avoids refresh races). */
+  scheduleRefreshRows?: () => void
 }): void {
   const pendingTabIdRef = useRef<number | null>(null)
+  const lastMirroredTabIdRef = useRef<number | null>(null)
 
   const handlerRef = useRef<
     ((tabId: number, windowId: number, reason: Reason) => void | Promise<void>) | null
@@ -43,7 +67,7 @@ export function useMirrorBrowserActiveTab({
 
   useLayoutEffect(() => {
     handlerRef.current = async (tabId: number, windowId: number, reason: Reason) => {
-      if (!enabled || blocked) {
+      if (!enabled) {
         return
       }
 
@@ -69,26 +93,43 @@ export function useMirrorBrowserActiveTab({
         }
       }
 
+      setActiveTabId(tabId)
+      lastMirroredTabIdRef.current = tabId
+
       let rowIdx = rows.findIndex((r) => r.kind === "tab" && r.tabId === tabId)
       if (rowIdx < 0) {
+        mirrorHiPendingRef.current = true
         pendingTabIdRef.current = tabId
         await onRefreshRows?.()
         return
       }
 
-      const vHi = visibleRowIndices.findIndex((ri) => ri === rowIdx)
+      expandForTabId(tabId)
+
+      let vHi = resolveVisibleHi(rows, visibleRowIndices, rowIdx)
       if (vHi < 0) {
-        pendingTabIdRef.current = tabId
         setFilterQuery("")
         setSearchMode(false)
+        vHi = resolveVisibleHi(rows, visibleRowIndices, rowIdx)
+      }
+      if (vHi < 0) {
+        mirrorHiPendingRef.current = true
+        pendingTabIdRef.current = tabId
+        scheduleRefreshRows?.()
         return
       }
 
       pendingTabIdRef.current = null
+      if (blocked) {
+        mirrorHiPendingRef.current = true
+        scheduleRefreshRows?.()
+        return
+      }
+      mirrorHiPendingRef.current = false
       setHi(vHi)
       setMoveDestHi(vHi)
-      setActiveTabId(tabId)
       anchorTabIdRef.current = tabId
+      scheduleRefreshRows?.()
     }
   }, [
     enabled,
@@ -101,26 +142,41 @@ export function useMirrorBrowserActiveTab({
     setFilterQuery,
     setSearchMode,
     anchorTabIdRef,
-    onRefreshRows
+    expandForTabId,
+    mirrorHiPendingRef,
+    onRefreshRows,
+    scheduleRefreshRows
   ])
 
   useEffect(() => {
     const pending = pendingTabIdRef.current
-    if (pending === null || !enabled || blocked) {
+    if (pending === null || !enabled) {
       return
     }
+
+    setActiveTabId(pending)
+    lastMirroredTabIdRef.current = pending
+
     const rowIdx = rows.findIndex((r) => r.kind === "tab" && r.tabId === pending)
     if (rowIdx < 0) {
       return
     }
-    const vHi = visibleRowIndices.findIndex((ri) => ri === rowIdx)
+
+    expandForTabId(pending)
+
+    const vHi = resolveVisibleHi(rows, visibleRowIndices, rowIdx)
     if (vHi < 0) {
       return
     }
+
     pendingTabIdRef.current = null
+    if (blocked) {
+      mirrorHiPendingRef.current = true
+      return
+    }
+    mirrorHiPendingRef.current = false
     setHi(vHi)
     setMoveDestHi(vHi)
-    setActiveTabId(pending)
     anchorTabIdRef.current = pending
   }, [
     enabled,
@@ -130,7 +186,43 @@ export function useMirrorBrowserActiveTab({
     setHi,
     setMoveDestHi,
     setActiveTabId,
-    anchorTabIdRef
+    anchorTabIdRef,
+    expandForTabId,
+    mirrorHiPendingRef
+  ])
+
+  useEffect(() => {
+    if (!enabled || blocked || !mirrorHiPendingRef.current) {
+      return
+    }
+    const tabId = pendingTabIdRef.current ?? lastMirroredTabIdRef.current
+    if (tabId === null) {
+      return
+    }
+    const rowIdx = rows.findIndex((r) => r.kind === "tab" && r.tabId === tabId)
+    if (rowIdx < 0) {
+      return
+    }
+    expandForTabId(tabId)
+    const vHi = resolveVisibleHi(rows, visibleRowIndices, rowIdx)
+    if (vHi < 0) {
+      return
+    }
+    pendingTabIdRef.current = null
+    mirrorHiPendingRef.current = false
+    setHi(vHi)
+    setMoveDestHi(vHi)
+    anchorTabIdRef.current = tabId
+  }, [
+    enabled,
+    blocked,
+    rows,
+    visibleRowIndices,
+    setHi,
+    setMoveDestHi,
+    expandForTabId,
+    anchorTabIdRef,
+    mirrorHiPendingRef
   ])
 
   useEffect(() => {

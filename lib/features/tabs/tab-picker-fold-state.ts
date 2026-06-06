@@ -214,6 +214,31 @@ export function collapseTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow):
   return { focusRowIdx: null, changed: false }
 }
 
+/** EN: Expand parent window / group so `tabId` is visible in the tree; returns whether state changed. */
+export function expandTabPickerForTabId(rows: TabPickerRow[], tabId: number): boolean {
+  const rowIdx = rows.findIndex((r) => r.kind === "tab" && r.tabId === tabId)
+  if (rowIdx < 0) {
+    return false
+  }
+  const tabRow = rows[rowIdx]
+  if (!tabRow || tabRow.kind !== "tab") {
+    return false
+  }
+  let changed = false
+  if (!isTabPickerWindowExpanded(tabRow.windowId)) {
+    setTabPickerWindowExpanded(tabRow.windowId, true)
+    changed = true
+  }
+  if (
+    tabRow.groupId !== null &&
+    !isTabPickerGroupExpanded(tabRow.windowId, tabRow.groupId)
+  ) {
+    setTabPickerGroupExpanded(tabRow.windowId, tabRow.groupId, true)
+    changed = true
+  }
+  return changed
+}
+
 /** EN: Expand window or group for `row`; returns focus row and whether state changed. */
 export function expandTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): TabPickerFoldMutation {
   if (row.kind === "window") {

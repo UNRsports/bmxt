@@ -31,6 +31,7 @@ export type PickerColumnHostContext = {
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
+  scheduleRefreshTabPickerRows: () => void
   onOpenSearchEntry: (entry: PickerEntry, matchIndex: number) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
@@ -57,6 +58,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           onInteractiveSnapshotChange={ctx.onTabPickerInteractiveChange}
           onAppendLog={ctx.onAppendLog}
           onRefreshRows={ctx.onRefreshTabPickerRows}
+          scheduleRefreshRows={ctx.scheduleRefreshTabPickerRows}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
           isHostPaneFocused={ctx.tabsPickerKeyboardActive}
           pickerInputRef={ctx.tabPickerInputRef}

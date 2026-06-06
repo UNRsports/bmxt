@@ -15,6 +15,7 @@ export type TabsPickerWrapperProps = {
   onInteractiveSnapshotChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
+  scheduleRefreshRows?: () => void
   onReturnToPrompt: () => void
   isHostPaneFocused: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>

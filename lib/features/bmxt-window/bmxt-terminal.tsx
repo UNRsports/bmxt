@@ -1,4 +1,5 @@
 import { buildTabPickerRows } from "../tabs"
+import { createTabPickerRowsRefresh } from "../tabs/tab-picker-rows-refresh"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import {
   anyLeafHasPickerOpen,
@@ -60,6 +61,7 @@ type SplitTreeProps = {
   paneFocusByLeaf: Record<string, PaneFocusTarget>
   setPaneFocusForLeaf: (sessionId: string, target: PaneFocusTarget) => void
   refreshTabPickerRows: () => Promise<void>
+  scheduleTabPickerRowsRefresh: () => void
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
 }
@@ -76,6 +78,7 @@ function SplitLeafView({
   paneFocusByLeaf,
   setPaneFocusForLeaf,
   refreshTabPickerRows,
+  scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
   appendCommandToHistory
 }: SplitTreeProps & { node: Extract<SplitNode, { kind: "leaf" }> }) {
@@ -109,6 +112,7 @@ function SplitLeafView({
         sessionPickers={sessionPickers}
         setSessionPickerSlot={setSessionPickerSlot}
         refreshTabPickerRows={refreshTabPickerRows}
+        scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
         postUpgradeBanner={postUpgradeBanner}
         paneFocus={paneFocusByLeaf[node.id] ?? "terminal"}
         onPaneFocusChange={(target) => setPaneFocusForLeaf(node.id, target)}
@@ -129,6 +133,7 @@ function SplitBranchView({
   paneFocusByLeaf,
   setPaneFocusForLeaf,
   refreshTabPickerRows,
+  scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
   appendCommandToHistory
 }: SplitTreeProps & { node: Extract<SplitNode, { kind: "row" | "col" }> }) {
@@ -155,6 +160,7 @@ function SplitBranchView({
           paneFocusByLeaf={paneFocusByLeaf}
           setPaneFocusForLeaf={setPaneFocusForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
+          scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
         />
@@ -172,6 +178,7 @@ function SplitBranchView({
           paneFocusByLeaf={paneFocusByLeaf}
           setPaneFocusForLeaf={setPaneFocusForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
+          scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
         />
@@ -230,47 +237,62 @@ export function BmxtTerminal() {
     []
   )
 
-  const refreshTabPickerRows = useCallback(async () => {
-    const map = pickersBySessionRef.current
-    const updates: Record<string, TabPickerState> = {}
-    for (const [sid, pickers] of Object.entries(map)) {
-      const prev = pickers.tabs
-      if (!prev) {
-        continue
-      }
-      try {
-        const rows = await buildTabPickerRows(prev.showUrl)
-        updates[sid] = {
-          rows,
-          showUrl: prev.showUrl,
-          initialHi: prev.initialHi,
-          variant: prev.variant,
-          interactive: prev.interactive
+  const setPickersBySessionRef = useRef(setPickersBySession)
+  setPickersBySessionRef.current = setPickersBySession
+
+  const tabPickerRefreshHandles = useMemo(
+    () =>
+      createTabPickerRowsRefresh(
+        async () => {
+          const map = pickersBySessionRef.current
+          const updates: Record<string, TabPickerState> = {}
+          for (const [sid, pickers] of Object.entries(map)) {
+            const prev = pickers.tabs
+            if (!prev) {
+              continue
+            }
+            try {
+              const rows = await buildTabPickerRows(prev.showUrl)
+              updates[sid] = {
+                rows,
+                showUrl: prev.showUrl,
+                initialHi: prev.initialHi,
+                variant: prev.variant,
+                interactive: prev.interactive
+              }
+            } catch {
+              /* keep previous */
+            }
+          }
+          if (Object.keys(updates).length === 0) {
+            return undefined
+          }
+          return updates
+        },
+        (updates) => {
+          setPickersBySessionRef.current((p) => {
+            let next = p
+            for (const [sid, st] of Object.entries(updates)) {
+              const cur = sessionPickersOrEmpty(next, sid)
+              if (cur.tabs) {
+                next = applySessionPickerSlot(next, sid, "tabs", st)
+              }
+            }
+            return next
+          })
         }
-      } catch {
-        /* keep previous */
-      }
-    }
-    if (Object.keys(updates).length === 0) {
-      return
-    }
-    setPickersBySession((p) => {
-      let next = p
-      for (const [sid, st] of Object.entries(updates)) {
-        const cur = sessionPickersOrEmpty(next, sid)
-        if (cur.tabs) {
-          next = applySessionPickerSlot(next, sid, "tabs", st)
-        }
-      }
-      return next
-    })
-  }, [])
+      ),
+    []
+  )
+
+  const refreshTabPickerRows = tabPickerRefreshHandles.refreshTabPickerRows
+  const scheduleTabPickerRowsRefresh = tabPickerRefreshHandles.scheduleTabPickerRowsRefresh
 
   const anyPickerOpen = useMemo(
     () => anyLeafHasPickerOpen(pickersBySession),
     [pickersBySession]
   )
-  useTabPickerChromeSync(refreshTabPickerRows, anyPickerOpen)
+  useTabPickerChromeSync(scheduleTabPickerRowsRefresh, anyPickerOpen)
 
   useEffect(() => {
     if (!state) {
@@ -334,6 +356,7 @@ export function BmxtTerminal() {
           paneFocusByLeaf={paneFocusByLeaf}
           setPaneFocusForLeaf={setPaneFocusForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
+          scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
         />

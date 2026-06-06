@@ -13,6 +13,7 @@ export function useSyncChromeTabStripPreview({
   setActiveTabId,
   pageActiveMode,
   altKeyHeldRef,
+  mirrorHiPendingRef,
   altPreviewTick = 0
 }: {
   hi: number
@@ -24,6 +25,7 @@ export function useSyncChromeTabStripPreview({
   setActiveTabId: (id: number | null) => void
   pageActiveMode: TabsPageActiveMode
   altKeyHeldRef: MutableRefObject<boolean>
+  mirrorHiPendingRef: MutableRefObject<boolean>
   /** EN: Bumped on Alt keydown in manual mode to re-run preview without moving hi. */
   altPreviewTick?: number
 }) {
@@ -101,12 +103,10 @@ export function useSyncChromeTabStripPreview({
     if (visibleRowIndices.length === 0) {
       return
     }
+    if (mirrorHiPendingRef.current) {
+      return
+    }
     if (pageActiveMode === "manual" && !altKeyHeldRef.current) {
-      const rowIndex = visibleRowIndices[hi]!
-      const row = rows[rowIndex]
-      if (row?.kind === "tab") {
-        setActiveTabId(row.tabId)
-      }
       return
     }
     const rowIndex = visibleRowIndices[hi]!
@@ -115,6 +115,7 @@ export function useSyncChromeTabStripPreview({
     altKeyHeldRef,
     hi,
     markedTabIds,
+    mirrorHiPendingRef,
     pageActiveMode,
     rows,
     setActiveTabId,

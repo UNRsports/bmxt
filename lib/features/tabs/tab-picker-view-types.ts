@@ -19,6 +19,8 @@ export type TabPickerViewProps = {
   markedGroupSet: Set<string>
   markedTabSet: Set<number>
   activeTabId: number | null
+  trackedWindowId: number | undefined
+  trackedWindowTitle: string | null
   showUrl: boolean
   setRowRef: (rowIndex: number, el: HTMLDivElement | null) => void
   isWindowExpanded: (windowId: number) => boolean

@@ -2,6 +2,7 @@
 
 import { displayTitle } from "../format/display-title"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
+import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
 import {
   getWindowDisplayNamesMap,
   pruneWindowDisplayNames
@@ -12,7 +13,14 @@ export { displayTitle }
 const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
 export type TabPickerRow =
-  | { kind: "window"; windowId: number; label: string; focused: boolean }
+  | {
+      kind: "window"
+      windowId: number
+      label: string
+      windowTitle: string
+      usesActiveTabTitle: boolean
+      focused: boolean
+    }
   | { kind: "group"; windowId: number; groupId: number | null; label: string }
   | {
       kind: "tab"
@@ -59,16 +67,15 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
     groupMeta.set(g.id, g)
   }
   const winsMeta = await chrome.windows.getAll({ populate: false })
-  const winFocused = new Map<number, boolean>()
   const openWindowIds: number[] = []
   for (const w of winsMeta) {
     if (w.id !== undefined) {
-      winFocused.set(w.id, Boolean(w.focused))
       openWindowIds.push(w.id)
     }
   }
   await pruneWindowDisplayNames(openWindowIds)
   const windowDisplayNames = await getWindowDisplayNamesMap()
+  const trackedWindowId = await resolveMirrorBrowserWindowId()
 
   const sorted = [...tabs].sort((a, b) => {
     const wa = a.windowId ?? 0
@@ -93,21 +100,39 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
   const windowOrder = [...new Set(sorted.map((t) => t.windowId ?? 0))].sort((a, b) => a - b)
   const rows: TabPickerRow[] = []
 
+  const activeTabByWindow = new Map<number, chrome.tabs.Tab>()
+  await Promise.all(
+    windowOrder.map(async (wid) => {
+      try {
+        const activeTabs = await chrome.tabs.query({ windowId: wid, active: true })
+        const t = activeTabs[0]
+        if (t) {
+          activeTabByWindow.set(wid, t)
+        }
+      } catch {
+        /* window may have closed */
+      }
+    })
+  )
+
   for (const wid of windowOrder) {
     const wTabs = byWindow.get(wid)
     if (!wTabs?.length) {
       continue
     }
-    const active = wTabs.find((t) => t.active) ?? wTabs[0]
-    const f = winFocused.get(wid) ?? false
+    const active = activeTabByWindow.get(wid) ?? wTabs.find((t) => t.active) ?? wTabs[0]
+    const tracked = trackedWindowId !== undefined && wid === trackedWindowId
     const customName = windowDisplayNames.get(wid)
+    const usesActiveTabTitle = customName === undefined
     const windowTitle =
       customName !== undefined ? customName : displayTitle(active?.title ?? "")
     rows.push({
       kind: "window",
       windowId: wid,
-      label: `${f ? "*" : " "}[ウィンドウ] ${windowTitle}`,
-      focused: f
+      windowTitle,
+      usesActiveTabTitle,
+      label: `${tracked ? "*" : " "}[ウィンドウ] ${windowTitle}`,
+      focused: tracked
     })
 
     let prevKey: number | "none" | undefined

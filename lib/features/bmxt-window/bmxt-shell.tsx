@@ -168,6 +168,7 @@ type Props = {
     value: SessionPickerState[K]
   ) => void
   refreshTabPickerRows: () => Promise<void>
+  scheduleTabPickerRowsRefresh: () => void
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
   paneFocus: PaneFocusTarget
@@ -185,6 +186,7 @@ export function BmxtShell({
   sessionPickers,
   setSessionPickerSlot,
   refreshTabPickerRows,
+  scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
   paneFocus,
   onPaneFocusChange
@@ -2341,6 +2343,7 @@ export function BmxtShell({
             domPickerInputRef={domPickerInputRef}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
+            scheduleRefreshTabPickerRows={scheduleTabPickerRowsRefresh}
             onOpenSearchEntry={(entry, matchIndex) =>
               void onOpenSearchPickerEntry(entry, matchIndex)
             }

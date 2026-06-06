@@ -8,7 +8,7 @@ import {
   type MutableRefObject
 } from "react"
 import type { TabPickerRow } from "./picker-rows"
-import { resolvePickerHeadline } from "./state-machine"
+import { resolvePickerHeadline, type PickerReducerEvent } from "./state-machine"
 import { usePickerReducerBridge } from "./use-picker-reducer-bridge"
 import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
@@ -31,6 +31,7 @@ import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 import { emptyTabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 import type { TabsPageActiveMode } from "./page-active-setting"
+import { useTrackedWindowDisplay } from "./use-tracked-window-display"
 
 type Props = {
   rows: TabPickerRow[]
@@ -42,6 +43,7 @@ type Props = {
   onInteractiveSnapshotChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
+  scheduleRefreshRows?: () => void
   /** EN: Esc at top level — return focus to BMXt prompt; picker stays open. */
   onReturnToPrompt: () => void
   /** EN: Pane has keyboard focus (Ctrl+←→ or click); when false, display-only. */
@@ -65,6 +67,7 @@ export function useTabPickerController({
   onInteractiveSnapshotChange,
   onAppendLog,
   onRefreshRows,
+  scheduleRefreshRows,
   onReturnToPrompt,
   isHostPaneFocused,
   pickerInputRef,
@@ -130,7 +133,10 @@ export function useTabPickerController({
   const prevBulkSubModeRef = useRef<BulkSubMode | null>(null)
   const shiftRangeAnchorHiRef = useRef<number | null>(null)
   const altKeyHeldRef = useRef(false)
+  const mirrorHiPendingRef = useRef(false)
   const [altPreviewTick, setAltPreviewTick] = useState(0)
+
+  const { trackedWindowId, trackedWindowTitle } = useTrackedWindowDisplay(activeTabId)
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -163,6 +169,7 @@ export function useTabPickerController({
     visibleRowIndices,
     collapseAtRow,
     expandAtRow,
+    expandForTabId,
     isWindowExpanded,
     isGroupExpanded
   } = useTabPickerFoldState(rows)
@@ -182,23 +189,48 @@ export function useTabPickerController({
     markedGroupKeys
   )
 
-  const { applyReducedState, applyReducedStateSequence, clearMarkedViaReducer } =
-    usePickerReducerBridge(
-      hi,
-      moveDestHi,
-      markedKind,
-      markedTabIds,
-      markedWindowIds,
-      markedGroupKeys,
-      bulkSubMode,
-      setHi,
-      setMoveDestHi,
-      setMarkedKind,
-      setMarkedTabIds,
-      setMarkedWindowIds,
-      setMarkedGroupKeys,
-      setBulkSubMode
-    )
+  const {
+    applyReducedState: applyReducedStateRaw,
+    applyReducedStateSequence: applyReducedStateSequenceRaw,
+    clearMarkedViaReducer
+  } = usePickerReducerBridge(
+    hi,
+    moveDestHi,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys,
+    bulkSubMode,
+    setHi,
+    setMoveDestHi,
+    setMarkedKind,
+    setMarkedTabIds,
+    setMarkedWindowIds,
+    setMarkedGroupKeys,
+    setBulkSubMode
+  )
+
+  const clearMirrorHiPendingForUserMove = useCallback((events: PickerReducerEvent[]) => {
+    if (events.some((ev) => ev.kind === "moveHi")) {
+      mirrorHiPendingRef.current = false
+    }
+  }, [])
+
+  const applyReducedState = useCallback(
+    (ev: PickerReducerEvent) => {
+      clearMirrorHiPendingForUserMove([ev])
+      applyReducedStateRaw(ev)
+    },
+    [applyReducedStateRaw, clearMirrorHiPendingForUserMove]
+  )
+
+  const applyReducedStateSequence = useCallback(
+    (events: PickerReducerEvent[]) => {
+      clearMirrorHiPendingForUserMove(events)
+      applyReducedStateSequenceRaw(events)
+    },
+    [applyReducedStateSequenceRaw, clearMirrorHiPendingForUserMove]
+  )
 
   const { groupPanelRef } = useTabPickerSyncAndLayoutEffects({
     initialHi,
@@ -240,6 +272,37 @@ export function useTabPickerController({
 
   useLoadGroupChoicesWhenBulkGroup(bulkSubMode, setGroupChoices, setGroupPickIndex)
 
+  const markedCount = pickerMarkedCount(
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys
+  )
+
+  const mirrorBlocked =
+    markedCount > 0 ||
+    bulkSubMode !== null ||
+    groupNewPhase !== "tabs" ||
+    newTabUrlWindowId !== null ||
+    commandMode
+
+  useMirrorBrowserActiveTab({
+    enabled: variant === "default",
+    blocked: mirrorBlocked,
+    rows,
+    visibleRowIndices,
+    setHi,
+    setMoveDestHi,
+    setActiveTabId,
+    setFilterQuery,
+    setSearchMode,
+    anchorTabIdRef,
+    expandForTabId,
+    mirrorHiPendingRef,
+    onRefreshRows,
+    scheduleRefreshRows
+  })
+
   useSyncChromeTabStripPreview({
     hi,
     visibleRowIndices,
@@ -250,6 +313,7 @@ export function useTabPickerController({
     setActiveTabId,
     pageActiveMode,
     altKeyHeldRef,
+    mirrorHiPendingRef,
     altPreviewTick
   })
 
@@ -296,13 +360,6 @@ export function useTabPickerController({
     visibleRowIndices
   ])
 
-  const markedCount = pickerMarkedCount(
-    markedKind,
-    markedTabIds,
-    markedWindowIds,
-    markedGroupKeys
-  )
-
   const {
     openEditFromPicker,
     closeEdit,
@@ -327,27 +384,6 @@ export function useTabPickerController({
     applyReducedState,
     clearMarkedViaReducer,
     onAppendLog,
-    onRefreshRows
-  })
-
-  const mirrorBlocked =
-    markedCount > 0 ||
-    bulkSubMode !== null ||
-    groupNewPhase !== "tabs" ||
-    newTabUrlWindowId !== null ||
-    commandMode
-
-  useMirrorBrowserActiveTab({
-    enabled: variant === "default",
-    blocked: mirrorBlocked,
-    rows,
-    visibleRowIndices,
-    setHi,
-    setMoveDestHi,
-    setActiveTabId,
-    setFilterQuery,
-    setSearchMode,
-    anchorTabIdRef,
     onRefreshRows
   })
 
@@ -553,6 +589,8 @@ export function useTabPickerController({
     markedGroupSet,
     markedTabSet,
     activeTabId,
+    trackedWindowId,
+    trackedWindowTitle,
     showUrl,
     setRowRef,
     isWindowExpanded,

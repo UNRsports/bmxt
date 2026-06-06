@@ -33,6 +33,8 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     markedGroupSet,
     markedTabSet,
     activeTabId,
+    trackedWindowId,
+    trackedWindowTitle,
     showUrl,
     setRowRef,
     isWindowExpanded,
@@ -151,6 +153,8 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
           markedGroupSet={markedGroupSet}
           markedTabSet={markedTabSet}
           activeTabId={activeTabId}
+          trackedWindowId={trackedWindowId}
+          trackedWindowTitle={trackedWindowTitle}
           showUrl={showUrl}
           searchHighlightQuery={searchHighlightQuery}
           setRowRef={setRowRef}

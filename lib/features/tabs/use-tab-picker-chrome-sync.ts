@@ -1,13 +1,11 @@
 import { useEffect } from "react"
 
-const DEBOUNCE_MS = 80
-
 /**
  * タブピッカー表示中に tabs / windows / tabGroups の変化を追従する。
- * デバウンスして連続イベントをまとめ、`refresh` で行データを再構築する。
+ * `scheduleRefresh` はデバウンス済みの行再構築を呼ぶ（重複 refresh の競合を避ける）。
  */
 export function useTabPickerChromeSync(
-  refresh: () => void | Promise<void>,
+  scheduleRefresh: () => void,
   enabled: boolean
 ) {
   useEffect(() => {
@@ -15,55 +13,42 @@ export function useTabPickerChromeSync(
       return
     }
 
-    let debounceTimer: ReturnType<typeof setTimeout> | undefined
-    const schedule = () => {
-      if (debounceTimer !== undefined) {
-        clearTimeout(debounceTimer)
-      }
-      debounceTimer = setTimeout(() => {
-        debounceTimer = undefined
-        void refresh()
-      }, DEBOUNCE_MS)
-    }
+    chrome.tabs.onCreated.addListener(scheduleRefresh)
+    chrome.tabs.onRemoved.addListener(scheduleRefresh)
+    chrome.tabs.onUpdated.addListener(scheduleRefresh)
+    chrome.tabs.onActivated.addListener(scheduleRefresh)
+    chrome.tabs.onMoved.addListener(scheduleRefresh)
+    chrome.tabs.onAttached.addListener(scheduleRefresh)
+    chrome.tabs.onDetached.addListener(scheduleRefresh)
+    chrome.tabs.onReplaced.addListener(scheduleRefresh)
 
-    chrome.tabs.onCreated.addListener(schedule)
-    chrome.tabs.onRemoved.addListener(schedule)
-    chrome.tabs.onUpdated.addListener(schedule)
-    chrome.tabs.onMoved.addListener(schedule)
-    chrome.tabs.onAttached.addListener(schedule)
-    chrome.tabs.onDetached.addListener(schedule)
-    chrome.tabs.onReplaced.addListener(schedule)
+    chrome.windows.onCreated.addListener(scheduleRefresh)
+    chrome.windows.onRemoved.addListener(scheduleRefresh)
+    chrome.windows.onFocusChanged.addListener(scheduleRefresh)
 
-    chrome.windows.onCreated.addListener(schedule)
-    chrome.windows.onRemoved.addListener(schedule)
-    chrome.windows.onFocusChanged.addListener(schedule)
-
-    chrome.tabGroups.onCreated.addListener(schedule)
-    chrome.tabGroups.onUpdated.addListener(schedule)
-    chrome.tabGroups.onRemoved.addListener(schedule)
-    chrome.tabGroups.onMoved.addListener(schedule)
+    chrome.tabGroups.onCreated.addListener(scheduleRefresh)
+    chrome.tabGroups.onUpdated.addListener(scheduleRefresh)
+    chrome.tabGroups.onRemoved.addListener(scheduleRefresh)
+    chrome.tabGroups.onMoved.addListener(scheduleRefresh)
 
     return () => {
-      if (debounceTimer !== undefined) {
-        clearTimeout(debounceTimer)
-      }
+      chrome.tabs.onCreated.removeListener(scheduleRefresh)
+      chrome.tabs.onRemoved.removeListener(scheduleRefresh)
+      chrome.tabs.onUpdated.removeListener(scheduleRefresh)
+      chrome.tabs.onActivated.removeListener(scheduleRefresh)
+      chrome.tabs.onMoved.removeListener(scheduleRefresh)
+      chrome.tabs.onAttached.removeListener(scheduleRefresh)
+      chrome.tabs.onDetached.removeListener(scheduleRefresh)
+      chrome.tabs.onReplaced.removeListener(scheduleRefresh)
 
-      chrome.tabs.onCreated.removeListener(schedule)
-      chrome.tabs.onRemoved.removeListener(schedule)
-      chrome.tabs.onUpdated.removeListener(schedule)
-      chrome.tabs.onMoved.removeListener(schedule)
-      chrome.tabs.onAttached.removeListener(schedule)
-      chrome.tabs.onDetached.removeListener(schedule)
-      chrome.tabs.onReplaced.removeListener(schedule)
+      chrome.windows.onCreated.removeListener(scheduleRefresh)
+      chrome.windows.onRemoved.removeListener(scheduleRefresh)
+      chrome.windows.onFocusChanged.removeListener(scheduleRefresh)
 
-      chrome.windows.onCreated.removeListener(schedule)
-      chrome.windows.onRemoved.removeListener(schedule)
-      chrome.windows.onFocusChanged.removeListener(schedule)
-
-      chrome.tabGroups.onCreated.removeListener(schedule)
-      chrome.tabGroups.onUpdated.removeListener(schedule)
-      chrome.tabGroups.onRemoved.removeListener(schedule)
-      chrome.tabGroups.onMoved.removeListener(schedule)
+      chrome.tabGroups.onCreated.removeListener(scheduleRefresh)
+      chrome.tabGroups.onUpdated.removeListener(scheduleRefresh)
+      chrome.tabGroups.onRemoved.removeListener(scheduleRefresh)
+      chrome.tabGroups.onMoved.removeListener(scheduleRefresh)
     }
-  }, [enabled, refresh])
+  }, [enabled, scheduleRefresh])
 }
