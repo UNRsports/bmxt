@@ -28,12 +28,16 @@ import {
 import type { BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
+import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
+import { emptyTabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 
 type Props = {
   rows: TabPickerRow[]
   showUrl: boolean
   initialHi: number
   variant?: "default" | "groupNew"
+  interactive?: TabPickerInteractiveSnapshot
+  onInteractiveSnapshotChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
   /** EN: Esc at top level — return focus to BMXt prompt; picker stays open. */
@@ -54,6 +58,8 @@ export function useTabPickerController({
   showUrl,
   initialHi,
   variant = "default",
+  interactive,
+  onInteractiveSnapshotChange,
   onAppendLog,
   onRefreshRows,
   onReturnToPrompt,
@@ -62,12 +68,16 @@ export function useTabPickerController({
   sessionId,
   onFocusTabIdChange
 }: Props) {
+  const restored = interactive ?? emptyTabPickerInteractiveSnapshot()
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
   /** `/` で確定したあとも維持するハイライト用クエリ（`:nohlsearch` で消す） */
-  const [hlSearchPattern, setHlSearchPattern] = useState("")
+  const [hlSearchPattern, setHlSearchPattern] = useState(restored.hlSearchPattern)
   const [hi, setHi] = useState(initialHi)
   const [activeTabId, setActiveTabId] = useState<number | null>(() => {
+    if (restored.anchorTabId !== null) {
+      return restored.anchorTabId
+    }
     const atHi = rows[initialHi]
     if (atHi?.kind === "tab") {
       return atHi.tabId
@@ -75,10 +85,10 @@ export function useTabPickerController({
     const firstActive = rows.find((row) => row.kind === "tab" && row.active)
     return firstActive?.kind === "tab" ? firstActive.tabId : null
   })
-  const [markedKind, setMarkedKind] = useState<SelectKind | null>(null)
-  const [markedTabIds, setMarkedTabIds] = useState<number[]>([])
-  const [markedWindowIds, setMarkedWindowIds] = useState<number[]>([])
-  const [markedGroupKeys, setMarkedGroupKeys] = useState<string[]>([])
+  const [markedKind, setMarkedKind] = useState<SelectKind | null>(restored.markedKind)
+  const [markedTabIds, setMarkedTabIds] = useState<number[]>(restored.markedTabIds)
+  const [markedWindowIds, setMarkedWindowIds] = useState<number[]>(restored.markedWindowIds)
+  const [markedGroupKeys, setMarkedGroupKeys] = useState<string[]>(restored.markedGroupKeys)
   const [bulkSubMode, setBulkSubMode] = useState<BulkSubMode | null>(null)
   const [moveDestHi, setMoveDestHi] = useState(initialHi)
   const [groupChoices, setGroupChoices] = useState<GroupChoice[]>([])
@@ -224,6 +234,32 @@ export function useTabPickerController({
     const row = rows[rowIndex]
     onFocusTabIdChange(row?.kind === "tab" ? row.tabId : null)
   }, [hi, visibleRowIndices, rows, onFocusTabIdChange])
+
+  useEffect(() => {
+    if (!onInteractiveSnapshotChange) {
+      return
+    }
+    const rowIndex = visibleRowIndices[hi]
+    const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+    onInteractiveSnapshotChange({
+      anchorTabId: row?.kind === "tab" ? row.tabId : null,
+      markedKind,
+      markedTabIds,
+      markedWindowIds,
+      markedGroupKeys,
+      hlSearchPattern
+    })
+  }, [
+    hi,
+    hlSearchPattern,
+    markedGroupKeys,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    onInteractiveSnapshotChange,
+    rows,
+    visibleRowIndices
+  ])
 
   const markedCount = pickerMarkedCount(
     markedKind,

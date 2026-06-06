@@ -119,7 +119,7 @@ import {
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
-import type { TabPickerState } from "../side-picker/session/tab-picker-state"
+import type { TabPickerState, TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 
 /** EN: Hint lines shown in the search picker while `--page` scan runs. */
 const SEARCH_PAGE_SCAN_HINT_LINES = [
@@ -164,6 +164,8 @@ type Props = {
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
+  paneFocus: PaneFocusTarget
+  onPaneFocusChange: (target: PaneFocusTarget) => void
 }
 
 export function BmxtShell({
@@ -177,7 +179,9 @@ export function BmxtShell({
   sessionPickers,
   setSessionPickerSlot,
   refreshTabPickerRows,
-  postUpgradeBanner
+  postUpgradeBanner,
+  paneFocus,
+  onPaneFocusChange
 }: Props) {
   const tabPicker = sessionPickers.tabs
   const searchListPicker = sessionPickers.search
@@ -203,8 +207,7 @@ export function BmxtShell({
   /** tabs / search / dom — 左ターミナル・右にピッカー列（複数可）。 */
   const sidePickerOpen =
     tabPicker !== null || searchListPicker !== null || domListPicker !== null
-  const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
-  const paneFocusRef = useRef<PaneFocusTarget>("terminal")
+  const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
   const openPickersRef = useRef<readonly PickerSlotId[]>([])
   const paneStripActionsRef = useRef<PaneStripActions>({
@@ -234,19 +237,19 @@ export function BmxtShell({
 
   useEffect(() => {
     if (paneFocus === "tabs" && tabPicker === null) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
     } else if (paneFocus === "search" && searchListPicker === null) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
     } else if (paneFocus === "dom" && domListPicker === null) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
     }
-  }, [paneFocus, tabPicker, searchListPicker, domListPicker])
+  }, [paneFocus, tabPicker, searchListPicker, domListPicker, onPaneFocusChange])
 
   useEffect(() => {
     if (!sidePickerOpen) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
     }
-  }, [sidePickerOpen])
+  }, [onPaneFocusChange, sidePickerOpen])
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -732,14 +735,14 @@ export function BmxtShell({
 
   const activatePaneFocus = useCallback(
     (target: PaneFocusTarget) => {
-      setPaneFocus(target)
+      onPaneFocusChange(target)
       if (target === "terminal") {
         focusPrompt()
       } else {
         pickerInputRefForSlot(target).current?.focus()
       }
     },
-    [focusPrompt, pickerInputRefForSlot]
+    [focusPrompt, onPaneFocusChange, pickerInputRefForSlot]
   )
 
   /** EN: When a picker column newly appears, move pane focus + blue border to match keyboard target. */
@@ -775,11 +778,11 @@ export function BmxtShell({
       return
     }
 
-    setPaneFocus(opened)
+    onPaneFocusChange(opened)
     requestAnimationFrame(() => {
       pickerInputRefForSlot(opened).current?.focus()
     })
-  }, [tabPicker, searchListPicker, domListPicker, isFocusedPane, pickerInputRefForSlot])
+  }, [tabPicker, searchListPicker, domListPicker, isFocusedPane, onPaneFocusChange, pickerInputRefForSlot])
 
   useEffect(() => {
     paneStripActionsRef.current = {
@@ -941,6 +944,17 @@ export function BmxtShell({
       queueDomListFollowRefresh(tabId)
     },
     [queueDomListFollowRefresh]
+  )
+
+  const onTabPickerInteractiveChange = useCallback(
+    (snapshot: TabPickerInteractiveSnapshot) => {
+      const cur = tabPickerRef.current
+      if (!cur) {
+        return
+      }
+      setTabPicker(sessionId, { ...cur, interactive: snapshot })
+    },
+    [sessionId, setTabPicker]
   )
 
   const promptLine = useCallback(
@@ -2260,6 +2274,7 @@ export function BmxtShell({
               void runDomListAndShow(cl, cl, false)
             }}
             onTabsPickerFocusTabId={onTabsPickerFocusTabId}
+            onTabPickerInteractiveChange={onTabPickerInteractiveChange}
           />
         </div>
       ) : (

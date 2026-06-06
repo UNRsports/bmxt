@@ -78,14 +78,11 @@ export function editTargetErrorMessage(
   }
   if (markedKind === "group" && markedGroupKeys.length === 1) {
     const ids = chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
-    if (ids.length === 0) {
-      return "error: (グループなし) 行では :edit は使えません。"
+    if (ids.length !== 1) {
+      return "error: :edit はタブグループ行を 1 つだけ選択したときに使えます。"
     }
   }
   const row = getPickerRowAtHi(rows, visibleRowIndices, hi)
-  if (row?.kind === "group" && row.groupId === null) {
-    return "error: (グループなし) 行では :edit は使えません。"
-  }
   if (resolveEditTarget(markedKind, markedWindowIds, markedGroupKeys, rows, visibleRowIndices, hi)) {
     return null
   }

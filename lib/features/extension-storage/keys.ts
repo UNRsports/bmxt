@@ -32,5 +32,11 @@ export const LAST_SEEN_WELCOME_VERSION_KEY = "bmxt_last_seen_welcome_version"
 /** Nav typing / translate editor — Chrome 内蔵 Translator（ja↔en 往復表示）。 */
 export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
 
+/** Tab picker: collapsed window / group tree (`exit` full close until persisted). */
+export const TAB_PICKER_FOLD_STATE_KEY = "bmxt_tab_picker_fold_v1"
+
+/** Per-leaf picker columns + pane focus (survives BMXt window close; cleared on `exit`). */
+export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
+
 export const MAX_SESSION_LOG_LINES = 500
 export const MAX_CMD_HISTORY_LINES = 300

@@ -15,6 +15,7 @@
   - [npm dependencies and security](#npm-dependencies)
 - [Command-line token model (first / second commands)](#command-line-token-model)
   - [Command List](#command-list)
+  - [BMXt process lifecycle (`clear` / window close / `exit`)](#bmxt-process-lifecycle)
   - [`aboutbmxt`](#aboutbmxt)
   - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
   - [`translate` (`translate -on` / `translate -off` / `translate -setting`)](#translate)
@@ -200,7 +201,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
 | `clear` | Clear logs |
-| `exit` | Close the focused split pane; if it is the last pane, close the BMXt window (that pane’s session log is cleared) |
+| `exit` | Close the focused split pane; if it is the last pane, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `split` | Pane layout: `split -col` / `split -row`; bare `split` + Enter restores `split ` (see in-app help); **Ctrl+Arrow** moves focus between panes when multiple are open |
 | `tabs` | Show available options, then restore prompt to `tabs ` for option input |
 | `tabs -list [-u]` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
@@ -225,7 +226,37 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `close` / `c <tabId>` | Close tab |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears the focused pane’s log and **closes that split pane**; when only one pane remains, it **closes the BMXt window** (`exit_pane` → `chrome.windows.remove` on the tracked window). **Neither** clears **command history** (up/down / Ctrl+R).
+**Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the focused pane**; the BMXt window and all other persisted process state stay as they are. **Closing the BMXt window** (× button) does **not** end the process — logs, split layout, open picker columns, tab-picker fold state, and command history remain in **`chrome.storage.local`** and are restored when you reopen BMXt. **`exit`** removes the focused pane’s log and closes that split pane; when **only one pane remains**, it closes the BMXt window and **clears the entire process** from storage (logs, split layout, picker UI, tab-picker fold state, and command history). See **[BMXt process lifecycle](#bmxt-process-lifecycle)**.
+
+<a id="bmxt-process-lifecycle"></a>
+
+### BMXt process lifecycle (`clear` / window close / `exit`)
+
+Unlike a typical terminal emulator, **closing the BMXt window does not terminate the BMXt process**. Until you run **`exit`** on the **last** split pane, the process lives in **`chrome.storage.local`** and is restored when you open BMXt again (toolbar, command shortcut, etc.).
+
+| Action | Session logs | Split layout | Open picker columns & `paneFocus` | Tab picker tree fold | Command history |
+|--------|--------------|--------------|-------------------------------------|----------------------|-----------------|
+| **`clear`** | Cleared (focused pane) | Kept | Kept | Kept | Kept |
+| **Close BMXt window** | Kept | Kept | Kept | Kept | Kept |
+| **Reopen BMXt window** | Restored | Restored | Restored | Restored | Restored |
+| **`exit`** (multiple panes) | Focused pane cleared; leaf removed | Updated | Other leaves kept | Kept | Kept |
+| **`exit`** (last pane) | **All cleared** | **Cleared** | **Cleared** | **Cleared** | **Cleared** |
+
+**Process-scoped storage keys** (removed only when the **last** pane exits via **`exit`**):
+
+| Key | Contents |
+|-----|----------|
+| `bmxt_terminal_sessions_v1` | Per-leaf session logs |
+| `bmxt_split_layout_v1` | Split tree and focused leaf id |
+| `bmxt_process_ui_v1` | Open picker slots per leaf (`tabs` / `search` / `dom`) and `paneFocus` |
+| `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
+| `bmxt_cmd_history` | Prompt command history (↑/↓, Ctrl+R) |
+
+**Not cleared on process exit** (user / browser metadata): custom window display names, translation assist settings, last normal window id, welcome/version tracking keys.
+
+**Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
+
+**Note:** **`tabs -exit -list`** (and other **`* -exit -list`**) only closes a picker column in the current session; it does **not** end the BMXt process or clear tab-picker fold state.
 
 **Split panes and picker columns:** With more than one **split terminal pane** open, **Ctrl+Arrow** moves keyboard focus between panes at the layout edges. Inside a pane that has picker columns, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → search → dom** (only among open columns). See **[Picker UI (side columns)](#picker-ui)**.
 
@@ -376,7 +407,7 @@ When a list picker is opened from the prompt, **`lib/features/bmxt-window/bmxt-s
 
 **Terminal (log + prompt)** | **tabs** (if open) | **search** (if open) | **dom** (if open)
 
-Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `search` / `dom` slots); **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom).
+Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `search` / `dom` slots). While the BMXt process is alive, **open columns, `paneFocus`, tab-picker highlight/marks, and tree fold state** are persisted to **`chrome.storage.local`** and restored after closing and reopening the BMXt window (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**). **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom).
 
 **Four layers (side picker)**
 
@@ -454,6 +485,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 | `#` / `Tab` | — | Toggle mark / multi-select |
 | `:` + bulk commands | — | `move`, `close`, `group`, `nw`, `nt`, `edit` (see [Tab Picker](#tabs-tab-picker)) |
 | `Shift+↑` / `Shift+↓` | — | Extend `#` range on tab rows |
+| `←` / `→` | — | Collapse / expand highlighted **window** or **tab group** row (tab row: parent group) |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Preview active tab in browser |
 | Close column | `search -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
@@ -485,6 +517,15 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 ### Tab Picker (`tabs -list` / `tabs -list -u`)
 
+**Tree layout**
+
+- Rows are hierarchical: **`[window]`** → **`[tab group]`** (real Chrome tab groups only) → **tab rows**.
+- Tabs **not** in a Chrome group are listed **directly under their window** (there is no “(no group)” header row).
+- **Initially every window and group is expanded.** **←** on the highlighted row collapses that window or tab group (**→** expands). On a **tab** row, **←** / **→** affect the **parent tab group** (ungrouped tabs have no group to fold).
+- Collapse/expand state is kept for the **BMXt process** lifetime (survives closing the BMXt window; cleared only on **`exit`** of the last pane — see [BMXt process lifecycle](#bmxt-process-lifecycle)).
+
+**Navigation and bulk**
+
 - On launch, highlight starts at the active tab of the last focused normal browser window.
 - Move with `j`/`k` (or `↑`/`↓`), toggle `#` on highlighted tab with `Tab` (multi-select supported). **Shift + `↑`/`↓`** extends a range selection anchored at the first mark.
 - **Bulk operations** — press `:` to open the command line, type a command, and press `Enter` to confirm. `Tab` cycles through completions from the current prefix. If no tab is marked yet, the highlighted tab is auto-marked when the command is confirmed.
@@ -504,11 +545,11 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 **Valid targets**
 
-- Exactly **one window row** or **one tab group row** (a real Chrome tab group, not the ungrouped “(no group)” row).
-- **Tab rows** are not supported.
+- Exactly **one window row** or **one tab group row** (a real Chrome tab group).
+- **Tab rows** and **ungrouped tabs** (no group header) are not supported.
 - Either mark the row with **`#`** on the window/group header, or highlight that row with **no `#` marks** — on confirm, the highlighted window/group row is auto-marked if needed.
 
-If the selection is invalid (tabs only, multiple windows/groups, ungrouped group row, etc.), an **`error:`** line is appended to the BMXt log and edit mode does not open.
+If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`error:`** line is appended to the BMXt log and edit mode does not open.
 
 **Window — custom display name**
 
@@ -556,7 +597,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 
 **Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`search -list`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on` / `-setting`**, arming / pair save and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
 
-**`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the focused split pane (or the whole BMXt window when it is the last pane).
+**`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the focused split pane. When it is the **last** pane, it closes the BMXt window and clears **all process-scoped storage** (see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
 **Main directories:**
 
@@ -571,7 +612,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane)
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
 
 <a id="add-new-built-in-command"></a>
 
@@ -777,6 +818,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
 - [コマンド一覧](#command-list-ja)
+  - [BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）](#bmxt-process-lifecycle-ja)
   - [`aboutbmxt`](#aboutbmxt-ja)
   - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
   - [`translate`（`translate -on` / `translate -off` / `translate -setting`）](#translate-ja)
@@ -963,7 +1005,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
 | `clear` | ログをクリア |
-| `exit` | フォーカス中の split ペインを閉じる。最後の 1 ペインなら BMXt ウィンドウごと閉じる（当該ペインのセッションログも消える） |
+| `exit` | フォーカス中の split ペインを閉じる。最後の 1 ペインなら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `split` | ペイン分割: `split -col` / `split -row`。単独 `split`＋Enter で `split ` へ復元（詳細はアプリ内ヘルプ）。複数ペイン時は **Ctrl+矢印** でフォーカス移動 |
 | `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
 | `tabs -list [-u]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。 |
@@ -988,7 +1030,37 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はフォーカス中ペインのログを消したうえで **当該 split ペインを閉じます**；残り 1 ペインだけのときは **BMXt ウィンドウごと閉じます**（`exit_pane` → 追跡ウィンドウに `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
+**補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **フォーカス中ペインの画面ログだけ**を消します。BMXt ウィンドウとその他の永続状態はそのままです。**BMXt ウィンドウを閉じる**（× ボタン）操作だけでは **プロセスは終了しません** — ログ、split レイアウト、開いているピッカー列、タブツリー開閉、コマンド履歴は **`chrome.storage.local`** に残り、BMXt を再度開くと復元されます。**`exit`** はフォーカス中ペインのログを消して **当該 split ペインを閉じます**；**残り 1 ペイン**のときは BMXt ウィンドウを閉じ、**プロセス全体**を storage から消去します（ログ、split、ピッカー UI、タブツリー開閉、コマンド履歴）。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**。
+
+<a id="bmxt-process-lifecycle-ja"></a>
+
+### BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）
+
+一般的なターミナルエミュレータとは異なり、**BMXt ウィンドウを閉じても BMXt プロセスは終了しません**。**最後の split ペイン**で **`exit`** するまで、プロセスは **`chrome.storage.local`** に残り、ツールバーやショートカットから BMXt を開き直すと復元されます。
+
+| 操作 | セッションログ | split レイアウト | 開いているピッカー列・`paneFocus` | タブツリー開閉 | コマンド履歴 |
+|------|----------------|------------------|-----------------------------------|----------------|--------------|
+| **`clear`** | 消去（フォーカス中ペイン） | 保持 | 保持 | 保持 | 保持 |
+| **BMXt ウィンドウを閉じる** | 保持 | 保持 | 保持 | 保持 | 保持 |
+| **BMXt ウィンドウを再度開く** | 復元 | 復元 | 復元 | 復元 | 復元 |
+| **`exit`**（複数ペイン） | フォーカス中ペイン消去・リーフ除去 | 更新 | 他リーフは保持 | 保持 | 保持 |
+| **`exit`**（最後の 1 ペイン） | **すべて消去** | **消去** | **消去** | **消去** | **消去** |
+
+**プロセススコープの storage キー**（**最後の 1 ペイン**の **`exit`** 時のみ削除）:
+
+| キー | 内容 |
+|------|------|
+| `bmxt_terminal_sessions_v1` | リーフごとのセッションログ |
+| `bmxt_split_layout_v1` | split ツリーとフォーカス中リーフ id |
+| `bmxt_process_ui_v1` | リーフごとの開いているピッカー（`tabs` / `search` / `dom`）と `paneFocus` |
+| `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
+| `bmxt_cmd_history` | プロンプトのコマンド履歴（↑/↓、Ctrl+R） |
+
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: ウィンドウ表示名、翻訳アシスト設定、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
+
+**実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
+
+**補足:** **`tabs -exit -list`**（および他の **`* -exit -list`**）は当該ピッカー列を閉じるだけで、BMXt プロセスを終了したりタブツリー開閉状態を消したりしません。
 
 **split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → search → dom**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
 
@@ -1120,7 +1192,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **search**（表示時） | **dom**（表示時）
 
-同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `search` / `dom` スロット）で、列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`** が担います（**`PICKER_SLOT_ORDER`**: tabs → search → dom）。
+同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `search` / `dom` スロット）。BMXt プロセスが存続する間、**開いている列・`paneFocus`・タブピッカーのハイライト／マーク・ツリー開閉**は **`chrome.storage.local`** に保存され、BMXt ウィンドウを閉じて開き直しても復元されます（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`**（**`PICKER_SLOT_ORDER`**: tabs → search → dom）。
 
 **4 層（サイドピッカー）**
 
@@ -1198,6 +1270,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | `#` / `Tab` | — | マーク付け／複数選択 |
 | `:` + バルク | — | `move`, `close`, `group`, `nw`, `nt`, `edit`（[タブピッカー](#tabs-tab-picker-ja)） |
 | `Shift+↑` / `Shift+↓` | — | タブ行の `#` 範囲拡張 |
+| `←` / `→` | — | ハイライト中の **ウィンドウ** または **タブグループ** 行を閉じる／開く（タブ行は所属グループ） |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ブラウザ側アクティブタブのプレビュー |
 | 列を閉じる | `search -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
@@ -1249,11 +1322,11 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 **有効な対象**
 
-- **ウィンドウ行 1 つ**、または **タブグループ行 1 つ**（Chrome の実グループ。未グループの「(no group)」行は不可）。
-- **タブ行**は対象外。
+- **ウィンドウ行 1 つ**、または **タブグループ行 1 つ**（Chrome の実グループ）。
+- **タブ行**および **未グループのタブ**（グループ見出しなし）は対象外。
 - ウィンドウ／グループ見出しに **`#`** を付けるか、**`#` なし**でその行をハイライトして確定（未マーク時はハイライト行が自動マーク）。
 
-選択が不正（タブのみ、複数ウィンドウ／グループ、未グループ行など）のときはログに **`error:`** 行が出て edit モードは開きません。
+選択が不正（タブのみ、複数ウィンドウ／グループなど）のときはログに **`error:`** 行が出て edit モードは開きません。
 
 **ウィンドウ — 表示名**
 
@@ -1273,6 +1346,15 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 <a id="tabs-tab-picker-impl-ja"></a>
 
 ### タブピッカー（`tabs -list` / `tabs -list -u`）
+
+**ツリー構造**
+
+- 行は階層表示: **`[ウィンドウ]`** → **`[タブグループ]`**（Chrome の実グループのみ）→ **タブ行**。
+- Chrome グループに属さないタブは **ウィンドウ行の直下**に並びます（「(グループなし)」見出し行はありません）。
+- **初期状態はすべて展開**。**←** でハイライト中のウィンドウまたはタブグループを閉じ、**→** で開きます。**タブ行**では **←** / **→** は **所属タブグループ**に対して効きます（未グループのタブには折りたたみ対象がありません）。
+- 開閉状態は **BMXt プロセス**存続中保持されます（BMXt ウィンドウを閉じても保持。**最後の 1 ペイン**の **`exit`** で消去 — [BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)）。
+
+**移動とバルク操作**
 
 - 起動時は、直前にフォーカスしていた通常ブラウザウィンドウのアクティブタブ位置にハイライトを合わせます。
 - `j`/`k`（または `↑`/`↓`）で移動、ピッカー内の `Tab` でハイライト中タブの `#` を付け外しします（複数選択可）。**Shift + `↑`/`↓`** で、ハイライトの移動に合わせて**連続したタブ行に `#` を一括付与**します（一覧上でアンカー行から現在行までの範囲）。**`#` が付いたタブは、同一ウィンドウ内では Chrome 本体のタブバー上でも複数選択（`chrome.tabs.highlight`）に合わせて表示**されます（BMXt を前面にしたまま操作できます）。
@@ -1317,7 +1399,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 **例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`search -list`**、**`translate -on` / `translate -off` / `translate -setting`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on` / `-setting`** の起動・ペア保存・オーバーレイ／typing アシストは UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
 
-**`exit`:** **`exit_pane`** Effect を返す。Service Worker はフォーカス中の split ペインを閉じる（最後の 1 ペインなら BMXt ウィンドウごと閉じる）。
+**`exit`:** **`exit_pane`** Effect を返す。Service Worker はフォーカス中の split ペインを閉じる。**最後の 1 ペイン**のときは BMXt ウィンドウを閉じ、**プロセススコープの storage をすべて消去**する（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
@@ -1329,7 +1411,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じる）
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
 
 manifest やコマンド実装を変えたら **`npm run codegen`** のあと **`npm run verify:manifest`** / **`npm run check:generated`** を実行し、必要なら **`npm run build`** してください。
 

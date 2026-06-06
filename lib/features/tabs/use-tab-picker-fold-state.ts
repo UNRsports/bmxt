@@ -1,11 +1,13 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import {
   collapseTabPickerAtRow,
   computeTabPickerVisibleRowIndices,
   expandTabPickerAtRow,
+  hydrateTabPickerFoldStateFromStorage,
   isTabPickerGroupExpanded,
-  isTabPickerWindowExpanded
+  isTabPickerWindowExpanded,
+  persistTabPickerFoldStateToStorage
 } from "./tab-picker-fold-state"
 
 export function useTabPickerFoldState(rows: TabPickerRow[]): {
@@ -18,6 +20,18 @@ export function useTabPickerFoldState(rows: TabPickerRow[]): {
   const [revision, setRevision] = useState(0)
   const bump = useCallback(() => setRevision((r) => r + 1), [])
 
+  useEffect(() => {
+    let cancelled = false
+    void hydrateTabPickerFoldStateFromStorage().then(() => {
+      if (!cancelled) {
+        bump()
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [bump])
+
   const visibleRowIndices = useMemo(() => {
     void revision
     return computeTabPickerVisibleRowIndices(rows)
@@ -25,8 +39,14 @@ export function useTabPickerFoldState(rows: TabPickerRow[]): {
 
   const collapseAtRow = useCallback(
     (row: TabPickerRow): number | null => {
-      const focusRowIdx = collapseTabPickerAtRow(rows, row)
-      bump()
+      const { focusRowIdx, changed } = collapseTabPickerAtRow(rows, row)
+      if (focusRowIdx === null) {
+        return null
+      }
+      if (changed) {
+        void persistTabPickerFoldStateToStorage()
+        bump()
+      }
       return focusRowIdx
     },
     [bump, rows]
@@ -34,8 +54,14 @@ export function useTabPickerFoldState(rows: TabPickerRow[]): {
 
   const expandAtRow = useCallback(
     (row: TabPickerRow): number | null => {
-      const focusRowIdx = expandTabPickerAtRow(rows, row)
-      bump()
+      const { focusRowIdx, changed } = expandTabPickerAtRow(rows, row)
+      if (focusRowIdx === null) {
+        return null
+      }
+      if (changed) {
+        void persistTabPickerFoldStateToStorage()
+        bump()
+      }
       return focusRowIdx
     },
     [bump, rows]

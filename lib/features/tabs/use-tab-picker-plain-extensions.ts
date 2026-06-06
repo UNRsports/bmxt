@@ -203,16 +203,17 @@ export function useTabPickerPlainExtensions({
       if (!row) {
         return false
       }
-      pickerStopEvent(e)
       const focusRowIdx = isLeft ? collapseAtRow(row) : expandAtRow(row)
-      if (focusRowIdx !== null) {
-        const newVisible = computeTabPickerVisibleRowIndices(rows)
-        const newHi = newVisible.indexOf(focusRowIdx)
-        if (newHi >= 0) {
-          setHi(newHi)
-        } else {
-          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
-        }
+      if (focusRowIdx === null) {
+        return false
+      }
+      pickerStopEvent(e)
+      const newVisible = computeTabPickerVisibleRowIndices(rows)
+      const newHi = newVisible.indexOf(focusRowIdx)
+      if (newHi >= 0) {
+        setHi(newHi)
+      } else {
+        setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
       }
       return true
     },
