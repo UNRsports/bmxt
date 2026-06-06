@@ -4,10 +4,13 @@
       "npm依存関係の整理",
       "findコマンドをsearchコマンド（モード）へ変更して機能強化し、検索結果を細分化して各要素へ直接ジャンプ可能に",
       "tabsモードのピッカーにて、ウィンドウやタブグループのツリーを開閉可能に実装",
-      "tabs -setting -page-active（--auto / --manual）でハイライト時のタブアクティブ化を切替。tabsモード上部に状況表示"
+      "tabs -setting -page-active（--auto / --manual）でハイライト時の自動タブアクティブ化を切替可能に実装"
     ],
     "en": [
-      ""
+      "Cleaned up npm dependencies",
+      "Renamed the find command to search (mode) with enhancements — search results can be subdivided so you can jump directly to each element",
+      "Tab picker: window and tab group tree rows can be expanded and collapsed",
+      "Added tabs -setting -page-active (--auto / --manual) to toggle automatic tab activation when moving the highlight"
     ]
   }
 }

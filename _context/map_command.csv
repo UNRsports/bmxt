@@ -6,14 +6,14 @@ dom,-list,--html,rest,,（同上）,trailingTokens の一つ。第三 `--html` �
 dom,-list,--react,rest,,（同上）,trailingTokens の一つ。,
 dom,-exit,-list,none,,dom -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session の DOM ピッカー列を閉じる（未表示なら案内行）。SW の run は案内行のみ。,
 exit,,,,,exit,Effect: exit_pane,
-search,-list,,rest,,search -list [--history|--bookmark|--page] <pattern> | search -exit -list,BMXt ウィンドウ UI（RUN_CMD 前）。`search -list` のみ Enter 時は scope プルダウン（第三 `--history`|`--bookmark`|`--page` 選択後に実行）。scope 確定後: search ピッカー列を即開き、走査進捗はピッカー内表示（結果確定後に非表示）。Esc は閉じずプロンプトへ。閉じるは search -exit -list。pattern 空可（capped 全件表示）。大文字小文字無視部分一致（v1 正規表現なし）。,
+search,-list,,rest,,search -list [--history|--bookmark|--page] <pattern> | search -exit -list,BMXt ウィンドウ UI（RUN_CMD 前）。`search -list` のみ Enter 時は scope プルダウン（第三 `--history`|`--bookmark`|`--page` 選択後に実行）。scope 確定後: search ピッカー列を即開き、走査進捗はピッカー内表示（結果確定後に非表示）。結果行で **→** により詳細一覧（細分化ヒット）へ。**←** / 詳細中 **Esc** で結果一覧へ。詳細行 **Enter** で該当 page 一致へスクロール＋強調（scriptable http(s)）。結果行 **Enter** は URL 新規タブ等。Esc は閉じずプロンプトへ。閉じるは search -exit -list。pattern 空可。大文字小文字無視部分一致（v1 正規表現なし）。旧 first コマンド `find` は `search` に統合。,
 search,-list,--history,rest,,（同上）,scope `--history`: 履歴タイトル/URL のみ（Effect: search_history）。,
 search,-list,--bookmark,rest,,（同上）,scope `--bookmark`: ブックマークのみ（Effect: search_bookmark）。,
 search,-list,--page,rest,,（同上）,scope `--page`: 非 discarded http(s) タブの可視テキスト（Effect: search_page・optional host permission ありうる）。,
 search,-exit,-list,none,,search -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session の search ピッカー列を閉じる（検索中はキャンセル。未表示なら案内行）。SW の run は案内行のみ。,
 group,new,,,,group new | group new <tabId> [tabId …],第二トークン `new` 必須（manifest subcommands 空・continuation なし）。tabId 無し: BMXt ウィンドウ UI が group-new variant のタブピッカー列を開く（対話的）。tabId 列挙あり: SW で Effect: group_new。,
 help,,,,?,"help, ?",linesDispatch(buildHelpLines())（組み込みコマンド一覧等）。Effect なし。,
-tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。Ctrl+←/→ で terminal↔tabs↔search↔dom↔translate 列フォーカス。上部に page-active 状況表示（nav 同様）。,-u は trailingTokens（Tab 補完対象）
+tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。**←**/**→** でウィンドウ／タブグループ行の開閉（タブ行は所属グループ）。Ctrl+←/→ で terminal↔tabs↔search↔dom↔translate 列フォーカス。上部に page-active 状況表示（nav 同様）。,-u は trailingTokens（Tab 補完対象）
 tabs,-setting,,none,,（同上）,第二 `-setting` のみ Enter: 第三 `-page-active` を案内し `tabs -setting ` に復帰。Tab 補完で `-page-active`。,
 tabs,-setting,-page-active,none,,tabs -setting -page-active --auto | --manual,第三 `-page-active` のみ Enter: 第四 `--auto` / `--manual` を案内し `tabs -setting -page-active ` に復帰。設定は chrome.storage.local に保存。,
 tabs,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`: ハイライト移動時にタブをアクティブ化（ウィンドウは背面のまま）。既定。,

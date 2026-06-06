@@ -206,13 +206,14 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `tabs` | Show available options, then restore prompt to `tabs ` for option input |
 | `tabs -list [-u]` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -exit -list` | Close tab picker column in this session (including `group new` picker) |
+| `tabs -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved in `chrome.storage.local` |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
 | `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
 | `dom -list [--html\|--react] [<pattern>]` | Open a read-only DOM picker column for the active tab (same picker chrome as `search -list`); flavor `--html` (default) or `--react`; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
-| `search -list --history\|--bookmark\|--page [<pattern>]` | Open a search picker column for one scope (history, bookmarks, or visible http(s) tab text); scan progress shows inside the picker; case-insensitive substring (no regex in v1) |
+| `search -list --history\|--bookmark\|--page [<pattern>]` | Open a search picker column for one scope (history, bookmarks, or visible http(s) tab text); scan progress shows inside the picker. **→** opens a per-row **detail list**; **Enter** on a detail row jumps to that match in the page. Case-insensitive substring (no regex in v1) |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight search if the column is not open yet) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
@@ -252,7 +253,7 @@ Unlike a typical terminal emulator, **closing the BMXt window does not terminate
 | `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
 | `bmxt_cmd_history` | Prompt command history (↑/↓, Ctrl+R) |
 
-**Not cleared on process exit** (user / browser metadata): custom window display names, translation assist settings, last normal window id, welcome/version tracking keys.
+**Not cleared on process exit** (user / browser metadata): custom window display names, translation assist settings, tab picker settings (`page-active`), last normal window id, welcome/version tracking keys.
 
 **Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
 
@@ -298,6 +299,7 @@ Unlike a typical terminal emulator, **closing the BMXt window does not terminate
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
 - **`search -list` only** + **Enter** opens the scope token menu (`--history`, `--bookmark`, `--page`); a scope must be chosen before the picker runs (see **[How columns open](#picker-ui)**).
 - **`search -list <scope> [<pattern>]`** opens the same list picker chrome as `dom -list`, but rows are search hits for the chosen scope. While **`--page`** scans open tabs, progress lines appear **inside the picker** and are hidden when results arrive.
+- In the results list, **`→`** on a row with multiple hits opens a **detail list** (breadcrumb: Search Results → Detail List). **`←`** or **`Esc`** returns to the results list. **`Enter`** on a detail row activates the source tab (or opens it), scrolls to the match, and highlights the needle when scriptable http(s) access is available; otherwise **`Enter`** on a results row opens the URL in a new tab (same as before).
 - Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
 
 <a id="nav-mode"></a>
@@ -462,9 +464,10 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 
 **Plain list columns (search / dom lines)**
 
-- **`/`** — incremental filter; **`Enter`** ends search mode (search: **`Enter`** on a row also opens the URL).
+- **`/`** — incremental filter; **`Enter`** ends search mode (search: **`Enter`** on a row also opens the URL, or jumps to a page match when detail navigation applies).
 - **`:`** then **`nohlsearch`** — clear filter and search highlight.
-- **`n`** / **`N`** — jump among matches (same rules as the tab picker search highlight).
+- **`n`** / **`N`** — jump among matches on the **results** row (when a row has multiple page matches).
+- **`→`** / **`←`** — **search only:** enter / leave the **detail list** for the highlighted result row (when it has subdivided hits). **`Esc`** in detail view returns to results first.
 - **`Ctrl+Left` / `Ctrl+Right`** — move along the pane strip (see above).
 - **dom only:** **`↑` / `↓`** (or **`j` / `k`**) move focus among **jumpable** element rows; the **target tab scrolls** to the highlighted node (debounced). Header/metadata lines without a DOM path are skipped.
 
@@ -474,19 +477,20 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 | Key / gesture | search / dom lines | Tab picker (`tabs -list`) |
 |---------------|------------------|---------------------------|
-| `j` / `k`, `↑` / `↓` | Move highlight | Move highlight (reducer `moveHi`) |
+| `j` / `k`, `↑` / `↓` | Move highlight | Move highlight (reducer `moveHi`); **`--auto`**: also activates tab in background window |
 | `/` | Search mode; `@` prefix matches URL substring | Same; filters visible rows |
 | `Enter` in `/` mode | End search (commit highlight pattern) | End search |
-| `Enter` in normal mode | search: open URL in new tab | Focus highlighted tab (picker stays open) |
+| `Enter` in normal mode | search results: open URL or jump to page match; search detail: jump to highlighted hit in page | Focus highlighted tab (picker stays open) |
 | `:` → `nohlsearch` | Clear filter + highlight | Clear search highlight |
-| `n` / `N` | Next / previous match row | Next / previous match row |
+| `n` / `N` | Next / previous match on results row | Next / previous match row |
+| `→` / `←` | search: enter / leave detail list for highlighted row | Collapse / expand highlighted **window** or **tab group** row (tab row: parent group) |
 | `Ctrl+←` / `Ctrl+→` | Pane strip (terminal ↔ open columns) | Same |
-| `Esc` | Prompt (column stays open) | Unwind `#` → `:` → `/` → bulk → prompt |
+| `Esc` | Prompt, or search detail → results first | Unwind `#` → `:` → `/` → bulk → prompt |
 | `#` / `Tab` | — | Toggle mark / multi-select |
 | `:` + bulk commands | — | `move`, `close`, `group`, `nw`, `nt`, `edit` (see [Tab Picker](#tabs-tab-picker)) |
 | `Shift+↑` / `Shift+↓` | — | Extend `#` range on tab rows |
-| `←` / `→` | — | Collapse / expand highlighted **window** or **tab group** row (tab row: parent group) |
-| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Preview active tab in browser |
+| `Alt+↑` / `Alt+↓` | — | **`--manual` only:** activate highlighted tab in background window |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Move highlight and force-activate tab in background window |
 | Close column | `search -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
 **Translate assist (prompt / nav typing)**
@@ -510,6 +514,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 - `tabs` alone prints available options and restores the prompt to `tabs ` so users can continue with the next token.
 - `tabs -list [-u]`: open tab picker column (`-u` includes URL rows).
 - `tabs -exit -list`: close tab picker column in this session.
+- `tabs -setting -page-active --auto | --manual`: configure tab preview on highlight. **`--auto`** (default): moving highlight activates the tab in the background window. **`--manual`**: only **Alt+↑↓** (or holding **Alt**) activates; **Enter** still jumps to the highlighted tab and brings its window forward. Persisted in **`chrome.storage.local`**; a **tabs** status strip under the prompt shows the current mode while the tab picker is open.
 - `tabs -nowurl`: print current tab URL.
 - `tabs -moveurl <url>`: activate matching http(s) tab and bring its window to front, or open a new tab if none matches. After `tabs -moveurl ` (trailing space), **Tab** cycles open http(s) tab URLs as completion candidates.
 
@@ -1010,13 +1015,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
 | `tabs -list [-u]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
+| `tabs -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。`chrome.storage.local` に保存 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
 | `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
 | `dom -list [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカー列で閲覧（`search -list` と同系 UI）。`--html`（既定）／`--react`。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
-| `search -list --history\|--bookmark\|--page [<pattern>]` | 検索ピッカー列（スコープ必須）。走査進捗はピッカー内表示、結果確定後に非表示。部分一致（v1 正規表現なし） |
+| `search -list --history\|--bookmark\|--page [<pattern>]` | 検索ピッカー列（スコープ必須）。走査進捗はピッカー内表示、結果確定後に非表示。**→** で行ごとの **詳細一覧**、詳細行の **Enter** でページ内の該当箇所へジャンプ。部分一致（v1 正規表現なし） |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（検索中ならキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
@@ -1056,7 +1062,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
 | `bmxt_cmd_history` | プロンプトのコマンド履歴（↑/↓、Ctrl+R） |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: ウィンドウ表示名、翻訳アシスト設定、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: ウィンドウ表示名、翻訳アシスト設定、タブピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
 
 **実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
 
@@ -1247,9 +1253,10 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 
 **プレーンリスト列（search / dom の行一覧）**
 
-- **`/`** — インクリメンタル絞り込み。**`Enter`** で検索モード終了（search では行上の **`Enter`** で URL を開く）。
+- **`/`** — インクリメンタル絞り込み。**`Enter`** で検索モード終了（search では行上の **`Enter`** で URL を開く、または詳細ジャンプが可能なときはページ内一致へ移動）。
 - **`:`** → **`nohlsearch`** — フィルタと検索ハイライトを解除。
-- **`n`** / **`N`** — マッチ行へジャンプ（タブピッカーの検索ハイライトと同系）。
+- **`n`** / **`N`** — 結果行上の複数マッチ間を移動（1 行に複数 page ヒットがあるとき）。
+- **`→`** / **`←`** — **search のみ:** ハイライト行の **詳細一覧** へ入る／結果一覧へ戻る（細分化ヒットがある行）。詳細表示中の **`Esc`** は先に結果一覧へ戻る。
 - **`Ctrl+←` / `Ctrl+→`** — ペイン内の列ストリップ移動（上記フォーカス節）。
 - **dom のみ:** **`↑` / `↓`**（または **`j` / `k`**）で **ジャンプ可能な要素行**にフォーカスを移すと、**対象タブがハイライトノードへスクロール**（debounce）。DOM path のない行はスキップ。
 
@@ -1259,19 +1266,20 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 | キー / 操作 | search / dom 行一覧 | タブピッカー（`tabs -list`） |
 |-------------|-------------------|------------------------------|
-| `j` / `k`, `↑` / `↓` | ハイライト移動 | ハイライト移動（`moveHi`） |
+| `j` / `k`, `↑` / `↓` | ハイライト移動 | ハイライト移動（`moveHi`）；**`--auto`**: 背面ウィンドウ内タブもアクティブ化 |
 | `/` | 検索モード（`@` で URL 部分一致） | 同左（可視行を絞る） |
 | `/` 中の `Enter` | 検索終了（ハイライト確定） | 検索終了 |
-| 通常時の `Enter` | search: 新規タブで URL を開く | ハイライトタブをアクティブ化（列は開いたまま） |
+| 通常時の `Enter` | search 結果: URL を開くまたは page 一致へジャンプ；search 詳細: ページ内ヒットへジャンプ | ハイライトタブをアクティブ化（列は開いたまま） |
 | `:` → `nohlsearch` | フィルタ・ハイライト解除 | 検索ハイライト解除 |
-| `n` / `N` | 次／前のマッチ行 | 次／前のマッチ行 |
+| `n` / `N` | 結果行上の次／前マッチ | 次／前のマッチ行 |
+| `→` / `←` | search: 詳細一覧へ／結果一覧へ | ハイライト中の **ウィンドウ** または **タブグループ** 行を閉じる／開く（タブ行は所属グループ） |
 | `Ctrl+←` / `Ctrl+→` | 列ストリップ（ターミナル ↔ 開列） | 同左 |
-| `Esc` | プロンプトへ（列は閉じない） | `#` → `:` → `/` → バルク → プロンプト |
+| `Esc` | プロンプトへ、または search 詳細 → 結果一覧 | `#` → `:` → `/` → バルク → プロンプト |
 | `#` / `Tab` | — | マーク付け／複数選択 |
 | `:` + バルク | — | `move`, `close`, `group`, `nw`, `nt`, `edit`（[タブピッカー](#tabs-tab-picker-ja)） |
 | `Shift+↑` / `Shift+↓` | — | タブ行の `#` 範囲拡張 |
-| `←` / `→` | — | ハイライト中の **ウィンドウ** または **タブグループ** 行を閉じる／開く（タブ行は所属グループ） |
-| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ブラウザ側アクティブタブのプレビュー |
+| `Alt+↑` / `Alt+↓` | — | **`--manual` のみ:** 背面ウィンドウ内でハイライトタブをアクティブ化 |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ハイライト移動＋背面ウィンドウ内タブを強制アクティブ化 |
 | 列を閉じる | `search -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
 **翻訳アシスト（プロンプト / nav typing）**
@@ -1302,6 +1310,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
 - **`search -list` のみ** + **Enter** ではスコープトークンメニュー（`--history` / `--bookmark` / `--page`）を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
 - **`search -list <scope> [<pattern>]`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--page`** 走査中は進捗をピッカー内に表示し、結果確定後に非表示にする。
+- 結果一覧で複数ヒットがある行では **`→`** で **詳細一覧**（パンくず: 検索結果一覧 → 詳細一覧）を開く。**`←`** または **`Esc`** で結果一覧に戻る。詳細行の **`Enter`** は該当タブを前面化（または新規タブで開く）し、scriptable な http(s) では一致箇所へスクロールして強調表示する。結果行の **`Enter`** だけの場合は従来どおり URL を新規タブで開く。
 - パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを走査し、初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs-ja"></a>
@@ -1311,6 +1320,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`tabs` 単体**は利用可能オプションを表示し、続けて **`tabs `**（末尾スペース付き）へ入力を復元します。
 - **`tabs -list [-u]`**：タブピッカー列を開きます（`-u` で URL 行付き）。
 - **`tabs -exit -list`**：当該セッションのタブピッカー列を閉じます。
+- **`tabs -setting -page-active --auto | --manual`**：ハイライト移動時のタブプレビューを設定。**`--auto`**（既定）: ハイライト移動で背面ウィンドウ内のタブをアクティブ化。**`--manual`**: **Alt+↑↓**（または **Alt** 押下）時のみアクティブ化。**Enter** は従来どおりハイライトタブへジャンプしてウィンドウを前面化。設定は **`chrome.storage.local`** に保存。タブピッカー表示中はプロンプト下の **tabs** ステータス列に現在モードを表示。
 - **`tabs -nowurl`**：現在タブの URL を表示します。
 - **`tabs -moveurl <url>`**：該当 http(s) タブをアクティブにしウィンドウを前面化。一致がなければ新規タブで開く。プロンプト上で `tabs -moveurl ` の直後に **Tab** を押すと、開いている http(s) タブの URL を補完候補として循環します。
 
