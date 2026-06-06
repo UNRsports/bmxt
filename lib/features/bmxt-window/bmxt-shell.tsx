@@ -35,9 +35,12 @@ import {
   isSearchListReadyToRun,
   parseSearchExitListLine,
   parseSearchListPickerLine,
+  searchListPatternFromLine,
   shouldShowSearchListPatternPlaceholder,
   type SearchListPickerState
 } from "../search/search-list-picker-input"
+import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs"
+import { normalizeSearchPattern } from "../search/search-format"
 import {
   isRetryableDomListOutput,
   parseDomExitListLine,
@@ -977,11 +980,13 @@ export function BmxtShell({
 
       const progressLabel = searchPageProgressLabel(searchListLine)
       const initialProgress = [`${progressLabel} — searching…`]
+      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(searchListLine))
 
       setSearchListPicker(sessionId, {
         phase: "loading",
         progressLines: initialProgress,
-        entries: []
+        entries: [],
+        pattern: searchPattern
       })
 
       try {
@@ -1021,13 +1026,15 @@ export function BmxtShell({
           }
           return
         }
-        const entries = pickerEntriesFromSearchLines(linesOut)
+        const parsed = pickerEntriesFromSearchLines(linesOut)
+        const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
         const emptyResultLines =
           entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
         setSearchListPicker(sessionId, {
           phase: "results",
           progressLines: [],
           entries,
+          pattern: searchPattern,
           emptyResultLines
         })
       } catch (e) {

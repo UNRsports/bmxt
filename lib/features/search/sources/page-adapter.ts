@@ -7,6 +7,7 @@ import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
 import { readTabInnerText } from "../../page-extract/read-tab-inner-text"
 import { isHttpUrl } from "../../url/is-http-url"
 import { matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../index"
+import { collectPageMatchesForTab } from "../search-page-matches"
 import { linesForSearchPageTab } from "./page-find-blocks"
 import {
   formatSearchPageProgress,
@@ -94,22 +95,23 @@ export async function searchPageLines(
       cancelled = true
       break
     }
-    if (text === null) {
-      skipped += 1
-    } else {
-      scanned += 1
-    }
-    await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
-    if (text === null) {
-      continue
-    }
     const url = tab.url ?? ""
     const title = tab.title ?? ""
-
     const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
+    const readable = text !== null
+
+    if (readable) {
+      scanned += 1
+    } else {
+      skipped += 1
+    }
+    await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
 
     if (matchAll) {
-      const previewLines = text
+      if (!readable) {
+        continue
+      }
+      const previewLines = text!
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
@@ -135,33 +137,16 @@ export async function searchPageLines(
       continue
     }
 
-    if (!matchesNeedle(text, pattern)) {
-      continue
-    }
-    const lines = text.split(/\r?\n/)
-    const tabMatches: SearchPageMatch[] = []
-    const snippetOccurrence = new Map<string, number>()
-    let lineNo = 0
-    for (const line of lines) {
-      lineNo += 1
-      if (!matchesNeedle(line, pattern)) {
-        continue
-      }
-      const trimmed = line.trim().slice(0, 500)
-      const suffix = line.length > 500 ? "…" : ""
-      const snippet = `${trimmed}${suffix}`
-      const key = snippet.toLowerCase()
-      const occurrence = snippetOccurrence.get(key) ?? 0
-      snippetOccurrence.set(key, occurrence + 1)
-      tabMatches.push({ lineNo, snippet, occurrence })
-      totalHits += 1
-      if (totalHits >= MAX_LINE_HITS) {
-        break
-      }
-    }
+    const tabMatches = collectPageMatchesForTab(
+      title,
+      text,
+      pattern,
+      Math.max(1, MAX_LINE_HITS - totalHits)
+    )
     if (tabMatches.length === 0) {
       continue
     }
+    totalHits += tabMatches.length
     out.push(
       ...linesForSearchPageTab({
         tabId,

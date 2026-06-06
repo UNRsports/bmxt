@@ -17,7 +17,31 @@ export type PickerEntry = {
   groupId?: number | null
   /** EN: Grouped line hits when `source === "page"` (one picker row per tab). */
   pageMatches?: SearchPageMatch[]
+  /** EN: Search hits merged by URL — which scopes matched (history / bookmark / page). */
+  sources?: PickerSource[]
   meta?: Record<string, string>
+}
+
+const SEARCH_SOURCE_ORDER: PickerSource[] = ["history", "bookmark", "page"]
+
+/** EN: Ordered scope labels for a merged search row. */
+export function pickerEntrySearchSources(entry: PickerEntry): PickerSource[] {
+  if (entry.sources && entry.sources.length > 0) {
+    return SEARCH_SOURCE_ORDER.filter((s) => entry.sources!.includes(s))
+  }
+  if (SEARCH_SOURCE_ORDER.includes(entry.source)) {
+    return [entry.source]
+  }
+  return []
+}
+
+/** EN: Picker row prefix for search results, e.g. `[history, page]`. */
+export function searchPickerSourceLabel(entry: PickerEntry): string {
+  const sources = pickerEntrySearchSources(entry)
+  if (sources.length === 0) {
+    return `[${entry.source}]`
+  }
+  return `[${sources.join(", ")}]`
 }
 
 export function entryDisplayLine(entry: PickerEntry): string {
@@ -28,10 +52,11 @@ export function entryDisplayLine(entry: PickerEntry): string {
 export function searchPickerSummaryLine(entry: PickerEntry): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
+  const label = searchPickerSourceLabel(entry)
   const base =
     url && !url.startsWith("(no ")
-      ? `[${entry.source}] ${title} — ${url}`
-      : `[${entry.source}] ${title}`
+      ? `${label} ${title} — ${url}`
+      : `${label} ${title}`
   const n = entry.pageMatches?.length ?? 0
   if (n > 1) {
     return `${base} · ${n} hits · n/N cycle`
@@ -60,10 +85,11 @@ export function searchPickerMatchDetail(entry: PickerEntry, matchHi = 0): string
 export function searchPickerDisplayLine(entry: PickerEntry, matchHi = 0): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
+  const label = searchPickerSourceLabel(entry)
   const base =
     url && !url.startsWith("(no ")
-      ? `[${entry.source}] ${title} — ${url}`
-      : `[${entry.source}] ${title}`
+      ? `${label} ${title} — ${url}`
+      : `${label} ${title}`
   const matches = entry.pageMatches
   if (!matches || matches.length === 0) {
     return base

@@ -1064,6 +1064,55 @@ body {
   color: #0d1117;
 }
 
+.bmxt-search-picker-row {
+  padding: 8px 10px;
+  border-bottom: 1px solid #21262d;
+  cursor: default;
+}
+
+.bmxt-search-picker-row--hi {
+  background: #1f6feb22;
+  outline: 1px solid #388bfd66;
+}
+
+.bmxt-search-picker-scope {
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 4px;
+}
+
+.bmxt-search-picker-field {
+  margin-top: 4px;
+}
+
+.bmxt-search-picker-field-label {
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 2px;
+}
+
+.bmxt-search-picker-title,
+.bmxt-search-picker-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e6edf3;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bmxt-search-picker-text {
+  font-size: 12px;
+  color: #c9d1d9;
+}
+
+.bmxt-search-picker-hl {
+  background: #ffc9dd;
+  color: #0d1117;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 .bmxt-tab-picker-tab-url {
   padding-left: 2ch;
   font-size: 11px;

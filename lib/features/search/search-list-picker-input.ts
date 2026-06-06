@@ -168,6 +168,8 @@ export type SearchListPickerState = {
   /** EN: Shown in picker while `phase === "loading"`; cleared when results arrive. */
   progressLines: string[]
   entries: PickerEntry[]
+  /** EN: Normalized pattern from the dispatch line (`search -list …`). */
+  pattern: string
   /** EN: When search completes with zero openable rows, show these lines instead. */
   emptyResultLines?: string[]
 }

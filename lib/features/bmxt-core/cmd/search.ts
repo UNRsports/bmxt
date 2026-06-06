@@ -1,4 +1,5 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
+import { normalizeSearchPattern } from "../../search/search-format"
 import { stripInvisibleFormatChars } from "../line-parse"
 import type { ChromeEffect } from "../../dispatch/effect-types"
 import type { CmdMeta } from "../types"
@@ -25,19 +26,6 @@ function usageLines(): string[] {
 
 function normalizeSearchSecondToken(head: string): string {
   return stripInvisibleFormatChars(head.trim()).toLowerCase()
-}
-
-function normalizeSearchPattern(raw: string): string {
-  const t = stripInvisibleFormatChars(raw.trim())
-  const chs = [...t]
-  if (chs.length >= 2) {
-    const a = chs[0]
-    const b = chs[chs.length - 1]
-    if ((a === '"' && b === '"') || (a === "'" && b === "'")) {
-      return stripInvisibleFormatChars(chs.slice(1, -1).join("").trim())
-    }
-  }
-  return t
 }
 
 function isSearchListScopeToken(token: string): boolean {

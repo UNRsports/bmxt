@@ -13,10 +13,10 @@ import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {
   searchPickerMatchDetail,
-  searchPickerSummaryLine,
   type PickerEntry
 } from "../side-picker/model/picker-entry"
-import { PlainTextPickerBody } from "../side-picker/plain/plain-text-picker-body"
+import { pageMatchesForDisplay } from "./search-picker-page-match"
+import { SearchListPickerBody } from "./search-list-picker-body"
 import type { SearchListPickerState } from "./search-list-picker-input"
 
 type Props = {
@@ -36,7 +36,7 @@ export function SearchListPickerOverlay({
   pickerInputRef,
   sessionId
 }: Props) {
-  const { phase, progressLines, entries, emptyResultLines } = state
+  const { phase, progressLines, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
   const [hi, setHi] = useState(0)
   const [matchHi, setMatchHi] = useState(0)
@@ -48,18 +48,18 @@ export function SearchListPickerOverlay({
     setMatchHi(0)
   }, [])
 
-  const lines = useMemo(() => {
+  const statusLines = useMemo(() => {
     if (loading) {
       return progressLines.length > 0 ? progressLines : ["search — starting…"]
     }
     if (entries.length > 0) {
-      return entries.map(searchPickerSummaryLine)
+      return []
     }
     if (emptyResultLines && emptyResultLines.length > 0) {
       return emptyResultLines
     }
     return ["(no matches)"]
-  }, [loading, progressLines, entries, emptyResultLines])
+  }, [loading, progressLines, entries.length, emptyResultLines])
 
   const headline = useMemo(() => {
     if (loading) {
@@ -94,7 +94,7 @@ export function SearchListPickerOverlay({
           return false
         }
         const entry = entries[hi]
-        const n = entry?.pageMatches?.length ?? 0
+        const n = pageMatchesForDisplay(entry?.pageMatches).length
         if (n <= 1) {
           return false
         }
@@ -115,9 +115,13 @@ export function SearchListPickerOverlay({
   }, [loading, entries, hi])
 
   return (
-    <PlainTextPickerBody
+    <SearchListPickerBody
       headline={headline}
-      lines={lines}
+      entries={entries}
+      pattern={pattern}
+      statusLines={statusLines}
+      statusOnly={loading || entries.length === 0}
+      matchHi={matchHi}
       onReturnToPrompt={onReturnToPrompt}
       onConfirmLineIndex={onConfirmLineIndex}
       enableCommandMode={!loading && entries.length > 0}
@@ -126,7 +130,6 @@ export function SearchListPickerOverlay({
       sessionId={sessionId}
       extensions={extensions}
       onHiChange={onHiChange}
-      statusOnly={loading || entries.length === 0}
     />
   )
 }

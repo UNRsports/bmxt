@@ -2,6 +2,7 @@ import { scrollSearchPageToSnippet } from "./sources/page-scroll-to-snippet"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { openEntryEffects } from "../side-picker/model/open-entry"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
+import { pickerEntrySearchSources } from "../side-picker/model/picker-entry"
 import type { ChromeEffect } from "../dispatch/effect-types"
 import type { DispatchChromeContext } from "../dispatch/dispatch-context"
 import { applyChromeEffects } from "../dispatch"
@@ -26,7 +27,8 @@ export async function openSearchPickerEntry(
   appendLogLines: (lines: string[]) => void | Promise<void>
 ): Promise<void> {
   const match = entry.pageMatches?.[matchIndex] ?? entry.pageMatches?.[0]
-  if (entry.source === "page" && entry.tabId != null && entry.windowId != null && match) {
+  const hasPageScope = pickerEntrySearchSources(entry).includes("page")
+  if (hasPageScope && entry.tabId != null && entry.windowId != null && match) {
     if (await tabStillOpen(entry.tabId)) {
       await executePickerFocusPlan({
         kind: "activateTab",
