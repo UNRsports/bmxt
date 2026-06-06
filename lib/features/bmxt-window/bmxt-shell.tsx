@@ -31,7 +31,7 @@ import {
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
   SEARCH_LIST_PATTERN_PLACEHOLDER,
-  isSearchListAwaitingScope,
+  isSearchListContinuationPrompt,
   isSearchListReadyToRun,
   parseSearchExitListLine,
   parseSearchListPickerLine,
@@ -1084,7 +1084,8 @@ export function BmxtShell({
       focusPrompt()
       return
     }
-    const trimmed = promptLine().trim()
+    const rawLine = promptLine()
+    const trimmed = rawLine.trim()
     if (!trimmed) {
       return
     }
@@ -1342,9 +1343,9 @@ export function BmxtShell({
         focusPrompt()
         return
       }
-      if (isSearchListAwaitingScope(trimmed)) {
+      if (isSearchListContinuationPrompt(rawLine)) {
         appendCommandToHistory(trimmed)
-        const next = trimmed.endsWith(" ") ? trimmed : `${trimmed} `
+        const next = `${trimmed} `
         lineRef.current = next
         setLine(next)
         setCursorPos(next.length)

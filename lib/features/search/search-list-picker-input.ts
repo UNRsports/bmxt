@@ -7,7 +7,7 @@ import { listThirdTokenCandidates } from "../builtin-commands/command-subcommand
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
 
-/** After `search -list ` — scope token `--history` | `--bookmark` | `--page`. */
+/** After `search -list ` — optional scope token `--history` | `--bookmark` | `--page`. */
 const SEARCH_LIST_LEAD_RE = /^\s*search\s+-list\s+/i
 
 const SEARCH_EXIT_LIST_RE = /^\s*search\s+-exit\s+-list\s*$/i
@@ -18,46 +18,63 @@ function searchListParts(trimmed: string): string[] {
   return trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
 }
 
-/** EN: Third-token scope flags after `search -list` (manifest `trailingTokens`). */
+/** EN: Optional third-token scope flags after `search -list` (manifest `trailingTokens`). */
 export function isSearchListScopeToken(token: string): boolean {
   return SEARCH_LIST_SCOPE.has(token.toLowerCase())
 }
 
 /**
- * EN: `search -list` only — show scope menu; do not auto-run until scope is chosen.
- * JA: `search -list` のみ — スコープを選ぶまで実行しない。
+ * EN: `search -list` without trailing space — restore prompt to `search -list ` first.
+ * JA: 末尾スペース無しの `search -list` — 先に `search -list ` へ復元する。
  */
-export function isSearchListAwaitingScope(trimmed: string): boolean {
+export function isSearchListContinuationPrompt(line: string): boolean {
+  const trimmed = line.trim()
   const parts = searchListParts(trimmed)
-  return (
-    parts.length === 2 &&
-    parts[0]!.toLowerCase() === "search" &&
-    parts[1]!.toLowerCase() === "-list"
-  )
+  if (
+    parts.length !== 2 ||
+    parts[0]!.toLowerCase() !== "search" ||
+    parts[1]!.toLowerCase() !== "-list"
+  ) {
+    return false
+  }
+  return !line.endsWith(" ")
 }
 
 /**
- * EN: Ready to dispatch `search -list` (scope token present; pattern may be empty).
- * JA: `search -list` の実行可能形（スコープ付き。パターン空可）。
+ * EN: Ready to dispatch `search -list` (empty pattern, pattern, and/or optional scope).
+ * JA: `search -list` の実行可能形（パターン空・パターンあり・任意スコープ付き）。
  */
 export function isSearchListReadyToRun(trimmed: string): boolean {
   const parts = searchListParts(trimmed)
-  if (parts.length < 3) {
+  if (parts.length < 2) {
     return false
   }
   if (parts[0]!.toLowerCase() !== "search" || parts[1]!.toLowerCase() !== "-list") {
     return false
   }
-  return isSearchListScopeToken(parts[2]!)
+  if (parts.length === 2) {
+    return true
+  }
+  const third = parts[2]!.toLowerCase()
+  if (isSearchListScopeToken(third)) {
+    return true
+  }
+  if (third.startsWith("--")) {
+    return false
+  }
+  return true
 }
 
-/** EN: Pattern text after `search -list <scope>` (may be empty). */
+/** EN: Pattern text after `search -list` or `search -list <scope>` (may be empty). */
 export function searchListPatternFromLine(trimmed: string): string {
   const parts = searchListParts(trimmed)
-  if (parts.length <= 3) {
+  if (parts.length <= 2) {
     return ""
   }
-  return parts.slice(3).join(" ")
+  if (isSearchListScopeToken(parts[2]!)) {
+    return parts.length <= 3 ? "" : parts.slice(3).join(" ")
+  }
+  return parts.slice(2).join(" ")
 }
 
 function tokenBoundsAt(s: string, pos: number): [number, number] {
@@ -73,8 +90,8 @@ function tokenBoundsAt(s: string, pos: number): [number, number] {
 }
 
 /**
- * EN: Cursor still editing the scope token — show scope menu, not pattern placeholder.
- * JA: スコープトークン入力中 — スコープメニューを表示し、パターン案内は出さない。
+ * EN: Cursor still editing the optional scope token — show scope menu, not pattern placeholder.
+ * JA: 任意スコープトークン入力中 — スコープメニューを表示し、パターン案内は出さない。
  */
 export function isEditingSearchListScopeToken(line: string, cursor: number): boolean {
   const trimmed = line.trim()
@@ -83,27 +100,34 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
   }
   const parts = searchListParts(trimmed)
   if (parts.length < 3) {
+    return false
+  }
+  const third = parts[2]!
+  if (!third.startsWith("--")) {
+    return false
+  }
+  if (!isSearchListScopeToken(third)) {
     return true
   }
-  if (!isSearchListScopeToken(parts[2]!)) {
-    return true
-  }
-  const scope = parts[2]!
-  const scopeStart = line.toLowerCase().indexOf(scope.toLowerCase())
+  const scopeStart = line.toLowerCase().indexOf(third.toLowerCase())
   if (scopeStart < 0) {
     return false
   }
-  const scopeEnd = scopeStart + scope.length
+  const scopeEnd = scopeStart + third.length
   const [l, r] = tokenBoundsAt(line, cursor)
   return l >= scopeStart && r <= scopeEnd
 }
 
 /** EN: Show pattern placeholder; suppress scope IME menu. */
 export function shouldShowSearchListPatternPlaceholder(line: string, cursor: number): boolean {
-  return isSearchListReadyToRun(line.trim()) && !isEditingSearchListScopeToken(line, cursor)
+  const trimmed = line.trim()
+  if (isSearchListContinuationPrompt(line)) {
+    return false
+  }
+  return isSearchListReadyToRun(trimmed) && !isEditingSearchListScopeToken(line, cursor)
 }
 
-/** EN: Prompt placeholder after scope is chosen on `search -list`. */
+/** EN: Prompt placeholder after `search -list `. */
 export const SEARCH_LIST_PATTERN_PLACEHOLDER =
   "絞り込み語を入力 · Enter で実行 — type a filter or press Enter to run"
 

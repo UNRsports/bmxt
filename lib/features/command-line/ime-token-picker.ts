@@ -11,8 +11,10 @@ import {
 } from "../builtin-commands/command-subcommands.gen"
 import { resolveCanonical } from "../bmxt-core/registry"
 import {
+  isEditingSearchListScopeToken,
   isSearchListReadyToRun,
-  isEditingSearchListScopeToken
+  isSearchListScopeToken,
+  searchListPatternFromLine
 } from "../search/search-list-picker-input"
 
 export type ImeTokenTier = "first" | "second" | "third"
@@ -90,7 +92,17 @@ export function resolveImeTokenPicker(
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
   const trimmed = line.trim()
-  if (isSearchListReadyToRun(trimmed) && !isEditingSearchListScopeToken(line, cursor)) {
+  const searchParts = trimmed.toLowerCase().startsWith("search -list")
+    ? trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
+    : []
+  const searchHasScope =
+    searchParts.length >= 3 && isSearchListScopeToken(searchParts[2] ?? "")
+  const searchPattern = searchListPatternFromLine(trimmed)
+  if (
+    isSearchListReadyToRun(trimmed) &&
+    (searchPattern.length > 0 || searchHasScope) &&
+    !isEditingSearchListScopeToken(line, cursor)
+  ) {
     return null
   }
 

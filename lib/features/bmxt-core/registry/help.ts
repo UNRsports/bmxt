@@ -43,7 +43,7 @@ export function buildHelpLines(): string[] {
     "",
     "search (in-memory search; nothing persisted by these commands):",
     "  search              - show available options, then restore prompt to `search ` for continuation.",
-    "  search -list --history|--bookmark|--page [<pattern>] — open search list picker in this BMXt pane.",
+    "  search -list [<pattern>] — open search list picker (all scopes; optional --history|--bookmark|--page to narrow).",
     "  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only).",
     "",
     "URL (http/https, typed as a whole line):",

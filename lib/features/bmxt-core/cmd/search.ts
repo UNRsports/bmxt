@@ -10,13 +10,16 @@ export const CMD: CmdMeta = {
   usagePrimary: "search -list [--history|--bookmark|--page] <pattern> | search -exit -list"
 }
 
+const ALL_SEARCH_SCOPES = ["--history", "--bookmark", "--page"] as const
+
 function usageLines(): string[] {
   return [
-    "usage: search -list --history|--bookmark|--page [<pattern>]   — open search picker (scope required)",
+    "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)",
+    "       search -list --history|--bookmark|--page [<pattern>]   — narrow to one scope",
     "       search -exit -list — close search list picker in this BMXt pane",
     "EN: Pattern is matched as a case-insensitive substring (no regex in v1).",
     "JA: パターンは大文字小文字を区別しない部分一致です（v1 は正規表現なし）。",
-    "EN/JA: Optional ASCII double quotes around the pattern are stripped (e.g. search -list --history \"…\")."
+    "EN/JA: Optional ASCII double quotes around the pattern are stripped (e.g. search -list \"…\")."
   ]
 }
 
@@ -42,33 +45,44 @@ function isSearchListScopeToken(token: string): boolean {
   return t === "--history" || t === "--bookmark" || t === "--page"
 }
 
-function dispatchForScope(scope: string, pattern: string) {
+function effectForScope(scope: string, pattern: string): ChromeEffect {
   switch (scope) {
     case "--history":
-      return effectsDispatch([{ kind: "search_history", pattern }])
+      return { kind: "search_history", pattern }
     case "--bookmark":
-      return effectsDispatch([{ kind: "search_bookmark", pattern }])
+      return { kind: "search_bookmark", pattern }
     case "--page":
-      return effectsDispatch([{ kind: "search_page", pattern }])
+      return { kind: "search_page", pattern }
     default:
-      return linesDispatch([`error: internal: bad search scope (${scope})`, ...usageLines()])
+      throw new Error(`bad search scope (${scope})`)
   }
 }
 
 function runList(args: string[]) {
-  if (args.length < 3) {
+  if (args.length < 2) {
+    return linesDispatch([...usageLines()])
+  }
+  if (args.length === 2) {
     return linesDispatch([
-      "error: search -list requires a scope: --history | --bookmark | --page",
+      "error: search -list requires a pattern or optional scope filter",
       ...usageLines()
     ])
   }
-  const scope = normalizeSearchSecondToken(args[2])
-  if (!isSearchListScopeToken(scope)) {
+  const third = normalizeSearchSecondToken(args[2])
+  if (third.startsWith("--") && !isSearchListScopeToken(third)) {
     return linesDispatch([`error: unknown search scope: ${args[2]}`, ...usageLines()])
   }
-  const patternRaw = args.slice(3).join(" ")
-  const pattern = normalizeSearchPattern(patternRaw)
-  return dispatchForScope(scope, pattern)
+  const scopes = isSearchListScopeToken(third) ? [third] : [...ALL_SEARCH_SCOPES]
+  const patternStartIdx = isSearchListScopeToken(third) ? 3 : 2
+  const pattern = normalizeSearchPattern(args.slice(patternStartIdx).join(" "))
+  try {
+    return effectsDispatch(scopes.map((scope) => effectForScope(scope, pattern)))
+  } catch (e) {
+    return linesDispatch([
+      `error: ${e instanceof Error ? e.message : String(e)}`,
+      ...usageLines()
+    ])
+  }
 }
 
 export function run(args: string[]) {
