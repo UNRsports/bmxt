@@ -171,8 +171,9 @@ export function useTabPickerController({
     expandAtRow,
     expandForTabId,
     isWindowExpanded,
-    isGroupExpanded
-  } = useTabPickerFoldState(rows)
+    isGroupExpanded,
+    commitSearchFoldSession
+  } = useTabPickerFoldState(rows, searchMode, filterQuery)
 
   const {
     markedTabSet,
@@ -476,6 +477,7 @@ export function useTabPickerController({
       setNewTabUrlWindowId,
       setNewTabUrl,
       closeSearch,
+      commitSearchFoldSession,
       onReturnToPrompt,
     commandMode,
     commandBuffer,

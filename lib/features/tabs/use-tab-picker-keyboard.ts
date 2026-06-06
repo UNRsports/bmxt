@@ -63,6 +63,7 @@ export function useTabPickerKeyboard({
   setNewTabUrlWindowId,
   setNewTabUrl,
   closeSearch,
+  commitSearchFoldSession,
   onReturnToPrompt,
   commandMode,
   commandBuffer,
@@ -126,6 +127,7 @@ export function useTabPickerKeyboard({
   setNewTabUrlWindowId: Dispatch<SetStateAction<number | null>>
   setNewTabUrl: Dispatch<SetStateAction<string>>
   closeSearch: () => void
+  commitSearchFoldSession: (query: string) => void
   onReturnToPrompt: () => void
   commandMode: boolean
   commandBuffer: string
@@ -198,6 +200,7 @@ export function useTabPickerKeyboard({
     setNewTabUrlWindowId,
     setNewTabUrl,
     closeSearch,
+    commitSearchFoldSession,
     onReturnToPrompt,
     commandMode,
     commandBuffer,
@@ -234,6 +237,7 @@ export function useTabPickerKeyboard({
     setFilterQuery,
     hlSearchPattern,
     setHlSearchPattern,
+    onSearchCommit: commitSearchFoldSession,
     commandMode,
     setCommandMode,
     commandBuffer,

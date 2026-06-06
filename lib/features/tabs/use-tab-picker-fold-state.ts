@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { parsePickerSearchNeedle } from "../side-picker/search/picker-search-needle"
 import type { TabPickerRow } from "./picker-rows"
 import {
+  beginTabPickerSearchFoldSession,
+  cancelTabPickerSearchFoldSession,
   collapseTabPickerAtRow,
+  commitTabPickerSearchFoldSession,
+  computeTabPickerSearchVisibleRowIndices,
   computeTabPickerVisibleRowIndices,
   expandTabPickerAtRow,
   expandTabPickerForTabId,
@@ -11,16 +16,22 @@ import {
   persistTabPickerFoldStateToStorage
 } from "./tab-picker-fold-state"
 
-export function useTabPickerFoldState(rows: TabPickerRow[]): {
+export function useTabPickerFoldState(
+  rows: TabPickerRow[],
+  searchMode: boolean,
+  filterQuery: string
+): {
   visibleRowIndices: number[]
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
   expandForTabId: (tabId: number) => boolean
   isWindowExpanded: (windowId: number) => boolean
   isGroupExpanded: (windowId: number, groupId: number | null) => boolean
+  commitSearchFoldSession: (query: string) => void
 } {
   const [revision, setRevision] = useState(0)
   const bump = useCallback(() => setRevision((r) => r + 1), [])
+  const prevSearchModeRef = useRef(searchMode)
 
   useEffect(() => {
     let cancelled = false
@@ -34,10 +45,42 @@ export function useTabPickerFoldState(rows: TabPickerRow[]): {
     }
   }, [bump])
 
+  useEffect(() => {
+    const wasSearch = prevSearchModeRef.current
+    if (searchMode && !wasSearch) {
+      beginTabPickerSearchFoldSession()
+    } else if (!searchMode && wasSearch) {
+      const restored = cancelTabPickerSearchFoldSession()
+      if (restored) {
+        void persistTabPickerFoldStateToStorage()
+        bump()
+      }
+    }
+    prevSearchModeRef.current = searchMode
+  }, [searchMode, bump])
+
+  const searchActiveNeedle = useMemo(() => {
+    if (!searchMode) {
+      return ""
+    }
+    return parsePickerSearchNeedle(filterQuery).needle
+  }, [filterQuery, searchMode])
+
+  const searchVisibleRowIndexSet = useMemo(() => {
+    if (searchActiveNeedle === "") {
+      return null
+    }
+    void revision
+    return new Set(computeTabPickerSearchVisibleRowIndices(rows, filterQuery))
+  }, [filterQuery, revision, rows, searchActiveNeedle])
+
   const visibleRowIndices = useMemo(() => {
     void revision
+    if (searchActiveNeedle !== "") {
+      return computeTabPickerSearchVisibleRowIndices(rows, filterQuery)
+    }
     return computeTabPickerVisibleRowIndices(rows)
-  }, [rows, revision])
+  }, [filterQuery, revision, rows, searchActiveNeedle])
 
   const collapseAtRow = useCallback(
     (row: TabPickerRow): number | null => {
@@ -81,20 +124,45 @@ export function useTabPickerFoldState(rows: TabPickerRow[]): {
     [bump, rows]
   )
 
+  const commitSearchFoldSession = useCallback(
+    (query: string) => {
+      const changed = commitTabPickerSearchFoldSession(rows, query)
+      if (changed) {
+        void persistTabPickerFoldStateToStorage()
+        bump()
+      }
+    },
+    [bump, rows]
+  )
+
   const isWindowExpanded = useCallback(
     (windowId: number) => {
+      if (searchVisibleRowIndexSet !== null) {
+        const rowIdx = rows.findIndex((r) => r.kind === "window" && r.windowId === windowId)
+        if (rowIdx >= 0 && searchVisibleRowIndexSet.has(rowIdx)) {
+          return true
+        }
+      }
       void revision
       return isTabPickerWindowExpanded(windowId)
     },
-    [revision]
+    [revision, rows, searchVisibleRowIndexSet]
   )
 
   const isGroupExpanded = useCallback(
     (windowId: number, groupId: number | null) => {
+      if (searchVisibleRowIndexSet !== null) {
+        const rowIdx = rows.findIndex(
+          (r) => r.kind === "group" && r.windowId === windowId && r.groupId === groupId
+        )
+        if (rowIdx >= 0 && searchVisibleRowIndexSet.has(rowIdx)) {
+          return true
+        }
+      }
       void revision
       return isTabPickerGroupExpanded(windowId, groupId)
     },
-    [revision]
+    [revision, rows, searchVisibleRowIndexSet]
   )
 
   return {
@@ -103,6 +171,7 @@ export function useTabPickerFoldState(rows: TabPickerRow[]): {
     expandAtRow,
     expandForTabId,
     isWindowExpanded,
-    isGroupExpanded
+    isGroupExpanded,
+    commitSearchFoldSession
   }
 }

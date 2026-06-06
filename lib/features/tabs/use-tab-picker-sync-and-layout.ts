@@ -1,9 +1,11 @@
 import type { MutableRefObject, RefObject } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useLayoutEffect, useRef } from "react"
+import { parsePickerSearchNeedle } from "../side-picker/search/picker-search-needle"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { BulkSubMode, EditPanel, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
+import { tabPickerVisibleHiIndicesMatching } from "./picker-rows"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
 
 type PickerGroupChoice = { id: number; windowId: number; label: string }
@@ -115,6 +117,16 @@ export function useTabPickerSyncAndLayoutEffects({
       }
     }
 
+    if (searchMode) {
+      const { needle } = parsePickerSearchNeedle(filterQuery)
+      if (needle !== "") {
+        const matches = tabPickerVisibleHiIndicesMatching(rows, visibleRowIndices, filterQuery)
+        if (matches.length > 0) {
+          targetHi = matches[0]!
+        }
+      }
+    }
+
     targetHi = Math.min(Math.max(0, targetHi), visibleRowIndices.length - 1)
 
     if (targetHi !== hi) {
@@ -128,7 +140,7 @@ export function useTabPickerSyncAndLayoutEffects({
     }
 
     setMoveDestHi((d) => Math.min(d, visibleRowIndices.length - 1))
-  }, [filterQuery, rows, visibleRowIndices, hi, setHi, setMoveDestHi, anchorTabIdRef, prevFilterQueryRef, prevRowsRef])
+  }, [filterQuery, rows, searchMode, visibleRowIndices, hi, setHi, setMoveDestHi, anchorTabIdRef, prevFilterQueryRef, prevRowsRef])
 
   useEffect(() => {
     if (groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null) {

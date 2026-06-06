@@ -3,6 +3,11 @@
 
 import { TAB_PICKER_FOLD_STATE_KEY } from "../extension-storage/keys"
 import type { TabPickerRow } from "./picker-rows"
+import {
+  computeTabPickerSearchFilteredRowIndices,
+  tabPickerTabRowMatchesSearch
+} from "./tab-picker-search-visibility"
+import { parsePickerSearchNeedle } from "../side-picker/search/picker-search-needle"
 import { groupRowKey } from "./tab-picker-keyboard"
 
 type StoredTabPickerFoldStateV1 = {
@@ -145,6 +150,110 @@ function findGroupRowIndex(
     (r) => r.kind === "group" && r.windowId === windowId && r.groupId === groupId
   )
   return idx >= 0 ? idx : null
+}
+
+type TabPickerFoldSnapshot = {
+  collapsedWindowIds: number[]
+  collapsedGroupKeys: string[]
+}
+
+let searchSessionSnapshot: TabPickerFoldSnapshot | null = null
+
+function snapshotTabPickerFoldState(): TabPickerFoldSnapshot {
+  return {
+    collapsedWindowIds: [...collapsedWindowIds],
+    collapsedGroupKeys: [...collapsedGroupKeys]
+  }
+}
+
+function restoreTabPickerFoldSnapshot(snapshot: TabPickerFoldSnapshot): void {
+  collapsedWindowIds.clear()
+  collapsedGroupKeys.clear()
+  for (const id of snapshot.collapsedWindowIds) {
+    collapsedWindowIds.add(id)
+  }
+  for (const key of snapshot.collapsedGroupKeys) {
+    collapsedGroupKeys.add(key)
+  }
+}
+
+/** EN: Capture fold state when `/` search begins (restored on Esc cancel). */
+export function beginTabPickerSearchFoldSession(): void {
+  searchSessionSnapshot = snapshotTabPickerFoldState()
+}
+
+/** EN: Restore pre-search fold state after Esc cancel; returns whether a session existed. */
+export function cancelTabPickerSearchFoldSession(): boolean {
+  if (searchSessionSnapshot === null) {
+    return false
+  }
+  restoreTabPickerFoldSnapshot(searchSessionSnapshot)
+  searchSessionSnapshot = null
+  return true
+}
+
+/** EN: Drop search snapshot without restoring (already committed or redundant). */
+export function clearTabPickerSearchFoldSession(): void {
+  searchSessionSnapshot = null
+}
+
+/** EN: During `/` input — virtually expand matching trees and hide non-matching tabs. */
+export function computeTabPickerSearchVisibleRowIndices(
+  rows: TabPickerRow[],
+  filterQuery: string
+): number[] {
+  return computeTabPickerSearchFilteredRowIndices(
+    rows,
+    filterQuery,
+    computeTabPickerVisibleRowIndices(rows)
+  )
+}
+
+/** EN: After Enter commit — persist expansions for trees that contained matches. */
+export function applyTabPickerSearchCommitFoldExpansions(
+  rows: TabPickerRow[],
+  filterQuery: string
+): boolean {
+  const { byUrl, needle } = parsePickerSearchNeedle(filterQuery)
+  if (needle === "") {
+    return false
+  }
+  const lc = needle.toLowerCase()
+  let changed = false
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]!
+    if (r.kind === "tab" && tabPickerTabRowMatchesSearch(r, byUrl, lc)) {
+      if (expandTabPickerForTabId(rows, r.tabId)) {
+        changed = true
+      }
+    } else if (!byUrl && r.kind === "window" && r.label.toLowerCase().includes(lc)) {
+      if (!isTabPickerWindowExpanded(r.windowId)) {
+        setTabPickerWindowExpanded(r.windowId, true)
+        changed = true
+      }
+    } else if (!byUrl && r.kind === "group" && r.label.toLowerCase().includes(lc)) {
+      if (!isTabPickerWindowExpanded(r.windowId)) {
+        setTabPickerWindowExpanded(r.windowId, true)
+        changed = true
+      }
+      if (!isTabPickerGroupExpanded(r.windowId, r.groupId)) {
+        setTabPickerGroupExpanded(r.windowId, r.groupId, true)
+        changed = true
+      }
+    }
+  }
+  return changed
+}
+
+/** EN: Commit search — apply match expansions and end the fold session. */
+export function commitTabPickerSearchFoldSession(
+  rows: TabPickerRow[],
+  filterQuery: string
+): boolean {
+  const changed = applyTabPickerSearchCommitFoldExpansions(rows, filterQuery)
+  searchSessionSnapshot = null
+  return changed
 }
 
 /** EN: Indices into `rows` that are visible given current fold state. */

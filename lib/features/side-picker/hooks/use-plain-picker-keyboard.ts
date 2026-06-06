@@ -36,6 +36,8 @@ export type UsePlainPickerKeyboardOptions = {
   setFilterQuery: Dispatch<SetStateAction<string>>
   hlSearchPattern: string
   setHlSearchPattern: Dispatch<SetStateAction<string>>
+  /** EN: Tabs picker — persist fold expansions when `/` search is committed. */
+  onSearchCommit?: (pattern: string) => void
   commandMode: boolean
   setCommandMode: Dispatch<SetStateAction<boolean>>
   commandBuffer: string
@@ -65,6 +67,7 @@ export function usePlainPickerKeyboard({
   setFilterQuery,
   hlSearchPattern,
   setHlSearchPattern,
+  onSearchCommit,
   commandMode,
   setCommandMode,
   commandBuffer,
@@ -162,12 +165,13 @@ export function usePlainPickerKeyboard({
       searchMode,
       filterQuery,
       onCommit: (pattern) => {
+        onSearchCommit?.(pattern)
         setHlSearchPattern(pattern)
         setSearchMode(false)
         setFilterQuery("")
       }
     }),
-    [filterQuery, searchMode, setFilterQuery, setHlSearchPattern, setSearchMode]
+    [filterQuery, onSearchCommit, searchMode, setFilterQuery, setHlSearchPattern, setSearchMode]
   )
 
   const filterCompletions = extensions?.filterCommandCompletions ?? filterUrlListCommandCompletions

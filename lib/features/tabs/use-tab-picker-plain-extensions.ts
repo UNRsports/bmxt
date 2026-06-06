@@ -91,13 +91,14 @@ export function useTabPickerPlainExtensions({
   newTabUrlWindowId,
   setNewTabUrlWindowId,
   setNewTabUrl,
-  closeSearch,
-  onReturnToPrompt,
-  commandMode,
-  commandBuffer,
-  clearCommandMode,
-  setCommandListingHint,
-  hlSearchPattern,
+    closeSearch,
+    commitSearchFoldSession,
+    onReturnToPrompt,
+    commandMode,
+    commandBuffer,
+    clearCommandMode,
+    setCommandListingHint,
+    hlSearchPattern,
   editPanel,
   openEditFromPicker,
   closeEdit,
@@ -150,6 +151,7 @@ export function useTabPickerPlainExtensions({
   setNewTabUrlWindowId: Dispatch<SetStateAction<number | null>>
   setNewTabUrl: Dispatch<SetStateAction<string>>
   closeSearch: () => void
+  commitSearchFoldSession: (query: string) => void
   onReturnToPrompt: () => void
   commandMode: boolean
   commandBuffer: string
