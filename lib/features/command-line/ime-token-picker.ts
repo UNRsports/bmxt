@@ -11,10 +11,9 @@ import {
 } from "../builtin-commands/command-subcommands.gen"
 import { resolveCanonical } from "../bmxt-core/registry"
 import {
-  isEditingSearchListScopeToken,
-  isSearchListReadyToRun,
-  isSearchListScopeToken,
-  searchListPatternFromLine
+  isSearchListAwaitingScopeOrPattern,
+  matchesSearchListScopeFilter,
+  shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
 
 export type ImeTokenTier = "first" | "second" | "third"
@@ -91,19 +90,27 @@ export function resolveImeTokenPicker(
   firstCommandTokens: readonly string[],
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
-  const trimmed = line.trim()
-  const searchParts = trimmed.toLowerCase().startsWith("search -list")
-    ? trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
-    : []
-  const searchHasScope =
-    searchParts.length >= 3 && isSearchListScopeToken(searchParts[2] ?? "")
-  const searchPattern = searchListPatternFromLine(trimmed)
   if (
-    isSearchListReadyToRun(trimmed) &&
-    (searchPattern.length > 0 || searchHasScope) &&
-    !isEditingSearchListScopeToken(line, cursor)
+    shouldShowSearchListPatternPlaceholder(line, cursor) &&
+    !isSearchListAwaitingScopeOrPattern(line)
   ) {
     return null
+  }
+
+  if (isSearchListAwaitingScopeOrPattern(line) && cursor >= line.length) {
+    const canonicalSearch = resolveCanonical("search")
+    if (canonicalSearch) {
+      const scopeCandidates = listThirdTokenCandidates(canonicalSearch, "-list", "")
+      if (scopeCandidates.length > 0) {
+        return {
+          tokenStart: line.length,
+          tokenEnd: line.length,
+          prefix: "",
+          candidates: [...scopeCandidates],
+          tier: "third"
+        }
+      }
+    }
   }
 
   const [l, r] = tokenBounds(line, cursor)
@@ -151,16 +158,9 @@ export function resolveImeTokenPicker(
   }
 
   if (tokenIndex === 1) {
-    const rawSecond =
-      matchMode === "contains"
-        ? listSecondTokenCandidatesByCommand(canonical, "")
-        : listSecondTokenCandidatesByCommand(canonical, prefix)
-    const cands = matchCandidates(rawSecond, prefix, matchMode)
-    if (cands.length > 0) {
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
-    }
     const secondWord = line.slice(l, r)
-    if (cursor >= line.length && isSecondToken(canonical, secondWord)) {
+    const secondComplete = isSecondToken(canonical, secondWord)
+    if (cursor >= line.length && secondComplete) {
       const next = listThirdTokenCandidates(canonical, secondWord.toLowerCase(), "")
       if (next.length > 0) {
         return {
@@ -172,16 +172,32 @@ export function resolveImeTokenPicker(
         }
       }
     }
+    const rawSecond =
+      matchMode === "contains"
+        ? listSecondTokenCandidatesByCommand(canonical, "")
+        : listSecondTokenCandidatesByCommand(canonical, prefix)
+    const cands = matchCandidates(rawSecond, prefix, matchMode).filter(
+      (c) => !(secondComplete && c.toLowerCase() === secondWord.toLowerCase())
+    )
+    if (cands.length > 0) {
+      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
+    }
     return null
   }
 
   if (tokenIndex === 2) {
     const second = tokensBefore[1]!.toLowerCase()
-    const rawThird =
-      matchMode === "contains"
-        ? listThirdTokenCandidates(canonical, second, "")
-        : listThirdTokenCandidates(canonical, second, prefix)
-    const cands = matchCandidates(rawThird, prefix, matchMode)
+    const allThird = listThirdTokenCandidates(canonical, second, "")
+    const isSearchListScopeTier = canonical === "search" && second === "-list"
+    const scopeIncremental =
+      isSearchListScopeTier &&
+      (matchMode === "contains" || matchesSearchListScopeFilter(prefix))
+    const rawThird = scopeIncremental
+      ? allThird
+      : listThirdTokenCandidates(canonical, second, prefix)
+    const effectiveMode =
+      scopeIncremental && !prefix.startsWith("--") ? "contains" : matchMode
+    const cands = matchCandidates(rawThird, prefix, effectiveMode)
     if (cands.length === 0) {
       return null
     }

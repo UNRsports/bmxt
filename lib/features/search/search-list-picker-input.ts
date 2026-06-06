@@ -23,6 +23,38 @@ export function isSearchListScopeToken(token: string): boolean {
   return SEARCH_LIST_SCOPE.has(token.toLowerCase())
 }
 
+const SEARCH_LIST_SCOPE_ORDER = ["--history", "--bookmark", "--page"] as const
+
+/**
+ * EN: Third token still narrowing scope candidates (e.g. `pa` → `--page`, `--p` → `--page`).
+ * JA: 第三トークンがスコープ候補の絞り込み中か（`pa` や `--p` など）。
+ */
+export function matchesSearchListScopeFilter(token: string): boolean {
+  const t = token.trim().toLowerCase()
+  if (!t) {
+    return false
+  }
+  if (t.startsWith("--")) {
+    return SEARCH_LIST_SCOPE_ORDER.some((s) => s.startsWith(t))
+  }
+  return SEARCH_LIST_SCOPE_ORDER.some((s) => s.includes(t))
+}
+
+/**
+ * EN: `search -list ` — optional scope (`--history` / …) or pattern may follow.
+ * JA: `search -list ` — 任意スコープまたはパターン入力待ち。
+ */
+export function isSearchListAwaitingScopeOrPattern(line: string): boolean {
+  const trimmed = line.trim()
+  const parts = searchListParts(trimmed)
+  return (
+    parts.length === 2 &&
+    parts[0]!.toLowerCase() === "search" &&
+    parts[1]!.toLowerCase() === "-list" &&
+    line.endsWith(" ")
+  )
+}
+
 /**
  * EN: `search -list` without trailing space — restore prompt to `search -list ` first.
  * JA: 末尾スペース無しの `search -list` — 先に `search -list ` へ復元する。
@@ -41,10 +73,10 @@ export function isSearchListContinuationPrompt(line: string): boolean {
 }
 
 /**
- * EN: Ready to dispatch `search -list` (empty pattern, pattern, and/or optional scope).
- * JA: `search -list` の実行可能形（パターン空・パターンあり・任意スコープ付き）。
+ * EN: Ready to dispatch `search -list` (pattern present, or continued `search -list ` with empty pattern).
+ * JA: `search -list` の実行可能形（パターンあり、または `search -list ` 継続後のパターン空実行）。
  */
-export function isSearchListReadyToRun(trimmed: string): boolean {
+export function isSearchListReadyToRun(trimmed: string, line?: string): boolean {
   const parts = searchListParts(trimmed)
   if (parts.length < 2) {
     return false
@@ -53,13 +85,16 @@ export function isSearchListReadyToRun(trimmed: string): boolean {
     return false
   }
   if (parts.length === 2) {
-    return true
+    return line !== undefined && line.endsWith(" ")
   }
   const third = parts[2]!.toLowerCase()
   if (isSearchListScopeToken(third)) {
-    return true
+    return searchListPatternFromLine(trimmed).length > 0
   }
   if (third.startsWith("--")) {
+    return false
+  }
+  if (matchesSearchListScopeFilter(parts[2]!)) {
     return false
   }
   return true
@@ -103,7 +138,7 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
     return false
   }
   const third = parts[2]!
-  if (!third.startsWith("--")) {
+  if (!matchesSearchListScopeFilter(third) && !third.startsWith("--")) {
     return false
   }
   if (!isSearchListScopeToken(third)) {
@@ -124,7 +159,26 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
   if (isSearchListContinuationPrompt(line)) {
     return false
   }
-  return isSearchListReadyToRun(trimmed) && !isEditingSearchListScopeToken(line, cursor)
+  if (!trimmed.toLowerCase().startsWith("search -list")) {
+    return false
+  }
+  if (isEditingSearchListScopeToken(line, cursor)) {
+    return false
+  }
+  const parts = searchListParts(trimmed)
+  if (parts.length === 2 && line.endsWith(" ")) {
+    return true
+  }
+  if (parts.length >= 3 && isSearchListScopeToken(parts[2]!)) {
+    return searchListPatternFromLine(trimmed).length === 0
+  }
+  if (parts.length >= 3 && matchesSearchListScopeFilter(parts[2]!)) {
+    return false
+  }
+  if (parts.length >= 3 && !parts[2]!.startsWith("--")) {
+    return true
+  }
+  return false
 }
 
 /** EN: Prompt placeholder after `search -list `. */

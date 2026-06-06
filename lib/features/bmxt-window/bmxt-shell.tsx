@@ -1362,7 +1362,7 @@ export function BmxtShell({
         focusPrompt()
         return
       }
-      if (!isSearchListReadyToRun(trimmed)) {
+      if (!isSearchListReadyToRun(trimmed, rawLine)) {
         focusPrompt()
         return
       }
@@ -1454,11 +1454,20 @@ export function BmxtShell({
         return
       }
       const cur = lineRef.current
-      const addSpace = s.tokenEnd >= cur.length
-      const nextLine = addSpace
-        ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
-        : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
-      const nextPos = s.tokenStart + tok.length + (addSpace ? 1 : 0)
+      const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
+      let nextLine: string
+      let nextPos: number
+      if (appendAtEnd) {
+        const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
+        nextLine = `${cur}${sep}${tok} `
+        nextPos = nextLine.length
+      } else {
+        const addTrailing = s.tokenEnd >= cur.length
+        nextLine = addTrailing
+          ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
+          : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
+        nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
+      }
       lineRef.current = nextLine
       setLine(nextLine)
       setCursorPos(nextPos)
@@ -1825,11 +1834,6 @@ export function BmxtShell({
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
           const trimmed = promptLine().trim()
-          if (isSearchListReadyToRun(trimmed)) {
-            setSubCmdPicker(null)
-            submitLine()
-            return
-          }
           if (shouldAutoSubmitAfterTokenPick(trimmed)) {
             setSubCmdPicker(null)
             submitLine()
