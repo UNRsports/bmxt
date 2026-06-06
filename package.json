@@ -5,6 +5,9 @@
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
+  "engines": {
+    "node": ">=20.11.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/UNRsports/bmxt.git"
@@ -35,7 +38,16 @@
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
     "prettier": "3.2.4",
+    "svgo": "3.3.3",
     "typescript": "5.3.3"
+  },
+  "overrides": {
+    "@plasmohq/parcel-resolver-post": "0.4.6",
+    "@plasmohq/parcel-transformer-manifest": "0.21.1",
+    "@plasmohq/parcel-transformer-svelte": "0.6.1",
+    "lmdb": {
+      "msgpackr": "1.11.10"
+    }
   },
   "manifest": {
     "name": "__MSG_extensionName__",
