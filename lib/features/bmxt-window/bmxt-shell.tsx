@@ -4,12 +4,18 @@ import { resolveImeTokenPicker } from "../command-line/ime-token-picker"
 import {
   buildTabPickerRows,
   listTabsMoveUrlCandidates,
+  loadTabsPickerSettings,
   parseGroupNewInteractiveLine,
   parseTabsExitListLine,
   parseTabsListPickerLine,
+  parseTabsSettingCommandLine,
   resolveInitialTabPickerHighlightIndex,
+  saveTabsPageActiveMode,
+  settingTokenForPageActiveMode,
+  TABS_PAGE_ACTIVE_MODE_TOKENS,
   tabsMoveUrlCompletionZone,
-  type TabPickerRow
+  type TabPickerRow,
+  type TabsPageActiveMode
 } from "../tabs"
 import { openSearchPickerEntry } from "../search/open-search-picker-entry"
 import {
@@ -290,6 +296,8 @@ export function BmxtShell({
   const translateEnabledRef = useRef(false)
   const translatePairIdRef = useRef<TranslationPairId>(DEFAULT_TRANSLATION_PAIR_ID)
   const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
+  const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
+  const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -403,7 +411,15 @@ export function BmxtShell({
         setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
       }
     })
+    void loadTabsPickerSettings().then((s) => {
+      setTabsPageActiveMode(s.pageActive)
+      tabsPageActiveModeRef.current = s.pageActive
+    })
   }, [])
+
+  useEffect(() => {
+    tabsPageActiveModeRef.current = tabsPageActiveMode
+  }, [tabsPageActiveMode])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
@@ -1112,6 +1128,65 @@ export function BmxtShell({
       return
     }
 
+    const tabsSettingCmd = parseTabsSettingCommandLine(trimmed)
+    if (tabsSettingCmd !== null) {
+      appendCommandToHistory(trimmed)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      if (tabsSettingCmd.kind === "incomplete") {
+        const cont = "tabs "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
+          "EN: `-setting -page-active` controls tab preview on highlight (`--auto` default, `--manual` needs Alt).",
+          "JA: `-setting -page-active` でハイライト時のタブアクティブ化を切替（`--auto` 既定、`--manual` は Alt）。"
+        ])
+        focusPrompt()
+        return
+      }
+      if (tabsSettingCmd.kind === "setting-incomplete") {
+        const cont = "tabs -setting "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          "tabs -setting: choose option — -page-active",
+          `current page-active: ${settingTokenForPageActiveMode(tabsPageActiveModeRef.current)}`
+        ])
+        focusPrompt()
+        return
+      }
+      if (tabsSettingCmd.kind === "page-active-incomplete") {
+        const cont = "tabs -setting -page-active "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
+        void appendLogLines([
+          `> ${trimmed}`,
+          `tabs -setting -page-active: choose mode — ${options}`,
+          `current: ${settingTokenForPageActiveMode(tabsPageActiveModeRef.current)}`
+        ])
+        focusPrompt()
+        return
+      }
+      setLine("")
+      setCursorPos(0)
+      lineRef.current = ""
+      void (async () => {
+        await saveTabsPageActiveMode(tabsSettingCmd.mode)
+        setTabsPageActiveMode(tabsSettingCmd.mode)
+        const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
+        await appendLogLines([`> ${trimmed}`, `tabs: page-active set to ${token}`])
+        focusPrompt()
+      })()
+      return
+    }
+
     const listPicker = parseTabsListPickerLine(trimmed)
     if (listPicker) {
       const { showUrl } = listPicker
@@ -1124,11 +1199,13 @@ export function BmxtShell({
         try {
           const rows = await buildTabPickerRows(showUrl)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
+          const pageActiveToken = settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
           await appendLogLines([
             `> ${trimmed}`,
-            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc → prompt"
+            `Tab picker — page-active ${pageActiveToken} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt`
           ])
           setTabPicker(sessionId, { rows, showUrl, initialHi })
+          setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -1149,6 +1226,7 @@ export function BmxtShell({
         const logLines = [`> ${trimmed}`]
         if (tabPickerRef.current !== null) {
           setTabPicker(sessionId, null)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
           activatePaneFocus("terminal")
           logLines.push("Tab picker closed.")
         } else {
@@ -1349,6 +1427,7 @@ export function BmxtShell({
             initialHi,
             variant: "groupNew"
           })
+          setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -2224,6 +2303,10 @@ export function BmxtShell({
             busy: navTranslateBusy,
             statusNote: navTranslateStatus
           }}
+          tabs={{
+            pickerOpen: tabPicker !== null,
+            pageActiveMode: tabsPageActiveMode
+          }}
         />
         <div className="bmxt-scroll-anchor" aria-hidden />
     </>
@@ -2275,6 +2358,7 @@ export function BmxtShell({
             }}
             onTabsPickerFocusTabId={onTabsPickerFocusTabId}
             onTabPickerInteractiveChange={onTabPickerInteractiveChange}
+            tabsPageActiveMode={tabsPageActiveMode}
           />
         </div>
       ) : (

@@ -29,3 +29,13 @@ export {
   tabsOptionCompletionZone,
   tabsMoveUrlCompletionZone
 } from "./input"
+export {
+  loadTabsPickerSettings,
+  saveTabsPageActiveMode,
+  settingTokenForPageActiveMode,
+  TABS_PAGE_ACTIVE_MODE_TOKENS,
+  type TabsPageActiveMode,
+  type TabsPickerSettings
+} from "./page-active-setting"
+export { parseTabsSettingCommandLine, type TabsSettingCommandParse } from "./parse-tabs-setting-command"
+export { TabsStatusBar } from "./tabs-status-bar"

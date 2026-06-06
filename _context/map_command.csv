@@ -13,7 +13,11 @@ search,-list,--page,rest,,（同上）,scope `--page`: 非 discarded http(s) タ
 search,-exit,-list,none,,search -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session の search ピッカー列を閉じる（検索中はキャンセル。未表示なら案内行）。SW の run は案内行のみ。,
 group,new,,,,group new | group new <tabId> [tabId …],第二トークン `new` 必須（manifest subcommands 空・continuation なし）。tabId 無し: BMXt ウィンドウ UI が group-new variant のタブピッカー列を開く（対話的）。tabId 列挙あり: SW で Effect: group_new。,
 help,,,,?,"help, ?",linesDispatch(buildHelpLines())（組み込みコマンド一覧等）。Effect なし。,
-tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。Ctrl+←/→ で terminal↔tabs↔search↔dom↔translate 列フォーカス。,-u は trailingTokens（Tab 補完対象）
+tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。Ctrl+←/→ で terminal↔tabs↔search↔dom↔translate 列フォーカス。上部に page-active 状況表示（nav 同様）。,-u は trailingTokens（Tab 補完対象）
+tabs,-setting,,none,,（同上）,第二 `-setting` のみ Enter: 第三 `-page-active` を案内し `tabs -setting ` に復帰。Tab 補完で `-page-active`。,
+tabs,-setting,-page-active,none,,tabs -setting -page-active --auto | --manual,第三 `-page-active` のみ Enter: 第四 `--auto` / `--manual` を案内し `tabs -setting -page-active ` に復帰。設定は chrome.storage.local に保存。,
+tabs,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`: ハイライト移動時にタブをアクティブ化（ウィンドウは背面のまま）。既定。,
+tabs,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`: Alt+↑↓ または Alt 押下時のみタブをアクティブ化。Enter は従来どおりジャンプ。,
 tabs,-list,-u,none,,（同上）,`-u`: 各行にタブ URL も表示。,
 tabs,-exit,-list,none,,tabs -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session のタブピッカー列を閉じる（group new 含む。未表示なら案内行）。SW run は案内行のみ。,
 tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,args[2] 以降を結合して http(s) URL 解析。成功時 Effect: tabs_move_url。空/不正なら usage。,

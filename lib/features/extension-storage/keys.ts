@@ -35,6 +35,9 @@ export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
 /** Tab picker: collapsed window / group tree (`exit` full close until persisted). */
 export const TAB_PICKER_FOLD_STATE_KEY = "bmxt_tab_picker_fold_v1"
 
+/** Tab picker: page-active preview mode (`--auto` / `--manual`). */
+export const TABS_PICKER_SETTINGS_KEY = "bmxt_tabs_picker_settings_v1"
+
 /** Per-leaf picker columns + pane focus (survives BMXt window close; cleared on `exit`). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 

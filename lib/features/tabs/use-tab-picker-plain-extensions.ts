@@ -107,7 +107,8 @@ export function useTabPickerPlainExtensions({
   cycleGroupMenuPick,
   backFromGroupRename,
   collapseAtRow,
-  expandAtRow
+  expandAtRow,
+  altKeyHeldRef
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -165,6 +166,7 @@ export function useTabPickerPlainExtensions({
   backFromGroupRename: () => void
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
+  altKeyHeldRef: MutableRefObject<boolean>
 }): PlainPickerKeyboardExtensions {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
@@ -277,13 +279,20 @@ export function useTabPickerPlainExtensions({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (e.altKey) {
+      const altOnlyChord = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+      if (e.altKey && !altOnlyChord) {
         return false
       }
       if (isReservedSplitPaneVerticalNav(e)) {
         return false
       }
       const navDir = verticalNavDirection(e)
+      if (altOnlyChord) {
+        if (navDir === null) {
+          return false
+        }
+        altKeyHeldRef.current = true
+      }
       if (navDir === null) {
         return false
       }
@@ -454,7 +463,8 @@ export function useTabPickerPlainExtensions({
       rows,
       setGroupPickIndex,
       shiftRangeAnchorHiRef,
-      visibleRowIndices
+      visibleRowIndices,
+      altKeyHeldRef
     ]
   )
 

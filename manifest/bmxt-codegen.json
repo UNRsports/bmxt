@@ -76,7 +76,7 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -moveurl <url> | tabs -nowurl",
+      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
@@ -86,6 +86,11 @@
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": ["-page-active"],
           "tail": "none"
         },
         {

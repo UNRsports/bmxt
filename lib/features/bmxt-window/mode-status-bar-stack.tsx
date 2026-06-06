@@ -1,6 +1,8 @@
 import { NavStatusBar } from "../nav"
 import type { TranslationPairId } from "../translate/translation-pair"
 import { TranslateStatusBar } from "../translate/translate-status-bar"
+import { TabsStatusBar } from "../tabs/tabs-status-bar"
+import type { TabsPageActiveMode } from "../tabs/page-active-setting"
 import type { ModeToolbarId } from "./mode-toolbar-order"
 
 type NavProps = {
@@ -23,14 +25,26 @@ type TranslateProps = {
   statusNote: string | null
 }
 
+type TabsProps = {
+  pickerOpen: boolean
+  pageActiveMode: TabsPageActiveMode
+}
+
 type Props = {
   order: readonly ModeToolbarId[]
   nav: NavProps
   translate: TranslateProps
+  tabs: TabsProps
 }
 
-export function ModeStatusBarStack({ order, nav, translate }: Props) {
+export function ModeStatusBarStack({ order, nav, translate, tabs }: Props) {
   const rows = order.flatMap((id) => {
+    if (id === "tabs") {
+      if (!tabs.pickerOpen) {
+        return []
+      }
+      return [<TabsStatusBar key="tabs" pageActiveMode={tabs.pageActiveMode} />]
+    }
     if (id === "nav") {
       if (!nav.armed) {
         return []

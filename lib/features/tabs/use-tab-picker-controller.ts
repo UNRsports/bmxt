@@ -30,11 +30,13 @@ import { useTabPickerEdit } from "./use-tab-picker-edit"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 import { emptyTabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
+import type { TabsPageActiveMode } from "./page-active-setting"
 
 type Props = {
   rows: TabPickerRow[]
   showUrl: boolean
   initialHi: number
+  pageActiveMode?: TabsPageActiveMode
   variant?: "default" | "groupNew"
   interactive?: TabPickerInteractiveSnapshot
   onInteractiveSnapshotChange?: (snapshot: TabPickerInteractiveSnapshot) => void
@@ -57,6 +59,7 @@ export function useTabPickerController({
   rows,
   showUrl,
   initialHi,
+  pageActiveMode = "auto",
   variant = "default",
   interactive,
   onInteractiveSnapshotChange,
@@ -126,6 +129,35 @@ export function useTabPickerController({
   const prevRowsRef = useRef(rows)
   const prevBulkSubModeRef = useRef<BulkSubMode | null>(null)
   const shiftRangeAnchorHiRef = useRef<number | null>(null)
+  const altKeyHeldRef = useRef(false)
+  const [altPreviewTick, setAltPreviewTick] = useState(0)
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Alt") {
+        altKeyHeldRef.current = true
+        if (pageActiveMode === "manual" && !e.repeat) {
+          setAltPreviewTick((t) => t + 1)
+        }
+      }
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Alt") {
+        altKeyHeldRef.current = false
+      }
+    }
+    const clearAlt = () => {
+      altKeyHeldRef.current = false
+    }
+    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("keyup", onKeyUp)
+    window.addEventListener("blur", clearAlt)
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener("keyup", onKeyUp)
+      window.removeEventListener("blur", clearAlt)
+    }
+  }, [pageActiveMode])
 
   const {
     visibleRowIndices,
@@ -215,7 +247,10 @@ export function useTabPickerController({
     markedKind,
     markedTabIds,
     tabIdToWindowId,
-    setActiveTabId
+    setActiveTabId,
+    pageActiveMode,
+    altKeyHeldRef,
+    altPreviewTick
   })
 
   useEffect(() => {
@@ -422,7 +457,8 @@ export function useTabPickerController({
     cycleGroupMenuPick,
     backFromGroupRename,
     collapseAtRow,
-    expandAtRow
+    expandAtRow,
+    altKeyHeldRef
   })
 
   const headLine = useMemo(

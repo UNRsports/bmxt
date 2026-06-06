@@ -10,6 +10,7 @@ import type { TabPickerInteractiveSnapshot } from "../session/tab-picker-state"
 import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
+import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
 
 export type SessionPickerColumnsProps = PickerColumnHostContext
 
@@ -34,6 +35,7 @@ export type PickerColumnHostContext = {
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onTabPickerInteractiveChange?: (snapshot: TabPickerInteractiveSnapshot) => void
+  tabsPageActiveMode?: TabsPageActiveMode
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -49,6 +51,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           rows={ctx.tabPicker.rows}
           showUrl={ctx.tabPicker.showUrl}
           initialHi={ctx.tabPicker.initialHi}
+          pageActiveMode={ctx.tabsPageActiveMode}
           variant={ctx.tabPicker.variant ?? "default"}
           interactive={ctx.tabPicker.interactive}
           onInteractiveSnapshotChange={ctx.onTabPickerInteractiveChange}

@@ -15,6 +15,7 @@ import {
   matchesSearchListScopeFilter,
   shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
+import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
 
 export type ImeTokenTier = "first" | "second" | "third"
 
@@ -202,6 +203,18 @@ export function resolveImeTokenPicker(
       return null
     }
     return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+  }
+
+  if (tokenIndex === 3) {
+    const second = tokensBefore[1]!.toLowerCase()
+    const third = tokensBefore[2]!.toLowerCase()
+    if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
+      const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+      if (cands.length === 0) {
+        return null
+      }
+      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+    }
   }
 
   return null
