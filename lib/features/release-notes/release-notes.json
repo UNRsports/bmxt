@@ -1,14 +1,10 @@
 {
-  "0.4.1": {
+  "0.4.2": {
     "ja": [
-      "コード内修正",
-      "navモードでの文字入力に関する不具合修正",
-      "翻訳モードからピッカーを廃し、シンプルな仕様に改善"
+      "npm依存関係の整理"
     ],
     "en": [
-      "Miscellaneous internal fixes",
-      "Fixed a bug affecting text input in nav mode",
-      "Removed the translation side picker; translate assist is now prompt preview and nav typing only"
+      ""
     ]
   }
 }

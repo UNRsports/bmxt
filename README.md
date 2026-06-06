@@ -12,6 +12,7 @@
 - [Key Specs](#key-specs)
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
   - [Reproducible builds](#reproducible-builds)
+  - [npm dependencies and security](#npm-dependencies)
 - [Command-line token model (first / second commands)](#command-line-token-model)
   - [Command List](#command-list)
   - [`aboutbmxt`](#aboutbmxt)
@@ -29,6 +30,7 @@
 - [Prompt Key Bindings](#prompt-key-bindings)
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
+  - [npm dependencies and security](#npm-dependencies)
   - [Main Sources](#main-sources)
   - [Version upgrade banner & release notes](#version-upgrade-banner)
 - [Production Build](#production-build)
@@ -128,7 +130,52 @@ The manifest sets **`content_security_policy.extension_pages`** with **`default-
 ### Reproducible builds
 
 
-Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply.
+Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**; do **not** use **`npm install`** in CI or when you want an exact tree) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply. See **[npm dependencies and security](#npm-dependencies)** for overrides, audit policy, and maintainer checks.
+
+<a id="npm-dependencies"></a>
+
+### npm dependencies and security
+
+
+**Direct dependencies** (see **`package.json`**) are **`plasmo@0.90.5`**, **`react@18.2.0`**, and **`react-dom@18.2.0`**. Almost all other packages are **transitive** (Plasmo pulls in Parcel, `@plasmohq/*`, and related tooling).
+
+**Install for reproducibility**
+
+| Command | When to use |
+|---------|-------------|
+| **`npm ci`** | **Default** after clone, in CI, and before release builds. Installs **exactly** what **`package-lock.json`** records. |
+| **`npm install`** | Only when you intentionally change **`package.json`** (new devDependency, **`overrides`**, etc.) and will commit the updated lockfile. |
+
+Recommended local flow after pulling lockfile changes:
+
+```bash
+rm -rf node_modules
+npm ci
+npm run build
+```
+
+**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). Do **not** add an **`engines`** field to **`package.json`**: with **Plasmo 0.90.5** it can break **`plasmo build`** (CSS/JSON asset resolution fails even though source files exist).
+
+**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=high`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used: it suggests downgrading **`plasmo`** and is unsafe.
+
+**`package.json` `overrides`** — used sparingly because Plasmo pins older transitive versions. Prefer **scoped** overrides (bump an `@plasmohq/*` patch that already declares fixed deps, or a **nested** override) over renaming arbitrary packages globally.
+
+Current overrides (also in **`package.json`**):
+
+| Override | Purpose |
+|----------|---------|
+| **`@plasmohq/parcel-transformer-manifest@0.21.1`** | Upstream patch declares **`content-security-policy-parser@0.6.0`**. |
+| **`@plasmohq/parcel-transformer-svelte@0.6.1`** | Upstream patch declares **`svelte@4.2.19`**. |
+| **`lmdb` → `msgpackr@1.11.10`** | **`@parcel/cache`** pins old **`lmdb`**; only this nested pin is needed. |
+| **`@plasmohq/parcel-resolver-post` → `tsup@8.4.0`** | Keeps **`@plasmohq/parcel-resolver-post@0.4.5`** (Plasmo’s expected version) and updates **`tsup`** only. |
+
+**Do not** set **`@plasmohq/parcel-resolver-post`** to **`0.4.6`** (or other unpinned bumps): **`plasmo build`** then fails to resolve CSS/JSON imports (e.g. **`../bmxt-ui.css`**, **`welcome-content.json`**) even when files exist.
+
+**`svgo@3.3.3`** is a **devDependency** (not an override): satisfies **htmlnano**’s optional peer and removes the Plasmo build warning about missing **svgo**.
+
+**Known residual audit items** — after the above, **`npm audit`** may still report a small number of **moderate** issues (Parcel dev-server, Svelte SSR in unused Plasmo transformers). These require **Plasmo / Parcel upstream** updates; do not “fix” them with **`npm audit fix --force`** or incompatible **`@plasmohq/*`** version jumps.
+
+**After any dependency change**, run **`npm ci`**, **`npm run build`**, **`npm test`**, and **`npm audit --audit-level=high`**, and commit **`package.json`** and **`package-lock.json`** together.
 
 <a id="command-line-token-model"></a>
 
@@ -605,7 +652,7 @@ During IME composition, composition events are prioritized to avoid conflicts wi
 After installing dependencies, start the development build (see **Development startup** below for the full flow).
 
 ```bash
-npm install   # or pnpm install / yarn
+npm ci        # preferred when package-lock.json is present
 npm run dev   # or pnpm dev
 ```
 
@@ -618,7 +665,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** `npm install` (or `pnpm install` / `yarn`).
+1. **Install JS dependencies:** **`npm ci`** when **`package-lock.json`** is present (preferred). Use **`npm install`** only when you are updating dependencies and will refresh the lockfile. See **[npm dependencies and security](#npm-dependencies)**.
 2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
 3. **Start dev:** From the repo root, run **`npm run dev`**. Leave this process running; it rebuilds the extension on file changes.
 4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`build/chrome-mv3-dev`** (created by Plasmo dev).
@@ -732,6 +779,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [主要仕様](#key-specs-ja)
   - [権限（`package.json` の manifest）](#permissions-manifest-ja)
   - [再現可能なビルド](#reproducible-builds-ja)
+  - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
 - [コマンド一覧](#command-list-ja)
   - [`aboutbmxt`](#aboutbmxt-ja)
@@ -749,6 +797,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [プロンプトのキーバインド](#prompt-key-bindings-ja)
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
+  - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
   - [主なソース](#main-sources-ja)
   - [バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)
 - [本番ビルド](#production-build-ja)
@@ -849,7 +898,52 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 再現可能なビルド
 
 
-公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。
+公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定。CI や厳密な再現では **`npm install`** を使わない）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。override・監査・メンテ手順は **[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
+
+<a id="npm-dependencies-ja"></a>
+
+### npm 依存関係とセキュリティ
+
+
+**直接依存**（**`package.json`**）は **`plasmo@0.90.5`**、**`react@18.2.0`**、**`react-dom@18.2.0`** のみです。その他の多数のパッケージは **間接依存**（Plasmo が Parcel・`@plasmohq/*` 等を引き込む）です。
+
+**再現性のあるインストール**
+
+| コマンド | 用途 |
+|---------|------|
+| **`npm ci`** | **通常はこちら**（clone 後・CI・リリースビルド前）。**`package-lock.json`** どおりのツリーのみ入る。 |
+| **`npm install`** | **`package.json`** を意図的に変えるとき（devDependency・**`overrides`** 追加など）のみ。更新した lockfile をコミットする。 |
+
+lockfile 更新を pull したあとの推奨手順:
+
+```bash
+rm -rf node_modules
+npm ci
+npm run build
+```
+
+**Node.js 版** — **`.nvmrc`** を参照（このリポジトリの推奨 Node）。**`package.json`** に **`engines`** は **書かない**: **Plasmo 0.90.5** では **`plasmo build`** が失敗する（CSS/JSON の import 解決エラー。ソースファイルは存在するのに bundler が解決できない）。
+
+**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=high`**、テスト、**`npm run build`** を実行する。**`npm audit fix --force`** は **使わない**（`plasmo` のダウングレードを提案し、危険）。
+
+**`package.json` の `overrides`** — Plasmo が古い間接依存を固定するため、**最小限**にとどめる。任意のパッケージ名を全局上書きするより、**`@plasmohq/*` の patch 版に合わせる**／**nested override** を優先する。
+
+現在の override（**`package.json`** と同内容）:
+
+| override | 目的 |
+|----------|------|
+| **`@plasmohq/parcel-transformer-manifest@0.21.1`** | 上流 patch が **`content-security-policy-parser@0.6.0`** を dependencies に宣言。 |
+| **`@plasmohq/parcel-transformer-svelte@0.6.1`** | 上流 patch が **`svelte@4.2.19`** を宣言。 |
+| **`lmdb` → `msgpackr@1.11.10`** | **`@parcel/cache`** が古い **`lmdb`** 固定のため、この nested だけ必要。 |
+| **`@plasmohq/parcel-resolver-post` → `tsup@8.4.0`** | **`@plasmohq/parcel-resolver-post@0.4.5`**（Plasmo 想定）のまま **`tsup`** のみ更新。 |
+
+**禁止:** **`@plasmohq/parcel-resolver-post`** を **`0.4.6`** などに **パッケージ版ごと** 上げること。すると **`plasmo build`** が CSS/JSON を解決できず（例: **`../bmxt-ui.css`**、**`welcome-content.json`**）、ファイルがあってもビルドが落ちる。
+
+**`svgo@3.3.3`** は **devDependency**（override ではない）。htmlnano の optional peer を満たし、Plasmo ビルド時の **svgo** 警告を消す。
+
+**残る audit（moderate）** — 上記後も **`npm audit`** で moderate が少数残ることがある（Parcel dev server、未使用の Svelte SSR 系など）。**Plasmo / Parcel の upstream 更新**待ち。**`npm audit fix --force`** や非互換な **`@plasmohq/*`** の版上げで直そうとしない。
+
+**依存関係を変更したら** **`npm ci`** → **`npm run build`** → **`npm test`** → **`npm audit --audit-level=high`** を実行し、**`package.json`** と **`package-lock.json`** を **セットでコミット**する。
 
 <a id="command-line-token-model-ja"></a>
 
@@ -1312,7 +1406,7 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 依存関係のインストール後、開発ビルドを起動します（手順の全体像は **Development startup** / **開発時の起動** を参照）。
 
 ```bash
-npm install   # または pnpm install / yarn
+npm ci        # package-lock.json があるときはこちら
 npm run dev   # または pnpm dev
 ```
 
@@ -1324,7 +1418,7 @@ npm run dev   # または pnpm dev
 
 ### 開発時の起動
 
-1. **依存関係:** リポジトリ直下で `npm install`（または `pnpm` / `yarn`）。
+1. **依存関係:** リポジトリ直下で **`npm ci`**（**`package-lock.json`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`npm install`**。**[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
 2. **Codegen:** **`manifest/bmxt-codegen.json`** を編集したときは、**`npm run codegen`** で **`lib/features/bmxt-core/registry/`**・**`lib/features/dispatch/`**・**`lib/features/builtin-commands/`** の生成物を揃える。
 3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`plasmo dev`** で、`build/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
 4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`build/chrome-mv3-dev`** を指定する（Plasmo dev が出力するディレクトリ）。
