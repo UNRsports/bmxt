@@ -5,20 +5,18 @@ import type { SelectKind } from "./tab-picker-overlay-types"
 
 export function useTabPickerDerivedState(
   rows: TabPickerRow[],
+  visibleRowIndices: number[],
   markedKind: SelectKind | null,
   markedTabIds: number[],
   markedWindowIds: number[],
   markedGroupKeys: string[]
 ): {
-  visibleRowIndices: number[]
   markedTabSet: Set<number>
   markedWindowSet: Set<number>
   markedGroupSet: Set<string>
   tabIdToWindowId: Map<number, number>
   selectedTabIds: number[]
 } {
-  const visibleRowIndices = useMemo(() => rows.map((_, i) => i), [rows])
-
   const markedTabSet = useMemo(() => new Set(markedTabIds), [markedTabIds])
   const markedWindowSet = useMemo(() => new Set(markedWindowIds), [markedWindowIds])
   const markedGroupSet = useMemo(() => new Set(markedGroupKeys), [markedGroupKeys])
@@ -63,7 +61,6 @@ export function useTabPickerDerivedState(
   }, [markedGroupSet, markedKind, markedTabIds, markedWindowSet, rows])
 
   return {
-    visibleRowIndices,
     markedTabSet,
     markedWindowSet,
     markedGroupSet,

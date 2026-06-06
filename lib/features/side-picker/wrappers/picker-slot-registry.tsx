@@ -1,14 +1,16 @@
 import type { MutableRefObject, ReactNode } from "react"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
-import type { FindListPickerState } from "../../find/find-list-picker-input"
-import { FindListPickerOverlay } from "../../find/find-list-picker-overlay"
+import { SearchListPickerOverlay } from "../../search/search-list-picker-overlay"
 import type { PickerEntry } from "../model/picker-entry"
 import type { PaneFocusTarget } from "../panel/pane-focus-nav"
 import { PickerPanelHost } from "../panel/picker-panel-host"
 import type { PickerSlotId } from "../session/session-pickers"
 import type { TabPickerState } from "../session/tab-picker-state"
+import type { TabPickerInteractiveSnapshot } from "../session/tab-picker-state"
 import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
+import type { SearchListPickerState } from "../../search/search-list-picker-input"
+import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
 
 export type SessionPickerColumnsProps = PickerColumnHostContext
 
@@ -19,19 +21,21 @@ export type PickerColumnHostContext = {
   paneFocus: PaneFocusTarget
   activatePaneFocus: (target: PaneFocusTarget) => void
   tabPicker: TabPickerState | null
-  findListPicker: FindListPickerState | null
+  searchListPicker: SearchListPickerState | null
   domListPicker: DomListPickerState | null
   tabsPickerKeyboardActive: boolean
-  findPickerKeyboardActive: boolean
+  searchPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
   tabPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
-  findPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  searchPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
-  onOpenFindEntry: (entry: PickerEntry, matchIndex: number) => void
+  onOpenSearchEntry: (entry: PickerEntry, matchIndex: number) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
+  onTabPickerInteractiveChange?: (snapshot: TabPickerInteractiveSnapshot) => void
+  tabsPageActiveMode?: TabsPageActiveMode
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -47,7 +51,10 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           rows={ctx.tabPicker.rows}
           showUrl={ctx.tabPicker.showUrl}
           initialHi={ctx.tabPicker.initialHi}
+          pageActiveMode={ctx.tabsPageActiveMode}
           variant={ctx.tabPicker.variant ?? "default"}
+          interactive={ctx.tabPicker.interactive}
+          onInteractiveSnapshotChange={ctx.onTabPickerInteractiveChange}
           onAppendLog={ctx.onAppendLog}
           onRefreshRows={ctx.onRefreshTabPickerRows}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
@@ -58,18 +65,18 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         />
       </PickerPanelHost>
     ) : null,
-  find: (ctx) =>
-    ctx.findListPicker ? (
+  search: (ctx) =>
+    ctx.searchListPicker ? (
       <PickerPanelHost
-        focusTarget="find"
+        focusTarget="search"
         paneFocus={ctx.paneFocus}
         isFocusedPane={ctx.isFocusedPane}>
-        <FindListPickerOverlay
-          entries={ctx.findListPicker.entries}
+        <SearchListPickerOverlay
+          state={ctx.searchListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
-          onOpenEntry={(entry, matchIndex) => ctx.onOpenFindEntry(entry, matchIndex)}
-          keyboardActive={ctx.findPickerKeyboardActive}
-          pickerInputRef={ctx.findPickerInputRef}
+          onOpenEntry={(entry, matchIndex) => ctx.onOpenSearchEntry(entry, matchIndex)}
+          keyboardActive={ctx.searchPickerKeyboardActive}
+          pickerInputRef={ctx.searchPickerInputRef}
           sessionId={ctx.sessionId}
         />
       </PickerPanelHost>
@@ -97,4 +104,4 @@ export function renderPickerSlot(slot: PickerSlotId, ctx: PickerColumnHostContex
   return PICKER_SLOT_RENDERERS[slot](ctx)
 }
 
-export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "find", "dom"]
+export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "search", "dom"]

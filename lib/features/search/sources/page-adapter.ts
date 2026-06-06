@@ -3,34 +3,35 @@
  * JA: 破棄されていない http(s) タブのみ。chrome-extension:// 等は除外。
  */
 
-import type { FindPageMatch } from "../side-picker/model/picker-entry"
-import { readTabInnerText } from "../page-extract/read-tab-inner-text"
-import { isHttpUrl } from "../url/is-http-url"
-import { matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../search"
-import { linesForFindPageTab } from "./page-find-blocks"
+import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
+import { readTabInnerText } from "../../page-extract/read-tab-inner-text"
+import { isHttpUrl } from "../../url/is-http-url"
+import { matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../index"
+import { collectPageMatchesForTab } from "../search-page-matches"
+import { linesForSearchPageTab } from "./page-find-blocks"
 import {
-  formatFindPageProgress,
-  shouldEmitFindPageProgress,
-  type FindPageProgress
+  formatSearchPageProgress,
+  shouldEmitSearchPageProgress,
+  type SearchPageProgress
 } from "./page-progress"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
 const MAX_LINE_HITS = 500
 
-export async function findPageLines(
+export async function searchPageLines(
   pattern: string,
   onProgress?: (message: string) => Promise<void>,
-  progressLabel = "find --page",
+  progressLabel = "search -list --page",
   shouldCancel?: () => boolean
 ): Promise<string[]> {
-  const emit = async (p: FindPageProgress) => {
+  const emit = async (p: SearchPageProgress) => {
     if (!onProgress) {
       return
     }
-    if (p.phase === "tick" && !shouldEmitFindPageProgress(p.tabIndex, p.tabTotal)) {
+    if (p.phase === "tick" && !shouldEmitSearchPageProgress(p.tabIndex, p.tabTotal)) {
       return
     }
-    await onProgress(formatFindPageProgress(progressLabel, p))
+    await onProgress(formatSearchPageProgress(progressLabel, p))
   }
   let activeTabId: number | undefined
   try {
@@ -94,27 +95,28 @@ export async function findPageLines(
       cancelled = true
       break
     }
-    if (text === null) {
-      skipped += 1
-    } else {
-      scanned += 1
-    }
-    await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
-    if (text === null) {
-      continue
-    }
     const url = tab.url ?? ""
     const title = tab.title ?? ""
-
     const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
+    const readable = text !== null
+
+    if (readable) {
+      scanned += 1
+    } else {
+      skipped += 1
+    }
+    await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
 
     if (matchAll) {
-      const previewLines = text
+      if (!readable) {
+        continue
+      }
+      const previewLines = text!
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
         .slice(0, MAX_EMPTY_PREVIEW_LINES)
-      const matches: FindPageMatch[] =
+      const matches: SearchPageMatch[] =
         previewLines.length > 0
           ? previewLines.map((pl, i) => ({
               lineNo: i + 1,
@@ -123,7 +125,7 @@ export async function findPageLines(
             }))
           : [{ lineNo: 0, snippet: "(no visible text in body.innerText)", occurrence: 0 }]
       out.push(
-        ...linesForFindPageTab({
+        ...linesForSearchPageTab({
           tabId,
           windowId,
           title: title || "(untitled)",
@@ -135,35 +137,18 @@ export async function findPageLines(
       continue
     }
 
-    if (!matchesNeedle(text, pattern)) {
-      continue
-    }
-    const lines = text.split(/\r?\n/)
-    const tabMatches: FindPageMatch[] = []
-    const snippetOccurrence = new Map<string, number>()
-    let lineNo = 0
-    for (const line of lines) {
-      lineNo += 1
-      if (!matchesNeedle(line, pattern)) {
-        continue
-      }
-      const trimmed = line.trim().slice(0, 500)
-      const suffix = line.length > 500 ? "…" : ""
-      const snippet = `${trimmed}${suffix}`
-      const key = snippet.toLowerCase()
-      const occurrence = snippetOccurrence.get(key) ?? 0
-      snippetOccurrence.set(key, occurrence + 1)
-      tabMatches.push({ lineNo, snippet, occurrence })
-      totalHits += 1
-      if (totalHits >= MAX_LINE_HITS) {
-        break
-      }
-    }
+    const tabMatches = collectPageMatchesForTab(
+      title,
+      text,
+      pattern,
+      Math.max(1, MAX_LINE_HITS - totalHits)
+    )
     if (tabMatches.length === 0) {
       continue
     }
+    totalHits += tabMatches.length
     out.push(
-      ...linesForFindPageTab({
+      ...linesForSearchPageTab({
         tabId,
         windowId,
         title: title || "(untitled)",
@@ -194,8 +179,8 @@ export async function findPageLines(
   if (scanned === 0 && tabs.length > 0) {
     return [
       "(no page text could be read from open http(s) tabs)",
-      "EN: With site access enabled, reload the pages you want to search (F5), then run find --page again.",
-      "JA: サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから find --page を再実行してください。",
+      "EN: With site access enabled, reload the pages you want to search (F5), then run search -list --page again.",
+      "JA: サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
       `scanned ${scanned} tab(s), skipped ${skipped}, ${tabTotal} http(s) tab(s) open`
     ]
   }

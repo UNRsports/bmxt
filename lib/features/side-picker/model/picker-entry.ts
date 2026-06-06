@@ -1,13 +1,12 @@
 export type PickerSource = "tab" | "history" | "bookmark" | "page"
 
-/** EN: One innerText line hit inside an open tab (`find --page`). */
-export type FindPageMatch = {
+/** EN: One innerText line hit inside an open tab (`search -list --page`). */
+export type SearchPageMatch = {
   lineNo: number
   snippet: string
   /** EN: Nth DOM occurrence of `snippet` on the tab (case-insensitive). */
   occurrence: number
 }
-
 export type PickerEntry = {
   id: string
   source: PickerSource
@@ -17,22 +16,47 @@ export type PickerEntry = {
   windowId?: number
   groupId?: number | null
   /** EN: Grouped line hits when `source === "page"` (one picker row per tab). */
-  pageMatches?: FindPageMatch[]
+  pageMatches?: SearchPageMatch[]
+  /** EN: Search hits merged by URL — which scopes matched (history / bookmark / page). */
+  sources?: PickerSource[]
   meta?: Record<string, string>
 }
 
+const SEARCH_SOURCE_ORDER: PickerSource[] = ["history", "bookmark", "page"]
+
+/** EN: Ordered scope labels for a merged search row. */
+export function pickerEntrySearchSources(entry: PickerEntry): PickerSource[] {
+  if (entry.sources && entry.sources.length > 0) {
+    return SEARCH_SOURCE_ORDER.filter((s) => entry.sources!.includes(s))
+  }
+  if (SEARCH_SOURCE_ORDER.includes(entry.source)) {
+    return [entry.source]
+  }
+  return []
+}
+
+/** EN: Picker row prefix for search results, e.g. `[history, page]`. */
+export function searchPickerSourceLabel(entry: PickerEntry): string {
+  const sources = pickerEntrySearchSources(entry)
+  if (sources.length === 0) {
+    return `[${entry.source}]`
+  }
+  return `[${sources.join(", ")}]`
+}
+
 export function entryDisplayLine(entry: PickerEntry): string {
-  return findPickerSummaryLine(entry)
+  return searchPickerSummaryLine(entry)
 }
 
 /** EN: One picker row per tab; hit count only (detail shown in headline while cycling n/N). */
-export function findPickerSummaryLine(entry: PickerEntry): string {
+export function searchPickerSummaryLine(entry: PickerEntry): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
+  const label = searchPickerSourceLabel(entry)
   const base =
     url && !url.startsWith("(no ")
-      ? `[${entry.source}] ${title} — ${url}`
-      : `[${entry.source}] ${title}`
+      ? `${label} ${title} — ${url}`
+      : `${label} ${title}`
   const n = entry.pageMatches?.length ?? 0
   if (n > 1) {
     return `${base} · ${n} hits · n/N cycle`
@@ -48,7 +72,7 @@ export function findPickerSummaryLine(entry: PickerEntry): string {
 }
 
 /** EN: Full detail for the active page hit (headline suffix). */
-export function findPickerMatchDetail(entry: PickerEntry, matchHi = 0): string {
+export function searchPickerMatchDetail(entry: PickerEntry, matchHi = 0): string {
   const m = entry.pageMatches?.[matchHi] ?? entry.pageMatches?.[0]
   if (!m) {
     return ""
@@ -58,13 +82,14 @@ export function findPickerMatchDetail(entry: PickerEntry, matchHi = 0): string {
 }
 
 /** EN: Picker row text; `matchHi` selects which page hit snippet to show. */
-export function findPickerDisplayLine(entry: PickerEntry, matchHi = 0): string {
+export function searchPickerDisplayLine(entry: PickerEntry, matchHi = 0): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
+  const label = searchPickerSourceLabel(entry)
   const base =
     url && !url.startsWith("(no ")
-      ? `[${entry.source}] ${title} — ${url}`
-      : `[${entry.source}] ${title}`
+      ? `${label} ${title} — ${url}`
+      : `${label} ${title}`
   const matches = entry.pageMatches
   if (!matches || matches.length === 0) {
     return base

@@ -114,9 +114,7 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
     for (const t of wTabs) {
       const key = groupKey(t)
       if (key !== prevKey) {
-        if (key === "none") {
-          rows.push({ kind: "group", windowId: wid, groupId: null, label: "(グループなし)" })
-        } else {
+        if (key !== "none") {
           rows.push({
             kind: "group",
             windowId: wid,

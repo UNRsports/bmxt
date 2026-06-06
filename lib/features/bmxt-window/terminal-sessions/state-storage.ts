@@ -1,10 +1,15 @@
 import {
   ACTIVE_TERMINAL_SESSION_KEY,
+  CMD_HISTORY_KEY,
   MAX_SESSION_LOG_LINES,
+  PROCESS_UI_STATE_KEY,
   SESSION_LOG_KEY,
   SPLIT_LAYOUT_KEY,
+  TAB_PICKER_FOLD_STATE_KEY,
   TERMINAL_SESSIONS_KEY
 } from "../../extension-storage/keys"
+import { clearProcessUiStateStorage } from "../process-ui-state-storage"
+import { clearTabPickerFoldStateStorage } from "../../tabs/tab-picker-fold-state"
 import {
   colChainFromLeafIds,
   containsLeaf,
@@ -314,15 +319,20 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
   await setSessionLines(sessionId, [])
 }
 
-/** ストレージ上のターミナル状態を消去（BMXt 終了時など）。 */
+/** ストレージ上のターミナル状態を消去（BMXt プロセス `exit` 全終了時）。 */
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
     SPLIT_LAYOUT_KEY,
     ACTIVE_TERMINAL_SESSION_KEY,
     SESSION_LOG_KEY,
-    LEGACY_SPLIT_KEY
+    LEGACY_SPLIT_KEY,
+    PROCESS_UI_STATE_KEY,
+    TAB_PICKER_FOLD_STATE_KEY,
+    CMD_HISTORY_KEY
   ])
+  await clearTabPickerFoldStateStorage()
+  await clearProcessUiStateStorage()
 }
 
 export async function setFocusedLeafSession(

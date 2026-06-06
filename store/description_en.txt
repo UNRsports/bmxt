@@ -30,6 +30,12 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.4.5:
+- Cleaned up npm dependencies
+- Renamed find to search (mode) with enhancements — subdivide results and jump directly to each element
+- Tab picker: expand/collapse window and tab group tree rows
+- Added tabs -setting -page-active (--auto / --manual) to toggle automatic tab activation on highlight
+
 0.4.1:
 - Miscellaneous internal fixes
 - Fixed a bug affecting text input in nav mode
@@ -45,7 +51,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 - Show a welcome page on install and when the extension version is upgraded
 - Fixed tabs mode filtering so keyboard focus no longer jumps to the list unexpectedly
 - Revised mouse interaction: text in the prompt and log can be selected while keeping keyboard-first operation as the default
-- Improved in-browser cross-search (`find`)
+- Improved in-browser cross-search (`search`)
 - Improved Tab completion menu behavior
 
 0.3.5:
@@ -59,7 +65,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 0.2.1:
 - Added the `dom` command so you can inspect the page source.
-- Added the `find` command to search across internal data such as history, bookmarks, and open tabs.
+- Added the `search` command to search across internal data such as history, bookmarks, and open tabs.
 
 0.1.1:
 - Added the split command; add panes with split and remove them with exit (closes the window when the last pane exits)
@@ -84,17 +90,15 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `tabs -list [-u]` | Open the tab picker; supports search, multi-select marker `#`, and bulk modes; `/` searches tab titles, Enter highlights matches, `n` jumps between them |
 | `tabs -moveurl <url>` | Focus a tab with the given URL or open a new tab (http/https) |
 | `tabs -nowurl` | Show the current tab’s URL |
+| `tabs -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved setting |
 | `dom` | Print available options; Enter alone restores the prompt to `dom ` (trailing space) for the next token |
-| `dom -list [--html|--react] [<pattern>]` | Open a read-only DOM picker for the active tab (same picker chrome as `find -list`); flavor `--html` (default) or `--react`; optional `<pattern>` filters rendered lines with a case-insensitive substring (not a regex). ↑/↓ focus scrolls the target tab to the highlighted element. Scriptable http(s) pages only; may prompt for optional site access |
+| `dom -list [--html|--react] [<pattern>]` | Open a read-only DOM picker for the active tab (same picker chrome as `search -list`); flavor `--html` (default) or `--react`; optional `<pattern>` filters rendered lines with a case-insensitive substring (not a regex). ↑/↓ focus scrolls the target tab to the highlighted element. Scriptable http(s) pages only; may prompt for optional site access |
 | `nav` | Print usage; Enter alone restores the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, reload, history) |
 | `nav -exit` | Fully disarm nav (turn the overlay **OFF** with **Alt** first) |
-| `find` | Print available options; Enter alone restores the prompt to `find ` for a subcommand or flag |
-| `find -list [--none|--history|--bookmark|--page] <pattern>` | Open a cross-search picker; default `--none` searches browsing history, bookmarks, and visible text in non-discarded http(s) tabs together; use one flag to limit scope. Case-insensitive substring match (no regex in v1) |
-| `find --none <pattern>` | Search all three scopes in one go (log output; empty pattern returns capped “all” style hits) |
-| `find --history <pattern>` | Search recent history titles/URLs only |
-| `find --bookmark <pattern>` | Search bookmark titles/URLs only |
-| `find --page <pattern>` | Search visible text in loaded http(s) tabs; may prompt for optional site access at runtime |
+| `search` | Print available options; Enter alone restores the prompt to `search ` for `-list` |
+| `search -list --history|--bookmark|--page [<pattern>]` | Open a search picker for one scope; scan progress appears inside the picker and hides when results arrive. **→** opens a detail list of hits per row; **Enter** on a detail row jumps to that match in the page (http(s)). Case-insensitive substring match (no regex in v1) |
+| `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
 | `close` / `c <tabId>` | Close a tab |
 | `group new <tabId> …` | Create a group |
 | `notes` | Show release notes for the current extension version; `notes <version>` for a specific version (e.g. `0.1.1`); `notes --list` lists versions that have entries |

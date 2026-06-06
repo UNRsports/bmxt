@@ -1,5 +1,6 @@
 export {
-  FIND_LIST_PICKER_HEADLINE,
+  SEARCH_LIST_PICKER_HEADLINE,
+  SEARCH_LIST_PICKER_LOADING_HEADLINE,
   DOM_LIST_PICKER_HEADLINE
 } from "./interaction/picker-headlines"
 export {
@@ -98,6 +99,6 @@ export type { TabPickerState } from "./session/tab-picker-state"
 export { pickerEntryFromTabRow, pickerEntryAtVisibleHi } from "./model/from-tab-row"
 export { executePickerFocusPlan, type PickerFocusPlan } from "./model/focus-picker-entry"
 export { type PickerEntry, type PickerSource, entryDisplayLine } from "./model/picker-entry"
-export { pickerEntriesFromFindLines } from "./model/from-find-lines"
+export { pickerEntriesFromSearchLines } from "./model/from-search-lines"
 export { normalizePickerOpenUrl } from "./model/normalize-picker-open-url"
 export { openEntryEffects, type OpenUrlMode } from "./model/open-entry"

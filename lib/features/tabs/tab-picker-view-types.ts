@@ -21,6 +21,8 @@ export type TabPickerViewProps = {
   activeTabId: number | null
   showUrl: boolean
   setRowRef: (rowIndex: number, el: HTMLDivElement | null) => void
+  isWindowExpanded: (windowId: number) => boolean
+  isGroupExpanded: (windowId: number, groupId: number | null) => boolean
   variant: "default" | "groupNew"
   groupNewPhase: "tabs" | "meta"
   groupPanelRef: RefObject<HTMLDivElement | null>

@@ -13,6 +13,7 @@ import {
 import { BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
 import { paneStripAtHorizontalEdge } from "../side-picker/panel/pane-focus-nav"
+import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { SplitNode } from "./split-layout/types"
 import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
 import { appendLinesToSession } from "./terminal-sessions/state-storage"
@@ -26,6 +27,7 @@ import { CSP_DYNAMIC_SCOPE_ATTR, useCspDynamicStyle } from "./csp-dynamic-styles
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react"
 
 import { useCommandHistory } from "./use-command-history"
+import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 
@@ -55,6 +57,8 @@ type SplitTreeProps = {
     slot: K,
     value: SessionPickerState[K]
   ) => void
+  paneFocusByLeaf: Record<string, PaneFocusTarget>
+  setPaneFocusForLeaf: (sessionId: string, target: PaneFocusTarget) => void
   refreshTabPickerRows: () => Promise<void>
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
@@ -69,6 +73,8 @@ function SplitLeafView({
   completionCandidates,
   pickersBySession,
   setSessionPickerSlot,
+  paneFocusByLeaf,
+  setPaneFocusForLeaf,
   refreshTabPickerRows,
   postUpgradeBanner,
   appendCommandToHistory
@@ -77,7 +83,7 @@ function SplitLeafView({
   const sessionPickers = sessionPickersOrEmpty(pickersBySession, node.id)
   const hasColumnPickers =
     sessionPickers.tabs !== null ||
-    sessionPickers.find !== null ||
+    sessionPickers.search !== null ||
     sessionPickers.dom !== null
   const leafHasKeyboardFocus = focusedLeafId === node.id
   return (
@@ -104,6 +110,8 @@ function SplitLeafView({
         setSessionPickerSlot={setSessionPickerSlot}
         refreshTabPickerRows={refreshTabPickerRows}
         postUpgradeBanner={postUpgradeBanner}
+        paneFocus={paneFocusByLeaf[node.id] ?? "terminal"}
+        onPaneFocusChange={(target) => setPaneFocusForLeaf(node.id, target)}
       />
     </div>
   )
@@ -118,6 +126,8 @@ function SplitBranchView({
   completionCandidates,
   pickersBySession,
   setSessionPickerSlot,
+  paneFocusByLeaf,
+  setPaneFocusForLeaf,
   refreshTabPickerRows,
   postUpgradeBanner,
   appendCommandToHistory
@@ -142,6 +152,8 @@ function SplitBranchView({
           completionCandidates={completionCandidates}
           pickersBySession={pickersBySession}
           setSessionPickerSlot={setSessionPickerSlot}
+          paneFocusByLeaf={paneFocusByLeaf}
+          setPaneFocusForLeaf={setPaneFocusForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
@@ -157,6 +169,8 @@ function SplitBranchView({
           completionCandidates={completionCandidates}
           pickersBySession={pickersBySession}
           setSessionPickerSlot={setSessionPickerSlot}
+          paneFocusByLeaf={paneFocusByLeaf}
+          setPaneFocusForLeaf={setPaneFocusForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}
@@ -179,19 +193,24 @@ export function BmxtTerminal() {
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
-  const [pickersBySession, setPickersBySession] = useState<SessionPickersByLeaf>({})
+
+  const validLeafIds = useMemo(
+    () => (state ? listLeafIds(state.layout.root) : []),
+    [state?.layout.root]
+  )
+
+  const {
+    pickersBySession,
+    setPickersBySession,
+    paneFocusByLeaf,
+    setPaneFocusForLeaf,
+    processUiReady
+  } = useProcessUiPersistence(validLeafIds, state !== null)
+
   const pickersBySessionRef = useRef(pickersBySession)
   pickersBySessionRef.current = pickersBySession
 
   const rootRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const order = state ? listLeafIds(state.layout.root) : null
-    if (!order) {
-      return
-    }
-    setPickersBySession((prev) => pruneSessionPickersMap(prev, order))
-  }, [state?.layout.root])
 
   useEffect(() => {
     void (async () => {
@@ -225,7 +244,8 @@ export function BmxtTerminal() {
           rows,
           showUrl: prev.showUrl,
           initialHi: prev.initialHi,
-          variant: prev.variant
+          variant: prev.variant,
+          interactive: prev.interactive
         }
       } catch {
         /* keep previous */
@@ -295,7 +315,7 @@ export function BmxtTerminal() {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setFocusedLeaf])
 
-  if (state === null || !upgradeBannerReady) {
+  if (state === null || !upgradeBannerReady || !processUiReady) {
     return <div className="bmxt-root bmxt-root--terminal-placeholder" />
   }
 
@@ -311,6 +331,8 @@ export function BmxtTerminal() {
           completionCandidates={completionCandidates}
           pickersBySession={pickersBySession}
           setSessionPickerSlot={setSessionPickerSlot}
+          paneFocusByLeaf={paneFocusByLeaf}
+          setPaneFocusForLeaf={setPaneFocusForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
           postUpgradeBanner={postUpgradeBanner}
           appendCommandToHistory={appendCommandToHistory}

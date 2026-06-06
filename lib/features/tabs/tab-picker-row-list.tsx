@@ -34,6 +34,8 @@ export type TabPickerRowListProps = {
   /** `/` 入力中または確定後の検索語（`@` で URL 側のみハイライト） */
   searchHighlightQuery: string
   setRowRef: (rowIndex: number, el: HTMLDivElement | null) => void
+  isWindowExpanded: (windowId: number) => boolean
+  isGroupExpanded: (windowId: number, groupId: number | null) => boolean
 }
 
 export function TabPickerRowList({
@@ -48,7 +50,9 @@ export function TabPickerRowList({
   activeTabId,
   showUrl,
   searchHighlightQuery,
-  setRowRef
+  setRowRef,
+  isWindowExpanded,
+  isGroupExpanded
 }: TabPickerRowListProps) {
   if (rows.length === 0) {
     return <div className="bmxt-tab-picker-empty">(タブなし)</div>
@@ -70,16 +74,20 @@ export function TabPickerRowList({
         const { byUrl, needle } = parsePickerSearchNeedle(searchHighlightQuery)
         if (row.kind === "window") {
           const markedRow = markedWindowSet.has(row.windowId)
+          const expanded = isWindowExpanded(row.windowId)
           return (
             <div
               key={i}
               id={`bmxt-tab-row-${i}`}
               ref={(el) => setRowRef(i, el)}
               className={`bmxt-tab-picker-row bmxt-tab-picker-row--window${
-                hiRow ? " bmxt-tab-picker-row--hi" : ""
-              }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
-                moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
-              }`}>
+                expanded ? "" : " bmxt-tab-picker-row--folded"
+              }${hiRow ? " bmxt-tab-picker-row--hi" : ""}${
+                markedRow ? " bmxt-tab-picker-row--marked" : ""
+              }${moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""}`}>
+              <span className="bmxt-tab-picker-fold-glyph" aria-hidden>
+                {expanded ? "▼" : "▶"}
+              </span>
               <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
               {byUrl ? row.label : renderHighlighted(row.label, needle, `w-${i}`)}
             </div>
@@ -87,16 +95,20 @@ export function TabPickerRowList({
         }
         if (row.kind === "group") {
           const markedRow = markedGroupSet.has(groupRowKey(row.windowId, row.groupId))
+          const expanded = isGroupExpanded(row.windowId, row.groupId)
           return (
             <div
               key={i}
               id={`bmxt-tab-row-${i}`}
               ref={(el) => setRowRef(i, el)}
               className={`bmxt-tab-picker-row bmxt-tab-picker-row--group${
-                hiRow ? " bmxt-tab-picker-row--hi" : ""
-              }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
-                moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
-              }`}>
+                expanded ? "" : " bmxt-tab-picker-row--folded"
+              }${hiRow ? " bmxt-tab-picker-row--hi" : ""}${
+                markedRow ? " bmxt-tab-picker-row--marked" : ""
+              }${moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""}`}>
+              <span className="bmxt-tab-picker-fold-glyph" aria-hidden>
+                {expanded ? "▼" : "▶"}
+              </span>
               <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
               {byUrl ? row.label : renderHighlighted(row.label, needle, `g-${i}`)}
             </div>

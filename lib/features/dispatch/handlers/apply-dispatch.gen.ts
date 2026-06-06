@@ -9,14 +9,14 @@ import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseTabEffect } from "./effects/close-tab"
 import { applyDomListEffect } from "./effects/dom-list"
 import { applyExitPaneEffect } from "./effects/exit-pane"
-import { applyFindBookmarkEffect } from "./effects/find-bookmark"
-import { applyFindHistoryEffect } from "./effects/find-history"
-import { applyFindPageEffect } from "./effects/find-page"
 import { applyGroupNewEffect } from "./effects/group-new"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
 import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
+import { applySearchBookmarkEffect } from "./effects/search-bookmark"
+import { applySearchHistoryEffect } from "./effects/search-history"
+import { applySearchPageEffect } from "./effects/search-page"
 import { applySplitColEffect } from "./effects/split-col"
 import { applySplitRowEffect } from "./effects/split-row"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
@@ -35,12 +35,6 @@ export async function applyOne(
       return applyDomListEffect(ctx, e)
     case "exit_pane":
       return applyExitPaneEffect(ctx, e)
-    case "find_bookmark":
-      return applyFindBookmarkEffect(ctx, e)
-    case "find_history":
-      return applyFindHistoryEffect(ctx, e)
-    case "find_page":
-      return applyFindPageEffect(ctx, e)
     case "group_new":
       return applyGroupNewEffect(ctx, e)
     case "navigate_current_tab":
@@ -51,6 +45,12 @@ export async function applyOne(
       return applyOpenUrlNewWindowEffect(ctx, e)
     case "open_welcome_page":
       return applyOpenWelcomePageEffect(ctx, e)
+    case "search_bookmark":
+      return applySearchBookmarkEffect(ctx, e)
+    case "search_history":
+      return applySearchHistoryEffect(ctx, e)
+    case "search_page":
+      return applySearchPageEffect(ctx, e)
     case "split_col":
       return applySplitColEffect(ctx, e)
     case "split_row":

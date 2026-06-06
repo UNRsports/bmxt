@@ -4,17 +4,23 @@ import { resolveImeTokenPicker } from "../command-line/ime-token-picker"
 import {
   buildTabPickerRows,
   listTabsMoveUrlCandidates,
+  loadTabsPickerSettings,
   parseGroupNewInteractiveLine,
   parseTabsExitListLine,
   parseTabsListPickerLine,
+  parseTabsSettingCommandLine,
   resolveInitialTabPickerHighlightIndex,
+  saveTabsPageActiveMode,
+  settingTokenForPageActiveMode,
+  TABS_PAGE_ACTIVE_MODE_TOKENS,
   tabsMoveUrlCompletionZone,
-  type TabPickerRow
+  type TabPickerRow,
+  type TabsPageActiveMode
 } from "../tabs"
-import { openFindPickerEntry } from "../find/open-find-picker-entry"
+import { openSearchPickerEntry } from "../search/open-search-picker-entry"
 import {
   openPickerSlots,
-  pickerEntriesFromFindLines,
+  pickerEntriesFromSearchLines,
   SessionPickerColumns,
   type PickerEntry,
   type PickerSlotId,
@@ -30,14 +36,17 @@ import {
 } from "../side-picker/panel/pane-focus-nav"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
-  FIND_LIST_PATTERN_PLACEHOLDER,
-  isFindListAwaitingScope,
-  isFindListReadyToRun,
-  parseFindExitListLine,
-  parseFindListPickerLine,
-  shouldShowFindListPatternPlaceholder,
-  type FindListPickerState
-} from "../find/find-list-picker-input"
+  SEARCH_LIST_PATTERN_PLACEHOLDER,
+  isSearchListContinuationPrompt,
+  isSearchListReadyToRun,
+  parseSearchExitListLine,
+  parseSearchListPickerLine,
+  searchListPatternFromLine,
+  shouldShowSearchListPatternPlaceholder,
+  type SearchListPickerState
+} from "../search/search-list-picker-input"
+import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs"
+import { normalizeSearchPattern } from "../search/search-format"
 import {
   isRetryableDomListOutput,
   parseDomExitListLine,
@@ -86,7 +95,7 @@ import {
   type TranslationBlock,
   type TranslationPairId
 } from "../translate"
-import { parseFindDirectDispatchLine } from "../find/find-direct-dispatch"
+import { searchPageProgressLabel } from "../search/sources/page-progress"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch } from "./text-utils"
@@ -95,7 +104,6 @@ import {
   type DispatchChromeContext
 } from "../dispatch"
 import type { ChromeEffect } from "../dispatch/effect-types"
-import { findPageProgressLabel } from "../find-sources/page-progress"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -117,18 +125,16 @@ import {
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
-import type { TabPickerState } from "../side-picker/session/tab-picker-state"
+import type { TabPickerState, TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 
-/** EN: Delay before showing find -list progress spinner (avoid flash on fast runs). */
-const FIND_LIST_SPINNER_DELAY_MS = 450
-
-const FIND_PAGE_SCAN_HINT_LINES = [
+/** EN: Hint lines shown in the search picker while `--page` scan runs. */
+const SEARCH_PAGE_SCAN_HINT_LINES = [
   "EN: Page scan may take a while when many tabs are open. Ctrl+C cancels.",
   "JA: タブが多いと時間がかかります。Ctrl+C で中断できます。"
 ] as const
 
-function effectsIncludeFindPage(effects: ChromeEffect[]): boolean {
-  return effects.some((e) => e.kind === "find_page")
+function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
+  return effects.some((e) => e.kind === "search_page")
 }
 
 function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
@@ -138,7 +144,7 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
     parseNavExitLine(trimmed) ||
     parseTabsListPickerLine(trimmed) !== null ||
     parseTabsExitListLine(trimmed) ||
-    parseFindExitListLine(trimmed) ||
+    parseSearchExitListLine(trimmed) ||
     parseDomExitListLine(trimmed) ||
     parseGroupNewInteractiveLine(trimmed)
   )
@@ -164,6 +170,8 @@ type Props = {
   refreshTabPickerRows: () => Promise<void>
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
+  paneFocus: PaneFocusTarget
+  onPaneFocusChange: (target: PaneFocusTarget) => void
 }
 
 export function BmxtShell({
@@ -177,10 +185,12 @@ export function BmxtShell({
   sessionPickers,
   setSessionPickerSlot,
   refreshTabPickerRows,
-  postUpgradeBanner
+  postUpgradeBanner,
+  paneFocus,
+  onPaneFocusChange
 }: Props) {
   const tabPicker = sessionPickers.tabs
-  const findListPicker = sessionPickers.find
+  const searchListPicker = sessionPickers.search
   const domListPicker = sessionPickers.dom
   const setTabPicker = useCallback(
     (forSessionId: string, v: TabPickerState | null) => {
@@ -188,9 +198,9 @@ export function BmxtShell({
     },
     [setSessionPickerSlot]
   )
-  const setFindListPicker = useCallback(
-    (forSessionId: string, v: FindListPickerState | null) => {
-      setSessionPickerSlot(forSessionId, "find", v)
+  const setSearchListPicker = useCallback(
+    (forSessionId: string, v: SearchListPickerState | null) => {
+      setSessionPickerSlot(forSessionId, "search", v)
     },
     [setSessionPickerSlot]
   )
@@ -200,11 +210,10 @@ export function BmxtShell({
     },
     [setSessionPickerSlot]
   )
-  /** tabs / find / dom — 左ターミナル・右にピッカー列（複数可）。 */
+  /** tabs / search / dom — 左ターミナル・右にピッカー列（複数可）。 */
   const sidePickerOpen =
-    tabPicker !== null || findListPicker !== null || domListPicker !== null
-  const [paneFocus, setPaneFocus] = useState<PaneFocusTarget>("terminal")
-  const paneFocusRef = useRef<PaneFocusTarget>("terminal")
+    tabPicker !== null || searchListPicker !== null || domListPicker !== null
+  const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
   const openPickersRef = useRef<readonly PickerSlotId[]>([])
   const paneStripActionsRef = useRef<PaneStripActions>({
@@ -213,7 +222,7 @@ export function BmxtShell({
     focusPicker: () => {}
   })
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const findPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const openPickers = useMemo(
@@ -222,7 +231,7 @@ export function BmxtShell({
   )
 
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
-  const findPickerKeyboardActive = paneFocus === "find" && isFocusedPane
+  const searchPickerKeyboardActive = paneFocus === "search" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
 
   useEffect(() => {
@@ -234,32 +243,32 @@ export function BmxtShell({
 
   useEffect(() => {
     if (paneFocus === "tabs" && tabPicker === null) {
-      setPaneFocus("terminal")
-    } else if (paneFocus === "find" && findListPicker === null) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
+    } else if (paneFocus === "search" && searchListPicker === null) {
+      onPaneFocusChange("terminal")
     } else if (paneFocus === "dom" && domListPicker === null) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
     }
-  }, [paneFocus, tabPicker, findListPicker, domListPicker])
+  }, [paneFocus, tabPicker, searchListPicker, domListPicker, onPaneFocusChange])
 
   useEffect(() => {
     if (!sidePickerOpen) {
-      setPaneFocus("terminal")
+      onPaneFocusChange("terminal")
     }
-  }, [sidePickerOpen])
+  }, [onPaneFocusChange, sidePickerOpen])
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
   }, [tabPicker])
-  const findListPickerRef = useRef<FindListPickerState | null>(null)
+  const searchListPickerRef = useRef<SearchListPickerState | null>(null)
   useEffect(() => {
-    findListPickerRef.current = findListPicker
-  }, [findListPicker])
+    searchListPickerRef.current = searchListPicker
+  }, [searchListPicker])
   const domListPickerRef = useRef<DomListPickerState | null>(null)
   useEffect(() => {
     domListPickerRef.current = domListPicker
   }, [domListPicker])
-  const findListDismissRef = useRef(false)
+  const searchListDismissRef = useRef(false)
   const domListDismissRef = useRef(false)
   const tabsPickerFocusTabIdRef = useRef<number | null>(null)
   const tabPickerOpenRef = useRef(false)
@@ -287,6 +296,8 @@ export function BmxtShell({
   const translateEnabledRef = useRef(false)
   const translatePairIdRef = useRef<TranslationPairId>(DEFAULT_TRANSLATION_PAIR_ID)
   const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
+  const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
+  const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -400,7 +411,15 @@ export function BmxtShell({
         setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
       }
     })
+    void loadTabsPickerSettings().then((s) => {
+      setTabsPageActiveMode(s.pageActive)
+      tabsPageActiveModeRef.current = s.pageActive
+    })
   }, [])
+
+  useEffect(() => {
+    tabsPageActiveModeRef.current = tabsPageActiveMode
+  }, [tabsPageActiveMode])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
@@ -438,10 +457,8 @@ export function BmxtShell({
   const allowEmptyFirstPickerSyncRef = useRef(false)
   /** EN: Esc closed the token menu — suppress until Tab or typing; not history ↑↓. */
   const imeTokenPickerDismissedRef = useRef(false)
-  const findListBusyRef = useRef(false)
-  const findListSpinnerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [findListBusy, setFindListBusy] = useState(false)
-  const [findListShowSpinner, setFindListShowSpinner] = useState(false)
+  const searchListBusyRef = useRef(false)
+  const [searchListBusy, setSearchListBusy] = useState(false)
 
   useEffect(() => {
     setLocalCompletion(completionCandidates)
@@ -513,7 +530,7 @@ export function BmxtShell({
         allowEmptyFirstPickerSyncRef.current = false
         return
       }
-      if (mode === "isearch" || findListBusyRef.current) {
+      if (mode === "isearch" || searchListBusyRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
         return
@@ -725,8 +742,8 @@ export function BmxtShell({
     switch (slot) {
       case "tabs":
         return tabPickerInputRef
-      case "find":
-        return findPickerInputRef
+      case "search":
+        return searchPickerInputRef
       case "dom":
         return domPickerInputRef
     }
@@ -734,30 +751,30 @@ export function BmxtShell({
 
   const activatePaneFocus = useCallback(
     (target: PaneFocusTarget) => {
-      setPaneFocus(target)
+      onPaneFocusChange(target)
       if (target === "terminal") {
         focusPrompt()
       } else {
         pickerInputRefForSlot(target).current?.focus()
       }
     },
-    [focusPrompt, pickerInputRefForSlot]
+    [focusPrompt, onPaneFocusChange, pickerInputRefForSlot]
   )
 
   /** EN: When a picker column newly appears, move pane focus + blue border to match keyboard target. */
   const prevSidePickersOpenRef = useRef({
     tabs: false,
-    find: false,
+    search: false,
     dom: false
   })
   useLayoutEffect(() => {
     const nowTabs = tabPicker !== null
-    const nowFind = findListPicker !== null
+    const nowSearch = searchListPicker !== null
     const nowDom = domListPicker !== null
     const prev = prevSidePickersOpenRef.current
     prevSidePickersOpenRef.current = {
       tabs: nowTabs,
-      find: nowFind,
+      search: nowSearch,
       dom: nowDom
     }
 
@@ -768,8 +785,8 @@ export function BmxtShell({
     let opened: PickerSlotId | null = null
     if (!prev.dom && nowDom) {
       opened = "dom"
-    } else if (!prev.find && nowFind) {
-      opened = "find"
+    } else if (!prev.search && nowSearch) {
+      opened = "search"
     } else if (!prev.tabs && nowTabs) {
       opened = "tabs"
     }
@@ -777,11 +794,11 @@ export function BmxtShell({
       return
     }
 
-    setPaneFocus(opened)
+    onPaneFocusChange(opened)
     requestAnimationFrame(() => {
       pickerInputRefForSlot(opened).current?.focus()
     })
-  }, [tabPicker, findListPicker, domListPicker, isFocusedPane, pickerInputRefForSlot])
+  }, [tabPicker, searchListPicker, domListPicker, isFocusedPane, onPaneFocusChange, pickerInputRefForSlot])
 
   useEffect(() => {
     paneStripActionsRef.current = {
@@ -945,50 +962,77 @@ export function BmxtShell({
     [queueDomListFollowRefresh]
   )
 
+  const onTabPickerInteractiveChange = useCallback(
+    (snapshot: TabPickerInteractiveSnapshot) => {
+      const cur = tabPickerRef.current
+      if (!cur) {
+        return
+      }
+      setTabPicker(sessionId, { ...cur, interactive: snapshot })
+    },
+    [sessionId, setTabPicker]
+  )
+
   const promptLine = useCallback(
     () => imeRef.current?.value ?? lineRef.current,
     []
   )
 
-  const showFindListPatternPlaceholder = useMemo(
+  const showSearchListPatternPlaceholder = useMemo(
     () =>
-      !findListBusy &&
-      !findListShowSpinner &&
-      shouldShowFindListPatternPlaceholder(line, cursorPos),
-    [line, cursorPos, findListBusy, findListShowSpinner]
+      !searchListBusy && shouldShowSearchListPatternPlaceholder(line, cursorPos),
+    [line, cursorPos, searchListBusy]
   )
 
-  const runFindListSearch = useCallback(
-    async (displayLine: string, findListLine: string) => {
-      if (findListBusyRef.current) {
+  const appendSearchPickerProgress = useCallback(
+    (message: string) => {
+      const prev = searchListPickerRef.current
+      if (!prev || prev.phase !== "loading") {
         return
       }
-      findListDismissRef.current = false
-      findListBusyRef.current = true
-      setFindListBusy(true)
-      setSubCmdPicker(null)
-      setFindListShowSpinner(false)
-      if (findListSpinnerTimerRef.current !== null) {
-        clearTimeout(findListSpinnerTimerRef.current)
+      setSearchListPicker(sessionId, {
+        ...prev,
+        progressLines: [...prev.progressLines, message]
+      })
+    },
+    [sessionId, setSearchListPicker]
+  )
+
+  const runSearchListSearch = useCallback(
+    async (displayLine: string, searchListLine: string) => {
+      if (searchListBusyRef.current) {
+        return
       }
-      findListSpinnerTimerRef.current = setTimeout(() => {
-        setFindListShowSpinner(true)
-      }, FIND_LIST_SPINNER_DELAY_MS)
+      searchListDismissRef.current = false
+      searchListBusyRef.current = true
+      setSearchListBusy(true)
+      setSubCmdPicker(null)
+
+      const progressLabel = searchPageProgressLabel(searchListLine)
+      const initialProgress = [`${progressLabel} — searching…`]
+      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(searchListLine))
+
+      setSearchListPicker(sessionId, {
+        phase: "loading",
+        progressLines: initialProgress,
+        entries: [],
+        pattern: searchPattern
+      })
 
       try {
         await ensureBmxtCore()
-        const bundle = runDispatch(findListLine)
+        await appendLogLines([`> ${displayLine}`])
+        const bundle = runDispatch(searchListLine)
         if (bundle.ty === "lines") {
-          await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
+          setSearchListPicker(sessionId, null)
+          await appendLogLines(bundle.lines ?? [])
           return
         }
-        await appendLogLines([
-          `> ${displayLine}`,
-          "find -list — searching (history · bookmarks · pages)…"
-        ])
         const effects = bundle.effects ?? []
-        if (effectsIncludeFindPage(effects)) {
-          await appendLogLines([...FIND_PAGE_SCAN_HINT_LINES])
+        if (effectsIncludeSearchPage(effects)) {
+          for (const hint of SEARCH_PAGE_SCAN_HINT_LINES) {
+            appendSearchPickerProgress(hint)
+          }
         }
         const ctx: DispatchChromeContext = {
           clearLog: async () => {},
@@ -997,127 +1041,59 @@ export function BmxtShell({
           focusInfo: async () => [],
           resolveTabArg: async () => undefined,
           commandSessionId: sessionId,
-          findPageProgressLabel: findPageProgressLabel(findListLine),
-          onFindPageProgress: async (message) => {
-            await appendLogLines([message])
+          searchPageProgressLabel: progressLabel,
+          onSearchPageProgress: async (message) => {
+            appendSearchPickerProgress(message)
           },
-          shouldCancelFindPage: () => findListDismissRef.current
+          shouldCancelSearchPage: () => searchListDismissRef.current
         }
         const linesOut = await applyChromeEffects(ctx, effects)
-        if (findListDismissRef.current) {
-          findListDismissRef.current = false
+        if (searchListDismissRef.current) {
+          searchListDismissRef.current = false
+          setSearchListPicker(sessionId, null)
           if (linesOut.length > 0) {
             await appendLogLines(linesOut)
           }
           return
         }
-        await appendLogLines(["find -list — picker (Esc → prompt)"])
-        setFindListPicker(sessionId, { entries: pickerEntriesFromFindLines(linesOut) })
+        const parsed = pickerEntriesFromSearchLines(linesOut)
+        const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
+        const emptyResultLines =
+          entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
+        setSearchListPicker(sessionId, {
+          phase: "results",
+          progressLines: [],
+          entries,
+          pattern: searchPattern,
+          emptyResultLines
+        })
       } catch (e) {
+        setSearchListPicker(sessionId, null)
         await appendLogLines([
-          `> ${displayLine}`,
           `error: ${e instanceof Error ? e.message : String(e)}`
         ])
       } finally {
-        if (findListSpinnerTimerRef.current !== null) {
-          clearTimeout(findListSpinnerTimerRef.current)
-          findListSpinnerTimerRef.current = null
-        }
-        findListBusyRef.current = false
-        setFindListBusy(false)
-        setFindListShowSpinner(false)
+        searchListBusyRef.current = false
+        setSearchListBusy(false)
       }
     },
-    [appendLogLines, sessionId, setFindListPicker]
+    [appendLogLines, appendSearchPickerProgress, sessionId, setSearchListPicker]
   )
 
-  const runFindDirectDispatch = useCallback(
-    async (displayLine: string, dispatchLine: string) => {
-      if (findListBusyRef.current) {
-        return
-      }
-      let pageScanBusy = false
-      const startPageScanBusy = () => {
-        findListDismissRef.current = false
-        findListBusyRef.current = true
-        setFindListBusy(true)
-        setFindListShowSpinner(false)
-        if (findListSpinnerTimerRef.current !== null) {
-          clearTimeout(findListSpinnerTimerRef.current)
-        }
-        findListSpinnerTimerRef.current = setTimeout(() => {
-          setFindListShowSpinner(true)
-        }, FIND_LIST_SPINNER_DELAY_MS)
-        pageScanBusy = true
-      }
-      const stopPageScanBusy = () => {
-        if (!pageScanBusy) {
-          return
-        }
-        if (findListSpinnerTimerRef.current !== null) {
-          clearTimeout(findListSpinnerTimerRef.current)
-          findListSpinnerTimerRef.current = null
-        }
-        findListBusyRef.current = false
-        setFindListBusy(false)
-        setFindListShowSpinner(false)
-        pageScanBusy = false
-      }
-      try {
-        await ensureBmxtCore()
-        await appendLogLines([`> ${displayLine}`])
-        const bundle = runDispatch(dispatchLine)
-        if (bundle.ty === "lines") {
-          const lines = bundle.lines ?? []
-          if (lines.length > 0) {
-            await appendLogLines(lines)
-          }
-          return
-        }
-        const effects = bundle.effects ?? []
-        if (effectsIncludeFindPage(effects)) {
-          startPageScanBusy()
-          await appendLogLines([...FIND_PAGE_SCAN_HINT_LINES])
-        }
-        const ctx: DispatchChromeContext = {
-          clearLog: async () => {},
-          exitPane: async () => [],
-          listWindows: async () => [],
-          focusInfo: async () => [],
-          resolveTabArg: async () => undefined,
-          commandSessionId: sessionId,
-          findPageProgressLabel: findPageProgressLabel(dispatchLine),
-          onFindPageProgress: async (message) => {
-            await appendLogLines([message])
-          },
-          shouldCancelFindPage: () => findListDismissRef.current
-        }
-        const linesOut = await applyChromeEffects(ctx, effects)
-        if (linesOut.length > 0) {
-          await appendLogLines(linesOut)
-        }
-      } catch (e) {
-        await appendLogLines([`error: ${e instanceof Error ? e.message : String(e)}`])
-      } finally {
-        stopPageScanBusy()
-      }
-    },
-    [appendLogLines, sessionId]
-  )
-
-  const cancelFindPageScan = useCallback(() => {
-    if (!findListBusyRef.current || findListDismissRef.current) {
+  const cancelSearchPageScan = useCallback(() => {
+    if (!searchListBusyRef.current || searchListDismissRef.current) {
       return
     }
-    findListDismissRef.current = true
+    searchListDismissRef.current = true
     void appendLogLines([
-      "find — cancelled (Ctrl+C)",
+      "search — cancelled (Ctrl+C)",
       "JA: ページ走査を中断しました。"
     ])
   }, [appendLogLines])
 
-  const onOpenFindPickerEntry = useCallback(
+  const onOpenSearchPickerEntry = useCallback(
     async (entry: PickerEntry, matchIndex: number) => {
+      const pattern = searchListPickerRef.current?.pattern ?? ""
       const ctx: DispatchChromeContext = {
         clearLog: async () => {},
         exitPane: async () => [],
@@ -1126,7 +1102,7 @@ export function BmxtShell({
         resolveTabArg: async () => undefined,
         commandSessionId: sessionId
       }
-      await openFindPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines))
+      await openSearchPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines), pattern)
     },
     [appendLogLines, sessionId]
   )
@@ -1146,8 +1122,68 @@ export function BmxtShell({
       focusPrompt()
       return
     }
-    const trimmed = promptLine().trim()
+    const rawLine = promptLine()
+    const trimmed = rawLine.trim()
     if (!trimmed) {
+      return
+    }
+
+    const tabsSettingCmd = parseTabsSettingCommandLine(trimmed)
+    if (tabsSettingCmd !== null) {
+      appendCommandToHistory(trimmed)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      if (tabsSettingCmd.kind === "incomplete") {
+        const cont = "tabs "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
+          "EN: `-setting -page-active` controls tab preview on highlight (`--auto` default, `--manual` needs Alt).",
+          "JA: `-setting -page-active` でハイライト時のタブアクティブ化を切替（`--auto` 既定、`--manual` は Alt）。"
+        ])
+        focusPrompt()
+        return
+      }
+      if (tabsSettingCmd.kind === "setting-incomplete") {
+        const cont = "tabs -setting "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          "tabs -setting: choose option — -page-active",
+          `current page-active: ${settingTokenForPageActiveMode(tabsPageActiveModeRef.current)}`
+        ])
+        focusPrompt()
+        return
+      }
+      if (tabsSettingCmd.kind === "page-active-incomplete") {
+        const cont = "tabs -setting -page-active "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
+        void appendLogLines([
+          `> ${trimmed}`,
+          `tabs -setting -page-active: choose mode — ${options}`,
+          `current: ${settingTokenForPageActiveMode(tabsPageActiveModeRef.current)}`
+        ])
+        focusPrompt()
+        return
+      }
+      setLine("")
+      setCursorPos(0)
+      lineRef.current = ""
+      void (async () => {
+        await saveTabsPageActiveMode(tabsSettingCmd.mode)
+        setTabsPageActiveMode(tabsSettingCmd.mode)
+        const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
+        await appendLogLines([`> ${trimmed}`, `tabs: page-active set to ${token}`])
+        focusPrompt()
+      })()
       return
     }
 
@@ -1163,11 +1199,13 @@ export function BmxtShell({
         try {
           const rows = await buildTabPickerRows(showUrl)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
+          const pageActiveToken = settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
           await appendLogLines([
             `> ${trimmed}`,
-            "Tab picker — ↑↓ move · Tab # · ←→ move/close/group/new win · / highlight · Ctrl+Shift+↑↓ active · Enter · Esc → prompt"
+            `Tab picker — page-active ${pageActiveToken} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt`
           ])
           setTabPicker(sessionId, { rows, showUrl, initialHi })
+          setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -1188,6 +1226,7 @@ export function BmxtShell({
         const logLines = [`> ${trimmed}`]
         if (tabPickerRef.current !== null) {
           setTabPicker(sessionId, null)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
           activatePaneFocus("terminal")
           logLines.push("Tab picker closed.")
         } else {
@@ -1199,7 +1238,7 @@ export function BmxtShell({
       return
     }
 
-    if (parseFindExitListLine(trimmed)) {
+    if (parseSearchExitListLine(trimmed)) {
       appendCommandToHistory(trimmed)
       setLine("")
       setCursorPos(0)
@@ -1207,25 +1246,20 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         const logLines = [`> ${trimmed}`]
-        const wasBusy = findListBusyRef.current
+        const wasBusy = searchListBusyRef.current
         if (wasBusy) {
-          findListDismissRef.current = true
-          findListBusyRef.current = false
-          setFindListBusy(false)
-          setFindListShowSpinner(false)
-          if (findListSpinnerTimerRef.current !== null) {
-            clearTimeout(findListSpinnerTimerRef.current)
-            findListSpinnerTimerRef.current = null
-          }
+          searchListDismissRef.current = true
+          searchListBusyRef.current = false
+          setSearchListBusy(false)
         }
-        if (findListPickerRef.current !== null) {
-          setFindListPicker(sessionId, null)
+        if (searchListPickerRef.current !== null) {
+          setSearchListPicker(sessionId, null)
           activatePaneFocus("terminal")
-          logLines.push("Find list picker closed.")
+          logLines.push("Search list picker closed.")
         } else if (wasBusy) {
-          logLines.push("Find list search cancelled.")
+          logLines.push("Search list search cancelled.")
         } else {
-          logLines.push("Find list picker is not open in this pane.")
+          logLines.push("Search list picker is not open in this pane.")
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1393,6 +1427,7 @@ export function BmxtShell({
             initialHi,
             variant: "groupNew"
           })
+          setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
@@ -1403,15 +1438,15 @@ export function BmxtShell({
       return
     }
 
-    const findListLine = parseFindListPickerLine(trimmed)
-    if (findListLine !== null) {
-      if (findListBusyRef.current) {
+    const searchListLine = parseSearchListPickerLine(trimmed)
+    if (searchListLine !== null) {
+      if (searchListBusyRef.current) {
         focusPrompt()
         return
       }
-      if (isFindListAwaitingScope(trimmed)) {
+      if (isSearchListContinuationPrompt(rawLine)) {
         appendCommandToHistory(trimmed)
-        const next = trimmed.endsWith(" ") ? trimmed : `${trimmed} `
+        const next = `${trimmed} `
         lineRef.current = next
         setLine(next)
         setCursorPos(next.length)
@@ -1421,7 +1456,7 @@ export function BmxtShell({
         focusPrompt()
         return
       }
-      if (!isFindListReadyToRun(trimmed)) {
+      if (!isSearchListReadyToRun(trimmed, rawLine)) {
         focusPrompt()
         return
       }
@@ -1431,7 +1466,7 @@ export function BmxtShell({
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       setSubCmdPicker(null)
-      void runFindListSearch(trimmed, findListLine)
+      void runSearchListSearch(trimmed, searchListLine)
       focusPrompt()
       return
     }
@@ -1445,23 +1480,6 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       setSubCmdPicker(null)
       void runDomListAndShow(domListLine, trimmed, /*announce*/ true)
-      focusPrompt()
-      return
-    }
-
-    const findDirectLine = parseFindDirectDispatchLine(trimmed)
-    if (findDirectLine !== null) {
-      if (findListBusyRef.current) {
-        focusPrompt()
-        return
-      }
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      setSubCmdPicker(null)
-      void runFindDirectDispatch(trimmed, findDirectLine)
       focusPrompt()
       return
     }
@@ -1510,10 +1528,9 @@ export function BmxtShell({
     sessionId,
     activatePaneFocus,
     setTabPicker,
-    setFindListPicker,
+    setSearchListPicker,
     runDomListAndShow,
-    runFindListSearch,
-    runFindDirectDispatch,
+    runSearchListSearch,
     syncImeTokenPicker,
     teardownNav
   ])
@@ -1531,11 +1548,20 @@ export function BmxtShell({
         return
       }
       const cur = lineRef.current
-      const addSpace = s.tokenEnd >= cur.length
-      const nextLine = addSpace
-        ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
-        : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
-      const nextPos = s.tokenStart + tok.length + (addSpace ? 1 : 0)
+      const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
+      let nextLine: string
+      let nextPos: number
+      if (appendAtEnd) {
+        const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
+        nextLine = `${cur}${sep}${tok} `
+        nextPos = nextLine.length
+      } else {
+        const addTrailing = s.tokenEnd >= cur.length
+        nextLine = addTrailing
+          ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
+          : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
+        nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
+      }
       lineRef.current = nextLine
       setLine(nextLine)
       setCursorPos(nextPos)
@@ -1840,14 +1866,14 @@ export function BmxtShell({
       }
 
       if (
-        findListBusyRef.current &&
+        searchListBusyRef.current &&
         e.ctrlKey &&
         !e.metaKey &&
         !e.altKey &&
         (e.key === "c" || e.key === "C")
       ) {
         e.preventDefault()
-        cancelFindPageScan()
+        cancelSearchPageScan()
         return
       }
 
@@ -1902,11 +1928,6 @@ export function BmxtShell({
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
           const trimmed = promptLine().trim()
-          if (isFindListReadyToRun(trimmed)) {
-            setSubCmdPicker(null)
-            submitLine()
-            return
-          }
           if (shouldAutoSubmitAfterTokenPick(trimmed)) {
             setSubCmdPicker(null)
             submitLine()
@@ -2027,7 +2048,7 @@ export function BmxtShell({
           })()
           return
         }
-        if (curLn.trim() === "" && !findListBusyRef.current) {
+        if (curLn.trim() === "" && !searchListBusyRef.current) {
           e.preventDefault()
           allowEmptyFirstPickerSyncRef.current = true
           syncImeTokenPicker(curLn, pos)
@@ -2112,7 +2133,7 @@ export function BmxtShell({
       dismissImeTokenPicker,
       promptLine,
       submitLine,
-      cancelFindPageScan,
+      cancelSearchPageScan,
       syncImeTokenPicker,
       tabPicker,
       sessionId,
@@ -2194,9 +2215,6 @@ export function BmxtShell({
         ) : null}
         <div
           className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}`}>
-          {findListShowSpinner ? (
-            <span className="bmxt-prompt-spinner" aria-label="Searching" role="status" />
-          ) : null}
           <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
           <div className="bmxt-prompt-field">
             <div className="bmxt-prompt-mirror" aria-hidden>
@@ -2228,17 +2246,14 @@ export function BmxtShell({
                   ? navTypingMultiline
                     ? NAV_TYPING_PLACEHOLDER_MULTILINE
                     : NAV_TYPING_PLACEHOLDER
-                  : showFindListPatternPlaceholder
-                    ? FIND_LIST_PATTERN_PLACEHOLDER
-                    : mode === "normal" &&
-                        line.trim() === "" &&
-                        !findListBusy &&
-                        !findListShowSpinner
+                  : showSearchListPatternPlaceholder
+                    ? SEARCH_LIST_PATTERN_PLACEHOLDER
+                    : mode === "normal" && line.trim() === "" && !searchListBusy
                       ? "type or use TAB key"
                       : undefined
               }
               value={navPromptValueControlled ? line : undefined}
-              readOnly={findListBusy}
+              readOnly={searchListBusy}
               onInput={onImeInput}
               onBeforeInput={onBeforeInput}
               onSelect={onImeSelect}
@@ -2248,7 +2263,7 @@ export function BmxtShell({
               onCompositionUpdate={onCompositionUpdate}
               onCompositionEnd={onCompositionEnd}
             />
-            {subCmdPicker && !findListBusy ? (
+            {subCmdPicker && !searchListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
@@ -2288,6 +2303,10 @@ export function BmxtShell({
             busy: navTranslateBusy,
             statusNote: navTranslateStatus
           }}
+          tabs={{
+            pickerOpen: tabPicker !== null,
+            pageActiveMode: tabsPageActiveMode
+          }}
         />
         <div className="bmxt-scroll-anchor" aria-hidden />
     </>
@@ -2312,17 +2331,19 @@ export function BmxtShell({
             paneFocus={paneFocus}
             activatePaneFocus={activatePaneFocus}
             tabPicker={tabPicker}
-            findListPicker={findListPicker}
+            searchListPicker={searchListPicker}
             domListPicker={domListPicker}
             tabsPickerKeyboardActive={tabsPickerKeyboardActive}
-            findPickerKeyboardActive={findPickerKeyboardActive}
+            searchPickerKeyboardActive={searchPickerKeyboardActive}
             domPickerKeyboardActive={domPickerKeyboardActive}
             tabPickerInputRef={tabPickerInputRef}
-            findPickerInputRef={findPickerInputRef}
+            searchPickerInputRef={searchPickerInputRef}
             domPickerInputRef={domPickerInputRef}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
-            onOpenFindEntry={(entry, matchIndex) => void onOpenFindPickerEntry(entry, matchIndex)}
+            onOpenSearchEntry={(entry, matchIndex) =>
+              void onOpenSearchPickerEntry(entry, matchIndex)
+            }
             onDomApprove={() => {
               if (domListPicker?.kind !== "prompt") {
                 return
@@ -2336,6 +2357,8 @@ export function BmxtShell({
               void runDomListAndShow(cl, cl, false)
             }}
             onTabsPickerFocusTabId={onTabsPickerFocusTabId}
+            onTabPickerInteractiveChange={onTabPickerInteractiveChange}
+            tabsPageActiveMode={tabsPageActiveMode}
           />
         </div>
       ) : (

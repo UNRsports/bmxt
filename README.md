@@ -12,8 +12,10 @@
 - [Key Specs](#key-specs)
   - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
   - [Reproducible builds](#reproducible-builds)
+  - [npm dependencies and security](#npm-dependencies)
 - [Command-line token model (first / second commands)](#command-line-token-model)
   - [Command List](#command-list)
+  - [BMXt process lifecycle (`clear` / window close / `exit`)](#bmxt-process-lifecycle)
   - [`aboutbmxt`](#aboutbmxt)
   - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
   - [`translate` (`translate -on` / `translate -off` / `translate -setting`)](#translate)
@@ -29,6 +31,7 @@
 - [Prompt Key Bindings](#prompt-key-bindings)
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
+  - [npm dependencies and security](#npm-dependencies)
   - [Main Sources](#main-sources)
   - [Version upgrade banner & release notes](#version-upgrade-banner)
 - [Production Build](#production-build)
@@ -117,7 +120,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ### Permissions (`manifest` in `package.json`)
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `find -page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
 **Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`npm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
@@ -128,7 +131,52 @@ The manifest sets **`content_security_policy.extension_pages`** with **`default-
 ### Reproducible builds
 
 
-Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply.
+Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**; do **not** use **`npm install`** in CI or when you want an exact tree) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply. See **[npm dependencies and security](#npm-dependencies)** for overrides, audit policy, and maintainer checks.
+
+<a id="npm-dependencies"></a>
+
+### npm dependencies and security
+
+
+**Direct dependencies** (see **`package.json`**) are **`plasmo@0.90.5`**, **`react@18.2.0`**, and **`react-dom@18.2.0`**. Almost all other packages are **transitive** (Plasmo pulls in Parcel, `@plasmohq/*`, and related tooling).
+
+**Install for reproducibility**
+
+| Command | When to use |
+|---------|-------------|
+| **`npm ci`** | **Default** after clone, in CI, and before release builds. Installs **exactly** what **`package-lock.json`** records. |
+| **`npm install`** | Only when you intentionally change **`package.json`** (new devDependency, **`overrides`**, etc.) and will commit the updated lockfile. |
+
+Recommended local flow after pulling lockfile changes:
+
+```bash
+rm -rf node_modules
+npm ci
+npm run build
+```
+
+**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). Do **not** add an **`engines`** field to **`package.json`**: with **Plasmo 0.90.5** it can break **`plasmo build`** (CSS/JSON asset resolution fails even though source files exist).
+
+**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=high`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used: it suggests downgrading **`plasmo`** and is unsafe.
+
+**`package.json` `overrides`** — used sparingly because Plasmo pins older transitive versions. Prefer **scoped** overrides (bump an `@plasmohq/*` patch that already declares fixed deps, or a **nested** override) over renaming arbitrary packages globally.
+
+Current overrides (also in **`package.json`**):
+
+| Override | Purpose |
+|----------|---------|
+| **`@plasmohq/parcel-transformer-manifest@0.21.1`** | Upstream patch declares **`content-security-policy-parser@0.6.0`**. |
+| **`@plasmohq/parcel-transformer-svelte@0.6.1`** | Upstream patch declares **`svelte@4.2.19`**. |
+| **`lmdb` → `msgpackr@1.11.10`** | **`@parcel/cache`** pins old **`lmdb`**; only this nested pin is needed. |
+| **`@plasmohq/parcel-resolver-post` → `tsup@8.4.0`** | Keeps **`@plasmohq/parcel-resolver-post@0.4.5`** (Plasmo’s expected version) and updates **`tsup`** only. |
+
+**Do not** set **`@plasmohq/parcel-resolver-post`** to **`0.4.6`** (or other unpinned bumps): **`plasmo build`** then fails to resolve CSS/JSON imports (e.g. **`../bmxt-ui.css`**, **`welcome-content.json`**) even when files exist.
+
+**`svgo@3.3.3`** is a **devDependency** (not an override): satisfies **htmlnano**’s optional peer and removes the Plasmo build warning about missing **svgo**.
+
+**Known residual audit items** — after the above, **`npm audit`** may still report a small number of **moderate** issues (Parcel dev-server, Svelte SSR in unused Plasmo transformers). These require **Plasmo / Parcel upstream** updates; do not “fix” them with **`npm audit fix --force`** or incompatible **`@plasmohq/*`** version jumps.
+
+**After any dependency change**, run **`npm ci`**, **`npm run build`**, **`npm test`**, and **`npm audit --audit-level=high`**, and commit **`package.json`** and **`package-lock.json`** together.
 
 <a id="command-line-token-model"></a>
 
@@ -153,23 +201,20 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
 | `clear` | Clear logs |
-| `exit` | Close the focused split pane; if it is the last pane, close the BMXt window (that pane’s session log is cleared) |
+| `exit` | Close the focused split pane; if it is the last pane, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `split` | Pane layout: `split -col` / `split -row`; bare `split` + Enter restores `split ` (see in-app help); **Ctrl+Arrow** moves focus between panes when multiple are open |
 | `tabs` | Show available options, then restore prompt to `tabs ` for option input |
 | `tabs -list [-u]` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -exit -list` | Close tab picker column in this session (including `group new` picker) |
+| `tabs -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved in `chrome.storage.local` |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
 | `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
-| `dom -list [--html\|--react] [<pattern>]` | Open a read-only DOM picker column for the active tab (same picker chrome as `find -list`); flavor `--html` (default) or `--react`; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
+| `dom -list [--html\|--react] [<pattern>]` | Open a read-only DOM picker column for the active tab (same picker chrome as `search -list`); flavor `--html` (default) or `--react`; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
 | `dom -exit -list` | Close DOM list picker column in this session |
-| `find` | Print usage and restore the prompt to `find ` for `-list` or a `--none` / `--history` / `--bookmark` / `--page` form |
-| `find -list [--none\|--history\|--bookmark\|--page] <pattern>` | Open a cross-search picker column; default `--none` searches browsing history, bookmarks, and visible http(s) tab text together; optional flag limits to one scope; case-insensitive substring (no regex in v1) |
-| `find -exit -list` | Close find list picker column in this session (cancels an in-flight search if the column is not open yet) |
-| `find --none <pattern>` | Run all three scopes without the picker (log lines; empty pattern returns capped “all” hits) |
-| `find --history <pattern>` | Recent history titles/URLs only |
-| `find --bookmark <pattern>` | Bookmark titles/URLs only |
-| `find --page <pattern>` | Visible text in non-discarded http(s) tabs only; may request optional host permission at runtime |
+| `search` | Print usage and restore the prompt to `search ` for `-list` |
+| `search -list --history\|--bookmark\|--page [<pattern>]` | Open a search picker column for one scope (history, bookmarks, or visible http(s) tab text); scan progress shows inside the picker. **→** opens a per-row **detail list**; **Enter** on a detail row jumps to that match in the page. Case-insensitive substring (no regex in v1) |
+| `search -exit -list` | Close search list picker column in this session (cancels an in-flight search if the column is not open yet) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
 | `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
@@ -182,9 +227,39 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `close` / `c <tabId>` | Close tab |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Note — `clear` vs `exit`:** `clear` only clears the on-screen session log; the BMXt window stays open. `exit` clears the focused pane’s log and **closes that split pane**; when only one pane remains, it **closes the BMXt window** (`exit_pane` → `chrome.windows.remove` on the tracked window). **Neither** clears **command history** (up/down / Ctrl+R).
+**Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the focused pane**; the BMXt window and all other persisted process state stay as they are. **Closing the BMXt window** (× button) does **not** end the process — logs, split layout, open picker columns, tab-picker fold state, and command history remain in **`chrome.storage.local`** and are restored when you reopen BMXt. **`exit`** removes the focused pane’s log and closes that split pane; when **only one pane remains**, it closes the BMXt window and **clears the entire process** from storage (logs, split layout, picker UI, tab-picker fold state, and command history). See **[BMXt process lifecycle](#bmxt-process-lifecycle)**.
 
-**Split panes and picker columns:** With more than one **split terminal pane** open, **Ctrl+Arrow** moves keyboard focus between panes at the layout edges. Inside a pane that has picker columns, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → find → dom** (only among open columns). See **[Picker UI (side columns)](#picker-ui)**.
+<a id="bmxt-process-lifecycle"></a>
+
+### BMXt process lifecycle (`clear` / window close / `exit`)
+
+Unlike a typical terminal emulator, **closing the BMXt window does not terminate the BMXt process**. Until you run **`exit`** on the **last** split pane, the process lives in **`chrome.storage.local`** and is restored when you open BMXt again (toolbar, command shortcut, etc.).
+
+| Action | Session logs | Split layout | Open picker columns & `paneFocus` | Tab picker tree fold | Command history |
+|--------|--------------|--------------|-------------------------------------|----------------------|-----------------|
+| **`clear`** | Cleared (focused pane) | Kept | Kept | Kept | Kept |
+| **Close BMXt window** | Kept | Kept | Kept | Kept | Kept |
+| **Reopen BMXt window** | Restored | Restored | Restored | Restored | Restored |
+| **`exit`** (multiple panes) | Focused pane cleared; leaf removed | Updated | Other leaves kept | Kept | Kept |
+| **`exit`** (last pane) | **All cleared** | **Cleared** | **Cleared** | **Cleared** | **Cleared** |
+
+**Process-scoped storage keys** (removed only when the **last** pane exits via **`exit`**):
+
+| Key | Contents |
+|-----|----------|
+| `bmxt_terminal_sessions_v1` | Per-leaf session logs |
+| `bmxt_split_layout_v1` | Split tree and focused leaf id |
+| `bmxt_process_ui_v1` | Open picker slots per leaf (`tabs` / `search` / `dom`) and `paneFocus` |
+| `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
+| `bmxt_cmd_history` | Prompt command history (↑/↓, Ctrl+R) |
+
+**Not cleared on process exit** (user / browser metadata): custom window display names, translation assist settings, tab picker settings (`page-active`), last normal window id, welcome/version tracking keys.
+
+**Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
+
+**Note:** **`tabs -exit -list`** (and other **`* -exit -list`**) only closes a picker column in the current session; it does **not** end the BMXt process or clear tab-picker fold state.
+
+**Split panes and picker columns:** With more than one **split terminal pane** open, **Ctrl+Arrow** moves keyboard focus between panes at the layout edges. Inside a pane that has picker columns, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → search → dom** (only among open columns). See **[Picker UI (side columns)](#picker-ui)**.
 
 <a id="aboutbmxt"></a>
 
@@ -217,15 +292,15 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 - **`--html`** (default) vs **`--react`** only changes how nodes are labeled in the picker UI.
 - Any tokens after the optional flavor flag are joined into a single **substring** filter on the printed lines (ASCII case fold); **not** a regular expression. ASCII `"…"` / `'…'` around the pattern are stripped once.
 
-<a id="find-command"></a>
+<a id="search-command"></a>
 
-### `find`
+### `search`
 
-- Bare `find` + **Enter** prints the usage block and restores **`find `**.
-- **`find -list` only** + **Enter** opens the scope token menu (`--none`, `--history`, …); a scope must be chosen before the picker runs (see **[How columns open](#picker-ui)**).
-- **`find -list <scope> …`** opens the same list picker chrome as `dom -list`, but rows are cross-search hits. **`--none`** fans out to **history + bookmarks + visible page text** in one picker session; **`--history`**, **`--bookmark`**, or **`--page`** limits to that single source.
-- One-shot forms **`find --none`**, **`find --history`**, **`find --bookmark`**, and **`find --page`** skip the picker and append results as log lines (handled in the BMXt window UI, not Service Worker `RUN_CMD`). An **empty** pattern with **`--none`** (for example **`find -list --none`** with no pattern) runs all three scopes with empty filters, which the host implements as capped “show many rows” behavior.
-- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`--page`** / **`find -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
+- Bare `search` + **Enter** prints the usage block and restores **`search `**.
+- **`search -list` only** + **Enter** opens the scope token menu (`--history`, `--bookmark`, `--page`); a scope must be chosen before the picker runs (see **[How columns open](#picker-ui)**).
+- **`search -list <scope> [<pattern>]`** opens the same list picker chrome as `dom -list`, but rows are search hits for the chosen scope. While **`--page`** scans open tabs, progress lines appear **inside the picker** and are hidden when results arrive.
+- In the results list, **`→`** on a row with multiple hits opens a **detail list** (breadcrumb: Search Results → Detail List). **`←`** or **`Esc`** returns to the results list. **`Enter`** on a detail row activates the source tab (or opens it), scrolls to the match, and highlights the needle when scriptable http(s) access is available; otherwise **`Enter`** on a results row opens the URL in a new tab (same as before).
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs and may trigger the extension’s **optional host permission** prompt the first time.
 
 <a id="nav-mode"></a>
 
@@ -243,7 +318,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **After `nav -enter` — Alt toggles overlay ON/OFF**
 
-- Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / find / dom** picker column **suspends** nav keys until you return focus to the prompt.
+- Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / search / dom** picker column **suspends** nav keys until you return focus to the prompt.
 - Each **Alt** press toggles overlay **ON** or **OFF**.
 - **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **↑ / ↓ / ← / →** move the virtual cursor (default **12px** per step; configurable later in `lib/features/nav/nav-config.ts`). **Enter** performs a **left-click** on the element under the cursor, or enters **typing mode** when the target is an editable field (see below).
 - **OFF:** removes the overlay from the current tab; nav stays **armed** until **`nav -exit`**.
@@ -332,9 +407,9 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 
 When a list picker is opened from the prompt, **`lib/features/bmxt-window/bmxt-shell.tsx`** lays out the focused session leaf as a horizontal strip:
 
-**Terminal (log + prompt)** | **tabs** (if open) | **find** (if open) | **dom** (if open)
+**Terminal (log + prompt)** | **tabs** (if open) | **search** (if open) | **dom** (if open)
 
-Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `find` / `dom` slots); **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → find → dom).
+Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `search` / `dom` slots). While the BMXt process is alive, **open columns, `paneFocus`, tab-picker highlight/marks, and tree fold state** are persisted to **`chrome.storage.local`** and restored after closing and reopening the BMXt window (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**). **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom).
 
 **Four layers (side picker)**
 
@@ -343,19 +418,19 @@ Several picker columns may be open at once in the same pane. Session state is **
 | ① Parent terminal | Log, prompt, picker launch/close | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② Panel host | Column chrome, blue focus border, click-to-activate | `lib/features/side-picker/panel/picker-panel-host.tsx` |
 | ③ Command wrapper | Slot entry + keyboard wiring | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
-| ④ Command body | Flat lines vs hierarchical tab rows vs dom prompt | `PlainTextPickerBody` (find/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), `dom/dom-prompt-render.tsx` |
+| ④ Command body | Flat lines vs hierarchical tab rows vs dom prompt | `PlainTextPickerBody` (search/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), `dom/dom-prompt-render.tsx` |
 
-**Shared keyboard:** **`usePlainPickerKeyboard`** in `lib/features/side-picker/hooks/` drives `/`, `:`, `n`/`N`, **`Esc` → prompt**, vertical navigation, and **Ctrl+←/→** pane-strip navigation via the interaction kernel (`lib/features/side-picker/interaction/picker-*.ts`). **find** and **dom** line columns use it directly; **tabs** adds **`useTabPickerPlainExtensions`** (`lib/features/tabs/use-tab-picker-plain-extensions.ts`) for bulk/edit, `#` / `Tab`, Shift range, and layered **`Esc`**.
+**Shared keyboard:** **`usePlainPickerKeyboard`** in `lib/features/side-picker/hooks/` drives `/`, `:`, `n`/`N`, **`Esc` → prompt**, vertical navigation, and **Ctrl+←/→** pane-strip navigation via the interaction kernel (`lib/features/side-picker/interaction/picker-*.ts`). **search** and **dom** line columns use it directly; **tabs** adds **`useTabPickerPlainExtensions`** (`lib/features/tabs/use-tab-picker-plain-extensions.ts`) for bulk/edit, `#` / `Tab`, Shift range, and layered **`Esc`**.
 
-**Shared list chrome:** **`PickerListShell`** (`chrome/picker-list-shell.tsx`) — headline, invisible IME `textarea`, list slot, search/command footers. **tabs** render through **`TabsUrlListPicker`** on this shell. **find** / **dom** line lists still use **`PlainTextPickerBody`** (same CSS classes, optional virtualization; may move to `PickerListShell` later).
+**Shared list chrome:** **`PickerListShell`** (`chrome/picker-list-shell.tsx`) — headline, invisible IME `textarea`, list slot, search/command footers. **tabs** render through **`TabsUrlListPicker`** on this shell. **search** / **dom** line lists still use **`PlainTextPickerBody`** (same CSS classes, optional virtualization; may move to `PickerListShell` later).
 
-**`PickerEntry` (find)**
+**`PickerEntry` (search)**
 
-Find hits are normalized to **`PickerEntry`** (`url`, `source`, display line) before render. **`Enter`** on a highlighted row dispatches **`open_url_new_tab`** (same primary action as opening a URL from the prompt). Implementation: **`lib/features/side-picker/model/open-entry.ts`**, wired from **`bmxt-shell.tsx`**.
+Search hits are normalized to **`PickerEntry`** (`url`, `source`, display line) before render. **`Enter`** on a highlighted row dispatches **`open_url_new_tab`** (same primary action as opening a URL from the prompt). Implementation: **`lib/features/side-picker/model/open-entry.ts`**, wired from **`bmxt-shell.tsx`**.
 
 **Focus and blue border**
 
-- **`paneFocus`** selects the active column: `terminal` → `tabs` → `find` → `dom` (skipping columns that are not open).
+- **`paneFocus`** selects the active column: `terminal` → `tabs` → `search` → `dom` (skipping columns that are not open).
 - The active column gets a **blue outline** (`.bmxt-split-pane--focused`).
 - When a column **newly opens**, keyboard focus and the outline move to that column.
 - **Ctrl+Left / Ctrl+Right** walk the strip inside the focused session leaf. At the strip ends, **Ctrl+Arrow** may delegate to **split-pane** navigation when multiple terminal leaves exist.
@@ -370,7 +445,7 @@ Find hits are normalized to **`PickerEntry`** (`url`, `source`, display line) be
 | Command | Closes |
 |---------|--------|
 | `tabs -exit -list` | Tab picker (including interactive **`group new`**) |
-| `find -exit -list` | Find list picker |
+| `search -exit -list` | Search list picker |
 | `dom -exit -list` | DOM list picker (including the permission confirmation panel) |
 
 Service Worker **`run`** for `*-exit -list` prints usage hints only; the window UI performs the actual close.
@@ -381,39 +456,42 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 |-------|----------|
 | `tabs -list` / `tabs -list -u` | Opens the tab picker column |
 | `group new` (no tab ids) | Opens the tab picker in **group-new** variant |
-| `find -list` only + **Enter** | Restores `find -list ` and shows the scope token menu (`--none`, `--history`, …) |
-| `find -list <scope> …` + **Enter** | Runs the search, then opens the find column |
+| `search -list` only + **Enter** | Restores `search -list ` and shows the scope token menu (`--history`, `--bookmark`, `--page`) |
+| `search -list <scope> [<pattern>]` + **Enter** | Runs the search (progress in picker), then shows results in the search column |
 | `dom -list` only + **Enter** | Shows the `--html` / `--react` flavor menu |
 | `dom -list --html` or `--react` … + **Enter** | Fetches DOM output, opens the dom column |
 | `translate -on` + **Enter** | Enables translation assist (prompt stays focused) |
 
-**Plain list columns (find / dom lines)**
+**Plain list columns (search / dom lines)**
 
-- **`/`** — incremental filter; **`Enter`** ends search mode (find: **`Enter`** on a row also opens the URL).
+- **`/`** — incremental filter; **`Enter`** ends search mode (search: **`Enter`** on a row also opens the URL, or jumps to a page match when detail navigation applies).
 - **`:`** then **`nohlsearch`** — clear filter and search highlight.
-- **`n`** / **`N`** — jump among matches (same rules as the tab picker search highlight).
+- **`n`** / **`N`** — jump among matches on the **results** row (when a row has multiple page matches).
+- **`→`** / **`←`** — **search only:** enter / leave the **detail list** for the highlighted result row (when it has subdivided hits). **`Esc`** in detail view returns to results first.
 - **`Ctrl+Left` / `Ctrl+Right`** — move along the pane strip (see above).
 - **dom only:** **`↑` / `↓`** (or **`j` / `k`**) move focus among **jumpable** element rows; the **target tab scrolls** to the highlighted node (debounced). Header/metadata lines without a DOM path are skipped.
 
 **Common picker keys (authoritative)**
 
-Headline strings in the UI come from **`lib/features/side-picker/interaction/picker-headlines.ts`** (find/dom) and **`lib/features/bmxt-core/tabs-picker/headline.ts`** (tabs, mode-dependent). Keep this table aligned when changing shortcuts.
+Headline strings in the UI come from **`lib/features/side-picker/interaction/picker-headlines.ts`** (search/dom) and **`lib/features/bmxt-core/tabs-picker/headline.ts`** (tabs, mode-dependent). Keep this table aligned when changing shortcuts.
 
-| Key / gesture | find / dom lines | Tab picker (`tabs -list`) |
+| Key / gesture | search / dom lines | Tab picker (`tabs -list`) |
 |---------------|------------------|---------------------------|
-| `j` / `k`, `↑` / `↓` | Move highlight | Move highlight (reducer `moveHi`) |
+| `j` / `k`, `↑` / `↓` | Move highlight | Move highlight (reducer `moveHi`); **`--auto`**: also activates tab in background window |
 | `/` | Search mode; `@` prefix matches URL substring | Same; filters visible rows |
 | `Enter` in `/` mode | End search (commit highlight pattern) | End search |
-| `Enter` in normal mode | find: open URL in new tab | Focus highlighted tab (picker stays open) |
+| `Enter` in normal mode | search results: open URL or jump to page match; search detail: jump to highlighted hit in page | Focus highlighted tab (picker stays open) |
 | `:` → `nohlsearch` | Clear filter + highlight | Clear search highlight |
-| `n` / `N` | Next / previous match row | Next / previous match row |
+| `n` / `N` | Next / previous match on results row | Next / previous match row |
+| `→` / `←` | search: enter / leave detail list for highlighted row | Collapse / expand highlighted **window** or **tab group** row (tab row: parent group) |
 | `Ctrl+←` / `Ctrl+→` | Pane strip (terminal ↔ open columns) | Same |
-| `Esc` | Prompt (column stays open) | Unwind `#` → `:` → `/` → bulk → prompt |
+| `Esc` | Prompt, or search detail → results first | Unwind `#` → `:` → `/` → bulk → prompt |
 | `#` / `Tab` | — | Toggle mark / multi-select |
 | `:` + bulk commands | — | `move`, `close`, `group`, `nw`, `nt`, `edit` (see [Tab Picker](#tabs-tab-picker)) |
 | `Shift+↑` / `Shift+↓` | — | Extend `#` range on tab rows |
-| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Preview active tab in browser |
-| Close column | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
+| `Alt+↑` / `Alt+↓` | — | **`--manual` only:** activate highlighted tab in background window |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | Move highlight and force-activate tab in background window |
+| Close column | `search -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
 **Translate assist (prompt / nav typing)**
 
@@ -436,12 +514,22 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 - `tabs` alone prints available options and restores the prompt to `tabs ` so users can continue with the next token.
 - `tabs -list [-u]`: open tab picker column (`-u` includes URL rows).
 - `tabs -exit -list`: close tab picker column in this session.
+- `tabs -setting -page-active --auto | --manual`: configure tab preview on highlight. **`--auto`** (default): moving highlight activates the tab in the background window. **`--manual`**: only **Alt+↑↓** (or holding **Alt**) activates; **Enter** still jumps to the highlighted tab and brings its window forward. Persisted in **`chrome.storage.local`**; a **tabs** status strip under the prompt shows the current mode while the tab picker is open.
 - `tabs -nowurl`: print current tab URL.
 - `tabs -moveurl <url>`: activate matching http(s) tab and bring its window to front, or open a new tab if none matches. After `tabs -moveurl ` (trailing space), **Tab** cycles open http(s) tab URLs as completion candidates.
 
 <a id="tabs-tab-picker"></a>
 
 ### Tab Picker (`tabs -list` / `tabs -list -u`)
+
+**Tree layout**
+
+- Rows are hierarchical: **`[window]`** → **`[tab group]`** (real Chrome tab groups only) → **tab rows**.
+- Tabs **not** in a Chrome group are listed **directly under their window** (there is no “(no group)” header row).
+- **Initially every window and group is expanded.** **←** on the highlighted row collapses that window or tab group (**→** expands). On a **tab** row, **←** / **→** affect the **parent tab group** (ungrouped tabs have no group to fold).
+- Collapse/expand state is kept for the **BMXt process** lifetime (survives closing the BMXt window; cleared only on **`exit`** of the last pane — see [BMXt process lifecycle](#bmxt-process-lifecycle)).
+
+**Navigation and bulk**
 
 - On launch, highlight starts at the active tab of the last focused normal browser window.
 - Move with `j`/`k` (or `↑`/`↓`), toggle `#` on highlighted tab with `Tab` (multi-select supported). **Shift + `↑`/`↓`** extends a range selection anchored at the first mark.
@@ -462,11 +550,11 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 **Valid targets**
 
-- Exactly **one window row** or **one tab group row** (a real Chrome tab group, not the ungrouped “(no group)” row).
-- **Tab rows** are not supported.
+- Exactly **one window row** or **one tab group row** (a real Chrome tab group).
+- **Tab rows** and **ungrouped tabs** (no group header) are not supported.
 - Either mark the row with **`#`** on the window/group header, or highlight that row with **no `#` marks** — on confirm, the highlighted window/group row is auto-marked if needed.
 
-If the selection is invalid (tabs only, multiple windows/groups, ungrouped group row, etc.), an **`error:`** line is appended to the BMXt log and edit mode does not open.
+If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`error:`** line is appended to the BMXt log and edit mode does not open.
 
 **Window — custom display name**
 
@@ -512,9 +600,9 @@ If the selection is invalid (tabs only, multiple windows/groups, ungrouped group
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`find -list`**, **`find --none` / `--history` / `--bookmark` / `--page`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on` / `-setting`**, arming / pair save and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`search -list`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on` / `-setting`**, arming / pair save and overlay or typing assist are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
 
-**`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the focused split pane (or the whole BMXt window when it is the last pane).
+**`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the focused split pane. When it is the **last** pane, it closes the BMXt window and clears **all process-scoped storage** (see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
 **Main directories:**
 
@@ -529,7 +617,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane)
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
 
 <a id="add-new-built-in-command"></a>
 
@@ -590,7 +678,7 @@ Applies when the prompt `textarea` is focused.
 **While nav is armed** (`nav -enter`):
 
 - **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (BMXt window active; terminal prompt column focused). Short **Alt** is ignored during **typing mode**; **Alt hold** (~500ms) commits typed text instead.
-- **↑ / ↓ / ← / →** — When overlay is **ON**, move the virtual cursor (not command history). When a **tabs / find / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
+- **↑ / ↓ / ← / →** — When overlay is **ON**, move the virtual cursor (not command history). When a **tabs / search / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
 - **Enter** — When overlay is **ON**, left-click at the virtual cursor, or enter **typing mode** on editable fields.
 - **Ctrl** (tap, overlay **ON**) — Open the nav **context menu** at the cursor (**↑ / ↓** choose, **Enter** run, **← / →** history, **Ctrl** / **Esc** close). See **[Nav mode](#nav-mode)**.
 - **Esc hold** (~500ms, **typing mode**) — Cancel typing and restore the previous field value.
@@ -605,7 +693,7 @@ During IME composition, composition events are prioritized to avoid conflicts wi
 After installing dependencies, start the development build (see **Development startup** below for the full flow).
 
 ```bash
-npm install   # or pnpm install / yarn
+npm ci        # preferred when package-lock.json is present
 npm run dev   # or pnpm dev
 ```
 
@@ -618,7 +706,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** `npm install` (or `pnpm install` / `yarn`).
+1. **Install JS dependencies:** **`npm ci`** when **`package-lock.json`** is present (preferred). Use **`npm install`** only when you are updating dependencies and will refresh the lockfile. See **[npm dependencies and security](#npm-dependencies)**.
 2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
 3. **Start dev:** From the repo root, run **`npm run dev`**. Leave this process running; it rebuilds the extension on file changes.
 4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`build/chrome-mv3-dev`** (created by Plasmo dev).
@@ -732,8 +820,10 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [主要仕様](#key-specs-ja)
   - [権限（`package.json` の manifest）](#permissions-manifest-ja)
   - [再現可能なビルド](#reproducible-builds-ja)
+  - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
 - [コマンド一覧](#command-list-ja)
+  - [BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）](#bmxt-process-lifecycle-ja)
   - [`aboutbmxt`](#aboutbmxt-ja)
   - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
   - [`translate`（`translate -on` / `translate -off` / `translate -setting`）](#translate-ja)
@@ -749,6 +839,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [プロンプトのキーバインド](#prompt-key-bindings-ja)
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
+  - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
   - [主なソース](#main-sources-ja)
   - [バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)
 - [本番ビルド](#production-build-ja)
@@ -838,7 +929,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 権限（`package.json` の manifest）
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`find -page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
+`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
 **データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`npm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
@@ -849,7 +940,52 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 再現可能なビルド
 
 
-公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。
+公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定。CI や厳密な再現では **`npm install`** を使わない）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。override・監査・メンテ手順は **[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
+
+<a id="npm-dependencies-ja"></a>
+
+### npm 依存関係とセキュリティ
+
+
+**直接依存**（**`package.json`**）は **`plasmo@0.90.5`**、**`react@18.2.0`**、**`react-dom@18.2.0`** のみです。その他の多数のパッケージは **間接依存**（Plasmo が Parcel・`@plasmohq/*` 等を引き込む）です。
+
+**再現性のあるインストール**
+
+| コマンド | 用途 |
+|---------|------|
+| **`npm ci`** | **通常はこちら**（clone 後・CI・リリースビルド前）。**`package-lock.json`** どおりのツリーのみ入る。 |
+| **`npm install`** | **`package.json`** を意図的に変えるとき（devDependency・**`overrides`** 追加など）のみ。更新した lockfile をコミットする。 |
+
+lockfile 更新を pull したあとの推奨手順:
+
+```bash
+rm -rf node_modules
+npm ci
+npm run build
+```
+
+**Node.js 版** — **`.nvmrc`** を参照（このリポジトリの推奨 Node）。**`package.json`** に **`engines`** は **書かない**: **Plasmo 0.90.5** では **`plasmo build`** が失敗する（CSS/JSON の import 解決エラー。ソースファイルは存在するのに bundler が解決できない）。
+
+**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=high`**、テスト、**`npm run build`** を実行する。**`npm audit fix --force`** は **使わない**（`plasmo` のダウングレードを提案し、危険）。
+
+**`package.json` の `overrides`** — Plasmo が古い間接依存を固定するため、**最小限**にとどめる。任意のパッケージ名を全局上書きするより、**`@plasmohq/*` の patch 版に合わせる**／**nested override** を優先する。
+
+現在の override（**`package.json`** と同内容）:
+
+| override | 目的 |
+|----------|------|
+| **`@plasmohq/parcel-transformer-manifest@0.21.1`** | 上流 patch が **`content-security-policy-parser@0.6.0`** を dependencies に宣言。 |
+| **`@plasmohq/parcel-transformer-svelte@0.6.1`** | 上流 patch が **`svelte@4.2.19`** を宣言。 |
+| **`lmdb` → `msgpackr@1.11.10`** | **`@parcel/cache`** が古い **`lmdb`** 固定のため、この nested だけ必要。 |
+| **`@plasmohq/parcel-resolver-post` → `tsup@8.4.0`** | **`@plasmohq/parcel-resolver-post@0.4.5`**（Plasmo 想定）のまま **`tsup`** のみ更新。 |
+
+**禁止:** **`@plasmohq/parcel-resolver-post`** を **`0.4.6`** などに **パッケージ版ごと** 上げること。すると **`plasmo build`** が CSS/JSON を解決できず（例: **`../bmxt-ui.css`**、**`welcome-content.json`**）、ファイルがあってもビルドが落ちる。
+
+**`svgo@3.3.3`** は **devDependency**（override ではない）。htmlnano の optional peer を満たし、Plasmo ビルド時の **svgo** 警告を消す。
+
+**残る audit（moderate）** — 上記後も **`npm audit`** で moderate が少数残ることがある（Parcel dev server、未使用の Svelte SSR 系など）。**Plasmo / Parcel の upstream 更新**待ち。**`npm audit fix --force`** や非互換な **`@plasmohq/*`** の版上げで直そうとしない。
+
+**依存関係を変更したら** **`npm ci`** → **`npm run build`** → **`npm test`** → **`npm audit --audit-level=high`** を実行し、**`package.json`** と **`package-lock.json`** を **セットでコミット**する。
 
 <a id="command-line-token-model-ja"></a>
 
@@ -874,23 +1010,20 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
 | `clear` | ログをクリア |
-| `exit` | フォーカス中の split ペインを閉じる。最後の 1 ペインなら BMXt ウィンドウごと閉じる（当該ペインのセッションログも消える） |
+| `exit` | フォーカス中の split ペインを閉じる。最後の 1 ペインなら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `split` | ペイン分割: `split -col` / `split -row`。単独 `split`＋Enter で `split ` へ復元（詳細はアプリ内ヘルプ）。複数ペイン時は **Ctrl+矢印** でフォーカス移動 |
 | `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
 | `tabs -list [-u]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。 |
 | `tabs -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
+| `tabs -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。`chrome.storage.local` に保存 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
 | `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
-| `dom -list [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカー列で閲覧（`find -list` と同系 UI）。`--html`（既定）／`--react`。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
+| `dom -list [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカー列で閲覧（`search -list` と同系 UI）。`--html`（既定）／`--react`。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
-| `find` | 利用案内を表示し、続けて `find ` へ入力復元（`-list` または `--none` 等） |
-| `find -list [--none\|--history\|--bookmark\|--page] <pattern>` | 横断検索ピッカー列。既定 `--none` は履歴・ブックマーク・http(s) タブ表示テキストをまとめて検索。フラグでスコープを1つに限定可。部分一致（v1 正規表現なし） |
-| `find -exit -list` | 当該セッションの find ピッカー列を閉じる（検索中ならキャンセル） |
-| `find --none <pattern>` | 3スコープをピッカーなしで一括実行（ログ出力。空パターンは件数上限付き一覧） |
-| `find --history <pattern>` | 閲覧履歴のタイトル／URL のみ |
-| `find --bookmark <pattern>` | ブックマークのタイトル／URL のみ |
-| `find --page <pattern>` | 非破棄 http(s) タブの表示テキストのみ（実行時にオプションのサイト権限を求めることがある） |
+| `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
+| `search -list --history\|--bookmark\|--page [<pattern>]` | 検索ピッカー列（スコープ必須）。走査進捗はピッカー内表示、結果確定後に非表示。**→** で行ごとの **詳細一覧**、詳細行の **Enter** でページ内の該当箇所へジャンプ。部分一致（v1 正規表現なし） |
+| `search -exit -list` | 当該セッションの search ピッカー列を閉じる（検索中ならキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
 | `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |
@@ -903,9 +1036,39 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**補足 — `clear` と `exit`:** `clear` は画面のセッションログだけを消し、BMXt ウィンドウは開いたままです。`exit` はフォーカス中ペインのログを消したうえで **当該 split ペインを閉じます**；残り 1 ペインだけのときは **BMXt ウィンドウごと閉じます**（`exit_pane` → 追跡ウィンドウに `chrome.windows.remove`）。**どちらもコマンド履歴**（↑/↓ や Ctrl+R）**は消しません**。
+**補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **フォーカス中ペインの画面ログだけ**を消します。BMXt ウィンドウとその他の永続状態はそのままです。**BMXt ウィンドウを閉じる**（× ボタン）操作だけでは **プロセスは終了しません** — ログ、split レイアウト、開いているピッカー列、タブツリー開閉、コマンド履歴は **`chrome.storage.local`** に残り、BMXt を再度開くと復元されます。**`exit`** はフォーカス中ペインのログを消して **当該 split ペインを閉じます**；**残り 1 ペイン**のときは BMXt ウィンドウを閉じ、**プロセス全体**を storage から消去します（ログ、split、ピッカー UI、タブツリー開閉、コマンド履歴）。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**。
 
-**split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → find → dom**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
+<a id="bmxt-process-lifecycle-ja"></a>
+
+### BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）
+
+一般的なターミナルエミュレータとは異なり、**BMXt ウィンドウを閉じても BMXt プロセスは終了しません**。**最後の split ペイン**で **`exit`** するまで、プロセスは **`chrome.storage.local`** に残り、ツールバーやショートカットから BMXt を開き直すと復元されます。
+
+| 操作 | セッションログ | split レイアウト | 開いているピッカー列・`paneFocus` | タブツリー開閉 | コマンド履歴 |
+|------|----------------|------------------|-----------------------------------|----------------|--------------|
+| **`clear`** | 消去（フォーカス中ペイン） | 保持 | 保持 | 保持 | 保持 |
+| **BMXt ウィンドウを閉じる** | 保持 | 保持 | 保持 | 保持 | 保持 |
+| **BMXt ウィンドウを再度開く** | 復元 | 復元 | 復元 | 復元 | 復元 |
+| **`exit`**（複数ペイン） | フォーカス中ペイン消去・リーフ除去 | 更新 | 他リーフは保持 | 保持 | 保持 |
+| **`exit`**（最後の 1 ペイン） | **すべて消去** | **消去** | **消去** | **消去** | **消去** |
+
+**プロセススコープの storage キー**（**最後の 1 ペイン**の **`exit`** 時のみ削除）:
+
+| キー | 内容 |
+|------|------|
+| `bmxt_terminal_sessions_v1` | リーフごとのセッションログ |
+| `bmxt_split_layout_v1` | split ツリーとフォーカス中リーフ id |
+| `bmxt_process_ui_v1` | リーフごとの開いているピッカー（`tabs` / `search` / `dom`）と `paneFocus` |
+| `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
+| `bmxt_cmd_history` | プロンプトのコマンド履歴（↑/↓、Ctrl+R） |
+
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: ウィンドウ表示名、翻訳アシスト設定、タブピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
+
+**実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
+
+**補足:** **`tabs -exit -list`**（および他の **`* -exit -list`**）は当該ピッカー列を閉じるだけで、BMXt プロセスを終了したりタブツリー開閉状態を消したりしません。
+
+**split ペインとピッカー列:** 複数の **split ターミナルペイン** があるとき、レイアウトの端では **Ctrl+矢印** でペイン間を移動します。ピッカー列があるペイン内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → search → dom**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)**。
 
 <a id="aboutbmxt-ja"></a>
 
@@ -944,7 +1107,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **`nav -enter` 後 — Alt でオーバーレイ ON/OFF**
 
-- **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / find / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
+- **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / search / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
 - **Alt** のたびにオーバーレイを **ON** / **OFF** 切替。
 - **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。**↑ / ↓ / ← / →** で仮想カーソルを移動（既定 **12px**／ステップ。`lib/features/nav/nav-config.ts` で将来調整可）。**Enter** でカーソル下を **左クリック**相当、または編集可能要素なら **typing モード**へ（下記）。
 - **OFF:** 当該タブのオーバーレイを除去。nav は **armed** のまま **`nav -exit`** まで継続。
@@ -1033,9 +1196,9 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 プロンプトからリストピッカーを開いたとき、**`lib/features/bmxt-window/bmxt-shell.tsx`** はフォーカス中のセッションリーフを次の横並びにします。
 
-**ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **find**（表示時） | **dom**（表示時）
+**ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **search**（表示時） | **dom**（表示時）
 
-同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `find` / `dom` スロット）で、列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`** が担います（**`PICKER_SLOT_ORDER`**: tabs → find → dom）。
+同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `search` / `dom` スロット）。BMXt プロセスが存続する間、**開いている列・`paneFocus`・タブピッカーのハイライト／マーク・ツリー開閉**は **`chrome.storage.local`** に保存され、BMXt ウィンドウを閉じて開き直しても復元されます（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`**（**`PICKER_SLOT_ORDER`**: tabs → search → dom）。
 
 **4 層（サイドピッカー）**
 
@@ -1044,19 +1207,19 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | ① 親ターミナル | ログ・プロンプト・ピッカー起動／閉じる | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② パネルホスト | 列クロム・青枠・クリックでアクティブ化 | `lib/features/side-picker/panel/picker-panel-host.tsx` |
 | ③ コマンドラッパ | スロット入口・keyboard 配線 | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx` |
-| ④ コマンド本体 | フラット行 / 階層タブ行 / dom 確認 | `PlainTextPickerBody`（find/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, `dom/dom-prompt-render.tsx` |
+| ④ コマンド本体 | フラット行 / 階層タブ行 / dom 確認 | `PlainTextPickerBody`（search/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, `dom/dom-prompt-render.tsx` |
 
-**共有 keyboard:** **`usePlainPickerKeyboard`**（`lib/features/side-picker/hooks/`）が `/`, `:`, `n`/`N`, **`Esc` → プロンプト**, 縦移動, **Ctrl+←/→** 列ストリップを interaction kernel 経由で処理。**find** / **dom** 行一覧はそのまま利用。**tabs** は **`useTabPickerPlainExtensions`**（`lib/features/tabs/use-tab-picker-plain-extensions.ts`）で bulk/edit・`#` / `Tab`・Shift 範囲・段階 **`Esc`** を追加。
+**共有 keyboard:** **`usePlainPickerKeyboard`**（`lib/features/side-picker/hooks/`）が `/`, `:`, `n`/`N`, **`Esc` → プロンプト**, 縦移動, **Ctrl+←/→** 列ストリップを interaction kernel 経由で処理。**search** / **dom** 行一覧はそのまま利用。**tabs** は **`useTabPickerPlainExtensions`**（`lib/features/tabs/use-tab-picker-plain-extensions.ts`）で bulk/edit・`#` / `Tab`・Shift 範囲・段階 **`Esc`** を追加。
 
-**共有リスト chrome:** **`PickerListShell`**（`chrome/picker-list-shell.tsx`）— headline・不可視 IME・リストスロット・検索/コマンドフッタ。**tabs** は **`TabsUrlListPicker`** 経由。**find** / **dom** 行一覧は現状 **`PlainTextPickerBody`**（同一 CSS・仮想スクロールあり。将来 `PickerListShell` に寄せ可能）。
+**共有リスト chrome:** **`PickerListShell`**（`chrome/picker-list-shell.tsx`）— headline・不可視 IME・リストスロット・検索/コマンドフッタ。**tabs** は **`TabsUrlListPicker`** 経由。**search** / **dom** 行一覧は現状 **`PlainTextPickerBody`**（同一 CSS・仮想スクロールあり。将来 `PickerListShell` に寄せ可能）。
 
-**`PickerEntry`（find）**
+**`PickerEntry`（search）**
 
-find のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示行）に正規化します。ハイライト行で **`Enter`** を押すと **`open_url_new_tab`** で URL を開きます（プロンプトから URL を開くのと同じ一次動作）。実装は **`lib/features/side-picker/model/open-entry.ts`**、配線は **`bmxt-shell.tsx`**。
+search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示行）に正規化します。ハイライト行で **`Enter`** を押すと **`open_url_new_tab`** で URL を開きます（プロンプトから URL を開くのと同じ一次動作）。実装は **`lib/features/side-picker/model/open-entry.ts`**、配線は **`bmxt-shell.tsx`**。
 
 **フォーカスと青枠**
 
-- **`paneFocus`** がキー入力を受け取る列を表します: `terminal` → `tabs` → `find` → `dom`（未表示の列は飛ばす）。
+- **`paneFocus`** がキー入力を受け取る列を表します: `terminal` → `tabs` → `search` → `dom`（未表示の列は飛ばす）。
 - フォーカス中の列に **青い枠**（`.bmxt-split-pane--focused`）が付きます。
 - 列が **新しく開いた** とき、キーボードフォーカスと青枠がその列へ移ります。
 - **Ctrl+← / Ctrl+→** でセッションリーフ内の列を移動します。strip の端では、split 複数ペイン時に **Ctrl+矢印** が **別リーフ** への移動に委譲されることがあります。
@@ -1071,7 +1234,7 @@ find のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示行�
 | コマンド | 閉じる対象 |
 |----------|------------|
 | `tabs -exit -list` | タブピッカー（対話的 **`group new`** 含む） |
-| `find -exit -list` | find リストピッカー |
+| `search -exit -list` | search リストピッカー |
 | `dom -exit -list` | DOM リストピッカー（権限確認パネル含む） |
 
 Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで、実際の閉じる処理はウィンドウ UI が行います。
@@ -1082,39 +1245,42 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 |------|------|
 | `tabs -list` / `tabs -list -u` | タブピッカー列を開く |
 | `group new`（タブ ID なし） | **group-new** variant のタブピッカー列 |
-| `find -list` のみ + **Enter** | `find -list ` に復元し、スコープトークンメニュー（`--none` 等） |
-| `find -list <scope> …` + **Enter** | 検索実行後、find 列を開く |
+| `search -list` のみ + **Enter** | `search -list ` に復元し、スコープトークンメニュー（`--history` / `--bookmark` / `--page`） |
+| `search -list <scope> [<pattern>]` + **Enter** | 検索実行（進捗はピッカー内）後、search 列に結果表示 |
 | `dom -list` のみ + **Enter** | `--html` / `--react` の flavor メニュー |
 | `dom -list --html` または `--react` … + **Enter** | DOM 取得後、dom 列を開く |
 | `translate -on` + **Enter** | 翻訳アシストを有効化（プロンプトにフォーカス維持） |
 
-**プレーンリスト列（find / dom の行一覧）**
+**プレーンリスト列（search / dom の行一覧）**
 
-- **`/`** — インクリメンタル絞り込み。**`Enter`** で検索モード終了（find では行上の **`Enter`** で URL を開く）。
+- **`/`** — インクリメンタル絞り込み。**`Enter`** で検索モード終了（search では行上の **`Enter`** で URL を開く、または詳細ジャンプが可能なときはページ内一致へ移動）。
 - **`:`** → **`nohlsearch`** — フィルタと検索ハイライトを解除。
-- **`n`** / **`N`** — マッチ行へジャンプ（タブピッカーの検索ハイライトと同系）。
+- **`n`** / **`N`** — 結果行上の複数マッチ間を移動（1 行に複数 page ヒットがあるとき）。
+- **`→`** / **`←`** — **search のみ:** ハイライト行の **詳細一覧** へ入る／結果一覧へ戻る（細分化ヒットがある行）。詳細表示中の **`Esc`** は先に結果一覧へ戻る。
 - **`Ctrl+←` / `Ctrl+→`** — ペイン内の列ストリップ移動（上記フォーカス節）。
 - **dom のみ:** **`↑` / `↓`**（または **`j` / `k`**）で **ジャンプ可能な要素行**にフォーカスを移すと、**対象タブがハイライトノードへスクロール**（debounce）。DOM path のない行はスキップ。
 
 **共通キー（正）**
 
-UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headlines.ts`**（find/dom）と **`lib/features/bmxt-core/tabs-picker/headline.ts`**（tabs・モード別）。ショートカットを変えたらこの表も更新する。
+UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headlines.ts`**（search/dom）と **`lib/features/bmxt-core/tabs-picker/headline.ts`**（tabs・モード別）。ショートカットを変えたらこの表も更新する。
 
-| キー / 操作 | find / dom 行一覧 | タブピッカー（`tabs -list`） |
+| キー / 操作 | search / dom 行一覧 | タブピッカー（`tabs -list`） |
 |-------------|-------------------|------------------------------|
-| `j` / `k`, `↑` / `↓` | ハイライト移動 | ハイライト移動（`moveHi`） |
+| `j` / `k`, `↑` / `↓` | ハイライト移動 | ハイライト移動（`moveHi`）；**`--auto`**: 背面ウィンドウ内タブもアクティブ化 |
 | `/` | 検索モード（`@` で URL 部分一致） | 同左（可視行を絞る） |
 | `/` 中の `Enter` | 検索終了（ハイライト確定） | 検索終了 |
-| 通常時の `Enter` | find: 新規タブで URL を開く | ハイライトタブをアクティブ化（列は開いたまま） |
+| 通常時の `Enter` | search 結果: URL を開くまたは page 一致へジャンプ；search 詳細: ページ内ヒットへジャンプ | ハイライトタブをアクティブ化（列は開いたまま） |
 | `:` → `nohlsearch` | フィルタ・ハイライト解除 | 検索ハイライト解除 |
-| `n` / `N` | 次／前のマッチ行 | 次／前のマッチ行 |
+| `n` / `N` | 結果行上の次／前マッチ | 次／前のマッチ行 |
+| `→` / `←` | search: 詳細一覧へ／結果一覧へ | ハイライト中の **ウィンドウ** または **タブグループ** 行を閉じる／開く（タブ行は所属グループ） |
 | `Ctrl+←` / `Ctrl+→` | 列ストリップ（ターミナル ↔ 開列） | 同左 |
-| `Esc` | プロンプトへ（列は閉じない） | `#` → `:` → `/` → バルク → プロンプト |
+| `Esc` | プロンプトへ、または search 詳細 → 結果一覧 | `#` → `:` → `/` → バルク → プロンプト |
 | `#` / `Tab` | — | マーク付け／複数選択 |
 | `:` + バルク | — | `move`, `close`, `group`, `nw`, `nt`, `edit`（[タブピッカー](#tabs-tab-picker-ja)） |
 | `Shift+↑` / `Shift+↓` | — | タブ行の `#` 範囲拡張 |
-| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ブラウザ側アクティブタブのプレビュー |
-| 列を閉じる | `find -exit -list` / `dom -exit -list` | `tabs -exit -list` |
+| `Alt+↑` / `Alt+↓` | — | **`--manual` のみ:** 背面ウィンドウ内でハイライトタブをアクティブ化 |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | — | ハイライト移動＋背面ウィンドウ内タブを強制アクティブ化 |
+| 列を閉じる | `search -exit -list` / `dom -exit -list` | `tabs -exit -list` |
 
 **翻訳アシスト（プロンプト / nav typing）**
 
@@ -1134,18 +1300,18 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 - **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
 - **`dom -list` のみ** + **Enter** では **`--html` / `--react` の flavor メニュー**を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
-- **`dom -list --html` …** / **`dom -list --react` …** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`find --page` 系と同じ系統）。
+- **`dom -list --html` …** / **`dom -list --react` …** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`search -list --page` 系と同じ系統）。
 - **`--html`**（既定）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
 - flavor の後ろのトークンはすべて連結され、出力行に対する**部分一致**フィルタになる（大文字小文字は ASCII 範囲で折りたたみ）。**正規表現ではない**。パターンを ASCII の `"` / `'` で1重に囲んだ場合は外側を1回だけ除去する。
 
-### `find`
+### `search`
 
 
-- **`find` 単体 + Enter** で利用案内を表示し、**`find `** へ復帰する。
-- **`find -list` のみ** + **Enter** ではスコープトークンメニュー（`--none` 等）を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
-- **`find -list <scope> …`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--none`** は履歴・ブックマーク・ページ表示テキストをまとめて対象にする。**`--history`** / **`--bookmark`** / **`--page`** でスコープを1つに絞れる。
-- **`find --none`** など直接形はピッカーを経由せずログ行として結果を出す（BMXt ウィンドウ UI で処理。Service Worker の `RUN_CMD` ではない）。**`--none`** でパターン空（例: **`find -list --none`** のみ）は3系統すべて空パターンで走り、実装側で件数上限付きの一覧になる。
-- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`--page`** 系は非破棄の **http(s)** タブを走査し、初回などに **オプションのホスト権限** を求めることがある。
+- **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
+- **`search -list` のみ** + **Enter** ではスコープトークンメニュー（`--history` / `--bookmark` / `--page`）を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
+- **`search -list <scope> [<pattern>]`** は `dom -list` と同系のリストピッカーでヒットを閲覧する。**`--page`** 走査中は進捗をピッカー内に表示し、結果確定後に非表示にする。
+- 結果一覧で複数ヒットがある行では **`→`** で **詳細一覧**（パンくず: 検索結果一覧 → 詳細一覧）を開く。**`←`** または **`Esc`** で結果一覧に戻る。詳細行の **`Enter`** は該当タブを前面化（または新規タブで開く）し、scriptable な http(s) では一致箇所へスクロールして強調表示する。結果行の **`Enter`** だけの場合は従来どおり URL を新規タブで開く。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを走査し、初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs-ja"></a>
 
@@ -1154,6 +1320,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`tabs` 単体**は利用可能オプションを表示し、続けて **`tabs `**（末尾スペース付き）へ入力を復元します。
 - **`tabs -list [-u]`**：タブピッカー列を開きます（`-u` で URL 行付き）。
 - **`tabs -exit -list`**：当該セッションのタブピッカー列を閉じます。
+- **`tabs -setting -page-active --auto | --manual`**：ハイライト移動時のタブプレビューを設定。**`--auto`**（既定）: ハイライト移動で背面ウィンドウ内のタブをアクティブ化。**`--manual`**: **Alt+↑↓**（または **Alt** 押下）時のみアクティブ化。**Enter** は従来どおりハイライトタブへジャンプしてウィンドウを前面化。設定は **`chrome.storage.local`** に保存。タブピッカー表示中はプロンプト下の **tabs** ステータス列に現在モードを表示。
 - **`tabs -nowurl`**：現在タブの URL を表示します。
 - **`tabs -moveurl <url>`**：該当 http(s) タブをアクティブにしウィンドウを前面化。一致がなければ新規タブで開く。プロンプト上で `tabs -moveurl ` の直後に **Tab** を押すと、開いている http(s) タブの URL を補完候補として循環します。
 
@@ -1165,11 +1332,11 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 **有効な対象**
 
-- **ウィンドウ行 1 つ**、または **タブグループ行 1 つ**（Chrome の実グループ。未グループの「(no group)」行は不可）。
-- **タブ行**は対象外。
+- **ウィンドウ行 1 つ**、または **タブグループ行 1 つ**（Chrome の実グループ）。
+- **タブ行**および **未グループのタブ**（グループ見出しなし）は対象外。
 - ウィンドウ／グループ見出しに **`#`** を付けるか、**`#` なし**でその行をハイライトして確定（未マーク時はハイライト行が自動マーク）。
 
-選択が不正（タブのみ、複数ウィンドウ／グループ、未グループ行など）のときはログに **`error:`** 行が出て edit モードは開きません。
+選択が不正（タブのみ、複数ウィンドウ／グループなど）のときはログに **`error:`** 行が出て edit モードは開きません。
 
 **ウィンドウ — 表示名**
 
@@ -1189,6 +1356,15 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 <a id="tabs-tab-picker-impl-ja"></a>
 
 ### タブピッカー（`tabs -list` / `tabs -list -u`）
+
+**ツリー構造**
+
+- 行は階層表示: **`[ウィンドウ]`** → **`[タブグループ]`**（Chrome の実グループのみ）→ **タブ行**。
+- Chrome グループに属さないタブは **ウィンドウ行の直下**に並びます（「(グループなし)」見出し行はありません）。
+- **初期状態はすべて展開**。**←** でハイライト中のウィンドウまたはタブグループを閉じ、**→** で開きます。**タブ行**では **←** / **→** は **所属タブグループ**に対して効きます（未グループのタブには折りたたみ対象がありません）。
+- 開閉状態は **BMXt プロセス**存続中保持されます（BMXt ウィンドウを閉じても保持。**最後の 1 ペイン**の **`exit`** で消去 — [BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)）。
+
+**移動とバルク操作**
 
 - 起動時は、直前にフォーカスしていた通常ブラウザウィンドウのアクティブタブ位置にハイライトを合わせます。
 - `j`/`k`（または `↑`/`↓`）で移動、ピッカー内の `Tab` でハイライト中タブの `#` を付け外しします（複数選択可）。**Shift + `↑`/`↓`** で、ハイライトの移動に合わせて**連続したタブ行に `#` を一括付与**します（一覧上でアンカー行から現在行までの範囲）。**`#` が付いたタブは、同一ウィンドウ内では Chrome 本体のタブバー上でも複数選択（`chrome.tabs.highlight`）に合わせて表示**されます（BMXt を前面にしたまま操作できます）。
@@ -1231,9 +1407,9 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`find -list`**、**`find --none` / `--history` / `--bookmark` / `--page`**、**`translate -on` / `translate -off` / `translate -setting`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on` / `-setting`** の起動・ペア保存・オーバーレイ／typing アシストは UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`search -list`**、**`translate -on` / `translate -off` / `translate -setting`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on` / `-setting`** の起動・ペア保存・オーバーレイ／typing アシストは UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
 
-**`exit`:** **`exit_pane`** Effect を返す。Service Worker はフォーカス中の split ペインを閉じる（最後の 1 ペインなら BMXt ウィンドウごと閉じる）。
+**`exit`:** **`exit_pane`** Effect を返す。Service Worker はフォーカス中の split ペインを閉じる。**最後の 1 ペイン**のときは BMXt ウィンドウを閉じ、**プロセススコープの storage をすべて消去**する（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
@@ -1245,7 +1421,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
-- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じる）
+- **`background.ts`** — `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
 
 manifest やコマンド実装を変えたら **`npm run codegen`** のあと **`npm run verify:manifest`** / **`npm run check:generated`** を実行し、必要なら **`npm run build`** してください。
 
@@ -1297,7 +1473,7 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 **nav 起動中**（`nav -enter` 後）:
 
 - **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（BMXt ウィンドウがアクティブで、ターミナル列にフォーカス）。**typing** 中の短い **Alt** は無視。**Alt 長押し**（約 500ms）は入力確定。
-- **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は仮想カーソル移動（コマンド履歴ではない）。**tabs / find / dom** ピッカー列にフォーカスがあるときはピッカー操作。
+- **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は仮想カーソル移動（コマンド履歴ではない）。**tabs / search / dom** ピッカー列にフォーカスがあるときはピッカー操作。
 - **Enter** — オーバーレイ **ON** 時、左クリック相当、または編集可能要素で **typing モード**。
 - **Ctrl**（タップ、オーバーレイ **ON**）— カーソル位置の **コンテキストメニュー**（**↑ / ↓** 選択、**Enter** 実行、**← / →** 履歴、**Ctrl** / **Esc** で閉じる）。詳細は **[Nav モード](#nav-mode-ja)**。
 - **Esc 長押し**（約 500ms、**typing** 中）— 入力取消（フィールドを元に戻す）。
@@ -1312,7 +1488,7 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 依存関係のインストール後、開発ビルドを起動します（手順の全体像は **Development startup** / **開発時の起動** を参照）。
 
 ```bash
-npm install   # または pnpm install / yarn
+npm ci        # package-lock.json があるときはこちら
 npm run dev   # または pnpm dev
 ```
 
@@ -1324,7 +1500,7 @@ npm run dev   # または pnpm dev
 
 ### 開発時の起動
 
-1. **依存関係:** リポジトリ直下で `npm install`（または `pnpm` / `yarn`）。
+1. **依存関係:** リポジトリ直下で **`npm ci`**（**`package-lock.json`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`npm install`**。**[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
 2. **Codegen:** **`manifest/bmxt-codegen.json`** を編集したときは、**`npm run codegen`** で **`lib/features/bmxt-core/registry/`**・**`lib/features/dispatch/`**・**`lib/features/builtin-commands/`** の生成物を揃える。
 3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`plasmo dev`** で、`build/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
 4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`build/chrome-mv3-dev`** を指定する（Plasmo dev が出力するディレクトリ）。

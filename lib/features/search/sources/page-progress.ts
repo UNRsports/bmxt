@@ -1,4 +1,4 @@
-export type FindPageProgress = {
+export type SearchPageProgress = {
   phase: "start" | "tick" | "done"
   tabIndex: number
   tabTotal: number
@@ -6,8 +6,8 @@ export type FindPageProgress = {
   skipped: number
 }
 
-/** EN: Log line for find --page / find --none page scan progress. */
-export function formatFindPageProgress(label: string, p: FindPageProgress): string {
+/** EN: Progress line for `search -list --page` tab scan. */
+export function formatSearchPageProgress(label: string, p: SearchPageProgress): string {
   if (p.phase === "start") {
     return `${label} — scanning visible text in ${p.tabTotal} open http(s) tab(s)…`
   }
@@ -17,22 +17,22 @@ export function formatFindPageProgress(label: string, p: FindPageProgress): stri
   return `${label} — ${p.tabIndex}/${p.tabTotal} tab(s) checked (${p.scanned} read, ${p.skipped} skipped)`
 }
 
-export function findPageProgressLabel(dispatchLine: string): string {
+export function searchPageProgressLabel(dispatchLine: string): string {
   const t = dispatchLine.trim().toLowerCase()
-  if (t.includes("find --none")) {
-    return "find --none (pages)"
+  if (t.includes("search -list") && t.includes("--history")) {
+    return "search -list --history"
   }
-  if (t.includes("find -list") && t.includes("--none")) {
-    return "find -list --none (pages)"
+  if (t.includes("search -list") && t.includes("--bookmark")) {
+    return "search -list --bookmark"
   }
-  if (t.includes("find -list") && t.includes("--page")) {
-    return "find -list --page"
+  if (t.includes("search -list") && t.includes("--page")) {
+    return "search -list --page"
   }
-  return "find --page"
+  return "search -list"
 }
 
 /** EN: Emit at start, every `stride` tabs, and at end — avoid log spam. */
-export function shouldEmitFindPageProgress(
+export function shouldEmitSearchPageProgress(
   tabIndex: number,
   tabTotal: number,
   stride = 4

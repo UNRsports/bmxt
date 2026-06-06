@@ -8,10 +8,10 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "close",
   "dom",
   "exit",
-  "find",
   "group",
   "help",
   "nav",
+  "search",
   "split",
   "tabs",
   "translate"

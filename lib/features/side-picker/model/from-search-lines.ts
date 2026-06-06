@@ -1,6 +1,18 @@
-import type { FindPageMatch, PickerEntry, PickerSource } from "./picker-entry"
+import type { PickerEntry, PickerSource, SearchPageMatch } from "./picker-entry"
 
-const SCOPE_RE = /^\[(none|history|bookmark|page)\]$/i
+const SEARCH_MERGE_SOURCES: PickerSource[] = ["history", "bookmark", "page"]
+
+function entrySearchSources(entry: PickerEntry): PickerSource[] {
+  if (entry.sources && entry.sources.length > 0) {
+    return SEARCH_MERGE_SOURCES.filter((s) => entry.sources!.includes(s))
+  }
+  if (SEARCH_MERGE_SOURCES.includes(entry.source)) {
+    return [entry.source]
+  }
+  return []
+}
+
+const SCOPE_RE = /^\[(history|bookmark|page)\]$/i
 const MATCH_LINE_RE = /^L(\d+):\s*(.*)$/s
 
 function parseScope(label: string): PickerSource | null {
@@ -8,11 +20,7 @@ function parseScope(label: string): PickerSource | null {
   if (!m) {
     return null
   }
-  const raw = m[1]!.toLowerCase()
-  if (raw === "none") {
-    return "history"
-  }
-  return raw as PickerSource
+  return m[1]!.toLowerCase() as PickerSource
 }
 
 function parseFieldLine(line: string): { key: string; value: string } | null {
@@ -23,7 +31,7 @@ function parseFieldLine(line: string): { key: string; value: string } | null {
   return { key: kv[1]!.trim().toLowerCase(), value: kv[2]! }
 }
 
-function parseMatchField(value: string): FindPageMatch | null {
+function parseMatchField(value: string): SearchPageMatch | null {
   const legacy = MATCH_LINE_RE.exec(value.trim())
   if (!legacy) {
     return null
@@ -45,7 +53,7 @@ function isOpenableUrl(url: string): boolean {
   )
 }
 
-function assignSnippetOccurrences(matches: FindPageMatch[]): FindPageMatch[] {
+function assignSnippetOccurrences(matches: SearchPageMatch[]): SearchPageMatch[] {
   const counts = new Map<string, number>()
   return matches.map((m) => {
     const key = m.snippet.toLowerCase()
@@ -56,13 +64,10 @@ function assignSnippetOccurrences(matches: FindPageMatch[]): FindPageMatch[] {
 }
 
 /**
- * EN: Parse `find -list` terminal blocks into picker entries.
- * JA: find ピッカー用の行ブロックを `PickerEntry` 列に変換する。
- *
- * Page blocks are one row per tab (`tabId` + repeated `match:` lines).
- * Legacy one-line-per-hit blocks (`line:` without `tabId`) are still accepted.
+ * EN: Parse `search -list` result blocks into picker entries.
+ * JA: search ピッカー用の行ブロックを `PickerEntry` 列に変換する。
  */
-export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
+export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
   const entries: PickerEntry[] = []
   let i = 0
   while (i < lines.length) {
@@ -75,7 +80,7 @@ export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
     let url = ""
     let tabId: number | undefined
     let windowId: number | undefined
-    const pageMatches: FindPageMatch[] = []
+    const pageMatches: SearchPageMatch[] = []
     i++
     while (i < lines.length && lines[i]!.trim() !== "") {
       const field = parseFieldLine(lines[i]!)
@@ -118,6 +123,7 @@ export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
           ? `page-tab-${tabId}`
           : `${scope}-${entries.length}-${trimmedUrl}`,
       source: scope,
+      sources: [scope],
       title: title.trim() || trimmedUrl,
       url: trimmedUrl,
       tabId: scope === "page" ? tabId : undefined,
@@ -126,7 +132,86 @@ export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
     })
     i++
   }
-  return mergePageEntriesByTab(entries)
+  return mergeEntriesByUrl(mergePageEntriesByTab(entries))
+}
+
+function normalizeUrlForSearchDedup(url: string): string {
+  try {
+    const u = new URL(url.trim())
+    let host = u.hostname.toLowerCase()
+    if (host.startsWith("www.")) {
+      host = host.slice(4)
+    }
+    let path = u.pathname
+    if (path.length > 1 && path.endsWith("/")) {
+      path = path.slice(0, -1)
+    }
+    return `${host}${path}`
+  } catch {
+    return url.trim().toLowerCase()
+  }
+}
+
+function primarySearchSource(entry: PickerEntry): PickerSource {
+  const sources = entrySearchSources(entry)
+  if (sources.includes("page") && entry.pageMatches && entry.pageMatches.length > 0) {
+    return "page"
+  }
+  return sources[0] ?? entry.source
+}
+
+function mergeSearchSources(a: PickerEntry, b: PickerEntry): PickerSource[] {
+  const merged = new Set<PickerSource>([...entrySearchSources(a), ...entrySearchSources(b)])
+  return SEARCH_MERGE_SOURCES.filter((s) => merged.has(s))
+}
+
+function preferSearchTitle(current: string, currentUrl: string, next: string): string {
+  const cur = current.trim()
+  const nxt = next.trim()
+  if (!nxt || nxt === "(no title)") {
+    return cur
+  }
+  if (!cur || cur === "(no title)" || cur === currentUrl) {
+    return nxt
+  }
+  return cur
+}
+
+/** EN: One picker row per URL; union history / bookmark / page scope labels. */
+function mergeEntriesByUrl(entries: PickerEntry[]): PickerEntry[] {
+  const order: PickerEntry[] = []
+  const byUrl = new Map<string, PickerEntry>()
+
+  for (const entry of entries) {
+    const key = normalizeUrlForSearchDedup(entry.url)
+    const prev = byUrl.get(key)
+    if (!prev) {
+      const row: PickerEntry = {
+        ...entry,
+        sources: entrySearchSources(entry)
+      }
+      byUrl.set(key, row)
+      order.push(row)
+      continue
+    }
+
+    prev.sources = mergeSearchSources(prev, entry)
+    if (entry.pageMatches && entry.pageMatches.length > 0) {
+      const combined = [...(prev.pageMatches ?? []), ...entry.pageMatches]
+      prev.pageMatches = assignSnippetOccurrences(combined)
+    }
+    if (entry.tabId != null) {
+      prev.tabId = entry.tabId
+    }
+    if (entry.windowId != null) {
+      prev.windowId = entry.windowId
+    }
+    prev.title = preferSearchTitle(prev.title, prev.url, entry.title)
+    prev.source = primarySearchSource(prev)
+    prev.id = prev.tabId != null ? `page-tab-${prev.tabId}` : `search-${key}`
+  }
+
+  return order
 }
 
 /** EN: Legacy logs used one block per line hit; merge into one row per tab. */

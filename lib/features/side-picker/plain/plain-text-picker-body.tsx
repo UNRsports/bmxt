@@ -46,6 +46,8 @@ export type PlainTextPickerBodyProps = {
   extensions?: PlainPickerKeyboardExtensions
   /** EN: Notified when the highlighted row index changes. */
   onHiChange?: (hi: number) => void
+  /** EN: Status/log lines only — dim styling, no row confirm or command mode. */
+  statusOnly?: boolean
 }
 
 const ROW_ID_PREFIX = "bmxt-plain-row"
@@ -54,23 +56,25 @@ function PlainTextPickerRow({
   index,
   line,
   hi,
-  searchHighlightQuery
+  searchHighlightQuery,
+  statusOnly = false
 }: {
   index: number
   line: string
   hi: number
   searchHighlightQuery: string
+  statusOnly?: boolean
 }): ReactNode {
-  const hiRow = index === hi
+  const hiRow = !statusOnly && index === hi
   const segments = plainPickerLineHighlightSegments(line, searchHighlightQuery)
   return (
     <div
       id={`${ROW_ID_PREFIX}-${index}`}
-      role="option"
+      role={statusOnly ? "listitem" : "option"}
       aria-selected={hiRow}
       className={`bmxt-tab-picker-row bmxt-tab-picker-row--tab${
         hiRow ? " bmxt-tab-picker-row--hi" : ""
-      }`}>
+      }${statusOnly ? " bmxt-tab-picker-row--status" : ""}`}>
       <div className="bmxt-tab-picker-tab-title">
         <span className="bmxt-tab-picker-tab-glyph"> </span>
         <span className="bmxt-tab-picker-tab-glyph"> </span>
@@ -104,7 +108,8 @@ export function PlainTextPickerBody({
   pickerInputRef,
   sessionId,
   extensions,
-  onHiChange
+  onHiChange,
+  statusOnly = false
 }: PlainTextPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
@@ -159,7 +164,7 @@ export function PlainTextPickerBody({
   }, [effectiveRowHeight, lines.length, useVirtual])
 
   useEffect(() => {
-    setHi(0)
+    setHi(statusOnly && lines.length > 0 ? lines.length - 1 : 0)
     setSearchMode(false)
     setFilterQuery("")
     setHlSearchPattern("")
@@ -167,9 +172,13 @@ export function PlainTextPickerBody({
     setCommandBuffer("")
     setCommandListingHint(false)
     if (listRef.current) {
-      listRef.current.scrollTop = 0
+      if (statusOnly && lines.length > 0) {
+        listRef.current.scrollTop = listRef.current.scrollHeight
+      } else {
+        listRef.current.scrollTop = 0
+      }
     }
-  }, [lines])
+  }, [lines, statusOnly])
 
   useEffect(() => {
     if (lines.length === 0) {
@@ -236,12 +245,12 @@ export function PlainTextPickerBody({
   }, [keyboardActive])
 
   const { onInputKeyDown } = usePlainPickerKeyboard({
-    lineCount: lines.length,
+    lineCount: statusOnly ? 0 : lines.length,
     keyboardActive,
     sessionId,
-    enableCommandMode,
+    enableCommandMode: statusOnly ? false : enableCommandMode,
     onReturnToPrompt,
-    onConfirmLineIndex,
+    onConfirmLineIndex: statusOnly ? undefined : onConfirmLineIndex,
     hi,
     setHi,
     searchMode,
@@ -276,6 +285,7 @@ export function PlainTextPickerBody({
           line={lines[i]!}
           hi={hi}
           searchHighlightQuery={searchHighlightQuery}
+          statusOnly={statusOnly}
         />
       )
     }

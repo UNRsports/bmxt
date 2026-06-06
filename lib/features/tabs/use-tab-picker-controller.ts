@@ -14,6 +14,7 @@ import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
+import { useTabPickerFoldState } from "./use-tab-picker-fold-state"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
@@ -27,12 +28,18 @@ import {
 import type { BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
+import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
+import { emptyTabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
+import type { TabsPageActiveMode } from "./page-active-setting"
 
 type Props = {
   rows: TabPickerRow[]
   showUrl: boolean
   initialHi: number
+  pageActiveMode?: TabsPageActiveMode
   variant?: "default" | "groupNew"
+  interactive?: TabPickerInteractiveSnapshot
+  onInteractiveSnapshotChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
   /** EN: Esc at top level — return focus to BMXt prompt; picker stays open. */
@@ -52,7 +59,10 @@ export function useTabPickerController({
   rows,
   showUrl,
   initialHi,
+  pageActiveMode = "auto",
   variant = "default",
+  interactive,
+  onInteractiveSnapshotChange,
   onAppendLog,
   onRefreshRows,
   onReturnToPrompt,
@@ -61,12 +71,16 @@ export function useTabPickerController({
   sessionId,
   onFocusTabIdChange
 }: Props) {
+  const restored = interactive ?? emptyTabPickerInteractiveSnapshot()
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
   /** `/` で確定したあとも維持するハイライト用クエリ（`:nohlsearch` で消す） */
-  const [hlSearchPattern, setHlSearchPattern] = useState("")
+  const [hlSearchPattern, setHlSearchPattern] = useState(restored.hlSearchPattern)
   const [hi, setHi] = useState(initialHi)
   const [activeTabId, setActiveTabId] = useState<number | null>(() => {
+    if (restored.anchorTabId !== null) {
+      return restored.anchorTabId
+    }
     const atHi = rows[initialHi]
     if (atHi?.kind === "tab") {
       return atHi.tabId
@@ -74,10 +88,10 @@ export function useTabPickerController({
     const firstActive = rows.find((row) => row.kind === "tab" && row.active)
     return firstActive?.kind === "tab" ? firstActive.tabId : null
   })
-  const [markedKind, setMarkedKind] = useState<SelectKind | null>(null)
-  const [markedTabIds, setMarkedTabIds] = useState<number[]>([])
-  const [markedWindowIds, setMarkedWindowIds] = useState<number[]>([])
-  const [markedGroupKeys, setMarkedGroupKeys] = useState<string[]>([])
+  const [markedKind, setMarkedKind] = useState<SelectKind | null>(restored.markedKind)
+  const [markedTabIds, setMarkedTabIds] = useState<number[]>(restored.markedTabIds)
+  const [markedWindowIds, setMarkedWindowIds] = useState<number[]>(restored.markedWindowIds)
+  const [markedGroupKeys, setMarkedGroupKeys] = useState<string[]>(restored.markedGroupKeys)
   const [bulkSubMode, setBulkSubMode] = useState<BulkSubMode | null>(null)
   const [moveDestHi, setMoveDestHi] = useState(initialHi)
   const [groupChoices, setGroupChoices] = useState<GroupChoice[]>([])
@@ -115,15 +129,58 @@ export function useTabPickerController({
   const prevRowsRef = useRef(rows)
   const prevBulkSubModeRef = useRef<BulkSubMode | null>(null)
   const shiftRangeAnchorHiRef = useRef<number | null>(null)
+  const altKeyHeldRef = useRef(false)
+  const [altPreviewTick, setAltPreviewTick] = useState(0)
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Alt") {
+        altKeyHeldRef.current = true
+        if (pageActiveMode === "manual" && !e.repeat) {
+          setAltPreviewTick((t) => t + 1)
+        }
+      }
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Alt") {
+        altKeyHeldRef.current = false
+      }
+    }
+    const clearAlt = () => {
+      altKeyHeldRef.current = false
+    }
+    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("keyup", onKeyUp)
+    window.addEventListener("blur", clearAlt)
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener("keyup", onKeyUp)
+      window.removeEventListener("blur", clearAlt)
+    }
+  }, [pageActiveMode])
 
   const {
     visibleRowIndices,
+    collapseAtRow,
+    expandAtRow,
+    isWindowExpanded,
+    isGroupExpanded
+  } = useTabPickerFoldState(rows)
+
+  const {
     markedTabSet,
     markedWindowSet,
     markedGroupSet,
     tabIdToWindowId,
     selectedTabIds
-  } = useTabPickerDerivedState(rows, markedKind, markedTabIds, markedWindowIds, markedGroupKeys)
+  } = useTabPickerDerivedState(
+    rows,
+    visibleRowIndices,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys
+  )
 
   const { applyReducedState, applyReducedStateSequence, clearMarkedViaReducer } =
     usePickerReducerBridge(
@@ -190,7 +247,10 @@ export function useTabPickerController({
     markedKind,
     markedTabIds,
     tabIdToWindowId,
-    setActiveTabId
+    setActiveTabId,
+    pageActiveMode,
+    altKeyHeldRef,
+    altPreviewTick
   })
 
   useEffect(() => {
@@ -209,6 +269,32 @@ export function useTabPickerController({
     const row = rows[rowIndex]
     onFocusTabIdChange(row?.kind === "tab" ? row.tabId : null)
   }, [hi, visibleRowIndices, rows, onFocusTabIdChange])
+
+  useEffect(() => {
+    if (!onInteractiveSnapshotChange) {
+      return
+    }
+    const rowIndex = visibleRowIndices[hi]
+    const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+    onInteractiveSnapshotChange({
+      anchorTabId: row?.kind === "tab" ? row.tabId : null,
+      markedKind,
+      markedTabIds,
+      markedWindowIds,
+      markedGroupKeys,
+      hlSearchPattern
+    })
+  }, [
+    hi,
+    hlSearchPattern,
+    markedGroupKeys,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    onInteractiveSnapshotChange,
+    rows,
+    visibleRowIndices
+  ])
 
   const markedCount = pickerMarkedCount(
     markedKind,
@@ -369,7 +455,10 @@ export function useTabPickerController({
     confirmGroupRename,
     confirmGroupMenuPick,
     cycleGroupMenuPick,
-    backFromGroupRename
+    backFromGroupRename,
+    collapseAtRow,
+    expandAtRow,
+    altKeyHeldRef
   })
 
   const headLine = useMemo(
@@ -466,6 +555,8 @@ export function useTabPickerController({
     activeTabId,
     showUrl,
     setRowRef,
+    isWindowExpanded,
+    isGroupExpanded,
     variant,
     groupNewPhase,
     groupPanelRef,

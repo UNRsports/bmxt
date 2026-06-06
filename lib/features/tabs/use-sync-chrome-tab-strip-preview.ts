@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, type MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { SelectKind } from "./tab-picker-overlay-types"
+import type { TabsPageActiveMode } from "./page-active-setting"
 
 export function useSyncChromeTabStripPreview({
   hi,
@@ -9,7 +10,10 @@ export function useSyncChromeTabStripPreview({
   markedKind,
   markedTabIds,
   tabIdToWindowId,
-  setActiveTabId
+  setActiveTabId,
+  pageActiveMode,
+  altKeyHeldRef,
+  altPreviewTick = 0
 }: {
   hi: number
   visibleRowIndices: number[]
@@ -18,6 +22,10 @@ export function useSyncChromeTabStripPreview({
   markedTabIds: number[]
   tabIdToWindowId: Map<number, number>
   setActiveTabId: (id: number | null) => void
+  pageActiveMode: TabsPageActiveMode
+  altKeyHeldRef: MutableRefObject<boolean>
+  /** EN: Bumped on Alt keydown in manual mode to re-run preview without moving hi. */
+  altPreviewTick?: number
 }) {
   const syncChromeTabStripPreview = useCallback(
     async (rowIndex: number) => {
@@ -93,7 +101,25 @@ export function useSyncChromeTabStripPreview({
     if (visibleRowIndices.length === 0) {
       return
     }
+    if (pageActiveMode === "manual" && !altKeyHeldRef.current) {
+      const rowIndex = visibleRowIndices[hi]!
+      const row = rows[rowIndex]
+      if (row?.kind === "tab") {
+        setActiveTabId(row.tabId)
+      }
+      return
+    }
     const rowIndex = visibleRowIndices[hi]!
     void syncChromeTabStripPreview(rowIndex)
-  }, [hi, markedTabIds, visibleRowIndices, syncChromeTabStripPreview])
+  }, [
+    altKeyHeldRef,
+    hi,
+    markedTabIds,
+    pageActiveMode,
+    rows,
+    setActiveTabId,
+    visibleRowIndices,
+    syncChromeTabStripPreview,
+    altPreviewTick
+  ])
 }

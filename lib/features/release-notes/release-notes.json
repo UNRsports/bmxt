@@ -1,14 +1,16 @@
 {
-  "0.4.1": {
+  "0.4.5": {
     "ja": [
-      "コード内修正",
-      "navモードでの文字入力に関する不具合修正",
-      "翻訳モードからピッカーを廃し、シンプルな仕様に改善"
+      "npm依存関係の整理",
+      "findコマンドをsearchコマンド（モード）へ変更して機能強化し、検索結果を細分化して各要素へ直接ジャンプ可能に",
+      "tabsモードのピッカーにて、ウィンドウやタブグループのツリーを開閉可能に実装",
+      "tabs -setting -page-active（--auto / --manual）でハイライト時の自動タブアクティブ化を切替可能に実装"
     ],
     "en": [
-      "Miscellaneous internal fixes",
-      "Fixed a bug affecting text input in nav mode",
-      "Removed the translation side picker; translate assist is now prompt preview and nav typing only"
+      "Cleaned up npm dependencies",
+      "Renamed the find command to search (mode) with enhancements — search results can be subdivided so you can jump directly to each element",
+      "Tab picker: window and tab group tree rows can be expanded and collapsed",
+      "Added tabs -setting -page-active (--auto / --manual) to toggle automatic tab activation when moving the highlight"
     ]
   }
 }

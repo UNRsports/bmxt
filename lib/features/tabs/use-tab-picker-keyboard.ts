@@ -78,7 +78,10 @@ export function useTabPickerKeyboard({
   confirmGroupRename,
   confirmGroupMenuPick,
   cycleGroupMenuPick,
-  backFromGroupRename
+  backFromGroupRename,
+  collapseAtRow,
+  expandAtRow,
+  altKeyHeldRef
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -139,6 +142,9 @@ export function useTabPickerKeyboard({
   confirmGroupMenuPick: () => void | Promise<void>
   cycleGroupMenuPick: (delta: number) => void
   backFromGroupRename: () => void
+  collapseAtRow: (row: TabPickerRow) => number | null
+  expandAtRow: (row: TabPickerRow) => number | null
+  altKeyHeldRef: MutableRefObject<boolean>
 }) {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
@@ -205,7 +211,10 @@ export function useTabPickerKeyboard({
     confirmGroupRename,
     confirmGroupMenuPick,
     cycleGroupMenuPick,
-    backFromGroupRename
+    backFromGroupRename,
+    collapseAtRow,
+    expandAtRow,
+    altKeyHeldRef
   })
 
   const { onInputKeyDown } = usePlainPickerKeyboard({

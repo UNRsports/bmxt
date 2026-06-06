@@ -11,9 +11,11 @@ import {
 } from "../builtin-commands/command-subcommands.gen"
 import { resolveCanonical } from "../bmxt-core/registry"
 import {
-  isFindListReadyToRun,
-  isEditingFindListScopeToken
-} from "../find/find-list-picker-input"
+  isSearchListAwaitingScopeOrPattern,
+  matchesSearchListScopeFilter,
+  shouldShowSearchListPatternPlaceholder
+} from "../search/search-list-picker-input"
+import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
 
 export type ImeTokenTier = "first" | "second" | "third"
 
@@ -89,9 +91,27 @@ export function resolveImeTokenPicker(
   firstCommandTokens: readonly string[],
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
-  const trimmed = line.trim()
-  if (isFindListReadyToRun(trimmed) && !isEditingFindListScopeToken(line, cursor)) {
+  if (
+    shouldShowSearchListPatternPlaceholder(line, cursor) &&
+    !isSearchListAwaitingScopeOrPattern(line)
+  ) {
     return null
+  }
+
+  if (isSearchListAwaitingScopeOrPattern(line) && cursor >= line.length) {
+    const canonicalSearch = resolveCanonical("search")
+    if (canonicalSearch) {
+      const scopeCandidates = listThirdTokenCandidates(canonicalSearch, "-list", "")
+      if (scopeCandidates.length > 0) {
+        return {
+          tokenStart: line.length,
+          tokenEnd: line.length,
+          prefix: "",
+          candidates: [...scopeCandidates],
+          tier: "third"
+        }
+      }
+    }
   }
 
   const [l, r] = tokenBounds(line, cursor)
@@ -139,16 +159,9 @@ export function resolveImeTokenPicker(
   }
 
   if (tokenIndex === 1) {
-    const rawSecond =
-      matchMode === "contains"
-        ? listSecondTokenCandidatesByCommand(canonical, "")
-        : listSecondTokenCandidatesByCommand(canonical, prefix)
-    const cands = matchCandidates(rawSecond, prefix, matchMode)
-    if (cands.length > 0) {
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
-    }
     const secondWord = line.slice(l, r)
-    if (cursor >= line.length && isSecondToken(canonical, secondWord)) {
+    const secondComplete = isSecondToken(canonical, secondWord)
+    if (cursor >= line.length && secondComplete) {
       const next = listThirdTokenCandidates(canonical, secondWord.toLowerCase(), "")
       if (next.length > 0) {
         return {
@@ -160,20 +173,48 @@ export function resolveImeTokenPicker(
         }
       }
     }
+    const rawSecond =
+      matchMode === "contains"
+        ? listSecondTokenCandidatesByCommand(canonical, "")
+        : listSecondTokenCandidatesByCommand(canonical, prefix)
+    const cands = matchCandidates(rawSecond, prefix, matchMode).filter(
+      (c) => !(secondComplete && c.toLowerCase() === secondWord.toLowerCase())
+    )
+    if (cands.length > 0) {
+      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
+    }
     return null
   }
 
   if (tokenIndex === 2) {
     const second = tokensBefore[1]!.toLowerCase()
-    const rawThird =
-      matchMode === "contains"
-        ? listThirdTokenCandidates(canonical, second, "")
-        : listThirdTokenCandidates(canonical, second, prefix)
-    const cands = matchCandidates(rawThird, prefix, matchMode)
+    const allThird = listThirdTokenCandidates(canonical, second, "")
+    const isSearchListScopeTier = canonical === "search" && second === "-list"
+    const scopeIncremental =
+      isSearchListScopeTier &&
+      (matchMode === "contains" || matchesSearchListScopeFilter(prefix))
+    const rawThird = scopeIncremental
+      ? allThird
+      : listThirdTokenCandidates(canonical, second, prefix)
+    const effectiveMode =
+      scopeIncremental && !prefix.startsWith("--") ? "contains" : matchMode
+    const cands = matchCandidates(rawThird, prefix, effectiveMode)
     if (cands.length === 0) {
       return null
     }
     return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+  }
+
+  if (tokenIndex === 3) {
+    const second = tokensBefore[1]!.toLowerCase()
+    const third = tokensBefore[2]!.toLowerCase()
+    if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
+      const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+      if (cands.length === 0) {
+        return null
+      }
+      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+    }
   }
 
   return null

@@ -336,6 +336,10 @@ body {
   color: #d2a8ff;
 }
 
+.bmxt-mode-status-seg--label-tabs {
+  color: #f0883e;
+}
+
 .bmxt-mode-status-seg--state {
   color: #8b949e;
 }
@@ -891,6 +895,17 @@ body {
   margin-top: 4px;
 }
 
+.bmxt-tab-picker-fold-glyph {
+  display: inline-block;
+  width: 1.2em;
+  color: #8b949e;
+  user-select: none;
+}
+
+.bmxt-tab-picker-row--folded .bmxt-tab-picker-fold-glyph {
+  color: #6e7681;
+}
+
 .bmxt-tab-picker-row--tab {
   padding-left: 2ch;
   border-radius: 2px;
@@ -910,6 +925,15 @@ body {
   background: rgba(47, 110, 181, 0.22);
   outline: 1px solid #388bfd;
   box-shadow: inset 3px 0 0 #3fb950;
+}
+
+.bmxt-tab-picker-row--status {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.bmxt-tab-picker-row--status .bmxt-plain-picker-row-text {
+  font-style: italic;
 }
 
 .bmxt-tab-picker-row--move-dest {
@@ -1053,6 +1077,73 @@ body {
 .bmxt-tab-picker-search-hl {
   background: #f5e942;
   color: #0d1117;
+}
+
+.bmxt-search-picker-crumb {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+
+.bmxt-search-picker-crumb-segment--active {
+  color: #e6edf3;
+}
+
+.bmxt-search-picker-crumb-sep {
+  margin: 0 6px;
+  color: #6e7681;
+  user-select: none;
+}
+
+.bmxt-search-picker-row {
+  padding: 8px 10px;
+  border-bottom: 1px solid #21262d;
+  cursor: default;
+}
+
+.bmxt-search-picker-row--hi {
+  background: #1f6feb22;
+  outline: 1px solid #388bfd66;
+}
+
+.bmxt-search-picker-scope {
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 4px;
+}
+
+.bmxt-search-picker-field {
+  margin-top: 4px;
+}
+
+.bmxt-search-picker-field-label {
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 2px;
+}
+
+.bmxt-search-picker-title,
+.bmxt-search-picker-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e6edf3;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bmxt-search-picker-text {
+  font-size: 12px;
+  color: #c9d1d9;
+}
+
+.bmxt-search-picker-hl {
+  background: #ffc9dd;
+  color: #0d1117;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .bmxt-tab-picker-tab-url {

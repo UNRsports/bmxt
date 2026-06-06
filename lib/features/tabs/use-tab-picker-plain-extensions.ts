@@ -11,6 +11,7 @@ import {
   verticalNavDirection
 } from "./tab-picker-keyboard"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
+import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import type { ExecutionIntent } from "./controller/execute-actions"
 import {
   resolvePickerEnterIntent,
@@ -104,7 +105,10 @@ export function useTabPickerPlainExtensions({
   confirmGroupRename,
   confirmGroupMenuPick,
   cycleGroupMenuPick,
-  backFromGroupRename
+  backFromGroupRename,
+  collapseAtRow,
+  expandAtRow,
+  altKeyHeldRef
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -160,11 +164,76 @@ export function useTabPickerPlainExtensions({
   confirmGroupMenuPick: () => void | Promise<void>
   cycleGroupMenuPick: (delta: number) => void
   backFromGroupRename: () => void
+  collapseAtRow: (row: TabPickerRow) => number | null
+  expandAtRow: (row: TabPickerRow) => number | null
+  altKeyHeldRef: MutableRefObject<boolean>
 }): PlainPickerKeyboardExtensions {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
   newTabUrlWindowIdRef.current = newTabUrlWindowId
   newTabUrlRef.current = newTabUrl
+
+  const onCaptureBefore = useCallback(
+    (e: KeyboardEvent): boolean => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+        return false
+      }
+      const ev = e as KeyboardEvent & { isComposing?: boolean }
+      if (ev.isComposing) {
+        return false
+      }
+      if (
+        searchMode ||
+        commandMode ||
+        bulkSubMode !== null ||
+        groupNewPhase === "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel !== null
+      ) {
+        return false
+      }
+      const isLeft = e.key === "ArrowLeft" || e.code === "ArrowLeft"
+      const isRight = e.key === "ArrowRight" || e.code === "ArrowRight"
+      if (!isLeft && !isRight) {
+        return false
+      }
+      if (visibleRowIndices.length === 0) {
+        return false
+      }
+      const rowIndex = visibleRowIndices[hi]
+      const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+      if (!row) {
+        return false
+      }
+      const focusRowIdx = isLeft ? collapseAtRow(row) : expandAtRow(row)
+      if (focusRowIdx === null) {
+        return false
+      }
+      pickerStopEvent(e)
+      const newVisible = computeTabPickerVisibleRowIndices(rows)
+      const newHi = newVisible.indexOf(focusRowIdx)
+      if (newHi >= 0) {
+        setHi(newHi)
+      } else {
+        setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+      }
+      return true
+    },
+    [
+      bulkSubMode,
+      collapseAtRow,
+      commandMode,
+      editPanel,
+      expandAtRow,
+      groupNewPhase,
+      hi,
+      newTabUrlWindowId,
+      rows,
+      searchMode,
+      setHi,
+      visibleRowIndices
+    ]
+  )
 
   const commitTabPickerCommand = useCallback(
     (buffer: string) => {
@@ -210,13 +279,20 @@ export function useTabPickerPlainExtensions({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (e.altKey) {
+      const altOnlyChord = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+      if (e.altKey && !altOnlyChord) {
         return false
       }
       if (isReservedSplitPaneVerticalNav(e)) {
         return false
       }
       const navDir = verticalNavDirection(e)
+      if (altOnlyChord) {
+        if (navDir === null) {
+          return false
+        }
+        altKeyHeldRef.current = true
+      }
       if (navDir === null) {
         return false
       }
@@ -387,7 +463,8 @@ export function useTabPickerPlainExtensions({
       rows,
       setGroupPickIndex,
       shiftRangeAnchorHiRef,
-      visibleRowIndices
+      visibleRowIndices,
+      altKeyHeldRef
     ]
   )
 
@@ -668,6 +745,7 @@ export function useTabPickerPlainExtensions({
 
   return useMemo(
     (): PlainPickerKeyboardExtensions => ({
+      onCaptureBefore,
       customVerticalNav,
       isSearchJumpEnabled: () =>
         !searchMode &&
@@ -700,6 +778,7 @@ export function useTabPickerPlainExtensions({
       groupNewPhase,
       hlSearchPattern,
       newTabUrlWindowId,
+      onCaptureBefore,
       onEsc,
       onInputAfterPlain,
       onNormalEnter,
