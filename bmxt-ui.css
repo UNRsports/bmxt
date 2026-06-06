@@ -1064,6 +1064,24 @@ body {
   color: #0d1117;
 }
 
+.bmxt-search-picker-crumb {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+
+.bmxt-search-picker-crumb-segment--active {
+  color: #e6edf3;
+}
+
+.bmxt-search-picker-crumb-sep {
+  margin: 0 6px;
+  color: #6e7681;
+  user-select: none;
+}
+
 .bmxt-search-picker-row {
   padding: 8px 10px;
   border-bottom: 1px solid #21262d;

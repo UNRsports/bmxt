@@ -16,10 +16,14 @@ import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/p
 import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
+import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { SearchPickerHighlight } from "./search-picker-highlight"
+import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 
 const ROW_ID_PREFIX = "bmxt-search-row"
+
+export type SearchListPickerView = "results" | "detail"
 
 export type SearchListPickerBodyProps = {
   headline: string
@@ -30,8 +34,14 @@ export type SearchListPickerBodyProps = {
   statusLines?: string[]
   statusOnly?: boolean
   matchHi?: number
+  pickerView?: SearchListPickerView
+  detailHits?: SearchEntryDetailHit[]
+  detailEntry?: PickerEntry
+  /** EN: Row index to restore when returning from detail view to the results list. */
+  resultsFocusHi?: number
   onReturnToPrompt: () => void
   onConfirmLineIndex?: (index: number) => void
+  onConfirmDetailHit?: (index: number) => void
   enableCommandMode?: boolean
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
@@ -59,6 +69,40 @@ function SearchListStatusRow({
       }`}>
       <div className="bmxt-tab-picker-tab-title">
         <span className="bmxt-plain-picker-row-text">{line}</span>
+      </div>
+    </div>
+  )
+}
+
+function SearchDetailPickerRow({
+  index,
+  hit,
+  hi,
+  pattern,
+  entry
+}: {
+  index: number
+  hit: SearchEntryDetailHit
+  hi: number
+  pattern: string
+  entry: PickerEntry
+}): ReactNode {
+  const hiRow = index === hi
+  const fieldLabel = `${hit.field}:`
+  return (
+    <div
+      id={`${ROW_ID_PREFIX}-${index}`}
+      role="option"
+      aria-selected={hiRow}
+      className={`bmxt-search-picker-row${hiRow ? " bmxt-search-picker-row--hi" : ""}`}>
+      {index === 0 ? (
+        <div className="bmxt-search-picker-scope">{searchPickerSourceLabel(entry)}</div>
+      ) : null}
+      <div className="bmxt-search-picker-field">
+        <div className="bmxt-search-picker-field-label">{fieldLabel}</div>
+        <div className="bmxt-search-picker-text">
+          <SearchPickerHighlight text={hit.displayText} needle={pattern} />
+        </div>
       </div>
     </div>
   )
@@ -114,8 +158,13 @@ export function SearchListPickerBody({
   statusLines = [],
   statusOnly = false,
   matchHi = 0,
+  pickerView = "results",
+  detailHits = [],
+  detailEntry,
+  resultsFocusHi = 0,
   onReturnToPrompt,
   onConfirmLineIndex,
+  onConfirmDetailHit,
   enableCommandMode = false,
   keyboardActive = false,
   pickerInputRef,
@@ -135,16 +184,6 @@ export function SearchListPickerBody({
   )
   const listRef = useRef<HTMLDivElement>(null)
   const [hi, setHiState] = useState(0)
-  const setHi = useCallback(
-    (action: SetStateAction<number>) => {
-      setHiState((prev) => {
-        const next = typeof action === "function" ? action(prev) : action
-        onHiChange?.(next)
-        return next
-      })
-    },
-    [onHiChange]
-  )
   const [searchMode, setSearchMode] = useState(false)
   const [filterQuery, setFilterQuery] = useState("")
   const [hlSearchPattern, setHlSearchPattern] = useState("")
@@ -152,14 +191,45 @@ export function SearchListPickerBody({
   const [commandBuffer, setCommandBuffer] = useState("")
   const [commandListingHint, setCommandListingHint] = useState(false)
 
-  const lineCount = statusOnly ? statusLines.length : entries.length
-  const matchLines = useMemo(
-    () => (statusOnly ? statusLines : entries.map((e) => e.title)),
-    [entries, statusLines, statusOnly]
+  const inDetailView = pickerView === "detail" && detailEntry != null
+  const setHi = useCallback(
+    (action: SetStateAction<number>) => {
+      setHiState((prev) => {
+        const next = typeof action === "function" ? action(prev) : action
+        if (!inDetailView) {
+          onHiChange?.(next)
+        }
+        return next
+      })
+    },
+    [inDetailView, onHiChange]
   )
+  const lineCount = statusOnly
+    ? statusLines.length
+    : inDetailView
+      ? detailHits.length
+      : entries.length
+  const matchLines = useMemo(
+    () =>
+      statusOnly
+        ? statusLines
+        : inDetailView
+          ? detailHits.map((h) => h.displayText)
+          : entries.map((e) => e.title),
+    [detailHits, entries, inDetailView, statusLines, statusOnly]
+  )
+  const listResetKey = inDetailView
+    ? `detail-${detailEntry?.id ?? ""}-${detailHits.length}`
+    : `results-${entries.length}-${resultsFocusHi}`
 
   useEffect(() => {
-    setHi(statusOnly && statusLines.length > 0 ? statusLines.length - 1 : 0)
+    const startHi =
+      statusOnly && statusLines.length > 0
+        ? statusLines.length - 1
+        : inDetailView
+          ? 0
+          : resultsFocusHi
+    setHi(startHi)
     setSearchMode(false)
     setFilterQuery("")
     setHlSearchPattern("")
@@ -173,7 +243,7 @@ export function SearchListPickerBody({
         listRef.current.scrollTop = 0
       }
     }
-  }, [entries, statusLines, statusOnly])
+  }, [listResetKey, statusLines, statusOnly])
 
   useEffect(() => {
     if (lineCount === 0) {
@@ -187,7 +257,7 @@ export function SearchListPickerBody({
       return
     }
     document.getElementById(`${ROW_ID_PREFIX}-${hi}`)?.scrollIntoView({ block: "nearest" })
-  }, [hi, lineCount, entries, statusLines, matchHi])
+  }, [hi, lineCount, entries, statusLines, matchHi, detailHits, inDetailView])
 
   useLayoutEffect(() => {
     if (keyboardActive) {
@@ -197,13 +267,15 @@ export function SearchListPickerBody({
     }
   }, [keyboardActive])
 
+  const confirmLineIndex = inDetailView ? onConfirmDetailHit : onConfirmLineIndex
+
   const { onInputKeyDown } = usePlainPickerKeyboard({
     lineCount: statusOnly ? 0 : lineCount,
     keyboardActive,
     sessionId,
-    enableCommandMode: statusOnly ? false : enableCommandMode,
+    enableCommandMode: statusOnly || inDetailView ? false : enableCommandMode,
     onReturnToPrompt,
-    onConfirmLineIndex: statusOnly ? undefined : onConfirmLineIndex,
+    onConfirmLineIndex: statusOnly ? undefined : confirmLineIndex,
     hi,
     setHi,
     searchMode,
@@ -224,8 +296,11 @@ export function SearchListPickerBody({
   const activeRowId =
     lineCount > 0 && hi >= 0 && hi < lineCount ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
+  const listAriaLabel = inDetailView ? "Search result detail hits" : "Search results"
+
   return (
     <div className="bmxt-tab-picker bmxt-side-picker bmxt-search-picker">
+      {!statusOnly ? <SearchPickerBreadcrumb view={pickerView} /> : null}
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}
@@ -260,13 +335,24 @@ export function SearchListPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label="Search results"
+        aria-label={listAriaLabel}
         aria-activedescendant={activeRowId}>
         {lineCount === 0 ? (
           <div className="bmxt-tab-picker-empty">(no output)</div>
         ) : statusOnly ? (
           statusLines.map((line, i) => (
             <SearchListStatusRow key={i} index={i} line={line} hi={hi} />
+          ))
+        ) : inDetailView && detailEntry ? (
+          detailHits.map((hit, i) => (
+            <SearchDetailPickerRow
+              key={`${detailEntry.id}-${i}`}
+              index={i}
+              hit={hit}
+              hi={hi}
+              pattern={pattern}
+              entry={detailEntry}
+            />
           ))
         ) : (
           entries.map((entry, i) => (
