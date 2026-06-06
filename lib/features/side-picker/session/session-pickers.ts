@@ -1,18 +1,18 @@
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
-import type { FindListPickerState } from "../../find/find-list-picker-input"
+import type { SearchListPickerState } from "../../search/search-list-picker-input"
 import type { TabPickerState } from "./tab-picker-state"
 
-export type PickerSlotId = "tabs" | "find" | "dom"
+export type PickerSlotId = "tabs" | "search" | "dom"
 
 export type SessionPickerState = {
   tabs: TabPickerState | null
-  find: FindListPickerState | null
+  search: SearchListPickerState | null
   dom: DomListPickerState | null
 }
 
 export const EMPTY_SESSION_PICKERS: SessionPickerState = {
   tabs: null,
-  find: null,
+  search: null,
   dom: null
 }
 
@@ -26,7 +26,7 @@ export function sessionPickersOrEmpty(
 }
 
 export function anySessionPickerOpen(pickers: SessionPickerState): boolean {
-  return pickers.tabs !== null || pickers.find !== null || pickers.dom !== null
+  return pickers.tabs !== null || pickers.search !== null || pickers.dom !== null
 }
 
 export function anyLeafHasPickerOpen(map: SessionPickersByLeaf): boolean {
@@ -38,8 +38,8 @@ export function openPickerSlots(pickers: SessionPickerState): PickerSlotId[] {
   if (pickers.tabs !== null) {
     open.push("tabs")
   }
-  if (pickers.find !== null) {
-    open.push("find")
+  if (pickers.search !== null) {
+    open.push("search")
   }
   if (pickers.dom !== null) {
     open.push("dom")
@@ -75,7 +75,7 @@ export function setSessionPickerSlot<K extends PickerSlotId>(
     }
     const nextSlot = { ...cur, [slot]: null }
     const allClosed =
-      nextSlot.tabs === null && nextSlot.find === null && nextSlot.dom === null
+      nextSlot.tabs === null && nextSlot.search === null && nextSlot.dom === null
     if (allClosed) {
       if (!(sessionId in prev)) {
         return prev

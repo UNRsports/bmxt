@@ -11,9 +11,9 @@ import {
 } from "../builtin-commands/command-subcommands.gen"
 import { resolveCanonical } from "../bmxt-core/registry"
 import {
-  isFindListReadyToRun,
-  isEditingFindListScopeToken
-} from "../find/find-list-picker-input"
+  isSearchListReadyToRun,
+  isEditingSearchListScopeToken
+} from "../search/search-list-picker-input"
 
 export type ImeTokenTier = "first" | "second" | "third"
 
@@ -90,7 +90,7 @@ export function resolveImeTokenPicker(
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
   const trimmed = line.trim()
-  if (isFindListReadyToRun(trimmed) && !isEditingFindListScopeToken(line, cursor)) {
+  if (isSearchListReadyToRun(trimmed) && !isEditingSearchListScopeToken(line, cursor)) {
     return null
   }
 

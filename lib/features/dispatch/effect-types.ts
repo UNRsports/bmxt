@@ -8,14 +8,14 @@ export type ChromeEffect =
   | { kind: "clear_log" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }
-  | { kind: "find_bookmark"; pattern: string }
-  | { kind: "find_history"; pattern: string }
-  | { kind: "find_page"; pattern: string }
   | { kind: "group_new"; tab_ids: number[] }
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_new_tab"; url: string }
   | { kind: "open_url_new_window"; url: string }
   | { kind: "open_welcome_page" }
+  | { kind: "search_bookmark"; pattern: string }
+  | { kind: "search_history"; pattern: string }
+  | { kind: "search_page"; pattern: string }
   | { kind: "split_col" }
   | { kind: "split_row" }
   | { kind: "tabs_move_url"; url: string }

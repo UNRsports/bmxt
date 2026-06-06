@@ -1,15 +1,15 @@
-import type { FindPageMatch } from "../side-picker/model/picker-entry"
+import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
 
-export type PageTabFindHit = {
+export type PageTabSearchHit = {
   tabId: number
   windowId: number
   title: string
   url: string
-  matches: FindPageMatch[]
+  matches: SearchPageMatch[]
 }
 
-/** EN: Terminal block for one tab's page find hits (picker + log). */
-export function linesForFindPageTab(hit: PageTabFindHit): string[] {
+/** EN: Terminal block for one tab's page search hits (picker + log). */
+export function linesForSearchPageTab(hit: PageTabSearchHit): string[] {
   const out: string[] = [
     "[page]",
     `tabId: ${hit.tabId}`,

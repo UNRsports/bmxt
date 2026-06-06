@@ -16,12 +16,12 @@ export type DispatchChromeContext = {
   resolveDomListTargetTabId?: () => Promise<number | undefined>
   /** EN: Receives structured DOM picker rows when `dom_list` runs (picker-direct path). */
   onDomListCapture?: (capture: DomListCapture) => void
-  /** EN: Throttled progress while `find_page` scans open tabs. */
-  onFindPageProgress?: (message: string) => Promise<void>
-  /** EN: Label prefix for progress lines (e.g. `find --page`). */
-  findPageProgressLabel?: string
-  /** EN: When true, `find_page` stops after the current tab (Ctrl+C / find -exit -list). */
-  shouldCancelFindPage?: () => boolean
+  /** EN: Throttled progress while `search_page` scans open tabs. */
+  onSearchPageProgress?: (message: string) => Promise<void>
+  /** EN: Label prefix for progress lines (e.g. `search -list --page`). */
+  searchPageProgressLabel?: string
+  /** EN: When true, `search_page` stops after the current tab (Ctrl+C / search -exit -list). */
+  shouldCancelSearchPage?: () => boolean
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
 }

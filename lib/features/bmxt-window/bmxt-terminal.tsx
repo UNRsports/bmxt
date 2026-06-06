@@ -77,7 +77,7 @@ function SplitLeafView({
   const sessionPickers = sessionPickersOrEmpty(pickersBySession, node.id)
   const hasColumnPickers =
     sessionPickers.tabs !== null ||
-    sessionPickers.find !== null ||
+    sessionPickers.search !== null ||
     sessionPickers.dom !== null
   const leafHasKeyboardFocus = focusedLeafId === node.id
   return (

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { pickerEntriesFromFindLines } from "./from-find-lines.ts"
+import { pickerEntriesFromSearchLines } from "./from-search-lines.ts"
 
-describe("pickerEntriesFromFindLines", () => {
+describe("pickerEntriesFromSearchLines", () => {
   it("parses a history block", () => {
-    const entries = pickerEntriesFromFindLines([
+    const entries = pickerEntriesFromSearchLines([
       "[history]",
       "title: Example",
       "url: https://example.com",
@@ -17,7 +17,7 @@ describe("pickerEntriesFromFindLines", () => {
   })
 
   it("skips blocks without http(s) url", () => {
-    const entries = pickerEntriesFromFindLines([
+    const entries = pickerEntriesFromSearchLines([
       "[bookmark]",
       "title: No URL",
       ""
@@ -25,19 +25,8 @@ describe("pickerEntriesFromFindLines", () => {
     assert.equal(entries.length, 0)
   })
 
-  it("parses [none] as history source", () => {
-    const entries = pickerEntriesFromFindLines([
-      "[none]",
-      "title: T",
-      "url: https://t.example/",
-      ""
-    ])
-    assert.equal(entries.length, 1)
-    assert.equal(entries[0]!.source, "history")
-  })
-
   it("groups page matches per tab with tabId", () => {
-    const entries = pickerEntriesFromFindLines([
+    const entries = pickerEntriesFromSearchLines([
       "[page]",
       "tabId: 42",
       "windowId: 7",

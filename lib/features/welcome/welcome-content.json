@@ -25,7 +25,7 @@
       "Show a welcome page when the extension version is upgraded",
       "Fixed tabs mode filtering so keyboard focus no longer jumps to the list unexpectedly",
       "Revised mouse interaction: text in the prompt and log can be selected while keeping keyboard-first operation as the default",
-      "Improved in-browser cross-search (`find`)",
+      "Improved in-browser cross-search (`search`)",
       "Improved Tab completion menu behavior"
     ],
     "ja": [

@@ -1,13 +1,12 @@
 export type PickerSource = "tab" | "history" | "bookmark" | "page"
 
-/** EN: One innerText line hit inside an open tab (`find --page`). */
-export type FindPageMatch = {
+/** EN: One innerText line hit inside an open tab (`search -list --page`). */
+export type SearchPageMatch = {
   lineNo: number
   snippet: string
   /** EN: Nth DOM occurrence of `snippet` on the tab (case-insensitive). */
   occurrence: number
 }
-
 export type PickerEntry = {
   id: string
   source: PickerSource
@@ -17,16 +16,16 @@ export type PickerEntry = {
   windowId?: number
   groupId?: number | null
   /** EN: Grouped line hits when `source === "page"` (one picker row per tab). */
-  pageMatches?: FindPageMatch[]
+  pageMatches?: SearchPageMatch[]
   meta?: Record<string, string>
 }
 
 export function entryDisplayLine(entry: PickerEntry): string {
-  return findPickerSummaryLine(entry)
+  return searchPickerSummaryLine(entry)
 }
 
 /** EN: One picker row per tab; hit count only (detail shown in headline while cycling n/N). */
-export function findPickerSummaryLine(entry: PickerEntry): string {
+export function searchPickerSummaryLine(entry: PickerEntry): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
   const base =
@@ -48,7 +47,7 @@ export function findPickerSummaryLine(entry: PickerEntry): string {
 }
 
 /** EN: Full detail for the active page hit (headline suffix). */
-export function findPickerMatchDetail(entry: PickerEntry, matchHi = 0): string {
+export function searchPickerMatchDetail(entry: PickerEntry, matchHi = 0): string {
   const m = entry.pageMatches?.[matchHi] ?? entry.pageMatches?.[0]
   if (!m) {
     return ""
@@ -58,7 +57,7 @@ export function findPickerMatchDetail(entry: PickerEntry, matchHi = 0): string {
 }
 
 /** EN: Picker row text; `matchHi` selects which page hit snippet to show. */
-export function findPickerDisplayLine(entry: PickerEntry, matchHi = 0): string {
+export function searchPickerDisplayLine(entry: PickerEntry, matchHi = 0): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
   const base =

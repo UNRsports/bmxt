@@ -5,18 +5,22 @@ import {
   useState,
   type MutableRefObject
 } from "react"
-import { FIND_LIST_PICKER_HEADLINE } from "../side-picker/interaction/picker-headlines"
+import {
+  SEARCH_LIST_PICKER_HEADLINE,
+  SEARCH_LIST_PICKER_LOADING_HEADLINE
+} from "../side-picker/interaction/picker-headlines"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {
-  findPickerMatchDetail,
-  findPickerSummaryLine,
+  searchPickerMatchDetail,
+  searchPickerSummaryLine,
   type PickerEntry
 } from "../side-picker/model/picker-entry"
 import { PlainTextPickerBody } from "../side-picker/plain/plain-text-picker-body"
+import type { SearchListPickerState } from "./search-list-picker-input"
 
 type Props = {
-  entries: PickerEntry[]
+  state: SearchListPickerState
   onReturnToPrompt: () => void
   onOpenEntry: (entry: PickerEntry, matchIndex: number) => void
   keyboardActive?: boolean
@@ -24,14 +28,16 @@ type Props = {
   sessionId?: string
 }
 
-export function FindListPickerOverlay({
+export function SearchListPickerOverlay({
   onReturnToPrompt,
-  entries,
+  state,
   onOpenEntry,
   keyboardActive = false,
   pickerInputRef,
   sessionId
 }: Props) {
+  const { phase, progressLines, entries, emptyResultLines } = state
+  const loading = phase === "loading"
   const [hi, setHi] = useState(0)
   const [matchHi, setMatchHi] = useState(0)
   const matchHiRef = useRef(matchHi)
@@ -42,31 +48,51 @@ export function FindListPickerOverlay({
     setMatchHi(0)
   }, [])
 
-  const lines = useMemo(() => entries.map(findPickerSummaryLine), [entries])
+  const lines = useMemo(() => {
+    if (loading) {
+      return progressLines.length > 0 ? progressLines : ["search — starting…"]
+    }
+    if (entries.length > 0) {
+      return entries.map(searchPickerSummaryLine)
+    }
+    if (emptyResultLines && emptyResultLines.length > 0) {
+      return emptyResultLines
+    }
+    return ["(no matches)"]
+  }, [loading, progressLines, entries, emptyResultLines])
 
   const headline = useMemo(() => {
+    if (loading) {
+      return SEARCH_LIST_PICKER_LOADING_HEADLINE
+    }
     const entry = entries[hi]
-    const detail = entry ? findPickerMatchDetail(entry, matchHi) : ""
+    const detail = entry ? searchPickerMatchDetail(entry, matchHi) : ""
     if (!detail) {
-      return FIND_LIST_PICKER_HEADLINE
+      return SEARCH_LIST_PICKER_HEADLINE
     }
     const clipped = detail.length > 88 ? `${detail.slice(0, 87)}…` : detail
-    return `${FIND_LIST_PICKER_HEADLINE} · ${clipped}`
-  }, [entries, hi, matchHi])
+    return `${SEARCH_LIST_PICKER_HEADLINE} · ${clipped}`
+  }, [loading, entries, hi, matchHi])
 
   const onConfirmLineIndex = useCallback(
     (index: number) => {
+      if (loading) {
+        return
+      }
       const entry = entries[index]
       if (entry) {
         onOpenEntry(entry, matchHiRef.current)
       }
     },
-    [entries, onOpenEntry]
+    [loading, entries, onOpenEntry]
   )
 
   const extensions = useMemo((): PlainPickerKeyboardExtensions => {
     return {
       onCaptureBefore: (e: KeyboardEvent) => {
+        if (loading) {
+          return false
+        }
         const entry = entries[hi]
         const n = entry?.pageMatches?.length ?? 0
         if (n <= 1) {
@@ -86,7 +112,7 @@ export function FindListPickerOverlay({
         return false
       }
     }
-  }, [entries, hi])
+  }, [loading, entries, hi])
 
   return (
     <PlainTextPickerBody
@@ -94,12 +120,13 @@ export function FindListPickerOverlay({
       lines={lines}
       onReturnToPrompt={onReturnToPrompt}
       onConfirmLineIndex={onConfirmLineIndex}
-      enableCommandMode
+      enableCommandMode={!loading && entries.length > 0}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}
       extensions={extensions}
       onHiChange={onHiChange}
+      statusOnly={loading || entries.length === 0}
     />
   )
 }

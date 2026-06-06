@@ -1,6 +1,6 @@
-import type { FindPageMatch, PickerEntry, PickerSource } from "./picker-entry"
+import type { SearchPageMatch, PickerEntry, PickerSource } from "./picker-entry"
 
-const SCOPE_RE = /^\[(none|history|bookmark|page)\]$/i
+const SCOPE_RE = /^\[(history|bookmark|page)\]$/i
 const MATCH_LINE_RE = /^L(\d+):\s*(.*)$/s
 
 function parseScope(label: string): PickerSource | null {
@@ -8,11 +8,7 @@ function parseScope(label: string): PickerSource | null {
   if (!m) {
     return null
   }
-  const raw = m[1]!.toLowerCase()
-  if (raw === "none") {
-    return "history"
-  }
-  return raw as PickerSource
+  return m[1]!.toLowerCase() as PickerSource
 }
 
 function parseFieldLine(line: string): { key: string; value: string } | null {
@@ -23,7 +19,7 @@ function parseFieldLine(line: string): { key: string; value: string } | null {
   return { key: kv[1]!.trim().toLowerCase(), value: kv[2]! }
 }
 
-function parseMatchField(value: string): FindPageMatch | null {
+function parseMatchField(value: string): SearchPageMatch | null {
   const legacy = MATCH_LINE_RE.exec(value.trim())
   if (!legacy) {
     return null
@@ -45,7 +41,7 @@ function isOpenableUrl(url: string): boolean {
   )
 }
 
-function assignSnippetOccurrences(matches: FindPageMatch[]): FindPageMatch[] {
+function assignSnippetOccurrences(matches: SearchPageMatch[]): SearchPageMatch[] {
   const counts = new Map<string, number>()
   return matches.map((m) => {
     const key = m.snippet.toLowerCase()
@@ -56,13 +52,10 @@ function assignSnippetOccurrences(matches: FindPageMatch[]): FindPageMatch[] {
 }
 
 /**
- * EN: Parse `find -list` terminal blocks into picker entries.
- * JA: find ピッカー用の行ブロックを `PickerEntry` 列に変換する。
- *
- * Page blocks are one row per tab (`tabId` + repeated `match:` lines).
- * Legacy one-line-per-hit blocks (`line:` without `tabId`) are still accepted.
+ * EN: Parse `search -list` result blocks into picker entries.
+ * JA: search ピッカー用の行ブロックを `PickerEntry` 列に変換する。
  */
-export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
+export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
   const entries: PickerEntry[] = []
   let i = 0
   while (i < lines.length) {
@@ -75,7 +68,7 @@ export function pickerEntriesFromFindLines(lines: string[]): PickerEntry[] {
     let url = ""
     let tabId: number | undefined
     let windowId: number | undefined
-    const pageMatches: FindPageMatch[] = []
+    const pageMatches: SearchPageMatch[] = []
     i++
     while (i < lines.length && lines[i]!.trim() !== "") {
       const field = parseFieldLine(lines[i]!)

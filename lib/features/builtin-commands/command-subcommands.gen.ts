@@ -22,13 +22,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
-  "find": [
-    { head: "-list", trailingTokens: ["--none","--history","--bookmark","--page"] as const, tail: "rest" },
-    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
-    { head: "--none", trailingTokens: [] as const, tail: "rest" },
-    { head: "--history", trailingTokens: [] as const, tail: "rest" },
-    { head: "--bookmark", trailingTokens: [] as const, tail: "rest" },
-    { head: "--page", trailingTokens: [] as const, tail: "rest" }
+  "search": [
+    { head: "-list", trailingTokens: ["--history","--bookmark","--page"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "group": [] as const,
   "help": [] as const,
@@ -110,9 +106,9 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "exit":
       return false
-    case "find": {
+    case "search": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "--none" || lower === "--history" || lower === "--bookmark" || lower === "--page"
+      return lower === "-list" || lower === "-exit"
     }
     case "group":
       return false

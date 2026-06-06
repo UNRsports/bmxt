@@ -1,8 +1,8 @@
-import { bmxtFindPageScrollToSnippetInjected } from "../page-dom/injected-find-page-scroll-to-snippet"
-import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
+import { bmxtFindPageScrollToSnippetInjected } from "../../page-dom/injected-find-page-scroll-to-snippet"
+import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 
 /** EN: Focus tab and scroll to the Nth in-page occurrence of `snippet` (case-insensitive). */
-export async function scrollFindPageToSnippet(
+export async function scrollSearchPageToSnippet(
   tabId: number,
   snippet: string,
   occurrence = 0

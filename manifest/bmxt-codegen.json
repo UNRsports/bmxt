@@ -41,36 +41,20 @@
       "subcommands": []
     },
     {
-      "module": "find",
-      "canonicalName": "find",
+      "module": "search",
+      "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "find -list [--none|--history|--bookmark|--page] <pattern> | find -exit -list | find --none|… <pattern>",
+      "usagePrimary": "search -list [--history|--bookmark|--page] <pattern> | search -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--none", "--history", "--bookmark", "--page"],
+          "trailingTokens": ["--history", "--bookmark", "--page"],
           "tail": "rest"
         },
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
           "tail": "none"
-        },
-        {
-          "head": "--none",
-          "tail": "rest"
-        },
-        {
-          "head": "--history",
-          "tail": "rest"
-        },
-        {
-          "head": "--bookmark",
-          "tail": "rest"
-        },
-        {
-          "head": "--page",
-          "tail": "rest"
         }
       ]
     },
@@ -207,28 +191,28 @@
       "tsHandlerExport": "applyExitPaneEffect"
     },
     {
-      "kind": "find_bookmark",
-      "rustVariant": "FindBookmark",
+      "kind": "search_bookmark",
+      "rustVariant": "SearchBookmark",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "find-bookmark",
-      "tsHandlerExport": "applyFindBookmarkEffect"
+      "tsHandlerFile": "search-bookmark",
+      "tsHandlerExport": "applySearchBookmarkEffect"
     },
     {
-      "kind": "find_history",
-      "rustVariant": "FindHistory",
+      "kind": "search_history",
+      "rustVariant": "SearchHistory",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "find-history",
-      "tsHandlerExport": "applyFindHistoryEffect"
+      "tsHandlerFile": "search-history",
+      "tsHandlerExport": "applySearchHistoryEffect"
     },
     {
-      "kind": "find_page",
-      "rustVariant": "FindPage",
+      "kind": "search_page",
+      "rustVariant": "SearchPage",
       "shape": "record",
       "fields": { "pattern": "string" },
-      "tsHandlerFile": "find-page",
-      "tsHandlerExport": "applyFindPageEffect"
+      "tsHandlerFile": "search-page",
+      "tsHandlerExport": "applySearchPageEffect"
     },
     {
       "kind": "group_new",

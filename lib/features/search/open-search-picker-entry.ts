@@ -1,4 +1,4 @@
-import { scrollFindPageToSnippet } from "../find-sources/page-scroll-to-snippet"
+import { scrollSearchPageToSnippet } from "./sources/page-scroll-to-snippet"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { openEntryEffects } from "../side-picker/model/open-entry"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
@@ -16,10 +16,10 @@ async function tabStillOpen(tabId: number): Promise<boolean> {
 }
 
 /**
- * EN: Open/focus a find picker row — page hits activate the source tab and scroll to the match.
- * JA: find ピッカー行を開く。page は元タブを前面にし該当箇所へスクロールする。
+ * EN: Open/focus a search picker row — page hits activate the source tab and scroll to the match.
+ * JA: search ピッカー行を開く。page は元タブを前面にし該当箇所へスクロールする。
  */
-export async function openFindPickerEntry(
+export async function openSearchPickerEntry(
   entry: PickerEntry,
   matchIndex: number,
   ctx: DispatchChromeContext,
@@ -33,14 +33,14 @@ export async function openFindPickerEntry(
         tabId: entry.tabId,
         windowId: entry.windowId
       })
-      const scrolled = await scrollFindPageToSnippet(
+      const scrolled = await scrollSearchPageToSnippet(
         entry.tabId,
         match.snippet,
         match.occurrence
       )
       if (!scrolled) {
         await appendLogLines([
-          "find — could not scroll to match (reload the tab or grant site access, then try again)"
+          "search — could not scroll to match (reload the tab or grant site access, then try again)"
         ])
       }
       return

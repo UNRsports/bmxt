@@ -3,7 +3,7 @@
  * JA: ブックマーク木をメモリ上のみ平坦化。永続化しません。
  */
 
-import { linesForFindElement, matchesNeedle, MAX_BOOKMARK_ROWS } from "../search"
+import { linesForSearchElement, matchesNeedle, MAX_BOOKMARK_ROWS } from "../index"
 
 function walkBookmarks(
   nodes: chrome.bookmarks.BookmarkTreeNode[],
@@ -25,7 +25,7 @@ function walkBookmarks(
   }
 }
 
-export async function findBookmarkLines(pattern: string): Promise<string[]> {
+export async function searchBookmarkLines(pattern: string): Promise<string[]> {
   const tree = await chrome.bookmarks.getTree()
   const flat: { title: string; url: string }[] = []
   walkBookmarks(tree, flat)
@@ -39,7 +39,7 @@ export async function findBookmarkLines(pattern: string): Promise<string[]> {
     }
     hitCount += 1
     matches.push(
-      ...linesForFindElement("bookmark", {
+      ...linesForSearchElement("bookmark", {
         title: b.title || "(untitled)",
         url: b.url
       })
