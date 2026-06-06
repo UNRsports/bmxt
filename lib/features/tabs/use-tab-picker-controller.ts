@@ -14,6 +14,7 @@ import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
+import { useTabPickerFoldState } from "./use-tab-picker-fold-state"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
@@ -118,12 +119,26 @@ export function useTabPickerController({
 
   const {
     visibleRowIndices,
+    collapseAtRow,
+    expandAtRow,
+    isWindowExpanded,
+    isGroupExpanded
+  } = useTabPickerFoldState(rows)
+
+  const {
     markedTabSet,
     markedWindowSet,
     markedGroupSet,
     tabIdToWindowId,
     selectedTabIds
-  } = useTabPickerDerivedState(rows, markedKind, markedTabIds, markedWindowIds, markedGroupKeys)
+  } = useTabPickerDerivedState(
+    rows,
+    visibleRowIndices,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys
+  )
 
   const { applyReducedState, applyReducedStateSequence, clearMarkedViaReducer } =
     usePickerReducerBridge(
@@ -369,7 +384,9 @@ export function useTabPickerController({
     confirmGroupRename,
     confirmGroupMenuPick,
     cycleGroupMenuPick,
-    backFromGroupRename
+    backFromGroupRename,
+    collapseAtRow,
+    expandAtRow
   })
 
   const headLine = useMemo(
@@ -466,6 +483,8 @@ export function useTabPickerController({
     activeTabId,
     showUrl,
     setRowRef,
+    isWindowExpanded,
+    isGroupExpanded,
     variant,
     groupNewPhase,
     groupPanelRef,

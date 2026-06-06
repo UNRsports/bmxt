@@ -891,6 +891,17 @@ body {
   margin-top: 4px;
 }
 
+.bmxt-tab-picker-fold-glyph {
+  display: inline-block;
+  width: 1.2em;
+  color: #8b949e;
+  user-select: none;
+}
+
+.bmxt-tab-picker-row--folded .bmxt-tab-picker-fold-glyph {
+  color: #6e7681;
+}
+
 .bmxt-tab-picker-row--tab {
   padding-left: 2ch;
   border-radius: 2px;

@@ -35,6 +35,8 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     activeTabId,
     showUrl,
     setRowRef,
+    isWindowExpanded,
+    isGroupExpanded,
     variant,
     groupNewPhase,
     groupPanelRef,
@@ -152,6 +154,8 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
           showUrl={showUrl}
           searchHighlightQuery={searchHighlightQuery}
           setRowRef={setRowRef}
+          isWindowExpanded={isWindowExpanded}
+          isGroupExpanded={isGroupExpanded}
         />
       }
       extraFooter={extraFooter}
