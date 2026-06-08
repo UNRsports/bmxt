@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -60,11 +60,18 @@
       "history",
       "bookmarks"
     ],
-    "optional_host_permissions": ["http://*/*", "https://*/*"],
+    "optional_host_permissions": [
+      "http://*/*",
+      "https://*/*"
+    ],
     "web_accessible_resources": [
       {
-        "resources": ["assets/welcome/*"],
-        "matches": ["<all_urls>"]
+        "resources": [
+          "assets/welcome/*"
+        ],
+        "matches": [
+          "<all_urls>"
+        ]
       }
     ],
     "content_security_policy": {

@@ -1,16 +1,10 @@
 {
-  "0.4.5": {
+  "0.4.6": {
     "ja": [
-      "npm依存関係の整理",
-      "findコマンドをsearchコマンド（モード）へ変更して機能強化し、検索結果を細分化して各要素へ直接ジャンプ可能に",
-      "tabsモードのピッカーにて、ウィンドウやタブグループのツリーを開閉可能に実装",
-      "tabs -setting -page-active（--auto / --manual）でハイライト時の自動タブアクティブ化を切替可能に実装"
+      "tabsモードにて新規タブグループの作成ができない現象を修正"
     ],
     "en": [
-      "Cleaned up npm dependencies",
-      "Renamed the find command to search (mode) with enhancements — search results can be subdivided so you can jump directly to each element",
-      "Tab picker: window and tab group tree rows can be expanded and collapsed",
-      "Added tabs -setting -page-active (--auto / --manual) to toggle automatic tab activation when moving the highlight"
+      "Fixed an issue where new tab groups could not be created in tabs mode"
     ]
   }
 }

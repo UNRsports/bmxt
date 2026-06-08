@@ -538,7 +538,8 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
   - Window rows: `close` (`c`), `newtab` (`nt`), `edit`
   - Group rows: `move` (`m`), `close` (`c`), `newwindow` (`nw`), `edit`
 - In `:` command mode, pressing `Tab` or `Enter` with an empty command shows a dim placeholder of available commands for the current target (tab/window/group).
-- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter`. **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
+- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter` to add `#` tabs (choose **new group** to open the name/color panel; **`Enter`** confirms creation; **`Esc`** returns to the tab list; **`Tab`** switches between name and color). **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
+- **Interactive `group new`** (prompt command, no tab ids): opens the tab picker in **group-new** variant — `Tab` marks tabs, **`Enter`** opens the same name/color panel as **[GROUP]** → new group; **`Enter`** again creates the group.
 - Use `/` for incremental search (`@` prefix for URL match). While filtering, **keyboard focus stays on the filter field**; the list highlights matches without taking typing focus. `Enter` focuses the highlighted tab while keeping the picker column open. **`Esc`** unwinds submodes in order: clear `#` → cancel `:` command mode → end `/` search → exit bulk submode → **return to the BMXt prompt** (column stays open). Close the column with **`tabs -exit -list`**.
 
 
@@ -577,7 +578,7 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 **Entry:** **`TabsPickerWrapper`** → **`useTabPickerController`** → **`TabsUrlListPicker`** (`PickerListShell` + **`TabPickerRowList`** + bulk/edit panels). **`TabPickerOverlay`** remains a deprecated alias of the same stack.
 
 - **Global capture**: **`usePlainPickerKeyboard`** registers **`useWindowKeydownCapture`** so **↑/↓/j/k**, `/`, `:`, `n`/`N`, and **Enter** work even when focus is not on the picker’s invisible IME `textarea` (e.g. after clicking the list). The same chain runs from the textarea’s **`onInputKeyDown`** when the event reaches it.
-- **Tabs-only keys**: **`useTabPickerPlainExtensions`** supplies **`PlainPickerKeyboardExtensions`** — custom vertical nav (bulk move/group, Shift range, Ctrl+Shift preview), layered **`Esc`**, **`Tab`** / `#` toggle, **`:`** bulk commands (`parsePickerCommand` in `use-tab-picker-plain-extensions.ts`; short aliases e.g. `m` → `move`; **`edit`** has no alias), and tab-specific **Enter** intents. Wired from **`use-tab-picker-keyboard.ts`**.
+- **Tabs-only keys**: **`useTabPickerPlainExtensions`** supplies **`PlainPickerKeyboardExtensions`** — custom vertical nav (bulk move/group, Shift range, Ctrl+Shift preview), layered **`Esc`**, **`Tab`** / `#` toggle, **`:`** bulk commands (`parsePickerCommand` in `use-tab-picker-plain-extensions.ts`; short aliases e.g. `m` → `move`; **`edit`** has no alias), and tab-specific **Enter** intents (including **new-group meta** name/color confirmation via window capture **`onNormalEnter`**). Wired from **`use-tab-picker-keyboard.ts`**.
 - **Reducer (TypeScript)**: Transitions go through **`runTabsPickerReduce`** in **`lib/features/bmxt-core/tabs-picker/reducer.ts`**. State and events use **camelCase** keys (e.g. `kind: "moveHi"`, `visibleLen`).
 - **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in the controller/keyboard path). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
 - **`:edit` UI**: target resolution and error messages live in **`lib/features/tabs/resolve-edit-entry.ts`**; panels and Chrome/storage effects in **`use-tab-picker-edit.ts`**, **`controller/edit-actions.ts`**, and **`extension-storage/window-display-names.ts`** (see [Tab picker `:edit`](#tabs-tab-picker-edit)).
@@ -1374,7 +1375,8 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
   - グループ行: `move`（`m`）、`close`（`c`）、`newwindow`（`nw`）、`edit`
 - `:` コマンドモードでは、コマンド未入力のまま `Tab` または `Enter` を押すと、現在の対象（タブ／ウィンドウ／グループ）に応じた利用可能コマンドを薄いプレースホルダーで表示します。
 - **[MOVE]** は `↑`/`↓` で移動先タブを選び、`Enter` で `#` タブを一括移動します。
-- **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
+- **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します（**新しいグループ** を選ぶと名前・色パネルへ。**`Enter`** で作成確定、**`Esc`** でタブ一覧へ、**`Tab`** で名前↔色）。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
+- **対話的 `group new`**（プロンプトで tabId なし）: **group-new** variant のタブピッカー列を開く — `Tab` でタブ選択、**`Enter`** で **[GROUP]** → 新しいグループ と同じ名前・色パネルへ、再度 **`Enter`** で作成。
 - `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。絞り込み中は **フィルタ欄にキーボードフォーカスが残り**、一覧側に入力フォーカスが移らない。**`Esc`** の解除順は `#` 全解除 → `:` コマンドモード終了 → `/` 検索終了 → バルクサブモード終了 → **BMXt プロンプトへ**（列は開いたまま）。列を閉じるには **`tabs -exit -list`**。
 - バルクモードでない `Enter` は、ハイライト中タブをアクティブ化して対象ウィンドウを前面化します（ピッカーは維持）。
 
@@ -1384,7 +1386,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 **入口:** **`TabsPickerWrapper`** → **`useTabPickerController`** → **`TabsUrlListPicker`**（`PickerListShell` + **`TabPickerRowList`** + bulk/edit パネル）。**`TabPickerOverlay`** は同一スタックの非推奨エイリアス。
 
 - **ウィンドウキャプチャ**: **`usePlainPickerKeyboard`** が **`useWindowKeydownCapture`** で **↑/↓/j/k**, `/`, `:`, `n`/`N`, **Enter** を拾います（リストクリック後など IME `textarea` 以外にフォーカスがあっても動作）。textarea の **`onInputKeyDown`** でも同じチェーンを実行します。
-- **tabs 固有キー**: **`useTabPickerPlainExtensions`** が **`PlainPickerKeyboardExtensions`** を供給 — バルク時の縦移動、Shift 範囲、Ctrl+Shift プレビュー、段階 **`Esc`**, **`Tab`** / `#`, **`:`** バルクコマンド（`use-tab-picker-plain-extensions.ts` の `parsePickerCommand`、短縮例 `m` → `move`、**`edit`** はエイリアスなし）、tabs 向け **Enter** 意図。配線は **`use-tab-picker-keyboard.ts`**。
+- **tabs 固有キー**: **`useTabPickerPlainExtensions`** が **`PlainPickerKeyboardExtensions`** を供給 — バルク時の縦移動、Shift 範囲、Ctrl+Shift プレビュー、段階 **`Esc`**, **`Tab`** / `#`, **`:`** バルクコマンド（`use-tab-picker-plain-extensions.ts` の `parsePickerCommand`、短縮例 `m` → `move`、**`edit`** はエイリアスなし）、tabs 向け **Enter** 意図（**新規グループ meta** の名前・色確定は window capture の **`onNormalEnter`** 経由）。配線は **`use-tab-picker-keyboard.ts`**。
 - **リデューサ（TypeScript）**: 状態遷移は **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**。イベント／状態は **`kind: "moveHi"`** や **`visibleLen`** など **camelCase**。
 - **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
 - **`:edit` UI**: 対象判定・エラー文は **`lib/features/tabs/resolve-edit-entry.ts`**。パネルと Chrome／storage 副作用は **`use-tab-picker-edit.ts`**、**`controller/edit-actions.ts`**、**`extension-storage/window-display-names.ts`**（仕様は [タブピッカー `:edit`](#tabs-tab-picker-edit-ja)）。
