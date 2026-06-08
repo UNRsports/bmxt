@@ -84,5 +84,16 @@
       "tabsモードのピッカーにて、ウィンドウやタブグループのツリーを開閉可能に実装",
       "tabs -setting -page-active（--auto / --manual）でハイライト時の自動タブアクティブ化を切替可能に実装"
     ]
+  },
+  "0.4.5.1": {
+    "heroImage": "assets/welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
+    "en": [
+      "Fixed an issue where new tab groups could not be created in tabs mode"
+    ],
+    "ja": [
+      "tabsモードにて新規タブグループの作成ができない現象を修正"
+    ]
   }
 }

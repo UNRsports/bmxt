@@ -30,6 +30,9 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.4.5.1:
+- Fixed an issue where new tab groups could not be created in tabs mode
+
 0.4.5:
 - Cleaned up npm dependencies
 - Renamed find to search (mode) with enhancements — subdivide results and jump directly to each element

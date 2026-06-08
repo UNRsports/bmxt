@@ -502,7 +502,9 @@ export function useTabPickerPlainExtensions({
       }
 
       if (groupNewPhase === "meta") {
-        return false
+        pickerStopEvent(e)
+        void executeCreateNewGroup()
+        return true
       }
 
       const intent = resolvePickerEnterIntent(
@@ -570,6 +572,7 @@ export function useTabPickerPlainExtensions({
       confirmGroupRename,
       confirmWindowRename,
       editPanel,
+      executeCreateNewGroup,
       executeOpenNewTabFromUrl,
       groupMetaTitleRef,
       groupNewPhase,

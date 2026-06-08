@@ -11,9 +11,9 @@ search,-list,--history,rest,,（同上）,scope `--history`: 履歴タイトル/
 search,-list,--bookmark,rest,,（同上）,scope `--bookmark`: ブックマークのみ（Effect: search_bookmark）。,
 search,-list,--page,rest,,（同上）,scope `--page`: 非 discarded http(s) タブの可視テキスト（Effect: search_page・optional host permission ありうる）。,
 search,-exit,-list,none,,search -exit -list,第三 `-list` のみ。BMXt ウィンドウ UI で当該 session の search ピッカー列を閉じる（検索中はキャンセル。未表示なら案内行）。SW の run は案内行のみ。,
-group,new,,,,group new | group new <tabId> [tabId …],第二トークン `new` 必須（manifest subcommands 空・continuation なし）。tabId 無し: BMXt ウィンドウ UI が group-new variant のタブピッカー列を開く（対話的）。tabId 列挙あり: SW で Effect: group_new。,
+group,new,,,,group new | group new <tabId> [tabId …],第二トークン `new` 必須（manifest subcommands 空・continuation なし）。tabId 無し: BMXt ウィンドウ UI が group-new variant のタブピッカー列を開く（Tab で選択 → Enter で名前・色 meta → Enter で作成）。tabId 列挙あり: SW で Effect: group_new。,
 help,,,,?,"help, ?",linesDispatch(buildHelpLines())（組み込みコマンド一覧等）。Effect なし。,
-tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。**←**/**→** でウィンドウ／タブグループ行の開閉（タブ行は所属グループ）。Ctrl+←/→ で terminal↔tabs↔search↔dom↔translate 列フォーカス。上部に page-active 状況表示（nav 同様）。,-u は trailingTokens（Tab 補完対象）
+tabs,-list,,none,,tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl,BMXt ウィンドウ UI（RUN_CMD 前）。同一 sessionId でタブピッカー列を開く。Esc は閉じずプロンプトへ。閉じるは tabs -exit -list。ピッカー内 `:move`/`:close`/`:group`/`:nw`/`:nt`/`:edit` 等。**←**/**→** でウィンドウ／タブグループ行の開閉（タブ行は所属グループ）。`:group` で **新しいグループ** を選ぶと名前・色パネル（Enter で作成確定・Esc で一覧へ・Tab で名前↔色）。Ctrl+←/→ で terminal↔tabs↔search↔dom↔translate 列フォーカス。上部に page-active 状況表示（nav 同様）。,-u は trailingTokens（Tab 補完対象）
 tabs,-setting,,none,,（同上）,第二 `-setting` のみ Enter: 第三 `-page-active` を案内し `tabs -setting ` に復帰。Tab 補完で `-page-active`。,
 tabs,-setting,-page-active,none,,tabs -setting -page-active --auto | --manual,第三 `-page-active` のみ Enter: 第四 `--auto` / `--manual` を案内し `tabs -setting -page-active ` に復帰。設定は chrome.storage.local に保存。,
 tabs,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`: ハイライト移動時にタブをアクティブ化（ウィンドウは背面のまま）。既定。,
