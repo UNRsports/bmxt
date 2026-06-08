@@ -30,7 +30,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
-0.4.5.1:
+0.4.6:
 - Fixed an issue where new tab groups could not be created in tabs mode
 
 0.4.5:

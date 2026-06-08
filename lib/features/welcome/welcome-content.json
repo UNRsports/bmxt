@@ -85,7 +85,7 @@
       "tabs -setting -page-active（--auto / --manual）でハイライト時の自動タブアクティブ化を切替可能に実装"
     ]
   },
-  "0.4.5.1": {
+  "0.4.6": {
     "heroImage": "assets/welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
