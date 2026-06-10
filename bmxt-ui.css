@@ -1,10 +1,14 @@
 /* BMXt: dedicated extension window — full bleed terminal layout */
 html {
+  --bmxt-fg: #c9d1d9;
+  --bmxt-bg: #0d1117;
+  --bmxt-font-size: 12px;
+  --bmxt-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  background: #0d1117;
+  background: var(--bmxt-bg);
   color-scheme: dark;
 }
 
@@ -13,7 +17,7 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  background: #0d1117;
+  background: var(--bmxt-bg);
   overflow: hidden;
 }
 
@@ -23,7 +27,7 @@ body {
   min-height: 0;
   margin: 0;
   padding: 0;
-  background: #0d1117;
+  background: var(--bmxt-bg);
 }
 
 .bmxt-root {
@@ -41,10 +45,10 @@ body {
   height: 100%;
   min-height: 0;
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
-  font-size: 12px;
-  background: #0d1117;
-  color: #c9d1d9;
+  font-family: var(--bmxt-font-family);
+  font-size: var(--bmxt-font-size);
+  background: var(--bmxt-bg);
+  color: var(--bmxt-fg);
   outline: none;
 }
 
@@ -54,7 +58,7 @@ body {
   height: 100%;
   min-height: 0;
   margin: 0;
-  background: #0d1117;
+  background: var(--bmxt-bg);
 }
 
 .bmxt-split-viewport {

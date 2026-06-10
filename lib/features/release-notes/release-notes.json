@@ -1,10 +1,10 @@
 {
-  "0.4.6": {
+  "0.4.7": {
     "ja": [
-      "tabsモードにて新規タブグループの作成ができない現象を修正"
+      ""
     ],
     "en": [
-      "Fixed an issue where new tab groups could not be created in tabs mode"
+      ""
     ]
   }
 }

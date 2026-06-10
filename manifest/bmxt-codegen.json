@@ -162,6 +162,32 @@
           "tail": "none"
         }
       ]
+    },
+    {
+      "module": "setting",
+      "canonicalName": "setting",
+      "aliases": [],
+      "usagePrimary": "setting -language | setting -appearance",
+      "subcommands": [
+        {
+          "head": "-language",
+          "trailingTokens": ["--japanese", "--english"],
+          "tail": "none"
+        },
+        {
+          "head": "-appearance",
+          "trailingTokens": [
+            "--fg",
+            "--bg-color",
+            "--size",
+            "--font",
+            "--bg-import",
+            "--bg-clear",
+            "--reset"
+          ],
+          "tail": "none"
+        }
+      ]
     }
   ],
   "effects": [

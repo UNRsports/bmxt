@@ -95,6 +95,21 @@ import {
   type TranslationBlock,
   type TranslationPairId
 } from "../translate"
+import {
+  clearUiBackgroundImage,
+  formatUiSettingsSummary,
+  importBackgroundImageFromFilePicker,
+  listAppearanceFlagTokens,
+  listUiLocaleSettingTokens,
+  parseSettingCommandLine,
+  resetUiAppearance,
+  saveUiAppearancePatch,
+  saveUiBackgroundImage,
+  saveUiLocale,
+  settingTokenForUiLocale,
+  useUiSettings,
+  validateAppearanceCommand
+} from "../setting"
 import { searchPageProgressLabel } from "../search/sources/page-progress"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
 import { logBmxtKey } from "../debug/key-log"
@@ -191,6 +206,8 @@ export function BmxtShell({
   paneFocus,
   onPaneFocusChange
 }: Props) {
+  const { settings: uiSettings, setLocale: setUiLocale, setAppearance: setUiAppearance } =
+    useUiSettings()
   const tabPicker = sessionPickers.tabs
   const searchListPicker = sessionPickers.search
   const domListPicker = sessionPickers.dom
@@ -1127,6 +1144,136 @@ export function BmxtShell({
     const rawLine = promptLine()
     const trimmed = rawLine.trim()
     if (!trimmed) {
+      return
+    }
+
+    const settingCmd = parseSettingCommandLine(trimmed)
+    if (settingCmd !== null) {
+      appendCommandToHistory(trimmed)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      if (settingCmd.kind === "incomplete") {
+        const cont = "setting "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          "usage: setting -language --japanese | --english",
+          "       setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family>",
+          "       setting -appearance --bg-import | --bg-clear | --reset"
+        ])
+        focusPrompt()
+        return
+      }
+      if (settingCmd.kind === "language-incomplete") {
+        const cont = "setting -language "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        const options = listUiLocaleSettingTokens().join(" | ")
+        void appendLogLines([
+          `> ${trimmed}`,
+          `setting -language: choose locale — ${options}`,
+          `current: ${settingTokenForUiLocale(uiSettings.locale)}`
+        ])
+        focusPrompt()
+        return
+      }
+      if (settingCmd.kind === "appearance-incomplete") {
+        const cont = "setting -appearance "
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        const options = listAppearanceFlagTokens().join(" | ")
+        void appendLogLines([
+          `> ${trimmed}`,
+          `setting -appearance: choose option — ${options}`,
+          ...formatUiSettingsSummary(uiSettings)
+        ])
+        focusPrompt()
+        return
+      }
+      if (settingCmd.kind === "appearance-flag-incomplete") {
+        const cont = `setting -appearance ${settingCmd.flag} `
+        setLine(cont)
+        setCursorPos(cont.length)
+        lineRef.current = cont
+        void appendLogLines([
+          `> ${trimmed}`,
+          `setting -appearance ${settingCmd.flag}: enter value (hex for colors, e.g. #c9d1d9)`
+        ])
+        focusPrompt()
+        return
+      }
+      setLine("")
+      setCursorPos(0)
+      lineRef.current = ""
+      void (async () => {
+        if (settingCmd.kind === "language") {
+          await saveUiLocale(settingCmd.locale)
+          setUiLocale(settingCmd.locale)
+          const token = settingTokenForUiLocale(settingCmd.locale)
+          await appendLogLines([`> ${trimmed}`, `setting: UI language set to ${token}`])
+          focusPrompt()
+          return
+        }
+        if (settingCmd.kind === "appearance-bg-import") {
+          const result = await importBackgroundImageFromFilePicker()
+          if (result.ok === false) {
+            if (result.cancelled) {
+              await appendLogLines([`> ${trimmed}`, "setting: background import cancelled"])
+            } else {
+              await appendLogLines([`> ${trimmed}`, result.error])
+            }
+            focusPrompt()
+            return
+          }
+          await saveUiBackgroundImage(result.dataUrl)
+          setUiAppearance({ bgImageDataUrl: result.dataUrl })
+          await appendLogLines([
+            `> ${trimmed}`,
+            `setting: background image imported (${result.mimeType}, ${result.byteLength} bytes)`
+          ])
+          focusPrompt()
+          return
+        }
+        if (settingCmd.kind === "appearance-bg-clear") {
+          await clearUiBackgroundImage()
+          setUiAppearance({ bgImageDataUrl: null })
+          await appendLogLines([`> ${trimmed}`, "setting: background image cleared"])
+          focusPrompt()
+          return
+        }
+        if (settingCmd.kind === "appearance-reset") {
+          await resetUiAppearance()
+          setUiAppearance({
+            fg: null,
+            bgColor: null,
+            fontSize: null,
+            fontFamily: null,
+            bgImageDataUrl: null
+          })
+          await appendLogLines([`> ${trimmed}`, "setting: appearance reset to defaults"])
+          focusPrompt()
+          return
+        }
+        if (settingCmd.kind === "appearance-value") {
+          const validated = validateAppearanceCommand(settingCmd.flag, settingCmd.value)
+          if (validated.ok === false) {
+            await appendLogLines([`> ${trimmed}`, validated.error])
+            focusPrompt()
+            return
+          }
+          await saveUiAppearancePatch(validated.patch)
+          setUiAppearance(validated.patch)
+          await appendLogLines([
+            `> ${trimmed}`,
+            `setting: appearance updated (${settingCmd.flag})`
+          ])
+          focusPrompt()
+        }
+      })()
       return
     }
 

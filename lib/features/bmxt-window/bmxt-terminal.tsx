@@ -31,6 +31,7 @@ import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
+import { UiSettingsProvider, useTerminalAppearance, useUiSettings } from "../setting"
 
 function leafIdFromKeyEventTarget(root: HTMLElement, target: EventTarget | null): string | null {
   let el: Element | null =
@@ -196,6 +197,17 @@ function SplitTreeView(props: SplitTreeProps) {
 }
 
 export function BmxtTerminal() {
+  return (
+    <UiSettingsProvider>
+      <BmxtTerminalInner />
+    </UiSettingsProvider>
+  )
+}
+
+function BmxtTerminalInner() {
+  const { settings } = useUiSettings()
+  useTerminalAppearance(settings.appearance)
+
   const { state, setFocusedLeaf } = useTerminalSessions()
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()

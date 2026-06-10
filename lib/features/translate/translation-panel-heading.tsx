@@ -1,17 +1,25 @@
 import type { BilingualUiLabel } from "./translation-pair"
+import { pickUiLabel, useUiLocale } from "../setting"
 
 type Props = {
   label: BilingualUiLabel
   className: string
 }
 
-/** EN: Panel title — Japanese line + English subline (pair-specific language tags). */
+/** EN: Panel title — single locale line from `setting -language`. */
 export function TranslationPanelHeading({ label, className }: Props) {
+  const locale = useUiLocale()
+  const text = pickUiLabel(label, locale)
   return (
     <div className={className}>
-      <span className="bmxt-translate-panel-heading-ja">{label.ja}</span>
-      <span className="bmxt-translate-panel-heading-en" lang="en">
-        {label.en}
+      <span
+        className={
+          locale === "en"
+            ? "bmxt-translate-panel-heading-en"
+            : "bmxt-translate-panel-heading-ja"
+        }
+        lang={locale === "en" ? "en" : "ja"}>
+        {text}
       </span>
     </div>
   )
