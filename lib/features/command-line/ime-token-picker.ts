@@ -16,10 +16,15 @@ import {
   shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
+import {
+  matchCandidates,
+  pickThirdTokenCandidates,
+  type CandidateMatchMode
+} from "./ime-token-match"
+
+export type { CandidateMatchMode } from "./ime-token-match"
 
 export type ImeTokenTier = "first" | "second" | "third"
-
-export type CandidateMatchMode = "prefix" | "contains"
 
 export type ResolveImeTokenPickerOptions = {
   /**
@@ -44,21 +49,6 @@ export type ImeTokenPickerModel = {
   prefix: string
   candidates: string[]
   tier: ImeTokenTier
-}
-
-function matchCandidates(
-  candidates: readonly string[],
-  prefix: string,
-  mode: CandidateMatchMode
-): string[] {
-  if (!prefix) {
-    return [...candidates]
-  }
-  const p = prefix.toLowerCase()
-  if (mode === "contains") {
-    return candidates.filter((c) => c.toLowerCase().includes(p))
-  }
-  return candidates.filter((c) => c.toLowerCase().startsWith(p))
 }
 
 function tokenBounds(s: string, pos: number): [number, number] {
@@ -189,16 +179,24 @@ export function resolveImeTokenPicker(
   if (tokenIndex === 2) {
     const second = tokensBefore[1]!.toLowerCase()
     const allThird = listThirdTokenCandidates(canonical, second, "")
+    if (allThird.length === 0) {
+      return null
+    }
     const isSearchListScopeTier = canonical === "search" && second === "-list"
-    const scopeIncremental =
-      isSearchListScopeTier &&
-      (matchMode === "contains" || matchesSearchListScopeFilter(prefix))
-    const rawThird = scopeIncremental
-      ? allThird
-      : listThirdTokenCandidates(canonical, second, prefix)
-    const effectiveMode =
-      scopeIncremental && !prefix.startsWith("--") ? "contains" : matchMode
-    const cands = matchCandidates(rawThird, prefix, effectiveMode)
+    const useFullListForMatch =
+      matchMode === "contains" ||
+      (isSearchListScopeTier && matchesSearchListScopeFilter(prefix))
+    let filterMode: CandidateMatchMode = matchMode
+    if (isSearchListScopeTier && useFullListForMatch && !prefix.startsWith("--")) {
+      filterMode = "contains"
+    }
+    const cands = pickThirdTokenCandidates(
+      allThird,
+      prefix,
+      matchMode,
+      useFullListForMatch,
+      filterMode
+    )
     if (cands.length === 0) {
       return null
     }

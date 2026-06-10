@@ -1,8 +1,20 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
+import { parseAppearanceResetConfirmAnswer } from "./parse-appearance-reset-confirm.ts"
 import { parseHexColor } from "./validate-color.ts"
 import { parseUiLocaleSettingToken, settingTokenForUiLocale } from "./locale.ts"
 import { parseFontSizePx } from "./validate-size.ts"
+
+describe("parseAppearanceResetConfirmAnswer", () => {
+  it("accepts y and n", () => {
+    assert.equal(parseAppearanceResetConfirmAnswer("y"), "yes")
+    assert.equal(parseAppearanceResetConfirmAnswer("N"), "no")
+  })
+
+  it("rejects other input", () => {
+    assert.equal(parseAppearanceResetConfirmAnswer("maybe"), "invalid")
+  })
+})
 
 describe("parseHexColor", () => {
   it("accepts #rrggbb", () => {

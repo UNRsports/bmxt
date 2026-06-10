@@ -102,6 +102,7 @@ import {
   listAppearanceFlagTokens,
   listUiLocaleSettingTokens,
   parseSettingCommandLine,
+  parseAppearanceResetConfirmAnswer,
   resetUiAppearance,
   saveUiAppearancePatch,
   saveUiBackgroundImage,
@@ -316,6 +317,7 @@ export function BmxtShell({
   const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
   const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
+  const [appearanceResetConfirmPending, setAppearanceResetConfirmPending] = useState(false)
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -1151,6 +1153,44 @@ export function BmxtShell({
       return
     }
 
+    if (appearanceResetConfirmPending) {
+      appendCommandToHistory(trimmed)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      setLine("")
+      setCursorPos(0)
+      lineRef.current = ""
+      const answer = parseAppearanceResetConfirmAnswer(trimmed)
+      if (answer === "invalid") {
+        void appendLogLines([
+          `> ${trimmed}`,
+          uiCopy.t("setting.appearance.resetConfirmInvalid"),
+          uiCopy.t("setting.appearance.resetConfirm")
+        ])
+        focusPrompt()
+        return
+      }
+      setAppearanceResetConfirmPending(false)
+      if (answer === "no") {
+        void appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.resetCancelled")])
+        focusPrompt()
+        return
+      }
+      void (async () => {
+        await resetUiAppearance()
+        setUiAppearance({
+          fg: null,
+          bgColor: null,
+          fontSize: null,
+          fontFamily: null,
+          bgImageDataUrl: null
+        })
+        await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.reset")])
+        focusPrompt()
+      })()
+      return
+    }
+
     const settingCmd = parseSettingCommandLine(trimmed)
     if (settingCmd !== null) {
       appendCommandToHistory(trimmed)
@@ -1212,6 +1252,15 @@ export function BmxtShell({
         focusPrompt()
         return
       }
+      if (settingCmd.kind === "appearance-reset") {
+        setAppearanceResetConfirmPending(true)
+        setLine("")
+        setCursorPos(0)
+        lineRef.current = ""
+        void appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.resetConfirm")])
+        focusPrompt()
+        return
+      }
       setLine("")
       setCursorPos(0)
       lineRef.current = ""
@@ -1257,19 +1306,6 @@ export function BmxtShell({
           await clearUiBackgroundImage()
           setUiAppearance({ bgImageDataUrl: null })
           await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.bgImage.cleared")])
-          focusPrompt()
-          return
-        }
-        if (settingCmd.kind === "appearance-reset") {
-          await resetUiAppearance()
-          setUiAppearance({
-            fg: null,
-            bgColor: null,
-            fontSize: null,
-            fontFamily: null,
-            bgImageDataUrl: null
-          })
-          await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.reset")])
           focusPrompt()
           return
         }
@@ -1699,6 +1735,7 @@ export function BmxtShell({
     }
     focusPrompt()
   }, [
+    appearanceResetConfirmPending,
     appendCommandToHistory,
     appendLogLines,
     focusPrompt,
@@ -1708,6 +1745,8 @@ export function BmxtShell({
     mode,
     promptLine,
     sessionId,
+    setUiAppearance,
+    uiCopy,
     activatePaneFocus,
     setTabPicker,
     setSearchListPicker,
@@ -2423,7 +2462,9 @@ export function BmxtShell({
                     : uiCopy.t("prompt.navTyping")
                   : showSearchListPatternPlaceholder
                     ? uiCopy.t("prompt.searchListPattern")
-                    : mode === "normal" && line.trim() === "" && !searchListBusy
+                    : appearanceResetConfirmPending
+                      ? uiCopy.t("prompt.appearanceResetConfirm")
+                      : mode === "normal" && line.trim() === "" && !searchListBusy
                       ? uiCopy.t("prompt.placeholder")
                       : undefined
               }

@@ -16,6 +16,7 @@ export {
 } from "./appearance"
 export { appearanceToCssDeclarations, UI_THEME_HTML_SELECTOR, useTerminalAppearance } from "./apply-appearance"
 export { importBackgroundImageFromFilePicker, type BgImageImportResult } from "./bg-image-import"
+export { parseAppearanceResetConfirmAnswer, type AppearanceResetConfirmAnswer } from "./parse-appearance-reset-confirm"
 export {
   DEFAULT_UI_LOCALE,
   listUiLocaleSettingTokens,

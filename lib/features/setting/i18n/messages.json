@@ -251,6 +251,18 @@
     "ja": "setting: 外観を既定値に戻しました（文字色・背景・フォント・背景画像）",
     "en": "setting: appearance reset to defaults (text, background, font, image)"
   },
+  "setting.appearance.resetConfirm": {
+    "ja": "外観設定（文字色・背景色・フォント・背景画像）がすべて既定値にリセットされます。問題ありませんか？ [y/n]",
+    "en": "All appearance settings (text, background, font, image) will be reset to defaults. Continue? [y/n]"
+  },
+  "setting.appearance.resetCancelled": {
+    "ja": "setting: 外観のリセットをキャンセルしました",
+    "en": "setting: appearance reset cancelled"
+  },
+  "setting.appearance.resetConfirmInvalid": {
+    "ja": "y または n で回答してください",
+    "en": "Answer y or n"
+  },
   "setting.appearance.updated": {
     "ja": "setting: 外観を更新しました（{flag}）",
     "en": "setting: appearance updated ({flag})"
@@ -455,6 +467,10 @@
     "ja": "絞り込み語を入力 · Enter で実行",
     "en": "type a filter or press Enter to run"
   },
+  "prompt.appearanceResetConfirm": {
+    "ja": "y / n",
+    "en": "y / n"
+  },
   "help.title": {
     "ja": "BMXt - ブラウザコマンドシェル",
     "en": "BMXt - browser command shell"
@@ -484,8 +500,8 @@
     "en": "translate (Chrome built-in Translator API, ja↔en):\n  translate            - show -on / -off / -setting, then restore prompt to `translate ` for continuation.\n  translate -on        - enable translation assist (nav typing preview under prompt).\n  translate -off       - close editor column and disable assist.\n  translate -setting   - then `--ja-en` or `--en-ja` (Tab menu); saves pair to storage."
   },
   "help.section.setting": {
-    "ja": "setting（グローバル UI — 表示言語とターミナル外観）:\n  setting              - `-language` / `-appearance` を表示し、プロンプトを `setting ` に戻して続きを入力。\n  setting -language --japanese | --english — UI 表示言語（保存）。\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — 保存。\n  setting -appearance --bg-import — PNG/JPEG/WebP 背景を選択（512 KiB 上限、拡張機能 storage に保存）。\n  setting -appearance --bg-clear — 背景画像を削除。\n  setting -appearance --reset-default — 文字色・背景色・フォント・背景画像を既定値に戻す。",
-    "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -language / -appearance, then restore prompt to `setting ` for continuation.\n  setting -language --japanese | --english — UI display language (saved).\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — saved.\n  setting -appearance --bg-import — pick PNG/JPEG/WebP background (512 KiB max, stored in extension).\n  setting -appearance --bg-clear — remove background image.\n  setting -appearance --reset-default — restore text, background, font, and image to defaults."
+    "ja": "setting（グローバル UI — 表示言語とターミナル外観）:\n  setting              - `-language` / `-appearance` を表示し、プロンプトを `setting ` に戻して続きを入力。\n  setting -language --japanese | --english — UI 表示言語（保存）。\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — 保存。\n  setting -appearance --bg-import — PNG/JPEG/WebP 背景を選択（512 KiB 上限、拡張機能 storage に保存）。\n  setting -appearance --bg-clear — 背景画像を削除。\n  setting -appearance --reset-default — 文字色・背景色・フォント・背景画像を既定値に戻す（y/n で確認）。",
+    "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -language / -appearance, then restore prompt to `setting ` for continuation.\n  setting -language --japanese | --english — UI display language (saved).\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — saved.\n  setting -appearance --bg-import — pick PNG/JPEG/WebP background (512 KiB max, stored in extension).\n  setting -appearance --bg-clear — remove background image.\n  setting -appearance --reset-default — restore text, background, font, and image to defaults (y/n confirmation)."
   },
   "help.section.search": {
     "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（全スコープ；任意で --history|--bookmark|--page で絞り込み）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
