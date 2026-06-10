@@ -107,6 +107,20 @@ import {
   saveUiBackgroundImage,
   saveUiLocale,
   settingTokenForUiLocale,
+  SHELL_HELP_HINT,
+  SHELL_WELCOME,
+  SEARCH_PAGE_SCAN_CANCELLED,
+  SEARCH_PAGE_SCAN_HINT,
+  TABS_SETTING_HINT,
+  TRANSLATE_USAGE_HINT,
+  translateOnLogLine,
+  NAV_ARMED_LOG,
+  NAV_EXIT_ACTIVE_ERROR,
+  NAV_HOST_ACCESS_WARNING,
+  formatBulletedLines,
+  versionUpgradeTitle,
+  DOM_PROMPT_HEADLINE,
+  useUiCopy,
   useUiSettings,
   validateAppearanceCommand
 } from "../setting"
@@ -141,12 +155,6 @@ import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
 import type { TabPickerState, TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
-
-/** EN: Hint lines shown in the search picker while `--page` scan runs. */
-const SEARCH_PAGE_SCAN_HINT_LINES = [
-  "EN: Page scan may take a while when many tabs are open. Ctrl+C cancels.",
-  "JA: タブが多いと時間がかかります。Ctrl+C で中断できます。"
-] as const
 
 function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
   return effects.some((e) => e.kind === "search_page")
@@ -208,6 +216,7 @@ export function BmxtShell({
 }: Props) {
   const { settings: uiSettings, setLocale: setUiLocale, setAppearance: setUiAppearance } =
     useUiSettings()
+  const uiCopy = useUiCopy()
   const tabPicker = sessionPickers.tabs
   const searchListPicker = sessionPickers.search
   const domListPicker = sessionPickers.dom
@@ -918,7 +927,8 @@ export function BmxtShell({
           onDomListCapture: (capture) => {
             domCapture = capture
           },
-          commandSessionId: sessionId
+          commandSessionId: sessionId,
+          uiLocale: uiSettings.locale
         }
         const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
         if (domListDismissRef.current) {
@@ -929,7 +939,7 @@ export function BmxtShell({
           if (announce) {
             await appendLogLines([
               `> ${displayLine}`,
-              "dom -list — permission / target check (Enter=許可 / Esc → prompt)"
+              uiCopy.t(DOM_PROMPT_HEADLINE)
             ])
           }
           setDomListPicker(sessionId, {
@@ -1049,9 +1059,7 @@ export function BmxtShell({
         }
         const effects = bundle.effects ?? []
         if (effectsIncludeSearchPage(effects)) {
-          for (const hint of SEARCH_PAGE_SCAN_HINT_LINES) {
-            appendSearchPickerProgress(hint)
-          }
+          appendSearchPickerProgress(uiCopy.t(SEARCH_PAGE_SCAN_HINT))
         }
         const ctx: DispatchChromeContext = {
           clearLog: async () => {},
@@ -1060,6 +1068,7 @@ export function BmxtShell({
           focusInfo: async () => [],
           resolveTabArg: async () => undefined,
           commandSessionId: sessionId,
+          uiLocale: uiSettings.locale,
           searchPageProgressLabel: progressLabel,
           onSearchPageProgress: async (message) => {
             appendSearchPickerProgress(message)
@@ -1106,9 +1115,9 @@ export function BmxtShell({
     searchListDismissRef.current = true
     void appendLogLines([
       "search — cancelled (Ctrl+C)",
-      "JA: ページ走査を中断しました。"
+      uiCopy.t(SEARCH_PAGE_SCAN_CANCELLED)
     ])
-  }, [appendLogLines])
+  }, [appendLogLines, uiCopy])
 
   const onOpenSearchPickerEntry = useCallback(
     async (entry: PickerEntry, matchIndex: number) => {
@@ -1119,7 +1128,8 @@ export function BmxtShell({
         listWindows: async () => [],
         focusInfo: async () => [],
         resolveTabArg: async () => undefined,
-        commandSessionId: sessionId
+        commandSessionId: sessionId,
+        uiLocale: uiSettings.locale
       }
       await openSearchPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines), pattern)
     },
@@ -1290,8 +1300,7 @@ export function BmxtShell({
         void appendLogLines([
           `> ${trimmed}`,
           "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
-          "EN: `-setting -page-active` controls tab preview on highlight (`--auto` default, `--manual` needs Alt).",
-          "JA: `-setting -page-active` でハイライト時のタブアクティブ化を切替（`--auto` 既定、`--manual` は Alt）。"
+          uiCopy.t(TABS_SETTING_HINT)
         ])
         focusPrompt()
         return
@@ -1427,14 +1436,9 @@ export function BmxtShell({
       setModeToolbarOrder((prev) => activateModeToolbar(prev, "nav"))
       void (async () => {
         const canPage = await canScriptHttpHostPages()
-        const logLines = [
-          `> ${trimmed}`,
-          "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · nav -exit to quit)"
-        ]
+        const logLines = [`> ${trimmed}`, uiCopy.t(NAV_ARMED_LOG)]
         if (!canPage) {
-          logLines.push(
-            "warning: http(s) site access was not granted — allow it before Alt ON, or enable site access under chrome://extensions."
-          )
+          logLines.push(uiCopy.t(NAV_HOST_ACCESS_WARNING))
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1455,8 +1459,7 @@ export function BmxtShell({
         void appendLogLines([
           `> ${trimmed}`,
           "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
-          "EN: `-on` enables translation assist (nav typing preview under the prompt).",
-          "JA: `-on` で翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。`-setting` でペアを選びます。"
+          uiCopy.t(TRANSLATE_USAGE_HINT)
         ])
         focusPrompt()
         return
@@ -1485,7 +1488,10 @@ export function BmxtShell({
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
           await appendLogLines([
             `> ${trimmed}`,
-            `translate: ON (${settingTokenForPairId(translatePairIdRef.current)}) — nav typing でプロンプト下に訳プレビュー · Alt 長押しで送信`
+            translateOnLogLine(
+              uiSettings.locale,
+              settingTokenForPairId(translatePairIdRef.current)
+            )
           ])
           focusPrompt()
         } else if (translateCmd.kind === "off") {
@@ -1514,10 +1520,7 @@ export function BmxtShell({
       void (async () => {
         const logLines = [`> ${trimmed}`]
         if (navActiveRef.current) {
-          logLines.push(
-            "error: turn nav off with Alt on the prompt first, then run nav -exit.",
-            "JA: 先に Alt で nav を OFF にしてから nav -exit を実行してください。"
-          )
+          logLines.push(uiCopy.t(NAV_EXIT_ACTIVE_ERROR))
         } else if (!navArmedRef.current) {
           logLines.push("nav is not armed in this pane.")
         } else {
@@ -2316,27 +2319,20 @@ export function BmxtShell({
     <>
         {lines.length === 0 || postUpgradeBanner ? (
           <div className="bmxt-hint">
-            Welcome to BMXt! This program is a test version.
-            <br />
-            BMXtへようこそ！本プログラムはテストバージョンです。
+            {uiCopy.t(SHELL_WELCOME)}
             <br />
             <br />
-            Type help and press Enter. Tab completes commands.
+            {uiCopy.t(SHELL_HELP_HINT)}
           </div>
         ) : null}
         {postUpgradeBanner ? (
           <div className="bmxt-version-upgrade">
             <div className="bmxt-version-upgrade-title">
-              ◆バージョンアップ / Version upgrade — {postUpgradeBanner.version}
+              {versionUpgradeTitle(uiCopy.locale, postUpgradeBanner.version)}
             </div>
-            <div className="bmxt-version-upgrade-notes bmxt-version-upgrade-notes--ja">
-              {postUpgradeBanner.ja.map((line, i) => (
-                <div key={i}>・{line}</div>
-              ))}
-            </div>
-            <div className="bmxt-version-upgrade-notes bmxt-version-upgrade-notes--en">
-              {postUpgradeBanner.en.map((line, i) => (
-                <div key={i}>· {line}</div>
+            <div className="bmxt-version-upgrade-notes">
+              {formatBulletedLines(postUpgradeBanner, uiCopy.locale).map((line, i) => (
+                <div key={i}>{line}</div>
               ))}
             </div>
           </div>

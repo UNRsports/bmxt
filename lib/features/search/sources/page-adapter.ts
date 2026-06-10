@@ -14,6 +14,8 @@ import {
   shouldEmitSearchPageProgress,
   type SearchPageProgress
 } from "./page-progress"
+import { DEFAULT_UI_LOCALE, pickUiLabel, type UiLocale } from "../../setting/locale"
+import { SEARCH_PAGE_NO_TEXT_HINT } from "../../setting/ui-copy"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
 const MAX_LINE_HITS = 500
@@ -22,7 +24,8 @@ export async function searchPageLines(
   pattern: string,
   onProgress?: (message: string) => Promise<void>,
   progressLabel = "search -list --page",
-  shouldCancel?: () => boolean
+  shouldCancel?: () => boolean,
+  uiLocale: UiLocale = DEFAULT_UI_LOCALE
 ): Promise<string[]> {
   const emit = async (p: SearchPageProgress) => {
     if (!onProgress) {
@@ -179,8 +182,7 @@ export async function searchPageLines(
   if (scanned === 0 && tabs.length > 0) {
     return [
       "(no page text could be read from open http(s) tabs)",
-      "EN: With site access enabled, reload the pages you want to search (F5), then run search -list --page again.",
-      "JA: サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
+      pickUiLabel(SEARCH_PAGE_NO_TEXT_HINT, uiLocale),
       `scanned ${scanned} tab(s), skipped ${skipped}, ${tabTotal} http(s) tab(s) open`
     ]
   }

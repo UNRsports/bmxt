@@ -7,6 +7,16 @@ import {
   type MutableRefObject
 } from "react"
 import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
+import {
+  DOM_PROMPT_APPROVE,
+  DOM_PROMPT_APPROVE_BUSY,
+  DOM_PROMPT_ARIA,
+  DOM_PROMPT_DENIED,
+  DOM_PROMPT_HEADLINE,
+  DOM_PROMPT_RETURN,
+  DOM_PROMPT_SCROLL_HINT,
+  useUiCopy
+} from "../setting"
 
 type Props = {
   /** Lines returned by the failing handler (shown verbatim above the buttons). */
@@ -21,21 +31,8 @@ type Props = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
 }
 
-const HEADLINE =
-  "dom -list — permission / target check · Enter=許可 / Y · Esc/N → prompt"
 const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 
-/**
- * EN: Confirmation panel shown when `dom -list` returned a retryable error.
- *     "Approve" calls `chrome.permissions.request` (if optional host access is missing) within
- *     the user gesture from the key event, then triggers `onApprove` to re-dispatch.
- *     Esc/N returns to the BMXt prompt (picker stays open). Uses the same `bmxt-tab-picker` chrome as find-list /
- *     dom-list rows so the styling stays consistent.
- * JA: `dom -list` がリトライ可能なエラーを返したときに表示する確認パネル。
- *     「許可」はキーのユーザージェスチャ内で `chrome.permissions.request` を呼び、
- *     許可が取れたら `onApprove` で再ディスパッチする。
- *     「拒否」はピッカーを閉じる。チューブ表示は find-list / dom-list と同じクロムで統一。
- */
 export function DomPromptRender({
   message,
   onApprove,
@@ -44,6 +41,7 @@ export function DomPromptRender({
   keyboardActive = false,
   pickerInputRef
 }: Props) {
+  const uiCopy = useUiCopy()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -88,10 +86,7 @@ export function DomPromptRender({
           onApprove()
           return
         }
-        setExtra([
-          "EN: Permission was not granted by the browser; keeping the picker open so you can retry.",
-          "JA: ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc でプロンプトへ。"
-        ])
+        setExtra([uiCopy.t(DOM_PROMPT_DENIED)])
       } catch (err) {
         setExtra([
           `error: permission request failed — ${err instanceof Error ? err.message : String(err)}`
@@ -100,7 +95,7 @@ export function DomPromptRender({
         setBusy(false)
       }
     })()
-  }, [busy, onApprove, onPermissionGranted])
+  }, [busy, onApprove, onPermissionGranted, uiCopy])
 
   useEffect(() => {
     if (!keyboardActive) {
@@ -152,7 +147,7 @@ export function DomPromptRender({
 
   return (
     <div className="bmxt-tab-picker">
-      <div className="bmxt-tab-picker-head">{HEADLINE}</div>
+      <div className="bmxt-tab-picker-head">{uiCopy.t(DOM_PROMPT_HEADLINE)}</div>
       <textarea
         ref={setInputEl}
         className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
@@ -163,7 +158,7 @@ export function DomPromptRender({
         autoCorrect="off"
         autoComplete="off"
         wrap="off"
-        aria-label="Permission prompt / 許可ダイアログ"
+        aria-label={uiCopy.t(DOM_PROMPT_ARIA)}
         value=""
         onKeyDown={onInputKeyDown}
       />
@@ -196,15 +191,15 @@ export function DomPromptRender({
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--primary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          {busy ? "Requesting…" : "許可 (Enter / Y)"}
+          {busy ? uiCopy.t(DOM_PROMPT_APPROVE_BUSY) : uiCopy.t(DOM_PROMPT_APPROVE)}
         </span>
         <span
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--secondary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          プロンプトへ (Esc / N)
+          {uiCopy.t(DOM_PROMPT_RETURN)}
         </span>
-        <span className="bmxt-dom-prompt-footer-hint">↑↓ / j k でメッセージをスクロール</span>
+        <span className="bmxt-dom-prompt-footer-hint">{uiCopy.t(DOM_PROMPT_SCROLL_HINT)}</span>
       </div>
     </div>
   )

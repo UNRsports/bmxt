@@ -45,6 +45,19 @@ export function pickUiLabel(label: BilingualUiLabel, locale: UiLocale): string {
   return locale === "en" ? label.en : label.ja
 }
 
+export type BilingualLines = {
+  readonly ja: readonly string[]
+  readonly en: readonly string[]
+}
+
+export function pickUiLines(lines: BilingualLines, locale: UiLocale): readonly string[] {
+  return locale === "en" ? lines.en : lines.ja
+}
+
+export function uiBulletPrefix(locale: UiLocale): string {
+  return locale === "en" ? "· " : "・"
+}
+
 export function listUiLocaleSettingTokens(): readonly UiLocaleSettingToken[] {
   return UI_LOCALE_SETTING_TOKENS
 }
