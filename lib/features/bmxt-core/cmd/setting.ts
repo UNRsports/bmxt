@@ -17,7 +17,7 @@ function usageLines(): string[] {
     "       setting -appearance --font <family>        — font-family stack",
     "       setting -appearance --bg-import              — pick PNG/JPEG/WebP (512 KiB max)",
     "       setting -appearance --bg-clear               — remove background image",
-    "       setting -appearance --reset                  — restore default appearance"
+    "       setting -appearance --reset-default          — restore default appearance (text, bg, font, image)"
   ]
 }
 

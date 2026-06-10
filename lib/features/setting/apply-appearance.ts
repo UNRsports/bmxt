@@ -25,17 +25,19 @@ export function appearanceToCssDeclarations(
     "--bmxt-font-size": resolved.fontSize,
     "--bmxt-font-family": resolved.fontFamily,
     color: "var(--bmxt-fg)",
-    backgroundColor: "var(--bmxt-bg)",
     fontSize: "var(--bmxt-font-size)",
     fontFamily: "var(--bmxt-font-family)"
   }
   if (resolved.bgImageDataUrl) {
-    decl.backgroundImage = `url("${escapeCssUrlData(resolved.bgImageDataUrl)}")`
-    decl.backgroundSize = "cover"
-    decl.backgroundPosition = "center"
-    decl.backgroundRepeat = "no-repeat"
+    decl["--bmxt-bg-image"] = `url("${escapeCssUrlData(resolved.bgImageDataUrl)}")`
+    decl["--bmxt-bg-size"] = "cover"
+    decl["--bmxt-bg-position"] = "center"
+    decl["--bmxt-bg-repeat"] = "no-repeat"
   } else {
-    decl.backgroundImage = "none"
+    decl["--bmxt-bg-image"] = "none"
+    decl["--bmxt-bg-size"] = "auto"
+    decl["--bmxt-bg-position"] = "center"
+    decl["--bmxt-bg-repeat"] = "no-repeat"
   }
   return decl
 }

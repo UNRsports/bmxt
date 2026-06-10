@@ -75,7 +75,7 @@ export function parseSettingCommandLine(trimmed: string): SettingCommandParse {
       }
       return null
     }
-    if (flag === "--reset") {
+    if (flag === "--reset-default") {
       if (parts.length === 3) {
         return { kind: "appearance-reset" }
       }

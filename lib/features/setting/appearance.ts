@@ -10,7 +10,7 @@ export const APPEARANCE_FLAG_TOKENS = [
   "--font",
   "--bg-import",
   "--bg-clear",
-  "--reset"
+  "--reset-default"
 ] as const
 
 export type AppearanceFlagToken = (typeof APPEARANCE_FLAG_TOKENS)[number]
@@ -131,7 +131,7 @@ export function buildAppearancePatch(
       return { ok: true, patch: {} }
     case "--bg-clear":
       return { ok: true, patch: { bgImageDataUrl: null } }
-    case "--reset":
+    case "--reset-default":
       return { ok: true, patch: { ...DEFAULT_UI_APPEARANCE } }
     default: {
       const _exhaustive: never = flag

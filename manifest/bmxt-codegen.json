@@ -183,7 +183,7 @@
             "--font",
             "--bg-import",
             "--bg-clear",
-            "--reset"
+            "--reset-default"
           ],
           "tail": "none"
         }
