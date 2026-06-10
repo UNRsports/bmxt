@@ -169,6 +169,33 @@ body {
   border-radius: 4px;
 }
 
+.bmxt-setting-picker-preview {
+  flex-shrink: 0;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #30363d;
+}
+
+.bmxt-setting-picker-preview-head {
+  font-size: 10px;
+  color: #8b949e;
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+.bmxt-setting-picker-preview-body {
+  box-sizing: border-box;
+}
+
+.bmxt-setting-picker-preview-prompt {
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.bmxt-setting-picker-preview-line {
+  line-height: 1.45;
+}
+
 .bmxt-plain-picker-measure-row {
   position: absolute;
   visibility: hidden;

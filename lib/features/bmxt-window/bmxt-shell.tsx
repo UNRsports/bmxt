@@ -95,19 +95,18 @@ import {
 import { buildHelpLines } from "../bmxt-core/registry/help"
 import {
   bgImportErrorLine,
-  clearUiBackgroundImage,
-  DEFAULT_SETTING_LIST_PICKER_STATE,
+  createSettingListPickerState,
   exportUiSettingsZip,
+  fontSizeFromPickerIndex,
   importUiSettingsZipFromFilePicker,
   importBackgroundImageFromFilePicker,
   parseSettingExitListLine,
   parseSettingIncompleteLine,
   parseSettingListPickerLine,
   replaceUiSettings,
-  resetUiAppearance,
-  saveUiAppearancePatch,
-  saveUiBackgroundImage,
-  saveUiLocale,
+  settingPickerApplyDraftToMain,
+  settingPickerRevertDraft,
+  settingPickerUpdateDraft,
   settingTokenForUiLocale,
   t,
   formatBulletedLines,
@@ -211,8 +210,7 @@ export function BmxtShell({
   paneFocus,
   onPaneFocusChange
 }: Props) {
-  const { settings: uiSettings, setLocale: setUiLocale, setAppearance: setUiAppearance } =
-    useUiSettings()
+  const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
   const uiCopy = useUiCopy()
   const tabPicker = sessionPickers.tabs
   const searchListPicker = sessionPickers.search
@@ -1161,43 +1159,59 @@ export function BmxtShell({
   )
 
   const onSettingPickerRowAction = useCallback(
-    async (row: SettingPickerRow, _index: number) => {
+    async (row: SettingPickerRow, index: number) => {
       const logPrefix = "setting -list"
+      const current = settingListPickerRef.current
+      if (!current) {
+        return
+      }
+      if (row.id === "save") {
+        const draft = current.draft
+        await replaceUiSettings(draft)
+        replaceUiSettingsState(draft)
+        await appendLogLines([logPrefix, uiCopy.t("setting.picker.saved")])
+        return
+      }
+      if (row.id === "cancel") {
+        setSettingListPicker(sessionId, settingPickerRevertDraft(current, uiSettings))
+        await appendLogLines([logPrefix, uiCopy.t("setting.picker.cancelled")])
+        return
+      }
       if (row.id === "locale-ja" || row.id === "locale-en") {
         const locale = row.id === "locale-ja" ? "ja" : "en"
-        await saveUiLocale(locale)
-        setUiLocale(locale)
-        const token = settingTokenForUiLocale(locale)
-        await appendLogLines([
-          logPrefix,
-          t("setting.language.set", locale, { token })
-        ])
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(current, { locale })
+        )
         return
       }
       if (row.id === "reset-yes") {
-        await resetUiAppearance()
-        setUiAppearance({
-          fg: null,
-          bgColor: null,
-          fontSize: null,
-          fontFamily: null,
-          bgImageDataUrl: null
-        })
-        await appendLogLines([logPrefix, uiCopy.t("setting.appearance.reset")])
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(current, {
+            appearance: {
+              fg: null,
+              bgColor: null,
+              fontSize: null,
+              fontFamily: null,
+              bgImageDataUrl: null
+            }
+          })
+        )
         return
       }
       if (row.id === "reset-no") {
-        await appendLogLines([logPrefix, uiCopy.t("setting.appearance.resetCancelled")])
         return
       }
       if (row.id === "size") {
-        const fontSize = row.line.trim()
-        await saveUiAppearancePatch({ fontSize })
-        setUiAppearance({ fontSize })
-        await appendLogLines([
-          logPrefix,
-          uiCopy.t("setting.appearance.updated", { flag: "--size" })
-        ])
+        const fontSize = fontSizeFromPickerIndex(index)
+        if (fontSize === null) {
+          return
+        }
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(current, { appearance: { fontSize } })
+        )
         return
       }
       if (row.id === "bg-import") {
@@ -1210,26 +1224,25 @@ export function BmxtShell({
           }
           return
         }
-        await saveUiBackgroundImage(result.dataUrl)
-        setUiAppearance({ bgImageDataUrl: result.dataUrl })
-        await appendLogLines([
-          logPrefix,
-          uiCopy.t("setting.bgImage.imported", {
-            mimeType: result.mimeType,
-            byteLength: result.byteLength
+        const afterImport = settingListPickerRef.current ?? current
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(afterImport, {
+            appearance: { bgImageDataUrl: result.dataUrl }
           })
-        ])
+        )
         return
       }
       if (row.id === "bg-clear") {
-        await clearUiBackgroundImage()
-        setUiAppearance({ bgImageDataUrl: null })
-        await appendLogLines([logPrefix, uiCopy.t("setting.bgImage.cleared")])
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(current, { appearance: { bgImageDataUrl: null } })
+        )
         return
       }
       if (row.id === "export") {
         try {
-          const { filename } = await exportUiSettingsZip()
+          const { filename } = await exportUiSettingsZip(current.draft)
           await appendLogLines([logPrefix, uiCopy.t("setting.export.done", { filename })])
         } catch (e) {
           await appendLogLines([
@@ -1256,33 +1269,45 @@ export function BmxtShell({
           ])
           return
         }
-        await replaceUiSettings(result.settings)
-        setUiLocale(result.settings.locale)
-        setUiAppearance(result.settings.appearance)
-        await appendLogLines([logPrefix, uiCopy.t("setting.import.done")])
+        const afterImport = settingListPickerRef.current ?? current
+        setSettingListPicker(sessionId, {
+          ...afterImport,
+          view: "main",
+          editing: false,
+          editDraft: "",
+          draft: result.settings
+        })
+        await appendLogLines([logPrefix, uiCopy.t("setting.picker.importDraft")])
       }
     },
-    [appendLogLines, setUiAppearance, setUiLocale, uiCopy, uiSettings.locale]
+    [
+      appendLogLines,
+      replaceUiSettingsState,
+      sessionId,
+      setSettingListPicker,
+      uiCopy,
+      uiSettings
+    ]
   )
 
   const onSettingPickerApplyEdit = useCallback(
     async (field: SettingEditField, value: string) => {
-      const logPrefix = "setting -list"
-      const flag = field === "fg" ? "--fg" : field === "bg-color" ? "--bg-color" : "--font"
+      const current = settingListPickerRef.current
+      if (!current) {
+        return
+      }
       const patch =
         field === "fg"
           ? { fg: value }
           : field === "bg-color"
             ? { bgColor: value }
             : { fontFamily: value }
-      await saveUiAppearancePatch(patch)
-      setUiAppearance(patch)
-      await appendLogLines([
-        logPrefix,
-        uiCopy.t("setting.appearance.updated", { flag })
-      ])
+      setSettingListPicker(
+        sessionId,
+        settingPickerApplyDraftToMain(current, { appearance: patch })
+      )
     },
-    [appendLogLines, setUiAppearance, uiCopy]
+    [sessionId, setSettingListPicker]
   )
 
   const onSettingPickerEditInvalid = useCallback(async () => {
@@ -1351,7 +1376,7 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.picker.hint")])
-        setSettingListPicker(sessionId, { ...DEFAULT_SETTING_LIST_PICKER_STATE })
+        setSettingListPicker(sessionId, createSettingListPickerState(uiSettings))
       })()
       focusPrompt()
       return
@@ -1790,8 +1815,7 @@ export function BmxtShell({
     mode,
     promptLine,
     sessionId,
-    setUiAppearance,
-    setUiLocale,
+    replaceUiSettingsState,
     uiCopy,
     uiSettings,
     activatePaneFocus,
@@ -2596,7 +2620,6 @@ export function BmxtShell({
             searchListPicker={searchListPicker}
             domListPicker={domListPicker}
             settingListPicker={settingListPicker}
-            uiAppearance={uiSettings.appearance}
             tabsPickerKeyboardActive={tabsPickerKeyboardActive}
             searchPickerKeyboardActive={searchPickerKeyboardActive}
             domPickerKeyboardActive={domPickerKeyboardActive}

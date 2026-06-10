@@ -49,9 +49,9 @@ export function useSettingPickerKeyboard({
   onInputKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
 } {
   const goMain = useCallback(() => {
-    onStateChange(settingPickerGoToView("main"))
+    onStateChange(settingPickerGoToView("main", state))
     setHi(0)
-  }, [onStateChange, setHi])
+  }, [onStateChange, setHi, state])
 
   const startEditing = useCallback(
     (draft: string) => {
@@ -105,7 +105,7 @@ export function useSettingPickerKeyboard({
         await callbacks.onImmediateMainAction(row)
         return
       }
-      onStateChange(settingPickerGoToView(target))
+      onStateChange(settingPickerGoToView(target, state))
       setHi(0)
       return
     }
@@ -114,7 +114,6 @@ export function useSettingPickerKeyboard({
     }
     if (isSettingListSubView(state.view)) {
       await callbacks.onApplyListChoice(row, hi)
-      goMain()
       return
     }
     if (isSettingDetailView(state.view)) {
@@ -157,9 +156,8 @@ export function useSettingPickerKeyboard({
       return true
     }
     await callbacks.onApplyEdit(field, value)
-    goMain()
     return true
-  }, [callbacks, goMain, state.editDraft, state.editing, state.view])
+  }, [callbacks, state.editDraft, state.editing, state.view])
 
   const applyListChoice = useCallback(async (): Promise<void> => {
     const row = rows[hi]
@@ -167,8 +165,7 @@ export function useSettingPickerKeyboard({
       return
     }
     await callbacks.onApplyListChoice(row, hi)
-    goMain()
-  }, [callbacks, goMain, hi, rows, state.editing, state.view])
+  }, [callbacks, hi, rows, state.editing, state.view])
 
   const handleEnter = useCallback(async (): Promise<void> => {
     if (state.editing) {

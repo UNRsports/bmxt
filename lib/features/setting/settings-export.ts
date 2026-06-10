@@ -122,17 +122,19 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /** EN: Package UI settings JSON + background image into a zip and save locally. */
-export async function exportUiSettingsZip(): Promise<{ filename: string }> {
-  const settings = await loadUiSettings()
-  const json = buildSettingsExportJson(settings)
+export async function exportUiSettingsZip(
+  settings?: UiSettings
+): Promise<{ filename: string }> {
+  const resolved = settings ?? (await loadUiSettings())
+  const json = buildSettingsExportJson(resolved)
   const entries: { name: string; data: Uint8Array }[] = [
     {
       name: SETTINGS_JSON_NAME,
       data: new TextEncoder().encode(JSON.stringify(json, null, 2))
     }
   ]
-  if (json.appearance.bgImageFile && settings.appearance.bgImageDataUrl) {
-    const decoded = dataUrlToBytes(settings.appearance.bgImageDataUrl)
+  if (json.appearance.bgImageFile && resolved.appearance.bgImageDataUrl) {
+    const decoded = dataUrlToBytes(resolved.appearance.bgImageDataUrl)
     if (decoded) {
       entries.push({ name: json.appearance.bgImageFile, data: decoded.bytes })
     }

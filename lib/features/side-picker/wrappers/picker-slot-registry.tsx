@@ -12,7 +12,6 @@ import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
-import type { UiAppearance } from "../../setting/appearance"
 import type { SettingPickerRow } from "../../setting/setting-picker-rows"
 import { SettingPickerWrapper } from "../../setting/setting-picker-wrapper"
 
@@ -28,7 +27,6 @@ export type PickerColumnHostContext = {
   searchListPicker: SearchListPickerState | null
   domListPicker: DomListPickerState | null
   settingListPicker: SettingListPickerState | null
-  uiAppearance: UiAppearance
   tabsPickerKeyboardActive: boolean
   searchPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
@@ -119,7 +117,6 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         isFocusedPane={ctx.isFocusedPane}>
         <SettingPickerWrapper
           state={ctx.settingListPicker}
-          appearance={ctx.uiAppearance}
           onStateChange={ctx.onSettingPickerStateChange}
           onRowAction={ctx.onSettingPickerRowAction}
           onApplyEdit={ctx.onSettingPickerApplyEdit}

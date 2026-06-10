@@ -9,6 +9,11 @@ import {
   parseSettingIncompleteLine,
   parseSettingListPickerLine
 } from "./setting-list-picker-input.ts"
+import {
+  createSettingListPickerState,
+  settingPickerApplyDraftToMain,
+  settingPickerUpdateDraft
+} from "./setting-list-picker-state.ts"
 import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
 
 const SETTINGS_JSON_NAME = "settings.json"
@@ -53,6 +58,48 @@ describe("parseFontSizePx", () => {
     assert.equal(parseFontSizePx("12"), "12px")
     assert.equal(parseFontSizePx("12px"), "12px")
     assert.equal(parseFontSizePx("40"), null)
+  })
+})
+
+describe("setting list picker draft", () => {
+  it("creates draft from committed settings", () => {
+    const state = createSettingListPickerState({
+      locale: "en",
+      appearance: { fg: "#ffffff", bgColor: null, fontSize: "14px", fontFamily: null, bgImageDataUrl: null }
+    })
+    assert.equal(state.draft.locale, "en")
+    assert.equal(state.draft.appearance.fg, "#ffffff")
+    assert.equal(state.draft.appearance.fontSize, "14px")
+  })
+
+  it("updates draft without touching view", () => {
+    const base = createSettingListPickerState({
+      locale: "ja",
+      appearance: { fg: null, bgColor: null, fontSize: null, fontFamily: null, bgImageDataUrl: null }
+    })
+    const next = settingPickerUpdateDraft(
+      { ...base, view: "language" },
+      { locale: "en", appearance: { fg: "#112233" } }
+    )
+    assert.equal(next.view, "language")
+    assert.equal(next.draft.locale, "en")
+    assert.equal(next.draft.appearance.fg, "#112233")
+  })
+
+  it("applies draft and returns to main atomically", () => {
+    const base = createSettingListPickerState({
+      locale: "en",
+      appearance: { fg: null, bgColor: null, fontSize: null, fontFamily: null, bgImageDataUrl: null }
+    })
+    const next = settingPickerApplyDraftToMain(
+      { ...base, view: "language", editing: true, editDraft: "#ff0000" },
+      { locale: "ja", appearance: { fg: "#aabbcc" } }
+    )
+    assert.equal(next.view, "main")
+    assert.equal(next.editing, false)
+    assert.equal(next.editDraft, "")
+    assert.equal(next.draft.locale, "ja")
+    assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
 })
 

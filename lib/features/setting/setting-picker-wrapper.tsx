@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type MutableRefObject } from "react"
-import { resolveTerminalAppearance, type UiAppearance } from "./appearance"
+import { resolveTerminalAppearance } from "./appearance"
 import { SettingPickerBody } from "./setting-picker-body"
 import {
   buildSettingPickerRows,
@@ -8,11 +8,10 @@ import {
 } from "./setting-picker-rows"
 import type { SettingEditField } from "./setting-picker-edit"
 import type { SettingListPickerState } from "./setting-list-picker-state"
-import { useUiLocale } from "./use-ui-settings"
+import { SettingPickerPreview } from "./setting-picker-preview"
 
 export type SettingPickerWrapperProps = {
   state: SettingListPickerState
-  appearance: UiAppearance
   onStateChange: (next: SettingListPickerState) => void
   onRowAction: (row: SettingPickerRow, index: number) => void | Promise<void>
   onApplyEdit: (field: SettingEditField, value: string) => void | Promise<void>
@@ -25,7 +24,6 @@ export type SettingPickerWrapperProps = {
 
 export function SettingPickerWrapper({
   state,
-  appearance,
   onStateChange,
   onRowAction,
   onApplyEdit,
@@ -35,7 +33,9 @@ export function SettingPickerWrapper({
   pickerInputRef,
   sessionId
 }: SettingPickerWrapperProps) {
-  const locale = useUiLocale()
+  const { draft } = state
+  const locale = draft.locale
+  const appearance = draft.appearance
   const rows = useMemo(
     () => buildSettingPickerRows(state.view, locale, appearance),
     [state.view, locale, appearance]
@@ -68,18 +68,27 @@ export function SettingPickerWrapper({
     [onApplyEdit, onEditInvalid, onRowAction, resolveEditSeed]
   )
 
+  const preview = useMemo(
+    () => (
+      <SettingPickerPreview appearance={appearance} locale={locale} />
+    ),
+    [appearance, locale]
+  )
+
   return (
     <SettingPickerBody
       headline={headline}
       lines={lines}
       rows={rows}
       state={state}
+      locale={locale}
       onStateChange={onStateChange}
       keyboardCallbacks={keyboardCallbacks}
       onReturnToPrompt={onReturnToPrompt}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}
+      preview={preview}
     />
   )
 }

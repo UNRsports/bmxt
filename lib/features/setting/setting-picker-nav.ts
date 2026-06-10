@@ -20,6 +20,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "resetConfirm"
     case "export":
     case "import":
+    case "save":
+    case "cancel":
       return null
     default:
       return null

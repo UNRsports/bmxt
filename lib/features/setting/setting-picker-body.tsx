@@ -13,7 +13,8 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../bmxt-window/csp-dynamic-stylesheet"
-import { useUiCopy } from "./use-ui-copy"
+import { t } from "./i18n/messages"
+import type { UiLocale } from "./locale"
 import {
   computePlainPickerWindow,
   PLAIN_PICKER_ROW_HEIGHT_FALLBACK,
@@ -67,6 +68,7 @@ export type SettingPickerBodyProps = {
   lines: readonly string[]
   rows: readonly SettingPickerRow[]
   state: SettingListPickerState
+  locale: UiLocale
   onStateChange: (next: SettingListPickerState) => void
   keyboardCallbacks: SettingPickerKeyboardCallbacks
   onReturnToPrompt: () => void
@@ -74,6 +76,7 @@ export type SettingPickerBodyProps = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
   statusLines?: readonly string[]
+  preview?: ReactNode
 }
 
 export function SettingPickerBody({
@@ -81,15 +84,16 @@ export function SettingPickerBody({
   lines,
   rows,
   state,
+  locale,
   onStateChange,
   keyboardCallbacks,
   onReturnToPrompt,
   keyboardActive = false,
   pickerInputRef,
   sessionId,
-  statusLines = []
+  statusLines = [],
+  preview = null
 }: SettingPickerBodyProps) {
-  const uiCopy = useUiCopy()
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -264,8 +268,8 @@ export function SettingPickerBody({
 
   const textareaValue = editing ? state.editDraft : ""
   const textareaAria = editing
-    ? settingPickerEditAriaLabel(state.view, uiCopy.locale)
-    : uiCopy.t("setting.picker.keysHint")
+    ? settingPickerEditAriaLabel(state.view, locale)
+    : t("setting.picker.keysHint", locale)
   const textareaClassName = editing
     ? "bmxt-tab-picker-filter-ime bmxt-setting-picker-edit-input"
     : "bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
@@ -297,7 +301,7 @@ export function SettingPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label={uiCopy.t("setting.picker.listAria")}
+        aria-label={t("setting.picker.listAria", locale)}
         aria-activedescendant={editing ? undefined : activeRowId}
         onScroll={useVirtual ? syncWindowFromScroll : undefined}>
         {displayLines.length >= PLAIN_PICKER_VIRTUALIZE_MIN ? (
@@ -340,12 +344,13 @@ export function SettingPickerBody({
           <div className="bmxt-tab-picker-row bmxt-tab-picker-row--status" role="listitem">
             <div className="bmxt-tab-picker-tab-title">
               <span className="bmxt-plain-picker-row-text">
-                {uiCopy.t("setting.picker.editingHint")}
+                {t("setting.picker.editingHint", locale)}
               </span>
             </div>
           </div>
         ) : null}
       </div>
+      {preview}
     </div>
   )
 }
