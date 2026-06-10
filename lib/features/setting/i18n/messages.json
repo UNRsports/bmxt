@@ -208,8 +208,16 @@
     "en": "usage: setting -list | setting -exit -list"
   },
   "setting.picker.hint": {
-    "ja": "Setting picker — ↑↓ 移動 · Enter 選択 · Esc → prompt · Ctrl+←→",
-    "en": "Setting picker — ↑↓ move · Enter select · Esc → prompt · Ctrl+←→"
+    "ja": "Setting picker — ↑↓ 移動 · → 選択/設定 · ← 戻る · Esc → prompt · Ctrl+←→",
+    "en": "Setting picker — ↑↓ move · → select/configure · ← back · Esc → prompt · Ctrl+←→"
+  },
+  "setting.picker.keysHint": {
+    "ja": "setting picker keys",
+    "en": "setting picker keys"
+  },
+  "setting.picker.listAria": {
+    "ja": "setting list",
+    "en": "setting list"
   },
   "setting.picker.closed": {
     "ja": "setting: 設定ピッカーを閉じました",
@@ -220,20 +228,80 @@
     "en": "setting: settings picker is not open"
   },
   "setting.picker.headline.main": {
-    "ja": "setting -list · ↑↓ · Enter · Esc → prompt",
-    "en": "setting -list · ↑↓ · Enter · Esc → prompt"
+    "ja": "setting -list · ↑↓ · → 設定 · Esc → prompt",
+    "en": "setting -list · ↑↓ · → configure · Esc → prompt"
   },
   "setting.picker.headline.language": {
-    "ja": "setting -list · language · ↑↓ · Enter · Esc → main",
-    "en": "setting -list · language · ↑↓ · Enter · Esc → main"
+    "ja": "setting -list · language · ↑↓ · Enter/→ 適用 · ← 一覧",
+    "en": "setting -list · language · ↑↓ · Enter/→ apply · ← list"
   },
   "setting.picker.headline.fontSize": {
-    "ja": "setting -list · size · ↑↓ · Enter · Esc → main",
-    "en": "setting -list · size · ↑↓ · Enter · Esc → main"
+    "ja": "setting -list · size · ↑↓ · Enter/→ 適用 · ← 一覧",
+    "en": "setting -list · size · ↑↓ · Enter/→ apply · ← list"
   },
   "setting.picker.headline.bgImage": {
-    "ja": "setting -list · bg-image · ↑↓ · Enter · Esc → main",
-    "en": "setting -list · bg-image · ↑↓ · Enter · Esc → main"
+    "ja": "setting -list · bg-image · ↑↓ · Enter/→ 実行 · ← 一覧",
+    "en": "setting -list · bg-image · ↑↓ · Enter/→ run · ← list"
+  },
+  "setting.picker.headline.fg": {
+    "ja": "setting -list · fg · Enter/→ 編集 · ← 一覧",
+    "en": "setting -list · fg · Enter/→ edit · ← list"
+  },
+  "setting.picker.headline.bgColor": {
+    "ja": "setting -list · bg-color · → 編集 · ← 一覧",
+    "en": "setting -list · bg-color · → edit · ← list"
+  },
+  "setting.picker.headline.font": {
+    "ja": "setting -list · font · → 編集 · ← 一覧",
+    "en": "setting -list · font · → edit · ← list"
+  },
+  "setting.picker.headline.resetConfirm": {
+    "ja": "setting -list · reset · ↑↓ · → 確定 · ← 一覧",
+    "en": "setting -list · reset · ↑↓ · → confirm · ← list"
+  },
+  "setting.picker.headline.editing": {
+    "ja": "setting -list · 編集中 — 下の入力欄に hex を入力 · Enter 保存 · Esc キャンセル",
+    "en": "setting -list · editing — type in the field below · Enter save · Esc cancel"
+  },
+  "setting.picker.editingHint": {
+    "ja": "Enter で保存 · Esc でキャンセル",
+    "en": "Enter to save · Esc to cancel"
+  },
+  "setting.picker.detail.fg": {
+    "ja": "text color: {value}",
+    "en": "text color: {value}"
+  },
+  "setting.picker.detail.bgColor": {
+    "ja": "background color: {value}",
+    "en": "background color: {value}"
+  },
+  "setting.picker.detail.font": {
+    "ja": "font-family: {value}",
+    "en": "font-family: {value}"
+  },
+  "setting.picker.resetYes": {
+    "ja": "y — reset all appearance to defaults",
+    "en": "y — reset all appearance to defaults"
+  },
+  "setting.picker.resetNo": {
+    "ja": "n — cancel",
+    "en": "n — cancel"
+  },
+  "setting.picker.editAria.fg": {
+    "ja": "文字色 (hex)",
+    "en": "Text color (hex)"
+  },
+  "setting.picker.editAria.bgColor": {
+    "ja": "背景色 (hex)",
+    "en": "Background color (hex)"
+  },
+  "setting.picker.editAria.font": {
+    "ja": "font-family",
+    "en": "font-family"
+  },
+  "setting.picker.editAria.generic": {
+    "ja": "setting edit",
+    "en": "setting edit"
   },
   "setting.picker.main.language": {
     "ja": "language: {token}",

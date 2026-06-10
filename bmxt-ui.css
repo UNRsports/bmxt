@@ -150,6 +150,25 @@ body {
   pointer-events: none;
 }
 
+.bmxt-setting-picker-edit-input {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 16px);
+  margin: 4px 8px 6px;
+  padding: 4px 8px;
+  position: relative;
+  height: auto;
+  min-height: 1.4em;
+  opacity: 1;
+  pointer-events: auto;
+  resize: none;
+  font: inherit;
+  color: inherit;
+  background: var(--bmxt-bg, #0d1117);
+  border: 1px solid var(--bmxt-accent, #388bfd);
+  border-radius: 4px;
+}
+
 .bmxt-plain-picker-measure-row {
   position: absolute;
   visibility: hidden;

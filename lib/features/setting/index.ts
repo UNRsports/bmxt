@@ -82,6 +82,7 @@ export {
   type SettingPickerRowId
 } from "./setting-picker-rows"
 export { SettingPickerWrapper, type SettingPickerWrapperProps } from "./setting-picker-wrapper"
+export { type SettingEditField, validateSettingEditValue } from "./setting-picker-edit"
 export {
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker,

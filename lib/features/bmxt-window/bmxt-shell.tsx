@@ -103,10 +103,8 @@ import {
   parseSettingExitListLine,
   parseSettingIncompleteLine,
   parseSettingListPickerLine,
-  parseSettingPromptAnswer,
   replaceUiSettings,
   resetUiAppearance,
-  resolveTerminalAppearance,
   saveUiAppearancePatch,
   saveUiBackgroundImage,
   saveUiLocale,
@@ -117,9 +115,9 @@ import {
   versionUpgradeTitle,
   useUiCopy,
   useUiSettings,
+  type SettingEditField,
   type SettingListPickerState,
-  type SettingPickerRow,
-  type SettingPromptPending
+  type SettingPickerRow
 } from "../setting"
 import { searchPageProgressLabel } from "../search/sources/page-progress"
 import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
@@ -343,9 +341,6 @@ export function BmxtShell({
   const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
   const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
-  const [settingPromptPending, setSettingPromptPending] = useState<SettingPromptPending | null>(
-    null
-  )
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -1179,40 +1174,20 @@ export function BmxtShell({
         ])
         return
       }
-      if (row.id === "fg") {
-        setSettingPromptPending({ kind: "edit-fg" })
-        activatePaneFocus("terminal")
-        await appendLogLines([
-          logPrefix,
-          uiCopy.t("setting.prompt.editFg", {
-            current: resolveTerminalAppearance(uiSettings.appearance).fg
-          })
-        ])
-        focusPrompt()
+      if (row.id === "reset-yes") {
+        await resetUiAppearance()
+        setUiAppearance({
+          fg: null,
+          bgColor: null,
+          fontSize: null,
+          fontFamily: null,
+          bgImageDataUrl: null
+        })
+        await appendLogLines([logPrefix, uiCopy.t("setting.appearance.reset")])
         return
       }
-      if (row.id === "bg-color") {
-        setSettingPromptPending({ kind: "edit-bg-color" })
-        activatePaneFocus("terminal")
-        await appendLogLines([
-          logPrefix,
-          uiCopy.t("setting.prompt.editBgColor", {
-            current: resolveTerminalAppearance(uiSettings.appearance).bgColor
-          })
-        ])
-        focusPrompt()
-        return
-      }
-      if (row.id === "font") {
-        setSettingPromptPending({ kind: "edit-font" })
-        activatePaneFocus("terminal")
-        await appendLogLines([
-          logPrefix,
-          uiCopy.t("setting.prompt.editFont", {
-            current: resolveTerminalAppearance(uiSettings.appearance).fontFamily
-          })
-        ])
-        focusPrompt()
+      if (row.id === "reset-no") {
+        await appendLogLines([logPrefix, uiCopy.t("setting.appearance.resetCancelled")])
         return
       }
       if (row.id === "size") {
@@ -1252,13 +1227,6 @@ export function BmxtShell({
         await appendLogLines([logPrefix, uiCopy.t("setting.bgImage.cleared")])
         return
       }
-      if (row.id === "reset-default") {
-        setSettingPromptPending({ kind: "reset-confirm" })
-        activatePaneFocus("terminal")
-        await appendLogLines([logPrefix, uiCopy.t("setting.appearance.resetConfirm")])
-        focusPrompt()
-        return
-      }
       if (row.id === "export") {
         try {
           const { filename } = await exportUiSettingsZip()
@@ -1294,17 +1262,35 @@ export function BmxtShell({
         await appendLogLines([logPrefix, uiCopy.t("setting.import.done")])
       }
     },
-    [
-      activatePaneFocus,
-      appendLogLines,
-      focusPrompt,
-      setUiAppearance,
-      setUiLocale,
-      uiCopy,
-      uiSettings.appearance,
-      uiSettings.locale
-    ]
+    [appendLogLines, setUiAppearance, setUiLocale, uiCopy, uiSettings.locale]
   )
+
+  const onSettingPickerApplyEdit = useCallback(
+    async (field: SettingEditField, value: string) => {
+      const logPrefix = "setting -list"
+      const flag = field === "fg" ? "--fg" : field === "bg-color" ? "--bg-color" : "--font"
+      const patch =
+        field === "fg"
+          ? { fg: value }
+          : field === "bg-color"
+            ? { bgColor: value }
+            : { fontFamily: value }
+      await saveUiAppearancePatch(patch)
+      setUiAppearance(patch)
+      await appendLogLines([
+        logPrefix,
+        uiCopy.t("setting.appearance.updated", { flag })
+      ])
+    },
+    [appendLogLines, setUiAppearance, uiCopy]
+  )
+
+  const onSettingPickerEditInvalid = useCallback(async () => {
+    await appendLogLines([
+      "setting -list",
+      uiCopy.t("setting.prompt.editInvalid")
+    ])
+  }, [appendLogLines, uiCopy])
 
   const onOpenSearchPickerEntry = useCallback(
     async (entry: PickerEntry, matchIndex: number) => {
@@ -1341,89 +1327,6 @@ export function BmxtShell({
     const rawLine = promptLine()
     const trimmed = rawLine.trim()
     if (!trimmed) {
-      return
-    }
-
-    if (settingPromptPending !== null) {
-      appendCommandToHistory(trimmed)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
-      const parsed = parseSettingPromptAnswer(settingPromptPending, trimmed)
-      if (parsed.ok === false) {
-        if ("cancelled" in parsed && parsed.cancelled) {
-          setSettingPromptPending(null)
-          focusPrompt()
-          return
-        }
-        const hint =
-          settingPromptPending.kind === "reset-confirm"
-            ? uiCopy.t("setting.appearance.resetConfirm")
-            : settingPromptPending.kind === "edit-fg"
-              ? uiCopy.t("setting.prompt.editFg", {
-                  current: resolveTerminalAppearance(uiSettings.appearance).fg
-                })
-              : settingPromptPending.kind === "edit-bg-color"
-                ? uiCopy.t("setting.prompt.editBgColor", {
-                    current: resolveTerminalAppearance(uiSettings.appearance).bgColor
-                  })
-                : uiCopy.t("setting.prompt.editFont", {
-                    current: resolveTerminalAppearance(uiSettings.appearance).fontFamily
-                  })
-        void appendLogLines([`> ${trimmed}`, uiCopy.t("setting.prompt.editInvalid"), hint])
-        focusPrompt()
-        return
-      }
-      setSettingPromptPending(null)
-      void (async () => {
-        if (parsed.kind === "reset-confirm") {
-          if (parsed.answer === "no") {
-            await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.resetCancelled")])
-            focusPrompt()
-            return
-          }
-          await resetUiAppearance()
-          setUiAppearance({
-            fg: null,
-            bgColor: null,
-            fontSize: null,
-            fontFamily: null,
-            bgImageDataUrl: null
-          })
-          await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.reset")])
-          focusPrompt()
-          return
-        }
-        if (parsed.kind === "edit-fg") {
-          await saveUiAppearancePatch({ fg: parsed.value })
-          setUiAppearance({ fg: parsed.value })
-          await appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("setting.appearance.updated", { flag: "--fg" })
-          ])
-          focusPrompt()
-          return
-        }
-        if (parsed.kind === "edit-bg-color") {
-          await saveUiAppearancePatch({ bgColor: parsed.value })
-          setUiAppearance({ bgColor: parsed.value })
-          await appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("setting.appearance.updated", { flag: "--bg-color" })
-          ])
-          focusPrompt()
-          return
-        }
-        await saveUiAppearancePatch({ fontFamily: parsed.value })
-        setUiAppearance({ fontFamily: parsed.value })
-        await appendLogLines([
-          `> ${trimmed}`,
-          uiCopy.t("setting.appearance.updated", { flag: "--font" })
-        ])
-        focusPrompt()
-      })()
       return
     }
 
@@ -1878,7 +1781,6 @@ export function BmxtShell({
     }
     focusPrompt()
   }, [
-    settingPromptPending,
     appendCommandToHistory,
     appendLogLines,
     focusPrompt,
@@ -2608,21 +2510,7 @@ export function BmxtShell({
                     : uiCopy.t("prompt.navTyping")
                   : showSearchListPatternPlaceholder
                     ? uiCopy.t("prompt.searchListPattern")
-                    : settingPromptPending?.kind === "reset-confirm"
-                      ? uiCopy.t("prompt.appearanceResetConfirm")
-                      : settingPromptPending?.kind === "edit-fg"
-                        ? uiCopy.t("setting.prompt.editFg", {
-                            current: resolveTerminalAppearance(uiSettings.appearance).fg
-                          })
-                        : settingPromptPending?.kind === "edit-bg-color"
-                          ? uiCopy.t("setting.prompt.editBgColor", {
-                              current: resolveTerminalAppearance(uiSettings.appearance).bgColor
-                            })
-                          : settingPromptPending?.kind === "edit-font"
-                            ? uiCopy.t("setting.prompt.editFont", {
-                                current: resolveTerminalAppearance(uiSettings.appearance).fontFamily
-                              })
-                            : mode === "normal" && line.trim() === "" && !searchListBusy
+                    : mode === "normal" && line.trim() === "" && !searchListBusy
                       ? uiCopy.t("prompt.placeholder")
                       : undefined
               }
@@ -2719,6 +2607,8 @@ export function BmxtShell({
             settingPickerInputRef={settingPickerInputRef}
             onSettingPickerStateChange={onSettingPickerStateChange}
             onSettingPickerRowAction={onSettingPickerRowAction}
+            onSettingPickerApplyEdit={onSettingPickerApplyEdit}
+            onSettingPickerEditInvalid={onSettingPickerEditInvalid}
             onAppendLog={appendLogLines}
             onRefreshTabPickerRows={refreshTabPickerRows}
             scheduleRefreshTabPickerRows={scheduleTabPickerRowsRefresh}

@@ -39,6 +39,8 @@ export type PickerColumnHostContext = {
   settingPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onSettingPickerStateChange: (next: SettingListPickerState) => void
   onSettingPickerRowAction: (row: SettingPickerRow, index: number) => void | Promise<void>
+  onSettingPickerApplyEdit: (field: "fg" | "bg-color" | "font", value: string) => void | Promise<void>
+  onSettingPickerEditInvalid: () => void | Promise<void>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
   scheduleRefreshTabPickerRows: () => void
@@ -120,6 +122,8 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           appearance={ctx.uiAppearance}
           onStateChange={ctx.onSettingPickerStateChange}
           onRowAction={ctx.onSettingPickerRowAction}
+          onApplyEdit={ctx.onSettingPickerApplyEdit}
+          onEditInvalid={ctx.onSettingPickerEditInvalid}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
           keyboardActive={ctx.settingPickerKeyboardActive}
           pickerInputRef={ctx.settingPickerInputRef}

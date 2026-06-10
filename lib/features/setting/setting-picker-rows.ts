@@ -14,6 +14,7 @@ import {
   type UiLocale
 } from "./locale"
 import type { SettingListPickerView } from "./setting-list-picker-state"
+import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 
 export type SettingPickerRowId =
   | "language"
@@ -29,7 +30,8 @@ export type SettingPickerRowId =
   | "import"
   | "locale-ja"
   | "locale-en"
-  | "back"
+  | "reset-yes"
+  | "reset-no"
 
 export type SettingPickerRow = {
   id: SettingPickerRowId
@@ -88,8 +90,47 @@ export function buildSettingPickerRows(
   if (view === "bgImage") {
     return [
       { id: "bg-import", line: t("setting.picker.bgImport", locale) },
-      { id: "bg-clear", line: t("setting.picker.bgClear", locale) },
-      { id: "back", line: t("setting.picker.back", locale) }
+      { id: "bg-clear", line: t("setting.picker.bgClear", locale) }
+    ]
+  }
+
+  if (view === "fg") {
+    return [
+      {
+        id: "fg",
+        line: t("setting.picker.detail.fg", locale, {
+          value: displayOrDefault(appearance.fg, resolved.fg, locale)
+        })
+      }
+    ]
+  }
+
+  if (view === "bgColor") {
+    return [
+      {
+        id: "bg-color",
+        line: t("setting.picker.detail.bgColor", locale, {
+          value: displayOrDefault(appearance.bgColor, resolved.bgColor, locale)
+        })
+      }
+    ]
+  }
+
+  if (view === "font") {
+    return [
+      {
+        id: "font",
+        line: t("setting.picker.detail.font", locale, {
+          value: displayOrDefault(appearance.fontFamily, resolved.fontFamily, locale)
+        })
+      }
+    ]
+  }
+
+  if (view === "resetConfirm") {
+    return [
+      { id: "reset-yes", line: t("setting.picker.resetYes", locale) },
+      { id: "reset-no", line: t("setting.picker.resetNo", locale) }
     ]
   }
 
@@ -147,7 +188,14 @@ export function buildSettingPickerRows(
   ]
 }
 
-export function settingPickerHeadline(view: SettingListPickerView, locale: UiLocale): string {
+export function settingPickerHeadline(
+  view: SettingListPickerView,
+  locale: UiLocale,
+  editing: boolean
+): string {
+  if (editing && isSettingDetailView(view)) {
+    return t("setting.picker.headline.editing", locale)
+  }
   const key: MessageKey =
     view === "main"
       ? "setting.picker.headline.main"
@@ -155,8 +203,38 @@ export function settingPickerHeadline(view: SettingListPickerView, locale: UiLoc
         ? "setting.picker.headline.language"
         : view === "fontSize"
           ? "setting.picker.headline.fontSize"
-          : "setting.picker.headline.bgImage"
+          : view === "bgImage"
+            ? "setting.picker.headline.bgImage"
+            : view === "fg"
+              ? "setting.picker.headline.fg"
+              : view === "bgColor"
+                ? "setting.picker.headline.bgColor"
+                : view === "font"
+                  ? "setting.picker.headline.font"
+                  : view === "resetConfirm"
+                    ? "setting.picker.headline.resetConfirm"
+                    : "setting.picker.headline.main"
   return t(key, locale)
+}
+
+export function settingPickerEditAriaLabel(
+  view: SettingListPickerView,
+  locale: UiLocale
+): string {
+  if (view === "fg") {
+    return t("setting.picker.editAria.fg", locale)
+  }
+  if (view === "bgColor") {
+    return t("setting.picker.editAria.bgColor", locale)
+  }
+  if (view === "font") {
+    return t("setting.picker.editAria.font", locale)
+  }
+  return t("setting.picker.editAria.generic", locale)
+}
+
+export function settingPickerAllowsVerticalNav(view: SettingListPickerView): boolean {
+  return view === "main" || isSettingListSubView(view)
 }
 
 export function resolvedDefaultFg(): string {
