@@ -12,7 +12,7 @@ import {
   settingMainRowTargetView
 } from "./setting-picker-nav"
 import type { SettingPickerRow } from "./setting-picker-rows"
-import { settingPickerAllowsVerticalNav } from "./setting-picker-rows"
+import { settingPickerAllowsVerticalNav, settingPickerInitialHi } from "./setting-picker-rows"
 import { settingEditFieldForView, validateSettingEditValue } from "./setting-picker-edit"
 
 export type SettingPickerKeyboardCallbacks = {
@@ -106,7 +106,9 @@ export function useSettingPickerKeyboard({
         return
       }
       onStateChange(settingPickerGoToView(target, state))
-      setHi(0)
+      setHi(
+        settingPickerInitialHi(target, state.draft.locale, state.draft.appearance)
+      )
       return
     }
     if (state.editing) {

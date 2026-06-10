@@ -6,7 +6,7 @@ import {
   resolveTerminalAppearance,
   type UiAppearance
 } from "./appearance"
-import { MAX_FONT_SIZE_PX, MIN_FONT_SIZE_PX } from "./validate-size"
+import { MAX_FONT_SIZE_PX, MIN_FONT_SIZE_PX, parseFontSizePx } from "./validate-size"
 import { t, type MessageKey } from "./i18n/messages"
 import {
   listUiLocaleSettingTokens,
@@ -69,6 +69,49 @@ export function fontSizeFromPickerIndex(index: number): string | null {
     return null
   }
   return `${px}px`
+}
+
+export function fontSizePickerIndexForValue(fontSize: string): number {
+  const normalized = parseFontSizePx(fontSize)
+  if (normalized === null) {
+    return 0
+  }
+  const px = Number.parseInt(normalized, 10)
+  if (!Number.isFinite(px)) {
+    return 0
+  }
+  const index = px - MIN_FONT_SIZE_PX
+  if (index < 0) {
+    return 0
+  }
+  const maxIndex = MAX_FONT_SIZE_PX - MIN_FONT_SIZE_PX
+  if (index > maxIndex) {
+    return maxIndex
+  }
+  return index
+}
+
+/** EN: Highlight index when entering a choice sub-list (current draft value). */
+export function settingPickerInitialHi(
+  view: SettingListPickerView,
+  locale: UiLocale,
+  appearance: UiAppearance
+): number {
+  if (view === "language") {
+    return locale === "en" ? 1 : 0
+  }
+  if (view === "fontSize") {
+    const resolved = resolveTerminalAppearance(appearance)
+    const size = appearance.fontSize ?? resolved.fontSize
+    return fontSizePickerIndexForValue(size)
+  }
+  if (view === "bgImage") {
+    return appearance.bgImageDataUrl ? 1 : 0
+  }
+  if (view === "resetConfirm") {
+    return 1
+  }
+  return 0
 }
 
 export function buildSettingPickerRows(

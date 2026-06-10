@@ -23,7 +23,7 @@ import {
 } from "../side-picker/plain/plain-text-picker-virtual"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import type { SettingPickerRow } from "./setting-picker-rows"
-import { settingPickerEditAriaLabel } from "./setting-picker-rows"
+import { settingPickerEditAriaLabel, settingPickerInitialHi } from "./setting-picker-rows"
 import { isSettingDetailView } from "./setting-picker-nav"
 import {
   useSettingPickerKeyboard,
@@ -49,16 +49,10 @@ function SettingPickerRowView({
       id={`${ROW_ID_PREFIX}-${index}`}
       role={statusOnly ? "listitem" : "option"}
       aria-selected={hiRow}
-      className={`bmxt-tab-picker-row bmxt-tab-picker-row--tab${
+      className={`bmxt-tab-picker-row bmxt-tab-picker-row--tab bmxt-setting-picker-row${
         hiRow ? " bmxt-tab-picker-row--hi" : ""
       }${statusOnly ? " bmxt-tab-picker-row--status" : ""}`}>
-      <div className="bmxt-tab-picker-tab-title">
-        <span className="bmxt-tab-picker-tab-glyph"> </span>
-        <span className="bmxt-tab-picker-tab-glyph"> </span>
-        <span className="bmxt-plain-picker-row-text">
-          <span>{line || "\u00a0"}</span>
-        </span>
-      </div>
+      <span className="bmxt-plain-picker-row-text">{line || "\u00a0"}</span>
     </div>
   )
 }
@@ -114,12 +108,15 @@ export function SettingPickerBody({
     setHiState((prev) => (typeof action === "function" ? action(prev) : action))
   }, [])
 
+  const listInitialHi = useMemo(
+    () =>
+      settingPickerInitialHi(state.view, state.draft.locale, state.draft.appearance),
+    [state.view, state.draft.locale, state.draft.appearance]
+  )
+
   useEffect(() => {
-    setHiState(0)
-    if (listRef.current) {
-      listRef.current.scrollTop = 0
-    }
-  }, [state.view, state.editing])
+    setHiState(listInitialHi)
+  }, [listInitialHi, state.view, state.editing])
 
   const editing = state.editing
   const displayLines = useMemo(() => {
@@ -275,7 +272,7 @@ export function SettingPickerBody({
     : "bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
 
   return (
-    <div className="bmxt-tab-picker bmxt-side-picker">
+    <div className="bmxt-tab-picker bmxt-side-picker bmxt-setting-picker">
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}
@@ -307,13 +304,9 @@ export function SettingPickerBody({
         {displayLines.length >= PLAIN_PICKER_VIRTUALIZE_MIN ? (
           <div
             ref={measureRef}
-            className="bmxt-tab-picker-row bmxt-tab-picker-row--tab bmxt-plain-picker-measure-row"
+            className="bmxt-tab-picker-row bmxt-tab-picker-row--tab bmxt-setting-picker-row bmxt-plain-picker-measure-row"
             aria-hidden>
-            <div className="bmxt-tab-picker-tab-title">
-              <span className="bmxt-tab-picker-tab-glyph"> </span>
-              <span className="bmxt-tab-picker-tab-glyph"> </span>
-              <span className="bmxt-plain-picker-row-text">{"\u00a0"}</span>
-            </div>
+            <span className="bmxt-plain-picker-row-text">{"\u00a0"}</span>
           </div>
         ) : null}
         {displayLines.length === 0 ? (
@@ -341,12 +334,12 @@ export function SettingPickerBody({
           />
         ))}
         {editing ? (
-          <div className="bmxt-tab-picker-row bmxt-tab-picker-row--status" role="listitem">
-            <div className="bmxt-tab-picker-tab-title">
-              <span className="bmxt-plain-picker-row-text">
-                {t("setting.picker.editingHint", locale)}
-              </span>
-            </div>
+          <div
+            className="bmxt-tab-picker-row bmxt-tab-picker-row--tab bmxt-setting-picker-row bmxt-tab-picker-row--status"
+            role="listitem">
+            <span className="bmxt-plain-picker-row-text">
+              {t("setting.picker.editingHint", locale)}
+            </span>
           </div>
         ) : null}
       </div>

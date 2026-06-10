@@ -80,7 +80,9 @@ export {
 export {
   buildSettingPickerRows,
   fontSizeFromPickerIndex,
+  fontSizePickerIndexForValue,
   settingPickerHeadline,
+  settingPickerInitialHi,
   type SettingPickerRow,
   type SettingPickerRowId
 } from "./setting-picker-rows"

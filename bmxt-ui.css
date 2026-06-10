@@ -169,6 +169,12 @@ body {
   border-radius: 4px;
 }
 
+/* setting -list: one line per row (no tab-tree glyphs). */
+.bmxt-setting-picker .bmxt-setting-picker-row.bmxt-tab-picker-row--tab {
+  padding: 1px 4px;
+  line-height: 1.35;
+}
+
 .bmxt-setting-picker-preview {
   flex-shrink: 0;
   margin-top: 8px;
