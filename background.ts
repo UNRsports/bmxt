@@ -22,6 +22,8 @@ import {
   ensureBmxtCore,
   runDispatch
 } from "./lib/features/bmxt-core"
+import { buildHelpLines } from "./lib/features/bmxt-core/registry/help"
+import { loadUiSettings } from "./lib/features/setting/settings"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
@@ -249,6 +251,11 @@ async function dispatch(
   sessionId: string,
   exitOutcome: { fullClose: boolean }
 ): Promise<string[]> {
+  const trimmed = line.trim()
+  if (trimmed === "help" || trimmed === "?") {
+    const { locale } = await loadUiSettings()
+    return buildHelpLines(locale)
+  }
   const bundle = runDispatch(line)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []

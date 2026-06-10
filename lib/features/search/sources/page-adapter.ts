@@ -14,8 +14,8 @@ import {
   shouldEmitSearchPageProgress,
   type SearchPageProgress
 } from "./page-progress"
-import { DEFAULT_UI_LOCALE, pickUiLabel, type UiLocale } from "../../setting/locale"
-import { SEARCH_PAGE_NO_TEXT_HINT } from "../../setting/ui-copy"
+import { DEFAULT_UI_LOCALE, type UiLocale } from "../../setting/locale"
+import { t } from "../../setting/i18n/messages"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
 const MAX_LINE_HITS = 500
@@ -182,7 +182,7 @@ export async function searchPageLines(
   if (scanned === 0 && tabs.length > 0) {
     return [
       "(no page text could be read from open http(s) tabs)",
-      pickUiLabel(SEARCH_PAGE_NO_TEXT_HINT, uiLocale),
+      t("search.pageNoTextHint", uiLocale),
       `scanned ${scanned} tab(s), skipped ${skipped}, ${tabTotal} http(s) tab(s) open`
     ]
   }

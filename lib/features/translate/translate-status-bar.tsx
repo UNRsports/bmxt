@@ -1,5 +1,4 @@
-import { translateStatusHint, translateStatusMeta } from "../setting/ui-copy"
-import { useUiLocale } from "../setting"
+import { translateStatusHint, translateStatusMeta, useUiLocale } from "../setting"
 import { getTranslationPairDef, type TranslationPairId } from "./translation-pair"
 
 type Props = {

@@ -1,5 +1,4 @@
-import { tabsStatusHint } from "../setting/ui-copy"
-import { useUiLocale } from "../setting"
+import { tabsStatusHint, useUiLocale } from "../setting"
 import {
   settingTokenForPageActiveMode,
   type TabsPageActiveMode

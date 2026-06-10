@@ -1,20 +1,15 @@
 import { useMemo } from "react"
-import {
-  pickUiLabel,
-  pickUiLines,
-  uiBulletPrefix,
-  type BilingualLines,
-  type BilingualUiLabel,
-  type UiLocale
-} from "./locale"
+import { pickUiLines, uiBulletPrefix, type BilingualLines } from "./locale"
+import { t, type MessageKey, type MessageVars } from "./i18n/messages"
 import { useUiLocale } from "./use-ui-settings"
+import type { UiLocale } from "./locale"
 
 export function useUiCopy() {
   const locale = useUiLocale()
   return useMemo(
     () => ({
       locale,
-      t: (label: BilingualUiLabel) => pickUiLabel(label, locale),
+      t: (key: MessageKey, vars?: MessageVars) => t(key, locale, vars),
       lines: (entry: BilingualLines) => pickUiLines(entry, locale),
       bulletPrefix: uiBulletPrefix(locale)
     }),

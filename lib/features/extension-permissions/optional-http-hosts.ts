@@ -5,7 +5,7 @@
 
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
 import { DEFAULT_UI_LOCALE } from "../setting/locale"
-import { optionalHostDeniedLines } from "../setting/ui-copy"
+import { optionalHostDeniedLines } from "../setting/i18n"
 import { isHttpUrl } from "../url/is-http-url"
 
 export const OPTIONAL_HTTP_HOST_ORIGINS = ["http://*/*", "https://*/*"] as const

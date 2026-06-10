@@ -4,6 +4,7 @@ import {
   type AppearanceFlagToken,
   type UiAppearance
 } from "./appearance"
+import { t } from "./i18n/messages"
 import {
   parseUiLocaleSettingToken,
   type UiLocale
@@ -97,7 +98,12 @@ export function parseSettingCommandLine(trimmed: string): SettingCommandParse {
 
 export function validateAppearanceCommand(
   flag: AppearanceFlagToken,
-  value: string | null
+  value: string | null,
+  locale: UiLocale
 ): { ok: true; patch: Partial<UiAppearance> } | { ok: false; error: string } {
-  return buildAppearancePatch(flag, value)
+  const result = buildAppearancePatch(flag, value)
+  if (result.ok === true) {
+    return result
+  }
+  return { ok: false, error: t(result.errorKey, locale) }
 }

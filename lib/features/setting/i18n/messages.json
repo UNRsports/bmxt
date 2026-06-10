@@ -1,0 +1,502 @@
+{
+  "shell.welcome": {
+    "ja": "BMXtへようこそ！本プログラムはテストバージョンです。",
+    "en": "Welcome to BMXt! This program is a test version."
+  },
+  "shell.helpHint": {
+    "ja": "help と入力して Enter。Tab でコマンドを補完します。",
+    "en": "Type help and press Enter. Tab completes commands."
+  },
+  "versionUpgrade.title": {
+    "ja": "◆バージョンアップ — {version}",
+    "en": "◆Version upgrade — {version}"
+  },
+  "welcome.pageTitle": {
+    "ja": "BMXtへようこそ",
+    "en": "Welcome to BMXt"
+  },
+  "welcome.previewSubtitle": {
+    "ja": "プレビュー: URL の",
+    "en": "Preview: welcome content for"
+  },
+  "welcome.previewSuffix": {
+    "ja": "で指定した版のウェルカム内容を表示しています。",
+    "en": "(URL query)."
+  },
+  "search.pageScanHint": {
+    "ja": "タブが多いと時間がかかります。Ctrl+C で中断できます。",
+    "en": "Page scan may take a while when many tabs are open. Ctrl+C cancels."
+  },
+  "search.pageScanCancelled": {
+    "ja": "ページ走査を中断しました。",
+    "en": "Page scan cancelled."
+  },
+  "search.pageNoTextHint": {
+    "ja": "サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
+    "en": "With site access enabled, reload the pages you want to search (F5), then run search -list --page again."
+  },
+  "tabs.settingHint": {
+    "ja": "`-setting -page-active` でハイライト時のタブアクティブ化を切替（`--auto` 既定、`--manual` は Alt）。",
+    "en": "`-setting -page-active` controls tab preview on highlight (`--auto` default, `--manual` needs Alt)."
+  },
+  "translate.usageHint": {
+    "ja": "`-on` で翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。`-setting` でペアを選びます。",
+    "en": "`-on` enables translation assist (nav typing preview under the prompt)."
+  },
+  "translate.onLogLine": {
+    "ja": "translate: ON ({pairToken}) — nav typing でプロンプト下に訳プレビュー · Alt 長押しで送信",
+    "en": "translate: ON ({pairToken}) — nav typing preview under prompt · Alt hold to commit"
+  },
+  "nav.exitActiveError": {
+    "ja": "error: 先に Alt で nav を OFF にしてから nav -exit を実行してください。",
+    "en": "error: turn nav off with Alt on the prompt first, then run nav -exit."
+  },
+  "nav.armedLog": {
+    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · Enter クリック/入力 · nav -exit で終了）",
+    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · nav -exit to quit)"
+  },
+  "nav.hostAccessWarning": {
+    "ja": "warning: http(s) のサイトアクセスが未許可です — Alt ON の前に許可するか、chrome://extensions でサイトアクセスを有効にしてください。",
+    "en": "warning: http(s) site access was not granted — allow it before Alt ON, or enable site access under chrome://extensions."
+  },
+  "secondCommandPicker.aria": {
+    "ja": "第二コマンド",
+    "en": "Second command"
+  },
+  "secondCommandPicker.hint": {
+    "ja": "第二コマンド · ↑↓ / Tab · Enter · Esc",
+    "en": "Second command · ↑↓ / Tab · Enter · Esc"
+  },
+  "domPrompt.headline": {
+    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · Esc/N → prompt",
+    "en": "dom -list — permission / target check · Enter=Allow / Y · Esc/N → prompt"
+  },
+  "domPrompt.aria": {
+    "ja": "許可ダイアログ",
+    "en": "Permission prompt"
+  },
+  "domPrompt.approve": {
+    "ja": "許可 (Enter / Y)",
+    "en": "Allow (Enter / Y)"
+  },
+  "domPrompt.approveBusy": {
+    "ja": "要求中…",
+    "en": "Requesting…"
+  },
+  "domPrompt.return": {
+    "ja": "プロンプトへ (Esc / N)",
+    "en": "Return to prompt (Esc / N)"
+  },
+  "domPrompt.scrollHint": {
+    "ja": "↑↓ / j k でメッセージをスクロール",
+    "en": "↑↓ / j k to scroll messages"
+  },
+  "domPrompt.denied": {
+    "ja": "ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc でプロンプトへ。",
+    "en": "Permission was not granted by the browser; keeping the picker open so you can retry."
+  },
+  "optionalHost.deniedHint": {
+    "ja": "表示されたダイアログで許可するか、chrome://extensions の詳細でサイトへのアクセスを有効にしてから再度実行してください。",
+    "en": "Approve access when prompted, or enable site access for BMXt under chrome://extensions → Details."
+  },
+  "optionalHost.deniedError": {
+    "ja": "error: http(s) site access was not granted (optional host permission).",
+    "en": "error: http(s) site access was not granted (optional host permission)."
+  },
+  "plainPicker.keysHint": {
+    "ja": "ピッカー操作",
+    "en": "Plain picker keys"
+  },
+  "plainPicker.searchHint": {
+    "ja": "検索ハイライト",
+    "en": "Search highlight"
+  },
+  "plainPicker.commandHint": {
+    "ja": "コマンド入力",
+    "en": "Command input"
+  },
+  "nav.status.typing": {
+    "ja": "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル",
+    "en": "Type on the BMXt prompt · Alt hold to commit · Esc hold to cancel"
+  },
+  "nav.status.typingMultiline": {
+    "ja": "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル",
+    "en": "Type on the BMXt prompt · Shift+Enter newline · Alt hold to commit · Esc hold to cancel"
+  },
+  "nav.status.selStart": {
+    "ja": "↑↓ 移動 · Enter で選択開始 · Esc/Ctrl で取消",
+    "en": "↑↓ move · Enter to start selection · Esc/Ctrl to cancel"
+  },
+  "nav.status.selEnd": {
+    "ja": "↑↓ 移動 · 範囲プレビュー · Enter で確定 · Esc/Ctrl で取消",
+    "en": "↑↓ move · range preview · Enter to confirm · Esc/Ctrl to cancel"
+  },
+  "nav.status.copyOpen": {
+    "ja": "コピー · Enter 実行 · Esc で選択解除",
+    "en": "Copy · Enter to run · Esc to clear selection"
+  },
+  "nav.status.copyClosed": {
+    "ja": "Esc で選択解除",
+    "en": "Esc to clear selection"
+  },
+  "nav.status.menu": {
+    "ja": "↑↓ 項目 · Enter 実行 · ←→ 履歴 · Ctrl/Esc で閉じる",
+    "en": "↑↓ items · Enter run · ←→ history · Ctrl/Esc close"
+  },
+  "nav.status.idle": {
+    "ja": "↑↓←→ 移動 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · nav -exit で終了",
+    "en": "↑↓←→ move · Enter click/type · Ctrl menu · Alt toggle · nav -exit to quit"
+  },
+  "translate.status.translating": {
+    "ja": "翻訳中…",
+    "en": "translating…"
+  },
+  "translate.status.navTypingAssist": {
+    "ja": "nav typing アシスト",
+    "en": "nav typing assist"
+  },
+  "translate.status.assistOn": {
+    "ja": "アシスト ON",
+    "en": "assist ON"
+  },
+  "translate.status.hintOff": {
+    "ja": "translate -off で無効化 · {pairLabel} · nav typing で訳 · 入力停止500msで 訳",
+    "en": "translate -off to disable · {pairLabel} · nav typing for preview · 500ms idle triggers translation"
+  },
+  "translate.status.commitEn": {
+    "ja": "Alt 長押しで英訳を送信",
+    "en": "Alt hold to send English"
+  },
+  "translate.status.commitJa": {
+    "ja": "Alt 長押しで和訳を送信",
+    "en": "Alt hold to send Japanese"
+  },
+  "translate.status.hintOnBase": {
+    "ja": "nav typing · 入力停止500msで 訳 · {commitHint}",
+    "en": "nav typing · 500ms idle triggers translation · {commitHint}"
+  },
+  "translate.status.multilineSuffix": {
+    "ja": " · Shift+Enter で改行",
+    "en": " · Shift+Enter newline"
+  },
+  "tabs.status.auto": {
+    "ja": "↑↓ でハイライト移動時にタブをアクティブ化（ウィンドウは背面） · Enter でジャンプ",
+    "en": "↑↓ activates tab on highlight (window stays behind) · Enter to jump"
+  },
+  "tabs.status.manual": {
+    "ja": "Alt+↑↓ でタブをアクティブ化 · Enter でジャンプ · tabs -setting -page-active で切替",
+    "en": "Alt+↑↓ to activate tab · Enter to jump · tabs -setting -page-active to switch"
+  },
+  "domList.unavailable": {
+    "ja": "dom -list — 表示不可",
+    "en": "dom -list — unavailable"
+  },
+  "domList.noTarget": {
+    "ja": "対象タブがありません。通常のブラウザウィンドウでページを開いてください。",
+    "en": "No target tab — focus a normal browser window with a page."
+  },
+  "domList.unscriptable": {
+    "ja": "権限のないページのため、本拡張機能では DOM を表示できません。",
+    "en": "This extension cannot show DOM on pages Chrome blocks from scripting (chrome://, Web Store, extension pages, etc.)."
+  },
+  "domList.captureFailed": {
+    "ja": "このページでは DOM を取得できませんでした。",
+    "en": "Could not capture DOM on this page."
+  },
+  "setting.usage.language": {
+    "ja": "usage: setting -language --japanese | --english",
+    "en": "usage: setting -language --japanese | --english"
+  },
+  "setting.usage.appearanceFlags": {
+    "ja": "       setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family>",
+    "en": "       setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family>"
+  },
+  "setting.usage.appearanceActions": {
+    "ja": "       setting -appearance --bg-import | --bg-clear | --reset",
+    "en": "       setting -appearance --bg-import | --bg-clear | --reset"
+  },
+  "setting.language.choose": {
+    "ja": "setting -language: ロケールを選択 — {options}",
+    "en": "setting -language: choose locale — {options}"
+  },
+  "setting.language.current": {
+    "ja": "現在: {token}",
+    "en": "current: {token}"
+  },
+  "setting.appearance.choose": {
+    "ja": "setting -appearance: オプションを選択 — {options}",
+    "en": "setting -appearance: choose option — {options}"
+  },
+  "setting.appearance.flagValue": {
+    "ja": "setting -appearance {flag}: 値を入力（色は hex、例 #c9d1d9）",
+    "en": "setting -appearance {flag}: enter value (hex for colors, e.g. #c9d1d9)"
+  },
+  "setting.language.set": {
+    "ja": "setting: UI 表示言語を {token} に設定しました",
+    "en": "setting: UI language set to {token}"
+  },
+  "setting.bgImport.cancelled": {
+    "ja": "setting: 背景画像の取り込みをキャンセルしました",
+    "en": "setting: background import cancelled"
+  },
+  "setting.bgImage.imported": {
+    "ja": "setting: 背景画像を取り込みました（{mimeType}, {byteLength} bytes）",
+    "en": "setting: background image imported ({mimeType}, {byteLength} bytes)"
+  },
+  "setting.bgImage.cleared": {
+    "ja": "setting: 背景画像を削除しました",
+    "en": "setting: background image cleared"
+  },
+  "setting.appearance.reset": {
+    "ja": "setting: 外観を既定値に戻しました",
+    "en": "setting: appearance reset to defaults"
+  },
+  "setting.appearance.updated": {
+    "ja": "setting: 外観を更新しました（{flag}）",
+    "en": "setting: appearance updated ({flag})"
+  },
+  "setting.summary.locale": {
+    "ja": "locale: {token}",
+    "en": "locale: {token}"
+  },
+  "setting.summary.fg": {
+    "ja": "fg: {value}",
+    "en": "fg: {value}"
+  },
+  "setting.summary.bgColor": {
+    "ja": "bg-color: {value}",
+    "en": "bg-color: {value}"
+  },
+  "setting.summary.size": {
+    "ja": "size: {value}",
+    "en": "size: {value}"
+  },
+  "setting.summary.font": {
+    "ja": "font: {value}",
+    "en": "font: {value}"
+  },
+  "setting.summary.bgImage": {
+    "ja": "bg-image: {value}",
+    "en": "bg-image: {value}"
+  },
+  "setting.summary.default": {
+    "ja": "(default)",
+    "en": "(default)"
+  },
+  "setting.summary.none": {
+    "ja": "(none)",
+    "en": "(none)"
+  },
+  "setting.summary.set": {
+    "ja": "set",
+    "en": "set"
+  },
+  "setting.error.usageFg": {
+    "ja": "usage: setting -appearance --fg #rrggbb",
+    "en": "usage: setting -appearance --fg #rrggbb"
+  },
+  "setting.error.usageBgColor": {
+    "ja": "usage: setting -appearance --bg-color #rrggbb",
+    "en": "usage: setting -appearance --bg-color #rrggbb"
+  },
+  "setting.error.usageSize": {
+    "ja": "usage: setting -appearance --size 12px",
+    "en": "usage: setting -appearance --size 12px"
+  },
+  "setting.error.usageFont": {
+    "ja": "usage: setting -appearance --font <family>",
+    "en": "usage: setting -appearance --font <family>"
+  },
+  "setting.error.fgHex": {
+    "ja": "error: --fg には web hex 色（#rgb または #rrggbb）が必要です",
+    "en": "error: --fg requires a web hex color (#rgb or #rrggbb)"
+  },
+  "setting.error.bgColorHex": {
+    "ja": "error: --bg-color には web hex 色（#rgb または #rrggbb）が必要です",
+    "en": "error: --bg-color requires a web hex color (#rgb or #rrggbb)"
+  },
+  "setting.error.sizeRange": {
+    "ja": "error: --size は 8–32（px 省略可）である必要があります",
+    "en": "error: --size must be 8–32 (optional px suffix)"
+  },
+  "setting.error.fontChars": {
+    "ja": "error: --font は ASCII 英数字・スペース・カンマ・ハイフン・引用符のみ（最大 200 文字）",
+    "en": "error: --font must be ASCII letters, digits, space, comma, hyphen, or quotes (max 200)"
+  },
+  "setting.error.bgMime": {
+    "ja": "error: 背景画像は PNG、JPEG、または WebP である必要があります",
+    "en": "error: background image must be PNG, JPEG, or WebP"
+  },
+  "setting.error.bgSize": {
+    "ja": "error: 背景画像が {maxBytes} bytes を超えています（512 KiB 上限）",
+    "en": "error: background image exceeds {maxBytes} bytes (512 KiB max)"
+  },
+  "setting.error.bgEncodedSize": {
+    "ja": "error: エンコード後の画像がストレージ上限を超えています（生データ {maxBytes} bytes 上限）",
+    "en": "error: encoded image exceeds storage limit ({maxBytes} bytes raw max)"
+  },
+  "setting.error.bgReadFailed": {
+    "ja": "error: 画像ファイルの読み込みに失敗しました",
+    "en": "error: failed to read image file"
+  },
+  "setting.error.filePickerUnavailable": {
+    "ja": "error: ファイルピッカーを利用できません",
+    "en": "error: file picker unavailable"
+  },
+  "tabs.usage": {
+    "ja": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
+    "en": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl"
+  },
+  "tabs.setting.choose": {
+    "ja": "tabs -setting: オプションを選択 — -page-active",
+    "en": "tabs -setting: choose option — -page-active"
+  },
+  "tabs.setting.pageActiveCurrent": {
+    "ja": "現在の page-active: {token}",
+    "en": "current page-active: {token}"
+  },
+  "tabs.pageActive.choose": {
+    "ja": "tabs -setting -page-active: モードを選択 — {options}",
+    "en": "tabs -setting -page-active: choose mode — {options}"
+  },
+  "tabs.pageActive.set": {
+    "ja": "tabs: page-active を {token} に設定しました",
+    "en": "tabs: page-active set to {token}"
+  },
+  "tabs.picker.hint": {
+    "ja": "Tab picker — page-active {token} · ↑↓ 移動 · Alt+↑↓ プレビュー（manual） · Enter ジャンプ · Esc → prompt",
+    "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
+  },
+  "tabs.picker.closed": {
+    "ja": "Tab picker を閉じました。",
+    "en": "Tab picker closed."
+  },
+  "tabs.picker.notOpen": {
+    "ja": "このペインでは Tab picker は開いていません。",
+    "en": "Tab picker is not open in this pane."
+  },
+  "translate.usage": {
+    "ja": "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
+    "en": "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja"
+  },
+  "translate.setting.choose": {
+    "ja": "translate -setting: ペアを選択 — {options}",
+    "en": "translate -setting: choose pair — {options}"
+  },
+  "translate.off": {
+    "ja": "translate: OFF",
+    "en": "translate: OFF"
+  },
+  "translate.pairSet": {
+    "ja": "translate: ペアを {token} に設定しました",
+    "en": "translate: pair set to {token}"
+  },
+  "search.cancelledCtrlC": {
+    "ja": "search — 中断しました（Ctrl+C）",
+    "en": "search — cancelled (Ctrl+C)"
+  },
+  "search.picker.closed": {
+    "ja": "Search list picker を閉じました。",
+    "en": "Search list picker closed."
+  },
+  "search.picker.cancelled": {
+    "ja": "Search list の検索をキャンセルしました。",
+    "en": "Search list search cancelled."
+  },
+  "search.picker.notOpen": {
+    "ja": "このペインでは Search list picker は開いていません。",
+    "en": "Search list picker is not open in this pane."
+  },
+  "nav.notArmed": {
+    "ja": "このペインでは nav は起動していません。",
+    "en": "nav is not armed in this pane."
+  },
+  "nav.disarmed": {
+    "ja": "nav を終了しました。",
+    "en": "nav disarmed."
+  },
+  "dom.listPicker": {
+    "ja": "dom -list — ピッカー（Esc → prompt）",
+    "en": "dom -list — picker (Esc → prompt)"
+  },
+  "dom.picker.closed": {
+    "ja": "DOM list picker を閉じました。",
+    "en": "DOM list picker closed."
+  },
+  "dom.picker.notOpen": {
+    "ja": "このペインでは DOM list picker は開いていません。",
+    "en": "DOM list picker is not open in this pane."
+  },
+  "group.newPicker": {
+    "ja": "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc → prompt",
+    "en": "group new — ↑↓ highlight · Tab select · Enter name/color · / search · Esc → prompt"
+  },
+  "error.generic": {
+    "ja": "error: {message}",
+    "en": "error: {message}"
+  },
+  "error.dispatchFailed": {
+    "ja": "error: command dispatch failed — {message}",
+    "en": "error: command dispatch failed — {message}"
+  },
+  "prompt.placeholder": {
+    "ja": "入力するか TAB キーで補完",
+    "en": "type or use TAB key"
+  },
+  "prompt.navTyping": {
+    "ja": "BMXt ウィンドウで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル",
+    "en": "Type in BMXt window · Alt hold to commit · Esc hold to cancel"
+  },
+  "prompt.navTypingMultiline": {
+    "ja": "BMXt ウィンドウで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル · Shift+Enter で改行",
+    "en": "Type in BMXt window · Alt hold to commit · Esc hold to cancel · Shift+Enter newline"
+  },
+  "prompt.searchListPattern": {
+    "ja": "絞り込み語を入力 · Enter で実行",
+    "en": "type a filter or press Enter to run"
+  },
+  "help.title": {
+    "ja": "BMXt - ブラウザコマンドシェル",
+    "en": "BMXt - browser command shell"
+  },
+  "help.quickStart": {
+    "ja": "クイックスタート: `tabs` と入力して Enter、表示されたオプションを続けて入力します。",
+    "en": "Quick start: type `tabs` and press Enter, then continue with the shown options."
+  },
+  "help.builtInCommandsHeader": {
+    "ja": "組み込みコマンド:",
+    "en": "Built-in commands:"
+  },
+  "help.section.tabs": {
+    "ja": "tabs（BMXt ウィンドウ / SW）:\n  tabs              - 利用可能なオプションを表示し、プロンプトを `tabs ` に戻して続きを入力。\n  tabs -list [-u]   - タブピッカーを開く（`-u` は各タイトル下に URL 行を表示）。\n  tabs -exit -list  - この BMXt ペインのタブピッカーを閉じる（Esc はプロンプトへ戻るのみ）。\n  tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー（保存）。\n  tabs -nowurl      - フォーカス中ウィンドウのアクティブタブの URL を表示。\n  tabs -moveurl <url> - 一致する URL のタブにフォーカス、なければ新規タブを開く。\n  picker `:` モード   - 空の Tab/Enter でターゲット別コマンドを薄く表示（tab/window/group）。",
+    "en": "tabs (BMXt window / SW):\n  tabs              - show available options, then restore prompt to `tabs ` for continuation.\n  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).\n  tabs -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tabs -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tabs -nowurl      - print current tab URL from active tab in focused window.\n  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
+  },
+  "help.section.split": {
+    "ja": "split（ターミナルペイン）:\n  split               - `-col` / `-row` を表示し、プロンプトを `split ` に戻して続きを入力。\n  split -col          - 垂直分割（現在ペインの横に新規ペイン）。\n  split -row          - 水平分割（現在ペインの下に新規ペイン）。\n  Ctrl+Arrow          - 複数ペイン時にキーボードフォーカスを移動。",
+    "en": "split (terminal panes):\n  split               - show -col / -row, then restore prompt to `split ` for continuation.\n  split -col          - vertical split (new pane beside current).\n  split -row          - horizontal split (new pane below current).\n  Ctrl+Arrow          - move keyboard focus between panes when more than one is open."
+  },
+  "help.section.dom": {
+    "ja": "dom（アクティブ対象タブのページ表示フィルタ）:\n  dom -list [--html|--react] [<pattern>] — この BMXt ペインで DOM list ピッカーを開く。\n  dom -exit -list  - この BMXt ペインの DOM list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "dom (page view filter on the active target tab):\n  dom -list [--html|--react] [<pattern>] — open DOM list picker in this BMXt pane.\n  dom -exit -list  - close DOM list picker in this BMXt pane (Esc returns to prompt only)."
+  },
+  "help.section.translate": {
+    "ja": "translate（Chrome 組み込み Translator API、ja↔en）:\n  translate            - `-on` / `-off` / `-setting` を表示し、プロンプトを `translate ` に戻して続きを入力。\n  translate -on        - 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。\n  translate -off       - エディタ列を閉じ、アシストを無効化。\n  translate -setting   - 続けて `--ja-en` または `--en-ja`（Tab メニュー）；ペアを storage に保存。",
+    "en": "translate (Chrome built-in Translator API, ja↔en):\n  translate            - show -on / -off / -setting, then restore prompt to `translate ` for continuation.\n  translate -on        - enable translation assist (nav typing preview under prompt).\n  translate -off       - close editor column and disable assist.\n  translate -setting   - then `--ja-en` or `--en-ja` (Tab menu); saves pair to storage."
+  },
+  "help.section.setting": {
+    "ja": "setting（グローバル UI — 表示言語とターミナル外観）:\n  setting              - `-language` / `-appearance` を表示し、プロンプトを `setting ` に戻して続きを入力。\n  setting -language --japanese | --english — UI 表示言語（保存）。\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — 保存。\n  setting -appearance --bg-import — PNG/JPEG/WebP 背景を選択（512 KiB 上限、拡張機能 storage に保存）。\n  setting -appearance --bg-clear | --reset — 背景画像を削除、または既定値に戻す。",
+    "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -language / -appearance, then restore prompt to `setting ` for continuation.\n  setting -language --japanese | --english — UI display language (saved).\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — saved.\n  setting -appearance --bg-import — pick PNG/JPEG/WebP background (512 KiB max, stored in extension).\n  setting -appearance --bg-clear | --reset — remove background image or restore defaults."
+  },
+  "help.section.search": {
+    "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（全スコープ；任意で --history|--bookmark|--page で絞り込み）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "search (in-memory search; nothing persisted by these commands):\n  search              - show available options, then restore prompt to `search ` for continuation.\n  search -list [<pattern>] — open search list picker (all scopes; optional --history|--bookmark|--page to narrow).\n  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only)."
+  },
+  "help.section.url": {
+    "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",
+    "en": "URL (http/https, typed as a whole line):\n  <url>           - new tab\n  <url> .         - current tab (active tab in focused window)\n  <url> -nw       - new window"
+  },
+  "help.section.keys": {
+    "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴   Ctrl+R  リバース i-search（再度: 古い一致）\n  Enter  実行または検索確定   Esc  検索キャンセル",
+    "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history   Ctrl+R  reverse-i-search (again: older match)\n  Enter  run or accept search   Esc  cancel search"
+  }
+}

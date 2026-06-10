@@ -20,7 +20,8 @@ const TOKEN_BY_LOCALE: Record<UiLocale, UiLocaleSettingToken> = {
   en: "--english"
 }
 
-export type BilingualUiLabel = {
+/** EN: Per-locale string table (welcome / release-notes JSON entries use this shape). */
+export type BilingualUiLabel = Partial<Record<UiLocale, string>> & {
   readonly ja: string
   readonly en: string
 }
@@ -42,7 +43,7 @@ export function parseUiLocale(raw: unknown): UiLocale {
 }
 
 export function pickUiLabel(label: BilingualUiLabel, locale: UiLocale): string {
-  return locale === "en" ? label.en : label.ja
+  return label[locale] ?? label[DEFAULT_UI_LOCALE] ?? label.en ?? label.ja
 }
 
 export type BilingualLines = {
@@ -51,7 +52,7 @@ export type BilingualLines = {
 }
 
 export function pickUiLines(lines: BilingualLines, locale: UiLocale): readonly string[] {
-  return locale === "en" ? lines.en : lines.ja
+  return lines[locale] ?? lines[DEFAULT_UI_LOCALE] ?? lines.en ?? lines.ja
 }
 
 export function uiBulletPrefix(locale: UiLocale): string {

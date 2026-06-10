@@ -13,12 +13,7 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../../bmxt-window/csp-dynamic-stylesheet"
-import {
-  PLAIN_PICKER_COMMAND_HINT,
-  PLAIN_PICKER_KEYS_HINT,
-  PLAIN_PICKER_SEARCH_HINT,
-  useUiCopy
-} from "../../setting"
+import { useUiCopy } from "../../setting"
 import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"
@@ -329,10 +324,10 @@ export function PlainTextPickerBody({
         wrap="off"
         aria-label={
           searchMode
-            ? uiCopy.t(PLAIN_PICKER_SEARCH_HINT)
+            ? uiCopy.t("plainPicker.searchHint")
             : commandMode
-              ? uiCopy.t(PLAIN_PICKER_COMMAND_HINT)
-              : uiCopy.t(PLAIN_PICKER_KEYS_HINT)
+              ? uiCopy.t("plainPicker.commandHint")
+              : uiCopy.t("plainPicker.keysHint")
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {

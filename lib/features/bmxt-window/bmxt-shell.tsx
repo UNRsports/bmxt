@@ -36,7 +36,6 @@ import {
 } from "../side-picker/panel/pane-focus-nav"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
-  SEARCH_LIST_PATTERN_PLACEHOLDER,
   isSearchListContinuationPrompt,
   isSearchListReadyToRun,
   parseSearchExitListLine,
@@ -59,8 +58,6 @@ import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
 import {
   NAV_ENTER_TYPING_EVENT,
   NAV_EXIT_TYPING_EVENT,
-  NAV_TYPING_PLACEHOLDER,
-  NAV_TYPING_PLACEHOLDER_MULTILINE,
   parseNavEnterLine,
   parseNavExitLine,
   useNavMode,
@@ -95,9 +92,12 @@ import {
   type TranslationBlock,
   type TranslationPairId
 } from "../translate"
+import { buildHelpLines } from "../bmxt-core/registry/help"
 import {
+  bgImportErrorLine,
   clearUiBackgroundImage,
   formatUiSettingsSummary,
+  t,
   importBackgroundImageFromFilePicker,
   listAppearanceFlagTokens,
   listUiLocaleSettingTokens,
@@ -107,19 +107,9 @@ import {
   saveUiBackgroundImage,
   saveUiLocale,
   settingTokenForUiLocale,
-  SHELL_HELP_HINT,
-  SHELL_WELCOME,
-  SEARCH_PAGE_SCAN_CANCELLED,
-  SEARCH_PAGE_SCAN_HINT,
-  TABS_SETTING_HINT,
-  TRANSLATE_USAGE_HINT,
-  translateOnLogLine,
-  NAV_ARMED_LOG,
-  NAV_EXIT_ACTIVE_ERROR,
-  NAV_HOST_ACCESS_WARNING,
   formatBulletedLines,
+  translateOnLogLine,
   versionUpgradeTitle,
-  DOM_PROMPT_HEADLINE,
   useUiCopy,
   useUiSettings,
   validateAppearanceCommand
@@ -939,7 +929,7 @@ export function BmxtShell({
           if (announce) {
             await appendLogLines([
               `> ${displayLine}`,
-              uiCopy.t(DOM_PROMPT_HEADLINE)
+              uiCopy.t("domPrompt.headline")
             ])
           }
           setDomListPicker(sessionId, {
@@ -950,7 +940,7 @@ export function BmxtShell({
           return
         }
         if (announce) {
-          await appendLogLines([`> ${displayLine}`, "dom -list — picker (Esc → prompt)"])
+          await appendLogLines([`> ${displayLine}`, uiCopy.t("dom.listPicker")])
         }
         const targetTabId = await resolveDomListTargetTabId()
         setDomListPicker(sessionId, {
@@ -964,7 +954,9 @@ export function BmxtShell({
       } catch (e) {
         await appendLogLines([
           `> ${displayLine}`,
-          `error: ${e instanceof Error ? e.message : String(e)}`
+          uiCopy.t("error.generic", {
+            message: e instanceof Error ? e.message : String(e)
+          })
         ])
         setDomListPicker(sessionId, null)
       }
@@ -1059,7 +1051,7 @@ export function BmxtShell({
         }
         const effects = bundle.effects ?? []
         if (effectsIncludeSearchPage(effects)) {
-          appendSearchPickerProgress(uiCopy.t(SEARCH_PAGE_SCAN_HINT))
+          appendSearchPickerProgress(uiCopy.t("search.pageScanHint"))
         }
         const ctx: DispatchChromeContext = {
           clearLog: async () => {},
@@ -1098,7 +1090,9 @@ export function BmxtShell({
       } catch (e) {
         setSearchListPicker(sessionId, null)
         await appendLogLines([
-          `error: ${e instanceof Error ? e.message : String(e)}`
+          uiCopy.t("error.generic", {
+            message: e instanceof Error ? e.message : String(e)
+          })
         ])
       } finally {
         searchListBusyRef.current = false
@@ -1114,8 +1108,8 @@ export function BmxtShell({
     }
     searchListDismissRef.current = true
     void appendLogLines([
-      "search — cancelled (Ctrl+C)",
-      uiCopy.t(SEARCH_PAGE_SCAN_CANCELLED)
+      uiCopy.t("search.cancelledCtrlC"),
+      uiCopy.t("search.pageScanCancelled")
     ])
   }, [appendLogLines, uiCopy])
 
@@ -1169,9 +1163,9 @@ export function BmxtShell({
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          "usage: setting -language --japanese | --english",
-          "       setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family>",
-          "       setting -appearance --bg-import | --bg-clear | --reset"
+          uiCopy.t("setting.usage.language"),
+          uiCopy.t("setting.usage.appearanceFlags"),
+          uiCopy.t("setting.usage.appearanceActions")
         ])
         focusPrompt()
         return
@@ -1184,8 +1178,10 @@ export function BmxtShell({
         const options = listUiLocaleSettingTokens().join(" | ")
         void appendLogLines([
           `> ${trimmed}`,
-          `setting -language: choose locale — ${options}`,
-          `current: ${settingTokenForUiLocale(uiSettings.locale)}`
+          uiCopy.t("setting.language.choose", { options }),
+          uiCopy.t("setting.language.current", {
+            token: settingTokenForUiLocale(uiSettings.locale)
+          })
         ])
         focusPrompt()
         return
@@ -1198,8 +1194,8 @@ export function BmxtShell({
         const options = listAppearanceFlagTokens().join(" | ")
         void appendLogLines([
           `> ${trimmed}`,
-          `setting -appearance: choose option — ${options}`,
-          ...formatUiSettingsSummary(uiSettings)
+          uiCopy.t("setting.appearance.choose", { options }),
+          ...formatUiSettingsSummary(uiSettings, uiSettings.locale)
         ])
         focusPrompt()
         return
@@ -1211,7 +1207,7 @@ export function BmxtShell({
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          `setting -appearance ${settingCmd.flag}: enter value (hex for colors, e.g. #c9d1d9)`
+          uiCopy.t("setting.appearance.flagValue", { flag: settingCmd.flag })
         ])
         focusPrompt()
         return
@@ -1224,7 +1220,10 @@ export function BmxtShell({
           await saveUiLocale(settingCmd.locale)
           setUiLocale(settingCmd.locale)
           const token = settingTokenForUiLocale(settingCmd.locale)
-          await appendLogLines([`> ${trimmed}`, `setting: UI language set to ${token}`])
+          await appendLogLines([
+            `> ${trimmed}`,
+            t("setting.language.set", settingCmd.locale, { token })
+          ])
           focusPrompt()
           return
         }
@@ -1232,9 +1231,12 @@ export function BmxtShell({
           const result = await importBackgroundImageFromFilePicker()
           if (result.ok === false) {
             if (result.cancelled) {
-              await appendLogLines([`> ${trimmed}`, "setting: background import cancelled"])
+              await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.bgImport.cancelled")])
             } else {
-              await appendLogLines([`> ${trimmed}`, result.error])
+              await appendLogLines([
+                `> ${trimmed}`,
+                bgImportErrorLine(uiSettings.locale, result)
+              ])
             }
             focusPrompt()
             return
@@ -1243,7 +1245,10 @@ export function BmxtShell({
           setUiAppearance({ bgImageDataUrl: result.dataUrl })
           await appendLogLines([
             `> ${trimmed}`,
-            `setting: background image imported (${result.mimeType}, ${result.byteLength} bytes)`
+            uiCopy.t("setting.bgImage.imported", {
+              mimeType: result.mimeType,
+              byteLength: result.byteLength
+            })
           ])
           focusPrompt()
           return
@@ -1251,7 +1256,7 @@ export function BmxtShell({
         if (settingCmd.kind === "appearance-bg-clear") {
           await clearUiBackgroundImage()
           setUiAppearance({ bgImageDataUrl: null })
-          await appendLogLines([`> ${trimmed}`, "setting: background image cleared"])
+          await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.bgImage.cleared")])
           focusPrompt()
           return
         }
@@ -1264,12 +1269,16 @@ export function BmxtShell({
             fontFamily: null,
             bgImageDataUrl: null
           })
-          await appendLogLines([`> ${trimmed}`, "setting: appearance reset to defaults"])
+          await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.appearance.reset")])
           focusPrompt()
           return
         }
         if (settingCmd.kind === "appearance-value") {
-          const validated = validateAppearanceCommand(settingCmd.flag, settingCmd.value)
+          const validated = validateAppearanceCommand(
+            settingCmd.flag,
+            settingCmd.value,
+            uiSettings.locale
+          )
           if (validated.ok === false) {
             await appendLogLines([`> ${trimmed}`, validated.error])
             focusPrompt()
@@ -1279,7 +1288,7 @@ export function BmxtShell({
           setUiAppearance(validated.patch)
           await appendLogLines([
             `> ${trimmed}`,
-            `setting: appearance updated (${settingCmd.flag})`
+            uiCopy.t("setting.appearance.updated", { flag: settingCmd.flag })
           ])
           focusPrompt()
         }
@@ -1299,8 +1308,8 @@ export function BmxtShell({
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
-          uiCopy.t(TABS_SETTING_HINT)
+          uiCopy.t("tabs.usage"),
+          uiCopy.t("tabs.settingHint")
         ])
         focusPrompt()
         return
@@ -1312,8 +1321,10 @@ export function BmxtShell({
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          "tabs -setting: choose option — -page-active",
-          `current page-active: ${settingTokenForPageActiveMode(tabsPageActiveModeRef.current)}`
+          uiCopy.t("tabs.setting.choose"),
+          uiCopy.t("tabs.setting.pageActiveCurrent", {
+            token: settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
+          })
         ])
         focusPrompt()
         return
@@ -1326,8 +1337,10 @@ export function BmxtShell({
         const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
         void appendLogLines([
           `> ${trimmed}`,
-          `tabs -setting -page-active: choose mode — ${options}`,
-          `current: ${settingTokenForPageActiveMode(tabsPageActiveModeRef.current)}`
+          uiCopy.t("tabs.pageActive.choose", { options }),
+          uiCopy.t("setting.language.current", {
+            token: settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
+          })
         ])
         focusPrompt()
         return
@@ -1339,7 +1352,7 @@ export function BmxtShell({
         await saveTabsPageActiveMode(tabsSettingCmd.mode)
         setTabsPageActiveMode(tabsSettingCmd.mode)
         const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
-        await appendLogLines([`> ${trimmed}`, `tabs: page-active set to ${token}`])
+        await appendLogLines([`> ${trimmed}`, uiCopy.t("tabs.pageActive.set", { token })])
         focusPrompt()
       })()
       return
@@ -1360,14 +1373,16 @@ export function BmxtShell({
           const pageActiveToken = settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
           await appendLogLines([
             `> ${trimmed}`,
-            `Tab picker — page-active ${pageActiveToken} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt`
+            uiCopy.t("tabs.picker.hint", { token: pageActiveToken })
           ])
           setTabPicker(sessionId, { rows, showUrl, initialHi })
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
-            `error: ${e instanceof Error ? e.message : String(e)}`
+            uiCopy.t("error.generic", {
+              message: e instanceof Error ? e.message : String(e)
+            })
           ])
         }
       })()
@@ -1386,9 +1401,9 @@ export function BmxtShell({
           setTabPicker(sessionId, null)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
           activatePaneFocus("terminal")
-          logLines.push("Tab picker closed.")
+          logLines.push(uiCopy.t("tabs.picker.closed"))
         } else {
-          logLines.push("Tab picker is not open in this pane.")
+          logLines.push(uiCopy.t("tabs.picker.notOpen"))
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1413,11 +1428,11 @@ export function BmxtShell({
         if (searchListPickerRef.current !== null) {
           setSearchListPicker(sessionId, null)
           activatePaneFocus("terminal")
-          logLines.push("Search list picker closed.")
+          logLines.push(uiCopy.t("search.picker.closed"))
         } else if (wasBusy) {
-          logLines.push("Search list search cancelled.")
+          logLines.push(uiCopy.t("search.picker.cancelled"))
         } else {
-          logLines.push("Search list picker is not open in this pane.")
+          logLines.push(uiCopy.t("search.picker.notOpen"))
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1436,9 +1451,9 @@ export function BmxtShell({
       setModeToolbarOrder((prev) => activateModeToolbar(prev, "nav"))
       void (async () => {
         const canPage = await canScriptHttpHostPages()
-        const logLines = [`> ${trimmed}`, uiCopy.t(NAV_ARMED_LOG)]
+        const logLines = [`> ${trimmed}`, uiCopy.t("nav.armedLog")]
         if (!canPage) {
-          logLines.push(uiCopy.t(NAV_HOST_ACCESS_WARNING))
+          logLines.push(uiCopy.t("nav.hostAccessWarning"))
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1458,8 +1473,8 @@ export function BmxtShell({
         lineRef.current = cont
         void appendLogLines([
           `> ${trimmed}`,
-          "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
-          uiCopy.t(TRANSLATE_USAGE_HINT)
+          uiCopy.t("translate.usage"),
+          uiCopy.t("translate.usageHint")
         ])
         focusPrompt()
         return
@@ -1472,8 +1487,10 @@ export function BmxtShell({
         const options = listTranslationPairSettingTokens().join(" | ")
         void appendLogLines([
           `> ${trimmed}`,
-          `translate -setting: choose pair — ${options}`,
-          `current: ${settingTokenForPairId(translatePairIdRef.current)}`
+          uiCopy.t("translate.setting.choose", { options }),
+          uiCopy.t("setting.language.current", {
+            token: settingTokenForPairId(translatePairIdRef.current)
+          })
         ])
         focusPrompt()
         return
@@ -1498,14 +1515,14 @@ export function BmxtShell({
           await saveTranslateEnabled(false)
           setTranslateEnabled(false)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "translate"))
-          await appendLogLines([`> ${trimmed}`, "translate: OFF"])
+          await appendLogLines([`> ${trimmed}`, uiCopy.t("translate.off")])
           activatePaneFocus("terminal")
         } else if (translateCmd.kind === "setting") {
           await saveTranslatePair(translateCmd.pair)
           setTranslatePairId(translateCmd.pair)
           resetNavTranslateSession()
           const token = settingTokenForPairId(translateCmd.pair)
-          await appendLogLines([`> ${trimmed}`, `translate: pair set to ${token}`])
+          await appendLogLines([`> ${trimmed}`, uiCopy.t("translate.pairSet", { token })])
         }
       })()
       return
@@ -1520,16 +1537,16 @@ export function BmxtShell({
       void (async () => {
         const logLines = [`> ${trimmed}`]
         if (navActiveRef.current) {
-          logLines.push(uiCopy.t(NAV_EXIT_ACTIVE_ERROR))
+          logLines.push(uiCopy.t("nav.exitActiveError"))
         } else if (!navArmedRef.current) {
-          logLines.push("nav is not armed in this pane.")
+          logLines.push(uiCopy.t("nav.notArmed"))
         } else {
           await teardownNav()
           navPositionsRef.current = {}
           setNavArmed(false)
           setNavActive(false)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "nav"))
-          logLines.push("nav disarmed.")
+          logLines.push(uiCopy.t("nav.disarmed"))
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1549,9 +1566,9 @@ export function BmxtShell({
         if (domListPickerRef.current !== null) {
           setDomListPicker(sessionId, null)
           activatePaneFocus("terminal")
-          logLines.push("DOM list picker closed.")
+          logLines.push(uiCopy.t("dom.picker.closed"))
         } else {
-          logLines.push("DOM list picker is not open in this pane.")
+          logLines.push(uiCopy.t("dom.picker.notOpen"))
         }
         await appendLogLines(logLines)
         focusPrompt()
@@ -1569,10 +1586,7 @@ export function BmxtShell({
         try {
           const rows = await buildTabPickerRows(false)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
-          await appendLogLines([
-            `> ${trimmed}`,
-            "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 検索 · Esc → prompt"
-          ])
+          await appendLogLines([`> ${trimmed}`, uiCopy.t("group.newPicker")])
           setTabPicker(sessionId, {
             rows,
             showUrl: false,
@@ -1583,7 +1597,9 @@ export function BmxtShell({
         } catch (e) {
           await appendLogLines([
             `> ${trimmed}`,
-            `error: ${e instanceof Error ? e.message : String(e)}`
+            uiCopy.t("error.generic", {
+              message: e instanceof Error ? e.message : String(e)
+            })
           ])
         }
       })()
@@ -1623,6 +1639,17 @@ export function BmxtShell({
       return
     }
 
+    if (trimmed === "help" || trimmed === "?") {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      void appendLogLines([`> ${trimmed}`, ...buildHelpLines(uiSettings.locale)])
+      focusPrompt()
+      return
+    }
+
     const domListLine = parseDomListPickerLine(trimmed)
     if (domListLine !== null) {
       appendCommandToHistory(trimmed)
@@ -1649,7 +1676,7 @@ export function BmxtShell({
         if (err) {
           void appendLogLines([
             `> ${trimmed}`,
-            `error: command dispatch failed — ${err.message}`
+            uiCopy.t("error.dispatchFailed", { message: err.message })
           ])
           return
         }
@@ -1658,7 +1685,10 @@ export function BmxtShell({
             "error" in response && typeof response.error === "string"
               ? response.error
               : "unknown error"
-          void appendLogLines([`> ${trimmed}`, `error: ${msg}`])
+          void appendLogLines([
+            `> ${trimmed}`,
+            uiCopy.t("error.generic", { message: msg })
+          ])
         }
       }
     )
@@ -2319,10 +2349,10 @@ export function BmxtShell({
     <>
         {lines.length === 0 || postUpgradeBanner ? (
           <div className="bmxt-hint">
-            {uiCopy.t(SHELL_WELCOME)}
+            {uiCopy.t("shell.welcome")}
             <br />
             <br />
-            {uiCopy.t(SHELL_HELP_HINT)}
+            {uiCopy.t("shell.helpHint")}
           </div>
         ) : null}
         {postUpgradeBanner ? (
@@ -2389,12 +2419,12 @@ export function BmxtShell({
               placeholder={
                 showNavTypingPlaceholder
                   ? navTypingMultiline
-                    ? NAV_TYPING_PLACEHOLDER_MULTILINE
-                    : NAV_TYPING_PLACEHOLDER
+                    ? uiCopy.t("prompt.navTypingMultiline")
+                    : uiCopy.t("prompt.navTyping")
                   : showSearchListPatternPlaceholder
-                    ? SEARCH_LIST_PATTERN_PLACEHOLDER
+                    ? uiCopy.t("prompt.searchListPattern")
                     : mode === "normal" && line.trim() === "" && !searchListBusy
-                      ? "type or use TAB key"
+                      ? uiCopy.t("prompt.placeholder")
                       : undefined
               }
               value={navPromptValueControlled ? line : undefined}

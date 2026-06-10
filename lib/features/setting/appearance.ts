@@ -1,3 +1,4 @@
+import type { MessageKey } from "./i18n/messages"
 import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
@@ -79,7 +80,7 @@ export function listAppearanceFlagTokens(): readonly AppearanceFlagToken[] {
 
 export type AppearancePatchResult =
   | { ok: true; patch: Partial<UiAppearance> }
-  | { ok: false; error: string }
+  | { ok: false; errorKey: MessageKey }
 
 export function buildAppearancePatch(
   flag: AppearanceFlagToken,
@@ -88,47 +89,41 @@ export function buildAppearancePatch(
   switch (flag) {
     case "--fg": {
       if (!value) {
-        return { ok: false, error: "usage: setting -appearance --fg #rrggbb" }
+        return { ok: false, errorKey: "setting.error.usageFg" }
       }
       const fg = parseHexColor(value)
       if (!fg) {
-        return { ok: false, error: "error: --fg requires a web hex color (#rgb or #rrggbb)" }
+        return { ok: false, errorKey: "setting.error.fgHex" }
       }
       return { ok: true, patch: { fg } }
     }
     case "--bg-color": {
       if (!value) {
-        return { ok: false, error: "usage: setting -appearance --bg-color #rrggbb" }
+        return { ok: false, errorKey: "setting.error.usageBgColor" }
       }
       const bgColor = parseHexColor(value)
       if (!bgColor) {
-        return {
-          ok: false,
-          error: "error: --bg-color requires a web hex color (#rgb or #rrggbb)"
-        }
+        return { ok: false, errorKey: "setting.error.bgColorHex" }
       }
       return { ok: true, patch: { bgColor } }
     }
     case "--size": {
       if (!value) {
-        return { ok: false, error: "usage: setting -appearance --size 12px" }
+        return { ok: false, errorKey: "setting.error.usageSize" }
       }
       const fontSize = parseFontSizePx(value)
       if (!fontSize) {
-        return { ok: false, error: "error: --size must be 8–32 (optional px suffix)" }
+        return { ok: false, errorKey: "setting.error.sizeRange" }
       }
       return { ok: true, patch: { fontSize } }
     }
     case "--font": {
       if (!value) {
-        return { ok: false, error: "usage: setting -appearance --font <family>" }
+        return { ok: false, errorKey: "setting.error.usageFont" }
       }
       const fontFamily = parseFontFamily(value)
       if (!fontFamily) {
-        return {
-          ok: false,
-          error: "error: --font must be ASCII letters, digits, space, comma, hyphen, or quotes (max 200)"
-        }
+        return { ok: false, errorKey: "setting.error.fontChars" }
       }
       return { ok: true, patch: { fontFamily } }
     }

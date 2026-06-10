@@ -7,16 +7,7 @@ import {
   type MutableRefObject
 } from "react"
 import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
-import {
-  DOM_PROMPT_APPROVE,
-  DOM_PROMPT_APPROVE_BUSY,
-  DOM_PROMPT_ARIA,
-  DOM_PROMPT_DENIED,
-  DOM_PROMPT_HEADLINE,
-  DOM_PROMPT_RETURN,
-  DOM_PROMPT_SCROLL_HINT,
-  useUiCopy
-} from "../setting"
+import { useUiCopy } from "../setting"
 
 type Props = {
   /** Lines returned by the failing handler (shown verbatim above the buttons). */
@@ -86,7 +77,7 @@ export function DomPromptRender({
           onApprove()
           return
         }
-        setExtra([uiCopy.t(DOM_PROMPT_DENIED)])
+        setExtra([uiCopy.t("domPrompt.denied")])
       } catch (err) {
         setExtra([
           `error: permission request failed — ${err instanceof Error ? err.message : String(err)}`
@@ -147,7 +138,7 @@ export function DomPromptRender({
 
   return (
     <div className="bmxt-tab-picker">
-      <div className="bmxt-tab-picker-head">{uiCopy.t(DOM_PROMPT_HEADLINE)}</div>
+      <div className="bmxt-tab-picker-head">{uiCopy.t("domPrompt.headline")}</div>
       <textarea
         ref={setInputEl}
         className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
@@ -158,7 +149,7 @@ export function DomPromptRender({
         autoCorrect="off"
         autoComplete="off"
         wrap="off"
-        aria-label={uiCopy.t(DOM_PROMPT_ARIA)}
+        aria-label={uiCopy.t("domPrompt.aria")}
         value=""
         onKeyDown={onInputKeyDown}
       />
@@ -191,15 +182,15 @@ export function DomPromptRender({
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--primary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          {busy ? uiCopy.t(DOM_PROMPT_APPROVE_BUSY) : uiCopy.t(DOM_PROMPT_APPROVE)}
+          {busy ? uiCopy.t("domPrompt.approveBusy") : uiCopy.t("domPrompt.approve")}
         </span>
         <span
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--secondary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          {uiCopy.t(DOM_PROMPT_RETURN)}
+          {uiCopy.t("domPrompt.return")}
         </span>
-        <span className="bmxt-dom-prompt-footer-hint">{uiCopy.t(DOM_PROMPT_SCROLL_HINT)}</span>
+        <span className="bmxt-dom-prompt-footer-hint">{uiCopy.t("domPrompt.scrollHint")}</span>
       </div>
     </div>
   )

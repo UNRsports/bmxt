@@ -1,5 +1,4 @@
-import { navStatusHint } from "../setting/ui-copy"
-import { useUiLocale } from "../setting"
+import { navStatusHint, useUiLocale } from "../setting"
 
 type Props = {
   armed: boolean

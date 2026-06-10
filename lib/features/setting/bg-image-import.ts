@@ -2,10 +2,11 @@ import {
   BG_IMAGE_ALLOWED_MIME_TYPES,
   BG_IMAGE_MAX_BYTES
 } from "./appearance"
+import type { MessageKey } from "./i18n/messages"
 
 export type BgImageImportResult =
   | { ok: true; dataUrl: string; mimeType: string; byteLength: number }
-  | { ok: false; error: string; cancelled?: boolean }
+  | { ok: false; errorKey: MessageKey; cancelled?: boolean }
 
 function isAllowedMimeType(mime: string): mime is (typeof BG_IMAGE_ALLOWED_MIME_TYPES)[number] {
   for (const allowed of BG_IMAGE_ALLOWED_MIME_TYPES) {
@@ -34,7 +35,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 /** EN: Open a file picker and import a background image into storage (size/MIME validated). */
 export async function importBackgroundImageFromFilePicker(): Promise<BgImageImportResult> {
   if (typeof document === "undefined") {
-    return { ok: false, error: "error: file picker unavailable" }
+    return { ok: false, errorKey: "setting.error.filePickerUnavailable" }
   }
 
   return new Promise((resolve) => {
@@ -55,20 +56,20 @@ export async function importBackgroundImageFromFilePicker(): Promise<BgImageImpo
         const file = input.files?.[0]
         cleanup()
         if (!file) {
-          resolve({ ok: false, error: "cancelled", cancelled: true })
+          resolve({ ok: false, errorKey: "setting.bgImport.cancelled", cancelled: true })
           return
         }
         if (!isAllowedMimeType(file.type)) {
           resolve({
             ok: false,
-            error: "error: background image must be PNG, JPEG, or WebP"
+            errorKey: "setting.error.bgMime"
           })
           return
         }
         if (file.size > BG_IMAGE_MAX_BYTES) {
           resolve({
             ok: false,
-            error: `error: background image exceeds ${BG_IMAGE_MAX_BYTES} bytes (512 KiB max)`
+            errorKey: "setting.error.bgSize"
           })
           return
         }
@@ -78,7 +79,7 @@ export async function importBackgroundImageFromFilePicker(): Promise<BgImageImpo
           if (encodedLength > BG_IMAGE_MAX_BYTES * 2) {
             resolve({
               ok: false,
-              error: `error: encoded image exceeds storage limit (${BG_IMAGE_MAX_BYTES} bytes raw max)`
+              errorKey: "setting.error.bgEncodedSize"
             })
             return
           }
@@ -89,7 +90,7 @@ export async function importBackgroundImageFromFilePicker(): Promise<BgImageImpo
             byteLength: file.size
           })
         } catch {
-          resolve({ ok: false, error: "error: failed to read image file" })
+          resolve({ ok: false, errorKey: "setting.error.bgReadFailed" })
         }
       })()
     })

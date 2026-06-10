@@ -10,13 +10,7 @@ import {
 } from "./welcome-image-paths"
 import { resolveWelcomeDisplayVersion } from "./welcome-version-resolve"
 import { CSP_DYNAMIC_SCOPE_ATTR, useCspDynamicStyle } from "../bmxt-window/csp-dynamic-stylesheet"
-import {
-  pickUiLines,
-  useUiCopy,
-  WELCOME_PAGE_TITLE,
-  WELCOME_PREVIEW_SUBTITLE,
-  WELCOME_PREVIEW_SUFFIX
-} from "../setting"
+import { pickUiLines, useUiCopy } from "../setting"
 import { useId } from "react"
 
 function listAdditionalImagePaths(
@@ -59,11 +53,11 @@ export function WelcomePage() {
   return (
     <main className="bmxt-welcome">
       <div className="bmxt-welcome__card">
-        <h1 className="bmxt-welcome__title">{uiCopy.t(WELCOME_PAGE_TITLE)}</h1>
+        <h1 className="bmxt-welcome__title">{uiCopy.t("welcome.pageTitle")}</h1>
         {fromUrlQuery ? (
           <p className="bmxt-welcome__subtitle">
-            {uiCopy.t(WELCOME_PREVIEW_SUBTITLE)} <code>?version={version}</code>{" "}
-            {uiCopy.t(WELCOME_PREVIEW_SUFFIX)}
+            {uiCopy.t("welcome.previewSubtitle")} <code>?version={version}</code>{" "}
+            {uiCopy.t("welcome.previewSuffix")}
           </p>
         ) : null}
 

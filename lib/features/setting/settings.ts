@@ -3,6 +3,7 @@ import {
   DEFAULT_UI_APPEARANCE,
   type UiAppearance
 } from "./appearance"
+import { formatUiSettingsSummaryLines } from "./i18n/resolvers"
 import {
   DEFAULT_UI_LOCALE,
   parseUiLocale,
@@ -82,15 +83,6 @@ export async function clearUiBackgroundImage(): Promise<void> {
   await saveUiAppearancePatch({ bgImageDataUrl: null })
 }
 
-export function formatUiSettingsSummary(settings: UiSettings): string[] {
-  const { locale, appearance } = settings
-  const lines = [
-    `locale: ${locale === "ja" ? "--japanese" : "--english"}`,
-    `fg: ${appearance.fg ?? "(default)"}`,
-    `bg-color: ${appearance.bgColor ?? "(default)"}`,
-    `size: ${appearance.fontSize ?? "(default)"}`,
-    `font: ${appearance.fontFamily ?? "(default)"}`,
-    `bg-image: ${appearance.bgImageDataUrl ? "set" : "(none)"}`
-  ]
-  return lines
+export function formatUiSettingsSummary(settings: UiSettings, locale: UiLocale): string[] {
+  return formatUiSettingsSummaryLines(locale, settings)
 }

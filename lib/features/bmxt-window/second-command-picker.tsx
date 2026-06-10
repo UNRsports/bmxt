@@ -1,6 +1,5 @@
 /** 第一コマンドのみ確定後に出す第二コマンド候補（IME 風リスト）。 */
 
-import { SECOND_COMMAND_PICKER_ARIA, SECOND_COMMAND_PICKER_HINT } from "../setting/ui-copy"
 import { useUiCopy } from "../setting"
 
 export type SubCommandPickerModel = {
@@ -20,8 +19,8 @@ export function SecondCommandPickerPanel({ model }: Props) {
     <div
       className="bmxt-subcmd-picker"
       role="listbox"
-      aria-label={uiCopy.t(SECOND_COMMAND_PICKER_ARIA)}>
-      <div className="bmxt-subcmd-picker-hint">{uiCopy.t(SECOND_COMMAND_PICKER_HINT)}</div>
+      aria-label={uiCopy.t("secondCommandPicker.aria")}>
+      <div className="bmxt-subcmd-picker-hint">{uiCopy.t("secondCommandPicker.hint")}</div>
       {model.candidates.map((c, i) => (
         <div
           key={c}
