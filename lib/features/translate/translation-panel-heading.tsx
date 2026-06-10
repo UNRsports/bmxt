@@ -6,7 +6,7 @@ type Props = {
   className: string
 }
 
-/** EN: Panel title — single locale line from `setting -language`. */
+/** EN: Panel title — single locale line from UI settings (settings picker). */
 export function TranslationPanelHeading({ label, className }: Props) {
   const locale = useUiLocale()
   const text = pickUiLabel(label, locale)

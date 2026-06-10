@@ -11,6 +11,10 @@ import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
+import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
+import type { UiAppearance } from "../../setting/appearance"
+import type { SettingPickerRow } from "../../setting/setting-picker-rows"
+import { SettingPickerWrapper } from "../../setting/setting-picker-wrapper"
 
 export type SessionPickerColumnsProps = PickerColumnHostContext
 
@@ -23,12 +27,18 @@ export type PickerColumnHostContext = {
   tabPicker: TabPickerState | null
   searchListPicker: SearchListPickerState | null
   domListPicker: DomListPickerState | null
+  settingListPicker: SettingListPickerState | null
+  uiAppearance: UiAppearance
   tabsPickerKeyboardActive: boolean
   searchPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
+  settingPickerKeyboardActive: boolean
   tabPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   searchPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  settingPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  onSettingPickerStateChange: (next: SettingListPickerState) => void
+  onSettingPickerRowAction: (row: SettingPickerRow, index: number) => void | Promise<void>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
   scheduleRefreshTabPickerRows: () => void
@@ -98,6 +108,24 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           onApprove={ctx.onDomApprove}
         />
       </PickerPanelHost>
+    ) : null,
+  setting: (ctx) =>
+    ctx.settingListPicker ? (
+      <PickerPanelHost
+        focusTarget="setting"
+        paneFocus={ctx.paneFocus}
+        isFocusedPane={ctx.isFocusedPane}>
+        <SettingPickerWrapper
+          state={ctx.settingListPicker}
+          appearance={ctx.uiAppearance}
+          onStateChange={ctx.onSettingPickerStateChange}
+          onRowAction={ctx.onSettingPickerRowAction}
+          onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          keyboardActive={ctx.settingPickerKeyboardActive}
+          pickerInputRef={ctx.settingPickerInputRef}
+          sessionId={ctx.sessionId}
+        />
+      </PickerPanelHost>
     ) : null
 }
 
@@ -106,4 +134,4 @@ export function renderPickerSlot(slot: PickerSlotId, ctx: PickerColumnHostContex
   return PICKER_SLOT_RENDERERS[slot](ctx)
 }
 
-export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "search", "dom"]
+export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "search", "dom", "setting"]

@@ -16,7 +16,15 @@ export {
 } from "./appearance"
 export { appearanceToCssDeclarations, UI_THEME_HTML_SELECTOR, useTerminalAppearance } from "./apply-appearance"
 export { importBackgroundImageFromFilePicker, type BgImageImportResult } from "./bg-image-import"
-export { parseAppearanceResetConfirmAnswer, type AppearanceResetConfirmAnswer } from "./parse-appearance-reset-confirm"
+export {
+  parseAppearanceResetConfirmAnswer,
+  type AppearanceResetConfirmAnswer
+} from "./parse-appearance-reset-confirm"
+export {
+  parseSettingPromptAnswer,
+  type SettingPromptAnswer,
+  type SettingPromptPending
+} from "./parse-setting-edit-pending"
 export {
   DEFAULT_UI_LOCALE,
   listUiLocaleSettingTokens,
@@ -57,21 +65,42 @@ export {
 } from "./i18n"
 export { useUiCopy, useUiLocaleOrDefault } from "./use-ui-copy"
 export {
-  parseSettingCommandLine,
-  validateAppearanceCommand,
-  type SettingCommandParse
-} from "./parse-setting-command"
+  parseSettingIncompleteLine,
+  parseSettingListPickerLine,
+  parseSettingExitListLine
+} from "./setting-list-picker-input"
+export {
+  DEFAULT_SETTING_LIST_PICKER_STATE,
+  type SettingListPickerState,
+  type SettingListPickerView
+} from "./setting-list-picker-state"
+export {
+  buildSettingPickerRows,
+  fontSizeFromPickerIndex,
+  settingPickerHeadline,
+  type SettingPickerRow,
+  type SettingPickerRowId
+} from "./setting-picker-rows"
+export { SettingPickerWrapper, type SettingPickerWrapperProps } from "./setting-picker-wrapper"
+export {
+  exportUiSettingsZip,
+  importUiSettingsZipFromFilePicker,
+  type SettingsExportJson
+} from "./settings-export"
 export {
   clearUiBackgroundImage,
   formatUiSettingsSummary,
   loadUiSettings,
+  replaceUiSettings,
   resetUiAppearance,
   saveUiAppearancePatch,
   saveUiBackgroundImage,
   saveUiLocale,
   type UiSettings
 } from "./settings"
+export { buildAppearancePatch } from "./appearance"
 export { UiSettingsProvider, useUiLocale, useUiSettings } from "./use-ui-settings"
 export { parseHexColor } from "./validate-color"
 export { parseFontFamily } from "./validate-font"
 export { MAX_FONT_SIZE_PX, MIN_FONT_SIZE_PX, parseFontSizePx } from "./validate-size"
+export { buildZipArchive, parseZipArchive, crc32, type ZipEntry } from "./zip-store"

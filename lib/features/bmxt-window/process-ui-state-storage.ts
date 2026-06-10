@@ -252,7 +252,12 @@ export async function rebuildSessionPickersFromStorage(
 
   for (const [leafId, leaf] of Object.entries(stored.byLeaf)) {
     paneFocusByLeaf[leafId] = leaf.paneFocus
-    const pickers: SessionPickerState = { tabs: null, search: null, dom: null }
+    const pickers: SessionPickerState = {
+      tabs: null,
+      search: null,
+      dom: null,
+      setting: null
+    }
 
     if (leaf.pickers.tabs) {
       const t = leaf.pickers.tabs

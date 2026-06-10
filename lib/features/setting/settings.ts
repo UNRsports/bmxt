@@ -83,6 +83,13 @@ export async function clearUiBackgroundImage(): Promise<void> {
   await saveUiAppearancePatch({ bgImageDataUrl: null })
 }
 
+export async function replaceUiSettings(next: UiSettings): Promise<void> {
+  await saveUiSettings({
+    locale: next.locale,
+    appearance: { ...DEFAULT_UI_APPEARANCE, ...next.appearance }
+  })
+}
+
 export function formatUiSettingsSummary(settings: UiSettings, locale: UiLocale): string[] {
   return formatUiSettingsSummaryLines(locale, settings)
 }

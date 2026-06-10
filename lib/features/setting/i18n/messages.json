@@ -203,17 +203,125 @@
     "ja": "このページでは DOM を取得できませんでした。",
     "en": "Could not capture DOM on this page."
   },
-  "setting.usage.language": {
-    "ja": "usage: setting -language --japanese | --english",
-    "en": "usage: setting -language --japanese | --english"
+  "setting.usage": {
+    "ja": "usage: setting -list | setting -exit -list",
+    "en": "usage: setting -list | setting -exit -list"
   },
-  "setting.usage.appearanceFlags": {
-    "ja": "       setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family>",
-    "en": "       setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family>"
+  "setting.picker.hint": {
+    "ja": "Setting picker — ↑↓ 移動 · Enter 選択 · Esc → prompt · Ctrl+←→",
+    "en": "Setting picker — ↑↓ move · Enter select · Esc → prompt · Ctrl+←→"
   },
-  "setting.usage.appearanceActions": {
-    "ja": "       setting -appearance --bg-import | --bg-clear | --reset-default",
-    "en": "       setting -appearance --bg-import | --bg-clear | --reset-default"
+  "setting.picker.closed": {
+    "ja": "setting: 設定ピッカーを閉じました",
+    "en": "setting: settings picker closed"
+  },
+  "setting.picker.notOpen": {
+    "ja": "setting: 設定ピッカーは開いていません",
+    "en": "setting: settings picker is not open"
+  },
+  "setting.picker.headline.main": {
+    "ja": "setting -list · ↑↓ · Enter · Esc → prompt",
+    "en": "setting -list · ↑↓ · Enter · Esc → prompt"
+  },
+  "setting.picker.headline.language": {
+    "ja": "setting -list · language · ↑↓ · Enter · Esc → main",
+    "en": "setting -list · language · ↑↓ · Enter · Esc → main"
+  },
+  "setting.picker.headline.fontSize": {
+    "ja": "setting -list · size · ↑↓ · Enter · Esc → main",
+    "en": "setting -list · size · ↑↓ · Enter · Esc → main"
+  },
+  "setting.picker.headline.bgImage": {
+    "ja": "setting -list · bg-image · ↑↓ · Enter · Esc → main",
+    "en": "setting -list · bg-image · ↑↓ · Enter · Esc → main"
+  },
+  "setting.picker.main.language": {
+    "ja": "language: {token}",
+    "en": "language: {token}"
+  },
+  "setting.picker.main.fg": {
+    "ja": "fg (text color): {value}",
+    "en": "fg (text color): {value}"
+  },
+  "setting.picker.main.bgColor": {
+    "ja": "bg-color: {value}",
+    "en": "bg-color: {value}"
+  },
+  "setting.picker.main.size": {
+    "ja": "size: {value}",
+    "en": "size: {value}"
+  },
+  "setting.picker.main.font": {
+    "ja": "font: {value}",
+    "en": "font: {value}"
+  },
+  "setting.picker.main.bgImage": {
+    "ja": "bg-image: {value}",
+    "en": "bg-image: {value}"
+  },
+  "setting.picker.main.reset": {
+    "ja": "reset-default — restore appearance to defaults",
+    "en": "reset-default — restore appearance to defaults"
+  },
+  "setting.picker.main.export": {
+    "ja": "export — save settings.json + background image as zip",
+    "en": "export — save settings.json + background image as zip"
+  },
+  "setting.picker.main.import": {
+    "ja": "import — load settings from zip",
+    "en": "import — load settings from zip"
+  },
+  "setting.picker.languageRow": {
+    "ja": "{token}",
+    "en": "{token}"
+  },
+  "setting.picker.fontSizeRow": {
+    "ja": "{size}",
+    "en": "{size}"
+  },
+  "setting.picker.bgImport": {
+    "ja": "import background image (PNG/JPEG/WebP, 512 KiB max)",
+    "en": "import background image (PNG/JPEG/WebP, 512 KiB max)"
+  },
+  "setting.picker.bgClear": {
+    "ja": "clear background image",
+    "en": "clear background image"
+  },
+  "setting.picker.back": {
+    "ja": "← back",
+    "en": "← back"
+  },
+  "setting.export.done": {
+    "ja": "setting: 設定を {filename} として保存しました",
+    "en": "setting: settings saved as {filename}"
+  },
+  "setting.import.done": {
+    "ja": "setting: zip から設定を読み込みました",
+    "en": "setting: settings imported from zip"
+  },
+  "setting.import.cancelled": {
+    "ja": "setting: インポートをキャンセルしました",
+    "en": "setting: import cancelled"
+  },
+  "setting.import.failed": {
+    "ja": "setting: インポートに失敗しました — {message}",
+    "en": "setting: import failed — {message}"
+  },
+  "setting.prompt.editFg": {
+    "ja": "文字色 (hex、現在 {current}):",
+    "en": "Text color (hex, current {current}):"
+  },
+  "setting.prompt.editBgColor": {
+    "ja": "背景色 (hex、現在 {current}):",
+    "en": "Background color (hex, current {current}):"
+  },
+  "setting.prompt.editFont": {
+    "ja": "font-family (現在 {current}):",
+    "en": "font-family (current {current}):"
+  },
+  "setting.prompt.editInvalid": {
+    "ja": "入力が無効です。もう一度入力してください。",
+    "en": "Invalid input. Try again."
   },
   "setting.language.choose": {
     "ja": "setting -language: ロケールを選択 — {options}",
@@ -500,8 +608,8 @@
     "en": "translate (Chrome built-in Translator API, ja↔en):\n  translate            - show -on / -off / -setting, then restore prompt to `translate ` for continuation.\n  translate -on        - enable translation assist (nav typing preview under prompt).\n  translate -off       - close editor column and disable assist.\n  translate -setting   - then `--ja-en` or `--en-ja` (Tab menu); saves pair to storage."
   },
   "help.section.setting": {
-    "ja": "setting（グローバル UI — 表示言語とターミナル外観）:\n  setting              - `-language` / `-appearance` を表示し、プロンプトを `setting ` に戻して続きを入力。\n  setting -language --japanese | --english — UI 表示言語（保存）。\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — 保存。\n  setting -appearance --bg-import — PNG/JPEG/WebP 背景を選択（512 KiB 上限、拡張機能 storage に保存）。\n  setting -appearance --bg-clear — 背景画像を削除。\n  setting -appearance --reset-default — 文字色・背景色・フォント・背景画像を既定値に戻す（y/n で確認）。",
-    "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -language / -appearance, then restore prompt to `setting ` for continuation.\n  setting -language --japanese | --english — UI display language (saved).\n  setting -appearance --fg #rrggbb | --bg-color #rrggbb | --size 12px | --font <family> — saved.\n  setting -appearance --bg-import — pick PNG/JPEG/WebP background (512 KiB max, stored in extension).\n  setting -appearance --bg-clear — remove background image.\n  setting -appearance --reset-default — restore text, background, font, and image to defaults (y/n confirmation)."
+    "ja": "setting（グローバル UI — 表示言語とターミナル外観）:\n  setting              - `-list` / `-exit` を表示し、プロンプトを `setting ` に戻して続きを入力。\n  setting -list         - 設定ピッカーを開く（言語・外観・エクスポート/インポート）。\n  setting -exit -list  - この BMXt ペインの設定ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -list / -exit, then restore prompt to `setting ` for continuation.\n  setting -list         - open settings picker (locale, appearance, export/import).\n  setting -exit -list  - close settings picker in this BMXt pane (Esc returns to prompt only)."
   },
   "help.section.search": {
     "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（全スコープ；任意で --history|--bookmark|--page で絞り込み）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",

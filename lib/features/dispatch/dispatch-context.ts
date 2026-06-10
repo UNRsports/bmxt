@@ -25,6 +25,6 @@ export type DispatchChromeContext = {
   shouldCancelSearchPage?: () => boolean
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
-  /** EN: UI display locale from `setting -language` (defaults to Japanese). */
+  /** EN: UI display locale from settings picker / storage (defaults to Japanese). */
   uiLocale?: UiLocale
 }

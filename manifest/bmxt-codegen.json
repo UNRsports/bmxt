@@ -167,24 +167,15 @@
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -language | setting -appearance",
+      "usagePrimary": "setting -list | setting -exit -list",
       "subcommands": [
         {
-          "head": "-language",
-          "trailingTokens": ["--japanese", "--english"],
+          "head": "-list",
           "tail": "none"
         },
         {
-          "head": "-appearance",
-          "trailingTokens": [
-            "--fg",
-            "--bg-color",
-            "--size",
-            "--font",
-            "--bg-import",
-            "--bg-clear",
-            "--reset-default"
-          ],
+          "head": "-exit",
+          "trailingTokens": ["-list"],
           "tail": "none"
         }
       ]

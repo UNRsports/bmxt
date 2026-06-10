@@ -50,8 +50,8 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-row", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "setting": [
-    { head: "-language", trailingTokens: ["--japanese","--english"] as const, tail: "none" },
-    { head: "-appearance", trailingTokens: ["--fg","--bg-color","--size","--font","--bg-import","--bg-clear","--reset-default"] as const, tail: "none" }
+    { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const
 }
 
@@ -139,7 +139,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "setting": {
       const lower = token.toLowerCase()
-      return lower === "-language" || lower === "-appearance"
+      return lower === "-list" || lower === "-exit"
     }
     default:
       return false
