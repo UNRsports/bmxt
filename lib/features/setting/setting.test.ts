@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { parseAppearanceResetConfirmAnswer } from "./parse-appearance-reset-confirm.ts"
-import { parseHexColor } from "./validate-color.ts"
+import { parseHexColor, previewHexColor } from "./validate-color.ts"
 import { parseUiLocaleSettingToken, settingTokenForUiLocale } from "./locale.ts"
 import { parseFontSizePx } from "./validate-size.ts"
 import {
@@ -26,6 +26,15 @@ describe("parseAppearanceResetConfirmAnswer", () => {
 
   it("rejects other input", () => {
     assert.equal(parseAppearanceResetConfirmAnswer("maybe"), "invalid")
+  })
+})
+
+describe("previewHexColor", () => {
+  it("previews partial hex while typing", () => {
+    assert.equal(previewHexColor("#c9d1d9"), "#c9d1d9")
+    assert.equal(previewHexColor("#c9d"), "#cc99dd")
+    assert.equal(previewHexColor("#c9"), "#c90000")
+    assert.equal(previewHexColor("red"), null)
   })
 })
 

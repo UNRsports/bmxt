@@ -26,3 +26,19 @@ export function parseHexColor(raw: string): string | null {
   }
   return `#${expanded.toLowerCase()}`
 }
+
+/** EN: Lenient hex for live preview while the user is still typing. */
+export function previewHexColor(raw: string): string | null {
+  const validated = parseHexColor(raw)
+  if (validated !== null) {
+    return validated
+  }
+  const trimmed = raw.trim()
+  const partial = /^#([0-9a-fA-F]{1,5})$/.exec(trimmed)
+  if (!partial) {
+    return null
+  }
+  const digits = partial[1]!
+  const padded = `${digits}${"0".repeat(6)}`.slice(0, 6)
+  return `#${padded.toLowerCase()}`
+}

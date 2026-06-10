@@ -85,7 +85,11 @@ export {
   type SettingPickerRowId
 } from "./setting-picker-rows"
 export { SettingPickerWrapper, type SettingPickerWrapperProps } from "./setting-picker-wrapper"
-export { type SettingEditField, validateSettingEditValue } from "./setting-picker-edit"
+export {
+  resolveSettingPickerPreviewAppearance,
+  type SettingEditField,
+  validateSettingEditValue
+} from "./setting-picker-edit"
 export {
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker,
@@ -104,7 +108,7 @@ export {
 } from "./settings"
 export { buildAppearancePatch } from "./appearance"
 export { UiSettingsProvider, useUiLocale, useUiSettings } from "./use-ui-settings"
-export { parseHexColor } from "./validate-color"
+export { parseHexColor, previewHexColor } from "./validate-color"
 export { parseFontFamily } from "./validate-font"
 export { MAX_FONT_SIZE_PX, MIN_FONT_SIZE_PX, parseFontSizePx } from "./validate-size"
 export { buildZipArchive, parseZipArchive, crc32, type ZipEntry } from "./zip-store"

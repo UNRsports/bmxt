@@ -6,7 +6,10 @@ import {
   settingPickerHeadline,
   type SettingPickerRow
 } from "./setting-picker-rows"
-import type { SettingEditField } from "./setting-picker-edit"
+import {
+  resolveSettingPickerPreviewAppearance,
+  type SettingEditField
+} from "./setting-picker-edit"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import { SettingPickerPreview } from "./setting-picker-preview"
 
@@ -36,6 +39,10 @@ export function SettingPickerWrapper({
   const { draft } = state
   const locale = draft.locale
   const appearance = draft.appearance
+  const previewAppearance = useMemo(
+    () => resolveSettingPickerPreviewAppearance(state),
+    [state]
+  )
   const rows = useMemo(
     () => buildSettingPickerRows(state.view, locale, appearance),
     [state.view, locale, appearance]
@@ -70,9 +77,9 @@ export function SettingPickerWrapper({
 
   const preview = useMemo(
     () => (
-      <SettingPickerPreview appearance={appearance} locale={locale} />
+      <SettingPickerPreview appearance={previewAppearance} locale={locale} />
     ),
-    [appearance, locale]
+    [previewAppearance, locale]
   )
 
   return (
