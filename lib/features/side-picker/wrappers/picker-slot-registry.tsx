@@ -37,7 +37,10 @@ export type PickerColumnHostContext = {
   settingPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   onSettingPickerStateChange: (next: SettingListPickerState) => void
   onSettingPickerRowAction: (row: SettingPickerRow, index: number) => void | Promise<void>
-  onSettingPickerApplyEdit: (field: "fg" | "bg-color" | "font", value: string) => void | Promise<void>
+  onSettingPickerApplyEdit: (
+    field: "fg" | "bg-color" | "font" | "picker-fg" | "picker-bg-color" | "picker-font",
+    value: string
+  ) => void | Promise<void>
   onSettingPickerEditInvalid: () => void | Promise<void>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>

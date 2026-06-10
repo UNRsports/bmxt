@@ -15,7 +15,8 @@ export const APPEARANCE_FLAG_TOKENS = [
 
 export type AppearanceFlagToken = (typeof APPEARANCE_FLAG_TOKENS)[number]
 
-export type UiAppearance = {
+/** EN: Nullable appearance fields (null = use built-in default). */
+export type UiAppearanceLayer = {
   fg: string | null
   bgColor: string | null
   fontSize: string | null
@@ -23,12 +24,24 @@ export type UiAppearance = {
   bgImageDataUrl: string | null
 }
 
-export const DEFAULT_UI_APPEARANCE: UiAppearance = {
+export type UiAppearance = UiAppearanceLayer & {
+  /** EN: When false, picker columns inherit the global layer. */
+  editPicker: boolean
+  picker: UiAppearanceLayer
+}
+
+export const DEFAULT_UI_APPEARANCE_LAYER: UiAppearanceLayer = {
   fg: null,
   bgColor: null,
   fontSize: null,
   fontFamily: null,
   bgImageDataUrl: null
+}
+
+export const DEFAULT_UI_APPEARANCE: UiAppearance = {
+  ...DEFAULT_UI_APPEARANCE_LAYER,
+  editPicker: false,
+  picker: { ...DEFAULT_UI_APPEARANCE_LAYER }
 }
 
 export const DEFAULT_TERMINAL_FG = "#c9d1d9"
@@ -54,6 +67,39 @@ export type ResolvedTerminalAppearance = {
   bgImageDataUrl: string | null
 }
 
+function parseAppearanceLayer(raw: unknown): UiAppearanceLayer {
+  if (!raw || typeof raw !== "object") {
+    return { ...DEFAULT_UI_APPEARANCE_LAYER }
+  }
+  const o = raw as Record<string, unknown>
+  return {
+    fg: typeof o.fg === "string" ? o.fg : null,
+    bgColor: typeof o.bgColor === "string" ? o.bgColor : null,
+    fontSize: typeof o.fontSize === "string" ? o.fontSize : null,
+    fontFamily: typeof o.fontFamily === "string" ? o.fontFamily : null,
+    bgImageDataUrl: typeof o.bgImageDataUrl === "string" ? o.bgImageDataUrl : null
+  }
+}
+
+/** EN: Normalize stored / imported appearance (backward compatible). */
+export function normalizeUiAppearance(raw: Partial<UiAppearance> | null | undefined): UiAppearance {
+  if (!raw || typeof raw !== "object") {
+    return {
+      ...DEFAULT_UI_APPEARANCE,
+      picker: { ...DEFAULT_UI_APPEARANCE_LAYER }
+    }
+  }
+  return {
+    fg: raw.fg ?? null,
+    bgColor: raw.bgColor ?? null,
+    fontSize: raw.fontSize ?? null,
+    fontFamily: raw.fontFamily ?? null,
+    bgImageDataUrl: raw.bgImageDataUrl ?? null,
+    editPicker: raw.editPicker === true,
+    picker: parseAppearanceLayer(raw.picker)
+  }
+}
+
 export function resolveTerminalAppearance(appearance: UiAppearance): ResolvedTerminalAppearance {
   return {
     fg: appearance.fg ?? DEFAULT_TERMINAL_FG,
@@ -61,6 +107,22 @@ export function resolveTerminalAppearance(appearance: UiAppearance): ResolvedTer
     fontSize: appearance.fontSize ?? DEFAULT_TERMINAL_FONT_SIZE,
     fontFamily: appearance.fontFamily ?? DEFAULT_TERMINAL_FONT_FAMILY,
     bgImageDataUrl: appearance.bgImageDataUrl
+  }
+}
+
+/** EN: Resolved picker-column theme (inherits global when editPicker is off). */
+export function resolvePickerAppearance(appearance: UiAppearance): ResolvedTerminalAppearance {
+  const global = resolveTerminalAppearance(appearance)
+  if (!appearance.editPicker) {
+    return global
+  }
+  const picker = appearance.picker
+  return {
+    fg: picker.fg ?? global.fg,
+    bgColor: picker.bgColor ?? global.bgColor,
+    fontSize: picker.fontSize ?? global.fontSize,
+    fontFamily: picker.fontFamily ?? global.fontFamily,
+    bgImageDataUrl: picker.bgImageDataUrl ?? global.bgImageDataUrl
   }
 }
 

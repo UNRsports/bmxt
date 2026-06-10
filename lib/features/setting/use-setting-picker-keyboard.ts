@@ -13,12 +13,16 @@ import {
 } from "./setting-picker-nav"
 import type { SettingPickerRow } from "./setting-picker-rows"
 import { settingPickerAllowsVerticalNav, settingPickerInitialHi } from "./setting-picker-rows"
-import { settingEditFieldForView, validateSettingEditValue } from "./setting-picker-edit"
+import {
+  settingEditFieldForView,
+  validateSettingEditValue,
+  type SettingEditField
+} from "./setting-picker-edit"
 
 export type SettingPickerKeyboardCallbacks = {
   onImmediateMainAction: (row: SettingPickerRow) => void | Promise<void>
   onApplyListChoice: (row: SettingPickerRow, index: number) => void | Promise<void>
-  onApplyEdit: (field: "fg" | "bg-color" | "font", value: string) => void | Promise<void>
+  onApplyEdit: (field: SettingEditField, value: string) => void | Promise<void>
   onEditInvalid: () => void
   onReturnToPrompt?: () => void
   resolveEditSeed: () => string

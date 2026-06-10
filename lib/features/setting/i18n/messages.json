@@ -235,25 +235,49 @@
     "ja": "setting -list · language · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · language · ↑↓ · Enter/→ preview · ← list"
   },
+  "setting.picker.headline.editPicker": {
+    "ja": "setting -list · edit-picker · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · edit-picker · ↑↓ · Enter/→ select · ← list"
+  },
   "setting.picker.headline.fontSize": {
     "ja": "setting -list · size · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · size · ↑↓ · Enter/→ preview · ← list"
+  },
+  "setting.picker.headline.pickerFontSize": {
+    "ja": "setting -list · size (picker) · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "en": "setting -list · size (picker) · ↑↓ · Enter/→ preview · ← list"
   },
   "setting.picker.headline.bgImage": {
     "ja": "setting -list · bg-image · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · bg-image · ↑↓ · Enter/→ preview · ← list"
   },
+  "setting.picker.headline.pickerBgImage": {
+    "ja": "setting -list · bg-image (picker) · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "en": "setting -list · bg-image (picker) · ↑↓ · Enter/→ preview · ← list"
+  },
   "setting.picker.headline.fg": {
     "ja": "setting -list · fg · Enter/→ 編集 · ← 一覧",
     "en": "setting -list · fg · Enter/→ edit · ← list"
+  },
+  "setting.picker.headline.fgPicker": {
+    "ja": "setting -list · fg (picker) · Enter/→ 編集 · ← 一覧",
+    "en": "setting -list · fg (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.bgColor": {
     "ja": "setting -list · bg-color · → 編集 · ← 一覧",
     "en": "setting -list · bg-color · → edit · ← list"
   },
+  "setting.picker.headline.bgColorPicker": {
+    "ja": "setting -list · bg-color (picker) · Enter/→ 編集 · ← 一覧",
+    "en": "setting -list · bg-color (picker) · Enter/→ edit · ← list"
+  },
   "setting.picker.headline.font": {
     "ja": "setting -list · font · → 編集 · ← 一覧",
     "en": "setting -list · font · → edit · ← list"
+  },
+  "setting.picker.headline.fontPicker": {
+    "ja": "setting -list · font (picker) · Enter/→ 編集 · ← 一覧",
+    "en": "setting -list · font (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.resetConfirm": {
     "ja": "setting -list · reset · ↑↓ · → 確定 · ← 一覧",
@@ -271,13 +295,25 @@
     "ja": "text color: {value}",
     "en": "text color: {value}"
   },
+  "setting.picker.detail.fgPicker": {
+    "ja": "picker text color: {value}",
+    "en": "picker text color: {value}"
+  },
   "setting.picker.detail.bgColor": {
     "ja": "background color: {value}",
     "en": "background color: {value}"
   },
+  "setting.picker.detail.bgColorPicker": {
+    "ja": "picker background color: {value}",
+    "en": "picker background color: {value}"
+  },
   "setting.picker.detail.font": {
     "ja": "font-family: {value}",
     "en": "font-family: {value}"
+  },
+  "setting.picker.detail.fontPicker": {
+    "ja": "picker font-family: {value}",
+    "en": "picker font-family: {value}"
   },
   "setting.picker.resetYes": {
     "ja": "y — reset all appearance to defaults",
@@ -291,13 +327,25 @@
     "ja": "文字色 (hex)",
     "en": "Text color (hex)"
   },
+  "setting.picker.editAria.fgPicker": {
+    "ja": "ピッカー文字色 (hex)",
+    "en": "Picker text color (hex)"
+  },
   "setting.picker.editAria.bgColor": {
     "ja": "背景色 (hex)",
     "en": "Background color (hex)"
   },
+  "setting.picker.editAria.bgColorPicker": {
+    "ja": "ピッカー背景色 (hex)",
+    "en": "Picker background color (hex)"
+  },
   "setting.picker.editAria.font": {
     "ja": "font-family",
     "en": "font-family"
+  },
+  "setting.picker.editAria.fontPicker": {
+    "ja": "picker font-family",
+    "en": "picker font-family"
   },
   "setting.picker.editAria.generic": {
     "ja": "setting edit",
@@ -307,25 +355,65 @@
     "ja": "language: {token}",
     "en": "language: {token}"
   },
+  "setting.picker.main.editPicker": {
+    "ja": "edit-picker: {value}",
+    "en": "edit-picker: {value}"
+  },
+  "setting.picker.editPickerStateOn": {
+    "ja": "on",
+    "en": "on"
+  },
+  "setting.picker.editPickerStateOff": {
+    "ja": "off",
+    "en": "off"
+  },
+  "setting.picker.editPickerOn": {
+    "ja": "on — ピッカー外観を個別編集",
+    "en": "on — edit picker appearance separately"
+  },
+  "setting.picker.editPickerOff": {
+    "ja": "off — ピッカーは全体設定に従う",
+    "en": "off — picker follows global appearance"
+  },
   "setting.picker.main.fg": {
     "ja": "fg (text color): {value}",
     "en": "fg (text color): {value}"
+  },
+  "setting.picker.main.fgPicker": {
+    "ja": "fg (picker text color): {value}",
+    "en": "fg (picker text color): {value}"
   },
   "setting.picker.main.bgColor": {
     "ja": "bg-color: {value}",
     "en": "bg-color: {value}"
   },
+  "setting.picker.main.bgColorPicker": {
+    "ja": "bg-color (picker): {value}",
+    "en": "bg-color (picker): {value}"
+  },
   "setting.picker.main.size": {
     "ja": "size: {value}",
     "en": "size: {value}"
+  },
+  "setting.picker.main.sizePicker": {
+    "ja": "size (picker): {value}",
+    "en": "size (picker): {value}"
   },
   "setting.picker.main.font": {
     "ja": "font: {value}",
     "en": "font: {value}"
   },
+  "setting.picker.main.fontPicker": {
+    "ja": "font (picker): {value}",
+    "en": "font (picker): {value}"
+  },
   "setting.picker.main.bgImage": {
     "ja": "bg-image: {value}",
     "en": "bg-image: {value}"
+  },
+  "setting.picker.main.bgImagePicker": {
+    "ja": "bg-image (picker): {value}",
+    "en": "bg-image (picker): {value}"
   },
   "setting.picker.main.reset": {
     "ja": "reset-default — restore appearance to defaults",
@@ -356,8 +444,16 @@
     "en": "> bmxt preview"
   },
   "setting.picker.preview.sample": {
-    "ja": "設定を反映したターミナル表示のプレビューです。",
-    "en": "Preview of terminal appearance with current draft settings."
+    "ja": "設定を反映した表示のプレビューです。",
+    "en": "Preview with current draft settings."
+  },
+  "setting.picker.preview.terminal": {
+    "ja": "Terminal",
+    "en": "Terminal"
+  },
+  "setting.picker.preview.pickerColumn": {
+    "ja": "Picker",
+    "en": "Picker"
   },
   "setting.picker.saved": {
     "ja": "setting: 設定を保存しました",

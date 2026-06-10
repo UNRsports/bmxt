@@ -1,15 +1,21 @@
-import type { UiAppearance } from "./appearance"
+import type { UiAppearance, UiAppearanceLayer } from "./appearance"
 import type { UiLocale } from "./locale"
 import type { UiSettings } from "./settings"
 
 export type SettingListPickerView =
   | "main"
   | "language"
+  | "editPicker"
   | "fontSize"
+  | "pickerFontSize"
   | "bgImage"
+  | "pickerBgImage"
   | "fg"
   | "bgColor"
   | "font"
+  | "fgPicker"
+  | "bgColorPicker"
+  | "fontPicker"
   | "resetConfirm"
 
 export type SettingListPickerState = {
@@ -30,12 +36,19 @@ export const DEFAULT_SETTING_LIST_PICKER_NAV: Pick<
   editDraft: ""
 }
 
+export type SettingDraftPatch = {
+  locale?: UiLocale
+  editPicker?: boolean
+  appearance?: Partial<UiAppearanceLayer>
+  picker?: Partial<UiAppearanceLayer>
+}
+
 export function createSettingListPickerState(committed: UiSettings): SettingListPickerState {
   return {
     ...DEFAULT_SETTING_LIST_PICKER_NAV,
     draft: {
       locale: committed.locale,
-      appearance: { ...committed.appearance }
+      appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
 }
@@ -54,25 +67,41 @@ export function settingPickerGoToView(
   return { ...prev, view, editing: false, editDraft: "" }
 }
 
+function applyDraftPatch(
+  prev: SettingListPickerState,
+  patch: SettingDraftPatch
+): SettingListPickerState["draft"] {
+  let draft = prev.draft
+  if (patch.locale !== undefined) {
+    draft = { ...draft, locale: patch.locale }
+  }
+  const nextAppearance = { ...draft.appearance, picker: { ...draft.appearance.picker } }
+  if (patch.editPicker !== undefined) {
+    nextAppearance.editPicker = patch.editPicker
+  }
+  if (patch.appearance) {
+    Object.assign(nextAppearance, patch.appearance)
+  }
+  if (patch.picker) {
+    nextAppearance.picker = { ...nextAppearance.picker, ...patch.picker }
+  }
+  return { ...draft, appearance: nextAppearance }
+}
+
 export function settingPickerUpdateDraft(
   prev: SettingListPickerState,
-  patch: { locale?: UiLocale; appearance?: Partial<UiAppearance> }
+  patch: SettingDraftPatch
 ): SettingListPickerState {
   return {
     ...prev,
-    draft: {
-      locale: patch.locale ?? prev.draft.locale,
-      appearance: patch.appearance
-        ? { ...prev.draft.appearance, ...patch.appearance }
-        : prev.draft.appearance
-    }
+    draft: applyDraftPatch(prev, patch)
   }
 }
 
 /** EN: Apply draft patch and return to main list in one state update. */
 export function settingPickerApplyDraftToMain(
   prev: SettingListPickerState,
-  patch: { locale?: UiLocale; appearance?: Partial<UiAppearance> }
+  patch: SettingDraftPatch
 ): SettingListPickerState {
   return settingPickerGoToView("main", settingPickerUpdateDraft(prev, patch))
 }
@@ -86,7 +115,7 @@ export function settingPickerRevertDraft(
     ...DEFAULT_SETTING_LIST_PICKER_NAV,
     draft: {
       locale: committed.locale,
-      appearance: { ...committed.appearance }
+      appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
 }

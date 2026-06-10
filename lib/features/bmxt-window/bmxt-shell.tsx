@@ -1185,11 +1185,33 @@ export function BmxtShell({
         )
         return
       }
+      if (row.id === "edit-picker-on") {
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(current, { editPicker: true })
+        )
+        return
+      }
+      if (row.id === "edit-picker-off") {
+        setSettingListPicker(
+          sessionId,
+          settingPickerApplyDraftToMain(current, { editPicker: false })
+        )
+        return
+      }
       if (row.id === "reset-yes") {
         setSettingListPicker(
           sessionId,
           settingPickerApplyDraftToMain(current, {
+            editPicker: false,
             appearance: {
+              fg: null,
+              bgColor: null,
+              fontSize: null,
+              fontFamily: null,
+              bgImageDataUrl: null
+            },
+            picker: {
               fg: null,
               bgColor: null,
               fontSize: null,
@@ -1208,10 +1230,11 @@ export function BmxtShell({
         if (fontSize === null) {
           return
         }
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(current, { appearance: { fontSize } })
-        )
+        const patch =
+          current.view === "pickerFontSize"
+            ? { picker: { fontSize } }
+            : { appearance: { fontSize } }
+        setSettingListPicker(sessionId, settingPickerApplyDraftToMain(current, patch))
         return
       }
       if (row.id === "bg-import") {
@@ -1225,19 +1248,22 @@ export function BmxtShell({
           return
         }
         const afterImport = settingListPickerRef.current ?? current
+        const bgPatch =
+          afterImport.view === "pickerBgImage"
+            ? { picker: { bgImageDataUrl: result.dataUrl } }
+            : { appearance: { bgImageDataUrl: result.dataUrl } }
         setSettingListPicker(
           sessionId,
-          settingPickerApplyDraftToMain(afterImport, {
-            appearance: { bgImageDataUrl: result.dataUrl }
-          })
+          settingPickerApplyDraftToMain(afterImport, bgPatch)
         )
         return
       }
       if (row.id === "bg-clear") {
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(current, { appearance: { bgImageDataUrl: null } })
-        )
+        const bgPatch =
+          current.view === "pickerBgImage"
+            ? { picker: { bgImageDataUrl: null } }
+            : { appearance: { bgImageDataUrl: null } }
+        setSettingListPicker(sessionId, settingPickerApplyDraftToMain(current, bgPatch))
         return
       }
       if (row.id === "export") {
@@ -1296,15 +1322,19 @@ export function BmxtShell({
       if (!current) {
         return
       }
-      const patch =
-        field === "fg"
+      const layerPatch =
+        field === "fg" || field === "picker-fg"
           ? { fg: value }
-          : field === "bg-color"
+          : field === "bg-color" || field === "picker-bg-color"
             ? { bgColor: value }
             : { fontFamily: value }
+      const draftPatch =
+        field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
+          ? { picker: layerPatch }
+          : { appearance: layerPatch }
       setSettingListPicker(
         sessionId,
-        settingPickerApplyDraftToMain(current, { appearance: patch })
+        settingPickerApplyDraftToMain(current, draftPatch)
       )
     },
     [sessionId, setSettingListPicker]

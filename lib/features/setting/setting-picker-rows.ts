@@ -3,6 +3,7 @@ import {
   DEFAULT_TERMINAL_FG,
   DEFAULT_TERMINAL_FONT_FAMILY,
   DEFAULT_TERMINAL_FONT_SIZE,
+  resolvePickerAppearance,
   resolveTerminalAppearance,
   type UiAppearance
 } from "./appearance"
@@ -18,11 +19,19 @@ import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 
 export type SettingPickerRowId =
   | "language"
+  | "edit-picker"
+  | "edit-picker-on"
+  | "edit-picker-off"
   | "fg"
+  | "fg-picker"
   | "bg-color"
+  | "bg-color-picker"
   | "size"
+  | "size-picker"
   | "font"
+  | "font-picker"
   | "bg-image"
+  | "bg-image-picker"
   | "bg-import"
   | "bg-clear"
   | "reset-default"
@@ -100,13 +109,24 @@ export function settingPickerInitialHi(
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
+  if (view === "editPicker") {
+    return appearance.editPicker ? 0 : 1
+  }
+  const resolvedGlobal = resolveTerminalAppearance(appearance)
+  const resolvedPicker = resolvePickerAppearance(appearance)
   if (view === "fontSize") {
-    const resolved = resolveTerminalAppearance(appearance)
-    const size = appearance.fontSize ?? resolved.fontSize
+    const size = appearance.fontSize ?? resolvedGlobal.fontSize
+    return fontSizePickerIndexForValue(size)
+  }
+  if (view === "pickerFontSize") {
+    const size = appearance.picker.fontSize ?? resolvedPicker.fontSize
     return fontSizePickerIndexForValue(size)
   }
   if (view === "bgImage") {
     return appearance.bgImageDataUrl ? 1 : 0
+  }
+  if (view === "pickerBgImage") {
+    return appearance.picker.bgImageDataUrl ? 1 : 0
   }
   if (view === "resetConfirm") {
     return 1
@@ -114,31 +134,12 @@ export function settingPickerInitialHi(
   return 0
 }
 
-export function buildSettingPickerRows(
-  view: SettingListPickerView,
+function buildGlobalDetailRows(
+  view: "fg" | "bgColor" | "font",
   locale: UiLocale,
   appearance: UiAppearance
 ): SettingPickerRow[] {
   const resolved = resolveTerminalAppearance(appearance)
-
-  if (view === "language") {
-    return listUiLocaleSettingTokens().map((token) => ({
-      id: token === "--japanese" ? "locale-ja" : "locale-en",
-      line: t("setting.picker.languageRow", locale, { token })
-    }))
-  }
-
-  if (view === "fontSize") {
-    return listFontSizePickerRows(locale)
-  }
-
-  if (view === "bgImage") {
-    return [
-      { id: "bg-import", line: t("setting.picker.bgImport", locale) },
-      { id: "bg-clear", line: t("setting.picker.bgClear", locale) }
-    ]
-  }
-
   if (view === "fg") {
     return [
       {
@@ -149,7 +150,6 @@ export function buildSettingPickerRows(
       }
     ]
   }
-
   if (view === "bgColor") {
     return [
       {
@@ -160,16 +160,92 @@ export function buildSettingPickerRows(
       }
     ]
   }
+  return [
+    {
+      id: "font",
+      line: t("setting.picker.detail.font", locale, {
+        value: displayOrDefault(appearance.fontFamily, resolved.fontFamily, locale)
+      })
+    }
+  ]
+}
 
-  if (view === "font") {
+function buildPickerDetailRows(
+  view: "fgPicker" | "bgColorPicker" | "fontPicker",
+  locale: UiLocale,
+  appearance: UiAppearance
+): SettingPickerRow[] {
+  const resolved = resolvePickerAppearance(appearance)
+  const layer = appearance.picker
+  if (view === "fgPicker") {
     return [
       {
-        id: "font",
-        line: t("setting.picker.detail.font", locale, {
-          value: displayOrDefault(appearance.fontFamily, resolved.fontFamily, locale)
+        id: "fg-picker",
+        line: t("setting.picker.detail.fgPicker", locale, {
+          value: displayOrDefault(layer.fg, resolved.fg, locale)
         })
       }
     ]
+  }
+  if (view === "bgColorPicker") {
+    return [
+      {
+        id: "bg-color-picker",
+        line: t("setting.picker.detail.bgColorPicker", locale, {
+          value: displayOrDefault(layer.bgColor, resolved.bgColor, locale)
+        })
+      }
+    ]
+  }
+  return [
+    {
+      id: "font-picker",
+      line: t("setting.picker.detail.fontPicker", locale, {
+        value: displayOrDefault(layer.fontFamily, resolved.fontFamily, locale)
+      })
+    }
+  ]
+}
+
+export function buildSettingPickerRows(
+  view: SettingListPickerView,
+  locale: UiLocale,
+  appearance: UiAppearance
+): SettingPickerRow[] {
+  const resolvedGlobal = resolveTerminalAppearance(appearance)
+  const resolvedPicker = resolvePickerAppearance(appearance)
+
+  if (view === "language") {
+    return listUiLocaleSettingTokens().map((token) => ({
+      id: token === "--japanese" ? "locale-ja" : "locale-en",
+      line: t("setting.picker.languageRow", locale, { token })
+    }))
+  }
+
+  if (view === "editPicker") {
+    return [
+      { id: "edit-picker-on", line: t("setting.picker.editPickerOn", locale) },
+      { id: "edit-picker-off", line: t("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "fontSize" || view === "pickerFontSize") {
+    return listFontSizePickerRows(locale)
+  }
+
+  if (view === "bgImage" || view === "pickerBgImage") {
+    return [
+      { id: "bg-import", line: t("setting.picker.bgImport", locale) },
+      { id: "bg-clear", line: t("setting.picker.bgClear", locale) }
+    ]
+  }
+
+  if (view === "fg" || view === "bgColor" || view === "font") {
+    return buildGlobalDetailRows(view, locale, appearance)
+  }
+
+  if (view === "fgPicker" || view === "bgColorPicker" || view === "fontPicker") {
+    return buildPickerDetailRows(view, locale, appearance)
   }
 
   if (view === "resetConfirm") {
@@ -182,8 +258,11 @@ export function buildSettingPickerRows(
   const bgImageLabel = appearance.bgImageDataUrl
     ? t("setting.summary.set", locale)
     : t("setting.summary.none", locale)
+  const pickerBgImageLabel = appearance.picker.bgImageDataUrl
+    ? t("setting.summary.set", locale)
+    : t("setting.summary.none", locale)
 
-  return [
+  const rows: SettingPickerRow[] = [
     {
       id: "language",
       line: t("setting.picker.main.language", locale, {
@@ -191,33 +270,91 @@ export function buildSettingPickerRows(
       })
     },
     {
+      id: "edit-picker",
+      line: t("setting.picker.main.editPicker", locale, {
+        value: appearance.editPicker
+          ? t("setting.picker.editPickerStateOn", locale)
+          : t("setting.picker.editPickerStateOff", locale)
+      })
+    },
+    {
       id: "fg",
       line: t("setting.picker.main.fg", locale, {
-        value: displayOrDefault(appearance.fg, resolved.fg, locale)
+        value: displayOrDefault(appearance.fg, resolvedGlobal.fg, locale)
       })
-    },
-    {
-      id: "bg-color",
-      line: t("setting.picker.main.bgColor", locale, {
-        value: displayOrDefault(appearance.bgColor, resolved.bgColor, locale)
+    }
+  ]
+
+  if (appearance.editPicker) {
+    rows.push({
+      id: "fg-picker",
+      line: t("setting.picker.main.fgPicker", locale, {
+        value: displayOrDefault(appearance.picker.fg, resolvedPicker.fg, locale)
       })
-    },
-    {
-      id: "size",
-      line: t("setting.picker.main.size", locale, {
-        value: displayOrDefault(appearance.fontSize, resolved.fontSize, locale)
+    })
+  }
+
+  rows.push({
+    id: "bg-color",
+    line: t("setting.picker.main.bgColor", locale, {
+      value: displayOrDefault(appearance.bgColor, resolvedGlobal.bgColor, locale)
+    })
+  })
+
+  if (appearance.editPicker) {
+    rows.push({
+      id: "bg-color-picker",
+      line: t("setting.picker.main.bgColorPicker", locale, {
+        value: displayOrDefault(appearance.picker.bgColor, resolvedPicker.bgColor, locale)
       })
-    },
-    {
-      id: "font",
-      line: t("setting.picker.main.font", locale, {
-        value: displayOrDefault(appearance.fontFamily, resolved.fontFamily, locale)
+    })
+  }
+
+  rows.push({
+    id: "size",
+    line: t("setting.picker.main.size", locale, {
+      value: displayOrDefault(appearance.fontSize, resolvedGlobal.fontSize, locale)
+    })
+  })
+
+  if (appearance.editPicker) {
+    rows.push({
+      id: "size-picker",
+      line: t("setting.picker.main.sizePicker", locale, {
+        value: displayOrDefault(appearance.picker.fontSize, resolvedPicker.fontSize, locale)
       })
-    },
-    {
-      id: "bg-image",
-      line: t("setting.picker.main.bgImage", locale, { value: bgImageLabel })
-    },
+    })
+  }
+
+  rows.push({
+    id: "font",
+    line: t("setting.picker.main.font", locale, {
+      value: displayOrDefault(appearance.fontFamily, resolvedGlobal.fontFamily, locale)
+    })
+  })
+
+  if (appearance.editPicker) {
+    rows.push({
+      id: "font-picker",
+      line: t("setting.picker.main.fontPicker", locale, {
+        value: displayOrDefault(appearance.picker.fontFamily, resolvedPicker.fontFamily, locale)
+      })
+    })
+  }
+
+  rows.push({
+    id: "bg-image",
+    line: t("setting.picker.main.bgImage", locale, { value: bgImageLabel })
+  })
+
+  if (appearance.editPicker) {
+    rows.push({
+      id: "bg-image-picker",
+      line: t("setting.picker.main.bgImagePicker", locale, { value: pickerBgImageLabel })
+    })
+  }
+
+  rows.push(
     {
       id: "reset-default",
       line: t("setting.picker.main.reset", locale)
@@ -238,7 +375,9 @@ export function buildSettingPickerRows(
       id: "cancel",
       line: t("setting.picker.main.cancel", locale)
     }
-  ]
+  )
+
+  return rows
 }
 
 export function settingPickerHeadline(
@@ -254,19 +393,31 @@ export function settingPickerHeadline(
       ? "setting.picker.headline.main"
       : view === "language"
         ? "setting.picker.headline.language"
-        : view === "fontSize"
-          ? "setting.picker.headline.fontSize"
-          : view === "bgImage"
-            ? "setting.picker.headline.bgImage"
-            : view === "fg"
-              ? "setting.picker.headline.fg"
-              : view === "bgColor"
-                ? "setting.picker.headline.bgColor"
-                : view === "font"
-                  ? "setting.picker.headline.font"
-                  : view === "resetConfirm"
-                    ? "setting.picker.headline.resetConfirm"
-                    : "setting.picker.headline.main"
+        : view === "editPicker"
+          ? "setting.picker.headline.editPicker"
+          : view === "fontSize"
+            ? "setting.picker.headline.fontSize"
+            : view === "pickerFontSize"
+              ? "setting.picker.headline.pickerFontSize"
+              : view === "bgImage"
+                ? "setting.picker.headline.bgImage"
+                : view === "pickerBgImage"
+                  ? "setting.picker.headline.pickerBgImage"
+                  : view === "fg"
+                    ? "setting.picker.headline.fg"
+                    : view === "bgColor"
+                      ? "setting.picker.headline.bgColor"
+                      : view === "font"
+                        ? "setting.picker.headline.font"
+                        : view === "fgPicker"
+                          ? "setting.picker.headline.fgPicker"
+                          : view === "bgColorPicker"
+                            ? "setting.picker.headline.bgColorPicker"
+                            : view === "fontPicker"
+                              ? "setting.picker.headline.fontPicker"
+                              : view === "resetConfirm"
+                                ? "setting.picker.headline.resetConfirm"
+                                : "setting.picker.headline.main"
   return t(key, locale)
 }
 
@@ -274,14 +425,20 @@ export function settingPickerEditAriaLabel(
   view: SettingListPickerView,
   locale: UiLocale
 ): string {
-  if (view === "fg") {
-    return t("setting.picker.editAria.fg", locale)
+  if (view === "fg" || view === "fgPicker") {
+    return t(view === "fgPicker" ? "setting.picker.editAria.fgPicker" : "setting.picker.editAria.fg", locale)
   }
-  if (view === "bgColor") {
-    return t("setting.picker.editAria.bgColor", locale)
+  if (view === "bgColor" || view === "bgColorPicker") {
+    return t(
+      view === "bgColorPicker" ? "setting.picker.editAria.bgColorPicker" : "setting.picker.editAria.bgColor",
+      locale
+    )
   }
-  if (view === "font") {
-    return t("setting.picker.editAria.font", locale)
+  if (view === "font" || view === "fontPicker") {
+    return t(
+      view === "fontPicker" ? "setting.picker.editAria.fontPicker" : "setting.picker.editAria.font",
+      locale
+    )
   }
   return t("setting.picker.editAria.generic", locale)
 }

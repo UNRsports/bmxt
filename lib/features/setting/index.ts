@@ -7,14 +7,25 @@ export {
   DEFAULT_TERMINAL_FONT_FAMILY,
   DEFAULT_TERMINAL_FONT_SIZE,
   DEFAULT_UI_APPEARANCE,
+  DEFAULT_UI_APPEARANCE_LAYER,
   listAppearanceFlagTokens,
+  normalizeUiAppearance,
   parseAppearanceFlagToken,
+  resolvePickerAppearance,
   resolveTerminalAppearance,
   type AppearanceFlagToken,
   type ResolvedTerminalAppearance,
-  type UiAppearance
+  type UiAppearance,
+  type UiAppearanceLayer
 } from "./appearance"
-export { appearanceToCssDeclarations, UI_THEME_HTML_SELECTOR, useTerminalAppearance } from "./apply-appearance"
+export {
+  appearanceToCssDeclarations,
+  pickerAppearanceToCssDeclarations,
+  resolvedAppearanceToScopedDeclarations,
+  UI_THEME_HTML_SELECTOR,
+  UNIFIED_BG_ATTR,
+  useTerminalAppearance
+} from "./apply-appearance"
 export { importBackgroundImageFromFilePicker, type BgImageImportResult } from "./bg-image-import"
 export {
   parseAppearanceResetConfirmAnswer,

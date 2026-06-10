@@ -15,6 +15,25 @@ import {
   settingPickerUpdateDraft
 } from "./setting-list-picker-state.ts"
 import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
+import type { UiAppearance } from "./appearance.ts"
+
+function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearance {
+  return {
+    fg: patch?.fg ?? null,
+    bgColor: patch?.bgColor ?? null,
+    fontSize: patch?.fontSize ?? null,
+    fontFamily: patch?.fontFamily ?? null,
+    bgImageDataUrl: patch?.bgImageDataUrl ?? null,
+    editPicker: patch?.editPicker ?? false,
+    picker: {
+      fg: patch?.picker?.fg ?? null,
+      bgColor: patch?.picker?.bgColor ?? null,
+      fontSize: patch?.picker?.fontSize ?? null,
+      fontFamily: patch?.picker?.fontFamily ?? null,
+      bgImageDataUrl: patch?.picker?.bgImageDataUrl ?? null
+    }
+  }
+}
 
 const SETTINGS_JSON_NAME = "settings.json"
 
@@ -74,7 +93,10 @@ describe("setting list picker draft", () => {
   it("creates draft from committed settings", () => {
     const state = createSettingListPickerState({
       locale: "en",
-      appearance: { fg: "#ffffff", bgColor: null, fontSize: "14px", fontFamily: null, bgImageDataUrl: null }
+      appearance: testAppearance({
+        fg: "#ffffff",
+        fontSize: "14px"
+      })
     })
     assert.equal(state.draft.locale, "en")
     assert.equal(state.draft.appearance.fg, "#ffffff")
@@ -84,7 +106,7 @@ describe("setting list picker draft", () => {
   it("updates draft without touching view", () => {
     const base = createSettingListPickerState({
       locale: "ja",
-      appearance: { fg: null, bgColor: null, fontSize: null, fontFamily: null, bgImageDataUrl: null }
+      appearance: testAppearance(null)
     })
     const next = settingPickerUpdateDraft(
       { ...base, view: "language" },
@@ -98,7 +120,7 @@ describe("setting list picker draft", () => {
   it("applies draft and returns to main atomically", () => {
     const base = createSettingListPickerState({
       locale: "en",
-      appearance: { fg: null, bgColor: null, fontSize: null, fontFamily: null, bgImageDataUrl: null }
+      appearance: testAppearance(null)
     })
     const next = settingPickerApplyDraftToMain(
       { ...base, view: "language", editing: true, editDraft: "#ff0000" },

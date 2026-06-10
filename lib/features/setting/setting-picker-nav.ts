@@ -6,16 +6,28 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
   switch (rowId) {
     case "language":
       return "language"
+    case "edit-picker":
+      return "editPicker"
     case "fg":
       return "fg"
+    case "fg-picker":
+      return "fgPicker"
     case "bg-color":
       return "bgColor"
+    case "bg-color-picker":
+      return "bgColorPicker"
     case "size":
       return "fontSize"
+    case "size-picker":
+      return "pickerFontSize"
     case "font":
       return "font"
+    case "font-picker":
+      return "fontPicker"
     case "bg-image":
       return "bgImage"
+    case "bg-image-picker":
+      return "pickerBgImage"
     case "reset-default":
       return "resetConfirm"
     case "export":
@@ -29,11 +41,27 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
 }
 
 export function isSettingListSubView(view: SettingListPickerView): boolean {
-  return view === "language" || view === "fontSize" || view === "bgImage" || view === "resetConfirm"
+  return (
+    view === "language" ||
+    view === "editPicker" ||
+    view === "fontSize" ||
+    view === "pickerFontSize" ||
+    view === "bgImage" ||
+    view === "pickerBgImage" ||
+    view === "resetConfirm"
+  )
+}
+
+export function isSettingGlobalDetailView(view: SettingListPickerView): boolean {
+  return view === "fg" || view === "bgColor" || view === "font"
+}
+
+export function isSettingPickerDetailView(view: SettingListPickerView): boolean {
+  return view === "fgPicker" || view === "bgColorPicker" || view === "fontPicker"
 }
 
 export function isSettingDetailView(view: SettingListPickerView): boolean {
-  return view === "fg" || view === "bgColor" || view === "font"
+  return isSettingGlobalDetailView(view) || isSettingPickerDetailView(view)
 }
 
 export function isArrowRight(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {

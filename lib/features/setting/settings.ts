@@ -1,6 +1,7 @@
 import { UI_SETTINGS_KEY } from "../extension-storage/keys"
 import {
   DEFAULT_UI_APPEARANCE,
+  normalizeUiAppearance,
   type UiAppearance
 } from "./appearance"
 import { formatUiSettingsSummaryLines } from "./i18n/resolvers"
@@ -17,33 +18,19 @@ export type UiSettings = {
 
 const DEFAULT_SETTINGS: UiSettings = {
   locale: DEFAULT_UI_LOCALE,
-  appearance: { ...DEFAULT_UI_APPEARANCE }
-}
-
-function parseAppearance(raw: unknown): UiAppearance {
-  if (!raw || typeof raw !== "object") {
-    return { ...DEFAULT_UI_APPEARANCE }
-  }
-  const o = raw as Record<string, unknown>
-  return {
-    fg: typeof o.fg === "string" ? o.fg : null,
-    bgColor: typeof o.bgColor === "string" ? o.bgColor : null,
-    fontSize: typeof o.fontSize === "string" ? o.fontSize : null,
-    fontFamily: typeof o.fontFamily === "string" ? o.fontFamily : null,
-    bgImageDataUrl: typeof o.bgImageDataUrl === "string" ? o.bgImageDataUrl : null
-  }
+  appearance: { ...DEFAULT_UI_APPEARANCE, picker: { ...DEFAULT_UI_APPEARANCE.picker } }
 }
 
 export async function loadUiSettings(): Promise<UiSettings> {
   const r = await chrome.storage.local.get(UI_SETTINGS_KEY)
   const raw = r[UI_SETTINGS_KEY]
   if (!raw || typeof raw !== "object") {
-    return { ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_UI_APPEARANCE } }
+    return { ...DEFAULT_SETTINGS, appearance: normalizeUiAppearance(null) }
   }
   const o = raw as Record<string, unknown>
   return {
     locale: parseUiLocale(o.locale),
-    appearance: parseAppearance(o.appearance)
+    appearance: normalizeUiAppearance(o.appearance as Partial<UiAppearance>)
   }
 }
 
@@ -60,10 +47,7 @@ export async function saveUiLocale(locale: UiLocale): Promise<void> {
 
 export async function saveUiAppearancePatch(patch: Partial<UiAppearance>): Promise<void> {
   const current = await loadUiSettings()
-  const appearance: UiAppearance = {
-    ...current.appearance,
-    ...patch
-  }
+  const appearance = normalizeUiAppearance({ ...current.appearance, ...patch })
   await saveUiSettings({ ...current, appearance })
 }
 
@@ -71,7 +55,7 @@ export async function resetUiAppearance(): Promise<void> {
   const current = await loadUiSettings()
   await saveUiSettings({
     ...current,
-    appearance: { ...DEFAULT_UI_APPEARANCE }
+    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
   })
 }
 
@@ -86,7 +70,7 @@ export async function clearUiBackgroundImage(): Promise<void> {
 export async function replaceUiSettings(next: UiSettings): Promise<void> {
   await saveUiSettings({
     locale: next.locale,
-    appearance: { ...DEFAULT_UI_APPEARANCE, ...next.appearance }
+    appearance: normalizeUiAppearance(next.appearance)
   })
 }
 

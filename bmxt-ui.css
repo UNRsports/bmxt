@@ -8,6 +8,14 @@ html {
   --bmxt-bg-repeat: no-repeat;
   --bmxt-font-size: 12px;
   --bmxt-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --bmxt-picker-fg: var(--bmxt-fg);
+  --bmxt-picker-bg: var(--bmxt-bg);
+  --bmxt-picker-bg-image: var(--bmxt-bg-image);
+  --bmxt-picker-bg-size: var(--bmxt-bg-size);
+  --bmxt-picker-bg-position: var(--bmxt-bg-position);
+  --bmxt-picker-bg-repeat: var(--bmxt-bg-repeat);
+  --bmxt-picker-font-size: var(--bmxt-font-size);
+  --bmxt-picker-font-family: var(--bmxt-font-family);
   margin: 0;
   padding: 0;
   width: 100%;
@@ -189,7 +197,29 @@ body {
   user-select: none;
 }
 
-.bmxt-setting-picker-preview-body {
+.bmxt-setting-picker-preview-panes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bmxt-setting-picker-preview-panes--split {
+  flex-direction: row;
+}
+
+.bmxt-setting-picker-preview-pane {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.bmxt-setting-picker-preview-pane-head {
+  font-size: 10px;
+  color: #8b949e;
+  margin-bottom: 4px;
+  user-select: none;
+}
+
+.bmxt-setting-picker-preview-pane-body {
   box-sizing: border-box;
 }
 
@@ -865,6 +895,23 @@ body {
   overflow: hidden;
 }
 
+/* edit-picker off: one bg image spans terminal + picker columns */
+html[data-bmxt-unified-bg] .bmxt-terminal-split {
+  background-color: var(--bmxt-bg);
+  background-image: var(--bmxt-bg-image);
+  background-size: var(--bmxt-bg-size);
+  background-position: var(--bmxt-bg-position);
+  background-repeat: var(--bmxt-bg-repeat);
+}
+
+html[data-bmxt-unified-bg] .bmxt-split-terminal-pane,
+html[data-bmxt-unified-bg] .bmxt-picker-host--split,
+html[data-bmxt-unified-bg] .bmxt-tab-picker,
+html[data-bmxt-unified-bg] .bmxt-side-picker {
+  background-color: transparent;
+  background-image: none;
+}
+
 .bmxt-split-terminal-pane {
   flex: 1 1 0;
   min-width: 0;
@@ -888,7 +935,14 @@ body {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  background: #0d1117;
+  background-color: var(--bmxt-picker-bg);
+  background-image: var(--bmxt-picker-bg-image);
+  background-size: var(--bmxt-picker-bg-size);
+  background-position: var(--bmxt-picker-bg-position);
+  background-repeat: var(--bmxt-picker-bg-repeat);
+  color: var(--bmxt-picker-fg);
+  font-family: var(--bmxt-picker-font-family);
+  font-size: var(--bmxt-picker-font-size);
 }
 
 .bmxt-picker-host--split {
@@ -939,8 +993,14 @@ body {
   width: 100%;
   height: 100%;
   padding: 8px 10px 10px;
-  background: #0d1117;
-  color: #c9d1d9;
+  background-color: var(--bmxt-picker-bg);
+  background-image: var(--bmxt-picker-bg-image);
+  background-size: var(--bmxt-picker-bg-size);
+  background-position: var(--bmxt-picker-bg-position);
+  background-repeat: var(--bmxt-picker-bg-repeat);
+  color: var(--bmxt-picker-fg);
+  font-family: var(--bmxt-picker-font-family);
+  font-size: var(--bmxt-picker-font-size);
   outline: none;
 }
 

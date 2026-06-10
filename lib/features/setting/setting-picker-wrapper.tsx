@@ -1,17 +1,23 @@
 import { useCallback, useMemo, type MutableRefObject } from "react"
-import { resolveTerminalAppearance } from "./appearance"
+import {
+  resolvePickerAppearance,
+  resolveTerminalAppearance
+} from "./appearance"
 import { SettingPickerBody } from "./setting-picker-body"
+import {
+  appearanceLayerForEdit,
+  settingEditLayerForView,
+  type SettingEditField
+} from "./setting-picker-edit"
 import {
   buildSettingPickerRows,
   settingPickerHeadline,
   type SettingPickerRow
 } from "./setting-picker-rows"
-import {
-  resolveSettingPickerPreviewAppearance,
-  type SettingEditField
-} from "./setting-picker-edit"
+import { isSettingDetailView } from "./setting-picker-nav"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import { SettingPickerPreview } from "./setting-picker-preview"
+import { resolveSettingPickerPreviewAppearance } from "./setting-picker-edit"
 
 export type SettingPickerWrapperProps = {
   state: SettingListPickerState
@@ -51,15 +57,21 @@ export function SettingPickerWrapper({
   const headline = settingPickerHeadline(state.view, locale, state.editing)
 
   const resolveEditSeed = useCallback((): string => {
-    const resolved = resolveTerminalAppearance(appearance)
-    if (state.view === "fg") {
-      return appearance.fg ?? resolved.fg
+    if (!isSettingDetailView(state.view)) {
+      return ""
     }
-    if (state.view === "bgColor") {
-      return appearance.bgColor ?? resolved.bgColor
+    const layer = settingEditLayerForView(state.view)
+    const layerValues = appearanceLayerForEdit(appearance, layer)
+    const resolved =
+      layer === "picker" ? resolvePickerAppearance(appearance) : resolveTerminalAppearance(appearance)
+    if (state.view === "fg" || state.view === "fgPicker") {
+      return layerValues.fg ?? resolved.fg
     }
-    if (state.view === "font") {
-      return appearance.fontFamily ?? resolved.fontFamily
+    if (state.view === "bgColor" || state.view === "bgColorPicker") {
+      return layerValues.bgColor ?? resolved.bgColor
+    }
+    if (state.view === "font" || state.view === "fontPicker") {
+      return layerValues.fontFamily ?? resolved.fontFamily
     }
     return ""
   }, [appearance, state.view])
@@ -76,9 +88,7 @@ export function SettingPickerWrapper({
   )
 
   const preview = useMemo(
-    () => (
-      <SettingPickerPreview appearance={previewAppearance} locale={locale} />
-    ),
+    () => <SettingPickerPreview appearance={previewAppearance} locale={locale} />,
     [previewAppearance, locale]
   )
 

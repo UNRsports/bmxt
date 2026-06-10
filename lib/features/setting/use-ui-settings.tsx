@@ -29,7 +29,15 @@ const INITIAL: UiSettings = {
     bgColor: null,
     fontSize: null,
     fontFamily: null,
-    bgImageDataUrl: null
+    bgImageDataUrl: null,
+    editPicker: false,
+    picker: {
+      fg: null,
+      bgColor: null,
+      fontSize: null,
+      fontFamily: null,
+      bgImageDataUrl: null
+    }
   }
 }
 
