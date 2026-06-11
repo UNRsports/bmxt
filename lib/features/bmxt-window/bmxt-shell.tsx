@@ -20,8 +20,9 @@ import {
 import { openSearchPickerEntry } from "../search/open-search-picker-entry"
 import {
   openPickerSlots,
+  PickerRail,
   pickerEntriesFromSearchLines,
-  SessionPickerColumns,
+  usePickerRailPresence,
   type PickerEntry,
   type PickerSlotId,
   type SessionPickerState
@@ -279,6 +280,16 @@ export function BmxtShell({
     () => openPickerSlots(sessionPickers),
     [sessionPickers]
   )
+
+  const { railPickers, railExpanded, displaySessionPickers } = usePickerRailPresence(
+    openPickers,
+    sessionPickers
+  )
+  const pickersForColumnOrder = railPickers.length > 0 ? railPickers : openPickers
+  const displayTabPicker = displaySessionPickers.tabs
+  const displaySearchListPicker = displaySessionPickers.search
+  const displayDomListPicker = displaySessionPickers.dom
+  const displaySettingListPicker = displaySessionPickers.setting
 
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const searchPickerKeyboardActive = paneFocus === "search" && isFocusedPane
@@ -1030,13 +1041,13 @@ export function BmxtShell({
         ? detailBarToPickerSlot(detailBarId)
         : focusedPickerSlot
     const order = resolvePickerColumnOrder(
-      openPickers,
+      pickersForColumnOrder,
       highlightSlot,
       pickerColumnOrderRef.current
     )
     pickerColumnOrderRef.current = order
     return order
-  }, [detailBarId, openPickers, paneFocus])
+  }, [detailBarId, paneFocus, pickersForColumnOrder])
 
   useDetailBarKeyboard({
     enabled: visibleDetailBars.length > 0 || navArmed,
@@ -2668,7 +2679,6 @@ export function BmxtShell({
   const mirror = promptMirrorSegments(line, cursorPos, isComposing, compositionAnchor)
   const iSearchPreview = iSearchMatches[iSearchCycle]
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
-  const splitPickerLayout = sidePickerOpen
 
   const shellContent = (
     <>
@@ -2828,72 +2838,65 @@ export function BmxtShell({
 
   return (
     <div className="bmxt-shell-root">
-      {splitPickerLayout ? (
+      <div
+        className="bmxt-terminal-split"
+        data-bmxt-session-id={sessionId}
+        data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
         <div
-          className="bmxt-terminal-split"
-          data-bmxt-session-id={sessionId}
-          data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
-          <div
-            className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
-            <div ref={scrollRef} className={shellScrollClassName}>
-              {shellContent}
-            </div>
+          className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
+          <div ref={scrollRef} className={shellScrollClassName}>
+            {shellContent}
           </div>
-          <SessionPickerColumns
-            columnOrder={pickerColumnOrder}
-            pulseSlot={pickerPulseSlot}
-            sessionId={sessionId}
-            isFocusedPane={isFocusedPane}
-            paneFocus={paneFocus}
-            activatePaneFocus={activatePaneFocus}
-            onExitToDetailBar={exitPickerToDetailBar}
-            tabPicker={tabPicker}
-            searchListPicker={searchListPicker}
-            domListPicker={domListPicker}
-            settingListPicker={settingListPicker}
-            tabsPickerKeyboardActive={tabsPickerKeyboardActive}
-            searchPickerKeyboardActive={searchPickerKeyboardActive}
-            domPickerKeyboardActive={domPickerKeyboardActive}
-            settingPickerKeyboardActive={settingPickerKeyboardActive}
-            tabPickerInputRef={tabPickerInputRef}
-            searchPickerInputRef={searchPickerInputRef}
-            domPickerInputRef={domPickerInputRef}
-            settingPickerInputRef={settingPickerInputRef}
-            onSettingPickerStateChange={onSettingPickerStateChange}
-            onSettingPickerRowAction={onSettingPickerRowAction}
-            onSettingPickerApplyEdit={onSettingPickerApplyEdit}
-            onSettingPickerEditInvalid={onSettingPickerEditInvalid}
-            onAppendLog={appendLogLines}
-            onRefreshTabPickerRows={refreshTabPickerRows}
-            scheduleRefreshTabPickerRows={scheduleTabPickerRowsRefresh}
-            onOpenSearchEntry={(entry, matchIndex) =>
-              void onOpenSearchPickerEntry(entry, matchIndex)
+        </div>
+        <PickerRail
+          railPickers={railPickers}
+          railExpanded={railExpanded}
+          columnOrder={pickerColumnOrder}
+          pulseSlot={pickerPulseSlot}
+          sessionId={sessionId}
+          isFocusedPane={isFocusedPane}
+          paneFocus={paneFocus}
+          activatePaneFocus={activatePaneFocus}
+          onExitToDetailBar={exitPickerToDetailBar}
+          tabPicker={displayTabPicker}
+          searchListPicker={displaySearchListPicker}
+          domListPicker={displayDomListPicker}
+          settingListPicker={displaySettingListPicker}
+          tabsPickerKeyboardActive={tabsPickerKeyboardActive}
+          searchPickerKeyboardActive={searchPickerKeyboardActive}
+          domPickerKeyboardActive={domPickerKeyboardActive}
+          settingPickerKeyboardActive={settingPickerKeyboardActive}
+          tabPickerInputRef={tabPickerInputRef}
+          searchPickerInputRef={searchPickerInputRef}
+          domPickerInputRef={domPickerInputRef}
+          settingPickerInputRef={settingPickerInputRef}
+          onSettingPickerStateChange={onSettingPickerStateChange}
+          onSettingPickerRowAction={onSettingPickerRowAction}
+          onSettingPickerApplyEdit={onSettingPickerApplyEdit}
+          onSettingPickerEditInvalid={onSettingPickerEditInvalid}
+          onAppendLog={appendLogLines}
+          onRefreshTabPickerRows={refreshTabPickerRows}
+          scheduleRefreshTabPickerRows={scheduleTabPickerRowsRefresh}
+          onOpenSearchEntry={(entry, matchIndex) =>
+            void onOpenSearchPickerEntry(entry, matchIndex)
+          }
+          onDomApprove={() => {
+            if (domListPicker?.kind !== "prompt") {
+              return
             }
-            onDomApprove={() => {
-              if (domListPicker?.kind !== "prompt") {
-                return
-              }
-              const cl = domListPicker.commandLine
-              setDomListPicker(sessionId, {
-                kind: "lines",
-                lines: ["dom -list — retrying after permission grant…"],
-                commandLine: cl
-              })
-              void runDomListAndShow(cl, cl, false)
-            }}
-            onTabsPickerFocusTabId={onTabsPickerFocusTabId}
-            onTabPickerInteractiveChange={onTabPickerInteractiveChange}
-            tabsPageActiveMode={tabsPageActiveMode}
-          />
-        </div>
-      ) : (
-        <div
-          ref={scrollRef}
-          data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}
-          className={`${shellScrollClassName}${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
-          {shellContent}
-        </div>
-      )}
+            const cl = domListPicker.commandLine
+            setDomListPicker(sessionId, {
+              kind: "lines",
+              lines: ["dom -list — retrying after permission grant…"],
+              commandLine: cl
+            })
+            void runDomListAndShow(cl, cl, false)
+          }}
+          onTabsPickerFocusTabId={onTabsPickerFocusTabId}
+          onTabPickerInteractiveChange={onTabPickerInteractiveChange}
+          tabsPageActiveMode={tabsPageActiveMode}
+        />
+      </div>
     </div>
   )
 }

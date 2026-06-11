@@ -940,6 +940,7 @@ html[data-bmxt-unified-bg] .bmxt-side-picker {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  transition: flex 0.28s ease;
   background-color: var(--bmxt-bg);
   background-image: var(--bmxt-bg-image);
   background-size: var(--bmxt-bg-size);
@@ -967,6 +968,25 @@ html[data-bmxt-unified-bg] .bmxt-side-picker {
 
 .bmxt-picker-host--split {
   border-left: 1px solid #30363d;
+}
+
+.bmxt-picker-rail {
+  display: flex;
+  flex-direction: row;
+  flex: 0 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: flex 0.28s ease;
+}
+
+.bmxt-picker-rail--expanded {
+  flex: var(--bmxt-picker-rail-flex, 1) 1 0;
+}
+
+html[data-bmxt-unified-bg] .bmxt-picker-rail {
+  background-color: transparent;
+  background-image: none;
 }
 
 .bmxt-picker-column-slot {

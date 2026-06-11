@@ -83,6 +83,8 @@ export { UrlListPickerWrapper, type UrlListPickerWrapperProps } from "./wrappers
 export { DomPickerWrapper, type DomPickerWrapperProps } from "./wrappers/dom-picker-wrapper"
 export { TabsPickerWrapper, type TabsPickerWrapperProps } from "./wrappers/tabs-picker-wrapper"
 export { SessionPickerColumns, type SessionPickerColumnsProps } from "./wrappers/session-picker-columns"
+export { PickerRail } from "./wrappers/picker-rail"
+export { usePickerRailPresence, PICKER_RAIL_MS } from "./wrappers/use-picker-rail-presence"
 export {
   EMPTY_SESSION_PICKERS,
   anyLeafHasPickerOpen,
