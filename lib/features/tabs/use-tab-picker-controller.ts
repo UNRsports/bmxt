@@ -46,10 +46,11 @@ type Props = {
   scheduleRefreshRows?: () => void
   /** EN: Esc at top level — return focus to BMXt prompt; picker stays open. */
   onReturnToPrompt: () => void
-  /** EN: Pane has keyboard focus (Ctrl+←→ or click); when false, display-only. */
+  /** EN: ← at top level — return to detail-bar selection for this picker. */
+  onExitToDetailBar?: () => void
+  /** EN: Pane has keyboard focus (detail bar → picker, or click); when false, display-only. */
   isHostPaneFocused: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
-  /** EN: Session leaf id for Ctrl+←→ pane-strip navigation. */
   sessionId: string
   /** EN: Fires when hi moves to a tab row (or off tab rows). Used by dom -list follow. */
   onFocusTabIdChange?: (tabId: number | null) => void
@@ -69,6 +70,7 @@ export function useTabPickerController({
   onRefreshRows,
   scheduleRefreshRows,
   onReturnToPrompt,
+  onExitToDetailBar,
   isHostPaneFocused,
   pickerInputRef,
   sessionId,
@@ -496,7 +498,8 @@ export function useTabPickerController({
     backFromGroupRename,
     collapseAtRow,
     expandAtRow,
-    altKeyHeldRef
+    altKeyHeldRef,
+    onExitToDetailBar
   })
 
   const headLine = useMemo(

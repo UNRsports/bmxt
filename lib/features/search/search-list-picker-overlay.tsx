@@ -28,6 +28,7 @@ import type { SearchListPickerState } from "./search-list-picker-input"
 type Props = {
   state: SearchListPickerState
   onReturnToPrompt: () => void
+  onExitToDetailBar?: () => void
   onOpenEntry: (entry: PickerEntry, matchIndex: number) => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
@@ -48,6 +49,7 @@ function isHorizontalNavKey(e: KeyboardEvent): boolean {
 
 export function SearchListPickerOverlay({
   onReturnToPrompt,
+  onExitToDetailBar,
   state,
   onOpenEntry,
   keyboardActive = false,
@@ -215,18 +217,23 @@ export function SearchListPickerOverlay({
         }
 
         if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
-          if (pickerViewRef.current !== "detail") {
-            return false
+          if (pickerViewRef.current === "detail") {
+            exitDetailView()
+            pickerStopEvent(e)
+            return true
           }
-          exitDetailView()
-          pickerStopEvent(e)
-          return true
+          if (onExitToDetailBar) {
+            pickerStopEvent(e)
+            onExitToDetailBar()
+            return true
+          }
+          return false
         }
 
         return false
       }
     }
-  }, [enterDetailForHi, entries, exitDetailView, loading])
+  }, [enterDetailForHi, entries, exitDetailView, loading, onExitToDetailBar])
 
   return (
     <SearchListPickerBody

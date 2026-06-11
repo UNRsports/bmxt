@@ -3,11 +3,11 @@
 
 /** search -list column (`SearchListPickerOverlay`). */
 export const SEARCH_LIST_PICKER_HEADLINE =
-  "search -list · ↑↓ · j/k · → detail · n/N hit (page) · Enter focus tab · Ctrl+←→ · Esc → prompt"
+  "search -list · ↑↓ · j/k · → detail · n/N hit (page) · Enter focus tab · ← detail bar · Esc → prompt"
 
 /** EN: Detail drill-down inside the search picker (`→` from a result row). */
 export const SEARCH_LIST_PICKER_DETAIL_HEADLINE =
-  "search -list · detail · ↑↓ · j/k · ← back · Enter jump · Esc → back · Ctrl+←→ · Esc×2 → prompt"
+  "search -list · detail · ↑↓ · j/k · ← back · Enter jump · Esc → back · Esc×2 → prompt"
 
 /** EN: While search is running inside the picker column. */
 export const SEARCH_LIST_PICKER_LOADING_HEADLINE =
@@ -15,4 +15,4 @@ export const SEARCH_LIST_PICKER_LOADING_HEADLINE =
 
 /** dom -list lines column (`DomPickerWrapper` + `PlainTextPickerBody`). */
 export const DOM_LIST_PICKER_HEADLINE =
-  "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · Ctrl+←→ · Esc → prompt"
+  "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"

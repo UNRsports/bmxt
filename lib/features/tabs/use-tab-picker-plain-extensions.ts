@@ -109,7 +109,8 @@ export function useTabPickerPlainExtensions({
   backFromGroupRename,
   collapseAtRow,
   expandAtRow,
-  altKeyHeldRef
+  altKeyHeldRef,
+  onExitToDetailBar
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -169,6 +170,7 @@ export function useTabPickerPlainExtensions({
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
   altKeyHeldRef: MutableRefObject<boolean>
+  onExitToDetailBar?: () => void
 }): PlainPickerKeyboardExtensions {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
@@ -209,6 +211,11 @@ export function useTabPickerPlainExtensions({
       }
       const focusRowIdx = isLeft ? collapseAtRow(row) : expandAtRow(row)
       if (focusRowIdx === null) {
+        if (isLeft && onExitToDetailBar) {
+          pickerStopEvent(e)
+          onExitToDetailBar()
+          return true
+        }
         return false
       }
       pickerStopEvent(e)
@@ -230,6 +237,7 @@ export function useTabPickerPlainExtensions({
       groupNewPhase,
       hi,
       newTabUrlWindowId,
+      onExitToDetailBar,
       rows,
       searchMode,
       setHi,

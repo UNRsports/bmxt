@@ -35,7 +35,14 @@ export type StoredProcessUiStateV1 = {
   byLeaf: Record<string, StoredLeafProcessUiV1>
 }
 
-const PANE_FOCUS_VALUES = new Set<PaneFocusTarget>(["terminal", "tabs", "search", "dom"])
+const PANE_FOCUS_VALUES = new Set<PaneFocusTarget>([
+  "terminal",
+  "detailBar",
+  "tabs",
+  "search",
+  "dom",
+  "setting"
+])
 
 function isPaneFocusTarget(v: unknown): v is PaneFocusTarget {
   return typeof v === "string" && PANE_FOCUS_VALUES.has(v as PaneFocusTarget)

@@ -26,14 +26,16 @@ import {
   type PickerSlotId,
   type SessionPickerState
 } from "../side-picker"
+import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import {
-  navigatePaneStripHoriz,
-  paneStripHorizAtEdge,
-  registerPaneStrip,
-  tryNavigatePaneStrip,
-  type PaneFocusTarget,
-  type PaneStripActions
-} from "../side-picker/panel/pane-focus-nav"
+  computePickerColumnOrder,
+  detailBarToPickerSlot,
+  isPickerDetailBar,
+  listVisibleDetailBars,
+  pickerSlotToDetailBar,
+  type DetailBarId
+} from "./detail-bar-focus"
+import { useDetailBarKeyboard } from "./use-detail-bar-keyboard"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
   isSearchListContinuationPrompt,
@@ -92,6 +94,7 @@ import {
   type TranslationBlock,
   type TranslationPairId
 } from "../translate"
+import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
 import { buildHelpLines } from "../bmxt-core/registry/help"
 import {
   bgImportErrorLine,
@@ -249,11 +252,9 @@ export function BmxtShell({
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
   const openPickersRef = useRef<readonly PickerSlotId[]>([])
-  const paneStripActionsRef = useRef<PaneStripActions>({
-    setFocus: () => {},
-    focusTerminal: () => {},
-    focusPicker: () => {}
-  })
+  const [detailBarId, setDetailBarId] = useState<DetailBarId | null>(null)
+  const [pickerPulseSlot, setPickerPulseSlot] = useState<PickerSlotId | null>(null)
+  const pickerPulseTimerRef = useRef<number | null>(null)
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -276,23 +277,6 @@ export function BmxtShell({
   isFocusedPaneRef.current = isFocusedPane
   openPickersRef.current = openPickers
 
-  useEffect(() => {
-    if (paneFocus === "tabs" && tabPicker === null) {
-      onPaneFocusChange("terminal")
-    } else if (paneFocus === "search" && searchListPicker === null) {
-      onPaneFocusChange("terminal")
-    } else if (paneFocus === "dom" && domListPicker === null) {
-      onPaneFocusChange("terminal")
-    } else if (paneFocus === "setting" && settingListPicker === null) {
-      onPaneFocusChange("terminal")
-    }
-  }, [paneFocus, tabPicker, searchListPicker, domListPicker, settingListPicker, onPaneFocusChange])
-
-  useEffect(() => {
-    if (!sidePickerOpen) {
-      onPaneFocusChange("terminal")
-    }
-  }, [onPaneFocusChange, sidePickerOpen])
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
     tabPickerRef.current = tabPicker
@@ -461,6 +445,52 @@ export function BmxtShell({
   useEffect(() => {
     tabsPageActiveModeRef.current = tabsPageActiveMode
   }, [tabsPageActiveMode])
+
+  useEffect(() => {
+    if (paneFocus === "tabs" && tabPicker === null) {
+      onPaneFocusChange("terminal")
+      setDetailBarId(null)
+    } else if (paneFocus === "search" && searchListPicker === null) {
+      onPaneFocusChange("terminal")
+      setDetailBarId(null)
+    } else if (paneFocus === "dom" && domListPicker === null) {
+      onPaneFocusChange("terminal")
+      setDetailBarId(null)
+    } else if (paneFocus === "setting" && settingListPicker === null) {
+      onPaneFocusChange("terminal")
+      setDetailBarId(null)
+    } else if (paneFocus === "detailBar" && detailBarId !== null) {
+      if (detailBarId === "tabs" && tabPicker === null) {
+        onPaneFocusChange("terminal")
+        setDetailBarId(null)
+      } else if (detailBarId === "search" && searchListPicker === null) {
+        onPaneFocusChange("terminal")
+        setDetailBarId(null)
+      } else if (detailBarId === "dom" && domListPicker === null) {
+        onPaneFocusChange("terminal")
+        setDetailBarId(null)
+      } else if (detailBarId === "setting" && settingListPicker === null) {
+        onPaneFocusChange("terminal")
+        setDetailBarId(null)
+      } else if (detailBarId === "nav" && !navArmed) {
+        onPaneFocusChange("terminal")
+        setDetailBarId(null)
+      } else if (detailBarId === "translate" && !translateEnabled) {
+        onPaneFocusChange("terminal")
+        setDetailBarId(null)
+      }
+    }
+  }, [
+    detailBarId,
+    domListPicker,
+    navArmed,
+    onPaneFocusChange,
+    paneFocus,
+    searchListPicker,
+    settingListPicker,
+    tabPicker,
+    translateEnabled
+  ])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
@@ -792,11 +822,25 @@ export function BmxtShell({
     }
   }, [])
 
+  const pulsePickerColumn = useCallback((slot: PickerSlotId) => {
+    setPickerPulseSlot(slot)
+    if (pickerPulseTimerRef.current !== null) {
+      window.clearTimeout(pickerPulseTimerRef.current)
+    }
+    pickerPulseTimerRef.current = window.setTimeout(() => {
+      setPickerPulseSlot(null)
+      pickerPulseTimerRef.current = null
+    }, 360)
+  }, [])
+
   const activatePaneFocus = useCallback(
     (target: PaneFocusTarget) => {
       onPaneFocusChange(target)
       if (target === "terminal") {
+        setDetailBarId(null)
         focusPrompt()
+      } else if (target === "detailBar") {
+        imeRef.current?.blur()
       } else {
         pickerInputRefForSlot(target).current?.focus()
       }
@@ -804,113 +848,119 @@ export function BmxtShell({
     [focusPrompt, onPaneFocusChange, pickerInputRefForSlot]
   )
 
-  /** EN: When a picker column newly appears, move pane focus + blue border to match keyboard target. */
-  const prevSidePickersOpenRef = useRef({
-    tabs: false,
-    search: false,
-    dom: false,
-    setting: false
-  })
-  useLayoutEffect(() => {
-    const nowTabs = tabPicker !== null
-    const nowSearch = searchListPicker !== null
-    const nowDom = domListPicker !== null
-    const nowSetting = settingListPicker !== null
-    const prev = prevSidePickersOpenRef.current
-    prevSidePickersOpenRef.current = {
-      tabs: nowTabs,
-      search: nowSearch,
-      dom: nowDom,
-      setting: nowSetting
-    }
+  const activateDetailBar = useCallback(
+    (id: DetailBarId) => {
+      setDetailBarId(id)
+      onPaneFocusChange("detailBar")
+      imeRef.current?.blur()
+      if (isPickerDetailBar(id)) {
+        pulsePickerColumn(detailBarToPickerSlot(id))
+      }
+    },
+    [onPaneFocusChange, pulsePickerColumn]
+  )
 
-    if (!isFocusedPane) {
+  const enterPickerFromDetailBar = useCallback(() => {
+    if (detailBarId === null || !isPickerDetailBar(detailBarId)) {
       return
     }
-
-    let opened: PickerSlotId | null = null
-    if (!prev.setting && nowSetting) {
-      opened = "setting"
-    } else if (!prev.dom && nowDom) {
-      opened = "dom"
-    } else if (!prev.search && nowSearch) {
-      opened = "search"
-    } else if (!prev.tabs && nowTabs) {
-      opened = "tabs"
-    }
-    if (opened === null) {
-      return
-    }
-
-    onPaneFocusChange(opened)
+    const slot = detailBarToPickerSlot(detailBarId)
+    onPaneFocusChange(slot)
     requestAnimationFrame(() => {
-      pickerInputRefForSlot(opened).current?.focus()
+      pickerInputRefForSlot(slot).current?.focus()
     })
-  }, [
-    tabPicker,
-    searchListPicker,
-    domListPicker,
-    settingListPicker,
+  }, [detailBarId, onPaneFocusChange, pickerInputRefForSlot])
+
+  const exitPickerToDetailBar = useCallback(
+    (slot: PickerSlotId) => {
+      activateDetailBar(pickerSlotToDetailBar(slot))
+    },
+    [activateDetailBar]
+  )
+
+  const exitDetailBarToTerminal = useCallback(() => {
+    activatePaneFocus("terminal")
+  }, [activatePaneFocus])
+
+  const cycleTranslatePairFromDetailBar = useCallback(
+    (direction: 1 | -1) => {
+      const index = TRANSLATION_PAIR_IDS.indexOf(translatePairIdRef.current)
+      const next =
+        TRANSLATION_PAIR_IDS[
+          (index + direction + TRANSLATION_PAIR_IDS.length) % TRANSLATION_PAIR_IDS.length
+        ]!
+      void (async () => {
+        await saveTranslatePair(next)
+        setTranslatePairId(next)
+        resetNavTranslateSession()
+      })()
+    },
+    [resetNavTranslateSession]
+  )
+
+  const isDetailBarVisible = useCallback(
+    (id: DetailBarId): boolean => {
+      if (id === "nav") {
+        return navArmed
+      }
+      if (id === "translate") {
+        return translateEnabled
+      }
+      if (id === "tabs") {
+        return tabPicker !== null
+      }
+      if (id === "search") {
+        return searchListPicker !== null
+      }
+      if (id === "dom") {
+        return domListPicker !== null
+      }
+      return settingListPicker !== null
+    },
+    [
+      domListPicker,
+      navArmed,
+      searchListPicker,
+      settingListPicker,
+      tabPicker,
+      translateEnabled
+    ]
+  )
+
+  const visibleDetailBars = useMemo(
+    () => listVisibleDetailBars(modeToolbarOrder, isDetailBarVisible),
+    [isDetailBarVisible, modeToolbarOrder]
+  )
+
+  const pickerColumnOrder = useMemo(() => {
+    const focusedPickerSlot =
+      paneFocus !== "terminal" && paneFocus !== "detailBar" ? paneFocus : null
+    const highlightSlot =
+      paneFocus === "detailBar" && detailBarId !== null && isPickerDetailBar(detailBarId)
+        ? detailBarToPickerSlot(detailBarId)
+        : focusedPickerSlot
+    return computePickerColumnOrder(openPickers, highlightSlot)
+  }, [detailBarId, openPickers, paneFocus])
+
+  useDetailBarKeyboard({
+    enabled: visibleDetailBars.length > 0,
     isFocusedPane,
-    onPaneFocusChange,
-    pickerInputRefForSlot
-  ])
-
-  useEffect(() => {
-    paneStripActionsRef.current = {
-      setFocus: activatePaneFocus,
-      focusTerminal: focusPrompt,
-      focusPicker: (slot) => pickerInputRefForSlot(slot).current?.focus()
+    paneFocus,
+    visibleDetailBars,
+    detailBarId,
+    navArmed,
+    blocked: navPageTyping || searchListBusy || mode === "isearch" || subCmdPicker !== null,
+    actions: {
+      activateDetailBar,
+      enterPickerFromDetailBar,
+      exitDetailBarToTerminal,
+      toggleNavActive,
+      cycleTranslatePair: cycleTranslatePairFromDetailBar
     }
-  }, [activatePaneFocus, focusPrompt, pickerInputRefForSlot])
+  })
 
-  useEffect(() => {
-    return registerPaneStrip(
-      sessionId,
-      () => ({
-        open: openPickersRef.current,
-        focus: paneFocusRef.current,
-        isFocusedLeaf: isFocusedPaneRef.current
-      }),
-      paneStripActionsRef.current
-    )
-  }, [sessionId])
-
-  useLayoutEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.isComposing) {
-        return
-      }
-      if (!e.ctrlKey || e.metaKey || e.altKey) {
-        return
-      }
-      const horiz =
-        e.key === "ArrowLeft" || e.code === "ArrowLeft"
-          ? "left"
-          : e.key === "ArrowRight" || e.code === "ArrowRight"
-            ? "right"
-            : null
-      if (!horiz) {
-        return
-      }
-      if (!isFocusedPaneRef.current || openPickersRef.current.length === 0) {
-        return
-      }
-      const open = openPickersRef.current
-      const focus = paneFocusRef.current
-      if (paneStripHorizAtEdge(open, focus, horiz)) {
-        return
-      }
-      if (navigatePaneStripHoriz(open, focus, horiz, paneStripActionsRef.current)) {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-      }
-    }
-    window.addEventListener("keydown", onKey, true)
-    return () => window.removeEventListener("keydown", onKey, true)
-  }, [])
-
-  const terminalPaneActive = isFocusedPane && paneFocus === "terminal"
+  const terminalPaneActive =
+    isFocusedPane && (paneFocus === "terminal" || paneFocus === "detailBar")
 
   useLayoutEffect(() => {
     if (!terminalPaneActive) {
@@ -975,6 +1025,7 @@ export function BmxtShell({
             message: linesOut,
             commandLine: domListLine
           })
+          setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
           return
         }
         if (announce) {
@@ -989,6 +1040,7 @@ export function BmxtShell({
           jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
           headerLineCount: domCapture?.headerLineCount ?? linesOut.length
         })
+        setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
       } catch (e) {
         await appendLogLines([
           `> ${displayLine}`,
@@ -1077,6 +1129,7 @@ export function BmxtShell({
         entries: [],
         pattern: searchPattern
       })
+      setModeToolbarOrder((prev) => activateModeToolbar(prev, "search"))
 
       try {
         await ensureBmxtCore()
@@ -1407,6 +1460,7 @@ export function BmxtShell({
       void (async () => {
         await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.picker.hint")])
         setSettingListPicker(sessionId, createSettingListPickerState(uiSettings))
+        setModeToolbarOrder((prev) => activateModeToolbar(prev, "setting"))
       })()
       focusPrompt()
       return
@@ -1422,6 +1476,7 @@ export function BmxtShell({
         const logLines = [`> ${trimmed}`]
         if (settingListPickerRef.current !== null) {
           setSettingListPicker(sessionId, null)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "setting"))
           activatePaneFocus("terminal")
           logLines.push(uiCopy.t("setting.picker.closed"))
         } else {
@@ -1564,6 +1619,7 @@ export function BmxtShell({
         }
         if (searchListPickerRef.current !== null) {
           setSearchListPicker(sessionId, null)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "search"))
           activatePaneFocus("terminal")
           logLines.push(uiCopy.t("search.picker.closed"))
         } else if (wasBusy) {
@@ -1702,6 +1758,7 @@ export function BmxtShell({
         domListDismissRef.current = true
         if (domListPickerRef.current !== null) {
           setDomListPicker(sessionId, null)
+          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "dom"))
           activatePaneFocus("terminal")
           logLines.push(uiCopy.t("dom.picker.closed"))
         } else {
@@ -2601,6 +2658,8 @@ export function BmxtShell({
         ) : null}
         <ModeStatusBarStack
           order={modeToolbarOrder}
+          focusedDetailBarId={detailBarId}
+          detailBarFocusActive={paneFocus === "detailBar"}
           nav={{
             armed: navArmed,
             active: navActive,
@@ -2623,6 +2682,18 @@ export function BmxtShell({
             pickerOpen: tabPicker !== null,
             pageActiveMode: tabsPageActiveMode
           }}
+          search={{
+            pickerOpen: searchListPicker !== null,
+            pattern: searchListPicker?.pattern,
+            phase: searchListPicker?.phase
+          }}
+          dom={{
+            pickerOpen: domListPicker !== null,
+            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines"
+          }}
+          setting={{
+            pickerOpen: settingListPicker !== null
+          }}
         />
         <div className="bmxt-scroll-anchor" aria-hidden />
     </>
@@ -2642,10 +2713,13 @@ export function BmxtShell({
             </div>
           </div>
           <SessionPickerColumns
+            columnOrder={pickerColumnOrder}
+            pulseSlot={pickerPulseSlot}
             sessionId={sessionId}
             isFocusedPane={isFocusedPane}
             paneFocus={paneFocus}
             activatePaneFocus={activatePaneFocus}
+            onExitToDetailBar={exitPickerToDetailBar}
             tabPicker={tabPicker}
             searchListPicker={searchListPicker}
             domListPicker={domListPicker}

@@ -1,5 +1,11 @@
 /** EN: Status toolbar slots shown under the prompt (activation order). */
-export type ModeToolbarId = "nav" | "translate" | "tabs"
+export type ModeToolbarId =
+  | "nav"
+  | "translate"
+  | "tabs"
+  | "search"
+  | "dom"
+  | "setting"
 
 export function activateModeToolbar(
   order: readonly ModeToolbarId[],

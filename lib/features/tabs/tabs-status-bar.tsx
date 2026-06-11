@@ -23,6 +23,10 @@ export function TabsStatusBar({ pageActiveMode }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">page-active {modeToken}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
+        {locale === "ja"
+          ? "Alt+↑↓ でバー選択 · → でピッカー · ← でプロンプト"
+          : "Alt+↑↓ select bar · → enter picker · ← prompt"}
+        {" · "}
         {tabsStatusHint(locale, pageActiveMode)}
       </span>
     </div>

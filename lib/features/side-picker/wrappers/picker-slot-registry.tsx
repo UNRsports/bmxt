@@ -50,6 +50,7 @@ export type PickerColumnHostContext = {
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onTabPickerInteractiveChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   tabsPageActiveMode?: TabsPageActiveMode
+  onExitToDetailBar: (slot: PickerSlotId) => void
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -73,6 +74,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           onRefreshRows={ctx.onRefreshTabPickerRows}
           scheduleRefreshRows={ctx.scheduleRefreshTabPickerRows}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("tabs")}
           isHostPaneFocused={ctx.tabsPickerKeyboardActive}
           pickerInputRef={ctx.tabPickerInputRef}
           sessionId={ctx.sessionId}
@@ -89,6 +91,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         <SearchListPickerOverlay
           state={ctx.searchListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("search")}
           onOpenEntry={(entry, matchIndex) => ctx.onOpenSearchEntry(entry, matchIndex)}
           keyboardActive={ctx.searchPickerKeyboardActive}
           pickerInputRef={ctx.searchPickerInputRef}
@@ -105,6 +108,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         <DomPickerWrapper
           state={ctx.domListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("dom")}
           keyboardActive={ctx.domPickerKeyboardActive}
           pickerInputRef={ctx.domPickerInputRef}
           sessionId={ctx.sessionId}
@@ -125,6 +129,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           onApplyEdit={ctx.onSettingPickerApplyEdit}
           onEditInvalid={ctx.onSettingPickerEditInvalid}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("setting")}
           keyboardActive={ctx.settingPickerKeyboardActive}
           pickerInputRef={ctx.settingPickerInputRef}
           sessionId={ctx.sessionId}

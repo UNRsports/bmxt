@@ -26,6 +26,7 @@ export type SettingPickerWrapperProps = {
   onApplyEdit: (field: SettingEditField, value: string) => void | Promise<void>
   onEditInvalid: () => void | Promise<void>
   onReturnToPrompt: () => void
+  onExitToDetailBar?: () => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
@@ -38,6 +39,7 @@ export function SettingPickerWrapper({
   onApplyEdit,
   onEditInvalid,
   onReturnToPrompt,
+  onExitToDetailBar,
   keyboardActive = false,
   pickerInputRef,
   sessionId
@@ -82,9 +84,11 @@ export function SettingPickerWrapper({
       onApplyListChoice: onRowAction,
       onApplyEdit,
       onEditInvalid,
+      onReturnToPrompt,
+      onExitToDetailBar,
       resolveEditSeed
     }),
-    [onApplyEdit, onEditInvalid, onRowAction, resolveEditSeed]
+    [onApplyEdit, onEditInvalid, onExitToDetailBar, onReturnToPrompt, onRowAction, resolveEditSeed]
   )
 
   const preview = useMemo(

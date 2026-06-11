@@ -25,6 +25,7 @@ export type SettingPickerKeyboardCallbacks = {
   onApplyEdit: (field: SettingEditField, value: string) => void | Promise<void>
   onEditInvalid: () => void
   onReturnToPrompt?: () => void
+  onExitToDetailBar?: () => void
   resolveEditSeed: () => string
 }
 
@@ -144,8 +145,10 @@ export function useSettingPickerKeyboard({
     }
     if (state.view !== "main") {
       goMain()
+      return
     }
-  }, [cancelEditing, goMain, state.editing, state.view])
+    callbacks.onExitToDetailBar?.()
+  }, [callbacks, cancelEditing, goMain, state.editing, state.view])
 
   const commitEdit = useCallback(async (): Promise<boolean> => {
     if (!state.editing) {
@@ -227,7 +230,6 @@ export function useSettingPickerKeyboard({
       }
       if (
         runPickerWindowCaptureChain(ev, sessionId ?? "", {
-          paneStrip: Boolean(sessionId),
           verticalNav: runVerticalNav
         })
       ) {

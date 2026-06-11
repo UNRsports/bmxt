@@ -13,7 +13,6 @@ import {
 } from "../side-picker"
 import { BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
-import { paneStripAtHorizontalEdge } from "../side-picker/panel/pane-focus-nav"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { SplitNode } from "./split-layout/types"
 import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
@@ -88,7 +87,8 @@ function SplitLeafView({
   const hasColumnPickers =
     sessionPickers.tabs !== null ||
     sessionPickers.search !== null ||
-    sessionPickers.dom !== null
+    sessionPickers.dom !== null ||
+    sessionPickers.setting !== null
   const leafHasKeyboardFocus = focusedLeafId === node.id
   return (
     <div
@@ -331,10 +331,6 @@ function BmxtTerminalInner() {
       const fromId =
         (rootRef.current && leafIdFromKeyEventTarget(rootRef.current, e.target)) ??
         state.layout.focusedLeafId
-      const horiz = dir === "left" || dir === "right" ? dir : null
-      if (horiz && !paneStripAtHorizontalEdge(fromId, horiz)) {
-        return
-      }
       if (countLeaves(state.layout.root) <= 1) {
         return
       }

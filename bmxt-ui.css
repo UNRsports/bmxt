@@ -450,6 +450,24 @@ body {
   color: #f0883e;
 }
 
+.bmxt-mode-status-seg--label-search {
+  color: #79c0ff;
+}
+
+.bmxt-mode-status-seg--label-dom {
+  color: #56d364;
+}
+
+.bmxt-mode-status-seg--label-setting {
+  color: #e3b341;
+}
+
+.bmxt-mode-status-row--focused .bmxt-mode-status {
+  outline: 2px solid #58a6ff;
+  outline-offset: -2px;
+  background: #1c2128;
+}
+
 .bmxt-mode-status-seg--state {
   color: #8b949e;
 }
@@ -947,6 +965,27 @@ html[data-bmxt-unified-bg] .bmxt-side-picker {
 
 .bmxt-picker-host--split {
   border-left: 1px solid #30363d;
+}
+
+.bmxt-picker-column-slot {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  transition: transform 0.28s ease, filter 0.28s ease;
+}
+
+.bmxt-picker-column-slot--pulse .bmxt-picker-host--split {
+  animation: bmxt-picker-column-pulse 0.36s ease-out;
+}
+
+@keyframes bmxt-picker-column-pulse {
+  from {
+    filter: brightness(1.35);
+  }
+  to {
+    filter: brightness(1);
+  }
 }
 
 .bmxt-split-pane--focused {

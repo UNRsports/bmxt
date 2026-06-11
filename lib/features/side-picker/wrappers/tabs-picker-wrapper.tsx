@@ -17,6 +17,7 @@ export type TabsPickerWrapperProps = {
   onRefreshRows?: () => Promise<void>
   scheduleRefreshRows?: () => void
   onReturnToPrompt: () => void
+  onExitToDetailBar?: () => void
   isHostPaneFocused: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string

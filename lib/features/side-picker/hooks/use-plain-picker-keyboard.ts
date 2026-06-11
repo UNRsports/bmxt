@@ -271,7 +271,7 @@ export function usePlainPickerKeyboard({
       }
       if (
         runPickerWindowCaptureChain(ev, sessionId ?? "", {
-          paneStrip: Boolean(sessionId),
+          exitToDetailBar: extensions?.exitToDetailBar,
           verticalNav: runPickerVerticalNav,
           searchJump: searchJumpOptions,
           searchEnter: searchEnterOptions,
