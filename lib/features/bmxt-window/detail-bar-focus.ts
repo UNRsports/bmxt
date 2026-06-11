@@ -20,18 +20,50 @@ export function pickerSlotToDetailBar(slot: PickerSlotId): PickerDetailBarId {
   return slot
 }
 
+function buildPickerColumnBaseOrder(
+  open: readonly PickerSlotId[],
+  persistedOrder: readonly PickerSlotId[]
+): PickerSlotId[] {
+  const openSet = new Set(open)
+  const base: PickerSlotId[] = []
+  for (const slot of persistedOrder) {
+    if (openSet.has(slot)) {
+      base.push(slot)
+    }
+  }
+  for (const slot of open) {
+    if (!base.includes(slot)) {
+      base.push(slot)
+    }
+  }
+  return base
+}
+
+/**
+ * EN: Resolve picker column order. `highlightSlot` moves left; when null, keep
+ * `persistedOrder` (non-picker detail bars do not reset column positions).
+ */
+export function resolvePickerColumnOrder(
+  open: readonly PickerSlotId[],
+  highlightSlot: PickerSlotId | null,
+  persistedOrder: readonly PickerSlotId[]
+): PickerSlotId[] {
+  const base = buildPickerColumnBaseOrder(open, persistedOrder)
+  if (base.length === 0) {
+    return []
+  }
+  if (highlightSlot === null || !open.includes(highlightSlot)) {
+    return base
+  }
+  return [highlightSlot, ...base.filter((slot) => slot !== highlightSlot)]
+}
+
 /** EN: Leftmost-first column order; `focusedSlot` moves to index 0 when set. */
 export function computePickerColumnOrder(
   open: readonly PickerSlotId[],
   focusedSlot: PickerSlotId | null
 ): PickerSlotId[] {
-  if (open.length === 0) {
-    return []
-  }
-  if (focusedSlot === null || !open.includes(focusedSlot)) {
-    return [...open]
-  }
-  return [focusedSlot, ...open.filter((slot) => slot !== focusedSlot)]
+  return resolvePickerColumnOrder(open, focusedSlot, open)
 }
 
 export function listVisibleDetailBars(

@@ -28,11 +28,11 @@ import {
 } from "../side-picker"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import {
-  computePickerColumnOrder,
   detailBarToPickerSlot,
   isPickerDetailBar,
   listVisibleDetailBars,
   pickerSlotToDetailBar,
+  resolvePickerColumnOrder,
   type DetailBarId
 } from "./detail-bar-focus"
 import { useDetailBarKeyboard } from "./use-detail-bar-keyboard"
@@ -265,8 +265,11 @@ export function BmxtShell({
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
   const openPickersRef = useRef<readonly PickerSlotId[]>([])
+  const pickerColumnOrderRef = useRef<readonly PickerSlotId[]>([])
   const [pickerPulseSlot, setPickerPulseSlot] = useState<PickerSlotId | null>(null)
   const pickerPulseTimerRef = useRef<number | null>(null)
+  const skipNextPromptFocusRef = useRef(false)
+  const prevOpenPickersRef = useRef<readonly PickerSlotId[] | null>(null)
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -873,18 +876,37 @@ export function BmxtShell({
     }, 360)
   }, [])
 
+  const focusPickerSlot = useCallback(
+    (slot: PickerSlotId) => {
+      skipNextPromptFocusRef.current = true
+      onPaneFocusChange(slot)
+      requestAnimationFrame(() => {
+        const input = pickerInputRefForSlot(slot).current
+        if (input) {
+          input.focus()
+          return
+        }
+        requestAnimationFrame(() => {
+          pickerInputRefForSlot(slot).current?.focus()
+        })
+      })
+    },
+    [onPaneFocusChange, pickerInputRefForSlot]
+  )
+
   const activatePaneFocus = useCallback(
     (target: PaneFocusTarget) => {
-      onPaneFocusChange(target)
       if (target === "terminal") {
+        onPaneFocusChange(target)
         focusPrompt()
       } else if (target === "detailBar") {
+        onPaneFocusChange(target)
         imeRef.current?.blur()
       } else {
-        pickerInputRefForSlot(target).current?.focus()
+        focusPickerSlot(target)
       }
     },
-    [focusPrompt, onPaneFocusChange, pickerInputRefForSlot]
+    [focusPickerSlot, focusPrompt, onPaneFocusChange]
   )
 
   const activateDetailBar = useCallback(
@@ -903,12 +925,8 @@ export function BmxtShell({
     if (detailBarId === null || !isPickerDetailBar(detailBarId)) {
       return
     }
-    const slot = detailBarToPickerSlot(detailBarId)
-    onPaneFocusChange(slot)
-    requestAnimationFrame(() => {
-      pickerInputRefForSlot(slot).current?.focus()
-    })
-  }, [detailBarId, onPaneFocusChange, pickerInputRefForSlot])
+    focusPickerSlot(detailBarToPickerSlot(detailBarId))
+  }, [detailBarId, focusPickerSlot])
 
   const exitPickerToDetailBar = useCallback(
     (slot: PickerSlotId) => {
@@ -1011,7 +1029,13 @@ export function BmxtShell({
       paneFocus === "detailBar" && detailBarId !== null && isPickerDetailBar(detailBarId)
         ? detailBarToPickerSlot(detailBarId)
         : focusedPickerSlot
-    return computePickerColumnOrder(openPickers, highlightSlot)
+    const order = resolvePickerColumnOrder(
+      openPickers,
+      highlightSlot,
+      pickerColumnOrderRef.current
+    )
+    pickerColumnOrderRef.current = order
+    return order
   }, [detailBarId, openPickers, paneFocus])
 
   useDetailBarKeyboard({
@@ -1037,6 +1061,20 @@ export function BmxtShell({
 
   const promptPaneFocused = isFocusedPane && paneFocus === "terminal"
 
+  useLayoutEffect(() => {
+    const prev = prevOpenPickersRef.current
+    if (prev === null) {
+      prevOpenPickersRef.current = openPickers
+      return
+    }
+    const newlyOpened = openPickers.filter((slot) => !prev.includes(slot))
+    prevOpenPickersRef.current = openPickers
+    if (!isFocusedPane || newlyOpened.length === 0) {
+      return
+    }
+    focusPickerSlot(newlyOpened[newlyOpened.length - 1]!)
+  }, [focusPickerSlot, isFocusedPane, openPickers])
+
   const prevNavActiveRef = useRef(navActive)
   useLayoutEffect(() => {
     const wasActive = prevNavActiveRef.current
@@ -1052,6 +1090,10 @@ export function BmxtShell({
 
   useLayoutEffect(() => {
     if (promptPaneFocused) {
+      if (skipNextPromptFocusRef.current) {
+        skipNextPromptFocusRef.current = false
+        return
+      }
       focusPrompt()
       return
     }
@@ -1550,7 +1592,6 @@ export function BmxtShell({
         setSettingListPicker(sessionId, createSettingListPickerState(uiSettings))
         setModeToolbarOrder((prev) => activateModeToolbar(prev, "setting"))
       })()
-      focusPrompt()
       return
     }
 
@@ -1917,7 +1958,6 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       setSubCmdPicker(null)
       void runSearchListSearch(trimmed, searchListLine)
-      focusPrompt()
       return
     }
 
@@ -1941,7 +1981,6 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       setSubCmdPicker(null)
       void runDomListAndShow(domListLine, trimmed, /*announce*/ true)
-      focusPrompt()
       return
     }
 

@@ -3,9 +3,9 @@ import { describe, it } from "node:test"
 import {
   computePickerColumnOrder,
   cycleDetailBarId,
-  isPickerDetailBar,
   listVisibleDetailBars,
-  resolveDetailBarFocusTarget
+  resolveDetailBarFocusTarget,
+  resolvePickerColumnOrder
 } from "./detail-bar-focus.ts"
 
 describe("detail bar focus helpers", () => {
@@ -13,6 +13,27 @@ describe("detail bar focus helpers", () => {
     assert.deepEqual(
       computePickerColumnOrder(["tabs", "search", "dom"], "dom"),
       ["dom", "tabs", "search"]
+    )
+  })
+
+  it("resolvePickerColumnOrder keeps persisted order when highlight is null", () => {
+    assert.deepEqual(
+      resolvePickerColumnOrder(["tabs", "search"], null, ["search", "tabs"]),
+      ["search", "tabs"]
+    )
+  })
+
+  it("resolvePickerColumnOrder moves highlight left without resetting persisted base", () => {
+    assert.deepEqual(
+      resolvePickerColumnOrder(["tabs", "search", "dom"], "tabs", ["search", "tabs", "dom"]),
+      ["tabs", "search", "dom"]
+    )
+  })
+
+  it("resolvePickerColumnOrder appends newly opened pickers", () => {
+    assert.deepEqual(
+      resolvePickerColumnOrder(["tabs", "dom"], null, ["tabs", "search"]),
+      ["tabs", "dom"]
     )
   })
 

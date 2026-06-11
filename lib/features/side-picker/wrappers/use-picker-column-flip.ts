@@ -16,25 +16,39 @@ function ordersEqual(a: readonly PickerSlotId[], b: readonly PickerSlotId[]): bo
   return a.length === b.length && a.every((slot, index) => slot === b[index])
 }
 
-function snapshotSlotRects(
-  order: readonly PickerSlotId[],
-  slotEls: ReadonlyMap<PickerSlotId, HTMLDivElement>,
-  into: Map<PickerSlotId, DOMRect>
-): void {
-  into.clear()
-  for (const slot of order) {
-    const el = slotEls.get(slot)
-    if (el) {
-      into.set(slot, el.getBoundingClientRect())
-    }
-  }
-}
-
 function resetSlotTransforms(slotEls: ReadonlyMap<PickerSlotId, HTMLDivElement>): void {
   for (const el of slotEls.values()) {
     el.style.transition = ""
     el.style.transform = ""
   }
+}
+
+function measureColumnSpanPx(
+  order: readonly PickerSlotId[],
+  slotEls: ReadonlyMap<PickerSlotId, HTMLDivElement>
+): number {
+  if (order.length === 0) {
+    return 0
+  }
+  const first = slotEls.get(order[0]!)
+  if (!first) {
+    return 0
+  }
+  return first.getBoundingClientRect().width
+}
+
+function computeIndexFlipDeltaX(
+  prevOrder: readonly PickerSlotId[],
+  nextOrder: readonly PickerSlotId[],
+  slot: PickerSlotId,
+  columnSpanPx: number
+): number {
+  const fromIndex = prevOrder.indexOf(slot)
+  const toIndex = nextOrder.indexOf(slot)
+  if (fromIndex < 0 || toIndex < 0 || columnSpanPx <= 0) {
+    return 0
+  }
+  return columnSpanPx * (fromIndex - toIndex)
 }
 
 /** EN: FLIP slide when `columnOrder` reorders open picker columns (same slots, new order). */
@@ -43,9 +57,8 @@ export function usePickerColumnFlip(
   slotElsRef: MutableRefObject<Map<PickerSlotId, HTMLDivElement>>
 ): void {
   const prevOrderRef = useRef<readonly PickerSlotId[]>([])
-  const prevRectsRef = useRef(new Map<PickerSlotId, DOMRect>())
   const playbackRafRef = useRef<number | null>(null)
-  const snapshotTimerRef = useRef<number | null>(null)
+  const settleTimerRef = useRef<number | null>(null)
   const animatingRef = useRef(false)
 
   useLayoutEffect(() => {
@@ -54,18 +67,17 @@ export function usePickerColumnFlip(
         cancelAnimationFrame(playbackRafRef.current)
         playbackRafRef.current = null
       }
-      if (snapshotTimerRef.current !== null) {
-        window.clearTimeout(snapshotTimerRef.current)
-        snapshotTimerRef.current = null
+      if (settleTimerRef.current !== null) {
+        window.clearTimeout(settleTimerRef.current)
+        settleTimerRef.current = null
       }
     }
 
-    const scheduleRectSnapshot = (): void => {
-      snapshotTimerRef.current = window.setTimeout(() => {
-        snapshotTimerRef.current = null
+    const scheduleSettle = (): void => {
+      settleTimerRef.current = window.setTimeout(() => {
+        settleTimerRef.current = null
         animatingRef.current = false
         resetSlotTransforms(slotElsRef.current)
-        snapshotSlotRects(columnOrder, slotElsRef.current, prevRectsRef.current)
       }, PICKER_COLUMN_FLIP_MS)
     }
 
@@ -79,25 +91,16 @@ export function usePickerColumnFlip(
     cancelPlayback()
     resetSlotTransforms(slotEls)
 
-    if (reorderPending && animatingRef.current) {
-      snapshotSlotRects(columnOrder, slotEls, prevRectsRef.current)
-      animatingRef.current = false
-      prevOrderRef.current = columnOrder
-      return
-    }
-
-    const shouldFlip = reorderPending
-
-    if (shouldFlip) {
+    if (reorderPending) {
+      const columnSpanPx = measureColumnSpanPx(columnOrder, slotEls)
       animatingRef.current = true
+
       for (const slot of columnOrder) {
         const el = slotEls.get(slot)
-        const first = prevRectsRef.current.get(slot)
-        if (!el || !first) {
+        if (!el) {
           continue
         }
-        const last = el.getBoundingClientRect()
-        const deltaX = first.left - last.left
+        const deltaX = computeIndexFlipDeltaX(prevOrder, columnOrder, slot, columnSpanPx)
         if (deltaX === 0) {
           continue
         }
@@ -116,11 +119,9 @@ export function usePickerColumnFlip(
             el.style.transition = ""
             el.style.transform = ""
           }
-          scheduleRectSnapshot()
+          scheduleSettle()
         })
       })
-    } else {
-      snapshotSlotRects(columnOrder, slotEls, prevRectsRef.current)
     }
 
     prevOrderRef.current = columnOrder
