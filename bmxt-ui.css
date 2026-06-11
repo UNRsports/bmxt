@@ -1222,10 +1222,59 @@ html[data-bmxt-unified-bg] .bmxt-side-picker {
   word-break: break-word;
 }
 
+.bmxt-tab-picker-row--tab .bmxt-tab-picker-tab-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  white-space: normal;
+  word-break: normal;
+}
+
+.bmxt-tab-picker-row--tab .bmxt-tab-picker-tab-title-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bmxt-tab-picker-tab-glyph {
   display: inline-block;
   width: 1ch;
   user-select: none;
+}
+
+.bmxt-tab-picker-tab-glyph--active,
+.bmxt-tab-picker-tab-glyph--mark {
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.bmxt-tab-picker-tab-glyph--active {
+  width: 1.2em;
+  color: transparent;
+}
+
+.bmxt-tab-picker-tab-glyph--active-on {
+  color: inherit;
+}
+
+.bmxt-tab-picker-tab-glyph--mark {
+  width: 1ch;
+  color: transparent;
+}
+
+.bmxt-tab-picker-tab-glyph--mark-on {
+  color: inherit;
+}
+
+.bmxt-tab-picker-row--tab .bmxt-tab-picker-tab-favicon {
+  display: block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  object-fit: contain;
 }
 
 .bmxt-tab-picker-tab-favicon {

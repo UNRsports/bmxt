@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type MutableRefObject } from "react"
+import { useCallback, useEffect, useRef, type MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
@@ -29,9 +29,13 @@ export function useSyncChromeTabStripPreview({
   /** EN: Bumped on Alt keydown in manual mode to re-run preview without moving hi. */
   altPreviewTick?: number
 }) {
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  const appliedActiveTabIdRef = useRef<number | null>(null)
+
   const syncChromeTabStripPreview = useCallback(
     async (rowIndex: number) => {
-      const row = rows[rowIndex]
+      const row = rowsRef.current[rowIndex]
       if (!row || row.kind !== "tab") {
         return
       }
@@ -40,6 +44,14 @@ export function useSyncChromeTabStripPreview({
         markedKind === "tab"
           ? markedTabIds.filter((id) => tabIdToWindowId.get(id) === winId)
           : []
+
+      const applyActiveTabId = (tabId: number) => {
+        if (appliedActiveTabIdRef.current === tabId) {
+          return
+        }
+        appliedActiveTabIdRef.current = tabId
+        setActiveTabId(tabId)
+      }
 
       try {
         const tabsInWin = await chrome.tabs.query({ windowId: winId })
@@ -50,22 +62,22 @@ export function useSyncChromeTabStripPreview({
 
         if (markedInWin.length === 0) {
           if (targetTab.active) {
-            setActiveTabId(row.tabId)
+            applyActiveTabId(row.tabId)
             return
           }
           await chrome.tabs.update(row.tabId, { active: true })
-          setActiveTabId(row.tabId)
+          applyActiveTabId(row.tabId)
           return
         }
 
         const hiInMarked = markedInWin.includes(row.tabId)
         if (!hiInMarked) {
           if (targetTab.active) {
-            setActiveTabId(row.tabId)
+            applyActiveTabId(row.tabId)
             return
           }
           await chrome.tabs.update(row.tabId, { active: true })
-          setActiveTabId(row.tabId)
+          applyActiveTabId(row.tabId)
           return
         }
 
@@ -76,11 +88,11 @@ export function useSyncChromeTabStripPreview({
 
         if (indices.length === 0) {
           if (targetTab.active) {
-            setActiveTabId(row.tabId)
+            applyActiveTabId(row.tabId)
             return
           }
           await chrome.tabs.update(row.tabId, { active: true })
-          setActiveTabId(row.tabId)
+          applyActiveTabId(row.tabId)
           return
         }
 
@@ -91,12 +103,12 @@ export function useSyncChromeTabStripPreview({
             : indices
 
         await chrome.tabs.highlight({ windowId: winId, tabs: tabsArg })
-        setActiveTabId(row.tabId)
+        applyActiveTabId(row.tabId)
       } catch {
         /* tab/window may have closed */
       }
     },
-    [markedKind, markedTabIds, rows, setActiveTabId, tabIdToWindowId]
+    [markedKind, markedTabIds, setActiveTabId, tabIdToWindowId]
   )
 
   useEffect(() => {
@@ -114,10 +126,10 @@ export function useSyncChromeTabStripPreview({
   }, [
     altKeyHeldRef,
     hi,
+    markedKind,
     markedTabIds,
     mirrorHiPendingRef,
     pageActiveMode,
-    rows,
     setActiveTabId,
     visibleRowIndices,
     syncChromeTabStripPreview,

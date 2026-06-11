@@ -28,7 +28,6 @@ function TabPickerTabFavicon({ src }: { src: string }) {
       alt=""
       width={16}
       height={16}
-      loading="lazy"
       decoding="async"
       draggable={false}
       onError={(e) => {
@@ -145,23 +144,35 @@ export function TabPickerRowList({
           moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
         }`
         const titleShown = displayTitle(row.title)
+        const activeMarker = activeTabId === row.tabId
+        const markedTab = markedTabSet.has(row.tabId)
         return (
           <div
-            key={i}
+            key={`tab-${row.tabId}`}
             id={`bmxt-tab-row-${i}`}
             ref={(el) => setRowRef(i, el)}
             className={rowClass}
             role="option"
             aria-selected={hiRow || markedRow}>
             <div className="bmxt-tab-picker-tab-title">
-              <span className="bmxt-tab-picker-tab-glyph">
-                {activeTabId === row.tabId ? "*" : " "}
+              <span
+                className={`bmxt-tab-picker-tab-glyph bmxt-tab-picker-tab-glyph--active${
+                  activeMarker ? " bmxt-tab-picker-tab-glyph--active-on" : ""
+                }`}
+                aria-hidden>
+                *
               </span>
-              <span className="bmxt-tab-picker-tab-glyph">
-                {markedTabSet.has(row.tabId) ? "#" : " "}
+              <span
+                className={`bmxt-tab-picker-tab-glyph bmxt-tab-picker-tab-glyph--mark${
+                  markedTab ? " bmxt-tab-picker-tab-glyph--mark-on" : ""
+                }`}
+                aria-hidden>
+                #
               </span>
               {row.faviconSrc ? <TabPickerTabFavicon src={row.faviconSrc} /> : null}
-              {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}
+              <span className="bmxt-tab-picker-tab-title-text">
+                {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}
+              </span>
             </div>
             {showUrl ? (
               <div className="bmxt-tab-picker-tab-url">
