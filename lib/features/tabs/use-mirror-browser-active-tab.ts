@@ -129,7 +129,6 @@ export function useMirrorBrowserActiveTab({
       setHi(vHi)
       setMoveDestHi(vHi)
       anchorTabIdRef.current = tabId
-      scheduleRefreshRows?.()
     }
   }, [
     enabled,

@@ -6,6 +6,7 @@ import { groupRowKey } from "./tab-picker-keyboard"
 import type { BulkSubMode, EditPanel, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
 import { tabPickerVisibleHiIndicesMatching } from "./picker-rows"
+import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
 
 type PickerGroupChoice = { id: number; windowId: number; label: string }
@@ -40,7 +41,7 @@ export function useTabPickerSyncAndLayoutEffects({
   shiftRangeAnchorHiRef,
   anchorTabIdRef,
   prevFilterQueryRef,
-  prevRowsRef,
+  prevRowsStructureKeyRef,
   prevBulkSubModeRef,
   skipNextInitialHiRef,
   isHostPaneFocused,
@@ -76,7 +77,7 @@ export function useTabPickerSyncAndLayoutEffects({
   shiftRangeAnchorHiRef: MutableRefObject<number | null>
   anchorTabIdRef: MutableRefObject<number | null>
   prevFilterQueryRef: MutableRefObject<string>
-  prevRowsRef: MutableRefObject<TabPickerRow[]>
+  prevRowsStructureKeyRef: MutableRefObject<string>
   prevBulkSubModeRef: MutableRefObject<BulkSubMode | null>
   /** 新規タブ直後の行は anchor 同期に任せ、親の initialHi 上書きを 1 回避ける */
   skipNextInitialHiRef: MutableRefObject<boolean>
@@ -99,10 +100,12 @@ export function useTabPickerSyncAndLayoutEffects({
       return
     }
 
+    const rowsStructureKey = tabPickerRowsStructureKey(rows)
     const structChanged =
-      prevFilterQueryRef.current !== filterQuery || prevRowsRef.current !== rows
+      prevFilterQueryRef.current !== filterQuery ||
+      prevRowsStructureKeyRef.current !== rowsStructureKey
     prevFilterQueryRef.current = filterQuery
-    prevRowsRef.current = rows
+    prevRowsStructureKeyRef.current = rowsStructureKey
 
     let targetHi = hi
 
@@ -140,7 +143,18 @@ export function useTabPickerSyncAndLayoutEffects({
     }
 
     setMoveDestHi((d) => Math.min(d, visibleRowIndices.length - 1))
-  }, [filterQuery, rows, searchMode, visibleRowIndices, hi, setHi, setMoveDestHi, anchorTabIdRef, prevFilterQueryRef, prevRowsRef])
+  }, [
+    filterQuery,
+    rows,
+    searchMode,
+    visibleRowIndices,
+    hi,
+    setHi,
+    setMoveDestHi,
+    anchorTabIdRef,
+    prevFilterQueryRef,
+    prevRowsStructureKeyRef
+  ])
 
   useEffect(() => {
     if (groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null) {

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { displayTitle } from "./picker-rows"
 
+const TRACKED_TITLE_DEBOUNCE_MS = 400
+
 /**
  * EN: Live tracked-window id/title from `activeTabId` (Chrome APIs), not row snapshots.
  * JA: 行データ再構築を待たず、追跡ウィンドウ名を安定表示する。
@@ -43,19 +45,34 @@ export function useTrackedWindowDisplay(activeTabId: number | null): {
       }
     })()
 
+    let titleDebounceTimer: ReturnType<typeof setTimeout> | undefined
+
     const onUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
       if (tabId !== activeTabId) {
         return
       }
-      if (changeInfo.title !== undefined) {
-        setTrackedWindowTitle(displayTitle(changeInfo.title))
+      if (changeInfo.title === undefined) {
+        return
       }
+      const nextTitle = displayTitle(changeInfo.title)
+      if (titleDebounceTimer !== undefined) {
+        clearTimeout(titleDebounceTimer)
+      }
+      titleDebounceTimer = setTimeout(() => {
+        titleDebounceTimer = undefined
+        if (!cancelled) {
+          setTrackedWindowTitle(nextTitle)
+        }
+      }, TRACKED_TITLE_DEBOUNCE_MS)
     }
 
     chrome.tabs.onUpdated.addListener(onUpdated)
 
     return () => {
       cancelled = true
+      if (titleDebounceTimer !== undefined) {
+        clearTimeout(titleDebounceTimer)
+      }
       chrome.tabs.onUpdated.removeListener(onUpdated)
     }
   }, [activeTabId])

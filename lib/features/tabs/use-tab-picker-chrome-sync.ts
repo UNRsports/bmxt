@@ -3,8 +3,9 @@ import {
   isTitleOnlyTabUpdate,
   shouldRefreshOnTabUpdated
 } from "./tab-picker-chrome-sync-filters"
+import { consumeTabPickerSelfActivation } from "./tab-picker-activation-suppression"
 
-const TITLE_REFRESH_DEBOUNCE_MS = 400
+const TITLE_PATCH_DEBOUNCE_MS = 400
 
 /**
  * タブピッカー表示中に tabs / windows / tabGroups の変化を追従する。
@@ -12,31 +13,53 @@ const TITLE_REFRESH_DEBOUNCE_MS = 400
  */
 export function useTabPickerChromeSync(
   scheduleRefresh: () => void,
-  enabled: boolean
+  enabled: boolean,
+  onTabTitleUpdated?: (tabId: number, title: string) => void
 ) {
   useEffect(() => {
     if (!enabled) {
       return
     }
 
-    let titleDebounceTimer: ReturnType<typeof setTimeout> | undefined
+    const titlePatchTimers = new Map<number, ReturnType<typeof setTimeout>>()
+    const pendingTitles = new Map<number, string>()
 
-    const scheduleTitleRefresh = () => {
-      if (titleDebounceTimer !== undefined) {
-        clearTimeout(titleDebounceTimer)
+    const scheduleTitlePatch = (tabId: number, title: string) => {
+      pendingTitles.set(tabId, title)
+      const prev = titlePatchTimers.get(tabId)
+      if (prev !== undefined) {
+        clearTimeout(prev)
       }
-      titleDebounceTimer = setTimeout(() => {
-        titleDebounceTimer = undefined
-        scheduleRefresh()
-      }, TITLE_REFRESH_DEBOUNCE_MS)
+      titlePatchTimers.set(
+        tabId,
+        setTimeout(() => {
+          titlePatchTimers.delete(tabId)
+          const nextTitle = pendingTitles.get(tabId)
+          pendingTitles.delete(tabId)
+          if (nextTitle !== undefined) {
+            onTabTitleUpdated?.(tabId, nextTitle)
+          }
+        }, TITLE_PATCH_DEBOUNCE_MS)
+      )
     }
 
-    const onTabUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+    const onTabUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
       if (!shouldRefreshOnTabUpdated(changeInfo)) {
         return
       }
       if (isTitleOnlyTabUpdate(changeInfo)) {
-        scheduleTitleRefresh()
+        const title = changeInfo.title
+        if (title !== undefined && onTabTitleUpdated !== undefined) {
+          scheduleTitlePatch(tabId, title)
+          return
+        }
+        return
+      }
+      scheduleRefresh()
+    }
+
+    const onActivated = (activeInfo: chrome.tabs.TabActiveInfo) => {
+      if (consumeTabPickerSelfActivation(activeInfo.tabId)) {
         return
       }
       scheduleRefresh()
@@ -45,7 +68,7 @@ export function useTabPickerChromeSync(
     chrome.tabs.onCreated.addListener(scheduleRefresh)
     chrome.tabs.onRemoved.addListener(scheduleRefresh)
     chrome.tabs.onUpdated.addListener(onTabUpdated)
-    chrome.tabs.onActivated.addListener(scheduleRefresh)
+    chrome.tabs.onActivated.addListener(onActivated)
     chrome.tabs.onMoved.addListener(scheduleRefresh)
     chrome.tabs.onAttached.addListener(scheduleRefresh)
     chrome.tabs.onDetached.addListener(scheduleRefresh)
@@ -61,14 +84,16 @@ export function useTabPickerChromeSync(
     chrome.tabGroups.onMoved.addListener(scheduleRefresh)
 
     return () => {
-      if (titleDebounceTimer !== undefined) {
-        clearTimeout(titleDebounceTimer)
+      for (const timer of titlePatchTimers.values()) {
+        clearTimeout(timer)
       }
+      titlePatchTimers.clear()
+      pendingTitles.clear()
 
       chrome.tabs.onCreated.removeListener(scheduleRefresh)
       chrome.tabs.onRemoved.removeListener(scheduleRefresh)
       chrome.tabs.onUpdated.removeListener(onTabUpdated)
-      chrome.tabs.onActivated.removeListener(scheduleRefresh)
+      chrome.tabs.onActivated.removeListener(onActivated)
       chrome.tabs.onMoved.removeListener(scheduleRefresh)
       chrome.tabs.onAttached.removeListener(scheduleRefresh)
       chrome.tabs.onDetached.removeListener(scheduleRefresh)
@@ -83,5 +108,5 @@ export function useTabPickerChromeSync(
       chrome.tabGroups.onRemoved.removeListener(scheduleRefresh)
       chrome.tabGroups.onMoved.removeListener(scheduleRefresh)
     }
-  }, [enabled, scheduleRefresh])
+  }, [enabled, onTabTitleUpdated, scheduleRefresh])
 }

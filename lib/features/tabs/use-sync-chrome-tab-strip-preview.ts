@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
+import { markTabPickerSelfActivation } from "./tab-picker-activation-suppression"
 
 export function useSyncChromeTabStripPreview({
   hi,
@@ -65,6 +66,7 @@ export function useSyncChromeTabStripPreview({
             applyActiveTabId(row.tabId)
             return
           }
+          markTabPickerSelfActivation(row.tabId)
           await chrome.tabs.update(row.tabId, { active: true })
           applyActiveTabId(row.tabId)
           return
@@ -76,6 +78,7 @@ export function useSyncChromeTabStripPreview({
             applyActiveTabId(row.tabId)
             return
           }
+          markTabPickerSelfActivation(row.tabId)
           await chrome.tabs.update(row.tabId, { active: true })
           applyActiveTabId(row.tabId)
           return
@@ -91,6 +94,7 @@ export function useSyncChromeTabStripPreview({
             applyActiveTabId(row.tabId)
             return
           }
+          markTabPickerSelfActivation(row.tabId)
           await chrome.tabs.update(row.tabId, { active: true })
           applyActiveTabId(row.tabId)
           return
@@ -102,6 +106,7 @@ export function useSyncChromeTabStripPreview({
             ? [hiIdx, ...indices.filter((i) => i !== hiIdx)]
             : indices
 
+        markTabPickerSelfActivation(row.tabId)
         await chrome.tabs.highlight({ windowId: winId, tabs: tabsArg })
         applyActiveTabId(row.tabId)
       } catch {

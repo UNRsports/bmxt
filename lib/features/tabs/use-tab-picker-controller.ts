@@ -32,6 +32,7 @@ import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-pi
 import { emptyTabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 import type { TabsPageActiveMode } from "./page-active-setting"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
+import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 
 type Props = {
   rows: TabPickerRow[]
@@ -131,7 +132,7 @@ export function useTabPickerController({
   const anchorTabIdRef = useRef<number | null>(null)
   const skipNextInitialHiRef = useRef(false)
   const prevFilterQueryRef = useRef(filterQuery)
-  const prevRowsRef = useRef(rows)
+  const prevRowsStructureKeyRef = useRef("")
   const prevBulkSubModeRef = useRef<BulkSubMode | null>(null)
   const shiftRangeAnchorHiRef = useRef<number | null>(null)
   const altKeyHeldRef = useRef(false)
@@ -265,7 +266,7 @@ export function useTabPickerController({
     shiftRangeAnchorHiRef,
     anchorTabIdRef,
     prevFilterQueryRef,
-    prevRowsRef,
+    prevRowsStructureKeyRef,
     prevBulkSubModeRef,
     skipNextInitialHiRef,
     isHostPaneFocused,
@@ -573,7 +574,7 @@ export function useTabPickerController({
 
   useLayoutEffect(() => {
     prevFilterQueryRef.current = filterQuery
-    prevRowsRef.current = rows
+    prevRowsStructureKeyRef.current = tabPickerRowsStructureKey(rows)
   })
 
 
