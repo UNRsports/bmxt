@@ -85,13 +85,11 @@ export function useTabPickerFoldState(
   const collapseAtRow = useCallback(
     (row: TabPickerRow): number | null => {
       const { focusRowIdx, changed } = collapseTabPickerAtRow(rows, row)
-      if (focusRowIdx === null) {
+      if (!changed || focusRowIdx === null) {
         return null
       }
-      if (changed) {
-        void persistTabPickerFoldStateToStorage()
-        bump()
-      }
+      void persistTabPickerFoldStateToStorage()
+      bump()
       return focusRowIdx
     },
     [bump, rows]

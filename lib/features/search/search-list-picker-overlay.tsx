@@ -171,6 +171,12 @@ export function SearchListPickerOverlay({
 
   const extensions = useMemo((): PlainPickerKeyboardExtensions => {
     return {
+      exitToDetailBar: onExitToDetailBar
+        ? {
+            canExit: () => pickerViewRef.current !== "detail" && !loading,
+            onExit: onExitToDetailBar
+          }
+        : undefined,
       onEsc: () => {
         if (pickerViewRef.current === "detail") {
           exitDetailView()
@@ -179,6 +185,20 @@ export function SearchListPickerOverlay({
         return false
       },
       onCaptureBefore: (e: KeyboardEvent) => {
+        const ev = e as KeyboardEvent & { isComposing?: boolean }
+        if (
+          e.key === "Enter" &&
+          !e.shiftKey &&
+          !ev.isComposing &&
+          !loading &&
+          pickerViewRef.current === "results"
+        ) {
+          if (enterDetailForHi(resultsHiRef.current)) {
+            pickerStopEvent(e)
+            return true
+          }
+        }
+
         if (loading || !isHorizontalNavKey(e)) {
           if (loading) {
             return false
@@ -205,26 +225,10 @@ export function SearchListPickerOverlay({
           return false
         }
 
-        if (e.key === "ArrowRight" || e.code === "ArrowRight") {
-          if (pickerViewRef.current === "detail") {
-            return false
-          }
-          if (enterDetailForHi(resultsHiRef.current)) {
-            pickerStopEvent(e)
-            return true
-          }
-          return false
-        }
-
         if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
           if (pickerViewRef.current === "detail") {
             exitDetailView()
             pickerStopEvent(e)
-            return true
-          }
-          if (onExitToDetailBar) {
-            pickerStopEvent(e)
-            onExitToDetailBar()
             return true
           }
           return false

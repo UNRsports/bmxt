@@ -14,6 +14,8 @@ import {
 import { BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
+import type { DetailBarId } from "./detail-bar-focus"
+import type { ModeToolbarId } from "./mode-toolbar-order"
 import type { SplitNode } from "./split-layout/types"
 import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
 import { appendLinesToSession } from "./terminal-sessions/state-storage"
@@ -60,6 +62,18 @@ type SplitTreeProps = {
   ) => void
   paneFocusByLeaf: Record<string, PaneFocusTarget>
   setPaneFocusForLeaf: (sessionId: string, target: PaneFocusTarget) => void
+  detailBarIdByLeaf: Record<string, DetailBarId | null>
+  setDetailBarIdForLeaf: (
+    sessionId: string,
+    update: import("react").SetStateAction<DetailBarId | null>
+  ) => void
+  modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
+  setModeToolbarOrderForLeaf: (
+    sessionId: string,
+    update: import("react").SetStateAction<ModeToolbarId[]>
+  ) => void
+  navArmedByLeaf: Record<string, boolean>
+  setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
@@ -77,6 +91,12 @@ function SplitLeafView({
   setSessionPickerSlot,
   paneFocusByLeaf,
   setPaneFocusForLeaf,
+  detailBarIdByLeaf,
+  setDetailBarIdForLeaf,
+  modeToolbarOrderByLeaf,
+  setModeToolbarOrderForLeaf,
+  navArmedByLeaf,
+  setNavArmedForLeaf,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
@@ -117,6 +137,12 @@ function SplitLeafView({
         postUpgradeBanner={postUpgradeBanner}
         paneFocus={paneFocusByLeaf[node.id] ?? "terminal"}
         onPaneFocusChange={(target) => setPaneFocusForLeaf(node.id, target)}
+        detailBarId={detailBarIdByLeaf[node.id] ?? null}
+        onDetailBarIdChange={(update) => setDetailBarIdForLeaf(node.id, update)}
+        modeToolbarOrder={modeToolbarOrderByLeaf[node.id] ?? []}
+        onModeToolbarOrderChange={(update) => setModeToolbarOrderForLeaf(node.id, update)}
+        navArmed={navArmedByLeaf[node.id] ?? false}
+        onNavArmedChange={(armed) => setNavArmedForLeaf(node.id, armed)}
       />
     </div>
   )
@@ -133,6 +159,12 @@ function SplitBranchView({
   setSessionPickerSlot,
   paneFocusByLeaf,
   setPaneFocusForLeaf,
+  detailBarIdByLeaf,
+  setDetailBarIdForLeaf,
+  modeToolbarOrderByLeaf,
+  setModeToolbarOrderForLeaf,
+  navArmedByLeaf,
+  setNavArmedForLeaf,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
@@ -160,6 +192,12 @@ function SplitBranchView({
           setSessionPickerSlot={setSessionPickerSlot}
           paneFocusByLeaf={paneFocusByLeaf}
           setPaneFocusForLeaf={setPaneFocusForLeaf}
+          detailBarIdByLeaf={detailBarIdByLeaf}
+          setDetailBarIdForLeaf={setDetailBarIdForLeaf}
+          modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
+          setModeToolbarOrderForLeaf={setModeToolbarOrderForLeaf}
+          navArmedByLeaf={navArmedByLeaf}
+          setNavArmedForLeaf={setNavArmedForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
           scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
           postUpgradeBanner={postUpgradeBanner}
@@ -178,6 +216,12 @@ function SplitBranchView({
           setSessionPickerSlot={setSessionPickerSlot}
           paneFocusByLeaf={paneFocusByLeaf}
           setPaneFocusForLeaf={setPaneFocusForLeaf}
+          detailBarIdByLeaf={detailBarIdByLeaf}
+          setDetailBarIdForLeaf={setDetailBarIdForLeaf}
+          modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
+          setModeToolbarOrderForLeaf={setModeToolbarOrderForLeaf}
+          navArmedByLeaf={navArmedByLeaf}
+          setNavArmedForLeaf={setNavArmedForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
           scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
           postUpgradeBanner={postUpgradeBanner}
@@ -223,6 +267,12 @@ function BmxtTerminalInner() {
     setPickersBySession,
     paneFocusByLeaf,
     setPaneFocusForLeaf,
+    detailBarIdByLeaf,
+    setDetailBarIdForLeaf,
+    modeToolbarOrderByLeaf,
+    setModeToolbarOrderForLeaf,
+    navArmedByLeaf,
+    setNavArmedForLeaf,
     processUiReady
   } = useProcessUiPersistence(validLeafIds, state !== null)
 
@@ -363,6 +413,12 @@ function BmxtTerminalInner() {
           setSessionPickerSlot={setSessionPickerSlot}
           paneFocusByLeaf={paneFocusByLeaf}
           setPaneFocusForLeaf={setPaneFocusForLeaf}
+          detailBarIdByLeaf={detailBarIdByLeaf}
+          setDetailBarIdForLeaf={setDetailBarIdForLeaf}
+          modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
+          setModeToolbarOrderForLeaf={setModeToolbarOrderForLeaf}
+          navArmedByLeaf={navArmedByLeaf}
+          setNavArmedForLeaf={setNavArmedForLeaf}
           refreshTabPickerRows={refreshTabPickerRows}
           scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
           postUpgradeBanner={postUpgradeBanner}

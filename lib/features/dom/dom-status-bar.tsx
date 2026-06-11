@@ -28,8 +28,8 @@ export function DomStatusBar({ kind }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
         {locale === "ja"
-          ? "Alt+↑↓ でバー選択 · → でピッカー · ← でプロンプト"
-          : "Alt+↑↓ select bar · → enter picker · ← prompt"}
+          ? "↓ で選択 · ↑↓ で移動 · → でピッカー · ピッカー内 → で戻る"
+          : "↓ from prompt · ↑↓ move · → picker · → in picker to return"}
       </span>
     </div>
   )

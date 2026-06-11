@@ -142,7 +142,8 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState
+  useState,
+  type SetStateAction
 } from "react"
 import {
   CSP_DYNAMIC_SCOPE_ATTR,
@@ -195,6 +196,12 @@ type Props = {
   postUpgradeBanner: PostUpgradeBanner | null
   paneFocus: PaneFocusTarget
   onPaneFocusChange: (target: PaneFocusTarget) => void
+  detailBarId: DetailBarId | null
+  onDetailBarIdChange: (update: SetStateAction<DetailBarId | null>) => void
+  modeToolbarOrder: ModeToolbarId[]
+  onModeToolbarOrderChange: (update: SetStateAction<ModeToolbarId[]>) => void
+  navArmed: boolean
+  onNavArmedChange: (armed: boolean) => void
 }
 
 export function BmxtShell({
@@ -211,7 +218,13 @@ export function BmxtShell({
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
   paneFocus,
-  onPaneFocusChange
+  onPaneFocusChange,
+  detailBarId,
+  onDetailBarIdChange,
+  modeToolbarOrder,
+  onModeToolbarOrderChange,
+  navArmed,
+  onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
   const uiCopy = useUiCopy()
@@ -252,7 +265,6 @@ export function BmxtShell({
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
   const openPickersRef = useRef<readonly PickerSlotId[]>([])
-  const [detailBarId, setDetailBarId] = useState<DetailBarId | null>(null)
   const [pickerPulseSlot, setPickerPulseSlot] = useState<PickerSlotId | null>(null)
   const pickerPulseTimerRef = useRef<number | null>(null)
   const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -312,7 +324,6 @@ export function BmxtShell({
       tabPickerOpenRef.current
     )
   }, [])
-  const [navArmed, setNavArmed] = useState(false)
   const [navActive, setNavActive] = useState(false)
   const [translateEnabled, setTranslateEnabled] = useState(false)
   const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
@@ -320,13 +331,31 @@ export function BmxtShell({
   )
   const translateEnabledRef = useRef(false)
   const translatePairIdRef = useRef<TranslationPairId>(DEFAULT_TRANSLATION_PAIR_ID)
-  const [modeToolbarOrder, setModeToolbarOrder] = useState<ModeToolbarId[]>([])
   const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
   const navPositionsRef = useRef<NavPositionsByTab>({})
+  const setDetailBarId = useCallback(
+    (update: SetStateAction<DetailBarId | null>) => {
+      onDetailBarIdChange(update)
+    },
+    [onDetailBarIdChange]
+  )
+  const setModeToolbarOrder = useCallback(
+    (update: SetStateAction<ModeToolbarId[]>) => {
+      onModeToolbarOrderChange(update)
+    },
+    [onModeToolbarOrderChange]
+  )
+  const setNavArmed = useCallback(
+    (armed: boolean) => {
+      onNavArmedChange(armed)
+    },
+    [onNavArmedChange]
+  )
+
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
   useEffect(() => {
@@ -447,6 +476,15 @@ export function BmxtShell({
   }, [tabsPageActiveMode])
 
   useEffect(() => {
+    if (paneFocus === "detailBar" && detailBarId === null) {
+      const fallback = modeToolbarOrder[modeToolbarOrder.length - 1] ?? null
+      if (fallback !== null) {
+        setDetailBarId(fallback)
+        return
+      }
+      onPaneFocusChange("terminal")
+      return
+    }
     if (paneFocus === "tabs" && tabPicker === null) {
       onPaneFocusChange("terminal")
       setDetailBarId(null)
@@ -483,10 +521,12 @@ export function BmxtShell({
   }, [
     detailBarId,
     domListPicker,
+    modeToolbarOrder,
     navArmed,
     onPaneFocusChange,
     paneFocus,
     searchListPicker,
+    setDetailBarId,
     settingListPicker,
     tabPicker,
     translateEnabled
@@ -950,6 +990,7 @@ export function BmxtShell({
     detailBarId,
     navArmed,
     blocked: navPageTyping || searchListBusy || mode === "isearch" || subCmdPicker !== null,
+    promptHistoryNavActive: histNavIndex !== -1,
     actions: {
       activateDetailBar,
       enterPickerFromDetailBar,
@@ -959,25 +1000,24 @@ export function BmxtShell({
     }
   })
 
-  const terminalPaneActive =
-    isFocusedPane && (paneFocus === "terminal" || paneFocus === "detailBar")
+  const promptPaneFocused = isFocusedPane && paneFocus === "terminal"
 
   useLayoutEffect(() => {
-    if (!terminalPaneActive) {
-      imeRef.current?.blur()
+    if (promptPaneFocused) {
+      focusPrompt()
       return
     }
-    focusPrompt()
-  }, [terminalPaneActive, focusPrompt])
+    imeRef.current?.blur()
+  }, [promptPaneFocused, focusPrompt])
 
   useEffect(() => {
-    if (!terminalPaneActive) {
+    if (!promptPaneFocused) {
       return
     }
     const onWinFocus = () => focusPrompt()
     window.addEventListener("focus", onWinFocus)
     return () => window.removeEventListener("focus", onWinFocus)
-  }, [terminalPaneActive, focusPrompt])
+  }, [promptPaneFocused, focusPrompt])
 
   const runDomListAndShow = useCallback(
     async (
@@ -2597,7 +2637,7 @@ export function BmxtShell({
               ) : (
                 <span
                   ref={cursorMirrorCellRef}
-                  className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${terminalPaneActive ? "" : " bmxt-cursor-cell--inactive"}`}>
+                  className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${promptPaneFocused ? "" : " bmxt-cursor-cell--inactive"}`}>
                   {mirror.cur || "\u00a0"}
                 </span>
               )}
@@ -2707,7 +2747,7 @@ export function BmxtShell({
           data-bmxt-session-id={sessionId}
           data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
           <div
-            className={`bmxt-split-terminal-pane${terminalPaneActive ? " bmxt-split-pane--focused" : ""}`}>
+            className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
             <div ref={scrollRef} className={shellScrollClassName}>
               {shellContent}
             </div>
@@ -2763,7 +2803,7 @@ export function BmxtShell({
         <div
           ref={scrollRef}
           data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}
-          className={`${shellScrollClassName}${terminalPaneActive ? " bmxt-split-pane--focused" : ""}`}>
+          className={`${shellScrollClassName}${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
           {shellContent}
         </div>
       )}

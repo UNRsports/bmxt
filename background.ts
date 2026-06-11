@@ -11,6 +11,7 @@ import {
   exitOrCloseSessionInStorage,
   readTerminalSessionsIfPresent,
   removeAllTerminalSessionsFromStorage,
+  resetBmxtTerminalSessionsInStorage,
   setSessionLines,
   ensureTerminalSessionsState,
   resolveSessionId,
@@ -97,9 +98,14 @@ chrome.action.onClicked.addListener(() => {
   openOrFocusBmxtWindow()
 })
 
+async function resetBmxtTerminalAsync(): Promise<void> {
+  await resetBmxtTerminalSessionsInStorage()
+  await openOrFocusBmxtWindowAsync()
+}
+
 chrome.commands.onCommand.addListener((command) => {
   if (command === "launch-bmxt") {
-    openOrFocusBmxtWindow()
+    void resetBmxtTerminalAsync()
   }
 })
 

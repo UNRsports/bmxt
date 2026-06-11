@@ -335,6 +335,26 @@ export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   await clearProcessUiStateStorage()
 }
 
+/**
+ * ターミナルを初期状態へ戻す（単一ペイン・空ログ）。ウィンドウは閉じない。
+ * ショートカット `launch-bmxt` から呼ぶ。キー削除と再生成の間隙を避けるため、
+ * セッション本体は上書きし、付随状態のみ除去する。
+ */
+export async function resetBmxtTerminalSessionsInStorage(): Promise<void> {
+  const fresh = emptyState()
+  await chrome.storage.local.remove([
+    ACTIVE_TERMINAL_SESSION_KEY,
+    SESSION_LOG_KEY,
+    LEGACY_SPLIT_KEY,
+    PROCESS_UI_STATE_KEY,
+    TAB_PICKER_FOLD_STATE_KEY,
+    CMD_HISTORY_KEY
+  ])
+  await clearTabPickerFoldStateStorage()
+  await clearProcessUiStateStorage()
+  await persistTerminalSessionsState(fresh)
+}
+
 export async function setFocusedLeafSession(
   sessionId: string
 ): Promise<TerminalSessionsStateV1 | null> {

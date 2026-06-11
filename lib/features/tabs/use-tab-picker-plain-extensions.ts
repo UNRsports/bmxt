@@ -209,24 +209,58 @@ export function useTabPickerPlainExtensions({
       if (!row) {
         return false
       }
-      const focusRowIdx = isLeft ? collapseAtRow(row) : expandAtRow(row)
-      if (focusRowIdx === null) {
-        if (isLeft && onExitToDetailBar) {
+
+      if (row.kind === "tab") {
+        if ((isLeft || isRight) && onExitToDetailBar) {
           pickerStopEvent(e)
           onExitToDetailBar()
           return true
         }
         return false
       }
-      pickerStopEvent(e)
-      const newVisible = computeTabPickerVisibleRowIndices(rows)
-      const newHi = newVisible.indexOf(focusRowIdx)
-      if (newHi >= 0) {
-        setHi(newHi)
-      } else {
-        setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+
+      if (row.kind !== "window" && row.kind !== "group") {
+        return false
       }
-      return true
+
+      if (isLeft) {
+        const focusRowIdx = collapseAtRow(row)
+        if (focusRowIdx === null) {
+          if (onExitToDetailBar) {
+            pickerStopEvent(e)
+            onExitToDetailBar()
+            return true
+          }
+          return false
+        }
+        pickerStopEvent(e)
+        const newVisible = computeTabPickerVisibleRowIndices(rows)
+        const newHi = newVisible.indexOf(focusRowIdx)
+        if (newHi >= 0) {
+          setHi(newHi)
+        } else {
+          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+        }
+        return true
+      }
+
+      if (isRight) {
+        const focusRowIdx = expandAtRow(row)
+        if (focusRowIdx === null) {
+          return false
+        }
+        pickerStopEvent(e)
+        const newVisible = computeTabPickerVisibleRowIndices(rows)
+        const newHi = newVisible.indexOf(focusRowIdx)
+        if (newHi >= 0) {
+          setHi(newHi)
+        } else {
+          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+        }
+        return true
+      }
+
+      return false
     },
     [
       bulkSubMode,

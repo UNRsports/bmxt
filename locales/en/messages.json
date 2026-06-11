@@ -8,7 +8,7 @@
     "description": "Description of the extension."
   },
   "commandLaunchBmxt": {
-    "message": "Open or focus BMXt",
-    "description": "Label for the global keyboard shortcut that opens BMXt."
+    "message": "Reset the terminal",
+    "description": "Label for the global keyboard shortcut that resets the BMXt terminal."
   }
 }

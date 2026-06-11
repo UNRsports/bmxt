@@ -11,8 +11,8 @@ import {
   type DetailBarId
 } from "./detail-bar-focus"
 
-function isAltVerticalNav(e: KeyboardEvent): "up" | "down" | null {
-  if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+function isPlainVerticalNav(e: KeyboardEvent): "up" | "down" | null {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
     return null
   }
   if (e.key === "ArrowUp" || e.code === "ArrowUp") {
@@ -53,6 +53,8 @@ export type UseDetailBarKeyboardOptions = {
   detailBarId: DetailBarId | null
   navArmed: boolean
   blocked: boolean
+  /** EN: When true, ↑/↓ on the prompt drive command history — do not steal ArrowDown. */
+  promptHistoryNavActive: boolean
   actions: DetailBarKeyboardActions
 }
 
@@ -73,16 +75,19 @@ export function useDetailBarKeyboard({
   detailBarId,
   navArmed,
   blocked,
+  promptHistoryNavActive,
   actions
 }: UseDetailBarKeyboardOptions): void {
   const paneFocusRef = useRef(paneFocus)
   const detailBarIdRef = useRef(detailBarId)
   const visibleRef = useRef(visibleDetailBars)
   const actionsRef = useRef(actions)
+  const promptHistoryNavActiveRef = useRef(promptHistoryNavActive)
   paneFocusRef.current = paneFocus
   detailBarIdRef.current = detailBarId
   visibleRef.current = visibleDetailBars
   actionsRef.current = actions
+  promptHistoryNavActiveRef.current = promptHistoryNavActive
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -95,11 +100,37 @@ export function useDetailBarKeyboard({
         return
       }
 
-      const altDir = isAltVerticalNav(e)
-      if (altDir && (focus === "terminal" || focus === "detailBar")) {
+      const vertDir = isPlainVerticalNav(e)
+      if (vertDir && focus === "terminal") {
+        if (vertDir === "down" && !promptHistoryNavActiveRef.current) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          const first = bars[0]
+          if (first) {
+            actionsRef.current.activateDetailBar(first)
+          }
+        }
+        return
+      }
+
+      if (vertDir && focus === "detailBar") {
         e.preventDefault()
         e.stopImmediatePropagation()
-        const next = cycleDetailBarId(bars, detailBarIdRef.current, altDir)
+        const current = detailBarIdRef.current
+        if (vertDir === "up") {
+          if (current === null || bars.length === 0) {
+            actionsRef.current.exitDetailBarToTerminal()
+            return
+          }
+          const index = bars.indexOf(current)
+          if (index <= 0) {
+            actionsRef.current.exitDetailBarToTerminal()
+            return
+          }
+          actionsRef.current.activateDetailBar(bars[index - 1]!)
+          return
+        }
+        const next = cycleDetailBarId(bars, current, "down")
         if (next) {
           actionsRef.current.activateDetailBar(next)
         }

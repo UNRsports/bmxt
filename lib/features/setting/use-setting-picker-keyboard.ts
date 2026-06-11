@@ -145,10 +145,8 @@ export function useSettingPickerKeyboard({
     }
     if (state.view !== "main") {
       goMain()
-      return
     }
-    callbacks.onExitToDetailBar?.()
-  }, [callbacks, cancelEditing, goMain, state.editing, state.view])
+  }, [cancelEditing, goMain, state.editing, state.view])
 
   const commitEdit = useCallback(async (): Promise<boolean> => {
     if (!state.editing) {
@@ -219,6 +217,10 @@ export function useSettingPickerKeyboard({
       if (isArrowRight(ev)) {
         ev.preventDefault()
         ev.stopPropagation()
+        if (state.view === "main" && !state.editing) {
+          callbacks.onExitToDetailBar?.()
+          return
+        }
         void handleArrowRight()
         return
       }
