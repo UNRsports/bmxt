@@ -877,7 +877,6 @@ export function BmxtShell({
     (target: PaneFocusTarget) => {
       onPaneFocusChange(target)
       if (target === "terminal") {
-        setDetailBarId(null)
         focusPrompt()
       } else if (target === "detailBar") {
         imeRef.current?.blur()
@@ -897,7 +896,7 @@ export function BmxtShell({
         pulsePickerColumn(detailBarToPickerSlot(id))
       }
     },
-    [onPaneFocusChange, pulsePickerColumn]
+    [onPaneFocusChange, pulsePickerColumn, setDetailBarId]
   )
 
   const enterPickerFromDetailBar = useCallback(() => {
@@ -919,8 +918,41 @@ export function BmxtShell({
   )
 
   const exitDetailBarToTerminal = useCallback(() => {
-    activatePaneFocus("terminal")
-  }, [activatePaneFocus])
+    onPaneFocusChange("terminal")
+    const end = lineRef.current.length
+    setCursorPos(end)
+    focusPrompt()
+  }, [focusPrompt, onPaneFocusChange])
+
+  const focusTerminalForNavControl = useCallback(() => {
+    exitDetailBarToTerminal()
+  }, [exitDetailBarToTerminal])
+
+  const focusNavDetailBar = useCallback(() => {
+    if (!navArmedRef.current) {
+      return
+    }
+    activateDetailBar("nav")
+  }, [activateDetailBar])
+
+  const handleToggleNavActive = useCallback(() => {
+    const turningOn = !navActiveRef.current
+    toggleNavActive()
+    if (turningOn) {
+      focusTerminalForNavControl()
+    } else {
+      focusNavDetailBar()
+    }
+  }, [focusNavDetailBar, focusTerminalForNavControl, toggleNavActive])
+
+  const toggleTabsPageActiveFromDetailBar = useCallback(() => {
+    const next: TabsPageActiveMode =
+      tabsPageActiveModeRef.current === "auto" ? "manual" : "auto"
+    void saveTabsPageActiveMode(next).then(() => {
+      setTabsPageActiveMode(next)
+      tabsPageActiveModeRef.current = next
+    })
+  }, [])
 
   const cycleTranslatePairFromDetailBar = useCallback(
     (direction: 1 | -1) => {
@@ -983,24 +1015,40 @@ export function BmxtShell({
   }, [detailBarId, openPickers, paneFocus])
 
   useDetailBarKeyboard({
-    enabled: visibleDetailBars.length > 0,
+    enabled: visibleDetailBars.length > 0 || navArmed,
     isFocusedPane,
     paneFocus,
     visibleDetailBars,
     detailBarId,
     navArmed,
+    navActive,
+    navTypingMode,
     blocked: navPageTyping || searchListBusy || mode === "isearch" || subCmdPicker !== null,
-    promptHistoryNavActive: histNavIndex !== -1,
+    isCaretAtPromptEnd: () => cursorRef.current >= lineRef.current.length,
     actions: {
       activateDetailBar,
       enterPickerFromDetailBar,
       exitDetailBarToTerminal,
-      toggleNavActive,
-      cycleTranslatePair: cycleTranslatePairFromDetailBar
+      toggleNavActive: handleToggleNavActive,
+      cycleTranslatePair: cycleTranslatePairFromDetailBar,
+      toggleTabsPageActive: toggleTabsPageActiveFromDetailBar
     }
   })
 
   const promptPaneFocused = isFocusedPane && paneFocus === "terminal"
+
+  const prevNavActiveRef = useRef(navActive)
+  useLayoutEffect(() => {
+    const wasActive = prevNavActiveRef.current
+    prevNavActiveRef.current = navActive
+    if (wasActive && !navActive && navArmed) {
+      focusNavDetailBar()
+      return
+    }
+    if (navActive && paneFocus !== "terminal") {
+      focusTerminalForNavControl()
+    }
+  }, [focusNavDetailBar, focusTerminalForNavControl, navActive, navArmed, paneFocus])
 
   useLayoutEffect(() => {
     if (promptPaneFocused) {
@@ -2422,7 +2470,7 @@ export function BmxtShell({
           return
         }
         if (!e.repeat) {
-          toggleNavActive()
+          handleToggleNavActive()
         }
         return
       }
@@ -2570,7 +2618,7 @@ export function BmxtShell({
       navTextSelDone,
       navTextSelPhase,
       paneFocus,
-      toggleNavActive
+      handleToggleNavActive
     ]
   )
 

@@ -4,7 +4,8 @@ import {
   computePickerColumnOrder,
   cycleDetailBarId,
   isPickerDetailBar,
-  listVisibleDetailBars
+  listVisibleDetailBars,
+  resolveDetailBarFocusTarget
 } from "./detail-bar-focus.ts"
 
 describe("detail bar focus helpers", () => {
@@ -29,8 +30,10 @@ describe("detail bar focus helpers", () => {
     )
   })
 
-  it("isPickerDetailBar recognizes picker slots", () => {
-    assert.equal(isPickerDetailBar("tabs"), true)
-    assert.equal(isPickerDetailBar("nav"), false)
+  it("resolveDetailBarFocusTarget prefers stored visible id", () => {
+    const bars = ["nav", "tabs", "search"] as const
+    assert.equal(resolveDetailBarFocusTarget(bars, "search"), "search")
+    assert.equal(resolveDetailBarFocusTarget(bars, "dom"), "nav")
+    assert.equal(resolveDetailBarFocusTarget([], "tabs"), null)
   })
 })

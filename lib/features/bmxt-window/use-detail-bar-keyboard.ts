@@ -1,6 +1,5 @@
 import { useCallback, useLayoutEffect, useRef } from "react"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
-import type { PickerSlotId } from "../side-picker/session/session-pickers"
 import {
   TRANSLATION_PAIR_IDS,
   type TranslationPairId
@@ -8,6 +7,7 @@ import {
 import {
   cycleDetailBarId,
   isPickerDetailBar,
+  resolveDetailBarFocusTarget,
   type DetailBarId
 } from "./detail-bar-focus"
 
@@ -37,12 +37,17 @@ function isPlainHorizontal(e: KeyboardEvent): "left" | "right" | null {
   return null
 }
 
+function isAltDetailBarKey(e: KeyboardEvent): boolean {
+  return e.key === "Alt" && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.repeat
+}
+
 export type DetailBarKeyboardActions = {
   activateDetailBar: (id: DetailBarId) => void
   enterPickerFromDetailBar: () => void
   exitDetailBarToTerminal: () => void
   toggleNavActive: () => void
   cycleTranslatePair: (direction: 1 | -1) => void
+  toggleTabsPageActive?: () => void
 }
 
 export type UseDetailBarKeyboardOptions = {
@@ -52,9 +57,13 @@ export type UseDetailBarKeyboardOptions = {
   visibleDetailBars: readonly DetailBarId[]
   detailBarId: DetailBarId | null
   navArmed: boolean
+  /** EN: Nav overlay ON — arrows belong to page cursor, not detail bars. */
+  navActive: boolean
+  /** EN: Nav typing mode — Alt is commit-hold, not overlay toggle. */
+  navTypingMode: boolean
   blocked: boolean
-  /** EN: When true, ↑/↓ on the prompt drive command history — do not steal ArrowDown. */
-  promptHistoryNavActive: boolean
+  /** EN: True when the prompt caret is at end-of-line (→ enters detail bar). */
+  isCaretAtPromptEnd: () => boolean
   actions: DetailBarKeyboardActions
 }
 
@@ -74,20 +83,28 @@ export function useDetailBarKeyboard({
   visibleDetailBars,
   detailBarId,
   navArmed,
+  navActive,
+  navTypingMode,
   blocked,
-  promptHistoryNavActive,
+  isCaretAtPromptEnd,
   actions
 }: UseDetailBarKeyboardOptions): void {
   const paneFocusRef = useRef(paneFocus)
   const detailBarIdRef = useRef(detailBarId)
   const visibleRef = useRef(visibleDetailBars)
   const actionsRef = useRef(actions)
-  const promptHistoryNavActiveRef = useRef(promptHistoryNavActive)
+  const isCaretAtPromptEndRef = useRef(isCaretAtPromptEnd)
+  const navTypingModeRef = useRef(navTypingMode)
+  const navActiveRef = useRef(navActive)
   paneFocusRef.current = paneFocus
   detailBarIdRef.current = detailBarId
   visibleRef.current = visibleDetailBars
   actionsRef.current = actions
-  promptHistoryNavActiveRef.current = promptHistoryNavActive
+  isCaretAtPromptEndRef.current = isCaretAtPromptEnd
+  navTypingModeRef.current = navTypingMode
+  navActiveRef.current = navActive
+
+  const navClaimsArrows = (): boolean => navArmed && navActiveRef.current
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -96,44 +113,30 @@ export function useDetailBarKeyboard({
       }
       const focus = paneFocusRef.current
       const bars = visibleRef.current
-      if (bars.length === 0) {
-        return
-      }
 
-      const vertDir = isPlainVerticalNav(e)
-      if (vertDir && focus === "terminal") {
-        if (vertDir === "down" && !promptHistoryNavActiveRef.current) {
+      if (focus === "terminal") {
+        if (isAltDetailBarKey(e) && navArmed && !navTypingModeRef.current) {
           e.preventDefault()
           e.stopImmediatePropagation()
-          const first = bars[0]
-          if (first) {
-            actionsRef.current.activateDetailBar(first)
+          actionsRef.current.toggleNavActive()
+          return
+        }
+        if (bars.length === 0) {
+          return
+        }
+        const horiz = isPlainHorizontal(e)
+        if (horiz === "right" && isCaretAtPromptEndRef.current() && !navClaimsArrows()) {
+          const target = resolveDetailBarFocusTarget(bars, detailBarIdRef.current)
+          if (target) {
+            e.preventDefault()
+            e.stopImmediatePropagation()
+            actionsRef.current.activateDetailBar(target)
           }
         }
         return
       }
 
-      if (vertDir && focus === "detailBar") {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        const current = detailBarIdRef.current
-        if (vertDir === "up") {
-          if (current === null || bars.length === 0) {
-            actionsRef.current.exitDetailBarToTerminal()
-            return
-          }
-          const index = bars.indexOf(current)
-          if (index <= 0) {
-            actionsRef.current.exitDetailBarToTerminal()
-            return
-          }
-          actionsRef.current.activateDetailBar(bars[index - 1]!)
-          return
-        }
-        const next = cycleDetailBarId(bars, current, "down")
-        if (next) {
-          actionsRef.current.activateDetailBar(next)
-        }
+      if (bars.length === 0) {
         return
       }
 
@@ -142,40 +145,49 @@ export function useDetailBarKeyboard({
       }
 
       const current = detailBarIdRef.current
-      if (!current) {
-        return
-      }
-
       const horiz = isPlainHorizontal(e)
-      if (!horiz) {
+
+      if (horiz === "left") {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        actionsRef.current.exitDetailBarToTerminal()
         return
       }
 
-      if (current === "nav" && navArmed) {
+      if (horiz === "right" && current !== null && isPickerDetailBar(current)) {
         e.preventDefault()
         e.stopImmediatePropagation()
-        if (!e.repeat) {
+        actionsRef.current.enterPickerFromDetailBar()
+        return
+      }
+
+      if (isAltDetailBarKey(e) && current !== null) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        if (current === "nav" && navArmed) {
           actionsRef.current.toggleNavActive()
+          return
+        }
+        if (current === "translate") {
+          actionsRef.current.cycleTranslatePair(1)
+          return
+        }
+        if (current === "tabs") {
+          actionsRef.current.toggleTabsPageActive?.()
         }
         return
       }
 
-      if (current === "translate") {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        if (!e.repeat) {
-          actionsRef.current.cycleTranslatePair(horiz === "right" ? 1 : -1)
+      const vertDir = isPlainVerticalNav(e)
+      if (vertDir) {
+        if (navClaimsArrows()) {
+          return
         }
-        return
-      }
-
-      if (isPickerDetailBar(current)) {
         e.preventDefault()
         e.stopImmediatePropagation()
-        if (horiz === "right") {
-          actionsRef.current.enterPickerFromDetailBar()
-        } else {
-          actionsRef.current.exitDetailBarToTerminal()
+        const next = cycleDetailBarId(bars, current, vertDir)
+        if (next) {
+          actionsRef.current.activateDetailBar(next)
         }
       }
     },

@@ -24,8 +24,8 @@ export function TabsStatusBar({ pageActiveMode }: Props) {
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">page-active {modeToken}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
         {locale === "ja"
-          ? "↓ で選択 · → でピッカー · タブ←/→で詳細バー · 窓/グループ←→で開閉"
-          : "↓ select · → picker · tab ←/→ detail bar · win/group ←→ fold"}
+          ? "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー"
+          : "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"}
         {" · "}
         {tabsStatusHint(locale, pageActiveMode)}
       </span>

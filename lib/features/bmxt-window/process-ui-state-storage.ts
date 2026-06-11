@@ -265,7 +265,7 @@ export function serializeProcessUiState(
       ) {
         byLeaf[leafId] = {
           paneFocus,
-          detailBarId: paneFocus === "detailBar" ? detailBarId : undefined,
+          detailBarId: detailBarId !== null ? detailBarId : undefined,
           modeToolbarOrder: modeToolbarOrder.length > 0 ? modeToolbarOrder : undefined,
           navArmed: navArmed || undefined,
           pickers: { tabs: null, search: null, dom: null }
@@ -289,7 +289,7 @@ export function serializeProcessUiState(
     }
     byLeaf[leafId] = {
       paneFocus,
-      detailBarId: paneFocus === "detailBar" ? detailBarId : undefined,
+      detailBarId: detailBarId !== null ? detailBarId : undefined,
       modeToolbarOrder: modeToolbarOrder.length > 0 ? modeToolbarOrder : undefined,
       navArmed: navArmed || undefined,
       pickers: {

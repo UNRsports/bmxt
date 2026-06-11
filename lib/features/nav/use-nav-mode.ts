@@ -365,7 +365,10 @@ export function useNavMode({
   }, [syncOverlayForTab])
 
   const toggleActive = useCallback(() => {
-    if (!armedRef.current || !isFocusedPane || paneFocus !== "terminal") {
+    if (!armedRef.current || !isFocusedPane) {
+      return
+    }
+    if (paneFocus !== "terminal" && paneFocus !== "detailBar") {
       return
     }
     const next = !activeRef.current

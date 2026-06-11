@@ -60,3 +60,17 @@ export function cycleDetailBarId(
   const next = (index + delta + bars.length) % bars.length
   return bars[next]!
 }
+
+/** EN: Restore detail-bar highlight when Alt returns from the prompt (stored id wins). */
+export function resolveDetailBarFocusTarget(
+  visibleBars: readonly DetailBarId[],
+  storedId: DetailBarId | null
+): DetailBarId | null {
+  if (visibleBars.length === 0) {
+    return null
+  }
+  if (storedId !== null && visibleBars.includes(storedId)) {
+    return storedId
+  }
+  return visibleBars[0]!
+}

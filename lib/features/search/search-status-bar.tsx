@@ -29,8 +29,8 @@ export function SearchStatusBar({ pattern, phase }: Props) {
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{meta}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
         {locale === "ja"
-          ? "↓ で選択 · ↑↓ で移動 · → でピッカー · ピッカー内 → で戻る"
-          : "↓ from prompt · ↑↓ move · → picker · → in picker to return"}
+          ? "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · Alt で切替 · → でピッカー"
+          : "EOL → focus · ↑↓ move · ← prompt · Alt toggle · → picker"}
       </span>
     </div>
   )
