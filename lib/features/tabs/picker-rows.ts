@@ -3,6 +3,7 @@
 import { displayTitle } from "../format/display-title"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
+import { resolveTabFaviconSrc } from "./tab-favicon-url"
 import {
   getWindowDisplayNamesMap,
   pruneWindowDisplayNames
@@ -29,6 +30,7 @@ export type TabPickerRow =
       groupId: number | null
       title: string
       url: string
+      faviconSrc: string | null
       active: boolean
     }
 
@@ -156,6 +158,7 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
         groupId: key === "none" ? null : key,
         title: t.title || "",
         url: tabUrl(t),
+        faviconSrc: resolveTabFaviconSrc(tabUrl(t)),
         active: Boolean(t.active)
       })
     }

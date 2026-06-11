@@ -20,6 +20,24 @@ function renderHighlighted(text: string, needle: string, keyPrefix: string): Rea
   )
 }
 
+function TabPickerTabFavicon({ src }: { src: string }) {
+  return (
+    <img
+      className="bmxt-tab-picker-tab-favicon"
+      src={src}
+      alt=""
+      width={16}
+      height={16}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      onError={(e) => {
+        e.currentTarget.style.visibility = "hidden"
+      }}
+    />
+  )
+}
+
 export type TabPickerRowListProps = {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -142,6 +160,7 @@ export function TabPickerRowList({
               <span className="bmxt-tab-picker-tab-glyph">
                 {markedTabSet.has(row.tabId) ? "#" : " "}
               </span>
+              {row.faviconSrc ? <TabPickerTabFavicon src={row.faviconSrc} /> : null}
               {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}
             </div>
             {showUrl ? (

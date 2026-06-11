@@ -1228,6 +1228,16 @@ html[data-bmxt-unified-bg] .bmxt-side-picker {
   user-select: none;
 }
 
+.bmxt-tab-picker-tab-favicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: text-bottom;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .bmxt-tab-picker-search-hl {
   background: #f5e942;
   color: #0d1117;
