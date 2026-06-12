@@ -58,7 +58,7 @@ type SplitTreeProps = {
   setSessionPickerSlot: <K extends PickerSlotId>(
     forSessionId: string,
     slot: K,
-    value: SessionPickerState[K]
+    value: SessionPickerState[K] | ((prev: SessionPickerState[K]) => SessionPickerState[K])
   ) => void
   paneFocusByLeaf: Record<string, PaneFocusTarget>
   setPaneFocusForLeaf: (sessionId: string, target: PaneFocusTarget) => void
@@ -293,7 +293,11 @@ function BmxtTerminalInner() {
   }, [])
 
   const setSessionPickerSlot = useCallback(
-    <K extends PickerSlotId>(forSessionId: string, slot: K, value: SessionPickerState[K]) => {
+    <K extends PickerSlotId>(
+      forSessionId: string,
+      slot: K,
+      value: SessionPickerState[K] | ((prev: SessionPickerState[K]) => SessionPickerState[K])
+    ) => {
       setPickersBySession((prev) => applySessionPickerSlot(prev, forSessionId, slot, value))
     },
     []
