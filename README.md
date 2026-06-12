@@ -231,7 +231,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `close` / `c <tabId>` | Close tab |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the focused pane**; the BMXt window and all other persisted process state stay as they are. **Closing the BMXt window** (× button) does **not** end the process — logs, split layout, open picker columns, tab-picker fold state, and command history remain in **`chrome.storage.local`** and are restored when you reopen BMXt. **`exit`** removes the focused pane’s log and closes that split pane; when **only one pane remains**, it closes the BMXt window and **clears the entire process** from storage (logs, split layout, picker UI, tab-picker fold state, and command history). See **[BMXt process lifecycle](#bmxt-process-lifecycle)**.
+**Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the focused pane**; the BMXt window and all other persisted process state stay as they are. **Closing the BMXt window** (× button) does **not** end the process — logs, split layout, open picker columns, tab-picker fold state, and command history remain in **`chrome.storage.local`** and are restored when you reopen BMXt. **`exit`** removes the focused pane’s log and closes that split pane; when **only one pane remains**, it closes the BMXt window and **clears process-scoped storage** (logs, split layout, picker UI, tab-picker fold state). **Command history is kept** across process exit. See **[BMXt process lifecycle](#bmxt-process-lifecycle)**.
 
 <a id="bmxt-process-lifecycle"></a>
 
@@ -245,7 +245,7 @@ Unlike a typical terminal emulator, **closing the BMXt window does not terminate
 | **Close BMXt window** | Kept | Kept | Kept | Kept | Kept |
 | **Reopen BMXt window** | Restored | Restored | Restored | Restored | Restored |
 | **`exit`** (multiple panes) | Focused pane cleared; leaf removed | Updated | Other leaves kept | Kept | Kept |
-| **`exit`** (last pane) | **All cleared** | **Cleared** | **Cleared** | **Cleared** | **Cleared** |
+| **`exit`** (last pane) | **All cleared** | **Cleared** | **Cleared** | **Cleared** | **Kept** |
 
 **Process-scoped storage keys** (removed only when the **last** pane exits via **`exit`**):
 
@@ -255,9 +255,8 @@ Unlike a typical terminal emulator, **closing the BMXt window does not terminate
 | `bmxt_split_layout_v1` | Split tree and focused leaf id |
 | `bmxt_process_ui_v1` | Open picker slots per leaf (`tabs` / `search` / `dom` / `setting`) and `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
-| `bmxt_cmd_history` | Prompt command history (↑/↓, Ctrl+R) |
 
-**Not cleared on process exit** (user / browser metadata): custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab picker settings (`page-active`), last normal window id, welcome/version tracking keys.
+**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`), custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab picker settings (`page-active`), last normal window id, welcome/version tracking keys.
 
 **Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
 
@@ -1106,7 +1105,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **フォーカス中ペインの画面ログだけ**を消します。BMXt ウィンドウとその他の永続状態はそのままです。**BMXt ウィンドウを閉じる**（× ボタン）操作だけでは **プロセスは終了しません** — ログ、split レイアウト、開いているピッカー列、タブツリー開閉、コマンド履歴は **`chrome.storage.local`** に残り、BMXt を再度開くと復元されます。**`exit`** はフォーカス中ペインのログを消して **当該 split ペインを閉じます**；**残り 1 ペイン**のときは BMXt ウィンドウを閉じ、**プロセス全体**を storage から消去します（ログ、split、ピッカー UI、タブツリー開閉、コマンド履歴）。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**。
+**補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **フォーカス中ペインの画面ログだけ**を消します。BMXt ウィンドウとその他の永続状態はそのままです。**BMXt ウィンドウを閉じる**（× ボタン）操作だけでは **プロセスは終了しません** — ログ、split レイアウト、開いているピッカー列、タブツリー開閉、コマンド履歴は **`chrome.storage.local`** に残り、BMXt を再度開くと復元されます。**`exit`** はフォーカス中ペインのログを消して **当該 split ペインを閉じます**；**残り 1 ペイン**のときは BMXt ウィンドウを閉じ、**プロセススコープの storage** を消去します（ログ、split、ピッカー UI、タブツリー開閉）。**コマンド履歴はプロセス終了後も保持**されます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**。
 
 <a id="bmxt-process-lifecycle-ja"></a>
 
@@ -1120,7 +1119,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | **BMXt ウィンドウを閉じる** | 保持 | 保持 | 保持 | 保持 | 保持 |
 | **BMXt ウィンドウを再度開く** | 復元 | 復元 | 復元 | 復元 | 復元 |
 | **`exit`**（複数ペイン） | フォーカス中ペイン消去・リーフ除去 | 更新 | 他リーフは保持 | 保持 | 保持 |
-| **`exit`**（最後の 1 ペイン） | **すべて消去** | **消去** | **消去** | **消去** | **消去** |
+| **`exit`**（最後の 1 ペイン） | **すべて消去** | **消去** | **消去** | **消去** | **保持** |
 
 **プロセススコープの storage キー**（**最後の 1 ペイン**の **`exit`** 時のみ削除）:
 
@@ -1130,9 +1129,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `bmxt_split_layout_v1` | split ツリーとフォーカス中リーフ id |
 | `bmxt_process_ui_v1` | リーフごとの開いているピッカー（`tabs` / `search` / `dom` / `setting`）と `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
-| `bmxt_cmd_history` | プロンプトのコマンド履歴（↑/↓、Ctrl+R） |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history`）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
 
 **実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
 

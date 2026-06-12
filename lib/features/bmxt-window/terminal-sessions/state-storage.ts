@@ -319,7 +319,7 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
   await setSessionLines(sessionId, [])
 }
 
-/** ストレージ上のターミナル状態を消去（BMXt プロセス `exit` 全終了時）。 */
+/** ストレージ上のターミナル状態を消去（BMXt プロセス `exit` 全終了時）。コマンド履歴は保持。 */
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
@@ -328,8 +328,7 @@ export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
     SESSION_LOG_KEY,
     LEGACY_SPLIT_KEY,
     PROCESS_UI_STATE_KEY,
-    TAB_PICKER_FOLD_STATE_KEY,
-    CMD_HISTORY_KEY
+    TAB_PICKER_FOLD_STATE_KEY
   ])
   await clearTabPickerFoldStateStorage()
   await clearProcessUiStateStorage()
