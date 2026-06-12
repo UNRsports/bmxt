@@ -11,6 +11,7 @@ import {
   verticalNavDirection
 } from "./tab-picker-keyboard"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
+import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import type { ExecutionIntent } from "./controller/execute-actions"
 import {
@@ -172,6 +173,8 @@ export function useTabPickerPlainExtensions({
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
 }): PlainPickerKeyboardExtensions {
+  useTabPickerLiveFieldsRevision()
+
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
   newTabUrlWindowIdRef.current = newTabUrlWindowId

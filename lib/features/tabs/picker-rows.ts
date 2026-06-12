@@ -8,6 +8,11 @@ import {
   getWindowDisplayNamesMap,
   pruneWindowDisplayNames
 } from "../extension-storage/window-display-names"
+import {
+  resolveLiveTabTitle,
+  resolveLiveTabUrl,
+  seedTabPickerLiveFields
+} from "./tab-picker-live-tab-fields"
 
 export { displayTitle }
 
@@ -126,8 +131,14 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
     const tracked = trackedWindowId !== undefined && wid === trackedWindowId
     const customName = windowDisplayNames.get(wid)
     const usesActiveTabTitle = customName === undefined
+    const activeTabId = active?.id
+    const activeRawTitle = active?.title ?? ""
+    const activeRawUrl = active ? tabUrl(active) : ""
+    if (activeTabId !== undefined) {
+      seedTabPickerLiveFields(activeTabId, activeRawTitle, activeRawUrl)
+    }
     const windowTitle =
-      customName !== undefined ? customName : displayTitle(active?.title ?? "")
+      customName !== undefined ? customName : displayTitle(activeRawTitle)
     rows.push({
       kind: "window",
       windowId: wid,
@@ -151,14 +162,18 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
         }
         prevKey = key
       }
+      const tabId = t.id!
+      const rawTitle = t.title || ""
+      const rawUrl = tabUrl(t)
+      seedTabPickerLiveFields(tabId, rawTitle, rawUrl)
       rows.push({
         kind: "tab",
-        tabId: t.id!,
+        tabId,
         windowId: wid,
         groupId: key === "none" ? null : key,
-        title: t.title || "",
-        url: tabUrl(t),
-        faviconSrc: resolveTabFaviconSrc(tabUrl(t)),
+        title: rawTitle,
+        url: rawUrl,
+        faviconSrc: resolveTabFaviconSrc(rawUrl),
         active: Boolean(t.active)
       })
     }
@@ -201,14 +216,16 @@ export function tabPickerVisibleHiIndicesMatching(
     }
     if (r.kind === "tab") {
       if (byUrl) {
-        if ((r.url || "").toLowerCase().includes(lc)) {
+        const url = resolveLiveTabUrl(r.tabId, r.url || "")
+        if (url.toLowerCase().includes(lc)) {
           out.push(vi)
         }
       } else {
-        const plain = (r.title || "").trim()
+        const title = resolveLiveTabTitle(r.tabId, r.title || "")
+        const plain = title.trim()
         if (
           plain.toLowerCase().includes(lc) ||
-          displayTitle(r.title).toLowerCase().includes(lc)
+          displayTitle(title).toLowerCase().includes(lc)
         ) {
           out.push(vi)
         }
@@ -237,16 +254,17 @@ export function filterTabRowIndices(rows: TabPickerRow[], filterQuery: string): 
       continue
     }
     if (byUrl) {
-      const u = (r.url || "").toLowerCase()
+      const u = resolveLiveTabUrl(r.tabId, r.url || "").toLowerCase()
       if (u.includes(needle.toLowerCase())) {
         out.push(i)
       }
     } else {
-      const plain = (r.title || "").trim()
+      const title = resolveLiveTabTitle(r.tabId, r.title || "")
+      const plain = title.trim()
       if (
         plain.includes(needle) ||
         plain.toLowerCase().includes(needle.toLowerCase()) ||
-        displayTitle(r.title).toLowerCase().includes(needle.toLowerCase())
+        displayTitle(title).toLowerCase().includes(needle.toLowerCase())
       ) {
         out.push(i)
       }

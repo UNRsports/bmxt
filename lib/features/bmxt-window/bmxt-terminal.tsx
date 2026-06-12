@@ -1,5 +1,4 @@
 import { buildTabPickerRows } from "../tabs"
-import { patchTabPickerRowsTitle } from "../tabs/patch-tab-picker-rows"
 import { createTabPickerRowsRefresh } from "../tabs/tab-picker-rows-refresh"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import {
@@ -351,31 +350,11 @@ function BmxtTerminalInner() {
   const refreshTabPickerRows = tabPickerRefreshHandles.refreshTabPickerRows
   const scheduleTabPickerRowsRefresh = tabPickerRefreshHandles.scheduleTabPickerRowsRefresh
 
-  const patchTabPickerRowTitle = useCallback((tabId: number, title: string) => {
-    setPickersBySession((prev) => {
-      let next = prev
-      let changed = false
-      for (const [sid, pickers] of Object.entries(prev)) {
-        const tabPicker = pickers.tabs
-        if (tabPicker === null) {
-          continue
-        }
-        const rows = patchTabPickerRowsTitle(tabPicker.rows, tabId, title)
-        if (rows === tabPicker.rows) {
-          continue
-        }
-        changed = true
-        next = applySessionPickerSlot(next, sid, "tabs", { ...tabPicker, rows })
-      }
-      return changed ? next : prev
-    })
-  }, [])
-
   const anyPickerOpen = useMemo(
     () => anyLeafHasPickerOpen(pickersBySession),
     [pickersBySession]
   )
-  useTabPickerChromeSync(scheduleTabPickerRowsRefresh, anyPickerOpen, patchTabPickerRowTitle)
+  useTabPickerChromeSync(scheduleTabPickerRowsRefresh, anyPickerOpen)
 
   useEffect(() => {
     if (!state) {

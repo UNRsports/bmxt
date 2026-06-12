@@ -15,6 +15,7 @@ export function useSyncChromeTabStripPreview({
   pageActiveMode,
   altKeyHeldRef,
   mirrorHiPendingRef,
+  isHostPaneFocused,
   altPreviewTick = 0
 }: {
   hi: number
@@ -27,12 +28,15 @@ export function useSyncChromeTabStripPreview({
   pageActiveMode: TabsPageActiveMode
   altKeyHeldRef: MutableRefObject<boolean>
   mirrorHiPendingRef: MutableRefObject<boolean>
+  /** EN: When false (BMXt pane unfocused / window in background), do not touch Chrome tab strip. */
+  isHostPaneFocused: boolean
   /** EN: Bumped on Alt keydown in manual mode to re-run preview without moving hi. */
   altPreviewTick?: number
 }) {
   const rowsRef = useRef(rows)
   rowsRef.current = rows
   const appliedActiveTabIdRef = useRef<number | null>(null)
+  const lastPreviewKeyRef = useRef("")
 
   const syncChromeTabStripPreview = useCallback(
     async (rowIndex: number) => {
@@ -117,6 +121,10 @@ export function useSyncChromeTabStripPreview({
   )
 
   useEffect(() => {
+    if (!isHostPaneFocused) {
+      lastPreviewKeyRef.current = ""
+      return
+    }
     if (visibleRowIndices.length === 0) {
       return
     }
@@ -126,11 +134,26 @@ export function useSyncChromeTabStripPreview({
     if (pageActiveMode === "manual" && !altKeyHeldRef.current) {
       return
     }
-    const rowIndex = visibleRowIndices[hi]!
+    const rowIndex = visibleRowIndices[hi]
+    if (rowIndex === undefined) {
+      return
+    }
+    const row = rowsRef.current[rowIndex]
+    if (!row || row.kind !== "tab") {
+      return
+    }
+    const markedKey =
+      markedKind === "tab" ? markedTabIds.slice().sort((a, b) => a - b).join(",") : ""
+    const previewKey = `${hi}:${row.tabId}:${markedKey}`
+    if (lastPreviewKeyRef.current === previewKey) {
+      return
+    }
+    lastPreviewKeyRef.current = previewKey
     void syncChromeTabStripPreview(rowIndex)
   }, [
     altKeyHeldRef,
     hi,
+    isHostPaneFocused,
     markedKind,
     markedTabIds,
     mirrorHiPendingRef,

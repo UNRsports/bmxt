@@ -1,81 +1,58 @@
 import { useEffect, useState } from "react"
 import { displayTitle } from "./picker-rows"
-
-const TRACKED_TITLE_DEBOUNCE_MS = 400
+import { resolveLiveTabTitle } from "./tab-picker-live-tab-fields"
+import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 
 /**
- * EN: Live tracked-window id/title from `activeTabId` (Chrome APIs), not row snapshots.
- * JA: 行データ再構築を待たず、追跡ウィンドウ名を安定表示する。
+ * EN: Tracked-window id from Chrome; title from the unified live tab-fields store.
+ * JA: ウィンドウ ID は Chrome API、タイトルは live fields 単一ソース。
  */
 export function useTrackedWindowDisplay(activeTabId: number | null): {
   trackedWindowId: number | undefined
   trackedWindowTitle: string | null
 } {
   const [trackedWindowId, setTrackedWindowId] = useState<number | undefined>(undefined)
-  const [trackedWindowTitle, setTrackedWindowTitle] = useState<string | null>(null)
+  const [queryTitle, setQueryTitle] = useState<string>("")
+  useTabPickerLiveFieldsRevision()
 
   useEffect(() => {
     if (activeTabId === null) {
       setTrackedWindowId(undefined)
-      setTrackedWindowTitle(null)
+      setQueryTitle("")
       return
     }
 
     let cancelled = false
 
-    const applyTab = (tab: chrome.tabs.Tab) => {
-      if (cancelled) {
-        return
-      }
-      if (tab.windowId !== undefined) {
-        setTrackedWindowId(tab.windowId)
-      }
-      setTrackedWindowTitle(displayTitle(tab.title ?? ""))
-    }
-
     void (async () => {
       try {
         const tab = await chrome.tabs.get(activeTabId)
-        applyTab(tab)
+        if (cancelled) {
+          return
+        }
+        if (tab.windowId !== undefined) {
+          setTrackedWindowId(tab.windowId)
+        }
+        setQueryTitle(tab.title ?? "")
       } catch {
         if (!cancelled) {
           setTrackedWindowId(undefined)
-          setTrackedWindowTitle(null)
+          setQueryTitle("")
         }
       }
     })()
 
-    let titleDebounceTimer: ReturnType<typeof setTimeout> | undefined
-
-    const onUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
-      if (tabId !== activeTabId) {
-        return
-      }
-      if (changeInfo.title === undefined) {
-        return
-      }
-      const nextTitle = displayTitle(changeInfo.title)
-      if (titleDebounceTimer !== undefined) {
-        clearTimeout(titleDebounceTimer)
-      }
-      titleDebounceTimer = setTimeout(() => {
-        titleDebounceTimer = undefined
-        if (!cancelled) {
-          setTrackedWindowTitle(nextTitle)
-        }
-      }, TRACKED_TITLE_DEBOUNCE_MS)
-    }
-
-    chrome.tabs.onUpdated.addListener(onUpdated)
-
     return () => {
       cancelled = true
-      if (titleDebounceTimer !== undefined) {
-        clearTimeout(titleDebounceTimer)
-      }
-      chrome.tabs.onUpdated.removeListener(onUpdated)
     }
   }, [activeTabId])
+
+  if (activeTabId === null) {
+    return { trackedWindowId: undefined, trackedWindowTitle: null }
+  }
+
+  const resolved = resolveLiveTabTitle(activeTabId, queryTitle)
+  const trackedWindowTitle = resolved !== "" ? displayTitle(resolved) : null
 
   return { trackedWindowId, trackedWindowTitle }
 }

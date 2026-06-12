@@ -32,6 +32,7 @@ import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-pi
 import { emptyTabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 import type { TabsPageActiveMode } from "./page-active-setting"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
+import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 
 type Props = {
@@ -78,6 +79,7 @@ export function useTabPickerController({
   onFocusTabIdChange
 }: Props) {
   const restored = interactive ?? emptyTabPickerInteractiveSnapshot()
+  useTabPickerLiveFieldsRevision()
   const [filterQuery, setFilterQuery] = useState("")
   const [searchMode, setSearchMode] = useState(false)
   /** `/` で確定したあとも維持するハイライト用クエリ（`:nohlsearch` で消す） */
@@ -318,6 +320,7 @@ export function useTabPickerController({
     pageActiveMode,
     altKeyHeldRef,
     mirrorHiPendingRef,
+    isHostPaneFocused,
     altPreviewTick
   })
 

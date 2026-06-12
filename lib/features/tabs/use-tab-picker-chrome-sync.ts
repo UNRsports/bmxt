@@ -1,74 +1,45 @@
 import { useEffect } from "react"
 import {
-  isTitleOnlyTabUpdate,
-  shouldRefreshOnTabUpdated
+  shouldHandleTabUpdated,
+  shouldRebuildRowsOnTabUpdated
 } from "./tab-picker-chrome-sync-filters"
-import { consumeTabPickerSelfActivation } from "./tab-picker-activation-suppression"
-
-const TITLE_PATCH_DEBOUNCE_MS = 400
+import {
+  applyTabPickerLiveFieldsFromChrome,
+  forgetTabPickerLiveFields
+} from "./tab-picker-live-tab-fields"
 
 /**
  * タブピッカー表示中に tabs / windows / tabGroups の変化を追従する。
- * `scheduleRefresh` はデバウンス済みの行再構築を呼ぶ（重複 refresh の競合を避ける）。
+ * タイトル・URL は row 再構築ではなく live fields ストアへ集約する。
+ * `scheduleRefresh` は構造変化時のみ（デバウンス済み行再構築）。
  */
 export function useTabPickerChromeSync(
   scheduleRefresh: () => void,
-  enabled: boolean,
-  onTabTitleUpdated?: (tabId: number, title: string) => void
+  enabled: boolean
 ) {
   useEffect(() => {
     if (!enabled) {
       return
     }
 
-    const titlePatchTimers = new Map<number, ReturnType<typeof setTimeout>>()
-    const pendingTitles = new Map<number, string>()
-
-    const scheduleTitlePatch = (tabId: number, title: string) => {
-      pendingTitles.set(tabId, title)
-      const prev = titlePatchTimers.get(tabId)
-      if (prev !== undefined) {
-        clearTimeout(prev)
-      }
-      titlePatchTimers.set(
-        tabId,
-        setTimeout(() => {
-          titlePatchTimers.delete(tabId)
-          const nextTitle = pendingTitles.get(tabId)
-          pendingTitles.delete(tabId)
-          if (nextTitle !== undefined) {
-            onTabTitleUpdated?.(tabId, nextTitle)
-          }
-        }, TITLE_PATCH_DEBOUNCE_MS)
-      )
-    }
-
     const onTabUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
-      if (!shouldRefreshOnTabUpdated(changeInfo)) {
+      if (!shouldHandleTabUpdated(changeInfo)) {
         return
       }
-      if (isTitleOnlyTabUpdate(changeInfo)) {
-        const title = changeInfo.title
-        if (title !== undefined && onTabTitleUpdated !== undefined) {
-          scheduleTitlePatch(tabId, title)
-          return
-        }
-        return
+      applyTabPickerLiveFieldsFromChrome(tabId, changeInfo)
+      if (shouldRebuildRowsOnTabUpdated(changeInfo)) {
+        scheduleRefresh()
       }
-      scheduleRefresh()
     }
 
-    const onActivated = (activeInfo: chrome.tabs.TabActiveInfo) => {
-      if (consumeTabPickerSelfActivation(activeInfo.tabId)) {
-        return
-      }
+    const onRemoved = (tabId: number) => {
+      forgetTabPickerLiveFields(tabId)
       scheduleRefresh()
     }
 
     chrome.tabs.onCreated.addListener(scheduleRefresh)
-    chrome.tabs.onRemoved.addListener(scheduleRefresh)
+    chrome.tabs.onRemoved.addListener(onRemoved)
     chrome.tabs.onUpdated.addListener(onTabUpdated)
-    chrome.tabs.onActivated.addListener(onActivated)
     chrome.tabs.onMoved.addListener(scheduleRefresh)
     chrome.tabs.onAttached.addListener(scheduleRefresh)
     chrome.tabs.onDetached.addListener(scheduleRefresh)
@@ -76,7 +47,6 @@ export function useTabPickerChromeSync(
 
     chrome.windows.onCreated.addListener(scheduleRefresh)
     chrome.windows.onRemoved.addListener(scheduleRefresh)
-    chrome.windows.onFocusChanged.addListener(scheduleRefresh)
 
     chrome.tabGroups.onCreated.addListener(scheduleRefresh)
     chrome.tabGroups.onUpdated.addListener(scheduleRefresh)
@@ -84,16 +54,9 @@ export function useTabPickerChromeSync(
     chrome.tabGroups.onMoved.addListener(scheduleRefresh)
 
     return () => {
-      for (const timer of titlePatchTimers.values()) {
-        clearTimeout(timer)
-      }
-      titlePatchTimers.clear()
-      pendingTitles.clear()
-
       chrome.tabs.onCreated.removeListener(scheduleRefresh)
-      chrome.tabs.onRemoved.removeListener(scheduleRefresh)
+      chrome.tabs.onRemoved.removeListener(onRemoved)
       chrome.tabs.onUpdated.removeListener(onTabUpdated)
-      chrome.tabs.onActivated.removeListener(onActivated)
       chrome.tabs.onMoved.removeListener(scheduleRefresh)
       chrome.tabs.onAttached.removeListener(scheduleRefresh)
       chrome.tabs.onDetached.removeListener(scheduleRefresh)
@@ -101,12 +64,11 @@ export function useTabPickerChromeSync(
 
       chrome.windows.onCreated.removeListener(scheduleRefresh)
       chrome.windows.onRemoved.removeListener(scheduleRefresh)
-      chrome.windows.onFocusChanged.removeListener(scheduleRefresh)
 
       chrome.tabGroups.onCreated.removeListener(scheduleRefresh)
       chrome.tabGroups.onUpdated.removeListener(scheduleRefresh)
       chrome.tabGroups.onRemoved.removeListener(scheduleRefresh)
       chrome.tabGroups.onMoved.removeListener(scheduleRefresh)
     }
-  }, [enabled, onTabTitleUpdated, scheduleRefresh])
+  }, [enabled, scheduleRefresh])
 }
