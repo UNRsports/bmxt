@@ -1,14 +1,19 @@
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
-import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 import { openEntryEffects } from "../side-picker/model/open-entry"
+import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 import type { PickerEntry, SearchPageMatch } from "../side-picker/model/picker-entry"
-import { isHttpUrl } from "../url/is-http-url"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
-import { normalizeUrlForSearchDedup } from "./search-url-dedup"
+import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
+import {
+  openUrlAtSearchDestination,
+  type SearchOpenDestinationRow
+} from "./search-open-destination"
 import type { ChromeEffect } from "../dispatch/effect-types"
 import type { DispatchChromeContext } from "../dispatch/dispatch-context"
 import { applyChromeEffects } from "../dispatch"
+
+export type SearchOpenAction = "jump" | "direct"
 
 const TAB_FOCUS_DELAY_MS = 120
 const TAB_LOAD_TIMEOUT_MS = 20000
@@ -34,39 +39,6 @@ function pickPageMatch(entry: PickerEntry, matchIndex: number): SearchPageMatch 
     return undefined
   }
   return matches[matchIndex] ?? matches[0]
-}
-
-/** EN: Resolve an open http(s) tab for this entry (stored tabId or URL match). */
-async function resolveOpenTabForEntry(
-  entry: PickerEntry
-): Promise<{ tabId: number; windowId: number } | null> {
-  if (entry.tabId != null) {
-    try {
-      const tab = await chrome.tabs.get(entry.tabId)
-      if (
-        !tab.discarded &&
-        tab.id != null &&
-        tab.windowId != null &&
-        isScriptablePageUrl(tab.url)
-      ) {
-        return { tabId: tab.id, windowId: tab.windowId }
-      }
-    } catch {
-      /* fall through to URL lookup */
-    }
-  }
-
-  const targetKey = normalizeUrlForSearchDedup(entry.url)
-  const tabs = await chrome.tabs.query({})
-  for (const tab of tabs) {
-    if (tab.discarded || tab.id == null || tab.windowId == null || !isHttpUrl(tab.url)) {
-      continue
-    }
-    if (normalizeUrlForSearchDedup(tab.url) === targetKey && isScriptablePageUrl(tab.url)) {
-      return { tabId: tab.id, windowId: tab.windowId }
-    }
-  }
-  return null
 }
 
 async function jumpToNeedleInTab(
@@ -143,8 +115,48 @@ async function createTabAndJumpToNeedle(
 }
 
 /**
+ * EN: Decide whether Enter should jump in-tab or open a new tab (`→` opens the destination tree for history).
+ * JA: Enter がタブ内ジャンプか新規タブかを判定する（history の開き先は `→`）。
+ */
+export async function resolveSearchOpenAction(
+  entry: PickerEntry,
+  matchIndex: number,
+  searchPattern = ""
+): Promise<SearchOpenAction> {
+  const match = pickPageMatch(entry, matchIndex)
+  const needle = searchPattern.trim()
+
+  if (match && needle) {
+    const resolved = await resolveOpenTabForSearchEntry(entry)
+    if (resolved && (await tabStillOpen(resolved.tabId))) {
+      const jumped = await jumpToNeedleInTab(
+        resolved.tabId,
+        resolved.windowId,
+        match,
+        needle
+      )
+      if (jumped) {
+        return "jump"
+      }
+      if (match.lineNo > 0) {
+        return "direct"
+      }
+    }
+
+    if (match.lineNo > 0) {
+      const jumped = await createTabAndJumpToNeedle(entry, match, needle)
+      if (jumped) {
+        return "jump"
+      }
+    }
+  }
+
+  return "direct"
+}
+
+/**
  * EN: Open/focus a search picker row — page hits activate the source tab, scroll to the
- *     search needle, and highlight it in the page.
+ *     search needle, and highlight it in the page. History rows may open at `destination`.
  * JA: search ピッカー行を開く。page ヒットは元タブを前面にし、検索語へスクロールして強調表示する。
  */
 export async function openSearchPickerEntry(
@@ -152,13 +164,29 @@ export async function openSearchPickerEntry(
   matchIndex: number,
   ctx: DispatchChromeContext,
   appendLogLines: (lines: string[]) => void | Promise<void>,
-  searchPattern = ""
+  searchPattern = "",
+  destination?: SearchOpenDestinationRow
 ): Promise<void> {
-  const match = pickPageMatch(entry, matchIndex)
-  const needle = searchPattern.trim()
+  if (destination) {
+    try {
+      const logLines = await openUrlAtSearchDestination(entry.url, destination)
+      if (logLines.length > 0) {
+        await appendLogLines(logLines)
+      }
+    } catch (e) {
+      await appendLogLines([`error: ${e instanceof Error ? e.message : String(e)}`])
+    }
+    return
+  }
 
-  if (match && needle) {
-    const resolved = await resolveOpenTabForEntry(entry)
+  const action = await resolveSearchOpenAction(entry, matchIndex, searchPattern)
+  if (action === "jump") {
+    const match = pickPageMatch(entry, matchIndex)
+    const needle = searchPattern.trim()
+    if (!match || !needle) {
+      return
+    }
+    const resolved = await resolveOpenTabForSearchEntry(entry)
     if (resolved && (await tabStillOpen(resolved.tabId))) {
       const jumped = await jumpToNeedleInTab(
         resolved.tabId,
@@ -176,13 +204,13 @@ export async function openSearchPickerEntry(
         return
       }
     }
-
     if (match.lineNo > 0) {
       const jumped = await createTabAndJumpToNeedle(entry, match, needle)
       if (jumped) {
         return
       }
     }
+    return
   }
 
   const effects: ChromeEffect[] = openEntryEffects(entry, "new_tab")

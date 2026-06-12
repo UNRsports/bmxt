@@ -10,6 +10,7 @@ import type { TabPickerInteractiveSnapshot } from "../session/tab-picker-state"
 import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
+import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
 import type { SettingPickerRow } from "../../setting/setting-picker-rows"
@@ -45,7 +46,11 @@ export type PickerColumnHostContext = {
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
   scheduleRefreshTabPickerRows: () => void
-  onOpenSearchEntry: (entry: PickerEntry, matchIndex: number) => void
+  onOpenSearchEntry: (
+    entry: PickerEntry,
+    matchIndex: number,
+    destination?: SearchOpenDestinationRow
+  ) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onTabPickerInteractiveChange?: (snapshot: TabPickerInteractiveSnapshot) => void
@@ -92,7 +97,9 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           state={ctx.searchListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
           onExitToDetailBar={() => ctx.onExitToDetailBar("search")}
-          onOpenEntry={(entry, matchIndex) => ctx.onOpenSearchEntry(entry, matchIndex)}
+          onOpenEntry={(entry, matchIndex, destination) =>
+            ctx.onOpenSearchEntry(entry, matchIndex, destination)
+          }
           keyboardActive={ctx.searchPickerKeyboardActive}
           pickerInputRef={ctx.searchPickerInputRef}
           sessionId={ctx.sessionId}

@@ -35,6 +35,11 @@ export function pickerEntrySearchSources(entry: PickerEntry): PickerSource[] {
   return []
 }
 
+/** EN: True when a search row should offer the in-picker open-target tree (`[history]`). */
+export function searchEntryOffersOpenDestination(entry: PickerEntry): boolean {
+  return pickerEntrySearchSources(entry).includes("history")
+}
+
 /** EN: Picker row prefix for search results, e.g. `[history, page]`. */
 export function searchPickerSourceLabel(entry: PickerEntry): string {
   const sources = pickerEntrySearchSources(entry)

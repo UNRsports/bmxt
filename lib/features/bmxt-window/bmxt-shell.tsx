@@ -18,6 +18,7 @@ import {
   type TabsPageActiveMode
 } from "../tabs"
 import { openSearchPickerEntry } from "../search/open-search-picker-entry"
+import type { SearchOpenDestinationRow } from "../search/search-open-destination"
 import {
   openPickerSlots,
   PickerRail,
@@ -1546,7 +1547,11 @@ export function BmxtShell({
   }, [appendLogLines, uiCopy])
 
   const onOpenSearchPickerEntry = useCallback(
-    async (entry: PickerEntry, matchIndex: number) => {
+    async (
+      entry: PickerEntry,
+      matchIndex: number,
+      destination?: SearchOpenDestinationRow
+    ) => {
       const pattern = searchListPickerRef.current?.pattern ?? ""
       const ctx: DispatchChromeContext = {
         clearLog: async () => {},
@@ -1557,9 +1562,16 @@ export function BmxtShell({
         commandSessionId: sessionId,
         uiLocale: uiSettings.locale
       }
-      await openSearchPickerEntry(entry, matchIndex, ctx, (lines) => appendLogLines(lines), pattern)
+      await openSearchPickerEntry(
+        entry,
+        matchIndex,
+        ctx,
+        (lines) => appendLogLines(lines),
+        pattern,
+        destination
+      )
     },
-    [appendLogLines, sessionId]
+    [appendLogLines, sessionId, uiSettings.locale]
   )
 
   const submitLine = useCallback(() => {
@@ -2880,8 +2892,8 @@ export function BmxtShell({
           onAppendLog={appendLogLines}
           onRefreshTabPickerRows={refreshTabPickerRows}
           scheduleRefreshTabPickerRows={scheduleTabPickerRowsRefresh}
-          onOpenSearchEntry={(entry, matchIndex) =>
-            void onOpenSearchPickerEntry(entry, matchIndex)
+          onOpenSearchEntry={(entry, matchIndex, destination) =>
+            void onOpenSearchPickerEntry(entry, matchIndex, destination)
           }
           onDomApprove={() => {
             if (domListPicker?.kind !== "prompt") {
