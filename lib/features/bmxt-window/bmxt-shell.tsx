@@ -109,7 +109,6 @@ import {
   parseSettingListPickerLine,
   replaceUiSettings,
   settingPickerApplyDraftToMain,
-  settingPickerRevertDraft,
   settingPickerUpdateDraft,
   settingTokenForUiLocale,
   t,
@@ -953,6 +952,12 @@ export function BmxtShell({
     focusPrompt()
   }, [focusPrompt, onPaneFocusChange])
 
+  const closeSettingPickerColumn = useCallback(() => {
+    setSettingListPicker(sessionId, null)
+    setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "setting"))
+    activatePaneFocus("terminal")
+  }, [activatePaneFocus, sessionId, setSettingListPicker, setModeToolbarOrder])
+
   const focusTerminalForNavControl = useCallback(() => {
     exitDetailBarToTerminal()
   }, [exitDetailBarToTerminal])
@@ -1363,11 +1368,12 @@ export function BmxtShell({
         const draft = current.draft
         await replaceUiSettings(draft)
         replaceUiSettingsState(draft)
+        closeSettingPickerColumn()
         await appendLogLines([logPrefix, uiCopy.t("setting.picker.saved")])
         return
       }
       if (row.id === "cancel") {
-        setSettingListPicker(sessionId, settingPickerRevertDraft(current, uiSettings))
+        closeSettingPickerColumn()
         await appendLogLines([logPrefix, uiCopy.t("setting.picker.cancelled")])
         return
       }
@@ -1502,11 +1508,9 @@ export function BmxtShell({
     },
     [
       appendLogLines,
+      closeSettingPickerColumn,
       replaceUiSettingsState,
-      sessionId,
-      setSettingListPicker,
-      uiCopy,
-      uiSettings
+      uiCopy
     ]
   )
 
@@ -1615,9 +1619,7 @@ export function BmxtShell({
       void (async () => {
         const logLines = [`> ${trimmed}`]
         if (settingListPickerRef.current !== null) {
-          setSettingListPicker(sessionId, null)
-          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "setting"))
-          activatePaneFocus("terminal")
+          closeSettingPickerColumn()
           logLines.push(uiCopy.t("setting.picker.closed"))
         } else {
           logLines.push(uiCopy.t("setting.picker.notOpen"))
@@ -2044,6 +2046,7 @@ export function BmxtShell({
     uiCopy,
     uiSettings,
     activatePaneFocus,
+    closeSettingPickerColumn,
     setTabPicker,
     setSearchListPicker,
     setSettingListPicker,

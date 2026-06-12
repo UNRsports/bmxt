@@ -208,8 +208,8 @@
     "en": "usage: setting -list | setting -exit -list"
   },
   "setting.picker.hint": {
-    "ja": "Setting picker — 変更は下部プレビューに反映 · save setting で確定 · ↑↓ · → · ← · Esc → prompt",
-    "en": "Setting picker — changes preview below · save setting to commit · ↑↓ · → · ← · Esc → prompt"
+    "ja": "Setting picker — 変更は下部プレビューに反映 · save setting & exit で確定 · ↑↓ · → · ← · Esc → prompt",
+    "en": "Setting picker — changes preview below · save setting & exit to commit · ↑↓ · → · ← · Esc → prompt"
   },
   "setting.picker.keysHint": {
     "ja": "setting picker keys",
@@ -228,8 +228,8 @@
     "en": "setting: settings picker is not open"
   },
   "setting.picker.headline.main": {
-    "ja": "setting -list · ↑↓ · → 設定 · 下部プレビュー確認 · save setting で確定",
-    "en": "setting -list · ↑↓ · → configure · check preview below · save setting to commit"
+    "ja": "setting -list · ↑↓ · → 設定 · 下部プレビュー確認 · save setting & exit で確定",
+    "en": "setting -list · ↑↓ · → configure · check preview below · save setting & exit to commit"
   },
   "setting.picker.headline.language": {
     "ja": "setting -list · language · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
@@ -428,12 +428,12 @@
     "en": "import — load settings from zip"
   },
   "setting.picker.main.save": {
-    "ja": "> save setting",
-    "en": "> save setting"
+    "ja": "> save setting & exit",
+    "en": "> save setting & exit"
   },
   "setting.picker.main.cancel": {
-    "ja": "> cancel setting",
-    "en": "> cancel setting"
+    "ja": "> cancel setting & exit",
+    "en": "> cancel setting & exit"
   },
   "setting.picker.preview.head": {
     "ja": "Preview",
@@ -464,8 +464,8 @@
     "en": "setting: discarded unsaved changes"
   },
   "setting.picker.importDraft": {
-    "ja": "setting: zip をプレビューに読み込みました（save setting で確定）",
-    "en": "setting: zip loaded into preview (use save setting to commit)"
+    "ja": "setting: zip をプレビューに読み込みました（save setting & exit で確定）",
+    "en": "setting: zip loaded into preview (use save setting & exit to commit)"
   },
   "setting.picker.languageRow": {
     "ja": "{token}",
