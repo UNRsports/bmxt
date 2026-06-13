@@ -379,7 +379,8 @@ export function useTabPickerController({
     expandForTabId,
     mirrorHiPendingRef,
     onRefreshRows,
-    scheduleRefreshRows
+    scheduleRefreshRows,
+    altKeyHeldRef
   })
 
   useSyncChromeTabStripPreview({
