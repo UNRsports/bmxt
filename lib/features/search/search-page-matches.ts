@@ -1,4 +1,5 @@
 import type { SearchPageMatch } from "../side-picker/model/picker-entry"
+import { globalNeedleOccurrenceForLine, innerTextLinesFromBodyText } from "../page-dom/needle-occurrence"
 import { matchesNeedle } from "./matcher"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 
@@ -9,7 +10,9 @@ function pushLineMatch(
   matches: SearchPageMatch[],
   occurrence: Map<string, number>,
   lineNo: number,
-  rawLine: string
+  rawLine: string,
+  bodyLines: readonly string[],
+  needle: string
 ): void {
   const trimmed = rawLine.trim().slice(0, 500)
   if (!trimmed) {
@@ -20,7 +23,14 @@ function pushLineMatch(
   const key = snippet.toLowerCase()
   const occ = occurrence.get(key) ?? 0
   occurrence.set(key, occ + 1)
-  matches.push({ lineNo, snippet, occurrence: occ })
+  const globalOccurrence =
+    lineNo > 0 ? globalNeedleOccurrenceForLine(bodyLines, lineNo, needle) : 0
+  matches.push({
+    lineNo,
+    snippet,
+    occurrence: occ,
+    globalOccurrence: globalOccurrence >= 0 ? globalOccurrence : undefined
+  })
 }
 
 /**
@@ -41,19 +51,20 @@ export function collectPageMatchesForTab(
   const matches: SearchPageMatch[] = []
   const occurrence = new Map<string, number>()
 
+  const bodyLines = text !== null ? innerTextLinesFromBodyText(text) : []
+
   if (title.trim().length > 0 && matchesNeedle(title, needle)) {
-    pushLineMatch(matches, occurrence, 0, title)
+    pushLineMatch(matches, occurrence, 0, title, bodyLines, needle)
   }
 
   if (text !== null && matchesNeedle(text, needle)) {
-    const lines = text.split(/\r?\n/)
     let lineNo = 0
-    for (const line of lines) {
+    for (const line of bodyLines) {
       lineNo += 1
       if (!matchesNeedle(line, needle)) {
         continue
       }
-      pushLineMatch(matches, occurrence, lineNo, line)
+      pushLineMatch(matches, occurrence, lineNo, line, bodyLines, needle)
       if (matches.length >= maxHits) {
         return matches
       }
@@ -63,7 +74,7 @@ export function collectPageMatchesForTab(
     if (bodyLineCount === 0) {
       const snippet = excerptAroundNeedle(text, needle, BODY_SNIPPET_CONTEXT)
       if (snippet.trim().length > 0) {
-        pushLineMatch(matches, occurrence, 1, snippet)
+        pushLineMatch(matches, occurrence, 1, snippet, bodyLines, needle)
       }
     }
   }

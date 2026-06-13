@@ -60,7 +60,8 @@ async function jumpToNeedleInTab(
   return scrollSearchPageToNeedle(tabId, {
     searchNeedle: needle,
     lineNo: match.lineNo,
-    snippetHint: match.snippet
+    snippetHint: match.snippet,
+    globalOccurrence: match.globalOccurrence
   })
 }
 

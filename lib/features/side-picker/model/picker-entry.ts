@@ -6,6 +6,8 @@ export type SearchPageMatch = {
   snippet: string
   /** EN: Nth DOM occurrence of `snippet` on the tab (case-insensitive). */
   occurrence: number
+  /** EN: Global 0-based needle index in page innerText at index time (scroll target). */
+  globalOccurrence?: number
 }
 export type PickerEntry = {
   id: string

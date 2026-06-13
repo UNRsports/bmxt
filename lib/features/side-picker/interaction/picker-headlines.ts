@@ -7,7 +7,7 @@ export const SEARCH_LIST_PICKER_HEADLINE =
 
 /** EN: Detail drill-down inside the search picker (`→` from a result row). */
 export const SEARCH_LIST_PICKER_DETAIL_HEADLINE =
-  "search -list · detail · ↑↓ · j/k · ← back · Enter jump · Esc → back · Esc×2 → prompt"
+  "search -list · detail · ↑↓ · j/k · Alt+↑↓ in-tab hits · ← back · Enter jump · Esc → back · Esc×2 → prompt"
 
 /** EN: History open-target tree inside the search picker. */
 export const SEARCH_LIST_PICKER_DESTINATION_HEADLINE =

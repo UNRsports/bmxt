@@ -727,6 +727,10 @@
     "ja": "search — プレビューする対象がありません（開いているタブなし）",
     "en": "search — nothing to preview (no open tabs)"
   },
+  "search.picker.noDetailScrollTarget": {
+    "ja": "search — ページ内ジャンプできるヒットがありません（タブ未 open またはスクロール不可）",
+    "en": "search — no in-page hits to jump (tab not open or not scrollable)"
+  },
   "search.status.hint": {
     "ja": "↑↓ 移動 · Alt+↑↓ 開タブ行のみ移動（背面プレビュー） · Enter でジャンプ · ← でプロンプト",
     "en": "↑↓ move · Alt+↑↓ open-tab rows only (background preview) · Enter jump · ← prompt"

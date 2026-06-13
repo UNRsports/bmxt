@@ -16,16 +16,24 @@ import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-k
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
 import { useUiCopy } from "../setting"
+import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import {
+  previewSearchPickerDetailHitInBackground,
   previewSearchPickerEntryInBackground
 } from "./preview-search-picker-entry"
 import {
   adjacentSearchPickerPreviewHi,
+  canPreviewSearchPickerSelection,
   searchPickerPreviewScrollAnimated
 } from "./search-picker-preview-nav"
-import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
+import {
+  listSearchDetailPreviewTargetIndices,
+  listSearchPickerPreviewTargetIndices
+} from "./search-picker-preview-targets"
 
 const PREVIEW_NOTICE_MS = 3200
+
+export type SearchPickerAltPreviewView = "results" | "detail"
 
 export type SearchPickerListScrollHint = {
   animated: boolean
@@ -33,6 +41,7 @@ export type SearchPickerListScrollHint = {
 }
 
 export type UseSearchPickerAltPreviewKitOptions = {
+  view: SearchPickerAltPreviewView
   enabled: boolean
   isHostPaneFocused: boolean
   entries: readonly PickerEntry[]
@@ -43,6 +52,8 @@ export type UseSearchPickerAltPreviewKitOptions = {
   setHi: Dispatch<SetStateAction<number>>
   searchMode: boolean
   commandMode: boolean
+  detailEntry?: PickerEntry
+  detailHits?: readonly SearchEntryDetailHit[]
   baseExtensions?: PlainPickerKeyboardExtensions
 }
 
@@ -53,8 +64,9 @@ export type UseSearchPickerAltPreviewKitResult = {
   previewNotice: string | null
 }
 
-/** EN: Alt+↑↓ background preview for search results (always manual / Alt-gated). */
+/** EN: Alt+↑↓ background preview for search results and detail hits (manual / Alt-gated). */
 export function useSearchPickerAltPreviewKit({
+  view,
   enabled,
   isHostPaneFocused,
   entries,
@@ -65,6 +77,8 @@ export function useSearchPickerAltPreviewKit({
   setHi,
   searchMode,
   commandMode,
+  detailEntry,
+  detailHits = [],
   baseExtensions
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
   const uiCopy = useUiCopy()
@@ -74,19 +88,40 @@ export function useSearchPickerAltPreviewKit({
   const [previewTargetIndices, setPreviewTargetIndices] = useState<number[]>([])
   const [previewNotice, setPreviewNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
+  const viewRef = useRef(view)
   const entriesRef = useRef(entries)
   const patternRef = useRef(pattern)
   const matchHiRef = useRef(matchHi)
   const hiRef = useRef(hi)
+  const detailEntryRef = useRef(detailEntry)
+  const detailHitsRef = useRef(detailHits)
   const previewTargetIndicesRef = useRef(previewTargetIndices)
+  viewRef.current = view
   entriesRef.current = entries
   patternRef.current = pattern
   matchHiRef.current = matchHi
   hiRef.current = hi
+  detailEntryRef.current = detailEntry
+  detailHitsRef.current = detailHits
   previewTargetIndicesRef.current = previewTargetIndices
 
   useEffect(() => {
-    if (!enabled || entries.length === 0) {
+    if (!enabled) {
+      setPreviewTargetIndices([])
+      return
+    }
+    if (view === "detail") {
+      let cancelled = false
+      void listSearchDetailPreviewTargetIndices(detailEntry, detailHits).then((indices) => {
+        if (!cancelled) {
+          setPreviewTargetIndices(indices)
+        }
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+    if (entries.length === 0) {
       setPreviewTargetIndices([])
       return
     }
@@ -99,40 +134,35 @@ export function useSearchPickerAltPreviewKit({
     return () => {
       cancelled = true
     }
-  }, [enabled, entries])
-
-  const hasPreviewTarget = previewTargetIndices.length > 0
+  }, [detailEntry, detailHits, enabled, entries, view])
 
   const showNoPreviewTargetNotice = useCallback(() => {
     if (noticeTimerRef.current !== null) {
       window.clearTimeout(noticeTimerRef.current)
     }
-    setPreviewNotice(uiCopy.t("search.picker.noPreviewTarget"))
+    const key =
+      viewRef.current === "detail"
+        ? "search.picker.noDetailScrollTarget"
+        : "search.picker.noPreviewTarget"
+    setPreviewNotice(uiCopy.t(key))
     noticeTimerRef.current = window.setTimeout(() => {
       setPreviewNotice(null)
       noticeTimerRef.current = null
     }, PREVIEW_NOTICE_MS)
   }, [uiCopy])
 
-  const onAltKeyDown = useCallback(() => {
-    if (!hasPreviewTarget) {
-      showNoPreviewTargetNotice()
-    }
-  }, [hasPreviewTarget, showNoPreviewTargetNotice])
-
-  usePickerAltKeyTracking({
-    enabled,
-    altKeyHeldRef,
-    bumpPreviewTickOnAltDown: true,
-    setAltPreviewTick,
-    onAltKeyDown
-  })
-
-  const entry = entries[hi]
-  const previewKey =
-    enabled && entry ? `${hi}:${entry.id}:${matchHi}:${pattern}` : ""
-
   const runPreview = useCallback(async () => {
+    if (viewRef.current === "detail") {
+      const entry = detailEntryRef.current
+      const hits = detailHitsRef.current
+      const index = hiRef.current
+      const hit = hits[index]
+      if (!entry || !hit) {
+        return
+      }
+      await previewSearchPickerDetailHitInBackground(entry, hit, patternRef.current)
+      return
+    }
     const index = hiRef.current
     const row = entriesRef.current[index]
     if (!row) {
@@ -144,6 +174,38 @@ export function useSearchPickerAltPreviewKit({
       patternRef.current
     )
   }, [])
+
+  const onAltKeyDown = useCallback(() => {
+    const currentHi = hiRef.current
+    const canPreview = canPreviewSearchPickerSelection(
+      viewRef.current,
+      currentHi,
+      previewTargetIndicesRef.current,
+      detailHitsRef.current
+    )
+    if (!canPreview) {
+      showNoPreviewTargetNotice()
+      return
+    }
+    void runPreview()
+  }, [runPreview, showNoPreviewTargetNotice])
+
+  usePickerAltKeyTracking({
+    enabled,
+    altKeyHeldRef,
+    bumpPreviewTickOnAltDown: true,
+    setAltPreviewTick,
+    onAltKeyDown
+  })
+
+  const resultsEntry = view === "results" ? entries[hi] : undefined
+  const detailHit = view === "detail" ? detailHits[hi] : undefined
+  const previewKey =
+    enabled && view === "results" && resultsEntry
+      ? `results:${hi}:${resultsEntry.id}:${matchHi}:${pattern}`
+      : enabled && view === "detail" && detailEntry && detailHit
+        ? `detail:${hi}:${detailEntry.id}:${detailHit.pageMatchIndex ?? ""}:${pattern}`
+        : ""
 
   usePickerAltPreviewSync({
     enabled: enabled && lineCount > 0,
@@ -181,12 +243,15 @@ export function useSearchPickerAltPreviewKit({
           previewTargetIndicesRef.current
         )
         if (nextHi === null) {
+          showNoPreviewTargetNotice()
           return true
         }
         if (searchPickerPreviewScrollAnimated(currentHi, nextHi)) {
           listScrollHintRef.current = { animated: true, alignStart: true }
         }
+        hiRef.current = nextHi
         setHi(nextHi)
+        void runPreview()
         return true
       }
 
@@ -197,7 +262,7 @@ export function useSearchPickerAltPreviewKit({
       }
       return true
     },
-    [commandMode, enabled, lineCount, searchMode, setHi]
+    [commandMode, enabled, lineCount, runPreview, searchMode, setHi, showNoPreviewTargetNotice]
   )
 
   const mergedExtensions = useMemo((): PlainPickerKeyboardExtensions => {

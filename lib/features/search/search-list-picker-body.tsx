@@ -280,11 +280,13 @@ export function SearchListPickerBody({
   const altPreviewEnabled =
     keyboardActive &&
     !statusOnly &&
-    !inDetailView &&
     !inDestinationView &&
-    entries.length > 0
+    (inDetailView
+      ? detailEntry != null && detailHits.length > 0
+      : entries.length > 0)
 
   const { mergedExtensions, previewNotice, listScrollHintRef } = useSearchPickerAltPreviewKit({
+    view: inDetailView ? "detail" : "results",
     enabled: altPreviewEnabled,
     isHostPaneFocused: keyboardActive,
     entries,
@@ -295,6 +297,8 @@ export function SearchListPickerBody({
     setHi,
     searchMode,
     commandMode,
+    detailEntry,
+    detailHits,
     baseExtensions: extensions
   })
 

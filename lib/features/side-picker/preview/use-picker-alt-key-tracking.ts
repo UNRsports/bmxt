@@ -47,12 +47,12 @@ export function usePickerAltKeyTracking({
       altKeyHeldRef.current = false
     }
 
-    window.addEventListener("keydown", onKeyDown)
-    window.addEventListener("keyup", onKeyUp)
+    window.addEventListener("keydown", onKeyDown, true)
+    window.addEventListener("keyup", onKeyUp, true)
     window.addEventListener("blur", clearAlt)
     return () => {
-      window.removeEventListener("keydown", onKeyDown)
-      window.removeEventListener("keyup", onKeyUp)
+      window.removeEventListener("keydown", onKeyDown, true)
+      window.removeEventListener("keyup", onKeyUp, true)
       window.removeEventListener("blur", clearAlt)
       altKeyHeldRef.current = false
     }

@@ -4,25 +4,17 @@
  * JA: innerText 行番号を手がかりに検索語へスクロールし、ページ内で強調表示する。
  */
 
-const BMXT_SEARCH_HL_ATTR = "data-bmxt-search-hl"
-const DEFAULT_HIGHLIGHT_MS = 8000
-
-function clearBmxtSearchHighlights(): void {
-  document.querySelectorAll(`mark[${BMXT_SEARCH_HL_ATTR}]`).forEach((mark) => {
-    const parent = mark.parentNode
-    if (!parent) {
-      return
-    }
-    while (mark.firstChild) {
-      parent.insertBefore(mark.firstChild, mark)
-    }
-    parent.removeChild(mark)
-    parent.normalize()
-  })
-}
+import {
+  applyBmxtNeedleHighlight,
+  DEFAULT_NEEDLE_HIGHLIGHT_MS
+} from "./injected-needle-highlight"
+import {
+  globalNeedleOccurrenceForLine,
+  innerTextLinesFromBodyText
+} from "./needle-occurrence"
 
 function innerTextLines(): string[] {
-  return (document.body?.innerText ?? "").split(/\r?\n/)
+  return innerTextLinesFromBodyText(document.body?.innerText ?? "")
 }
 
 function collectNeedleRanges(needle: string): Range[] {
@@ -52,27 +44,6 @@ function collectNeedleRanges(needle: string): Range[] {
   return ranges
 }
 
-function globalNeedleOccurrenceForLine(lines: string[], lineNo: number, needle: string): number {
-  const needleLower = needle.toLowerCase()
-  let globalIndex = 0
-  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const line = lines[lineIdx]!
-    let from = 0
-    while (from < line.length) {
-      const idx = line.toLowerCase().indexOf(needleLower, from)
-      if (idx < 0) {
-        break
-      }
-      if (lineIdx + 1 === lineNo) {
-        return globalIndex
-      }
-      globalIndex += 1
-      from = idx + Math.max(1, needle.length)
-    }
-  }
-  return -1
-}
-
 function lineContextAroundNeedle(line: string, needle: string, context = 36): string {
   const trimmed = line.trim()
   if (!trimmed) {
@@ -90,11 +61,11 @@ function lineContextAroundNeedle(line: string, needle: string, context = 36): st
 function expandRangeText(range: Range, before = 64, after = 64): string {
   try {
     const pre = document.createRange()
-    pre.selectNodeContents(document.body)
+    pre.selectNodeContents(document.body!)
     pre.setEnd(range.startContainer, range.startOffset)
     const post = document.createRange()
     post.setStart(range.endContainer, range.endOffset)
-    post.selectNodeContents(document.body)
+    post.selectNodeContents(document.body!)
     const beforeText = pre.toString()
     const afterText = post.toString()
     return (
@@ -143,10 +114,23 @@ function pickRangeForLine(
   ranges: Range[],
   lineNo: number,
   needle: string,
-  snippetHint: string
+  snippetHint: string,
+  globalOccurrenceHint = -1
 ): Range | undefined {
   if (ranges.length === 0) {
     return undefined
+  }
+
+  if (globalOccurrenceHint >= 0 && globalOccurrenceHint < ranges.length) {
+    return ranges[globalOccurrenceHint]
+  }
+
+  const hint = snippetHint.replace(/…\s*$/, "").trim()
+  if (hint) {
+    const byHint = findRangeByContext(hint, needle)
+    if (byHint) {
+      return byHint
+    }
   }
 
   const lines = innerTextLines()
@@ -163,62 +147,15 @@ function pickRangeForLine(
     }
   }
 
-  const hint = snippetHint.replace(/…\s*$/, "").trim()
-  if (hint) {
-    const byHint = findRangeByContext(hint, needle)
-    if (byHint) {
-      return byHint
-    }
-  }
-
   return ranges[0]
-}
-
-function applyNeedleHighlight(range: Range, persistMs: number): boolean {
-  clearBmxtSearchHighlights()
-  const el =
-    range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-      ? (range.commonAncestorContainer as Element)
-      : range.commonAncestorContainer.parentElement
-  try {
-    el?.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
-  } catch {
-    el?.scrollIntoView()
-  }
-
-  const mark = document.createElement("mark")
-  mark.setAttribute(BMXT_SEARCH_HL_ATTR, "1")
-  mark.style.backgroundColor = "rgba(255, 201, 221, 0.95)"
-  mark.style.color = "#0d1117"
-  mark.style.borderRadius = "2px"
-  mark.style.padding = "0 1px"
-
-  try {
-    range.surroundContents(mark)
-  } catch {
-    if (el instanceof HTMLElement) {
-      el.style.outline = "2px solid #ffc9dd"
-      el.style.outlineOffset = "2px"
-      window.setTimeout(() => {
-        el.style.outline = ""
-        el.style.outlineOffset = ""
-      }, persistMs)
-      return true
-    }
-    return false
-  }
-
-  window.setTimeout(() => {
-    clearBmxtSearchHighlights()
-  }, persistMs)
-  return true
 }
 
 export function bmxtScrollToSearchNeedleInjected(
   searchNeedle: string,
   lineNo: number,
   snippetHint: string,
-  persistMs = DEFAULT_HIGHLIGHT_MS
+  persistMs = DEFAULT_NEEDLE_HIGHLIGHT_MS,
+  globalOccurrenceHint = -1
 ): { ok: boolean } {
   const needle = searchNeedle.trim()
   if (!needle || !document.body) {
@@ -230,10 +167,16 @@ export function bmxtScrollToSearchNeedleInjected(
     return { ok: false }
   }
 
-  const picked = pickRangeForLine(ranges, lineNo, needle, snippetHint)
+  const picked = pickRangeForLine(
+    ranges,
+    lineNo,
+    needle,
+    snippetHint,
+    globalOccurrenceHint
+  )
   if (!picked) {
     return { ok: false }
   }
 
-  return { ok: applyNeedleHighlight(picked, persistMs) }
+  return { ok: applyBmxtNeedleHighlight(picked, persistMs) }
 }

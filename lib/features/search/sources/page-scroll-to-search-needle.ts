@@ -10,6 +10,7 @@ export type ScrollSearchPageToNeedleOptions = {
   searchNeedle: string
   lineNo?: number
   snippetHint?: string
+  globalOccurrence?: number
 }
 
 const SCROLL_RETRY_DELAY_MS = 180
@@ -21,12 +22,16 @@ function sleep(ms: number): Promise<void> {
 }
 
 function buildScrollRequest(options: ScrollSearchPageToNeedleOptions): PageScrollNeedleRequest {
-  return {
+  const request: PageScrollNeedleRequest = {
     channel: PAGE_SCROLL_NEEDLE_CHANNEL,
     searchNeedle: options.searchNeedle.trim(),
     lineNo: options.lineNo ?? 0,
     snippetHint: options.snippetHint ?? ""
   }
+  if (options.globalOccurrence !== undefined && options.globalOccurrence >= 0) {
+    request.globalOccurrence = options.globalOccurrence
+  }
+  return request
 }
 
 async function scrollViaContentScript(
@@ -52,7 +57,13 @@ async function scrollViaExecuteScript(
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId },
       func: bmxtScrollToSearchNeedleInjected,
-      args: [request.searchNeedle, request.lineNo, request.snippetHint]
+      args: [
+        request.searchNeedle,
+        request.lineNo,
+        request.snippetHint,
+        8000,
+        request.globalOccurrence ?? -1
+      ]
     })
     return Boolean((result as PageScrollNeedleResponse | undefined)?.ok)
   } catch {

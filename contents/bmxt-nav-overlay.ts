@@ -29,7 +29,13 @@ chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
   }
   if (isPageScrollNeedleRequest(raw)) {
     sendResponse(
-      bmxtScrollToSearchNeedleInjected(raw.searchNeedle, raw.lineNo, raw.snippetHint)
+      bmxtScrollToSearchNeedleInjected(
+        raw.searchNeedle,
+        raw.lineNo,
+        raw.snippetHint,
+        8000,
+        raw.globalOccurrence ?? -1
+      )
     )
     return true
   }

@@ -6,6 +6,8 @@ export type PageScrollNeedleRequest = {
   searchNeedle: string
   lineNo: number
   snippetHint: string
+  /** EN: Precomputed global needle index (0-based) from search indexing. */
+  globalOccurrence?: number
 }
 
 export type PageScrollNeedleResponse = { ok: boolean }

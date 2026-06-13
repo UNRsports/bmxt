@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   adjacentSearchPickerPreviewHi,
+  canPreviewSearchPickerSelection,
+  listSearchDetailScrollTargetIndices,
   searchPickerPreviewScrollAnimated
 } from "./search-picker-preview-nav.ts"
 
@@ -27,5 +29,28 @@ describe("searchPickerPreviewScrollAnimated", () => {
   it("animates when more than one row is skipped", () => {
     assert.equal(searchPickerPreviewScrollAnimated(2, 5), true)
     assert.equal(searchPickerPreviewScrollAnimated(5, 4), false)
+  })
+})
+
+describe("listSearchDetailScrollTargetIndices", () => {
+  it("lists rows with pageMatchIndex", () => {
+    const hits = [
+      { field: "title" as const, displayText: "a", canScrollTo: false },
+      { field: "text" as const, displayText: "b", pageMatchIndex: 1, canScrollTo: true },
+      { field: "text" as const, displayText: "c", pageMatchIndex: 2, canScrollTo: true }
+    ]
+    assert.deepEqual(listSearchDetailScrollTargetIndices(hits), [1, 2])
+  })
+})
+
+describe("canPreviewSearchPickerSelection", () => {
+  it("allows rows listed in previewTargetIndices", () => {
+    const hits = [
+      { field: "title" as const, displayText: "a", canScrollTo: false },
+      { field: "text" as const, displayText: "b", pageMatchIndex: 1, canScrollTo: true }
+    ]
+    assert.equal(canPreviewSearchPickerSelection("detail", 1, [1, 2], hits), true)
+    assert.equal(canPreviewSearchPickerSelection("detail", 0, [1, 2], hits), false)
+    assert.equal(canPreviewSearchPickerSelection("results", 2, [2, 5], hits), true)
   })
 })
