@@ -319,7 +319,7 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
   await setSessionLines(sessionId, [])
 }
 
-/** ストレージ上のターミナル状態を消去（BMXt プロセス `exit` 全終了時）。コマンド履歴は保持。 */
+/** ストレージ上のターミナル状態を消去（最後の `exit` または BMXt ウィンドウ × 閉じ）。コマンド履歴は保持。 */
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
@@ -336,7 +336,7 @@ export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
 
 /**
  * ターミナルを初期状態へ戻す（単一ペイン・空ログ）。ウィンドウは閉じない。
- * ショートカット `launch-bmxt`（窓が無いとき）および `reset-bmxt` から呼ぶ。キー削除と再生成の間隙を避けるため、
+ * ショートカット `reset-bmxt` から呼ぶ。キー削除と再生成の間隙を避けるため、
  * セッション本体は上書きし、付随状態のみ除去する。
  */
 export async function resetBmxtTerminalSessionsInStorage(): Promise<void> {

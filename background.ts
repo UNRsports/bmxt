@@ -10,10 +10,10 @@ import {
   clearSessionLines,
   exitOrCloseSessionInStorage,
   readTerminalSessionsIfPresent,
+  ensureTerminalSessionsState,
   removeAllTerminalSessionsFromStorage,
   resetBmxtTerminalSessionsInStorage,
   setSessionLines,
-  ensureTerminalSessionsState,
   resolveSessionId,
   splitColForLeaf,
   splitRowForLeaf
@@ -118,6 +118,8 @@ chrome.windows.onRemoved.addListener((windowId) => {
   if (windowId === bmxtWindowId) {
     bmxtWindowId = undefined
     void persistBmxtWindowId(undefined)
+    /* × 閉じも最後の exit と同様: ログ等は消すが bmxt_cmd_history は残す */
+    void removeAllTerminalSessionsFromStorage()
   }
 })
 
@@ -132,7 +134,7 @@ async function launchBmxtFromShortcutAsync(): Promise<void> {
     await focusBmxtWindow(existingId)
     return
   }
-  await resetBmxtTerminalSessionsInStorage()
+  await ensureTerminalSessionsState()
   await openOrFocusBmxtWindowAsync()
 }
 

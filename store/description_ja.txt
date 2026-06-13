@@ -30,6 +30,14 @@ https://x.com/ny0n150226
 
 
 ◆バージョン履歴
+0.5.3：
+・拡張機能のショートカットを、起動用とリセット用に変更
+・設定機能を実装し、拡張機能の外観を調整／保存／読み込み可能に実装
+・tabsモードにてファビコン表示を実装し、タブタイトル周辺の表示不具合を修正
+・各コマンドにおけるpicker操作を変更し、より直感的かつ操作と視線移動が減るように実装
+・picker操作変更に伴う関係各種の操作体系も見直し
+・searchモードの大幅刷新
+
 0.4.6：
 ・tabsモードにて新規タブグループの作成ができない現象を修正
 
@@ -104,4 +112,12 @@ https://x.com/ny0n150226
 | `search -exit -list` | search ピッカー列を閉じる（検索中ならキャンセル） |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
+| `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
+| `setting -list` | 設定ピッカー列を開く（UI 言語・外観・ピッカー個別外観・export/import zip）。`> save setting` で確定 |
+| `setting -exit -list` | 設定ピッカー列を閉じる |
+| `translate` | 利用案内を表示し、続けて `translate ` へ入力復元 |
+| `translate -on` | 翻訳アシストを有効化（nav typing 時のプロンプト下プレビュー） |
+| `translate -off` | 翻訳アシストを無効化 |
+| `translate -setting --ja-en` / `--en-ja` | nav typing 用の翻訳ペアを保存 |
+| `aboutbmxt` | BMXt ウェルカムページを新規ブラウザタブで開く |
 | `notes` | 現在の拡張機能バージョンのリリースノートを表示。`notes <version>` で該当版（例: `0.1.1`）。`notes --list` でエントリがある版一覧 |
