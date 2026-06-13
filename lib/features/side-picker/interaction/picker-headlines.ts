@@ -3,7 +3,7 @@
 
 /** search -list column (`SearchListPickerOverlay`). */
 export const SEARCH_LIST_PICKER_HEADLINE =
-  "search -list · ↑↓ · j/k · Alt+↑↓ preview (open tab) · → detail / open target · Enter open · n/N · ← · Esc → prompt"
+  "search -list · ↑↓ · j/k · Alt+↑↓ open-tab rows only · → detail / open target · Enter open · n/N · ← · Esc → prompt"
 
 /** EN: Detail drill-down inside the search picker (`→` from a result row). */
 export const SEARCH_LIST_PICKER_DETAIL_HEADLINE =

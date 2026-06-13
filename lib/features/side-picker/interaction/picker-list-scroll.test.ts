@@ -41,4 +41,17 @@ describe("scrollPickerListRowIntoView", () => {
     scrollPickerListRowIntoView(listEl, rowEl)
     assert.equal(listEl.scrollTop, 50)
   })
+
+  it("alignStart scrolls when row is fully visible", () => {
+    const listEl = {
+      scrollTop: 50,
+      getBoundingClientRect: () => ({ top: 100, bottom: 200, left: 0, right: 100 })
+    } as unknown as HTMLElement
+    const rowEl = {
+      getBoundingClientRect: () => ({ top: 120, bottom: 160, left: 0, right: 100 })
+    } as unknown as HTMLElement
+
+    scrollPickerListRowIntoView(listEl, rowEl, { alignStart: true })
+    assert.equal(listEl.scrollTop, 70)
+  })
 })

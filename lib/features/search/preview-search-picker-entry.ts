@@ -1,5 +1,6 @@
 import type { PickerEntry, SearchPageMatch } from "../side-picker/model/picker-entry"
 import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
+import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
@@ -41,12 +42,10 @@ export async function previewSearchPickerEntryInBackground(
 export async function anySearchPickerPreviewTarget(
   entries: readonly PickerEntry[]
 ): Promise<boolean> {
-  for (const entry of entries) {
-    if (await resolveOpenTabForSearchEntry(entry)) {
-      return true
-    }
-  }
-  return false
+  const indices = await listSearchPickerPreviewTargetIndices(entries)
+  return indices.length > 0
 }
+
+export { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
 
 export type { SearchPageMatch }

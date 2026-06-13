@@ -10,18 +10,27 @@ import {
 } from "react"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
-import { isPickerAltBlockedChord } from "../side-picker/preview/picker-alt-chord"
+import { isPickerAltBlockedChord, isPickerAltOnlyChord } from "../side-picker/preview/picker-alt-chord"
 import { pickerAltVerticalNavDirection } from "../side-picker/preview/picker-alt-vertical-nav"
 import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
 import { useUiCopy } from "../setting"
 import {
-  anySearchPickerPreviewTarget,
   previewSearchPickerEntryInBackground
 } from "./preview-search-picker-entry"
+import {
+  adjacentSearchPickerPreviewHi,
+  searchPickerPreviewScrollAnimated
+} from "./search-picker-preview-nav"
+import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
 
 const PREVIEW_NOTICE_MS = 3200
+
+export type SearchPickerListScrollHint = {
+  animated: boolean
+  alignStart?: boolean
+}
 
 export type UseSearchPickerAltPreviewKitOptions = {
   enabled: boolean
@@ -39,6 +48,7 @@ export type UseSearchPickerAltPreviewKitOptions = {
 
 export type UseSearchPickerAltPreviewKitResult = {
   altKeyHeldRef: MutableRefObject<boolean>
+  listScrollHintRef: MutableRefObject<SearchPickerListScrollHint | null>
   mergedExtensions: PlainPickerKeyboardExtensions
   previewNotice: string | null
 }
@@ -59,34 +69,39 @@ export function useSearchPickerAltPreviewKit({
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
   const uiCopy = useUiCopy()
   const altKeyHeldRef = useRef(false)
+  const listScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
   const [altPreviewTick, setAltPreviewTick] = useState(0)
-  const [hasPreviewTarget, setHasPreviewTarget] = useState(false)
+  const [previewTargetIndices, setPreviewTargetIndices] = useState<number[]>([])
   const [previewNotice, setPreviewNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
   const entriesRef = useRef(entries)
   const patternRef = useRef(pattern)
   const matchHiRef = useRef(matchHi)
   const hiRef = useRef(hi)
+  const previewTargetIndicesRef = useRef(previewTargetIndices)
   entriesRef.current = entries
   patternRef.current = pattern
   matchHiRef.current = matchHi
   hiRef.current = hi
+  previewTargetIndicesRef.current = previewTargetIndices
 
   useEffect(() => {
     if (!enabled || entries.length === 0) {
-      setHasPreviewTarget(false)
+      setPreviewTargetIndices([])
       return
     }
     let cancelled = false
-    void anySearchPickerPreviewTarget(entries).then((any) => {
+    void listSearchPickerPreviewTargetIndices(entries).then((indices) => {
       if (!cancelled) {
-        setHasPreviewTarget(any)
+        setPreviewTargetIndices(indices)
       }
     })
     return () => {
       cancelled = true
     }
   }, [enabled, entries])
+
+  const hasPreviewTarget = previewTargetIndices.length > 0
 
   const showNoPreviewTargetNotice = useCallback(() => {
     if (noticeTimerRef.current !== null) {
@@ -157,6 +172,24 @@ export function useSearchPickerAltPreviewKit({
         return false
       }
       pickerStopEvent(e)
+
+      if (isPickerAltOnlyChord(e)) {
+        const currentHi = hiRef.current
+        const nextHi = adjacentSearchPickerPreviewHi(
+          currentHi,
+          navDir,
+          previewTargetIndicesRef.current
+        )
+        if (nextHi === null) {
+          return true
+        }
+        if (searchPickerPreviewScrollAnimated(currentHi, nextHi)) {
+          listScrollHintRef.current = { animated: true, alignStart: true }
+        }
+        setHi(nextHi)
+        return true
+      }
+
       if (navDir === "down") {
         setHi((h) => Math.min(h + 1, lineCount - 1))
       } else {
@@ -181,5 +214,5 @@ export function useSearchPickerAltPreviewKit({
     }
   }, [baseExtensions, customVerticalNav, enabled])
 
-  return { altKeyHeldRef, mergedExtensions, previewNotice }
+  return { altKeyHeldRef, listScrollHintRef, mergedExtensions, previewNotice }
 }

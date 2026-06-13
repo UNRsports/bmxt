@@ -35,8 +35,10 @@ export {
 export { runPickerPaneStripKeydown } from "./interaction/picker-pane-strip"
 export {
   scrollPickerListRowIntoView,
+  scrollPickerListRowIntoViewAnimated,
   scrollPickerListToHi,
-  scrollPickerListToHiAfterLayout
+  scrollPickerListToHiAfterLayout,
+  scrollPickerListToHiAnimated
 } from "./interaction/picker-list-scroll"
 export { runPickerSearchEnter, type RunPickerSearchEnterOptions } from "./interaction/picker-search-enter"
 export {

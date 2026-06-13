@@ -12,7 +12,7 @@ import {
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
-import { scrollPickerListToHiAfterLayout } from "../side-picker/interaction/picker-list-scroll"
+import { scrollPickerListToHiAfterLayout, scrollPickerListToHiAnimated } from "../side-picker/interaction/picker-list-scroll"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
@@ -241,7 +241,7 @@ export function SearchListPickerBody({
     ? `destination-${destinationRows.length}`
     : inDetailView
       ? `detail-${detailEntry?.id ?? ""}-${detailHits.length}`
-      : `results-${entries.length}-${resultsFocusHi}`
+      : `results-${entries.length}`
 
   useEffect(() => {
     const startHi =
@@ -260,11 +260,9 @@ export function SearchListPickerBody({
     if (listRef.current) {
       if (statusOnly && statusLines.length > 0) {
         listRef.current.scrollTop = listRef.current.scrollHeight
-      } else {
-        listRef.current.scrollTop = 0
       }
     }
-  }, [listResetKey, statusLines, statusOnly])
+  }, [listResetKey, statusLines, statusOnly, inDetailView, resultsFocusHi])
 
   useEffect(() => {
     if (lineCount === 0) {
@@ -279,9 +277,37 @@ export function SearchListPickerBody({
     }
   }, [hi, inDestinationView, inDetailView, subviewHiRef])
 
+  const altPreviewEnabled =
+    keyboardActive &&
+    !statusOnly &&
+    !inDetailView &&
+    !inDestinationView &&
+    entries.length > 0
+
+  const { mergedExtensions, previewNotice, listScrollHintRef } = useSearchPickerAltPreviewKit({
+    enabled: altPreviewEnabled,
+    isHostPaneFocused: keyboardActive,
+    entries,
+    pattern,
+    matchHi,
+    hi,
+    lineCount,
+    setHi,
+    searchMode,
+    commandMode,
+    baseExtensions: extensions
+  })
+
   const followListScrollToHi = useCallback(() => {
-    scrollPickerListToHiAfterLayout(listRef.current, ROW_ID_PREFIX, hi)
-  }, [hi])
+    const hint = listScrollHintRef.current
+    listScrollHintRef.current = null
+    const scrollOptions = hint?.alignStart ? { alignStart: true as const } : undefined
+    if (hint?.animated) {
+      scrollPickerListToHiAnimated(listRef.current, ROW_ID_PREFIX, hi, scrollOptions)
+      return
+    }
+    scrollPickerListToHiAfterLayout(listRef.current, ROW_ID_PREFIX, hi, scrollOptions)
+  }, [hi, listScrollHintRef])
 
   useLayoutEffect(() => {
     if (lineCount === 0) {
@@ -303,27 +329,6 @@ export function SearchListPickerBody({
     : inDetailView
       ? onConfirmDetailHit
       : onConfirmLineIndex
-
-  const altPreviewEnabled =
-    keyboardActive &&
-    !statusOnly &&
-    !inDetailView &&
-    !inDestinationView &&
-    entries.length > 0
-
-  const { mergedExtensions, previewNotice } = useSearchPickerAltPreviewKit({
-    enabled: altPreviewEnabled,
-    isHostPaneFocused: keyboardActive,
-    entries,
-    pattern,
-    matchHi,
-    hi,
-    lineCount,
-    setHi,
-    searchMode,
-    commandMode,
-    baseExtensions: extensions
-  })
 
   const { onInputKeyDown } = usePlainPickerKeyboard({
     lineCount: statusOnly ? 0 : lineCount,
