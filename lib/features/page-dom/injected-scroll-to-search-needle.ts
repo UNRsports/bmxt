@@ -1,9 +1,9 @@
 /**
  * EN: Injected via content script or `chrome.scripting.executeScript` — scroll to a
- *     search needle and highlight it in-page. Range pick order: snippet (live DOM) →
- *     lineNo auxiliary → scan-time globalOccurrence → first match.
- * JA: 検索語へスクロールして強調表示。Range 選択は snippet（live DOM）→ lineNo 補助 →
- *     スキャン時 globalOccurrence → 先頭一致。
+ *     search needle and highlight it in-page. Ranges are ordered by innerText global
+ *     occurrence; pick order: indexed globalOccurrence → snippet → line context → first.
+ * JA: 検索語へスクロールして強調表示。Range は innerText 出現順。選択は
+ *     globalOccurrence → snippet → 行コンテキスト → 先頭一致。
  */
 
 import {
@@ -56,11 +56,63 @@ function collectNeedleRanges(needle: string): Range[] {
   return ranges
 }
 
+function collectNeedleRangesInInnerTextOrder(needle: string): Range[] {
+  const trimmed = needle.trim()
+  if (!trimmed || !document.body) {
+    return []
+  }
+  const domRanges = collectNeedleRanges(trimmed)
+  if (domRanges.length === 0) {
+    return []
+  }
+
+  const lines = innerTextLines()
+  const ordered: Range[] = []
+  const claimed = new Set<Range>()
+
+  for (const line of lines) {
+    let from = 0
+    while (from < line.length) {
+      const hit = findRawNeedleInHaystack(line, trimmed, from)
+      if (!hit) {
+        break
+      }
+      const start = Math.max(0, hit.index - 48)
+      const end = Math.min(line.length, hit.index + hit.length + 48)
+      let context = line.slice(start, end).trim()
+      if (start > 0) {
+        context = `…${context}`
+      }
+      if (end < line.length) {
+        context = `${context}…`
+      }
+      const range = findRangeByContext(
+        context,
+        trimmed,
+        domRanges.filter((candidate) => !claimed.has(candidate))
+      )
+      if (range) {
+        ordered.push(range)
+        claimed.add(range)
+      }
+      from = hit.index + Math.max(1, hit.length)
+    }
+  }
+
+  for (const range of domRanges) {
+    if (!claimed.has(range)) {
+      ordered.push(range)
+    }
+  }
+
+  return ordered.length > 0 ? ordered : domRanges
+}
+
 function resolveNeedleRanges(needle: string, activeOnly: boolean): Range[] {
   if (activeOnly && sessionNeedle === needle && sessionRanges.length > 0) {
     return sessionRanges
   }
-  const ranges = collectNeedleRanges(needle)
+  const ranges = collectNeedleRangesInInnerTextOrder(needle)
   sessionNeedle = needle
   sessionRanges = ranges
   return ranges
@@ -142,7 +194,11 @@ function pickRangeForLine(
     return undefined
   }
 
-  const hint = snippetHint.replace(/…\s*$/, "").trim()
+  if (globalOccurrenceHint >= 0 && globalOccurrenceHint < ranges.length) {
+    return ranges[globalOccurrenceHint]
+  }
+
+  const hint = snippetHint.replace(/^\s*…/, "").replace(/…\s*$/, "").trim()
   if (hint) {
     const byHint = findRangeByContext(hint, needle, ranges)
     if (byHint) {
@@ -153,19 +209,15 @@ function pickRangeForLine(
   const lines = innerTextLines()
   if (lineNo > 0 && lineNo <= lines.length) {
     const lineText = lines[lineNo - 1]!
-    const occ = globalNeedleOccurrenceForLine(lines, lineNo, needle)
-    if (occ >= 0 && occ < ranges.length) {
-      return ranges[occ]
-    }
     const context = lineContextAroundNeedle(lineText, needle)
     const byLineContext = findRangeByContext(context, needle, ranges)
     if (byLineContext) {
       return byLineContext
     }
-  }
-
-  if (globalOccurrenceHint >= 0 && globalOccurrenceHint < ranges.length) {
-    return ranges[globalOccurrenceHint]
+    const occ = globalNeedleOccurrenceForLine(lines, lineNo, needle)
+    if (occ >= 0 && occ < ranges.length) {
+      return ranges[occ]
+    }
   }
 
   return ranges[0]

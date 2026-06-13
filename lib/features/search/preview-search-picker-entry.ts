@@ -3,10 +3,9 @@ import type { BmxtNeedleHighlightColorsPayload } from "../page-dom/page-scroll-n
 import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
-import { excerptAroundNeedle } from "./search-picker-excerpt"
+import { resolveSearchPickerPageMatchFromMatches } from "./search-picker-page-match"
 import { clearSearchPageHighlights } from "./sources/clear-search-page-highlights"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
-import { scrollSearchPageToSnippet } from "./sources/page-scroll-to-snippet"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
 
 const PREVIEW_TAB_ACTIVATE_DELAY_MS = 120
@@ -67,15 +66,23 @@ async function scrollToPageMatch(
     return true
   }
 
-  const excerpt = excerptAroundNeedle(match.snippet, needle)
-  if (excerpt.trim().length > 0) {
-    const snippetScrolled = await scrollSearchPageToSnippet(tabId, excerpt, match.occurrence, 0, highlightColors)
-    if (snippetScrolled) {
+  if (activeOnly) {
+    const retried = await scrollSearchPageToNeedle(tabId, {
+      searchNeedle: needle,
+      lineNo: match.lineNo,
+      snippetHint: match.snippet,
+      globalOccurrence: match.globalOccurrence,
+      persistMs: 0,
+      highlightColors,
+      activeOnly: false
+    })
+    if (retried) {
       previewSessionTabId = tabId
       previewSessionNeedle = needle
     }
-    return snippetScrolled
+    return retried
   }
+
   return false
 }
 
@@ -117,6 +124,22 @@ export async function previewSearchPickerPageMatchInBackground(
   return previewPageMatchInOpenTab(
     entry,
     pickPageMatchAtIndex(entry, pageMatchIndex),
+    searchPattern,
+    highlightColors
+  )
+}
+
+/** EN: Background preview for results list row + display `matchHi`. */
+export async function previewSearchPickerResultsMatchInBackground(
+  entry: PickerEntry,
+  matchHi: number,
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors
+): Promise<boolean> {
+  const { pageMatchIndex } = resolveSearchPickerPageMatchFromMatches(entry.pageMatches, matchHi)
+  return previewSearchPickerPageMatchInBackground(
+    entry,
+    pageMatchIndex,
     searchPattern,
     highlightColors
   )

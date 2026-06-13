@@ -21,6 +21,7 @@ import { useSearchPickerResultsOpenTabNav } from "./use-search-picker-results-op
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { SearchPickerHighlight } from "./search-picker-highlight"
+import { SearchPickerTabFavicon } from "./search-picker-tab-favicon"
 import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
@@ -28,6 +29,7 @@ import type { SearchOpenDestinationRow } from "./search-open-destination"
 import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
 import type { SearchPageActiveMode } from "./page-active-setting"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
+import { useTabPickerLiveFieldsRevision } from "../tabs/use-tab-picker-live-fields-revision"
 
 const ROW_ID_PREFIX = "bmxt-search-row"
 
@@ -151,7 +153,12 @@ function SearchListPickerRow({
       <div className="bmxt-search-picker-field">
         <div className="bmxt-search-picker-field-label">title:</div>
         <div className="bmxt-search-picker-title">
-          <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={pattern} />
+          {entry.tabId != null ? (
+            <SearchPickerTabFavicon tabId={entry.tabId} url={entry.url} />
+          ) : null}
+          <span className="bmxt-search-picker-title-text">
+            <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={pattern} />
+          </span>
         </div>
       </div>
       {showText ? (
@@ -192,6 +199,7 @@ export function SearchListPickerBody({
   destinationFromDetail = false,
   pageActiveMode = "auto"
 }: SearchListPickerBodyProps) {
+  useTabPickerLiveFieldsRevision()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -306,12 +314,16 @@ export function SearchListPickerBody({
     previewNotice: resultsPreviewNotice
   } = useSearchPickerResultsOpenTabNav({
     enabled: resultsOpenTabNavEnabled,
+    isHostPaneFocused: keyboardActive,
     entries,
+    pattern,
+    matchHi,
     hi,
     lineCount,
     setHi,
     searchMode,
     commandMode,
+    pageActiveMode,
     listScrollHintRef,
     baseExtensions: extensions
   })

@@ -16,9 +16,10 @@ import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {
   searchEntryOffersOpenDestination,
-  searchPickerMatchDetail,
+  searchPickerSourceLabel,
   type PickerEntry
 } from "../side-picker/model/picker-entry"
+import { searchPickerActiveMatchDetail } from "./search-picker-page-match"
 import { resolveSearchArrowRightTarget } from "./search-arrow-right-target"
 import { listSearchEntryDetailHits } from "./search-entry-detail-hits"
 import { searchEntryHasOpenTab } from "./search-entry-open-tab"
@@ -239,7 +240,7 @@ export function SearchListPickerOverlay({
       return `${SEARCH_LIST_PICKER_DETAIL_HEADLINE} · ${clipped}`
     }
     const entry = entries[resultsHi]
-    const detail = entry ? searchPickerMatchDetail(entry, matchHi) : ""
+    const detail = entry ? searchPickerActiveMatchDetail(entry, matchHi) : ""
     if (!detail) {
       return SEARCH_LIST_PICKER_HEADLINE
     }

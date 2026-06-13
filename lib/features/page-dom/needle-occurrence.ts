@@ -114,14 +114,40 @@ export function assignGlobalOccurrencesToPageMatches(
   if (!trimmedNeedle) {
     return [...matches]
   }
+
+  const lineHitToGlobal = new Map<string, number>()
+  let globalIdx = 0
+  for (let lineIdx = 0; lineIdx < bodyLines.length; lineIdx++) {
+    const line = bodyLines[lineIdx]!
+    let from = 0
+    let hitOnLine = 0
+    while (from < line.length) {
+      const hit = findRawNeedleInHaystack(line, trimmedNeedle, from)
+      if (!hit) {
+        break
+      }
+      lineHitToGlobal.set(`${lineIdx + 1}:${hitOnLine}`, globalIdx)
+      globalIdx += 1
+      hitOnLine += 1
+      from = hit.index + Math.max(1, hit.length)
+    }
+  }
+
+  const lineHitCounts = new Map<number, number>()
   return matches.map((match) => {
     if (match.lineNo <= 0) {
       return match
     }
-    const globalOccurrence = globalNeedleOccurrenceForLine(bodyLines, match.lineNo, trimmedNeedle)
-    if (globalOccurrence < 0) {
+    const hitOnLine = lineHitCounts.get(match.lineNo) ?? 0
+    lineHitCounts.set(match.lineNo, hitOnLine + 1)
+    const mapped = lineHitToGlobal.get(`${match.lineNo}:${hitOnLine}`)
+    if (mapped !== undefined) {
+      return { ...match, globalOccurrence: mapped }
+    }
+    const fallback = globalNeedleOccurrenceForLine(bodyLines, match.lineNo, trimmedNeedle)
+    if (fallback < 0) {
       return match
     }
-    return { ...match, globalOccurrence }
+    return { ...match, globalOccurrence: fallback }
   })
 }

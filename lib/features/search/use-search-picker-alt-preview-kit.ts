@@ -244,20 +244,35 @@ export function useSearchPickerAltPreviewKit({
 
       if (altArrow) {
         altKeyHeldRef.current = true
-        if (navDir === "down") {
-          setHi((h) => Math.min(h + 1, lineCount - 1))
+        const currentHi = hiRef.current
+        const nextHi =
+          navDir === "down"
+            ? Math.min(currentHi + 1, lineCount - 1)
+            : Math.max(currentHi - 1, 0)
+        hiRef.current = nextHi
+        setHi(nextHi)
+        const canPreview = canPreviewSearchPickerSelection(
+          "detail",
+          nextHi,
+          previewTargetIndicesRef.current,
+          detailHitsRef.current,
+          detailEntryRef.current?.pageMatches
+        )
+        if (!canPreview) {
+          showNoPreviewTargetNotice()
         } else {
-          setHi((h) => Math.max(h - 1, 0))
+          void runPreview()
         }
-        void runPreview()
         return true
       }
 
-      if (navDir === "down") {
-        setHi((h) => Math.min(h + 1, lineCount - 1))
-      } else {
-        setHi((h) => Math.max(h - 1, 0))
-      }
+      const currentHi = hiRef.current
+      const nextHi =
+        navDir === "down"
+          ? Math.min(currentHi + 1, lineCount - 1)
+          : Math.max(currentHi - 1, 0)
+      hiRef.current = nextHi
+      setHi(nextHi)
       return true
     },
     [

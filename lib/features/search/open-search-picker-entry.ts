@@ -1,4 +1,5 @@
 import { createTabInNormalBrowserWindow } from "../dispatch/handlers/shared"
+import { resolveSearchPickerPageMatch } from "./search-picker-page-match"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { openEntryEffects } from "../side-picker/model/open-entry"
@@ -38,12 +39,8 @@ async function tabStillOpen(tabId: number): Promise<boolean> {
   }
 }
 
-function pickPageMatch(entry: PickerEntry, matchIndex: number): SearchPageMatch | undefined {
-  const matches = entry.pageMatches
-  if (!matches || matches.length === 0) {
-    return undefined
-  }
-  return matches[matchIndex] ?? matches[0]
+function pickPageMatch(entry: PickerEntry, matchHi: number): SearchPageMatch | undefined {
+  return resolveSearchPickerPageMatch(entry, matchHi).match
 }
 
 async function activateOpenTab(resolved: OpenTabResolution): Promise<void> {

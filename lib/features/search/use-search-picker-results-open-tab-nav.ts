@@ -15,27 +15,42 @@ import {
   verticalNavDirection
 } from "../side-picker/interaction/picker-vertical-nav"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
+import { isPickerAltBlockedChord, isPickerAltOnlyChord } from "../side-picker/preview/picker-alt-chord"
 import {
   isPickerCtrlBlockedChord,
   isPickerCtrlOnlyChord
 } from "../side-picker/preview/picker-ctrl-chord"
+import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
+import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
-import { useUiCopy } from "../setting"
+import { resolveSearchHighlightAppearance, useUiCopy, useUiSettings } from "../setting"
 import {
   adjacentSearchPickerPreviewHi,
+  canPreviewSearchPickerSelection,
   searchPickerPreviewScrollAnimated
 } from "./search-picker-preview-nav"
 import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
+import type { SearchPageActiveMode } from "./page-active-setting"
+import {
+  previewSearchPickerResultsMatchInBackground,
+  type SearchPageHighlightColors
+} from "./preview-search-picker-entry"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
+
+const PREVIEW_NOTICE_MS = 3200
 
 export type UseSearchPickerResultsOpenTabNavOptions = {
   enabled: boolean
+  isHostPaneFocused: boolean
   entries: readonly PickerEntry[]
+  pattern: string
+  matchHi: number
   hi: number
   lineCount: number
   setHi: Dispatch<SetStateAction<number>>
   searchMode: boolean
   commandMode: boolean
+  pageActiveMode?: SearchPageActiveMode
   listScrollHintRef: MutableRefObject<SearchPickerListScrollHint | null>
   baseExtensions?: PlainPickerKeyboardExtensions
 }
@@ -45,26 +60,43 @@ export type UseSearchPickerResultsOpenTabNavResult = {
   previewNotice: string | null
 }
 
-/** EN: Results list — Ctrl+↑↓ jumps among rows with an open tab only. */
+/** EN: Results list — page-active preview; Ctrl+↑↓ jumps among open-tab rows. */
 export function useSearchPickerResultsOpenTabNav({
   enabled,
+  isHostPaneFocused,
   entries,
+  pattern,
+  matchHi,
   hi,
   lineCount,
   setHi,
   searchMode,
   commandMode,
+  pageActiveMode = "auto",
   listScrollHintRef,
   baseExtensions
 }: UseSearchPickerResultsOpenTabNavOptions): UseSearchPickerResultsOpenTabNavResult {
   const uiCopy = useUiCopy()
+  const { settings } = useUiSettings()
+  const altKeyHeldRef = useRef(false)
+  const [altPreviewTick, setAltPreviewTick] = useState(0)
   const [openTabIndices, setOpenTabIndices] = useState<number[]>([])
   const [previewNotice, setPreviewNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
   const hiRef = useRef(hi)
+  const matchHiRef = useRef(matchHi)
   const openTabIndicesRef = useRef(openTabIndices)
+  const entriesRef = useRef(entries)
+  const patternRef = useRef(pattern)
+  const highlightColorsRef = useRef<SearchPageHighlightColors>(
+    resolveSearchHighlightAppearance(settings.appearance)
+  )
   hiRef.current = hi
+  matchHiRef.current = matchHi
   openTabIndicesRef.current = openTabIndices
+  entriesRef.current = entries
+  patternRef.current = pattern
+  highlightColorsRef.current = resolveSearchHighlightAppearance(settings.appearance)
 
   const entriesOpenTabKey = useMemo(
     () => entries.map((e) => `${e.id}:${e.tabId ?? ""}:${e.url}`).join("\n"),
@@ -95,50 +127,157 @@ export function useSearchPickerResultsOpenTabNav({
     noticeTimerRef.current = window.setTimeout(() => {
       setPreviewNotice(null)
       noticeTimerRef.current = null
-    }, 3200)
+    }, PREVIEW_NOTICE_MS)
   }, [uiCopy])
+
+  const runPreview = useCallback(async () => {
+    const index = hiRef.current
+    const entry = entriesRef.current[index]
+    if (!entry) {
+      return
+    }
+    await previewSearchPickerResultsMatchInBackground(
+      entry,
+      matchHiRef.current,
+      patternRef.current,
+      highlightColorsRef.current
+    )
+  }, [])
+
+  const onAltKeyDown = useCallback(() => {
+    const currentHi = hiRef.current
+    const entry = entriesRef.current[currentHi]
+    const canPreview = canPreviewSearchPickerSelection(
+      "results",
+      currentHi,
+      openTabIndicesRef.current,
+      [],
+      entry?.pageMatches
+    )
+    if (!canPreview) {
+      showNoOpenTabNotice()
+      return
+    }
+    void runPreview()
+  }, [runPreview, showNoOpenTabNotice])
+
+  usePickerAltKeyTracking({
+    enabled,
+    altKeyHeldRef,
+    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
+    setAltPreviewTick,
+    onAltKeyDown
+  })
+
+  const entry = entries[hi]
+  const previewKey =
+    enabled && entry
+      ? `results:${hi}:${matchHi}:${entry.id}:${pattern}:${highlightColorsRef.current.hitBg}:${highlightColorsRef.current.jumpBg}`
+      : ""
+
+  usePickerAltPreviewSync({
+    enabled: enabled && lineCount > 0,
+    isHostPaneFocused,
+    mode: pageActiveMode,
+    altKeyHeldRef,
+    altPreviewTick,
+    previewKey,
+    isBlocked: () => {
+      const currentHi = hiRef.current
+      const row = entriesRef.current[currentHi]
+      return !canPreviewSearchPickerSelection(
+        "results",
+        currentHi,
+        openTabIndicesRef.current,
+        [],
+        row?.pageMatches
+      )
+    },
+    runPreview
+  })
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
       if (!enabled || searchMode || commandMode) {
         return false
       }
-      if (isPickerCtrlBlockedChord(e)) {
-        return false
-      }
-      if (
-        !isPickerCtrlOnlyChord(e) ||
-        (!isPhysicalArrowUp(e) && !isPhysicalArrowDown(e))
-      ) {
+      if (isPickerCtrlBlockedChord(e) || isPickerAltBlockedChord(e)) {
         return false
       }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || lineCount === 0) {
         return false
       }
+
+      const ctrlArrow =
+        isPickerCtrlOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
+      const altArrow =
+        isPickerAltOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
       const navDir = verticalNavDirection(e)
-      if (navDir === null) {
-        return false
-      }
-      pickerStopEvent(e)
-      const currentHi = hiRef.current
-      const nextHi = adjacentSearchPickerPreviewHi(
-        currentHi,
-        navDir,
-        openTabIndicesRef.current
-      )
-      if (nextHi === null) {
-        showNoOpenTabNotice()
+
+      if (ctrlArrow) {
+        const ctrlDir = isPhysicalArrowDown(e) ? "down" : "up"
+        pickerStopEvent(e)
+        const currentHi = hiRef.current
+        const nextHi = adjacentSearchPickerPreviewHi(
+          currentHi,
+          ctrlDir,
+          openTabIndicesRef.current
+        )
+        if (nextHi === null) {
+          showNoOpenTabNotice()
+          return true
+        }
+        if (searchPickerPreviewScrollAnimated(currentHi, nextHi)) {
+          listScrollHintRef.current = { animated: true, alignStart: true }
+        }
+        hiRef.current = nextHi
+        setHi(nextHi)
+        if (pageActiveMode === "auto") {
+          void runPreview()
+        }
         return true
       }
-      if (searchPickerPreviewScrollAnimated(currentHi, nextHi)) {
-        listScrollHintRef.current = { animated: true, alignStart: true }
+
+      if (!altArrow || navDir === null) {
+        return false
       }
+
+      pickerStopEvent(e)
+      altKeyHeldRef.current = true
+      const currentHi = hiRef.current
+      const nextHi =
+        navDir === "down"
+          ? Math.min(currentHi + 1, lineCount - 1)
+          : Math.max(currentHi - 1, 0)
       hiRef.current = nextHi
       setHi(nextHi)
+      const row = entriesRef.current[nextHi]
+      const canPreview = canPreviewSearchPickerSelection(
+        "results",
+        nextHi,
+        openTabIndicesRef.current,
+        [],
+        row?.pageMatches
+      )
+      if (!canPreview) {
+        showNoOpenTabNotice()
+      } else {
+        void runPreview()
+      }
       return true
     },
-    [commandMode, enabled, lineCount, listScrollHintRef, searchMode, setHi, showNoOpenTabNotice]
+    [
+      commandMode,
+      enabled,
+      lineCount,
+      listScrollHintRef,
+      pageActiveMode,
+      runPreview,
+      searchMode,
+      setHi,
+      showNoOpenTabNotice
+    ]
   )
 
   const mergedExtensions = useMemo((): PlainPickerKeyboardExtensions => {

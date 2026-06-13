@@ -1408,6 +1408,22 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   word-break: break-word;
 }
 
+.bmxt-search-picker-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.bmxt-search-picker-title-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bmxt-search-picker-title .bmxt-search-picker-tab-favicon {
+  flex: 0 0 16px;
+  margin-top: 2px;
+}
+
 .bmxt-search-picker-text {
   font-size: 12px;
   color: #c9d1d9;
