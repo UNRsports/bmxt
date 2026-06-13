@@ -17,6 +17,7 @@ import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/p
 import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
 import { useSearchPickerAltPreviewKit } from "./use-search-picker-alt-preview-kit"
+import { useSearchPickerResultsOpenTabNav } from "./use-search-picker-results-open-tab-nav"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { SearchPickerHighlight } from "./search-picker-highlight"
@@ -26,6 +27,7 @@ import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker
 import type { SearchOpenDestinationRow } from "./search-open-destination"
 import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
 import type { SearchPageActiveMode } from "./page-active-setting"
+import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
 
 const ROW_ID_PREFIX = "bmxt-search-row"
 
@@ -294,21 +296,44 @@ export function SearchListPickerBody({
     [settings.appearance]
   )
 
-  const { mergedExtensions, previewNotice, listScrollHintRef } = useSearchPickerAltPreviewKit({
-    enabled: altPreviewEnabled,
-    isHostPaneFocused: keyboardActive,
-    pattern,
+  const listScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
+
+  const resultsOpenTabNavEnabled =
+    keyboardActive && !statusOnly && !inDetailView && !inDestinationView && entries.length > 0
+
+  const {
+    mergedExtensions: resultsNavExtensions,
+    previewNotice: resultsPreviewNotice
+  } = useSearchPickerResultsOpenTabNav({
+    enabled: resultsOpenTabNavEnabled,
+    entries,
     hi,
     lineCount,
     setHi,
     searchMode,
     commandMode,
-    detailEntry,
-    detailHits,
-    highlightColors: searchHighlightColors,
-    pageActiveMode,
+    listScrollHintRef,
     baseExtensions: extensions
   })
+
+  const { mergedExtensions, previewNotice: detailPreviewNotice } = useSearchPickerAltPreviewKit({
+      enabled: altPreviewEnabled,
+      isHostPaneFocused: keyboardActive,
+      pattern,
+      hi,
+      lineCount,
+      setHi,
+      searchMode,
+      commandMode,
+      detailEntry,
+      detailHits,
+      highlightColors: searchHighlightColors,
+      pageActiveMode,
+      listScrollHintRef,
+      baseExtensions: resultsNavExtensions
+    })
+
+  const previewNotice = detailPreviewNotice ?? resultsPreviewNotice
 
   const followListScrollToHi = useCallback(() => {
     const hint = listScrollHintRef.current
@@ -326,7 +351,7 @@ export function SearchListPickerBody({
       return
     }
     followListScrollToHi()
-  }, [followListScrollToHi, lineCount, matchHi, pickerView])
+  }, [followListScrollToHi, hi, lineCount, matchHi, pickerView])
 
   useLayoutEffect(() => {
     if (keyboardActive) {

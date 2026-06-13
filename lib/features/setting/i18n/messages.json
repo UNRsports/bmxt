@@ -764,12 +764,12 @@
     "en": "search — no in-page hits to jump (tab not open or not scrollable)"
   },
   "search.status.auto": {
-    "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Alt+↑↓ で開タブ行のみ · Enter でジャンプ",
-    "en": "↑↓ in-page preview on highlight (background) · Alt+↑↓ open-tab rows only · Enter jump"
+    "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ",
+    "en": "↑↓ in-page preview on highlight (background) · Ctrl+↑↓ open-tab rows only · Enter jump"
   },
   "search.status.manual": {
-    "ja": "Alt+↑↓ でページ内プレビュー · Enter でジャンプ · Alt で page-active 切替",
-    "en": "Alt+↑↓ for in-page preview · Enter jump · Alt toggles page-active"
+    "ja": "Alt+↑↓ でページ内プレビュー · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ · Alt で page-active 切替",
+    "en": "Alt+↑↓ for in-page preview · Ctrl+↑↓ open-tab rows only · Enter jump · Alt toggles page-active"
   },
   "nav.notArmed": {
     "ja": "このペインでは nav は起動していません。",

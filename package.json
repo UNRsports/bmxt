@@ -76,6 +76,14 @@
         },
         "description": "__MSG_commandLaunchBmxt__",
         "global": true
+      },
+      "reset-bmxt": {
+        "suggested_key": {
+          "default": "Shift+Alt+R",
+          "mac": "Shift+Alt+R"
+        },
+        "description": "__MSG_commandResetBmxt__",
+        "global": true
       }
     }
   }

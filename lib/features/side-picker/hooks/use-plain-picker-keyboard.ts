@@ -123,8 +123,8 @@ export function usePlainPickerKeyboard({
       if (searchMode || commandMode) {
         return false
       }
-      if (extensions?.customVerticalNav) {
-        return extensions.customVerticalNav(e)
+      if (extensions?.customVerticalNav?.(e)) {
+        return true
       }
       return runDefaultVerticalNav(e)
     },

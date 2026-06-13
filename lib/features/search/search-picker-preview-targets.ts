@@ -1,18 +1,22 @@
-import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
+import {
+  listOpenTabsByNormalizedUrl,
+  resolveOpenTabForSearchEntry
+} from "./search-entry-open-tab"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
 
-/** EN: Row indices whose URL is open in a non-discarded scriptable tab (Alt preview targets). */
+/** EN: Row indices whose URL is open in a non-discarded scriptable tab (Ctrl+↑↓ jump targets). */
 export async function listSearchPickerPreviewTargetIndices(
   entries: readonly PickerEntry[]
 ): Promise<number[]> {
+  const openTabsByUrl = await listOpenTabsByNormalizedUrl()
   const indices: number[] = []
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i]
     if (!entry) {
       continue
     }
-    if (await resolveOpenTabForSearchEntry(entry)) {
+    if (await resolveOpenTabForSearchEntry(entry, openTabsByUrl)) {
       indices.push(i)
     }
   }
@@ -27,7 +31,8 @@ export async function listSearchDetailPreviewTargetIndices(
   if (!entry || hits.length === 0) {
     return []
   }
-  if (!(await resolveOpenTabForSearchEntry(entry))) {
+  const openTabsByUrl = await listOpenTabsByNormalizedUrl()
+  if (!(await resolveOpenTabForSearchEntry(entry, openTabsByUrl))) {
     return []
   }
   const indices: number[] = []

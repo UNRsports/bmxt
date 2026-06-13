@@ -34,6 +34,8 @@ const BMXT_PAGE = "tabs/bmxt.html"
 
 let lastFocusedNormalWindow: number | undefined
 let bmxtWindowId: number | undefined
+/** 連打で BMXt 窓が複数できるのを防ぐ。 */
+let bmxtWindowLaunchChain: Promise<void> = Promise.resolve()
 
 async function persistBmxtWindowId(id: number | undefined): Promise<void> {
   if (id === undefined) {
@@ -55,35 +57,60 @@ async function hydrateBmxtWindowIdFromStorage(): Promise<void> {
   }
 }
 
+/** 保存 ID が無効なときは bmxt.html タブから窓 ID を復元する。 */
+async function resolveBmxtWindowIdAsync(): Promise<number | undefined> {
+  await hydrateBmxtWindowIdFromStorage()
+  if (bmxtWindowId !== undefined) {
+    try {
+      await chrome.windows.get(bmxtWindowId)
+      return bmxtWindowId
+    } catch {
+      bmxtWindowId = undefined
+      await persistBmxtWindowId(undefined)
+    }
+  }
+  const pageUrl = chrome.runtime.getURL(BMXT_PAGE)
+  const tabs = await chrome.tabs.query({ url: pageUrl })
+  const tab = tabs.find((t) => typeof t.windowId === "number")
+  if (tab?.windowId === undefined) {
+    return undefined
+  }
+  bmxtWindowId = tab.windowId
+  await persistBmxtWindowId(tab.windowId)
+  return tab.windowId
+}
+
+async function focusBmxtWindow(windowId: number): Promise<void> {
+  await chrome.windows.update(windowId, { focused: true })
+}
+
+function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
+  bmxtWindowLaunchChain = bmxtWindowLaunchChain.then(task, task)
+  void bmxtWindowLaunchChain
+}
+
 function openOrFocusBmxtWindow() {
-  void openOrFocusBmxtWindowAsync()
+  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
 }
 
 async function openOrFocusBmxtWindowAsync(): Promise<void> {
-  await hydrateBmxtWindowIdFromStorage()
-  const url = chrome.runtime.getURL(BMXT_PAGE)
-  if (bmxtWindowId === undefined) {
-    /* normal: タブグループ API が popup ウィンドウでは無効なため（chrome.tabs.group） */
-    const w = await chrome.windows.create({
-      url,
-      type: "normal",
-      width: 780,
-      height: 580,
-      focused: true
-    })
-    if (w.id !== undefined) {
-      bmxtWindowId = w.id
-      await persistBmxtWindowId(w.id)
-    }
+  const existingId = await resolveBmxtWindowIdAsync()
+  if (existingId !== undefined) {
+    await focusBmxtWindow(existingId)
     return
   }
-  try {
-    await chrome.windows.get(bmxtWindowId)
-    await chrome.windows.update(bmxtWindowId, { focused: true })
-  } catch {
-    bmxtWindowId = undefined
-    await persistBmxtWindowId(undefined)
-    await openOrFocusBmxtWindowAsync()
+  /* normal: タブグループ API が popup ウィンドウでは無効なため（chrome.tabs.group） */
+  const url = chrome.runtime.getURL(BMXT_PAGE)
+  const w = await chrome.windows.create({
+    url,
+    type: "normal",
+    width: 780,
+    height: 580,
+    focused: true
+  })
+  if (w.id !== undefined) {
+    bmxtWindowId = w.id
+    await persistBmxtWindowId(w.id)
   }
 }
 
@@ -98,14 +125,30 @@ chrome.action.onClicked.addListener(() => {
   openOrFocusBmxtWindow()
 })
 
-async function resetBmxtTerminalAsync(): Promise<void> {
+/** ショートカット: 既に BMXt 窓があれば最前面へ。無ければ初期化して 1 枚だけ開く。 */
+async function launchBmxtFromShortcutAsync(): Promise<void> {
+  const existingId = await resolveBmxtWindowIdAsync()
+  if (existingId !== undefined) {
+    await focusBmxtWindow(existingId)
+    return
+  }
+  await resetBmxtTerminalSessionsInStorage()
+  await openOrFocusBmxtWindowAsync()
+}
+
+/** ショートカット: ターミナルを初期状態に戻し、BMXt 窓を開く／最前面へ（1 枚に統一）。 */
+async function resetBmxtFromShortcutAsync(): Promise<void> {
   await resetBmxtTerminalSessionsInStorage()
   await openOrFocusBmxtWindowAsync()
 }
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "launch-bmxt") {
-    void resetBmxtTerminalAsync()
+    enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
+    return
+  }
+  if (command === "reset-bmxt") {
+    enqueueBmxtWindowLaunch(() => resetBmxtFromShortcutAsync())
   }
 })
 

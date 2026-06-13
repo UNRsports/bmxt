@@ -9,9 +9,18 @@ import {
   type SetStateAction
 } from "react"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
+import {
+  isPhysicalArrowDown,
+  isPhysicalArrowUp,
+  isReservedSplitPaneVerticalNav,
+  verticalNavDirection
+} from "../side-picker/interaction/picker-vertical-nav"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { isPickerAltBlockedChord, isPickerAltOnlyChord } from "../side-picker/preview/picker-alt-chord"
-import { pickerAltVerticalNavDirection } from "../side-picker/preview/picker-alt-vertical-nav"
+import {
+  isPickerCtrlBlockedChord,
+  isPickerCtrlOnlyChord
+} from "../side-picker/preview/picker-ctrl-chord"
 import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
@@ -49,6 +58,7 @@ export type UseSearchPickerAltPreviewKitOptions = {
   detailHits?: readonly SearchEntryDetailHit[]
   highlightColors: SearchPageHighlightColors
   pageActiveMode?: SearchPageActiveMode
+  listScrollHintRef?: MutableRefObject<SearchPickerListScrollHint | null>
   baseExtensions?: PlainPickerKeyboardExtensions
 }
 
@@ -59,7 +69,7 @@ export type UseSearchPickerAltPreviewKitResult = {
   previewNotice: string | null
 }
 
-/** EN: Detail-view page highlight + Alt+↑↓ jump (background tab, dual-color highlights). */
+/** EN: Detail view — Ctrl+↑↓ open-tab rows; Alt manual preview; auto preview on ↑↓. */
 export function useSearchPickerAltPreviewKit({
   enabled,
   isHostPaneFocused,
@@ -73,11 +83,13 @@ export function useSearchPickerAltPreviewKit({
   detailHits = [],
   highlightColors,
   pageActiveMode = "auto",
+  listScrollHintRef: listScrollHintRefOption,
   baseExtensions
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
   const uiCopy = useUiCopy()
   const altKeyHeldRef = useRef(false)
-  const listScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
+  const internalListScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
+  const listScrollHintRef = listScrollHintRefOption ?? internalListScrollHintRef
   const [altPreviewTick, setAltPreviewTick] = useState(0)
   const [previewTargetIndices, setPreviewTargetIndices] = useState<number[]>([])
   const [previewNotice, setPreviewNotice] = useState<string | null>(null)
@@ -183,24 +195,27 @@ export function useSearchPickerAltPreviewKit({
       if (!enabled || searchMode || commandMode) {
         return false
       }
-      if (isPickerAltBlockedChord(e)) {
-        return false
-      }
-      const navDir = pickerAltVerticalNavDirection(e, altKeyHeldRef)
-      if (navDir === null) {
+      if (isPickerCtrlBlockedChord(e) || isPickerAltBlockedChord(e)) {
         return false
       }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || lineCount === 0) {
         return false
       }
-      pickerStopEvent(e)
 
-      if (isPickerAltOnlyChord(e)) {
+      const ctrlArrow =
+        isPickerCtrlOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
+      const altArrow =
+        isPickerAltOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
+      const navDir = verticalNavDirection(e)
+
+      if (ctrlArrow) {
+        const ctrlDir = isPhysicalArrowDown(e) ? "down" : "up"
+        pickerStopEvent(e)
         const currentHi = hiRef.current
         const nextHi = adjacentSearchPickerPreviewHi(
           currentHi,
-          navDir,
+          ctrlDir,
           previewTargetIndicesRef.current
         )
         if (nextHi === null) {
@@ -212,6 +227,28 @@ export function useSearchPickerAltPreviewKit({
         }
         hiRef.current = nextHi
         setHi(nextHi)
+        if (pageActiveMode === "auto") {
+          void runPreview()
+        }
+        return true
+      }
+
+      if (navDir === null) {
+        return false
+      }
+      if (!altArrow && isReservedSplitPaneVerticalNav(e)) {
+        return false
+      }
+
+      pickerStopEvent(e)
+
+      if (altArrow) {
+        altKeyHeldRef.current = true
+        if (navDir === "down") {
+          setHi((h) => Math.min(h + 1, lineCount - 1))
+        } else {
+          setHi((h) => Math.max(h - 1, 0))
+        }
         void runPreview()
         return true
       }
@@ -223,7 +260,16 @@ export function useSearchPickerAltPreviewKit({
       }
       return true
     },
-    [commandMode, enabled, lineCount, runPreview, searchMode, setHi, showNoPreviewTargetNotice]
+    [
+      commandMode,
+      enabled,
+      lineCount,
+      pageActiveMode,
+      runPreview,
+      searchMode,
+      setHi,
+      showNoPreviewTargetNotice
+    ]
   )
 
   const mergedExtensions = useMemo((): PlainPickerKeyboardExtensions => {

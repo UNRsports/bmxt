@@ -8,7 +8,11 @@
     "description": "拡張機能の説明。"
   },
   "commandLaunchBmxt": {
-    "message": "ターミナルをリセットする",
-    "description": "BMXt ターミナルを初期状態に戻すグローバルショートカットの説明。"
+    "message": "BMXt を開く、または最前面へ",
+    "description": "BMXt ターミナルを開く／既存ウィンドウを最前面に出すグローバルショートカットの説明。"
+  },
+  "commandResetBmxt": {
+    "message": "BMXt ターミナルをリセットする",
+    "description": "BMXt ターミナルを初期状態に戻し、ウィンドウを開く／最前面に出すグローバルショートカットの説明。"
   }
 }

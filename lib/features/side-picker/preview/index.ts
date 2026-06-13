@@ -7,6 +7,10 @@ export {
   isPickerAltOnlyChord,
   isPickerAltBlockedChord
 } from "./picker-alt-chord"
+export {
+  isPickerCtrlOnlyChord,
+  isPickerCtrlBlockedChord
+} from "./picker-ctrl-chord"
 export { pickerAltVerticalNavDirection } from "./picker-alt-vertical-nav"
 export {
   shouldRunPickerAltPreview,

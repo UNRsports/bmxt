@@ -1,6 +1,6 @@
 /**
- * EN: Pure Alt-preview row navigation helpers (no Chrome APIs).
- * JA: Alt プレビュー行移動の純関数（Chrome API なし）。
+ * EN: Pure row-navigation helpers for search picker (no Chrome APIs).
+ * JA: search ピッカー行移動の純関数（Chrome API なし）。
  */
 
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
@@ -27,7 +27,7 @@ export function listSearchDetailScrollTargetIndices(
   return indices
 }
 
-/** EN: Next/previous Alt-preview row from `currentHi` (skips non-open rows). */
+/** EN: Next/previous open-tab row from `currentHi` (skips closed-tab rows). */
 export function adjacentSearchPickerPreviewHi(
   currentHi: number,
   direction: "up" | "down",

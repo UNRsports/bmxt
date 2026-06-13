@@ -3,11 +3,11 @@
 
 /** search -list column (`SearchListPickerOverlay`). */
 export const SEARCH_LIST_PICKER_HEADLINE =
-  "search -list · ↑↓ · j/k · Alt+↑↓ open-tab rows only · → detail / open target · Enter open · n/N · ← · Esc → prompt"
+  "search -list · ↑↓ · j/k · Ctrl+↑↓ open-tab rows only · → detail / open target · Enter open · n/N · ← · Esc → prompt"
 
 /** EN: Detail drill-down inside the search picker (`→` from a result row). */
 export const SEARCH_LIST_PICKER_DETAIL_HEADLINE =
-  "search -list · detail · ↑↓ · j/k · Alt+↑↓ in-tab hits · ← back · Enter jump · Esc → back · Esc×2 → prompt"
+  "search -list · detail · ↑↓ · j/k · Ctrl+↑↓ open-tab hits · Alt+↑↓ preview (manual) · ← back · Enter jump · Esc → back · Esc×2 → prompt"
 
 /** EN: History open-target tree inside the search picker. */
 export const SEARCH_LIST_PICKER_DESTINATION_HEADLINE =
