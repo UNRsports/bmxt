@@ -46,7 +46,8 @@ export function useTabPickerSyncAndLayoutEffects({
   skipNextInitialHiRef,
   isHostPaneFocused,
   editPanel,
-  editPanelRef
+  editPanelRef,
+  setAnchorTabId
 }: {
   initialHi: number
   filterQuery: string
@@ -84,6 +85,7 @@ export function useTabPickerSyncAndLayoutEffects({
   isHostPaneFocused: boolean
   editPanel: EditPanel | null
   editPanelRef: RefObject<HTMLDivElement | null>
+  setAnchorTabId: (tabId: number | null) => void
 }): { groupPanelRef: RefObject<HTMLDivElement | null> } {
   const groupPanelRef = useRef<HTMLDivElement>(null)
 
@@ -139,7 +141,7 @@ export function useTabPickerSyncAndLayoutEffects({
     const ri = visibleRowIndices[targetHi]
     const row = ri !== undefined ? rows[ri] : undefined
     if (row?.kind === "tab") {
-      anchorTabIdRef.current = row.tabId
+      setAnchorTabId(row.tabId)
     }
 
     setMoveDestHi((d) => Math.min(d, visibleRowIndices.length - 1))
@@ -153,7 +155,8 @@ export function useTabPickerSyncAndLayoutEffects({
     setMoveDestHi,
     anchorTabIdRef,
     prevFilterQueryRef,
-    prevRowsStructureKeyRef
+    prevRowsStructureKeyRef,
+    setAnchorTabId
   ])
 
   useEffect(() => {

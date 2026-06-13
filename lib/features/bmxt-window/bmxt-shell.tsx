@@ -15,7 +15,9 @@ import {
   TABS_PAGE_ACTIVE_MODE_TOKENS,
   tabsMoveUrlCompletionZone,
   type TabPickerRow,
-  type TabsPageActiveMode
+  type TabsPageActiveMode,
+  closeTabPickerEngineForSession,
+  openTabPickerEngineForSession
 } from "../tabs"
 import { openSearchPickerEntry } from "../search/open-search-picker-entry"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
@@ -153,7 +155,7 @@ import {
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
-import type { TabPickerState, TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
+import type { TabPickerState } from "../side-picker/session/tab-picker-state"
 
 function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
   return effects.some((e) => e.kind === "search_page")
@@ -1220,18 +1222,6 @@ export function BmxtShell({
     [queueDomListFollowRefresh]
   )
 
-  const onTabPickerInteractiveChange = useCallback(
-    (snapshot: TabPickerInteractiveSnapshot) => {
-      setTabPicker(sessionId, (cur) => {
-        if (!cur) {
-          return null
-        }
-        return { ...cur, interactive: snapshot }
-      })
-    },
-    [sessionId, setTabPicker]
-  )
-
   const promptLine = useCallback(
     () => imeRef.current?.value ?? lineRef.current,
     []
@@ -1721,7 +1711,7 @@ export function BmxtShell({
             `> ${trimmed}`,
             uiCopy.t("tabs.picker.hint", { token: pageActiveToken })
           ])
-          setTabPicker(sessionId, { rows, showUrl, initialHi })
+          setTabPicker(sessionId, openTabPickerEngineForSession(sessionId, { rows, showUrl, initialHi }))
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
@@ -1744,6 +1734,7 @@ export function BmxtShell({
       void (async () => {
         const logLines = [`> ${trimmed}`]
         if (tabPickerRef.current !== null) {
+          closeTabPickerEngineForSession(sessionId)
           setTabPicker(sessionId, null)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
           activatePaneFocus("terminal")
@@ -1935,12 +1926,15 @@ export function BmxtShell({
           const rows = await buildTabPickerRows(false)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([`> ${trimmed}`, uiCopy.t("group.newPicker")])
-          setTabPicker(sessionId, {
-            rows,
-            showUrl: false,
-            initialHi,
-            variant: "groupNew"
-          })
+          setTabPicker(
+            sessionId,
+            openTabPickerEngineForSession(sessionId, {
+              rows,
+              showUrl: false,
+              initialHi,
+              variant: "groupNew"
+            })
+          )
           setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await appendLogLines([
@@ -2908,7 +2902,6 @@ export function BmxtShell({
             void runDomListAndShow(cl, cl, false)
           }}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
-          onTabPickerInteractiveChange={onTabPickerInteractiveChange}
           tabsPageActiveMode={tabsPageActiveMode}
         />
       </div>

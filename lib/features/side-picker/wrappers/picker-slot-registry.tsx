@@ -6,7 +6,6 @@ import type { PaneFocusTarget } from "../panel/pane-focus-nav"
 import { PickerPanelHost } from "../panel/picker-panel-host"
 import type { PickerSlotId } from "../session/session-pickers"
 import type { TabPickerState } from "../session/tab-picker-state"
-import type { TabPickerInteractiveSnapshot } from "../session/tab-picker-state"
 import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
@@ -53,7 +52,6 @@ export type PickerColumnHostContext = {
   ) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
-  onTabPickerInteractiveChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   tabsPageActiveMode?: TabsPageActiveMode
   onExitToDetailBar: (slot: PickerSlotId) => void
 }
@@ -68,13 +66,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         paneFocus={ctx.paneFocus}
         isFocusedPane={ctx.isFocusedPane}>
         <TabsPickerWrapper
-          rows={ctx.tabPicker.rows}
-          showUrl={ctx.tabPicker.showUrl}
-          initialHi={ctx.tabPicker.initialHi}
           pageActiveMode={ctx.tabsPageActiveMode}
-          variant={ctx.tabPicker.variant ?? "default"}
-          interactive={ctx.tabPicker.interactive}
-          onInteractiveSnapshotChange={ctx.onTabPickerInteractiveChange}
           onAppendLog={ctx.onAppendLog}
           onRefreshRows={ctx.onRefreshTabPickerRows}
           scheduleRefreshRows={ctx.scheduleRefreshTabPickerRows}

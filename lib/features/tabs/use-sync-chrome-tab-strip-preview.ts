@@ -37,11 +37,14 @@ export function useSyncChromeTabStripPreview({
   rowsRef.current = rows
   const appliedActiveTabIdRef = useRef<number | null>(null)
   const lastPreviewKeyRef = useRef("")
+  const previewGenerationRef = useRef(0)
 
   const syncChromeTabStripPreview = useCallback(
-    async (rowIndex: number) => {
+    async (rowIndex: number, expectedTabId: number, generation: number) => {
+      const isCurrent = (): boolean => generation === previewGenerationRef.current
+
       const row = rowsRef.current[rowIndex]
-      if (!row || row.kind !== "tab") {
+      if (!row || row.kind !== "tab" || row.tabId !== expectedTabId) {
         return
       }
       const winId = row.windowId
@@ -60,6 +63,9 @@ export function useSyncChromeTabStripPreview({
 
       try {
         const tabsInWin = await chrome.tabs.query({ windowId: winId })
+        if (!isCurrent()) {
+          return
+        }
         const targetTab = tabsInWin.find((t) => t.id === row.tabId)
         if (!targetTab) {
           return
@@ -70,8 +76,14 @@ export function useSyncChromeTabStripPreview({
             applyActiveTabId(row.tabId)
             return
           }
+          if (!isCurrent()) {
+            return
+          }
           markTabPickerSelfActivation(row.tabId)
           await chrome.tabs.update(row.tabId, { active: true })
+          if (!isCurrent()) {
+            return
+          }
           applyActiveTabId(row.tabId)
           return
         }
@@ -82,8 +94,14 @@ export function useSyncChromeTabStripPreview({
             applyActiveTabId(row.tabId)
             return
           }
+          if (!isCurrent()) {
+            return
+          }
           markTabPickerSelfActivation(row.tabId)
           await chrome.tabs.update(row.tabId, { active: true })
+          if (!isCurrent()) {
+            return
+          }
           applyActiveTabId(row.tabId)
           return
         }
@@ -98,8 +116,14 @@ export function useSyncChromeTabStripPreview({
             applyActiveTabId(row.tabId)
             return
           }
+          if (!isCurrent()) {
+            return
+          }
           markTabPickerSelfActivation(row.tabId)
           await chrome.tabs.update(row.tabId, { active: true })
+          if (!isCurrent()) {
+            return
+          }
           applyActiveTabId(row.tabId)
           return
         }
@@ -110,8 +134,14 @@ export function useSyncChromeTabStripPreview({
             ? [hiIdx, ...indices.filter((i) => i !== hiIdx)]
             : indices
 
+        if (!isCurrent()) {
+          return
+        }
         markTabPickerSelfActivation(row.tabId)
         await chrome.tabs.highlight({ windowId: winId, tabs: tabsArg })
+        if (!isCurrent()) {
+          return
+        }
         applyActiveTabId(row.tabId)
       } catch {
         /* tab/window may have closed */
@@ -149,7 +179,8 @@ export function useSyncChromeTabStripPreview({
       return
     }
     lastPreviewKeyRef.current = previewKey
-    void syncChromeTabStripPreview(rowIndex)
+    const generation = ++previewGenerationRef.current
+    void syncChromeTabStripPreview(rowIndex, row.tabId, generation)
   }, [
     altKeyHeldRef,
     hi,

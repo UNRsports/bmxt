@@ -1,5 +1,8 @@
-import { buildTabPickerRows } from "../tabs"
-import { createTabPickerRowsRefresh } from "../tabs/tab-picker-rows-refresh"
+import {
+  createEngineTabPickerRowsRefresh,
+  reconcileTabPickerEngines,
+  setTabPickerEngineProjectedChangeHandler
+} from "../tabs/engine"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
 import {
   anyLeafHasPickerOpen,
@@ -8,8 +11,7 @@ import {
   setSessionPickerSlot as applySessionPickerSlot,
   type PickerSlotId,
   type SessionPickerState,
-  type SessionPickersByLeaf,
-  type TabPickerState
+  type SessionPickersByLeaf
 } from "../side-picker"
 import { BmxtShell } from "./bmxt-shell"
 import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
@@ -306,50 +308,22 @@ function BmxtTerminalInner() {
   const setPickersBySessionRef = useRef(setPickersBySession)
   setPickersBySessionRef.current = setPickersBySession
 
-  const tabPickerRefreshHandles = useMemo(
-    () =>
-      createTabPickerRowsRefresh(
-        async () => {
-          const map = pickersBySessionRef.current
-          const updates: Record<string, TabPickerState> = {}
-          for (const [sid, pickers] of Object.entries(map)) {
-            const prev = pickers.tabs
-            if (!prev) {
-              continue
-            }
-            try {
-              const rows = await buildTabPickerRows(prev.showUrl)
-              updates[sid] = {
-                rows,
-                showUrl: prev.showUrl,
-                initialHi: prev.initialHi,
-                variant: prev.variant,
-                interactive: prev.interactive
-              }
-            } catch {
-              /* keep previous */
-            }
-          }
-          if (Object.keys(updates).length === 0) {
-            return undefined
-          }
-          return updates
-        },
-        (updates) => {
-          setPickersBySessionRef.current((p) => {
-            let next = p
-            for (const [sid, st] of Object.entries(updates)) {
-              const cur = sessionPickersOrEmpty(next, sid)
-              if (cur.tabs) {
-                next = applySessionPickerSlot(next, sid, "tabs", st)
-              }
-            }
-            return next
-          })
+  const tabPickerRefreshHandles = useMemo(() => createEngineTabPickerRowsRefresh(), [])
+
+  useEffect(() => {
+    setTabPickerEngineProjectedChangeHandler((forSessionId, projected) => {
+      setPickersBySessionRef.current((prev) => {
+        const cur = sessionPickersOrEmpty(prev, forSessionId)
+        if (!cur.tabs) {
+          return prev
         }
-      ),
-    []
-  )
+        return applySessionPickerSlot(prev, forSessionId, "tabs", projected)
+      })
+    })
+    return () => {
+      setTabPickerEngineProjectedChangeHandler(null)
+    }
+  }, [])
 
   const refreshTabPickerRows = tabPickerRefreshHandles.refreshTabPickerRows
   const scheduleTabPickerRowsRefresh = tabPickerRefreshHandles.scheduleTabPickerRowsRefresh
@@ -359,6 +333,10 @@ function BmxtTerminalInner() {
     [pickersBySession]
   )
   useTabPickerChromeSync(scheduleTabPickerRowsRefresh, anyPickerOpen)
+
+  useEffect(() => {
+    reconcileTabPickerEngines(pickersBySession)
+  }, [pickersBySession])
 
   useEffect(() => {
     if (!state) {
