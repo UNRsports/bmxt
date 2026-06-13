@@ -189,7 +189,7 @@ type Props = {
   setSessionPickerSlot: <K extends PickerSlotId>(
     forSessionId: string,
     slot: K,
-    value: SessionPickerState[K]
+    value: SessionPickerState[K] | ((prev: SessionPickerState[K]) => SessionPickerState[K])
   ) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -234,25 +234,25 @@ export function BmxtShell({
   const domListPicker = sessionPickers.dom
   const settingListPicker = sessionPickers.setting
   const setTabPicker = useCallback(
-    (forSessionId: string, v: TabPickerState | null) => {
+    (forSessionId: string, v: TabPickerState | null | ((prev: TabPickerState | null) => TabPickerState | null)) => {
       setSessionPickerSlot(forSessionId, "tabs", v)
     },
     [setSessionPickerSlot]
   )
   const setSearchListPicker = useCallback(
-    (forSessionId: string, v: SearchListPickerState | null) => {
+    (forSessionId: string, v: SearchListPickerState | null | ((prev: SearchListPickerState | null) => SearchListPickerState | null)) => {
       setSessionPickerSlot(forSessionId, "search", v)
     },
     [setSessionPickerSlot]
   )
   const setDomListPicker = useCallback(
-    (forSessionId: string, v: DomListPickerState | null) => {
+    (forSessionId: string, v: DomListPickerState | null | ((prev: DomListPickerState | null) => DomListPickerState | null)) => {
       setSessionPickerSlot(forSessionId, "dom", v)
     },
     [setSessionPickerSlot]
   )
   const setSettingListPicker = useCallback(
-    (forSessionId: string, v: SettingListPickerState | null) => {
+    (forSessionId: string, v: SettingListPickerState | null | ((prev: SettingListPickerState | null) => SettingListPickerState | null)) => {
       setSessionPickerSlot(forSessionId, "setting", v)
     },
     [setSessionPickerSlot]
@@ -1222,11 +1222,12 @@ export function BmxtShell({
 
   const onTabPickerInteractiveChange = useCallback(
     (snapshot: TabPickerInteractiveSnapshot) => {
-      const cur = tabPickerRef.current
-      if (!cur) {
-        return
-      }
-      setTabPicker(sessionId, { ...cur, interactive: snapshot })
+      setTabPicker(sessionId, (cur) => {
+        if (!cur) {
+          return null
+        }
+        return { ...cur, interactive: snapshot }
+      })
     },
     [sessionId, setTabPicker]
   )
@@ -1244,13 +1245,14 @@ export function BmxtShell({
 
   const appendSearchPickerProgress = useCallback(
     (message: string) => {
-      const prev = searchListPickerRef.current
-      if (!prev || prev.phase !== "loading") {
-        return
-      }
-      setSearchListPicker(sessionId, {
-        ...prev,
-        progressLines: [...prev.progressLines, message]
+      setSearchListPicker(sessionId, (prev) => {
+        if (!prev || prev.phase !== "loading") {
+          return prev
+        }
+        return {
+          ...prev,
+          progressLines: [...prev.progressLines, message]
+        }
       })
     },
     [sessionId, setSearchListPicker]
@@ -1517,24 +1519,22 @@ export function BmxtShell({
 
   const onSettingPickerApplyEdit = useCallback(
     async (field: SettingEditField, value: string) => {
-      const current = settingListPickerRef.current
-      if (!current) {
-        return
-      }
-      const layerPatch =
-        field === "fg" || field === "picker-fg"
-          ? { fg: value }
-          : field === "bg-color" || field === "picker-bg-color"
-            ? { bgColor: value }
-            : { fontFamily: value }
-      const draftPatch =
-        field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
-          ? { picker: layerPatch }
-          : { appearance: layerPatch }
-      setSettingListPicker(
-        sessionId,
-        settingPickerApplyDraftToMain(current, draftPatch)
-      )
+      setSettingListPicker(sessionId, (current) => {
+        if (!current) {
+          return null
+        }
+        const layerPatch =
+          field === "fg" || field === "picker-fg"
+            ? { fg: value }
+            : field === "bg-color" || field === "picker-bg-color"
+              ? { bgColor: value }
+              : { fontFamily: value }
+        const draftPatch =
+          field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
+            ? { picker: layerPatch }
+            : { appearance: layerPatch }
+        return settingPickerApplyDraftToMain(current, draftPatch)
+      })
     },
     [sessionId, setSettingListPicker]
   )

@@ -132,7 +132,7 @@ The manifest sets **`content_security_policy.extension_pages`** with **`default-
 ### Reproducible builds
 
 
-Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**; do **not** use **`npm install`** in CI or when you want an exact tree) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply. See **[npm dependencies and security](#npm-dependencies)** for overrides, audit policy, and maintainer checks.
+Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**; do **not** use **`npm install`** in CI or when you want an exact tree) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply. See **[npm dependencies and security](#npm-dependencies)** for lockfile policy, audit policy, and maintainer checks.
 
 <a id="npm-dependencies"></a>
 
@@ -146,7 +146,9 @@ Official releases are tagged in Git (`git tag`). To reproduce a store submission
 | Command | When to use |
 |---------|-------------|
 | **`npm ci`** | **Default** after clone, in CI, and before release builds. Installs **exactly** what **`package-lock.json`** records. |
-| **`npm install`** | Only when you intentionally change **`package.json`** (new devDependency, **`overrides`**, etc.) and will commit the updated lockfile. |
+| **`npm install`** | Only when you intentionally change **`package.json`** (new devDependency, bump a direct dependency, etc.) and will commit the updated lockfile. |
+
+**Dependency freeze (Plasmo 0.90.5)** — transitive versions are **not** overridden in **`package.json`**. The full tree is pinned in **`package-lock.json`** (exact versions + integrity hashes). Use **`npm ci`** everywhere you need a known-good tree until Plasmo / Parcel / `@plasmohq/*` release aligned updates. **`.npmrc`** is **gitignored** (never commit tokens or local registry config). When you run **`npm install`** to add a direct dependency, either pin the version in **`package.json`** yourself (no **`^`**) or set **`save-exact=true`** in your **local** **`~/.npmrc`** or project **`.npmrc`** (local only).
 
 Recommended local flow after pulling lockfile changes:
 
@@ -158,26 +160,13 @@ npm run build
 
 **Node.js version** — use **`.nvmrc`** (recommended Node for this repo). Do **not** add an **`engines`** field to **`package.json`**: with **Plasmo 0.90.5** it can break **`plasmo build`** (CSS/JSON asset resolution fails even though source files exist).
 
-**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=high`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used: it suggests downgrading **`plasmo`** and is unsafe.
+**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=critical`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used: it suggests downgrading **`plasmo`** and is unsafe.
 
-**`package.json` `overrides`** — used sparingly because Plasmo pins older transitive versions. Prefer **scoped** overrides (bump an `@plasmohq/*` patch that already declares fixed deps, or a **nested** override) over renaming arbitrary packages globally.
+**`svgo@3.3.3`** is a **devDependency**: satisfies **htmlnano**’s optional peer and removes the Plasmo build warning about missing **svgo**.
 
-Current overrides (also in **`package.json`**):
+**Known residual audit items** — **`npm audit`** may report **high** (and **moderate**) issues in Plasmo’s build-time toolchain (Parcel dev-server, **esbuild** via **tsup**, Svelte SSR in unused transformers). These are **not shipped** in the extension bundle; they require **Plasmo / Parcel upstream** updates. CI gates on **critical** only during the freeze. Do not “fix” them with **`npm audit fix --force`** or ad hoc **`@plasmohq/*`** version jumps (e.g. **`@plasmohq/parcel-resolver-post@0.4.6`** breaks **`plasmo build`** CSS/JSON resolution).
 
-| Override | Purpose |
-|----------|---------|
-| **`@plasmohq/parcel-transformer-manifest@0.21.1`** | Upstream patch declares **`content-security-policy-parser@0.6.0`**. |
-| **`@plasmohq/parcel-transformer-svelte@0.6.1`** | Upstream patch declares **`svelte@4.2.19`**. |
-| **`lmdb` → `msgpackr@1.11.10`** | **`@parcel/cache`** pins old **`lmdb`**; only this nested pin is needed. |
-| **`@plasmohq/parcel-resolver-post` → `tsup@8.4.0`** | Keeps **`@plasmohq/parcel-resolver-post@0.4.5`** (Plasmo’s expected version) and updates **`tsup`** only. |
-
-**Do not** set **`@plasmohq/parcel-resolver-post`** to **`0.4.6`** (or other unpinned bumps): **`plasmo build`** then fails to resolve CSS/JSON imports (e.g. **`../bmxt-ui.css`**, **`welcome-content.json`**) even when files exist.
-
-**`svgo@3.3.3`** is a **devDependency** (not an override): satisfies **htmlnano**’s optional peer and removes the Plasmo build warning about missing **svgo**.
-
-**Known residual audit items** — after the above, **`npm audit`** may still report a small number of **moderate** issues (Parcel dev-server, Svelte SSR in unused Plasmo transformers). These require **Plasmo / Parcel upstream** updates; do not “fix” them with **`npm audit fix --force`** or incompatible **`@plasmohq/*`** version jumps.
-
-**After any dependency change**, run **`npm ci`**, **`npm run build`**, **`npm test`**, and **`npm audit --audit-level=high`**, and commit **`package.json`** and **`package-lock.json`** together.
+**After any dependency change**, run **`npm ci`**, **`npm run build`**, **`npm test`**, and **`npm audit --audit-level=critical`**, and commit **`package.json`** and **`package-lock.json`** together.
 
 <a id="command-line-token-model"></a>
 
@@ -1006,7 +995,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 再現可能なビルド
 
 
-公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定。CI や厳密な再現では **`npm install`** を使わない）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。override・監査・メンテ手順は **[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
+公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定。CI や厳密な再現では **`npm install`** を使わない）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。lockfile 方針・監査・メンテ手順は **[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
 
 <a id="npm-dependencies-ja"></a>
 
@@ -1020,7 +1009,9 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 | コマンド | 用途 |
 |---------|------|
 | **`npm ci`** | **通常はこちら**（clone 後・CI・リリースビルド前）。**`package-lock.json`** どおりのツリーのみ入る。 |
-| **`npm install`** | **`package.json`** を意図的に変えるとき（devDependency・**`overrides`** 追加など）のみ。更新した lockfile をコミットする。 |
+| **`npm install`** | **`package.json`** を意図的に変えるとき（devDependency・直接依存の版上げなど）のみ。更新した lockfile をコミットする。 |
+
+**依存凍結（Plasmo 0.90.5）** — **`package.json`** では **`overrides` を使わない**。推移依存の版は **`package-lock.json`** に exact + integrity で固定する。Plasmo / Parcel / `@plasmohq/*` の足並みが揃うまで、再現が必要な場面は **`npm ci`** のみ使う。**`.npmrc`** は **gitignore**（トークン・ローカル registry 設定をコミットしない）。直接依存を **`npm install`** で足すときは、**`package.json`** で版を **`^` なしで明示するか、**`save-exact=true`** を **ローカル**の **`~/.npmrc`** またはプロジェクト **`.npmrc`**（リポジトリ外／未コミット）に書く。
 
 lockfile 更新を pull したあとの推奨手順:
 
@@ -1032,26 +1023,13 @@ npm run build
 
 **Node.js 版** — **`.nvmrc`** を参照（このリポジトリの推奨 Node）。**`package.json`** に **`engines`** は **書かない**: **Plasmo 0.90.5** では **`plasmo build`** が失敗する（CSS/JSON の import 解決エラー。ソースファイルは存在するのに bundler が解決できない）。
 
-**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=high`**、テスト、**`npm run build`** を実行する。**`npm audit fix --force`** は **使わない**（`plasmo` のダウングレードを提案し、危険）。
+**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=critical`**、テスト、**`npm run build`** を実行する。**`npm audit fix --force`** は **使わない**（`plasmo` のダウングレードを提案し、危険）。
 
-**`package.json` の `overrides`** — Plasmo が古い間接依存を固定するため、**最小限**にとどめる。任意のパッケージ名を全局上書きするより、**`@plasmohq/*` の patch 版に合わせる**／**nested override** を優先する。
+**`svgo@3.3.3`** は **devDependency**。htmlnano の optional peer を満たし、Plasmo ビルド時の **svgo** 警告を消す。
 
-現在の override（**`package.json`** と同内容）:
+**残る audit（high / moderate）** — Plasmo ビルド専用ツールチェーン（Parcel dev server、**tsup** 経由の **esbuild**、未使用 Svelte SSR 等）に **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。**Plasmo / Parcel の upstream 更新**待ち。凍結期間中の CI は **critical** のみで fail する。**`npm audit fix --force`** や **`@plasmohq/*`** の場当たり版上げ（例: **`@plasmohq/parcel-resolver-post@0.4.6`** は **`plasmo build`** の CSS/JSON 解決を壊す）で直そうとしない。
 
-| override | 目的 |
-|----------|------|
-| **`@plasmohq/parcel-transformer-manifest@0.21.1`** | 上流 patch が **`content-security-policy-parser@0.6.0`** を dependencies に宣言。 |
-| **`@plasmohq/parcel-transformer-svelte@0.6.1`** | 上流 patch が **`svelte@4.2.19`** を宣言。 |
-| **`lmdb` → `msgpackr@1.11.10`** | **`@parcel/cache`** が古い **`lmdb`** 固定のため、この nested だけ必要。 |
-| **`@plasmohq/parcel-resolver-post` → `tsup@8.4.0`** | **`@plasmohq/parcel-resolver-post@0.4.5`**（Plasmo 想定）のまま **`tsup`** のみ更新。 |
-
-**禁止:** **`@plasmohq/parcel-resolver-post`** を **`0.4.6`** などに **パッケージ版ごと** 上げること。すると **`plasmo build`** が CSS/JSON を解決できず（例: **`../bmxt-ui.css`**、**`welcome-content.json`**）、ファイルがあってもビルドが落ちる。
-
-**`svgo@3.3.3`** は **devDependency**（override ではない）。htmlnano の optional peer を満たし、Plasmo ビルド時の **svgo** 警告を消す。
-
-**残る audit（moderate）** — 上記後も **`npm audit`** で moderate が少数残ることがある（Parcel dev server、未使用の Svelte SSR 系など）。**Plasmo / Parcel の upstream 更新**待ち。**`npm audit fix --force`** や非互換な **`@plasmohq/*`** の版上げで直そうとしない。
-
-**依存関係を変更したら** **`npm ci`** → **`npm run build`** → **`npm test`** → **`npm audit --audit-level=high`** を実行し、**`package.json`** と **`package-lock.json`** を **セットでコミット**する。
+**依存関係を変更したら** **`npm ci`** → **`npm run build`** → **`npm test`** → **`npm audit --audit-level=critical`** を実行し、**`package.json`** と **`package-lock.json`** を **セットでコミット**する。
 
 <a id="command-line-token-model-ja"></a>
 

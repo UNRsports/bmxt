@@ -77,10 +77,11 @@ export function setSessionPickerSlot<K extends PickerSlotId>(
   prev: SessionPickersByLeaf,
   sessionId: string,
   slot: K,
-  value: SessionPickerState[K]
+  value: SessionPickerState[K] | ((prev: SessionPickerState[K]) => SessionPickerState[K])
 ): SessionPickersByLeaf {
   const cur = sessionPickersOrEmpty(prev, sessionId)
-  if (value === null) {
+  const nextValue = typeof value === "function" ? (value as Function)(cur[slot]) : value
+  if (nextValue === null) {
     if (cur[slot] === null && !(sessionId in prev)) {
       return prev
     }
@@ -99,5 +100,5 @@ export function setSessionPickerSlot<K extends PickerSlotId>(
     }
     return { ...prev, [sessionId]: nextSlot }
   }
-  return { ...prev, [sessionId]: { ...cur, [slot]: value } }
+  return { ...prev, [sessionId]: { ...cur, [slot]: nextValue } }
 }
