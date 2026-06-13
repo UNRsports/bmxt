@@ -1,4 +1,5 @@
 import { useUiLocale } from "../setting"
+import { searchStatusHint } from "../setting/i18n/resolvers"
 
 type Props = {
   pattern?: string
@@ -28,9 +29,7 @@ export function SearchStatusBar({ pattern, phase }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{meta}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {locale === "ja"
-          ? "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · Alt で切替 · → でピッカー"
-          : "EOL → focus · ↑↓ move · ← prompt · Alt toggle · → picker"}
+        {searchStatusHint(locale)}
       </span>
     </div>
   )

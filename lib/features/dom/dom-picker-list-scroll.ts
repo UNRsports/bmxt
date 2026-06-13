@@ -1,18 +1,17 @@
-/**
- * EN: Keep the highlighted DOM picker row visible inside the scrollable list column.
- * JA: DOM ピッカー列内でハイライト行が常に見えるようスクロールする。
- */
+/** EN: Backward-compatible alias — prefer `side-picker/interaction/picker-list-scroll`. */
+import {
+  scrollPickerListRowIntoView,
+  scrollPickerListToHi,
+  scrollPickerListToHiAfterLayout
+} from "../side-picker/interaction/picker-list-scroll"
+
+export { scrollPickerListRowIntoView, scrollPickerListToHi, scrollPickerListToHiAfterLayout }
+
+/** @deprecated Use `scrollPickerListToHi`. */
 export function scrollDomPickerListToHi(
   listEl: HTMLElement | null,
   rowIdPrefix: string,
   hi: number
 ): void {
-  if (!listEl || hi < 0) {
-    return
-  }
-  const row = document.getElementById(`${rowIdPrefix}-${hi}`)
-  if (!row) {
-    return
-  }
-  row.scrollIntoView({ block: "nearest", inline: "nearest" })
+  scrollPickerListToHi(listEl, rowIdPrefix, hi)
 }

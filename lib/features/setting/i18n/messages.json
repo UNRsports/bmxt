@@ -723,6 +723,14 @@
     "ja": "このペインでは Search list picker は開いていません。",
     "en": "Search list picker is not open in this pane."
   },
+  "search.picker.noPreviewTarget": {
+    "ja": "search — プレビューする対象がありません（開いているタブなし）",
+    "en": "search — nothing to preview (no open tabs)"
+  },
+  "search.status.hint": {
+    "ja": "↑↓ 移動 · Alt+↑↓ 背面プレビュー · Enter でジャンプ · ← でプロンプト",
+    "en": "↑↓ move · Alt+↑↓ background preview · Enter jump · ← prompt"
+  },
   "nav.notArmed": {
     "ja": "このペインでは nav は起動していません。",
     "en": "nav is not armed in this pane."

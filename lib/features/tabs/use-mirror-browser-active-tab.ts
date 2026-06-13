@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from "react"
 import type { MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
-import { consumeTabPickerSelfActivation } from "./tab-picker-activation-suppression"
+import { consumePickerSelfTabActivation as consumeTabPickerSelfActivation } from "../side-picker/preview/picker-self-tab-activation"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys"
 

@@ -73,6 +73,10 @@ export function tabsStatusHint(locale: UiLocale, pageActiveMode: TabsPageActiveM
   return t(pageActiveMode === "auto" ? "tabs.status.auto" : "tabs.status.manual", locale)
 }
 
+export function searchStatusHint(locale: UiLocale): string {
+  return t("search.status.hint", locale)
+}
+
 export function optionalHostDeniedLines(locale: UiLocale): string[] {
   return [t("optionalHost.deniedError", locale), t("optionalHost.deniedHint", locale)]
 }

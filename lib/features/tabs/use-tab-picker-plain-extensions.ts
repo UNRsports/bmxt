@@ -3,6 +3,8 @@ import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useMemo, useRef } from "react"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
+import { isPickerAltBlockedChord } from "../side-picker/preview/picker-alt-chord"
+import { pickerAltVerticalNavDirection } from "../side-picker/preview/picker-alt-vertical-nav"
 import {
   groupRowKey,
   isPhysicalArrowDown,
@@ -326,20 +328,10 @@ export function useTabPickerPlainExtensions({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      const altOnlyChord = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
-      if (e.altKey && !altOnlyChord) {
+      if (isPickerAltBlockedChord(e)) {
         return false
       }
-      if (isReservedSplitPaneVerticalNav(e)) {
-        return false
-      }
-      const navDir = verticalNavDirection(e)
-      if (altOnlyChord) {
-        if (navDir === null) {
-          return false
-        }
-        altKeyHeldRef.current = true
-      }
+      const navDir = pickerAltVerticalNavDirection(e, altKeyHeldRef)
       if (navDir === null) {
         return false
       }

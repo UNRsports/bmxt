@@ -10,6 +10,7 @@ import {
 import { resolvePickerHeadline, type PickerReducerEvent } from "./state-machine"
 import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
+import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
 import { useTabPickerFoldState } from "./use-tab-picker-fold-state"
@@ -221,32 +222,12 @@ export function useTabPickerController({
     anchorTabIdRef.current = state.anchorTabId
   }, [state.anchorTabId])
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Alt") {
-        altKeyHeldRef.current = true
-        if (pageActiveMode === "manual" && !e.repeat) {
-          setAltPreviewTick((t) => t + 1)
-        }
-      }
-    }
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Alt") {
-        altKeyHeldRef.current = false
-      }
-    }
-    const clearAlt = () => {
-      altKeyHeldRef.current = false
-    }
-    window.addEventListener("keydown", onKeyDown)
-    window.addEventListener("keyup", onKeyUp)
-    window.addEventListener("blur", clearAlt)
-    return () => {
-      window.removeEventListener("keydown", onKeyDown)
-      window.removeEventListener("keyup", onKeyUp)
-      window.removeEventListener("blur", clearAlt)
-    }
-  }, [pageActiveMode])
+  usePickerAltKeyTracking({
+    enabled: true,
+    altKeyHeldRef,
+    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
+    setAltPreviewTick
+  })
 
   const {
     visibleRowIndices,

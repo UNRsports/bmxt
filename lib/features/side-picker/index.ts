@@ -33,6 +33,11 @@ export {
   type PickerCommandCompletionState
 } from "./interaction/picker-command-completion"
 export { runPickerPaneStripKeydown } from "./interaction/picker-pane-strip"
+export {
+  scrollPickerListRowIntoView,
+  scrollPickerListToHi,
+  scrollPickerListToHiAfterLayout
+} from "./interaction/picker-list-scroll"
 export { runPickerSearchEnter, type RunPickerSearchEnterOptions } from "./interaction/picker-search-enter"
 export {
   runPickerSearchJump,
@@ -104,3 +109,17 @@ export { type PickerEntry, type PickerSource, entryDisplayLine } from "./model/p
 export { pickerEntriesFromSearchLines } from "./model/from-search-lines"
 export { normalizePickerOpenUrl } from "./model/normalize-picker-open-url"
 export { openEntryEffects, type OpenUrlMode } from "./model/open-entry"
+export {
+  activateTabInBackground,
+  consumePickerSelfTabActivation,
+  isPickerAltBlockedChord,
+  isPickerAltOnlyChord,
+  markPickerSelfTabActivation,
+  pickerAltVerticalNavDirection,
+  shouldRunPickerAltPreview,
+  usePickerAltKeyTracking,
+  usePickerAltPreviewSync,
+  type PickerAltPreviewMode,
+  type UsePickerAltKeyTrackingOptions,
+  type UsePickerAltPreviewSyncOptions
+} from "./preview/index"

@@ -12,9 +12,11 @@ import {
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
+import { scrollPickerListToHiAfterLayout } from "../side-picker/interaction/picker-list-scroll"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
+import { useSearchPickerAltPreviewKit } from "./use-search-picker-alt-preview-kit"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { SearchPickerHighlight } from "./search-picker-highlight"
@@ -277,12 +279,16 @@ export function SearchListPickerBody({
     }
   }, [hi, inDestinationView, inDetailView, subviewHiRef])
 
+  const followListScrollToHi = useCallback(() => {
+    scrollPickerListToHiAfterLayout(listRef.current, ROW_ID_PREFIX, hi)
+  }, [hi])
+
   useLayoutEffect(() => {
     if (lineCount === 0) {
       return
     }
-    document.getElementById(`${ROW_ID_PREFIX}-${hi}`)?.scrollIntoView({ block: "nearest" })
-  }, [hi, lineCount, entries, statusLines, matchHi, detailHits, inDetailView])
+    followListScrollToHi()
+  }, [followListScrollToHi, lineCount, matchHi, pickerView])
 
   useLayoutEffect(() => {
     if (keyboardActive) {
@@ -297,6 +303,27 @@ export function SearchListPickerBody({
     : inDetailView
       ? onConfirmDetailHit
       : onConfirmLineIndex
+
+  const altPreviewEnabled =
+    keyboardActive &&
+    !statusOnly &&
+    !inDetailView &&
+    !inDestinationView &&
+    entries.length > 0
+
+  const { mergedExtensions, previewNotice } = useSearchPickerAltPreviewKit({
+    enabled: altPreviewEnabled,
+    isHostPaneFocused: keyboardActive,
+    entries,
+    pattern,
+    matchHi,
+    hi,
+    lineCount,
+    setHi,
+    searchMode,
+    commandMode,
+    baseExtensions: extensions
+  })
 
   const { onInputKeyDown } = usePlainPickerKeyboard({
     lineCount: statusOnly ? 0 : lineCount,
@@ -319,7 +346,7 @@ export function SearchListPickerBody({
     setCommandBuffer,
     setCommandListingHint,
     matchLines,
-    extensions
+    extensions: mergedExtensions
   })
 
   const activeRowId =
@@ -340,6 +367,11 @@ export function SearchListPickerBody({
         />
       ) : null}
       <div className="bmxt-tab-picker-head">{headline}</div>
+      {previewNotice ? (
+        <div className="bmxt-tab-picker-head bmxt-search-picker-preview-notice" role="status">
+          {previewNotice}
+        </div>
+      ) : null}
       <textarea
         ref={setInputEl}
         className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"

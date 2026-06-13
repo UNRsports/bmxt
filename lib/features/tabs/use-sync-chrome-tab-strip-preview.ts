@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
-import { markTabPickerSelfActivation } from "./tab-picker-activation-suppression"
+import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
+import { markPickerSelfTabActivation } from "../side-picker/preview/picker-self-tab-activation"
+import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 
 export function useSyncChromeTabStripPreview({
   hi,
@@ -36,7 +38,6 @@ export function useSyncChromeTabStripPreview({
   const rowsRef = useRef(rows)
   rowsRef.current = rows
   const appliedActiveTabIdRef = useRef<number | null>(null)
-  const lastPreviewKeyRef = useRef("")
   const previewGenerationRef = useRef(0)
 
   const syncChromeTabStripPreview = useCallback(
@@ -79,8 +80,9 @@ export function useSyncChromeTabStripPreview({
           if (!isCurrent()) {
             return
           }
-          markTabPickerSelfActivation(row.tabId)
-          await chrome.tabs.update(row.tabId, { active: true })
+          if (!(await activateTabInBackground(row.tabId))) {
+            return
+          }
           if (!isCurrent()) {
             return
           }
@@ -97,8 +99,9 @@ export function useSyncChromeTabStripPreview({
           if (!isCurrent()) {
             return
           }
-          markTabPickerSelfActivation(row.tabId)
-          await chrome.tabs.update(row.tabId, { active: true })
+          if (!(await activateTabInBackground(row.tabId))) {
+            return
+          }
           if (!isCurrent()) {
             return
           }
@@ -119,8 +122,9 @@ export function useSyncChromeTabStripPreview({
           if (!isCurrent()) {
             return
           }
-          markTabPickerSelfActivation(row.tabId)
-          await chrome.tabs.update(row.tabId, { active: true })
+          if (!(await activateTabInBackground(row.tabId))) {
+            return
+          }
           if (!isCurrent()) {
             return
           }
@@ -137,7 +141,7 @@ export function useSyncChromeTabStripPreview({
         if (!isCurrent()) {
           return
         }
-        markTabPickerSelfActivation(row.tabId)
+        markPickerSelfTabActivation(row.tabId)
         await chrome.tabs.highlight({ windowId: winId, tabs: tabsArg })
         if (!isCurrent()) {
           return
@@ -150,48 +154,37 @@ export function useSyncChromeTabStripPreview({
     [markedKind, markedTabIds, setActiveTabId, tabIdToWindowId]
   )
 
-  useEffect(() => {
-    if (!isHostPaneFocused) {
-      lastPreviewKeyRef.current = ""
+  const rowIndex = visibleRowIndices[hi]
+  const row = rowIndex !== undefined ? rowsRef.current[rowIndex] : undefined
+  const markedKey =
+    markedKind === "tab" ? markedTabIds.slice().sort((a, b) => a - b).join(",") : ""
+  const previewKey =
+    row && row.kind === "tab" ? `${hi}:${row.tabId}:${markedKey}` : ""
+
+  const runPreview = useCallback(() => {
+    if (visibleRowIndices.length === 0 || mirrorHiPendingRef.current) {
       return
     }
-    if (visibleRowIndices.length === 0) {
+    const ri = visibleRowIndices[hi]
+    if (ri === undefined) {
       return
     }
-    if (mirrorHiPendingRef.current) {
+    const r = rowsRef.current[ri]
+    if (!r || r.kind !== "tab") {
       return
     }
-    if (pageActiveMode === "manual" && !altKeyHeldRef.current) {
-      return
-    }
-    const rowIndex = visibleRowIndices[hi]
-    if (rowIndex === undefined) {
-      return
-    }
-    const row = rowsRef.current[rowIndex]
-    if (!row || row.kind !== "tab") {
-      return
-    }
-    const markedKey =
-      markedKind === "tab" ? markedTabIds.slice().sort((a, b) => a - b).join(",") : ""
-    const previewKey = `${hi}:${row.tabId}:${markedKey}`
-    if (lastPreviewKeyRef.current === previewKey) {
-      return
-    }
-    lastPreviewKeyRef.current = previewKey
     const generation = ++previewGenerationRef.current
-    void syncChromeTabStripPreview(rowIndex, row.tabId, generation)
-  }, [
-    altKeyHeldRef,
-    hi,
+    void syncChromeTabStripPreview(ri, r.tabId, generation)
+  }, [hi, mirrorHiPendingRef, syncChromeTabStripPreview, visibleRowIndices])
+
+  usePickerAltPreviewSync({
+    enabled: visibleRowIndices.length > 0,
     isHostPaneFocused,
-    markedKind,
-    markedTabIds,
-    mirrorHiPendingRef,
-    pageActiveMode,
-    setActiveTabId,
-    visibleRowIndices,
-    syncChromeTabStripPreview,
-    altPreviewTick
-  ])
+    mode: pageActiveMode,
+    altKeyHeldRef,
+    altPreviewTick,
+    previewKey,
+    isBlocked: () => mirrorHiPendingRef.current,
+    runPreview
+  })
 }
