@@ -20,6 +20,11 @@ import {
   openTabPickerEngineForSession
 } from "../tabs"
 import { openSearchPickerEntry } from "../search/open-search-picker-entry"
+import {
+  loadSearchPickerSettings,
+  saveSearchPageActiveMode,
+  type SearchPageActiveMode
+} from "../search/page-active-setting"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
 import {
   openPickerSlots,
@@ -349,6 +354,8 @@ export function BmxtShell({
   const translatePairIdRef = useRef<TranslationPairId>(DEFAULT_TRANSLATION_PAIR_ID)
   const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
+  const [searchPageActiveMode, setSearchPageActiveMode] = useState<SearchPageActiveMode>("auto")
+  const searchPageActiveModeRef = useRef<SearchPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -485,11 +492,19 @@ export function BmxtShell({
       setTabsPageActiveMode(s.pageActive)
       tabsPageActiveModeRef.current = s.pageActive
     })
+    void loadSearchPickerSettings().then((s) => {
+      setSearchPageActiveMode(s.pageActive)
+      searchPageActiveModeRef.current = s.pageActive
+    })
   }, [])
 
   useEffect(() => {
     tabsPageActiveModeRef.current = tabsPageActiveMode
   }, [tabsPageActiveMode])
+
+  useEffect(() => {
+    searchPageActiveModeRef.current = searchPageActiveMode
+  }, [searchPageActiveMode])
 
   useEffect(() => {
     if (paneFocus === "detailBar" && detailBarId === null) {
@@ -991,6 +1006,15 @@ export function BmxtShell({
     })
   }, [])
 
+  const toggleSearchPageActiveFromDetailBar = useCallback(() => {
+    const next: SearchPageActiveMode =
+      searchPageActiveModeRef.current === "auto" ? "manual" : "auto"
+    void saveSearchPageActiveMode(next).then(() => {
+      setSearchPageActiveMode(next)
+      searchPageActiveModeRef.current = next
+    })
+  }, [])
+
   const cycleTranslatePairFromDetailBar = useCallback(
     (direction: 1 | -1) => {
       const index = TRANSLATION_PAIR_IDS.indexOf(translatePairIdRef.current)
@@ -1074,7 +1098,8 @@ export function BmxtShell({
       exitDetailBarToTerminal,
       toggleNavActive: handleToggleNavActive,
       cycleTranslatePair: cycleTranslatePairFromDetailBar,
-      toggleTabsPageActive: toggleTabsPageActiveFromDetailBar
+      toggleTabsPageActive: toggleTabsPageActiveFromDetailBar,
+      toggleSearchPageActive: toggleSearchPageActiveFromDetailBar
     }
   })
 
@@ -2835,7 +2860,8 @@ export function BmxtShell({
           search={{
             pickerOpen: searchListPicker !== null,
             pattern: searchListPicker?.pattern,
-            phase: searchListPicker?.phase
+            phase: searchListPicker?.phase,
+            pageActiveMode: searchPageActiveMode
           }}
           dom={{
             pickerOpen: domListPicker !== null,
@@ -2907,6 +2933,7 @@ export function BmxtShell({
           }}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
           tabsPageActiveMode={tabsPageActiveMode}
+          searchPageActiveMode={searchPageActiveMode}
         />
       </div>
     </div>

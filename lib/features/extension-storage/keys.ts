@@ -38,6 +38,9 @@ export const TAB_PICKER_FOLD_STATE_KEY = "bmxt_tab_picker_fold_v1"
 /** Tab picker: page-active preview mode (`--auto` / `--manual`). */
 export const TABS_PICKER_SETTINGS_KEY = "bmxt_tabs_picker_settings_v1"
 
+/** Search list picker: page-active preview mode (`--auto` / `--manual`). */
+export const SEARCH_PICKER_SETTINGS_KEY = "bmxt_search_picker_settings_v1"
+
 /** Global UI: display locale and terminal appearance. */
 export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 

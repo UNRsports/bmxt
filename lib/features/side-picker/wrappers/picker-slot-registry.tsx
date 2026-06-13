@@ -10,6 +10,7 @@ import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
 import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
+import type { SearchPageActiveMode } from "../../search/page-active-setting"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
 import type { SettingPickerRow } from "../../setting/setting-picker-rows"
@@ -53,6 +54,7 @@ export type PickerColumnHostContext = {
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   tabsPageActiveMode?: TabsPageActiveMode
+  searchPageActiveMode?: SearchPageActiveMode
   onExitToDetailBar: (slot: PickerSlotId) => void
 }
 
@@ -95,6 +97,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           keyboardActive={ctx.searchPickerKeyboardActive}
           pickerInputRef={ctx.searchPickerInputRef}
           sessionId={ctx.sessionId}
+          pageActiveMode={ctx.searchPageActiveMode}
         />
       </PickerPanelHost>
     ) : null,

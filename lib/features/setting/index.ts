@@ -67,6 +67,7 @@ export {
   navStatusHint,
   optionalHostDeniedLines,
   t,
+  searchStatusHint,
   tabsStatusHint,
   translateOnLogLine,
   translateStatusHint,

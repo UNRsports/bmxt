@@ -1,16 +1,21 @@
-import { useUiLocale } from "../setting"
-import { searchStatusHint } from "../setting/i18n/resolvers"
+import { searchStatusHint, useUiLocale } from "../setting"
+import {
+  settingTokenForSearchPageActiveMode,
+  type SearchPageActiveMode
+} from "./page-active-setting"
 
 type Props = {
   pattern?: string
   phase?: "loading" | "results"
+  pageActiveMode: SearchPageActiveMode
 }
 
 /** EN: Detail bar for the search list picker. */
-export function SearchStatusBar({ pattern, phase }: Props) {
+export function SearchStatusBar({ pattern, phase, pageActiveMode }: Props) {
   const locale = useUiLocale()
-  const stateLabel = phase === "loading" ? "loading" : "list"
-  const meta =
+  const modeToken = settingTokenForSearchPageActiveMode(pageActiveMode)
+  const stateLabel = pageActiveMode === "auto" ? "auto" : "manual"
+  const patternMeta =
     pattern && pattern.length > 0
       ? pattern.length > 48
         ? `${pattern.slice(0, 48)}…`
@@ -18,6 +23,8 @@ export function SearchStatusBar({ pattern, phase }: Props) {
       : locale === "ja"
         ? "（パターンなし）"
         : "(no pattern)"
+  const phasePrefix = phase === "loading" ? (locale === "ja" ? "loading · " : "loading · ") : ""
+  const meta = `${phasePrefix}page-active ${modeToken} · ${patternMeta}`
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
@@ -29,7 +36,11 @@ export function SearchStatusBar({ pattern, phase }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{meta}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {searchStatusHint(locale)}
+        {locale === "ja"
+          ? "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー"
+          : "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"}
+        {" · "}
+        {searchStatusHint(locale, pageActiveMode)}
       </span>
     </div>
   )

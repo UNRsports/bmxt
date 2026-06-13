@@ -27,6 +27,7 @@ import {
   searchPickerPreviewScrollAnimated
 } from "./search-picker-preview-nav"
 import { listSearchDetailPreviewTargetIndices } from "./search-picker-preview-targets"
+import type { SearchPageActiveMode } from "./page-active-setting"
 
 const PREVIEW_NOTICE_MS = 3200
 
@@ -47,6 +48,7 @@ export type UseSearchPickerAltPreviewKitOptions = {
   detailEntry?: PickerEntry
   detailHits?: readonly SearchEntryDetailHit[]
   highlightColors: SearchPageHighlightColors
+  pageActiveMode?: SearchPageActiveMode
   baseExtensions?: PlainPickerKeyboardExtensions
 }
 
@@ -70,6 +72,7 @@ export function useSearchPickerAltPreviewKit({
   detailEntry,
   detailHits = [],
   highlightColors,
+  pageActiveMode = "auto",
   baseExtensions
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
   const uiCopy = useUiCopy()
@@ -154,7 +157,7 @@ export function useSearchPickerAltPreviewKit({
   usePickerAltKeyTracking({
     enabled,
     altKeyHeldRef,
-    bumpPreviewTickOnAltDown: true,
+    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
     setAltPreviewTick,
     onAltKeyDown
   })
@@ -168,7 +171,7 @@ export function useSearchPickerAltPreviewKit({
   usePickerAltPreviewSync({
     enabled: enabled && lineCount > 0,
     isHostPaneFocused,
-    mode: "auto",
+    mode: pageActiveMode,
     altKeyHeldRef,
     altPreviewTick,
     previewKey,

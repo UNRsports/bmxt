@@ -48,6 +48,7 @@ export type DetailBarKeyboardActions = {
   toggleNavActive: () => void
   cycleTranslatePair: (direction: 1 | -1) => void
   toggleTabsPageActive?: () => void
+  toggleSearchPageActive?: () => void
 }
 
 export type UseDetailBarKeyboardOptions = {
@@ -174,6 +175,10 @@ export function useDetailBarKeyboard({
         }
         if (current === "tabs") {
           actionsRef.current.toggleTabsPageActive?.()
+          return
+        }
+        if (current === "search") {
+          actionsRef.current.toggleSearchPageActive?.()
         }
         return
       }

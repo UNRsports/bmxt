@@ -1,5 +1,6 @@
 import type { TranslationPairId } from "../../translate/translation-pair"
 import { getTranslationPairDef } from "../../translate/translation-pair"
+import type { SearchPageActiveMode } from "../../search/page-active-setting"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
 import { BG_IMAGE_MAX_BYTES } from "../appearance"
 import type { BgImageImportResult } from "../bg-image-import"
@@ -73,8 +74,8 @@ export function tabsStatusHint(locale: UiLocale, pageActiveMode: TabsPageActiveM
   return t(pageActiveMode === "auto" ? "tabs.status.auto" : "tabs.status.manual", locale)
 }
 
-export function searchStatusHint(locale: UiLocale): string {
-  return t("search.status.hint", locale)
+export function searchStatusHint(locale: UiLocale, pageActiveMode: SearchPageActiveMode): string {
+  return t(pageActiveMode === "auto" ? "search.status.auto" : "search.status.manual", locale)
 }
 
 export function optionalHostDeniedLines(locale: UiLocale): string[] {

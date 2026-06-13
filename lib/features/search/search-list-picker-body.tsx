@@ -25,6 +25,7 @@ import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
 import type { SearchOpenDestinationRow } from "./search-open-destination"
 import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
+import type { SearchPageActiveMode } from "./page-active-setting"
 
 const ROW_ID_PREFIX = "bmxt-search-row"
 
@@ -59,6 +60,7 @@ export type SearchListPickerBodyProps = {
   subviewHiRef?: MutableRefObject<number>
   /** EN: Breadcrumb shows Results → Detail → Open target when destination opened from detail. */
   destinationFromDetail?: boolean
+  pageActiveMode?: SearchPageActiveMode
 }
 
 function SearchListStatusRow({
@@ -185,7 +187,8 @@ export function SearchListPickerBody({
   extensions,
   onHiChange,
   subviewHiRef,
-  destinationFromDetail = false
+  destinationFromDetail = false,
+  pageActiveMode = "auto"
 }: SearchListPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
@@ -303,6 +306,7 @@ export function SearchListPickerBody({
     detailEntry,
     detailHits,
     highlightColors: searchHighlightColors,
+    pageActiveMode,
     baseExtensions: extensions
   })
 

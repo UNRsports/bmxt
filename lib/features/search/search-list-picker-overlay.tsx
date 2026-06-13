@@ -29,6 +29,7 @@ import {
   type SearchListPickerView
 } from "./search-list-picker-body"
 import type { SearchListPickerState } from "./search-list-picker-input"
+import type { SearchPageActiveMode } from "./page-active-setting"
 import {
   buildSearchOpenDestinationRows,
   type SearchOpenDestinationRow
@@ -48,6 +49,7 @@ type Props = {
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
+  pageActiveMode?: SearchPageActiveMode
 }
 
 function isHorizontalNavKey(e: KeyboardEvent): boolean {
@@ -69,7 +71,8 @@ export function SearchListPickerOverlay({
   onOpenEntry,
   keyboardActive = false,
   pickerInputRef,
-  sessionId
+  sessionId,
+  pageActiveMode = "auto"
 }: Props) {
   const { phase, progressLines, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
@@ -412,6 +415,7 @@ export function SearchListPickerOverlay({
       extensions={extensions}
       onHiChange={onHiChange}
       subviewHiRef={subviewHiRef}
+      pageActiveMode={pageActiveMode}
     />
   )
 }

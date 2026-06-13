@@ -763,9 +763,13 @@
     "ja": "search — ページ内ジャンプできるヒットがありません（タブ未 open またはスクロール不可）",
     "en": "search — no in-page hits to jump (tab not open or not scrollable)"
   },
-  "search.status.hint": {
-    "ja": "↑↓ 移動 · Alt+↑↓ 開タブ行のみ移動（背面プレビュー） · Enter でジャンプ · ← でプロンプト",
-    "en": "↑↓ move · Alt+↑↓ open-tab rows only (background preview) · Enter jump · ← prompt"
+  "search.status.auto": {
+    "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Alt+↑↓ で開タブ行のみ · Enter でジャンプ",
+    "en": "↑↓ in-page preview on highlight (background) · Alt+↑↓ open-tab rows only · Enter jump"
+  },
+  "search.status.manual": {
+    "ja": "Alt+↑↓ でページ内プレビュー · Enter でジャンプ · Alt で page-active 切替",
+    "en": "Alt+↑↓ for in-page preview · Enter jump · Alt toggles page-active"
   },
   "nav.notArmed": {
     "ja": "このペインでは nav は起動していません。",

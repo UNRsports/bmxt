@@ -17,6 +17,7 @@ export {
   formatUiSettingsSummaryLines,
   navStatusHint,
   optionalHostDeniedLines,
+  searchStatusHint,
   tabsStatusHint,
   translateOnLogLine,
   translateStatusHint,

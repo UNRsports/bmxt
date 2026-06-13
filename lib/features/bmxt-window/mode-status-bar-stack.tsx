@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { DomStatusBar } from "../dom/dom-status-bar"
 import { NavStatusBar } from "../nav"
 import { SearchStatusBar } from "../search/search-status-bar"
+import type { SearchPageActiveMode } from "../search/page-active-setting"
 import { SettingStatusBar } from "../setting/setting-status-bar"
 import type { TranslationPairId } from "../translate/translation-pair"
 import { TranslateStatusBar } from "../translate/translate-status-bar"
@@ -39,6 +40,7 @@ type SearchProps = {
   pickerOpen: boolean
   pattern?: string
   phase?: "loading" | "results"
+  pageActiveMode: SearchPageActiveMode
 }
 
 type DomProps = {
@@ -113,7 +115,11 @@ export function ModeStatusBarStack({
           "search",
           focusedDetailBarId,
           detailBarFocusActive,
-          <SearchStatusBar pattern={search.pattern} phase={search.phase} />
+          <SearchStatusBar
+            pattern={search.pattern}
+            phase={search.phase}
+            pageActiveMode={search.pageActiveMode}
+          />
         )
       ]
     }
