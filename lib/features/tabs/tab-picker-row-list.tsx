@@ -4,19 +4,42 @@ import {
   splitTextHighlightSegments
 } from "../side-picker/search/picker-search-needle"
 import { displayTitle, type TabPickerRow } from "./picker-rows"
+import { resolveLiveTabFaviconSrc } from "./tab-picker-live-display"
+import { resolveLiveTabTitle, resolveLiveTabUrl } from "./tab-picker-live-tab-fields"
 import { formatWindowPickerLabel } from "./tab-picker-window-label"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { BulkSubMode } from "./tab-picker-overlay-types"
+import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 
 function renderHighlighted(text: string, needle: string, keyPrefix: string): ReactNode {
-  return splitTextHighlightSegments(text, needle).map((seg, i) =>
-    seg.match ? (
-      <mark key={`${keyPrefix}-${i}`} className="bmxt-tab-picker-search-hl">
+  let offset = 0
+  return splitTextHighlightSegments(text, needle).map((seg) => {
+    const key = `${keyPrefix}-${offset}`
+    offset += seg.text.length
+    return seg.match ? (
+      <mark key={key} className="bmxt-tab-picker-search-hl">
         {seg.text}
       </mark>
     ) : (
-      <span key={`${keyPrefix}-${i}`}>{seg.text}</span>
+      <span key={key}>{seg.text}</span>
     )
+  })
+}
+
+function TabPickerTabFavicon({ src }: { src: string }) {
+  return (
+    <img
+      className="bmxt-tab-picker-tab-favicon"
+      src={src}
+      alt=""
+      width={16}
+      height={16}
+      decoding="async"
+      draggable={false}
+      onError={(e) => {
+        e.currentTarget.style.visibility = "hidden"
+      }}
+    />
   )
 }
 
@@ -59,6 +82,8 @@ export function TabPickerRowList({
   isWindowExpanded,
   isGroupExpanded
 }: TabPickerRowListProps) {
+  useTabPickerLiveFieldsRevision()
+
   if (rows.length === 0) {
     return <div className="bmxt-tab-picker-empty">(タブなし)</div>
   }
@@ -80,7 +105,12 @@ export function TabPickerRowList({
         if (row.kind === "window") {
           const markedRow = markedWindowSet.has(row.windowId)
           const expanded = isWindowExpanded(row.windowId)
-          const windowLabel = formatWindowPickerLabel(row, trackedWindowId, trackedWindowTitle)
+          const windowLabel = formatWindowPickerLabel(
+            row,
+            rows,
+            trackedWindowId,
+            trackedWindowTitle
+          )
           return (
             <div
               key={i}
@@ -126,29 +156,45 @@ export function TabPickerRowList({
         }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
           moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
         }`
-        const titleShown = displayTitle(row.title)
+        const liveTitle = resolveLiveTabTitle(row.tabId, row.title)
+        const liveUrl = resolveLiveTabUrl(row.tabId, row.url)
+        const titleShown = displayTitle(liveTitle)
+        const faviconSrc = resolveLiveTabFaviconSrc(row.tabId, row.faviconSrc, liveUrl)
+        const activeMarker = activeTabId === row.tabId
+        const markedTab = markedTabSet.has(row.tabId)
         return (
           <div
-            key={i}
+            key={`tab-${row.tabId}`}
             id={`bmxt-tab-row-${i}`}
             ref={(el) => setRowRef(i, el)}
             className={rowClass}
             role="option"
             aria-selected={hiRow || markedRow}>
             <div className="bmxt-tab-picker-tab-title">
-              <span className="bmxt-tab-picker-tab-glyph">
-                {activeTabId === row.tabId ? "*" : " "}
+              <span
+                className={`bmxt-tab-picker-tab-glyph bmxt-tab-picker-tab-glyph--active${
+                  activeMarker ? " bmxt-tab-picker-tab-glyph--active-on" : ""
+                }`}
+                aria-hidden>
+                *
               </span>
-              <span className="bmxt-tab-picker-tab-glyph">
-                {markedTabSet.has(row.tabId) ? "#" : " "}
+              <span
+                className={`bmxt-tab-picker-tab-glyph bmxt-tab-picker-tab-glyph--mark${
+                  markedTab ? " bmxt-tab-picker-tab-glyph--mark-on" : ""
+                }`}
+                aria-hidden>
+                #
               </span>
-              {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}
+              {faviconSrc ? <TabPickerTabFavicon src={faviconSrc} /> : null}
+              <span className="bmxt-tab-picker-tab-title-text">
+                {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}
+              </span>
             </div>
             {showUrl ? (
               <div className="bmxt-tab-picker-tab-url">
                 {byUrl
-                  ? renderHighlighted(row.url || "(no url)", needle, `u-${i}`)
-                  : row.url || "(no url)"}
+                  ? renderHighlighted(liveUrl || "(no url)", needle, `u-${i}`)
+                  : liveUrl || "(no url)"}
               </div>
             ) : null}
           </div>

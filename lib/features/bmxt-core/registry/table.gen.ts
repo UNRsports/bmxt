@@ -17,6 +17,7 @@ import * as nav from "../cmd/nav"
 import * as translate from "../cmd/translate"
 import * as aboutbmxt from "../cmd/aboutbmxt"
 import * as split from "../cmd/split"
+import * as setting from "../cmd/setting"
 
 export const COMMANDS: readonly CmdMeta[] = [
   clear.CMD,
@@ -30,7 +31,8 @@ export const COMMANDS: readonly CmdMeta[] = [
   nav.CMD,
   translate.CMD,
   aboutbmxt.CMD,
-  split.CMD
+  split.CMD,
+  setting.CMD
 ]
 
 export const COMMAND_RUNNERS: ReadonlyArray<{
@@ -48,7 +50,8 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: nav.CMD.name, run: nav.run },
   { name: translate.CMD.name, run: translate.run },
   { name: aboutbmxt.CMD.name, run: aboutbmxt.run },
-  { name: split.CMD.name, run: split.run }
+  { name: split.CMD.name, run: split.run },
+  { name: setting.CMD.name, run: setting.run }
 ]
 
 export function cmdByName(name: string): CmdMeta | undefined {

@@ -319,11 +319,29 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
   await setSessionLines(sessionId, [])
 }
 
-/** ストレージ上のターミナル状態を消去（BMXt プロセス `exit` 全終了時）。 */
+/** ストレージ上のターミナル状態を消去（最後の `exit` または BMXt ウィンドウ × 閉じ）。コマンド履歴は保持。 */
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
     SPLIT_LAYOUT_KEY,
+    ACTIVE_TERMINAL_SESSION_KEY,
+    SESSION_LOG_KEY,
+    LEGACY_SPLIT_KEY,
+    PROCESS_UI_STATE_KEY,
+    TAB_PICKER_FOLD_STATE_KEY
+  ])
+  await clearTabPickerFoldStateStorage()
+  await clearProcessUiStateStorage()
+}
+
+/**
+ * ターミナルを初期状態へ戻す（単一ペイン・空ログ）。ウィンドウは閉じない。
+ * ショートカット `reset-bmxt` から呼ぶ。キー削除と再生成の間隙を避けるため、
+ * セッション本体は上書きし、付随状態のみ除去する。
+ */
+export async function resetBmxtTerminalSessionsInStorage(): Promise<void> {
+  const fresh = emptyState()
+  await chrome.storage.local.remove([
     ACTIVE_TERMINAL_SESSION_KEY,
     SESSION_LOG_KEY,
     LEGACY_SPLIT_KEY,
@@ -333,6 +351,7 @@ export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
   ])
   await clearTabPickerFoldStateStorage()
   await clearProcessUiStateStorage()
+  await persistTerminalSessionsState(fresh)
 }
 
 export async function setFocusedLeafSession(

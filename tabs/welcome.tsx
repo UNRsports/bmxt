@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 
 import { WelcomePage } from "../lib/features/welcome"
+import { UiSettingsProvider } from "../lib/features/setting"
 import "../lib/features/welcome/welcome-page.css"
 
 export default function WelcomeTabPage() {
@@ -8,5 +9,9 @@ export default function WelcomeTabPage() {
     document.title = "BMXt - Welcome"
   }, [])
 
-  return <WelcomePage />
+  return (
+    <UiSettingsProvider>
+      <WelcomePage />
+    </UiSettingsProvider>
+  )
 }

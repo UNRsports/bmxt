@@ -33,6 +33,13 @@ export {
   type PickerCommandCompletionState
 } from "./interaction/picker-command-completion"
 export { runPickerPaneStripKeydown } from "./interaction/picker-pane-strip"
+export {
+  scrollPickerListRowIntoView,
+  scrollPickerListRowIntoViewAnimated,
+  scrollPickerListToHi,
+  scrollPickerListToHiAfterLayout,
+  scrollPickerListToHiAnimated
+} from "./interaction/picker-list-scroll"
 export { runPickerSearchEnter, type RunPickerSearchEnterOptions } from "./interaction/picker-search-enter"
 export {
   runPickerSearchJump,
@@ -83,6 +90,8 @@ export { UrlListPickerWrapper, type UrlListPickerWrapperProps } from "./wrappers
 export { DomPickerWrapper, type DomPickerWrapperProps } from "./wrappers/dom-picker-wrapper"
 export { TabsPickerWrapper, type TabsPickerWrapperProps } from "./wrappers/tabs-picker-wrapper"
 export { SessionPickerColumns, type SessionPickerColumnsProps } from "./wrappers/session-picker-columns"
+export { PickerRail } from "./wrappers/picker-rail"
+export { usePickerRailPresence, PICKER_RAIL_MS } from "./wrappers/use-picker-rail-presence"
 export {
   EMPTY_SESSION_PICKERS,
   anyLeafHasPickerOpen,
@@ -102,3 +111,17 @@ export { type PickerEntry, type PickerSource, entryDisplayLine } from "./model/p
 export { pickerEntriesFromSearchLines } from "./model/from-search-lines"
 export { normalizePickerOpenUrl } from "./model/normalize-picker-open-url"
 export { openEntryEffects, type OpenUrlMode } from "./model/open-entry"
+export {
+  activateTabInBackground,
+  consumePickerSelfTabActivation,
+  isPickerAltBlockedChord,
+  isPickerAltOnlyChord,
+  markPickerSelfTabActivation,
+  pickerAltVerticalNavDirection,
+  shouldRunPickerAltPreview,
+  usePickerAltKeyTracking,
+  usePickerAltPreviewSync,
+  type PickerAltPreviewMode,
+  type UsePickerAltKeyTrackingOptions,
+  type UsePickerAltPreviewSyncOptions
+} from "./preview/index"

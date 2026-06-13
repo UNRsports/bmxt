@@ -6,6 +6,8 @@ export type SearchPageMatch = {
   snippet: string
   /** EN: Nth DOM occurrence of `snippet` on the tab (case-insensitive). */
   occurrence: number
+  /** EN: Global 0-based needle index in page innerText at index time (scroll target). */
+  globalOccurrence?: number
 }
 export type PickerEntry = {
   id: string
@@ -33,6 +35,11 @@ export function pickerEntrySearchSources(entry: PickerEntry): PickerSource[] {
     return [entry.source]
   }
   return []
+}
+
+/** EN: True when a search row should offer the in-picker open-target tree (`[history]`). */
+export function searchEntryOffersOpenDestination(entry: PickerEntry): boolean {
+  return pickerEntrySearchSources(entry).includes("history")
 }
 
 /** EN: Picker row prefix for search results, e.g. `[history, page]`. */

@@ -11,6 +11,13 @@ import type {
   SessionPickerState,
   SessionPickersByLeaf
 } from "../side-picker/session/session-pickers"
+import type { DetailBarId } from "./detail-bar-focus"
+import { pickerSlotToDetailBar } from "./detail-bar-focus"
+import {
+  deriveModeToolbarOrderFromPickers,
+  isModeToolbarId,
+  type ModeToolbarId
+} from "./mode-toolbar-order"
 import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
 import { buildTabPickerRows, initialTabPickerHighlightIndex } from "../tabs/picker-rows"
 import { computeTabPickerVisibleRowIndices } from "../tabs/tab-picker-fold-state"
@@ -23,6 +30,9 @@ type StoredTabPickerSlotV1 = {
 
 type StoredLeafProcessUiV1 = {
   paneFocus: PaneFocusTarget
+  detailBarId?: DetailBarId | null
+  modeToolbarOrder?: ModeToolbarId[]
+  navArmed?: boolean
   pickers: {
     tabs: StoredTabPickerSlotV1 | null
     search: SearchListPickerState | null
@@ -35,10 +45,62 @@ export type StoredProcessUiStateV1 = {
   byLeaf: Record<string, StoredLeafProcessUiV1>
 }
 
-const PANE_FOCUS_VALUES = new Set<PaneFocusTarget>(["terminal", "tabs", "search", "dom"])
+const PANE_FOCUS_VALUES = new Set<PaneFocusTarget>([
+  "terminal",
+  "detailBar",
+  "tabs",
+  "search",
+  "dom",
+  "setting"
+])
 
 function isPaneFocusTarget(v: unknown): v is PaneFocusTarget {
   return typeof v === "string" && PANE_FOCUS_VALUES.has(v as PaneFocusTarget)
+}
+
+function parseModeToolbarOrder(raw: unknown): ModeToolbarId[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const order: ModeToolbarId[] = []
+  for (const entry of raw) {
+    if (isModeToolbarId(entry) && !order.includes(entry)) {
+      order.push(entry)
+    }
+  }
+  return order.length > 0 ? order : undefined
+}
+
+function parseDetailBarId(raw: unknown): DetailBarId | null | undefined {
+  if (raw === undefined) {
+    return undefined
+  }
+  if (raw === null) {
+    return null
+  }
+  return isModeToolbarId(raw) ? raw : null
+}
+
+function resolveRestoredDetailBarId(
+  paneFocus: PaneFocusTarget,
+  storedId: DetailBarId | null | undefined,
+  modeToolbarOrder: ModeToolbarId[]
+): DetailBarId | null {
+  if (storedId !== undefined && storedId !== null) {
+    return storedId
+  }
+  if (paneFocus === "detailBar") {
+    return modeToolbarOrder[modeToolbarOrder.length - 1] ?? null
+  }
+  if (
+    paneFocus === "tabs" ||
+    paneFocus === "search" ||
+    paneFocus === "dom" ||
+    paneFocus === "setting"
+  ) {
+    return pickerSlotToDetailBar(paneFocus)
+  }
+  return storedId ?? null
 }
 
 function parseInteractiveSnapshot(raw: unknown): TabPickerInteractiveSnapshot | null {
@@ -120,8 +182,14 @@ function parseStoredLeaf(raw: unknown): StoredLeafProcessUiV1 | null {
     o.pickers.dom === null || (typeof o.pickers.dom === "object" && o.pickers.dom !== null)
       ? (o.pickers.dom as DomListPickerState | null)
       : null
+  const modeToolbarOrder = parseModeToolbarOrder(o.modeToolbarOrder)
+  const detailBarId = parseDetailBarId(o.detailBarId)
+  const navArmed = typeof o.navArmed === "boolean" ? o.navArmed : undefined
   return {
     paneFocus: o.paneFocus,
+    detailBarId,
+    modeToolbarOrder,
+    navArmed,
     pickers: { tabs, search, dom }
   }
 }
@@ -176,28 +244,54 @@ export async function readProcessUiStateFromStorage(): Promise<StoredProcessUiSt
 export function serializeProcessUiState(
   pickersBySession: SessionPickersByLeaf,
   paneFocusByLeaf: Record<string, PaneFocusTarget>,
-  validLeafIds: readonly string[]
+  validLeafIds: readonly string[],
+  detailBarIdByLeaf: Record<string, DetailBarId | null>,
+  modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>,
+  navArmedByLeaf: Record<string, boolean>
 ): StoredProcessUiStateV1 {
   const byLeaf: Record<string, StoredLeafProcessUiV1> = {}
   for (const leafId of validLeafIds) {
     const pickers = pickersBySession[leafId]
     const paneFocus = paneFocusByLeaf[leafId] ?? "terminal"
+    const detailBarId = detailBarIdByLeaf[leafId] ?? null
+    const modeToolbarOrder = modeToolbarOrderByLeaf[leafId] ?? []
+    const navArmed = navArmedByLeaf[leafId] ?? false
     if (!pickers) {
-      if (paneFocus !== "terminal") {
+      if (
+        paneFocus !== "terminal" ||
+        detailBarId !== null ||
+        modeToolbarOrder.length > 0 ||
+        navArmed
+      ) {
         byLeaf[leafId] = {
           paneFocus,
+          detailBarId: detailBarId !== null ? detailBarId : undefined,
+          modeToolbarOrder: modeToolbarOrder.length > 0 ? modeToolbarOrder : undefined,
+          navArmed: navArmed || undefined,
           pickers: { tabs: null, search: null, dom: null }
         }
       }
       continue
     }
     const hasOpen =
-      pickers.tabs !== null || pickers.search !== null || pickers.dom !== null
-    if (!hasOpen && paneFocus === "terminal") {
+      pickers.tabs !== null ||
+      pickers.search !== null ||
+      pickers.dom !== null ||
+      pickers.setting !== null
+    if (
+      !hasOpen &&
+      paneFocus === "terminal" &&
+      detailBarId === null &&
+      modeToolbarOrder.length === 0 &&
+      !navArmed
+    ) {
       continue
     }
     byLeaf[leafId] = {
       paneFocus,
+      detailBarId: detailBarId !== null ? detailBarId : undefined,
+      modeToolbarOrder: modeToolbarOrder.length > 0 ? modeToolbarOrder : undefined,
+      navArmed: navArmed || undefined,
       pickers: {
         tabs: pickers.tabs
           ? {
@@ -246,13 +340,24 @@ export async function rebuildSessionPickersFromStorage(
 ): Promise<{
   pickersBySession: SessionPickersByLeaf
   paneFocusByLeaf: Record<string, PaneFocusTarget>
+  detailBarIdByLeaf: Record<string, DetailBarId | null>
+  modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
+  navArmedByLeaf: Record<string, boolean>
 }> {
   const pickersBySession: SessionPickersByLeaf = {}
   const paneFocusByLeaf: Record<string, PaneFocusTarget> = {}
+  const detailBarIdByLeaf: Record<string, DetailBarId | null> = {}
+  const modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]> = {}
+  const navArmedByLeaf: Record<string, boolean> = {}
 
   for (const [leafId, leaf] of Object.entries(stored.byLeaf)) {
     paneFocusByLeaf[leafId] = leaf.paneFocus
-    const pickers: SessionPickerState = { tabs: null, search: null, dom: null }
+    const pickers: SessionPickerState = {
+      tabs: null,
+      search: null,
+      dom: null,
+      setting: null
+    }
 
     if (leaf.pickers.tabs) {
       const t = leaf.pickers.tabs
@@ -277,10 +382,43 @@ export async function rebuildSessionPickersFromStorage(
       pickers.dom = leaf.pickers.dom
     }
 
-    if (pickers.tabs !== null || pickers.search !== null || pickers.dom !== null) {
+    if (
+      pickers.tabs !== null ||
+      pickers.search !== null ||
+      pickers.dom !== null ||
+      pickers.setting !== null
+    ) {
       pickersBySession[leafId] = pickers
+    }
+
+    const navArmed = leaf.navArmed ?? false
+    navArmedByLeaf[leafId] = navArmed
+    const hasRestoredPickers =
+      pickers.tabs !== null ||
+      pickers.search !== null ||
+      pickers.dom !== null ||
+      pickers.setting !== null
+    const modeToolbarOrder =
+      leaf.modeToolbarOrder ??
+      deriveModeToolbarOrderFromPickers(hasRestoredPickers ? pickers : undefined, navArmed)
+    if (modeToolbarOrder.length > 0) {
+      modeToolbarOrderByLeaf[leafId] = modeToolbarOrder
+    }
+    const detailBarId = resolveRestoredDetailBarId(
+      leaf.paneFocus,
+      leaf.detailBarId,
+      modeToolbarOrder
+    )
+    if (detailBarId !== null) {
+      detailBarIdByLeaf[leafId] = detailBarId
     }
   }
 
-  return { pickersBySession, paneFocusByLeaf }
+  return {
+    pickersBySession,
+    paneFocusByLeaf,
+    detailBarIdByLeaf,
+    modeToolbarOrderByLeaf,
+    navArmedByLeaf
+  }
 }

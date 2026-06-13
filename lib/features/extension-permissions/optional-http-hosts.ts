@@ -4,6 +4,8 @@
  */
 
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
+import { DEFAULT_UI_LOCALE } from "../setting/locale"
+import { optionalHostDeniedLines } from "../setting/i18n"
 import { isHttpUrl } from "../url/is-http-url"
 
 export const OPTIONAL_HTTP_HOST_ORIGINS = ["http://*/*", "https://*/*"] as const
@@ -86,8 +88,5 @@ export async function ensureOptionalHttpHostAccess(): Promise<OptionalHostAccess
   return "denied"
 }
 
-export const OPTIONAL_HOST_DENIED_LINES = [
-  "error: http(s) site access was not granted (optional host permission).",
-  "EN: Approve access when prompted, or enable site access for BMXt under chrome://extensions → Details.",
-  "JA: 表示されたダイアログで許可するか、chrome://extensions の詳細でサイトへのアクセスを有効にしてから再度実行してください。"
-] as const
+/** @deprecated Use `optionalHostDeniedLines(locale)` — kept for eligibility first-line check. */
+export const OPTIONAL_HOST_DENIED_LINES = optionalHostDeniedLines(DEFAULT_UI_LOCALE)

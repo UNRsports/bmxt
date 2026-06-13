@@ -95,5 +95,26 @@
     "ja": [
       "tabsモードにて新規タブグループの作成ができない現象を修正"
     ]
+  },
+  "0.5.3": {
+    "heroImage": "assets/welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
+    "en": [
+      "Split extension shortcuts into launch (**launch-bmxt**, default **Shift+Alt+C**) and reset (**reset-bmxt**, default **Shift+Alt+R**)",
+      "Implemented the **setting** command to customize, save, and load extension appearance",
+      "Added favicon display in tabs mode and fixed display issues around tab titles",
+      "Revised picker interaction across commands for a more intuitive flow with less hand and eye movement",
+      "Updated related interaction systems (detail bars, column focus, and related flows) to match the new picker model",
+      "Major overhaul of search mode"
+    ],
+    "ja": [
+      "拡張機能のショートカットを、起動用とリセット用に変更",
+      "設定機能を実装し、拡張機能の外観を調整／保存／読み込み可能に実装",
+      "tabsモードにてファビコン表示を実装し、タブタイトル周辺の表示不具合を修正",
+      "各コマンドにおけるpicker操作を変更し、より直感的かつ操作と視線移動が減るように実装",
+      "picker操作変更に伴う関係各種の操作体系も見直し",
+      "searchモードの大幅刷新"
+    ]
   }
 }

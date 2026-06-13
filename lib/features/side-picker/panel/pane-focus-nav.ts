@@ -3,7 +3,7 @@
 
 import type { PickerSlotId } from "../session/session-pickers"
 
-export type PaneFocusTarget = "terminal" | PickerSlotId
+export type PaneFocusTarget = "terminal" | "detailBar" | PickerSlotId
 
 export type PaneStripOpen = PickerSlotId
 
@@ -45,7 +45,7 @@ function applyFocus(actions: PaneStripActions, target: PaneFocusTarget): void {
   actions.setFocus(target)
   if (target === "terminal") {
     actions.focusTerminal()
-  } else {
+  } else if (target !== "detailBar") {
     actions.focusPicker(target)
   }
 }

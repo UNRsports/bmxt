@@ -1,3 +1,5 @@
+import { navStatusHint, useUiLocale } from "../setting"
+
 type Props = {
   armed: boolean
   active: boolean
@@ -19,6 +21,7 @@ export function NavStatusBar({
   tabTitle,
   overlayError = null
 }: Props) {
+  const locale = useUiLocale()
   if (!armed) {
     return null
   }
@@ -40,6 +43,21 @@ export function NavStatusBar({
         : active
           ? "ON"
           : "OFF (Alt toggles)"
+  const hintMode = typingMode
+    ? typingMultiline
+      ? "typingMultiline"
+      : "typing"
+    : textSelPicking
+      ? textSelPhase === "start"
+        ? "selStart"
+        : "selEnd"
+      : textSelPhase === "done"
+        ? menuOpen
+          ? "copyOpen"
+          : "copyClosed"
+        : menuOpen
+          ? "menu"
+          : "idle"
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--label bmxt-mode-status-seg--label-nav">
@@ -51,21 +69,7 @@ export function NavStatusBar({
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{tabLabel}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {typingMode
-          ? typingMultiline
-            ? "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル"
-            : "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル"
-          : textSelPicking
-            ? textSelPhase === "start"
-              ? "↑↓ 移動 · Enter で選択開始 · Esc/Ctrl で取消"
-              : "↑↓ 移動 · 範囲プレビュー · Enter で確定 · Esc/Ctrl で取消"
-            : textSelPhase === "done"
-              ? menuOpen
-                ? "コピー · Enter 実行 · Esc で選択解除"
-                : "Esc で選択解除"
-              : menuOpen
-                ? "↑↓ 項目 · Enter 実行 · ←→ 履歴 · Ctrl/Esc で閉じる"
-                : "↑↓←→ move · Enter click/type · Ctrl menu · Alt toggle · nav -exit to quit"}
+        {navStatusHint(locale, hintMode)}
       </span>
     </div>
   )

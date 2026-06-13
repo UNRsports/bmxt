@@ -30,6 +30,14 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.5.3:
+- Split extension shortcuts into launch and reset
+- Implemented the setting command to customize, save, and load extension appearance
+- Added favicon display in tabs mode and fixed display issues around tab titles
+- Revised picker interaction across commands for a more intuitive flow with less hand and eye movement
+- Updated related interaction systems to match the new picker model
+- Major overhaul of search mode
+
 0.4.6:
 - Fixed an issue where new tab groups could not be created in tabs mode
 
@@ -104,4 +112,12 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
 | `close` / `c <tabId>` | Close a tab |
 | `group new <tabId> …` | Create a group |
+| `setting` | Print usage and restore the prompt to `setting ` for `-list` |
+| `setting -list` | Open the settings picker column (UI locale, terminal appearance, optional per-picker appearance, export/import zip); changes apply only after `> save setting` in the picker |
+| `setting -exit -list` | Close the settings picker column in this session |
+| `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
+| `translate -on` | Enable translation assist (nav typing preview under the prompt) |
+| `translate -off` | Disable translation assist |
+| `translate -setting --ja-en` / `--en-ja` | Save the translation pair for nav typing assist |
+| `aboutbmxt` | Open the BMXt welcome page in a new browser tab |
 | `notes` | Show release notes for the current extension version; `notes <version>` for a specific version (e.g. `0.1.1`); `notes --list` lists versions that have entries |

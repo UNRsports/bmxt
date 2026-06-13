@@ -1,8 +1,17 @@
 import { useEffect } from "react"
+import {
+  shouldHandleTabUpdated,
+  shouldRebuildRowsOnTabUpdated
+} from "./tab-picker-chrome-sync-filters"
+import {
+  applyTabPickerLiveFieldsFromChrome,
+  forgetTabPickerLiveFields
+} from "./tab-picker-live-tab-fields"
 
 /**
  * タブピッカー表示中に tabs / windows / tabGroups の変化を追従する。
- * `scheduleRefresh` はデバウンス済みの行再構築を呼ぶ（重複 refresh の競合を避ける）。
+ * タイトル・URL は row 再構築ではなく live fields ストアへ集約する。
+ * `scheduleRefresh` は構造変化時のみ（デバウンス済み行再構築）。
  */
 export function useTabPickerChromeSync(
   scheduleRefresh: () => void,
@@ -13,10 +22,24 @@ export function useTabPickerChromeSync(
       return
     }
 
+    const onTabUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (!shouldHandleTabUpdated(changeInfo)) {
+        return
+      }
+      applyTabPickerLiveFieldsFromChrome(tabId, changeInfo)
+      if (shouldRebuildRowsOnTabUpdated(changeInfo)) {
+        scheduleRefresh()
+      }
+    }
+
+    const onRemoved = (tabId: number) => {
+      forgetTabPickerLiveFields(tabId)
+      scheduleRefresh()
+    }
+
     chrome.tabs.onCreated.addListener(scheduleRefresh)
-    chrome.tabs.onRemoved.addListener(scheduleRefresh)
-    chrome.tabs.onUpdated.addListener(scheduleRefresh)
-    chrome.tabs.onActivated.addListener(scheduleRefresh)
+    chrome.tabs.onRemoved.addListener(onRemoved)
+    chrome.tabs.onUpdated.addListener(onTabUpdated)
     chrome.tabs.onMoved.addListener(scheduleRefresh)
     chrome.tabs.onAttached.addListener(scheduleRefresh)
     chrome.tabs.onDetached.addListener(scheduleRefresh)
@@ -24,7 +47,6 @@ export function useTabPickerChromeSync(
 
     chrome.windows.onCreated.addListener(scheduleRefresh)
     chrome.windows.onRemoved.addListener(scheduleRefresh)
-    chrome.windows.onFocusChanged.addListener(scheduleRefresh)
 
     chrome.tabGroups.onCreated.addListener(scheduleRefresh)
     chrome.tabGroups.onUpdated.addListener(scheduleRefresh)
@@ -33,9 +55,8 @@ export function useTabPickerChromeSync(
 
     return () => {
       chrome.tabs.onCreated.removeListener(scheduleRefresh)
-      chrome.tabs.onRemoved.removeListener(scheduleRefresh)
-      chrome.tabs.onUpdated.removeListener(scheduleRefresh)
-      chrome.tabs.onActivated.removeListener(scheduleRefresh)
+      chrome.tabs.onRemoved.removeListener(onRemoved)
+      chrome.tabs.onUpdated.removeListener(onTabUpdated)
       chrome.tabs.onMoved.removeListener(scheduleRefresh)
       chrome.tabs.onAttached.removeListener(scheduleRefresh)
       chrome.tabs.onDetached.removeListener(scheduleRefresh)
@@ -43,7 +64,6 @@ export function useTabPickerChromeSync(
 
       chrome.windows.onCreated.removeListener(scheduleRefresh)
       chrome.windows.onRemoved.removeListener(scheduleRefresh)
-      chrome.windows.onFocusChanged.removeListener(scheduleRefresh)
 
       chrome.tabGroups.onCreated.removeListener(scheduleRefresh)
       chrome.tabGroups.onUpdated.removeListener(scheduleRefresh)

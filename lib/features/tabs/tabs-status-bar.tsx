@@ -1,3 +1,4 @@
+import { tabsStatusHint, useUiLocale } from "../setting"
 import {
   settingTokenForPageActiveMode,
   type TabsPageActiveMode
@@ -8,12 +9,9 @@ type Props = {
 }
 
 export function TabsStatusBar({ pageActiveMode }: Props) {
+  const locale = useUiLocale()
   const modeToken = settingTokenForPageActiveMode(pageActiveMode)
   const stateLabel = pageActiveMode === "auto" ? "auto" : "manual"
-  const hint =
-    pageActiveMode === "auto"
-      ? "↑↓ でハイライト移動時にタブをアクティブ化（ウィンドウは背面） · Enter でジャンプ"
-      : "Alt+↑↓ でタブをアクティブ化 · Enter でジャンプ · tabs -setting -page-active で切替"
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
@@ -24,7 +22,13 @@ export function TabsStatusBar({ pageActiveMode }: Props) {
         {stateLabel}
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">page-active {modeToken}</span>
-      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">{hint}</span>
+      <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
+        {locale === "ja"
+          ? "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー"
+          : "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"}
+        {" · "}
+        {tabsStatusHint(locale, pageActiveMode)}
+      </span>
     </div>
   )
 }

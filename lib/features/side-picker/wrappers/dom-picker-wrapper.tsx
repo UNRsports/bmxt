@@ -7,6 +7,7 @@ import { DOM_LIST_PICKER_HEADLINE } from "../interaction/picker-headlines"
 export type DomPickerWrapperProps = {
   state: DomListPickerState
   onReturnToPrompt: () => void
+  onExitToDetailBar?: () => void
   onApprove: () => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
@@ -17,6 +18,7 @@ export type DomPickerWrapperProps = {
 export function DomPickerWrapper({
   state,
   onReturnToPrompt,
+  onExitToDetailBar,
   onApprove,
   keyboardActive = false,
   pickerInputRef,
@@ -42,6 +44,7 @@ export function DomPickerWrapper({
       headerLineCount={state.headerLineCount ?? state.lines.length}
       targetTabId={state.targetTabId}
       onReturnToPrompt={onReturnToPrompt}
+      onExitToDetailBar={onExitToDetailBar}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}

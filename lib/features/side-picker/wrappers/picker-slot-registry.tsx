@@ -6,11 +6,15 @@ import type { PaneFocusTarget } from "../panel/pane-focus-nav"
 import { PickerPanelHost } from "../panel/picker-panel-host"
 import type { PickerSlotId } from "../session/session-pickers"
 import type { TabPickerState } from "../session/tab-picker-state"
-import type { TabPickerInteractiveSnapshot } from "../session/tab-picker-state"
 import { DomPickerWrapper } from "./dom-picker-wrapper"
 import { TabsPickerWrapper } from "./tabs-picker-wrapper"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
+import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
+import type { SearchPageActiveMode } from "../../search/page-active-setting"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
+import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
+import type { SettingPickerRow } from "../../setting/setting-picker-rows"
+import { SettingPickerWrapper } from "../../setting/setting-picker-wrapper"
 
 export type SessionPickerColumnsProps = PickerColumnHostContext
 
@@ -23,20 +27,35 @@ export type PickerColumnHostContext = {
   tabPicker: TabPickerState | null
   searchListPicker: SearchListPickerState | null
   domListPicker: DomListPickerState | null
+  settingListPicker: SettingListPickerState | null
   tabsPickerKeyboardActive: boolean
   searchPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
+  settingPickerKeyboardActive: boolean
   tabPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   searchPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  settingPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  onSettingPickerStateChange: (next: SettingListPickerState) => void
+  onSettingPickerRowAction: (row: SettingPickerRow, index: number) => void | Promise<void>
+  onSettingPickerApplyEdit: (
+    field: "fg" | "bg-color" | "font" | "picker-fg" | "picker-bg-color" | "picker-font",
+    value: string
+  ) => void | Promise<void>
+  onSettingPickerEditInvalid: () => void | Promise<void>
   onAppendLog: (lines: string[]) => void | Promise<void>
   onRefreshTabPickerRows: () => Promise<void>
   scheduleRefreshTabPickerRows: () => void
-  onOpenSearchEntry: (entry: PickerEntry, matchIndex: number) => void
+  onOpenSearchEntry: (
+    entry: PickerEntry,
+    matchIndex: number,
+    destination?: SearchOpenDestinationRow
+  ) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
-  onTabPickerInteractiveChange?: (snapshot: TabPickerInteractiveSnapshot) => void
   tabsPageActiveMode?: TabsPageActiveMode
+  searchPageActiveMode?: SearchPageActiveMode
+  onExitToDetailBar: (slot: PickerSlotId) => void
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -49,17 +68,12 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         paneFocus={ctx.paneFocus}
         isFocusedPane={ctx.isFocusedPane}>
         <TabsPickerWrapper
-          rows={ctx.tabPicker.rows}
-          showUrl={ctx.tabPicker.showUrl}
-          initialHi={ctx.tabPicker.initialHi}
           pageActiveMode={ctx.tabsPageActiveMode}
-          variant={ctx.tabPicker.variant ?? "default"}
-          interactive={ctx.tabPicker.interactive}
-          onInteractiveSnapshotChange={ctx.onTabPickerInteractiveChange}
           onAppendLog={ctx.onAppendLog}
           onRefreshRows={ctx.onRefreshTabPickerRows}
           scheduleRefreshRows={ctx.scheduleRefreshTabPickerRows}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("tabs")}
           isHostPaneFocused={ctx.tabsPickerKeyboardActive}
           pickerInputRef={ctx.tabPickerInputRef}
           sessionId={ctx.sessionId}
@@ -76,10 +90,14 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         <SearchListPickerOverlay
           state={ctx.searchListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
-          onOpenEntry={(entry, matchIndex) => ctx.onOpenSearchEntry(entry, matchIndex)}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("search")}
+          onOpenEntry={(entry, matchIndex, destination) =>
+            ctx.onOpenSearchEntry(entry, matchIndex, destination)
+          }
           keyboardActive={ctx.searchPickerKeyboardActive}
           pickerInputRef={ctx.searchPickerInputRef}
           sessionId={ctx.sessionId}
+          pageActiveMode={ctx.searchPageActiveMode}
         />
       </PickerPanelHost>
     ) : null,
@@ -92,10 +110,31 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
         <DomPickerWrapper
           state={ctx.domListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("dom")}
           keyboardActive={ctx.domPickerKeyboardActive}
           pickerInputRef={ctx.domPickerInputRef}
           sessionId={ctx.sessionId}
           onApprove={ctx.onDomApprove}
+        />
+      </PickerPanelHost>
+    ) : null,
+  setting: (ctx) =>
+    ctx.settingListPicker ? (
+      <PickerPanelHost
+        focusTarget="setting"
+        paneFocus={ctx.paneFocus}
+        isFocusedPane={ctx.isFocusedPane}>
+        <SettingPickerWrapper
+          state={ctx.settingListPicker}
+          onStateChange={ctx.onSettingPickerStateChange}
+          onRowAction={ctx.onSettingPickerRowAction}
+          onApplyEdit={ctx.onSettingPickerApplyEdit}
+          onEditInvalid={ctx.onSettingPickerEditInvalid}
+          onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("setting")}
+          keyboardActive={ctx.settingPickerKeyboardActive}
+          pickerInputRef={ctx.settingPickerInputRef}
+          sessionId={ctx.sessionId}
         />
       </PickerPanelHost>
     ) : null
@@ -106,4 +145,4 @@ export function renderPickerSlot(slot: PickerSlotId, ctx: PickerColumnHostContex
   return PICKER_SLOT_RENDERERS[slot](ctx)
 }
 
-export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "search", "dom"]
+export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "search", "dom", "setting"]

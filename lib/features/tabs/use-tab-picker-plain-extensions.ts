@@ -3,6 +3,8 @@ import type { Dispatch, SetStateAction } from "react"
 import { useCallback, useMemo, useRef } from "react"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
+import { isPickerAltBlockedChord } from "../side-picker/preview/picker-alt-chord"
+import { pickerAltVerticalNavDirection } from "../side-picker/preview/picker-alt-vertical-nav"
 import {
   groupRowKey,
   isPhysicalArrowDown,
@@ -11,6 +13,7 @@ import {
   verticalNavDirection
 } from "./tab-picker-keyboard"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
+import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import type { ExecutionIntent } from "./controller/execute-actions"
 import {
@@ -109,7 +112,8 @@ export function useTabPickerPlainExtensions({
   backFromGroupRename,
   collapseAtRow,
   expandAtRow,
-  altKeyHeldRef
+  altKeyHeldRef,
+  onExitToDetailBar
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -169,7 +173,10 @@ export function useTabPickerPlainExtensions({
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
   altKeyHeldRef: MutableRefObject<boolean>
+  onExitToDetailBar?: () => void
 }): PlainPickerKeyboardExtensions {
+  useTabPickerLiveFieldsRevision()
+
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
   newTabUrlWindowIdRef.current = newTabUrlWindowId
@@ -207,19 +214,58 @@ export function useTabPickerPlainExtensions({
       if (!row) {
         return false
       }
-      const focusRowIdx = isLeft ? collapseAtRow(row) : expandAtRow(row)
-      if (focusRowIdx === null) {
+
+      if (row.kind === "tab") {
+        if ((isLeft || isRight) && onExitToDetailBar) {
+          pickerStopEvent(e)
+          onExitToDetailBar()
+          return true
+        }
         return false
       }
-      pickerStopEvent(e)
-      const newVisible = computeTabPickerVisibleRowIndices(rows)
-      const newHi = newVisible.indexOf(focusRowIdx)
-      if (newHi >= 0) {
-        setHi(newHi)
-      } else {
-        setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+
+      if (row.kind !== "window" && row.kind !== "group") {
+        return false
       }
-      return true
+
+      if (isLeft) {
+        const focusRowIdx = collapseAtRow(row)
+        if (focusRowIdx === null) {
+          if (onExitToDetailBar) {
+            pickerStopEvent(e)
+            onExitToDetailBar()
+            return true
+          }
+          return false
+        }
+        pickerStopEvent(e)
+        const newVisible = computeTabPickerVisibleRowIndices(rows)
+        const newHi = newVisible.indexOf(focusRowIdx)
+        if (newHi >= 0) {
+          setHi(newHi)
+        } else {
+          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+        }
+        return true
+      }
+
+      if (isRight) {
+        const focusRowIdx = expandAtRow(row)
+        if (focusRowIdx === null) {
+          return false
+        }
+        pickerStopEvent(e)
+        const newVisible = computeTabPickerVisibleRowIndices(rows)
+        const newHi = newVisible.indexOf(focusRowIdx)
+        if (newHi >= 0) {
+          setHi(newHi)
+        } else {
+          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+        }
+        return true
+      }
+
+      return false
     },
     [
       bulkSubMode,
@@ -230,6 +276,7 @@ export function useTabPickerPlainExtensions({
       groupNewPhase,
       hi,
       newTabUrlWindowId,
+      onExitToDetailBar,
       rows,
       searchMode,
       setHi,
@@ -281,20 +328,10 @@ export function useTabPickerPlainExtensions({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      const altOnlyChord = e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
-      if (e.altKey && !altOnlyChord) {
+      if (isPickerAltBlockedChord(e)) {
         return false
       }
-      if (isReservedSplitPaneVerticalNav(e)) {
-        return false
-      }
-      const navDir = verticalNavDirection(e)
-      if (altOnlyChord) {
-        if (navDir === null) {
-          return false
-        }
-        altKeyHeldRef.current = true
-      }
+      const navDir = pickerAltVerticalNavDirection(e, altKeyHeldRef)
       if (navDir === null) {
         return false
       }

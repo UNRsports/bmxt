@@ -1,0 +1,64 @@
+/** EN: UI display locale (not translation API pair). */
+
+export const UI_LOCALE_IDS = ["ja", "en"] as const
+
+export type UiLocale = (typeof UI_LOCALE_IDS)[number]
+
+export const UI_LOCALE_SETTING_TOKENS = ["--japanese", "--english"] as const
+
+export type UiLocaleSettingToken = (typeof UI_LOCALE_SETTING_TOKENS)[number]
+
+export const DEFAULT_UI_LOCALE: UiLocale = "ja"
+
+const LOCALE_BY_TOKEN = new Map<string, UiLocale>([
+  ["--japanese", "ja"],
+  ["--english", "en"]
+])
+
+const TOKEN_BY_LOCALE: Record<UiLocale, UiLocaleSettingToken> = {
+  ja: "--japanese",
+  en: "--english"
+}
+
+/** EN: Per-locale string table (welcome / release-notes JSON entries use this shape). */
+export type BilingualUiLabel = Partial<Record<UiLocale, string>> & {
+  readonly ja: string
+  readonly en: string
+}
+
+export function parseUiLocaleSettingToken(token: string): UiLocale | null {
+  const key = token.trim().toLowerCase()
+  return LOCALE_BY_TOKEN.get(key) ?? null
+}
+
+export function settingTokenForUiLocale(locale: UiLocale): UiLocaleSettingToken {
+  return TOKEN_BY_LOCALE[locale]
+}
+
+export function parseUiLocale(raw: unknown): UiLocale {
+  if (raw === "en") {
+    return "en"
+  }
+  return DEFAULT_UI_LOCALE
+}
+
+export function pickUiLabel(label: BilingualUiLabel, locale: UiLocale): string {
+  return label[locale] ?? label[DEFAULT_UI_LOCALE] ?? label.en ?? label.ja
+}
+
+export type BilingualLines = {
+  readonly ja: readonly string[]
+  readonly en: readonly string[]
+}
+
+export function pickUiLines(lines: BilingualLines, locale: UiLocale): readonly string[] {
+  return lines[locale] ?? lines[DEFAULT_UI_LOCALE] ?? lines.en ?? lines.ja
+}
+
+export function uiBulletPrefix(locale: UiLocale): string {
+  return locale === "en" ? "· " : "・"
+}
+
+export function listUiLocaleSettingTokens(): readonly UiLocaleSettingToken[] {
+  return UI_LOCALE_SETTING_TOKENS
+}

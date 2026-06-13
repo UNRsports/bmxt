@@ -1,3 +1,4 @@
+import { translateStatusHint, translateStatusMeta, useUiLocale } from "../setting"
 import { getTranslationPairDef, type TranslationPairId } from "./translation-pair"
 
 type Props = {
@@ -8,15 +9,6 @@ type Props = {
   statusNote?: string | null
 }
 
-function navCommitHint(pairId: TranslationPairId, multiline: boolean): string {
-  const commitHint =
-    getTranslationPairDef(pairId).commitLanguage === "en"
-      ? "Alt 長押しで英訳を送信"
-      : "Alt 長押しで和訳を送信"
-  const base = `nav typing · 入力停止500msで 訳 · ${commitHint}`
-  return multiline ? `${base} · Shift+Enter で改行` : base
-}
-
 export function TranslateStatusBar({
   pairId,
   navTypingAssist,
@@ -24,20 +16,10 @@ export function TranslateStatusBar({
   busy = false,
   statusNote = null
 }: Props) {
+  const locale = useUiLocale()
   const pairLabel = getTranslationPairDef(pairId).statusLabel
-
-  const meta =
-    statusNote !== null && statusNote.length > 0
-      ? statusNote
-      : busy
-        ? "translating…"
-        : navTypingAssist
-          ? "nav typing assist"
-          : "assist ON"
-
-  const hint = navTypingAssist
-    ? navCommitHint(pairId, navTypingMultiline)
-    : `translate -off to disable · ${pairLabel} · nav typing で訳 · 入力停止500msで 訳`
+  const meta = translateStatusMeta(locale, busy, navTypingAssist, statusNote)
+  const hint = translateStatusHint(locale, pairId, navTypingAssist, navTypingMultiline)
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">

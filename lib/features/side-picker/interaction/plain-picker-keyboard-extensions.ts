@@ -1,7 +1,10 @@
+import type { PickerExitToDetailBarOptions } from "./picker-list-kernel"
+
 /** EN: Optional hooks for tabs bulk/edit atop plain picker keyboard. */
 /** JA: プレーン picker keyboard 上に載せる tabs 固有拡張。 */
 
 export type PlainPickerKeyboardExtensions = {
+  exitToDetailBar?: PickerExitToDetailBarOptions
   /** EN: When true, skip default j/k (bulk move/group nav handles arrows). */
   customVerticalNav?: (e: KeyboardEvent) => boolean
   isSearchJumpEnabled?: () => boolean

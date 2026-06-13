@@ -1,5 +1,7 @@
 /** 第一コマンドのみ確定後に出す第二コマンド候補（IME 風リスト）。 */
 
+import { useUiCopy } from "../setting"
+
 export type SubCommandPickerModel = {
   /** 例: `tabs ` / `split `（末尾スペース付き continuation） */
   continuation: string
@@ -12,14 +14,13 @@ type Props = {
 }
 
 export function SecondCommandPickerPanel({ model }: Props) {
+  const uiCopy = useUiCopy()
   return (
     <div
       className="bmxt-subcmd-picker"
       role="listbox"
-      aria-label="Second command / 第二コマンド">
-      <div className="bmxt-subcmd-picker-hint">
-        Second command · ↑↓ / Tab · Enter · Esc — 第二コマンド
-      </div>
+      aria-label={uiCopy.t("secondCommandPicker.aria")}>
+      <div className="bmxt-subcmd-picker-hint">{uiCopy.t("secondCommandPicker.hint")}</div>
       {model.candidates.map((c, i) => (
         <div
           key={c}

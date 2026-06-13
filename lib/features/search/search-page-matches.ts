@@ -1,26 +1,50 @@
 import type { SearchPageMatch } from "../side-picker/model/picker-entry"
+import { findRawNeedleInHaystack, innerTextLinesFromBodyText } from "../page-dom/needle-occurrence"
 import { matchesNeedle } from "./matcher"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 
 const DEFAULT_MAX_HITS = 32
 const BODY_SNIPPET_CONTEXT = 96
+const LINE_HIT_SNIPPET_CONTEXT = 48
+
+function snippetForLineNeedleHit(line: string, needle: string, from: number): string {
+  const hit = findRawNeedleInHaystack(line, needle, from)
+  if (!hit) {
+    const trimmed = line.trim().slice(0, 500)
+    return trimmed + (line.length > 500 ? "…" : "")
+  }
+  const start = Math.max(0, hit.index - LINE_HIT_SNIPPET_CONTEXT)
+  const end = Math.min(line.length, hit.index + hit.length + LINE_HIT_SNIPPET_CONTEXT)
+  let excerpt = line.slice(start, end).trim()
+  if (start > 0) {
+    excerpt = `…${excerpt}`
+  }
+  if (end < line.length) {
+    excerpt = `${excerpt}…`
+  }
+  return excerpt.slice(0, 500)
+}
 
 function pushLineMatch(
   matches: SearchPageMatch[],
   occurrence: Map<string, number>,
   lineNo: number,
-  rawLine: string
+  snippet: string,
+  globalOccurrence: number
 ): void {
-  const trimmed = rawLine.trim().slice(0, 500)
+  const trimmed = snippet.trim()
   if (!trimmed) {
     return
   }
-  const suffix = rawLine.length > 500 ? "…" : ""
-  const snippet = `${trimmed}${suffix}`
-  const key = snippet.toLowerCase()
+  const key = trimmed.toLowerCase()
   const occ = occurrence.get(key) ?? 0
   occurrence.set(key, occ + 1)
-  matches.push({ lineNo, snippet, occurrence: occ })
+  matches.push({
+    lineNo,
+    snippet: trimmed,
+    occurrence: occ,
+    globalOccurrence
+  })
 }
 
 /**
@@ -40,22 +64,40 @@ export function collectPageMatchesForTab(
 
   const matches: SearchPageMatch[] = []
   const occurrence = new Map<string, number>()
+  let nextGlobalOccurrence = 0
+
+  const bodyLines = text !== null ? innerTextLinesFromBodyText(text) : []
 
   if (title.trim().length > 0 && matchesNeedle(title, needle)) {
-    pushLineMatch(matches, occurrence, 0, title)
+    pushLineMatch(matches, occurrence, 0, title, nextGlobalOccurrence)
+    nextGlobalOccurrence += 1
   }
 
   if (text !== null && matchesNeedle(text, needle)) {
-    const lines = text.split(/\r?\n/)
     let lineNo = 0
-    for (const line of lines) {
+    for (const line of bodyLines) {
       lineNo += 1
       if (!matchesNeedle(line, needle)) {
         continue
       }
-      pushLineMatch(matches, occurrence, lineNo, line)
-      if (matches.length >= maxHits) {
-        return matches
+      let from = 0
+      let hitOnLine = 0
+      while (from < line.length) {
+        const hit = findRawNeedleInHaystack(line, needle, from)
+        if (!hit) {
+          break
+        }
+        const snippet =
+          hitOnLine === 0 && !line.includes("\n")
+            ? `${line.trim().slice(0, 500)}${line.length > 500 ? "…" : ""}`
+            : snippetForLineNeedleHit(line, needle, from)
+        pushLineMatch(matches, occurrence, lineNo, snippet, nextGlobalOccurrence)
+        nextGlobalOccurrence += 1
+        hitOnLine += 1
+        from = hit.index + Math.max(1, hit.length)
+        if (matches.length >= maxHits) {
+          return matches
+        }
       }
     }
 
@@ -63,7 +105,7 @@ export function collectPageMatchesForTab(
     if (bodyLineCount === 0) {
       const snippet = excerptAroundNeedle(text, needle, BODY_SNIPPET_CONTEXT)
       if (snippet.trim().length > 0) {
-        pushLineMatch(matches, occurrence, 1, snippet)
+        pushLineMatch(matches, occurrence, 1, snippet, nextGlobalOccurrence)
       }
     }
   }

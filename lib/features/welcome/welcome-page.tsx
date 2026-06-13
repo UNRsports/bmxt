@@ -10,6 +10,7 @@ import {
 } from "./welcome-image-paths"
 import { resolveWelcomeDisplayVersion } from "./welcome-version-resolve"
 import { CSP_DYNAMIC_SCOPE_ATTR, useCspDynamicStyle } from "../bmxt-window/csp-dynamic-stylesheet"
+import { pickUiLines, useUiCopy } from "../setting"
 import { useId } from "react"
 
 function listAdditionalImagePaths(
@@ -25,6 +26,7 @@ function listAdditionalImagePaths(
 }
 
 export function WelcomePage() {
+  const uiCopy = useUiCopy()
   const manifestVersion = chrome.runtime.getManifest().version
   const params =
     typeof location !== "undefined"
@@ -46,20 +48,17 @@ export function WelcomePage() {
     heroMaxWidth ? { maxWidth: heroMaxWidth } : null
   )
   const additionalImagePaths = listAdditionalImagePaths(entry)
+  const noteLines = pickUiLines(entry, uiCopy.locale)
 
   return (
     <main className="bmxt-welcome">
       <div className="bmxt-welcome__card">
-        <h1 className="bmxt-welcome__title">Welcome to BMXt</h1>
+        <h1 className="bmxt-welcome__title">{uiCopy.t("welcome.pageTitle")}</h1>
         {fromUrlQuery ? (
-          <>
-            <p className="bmxt-welcome__subtitle">
-              Preview: welcome content for <code>?version={version}</code> (URL query).
-            </p>
-            <p className="bmxt-welcome__subtitle">
-              プレビュー: URL の <code>?version={version}</code> で指定した版のウェルカム内容を表示しています。
-            </p>
-          </>
+          <p className="bmxt-welcome__subtitle">
+            {uiCopy.t("welcome.previewSubtitle")} <code>?version={version}</code>{" "}
+            {uiCopy.t("welcome.previewSuffix")}
+          </p>
         ) : null}
 
         <section className="bmxt-welcome__section">
@@ -90,16 +89,9 @@ export function WelcomePage() {
             </div>
           ) : null}
           <div className="bmxt-welcome__notes">
-            <h3 className="bmxt-welcome__lang">[en]</h3>
             <ul>
-              {entry.en.map((line, i) => (
-                <li key={`en-${i}`}>{line}</li>
-              ))}
-            </ul>
-            <h3 className="bmxt-welcome__lang">[ja]</h3>
-            <ul>
-              {entry.ja.map((line, i) => (
-                <li key={`ja-${i}`}>{line}</li>
+              {noteLines.map((line, i) => (
+                <li key={`${uiCopy.locale}-${i}`}>{line}</li>
               ))}
             </ul>
           </div>

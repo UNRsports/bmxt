@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from "react"
 import type { MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
+import { consumePickerSelfTabActivation as consumeTabPickerSelfActivation } from "../side-picker/preview/picker-self-tab-activation"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys"
 
@@ -38,6 +39,7 @@ export function useMirrorBrowserActiveTab({
   anchorTabIdRef,
   expandForTabId,
   mirrorHiPendingRef,
+  altKeyHeldRef,
   onRefreshRows,
   scheduleRefreshRows
 }: {
@@ -54,6 +56,8 @@ export function useMirrorBrowserActiveTab({
   expandForTabId: (tabId: number) => boolean
   /** EN: True while browser-side active tab changed but hi has not caught up yet. */
   mirrorHiPendingRef: MutableRefObject<boolean>
+  /** EN: Alt-held picker preview — do not move hi toward Chrome activation. */
+  altKeyHeldRef?: MutableRefObject<boolean>
   onRefreshRows?: () => Promise<void>
   /** EN: Debounced row rebuild for browser event mirroring (avoids refresh races). */
   scheduleRefreshRows?: () => void
@@ -68,6 +72,10 @@ export function useMirrorBrowserActiveTab({
   useLayoutEffect(() => {
     handlerRef.current = async (tabId: number, windowId: number, reason: Reason) => {
       if (!enabled) {
+        return
+      }
+
+      if (reason === "activated" && consumeTabPickerSelfActivation(tabId)) {
         return
       }
 
@@ -125,11 +133,13 @@ export function useMirrorBrowserActiveTab({
         scheduleRefreshRows?.()
         return
       }
+      if (altKeyHeldRef?.current) {
+        return
+      }
       mirrorHiPendingRef.current = false
       setHi(vHi)
       setMoveDestHi(vHi)
       anchorTabIdRef.current = tabId
-      scheduleRefreshRows?.()
     }
   }, [
     enabled,
@@ -144,6 +154,7 @@ export function useMirrorBrowserActiveTab({
     anchorTabIdRef,
     expandForTabId,
     mirrorHiPendingRef,
+    altKeyHeldRef,
     onRefreshRows,
     scheduleRefreshRows
   ])
@@ -174,6 +185,9 @@ export function useMirrorBrowserActiveTab({
       mirrorHiPendingRef.current = true
       return
     }
+    if (altKeyHeldRef?.current) {
+      return
+    }
     mirrorHiPendingRef.current = false
     setHi(vHi)
     setMoveDestHi(vHi)
@@ -188,11 +202,15 @@ export function useMirrorBrowserActiveTab({
     setActiveTabId,
     anchorTabIdRef,
     expandForTabId,
-    mirrorHiPendingRef
+    mirrorHiPendingRef,
+    altKeyHeldRef
   ])
 
   useEffect(() => {
     if (!enabled || blocked || !mirrorHiPendingRef.current) {
+      return
+    }
+    if (altKeyHeldRef?.current) {
       return
     }
     const tabId = pendingTabIdRef.current ?? lastMirroredTabIdRef.current
@@ -222,7 +240,8 @@ export function useMirrorBrowserActiveTab({
     setMoveDestHi,
     expandForTabId,
     anchorTabIdRef,
-    mirrorHiPendingRef
+    mirrorHiPendingRef,
+    altKeyHeldRef
   ])
 
   useEffect(() => {

@@ -1,4 +1,8 @@
 import type { PickerEntry, PickerSource, SearchPageMatch } from "../side-picker/model/picker-entry"
+import {
+  assignGlobalOccurrencesToPageMatches,
+  innerTextLinesFromBodyText
+} from "../page-dom/needle-occurrence"
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
 import { isHttpUrl } from "../url/is-http-url"
 import { MAX_PAGE_TEXT_CHARS } from "./limits"
@@ -21,6 +25,25 @@ function assignSnippetOccurrences(matches: SearchPageMatch[]): SearchPageMatch[]
     counts.set(key, occurrence + 1)
     return { ...m, occurrence }
   })
+}
+
+async function refreshPageMatchGlobalsFromTab(
+  entry: PickerEntry,
+  tabId: number,
+  needle: string
+): Promise<SearchPageMatch[] | undefined> {
+  const matches = entry.pageMatches
+  if (!matches || matches.length === 0) {
+    return undefined
+  }
+  const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
+  if (text === null) {
+    return matches
+  }
+  const bodyLines = innerTextLinesFromBodyText(text)
+  return assignSnippetOccurrences(
+    assignGlobalOccurrencesToPageMatches(matches, bodyLines, needle)
+  )
 }
 
 /**
@@ -63,7 +86,13 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
 
     const hasBodyHits = (entry.pageMatches ?? []).some((m) => m.lineNo > 0)
     if (hasBodyHits) {
-      out.push(entry)
+      const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab.id, needle)
+      out.push({
+        ...entry,
+        tabId: entry.tabId ?? tab.id,
+        windowId: entry.windowId ?? tab.windowId,
+        pageMatches: pageMatches ?? entry.pageMatches
+      })
       continue
     }
 

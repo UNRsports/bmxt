@@ -1,4 +1,5 @@
 import type { DomListCapture } from "../dom/dom-list-capture"
+import type { UiLocale } from "../setting/locale"
 
 /** `applyChromeEffects` が Chrome 操作のために使うコールバック。 */
 
@@ -24,4 +25,6 @@ export type DispatchChromeContext = {
   shouldCancelSearchPage?: () => boolean
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
+  /** EN: UI display locale from settings picker / storage (defaults to Japanese). */
+  uiLocale?: UiLocale
 }

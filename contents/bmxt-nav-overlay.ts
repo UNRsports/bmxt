@@ -8,8 +8,14 @@ import {
   bmxtExtractPageInnerTextInPage,
   isPageExtractRequest
 } from "../lib/features/page-extract/page-extract-message"
+import { bmxtFindPageScrollToSnippetInjected } from "../lib/features/page-dom/injected-find-page-scroll-to-snippet"
 import { bmxtScrollToSearchNeedleInjected } from "../lib/features/page-dom/injected-scroll-to-search-needle"
-import { isPageScrollNeedleRequest } from "../lib/features/page-dom/page-scroll-needle-message"
+import { bmxtClearSearchNeedleHighlightInjected } from "../lib/features/page-dom/injected-clear-search-needle"
+import {
+  isPageClearNeedleRequest,
+  isPageScrollNeedleRequest
+} from "../lib/features/page-dom/page-scroll-needle-message"
+import { isPageScrollSnippetRequest } from "../lib/features/page-dom/page-scroll-snippet-message"
 import {
   bmxtNavControlInjected,
   NAV_OVERLAY_CHANNEL,
@@ -28,8 +34,32 @@ chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
     return true
   }
   if (isPageScrollNeedleRequest(raw)) {
+    const colors = raw.highlightColors
+    const hitBg = colors?.hitBg ?? "#ffc9dd"
+    const jumpBg = colors?.jumpBg ?? "#ffdb4d"
+    const fg = colors?.fg ?? "#0d1117"
     sendResponse(
-      bmxtScrollToSearchNeedleInjected(raw.searchNeedle, raw.lineNo, raw.snippetHint)
+      bmxtScrollToSearchNeedleInjected(
+        raw.searchNeedle,
+        raw.lineNo,
+        raw.snippetHint,
+        raw.persistMs ?? 0,
+        raw.globalOccurrence ?? -1,
+        hitBg,
+        jumpBg,
+        fg,
+        raw.activeOnly ?? false
+      )
+    )
+    return true
+  }
+  if (isPageClearNeedleRequest(raw)) {
+    sendResponse(bmxtClearSearchNeedleHighlightInjected())
+    return true
+  }
+  if (isPageScrollSnippetRequest(raw)) {
+    sendResponse(
+      bmxtFindPageScrollToSnippetInjected(raw.snippet, raw.occurrence, 8000)
     )
     return true
   }

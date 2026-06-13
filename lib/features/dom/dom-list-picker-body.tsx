@@ -33,6 +33,7 @@ export type DomListPickerBodyProps = {
   headerLineCount: number
   targetTabId?: number
   onReturnToPrompt: () => void
+  onExitToDetailBar?: () => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
@@ -123,6 +124,7 @@ export function DomListPickerBody({
   headerLineCount,
   targetTabId,
   onReturnToPrompt,
+  onExitToDetailBar,
   keyboardActive = false,
   pickerInputRef,
   sessionId
@@ -229,9 +231,16 @@ export function DomListPickerBody({
 
   const extensions = useMemo(
     () => ({
-      customVerticalNav: domVerticalNav
+      customVerticalNav: domVerticalNav,
+      exitToDetailBar:
+        onExitToDetailBar && !searchMode && !commandMode
+          ? {
+              canExit: () => !searchMode && !commandMode,
+              onExit: onExitToDetailBar
+            }
+          : undefined
     }),
-    [domVerticalNav]
+    [commandMode, domVerticalNav, onExitToDetailBar, searchMode]
   )
 
   const { onInputKeyDown } = usePlainPickerKeyboard({

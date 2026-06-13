@@ -39,3 +39,9 @@ export {
 } from "./page-active-setting"
 export { parseTabsSettingCommandLine, type TabsSettingCommandParse } from "./parse-tabs-setting-command"
 export { TabsStatusBar } from "./tabs-status-bar"
+export {
+  closeTabPickerEngineForSession,
+  openTabPickerEngineForSession,
+  reconcileTabPickerEngines,
+  type TabPickerEngineState
+} from "./engine"

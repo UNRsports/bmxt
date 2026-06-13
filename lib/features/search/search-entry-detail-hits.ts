@@ -40,10 +40,14 @@ export function listSearchEntryDetailHits(
   const needle = pattern.trim()
   const matches = entry.pageMatches ?? []
   const hits: SearchEntryDetailHit[] = []
+  const bodyMatchCount = matches.filter((m) => m.lineNo > 0).length
 
   if (matches.length > 0) {
     for (let i = 0; i < matches.length; i++) {
       const m = matches[i]!
+      if (bodyMatchCount > 0 && m.lineNo <= 0) {
+        continue
+      }
       if (m.lineNo > 0) {
         const excerpt = excerptAroundNeedle(m.snippet, needle)
         hits.push({

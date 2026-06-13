@@ -9,6 +9,10 @@
   },
   "commandLaunchBmxt": {
     "message": "Open or focus BMXt",
-    "description": "Label for the global keyboard shortcut that opens BMXt."
+    "description": "Label for the global keyboard shortcut that opens BMXt or focuses an existing window."
+  },
+  "commandResetBmxt": {
+    "message": "Reset the BMXt terminal",
+    "description": "Label for the global keyboard shortcut that resets BMXt to a fresh state and opens or focuses the window."
   }
 }

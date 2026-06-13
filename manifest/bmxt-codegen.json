@@ -162,6 +162,23 @@
           "tail": "none"
         }
       ]
+    },
+    {
+      "module": "setting",
+      "canonicalName": "setting",
+      "aliases": [],
+      "usagePrimary": "setting -list | setting -exit -list",
+      "subcommands": [
+        {
+          "head": "-list",
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": ["-list"],
+          "tail": "none"
+        }
+      ]
     }
   ],
   "effects": [

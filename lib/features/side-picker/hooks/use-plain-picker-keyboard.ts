@@ -123,8 +123,8 @@ export function usePlainPickerKeyboard({
       if (searchMode || commandMode) {
         return false
       }
-      if (extensions?.customVerticalNav) {
-        return extensions.customVerticalNav(e)
+      if (extensions?.customVerticalNav?.(e)) {
+        return true
       }
       return runDefaultVerticalNav(e)
     },
@@ -271,7 +271,7 @@ export function usePlainPickerKeyboard({
       }
       if (
         runPickerWindowCaptureChain(ev, sessionId ?? "", {
-          paneStrip: Boolean(sessionId),
+          exitToDetailBar: extensions?.exitToDetailBar,
           verticalNav: runPickerVerticalNav,
           searchJump: searchJumpOptions,
           searchEnter: searchEnterOptions,

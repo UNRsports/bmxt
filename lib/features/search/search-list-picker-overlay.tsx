@@ -7,6 +7,7 @@ import {
   type MutableRefObject
 } from "react"
 import {
+  SEARCH_LIST_PICKER_DESTINATION_HEADLINE,
   SEARCH_LIST_PICKER_DETAIL_HEADLINE,
   SEARCH_LIST_PICKER_HEADLINE,
   SEARCH_LIST_PICKER_LOADING_HEADLINE
@@ -14,24 +15,42 @@ import {
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {
-  searchPickerMatchDetail,
+  searchEntryOffersOpenDestination,
+  searchPickerSourceLabel,
   type PickerEntry
 } from "../side-picker/model/picker-entry"
+import { searchPickerActiveMatchDetail } from "./search-picker-page-match"
+import { resolveSearchArrowRightTarget } from "./search-arrow-right-target"
 import { listSearchEntryDetailHits } from "./search-entry-detail-hits"
+import { searchEntryHasOpenTab } from "./search-entry-open-tab"
+import { clearSearchPickerPageHighlightsForEntry } from "./preview-search-picker-entry"
 import { pageMatchesForDisplay } from "./search-picker-page-match"
 import {
   SearchListPickerBody,
   type SearchListPickerView
 } from "./search-list-picker-body"
 import type { SearchListPickerState } from "./search-list-picker-input"
+import type { SearchPageActiveMode } from "./page-active-setting"
+import {
+  buildSearchOpenDestinationRows,
+  type SearchOpenDestinationRow
+} from "./search-open-destination"
+
+type DestinationReturnView = "results" | "detail"
 
 type Props = {
   state: SearchListPickerState
   onReturnToPrompt: () => void
-  onOpenEntry: (entry: PickerEntry, matchIndex: number) => void
+  onExitToDetailBar?: () => void
+  onOpenEntry: (
+    entry: PickerEntry,
+    matchIndex: number,
+    destination?: SearchOpenDestinationRow
+  ) => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
+  pageActiveMode?: SearchPageActiveMode
 }
 
 function isHorizontalNavKey(e: KeyboardEvent): boolean {
@@ -48,29 +67,55 @@ function isHorizontalNavKey(e: KeyboardEvent): boolean {
 
 export function SearchListPickerOverlay({
   onReturnToPrompt,
+  onExitToDetailBar,
   state,
   onOpenEntry,
   keyboardActive = false,
   pickerInputRef,
-  sessionId
+  sessionId,
+  pageActiveMode = "auto"
 }: Props) {
   const { phase, progressLines, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
   const [pickerView, setPickerView] = useState<SearchListPickerView>("results")
   const [detailEntryIndex, setDetailEntryIndex] = useState(0)
+  const [destinationEntryIndex, setDestinationEntryIndex] = useState(0)
+  const [destinationReturnView, setDestinationReturnView] =
+    useState<DestinationReturnView>("results")
   const [resultsHi, setResultsHi] = useState(0)
   const [matchHi, setMatchHi] = useState(0)
+  const [destinationEntry, setDestinationEntry] = useState<PickerEntry | undefined>(undefined)
+  const [destinationMatchIndex, setDestinationMatchIndex] = useState(0)
+  const [destinationRows, setDestinationRows] = useState<SearchOpenDestinationRow[]>([])
+  const subviewHiRef = useRef(0)
+  const arrowRightBusyRef = useRef(false)
   const matchHiRef = useRef(matchHi)
   matchHiRef.current = matchHi
   const pickerViewRef = useRef(pickerView)
   pickerViewRef.current = pickerView
   const resultsHiRef = useRef(resultsHi)
   resultsHiRef.current = resultsHi
+  const detailEntryIndexRef = useRef(detailEntryIndex)
+  detailEntryIndexRef.current = detailEntryIndex
+  const destinationReturnViewRef = useRef(destinationReturnView)
+  destinationReturnViewRef.current = destinationReturnView
+  const destinationEntryRef = useRef(destinationEntry)
+  destinationEntryRef.current = destinationEntry
+  const destinationMatchIndexRef = useRef(destinationMatchIndex)
+  destinationMatchIndexRef.current = destinationMatchIndex
+  const entriesRef = useRef(entries)
+  entriesRef.current = entries
+  const patternRef = useRef(pattern)
+  patternRef.current = pattern
 
   useEffect(() => {
     setPickerView("results")
     setDetailEntryIndex(0)
+    setDestinationEntryIndex(0)
+    setDestinationReturnView("results")
     setResultsHi(0)
+    setDestinationEntry(undefined)
+    setDestinationRows([])
   }, [entries, phase])
 
   const onHiChange = useCallback((nextHi: number) => {
@@ -86,6 +131,15 @@ export function SearchListPickerOverlay({
     return listSearchEntryDetailHits(detailEntry, pattern)
   }, [detailEntry, pattern])
 
+  useEffect(() => {
+    if (pickerView !== "detail" || !detailEntry) {
+      return
+    }
+    return () => {
+      void clearSearchPickerPageHighlightsForEntry(detailEntry)
+    }
+  }, [detailEntry, pickerView])
+
   const statusLines = useMemo(() => {
     if (loading) {
       return progressLines.length > 0 ? progressLines : ["search — starting…"]
@@ -99,9 +153,86 @@ export function SearchListPickerOverlay({
     return ["(no matches)"]
   }, [loading, progressLines, entries.length, emptyResultLines])
 
+  const enterDestinationForEntry = useCallback(
+    async (
+      entry: PickerEntry,
+      matchIndex: number,
+      resultsIndex: number,
+      returnView: DestinationReturnView
+    ) => {
+      if (returnView === "detail") {
+        void clearSearchPickerPageHighlightsForEntry(entry)
+      }
+      const rows = await buildSearchOpenDestinationRows()
+      setDestinationEntryIndex(resultsIndex)
+      setDestinationReturnView(returnView)
+      setDestinationEntry(entry)
+      setDestinationMatchIndex(matchIndex)
+      setDestinationRows(rows)
+      setPickerView("destination")
+    },
+    []
+  )
+
+  const handleArrowRight = useCallback(
+    async (fromDetailView: boolean) => {
+      if (arrowRightBusyRef.current) {
+        return
+      }
+      arrowRightBusyRef.current = true
+      try {
+        const resultsIndex = fromDetailView
+          ? detailEntryIndexRef.current
+          : resultsHiRef.current
+        const entry = entriesRef.current[resultsIndex]
+        if (!entry) {
+          return
+        }
+
+        const needle = patternRef.current
+        const tabOpen = await searchEntryHasOpenTab(entry)
+        const hits = listSearchEntryDetailHits(entry, needle)
+        const target = resolveSearchArrowRightTarget({
+          tabOpen,
+          offersDestination: searchEntryOffersOpenDestination(entry),
+          hasDetailHits: hits.length > 0,
+          fromDetailView
+        })
+
+        if (target === "destination") {
+          const hit = hits[subviewHiRef.current]
+          const matchIndex = fromDetailView
+            ? (hit?.pageMatchIndex ?? matchHiRef.current)
+            : matchHiRef.current
+          await enterDestinationForEntry(
+            entry,
+            matchIndex,
+            resultsIndex,
+            fromDetailView ? "detail" : "results"
+          )
+          return
+        }
+
+        if (target === "detail") {
+          setDetailEntryIndex(resultsIndex)
+          setPickerView("detail")
+          return
+        }
+      } finally {
+        arrowRightBusyRef.current = false
+      }
+    },
+    [enterDestinationForEntry]
+  )
+
   const headline = useMemo(() => {
     if (loading) {
       return SEARCH_LIST_PICKER_LOADING_HEADLINE
+    }
+    if (pickerView === "destination" && destinationEntry) {
+      const title = destinationEntry.title.trim() || destinationEntry.url
+      const clipped = title.length > 72 ? `${title.slice(0, 71)}…` : title
+      return `${SEARCH_LIST_PICKER_DESTINATION_HEADLINE} · ${clipped}`
     }
     if (pickerView === "detail" && detailEntry) {
       const title = detailEntry.title.trim() || detailEntry.url
@@ -109,13 +240,13 @@ export function SearchListPickerOverlay({
       return `${SEARCH_LIST_PICKER_DETAIL_HEADLINE} · ${clipped}`
     }
     const entry = entries[resultsHi]
-    const detail = entry ? searchPickerMatchDetail(entry, matchHi) : ""
+    const detail = entry ? searchPickerActiveMatchDetail(entry, matchHi) : ""
     if (!detail) {
       return SEARCH_LIST_PICKER_HEADLINE
     }
     const clipped = detail.length > 88 ? `${detail.slice(0, 87)}…` : detail
     return `${SEARCH_LIST_PICKER_HEADLINE} · ${clipped}`
-  }, [loading, entries, resultsHi, matchHi, pickerView, detailEntry])
+  }, [loading, entries, resultsHi, matchHi, pickerView, detailEntry, destinationEntry])
 
   const onConfirmLineIndex = useCallback(
     (index: number) => {
@@ -145,31 +276,50 @@ export function SearchListPickerOverlay({
     [detailEntry, detailHits, loading, onOpenEntry]
   )
 
-  const enterDetailForHi = useCallback(
+  const onConfirmDestination = useCallback(
     (index: number) => {
-      const entry = entries[index]
-      if (!entry) {
-        return false
+      const entry = destinationEntryRef.current
+      const dest = destinationRows[index]
+      if (!entry || !dest) {
+        return
       }
-      const hits = listSearchEntryDetailHits(entry, pattern)
-      if (hits.length === 0) {
-        return false
-      }
-      setDetailEntryIndex(index)
-      setPickerView("detail")
-      return true
+      onOpenEntry(entry, destinationMatchIndexRef.current, dest)
+      setPickerView("results")
+      setDestinationReturnView("results")
+      setDestinationEntry(undefined)
+      setDestinationRows([])
     },
-    [entries, pattern]
+    [destinationRows, onOpenEntry]
   )
 
   const exitDetailView = useCallback(() => {
+    const entry = entries[detailEntryIndex]
+    if (entry) {
+      void clearSearchPickerPageHighlightsForEntry(entry)
+    }
     setResultsHi(detailEntryIndex)
     setPickerView("results")
-  }, [detailEntryIndex])
+  }, [detailEntryIndex, entries])
+
+  const exitDestinationView = useCallback(() => {
+    setResultsHi(destinationEntryIndex)
+    if (destinationReturnViewRef.current === "detail") {
+      setPickerView("detail")
+    } else {
+      setPickerView("results")
+    }
+    setDestinationReturnView("results")
+    setDestinationEntry(undefined)
+    setDestinationRows([])
+  }, [destinationEntryIndex])
 
   const extensions = useMemo((): PlainPickerKeyboardExtensions => {
     return {
       onEsc: () => {
+        if (pickerViewRef.current === "destination") {
+          exitDestinationView()
+          return true
+        }
         if (pickerViewRef.current === "detail") {
           exitDetailView()
           return true
@@ -181,7 +331,7 @@ export function SearchListPickerOverlay({
           if (loading) {
             return false
           }
-          if (pickerViewRef.current === "detail") {
+          if (pickerViewRef.current === "detail" || pickerViewRef.current === "destination") {
             return false
           }
           const entry = entries[resultsHiRef.current]
@@ -204,29 +354,42 @@ export function SearchListPickerOverlay({
         }
 
         if (e.key === "ArrowRight" || e.code === "ArrowRight") {
-          if (pickerViewRef.current === "detail") {
-            return false
-          }
-          if (enterDetailForHi(resultsHiRef.current)) {
+          if (pickerViewRef.current === "results") {
             pickerStopEvent(e)
+            void handleArrowRight(false)
+            return true
+          }
+          if (pickerViewRef.current === "detail") {
+            pickerStopEvent(e)
+            void handleArrowRight(true)
             return true
           }
           return false
         }
 
         if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
-          if (pickerViewRef.current !== "detail") {
-            return false
+          if (pickerViewRef.current === "destination") {
+            exitDestinationView()
+            pickerStopEvent(e)
+            return true
           }
-          exitDetailView()
-          pickerStopEvent(e)
-          return true
+          if (pickerViewRef.current === "detail") {
+            exitDetailView()
+            pickerStopEvent(e)
+            return true
+          }
+          if (onExitToDetailBar) {
+            onExitToDetailBar()
+            pickerStopEvent(e)
+            return true
+          }
+          return false
         }
 
         return false
       }
     }
-  }, [enterDetailForHi, entries, exitDetailView, loading])
+  }, [entries, exitDestinationView, exitDetailView, handleArrowRight, loading, onExitToDetailBar])
 
   return (
     <SearchListPickerBody
@@ -240,15 +403,20 @@ export function SearchListPickerOverlay({
       detailHits={detailHits}
       detailEntry={detailEntry}
       resultsFocusHi={resultsHi}
+      destinationRows={destinationRows}
+      destinationFromDetail={destinationReturnView === "detail"}
       onReturnToPrompt={onReturnToPrompt}
       onConfirmLineIndex={onConfirmLineIndex}
       onConfirmDetailHit={onConfirmDetailHit}
+      onConfirmDestination={onConfirmDestination}
       enableCommandMode={!loading && entries.length > 0}
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}
       extensions={extensions}
       onHiChange={onHiChange}
+      subviewHiRef={subviewHiRef}
+      pageActiveMode={pageActiveMode}
     />
   )
 }

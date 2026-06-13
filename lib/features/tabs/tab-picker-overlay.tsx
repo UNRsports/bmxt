@@ -3,7 +3,11 @@ import { useTabPickerController, type TabPickerOverlayProps } from "./use-tab-pi
 
 export type { TabPickerOverlayProps }
 
-/** @deprecated Use `TabsPickerWrapper` — thin re-export for callers not yet on side-picker wrapper. */
+/** @deprecated Use `TabsPickerWrapper` via side-picker slot registry. */
 export function TabPickerOverlay(props: TabPickerOverlayProps) {
-  return <TabsUrlListPicker {...useTabPickerController(props)} />
+  const viewProps = useTabPickerController(props)
+  if (!viewProps) {
+    return null
+  }
+  return <TabsUrlListPicker {...viewProps} />
 }

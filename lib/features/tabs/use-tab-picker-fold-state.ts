@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { parsePickerSearchNeedle } from "../side-picker/search/picker-search-needle"
 import type { TabPickerRow } from "./picker-rows"
+import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 import {
   beginTabPickerSearchFoldSession,
   cancelTabPickerSearchFoldSession,
@@ -66,6 +67,8 @@ export function useTabPickerFoldState(
     return parsePickerSearchNeedle(filterQuery).needle
   }, [filterQuery, searchMode])
 
+  const rowsStructureKey = useMemo(() => tabPickerRowsStructureKey(rows), [rows])
+
   const searchVisibleRowIndexSet = useMemo(() => {
     if (searchActiveNeedle === "") {
       return null
@@ -74,24 +77,27 @@ export function useTabPickerFoldState(
     return new Set(computeTabPickerSearchVisibleRowIndices(rows, filterQuery))
   }, [filterQuery, revision, rows, searchActiveNeedle])
 
-  const visibleRowIndices = useMemo(() => {
+  const visibleRowIndicesWithoutSearch = useMemo(() => {
     void revision
-    if (searchActiveNeedle !== "") {
-      return computeTabPickerSearchVisibleRowIndices(rows, filterQuery)
-    }
     return computeTabPickerVisibleRowIndices(rows)
+  }, [revision, rowsStructureKey])
+
+  const visibleRowIndicesWithSearch = useMemo(() => {
+    void revision
+    return computeTabPickerSearchVisibleRowIndices(rows, filterQuery)
   }, [filterQuery, revision, rows, searchActiveNeedle])
+
+  const visibleRowIndices =
+    searchActiveNeedle !== "" ? visibleRowIndicesWithSearch : visibleRowIndicesWithoutSearch
 
   const collapseAtRow = useCallback(
     (row: TabPickerRow): number | null => {
       const { focusRowIdx, changed } = collapseTabPickerAtRow(rows, row)
-      if (focusRowIdx === null) {
+      if (!changed || focusRowIdx === null) {
         return null
       }
-      if (changed) {
-        void persistTabPickerFoldStateToStorage()
-        bump()
-      }
+      void persistTabPickerFoldStateToStorage()
+      bump()
       return focusRowIdx
     },
     [bump, rows]
