@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: May 31, 2026</p>
+          <p class="muted">Last updated: June 13, 2026</p>
         </div>
       </header>
 
@@ -147,8 +147,9 @@
             <li>
               BMXt is a <strong>local productivity tool</strong>: a command-style UI for tabs, tab groups,
               browser windows, and related tasks you initiate (including optional page inspection, search
-              across history or bookmarks or open pages, an optional keyboard nav overlay, and optional
-              translation assist when you run <code>translate -on</code>).
+              across history or bookmarks or open pages, an optional keyboard nav overlay, optional UI locale
+              and appearance settings via <code>setting -list</code>, and optional translation assist when you
+              run <code>translate -on</code>).
             </li>
             <li>
               We do <strong>not</strong> sell your personal information. We do <strong>not</strong> run
@@ -164,13 +165,14 @@
             </li>
             <li>
               Command output and typed history are handled primarily <strong>in memory</strong> for the UI;
-              only capped fields are written to <code>chrome.storage.local</code>. Translate editor text stays
-              in session memory and is not persisted to storage. The Extension UI and service worker are not
-              designed to call <code>fetch()</code> against arbitrary third-party HTTPS URLs;
-              <code>connect-src</code> in the packaged manifest reinforces that (Chrome Web Store delivery and
-              browser updates are separate). Optional <code>http://*/*</code> and <code>https://*/*</code>
-              access is requested <strong>at runtime</strong> only when you run commands that inject into web
-              pages.
+              only capped fields are written to <code>chrome.storage.local</code>. Text you type during nav
+              typing for translation previews stays in session memory and is not saved to storage as typed
+              content; only translation assist on/off and your chosen language pair are persisted locally. The
+              Extension UI and service worker are not designed to call <code>fetch()</code> against arbitrary
+              third-party HTTPS URLs; <code>connect-src</code> in the packaged manifest reinforces that (Chrome
+              Web Store delivery and browser updates are separate). Optional <code>http://*/*</code> and
+              <code>https://*/*</code> access is requested <strong>at runtime</strong> only when you run
+              commands that inject into web pages.
             </li>
             <li>
               When translation assist is on, text you type may be processed by Chrome’s built-in
@@ -193,6 +195,12 @@
           commands. This processing occurs locally to carry out tab and window management features you
           initiate.
         </p>
+        <p>
+          The Extension also uses the <code>favicon</code> permission so tab and search picker rows can show
+          site favicons derived from page URLs Chrome already exposes to the Extension. Favicons are resolved
+          and displayed locally; BMXt does not upload favicon requests or tab metadata to UNRsports servers
+          for this purpose.
+        </p>
         <h3>4.2 Tab groups</h3>
         <p>
           The Extension uses the <code>tabGroups</code> permission to read and update tab group metadata and
@@ -211,10 +219,12 @@
         <ul>
           <li>
             <strong>Command history</strong> — recent commands you typed in the Extension UI (subject to
-            limits enforced in the Extension).
+            limits enforced in the Extension). Cleared when you use the <code>reset-bmxt</code> shortcut;
+            otherwise kept across BMXt window close and process exit.
           </li>
           <li>
             <strong>Session log</strong> — text output shown in the Extension UI (subject to line limits).
+            Removed when you close the BMXt window or <code>exit</code> the last split pane.
           </li>
           <li>
             <strong>Last focused normal window</strong> — a window identifier used to route focus-related
@@ -222,7 +232,17 @@
           </li>
           <li>
             <strong>Terminal sessions and split layout</strong> — log text per pane and pane layout when you
-            use split terminals.
+            use split terminals. Removed on BMXt window close or last-pane <code>exit</code>.
+          </li>
+          <li>
+            <strong>Process UI state</strong> — which picker columns are open and keyboard focus among
+            terminal / picker columns (<code>bmxt_process_ui_v1</code>). Removed on BMXt window close or
+            last-pane <code>exit</code>.
+          </li>
+          <li>
+            <strong>Tab picker tree fold state</strong> — collapsed window or tab-group rows in the tab
+            picker (<code>bmxt_tab_picker_fold_v1</code>). Removed on BMXt window close or last-pane
+            <code>exit</code>.
           </li>
           <li>
             <strong>BMXt window identifier</strong> — so the Extension can reopen or focus its UI window after
@@ -230,6 +250,19 @@
           </li>
           <li>
             <strong>Custom window display names</strong> — labels you set in the tab picker edit flow.
+          </li>
+          <li>
+            <strong>UI settings</strong> — display locale, terminal and picker appearance (colors, fonts,
+            sizes), and optional background images you import (<code>bmxt_ui_settings_v1</code>). Imported
+            images are stored on your device as data URLs in this storage.
+          </li>
+          <li>
+            <strong>Tab picker page-active mode</strong> — whether highlight moves auto-activate tabs
+            (<code>--auto</code> / <code>--manual</code>; <code>bmxt_tabs_picker_settings_v1</code>).
+          </li>
+          <li>
+            <strong>Search picker page-active mode</strong> — same preference for the search list picker
+            (<code>bmxt_search_picker_settings_v1</code>).
           </li>
           <li>
             <strong>Last seen extension version</strong> — used only to show an in-UI release-notes notice
@@ -240,13 +273,23 @@
             after install or update.
           </li>
           <li>
-            <strong>Translation assist enabled flag</strong> — whether <code>translate -on</code> /
-            <code>translate -off</code> is active (<code>bmxt_typing_translate_v1</code>).
+            <strong>Translation assist settings</strong> — whether <code>translate -on</code> /
+            <code>translate -off</code> is active and your saved language pair
+            (<code>--ja-en</code> / <code>--en-ja</code>; <code>bmxt_typing_translate_v1</code>).
           </li>
         </ul>
         <p>
-          Text in the translate editor column is kept in session memory only and is not written to this
-          storage when you close the column.
+          When you close the BMXt window or run <code>exit</code> on the last split pane, process-scoped
+          entries above (session logs, split layout, open picker state, tab-picker fold) are removed from
+          storage. Command history, UI settings, translation assist preferences, picker page-active settings,
+          custom window display names, and version-tracking keys remain until you clear them (for example via
+          the <code>reset-bmxt</code> shortcut, which also clears command history) or uninstall the
+          Extension.
+        </p>
+        <p>
+          If you use <code>setting -list</code> to export or import a settings zip, the file is written to or
+          read from a location you choose through the browser’s download or file-picker APIs. BMXt does not
+          upload that file to UNRsports servers.
         </p>
         <p>This storage remains on your device under Chrome’s extension storage rules.</p>
 
@@ -254,19 +297,19 @@
         <p>
           If you run supported commands, the Extension may use the <code>history</code> and
           <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
-          stores—for example <code>find</code> with <code>--history</code> or <code>--bookmark</code>.
+          stores—for example <code>search -list --history</code> or <code>search -list --bookmark</code>.
         </p>
         <p>
           For ordinary http(s) pages (not chrome://, extension, or Chrome Web Store pages), the Extension may
           use the <code>scripting</code> permission together with <strong>optional</strong>
           <code>http://*/*</code> and <code>https://*/*</code> host access (granted when prompted, or in
           extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>.
-          Examples: <code>find --page</code> (visible text in open tabs), <code>dom -list</code> (page structure
-          and scrolling to an element you pick in the list), and <code>nav -enter</code> (a keyboard nav overlay
-          on the active tab for move, click, type, and related actions you control from the Extension UI). When
-          translation assist is enabled, text you enter during nav typing in the Extension UI may also be
-          processed as described in section 4.7. Nav may use a lightweight content script registered for
-          http(s) pages, with
+          Examples: <code>search -list --page</code> (visible text in open tabs), <code>dom -list</code> (page
+          structure and scrolling to an element you pick in the list), and <code>nav -enter</code> (a keyboard
+          nav overlay on the active tab for move, click, type, and related actions you control from the
+          Extension UI). When translation assist is enabled, text you enter during nav typing in the Extension
+          UI may also be processed as described in section 4.7. Nav may use a lightweight content script
+          registered for http(s) pages, with
           <code>chrome.scripting.executeScript</code> as a fallback when that script is not loaded. That
           processing is intended to occur <strong>on your device</strong>; the Extension is not designed to add
           new persistent stores for those results or to upload page content to UNRsports servers as part of
@@ -284,15 +327,16 @@
         <h3>4.7 Translation assist (Chrome built-in Translator API)</h3>
         <p>
           If you run <code>translate -on</code>, the Extension enables optional translation assist within its
-          UI. Text you type in the translate editor column and, while assist is enabled, text entered during
-          nav typing mode in the Extension UI may be passed to Chrome’s built-in <strong>Translator API</strong>
-          (Japanese ↔ English) for on-device translation and back-translation previews. The Extension does not
+          UI. While assist is enabled, text you enter during <strong>nav typing mode</strong> in the Extension
+          UI may be passed to Chrome’s built-in <strong>Translator API</strong> (Japanese ↔ English) for
+          on-device translation and back-translation previews shown under the prompt. The Extension does not
           send that text to UNRsports servers for translation.
         </p>
         <p>
           Translation runs in the Extension page context only (not in injected page scripts or the service
           worker). No additional manifest permission is declared for this feature; existing
-          <code>storage</code> permission covers the on/off preference. On first use, Chrome may download
+          <code>storage</code> permission covers the on/off flag and saved language pair
+          (<code>translate -setting --ja-en</code> / <code>--en-ja</code>). On first use, Chrome may download
           language models for the requested language pair to your device. That download and on-device
           processing are handled by Chrome (Google) under Chrome’s own terms. Translation assist requires a
           supported desktop Chrome version (138 or newer) and availability of the ja↔en pair on your device.
@@ -344,9 +388,10 @@
         <h2>8. Legal bases and use limitations</h2>
         <p>
           We process the information described above solely to provide the Extension’s stated functionality
-          (managing tabs, groups, and windows; optional page inspection, search, nav overlay, and translation
-          assist through user-initiated commands) and to maintain minimal local UI state. We do not use this
-          information for creditworthiness, lending decisions, or unrelated profiling.
+          (managing tabs, groups, and windows; optional page inspection, search, nav overlay, UI locale and
+          appearance settings, and translation assist through user-initiated commands) and to maintain
+          minimal local UI state. We do not use this information for creditworthiness, lending decisions, or
+          unrelated profiling.
         </p>
 
         <h2>9. Children’s privacy</h2>
@@ -407,8 +452,8 @@
             <li>
               BMXt は、タブ・タブグループ・ブラウザウィンドウ等を<strong>専用のコマンド UI
               から操作する</strong>ローカル向け生産性ツールです（ページ構造の参照・履歴／ブックマーク／ページ内検索、
-              任意のキーボードナビオーバーレイ、<code>translate -on</code> 実行時の任意の翻訳アシストなど、
-              ユーザーが起動した機能を含みます）。
+              任意のキーボードナビオーバーレイ、<code>setting -list</code> による UI 言語・外観設定、
+              <code>translate -on</code> 実行時の任意の翻訳アシストなど、ユーザーが起動した機能を含みます）。
             </li>
             <li>
               当方が提供する公式ビルドにおいて、本拡張機能内に <strong>広告目的の分析ツールを組み込み、利用者の
@@ -424,9 +469,10 @@
             </li>
             <li>
               コマンド出力・入力履歴は主に UI 用の<strong>メモリ</strong>で扱い、永続化は上限付きの
-              <code>chrome.storage.local</code> のみです。翻訳エディタ列の入力本文はセッション内メモリに留まり、
-              storage には保存しません。拡張ページ・サービスワーカーから <code>fetch()</code> で任意の第三者
-              HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP（<code>connect-src</code>
+              <code>chrome.storage.local</code> のみです。翻訳アシスト用の nav typing 入力はプレビュー用に
+              セッション内メモリで扱い、入力本文そのものは storage に保存しません。翻訳アシストの ON/OFF と
+              言語ペア設定のみがローカルに保存されます。拡張ページ・サービスワーカーから <code>fetch()</code>
+              で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP（<code>connect-src</code>
               等）はその補助線です（ストア配信・ブラウザ更新は別）。ページへのスクリプト注入が要るコマンドのときだけ、
               オプションの <code>http://*/*</code> / <code>https://*/*</code> を<strong>実行時</strong>に求めます。
             </li>
@@ -447,6 +493,11 @@
           権限により開いているタブを参照・操作します。これらはユーザーが開始したタブ／ウィンドウ管理機能を
           端末上で実現するためにのみ用います。
         </p>
+        <p>
+          また <code>favicon</code> 権限により、タブ／search ピッカー行にサイトのファビコンを表示します（Chrome
+          が拡張機能に開示しているページ URL から解決）。ファビコンは端末上で取得・表示され、当方のサーバーへ
+          タブメタデータやファビコン要求を送信する設計にはしていません。
+        </p>
 
         <h3>4.2 タブグループ</h3>
         <p>
@@ -465,19 +516,46 @@
           <code>chrome.storage.local</code> を用いて、端末内に限り次のようなデータを保存することがあります。
         </p>
         <ul>
-          <li><strong>コマンド履歴</strong> — 本拡張機能 UI に入力されたコマンドの履歴（拡張機能側で上限あり）。</li>
-          <li><strong>セッションログ</strong> — UI に表示するログ出力（行数に上限あり）。</li>
+          <li>
+            <strong>コマンド履歴</strong> — 本拡張機能 UI に入力されたコマンドの履歴（拡張機能側で上限あり）。
+            <code>reset-bmxt</code> ショートカット使用時に消去。それ以外は BMXt ウィンドウ閉じ／プロセス終了後も保持。
+          </li>
+          <li>
+            <strong>セッションログ</strong> — UI に表示するログ出力（行数に上限あり）。BMXt ウィンドウを閉じる、または
+            最後のペインで <code>exit</code> したときに消去。
+          </li>
           <li>
             <strong>最後にフォーカスした通常ウィンドウ</strong> — フォーカス関連の動作のために用いるウィンドウ ID。
           </li>
           <li>
             <strong>ターミナルセッションと分割レイアウト</strong> — ペインごとのログと、分割表示時のレイアウト。
+            BMXt ウィンドウ閉じ／最後のペイン <code>exit</code> で消去。
+          </li>
+          <li>
+            <strong>プロセス UI 状態</strong> — 開いているピッカー列とターミナル／ピッカー間のフォーカス
+            （<code>bmxt_process_ui_v1</code>）。BMXt ウィンドウ閉じ／最後のペイン <code>exit</code> で消去。
+          </li>
+          <li>
+            <strong>タブピッカーのツリー開閉状態</strong> — ウィンドウ／タブグループ行の折りたたみ
+            （<code>bmxt_tab_picker_fold_v1</code>）。BMXt ウィンドウ閉じ／最後のペイン <code>exit</code> で消去。
           </li>
           <li>
             <strong>BMXt ウィンドウ ID</strong> — サービスワーカー再起動後も UI ウィンドウを開き直す／フォーカスするため。
           </li>
           <li>
             <strong>ウィンドウ表示名</strong> — タブピッカーの編集で設定した表示ラベル。
+          </li>
+          <li>
+            <strong>UI 設定</strong> — 表示言語、ターミナル／ピッカー外観（色・フォント・サイズ）、ユーザーが import
+            した背景画像（<code>bmxt_ui_settings_v1</code>）。import した画像は data URL として端末内 storage に保存。
+          </li>
+          <li>
+            <strong>タブピッカーの page-active 設定</strong> — ハイライト移動時のタブ自動アクティブ化
+            （<code>--auto</code> / <code>--manual</code>；<code>bmxt_tabs_picker_settings_v1</code>）。
+          </li>
+          <li>
+            <strong>search ピッカーの page-active 設定</strong> — search リストピッカー向けの同設定
+            （<code>bmxt_search_picker_settings_v1</code>）。
           </li>
           <li>
             <strong>最後に確認した拡張機能バージョン</strong> — 更新後のリリースノート案内用のみ。
@@ -487,27 +565,35 @@
             表示制御用のみ。
           </li>
           <li>
-            <strong>翻訳アシストの ON/OFF</strong> — <code>translate -on</code> / <code>translate -off</code>
-            の状態（<code>bmxt_typing_translate_v1</code>）。
+            <strong>翻訳アシスト設定</strong> — <code>translate -on</code> / <code>translate -off</code> の状態と
+            保存した言語ペア（<code>--ja-en</code> / <code>--en-ja</code>；<code>bmxt_typing_translate_v1</code>）。
           </li>
         </ul>
         <p>
-          翻訳エディタ列の入力本文はセッション内メモリのみで扱い、列を閉じてもこの storage には書き込みません。
+          BMXt ウィンドウを閉じる、または最後の split ペインで <code>exit</code> すると、上記のうちプロセススコープの
+          データ（セッションログ、split レイアウト、開いているピッカー状態、タブツリー開閉）は storage から消えます。
+          コマンド履歴、UI 設定、翻訳アシスト設定、ピッカー page-active 設定、ウィンドウ表示名、バージョン追跡キーは、
+          <code>reset-bmxt</code> ショートカット（コマンド履歴も消去）や拡張機能のアンインストール等で消すまで保持されます。
+        </p>
+        <p>
+          <code>setting -list</code> で設定 zip を export／import する場合、ファイルはブラウザのダウンロードまたは
+          ファイル選択 API 経由で、ユーザーが選んだ場所に書き込み／読み込みされます。当方のサーバーへ upload する設計には
+          していません。
         </p>
         <p>これらは Chrome の拡張機能ストレージの仕組みのもと、ユーザーの端末内に留まります。</p>
 
         <h3>4.5 履歴・ブックマーク・ページ操作（対応コマンド時）</h3>
         <p>
           対応するコマンドを実行した場合、<code>history</code> および <code>bookmarks</code> 権限により
-          Chrome の履歴・ブックマークからタイトルや URL を読み取ることがあります（例: <code>find</code> の
-          <code>--history</code> / <code>--bookmark</code>）。
+          Chrome の履歴・ブックマークからタイトルや URL を読み取ることがあります（例:
+          <code>search -list --history</code> / <code>search -list --bookmark</code>）。
         </p>
         <p>
           通常の http(s) ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア等を除く）では、
           ユーザーがコマンドを実行したときに限り、<code>scripting</code> 権限と<strong>オプション</strong>の
           <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは拡張機能の詳細設定で許可されたとき）により、
           同梱の小さなヘルパースクリプトを実行します。例:
-          <code>find --page</code>（開いているタブの可視テキスト）、<code>dom -list</code>（ページ構造の一覧と、
+          <code>search -list --page</code>（開いているタブの可視テキスト）、<code>dom -list</code>（ページ構造の一覧と、
           一覧で選んだ要素へのスクロール）、<code>nav -enter</code>（アクティブタブ上のキーボードナビオーバーレイによる
           移動・クリック・入力など、本拡張機能 UI からの操作）。翻訳アシストが ON のとき、本拡張機能 UI での nav
           typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では http(s) 向けの軽量コンテンツスクリプトを
@@ -525,14 +611,15 @@
         </p>
         <h3>4.7 翻訳アシスト（Chrome 内蔵 Translator API）</h3>
         <p>
-          <code>translate -on</code> を実行すると、本拡張機能 UI 内で任意の翻訳アシストが有効になります。翻訳エディタ列に
-          入力したテキスト、およびアシスト ON 中の nav typing モードで本拡張機能 UI に入力したテキストは、Chrome 内蔵の
-          <strong>Translator API</strong>（日本語 ↔ 英語）に渡され、端末上で訳文・再訳プレビューが生成されます。当方の
-          サーバーへ翻訳目的で送信することはありません。
+          <code>translate -on</code> を実行すると、本拡張機能 UI 内で任意の翻訳アシストが有効になります。アシスト ON
+          中の <strong>nav typing モード</strong>で本拡張機能 UI に入力したテキストは、Chrome 内蔵の
+          <strong>Translator API</strong>（日本語 ↔ 英語）に渡され、端末上で訳文・再訳プレビューがプロンプト下に
+          表示されます。当方のサーバーへ翻訳目的で送信することはありません。
         </p>
         <p>
           翻訳処理は拡張ページのコンテキスト内でのみ行い、注入したページスクリプトやサービスワーカーでは行いません。
-          この機能のための追加 manifest 権限は宣言しておらず、ON/OFF 設定には既存の <code>storage</code> 権限を用います。
+          この機能のための追加 manifest 権限は宣言しておらず、ON/OFF と保存した言語ペア（<code>translate -setting
+          --ja-en</code> / <code>--en-ja</code>）には既存の <code>storage</code> 権限を用います。
           初回利用時、Chrome が要求する言語ペアのモデルを端末にダウンロードする場合があります。そのダウンロードと
           端末上の処理は Chrome（Google）が Chrome 自身の条件に従って行います。翻訳アシストには、対応するデスクトップ版
           Chrome（138 以降）および端末上で ja↔en ペアが利用可能であることが必要です。
@@ -579,7 +666,7 @@
         <h2>8. 利用目的の制限</h2>
         <p>
           上記の情報は、本拡張機能が明示する機能（ユーザーが開始したタブ・グループ・ウィンドウの管理、任意のページ参照・
-          検索・ナビオーバーレイ・翻訳アシスト）および最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、
+          検索・ナビオーバーレイ・UI 言語／外観設定・翻訳アシスト）および最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、
           これらと無関係なプロファイル目的には用いません。
         </p>
 
