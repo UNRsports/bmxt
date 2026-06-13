@@ -31,6 +31,8 @@ const INITIAL: UiSettings = {
     fontFamily: null,
     bgImageDataUrl: null,
     editPicker: false,
+    searchHitHighlightBg: null,
+    searchJumpHighlightBg: null,
     picker: {
       fg: null,
       bgColor: null,

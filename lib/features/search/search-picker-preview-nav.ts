@@ -4,17 +4,25 @@
  */
 
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
+import type { SearchPageMatch } from "../side-picker/model/picker-entry"
 
-/** EN: Detail rows with in-page scroll targets (`pageMatchIndex`). */
+/** EN: Detail rows with in-page scroll targets (body `pageMatchIndex`). */
 export function listSearchDetailScrollTargetIndices(
-  hits: readonly SearchEntryDetailHit[]
+  hits: readonly SearchEntryDetailHit[],
+  pageMatches?: readonly SearchPageMatch[]
 ): number[] {
   const indices: number[] = []
   for (let i = 0; i < hits.length; i++) {
     const hit = hits[i]
-    if (hit?.pageMatchIndex !== undefined) {
-      indices.push(i)
+    const pageMatchIndex = hit?.pageMatchIndex
+    if (pageMatchIndex === undefined) {
+      continue
     }
+    const match = pageMatches?.[pageMatchIndex]
+    if (!match || match.lineNo <= 0) {
+      continue
+    }
+    indices.push(i)
   }
   return indices
 }
@@ -58,7 +66,20 @@ export function canPreviewSearchPickerSelection(
   view: "results" | "detail",
   hi: number,
   previewTargetIndices: readonly number[],
-  _detailHits: readonly SearchEntryDetailHit[]
+  detailHits: readonly SearchEntryDetailHit[],
+  pageMatches?: readonly SearchPageMatch[]
 ): boolean {
-  return previewTargetIndices.includes(hi)
+  if (previewTargetIndices.includes(hi)) {
+    return true
+  }
+  if (view !== "detail") {
+    return false
+  }
+  const hit = detailHits[hi]
+  const pageMatchIndex = hit?.pageMatchIndex
+  if (pageMatchIndex === undefined) {
+    return false
+  }
+  const match = pageMatches?.[pageMatchIndex]
+  return match != null && match.lineNo > 0
 }

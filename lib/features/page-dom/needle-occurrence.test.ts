@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { globalNeedleOccurrenceForLine } from "./needle-occurrence.ts"
+import {
+  findRawNeedleInHaystack,
+  globalNeedleOccurrenceForLine
+} from "./needle-occurrence.ts"
 
 describe("globalNeedleOccurrenceForLine", () => {
   const lines = [
@@ -19,5 +22,19 @@ describe("globalNeedleOccurrenceForLine", () => {
   it("returns -1 when the line does not contain the needle", () => {
     assert.equal(globalNeedleOccurrenceForLine(lines, 2, "BMXt"), -1)
     assert.equal(globalNeedleOccurrenceForLine(lines, 99, "BMXt"), -1)
+  })
+})
+
+describe("findRawNeedleInHaystack", () => {
+  it("matches case-insensitive ASCII", () => {
+    const hit = findRawNeedleInHaystack("hello BMXt world", "bmxt")
+    assert.deepEqual(hit, { index: 6, length: 4 })
+  })
+
+  it("matches NFKC-normalized full-width alphanumerics", () => {
+    const hit = findRawNeedleInHaystack("code ＡＢＣ here", "ABC")
+    assert.ok(hit)
+    assert.equal(hit!.index, 5)
+    assert.equal(hit!.length, 3)
   })
 })

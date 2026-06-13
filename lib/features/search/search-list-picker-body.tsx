@@ -24,6 +24,7 @@ import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
 import type { SearchOpenDestinationRow } from "./search-open-destination"
+import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
 
 const ROW_ID_PREFIX = "bmxt-search-row"
 
@@ -280,18 +281,20 @@ export function SearchListPickerBody({
   const altPreviewEnabled =
     keyboardActive &&
     !statusOnly &&
-    !inDestinationView &&
-    (inDetailView
-      ? detailEntry != null && detailHits.length > 0
-      : entries.length > 0)
+    inDetailView &&
+    detailEntry != null &&
+    detailHits.length > 0
+
+  const { settings } = useUiSettings()
+  const searchHighlightColors = useMemo(
+    () => resolveSearchHighlightAppearance(settings.appearance),
+    [settings.appearance]
+  )
 
   const { mergedExtensions, previewNotice, listScrollHintRef } = useSearchPickerAltPreviewKit({
-    view: inDetailView ? "detail" : "results",
     enabled: altPreviewEnabled,
     isHostPaneFocused: keyboardActive,
-    entries,
     pattern,
-    matchHi,
     hi,
     lineCount,
     setHi,
@@ -299,6 +302,7 @@ export function SearchListPickerBody({
     commandMode,
     detailEntry,
     detailHits,
+    highlightColors: searchHighlightColors,
     baseExtensions: extensions
   })
 

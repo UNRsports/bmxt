@@ -12,9 +12,11 @@ export {
   normalizeUiAppearance,
   parseAppearanceFlagToken,
   resolvePickerAppearance,
+  resolveSearchHighlightAppearance,
   resolveTerminalAppearance,
   type AppearanceFlagToken,
   type ResolvedTerminalAppearance,
+  type ResolvedSearchHighlightAppearance,
   type UiAppearance,
   type UiAppearanceLayer
 } from "./appearance"

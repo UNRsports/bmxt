@@ -1518,7 +1518,11 @@ export function BmxtShell({
             ? { fg: value }
             : field === "bg-color" || field === "picker-bg-color"
               ? { bgColor: value }
-              : { fontFamily: value }
+              : field === "search-hit-highlight"
+                ? { searchHitHighlightBg: value }
+                : field === "search-jump-highlight"
+                  ? { searchJumpHighlightBg: value }
+                  : { fontFamily: value }
         const draftPatch =
           field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
             ? { picker: layerPatch }

@@ -12,6 +12,8 @@ export type SettingListPickerView =
   | "pickerBgImage"
   | "fg"
   | "bgColor"
+  | "searchHitHighlight"
+  | "searchJumpHighlight"
   | "font"
   | "fgPicker"
   | "bgColorPicker"

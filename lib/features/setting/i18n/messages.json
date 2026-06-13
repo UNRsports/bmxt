@@ -271,6 +271,14 @@
     "ja": "setting -list · bg-color (picker) · Enter/→ 編集 · ← 一覧",
     "en": "setting -list · bg-color (picker) · Enter/→ edit · ← list"
   },
+  "setting.picker.headline.searchHitHighlight": {
+    "ja": "setting -list · search-hit-highlight · → 編集 · ← 一覧",
+    "en": "setting -list · search-hit-highlight · → edit · ← list"
+  },
+  "setting.picker.headline.searchJumpHighlight": {
+    "ja": "setting -list · search-jump-highlight · → 編集 · ← 一覧",
+    "en": "setting -list · search-jump-highlight · → edit · ← list"
+  },
   "setting.picker.headline.font": {
     "ja": "setting -list · font · → 編集 · ← 一覧",
     "en": "setting -list · font · → edit · ← list"
@@ -307,6 +315,14 @@
     "ja": "picker background color: {value}",
     "en": "picker background color: {value}"
   },
+  "setting.picker.detail.searchHitHighlight": {
+    "ja": "search hit highlight: {value}",
+    "en": "search hit highlight: {value}"
+  },
+  "setting.picker.detail.searchJumpHighlight": {
+    "ja": "search jump highlight: {value}",
+    "en": "search jump highlight: {value}"
+  },
   "setting.picker.detail.font": {
     "ja": "font-family: {value}",
     "en": "font-family: {value}"
@@ -338,6 +354,14 @@
   "setting.picker.editAria.bgColorPicker": {
     "ja": "ピッカー背景色 (hex)",
     "en": "Picker background color (hex)"
+  },
+  "setting.picker.editAria.searchHitHighlight": {
+    "ja": "検索ヒット強調色 (hex)",
+    "en": "Search hit highlight (hex)"
+  },
+  "setting.picker.editAria.searchJumpHighlight": {
+    "ja": "ジャンプ先強調色 (hex)",
+    "en": "Search jump highlight (hex)"
   },
   "setting.picker.editAria.font": {
     "ja": "font-family",
@@ -390,6 +414,14 @@
   "setting.picker.main.bgColorPicker": {
     "ja": "bg-color (picker): {value}",
     "en": "bg-color (picker): {value}"
+  },
+  "setting.picker.main.searchHitHighlight": {
+    "ja": "search-hit-highlight: {value}",
+    "en": "search-hit-highlight: {value}"
+  },
+  "setting.picker.main.searchJumpHighlight": {
+    "ja": "search-jump-highlight: {value}",
+    "en": "search-jump-highlight: {value}"
   },
   "setting.picker.main.size": {
     "ja": "size: {value}",

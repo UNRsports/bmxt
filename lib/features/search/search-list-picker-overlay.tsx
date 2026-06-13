@@ -22,6 +22,7 @@ import {
 import { resolveSearchArrowRightTarget } from "./search-arrow-right-target"
 import { listSearchEntryDetailHits } from "./search-entry-detail-hits"
 import { searchEntryHasOpenTab } from "./search-entry-open-tab"
+import { clearSearchPickerPageHighlightsForEntry } from "./preview-search-picker-entry"
 import { pageMatchesForDisplay } from "./search-picker-page-match"
 import {
   SearchListPickerBody,
@@ -126,6 +127,15 @@ export function SearchListPickerOverlay({
     return listSearchEntryDetailHits(detailEntry, pattern)
   }, [detailEntry, pattern])
 
+  useEffect(() => {
+    if (pickerView !== "detail" || !detailEntry) {
+      return
+    }
+    return () => {
+      void clearSearchPickerPageHighlightsForEntry(detailEntry)
+    }
+  }, [detailEntry, pickerView])
+
   const statusLines = useMemo(() => {
     if (loading) {
       return progressLines.length > 0 ? progressLines : ["search — starting…"]
@@ -146,6 +156,9 @@ export function SearchListPickerOverlay({
       resultsIndex: number,
       returnView: DestinationReturnView
     ) => {
+      if (returnView === "detail") {
+        void clearSearchPickerPageHighlightsForEntry(entry)
+      }
       const rows = await buildSearchOpenDestinationRows()
       setDestinationEntryIndex(resultsIndex)
       setDestinationReturnView(returnView)
@@ -199,6 +212,7 @@ export function SearchListPickerOverlay({
         if (target === "detail") {
           setDetailEntryIndex(resultsIndex)
           setPickerView("detail")
+          return
         }
       } finally {
         arrowRightBusyRef.current = false
@@ -275,9 +289,13 @@ export function SearchListPickerOverlay({
   )
 
   const exitDetailView = useCallback(() => {
+    const entry = entries[detailEntryIndex]
+    if (entry) {
+      void clearSearchPickerPageHighlightsForEntry(entry)
+    }
     setResultsHi(detailEntryIndex)
     setPickerView("results")
-  }, [detailEntryIndex])
+  }, [detailEntryIndex, entries])
 
   const exitDestinationView = useCallback(() => {
     setResultsHi(destinationEntryIndex)

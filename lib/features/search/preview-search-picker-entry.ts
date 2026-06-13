@@ -1,13 +1,25 @@
 import type { PickerEntry, SearchPageMatch } from "../side-picker/model/picker-entry"
+import type { BmxtNeedleHighlightColorsPayload } from "../page-dom/page-scroll-needle-message"
 import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
-import { pickPageMatchForDisplay } from "./search-picker-page-match"
+import { excerptAroundNeedle } from "./search-picker-excerpt"
+import { clearSearchPageHighlights } from "./sources/clear-search-page-highlights"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { scrollSearchPageToSnippet } from "./sources/page-scroll-to-snippet"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
 
 const PREVIEW_TAB_ACTIVATE_DELAY_MS = 120
+
+export type SearchPageHighlightColors = BmxtNeedleHighlightColorsPayload
+
+let previewSessionTabId: number | null = null
+let previewSessionNeedle = ""
+
+export function resetSearchPickerPageHighlightSession(): void {
+  previewSessionTabId = null
+  previewSessionNeedle = ""
+}
 
 function pickPageMatchAtIndex(
   entry: PickerEntry,
@@ -29,26 +41,40 @@ function sleep(ms: number): Promise<void> {
 async function scrollToPageMatch(
   tabId: number,
   match: SearchPageMatch,
-  searchPattern: string
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors
 ): Promise<boolean> {
   const needle = searchPattern.trim()
-  if (!needle) {
+  if (!needle || match.lineNo <= 0) {
     return false
   }
+
+  const activeOnly =
+    previewSessionTabId === tabId && previewSessionNeedle === needle && previewSessionTabId !== null
 
   const scrolled = await scrollSearchPageToNeedle(tabId, {
     searchNeedle: needle,
     lineNo: match.lineNo,
     snippetHint: match.snippet,
-    globalOccurrence: match.globalOccurrence
+    globalOccurrence: match.globalOccurrence,
+    persistMs: 0,
+    highlightColors,
+    activeOnly
   })
   if (scrolled) {
+    previewSessionTabId = tabId
+    previewSessionNeedle = needle
     return true
   }
 
-  const snippet = match.snippet.trim()
-  if (snippet.length > 0) {
-    return scrollSearchPageToSnippet(tabId, snippet, match.occurrence)
+  const excerpt = excerptAroundNeedle(match.snippet, needle)
+  if (excerpt.trim().length > 0) {
+    const snippetScrolled = await scrollSearchPageToSnippet(tabId, excerpt, match.occurrence, 0, highlightColors)
+    if (snippetScrolled) {
+      previewSessionTabId = tabId
+      previewSessionNeedle = needle
+    }
+    return snippetScrolled
   }
   return false
 }
@@ -56,7 +82,8 @@ async function scrollToPageMatch(
 async function previewPageMatchInOpenTab(
   entry: PickerEntry,
   match: SearchPageMatch | undefined,
-  searchPattern: string
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors
 ): Promise<boolean> {
   const resolved = await resolveOpenTabForSearchEntry(entry)
   if (!resolved) {
@@ -69,12 +96,12 @@ async function previewPageMatchInOpenTab(
   }
 
   const needle = searchPattern.trim()
-  if (!match || !needle) {
+  if (!match || !needle || match.lineNo <= 0) {
     return true
   }
 
   await sleep(PREVIEW_TAB_ACTIVATE_DELAY_MS)
-  return scrollToPageMatch(resolved.tabId, match, searchPattern)
+  return scrollToPageMatch(resolved.tabId, match, searchPattern, highlightColors)
 }
 
 /**
@@ -84,12 +111,14 @@ async function previewPageMatchInOpenTab(
 export async function previewSearchPickerPageMatchInBackground(
   entry: PickerEntry,
   pageMatchIndex: number,
-  searchPattern: string
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors
 ): Promise<boolean> {
   return previewPageMatchInOpenTab(
     entry,
     pickPageMatchAtIndex(entry, pageMatchIndex),
-    searchPattern
+    searchPattern,
+    highlightColors
   )
 }
 
@@ -97,29 +126,32 @@ export async function previewSearchPickerPageMatchInBackground(
 export async function previewSearchPickerDetailHitInBackground(
   entry: PickerEntry,
   hit: SearchEntryDetailHit,
-  searchPattern: string
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors
 ): Promise<boolean> {
   if (hit.pageMatchIndex === undefined) {
     return false
   }
-  return previewSearchPickerPageMatchInBackground(entry, hit.pageMatchIndex, searchPattern)
+  return previewSearchPickerPageMatchInBackground(
+    entry,
+    hit.pageMatchIndex,
+    searchPattern,
+    highlightColors
+  )
 }
 
-/**
- * EN: Background preview for a search picker row — activate tab without focusing window,
- *     then scroll/highlight the page match when available.
- * JA: search ピッカー行の背面プレビュー — ウィンドウを前面化せずタブ切替、page ヒットがあればスクロール。
- */
-export async function previewSearchPickerEntryInBackground(
-  entry: PickerEntry,
-  matchIndex: number,
-  searchPattern: string
-): Promise<boolean> {
-  return previewPageMatchInOpenTab(
-    entry,
-    pickPageMatchForDisplay(entry.pageMatches, matchIndex),
-    searchPattern
-  )
+/** EN: Clear in-page highlights and preview session state for an entry. */
+export async function clearSearchPickerPageHighlightsForEntry(entry: PickerEntry): Promise<boolean> {
+  const resolved = await resolveOpenTabForSearchEntry(entry)
+  resetSearchPickerPageHighlightSession()
+  if (!resolved) {
+    return false
+  }
+  if (previewSessionTabId === resolved.tabId) {
+    previewSessionTabId = null
+    previewSessionNeedle = ""
+  }
+  return clearSearchPageHighlights(resolved.tabId)
 }
 
 /** EN: True when at least one entry has an open scriptable tab for preview. */

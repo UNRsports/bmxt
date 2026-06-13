@@ -1,6 +1,7 @@
 import { bmxtScrollToSearchNeedleInjected } from "../../page-dom/injected-scroll-to-search-needle"
 import {
   PAGE_SCROLL_NEEDLE_CHANNEL,
+  type BmxtNeedleHighlightColorsPayload,
   type PageScrollNeedleRequest,
   type PageScrollNeedleResponse
 } from "../../page-dom/page-scroll-needle-message"
@@ -11,6 +12,11 @@ export type ScrollSearchPageToNeedleOptions = {
   lineNo?: number
   snippetHint?: string
   globalOccurrence?: number
+  /** EN: Auto-clear after ms; 0 keeps until explicit clear. */
+  persistMs?: number
+  highlightColors?: BmxtNeedleHighlightColorsPayload
+  /** EN: Only update jump highlight + scroll. */
+  activeOnly?: boolean
 }
 
 const SCROLL_RETRY_DELAY_MS = 180
@@ -30,6 +36,15 @@ function buildScrollRequest(options: ScrollSearchPageToNeedleOptions): PageScrol
   }
   if (options.globalOccurrence !== undefined && options.globalOccurrence >= 0) {
     request.globalOccurrence = options.globalOccurrence
+  }
+  if (options.highlightColors) {
+    request.highlightColors = options.highlightColors
+  }
+  if (options.activeOnly) {
+    request.activeOnly = true
+  }
+  if (options.persistMs !== undefined) {
+    request.persistMs = options.persistMs
   }
   return request
 }
@@ -53,6 +68,11 @@ async function scrollViaExecuteScript(
   tabId: number,
   request: PageScrollNeedleRequest
 ): Promise<boolean> {
+  const colors = request.highlightColors
+  const hitBg = colors?.hitBg ?? "#ffc9dd"
+  const jumpBg = colors?.jumpBg ?? "#ffdb4d"
+  const fg = colors?.fg ?? "#0d1117"
+  const persistMs = request.persistMs ?? 0
   try {
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId },
@@ -61,8 +81,12 @@ async function scrollViaExecuteScript(
         request.searchNeedle,
         request.lineNo,
         request.snippetHint,
-        8000,
-        request.globalOccurrence ?? -1
+        persistMs,
+        request.globalOccurrence ?? -1,
+        hitBg,
+        jumpBg,
+        fg,
+        request.activeOnly ?? false
       ]
     })
     return Boolean((result as PageScrollNeedleResponse | undefined)?.ok)

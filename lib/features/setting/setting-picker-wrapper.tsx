@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type MutableRefObject } from "react"
 import {
   resolvePickerAppearance,
+  resolveSearchHighlightAppearance,
   resolveTerminalAppearance
 } from "./appearance"
 import { SettingPickerBody } from "./setting-picker-body"
@@ -71,6 +72,13 @@ export function SettingPickerWrapper({
     }
     if (state.view === "bgColor" || state.view === "bgColorPicker") {
       return layerValues.bgColor ?? resolved.bgColor
+    }
+    const searchHl = resolveSearchHighlightAppearance(appearance)
+    if (state.view === "searchHitHighlight") {
+      return appearance.searchHitHighlightBg ?? searchHl.hitBg
+    }
+    if (state.view === "searchJumpHighlight") {
+      return appearance.searchJumpHighlightBg ?? searchHl.jumpBg
     }
     if (state.view === "font" || state.view === "fontPicker") {
       return layerValues.fontFamily ?? resolved.fontFamily

@@ -5,13 +5,24 @@
  */
 
 import {
-  applyBmxtNeedleHighlight,
-  DEFAULT_NEEDLE_HIGHLIGHT_MS
+  applyBmxtSearchNeedleHighlightSession,
+  DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS,
+  type BmxtNeedleHighlightColors
 } from "./injected-needle-highlight"
 import {
+  findRawNeedleInHaystack,
   globalNeedleOccurrenceForLine,
   innerTextLinesFromBodyText
 } from "./needle-occurrence"
+
+let sessionNeedle = ""
+let sessionRanges: Range[] = []
+
+/** EN: Reset cached ranges (detail picker closed or pattern changed). */
+export function resetBmxtSearchNeedleSession(): void {
+  sessionNeedle = ""
+  sessionRanges = []
+}
 
 function innerTextLines(): string[] {
   return innerTextLinesFromBodyText(document.body?.innerText ?? "")
@@ -22,7 +33,6 @@ function collectNeedleRanges(needle: string): Range[] {
   if (!trimmed || !document.body) {
     return []
   }
-  const needleLower = trimmed.toLowerCase()
   const ranges: Range[] = []
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   let node: Text | null
@@ -30,17 +40,27 @@ function collectNeedleRanges(needle: string): Range[] {
     const text = node.textContent ?? ""
     let from = 0
     while (from < text.length) {
-      const idx = text.toLowerCase().indexOf(needleLower, from)
-      if (idx < 0) {
+      const hit = findRawNeedleInHaystack(text, trimmed, from)
+      if (!hit) {
         break
       }
       const range = document.createRange()
-      range.setStart(node, idx)
-      range.setEnd(node, Math.min(idx + trimmed.length, text.length))
+      range.setStart(node, hit.index)
+      range.setEnd(node, Math.min(hit.index + hit.length, text.length))
       ranges.push(range)
-      from = idx + Math.max(1, trimmed.length)
+      from = hit.index + Math.max(1, hit.length)
     }
   }
+  return ranges
+}
+
+function resolveNeedleRanges(needle: string, activeOnly: boolean): Range[] {
+  if (activeOnly && sessionNeedle === needle && sessionRanges.length > 0) {
+    return sessionRanges
+  }
+  const ranges = collectNeedleRanges(needle)
+  sessionNeedle = needle
+  sessionRanges = ranges
   return ranges
 }
 
@@ -49,12 +69,12 @@ function lineContextAroundNeedle(line: string, needle: string, context = 36): st
   if (!trimmed) {
     return ""
   }
-  const idx = trimmed.toLowerCase().indexOf(needle.toLowerCase())
-  if (idx < 0) {
+  const hit = findRawNeedleInHaystack(trimmed, needle)
+  if (!hit) {
     return trimmed.slice(0, Math.min(96, trimmed.length))
   }
-  const start = Math.max(0, idx - context)
-  const end = Math.min(trimmed.length, idx + needle.length + context)
+  const start = Math.max(0, hit.index - context)
+  const end = Math.min(trimmed.length, hit.index + hit.length + context)
   return trimmed.slice(start, end)
 }
 
@@ -78,14 +98,13 @@ function expandRangeText(range: Range, before = 64, after = 64): string {
   }
 }
 
-function findRangeByContext(context: string, needle: string): Range | undefined {
+function findRangeByContext(context: string, needle: string, ranges: Range[]): Range | undefined {
   const ctx = context.trim()
   if (!ctx || !document.body) {
     return undefined
   }
   const ctxLower = ctx.toLowerCase()
   const needleLower = needle.toLowerCase()
-  const ranges = collectNeedleRanges(needle)
   let best: Range | undefined
   let bestScore = -1
   for (const range of ranges) {
@@ -127,7 +146,7 @@ function pickRangeForLine(
 
   const hint = snippetHint.replace(/…\s*$/, "").trim()
   if (hint) {
-    const byHint = findRangeByContext(hint, needle)
+    const byHint = findRangeByContext(hint, needle, ranges)
     if (byHint) {
       return byHint
     }
@@ -141,7 +160,7 @@ function pickRangeForLine(
       return ranges[occ]
     }
     const context = lineContextAroundNeedle(lineText, needle)
-    const byContext = findRangeByContext(context, needle)
+    const byContext = findRangeByContext(context, needle, ranges)
     if (byContext) {
       return byContext
     }
@@ -150,19 +169,31 @@ function pickRangeForLine(
   return ranges[0]
 }
 
+export type BmxtScrollToSearchNeedleInjectedOptions = {
+  persistMs?: number
+  globalOccurrenceHint?: number
+  highlightColors?: BmxtNeedleHighlightColors
+  activeOnly?: boolean
+}
+
 export function bmxtScrollToSearchNeedleInjected(
   searchNeedle: string,
   lineNo: number,
   snippetHint: string,
-  persistMs = DEFAULT_NEEDLE_HIGHLIGHT_MS,
-  globalOccurrenceHint = -1
+  persistMs = 0,
+  globalOccurrenceHint = -1,
+  hitBg = DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS.hitBg,
+  jumpBg = DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS.jumpBg,
+  fg = DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS.fg,
+  activeOnly = false
 ): { ok: boolean } {
   const needle = searchNeedle.trim()
   if (!needle || !document.body) {
     return { ok: false }
   }
 
-  const ranges = collectNeedleRanges(needle)
+  const colors: BmxtNeedleHighlightColors = { hitBg, jumpBg, fg }
+  const ranges = resolveNeedleRanges(needle, activeOnly)
   if (ranges.length === 0) {
     return { ok: false }
   }
@@ -178,5 +209,10 @@ export function bmxtScrollToSearchNeedleInjected(
     return { ok: false }
   }
 
-  return { ok: applyBmxtNeedleHighlight(picked, persistMs) }
+  return {
+    ok: applyBmxtSearchNeedleHighlightSession(ranges, picked, colors, {
+      activeOnly,
+      persistMs
+    })
+  }
 }

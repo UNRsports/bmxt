@@ -19,7 +19,7 @@ export async function listSearchPickerPreviewTargetIndices(
   return indices
 }
 
-/** EN: Detail rows previewable in background (open tab + page match). */
+/** EN: Detail rows previewable in background (open tab + body page match). */
 export async function listSearchDetailPreviewTargetIndices(
   entry: PickerEntry | undefined,
   hits: readonly SearchEntryDetailHit[]
@@ -32,9 +32,16 @@ export async function listSearchDetailPreviewTargetIndices(
   }
   const indices: number[] = []
   for (let i = 0; i < hits.length; i++) {
-    if (hits[i]?.pageMatchIndex !== undefined) {
-      indices.push(i)
+    const hit = hits[i]
+    const pageMatchIndex = hit?.pageMatchIndex
+    if (pageMatchIndex === undefined) {
+      continue
     }
+    const match = entry.pageMatches?.[pageMatchIndex]
+    if (!match || match.lineNo <= 0) {
+      continue
+    }
+    indices.push(i)
   }
   return indices
 }

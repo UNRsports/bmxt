@@ -4,6 +4,7 @@ import {
   DEFAULT_TERMINAL_FONT_FAMILY,
   DEFAULT_TERMINAL_FONT_SIZE,
   resolvePickerAppearance,
+  resolveSearchHighlightAppearance,
   resolveTerminalAppearance,
   type UiAppearance
 } from "./appearance"
@@ -26,6 +27,8 @@ export type SettingPickerRowId =
   | "fg-picker"
   | "bg-color"
   | "bg-color-picker"
+  | "search-hit-highlight"
+  | "search-jump-highlight"
   | "size"
   | "size-picker"
   | "font"
@@ -170,6 +173,32 @@ function buildGlobalDetailRows(
   ]
 }
 
+function buildSearchHighlightDetailRows(
+  view: "searchHitHighlight" | "searchJumpHighlight",
+  locale: UiLocale,
+  appearance: UiAppearance
+): SettingPickerRow[] {
+  const resolved = resolveSearchHighlightAppearance(appearance)
+  if (view === "searchHitHighlight") {
+    return [
+      {
+        id: "search-hit-highlight",
+        line: t("setting.picker.detail.searchHitHighlight", locale, {
+          value: displayOrDefault(appearance.searchHitHighlightBg, resolved.hitBg, locale)
+        })
+      }
+    ]
+  }
+  return [
+    {
+      id: "search-jump-highlight",
+      line: t("setting.picker.detail.searchJumpHighlight", locale, {
+        value: displayOrDefault(appearance.searchJumpHighlightBg, resolved.jumpBg, locale)
+      })
+    }
+  ]
+}
+
 function buildPickerDetailRows(
   view: "fgPicker" | "bgColorPicker" | "fontPicker",
   locale: UiLocale,
@@ -214,6 +243,7 @@ export function buildSettingPickerRows(
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
+  const resolvedSearchHl = resolveSearchHighlightAppearance(appearance)
 
   if (view === "language") {
     return listUiLocaleSettingTokens().map((token) => ({
@@ -242,6 +272,10 @@ export function buildSettingPickerRows(
 
   if (view === "fg" || view === "bgColor" || view === "font") {
     return buildGlobalDetailRows(view, locale, appearance)
+  }
+
+  if (view === "searchHitHighlight" || view === "searchJumpHighlight") {
+    return buildSearchHighlightDetailRows(view, locale, appearance)
   }
 
   if (view === "fgPicker" || view === "bgColorPicker" || view === "fontPicker") {
@@ -298,6 +332,20 @@ export function buildSettingPickerRows(
     id: "bg-color",
     line: t("setting.picker.main.bgColor", locale, {
       value: displayOrDefault(appearance.bgColor, resolvedGlobal.bgColor, locale)
+    })
+  })
+
+  rows.push({
+    id: "search-hit-highlight",
+    line: t("setting.picker.main.searchHitHighlight", locale, {
+      value: displayOrDefault(appearance.searchHitHighlightBg, resolvedSearchHl.hitBg, locale)
+    })
+  })
+
+  rows.push({
+    id: "search-jump-highlight",
+    line: t("setting.picker.main.searchJumpHighlight", locale, {
+      value: displayOrDefault(appearance.searchJumpHighlightBg, resolvedSearchHl.jumpBg, locale)
     })
   })
 
@@ -407,7 +455,11 @@ export function settingPickerHeadline(
                     ? "setting.picker.headline.fg"
                     : view === "bgColor"
                       ? "setting.picker.headline.bgColor"
-                      : view === "font"
+                      : view === "searchHitHighlight"
+                        ? "setting.picker.headline.searchHitHighlight"
+                        : view === "searchJumpHighlight"
+                          ? "setting.picker.headline.searchJumpHighlight"
+                          : view === "font"
                         ? "setting.picker.headline.font"
                         : view === "fgPicker"
                           ? "setting.picker.headline.fgPicker"
@@ -433,6 +485,12 @@ export function settingPickerEditAriaLabel(
       view === "bgColorPicker" ? "setting.picker.editAria.bgColorPicker" : "setting.picker.editAria.bgColor",
       locale
     )
+  }
+  if (view === "searchHitHighlight") {
+    return t("setting.picker.editAria.searchHitHighlight", locale)
+  }
+  if (view === "searchJumpHighlight") {
+    return t("setting.picker.editAria.searchJumpHighlight", locale)
   }
   if (view === "font" || view === "fontPicker") {
     return t(

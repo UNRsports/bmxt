@@ -14,6 +14,10 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "fgPicker"
     case "bg-color":
       return "bgColor"
+    case "search-hit-highlight":
+      return "searchHitHighlight"
+    case "search-jump-highlight":
+      return "searchJumpHighlight"
     case "bg-color-picker":
       return "bgColorPicker"
     case "size":
@@ -53,7 +57,13 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
 }
 
 export function isSettingGlobalDetailView(view: SettingListPickerView): boolean {
-  return view === "fg" || view === "bgColor" || view === "font"
+  return (
+    view === "fg" ||
+    view === "bgColor" ||
+    view === "searchHitHighlight" ||
+    view === "searchJumpHighlight" ||
+    view === "font"
+  )
 }
 
 export function isSettingPickerDetailView(view: SettingListPickerView): boolean {

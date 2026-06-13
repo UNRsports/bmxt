@@ -25,6 +25,8 @@ function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearanc
     fontFamily: patch?.fontFamily ?? null,
     bgImageDataUrl: patch?.bgImageDataUrl ?? null,
     editPicker: patch?.editPicker ?? false,
+    searchHitHighlightBg: patch?.searchHitHighlightBg ?? null,
+    searchJumpHighlightBg: patch?.searchJumpHighlightBg ?? null,
     picker: {
       fg: patch?.picker?.fg ?? null,
       bgColor: patch?.picker?.bgColor ?? null,

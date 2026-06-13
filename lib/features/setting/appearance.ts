@@ -1,7 +1,12 @@
-import type { MessageKey } from "./i18n/messages"
+import {
+  DEFAULT_SEARCH_HIT_HIGHLIGHT_BG,
+  DEFAULT_SEARCH_HIGHLIGHT_FG,
+  DEFAULT_SEARCH_JUMP_HIGHLIGHT_BG
+} from "../page-dom/injected-needle-highlight"
 import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
+import type { MessageKey } from "./i18n/messages"
 
 export const APPEARANCE_FLAG_TOKENS = [
   "--fg",
@@ -28,6 +33,10 @@ export type UiAppearance = UiAppearanceLayer & {
   /** EN: When false, picker columns inherit the global layer. */
   editPicker: boolean
   picker: UiAppearanceLayer
+  /** EN: In-page search hit highlight (search picker detail). */
+  searchHitHighlightBg: string | null
+  /** EN: In-page jump-target highlight (search picker detail). */
+  searchJumpHighlightBg: string | null
 }
 
 export const DEFAULT_UI_APPEARANCE_LAYER: UiAppearanceLayer = {
@@ -41,7 +50,9 @@ export const DEFAULT_UI_APPEARANCE_LAYER: UiAppearanceLayer = {
 export const DEFAULT_UI_APPEARANCE: UiAppearance = {
   ...DEFAULT_UI_APPEARANCE_LAYER,
   editPicker: false,
-  picker: { ...DEFAULT_UI_APPEARANCE_LAYER }
+  picker: { ...DEFAULT_UI_APPEARANCE_LAYER },
+  searchHitHighlightBg: null,
+  searchJumpHighlightBg: null
 }
 
 export const DEFAULT_TERMINAL_FG = "#c9d1d9"
@@ -96,7 +107,11 @@ export function normalizeUiAppearance(raw: Partial<UiAppearance> | null | undefi
     fontFamily: raw.fontFamily ?? null,
     bgImageDataUrl: raw.bgImageDataUrl ?? null,
     editPicker: raw.editPicker === true,
-    picker: parseAppearanceLayer(raw.picker)
+    picker: parseAppearanceLayer(raw.picker),
+    searchHitHighlightBg:
+      typeof raw.searchHitHighlightBg === "string" ? raw.searchHitHighlightBg : null,
+    searchJumpHighlightBg:
+      typeof raw.searchJumpHighlightBg === "string" ? raw.searchJumpHighlightBg : null
   }
 }
 
@@ -123,6 +138,23 @@ export function resolvePickerAppearance(appearance: UiAppearance): ResolvedTermi
     fontSize: picker.fontSize ?? global.fontSize,
     fontFamily: picker.fontFamily ?? global.fontFamily,
     bgImageDataUrl: picker.bgImageDataUrl ?? global.bgImageDataUrl
+  }
+}
+
+export type ResolvedSearchHighlightAppearance = {
+  hitBg: string
+  jumpBg: string
+  fg: string
+}
+
+/** EN: Resolved in-page search highlight colors for the detail picker. */
+export function resolveSearchHighlightAppearance(
+  appearance: UiAppearance
+): ResolvedSearchHighlightAppearance {
+  return {
+    hitBg: appearance.searchHitHighlightBg ?? DEFAULT_SEARCH_HIT_HIGHLIGHT_BG,
+    jumpBg: appearance.searchJumpHighlightBg ?? DEFAULT_SEARCH_JUMP_HIGHLIGHT_BG,
+    fg: DEFAULT_SEARCH_HIGHLIGHT_FG
   }
 }
 

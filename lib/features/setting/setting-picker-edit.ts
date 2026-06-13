@@ -14,6 +14,8 @@ import {
 export type SettingEditField =
   | "fg"
   | "bg-color"
+  | "search-hit-highlight"
+  | "search-jump-highlight"
   | "font"
   | "picker-fg"
   | "picker-bg-color"
@@ -52,6 +54,20 @@ function mergeLayerEdit(
     }
     return normalizeUiAppearance({ ...appearance, bgColor })
   }
+  if (field === "search-hit-highlight") {
+    const searchHitHighlightBg = previewHexColor(trimmed)
+    if (searchHitHighlightBg === null) {
+      return appearance
+    }
+    return normalizeUiAppearance({ ...appearance, searchHitHighlightBg })
+  }
+  if (field === "search-jump-highlight") {
+    const searchJumpHighlightBg = previewHexColor(trimmed)
+    if (searchJumpHighlightBg === null) {
+      return appearance
+    }
+    return normalizeUiAppearance({ ...appearance, searchJumpHighlightBg })
+  }
   const fontFamily = validateSettingEditValue(
     layer === "picker" ? "picker-font" : "font",
     trimmed
@@ -89,6 +105,9 @@ export function validateSettingEditValue(field: SettingEditField, raw: string): 
   if (field === "fg" || field === "bg-color" || field === "picker-fg" || field === "picker-bg-color") {
     return parseHexColor(trimmed)
   }
+  if (field === "search-hit-highlight" || field === "search-jump-highlight") {
+    return parseHexColor(trimmed)
+  }
   return parseFontFamily(trimmed)
 }
 
@@ -100,6 +119,12 @@ export function settingEditFieldForView(
   }
   if (view === "bgColor" || view === "bgColorPicker") {
     return view === "bgColorPicker" ? "picker-bg-color" : "bg-color"
+  }
+  if (view === "searchHitHighlight") {
+    return "search-hit-highlight"
+  }
+  if (view === "searchJumpHighlight") {
+    return "search-jump-highlight"
   }
   return view === "fontPicker" ? "picker-font" : "font"
 }

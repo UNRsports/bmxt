@@ -33,13 +33,18 @@ describe("searchPickerPreviewScrollAnimated", () => {
 })
 
 describe("listSearchDetailScrollTargetIndices", () => {
-  it("lists rows with pageMatchIndex", () => {
+  it("lists rows with body pageMatchIndex", () => {
     const hits = [
       { field: "title" as const, displayText: "a", canScrollTo: false },
       { field: "text" as const, displayText: "b", pageMatchIndex: 1, canScrollTo: true },
       { field: "text" as const, displayText: "c", pageMatchIndex: 2, canScrollTo: true }
     ]
-    assert.deepEqual(listSearchDetailScrollTargetIndices(hits), [1, 2])
+    const pageMatches = [
+      { lineNo: 0, snippet: "title hit", occurrence: 0 },
+      { lineNo: 3, snippet: "body b", occurrence: 0 },
+      { lineNo: 8, snippet: "body c", occurrence: 0 }
+    ]
+    assert.deepEqual(listSearchDetailScrollTargetIndices(hits, pageMatches), [1, 2])
   })
 })
 
