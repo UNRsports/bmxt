@@ -1,10 +1,14 @@
+import { createTabInNormalBrowserWindow } from "../dispatch/handlers/shared"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { openEntryEffects } from "../side-picker/model/open-entry"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 import type { PickerEntry, SearchPageMatch } from "../side-picker/model/picker-entry"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
-import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
+import {
+  resolveOpenTabForSearchEntry,
+  type OpenTabResolution
+} from "./search-entry-open-tab"
 import {
   openUrlAtSearchDestination,
   type SearchOpenDestinationRow
@@ -13,10 +17,11 @@ import type { ChromeEffect } from "../dispatch/effect-types"
 import type { DispatchChromeContext } from "../dispatch/dispatch-context"
 import { applyChromeEffects } from "../dispatch"
 
-export type SearchOpenAction = "jump" | "direct"
-
 const TAB_FOCUS_DELAY_MS = 120
 const TAB_LOAD_TIMEOUT_MS = 20000
+
+const SCROLL_FAILED_LOG =
+  "search — could not scroll to match (reload the tab or grant site access, then try again)"
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -41,9 +46,17 @@ function pickPageMatch(entry: PickerEntry, matchIndex: number): SearchPageMatch 
   return matches[matchIndex] ?? matches[0]
 }
 
-async function jumpToNeedleInTab(
+async function activateOpenTab(resolved: OpenTabResolution): Promise<void> {
+  await executePickerFocusPlan({
+    kind: "activateTab",
+    tabId: resolved.tabId,
+    windowId: resolved.windowId
+  })
+  await sleep(TAB_FOCUS_DELAY_MS)
+}
+
+async function scrollToMatchInTab(
   tabId: number,
-  windowId: number,
   match: SearchPageMatch,
   searchPattern: string
 ): Promise<boolean> {
@@ -51,12 +64,6 @@ async function jumpToNeedleInTab(
   if (!needle) {
     return false
   }
-  await executePickerFocusPlan({
-    kind: "activateTab",
-    tabId,
-    windowId
-  })
-  await sleep(TAB_FOCUS_DELAY_MS)
   return scrollSearchPageToNeedle(tabId, {
     searchNeedle: needle,
     lineNo: match.lineNo,
@@ -101,64 +108,21 @@ async function createTabAndJumpToNeedle(
   if (!url || !isScriptablePageUrl(url)) {
     return false
   }
-  let tab: chrome.tabs.Tab
-  try {
-    tab = await chrome.tabs.create({ url })
-  } catch {
-    return false
-  }
-  if (tab.id == null || tab.windowId == null) {
+  const tab = await createTabInNormalBrowserWindow(url)
+  if (!tab || tab.id == null || tab.windowId == null) {
     return false
   }
   await waitForTabComplete(tab.id)
   await sleep(TAB_FOCUS_DELAY_MS + 200)
-  return jumpToNeedleInTab(tab.id, tab.windowId, match, searchPattern)
+  await activateOpenTab({ tabId: tab.id, windowId: tab.windowId })
+  return scrollToMatchInTab(tab.id, match, searchPattern)
 }
 
 /**
- * EN: Decide whether Enter should jump in-tab or open a new tab (`→` opens the destination tree for history).
- * JA: Enter がタブ内ジャンプか新規タブかを判定する（history の開き先は `→`）。
- */
-export async function resolveSearchOpenAction(
-  entry: PickerEntry,
-  matchIndex: number,
-  searchPattern = ""
-): Promise<SearchOpenAction> {
-  const match = pickPageMatch(entry, matchIndex)
-  const needle = searchPattern.trim()
-
-  if (match && needle) {
-    const resolved = await resolveOpenTabForSearchEntry(entry)
-    if (resolved && (await tabStillOpen(resolved.tabId))) {
-      const jumped = await jumpToNeedleInTab(
-        resolved.tabId,
-        resolved.windowId,
-        match,
-        needle
-      )
-      if (jumped) {
-        return "jump"
-      }
-      if (match.lineNo > 0) {
-        return "direct"
-      }
-    }
-
-    if (match.lineNo > 0) {
-      const jumped = await createTabAndJumpToNeedle(entry, match, needle)
-      if (jumped) {
-        return "jump"
-      }
-    }
-  }
-
-  return "direct"
-}
-
-/**
- * EN: Open/focus a search picker row — page hits activate the source tab, scroll to the
- *     search needle, and highlight it in the page. History rows may open at `destination`.
- * JA: search ピッカー行を開く。page ヒットは元タブを前面にし、検索語へスクロールして強調表示する。
+ * EN: Open/focus a search picker row — when the URL is already open, activate that tab
+ *     and its browser window (never duplicate in the BMXt window). Try in-page scroll when possible.
+ * JA: search ピッカー行を開く。URL が既に開いていればそのタブとブラウザウィンドウを前面化し、
+ *     可能ならページ内スクロールする（BMXt ウィンドウに重複オープンしない）。
  */
 export async function openSearchPickerEntry(
   entry: PickerEntry,
@@ -180,37 +144,27 @@ export async function openSearchPickerEntry(
     return
   }
 
-  const action = await resolveSearchOpenAction(entry, matchIndex, searchPattern)
-  if (action === "jump") {
-    const match = pickPageMatch(entry, matchIndex)
-    const needle = searchPattern.trim()
-    if (!match || !needle) {
+  const match = pickPageMatch(entry, matchIndex)
+  const needle = searchPattern.trim()
+  const resolved = await resolveOpenTabForSearchEntry(entry)
+
+  if (resolved && (await tabStillOpen(resolved.tabId))) {
+    await activateOpenTab(resolved)
+    if (match && needle) {
+      const scrolled = await scrollToMatchInTab(resolved.tabId, match, needle)
+      if (!scrolled && match.lineNo > 0) {
+        await appendLogLines([SCROLL_FAILED_LOG])
+      }
+    }
+    return
+  }
+
+  if (match && needle && match.lineNo > 0) {
+    const jumped = await createTabAndJumpToNeedle(entry, match, needle)
+    if (jumped) {
       return
     }
-    const resolved = await resolveOpenTabForSearchEntry(entry)
-    if (resolved && (await tabStillOpen(resolved.tabId))) {
-      const jumped = await jumpToNeedleInTab(
-        resolved.tabId,
-        resolved.windowId,
-        match,
-        needle
-      )
-      if (jumped) {
-        return
-      }
-      if (match.lineNo > 0) {
-        await appendLogLines([
-          "search — could not scroll to match (reload the tab or grant site access, then try again)"
-        ])
-        return
-      }
-    }
-    if (match.lineNo > 0) {
-      const jumped = await createTabAndJumpToNeedle(entry, match, needle)
-      if (jumped) {
-        return
-      }
-    }
+    await appendLogLines([SCROLL_FAILED_LOG])
     return
   }
 

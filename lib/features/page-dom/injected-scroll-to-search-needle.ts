@@ -1,7 +1,9 @@
 /**
  * EN: Injected via content script or `chrome.scripting.executeScript` — scroll to a
- *     search needle on a specific innerText line and highlight it in-page.
- * JA: innerText 行番号を手がかりに検索語へスクロールし、ページ内で強調表示する。
+ *     search needle and highlight it in-page. Range pick order: snippet (live DOM) →
+ *     lineNo auxiliary → scan-time globalOccurrence → first match.
+ * JA: 検索語へスクロールして強調表示。Range 選択は snippet（live DOM）→ lineNo 補助 →
+ *     スキャン時 globalOccurrence → 先頭一致。
  */
 
 import {
@@ -140,10 +142,6 @@ function pickRangeForLine(
     return undefined
   }
 
-  if (globalOccurrenceHint >= 0 && globalOccurrenceHint < ranges.length) {
-    return ranges[globalOccurrenceHint]
-  }
-
   const hint = snippetHint.replace(/…\s*$/, "").trim()
   if (hint) {
     const byHint = findRangeByContext(hint, needle, ranges)
@@ -160,10 +158,14 @@ function pickRangeForLine(
       return ranges[occ]
     }
     const context = lineContextAroundNeedle(lineText, needle)
-    const byContext = findRangeByContext(context, needle, ranges)
-    if (byContext) {
-      return byContext
+    const byLineContext = findRangeByContext(context, needle, ranges)
+    if (byLineContext) {
+      return byLineContext
     }
+  }
+
+  if (globalOccurrenceHint >= 0 && globalOccurrenceHint < ranges.length) {
+    return ranges[globalOccurrenceHint]
   }
 
   return ranges[0]
