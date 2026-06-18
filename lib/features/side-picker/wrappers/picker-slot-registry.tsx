@@ -63,10 +63,7 @@ type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
 const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
   tabs: (ctx) =>
     ctx.tabPicker ? (
-      <PickerPanelHost
-        focusTarget="tabs"
-        paneFocus={ctx.paneFocus}
-        isFocusedPane={ctx.isFocusedPane}>
+      <PickerPanelHost>
         <TabsPickerWrapper
           pageActiveMode={ctx.tabsPageActiveMode}
           onAppendLog={ctx.onAppendLog}
@@ -83,10 +80,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   search: (ctx) =>
     ctx.searchListPicker ? (
-      <PickerPanelHost
-        focusTarget="search"
-        paneFocus={ctx.paneFocus}
-        isFocusedPane={ctx.isFocusedPane}>
+      <PickerPanelHost>
         <SearchListPickerOverlay
           state={ctx.searchListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
@@ -103,10 +97,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   dom: (ctx) =>
     ctx.domListPicker ? (
-      <PickerPanelHost
-        focusTarget="dom"
-        paneFocus={ctx.paneFocus}
-        isFocusedPane={ctx.isFocusedPane}>
+      <PickerPanelHost>
         <DomPickerWrapper
           state={ctx.domListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
@@ -120,10 +111,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
     ) : null,
   setting: (ctx) =>
     ctx.settingListPicker ? (
-      <PickerPanelHost
-        focusTarget="setting"
-        paneFocus={ctx.paneFocus}
-        isFocusedPane={ctx.isFocusedPane}>
+      <PickerPanelHost>
         <SettingPickerWrapper
           state={ctx.settingListPicker}
           onStateChange={ctx.onSettingPickerStateChange}

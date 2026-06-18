@@ -779,6 +779,10 @@
     "ja": "search — ページ内ジャンプできるヒットがありません（タブ未 open またはスクロール不可）",
     "en": "search — no in-page hits to jump (tab not open or not scrollable)"
   },
+  "search.picker.previewScrollFailed": {
+    "ja": "search — ページ内ジャンプに失敗しました（タブを再読み込みするか、サイトアクセスを確認してください）",
+    "en": "search — in-page jump failed (reload the tab or check site access)"
+  },
   "search.status.auto": {
     "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ",
     "en": "↑↓ in-page preview on highlight (background) · Ctrl+↑↓ open-tab rows only · Enter jump"

@@ -96,13 +96,13 @@ function SearchDetailPickerRow({
   index,
   hit,
   hi,
-  pattern,
+  highlightNeedle,
   entry
 }: {
   index: number
   hit: SearchEntryDetailHit
   hi: number
-  pattern: string
+  highlightNeedle: string
   entry: PickerEntry
 }): ReactNode {
   const hiRow = index === hi
@@ -119,7 +119,7 @@ function SearchDetailPickerRow({
       <div className="bmxt-search-picker-field">
         <div className="bmxt-search-picker-field-label">{fieldLabel}</div>
         <div className="bmxt-search-picker-text">
-          <SearchPickerHighlight text={hit.displayText} needle={pattern} />
+          <SearchPickerHighlight text={hit.displayText} needle={highlightNeedle} />
         </div>
       </div>
     </div>
@@ -131,18 +131,22 @@ function SearchListPickerRow({
   entry,
   hi,
   pattern,
+  highlightNeedle,
   matchHi
 }: {
   index: number
   entry: PickerEntry
   hi: number
   pattern: string
+  highlightNeedle: string
   matchHi: number
 }): ReactNode {
   const hiRow = index === hi
   const pageMatch = pickPageMatchForDisplay(entry.pageMatches, hiRow ? matchHi : 0)
   const showText = pageMatch != null && pageMatch.snippet.trim().length > 0
   const textExcerpt = pageMatch ? excerptAroundNeedle(pageMatch.snippet, pattern) : ""
+  const titleNeedle = highlightNeedle.trim() !== "" ? highlightNeedle : pattern
+  const textNeedle = highlightNeedle.trim() !== "" ? highlightNeedle : pattern
 
   return (
     <div
@@ -158,7 +162,7 @@ function SearchListPickerRow({
             <SearchPickerTabFavicon tabId={entry.tabId} url={entry.url} />
           ) : null}
           <span className="bmxt-search-picker-title-text">
-            <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={pattern} />
+            <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={titleNeedle} />
           </span>
         </div>
       </div>
@@ -166,7 +170,7 @@ function SearchListPickerRow({
         <div className="bmxt-search-picker-field">
           <div className="bmxt-search-picker-field-label">text:</div>
           <div className="bmxt-search-picker-text">
-            <SearchPickerHighlight text={textExcerpt} needle={pattern} />
+            <SearchPickerHighlight text={textExcerpt} needle={textNeedle} />
           </div>
         </div>
       ) : null}
@@ -253,6 +257,10 @@ export function SearchListPickerBody({
             : entries.map((e) => e.title),
     [destinationRows, detailHits, entries, inDestinationView, inDetailView, statusLines, statusOnly]
   )
+  const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
+  const rowHighlightNeedle =
+    searchHighlightQuery.trim() !== "" ? searchHighlightQuery : pattern
+
   const listResetKey = inDestinationView
     ? `destination-${destinationRows.length}`
     : inDetailView
@@ -480,7 +488,7 @@ export function SearchListPickerBody({
               index={i}
               hit={hit}
               hi={hi}
-              pattern={pattern}
+              highlightNeedle={rowHighlightNeedle}
               entry={detailEntry}
             />
           ))
@@ -492,6 +500,7 @@ export function SearchListPickerBody({
               entry={entry}
               hi={hi}
               pattern={pattern}
+              highlightNeedle={rowHighlightNeedle}
               matchHi={matchHi}
             />
           ))

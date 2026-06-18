@@ -1052,6 +1052,12 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   outline-offset: -3px;
 }
 
+/* Picker columns sit inside overflow:hidden rails — inset shadow stays visible. */
+.bmxt-picker-column-slot.bmxt-split-pane--focused {
+  outline: none;
+  box-shadow: inset 0 0 0 3px #58a6ff;
+}
+
 /* EN: Mouse — select displayed text; links stay clickable. Keyboard drives extension state. */
 .bmxt-tab-picker-list,
 .bmxt-tab-picker-head,

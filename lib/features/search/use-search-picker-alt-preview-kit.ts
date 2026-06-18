@@ -92,6 +92,7 @@ export function useSearchPickerAltPreviewKit({
   const listScrollHintRef = listScrollHintRefOption ?? internalListScrollHintRef
   const [altPreviewTick, setAltPreviewTick] = useState(0)
   const [previewTargetIndices, setPreviewTargetIndices] = useState<number[]>([])
+  const [previewTargetsReady, setPreviewTargetsReady] = useState(false)
   const [previewNotice, setPreviewNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
   const patternRef = useRef(pattern)
@@ -110,12 +111,15 @@ export function useSearchPickerAltPreviewKit({
   useEffect(() => {
     if (!enabled) {
       setPreviewTargetIndices([])
+      setPreviewTargetsReady(false)
       return
     }
     let cancelled = false
+    setPreviewTargetsReady(false)
     void listSearchDetailPreviewTargetIndices(detailEntry, detailHits).then((indices) => {
       if (!cancelled) {
         setPreviewTargetIndices(indices)
+        setPreviewTargetsReady(true)
       }
     })
     return () => {
@@ -123,48 +127,78 @@ export function useSearchPickerAltPreviewKit({
     }
   }, [detailEntry, detailHits, enabled])
 
-  const showNoPreviewTargetNotice = useCallback(() => {
-    if (noticeTimerRef.current !== null) {
-      window.clearTimeout(noticeTimerRef.current)
-    }
-    setPreviewNotice(uiCopy.t("search.picker.noDetailScrollTarget"))
-    noticeTimerRef.current = window.setTimeout(() => {
-      setPreviewNotice(null)
-      noticeTimerRef.current = null
-    }, PREVIEW_NOTICE_MS)
-  }, [uiCopy])
+  const showPreviewNotice = useCallback(
+    (message: string) => {
+      if (noticeTimerRef.current !== null) {
+        window.clearTimeout(noticeTimerRef.current)
+      }
+      setPreviewNotice(message)
+      noticeTimerRef.current = window.setTimeout(() => {
+        setPreviewNotice(null)
+        noticeTimerRef.current = null
+      }, PREVIEW_NOTICE_MS)
+    },
+    []
+  )
 
-  const runPreview = useCallback(async (rowIndex?: number) => {
-    const entry = detailEntryRef.current
-    const hits = detailHitsRef.current
-    const index = rowIndex ?? hiRef.current
-    const hit = hits[index]
-    if (!entry || !hit) {
-      return
-    }
-    await previewSearchPickerDetailHitInBackground(
-      entry,
-      hit,
-      patternRef.current,
-      highlightColorsRef.current
-    )
-  }, [])
+  const showNoPreviewTargetNotice = useCallback(() => {
+    showPreviewNotice(uiCopy.t("search.picker.noDetailScrollTarget"))
+  }, [showPreviewNotice, uiCopy])
+
+  const showPreviewScrollFailedNotice = useCallback(() => {
+    showPreviewNotice(uiCopy.t("search.picker.previewScrollFailed"))
+  }, [showPreviewNotice, uiCopy])
+
+  const canPreviewCurrentSelection = useCallback(
+    (rowIndex: number): boolean => {
+      return canPreviewSearchPickerSelection(
+        "detail",
+        rowIndex,
+        previewTargetIndicesRef.current,
+        detailHitsRef.current,
+        detailEntryRef.current?.pageMatches,
+        previewTargetsReady
+      )
+    },
+    [previewTargetsReady]
+  )
+
+  const runPreview = useCallback(
+    async (rowIndex?: number): Promise<boolean> => {
+      const entry = detailEntryRef.current
+      const hits = detailHitsRef.current
+      const index = rowIndex ?? hiRef.current
+      const hit = hits[index]
+      if (!entry || !hit) {
+        return false
+      }
+      return previewSearchPickerDetailHitInBackground(
+        entry,
+        hit,
+        patternRef.current,
+        highlightColorsRef.current
+      )
+    },
+    []
+  )
+
+  const runPreviewWithNotice = useCallback(
+    async (rowIndex?: number) => {
+      if (!canPreviewCurrentSelection(rowIndex ?? hiRef.current)) {
+        showNoPreviewTargetNotice()
+        return
+      }
+      const ok = await runPreview(rowIndex)
+      if (!ok) {
+        showPreviewScrollFailedNotice()
+      }
+    },
+    [canPreviewCurrentSelection, runPreview, showNoPreviewTargetNotice, showPreviewScrollFailedNotice]
+  )
 
   const onAltKeyDown = useCallback(() => {
-    const currentHi = hiRef.current
-    const canPreview = canPreviewSearchPickerSelection(
-      "detail",
-      currentHi,
-      previewTargetIndicesRef.current,
-      detailHitsRef.current,
-      detailEntryRef.current?.pageMatches
-    )
-    if (!canPreview) {
-      showNoPreviewTargetNotice()
-      return
-    }
-    void runPreview()
-  }, [runPreview, showNoPreviewTargetNotice])
+    void runPreviewWithNotice()
+  }, [runPreviewWithNotice])
 
   usePickerAltKeyTracking({
     enabled,
@@ -187,12 +221,17 @@ export function useSearchPickerAltPreviewKit({
     altKeyHeldRef,
     altPreviewTick,
     previewKey,
-    runPreview
+    runPreview: () => runPreviewWithNotice()
   })
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (!enabled || searchMode || commandMode) {
+      if (!enabled || commandMode) {
+        return false
+      }
+      const altArrow =
+        isPickerAltOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
+      if (searchMode && !altArrow) {
         return false
       }
       if (isPickerCtrlBlockedChord(e) || isPickerAltBlockedChord(e)) {
@@ -205,8 +244,6 @@ export function useSearchPickerAltPreviewKit({
 
       const ctrlArrow =
         isPickerCtrlOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
-      const altArrow =
-        isPickerAltOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
       const navDir = verticalNavDirection(e)
 
       if (ctrlArrow) {
@@ -228,7 +265,7 @@ export function useSearchPickerAltPreviewKit({
         hiRef.current = nextHi
         setHi(nextHi)
         if (pageActiveMode === "auto") {
-          void runPreview(nextHi)
+          void runPreviewWithNotice(nextHi)
         }
         return true
       }
@@ -251,17 +288,11 @@ export function useSearchPickerAltPreviewKit({
             : Math.max(currentHi - 1, 0)
         hiRef.current = nextHi
         setHi(nextHi)
-        const canPreview = canPreviewSearchPickerSelection(
-          "detail",
-          nextHi,
-          previewTargetIndicesRef.current,
-          detailHitsRef.current,
-          detailEntryRef.current?.pageMatches
-        )
+        const canPreview = canPreviewCurrentSelection(nextHi)
         if (!canPreview) {
           showNoPreviewTargetNotice()
         } else {
-          void runPreview(nextHi)
+          void runPreviewWithNotice(nextHi)
         }
         return true
       }
@@ -274,25 +305,19 @@ export function useSearchPickerAltPreviewKit({
       hiRef.current = nextHi
       setHi(nextHi)
       if (pageActiveMode === "auto") {
-        const canPreview = canPreviewSearchPickerSelection(
-          "detail",
-          nextHi,
-          previewTargetIndicesRef.current,
-          detailHitsRef.current,
-          detailEntryRef.current?.pageMatches
-        )
-        if (canPreview) {
-          void runPreview(nextHi)
+        if (canPreviewCurrentSelection(nextHi)) {
+          void runPreviewWithNotice(nextHi)
         }
       }
       return true
     },
     [
+      canPreviewCurrentSelection,
       commandMode,
       enabled,
       lineCount,
       pageActiveMode,
-      runPreview,
+      runPreviewWithNotice,
       searchMode,
       setHi,
       showNoPreviewTargetNotice

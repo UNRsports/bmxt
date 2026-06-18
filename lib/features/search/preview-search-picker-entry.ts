@@ -3,7 +3,7 @@ import type { BmxtNeedleHighlightColorsPayload } from "../page-dom/page-scroll-n
 import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
-import { resolveSearchPickerPageMatchFromMatches, lineHitIndexForPageMatch } from "./search-picker-page-match"
+import { resolveSearchPickerPageMatchFromMatches } from "./search-picker-page-match"
 import { clearSearchPageHighlights } from "./sources/clear-search-page-highlights"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
@@ -38,8 +38,6 @@ function sleep(ms: number): Promise<void> {
 }
 
 function previewScrollOptions(
-  entry: PickerEntry,
-  pageMatchIndex: number,
   match: SearchPageMatch,
   searchPattern: string,
   highlightColors: SearchPageHighlightColors,
@@ -50,7 +48,6 @@ function previewScrollOptions(
     lineNo: match.lineNo,
     snippetHint: match.snippet,
     globalOccurrence: match.globalOccurrence,
-    lineHitIndex: lineHitIndexForPageMatch(entry.pageMatches, pageMatchIndex),
     persistMs: 0,
     highlightColors,
     activeOnly
@@ -59,8 +56,6 @@ function previewScrollOptions(
 
 async function scrollToPageMatch(
   tabId: number,
-  entry: PickerEntry,
-  pageMatchIndex: number,
   match: SearchPageMatch,
   searchPattern: string,
   highlightColors: SearchPageHighlightColors
@@ -81,7 +76,7 @@ async function scrollToPageMatch(
 
   const scrolled = await scrollSearchPageToNeedle(
     tabId,
-    previewScrollOptions(entry, pageMatchIndex, match, searchPattern, highlightColors, activeOnly)
+    previewScrollOptions(match, searchPattern, highlightColors, activeOnly)
   )
   if (scrolled) {
     markPreviewSession()
@@ -91,7 +86,7 @@ async function scrollToPageMatch(
   if (activeOnly) {
     const retried = await scrollSearchPageToNeedle(
       tabId,
-      previewScrollOptions(entry, pageMatchIndex, match, searchPattern, highlightColors, false)
+      previewScrollOptions(match, searchPattern, highlightColors, false)
     )
     if (retried) {
       markPreviewSession()
@@ -125,7 +120,7 @@ async function previewPageMatchInOpenTab(
   }
 
   await sleep(PREVIEW_TAB_ACTIVATE_DELAY_MS)
-  return scrollToPageMatch(resolved.tabId, entry, pageMatchIndex, match, searchPattern, highlightColors)
+  return scrollToPageMatch(resolved.tabId, match, searchPattern, highlightColors)
 }
 
 /**
@@ -187,6 +182,10 @@ export async function clearSearchPickerPageHighlightsForEntry(entry: PickerEntry
   resetSearchPickerPageHighlightSession()
   if (!resolved) {
     return false
+  }
+  if (previewSessionTabId === resolved.tabId) {
+    previewSessionTabId = null
+    previewSessionNeedle = ""
   }
   return clearSearchPageHighlights(resolved.tabId)
 }
