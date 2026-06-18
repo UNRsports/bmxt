@@ -1,5 +1,7 @@
 import type { SessionPickerState } from "../side-picker/session/session-pickers"
 
+export type SessionSwitchPickerMatchMode = "prefix" | "contains"
+
 export const MAX_SESSION_NAME_LEN = 64
 
 const SESSION_CMD_LOG_RE = /^\s*>\s*session\b/i
@@ -38,6 +40,74 @@ function appendPart(parts: string[], label: string, detail?: string): void {
 export function formatSessionListCandidateLabel(row: SessionListRow): string {
   const mark = row.isActive ? "*" : " "
   return `${mark}${row.index}  ${row.displayName}`
+}
+
+export function sessionSwitchCommandName(
+  row: SessionListRow,
+  rows: readonly SessionListRow[]
+): string {
+  const dupes = rows.filter((r) => r.displayName === row.displayName).length
+  return dupes > 1 ? `${row.displayName} (${row.index})` : row.displayName
+}
+
+/** EN: Filter `session -switch` picker rows (incremental contains/prefix like subcommand picker). */
+export function filterSessionSwitchPickerRows(
+  rows: readonly SessionListRow[],
+  namePrefix: string,
+  matchMode: SessionSwitchPickerMatchMode
+): SessionListRow[] {
+  if (namePrefix.length === 0) {
+    return [...rows]
+  }
+  const p = namePrefix.toLowerCase()
+  return rows.filter((row) => {
+    const label = sessionSwitchCommandName(row, rows).toLowerCase()
+    return matchMode === "contains" ? label.includes(p) : label.startsWith(p)
+  })
+}
+
+export function buildSessionSwitchCommandLine(
+  row: SessionListRow,
+  rows: readonly SessionListRow[]
+): string {
+  return `session -switch ${sessionSwitchCommandName(row, rows)}`
+}
+
+export function formatSessionSwitchCandidateLabel(
+  row: SessionListRow,
+  rows: readonly SessionListRow[]
+): string {
+  const mark = row.isActive ? "*" : " "
+  return `${mark}${sessionSwitchCommandName(row, rows)}`
+}
+
+export function resolveSessionRowByDisplayName(
+  rows: readonly SessionListRow[],
+  query: string
+): SessionListRow | null {
+  const q = query.trim()
+  if (q.length === 0) {
+    return null
+  }
+  const exact = rows.filter((r) => r.displayName === q)
+  if (exact.length === 1) {
+    return exact[0]!
+  }
+  if (exact.length > 1) {
+    return null
+  }
+  const indexed = q.match(/^(.+?)\s+\((\d+)\)$/)
+  if (indexed) {
+    const namePart = indexed[1]!.trim()
+    const index = Number.parseInt(indexed[2] ?? "", 10)
+    const row = rows.find((r) => r.displayName === namePart && r.index === index)
+    return row ?? null
+  }
+  const ci = rows.filter((r) => r.displayName.toLowerCase() === q.toLowerCase())
+  if (ci.length === 1) {
+    return ci[0]!
+  }
+  return null
 }
 
 export function buildSessionSummary(

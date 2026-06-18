@@ -48,6 +48,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "session": [
     { head: "-new", trailingTokens: [] as const, tail: "rest" },
     { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-switch", trailingTokens: [] as const, tail: "rest" },
     { head: "-next", trailingTokens: [] as const, tail: "none" },
     { head: "-prev", trailingTokens: [] as const, tail: "none" },
     { head: "-setting-name", trailingTokens: [] as const, tail: "rest" }
@@ -138,7 +139,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "session": {
       const lower = token.toLowerCase()
-      return lower === "-new" || lower === "-list" || lower === "-next" || lower === "-prev" || lower === "-setting-name"
+      return lower === "-new" || lower === "-list" || lower === "-switch" || lower === "-next" || lower === "-prev" || lower === "-setting-name"
     }
     case "setting": {
       const lower = token.toLowerCase()

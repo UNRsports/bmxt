@@ -151,7 +151,7 @@
       "module": "session",
       "canonicalName": "session",
       "aliases": [],
-      "usagePrimary": "session -new [name] | session -list | session -next | session -prev | session -setting-name [name]",
+      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]",
       "subcommands": [
         {
           "head": "-new",
@@ -160,6 +160,10 @@
         {
           "head": "-list",
           "tail": "none"
+        },
+        {
+          "head": "-switch",
+          "tail": "rest"
         },
         {
           "head": "-next",

@@ -1,21 +1,31 @@
 export {
   isSessionSettingNameUiLine,
+  isSessionSwitchByNameUiLine,
   isSessionSwitchUiLine,
   parseSessionListPickerLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
-  parseSessionSwitchByNumberLine
+  parseSessionSwitchPickerLine,
+  parseSessionSwitchWithLine,
+  parseSessionSwitchByNumberLine,
+  resolveSessionSwitchPickerState
 } from "./session-input"
 export {
   buildSessionListRows,
   buildSessionSummary,
+  buildSessionSwitchCommandLine,
   deriveDefaultSessionName,
+  filterSessionSwitchPickerRows,
   formatSessionListCandidateLabel,
+  formatSessionSwitchCandidateLabel,
   lastCommandFromSessionLog,
   MAX_SESSION_NAME_LEN,
   resolveSessionDisplayName,
+  resolveSessionRowByDisplayName,
   sanitizeSessionName,
-  type SessionListRow
+  sessionSwitchCommandName,
+  type SessionListRow,
+  type SessionSwitchPickerMatchMode
 } from "./session-summary"
 export { SessionBar } from "./session-bar"
-export { SessionListCandidatePanel } from "./session-list-candidate-panel"
+export { SessionListCandidatePanel, type SessionCandidatePanelVariant } from "./session-list-candidate-panel"

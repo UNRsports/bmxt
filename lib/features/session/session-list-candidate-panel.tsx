@@ -1,19 +1,28 @@
-/** EN: `session -list` — floating candidate menu (same chrome as token / subcommand pickers). */
+/** EN: `session -list` / `session -switch` — floating candidate menu (subcommand picker chrome). */
 
 import { useLayoutEffect, useRef } from "react"
 import { useUiCopy } from "../setting"
-import { formatSessionListCandidateLabel, type SessionListRow } from "./session-summary"
+import {
+  formatSessionListCandidateLabel,
+  formatSessionSwitchCandidateLabel,
+  type SessionListRow
+} from "./session-summary"
 
 const ITEM_ID_PREFIX = "bmxt-session-candidate-item"
+
+export type SessionCandidatePanelVariant = "list" | "switch"
 
 type Props = {
   rows: SessionListRow[]
   hi: number
+  variant: SessionCandidatePanelVariant
 }
 
-export function SessionListCandidatePanel({ rows, hi }: Props) {
+export function SessionListCandidatePanel({ rows, hi, variant }: Props) {
   const uiCopy = useUiCopy()
   const listRef = useRef<HTMLDivElement>(null)
+  const hintKey = variant === "switch" ? "session.switch.hint" : "session.picker.hint"
+  const ariaKey = variant === "switch" ? "session.switch.aria" : "session.picker.aria"
 
   useLayoutEffect(() => {
     const list = listRef.current
@@ -25,8 +34,8 @@ export function SessionListCandidatePanel({ rows, hi }: Props) {
   }, [hi, rows.length])
 
   return (
-    <div className="bmxt-subcmd-picker" role="listbox" aria-label={uiCopy.t("session.picker.aria")}>
-      <div className="bmxt-subcmd-picker-hint">{uiCopy.t("session.picker.hint")}</div>
+    <div className="bmxt-subcmd-picker" role="listbox" aria-label={uiCopy.t(ariaKey)}>
+      <div className="bmxt-subcmd-picker-hint">{uiCopy.t(hintKey)}</div>
       <div ref={listRef} className="bmxt-subcmd-picker-list">
         {rows.map((row, i) => (
           <div
@@ -37,7 +46,9 @@ export function SessionListCandidatePanel({ rows, hi }: Props) {
             className={`bmxt-subcmd-picker-item${i === hi ? " bmxt-subcmd-picker-item--hi" : ""}${
               row.isActive ? " bmxt-subcmd-picker-item--active-session" : ""
             }`}>
-            {formatSessionListCandidateLabel(row)}
+            {variant === "switch"
+              ? formatSessionSwitchCandidateLabel(row, rows)
+              : formatSessionListCandidateLabel(row)}
           </div>
         ))}
       </div>

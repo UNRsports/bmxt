@@ -723,6 +723,22 @@
     "ja": "セッション切り替え候補",
     "en": "Session switch candidates"
   },
+  "session.switch.hint": {
+    "ja": "Session switch — * がアクティブ · 入力で絞り込み · ↑↓ · Enter でコマンドに名前を入れる · もう一度 Enter で切り替え · Esc → prompt",
+    "en": "Session switch — * marks active · type to filter · ↑↓ · Enter insert name into command · Enter again to switch · Esc → prompt"
+  },
+  "session.switch.aria": {
+    "ja": "セッション名による切り替え候補",
+    "en": "Switch session by name"
+  },
+  "session.switch.switched": {
+    "ja": "セッション「{name}」に切り替えました。",
+    "en": "Switched to session \"{name}\"."
+  },
+  "session.switch.notFound": {
+    "ja": "session: セッション名「{name}」が見つかりません。`session -switch` で候補を表示できます。",
+    "en": "session: no session named \"{name}\". Use `session -switch` for the name menu."
+  },
   "session.number.invalid": {
     "ja": "session: 番号 {n} は範囲外です（1–{max}）。`session` または `session -list` で一覧を開けます。",
     "en": "session: number {n} is out of range (1–{max}). Use `session` or `session -list` for the switch list."
@@ -1444,8 +1460,8 @@
     "en": "tabs (BMXt window / SW):\n  tabs              - show available options, then restore prompt to `tabs ` for continuation.\n  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).\n  tabs -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tabs -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tabs -nowurl      - print current tab URL from active tab in focused window.\n  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
   },
   "help.section.session": {
-    "ja": "session（ターミナルセッション切り替え）:\n  session                       - 第二コマンド候補をメニュー表示し、プロンプトを `session ` に戻す。\n  session <n>                   - 番号 n（1 始まり）のセッションへ切り替え。\n  session -list                 - セッション切り替えリスト（↑↓ · Enter · 1–9）。\n  session -new [name]           - 新規セッションを作成して切り替え。\n  session -setting-name [name]  - このセッションの表示名を変更（省略時は現在名をプロンプトに表示して編集）。\n  session -next / -prev         - 次 / 前のセッションへ切り替え。\n  Ctrl+← / Ctrl+→              - 複数セッション時に前後へ切り替え。\n  ウィンドウ上端                  - セッションが 2 つ以上のとき tmux 風のセッション名帯を表示。",
-    "en": "session (terminal session switching):\n  session                       - show second-command menu, then restore prompt to `session `.\n  session <n>                   - switch to session number n (1-based).\n  session -list                 - session switch list (↑↓ · Enter · 1–9).\n  session -new [name]           - create a new session and switch to it.\n  session -setting-name [name]  - rename this session (omit name to edit current name on the prompt).\n  session -next / -prev         - switch to next / previous session.\n  Ctrl+← / Ctrl+→              - prev / next when multiple sessions exist.\n  Window top bar                - tmux-style session name strip when 2+ sessions exist."
+    "ja": "session（ターミナルセッション切り替え）:\n  session                       - 第二コマンド候補をメニュー表示し、プロンプトを `session ` に戻す。\n  session <n>                   - 番号 n（1 始まり）のセッションへ切り替え。\n  session -list                 - 番号付き切り替えリスト（↑↓ · Enter · 1–9）。\n  session -switch [name]        - セッション名で切り替え（候補メニューまたは直接指定）。\n  session -new [name]           - 新規セッションを作成して切り替え。\n  session -setting-name [name]  - このセッションの表示名を変更。\n  session -next / -prev         - 次 / 前のセッションへ切り替え。\n  Ctrl+← / Ctrl+→              - 複数セッション時に前後へ切り替え。",
+    "en": "session (terminal session switching):\n  session                       - show second-command menu, then restore prompt to `session `.\n  session <n>                   - switch to session number n (1-based).\n  session -list                 - numbered switch list (↑↓ · Enter · 1–9).\n  session -switch [name]        - switch by session name (candidate menu or direct).\n  session -new [name]           - create a new session and switch to it.\n  session -setting-name [name]  - rename this session.\n  session -next / -prev         - switch to next / previous session.\n  Ctrl+← / Ctrl+→              - prev / next when multiple sessions exist."
   },
   "help.section.dom": {
     "ja": "dom（アクティブ対象タブのページ表示フィルタ）:\n  dom -list [--html|--react] [<pattern>] — この BMXt ペインで DOM list ピッカーを開く。\n  dom -exit -list  - この BMXt ペインの DOM list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",

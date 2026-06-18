@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { buildSessionListRows, buildSessionSummary, formatSessionListCandidateLabel, deriveDefaultSessionName, lastCommandFromSessionLog, resolveSessionDisplayName, sanitizeSessionName } from "./session-summary.ts"
+import { buildSessionListRows, buildSessionSummary, buildSessionSwitchCommandLine, filterSessionSwitchPickerRows, formatSessionListCandidateLabel, formatSessionSwitchCandidateLabel, deriveDefaultSessionName, lastCommandFromSessionLog, resolveSessionDisplayName, resolveSessionRowByDisplayName, sanitizeSessionName } from "./session-summary.ts"
 
 describe("sanitizeSessionName", () => {
   it("accepts trimmed names", () => {
@@ -92,6 +92,92 @@ describe("resolveSessionDisplayName", () => {
       logs: []
     })
     assert.equal(name, "work")
+  })
+})
+
+describe("filterSessionSwitchPickerRows", () => {
+  it("filters by contains while the picker is open", () => {
+    const rows = buildSessionListRows({
+      order: ["a", "b"],
+      activeId: "a",
+      namesById: { a: "tabs", b: "manual" },
+      logsById: {},
+      pickersBySession: {},
+      navArmedByLeaf: {}
+    })
+    const filtered = filterSessionSwitchPickerRows(rows, "ab", "contains")
+    assert.equal(filtered.length, 1)
+    assert.equal(filtered[0]!.displayName, "tabs")
+  })
+})
+
+describe("buildSessionSwitchCommandLine", () => {
+  it("builds a complete switch command", () => {
+    const rows = buildSessionListRows({
+      order: ["a"],
+      activeId: "a",
+      namesById: { a: "work" },
+      logsById: {},
+      pickersBySession: {},
+      navArmedByLeaf: {}
+    })
+    assert.equal(buildSessionSwitchCommandLine(rows[0]!, rows), "session -switch work")
+  })
+})
+
+describe("formatSessionSwitchCandidateLabel", () => {
+  it("shows display name with active mark", () => {
+    const rows = buildSessionListRows({
+      order: ["a", "b"],
+      activeId: "b",
+      namesById: { b: "work" },
+      logsById: {},
+      pickersBySession: {},
+      navArmedByLeaf: {}
+    })
+    const label = formatSessionSwitchCandidateLabel(rows[1]!, rows)
+    assert.equal(label, "*work")
+  })
+
+  it("disambiguates duplicate names with index", () => {
+    const rows = buildSessionListRows({
+      order: ["a", "b"],
+      activeId: "a",
+      namesById: { a: "tabs", b: "tabs" },
+      logsById: {},
+      pickersBySession: {},
+      navArmedByLeaf: {}
+    })
+    assert.equal(formatSessionSwitchCandidateLabel(rows[0]!, rows), "*tabs (1)")
+    assert.equal(formatSessionSwitchCandidateLabel(rows[1]!, rows), " tabs (2)")
+  })
+})
+
+describe("resolveSessionRowByDisplayName", () => {
+  it("resolves unique display name", () => {
+    const rows = buildSessionListRows({
+      order: ["a", "b"],
+      activeId: "a",
+      namesById: { b: "work" },
+      logsById: {},
+      pickersBySession: {},
+      navArmedByLeaf: {}
+    })
+    const row = resolveSessionRowByDisplayName(rows, "work")
+    assert.equal(row?.sessionId, "b")
+  })
+
+  it("resolves indexed label for duplicates", () => {
+    const rows = buildSessionListRows({
+      order: ["a", "b"],
+      activeId: "a",
+      namesById: { a: "tabs", b: "tabs" },
+      logsById: {},
+      pickersBySession: {},
+      navArmedByLeaf: {}
+    })
+    const row = resolveSessionRowByDisplayName(rows, "tabs (2)")
+    assert.equal(row?.sessionId, "b")
   })
 })
 

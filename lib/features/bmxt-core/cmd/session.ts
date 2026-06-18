@@ -10,19 +10,20 @@ export const CMD: CmdMeta = {
   name: "session",
   aliases: [],
   usagePrimary:
-    "session -new [name] | session -list | session -next | session -prev | session -setting-name [name]"
+    "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]"
 }
 
 function sessionUsageLines(): string[] {
   return [
-    "usage: session                    — choose a second token (Tab or Enter menu)",
-    "       session <n>               — switch to session number n (1-based)",
-    "       session -list             — open switch list (↑↓ · Enter · 1–9)",
-    "       session -new [name]       — new session (switch to it); optional display name",
+    "usage: session                       — choose a second token (Tab or Enter menu)",
+    "       session <n>                  — switch to session number n (1-based)",
+    "       session -list                — switch list by number (↑↓ · Enter · 1–9)",
+    "       session -switch [name]       — switch by session name (menu or direct)",
+    "       session -new [name]          — new session (switch to it); optional display name",
     "       session -setting-name [name] — rename this session (prompt pre-fills current name)",
-    "       session -next             — next session",
-    "       session -prev             — previous session",
-    "       Ctrl+Arrow                — prev / next when multiple sessions exist"
+    "       session -next                — next session",
+    "       session -prev                — previous session",
+    "       Ctrl+Arrow                   — prev / next when multiple sessions exist"
   ]
 }
 
@@ -54,7 +55,7 @@ export function run(args: string[]) {
     }
     return effectsDispatch([{ kind: "session_new", name: rawName }])
   }
-  if (sub === "-setting-name") {
+  if (sub === "-setting-name" || sub === "-switch") {
     const rawName = args.slice(2).join(" ").trim()
     if (rawName.length > MAX_SESSION_NAME_LEN) {
       return linesDispatch([
@@ -68,14 +69,20 @@ export function run(args: string[]) {
         ...sessionUsageLines()
       ])
     }
+    if (sub === "-setting-name") {
+      return linesDispatch([
+        "`session -setting-name` is handled in the BMXt window UI.",
+        "Run it from the prompt in a BMXt terminal pane."
+      ])
+    }
     return linesDispatch([
-      "`session -setting-name` is handled in the BMXt window UI.",
+      "`session -switch` is handled in the BMXt window UI.",
       "Run it from the prompt in a BMXt terminal pane."
     ])
   }
   if (args.length > 2) {
     return linesDispatch([
-      "error: session takes only one option (-new | -list | -next | -prev | -setting-name)",
+      "error: session takes only one option (-new | -list | -switch | -next | -prev | -setting-name)",
       ...sessionUsageLines()
     ])
   }
