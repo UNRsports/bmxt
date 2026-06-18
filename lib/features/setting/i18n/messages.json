@@ -719,6 +719,10 @@
     "ja": "Session list — * がアクティブ · ↑↓ または 1–9 · Enter 切り替え · Esc → prompt · `session <n>` でも可",
     "en": "Session list — * marks active · ↑↓ or 1–9 · Enter switch · Esc → prompt · or `session <n>`"
   },
+  "session.picker.aria": {
+    "ja": "セッション切り替え候補",
+    "en": "Session switch candidates"
+  },
   "session.number.invalid": {
     "ja": "session: 番号 {n} は範囲外です（1–{max}）。`session` または `session -list` で一覧を開けます。",
     "en": "session: number {n} is out of range (1–{max}). Use `session` or `session -list` for the switch list."

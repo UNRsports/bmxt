@@ -21,6 +21,29 @@ export function pickPageMatchForDisplay(
   return pool[idx]
 }
 
+/** EN: 0-based needle hit index on `match.lineNo` within `pageMatches`. */
+export function lineHitIndexForPageMatch(
+  matches: SearchPageMatch[] | undefined,
+  pageMatchIndex: number
+): number {
+  const match = matches?.[pageMatchIndex]
+  if (!match || match.lineNo <= 0 || !matches) {
+    return -1
+  }
+  let hitOnLine = 0
+  for (let i = 0; i <= pageMatchIndex; i++) {
+    const row = matches[i]
+    if (!row || row.lineNo !== match.lineNo) {
+      continue
+    }
+    if (i === pageMatchIndex) {
+      return hitOnLine
+    }
+    hitOnLine += 1
+  }
+  return -1
+}
+
 /** EN: Map display `matchHi` to a raw `pageMatches` index. */
 export function resolveSearchResultsPageMatchIndex(
   matches: SearchPageMatch[] | undefined,

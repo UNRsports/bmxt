@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { buildSessionListRows, buildSessionSummary } from "./session-summary.ts"
+import { buildSessionListRows, buildSessionSummary, formatSessionListCandidateLabel } from "./session-summary.ts"
 
 describe("buildSessionSummary", () => {
   it("lists open pickers and nav", () => {
@@ -30,6 +30,28 @@ describe("buildSessionSummary", () => {
 
   it("returns terminal only when empty", () => {
     assert.equal(buildSessionSummary(undefined, false), "(terminal only)")
+  })
+})
+
+describe("formatSessionListCandidateLabel", () => {
+  it("marks active session with asterisk", () => {
+    const label = formatSessionListCandidateLabel({
+      sessionId: "b",
+      index: 2,
+      isActive: true,
+      summary: "tabs"
+    })
+    assert.equal(label, "*2  tabs")
+  })
+
+  it("uses space for inactive sessions", () => {
+    const label = formatSessionListCandidateLabel({
+      sessionId: "a",
+      index: 1,
+      isActive: false,
+      summary: "(terminal only)"
+    })
+    assert.equal(label, " 1  (terminal only)")
   })
 })
 

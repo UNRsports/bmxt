@@ -21,7 +21,7 @@ describe("session-input", () => {
 
   it("isSessionSwitchUiLine", () => {
     assert.equal(isSessionSwitchUiLine("session"), false)
-    assert.equal(isSessionSwitchUiLine("session -list"), true)
+    assert.equal(isSessionSwitchUiLine("session -list"), false)
     assert.equal(isSessionSwitchUiLine("session 3"), true)
     assert.equal(isSessionSwitchUiLine("session -new"), false)
   })

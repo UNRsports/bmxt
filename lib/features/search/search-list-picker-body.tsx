@@ -287,7 +287,7 @@ export function SearchListPickerBody({
     setHi((h) => Math.min(Math.max(0, h), lineCount - 1))
   }, [lineCount])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if ((inDetailView || inDestinationView) && subviewHiRef) {
       subviewHiRef.current = hi
     }

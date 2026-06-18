@@ -12,6 +12,8 @@ export type ScrollSearchPageToNeedleOptions = {
   lineNo?: number
   snippetHint?: string
   globalOccurrence?: number
+  /** EN: 0-based hit index on `lineNo` when the line has multiple needle matches. */
+  lineHitIndex?: number
   /** EN: Auto-clear after ms; 0 keeps until explicit clear. */
   persistMs?: number
   highlightColors?: BmxtNeedleHighlightColorsPayload
@@ -36,6 +38,9 @@ function buildScrollRequest(options: ScrollSearchPageToNeedleOptions): PageScrol
   }
   if (options.globalOccurrence !== undefined && options.globalOccurrence >= 0) {
     request.globalOccurrence = options.globalOccurrence
+  }
+  if (options.lineHitIndex !== undefined && options.lineHitIndex >= 0) {
+    request.lineHitIndex = options.lineHitIndex
   }
   if (options.highlightColors) {
     request.highlightColors = options.highlightColors
@@ -86,7 +91,8 @@ async function scrollViaExecuteScript(
         hitBg,
         jumpBg,
         fg,
-        request.activeOnly ?? false
+        request.activeOnly ?? false,
+        request.lineHitIndex ?? -1
       ]
     })
     return Boolean((result as PageScrollNeedleResponse | undefined)?.ok)

@@ -3,5 +3,10 @@ export {
   parseSessionListPickerLine,
   parseSessionSwitchByNumberLine
 } from "./session-input"
-export { buildSessionListRows, buildSessionSummary, type SessionListRow } from "./session-summary"
-export { SessionListPickerPanel } from "./session-list-picker"
+export {
+  buildSessionListRows,
+  buildSessionSummary,
+  formatSessionListCandidateLabel,
+  type SessionListRow
+} from "./session-summary"
+export { SessionListCandidatePanel } from "./session-list-candidate-panel"

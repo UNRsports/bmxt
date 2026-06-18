@@ -188,7 +188,8 @@ function pickRangeForLine(
   lineNo: number,
   needle: string,
   snippetHint: string,
-  globalOccurrenceHint = -1
+  globalOccurrenceHint = -1,
+  lineHitIndex = -1
 ): Range | undefined {
   if (ranges.length === 0) {
     return undefined
@@ -209,6 +210,26 @@ function pickRangeForLine(
   const lines = innerTextLines()
   if (lineNo > 0 && lineNo <= lines.length) {
     const lineText = lines[lineNo - 1]!
+    if (lineHitIndex >= 0) {
+      let from = 0
+      let hitCount = 0
+      while (from < lineText.length) {
+        const hit = findRawNeedleInHaystack(lineText, needle, from)
+        if (!hit) {
+          break
+        }
+        if (hitCount === lineHitIndex) {
+          const context = lineContextAroundNeedle(lineText, needle, 36)
+          const byHitOnLine = findRangeByContext(context, needle, ranges)
+          if (byHitOnLine) {
+            return byHitOnLine
+          }
+          break
+        }
+        hitCount += 1
+        from = hit.index + Math.max(1, hit.length)
+      }
+    }
     const context = lineContextAroundNeedle(lineText, needle)
     const byLineContext = findRangeByContext(context, needle, ranges)
     if (byLineContext) {
@@ -239,7 +260,8 @@ export function bmxtScrollToSearchNeedleInjected(
   hitBg = DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS.hitBg,
   jumpBg = DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS.jumpBg,
   fg = DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS.fg,
-  activeOnly = false
+  activeOnly = false,
+  lineHitIndex = -1
 ): { ok: boolean } {
   const needle = searchNeedle.trim()
   if (!needle || !document.body) {
@@ -257,7 +279,8 @@ export function bmxtScrollToSearchNeedleInjected(
     lineNo,
     needle,
     snippetHint,
-    globalOccurrenceHint
+    globalOccurrenceHint,
+    lineHitIndex
   )
   if (!picked) {
     return { ok: false }

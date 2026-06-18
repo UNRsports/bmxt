@@ -48,7 +48,8 @@ chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
         hitBg,
         jumpBg,
         fg,
-        raw.activeOnly ?? false
+        raw.activeOnly ?? false,
+        raw.lineHitIndex ?? -1
       )
     )
     return true

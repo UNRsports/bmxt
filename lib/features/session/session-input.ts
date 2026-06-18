@@ -21,9 +21,7 @@ export function parseSessionSwitchByNumberLine(trimmed: string): number | null {
   return n
 }
 
-/** `session -list` or `session <n>` — UI-handled switch lines (not bare `session`). */
+/** `session <n>` — UI-handled direct switch (not `session -list`; that uses inline candidates). */
 export function isSessionSwitchUiLine(trimmed: string): boolean {
-  return (
-    parseSessionListPickerLine(trimmed) || parseSessionSwitchByNumberLine(trimmed) !== null
-  )
+  return parseSessionSwitchByNumberLine(trimmed) !== null
 }

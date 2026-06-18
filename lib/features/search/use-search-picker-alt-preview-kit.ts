@@ -134,10 +134,10 @@ export function useSearchPickerAltPreviewKit({
     }, PREVIEW_NOTICE_MS)
   }, [uiCopy])
 
-  const runPreview = useCallback(async () => {
+  const runPreview = useCallback(async (rowIndex?: number) => {
     const entry = detailEntryRef.current
     const hits = detailHitsRef.current
-    const index = hiRef.current
+    const index = rowIndex ?? hiRef.current
     const hit = hits[index]
     if (!entry || !hit) {
       return
@@ -228,7 +228,7 @@ export function useSearchPickerAltPreviewKit({
         hiRef.current = nextHi
         setHi(nextHi)
         if (pageActiveMode === "auto") {
-          void runPreview()
+          void runPreview(nextHi)
         }
         return true
       }
@@ -261,7 +261,7 @@ export function useSearchPickerAltPreviewKit({
         if (!canPreview) {
           showNoPreviewTargetNotice()
         } else {
-          void runPreview()
+          void runPreview(nextHi)
         }
         return true
       }
@@ -273,6 +273,18 @@ export function useSearchPickerAltPreviewKit({
           : Math.max(currentHi - 1, 0)
       hiRef.current = nextHi
       setHi(nextHi)
+      if (pageActiveMode === "auto") {
+        const canPreview = canPreviewSearchPickerSelection(
+          "detail",
+          nextHi,
+          previewTargetIndicesRef.current,
+          detailHitsRef.current,
+          detailEntryRef.current?.pageMatches
+        )
+        if (canPreview) {
+          void runPreview(nextHi)
+        }
+      }
       return true
     },
     [

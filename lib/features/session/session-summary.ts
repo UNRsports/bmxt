@@ -15,6 +15,11 @@ function appendPart(parts: string[], label: string, detail?: string): void {
   }
 }
 
+export function formatSessionListCandidateLabel(row: SessionListRow): string {
+  const mark = row.isActive ? "*" : " "
+  return `${mark}${row.index}  ${row.summary}`
+}
+
 export function buildSessionSummary(
   pickers: SessionPickerState | undefined,
   navArmed: boolean

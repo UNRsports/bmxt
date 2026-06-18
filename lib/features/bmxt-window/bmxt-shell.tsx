@@ -4,7 +4,7 @@ import {
   isSessionSwitchUiLine,
   parseSessionListPickerLine,
   parseSessionSwitchByNumberLine,
-  SessionListPickerPanel,
+  SessionListCandidatePanel,
   type SessionListRow
 } from "../session"
 import { continuationPromptAfterLoneFirstToken } from "../builtin-commands/command-subcommands.gen"
@@ -190,6 +190,36 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
     parseDomExitListLine(trimmed) ||
     parseGroupNewInteractiveLine(trimmed)
   )
+}
+
+function measureFloatingPickerHostPosition(
+  cell: HTMLElement | null,
+  host: HTMLElement | null
+): { left: number; top: number } | null {
+  if (!cell) {
+    return null
+  }
+  const cr = cell.getBoundingClientRect()
+  const gap = 2
+  const hostW = host?.offsetWidth ?? 260
+  const hostH = host?.offsetHeight ?? 140
+  let left = cr.right + gap
+  const maxLeft = window.innerWidth - hostW - 8
+  if (left > maxLeft) {
+    left = Math.max(8, maxLeft)
+  } else {
+    left = Math.max(8, left)
+  }
+  let top = cr.bottom + gap
+  if (top + hostH > window.innerHeight - 8 && cr.top - gap - hostH >= 8) {
+    top = cr.top - gap - hostH
+  }
+  if (top + hostH > window.innerHeight - 8) {
+    top = Math.max(8, window.innerHeight - hostH - 8)
+  } else {
+    top = Math.max(8, top)
+  }
+  return { left, top }
 }
 
 type Props = {
@@ -621,8 +651,15 @@ export function BmxtShell({
     null
   )
   const subCmdPickerScopeId = `subcmd-picker-${sessionId}`
+  const sessionListPickerScopeId = `session-list-picker-${sessionId}`
+  const promptPickerOpen = subCmdPicker !== null || sessionListPickerOpen
+  const promptPickerScopeId = subCmdPicker
+    ? subCmdPickerScopeId
+    : sessionListPickerOpen
+      ? sessionListPickerScopeId
+      : null
   useCspDynamicStyle(
-    subCmdPicker && subCmdPickerPos ? subCmdPickerScopeId : null,
+    promptPickerOpen && subCmdPickerPos && promptPickerScopeId ? promptPickerScopeId : null,
     subCmdPickerPos
       ? {
           left: `${subCmdPickerPos.left}px`,
@@ -647,6 +684,8 @@ export function BmxtShell({
   const allowEmptyFirstPickerSyncRef = useRef(false)
   /** EN: Esc closed the token menu — suppress until Tab or typing; not history ↑↓. */
   const imeTokenPickerDismissedRef = useRef(false)
+  /** EN: Esc closed the session-list menu while `session -list` stays on the prompt. */
+  const sessionListPickerDismissedRef = useRef(false)
   const searchListBusyRef = useRef(false)
   const [searchListBusy, setSearchListBusy] = useState(false)
 
@@ -707,6 +746,14 @@ export function BmxtShell({
     [subCmdPicker]
   )
 
+  const sessionListMenuAnchorEpisode = useMemo(
+    () =>
+      sessionListPickerHi === null
+        ? null
+        : sessionListRows.map((r) => r.sessionId).join("\0"),
+    [sessionListPickerHi, sessionListRows]
+  )
+
   const dismissImeTokenPicker = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
     imeTokenPickerDismissedRef.current = true
@@ -723,8 +770,29 @@ export function BmxtShell({
       if (mode === "isearch" || searchListBusyRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
+        setSessionListPickerHi(null)
         return
       }
+      if (parseSessionListPickerLine(ln)) {
+        if (sessionListPickerDismissedRef.current) {
+          setSubCmdPicker(null)
+          setSessionListPickerHi(null)
+          return
+        }
+        setSubCmdPicker(null)
+        allowEmptyFirstPickerSyncRef.current = false
+        const rows = sessionListRowsRef.current
+        setSessionListPickerHi((prev) => {
+          if (prev !== null && prev < rows.length) {
+            return prev
+          }
+          const activeIdx = rows.findIndex((r) => r.isActive)
+          return activeIdx >= 0 ? activeIdx : 0
+        })
+        return
+      }
+      sessionListPickerDismissedRef.current = false
+      setSessionListPickerHi(null)
       if (imeTokenPickerDismissedRef.current) {
         setSubCmdPicker(null)
         return
@@ -820,38 +888,19 @@ export function BmxtShell({
   }, [line, cursorPos, isComposing])
 
   useLayoutEffect(() => {
-    if (!subCmdPicker) {
+    if (!promptPickerOpen) {
       setSubCmdPickerPos(null)
       return
     }
     const measure = () => {
-      const cell = cursorMirrorCellRef.current
-      const host = subCmdPickerHostRef.current
-      if (!cell) {
+      const next = measureFloatingPickerHostPosition(
+        cursorMirrorCellRef.current,
+        subCmdPickerHostRef.current
+      )
+      if (!next) {
         return
       }
-      const cr = cell.getBoundingClientRect()
-      const gap = 2
-      const hostW = host?.offsetWidth ?? 260
-      const hostH = host?.offsetHeight ?? 140
-      let left = cr.right + gap
-      const maxLeft = window.innerWidth - hostW - 8
-      if (left > maxLeft) {
-        left = Math.max(8, maxLeft)
-      } else {
-        left = Math.max(8, left)
-      }
-      let top = cr.bottom + gap
-      if (top + hostH > window.innerHeight - 8 && cr.top - gap - hostH >= 8) {
-        top = cr.top - gap - hostH
-      }
-      if (top + hostH > window.innerHeight - 8) {
-        top = Math.max(8, window.innerHeight - hostH - 8)
-      } else {
-        top = Math.max(8, top)
-      }
       setSubCmdPickerPos((prev) => {
-        const next = { left, top }
         if (prev && prev.left === next.left && prev.top === next.top) {
           return prev
         }
@@ -868,30 +917,48 @@ export function BmxtShell({
       sc?.removeEventListener("scroll", measure)
       window.removeEventListener("resize", measure)
     }
-  }, [subCmdPickerAnchorEpisode, line, cursorPos, mode])
+  }, [subCmdPickerAnchorEpisode, sessionListMenuAnchorEpisode, line, cursorPos, mode, promptPickerOpen])
 
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
   const closeSessionListPicker = useCallback(() => {
+    sessionListPickerDismissedRef.current = true
     setSessionListPickerHi(null)
     focusPrompt()
   }, [focusPrompt])
 
-  const openSessionListPicker = useCallback(
-    (commandLine: string) => {
-      setSubCmdPicker(null)
+  const switchSessionFromListPicker = useCallback(
+    (commandLine: string, pickHi: number) => {
+      const rows = sessionListRowsRef.current
+      const row = rows[pickHi]
+      sessionListPickerDismissedRef.current = false
+      setSessionListPickerHi(null)
       appendCommandToHistory(commandLine)
       setLine("")
       setCursorPos(0)
+      lineRef.current = ""
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
-      const activeIdx = sessionListRows.findIndex((r) => r.isActive)
-      setSessionListPickerHi(activeIdx >= 0 ? activeIdx : 0)
-      void appendLogLines([`> ${commandLine}`, uiCopy.t("session.picker.hint")])
+      void (async () => {
+        const logLines = [`> ${commandLine}`]
+        if (!row) {
+          logLines.push(
+            uiCopy.t("session.number.invalid", {
+              n: String(pickHi + 1),
+              max: String(rows.length)
+            })
+          )
+        } else {
+          logLines.push(uiCopy.t("session.number.switched", { n: String(row.index) }))
+          await onActivateSession(row.sessionId)
+        }
+        await appendLogLines(logLines)
+        focusPrompt()
+      })()
     },
-    [appendCommandToHistory, appendLogLines, sessionListRows, uiCopy]
+    [appendCommandToHistory, appendLogLines, focusPrompt, onActivateSession, uiCopy]
   )
 
   useEffect(() => {
@@ -1792,7 +1859,9 @@ export function BmxtShell({
     }
 
     if (parseSessionListPickerLine(trimmed)) {
-      openSessionListPicker(trimmed)
+      const activeIdx = sessionListRows.findIndex((r) => r.isActive)
+      const pickHi = sessionListPickerHiRef.current ?? (activeIdx >= 0 ? activeIdx : 0)
+      switchSessionFromListPicker(trimmed, pickHi)
       return
     }
 
@@ -2191,7 +2260,7 @@ export function BmxtShell({
     runDomListAndShow,
     runSearchListSearch,
     syncImeTokenPicker,
-    openSessionListPicker,
+    switchSessionFromListPicker,
     onActivateSession,
     sessionListRows,
     setModeToolbarOrder,
@@ -2342,6 +2411,7 @@ export function BmxtShell({
   const onImeInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
       allowEmptyFirstPickerSyncRef.current = false
+      sessionListPickerDismissedRef.current = false
       if (skipHistResetRef.current) {
         skipHistResetRef.current = false
       } else if (!navPageTyping || isComposingRef.current) {
@@ -2533,6 +2603,7 @@ export function BmxtShell({
 
       if (sessionListPickerHiRef.current !== null) {
         const rows = sessionListRowsRef.current
+        const commandLine = lineRef.current.trim()
         if (e.key === "Escape") {
           e.preventDefault()
           closeSessionListPicker()
@@ -2541,13 +2612,7 @@ export function BmxtShell({
         const digit = /^[1-9]$/.test(e.key) ? Number.parseInt(e.key, 10) : null
         if (digit !== null && digit <= rows.length) {
           e.preventDefault()
-          const row = rows[digit - 1]
-          setSessionListPickerHi(null)
-          if (row) {
-            void onActivateSession(row.sessionId).then(() => focusPrompt())
-          } else {
-            focusPrompt()
-          }
+          switchSessionFromListPicker(commandLine, digit - 1)
           return
         }
         if (e.key === "ArrowUp") {
@@ -2573,13 +2638,7 @@ export function BmxtShell({
         if (e.key === "Enter") {
           e.preventDefault()
           const pickHi = sessionListPickerHiRef.current ?? 0
-          const row = rows[pickHi]
-          setSessionListPickerHi(null)
-          if (row) {
-            void onActivateSession(row.sessionId).then(() => focusPrompt())
-          } else {
-            focusPrompt()
-          }
+          switchSessionFromListPicker(commandLine, pickHi)
           return
         }
       }
@@ -2746,6 +2805,7 @@ export function BmxtShell({
 
       if (e.key === "Tab") {
         imeTokenPickerDismissedRef.current = false
+        sessionListPickerDismissedRef.current = false
         const curLn = lineRef.current
         const pos = cursorRef.current
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
@@ -2877,7 +2937,7 @@ export function BmxtShell({
       navTextSelPhase,
       closeSessionListPicker,
       focusPrompt,
-      onActivateSession,
+      switchSessionFromListPicker,
       paneFocus,
       handleToggleNavActive
     ]
@@ -2918,9 +2978,6 @@ export function BmxtShell({
             {ln}
           </div>
         ))}
-        {sessionListPickerOpen && sessionListPickerHi !== null ? (
-          <SessionListPickerPanel rows={sessionListRows} hi={sessionListPickerHi} />
-        ) : null}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">
             <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>
@@ -2987,12 +3044,16 @@ export function BmxtShell({
               onCompositionUpdate={onCompositionUpdate}
               onCompositionEnd={onCompositionEnd}
             />
-            {subCmdPicker && !searchListBusy ? (
+            {promptPickerOpen && !searchListBusy ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
-                {...{ [CSP_DYNAMIC_SCOPE_ATTR]: subCmdPickerScopeId }}>
-                <TokenPickerPanel model={subCmdPicker} />
+                {...{ [CSP_DYNAMIC_SCOPE_ATTR]: promptPickerScopeId ?? subCmdPickerScopeId }}>
+                {subCmdPicker ? (
+                  <TokenPickerPanel model={subCmdPicker} />
+                ) : sessionListPickerHi !== null ? (
+                  <SessionListCandidatePanel rows={sessionListRows} hi={sessionListPickerHi} />
+                ) : null}
               </div>
             ) : null}
           </div>
