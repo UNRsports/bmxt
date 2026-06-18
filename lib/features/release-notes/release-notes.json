@@ -6,7 +6,9 @@
       "画面スペースの有効活用のためsplit機能を廃止し、sessionコマンドによるセッション切り替えUIを実装"
     ],
     "en": [
-      ""
+      "Audited remaining bilingual (Japanese/English mixed) UI after locale switching was added, and applied locale rules consistently",
+      "UI adjustments in tabs mode",
+      "Removed the split command to make better use of screen space; added session switching UI via the session command"
     ]
   }
 }

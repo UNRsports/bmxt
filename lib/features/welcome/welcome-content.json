@@ -116,5 +116,20 @@
       "picker操作変更に伴う関係各種の操作体系も見直し",
       "searchモードの大幅刷新"
     ]
+  },
+  "0.5.6": {
+    "heroImage": "assets/welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
+    "en": [
+      "Audited remaining bilingual (Japanese/English mixed) UI after locale switching was added, and applied locale rules consistently",
+      "UI adjustments in tabs mode",
+      "Removed the split command to make better use of screen space; added session switching UI via the session command"
+    ],
+    "ja": [
+      "英語／日本語切り替え機能実装後も残っている併記部分の洗い出しと切り替え仕様の徹底",
+      "tabsモードのUI調整",
+      "画面スペースの有効活用のためsplit機能を廃止し、sessionコマンドによるセッション切り替えUIを実装"
+    ]
   }
 }
