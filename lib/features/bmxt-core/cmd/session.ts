@@ -1,22 +1,26 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
+import {
+  MAX_SESSION_NAME_LEN,
+  sanitizeSessionName
+} from "../../session/session-summary"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
 
 export const CMD: CmdMeta = {
   name: "session",
   aliases: [],
-  usagePrimary: "session -new | session -list | session -next | session -prev"
+  usagePrimary: "session -new [name] | session -list | session -next | session -prev"
 }
 
 function sessionUsageLines(): string[] {
   return [
-    "usage: session        — choose -new / -list / -next / -prev (Tab or Enter menu)",
-    "       session <n>   — switch to session number n (1-based)",
-    "       session -list — open switch list (↑↓ · Enter · 1–9)",
-    "       session -new  — new session (switch to it)",
-    "       session -next — next session",
-    "       session -prev — previous session",
-    "       Ctrl+Arrow    — prev / next when multiple sessions exist"
+    "usage: session              — choose -new / -list / -next / -prev (Tab or Enter menu)",
+    "       session <n>         — switch to session number n (1-based)",
+    "       session -list       — open switch list (↑↓ · Enter · 1–9)",
+    "       session -new [name] — new session (switch to it); optional display name",
+    "       session -next       — next session",
+    "       session -prev       — previous session",
+    "       Ctrl+Arrow          — prev / next when multiple sessions exist"
   ]
 }
 
@@ -32,14 +36,27 @@ export function run(args: string[]) {
   if (!isSecondToken("session", args[1])) {
     return linesDispatch([`error: unknown session option: ${args[1]}`, ...sessionUsageLines()])
   }
+  if (sub === "-new") {
+    const rawName = args.slice(2).join(" ").trim()
+    if (rawName.length > MAX_SESSION_NAME_LEN) {
+      return linesDispatch([
+        `error: session name too long (max ${MAX_SESSION_NAME_LEN} characters)`,
+        ...sessionUsageLines()
+      ])
+    }
+    if (rawName.length > 0 && sanitizeSessionName(rawName) === null) {
+      return linesDispatch([
+        "error: invalid session name (no control characters or newlines)",
+        ...sessionUsageLines()
+      ])
+    }
+    return effectsDispatch([{ kind: "session_new", name: rawName }])
+  }
   if (args.length > 2) {
     return linesDispatch([
       "error: session takes only one option (-new | -list | -next | -prev)",
       ...sessionUsageLines()
     ])
-  }
-  if (sub === "-new") {
-    return effectsDispatch([{ kind: "session_new" }])
   }
   if (sub === "-next") {
     return effectsDispatch([{ kind: "session_next" }])

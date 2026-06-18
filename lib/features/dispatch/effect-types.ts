@@ -16,7 +16,7 @@ export type ChromeEffect =
   | { kind: "search_bookmark"; pattern: string }
   | { kind: "search_history"; pattern: string }
   | { kind: "search_page"; pattern: string }
-  | { kind: "session_new" }
+  | { kind: "session_new"; name: string }
   | { kind: "session_next" }
   | { kind: "session_prev" }
   | { kind: "tabs_move_url"; url: string }

@@ -151,11 +151,11 @@
       "module": "session",
       "canonicalName": "session",
       "aliases": [],
-      "usagePrimary": "session -new | session -list | session -next | session -prev",
+      "usagePrimary": "session -new [name] | session -list | session -next | session -prev",
       "subcommands": [
         {
           "head": "-new",
-          "tail": "none"
+          "tail": "rest"
         },
         {
           "head": "-list",
@@ -286,7 +286,8 @@
     {
       "kind": "session_new",
       "rustVariant": "SessionNew",
-      "shape": "unit",
+      "shape": "record",
+      "fields": { "name": "string" },
       "tsHandlerFile": "session-new",
       "tsHandlerExport": "applySessionNewEffect"
     },

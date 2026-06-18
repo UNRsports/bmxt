@@ -8,4 +8,6 @@ export type TerminalSessionsStateV1 = {
   /** 作成順（左が古い）。 */
   order: string[]
   activeId: string
+  /** ユーザー指定または `session -new` 作成時に決定した表示名。 */
+  namesById: Record<string, string>
 }

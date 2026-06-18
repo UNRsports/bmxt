@@ -46,7 +46,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "aboutbmxt": [] as const,
   "session": [
-    { head: "-new", trailingTokens: [] as const, tail: "none" },
+    { head: "-new", trailingTokens: [] as const, tail: "rest" },
     { head: "-list", trailingTokens: [] as const, tail: "none" },
     { head: "-next", trailingTokens: [] as const, tail: "none" },
     { head: "-prev", trailingTokens: [] as const, tail: "none" }

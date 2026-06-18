@@ -232,6 +232,8 @@ type Props = {
   completionCandidates: string[]
   sessionOrder: string[]
   activeSessionId: string
+  sessionNamesById: Record<string, string | undefined>
+  sessionLogsById: Record<string, string[] | undefined>
   pickersBySession: SessionPickersByLeaf
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => Promise<void>
@@ -266,6 +268,8 @@ export function BmxtShell({
   completionCandidates,
   sessionOrder,
   activeSessionId,
+  sessionNamesById,
+  sessionLogsById,
   pickersBySession,
   navArmedByLeaf,
   onActivateSession,
@@ -504,10 +508,12 @@ export function BmxtShell({
       buildSessionListRows({
         order: sessionOrder,
         activeId: activeSessionId,
+        namesById: sessionNamesById,
+        logsById: sessionLogsById,
         pickersBySession,
         navArmedByLeaf
       }),
-    [sessionOrder, activeSessionId, pickersBySession, navArmedByLeaf]
+    [sessionOrder, activeSessionId, sessionNamesById, sessionLogsById, pickersBySession, navArmedByLeaf]
   )
   const sessionListPickerOpen = sessionListPickerHi !== null
   const sessionListPickerHiRef = useRef(sessionListPickerHi)

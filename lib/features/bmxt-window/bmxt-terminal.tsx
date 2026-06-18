@@ -13,6 +13,7 @@ import {
   type SessionPickerState,
   type SessionPickersByLeaf
 } from "../side-picker"
+import { SessionBar } from "../session"
 import { BmxtShell } from "./bmxt-shell"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
@@ -38,6 +39,8 @@ type SessionPaneProps = {
   completionCandidates: string[]
   sessionOrder: string[]
   activeSessionId: string
+  sessionNamesById: Record<string, string | undefined>
+  sessionLogsById: Record<string, string[] | undefined>
   pickersBySession: SessionPickersByLeaf
   setSessionPickerSlot: <K extends PickerSlotId>(
     forSessionId: string,
@@ -73,6 +76,8 @@ function SessionPaneView({
   completionCandidates,
   sessionOrder,
   activeSessionId,
+  sessionNamesById,
+  sessionLogsById,
   pickersBySession,
   setSessionPickerSlot,
   paneFocusByLeaf,
@@ -104,6 +109,8 @@ function SessionPaneView({
         completionCandidates={completionCandidates}
         sessionOrder={sessionOrder}
         activeSessionId={activeSessionId}
+        sessionNamesById={sessionNamesById}
+        sessionLogsById={sessionLogsById}
         pickersBySession={pickersBySession}
         navArmedByLeaf={navArmedByLeaf}
         onActivateSession={onActivateSession}
@@ -270,6 +277,8 @@ function BmxtTerminalInner() {
     completionCandidates,
     sessionOrder: state.order,
     activeSessionId: state.activeId,
+    sessionNamesById: state.namesById,
+    sessionLogsById: state.logsById,
     pickersBySession,
     setSessionPickerSlot,
     paneFocusByLeaf,
@@ -289,6 +298,17 @@ function BmxtTerminalInner() {
 
   return (
     <div ref={rootRef} className="bmxt-root bmxt-root--terminal" tabIndex={-1}>
+      <SessionBar
+        order={state.order}
+        activeId={state.activeId}
+        namesById={state.namesById}
+        logsById={state.logsById}
+        pickersBySession={pickersBySession}
+        navArmedByLeaf={navArmedByLeaf}
+        onActivateSession={(id) => {
+          void setActiveSession(id)
+        }}
+      />
       <div className="bmxt-session-stack">
         {state.order.map((sessionId) => (
           <SessionPaneView

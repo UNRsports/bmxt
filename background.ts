@@ -216,8 +216,12 @@ async function tryRunCommandWithoutWasm(sessionId: string, trimmed: string): Pro
     await exitBmxtWindowFull()
     return true
   }
-  if (/^\s*session\s+-new\s*$/i.test(trimmed)) {
-    await createSessionAndActivate(sessionId)
+  const newMatch = trimmed.match(/^\s*session\s+-new(?:\s+(.+))?\s*$/i)
+  if (newMatch) {
+    const rawName = (newMatch[1] ?? "").trim()
+    await createSessionAndActivate(sessionId, {
+      name: rawName.length > 0 ? rawName : undefined
+    })
     await appendLinesToSession(sessionId, [`> ${trimmed}`])
     return true
   }

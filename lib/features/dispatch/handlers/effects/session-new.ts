@@ -6,8 +6,11 @@ type E = Extract<ChromeEffect, { kind: "session_new" }>
 
 export async function applySessionNewEffect(
   ctx: DispatchChromeContext,
-  _e: E
+  e: E
 ): Promise<string[]> {
-  await createSessionAndActivate(ctx.commandSessionId)
+  const explicit = e.name.trim()
+  await createSessionAndActivate(ctx.commandSessionId, {
+    name: explicit.length > 0 ? explicit : undefined
+  })
   return []
 }

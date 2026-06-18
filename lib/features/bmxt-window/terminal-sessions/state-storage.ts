@@ -8,8 +8,11 @@ import {
   TAB_PICKER_FOLD_STATE_KEY,
   TERMINAL_SESSIONS_KEY
 } from "../../extension-storage/keys"
-import { clearProcessUiStateStorage } from "../process-ui-state-storage"
+import { clearProcessUiStateStorage, readProcessUiStateFromStorage } from "../process-ui-state-storage"
 import { clearTabPickerFoldStateStorage } from "../../tabs/tab-picker-fold-state"
+import { sanitizeSessionName } from "../../session/session-summary"
+import { deriveDefaultSessionName } from "../../session/session-summary"
+import type { SessionPickerState } from "../../side-picker/session/session-pickers"
 import type { SplitLayoutV1 } from "../split-layout/types"
 import { isValidLayout, listLeafIds } from "../split-layout/tree"
 import type { TerminalSessionsStateV1 } from "./types"
@@ -42,6 +45,14 @@ type StoredSessionsBodyV4 = {
   activeId: string
 }
 
+type StoredSessionsBodyV5 = {
+  v: 5
+  logsById: Record<string, string[]>
+  order: string[]
+  activeId: string
+  namesById: Record<string, string>
+}
+
 function trimLog(lines: string[]): string[] {
   return lines.slice(-MAX_SESSION_LOG_LINES)
 }
@@ -59,7 +70,8 @@ function emptyState(): TerminalSessionsStateV1 {
     v: 2,
     logsById: { [id]: [] },
     order: [id],
-    activeId: id
+    activeId: id,
+    namesById: {}
   }
 }
 
@@ -123,6 +135,28 @@ function isBodyV3Stored(x: unknown): x is StoredLogsV3 {
   return true
 }
 
+function isBodyV5Stored(x: unknown): x is StoredSessionsBodyV5 {
+  if (!x || typeof x !== "object") {
+    return false
+  }
+  const o = x as StoredSessionsBodyV5
+  if (o.v !== 5 || typeof o.logsById !== "object" || !Array.isArray(o.order)) {
+    return false
+  }
+  if (o.order.length === 0 || typeof o.activeId !== "string") {
+    return false
+  }
+  if (!o.order.includes(o.activeId) || typeof o.namesById !== "object") {
+    return false
+  }
+  for (const id of o.order) {
+    if (!Array.isArray(o.logsById[id])) {
+      return false
+    }
+  }
+  return true
+}
+
 function isBodyV4Stored(x: unknown): x is StoredSessionsBodyV4 {
   if (!x || typeof x !== "object") {
     return false
@@ -145,12 +179,23 @@ function isBodyV4Stored(x: unknown): x is StoredSessionsBodyV4 {
   return true
 }
 
+function stateFromV5Body(body: StoredSessionsBodyV5): TerminalSessionsStateV1 {
+  return {
+    v: 2,
+    logsById: body.logsById,
+    order: [...body.order],
+    activeId: body.activeId,
+    namesById: { ...body.namesById }
+  }
+}
+
 function stateFromV4Body(body: StoredSessionsBodyV4): TerminalSessionsStateV1 {
   return {
     v: 2,
     logsById: body.logsById,
     order: [...body.order],
-    activeId: body.activeId
+    activeId: body.activeId,
+    namesById: {}
   }
 }
 
@@ -211,7 +256,22 @@ async function migrateStorageShapes(): Promise<void> {
   const raw = r[TERMINAL_SESSIONS_KEY]
   const layoutRaw = r[SPLIT_LAYOUT_KEY]
 
+  if (isBodyV5Stored(raw)) {
+    if (layoutRaw !== undefined) {
+      await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
+    }
+    return
+  }
+
   if (isBodyV4Stored(raw)) {
+    const body: StoredSessionsBodyV5 = {
+      v: 5,
+      logsById: raw.logsById,
+      order: [...raw.order],
+      activeId: raw.activeId,
+      namesById: {}
+    }
+    await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     if (layoutRaw !== undefined) {
       await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
     }
@@ -224,11 +284,12 @@ async function migrateStorageShapes(): Promise<void> {
       typeof activeRaw === "string" && raw.order.includes(activeRaw)
         ? activeRaw
         : raw.order[0]
-    const body: StoredSessionsBodyV4 = {
-      v: 4,
+    const body: StoredSessionsBodyV5 = {
+      v: 5,
       logsById: raw.logsById,
       order: [...raw.order],
-      activeId
+      activeId,
+      namesById: {}
     }
     await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     await chrome.storage.local.remove([SPLIT_LAYOUT_KEY, ACTIVE_TERMINAL_SESSION_KEY])
@@ -236,11 +297,12 @@ async function migrateStorageShapes(): Promise<void> {
   }
 
   if (isCombinedV1Stored(raw)) {
-    const body: StoredSessionsBodyV4 = {
-      v: 4,
+    const body: StoredSessionsBodyV5 = {
+      v: 5,
       logsById: raw.logsById,
       order: [...raw.order],
-      activeId: raw.activeId
+      activeId: raw.activeId,
+      namesById: {}
     }
     await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     await chrome.storage.local.remove([ACTIVE_TERMINAL_SESSION_KEY, SPLIT_LAYOUT_KEY])
@@ -250,11 +312,12 @@ async function migrateStorageShapes(): Promise<void> {
   if (isBodyV3Stored(raw)) {
     if (isValidLayout(layoutRaw)) {
       const { order, activeId } = orderFromSplitLayout(layoutRaw, raw.logsById)
-      const body: StoredSessionsBodyV4 = {
-        v: 4,
+      const body: StoredSessionsBodyV5 = {
+        v: 5,
         logsById: raw.logsById,
         order,
-        activeId
+        activeId,
+        namesById: {}
       }
       await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
       await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
@@ -264,11 +327,12 @@ async function migrateStorageShapes(): Promise<void> {
     if (keys.length === 0) {
       return
     }
-    const body: StoredSessionsBodyV4 = {
-      v: 4,
+    const body: StoredSessionsBodyV5 = {
+      v: 5,
       logsById: raw.logsById,
       order: keys,
-      activeId: keys[0]
+      activeId: keys[0]!,
+      namesById: {}
     }
     await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
@@ -279,10 +343,10 @@ export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsS
   await migrateStorageShapes()
   const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY])
   const raw = r[TERMINAL_SESSIONS_KEY]
-  if (!isBodyV4Stored(raw)) {
+  if (!isBodyV5Stored(raw)) {
     return null
   }
-  return ensureActiveInOrder(stateFromV4Body(raw))
+  return ensureActiveInOrder(stateFromV5Body(raw))
 }
 
 export async function ensureTerminalSessionsState(): Promise<TerminalSessionsStateV1> {
@@ -297,7 +361,8 @@ export async function ensureTerminalSessionsState(): Promise<TerminalSessionsSta
       v: 2,
       logsById: { [id]: migrated },
       order: [id],
-      activeId: id
+      activeId: id,
+      namesById: {}
     }
     await persistTerminalSessionsState(state)
     await removeLegacyKeys()
@@ -312,11 +377,12 @@ export async function persistTerminalSessionsState(
   state: TerminalSessionsStateV1
 ): Promise<void> {
   const normalized = ensureActiveInOrder(state)
-  const body: StoredSessionsBodyV4 = {
-    v: 4,
+  const body: StoredSessionsBodyV5 = {
+    v: 5,
     logsById: normalized.logsById,
     order: [...normalized.order],
-    activeId: normalized.activeId
+    activeId: normalized.activeId,
+    namesById: { ...normalized.namesById }
   }
   await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
 }
@@ -423,16 +489,63 @@ function adjacentSessionId(
   return order[next] ?? null
 }
 
+function pickersFromStoredLeaf(
+  leaf: NonNullable<Awaited<ReturnType<typeof readProcessUiStateFromStorage>>>["byLeaf"][string]
+): SessionPickerState | undefined {
+  if (!leaf) {
+    return undefined
+  }
+  const p = leaf.pickers
+  return {
+    tabs: p.tabs
+      ? {
+          showUrl: p.tabs.showUrl,
+          interactive: p.tabs.interactive,
+          rows: [],
+          initialHi: 0
+        }
+      : null,
+    search: p.search,
+    dom: p.dom,
+    setting: null
+  }
+}
+
+async function resolveNewSessionName(
+  fromSessionId: string,
+  fresh: TerminalSessionsStateV1,
+  explicitName: string | undefined
+): Promise<string> {
+  const sanitized = explicitName !== undefined ? sanitizeSessionName(explicitName) : null
+  if (sanitized) {
+    return sanitized
+  }
+  const processUi = await readProcessUiStateFromStorage()
+  const leaf = processUi?.byLeaf[fromSessionId]
+  const pickers = leaf ? pickersFromStoredLeaf(leaf) : undefined
+  const navArmed = leaf?.navArmed ?? false
+  const logs = fresh.logsById[fromSessionId] ?? []
+  return deriveDefaultSessionName({
+    pickers,
+    navArmed,
+    logs,
+    fallbackIndex: fresh.order.length + 1
+  })
+}
+
 export async function createSessionAndActivate(
-  _fromSessionId: string
+  fromSessionId: string,
+  options?: { name?: string }
 ): Promise<TerminalSessionsStateV1 | null> {
   const fresh = await readFreshSessionsOrEnsure()
   const newId = newSessionId()
+  const sessionName = await resolveNewSessionName(fromSessionId, fresh, options?.name)
   await persistTerminalSessionsState({
     ...fresh,
     logsById: { ...fresh.logsById, [newId]: [] },
     order: [...fresh.order, newId],
-    activeId: newId
+    activeId: newId,
+    namesById: { ...fresh.namesById, [newId]: sessionName }
   })
   return readTerminalSessionsIfPresent()
 }
@@ -474,7 +587,8 @@ export async function exitOrCloseSessionInStorage(sessionId: string): Promise<Ex
     await removeAllTerminalSessionsFromStorage()
     return { fullClose: true }
   }
-  const { [sessionId]: _removed, ...restLogs } = fresh.logsById
+  const { [sessionId]: _removedLog, ...restLogs } = fresh.logsById
+  const { [sessionId]: _removedName, ...restNames } = fresh.namesById
   const closedIdx = fresh.order.indexOf(sessionId)
   let activeId = fresh.activeId
   if (activeId === sessionId) {
@@ -484,6 +598,7 @@ export async function exitOrCloseSessionInStorage(sessionId: string): Promise<Ex
   await persistTerminalSessionsState({
     ...fresh,
     logsById: restLogs,
+    namesById: restNames,
     order: newOrder,
     activeId
   })
