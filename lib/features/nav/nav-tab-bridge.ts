@@ -1,5 +1,6 @@
 import { displayTitle } from "../format/display-title"
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab"
+import { getNavOverlayLabelsJson } from "./nav-overlay-labels"
 import { runNavControlOnTab, type NavControlResult, type NavKeyForward } from "./run-nav-inject"
 
 export type NavPoint = { x: number; y: number }
@@ -126,7 +127,8 @@ async function runNavControlViaBackground(
       shiftKey: keyForward?.shiftKey,
       altKey: keyForward?.altKey,
       metaKey: keyForward?.metaKey,
-      text
+      text,
+      labelsJson: getNavOverlayLabelsJson()
     })
     if (res && typeof res === "object" && "ok" in res) {
       return res as NavControlResult

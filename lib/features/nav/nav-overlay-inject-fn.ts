@@ -58,6 +58,7 @@ export type NavOverlayMessage = {
   altKey?: boolean
   metaKey?: boolean
   text?: string
+  labelsJson?: string
 }
 
 export function bmxtNavControlInjected(
@@ -73,7 +74,8 @@ export function bmxtNavControlInjected(
   shiftKey = 0,
   altKey = 0,
   metaKey = 0,
-  text = ""
+  text = "",
+  labelsJson = ""
 ): NavInjectResult {
   const ROOT_ID = "__bmxt_nav_cursor_root__"
   const NAV_CURSOR_SCALE = 1.1
@@ -82,11 +84,32 @@ export function bmxtNavControlInjected(
   /** EN: Keep in sync with `nav-menu-items.ts` (`NAV_MENU_ITEMS` order). */
   const MENU_ITEM_IDS = ["selectText", "saveImage", "reloadPage"]
   const COPY_MENU_ITEM_IDS = ["copySelection"]
-  const MENU_ITEM_LABELS: Record<string, string> = {
-    selectText: "テキスト選択",
-    saveImage: "カーソル下の画像を保存",
-    reloadPage: "ページを再読み込み",
-    copySelection: "コピー"
+  const LABELS_FALLBACK = {
+    selectText: "Select text",
+    saveImage: "Save image under cursor",
+    reloadPage: "Reload page",
+    copySelection: "Copy",
+    historyBack: "History back",
+    historyForward: "History forward",
+    menuSelectHint: "↑↓ · Enter",
+    menuCopyHint: "Enter",
+    textSelStart: "Selection start: Enter · Esc cancel",
+    textSelEnd: "Selection end: Enter confirm · move to preview · Esc cancel",
+    typingLine1: "Type in the BMXt window",
+    typingLine2: "Text typed in BMXt appears here",
+    typingMultiline: "Shift+Enter for newline"
+  }
+  type OverlayLabels = typeof LABELS_FALLBACK
+  let parsedLabels: OverlayLabels = LABELS_FALLBACK
+  if (labelsJson) {
+    try {
+      const o = JSON.parse(labelsJson) as Partial<OverlayLabels>
+      if (typeof o.selectText === "string" && typeof o.saveImage === "string") {
+        parsedLabels = { ...LABELS_FALLBACK, ...o }
+      }
+    } catch {
+      /* keep fallback */
+    }
   }
   const TEXT_INPUT_TYPES = new Set([
     "text",
@@ -112,6 +135,7 @@ export function bmxtNavControlInjected(
     textSelPhase: NavInjectTextSelPhase
     textSelStartX: number
     textSelStartY: number
+    labels: OverlayLabels
   }
 
   function sessionWin(): { bmxtNav?: NavSession } {
@@ -293,6 +317,8 @@ export function bmxtNavControlInjected(
       return null
     }
 
+    const labels = sess.labels
+
     const container = document.createElement("div")
     container.setAttribute("data-bmxt-nav-menu", "1")
     container.style.cssText = "position:absolute;left:0;top:" + NAV_MENU_TOP_PX + "px;min-width:200px;max-width:280px;padding:4px 0;font:600 11px system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.95);border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.4);pointer-events:none"
@@ -306,7 +332,7 @@ export function bmxtNavControlInjected(
     for (let i = 0; i < itemIds.length; i++) {
       const id = itemIds[i]!
       const selected = i === sess.menuIndex
-      const hint = sess.menuVariant === "copy" ? "Enter" : "↑↓ · Enter"
+      const hint = sess.menuVariant === "copy" ? labels.menuCopyHint : labels.menuSelectHint
 
       const row = document.createElement("div")
       row.setAttribute("data-bmxt-nav-menu-item", id)
@@ -316,7 +342,16 @@ export function bmxtNavControlInjected(
       }
 
       const labelSpan = document.createElement("span")
-      labelSpan.textContent = MENU_ITEM_LABELS[id] ?? id
+      labelSpan.textContent =
+        id === "selectText"
+          ? labels.selectText
+          : id === "saveImage"
+            ? labels.saveImage
+            : id === "reloadPage"
+              ? labels.reloadPage
+              : id === "copySelection"
+                ? labels.copySelection
+                : id
       row.appendChild(labelSpan)
 
       const hintSpan = document.createElement("span")
@@ -334,7 +369,7 @@ export function bmxtNavControlInjected(
       const backRow = document.createElement("div")
       backRow.style.cssText = rowBase
       const backLabelSpan = document.createElement("span")
-      backLabelSpan.textContent = "履歴を戻る"
+      backLabelSpan.textContent = labels.historyBack
       backRow.appendChild(backLabelSpan)
       const backHintSpan = document.createElement("span")
       backHintSpan.style.cssText = hintStyle
@@ -345,7 +380,7 @@ export function bmxtNavControlInjected(
       const fwdRow = document.createElement("div")
       fwdRow.style.cssText = rowBase
       const fwdLabelSpan = document.createElement("span")
-      fwdLabelSpan.textContent = "履歴を進む"
+      fwdLabelSpan.textContent = labels.historyForward
       fwdRow.appendChild(fwdLabelSpan)
       const fwdHintSpan = document.createElement("span")
       fwdHintSpan.style.cssText = hintStyle
@@ -366,11 +401,8 @@ export function bmxtNavControlInjected(
     }
   }
 
-  function createTextSelHintElement(phase: "start" | "end"): HTMLElement {
-    const label =
-      phase === "start"
-        ? "選択開始: Enter · Esc 取消"
-        : "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消"
+  function createTextSelHintElement(phase: "start" | "end", labels: OverlayLabels): HTMLElement {
+    const label = phase === "start" ? labels.textSelStart : labels.textSelEnd
 
     const div = document.createElement("div")
     div.setAttribute("data-bmxt-nav-textsel-hint", "1")
@@ -641,25 +673,25 @@ export function bmxtNavControlInjected(
     return svg
   }
 
-  function createTypingHintElement(multiline: boolean): HTMLElement {
+  function createTypingHintElement(multiline: boolean, labels: OverlayLabels): HTMLElement {
     const div = document.createElement("div")
     div.setAttribute("data-bmxt-nav-hint", "1")
     div.style.cssText = "margin-top:4px;padding:4px 8px;max-width:220px;font:600 11px/1.35 system-ui,sans-serif;color:#f0f6fc;background:rgba(15,23,42,0.92);border:1px solid rgba(255,255,255,0.25);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.35);white-space:normal;pointer-events:none;line-height:1.35"
 
     const span1 = document.createElement("span")
     span1.style.display = "block"
-    span1.textContent = "type on bmxt window"
+    span1.textContent = labels.typingLine1
     div.appendChild(span1)
 
     const span2 = document.createElement("span")
     span2.style.cssText = "display:block;margin-top:2px;font-weight:500;opacity:0.9;font-size:10px"
-    span2.textContent = "text typed in BMXt goes here"
+    span2.textContent = labels.typingLine2
     div.appendChild(span2)
 
     if (multiline) {
       const span3 = document.createElement("span")
       span3.style.cssText = "display:block;margin-top:2px;opacity:0.85"
-      span3.textContent = "Shift+Enter で改行"
+      span3.textContent = labels.typingMultiline
       div.appendChild(span3)
     }
 
@@ -671,9 +703,9 @@ export function bmxtNavControlInjected(
     sess.root.appendChild(createPointerSvgElement())
 
     if (sess.typingActive) {
-      sess.root.appendChild(createTypingHintElement(sess.typingMultiline))
+      sess.root.appendChild(createTypingHintElement(sess.typingMultiline, sess.labels))
     } else if (sess.textSelPhase === "start" || sess.textSelPhase === "end") {
-      sess.root.appendChild(createTextSelHintElement(sess.textSelPhase))
+      sess.root.appendChild(createTextSelHintElement(sess.textSelPhase, sess.labels))
     }
 
     const menu = createMenuElement(sess)
@@ -785,7 +817,8 @@ export function bmxtNavControlInjected(
       menuVariant: "default",
       textSelPhase: "idle",
       textSelStartX: 0,
-      textSelStartY: 0
+      textSelStartY: 0,
+      labels: parsedLabels
     }
     if (prevTyping) {
       prevTyping.blur()
@@ -1001,6 +1034,11 @@ export function bmxtNavControlInjected(
   }
 
   try {
+    const activeSess = getSession()
+    if (activeSess) {
+      activeSess.labels = parsedLabels
+    }
+
     if (action === "stop") {
       removeSession()
       return { ok: true, x: 0, y: 0 }

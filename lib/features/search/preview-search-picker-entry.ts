@@ -37,6 +37,23 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+function previewScrollOptions(
+  match: SearchPageMatch,
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors,
+  activeOnly: boolean
+) {
+  return {
+    searchNeedle: searchPattern.trim(),
+    lineNo: match.lineNo,
+    snippetHint: match.snippet,
+    globalOccurrence: match.globalOccurrence,
+    persistMs: 0,
+    highlightColors,
+    activeOnly
+  }
+}
+
 async function scrollToPageMatch(
   tabId: number,
   match: SearchPageMatch,
@@ -48,37 +65,31 @@ async function scrollToPageMatch(
     return false
   }
 
-  const activeOnly =
+  const sameTabAndNeedle =
     previewSessionTabId === tabId && previewSessionNeedle === needle && previewSessionTabId !== null
+  const activeOnly = sameTabAndNeedle
 
-  const scrolled = await scrollSearchPageToNeedle(tabId, {
-    searchNeedle: needle,
-    lineNo: match.lineNo,
-    snippetHint: match.snippet,
-    globalOccurrence: match.globalOccurrence,
-    persistMs: 0,
-    highlightColors,
-    activeOnly
-  })
-  if (scrolled) {
+  const markPreviewSession = () => {
     previewSessionTabId = tabId
     previewSessionNeedle = needle
+  }
+
+  const scrolled = await scrollSearchPageToNeedle(
+    tabId,
+    previewScrollOptions(match, searchPattern, highlightColors, activeOnly)
+  )
+  if (scrolled) {
+    markPreviewSession()
     return true
   }
 
   if (activeOnly) {
-    const retried = await scrollSearchPageToNeedle(tabId, {
-      searchNeedle: needle,
-      lineNo: match.lineNo,
-      snippetHint: match.snippet,
-      globalOccurrence: match.globalOccurrence,
-      persistMs: 0,
-      highlightColors,
-      activeOnly: false
-    })
+    const retried = await scrollSearchPageToNeedle(
+      tabId,
+      previewScrollOptions(match, searchPattern, highlightColors, false)
+    )
     if (retried) {
-      previewSessionTabId = tabId
-      previewSessionNeedle = needle
+      markPreviewSession()
     }
     return retried
   }
@@ -88,6 +99,7 @@ async function scrollToPageMatch(
 
 async function previewPageMatchInOpenTab(
   entry: PickerEntry,
+  pageMatchIndex: number,
   match: SearchPageMatch | undefined,
   searchPattern: string,
   highlightColors: SearchPageHighlightColors
@@ -123,6 +135,7 @@ export async function previewSearchPickerPageMatchInBackground(
 ): Promise<boolean> {
   return previewPageMatchInOpenTab(
     entry,
+    pageMatchIndex,
     pickPageMatchAtIndex(entry, pageMatchIndex),
     searchPattern,
     highlightColors

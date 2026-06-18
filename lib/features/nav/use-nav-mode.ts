@@ -5,6 +5,9 @@ import {
 } from "../extension-permissions/optional-http-hosts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
+import { t } from "../setting/i18n/messages"
+import type { UiLocale } from "../setting/locale"
+import { setNavOverlayLabelsForRun } from "./nav-overlay-labels"
 import { NAV_ARROW_STEP_PX } from "./nav-config"
 import { attachNavKeyHold } from "./nav-key-hold"
 import type { NavInjectTextSelPhase } from "./nav-overlay-inject-fn"
@@ -49,20 +52,21 @@ export type UseNavModeOptions = {
   resolveTypingCommitText?: () => Promise<string>
   /** EN: `translate -on` assist — suspend nav Ctrl menu while BMXt focus is outside nav. */
   translateAssistActive?: boolean
+  uiLocale: UiLocale
 }
 
-function overlayErrorLabel(reason: string | undefined): string {
+function overlayErrorLabel(reason: string | undefined, locale: UiLocale): string {
   if (!reason) {
-    return "overlay failed"
+    return t("nav.overlay.error.generic", locale)
   }
   if (reason === "permission-denied") {
-    return "site access denied"
+    return t("nav.overlay.error.permissionDenied", locale)
   }
   if (reason === "not-scriptable") {
-    return "page not scriptable"
+    return t("nav.overlay.error.notScriptable", locale)
   }
   if (reason === "no-result" || reason === "no-sw-response") {
-    return "inject no result"
+    return t("nav.overlay.error.injectNoResult", locale)
   }
   if (reason.startsWith("inject-failed:") || reason.startsWith("sw-message-failed:")) {
     return reason
@@ -213,7 +217,8 @@ export function useNavMode({
   positionsRef,
   getTypingBuffer,
   resolveTypingCommitText,
-  translateAssistActive = false
+  translateAssistActive = false,
+  uiLocale
 }: UseNavModeOptions): {
   currentTabTitle: string | null
   overlayError: string | null
@@ -229,6 +234,10 @@ export function useNavMode({
 } {
   const [currentTabTitle, setCurrentTabTitle] = useState<string | null>(null)
   const [overlayError, setOverlayError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setNavOverlayLabelsForRun(uiLocale)
+  }, [uiLocale])
   const [typingMode, setTypingMode] = useState(false)
   const [typingMultiline, setTypingMultiline] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -321,13 +330,13 @@ export function useNavMode({
         applyNavInjectState(res, navUiSetters, navUiRefs)
       } else {
         const reason = "reason" in res ? res.reason : undefined
-        setOverlayError(overlayErrorLabel(reason))
+        setOverlayError(overlayErrorLabel(reason, uiLocale))
       }
       lastOverlayTabRef.current = tabId
       setCurrentTabTitle(await resolveTabDisplayTitle(tabId))
       return res.ok ? undefined : "reason" in res ? res.reason : undefined
     },
-    [exitTypingMode, positionsRef, savePosition]
+    [exitTypingMode, positionsRef, savePosition, uiLocale]
   )
 
   const teardownAll = useCallback(async () => {

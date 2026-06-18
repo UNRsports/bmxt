@@ -105,10 +105,14 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
     }
 
     const windowId = typeof tab.windowId === "number" ? tab.windowId : undefined
-    const combined = assignSnippetOccurrences([
-      ...(entry.pageMatches ?? []),
-      ...pageMatches
-    ])
+    const bodyLines = innerTextLinesFromBodyText(text ?? "")
+    const combined = assignSnippetOccurrences(
+      assignGlobalOccurrencesToPageMatches(
+        [...(entry.pageMatches ?? []), ...pageMatches],
+        bodyLines,
+        needle
+      )
+    )
     out.push({
       ...entry,
       sources: mergeSources(entry),

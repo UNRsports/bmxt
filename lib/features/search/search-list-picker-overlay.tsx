@@ -7,11 +7,13 @@ import {
   type MutableRefObject
 } from "react"
 import {
-  SEARCH_LIST_PICKER_DESTINATION_HEADLINE,
-  SEARCH_LIST_PICKER_DETAIL_HEADLINE,
-  SEARCH_LIST_PICKER_HEADLINE,
-  SEARCH_LIST_PICKER_LOADING_HEADLINE
-} from "../side-picker/interaction/picker-headlines"
+  domListPickerHeadline,
+  searchListPickerDestinationHeadline,
+  searchListPickerDetailHeadline,
+  searchListPickerHeadline,
+  searchListPickerLoadingHeadline
+} from "../setting/i18n/picker-headlines"
+import { useUiCopy } from "../setting"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {
@@ -75,6 +77,7 @@ export function SearchListPickerOverlay({
   sessionId,
   pageActiveMode = "auto"
 }: Props) {
+  const uiCopy = useUiCopy()
   const { phase, progressLines, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
   const [pickerView, setPickerView] = useState<SearchListPickerView>("results")
@@ -163,7 +166,7 @@ export function SearchListPickerOverlay({
       if (returnView === "detail") {
         void clearSearchPickerPageHighlightsForEntry(entry)
       }
-      const rows = await buildSearchOpenDestinationRows()
+      const rows = await buildSearchOpenDestinationRows(uiCopy.locale)
       setDestinationEntryIndex(resultsIndex)
       setDestinationReturnView(returnView)
       setDestinationEntry(entry)
@@ -171,7 +174,7 @@ export function SearchListPickerOverlay({
       setDestinationRows(rows)
       setPickerView("destination")
     },
-    []
+    [uiCopy.locale]
   )
 
   const handleArrowRight = useCallback(
@@ -226,27 +229,37 @@ export function SearchListPickerOverlay({
   )
 
   const headline = useMemo(() => {
+    const locale = uiCopy.locale
     if (loading) {
-      return SEARCH_LIST_PICKER_LOADING_HEADLINE
+      return searchListPickerLoadingHeadline(locale)
     }
     if (pickerView === "destination" && destinationEntry) {
       const title = destinationEntry.title.trim() || destinationEntry.url
       const clipped = title.length > 72 ? `${title.slice(0, 71)}…` : title
-      return `${SEARCH_LIST_PICKER_DESTINATION_HEADLINE} · ${clipped}`
+      return `${searchListPickerDestinationHeadline(locale)} · ${clipped}`
     }
     if (pickerView === "detail" && detailEntry) {
       const title = detailEntry.title.trim() || detailEntry.url
       const clipped = title.length > 72 ? `${title.slice(0, 71)}…` : title
-      return `${SEARCH_LIST_PICKER_DETAIL_HEADLINE} · ${clipped}`
+      return `${searchListPickerDetailHeadline(locale)} · ${clipped}`
     }
     const entry = entries[resultsHi]
     const detail = entry ? searchPickerActiveMatchDetail(entry, matchHi) : ""
     if (!detail) {
-      return SEARCH_LIST_PICKER_HEADLINE
+      return searchListPickerHeadline(locale)
     }
     const clipped = detail.length > 88 ? `${detail.slice(0, 87)}…` : detail
-    return `${SEARCH_LIST_PICKER_HEADLINE} · ${clipped}`
-  }, [loading, entries, resultsHi, matchHi, pickerView, detailEntry, destinationEntry])
+    return `${searchListPickerHeadline(locale)} · ${clipped}`
+  }, [
+    loading,
+    entries,
+    resultsHi,
+    matchHi,
+    pickerView,
+    detailEntry,
+    destinationEntry,
+    uiCopy.locale
+  ])
 
   const onConfirmLineIndex = useCallback(
     (index: number) => {

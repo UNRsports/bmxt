@@ -9,12 +9,13 @@ import {
   type ReactNode,
   type SetStateAction
 } from "react"
+import { useUiCopy } from "../setting"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
 import { scrollPickerListToHiAfterLayout, scrollPickerListToHiAnimated } from "../side-picker/interaction/picker-list-scroll"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
-import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
+import { urlListCommandListingHint } from "../side-picker/interaction/url-list-commands"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
 import { useSearchPickerAltPreviewKit } from "./use-search-picker-alt-preview-kit"
 import { useSearchPickerResultsOpenTabNav } from "./use-search-picker-results-open-tab-nav"
@@ -95,13 +96,13 @@ function SearchDetailPickerRow({
   index,
   hit,
   hi,
-  pattern,
+  highlightNeedle,
   entry
 }: {
   index: number
   hit: SearchEntryDetailHit
   hi: number
-  pattern: string
+  highlightNeedle: string
   entry: PickerEntry
 }): ReactNode {
   const hiRow = index === hi
@@ -118,7 +119,7 @@ function SearchDetailPickerRow({
       <div className="bmxt-search-picker-field">
         <div className="bmxt-search-picker-field-label">{fieldLabel}</div>
         <div className="bmxt-search-picker-text">
-          <SearchPickerHighlight text={hit.displayText} needle={pattern} />
+          <SearchPickerHighlight text={hit.displayText} needle={highlightNeedle} />
         </div>
       </div>
     </div>
@@ -130,18 +131,22 @@ function SearchListPickerRow({
   entry,
   hi,
   pattern,
+  highlightNeedle,
   matchHi
 }: {
   index: number
   entry: PickerEntry
   hi: number
   pattern: string
+  highlightNeedle: string
   matchHi: number
 }): ReactNode {
   const hiRow = index === hi
   const pageMatch = pickPageMatchForDisplay(entry.pageMatches, hiRow ? matchHi : 0)
   const showText = pageMatch != null && pageMatch.snippet.trim().length > 0
   const textExcerpt = pageMatch ? excerptAroundNeedle(pageMatch.snippet, pattern) : ""
+  const titleNeedle = highlightNeedle.trim() !== "" ? highlightNeedle : pattern
+  const textNeedle = highlightNeedle.trim() !== "" ? highlightNeedle : pattern
 
   return (
     <div
@@ -157,7 +162,7 @@ function SearchListPickerRow({
             <SearchPickerTabFavicon tabId={entry.tabId} url={entry.url} />
           ) : null}
           <span className="bmxt-search-picker-title-text">
-            <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={pattern} />
+            <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={titleNeedle} />
           </span>
         </div>
       </div>
@@ -165,7 +170,7 @@ function SearchListPickerRow({
         <div className="bmxt-search-picker-field">
           <div className="bmxt-search-picker-field-label">text:</div>
           <div className="bmxt-search-picker-text">
-            <SearchPickerHighlight text={textExcerpt} needle={pattern} />
+            <SearchPickerHighlight text={textExcerpt} needle={textNeedle} />
           </div>
         </div>
       ) : null}
@@ -199,6 +204,7 @@ export function SearchListPickerBody({
   destinationFromDetail = false,
   pageActiveMode = "auto"
 }: SearchListPickerBodyProps) {
+  const uiCopy = useUiCopy()
   useTabPickerLiveFieldsRevision()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
@@ -251,6 +257,10 @@ export function SearchListPickerBody({
             : entries.map((e) => e.title),
     [destinationRows, detailHits, entries, inDestinationView, inDetailView, statusLines, statusOnly]
   )
+  const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
+  const rowHighlightNeedle =
+    searchHighlightQuery.trim() !== "" ? searchHighlightQuery : pattern
+
   const listResetKey = inDestinationView
     ? `destination-${destinationRows.length}`
     : inDetailView
@@ -285,7 +295,7 @@ export function SearchListPickerBody({
     setHi((h) => Math.min(Math.max(0, h), lineCount - 1))
   }, [lineCount])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if ((inDetailView || inDestinationView) && subviewHiRef) {
       subviewHiRef.current = hi
     }
@@ -478,7 +488,7 @@ export function SearchListPickerBody({
               index={i}
               hit={hit}
               hi={hi}
-              pattern={pattern}
+              highlightNeedle={rowHighlightNeedle}
               entry={detailEntry}
             />
           ))
@@ -490,6 +500,7 @@ export function SearchListPickerBody({
               entry={entry}
               hi={hi}
               pattern={pattern}
+              highlightNeedle={rowHighlightNeedle}
               matchHi={matchHi}
             />
           ))
@@ -500,7 +511,7 @@ export function SearchListPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={URL_LIST_COMMAND_LISTING_HINT}
+          listingHintText={urlListCommandListingHint(uiCopy.locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

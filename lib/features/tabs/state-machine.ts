@@ -10,6 +10,7 @@ import { resolveTabsPickerMovePlan } from "../bmxt-core"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { resolveTabsPickerCreateGroupPlan } from "../bmxt-core"
 import { resolveTabsPickerHeadline } from "../bmxt-core"
+import type { UiLocale } from "../setting/locale"
 
 export type PickerSelectKind = "window" | "group" | "tab"
 export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit"
@@ -257,18 +258,24 @@ export function resolvePickerMovePlan(
   })
 }
 
-export function resolvePickerHeadline(context: {
-  bulkSubMode: PickerReducerState["bulkSubMode"]
-  groupNewPhase: GroupNewPhase
-  variant: PickerVariant
-  editPanelKind?: string | null
-}): string {
-  return resolveTabsPickerHeadline({
-    bulkSubMode: context.bulkSubMode,
-    groupNewPhase: context.groupNewPhase,
-    variant: context.variant,
-    editPanelKind: context.editPanelKind ?? null
-  })
+export function resolvePickerHeadline(
+  context: {
+    bulkSubMode: PickerReducerState["bulkSubMode"]
+    groupNewPhase: GroupNewPhase
+    variant: PickerVariant
+    editPanelKind?: string | null
+  },
+  locale: UiLocale
+): string {
+  return resolveTabsPickerHeadline(
+    {
+      bulkSubMode: context.bulkSubMode,
+      groupNewPhase: context.groupNewPhase,
+      variant: context.variant,
+      editPanelKind: context.editPanelKind ?? null
+    },
+    locale
+  )
 }
 
 export function resolvePickerCreateGroupPlan(context: {

@@ -1,4 +1,6 @@
 import { bodyToTerminalLines } from "../page-dom/dom-terminal-lines"
+import { t } from "../setting/i18n/messages"
+import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
 import { bmxtDomShowInjected, type DomShowMode } from "../page-dom/injected-dom-show"
 import { domTreeGuideForDepth, parseDomTreeSourceLine } from "./dom-list-line-format"
 
@@ -75,15 +77,12 @@ function noticeCapture(lines: string[]): DomListCapture {
 export async function captureDomListForTab(
   tab: chrome.tabs.Tab,
   flavor: string,
-  pattern: string
+  pattern: string,
+  locale: UiLocale = DEFAULT_UI_LOCALE
 ): Promise<DomListCapture> {
   const tabId = tab.id
   if (tabId === undefined) {
-    return noticeCapture([
-      "dom -list — 表示不可",
-      "JA: 対象タブがありません。通常のブラウザウィンドウでページを開いてください。",
-      "EN: No target tab — focus a normal browser window with a page."
-    ])
+    return noticeCapture([t("domList.unavailable", locale), t("domList.noTarget", locale)])
   }
 
   const mode: DomShowMode = flavor === "--react" ? "react" : "html"

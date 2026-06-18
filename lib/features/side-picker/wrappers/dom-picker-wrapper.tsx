@@ -2,7 +2,8 @@ import type { MutableRefObject } from "react"
 import { DomListPickerBody } from "../../dom/dom-list-picker-body"
 import { DomPromptRender } from "../../dom/dom-prompt-render"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
-import { DOM_LIST_PICKER_HEADLINE } from "../interaction/picker-headlines"
+import { domListPickerHeadline } from "../../setting/i18n/picker-headlines"
+import { useUiCopy } from "../../setting"
 
 export type DomPickerWrapperProps = {
   state: DomListPickerState
@@ -24,6 +25,7 @@ export function DomPickerWrapper({
   pickerInputRef,
   sessionId
 }: DomPickerWrapperProps) {
+  const uiCopy = useUiCopy()
   if (state.kind === "prompt") {
     return (
       <DomPromptRender
@@ -38,7 +40,7 @@ export function DomPickerWrapper({
   const jumpPaths = state.jumpPaths ?? state.lines.map(() => null)
   return (
     <DomListPickerBody
-      headline={DOM_LIST_PICKER_HEADLINE}
+      headline={domListPickerHeadline(uiCopy.locale)}
       lines={state.lines}
       jumpPaths={jumpPaths}
       headerLineCount={state.headerLineCount ?? state.lines.length}

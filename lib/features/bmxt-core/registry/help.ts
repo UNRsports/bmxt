@@ -4,7 +4,7 @@ import { COMMANDS, cmdByName } from "./table.gen"
 
 const HELP_SECTION_KEYS: readonly MessageKey[] = [
   "help.section.tabs",
-  "help.section.split",
+  "help.section.session",
   "help.section.dom",
   "help.section.translate",
   "help.section.setting",

@@ -1,3 +1,6 @@
+import type { UiLocale } from "../../setting/locale"
+import { t } from "../../setting/i18n/messages"
+
 export const URL_LIST_PICKER_COMMANDS = ["nohlsearch"] as const
 
 export function filterUrlListCommandCompletions(prefix: string): string[] {
@@ -8,4 +11,6 @@ export function filterUrlListCommandCompletions(prefix: string): string[] {
   return URL_LIST_PICKER_COMMANDS.filter((c) => c.startsWith(p))
 }
 
-export const URL_LIST_COMMAND_LISTING_HINT = ":nohlsearch — 検索ハイライトを消す"
+export function urlListCommandListingHint(locale: UiLocale): string {
+  return t("picker.commandListing.nohlsearch", locale)
+}

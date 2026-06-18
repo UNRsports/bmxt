@@ -18,24 +18,33 @@ export function SessionPickerColumns({ columnOrder, pulseSlot, ...props }: Props
 
   return (
     <>
-      {columnOrder.map((slot) => (
-        <Fragment key={slot}>
-          <div
-            ref={(el) => {
-              if (el) {
-                slotElsRef.current.set(slot, el)
-              } else {
-                slotElsRef.current.delete(slot)
-              }
-            }}
-            className={`bmxt-picker-column-slot${
-              pulseSlot === slot ? " bmxt-picker-column-slot--pulse" : ""
-            }`}
-            data-picker-slot={slot}>
-            {renderPickerSlot(slot, props)}
-          </div>
-        </Fragment>
-      ))}
+      {columnOrder.map((slot) => {
+        const columnFocused = props.isFocusedPane && props.paneFocus === slot
+        return (
+          <Fragment key={slot}>
+            <div
+              ref={(el) => {
+                if (el) {
+                  slotElsRef.current.set(slot, el)
+                } else {
+                  slotElsRef.current.delete(slot)
+                }
+              }}
+              className={`bmxt-picker-column-slot${
+                columnFocused ? " bmxt-split-pane--focused" : ""
+              }${pulseSlot === slot ? " bmxt-picker-column-slot--pulse" : ""}`}
+              data-picker-slot={slot}
+              onMouseDown={(e) => {
+                if (e.button !== 0) {
+                  return
+                }
+                props.activatePaneFocus(slot)
+              }}>
+              {renderPickerSlot(slot, props)}
+            </div>
+          </Fragment>
+        )
+      })}
     </>
   )
 }

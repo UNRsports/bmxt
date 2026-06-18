@@ -4,7 +4,8 @@ import type { SearchPageMatch } from "../side-picker/model/picker-entry.ts"
 import {
   pageMatchesForDisplay,
   pickPageMatchForDisplay,
-  resolveSearchPickerPageMatchFromMatches
+  resolveSearchPickerPageMatchFromMatches,
+  lineHitIndexForPageMatch
 } from "./search-picker-page-match.ts"
 
 describe("pageMatchesForDisplay", () => {
@@ -28,5 +29,18 @@ describe("resolveSearchPickerPageMatchFromMatches", () => {
     assert.equal(pickPageMatchForDisplay(matches, 0)?.snippet, "body a")
     assert.equal(resolveSearchPickerPageMatchFromMatches(matches, 0).pageMatchIndex, 1)
     assert.equal(resolveSearchPickerPageMatchFromMatches(matches, 1).pageMatchIndex, 2)
+  })
+})
+
+describe("lineHitIndexForPageMatch", () => {
+  it("counts repeated hits on the same line", () => {
+    const matches: SearchPageMatch[] = [
+      { lineNo: 4, snippet: "first", occurrence: 0, globalOccurrence: 0 },
+      { lineNo: 4, snippet: "second", occurrence: 0, globalOccurrence: 1 },
+      { lineNo: 9, snippet: "other line", occurrence: 0, globalOccurrence: 2 }
+    ]
+    assert.equal(lineHitIndexForPageMatch(matches, 0), 0)
+    assert.equal(lineHitIndexForPageMatch(matches, 1), 1)
+    assert.equal(lineHitIndexForPageMatch(matches, 2), 0)
   })
 })

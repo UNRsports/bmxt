@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect } from "react"
+import { useUiCopy } from "../setting"
 import { NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice } from "./tab-picker-overlay-types"
 
@@ -8,11 +9,16 @@ export function useLoadGroupChoicesWhenBulkGroup(
   setGroupChoices: Dispatch<SetStateAction<GroupChoice[]>>,
   setGroupPickIndex: Dispatch<SetStateAction<number>>
 ) {
+  const uiCopy = useUiCopy()
   useEffect(() => {
     if (bulkSubMode !== "group") {
       return
     }
     let cancelled = false
+    const untitled = uiCopy.t("tabs.picker.groupChoiceUntitled")
+    const newGroupLabel = uiCopy.t("tabs.picker.groupChoiceNew")
+    const winSuffix = (windowId: number) =>
+      uiCopy.t("tabs.picker.groupChoiceWinSuffix", { windowId: String(windowId) })
     void (async () => {
       try {
         const gs = await chrome.tabGroups.query({})
@@ -25,13 +31,13 @@ export function useLoadGroupChoicesWhenBulkGroup(
           .map((g) => ({
             id: g.id!,
             windowId: g.windowId ?? 0,
-            label: `${(g.title || "").trim() || "(無題のグループ)"} · win ${g.windowId ?? "?"}`
+            label: `${(g.title || "").trim() || untitled}${winSuffix(g.windowId ?? 0)}`
           }))
           .sort((a, b) => a.windowId - b.windowId || a.id - b.id)
         choices.unshift({
           id: NEW_GROUP_LIST_SENTINEL,
           windowId: 0,
-          label: "＋ 新規グループ（名前・色を指定）"
+          label: newGroupLabel
         })
         setGroupChoices(choices)
         setGroupPickIndex(0)
@@ -41,7 +47,7 @@ export function useLoadGroupChoicesWhenBulkGroup(
             {
               id: NEW_GROUP_LIST_SENTINEL,
               windowId: 0,
-              label: "＋ 新規グループ（名前・色を指定）"
+              label: newGroupLabel
             }
           ])
           setGroupPickIndex(0)
@@ -51,5 +57,5 @@ export function useLoadGroupChoicesWhenBulkGroup(
     return () => {
       cancelled = true
     }
-  }, [bulkSubMode, setGroupChoices, setGroupPickIndex])
+  }, [bulkSubMode, setGroupChoices, setGroupPickIndex, uiCopy])
 }

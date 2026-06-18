@@ -181,9 +181,7 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
   return false
 }
 
-/** EN: Prompt placeholder after `search -list `. */
-export const SEARCH_LIST_PATTERN_PLACEHOLDER =
-  "絞り込み語を入力 · Enter で実行 — type a filter or press Enter to run"
+/** EN: Prompt placeholder after `search -list ` — use `prompt.searchListPattern` via UI settings locale. */
 
 /** `search -exit -list` — close search list picker in this pane (full line must match). */
 export function parseSearchExitListLine(trimmed: string): boolean {

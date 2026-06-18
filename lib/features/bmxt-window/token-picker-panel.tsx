@@ -1,9 +1,9 @@
 /** EN: IME-style dropdown for command-line fixed tokens (any tier). */
-/** JA: コマンドライン固定トークン用 IME 風プルダウン（第一〜第三）。 */
 
 import { useLayoutEffect, useRef } from "react"
 import type { ImeTokenTier } from "../command-line/ime-token-picker"
 import { imeTokenPickerHint } from "../command-line/ime-token-picker"
+import { useUiCopy } from "../setting"
 
 const ITEM_ID_PREFIX = "bmxt-subcmd-item"
 
@@ -20,7 +20,9 @@ type Props = {
 }
 
 export function TokenPickerPanel({ model }: Props) {
+  const uiCopy = useUiCopy()
   const listRef = useRef<HTMLDivElement>(null)
+  const hint = imeTokenPickerHint(model.tier, uiCopy.locale)
 
   useLayoutEffect(() => {
     const list = listRef.current
@@ -32,11 +34,8 @@ export function TokenPickerPanel({ model }: Props) {
   }, [model.hi, model.candidates.length])
 
   return (
-    <div
-      className="bmxt-subcmd-picker"
-      role="listbox"
-      aria-label={imeTokenPickerHint(model.tier)}>
-      <div className="bmxt-subcmd-picker-hint">{imeTokenPickerHint(model.tier)}</div>
+    <div className="bmxt-subcmd-picker" role="listbox" aria-label={hint}>
+      <div className="bmxt-subcmd-picker-hint">{hint}</div>
       <div ref={listRef} className="bmxt-subcmd-picker-list">
         {model.candidates.map((c, i) => (
           <div

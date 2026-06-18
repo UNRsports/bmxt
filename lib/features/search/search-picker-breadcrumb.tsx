@@ -1,17 +1,19 @@
 import type { ReactNode } from "react"
+import { useUiCopy } from "../setting"
 import type { SearchListPickerView } from "./search-list-picker-body"
 
 type SearchPickerBreadcrumbProps = {
   view: SearchListPickerView
-  /** EN: Destination was opened from detail (`Results → Detail → Open target`). */
+  /** EN: Destination was shown from detail (`Results → Detail → Open target`). */
   showDetailBeforeDestination?: boolean
 }
 
-/** EN: JA/EN breadcrumb above the search picker list. */
+/** EN: Locale-aware breadcrumb above the search picker list. */
 export function SearchPickerBreadcrumb({
   view,
   showDetailBeforeDestination = false
 }: SearchPickerBreadcrumbProps): ReactNode {
+  const uiCopy = useUiCopy()
   const onResults = view === "results"
   const onDetail = view === "detail"
   const onDestination = view === "destination"
@@ -23,7 +25,7 @@ export function SearchPickerBreadcrumb({
             ? "bmxt-search-picker-crumb-segment bmxt-search-picker-crumb-segment--active"
             : "bmxt-search-picker-crumb-segment"
         }>
-        検索結果一覧 · Search Results
+        {uiCopy.t("search.picker.breadcrumb.results")}
       </span>
       {onDetail || (onDestination && showDetailBeforeDestination) ? (
         <>
@@ -36,7 +38,7 @@ export function SearchPickerBreadcrumb({
                 ? "bmxt-search-picker-crumb-segment bmxt-search-picker-crumb-segment--active"
                 : "bmxt-search-picker-crumb-segment"
             }>
-            詳細一覧 · Detail List
+            {uiCopy.t("search.picker.breadcrumb.detail")}
           </span>
         </>
       ) : null}
@@ -46,7 +48,7 @@ export function SearchPickerBreadcrumb({
             &gt;
           </span>
           <span className="bmxt-search-picker-crumb-segment bmxt-search-picker-crumb-segment--active">
-            開き先 · Open target
+            {uiCopy.t("search.picker.breadcrumb.destination")}
           </span>
         </>
       ) : null}

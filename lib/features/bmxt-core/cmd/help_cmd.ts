@@ -1,4 +1,4 @@
-import { DEFAULT_UI_LOCALE } from "../../setting/locale"
+import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { CmdMeta } from "../types"
 import { linesDispatch } from "../types"
 import { buildHelpLines } from "../registry"
@@ -10,5 +10,5 @@ export const CMD: CmdMeta = {
 }
 
 export function run(_args: string[]) {
-  return linesDispatch(buildHelpLines(DEFAULT_UI_LOCALE))
+  return linesDispatch(buildHelpLines(getRunLocale()))
 }

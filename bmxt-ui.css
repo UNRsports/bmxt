@@ -93,6 +93,101 @@ body {
   background-repeat: var(--bmxt-bg-repeat);
 }
 
+.bmxt-session-stack {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.bmxt-session-bar {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  min-height: 28px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  overflow-x: auto;
+  overflow-y: hidden;
+  user-select: none;
+}
+
+.bmxt-session-bar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 4px 12px;
+  border: none;
+  border-right: 1px solid #21262d;
+  background: transparent;
+  color: #8b949e;
+  font-family: var(--bmxt-mono, ui-monospace, monospace);
+  font-size: 11px;
+  line-height: 1.35;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 16rem;
+}
+
+.bmxt-session-bar-tab:hover {
+  background: rgba(88, 166, 255, 0.08);
+  color: #c9d1d9;
+}
+
+.bmxt-session-bar-tab--active {
+  background: rgba(88, 166, 255, 0.16);
+  color: #58a6ff;
+}
+
+.bmxt-session-bar-tab-index {
+  flex: 0 0 auto;
+  color: #484f58;
+  font-variant-numeric: tabular-nums;
+}
+
+.bmxt-session-bar-tab--active .bmxt-session-bar-tab-index {
+  color: #58a6ff;
+}
+
+.bmxt-session-bar-tab-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bmxt-session-viewport {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.bmxt-session-viewport--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.bmxt-session-viewport--active {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.bmxt-subcmd-picker-item--active-session {
+  color: #58a6ff;
+}
+
 .bmxt-split-viewport {
   position: relative;
   display: flex;
@@ -497,6 +592,16 @@ body {
 }
 
 .bmxt-prompt-line--nav-typing .bmxt-prompt-glyph {
+  color: #58a6ff;
+}
+
+.bmxt-prompt-line--session-name-typing .bmxt-prompt-field {
+  outline: 1px solid rgba(88, 166, 255, 0.35);
+  outline-offset: -1px;
+  border-radius: 2px;
+}
+
+.bmxt-prompt-line--session-name-typing .bmxt-prompt-glyph {
   color: #58a6ff;
 }
 
@@ -1017,6 +1122,12 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   outline-offset: -3px;
 }
 
+/* Picker columns sit inside overflow:hidden rails — inset shadow stays visible. */
+.bmxt-picker-column-slot.bmxt-split-pane--focused {
+  outline: none;
+  box-shadow: inset 0 0 0 3px #58a6ff;
+}
+
 /* EN: Mouse — select displayed text; links stay clickable. Keyboard drives extension state. */
 .bmxt-tab-picker-list,
 .bmxt-tab-picker-head,
@@ -1105,7 +1216,6 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 }
 
 .bmxt-tab-picker-row--group {
-  color: #ffa657;
   padding-left: 2ch;
   margin-top: 4px;
 }
@@ -1124,6 +1234,10 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-tab-picker-row--tab {
   padding-left: 2ch;
   border-radius: 2px;
+}
+
+.bmxt-tab-picker-row--tab-in-group {
+  padding-left: 4ch;
 }
 
 .bmxt-tab-picker-row--marked {
@@ -1346,6 +1460,49 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   vertical-align: text-bottom;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.bmxt-tab-picker-group-line {
+  flex: 0 0 auto;
+  font-weight: 600;
+  user-select: none;
+  margin-right: 0.65em;
+}
+
+.bmxt-tab-picker-group-accent--grey {
+  color: #9aa0a6;
+}
+
+.bmxt-tab-picker-group-accent--blue {
+  color: #8ab4f8;
+}
+
+.bmxt-tab-picker-group-accent--red {
+  color: #f28b82;
+}
+
+.bmxt-tab-picker-group-accent--yellow {
+  color: #fdd663;
+}
+
+.bmxt-tab-picker-group-accent--green {
+  color: #81c995;
+}
+
+.bmxt-tab-picker-group-accent--pink {
+  color: #ff8bcb;
+}
+
+.bmxt-tab-picker-group-accent--purple {
+  color: #d7aefb;
+}
+
+.bmxt-tab-picker-group-accent--cyan {
+  color: #78d9ec;
+}
+
+.bmxt-tab-picker-group-accent--orange {
+  color: #fcad70;
 }
 
 .bmxt-tab-picker-search-hl {

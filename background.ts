@@ -15,8 +15,9 @@ import {
   resetBmxtTerminalSessionsInStorage,
   setSessionLines,
   resolveSessionId,
-  splitColForLeaf,
-  splitRowForLeaf
+  createSessionAndActivate,
+  switchSessionNext,
+  switchSessionPrev
 } from "./lib/features/bmxt-window/terminal-sessions/state-storage"
 import { displayTitle } from "./lib/features/format/display-title"
 import {
@@ -25,6 +26,8 @@ import {
 } from "./lib/features/bmxt-core"
 import { buildHelpLines } from "./lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "./lib/features/setting/settings"
+import { setRunLocale, getRunLocale } from "./lib/features/setting/i18n/run-locale"
+import { t } from "./lib/features/setting/i18n/messages"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
@@ -213,13 +216,22 @@ async function tryRunCommandWithoutWasm(sessionId: string, trimmed: string): Pro
     await exitBmxtWindowFull()
     return true
   }
-  if (/^\s*split\s+-col\s*$/i.test(trimmed)) {
-    await splitColForLeaf(sessionId)
+  const newMatch = trimmed.match(/^\s*session\s+-new(?:\s+(.+))?\s*$/i)
+  if (newMatch) {
+    const rawName = (newMatch[1] ?? "").trim()
+    await createSessionAndActivate(sessionId, {
+      name: rawName.length > 0 ? rawName : undefined
+    })
     await appendLinesToSession(sessionId, [`> ${trimmed}`])
     return true
   }
-  if (/^\s*split\s+-row\s*$/i.test(trimmed)) {
-    await splitRowForLeaf(sessionId)
+  if (/^\s*session\s+-next\s*$/i.test(trimmed)) {
+    await switchSessionNext(sessionId)
+    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    return true
+  }
+  if (/^\s*session\s+-prev\s*$/i.test(trimmed)) {
+    await switchSessionPrev(sessionId)
     await appendLinesToSession(sessionId, [`> ${trimmed}`])
     return true
   }
@@ -287,7 +299,7 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
     if (!exitOutcome.fullClose) {
       const peek = await readTerminalSessionsIfPresent()
       if (peek) {
-        await appendLinesToSession(peek.layout.focusedLeafId, [`> ${trimmed}`, ...more])
+        await appendLinesToSession(peek.activeId, [`> ${trimmed}`, ...more])
       }
     }
     return
@@ -302,12 +314,13 @@ async function dispatch(
   sessionId: string,
   exitOutcome: { fullClose: boolean }
 ): Promise<string[]> {
+  const { locale } = await loadUiSettings()
+  setRunLocale(locale)
   const trimmed = line.trim()
   if (trimmed === "help" || trimmed === "?") {
-    const { locale } = await loadUiSettings()
     return buildHelpLines(locale)
   }
-  const bundle = runDispatch(line)
+  const bundle = runDispatch(line, locale)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
   }
@@ -335,7 +348,7 @@ async function dispatch(
 async function listWindows(): Promise<string[]> {
   const wins = await chrome.windows.getAll({ populate: true })
   if (wins.length === 0) {
-    return ["(ウィンドウなし)"]
+    return [t("windows.none", getRunLocale())]
   }
   return wins.map((w) => {
     const f = w.focused ? "*" : " "
@@ -428,6 +441,7 @@ type NavControlRequest = {
   altKey?: boolean
   metaKey?: boolean
   text?: string
+  labelsJson?: string
 }
 
 chrome.runtime.onMessage.addListener(
@@ -467,7 +481,8 @@ chrome.runtime.onMessage.addListener(
               metaKey: Boolean(message.metaKey)
             }
           : undefined,
-        typeof message.text === "string" ? message.text : undefined
+        typeof message.text === "string" ? message.text : undefined,
+        typeof message.labelsJson === "string" ? message.labelsJson : undefined
       )
         .then((result) => sendResponse(result))
         .catch((e) =>

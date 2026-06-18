@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useUiCopy } from "../setting"
 import {
   parsePickerSearchNeedle,
   splitTextHighlightSegments
@@ -82,10 +83,11 @@ export function TabPickerRowList({
   isWindowExpanded,
   isGroupExpanded
 }: TabPickerRowListProps) {
+  const uiCopy = useUiCopy()
   useTabPickerLiveFieldsRevision()
 
   if (rows.length === 0) {
-    return <div className="bmxt-tab-picker-empty">(タブなし)</div>
+    return <div className="bmxt-tab-picker-empty">{uiCopy.t("tabs.picker.empty")}</div>
   }
 
   return (
@@ -109,7 +111,8 @@ export function TabPickerRowList({
             row,
             rows,
             trackedWindowId,
-            trackedWindowTitle
+            trackedWindowTitle,
+            uiCopy.locale
           )
           return (
             <div
@@ -132,6 +135,7 @@ export function TabPickerRowList({
         if (row.kind === "group") {
           const markedRow = markedGroupSet.has(groupRowKey(row.windowId, row.groupId))
           const expanded = isGroupExpanded(row.windowId, row.groupId)
+          const groupLabelClass = `bmxt-tab-picker-group-label bmxt-tab-picker-group-accent--${row.color}`
           return (
             <div
               key={i}
@@ -146,16 +150,18 @@ export function TabPickerRowList({
                 {expanded ? "▼" : "▶"}
               </span>
               <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
-              {byUrl ? row.label : renderHighlighted(row.label, needle, `g-${i}`)}
+              <span className={groupLabelClass}>
+                {byUrl ? row.label : renderHighlighted(row.label, needle, `g-${i}`)}
+              </span>
             </div>
           )
         }
         const markedRow = markedTabSet.has(row.tabId)
         const rowClass = `bmxt-tab-picker-row bmxt-tab-picker-row--tab${
-          hiRow ? " bmxt-tab-picker-row--hi" : ""
-        }${markedRow ? " bmxt-tab-picker-row--marked" : ""}${
-          moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""
-        }`
+          row.groupColor ? " bmxt-tab-picker-row--tab-in-group" : ""
+        }${hiRow ? " bmxt-tab-picker-row--hi" : ""}${
+          markedRow ? " bmxt-tab-picker-row--marked" : ""
+        }${moveDestRow ? " bmxt-tab-picker-row--move-dest" : ""}`
         const liveTitle = resolveLiveTabTitle(row.tabId, row.title)
         const liveUrl = resolveLiveTabUrl(row.tabId, row.url)
         const titleShown = displayTitle(liveTitle)
@@ -185,6 +191,13 @@ export function TabPickerRowList({
                 aria-hidden>
                 #
               </span>
+              {row.groupColor ? (
+                <span
+                  className={`bmxt-tab-picker-group-line bmxt-tab-picker-group-accent--${row.groupColor}`}
+                  aria-hidden>
+                  |
+                </span>
+              ) : null}
               {faviconSrc ? <TabPickerTabFavicon src={faviconSrc} /> : null}
               <span className="bmxt-tab-picker-tab-title-text">
                 {byUrl ? titleShown : renderHighlighted(titleShown, needle, `t-${i}`)}

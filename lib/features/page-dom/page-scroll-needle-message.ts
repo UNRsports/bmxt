@@ -17,6 +17,8 @@ export type PageScrollNeedleRequest = {
   snippetHint: string
   /** EN: Precomputed global needle index (0-based) from search indexing. */
   globalOccurrence?: number
+  /** EN: 0-based hit index on `lineNo` when the line has multiple needle matches. */
+  lineHitIndex?: number
   /** EN: Highlight colors for hit vs jump layers. */
   highlightColors?: BmxtNeedleHighlightColorsPayload
   /** EN: Only move jump highlight + scroll (detail picker row change). */

@@ -1,6 +1,7 @@
 import type { MutableRefObject } from "react"
 import { useCallback } from "react"
 import { logBmxtKey } from "../debug/key-log"
+import { useUiCopy } from "../setting"
 import type { TabPickerRow } from "./picker-rows"
 import { mapVisibleIndicesToPlanRows } from "./tab-picker-plan-rows"
 import {
@@ -61,6 +62,7 @@ export type TabPickerExecutionParams = {
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
+  const uiCopy = useUiCopy()
   const {
     rows,
     visibleRowIndices,
@@ -169,8 +171,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onRefreshRows,
     rows,
     selectedTabIds,
-    visibleRowIndices
-  ])
+      uiCopy
+    ]
+  )
 
   const executeBulkGroup = useCallback(async () => {
     if (selectedTabIds.length === 0) {
@@ -312,7 +315,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           return
         }
 
-        const primaryReason = err?.message ?? "tabs.create が応答しませんでした"
+        const primaryReason =
+          err?.message ?? uiCopy.t("tabs.picker.error.createNoResponse")
         logBmxtKey("picker", "tabs.create(windowId) fallback", { primaryReason })
 
         const fallbackCreate: chrome.tabs.CreateProperties =
@@ -321,8 +325,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           const err2 = chrome.runtime.lastError
           if (err2 || tab2?.id === undefined) {
             abortLogged([
-              `新規タブ: ${primaryReason}`,
-              err2?.message ? `フォールバック: ${err2.message}` : "フォールバックにも失敗しました。"
+              uiCopy.t("tabs.picker.error.newTabPrimary", { message: primaryReason }),
+              err2?.message
+                ? uiCopy.t("tabs.picker.error.newTabFallbackLine", { message: err2.message })
+                : uiCopy.t("tabs.picker.error.newTabFallbackFailed")
             ])
             return
           }
@@ -330,8 +336,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             const err3 = chrome.runtime.lastError
             if (err3 || moved?.id === undefined) {
               abortLogged([
-                `新規タブ: ${primaryReason}`,
-                `別ウィンドウへ移動できませんでした: ${err3?.message ?? "unknown"}`
+                uiCopy.t("tabs.picker.error.newTabPrimary", { message: primaryReason }),
+                uiCopy.t("tabs.picker.error.newTabMoveFailed", {
+                  message: err3?.message ?? "unknown"
+                })
               ])
               return
             }
@@ -345,7 +353,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       onNewTabUrlPanelDone,
       onPickerHighlightCreatedTab,
       onRefreshRows,
-      setActiveTabId
+      setActiveTabId,
+      uiCopy
     ]
   )
 
@@ -363,7 +372,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         implicitWid
       )
       if (!v.ok) {
-        void onAppendLog?.([`error: ${v.reason ?? "実行できません。"}`])
+        void onAppendLog?.([
+          `error: ${v.reason ?? uiCopy.t("tabs.picker.error.executeFailed")}`
+        ])
         return
       }
       let execMarkedKind = markedKind
@@ -450,7 +461,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       setGroupNewPhase,
       setNewGroupColorIndex,
       setNewGroupTitle,
-      visibleRowIndices
+      visibleRowIndices,
+      uiCopy
     ]
   )
 

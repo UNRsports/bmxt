@@ -13,6 +13,7 @@ import {
   type NavInjectResult,
   type NavOverlayMessage
 } from "./nav-overlay-inject-fn"
+import { getNavOverlayLabelsJson } from "./nav-overlay-labels"
 
 export type NavControlResult = NavInjectResult
 export type { NavOverlayMessage }
@@ -56,7 +57,8 @@ export async function runNavControlOnTab(
   dx = 0,
   dy = 0,
   keyForward?: NavKeyForward,
-  text?: string
+  text?: string,
+  labelsJson?: string
 ): Promise<NavControlResult> {
   if (!(await tabUrlOk(tabId))) {
     return { ok: false, reason: "not-scriptable" }
@@ -64,6 +66,7 @@ export async function runNavControlOnTab(
 
   const k = keyForward?.key ?? ""
   const code = keyForward?.code ?? ""
+  const labels = labelsJson ?? getNavOverlayLabelsJson()
   const payload: NavOverlayMessage = {
     channel: NAV_OVERLAY_CHANNEL,
     action,
@@ -78,7 +81,8 @@ export async function runNavControlOnTab(
     shiftKey: keyForward?.shiftKey,
     altKey: keyForward?.altKey,
     metaKey: keyForward?.metaKey,
-    text
+    text,
+    labelsJson: labels
   }
 
   try {
@@ -112,7 +116,8 @@ export async function runNavControlOnTab(
         keyForward?.shiftKey ? 1 : 0,
         keyForward?.altKey ? 1 : 0,
         keyForward?.metaKey ? 1 : 0,
-        text ?? ""
+        text ?? "",
+        labels
       ]
     })
     return (result as NavInjectResult | undefined) ?? { ok: false, reason: "no-result" }

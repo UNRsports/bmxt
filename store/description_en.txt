@@ -30,6 +30,11 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.5.6:
+- Audited remaining bilingual UI after locale switching and applied locale rules consistently
+- UI adjustments in tabs mode
+- Removed the split command to save screen space; implemented session switching UI via the session command
+
 0.5.3:
 - Split extension shortcuts into launch and reset
 - Implemented the setting command to customize, save, and load extension appearance
@@ -79,8 +84,6 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 - Added the `search` command to search across internal data such as history, bookmarks, and open tabs.
 
 0.1.1:
-- Added the split command; add panes with split and remove them with exit (closes the window when the last pane exits)
-- With multiple panes from split, Ctrl+Arrow moves focus between panes
 - Clarified command behavior rules
 - Added an assist menu while typing commands (type "tabs" and press Enter to try it)
 - In tabs mode, "/" search: type a phrase and press Enter to highlight matches; press n to jump between them
@@ -95,8 +98,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 |----------|------|
 | `help` / `?` | Show help |
 | `clear` | Clear logs |
-| `exit` | Close the BMXt window and clear the session log |
-| `split` | Show `-col` / `-row` options; Enter alone restores the prompt to `split ` (with a trailing space); `split -col` adds a pane beside the current one; `split -row` adds a pane below; with multiple panes, Ctrl+Arrow moves focus between panes |
+| `exit` | Close the active terminal session; when it is the last session, close the BMXt window and clear process-scoped state |
 | `tabs` | Show available options, then restore the prompt to `tabs ` (with a trailing space) for continued input |
 | `tabs -list [-u]` | Open the tab picker; supports search, multi-select marker `#`, and bulk modes; `/` searches tab titles, Enter highlights matches, `n` jumps between them |
 | `tabs -moveurl <url>` | Focus a tab with the given URL or open a new tab (http/https) |
@@ -115,6 +117,13 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Open the settings picker column (UI locale, terminal appearance, optional per-picker appearance, export/import zip); changes apply only after `> save setting` in the picker |
 | `setting -exit -list` | Close the settings picker column in this session |
+| `session` | Print usage and restore the prompt to `session ` for second tokens (tmux-style terminal sessions in one BMXt window) |
+| `session -new [name]` | Create a new terminal session and switch to it; optional display name |
+| `session -list` | Inline session picker on the prompt (↑↓ · Enter / 1–9 switches immediately by index) |
+| `session -switch [name]` | Inline session picker by display name (type to filter · Enter inserts `session -switch <name>` · Enter again runs switch) |
+| `session -next` / `session -prev` | Cycle the active terminal session |
+| `session -setting-name [name]` | Rename the current session |
+| `session <n>` | Switch to terminal session number n (1-based) |
 | `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Enable translation assist (nav typing preview under the prompt) |
 | `translate -off` | Disable translation assist |

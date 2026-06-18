@@ -1,3 +1,6 @@
+import { t } from "../../setting/i18n/messages"
+import type { UiLocale } from "../../setting/locale"
+
 export type HeadlineContext = {
   bulkSubMode?: string | null
   groupNewPhase?: string
@@ -5,63 +8,57 @@ export type HeadlineContext = {
   editPanelKind?: string | null
 }
 
-function commonParts(): string[] {
-  return [
-    "↑↓ move",
-    "Shift+↑↓ range #",
-    "Tab #",
-    ": コマンド（move/close/group/nw/nt/edit · Tab 補完）",
-    "/ highlight · Enter commit · :nohlsearch clears",
-    "Ctrl+Shift+↑↓ active preview",
-    "Enter confirm",
-    "Esc clear # · prompt"
-  ]
+function commonPart(locale: UiLocale): string {
+  return t("tabs.picker.headline.common", locale)
 }
 
-export function resolveHeadline(ctx: HeadlineContext): string {
+function withCommon(key: Parameters<typeof t>[0], locale: UiLocale): string {
+  return t(key, locale, { common: commonPart(locale) })
+}
+
+export function resolveHeadline(ctx: HeadlineContext, locale: UiLocale): string {
   const bulkSubMode = ctx.bulkSubMode ?? null
   const groupNewPhase = ctx.groupNewPhase ?? "tabs"
   const variant = ctx.variant ?? "default"
   const editPanelKind = ctx.editPanelKind ?? null
 
   if (bulkSubMode === "group" && groupNewPhase === "meta") {
-    return "Tab picker — [GROUP] 新規 · 名前・色 · Enter 確定 · Esc でターゲット一覧へ · Tab 名前↔色"
+    return t("tabs.picker.headline.groupMeta", locale)
   }
   if (variant === "groupNew" && groupNewPhase === "meta") {
-    return "group new — 名前・色 · Enter 確定 · Esc タブ一覧へ · Tab 名前↔色"
+    return t("tabs.picker.headline.groupNewMeta", locale)
   }
   if (variant === "groupNew" && groupNewPhase === "tabs") {
-    return "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 文字ハイライト · Esc"
+    return t("tabs.picker.headline.groupNewTabs", locale)
   }
 
-  const parts = commonParts().join(" · ")
   switch (bulkSubMode) {
     case "move":
-      return `Tab picker — [MOVE] ↑↓ dest · Enter apply · ${parts}`
+      return withCommon("tabs.picker.headline.move", locale)
     case "close":
-      return `Tab picker — [CLOSE] Enter でウィンドウを閉じる / タブを閉じる · ${parts}`
+      return withCommon("tabs.picker.headline.close", locale)
     case "newTab":
-      return `Tab picker — [NEW TAB] Enter で URL 入力 · ${parts}`
+      return withCommon("tabs.picker.headline.newTab", locale)
     case "group":
-      return `Tab picker — [GROUP] ↑↓ 既存 or 新規 · Enter · ${parts}`
+      return withCommon("tabs.picker.headline.group", locale)
     case "newWindow":
-      return `Tab picker — [NEW WINDOW] Enter move # tabs to new window · ${parts}`
+      return withCommon("tabs.picker.headline.newWindow", locale)
     case "edit":
       if (editPanelKind === "windowRename") {
-        return `Tab picker — [EDIT] ウィンドウ名 · Enter 確定 · Esc キャンセル · ${parts}`
+        return withCommon("tabs.picker.headline.editWindowRename", locale)
       }
       if (editPanelKind === "groupRename") {
-        return `Tab picker — [EDIT] グループ名 · Enter 確定 · Esc で操作一覧へ · ${parts}`
+        return withCommon("tabs.picker.headline.editGroupRename", locale)
       }
       if (editPanelKind === "groupMenu") {
-        return `Tab picker — [EDIT] ↑↓ 操作選択 · Enter 実行 · Esc キャンセル · ${parts}`
+        return withCommon("tabs.picker.headline.editGroupMenu", locale)
       }
-      return `Tab picker — [EDIT] · ${parts}`
+      return withCommon("tabs.picker.headline.edit", locale)
     default:
-      return `Tab picker — ${parts}`
+      return withCommon("tabs.picker.headline.default", locale)
   }
 }
 
-export function resolveTabsPickerHeadline(context: HeadlineContext): string {
-  return resolveHeadline(context)
+export function resolveTabsPickerHeadline(context: HeadlineContext, locale: UiLocale): string {
+  return resolveHeadline(context, locale)
 }

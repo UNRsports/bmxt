@@ -27,6 +27,7 @@ import type { BulkSubMode, SelectKind } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
+import { useUiCopy } from "../setting"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
@@ -128,6 +129,7 @@ export function useTabPickerController({
   sessionId,
   onFocusTabIdChange
 }: Props): TabPickerViewProps | null {
+  const uiCopy = useUiCopy()
   const engineApi = useTabPickerEngineState(sessionId)
   useTabPickerLiveFieldsRevision()
 
@@ -542,13 +544,16 @@ export function useTabPickerController({
 
   const headLine = useMemo(
     () =>
-      resolvePickerHeadline({
-        bulkSubMode,
-        groupNewPhase,
-        variant,
-        editPanelKind: editPanel?.kind ?? null
-      }),
-    [bulkSubMode, editPanel?.kind, groupNewPhase, variant]
+      resolvePickerHeadline(
+        {
+          bulkSubMode,
+          groupNewPhase,
+          variant,
+          editPanelKind: editPanel?.kind ?? null
+        },
+        uiCopy.locale
+      ),
+    [bulkSubMode, editPanel?.kind, groupNewPhase, uiCopy.locale, variant]
   )
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
@@ -592,8 +597,8 @@ export function useTabPickerController({
     if (uniq.length < 2) {
       return null
     }
-    return `Tab で循環: ${uniq.join(" · ")}`
-  }, [commandBuffer, commandMode])
+    return uiCopy.t("picker.commandAmbiguous.tabCycle", { commands: uniq.join(" · ") })
+  }, [commandBuffer, commandMode, uiCopy])
 
   const setRowRef = useCallback((rowIndex: number, el: HTMLDivElement | null) => {
     if (el) {

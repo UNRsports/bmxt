@@ -1,5 +1,5 @@
-/** EN: Tab picker fold state (window / group); persisted until BMXt `exit` full close. */
-/** JA: タブピッカーの開閉状態。BMXt ウィンドウを閉じても保持し、`exit` 全終了で消去。 */
+/** EN: Tab picker fold state per session; persisted until BMXt `exit` full close. */
+/** JA: タブピッカーの開閉状態（セッション単位）。BMXt 全終了で消去。 */
 
 import { TAB_PICKER_FOLD_STATE_KEY } from "../extension-storage/keys"
 import type { TabPickerRow } from "./picker-rows"
@@ -10,6 +10,17 @@ import {
 import { parsePickerSearchNeedle } from "../side-picker/search/picker-search-needle"
 import { groupRowKey } from "./tab-picker-keyboard"
 
+type FoldSnapshot = {
+  collapsedWindowIds: number[]
+  collapsedGroupKeys: string[]
+}
+
+type StoredTabPickerFoldStateV2 = {
+  v: 2
+  bySession: Record<string, FoldSnapshot>
+}
+
+/** @deprecated v1 — migrated to v2 on read. */
 type StoredTabPickerFoldStateV1 = {
   v: 1
   collapsedWindowIds: number[]
@@ -21,48 +32,114 @@ export type TabPickerFoldMutation = {
   changed: boolean
 }
 
+const foldBySession = new Map<string, FoldSnapshot>()
+let activeSessionId: string | null = null
 const collapsedWindowIds = new Set<number>()
 const collapsedGroupKeys = new Set<string>()
 
 let hydratePromise: Promise<void> | null = null
 
-function parseStoredTabPickerFoldState(raw: unknown): StoredTabPickerFoldStateV1 | null {
+function parseFoldSnapshot(raw: unknown): FoldSnapshot | null {
   if (!raw || typeof raw !== "object") {
     return null
   }
-  const o = raw as StoredTabPickerFoldStateV1
-  if (o.v !== 1 || !Array.isArray(o.collapsedWindowIds) || !Array.isArray(o.collapsedGroupKeys)) {
+  const o = raw as FoldSnapshot
+  if (!Array.isArray(o.collapsedWindowIds) || !Array.isArray(o.collapsedGroupKeys)) {
     return null
   }
   const collapsedWindowIdsOut: number[] = []
   for (const id of o.collapsedWindowIds) {
-    if (typeof id !== "number" || !Number.isInteger(id)) {
-      continue
+    if (typeof id === "number" && Number.isInteger(id)) {
+      collapsedWindowIdsOut.push(id)
     }
-    collapsedWindowIdsOut.push(id)
   }
   const collapsedGroupKeysOut: string[] = []
   for (const key of o.collapsedGroupKeys) {
-    if (typeof key !== "string" || key.length === 0 || key.length > 128) {
-      continue
+    if (typeof key === "string" && key.length > 0 && key.length <= 128) {
+      collapsedGroupKeysOut.push(key)
     }
-    collapsedGroupKeysOut.push(key)
   }
   return {
-    v: 1,
     collapsedWindowIds: collapsedWindowIdsOut,
     collapsedGroupKeys: collapsedGroupKeysOut
   }
 }
 
-function applyStoredFoldState(stored: StoredTabPickerFoldStateV1): void {
+function parseStoredTabPickerFoldState(raw: unknown): StoredTabPickerFoldStateV2 | null {
+  if (!raw || typeof raw !== "object") {
+    return null
+  }
+  const o = raw as Record<string, unknown>
+  if (o.v === 1 && Array.isArray(o.collapsedWindowIds) && Array.isArray(o.collapsedGroupKeys)) {
+    const v1 = o as StoredTabPickerFoldStateV1
+    return {
+      v: 2,
+      bySession: {
+        __legacy__: {
+          collapsedWindowIds: v1.collapsedWindowIds.filter(
+            (id) => typeof id === "number" && Number.isInteger(id)
+          ),
+          collapsedGroupKeys: v1.collapsedGroupKeys.filter(
+            (key) => typeof key === "string" && key.length > 0 && key.length <= 128
+          )
+        }
+      }
+    }
+  }
+  if (o.v !== 2 || typeof o.bySession !== "object" || o.bySession === null) {
+    return null
+  }
+  const bySession: Record<string, FoldSnapshot> = {}
+  for (const [sessionId, snapRaw] of Object.entries(o.bySession as Record<string, unknown>)) {
+    if (typeof sessionId !== "string" || sessionId.length === 0 || sessionId.length > 128) {
+      continue
+    }
+    const snap = parseFoldSnapshot(snapRaw)
+    if (snap !== null) {
+      bySession[sessionId] = snap
+    }
+  }
+  return { v: 2, bySession }
+}
+
+function snapshotActiveSets(): FoldSnapshot {
+  return {
+    collapsedWindowIds: [...collapsedWindowIds],
+    collapsedGroupKeys: [...collapsedGroupKeys]
+  }
+}
+
+function applySnapshotToActiveSets(snapshot: FoldSnapshot): void {
   collapsedWindowIds.clear()
   collapsedGroupKeys.clear()
-  for (const id of stored.collapsedWindowIds) {
+  for (const id of snapshot.collapsedWindowIds) {
     collapsedWindowIds.add(id)
   }
-  for (const key of stored.collapsedGroupKeys) {
+  for (const key of snapshot.collapsedGroupKeys) {
     collapsedGroupKeys.add(key)
+  }
+}
+
+function persistActiveSessionSnapshot(): void {
+  if (activeSessionId === null) {
+    return
+  }
+  foldBySession.set(activeSessionId, snapshotActiveSets())
+}
+
+/** EN: Switch in-memory fold view to `sessionId` (call when active session changes). */
+export function setTabPickerFoldActiveSession(sessionId: string): void {
+  if (activeSessionId === sessionId) {
+    return
+  }
+  persistActiveSessionSnapshot()
+  activeSessionId = sessionId
+  const snap = foldBySession.get(sessionId)
+  if (snap) {
+    applySnapshotToActiveSets(snap)
+  } else {
+    collapsedWindowIds.clear()
+    collapsedGroupKeys.clear()
   }
 }
 
@@ -76,7 +153,16 @@ export function hydrateTabPickerFoldStateFromStorage(): Promise<void> {
       const r = await chrome.storage.local.get(TAB_PICKER_FOLD_STATE_KEY)
       const parsed = parseStoredTabPickerFoldState(r[TAB_PICKER_FOLD_STATE_KEY])
       if (parsed !== null) {
-        applyStoredFoldState(parsed)
+        foldBySession.clear()
+        for (const [sessionId, snap] of Object.entries(parsed.bySession)) {
+          foldBySession.set(sessionId, snap)
+        }
+        if (activeSessionId !== null) {
+          const snap = foldBySession.get(activeSessionId)
+          if (snap) {
+            applySnapshotToActiveSets(snap)
+          }
+        }
       }
     } catch {
       /* storage unavailable */
@@ -87,22 +173,52 @@ export function hydrateTabPickerFoldStateFromStorage(): Promise<void> {
 
 /** EN: Persist in-memory fold state (BMXt window close / SW sleep safe). */
 export async function persistTabPickerFoldStateToStorage(): Promise<void> {
-  const payload: StoredTabPickerFoldStateV1 = {
-    v: 1,
-    collapsedWindowIds: [...collapsedWindowIds],
-    collapsedGroupKeys: [...collapsedGroupKeys]
+  persistActiveSessionSnapshot()
+  const bySession: Record<string, FoldSnapshot> = {}
+  for (const [sessionId, snap] of foldBySession) {
+    bySession[sessionId] = snap
   }
+  const payload: StoredTabPickerFoldStateV2 = { v: 2, bySession }
   try {
+    if (Object.keys(bySession).length === 0) {
+      await chrome.storage.local.remove(TAB_PICKER_FOLD_STATE_KEY)
+      return
+    }
     await chrome.storage.local.set({ [TAB_PICKER_FOLD_STATE_KEY]: payload })
   } catch {
     /* ignore */
   }
 }
 
+/** EN: Remove fold state for sessions no longer in the process. */
+export function pruneTabPickerFoldSessions(validSessionIds: readonly string[]): void {
+  const keep = new Set(validSessionIds)
+  for (const sessionId of [...foldBySession.keys()]) {
+    if (!keep.has(sessionId)) {
+      foldBySession.delete(sessionId)
+    }
+  }
+  if (activeSessionId !== null && !keep.has(activeSessionId)) {
+    collapsedWindowIds.clear()
+    collapsedGroupKeys.clear()
+  }
+}
+
+/** EN: Remove fold state for a closed session. */
+export function removeTabPickerFoldStateForSession(sessionId: string): void {
+  foldBySession.delete(sessionId)
+  if (activeSessionId === sessionId) {
+    collapsedWindowIds.clear()
+    collapsedGroupKeys.clear()
+  }
+}
+
 /** EN: Clear fold state on BMXt `exit` full close (storage + in-memory). */
 export async function clearTabPickerFoldStateStorage(): Promise<void> {
+  foldBySession.clear()
   collapsedWindowIds.clear()
   collapsedGroupKeys.clear()
+  activeSessionId = null
   hydratePromise = null
   try {
     await chrome.storage.local.remove(TAB_PICKER_FOLD_STATE_KEY)
@@ -152,34 +268,15 @@ function findGroupRowIndex(
   return idx >= 0 ? idx : null
 }
 
-type TabPickerFoldSnapshot = {
-  collapsedWindowIds: number[]
-  collapsedGroupKeys: string[]
-}
+let searchSessionSnapshot: FoldSnapshot | null = null
 
-let searchSessionSnapshot: TabPickerFoldSnapshot | null = null
-
-function snapshotTabPickerFoldState(): TabPickerFoldSnapshot {
-  return {
-    collapsedWindowIds: [...collapsedWindowIds],
-    collapsedGroupKeys: [...collapsedGroupKeys]
-  }
-}
-
-function restoreTabPickerFoldSnapshot(snapshot: TabPickerFoldSnapshot): void {
-  collapsedWindowIds.clear()
-  collapsedGroupKeys.clear()
-  for (const id of snapshot.collapsedWindowIds) {
-    collapsedWindowIds.add(id)
-  }
-  for (const key of snapshot.collapsedGroupKeys) {
-    collapsedGroupKeys.add(key)
-  }
+function restoreTabPickerFoldSnapshot(snapshot: FoldSnapshot): void {
+  applySnapshotToActiveSets(snapshot)
 }
 
 /** EN: Capture fold state when `/` search begins (restored on Esc cancel). */
 export function beginTabPickerSearchFoldSession(): void {
-  searchSessionSnapshot = snapshotTabPickerFoldState()
+  searchSessionSnapshot = snapshotActiveSets()
 }
 
 /** EN: Restore pre-search fold state after Esc cancel; returns whether a session existed. */

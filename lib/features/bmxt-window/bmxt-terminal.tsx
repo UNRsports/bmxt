@@ -4,58 +4,43 @@ import {
   setTabPickerEngineProjectedChangeHandler
 } from "../tabs/engine"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
+import { setTabPickerFoldActiveSession, pruneTabPickerFoldSessions } from "../tabs/tab-picker-fold-state"
 import {
   anyLeafHasPickerOpen,
-  pruneSessionPickersMap,
   sessionPickersOrEmpty,
   setSessionPickerSlot as applySessionPickerSlot,
   type PickerSlotId,
   type SessionPickerState,
   type SessionPickersByLeaf
 } from "../side-picker"
+import { SessionBar } from "../session"
 import { BmxtShell } from "./bmxt-shell"
-import { adjacentLeafByRect, type RectDir } from "./split-layout/rect-nav"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
-import type { SplitNode } from "./split-layout/types"
-import { countLeaves, isLeaf, listLeafIds } from "./split-layout/tree"
 import { appendLinesToSession } from "./terminal-sessions/state-storage"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
   getCompletionCandidates
 } from "../bmxt-core"
-import { CSP_DYNAMIC_SCOPE_ATTR, useCspDynamicStyle } from "./csp-dynamic-stylesheet"
-
-import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react"
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useTerminalAppearance, useUiSettings } from "../setting"
 
-function leafIdFromKeyEventTarget(root: HTMLElement, target: EventTarget | null): string | null {
-  let el: Element | null =
-    target instanceof Element ? target : target instanceof Text ? target.parentElement : null
-  while (el && el !== root) {
-    const sid = el.getAttribute("data-bmxt-session-id")
-    if (typeof sid === "string" && sid.length > 0) {
-      return sid
-    }
-    el = el.parentElement
-  }
-  return null
-}
-
-type SplitTreeProps = {
-  node: SplitNode
-  logsById: Record<string, string[]>
-  focusedLeafId: string
-  onFocusLeaf: (sessionId: string) => void
+type SessionPaneProps = {
+  sessionId: string
+  isActive: boolean
+  lines: string[]
   history: string[]
   completionCandidates: string[]
+  sessionOrder: string[]
+  activeSessionId: string
+  sessionNamesById: Record<string, string | undefined>
+  sessionLogsById: Record<string, string[] | undefined>
   pickersBySession: SessionPickersByLeaf
   setSessionPickerSlot: <K extends PickerSlotId>(
     forSessionId: string,
@@ -76,19 +61,24 @@ type SplitTreeProps = {
   ) => void
   navArmedByLeaf: Record<string, boolean>
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
+  onActivateSession: (sessionId: string) => Promise<void>
+  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
   appendCommandToHistory: (cmd: string) => void
 }
 
-function SplitLeafView({
-  node,
-  logsById,
-  focusedLeafId,
-  onFocusLeaf,
+function SessionPaneView({
+  sessionId,
+  isActive,
+  lines,
   history,
   completionCandidates,
+  sessionOrder,
+  activeSessionId,
+  sessionNamesById,
+  sessionLogsById,
   pickersBySession,
   setSessionPickerSlot,
   paneFocusByLeaf,
@@ -99,147 +89,52 @@ function SplitLeafView({
   setModeToolbarOrderForLeaf,
   navArmedByLeaf,
   setNavArmedForLeaf,
+  onActivateSession,
+  onSetSessionDisplayName,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
   appendCommandToHistory
-}: SplitTreeProps & { node: Extract<SplitNode, { kind: "leaf" }> }) {
-  const lines = logsById[node.id] ?? []
-  const sessionPickers = sessionPickersOrEmpty(pickersBySession, node.id)
-  const hasColumnPickers =
-    sessionPickers.tabs !== null ||
-    sessionPickers.search !== null ||
-    sessionPickers.dom !== null ||
-    sessionPickers.setting !== null
-  const leafHasKeyboardFocus = focusedLeafId === node.id
+}: SessionPaneProps) {
+  const sessionPickers = sessionPickersOrEmpty(pickersBySession, sessionId)
   return (
     <div
-      data-bmxt-session-id={node.id}
-      data-bmxt-leaf-focused={leafHasKeyboardFocus ? "" : undefined}
-      className={`bmxt-split-leaf${
-        leafHasKeyboardFocus && !hasColumnPickers ? " bmxt-split-leaf--focused" : ""
-      }`}
-      onPointerDownCapture={() => {
-        if (!leafHasKeyboardFocus) {
-          onFocusLeaf(node.id)
-        }
-      }}>
+      data-bmxt-session-id={sessionId}
+      data-bmxt-session-active={isActive ? "" : undefined}
+      className={`bmxt-session-viewport${isActive ? " bmxt-session-viewport--active" : " bmxt-session-viewport--hidden"}`}
+      aria-hidden={!isActive}>
       <BmxtShell
-        sessionId={node.id}
-        isFocusedPane={focusedLeafId === node.id}
+        sessionId={sessionId}
+        isFocusedPane={isActive}
         lines={lines}
         history={history}
         completionCandidates={completionCandidates}
-        appendLogLines={(newLines) => appendLinesToSession(node.id, newLines)}
+        sessionOrder={sessionOrder}
+        activeSessionId={activeSessionId}
+        sessionNamesById={sessionNamesById}
+        sessionLogsById={sessionLogsById}
+        pickersBySession={pickersBySession}
+        navArmedByLeaf={navArmedByLeaf}
+        onActivateSession={onActivateSession}
+        onSetSessionDisplayName={onSetSessionDisplayName}
+        appendLogLines={(newLines) => appendLinesToSession(sessionId, newLines)}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
         setSessionPickerSlot={setSessionPickerSlot}
         refreshTabPickerRows={refreshTabPickerRows}
         scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
         postUpgradeBanner={postUpgradeBanner}
-        paneFocus={paneFocusByLeaf[node.id] ?? "terminal"}
-        onPaneFocusChange={(target) => setPaneFocusForLeaf(node.id, target)}
-        detailBarId={detailBarIdByLeaf[node.id] ?? null}
-        onDetailBarIdChange={(update) => setDetailBarIdForLeaf(node.id, update)}
-        modeToolbarOrder={modeToolbarOrderByLeaf[node.id] ?? []}
-        onModeToolbarOrderChange={(update) => setModeToolbarOrderForLeaf(node.id, update)}
-        navArmed={navArmedByLeaf[node.id] ?? false}
-        onNavArmedChange={(armed) => setNavArmedForLeaf(node.id, armed)}
+        paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
+        onPaneFocusChange={(target) => setPaneFocusForLeaf(sessionId, target)}
+        detailBarId={detailBarIdByLeaf[sessionId] ?? null}
+        onDetailBarIdChange={(update) => setDetailBarIdForLeaf(sessionId, update)}
+        modeToolbarOrder={modeToolbarOrderByLeaf[sessionId] ?? []}
+        onModeToolbarOrderChange={(update) => setModeToolbarOrderForLeaf(sessionId, update)}
+        navArmed={navArmedByLeaf[sessionId] ?? false}
+        onNavArmedChange={(armed) => setNavArmedForLeaf(sessionId, armed)}
       />
     </div>
   )
-}
-
-function SplitBranchView({
-  node,
-  logsById,
-  focusedLeafId,
-  onFocusLeaf,
-  history,
-  completionCandidates,
-  pickersBySession,
-  setSessionPickerSlot,
-  paneFocusByLeaf,
-  setPaneFocusForLeaf,
-  detailBarIdByLeaf,
-  setDetailBarIdForLeaf,
-  modeToolbarOrderByLeaf,
-  setModeToolbarOrderForLeaf,
-  navArmedByLeaf,
-  setNavArmedForLeaf,
-  refreshTabPickerRows,
-  scheduleTabPickerRowsRefresh,
-  postUpgradeBanner,
-  appendCommandToHistory
-}: SplitTreeProps & { node: Extract<SplitNode, { kind: "row" | "col" }> }) {
-  const isRow = node.kind === "row"
-  const r = node.ratio
-  const rest = 1 - r
-  const paneAScopeId = useId()
-  const paneBScopeId = useId()
-  useCspDynamicStyle(paneAScopeId, { flex: r })
-  useCspDynamicStyle(paneBScopeId, { flex: rest })
-  return (
-    <div
-      className={`bmxt-split-branch ${isRow ? "bmxt-split-branch--row" : "bmxt-split-branch--col"}`}>
-      <div className="bmxt-split-pane" {...{ [CSP_DYNAMIC_SCOPE_ATTR]: paneAScopeId }}>
-        <SplitTreeView
-          node={node.a}
-          logsById={logsById}
-          focusedLeafId={focusedLeafId}
-          onFocusLeaf={onFocusLeaf}
-          history={history}
-          completionCandidates={completionCandidates}
-          pickersBySession={pickersBySession}
-          setSessionPickerSlot={setSessionPickerSlot}
-          paneFocusByLeaf={paneFocusByLeaf}
-          setPaneFocusForLeaf={setPaneFocusForLeaf}
-          detailBarIdByLeaf={detailBarIdByLeaf}
-          setDetailBarIdForLeaf={setDetailBarIdForLeaf}
-          modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
-          setModeToolbarOrderForLeaf={setModeToolbarOrderForLeaf}
-          navArmedByLeaf={navArmedByLeaf}
-          setNavArmedForLeaf={setNavArmedForLeaf}
-          refreshTabPickerRows={refreshTabPickerRows}
-          scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
-          postUpgradeBanner={postUpgradeBanner}
-          appendCommandToHistory={appendCommandToHistory}
-        />
-      </div>
-      <div className="bmxt-split-pane" {...{ [CSP_DYNAMIC_SCOPE_ATTR]: paneBScopeId }}>
-        <SplitTreeView
-          node={node.b}
-          logsById={logsById}
-          focusedLeafId={focusedLeafId}
-          onFocusLeaf={onFocusLeaf}
-          history={history}
-          completionCandidates={completionCandidates}
-          pickersBySession={pickersBySession}
-          setSessionPickerSlot={setSessionPickerSlot}
-          paneFocusByLeaf={paneFocusByLeaf}
-          setPaneFocusForLeaf={setPaneFocusForLeaf}
-          detailBarIdByLeaf={detailBarIdByLeaf}
-          setDetailBarIdForLeaf={setDetailBarIdForLeaf}
-          modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
-          setModeToolbarOrderForLeaf={setModeToolbarOrderForLeaf}
-          navArmedByLeaf={navArmedByLeaf}
-          setNavArmedForLeaf={setNavArmedForLeaf}
-          refreshTabPickerRows={refreshTabPickerRows}
-          scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
-          postUpgradeBanner={postUpgradeBanner}
-          appendCommandToHistory={appendCommandToHistory}
-        />
-      </div>
-    </div>
-  )
-}
-
-function SplitTreeView(props: SplitTreeProps) {
-  const { node } = props
-  if (isLeaf(node)) {
-    return <SplitLeafView {...props} node={node} />
-  }
-  return <SplitBranchView {...props} node={node} />
 }
 
 export function BmxtTerminal() {
@@ -254,15 +149,12 @@ function BmxtTerminalInner() {
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
-  const { state, setFocusedLeaf } = useTerminalSessions()
+  const { state, setActiveSession, setSessionDisplayName } = useTerminalSessions()
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
 
-  const validLeafIds = useMemo(
-    () => (state ? listLeafIds(state.layout.root) : []),
-    [state?.layout.root]
-  )
+  const validSessionIds = useMemo(() => state?.order ?? [], [state?.order])
 
   const {
     pickersBySession,
@@ -276,7 +168,7 @@ function BmxtTerminalInner() {
     navArmedByLeaf,
     setNavArmedForLeaf,
     processUiReady
-  } = useProcessUiPersistence(validLeafIds, state !== null)
+  } = useProcessUiPersistence(validSessionIds, state !== null)
 
   const pickersBySessionRef = useRef(pickersBySession)
   pickersBySessionRef.current = pickersBySession
@@ -294,6 +186,14 @@ function BmxtTerminalInner() {
     })()
   }, [])
 
+  useEffect(() => {
+    if (!state) {
+      return
+    }
+    pruneTabPickerFoldSessions(state.order)
+    setTabPickerFoldActiveSession(state.activeId)
+  }, [state?.activeId, state?.order])
+
   const setSessionPickerSlot = useCallback(
     <K extends PickerSlotId>(
       forSessionId: string,
@@ -302,7 +202,7 @@ function BmxtTerminalInner() {
     ) => {
       setPickersBySession((prev) => applySessionPickerSlot(prev, forSessionId, slot, value))
     },
-    []
+    [setPickersBySession]
   )
 
   const setPickersBySessionRef = useRef(setPickersBySession)
@@ -346,66 +246,83 @@ function BmxtTerminalInner() {
       if (!e.ctrlKey || e.metaKey || e.altKey) {
         return
       }
-      const keyMap: Record<string, RectDir> = {
-        ArrowLeft: "left",
-        ArrowRight: "right",
-        ArrowUp: "up",
-        ArrowDown: "down"
-      }
-      const dir = keyMap[e.key]
-      if (!dir) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
         return
       }
       const t = e.target as Node | null
       if (!t || !rootRef.current?.contains(t)) {
         return
       }
-      const fromId =
-        (rootRef.current && leafIdFromKeyEventTarget(rootRef.current, e.target)) ??
-        state.layout.focusedLeafId
-      if (countLeaves(state.layout.root) <= 1) {
+      if (state.order.length <= 1) {
         return
       }
-      const next = adjacentLeafByRect(state.layout.root, fromId, dir)
-      if (next) {
-        e.preventDefault()
-        e.stopPropagation()
-        void setFocusedLeaf(next)
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = e.key === "ArrowRight" ? 1 : -1
+      const idx = state.order.indexOf(state.activeId)
+      const from = idx >= 0 ? idx : 0
+      const nextIdx = (from + delta + state.order.length) % state.order.length
+      const nextId = state.order[nextIdx]
+      if (nextId) {
+        void setActiveSession(nextId)
       }
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
-  }, [state, setFocusedLeaf])
+  }, [state, setActiveSession])
 
   if (state === null || !upgradeBannerReady || !processUiReady) {
     return <div className="bmxt-root bmxt-root--terminal-placeholder" />
   }
 
+  const sharedPaneProps = {
+    history,
+    completionCandidates,
+    sessionOrder: state.order,
+    activeSessionId: state.activeId,
+    sessionNamesById: state.namesById,
+    sessionLogsById: state.logsById,
+    pickersBySession,
+    setSessionPickerSlot,
+    paneFocusByLeaf,
+    setPaneFocusForLeaf,
+    detailBarIdByLeaf,
+    setDetailBarIdForLeaf,
+    modeToolbarOrderByLeaf,
+    setModeToolbarOrderForLeaf,
+    navArmedByLeaf,
+    setNavArmedForLeaf,
+    onActivateSession: setActiveSession,
+    onSetSessionDisplayName: setSessionDisplayName,
+    refreshTabPickerRows,
+    scheduleTabPickerRowsRefresh,
+    postUpgradeBanner,
+    appendCommandToHistory
+  }
+
   return (
     <div ref={rootRef} className="bmxt-root bmxt-root--terminal" tabIndex={-1}>
-      <div className="bmxt-split-viewport">
-        <SplitTreeView
-          node={state.layout.root}
-          logsById={state.logsById}
-          focusedLeafId={state.layout.focusedLeafId}
-          onFocusLeaf={(sessionId) => void setFocusedLeaf(sessionId)}
-          history={history}
-          completionCandidates={completionCandidates}
-          pickersBySession={pickersBySession}
-          setSessionPickerSlot={setSessionPickerSlot}
-          paneFocusByLeaf={paneFocusByLeaf}
-          setPaneFocusForLeaf={setPaneFocusForLeaf}
-          detailBarIdByLeaf={detailBarIdByLeaf}
-          setDetailBarIdForLeaf={setDetailBarIdForLeaf}
-          modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
-          setModeToolbarOrderForLeaf={setModeToolbarOrderForLeaf}
-          navArmedByLeaf={navArmedByLeaf}
-          setNavArmedForLeaf={setNavArmedForLeaf}
-          refreshTabPickerRows={refreshTabPickerRows}
-          scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
-          postUpgradeBanner={postUpgradeBanner}
-          appendCommandToHistory={appendCommandToHistory}
-        />
+      <SessionBar
+        order={state.order}
+        activeId={state.activeId}
+        namesById={state.namesById}
+        logsById={state.logsById}
+        pickersBySession={pickersBySession}
+        navArmedByLeaf={navArmedByLeaf}
+        onActivateSession={(id) => {
+          void setActiveSession(id)
+        }}
+      />
+      <div className="bmxt-session-stack">
+        {state.order.map((sessionId) => (
+          <SessionPaneView
+            key={sessionId}
+            sessionId={sessionId}
+            isActive={sessionId === state.activeId}
+            lines={state.logsById[sessionId] ?? []}
+            {...sharedPaneProps}
+          />
+        ))}
       </div>
     </div>
   )

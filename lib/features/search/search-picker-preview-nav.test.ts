@@ -58,4 +58,15 @@ describe("canPreviewSearchPickerSelection", () => {
     assert.equal(canPreviewSearchPickerSelection("detail", 0, [1, 2], hits), false)
     assert.equal(canPreviewSearchPickerSelection("results", 2, [2, 5], hits), true)
   })
+
+  it("rejects detail rows not in previewTargetIndices once targets are ready", () => {
+    const hits = [
+      { field: "text" as const, displayText: "b", pageMatchIndex: 1, canScrollTo: true }
+    ]
+    const pageMatches = [{ lineNo: 3, snippet: "body b", occurrence: 0 }]
+    assert.equal(
+      canPreviewSearchPickerSelection("detail", 0, [], hits, pageMatches, true),
+      false
+    )
+  })
 })

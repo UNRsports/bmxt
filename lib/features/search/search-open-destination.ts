@@ -2,6 +2,8 @@ import { displayTitle } from "../tabs/picker-rows"
 import { getWindowDisplayNamesMap, pruneWindowDisplayNames } from "../extension-storage/window-display-names"
 import { resolveMirrorBrowserWindowId } from "../tabs/resolve-mirror-browser-window"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
+import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
+import { t } from "../setting/i18n/messages"
 export { searchEntryOffersOpenDestination } from "../side-picker/model/picker-entry"
 
 export type SearchOpenDestinationKind = "new_window" | "window" | "group" | "ungrouped"
@@ -15,22 +17,20 @@ export type SearchOpenDestinationRow = {
 
 const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
-const NEW_WINDOW_LABEL = "＋ 新しいウィンドウ · New window"
-const UNGROUPED_LABEL = "(グループなし) · Ungrouped"
-
-function formatGroupLabel(g: chrome.tabGroups.TabGroup): string {
+function formatGroupLabel(g: chrome.tabGroups.TabGroup, locale: UiLocale): string {
   const raw = (g.title || "").trim()
   if (!raw) {
-    return `(無題のグループ) [${g.color}]`
+    return t("search.openDestination.untitledGroup", locale, { color: g.color })
   }
   return `【${displayTitle(raw)}】`
 }
 
 /**
  * EN: Build flat destination rows: new window, then per-window tree (window, ungrouped, groups).
- * JA: 開き先一覧 — 新規ウィンドウと、既存ウィンドウ配下のグループなし／グループ。
  */
-export async function buildSearchOpenDestinationRows(): Promise<SearchOpenDestinationRow[]> {
+export async function buildSearchOpenDestinationRows(
+  locale: UiLocale = DEFAULT_UI_LOCALE
+): Promise<SearchOpenDestinationRow[]> {
   const [tabs, groups, winsMeta, trackedWindowId] = await Promise.all([
     chrome.tabs.query({}),
     chrome.tabGroups.query({}),
@@ -91,7 +91,9 @@ export async function buildSearchOpenDestinationRows(): Promise<SearchOpenDestin
     })
   )
 
-  const rows: SearchOpenDestinationRow[] = [{ kind: "new_window", label: NEW_WINDOW_LABEL }]
+  const rows: SearchOpenDestinationRow[] = [
+    { kind: "new_window", label: t("search.openDestination.newWindow", locale) }
+  ]
 
   for (const wid of windowOrder) {
     const wTabs = tabsByWindow.get(wid) ?? []
@@ -103,10 +105,17 @@ export async function buildSearchOpenDestinationRows(): Promise<SearchOpenDestin
       customName !== undefined
         ? customName
         : displayTitle(active?.title ?? "")
-    const windowLabel = `${tracked ? "*" : " "}[ウィンドウ] ${windowTitle}`
+    const windowLabel = t("tabs.picker.windowLabel", locale, {
+      star: tracked ? "*" : " ",
+      title: windowTitle
+    })
 
     rows.push({ kind: "window", windowId: wid, label: windowLabel })
-    rows.push({ kind: "ungrouped", windowId: wid, label: UNGROUPED_LABEL })
+    rows.push({
+      kind: "ungrouped",
+      windowId: wid,
+      label: t("search.openDestination.ungrouped", locale)
+    })
 
     const windowGroups = (groupsByWindow.get(wid) ?? []).sort((a, b) => (a.id ?? 0) - (b.id ?? 0))
     for (const g of windowGroups) {
@@ -117,7 +126,7 @@ export async function buildSearchOpenDestinationRows(): Promise<SearchOpenDestin
         kind: "group",
         windowId: wid,
         groupId: g.id,
-        label: formatGroupLabel(g)
+        label: formatGroupLabel(g, locale)
       })
     }
   }

@@ -198,7 +198,12 @@ export function useSearchPickerResultsOpenTabNav({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (!enabled || searchMode || commandMode) {
+      if (!enabled || commandMode) {
+        return false
+      }
+      const altArrow =
+        isPickerAltOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
+      if (searchMode && !altArrow) {
         return false
       }
       if (isPickerCtrlBlockedChord(e) || isPickerAltBlockedChord(e)) {
@@ -211,8 +216,6 @@ export function useSearchPickerResultsOpenTabNav({
 
       const ctrlArrow =
         isPickerCtrlOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
-      const altArrow =
-        isPickerAltOnlyChord(e) && (isPhysicalArrowUp(e) || isPhysicalArrowDown(e))
       const navDir = verticalNavDirection(e)
 
       if (ctrlArrow) {

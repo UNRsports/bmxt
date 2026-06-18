@@ -1,15 +1,15 @@
-import { tabsStatusHint, useUiLocale } from "../setting"
+import { tabsStatusHint, useUiCopy } from "../setting"
 import {
   settingTokenForPageActiveMode,
   type TabsPageActiveMode
 } from "./page-active-setting"
 
-type Props = {
+type TabsStatusBarProps = {
   pageActiveMode: TabsPageActiveMode
 }
 
-export function TabsStatusBar({ pageActiveMode }: Props) {
-  const locale = useUiLocale()
+export function TabsStatusBar({ pageActiveMode }: TabsStatusBarProps) {
+  const uiCopy = useUiCopy()
   const modeToken = settingTokenForPageActiveMode(pageActiveMode)
   const stateLabel = pageActiveMode === "auto" ? "auto" : "manual"
 
@@ -23,11 +23,9 @@ export function TabsStatusBar({ pageActiveMode }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">page-active {modeToken}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {locale === "ja"
-          ? "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー"
-          : "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"}
+        {uiCopy.t("modeStatus.tabs.hint")}
         {" · "}
-        {tabsStatusHint(locale, pageActiveMode)}
+        {tabsStatusHint(uiCopy.locale, pageActiveMode)}
       </span>
     </div>
   )

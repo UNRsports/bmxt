@@ -67,10 +67,14 @@ export function canPreviewSearchPickerSelection(
   hi: number,
   previewTargetIndices: readonly number[],
   detailHits: readonly SearchEntryDetailHit[],
-  pageMatches?: readonly SearchPageMatch[]
+  pageMatches?: readonly SearchPageMatch[],
+  previewTargetsReady = false
 ): boolean {
   if (previewTargetIndices.includes(hi)) {
     return true
+  }
+  if (view === "detail" && previewTargetsReady) {
+    return false
   }
   if (view !== "detail") {
     return false

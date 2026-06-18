@@ -18,7 +18,7 @@ import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"
 import type { PlainPickerKeyboardExtensions } from "../interaction/plain-picker-keyboard-extensions"
-import { URL_LIST_COMMAND_LISTING_HINT } from "../interaction/url-list-commands"
+import { urlListCommandListingHint } from "../interaction/url-list-commands"
 import { plainPickerLineHighlightSegments } from "../search/plain-picker-search"
 import {
   computePlainPickerWindow,
@@ -386,7 +386,7 @@ export function PlainTextPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={URL_LIST_COMMAND_LISTING_HINT}
+          listingHintText={urlListCommandListingHint(uiCopy.locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

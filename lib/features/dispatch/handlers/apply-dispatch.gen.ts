@@ -17,8 +17,9 @@ import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
 import { applySearchBookmarkEffect } from "./effects/search-bookmark"
 import { applySearchHistoryEffect } from "./effects/search-history"
 import { applySearchPageEffect } from "./effects/search-page"
-import { applySplitColEffect } from "./effects/split-col"
-import { applySplitRowEffect } from "./effects/split-row"
+import { applySessionNewEffect } from "./effects/session-new"
+import { applySessionNextEffect } from "./effects/session-next"
+import { applySessionPrevEffect } from "./effects/session-prev"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
 import { applyTabsNuEffect } from "./effects/tabs-nu"
 
@@ -51,10 +52,12 @@ export async function applyOne(
       return applySearchHistoryEffect(ctx, e)
     case "search_page":
       return applySearchPageEffect(ctx, e)
-    case "split_col":
-      return applySplitColEffect(ctx, e)
-    case "split_row":
-      return applySplitRowEffect(ctx, e)
+    case "session_new":
+      return applySessionNewEffect(ctx, e)
+    case "session_next":
+      return applySessionNextEffect(ctx, e)
+    case "session_prev":
+      return applySessionPrevEffect(ctx, e)
     case "tabs_move_url":
       return applyTabsMoveUrlEffect(ctx, e)
     case "tabs_nu":

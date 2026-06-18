@@ -715,6 +715,50 @@
     "ja": "Tab picker — page-active {token} · ↑↓ 移動 · Alt+↑↓ プレビュー（manual） · Enter ジャンプ · Esc → prompt",
     "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
   },
+  "session.picker.hint": {
+    "ja": "Session list — * がアクティブ · ↑↓ または 1–9 · Enter 切り替え · Esc → prompt · `session <n>` でも可",
+    "en": "Session list — * marks active · ↑↓ or 1–9 · Enter switch · Esc → prompt · or `session <n>`"
+  },
+  "session.picker.aria": {
+    "ja": "セッション切り替え候補",
+    "en": "Session switch candidates"
+  },
+  "session.switch.hint": {
+    "ja": "Session switch — * がアクティブ · 入力で絞り込み · ↑↓ · Enter でコマンドに名前を入れる · もう一度 Enter で切り替え · Esc → prompt",
+    "en": "Session switch — * marks active · type to filter · ↑↓ · Enter insert name into command · Enter again to switch · Esc → prompt"
+  },
+  "session.switch.aria": {
+    "ja": "セッション名による切り替え候補",
+    "en": "Switch session by name"
+  },
+  "session.switch.switched": {
+    "ja": "セッション「{name}」に切り替えました。",
+    "en": "Switched to session \"{name}\"."
+  },
+  "session.switch.notFound": {
+    "ja": "session: セッション名「{name}」が見つかりません。`session -switch` で候補を表示できます。",
+    "en": "session: no session named \"{name}\". Use `session -switch` for the name menu."
+  },
+  "session.number.invalid": {
+    "ja": "session: 番号 {n} は範囲外です（1–{max}）。`session` または `session -list` で一覧を開けます。",
+    "en": "session: number {n} is out of range (1–{max}). Use `session` or `session -list` for the switch list."
+  },
+  "session.number.switched": {
+    "ja": "session {n} に切り替えました。",
+    "en": "Switched to session {n}."
+  },
+  "session.settingName.placeholder": {
+    "ja": "セッション名 — Enter で保存 · Esc でキャンセル",
+    "en": "Session name — Enter save · Esc cancel"
+  },
+  "session.settingName.saved": {
+    "ja": "セッション名を「{name}」に変更しました。",
+    "en": "Session name set to \"{name}\"."
+  },
+  "session.settingName.invalid": {
+    "ja": "session: 無効なセッション名です（空・制御文字・改行は不可）。",
+    "en": "session: invalid session name (empty, control characters, or newlines)."
+  },
   "tabs.picker.closed": {
     "ja": "Tab picker を閉じました。",
     "en": "Tab picker closed."
@@ -762,6 +806,10 @@
   "search.picker.noDetailScrollTarget": {
     "ja": "search — ページ内ジャンプできるヒットがありません（タブ未 open またはスクロール不可）",
     "en": "search — no in-page hits to jump (tab not open or not scrollable)"
+  },
+  "search.picker.previewScrollFailed": {
+    "ja": "search — ページ内ジャンプに失敗しました（タブを再読み込みするか、サイトアクセスを確認してください）",
+    "en": "search — in-page jump failed (reload the tab or check site access)"
   },
   "search.status.auto": {
     "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ",
@@ -823,6 +871,578 @@
     "ja": "y / n",
     "en": "y / n"
   },
+  "modeStatus.setting.meta": {
+    "ja": "UI 設定",
+    "en": "UI settings"
+  },
+  "modeStatus.setting.hint": {
+    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー",
+    "en": "EOL → focus · ↑↓ move · ← prompt · → picker"
+  },
+  "modeStatus.search.noPattern": {
+    "ja": "（パターンなし）",
+    "en": "(no pattern)"
+  },
+  "modeStatus.search.loadingPrefix": {
+    "ja": "loading · ",
+    "en": "loading · "
+  },
+  "modeStatus.search.hint": {
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+  },
+  "modeStatus.dom.permission": {
+    "ja": "権限確認",
+    "en": "permission"
+  },
+  "modeStatus.dom.list": {
+    "ja": "DOM 一覧",
+    "en": "DOM list"
+  },
+  "modeStatus.dom.hint": {
+    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー",
+    "en": "EOL → focus · ↑↓ move · ← prompt · → picker"
+  },
+  "modeStatus.tabs.hint": {
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+  },
+  "search.picker.breadcrumb.results": {
+    "ja": "検索結果一覧",
+    "en": "Search Results"
+  },
+  "search.picker.breadcrumb.detail": {
+    "ja": "詳細一覧",
+    "en": "Detail List"
+  },
+  "search.picker.breadcrumb.destination": {
+    "ja": "開き先",
+    "en": "Open target"
+  },
+  "search.openDestination.newWindow": {
+    "ja": "＋ 新しいウィンドウ",
+    "en": "＋ New window"
+  },
+  "search.openDestination.ungrouped": {
+    "ja": "(グループなし)",
+    "en": "(Ungrouped)"
+  },
+  "search.openDestination.untitledGroup": {
+    "ja": "(無題のグループ) [{color}]",
+    "en": "(Untitled group) [{color}]"
+  },
+  "search.picker.headline.list": {
+    "ja": "search -list · ↑↓ · j/k · Ctrl+↑↓ 開タブ行のみ · → 詳細 / 開き先 · Enter 開く · n/N · ← · Esc → prompt",
+    "en": "search -list · ↑↓ · j/k · Ctrl+↑↓ open-tab rows only · → detail / open target · Enter open · n/N · ← · Esc → prompt"
+  },
+  "search.picker.headline.detail": {
+    "ja": "search -list · 詳細 · ↑↓ · j/k · Ctrl+↑↓ 開タブヒット · Alt+↑↓ プレビュー（manual） · ← 戻る · Enter ジャンプ · Esc → 戻る · Esc×2 → prompt",
+    "en": "search -list · detail · ↑↓ · j/k · Ctrl+↑↓ open-tab hits · Alt+↑↓ preview (manual) · ← back · Enter jump · Esc → back · Esc×2 → prompt"
+  },
+  "search.picker.headline.destination": {
+    "ja": "search -list · 開き先 · ↑↓ · j/k · ← 戻る · Enter 開く · Esc → 戻る · Esc×2 → prompt",
+    "en": "search -list · open target · ↑↓ · j/k · ← back · Enter open · Esc → back · Esc×2 → prompt"
+  },
+  "search.picker.headline.loading": {
+    "ja": "search -list · 走査中… · Ctrl+C 中断 · search -exit -list",
+    "en": "search -list · scanning… · Ctrl+C cancel · search -exit -list"
+  },
+  "dom.picker.headline": {
+    "ja": "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · → detail bar · Esc → prompt",
+    "en": "dom -list · ↑↓/j/k focus element + jump page · / · :nohlsearch · n/N · → detail bar · Esc → prompt"
+  },
+  "imeToken.hint.first": {
+    "ja": "第一コマンド · ↑↓ · Tab · Enter · Esc",
+    "en": "Command · ↑↓ · Tab · Enter · Esc"
+  },
+  "imeToken.hint.second": {
+    "ja": "第二コマンド · ↑↓ · Tab · Enter · Esc",
+    "en": "Subcommand · ↑↓ · Tab · Enter · Esc"
+  },
+  "imeToken.hint.third": {
+    "ja": "オプション · ↑↓ · Tab · Enter · Esc",
+    "en": "Option · ↑↓ · Tab · Enter · Esc"
+  },
+  "picker.searchFooter.hint": {
+    "ja": "Enter で / 終了（ハイライト維持）· Esc キャンセル",
+    "en": "Enter ends / (keeps highlight) · Esc cancel"
+  },
+  "picker.commandFooter.hint": {
+    "ja": "Enter 実行  Esc キャンセル",
+    "en": "Enter run  Esc cancel"
+  },
+  "picker.commandListing.nohlsearch": {
+    "ja": ":nohlsearch — 検索ハイライトを消す",
+    "en": ":nohlsearch — clear search highlight"
+  },
+  "picker.commandAmbiguous.tabCycle": {
+    "ja": "Tab で循環: {commands}",
+    "en": "Tab to cycle: {commands}"
+  },
+  "tabs.picker.empty": {
+    "ja": "(タブなし)",
+    "en": "(no tabs)"
+  },
+  "tabs.picker.loadingGroups": {
+    "ja": "(読み込み中…)",
+    "en": "(loading…)"
+  },
+  "tabs.picker.targetGroups": {
+    "ja": "Target groups",
+    "en": "Target groups"
+  },
+  "tabs.picker.newGroup": {
+    "ja": "新しいグループ",
+    "en": "New group"
+  },
+  "tabs.picker.nameLabel": {
+    "ja": "名前",
+    "en": "Name"
+  },
+  "tabs.picker.colorLabel": {
+    "ja": "色（← →）",
+    "en": "Color (← →)"
+  },
+  "tabs.picker.unknownGroup": {
+    "ja": "(不明なグループ)",
+    "en": "(unknown group)"
+  },
+  "tabs.picker.untitledGroup": {
+    "ja": "(無題のグループ) [{color}]",
+    "en": "(Untitled group) [{color}]"
+  },
+  "tabs.picker.windowLabel": {
+    "ja": "{star}[ウィンドウ] {title}",
+    "en": "{star}[Window] {title}"
+  },
+  "tabs.picker.headline.common": {
+    "ja": "↑↓ 移動 · Shift+↑↓ 範囲 # · Tab # · : コマンド（move/close/group/nw/nt/edit · Tab 補完） · / ハイライト · Enter 確定 · :nohlsearch 解除 · Ctrl+Shift+↑↓ アクティブプレビュー · Enter 確定 · Esc # 解除 · prompt",
+    "en": "↑↓ move · Shift+↑↓ range # · Tab # · : commands (move/close/group/nw/nt/edit · Tab complete) · / highlight · Enter commit · :nohlsearch clears · Ctrl+Shift+↑↓ active preview · Enter confirm · Esc clear # · prompt"
+  },
+  "tabs.picker.headline.default": {
+    "ja": "Tab picker — {common}",
+    "en": "Tab picker — {common}"
+  },
+  "tabs.picker.headline.move": {
+    "ja": "Tab picker — [MOVE] ↑↓ 移動先 · Enter 適用 · {common}",
+    "en": "Tab picker — [MOVE] ↑↓ dest · Enter apply · {common}"
+  },
+  "tabs.picker.headline.close": {
+    "ja": "Tab picker — [CLOSE] Enter でウィンドウを閉じる / タブを閉じる · {common}",
+    "en": "Tab picker — [CLOSE] Enter close window / close tabs · {common}"
+  },
+  "tabs.picker.headline.newTab": {
+    "ja": "Tab picker — [NEW TAB] Enter で URL 入力 · {common}",
+    "en": "Tab picker — [NEW TAB] Enter URL input · {common}"
+  },
+  "tabs.picker.headline.group": {
+    "ja": "Tab picker — [GROUP] ↑↓ 既存 or 新規 · Enter · {common}",
+    "en": "Tab picker — [GROUP] ↑↓ existing or new · Enter · {common}"
+  },
+  "tabs.picker.headline.newWindow": {
+    "ja": "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {common}",
+    "en": "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {common}"
+  },
+  "tabs.picker.headline.editWindowRename": {
+    "ja": "Tab picker — [EDIT] ウィンドウ名 · Enter 確定 · Esc キャンセル · {common}",
+    "en": "Tab picker — [EDIT] window name · Enter confirm · Esc cancel · {common}"
+  },
+  "tabs.picker.headline.editGroupRename": {
+    "ja": "Tab picker — [EDIT] グループ名 · Enter 確定 · Esc で操作一覧へ · {common}",
+    "en": "Tab picker — [EDIT] group name · Enter confirm · Esc to action list · {common}"
+  },
+  "tabs.picker.headline.editGroupMenu": {
+    "ja": "Tab picker — [EDIT] ↑↓ 操作選択 · Enter 実行 · Esc キャンセル · {common}",
+    "en": "Tab picker — [EDIT] ↑↓ pick action · Enter run · Esc cancel · {common}"
+  },
+  "tabs.picker.headline.edit": {
+    "ja": "Tab picker — [EDIT] · {common}",
+    "en": "Tab picker — [EDIT] · {common}"
+  },
+  "tabs.picker.headline.groupMeta": {
+    "ja": "Tab picker — [GROUP] 新規 · 名前・色 · Enter 確定 · Esc でターゲット一覧へ · Tab 名前↔色",
+    "en": "Tab picker — [GROUP] new · name/color · Enter confirm · Esc to target list · Tab name↔color"
+  },
+  "tabs.picker.headline.groupNewMeta": {
+    "ja": "group new — 名前・色 · Enter 確定 · Esc タブ一覧へ · Tab 名前↔色",
+    "en": "group new — name/color · Enter confirm · Esc to tab list · Tab name↔color"
+  },
+  "tabs.picker.headline.groupNewTabs": {
+    "ja": "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 文字ハイライト · Esc",
+    "en": "group new — ↑↓ highlight · Tab select · Enter name/color · / char highlight · Esc"
+  },
+  "nav.overlay.menu.selectText": {
+    "ja": "テキスト選択",
+    "en": "Select text"
+  },
+  "nav.overlay.menu.saveImage": {
+    "ja": "カーソル下の画像を保存",
+    "en": "Save image under cursor"
+  },
+  "nav.overlay.menu.reloadPage": {
+    "ja": "ページを再読み込み",
+    "en": "Reload page"
+  },
+  "nav.overlay.menu.copySelection": {
+    "ja": "コピー",
+    "en": "Copy"
+  },
+  "nav.overlay.menu.historyBack": {
+    "ja": "履歴を戻る",
+    "en": "History back"
+  },
+  "nav.overlay.menu.historyForward": {
+    "ja": "履歴を進む",
+    "en": "History forward"
+  },
+  "nav.overlay.menu.selectHint": {
+    "ja": "↑↓ · Enter",
+    "en": "↑↓ · Enter"
+  },
+  "nav.overlay.menu.copyHint": {
+    "ja": "Enter",
+    "en": "Enter"
+  },
+  "nav.overlay.textSel.start": {
+    "ja": "選択開始: Enter · Esc 取消",
+    "en": "Selection start: Enter · Esc cancel"
+  },
+  "nav.overlay.textSel.end": {
+    "ja": "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消",
+    "en": "Selection end: Enter confirm · move to preview · Esc cancel"
+  },
+  "nav.overlay.typing.line1": {
+    "ja": "BMXt ウィンドウで入力",
+    "en": "Type in the BMXt window"
+  },
+  "nav.overlay.typing.line2": {
+    "ja": "入力したテキストがここに反映されます",
+    "en": "Text typed in BMXt appears here"
+  },
+  "nav.overlay.typing.multiline": {
+    "ja": "Shift+Enter で改行",
+    "en": "Shift+Enter for newline"
+  },
+  "nav.overlay.error.generic": {
+    "ja": "オーバーレイエラー",
+    "en": "overlay failed"
+  },
+  "nav.overlay.error.permissionDenied": {
+    "ja": "サイトアクセスが拒否されました",
+    "en": "site access denied"
+  },
+  "nav.overlay.error.notScriptable": {
+    "ja": "このページではスクリプトできません",
+    "en": "page not scriptable"
+  },
+  "nav.overlay.error.noTargetTab": {
+    "ja": "対象タブがありません",
+    "en": "no target tab"
+  },
+  "nav.overlay.error.injectNoResult": {
+    "ja": "注入結果なし",
+    "en": "inject no result"
+  },
+  "tabs.picker.editWindowName": {
+    "ja": "ウィンドウ名",
+    "en": "Window name"
+  },
+  "tabs.picker.editGroupMenu": {
+    "ja": "タブグループの編集",
+    "en": "Edit tab group"
+  },
+  "tabs.picker.editGroupName": {
+    "ja": "グループ名",
+    "en": "Group name"
+  },
+  "tabs.picker.newTabPanel": {
+    "ja": "新しいタブ",
+    "en": "New tab"
+  },
+  "tabs.picker.urlLabel": {
+    "ja": "URL",
+    "en": "URL"
+  },
+  "tabs.picker.groupColorAria": {
+    "ja": "グループの色",
+    "en": "Group color"
+  },
+  "tabs.picker.groupChoiceUntitled": {
+    "ja": "(無題のグループ)",
+    "en": "(Untitled group)"
+  },
+  "tabs.picker.groupChoiceNew": {
+    "ja": "＋ 新規グループ（名前・色を指定）",
+    "en": "＋ New group (name & color)"
+  },
+  "tabs.picker.groupChoiceWinSuffix": {
+    "ja": " · win {windowId}",
+    "en": " · win {windowId}"
+  },
+  "tabs.picker.editMenu.rename": {
+    "ja": "名前の変更",
+    "en": "Rename"
+  },
+  "tabs.picker.editMenu.ungroup": {
+    "ja": "タブグループの解除",
+    "en": "Ungroup tabs"
+  },
+  "tabs.picker.editMenu.deleteGroup": {
+    "ja": "タブグループの削除",
+    "en": "Delete tab group"
+  },
+  "tabs.picker.error.editOnTab": {
+    "ja": "error: :edit はタブ行では使えません。ウィンドウ行またはタブグループ行を単体選択してください。",
+    "en": "error: :edit cannot target a tab row. Select a single window or tab group row."
+  },
+  "tabs.picker.error.editMultipleWindows": {
+    "ja": "error: :edit はウィンドウを 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires exactly one selected window."
+  },
+  "tabs.picker.error.editMultipleGroups": {
+    "ja": "error: :edit はタブグループを 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires exactly one selected tab group."
+  },
+  "tabs.picker.error.editInvalidGroup": {
+    "ja": "error: :edit はタブグループ行を 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires a single valid tab group row."
+  },
+  "tabs.picker.error.editNeedsWindowOrGroup": {
+    "ja": "error: :edit はウィンドウ行またはタブグループ行を 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires a single window or tab group row."
+  },
+  "tabs.picker.error.createNoResponse": {
+    "ja": "tabs.create が応答しませんでした",
+    "en": "tabs.create did not respond"
+  },
+  "tabs.picker.error.newTabFallbackFailed": {
+    "ja": "フォールバックにも失敗しました。",
+    "en": "Fallback create also failed."
+  },
+  "tabs.picker.error.newTabFallbackLine": {
+    "ja": "フォールバック: {message}",
+    "en": "Fallback: {message}"
+  },
+  "tabs.picker.error.newTabMoveFailed": {
+    "ja": "別ウィンドウへ移動できませんでした: {message}",
+    "en": "Could not move tab to target window: {message}"
+  },
+  "tabs.picker.error.newTabPrimary": {
+    "ja": "新規タブ: {message}",
+    "en": "New tab: {message}"
+  },
+  "tabs.picker.error.executeFailed": {
+    "ja": "実行できません。",
+    "en": "Cannot execute."
+  },
+  "tabs.picker.error.windowNameSaveFailed": {
+    "ja": "error: ウィンドウ名の保存に失敗しました。",
+    "en": "error: failed to save window name."
+  },
+  "tabs.picker.error.groupNameSaveFailed": {
+    "ja": "error: グループ名の変更に失敗しました。",
+    "en": "error: failed to rename tab group."
+  },
+  "tabs.picker.error.groupActionFailed": {
+    "ja": "error: タブグループの操作に失敗しました。",
+    "en": "error: tab group action failed."
+  },
+  "windows.none": {
+    "ja": "(ウィンドウなし)",
+    "en": "(no windows)"
+  },
+  "cmd.nav.usage.line1": {
+    "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（プロンプトで Alt がオーバーレイ ON/OFF）",
+    "en": "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on prompt toggles overlay on/off)"
+  },
+  "cmd.nav.usage.line2": {
+    "ja": "       nav -exit        — nav を終了（先に Alt で OFF）",
+    "en": "       nav -exit        — disarm nav (turn Alt off first)"
+  },
+  "cmd.nav.usage.altToggle": {
+    "ja": "起動中、プロンプトにフォーカスがあるとき Alt でページオーバーレイを ON/OFF します。",
+    "en": "While armed, Alt toggles the page overlay when this pane's prompt has focus."
+  },
+  "cmd.nav.usage.navTyping": {
+    "ja": "nav typing 翻訳: `translate -on` を使用（translate コマンド参照）。",
+    "en": "Nav typing translation: use `translate -on` (see translate command)."
+  },
+  "cmd.nav.usage.controls": {
+    "ja": "起動後はプロンプトで Alt がオーバーレイ ON/OFF。↑↓←→ で移動、Enter で左クリック相当。",
+    "en": "While armed, Alt toggles overlay on/off on the prompt. ↑↓←→ move; Enter clicks."
+  },
+  "cmd.nav.enter.title": {
+    "ja": "nav -enter — BMXt プロンプトから起動",
+    "en": "nav -enter — arm from the BMXt prompt"
+  },
+  "cmd.nav.enter.detail": {
+    "ja": "BMXt プロンプトで `nav -enter` を実行し、コマンドライン上で Alt でページカーソルを切り替えます。",
+    "en": "Run `nav -enter` in the BMXt window; then Alt on the command line toggles the page cursor."
+  },
+  "cmd.nav.exit.title": {
+    "ja": "nav -exit — BMXt プロンプトから終了",
+    "en": "nav -exit — disarm from the BMXt prompt"
+  },
+  "cmd.nav.exit.detail": {
+    "ja": "先に Alt で nav を OFF にしてから、このペインで `nav -exit` を実行してください。",
+    "en": "Turn nav off with Alt first, then run `nav -exit` in this pane."
+  },
+  "cmd.setting.usage.line1": {
+    "ja": "usage: setting -list       — 設定ピッカーを開く（言語・外観・エクスポート/インポート）",
+    "en": "usage: setting -list       — open settings picker (locale, appearance, export/import)"
+  },
+  "cmd.setting.usage.line2": {
+    "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
+    "en": "       setting -exit -list — close settings picker in this BMXt pane"
+  },
+  "cmd.setting.list.title": {
+    "ja": "setting -list — BMXt プロンプトから実行",
+    "en": "setting -list — run from the BMXt prompt"
+  },
+  "cmd.setting.list.detail": {
+    "ja": "設定ピッカー列を開きます（↑↓ · Enter · Esc → プロンプト）。",
+    "en": "Opens the settings picker column (↑↓ · Enter · Esc → prompt)."
+  },
+  "cmd.setting.exit.title": {
+    "ja": "setting -exit -list — BMXt プロンプトから実行",
+    "en": "setting -exit -list — run from the BMXt prompt"
+  },
+  "cmd.setting.exit.detail": {
+    "ja": "このペインの設定ピッカーを閉じます。",
+    "en": "Closes the settings picker in this pane."
+  },
+  "cmd.tabs.usage.line1": {
+    "ja": "usage: tabs -list [-u]   — タブピッカー（`-u` は各タブ URL を表示）",
+    "en": "usage: tabs -list [-u]   — tab picker (optional -u: show each tab URL)"
+  },
+  "cmd.tabs.usage.line2": {
+    "ja": "       tabs -exit -list — この BMXt ペインのタブピッカーを閉じる",
+    "en": "       tabs -exit -list — close tab picker in this BMXt pane"
+  },
+  "cmd.tabs.usage.line3": {
+    "ja": "       tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー",
+    "en": "       tabs -setting -page-active --auto | --manual — page preview on highlight"
+  },
+  "cmd.tabs.usage.line4": {
+    "ja": "       tabs -moveurl <url> — URL のタブへ移動、なければ新規タブ",
+    "en": "       tabs -moveurl <url> — go to tab with URL or open new tab (Tab completes URLs in BMXt)"
+  },
+  "cmd.tabs.usage.line5": {
+    "ja": "       tabs -nowurl       — 現在のタブ URL を表示",
+    "en": "       tabs -nowurl       — show current tab URL"
+  },
+  "cmd.tabs.runHint": {
+    "ja": "実行例: tabs -list / tabs -list -u（ピッカーを開く）· tabs -exit -list（閉じる）· tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
+    "en": "Run: tabs -list or tabs -list -u (open picker). tabs -exit -list (close picker). tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl (current URL). tabs -moveurl <url> (jump or new tab)."
+  },
+  "cmd.tabs.list.title": {
+    "ja": "Tab picker は BMXt プロンプトから開きます: tabs -list または tabs -list -u",
+    "en": "Tab picker is opened from the BMXt prompt with: tabs -list or tabs -list -u"
+  },
+  "cmd.tabs.exitList.title": {
+    "ja": "Tab picker は BMXt プロンプトから閉じます: tabs -exit -list",
+    "en": "Tab picker is closed from the BMXt prompt with: tabs -exit -list"
+  },
+  "cmd.tabs.setting.title": {
+    "ja": "tabs -setting は BMXt プロンプトから: tabs -setting -page-active --auto または --manual",
+    "en": "tabs -setting is handled from the BMXt prompt with: tabs -setting -page-active --auto or --manual"
+  },
+  "cmd.tabs.setting.pageActive": {
+    "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
+    "en": "`--auto` activates the highlighted tab on move (default). `--manual` activates only with Alt."
+  },
+  "cmd.dom.usage.line1": {
+    "ja": "usage: dom -list [--html|--react] [<pattern>]   — DOM ピッカーを開く（既定 flavor: --html）",
+    "en": "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)"
+  },
+  "cmd.dom.usage.line2": {
+    "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
+    "en": "       dom -exit -list — close DOM list picker in this BMXt pane"
+  },
+  "cmd.dom.usage.listDetail": {
+    "ja": "-list は picker（search -list と同じクロム）。flavor: --html (default) | --react。",
+    "en": "-list opens a picker (same chrome as search -list); flavor pull-down: --html (default) | --react."
+  },
+  "cmd.dom.usage.patternDetail": {
+    "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
+    "en": "<pattern> is a case-insensitive substring filter on the output lines (no regex)."
+  },
+  "cmd.dom.exitList.title": {
+    "ja": "DOM list picker は BMXt プロンプトから閉じます: dom -exit -list",
+    "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
+  },
+  "cmd.dom.exitList.detail": {
+    "ja": "DOM ピッカー列表示中に BMXt プロンプトで実行してください。",
+    "en": "Run that line in the BMXt window while the DOM picker column is open."
+  },
+  "cmd.search.usage.line1": {
+    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page）",
+    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)"
+  },
+  "cmd.search.usage.line2": {
+    "ja": "       search -list --history|--bookmark|--page [<pattern>]   — スコープを 1 つに絞る",
+    "en": "       search -list --history|--bookmark|--page [<pattern>]   — narrow to one scope"
+  },
+  "cmd.search.usage.line3": {
+    "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
+    "en": "       search -exit -list — close search list picker in this BMXt pane"
+  },
+  "cmd.search.usage.pattern": {
+    "ja": "パターンは大文字小文字を区別しない部分一致です（v1 は正規表現なし）。",
+    "en": "Pattern is matched as a case-insensitive substring (no regex in v1)."
+  },
+  "cmd.search.usage.quotes": {
+    "ja": "パターンを ASCII 二重引用符で囲んでも除去されます（例: search -list \"…\"）。",
+    "en": "Optional ASCII double quotes around the pattern are stripped (e.g. search -list \"…\")."
+  },
+  "cmd.search.exitList.title": {
+    "ja": "Search list picker は BMXt プロンプトから閉じます: search -exit -list",
+    "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
+  },
+  "cmd.search.exitList.detail": {
+    "ja": "search ピッカー列表示中に BMXt プロンプトで実行してください。",
+    "en": "Run that line in the BMXt window while the search picker column is open."
+  },
+  "cmd.translate.usage.line1": {
+    "ja": "usage: translate -on   — 翻訳アシストを有効化（nav typing プレビュー）",
+    "en": "usage: translate -on   — enable translation assist (nav typing preview under prompt)"
+  },
+  "cmd.translate.usage.line2": {
+    "ja": "       translate -off  — 翻訳アシストを無効化",
+    "en": "       translate -off  — disable translation assist"
+  },
+  "cmd.translate.usage.line3": {
+    "ja": "       translate -setting --ja-en | --en-ja  — 翻訳ペアを設定（保存）",
+    "en": "       translate -setting --ja-en | --en-ja  — set translation pair (saved)"
+  },
+  "cmd.translate.usage.detail": {
+    "ja": "`-on` でアシストを有効化。nav typing 時はプロンプト下に訳プレビュー。`-setting` で `--ja-en` / `--en-ja` を選べます。",
+    "en": "`-on` enables assist only; nav typing shows a translation preview under the prompt; Alt-hold commit sends the pair target language."
+  },
+  "cmd.translate.on.title": {
+    "ja": "translate -on — BMXt プロンプトから実行",
+    "en": "translate -on — run from the BMXt prompt"
+  },
+  "cmd.translate.on.detail": {
+    "ja": "翻訳アシストを有効化。nav typing 時はプロンプト下に訳を表示します。",
+    "en": "Enables translation assist; nav typing shows preview under the prompt."
+  },
+  "cmd.translate.off.title": {
+    "ja": "translate -off — BMXt プロンプトから実行",
+    "en": "translate -off — run from the BMXt prompt"
+  },
+  "cmd.translate.off.detail": {
+    "ja": "翻訳アシストを OFF にします。",
+    "en": "Disables translation assist."
+  },
+  "cmd.translate.setting.title": {
+    "ja": "translate -setting — BMXt プロンプトから実行",
+    "en": "translate -setting — run from the BMXt prompt"
+  },
+  "cmd.translate.setting.detail": {
+    "ja": "第三トークンに `--ja-en` / `--en-ja` を指定して翻訳ペアを保存します（Tab で第三トークン補完）。",
+    "en": "`translate -setting --ja-en` or `translate -setting --en-ja` (Tab completes third token)."
+  },
   "help.title": {
     "ja": "BMXt - ブラウザコマンドシェル",
     "en": "BMXt - browser command shell"
@@ -839,9 +1459,9 @@
     "ja": "tabs（BMXt ウィンドウ / SW）:\n  tabs              - 利用可能なオプションを表示し、プロンプトを `tabs ` に戻して続きを入力。\n  tabs -list [-u]   - タブピッカーを開く（`-u` は各タイトル下に URL 行を表示）。\n  tabs -exit -list  - この BMXt ペインのタブピッカーを閉じる（Esc はプロンプトへ戻るのみ）。\n  tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー（保存）。\n  tabs -nowurl      - フォーカス中ウィンドウのアクティブタブの URL を表示。\n  tabs -moveurl <url> - 一致する URL のタブにフォーカス、なければ新規タブを開く。\n  picker `:` モード   - 空の Tab/Enter でターゲット別コマンドを薄く表示（tab/window/group）。",
     "en": "tabs (BMXt window / SW):\n  tabs              - show available options, then restore prompt to `tabs ` for continuation.\n  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).\n  tabs -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tabs -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tabs -nowurl      - print current tab URL from active tab in focused window.\n  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
   },
-  "help.section.split": {
-    "ja": "split（ターミナルペイン）:\n  split               - `-col` / `-row` を表示し、プロンプトを `split ` に戻して続きを入力。\n  split -col          - 垂直分割（現在ペインの横に新規ペイン）。\n  split -row          - 水平分割（現在ペインの下に新規ペイン）。\n  Ctrl+Arrow          - 複数ペイン時にキーボードフォーカスを移動。",
-    "en": "split (terminal panes):\n  split               - show -col / -row, then restore prompt to `split ` for continuation.\n  split -col          - vertical split (new pane beside current).\n  split -row          - horizontal split (new pane below current).\n  Ctrl+Arrow          - move keyboard focus between panes when more than one is open."
+  "help.section.session": {
+    "ja": "session（ターミナルセッション切り替え）:\n  session                       - 第二コマンド候補をメニュー表示し、プロンプトを `session ` に戻す。\n  session <n>                   - 番号 n（1 始まり）のセッションへ切り替え。\n  session -list                 - 番号付き切り替えリスト（↑↓ · Enter · 1–9）。\n  session -switch [name]        - セッション名で切り替え（候補メニューまたは直接指定）。\n  session -new [name]           - 新規セッションを作成して切り替え。\n  session -setting-name [name]  - このセッションの表示名を変更。\n  session -next / -prev         - 次 / 前のセッションへ切り替え。\n  Ctrl+← / Ctrl+→              - 複数セッション時に前後へ切り替え。",
+    "en": "session (terminal session switching):\n  session                       - show second-command menu, then restore prompt to `session `.\n  session <n>                   - switch to session number n (1-based).\n  session -list                 - numbered switch list (↑↓ · Enter · 1–9).\n  session -switch [name]        - switch by session name (candidate menu or direct).\n  session -new [name]           - create a new session and switch to it.\n  session -setting-name [name]  - rename this session.\n  session -next / -prev         - switch to next / previous session.\n  Ctrl+← / Ctrl+→              - prev / next when multiple sessions exist."
   },
   "help.section.dom": {
     "ja": "dom（アクティブ対象タブのページ表示フィルタ）:\n  dom -list [--html|--react] [<pattern>] — この BMXt ペインで DOM list ピッカーを開く。\n  dom -exit -list  - この BMXt ペインの DOM list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
@@ -864,7 +1484,7 @@
     "en": "URL (http/https, typed as a whole line):\n  <url>           - new tab\n  <url> .         - current tab (active tab in focused window)\n  <url> -nw       - new window"
   },
   "help.section.keys": {
-    "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴   Ctrl+R  リバース i-search（再度: 古い一致）\n  Enter  実行または検索確定   Esc  検索キャンセル",
-    "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history   Ctrl+R  reverse-i-search (again: older match)\n  Enter  run or accept search   Esc  cancel search"
+    "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴（全セッション共通）   Ctrl+R  リバース i-search（再度: 古い一致）\n  Ctrl+← / Ctrl+→  セッション切り替え（複数セッション時）\n  Enter  実行または検索確定   Esc  検索キャンセル",
+    "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history (shared across sessions)   Ctrl+R  reverse-i-search (again: older match)\n  Ctrl+← / Ctrl+→  switch sessions when multiple are open\n  Enter  run or accept search   Esc  cancel search"
   }
 }

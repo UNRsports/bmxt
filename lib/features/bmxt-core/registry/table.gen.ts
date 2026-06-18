@@ -16,7 +16,7 @@ import * as tabs from "../cmd/tabs"
 import * as nav from "../cmd/nav"
 import * as translate from "../cmd/translate"
 import * as aboutbmxt from "../cmd/aboutbmxt"
-import * as split from "../cmd/split"
+import * as session from "../cmd/session"
 import * as setting from "../cmd/setting"
 
 export const COMMANDS: readonly CmdMeta[] = [
@@ -31,7 +31,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   nav.CMD,
   translate.CMD,
   aboutbmxt.CMD,
-  split.CMD,
+  session.CMD,
   setting.CMD
 ]
 
@@ -50,7 +50,7 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: nav.CMD.name, run: nav.run },
   { name: translate.CMD.name, run: translate.run },
   { name: aboutbmxt.CMD.name, run: aboutbmxt.run },
-  { name: split.CMD.name, run: split.run },
+  { name: session.CMD.name, run: session.run },
   { name: setting.CMD.name, run: setting.run }
 ]
 
