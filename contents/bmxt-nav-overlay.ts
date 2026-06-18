@@ -80,7 +80,8 @@ chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
     msg.shiftKey ? 1 : 0,
     msg.altKey ? 1 : 0,
     msg.metaKey ? 1 : 0,
-    msg.text ?? ""
+    msg.text ?? "",
+    msg.labelsJson ?? ""
   )
   sendResponse(result)
   return true

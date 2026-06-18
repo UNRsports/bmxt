@@ -1023,6 +1023,186 @@
     "ja": "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 文字ハイライト · Esc",
     "en": "group new — ↑↓ highlight · Tab select · Enter name/color · / char highlight · Esc"
   },
+  "nav.overlay.menu.selectText": {
+    "ja": "テキスト選択",
+    "en": "Select text"
+  },
+  "nav.overlay.menu.saveImage": {
+    "ja": "カーソル下の画像を保存",
+    "en": "Save image under cursor"
+  },
+  "nav.overlay.menu.reloadPage": {
+    "ja": "ページを再読み込み",
+    "en": "Reload page"
+  },
+  "nav.overlay.menu.copySelection": {
+    "ja": "コピー",
+    "en": "Copy"
+  },
+  "nav.overlay.menu.historyBack": {
+    "ja": "履歴を戻る",
+    "en": "History back"
+  },
+  "nav.overlay.menu.historyForward": {
+    "ja": "履歴を進む",
+    "en": "History forward"
+  },
+  "nav.overlay.menu.selectHint": {
+    "ja": "↑↓ · Enter",
+    "en": "↑↓ · Enter"
+  },
+  "nav.overlay.menu.copyHint": {
+    "ja": "Enter",
+    "en": "Enter"
+  },
+  "nav.overlay.textSel.start": {
+    "ja": "選択開始: Enter · Esc 取消",
+    "en": "Selection start: Enter · Esc cancel"
+  },
+  "nav.overlay.textSel.end": {
+    "ja": "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消",
+    "en": "Selection end: Enter confirm · move to preview · Esc cancel"
+  },
+  "nav.overlay.typing.line1": {
+    "ja": "BMXt ウィンドウで入力",
+    "en": "Type in the BMXt window"
+  },
+  "nav.overlay.typing.line2": {
+    "ja": "入力したテキストがここに反映されます",
+    "en": "Text typed in BMXt appears here"
+  },
+  "nav.overlay.typing.multiline": {
+    "ja": "Shift+Enter で改行",
+    "en": "Shift+Enter for newline"
+  },
+  "nav.overlay.error.generic": {
+    "ja": "オーバーレイエラー",
+    "en": "overlay failed"
+  },
+  "nav.overlay.error.permissionDenied": {
+    "ja": "サイトアクセスが拒否されました",
+    "en": "site access denied"
+  },
+  "nav.overlay.error.notScriptable": {
+    "ja": "このページではスクリプトできません",
+    "en": "page not scriptable"
+  },
+  "nav.overlay.error.noTargetTab": {
+    "ja": "対象タブがありません",
+    "en": "no target tab"
+  },
+  "nav.overlay.error.injectNoResult": {
+    "ja": "注入結果なし",
+    "en": "inject no result"
+  },
+  "tabs.picker.editWindowName": {
+    "ja": "ウィンドウ名",
+    "en": "Window name"
+  },
+  "tabs.picker.editGroupMenu": {
+    "ja": "タブグループの編集",
+    "en": "Edit tab group"
+  },
+  "tabs.picker.editGroupName": {
+    "ja": "グループ名",
+    "en": "Group name"
+  },
+  "tabs.picker.newTabPanel": {
+    "ja": "新しいタブ",
+    "en": "New tab"
+  },
+  "tabs.picker.urlLabel": {
+    "ja": "URL",
+    "en": "URL"
+  },
+  "tabs.picker.groupColorAria": {
+    "ja": "グループの色",
+    "en": "Group color"
+  },
+  "tabs.picker.groupChoiceUntitled": {
+    "ja": "(無題のグループ)",
+    "en": "(Untitled group)"
+  },
+  "tabs.picker.groupChoiceNew": {
+    "ja": "＋ 新規グループ（名前・色を指定）",
+    "en": "＋ New group (name & color)"
+  },
+  "tabs.picker.groupChoiceWinSuffix": {
+    "ja": " · win {windowId}",
+    "en": " · win {windowId}"
+  },
+  "tabs.picker.editMenu.rename": {
+    "ja": "名前の変更",
+    "en": "Rename"
+  },
+  "tabs.picker.editMenu.ungroup": {
+    "ja": "タブグループの解除",
+    "en": "Ungroup tabs"
+  },
+  "tabs.picker.editMenu.deleteGroup": {
+    "ja": "タブグループの削除",
+    "en": "Delete tab group"
+  },
+  "tabs.picker.error.editOnTab": {
+    "ja": "error: :edit はタブ行では使えません。ウィンドウ行またはタブグループ行を単体選択してください。",
+    "en": "error: :edit cannot target a tab row. Select a single window or tab group row."
+  },
+  "tabs.picker.error.editMultipleWindows": {
+    "ja": "error: :edit はウィンドウを 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires exactly one selected window."
+  },
+  "tabs.picker.error.editMultipleGroups": {
+    "ja": "error: :edit はタブグループを 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires exactly one selected tab group."
+  },
+  "tabs.picker.error.editInvalidGroup": {
+    "ja": "error: :edit はタブグループ行を 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires a single valid tab group row."
+  },
+  "tabs.picker.error.editNeedsWindowOrGroup": {
+    "ja": "error: :edit はウィンドウ行またはタブグループ行を 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires a single window or tab group row."
+  },
+  "tabs.picker.error.createNoResponse": {
+    "ja": "tabs.create が応答しませんでした",
+    "en": "tabs.create did not respond"
+  },
+  "tabs.picker.error.newTabFallbackFailed": {
+    "ja": "フォールバックにも失敗しました。",
+    "en": "Fallback create also failed."
+  },
+  "tabs.picker.error.newTabFallbackLine": {
+    "ja": "フォールバック: {message}",
+    "en": "Fallback: {message}"
+  },
+  "tabs.picker.error.newTabMoveFailed": {
+    "ja": "別ウィンドウへ移動できませんでした: {message}",
+    "en": "Could not move tab to target window: {message}"
+  },
+  "tabs.picker.error.newTabPrimary": {
+    "ja": "新規タブ: {message}",
+    "en": "New tab: {message}"
+  },
+  "tabs.picker.error.executeFailed": {
+    "ja": "実行できません。",
+    "en": "Cannot execute."
+  },
+  "tabs.picker.error.windowNameSaveFailed": {
+    "ja": "error: ウィンドウ名の保存に失敗しました。",
+    "en": "error: failed to save window name."
+  },
+  "tabs.picker.error.groupNameSaveFailed": {
+    "ja": "error: グループ名の変更に失敗しました。",
+    "en": "error: failed to rename tab group."
+  },
+  "tabs.picker.error.groupActionFailed": {
+    "ja": "error: タブグループの操作に失敗しました。",
+    "en": "error: tab group action failed."
+  },
+  "windows.none": {
+    "ja": "(ウィンドウなし)",
+    "en": "(no windows)"
+  },
   "cmd.nav.usage.line1": {
     "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（プロンプトで Alt がオーバーレイ ON/OFF）",
     "en": "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on prompt toggles overlay on/off)"

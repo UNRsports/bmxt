@@ -119,6 +119,7 @@ import {
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft,
   settingTokenForUiLocale,
+  setRunLocale,
   t,
   formatBulletedLines,
   translateOnLogLine,
@@ -236,6 +237,14 @@ export function BmxtShell({
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
   const uiCopy = useUiCopy()
+  const prevUiLocaleRef = useRef(uiSettings.locale)
+  useEffect(() => {
+    setRunLocale(uiSettings.locale)
+    if (prevUiLocaleRef.current !== uiSettings.locale) {
+      prevUiLocaleRef.current = uiSettings.locale
+      scheduleTabPickerRowsRefresh()
+    }
+  }, [uiSettings.locale, scheduleTabPickerRowsRefresh])
   const tabPicker = sessionPickers.tabs
   const searchListPicker = sessionPickers.search
   const domListPicker = sessionPickers.dom
@@ -427,7 +436,8 @@ export function BmxtShell({
         setNavTranslateCommitErrorRef.current(`commit failed: ${msg}`)
         throw e
       }
-    }
+    },
+    uiLocale: uiSettings.locale
   })
 
   const navTextSelDone = navTextSelPhase === "done"
@@ -1733,7 +1743,7 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         try {
-          const rows = await buildTabPickerRows(showUrl)
+          const rows = await buildTabPickerRows(showUrl, uiSettings.locale)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           const pageActiveToken = settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
           await appendLogLines([
@@ -1952,7 +1962,7 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         try {
-          const rows = await buildTabPickerRows(false)
+          const rows = await buildTabPickerRows(false, uiSettings.locale)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           await appendLogLines([`> ${trimmed}`, uiCopy.t("group.newPicker")])
           setTabPicker(

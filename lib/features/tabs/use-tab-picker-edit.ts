@@ -7,6 +7,7 @@ import {
 } from "./controller/edit-actions"
 import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import { groupEditMenuActionAtPickIndex } from "./group-edit-menu"
+import { useUiCopy } from "../setting"
 import type { EditPanel } from "./tab-picker-overlay-types"
 import {
   buildInitialEditPanel,
@@ -39,6 +40,7 @@ export type TabPickerEditParams = {
 }
 
 export function useTabPickerEdit(p: TabPickerEditParams) {
+  const uiCopy = useUiCopy()
   const {
     rows,
     visibleRowIndices,
@@ -86,11 +88,11 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
         markedGroupKeys,
         rows,
         visibleRowIndices,
-        hi
+        hi,
+        uiCopy.locale
       )
       void onAppendLog?.([
-        err ??
-          "error: :edit はウィンドウ行またはタブグループ行を 1 つだけ選択したときに使えます。"
+        err ?? uiCopy.t("tabs.picker.error.editNeedsWindowOrGroup")
       ])
       return
     }
@@ -139,7 +141,8 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     setBulkSubMode,
     setEditPanel,
     setEditTitle,
-    visibleRowIndices
+    visibleRowIndices,
+    uiCopy
   ])
 
   const confirmWindowRename = useCallback(async () => {
@@ -149,11 +152,11 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     try {
       await applyWindowDisplayName(editPanel.windowId, editTitle)
     } catch {
-      void onAppendLog?.(["error: ウィンドウ名の保存に失敗しました。"])
+      void onAppendLog?.([uiCopy.t("tabs.picker.error.windowNameSaveFailed")])
       return
     }
     await finishEdit()
-  }, [editPanel, editTitle, finishEdit, onAppendLog])
+  }, [editPanel, editTitle, finishEdit, onAppendLog, uiCopy])
 
   const confirmGroupRename = useCallback(async () => {
     if (editPanel?.kind !== "groupRename") {
@@ -162,11 +165,11 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     try {
       await applyTabGroupTitle(editPanel.groupId, editTitle)
     } catch {
-      void onAppendLog?.(["error: グループ名の変更に失敗しました。"])
+      void onAppendLog?.([uiCopy.t("tabs.picker.error.groupNameSaveFailed")])
       return
     }
     await finishEdit()
-  }, [editPanel, editTitle, finishEdit, onAppendLog])
+  }, [editPanel, editTitle, finishEdit, onAppendLog, uiCopy])
 
   const runGroupMenuAction = useCallback(
     async (actionId: ReturnType<typeof groupEditMenuActionAtPickIndex>) => {
@@ -196,12 +199,12 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
           await removeTabGroup(editPanel.groupId)
         }
       } catch {
-        void onAppendLog?.(["error: タブグループの操作に失敗しました。"])
+        void onAppendLog?.([uiCopy.t("tabs.picker.error.groupActionFailed")])
         return
       }
       await finishEdit()
     },
-    [editPanel, finishEdit, onAppendLog, setEditPanel, setEditTitle]
+    [editPanel, finishEdit, onAppendLog, setEditPanel, setEditTitle, uiCopy]
   )
 
   const confirmGroupMenuPick = useCallback(async () => {

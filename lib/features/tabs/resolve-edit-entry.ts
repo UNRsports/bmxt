@@ -1,4 +1,6 @@
 import { getWindowDisplayName } from "../extension-storage/window-display-names"
+import { t } from "../setting/i18n/messages"
+import type { UiLocale } from "../setting/locale"
 import type { TabPickerRow } from "./picker-rows"
 import { getPickerRowAtHi } from "./tab-picker-bulk-window"
 import { chromeTabGroupIdsFromMarkedGroupKeys, groupRowKey } from "./tab-picker-keyboard"
@@ -65,28 +67,29 @@ export function editTargetErrorMessage(
   markedGroupKeys: string[],
   rows: TabPickerRow[],
   visibleRowIndices: number[],
-  hi: number
+  hi: number,
+  locale: UiLocale
 ): string | null {
   if (markedKind === "tab") {
-    return "error: :edit はタブ行では使えません。ウィンドウ行またはタブグループ行を単体選択してください。"
+    return t("tabs.picker.error.editOnTab", locale)
   }
   if (markedKind === "window" && markedWindowIds.length > 1) {
-    return "error: :edit はウィンドウを 1 つだけ選択したときに使えます。"
+    return t("tabs.picker.error.editMultipleWindows", locale)
   }
   if (markedKind === "group" && markedGroupKeys.length > 1) {
-    return "error: :edit はタブグループを 1 つだけ選択したときに使えます。"
+    return t("tabs.picker.error.editMultipleGroups", locale)
   }
   if (markedKind === "group" && markedGroupKeys.length === 1) {
     const ids = chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
     if (ids.length !== 1) {
-      return "error: :edit はタブグループ行を 1 つだけ選択したときに使えます。"
+      return t("tabs.picker.error.editInvalidGroup", locale)
     }
   }
   const row = getPickerRowAtHi(rows, visibleRowIndices, hi)
   if (resolveEditTarget(markedKind, markedWindowIds, markedGroupKeys, rows, visibleRowIndices, hi)) {
     return null
   }
-  return "error: :edit はウィンドウ行またはタブグループ行を 1 つだけ選択したときに使えます。"
+  return t("tabs.picker.error.editNeedsWindowOrGroup", locale)
 }
 
 export async function buildInitialEditPanel(target: EditTarget): Promise<EditPanel> {

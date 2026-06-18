@@ -64,7 +64,7 @@ export const TAB_PICKER_COMMANDS_FOR_GROUP = [
 ] as const
 
 export const GROUP_EDIT_MENU_ITEMS = [
-  { id: "rename" as const, label: "名前の変更" },
-  { id: "ungroup" as const, label: "タブグループの解除" },
-  { id: "deleteGroup" as const, label: "タブグループの削除" }
+  { id: "rename" as const, messageKey: "tabs.picker.editMenu.rename" as const },
+  { id: "ungroup" as const, messageKey: "tabs.picker.editMenu.ungroup" as const },
+  { id: "deleteGroup" as const, messageKey: "tabs.picker.editMenu.deleteGroup" as const }
 ] as const

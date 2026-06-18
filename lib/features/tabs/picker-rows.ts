@@ -1,6 +1,9 @@
 /** Tab picker: structured rows for interactive UI + same grouping as legacy tabs list. */
 
 import { displayTitle } from "../format/display-title"
+import { t } from "../setting/i18n/messages"
+import { getRunLocale } from "../setting/i18n/run-locale"
+import type { UiLocale } from "../setting/locale"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
 import { resolveTabFaviconSrc } from "./tab-favicon-url"
@@ -47,13 +50,13 @@ function groupKey(tab: chrome.tabs.Tab): number | "none" {
   return g
 }
 
-function formatGroupLabel(g: chrome.tabGroups.TabGroup | undefined): string {
+function formatGroupLabel(g: chrome.tabGroups.TabGroup | undefined, locale: UiLocale): string {
   if (!g) {
-    return "(不明なグループ)"
+    return t("tabs.picker.unknownGroup", locale)
   }
   const raw = (g.title || "").trim()
   if (!raw) {
-    return `(無題のグループ) [${g.color}]`
+    return t("tabs.picker.untitledGroup", locale, { color: g.color })
   }
   return `【${displayTitle(raw)}】`
 }
@@ -63,7 +66,10 @@ function tabUrl(t: chrome.tabs.Tab): string {
 }
 
 /** Build rows (window / group headers + tabs) for the picker. `showUrl` is stored per picker session for UI. */
-export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRow[]> {
+export async function buildTabPickerRows(
+  _showUrl: boolean,
+  locale: UiLocale = getRunLocale()
+): Promise<TabPickerRow[]> {
   const tabs = await chrome.tabs.query({})
   if (tabs.length === 0) {
     return []
@@ -144,7 +150,10 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
       windowId: wid,
       windowTitle,
       usesActiveTabTitle,
-      label: `${tracked ? "*" : " "}[ウィンドウ] ${windowTitle}`,
+      label: t("tabs.picker.windowLabel", locale, {
+        star: tracked ? "*" : " ",
+        title: windowTitle
+      }),
       focused: tracked
     })
 
@@ -157,7 +166,7 @@ export async function buildTabPickerRows(_showUrl: boolean): Promise<TabPickerRo
             kind: "group",
             windowId: wid,
             groupId: key,
-            label: formatGroupLabel(groupMeta.get(key))
+            label: formatGroupLabel(groupMeta.get(key), locale)
           })
         }
         prevKey = key

@@ -25,7 +25,8 @@ import {
 } from "./lib/features/bmxt-core"
 import { buildHelpLines } from "./lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "./lib/features/setting/settings"
-import { setRunLocale } from "./lib/features/setting/i18n/run-locale"
+import { setRunLocale, getRunLocale } from "./lib/features/setting/i18n/run-locale"
+import { t } from "./lib/features/setting/i18n/messages"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
@@ -337,7 +338,7 @@ async function dispatch(
 async function listWindows(): Promise<string[]> {
   const wins = await chrome.windows.getAll({ populate: true })
   if (wins.length === 0) {
-    return ["(ウィンドウなし)"]
+    return [t("windows.none", getRunLocale())]
   }
   return wins.map((w) => {
     const f = w.focused ? "*" : " "
@@ -430,6 +431,7 @@ type NavControlRequest = {
   altKey?: boolean
   metaKey?: boolean
   text?: string
+  labelsJson?: string
 }
 
 chrome.runtime.onMessage.addListener(
@@ -469,7 +471,8 @@ chrome.runtime.onMessage.addListener(
               metaKey: Boolean(message.metaKey)
             }
           : undefined,
-        typeof message.text === "string" ? message.text : undefined
+        typeof message.text === "string" ? message.text : undefined,
+        typeof message.labelsJson === "string" ? message.labelsJson : undefined
       )
         .then((result) => sendResponse(result))
         .catch((e) =>
