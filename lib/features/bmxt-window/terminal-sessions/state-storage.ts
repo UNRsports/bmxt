@@ -550,6 +550,21 @@ export async function createSessionAndActivate(
   return readTerminalSessionsIfPresent()
 }
 
+export async function setSessionDisplayName(
+  sessionId: string,
+  name: string
+): Promise<TerminalSessionsStateV1 | null> {
+  const fresh = await readFreshSessionsOrEnsure()
+  if (!fresh.order.includes(sessionId)) {
+    return null
+  }
+  await persistTerminalSessionsState({
+    ...fresh,
+    namesById: { ...fresh.namesById, [sessionId]: name }
+  })
+  return readTerminalSessionsIfPresent()
+}
+
 export async function switchSessionNext(
   currentSessionId: string
 ): Promise<TerminalSessionsStateV1 | null> {

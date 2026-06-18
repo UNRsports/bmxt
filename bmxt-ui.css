@@ -595,6 +595,16 @@ body {
   color: #58a6ff;
 }
 
+.bmxt-prompt-line--session-name-typing .bmxt-prompt-field {
+  outline: 1px solid rgba(88, 166, 255, 0.35);
+  outline-offset: -1px;
+  border-radius: 2px;
+}
+
+.bmxt-prompt-line--session-name-typing .bmxt-prompt-glyph {
+  color: #58a6ff;
+}
+
 /* nav typing — Chrome Translator assist (訳) */
 .bmxt-typing-translate {
   margin-top: 2px;

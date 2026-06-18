@@ -9,18 +9,20 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "session",
   aliases: [],
-  usagePrimary: "session -new [name] | session -list | session -next | session -prev"
+  usagePrimary:
+    "session -new [name] | session -list | session -next | session -prev | session -setting-name [name]"
 }
 
 function sessionUsageLines(): string[] {
   return [
-    "usage: session              — choose -new / -list / -next / -prev (Tab or Enter menu)",
-    "       session <n>         — switch to session number n (1-based)",
-    "       session -list       — open switch list (↑↓ · Enter · 1–9)",
-    "       session -new [name] — new session (switch to it); optional display name",
-    "       session -next       — next session",
-    "       session -prev       — previous session",
-    "       Ctrl+Arrow          — prev / next when multiple sessions exist"
+    "usage: session                    — choose a second token (Tab or Enter menu)",
+    "       session <n>               — switch to session number n (1-based)",
+    "       session -list             — open switch list (↑↓ · Enter · 1–9)",
+    "       session -new [name]       — new session (switch to it); optional display name",
+    "       session -setting-name [name] — rename this session (prompt pre-fills current name)",
+    "       session -next             — next session",
+    "       session -prev             — previous session",
+    "       Ctrl+Arrow                — prev / next when multiple sessions exist"
   ]
 }
 
@@ -52,9 +54,28 @@ export function run(args: string[]) {
     }
     return effectsDispatch([{ kind: "session_new", name: rawName }])
   }
+  if (sub === "-setting-name") {
+    const rawName = args.slice(2).join(" ").trim()
+    if (rawName.length > MAX_SESSION_NAME_LEN) {
+      return linesDispatch([
+        `error: session name too long (max ${MAX_SESSION_NAME_LEN} characters)`,
+        ...sessionUsageLines()
+      ])
+    }
+    if (rawName.length > 0 && sanitizeSessionName(rawName) === null) {
+      return linesDispatch([
+        "error: invalid session name (no control characters or newlines)",
+        ...sessionUsageLines()
+      ])
+    }
+    return linesDispatch([
+      "`session -setting-name` is handled in the BMXt window UI.",
+      "Run it from the prompt in a BMXt terminal pane."
+    ])
+  }
   if (args.length > 2) {
     return linesDispatch([
-      "error: session takes only one option (-new | -list | -next | -prev)",
+      "error: session takes only one option (-new | -list | -next | -prev | -setting-name)",
       ...sessionUsageLines()
     ])
   }

@@ -62,6 +62,7 @@ type SessionPaneProps = {
   navArmedByLeaf: Record<string, boolean>
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
   onActivateSession: (sessionId: string) => Promise<void>
+  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
@@ -89,6 +90,7 @@ function SessionPaneView({
   navArmedByLeaf,
   setNavArmedForLeaf,
   onActivateSession,
+  onSetSessionDisplayName,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
@@ -114,6 +116,7 @@ function SessionPaneView({
         pickersBySession={pickersBySession}
         navArmedByLeaf={navArmedByLeaf}
         onActivateSession={onActivateSession}
+        onSetSessionDisplayName={onSetSessionDisplayName}
         appendLogLines={(newLines) => appendLinesToSession(sessionId, newLines)}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -146,7 +149,7 @@ function BmxtTerminalInner() {
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
-  const { state, setActiveSession } = useTerminalSessions()
+  const { state, setActiveSession, setSessionDisplayName } = useTerminalSessions()
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
@@ -290,6 +293,7 @@ function BmxtTerminalInner() {
     navArmedByLeaf,
     setNavArmedForLeaf,
     onActivateSession: setActiveSession,
+    onSetSessionDisplayName: setSessionDisplayName,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,

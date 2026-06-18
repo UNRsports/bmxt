@@ -1,6 +1,9 @@
 export {
+  isSessionSettingNameUiLine,
   isSessionSwitchUiLine,
   parseSessionListPickerLine,
+  parseSessionSettingNameBareLine,
+  parseSessionSettingNameWithLine,
   parseSessionSwitchByNumberLine
 } from "./session-input"
 export {

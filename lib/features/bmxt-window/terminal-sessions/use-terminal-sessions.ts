@@ -1,15 +1,17 @@
-import { TERMINAL_SESSIONS_KEY } from "../../extension-storage/keys"
 import { useCallback, useEffect, useState } from "react"
+import { TERMINAL_SESSIONS_KEY } from "../../extension-storage/keys"
 import {
   ensureTerminalSessionsState,
   readTerminalSessionsIfPresent,
-  setActiveSession
+  setActiveSession,
+  setSessionDisplayName
 } from "./state-storage"
 import type { TerminalSessionsStateV1 } from "./types"
 
 export function useTerminalSessions(): {
   state: TerminalSessionsStateV1 | null
   setActiveSession: (sessionId: string) => Promise<void>
+  setSessionDisplayName: (sessionId: string, name: string) => Promise<void>
 } {
   const [state, setState] = useState<TerminalSessionsStateV1 | null>(null)
 
@@ -51,8 +53,16 @@ export function useTerminalSessions(): {
     }
   }, [])
 
+  const renameSession = useCallback(async (sessionId: string, name: string) => {
+    const next = await setSessionDisplayName(sessionId, name)
+    if (next) {
+      setState(next)
+    }
+  }, [])
+
   return {
     state,
-    setActiveSession: activateSession
+    setActiveSession: activateSession,
+    setSessionDisplayName: renameSession
   }
 }
