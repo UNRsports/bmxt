@@ -6,6 +6,8 @@ import { getRunLocale } from "../setting/i18n/run-locale"
 import type { UiLocale } from "../setting/locale"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
+import { normalizeTabGroupColor } from "./tab-picker-overlay-constants"
+import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
 import { resolveTabFaviconSrc } from "./tab-favicon-url"
 import {
   getWindowDisplayNamesMap,
@@ -30,12 +32,19 @@ export type TabPickerRow =
       usesActiveTabTitle: boolean
       focused: boolean
     }
-  | { kind: "group"; windowId: number; groupId: number | null; label: string }
+  | {
+      kind: "group"
+      windowId: number
+      groupId: number | null
+      label: string
+      color: NewGroupPaletteColor
+    }
   | {
       kind: "tab"
       tabId: number
       windowId: number
       groupId: number | null
+      groupColor: NewGroupPaletteColor | null
       title: string
       url: string
       faviconSrc: string | null
@@ -162,11 +171,13 @@ export async function buildTabPickerRows(
       const key = groupKey(t)
       if (key !== prevKey) {
         if (key !== "none") {
+          const meta = groupMeta.get(key)
           rows.push({
             kind: "group",
             windowId: wid,
             groupId: key,
-            label: formatGroupLabel(groupMeta.get(key), locale)
+            label: formatGroupLabel(meta, locale),
+            color: normalizeTabGroupColor(meta?.color)
           })
         }
         prevKey = key
@@ -175,11 +186,14 @@ export async function buildTabPickerRows(
       const rawTitle = t.title || ""
       const rawUrl = tabUrl(t)
       seedTabPickerLiveFields(tabId, rawTitle, rawUrl)
+      const groupColor =
+        key === "none" ? null : normalizeTabGroupColor(groupMeta.get(key)?.color)
       rows.push({
         kind: "tab",
         tabId,
         windowId: wid,
         groupId: key === "none" ? null : key,
+        groupColor,
         title: rawTitle,
         url: rawUrl,
         faviconSrc: resolveTabFaviconSrc(rawUrl),

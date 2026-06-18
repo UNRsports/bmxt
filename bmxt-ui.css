@@ -1105,7 +1105,6 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 }
 
 .bmxt-tab-picker-row--group {
-  color: #ffa657;
   padding-left: 2ch;
   margin-top: 4px;
 }
@@ -1124,6 +1123,10 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-tab-picker-row--tab {
   padding-left: 2ch;
   border-radius: 2px;
+}
+
+.bmxt-tab-picker-row--tab-in-group {
+  padding-left: 4ch;
 }
 
 .bmxt-tab-picker-row--marked {
@@ -1346,6 +1349,49 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   vertical-align: text-bottom;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.bmxt-tab-picker-group-line {
+  flex: 0 0 auto;
+  font-weight: 600;
+  user-select: none;
+  margin-right: 0.65em;
+}
+
+.bmxt-tab-picker-group-accent--grey {
+  color: #9aa0a6;
+}
+
+.bmxt-tab-picker-group-accent--blue {
+  color: #8ab4f8;
+}
+
+.bmxt-tab-picker-group-accent--red {
+  color: #f28b82;
+}
+
+.bmxt-tab-picker-group-accent--yellow {
+  color: #fdd663;
+}
+
+.bmxt-tab-picker-group-accent--green {
+  color: #81c995;
+}
+
+.bmxt-tab-picker-group-accent--pink {
+  color: #ff8bcb;
+}
+
+.bmxt-tab-picker-group-accent--purple {
+  color: #d7aefb;
+}
+
+.bmxt-tab-picker-group-accent--cyan {
+  color: #78d9ec;
+}
+
+.bmxt-tab-picker-group-accent--orange {
+  color: #fcad70;
 }
 
 .bmxt-tab-picker-search-hl {

@@ -13,6 +13,16 @@ export const NEW_GROUP_COLORS = [
 
 export type NewGroupPaletteColor = (typeof NEW_GROUP_COLORS)[number]
 
+/** Chrome `tabGroups` の `color` をピッカー用パレットに正規化する。 */
+export function normalizeTabGroupColor(
+  color: string | undefined
+): NewGroupPaletteColor {
+  if (color !== undefined && (NEW_GROUP_COLORS as readonly string[]).includes(color)) {
+    return color as NewGroupPaletteColor
+  }
+  return "grey"
+}
+
 export const COLOR_SWATCH_BG: Partial<Record<NewGroupPaletteColor, string>> = {
   grey: "#9aa0a6",
   blue: "#8ab4f8",
