@@ -1,4 +1,10 @@
 import { flushSync } from "react-dom"
+import {
+  buildSessionListRows,
+  parseSessionListPickerLine,
+  SessionListPickerPanel,
+  type SessionListRow
+} from "../session"
 import { continuationPromptAfterLoneFirstToken } from "../builtin-commands/command-subcommands.gen"
 import { resolveImeTokenPicker } from "../command-line/ime-token-picker"
 import {
@@ -33,7 +39,8 @@ import {
   usePickerRailPresence,
   type PickerEntry,
   type PickerSlotId,
-  type SessionPickerState
+  type SessionPickerState,
+  type SessionPickersByLeaf
 } from "../side-picker"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import {
@@ -173,6 +180,7 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
     parseNavEnterLine(trimmed) ||
     parseNavExitLine(trimmed) ||
     parseTabsListPickerLine(trimmed) !== null ||
+    parseSessionListPickerLine(trimmed) ||
     parseTabsExitListLine(trimmed) ||
     parseSettingListPickerLine(trimmed) ||
     parseSettingExitListLine(trimmed) ||
@@ -183,13 +191,18 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
 }
 
 type Props = {
-  /** コマンド実行・ログ追記のスコープ（複数ターミナル）。 */
+  /** コマンド実行・ログ追記のスコープ（複数ターミナルセッション）。 */
   sessionId: string
-  /** split 複数ペイン時、キーボード入力を受け取るのはこれが true のペインだけ。 */
+  /** アクティブセッションだけがキーボード入力を受け取る。 */
   isFocusedPane: boolean
   lines: string[]
   history: string[]
   completionCandidates: string[]
+  sessionOrder: string[]
+  activeSessionId: string
+  pickersBySession: SessionPickersByLeaf
+  navArmedByLeaf: Record<string, boolean>
+  onActivateSession: (sessionId: string) => Promise<void>
   appendLogLines: (newLines: string[]) => Promise<void>
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -219,6 +232,11 @@ export function BmxtShell({
   lines,
   history,
   completionCandidates,
+  sessionOrder,
+  activeSessionId,
+  pickersBySession,
+  navArmedByLeaf,
+  onActivateSession,
   appendLogLines,
   appendCommandToHistory,
   sessionPickers,
@@ -447,6 +465,20 @@ export function BmxtShell({
   useEffect(() => {
     subCmdPickerRef.current = subCmdPicker
   }, [subCmdPicker])
+
+  const [sessionListPickerHi, setSessionListPickerHi] = useState<number | null>(null)
+  const sessionListRows = useMemo(
+    (): SessionListRow[] =>
+      buildSessionListRows({
+        order: sessionOrder,
+        activeId: activeSessionId,
+        pickersBySession,
+        navArmedByLeaf
+      }),
+    [sessionOrder, activeSessionId, pickersBySession, navArmedByLeaf]
+  )
+  const sessionListPickerOpen = sessionListPickerHi !== null
+
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
   const [cursorPos, setCursorPos] = useState(0)
@@ -835,6 +867,11 @@ export function BmxtShell({
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
+
+  const closeSessionListPicker = useCallback(() => {
+    setSessionListPickerHi(null)
+    focusPrompt()
+  }, [focusPrompt])
 
   useEffect(() => {
     const onEnter = (ev: Event) => {
@@ -1733,6 +1770,18 @@ export function BmxtShell({
       return
     }
 
+    if (parseSessionListPickerLine(trimmed)) {
+      appendCommandToHistory(trimmed)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      const activeIdx = sessionListRows.findIndex((r) => r.isActive)
+      setSessionListPickerHi(activeIdx >= 0 ? activeIdx : 0)
+      void appendLogLines([`> ${trimmed}`, uiCopy.t("session.picker.hint")])
+      return
+    }
+
     const listPicker = parseTabsListPickerLine(trimmed)
     if (listPicker) {
       const { showUrl } = listPicker
@@ -2431,6 +2480,45 @@ export function BmxtShell({
         return
       }
 
+      if (sessionListPickerOpen && sessionListPickerHi !== null) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          closeSessionListPicker()
+          return
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault()
+          setSessionListPickerHi((hi) => {
+            const cur = hi ?? 0
+            return sessionListRows.length === 0
+              ? 0
+              : (cur - 1 + sessionListRows.length) % sessionListRows.length
+          })
+          return
+        }
+        if (e.key === "ArrowDown") {
+          e.preventDefault()
+          setSessionListPickerHi((hi) => {
+            const cur = hi ?? 0
+            return sessionListRows.length === 0
+              ? 0
+              : (cur + 1) % sessionListRows.length
+          })
+          return
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          const row = sessionListRows[sessionListPickerHi]
+          setSessionListPickerHi(null)
+          if (row) {
+            void onActivateSession(row.sessionId).then(() => focusPrompt())
+          } else {
+            focusPrompt()
+          }
+          return
+        }
+      }
+
       if (
         searchListBusyRef.current &&
         e.ctrlKey &&
@@ -2755,6 +2843,9 @@ export function BmxtShell({
             {ln}
           </div>
         ))}
+        {sessionListPickerOpen && sessionListPickerHi !== null ? (
+          <SessionListPickerPanel rows={sessionListRows} hi={sessionListPickerHi} />
+        ) : null}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">
             <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>

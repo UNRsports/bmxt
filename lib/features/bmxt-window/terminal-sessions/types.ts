@@ -1,11 +1,11 @@
 /**
- * 複数ターミナル（プロセス）のログ + 分割レイアウト。表示は TS、コマンド処理は Rust/WASM。
+ * 複数ターミナルセッションのログ + アクティブ切り替え。表示は TS、コマンド処理は bmxt-core。
  */
 
-import type { SplitLayoutV1 } from "../split-layout/types"
-
 export type TerminalSessionsStateV1 = {
-  v: 1
+  v: 2
   logsById: Record<string, string[]>
-  layout: SplitLayoutV1
+  /** 作成順（左が古い）。 */
+  order: string[]
+  activeId: string
 }

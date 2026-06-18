@@ -1,15 +1,15 @@
-import { SPLIT_LAYOUT_KEY, TERMINAL_SESSIONS_KEY } from "../../extension-storage/keys"
+import { TERMINAL_SESSIONS_KEY } from "../../extension-storage/keys"
 import { useCallback, useEffect, useState } from "react"
 import {
   ensureTerminalSessionsState,
   readTerminalSessionsIfPresent,
-  setFocusedLeafSession
+  setActiveSession
 } from "./state-storage"
 import type { TerminalSessionsStateV1 } from "./types"
 
 export function useTerminalSessions(): {
   state: TerminalSessionsStateV1 | null
-  setFocusedLeaf: (sessionId: string) => Promise<void>
+  setActiveSession: (sessionId: string) => Promise<void>
 } {
   const [state, setState] = useState<TerminalSessionsStateV1 | null>(null)
 
@@ -29,7 +29,7 @@ export function useTerminalSessions(): {
       if (area !== "local") {
         return
       }
-      if (!changes[TERMINAL_SESSIONS_KEY] && !changes[SPLIT_LAYOUT_KEY]) {
+      if (!changes[TERMINAL_SESSIONS_KEY]) {
         return
       }
       void readTerminalSessionsIfPresent().then((s) => {
@@ -44,8 +44,8 @@ export function useTerminalSessions(): {
     return () => chrome.storage.onChanged.removeListener(onChange)
   }, [])
 
-  const setFocusedLeaf = useCallback(async (sessionId: string) => {
-    const next = await setFocusedLeafSession(sessionId)
+  const activateSession = useCallback(async (sessionId: string) => {
+    const next = await setActiveSession(sessionId)
     if (next) {
       setState(next)
     }
@@ -53,6 +53,6 @@ export function useTerminalSessions(): {
 
   return {
     state,
-    setFocusedLeaf
+    setActiveSession: activateSession
   }
 }

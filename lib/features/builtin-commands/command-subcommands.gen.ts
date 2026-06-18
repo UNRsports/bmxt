@@ -45,9 +45,11 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-setting", trailingTokens: ["--ja-en","--en-ja"] as const, tail: "none" }
   ] as const,
   "aboutbmxt": [] as const,
-  "split": [
-    { head: "-col", trailingTokens: [] as const, tail: "none" },
-    { head: "-row", trailingTokens: [] as const, tail: "none" }
+  "session": [
+    { head: "-new", trailingTokens: [] as const, tail: "none" },
+    { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-next", trailingTokens: [] as const, tail: "none" },
+    { head: "-prev", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
@@ -133,9 +135,9 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "aboutbmxt":
       return false
-    case "split": {
+    case "session": {
       const lower = token.toLowerCase()
-      return lower === "-col" || lower === "-row"
+      return lower === "-new" || lower === "-list" || lower === "-next" || lower === "-prev"
     }
     case "setting": {
       const lower = token.toLowerCase()

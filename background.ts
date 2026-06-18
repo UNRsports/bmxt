@@ -15,8 +15,9 @@ import {
   resetBmxtTerminalSessionsInStorage,
   setSessionLines,
   resolveSessionId,
-  splitColForLeaf,
-  splitRowForLeaf
+  createSessionAndActivate,
+  switchSessionNext,
+  switchSessionPrev
 } from "./lib/features/bmxt-window/terminal-sessions/state-storage"
 import { displayTitle } from "./lib/features/format/display-title"
 import {
@@ -215,13 +216,18 @@ async function tryRunCommandWithoutWasm(sessionId: string, trimmed: string): Pro
     await exitBmxtWindowFull()
     return true
   }
-  if (/^\s*split\s+-col\s*$/i.test(trimmed)) {
-    await splitColForLeaf(sessionId)
+  if (/^\s*session\s+-new\s*$/i.test(trimmed)) {
+    await createSessionAndActivate(sessionId)
     await appendLinesToSession(sessionId, [`> ${trimmed}`])
     return true
   }
-  if (/^\s*split\s+-row\s*$/i.test(trimmed)) {
-    await splitRowForLeaf(sessionId)
+  if (/^\s*session\s+-next\s*$/i.test(trimmed)) {
+    await switchSessionNext(sessionId)
+    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    return true
+  }
+  if (/^\s*session\s+-prev\s*$/i.test(trimmed)) {
+    await switchSessionPrev(sessionId)
     await appendLinesToSession(sessionId, [`> ${trimmed}`])
     return true
   }
@@ -289,7 +295,7 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
     if (!exitOutcome.fullClose) {
       const peek = await readTerminalSessionsIfPresent()
       if (peek) {
-        await appendLinesToSession(peek.layout.focusedLeafId, [`> ${trimmed}`, ...more])
+        await appendLinesToSession(peek.activeId, [`> ${trimmed}`, ...more])
       }
     }
     return

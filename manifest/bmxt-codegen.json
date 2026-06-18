@@ -148,17 +148,25 @@
       "subcommands": []
     },
     {
-      "module": "split",
-      "canonicalName": "split",
+      "module": "session",
+      "canonicalName": "session",
       "aliases": [],
-      "usagePrimary": "split -col | split -row",
+      "usagePrimary": "session -new | session -list | session -next | session -prev",
       "subcommands": [
         {
-          "head": "-col",
+          "head": "-new",
           "tail": "none"
         },
         {
-          "head": "-row",
+          "head": "-list",
+          "tail": "none"
+        },
+        {
+          "head": "-next",
+          "tail": "none"
+        },
+        {
+          "head": "-prev",
           "tail": "none"
         }
       ]
@@ -276,18 +284,25 @@
       "tsHandlerExport": "applyOpenWelcomePageEffect"
     },
     {
-      "kind": "split_col",
-      "rustVariant": "SplitCol",
+      "kind": "session_new",
+      "rustVariant": "SessionNew",
       "shape": "unit",
-      "tsHandlerFile": "split-col",
-      "tsHandlerExport": "applySplitColEffect"
+      "tsHandlerFile": "session-new",
+      "tsHandlerExport": "applySessionNewEffect"
     },
     {
-      "kind": "split_row",
-      "rustVariant": "SplitRow",
+      "kind": "session_next",
+      "rustVariant": "SessionNext",
       "shape": "unit",
-      "tsHandlerFile": "split-row",
-      "tsHandlerExport": "applySplitRowEffect"
+      "tsHandlerFile": "session-next",
+      "tsHandlerExport": "applySessionNextEffect"
+    },
+    {
+      "kind": "session_prev",
+      "rustVariant": "SessionPrev",
+      "shape": "unit",
+      "tsHandlerFile": "session-prev",
+      "tsHandlerExport": "applySessionPrevEffect"
     },
     {
       "kind": "tabs_move_url",

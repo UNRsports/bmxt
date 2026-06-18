@@ -6,14 +6,15 @@
 /** 旧単一ログキー（`TERMINAL_SESSIONS_KEY` へ移行後は未使用）。 */
 export const SESSION_LOG_KEY = "bmxt_log"
 
-/** 複数ターミナル: ログ本体（v3: logsById のみ。分割とフォーカスは `SPLIT_LAYOUT_KEY`）。 */
+/** 複数ターミナル: ログ + セッション順 + アクティブ ID（v4）。 */
 export const TERMINAL_SESSIONS_KEY = "bmxt_terminal_sessions_v1"
 
 /** 移行のみ: 旧 v2 と併用していたフォーカス ID。 */
 export const ACTIVE_TERMINAL_SESSION_KEY = "bmxt_active_terminal_session"
 
-/** ターミナル分割ツリー + フォーカス中リーフ ID。 */
+/** 移行のみ: 旧 split ツリー + フォーカス中リーフ ID。 */
 export const SPLIT_LAYOUT_KEY = "bmxt_split_layout_v1"
+
 export const CMD_HISTORY_KEY = "bmxt_cmd_history"
 export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 
@@ -32,7 +33,7 @@ export const LAST_SEEN_WELCOME_VERSION_KEY = "bmxt_last_seen_welcome_version"
 /** Nav typing / translate editor — Chrome 内蔵 Translator（ja↔en 往復表示）。 */
 export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
 
-/** Tab picker: collapsed window / group tree (`exit` full close until persisted). */
+/** Tab picker: collapsed window / group tree per session (`exit` full close until persisted). */
 export const TAB_PICKER_FOLD_STATE_KEY = "bmxt_tab_picker_fold_v1"
 
 /** Tab picker: page-active preview mode (`--auto` / `--manual`). */

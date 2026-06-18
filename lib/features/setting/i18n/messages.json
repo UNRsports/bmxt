@@ -715,6 +715,10 @@
     "ja": "Tab picker — page-active {token} · ↑↓ 移動 · Alt+↑↓ プレビュー（manual） · Enter ジャンプ · Esc → prompt",
     "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
   },
+  "session.picker.hint": {
+    "ja": "Session list — * がアクティブ · ↑↓ 移動 · Enter 切り替え · Esc → prompt",
+    "en": "Session list — * marks active · ↑↓ move · Enter switch · Esc → prompt"
+  },
   "tabs.picker.closed": {
     "ja": "Tab picker を閉じました。",
     "en": "Tab picker closed."
@@ -1411,9 +1415,9 @@
     "ja": "tabs（BMXt ウィンドウ / SW）:\n  tabs              - 利用可能なオプションを表示し、プロンプトを `tabs ` に戻して続きを入力。\n  tabs -list [-u]   - タブピッカーを開く（`-u` は各タイトル下に URL 行を表示）。\n  tabs -exit -list  - この BMXt ペインのタブピッカーを閉じる（Esc はプロンプトへ戻るのみ）。\n  tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー（保存）。\n  tabs -nowurl      - フォーカス中ウィンドウのアクティブタブの URL を表示。\n  tabs -moveurl <url> - 一致する URL のタブにフォーカス、なければ新規タブを開く。\n  picker `:` モード   - 空の Tab/Enter でターゲット別コマンドを薄く表示（tab/window/group）。",
     "en": "tabs (BMXt window / SW):\n  tabs              - show available options, then restore prompt to `tabs ` for continuation.\n  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).\n  tabs -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tabs -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tabs -nowurl      - print current tab URL from active tab in focused window.\n  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
   },
-  "help.section.split": {
-    "ja": "split（ターミナルペイン）:\n  split               - `-col` / `-row` を表示し、プロンプトを `split ` に戻して続きを入力。\n  split -col          - 垂直分割（現在ペインの横に新規ペイン）。\n  split -row          - 水平分割（現在ペインの下に新規ペイン）。\n  Ctrl+Arrow          - 複数ペイン時にキーボードフォーカスを移動。",
-    "en": "split (terminal panes):\n  split               - show -col / -row, then restore prompt to `split ` for continuation.\n  split -col          - vertical split (new pane beside current).\n  split -row          - horizontal split (new pane below current).\n  Ctrl+Arrow          - move keyboard focus between panes when more than one is open."
+  "help.section.session": {
+    "ja": "session（ターミナルセッション切り替え）:\n  session              - `-new` / `-list` / `-next` / `-prev` を表示し、プロンプトを `session ` に戻して続きを入力。\n  session -new         - 新規セッションを作成して切り替え。\n  session -list        - セッション一覧ピッカー（開いている picker・検索条件などを表示）。\n  session -next        - 次のセッションへ切り替え。\n  session -prev        - 前のセッションへ切り替え。\n  Ctrl+← / Ctrl+→     - 複数セッション時に前後へ切り替え。",
+    "en": "session (terminal session switching):\n  session              - show -new / -list / -next / -prev, then restore prompt to `session ` for continuation.\n  session -new         - create a new session and switch to it.\n  session -list        - session list picker (shows open pickers, search patterns, etc.).\n  session -next        - switch to the next session.\n  session -prev        - switch to the previous session.\n  Ctrl+← / Ctrl+→     - prev / next when multiple sessions exist."
   },
   "help.section.dom": {
     "ja": "dom（アクティブ対象タブのページ表示フィルタ）:\n  dom -list [--html|--react] [<pattern>] — この BMXt ペインで DOM list ピッカーを開く。\n  dom -exit -list  - この BMXt ペインの DOM list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
@@ -1436,7 +1440,7 @@
     "en": "URL (http/https, typed as a whole line):\n  <url>           - new tab\n  <url> .         - current tab (active tab in focused window)\n  <url> -nw       - new window"
   },
   "help.section.keys": {
-    "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴   Ctrl+R  リバース i-search（再度: 古い一致）\n  Enter  実行または検索確定   Esc  検索キャンセル",
-    "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history   Ctrl+R  reverse-i-search (again: older match)\n  Enter  run or accept search   Esc  cancel search"
+    "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴（全セッション共通）   Ctrl+R  リバース i-search（再度: 古い一致）\n  Ctrl+← / Ctrl+→  セッション切り替え（複数セッション時）\n  Enter  実行または検索確定   Esc  検索キャンセル",
+    "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history (shared across sessions)   Ctrl+R  reverse-i-search (again: older match)\n  Ctrl+← / Ctrl+→  switch sessions when multiple are open\n  Enter  run or accept search   Esc  cancel search"
   }
 }
