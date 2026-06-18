@@ -10,11 +10,13 @@ export const CMD: CmdMeta = {
 
 function sessionUsageLines(): string[] {
   return [
-    "usage: session -new   — new session (switch to it)",
-    "       session -list  — list sessions and open picker",
-    "       session -next  — next session",
-    "       session -prev  — previous session",
-    "       Ctrl+Arrow     — prev / next when multiple sessions exist"
+    "usage: session        — choose -new / -list / -next / -prev (Tab or Enter menu)",
+    "       session <n>   — switch to session number n (1-based)",
+    "       session -list — open switch list (↑↓ · Enter · 1–9)",
+    "       session -new  — new session (switch to it)",
+    "       session -next — next session",
+    "       session -prev — previous session",
+    "       Ctrl+Arrow    — prev / next when multiple sessions exist"
   ]
 }
 

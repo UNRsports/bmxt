@@ -1,7 +1,9 @@
 import { flushSync } from "react-dom"
 import {
   buildSessionListRows,
+  isSessionSwitchUiLine,
   parseSessionListPickerLine,
+  parseSessionSwitchByNumberLine,
   SessionListPickerPanel,
   type SessionListRow
 } from "../session"
@@ -180,7 +182,7 @@ function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
     parseNavEnterLine(trimmed) ||
     parseNavExitLine(trimmed) ||
     parseTabsListPickerLine(trimmed) !== null ||
-    parseSessionListPickerLine(trimmed) ||
+    isSessionSwitchUiLine(trimmed) ||
     parseTabsExitListLine(trimmed) ||
     parseSettingListPickerLine(trimmed) ||
     parseSettingExitListLine(trimmed) ||
@@ -478,6 +480,10 @@ export function BmxtShell({
     [sessionOrder, activeSessionId, pickersBySession, navArmedByLeaf]
   )
   const sessionListPickerOpen = sessionListPickerHi !== null
+  const sessionListPickerHiRef = useRef(sessionListPickerHi)
+  sessionListPickerHiRef.current = sessionListPickerHi
+  const sessionListRowsRef = useRef(sessionListRows)
+  sessionListRowsRef.current = sessionListRows
 
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
   const [line, setLine] = useState("")
@@ -873,6 +879,21 @@ export function BmxtShell({
     focusPrompt()
   }, [focusPrompt])
 
+  const openSessionListPicker = useCallback(
+    (commandLine: string) => {
+      setSubCmdPicker(null)
+      appendCommandToHistory(commandLine)
+      setLine("")
+      setCursorPos(0)
+      setHistNavIndex(-1)
+      tabPressSeqRef.current = 0
+      const activeIdx = sessionListRows.findIndex((r) => r.isActive)
+      setSessionListPickerHi(activeIdx >= 0 ? activeIdx : 0)
+      void appendLogLines([`> ${commandLine}`, uiCopy.t("session.picker.hint")])
+    },
+    [appendCommandToHistory, appendLogLines, sessionListRows, uiCopy]
+  )
+
   useEffect(() => {
     const onEnter = (ev: Event) => {
       const detail = (ev as CustomEvent<NavEnterTypingDetail>).detail
@@ -1137,7 +1158,7 @@ export function BmxtShell({
     navArmed,
     navActive,
     navTypingMode,
-    blocked: navPageTyping || searchListBusy || mode === "isearch" || subCmdPicker !== null,
+    blocked: navPageTyping || searchListBusy || mode === "isearch" || subCmdPicker !== null || sessionListPickerOpen,
     isCaretAtPromptEnd: () => cursorRef.current >= lineRef.current.length,
     actions: {
       activateDetailBar,
@@ -1771,14 +1792,36 @@ export function BmxtShell({
     }
 
     if (parseSessionListPickerLine(trimmed)) {
+      openSessionListPicker(trimmed)
+      return
+    }
+
+    const sessionNumber = parseSessionSwitchByNumberLine(trimmed)
+    if (sessionNumber !== null) {
       appendCommandToHistory(trimmed)
       setLine("")
       setCursorPos(0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
-      const activeIdx = sessionListRows.findIndex((r) => r.isActive)
-      setSessionListPickerHi(activeIdx >= 0 ? activeIdx : 0)
-      void appendLogLines([`> ${trimmed}`, uiCopy.t("session.picker.hint")])
+      const row = sessionListRows[sessionNumber - 1]
+      void (async () => {
+        const logLines = [`> ${trimmed}`]
+        if (!row) {
+          logLines.push(
+            uiCopy.t("session.number.invalid", {
+              n: String(sessionNumber),
+              max: String(sessionListRows.length)
+            })
+          )
+          await appendLogLines(logLines)
+          focusPrompt()
+          return
+        }
+        logLines.push(uiCopy.t("session.number.switched", { n: String(sessionNumber) }))
+        await appendLogLines(logLines)
+        await onActivateSession(row.sessionId)
+        focusPrompt()
+      })()
       return
     }
 
@@ -2124,6 +2167,7 @@ export function BmxtShell({
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
       lineRef.current = continuationPrompt
+      queueMicrotask(() => syncImeTokenPicker(continuationPrompt, continuationPrompt.length))
     }
     focusPrompt()
   }, [
@@ -2147,6 +2191,13 @@ export function BmxtShell({
     runDomListAndShow,
     runSearchListSearch,
     syncImeTokenPicker,
+    openSessionListPicker,
+    onActivateSession,
+    sessionListRows,
+    setModeToolbarOrder,
+    setNavArmed,
+    setNavActive,
+    setSubCmdPicker,
     teardownNav
   ])
 
@@ -2480,35 +2531,49 @@ export function BmxtShell({
         return
       }
 
-      if (sessionListPickerOpen && sessionListPickerHi !== null) {
+      if (sessionListPickerHiRef.current !== null) {
+        const rows = sessionListRowsRef.current
         if (e.key === "Escape") {
           e.preventDefault()
           closeSessionListPicker()
           return
         }
+        const digit = /^[1-9]$/.test(e.key) ? Number.parseInt(e.key, 10) : null
+        if (digit !== null && digit <= rows.length) {
+          e.preventDefault()
+          const row = rows[digit - 1]
+          setSessionListPickerHi(null)
+          if (row) {
+            void onActivateSession(row.sessionId).then(() => focusPrompt())
+          } else {
+            focusPrompt()
+          }
+          return
+        }
         if (e.key === "ArrowUp") {
           e.preventDefault()
-          setSessionListPickerHi((hi) => {
-            const cur = hi ?? 0
-            return sessionListRows.length === 0
-              ? 0
-              : (cur - 1 + sessionListRows.length) % sessionListRows.length
+          setSessionListPickerHi((cur) => {
+            const at = cur ?? 0
+            const next = rows.length === 0 ? 0 : (at - 1 + rows.length) % rows.length
+            sessionListPickerHiRef.current = next
+            return next
           })
           return
         }
         if (e.key === "ArrowDown") {
           e.preventDefault()
-          setSessionListPickerHi((hi) => {
-            const cur = hi ?? 0
-            return sessionListRows.length === 0
-              ? 0
-              : (cur + 1) % sessionListRows.length
+          setSessionListPickerHi((cur) => {
+            const at = cur ?? 0
+            const next = rows.length === 0 ? 0 : (at + 1) % rows.length
+            sessionListPickerHiRef.current = next
+            return next
           })
           return
         }
         if (e.key === "Enter") {
           e.preventDefault()
-          const row = sessionListRows[sessionListPickerHi]
+          const pickHi = sessionListPickerHiRef.current ?? 0
+          const row = rows[pickHi]
           setSessionListPickerHi(null)
           if (row) {
             void onActivateSession(row.sessionId).then(() => focusPrompt())
@@ -2726,6 +2791,9 @@ export function BmxtShell({
       }
 
       if (e.key === "ArrowUp" && !navKeyboardEnabled && !navTypingMode) {
+        if (sessionListPickerHiRef.current !== null) {
+          return
+        }
         e.preventDefault()
         if (history.length === 0) {
           return
@@ -2746,6 +2814,9 @@ export function BmxtShell({
       }
 
       if (e.key === "ArrowDown" && !navKeyboardEnabled && !navTypingMode) {
+        if (sessionListPickerHiRef.current !== null) {
+          return
+        }
         e.preventDefault()
         if (histNavIndex === -1) {
           return
@@ -2768,7 +2839,8 @@ export function BmxtShell({
         !navTypingMode &&
         !navMenuOpen &&
         !navTextSelPicking &&
-        !navTextSelDone
+        !navTextSelDone &&
+        sessionListPickerHiRef.current === null
       ) {
         e.preventDefault()
         submitLine()
@@ -2803,6 +2875,9 @@ export function BmxtShell({
       navTextSelPicking,
       navTextSelDone,
       navTextSelPhase,
+      closeSessionListPicker,
+      focusPrompt,
+      onActivateSession,
       paneFocus,
       handleToggleNavActive
     ]
