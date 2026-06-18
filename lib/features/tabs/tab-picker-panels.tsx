@@ -1,4 +1,5 @@
 import type { KeyboardEvent, RefObject } from "react"
+import { useUiCopy } from "../setting"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import type { GroupChoice } from "./tab-picker-overlay-types"
@@ -12,11 +13,12 @@ export function TabPickerGroupTargetPanel({
   groupChoices: GroupChoice[]
   groupPickIndex: number
 }) {
+  const uiCopy = useUiCopy()
   return (
     <div ref={panelRef} className="bmxt-tab-picker-group-panel bmxt-scroll">
-      <div className="bmxt-tab-picker-group-head">Target groups</div>
+      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.targetGroups")}</div>
       {groupChoices.length === 0 ? (
-        <div className="bmxt-tab-picker-group-empty">(読み込み中…)</div>
+        <div className="bmxt-tab-picker-group-empty">{uiCopy.t("tabs.picker.loadingGroups")}</div>
       ) : (
         groupChoices.map((g, idx) => (
           <div
@@ -50,13 +52,14 @@ export function TabPickerNewGroupMetaPanel({
   onMetaTitleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
   onMetaColorKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void
 }) {
+  const uiCopy = useUiCopy()
   const activeColor = NEW_GROUP_COLORS[newGroupColorIndex]
   return (
     <div className="bmxt-tab-picker-new-group-meta">
-      <div className="bmxt-tab-picker-group-head">新しいグループ</div>
+      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.newGroup")}</div>
       <div className="bmxt-tab-picker-new-group-field">
         <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-new-group-title">
-          名前
+          {uiCopy.t("tabs.picker.nameLabel")}
         </label>
         <input
           id="bmxt-new-group-title"
@@ -72,7 +75,7 @@ export function TabPickerNewGroupMetaPanel({
         />
       </div>
       <div className="bmxt-tab-picker-new-group-field">
-        <div className="bmxt-tab-picker-new-group-label">色（← →）</div>
+        <div className="bmxt-tab-picker-new-group-label">{uiCopy.t("tabs.picker.colorLabel")}</div>
         <div
           ref={groupMetaColorStripRef}
           className="bmxt-tab-picker-color-strip"

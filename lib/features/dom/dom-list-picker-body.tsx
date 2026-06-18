@@ -8,10 +8,11 @@ import {
   type MutableRefObject,
   type ReactNode
 } from "react"
+import { useUiCopy } from "../setting"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
-import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
+import { urlListCommandListingHint } from "../side-picker/interaction/url-list-commands"
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import { plainPickerLineHighlightSegments } from "../side-picker/search/plain-picker-search"
 import { scrollDomPickerListToHi } from "./dom-picker-list-scroll"
@@ -129,6 +130,7 @@ export function DomListPickerBody({
   pickerInputRef,
   sessionId
 }: DomListPickerBodyProps) {
+  const uiCopy = useUiCopy()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -348,7 +350,7 @@ export function DomListPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={URL_LIST_COMMAND_LISTING_HINT}
+          listingHintText={urlListCommandListingHint(uiCopy.locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

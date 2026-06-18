@@ -9,10 +9,6 @@ export {
   type NavPositionsByTab
 } from "./use-nav-mode"
 export {
-  NAV_TYPING_PLACEHOLDER,
-  NAV_TYPING_PLACEHOLDER_MULTILINE
-} from "./nav-typing-prompt"
-export {
   NAV_MENU_ITEMS,
   NAV_MENU_COPY_ITEMS,
   NAV_MENU_HISTORY_ROWS,

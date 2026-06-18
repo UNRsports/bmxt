@@ -1162,7 +1162,7 @@ export function BmxtShell({
       domListDismissRef.current = false
       try {
         await ensureBmxtCore()
-        const bundle = runDispatch(domListLine)
+        const bundle = runDispatch(domListLine, uiSettings.locale)
         if (bundle.ty === "lines") {
           await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
           setDomListPicker(sessionId, null)
@@ -1298,7 +1298,7 @@ export function BmxtShell({
       try {
         await ensureBmxtCore()
         await appendLogLines([`> ${displayLine}`])
-        const bundle = runDispatch(searchListLine)
+        const bundle = runDispatch(searchListLine, uiSettings.locale)
         if (bundle.ty === "lines") {
           setSearchListPicker(sessionId, null)
           await appendLogLines(bundle.lines ?? [])

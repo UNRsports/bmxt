@@ -9,12 +9,13 @@ import {
   type ReactNode,
   type SetStateAction
 } from "react"
+import { useUiCopy } from "../setting"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
 import { scrollPickerListToHiAfterLayout, scrollPickerListToHiAnimated } from "../side-picker/interaction/picker-list-scroll"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
-import { URL_LIST_COMMAND_LISTING_HINT } from "../side-picker/interaction/url-list-commands"
+import { urlListCommandListingHint } from "../side-picker/interaction/url-list-commands"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
 import { useSearchPickerAltPreviewKit } from "./use-search-picker-alt-preview-kit"
 import { useSearchPickerResultsOpenTabNav } from "./use-search-picker-results-open-tab-nav"
@@ -199,6 +200,7 @@ export function SearchListPickerBody({
   destinationFromDetail = false,
   pageActiveMode = "auto"
 }: SearchListPickerBodyProps) {
+  const uiCopy = useUiCopy()
   useTabPickerLiveFieldsRevision()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
@@ -500,7 +502,7 @@ export function SearchListPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={URL_LIST_COMMAND_LISTING_HINT}
+          listingHintText={urlListCommandListingHint(uiCopy.locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

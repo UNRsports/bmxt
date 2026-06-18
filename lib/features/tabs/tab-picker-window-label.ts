@@ -1,3 +1,5 @@
+import { t } from "../setting/i18n/messages"
+import type { UiLocale } from "../setting/locale"
 import { displayTitle, type TabPickerRow } from "./picker-rows"
 import { resolveLiveTabTitle } from "./tab-picker-live-tab-fields"
 
@@ -8,7 +10,8 @@ export function formatWindowPickerLabel(
   row: WindowPickerRow,
   rows: TabPickerRow[],
   trackedWindowId: number | undefined,
-  trackedWindowTitle: string | null
+  trackedWindowTitle: string | null,
+  locale: UiLocale
 ): string {
   const starred = trackedWindowId !== undefined && row.windowId === trackedWindowId
   const star = starred ? "*" : " "
@@ -25,7 +28,7 @@ export function formatWindowPickerLabel(
       }
     }
   }
-  return `${star}[ウィンドウ] ${title}`
+  return t("tabs.picker.windowLabel", locale, { star, title })
 }
 
 export { displayTitle }

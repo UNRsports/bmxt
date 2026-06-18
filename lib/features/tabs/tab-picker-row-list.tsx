@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useUiCopy } from "../setting"
 import {
   parsePickerSearchNeedle,
   splitTextHighlightSegments
@@ -82,10 +83,11 @@ export function TabPickerRowList({
   isWindowExpanded,
   isGroupExpanded
 }: TabPickerRowListProps) {
+  const uiCopy = useUiCopy()
   useTabPickerLiveFieldsRevision()
 
   if (rows.length === 0) {
-    return <div className="bmxt-tab-picker-empty">(タブなし)</div>
+    return <div className="bmxt-tab-picker-empty">{uiCopy.t("tabs.picker.empty")}</div>
   }
 
   return (
@@ -109,7 +111,8 @@ export function TabPickerRowList({
             row,
             rows,
             trackedWindowId,
-            trackedWindowTitle
+            trackedWindowTitle,
+            uiCopy.locale
           )
           return (
             <div

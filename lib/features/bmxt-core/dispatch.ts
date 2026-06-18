@@ -1,5 +1,7 @@
 import type { DispatchBundle } from "../dispatch"
 import { isSecondToken } from "../builtin-commands/command-subcommands.gen"
+import { setRunLocale } from "../setting/i18n/run-locale"
+import type { UiLocale } from "../setting/locale"
 import { parseHttpUrlCandidate, tokenize } from "./line-parse"
 import type { DispatchJson } from "./types"
 import { effectsDispatch, linesDispatch } from "./types"
@@ -36,7 +38,10 @@ function tryUrlLine(trimmed: string): DispatchJson | null {
   return null
 }
 
-export function dispatchFull(line: string): string {
+export function dispatchFull(line: string, locale?: UiLocale): string {
+  if (locale !== undefined) {
+    setRunLocale(locale)
+  }
   const trimmed = line.trim()
   if (!trimmed) {
     return dispatchJsonString(linesDispatch([]))
@@ -71,9 +76,9 @@ export function parseDispatchJson(raw: string): DispatchBundle {
   throw new Error(`BMXt: unknown dispatch ty ${(o as { ty?: string }).ty}`)
 }
 
-export function runDispatch(line: string): DispatchBundle {
+export function runDispatch(line: string, locale?: UiLocale): DispatchBundle {
   try {
-    return parseDispatchJson(dispatchFull(line))
+    return parseDispatchJson(dispatchFull(line, locale))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return {

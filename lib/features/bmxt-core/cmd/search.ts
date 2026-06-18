@@ -1,4 +1,5 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
+import { searchCmdExitListLines, searchCmdUsageLines } from "../../setting/i18n/cmd-lines"
 import { normalizeSearchPattern } from "../../search/search-format"
 import { stripInvisibleFormatChars } from "../line-parse"
 import type { ChromeEffect } from "../../dispatch/effect-types"
@@ -12,17 +13,6 @@ export const CMD: CmdMeta = {
 }
 
 const ALL_SEARCH_SCOPES = ["--history", "--bookmark", "--page"] as const
-
-function usageLines(): string[] {
-  return [
-    "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)",
-    "       search -list --history|--bookmark|--page [<pattern>]   — narrow to one scope",
-    "       search -exit -list — close search list picker in this BMXt pane",
-    "EN: Pattern is matched as a case-insensitive substring (no regex in v1).",
-    "JA: パターンは大文字小文字を区別しない部分一致です（v1 は正規表現なし）。",
-    "EN/JA: Optional ASCII double quotes around the pattern are stripped (e.g. search -list \"…\")."
-  ]
-}
 
 function normalizeSearchSecondToken(head: string): string {
   return stripInvisibleFormatChars(head.trim()).toLowerCase()
@@ -48,17 +38,17 @@ function effectForScope(scope: string, pattern: string): ChromeEffect {
 
 function runList(args: string[]) {
   if (args.length < 2) {
-    return linesDispatch([...usageLines()])
+    return linesDispatch([...searchCmdUsageLines()])
   }
   if (args.length === 2) {
     return linesDispatch([
       "error: search -list requires a pattern or optional scope filter",
-      ...usageLines()
+      ...searchCmdUsageLines()
     ])
   }
   const third = normalizeSearchSecondToken(args[2])
   if (third.startsWith("--") && !isSearchListScopeToken(third)) {
-    return linesDispatch([`error: unknown search scope: ${args[2]}`, ...usageLines()])
+    return linesDispatch([`error: unknown search scope: ${args[2]}`, ...searchCmdUsageLines()])
   }
   const scopes = isSearchListScopeToken(third) ? [third] : [...ALL_SEARCH_SCOPES]
   const patternStartIdx = isSearchListScopeToken(third) ? 3 : 2
@@ -68,32 +58,28 @@ function runList(args: string[]) {
   } catch (e) {
     return linesDispatch([
       `error: ${e instanceof Error ? e.message : String(e)}`,
-      ...usageLines()
+      ...searchCmdUsageLines()
     ])
   }
 }
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["search: available options", ...usageLines()])
+    return linesDispatch(["search: available options", ...searchCmdUsageLines()])
   }
   const headRaw = args[1]
   const headKey = normalizeSearchSecondToken(headRaw)
   if (!isSecondToken("search", headKey)) {
-    return linesDispatch([`error: unknown search option: ${headRaw}`, ...usageLines()])
+    return linesDispatch([`error: unknown search option: ${headRaw}`, ...searchCmdUsageLines()])
   }
   if (headKey === "-list") {
     return runList(args)
   }
   if (headKey === "-exit") {
     if (args.length !== 3 || normalizeSearchSecondToken(args[2]) !== "-list") {
-      return linesDispatch(["error: usage: search -exit -list", ...usageLines()])
+      return linesDispatch(["error: usage: search -exit -list", ...searchCmdUsageLines()])
     }
-    return linesDispatch([
-      "Search list picker is closed from the BMXt prompt with:  search -exit -list",
-      "EN: Run that line in the BMXt window while the search picker column is open.",
-      "JA: search ピッカー列表示中に BMXt プロンプトで実行してください。"
-    ])
+    return linesDispatch(searchCmdExitListLines())
   }
-  return linesDispatch([...usageLines()])
+  return linesDispatch([...searchCmdUsageLines()])
 }

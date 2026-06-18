@@ -1,6 +1,5 @@
 /**
  * EN: IME-style token picker — first / second / third fixed tokens from manifest subcommands.
- * JA: manifest の subcommands に基づく第一〜第三トークンの IME 風候補。
  */
 
 import {
@@ -15,6 +14,8 @@ import {
   matchesSearchListScopeFilter,
   shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
+import { t } from "../setting/i18n/messages"
+import type { UiLocale } from "../setting/locale"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
 import {
   matchCandidates,
@@ -27,19 +28,7 @@ export type { CandidateMatchMode } from "./ime-token-match"
 export type ImeTokenTier = "first" | "second" | "third"
 
 export type ResolveImeTokenPickerOptions = {
-  /**
-   * EN: When true, an empty prefix on the first command token still yields all first-command
-   * candidates (used for Tab cycling on an empty line). Default sync omits the menu until the
-   * user types or presses Tab.
-   * JA: 第一トークンで接頭辞が空でも全第一コマンド候補を返す（空行での Tab 巡回用）。既定の
-   * 同期では、タイプまたは Tab までメニューを出さない。
-   */
   emptyFirstPrefixShowsAll?: boolean
-  /**
-   * EN: `prefix` — token starts with typed text; `contains` — typed text appears anywhere in the
-   * candidate (used while the completion menu is visible).
-   * JA: `prefix` は先頭一致、`contains` は候補文字列内の部分一致（メニュー表示中）。
-   */
   candidateMatch?: CandidateMatchMode
 }
 
@@ -63,14 +52,14 @@ function tokenBounds(s: string, pos: number): [number, number] {
   return [l, r]
 }
 
-export function imeTokenPickerHint(tier: ImeTokenTier): string {
+export function imeTokenPickerHint(tier: ImeTokenTier, locale: UiLocale): string {
   switch (tier) {
     case "first":
-      return "Command · ↑↓ · Tab · Enter · Esc — 第一コマンド"
+      return t("imeToken.hint.first", locale)
     case "second":
-      return "Subcommand · ↑↓ · Tab · Enter · Esc — 第二コマンド"
+      return t("imeToken.hint.second", locale)
     case "third":
-      return "Option · ↑↓ · Tab · Enter · Esc — オプション"
+      return t("imeToken.hint.third", locale)
   }
 }
 

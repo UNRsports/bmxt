@@ -1,7 +1,7 @@
 export {
-  SEARCH_LIST_PICKER_HEADLINE,
-  SEARCH_LIST_PICKER_LOADING_HEADLINE,
-  DOM_LIST_PICKER_HEADLINE
+  domListPickerHeadline,
+  searchListPickerHeadline,
+  searchListPickerLoadingHeadline
 } from "./interaction/picker-headlines"
 export {
   verticalNavDirection,
@@ -12,7 +12,7 @@ export {
 export {
   URL_LIST_PICKER_COMMANDS,
   filterUrlListCommandCompletions,
-  URL_LIST_COMMAND_LISTING_HINT
+  urlListCommandListingHint
 } from "./interaction/url-list-commands"
 export {
   pickerEnterKey,

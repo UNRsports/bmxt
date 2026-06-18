@@ -1,12 +1,12 @@
-import { useUiLocale } from "../setting"
+import { useUiCopy } from "../setting"
 
-type Props = {
+type DomStatusBarProps = {
   kind: "lines" | "prompt"
 }
 
 /** EN: Detail bar for the dom list picker. */
-export function DomStatusBar({ kind }: Props) {
-  const locale = useUiLocale()
+export function DomStatusBar({ kind }: DomStatusBarProps) {
+  const uiCopy = useUiCopy()
   const stateLabel = kind === "prompt" ? "prompt" : "list"
 
   return (
@@ -19,17 +19,11 @@ export function DomStatusBar({ kind }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">
         {kind === "prompt"
-          ? locale === "ja"
-            ? "権限確認"
-            : "permission"
-          : locale === "ja"
-            ? "DOM 一覧"
-            : "DOM list"}
+          ? uiCopy.t("modeStatus.dom.permission")
+          : uiCopy.t("modeStatus.dom.list")}
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {locale === "ja"
-          ? "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー"
-          : "EOL → focus · ↑↓ move · ← prompt · → picker"}
+        {uiCopy.t("modeStatus.dom.hint")}
       </span>
     </div>
   )

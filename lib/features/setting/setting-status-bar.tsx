@@ -1,8 +1,8 @@
-import { useUiLocale } from "./index"
+import { useUiCopy } from "./index"
 
 /** EN: Detail bar for the setting list picker. */
 export function SettingStatusBar() {
-  const locale = useUiLocale()
+  const uiCopy = useUiCopy()
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
@@ -13,12 +13,10 @@ export function SettingStatusBar() {
         list
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">
-        {locale === "ja" ? "UI 設定" : "UI settings"}
+        {uiCopy.t("modeStatus.setting.meta")}
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {locale === "ja"
-          ? "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー"
-          : "EOL → focus · ↑↓ move · ← prompt · → picker"}
+        {uiCopy.t("modeStatus.setting.hint")}
       </span>
     </div>
   )

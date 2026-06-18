@@ -1,18 +1,18 @@
-import { searchStatusHint, useUiLocale } from "../setting"
+import { searchStatusHint, useUiCopy } from "../setting"
 import {
   settingTokenForSearchPageActiveMode,
   type SearchPageActiveMode
 } from "./page-active-setting"
 
-type Props = {
+type SearchStatusBarProps = {
   pattern?: string
   phase?: "loading" | "results"
   pageActiveMode: SearchPageActiveMode
 }
 
 /** EN: Detail bar for the search list picker. */
-export function SearchStatusBar({ pattern, phase, pageActiveMode }: Props) {
-  const locale = useUiLocale()
+export function SearchStatusBar({ pattern, phase, pageActiveMode }: SearchStatusBarProps) {
+  const uiCopy = useUiCopy()
   const modeToken = settingTokenForSearchPageActiveMode(pageActiveMode)
   const stateLabel = pageActiveMode === "auto" ? "auto" : "manual"
   const patternMeta =
@@ -20,10 +20,8 @@ export function SearchStatusBar({ pattern, phase, pageActiveMode }: Props) {
       ? pattern.length > 48
         ? `${pattern.slice(0, 48)}…`
         : pattern
-      : locale === "ja"
-        ? "（パターンなし）"
-        : "(no pattern)"
-  const phasePrefix = phase === "loading" ? (locale === "ja" ? "loading · " : "loading · ") : ""
+      : uiCopy.t("modeStatus.search.noPattern")
+  const phasePrefix = phase === "loading" ? uiCopy.t("modeStatus.search.loadingPrefix") : ""
   const meta = `${phasePrefix}page-active ${modeToken} · ${patternMeta}`
 
   return (
@@ -36,11 +34,9 @@ export function SearchStatusBar({ pattern, phase, pageActiveMode }: Props) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{meta}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {locale === "ja"
-          ? "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー"
-          : "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"}
+        {uiCopy.t("modeStatus.search.hint")}
         {" · "}
-        {searchStatusHint(locale, pageActiveMode)}
+        {searchStatusHint(uiCopy.locale, pageActiveMode)}
       </span>
     </div>
   )
