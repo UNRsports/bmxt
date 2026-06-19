@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: June 13, 2026</p>
+          <p class="muted">Last updated: June 19, 2026</p>
         </div>
       </header>
 
@@ -213,8 +213,10 @@
         </p>
         <h3>4.4 Local storage (extension storage)</h3>
         <p>
-          The Extension uses <code>chrome.storage.local</code> to persist small amounts of data on your
-          device, including:
+          The Extension uses <code>chrome.storage.local</code> to persist data on your device. It also
+          declares the <code>unlimitedStorage</code> permission so local SQLite blobs (search metadata cache,
+          optional job audit log) and user-imported UI background images can exceed Chrome’s default extension
+          storage quota. Everything below remains on your device, including:
         </p>
         <ul>
           <li>
@@ -231,9 +233,10 @@
             behavior within the Extension.
           </li>
           <li>
-            <strong>Terminal sessions</strong> — log text and session order for tmux-style terminal
-            sessions inside one BMXt window (<code>bmxt_terminal_sessions_v1</code>). Removed on BMXt window
-            close or last-session <code>exit</code>.
+            <strong>Terminal sessions</strong> — log text, session order, and optional session display names
+            you set via the <code>session</code> command for tmux-style terminal sessions inside one BMXt
+            window (<code>bmxt_terminal_sessions_v1</code>). Removed on BMXt window close or last-session
+            <code>exit</code>.
           </li>
           <li>
             <strong>Process UI state</strong> — which picker columns are open and keyboard focus among
@@ -266,12 +269,14 @@
             (<code>bmxt_search_picker_settings_v1</code>).
           </li>
           <li>
-            <strong>Search metadata cache</strong> — a local SQLite blob caching
-            <code>search -list --history</code> and <code>search -list --bookmark</code> titles and URLs to
-            speed repeat scans (<code>bmxt_search_cache_db_v1</code>). Does <strong>not</strong> store page
-            body text from <code>search -list --page</code> (that scope reads open tabs live each time you run
-            the command). Cleared from <strong>setting -list → reset-search-cache</strong> or on uninstall;
-            kept across BMXt window close.
+            <strong>Search metadata cache</strong> — a local SQLite blob (<code>bmxt_search_cache_db_v1</code>)
+            storing titles and URLs from Chrome history and bookmarks to speed
+            <code>search -list --history</code> and <code>search -list --bookmark</code>. The service worker
+            may update this cache proactively when you visit pages, when bookmarks change, and on startup—not
+            only when you run search commands. Does <strong>not</strong> store page body text from
+            <code>search -list --page</code> (that scope reads open tabs live each time you run the command).
+            Cleared from <strong>setting -list → reset-search-cache</strong> or on uninstall; kept across BMXt
+            window close.
           </li>
           <li>
             <strong>Job audit log (optional)</strong> — when long-running picker or command work runs in the
@@ -314,7 +319,9 @@
           If you run supported commands, the Extension may use the <code>history</code> and
           <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
           stores—for example <code>search -list --all</code>, <code>search -list --history</code>, or
-          <code>search -list --bookmark</code>.
+          <code>search -list --bookmark</code>. In addition, the service worker may read history entries and
+          bookmark tree metadata in the background to keep the local search metadata cache up to date (see
+          section 4.4), even when you have not run a search command recently.
         </p>
         <p>
           For ordinary http(s) pages (not chrome://, extension, or Chrome Web Store pages), the Extension may
@@ -364,8 +371,11 @@
         <p>
           Command handling and UI logic in official builds are implemented in <strong>TypeScript</strong> and
           run locally in the extension page and service worker. Earlier versions bundled WebAssembly compiled
-          from Rust; that was <strong>removed in version 0.3.5</strong> to reduce package size. Current builds
-          do not ship WebAssembly for command processing.
+          from Rust for command processing; that was <strong>removed in version 0.3.5</strong> to reduce
+          package size. Current builds do not download WebAssembly from the network. They still ship a
+          packaged <strong>sql.js</strong> WebAssembly module used only on your device for local SQLite
+          (search metadata cache and optional job audit log). The packaged manifest’s Content Security Policy
+          includes <code>wasm-unsafe-eval</code> for that bundled module only.
         </p>
 
         <h2>6. Remote code</h2>
@@ -531,7 +541,10 @@
 
         <h3>4.4 ローカルストレージ（拡張機能ストレージ）</h3>
         <p>
-          <code>chrome.storage.local</code> を用いて、端末内に限り次のようなデータを保存することがあります。
+          <code>chrome.storage.local</code> を用いて端末内にデータを保存します。また
+          <code>unlimitedStorage</code> 権限を宣言し、ローカル SQLite blob（検索メタデータキャッシュ、任意の
+          ジョブ監査ログ）やユーザーが import した UI 背景画像が Chrome の既定の拡張機能 storage quota を
+          超えても保存できるようにしています。以下はいずれも端末内に留まります。
         </p>
         <ul>
           <li>
@@ -546,7 +559,8 @@
             <strong>最後にフォーカスした通常ウィンドウ</strong> — フォーカス関連の動作のために用いるウィンドウ ID。
           </li>
           <li>
-            <strong>ターミナルセッション</strong> — 1 つの BMXt ウィンドウ内の tmux 風ターミナルセッション向けログと順序
+            <strong>ターミナルセッション</strong> — 1 つの BMXt ウィンドウ内の tmux 風ターミナルセッション向けログ、
+            順序、および <code>session</code> コマンドで設定した任意のセッション表示名
             （<code>bmxt_terminal_sessions_v1</code>）。BMXt ウィンドウ閉じ／最後のセッション <code>exit</code> で消去。
           </li>
           <li>
@@ -576,10 +590,12 @@
             （<code>bmxt_search_picker_settings_v1</code>）。
           </li>
           <li>
-            <strong>検索メタデータキャッシュ</strong> —
-            <code>search -list --history</code> / <code>--bookmark</code> の URL・タイトル等を再走査を速くするため
-            SQLite（<code>bmxt_search_cache_db_v1</code>）に保存。<code>search -list --page</code> のページ本文は
-            <strong>保存しない</strong>（コマンド実行のたびに開いているタブから都度読み取り）。
+            <strong>検索メタデータキャッシュ</strong> — Chrome の履歴・ブックマークから取得した URL・タイトル等を
+            <code>search -list --history</code> / <code>--bookmark</code> の再走査を速くするため SQLite
+            （<code>bmxt_search_cache_db_v1</code>）に保存。サービスワーカーは、search コマンドの実行に限らず、
+            ページ訪問時・ブックマーク変更時・起動時にこのキャッシュを<strong>先行的に</strong>更新することがあります。
+            <code>search -list --page</code> のページ本文は<strong>保存しない</strong>（コマンド実行のたびに開いている
+            タブから都度読み取り）。
             <strong>setting -list → reset-search-cache</strong> またはアンインストールで消去。BMXt ウィンドウを閉じても保持。
           </li>
           <li>
@@ -616,7 +632,10 @@
         <p>
           対応するコマンドを実行した場合、<code>history</code> および <code>bookmarks</code> 権限により
           Chrome の履歴・ブックマークからタイトルや URL を読み取ることがあります（例:
-          <code>search -list --history</code> / <code>search -list --bookmark</code>）。
+          <code>search -list --all</code>、<code>search -list --history</code>、
+          <code>search -list --bookmark</code>）。加えて、サービスワーカーは search コマンドを直近に実行していなくても、
+          4.4 に記載の検索メタデータキャッシュを最新に保つため、バックグラウンドで履歴エントリおよびブックマークツリーの
+          メタデータを読み取ることがあります。
         </p>
         <p>
           通常の http(s) ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア等を除く）では、
@@ -658,9 +677,11 @@
         <h2>5. 拡張機能のコード</h2>
         <p>
           公式ビルドのコマンド処理と UI ロジックは <strong>TypeScript</strong> で実装され、拡張ページとサービスワーカー上で
-          ローカルに実行されます。旧バージョンでは Rust 由来の WebAssembly を同梱していましたが、
-          <strong>バージョン 0.3.5 で廃止</strong>しパッケージサイズを縮小しています。現行ビルドではコマンド処理用の
-          WebAssembly は同梱しません。
+          ローカルに実行されます。旧バージョンでは Rust 由来の WebAssembly をコマンド処理に同梱していましたが、
+          <strong>バージョン 0.3.5 で廃止</strong>しパッケージサイズを縮小しています。現行ビルドはネットワークから
+          WebAssembly を取得しません。ローカル SQLite（検索メタデータキャッシュ、任意のジョブ監査ログ）向けに、同梱の
+          <strong>sql.js</strong> WebAssembly モジュールのみを端末上で使用します。パッケージ manifest の CSP には、
+          その同梱モジュール向けに <code>wasm-unsafe-eval</code> が含まれます。
         </p>
 
         <h2>6. リモートコード</h2>
