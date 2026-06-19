@@ -845,6 +845,13 @@ export function BmxtShell({
     setSubCmdPicker(null)
   }, [])
 
+  const closePromptPickerUi = useCallback(() => {
+    allowEmptyFirstPickerSyncRef.current = false
+    setSubCmdPicker(null)
+    setSessionListPickerHi(null)
+    setSessionPickerVariant(null)
+  }, [])
+
   const openSessionPicker = useCallback(
     (variant: SessionCandidatePanelVariant) => {
       setSubCmdPicker(null)
@@ -864,6 +871,9 @@ export function BmxtShell({
 
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
+      if (paneFocusRef.current !== "terminal") {
+        return
+      }
       if (sessionNameTypingRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
@@ -1300,6 +1310,7 @@ export function BmxtShell({
 
   const activateDetailBar = useCallback(
     (id: DetailBarId) => {
+      closePromptPickerUi()
       setDetailBarId(id)
       onPaneFocusChange("detailBar")
       imeRef.current?.blur()
@@ -1307,7 +1318,7 @@ export function BmxtShell({
         pulsePickerColumn(detailBarToPickerSlot(id))
       }
     },
-    [onPaneFocusChange, pulsePickerColumn, setDetailBarId]
+    [closePromptPickerUi, onPaneFocusChange, pulsePickerColumn, setDetailBarId]
   )
 
   const enterPickerFromDetailBar = useCallback(() => {
@@ -1502,8 +1513,9 @@ export function BmxtShell({
       focusPrompt()
       return
     }
+    closePromptPickerUi()
     imeRef.current?.blur()
-  }, [promptPaneFocused, focusPrompt])
+  }, [closePromptPickerUi, promptPaneFocused, focusPrompt])
 
   useEffect(() => {
     if (!promptPaneFocused) {
@@ -2686,6 +2698,9 @@ export function BmxtShell({
 
   const onImeInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
+      if (!promptPaneFocused) {
+        return
+      }
       allowEmptyFirstPickerSyncRef.current = false
       sessionListPickerDismissedRef.current = false
       if (skipHistResetRef.current) {
@@ -2707,10 +2722,13 @@ export function BmxtShell({
       }
       syncPromptFromTextarea(e.currentTarget, { composing: isComposingRef.current })
     },
-    [mode, navPageTyping, syncPromptFromTextarea, syncPromptFromTextareaForComposition]
+    [mode, navPageTyping, promptPaneFocused, syncPromptFromTextarea, syncPromptFromTextareaForComposition]
   )
 
   const onImeSelect = useCallback(() => {
+    if (!promptPaneFocused) {
+      return
+    }
     const ta = imeRef.current
     if (!ta || isComposing) {
       return
@@ -2718,7 +2736,7 @@ export function BmxtShell({
     const pos = ta.selectionEnd
     setCursorPos(pos)
     syncImeTokenPicker(ta.value, pos)
-  }, [isComposing, syncImeTokenPicker])
+  }, [isComposing, promptPaneFocused, syncImeTokenPicker])
 
   const applyNavTypingMutation = useCallback(
     (ta: HTMLTextAreaElement, nextLine: string, nextCursor: number) => {
@@ -2766,6 +2784,9 @@ export function BmxtShell({
 
   const onPaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!promptPaneFocused) {
+        return
+      }
       e.preventDefault()
       allowEmptyFirstPickerSyncRef.current = false
       const ta = e.currentTarget
@@ -2785,7 +2806,7 @@ export function BmxtShell({
       setCursorPos(start + t.length)
       syncImeTokenPicker(next, start + t.length)
     },
-    [mode, navPageTyping, navTypingMultiline, syncImeTokenPicker]
+    [mode, navPageTyping, navTypingMultiline, promptPaneFocused, syncImeTokenPicker]
   )
 
   const onCompositionStart = useCallback(
@@ -2870,6 +2891,10 @@ export function BmxtShell({
         ) {
           e.preventDefault()
         }
+        return
+      }
+
+      if (!promptPaneFocused) {
         return
       }
 
@@ -3243,7 +3268,8 @@ export function BmxtShell({
       applySessionSwitchPick,
     switchSessionFromListPicker,
       paneFocus,
-      handleToggleNavActive
+      handleToggleNavActive,
+      promptPaneFocused
     ]
   )
 
@@ -3325,7 +3351,7 @@ export function BmxtShell({
               autoCorrect="off"
               autoComplete="off"
               wrap="off"
-              tabIndex={0}
+              tabIndex={promptPaneFocused ? 0 : -1}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
               placeholder={
                 showNavTypingPlaceholder
@@ -3341,7 +3367,7 @@ export function BmxtShell({
                       : undefined
               }
               value={navPromptValueControlled ? line : undefined}
-              readOnly={searchListBusy}
+              readOnly={searchListBusy || !promptPaneFocused}
               onInput={onImeInput}
               onBeforeInput={onBeforeInput}
               onSelect={onImeSelect}
