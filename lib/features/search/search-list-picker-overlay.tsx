@@ -43,6 +43,8 @@ type DestinationReturnView = "results" | "detail"
 
 type Props = {
   state: SearchListPickerState
+  /** EN: Batched progress lines while `phase === "loading"`. */
+  loadingProgressLines?: readonly string[]
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   /** EN: Cancel background page scan while `phase === "loading"`. */
@@ -74,6 +76,7 @@ export function SearchListPickerOverlay({
   onReturnToPrompt,
   onExitToDetailBar,
   onCancelInFlightScan,
+  loadingProgressLines = [],
   state,
   onOpenEntry,
   keyboardActive = false,
@@ -82,8 +85,9 @@ export function SearchListPickerOverlay({
   pageActiveMode = "auto"
 }: Props) {
   const uiCopy = useUiCopy()
-  const { phase, progressLines, entries, emptyResultLines, pattern = "" } = state
+  const { phase, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
+  const progressLines = loading ? loadingProgressLines : state.progressLines
   const [pickerView, setPickerView] = useState<SearchListPickerView>("results")
   const [detailEntryIndex, setDetailEntryIndex] = useState(0)
   const [destinationEntryIndex, setDestinationEntryIndex] = useState(0)
@@ -157,9 +161,9 @@ export function SearchListPickerOverlay({
     return `${phase}:${entries.length}:${first}:${last}`
   }, [entries, phase])
 
-  const statusLines = useMemo(() => {
+  const statusLines = useMemo((): string[] => {
     if (loading) {
-      return progressLines.length > 0 ? progressLines : ["search — starting…"]
+      return progressLines.length > 0 ? [...progressLines] : ["search — starting…"]
     }
     if (entries.length > 0) {
       return []

@@ -1,6 +1,6 @@
 import { flushSync } from "react-dom"
+import { TerminalLogLines } from "./terminal-log-lines"
 import {
-  buildSessionListRows,
   isSessionSettingNameUiLine,
   isSessionSwitchUiLine,
   parseSessionListPickerLine,
@@ -85,6 +85,7 @@ import {
   isSearchListJobActive,
   type SearchListJob
 } from "../search/search-list-job"
+import { useBatchedSearchLoadingProgress } from "../search/use-batched-search-loading-progress"
 import { resetSearchCacheFromSettings } from "../search/cache/search-cache-store"
 import { normalizeSearchPattern } from "../search/search-format"
 import {
@@ -283,7 +284,8 @@ type Props = {
   activeSessionId: string
   sessionNamesById: Record<string, string | undefined>
   sessionLogsById: Record<string, string[] | undefined>
-  pickersBySession: SessionPickersByLeaf
+  /** EN: Pre-built session list rows (avoids passing full `pickersBySession` into every shell). */
+  sessionListRows: SessionListRow[]
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => Promise<void>
   onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
@@ -320,7 +322,7 @@ export function BmxtShell({
   activeSessionId,
   sessionNamesById,
   sessionLogsById,
-  pickersBySession,
+  sessionListRows,
   navArmedByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
@@ -555,28 +557,22 @@ export function BmxtShell({
   }, [subCmdPicker])
 
   const [sessionListPickerHi, setSessionListPickerHi] = useState<number | null>(null)
+  const sessionListPickerOpen = sessionListPickerHi !== null
+  const sessionListPickerHiRef = useRef(sessionListPickerHi)
+  sessionListPickerHiRef.current = sessionListPickerHi
   const [sessionPickerVariant, setSessionPickerVariant] = useState<SessionCandidatePanelVariant | null>(
     null
   )
   const sessionPickerVariantRef = useRef(sessionPickerVariant)
   sessionPickerVariantRef.current = sessionPickerVariant
-  const sessionListRows = useMemo(
-    (): SessionListRow[] =>
-      buildSessionListRows({
-        order: sessionOrder,
-        activeId: activeSessionId,
-        namesById: sessionNamesById,
-        logsById: sessionLogsById,
-        pickersBySession,
-        navArmedByLeaf
-      }),
-    [sessionOrder, activeSessionId, sessionNamesById, sessionLogsById, pickersBySession, navArmedByLeaf]
-  )
-  const sessionListPickerOpen = sessionListPickerHi !== null
-  const sessionListPickerHiRef = useRef(sessionListPickerHi)
-  sessionListPickerHiRef.current = sessionListPickerHi
   const sessionListRowsRef = useRef(sessionListRows)
   sessionListRowsRef.current = sessionListRows
+  const {
+    lines: searchLoadingProgressLines,
+    reset: resetSearchLoadingProgress,
+    append: appendSearchLoadingProgress,
+    clear: clearSearchLoadingProgress
+  } = useBatchedSearchLoadingProgress()
 
   const [sessionNameTyping, setSessionNameTyping] = useState(false)
   const sessionNameTypingRef = useRef(sessionNameTyping)
@@ -588,11 +584,11 @@ export function BmxtShell({
       sessionId,
       index: index >= 0 ? index + 1 : 1,
       namesById: sessionNamesById,
-      pickers: pickersBySession[sessionId],
+      pickers: sessionPickers,
       navArmed: navArmedByLeaf[sessionId] ?? false,
       logs: sessionLogsById[sessionId] ?? []
     })
-  }, [sessionId, sessionOrder, sessionNamesById, sessionLogsById, pickersBySession, navArmedByLeaf])
+  }, [sessionId, sessionOrder, sessionNamesById, sessionLogsById, sessionPickers, navArmedByLeaf])
   const currentSessionDisplayNameRef = useRef(currentSessionDisplayName)
   currentSessionDisplayNameRef.current = currentSessionDisplayName
 
@@ -1638,24 +1634,6 @@ export function BmxtShell({
     [line, cursorPos]
   )
 
-  const appendSearchPickerProgress = useCallback(
-    (message: string, job: SearchListJob) => {
-      if (job.cancelled) {
-        return
-      }
-      setSearchListPicker(sessionId, (prev) => {
-        if (!prev || prev.phase !== "loading") {
-          return prev
-        }
-        return {
-          ...prev,
-          progressLines: [...prev.progressLines, message]
-        }
-      })
-    },
-    [sessionId, setSearchListPicker]
-  )
-
   const runSearchListSearch = useCallback(
     async (_displayLine: string, searchListLine: string) => {
       searchListJobSeqRef.current += 1
@@ -1668,9 +1646,10 @@ export function BmxtShell({
       const initialProgress = [`${progressLabel} — searching…`]
       const searchPattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
 
+      resetSearchLoadingProgress(initialProgress)
       setSearchListPicker(sessionId, {
         phase: "loading",
-        progressLines: initialProgress,
+        progressLines: [],
         entries: [],
         pattern: searchPattern
       })
@@ -1687,13 +1666,16 @@ export function BmxtShell({
           return
         }
         if (bundle.ty === "lines") {
+          clearSearchLoadingProgress()
           setSearchListPicker(sessionId, null)
           await appendLogLines(bundle.lines ?? [])
           return
         }
         const effects = bundle.effects ?? []
         if (effectsIncludeSearchPage(effects)) {
-          appendSearchPickerProgress(uiCopy.t("search.pageScanHint"), job)
+          if (!job.cancelled) {
+            appendSearchLoadingProgress(uiCopy.t("search.pageScanHint"))
+          }
         }
         const ctx: DispatchChromeContext = {
           clearLog: async () => {},
@@ -1705,12 +1687,15 @@ export function BmxtShell({
           uiLocale: uiSettings.locale,
           searchPageProgressLabel: progressLabel,
           onSearchPageProgress: async (message) => {
-            appendSearchPickerProgress(message, job)
+            if (!job.cancelled) {
+              appendSearchLoadingProgress(message)
+            }
           },
           shouldCancelSearchPage: () => job.cancelled
         }
         const linesOut = await applyChromeEffects(ctx, effects)
         if (job.cancelled) {
+          clearSearchLoadingProgress()
           if (linesOut.length > 0) {
             await appendLogLines(linesOut)
           }
@@ -1719,8 +1704,10 @@ export function BmxtShell({
         const parsed = pickerEntriesFromSearchLines(linesOut)
         const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
         if (job.cancelled) {
+          clearSearchLoadingProgress()
           return
         }
+        clearSearchLoadingProgress()
         const emptyResultLines =
           entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
         setSearchListPicker(sessionId, {
@@ -1731,6 +1718,7 @@ export function BmxtShell({
           emptyResultLines
         })
       } catch (e) {
+        clearSearchLoadingProgress()
         if (!job.cancelled) {
           setSearchListPicker(sessionId, null)
           await appendLogLines([
@@ -1745,7 +1733,15 @@ export function BmxtShell({
         }
       }
     },
-    [appendLogLines, appendSearchPickerProgress, sessionId, setSearchListPicker, uiCopy]
+    [
+      appendLogLines,
+      appendSearchLoadingProgress,
+      clearSearchLoadingProgress,
+      resetSearchLoadingProgress,
+      sessionId,
+      setSearchListPicker,
+      uiCopy
+    ]
   )
 
   const cancelSearchPageScan = useCallback(() => {
@@ -1754,11 +1750,12 @@ export function BmxtShell({
       return
     }
     cancelSearchListJob(job)
+    clearSearchLoadingProgress()
     void appendLogLines([
       uiCopy.t("search.cancelledCtrlC"),
       uiCopy.t("search.pageScanCancelled")
     ])
-  }, [appendLogLines, uiCopy])
+  }, [appendLogLines, clearSearchLoadingProgress, uiCopy])
 
   const onSettingPickerStateChange = useCallback(
     (next: SettingListPickerState) => {
@@ -2283,6 +2280,7 @@ export function BmxtShell({
           cancelSearchListJob(searchListJobRef.current)
           searchListJobRef.current = null
         }
+        clearSearchLoadingProgress()
         if (searchListPickerRef.current !== null) {
           setSearchListPicker(sessionId, null)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "search"))
@@ -3338,11 +3336,7 @@ export function BmxtShell({
             </div>
           </div>
         ) : null}
-        {lines.map((ln, i) => (
-          <div key={i} className="bmxt-out-line">
-            {ln}
-          </div>
-        ))}
+        {lines.length > 0 ? <TerminalLogLines lines={lines} /> : null}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">
             <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>
@@ -3508,6 +3502,7 @@ export function BmxtShell({
           onCancelSearchInFlight={cancelSearchPageScan}
           tabPicker={displayTabPicker}
           searchListPicker={displaySearchListPicker}
+          searchLoadingProgressLines={searchLoadingProgressLines}
           domListPicker={displayDomListPicker}
           settingListPicker={displaySettingListPicker}
           tabsPickerKeyboardActive={tabsPickerKeyboardActive}

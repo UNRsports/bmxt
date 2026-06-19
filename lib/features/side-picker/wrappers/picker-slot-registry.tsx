@@ -56,6 +56,8 @@ export type PickerColumnHostContext = {
   tabsPageActiveMode?: TabsPageActiveMode
   searchPageActiveMode?: SearchPageActiveMode
   onExitToDetailBar: (slot: PickerSlotId) => void
+  /** EN: Live loading log for search picker (not stored in `searchListPicker.progressLines`). */
+  searchLoadingProgressLines?: readonly string[]
   /** EN: Cancel an in-flight `search -list` page scan (Ctrl+C while search picker focused). */
   onCancelSearchInFlight?: () => void
 }
@@ -85,6 +87,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
       <PickerPanelHost>
         <SearchListPickerOverlay
           state={ctx.searchListPicker}
+          loadingProgressLines={ctx.searchLoadingProgressLines}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
           onExitToDetailBar={() => ctx.onExitToDetailBar("search")}
           onCancelInFlightScan={ctx.onCancelSearchInFlight}
