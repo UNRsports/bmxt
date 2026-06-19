@@ -771,7 +771,9 @@ export function BmxtShell({
   const completionCandidatesRef = useRef<string[]>([])
   /** EN: Tab on empty line opened the first-command menu — keep showing until input/Esc/submit. */
   const allowEmptyFirstPickerSyncRef = useRef(false)
-  /** EN: Esc closed the token menu — suppress until Tab or typing; not history ↑↓. */
+  /** EN: Tab on the prompt requested the token menu — open/update once per Tab press. */
+  const tabPickerOpenRequestRef = useRef(false)
+  /** EN: Esc closed the token menu — suppress until Tab; not history ↑↓. */
   const imeTokenPickerDismissedRef = useRef(false)
   /** EN: Esc closed the session-list menu while `session -list` stays on the prompt. */
   const sessionListPickerDismissedRef = useRef(false)
@@ -843,12 +845,14 @@ export function BmxtShell({
 
   const dismissImeTokenPicker = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
+    tabPickerOpenRequestRef.current = false
     imeTokenPickerDismissedRef.current = true
     setSubCmdPicker(null)
   }, [])
 
   const closePromptPickerUi = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
+    tabPickerOpenRequestRef.current = false
     setSubCmdPicker(null)
     setSessionListPickerHi(null)
     setSessionPickerVariant(null)
@@ -942,15 +946,26 @@ export function BmxtShell({
       setSessionPickerVariant(null)
       if (imeTokenPickerDismissedRef.current) {
         setSubCmdPicker(null)
+        allowEmptyFirstPickerSyncRef.current = false
+        tabPickerOpenRequestRef.current = false
         return
       }
+      const pickerAlreadyOpen = subCmdPickerRef.current !== null
+      const tabOpenRequested = tabPickerOpenRequestRef.current
+      const emptyFirstTab = allowEmptyFirstPickerSyncRef.current
+      const mayOpenPicker = pickerAlreadyOpen || tabOpenRequested || emptyFirstTab
       const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
-        emptyFirstPrefixShowsAll: allowEmptyFirstPickerSyncRef.current,
-        candidateMatch: incrementalPickerMatchMode(subCmdPickerRef.current !== null)
+        emptyFirstPrefixShowsAll: mayOpenPicker,
+        candidateMatch: incrementalPickerMatchMode(pickerAlreadyOpen)
       })
+      allowEmptyFirstPickerSyncRef.current = false
+      tabPickerOpenRequestRef.current = false
       if (!resolved) {
         setSubCmdPicker(null)
-        allowEmptyFirstPickerSyncRef.current = false
+        return
+      }
+      if (!mayOpenPicker) {
+        setSubCmdPicker(null)
         return
       }
       setSubCmdPicker((prev) => {
@@ -2503,7 +2518,7 @@ export function BmxtShell({
         setCursorPos(next.length)
         setHistNavIndex(-1)
         tabPressSeqRef.current = 0
-        queueMicrotask(() => syncImeTokenPicker(next, next.length))
+        setSubCmdPicker(null)
         focusPrompt()
         return
       }
@@ -2574,10 +2589,10 @@ export function BmxtShell({
       }
     )
     if (continuationPrompt) {
+      setSubCmdPicker(null)
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
       lineRef.current = continuationPrompt
-      queueMicrotask(() => syncImeTokenPicker(continuationPrompt, continuationPrompt.length))
     }
     focusPrompt()
   }, [
@@ -3211,6 +3226,7 @@ export function BmxtShell({
         if (curLn.trim() === "") {
           e.preventDefault()
           allowEmptyFirstPickerSyncRef.current = true
+          tabPickerOpenRequestRef.current = true
           syncImeTokenPicker(curLn, pos)
           return
         }
@@ -3220,6 +3236,7 @@ export function BmxtShell({
         if (imePick && imePick.candidates.length > 0) {
           e.preventDefault()
           tabPressSeqRef.current = 0
+          tabPickerOpenRequestRef.current = true
           syncImeTokenPicker(curLn, pos)
           return
         }
