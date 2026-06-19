@@ -102,11 +102,11 @@ async function openOrFocusBmxtWindowAsync(): Promise<void> {
     await focusBmxtWindow(existingId)
     return
   }
-  /* normal: タブグループ API が popup ウィンドウでは無効なため（chrome.tabs.group） */
+  /* popup: タブバーなしの単一ページ窓（BMXt シェル専用） */
   const url = chrome.runtime.getURL(BMXT_PAGE)
   const w = await chrome.windows.create({
     url,
-    type: "normal",
+    type: "popup",
     width: 780,
     height: 580,
     focused: true
@@ -170,11 +170,8 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     if (chrome.runtime.lastError || !win) {
       return
     }
-    if (win.type === "normal") {
-      /* BMXt 自体も normal になるため、ここを記録すると「最後の閲覧ウィンドウ」がずれる */
-      if (windowId !== bmxtWindowId) {
-        rememberNormalWindow(windowId)
-      }
+    if (win.type === "normal" && windowId !== bmxtWindowId) {
+      rememberNormalWindow(windowId)
     }
   })
 })
