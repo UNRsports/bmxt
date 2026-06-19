@@ -32,6 +32,8 @@ import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useTerminalAppearance, useUiSettings } from "../setting"
 
+const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
+
 type SessionPaneProps = {
   sessionId: string
   isActive: boolean
@@ -142,9 +144,30 @@ const SessionPaneView = memo(function SessionPaneView({
 }, sessionPanePropsEqual)
 
 function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): boolean {
+  if (prev.sessionId !== next.sessionId || prev.isActive !== next.isActive) {
+    return false
+  }
+  if (
+    prev.sessionPickers === next.sessionPickers &&
+    prev.paneFocus === next.paneFocus &&
+    prev.detailBarId === next.detailBarId &&
+    prev.modeToolbarOrder === next.modeToolbarOrder &&
+    prev.navArmed === next.navArmed &&
+    prev.lines === next.lines &&
+    prev.setSessionPickerSlot === next.setSessionPickerSlot &&
+    prev.setPaneFocusForLeaf === next.setPaneFocusForLeaf &&
+    prev.setDetailBarIdForLeaf === next.setDetailBarIdForLeaf &&
+    prev.setModeToolbarOrderForLeaf === next.setModeToolbarOrderForLeaf &&
+    prev.setNavArmedForLeaf === next.setNavArmedForLeaf &&
+    prev.onActivateSession === next.onActivateSession &&
+    prev.onSetSessionDisplayName === next.onSetSessionDisplayName &&
+    prev.refreshTabPickerRows === next.refreshTabPickerRows &&
+    prev.scheduleTabPickerRowsRefresh === next.scheduleTabPickerRowsRefresh &&
+    prev.appendCommandToHistory === next.appendCommandToHistory
+  ) {
+    return !next.isActive
+  }
   return (
-    prev.sessionId === next.sessionId &&
-    prev.isActive === next.isActive &&
     prev.lines === next.lines &&
     prev.history === next.history &&
     prev.completionCandidates === next.completionCandidates &&
@@ -246,6 +269,22 @@ function BmxtTerminalInner() {
   }, [state?.activeId, state?.order])
 
   const prevSessionOrderRef = useRef<readonly string[]>([])
+  const [mountedSessionIds, setMountedSessionIds] = useState<ReadonlySet<string>>(() => new Set())
+
+  useEffect(() => {
+    if (!state) {
+      return
+    }
+    setMountedSessionIds((prev) => {
+      if (prev.has(state.activeId)) {
+        return prev
+      }
+      const next = new Set(prev)
+      next.add(state.activeId)
+      return next
+    })
+  }, [state?.activeId])
+
   useEffect(() => {
     if (!state) {
       return
@@ -254,6 +293,14 @@ function BmxtTerminalInner() {
     for (const sessionId of prev) {
       if (!state.order.includes(sessionId)) {
         disposeJobRunner(sessionId)
+        setMountedSessionIds((mounted) => {
+          if (!mounted.has(sessionId)) {
+            return mounted
+          }
+          const next = new Set(mounted)
+          next.delete(sessionId)
+          return next
+        })
       }
     }
     prevSessionOrderRef.current = state.order
@@ -376,20 +423,27 @@ function BmxtTerminalInner() {
         }}
       />
       <div className="bmxt-session-stack">
-        {state.order.map((sessionId) => (
-          <SessionPaneView
-            key={sessionId}
-            sessionId={sessionId}
-            isActive={sessionId === state.activeId}
-            lines={state.logsById[sessionId] ?? []}
-            sessionPickers={sessionPickersOrEmpty(pickersBySession, sessionId)}
-            paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
-            detailBarId={detailBarIdByLeaf[sessionId] ?? null}
-            modeToolbarOrder={modeToolbarOrderByLeaf[sessionId] ?? []}
-            navArmed={navArmedByLeaf[sessionId] ?? false}
-            {...sharedPaneProps}
-          />
-        ))}
+        {state.order.map((sessionId) => {
+          const isActive = sessionId === state.activeId
+          if (!mountedSessionIds.has(sessionId) && !isActive) {
+            return null
+          }
+          return (
+            <SessionPaneView
+              key={sessionId}
+              sessionId={sessionId}
+              isActive={isActive}
+              lines={state.logsById[sessionId] ?? []}
+              sessionPickers={sessionPickersOrEmpty(pickersBySession, sessionId)}
+              paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
+              detailBarId={detailBarIdByLeaf[sessionId] ?? null}
+              modeToolbarOrder={modeToolbarOrderByLeaf[sessionId] ?? []}
+              navArmed={navArmedByLeaf[sessionId] ?? false}
+              sessionListRows={isActive ? sessionListRows : EMPTY_SESSION_LIST_ROWS}
+              {...sharedPaneProps}
+            />
+          )
+        })}
       </div>
     </div>
   )
