@@ -71,6 +71,7 @@ import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
   isSearchListContinuationPrompt,
   isSearchListReadyToRun,
+  normalizeSearchListDispatchLine,
   parseSearchExitListLine,
   parseSearchListPickerLine,
   searchListPatternFromLine,
@@ -1656,9 +1657,10 @@ export function BmxtShell({
       setSearchListBusy(true)
       setSubCmdPicker(null)
 
-      const progressLabel = searchPageProgressLabel(searchListLine)
+      const dispatchLine = normalizeSearchListDispatchLine(searchListLine)
+      const progressLabel = searchPageProgressLabel(dispatchLine)
       const initialProgress = [`${progressLabel} — searching…`]
-      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(searchListLine))
+      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
 
       setSearchListPicker(sessionId, {
         phase: "loading",
@@ -1670,8 +1672,8 @@ export function BmxtShell({
 
       try {
         await ensureBmxtCore()
-        await appendLogLines([`> ${displayLine}`])
-        const bundle = runDispatch(searchListLine, uiSettings.locale)
+        await appendLogLines([`> ${dispatchLine}`])
+        const bundle = runDispatch(dispatchLine, uiSettings.locale)
         if (bundle.ty === "lines") {
           setSearchListPicker(sessionId, null)
           await appendLogLines(bundle.lines ?? [])

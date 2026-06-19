@@ -9,18 +9,22 @@ import type { PickerEntry } from "../side-picker/model/picker-entry"
 
 export {
   isEditingSearchListScopeToken,
+  isSearchListAllScopeToken,
   isSearchListAwaitingScopeOrPattern,
   isSearchListContinuationPrompt,
   isSearchListReadyToRun,
   isSearchListScopeToken,
   matchesSearchListScopeFilter,
+  normalizeSearchListDispatchLine,
   parseSearchExitListLine,
   parseSearchListPickerLine,
+  searchListDefaultEffectScopes,
+  searchListEffectScopesForToken,
   searchListPatternFromLine,
   shouldShowSearchListPatternPlaceholder
 } from "./search-list-picker-parse"
 
-/** After `search -list ` — optional scope token `--history` | `--bookmark` | `--page`. */
+/** After `search -list ` — scope token `--all` | `--history` | `--bookmark` | `--page`. */
 const SEARCH_LIST_LEAD_RE = /^\s*search\s+-list\s+/i
 
 export function searchListScopeCompletionZone(

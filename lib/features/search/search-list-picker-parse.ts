@@ -5,9 +5,11 @@
 
 const SEARCH_EXIT_LIST_RE = /^\s*search\s+-exit\s+-list\s*$/i
 
-const SEARCH_LIST_SCOPE = new Set(["--history", "--bookmark", "--page"])
+const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page"])
 
-const SEARCH_LIST_SCOPE_ORDER = ["--history", "--bookmark", "--page"] as const
+const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page"] as const
+
+const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page"] as const
 
 function searchListParts(trimmed: string): string[] {
   return trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
@@ -16,6 +18,40 @@ function searchListParts(trimmed: string): string[] {
 /** EN: Optional third-token scope flags after `search -list` (manifest `trailingTokens`). */
 export function isSearchListScopeToken(token: string): boolean {
   return SEARCH_LIST_SCOPE.has(token.toLowerCase())
+}
+
+/** EN: `--all` — cross-scope search (history + bookmark + page). */
+export function isSearchListAllScopeToken(token: string): boolean {
+  return token.toLowerCase() === "--all"
+}
+
+/** EN: Effect scopes dispatched for a scope token (`--all` expands to all three). */
+export function searchListEffectScopesForToken(token: string): readonly string[] {
+  if (isSearchListAllScopeToken(token)) {
+    return SEARCH_LIST_EFFECT_SCOPES
+  }
+  return [token.toLowerCase()]
+}
+
+/** EN: Effect scopes when the third token is not a scope flag (pattern-only line). */
+export function searchListDefaultEffectScopes(): readonly string[] {
+  return SEARCH_LIST_EFFECT_SCOPES
+}
+
+/**
+ * EN: Bare `search -list` → `search -list --all` for dispatch / progress labels.
+ * JA: スコープ無しの `search -list` を横断検索 `--all` に正規化する。
+ */
+export function normalizeSearchListDispatchLine(trimmed: string): string {
+  const parts = searchListParts(trimmed)
+  if (
+    parts.length === 2 &&
+    parts[0]!.toLowerCase() === "search" &&
+    parts[1]!.toLowerCase() === "-list"
+  ) {
+    return "search -list --all"
+  }
+  return trimmed.trim()
 }
 
 /**

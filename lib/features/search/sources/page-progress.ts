@@ -19,6 +19,9 @@ export function formatSearchPageProgress(label: string, p: SearchPageProgress): 
 
 export function searchPageProgressLabel(dispatchLine: string): string {
   const t = dispatchLine.trim().toLowerCase()
+  if (t.includes("search -list") && t.includes("--all")) {
+    return "search -list --all"
+  }
   if (t.includes("search -list") && t.includes("--history")) {
     return "search -list --history"
   }

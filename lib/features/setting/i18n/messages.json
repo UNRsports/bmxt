@@ -1380,8 +1380,8 @@
     "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list --history|--bookmark|--page [<pattern>]   — スコープを 1 つに絞る",
-    "en": "       search -list --history|--bookmark|--page [<pattern>]   — narrow to one scope"
+    "ja": "       search -list --all|--history|--bookmark|--page [<pattern>]   — スコープ（--all は横断）",
+    "en": "       search -list --all|--history|--bookmark|--page [<pattern>]   — scope (--all = cross-scope)"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -1476,8 +1476,8 @@
     "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -list / -exit, then restore prompt to `setting ` for continuation.\n  setting -list         - open settings picker (locale, appearance, export/import).\n  setting -exit -list  - close settings picker in this BMXt pane (Esc returns to prompt only)."
   },
   "help.section.search": {
-    "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（全スコープ；任意で --history|--bookmark|--page で絞り込み）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
-    "en": "search (in-memory search; nothing persisted by these commands):\n  search              - show available options, then restore prompt to `search ` for continuation.\n  search -list [<pattern>] — open search list picker (all scopes; optional --history|--bookmark|--page to narrow).\n  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only)."
+    "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（`--all` またはパターンのみで全スコープ横断）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "search (in-memory search; nothing persisted by these commands):\n  search              - show available options, then restore prompt to `search ` for continuation.\n  search -list [<pattern>] — open search list picker (cross-scope via `--all` or pattern-only line).\n  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only)."
   },
   "help.section.url": {
     "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",
