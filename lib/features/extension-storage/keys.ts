@@ -60,5 +60,8 @@ export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 
+/** SQLite blob (`sql.js`) — job lifecycle audit / recovery (UI + background runners). */
+export const JOB_DB_KEY = "bmxt_job_db_v1"
+
 export const MAX_SESSION_LOG_LINES = 500
 export const MAX_CMD_HISTORY_LINES = 300

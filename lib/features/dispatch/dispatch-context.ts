@@ -21,6 +21,8 @@ export type DispatchChromeContext = {
   onSearchPageProgress?: (message: string) => Promise<void>
   /** EN: Label prefix for progress lines (e.g. `search -list --page`). */
   searchPageProgressLabel?: string
+  /** EN: Generic cooperative cancel for long-running effects (job runner). */
+  shouldCancel?: () => boolean
   /** EN: When true, `search_page` stops after the current tab (Ctrl+C / search -exit -list). */
   shouldCancelSearchPage?: () => boolean
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */

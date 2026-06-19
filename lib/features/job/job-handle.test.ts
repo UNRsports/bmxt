@@ -6,20 +6,20 @@ import {
   createJobHandle,
   isJobHandleActive,
   shouldCancelJob
-} from "../job/job-handle.ts"
+} from "./job-handle.ts"
 
-describe("search-list-job compatibility", () => {
-  it("cancels the previous job when a new one starts", () => {
-    const first = createJobHandle("search-list", 1, "", null)
-    const second = createJobHandle("search-list", 2, "", first)
+describe("job-handle", () => {
+  it("cancels the previous handle when a new one starts", () => {
+    const first = createJobHandle("search-list", 1, "s1", null)
+    const second = createJobHandle("search-list", 2, "s1", first)
     assert.equal(first.cancelled, true)
     assert.equal(second.cancelled, false)
     assert.equal(isJobHandleActive(first), false)
     assert.equal(isJobHandleActive(second), true)
   })
 
-  it("marks a job inactive after explicit cancel", () => {
-    const job = createJobHandle("search-list", 1, "", null)
+  it("marks a handle inactive after explicit cancel", () => {
+    const job = createJobHandle("dom-list", 1, "s1", null)
     cancelJobHandle(job)
     assert.equal(isJobHandleActive(job), false)
     assert.equal(shouldCancelJob(job), true)

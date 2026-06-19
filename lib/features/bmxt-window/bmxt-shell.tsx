@@ -79,14 +79,14 @@ import {
   type SearchListPickerState
 } from "../search/search-list-picker-input"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs"
-import {
-  cancelSearchListJob,
-  createSearchListJob,
-  isSearchListJobActive,
-  type SearchListJob
-} from "../search/search-list-job"
 import { useBatchedSearchLoadingProgress } from "../search/use-batched-search-loading-progress"
 import { resetSearchCacheFromSettings } from "../search/cache/search-cache-store"
+import {
+  isJobHandleActive,
+  mergeJobIntoDispatchContext,
+  shouldCancelJob,
+  useSessionJobRunner
+} from "../job"
 import { normalizeSearchPattern } from "../search/search-format"
 import {
   isRetryableDomListOutput,
@@ -442,9 +442,7 @@ export function BmxtShell({
   useEffect(() => {
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
-  const searchListJobRef = useRef<SearchListJob | null>(null)
-  const searchListJobSeqRef = useRef(0)
-  const domListDismissRef = useRef(false)
+  const jobRunner = useSessionJobRunner(sessionId)
   const tabsPickerFocusTabIdRef = useRef<number | null>(null)
   const tabPickerOpenRef = useRef(false)
   useEffect(() => {
@@ -1536,73 +1534,95 @@ export function BmxtShell({
       displayLine: string,
       announce: boolean
     ): Promise<void> => {
-      domListDismissRef.current = false
-      try {
-        await ensureBmxtCore()
-        const bundle = runDispatch(domListLine, uiSettings.locale)
-        if (bundle.ty === "lines") {
-          await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
-          setDomListPicker(sessionId, null)
-          return
-        }
-        let domCapture: DomListCapture | undefined
-        const ctx: DispatchChromeContext = {
-          clearLog: async () => {},
-          exitPane: async () => [],
-          listWindows: async () => [],
-          focusInfo: async () => [],
-          resolveTabArg: async () => undefined,
-          resolveDomListTargetTabId,
-          onDomListCapture: (capture) => {
-            domCapture = capture
-          },
-          commandSessionId: sessionId,
-          uiLocale: uiSettings.locale
-        }
-        const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-        if (domListDismissRef.current) {
-          domListDismissRef.current = false
-          return
-        }
-        if (isRetryableDomListOutput(linesOut)) {
-          if (announce) {
+      await jobRunner.start(
+        "dom-list",
+        async (job) => {
+          try {
+            await ensureBmxtCore()
+            const bundle = runDispatch(domListLine, uiSettings.locale)
+            if (shouldCancelJob(job)) {
+              return
+            }
+            if (bundle.ty === "lines") {
+              await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
+              setDomListPicker(sessionId, null)
+              return
+            }
+            let domCapture: DomListCapture | undefined
+            const ctx = mergeJobIntoDispatchContext(
+              {
+                clearLog: async () => {},
+                exitPane: async () => [],
+                listWindows: async () => [],
+                focusInfo: async () => [],
+                resolveTabArg: async () => undefined,
+                resolveDomListTargetTabId,
+                onDomListCapture: (capture) => {
+                  domCapture = capture
+                },
+                commandSessionId: sessionId,
+                uiLocale: uiSettings.locale
+              },
+              job
+            )
+            const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+            if (shouldCancelJob(job)) {
+              return
+            }
+            if (isRetryableDomListOutput(linesOut)) {
+              if (announce) {
+                await appendLogLines([
+                  `> ${displayLine}`,
+                  uiCopy.t("domPrompt.headline")
+                ])
+              }
+              setDomListPicker(sessionId, {
+                kind: "prompt",
+                message: linesOut,
+                commandLine: domListLine
+              })
+              setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
+              return
+            }
+            if (announce) {
+              await appendLogLines([`> ${displayLine}`, uiCopy.t("dom.listPicker")])
+            }
+            const targetTabId = await resolveDomListTargetTabId()
+            setDomListPicker(sessionId, {
+              kind: "lines",
+              lines: linesOut,
+              commandLine: domListLine,
+              targetTabId,
+              jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
+              headerLineCount: domCapture?.headerLineCount ?? linesOut.length
+            })
+            setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
+          } catch (e) {
+            if (shouldCancelJob(job)) {
+              return
+            }
             await appendLogLines([
               `> ${displayLine}`,
-              uiCopy.t("domPrompt.headline")
+              uiCopy.t("error.generic", {
+                message: e instanceof Error ? e.message : String(e)
+              })
             ])
+            setDomListPicker(sessionId, null)
           }
-          setDomListPicker(sessionId, {
-            kind: "prompt",
-            message: linesOut,
-            commandLine: domListLine
-          })
-          setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
-          return
-        }
-        if (announce) {
-          await appendLogLines([`> ${displayLine}`, uiCopy.t("dom.listPicker")])
-        }
-        const targetTabId = await resolveDomListTargetTabId()
-        setDomListPicker(sessionId, {
-          kind: "lines",
-          lines: linesOut,
-          commandLine: domListLine,
-          targetTabId,
-          jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
-          headerLineCount: domCapture?.headerLineCount ?? linesOut.length
-        })
-        setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
-      } catch (e) {
-        await appendLogLines([
-          `> ${displayLine}`,
-          uiCopy.t("error.generic", {
-            message: e instanceof Error ? e.message : String(e)
-          })
-        ])
-        setDomListPicker(sessionId, null)
-      }
+        },
+        { meta: { line: domListLine } }
+      )
     },
-    [appendLogLines, sessionId, setDomListPicker, resolveDomListTargetTabId]
+    [
+      appendLogLines,
+      jobRunner,
+      sessionId,
+      setDomListPicker,
+      setModeToolbarOrder,
+      resolveDomListTargetTabId,
+      uiCopy,
+      uiSettings.locale
+    ]
   )
 
   const refreshDomListPicker = useCallback(
@@ -1613,7 +1633,8 @@ export function BmxtShell({
   const { onTabsPickerFocusTabId: queueDomListFollowRefresh } = useDomListFollowTab({
     domListPicker,
     resolveTargetTabId: resolveDomListTargetTabId,
-    refreshDomList: refreshDomListPicker
+    refreshDomList: refreshDomListPicker,
+    isDomListJobActive: () => jobRunner.isActive("dom-list")
   })
 
   const onTabsPickerFocusTabId = useCallback(
@@ -1636,9 +1657,6 @@ export function BmxtShell({
 
   const runSearchListSearch = useCallback(
     async (_displayLine: string, searchListLine: string) => {
-      searchListJobSeqRef.current += 1
-      const job = createSearchListJob(searchListJobSeqRef.current, searchListJobRef.current)
-      searchListJobRef.current = job
       setSubCmdPicker(null)
 
       const dispatchLine = normalizeSearchListDispatchLine(searchListLine)
@@ -1655,107 +1673,113 @@ export function BmxtShell({
       })
       setModeToolbarOrder((prev) => activateModeToolbar(prev, "search"))
 
-      try {
-        await ensureBmxtCore()
-        if (job.cancelled) {
-          return
-        }
-        await appendLogLines([`> ${dispatchLine}`])
-        const bundle = runDispatch(dispatchLine, uiSettings.locale)
-        if (job.cancelled) {
-          return
-        }
-        if (bundle.ty === "lines") {
-          clearSearchLoadingProgress()
-          setSearchListPicker(sessionId, null)
-          await appendLogLines(bundle.lines ?? [])
-          return
-        }
-        const effects = bundle.effects ?? []
-        if (effectsIncludeSearchPage(effects)) {
-          if (!job.cancelled) {
-            appendSearchLoadingProgress(uiCopy.t("search.pageScanHint"))
-          }
-        }
-        const ctx: DispatchChromeContext = {
-          clearLog: async () => {},
-          exitPane: async () => [],
-          listWindows: async () => [],
-          focusInfo: async () => [],
-          resolveTabArg: async () => undefined,
-          commandSessionId: sessionId,
-          uiLocale: uiSettings.locale,
-          searchPageProgressLabel: progressLabel,
-          onSearchPageProgress: async (message) => {
-            if (!job.cancelled) {
-              appendSearchLoadingProgress(message)
+      await jobRunner.start(
+        "search-list",
+        async (job) => {
+          try {
+            await ensureBmxtCore()
+            if (shouldCancelJob(job)) {
+              return
             }
-          },
-          shouldCancelSearchPage: () => job.cancelled
-        }
-        const linesOut = await applyChromeEffects(ctx, effects)
-        if (job.cancelled) {
-          clearSearchLoadingProgress()
-          if (linesOut.length > 0) {
-            await appendLogLines(linesOut)
-          }
-          return
-        }
-        const parsed = pickerEntriesFromSearchLines(linesOut)
-        const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
-        if (job.cancelled) {
-          clearSearchLoadingProgress()
-          return
-        }
-        clearSearchLoadingProgress()
-        const emptyResultLines =
-          entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
-        setSearchListPicker(sessionId, {
-          phase: "results",
-          progressLines: [],
-          entries,
-          pattern: searchPattern,
-          emptyResultLines
-        })
-      } catch (e) {
-        clearSearchLoadingProgress()
-        if (!job.cancelled) {
-          setSearchListPicker(sessionId, null)
-          await appendLogLines([
-            uiCopy.t("error.generic", {
-              message: e instanceof Error ? e.message : String(e)
+            await appendLogLines([`> ${dispatchLine}`])
+            const bundle = runDispatch(dispatchLine, uiSettings.locale)
+            if (shouldCancelJob(job)) {
+              return
+            }
+            if (bundle.ty === "lines") {
+              clearSearchLoadingProgress()
+              setSearchListPicker(sessionId, null)
+              await appendLogLines(bundle.lines ?? [])
+              return
+            }
+            const effects = bundle.effects ?? []
+            if (effectsIncludeSearchPage(effects) && !shouldCancelJob(job)) {
+              appendSearchLoadingProgress(uiCopy.t("search.pageScanHint"))
+            }
+            const ctx = mergeJobIntoDispatchContext(
+              {
+                clearLog: async () => {},
+                exitPane: async () => [],
+                listWindows: async () => [],
+                focusInfo: async () => [],
+                resolveTabArg: async () => undefined,
+                commandSessionId: sessionId,
+                uiLocale: uiSettings.locale
+              },
+              job,
+              {
+                searchPageProgressLabel: progressLabel,
+                onSearchPageProgress: async (message) => {
+                  if (!shouldCancelJob(job)) {
+                    appendSearchLoadingProgress(message)
+                  }
+                }
+              }
+            )
+            const linesOut = await applyChromeEffects(ctx, effects)
+            if (shouldCancelJob(job)) {
+              clearSearchLoadingProgress()
+              if (linesOut.length > 0) {
+                await appendLogLines(linesOut)
+              }
+              return
+            }
+            const parsed = pickerEntriesFromSearchLines(linesOut)
+            const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
+            if (shouldCancelJob(job)) {
+              clearSearchLoadingProgress()
+              return
+            }
+            clearSearchLoadingProgress()
+            const emptyResultLines =
+              entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
+            setSearchListPicker(sessionId, {
+              phase: "results",
+              progressLines: [],
+              entries,
+              pattern: searchPattern,
+              emptyResultLines
             })
-          ])
-        }
-      } finally {
-        if (searchListJobRef.current === job) {
-          searchListJobRef.current = null
-        }
-      }
+          } catch (e) {
+            clearSearchLoadingProgress()
+            if (!shouldCancelJob(job)) {
+              setSearchListPicker(sessionId, null)
+              await appendLogLines([
+                uiCopy.t("error.generic", {
+                  message: e instanceof Error ? e.message : String(e)
+                })
+              ])
+            }
+          }
+        },
+        { meta: { line: dispatchLine } }
+      )
     },
     [
       appendLogLines,
       appendSearchLoadingProgress,
       clearSearchLoadingProgress,
+      jobRunner,
       resetSearchLoadingProgress,
       sessionId,
       setSearchListPicker,
-      uiCopy
+      uiCopy,
+      uiSettings.locale
     ]
   )
 
   const cancelSearchPageScan = useCallback(() => {
-    const job = searchListJobRef.current
-    if (!isSearchListJobActive(job)) {
+    const job = jobRunner.getActive("search-list")
+    if (!isJobHandleActive(job)) {
       return
     }
-    cancelSearchListJob(job)
+    jobRunner.cancelHandle(job)
     clearSearchLoadingProgress()
     void appendLogLines([
       uiCopy.t("search.cancelledCtrlC"),
       uiCopy.t("search.pageScanCancelled")
     ])
-  }, [appendLogLines, clearSearchLoadingProgress, uiCopy])
+  }, [appendLogLines, clearSearchLoadingProgress, jobRunner, uiCopy])
 
   const onSettingPickerStateChange = useCallback(
     (next: SettingListPickerState) => {
@@ -2275,10 +2299,9 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         const logLines = [`> ${trimmed}`]
-        const hadActiveJob = isSearchListJobActive(searchListJobRef.current)
+        const hadActiveJob = jobRunner.isActive("search-list")
         if (hadActiveJob) {
-          cancelSearchListJob(searchListJobRef.current)
-          searchListJobRef.current = null
+          jobRunner.cancel("search-list")
         }
         clearSearchLoadingProgress()
         if (searchListPickerRef.current !== null) {
@@ -2419,7 +2442,10 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         const logLines = [`> ${trimmed}`]
-        domListDismissRef.current = true
+        const hadActiveDomJob = jobRunner.isActive("dom-list")
+        if (hadActiveDomJob) {
+          jobRunner.cancel("dom-list")
+        }
         if (domListPickerRef.current !== null) {
           setDomListPicker(sessionId, null)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "dom"))
@@ -3003,7 +3029,7 @@ export function BmxtShell({
         (e.key === "c" || e.key === "C") &&
         paneFocusRef.current === "search" &&
         searchListPickerRef.current?.phase === "loading" &&
-        isSearchListJobActive(searchListJobRef.current)
+        isJobHandleActive(jobRunner.getActive("search-list"))
       ) {
         e.preventDefault()
         cancelSearchPageScan()

@@ -25,6 +25,7 @@ import {
   getCompletionCandidates
 } from "../bmxt-core"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { disposeJobRunner } from "../job"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
@@ -243,6 +244,20 @@ function BmxtTerminalInner() {
     pruneTabPickerFoldSessions(state.order)
     setTabPickerFoldActiveSession(state.activeId)
   }, [state?.activeId, state?.order])
+
+  const prevSessionOrderRef = useRef<readonly string[]>([])
+  useEffect(() => {
+    if (!state) {
+      return
+    }
+    const prev = prevSessionOrderRef.current
+    for (const sessionId of prev) {
+      if (!state.order.includes(sessionId)) {
+        disposeJobRunner(sessionId)
+      }
+    }
+    prevSessionOrderRef.current = state.order
+  }, [state?.order])
 
   const setSessionPickerSlot = useCallback(
     <K extends PickerSlotId>(
