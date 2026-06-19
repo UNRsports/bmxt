@@ -1534,6 +1534,14 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   cursor: default;
 }
 
+.bmxt-search-picker-measure-row {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  left: 0;
+  right: 0;
+}
+
 .bmxt-search-picker-row--hi {
   background: #1f6feb22;
   outline: 1px solid #388bfd66;
