@@ -5,7 +5,8 @@
       "searchモードの刷新とジョブ制導入にあわせてsqliteによるキャッシュを実装"
     ],
     "en": [
-      ""
+      "Changed the extension window to a dedicated popup window without a tab bar",
+      "Implemented SQLite caching for search mode alongside the search refresh and job-based execution model"
     ]
   }
 }

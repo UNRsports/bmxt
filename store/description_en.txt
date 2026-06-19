@@ -30,6 +30,10 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.6.0:
+- Changed the extension window to a dedicated popup window without a tab bar
+- Implemented SQLite caching for search mode alongside the search refresh and job-based execution model
+
 0.5.6:
 - Audited remaining bilingual UI after locale switching and applied locale rules consistently
 - UI adjustments in tabs mode
@@ -110,7 +114,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, reload, history) |
 | `nav -exit` | Fully disarm nav (turn the overlay **OFF** with **Alt** first) |
 | `search` | Print available options; Enter alone restores the prompt to `search ` for `-list` |
-| `search -list --history|--bookmark|--page [<pattern>]` | Open a search picker for one scope; scan progress appears inside the picker and hides when results arrive. **→** opens a detail list of hits per row; **Enter** on a detail row jumps to that match in the page (http(s)). Case-insensitive substring match (no regex in v1) |
+| `search -list [--all|--history|--bookmark|--page] [<pattern>]` | Open a search picker column. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, and open http(s) tab text in parallel; single-scope flags limit to one source. Scan progress appears inside the picker and hides when results arrive. **→** opens a detail list of hits per row or **`[history]`** open-target tree; **Enter** on a detail row jumps to that match in the page (http(s)). Case-insensitive substring match (no regex in v1) |
 | `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
 | `close` / `c <tabId>` | Close a tab |
 | `group new <tabId> …` | Create a group |
