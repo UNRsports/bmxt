@@ -46,6 +46,9 @@ const ROW_ID_PREFIX = "bmxt-search-row"
 /** EN: Estimated row height until the hidden probe row is measured. */
 const SEARCH_PICKER_ROW_HEIGHT_FALLBACK = 64
 
+/** EN: Detail hit rows are shorter than full result rows. */
+const SEARCH_PICKER_DETAIL_ROW_HEIGHT_FALLBACK = 40
+
 export type SearchListPickerView = "results" | "detail" | "destination"
 
 export type SearchListPickerBodyProps = {
@@ -258,6 +261,24 @@ export function SearchListPickerBody({
 
   const inDetailView = pickerView === "detail" && detailEntry != null
   const inDestinationView = pickerView === "destination"
+  const virtualItemCount = statusOnly
+    ? 0
+    : inDestinationView
+      ? destinationRows.length
+      : inDetailView
+        ? detailHits.length
+        : entries.length
+  const useVirtualResults =
+    !statusOnly &&
+    !inDetailView &&
+    !inDestinationView &&
+    entries.length >= PLAIN_PICKER_VIRTUALIZE_MIN
+  const useVirtualDetail =
+    inDetailView && detailEntry != null && detailHits.length >= PLAIN_PICKER_VIRTUALIZE_MIN
+  const useVirtual = useVirtualResults || useVirtualDetail
+  const effectiveRowHeight =
+    rowHeight ??
+    (useVirtualDetail ? SEARCH_PICKER_DETAIL_ROW_HEIGHT_FALLBACK : SEARCH_PICKER_ROW_HEIGHT_FALLBACK)
   const setHi = useCallback(
     (action: SetStateAction<number>) => {
       setHiState((prev) => {
@@ -298,27 +319,20 @@ export function SearchListPickerBody({
       ? `detail-${detailEntry?.id ?? ""}-${detailHits.length}`
       : `results-${entries.length}-${entries[0]?.id ?? ""}-${entries[entries.length - 1]?.id ?? ""}`
 
-  const useVirtual =
-    !statusOnly &&
-    !inDetailView &&
-    !inDestinationView &&
-    entries.length >= PLAIN_PICKER_VIRTUALIZE_MIN
-  const effectiveRowHeight = rowHeight ?? SEARCH_PICKER_ROW_HEIGHT_FALLBACK
-
   const syncWindowFromScroll = useCallback(() => {
     const list = listRef.current
-    if (!list || !useVirtual || entries.length === 0) {
+    if (!list || !useVirtual || virtualItemCount === 0) {
       return
     }
     setWindowRange(
       computePlainPickerWindow(
         list.scrollTop,
         list.clientHeight,
-        entries.length,
+        virtualItemCount,
         effectiveRowHeight
       )
     )
-  }, [effectiveRowHeight, entries.length, useVirtual])
+  }, [effectiveRowHeight, useVirtual, virtualItemCount])
 
   useEffect(() => {
     const startHi =
@@ -352,7 +366,7 @@ export function SearchListPickerBody({
     if (h > 0) {
       setRowHeight(h)
     }
-  }, [entries.length, useVirtual])
+  }, [detailHits.length, entries.length, inDetailView, useVirtual])
 
   useEffect(() => {
     if (lineCount === 0) {
@@ -442,7 +456,7 @@ export function SearchListPickerBody({
             computePlainPickerWindow(
               list.scrollTop,
               list.clientHeight,
-              entries.length,
+              virtualItemCount,
               effectiveRowHeight
             )
           )
@@ -471,7 +485,7 @@ export function SearchListPickerBody({
         computePlainPickerWindow(
           hint?.animated ? targetTop : list.scrollTop,
           list.clientHeight,
-          entries.length,
+          virtualItemCount,
           effectiveRowHeight
         )
       )
@@ -483,7 +497,7 @@ export function SearchListPickerBody({
       return
     }
     scrollPickerListToHiAfterLayout(list, ROW_ID_PREFIX, hi, scrollOptions)
-  }, [effectiveRowHeight, entries.length, hi, listScrollHintRef, useVirtual])
+  }, [effectiveRowHeight, hi, listScrollHintRef, useVirtual, virtualItemCount])
 
   useLayoutEffect(() => {
     if (lineCount === 0) {
@@ -568,9 +582,33 @@ export function SearchListPickerBody({
     return slice
   }
 
-  const totalHeight = useVirtual ? entries.length * effectiveRowHeight : undefined
+  const renderDetailRows = (start: number, end: number): ReactNode[] => {
+    if (!detailEntry) {
+      return []
+    }
+    const slice: ReactNode[] = []
+    for (let i = start; i < end; i++) {
+      const hit = detailHits[i]
+      if (!hit) {
+        continue
+      }
+      slice.push(
+        <SearchDetailPickerRow
+          key={`${detailEntry.id}-${i}`}
+          index={i}
+          hit={hit}
+          hi={hi}
+          highlightNeedle={rowHighlightNeedle}
+          entry={detailEntry}
+        />
+      )
+    }
+    return slice
+  }
+
+  const totalHeight = useVirtual ? virtualItemCount * effectiveRowHeight : undefined
   const virtualStart = useVirtual ? windowRange.start : 0
-  const virtualEnd = useVirtual ? windowRange.end : entries.length
+  const virtualEnd = useVirtual ? windowRange.end : virtualItemCount
   const virtualTrackScopeId = useId()
   const virtualWindowScopeId = useId()
   const listScopeId = useId()
@@ -590,7 +628,7 @@ export function SearchListPickerBody({
   )
 
   useLayoutEffect(() => {
-    if (!useVirtual || statusOnly || inDetailView || inDestinationView || entries.length === 0) {
+    if (!useVirtual || statusOnly || inDestinationView || virtualItemCount === 0) {
       return
     }
     const list = listRef.current
@@ -599,16 +637,23 @@ export function SearchListPickerBody({
     }
     list.scrollTop = 0
     setWindowRange(
-      computePlainPickerWindow(0, list.clientHeight, entries.length, effectiveRowHeight)
+      computePlainPickerWindow(0, list.clientHeight, virtualItemCount, effectiveRowHeight)
     )
-  }, [listResetKey, effectiveRowHeight, entries.length, inDestinationView, inDetailView, statusOnly, useVirtual])
+  }, [
+    effectiveRowHeight,
+    inDestinationView,
+    listResetKey,
+    statusOnly,
+    useVirtual,
+    virtualItemCount
+  ])
 
   useLayoutEffect(() => {
     if (!useVirtual) {
       return
     }
     syncWindowFromScroll()
-  }, [syncWindowFromScroll, useVirtual, effectiveRowHeight, entries.length])
+  }, [syncWindowFromScroll, useVirtual, effectiveRowHeight, virtualItemCount])
 
   return (
     <div className="bmxt-tab-picker bmxt-side-picker bmxt-search-picker">
@@ -663,7 +708,7 @@ export function SearchListPickerBody({
         aria-label={listAriaLabel}
         aria-activedescendant={activeRowId}
         onScroll={useVirtual ? syncWindowFromScroll : undefined}>
-        {useVirtual ? (
+        {useVirtualResults ? (
           <div
             ref={measureRef}
             className="bmxt-search-picker-row bmxt-search-picker-measure-row"
@@ -680,6 +725,16 @@ export function SearchListPickerBody({
               <div className="bmxt-search-picker-text">{"\u00a0"}</div>
             </div>
           </div>
+        ) : useVirtualDetail ? (
+          <div
+            ref={measureRef}
+            className="bmxt-search-picker-row bmxt-search-picker-measure-row"
+            aria-hidden>
+            <div className="bmxt-search-picker-field">
+              <div className="bmxt-search-picker-field-label">text:</div>
+              <div className="bmxt-search-picker-text">{"\u00a0"}</div>
+            </div>
+          </div>
         ) : null}
         {lineCount === 0 ? (
           <div className="bmxt-tab-picker-empty">(no output)</div>
@@ -692,17 +747,29 @@ export function SearchListPickerBody({
             <SearchOpenDestinationPickerRow key={`${row.kind}-${row.windowId ?? ""}-${row.groupId ?? ""}-${i}`} index={i} row={row} hi={hi} />
           ))
         ) : inDetailView && detailEntry ? (
-          detailHits.map((hit, i) => (
-            <SearchDetailPickerRow
-              key={`${detailEntry.id}-${i}`}
-              index={i}
-              hit={hit}
-              hi={hi}
-              highlightNeedle={rowHighlightNeedle}
-              entry={detailEntry}
-            />
-          ))
-        ) : useVirtual ? (
+          useVirtualDetail ? (
+            <div
+              className="bmxt-plain-picker-virtual-track"
+              {...{ [CSP_DYNAMIC_SCOPE_ATTR]: virtualTrackScopeId }}>
+              <div
+                className="bmxt-plain-picker-virtual-window"
+                {...{ [CSP_DYNAMIC_SCOPE_ATTR]: virtualWindowScopeId }}>
+                {renderDetailRows(virtualStart, virtualEnd)}
+              </div>
+            </div>
+          ) : (
+            detailHits.map((hit, i) => (
+              <SearchDetailPickerRow
+                key={`${detailEntry.id}-${i}`}
+                index={i}
+                hit={hit}
+                hi={hi}
+                highlightNeedle={rowHighlightNeedle}
+                entry={detailEntry}
+              />
+            ))
+          )
+        ) : useVirtualResults ? (
           <div
             className="bmxt-plain-picker-virtual-track"
             {...{ [CSP_DYNAMIC_SCOPE_ATTR]: virtualTrackScopeId }}>

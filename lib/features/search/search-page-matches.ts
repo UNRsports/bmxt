@@ -3,7 +3,6 @@ import { findRawNeedleInHaystack, innerTextLinesFromBodyText } from "../page-dom
 import { matchesNeedle } from "./matcher"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 
-const DEFAULT_MAX_HITS = 32
 const BODY_SNIPPET_CONTEXT = 96
 const LINE_HIT_SNIPPET_CONTEXT = 48
 
@@ -54,8 +53,7 @@ function pushLineMatch(
 export function collectPageMatchesForTab(
   title: string,
   text: string | null,
-  pattern: string,
-  maxHits = DEFAULT_MAX_HITS
+  pattern: string
 ): SearchPageMatch[] {
   const needle = pattern.trim()
   if (!needle) {
@@ -95,9 +93,6 @@ export function collectPageMatchesForTab(
         nextGlobalOccurrence += 1
         hitOnLine += 1
         from = hit.index + Math.max(1, hit.length)
-        if (matches.length >= maxHits) {
-          return matches
-        }
       }
     }
 

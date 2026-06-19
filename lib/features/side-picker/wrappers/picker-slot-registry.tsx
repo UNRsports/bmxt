@@ -56,6 +56,8 @@ export type PickerColumnHostContext = {
   tabsPageActiveMode?: TabsPageActiveMode
   searchPageActiveMode?: SearchPageActiveMode
   onExitToDetailBar: (slot: PickerSlotId) => void
+  /** EN: Cancel an in-flight `search -list` page scan (Ctrl+C while search picker focused). */
+  onCancelSearchInFlight?: () => void
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -85,6 +87,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           state={ctx.searchListPicker}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
           onExitToDetailBar={() => ctx.onExitToDetailBar("search")}
+          onCancelInFlightScan={ctx.onCancelSearchInFlight}
           onOpenEntry={(entry, matchIndex, destination) =>
             ctx.onOpenSearchEntry(entry, matchIndex, destination)
           }

@@ -83,7 +83,8 @@ async function persistSearchCacheDbInternal(s: SearchCacheDbSession): Promise<vo
     return
   }
   const exported = s.exportBytes()
-  await chrome.storage.local.set({ [SEARCH_CACHE_DB_KEY]: exported })
+  // chrome.storage.local is JSON-backed — Uint8Array is not serializable.
+  await chrome.storage.local.set({ [SEARCH_CACHE_DB_KEY]: Array.from(exported) })
   s.markClean()
 }
 

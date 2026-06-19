@@ -1,6 +1,6 @@
 /**
- * EN: Hard caps for in-memory find / page scans (no persistence; limits memory + terminal spam).
- * JA: メモリ内 find / ページ走査の上限（永続化なし。メモリ・ログ量の抑制）。
+ * EN: Caps for history/bookmark API rows. Page body text is read in full (SQLite cache).
+ * JA: 履歴／ブックマーク API の上限。ページ本文は SQLite キャッシュのため全文読み取り。
  */
 
 /** EN: Max chrome.history.search rows per find --history. JA: find --history の最大件数。 */
@@ -12,5 +12,5 @@ export const HISTORY_LOOKBACK_MS = 90 * 24 * 60 * 60 * 1000
 /** EN: Max flattened bookmark rows. JA: ブックマーク走査の最大行数。 */
 export const MAX_BOOKMARK_ROWS = 5000
 
-/** EN: Max characters of innerText read per tab. JA: タブあたり innerText の最大文字数。 */
-export const MAX_PAGE_TEXT_CHARS = 80_000
+/** EN: Max characters of innerText read per tab; 0 = no truncation. JA: タブ innerText 上限（0 は切り詰めなし）。 */
+export const MAX_PAGE_TEXT_CHARS = 0

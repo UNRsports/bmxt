@@ -45,6 +45,8 @@ type Props = {
   state: SearchListPickerState
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
+  /** EN: Cancel background page scan while `phase === "loading"`. */
+  onCancelInFlightScan?: () => void
   onOpenEntry: (
     entry: PickerEntry,
     matchIndex: number,
@@ -71,6 +73,7 @@ function isHorizontalNavKey(e: KeyboardEvent): boolean {
 export function SearchListPickerOverlay({
   onReturnToPrompt,
   onExitToDetailBar,
+  onCancelInFlightScan,
   state,
   onOpenEntry,
   keyboardActive = false,
@@ -351,10 +354,31 @@ export function SearchListPickerOverlay({
         return false
       },
       onCaptureBefore: (e: KeyboardEvent) => {
-        if (loading || !isHorizontalNavKey(e)) {
-          if (loading) {
-            return false
+        if (loading) {
+          if (
+            e.ctrlKey &&
+            !e.metaKey &&
+            !e.altKey &&
+            (e.key === "c" || e.key === "C") &&
+            onCancelInFlightScan
+          ) {
+            onCancelInFlightScan()
+            pickerStopEvent(e)
+            return true
           }
+          if (
+            (e.key === "ArrowLeft" || e.code === "ArrowLeft") &&
+            pickerViewRef.current === "results" &&
+            onExitToDetailBar
+          ) {
+            onExitToDetailBar()
+            pickerStopEvent(e)
+            return true
+          }
+          return false
+        }
+
+        if (!isHorizontalNavKey(e)) {
           if (pickerViewRef.current === "detail" || pickerViewRef.current === "destination") {
             return false
           }
@@ -413,7 +437,15 @@ export function SearchListPickerOverlay({
         return false
       }
     }
-  }, [entries, exitDestinationView, exitDetailView, handleArrowRight, loading, onExitToDetailBar])
+  }, [
+    entries,
+    exitDestinationView,
+    exitDetailView,
+    handleArrowRight,
+    loading,
+    onCancelInFlightScan,
+    onExitToDetailBar
+  ])
 
   return (
     <SearchListPickerBody
