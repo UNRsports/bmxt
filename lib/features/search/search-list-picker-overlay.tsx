@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -111,12 +112,13 @@ export function SearchListPickerOverlay({
   const patternRef = useRef(pattern)
   patternRef.current = pattern
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPickerView("results")
     setDetailEntryIndex(0)
     setDestinationEntryIndex(0)
     setDestinationReturnView("results")
     setResultsHi(0)
+    setMatchHi(0)
     setDestinationEntry(undefined)
     setDestinationRows([])
   }, [entries, phase])
@@ -142,6 +144,15 @@ export function SearchListPickerOverlay({
       void clearSearchPickerPageHighlightsForEntry(detailEntry)
     }
   }, [detailEntry, pickerView])
+
+  const resultsListKey = useMemo(() => {
+    if (entries.length === 0) {
+      return `empty-${phase}`
+    }
+    const first = entries[0]?.id ?? ""
+    const last = entries[entries.length - 1]?.id ?? ""
+    return `${phase}:${entries.length}:${first}:${last}`
+  }, [entries, phase])
 
   const statusLines = useMemo(() => {
     if (loading) {
@@ -406,6 +417,7 @@ export function SearchListPickerOverlay({
 
   return (
     <SearchListPickerBody
+      key={resultsListKey}
       headline={headline}
       entries={entries}
       pattern={pattern}

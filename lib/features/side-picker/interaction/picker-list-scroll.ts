@@ -125,3 +125,34 @@ export function scrollPickerListRowIntoViewAnimated(
     listEl.scrollTo({ top: targetScrollTop, behavior: "smooth" })
   }
 }
+
+/** EN: Scroll list column so the active `<mark>` in row `hi` stays visible (n/N within a row). */
+export function scrollSearchPickerHighlightIntoView(
+  listEl: HTMLElement | null,
+  rowIdPrefix: string,
+  hi: number
+): void {
+  if (!listEl || hi < 0) {
+    return
+  }
+  const row = findPickerListRow(listEl, rowIdPrefix, hi)
+  if (!row) {
+    return
+  }
+  const mark = row.querySelector("mark.bmxt-search-picker-hl")
+  if (mark instanceof HTMLElement) {
+    scrollPickerListRowIntoView(listEl, mark)
+  }
+}
+
+/** EN: Run now and once after layout — highlight may render after excerpt update. */
+export function scrollSearchPickerHighlightIntoViewAfterLayout(
+  listEl: HTMLElement | null,
+  rowIdPrefix: string,
+  hi: number
+): void {
+  scrollSearchPickerHighlightIntoView(listEl, rowIdPrefix, hi)
+  requestAnimationFrame(() => {
+    scrollSearchPickerHighlightIntoView(listEl, rowIdPrefix, hi)
+  })
+}

@@ -18,7 +18,7 @@ import { useUiCopy } from "../setting"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
-import { scrollPickerListToHiAfterLayout, scrollPickerListToHiAnimated } from "../side-picker/interaction/picker-list-scroll"
+import { scrollPickerListToHiAfterLayout, scrollPickerListToHiAnimated, scrollSearchPickerHighlightIntoViewAfterLayout } from "../side-picker/interaction/picker-list-scroll"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { urlListCommandListingHint } from "../side-picker/interaction/url-list-commands"
 import {
@@ -29,7 +29,7 @@ import {
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
 import { useSearchPickerAltPreviewKit } from "./use-search-picker-alt-preview-kit"
 import { useSearchPickerResultsOpenTabNav } from "./use-search-picker-results-open-tab-nav"
-import { excerptAroundNeedle } from "./search-picker-excerpt"
+import { excerptAroundNeedleWithHighlight, SEARCH_PICKER_TEXT_CONTEXT_CHARS } from "./search-picker-excerpt"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { SearchPickerHighlight } from "./search-picker-highlight"
 import { SearchPickerTabFavicon } from "./search-picker-tab-favicon"
@@ -40,7 +40,6 @@ import type { SearchOpenDestinationRow } from "./search-open-destination"
 import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
 import type { SearchPageActiveMode } from "./page-active-setting"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
-import { useTabPickerLiveFieldsRevision } from "../tabs/use-tab-picker-live-fields-revision"
 
 const ROW_ID_PREFIX = "bmxt-search-row"
 
@@ -157,9 +156,18 @@ function SearchListPickerRow({
   const hiRow = index === hi
   const pageMatch = pickPageMatchForDisplay(entry.pageMatches, hiRow ? matchHi : 0)
   const showText = pageMatch != null && pageMatch.snippet.trim().length > 0
-  const textExcerpt = pageMatch ? excerptAroundNeedle(pageMatch.snippet, pattern) : ""
+  const textExcerpt = pageMatch
+    ? excerptAroundNeedleWithHighlight(
+        pageMatch.snippet,
+        pattern,
+        SEARCH_PICKER_TEXT_CONTEXT_CHARS,
+        pageMatch.occurrence ?? 0
+      )
+    : { text: "", highlightOccurrence: 0 }
   const titleNeedle = highlightNeedle.trim() !== "" ? highlightNeedle : pattern
   const textNeedle = highlightNeedle.trim() !== "" ? highlightNeedle : pattern
+  const titleHighlightOccurrence = hiRow && titleNeedle.trim() !== "" ? 0 : undefined
+  const textHighlightOccurrence = hiRow && textNeedle.trim() !== "" ? textExcerpt.highlightOccurrence : undefined
 
   return (
     <div
@@ -175,7 +183,11 @@ function SearchListPickerRow({
             <SearchPickerTabFavicon tabId={entry.tabId} url={entry.url} />
           ) : null}
           <span className="bmxt-search-picker-title-text">
-            <SearchPickerHighlight text={entry.title.trim() || entry.url} needle={titleNeedle} />
+            <SearchPickerHighlight
+              text={entry.title.trim() || entry.url}
+              needle={titleNeedle}
+              activeOccurrence={titleHighlightOccurrence}
+            />
           </span>
         </div>
       </div>
@@ -183,7 +195,11 @@ function SearchListPickerRow({
         <div className="bmxt-search-picker-field">
           <div className="bmxt-search-picker-field-label">text:</div>
           <div className="bmxt-search-picker-text">
-            <SearchPickerHighlight text={textExcerpt} needle={textNeedle} />
+            <SearchPickerHighlight
+              text={textExcerpt.text}
+              needle={textNeedle}
+              activeOccurrence={textHighlightOccurrence}
+            />
           </div>
         </div>
       ) : null}
@@ -218,7 +234,6 @@ export function SearchListPickerBody({
   pageActiveMode = "auto"
 }: SearchListPickerBodyProps) {
   const uiCopy = useUiCopy()
-  useTabPickerLiveFieldsRevision()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -281,7 +296,7 @@ export function SearchListPickerBody({
     ? `destination-${destinationRows.length}`
     : inDetailView
       ? `detail-${detailEntry?.id ?? ""}-${detailHits.length}`
-      : `results-${entries.length}`
+      : `results-${entries.length}-${entries[0]?.id ?? ""}-${entries[entries.length - 1]?.id ?? ""}`
 
   const useVirtual =
     !statusOnly &&
@@ -412,9 +427,31 @@ export function SearchListPickerBody({
     const hint = listScrollHintRef.current
     listScrollHintRef.current = null
     const scrollOptions = hint?.alignStart ? { alignStart: true as const } : undefined
+    const list = listRef.current
 
-    if (useVirtual && listRef.current) {
-      const list = listRef.current
+    if (list) {
+      const rowInDom = list.querySelector<HTMLElement>(`#${CSS.escape(`${ROW_ID_PREFIX}-${hi}`)}`)
+      if (rowInDom) {
+        if (hint?.animated) {
+          scrollPickerListToHiAnimated(list, ROW_ID_PREFIX, hi, scrollOptions)
+        } else {
+          scrollPickerListToHiAfterLayout(list, ROW_ID_PREFIX, hi, scrollOptions)
+        }
+        if (useVirtual) {
+          setWindowRange(
+            computePlainPickerWindow(
+              list.scrollTop,
+              list.clientHeight,
+              entries.length,
+              effectiveRowHeight
+            )
+          )
+        }
+        return
+      }
+    }
+
+    if (useVirtual && list) {
       const targetTop = hint?.alignStart
         ? hi * effectiveRowHeight
         : scrollTopForPlainPickerIndex(
@@ -442,10 +479,10 @@ export function SearchListPickerBody({
     }
 
     if (hint?.animated) {
-      scrollPickerListToHiAnimated(listRef.current, ROW_ID_PREFIX, hi, scrollOptions)
+      scrollPickerListToHiAnimated(list, ROW_ID_PREFIX, hi, scrollOptions)
       return
     }
-    scrollPickerListToHiAfterLayout(listRef.current, ROW_ID_PREFIX, hi, scrollOptions)
+    scrollPickerListToHiAfterLayout(list, ROW_ID_PREFIX, hi, scrollOptions)
   }, [effectiveRowHeight, entries.length, hi, listScrollHintRef, useVirtual])
 
   useLayoutEffect(() => {
@@ -453,7 +490,14 @@ export function SearchListPickerBody({
       return
     }
     followListScrollToHi()
-  }, [followListScrollToHi, hi, lineCount, matchHi, pickerView])
+  }, [followListScrollToHi, hi, lineCount, pickerView])
+
+  useLayoutEffect(() => {
+    if (lineCount === 0 || statusOnly || inDetailView || inDestinationView) {
+      return
+    }
+    scrollSearchPickerHighlightIntoViewAfterLayout(listRef.current, ROW_ID_PREFIX, hi)
+  }, [hi, inDestinationView, inDetailView, lineCount, matchHi, pickerView, statusOnly])
 
   useLayoutEffect(() => {
     if (keyboardActive) {
@@ -529,6 +573,11 @@ export function SearchListPickerBody({
   const virtualEnd = useVirtual ? windowRange.end : entries.length
   const virtualTrackScopeId = useId()
   const virtualWindowScopeId = useId()
+  const listScopeId = useId()
+  useCspDynamicStyle(
+    useVirtual ? listScopeId : null,
+    useVirtual ? { "--bmxt-search-picker-row-height": `${effectiveRowHeight}px` } : null
+  )
   useCspDynamicStyle(
     useVirtual ? virtualTrackScopeId : null,
     useVirtual && totalHeight !== undefined ? { height: `${totalHeight}px` } : null
@@ -539,6 +588,20 @@ export function SearchListPickerBody({
       ? { transform: `translateY(${virtualStart * effectiveRowHeight}px)` }
       : null
   )
+
+  useLayoutEffect(() => {
+    if (!useVirtual || statusOnly || inDetailView || inDestinationView || entries.length === 0) {
+      return
+    }
+    const list = listRef.current
+    if (!list) {
+      return
+    }
+    list.scrollTop = 0
+    setWindowRange(
+      computePlainPickerWindow(0, list.clientHeight, entries.length, effectiveRowHeight)
+    )
+  }, [listResetKey, effectiveRowHeight, entries.length, inDestinationView, inDetailView, statusOnly, useVirtual])
 
   useLayoutEffect(() => {
     if (!useVirtual) {
@@ -592,7 +655,10 @@ export function SearchListPickerBody({
       />
       <div
         ref={listRef}
-        className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
+        className={`bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable${
+          useVirtual ? " bmxt-tab-picker-list--search-virtual" : ""
+        }`}
+        {...(useVirtual ? { [CSP_DYNAMIC_SCOPE_ATTR]: listScopeId } : {})}
         role="listbox"
         aria-label={listAriaLabel}
         aria-activedescendant={activeRowId}

@@ -17,10 +17,12 @@ function escapeRegExp(s: string): string {
 /**
  * `needle` に対する大文字小文字無視の非重複一致で `text` を分割（ハイライト用）。
  * `needle` が空のときは全文を非一致 1 セグメントとして返す。
+ * `activeOccurrence` を指定すると、その 0 始まり出現だけを `match: true` にする。
  */
 export function splitTextHighlightSegments(
   text: string,
-  needle: string
+  needle: string,
+  activeOccurrence?: number
 ): Array<{ text: string; match: boolean }> {
   if (needle === "") {
     return [{ text, match: false }]
@@ -29,11 +31,15 @@ export function splitTextHighlightSegments(
   const out: Array<{ text: string; match: boolean }> = []
   let last = 0
   let m: RegExpExecArray | null
+  let occurrence = 0
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) {
       out.push({ text: text.slice(last, m.index), match: false })
     }
-    out.push({ text: m[0], match: true })
+    const isActive =
+      activeOccurrence === undefined || activeOccurrence < 0 || occurrence === activeOccurrence
+    out.push({ text: m[0], match: isActive })
+    occurrence += 1
     const adv = m[0].length
     last = m.index + adv
     if (adv === 0) {
