@@ -1,5 +1,5 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
-import { searchCmdExitListLines, searchCmdUsageLines } from "../../setting/i18n/cmd-lines"
+import { searchCmdExitListLines, searchCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
 import {
   isSearchListScopeToken,
   normalizeSearchListDispatchLine,
@@ -67,7 +67,7 @@ function runList(args: string[]) {
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["search: available options", ...searchCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("search"), ...searchCmdUsageLines()])
   }
   const headRaw = args[1]
   const headKey = normalizeSearchSecondToken(headRaw)

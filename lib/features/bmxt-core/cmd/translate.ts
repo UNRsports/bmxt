@@ -1,5 +1,6 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
+  cmdAvailableOptionsLine,
   translateCmdOffLines,
   translateCmdOnLines,
   translateCmdSettingLines,
@@ -16,7 +17,7 @@ export const CMD: CmdMeta = {
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["translate: available options", ...translateCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("translate"), ...translateCmdUsageLines()])
   }
   const first = args[1]
   if (!isSecondToken("translate", first)) {

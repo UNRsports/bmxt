@@ -1,5 +1,6 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
+  cmdAvailableOptionsLine,
   navCmdEnterLines,
   navCmdExitLines,
   navCmdUsageLines
@@ -15,7 +16,7 @@ export const CMD: CmdMeta = {
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["nav: available options", ...navCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("nav"), ...navCmdUsageLines()])
   }
   const first = args[1]
   if (!isSecondToken("nav", first)) {

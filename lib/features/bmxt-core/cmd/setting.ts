@@ -1,5 +1,6 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
+  cmdAvailableOptionsLine,
   settingCmdExitLines,
   settingCmdListLines,
   settingCmdUsageLines
@@ -15,7 +16,7 @@ export const CMD: CmdMeta = {
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["setting: available options", ...settingCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("setting"), ...settingCmdUsageLines()])
   }
   const first = args[1]
   if (!isSecondToken("setting", first)) {
