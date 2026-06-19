@@ -42,6 +42,18 @@ export const TABS_PICKER_SETTINGS_KEY = "bmxt_tabs_picker_settings_v1"
 /** Search list picker: page-active preview mode (`--auto` / `--manual`). */
 export const SEARCH_PICKER_SETTINGS_KEY = "bmxt_search_picker_settings_v1"
 
+/** Single SQLite blob (`sql.js`) — sole search cache source (history / bookmark / page). */
+export const SEARCH_CACHE_DB_KEY = "bmxt_search_cache_db_v1"
+
+/** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
+export const SEARCH_CACHE_HISTORY_KEY = "bmxt_search_cache_history_v1"
+
+/** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
+export const SEARCH_CACHE_BOOKMARK_KEY = "bmxt_search_cache_bookmark_v1"
+
+/** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
+export const SEARCH_CACHE_PAGE_KEY = "bmxt_search_cache_page_v1"
+
 /** Global UI: display locale and terminal appearance. */
 export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 

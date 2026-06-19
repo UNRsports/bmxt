@@ -14,6 +14,7 @@ import {
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft
 } from "./setting-list-picker-state.ts"
+import { settingMainRowTargetView } from "./setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
 import type { UiAppearance } from "./appearance.ts"
 
@@ -133,6 +134,9 @@ describe("setting list picker draft", () => {
     assert.equal(next.editDraft, "")
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
+  })
+  it("maps reset-search-cache to confirm view", () => {
+    assert.equal(settingMainRowTargetView("reset-search-cache"), "searchCacheResetConfirm")
   })
 })
 

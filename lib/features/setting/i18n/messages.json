@@ -291,6 +291,10 @@
     "ja": "setting -list · reset · ↑↓ · → 確定 · ← 一覧",
     "en": "setting -list · reset · ↑↓ · → confirm · ← list"
   },
+  "setting.picker.headline.searchCacheResetConfirm": {
+    "ja": "setting -list · search-cache reset · ↑↓ · → 確定 · ← 一覧",
+    "en": "setting -list · search-cache reset · ↑↓ · → confirm · ← list"
+  },
   "setting.picker.headline.editing": {
     "ja": "setting -list · 編集中 — 入力欄に値を入力 · Enter でプレビュー反映 · Esc キャンセル",
     "en": "setting -list · editing — type in the field · Enter to preview · Esc cancel"
@@ -337,6 +341,14 @@
   },
   "setting.picker.resetNo": {
     "ja": "n — cancel",
+    "en": "n — cancel"
+  },
+  "setting.picker.searchCacheResetYes": {
+    "ja": "y — search キャッシュ（SQLite）を消去",
+    "en": "y — clear search cache (SQLite)"
+  },
+  "setting.picker.searchCacheResetNo": {
+    "ja": "n — キャンセル",
     "en": "n — cancel"
   },
   "setting.picker.editAria.fg": {
@@ -450,6 +462,10 @@
   "setting.picker.main.reset": {
     "ja": "reset-default — restore appearance to defaults",
     "en": "reset-default — restore appearance to defaults"
+  },
+  "setting.picker.main.resetSearchCache": {
+    "ja": "reset-search-cache — clear search SQLite cache",
+    "en": "reset-search-cache — clear search SQLite cache"
   },
   "setting.picker.main.export": {
     "ja": "export — save settings.json + background image as zip",
@@ -594,6 +610,10 @@
   "setting.appearance.resetCancelled": {
     "ja": "setting: 外観のリセットをキャンセルしました",
     "en": "setting: appearance reset cancelled"
+  },
+  "setting.searchCache.resetDone": {
+    "ja": "setting: search キャッシュ（SQLite）を消去しました",
+    "en": "setting: search cache (SQLite) cleared"
   },
   "setting.appearance.resetConfirmInvalid": {
     "ja": "y または n で回答してください",

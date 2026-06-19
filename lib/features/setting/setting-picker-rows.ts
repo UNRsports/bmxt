@@ -38,12 +38,15 @@ export type SettingPickerRowId =
   | "bg-import"
   | "bg-clear"
   | "reset-default"
+  | "reset-search-cache"
   | "export"
   | "import"
   | "locale-ja"
   | "locale-en"
   | "reset-yes"
   | "reset-no"
+  | "search-cache-reset-yes"
+  | "search-cache-reset-no"
   | "save"
   | "cancel"
 
@@ -131,7 +134,7 @@ export function settingPickerInitialHi(
   if (view === "pickerBgImage") {
     return appearance.picker.bgImageDataUrl ? 1 : 0
   }
-  if (view === "resetConfirm") {
+  if (view === "resetConfirm" || view === "searchCacheResetConfirm") {
     return 1
   }
   return 0
@@ -289,6 +292,19 @@ export function buildSettingPickerRows(
     ]
   }
 
+  if (view === "searchCacheResetConfirm") {
+    return [
+      {
+        id: "search-cache-reset-yes",
+        line: t("setting.picker.searchCacheResetYes", locale)
+      },
+      {
+        id: "search-cache-reset-no",
+        line: t("setting.picker.searchCacheResetNo", locale)
+      }
+    ]
+  }
+
   const bgImageLabel = appearance.bgImageDataUrl
     ? t("setting.summary.set", locale)
     : t("setting.summary.none", locale)
@@ -408,6 +424,10 @@ export function buildSettingPickerRows(
       line: t("setting.picker.main.reset", locale)
     },
     {
+      id: "reset-search-cache",
+      line: t("setting.picker.main.resetSearchCache", locale)
+    },
+    {
       id: "export",
       line: t("setting.picker.main.export", locale)
     },
@@ -469,7 +489,9 @@ export function settingPickerHeadline(
                               ? "setting.picker.headline.fontPicker"
                               : view === "resetConfirm"
                                 ? "setting.picker.headline.resetConfirm"
-                                : "setting.picker.headline.main"
+                                : view === "searchCacheResetConfirm"
+                                  ? "setting.picker.headline.searchCacheResetConfirm"
+                                  : "setting.picker.headline.main"
   return t(key, locale)
 }
 

@@ -79,6 +79,7 @@ import {
   type SearchListPickerState
 } from "../search/search-list-picker-input"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs"
+import { resetSearchCacheFromSettings } from "../search/cache/search-cache-store"
 import { normalizeSearchPattern } from "../search/search-format"
 import {
   isRetryableDomListOutput,
@@ -140,6 +141,7 @@ import {
   parseSettingListPickerLine,
   replaceUiSettings,
   settingPickerApplyDraftToMain,
+  settingPickerGoToView,
   settingPickerUpdateDraft,
   settingTokenForUiLocale,
   setRunLocale,
@@ -1816,6 +1818,24 @@ export function BmxtShell({
         return
       }
       if (row.id === "reset-no") {
+        return
+      }
+      if (row.id === "search-cache-reset-yes") {
+        try {
+          await resetSearchCacheFromSettings()
+          setSettingListPicker(sessionId, settingPickerGoToView("main", current))
+          await appendLogLines([logPrefix, uiCopy.t("setting.searchCache.resetDone")])
+        } catch (e) {
+          await appendLogLines([
+            logPrefix,
+            uiCopy.t("error.generic", {
+              message: e instanceof Error ? e.message : String(e)
+            })
+          ])
+        }
+        return
+      }
+      if (row.id === "search-cache-reset-no") {
         return
       }
       if (row.id === "size") {

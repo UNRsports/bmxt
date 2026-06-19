@@ -31,6 +31,10 @@ import { t } from "./lib/features/setting/i18n/messages"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
+import {
+  registerSearchCacheBackgroundListeners,
+  warmSearchCachesOnStartup
+} from "./lib/features/search/cache/background-listeners"
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"
@@ -189,12 +193,17 @@ chrome.runtime.onInstalled.addListener((details) => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
   void openWelcomePageOnUpdateIfNeeded(details)
+  warmSearchCachesOnStartup()
 })
 
 chrome.runtime.onStartup.addListener(() => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
+  warmSearchCachesOnStartup()
 })
+
+registerSearchCacheBackgroundListeners()
+warmSearchCachesOnStartup()
 
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()

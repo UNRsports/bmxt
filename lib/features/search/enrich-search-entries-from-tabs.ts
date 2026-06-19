@@ -3,9 +3,8 @@ import {
   assignGlobalOccurrencesToPageMatches,
   innerTextLinesFromBodyText
 } from "../page-dom/needle-occurrence"
-import { readTabInnerText } from "../page-extract/read-tab-inner-text"
+import { resolvePageInnerTextByOpenTab, flushSearchCacheDb } from "./cache/search-cache-store"
 import { isHttpUrl } from "../url/is-http-url"
-import { MAX_PAGE_TEXT_CHARS } from "./limits"
 import { collectPageMatchesForTab } from "./search-page-matches"
 import { normalizeUrlForSearchDedup } from "./search-url-dedup"
 
@@ -29,14 +28,14 @@ function assignSnippetOccurrences(matches: SearchPageMatch[]): SearchPageMatch[]
 
 async function refreshPageMatchGlobalsFromTab(
   entry: PickerEntry,
-  tabId: number,
+  tab: chrome.tabs.Tab,
   needle: string
 ): Promise<SearchPageMatch[] | undefined> {
   const matches = entry.pageMatches
   if (!matches || matches.length === 0) {
     return undefined
   }
-  const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
+  const text = await resolvePageInnerTextByOpenTab(tab)
   if (text === null) {
     return matches
   }
@@ -86,7 +85,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
 
     const hasBodyHits = (entry.pageMatches ?? []).some((m) => m.lineNo > 0)
     if (hasBodyHits) {
-      const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab.id, needle)
+      const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab, needle)
       out.push({
         ...entry,
         tabId: entry.tabId ?? tab.id,
@@ -96,7 +95,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
       continue
     }
 
-    const text = await readTabInnerText(tab.id, MAX_PAGE_TEXT_CHARS)
+    const text = await resolvePageInnerTextByOpenTab(tab)
     const pageMatches = collectPageMatchesForTab(tab.title ?? "", text, needle)
     const bodyMatches = pageMatches.filter((m) => m.lineNo > 0)
     if (bodyMatches.length === 0) {
@@ -124,5 +123,6 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
     })
   }
 
+  await flushSearchCacheDb()
   return out
 }

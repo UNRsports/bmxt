@@ -4,9 +4,13 @@
  */
 
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
-import { readTabInnerText } from "../../page-extract/read-tab-inner-text"
+import {
+  flushSearchCacheDb,
+  prunePageTabsForOpenTabIds,
+  resolvePageTabInnerText
+} from "../cache/search-cache-store"
 import { isHttpUrl } from "../../url/is-http-url"
-import { matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../index"
+import { matchesNeedle } from "../index"
 import { collectPageMatchesForTab } from "../search-page-matches"
 import { linesForSearchPageTab } from "./page-find-blocks"
 import {
@@ -74,10 +78,18 @@ export async function searchPageLines(
   let totalHits = 0
   let scanned = 0
   let skipped = 0
+  let cacheHits = 0
   let tabsChecked = 0
   let cancelled = false
   const matchAll = !pattern.trim()
   const tabTotal = tabs.length
+  const openTabIds = new Set<number>()
+  for (const t of tabs) {
+    if (typeof t.id === "number") {
+      openTabIds.add(t.id)
+    }
+  }
+  await prunePageTabsForOpenTabIds(openTabIds)
 
   await emit({ phase: "start", tabIndex: 0, tabTotal, scanned: 0, skipped: 0 })
 
@@ -93,7 +105,10 @@ export async function searchPageLines(
       continue
     }
     tabsChecked = tabIndex + 1
-    const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
+    const { text, fromCache } = await resolvePageTabInnerText(tab)
+    if (fromCache) {
+      cacheHits += 1
+    }
     if (shouldCancel?.()) {
       cancelled = true
       break
@@ -169,9 +184,10 @@ export async function searchPageLines(
   }
 
   await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
+  await flushSearchCacheDb()
 
   if (cancelled) {
-    const summary = `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped)`
+    const summary = `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped, ${cacheHits} cache hit(s))`
     if (out.length === 0) {
       return [summary]
     }
@@ -195,7 +211,7 @@ export async function searchPageLines(
   }
   const pageCount = out.filter((l) => l === "[page]").length
   out.unshift(
-    `(${matchAll ? scanned : pageCount} page(s), ${totalHits} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}; ${tabTotal} tab(s) checked)`
+    `(${matchAll ? scanned : pageCount} page(s), ${totalHits} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}, ${cacheHits} cache hit(s); ${tabTotal} tab(s) checked)`
   )
   return out
 }
