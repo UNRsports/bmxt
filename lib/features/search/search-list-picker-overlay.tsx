@@ -262,7 +262,10 @@ export function SearchListPickerOverlay({
       return `${searchListPickerDetailHeadline(locale)} · ${clipped}`
     }
     const entry = entries[resultsHi]
-    const detail = entry ? searchPickerActiveMatchDetail(entry, matchHi) : ""
+    const detail =
+      entry && pattern.trim() !== ""
+        ? searchPickerActiveMatchDetail(entry, matchHi)
+        : ""
     if (!detail) {
       return searchListPickerHeadline(locale)
     }
@@ -276,7 +279,8 @@ export function SearchListPickerOverlay({
     pickerView,
     detailEntry,
     destinationEntry,
-    uiCopy.locale
+    uiCopy.locale,
+    pattern
   ])
 
   const onConfirmLineIndex = useCallback(
@@ -384,6 +388,9 @@ export function SearchListPickerOverlay({
 
         if (!isHorizontalNavKey(e)) {
           if (pickerViewRef.current === "detail" || pickerViewRef.current === "destination") {
+            return false
+          }
+          if (patternRef.current.trim() === "") {
             return false
           }
           const entry = entries[resultsHiRef.current]

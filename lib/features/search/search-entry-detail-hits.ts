@@ -1,6 +1,6 @@
-import type { PickerEntry } from "../side-picker/model/picker-entry"
-import { matchesNeedle } from "./matcher"
-import { excerptAroundNeedle } from "./search-picker-excerpt"
+import type { PickerEntry } from "../side-picker/model/picker-entry.ts"
+import { matchesNeedle } from "./matcher.ts"
+import { excerptAroundNeedle } from "./search-picker-excerpt.ts"
 
 /** EN: One searchable hit row inside the search picker detail view. */
 export type SearchEntryDetailHit = {
@@ -32,12 +32,17 @@ function pushUniqueTitleOrUrl(
 /**
  * EN: All pattern hits for one search picker row — title, url, and page body lines.
  * JA: 検索結果 1 行分のヒット（タイトル・URL・本文行）を詳細一覧用に列挙する。
+ * EN: Returns no rows when `pattern` is empty — detail view requires an explicit search needle.
+ * JA: パターン未指定時は詳細一覧を出さない（空配列を返す）。
  */
 export function listSearchEntryDetailHits(
   entry: PickerEntry,
   pattern: string
 ): SearchEntryDetailHit[] {
   const needle = pattern.trim()
+  if (!needle) {
+    return []
+  }
   const matches = entry.pageMatches ?? []
   const hits: SearchEntryDetailHit[] = []
   const bodyMatchCount = matches.filter((m) => m.lineNo > 0).length
@@ -70,12 +75,12 @@ export function listSearchEntryDetailHits(
   }
 
   const titleText = entry.title.trim() || entry.url
-  if (!needle || matchesNeedle(titleText, needle)) {
+  if (matchesNeedle(titleText, needle)) {
     pushUniqueTitleOrUrl(hits, "title", titleText)
   }
 
   const url = entry.url.trim()
-  if (url && (!needle || matchesNeedle(url, needle))) {
+  if (url && matchesNeedle(url, needle)) {
     pushUniqueTitleOrUrl(hits, "url", url)
   }
 

@@ -158,7 +158,10 @@ function SearchListPickerRow({
 }): ReactNode {
   const hiRow = index === hi
   const pageMatch = pickPageMatchForDisplay(entry.pageMatches, hiRow ? matchHi : 0)
-  const showText = pageMatch != null && pageMatch.snippet.trim().length > 0
+  const showText =
+    pattern.trim() !== "" &&
+    pageMatch != null &&
+    pageMatch.snippet.trim().length > 0
   const textExcerpt = pageMatch
     ? excerptAroundNeedleWithHighlight(
         pageMatch.snippet,
