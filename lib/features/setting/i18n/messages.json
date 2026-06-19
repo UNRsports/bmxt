@@ -344,8 +344,8 @@
     "en": "n — cancel"
   },
   "setting.picker.searchCacheResetYes": {
-    "ja": "y — search キャッシュ（SQLite）を消去",
-    "en": "y — clear search cache (SQLite)"
+    "ja": "y — search メタデータキャッシュ（履歴／ブックマーク SQLite）を消去",
+    "en": "y — clear search metadata cache (history/bookmark SQLite)"
   },
   "setting.picker.searchCacheResetNo": {
     "ja": "n — キャンセル",
@@ -464,8 +464,8 @@
     "en": "reset-default — restore appearance to defaults"
   },
   "setting.picker.main.resetSearchCache": {
-    "ja": "reset-search-cache — clear search SQLite cache",
-    "en": "reset-search-cache — clear search SQLite cache"
+    "ja": "reset-search-cache — 履歴／ブックマークの search SQLite キャッシュを消去",
+    "en": "reset-search-cache — clear history/bookmark search SQLite cache"
   },
   "setting.picker.main.export": {
     "ja": "export — save settings.json + background image as zip",
@@ -612,8 +612,8 @@
     "en": "setting: appearance reset cancelled"
   },
   "setting.searchCache.resetDone": {
-    "ja": "setting: search キャッシュ（SQLite）を消去しました",
-    "en": "setting: search cache (SQLite) cleared"
+    "ja": "setting: search メタデータキャッシュ（SQLite）を消去しました",
+    "en": "setting: search metadata cache (SQLite) cleared"
   },
   "setting.appearance.resetConfirmInvalid": {
     "ja": "y または n で回答してください",

@@ -3,7 +3,8 @@ import {
   assignGlobalOccurrencesToPageMatches,
   innerTextLinesFromBodyText
 } from "../page-dom/needle-occurrence"
-import { resolvePageInnerTextByOpenTab, flushSearchCacheDb } from "./cache/search-cache-store"
+import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
+import { MAX_PAGE_TEXT_CHARS } from "./limits"
 import { isHttpUrl } from "../url/is-http-url"
 import { collectPageMatchesForTab } from "./search-page-matches"
 import { normalizeUrlForSearchDedup } from "./search-url-dedup"
@@ -35,7 +36,7 @@ async function refreshPageMatchGlobalsFromTab(
   if (!matches || matches.length === 0) {
     return undefined
   }
-  const text = await resolvePageInnerTextByOpenTab(tab)
+  const text = await readOpenTabInnerText(tab, MAX_PAGE_TEXT_CHARS)
   if (text === null) {
     return matches
   }
@@ -95,7 +96,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
       continue
     }
 
-    const text = await resolvePageInnerTextByOpenTab(tab)
+    const text = await readOpenTabInnerText(tab, MAX_PAGE_TEXT_CHARS)
     const pageMatches = collectPageMatchesForTab(tab.title ?? "", text, needle)
     const bodyMatches = pageMatches.filter((m) => m.lineNo > 0)
     if (bodyMatches.length === 0) {
@@ -123,6 +124,5 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
     })
   }
 
-  await flushSearchCacheDb()
   return out
 }

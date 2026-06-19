@@ -224,15 +224,16 @@
           </li>
           <li>
             <strong>Session log</strong> — text output shown in the Extension UI (subject to line limits).
-            Removed when you close the BMXt window or <code>exit</code> the last split pane.
+            Removed when you close the BMXt window or run <code>exit</code> on the last terminal session.
           </li>
           <li>
             <strong>Last focused normal window</strong> — a window identifier used to route focus-related
             behavior within the Extension.
           </li>
           <li>
-            <strong>Terminal sessions and split layout</strong> — log text per pane and pane layout when you
-            use split terminals. Removed on BMXt window close or last-pane <code>exit</code>.
+            <strong>Terminal sessions</strong> — log text and session order for tmux-style terminal
+            sessions inside one BMXt window (<code>bmxt_terminal_sessions_v1</code>). Removed on BMXt window
+            close or last-session <code>exit</code>.
           </li>
           <li>
             <strong>Process UI state</strong> — which picker columns are open and keyboard focus among
@@ -265,6 +266,20 @@
             (<code>bmxt_search_picker_settings_v1</code>).
           </li>
           <li>
+            <strong>Search metadata cache</strong> — a local SQLite blob caching
+            <code>search -list --history</code> and <code>search -list --bookmark</code> titles and URLs to
+            speed repeat scans (<code>bmxt_search_cache_db_v1</code>). Does <strong>not</strong> store page
+            body text from <code>search -list --page</code> (that scope reads open tabs live each time you run
+            the command). Cleared from <strong>setting -list → reset-search-cache</strong> or on uninstall;
+            kept across BMXt window close.
+          </li>
+          <li>
+            <strong>Job audit log (optional)</strong> — when long-running picker or command work runs in the
+            BMXt UI tab, completed job records may be stored in a local SQLite blob
+            (<code>bmxt_job_db_v1</code>). The service worker does not persist this data. Kept across process
+            exit until cleared or uninstalled.
+          </li>
+          <li>
             <strong>Last seen extension version</strong> — used only to show an in-UI release-notes notice
             after updates.
           </li>
@@ -279,12 +294,13 @@
           </li>
         </ul>
         <p>
-          When you close the BMXt window or run <code>exit</code> on the last split pane, process-scoped
-          entries above (session logs, split layout, open picker state, tab-picker fold) are removed from
+          When you close the BMXt window or run <code>exit</code> on the last terminal session,
+          process-scoped entries above (session logs, open picker state, tab-picker fold) are removed from
           storage. Command history, UI settings, translation assist preferences, picker page-active settings,
-          custom window display names, and version-tracking keys remain until you clear them (for example via
-          the <code>reset-bmxt</code> shortcut, which also clears command history) or uninstall the
-          Extension.
+          search metadata cache (history/bookmark titles and URLs only; not page body), optional job audit log,
+          custom window display names, and version-tracking keys remain until you clear them (for example
+          <strong>setting -list → reset-search-cache</strong> for the search metadata cache,
+          the <code>reset-bmxt</code> shortcut for command history, or uninstalling the Extension).
         </p>
         <p>
           If you use <code>setting -list</code> to export or import a settings zip, the file is written to or
@@ -297,14 +313,16 @@
         <p>
           If you run supported commands, the Extension may use the <code>history</code> and
           <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
-          stores—for example <code>search -list --history</code> or <code>search -list --bookmark</code>.
+          stores—for example <code>search -list --all</code>, <code>search -list --history</code>, or
+          <code>search -list --bookmark</code>.
         </p>
         <p>
           For ordinary http(s) pages (not chrome://, extension, or Chrome Web Store pages), the Extension may
           use the <code>scripting</code> permission together with <strong>optional</strong>
           <code>http://*/*</code> and <code>https://*/*</code> host access (granted when prompted, or in
           extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>.
-          Examples: <code>search -list --page</code> (visible text in open tabs), <code>dom -list</code> (page
+          Examples: <code>search -list --page</code> (reads visible text from open tabs when you run the
+          command, without persisting page content to extension storage), <code>dom -list</code> (page
           structure and scrolling to an element you pick in the list), and <code>nav -enter</code> (a keyboard
           nav overlay on the active tab for move, click, type, and related actions you control from the
           Extension UI). When translation assist is enabled, text you enter during nav typing in the Extension
@@ -522,14 +540,14 @@
           </li>
           <li>
             <strong>セッションログ</strong> — UI に表示するログ出力（行数に上限あり）。BMXt ウィンドウを閉じる、または
-            最後のペインで <code>exit</code> したときに消去。
+            最後のターミナルセッションで <code>exit</code> したときに消去。
           </li>
           <li>
             <strong>最後にフォーカスした通常ウィンドウ</strong> — フォーカス関連の動作のために用いるウィンドウ ID。
           </li>
           <li>
-            <strong>ターミナルセッションと分割レイアウト</strong> — ペインごとのログと、分割表示時のレイアウト。
-            BMXt ウィンドウ閉じ／最後のペイン <code>exit</code> で消去。
+            <strong>ターミナルセッション</strong> — 1 つの BMXt ウィンドウ内の tmux 風ターミナルセッション向けログと順序
+            （<code>bmxt_terminal_sessions_v1</code>）。BMXt ウィンドウ閉じ／最後のセッション <code>exit</code> で消去。
           </li>
           <li>
             <strong>プロセス UI 状態</strong> — 開いているピッカー列とターミナル／ピッカー間のフォーカス
@@ -558,6 +576,17 @@
             （<code>bmxt_search_picker_settings_v1</code>）。
           </li>
           <li>
+            <strong>検索メタデータキャッシュ</strong> —
+            <code>search -list --history</code> / <code>--bookmark</code> の URL・タイトル等を再走査を速くするため
+            SQLite（<code>bmxt_search_cache_db_v1</code>）に保存。<code>search -list --page</code> のページ本文は
+            <strong>保存しない</strong>（コマンド実行のたびに開いているタブから都度読み取り）。
+            <strong>setting -list → reset-search-cache</strong> またはアンインストールで消去。BMXt ウィンドウを閉じても保持。
+          </li>
+          <li>
+            <strong>ジョブ監査ログ（任意）</strong> — BMXt UI タブで長時間処理を実行したとき、完了ジョブを
+            <code>bmxt_job_db_v1</code> に記録することがある（サービスワーカーは永続化しない）。プロセス終了後も保持。
+          </li>
+          <li>
             <strong>最後に確認した拡張機能バージョン</strong> — 更新後のリリースノート案内用のみ。
           </li>
           <li>
@@ -570,10 +599,11 @@
           </li>
         </ul>
         <p>
-          BMXt ウィンドウを閉じる、または最後の split ペインで <code>exit</code> すると、上記のうちプロセススコープの
-          データ（セッションログ、split レイアウト、開いているピッカー状態、タブツリー開閉）は storage から消えます。
-          コマンド履歴、UI 設定、翻訳アシスト設定、ピッカー page-active 設定、ウィンドウ表示名、バージョン追跡キーは、
-          <code>reset-bmxt</code> ショートカット（コマンド履歴も消去）や拡張機能のアンインストール等で消すまで保持されます。
+          BMXt ウィンドウを閉じる、または最後のターミナルセッションで <code>exit</code> すると、上記のうちプロセススコープの
+          データ（セッションログ、開いているピッカー状態、タブツリー開閉）は storage から消えます。
+          コマンド履歴、UI 設定、翻訳アシスト設定、ピッカー page-active 設定、検索メタデータキャッシュ（履歴／ブックマークの URL・タイトルのみ。<code>--page</code> 本文は含まない）、任意のジョブ監査ログ、
+          ウィンドウ表示名、バージョン追跡キーは、
+          <code>reset-bmxt</code> ショートカット（コマンド履歴も消去）、setting -list の reset-search-cache（検索メタデータキャッシュ）、拡張機能のアンインストール等で消すまで保持されます。
         </p>
         <p>
           <code>setting -list</code> で設定 zip を export／import する場合、ファイルはブラウザのダウンロードまたは
@@ -593,7 +623,7 @@
           ユーザーがコマンドを実行したときに限り、<code>scripting</code> 権限と<strong>オプション</strong>の
           <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは拡張機能の詳細設定で許可されたとき）により、
           同梱の小さなヘルパースクリプトを実行します。例:
-          <code>search -list --page</code>（開いているタブの可視テキスト）、<code>dom -list</code>（ページ構造の一覧と、
+          <code>search -list --page</code>（コマンド実行時に開いているタブの可視テキストを都度読み取り。本文は拡張機能 storage に永続化しない）、<code>dom -list</code>（ページ構造の一覧と、
           一覧で選んだ要素へのスクロール）、<code>nav -enter</code>（アクティブタブ上のキーボードナビオーバーレイによる
           移動・クリック・入力など、本拡張機能 UI からの操作）。翻訳アシストが ON のとき、本拡張機能 UI での nav
           typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では http(s) 向けの軽量コンテンツスクリプトを

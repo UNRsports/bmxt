@@ -3,8 +3,7 @@
  * JA: search キャッシュの単一 SQLite 情報源（history / bookmark / page 共通）。
  */
 
-import { readTabInnerText } from "../../page-extract/read-tab-inner-text"
-import { HISTORY_LOOKBACK_MS, MAX_BOOKMARK_ROWS, MAX_HISTORY_RESULTS, MAX_PAGE_TEXT_CHARS } from "../limits"
+import { HISTORY_LOOKBACK_MS, MAX_BOOKMARK_ROWS, MAX_HISTORY_RESULTS } from "../limits"
 import { bookmarkTreeRevision, flattenBookmarkTreeWithRevision } from "./bookmark-revision"
 import {
   persistSearchCacheDb,
@@ -19,8 +18,8 @@ import {
   META_HISTORY_MAX_LAST_VISIT,
   META_HISTORY_MAX_RESULTS
 } from "./db/schema"
-import { isHistoryCacheEntryFresh, isPageTabCacheEntryFresh } from "./stale"
-import type { BookmarkCacheEntry, HistoryCacheEntry, PageTabCacheEntry } from "./types"
+import { isHistoryCacheEntryFresh } from "./stale"
+import type { BookmarkCacheEntry, HistoryCacheEntry } from "./types"
 
 const HISTORY_PROBE_MAX = 32
 const HISTORY_PROBE_WINDOW_MS = 60_000
@@ -202,96 +201,14 @@ export async function warmSearchBookmarkCache(): Promise<void> {
   await rebuildBookmarkSearchCache()
 }
 
-export function tabDataTimestamp(tab: chrome.tabs.Tab): number {
-  const lastAccessed = (tab as { lastAccessed?: number }).lastAccessed
-  if (typeof lastAccessed === "number" && Number.isFinite(lastAccessed)) {
-    return lastAccessed
-  }
-  return Date.now()
-}
-
-function buildPageTabEntry(
-  tab: chrome.tabs.Tab,
-  text: string | null,
-  dataTimestamp: number
-): PageTabCacheEntry {
-  return {
-    tabId: tab.id!,
-    url: tab.url ?? "",
-    title: tab.title ?? "",
-    windowId: typeof tab.windowId === "number" ? tab.windowId : 0,
-    text,
-    dataTimestamp,
-    fetchedAt: Date.now()
-  }
-}
-
-export type PageTabTextResult = {
-  text: string | null
-  fromCache: boolean
-}
-
-/** EN: Compare tab URL + timestamp against unified `page_tab` table. */
-export async function resolvePageTabInnerText(tab: chrome.tabs.Tab): Promise<PageTabTextResult> {
-  const tabId = tab.id
-  if (tabId === undefined) {
-    return { text: null, fromCache: false }
-  }
-  const url = tab.url ?? ""
-  const dataTimestamp = tabDataTimestamp(tab)
-
-  return runSearchCacheTask(async (session) => {
-    const existing = session.getPageTab(tabId)
-    if (isPageTabCacheEntryFresh(existing ?? undefined, url, dataTimestamp)) {
-      return { text: existing!.text, fromCache: true }
-    }
-    const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
-    session.upsertPageTab(buildPageTabEntry(tab, text, dataTimestamp))
-    return { text, fromCache: false }
-  })
-}
-
-/** EN: Read cached page text by normalized URL (enrichment / cross-scope use). */
-export async function resolvePageInnerTextByOpenTab(
-  tab: chrome.tabs.Tab
-): Promise<string | null> {
-  const result = await resolvePageTabInnerText(tab)
-  return result.text
-}
-
-export async function prefetchPageTabInnerTextIfStale(tab: chrome.tabs.Tab): Promise<void> {
-  const tabId = tab.id
-  if (tabId === undefined) {
-    return
-  }
-  const url = tab.url ?? ""
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    return
-  }
-  await runSearchCacheTaskAndPersist(async (session) => {
-    const dataTimestamp = tabDataTimestamp(tab)
-    const existing = session.getPageTab(tabId)
-    if (isPageTabCacheEntryFresh(existing ?? undefined, url, dataTimestamp)) {
-      return
-    }
-    const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
-    session.upsertPageTab(buildPageTabEntry(tab, text, dataTimestamp))
-  })
-}
-
-export async function prunePageTabsForOpenTabIds(openTabIds: ReadonlySet<number>): Promise<void> {
-  await runSearchCacheTask(async (session) => {
-    session.prunePageTabsExcept(openTabIds)
-  })
-}
-
+/** EN: Drop one legacy `page_tab` row (migration / tab navigation cleanup only). */
 export async function removePageCacheTab(tabId: number): Promise<void> {
   await runSearchCacheTaskAndPersist(async (session) => {
     session.deletePageTab(tabId)
   })
 }
 
-/** EN: Flush pending SQLite mutations after a page scan batch. */
+/** EN: Flush pending SQLite mutations after history/bookmark cache writes. */
 export async function flushSearchCacheDb(): Promise<void> {
   await persistSearchCacheDb()
 }

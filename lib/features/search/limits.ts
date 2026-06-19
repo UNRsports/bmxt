@@ -1,6 +1,6 @@
 /**
- * EN: Caps for history/bookmark API rows. Page body text is read in full (SQLite cache).
- * JA: 履歴／ブックマーク API の上限。ページ本文は SQLite キャッシュのため全文読み取り。
+ * EN: Caps for history/bookmark API rows. Page body is read live per tab (not SQLite-cached).
+ * JA: 履歴／ブックマーク API の上限。ページ本文はタブごとに都度読み取り（SQLite キャッシュなし）。
  */
 
 /** EN: Max chrome.history.search rows per find --history. JA: find --history の最大件数。 */

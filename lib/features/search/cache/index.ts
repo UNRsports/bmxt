@@ -1,14 +1,10 @@
-/** EN: Unified SQLite search cache — single source for all scopes. */
+/** EN: Unified SQLite search cache — history/bookmark scopes; page text is live-only. */
 export {
   flushSearchCacheDb,
-  prefetchPageTabInnerTextIfStale,
   rebuildBookmarkSearchCache,
   removePageCacheTab,
   resolveBookmarkEntriesForSearch,
   resolveHistoryEntriesForSearch,
-  resolvePageInnerTextByOpenTab,
-  resolvePageTabInnerText,
-  tabDataTimestamp,
   upsertHistoryCacheOnVisit,
   warmSearchBookmarkCache,
   warmSearchHistoryCache,

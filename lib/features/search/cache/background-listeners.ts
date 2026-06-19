@@ -1,5 +1,4 @@
 import {
-  prefetchPageTabInnerTextIfStale,
   rebuildBookmarkSearchCache,
   removePageCacheTab,
   upsertHistoryCacheOnVisit,
@@ -24,10 +23,6 @@ async function onTabUpdated(
 ): Promise<void> {
   if (changeInfo.url !== undefined) {
     await removePageCacheTab(tabId)
-    return
-  }
-  if (changeInfo.status === "complete") {
-    void prefetchPageTabInnerTextIfStale(tab)
   }
 }
 
@@ -35,7 +30,7 @@ function onTabRemoved(tabId: number): void {
   void removePageCacheTab(tabId)
 }
 
-/** EN: Keep the unified search cache warm; invalidate page rows on navigation. */
+/** EN: Keep history/bookmark cache warm; drop legacy page_tab rows on tab close/navigation. */
 export function registerSearchCacheBackgroundListeners(): void {
   if (listenersRegistered) {
     return

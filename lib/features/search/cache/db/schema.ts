@@ -1,4 +1,4 @@
-/** EN: Single SQLite schema for all `search -list` cache scopes. */
+/** EN: Single SQLite schema for history/bookmark cache. `page_tab` retained for legacy migration/cleanup only. */
 
 export const SEARCH_CACHE_DB_SCHEMA_VERSION = 2
 
