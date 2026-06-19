@@ -28,7 +28,8 @@ import { buildHelpLines } from "./lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "./lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "./lib/features/setting/i18n/run-locale"
 import { t } from "./lib/features/setting/i18n/messages"
-import { BACKGROUND_JOB_SCOPE, getJobRunner } from "./lib/features/job"
+import { BACKGROUND_JOB_SCOPE } from "./lib/features/job/job-types.ts"
+import { getJobRunner } from "./lib/features/job/job-runner.ts"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
@@ -276,7 +277,7 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
     async () => {
       await runCommandBody(trimmed, sessionIdRaw)
     },
-    { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" } }
+    { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
   )
 }
 

@@ -12,6 +12,7 @@ import {
   type JobStatus,
   type JobSupersedePolicy
 } from "./job-types.ts"
+import { isJobSqlitePersistenceAvailable } from "./job-persistence-env.ts"
 
 export type JobRunOptions = {
   meta?: JobMeta
@@ -188,11 +189,20 @@ export class JobRunner {
   private async createRunningHandle(
     kind: JobKind,
     meta: JobMeta | undefined,
-    audited: boolean
+    persistRequested: boolean
   ): Promise<BmxtJobHandle> {
-    const id = audited
-      ? await persistJobStartedLazy(this.scopeId, kind, meta)
-      : ++this.seq
+    let audited = persistRequested && isJobSqlitePersistenceAvailable()
+    let id: number
+    if (audited) {
+      try {
+        id = await persistJobStartedLazy(this.scopeId, kind, meta)
+      } catch {
+        audited = false
+        id = ++this.seq
+      }
+    } else {
+      id = ++this.seq
+    }
     const job = createJobHandle(kind, id, this.scopeId, null)
     job.audited = audited
     return job
@@ -206,7 +216,9 @@ export class JobRunner {
     if (!job.audited) {
       return
     }
-    void persistJobFinishedLazy(job.id, status, error)
+    void persistJobFinishedLazy(job.id, status, error).catch(() => {
+      /* audit trail is optional */
+    })
   }
 
   private supersedeActive(kind: JobKind, status: "cancelled" | "superseded"): void {
