@@ -14,7 +14,7 @@ export type PageExtractRequest = {
 export function bmxtExtractPageInnerTextInPage(max: number): string {
   try {
     const t = document.body?.innerText ?? ""
-    return t.length > max ? t.slice(0, max) : t
+    return max > 0 && t.length > max ? t.slice(0, max) : t
   } catch {
     return ""
   }

@@ -28,9 +28,15 @@ import { buildHelpLines } from "./lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "./lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "./lib/features/setting/i18n/run-locale"
 import { t } from "./lib/features/setting/i18n/messages"
+import { BACKGROUND_JOB_SCOPE } from "./lib/features/job/job-types.ts"
+import { getJobRunner } from "./lib/features/job/job-runner.ts"
 import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
+import {
+  registerSearchCacheBackgroundListeners,
+  warmSearchCachesOnStartup
+} from "./lib/features/search/cache/background-listeners"
 
 /** Plasmo bundle path for the BMXt UI page. */
 const BMXT_PAGE = "tabs/bmxt.html"
@@ -102,11 +108,11 @@ async function openOrFocusBmxtWindowAsync(): Promise<void> {
     await focusBmxtWindow(existingId)
     return
   }
-  /* normal: タブグループ API が popup ウィンドウでは無効なため（chrome.tabs.group） */
+  /* popup: タブバーなしの単一ページ窓（BMXt シェル専用） */
   const url = chrome.runtime.getURL(BMXT_PAGE)
   const w = await chrome.windows.create({
     url,
-    type: "normal",
+    type: "popup",
     width: 780,
     height: 580,
     focused: true
@@ -170,11 +176,8 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     if (chrome.runtime.lastError || !win) {
       return
     }
-    if (win.type === "normal") {
-      /* BMXt 自体も normal になるため、ここを記録すると「最後の閲覧ウィンドウ」がずれる */
-      if (windowId !== bmxtWindowId) {
-        rememberNormalWindow(windowId)
-      }
+    if (win.type === "normal" && windowId !== bmxtWindowId) {
+      rememberNormalWindow(windowId)
     }
   })
 })
@@ -192,12 +195,17 @@ chrome.runtime.onInstalled.addListener((details) => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
   void openWelcomePageOnUpdateIfNeeded(details)
+  warmSearchCachesOnStartup()
 })
 
 chrome.runtime.onStartup.addListener(() => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
+  warmSearchCachesOnStartup()
 })
+
+registerSearchCacheBackgroundListeners()
+warmSearchCachesOnStartup()
 
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
@@ -263,6 +271,18 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
   if (!trimmed) {
     return
   }
+  const runner = getJobRunner(BACKGROUND_JOB_SCOPE)
+  await runner.start(
+    "run-cmd",
+    async () => {
+      await runCommandBody(trimmed, sessionIdRaw)
+    },
+    { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
+  )
+}
+
+async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void> {
+  const trimmed = line
   const st0 = await ensureTerminalSessionsState()
   const sessionId = resolveSessionId(st0, sessionIdRaw)
 

@@ -1,21 +1,17 @@
 /**
- * EN: Reads chrome.history in memory only; nothing is written to extension storage.
- * JA: chrome.history をメモリ上のみ参照。拡張の storage には書き込みません。
+ * EN: Reads chrome.history via `unlimitedStorage` cache when URL + lastVisitTime still match.
+ * JA: URL と lastVisitTime が一致すれば storage キャッシュを再利用。
  */
 
 import {
-  HISTORY_LOOKBACK_MS,
   linesForSearchElement,
   matchesNeedle,
   MAX_HISTORY_RESULTS
 } from "../index"
+import { resolveHistoryEntriesForSearch } from "../cache/search-cache-store"
 
 export async function searchHistoryLines(pattern: string): Promise<string[]> {
-  const items = await chrome.history.search({
-    text: "",
-    maxResults: MAX_HISTORY_RESULTS,
-    startTime: Date.now() - HISTORY_LOOKBACK_MS
-  })
+  const items = await resolveHistoryEntriesForSearch()
   const matchAll = !pattern.trim()
   const matches: string[] = []
   let hitCount = 0

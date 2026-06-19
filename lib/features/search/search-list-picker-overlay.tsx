@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -42,8 +43,12 @@ type DestinationReturnView = "results" | "detail"
 
 type Props = {
   state: SearchListPickerState
+  /** EN: Batched progress lines while `phase === "loading"`. */
+  loadingProgressLines?: readonly string[]
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
+  /** EN: Cancel background page scan while `phase === "loading"`. */
+  onCancelInFlightScan?: () => void
   onOpenEntry: (
     entry: PickerEntry,
     matchIndex: number,
@@ -70,6 +75,8 @@ function isHorizontalNavKey(e: KeyboardEvent): boolean {
 export function SearchListPickerOverlay({
   onReturnToPrompt,
   onExitToDetailBar,
+  onCancelInFlightScan,
+  loadingProgressLines = [],
   state,
   onOpenEntry,
   keyboardActive = false,
@@ -78,8 +85,9 @@ export function SearchListPickerOverlay({
   pageActiveMode = "auto"
 }: Props) {
   const uiCopy = useUiCopy()
-  const { phase, progressLines, entries, emptyResultLines, pattern = "" } = state
+  const { phase, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
+  const progressLines = loading ? loadingProgressLines : state.progressLines
   const [pickerView, setPickerView] = useState<SearchListPickerView>("results")
   const [detailEntryIndex, setDetailEntryIndex] = useState(0)
   const [destinationEntryIndex, setDestinationEntryIndex] = useState(0)
@@ -111,12 +119,13 @@ export function SearchListPickerOverlay({
   const patternRef = useRef(pattern)
   patternRef.current = pattern
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPickerView("results")
     setDetailEntryIndex(0)
     setDestinationEntryIndex(0)
     setDestinationReturnView("results")
     setResultsHi(0)
+    setMatchHi(0)
     setDestinationEntry(undefined)
     setDestinationRows([])
   }, [entries, phase])
@@ -143,9 +152,18 @@ export function SearchListPickerOverlay({
     }
   }, [detailEntry, pickerView])
 
-  const statusLines = useMemo(() => {
+  const resultsListKey = useMemo(() => {
+    if (entries.length === 0) {
+      return `empty-${phase}`
+    }
+    const first = entries[0]?.id ?? ""
+    const last = entries[entries.length - 1]?.id ?? ""
+    return `${phase}:${entries.length}:${first}:${last}`
+  }, [entries, phase])
+
+  const statusLines = useMemo((): string[] => {
     if (loading) {
-      return progressLines.length > 0 ? progressLines : ["search — starting…"]
+      return progressLines.length > 0 ? [...progressLines] : ["search — starting…"]
     }
     if (entries.length > 0) {
       return []
@@ -244,7 +262,10 @@ export function SearchListPickerOverlay({
       return `${searchListPickerDetailHeadline(locale)} · ${clipped}`
     }
     const entry = entries[resultsHi]
-    const detail = entry ? searchPickerActiveMatchDetail(entry, matchHi) : ""
+    const detail =
+      entry && pattern.trim() !== ""
+        ? searchPickerActiveMatchDetail(entry, matchHi)
+        : ""
     if (!detail) {
       return searchListPickerHeadline(locale)
     }
@@ -258,7 +279,8 @@ export function SearchListPickerOverlay({
     pickerView,
     detailEntry,
     destinationEntry,
-    uiCopy.locale
+    uiCopy.locale,
+    pattern
   ])
 
   const onConfirmLineIndex = useCallback(
@@ -340,11 +362,35 @@ export function SearchListPickerOverlay({
         return false
       },
       onCaptureBefore: (e: KeyboardEvent) => {
-        if (loading || !isHorizontalNavKey(e)) {
-          if (loading) {
+        if (loading) {
+          if (
+            e.ctrlKey &&
+            !e.metaKey &&
+            !e.altKey &&
+            (e.key === "c" || e.key === "C") &&
+            onCancelInFlightScan
+          ) {
+            onCancelInFlightScan()
+            pickerStopEvent(e)
+            return true
+          }
+          if (
+            (e.key === "ArrowLeft" || e.code === "ArrowLeft") &&
+            pickerViewRef.current === "results" &&
+            onExitToDetailBar
+          ) {
+            onExitToDetailBar()
+            pickerStopEvent(e)
+            return true
+          }
+          return false
+        }
+
+        if (!isHorizontalNavKey(e)) {
+          if (pickerViewRef.current === "detail" || pickerViewRef.current === "destination") {
             return false
           }
-          if (pickerViewRef.current === "detail" || pickerViewRef.current === "destination") {
+          if (patternRef.current.trim() === "") {
             return false
           }
           const entry = entries[resultsHiRef.current]
@@ -402,10 +448,19 @@ export function SearchListPickerOverlay({
         return false
       }
     }
-  }, [entries, exitDestinationView, exitDetailView, handleArrowRight, loading, onExitToDetailBar])
+  }, [
+    entries,
+    exitDestinationView,
+    exitDetailView,
+    handleArrowRight,
+    loading,
+    onCancelInFlightScan,
+    onExitToDetailBar
+  ])
 
   return (
     <SearchListPickerBody
+      key={resultsListKey}
       headline={headline}
       entries={entries}
       pattern={pattern}

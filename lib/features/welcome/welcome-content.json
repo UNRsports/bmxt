@@ -131,5 +131,18 @@
       "tabsモードのUI調整",
       "画面スペースの有効活用のためsplit機能を廃止し、sessionコマンドによるセッション切り替えUIを実装"
     ]
+  },
+  "0.6.0": {
+    "heroImage": "assets/welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
+    "en": [
+      "Changed the extension window to a dedicated popup window without a tab bar",
+      "Implemented SQLite caching for search mode alongside the search refresh and job-based execution model"
+    ],
+    "ja": [
+      "拡張機能のウィンドウを通常のポップアップウィンドウに変更",
+      "searchモードの刷新とジョブ制導入にあわせてsqliteによるキャッシュを実装"
+    ]
   }
 }

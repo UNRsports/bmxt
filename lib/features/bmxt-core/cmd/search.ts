@@ -1,5 +1,11 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
-import { searchCmdExitListLines, searchCmdUsageLines } from "../../setting/i18n/cmd-lines"
+import { searchCmdExitListLines, searchCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
+import {
+  isSearchListScopeToken,
+  normalizeSearchListDispatchLine,
+  searchListDefaultEffectScopes,
+  searchListEffectScopesForToken
+} from "../../search/search-list-picker-parse"
 import { normalizeSearchPattern } from "../../search/search-format"
 import { stripInvisibleFormatChars } from "../line-parse"
 import type { ChromeEffect } from "../../dispatch/effect-types"
@@ -9,18 +15,11 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "search",
   aliases: [],
-  usagePrimary: "search -list [--history|--bookmark|--page] <pattern> | search -exit -list"
+  usagePrimary: "search -list [--all|--history|--bookmark|--page] [<pattern>] | search -exit -list"
 }
-
-const ALL_SEARCH_SCOPES = ["--history", "--bookmark", "--page"] as const
 
 function normalizeSearchSecondToken(head: string): string {
   return stripInvisibleFormatChars(head.trim()).toLowerCase()
-}
-
-function isSearchListScopeToken(token: string): boolean {
-  const t = token.toLowerCase()
-  return t === "--history" || t === "--bookmark" || t === "--page"
 }
 
 function effectForScope(scope: string, pattern: string): ChromeEffect {
@@ -41,17 +40,20 @@ function runList(args: string[]) {
     return linesDispatch([...searchCmdUsageLines()])
   }
   if (args.length === 2) {
-    return linesDispatch([
-      "error: search -list requires a pattern or optional scope filter",
-      ...searchCmdUsageLines()
-    ])
+    const pattern = ""
+    return effectsDispatch(
+      searchListDefaultEffectScopes().map((scope) => effectForScope(scope, pattern))
+    )
   }
   const third = normalizeSearchSecondToken(args[2])
   if (third.startsWith("--") && !isSearchListScopeToken(third)) {
     return linesDispatch([`error: unknown search scope: ${args[2]}`, ...searchCmdUsageLines()])
   }
-  const scopes = isSearchListScopeToken(third) ? [third] : [...ALL_SEARCH_SCOPES]
-  const patternStartIdx = isSearchListScopeToken(third) ? 3 : 2
+  const hasScopeToken = isSearchListScopeToken(third)
+  const scopes = hasScopeToken
+    ? searchListEffectScopesForToken(third)
+    : searchListDefaultEffectScopes()
+  const patternStartIdx = hasScopeToken ? 3 : 2
   const pattern = normalizeSearchPattern(args.slice(patternStartIdx).join(" "))
   try {
     return effectsDispatch(scopes.map((scope) => effectForScope(scope, pattern)))
@@ -65,7 +67,7 @@ function runList(args: string[]) {
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["search: available options", ...searchCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("search"), ...searchCmdUsageLines()])
   }
   const headRaw = args[1]
   const headKey = normalizeSearchSecondToken(headRaw)

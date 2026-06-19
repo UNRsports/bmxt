@@ -13,7 +13,7 @@ import {
   type SessionPickerState,
   type SessionPickersByLeaf
 } from "../side-picker"
-import { SessionBar } from "../session"
+import { buildSessionListRows, SessionBar, type SessionListRow } from "../session"
 import { BmxtShell } from "./bmxt-shell"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
@@ -24,12 +24,15 @@ import {
   FALLBACK_COMPLETION_CANDIDATES,
   getCompletionCandidates
 } from "../bmxt-core"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { disposeJobRunner } from "../job"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useTerminalAppearance, useUiSettings } from "../setting"
+
+const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 
 type SessionPaneProps = {
   sessionId: string
@@ -41,26 +44,28 @@ type SessionPaneProps = {
   activeSessionId: string
   sessionNamesById: Record<string, string | undefined>
   sessionLogsById: Record<string, string[] | undefined>
-  pickersBySession: SessionPickersByLeaf
+  sessionListRows: SessionListRow[]
+  sessionPickers: SessionPickerState
   setSessionPickerSlot: <K extends PickerSlotId>(
     forSessionId: string,
     slot: K,
     value: SessionPickerState[K] | ((prev: SessionPickerState[K]) => SessionPickerState[K])
   ) => void
-  paneFocusByLeaf: Record<string, PaneFocusTarget>
+  paneFocus: PaneFocusTarget
   setPaneFocusForLeaf: (sessionId: string, target: PaneFocusTarget) => void
-  detailBarIdByLeaf: Record<string, DetailBarId | null>
+  detailBarId: DetailBarId | null
   setDetailBarIdForLeaf: (
     sessionId: string,
     update: import("react").SetStateAction<DetailBarId | null>
   ) => void
-  modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
+  modeToolbarOrder: ModeToolbarId[]
   setModeToolbarOrderForLeaf: (
     sessionId: string,
     update: import("react").SetStateAction<ModeToolbarId[]>
   ) => void
-  navArmedByLeaf: Record<string, boolean>
+  navArmed: boolean
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
+  navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => Promise<void>
   onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
   refreshTabPickerRows: () => Promise<void>
@@ -69,7 +74,7 @@ type SessionPaneProps = {
   appendCommandToHistory: (cmd: string) => void
 }
 
-function SessionPaneView({
+const SessionPaneView = memo(function SessionPaneView({
   sessionId,
   isActive,
   lines,
@@ -79,16 +84,18 @@ function SessionPaneView({
   activeSessionId,
   sessionNamesById,
   sessionLogsById,
-  pickersBySession,
+  sessionListRows,
+  sessionPickers,
   setSessionPickerSlot,
-  paneFocusByLeaf,
+  paneFocus,
   setPaneFocusForLeaf,
-  detailBarIdByLeaf,
+  detailBarId,
   setDetailBarIdForLeaf,
-  modeToolbarOrderByLeaf,
+  modeToolbarOrder,
   setModeToolbarOrderForLeaf,
-  navArmedByLeaf,
+  navArmed,
   setNavArmedForLeaf,
+  navArmedByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
   refreshTabPickerRows,
@@ -96,7 +103,6 @@ function SessionPaneView({
   postUpgradeBanner,
   appendCommandToHistory
 }: SessionPaneProps) {
-  const sessionPickers = sessionPickersOrEmpty(pickersBySession, sessionId)
   return (
     <div
       data-bmxt-session-id={sessionId}
@@ -113,7 +119,7 @@ function SessionPaneView({
         activeSessionId={activeSessionId}
         sessionNamesById={sessionNamesById}
         sessionLogsById={sessionLogsById}
-        pickersBySession={pickersBySession}
+        sessionListRows={sessionListRows}
         navArmedByLeaf={navArmedByLeaf}
         onActivateSession={onActivateSession}
         onSetSessionDisplayName={onSetSessionDisplayName}
@@ -124,16 +130,69 @@ function SessionPaneView({
         refreshTabPickerRows={refreshTabPickerRows}
         scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
         postUpgradeBanner={postUpgradeBanner}
-        paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
+        paneFocus={paneFocus}
         onPaneFocusChange={(target) => setPaneFocusForLeaf(sessionId, target)}
-        detailBarId={detailBarIdByLeaf[sessionId] ?? null}
+        detailBarId={detailBarId}
         onDetailBarIdChange={(update) => setDetailBarIdForLeaf(sessionId, update)}
-        modeToolbarOrder={modeToolbarOrderByLeaf[sessionId] ?? []}
+        modeToolbarOrder={modeToolbarOrder}
         onModeToolbarOrderChange={(update) => setModeToolbarOrderForLeaf(sessionId, update)}
-        navArmed={navArmedByLeaf[sessionId] ?? false}
+        navArmed={navArmed}
         onNavArmedChange={(armed) => setNavArmedForLeaf(sessionId, armed)}
       />
     </div>
+  )
+}, sessionPanePropsEqual)
+
+function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): boolean {
+  if (prev.sessionId !== next.sessionId || prev.isActive !== next.isActive) {
+    return false
+  }
+  if (
+    prev.sessionPickers === next.sessionPickers &&
+    prev.paneFocus === next.paneFocus &&
+    prev.detailBarId === next.detailBarId &&
+    prev.modeToolbarOrder === next.modeToolbarOrder &&
+    prev.navArmed === next.navArmed &&
+    prev.lines === next.lines &&
+    prev.setSessionPickerSlot === next.setSessionPickerSlot &&
+    prev.setPaneFocusForLeaf === next.setPaneFocusForLeaf &&
+    prev.setDetailBarIdForLeaf === next.setDetailBarIdForLeaf &&
+    prev.setModeToolbarOrderForLeaf === next.setModeToolbarOrderForLeaf &&
+    prev.setNavArmedForLeaf === next.setNavArmedForLeaf &&
+    prev.onActivateSession === next.onActivateSession &&
+    prev.onSetSessionDisplayName === next.onSetSessionDisplayName &&
+    prev.refreshTabPickerRows === next.refreshTabPickerRows &&
+    prev.scheduleTabPickerRowsRefresh === next.scheduleTabPickerRowsRefresh &&
+    prev.appendCommandToHistory === next.appendCommandToHistory
+  ) {
+    return !next.isActive
+  }
+  return (
+    prev.lines === next.lines &&
+    prev.history === next.history &&
+    prev.completionCandidates === next.completionCandidates &&
+    prev.sessionOrder === next.sessionOrder &&
+    prev.activeSessionId === next.activeSessionId &&
+    prev.sessionNamesById === next.sessionNamesById &&
+    prev.sessionLogsById === next.sessionLogsById &&
+    prev.sessionListRows === next.sessionListRows &&
+    prev.sessionPickers === next.sessionPickers &&
+    prev.paneFocus === next.paneFocus &&
+    prev.detailBarId === next.detailBarId &&
+    prev.modeToolbarOrder === next.modeToolbarOrder &&
+    prev.navArmed === next.navArmed &&
+    prev.navArmedByLeaf === next.navArmedByLeaf &&
+    prev.postUpgradeBanner === next.postUpgradeBanner &&
+    prev.setSessionPickerSlot === next.setSessionPickerSlot &&
+    prev.setPaneFocusForLeaf === next.setPaneFocusForLeaf &&
+    prev.setDetailBarIdForLeaf === next.setDetailBarIdForLeaf &&
+    prev.setModeToolbarOrderForLeaf === next.setModeToolbarOrderForLeaf &&
+    prev.setNavArmedForLeaf === next.setNavArmedForLeaf &&
+    prev.onActivateSession === next.onActivateSession &&
+    prev.onSetSessionDisplayName === next.onSetSessionDisplayName &&
+    prev.refreshTabPickerRows === next.refreshTabPickerRows &&
+    prev.scheduleTabPickerRowsRefresh === next.scheduleTabPickerRowsRefresh &&
+    prev.appendCommandToHistory === next.appendCommandToHistory
   )
 }
 
@@ -170,6 +229,21 @@ function BmxtTerminalInner() {
     processUiReady
   } = useProcessUiPersistence(validSessionIds, state !== null)
 
+  const sessionListRows = useMemo(
+    () =>
+      state
+        ? buildSessionListRows({
+            order: state.order,
+            activeId: state.activeId,
+            namesById: state.namesById,
+            logsById: state.logsById,
+            pickersBySession,
+            navArmedByLeaf
+          })
+        : [],
+    [navArmedByLeaf, pickersBySession, state]
+  )
+
   const pickersBySessionRef = useRef(pickersBySession)
   pickersBySessionRef.current = pickersBySession
 
@@ -193,6 +267,44 @@ function BmxtTerminalInner() {
     pruneTabPickerFoldSessions(state.order)
     setTabPickerFoldActiveSession(state.activeId)
   }, [state?.activeId, state?.order])
+
+  const prevSessionOrderRef = useRef<readonly string[]>([])
+  const [mountedSessionIds, setMountedSessionIds] = useState<ReadonlySet<string>>(() => new Set())
+
+  useEffect(() => {
+    if (!state) {
+      return
+    }
+    setMountedSessionIds((prev) => {
+      if (prev.has(state.activeId)) {
+        return prev
+      }
+      const next = new Set(prev)
+      next.add(state.activeId)
+      return next
+    })
+  }, [state?.activeId])
+
+  useEffect(() => {
+    if (!state) {
+      return
+    }
+    const prev = prevSessionOrderRef.current
+    for (const sessionId of prev) {
+      if (!state.order.includes(sessionId)) {
+        disposeJobRunner(sessionId)
+        setMountedSessionIds((mounted) => {
+          if (!mounted.has(sessionId)) {
+            return mounted
+          }
+          const next = new Set(mounted)
+          next.delete(sessionId)
+          return next
+        })
+      }
+    }
+    prevSessionOrderRef.current = state.order
+  }, [state?.order])
 
   const setSessionPickerSlot = useCallback(
     <K extends PickerSlotId>(
@@ -282,16 +394,13 @@ function BmxtTerminalInner() {
     activeSessionId: state.activeId,
     sessionNamesById: state.namesById,
     sessionLogsById: state.logsById,
-    pickersBySession,
+    sessionListRows,
     setSessionPickerSlot,
-    paneFocusByLeaf,
     setPaneFocusForLeaf,
-    detailBarIdByLeaf,
     setDetailBarIdForLeaf,
-    modeToolbarOrderByLeaf,
     setModeToolbarOrderForLeaf,
-    navArmedByLeaf,
     setNavArmedForLeaf,
+    navArmedByLeaf,
     onActivateSession: setActiveSession,
     onSetSessionDisplayName: setSessionDisplayName,
     refreshTabPickerRows,
@@ -314,15 +423,27 @@ function BmxtTerminalInner() {
         }}
       />
       <div className="bmxt-session-stack">
-        {state.order.map((sessionId) => (
-          <SessionPaneView
-            key={sessionId}
-            sessionId={sessionId}
-            isActive={sessionId === state.activeId}
-            lines={state.logsById[sessionId] ?? []}
-            {...sharedPaneProps}
-          />
-        ))}
+        {state.order.map((sessionId) => {
+          const isActive = sessionId === state.activeId
+          if (!mountedSessionIds.has(sessionId) && !isActive) {
+            return null
+          }
+          return (
+            <SessionPaneView
+              key={sessionId}
+              sessionId={sessionId}
+              isActive={isActive}
+              lines={state.logsById[sessionId] ?? []}
+              sessionPickers={sessionPickersOrEmpty(pickersBySession, sessionId)}
+              paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
+              detailBarId={detailBarIdByLeaf[sessionId] ?? null}
+              modeToolbarOrder={modeToolbarOrderByLeaf[sessionId] ?? []}
+              navArmed={navArmedByLeaf[sessionId] ?? false}
+              sessionListRows={isActive ? sessionListRows : EMPTY_SESSION_LIST_ROWS}
+              {...sharedPaneProps}
+            />
+          )
+        })}
       </div>
     </div>
   )

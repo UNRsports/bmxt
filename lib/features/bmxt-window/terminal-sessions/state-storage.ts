@@ -342,7 +342,11 @@ async function migrateStorageShapes(): Promise<void> {
 export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsStateV1 | null> {
   await migrateStorageShapes()
   const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY])
-  const raw = r[TERMINAL_SESSIONS_KEY]
+  return parseTerminalSessionsStorageValue(r[TERMINAL_SESSIONS_KEY])
+}
+
+/** EN: Parse `chrome.storage.onChanged` `newValue` without an extra storage read. */
+export function parseTerminalSessionsStorageValue(raw: unknown): TerminalSessionsStateV1 | null {
   if (!isBodyV5Stored(raw)) {
     return null
   }

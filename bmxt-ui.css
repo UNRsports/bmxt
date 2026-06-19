@@ -1532,6 +1532,19 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   padding: 8px 10px;
   border-bottom: 1px solid #21262d;
   cursor: default;
+  box-sizing: border-box;
+}
+
+.bmxt-tab-picker-list--search-virtual .bmxt-search-picker-row {
+  min-height: var(--bmxt-search-picker-row-height, 64px);
+}
+
+.bmxt-search-picker-measure-row {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  left: 0;
+  right: 0;
 }
 
 .bmxt-search-picker-row--hi {

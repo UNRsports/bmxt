@@ -53,3 +53,15 @@ export async function readTabInnerText(tabId: number, maxChars: number): Promise
   }
   return null
 }
+
+/** EN: Live read for one open tab — no SQLite / storage cache. */
+export async function readOpenTabInnerText(
+  tab: chrome.tabs.Tab,
+  maxChars: number
+): Promise<string | null> {
+  const tabId = tab.id
+  if (tabId === undefined) {
+    return null
+  }
+  return readTabInnerText(tabId, maxChars)
+}

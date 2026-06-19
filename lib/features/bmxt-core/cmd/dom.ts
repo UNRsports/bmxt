@@ -1,5 +1,5 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
-import { domCmdExitListLines, domCmdUsageLines } from "../../setting/i18n/cmd-lines"
+import { domCmdExitListLines, domCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
 import { stripInvisibleFormatChars } from "../line-parse"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
@@ -45,7 +45,7 @@ function runList(args: string[]) {
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["dom: available options", ...domCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("dom"), ...domCmdUsageLines()])
   }
   const first = args[1]
   if (!isSecondToken("dom", first)) {

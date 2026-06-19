@@ -4,9 +4,10 @@
  */
 
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
-import { readTabInnerText } from "../../page-extract/read-tab-inner-text"
+import { readOpenTabInnerText } from "../../page-extract/read-tab-inner-text"
 import { isHttpUrl } from "../../url/is-http-url"
-import { matchesNeedle, MAX_PAGE_TEXT_CHARS } from "../index"
+import { matchesNeedle } from "../index"
+import { MAX_PAGE_TEXT_CHARS } from "../limits"
 import { collectPageMatchesForTab } from "../search-page-matches"
 import { linesForSearchPageTab } from "./page-find-blocks"
 import {
@@ -18,7 +19,6 @@ import { DEFAULT_UI_LOCALE, type UiLocale } from "../../setting/locale"
 import { t } from "../../setting/i18n/messages"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
-const MAX_LINE_HITS = 500
 
 export async function searchPageLines(
   pattern: string,
@@ -71,7 +71,6 @@ export async function searchPageLines(
 
   const tabs = prioritized
   const out: string[] = []
-  let totalHits = 0
   let scanned = 0
   let skipped = 0
   let tabsChecked = 0
@@ -93,7 +92,7 @@ export async function searchPageLines(
       continue
     }
     tabsChecked = tabIndex + 1
-    const text = await readTabInnerText(tabId, MAX_PAGE_TEXT_CHARS)
+    const text = await readOpenTabInnerText(tab, MAX_PAGE_TEXT_CHARS)
     if (shouldCancel?.()) {
       cancelled = true
       break
@@ -136,20 +135,13 @@ export async function searchPageLines(
           matches
         })
       )
-      totalHits += 1
       continue
     }
 
-    const tabMatches = collectPageMatchesForTab(
-      title,
-      text,
-      pattern,
-      Math.max(1, MAX_LINE_HITS - totalHits)
-    )
+    const tabMatches = collectPageMatchesForTab(title, text, pattern)
     if (tabMatches.length === 0) {
       continue
     }
-    totalHits += tabMatches.length
     out.push(
       ...linesForSearchPageTab({
         tabId,
@@ -159,13 +151,6 @@ export async function searchPageLines(
         matches: tabMatches
       })
     )
-    if (totalHits >= MAX_LINE_HITS) {
-      await emit({ phase: "done", tabIndex: tabTotal, tabTotal, scanned, skipped })
-      out.unshift(
-        `(stopped at ${totalHits} line hit(s) across tabs; raise limits in lib/features/search/limits.ts if needed)`
-      )
-      return out
-    }
   }
 
   await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
@@ -194,8 +179,9 @@ export async function searchPageLines(
     ]
   }
   const pageCount = out.filter((l) => l === "[page]").length
+  const lineHitCount = out.filter((l) => l.startsWith("L")).length
   out.unshift(
-    `(${matchAll ? scanned : pageCount} page(s), ${totalHits} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}; ${tabTotal} tab(s) checked)`
+    `(${matchAll ? scanned : pageCount} page(s), ${lineHitCount} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}; ${tabTotal} tab(s) checked)`
   )
   return out
 }

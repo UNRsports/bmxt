@@ -1,5 +1,6 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
+  cmdAvailableOptionsLine,
   tabsCmdExitListLines,
   tabsCmdListLines,
   tabsCmdRunHintLine,
@@ -30,7 +31,7 @@ function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | nu
 
 export function run(args: string[]) {
   if (!args[1]) {
-    return linesDispatch(["tabs: available options", ...tabsCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("tabs"), ...tabsCmdUsageLines()])
   }
   const first = args[1]
   if (!isSecondToken("tabs", first)) {

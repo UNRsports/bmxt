@@ -68,7 +68,7 @@
     "en": "Second command · ↑↓ / Tab · Enter · Esc"
   },
   "domPrompt.headline": {
-    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · Esc/N → prompt",
+    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · Esc/N → プロンプト",
     "en": "dom -list — permission / target check · Enter=Allow / Y · Esc/N → prompt"
   },
   "domPrompt.aria": {
@@ -100,7 +100,7 @@
     "en": "Approve access when prompted, or enable site access for BMXt under chrome://extensions → Details."
   },
   "optionalHost.deniedError": {
-    "ja": "error: http(s) site access was not granted (optional host permission).",
+    "ja": "error: http(s) のサイトアクセスが許可されませんでした（任意ホスト権限）。",
     "en": "error: http(s) site access was not granted (optional host permission)."
   },
   "plainPicker.keysHint": {
@@ -208,15 +208,15 @@
     "en": "usage: setting -list | setting -exit -list"
   },
   "setting.picker.hint": {
-    "ja": "Setting picker — 変更は下部プレビューに反映 · save setting & exit で確定 · ↑↓ · → · ← · Esc → prompt",
+    "ja": "設定ピッカー — 変更は下部プレビューに反映 · > 設定を保存して終了 で確定 · ↑↓ · → · ← · Esc → プロンプト",
     "en": "Setting picker — changes preview below · save setting & exit to commit · ↑↓ · → · ← · Esc → prompt"
   },
   "setting.picker.keysHint": {
-    "ja": "setting picker keys",
+    "ja": "設定ピッカーのキー操作",
     "en": "setting picker keys"
   },
   "setting.picker.listAria": {
-    "ja": "setting list",
+    "ja": "設定一覧",
     "en": "setting list"
   },
   "setting.picker.closed": {
@@ -228,68 +228,72 @@
     "en": "setting: settings picker is not open"
   },
   "setting.picker.headline.main": {
-    "ja": "setting -list · ↑↓ · → 設定 · 下部プレビュー確認 · save setting & exit で確定",
+    "ja": "setting -list · ↑↓ · → 設定 · 下部プレビュー確認 · > 設定を保存して終了 で確定",
     "en": "setting -list · ↑↓ · → configure · check preview below · save setting & exit to commit"
   },
   "setting.picker.headline.language": {
-    "ja": "setting -list · language · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "ja": "setting -list · language（言語） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · language · ↑↓ · Enter/→ preview · ← list"
   },
   "setting.picker.headline.editPicker": {
-    "ja": "setting -list · edit-picker · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "ja": "setting -list · edit-picker（ピッカー個別編集） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · edit-picker · ↑↓ · Enter/→ select · ← list"
   },
   "setting.picker.headline.fontSize": {
-    "ja": "setting -list · size · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "ja": "setting -list · size（サイズ） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · size · ↑↓ · Enter/→ preview · ← list"
   },
   "setting.picker.headline.pickerFontSize": {
-    "ja": "setting -list · size (picker) · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "ja": "setting -list · size（ピッカー） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · size (picker) · ↑↓ · Enter/→ preview · ← list"
   },
   "setting.picker.headline.bgImage": {
-    "ja": "setting -list · bg-image · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "ja": "setting -list · bg-image（背景画像） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · bg-image · ↑↓ · Enter/→ preview · ← list"
   },
   "setting.picker.headline.pickerBgImage": {
-    "ja": "setting -list · bg-image (picker) · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
+    "ja": "setting -list · bg-image（ピッカー） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
     "en": "setting -list · bg-image (picker) · ↑↓ · Enter/→ preview · ← list"
   },
   "setting.picker.headline.fg": {
-    "ja": "setting -list · fg · Enter/→ 編集 · ← 一覧",
+    "ja": "setting -list · fg（文字色） · Enter/→ 編集 · ← 一覧",
     "en": "setting -list · fg · Enter/→ edit · ← list"
   },
   "setting.picker.headline.fgPicker": {
-    "ja": "setting -list · fg (picker) · Enter/→ 編集 · ← 一覧",
+    "ja": "setting -list · fg（ピッカー文字色） · Enter/→ 編集 · ← 一覧",
     "en": "setting -list · fg (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.bgColor": {
-    "ja": "setting -list · bg-color · → 編集 · ← 一覧",
+    "ja": "setting -list · bg-color（背景色） · → 編集 · ← 一覧",
     "en": "setting -list · bg-color · → edit · ← list"
   },
   "setting.picker.headline.bgColorPicker": {
-    "ja": "setting -list · bg-color (picker) · Enter/→ 編集 · ← 一覧",
+    "ja": "setting -list · bg-color（ピッカー背景色） · Enter/→ 編集 · ← 一覧",
     "en": "setting -list · bg-color (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.searchHitHighlight": {
-    "ja": "setting -list · search-hit-highlight · → 編集 · ← 一覧",
+    "ja": "setting -list · search-hit-highlight（検索ヒット強調） · → 編集 · ← 一覧",
     "en": "setting -list · search-hit-highlight · → edit · ← list"
   },
   "setting.picker.headline.searchJumpHighlight": {
-    "ja": "setting -list · search-jump-highlight · → 編集 · ← 一覧",
+    "ja": "setting -list · search-jump-highlight（ジャンプ先強調） · → 編集 · ← 一覧",
     "en": "setting -list · search-jump-highlight · → edit · ← list"
   },
   "setting.picker.headline.font": {
-    "ja": "setting -list · font · → 編集 · ← 一覧",
+    "ja": "setting -list · font（フォント） · → 編集 · ← 一覧",
     "en": "setting -list · font · → edit · ← list"
   },
   "setting.picker.headline.fontPicker": {
-    "ja": "setting -list · font (picker) · Enter/→ 編集 · ← 一覧",
+    "ja": "setting -list · font（ピッカー） · Enter/→ 編集 · ← 一覧",
     "en": "setting -list · font (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.resetConfirm": {
-    "ja": "setting -list · reset · ↑↓ · → 確定 · ← 一覧",
+    "ja": "setting -list · reset（リセット） · ↑↓ · → 確定 · ← 一覧",
     "en": "setting -list · reset · ↑↓ · → confirm · ← list"
+  },
+  "setting.picker.headline.searchCacheResetConfirm": {
+    "ja": "setting -list · search-cache reset · ↑↓ · → 確定 · ← 一覧",
+    "en": "setting -list · search-cache reset · ↑↓ · → confirm · ← list"
   },
   "setting.picker.headline.editing": {
     "ja": "setting -list · 編集中 — 入力欄に値を入力 · Enter でプレビュー反映 · Esc キャンセル",
@@ -300,27 +304,27 @@
     "en": "Enter to preview · Esc to cancel"
   },
   "setting.picker.detail.fg": {
-    "ja": "text color: {value}",
+    "ja": "文字色: {value}",
     "en": "text color: {value}"
   },
   "setting.picker.detail.fgPicker": {
-    "ja": "picker text color: {value}",
+    "ja": "ピッカー文字色: {value}",
     "en": "picker text color: {value}"
   },
   "setting.picker.detail.bgColor": {
-    "ja": "background color: {value}",
+    "ja": "背景色: {value}",
     "en": "background color: {value}"
   },
   "setting.picker.detail.bgColorPicker": {
-    "ja": "picker background color: {value}",
+    "ja": "ピッカー背景色: {value}",
     "en": "picker background color: {value}"
   },
   "setting.picker.detail.searchHitHighlight": {
-    "ja": "search hit highlight: {value}",
+    "ja": "検索ヒット強調色: {value}",
     "en": "search hit highlight: {value}"
   },
   "setting.picker.detail.searchJumpHighlight": {
-    "ja": "search jump highlight: {value}",
+    "ja": "ジャンプ先強調色: {value}",
     "en": "search jump highlight: {value}"
   },
   "setting.picker.detail.font": {
@@ -328,15 +332,23 @@
     "en": "font-family: {value}"
   },
   "setting.picker.detail.fontPicker": {
-    "ja": "picker font-family: {value}",
+    "ja": "ピッカー font-family: {value}",
     "en": "picker font-family: {value}"
   },
   "setting.picker.resetYes": {
-    "ja": "y — reset all appearance to defaults",
+    "ja": "y — 外観をすべて既定値にリセット",
     "en": "y — reset all appearance to defaults"
   },
   "setting.picker.resetNo": {
-    "ja": "n — cancel",
+    "ja": "n — キャンセル",
+    "en": "n — cancel"
+  },
+  "setting.picker.searchCacheResetYes": {
+    "ja": "y — search メタデータキャッシュ（履歴／ブックマーク SQLite）を消去",
+    "en": "y — clear search metadata cache (history/bookmark SQLite)"
+  },
+  "setting.picker.searchCacheResetNo": {
+    "ja": "n — キャンセル",
     "en": "n — cancel"
   },
   "setting.picker.editAria.fg": {
@@ -368,107 +380,111 @@
     "en": "font-family"
   },
   "setting.picker.editAria.fontPicker": {
-    "ja": "picker font-family",
+    "ja": "ピッカー font-family",
     "en": "picker font-family"
   },
   "setting.picker.editAria.generic": {
-    "ja": "setting edit",
+    "ja": "設定編集",
     "en": "setting edit"
   },
   "setting.picker.main.language": {
-    "ja": "language: {token}",
+    "ja": "language（言語）: {token}",
     "en": "language: {token}"
   },
   "setting.picker.main.editPicker": {
-    "ja": "edit-picker: {value}",
+    "ja": "edit-picker（ピッカー個別編集）: {value}",
     "en": "edit-picker: {value}"
   },
   "setting.picker.editPickerStateOn": {
-    "ja": "on",
+    "ja": "オン",
     "en": "on"
   },
   "setting.picker.editPickerStateOff": {
-    "ja": "off",
+    "ja": "オフ",
     "en": "off"
   },
   "setting.picker.editPickerOn": {
-    "ja": "on — ピッカー外観を個別編集",
+    "ja": "オン — ピッカー外観を個別編集",
     "en": "on — edit picker appearance separately"
   },
   "setting.picker.editPickerOff": {
-    "ja": "off — ピッカーは全体設定に従う",
+    "ja": "オフ — ピッカーは全体設定に従う",
     "en": "off — picker follows global appearance"
   },
   "setting.picker.main.fg": {
-    "ja": "fg (text color): {value}",
+    "ja": "fg（文字色）: {value}",
     "en": "fg (text color): {value}"
   },
   "setting.picker.main.fgPicker": {
-    "ja": "fg (picker text color): {value}",
+    "ja": "fg（ピッカー文字色）: {value}",
     "en": "fg (picker text color): {value}"
   },
   "setting.picker.main.bgColor": {
-    "ja": "bg-color: {value}",
+    "ja": "bg-color（背景色）: {value}",
     "en": "bg-color: {value}"
   },
   "setting.picker.main.bgColorPicker": {
-    "ja": "bg-color (picker): {value}",
+    "ja": "bg-color（ピッカー背景色）: {value}",
     "en": "bg-color (picker): {value}"
   },
   "setting.picker.main.searchHitHighlight": {
-    "ja": "search-hit-highlight: {value}",
+    "ja": "search-hit-highlight（検索ヒット強調）: {value}",
     "en": "search-hit-highlight: {value}"
   },
   "setting.picker.main.searchJumpHighlight": {
-    "ja": "search-jump-highlight: {value}",
+    "ja": "search-jump-highlight（ジャンプ先強調）: {value}",
     "en": "search-jump-highlight: {value}"
   },
   "setting.picker.main.size": {
-    "ja": "size: {value}",
+    "ja": "size（サイズ）: {value}",
     "en": "size: {value}"
   },
   "setting.picker.main.sizePicker": {
-    "ja": "size (picker): {value}",
+    "ja": "size（ピッカー）: {value}",
     "en": "size (picker): {value}"
   },
   "setting.picker.main.font": {
-    "ja": "font: {value}",
+    "ja": "font（フォント）: {value}",
     "en": "font: {value}"
   },
   "setting.picker.main.fontPicker": {
-    "ja": "font (picker): {value}",
+    "ja": "font（ピッカー）: {value}",
     "en": "font (picker): {value}"
   },
   "setting.picker.main.bgImage": {
-    "ja": "bg-image: {value}",
+    "ja": "bg-image（背景画像）: {value}",
     "en": "bg-image: {value}"
   },
   "setting.picker.main.bgImagePicker": {
-    "ja": "bg-image (picker): {value}",
+    "ja": "bg-image（ピッカー）: {value}",
     "en": "bg-image (picker): {value}"
   },
   "setting.picker.main.reset": {
-    "ja": "reset-default — restore appearance to defaults",
+    "ja": "reset-default — 外観を既定値に戻す",
     "en": "reset-default — restore appearance to defaults"
   },
+  "setting.picker.main.resetSearchCache": {
+    "ja": "reset-search-cache — 履歴／ブックマークの search SQLite キャッシュを消去",
+    "en": "reset-search-cache — clear history/bookmark search SQLite cache"
+  },
   "setting.picker.main.export": {
-    "ja": "export — save settings.json + background image as zip",
+    "ja": "export — settings.json + 背景画像を zip で保存",
     "en": "export — save settings.json + background image as zip"
   },
   "setting.picker.main.import": {
-    "ja": "import — load settings from zip",
+    "ja": "import — zip から設定を読み込む",
     "en": "import — load settings from zip"
   },
   "setting.picker.main.save": {
-    "ja": "> save setting & exit",
+    "ja": "> 設定を保存して終了",
     "en": "> save setting & exit"
   },
   "setting.picker.main.cancel": {
-    "ja": "> cancel setting & exit",
+    "ja": "> 設定を破棄して終了",
     "en": "> cancel setting & exit"
   },
   "setting.picker.preview.head": {
-    "ja": "Preview",
+    "ja": "プレビュー",
     "en": "Preview"
   },
   "setting.picker.preview.prompt": {
@@ -480,11 +496,11 @@
     "en": "Preview with current draft settings."
   },
   "setting.picker.preview.terminal": {
-    "ja": "Terminal",
+    "ja": "ターミナル",
     "en": "Terminal"
   },
   "setting.picker.preview.pickerColumn": {
-    "ja": "Picker",
+    "ja": "ピッカー",
     "en": "Picker"
   },
   "setting.picker.saved": {
@@ -496,7 +512,7 @@
     "en": "setting: discarded unsaved changes"
   },
   "setting.picker.importDraft": {
-    "ja": "setting: zip をプレビューに読み込みました（save setting & exit で確定）",
+    "ja": "setting: zip をプレビューに読み込みました（> 設定を保存して終了 で確定）",
     "en": "setting: zip loaded into preview (use save setting & exit to commit)"
   },
   "setting.picker.languageRow": {
@@ -508,15 +524,15 @@
     "en": "{size}"
   },
   "setting.picker.bgImport": {
-    "ja": "import background image (PNG/JPEG/WebP, 512 KiB max)",
+    "ja": "背景画像を取り込む（PNG/JPEG/WebP、最大 512 KiB）",
     "en": "import background image (PNG/JPEG/WebP, 512 KiB max)"
   },
   "setting.picker.bgClear": {
-    "ja": "clear background image",
+    "ja": "背景画像を削除",
     "en": "clear background image"
   },
   "setting.picker.back": {
-    "ja": "← back",
+    "ja": "← 戻る",
     "en": "← back"
   },
   "setting.export.done": {
@@ -595,6 +611,10 @@
     "ja": "setting: 外観のリセットをキャンセルしました",
     "en": "setting: appearance reset cancelled"
   },
+  "setting.searchCache.resetDone": {
+    "ja": "setting: search メタデータキャッシュ（SQLite）を消去しました",
+    "en": "setting: search metadata cache (SQLite) cleared"
+  },
   "setting.appearance.resetConfirmInvalid": {
     "ja": "y または n で回答してください",
     "en": "Answer y or n"
@@ -628,15 +648,15 @@
     "en": "bg-image: {value}"
   },
   "setting.summary.default": {
-    "ja": "(default)",
+    "ja": "（既定）",
     "en": "(default)"
   },
   "setting.summary.none": {
-    "ja": "(none)",
+    "ja": "（なし）",
     "en": "(none)"
   },
   "setting.summary.set": {
-    "ja": "set",
+    "ja": "設定済み",
     "en": "set"
   },
   "setting.error.usageFg": {
@@ -716,7 +736,7 @@
     "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
   },
   "session.picker.hint": {
-    "ja": "Session list — * がアクティブ · ↑↓ または 1–9 · Enter 切り替え · Esc → prompt · `session <n>` でも可",
+    "ja": "セッション一覧 — * がアクティブ · ↑↓ または 1–9 · Enter 切り替え · Esc → プロンプト · `session <n>` でも可",
     "en": "Session list — * marks active · ↑↓ or 1–9 · Enter switch · Esc → prompt · or `session <n>`"
   },
   "session.picker.aria": {
@@ -724,7 +744,7 @@
     "en": "Session switch candidates"
   },
   "session.switch.hint": {
-    "ja": "Session switch — * がアクティブ · 入力で絞り込み · ↑↓ · Enter でコマンドに名前を入れる · もう一度 Enter で切り替え · Esc → prompt",
+    "ja": "セッション切り替え — * がアクティブ · 入力で絞り込み · ↑↓ · Enter でコマンドに名前を入れる · もう一度 Enter で切り替え · Esc → プロンプト",
     "en": "Session switch — * marks active · type to filter · ↑↓ · Enter insert name into command · Enter again to switch · Esc → prompt"
   },
   "session.switch.aria": {
@@ -1251,6 +1271,94 @@
     "ja": "(ウィンドウなし)",
     "en": "(no windows)"
   },
+  "cmd.common.availableOptions": {
+    "ja": "{command}: 利用可能なオプション",
+    "en": "{command}: available options"
+  },
+  "cmd.session.usage.line1": {
+    "ja": "usage: session                       — 第二トークンを選択（Tab または Enter メニュー）",
+    "en": "usage: session                       — choose a second token (Tab or Enter menu)"
+  },
+  "cmd.session.usage.line2": {
+    "ja": "       session <n>                  — セッション番号 n に切り替え（1 始まり）",
+    "en": "       session <n>                  — switch to session number n (1-based)"
+  },
+  "cmd.session.usage.line3": {
+    "ja": "       session -list                — 番号付き切り替えリスト（↑↓ · Enter · 1–9）",
+    "en": "       session -list                — switch list by number (↑↓ · Enter · 1–9)"
+  },
+  "cmd.session.usage.line4": {
+    "ja": "       session -switch [name]       — セッション名で切り替え（メニューまたは直接指定）",
+    "en": "       session -switch [name]       — switch by session name (menu or direct)"
+  },
+  "cmd.session.usage.line5": {
+    "ja": "       session -new [name]          — 新規セッション（切り替え）；表示名は任意",
+    "en": "       session -new [name]          — new session (switch to it); optional display name"
+  },
+  "cmd.session.usage.line6": {
+    "ja": "       session -setting-name [name] — このセッションの名前変更（プロンプトに現在名を表示）",
+    "en": "       session -setting-name [name] — rename this session (prompt pre-fills current name)"
+  },
+  "cmd.session.usage.line7": {
+    "ja": "       session -next                — 次のセッション",
+    "en": "       session -next                — next session"
+  },
+  "cmd.session.usage.line8": {
+    "ja": "       session -prev                — 前のセッション",
+    "en": "       session -prev                — previous session"
+  },
+  "cmd.session.usage.line9": {
+    "ja": "       Ctrl+Arrow                   — 複数セッション時に前後へ切り替え",
+    "en": "       Ctrl+Arrow                   — prev / next when multiple sessions exist"
+  },
+  "cmd.session.runHint": {
+    "ja": "第一コマンドのみ実行するとこの案内を表示し、Tab 補完用にプロンプトを `session ` に戻します。",
+    "en": "Run session alone for this message; the prompt restores to `session ` for Tab completion."
+  },
+  "cmd.session.error.unknownOption": {
+    "ja": "error: 不明な session オプション: {option}",
+    "en": "error: unknown session option: {option}"
+  },
+  "cmd.session.error.nameTooLong": {
+    "ja": "error: セッション名が長すぎます（最大 {max} 文字）",
+    "en": "error: session name too long (max {max} characters)"
+  },
+  "cmd.session.error.invalidName": {
+    "ja": "error: 無効なセッション名です（制御文字・改行は不可）",
+    "en": "error: invalid session name (no control characters or newlines)"
+  },
+  "cmd.session.error.tooManyArgs": {
+    "ja": "error: session はオプションを 1 つだけ指定できます（-new | -list | -switch | -next | -prev | -setting-name）",
+    "en": "error: session takes only one option (-new | -list | -switch | -next | -prev | -setting-name)"
+  },
+  "cmd.session.error.internal": {
+    "ja": "error: internal: session オプションが不整合です",
+    "en": "error: internal: session option out of sync"
+  },
+  "cmd.session.listUi.title": {
+    "ja": "`session -list` は BMXt ウィンドウ UI で処理されます。",
+    "en": "`session -list` is handled in the BMXt window UI."
+  },
+  "cmd.session.listUi.detail": {
+    "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
+    "en": "Run it from the prompt in a BMXt terminal pane."
+  },
+  "cmd.session.switchUi.title": {
+    "ja": "`session -switch` は BMXt ウィンドウ UI で処理されます。",
+    "en": "`session -switch` is handled in the BMXt window UI."
+  },
+  "cmd.session.switchUi.detail": {
+    "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
+    "en": "Run it from the prompt in a BMXt terminal pane."
+  },
+  "cmd.session.settingNameUi.title": {
+    "ja": "`session -setting-name` は BMXt ウィンドウ UI で処理されます。",
+    "en": "`session -setting-name` is handled in the BMXt window UI."
+  },
+  "cmd.session.settingNameUi.detail": {
+    "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
+    "en": "Run it from the prompt in a BMXt terminal pane."
+  },
   "cmd.nav.usage.line1": {
     "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（プロンプトで Alt がオーバーレイ ON/OFF）",
     "en": "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on prompt toggles overlay on/off)"
@@ -1380,8 +1488,8 @@
     "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list --history|--bookmark|--page [<pattern>]   — スコープを 1 つに絞る",
-    "en": "       search -list --history|--bookmark|--page [<pattern>]   — narrow to one scope"
+    "ja": "       search -list --all|--history|--bookmark|--page [<pattern>]   — スコープ（--all は横断）",
+    "en": "       search -list --all|--history|--bookmark|--page [<pattern>]   — scope (--all = cross-scope)"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -1476,8 +1584,8 @@
     "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -list / -exit, then restore prompt to `setting ` for continuation.\n  setting -list         - open settings picker (locale, appearance, export/import).\n  setting -exit -list  - close settings picker in this BMXt pane (Esc returns to prompt only)."
   },
   "help.section.search": {
-    "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（全スコープ；任意で --history|--bookmark|--page で絞り込み）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
-    "en": "search (in-memory search; nothing persisted by these commands):\n  search              - show available options, then restore prompt to `search ` for continuation.\n  search -list [<pattern>] — open search list picker (all scopes; optional --history|--bookmark|--page to narrow).\n  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only)."
+    "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（`--all` またはパターンのみで全スコープ横断）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "search (in-memory search; nothing persisted by these commands):\n  search              - show available options, then restore prompt to `search ` for continuation.\n  search -list [<pattern>] — open search list picker (cross-scope via `--all` or pattern-only line).\n  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only)."
   },
   "help.section.url": {
     "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",

@@ -1,34 +1,13 @@
 /**
- * EN: Flattens the bookmark tree in memory only; no persistence.
- * JA: ブックマーク木をメモリ上のみ平坦化。永続化しません。
+ * EN: Flattens the bookmark tree; reuses storage when tree revision is unchanged.
+ * JA: ブックマーク木を平坦化。revision 一致時は storage を再利用。
  */
 
 import { linesForSearchElement, matchesNeedle, MAX_BOOKMARK_ROWS } from "../index"
-
-function walkBookmarks(
-  nodes: chrome.bookmarks.BookmarkTreeNode[],
-  out: { title: string; url: string }[]
-): void {
-  for (const n of nodes) {
-    if (n.url) {
-      out.push({ title: n.title ?? "", url: n.url })
-      if (out.length >= MAX_BOOKMARK_ROWS) {
-        return
-      }
-    }
-    if (n.children?.length) {
-      walkBookmarks(n.children, out)
-      if (out.length >= MAX_BOOKMARK_ROWS) {
-        return
-      }
-    }
-  }
-}
+import { resolveBookmarkEntriesForSearch } from "../cache/search-cache-store"
 
 export async function searchBookmarkLines(pattern: string): Promise<string[]> {
-  const tree = await chrome.bookmarks.getTree()
-  const flat: { title: string; url: string }[] = []
-  walkBookmarks(tree, flat)
+  const flat = await resolveBookmarkEntriesForSearch()
   const matchAll = !pattern.trim()
   const matches: string[] = []
   let hitCount = 0

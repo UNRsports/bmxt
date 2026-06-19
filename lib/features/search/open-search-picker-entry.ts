@@ -1,5 +1,5 @@
 import { createTabInNormalBrowserWindow } from "../dispatch/handlers/shared"
-import { resolveSearchPickerPageMatch } from "./search-picker-page-match"
+import { resolveSearchPickerPageMatch, lineHitIndexForPageMatch } from "./search-picker-page-match"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { openEntryEffects } from "../side-picker/model/open-entry"
@@ -39,9 +39,6 @@ async function tabStillOpen(tabId: number): Promise<boolean> {
   }
 }
 
-function pickPageMatch(entry: PickerEntry, matchHi: number): SearchPageMatch | undefined {
-  return resolveSearchPickerPageMatch(entry, matchHi).match
-}
 
 async function activateOpenTab(resolved: OpenTabResolution): Promise<void> {
   await executePickerFocusPlan({
@@ -55,17 +52,21 @@ async function activateOpenTab(resolved: OpenTabResolution): Promise<void> {
 async function scrollToMatchInTab(
   tabId: number,
   match: SearchPageMatch,
+  pageMatchIndex: number,
+  matches: SearchPageMatch[] | undefined,
   searchPattern: string
 ): Promise<boolean> {
   const needle = searchPattern.trim()
   if (!needle) {
     return false
   }
+  const lineHitIndex = lineHitIndexForPageMatch(matches, pageMatchIndex)
   return scrollSearchPageToNeedle(tabId, {
     searchNeedle: needle,
     lineNo: match.lineNo,
     snippetHint: match.snippet,
-    globalOccurrence: match.globalOccurrence
+    globalOccurrence: match.globalOccurrence,
+    lineHitIndex: lineHitIndex >= 0 ? lineHitIndex : undefined
   })
 }
 
@@ -99,6 +100,7 @@ async function waitForTabComplete(tabId: number): Promise<boolean> {
 async function createTabAndJumpToNeedle(
   entry: PickerEntry,
   match: SearchPageMatch,
+  pageMatchIndex: number,
   searchPattern: string
 ): Promise<boolean> {
   const url = normalizePickerOpenUrl(entry.url)
@@ -112,7 +114,7 @@ async function createTabAndJumpToNeedle(
   await waitForTabComplete(tab.id)
   await sleep(TAB_FOCUS_DELAY_MS + 200)
   await activateOpenTab({ tabId: tab.id, windowId: tab.windowId })
-  return scrollToMatchInTab(tab.id, match, searchPattern)
+  return scrollToMatchInTab(tab.id, match, pageMatchIndex, entry.pageMatches, searchPattern)
 }
 
 /**
@@ -141,14 +143,20 @@ export async function openSearchPickerEntry(
     return
   }
 
-  const match = pickPageMatch(entry, matchIndex)
+  const { match, pageMatchIndex } = resolveSearchPickerPageMatch(entry, matchIndex)
   const needle = searchPattern.trim()
   const resolved = await resolveOpenTabForSearchEntry(entry)
 
   if (resolved && (await tabStillOpen(resolved.tabId))) {
     await activateOpenTab(resolved)
     if (match && needle) {
-      const scrolled = await scrollToMatchInTab(resolved.tabId, match, needle)
+      const scrolled = await scrollToMatchInTab(
+        resolved.tabId,
+        match,
+        pageMatchIndex,
+        entry.pageMatches,
+        needle
+      )
       if (!scrolled && match.lineNo > 0) {
         await appendLogLines([SCROLL_FAILED_LOG])
       }
@@ -157,7 +165,7 @@ export async function openSearchPickerEntry(
   }
 
   if (match && needle && match.lineNo > 0) {
-    const jumped = await createTabAndJumpToNeedle(entry, match, needle)
+    const jumped = await createTabAndJumpToNeedle(entry, match, pageMatchIndex, needle)
     if (jumped) {
       return
     }

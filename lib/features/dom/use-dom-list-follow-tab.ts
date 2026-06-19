@@ -8,6 +8,8 @@ type Props = {
   domListPicker: DomListPickerState | null
   resolveTargetTabId: () => Promise<number | undefined>
   refreshDomList: (commandLine: string) => Promise<void>
+  /** EN: When provided, skip refresh while a `dom-list` job is in flight. */
+  isDomListJobActive?: () => boolean
 }
 
 /**
@@ -18,7 +20,8 @@ type Props = {
 export function useDomListFollowTab({
   domListPicker,
   resolveTargetTabId,
-  refreshDomList
+  refreshDomList,
+  isDomListJobActive
 }: Props): {
   onTabsPickerFocusTabId: (tabId: number | null) => void
 } {
@@ -27,7 +30,8 @@ export function useDomListFollowTab({
   const refreshRef = useRef(refreshDomList)
   const resolveRef = useRef(resolveTargetTabId)
   const domListPickerRef = useRef(domListPicker)
-  const inFlightRef = useRef(false)
+  const isActiveRef = useRef(isDomListJobActive)
+  isActiveRef.current = isDomListJobActive
 
   useEffect(() => {
     refreshRef.current = refreshDomList
@@ -49,7 +53,7 @@ export function useDomListFollowTab({
     if (!picker || picker.kind !== "lines") {
       return
     }
-    if (inFlightRef.current) {
+    if (isActiveRef.current?.()) {
       return
     }
     const nextId = await resolveRef.current()
@@ -60,12 +64,7 @@ export function useDomListFollowTab({
     } else if (nextId === lastTabIdRef.current) {
       return
     }
-    inFlightRef.current = true
-    try {
-      await refreshRef.current(picker.commandLine)
-    } finally {
-      inFlightRef.current = false
-    }
+    await refreshRef.current(picker.commandLine)
   }, [])
 
   const queueRefresh = useCallback(() => {

@@ -88,6 +88,7 @@ export {
 export {
   createSettingListPickerState,
   settingPickerApplyDraftToMain,
+  settingPickerGoToView,
   settingPickerRevertDraft,
   settingPickerUpdateDraft,
   type SettingListPickerState,

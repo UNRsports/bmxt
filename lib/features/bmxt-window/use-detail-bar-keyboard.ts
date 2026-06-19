@@ -41,6 +41,10 @@ function isAltDetailBarKey(e: KeyboardEvent): boolean {
   return e.key === "Alt" && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.repeat
 }
 
+function isTabDetailBarCycleKey(e: KeyboardEvent): boolean {
+  return e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey
+}
+
 export type DetailBarKeyboardActions = {
   activateDetailBar: (id: DetailBarId) => void
   enterPickerFromDetailBar: () => void
@@ -159,6 +163,20 @@ export function useDetailBarKeyboard({
         e.preventDefault()
         e.stopImmediatePropagation()
         actionsRef.current.enterPickerFromDetailBar()
+        return
+      }
+
+      if (isTabDetailBarCycleKey(e)) {
+        if (navClaimsArrows()) {
+          return
+        }
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        const direction = e.shiftKey ? "up" : "down"
+        const next = cycleDetailBarId(bars, current, direction)
+        if (next) {
+          actionsRef.current.activateDetailBar(next)
+        }
         return
       }
 

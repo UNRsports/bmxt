@@ -44,11 +44,11 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--history|--bookmark|--page] <pattern> | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page] [<pattern>] | search -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--history", "--bookmark", "--page"],
+          "trailingTokens": ["--all", "--history", "--bookmark", "--page"],
           "tail": "rest"
         },
         {

@@ -1,9 +1,13 @@
 import type { UiLocale } from "../locale"
 import { getRunLocale } from "./run-locale"
-import { t, type MessageKey } from "./messages"
+import { t, type MessageKey, type MessageVars } from "./messages"
 
-function L(key: MessageKey, locale?: UiLocale): string {
-  return t(key, locale ?? getRunLocale())
+function L(key: MessageKey, locale?: UiLocale, vars?: MessageVars): string {
+  return t(key, locale ?? getRunLocale(), vars)
+}
+
+export function cmdAvailableOptionsLine(command: string, locale?: UiLocale): string {
+  return L("cmd.common.availableOptions", locale, { command })
 }
 
 export function navCmdUsageLines(locale?: UiLocale): string[] {
@@ -112,4 +116,37 @@ export function translateCmdOffLines(locale?: UiLocale): string[] {
 
 export function translateCmdSettingLines(locale?: UiLocale): string[] {
   return [L("cmd.translate.setting.title", locale), L("cmd.translate.setting.detail", locale)]
+}
+
+export function sessionCmdUsageLines(locale?: UiLocale): string[] {
+  return [
+    L("cmd.session.usage.line1", locale),
+    L("cmd.session.usage.line2", locale),
+    L("cmd.session.usage.line3", locale),
+    L("cmd.session.usage.line4", locale),
+    L("cmd.session.usage.line5", locale),
+    L("cmd.session.usage.line6", locale),
+    L("cmd.session.usage.line7", locale),
+    L("cmd.session.usage.line8", locale),
+    L("cmd.session.usage.line9", locale)
+  ]
+}
+
+export function sessionCmdRunHintLine(locale?: UiLocale): string {
+  return L("cmd.session.runHint", locale)
+}
+
+export function sessionCmdListUiLines(locale?: UiLocale): string[] {
+  return [L("cmd.session.listUi.title", locale), L("cmd.session.listUi.detail", locale)]
+}
+
+export function sessionCmdSwitchUiLines(locale?: UiLocale): string[] {
+  return [L("cmd.session.switchUi.title", locale), L("cmd.session.switchUi.detail", locale)]
+}
+
+export function sessionCmdSettingNameUiLines(locale?: UiLocale): string[] {
+  return [
+    L("cmd.session.settingNameUi.title", locale),
+    L("cmd.session.settingNameUi.detail", locale)
+  ]
 }

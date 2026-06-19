@@ -42,11 +42,26 @@ export const TABS_PICKER_SETTINGS_KEY = "bmxt_tabs_picker_settings_v1"
 /** Search list picker: page-active preview mode (`--auto` / `--manual`). */
 export const SEARCH_PICKER_SETTINGS_KEY = "bmxt_search_picker_settings_v1"
 
+/** Single SQLite blob (`sql.js`) — search metadata cache (`--history` / `--bookmark` only; not `--page` body). */
+export const SEARCH_CACHE_DB_KEY = "bmxt_search_cache_db_v1"
+
+/** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
+export const SEARCH_CACHE_HISTORY_KEY = "bmxt_search_cache_history_v1"
+
+/** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
+export const SEARCH_CACHE_BOOKMARK_KEY = "bmxt_search_cache_bookmark_v1"
+
+/** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
+export const SEARCH_CACHE_PAGE_KEY = "bmxt_search_cache_page_v1"
+
 /** Global UI: display locale and terminal appearance. */
 export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
+
+/** SQLite blob (`sql.js`) — job lifecycle audit / recovery (UI + background runners). */
+export const JOB_DB_KEY = "bmxt_job_db_v1"
 
 export const MAX_SESSION_LOG_LINES = 500
 export const MAX_CMD_HISTORY_LINES = 300

@@ -8,10 +8,18 @@ import { applyOne } from "./handlers/apply-one"
 
 export type { DispatchChromeContext } from "./dispatch-context"
 
+function isParallelSearchEffect(e: ChromeEffect): boolean {
+  return e.kind === "search_history" || e.kind === "search_bookmark" || e.kind === "search_page"
+}
+
 export async function applyChromeEffects(
   ctx: DispatchChromeContext,
   effects: ChromeEffect[]
 ): Promise<string[]> {
+  if (effects.length > 1 && effects.every(isParallelSearchEffect)) {
+    const parts = await Promise.all(effects.map((e) => applyOne(ctx, e)))
+    return parts.flat()
+  }
   const out: string[] = []
   for (const e of effects) {
     // eslint-disable-next-line no-await-in-loop

@@ -307,7 +307,14 @@ export function serializeProcessUiState(
               }
             }
           : null,
-        search: pickers.search,
+        search: pickers.search
+          ? pickers.search.phase === "loading"
+            ? {
+                ...pickers.search,
+                progressLines: []
+              }
+            : pickers.search
+          : null,
         dom: pickers.dom
       }
     }

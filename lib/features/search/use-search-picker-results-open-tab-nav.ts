@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -282,6 +283,13 @@ export function useSearchPickerResultsOpenTabNav({
       showNoOpenTabNotice
     ]
   )
+
+  useLayoutEffect(() => {
+    if (!enabled || lineCount === 0 || pageActiveMode !== "auto" || !isHostPaneFocused) {
+      return
+    }
+    void runPreview()
+  }, [enabled, entriesOpenTabKey, isHostPaneFocused, lineCount, pageActiveMode, runPreview])
 
   const mergedExtensions = useMemo((): PlainPickerKeyboardExtensions => {
     return {

@@ -1,6 +1,6 @@
 import { flushSync } from "react-dom"
+import { TerminalLogLines } from "./terminal-log-lines"
 import {
-  buildSessionListRows,
   isSessionSettingNameUiLine,
   isSessionSwitchUiLine,
   parseSessionListPickerLine,
@@ -71,6 +71,7 @@ import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import {
   isSearchListContinuationPrompt,
   isSearchListReadyToRun,
+  normalizeSearchListDispatchLine,
   parseSearchExitListLine,
   parseSearchListPickerLine,
   searchListPatternFromLine,
@@ -78,6 +79,14 @@ import {
   type SearchListPickerState
 } from "../search/search-list-picker-input"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs"
+import { useBatchedSearchLoadingProgress } from "../search/use-batched-search-loading-progress"
+import { resetSearchCacheFromSettings } from "../search/cache/search-cache-store"
+import {
+  isJobHandleActive,
+  mergeJobIntoDispatchContext,
+  shouldCancelJob,
+  useSessionJobRunner
+} from "../job"
 import { normalizeSearchPattern } from "../search/search-format"
 import {
   isRetryableDomListOutput,
@@ -139,6 +148,7 @@ import {
   parseSettingListPickerLine,
   replaceUiSettings,
   settingPickerApplyDraftToMain,
+  settingPickerGoToView,
   settingPickerUpdateDraft,
   settingTokenForUiLocale,
   setRunLocale,
@@ -274,7 +284,8 @@ type Props = {
   activeSessionId: string
   sessionNamesById: Record<string, string | undefined>
   sessionLogsById: Record<string, string[] | undefined>
-  pickersBySession: SessionPickersByLeaf
+  /** EN: Pre-built session list rows (avoids passing full `pickersBySession` into every shell). */
+  sessionListRows: SessionListRow[]
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => Promise<void>
   onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
@@ -311,7 +322,7 @@ export function BmxtShell({
   activeSessionId,
   sessionNamesById,
   sessionLogsById,
-  pickersBySession,
+  sessionListRows,
   navArmedByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
@@ -431,8 +442,7 @@ export function BmxtShell({
   useEffect(() => {
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
-  const searchListDismissRef = useRef(false)
-  const domListDismissRef = useRef(false)
+  const jobRunner = useSessionJobRunner(sessionId)
   const tabsPickerFocusTabIdRef = useRef<number | null>(null)
   const tabPickerOpenRef = useRef(false)
   useEffect(() => {
@@ -545,28 +555,22 @@ export function BmxtShell({
   }, [subCmdPicker])
 
   const [sessionListPickerHi, setSessionListPickerHi] = useState<number | null>(null)
+  const sessionListPickerOpen = sessionListPickerHi !== null
+  const sessionListPickerHiRef = useRef(sessionListPickerHi)
+  sessionListPickerHiRef.current = sessionListPickerHi
   const [sessionPickerVariant, setSessionPickerVariant] = useState<SessionCandidatePanelVariant | null>(
     null
   )
   const sessionPickerVariantRef = useRef(sessionPickerVariant)
   sessionPickerVariantRef.current = sessionPickerVariant
-  const sessionListRows = useMemo(
-    (): SessionListRow[] =>
-      buildSessionListRows({
-        order: sessionOrder,
-        activeId: activeSessionId,
-        namesById: sessionNamesById,
-        logsById: sessionLogsById,
-        pickersBySession,
-        navArmedByLeaf
-      }),
-    [sessionOrder, activeSessionId, sessionNamesById, sessionLogsById, pickersBySession, navArmedByLeaf]
-  )
-  const sessionListPickerOpen = sessionListPickerHi !== null
-  const sessionListPickerHiRef = useRef(sessionListPickerHi)
-  sessionListPickerHiRef.current = sessionListPickerHi
   const sessionListRowsRef = useRef(sessionListRows)
   sessionListRowsRef.current = sessionListRows
+  const {
+    lines: searchLoadingProgressLines,
+    reset: resetSearchLoadingProgress,
+    append: appendSearchLoadingProgress,
+    clear: clearSearchLoadingProgress
+  } = useBatchedSearchLoadingProgress()
 
   const [sessionNameTyping, setSessionNameTyping] = useState(false)
   const sessionNameTypingRef = useRef(sessionNameTyping)
@@ -578,11 +582,11 @@ export function BmxtShell({
       sessionId,
       index: index >= 0 ? index + 1 : 1,
       namesById: sessionNamesById,
-      pickers: pickersBySession[sessionId],
+      pickers: sessionPickers,
       navArmed: navArmedByLeaf[sessionId] ?? false,
       logs: sessionLogsById[sessionId] ?? []
     })
-  }, [sessionId, sessionOrder, sessionNamesById, sessionLogsById, pickersBySession, navArmedByLeaf])
+  }, [sessionId, sessionOrder, sessionNamesById, sessionLogsById, sessionPickers, navArmedByLeaf])
   const currentSessionDisplayNameRef = useRef(currentSessionDisplayName)
   currentSessionDisplayNameRef.current = currentSessionDisplayName
 
@@ -767,12 +771,12 @@ export function BmxtShell({
   const completionCandidatesRef = useRef<string[]>([])
   /** EN: Tab on empty line opened the first-command menu — keep showing until input/Esc/submit. */
   const allowEmptyFirstPickerSyncRef = useRef(false)
-  /** EN: Esc closed the token menu — suppress until Tab or typing; not history ↑↓. */
+  /** EN: Tab on the prompt requested the token menu — open/update once per Tab press. */
+  const tabPickerOpenRequestRef = useRef(false)
+  /** EN: Esc closed the token menu — suppress until Tab; not history ↑↓. */
   const imeTokenPickerDismissedRef = useRef(false)
   /** EN: Esc closed the session-list menu while `session -list` stays on the prompt. */
   const sessionListPickerDismissedRef = useRef(false)
-  const searchListBusyRef = useRef(false)
-  const [searchListBusy, setSearchListBusy] = useState(false)
 
   useEffect(() => {
     setLocalCompletion(completionCandidates)
@@ -841,8 +845,17 @@ export function BmxtShell({
 
   const dismissImeTokenPicker = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
+    tabPickerOpenRequestRef.current = false
     imeTokenPickerDismissedRef.current = true
     setSubCmdPicker(null)
+  }, [])
+
+  const closePromptPickerUi = useCallback(() => {
+    allowEmptyFirstPickerSyncRef.current = false
+    tabPickerOpenRequestRef.current = false
+    setSubCmdPicker(null)
+    setSessionListPickerHi(null)
+    setSessionPickerVariant(null)
   }, [])
 
   const openSessionPicker = useCallback(
@@ -864,6 +877,9 @@ export function BmxtShell({
 
   const syncImeTokenPicker = useCallback(
     (ln: string, pos: number) => {
+      if (paneFocusRef.current !== "terminal") {
+        return
+      }
       if (sessionNameTypingRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
@@ -875,7 +891,7 @@ export function BmxtShell({
         allowEmptyFirstPickerSyncRef.current = false
         return
       }
-      if (mode === "isearch" || searchListBusyRef.current) {
+      if (mode === "isearch") {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
         setSessionListPickerHi(null)
@@ -930,15 +946,26 @@ export function BmxtShell({
       setSessionPickerVariant(null)
       if (imeTokenPickerDismissedRef.current) {
         setSubCmdPicker(null)
+        allowEmptyFirstPickerSyncRef.current = false
+        tabPickerOpenRequestRef.current = false
         return
       }
+      const pickerAlreadyOpen = subCmdPickerRef.current !== null
+      const tabOpenRequested = tabPickerOpenRequestRef.current
+      const emptyFirstTab = allowEmptyFirstPickerSyncRef.current
+      const mayOpenPicker = pickerAlreadyOpen || tabOpenRequested || emptyFirstTab
       const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
-        emptyFirstPrefixShowsAll: allowEmptyFirstPickerSyncRef.current,
-        candidateMatch: incrementalPickerMatchMode(subCmdPickerRef.current !== null)
+        emptyFirstPrefixShowsAll: mayOpenPicker,
+        candidateMatch: incrementalPickerMatchMode(pickerAlreadyOpen)
       })
+      allowEmptyFirstPickerSyncRef.current = false
+      tabPickerOpenRequestRef.current = false
       if (!resolved) {
         setSubCmdPicker(null)
-        allowEmptyFirstPickerSyncRef.current = false
+        return
+      }
+      if (!mayOpenPicker) {
+        setSubCmdPicker(null)
         return
       }
       setSubCmdPicker((prev) => {
@@ -1300,6 +1327,7 @@ export function BmxtShell({
 
   const activateDetailBar = useCallback(
     (id: DetailBarId) => {
+      closePromptPickerUi()
       setDetailBarId(id)
       onPaneFocusChange("detailBar")
       imeRef.current?.blur()
@@ -1307,7 +1335,7 @@ export function BmxtShell({
         pulsePickerColumn(detailBarToPickerSlot(id))
       }
     },
-    [onPaneFocusChange, pulsePickerColumn, setDetailBarId]
+    [closePromptPickerUi, onPaneFocusChange, pulsePickerColumn, setDetailBarId]
   )
 
   const enterPickerFromDetailBar = useCallback(() => {
@@ -1451,7 +1479,7 @@ export function BmxtShell({
     navArmed,
     navActive,
     navTypingMode,
-    blocked: navPageTyping || sessionNameTyping || searchListBusy || mode === "isearch" || subCmdPicker !== null || sessionListPickerOpen,
+    blocked: navPageTyping || sessionNameTyping || mode === "isearch" || subCmdPicker !== null || sessionListPickerOpen,
     isCaretAtPromptEnd: () => cursorRef.current >= lineRef.current.length,
     actions: {
       activateDetailBar,
@@ -1502,8 +1530,9 @@ export function BmxtShell({
       focusPrompt()
       return
     }
+    closePromptPickerUi()
     imeRef.current?.blur()
-  }, [promptPaneFocused, focusPrompt])
+  }, [closePromptPickerUi, promptPaneFocused, focusPrompt])
 
   useEffect(() => {
     if (!promptPaneFocused) {
@@ -1520,73 +1549,95 @@ export function BmxtShell({
       displayLine: string,
       announce: boolean
     ): Promise<void> => {
-      domListDismissRef.current = false
-      try {
-        await ensureBmxtCore()
-        const bundle = runDispatch(domListLine, uiSettings.locale)
-        if (bundle.ty === "lines") {
-          await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
-          setDomListPicker(sessionId, null)
-          return
-        }
-        let domCapture: DomListCapture | undefined
-        const ctx: DispatchChromeContext = {
-          clearLog: async () => {},
-          exitPane: async () => [],
-          listWindows: async () => [],
-          focusInfo: async () => [],
-          resolveTabArg: async () => undefined,
-          resolveDomListTargetTabId,
-          onDomListCapture: (capture) => {
-            domCapture = capture
-          },
-          commandSessionId: sessionId,
-          uiLocale: uiSettings.locale
-        }
-        const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-        if (domListDismissRef.current) {
-          domListDismissRef.current = false
-          return
-        }
-        if (isRetryableDomListOutput(linesOut)) {
-          if (announce) {
+      await jobRunner.start(
+        "dom-list",
+        async (job) => {
+          try {
+            await ensureBmxtCore()
+            const bundle = runDispatch(domListLine, uiSettings.locale)
+            if (shouldCancelJob(job)) {
+              return
+            }
+            if (bundle.ty === "lines") {
+              await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
+              setDomListPicker(sessionId, null)
+              return
+            }
+            let domCapture: DomListCapture | undefined
+            const ctx = mergeJobIntoDispatchContext(
+              {
+                clearLog: async () => {},
+                exitPane: async () => [],
+                listWindows: async () => [],
+                focusInfo: async () => [],
+                resolveTabArg: async () => undefined,
+                resolveDomListTargetTabId,
+                onDomListCapture: (capture) => {
+                  domCapture = capture
+                },
+                commandSessionId: sessionId,
+                uiLocale: uiSettings.locale
+              },
+              job
+            )
+            const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+            if (shouldCancelJob(job)) {
+              return
+            }
+            if (isRetryableDomListOutput(linesOut)) {
+              if (announce) {
+                await appendLogLines([
+                  `> ${displayLine}`,
+                  uiCopy.t("domPrompt.headline")
+                ])
+              }
+              setDomListPicker(sessionId, {
+                kind: "prompt",
+                message: linesOut,
+                commandLine: domListLine
+              })
+              setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
+              return
+            }
+            if (announce) {
+              await appendLogLines([`> ${displayLine}`, uiCopy.t("dom.listPicker")])
+            }
+            const targetTabId = await resolveDomListTargetTabId()
+            setDomListPicker(sessionId, {
+              kind: "lines",
+              lines: linesOut,
+              commandLine: domListLine,
+              targetTabId,
+              jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
+              headerLineCount: domCapture?.headerLineCount ?? linesOut.length
+            })
+            setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
+          } catch (e) {
+            if (shouldCancelJob(job)) {
+              return
+            }
             await appendLogLines([
               `> ${displayLine}`,
-              uiCopy.t("domPrompt.headline")
+              uiCopy.t("error.generic", {
+                message: e instanceof Error ? e.message : String(e)
+              })
             ])
+            setDomListPicker(sessionId, null)
           }
-          setDomListPicker(sessionId, {
-            kind: "prompt",
-            message: linesOut,
-            commandLine: domListLine
-          })
-          setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
-          return
-        }
-        if (announce) {
-          await appendLogLines([`> ${displayLine}`, uiCopy.t("dom.listPicker")])
-        }
-        const targetTabId = await resolveDomListTargetTabId()
-        setDomListPicker(sessionId, {
-          kind: "lines",
-          lines: linesOut,
-          commandLine: domListLine,
-          targetTabId,
-          jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
-          headerLineCount: domCapture?.headerLineCount ?? linesOut.length
-        })
-        setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
-      } catch (e) {
-        await appendLogLines([
-          `> ${displayLine}`,
-          uiCopy.t("error.generic", {
-            message: e instanceof Error ? e.message : String(e)
-          })
-        ])
-        setDomListPicker(sessionId, null)
-      }
+        },
+        { meta: { line: domListLine } }
+      )
     },
-    [appendLogLines, sessionId, setDomListPicker, resolveDomListTargetTabId]
+    [
+      appendLogLines,
+      jobRunner,
+      sessionId,
+      setDomListPicker,
+      setModeToolbarOrder,
+      resolveDomListTargetTabId,
+      uiCopy,
+      uiSettings.locale
+    ]
   )
 
   const refreshDomListPicker = useCallback(
@@ -1597,7 +1648,8 @@ export function BmxtShell({
   const { onTabsPickerFocusTabId: queueDomListFollowRefresh } = useDomListFollowTab({
     domListPicker,
     resolveTargetTabId: resolveDomListTargetTabId,
-    refreshDomList: refreshDomListPicker
+    refreshDomList: refreshDomListPicker,
+    isDomListJobActive: () => jobRunner.isActive("dom-list")
   })
 
   const onTabsPickerFocusTabId = useCallback(
@@ -1614,120 +1666,135 @@ export function BmxtShell({
   )
 
   const showSearchListPatternPlaceholder = useMemo(
-    () =>
-      !searchListBusy && shouldShowSearchListPatternPlaceholder(line, cursorPos),
-    [line, cursorPos, searchListBusy]
-  )
-
-  const appendSearchPickerProgress = useCallback(
-    (message: string) => {
-      setSearchListPicker(sessionId, (prev) => {
-        if (!prev || prev.phase !== "loading") {
-          return prev
-        }
-        return {
-          ...prev,
-          progressLines: [...prev.progressLines, message]
-        }
-      })
-    },
-    [sessionId, setSearchListPicker]
+    () => shouldShowSearchListPatternPlaceholder(line, cursorPos),
+    [line, cursorPos]
   )
 
   const runSearchListSearch = useCallback(
-    async (displayLine: string, searchListLine: string) => {
-      if (searchListBusyRef.current) {
-        return
-      }
-      searchListDismissRef.current = false
-      searchListBusyRef.current = true
-      setSearchListBusy(true)
+    async (_displayLine: string, searchListLine: string) => {
       setSubCmdPicker(null)
 
-      const progressLabel = searchPageProgressLabel(searchListLine)
+      const dispatchLine = normalizeSearchListDispatchLine(searchListLine)
+      const progressLabel = searchPageProgressLabel(dispatchLine)
       const initialProgress = [`${progressLabel} — searching…`]
-      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(searchListLine))
+      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
 
+      resetSearchLoadingProgress(initialProgress)
       setSearchListPicker(sessionId, {
         phase: "loading",
-        progressLines: initialProgress,
+        progressLines: [],
         entries: [],
         pattern: searchPattern
       })
       setModeToolbarOrder((prev) => activateModeToolbar(prev, "search"))
 
-      try {
-        await ensureBmxtCore()
-        await appendLogLines([`> ${displayLine}`])
-        const bundle = runDispatch(searchListLine, uiSettings.locale)
-        if (bundle.ty === "lines") {
-          setSearchListPicker(sessionId, null)
-          await appendLogLines(bundle.lines ?? [])
-          return
-        }
-        const effects = bundle.effects ?? []
-        if (effectsIncludeSearchPage(effects)) {
-          appendSearchPickerProgress(uiCopy.t("search.pageScanHint"))
-        }
-        const ctx: DispatchChromeContext = {
-          clearLog: async () => {},
-          exitPane: async () => [],
-          listWindows: async () => [],
-          focusInfo: async () => [],
-          resolveTabArg: async () => undefined,
-          commandSessionId: sessionId,
-          uiLocale: uiSettings.locale,
-          searchPageProgressLabel: progressLabel,
-          onSearchPageProgress: async (message) => {
-            appendSearchPickerProgress(message)
-          },
-          shouldCancelSearchPage: () => searchListDismissRef.current
-        }
-        const linesOut = await applyChromeEffects(ctx, effects)
-        if (searchListDismissRef.current) {
-          searchListDismissRef.current = false
-          setSearchListPicker(sessionId, null)
-          if (linesOut.length > 0) {
-            await appendLogLines(linesOut)
+      await jobRunner.start(
+        "search-list",
+        async (job) => {
+          try {
+            await ensureBmxtCore()
+            if (shouldCancelJob(job)) {
+              return
+            }
+            await appendLogLines([`> ${dispatchLine}`])
+            const bundle = runDispatch(dispatchLine, uiSettings.locale)
+            if (shouldCancelJob(job)) {
+              return
+            }
+            if (bundle.ty === "lines") {
+              clearSearchLoadingProgress()
+              setSearchListPicker(sessionId, null)
+              await appendLogLines(bundle.lines ?? [])
+              return
+            }
+            const effects = bundle.effects ?? []
+            if (effectsIncludeSearchPage(effects) && !shouldCancelJob(job)) {
+              appendSearchLoadingProgress(uiCopy.t("search.pageScanHint"))
+            }
+            const ctx = mergeJobIntoDispatchContext(
+              {
+                clearLog: async () => {},
+                exitPane: async () => [],
+                listWindows: async () => [],
+                focusInfo: async () => [],
+                resolveTabArg: async () => undefined,
+                commandSessionId: sessionId,
+                uiLocale: uiSettings.locale
+              },
+              job,
+              {
+                searchPageProgressLabel: progressLabel,
+                onSearchPageProgress: async (message) => {
+                  if (!shouldCancelJob(job)) {
+                    appendSearchLoadingProgress(message)
+                  }
+                }
+              }
+            )
+            const linesOut = await applyChromeEffects(ctx, effects)
+            if (shouldCancelJob(job)) {
+              clearSearchLoadingProgress()
+              if (linesOut.length > 0) {
+                await appendLogLines(linesOut)
+              }
+              return
+            }
+            const parsed = pickerEntriesFromSearchLines(linesOut)
+            const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
+            if (shouldCancelJob(job)) {
+              clearSearchLoadingProgress()
+              return
+            }
+            clearSearchLoadingProgress()
+            const emptyResultLines =
+              entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
+            setSearchListPicker(sessionId, {
+              phase: "results",
+              progressLines: [],
+              entries,
+              pattern: searchPattern,
+              emptyResultLines
+            })
+          } catch (e) {
+            clearSearchLoadingProgress()
+            if (!shouldCancelJob(job)) {
+              setSearchListPicker(sessionId, null)
+              await appendLogLines([
+                uiCopy.t("error.generic", {
+                  message: e instanceof Error ? e.message : String(e)
+                })
+              ])
+            }
           }
-          return
-        }
-        const parsed = pickerEntriesFromSearchLines(linesOut)
-        const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
-        const emptyResultLines =
-          entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
-        setSearchListPicker(sessionId, {
-          phase: "results",
-          progressLines: [],
-          entries,
-          pattern: searchPattern,
-          emptyResultLines
-        })
-      } catch (e) {
-        setSearchListPicker(sessionId, null)
-        await appendLogLines([
-          uiCopy.t("error.generic", {
-            message: e instanceof Error ? e.message : String(e)
-          })
-        ])
-      } finally {
-        searchListBusyRef.current = false
-        setSearchListBusy(false)
-      }
+        },
+        { meta: { line: dispatchLine } }
+      )
     },
-    [appendLogLines, appendSearchPickerProgress, sessionId, setSearchListPicker]
+    [
+      appendLogLines,
+      appendSearchLoadingProgress,
+      clearSearchLoadingProgress,
+      jobRunner,
+      resetSearchLoadingProgress,
+      sessionId,
+      setSearchListPicker,
+      uiCopy,
+      uiSettings.locale
+    ]
   )
 
   const cancelSearchPageScan = useCallback(() => {
-    if (!searchListBusyRef.current || searchListDismissRef.current) {
+    const job = jobRunner.getActive("search-list")
+    if (!isJobHandleActive(job)) {
       return
     }
-    searchListDismissRef.current = true
+    jobRunner.cancelHandle(job)
+    clearSearchLoadingProgress()
     void appendLogLines([
       uiCopy.t("search.cancelledCtrlC"),
       uiCopy.t("search.pageScanCancelled")
     ])
-  }, [appendLogLines, uiCopy])
+  }, [appendLogLines, clearSearchLoadingProgress, jobRunner, uiCopy])
 
   const onSettingPickerStateChange = useCallback(
     (next: SettingListPickerState) => {
@@ -1802,6 +1869,24 @@ export function BmxtShell({
         return
       }
       if (row.id === "reset-no") {
+        return
+      }
+      if (row.id === "search-cache-reset-yes") {
+        try {
+          await resetSearchCacheFromSettings()
+          setSettingListPicker(sessionId, settingPickerGoToView("main", current))
+          await appendLogLines([logPrefix, uiCopy.t("setting.searchCache.resetDone")])
+        } catch (e) {
+          await appendLogLines([
+            logPrefix,
+            uiCopy.t("error.generic", {
+              message: e instanceof Error ? e.message : String(e)
+            })
+          ])
+        }
+        return
+      }
+      if (row.id === "search-cache-reset-no") {
         return
       }
       if (row.id === "size") {
@@ -2229,18 +2314,17 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         const logLines = [`> ${trimmed}`]
-        const wasBusy = searchListBusyRef.current
-        if (wasBusy) {
-          searchListDismissRef.current = true
-          searchListBusyRef.current = false
-          setSearchListBusy(false)
+        const hadActiveJob = jobRunner.isActive("search-list")
+        if (hadActiveJob) {
+          jobRunner.cancel("search-list")
         }
+        clearSearchLoadingProgress()
         if (searchListPickerRef.current !== null) {
           setSearchListPicker(sessionId, null)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "search"))
           activatePaneFocus("terminal")
           logLines.push(uiCopy.t("search.picker.closed"))
-        } else if (wasBusy) {
+        } else if (hadActiveJob) {
           logLines.push(uiCopy.t("search.picker.cancelled"))
         } else {
           logLines.push(uiCopy.t("search.picker.notOpen"))
@@ -2373,7 +2457,10 @@ export function BmxtShell({
       tabPressSeqRef.current = 0
       void (async () => {
         const logLines = [`> ${trimmed}`]
-        domListDismissRef.current = true
+        const hadActiveDomJob = jobRunner.isActive("dom-list")
+        if (hadActiveDomJob) {
+          jobRunner.cancel("dom-list")
+        }
         if (domListPickerRef.current !== null) {
           setDomListPicker(sessionId, null)
           setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "dom"))
@@ -2423,10 +2510,6 @@ export function BmxtShell({
 
     const searchListLine = parseSearchListPickerLine(trimmed)
     if (searchListLine !== null) {
-      if (searchListBusyRef.current) {
-        focusPrompt()
-        return
-      }
       if (isSearchListContinuationPrompt(rawLine)) {
         appendCommandToHistory(trimmed)
         const next = `${trimmed} `
@@ -2435,7 +2518,7 @@ export function BmxtShell({
         setCursorPos(next.length)
         setHistNavIndex(-1)
         tabPressSeqRef.current = 0
-        queueMicrotask(() => syncImeTokenPicker(next, next.length))
+        setSubCmdPicker(null)
         focusPrompt()
         return
       }
@@ -2506,10 +2589,10 @@ export function BmxtShell({
       }
     )
     if (continuationPrompt) {
+      setSubCmdPicker(null)
       setLine(continuationPrompt)
       setCursorPos(continuationPrompt.length)
       lineRef.current = continuationPrompt
-      queueMicrotask(() => syncImeTokenPicker(continuationPrompt, continuationPrompt.length))
     }
     focusPrompt()
   }, [
@@ -2686,6 +2769,9 @@ export function BmxtShell({
 
   const onImeInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
+      if (!promptPaneFocused) {
+        return
+      }
       allowEmptyFirstPickerSyncRef.current = false
       sessionListPickerDismissedRef.current = false
       if (skipHistResetRef.current) {
@@ -2707,10 +2793,13 @@ export function BmxtShell({
       }
       syncPromptFromTextarea(e.currentTarget, { composing: isComposingRef.current })
     },
-    [mode, navPageTyping, syncPromptFromTextarea, syncPromptFromTextareaForComposition]
+    [mode, navPageTyping, promptPaneFocused, syncPromptFromTextarea, syncPromptFromTextareaForComposition]
   )
 
   const onImeSelect = useCallback(() => {
+    if (!promptPaneFocused) {
+      return
+    }
     const ta = imeRef.current
     if (!ta || isComposing) {
       return
@@ -2718,7 +2807,7 @@ export function BmxtShell({
     const pos = ta.selectionEnd
     setCursorPos(pos)
     syncImeTokenPicker(ta.value, pos)
-  }, [isComposing, syncImeTokenPicker])
+  }, [isComposing, promptPaneFocused, syncImeTokenPicker])
 
   const applyNavTypingMutation = useCallback(
     (ta: HTMLTextAreaElement, nextLine: string, nextCursor: number) => {
@@ -2766,6 +2855,9 @@ export function BmxtShell({
 
   const onPaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!promptPaneFocused) {
+        return
+      }
       e.preventDefault()
       allowEmptyFirstPickerSyncRef.current = false
       const ta = e.currentTarget
@@ -2785,7 +2877,7 @@ export function BmxtShell({
       setCursorPos(start + t.length)
       syncImeTokenPicker(next, start + t.length)
     },
-    [mode, navPageTyping, navTypingMultiline, syncImeTokenPicker]
+    [mode, navPageTyping, navTypingMultiline, promptPaneFocused, syncImeTokenPicker]
   )
 
   const onCompositionStart = useCallback(
@@ -2873,6 +2965,10 @@ export function BmxtShell({
         return
       }
 
+      if (!promptPaneFocused) {
+        return
+      }
+
       if (sessionNameTypingRef.current) {
         if (e.key === "Escape") {
           e.preventDefault()
@@ -2942,11 +3038,13 @@ export function BmxtShell({
       }
 
       if (
-        searchListBusyRef.current &&
         e.ctrlKey &&
         !e.metaKey &&
         !e.altKey &&
-        (e.key === "c" || e.key === "C")
+        (e.key === "c" || e.key === "C") &&
+        paneFocusRef.current === "search" &&
+        searchListPickerRef.current?.phase === "loading" &&
+        isJobHandleActive(jobRunner.getActive("search-list"))
       ) {
         e.preventDefault()
         cancelSearchPageScan()
@@ -3125,9 +3223,10 @@ export function BmxtShell({
           })()
           return
         }
-        if (curLn.trim() === "" && !searchListBusyRef.current) {
+        if (curLn.trim() === "") {
           e.preventDefault()
           allowEmptyFirstPickerSyncRef.current = true
+          tabPickerOpenRequestRef.current = true
           syncImeTokenPicker(curLn, pos)
           return
         }
@@ -3137,6 +3236,7 @@ export function BmxtShell({
         if (imePick && imePick.candidates.length > 0) {
           e.preventDefault()
           tabPressSeqRef.current = 0
+          tabPickerOpenRequestRef.current = true
           syncImeTokenPicker(curLn, pos)
           return
         }
@@ -3243,7 +3343,8 @@ export function BmxtShell({
       applySessionSwitchPick,
     switchSessionFromListPicker,
       paneFocus,
-      handleToggleNavActive
+      handleToggleNavActive,
+      promptPaneFocused
     ]
   )
 
@@ -3278,11 +3379,7 @@ export function BmxtShell({
             </div>
           </div>
         ) : null}
-        {lines.map((ln, i) => (
-          <div key={i} className="bmxt-out-line">
-            {ln}
-          </div>
-        ))}
+        {lines.length > 0 ? <TerminalLogLines lines={lines} /> : null}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">
             <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>
@@ -3325,7 +3422,7 @@ export function BmxtShell({
               autoCorrect="off"
               autoComplete="off"
               wrap="off"
-              tabIndex={0}
+              tabIndex={promptPaneFocused ? 0 : -1}
               aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
               placeholder={
                 showNavTypingPlaceholder
@@ -3336,12 +3433,12 @@ export function BmxtShell({
                     ? uiCopy.t("session.settingName.placeholder")
                   : showSearchListPatternPlaceholder
                     ? uiCopy.t("prompt.searchListPattern")
-                    : mode === "normal" && line.trim() === "" && !searchListBusy
+                    : mode === "normal" && line.trim() === ""
                       ? uiCopy.t("prompt.placeholder")
                       : undefined
               }
               value={navPromptValueControlled ? line : undefined}
-              readOnly={searchListBusy}
+              readOnly={!promptPaneFocused}
               onInput={onImeInput}
               onBeforeInput={onBeforeInput}
               onSelect={onImeSelect}
@@ -3351,7 +3448,7 @@ export function BmxtShell({
               onCompositionUpdate={onCompositionUpdate}
               onCompositionEnd={onCompositionEnd}
             />
-            {promptPickerOpen && !searchListBusy ? (
+            {promptPickerOpen ? (
               <div
                 ref={subCmdPickerHostRef}
                 className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
@@ -3445,8 +3542,10 @@ export function BmxtShell({
           paneFocus={paneFocus}
           activatePaneFocus={activatePaneFocus}
           onExitToDetailBar={exitPickerToDetailBar}
+          onCancelSearchInFlight={cancelSearchPageScan}
           tabPicker={displayTabPicker}
           searchListPicker={displaySearchListPicker}
+          searchLoadingProgressLines={searchLoadingProgressLines}
           domListPicker={displayDomListPicker}
           settingListPicker={displaySettingListPicker}
           tabsPickerKeyboardActive={tabsPickerKeyboardActive}
