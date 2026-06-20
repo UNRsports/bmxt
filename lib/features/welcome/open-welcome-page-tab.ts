@@ -1,9 +1,11 @@
-import { WELCOME_PAGE_PATH } from "./welcome-page-path"
+import { loadUiSettings } from "../setting/settings"
+import { buildWelcomePageUrl } from "./welcome-external-url"
 
-/** `tabs/welcome.html` を通常のブラウザタブで開く（install / update / aboutbmxt 共通）。 */
+/** GitHub Pages の welcome.html を通常のブラウザタブで開く（install / update / aboutbmxt 共通）。 */
 export async function openWelcomePageTab(): Promise<void> {
+  const settings = await loadUiSettings()
   await chrome.tabs.create({
-    url: chrome.runtime.getURL(WELCOME_PAGE_PATH),
+    url: buildWelcomePageUrl(settings.locale),
     active: true
   })
 }

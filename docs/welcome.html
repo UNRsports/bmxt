@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BMXt — Welcome</title>
+    <link rel="icon" type="image/png" href="icon.png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fafafa;
+        --fg: #1a1a1a;
+        --muted: #555;
+        --border: #ddd;
+        --accent: #2563eb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121212;
+          --fg: #eee;
+          --muted: #aaa;
+          --border: #333;
+          --accent: #60a5fa;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 1rem;
+        line-height: 1.65;
+        color: var(--fg);
+        background: var(--bg);
+      }
+      .wrap {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 4rem;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      header img.logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0.25rem 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      nav.lang {
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+      }
+      nav.lang a {
+        color: var(--accent);
+      }
+      .hero {
+        margin: 0 0 2rem;
+        text-align: center;
+      }
+      .hero img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      h2.version {
+        font-size: 1.1rem;
+        margin: 2rem 0 0.5rem;
+        padding-top: 0.25rem;
+      }
+      h2.version:first-of-type {
+        margin-top: 0;
+      }
+      ul.notes {
+        margin: 0.25rem 0 0;
+        padding-left: 1.35rem;
+      }
+      ul.notes li {
+        margin: 0.35rem 0;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .error {
+        margin: 1rem 0;
+        padding: 1rem 1.1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--bg) 92%, var(--fg));
+      }
+      footer {
+        margin-top: 3rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      footer a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <img class="logo" src="icon.png" width="48" height="48" alt="" />
+        <div>
+          <h1 id="page-title">BMXt</h1>
+          <p class="muted" id="page-subtitle"></p>
+        </div>
+      </header>
+
+      <nav class="lang" aria-label="Language" id="lang-nav"></nav>
+
+      <figure class="hero">
+        <img
+          src="welcome/manual_howToUseBMXt.png"
+          width="840"
+          alt=""
+          id="hero-alt"
+        />
+      </figure>
+
+      <div id="history" aria-live="polite"></div>
+
+      <footer>
+        <span id="footer-text"></span>
+        · <a href="index.html" id="privacy-link"></a>
+      </footer>
+    </div>
+    <script>
+      const UI = {
+        ja: {
+          pageTitle: "BMXtへようこそ",
+          pageSubtitle: "バージョン履歴",
+          historyHeading: "リリースノート",
+          heroAlt: "BMXt の基本的な使い方",
+          langNav: "言語:",
+          footer: "本プログラムはテストバージョンです。",
+          privacy: "プライバシーポリシー",
+          loadError: "バージョン履歴を読み込めませんでした。しばらくしてから再度お試しください。",
+          empty: "（バージョン履歴は未登録です。）"
+        },
+        en: {
+          pageTitle: "Welcome to BMXt",
+          pageSubtitle: "Version history",
+          historyHeading: "Release notes",
+          heroAlt: "How to use BMXt",
+          langNav: "Language:",
+          footer: "This program is a test version.",
+          privacy: "Privacy policy",
+          loadError: "Could not load version history. Please try again later.",
+          empty: "(No version history entries yet.)"
+        }
+      }
+
+      const DEFAULT_LOCALE = "ja"
+      const VALID_LOCALES = ["ja", "en"]
+
+      function parseLocale() {
+        const raw = new URLSearchParams(location.search).get("lang")
+        if (raw && VALID_LOCALES.includes(raw)) {
+          return raw
+        }
+        return DEFAULT_LOCALE
+      }
+
+      function compareVersion(a, b) {
+        const pa = a.split(".").map((n) => Number(n))
+        const pb = b.split(".").map((n) => Number(n))
+        const len = Math.max(pa.length, pb.length)
+        for (let i = 0; i < len; i++) {
+          const da = pa[i] ?? 0
+          const db = pb[i] ?? 0
+          if (da !== db) {
+            return da - db
+          }
+        }
+        return 0
+      }
+
+      function pickLines(entry, locale) {
+        const lines = entry[locale]
+        if (Array.isArray(lines) && lines.length > 0) {
+          return lines
+        }
+        const fallback = entry[DEFAULT_LOCALE]
+        if (Array.isArray(fallback)) {
+          return fallback
+        }
+        return entry.en ?? entry.ja ?? []
+      }
+
+      function renderLangNav(locale) {
+        const nav = document.getElementById("lang-nav")
+        const copy = UI[locale]
+        const parts = VALID_LOCALES.map((id) => {
+          if (id === locale) {
+            return `<strong>${id === "ja" ? "日本語" : "English"}</strong>`
+          }
+          const url = new URL(location.href)
+          url.searchParams.set("lang", id)
+          const label = id === "ja" ? "日本語" : "English"
+          return `<a href="${url.pathname}${url.search}">${label}</a>`
+        })
+        nav.innerHTML = `${copy.langNav} ${parts.join(" · ")}`
+      }
+
+      function renderStatic(locale) {
+        const copy = UI[locale]
+        document.documentElement.lang = locale === "ja" ? "ja" : "en"
+        document.title = `${copy.pageTitle} — BMXt`
+        document.getElementById("page-title").textContent = copy.pageTitle
+        document.getElementById("page-subtitle").textContent = copy.pageSubtitle
+        document.getElementById("hero-alt").alt = copy.heroAlt
+        document.getElementById("footer-text").textContent = copy.footer
+        document.getElementById("privacy-link").textContent = copy.privacy
+        renderLangNav(locale)
+      }
+
+      function renderHistory(entries, locale) {
+        const container = document.getElementById("history")
+        const copy = UI[locale]
+
+        if (!Array.isArray(entries) || entries.length === 0) {
+          container.innerHTML = `<p class="muted">${copy.empty}</p>`
+          return
+        }
+
+        const sorted = [...entries].sort((a, b) =>
+          compareVersion(b.version, a.version)
+        )
+
+        const sections = sorted.map((entry) => {
+          const lines = pickLines(entry, locale)
+          const items = lines
+            .map((line) => `<li>${line}</li>`)
+            .join("")
+          return `<section><h2 class="version">Version ${entry.version}</h2><ul class="notes">${items}</ul></section>`
+        })
+
+        container.innerHTML = `<h2 class="version">${copy.historyHeading}</h2>${sections.join("")}`
+      }
+
+      async function main() {
+        const locale = parseLocale()
+        renderStatic(locale)
+
+        try {
+          const res = await fetch("welcome-content.json", { cache: "no-cache" })
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`)
+          }
+          const data = await res.json()
+          renderHistory(data, locale)
+        } catch {
+          const copy = UI[locale]
+          document.getElementById("history").innerHTML =
+            `<p class="error">${copy.loadError}</p>`
+        }
+      }
+
+      main()
+    </script>
+  </body>
+</html>
