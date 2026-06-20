@@ -14,7 +14,7 @@ import {
   type SessionPickersByLeaf
 } from "../side-picker"
 import { buildSessionListRows, SessionBar, type SessionListRow } from "../session"
-import { BmxtShell } from "./bmxt-shell"
+import { LazyBmxtShell } from "./shell/lazy-bmxt-shell"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
@@ -109,7 +109,7 @@ const SessionPaneView = memo(function SessionPaneView({
       data-bmxt-session-active={isActive ? "" : undefined}
       className={`bmxt-session-viewport${isActive ? " bmxt-session-viewport--active" : " bmxt-session-viewport--hidden"}`}
       aria-hidden={!isActive}>
-      <BmxtShell
+      <LazyBmxtShell
         sessionId={sessionId}
         isFocusedPane={isActive}
         lines={lines}

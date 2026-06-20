@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -12,7 +11,6 @@ import {
 } from "react"
 import {
   buildSessionSwitchCommandLine,
-  filterSessionSwitchPickerRows,
   parseSessionListPickerLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
@@ -20,14 +18,10 @@ import {
   parseSessionSwitchPickerLine,
   parseSessionSwitchWithLine,
   resolveSessionRowByDisplayName,
-  resolveSessionSwitchPickerState,
   sanitizeSessionName,
-  SessionListCandidatePanel,
-  type SessionCandidatePanelVariant,
   type SessionListRow
 } from "../../session"
-import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen"
-import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
+import { resolveImeTokenPicker } from "../../command-line"
 import {
   buildTabPickerRows,
   listTabsMoveUrlCandidates,
@@ -73,7 +67,6 @@ import {
   navTypingInsert,
   navTypingShouldPreventLineBreakInput,
   normalizeNavTypingInitialValue,
-  promptMirrorSegments,
   sanitizeNavTypingDomValueWithCursor,
   sanitizeNavTypingInsertText
 } from "../../nav/nav-prompt-input"
@@ -84,7 +77,6 @@ import {
   saveTranslateEnabled,
   saveTranslatePair,
   settingTokenForPairId,
-  TranslationStrip,
   useSentenceTranslate,
   type TranslationPairId
 } from "../../translate"
@@ -101,17 +93,17 @@ import {
 } from "../../bmxt-core"
 import { logBmxtKey } from "../../debug/key-log"
 import { matchesForSearch } from "../text-utils"
-import { TokenPickerPanel, type TokenPickerModel } from "../token-picker-panel"
-import {
-  CSP_DYNAMIC_SCOPE_ATTR,
-  useCspDynamicStyle
-} from "../csp-dynamic-stylesheet"
 import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
-import { measureFloatingPickerHostPosition } from "./measure-floating-picker-host"
 import { shouldAutoSubmitAfterTokenPick } from "./should-auto-submit-after-token-pick"
-import { shouldKeepSessionSwitchPickerOpen } from "./should-keep-session-switch-picker-open"
 import type { PromptShellBridge } from "./prompt-shell-bridge"
 import type { BmxtPromptHandle } from "./bmxt-prompt-handle"
+import { paintPromptMirrorDom, type PromptMirrorDomRefs } from "./prompt-mirror-dom"
+import {
+  LazyBmxtPromptPickerIsland
+} from "./lazy-prompt-picker-island"
+import type { BmxtPromptPickerHandle } from "./bmxt-prompt-picker-island"
+import { LazyTranslationStrip } from "./lazy-translation-strip"
+import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen"
 
 export type BmxtPromptPaneProps = {
   bridgeRef: RefObject<PromptShellBridge>
@@ -172,21 +164,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       translatePairIdRef.current = translatePairId
     }, [translatePairId])
 
-  const [subCmdPicker, setSubCmdPicker] = useState<TokenPickerModel | null>(null)
-  const subCmdPickerRef = useRef<TokenPickerModel | null>(null)
-  useEffect(() => {
-    subCmdPickerRef.current = subCmdPicker
-  }, [subCmdPicker])
-
-  const [sessionListPickerHi, setSessionListPickerHi] = useState<number | null>(null)
-  const sessionListPickerOpen = sessionListPickerHi !== null
-  const sessionListPickerHiRef = useRef(sessionListPickerHi)
-  sessionListPickerHiRef.current = sessionListPickerHi
-  const [sessionPickerVariant, setSessionPickerVariant] = useState<SessionCandidatePanelVariant | null>(
-    null
-  )
-  const sessionPickerVariantRef = useRef(sessionPickerVariant)
-  sessionPickerVariantRef.current = sessionPickerVariant
+  const pickerIslandRef = useRef<BmxtPromptPickerHandle | null>(null)
   const sessionListRowsRef = useRef(sessionListRows)
   sessionListRowsRef.current = sessionListRows
   const currentSessionDisplayNameRef = useRef("")
@@ -197,25 +175,168 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
   sessionNameTypingRef.current = sessionNameTyping
 
   const [mode, setMode] = useState<"normal" | "isearch">("normal")
-  const [line, setLine] = useState("")
-  const [cursorPos, setCursorPos] = useState(0)
-  const sessionListPickerRows = useMemo((): SessionListRow[] => {
-    if (sessionPickerVariant !== "switch" || sessionListPickerHi === null) {
-      return sessionListRows
-    }
-    const state = resolveSessionSwitchPickerState(line, cursorPos)
-    const namePrefix = state?.namePrefix ?? ""
-    return filterSessionSwitchPickerRows(
-      sessionListRows,
-      namePrefix,
-      incrementalPickerMatchMode(true)
-    )
-  }, [sessionListRows, sessionPickerVariant, sessionListPickerHi, line, cursorPos])
-  const sessionListPickerRowsRef = useRef(sessionListPickerRows)
-  sessionListPickerRowsRef.current = sessionListPickerRows
-  const [isComposing, setIsComposing] = useState(false)
-  const [compositionAnchor, setCompositionAnchor] = useState(0)
+  /** EN: React line state only for reverse-i-search UI (normal prompt uses refs + DOM mirror). */
+  const [iSearchLine, setISearchLine] = useState("")
+  const [translateBuffer, setTranslateBuffer] = useState("")
+  const [placeholderFlags, setPlaceholderFlags] = useState({
+    showNav: false,
+    showSessionName: false,
+    showSearchList: false,
+    showDefault: true
+  })
   const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
+  const [isComposing, setIsComposing] = useState(false)
+  const [pickerUiState, setPickerUiState] = useState({
+    subCmdPickerOpen: false,
+    sessionListPickerOpen: false
+  })
+
+  const imeRef = useRef<HTMLTextAreaElement>(null)
+  const isComposingRef = useRef(false)
+  const compositionStartSnapshotRef = useRef("")
+  const compositionAnchorRef = useRef(0)
+  const mirrorBeforeRef = useRef<HTMLSpanElement>(null)
+  const mirrorCompositionRef = useRef<HTMLSpanElement>(null)
+  const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
+  const mirrorAfterRef = useRef<HTMLSpanElement>(null)
+  const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
+
+  const tabPressSeqRef = useRef(0)
+  const lineRef = useRef("")
+  const cursorRef = useRef(0)
+  const navPromptSnapRef = useRef<{ line: string; cursor: number } | null>(null)
+  const completionCandidatesRef = useRef<string[]>([])
+  const allowEmptyFirstPickerSyncRef = useRef(false)
+  const tabPickerOpenRequestRef = useRef(false)
+  const imeTokenPickerDismissedRef = useRef(false)
+  const sessionListPickerDismissedRef = useRef(false)
+
+  const onPickerUiChange = useCallback(
+    (state: { subCmdPickerOpen: boolean; sessionListPickerOpen: boolean }) => {
+      setPickerUiState((prev) => {
+        if (
+          prev.subCmdPickerOpen === state.subCmdPickerOpen &&
+          prev.sessionListPickerOpen === state.sessionListPickerOpen
+        ) {
+          return prev
+        }
+        return state
+      })
+    },
+    []
+  )
+
+  const getMirrorDomRefs = useCallback((): PromptMirrorDomRefs => {
+    return {
+      beforeEl: mirrorBeforeRef.current,
+      compositionEl: mirrorCompositionRef.current,
+      cursorCellEl: cursorMirrorCellRef.current,
+      afterEl: mirrorAfterRef.current
+    }
+  }, [])
+
+  const updatePlaceholderFlags = useCallback(
+    (ln: string, pos: number, composing: boolean) => {
+      setPlaceholderFlags((prev) => {
+        const next = {
+          showNav: navPageTyping && ln.trim() === "" && !composing,
+          showSessionName: sessionNameTyping && !composing,
+          showSearchList: shouldShowSearchListPatternPlaceholder(ln, pos),
+          showDefault: mode === "normal" && ln.trim() === ""
+        }
+        if (
+          prev.showNav === next.showNav &&
+          prev.showSessionName === next.showSessionName &&
+          prev.showSearchList === next.showSearchList &&
+          prev.showDefault === next.showDefault
+        ) {
+          return prev
+        }
+        return next
+      })
+    },
+    [mode, navPageTyping, sessionNameTyping]
+  )
+
+  const paintMirror = useCallback(
+    (ln: string, pos: number, composing: boolean, anchor: number) => {
+      paintPromptMirrorDom(
+        getMirrorDomRefs(),
+        ln,
+        pos,
+        composing,
+        anchor,
+        promptPaneFocused
+      )
+    },
+    [getMirrorDomRefs, promptPaneFocused]
+  )
+
+  const syncPicker = useCallback((ln: string, pos: number) => {
+    pickerIslandRef.current?.sync(ln, pos)
+  }, [])
+
+  const commitPromptState = useCallback(
+    (
+      nextLine: string,
+      nextCursor: number,
+      ta?: HTMLTextAreaElement | null,
+      opts?: { preserveSelection?: boolean; syncPicker?: boolean }
+    ) => {
+      lineRef.current = nextLine
+      cursorRef.current = nextCursor
+      paintMirror(nextLine, nextCursor, false, 0)
+
+      if (mode === "isearch") {
+        setISearchLine(nextLine)
+      }
+      if (navPageTyping && translateEnabled) {
+        setTranslateBuffer(nextLine)
+      }
+      updatePlaceholderFlags(nextLine, nextCursor, false)
+
+      if (opts?.syncPicker !== false) {
+        syncPicker(nextLine, nextCursor)
+      }
+
+      const target = ta ?? imeRef.current
+      if (target) {
+        if (target.value !== nextLine) {
+          target.value = nextLine
+        }
+        if (!opts?.preserveSelection) {
+          target.setSelectionRange(nextCursor, nextCursor)
+        }
+      }
+    },
+    [mode, navPageTyping, paintMirror, sessionNameTyping, syncPicker, translateEnabled, updatePlaceholderFlags]
+  )
+
+  const updatePromptMirrorOnly = useCallback(
+    (
+      nextLine: string,
+      nextCursor: number,
+      composing: boolean,
+      anchor: number,
+      ta?: HTMLTextAreaElement | null
+    ) => {
+      lineRef.current = nextLine
+      cursorRef.current = nextCursor
+      paintMirror(nextLine, nextCursor, composing, anchor)
+      if (navPageTyping && translateEnabled) {
+        setTranslateBuffer(nextLine)
+      }
+      if (composing) {
+        setIsComposing(true)
+      }
+      if (ta && composing) {
+        if (ta.value !== nextLine) {
+          ta.value = nextLine
+        }
+      }
+    },
+    [navPageTyping, paintMirror, translateEnabled]
+  )
 
   const {
     blocks: navTranslateBlocks,
@@ -227,7 +348,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     setCommitError: setNavTranslateCommitError
   } = useSentenceTranslate({
     active: navPageTyping && translateEnabled,
-    buffer: line,
+    buffer: translateBuffer,
     isComposing,
     pairId: translatePairId
   })
@@ -246,12 +367,9 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
   }, [localCompletion])
 
   useEffect(() => {
-    lineRef.current = line
-  }, [line])
+    updatePlaceholderFlags(lineRef.current, cursorRef.current, isComposingRef.current)
+  }, [sessionNameTyping, updatePlaceholderFlags])
 
-  useEffect(() => {
-    cursorRef.current = cursorPos
-  }, [cursorPos])
   useEffect(() => {
     void (async () => {
       try {
@@ -262,180 +380,33 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
     })()
   }, [])
+
+  useEffect(() => {
+    paintMirror(lineRef.current, cursorRef.current, isComposingRef.current, compositionAnchorRef.current)
+  }, [paintMirror, promptPaneFocused])
+
+  const getPickerSessionContext = useCallback(() => {
+    return (
+      pickerIslandRef.current?.getSessionListContext() ?? {
+        rows: sessionListRowsRef.current,
+        variant: null,
+        hi: null
+      }
+    )
+  }, [])
+
   const iSearchMatches = useMemo(
-    () => matchesForSearch(history, mode === "isearch" ? line : ""),
-    [history, line, mode]
-  )
-
-  /** `hi` 変更では変わらない — 第二コマンドピッカーの位置再計算はこれが変わったときだけ行う */
-  const subCmdPickerAnchorEpisode = useMemo(
-    () =>
-      subCmdPicker === null
-        ? null
-        : `${subCmdPicker.tier}\0${subCmdPicker.tokenStart}\0${subCmdPicker.candidates.join("\0")}`,
-    [subCmdPicker]
-  )
-
-  const sessionListMenuAnchorEpisode = useMemo(
-    () =>
-      sessionListPickerHi === null
-        ? null
-        : sessionListPickerRows.map((r) => r.sessionId).join("\0"),
-    [sessionListPickerHi, sessionListPickerRows]
+    () => matchesForSearch(history, mode === "isearch" ? iSearchLine : ""),
+    [history, iSearchLine, mode]
   )
 
   const dismissImeTokenPicker = useCallback(() => {
-    allowEmptyFirstPickerSyncRef.current = false
-    tabPickerOpenRequestRef.current = false
-    imeTokenPickerDismissedRef.current = true
-    setSubCmdPicker(null)
+    pickerIslandRef.current?.dismissToken()
   }, [])
 
   const closePromptPickerUi = useCallback(() => {
-    allowEmptyFirstPickerSyncRef.current = false
-    tabPickerOpenRequestRef.current = false
-    setSubCmdPicker(null)
-    setSessionListPickerHi(null)
-    setSessionPickerVariant(null)
+    pickerIslandRef.current?.closeAll()
   }, [])
-
-  const openSessionPicker = useCallback(
-    (variant: SessionCandidatePanelVariant) => {
-      setSubCmdPicker(null)
-      allowEmptyFirstPickerSyncRef.current = false
-      const rows = sessionListRowsRef.current
-      setSessionPickerVariant(variant)
-      setSessionListPickerHi((prev) => {
-        if (prev !== null && prev < rows.length) {
-          return prev
-        }
-        const activeIdx = rows.findIndex((r) => r.isActive)
-        return activeIdx >= 0 ? activeIdx : 0
-      })
-    },
-    []
-  )
-
-  const syncImeTokenPicker = useCallback(
-    (ln: string, pos: number) => {
-      if (bridgeRef.current.paneFocusRef.current !== "terminal") {
-        return
-      }
-      if (sessionNameTypingRef.current) {
-        setSubCmdPicker(null)
-        allowEmptyFirstPickerSyncRef.current = false
-        setSessionListPickerHi(null)
-        return
-      }
-      if (navPageTyping) {
-        setSubCmdPicker(null)
-        allowEmptyFirstPickerSyncRef.current = false
-        return
-      }
-      if (mode === "isearch") {
-        setSubCmdPicker(null)
-        allowEmptyFirstPickerSyncRef.current = false
-        setSessionListPickerHi(null)
-        return
-      }
-      const switchState = resolveSessionSwitchPickerState(ln, pos)
-      if (switchState !== null) {
-        const allRows = sessionListRowsRef.current
-        const keepOpen = shouldKeepSessionSwitchPickerOpen(ln, pos, allRows)
-        if (!keepOpen) {
-          setSubCmdPicker(null)
-          setSessionListPickerHi(null)
-          setSessionPickerVariant(null)
-          sessionListPickerDismissedRef.current = true
-          return
-        }
-        sessionListPickerDismissedRef.current = false
-        setSubCmdPicker(null)
-        const namePrefix = switchState.namePrefix
-        const matchMode = incrementalPickerMatchMode(sessionListPickerHiRef.current !== null)
-        const filtered = filterSessionSwitchPickerRows(allRows, namePrefix, matchMode)
-        setSessionPickerVariant("switch")
-        setSessionListPickerHi((prev) => {
-          if (filtered.length === 0) {
-            return 0
-          }
-          const prevRows = sessionListPickerRowsRef.current
-          if (prev !== null && prevRows[prev]) {
-            const idx = filtered.findIndex((r) => r.sessionId === prevRows[prev]!.sessionId)
-            if (idx >= 0) {
-              return idx
-            }
-          }
-          const activeIdx = filtered.findIndex((r) => r.isActive)
-          return activeIdx >= 0 ? activeIdx : 0
-        })
-        return
-      }
-      if (parseSessionListPickerLine(ln)) {
-        if (sessionListPickerDismissedRef.current) {
-          setSubCmdPicker(null)
-          setSessionListPickerHi(null)
-          setSessionPickerVariant(null)
-          return
-        }
-        setSubCmdPicker(null)
-        openSessionPicker("list")
-        return
-      }
-      sessionListPickerDismissedRef.current = false
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
-      if (imeTokenPickerDismissedRef.current) {
-        setSubCmdPicker(null)
-        allowEmptyFirstPickerSyncRef.current = false
-        tabPickerOpenRequestRef.current = false
-        return
-      }
-      const pickerAlreadyOpen = subCmdPickerRef.current !== null
-      const tabOpenRequested = tabPickerOpenRequestRef.current
-      const emptyFirstTab = allowEmptyFirstPickerSyncRef.current
-      const mayOpenPicker = pickerAlreadyOpen || tabOpenRequested || emptyFirstTab
-      const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
-        emptyFirstPrefixShowsAll: mayOpenPicker,
-        candidateMatch: incrementalPickerMatchMode(pickerAlreadyOpen)
-      })
-      allowEmptyFirstPickerSyncRef.current = false
-      tabPickerOpenRequestRef.current = false
-      if (!resolved) {
-        setSubCmdPicker(null)
-        return
-      }
-      if (!mayOpenPicker) {
-        setSubCmdPicker(null)
-        return
-      }
-      setSubCmdPicker((prev) => {
-        const sameSlot =
-          prev !== null &&
-          prev.tokenStart === resolved.tokenStart &&
-          prev.tokenEnd === resolved.tokenEnd &&
-          prev.tier === resolved.tier &&
-          prev.candidates.length === resolved.candidates.length &&
-          prev.candidates.every((c, i) => c === resolved.candidates[i])
-        const hi = sameSlot
-          ? Math.min(prev!.hi, resolved.candidates.length - 1)
-          : 0
-        return {
-          tokenStart: resolved.tokenStart,
-          tokenEnd: resolved.tokenEnd,
-          candidates: resolved.candidates,
-          hi,
-          tier: resolved.tier
-        }
-      })
-    },
-    [mode, navPageTyping, openSessionPicker]
-  )
-  const imeRef = useRef<HTMLTextAreaElement>(null)
-  const isComposingRef = useRef(false)
-  const compositionStartSnapshotRef = useRef("")
-  const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
-  const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
 
   const focusPrompt = useCallback(() => {
     imeRef.current?.focus()
@@ -446,37 +417,9 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     if (!snap) {
       return
     }
-    const ta = imeRef.current
-    if (ta) {
-      ta.value = snap.line
-      ta.selectionStart = snap.cursor
-      ta.selectionEnd = snap.cursor
-    }
-    lineRef.current = snap.line
-    setLine(snap.line)
-    setCursorPos(snap.cursor)
-  }, [])
+    commitPromptState(snap.line, snap.cursor)
+  }, [commitPromptState])
 
-  const [subCmdPickerPos, setSubCmdPickerPos] = useState<{ left: number; top: number } | null>(
-    null
-  )
-  const subCmdPickerScopeId = `subcmd-picker-${sessionId}`
-  const sessionListPickerScopeId = `session-list-picker-${sessionId}`
-  const promptPickerOpen = subCmdPicker !== null || sessionListPickerOpen
-  const promptPickerScopeId = subCmdPicker
-    ? subCmdPickerScopeId
-    : sessionListPickerOpen
-      ? sessionListPickerScopeId
-      : null
-  useCspDynamicStyle(
-    promptPickerOpen && subCmdPickerPos && promptPickerScopeId ? promptPickerScopeId : null,
-    subCmdPickerPos
-      ? {
-          left: `${subCmdPickerPos.left}px`,
-          top: `${subCmdPickerPos.top}px`
-        }
-      : null
-  )
   const [histNavIndex, setHistNavIndex] = useState(-1)
   const [histDraft, setHistDraft] = useState("")
   const skipHistResetRef = useRef(false)
@@ -484,84 +427,30 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
   const [iSearchCycle, setISearchCycle] = useState(0)
   const [iSearchSnapshot, setISearchSnapshot] = useState("")
 
-  const tabPressSeqRef = useRef(0)
-  const lineRef = useRef("")
-  const cursorRef = useRef(0)
-  const navPromptSnapRef = useRef<{ line: string; cursor: number } | null>(null)
-  const completionCandidatesRef = useRef<string[]>([])
-  /** EN: Tab on empty line opened the first-command menu — keep showing until input/Esc/submit. */
-  const allowEmptyFirstPickerSyncRef = useRef(false)
-  /** EN: Tab on the prompt requested the token menu — open/update once per Tab press. */
-  const tabPickerOpenRequestRef = useRef(false)
-  /** EN: Esc closed the token menu — suppress until Tab; not history ↑↓. */
-  const imeTokenPickerDismissedRef = useRef(false)
-  /** EN: Esc closed the session-list menu while `session -list` stays on the prompt. */
-  const sessionListPickerDismissedRef = useRef(false)
-  useLayoutEffect(() => {
-    const ta = imeRef.current
-    if (!ta || isComposing) {
-      return
-    }
-    if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
-      ta.setSelectionRange(cursorPos, cursorPos)
-    }
-  }, [line, cursorPos, isComposing])
+  const getSubCmdPicker = useCallback(
+    () => pickerIslandRef.current?.getSubCmdPicker() ?? null,
+    []
+  )
 
-  useLayoutEffect(() => {
-    if (!promptPickerOpen) {
-      setSubCmdPickerPos(null)
-      return
-    }
-    const measure = () => {
-      const next = measureFloatingPickerHostPosition(
-        cursorMirrorCellRef.current,
-        subCmdPickerHostRef.current
-      )
-      if (!next) {
-        return
-      }
-      setSubCmdPickerPos((prev) => {
-        if (prev && prev.left === next.left && prev.top === next.top) {
-          return prev
-        }
-        return next
-      })
-    }
-    measure()
-    const raf = requestAnimationFrame(measure)
-    const sc = scrollRef.current
-    sc?.addEventListener("scroll", measure, { passive: true })
-    window.addEventListener("resize", measure)
-    return () => {
-      cancelAnimationFrame(raf)
-      sc?.removeEventListener("scroll", measure)
-      window.removeEventListener("resize", measure)
-    }
-  }, [subCmdPickerAnchorEpisode, sessionListMenuAnchorEpisode, line, cursorPos, mode, promptPickerOpen])
   const closeSessionNameTyping = useCallback(() => {
     setSessionNameTyping(false)
-    setLine("")
-    setCursorPos(0)
-    lineRef.current = ""
+    commitPromptState("", 0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
     focusPrompt()
-  }, [focusPrompt])
+  }, [commitPromptState, focusPrompt])
 
   const openSessionNameTyping = useCallback(
     (commandLine: string) => {
-      setSubCmdPicker(null)
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
+      pickerIslandRef.current?.clearSubCmdPicker()
+      pickerIslandRef.current?.closeAll()
       sessionListPickerDismissedRef.current = false
       bridgeRef.current.appendCommandToHistory(commandLine)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       const name = currentSessionDisplayNameRef.current
       setSessionNameTyping(true)
-      setLine(name)
-      setCursorPos(name.length)
-      lineRef.current = name
+      commitPromptState(name, name.length)
       void bridgeRef.current.appendLogLines([`> ${commandLine}`])
       queueMicrotask(() => {
         const ta = imeRef.current
@@ -578,9 +467,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     (rawName: string, logLines: string[]) => {
       const sanitized = sanitizeSessionName(rawName)
       setSessionNameTyping(false)
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -602,23 +489,18 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
   const closeSessionListPicker = useCallback(() => {
     sessionListPickerDismissedRef.current = true
-    setSessionListPickerHi(null)
-    setSessionPickerVariant(null)
+    pickerIslandRef.current?.closeAll()
     focusPrompt()
-  }, [focusPrompt])
+  }, [commitPromptState, focusPrompt])
 
   const switchSessionFromListPicker = useCallback(
     (commandLine: string, pickHi: number) => {
-      const rows = sessionListPickerRowsRef.current
+      const { rows, variant } = getPickerSessionContext()
       const row = rows[pickHi]
-      const variant = sessionPickerVariantRef.current
       sessionListPickerDismissedRef.current = false
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
+      pickerIslandRef.current?.closeAll()
       bridgeRef.current.appendCommandToHistory(commandLine)
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -642,29 +524,26 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         focusPrompt()
       })()
     },
-    [bridgeRef.current.appendCommandToHistory, bridgeRef.current.appendLogLines, focusPrompt, bridgeRef.current.onActivateSession, uiCopy]
+    [bridgeRef.current.appendCommandToHistory, bridgeRef.current.appendLogLines, focusPrompt, bridgeRef.current.onActivateSession, getPickerSessionContext, uiCopy]
   )
 
   const applySessionSwitchPick = useCallback(
     (pickHi: number) => {
-      const visibleRows = sessionListPickerRowsRef.current
+      const visibleRows = getPickerSessionContext().rows
       const allRows = sessionListRowsRef.current
       const row = visibleRows[pickHi]
       if (!row) {
         return
       }
       sessionListPickerDismissedRef.current = true
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
+      pickerIslandRef.current?.closeAll()
       const nextLine = buildSessionSwitchCommandLine(row, allRows)
-      lineRef.current = nextLine
-      setLine(nextLine)
-      setCursorPos(nextLine.length)
+      commitPromptState(nextLine, nextLine.length)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       focusPrompt()
     },
-    [focusPrompt]
+    [commitPromptState, focusPrompt, getPickerSessionContext]
   )
 
   useEffect(() => {
@@ -681,7 +560,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       skipHistResetRef.current = true
       tabPressSeqRef.current = 0
       setHistNavIndex(-1)
-      setSubCmdPicker(null)
+      pickerIslandRef.current?.clearSubCmdPicker()
       allowEmptyFirstPickerSyncRef.current = false
       imeTokenPickerDismissedRef.current = false
       isComposingRef.current = false
@@ -691,11 +570,9 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         detail.multiline
       )
       const applyEnter = () => {
-        setCompositionAnchor(0)
+        compositionAnchorRef.current = 0
         setIsComposing(false)
-        lineRef.current = initial
-        setLine(initial)
-        setCursorPos(initial.length)
+        commitPromptState(initial, initial.length)
       }
       flushSync(applyEnter)
       if (ta) {
@@ -707,7 +584,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     const onExit = () => {
       isComposingRef.current = false
       compositionStartSnapshotRef.current = ""
-      setCompositionAnchor(0)
+      compositionAnchorRef.current = 0
       setIsComposing(false)
       restoreNavPromptSnap()
       navPromptSnapRef.current = null
@@ -733,8 +610,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       const pick = iSearchMatches[iSearchCycle]
       const next = pick !== undefined ? pick : iSearchSnapshot
       setMode("normal")
-      setLine(next)
-      setCursorPos(next.length)
+      commitPromptState(next, next.length)
       setISearchCycle(0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
@@ -752,9 +628,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       const cont = "setting "
-      setLine(cont)
-      setCursorPos(cont.length)
-      lineRef.current = cont
+      commitPromptState(cont, cont.length)
       void bridgeRef.current.appendLogLines([`> ${trimmed}`, uiCopy.t("setting.usage")])
       focusPrompt()
       return
@@ -762,8 +636,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseSettingListPickerLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -776,8 +649,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseSettingExitListLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -801,9 +673,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       tabPressSeqRef.current = 0
       if (tabsSettingCmd.kind === "incomplete") {
         const cont = "tabs "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
+        commitPromptState(cont, cont.length)
         void bridgeRef.current.appendLogLines([
           `> ${trimmed}`,
           uiCopy.t("tabs.usage"),
@@ -814,9 +684,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
       if (tabsSettingCmd.kind === "setting-incomplete") {
         const cont = "tabs -setting "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
+        commitPromptState(cont, cont.length)
         void bridgeRef.current.appendLogLines([
           `> ${trimmed}`,
           uiCopy.t("tabs.setting.choose"),
@@ -829,9 +697,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
       if (tabsSettingCmd.kind === "page-active-incomplete") {
         const cont = "tabs -setting -page-active "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
+        commitPromptState(cont, cont.length)
         const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
         void bridgeRef.current.appendLogLines([
           `> ${trimmed}`,
@@ -843,9 +709,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         focusPrompt()
         return
       }
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
+      commitPromptState("", 0)
       void (async () => {
         await saveTabsPageActiveMode(tabsSettingCmd.mode)
         bridgeRef.current.setTabsPageActiveMode(tabsSettingCmd.mode)
@@ -876,7 +740,8 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseSessionListPickerLine(trimmed)) {
       const activeIdx = sessionListRows.findIndex((r) => r.isActive)
-      const pickHi = sessionListPickerHiRef.current ?? (activeIdx >= 0 ? activeIdx : 0)
+      const ctx = getPickerSessionContext()
+      const pickHi = ctx.hi ?? (activeIdx >= 0 ? activeIdx : 0)
       switchSessionFromListPicker(trimmed, pickHi)
       return
     }
@@ -884,8 +749,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     const sessionSwitchName = parseSessionSwitchWithLine(trimmed)
     if (sessionSwitchName !== null) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       const row = resolveSessionRowByDisplayName(sessionListRows, sessionSwitchName)
@@ -905,7 +769,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseSessionSwitchPickerLine(trimmed)) {
       sessionListPickerDismissedRef.current = false
-      syncImeTokenPicker(lineRef.current, lineRef.current.length)
+      syncPicker(lineRef.current, lineRef.current.length)
       focusPrompt()
       return
     }
@@ -913,8 +777,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     const sessionNumber = parseSessionSwitchByNumberLine(trimmed)
     if (sessionNumber !== null) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       const row = sessionListRows[sessionNumber - 1]
@@ -943,8 +806,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     if (listPicker) {
       const { showUrl } = listPicker
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -972,8 +834,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseTabsExitListLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -995,8 +856,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseSearchExitListLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -1024,8 +884,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseNavEnterLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       bridgeRef.current.setNavArmed(true)
@@ -1050,9 +909,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       tabPressSeqRef.current = 0
       if (translateCmd.kind === "incomplete") {
         const cont = "translate "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
+        commitPromptState(cont, cont.length)
         void bridgeRef.current.appendLogLines([
           `> ${trimmed}`,
           uiCopy.t("translate.usage"),
@@ -1063,9 +920,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
       if (translateCmd.kind === "setting-incomplete") {
         const cont = "translate -setting "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
+        commitPromptState(cont, cont.length)
         const options = listTranslationPairSettingTokens().join(" | ")
         void bridgeRef.current.appendLogLines([
           `> ${trimmed}`,
@@ -1077,9 +932,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         focusPrompt()
         return
       }
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
+      commitPromptState("", 0)
       void (async () => {
         if (translateCmd.kind === "on") {
           await saveTranslateEnabled(true)
@@ -1112,8 +965,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseNavExitLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -1138,8 +990,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseDomExitListLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -1164,8 +1015,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
     if (parseGroupNewInteractiveLine(trimmed)) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void (async () => {
@@ -1200,12 +1050,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       if (isSearchListContinuationPrompt(rawLine)) {
         bridgeRef.current.appendCommandToHistory(trimmed)
         const next = `${trimmed} `
-        lineRef.current = next
-        setLine(next)
-        setCursorPos(next.length)
+        commitPromptState(next, next.length)
         setHistNavIndex(-1)
         tabPressSeqRef.current = 0
-        setSubCmdPicker(null)
+        pickerIslandRef.current?.clearSubCmdPicker()
         focusPrompt()
         return
       }
@@ -1214,19 +1062,17 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         return
       }
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
-      setSubCmdPicker(null)
+      pickerIslandRef.current?.clearSubCmdPicker()
       void bridgeRef.current.runSearchListSearch(trimmed, searchListLine)
       return
     }
 
     if (trimmed === "help" || trimmed === "?") {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       void bridgeRef.current.appendLogLines([`> ${trimmed}`, ...buildHelpLines(bridgeRef.current.uiSettings.locale)])
@@ -1237,19 +1083,17 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     const domListLine = parseDomListPickerLine(trimmed)
     if (domListLine !== null) {
       bridgeRef.current.appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
+      commitPromptState("", 0)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
-      setSubCmdPicker(null)
+      pickerIslandRef.current?.clearSubCmdPicker()
       void bridgeRef.current.runDomListAndShow(domListLine, trimmed, /*announce*/ true)
       return
     }
 
     bridgeRef.current.appendCommandToHistory(trimmed)
     const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
-    setLine("")
-    setCursorPos(0)
+    commitPromptState("", 0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
 
@@ -1257,10 +1101,8 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     if (localBundle.ty === "lines") {
       void bridgeRef.current.appendLogLines([`> ${trimmed}`, ...(localBundle.lines ?? [])])
       if (continuationPrompt) {
-        setSubCmdPicker(null)
-        setLine(continuationPrompt)
-        setCursorPos(continuationPrompt.length)
-        lineRef.current = continuationPrompt
+        pickerIslandRef.current?.clearSubCmdPicker()
+        commitPromptState(continuationPrompt, continuationPrompt.length)
       }
       focusPrompt()
       return
@@ -1290,10 +1132,8 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
     )
     if (continuationPrompt) {
-      setSubCmdPicker(null)
-      setLine(continuationPrompt)
-      setCursorPos(continuationPrompt.length)
-      lineRef.current = continuationPrompt
+      pickerIslandRef.current?.clearSubCmdPicker()
+      commitPromptState(continuationPrompt, continuationPrompt.length)
     }
     focusPrompt()
   }, [
@@ -1307,10 +1147,11 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     sessionId,
     sessionListRows,
     uiCopy,
-    syncImeTokenPicker,
+    syncPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
     applySessionSwitchPick,
+    getPickerSessionContext,
     switchSessionFromListPicker
   ])
 
@@ -1318,7 +1159,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     (idx: number) => {
       allowEmptyFirstPickerSyncRef.current = false
       imeTokenPickerDismissedRef.current = false
-      const s = subCmdPickerRef.current
+      const s = getSubCmdPicker()
       if (!s) {
         return
       }
@@ -1341,73 +1182,74 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
           : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
         nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
       }
-      lineRef.current = nextLine
-      setLine(nextLine)
-      setCursorPos(nextPos)
+      commitPromptState(nextLine, nextPos)
       setHistNavIndex(-1)
       tabPressSeqRef.current = 0
       const trimmedNext = nextLine.trim()
       if (shouldAutoSubmitAfterTokenPick(trimmedNext)) {
-        setSubCmdPicker(null)
+        pickerIslandRef.current?.clearSubCmdPicker()
         queueMicrotask(() => submitLine())
         return
       }
-      queueMicrotask(() => syncImeTokenPicker(nextLine, nextPos))
-      focusPrompt()
+      queueMicrotask(() => focusPrompt())
     },
-    [focusPrompt, submitLine, syncImeTokenPicker]
+    [commitPromptState, focusPrompt, submitLine]
   )
 
   const exitISearch = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
     imeTokenPickerDismissedRef.current = false
     setMode("normal")
-    setLine(iSearchSnapshot)
-    setCursorPos(iSearchSnapshot.length)
+    commitPromptState(iSearchSnapshot, iSearchSnapshot.length)
     setISearchCycle(0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
     focusPrompt()
-  }, [focusPrompt, iSearchSnapshot])
+  }, [commitPromptState, focusPrompt, iSearchSnapshot])
 
   const enterISearch = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
     imeTokenPickerDismissedRef.current = false
     setISearchSnapshot(lineRef.current)
     setMode("isearch")
-    setLine("")
-    setCursorPos(0)
+    commitPromptState("", 0)
     setISearchCycle(0)
     tabPressSeqRef.current = 0
     focusPrompt()
-  }, [focusPrompt])
+  }, [commitPromptState, focusPrompt])
 
-  const applyHistoryLine = useCallback((text: string) => {
-    allowEmptyFirstPickerSyncRef.current = false
-    skipHistResetRef.current = true
-    tabPressSeqRef.current = 0
-    setLine(text)
-    setCursorPos(text.length)
-  }, [])
+  const applyHistoryLine = useCallback(
+    (text: string) => {
+      allowEmptyFirstPickerSyncRef.current = false
+      skipHistResetRef.current = true
+      tabPressSeqRef.current = 0
+      commitPromptState(text, text.length)
+    },
+    [commitPromptState]
+  )
 
   const applyPromptLine = useCallback(
     (
       nextLine: string,
       nextCursor: number,
       ta?: HTMLTextAreaElement | null,
-      opts?: { preserveSelection?: boolean }
+      opts?: { preserveSelection?: boolean; composing?: boolean }
     ) => {
-      lineRef.current = nextLine
-      setLine(nextLine)
-      setCursorPos(nextCursor)
-      syncImeTokenPicker(nextLine, nextCursor)
-      if (ta && !opts?.preserveSelection) {
-        queueMicrotask(() => {
-          ta.setSelectionRange(nextCursor, nextCursor)
-        })
+      if (opts?.composing || isComposingRef.current) {
+        updatePromptMirrorOnly(
+          nextLine,
+          nextCursor,
+          true,
+          compositionAnchorRef.current,
+          ta
+        )
+        return
       }
+      commitPromptState(nextLine, nextCursor, ta, {
+        preserveSelection: opts?.preserveSelection
+      })
     },
-    [syncImeTokenPicker]
+    [commitPromptState, updatePromptMirrorOnly]
   )
 
   const syncPromptFromTextarea = useCallback(
@@ -1433,7 +1275,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
           }
         }
       }
-      applyPromptLine(v, pos, ta, { preserveSelection: opts?.composing })
+      applyPromptLine(v, pos, ta, {
+        preserveSelection: opts?.composing,
+        composing: opts?.composing
+      })
     },
     [applyPromptLine, navPageTyping, navTypingMultiline]
   )
@@ -1490,9 +1335,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       return
     }
     const pos = ta.selectionEnd
-    setCursorPos(pos)
-    syncImeTokenPicker(ta.value, pos)
-  }, [isComposing, promptPaneFocused, syncImeTokenPicker])
+    cursorRef.current = pos
+    paintMirror(ta.value, pos, false, 0)
+    syncPicker(ta.value, pos)
+  }, [isComposing, paintMirror, promptPaneFocused, syncPicker])
 
   const applyNavTypingMutation = useCallback(
     (ta: HTMLTextAreaElement, nextLine: string, nextCursor: number) => {
@@ -1557,12 +1403,9 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       if (mode === "isearch") {
         setISearchCycle(0)
       }
-      lineRef.current = next
-      setLine(next)
-      setCursorPos(start + t.length)
-      syncImeTokenPicker(next, start + t.length)
+      commitPromptState(next, start + t.length, ta)
     },
-    [mode, navPageTyping, navTypingMultiline, promptPaneFocused, syncImeTokenPicker]
+    [commitPromptState, mode, navPageTyping, navTypingMultiline, promptPaneFocused]
   )
 
   const onCompositionStart = useCallback(
@@ -1570,7 +1413,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       const ta = ev.currentTarget
       const snapshot = lineRef.current
       if (navPageTyping && ev.data === "" && ta.value === snapshot) {
-        setCompositionAnchor(ta.selectionStart)
+        compositionAnchorRef.current = ta.selectionStart
         return
       }
       isComposingRef.current = true
@@ -1578,7 +1421,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       const anchor = ta.selectionStart
       const run = () => {
         setIsComposing(true)
-        setCompositionAnchor(anchor)
+        compositionAnchorRef.current = anchor
         syncPromptFromTextarea(ta, { composing: true, newlineSnapshot: snapshot })
       }
       if (navPageTyping) {
@@ -1599,7 +1442,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         const snapshot = compositionStartSnapshotRef.current
         flushSync(() => {
           setIsComposing(true)
-          setCompositionAnchor(ta.selectionStart)
+          compositionAnchorRef.current = ta.selectionStart
           syncPromptFromTextarea(ta, { composing: true, newlineSnapshot: snapshot })
         })
         return
@@ -1621,7 +1464,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         syncPromptFromTextarea(ta, { composing: false, newlineSnapshot: snapshot })
         compositionStartSnapshotRef.current = lineRef.current
         setIsComposing(false)
-        setCompositionAnchor(0)
+        compositionAnchorRef.current = 0
         allowEmptyFirstPickerSyncRef.current = false
       }
       if (navPageTyping) {
@@ -1671,10 +1514,11 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         return
       }
 
-      if (sessionListPickerHiRef.current !== null) {
-        const rows = sessionListPickerRowsRef.current
+      if (pickerIslandRef.current?.isSessionListOpen()) {
+        const ctx = getPickerSessionContext()
+        const rows = ctx.rows
         const commandLine = lineRef.current.trim()
-        const pickerVariant = sessionPickerVariantRef.current
+        const pickerVariant = ctx.variant
         if (e.key === "Escape") {
           e.preventDefault()
           closeSessionListPicker()
@@ -1692,27 +1536,23 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         }
         if (e.key === "ArrowUp") {
           e.preventDefault()
-          setSessionListPickerHi((cur) => {
+          pickerIslandRef.current?.setSessionListPickerHi((cur) => {
             const at = cur ?? 0
-            const next = rows.length === 0 ? 0 : (at - 1 + rows.length) % rows.length
-            sessionListPickerHiRef.current = next
-            return next
+            return rows.length === 0 ? 0 : (at - 1 + rows.length) % rows.length
           })
           return
         }
         if (e.key === "ArrowDown") {
           e.preventDefault()
-          setSessionListPickerHi((cur) => {
+          pickerIslandRef.current?.setSessionListPickerHi((cur) => {
             const at = cur ?? 0
-            const next = rows.length === 0 ? 0 : (at + 1) % rows.length
-            sessionListPickerHiRef.current = next
-            return next
+            return rows.length === 0 ? 0 : (at + 1) % rows.length
           })
           return
         }
         if (e.key === "Enter") {
           e.preventDefault()
-          const pickHi = sessionListPickerHiRef.current ?? 0
+          const pickHi = ctx.hi ?? 0
           if (pickerVariant === "switch") {
             applySessionSwitchPick(pickHi)
           } else {
@@ -1745,10 +1585,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         metaKey: e.metaKey,
         mode,
         tabPickerOpen: Boolean(bridgeRef.current.getTabPicker()),
-        subCmdPickerOpen: Boolean(subCmdPickerRef.current)
+        subCmdPickerOpen: Boolean(getSubCmdPicker())
       })
 
-      const subPick = navPageTyping ? null : subCmdPickerRef.current
+      const subPick = navPageTyping ? null : getSubCmdPicker()
       if (subPick) {
         if (e.key === "Escape") {
           e.preventDefault()
@@ -1765,14 +1605,14 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
             dismissImeTokenPicker()
             return
           }
-          setSubCmdPicker((s) => (s ? { ...s, hi: s.hi - 1 } : null))
+          pickerIslandRef.current?.nudgeSubCmdPickerHi(-1)
           return
         }
         if (e.key === "ArrowDown" && !e.ctrlKey && !e.metaKey) {
           e.preventDefault()
           const n = subPick.candidates.length
           if (n > 0) {
-            setSubCmdPicker((s) => (s ? { ...s, hi: (s.hi + 1) % n } : null))
+            pickerIslandRef.current?.cycleSubCmdPickerHi()
           }
           return
         }
@@ -1780,7 +1620,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
           e.preventDefault()
           const n = subPick.candidates.length
           if (n > 0) {
-            setSubCmdPicker((s) => (s ? { ...s, hi: (s.hi + 1) % n } : null))
+            pickerIslandRef.current?.cycleSubCmdPickerHi()
           }
           return
         }
@@ -1788,7 +1628,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
           e.preventDefault()
           const trimmed = promptLine().trim()
           if (shouldAutoSubmitAfterTokenPick(trimmed)) {
-            setSubCmdPicker(null)
+            pickerIslandRef.current?.clearSubCmdPicker()
             submitLine()
             return
           }
@@ -1903,8 +1743,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
             const newLine =
               curLn.slice(0, muZone.urlStart) + rep + curLn.slice(muZone.tokenEnd)
             setHistNavIndex(-1)
-            setLine(newLine)
-            setCursorPos(muZone.urlStart + rep.length)
+            commitPromptState(newLine, muZone.urlStart + rep.length)
           })()
           return
         }
@@ -1912,7 +1751,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
           e.preventDefault()
           allowEmptyFirstPickerSyncRef.current = true
           tabPickerOpenRequestRef.current = true
-          syncImeTokenPicker(curLn, pos)
+          syncPicker(curLn, pos)
           return
         }
         const imePick = resolveImeTokenPicker(curLn, pos, completionCandidatesRef.current, {
@@ -1922,7 +1761,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
           e.preventDefault()
           tabPressSeqRef.current = 0
           tabPickerOpenRequestRef.current = true
-          syncImeTokenPicker(curLn, pos)
+          syncPicker(curLn, pos)
           return
         }
       }
@@ -1934,7 +1773,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
 
       if (e.key === "ArrowUp" && !navKeyboardEnabled && !navTypingMode) {
-        if (sessionListPickerHiRef.current !== null || sessionNameTypingRef.current) {
+        if (pickerIslandRef.current?.isSessionListOpen() || sessionNameTypingRef.current) {
           return
         }
         e.preventDefault()
@@ -1957,7 +1796,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       }
 
       if (e.key === "ArrowDown" && !navKeyboardEnabled && !navTypingMode) {
-        if (sessionListPickerHiRef.current !== null || sessionNameTypingRef.current) {
+        if (pickerIslandRef.current?.isSessionListOpen() || sessionNameTypingRef.current) {
           return
         }
         e.preventDefault()
@@ -1983,7 +1822,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         !navMenuOpen &&
         !navTextSelPicking &&
         !navTextSelDone &&
-        sessionListPickerHiRef.current === null &&
+        !pickerIslandRef.current?.isSessionListOpen() &&
         !sessionNameTypingRef.current
       ) {
         e.preventDefault()
@@ -2004,7 +1843,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       promptLine,
       submitLine,
       bridgeRef,
-      syncImeTokenPicker,
+      syncPicker,
       closeSessionNameTyping,
       closeSessionListPicker,
       navArmed,
@@ -2018,6 +1857,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       isFocusedPane,
       applyNavTypingMutation,
       applySessionSwitchPick,
+      getPickerSessionContext,
       switchSessionFromListPicker,
       paneFocus,
       handleToggleNavActive,
@@ -2025,16 +1865,6 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     ]
   )
 
-  const showSearchListPatternPlaceholder = useMemo(
-    () => shouldShowSearchListPatternPlaceholder(line, cursorPos),
-    [line, cursorPos]
-  )
-
-  const navPromptValueControlled = !navPageTyping
-  const showNavTypingPlaceholder =
-    navPageTyping && line.trim() === "" && !isComposing
-  const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
-  const mirror = promptMirrorSegments(line, cursorPos, isComposing, compositionAnchor)
   const iSearchPreview = iSearchMatches[iSearchCycle]
 
   useEffect(() => {
@@ -2045,10 +1875,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
     shell.onPromptBlockedChange({
       sessionNameTyping,
       mode,
-      subCmdPickerOpen: subCmdPicker !== null,
-      sessionListPickerOpen
+      subCmdPickerOpen: pickerUiState.subCmdPickerOpen,
+      sessionListPickerOpen: pickerUiState.sessionListPickerOpen
     })
-  }, [bridgeRef, sessionNameTyping, mode, subCmdPicker, sessionListPickerOpen])
+  }, [bridgeRef, sessionNameTyping, mode, pickerUiState])
 
   useEffect(() => {
     const shell = bridgeRef.current
@@ -2093,11 +1923,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         imeRef.current?.blur()
       },
       setLine: (next: string) => {
-        lineRef.current = next
-        setLine(next)
+        commitPromptState(next, next.length)
       },
       setCursorPos: (pos: number) => {
-        setCursorPos(pos)
+        commitPromptState(lineRef.current, pos)
       },
       resolveTypingCommitText,
       getTranslateBlocks: () => navTranslateBlocksRef.current,
@@ -2106,18 +1935,18 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       isDetailBarKeyboardBlocked: () =>
         sessionNameTyping ||
         mode === "isearch" ||
-        subCmdPicker !== null ||
-        sessionListPickerOpen,
+        pickerUiState.subCmdPickerOpen ||
+        pickerUiState.sessionListPickerOpen,
       isCaretAtPromptEnd: () => cursorRef.current >= lineRef.current.length
     }),
     [
       closePromptPickerUi,
+      commitPromptState,
       mode,
+      pickerUiState,
       resetNavTranslateSession,
       resolveTypingCommitText,
-      sessionListPickerOpen,
-      sessionNameTyping,
-      subCmdPicker
+      sessionNameTyping
     ]
   )
 
@@ -2126,7 +1955,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
       {mode === "isearch" ? (
         <div className="bmxt-isearch">
           <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>
-          <span className="bmxt-isearch-query">{line}</span>
+          <span className="bmxt-isearch-query">{iSearchLine}</span>
           <span className="bmxt-isearch-label">&apos;: </span>
           <span className="bmxt-isearch-match">
             {iSearchMatches.length === 0 ? "(no match)" : iSearchPreview ?? "(no match)"}
@@ -2142,17 +1971,10 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
         <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
         <div className="bmxt-prompt-field">
           <div className="bmxt-prompt-mirror" aria-hidden>
-            <span>{mirror.before}</span>
-            {mirror.composition ? (
-              <span className="bmxt-prompt-composition">{mirror.composition}</span>
-            ) : (
-              <span
-                ref={cursorMirrorCellRef}
-                className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${promptPaneFocused ? "" : " bmxt-cursor-cell--inactive"}`}>
-                {mirror.cur || "\u00a0"}
-              </span>
-            )}
-            <span>{mirror.after}</span>
+            <span ref={mirrorBeforeRef} />
+            <span ref={mirrorCompositionRef} className="bmxt-prompt-composition" hidden />
+            <span ref={cursorMirrorCellRef} className="bmxt-cursor-cell" />
+            <span ref={mirrorAfterRef} />
           </div>
           <textarea
             ref={imeRef}
@@ -2166,19 +1988,18 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
             tabIndex={promptPaneFocused ? 0 : -1}
             aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
             placeholder={
-              showNavTypingPlaceholder
+              placeholderFlags.showNav
                 ? navTypingMultiline
                   ? uiCopy.t("prompt.navTypingMultiline")
                   : uiCopy.t("prompt.navTyping")
-                : showSessionNameTypingPlaceholder
+                : placeholderFlags.showSessionName
                   ? uiCopy.t("session.settingName.placeholder")
-                  : showSearchListPatternPlaceholder
+                  : placeholderFlags.showSearchList
                     ? uiCopy.t("prompt.searchListPattern")
-                    : mode === "normal" && line.trim() === ""
+                    : placeholderFlags.showDefault
                       ? uiCopy.t("prompt.placeholder")
                       : undefined
             }
-            value={navPromptValueControlled ? line : undefined}
             readOnly={!promptPaneFocused}
             onInput={onImeInput}
             onBeforeInput={onBeforeInput}
@@ -2189,28 +2010,32 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
             onCompositionUpdate={onCompositionUpdate}
             onCompositionEnd={onCompositionEnd}
           />
-          {promptPickerOpen ? (
-            <div
-              ref={subCmdPickerHostRef}
-              className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
-              {...{ [CSP_DYNAMIC_SCOPE_ATTR]: promptPickerScopeId ?? subCmdPickerScopeId }}>
-              {subCmdPicker ? (
-                <TokenPickerPanel model={subCmdPicker} />
-              ) : sessionListPickerHi !== null ? (
-                <SessionListCandidatePanel
-                  rows={sessionListPickerRows}
-                  hi={sessionListPickerHi}
-                  variant={sessionPickerVariant ?? "list"}
-                />
-              ) : null}
-            </div>
-          ) : null}
+          <LazyBmxtPromptPickerIsland
+            pickerRef={pickerIslandRef}
+            sessionId={sessionId}
+            scrollRef={scrollRef}
+            promptPaneFocused={promptPaneFocused}
+            sessionListRows={sessionListRows}
+            mode={mode}
+            navPageTyping={navPageTyping}
+            completionCandidatesRef={completionCandidatesRef}
+            bridgeRef={bridgeRef}
+            cursorMirrorCellRef={cursorMirrorCellRef}
+            hostRef={subCmdPickerHostRef}
+            allowEmptyFirstPickerSyncRef={allowEmptyFirstPickerSyncRef}
+            tabPickerOpenRequestRef={tabPickerOpenRequestRef}
+            imeTokenPickerDismissedRef={imeTokenPickerDismissedRef}
+            sessionListPickerDismissedRef={sessionListPickerDismissedRef}
+            sessionNameTypingRef={sessionNameTypingRef}
+            sessionListRowsRef={sessionListRowsRef}
+            onPickerUiChange={onPickerUiChange}
+          />
         </div>
       </div>
       {navPageTyping && translateEnabled ? (
-        <TranslationStrip
+        <LazyTranslationStrip
           pairId={translatePairId}
-          buffer={line}
+          buffer={translateBuffer}
           blocks={navTranslateBlocks}
           busy={navTranslateBusy}
           translatePending={navTranslatePending}
