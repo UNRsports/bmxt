@@ -17,6 +17,17 @@ import {
 } from "./locale"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
+import type { SearchPageActiveMode } from "../search/page-active-setting"
+import {
+  settingTokenForPageActiveMode,
+  type TabsPageActiveMode
+} from "../tabs/page-active-setting"
+import { settingTokenForSearchPageActiveMode } from "../search/page-active-setting"
+
+export type PickerPageActiveDefaults = {
+  tabsPageActive: TabsPageActiveMode
+  searchPageActive: SearchPageActiveMode
+}
 
 export type SettingPickerRowId =
   | "language"
@@ -41,6 +52,12 @@ export type SettingPickerRowId =
   | "reset-search-cache"
   | "export"
   | "import"
+  | "tabs-page-active"
+  | "tabs-page-active-auto"
+  | "tabs-page-active-manual"
+  | "search-page-active"
+  | "search-page-active-auto"
+  | "search-page-active-manual"
   | "locale-ja"
   | "locale-en"
   | "reset-yes"
@@ -110,13 +127,20 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
 export function settingPickerInitialHi(
   view: SettingListPickerView,
   locale: UiLocale,
-  appearance: UiAppearance
+  appearance: UiAppearance,
+  pageActiveDefaults?: PickerPageActiveDefaults
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
+  }
+  if (view === "tabsPageActive") {
+    return pageActiveDefaults?.tabsPageActive === "manual" ? 1 : 0
+  }
+  if (view === "searchPageActive") {
+    return pageActiveDefaults?.searchPageActive === "manual" ? 1 : 0
   }
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -242,7 +266,11 @@ function buildPickerDetailRows(
 export function buildSettingPickerRows(
   view: SettingListPickerView,
   locale: UiLocale,
-  appearance: UiAppearance
+  appearance: UiAppearance,
+  pageActiveDefaults: PickerPageActiveDefaults = {
+    tabsPageActive: "auto",
+    searchPageActive: "auto"
+  }
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -259,6 +287,32 @@ export function buildSettingPickerRows(
     return [
       { id: "edit-picker-on", line: t("setting.picker.editPickerOn", locale) },
       { id: "edit-picker-off", line: t("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "tabsPageActive") {
+    return [
+      {
+        id: "tabs-page-active-auto",
+        line: t("setting.picker.pageActiveAuto", locale)
+      },
+      {
+        id: "tabs-page-active-manual",
+        line: t("setting.picker.pageActiveManual", locale)
+      }
+    ]
+  }
+
+  if (view === "searchPageActive") {
+    return [
+      {
+        id: "search-page-active-auto",
+        line: t("setting.picker.pageActiveAuto", locale)
+      },
+      {
+        id: "search-page-active-manual",
+        line: t("setting.picker.pageActiveManual", locale)
+      }
     ]
   }
 
@@ -325,6 +379,18 @@ export function buildSettingPickerRows(
         value: appearance.editPicker
           ? t("setting.picker.editPickerStateOn", locale)
           : t("setting.picker.editPickerStateOff", locale)
+      })
+    },
+    {
+      id: "tabs-page-active",
+      line: t("setting.picker.main.tabsPageActive", locale, {
+        token: settingTokenForPageActiveMode(pageActiveDefaults.tabsPageActive)
+      })
+    },
+    {
+      id: "search-page-active",
+      line: t("setting.picker.main.searchPageActive", locale, {
+        token: settingTokenForSearchPageActiveMode(pageActiveDefaults.searchPageActive)
       })
     },
     {
@@ -463,7 +529,11 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
-          : view === "fontSize"
+          : view === "tabsPageActive"
+            ? "setting.picker.headline.tabsPageActive"
+            : view === "searchPageActive"
+              ? "setting.picker.headline.searchPageActive"
+              : view === "fontSize"
             ? "setting.picker.headline.fontSize"
             : view === "pickerFontSize"
               ? "setting.picker.headline.pickerFontSize"

@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   listTabPickerActions,
+  resolveTabActionTargetTabIds,
   resolveTabPickerActionTargetKind,
   tabPickerActionIsImmediate,
   tabPickerActionToBulkSubMode
@@ -71,5 +72,43 @@ describe("tabPickerActionIsImmediate", () => {
     assert.equal(tabPickerActionIsImmediate("reload"), true)
     assert.equal(tabPickerActionIsImmediate("duplicate"), true)
     assert.equal(tabPickerActionIsImmediate("move"), false)
+  })
+})
+
+describe("resolveTabActionTargetTabIds", () => {
+  it("prefers marked tabs over highlighted row", () => {
+    assert.deepEqual(
+      resolveTabActionTargetTabIds({
+        markedKind: "tab",
+        markedTabIds: [1, 2],
+        highlightedTabId: 99,
+        selectedTabIds: []
+      }),
+      [1, 2]
+    )
+  })
+
+  it("uses highlighted tab when no marks", () => {
+    assert.deepEqual(
+      resolveTabActionTargetTabIds({
+        markedKind: null,
+        markedTabIds: [],
+        highlightedTabId: 42,
+        selectedTabIds: []
+      }),
+      [42]
+    )
+  })
+
+  it("falls back to selectedTabIds for window/group marks", () => {
+    assert.deepEqual(
+      resolveTabActionTargetTabIds({
+        markedKind: "window",
+        markedTabIds: [],
+        highlightedTabId: null,
+        selectedTabIds: [7, 8]
+      }),
+      [7, 8]
+    )
   })
 })

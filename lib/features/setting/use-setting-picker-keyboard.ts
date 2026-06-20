@@ -37,6 +37,7 @@ export type UseSettingPickerKeyboardOptions = {
   setHi: (next: number | ((prev: number) => number)) => void
   keyboardActive: boolean
   sessionId?: string
+  pageActiveDefaults?: import("./setting-picker-rows").PickerPageActiveDefaults
   callbacks: SettingPickerKeyboardCallbacks
 }
 
@@ -48,6 +49,7 @@ export function useSettingPickerKeyboard({
   setHi,
   keyboardActive,
   sessionId,
+  pageActiveDefaults = { tabsPageActive: "auto", searchPageActive: "auto" },
   callbacks
 }: UseSettingPickerKeyboardOptions): {
   onWindowKeydownCapture: (ev: KeyboardEvent) => void
@@ -112,7 +114,12 @@ export function useSettingPickerKeyboard({
       }
       onStateChange(settingPickerGoToView(target, state))
       setHi(
-        settingPickerInitialHi(target, state.draft.locale, state.draft.appearance)
+        settingPickerInitialHi(
+          target,
+          state.draft.locale,
+          state.draft.appearance,
+          pageActiveDefaults
+        )
       )
       return
     }
@@ -131,6 +138,7 @@ export function useSettingPickerKeyboard({
     goMain,
     hi,
     onStateChange,
+    pageActiveDefaults,
     rows,
     setHi,
     startEditing,

@@ -475,7 +475,8 @@ export function useTabPickerController({
     closeSearch,
     openEditFromPicker,
     executeCloseForReducerState,
-    onRefreshRows
+    onRefreshRows,
+    onAppendLog
   })
 
   const onAltToggleFold = useCallback(

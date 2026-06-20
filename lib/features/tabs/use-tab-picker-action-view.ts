@@ -4,6 +4,7 @@ import { groupRowKey } from "./tab-picker-keyboard"
 import type { TabPickerRow } from "./picker-rows"
 import {
   listTabPickerActions,
+  resolveTabActionTargetTabIds,
   tabPickerActionToBulkSubMode,
   TAB_PICKER_ACTION_MESSAGE_KEYS,
   type TabPickerActionId,
@@ -46,7 +47,8 @@ export function useTabPickerActionView({
   closeSearch,
   openEditFromPicker,
   executeCloseForReducerState,
-  onRefreshRows
+  onRefreshRows,
+  onAppendLog
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -71,6 +73,7 @@ export function useTabPickerActionView({
   openEditFromPicker: () => void | Promise<void>
   executeCloseForReducerState: (state: PickerReducerState) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
+  onAppendLog?: (lines: string[]) => void | Promise<void>
 }) {
   const uiCopy = useUiCopy()
   const [pickerView, setPickerView] = useState<TabPickerListView>("list")
@@ -121,16 +124,12 @@ export function useTabPickerActionView({
   )
 
   const resolveImmediateTabIds = useCallback((): number[] => {
-    if (markedKind === "tab" && markedTabIds.length > 0) {
-      return [...markedTabIds]
-    }
-    if (selectedTabIds.length > 0) {
-      return [...selectedTabIds]
-    }
-    if (highlightedRow?.kind === "tab") {
-      return [highlightedRow.tabId]
-    }
-    return []
+    return resolveTabActionTargetTabIds({
+      markedKind,
+      markedTabIds,
+      highlightedTabId: highlightedRow?.kind === "tab" ? highlightedRow.tabId : null,
+      selectedTabIds
+    })
   }, [highlightedRow, markedKind, markedTabIds, selectedTabIds])
 
   const autoMarkReducerState = useCallback((): PickerReducerState => {
@@ -222,8 +221,9 @@ export function useTabPickerActionView({
         }
         try {
           await executeReloadTabsAction(tabIds)
-        } catch {
-          /* ignore */
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e)
+          void onAppendLog?.([uiCopy.t("tabs.picker.error.reloadFailed", { message })])
         }
         return
       }
@@ -236,8 +236,9 @@ export function useTabPickerActionView({
         try {
           await executeDuplicateTabsAction(tabIds)
           await onRefreshRows?.()
-        } catch {
-          /* ignore */
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e)
+          void onAppendLog?.([uiCopy.t("tabs.picker.error.duplicateFailed", { message })])
         }
         return
       }
@@ -272,8 +273,10 @@ export function useTabPickerActionView({
       executeCloseForReducerState,
       exitActionView,
       markedCount,
+      onAppendLog,
       onRefreshRows,
       openEditFromPicker,
+      uiCopy,
       resolveImmediateTabIds,
       setBulkSubMode,
       setHlSearchPattern

@@ -86,6 +86,25 @@ export function tabPickerActionIsImmediate(id: TabPickerActionId): boolean {
   return id === "reload" || id === "duplicate" || id === "nohlsearch"
 }
 
+/** EN: Tab targets for reload/duplicate — `#` marks win; else highlighted tab row. */
+export function resolveTabActionTargetTabIds(input: {
+  markedKind: SelectKind | null
+  markedTabIds: number[]
+  highlightedTabId: number | null
+  selectedTabIds: number[]
+}): number[] {
+  if (input.markedKind === "tab" && input.markedTabIds.length > 0) {
+    return [...input.markedTabIds]
+  }
+  if (input.highlightedTabId !== null) {
+    return [input.highlightedTabId]
+  }
+  if (input.selectedTabIds.length > 0) {
+    return [...input.selectedTabIds]
+  }
+  return []
+}
+
 export const TAB_PICKER_ACTION_MESSAGE_KEYS: Record<
   TabPickerActionId,
   "tabs.picker.action.move" | "tabs.picker.action.close" | "tabs.picker.action.group" | "tabs.picker.action.newWindow" | "tabs.picker.action.newTab" | "tabs.picker.action.edit" | "tabs.picker.action.reload" | "tabs.picker.action.duplicate" | "tabs.picker.action.nohlsearch"

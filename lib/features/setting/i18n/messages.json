@@ -411,6 +411,30 @@
     "ja": "オフ — ピッカーは全体設定に従う",
     "en": "off — picker follows global appearance"
   },
+  "setting.picker.main.tabsPageActive": {
+    "ja": "tabs page-active（既定）: {token}",
+    "en": "tabs page-active (default): {token}"
+  },
+  "setting.picker.main.searchPageActive": {
+    "ja": "search page-active（既定）: {token}",
+    "en": "search page-active (default): {token}"
+  },
+  "setting.picker.pageActiveAuto": {
+    "ja": "--auto — ハイライトでプレビュー",
+    "en": "--auto — preview on highlight"
+  },
+  "setting.picker.pageActiveManual": {
+    "ja": "--manual — Alt+↑↓ でプレビュー",
+    "en": "--manual — preview with Alt+↑↓"
+  },
+  "setting.picker.headline.tabsPageActive": {
+    "ja": "setting -list · tabs page-active · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · tabs page-active · ↑↓ · Enter/→ select · ← list"
+  },
+  "setting.picker.headline.searchPageActive": {
+    "ja": "setting -list · search page-active · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · search page-active · ↑↓ · Enter/→ select · ← list"
+  },
   "setting.picker.main.fg": {
     "ja": "fg（文字色）: {value}",
     "en": "fg (text color): {value}"
@@ -731,6 +755,10 @@
     "ja": "tabs: page-active を {token} に設定しました",
     "en": "tabs: page-active set to {token}"
   },
+  "search.pageActive.set": {
+    "ja": "search: page-active を {token} に設定しました",
+    "en": "search: page-active set to {token}"
+  },
   "tabs.picker.hint": {
     "ja": "Tab picker — page-active {token} · ↑↓ 移動 · Alt+↑↓ プレビュー（manual） · Enter ジャンプ · Esc → prompt",
     "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
@@ -938,6 +966,30 @@
   "search.picker.breadcrumb.destination": {
     "ja": "開き先",
     "en": "Open target"
+  },
+  "search.picker.breadcrumb.actions": {
+    "ja": "操作",
+    "en": "Actions"
+  },
+  "search.picker.headline.actions": {
+    "ja": "search -list · 操作一覧",
+    "en": "search -list · actions"
+  },
+  "search.picker.action.reload": {
+    "ja": "再読み込み",
+    "en": "Reload"
+  },
+  "search.picker.action.duplicate": {
+    "ja": "複製",
+    "en": "Duplicate"
+  },
+  "search.picker.action.detail": {
+    "ja": "詳細",
+    "en": "Detail"
+  },
+  "search.picker.action.nohlsearch": {
+    "ja": "ハイライト解除",
+    "en": "Clear highlight"
   },
   "search.openDestination.newWindow": {
     "ja": "＋ 新しいウィンドウ",
@@ -1322,6 +1374,14 @@
   "tabs.picker.error.groupActionFailed": {
     "ja": "error: タブグループの操作に失敗しました。",
     "en": "error: tab group action failed."
+  },
+  "tabs.picker.error.reloadFailed": {
+    "ja": "error: 再読み込みに失敗しました: {message}",
+    "en": "error: reload failed: {message}"
+  },
+  "tabs.picker.error.duplicateFailed": {
+    "ja": "error: 複製に失敗しました: {message}",
+    "en": "error: duplicate failed: {message}"
   },
   "windows.none": {
     "ja": "(ウィンドウなし)",

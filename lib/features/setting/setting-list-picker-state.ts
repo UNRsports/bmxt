@@ -6,6 +6,8 @@ export type SettingListPickerView =
   | "main"
   | "language"
   | "editPicker"
+  | "tabsPageActive"
+  | "searchPageActive"
   | "fontSize"
   | "pickerFontSize"
   | "bgImage"

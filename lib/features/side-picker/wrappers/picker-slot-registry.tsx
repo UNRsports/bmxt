@@ -129,6 +129,10 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           keyboardActive={ctx.settingPickerKeyboardActive}
           pickerInputRef={ctx.settingPickerInputRef}
           sessionId={ctx.sessionId}
+          pageActiveDefaults={{
+            tabsPageActive: ctx.tabsPageActiveMode ?? "auto",
+            searchPageActive: ctx.searchPageActiveMode ?? "auto"
+          }}
         />
       </PickerPanelHost>
     ) : null

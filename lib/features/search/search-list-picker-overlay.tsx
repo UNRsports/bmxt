@@ -25,15 +25,26 @@ import {
 import { searchPickerActiveMatchDetail } from "./search-picker-page-match"
 import { resolveSearchArrowRightTarget } from "./search-arrow-right-target"
 import { listSearchEntryDetailHits } from "./search-entry-detail-hits"
-import { searchEntryHasOpenTab } from "./search-entry-open-tab"
+import { searchEntryHasOpenTab, resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
 import { clearSearchPickerPageHighlightsForEntry } from "./preview-search-picker-entry"
 import { pageMatchesForDisplay } from "./search-picker-page-match"
 import {
   SearchListPickerBody,
-  type SearchListPickerView
+  type SearchListPickerView,
+  type SearchPickerActionRow
 } from "./search-list-picker-body"
 import type { SearchListPickerState } from "./search-list-picker-input"
 import type { SearchPageActiveMode } from "./page-active-setting"
+import {
+  executeDuplicateTabsAction,
+  executeReloadTabsAction
+} from "../tabs/controller/execute-actions"
+import {
+  listSearchPickerActions,
+  SEARCH_PICKER_ACTION_MESSAGE_KEYS,
+  type SearchPickerActionId
+} from "./search-picker-actions"
+import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import {
   buildSearchOpenDestinationRows,
   type SearchOpenDestinationRow
@@ -98,6 +109,9 @@ export function SearchListPickerOverlay({
   const [destinationEntry, setDestinationEntry] = useState<PickerEntry | undefined>(undefined)
   const [destinationMatchIndex, setDestinationMatchIndex] = useState(0)
   const [destinationRows, setDestinationRows] = useState<SearchOpenDestinationRow[]>([])
+  const [actionHi, setActionHi] = useState(0)
+  const actionHiRef = useRef(actionHi)
+  actionHiRef.current = actionHi
   const subviewHiRef = useRef(0)
   const arrowRightBusyRef = useRef(false)
   const matchHiRef = useRef(matchHi)
@@ -128,6 +142,7 @@ export function SearchListPickerOverlay({
     setMatchHi(0)
     setDestinationEntry(undefined)
     setDestinationRows([])
+    setActionHi(0)
   }, [entries, phase])
 
   const onHiChange = useCallback((nextHi: number) => {
@@ -136,6 +151,7 @@ export function SearchListPickerOverlay({
   }, [])
 
   const detailEntry = pickerView === "detail" ? entries[detailEntryIndex] : undefined
+  const actionEntry = pickerView === "actions" ? entries[resultsHi] : undefined
   const detailHits = useMemo(() => {
     if (!detailEntry) {
       return []
@@ -195,6 +211,93 @@ export function SearchListPickerOverlay({
     [uiCopy.locale]
   )
 
+  const actionIds = useMemo((): SearchPickerActionId[] => {
+    if (!actionEntry) {
+      return []
+    }
+    const needle = pattern.trim()
+    const hits = listSearchEntryDetailHits(actionEntry, needle)
+    return listSearchPickerActions({
+      tabOpen: true,
+      hasDetailHits: hits.length > 0,
+      hlSearchPattern: ""
+    })
+  }, [actionEntry, pattern])
+
+  const actionRows = useMemo((): SearchPickerActionRow[] => {
+    return actionIds.map((id) => ({
+      id,
+      label: uiCopy.t(SEARCH_PICKER_ACTION_MESSAGE_KEYS[id])
+    }))
+  }, [actionIds, uiCopy])
+
+  const exitActionView = useCallback(() => {
+    setPickerView("results")
+    setActionHi(0)
+  }, [])
+
+  const enterActionView = useCallback(async (resultsIndex: number) => {
+    const entry = entriesRef.current[resultsIndex]
+    if (!entry) {
+      return false
+    }
+    const tabOpen = await searchEntryHasOpenTab(entry)
+    if (!tabOpen) {
+      return false
+    }
+    const hits = listSearchEntryDetailHits(entry, patternRef.current)
+    const ids = listSearchPickerActions({
+      tabOpen: true,
+      hasDetailHits: hits.length > 0,
+      hlSearchPattern: ""
+    })
+    if (ids.length === 0) {
+      return false
+    }
+    setActionHi(0)
+    setPickerView("actions")
+    return true
+  }, [])
+
+  const commitSearchAction = useCallback(
+    async (actionId: SearchPickerActionId) => {
+      const resultsIndex = resultsHiRef.current
+      const entry = entriesRef.current[resultsIndex]
+      exitActionView()
+      if (!entry) {
+        return
+      }
+      if (actionId === "detail") {
+        setDetailEntryIndex(resultsIndex)
+        setPickerView("detail")
+        return
+      }
+      if (actionId === "nohlsearch") {
+        return
+      }
+      const resolved = await resolveOpenTabForSearchEntry(entry)
+      if (!resolved) {
+        return
+      }
+      if (actionId === "reload") {
+        try {
+          await executeReloadTabsAction([resolved.tabId])
+        } catch {
+          /* ignore */
+        }
+        return
+      }
+      if (actionId === "duplicate") {
+        try {
+          await executeDuplicateTabsAction([resolved.tabId])
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    [exitActionView]
+  )
+
   const handleArrowRight = useCallback(
     async (fromDetailView: boolean) => {
       if (arrowRightBusyRef.current) {
@@ -212,6 +315,12 @@ export function SearchListPickerOverlay({
 
         const needle = patternRef.current
         const tabOpen = await searchEntryHasOpenTab(entry)
+        if (!fromDetailView && tabOpen) {
+          const opened = await enterActionView(resultsIndex)
+          if (opened) {
+            return
+          }
+        }
         const hits = listSearchEntryDetailHits(entry, needle)
         const target = resolveSearchArrowRightTarget({
           tabOpen,
@@ -243,7 +352,7 @@ export function SearchListPickerOverlay({
         arrowRightBusyRef.current = false
       }
     },
-    [enterDestinationForEntry]
+    [enterActionView, enterDestinationForEntry]
   )
 
   const headline = useMemo(() => {
@@ -255,6 +364,11 @@ export function SearchListPickerOverlay({
       const title = destinationEntry.title.trim() || destinationEntry.url
       const clipped = title.length > 72 ? `${title.slice(0, 71)}…` : title
       return `${searchListPickerDestinationHeadline(locale)} · ${clipped}`
+    }
+    if (pickerView === "actions" && actionEntry) {
+      const title = actionEntry.title.trim() || actionEntry.url
+      const clipped = title.length > 72 ? `${title.slice(0, 71)}…` : title
+      return `${uiCopy.t("search.picker.headline.actions")} · ${clipped}`
     }
     if (pickerView === "detail" && detailEntry) {
       const title = detailEntry.title.trim() || detailEntry.url
@@ -279,7 +393,8 @@ export function SearchListPickerOverlay({
     pickerView,
     detailEntry,
     destinationEntry,
-    uiCopy.locale,
+    actionEntry,
+    uiCopy,
     pattern
   ])
 
@@ -351,6 +466,10 @@ export function SearchListPickerOverlay({
   const extensions = useMemo((): PlainPickerKeyboardExtensions => {
     return {
       onEsc: () => {
+        if (pickerViewRef.current === "actions") {
+          exitActionView()
+          return true
+        }
         if (pickerViewRef.current === "destination") {
           exitDestinationView()
           return true
@@ -360,6 +479,34 @@ export function SearchListPickerOverlay({
           return true
         }
         return false
+      },
+      customVerticalNav: (e: KeyboardEvent) => {
+        if (pickerViewRef.current !== "actions") {
+          return false
+        }
+        const navDir = verticalNavDirection(e)
+        if (navDir === null || actionRows.length === 0) {
+          return false
+        }
+        pickerStopEvent(e)
+        setActionHi((current) =>
+          navDir === "down"
+            ? Math.min(current + 1, actionRows.length - 1)
+            : Math.max(current - 1, 0)
+        )
+        return true
+      },
+      onNormalEnter: (e: KeyboardEvent) => {
+        if (pickerViewRef.current !== "actions") {
+          return false
+        }
+        const action = actionRows[actionHiRef.current]
+        if (!action) {
+          return false
+        }
+        pickerStopEvent(e)
+        void commitSearchAction(action.id as SearchPickerActionId)
+        return true
       },
       onCaptureBefore: (e: KeyboardEvent) => {
         if (loading) {
@@ -387,7 +534,11 @@ export function SearchListPickerOverlay({
         }
 
         if (!isHorizontalNavKey(e)) {
-          if (pickerViewRef.current === "detail" || pickerViewRef.current === "destination") {
+          if (
+            pickerViewRef.current === "detail" ||
+            pickerViewRef.current === "destination" ||
+            pickerViewRef.current === "actions"
+          ) {
             return false
           }
           if (patternRef.current.trim() === "") {
@@ -427,6 +578,11 @@ export function SearchListPickerOverlay({
         }
 
         if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
+          if (pickerViewRef.current === "actions") {
+            pickerStopEvent(e)
+            exitActionView()
+            return true
+          }
           if (pickerViewRef.current === "destination") {
             exitDestinationView()
             pickerStopEvent(e)
@@ -449,7 +605,10 @@ export function SearchListPickerOverlay({
       }
     }
   }, [
+    actionRows,
+    commitSearchAction,
     entries,
+    exitActionView,
     exitDestinationView,
     exitDetailView,
     handleArrowRight,
@@ -485,6 +644,8 @@ export function SearchListPickerOverlay({
       onHiChange={onHiChange}
       subviewHiRef={subviewHiRef}
       pageActiveMode={pageActiveMode}
+      actionRows={actionRows}
+      actionHi={actionHi}
     />
   )
 }

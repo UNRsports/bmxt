@@ -44,6 +44,7 @@ import { openSearchPickerEntry } from "../search/open-search-picker-entry"
 import {
   loadSearchPickerSettings,
   saveSearchPageActiveMode,
+  settingTokenForSearchPageActiveMode,
   type SearchPageActiveMode
 } from "../search/page-active-setting"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
@@ -442,6 +443,18 @@ export function BmxtShell({
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const [searchPageActiveMode, setSearchPageActiveMode] = useState<SearchPageActiveMode>("auto")
   const searchPageActiveModeRef = useRef<SearchPageActiveMode>("auto")
+  useEffect(() => {
+    void (async () => {
+      const [tabsSettings, searchSettings] = await Promise.all([
+        loadTabsPickerSettings(),
+        loadSearchPickerSettings()
+      ])
+      setTabsPageActiveMode(tabsSettings.pageActive)
+      tabsPageActiveModeRef.current = tabsSettings.pageActive
+      setSearchPageActiveMode(searchSettings.pageActive)
+      searchPageActiveModeRef.current = searchSettings.pageActive
+    })()
+  }, [])
   const navPositionsRef = useRef<NavPositionsByTab>({})
   const setDetailBarId = useCallback(
     (update: SetStateAction<DetailBarId | null>) => {
@@ -1189,6 +1202,34 @@ export function BmxtShell({
           sessionId,
           settingPickerApplyDraftToMain(current, { editPicker: false })
         )
+        return
+      }
+      if (row.id === "tabs-page-active-auto" || row.id === "tabs-page-active-manual") {
+        const mode: TabsPageActiveMode = row.id === "tabs-page-active-auto" ? "auto" : "manual"
+        await saveTabsPageActiveMode(mode)
+        setTabsPageActiveMode(mode)
+        tabsPageActiveModeRef.current = mode
+        setSettingListPicker(sessionId, settingPickerGoToView("main", current))
+        await appendLogLines([
+          logPrefix,
+          uiCopy.t("tabs.pageActive.set", {
+            token: settingTokenForPageActiveMode(mode)
+          })
+        ])
+        return
+      }
+      if (row.id === "search-page-active-auto" || row.id === "search-page-active-manual") {
+        const mode: SearchPageActiveMode = row.id === "search-page-active-auto" ? "auto" : "manual"
+        await saveSearchPageActiveMode(mode)
+        setSearchPageActiveMode(mode)
+        searchPageActiveModeRef.current = mode
+        setSettingListPicker(sessionId, settingPickerGoToView("main", current))
+        await appendLogLines([
+          logPrefix,
+          uiCopy.t("search.pageActive.set", {
+            token: settingTokenForSearchPageActiveMode(mode)
+          })
+        ])
         return
       }
       if (row.id === "reset-yes") {

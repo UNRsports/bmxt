@@ -23,7 +23,7 @@ import {
 } from "../side-picker/plain/plain-text-picker-virtual"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import type { SettingPickerRow } from "./setting-picker-rows"
-import { settingPickerEditAriaLabel, settingPickerInitialHi } from "./setting-picker-rows"
+import { settingPickerEditAriaLabel, settingPickerInitialHi, type PickerPageActiveDefaults } from "./setting-picker-rows"
 import { isSettingDetailView } from "./setting-picker-nav"
 import {
   useSettingPickerKeyboard,
@@ -71,6 +71,7 @@ export type SettingPickerBodyProps = {
   sessionId?: string
   statusLines?: readonly string[]
   preview?: ReactNode
+  pageActiveDefaults?: PickerPageActiveDefaults
 }
 
 export function SettingPickerBody({
@@ -86,7 +87,8 @@ export function SettingPickerBody({
   pickerInputRef,
   sessionId,
   statusLines = [],
-  preview = null
+  preview = null,
+  pageActiveDefaults = { tabsPageActive: "auto", searchPageActive: "auto" }
 }: SettingPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const setInputEl = useCallback(
@@ -110,8 +112,13 @@ export function SettingPickerBody({
 
   const listInitialHi = useMemo(
     () =>
-      settingPickerInitialHi(state.view, state.draft.locale, state.draft.appearance),
-    [state.view, state.draft.locale, state.draft.appearance]
+      settingPickerInitialHi(
+        state.view,
+        state.draft.locale,
+        state.draft.appearance,
+        pageActiveDefaults
+      ),
+    [pageActiveDefaults, state.view, state.draft.locale, state.draft.appearance]
   )
 
   useEffect(() => {
@@ -202,6 +209,7 @@ export function SettingPickerBody({
     setHi,
     keyboardActive,
     sessionId,
+    pageActiveDefaults,
     callbacks: {
       ...keyboardCallbacks,
       onReturnToPrompt

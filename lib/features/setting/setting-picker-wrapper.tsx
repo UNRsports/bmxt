@@ -13,6 +13,7 @@ import {
 import {
   buildSettingPickerRows,
   settingPickerHeadline,
+  type PickerPageActiveDefaults,
   type SettingPickerRow
 } from "./setting-picker-rows"
 import { isSettingDetailView } from "./setting-picker-nav"
@@ -31,6 +32,7 @@ export type SettingPickerWrapperProps = {
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
+  pageActiveDefaults?: PickerPageActiveDefaults
 }
 
 export function SettingPickerWrapper({
@@ -43,7 +45,8 @@ export function SettingPickerWrapper({
   onExitToDetailBar,
   keyboardActive = false,
   pickerInputRef,
-  sessionId
+  sessionId,
+  pageActiveDefaults = { tabsPageActive: "auto", searchPageActive: "auto" }
 }: SettingPickerWrapperProps) {
   const { draft } = state
   const locale = draft.locale
@@ -53,8 +56,8 @@ export function SettingPickerWrapper({
     [state]
   )
   const rows = useMemo(
-    () => buildSettingPickerRows(state.view, locale, appearance),
-    [state.view, locale, appearance]
+    () => buildSettingPickerRows(state.view, locale, appearance, pageActiveDefaults),
+    [appearance, locale, pageActiveDefaults, state.view]
   )
   const lines = useMemo(() => rows.map((row) => row.line), [rows])
   const headline = settingPickerHeadline(state.view, locale, state.editing)
@@ -117,6 +120,7 @@ export function SettingPickerWrapper({
       keyboardActive={keyboardActive}
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}
+      pageActiveDefaults={pageActiveDefaults}
       preview={preview}
     />
   )

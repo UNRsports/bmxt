@@ -34,14 +34,19 @@ import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { SearchPickerHighlight } from "./search-picker-highlight"
 import { SearchPickerTabFavicon } from "./search-picker-tab-favicon"
 import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
+import { TabPickerActionPickerRow } from "../tabs/tab-picker-action-picker-row"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
 import type { SearchOpenDestinationRow } from "./search-open-destination"
 import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
 import type { SearchPageActiveMode } from "./page-active-setting"
+import type { SearchPickerListView } from "./search-picker-actions"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
 
+export type { SearchPickerListView as SearchListPickerView } from "./search-picker-actions"
+
 const ROW_ID_PREFIX = "bmxt-search-row"
+const SEARCH_ACTION_ROW_ID_PREFIX = "bmxt-tab-action-row"
 
 /** EN: Estimated row height until the hidden probe row is measured. */
 const SEARCH_PICKER_ROW_HEIGHT_FALLBACK = 64
@@ -49,7 +54,10 @@ const SEARCH_PICKER_ROW_HEIGHT_FALLBACK = 64
 /** EN: Detail hit rows are shorter than full result rows. */
 const SEARCH_PICKER_DETAIL_ROW_HEIGHT_FALLBACK = 40
 
-export type SearchListPickerView = "results" | "detail" | "destination"
+export type SearchPickerActionRow = {
+  id: string
+  label: string
+}
 
 export type SearchListPickerBodyProps = {
   headline: string
@@ -60,7 +68,7 @@ export type SearchListPickerBodyProps = {
   statusLines?: string[]
   statusOnly?: boolean
   matchHi?: number
-  pickerView?: SearchListPickerView
+  pickerView?: SearchPickerListView
   detailHits?: SearchEntryDetailHit[]
   detailEntry?: PickerEntry
   /** EN: Row index to restore when returning from detail view to the results list. */
@@ -81,6 +89,8 @@ export type SearchListPickerBodyProps = {
   /** EN: Breadcrumb shows Results → Detail → Open target when destination opened from detail. */
   destinationFromDetail?: boolean
   pageActiveMode?: SearchPageActiveMode
+  actionRows?: SearchPickerActionRow[]
+  actionHi?: number
 }
 
 function SearchListStatusRow({
@@ -237,7 +247,9 @@ export function SearchListPickerBody({
   onHiChange,
   subviewHiRef,
   destinationFromDetail = false,
-  pageActiveMode = "auto"
+  pageActiveMode = "auto",
+  actionRows = [],
+  actionHi = 0
 }: SearchListPickerBodyProps) {
   const uiCopy = useUiCopy()
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -264,17 +276,21 @@ export function SearchListPickerBody({
 
   const inDetailView = pickerView === "detail" && detailEntry != null
   const inDestinationView = pickerView === "destination"
+  const inActionView = pickerView === "actions"
   const virtualItemCount = statusOnly
     ? 0
-    : inDestinationView
-      ? destinationRows.length
-      : inDetailView
-        ? detailHits.length
-        : entries.length
+    : inActionView
+      ? actionRows.length
+      : inDestinationView
+        ? destinationRows.length
+        : inDetailView
+          ? detailHits.length
+          : entries.length
   const useVirtualResults =
     !statusOnly &&
     !inDetailView &&
     !inDestinationView &&
+    !inActionView &&
     entries.length >= PLAIN_PICKER_VIRTUALIZE_MIN
   const useVirtualDetail =
     inDetailView && detailEntry != null && detailHits.length >= PLAIN_PICKER_VIRTUALIZE_MIN
@@ -286,31 +302,35 @@ export function SearchListPickerBody({
     (action: SetStateAction<number>) => {
       setHiState((prev) => {
         const next = typeof action === "function" ? action(prev) : action
-        if (!inDetailView && !inDestinationView) {
+        if (!inDetailView && !inDestinationView && !inActionView) {
           onHiChange?.(next)
         }
         return next
       })
     },
-    [inDestinationView, inDetailView, onHiChange]
+    [inActionView, inDestinationView, inDetailView, onHiChange]
   )
   const lineCount = statusOnly
     ? statusLines.length
-    : inDestinationView
-      ? destinationRows.length
-      : inDetailView
-        ? detailHits.length
-        : entries.length
+    : inActionView
+      ? actionRows.length
+      : inDestinationView
+        ? destinationRows.length
+        : inDetailView
+          ? detailHits.length
+          : entries.length
   const matchLines = useMemo(
     () =>
       statusOnly
         ? statusLines
-        : inDestinationView
-          ? destinationRows.map((r) => r.label)
-          : inDetailView
-            ? detailHits.map((h) => h.displayText)
-            : entries.map((e) => e.title),
-    [destinationRows, detailHits, entries, inDestinationView, inDetailView, statusLines, statusOnly]
+        : inActionView
+          ? actionRows.map((row) => row.label)
+          : inDestinationView
+            ? destinationRows.map((r) => r.label)
+            : inDetailView
+              ? detailHits.map((h) => h.displayText)
+              : entries.map((e) => e.title),
+    [actionRows, destinationRows, detailHits, entries, inActionView, inDestinationView, inDetailView, statusLines, statusOnly]
   )
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
   const rowHighlightNeedle =
@@ -400,7 +420,12 @@ export function SearchListPickerBody({
   const listScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
 
   const resultsOpenTabNavEnabled =
-    keyboardActive && !statusOnly && !inDetailView && !inDestinationView && entries.length > 0
+    keyboardActive &&
+    !statusOnly &&
+    !inDetailView &&
+    !inDestinationView &&
+    !inActionView &&
+    entries.length > 0
 
   const {
     mergedExtensions: resultsNavExtensions,
@@ -510,11 +535,11 @@ export function SearchListPickerBody({
   }, [followListScrollToHi, hi, lineCount, pickerView])
 
   useLayoutEffect(() => {
-    if (lineCount === 0 || statusOnly || inDetailView || inDestinationView) {
+    if (lineCount === 0 || statusOnly || inDetailView || inDestinationView || inActionView) {
       return
     }
     scrollSearchPickerHighlightIntoViewAfterLayout(listRef.current, ROW_ID_PREFIX, hi)
-  }, [hi, inDestinationView, inDetailView, lineCount, matchHi, pickerView, statusOnly])
+  }, [hi, inActionView, inDestinationView, inDetailView, lineCount, matchHi, pickerView, statusOnly])
 
   useLayoutEffect(() => {
     if (keyboardActive) {
@@ -534,7 +559,8 @@ export function SearchListPickerBody({
     lineCount: statusOnly ? 0 : lineCount,
     keyboardActive,
     sessionId,
-    enableCommandMode: statusOnly || inDetailView || inDestinationView ? false : enableCommandMode,
+    enableCommandMode:
+      statusOnly || inDetailView || inDestinationView || inActionView ? false : enableCommandMode,
     onReturnToPrompt,
     onConfirmLineIndex: statusOnly ? undefined : confirmLineIndex,
     hi,
@@ -555,13 +581,19 @@ export function SearchListPickerBody({
   })
 
   const activeRowId =
-    lineCount > 0 && hi >= 0 && hi < lineCount ? `${ROW_ID_PREFIX}-${hi}` : undefined
+    lineCount > 0 && hi >= 0 && hi < lineCount
+      ? inActionView
+        ? `${SEARCH_ACTION_ROW_ID_PREFIX}-${actionHi}`
+        : `${ROW_ID_PREFIX}-${hi}`
+      : undefined
 
-  const listAriaLabel = inDestinationView
-    ? "Search open targets"
-    : inDetailView
-      ? "Search result detail hits"
-      : "Search results"
+  const listAriaLabel = inActionView
+    ? "Search actions"
+    : inDestinationView
+      ? "Search open targets"
+      : inDetailView
+        ? "Search result detail hits"
+        : "Search results"
 
   const renderResultsRows = (start: number, end: number): ReactNode[] => {
     const slice: ReactNode[] = []
@@ -748,6 +780,10 @@ export function SearchListPickerBody({
         ) : inDestinationView ? (
           destinationRows.map((row, i) => (
             <SearchOpenDestinationPickerRow key={`${row.kind}-${row.windowId ?? ""}-${row.groupId ?? ""}-${i}`} index={i} row={row} hi={hi} />
+          ))
+        ) : inActionView ? (
+          actionRows.map((row, i) => (
+            <TabPickerActionPickerRow key={row.id} index={i} label={row.label} hi={actionHi} />
           ))
         ) : inDetailView && detailEntry ? (
           useVirtualDetail ? (

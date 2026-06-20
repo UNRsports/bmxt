@@ -8,6 +8,10 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "language"
     case "edit-picker":
       return "editPicker"
+    case "tabs-page-active":
+      return "tabsPageActive"
+    case "search-page-active":
+      return "searchPageActive"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -50,6 +54,8 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
   return (
     view === "language" ||
     view === "editPicker" ||
+    view === "tabsPageActive" ||
+    view === "searchPageActive" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||
