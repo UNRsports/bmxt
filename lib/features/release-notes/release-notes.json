@@ -1,12 +1,10 @@
 {
-  "0.6.0": {
+  "0.6.1": {
     "ja": [
-      "拡張機能のウィンドウを通常のポップアップウィンドウに変更",
-      "searchモードの刷新とジョブ制導入にあわせてsqliteによるキャッシュを実装"
+      "ウェルカムページを外部化してパッケージサイズを削減"
     ],
     "en": [
-      "Changed the extension window to a dedicated popup window without a tab bar",
-      "Implemented SQLite caching for search mode alongside the search refresh and job-based execution model"
+      ""
     ]
   }
 }
