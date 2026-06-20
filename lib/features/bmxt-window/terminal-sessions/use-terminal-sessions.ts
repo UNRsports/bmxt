@@ -96,10 +96,12 @@ export function useTerminalSessions(): {
   }, [commitSessionsState])
 
   const activateSession = useCallback(async (sessionId: string) => {
-    const prev = stateRef.current
-    if (prev.order.includes(sessionId) && prev.activeId !== sessionId) {
-      commitSessionsState({ ...prev, activeId: sessionId })
-    }
+    setState((prev) => {
+      if (prev.order.includes(sessionId) && prev.activeId !== sessionId) {
+        return { ...prev, activeId: sessionId }
+      }
+      return prev
+    })
     const next = await setActiveSession(sessionId)
     if (next) {
       commitSessionsState(next)
