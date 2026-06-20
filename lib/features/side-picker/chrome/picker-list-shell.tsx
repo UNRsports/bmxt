@@ -16,6 +16,7 @@ export type PickerListShellProps = {
   listAriaLabel: string
   listAriaMultiselectable?: boolean
   listActivedescendant?: string
+  listPrefix?: ReactNode
   listBody: ReactNode
   searchFooter?: ReactNode
   commandFooter?: ReactNode
@@ -39,6 +40,7 @@ export function PickerListShell({
   listAriaLabel,
   listAriaMultiselectable,
   listActivedescendant,
+  listPrefix,
   listBody,
   searchFooter,
   commandFooter,
@@ -66,6 +68,7 @@ export function PickerListShell({
             : undefined
         }
       />
+      {listPrefix}
       <div
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role={listRole}

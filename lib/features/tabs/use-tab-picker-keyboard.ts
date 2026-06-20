@@ -8,13 +8,10 @@ import type { PickerReducerEvent } from "./state-machine"
 import {
   NEW_GROUP_COLORS
 } from "./tab-picker-overlay-constants"
-import type {
-  BulkSubMode,
-  EditPanel,
-  GroupChoice,
-  SelectKind
-} from "./tab-picker-overlay-types"
+import type { BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { useTabPickerPlainExtensions } from "./use-tab-picker-plain-extensions"
+import type { TabPickerActionId, TabPickerListView } from "./tab-picker-actions"
+import type { TabPickerActionRow } from "./use-tab-picker-action-view"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -65,11 +62,6 @@ export function useTabPickerKeyboard({
   closeSearch,
   commitSearchFoldSession,
   onReturnToPrompt,
-  commandMode,
-  commandBuffer,
-  setCommandMode,
-  setCommandBuffer,
-  setCommandListingHint,
   isHostPaneFocused,
   sessionId,
   editPanel,
@@ -80,10 +72,16 @@ export function useTabPickerKeyboard({
   confirmGroupMenuPick,
   cycleGroupMenuPick,
   backFromGroupRename,
-  collapseAtRow,
-  expandAtRow,
   altKeyHeldRef,
-  onExitToDetailBar
+  onExitToDetailBar,
+  pickerView,
+  actionHi,
+  setActionHi,
+  actionRows,
+  enterActionView,
+  exitActionView,
+  commitAction,
+  canEnterActionView
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -130,11 +128,6 @@ export function useTabPickerKeyboard({
   closeSearch: () => void
   commitSearchFoldSession: (query: string) => void
   onReturnToPrompt: () => void
-  commandMode: boolean
-  commandBuffer: string
-  setCommandMode: Dispatch<SetStateAction<boolean>>
-  setCommandBuffer: Dispatch<SetStateAction<string>>
-  setCommandListingHint: Dispatch<SetStateAction<boolean>>
   isHostPaneFocused: boolean
   sessionId: string
   editPanel: EditPanel | null
@@ -145,21 +138,21 @@ export function useTabPickerKeyboard({
   confirmGroupMenuPick: () => void | Promise<void>
   cycleGroupMenuPick: (delta: number) => void
   backFromGroupRename: () => void
-  collapseAtRow: (row: TabPickerRow) => number | null
-  expandAtRow: (row: TabPickerRow) => number | null
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
+  pickerView: TabPickerListView
+  actionHi: number
+  setActionHi: Dispatch<SetStateAction<number>>
+  actionRows: TabPickerActionRow[]
+  enterActionView: () => boolean
+  exitActionView: () => void
+  commitAction: (actionId: TabPickerActionId) => void | Promise<void>
+  canEnterActionView: boolean
 }) {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
   newTabUrlWindowIdRef.current = newTabUrlWindowId
   newTabUrlRef.current = newTabUrl
-
-  const clearCommandMode = useCallback(() => {
-    setCommandMode(false)
-    setCommandBuffer("")
-    setCommandListingHint(false)
-  }, [setCommandBuffer, setCommandListingHint, setCommandMode])
 
   const extensions = useTabPickerPlainExtensions({
     rows,
@@ -204,10 +197,6 @@ export function useTabPickerKeyboard({
     closeSearch,
     commitSearchFoldSession,
     onReturnToPrompt,
-    commandMode,
-    commandBuffer,
-    clearCommandMode,
-    setCommandListingHint,
     hlSearchPattern,
     editPanel,
     openEditFromPicker,
@@ -217,23 +206,34 @@ export function useTabPickerKeyboard({
     confirmGroupMenuPick,
     cycleGroupMenuPick,
     backFromGroupRename,
-    collapseAtRow,
-    expandAtRow,
     altKeyHeldRef,
-    onExitToDetailBar
+    onExitToDetailBar,
+    pickerView,
+    actionHi,
+    setActionHi,
+    actionRows,
+    enterActionView,
+    exitActionView,
+    commitAction,
+    canEnterActionView
   })
 
+  const keyboardLineCount =
+    pickerView === "actions" ? actionRows.length : visibleRowIndices.length
+  const keyboardHi = pickerView === "actions" ? actionHi : hi
+  const keyboardSetHi = pickerView === "actions" ? setActionHi : setHi
+
   const { onInputKeyDown } = usePlainPickerKeyboard({
-    lineCount: visibleRowIndices.length,
+    lineCount: keyboardLineCount,
     keyboardActive: isHostPaneFocused,
     sessionId,
-    enableCommandMode: true,
+    enableCommandMode: false,
     onReturnToPrompt,
     onConfirmLineIndex: () => {
       void confirmSelection()
     },
-    hi,
-    setHi,
+    hi: keyboardHi,
+    setHi: keyboardSetHi,
     searchMode,
     setSearchMode,
     filterQuery,
@@ -241,11 +241,11 @@ export function useTabPickerKeyboard({
     hlSearchPattern,
     setHlSearchPattern,
     onSearchCommit: commitSearchFoldSession,
-    commandMode,
-    setCommandMode,
-    commandBuffer,
-    setCommandBuffer,
-    setCommandListingHint,
+    commandMode: false,
+    setCommandMode: () => undefined,
+    commandBuffer: "",
+    setCommandBuffer: () => undefined,
+    setCommandListingHint: () => undefined,
     extensions
   })
 

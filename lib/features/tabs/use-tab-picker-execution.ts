@@ -21,6 +21,8 @@ import {
   executeMoveAction,
   executeNewWindowAction
 } from "./controller/execute-actions"
+import { computeSelectedTabIds } from "./use-tab-picker-derived-state"
+import type { PickerReducerState } from "./state-machine"
 import { executeCreateNewGroupAction } from "./controller/create-new-group"
 import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
@@ -56,6 +58,7 @@ export type TabPickerExecutionParams = {
   onRefreshRows?: () => Promise<void>
   setSearchMode: (v: boolean) => void
   setFilterQuery: (v: string) => void
+  setBulkSubMode: (v: BulkSubMode | null) => void
   onNewTabUrlPanelDone?: () => void
   /** URL からタブ作成後、ピッカーでそのタブ行をハイライトする（refresh 前に呼ぶ） */
   onPickerHighlightCreatedTab?: (tabId: number) => void
@@ -89,6 +92,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
+    setBulkSubMode,
     onNewTabUrlPanelDone,
     onPickerHighlightCreatedTab
   } = p
@@ -466,6 +470,31 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     ]
   )
 
+  const executeCloseForReducerState = useCallback(
+    async (state: PickerReducerState) => {
+      const tabIds = computeSelectedTabIds(
+        rows,
+        state.markedKind,
+        state.markedTabIds,
+        state.markedWindowIds,
+        state.markedGroupKeys
+      )
+      try {
+        await executeCloseAction({
+          markedKind: state.markedKind,
+          markedWindowIds: state.markedWindowIds,
+          selectedTabIds: tabIds
+        })
+      } catch {
+        /* ignore */
+      }
+      clearMarkedViaReducer()
+      setBulkSubMode(null)
+      await onRefreshRows?.()
+    },
+    [clearMarkedViaReducer, onRefreshRows, rows, setBulkSubMode]
+  )
+
   return {
     closeSearch,
     confirmSelection,
@@ -475,6 +504,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     executeBulkNewWindow,
     executeCreateNewGroup,
     executeOpenNewTabFromUrl,
+    executeCloseForReducerState,
     runExecutionIntent
   }
 }

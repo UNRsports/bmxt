@@ -3,6 +3,43 @@ import type { TabPickerRow } from "./picker-rows"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { SelectKind } from "./tab-picker-overlay-types"
 
+export function computeSelectedTabIds(
+  rows: TabPickerRow[],
+  markedKind: SelectKind | null,
+  markedTabIds: number[],
+  markedWindowIds: number[],
+  markedGroupKeys: string[]
+): number[] {
+  if (markedKind === "tab") {
+    return markedTabIds
+  }
+  if (markedKind === "window") {
+    const markedWindowSet = new Set(markedWindowIds)
+    const out: number[] = []
+    for (const r of rows) {
+      if (r.kind === "tab" && markedWindowSet.has(r.windowId)) {
+        out.push(r.tabId)
+      }
+    }
+    return out.sort((a, b) => a - b)
+  }
+  if (markedKind === "group") {
+    const markedGroupSet = new Set(markedGroupKeys)
+    const out: number[] = []
+    for (const r of rows) {
+      if (r.kind !== "tab") {
+        continue
+      }
+      const k = groupRowKey(r.windowId, r.groupId)
+      if (markedGroupSet.has(k)) {
+        out.push(r.tabId)
+      }
+    }
+    return out.sort((a, b) => a - b)
+  }
+  return []
+}
+
 export function useTabPickerDerivedState(
   rows: TabPickerRow[],
   visibleRowIndices: number[],
@@ -32,32 +69,7 @@ export function useTabPickerDerivedState(
   }, [rows])
 
   const selectedTabIds = useMemo(() => {
-    if (markedKind === "tab") {
-      return markedTabIds
-    }
-    if (markedKind === "window") {
-      const out: number[] = []
-      for (const r of rows) {
-        if (r.kind === "tab" && markedWindowSet.has(r.windowId)) {
-          out.push(r.tabId)
-        }
-      }
-      return out.sort((a, b) => a - b)
-    }
-    if (markedKind === "group") {
-      const out: number[] = []
-      for (const r of rows) {
-        if (r.kind !== "tab") {
-          continue
-        }
-        const k = groupRowKey(r.windowId, r.groupId)
-        if (markedGroupSet.has(k)) {
-          out.push(r.tabId)
-        }
-      }
-      return out.sort((a, b) => a - b)
-    }
-    return []
+    return computeSelectedTabIds(rows, markedKind, markedTabIds, markedWindowIds, markedGroupKeys)
   }, [markedGroupSet, markedKind, markedTabIds, markedWindowSet, rows])
 
   return {

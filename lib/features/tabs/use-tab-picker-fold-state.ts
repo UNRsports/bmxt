@@ -25,6 +25,7 @@ export function useTabPickerFoldState(
   visibleRowIndices: number[]
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
+  toggleFoldAtRow: (row: TabPickerRow) => number | null
   expandForTabId: (tabId: number) => boolean
   isWindowExpanded: (windowId: number) => boolean
   isGroupExpanded: (windowId: number, groupId: number | null) => boolean
@@ -171,10 +172,30 @@ export function useTabPickerFoldState(
     [revision, rows, searchVisibleRowIndexSet]
   )
 
+  const toggleFoldAtRow = useCallback(
+    (row: TabPickerRow): number | null => {
+      if (row.kind === "window") {
+        if (isWindowExpanded(row.windowId)) {
+          return collapseAtRow(row)
+        }
+        return expandAtRow(row)
+      }
+      if (row.kind === "group") {
+        if (isGroupExpanded(row.windowId, row.groupId)) {
+          return collapseAtRow(row)
+        }
+        return expandAtRow(row)
+      }
+      return null
+    },
+    [collapseAtRow, expandAtRow, isGroupExpanded, isWindowExpanded]
+  )
+
   return {
     visibleRowIndices,
     collapseAtRow,
     expandAtRow,
+    toggleFoldAtRow,
     expandForTabId,
     isWindowExpanded,
     isGroupExpanded,

@@ -108,6 +108,27 @@ export async function executeGroupAction(params: {
   await chrome.tabs.group({ groupId: params.target.groupId, tabIds: params.selectedTabIds })
 }
 
+export async function executeReloadTabsAction(tabIds: number[]): Promise<void> {
+  if (tabIds.length === 0) {
+    return
+  }
+  await Promise.all(tabIds.map((tabId) => chrome.tabs.reload(tabId)))
+}
+
+export async function executeDuplicateTabsAction(tabIds: number[]): Promise<number[]> {
+  if (tabIds.length === 0) {
+    return []
+  }
+  const created: number[] = []
+  for (const tabId of tabIds) {
+    const dup = await chrome.tabs.duplicate(tabId)
+    if (dup.id !== undefined) {
+      created.push(dup.id)
+    }
+  }
+  return created
+}
+
 export async function executeNewWindowAction(params: {
   selectedTabIds: number[]
   order: NewWindowOrder

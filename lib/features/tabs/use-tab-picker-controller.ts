@@ -11,20 +11,17 @@ import { resolvePickerHeadline, type PickerReducerEvent } from "./state-machine"
 import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
 import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
+import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import { useSyncChromeTabStripPreview } from "./use-sync-chrome-tab-strip-preview"
 import { pickerMarkedCount, useTabPickerDerivedState } from "./use-tab-picker-derived-state"
+import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import { useTabPickerFoldState } from "./use-tab-picker-fold-state"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
-import {
-  TAB_PICKER_COMMANDS_FOR_GROUP,
-  TAB_PICKER_COMMANDS_FOR_TAB,
-  TAB_PICKER_COMMANDS_FOR_WINDOW,
-  filterTabPickerCommandCompletions
-} from "./tab-picker-overlay-constants"
-import type { BulkSubMode, SelectKind } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
+import { useTabPickerActionView } from "./use-tab-picker-action-view"
+import type { BulkSubMode } from "./tab-picker-overlay-types"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
 import { useUiCopy } from "../setting"
@@ -224,17 +221,11 @@ export function useTabPickerController({
     anchorTabIdRef.current = state.anchorTabId
   }, [state.anchorTabId])
 
-  usePickerAltKeyTracking({
-    enabled: true,
-    altKeyHeldRef,
-    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
-    setAltPreviewTick
-  })
-
   const {
     visibleRowIndices,
     collapseAtRow,
     expandAtRow,
+    toggleFoldAtRow,
     expandForTabId,
     isWindowExpanded,
     isGroupExpanded,
@@ -341,31 +332,6 @@ export function useTabPickerController({
     markedGroupKeys
   )
 
-  const mirrorBlocked =
-    markedCount > 0 ||
-    bulkSubMode !== null ||
-    groupNewPhase !== "tabs" ||
-    newTabUrlWindowId !== null ||
-    commandMode
-
-  useMirrorBrowserActiveTab({
-    enabled: variant === "default",
-    blocked: mirrorBlocked,
-    rows,
-    visibleRowIndices,
-    setHi,
-    setMoveDestHi,
-    setActiveTabId,
-    setFilterQuery,
-    setSearchMode,
-    anchorTabIdRef,
-    expandForTabId,
-    mirrorHiPendingRef,
-    onRefreshRows,
-    scheduleRefreshRows,
-    altKeyHeldRef
-  })
-
   useSyncChromeTabStripPreview({
     hi,
     visibleRowIndices,
@@ -440,6 +406,7 @@ export function useTabPickerController({
     confirmSelection,
     executeCreateNewGroup,
     executeOpenNewTabFromUrl,
+    executeCloseForReducerState,
     runExecutionIntent
   } = useTabPickerExecution({
     rows,
@@ -467,12 +434,127 @@ export function useTabPickerController({
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
+    setBulkSubMode,
     onNewTabUrlPanelDone: () => {
       setNewTabUrlWindowId(null)
       setNewTabUrl("")
       setBulkSubMode(null)
     },
     onPickerHighlightCreatedTab
+  })
+
+  const {
+    pickerView,
+    actionHi,
+    setActionHi,
+    actionRows,
+    enterActionView,
+    exitActionView,
+    commitAction,
+    canEnterActionView
+  } = useTabPickerActionView({
+    rows,
+    visibleRowIndices,
+    hi,
+    moveDestHi,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys,
+    markedCount,
+    selectedTabIds,
+    hlSearchPattern,
+    bulkSubMode,
+    searchMode,
+    groupNewPhase,
+    newTabUrlWindowId,
+    editPanel,
+    applyReducedState,
+    setBulkSubMode,
+    setHlSearchPattern,
+    closeSearch,
+    openEditFromPicker,
+    executeCloseForReducerState,
+    onRefreshRows
+  })
+
+  const onAltToggleFold = useCallback(
+    (e: KeyboardEvent) => {
+      if (
+        pickerView === "actions" ||
+        searchMode ||
+        bulkSubMode !== null ||
+        groupNewPhase !== "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel !== null ||
+        visibleRowIndices.length === 0
+      ) {
+        return
+      }
+      const rowIndex = visibleRowIndices[hi]
+      const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+      if (!row || (row.kind !== "window" && row.kind !== "group")) {
+        return
+      }
+      pickerStopEvent(e)
+      const focusRowIdx = toggleFoldAtRow(row)
+      if (focusRowIdx === null) {
+        return
+      }
+      const newVisible = computeTabPickerVisibleRowIndices(rows)
+      const newHi = newVisible.indexOf(focusRowIdx)
+      if (newHi >= 0) {
+        setHi(newHi)
+      } else {
+        setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
+      }
+    },
+    [
+      bulkSubMode,
+      editPanel,
+      groupNewPhase,
+      hi,
+      newTabUrlWindowId,
+      pickerView,
+      rows,
+      searchMode,
+      setHi,
+      toggleFoldAtRow,
+      visibleRowIndices
+    ]
+  )
+
+  usePickerAltKeyTracking({
+    enabled: true,
+    altKeyHeldRef,
+    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
+    setAltPreviewTick,
+    onAltKeyDown: onAltToggleFold
+  })
+
+  const mirrorBlocked =
+    markedCount > 0 ||
+    bulkSubMode !== null ||
+    groupNewPhase !== "tabs" ||
+    newTabUrlWindowId !== null ||
+    pickerView === "actions"
+
+  useMirrorBrowserActiveTab({
+    enabled: variant === "default",
+    blocked: mirrorBlocked,
+    rows,
+    visibleRowIndices,
+    setHi,
+    setMoveDestHi,
+    setActiveTabId,
+    setFilterQuery,
+    setSearchMode,
+    anchorTabIdRef,
+    expandForTabId,
+    mirrorHiPendingRef,
+    onRefreshRows,
+    scheduleRefreshRows,
+    altKeyHeldRef
   })
 
   const { onMetaTitleKeyDown, onMetaColorKeyDown, onInputKeyDown } = useTabPickerKeyboard({
@@ -521,11 +603,6 @@ export function useTabPickerController({
     closeSearch,
     commitSearchFoldSession,
     onReturnToPrompt,
-    commandMode,
-    commandBuffer,
-    setCommandMode,
-    setCommandBuffer,
-    setCommandListingHint,
     isHostPaneFocused,
     sessionId,
     editPanel,
@@ -536,69 +613,36 @@ export function useTabPickerController({
     confirmGroupMenuPick,
     cycleGroupMenuPick,
     backFromGroupRename,
-    collapseAtRow,
-    expandAtRow,
     altKeyHeldRef,
-    onExitToDetailBar
+    onExitToDetailBar,
+    pickerView,
+    actionHi,
+    setActionHi,
+    actionRows,
+    enterActionView,
+    exitActionView,
+    commitAction,
+    canEnterActionView
   })
 
-  const headLine = useMemo(
-    () =>
-      resolvePickerHeadline(
-        {
-          bulkSubMode,
-          groupNewPhase,
-          variant,
-          editPanelKind: editPanel?.kind ?? null
-        },
-        uiCopy.locale
-      ),
-    [bulkSubMode, editPanel?.kind, groupNewPhase, uiCopy.locale, variant]
-  )
+  const headLine = useMemo(() => {
+    if (pickerView === "actions") {
+      return uiCopy.t("tabs.picker.headline.actions", {
+        common: uiCopy.t("tabs.picker.headline.common")
+      })
+    }
+    return resolvePickerHeadline(
+      {
+        bulkSubMode,
+        groupNewPhase,
+        variant,
+        editPanelKind: editPanel?.kind ?? null
+      },
+      uiCopy.locale
+    )
+  }, [bulkSubMode, editPanel?.kind, groupNewPhase, pickerView, uiCopy, variant])
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
-
-  const commandListingHintText = useMemo(() => {
-    const targetKind: SelectKind | null = (() => {
-      if (markedKind) {
-        return markedKind
-      }
-      const rowIndex = visibleRowIndices[hi]
-      const row = rowIndex === undefined ? undefined : rows[rowIndex]
-      if (!row) {
-        return null
-      }
-      if (row.kind === "tab") {
-        return "tab"
-      }
-      if (row.kind === "window") {
-        return "window"
-      }
-      return "group"
-    })()
-
-    const commands =
-      targetKind === "tab"
-        ? TAB_PICKER_COMMANDS_FOR_TAB
-        : targetKind === "window"
-          ? TAB_PICKER_COMMANDS_FOR_WINDOW
-          : targetKind === "group"
-            ? TAB_PICKER_COMMANDS_FOR_GROUP
-            : TAB_PICKER_COMMANDS_FOR_TAB
-    return commands.join(" · ")
-  }, [hi, markedKind, rows, visibleRowIndices])
-
-  const commandAmbiguousPlaceholder = useMemo(() => {
-    if (!commandMode || commandBuffer.trim() === "") {
-      return null
-    }
-    const matches = filterTabPickerCommandCompletions(commandBuffer)
-    const uniq = [...new Set(matches)]
-    if (uniq.length < 2) {
-      return null
-    }
-    return uiCopy.t("picker.commandAmbiguous.tabCycle", { commands: uniq.join(" · ") })
-  }, [commandBuffer, commandMode, uiCopy])
 
   const setRowRef = useCallback((rowIndex: number, el: HTMLDivElement | null) => {
     if (el) {
@@ -626,8 +670,9 @@ export function useTabPickerController({
   return {
     headLine,
     searchHighlightQuery,
-    commandListingHintText,
-    commandAmbiguousPlaceholder,
+    pickerView,
+    actionHi,
+    actionRows,
     setInputEl,
     onInputKeyDown,
     onMetaTitleKeyDown,
@@ -667,11 +712,6 @@ export function useTabPickerController({
     searchMode,
     filterQuery,
     setFilterQuery,
-    commandMode,
-    commandBuffer,
-    setCommandBuffer,
-    setCommandListingHint,
-    commandListingHint,
     isHostPaneFocused,
     inputRef
   }

@@ -1,12 +1,15 @@
 import type { Dispatch, RefObject, SetStateAction } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { BulkSubMode, EditPanel, GroupChoice } from "./tab-picker-overlay-types"
+import type { TabPickerListView } from "./tab-picker-actions"
+import type { TabPickerActionRow } from "./use-tab-picker-action-view"
 
 export type TabPickerViewProps = {
   headLine: string
   searchHighlightQuery: string
-  commandListingHintText: string
-  commandAmbiguousPlaceholder: string | null
+  pickerView: TabPickerListView
+  actionHi: number
+  actionRows: TabPickerActionRow[]
   setInputEl: (el: HTMLTextAreaElement | null) => void
   onInputKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
   onMetaTitleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
@@ -46,11 +49,6 @@ export type TabPickerViewProps = {
   searchMode: boolean
   filterQuery: string
   setFilterQuery: Dispatch<SetStateAction<string>>
-  commandMode: boolean
-  commandBuffer: string
-  setCommandBuffer: Dispatch<SetStateAction<string>>
-  setCommandListingHint: Dispatch<SetStateAction<boolean>>
-  commandListingHint: boolean
   isHostPaneFocused: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
 }

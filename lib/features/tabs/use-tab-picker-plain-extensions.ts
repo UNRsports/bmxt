@@ -14,45 +14,19 @@ import {
 } from "./tab-picker-keyboard"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
-import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import type { ExecutionIntent } from "./controller/execute-actions"
 import {
   resolvePickerEnterIntent,
   resolvePickerPreview,
   type PickerReducerEvent
 } from "./state-machine"
-import { filterTabPickerCommandCompletions } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
+import type { TabPickerActionId, TabPickerListView } from "./tab-picker-actions"
+import type { TabPickerActionRow } from "./use-tab-picker-action-view"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
-
-function parsePickerCommand(cmd: string): BulkSubMode | null {
-  switch (cmd.trim().toLowerCase()) {
-    case "move":
-    case "m":
-      return "move"
-    case "close":
-    case "c":
-      return "close"
-    case "group":
-    case "g":
-      return "group"
-    case "newwindow":
-    case "nw":
-    case "new-window":
-      return "newWindow"
-    case "newtab":
-    case "nt":
-    case "new-tab":
-      return "newTab"
-    case "edit":
-      return "edit"
-    default:
-      return null
-  }
-}
 
 export function useTabPickerPlainExtensions({
   rows,
@@ -97,10 +71,6 @@ export function useTabPickerPlainExtensions({
     closeSearch,
     commitSearchFoldSession,
     onReturnToPrompt,
-    commandMode,
-    commandBuffer,
-    clearCommandMode,
-    setCommandListingHint,
     hlSearchPattern,
   editPanel,
   openEditFromPicker,
@@ -110,10 +80,16 @@ export function useTabPickerPlainExtensions({
   confirmGroupMenuPick,
   cycleGroupMenuPick,
   backFromGroupRename,
-  collapseAtRow,
-  expandAtRow,
   altKeyHeldRef,
-  onExitToDetailBar
+  onExitToDetailBar,
+  pickerView,
+  actionHi,
+  setActionHi,
+  actionRows,
+  enterActionView,
+  exitActionView,
+  commitAction,
+  canEnterActionView
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -157,10 +133,6 @@ export function useTabPickerPlainExtensions({
   closeSearch: () => void
   commitSearchFoldSession: (query: string) => void
   onReturnToPrompt: () => void
-  commandMode: boolean
-  commandBuffer: string
-  clearCommandMode: () => void
-  setCommandListingHint: Dispatch<SetStateAction<boolean>>
   hlSearchPattern: string
   editPanel: EditPanel | null
   openEditFromPicker: () => void | Promise<void>
@@ -170,10 +142,16 @@ export function useTabPickerPlainExtensions({
   confirmGroupMenuPick: () => void | Promise<void>
   cycleGroupMenuPick: (delta: number) => void
   backFromGroupRename: () => void
-  collapseAtRow: (row: TabPickerRow) => number | null
-  expandAtRow: (row: TabPickerRow) => number | null
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
+  pickerView: TabPickerListView
+  actionHi: number
+  setActionHi: Dispatch<SetStateAction<number>>
+  actionRows: TabPickerActionRow[]
+  enterActionView: () => boolean
+  exitActionView: () => void
+  commitAction: (actionId: TabPickerActionId) => void | Promise<void>
+  canEnterActionView: boolean
 }): PlainPickerKeyboardExtensions {
   useTabPickerLiveFieldsRevision()
 
@@ -184,26 +162,36 @@ export function useTabPickerPlainExtensions({
 
   const onCaptureBefore = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
-        return false
-      }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing) {
-        return false
-      }
-      if (
-        searchMode ||
-        commandMode ||
-        bulkSubMode !== null ||
-        groupNewPhase === "meta" ||
-        newTabUrlWindowId !== null ||
-        editPanel !== null
-      ) {
         return false
       }
       const isLeft = e.key === "ArrowLeft" || e.code === "ArrowLeft"
       const isRight = e.key === "ArrowRight" || e.code === "ArrowRight"
       if (!isLeft && !isRight) {
+        return false
+      }
+
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+        return false
+      }
+
+      if (pickerView === "actions") {
+        if (isLeft) {
+          pickerStopEvent(e)
+          exitActionView()
+          return true
+        }
+        return false
+      }
+
+      if (
+        searchMode ||
+        bulkSubMode !== null ||
+        groupNewPhase === "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel !== null
+      ) {
         return false
       }
       if (visibleRowIndices.length === 0) {
@@ -215,53 +203,15 @@ export function useTabPickerPlainExtensions({
         return false
       }
 
-      if (row.kind === "tab") {
-        if ((isLeft || isRight) && onExitToDetailBar) {
-          pickerStopEvent(e)
-          onExitToDetailBar()
-          return true
-        }
-        return false
-      }
-
-      if (row.kind !== "window" && row.kind !== "group") {
-        return false
-      }
-
-      if (isLeft) {
-        const focusRowIdx = collapseAtRow(row)
-        if (focusRowIdx === null) {
-          if (onExitToDetailBar) {
-            pickerStopEvent(e)
-            onExitToDetailBar()
-            return true
-          }
-          return false
-        }
+      if (isRight && canEnterActionView) {
         pickerStopEvent(e)
-        const newVisible = computeTabPickerVisibleRowIndices(rows)
-        const newHi = newVisible.indexOf(focusRowIdx)
-        if (newHi >= 0) {
-          setHi(newHi)
-        } else {
-          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
-        }
+        enterActionView()
         return true
       }
 
-      if (isRight) {
-        const focusRowIdx = expandAtRow(row)
-        if (focusRowIdx === null) {
-          return false
-        }
+      if (isLeft && onExitToDetailBar) {
         pickerStopEvent(e)
-        const newVisible = computeTabPickerVisibleRowIndices(rows)
-        const newHi = newVisible.indexOf(focusRowIdx)
-        if (newHi >= 0) {
-          setHi(newHi)
-        } else {
-          setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
-        }
+        onExitToDetailBar()
         return true
       }
 
@@ -269,65 +219,37 @@ export function useTabPickerPlainExtensions({
     },
     [
       bulkSubMode,
-      collapseAtRow,
-      commandMode,
+      canEnterActionView,
       editPanel,
-      expandAtRow,
+      enterActionView,
+      exitActionView,
       groupNewPhase,
       hi,
       newTabUrlWindowId,
       onExitToDetailBar,
+      pickerView,
       rows,
       searchMode,
-      setHi,
-      visibleRowIndices
-    ]
-  )
-
-  const commitTabPickerCommand = useCallback(
-    (buffer: string) => {
-      const mode = parsePickerCommand(buffer)
-      clearCommandMode()
-      if (mode === "edit") {
-        void openEditFromPicker()
-        return true
-      }
-      if (mode !== null) {
-        const rowIndex = visibleRowIndices[hi]
-        const row = rowIndex !== undefined ? rows[rowIndex] : undefined
-        if (row && markedCount === 0) {
-          if (row.kind === "tab") {
-            applyReducedState({ kind: "toggleCurrent", row: { kind: "tab", tabId: row.tabId } })
-          } else if (row.kind === "window") {
-            applyReducedState({
-              kind: "toggleCurrent",
-              row: { kind: "window", windowId: row.windowId }
-            })
-          } else if (row.kind === "group" && row.groupId !== null) {
-            applyReducedState({
-              kind: "toggleCurrent",
-              row: { kind: "group", groupKey: groupRowKey(row.windowId, row.groupId) }
-            })
-          }
-        }
-        setBulkSubMode(mode)
-      }
-      return true
-    },
-    [
-      applyReducedState,
-      clearCommandMode,
-      hi,
-      markedCount,
-      openEditFromPicker,
-      rows,
-      setBulkSubMode,
       visibleRowIndices
     ]
   )
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
+      if (pickerView === "actions") {
+        const navDir = verticalNavDirection(e)
+        if (navDir === null || actionRows.length === 0) {
+          return false
+        }
+        pickerStopEvent(e)
+        setActionHi((current) =>
+          navDir === "down"
+            ? Math.min(current + 1, actionRows.length - 1)
+            : Math.max(current - 1, 0)
+        )
+        return true
+      }
+
       if (isPickerAltBlockedChord(e)) {
         return false
       }
@@ -488,6 +410,7 @@ export function useTabPickerPlainExtensions({
       return true
     },
     [
+      actionRows.length,
       applyReducedState,
       applyReducedStateSequence,
       bulkSubMode,
@@ -499,7 +422,9 @@ export function useTabPickerPlainExtensions({
       groupNewPhase,
       hi,
       newTabUrlWindowId,
+      pickerView,
       rows,
+      setActionHi,
       setGroupPickIndex,
       shiftRangeAnchorHiRef,
       visibleRowIndices,
@@ -512,6 +437,16 @@ export function useTabPickerPlainExtensions({
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
         return false
+      }
+
+      if (pickerView === "actions") {
+        const action = actionRows[actionHi]
+        if (!action) {
+          return false
+        }
+        pickerStopEvent(e)
+        void commitAction(action.id)
+        return true
       }
 
       if (newTabUrlWindowIdRef.current !== null) {
@@ -603,7 +538,10 @@ export function useTabPickerPlainExtensions({
       return false
     },
     [
+      actionHi,
+      actionRows,
       bulkSubMode,
+      commitAction,
       confirmSelection,
       confirmGroupMenuPick,
       confirmGroupRename,
@@ -620,6 +558,7 @@ export function useTabPickerPlainExtensions({
       markedWindowIds,
       moveDestHi,
       newGroupTabIdsRef,
+      pickerView,
       runExecutionIntent,
       rows,
       selectedTabIds,
@@ -667,6 +606,11 @@ export function useTabPickerPlainExtensions({
         requestAnimationFrame(() => inputRef.current?.focus())
         return true
       }
+      if (pickerView === "actions") {
+        stop()
+        exitActionView()
+        return true
+      }
       if (markedCount > 0) {
         stop()
         applyReducedState({ kind: "clearMarked" })
@@ -692,10 +636,12 @@ export function useTabPickerPlainExtensions({
       closeEdit,
       closeSearch,
       editPanel,
+      exitActionView,
       groupNewPhase,
       inputRef,
       markedCount,
       newTabUrlWindowId,
+      pickerView,
       searchMode,
       setBulkSubMode,
       setGroupNewPhase,
@@ -714,10 +660,8 @@ export function useTabPickerPlainExtensions({
       }
 
       if (e.key === "Tab") {
-        if (commandMode) {
-          return false
-        }
         if (
+          pickerView === "actions" ||
           groupNewPhase === "meta" ||
           newTabUrlWindowId !== null ||
           editPanel !== null
@@ -771,13 +715,13 @@ export function useTabPickerPlainExtensions({
     },
     [
       applyReducedState,
-      commandMode,
       editPanel,
       executeCreateNewGroup,
       groupNewPhase,
       hi,
       markedTabIds,
       newTabUrlWindowId,
+      pickerView,
       rows,
       shiftRangeAnchorHiRef,
       variant,
@@ -790,8 +734,8 @@ export function useTabPickerPlainExtensions({
       onCaptureBefore,
       customVerticalNav,
       isSearchJumpEnabled: () =>
+        pickerView === "list" &&
         !searchMode &&
-        !commandMode &&
         groupNewPhase !== "meta" &&
         newTabUrlWindowId === null &&
         editPanel === null &&
@@ -800,21 +744,22 @@ export function useTabPickerPlainExtensions({
         hlSearchPattern !== "",
       matchIndices: () =>
         tabPickerVisibleHiIndicesMatching(rows, visibleRowIndices, hlSearchPattern),
-      filterCommandCompletions: filterTabPickerCommandCompletions,
-      onCommandEmptyEnter: () => setCommandListingHint(true),
-      onCommandEnter: commitTabPickerCommand,
       onNormalEnter,
       onEsc,
       onInputAfterPlain,
       blockOpenChords: () =>
-        groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null,
+        pickerView === "actions" ||
+        groupNewPhase === "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel !== null,
       blockPlainTyping: () =>
-        groupNewPhase === "meta" || newTabUrlWindowId !== null || editPanel !== null
+        pickerView === "actions" ||
+        groupNewPhase === "meta" ||
+        newTabUrlWindowId !== null ||
+        editPanel !== null
     }),
     [
       bulkSubMode,
-      commandMode,
-      commitTabPickerCommand,
       customVerticalNav,
       editPanel,
       groupNewPhase,
@@ -824,9 +769,9 @@ export function useTabPickerPlainExtensions({
       onEsc,
       onInputAfterPlain,
       onNormalEnter,
+      pickerView,
       rows,
       searchMode,
-      setCommandListingHint,
       visibleRowIndices
     ]
   )

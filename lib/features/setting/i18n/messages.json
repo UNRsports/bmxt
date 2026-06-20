@@ -1036,8 +1036,64 @@
     "en": "{star}[Window] {title}"
   },
   "tabs.picker.headline.common": {
-    "ja": "↑↓ 移動 · Shift+↑↓ 範囲 # · Tab # · : コマンド（move/close/group/nw/nt/edit · Tab 補完） · / ハイライト · Enter 確定 · :nohlsearch 解除 · Ctrl+Shift+↑↓ アクティブプレビュー · Enter 確定 · Esc # 解除 · prompt",
-    "en": "↑↓ move · Shift+↑↓ range # · Tab # · : commands (move/close/group/nw/nt/edit · Tab complete) · / highlight · Enter commit · :nohlsearch clears · Ctrl+Shift+↑↓ active preview · Enter confirm · Esc clear # · prompt"
+    "ja": "↑↓ 移動 · Shift+↑↓ 範囲 # · Tab # · → 操作一覧 · Alt ウィンドウ/グループ開閉 · / ハイライト · Enter 確定 · Ctrl+Shift+↑↓ アクティブプレビュー · Esc # 解除 · prompt",
+    "en": "↑↓ move · Shift+↑↓ range # · Tab # · → actions · Alt window/group fold · / highlight · Enter confirm · Ctrl+Shift+↑↓ active preview · Esc clear # · prompt"
+  },
+  "tabs.picker.headline.actions": {
+    "ja": "Tab picker — [操作] ↑↓ 選択 · Enter 実行 · ← 一覧へ · {common}",
+    "en": "Tab picker — [ACTIONS] ↑↓ pick · Enter run · ← back · {common}"
+  },
+  "tabs.picker.breadcrumb.list": {
+    "ja": "一覧",
+    "en": "List"
+  },
+  "tabs.picker.breadcrumb.actions": {
+    "ja": "操作",
+    "en": "Actions"
+  },
+  "tabs.picker.action.move": {
+    "ja": "移動",
+    "en": "Move"
+  },
+  "tabs.picker.action.close": {
+    "ja": "閉じる",
+    "en": "Close"
+  },
+  "tabs.picker.action.group": {
+    "ja": "グループ化",
+    "en": "Group"
+  },
+  "tabs.picker.action.newWindow": {
+    "ja": "新しいウィンドウ",
+    "en": "New window"
+  },
+  "tabs.picker.action.newTab": {
+    "ja": "新しいタブ",
+    "en": "New tab"
+  },
+  "tabs.picker.action.edit": {
+    "ja": "編集",
+    "en": "Edit"
+  },
+  "tabs.picker.action.reload": {
+    "ja": "再読み込み",
+    "en": "Reload"
+  },
+  "tabs.picker.action.duplicate": {
+    "ja": "複製",
+    "en": "Duplicate"
+  },
+  "tabs.picker.action.expand": {
+    "ja": "展開",
+    "en": "Expand"
+  },
+  "tabs.picker.action.collapse": {
+    "ja": "折りたたむ",
+    "en": "Collapse"
+  },
+  "tabs.picker.action.nohlsearch": {
+    "ja": "ハイライト解除",
+    "en": "Clear highlight"
   },
   "tabs.picker.headline.default": {
     "ja": "Tab picker — {common}",
