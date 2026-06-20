@@ -11,6 +11,6 @@ export {
   resetSearchCacheFromSettings
 } from "./search-cache-store"
 
-export { registerSearchCacheBackgroundListeners, warmSearchCachesOnStartup } from "./background-listeners"
+export { registerSearchCacheBackgroundListeners, scheduleSearchCacheMaintenanceStartup, warmSearchCachesOnStartup } from "./background-listeners"
 
 export type { BookmarkCacheEntry, HistoryCacheEntry, PageTabCacheEntry } from "./types"

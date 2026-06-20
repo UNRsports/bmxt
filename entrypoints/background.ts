@@ -28,14 +28,12 @@ import { buildHelpLines } from "../lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../lib/features/setting/i18n/run-locale"
 import { t } from "../lib/features/setting/i18n/messages"
-import { BACKGROUND_JOB_SCOPE } from "../lib/features/job/job-types.ts"
-import { getJobRunner } from "../lib/features/job/job-runner.ts"
 import { runNavControlOnTab } from "../lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "../lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "../lib/features/welcome"
 import {
   registerSearchCacheBackgroundListeners,
-  warmSearchCachesOnStartup
+  scheduleSearchCacheMaintenanceStartup
 } from "../lib/features/search/cache/background-listeners"
 
 /** WXT bundle path for the BMXt UI page. */
@@ -196,17 +194,17 @@ chrome.runtime.onInstalled.addListener((details) => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
   void openWelcomePageOnUpdateIfNeeded(details)
-  warmSearchCachesOnStartup()
+  scheduleSearchCacheMaintenanceStartup()
 })
 
 chrome.runtime.onStartup.addListener(() => {
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
-  warmSearchCachesOnStartup()
+  scheduleSearchCacheMaintenanceStartup()
 })
 
 registerSearchCacheBackgroundListeners()
-warmSearchCachesOnStartup()
+scheduleSearchCacheMaintenanceStartup()
 
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
@@ -272,14 +270,7 @@ async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
   if (!trimmed) {
     return
   }
-  const runner = getJobRunner(BACKGROUND_JOB_SCOPE)
-  await runner.start(
-    "run-cmd",
-    async () => {
-      await runCommandBody(trimmed, sessionIdRaw)
-    },
-    { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
-  )
+  await runCommandBody(trimmed, sessionIdRaw)
 }
 
 async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void> {

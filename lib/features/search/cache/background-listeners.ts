@@ -1,36 +1,55 @@
+import type { HistoryCacheEntry } from "./types"
 import {
-  rebuildBookmarkSearchCache,
-  removePageCacheTab,
-  upsertHistoryCacheOnVisit,
-  warmSearchBookmarkCache,
-  warmSearchHistoryCache
-} from "./search-cache-store"
+  flushPendingHistoryCacheWrites,
+  flushPendingPageCacheRemovals,
+  queueHistoryCacheVisit,
+  scheduleBookmarkCacheRebuild,
+  scheduleDeferredSearchCacheWarm,
+  scheduleHistoryCacheFlush,
+  schedulePageCacheFlush,
+  queuePageCacheTabRemoval
+} from "./maintainer/search-cache-maintainer"
 
 let listenersRegistered = false
 
+function historyEntryFromItem(it: chrome.history.HistoryItem): HistoryCacheEntry | null {
+  const url = it.url ?? ""
+  if (!url) {
+    return null
+  }
+  return {
+    url,
+    title: it.title ?? "",
+    lastVisitTime: it.lastVisitTime ?? 0
+  }
+}
+
 function onHistoryVisited(item: chrome.history.HistoryItem): void {
-  void upsertHistoryCacheOnVisit(item)
+  const row = historyEntryFromItem(item)
+  if (!row) {
+    return
+  }
+  queueHistoryCacheVisit(row)
+  scheduleHistoryCacheFlush()
 }
 
 function onBookmarkTreeChanged(): void {
-  void rebuildBookmarkSearchCache()
+  scheduleBookmarkCacheRebuild()
 }
 
-async function onTabUpdated(
-  tabId: number,
-  changeInfo: chrome.tabs.TabChangeInfo,
-  tab: chrome.tabs.Tab
-): Promise<void> {
+function onTabUpdated(tabId: number, changeInfo: chrome.tabs.TabChangeInfo): void {
   if (changeInfo.url !== undefined) {
-    await removePageCacheTab(tabId)
+    queuePageCacheTabRemoval(tabId)
+    schedulePageCacheFlush()
   }
 }
 
 function onTabRemoved(tabId: number): void {
-  void removePageCacheTab(tabId)
+  queuePageCacheTabRemoval(tabId)
+  schedulePageCacheFlush()
 }
 
-/** EN: Keep history/bookmark cache warm; drop legacy page_tab rows on tab close/navigation. */
+/** EN: Low-priority cache maintenance — debounced, off the command hot path. */
 export function registerSearchCacheBackgroundListeners(): void {
   if (listenersRegistered) {
     return
@@ -42,14 +61,23 @@ export function registerSearchCacheBackgroundListeners(): void {
   chrome.bookmarks.onChanged.addListener(onBookmarkTreeChanged)
   chrome.bookmarks.onMoved.addListener(onBookmarkTreeChanged)
   chrome.bookmarks.onRemoved.addListener(onBookmarkTreeChanged)
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    void onTabUpdated(tabId, changeInfo, tab)
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    onTabUpdated(tabId, changeInfo)
   })
   chrome.tabs.onRemoved.addListener(onTabRemoved)
 }
 
-/** EN: Initial fill when the service worker starts (non-blocking). */
-export function warmSearchCachesOnStartup(): void {
-  void warmSearchHistoryCache()
-  void warmSearchBookmarkCache()
+/** EN: Defer initial warm so SW command dispatch is not blocked at startup. */
+export function scheduleSearchCacheMaintenanceStartup(): void {
+  scheduleDeferredSearchCacheWarm()
 }
+
+/** EN: @deprecated Use `scheduleSearchCacheMaintenanceStartup`. */
+export function warmSearchCachesOnStartup(): void {
+  scheduleSearchCacheMaintenanceStartup()
+}
+
+export {
+  flushPendingHistoryCacheWrites,
+  flushPendingPageCacheRemovals
+} from "./maintainer/search-cache-maintainer"

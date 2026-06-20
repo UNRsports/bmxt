@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { TERMINAL_SESSIONS_KEY } from "../../extension-storage/keys"
+import { useSessionLogSync } from "../../session-log"
 import {
   mergeSessionsStatePreservingStableRefs,
   sessionsUiSnapshotEqual
@@ -37,8 +38,15 @@ export function useTerminalSessions(): {
   stateRef.current = state
 
   const commitSessionsState = useCallback((next: TerminalSessionsStateV1 | null) => {
-    setState((prev) => applySessionsState(prev, next))
+    setState((prev) => {
+      if (!next) {
+        return null
+      }
+      return applySessionsState(prev, next)
+    })
   }, [])
+
+  useSessionLogSync({ onState: commitSessionsState })
 
   useEffect(() => {
     void readTerminalSessionsIfPresent().then((s) => {

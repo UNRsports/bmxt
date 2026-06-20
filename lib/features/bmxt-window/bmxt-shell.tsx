@@ -1625,7 +1625,7 @@ export function BmxtShell({
             setDomListPicker(sessionId, null)
           }
         },
-        { meta: { line: domListLine } }
+        { meta: { line: domListLine }, persist: false }
       )
     },
     [
@@ -1767,7 +1767,7 @@ export function BmxtShell({
             }
           }
         },
-        { meta: { line: dispatchLine } }
+        { meta: { line: dispatchLine }, persist: false }
       )
     },
     [
