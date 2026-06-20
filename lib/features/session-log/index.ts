@@ -28,3 +28,4 @@ export {
 } from "./mutations"
 
 export { useSessionLogSync } from "./use-session-log-sync"
+export { pushSessionLogMessage } from "./push"

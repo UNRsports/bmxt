@@ -35,6 +35,7 @@ import {
   registerSearchCacheBackgroundListeners,
   scheduleSearchCacheMaintenanceStartup
 } from "../lib/features/search/cache/background-listeners"
+import { pushSessionLogMessage, SESSION_STATE_SYNC } from "../lib/features/session-log"
 
 /** WXT bundle path for the BMXt UI page. */
 const BMXT_PAGE = "bmxt.html"
@@ -135,8 +136,14 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
   void bmxtWindowLaunchChain
 }
 
+async function openBmxtWithSessionSync(): Promise<void> {
+  const state = await ensureTerminalSessionsState()
+  await openOrFocusBmxtWindowAsync()
+  pushSessionLogMessage({ type: SESSION_STATE_SYNC, state })
+}
+
 function openOrFocusBmxtWindow() {
-  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
+  enqueueBmxtWindowLaunch(() => openBmxtWithSessionSync())
 }
 
 export default defineBackground(() => {
@@ -155,14 +162,13 @@ chrome.action.onClicked.addListener(() => {
 
 /** ショートカット: 既に BMXt 窓があれば最前面へ。無ければ初期化して 1 枚だけ開く。 */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
-  await openOrFocusBmxtWindowAsync()
-  void ensureTerminalSessionsState()
+  await openBmxtWithSessionSync()
 }
 
 /** ショートカット: ターミナルを初期状態に戻し、BMXt 窓を開く／最前面へ（1 枚に統一）。 */
 async function resetBmxtFromShortcutAsync(): Promise<void> {
   await resetBmxtTerminalSessionsInStorage()
-  await openOrFocusBmxtWindowAsync()
+  await openBmxtWithSessionSync()
 }
 
 chrome.commands.onCommand.addListener((command) => {

@@ -19,7 +19,8 @@ import {
   type ModeToolbarId
 } from "./mode-toolbar-order"
 import type { TabPickerInteractiveSnapshot } from "../side-picker/session/tab-picker-state"
-import { buildTabPickerRows, initialTabPickerHighlightIndex } from "../tabs/picker-rows"
+import { initialTabPickerHighlightIndex } from "../tabs/picker-rows"
+import type { DeferredTabPickerRestore } from "./process-ui/deferred-tab-picker-restore"
 import { computeTabPickerVisibleRowIndices } from "../tabs/tab-picker-fold-state"
 
 type StoredTabPickerSlotV1 = {
@@ -350,12 +351,14 @@ export async function rebuildSessionPickersFromStorage(
   detailBarIdByLeaf: Record<string, DetailBarId | null>
   modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
   navArmedByLeaf: Record<string, boolean>
+  deferredTabPickerRestores: DeferredTabPickerRestore[]
 }> {
   const pickersBySession: SessionPickersByLeaf = {}
   const paneFocusByLeaf: Record<string, PaneFocusTarget> = {}
   const detailBarIdByLeaf: Record<string, DetailBarId | null> = {}
   const modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]> = {}
   const navArmedByLeaf: Record<string, boolean> = {}
+  const deferredTabPickerRestores: DeferredTabPickerRestore[] = []
 
   for (const [leafId, leaf] of Object.entries(stored.byLeaf)) {
     paneFocusByLeaf[leafId] = leaf.paneFocus
@@ -368,19 +371,19 @@ export async function rebuildSessionPickersFromStorage(
 
     if (leaf.pickers.tabs) {
       const t = leaf.pickers.tabs
-      try {
-        const rows = await buildTabPickerRows(t.showUrl)
-        const initialHi = resolveTabPickerHiFromAnchor(rows, t.interactive.anchorTabId)
-        pickers.tabs = {
-          rows,
-          showUrl: t.showUrl,
-          initialHi,
-          variant: t.variant,
-          interactive: t.interactive
-        }
-      } catch {
-        /* skip broken tab picker restore */
+      pickers.tabs = {
+        rows: [],
+        showUrl: t.showUrl,
+        initialHi: 0,
+        variant: t.variant,
+        interactive: t.interactive
       }
+      deferredTabPickerRestores.push({
+        leafId,
+        showUrl: t.showUrl,
+        variant: t.variant,
+        interactive: t.interactive
+      })
     }
     if (leaf.pickers.search) {
       pickers.search = leaf.pickers.search
@@ -426,6 +429,7 @@ export async function rebuildSessionPickersFromStorage(
     paneFocusByLeaf,
     detailBarIdByLeaf,
     modeToolbarOrderByLeaf,
-    navArmedByLeaf
+    navArmedByLeaf,
+    deferredTabPickerRestores
   }
 }

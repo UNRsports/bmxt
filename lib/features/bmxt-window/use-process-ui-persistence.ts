@@ -11,6 +11,7 @@ import {
   serializeProcessUiState,
   writeProcessUiStateToStorage
 } from "./process-ui-state-storage"
+import { hydrateDeferredTabPickerRows } from "./process-ui/deferred-tab-picker-restore"
 
 const PERSIST_DEBOUNCE_MS = 250
 
@@ -84,6 +85,10 @@ export function useProcessUiPersistence(
         setDetailBarIdByLeaf(rebuilt.detailBarIdByLeaf)
         setModeToolbarOrderByLeaf(rebuilt.modeToolbarOrderByLeaf)
         setNavArmedByLeaf(rebuilt.navArmedByLeaf)
+        void hydrateDeferredTabPickerRows(
+          rebuilt.deferredTabPickerRestores,
+          setPickersBySession
+        )
       }
     })()
     return () => {
