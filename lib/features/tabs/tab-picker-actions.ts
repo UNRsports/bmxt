@@ -86,21 +86,33 @@ export function tabPickerActionIsImmediate(id: TabPickerActionId): boolean {
   return id === "reload" || id === "duplicate" || id === "nohlsearch"
 }
 
-/** EN: Tab targets for reload/duplicate — `#` marks win; else highlighted tab row. */
+/**
+ * EN: Tab targets for reload/duplicate (→ action menu).
+ * Single tab: highlighted row wins (`#` optional). Multiple tabs: `#`-marked tab ids only (2+).
+ */
 export function resolveTabActionTargetTabIds(input: {
   markedKind: SelectKind | null
   markedTabIds: number[]
   highlightedTabId: number | null
   selectedTabIds: number[]
 }): number[] {
-  if (input.markedKind === "tab" && input.markedTabIds.length > 0) {
-    return [...input.markedTabIds]
-  }
-  if (input.highlightedTabId !== null) {
-    return [input.highlightedTabId]
+  if (input.markedKind === "tab") {
+    if (input.markedTabIds.length >= 2) {
+      return [...input.markedTabIds]
+    }
+    if (input.highlightedTabId !== null) {
+      return [input.highlightedTabId]
+    }
+    if (input.markedTabIds.length === 1) {
+      return [input.markedTabIds[0]!]
+    }
+    return []
   }
   if (input.selectedTabIds.length > 0) {
     return [...input.selectedTabIds]
+  }
+  if (input.highlightedTabId !== null) {
+    return [input.highlightedTabId]
   }
   return []
 }

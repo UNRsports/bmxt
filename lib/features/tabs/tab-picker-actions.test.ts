@@ -76,7 +76,7 @@ describe("tabPickerActionIsImmediate", () => {
 })
 
 describe("resolveTabActionTargetTabIds", () => {
-  it("prefers marked tabs over highlighted row", () => {
+  it("uses only # marks when two or more tabs are marked", () => {
     assert.deepEqual(
       resolveTabActionTargetTabIds({
         markedKind: "tab",
@@ -88,7 +88,7 @@ describe("resolveTabActionTargetTabIds", () => {
     )
   })
 
-  it("uses highlighted tab when no marks", () => {
+  it("uses highlighted tab for single-tab case without # marks", () => {
     assert.deepEqual(
       resolveTabActionTargetTabIds({
         markedKind: null,
@@ -97,6 +97,30 @@ describe("resolveTabActionTargetTabIds", () => {
         selectedTabIds: []
       }),
       [42]
+    )
+  })
+
+  it("uses highlighted tab when only one # mark exists but hi is elsewhere", () => {
+    assert.deepEqual(
+      resolveTabActionTargetTabIds({
+        markedKind: "tab",
+        markedTabIds: [2],
+        highlightedTabId: 99,
+        selectedTabIds: []
+      }),
+      [99]
+    )
+  })
+
+  it("uses the lone # mark when hi is not on a tab row", () => {
+    assert.deepEqual(
+      resolveTabActionTargetTabIds({
+        markedKind: "tab",
+        markedTabIds: [3],
+        highlightedTabId: null,
+        selectedTabIds: [3]
+      }),
+      [3]
     )
   })
 
