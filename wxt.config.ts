@@ -21,7 +21,16 @@ function isSqlJsBrowserExternalizeMessage(message: string): boolean {
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
+  react: {
+    vite: {
+      jsxRuntime: "automatic"
+    }
+  },
   vite: () => ({
+    esbuild: {
+      jsx: "automatic",
+      jsxImportSource: "react"
+    },
     build: {
       chunkSizeWarningLimit: 2048
     },

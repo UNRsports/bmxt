@@ -41,6 +41,7 @@ body {
   overflow: hidden;
 }
 
+#root,
 #__plasmo {
   width: 100%;
   height: 100%;
