@@ -150,6 +150,7 @@
         ja: {
           pageTitle: "BMXtへようこそ",
           pageSubtitle: "バージョン履歴",
+          pageSubtitleThrough: "バージョン履歴（v{version} まで）",
           historyHeading: "リリースノート",
           heroAlt: "BMXt の基本的な使い方",
           langNav: "言語:",
@@ -161,6 +162,7 @@
         en: {
           pageTitle: "Welcome to BMXt",
           pageSubtitle: "Version history",
+          pageSubtitleThrough: "Version history (through v{version})",
           historyHeading: "Release notes",
           heroAlt: "How to use BMXt",
           langNav: "Language:",
@@ -173,6 +175,8 @@
 
       const DEFAULT_LOCALE = "ja"
       const VALID_LOCALES = ["ja", "en"]
+      const VERSION_PARAM = "v"
+      const VERSION_PARAM_RE = /^\d+(\.\d+)*$/
 
       function parseLocale() {
         const raw = new URLSearchParams(location.search).get("lang")
@@ -180,6 +184,18 @@
           return raw
         }
         return DEFAULT_LOCALE
+      }
+
+      function parseMaxVersion(searchParams) {
+        const raw = searchParams.get(VERSION_PARAM)
+        if (!raw) {
+          return null
+        }
+        const trimmed = raw.trim()
+        if (!VERSION_PARAM_RE.test(trimmed)) {
+          return null
+        }
+        return trimmed
       }
 
       function compareVersion(a, b) {
@@ -208,6 +224,15 @@
         return entry.en ?? entry.ja ?? []
       }
 
+      function filterEntriesThroughVersion(entries, maxVersion) {
+        if (!maxVersion) {
+          return entries
+        }
+        return entries.filter(
+          (entry) => compareVersion(entry.version, maxVersion) <= 0
+        )
+      }
+
       function renderLangNav(locale) {
         const nav = document.getElementById("lang-nav")
         const copy = UI[locale]
@@ -223,12 +248,15 @@
         nav.innerHTML = `${copy.langNav} ${parts.join(" · ")}`
       }
 
-      function renderStatic(locale) {
+      function renderStatic(locale, maxVersion) {
         const copy = UI[locale]
         document.documentElement.lang = locale === "ja" ? "ja" : "en"
         document.title = `${copy.pageTitle} — BMXt`
         document.getElementById("page-title").textContent = copy.pageTitle
-        document.getElementById("page-subtitle").textContent = copy.pageSubtitle
+        const subtitle = maxVersion
+          ? copy.pageSubtitleThrough.replace("{version}", maxVersion)
+          : copy.pageSubtitle
+        document.getElementById("page-subtitle").textContent = subtitle
         document.getElementById("hero-alt").alt = copy.heroAlt
         document.getElementById("footer-text").textContent = copy.footer
         document.getElementById("privacy-link").textContent = copy.privacy
@@ -260,8 +288,10 @@
       }
 
       async function main() {
+        const searchParams = new URLSearchParams(location.search)
         const locale = parseLocale()
-        renderStatic(locale)
+        const maxVersion = parseMaxVersion(searchParams)
+        renderStatic(locale, maxVersion)
 
         try {
           const res = await fetch("welcome-content.json", { cache: "no-cache" })
@@ -269,7 +299,8 @@
             throw new Error(`HTTP ${res.status}`)
           }
           const data = await res.json()
-          renderHistory(data, locale)
+          const visible = filterEntriesThroughVersion(data, maxVersion)
+          renderHistory(visible, locale)
         } catch {
           const copy = UI[locale]
           document.getElementById("history").innerHTML =
