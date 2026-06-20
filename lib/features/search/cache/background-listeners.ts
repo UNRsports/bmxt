@@ -1,12 +1,8 @@
 import type { HistoryCacheEntry } from "./types"
 import {
-  flushPendingHistoryCacheWrites,
-  flushPendingPageCacheRemovals,
   queueHistoryCacheVisit,
   scheduleBookmarkCacheRebuild,
   scheduleDeferredSearchCacheWarm,
-  scheduleHistoryCacheFlush,
-  schedulePageCacheFlush,
   queuePageCacheTabRemoval
 } from "./maintainer/search-cache-maintainer"
 
@@ -30,7 +26,6 @@ function onHistoryVisited(item: chrome.history.HistoryItem): void {
     return
   }
   queueHistoryCacheVisit(row)
-  scheduleHistoryCacheFlush()
 }
 
 function onBookmarkTreeChanged(): void {
@@ -40,16 +35,14 @@ function onBookmarkTreeChanged(): void {
 function onTabUpdated(tabId: number, changeInfo: chrome.tabs.TabChangeInfo): void {
   if (changeInfo.url !== undefined) {
     queuePageCacheTabRemoval(tabId)
-    schedulePageCacheFlush()
   }
 }
 
 function onTabRemoved(tabId: number): void {
   queuePageCacheTabRemoval(tabId)
-  schedulePageCacheFlush()
 }
 
-/** EN: Low-priority cache maintenance — debounced, off the command hot path. */
+/** EN: Low-priority cache maintenance — in-memory updates are immediate; disk persist is debounced. */
 export function registerSearchCacheBackgroundListeners(): void {
   if (listenersRegistered) {
     return
@@ -81,3 +74,4 @@ export {
   flushPendingHistoryCacheWrites,
   flushPendingPageCacheRemovals
 } from "./maintainer/search-cache-maintainer"
+export { scheduleSearchCachePersist, flushSearchCachePersist } from "./db/search-cache-db"

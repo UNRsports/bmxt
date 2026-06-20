@@ -21,9 +21,9 @@ const DEFAULT_SETTINGS: UiSettings = {
   appearance: { ...DEFAULT_UI_APPEARANCE, picker: { ...DEFAULT_UI_APPEARANCE.picker } }
 }
 
-export async function loadUiSettings(): Promise<UiSettings> {
-  const r = await chrome.storage.local.get(UI_SETTINGS_KEY)
-  const raw = r[UI_SETTINGS_KEY]
+let cachedUiSettings: UiSettings | null = null
+
+function parseUiSettingsRaw(raw: unknown): UiSettings {
   if (!raw || typeof raw !== "object") {
     return { ...DEFAULT_SETTINGS, appearance: normalizeUiAppearance(null) }
   }
@@ -34,7 +34,21 @@ export async function loadUiSettings(): Promise<UiSettings> {
   }
 }
 
+export async function loadUiSettings(): Promise<UiSettings> {
+  if (cachedUiSettings) {
+    return cachedUiSettings
+  }
+  const r = await chrome.storage.local.get(UI_SETTINGS_KEY)
+  cachedUiSettings = parseUiSettingsRaw(r[UI_SETTINGS_KEY])
+  return cachedUiSettings
+}
+
+export function invalidateUiSettingsCache(): void {
+  cachedUiSettings = null
+}
+
 async function saveUiSettings(next: UiSettings): Promise<void> {
+  cachedUiSettings = next
   await chrome.storage.local.set({
     [UI_SETTINGS_KEY]: next satisfies UiSettings
   })

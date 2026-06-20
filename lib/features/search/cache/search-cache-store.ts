@@ -10,6 +10,8 @@ import {
   resetSearchCacheDatabase,
   runSearchCacheTask,
   runSearchCacheTaskAndPersist,
+  scheduleSearchCachePersist,
+  flushSearchCachePersist,
   type SearchCacheDbSession
 } from "./db/search-cache-db"
 import {
@@ -134,7 +136,7 @@ export async function upsertHistoryCacheOnVisit(item: chrome.history.HistoryItem
   if (!row) {
     return
   }
-  await runSearchCacheTaskAndPersist(async (session) => {
+  await runSearchCacheTask(async (session) => {
     const existing = session.getHistoryRow(row.url)
     if (existing && existing.lastVisitTime >= row.lastVisitTime) {
       return
@@ -146,18 +148,20 @@ export async function upsertHistoryCacheOnVisit(item: chrome.history.HistoryItem
     session.trimHistoryRows(MAX_HISTORY_RESULTS)
     syncHistoryConfigMeta(session)
   })
+  scheduleSearchCachePersist()
 }
 
 /** EN: Warm history table on startup. */
 export async function warmSearchHistoryCache(): Promise<void> {
   const live = await fetchLiveHistoryEntries()
-  await runSearchCacheTaskAndPersist(async (session) => {
+  await runSearchCacheTask(async (session) => {
     for (const row of live) {
       session.upsertHistoryRow(row.url, row.title, row.lastVisitTime)
     }
     session.trimHistoryRows(MAX_HISTORY_RESULTS)
     syncHistoryConfigMeta(session)
   })
+  scheduleSearchCachePersist()
 }
 
 /** EN: Resolve bookmark rows — compare tree revision against unified DB meta. */
@@ -187,13 +191,14 @@ export async function resolveBookmarkEntriesForSearch(): Promise<BookmarkCacheEn
 export async function rebuildBookmarkSearchCache(): Promise<void> {
   const tree = await chrome.bookmarks.getTree()
   const { revision, entries } = flattenBookmarkTreeWithRevision(tree, MAX_BOOKMARK_ROWS)
-  await runSearchCacheTaskAndPersist(async (session) => {
+  await runSearchCacheTask(async (session) => {
     session.clearBookmarkRows()
     for (const row of entries) {
       session.upsertBookmarkRow(row.url, row.title, row.dateAdded)
     }
     session.setMeta(META_BOOKMARK_REVISION, revision)
   })
+  scheduleSearchCachePersist()
 }
 
 /** EN: Warm bookmark table on startup. */
@@ -203,14 +208,15 @@ export async function warmSearchBookmarkCache(): Promise<void> {
 
 /** EN: Drop one legacy `page_tab` row (migration / tab navigation cleanup only). */
 export async function removePageCacheTab(tabId: number): Promise<void> {
-  await runSearchCacheTaskAndPersist(async (session) => {
+  await runSearchCacheTask(async (session) => {
     session.deletePageTab(tabId)
   })
+  scheduleSearchCachePersist()
 }
 
 /** EN: Flush pending SQLite mutations after history/bookmark cache writes. */
 export async function flushSearchCacheDb(): Promise<void> {
-  await persistSearchCacheDb()
+  await flushSearchCachePersist()
 }
 
 /** EN: Clear search cache DB from settings (separate from `reset-bmxt`). */

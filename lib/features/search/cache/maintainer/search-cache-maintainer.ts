@@ -1,5 +1,5 @@
 import { HISTORY_LOOKBACK_MS, MAX_HISTORY_RESULTS } from "../../limits"
-import { runSearchCacheTaskAndPersist, type SearchCacheDbSession } from "../db/search-cache-db"
+import { runSearchCacheTask, scheduleSearchCachePersist, type SearchCacheDbSession } from "../db/search-cache-db"
 import {
   META_HISTORY_LOOKBACK_MS,
   META_HISTORY_MAX_RESULTS
@@ -7,17 +7,12 @@ import {
 import { rebuildBookmarkSearchCache, warmSearchHistoryCache } from "../search-cache-store"
 import type { HistoryCacheEntry } from "../types"
 
-const HISTORY_FLUSH_DEBOUNCE_MS = 2000
-const BOOKMARK_REBUILD_DEBOUNCE_MS = 2000
-const PAGE_TAB_FLUSH_DEBOUNCE_MS = 500
-const WARM_DEFER_MS = 5000
-
 const pendingHistory = new Map<string, HistoryCacheEntry>()
 const pendingPageTabRemovals = new Set<number>()
 
-let historyFlushTimer: ReturnType<typeof setTimeout> | undefined
-let bookmarkRebuildTimer: ReturnType<typeof setTimeout> | undefined
-let pageTabFlushTimer: ReturnType<typeof setTimeout> | undefined
+let historyMicrotaskQueued = false
+let pageTabMicrotaskQueued = false
+let bookmarkMicrotaskQueued = false
 let warmScheduled = false
 
 function historyConfigMatches(session: SearchCacheDbSession): boolean {
@@ -33,21 +28,20 @@ function syncHistoryConfigMeta(session: SearchCacheDbSession): void {
   session.recomputeHistoryMaxLastVisit()
 }
 
+/** EN: Coalesce same-tick visits, apply to in-memory SQLite immediately, persist debounced. */
 export function queueHistoryCacheVisit(row: HistoryCacheEntry): void {
   const existing = pendingHistory.get(row.url)
   if (!existing || row.lastVisitTime >= existing.lastVisitTime) {
     pendingHistory.set(row.url, row)
   }
-}
-
-export function scheduleHistoryCacheFlush(): void {
-  if (historyFlushTimer !== undefined) {
-    clearTimeout(historyFlushTimer)
+  if (historyMicrotaskQueued) {
+    return
   }
-  historyFlushTimer = setTimeout(() => {
-    historyFlushTimer = undefined
+  historyMicrotaskQueued = true
+  queueMicrotask(() => {
+    historyMicrotaskQueued = false
     void flushPendingHistoryCacheWrites()
-  }, HISTORY_FLUSH_DEBOUNCE_MS)
+  })
 }
 
 export async function flushPendingHistoryCacheWrites(): Promise<void> {
@@ -56,7 +50,7 @@ export async function flushPendingHistoryCacheWrites(): Promise<void> {
   }
   const batch = [...pendingHistory.values()]
   pendingHistory.clear()
-  await runSearchCacheTaskAndPersist(async (session) => {
+  await runSearchCacheTask(async (session) => {
     for (const row of batch) {
       const existing = session.getHistoryRow(row.url)
       if (existing && existing.lastVisitTime >= row.lastVisitTime) {
@@ -70,30 +64,31 @@ export async function flushPendingHistoryCacheWrites(): Promise<void> {
     session.trimHistoryRows(MAX_HISTORY_RESULTS)
     syncHistoryConfigMeta(session)
   })
+  scheduleSearchCachePersist()
 }
 
+/** EN: Coalesce burst bookmark events; rebuild in-memory immediately, persist debounced. */
 export function scheduleBookmarkCacheRebuild(): void {
-  if (bookmarkRebuildTimer !== undefined) {
-    clearTimeout(bookmarkRebuildTimer)
+  if (bookmarkMicrotaskQueued) {
+    return
   }
-  bookmarkRebuildTimer = setTimeout(() => {
-    bookmarkRebuildTimer = undefined
+  bookmarkMicrotaskQueued = true
+  queueMicrotask(() => {
+    bookmarkMicrotaskQueued = false
     void rebuildBookmarkSearchCache()
-  }, BOOKMARK_REBUILD_DEBOUNCE_MS)
+  })
 }
 
 export function queuePageCacheTabRemoval(tabId: number): void {
   pendingPageTabRemovals.add(tabId)
-}
-
-export function schedulePageCacheFlush(): void {
-  if (pageTabFlushTimer !== undefined) {
-    clearTimeout(pageTabFlushTimer)
+  if (pageTabMicrotaskQueued) {
+    return
   }
-  pageTabFlushTimer = setTimeout(() => {
-    pageTabFlushTimer = undefined
+  pageTabMicrotaskQueued = true
+  queueMicrotask(() => {
+    pageTabMicrotaskQueued = false
     void flushPendingPageCacheRemovals()
-  }, PAGE_TAB_FLUSH_DEBOUNCE_MS)
+  })
 }
 
 export async function flushPendingPageCacheRemovals(): Promise<void> {
@@ -102,14 +97,15 @@ export async function flushPendingPageCacheRemovals(): Promise<void> {
   }
   const ids = [...pendingPageTabRemovals]
   pendingPageTabRemovals.clear()
-  await runSearchCacheTaskAndPersist(async (session) => {
+  await runSearchCacheTask(async (session) => {
     for (const tabId of ids) {
       session.deletePageTab(tabId)
     }
   })
+  scheduleSearchCachePersist()
 }
 
-/** EN: Defer initial warm so SW command dispatch is not blocked at startup. */
+/** EN: Warm after SW startup without blocking the first command macrotask. */
 export function scheduleDeferredSearchCacheWarm(): void {
   if (warmScheduled) {
     return
@@ -118,5 +114,5 @@ export function scheduleDeferredSearchCacheWarm(): void {
   setTimeout(() => {
     void warmSearchHistoryCache().catch(() => {})
     void rebuildBookmarkSearchCache().catch(() => {})
-  }, WARM_DEFER_MS)
+  }, 0)
 }

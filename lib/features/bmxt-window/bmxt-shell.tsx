@@ -2565,6 +2565,20 @@ export function BmxtShell({
     setCursorPos(0)
     setHistNavIndex(-1)
     tabPressSeqRef.current = 0
+
+    const localBundle = runDispatch(trimmed, uiSettings.locale)
+    if (localBundle.ty === "lines") {
+      void appendLogLines([`> ${trimmed}`, ...(localBundle.lines ?? [])])
+      if (continuationPrompt) {
+        setSubCmdPicker(null)
+        setLine(continuationPrompt)
+        setCursorPos(continuationPrompt.length)
+        lineRef.current = continuationPrompt
+      }
+      focusPrompt()
+      return
+    }
+
     chrome.runtime.sendMessage(
       { type: "RUN_CMD", line: trimmed, sessionId },
       (response) => {

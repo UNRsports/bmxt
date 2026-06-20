@@ -383,7 +383,7 @@ function BmxtTerminalInner() {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  if (state === null || !upgradeBannerReady || !processUiReady) {
+  if (state === null) {
     return <div className="bmxt-root bmxt-root--terminal-placeholder" />
   }
 

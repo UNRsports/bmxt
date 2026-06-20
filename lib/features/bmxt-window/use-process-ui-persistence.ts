@@ -52,7 +52,7 @@ export function useProcessUiPersistence(
     Record<string, ModeToolbarId[]>
   >({})
   const [navArmedByLeaf, setNavArmedByLeaf] = useState<Record<string, boolean>>({})
-  const [processUiReady, setProcessUiReady] = useState(false)
+  const [processUiReady] = useState(true)
 
   const pickersRef = useRef(pickersBySession)
   const paneFocusRef = useRef(paneFocusByLeaf)
@@ -74,18 +74,16 @@ export function useProcessUiPersistence(
       if (cancelled) {
         return
       }
-      if (stored) {
-        const rebuilt = await rebuildSessionPickersFromStorage(stored)
-        if (!cancelled) {
-          setPickersBySession(rebuilt.pickersBySession)
-          setPaneFocusByLeaf(rebuilt.paneFocusByLeaf)
-          setDetailBarIdByLeaf(rebuilt.detailBarIdByLeaf)
-          setModeToolbarOrderByLeaf(rebuilt.modeToolbarOrderByLeaf)
-          setNavArmedByLeaf(rebuilt.navArmedByLeaf)
-        }
+      if (!stored) {
+        return
       }
+      const rebuilt = await rebuildSessionPickersFromStorage(stored)
       if (!cancelled) {
-        setProcessUiReady(true)
+        setPickersBySession(rebuilt.pickersBySession)
+        setPaneFocusByLeaf(rebuilt.paneFocusByLeaf)
+        setDetailBarIdByLeaf(rebuilt.detailBarIdByLeaf)
+        setModeToolbarOrderByLeaf(rebuilt.modeToolbarOrderByLeaf)
+        setNavArmedByLeaf(rebuilt.navArmedByLeaf)
       }
     })()
     return () => {

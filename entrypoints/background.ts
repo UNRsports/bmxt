@@ -4,7 +4,7 @@ import {
   applyChromeEffects,
   type DispatchChromeContext
 } from "../lib/features/dispatch"
-import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "../lib/features/extension-storage/keys"
+import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY, UI_SETTINGS_KEY } from "../lib/features/extension-storage/keys"
 import {
   appendLinesToSession,
   clearSessionLines,
@@ -25,7 +25,7 @@ import {
   runDispatch
 } from "../lib/features/bmxt-core"
 import { buildHelpLines } from "../lib/features/bmxt-core/registry/help"
-import { loadUiSettings } from "../lib/features/setting/settings"
+import { invalidateUiSettingsCache, loadUiSettings } from "../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../lib/features/setting/i18n/run-locale"
 import { t } from "../lib/features/setting/i18n/messages"
 import { runNavControlOnTab } from "../lib/features/nav/run-nav-inject"
@@ -142,8 +142,9 @@ async function launchBmxtFromShortcutAsync(): Promise<void> {
     await focusBmxtWindow(existingId)
     return
   }
-  await ensureTerminalSessionsState()
+  /* EN: Show the window first; session storage init must not block popup creation. */
   await openOrFocusBmxtWindowAsync()
+  void ensureTerminalSessionsState()
 }
 
 /** ショートカット: ターミナルを初期状態に戻し、BMXt 窓を開く／最前面へ（1 枚に統一）。 */
@@ -294,8 +295,9 @@ async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void
   }
   const isClear = trimmed.toLowerCase() === "clear"
   const isExit = trimmed.toLowerCase() === "exit"
+  const logBatch: string[] = []
   if (!isClear) {
-    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    logBatch.push(`> ${trimmed}`)
   }
   const more: string[] = []
   try {
@@ -317,7 +319,10 @@ async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void
     return
   }
   if (more.length > 0) {
-    await appendLinesToSession(sessionId, more)
+    logBatch.push(...more)
+  }
+  if (logBatch.length > 0) {
+    await appendLinesToSession(sessionId, logBatch)
   }
 }
 
@@ -455,6 +460,12 @@ type NavControlRequest = {
   text?: string
   labelsJson?: string
 }
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && UI_SETTINGS_KEY in changes) {
+    invalidateUiSettingsCache()
+  }
+})
 
 chrome.runtime.onMessage.addListener(
   (

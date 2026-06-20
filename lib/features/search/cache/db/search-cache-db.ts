@@ -11,12 +11,15 @@ import { SearchCacheDbSession } from "./search-cache-db-session"
 
 const SQL_WASM_PATH = "assets/search-cache/sql-wasm.wasm"
 
+const PERSIST_DEBOUNCE_MS = 300
+
 let sqlStatic: SqlJsStatic | null = null
 let database: Database | null = null
 let session: SearchCacheDbSession | null = null
 let openPromise: Promise<SearchCacheDbSession> | null = null
 let taskChain: Promise<unknown> = Promise.resolve()
 let persistChain: Promise<void> = Promise.resolve()
+let persistDebounceTimer: ReturnType<typeof setTimeout> | undefined
 
 function wasmUrl(): string {
   if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
@@ -88,6 +91,26 @@ async function persistSearchCacheDbInternal(s: SearchCacheDbSession): Promise<vo
   s.markClean()
 }
 
+/** EN: Debounce blob export — in-memory SQLite stays current via `runSearchCacheTask`. */
+export function scheduleSearchCachePersist(): void {
+  if (persistDebounceTimer !== undefined) {
+    clearTimeout(persistDebounceTimer)
+  }
+  persistDebounceTimer = setTimeout(() => {
+    persistDebounceTimer = undefined
+    void persistSearchCacheDb()
+  }, PERSIST_DEBOUNCE_MS)
+}
+
+/** EN: Await any debounced persist (settings / explicit flush). */
+export async function flushSearchCachePersist(): Promise<void> {
+  if (persistDebounceTimer !== undefined) {
+    clearTimeout(persistDebounceTimer)
+    persistDebounceTimer = undefined
+  }
+  await persistSearchCacheDb()
+}
+
 /** EN: Serialize the in-memory SQLite file to `chrome.storage.local` (offline). */
 export async function persistSearchCacheDb(): Promise<void> {
   persistChain = persistChain.then(async () => {
@@ -112,7 +135,7 @@ export async function runSearchCacheTaskAndPersist<T>(
   fn: (session: SearchCacheDbSession) => Promise<T>
 ): Promise<T> {
   const result = await runSearchCacheTask(fn)
-  await persistSearchCacheDb()
+  await flushSearchCachePersist()
   return result
 }
 
@@ -128,6 +151,10 @@ export async function createInMemorySearchCacheSession(SQL: SqlJsStatic): Promis
 export async function resetSearchCacheDatabase(): Promise<void> {
   await persistChain.catch(() => {})
   await taskChain.catch(() => {})
+  if (persistDebounceTimer !== undefined) {
+    clearTimeout(persistDebounceTimer)
+    persistDebounceTimer = undefined
+  }
   if (database) {
     try {
       database.close()

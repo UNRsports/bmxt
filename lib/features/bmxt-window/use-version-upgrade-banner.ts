@@ -21,7 +21,7 @@ export function useVersionUpgradeBanner(): {
   upgradeBannerReady: boolean
 } {
   const [banner, setBanner] = useState<PostUpgradeBanner | null>(null)
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(true)
 
   useEffect(() => {
     const v = chrome.runtime.getManifest().version
