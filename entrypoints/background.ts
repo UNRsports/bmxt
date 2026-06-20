@@ -3,8 +3,8 @@
 import {
   applyChromeEffects,
   type DispatchChromeContext
-} from "./lib/features/dispatch"
-import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "./lib/features/extension-storage/keys"
+} from "../lib/features/dispatch"
+import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "../lib/features/extension-storage/keys"
 import {
   appendLinesToSession,
   clearSessionLines,
@@ -18,28 +18,28 @@ import {
   createSessionAndActivate,
   switchSessionNext,
   switchSessionPrev
-} from "./lib/features/bmxt-window/terminal-sessions/state-storage"
-import { displayTitle } from "./lib/features/format/display-title"
+} from "../lib/features/bmxt-window/terminal-sessions/state-storage"
+import { displayTitle } from "../lib/features/format/display-title"
 import {
   ensureBmxtCore,
   runDispatch
-} from "./lib/features/bmxt-core"
-import { buildHelpLines } from "./lib/features/bmxt-core/registry/help"
-import { loadUiSettings } from "./lib/features/setting/settings"
-import { setRunLocale, getRunLocale } from "./lib/features/setting/i18n/run-locale"
-import { t } from "./lib/features/setting/i18n/messages"
-import { BACKGROUND_JOB_SCOPE } from "./lib/features/job/job-types.ts"
-import { getJobRunner } from "./lib/features/job/job-runner.ts"
-import { runNavControlOnTab } from "./lib/features/nav/run-nav-inject"
-import type { NavInjectAction } from "./lib/features/nav/nav-overlay-inject-fn"
-import { openWelcomePageOnUpdateIfNeeded } from "./lib/features/welcome"
+} from "../lib/features/bmxt-core"
+import { buildHelpLines } from "../lib/features/bmxt-core/registry/help"
+import { loadUiSettings } from "../lib/features/setting/settings"
+import { setRunLocale, getRunLocale } from "../lib/features/setting/i18n/run-locale"
+import { t } from "../lib/features/setting/i18n/messages"
+import { BACKGROUND_JOB_SCOPE } from "../lib/features/job/job-types.ts"
+import { getJobRunner } from "../lib/features/job/job-runner.ts"
+import { runNavControlOnTab } from "../lib/features/nav/run-nav-inject"
+import type { NavInjectAction } from "../lib/features/nav/nav-overlay-inject-fn"
+import { openWelcomePageOnUpdateIfNeeded } from "../lib/features/welcome"
 import {
   registerSearchCacheBackgroundListeners,
   warmSearchCachesOnStartup
-} from "./lib/features/search/cache/background-listeners"
+} from "../lib/features/search/cache/background-listeners"
 
-/** Plasmo bundle path for the BMXt UI page. */
-const BMXT_PAGE = "tabs/bmxt.html"
+/** WXT bundle path for the BMXt UI page. */
+const BMXT_PAGE = "bmxt.html"
 
 let lastFocusedNormalWindow: number | undefined
 let bmxtWindowId: number | undefined
@@ -123,6 +123,7 @@ async function openOrFocusBmxtWindowAsync(): Promise<void> {
   }
 }
 
+export default defineBackground(() => {
 chrome.windows.onRemoved.addListener((windowId) => {
   if (windowId === bmxtWindowId) {
     bmxtWindowId = undefined
@@ -516,3 +517,4 @@ chrome.runtime.onMessage.addListener(
     return false
   }
 )
+})

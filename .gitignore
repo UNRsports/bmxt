@@ -17,15 +17,16 @@
 .cursor/
 
 
-# --- Build / bundler（Plasmo, Parcel, 汎用）---
+# --- Build / bundler（WXT, 汎用）---
 out/
+.output/
 build/
 dist/
 .parcel-cache/
 .cache/
 
-# Plasmo
-.plasmo
+# WXT
+.wxt
 
 
 # --- Testing / coverage ---

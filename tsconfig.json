@@ -1,21 +1,30 @@
 {
-  "extends": "plasmo/templates/tsconfig.base",
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts"
-  ],
-  "include": [
-    ".plasmo/index.d.ts",
-    "./**/*.ts",
-    "./**/*.tsx"
-  ],
   "compilerOptions": {
+    "strict": false,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
-    "paths": {
-      "~*": [
-        "./*"
-      ]
-    },
-    "baseUrl": "."
-  }
+    "jsx": "preserve",
+    "types": ["chrome"]
+  },
+  "include": [
+    ".wxt/types/globals.d.ts",
+    ".wxt/types/imports.d.ts",
+    ".wxt/types/paths.d.ts",
+    ".wxt/types/i18n.d.ts",
+    "entrypoints/**/*.ts",
+    "entrypoints/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "**/*.test.ts", ".output"]
 }

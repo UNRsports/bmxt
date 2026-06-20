@@ -72,7 +72,7 @@ Please also take a look at the demo video.
 ## 🛠 Seed Project
 
 
-This repository is a dedicated shell built with **Chrome Extension (Manifest V3) + [Plasmo](https://docs.plasmo.com/)**. It runs in its own dedicated popup window (tab bar–less single-page chrome via `chrome.windows.create({ type: "popup" })`), not the toolbar action popup. The author handles technical decision-making and verification/design/testing, while implementation is done 100% with an AI assistant (Cursor). At this stage, the project is positioned as a validation and seeding phase focused on eliminating behavioral breakage and polishing UX.
+This repository is a dedicated shell built with **Chrome Extension (Manifest V3) + [WXT](https://wxt.dev/)**. It runs in its own dedicated popup window (tab bar–less single-page chrome via `chrome.windows.create({ type: "popup" })`), not the toolbar action popup. The author handles technical decision-making and verification/design/testing, while implementation is done 100% with an AI assistant (Cursor). At this stage, the project is positioned as a validation and seeding phase focused on eliminating behavioral breakage and polishing UX.
 
 <a id="demo-video"></a>
 
@@ -103,7 +103,7 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 ## Technical Overview
 
 
-The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [Plasmo](https://docs.plasmo.com/) (Manifest V3).
+The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3).
 
 **Layout:** Command registry, dispatch, and built-in command logic live in **`lib/features/bmxt-core/`** (TypeScript); Chrome API effects and feature UI live under **`lib/features/<feature>/`** (see also `.cursorrules` in the repo root). **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
 
@@ -113,10 +113,10 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 ## Key Specs
 
-- **UI**: Extension page opened in a dedicated popup window without a tab bar (Plasmo route `tabs/bmxt`; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`tabs/bmxt.tsx`** is a thin entry that mounts it.
+- **UI**: Extension page opened in a dedicated popup window without a tab bar (WXT entrypoint **`entrypoints/bmxt`**; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`entrypoints/bmxt/main.tsx`** is a thin entry that mounts it.
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
 - **State**: Command output logs and command history are stored in `chrome.storage.local`. Keys and caps are defined in **`lib/features/extension-storage/keys.ts`**: **500** log lines (`bmxt_log`), **300** history entries (`bmxt_cmd_history`).
-- **Background**: Service Worker (`background.ts`) opens the window on icon click and handles command execution and tab operations.
+- **Background**: Service Worker (`entrypoints/background.ts`) opens the window on icon click and handles command execution and tab operations.
 - **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**).
 
 <a id="permissions-manifest"></a>
@@ -142,7 +142,7 @@ Official releases are tagged in Git (`git tag`). To reproduce a store submission
 ### npm dependencies and security
 
 
-**Direct dependencies** (see **`package.json`**) are **`plasmo@0.90.5`**, **`react@18.2.0`**, and **`react-dom@18.2.0`**. Almost all other packages are **transitive** (Plasmo pulls in Parcel, `@plasmohq/*`, and related tooling).
+**Direct dependencies** (see **`package.json`**) are **`react@18.2.0`**, **`react-dom@18.2.0`**, and **`sql.js`**. Build tooling uses **`wxt@0.20.18`** and **`@wxt-dev/module-react@1.1.5`** (devDependencies; Vite-based bundler).
 
 **Install for reproducibility**
 
@@ -151,7 +151,7 @@ Official releases are tagged in Git (`git tag`). To reproduce a store submission
 | **`npm ci`** | **Default** after clone, in CI, and before release builds. Installs **exactly** what **`package-lock.json`** records. |
 | **`npm install`** | Only when you intentionally change **`package.json`** (new devDependency, bump a direct dependency, etc.) and will commit the updated lockfile. |
 
-**Dependency freeze (Plasmo 0.90.5)** — transitive versions are **not** overridden in **`package.json`**. The full tree is pinned in **`package-lock.json`** (exact versions + integrity hashes). Use **`npm ci`** everywhere you need a known-good tree until Plasmo / Parcel / `@plasmohq/*` release aligned updates. **`.npmrc`** is **gitignored** (never commit tokens or local registry config). When you run **`npm install`** to add a direct dependency, either pin the version in **`package.json`** yourself (no **`^`**) or set **`save-exact=true`** in your **local** **`~/.npmrc`** or project **`.npmrc`** (local only).
+**Dependency pinning** — transitive versions are **not** overridden in **`package.json`**. The full tree is pinned in **`package-lock.json`** (exact versions + integrity hashes). Use **`npm ci`** everywhere you need a known-good tree. **`.npmrc`** is **gitignored** (never commit tokens or local registry config). When you run **`npm install`** to add a direct dependency, either pin the version in **`package.json`** yourself (no **`^`**) or set **`save-exact=true`** in your **local** **`~/.npmrc`** or project **`.npmrc`** (local only).
 
 Recommended local flow after pulling lockfile changes:
 
@@ -161,13 +161,11 @@ npm ci
 npm run build
 ```
 
-**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). Do **not** add an **`engines`** field to **`package.json`**: with **Plasmo 0.90.5** it can break **`plasmo build`** (CSS/JSON asset resolution fails even though source files exist).
+**Node.js version** — use **`.nvmrc`** (recommended Node for this repo).
 
-**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=critical`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used: it suggests downgrading **`plasmo`** and is unsafe.
+**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=critical`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used without reviewing the suggested dependency changes.
 
-**`svgo@3.3.3`** is a **devDependency**: satisfies **htmlnano**’s optional peer and removes the Plasmo build warning about missing **svgo**.
-
-**Known residual audit items** — **`npm audit`** may report **high** (and **moderate**) issues in Plasmo’s build-time toolchain (Parcel dev-server, **esbuild** via **tsup**, Svelte SSR in unused transformers). These are **not shipped** in the extension bundle; they require **Plasmo / Parcel upstream** updates. CI gates on **critical** only during the freeze. Do not “fix” them with **`npm audit fix --force`** or ad hoc **`@plasmohq/*`** version jumps (e.g. **`@plasmohq/parcel-resolver-post@0.4.6`** breaks **`plasmo build`** CSS/JSON resolution).
+**Known residual audit items** — **`npm audit`** may report issues in WXT’s build-time toolchain (Vite, esbuild, etc.). These are **not shipped** in the extension bundle. CI gates on **critical** only.
 
 **After any dependency change**, run **`npm ci`**, **`npm run build`**, **`npm test`**, and **`npm audit --audit-level=critical`**, and commit **`package.json`** and **`package-lock.json`** together.
 
@@ -360,14 +358,14 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 **Pages and permissions**
 
 - **Scriptable http(s)** only (`chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
-- After installing or reloading the extension, **reload the target page once** so the Plasmo **content script** (`contents/bmxt-nav-overlay.ts`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
+- After installing or reloading the extension, **reload the target page once** so the WXT **content script** (`entrypoints/bmxt-nav-overlay.content.ts`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
 
 **Implementation**
 
 - **`lib/features/nav/`** — prompt parsing, status bar, session hook (`useNavMode`), inject snippet, Service Worker runner (`run-nav-inject.ts`).
 - **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; **Alt** / nav **Enter** / arrow keys on the prompt.
-- **`background.ts`** — `NAV_CONTROL` message runs inject on the target tab.
-- **`contents/bmxt-nav-overlay.ts`** — content script listener on http(s) pages.
+- **`entrypoints/background.ts`** — `NAV_CONTROL` message runs inject on the target tab.
+- **`entrypoints/bmxt-nav-overlay.content.ts`** — content script listener on http(s) pages.
 
 <a id="translate"></a>
 
@@ -728,10 +726,10 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, `bmxt_ui_settings_v1`); see **[`setting`](#setting)**
 - **`lib/features/session/`** — terminal sessions (`session -list` / `-switch` inline pickers, session bar); see **[`session`](#session)**
 - **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional SQLite audit log; see **[Job execution](#job-execution)**
-- **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
+- **`entrypoints/bmxt-nav-overlay.content.ts`** — WXT content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- **`background.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
+- **`entrypoints/background.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
 
 <a id="job-execution"></a>
 
@@ -744,7 +742,7 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 |----------|---------------|------------------|---------------|
 | `search-list` | session id | cancel-previous | `bmxt-shell.tsx` (`search -list`) |
 | `dom-list` | session id | cancel-previous | `bmxt-shell.tsx` (`dom -list`) |
-| `run-cmd` | `__background__` | parallel | `background.ts` (most `RUN_CMD` lines) |
+| `run-cmd` | `__background__` | parallel | `entrypoints/background.ts` (most `RUN_CMD` lines) |
 | `tab-picker-refresh` | `__terminal__` | coalesce-latest | tab-picker follow-tab refresh |
 
 **Cancel:** **`Ctrl+C`** on the prompt, **`* -exit -list`** while a picker job is loading, or starting a new job of the same kind in the same scope (for **cancel-previous** kinds).
@@ -833,7 +831,7 @@ npm ci        # preferred when package-lock.json is present
 npm run dev   # or pnpm dev
 ```
 
-`npm run dev` runs **`plasmo dev`**: a watch build that updates **`build/chrome-mv3-dev`**. Keep the terminal process running while you work.
+`npm run dev` runs **`wxt`**: a watch build that updates **`.output/chrome-mv3-dev`**. Keep the terminal process running while you work.
 
 If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before reloading the extension so generated TypeScript stays in sync.
 
@@ -845,23 +843,23 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 1. **Install JS dependencies:** **`npm ci`** when **`package-lock.json`** is present (preferred). Use **`npm install`** only when you are updating dependencies and will refresh the lockfile. See **[npm dependencies and security](#npm-dependencies)**.
 2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
 3. **Start dev:** From the repo root, run **`npm run dev`**. Leave this process running; it rebuilds the extension on file changes.
-4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`build/chrome-mv3-dev`** (created by Plasmo dev).
+4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
 5. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
-6. **After edits:** When Plasmo finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
+6. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
 
 <a id="main-sources"></a>
 
 ### Main Sources
 
-- `tabs/bmxt.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
-- `bmxt-ui.css` — Window styles at repo root (imported from `tabs/bmxt.tsx`)
+- `entrypoints/bmxt/main.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
+- `bmxt-ui.css` — Window styles at repo root (imported from `entrypoints/bmxt/main.tsx`)
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
 - `lib/features/welcome/` — Post-update welcome page (`tabs/welcome.html`; content in **`welcome-content.json`**)
 - `tabs/welcome.tsx` — Welcome page entry
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
-- `background.ts` — Service Worker (window launch, `runDispatch`, effects)
+- `entrypoints/background.ts` — Service Worker (window launch, `runDispatch`, effects)
 - `lib/features/bmxt-core/` — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
 - `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
@@ -872,7 +870,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
 - `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
-- `contents/bmxt-nav-overlay.ts` — Nav content script (http(s))
+- `entrypoints/bmxt-nav-overlay.content.ts` — Nav content script (http(s))
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
 
@@ -883,7 +881,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 **Welcome page on extension update** (normal browser tab, separate from the in-window block)
 
-When Chrome reports **`install`** or **`update`**, **`background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
+When Chrome reports **`install`** or **`update`**, **`entrypoints/background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
 
 **Manual / preview URL:** `chrome-extension://<extension-id>/tabs/welcome.html?version=0.6.0` shows that entry from **`welcome-content.json`** (query omitted → current manifest version, same as before). Invalid `version` strings are ignored. Auto-open on update does not append query parameters.
 
@@ -900,7 +898,7 @@ Existing **session log** lines are still rendered **below** that block.
 
 1. Bump **`package.json`** → **`version`**.
 2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays (used by the in-window upgrade banner).
-3. Optionally add **`lib/features/welcome/welcome-content.json`** for the welcome page (`ja` / `en` bullet arrays; **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**). Users can open that page anytime with **`aboutbmxt`** (same tab as install/update auto-open). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. Plasmo copies that folder via **`web_accessible_resources`** in **`package.json`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
+3. Optionally add **`lib/features/welcome/welcome-content.json`** for the welcome page (`ja` / `en` bullet arrays; **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**). Users can open that page anytime with **`aboutbmxt`** (same tab as install/update auto-open). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. WXT copies that folder via **`web_accessible_resources`** in **`wxt.config.ts`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
 4. Build and ship.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
@@ -916,14 +914,14 @@ npm run build
 ```
 
 
-Artifacts are output under `build/chrome-mv3-prod`. For store submission zip, you can also run `npm run package`.
+Artifacts are output under `.output/chrome-mv3`. For store submission zip, you can also run `npm run package`.
 
 <a id="store-submission"></a>
 
 ## Store Submission (Reference)
 
 
-You can automate submission with the [Plasmo workflow](https://docs.plasmo.com/framework/workflows/submit) or [bpp](https://bpp.browser.market). Typical flow: register extension in store, prepare credentials, then connect CI.
+You can automate submission with [WXT zip](https://wxt.dev/guide/essentials/config/build-mode.html) or [bpp](https://bpp.browser.market). Typical flow: register extension in store, prepare credentials, then connect CI.
 
 <a id="license"></a>
 
@@ -1021,7 +1019,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 ## 🛠 シードプロジェクト
 
 
-このリポジトリは **Chrome 拡張（Manifest V3）＋ [Plasmo](https://docs.plasmo.com/)** で動く専用シェルです。BMXt は **タブバーなしの独立 popup ウィンドウ**（`chrome.windows.create({ type: "popup" })`）で動作します（ツールバーアイコン直下の action popup ではありません）。技術選定の判断と確認／設計／テストは作者自身が、実装には AI アシスタント（Cursor）を100%使用して進めており、現段階では「動作の破綻をなくし、手触りを磨く」ための検証・種まきのフェーズと位置づけています。
+このリポジトリは **Chrome 拡張（Manifest V3）＋ [WXT](https://wxt.dev/)** で動く専用シェルです。BMXt は **タブバーなしの独立 popup ウィンドウ**（`chrome.windows.create({ type: "popup" })`）で動作します（ツールバーアイコン直下の action popup ではありません）。技術選定の判断と確認／設計／テストは作者自身が、実装には AI アシスタント（Cursor）を100%使用して進めており、現段階では「動作の破綻をなくし、手触りを磨く」ための検証・種まきのフェーズと位置づけています。
 
 <a id="demo-video-ja"></a>
 
@@ -1052,7 +1050,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ## 技術概要
 
 
-以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[Plasmo](https://docs.plasmo.com/)（Manifest V3）でビルドしています。
+以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[WXT](https://wxt.dev/)（Manifest V3）でビルドしています。
 
 **配置:** コマンドのレジストリ・ディスパッチ・組み込みコマンド実装は **`lib/features/bmxt-core/`**（TypeScript）、Chrome API の実行や機能別 UI は **`lib/features/<feature>/`** に置く方針です（リポジトリ直下の **`.cursorrules`** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
 
@@ -1062,10 +1060,10 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 ## 主要仕様
 
-- **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（Plasmo のルート **`tabs/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`tabs/bmxt.tsx`** はそれをマウントする薄いエントリです。
+- **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（WXT エントリ **`entrypoints/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`entrypoints/bmxt/main.tsx`** はそれをマウントする薄いエントリです。
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
 - **状態**: コマンド出力ログとコマンド履歴は `chrome.storage.local` に保持。キーと上限は **`lib/features/extension-storage/keys.ts`** で定義（**ログ 500 行** `bmxt_log`、**履歴 300 件** `bmxt_cmd_history`）。
-- **バックグラウンド**: Service Worker（`background.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
+- **バックグラウンド**: Service Worker（`entrypoints/background.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
 - **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。
 
 <a id="permissions-manifest-ja"></a>
@@ -1091,7 +1089,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### npm 依存関係とセキュリティ
 
 
-**直接依存**（**`package.json`**）は **`plasmo@0.90.5`**、**`react@18.2.0`**、**`react-dom@18.2.0`** のみです。その他の多数のパッケージは **間接依存**（Plasmo が Parcel・`@plasmohq/*` 等を引き込む）です。
+**直接依存**（**`package.json`**）は **`react@18.2.0`**、**`react-dom@18.2.0`**、**`sql.js`**。ビルドは **`wxt@0.20.18`** と **`@wxt-dev/module-react@1.1.5`**（devDependencies、Vite ベース）を使用。
 
 **再現性のあるインストール**
 
@@ -1100,7 +1098,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 | **`npm ci`** | **通常はこちら**（clone 後・CI・リリースビルド前）。**`package-lock.json`** どおりのツリーのみ入る。 |
 | **`npm install`** | **`package.json`** を意図的に変えるとき（devDependency・直接依存の版上げなど）のみ。更新した lockfile をコミットする。 |
 
-**依存凍結（Plasmo 0.90.5）** — **`package.json`** では **`overrides` を使わない**。推移依存の版は **`package-lock.json`** に exact + integrity で固定する。Plasmo / Parcel / `@plasmohq/*` の足並みが揃うまで、再現が必要な場面は **`npm ci`** のみ使う。**`.npmrc`** は **gitignore**（トークン・ローカル registry 設定をコミットしない）。直接依存を **`npm install`** で足すときは、**`package.json`** で版を **`^` なしで明示するか、**`save-exact=true`** を **ローカル**の **`~/.npmrc`** またはプロジェクト **`.npmrc`**（リポジトリ外／未コミット）に書く。
+**依存の固定** — **`package.json`** では **`overrides` を使わない**。推移依存の版は **`package-lock.json`** に exact + integrity で固定する。再現が必要な場面は **`npm ci`** のみ使う。
 
 lockfile 更新を pull したあとの推奨手順:
 
@@ -1110,13 +1108,11 @@ npm ci
 npm run build
 ```
 
-**Node.js 版** — **`.nvmrc`** を参照（このリポジトリの推奨 Node）。**`package.json`** に **`engines`** は **書かない**: **Plasmo 0.90.5** では **`plasmo build`** が失敗する（CSS/JSON の import 解決エラー。ソースファイルは存在するのに bundler が解決できない）。
+**Node.js 版** — **`.nvmrc`** を参照（このリポジトリの推奨 Node）。
 
-**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=critical`**、テスト、**`npm run build`** を実行する。**`npm audit fix --force`** は **使わない**（`plasmo` のダウングレードを提案し、危険）。
+**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=critical`**、テスト、**`npm run build`** を実行する。
 
-**`svgo@3.3.3`** は **devDependency**。htmlnano の optional peer を満たし、Plasmo ビルド時の **svgo** 警告を消す。
-
-**残る audit（high / moderate）** — Plasmo ビルド専用ツールチェーン（Parcel dev server、**tsup** 経由の **esbuild**、未使用 Svelte SSR 等）に **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。**Plasmo / Parcel の upstream 更新**待ち。凍結期間中の CI は **critical** のみで fail する。**`npm audit fix --force`** や **`@plasmohq/*`** の場当たり版上げ（例: **`@plasmohq/parcel-resolver-post@0.4.6`** は **`plasmo build`** の CSS/JSON 解決を壊す）で直そうとしない。
+**残る audit** — WXT ビルド専用ツールチェーン（Vite、esbuild 等）に **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。CI は **critical** のみで fail する。
 
 **依存関係を変更したら** **`npm ci`** → **`npm run build`** → **`npm test`** → **`npm audit --audit-level=critical`** を実行し、**`package.json`** と **`package-lock.json`** を **セットでコミット**する。
 
@@ -1285,14 +1281,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 **ページと権限**
 
 - **scriptable な http(s)** のみ（`chrome://`・ウェブストア・`chrome-extension://` 等は拒否）。注入失敗時はステータス帯に短い理由（例: **`site access denied`**）。
-- 拡張のインストール／再読み込み後は、対象ページを **一度再読み込み**して Plasmo **コンテンツスクリプト**（`contents/bmxt-nav-overlay.ts`）を登録することを推奨。未登録時は Service Worker が **`chrome.scripting.executeScript`** にフォールバック。
+- 拡張のインストール／再読み込み後は、対象ページを **一度再読み込み**して WXT **コンテンツスクリプト**（`entrypoints/bmxt-nav-overlay.content.ts`）を登録することを推奨。未登録時は Service Worker が **`chrome.scripting.executeScript`** にフォールバック。
 
 **実装**
 
 - **`lib/features/nav/`** — プロンプト解析、ステータス帯、セッションフック（`useNavMode`）、注入スニペット、SW ランナー（`run-nav-inject.ts`）。
 - **`lib/features/bmxt-window/bmxt-shell.tsx`** — **`nav -enter` / `nav -exit`** を `RUN_CMD` より前に処理。**Alt** / nav 用 **Enter** / 矢印キー。
-- **`background.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
-- **`contents/bmxt-nav-overlay.ts`** — http(s) ページ上のリスナー。
+- **`entrypoints/background.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
+- **`entrypoints/bmxt-nav-overlay.content.ts`** — http(s) ページ上のリスナー。
 
 <a id="translate-ja"></a>
 
@@ -1672,10 +1668,10 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、`bmxt_ui_settings_v1`）；**[`setting`](#setting-ja)** 参照
 - **`lib/features/session/`** — ターミナルセッション（`session -list` / `-switch` インライン候補、セッションバー）；**[`session`](#session-ja)** 参照
 - **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
-- **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
+- **`entrypoints/bmxt-nav-overlay.content.ts`** — http(s) 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
-- **`background.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` を包む → `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
+- **`entrypoints/background.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` を包む → `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
 
 manifest やコマンド実装を変えたら **`npm run codegen`** のあと **`npm run verify:manifest`** / **`npm run check:generated`** を実行し、必要なら **`npm run build`** してください。
 
@@ -1690,7 +1686,7 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 |------------|--------------|------------|----------|
 | `search-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`search -list`） |
 | `dom-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`dom -list`） |
-| `run-cmd` | `__background__` | parallel | `background.ts` |
+| `run-cmd` | `__background__` | parallel | `entrypoints/background.ts` |
 | `tab-picker-refresh` | `__terminal__` | coalesce-latest | タブピッカー追従更新 |
 
 **キャンセル:** プロンプトの **`Ctrl+C`**、走査中の **`* -exit -list`**、同一スコープで同種ジョブを再開始（**cancel-previous** 種別）。
@@ -1768,7 +1764,7 @@ npm ci        # package-lock.json があるときはこちら
 npm run dev   # または pnpm dev
 ```
 
-`npm run dev` は **`plasmo dev`**（ウォッチ付き開発ビルド）で、**`build/chrome-mv3-dev`** を更新します。作業中はターミナル上のプロセスを止めずに置いておきます。
+`npm run dev` は **`wxt`**（ウォッチ付き開発ビルド）で、**`.output/chrome-mv3-dev`** を更新します。作業中はターミナル上のプロセスを止めずに置いておきます。
 
 **`manifest/bmxt-codegen.json`** を編集したときは、拡張を再読み込みする前に **`npm run codegen`** を実行し、生成 TypeScript を揃えてください。
 
@@ -1778,17 +1774,17 @@ npm run dev   # または pnpm dev
 
 1. **依存関係:** リポジトリ直下で **`npm ci`**（**`package-lock.json`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`npm install`**。**[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
 2. **Codegen:** **`manifest/bmxt-codegen.json`** を編集したときは、**`npm run codegen`** で **`lib/features/bmxt-core/registry/`**・**`lib/features/dispatch/`**・**`lib/features/builtin-commands/`** の生成物を揃える。
-3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`plasmo dev`** で、`build/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
-4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`build/chrome-mv3-dev`** を指定する（Plasmo dev が出力するディレクトリ）。
+3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`wxt`** で、`.output/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
+4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`.output/chrome-mv3-dev`** を指定する（WXT dev が出力するディレクトリ）。
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
-6. **変更の反映:** 保存後、Plasmo の再ビルドが終わったら、拡張機能カードの **「再読み込み」**、または BMXt のタブ／ウィンドウの再読み込みで Service Worker・UI の変更を取り込む。
+6. **変更の反映:** 保存後、WXT の再ビルドが終わったら、拡張機能カードの **「再読み込み」**、または BMXt のタブ／ウィンドウの再読み込みで Service Worker・UI の変更を取り込む。
 
 <a id="main-sources-ja"></a>
 
 ### 主なソース
 
-- `tabs/bmxt.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
-- `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`tabs/bmxt.tsx` から import）
+- `entrypoints/bmxt/main.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
+- `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`entrypoints/bmxt/main.tsx` から import）
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
@@ -1796,7 +1792,7 @@ npm run dev   # または pnpm dev
 - `tabs/welcome.tsx` — ウェルカムページのエントリ
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
-- `background.ts` — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
+- `entrypoints/background.ts` — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
 - `lib/features/bmxt-core/` — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
@@ -1807,7 +1803,7 @@ npm run dev   # または pnpm dev
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
 - `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
-- `contents/bmxt-nav-overlay.ts` — Nav 用コンテンツスクリプト（http(s)）
+- `entrypoints/bmxt-nav-overlay.content.ts` — Nav 用コンテンツスクリプト（http(s)）
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
@@ -1818,7 +1814,7 @@ npm run dev   # または pnpm dev
 
 **拡張機能更新時のウェルカムページ**（通常タブ。ウィンドウ内ブロックとは別）
 
-Chrome が **`install`** または **`update`** を報告したとき、**`background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
+Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
 
 **手動・プレビュー URL:** `chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.6.0` で JSON の該当版を表示（クエリなし → manifest の現行版、従来どおり）。不正な `version` 文字列は無視。更新時の自動表示ではクエリは付けない。
 
@@ -1851,14 +1847,14 @@ npm run build
 ```
 
 
-成果物は `build/chrome-mv3-prod` 配下に出力されます。ストア提出用に zip する場合は `npm run package`（Plasmo のパッケージコマンド）も利用できます。
+成果物は `.output/chrome-mv3` 配下に出力されます。ストア提出用に zip する場合は `npm run package`（WXT の zip コマンド）も利用できます。
 
 <a id="store-submission-ja"></a>
 
 ## ストア提出（参考）
 
 
-[Plasmo の提出ワークフロー](https://docs.plasmo.com/framework/workflows/submit)や [bpp](https://bpp.browser.market) などの自動化を利用できます。初回はストア側で拡張を登録し、資格情報を整えてから CI 連携するのが一般的です。
+[WXT zip](https://wxt.dev/guide/essentials/config/build-mode.html)や [bpp](https://bpp.browser.market) などの自動化を利用できます。初回はストア側で拡張を登録し、資格情報を整えてから CI 連携するのが一般的です。
 
 <a id="license-ja"></a>
 
