@@ -206,6 +206,12 @@ export function useDetailBarKeyboard({
         if (navClaimsArrows()) {
           return
         }
+        if (vertDir === "up" && current !== null && bars.indexOf(current) === 0) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          actionsRef.current.exitDetailBarToTerminal()
+          return
+        }
         e.preventDefault()
         e.stopImmediatePropagation()
         const next = cycleDetailBarId(bars, current, vertDir)

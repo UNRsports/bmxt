@@ -1515,7 +1515,11 @@ export function BmxtShell({
         data-bmxt-session-id={sessionId}
         data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
         <div
-          className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
+          className={`bmxt-split-terminal-pane${
+            promptPaneFocused
+              ? " bmxt-split-pane--focused bmxt-split-terminal-pane--prompt-focused"
+              : ""
+          }`}>
           <div ref={scrollRef} className={shellScrollClassName}>
             {shellContent}
           </div>

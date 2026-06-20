@@ -615,13 +615,14 @@ body {
 .bmxt-prompt-area--focused {
   position: relative;
   z-index: 1;
-  outline: 3px solid #58a6ff;
-  outline-offset: -3px;
-  background: rgba(88, 166, 255, 0.04);
+  /* Inset ring — ancestor overflow:hidden clips outline on inner scroll content. */
+  box-shadow: inset 0 0 0 3px #58a6ff;
+  background: rgba(88, 166, 255, 0.06);
+  border-radius: 2px;
 }
 
 [data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-prompt-area--focused {
-  outline: none;
+  box-shadow: none;
   background: transparent;
 }
 
@@ -1147,6 +1148,11 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   z-index: 1;
   outline: 3px solid #58a6ff;
   outline-offset: -3px;
+}
+
+/* Prompt focus uses `.bmxt-prompt-area--focused` inset ring — skip the whole-column outline. */
+.bmxt-split-terminal-pane.bmxt-split-pane--focused.bmxt-split-terminal-pane--prompt-focused {
+  outline: none;
 }
 
 /* Picker columns sit inside overflow:hidden rails — inset shadow stays visible. */
