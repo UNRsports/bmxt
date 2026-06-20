@@ -1,7 +1,46 @@
+import { createRequire } from "node:module"
+import { dirname } from "node:path"
+import { fileURLToPath } from "node:url"
 import { defineConfig } from "wxt"
+
+const require = createRequire(fileURLToPath(import.meta.url))
+const { createLogger } = require(
+  require.resolve("vite", { paths: [dirname(require.resolve("wxt"))] })
+) as typeof import("vite")
+
+const viteLogger = createLogger()
+const viteLoggerInfo = viteLogger.info
+const viteLoggerWarn = viteLogger.warn
+
+function isSqlJsBrowserExternalizeMessage(message: string): boolean {
+  return (
+    message.includes("externalized for browser compatibility") &&
+    message.includes("sql.js")
+  )
+}
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
+  vite: () => ({
+    build: {
+      chunkSizeWarningLimit: 2048
+    },
+    customLogger: {
+      ...viteLogger,
+      info(message, options) {
+        if (isSqlJsBrowserExternalizeMessage(message)) {
+          return
+        }
+        viteLoggerInfo(message, options)
+      },
+      warn(message, options) {
+        if (isSqlJsBrowserExternalizeMessage(message)) {
+          return
+        }
+        viteLoggerWarn(message, options)
+      }
+    }
+  }),
   manifest: {
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
