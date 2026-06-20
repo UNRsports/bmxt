@@ -64,18 +64,30 @@ async function hydrateBmxtWindowIdFromStorage(): Promise<void> {
   }
 }
 
-/** 保存 ID が無効なときは bmxt.html タブから窓 ID を復元する。 */
-async function resolveBmxtWindowIdAsync(): Promise<number | undefined> {
+type BmxtWindowIdLookup =
+  | { kind: "found"; id: number }
+  | { kind: "none" }
+  | { kind: "stale-id" }
+
+/** EN: Memory + stored ID only — no tab scan (fast path for cold open). */
+async function lookupBmxtWindowIdFast(): Promise<BmxtWindowIdLookup> {
   await hydrateBmxtWindowIdFromStorage()
-  if (bmxtWindowId !== undefined) {
-    try {
-      await chrome.windows.get(bmxtWindowId)
-      return bmxtWindowId
-    } catch {
-      bmxtWindowId = undefined
-      await persistBmxtWindowId(undefined)
-    }
+  if (bmxtWindowId === undefined) {
+    return { kind: "none" }
   }
+  const id = bmxtWindowId
+  try {
+    await chrome.windows.get(id)
+    return { kind: "found", id }
+  } catch {
+    bmxtWindowId = undefined
+    void persistBmxtWindowId(undefined)
+    return { kind: "stale-id" }
+  }
+}
+
+/** EN: Slow recovery when a stored window id was stale but the popup may still exist. */
+async function recoverBmxtWindowIdFromTabs(): Promise<number | undefined> {
   const pageUrl = chrome.runtime.getURL(BMXT_PAGE)
   const tabs = await chrome.tabs.query({ url: pageUrl })
   const tab = tabs.find((t) => typeof t.windowId === "number")
@@ -83,25 +95,18 @@ async function resolveBmxtWindowIdAsync(): Promise<number | undefined> {
     return undefined
   }
   bmxtWindowId = tab.windowId
-  await persistBmxtWindowId(tab.windowId)
+  void persistBmxtWindowId(tab.windowId)
   return tab.windowId
 }
 
-async function focusBmxtWindow(windowId: number): Promise<void> {
-  await chrome.windows.update(windowId, { focused: true })
-}
-
-function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
-  bmxtWindowLaunchChain = bmxtWindowLaunchChain.then(task, task)
-  void bmxtWindowLaunchChain
-}
-
-function openOrFocusBmxtWindow() {
-  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
-}
-
 async function openOrFocusBmxtWindowAsync(): Promise<void> {
-  const existingId = await resolveBmxtWindowIdAsync()
+  const fast = await lookupBmxtWindowIdFast()
+  let existingId: number | undefined
+  if (fast.kind === "found") {
+    existingId = fast.id
+  } else if (fast.kind === "stale-id") {
+    existingId = await recoverBmxtWindowIdFromTabs()
+  }
   if (existingId !== undefined) {
     await focusBmxtWindow(existingId)
     return
@@ -117,8 +122,21 @@ async function openOrFocusBmxtWindowAsync(): Promise<void> {
   })
   if (w.id !== undefined) {
     bmxtWindowId = w.id
-    await persistBmxtWindowId(w.id)
+    void persistBmxtWindowId(w.id)
   }
+}
+
+async function focusBmxtWindow(windowId: number): Promise<void> {
+  await chrome.windows.update(windowId, { focused: true })
+}
+
+function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
+  bmxtWindowLaunchChain = bmxtWindowLaunchChain.then(task, task)
+  void bmxtWindowLaunchChain
+}
+
+function openOrFocusBmxtWindow() {
+  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
 }
 
 export default defineBackground(() => {
@@ -137,12 +155,6 @@ chrome.action.onClicked.addListener(() => {
 
 /** ショートカット: 既に BMXt 窓があれば最前面へ。無ければ初期化して 1 枚だけ開く。 */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
-  const existingId = await resolveBmxtWindowIdAsync()
-  if (existingId !== undefined) {
-    await focusBmxtWindow(existingId)
-    return
-  }
-  /* EN: Show the window first; session storage init must not block popup creation. */
   await openOrFocusBmxtWindowAsync()
   void ensureTerminalSessionsState()
 }
@@ -204,11 +216,14 @@ chrome.runtime.onStartup.addListener(() => {
   scheduleSearchCacheMaintenanceStartup()
 })
 
-registerSearchCacheBackgroundListeners()
-scheduleSearchCacheMaintenanceStartup()
-
 hydrateLastWindowFromStorage()
 void hydrateBmxtWindowIdFromStorage()
+
+/* EN: Defer search-cache listeners so the first shortcut launch is not blocked. */
+setTimeout(() => {
+  registerSearchCacheBackgroundListeners()
+  scheduleSearchCacheMaintenanceStartup()
+}, 0)
 
 /**
  * WASM 未ロード時でも効かせるコマンド（レイアウト・終了・ログ消去）。

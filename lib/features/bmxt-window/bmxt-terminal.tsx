@@ -209,11 +209,11 @@ function BmxtTerminalInner() {
   useTerminalAppearance(settings.appearance)
 
   const { state, setActiveSession, setSessionDisplayName } = useTerminalSessions()
-  const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
+  const { postUpgradeBanner } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
 
-  const validSessionIds = useMemo(() => state?.order ?? [], [state?.order])
+  const validSessionIds = useMemo(() => state.order, [state.order])
 
   const {
     pickersBySession,
@@ -225,22 +225,19 @@ function BmxtTerminalInner() {
     modeToolbarOrderByLeaf,
     setModeToolbarOrderForLeaf,
     navArmedByLeaf,
-    setNavArmedForLeaf,
-    processUiReady
-  } = useProcessUiPersistence(validSessionIds, state !== null)
+    setNavArmedForLeaf
+  } = useProcessUiPersistence(validSessionIds, true)
 
   const sessionListRows = useMemo(
     () =>
-      state
-        ? buildSessionListRows({
-            order: state.order,
-            activeId: state.activeId,
-            namesById: state.namesById,
-            logsById: state.logsById,
-            pickersBySession,
-            navArmedByLeaf
-          })
-        : [],
+      buildSessionListRows({
+        order: state.order,
+        activeId: state.activeId,
+        namesById: state.namesById,
+        logsById: state.logsById,
+        pickersBySession,
+        navArmedByLeaf
+      }),
     [navArmedByLeaf, pickersBySession, state]
   )
 
@@ -261,20 +258,14 @@ function BmxtTerminalInner() {
   }, [])
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     pruneTabPickerFoldSessions(state.order)
     setTabPickerFoldActiveSession(state.activeId)
-  }, [state?.activeId, state?.order])
+  }, [state.activeId, state.order])
 
   const prevSessionOrderRef = useRef<readonly string[]>([])
   const [mountedSessionIds, setMountedSessionIds] = useState<ReadonlySet<string>>(() => new Set())
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     setMountedSessionIds((prev) => {
       if (prev.has(state.activeId)) {
         return prev
@@ -283,12 +274,9 @@ function BmxtTerminalInner() {
       next.add(state.activeId)
       return next
     })
-  }, [state?.activeId])
+  }, [state.activeId])
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     const prev = prevSessionOrderRef.current
     for (const sessionId of prev) {
       if (!state.order.includes(sessionId)) {
@@ -304,7 +292,7 @@ function BmxtTerminalInner() {
       }
     }
     prevSessionOrderRef.current = state.order
-  }, [state?.order])
+  }, [state.order])
 
   const setSessionPickerSlot = useCallback(
     <K extends PickerSlotId>(
@@ -351,9 +339,6 @@ function BmxtTerminalInner() {
   }, [pickersBySession])
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.metaKey || e.altKey) {
         return
@@ -382,10 +367,6 @@ function BmxtTerminalInner() {
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
-
-  if (state === null) {
-    return <div className="bmxt-root bmxt-root--terminal-placeholder" />
-  }
 
   const sharedPaneProps = {
     history,

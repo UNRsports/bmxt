@@ -88,6 +88,11 @@ function emptyState(): TerminalSessionsStateV1 {
   }
 }
 
+/** EN: Optimistic in-memory shell before `chrome.storage` hydrates. */
+export function createEmptyTerminalSessionsState(): TerminalSessionsStateV1 {
+  return emptyState()
+}
+
 /** 旧: 単一キーに order + activeId を含むブロブ。 */
 type LegacyCombinedV1 = {
   v: 1
@@ -262,15 +267,19 @@ function orderFromSplitLayout(layout: SplitLayoutV1, logsById: Record<string, st
 
 let storageMigrationSettled = false
 
-async function migrateStorageShapes(): Promise<void> {
+type MigrationStorageRecord = {
+  [TERMINAL_SESSIONS_KEY]?: unknown
+  [SPLIT_LAYOUT_KEY]?: unknown
+  [ACTIVE_TERMINAL_SESSION_KEY]?: unknown
+}
+
+/** EN: Apply legacy shape upgrades; returns the effective sessions blob (no extra storage read). */
+async function migrateStorageShapesFromRecord(
+  r: MigrationStorageRecord
+): Promise<unknown> {
   if (storageMigrationSettled) {
-    return
+    return r[TERMINAL_SESSIONS_KEY]
   }
-  const r = await chrome.storage.local.get([
-    TERMINAL_SESSIONS_KEY,
-    SPLIT_LAYOUT_KEY,
-    ACTIVE_TERMINAL_SESSION_KEY
-  ])
   const raw = r[TERMINAL_SESSIONS_KEY]
   const layoutRaw = r[SPLIT_LAYOUT_KEY]
 
@@ -279,7 +288,7 @@ async function migrateStorageShapes(): Promise<void> {
       await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
     }
     storageMigrationSettled = true
-    return
+    return raw
   }
 
   if (isBodyV4Stored(raw)) {
@@ -295,7 +304,7 @@ async function migrateStorageShapes(): Promise<void> {
       await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
     }
     storageMigrationSettled = true
-    return
+    return body
   }
 
   if (isBodyV2Stored(raw)) {
@@ -314,7 +323,7 @@ async function migrateStorageShapes(): Promise<void> {
     await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     await chrome.storage.local.remove([SPLIT_LAYOUT_KEY, ACTIVE_TERMINAL_SESSION_KEY])
     storageMigrationSettled = true
-    return
+    return body
   }
 
   if (isCombinedV1Stored(raw)) {
@@ -328,7 +337,7 @@ async function migrateStorageShapes(): Promise<void> {
     await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     await chrome.storage.local.remove([ACTIVE_TERMINAL_SESSION_KEY, SPLIT_LAYOUT_KEY])
     storageMigrationSettled = true
-    return
+    return body
   }
 
   if (isBodyV3Stored(raw)) {
@@ -344,12 +353,12 @@ async function migrateStorageShapes(): Promise<void> {
       await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
       await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
       storageMigrationSettled = true
-      return
+      return body
     }
     const keys = Object.keys(raw.logsById).sort()
     if (keys.length === 0) {
       storageMigrationSettled = true
-      return
+      return raw
     }
     const body: StoredSessionsBodyV5 = {
       v: 5,
@@ -360,8 +369,11 @@ async function migrateStorageShapes(): Promise<void> {
     }
     await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
     await chrome.storage.local.remove(SPLIT_LAYOUT_KEY)
+    storageMigrationSettled = true
+    return body
   }
   storageMigrationSettled = true
+  return raw
 }
 
 registerSessionLogDiskWriter(async (state) => {
@@ -388,9 +400,19 @@ export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsS
   if (cached) {
     return cached
   }
-  await migrateStorageShapes()
-  const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY])
-  const parsed = parseTerminalSessionsStorageValue(r[TERMINAL_SESSIONS_KEY])
+  let rawSessions: unknown
+  if (storageMigrationSettled) {
+    const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY])
+    rawSessions = r[TERMINAL_SESSIONS_KEY]
+  } else {
+    const r = await chrome.storage.local.get([
+      TERMINAL_SESSIONS_KEY,
+      SPLIT_LAYOUT_KEY,
+      ACTIVE_TERMINAL_SESSION_KEY
+    ])
+    rawSessions = await migrateStorageShapesFromRecord(r)
+  }
+  const parsed = parseTerminalSessionsStorageValue(rawSessions)
   if (parsed) {
     seedSessionLogCache(parsed)
   }
