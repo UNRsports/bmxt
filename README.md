@@ -9,8 +9,9 @@
 - [📺 Demo Video](#demo-video)
 - [♿️ Universal Design Intent](#universal-design-intent)
 - [Technical Overview](#technical-overview)
+  - [WXT project layout](#wxt-project-layout)
 - [Key Specs](#key-specs)
-  - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
+  - [Permissions (`wxt.config.ts` manifest)](#permissions-manifest)
   - [Reproducible builds](#reproducible-builds)
   - [npm dependencies and security](#npm-dependencies)
 - [Command-line token model (first / second commands)](#command-line-token-model)
@@ -109,11 +110,35 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
+<a id="wxt-project-layout"></a>
+
+### WXT project layout
+
+Extension sources follow [WXT](https://wxt.dev/) conventions. The Manifest V3 definition and Vite/React build options live in **`wxt.config.ts`** (not `package.json`). Entrypoints sit under **`entrypoints/`**; feature logic under **`lib/features/`**; static assets under **`public/`** (copied into the build output).
+
+| Path | Role |
+|------|------|
+| **`wxt.config.ts`** | Manifest (permissions, CSP, commands), React/Vite config |
+| **`entrypoints/background.ts`** | Service worker |
+| **`entrypoints/bmxt/`** | BMXt window — `index.html` + `main.tsx` → output **`bmxt.html`** |
+| **`entrypoints/bmxt-nav-overlay.content.ts`** | Nav overlay content script (http/https) |
+| **`public/_locales/`** | Extension i18n messages (`__MSG_*__` in manifest) |
+| **`public/assets/search-cache/`** | `sql-wasm.wasm` (via **`scripts/copy-sql-wasm.mjs`**) |
+| **`bmxt-ui.css`** | Full-window terminal styles (React mounts into **`#root`**) |
+| **`manifest/bmxt-codegen.json`** | Single source for command registry / dispatch codegen |
+| **`.output/chrome-mv3/`** | Production build — load unpacked for manual testing |
+| **`.output/chrome-mv3-dev/`** | Dev watch build |
+| **`.output/bmxtdemo-<version>-chrome.zip`** | Store zip from **`npm run package`** |
+
+**Build scripts:** **`npm run dev`**, **`build`**, and **`package`** each run **`scripts/copy-sql-wasm.mjs`** and **`scripts/sync-welcome-docs.mjs`** before invoking WXT. **`postinstall`** also runs those scripts plus **`wxt prepare`** (generates **`.wxt/types/`**).
+
+**TypeScript / JSX:** **`tsconfig.json`** uses **`"jsx": "react-jsx"`** (automatic JSX runtime). WXT loads **`@wxt-dev/module-react`** with **`jsxRuntime: "automatic"`** in **`wxt.config.ts`**.
+
 <a id="key-specs"></a>
 
 ## Key Specs
 
-- **UI**: Extension page opened in a dedicated popup window without a tab bar (WXT entrypoint **`entrypoints/bmxt`**; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`entrypoints/bmxt/main.tsx`** is a thin entry that mounts it.
+- **UI**: Extension page opened in a dedicated popup window without a tab bar (WXT entrypoint **`entrypoints/bmxt/`** → **`bmxt.html`**; `chrome.windows.create({ type: "popup" })`). React mounts into **`#root`** in **`entrypoints/bmxt/index.html`**. Window UI lives in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`entrypoints/bmxt/main.tsx`** is a thin entry that mounts it. Styles in **`bmxt-ui.css`** at repo root.
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
 - **State**: Command output logs and command history are stored in `chrome.storage.local`. Keys and caps are defined in **`lib/features/extension-storage/keys.ts`**: **500** log lines (`bmxt_log`), **300** history entries (`bmxt_cmd_history`).
 - **Background**: Service Worker (`entrypoints/background.ts`) opens the window on icon click and handles command execution and tab operations.
@@ -121,14 +146,14 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 <a id="permissions-manifest"></a>
 
-### Permissions (`manifest` in `package.json`)
+### Permissions (`wxt.config.ts` manifest)
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
+`favicon`, `tabs`, `tabGroups`, `storage`, `unlimitedStorage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
 **Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`npm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
-The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self'`**, **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`package.json`** for the exact string.
+The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self' 'wasm-unsafe-eval'`** (required for **`sql.js`** WebAssembly in the search cache), **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`wxt.config.ts`** for the exact string. Extension **version** and npm metadata remain in **`package.json`** (WXT reads **`version`** from there at build time).
 
 <a id="reproducible-builds"></a>
 
@@ -264,22 +289,17 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 ### `aboutbmxt`
 
-**`aboutbmxt`** is a single-token built-in command (no second command). Run it from the BMXt prompt to open the extension **welcome page** (`tabs/welcome.html`) in a **new browser tab** (same URL and tab behavior as install/update auto-open).
+**`aboutbmxt`** is a single-token built-in command (no second command). Run it from the BMXt prompt to open the **GitHub Pages welcome page** ([`https://unrsports.github.io/bmxt/welcome.html`](https://unrsports.github.io/bmxt/welcome.html)) in a **new browser tab** (same URL and tab behavior as install/update auto-open).
 
 | Input | Effect |
 |-------|--------|
-| **`aboutbmxt`** | Opens **`tabs/welcome.html`** via **`open_welcome_page`** (Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**). The terminal logs a short confirmation line. |
+| **`aboutbmxt`** | Opens the welcome page via **`open_welcome_page`** (Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**). UI locale is passed as **`lang`**; manifest version as **`v`**. The terminal logs a short confirmation line. |
 
-**Page content** comes from **`lib/features/welcome/welcome-content.json`** for the **current manifest version** (same source as install/update auto-open). Each version entry may include:
+**Page content:** static **`docs/welcome.html`** on GitHub Pages. Version history bullets come from **`lib/features/welcome/welcome-content.json`** (each entry: **`version`**, **`ja`**, **`en`** string arrays). **`scripts/sync-welcome-docs.mjs`** copies that JSON to **`docs/welcome-content.json`** on **`dev` / `build` / `package` / `postinstall`**. Optional hero/screenshots live under **`docs/welcome/`** (referenced from **`docs/welcome.html`**, e.g. **`welcome/manual_howToUseBMXt.png`**).
 
-- **`ja`** / **`en`** — bullet lists shown on the page
-- **`heroImage`** — hero screenshot path under **`assets/welcome/`** (use **`"_none_heroImage"`** when there is no hero image)
-- **`heroImageMaxWidth`** — optional CSS **`max-width`** for the hero image (number → px, or a string such as **`"640px"`** / **`"80%"`**); layout is **width-based** (`width: 100%`, `height: auto`)
-- **`additionalImages`** — optional extra screenshots (paths starting with **`_none_`** are skipped)
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). **Manual preview:** `https://unrsports.github.io/bmxt/welcome.html?lang=en&v=0.6.0` (omit **`v`** → all versions in JSON; invalid **`v`** is ignored). See **[Version upgrade banner & release notes](#version-upgrade-banner)** for the in-window upgrade block (separate from this page).
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same welcome URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview of a specific JSON key, use **`chrome-extension://<extension-id>/tabs/welcome.html?version=0.6.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
-
-**Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, page UI **`lib/features/welcome/welcome-page.tsx`**.
+**Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, **`lib/features/welcome/open-welcome-page-tab.ts`**, **`lib/features/welcome/welcome-external-url.ts`**, static page **`docs/welcome.html`**.
 
 <a id="dom-command"></a>
 
@@ -845,32 +865,37 @@ If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before
 3. **Start dev:** From the repo root, run **`npm run dev`**. Leave this process running; it rebuilds the extension on file changes.
 4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
 5. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
-6. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
+6. **After edits:** When WXT finishes rebuilding, click **Reload** on the extension card in `chrome://extensions`, then reopen the BMXt window so the Service Worker and UI pick up changes.
 
 <a id="main-sources"></a>
 
 ### Main Sources
 
-- `entrypoints/bmxt/main.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
-- `bmxt-ui.css` — Window styles at repo root (imported from `entrypoints/bmxt/main.tsx`)
-- `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
-- `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
-- `lib/features/welcome/` — Post-update welcome page (`tabs/welcome.html`; content in **`welcome-content.json`**)
-- `tabs/welcome.tsx` — Welcome page entry
-- `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
-- `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
-- `entrypoints/background.ts` — Service Worker (window launch, `runDispatch`, effects)
-- `lib/features/bmxt-core/` — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
-- `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
-- `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
-- `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, SQLite metadata cache (`bmxt_search_cache_db_v1` for **`--history`** / **`--bookmark`** only)
-- `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional SQLite audit log (`bmxt_job_db_v1`)
-- `lib/features/nav/` — Nav overlay feature package
-- `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
-- `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
-- `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
-- `entrypoints/bmxt-nav-overlay.content.ts` — Nav content script (http(s))
+- **`wxt.config.ts`** — Manifest V3, CSP, global shortcuts, Vite/React build
+- **`entrypoints/background.ts`** — Service worker (window launch, `runDispatch`, effects)
+- **`entrypoints/bmxt/index.html`**, **`entrypoints/bmxt/main.tsx`** — BMXt window entry (thin wrapper around `BmxtTerminal`; output **`bmxt.html`**)
+- **`entrypoints/bmxt-nav-overlay.content.ts`** — Nav content script (http(s))
+- **`bmxt-ui.css`** — Window styles at repo root (imported from `entrypoints/bmxt/main.tsx`; **`#root`** full-bleed layout)
+- **`public/_locales/`** — Extension name/description i18n for the manifest
+- **`public/assets/search-cache/`** — WASM for SQLite search cache
+- **`lib/features/bmxt-window/`** — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
+- **`lib/features/side-picker/`** — Shared side-column picker UI (panel host, `PickerListShell`, `usePlainPickerKeyboard`, interaction kernel, wrappers)
+- **`lib/features/release-notes/release-notes.json`** — In-app upgrade banner text (keys must match `package.json` `version`)
+- **`lib/features/welcome/`** — Welcome tab URL builder, install/update auto-open, **`welcome-content.json`**
+- **`docs/welcome.html`**, **`docs/welcome-content.json`** — GitHub Pages welcome page (JSON synced from `lib/features/welcome/`)
+- **`lib/features/extension-storage/`** — Storage keys and caps (used by Service Worker and UI)
+- **`lib/features/tabs/`** — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
+- **`lib/features/bmxt-core/`** — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
+- **`lib/features/dispatch/`** — Generated dispatch + hand-written **`handlers/effects/`**
+- **`lib/features/builtin-commands/`** — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
+- **`manifest/bmxt-codegen.json`** — Codegen manifest (run **`npm run codegen`** after edits)
+- **`lib/features/page-dom/`** — DOM injection helpers (`dom -list`)
+- **`lib/features/search/`** — Search mode (`search -list`), cross-scope **`--all`**, SQLite metadata cache (`bmxt_search_cache_db_v1` for **`--history`** / **`--bookmark`** only)
+- **`lib/features/job/`** — Per-scope **`JobRunner`**, cancel handles, optional SQLite audit log (`bmxt_job_db_v1`)
+- **`lib/features/nav/`** — Nav overlay feature package
+- **`lib/features/translate/`** — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
+- **`lib/features/setting/`** — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
+- **`lib/features/session/`** — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
 
@@ -879,11 +904,11 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 ### Version upgrade banner & release notes
 
 
-**Welcome page on extension update** (normal browser tab, separate from the in-window block)
+**Welcome page on extension update** (normal browser tab on GitHub Pages, separate from the in-window block)
 
-When Chrome reports **`install`** or **`update`**, **`entrypoints/background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
+When Chrome reports **`install`** or **`update`**, **`entrypoints/background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy comes from **`lib/features/welcome/welcome-content.json`** (synced to **`docs/welcome-content.json`** for GitHub Pages).
 
-**Manual / preview URL:** `chrome-extension://<extension-id>/tabs/welcome.html?version=0.6.0` shows that entry from **`welcome-content.json`** (query omitted → current manifest version, same as before). Invalid `version` strings are ignored. Auto-open on update does not append query parameters.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=en&v=0.6.0` shows entries through that version from **`welcome-content.json`** (query **`v`** omitted → all versions; invalid **`v`** is ignored). Auto-open on update does not append query parameters beyond locale/version from runtime settings.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -898,12 +923,12 @@ Existing **session log** lines are still rendered **below** that block.
 
 1. Bump **`package.json`** → **`version`**.
 2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays (used by the in-window upgrade banner).
-3. Optionally add **`lib/features/welcome/welcome-content.json`** for the welcome page (`ja` / `en` bullet arrays; **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**). Users can open that page anytime with **`aboutbmxt`** (same tab as install/update auto-open). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. WXT copies that folder via **`web_accessible_resources`** in **`wxt.config.ts`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
+3. Optionally add a matching object to **`lib/features/welcome/welcome-content.json`** for the GitHub Pages welcome page (**`version`**, **`ja`**, **`en`** arrays). Run **`npm run build`** or **`npm run dev`** so **`scripts/sync-welcome-docs.mjs`** updates **`docs/welcome-content.json`**. Commit both JSON files and deploy **`docs/`** to GitHub Pages. Optional screenshots go under **`docs/welcome/`** (edit **`docs/welcome.html`** if the hero image changes).
 4. Build and ship.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
 
-**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-page.tsx`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-external-url.ts`**, **`docs/welcome.html`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
 
 <a id="production-build"></a>
 
@@ -913,8 +938,15 @@ If no **`release-notes.json`** entry exists for the current version, placeholder
 npm run build
 ```
 
+Artifacts are output under **`.output/chrome-mv3`**. Load that folder unpacked in `chrome://extensions` for manual testing of a production build.
 
-Artifacts are output under `.output/chrome-mv3`. For store submission zip, you can also run `npm run package`.
+Store submission zip:
+
+```bash
+npm run package
+```
+
+This runs a production build, then writes **`.output/bmxtdemo-<version>-chrome.zip`** (version from **`package.json`**). CI submit workflow (**.github/workflows/submit.yml`**) uses the same zip path with [bpp](https://bpp.browser.market).
 
 <a id="store-submission"></a>
 
@@ -955,8 +987,9 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [📺 デモ動画](#demo-video-ja)
 - [♿️ ユニバーサルデザインの意図](#universal-design-intent-ja)
 - [技術概要](#technical-overview-ja)
+  - [WXT プロジェクト構成](#wxt-project-layout-ja)
 - [主要仕様](#key-specs-ja)
-  - [権限（`package.json` の manifest）](#permissions-manifest-ja)
+  - [権限（`wxt.config.ts` の manifest）](#permissions-manifest-ja)
   - [再現可能なビルド](#reproducible-builds-ja)
   - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
@@ -1056,11 +1089,35 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
+<a id="wxt-project-layout-ja"></a>
+
+### WXT プロジェクト構成
+
+[WXT](https://wxt.dev/) の規約に従います。Manifest V3 と Vite/React のビルド設定は **`wxt.config.ts`**（`package.json` ではない）にあります。エントリは **`entrypoints/`**、機能ロジックは **`lib/features/`**、静的ファイルは **`public/`**（ビルド出力へそのままコピー）です。
+
+| パス | 役割 |
+|------|------|
+| **`wxt.config.ts`** | manifest（権限・CSP・commands）、React/Vite 設定 |
+| **`entrypoints/background.ts`** | Service Worker |
+| **`entrypoints/bmxt/`** | BMXt ウィンドウ — `index.html` + `main.tsx` → 出力 **`bmxt.html`** |
+| **`entrypoints/bmxt-nav-overlay.content.ts`** | Nav オーバーレイ用コンテンツスクリプト（http/https） |
+| **`public/_locales/`** | 拡張 manifest 用 i18n（`__MSG_*__`） |
+| **`public/assets/search-cache/`** | `sql-wasm.wasm`（**`scripts/copy-sql-wasm.mjs`**） |
+| **`bmxt-ui.css`** | ウィンドウ全体のターミナルスタイル（React は **`#root`** にマウント） |
+| **`manifest/bmxt-codegen.json`** | コマンドレジストリ／dispatch codegen の単一ソース |
+| **`.output/chrome-mv3/`** | 本番ビルド — 手動テスト用に unpacked 読み込み |
+| **`.output/chrome-mv3-dev/`** | dev ウォッチビルド |
+| **`.output/bmxtdemo-<version>-chrome.zip`** | **`npm run package`** のストア zip |
+
+**ビルドスクリプト:** **`npm run dev`** / **`build`** / **`package`** はいずれも WXT の前に **`scripts/copy-sql-wasm.mjs`** と **`scripts/sync-welcome-docs.mjs`** を実行します。**`postinstall`** も同様に加え **`wxt prepare`**（**`.wxt/types/`** 生成）を走らせます。
+
+**TypeScript / JSX:** **`tsconfig.json`** は **`"jsx": "react-jsx"`**（automatic JSX runtime）。WXT は **`wxt.config.ts`** で **`@wxt-dev/module-react`** を **`jsxRuntime: "automatic"`** で読み込みます。
+
 <a id="key-specs-ja"></a>
 
 ## 主要仕様
 
-- **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（WXT エントリ **`entrypoints/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`entrypoints/bmxt/main.tsx`** はそれをマウントする薄いエントリです。
+- **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（WXT エントリ **`entrypoints/bmxt/`** → **`bmxt.html`**、`chrome.windows.create({ type: "popup" })`）。React は **`entrypoints/bmxt/index.html`** の **`#root`** にマウント。実装本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）、**`entrypoints/bmxt/main.tsx`** は薄いエントリ。スタイルはリポジトリ直下の **`bmxt-ui.css`**。
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
 - **状態**: コマンド出力ログとコマンド履歴は `chrome.storage.local` に保持。キーと上限は **`lib/features/extension-storage/keys.ts`** で定義（**ログ 500 行** `bmxt_log`、**履歴 300 件** `bmxt_cmd_history`）。
 - **バックグラウンド**: Service Worker（`entrypoints/background.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
@@ -1068,14 +1125,14 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 <a id="permissions-manifest-ja"></a>
 
-### 権限（`package.json` の manifest）
+### 権限（`wxt.config.ts` の manifest）
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
+`favicon`, `tabs`, `tabGroups`, `storage`, `unlimitedStorage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
 **データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`npm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
-**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self'`**、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`package.json`** を参照してください。
+**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self' 'wasm-unsafe-eval'`**（search キャッシュの **`sql.js`** WebAssembly 用）、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`wxt.config.ts`** を参照してください。拡張の **version** と npm メタデータは **`package.json`** にあり、WXT がビルド時に **version** を読み取ります。
 
 <a id="reproducible-builds-ja"></a>
 
@@ -1211,22 +1268,17 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### `aboutbmxt`
 
-**`aboutbmxt`** は第一コマンドのみの組み込みコマンド（第二コマンドなし）です。BMXt プロンプトから実行すると、拡張機能の **ウェルカムページ**（`tabs/welcome.html`）を **新しいブラウザタブ** で開きます（インストール／更新時の自動表示と同じ URL・タブ）。
+**`aboutbmxt`** は第一コマンドのみの組み込みコマンド（第二コマンドなし）です。BMXt プロンプトから実行すると、**GitHub Pages のウェルカムページ**（[`https://unrsports.github.io/bmxt/welcome.html`](https://unrsports.github.io/bmxt/welcome.html)）を **新しいブラウザタブ** で開きます（インストール／更新時の自動表示と同じ URL・タブ）。
 
 | 入力 | 動作 |
 |------|------|
-| **`aboutbmxt`** | **`tabs/welcome.html`** を **`open_welcome_page`** 経由で開く（Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**）。ターミナルには短い確認行が出る。 |
+| **`aboutbmxt`** | **`open_welcome_page`** 経由でウェルカムページを開く（Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**）。UI ロケールは **`lang`**、manifest 版は **`v`** クエリで渡す。ターミナルには短い確認行が出る。 |
 
-**ページ内容**は **manifest の現行バージョン** に対応する **`lib/features/welcome/welcome-content.json`** のエントリから読み込みます（インストール／更新時の自動表示と同じデータ源）。各版のオブジェクトには次を書けます。
+**ページ内容:** GitHub Pages 上の静的 **`docs/welcome.html`**。バージョン履歴の箇条書きは **`lib/features/welcome/welcome-content.json`**（各エントリ: **`version`**, **`ja`**, **`en`** の文字列配列）。**`scripts/sync-welcome-docs.mjs`** が **`dev` / `build` / `package` / `postinstall`** で JSON を **`docs/welcome-content.json`** にコピーする。hero 等の画像は **`docs/welcome/`**（**`docs/welcome.html`** から参照。例: **`welcome/manual_howToUseBMXt.png`**）。
 
-- **`ja`** / **`en`** — ページ上の箇条書き
-- **`heroImage`** — **`assets/welcome/`** 配下の hero 画像パス（画像なしは **`"_none_heroImage"`**）
-- **`heroImageMaxWidth`** — hero 画像の CSS **`max-width`**（数値は px、文字列は **`"640px"`** / **`"80%"`** など）。表示は **幅ベース**（`width: 100%`、`height: auto`）
-- **`additionalImages`** — 追加スクリーンショット（**`_none_`** で始まるパスはスキップ）
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。**手動プレビュー:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0`（**`v`** 省略 → JSON 全版、不正な **`v`** は無視）。ウィンドウ内アップグレードバナーは別 — **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。JSON の特定版を手動プレビューする場合は **`chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.6.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
-
-**実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、ページ UI **`lib/features/welcome/welcome-page.tsx`**。
+**実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、**`lib/features/welcome/open-welcome-page-tab.ts`**、**`lib/features/welcome/welcome-external-url.ts`**、静的ページ **`docs/welcome.html`**。
 
 <a id="nav-mode-ja"></a>
 
@@ -1777,33 +1829,37 @@ npm run dev   # または pnpm dev
 3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`wxt`** で、`.output/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
 4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`.output/chrome-mv3-dev`** を指定する（WXT dev が出力するディレクトリ）。
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
-6. **変更の反映:** 保存後、WXT の再ビルドが終わったら、拡張機能カードの **「再読み込み」**、または BMXt のタブ／ウィンドウの再読み込みで Service Worker・UI の変更を取り込む。
+6. **変更の反映:** 保存後、WXT の再ビルドが終わったら `chrome://extensions` で拡張機能カードの **「再読み込み」** を押し、BMXt ウィンドウを開き直して Service Worker・UI の変更を取り込む。
 
 <a id="main-sources-ja"></a>
 
 ### 主なソース
 
-- `entrypoints/bmxt/main.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
-- `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`entrypoints/bmxt/main.tsx` から import）
-- `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
-- `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
-- `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
-- `lib/features/welcome/` — 更新後ウェルカムページ（`tabs/welcome.html`、本文は **`welcome-content.json`**）
-- `tabs/welcome.tsx` — ウェルカムページのエントリ
-- `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
-- `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
-- `entrypoints/background.ts` — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
-- `lib/features/bmxt-core/` — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
-- `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
-- `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
-- `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
-- `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、SQLite メタデータキャッシュ（`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** のみ）
-- `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ（`bmxt_job_db_v1`）
-- `lib/features/nav/` — Nav オーバーレイ機能パッケージ
-- `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
-- `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
-- `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
-- `entrypoints/bmxt-nav-overlay.content.ts` — Nav 用コンテンツスクリプト（http(s)）
+- **`wxt.config.ts`** — Manifest V3、CSP、グローバルショートカット、Vite/React ビルド
+- **`entrypoints/background.ts`** — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
+- **`entrypoints/bmxt/index.html`**, **`entrypoints/bmxt/main.tsx`** — BMXt ウィンドウエントリ（`BmxtTerminal` の薄いラッパ、出力 **`bmxt.html`**）
+- **`entrypoints/bmxt-nav-overlay.content.ts`** — Nav コンテンツスクリプト（http(s)）
+- **`bmxt-ui.css`** — リポジトリ直下。ウィンドウ用スタイル（`entrypoints/bmxt/main.tsx` から import、**`#root`** フルブリード）
+- **`public/_locales/`** — 拡張名・説明の i18n（manifest の `__MSG_*__`）
+- **`public/assets/search-cache/`** — SQLite search キャッシュ用 WASM
+- **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
+- **`lib/features/side-picker/`** — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
+- **`lib/features/release-notes/release-notes.json`** — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
+- **`lib/features/welcome/`** — ウェルカムタブ URL 生成、install/update 自動表示、**`welcome-content.json`**
+- **`docs/welcome.html`**, **`docs/welcome-content.json`** — GitHub Pages ウェルカムページ（JSON は `lib/features/welcome/` から同期）
+- **`lib/features/extension-storage/`** — ストレージキーと上限（Service Worker と UI の両方から参照）
+- **`lib/features/tabs/`** — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
+- **`lib/features/bmxt-core/`** — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
+- **`lib/features/dispatch/`** — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
+- **`lib/features/builtin-commands/`** — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
+- **`manifest/bmxt-codegen.json`** — codegen マニフェスト（編集後は **`npm run codegen`**）
+- **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
+- **`lib/features/search/`** — search モード（`search -list`）、横断 **`--all`**、SQLite メタデータキャッシュ（`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** のみ）
+- **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ（`bmxt_job_db_v1`）
+- **`lib/features/nav/`** — Nav オーバーレイ機能パッケージ
+- **`lib/features/translate/`** — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
+- **`lib/features/setting/`** — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
+- **`lib/features/session/`** — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
@@ -1812,11 +1868,11 @@ npm run dev   # または pnpm dev
 ### バージョンアップバナーとリリースノート
 
 
-**拡張機能更新時のウェルカムページ**（通常タブ。ウィンドウ内ブロックとは別）
+**拡張更新時のウェルカムページ**（GitHub Pages の通常タブ。ウィンドウ内ブロックとは別）
 
-Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
+Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言は **`lib/features/welcome/welcome-content.json`**（GitHub Pages 向けに **`docs/welcome-content.json`** へ同期）。
 
-**手動・プレビュー URL:** `chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.6.0` で JSON の該当版を表示（クエリなし → manifest の現行版、従来どおり）。不正な `version` 文字列は無視。更新時の自動表示ではクエリは付けない。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0` で **`welcome-content.json`** の該当版までを表示（**`v`** 省略 → 全版、不正な **`v`** は無視）。更新時の自動表示では実行時の locale/version 以外のクエリは付けない。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 
@@ -1831,12 +1887,12 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 
 1. **`package.json`** の **`version`** を上げる。
 2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列。ウィンドウ内アップグレードバナー用）。
-3. 任意で **`lib/features/welcome/welcome-content.json`** にウェルカムページ用エントリを追加する（**`ja`** / **`en`** の配列。**`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**）。ユーザーは **`aboutbmxt`** でいつでもそのページを開ける（インストール／更新時の自動表示と同じタブ）。画像は **`assets/welcome/`** に置き、JSON では `assets/welcome/<ファイル名>` と書く（WebP 可）。**`package.json`** の **`web_accessible_resources`**（`assets/welcome/*`）経由でビルドに同梱される。追加・変更後はビルドと拡張の再読み込みが必要。画像なしは **`heroImage": "_none_heroImage"`**。
+3. 任意で **`lib/features/welcome/welcome-content.json`** に GitHub Pages 用エントリを追加（**`version`**, **`ja`**, **`en`** 配列）。**`npm run build`** または **`npm run dev`** で **`scripts/sync-welcome-docs.mjs`** が **`docs/welcome-content.json`** を更新する。両 JSON をコミットし **`docs/`** を GitHub Pages にデプロイ。画像は **`docs/welcome/`**（hero 変更時は **`docs/welcome.html`** も編集）。
 4. ビルドして配布する。
 
 **`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
 
-**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-page.tsx`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
+**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-external-url.ts`**、**`docs/welcome.html`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
 
 <a id="production-build-ja"></a>
 
@@ -1846,8 +1902,15 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 npm run build
 ```
 
+成果物は **`.output/chrome-mv3`** 配下に出力されます。手動テストでは `chrome://extensions` からこのフォルダを unpacked 読み込みしてください。
 
-成果物は `.output/chrome-mv3` 配下に出力されます。ストア提出用に zip する場合は `npm run package`（WXT の zip コマンド）も利用できます。
+ストア提出用 zip:
+
+```bash
+npm run package
+```
+
+本番ビルドのあと **`.output/bmxtdemo-<version>-chrome.zip`** を生成します（**`<version>`** は **`package.json`** の version）。CI の submit ワークフロー（**.github/workflows/submit.yml`**）も同じ zip パスで [bpp](https://bpp.browser.market) を利用します。
 
 <a id="store-submission-ja"></a>
 
