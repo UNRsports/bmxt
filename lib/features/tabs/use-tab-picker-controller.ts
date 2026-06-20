@@ -481,10 +481,11 @@ export function useTabPickerController({
   const onAltToggleFold = useCallback(
     (e: KeyboardEvent) => {
       if (
+        !isHostPaneFocused ||
         pickerView === "actions" ||
         searchMode ||
         bulkSubMode !== null ||
-        groupNewPhase !== "meta" ||
+        groupNewPhase === "meta" ||
         newTabUrlWindowId !== null ||
         editPanel !== null ||
         visibleRowIndices.length === 0
@@ -514,6 +515,7 @@ export function useTabPickerController({
       editPanel,
       groupNewPhase,
       hi,
+      isHostPaneFocused,
       newTabUrlWindowId,
       pickerView,
       rows,

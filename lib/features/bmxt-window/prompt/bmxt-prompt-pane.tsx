@@ -1952,22 +1952,24 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
 
   return (
     <>
-      {mode === "isearch" ? (
-        <div className="bmxt-isearch">
-          <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>
-          <span className="bmxt-isearch-query">{iSearchLine}</span>
-          <span className="bmxt-isearch-label">&apos;: </span>
-          <span className="bmxt-isearch-match">
-            {iSearchMatches.length === 0 ? "(no match)" : iSearchPreview ?? "(no match)"}
-          </span>
-          <span className="bmxt-isearch-hint">
-            {" "}
-            Ctrl+R older · ↑ newer · ↓ older · Enter · Esc
-          </span>
-        </div>
-      ) : null}
       <div
-        className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}${sessionNameTyping ? " bmxt-prompt-line--session-name-typing" : ""}`}>
+        className={`bmxt-prompt-area${promptPaneFocused ? " bmxt-prompt-area--focused" : ""}`}>
+        {mode === "isearch" ? (
+          <div className="bmxt-isearch">
+            <span className="bmxt-isearch-label">(reverse-i-search)&apos;</span>
+            <span className="bmxt-isearch-query">{iSearchLine}</span>
+            <span className="bmxt-isearch-label">&apos;: </span>
+            <span className="bmxt-isearch-match">
+              {iSearchMatches.length === 0 ? "(no match)" : iSearchPreview ?? "(no match)"}
+            </span>
+            <span className="bmxt-isearch-hint">
+              {" "}
+              Ctrl+R older · ↑ newer · ↓ older · Enter · Esc
+            </span>
+          </div>
+        ) : null}
+        <div
+          className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}${sessionNameTyping ? " bmxt-prompt-line--session-name-typing" : ""}`}>
         <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
         <div className="bmxt-prompt-field">
           <div className="bmxt-prompt-mirror" aria-hidden>
@@ -2031,6 +2033,7 @@ export const BmxtPromptPane = forwardRef<BmxtPromptHandle, BmxtPromptPaneProps>(
             onPickerUiChange={onPickerUiChange}
           />
         </div>
+      </div>
       </div>
       {navPageTyping && translateEnabled ? (
         <LazyTranslationStrip

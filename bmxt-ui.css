@@ -606,6 +606,34 @@ body {
   color: #58a6ff;
 }
 
+/* Command prompt block — blue focus ring when paneFocus is terminal (picker / detail bar → prompt). */
+.bmxt-prompt-area {
+  margin-top: 4px;
+  padding-bottom: 6px;
+}
+
+.bmxt-prompt-area--focused {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid #58a6ff;
+  outline-offset: -3px;
+  background: rgba(88, 166, 255, 0.04);
+}
+
+[data-bmxt-session-id]:not([data-bmxt-leaf-focused]) .bmxt-prompt-area--focused {
+  outline: none;
+  background: transparent;
+}
+
+.bmxt-prompt-area .bmxt-prompt-line {
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
+.bmxt-prompt-area .bmxt-isearch {
+  margin-bottom: 4px;
+}
+
 /* nav typing — Chrome Translator assist (訳) */
 .bmxt-typing-translate {
   margin-top: 2px;
@@ -816,8 +844,6 @@ body {
   gap: 6px;
   min-height: 1.35em;
   line-height: 1.35;
-  margin-top: 4px;
-  padding-bottom: 6px;
 }
 
 .bmxt-prompt-field {
