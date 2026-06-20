@@ -1,5 +1,4 @@
-import type { MutableRefObject, RefObject } from "react"
-import type { Dispatch, SetStateAction } from "react"
+import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "react"
 import { useCallback, useMemo, useRef } from "react"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
@@ -83,9 +82,12 @@ export function useTabPickerPlainExtensions({
   altKeyHeldRef,
   onExitToDetailBar,
   pickerView,
+  pickerViewRef,
   actionHi,
+  actionHiRef,
   setActionHi,
   actionRows,
+  actionRowsRef,
   enterActionView,
   exitActionView,
   commitAction,
@@ -145,9 +147,12 @@ export function useTabPickerPlainExtensions({
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
   pickerView: TabPickerListView
+  pickerViewRef: MutableRefObject<TabPickerListView>
   actionHi: number
+  actionHiRef: MutableRefObject<number>
   setActionHi: Dispatch<SetStateAction<number>>
   actionRows: TabPickerActionRow[]
+  actionRowsRef: MutableRefObject<TabPickerActionRow[]>
   enterActionView: () => boolean
   exitActionView: () => void
   commitAction: (actionId: TabPickerActionId) => void | Promise<void>
@@ -439,8 +444,8 @@ export function useTabPickerPlainExtensions({
         return false
       }
 
-      if (pickerView === "actions") {
-        const action = actionRows[actionHi]
+      if (pickerViewRef.current === "actions") {
+        const action = actionRowsRef.current[actionHiRef.current]
         if (!action) {
           return false
         }
@@ -538,8 +543,8 @@ export function useTabPickerPlainExtensions({
       return false
     },
     [
-      actionHi,
-      actionRows,
+      actionHiRef,
+      actionRowsRef,
       bulkSubMode,
       commitAction,
       confirmSelection,
@@ -558,7 +563,7 @@ export function useTabPickerPlainExtensions({
       markedWindowIds,
       moveDestHi,
       newGroupTabIdsRef,
-      pickerView,
+      pickerViewRef,
       runExecutionIntent,
       rows,
       selectedTabIds,

@@ -111,4 +111,16 @@ describe("resolveTabActionTargetTabIds", () => {
       [7, 8]
     )
   })
+
+  it("uses marked tab ids when highlight is on a window row", () => {
+    assert.deepEqual(
+      resolveTabActionTargetTabIds({
+        markedKind: "tab",
+        markedTabIds: [3, 4],
+        highlightedTabId: null,
+        selectedTabIds: [3, 4]
+      }),
+      [3, 4]
+    )
+  })
 })

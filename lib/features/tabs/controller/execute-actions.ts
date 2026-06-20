@@ -112,7 +112,21 @@ export async function executeReloadTabsAction(tabIds: number[]): Promise<void> {
   if (tabIds.length === 0) {
     return
   }
-  await Promise.all(tabIds.map((tabId) => chrome.tabs.reload(tabId)))
+  const errors: string[] = []
+  await Promise.all(
+    tabIds.map(async (tabId) => {
+      try {
+        await chrome.tabs.get(tabId)
+        await chrome.tabs.reload(tabId)
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
+        errors.push(`tab ${tabId}: ${message}`)
+      }
+    })
+  )
+  if (errors.length > 0) {
+    throw new Error(errors.join("; "))
+  }
 }
 
 export async function executeDuplicateTabsAction(tabIds: number[]): Promise<number[]> {

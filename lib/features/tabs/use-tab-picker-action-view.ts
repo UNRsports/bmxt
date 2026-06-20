@@ -22,6 +22,13 @@ export type TabPickerActionRow = {
   label: string
 }
 
+type ActionTargetSnapshot = {
+  markedKind: SelectKind | null
+  markedTabIds: number[]
+  highlightedTabId: number | null
+  selectedTabIds: number[]
+}
+
 type ApplyReduced = (ev: PickerReducerEvent) => void
 
 export function useTabPickerActionView({
@@ -82,6 +89,7 @@ export function useTabPickerActionView({
   pickerViewRef.current = pickerView
   const actionHiRef = useRef(actionHi)
   actionHiRef.current = actionHi
+  const actionTargetSnapshotRef = useRef<ActionTargetSnapshot | null>(null)
 
   const highlightedRow = useMemo(() => {
     const rowIndex = visibleRowIndices[hi]
@@ -122,6 +130,8 @@ export function useTabPickerActionView({
       })),
     [actionIds, uiCopy]
   )
+  const actionRowsRef = useRef(actionRows)
+  actionRowsRef.current = actionRows
 
   const resolveImmediateTabIds = useCallback((): number[] => {
     return resolveTabActionTargetTabIds({
@@ -131,6 +141,14 @@ export function useTabPickerActionView({
       selectedTabIds
     })
   }, [highlightedRow, markedKind, markedTabIds, selectedTabIds])
+
+  const resolveActionTargetTabIds = useCallback((): number[] => {
+    const snapshot = actionTargetSnapshotRef.current
+    if (snapshot !== null) {
+      return resolveTabActionTargetTabIds(snapshot)
+    }
+    return resolveImmediateTabIds()
+  }, [resolveImmediateTabIds])
 
   const autoMarkReducerState = useCallback((): PickerReducerState => {
     const base: PickerReducerState = {
@@ -199,14 +217,32 @@ export function useTabPickerActionView({
     if (actionIds.length === 0) {
       return false
     }
+    actionTargetSnapshotRef.current = {
+      markedKind,
+      markedTabIds: [...markedTabIds],
+      highlightedTabId: highlightedRow?.kind === "tab" ? highlightedRow.tabId : null,
+      selectedTabIds: [...selectedTabIds]
+    }
     setActionHi(0)
     setPickerView("actions")
     return true
-  }, [actionIds.length])
+  }, [
+    actionIds.length,
+    highlightedRow,
+    markedKind,
+    markedTabIds,
+    selectedTabIds
+  ])
 
   const commitAction = useCallback(
     async (actionId: TabPickerActionId) => {
+      const reloadTabIds =
+        actionId === "reload" || actionId === "duplicate"
+          ? resolveActionTargetTabIds()
+          : []
+
       exitActionView()
+      actionTargetSnapshotRef.current = null
 
       if (actionId === "nohlsearch") {
         setHlSearchPattern("")
@@ -215,12 +251,14 @@ export function useTabPickerActionView({
       }
 
       if (actionId === "reload") {
-        const tabIds = resolveImmediateTabIds()
-        if (tabIds.length === 0) {
+        if (reloadTabIds.length === 0) {
+          void onAppendLog?.([
+            uiCopy.t("tabs.picker.error.reloadFailed", { message: "no target tab" })
+          ])
           return
         }
         try {
-          await executeReloadTabsAction(tabIds)
+          await executeReloadTabsAction(reloadTabIds)
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e)
           void onAppendLog?.([uiCopy.t("tabs.picker.error.reloadFailed", { message })])
@@ -229,12 +267,14 @@ export function useTabPickerActionView({
       }
 
       if (actionId === "duplicate") {
-        const tabIds = resolveImmediateTabIds()
-        if (tabIds.length === 0) {
+        if (reloadTabIds.length === 0) {
+          void onAppendLog?.([
+            uiCopy.t("tabs.picker.error.duplicateFailed", { message: "no target tab" })
+          ])
           return
         }
         try {
-          await executeDuplicateTabsAction(tabIds)
+          await executeDuplicateTabsAction(reloadTabIds)
           await onRefreshRows?.()
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e)
@@ -277,7 +317,7 @@ export function useTabPickerActionView({
       onRefreshRows,
       openEditFromPicker,
       uiCopy,
-      resolveImmediateTabIds,
+      resolveActionTargetTabIds,
       setBulkSubMode,
       setHlSearchPattern
     ]
@@ -297,6 +337,7 @@ export function useTabPickerActionView({
     pickerViewRef,
     actionHi,
     actionHiRef,
+    actionRowsRef,
     setActionHi,
     actionRows,
     enterActionView,

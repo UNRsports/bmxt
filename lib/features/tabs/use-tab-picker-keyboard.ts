@@ -75,9 +75,12 @@ export function useTabPickerKeyboard({
   altKeyHeldRef,
   onExitToDetailBar,
   pickerView,
+  pickerViewRef,
   actionHi,
+  actionHiRef,
   setActionHi,
   actionRows,
+  actionRowsRef,
   enterActionView,
   exitActionView,
   commitAction,
@@ -141,9 +144,12 @@ export function useTabPickerKeyboard({
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
   pickerView: TabPickerListView
+  pickerViewRef: MutableRefObject<TabPickerListView>
   actionHi: number
+  actionHiRef: MutableRefObject<number>
   setActionHi: Dispatch<SetStateAction<number>>
   actionRows: TabPickerActionRow[]
+  actionRowsRef: MutableRefObject<TabPickerActionRow[]>
   enterActionView: () => boolean
   exitActionView: () => void
   commitAction: (actionId: TabPickerActionId) => void | Promise<void>
@@ -209,9 +215,12 @@ export function useTabPickerKeyboard({
     altKeyHeldRef,
     onExitToDetailBar,
     pickerView,
+    pickerViewRef,
     actionHi,
+    actionHiRef,
     setActionHi,
     actionRows,
+    actionRowsRef,
     enterActionView,
     exitActionView,
     commitAction,
