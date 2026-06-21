@@ -33,10 +33,18 @@ import { getJobRunner } from "../../lib/features/job/job-runner"
 import { runNavControlOnTab } from "../../lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "../../lib/features/nav/nav-overlay-inject-fn"
 import { openWelcomePageOnUpdateIfNeeded } from "../../lib/features/welcome"
+import { registerSearchCacheBackgroundListeners } from "../../lib/features/search/cache/background-listeners"
 import {
-  registerSearchCacheBackgroundListeners,
-  warmSearchCachesOnStartup
-} from "../../lib/features/search/cache/background-listeners"
+  flushLaunchPerf,
+  markLaunchPhase,
+  resetLaunchPerf
+} from "../../lib/features/launch/launch-perf"
+import {
+  notifyInteractiveLaunchCompleted,
+  scheduleDeferredWarmSearchCaches,
+  scheduleDeferredWarmSearchCachesForLifecycle,
+  ensureWarmSearchCachesStarted
+} from "../../lib/features/launch/warm-search-scheduler"
 
 /** WXT unlisted page path for the BMXt UI. */
 const BMXT_PAGE = "bmxt.html"
@@ -94,22 +102,7 @@ export default defineBackground(() => {
     await chrome.windows.update(windowId, { focused: true })
   }
 
-  function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
-    bmxtWindowLaunchChain = bmxtWindowLaunchChain.then(task, task)
-    void bmxtWindowLaunchChain
-  }
-
-  function openOrFocusBmxtWindow() {
-    enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
-  }
-
-  async function openOrFocusBmxtWindowAsync(): Promise<void> {
-    const existingId = await resolveBmxtWindowIdAsync()
-    if (existingId !== undefined) {
-      await focusBmxtWindow(existingId)
-      return
-    }
-    /* popup: タブバーなしの単一ページ窓（BMXt シェル専用） */
+  async function createBmxtWindowAsync(): Promise<void> {
     const url = chrome.runtime.getURL(BMXT_PAGE)
     const w = await chrome.windows.create({
       url,
@@ -122,6 +115,42 @@ export default defineBackground(() => {
       bmxtWindowId = w.id
       await persistBmxtWindowId(w.id)
     }
+  }
+
+  async function openOrFocusBmxtWindowAsync(): Promise<void> {
+    const existingId = await resolveBmxtWindowIdAsync()
+    if (existingId !== undefined) {
+      await focusBmxtWindow(existingId)
+      return
+    }
+    await createBmxtWindowAsync()
+  }
+
+  function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
+    bmxtWindowLaunchChain = bmxtWindowLaunchChain.then(async () => {
+      const chainStart = performance.now()
+      try {
+        await task()
+      } finally {
+        markLaunchPhase("launch-chain-done")
+        notifyInteractiveLaunchCompleted()
+        await flushLaunchPerf({
+          launchChainMs: Math.round(performance.now() - chainStart)
+        })
+      }
+    }, async () => {
+      const chainStart = performance.now()
+      try {
+        await task()
+      } finally {
+        markLaunchPhase("launch-chain-done")
+        notifyInteractiveLaunchCompleted()
+        await flushLaunchPerf({
+          launchChainMs: Math.round(performance.now() - chainStart)
+        })
+      }
+    })
+    void bmxtWindowLaunchChain
   }
 
   chrome.windows.onRemoved.addListener((windowId) => {
@@ -137,15 +166,22 @@ export default defineBackground(() => {
     openOrFocusBmxtWindow()
   })
 
-  /** ショートカット: 既に BMXt 窓があれば最前面へ。無ければ初期化して 1 枚だけ開く。 */
+  function openOrFocusBmxtWindow() {
+    enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
+  }
+
+  /** ショートカット: 既に BMXt 窓があれば最前面へ。無ければ窓を先に開く（セッション init は UI 側）。 */
   async function launchBmxtFromShortcutAsync(): Promise<void> {
+    markLaunchPhase("resolve-window-start")
     const existingId = await resolveBmxtWindowIdAsync()
+    markLaunchPhase("resolve-window-done")
     if (existingId !== undefined) {
       await focusBmxtWindow(existingId)
+      markLaunchPhase("focus-window-done")
       return
     }
-    await ensureTerminalSessionsState()
-    await openOrFocusBmxtWindowAsync()
+    await createBmxtWindowAsync()
+    markLaunchPhase("create-window-done")
   }
 
   /** ショートカット: ターミナルを初期状態に戻し、BMXt 窓を開く／最前面へ（1 枚に統一）。 */
@@ -156,6 +192,8 @@ export default defineBackground(() => {
 
   chrome.commands.onCommand.addListener((command) => {
     if (command === "launch-bmxt") {
+      resetLaunchPerf()
+      markLaunchPhase("shortcut-received")
       enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
       return
     }
@@ -196,20 +234,23 @@ export default defineBackground(() => {
     hydrateLastWindowFromStorage()
     void hydrateBmxtWindowIdFromStorage()
     void openWelcomePageOnUpdateIfNeeded(details)
-    warmSearchCachesOnStartup()
+    scheduleDeferredWarmSearchCachesForLifecycle("install")
   })
 
   chrome.runtime.onStartup.addListener(() => {
     hydrateLastWindowFromStorage()
     void hydrateBmxtWindowIdFromStorage()
-    warmSearchCachesOnStartup()
+    scheduleDeferredWarmSearchCachesForLifecycle("browser-startup")
   })
 
   registerSearchCacheBackgroundListeners()
-  warmSearchCachesOnStartup()
+  scheduleDeferredWarmSearchCaches()
 
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
+
+  resetLaunchPerf()
+  markLaunchPhase("sw-listeners-ready")
 
   /**
    * WASM 未ロード時でも効かせるコマンド（レイアウト・終了・ログ消去）。
@@ -290,6 +331,9 @@ export default defineBackground(() => {
     sessionIdRaw?: string
   ): Promise<void> {
     const trimmed = line
+    if (/^\s*search\b/i.test(trimmed)) {
+      ensureWarmSearchCachesStarted()
+    }
     const st0 = await ensureTerminalSessionsState()
     const sessionId = resolveSessionId(st0, sessionIdRaw)
 

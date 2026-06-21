@@ -48,8 +48,12 @@ export function registerSearchCacheBackgroundListeners(): void {
   chrome.tabs.onRemoved.addListener(onTabRemoved)
 }
 
-/** EN: Initial fill when the service worker starts (non-blocking). */
+/** EN: Initial fill when the service worker starts. */
+export async function warmSearchCachesOnStartupAsync(): Promise<void> {
+  await Promise.all([warmSearchHistoryCache(), warmSearchBookmarkCache()])
+}
+
+/** EN: Fire-and-forget warm (prefer deferred scheduler on SW wake). */
 export function warmSearchCachesOnStartup(): void {
-  void warmSearchHistoryCache()
-  void warmSearchBookmarkCache()
+  void warmSearchCachesOnStartupAsync()
 }
