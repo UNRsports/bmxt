@@ -1,6 +1,6 @@
 /**
- * EN: Heavy background services (command dispatch, nav, search listeners). Lazy-loaded from index.
- * JA: コマンド dispatch 等の重い SW 処理。index から遅延読み込み。
+ * EN: Heavy background services (command dispatch, nav, search listeners). Loaded via importScripts.
+ * JA: コマンド dispatch 等の重い SW 処理。importScripts で読み込む。
  */
 
 import {
@@ -46,18 +46,37 @@ import {
 } from "./window-state"
 
 let lastFocusedNormalWindow: number | undefined
+let commandCoreWarmed = false
 
-async function closeBmxtWindowOnly(): Promise<void> {
+function senderWindowId(sender?: chrome.runtime.MessageSender): number | undefined {
+  const tab = sender?.tab
+  if (!tab || typeof tab.windowId !== "number") {
+    return undefined
+  }
+  return tab.windowId
+}
+
+async function closeBmxtWindowById(windowId: number): Promise<void> {
+  try {
+    await chrome.windows.remove(windowId)
+  } catch {
+    /* already closed */
+  }
+  if (readBmxtWindowIdInMemory() === windowId) {
+    clearBmxtWindowIdInMemory()
+    void persistBmxtWindowId(undefined)
+  }
+}
+
+async function closeBmxtWindowOnly(hintWindowId?: number): Promise<void> {
+  if (hintWindowId !== undefined) {
+    await closeBmxtWindowById(hintWindowId)
+    return
+  }
   await hydrateBmxtWindowIdFromStorage()
   const wid = readBmxtWindowIdInMemory()
   if (wid !== undefined) {
-    try {
-      await chrome.windows.remove(wid)
-    } catch {
-      /* already closed */
-    }
-    clearBmxtWindowIdInMemory()
-    await persistBmxtWindowId(undefined)
+    await closeBmxtWindowById(wid)
   }
 }
 
@@ -96,15 +115,49 @@ async function tryRunCommandWithoutWasm(
   return false
 }
 
-async function exitBmxtWindowFull(): Promise<string[]> {
-  await removeAllTerminalSessionsFromStorage()
-  await closeBmxtWindowOnly()
+async function exitBmxtWindowFull(hintWindowId?: number): Promise<string[]> {
+  void closeBmxtWindowOnly(hintWindowId)
+  void removeAllTerminalSessionsFromStorage()
   return ["(BMXt window closed, session log cleared)"]
 }
 
-async function runCommand(line: string, sessionIdRaw?: string): Promise<void> {
+async function runExitCommand(
+  sessionIdRaw?: string,
+  sender?: chrome.runtime.MessageSender
+): Promise<void> {
+  const hintWindowId = senderWindowId(sender)
+  const st = await readTerminalSessionsIfPresent()
+  const isLastOrEmpty = !st || st.order.length <= 1
+
+  if (isLastOrEmpty) {
+    void closeBmxtWindowOnly(hintWindowId)
+    void removeAllTerminalSessionsFromStorage()
+    return
+  }
+
+  const st0 = await ensureTerminalSessionsState()
+  const sessionId = resolveSessionId(st0, sessionIdRaw)
+  const r = await exitOrCloseSessionInStorage(sessionId)
+  if (r.fullClose) {
+    void closeBmxtWindowOnly(hintWindowId)
+    return
+  }
+  if ("activeIdAfter" in r) {
+    await appendLinesToSession(r.activeIdAfter, [`> exit`])
+  }
+}
+
+async function runCommand(
+  line: string,
+  sessionIdRaw?: string,
+  sender?: chrome.runtime.MessageSender
+): Promise<void> {
   const trimmed = line.trim()
   if (!trimmed) {
+    return
+  }
+  if (trimmed.toLowerCase() === "exit") {
+    await runExitCommand(sessionIdRaw, sender)
     return
   }
   const runner = getJobRunner(BACKGROUND_JOB_SCOPE)
@@ -140,7 +193,6 @@ async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void
     return
   }
   const isClear = trimmed.toLowerCase() === "clear"
-  const isExit = trimmed.toLowerCase() === "exit"
   if (!isClear) {
     await appendLinesToSession(sessionId, [`> ${trimmed}`])
   }
@@ -152,15 +204,6 @@ async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void
   }
   if (isClear) {
     await setSessionLines(sessionId, [`> ${trimmed}`, ...more])
-    return
-  }
-  if (isExit) {
-    if (!exitOutcome.fullClose) {
-      const peek = await readTerminalSessionsIfPresent()
-      if (peek) {
-        await appendLinesToSession(peek.activeId, [`> ${trimmed}`, ...more])
-      }
-    }
     return
   }
   if (more.length > 0) {
@@ -328,8 +371,21 @@ export async function resetBmxtFromShortcutAsync(
   await openOrFocus()
 }
 
-export async function runCommandMessage(line: string, sessionIdRaw?: string): Promise<void> {
-  await runCommand(line, sessionIdRaw)
+export async function warmBackgroundServicesAsync(): Promise<void> {
+  if (commandCoreWarmed) {
+    return
+  }
+  await ensureBmxtCore()
+  getJobRunner(BACKGROUND_JOB_SCOPE)
+  commandCoreWarmed = true
+}
+
+export async function runCommandMessage(
+  line: string,
+  sessionIdRaw?: string,
+  sender?: chrome.runtime.MessageSender
+): Promise<void> {
+  await runCommand(line, sessionIdRaw, sender)
 }
 
 export async function runNavControlMessage(message: NavControlRequest): Promise<unknown> {

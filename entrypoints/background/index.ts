@@ -1,4 +1,4 @@
-/** Service worker entry: fast window launch first, heavy services lazy-loaded. */
+/** Service worker entry: fast window launch first; command core loads eagerly on SW wake. */
 
 import { scheduleDeferredWarmSearchCaches } from "../../lib/features/launch/warm-search-scheduler"
 import { loadBackgroundServicesAsync } from "./load-background-services"
@@ -9,5 +9,8 @@ export default defineBackground(() => {
   setupWindowLaunch()
   setupMessageBridge()
   scheduleDeferredWarmSearchCaches()
-  void loadBackgroundServicesAsync().then((m) => m.registerBackgroundServices())
+  void loadBackgroundServicesAsync().then((m) => {
+    m.registerBackgroundServices()
+    void m.warmBackgroundServicesAsync()
+  })
 })

@@ -40,10 +40,24 @@ function safeSendResponse(sendResponse: (response: unknown) => void, body: unkno
 
 export function setupMessageBridge(): void {
   chrome.runtime.onMessage.addListener(
-    (message: RunCmdMessage & NavControlMessage, _sender, sendResponse) => {
+    (message: RunCmdMessage & NavControlMessage, sender, sendResponse) => {
+      if (message?.type === "WARM_BACKGROUND") {
+        void loadBackgroundServicesAsync()
+          .then((services) => services.warmBackgroundServicesAsync())
+          .then(() => safeSendResponse(sendResponse, { ok: true }))
+          .catch((e) =>
+            safeSendResponse(sendResponse, {
+              ok: false,
+              error: e instanceof Error ? e.message : String(e)
+            })
+          )
+        return true
+      }
       if (message?.type === "RUN_CMD" && typeof message.line === "string") {
         void loadBackgroundServicesAsync()
-          .then((services) => services.runCommandMessage(message.line!, message.sessionId))
+          .then((services) =>
+            services.runCommandMessage(message.line!, message.sessionId, sender)
+          )
           .then(() => safeSendResponse(sendResponse, { ok: true }))
           .catch((e) =>
             safeSendResponse(sendResponse, {

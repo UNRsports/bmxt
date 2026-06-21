@@ -44,7 +44,8 @@ function verifyBuiltBackground() {
     "create-window-done",
     "launch-chain-done",
     "background-services.js",
-    "RUN_CMD"
+    "RUN_CMD",
+    "WARM_BACKGROUND"
   ]
   const shellMissing = shellRequired.filter((token) => !bg.includes(token))
   if (shellMissing.length > 0) {

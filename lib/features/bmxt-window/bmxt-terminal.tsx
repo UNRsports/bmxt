@@ -27,6 +27,7 @@ import {
 } from "../bmxt-core"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { disposeJobRunner } from "../job"
+import { warmBackgroundServicesFromPageAsync } from "../launch/warm-background-services"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
@@ -214,6 +215,8 @@ function BmxtTerminalInner() {
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
 
+  const [backgroundReady, setBackgroundReady] = useState(false)
+
   const validSessionIds = useMemo(() => state?.order ?? [], [state?.order])
 
   const {
@@ -249,6 +252,12 @@ function BmxtTerminalInner() {
   pickersBySessionRef.current = pickersBySession
 
   const rootRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    void warmBackgroundServicesFromPageAsync()
+      .then(() => setBackgroundReady(true))
+      .catch(() => setBackgroundReady(true))
+  }, [])
 
   useEffect(() => {
     void (async () => {
@@ -384,7 +393,7 @@ function BmxtTerminalInner() {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  if (state === null || !upgradeBannerReady || !processUiReady) {
+  if (state === null || !upgradeBannerReady || !processUiReady || !backgroundReady) {
     return <TerminalBootSplash />
   }
 

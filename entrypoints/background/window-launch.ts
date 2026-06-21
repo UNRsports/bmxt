@@ -54,6 +54,7 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
 
 /** EN: Shortcut — focus existing window or create immediately (no tabs.query before create). */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
+  void loadBackgroundServicesAsync()
   markLaunchPhase("resolve-window-start")
   const existingId = await resolveBmxtWindowIdFastAsync()
   markLaunchPhase("resolve-window-done")
@@ -76,6 +77,7 @@ async function resetBmxtFromShortcutAsync(): Promise<void> {
 }
 
 function openOrFocusBmxtWindow(): void {
+  void loadBackgroundServicesAsync()
   enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
 }
 

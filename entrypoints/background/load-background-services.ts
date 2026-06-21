@@ -7,7 +7,12 @@
 
 export type BackgroundServicesModule = {
   registerBackgroundServices(): void
-  runCommandMessage(line: string, sessionId?: string): Promise<void>
+  warmBackgroundServicesAsync(): Promise<void>
+  runCommandMessage(
+    line: string,
+    sessionId?: string,
+    sender?: chrome.runtime.MessageSender
+  ): Promise<void>
   runNavControlMessage(message: Record<string, unknown>): Promise<unknown>
   removeAllTerminalSessionsFromStorageAsync(): Promise<void>
   resetBmxtFromShortcutAsync(openOrFocus: () => Promise<void>): Promise<void>
