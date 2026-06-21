@@ -73,11 +73,15 @@
         margin: 0 0 2rem;
         text-align: center;
       }
-      .hero img {
+      .hero img,
+      .hero-extra img {
         max-width: 100%;
         height: auto;
         border-radius: 8px;
         border: 1px solid var(--border);
+      }
+      .hero-extra {
+        margin-top: 1rem;
       }
       h2.version {
         font-size: 1.1rem;
@@ -129,14 +133,7 @@
 
       <nav class="lang" aria-label="Language" id="lang-nav"></nav>
 
-      <figure class="hero">
-        <img
-          src="welcome/manual_howToUseBMXt.png"
-          width="840"
-          alt=""
-          id="hero-alt"
-        />
-      </figure>
+      <div id="hero" hidden></div>
 
       <div id="history" aria-live="polite"></div>
 
@@ -177,6 +174,47 @@
       const VALID_LOCALES = ["ja", "en"]
       const VERSION_PARAM = "v"
       const VERSION_PARAM_RE = /^\d+(\.\d+)*$/
+      const WELCOME_NONE_HERO_IMAGE = "_none_heroImage"
+
+      function isRenderableWelcomeImagePath(path) {
+        if (!path || path === WELCOME_NONE_HERO_IMAGE || path.startsWith("_none_")) {
+          return false
+        }
+        return true
+      }
+
+      function resolveHeroImageMaxWidthCss(value) {
+        if (value === undefined || value === null) {
+          return undefined
+        }
+        if (typeof value === "number") {
+          if (!Number.isFinite(value) || value <= 0) {
+            return undefined
+          }
+          return `${value}px`
+        }
+        const trimmed = String(value).trim()
+        if (!trimmed) {
+          return undefined
+        }
+        if (/^\d+$/.test(trimmed)) {
+          return `${trimmed}px`
+        }
+        if (/^[\d.]+(px|%|rem|em|vw|vh|ch)$/.test(trimmed)) {
+          return trimmed
+        }
+        return undefined
+      }
+
+      function listAdditionalImagePaths(entry) {
+        const paths = []
+        for (const path of entry.additionalImages ?? []) {
+          if (isRenderableWelcomeImagePath(path)) {
+            paths.push(path)
+          }
+        }
+        return paths
+      }
 
       function parseLocale() {
         const raw = new URLSearchParams(location.search).get("lang")
@@ -233,6 +271,26 @@
         )
       }
 
+      function resolveHeroEntry(entries, maxVersion) {
+        if (!Array.isArray(entries) || entries.length === 0) {
+          return null
+        }
+        const sorted = [...entries].sort((a, b) =>
+          compareVersion(b.version, a.version)
+        )
+        if (maxVersion) {
+          const exact = sorted.find((entry) => entry.version === maxVersion)
+          if (exact) {
+            return exact
+          }
+          const filtered = sorted.filter(
+            (entry) => compareVersion(entry.version, maxVersion) <= 0
+          )
+          return filtered[0] ?? null
+        }
+        return sorted[0] ?? null
+      }
+
       function renderLangNav(locale) {
         const nav = document.getElementById("lang-nav")
         const copy = UI[locale]
@@ -257,10 +315,43 @@
           ? copy.pageSubtitleThrough.replace("{version}", maxVersion)
           : copy.pageSubtitle
         document.getElementById("page-subtitle").textContent = subtitle
-        document.getElementById("hero-alt").alt = copy.heroAlt
         document.getElementById("footer-text").textContent = copy.footer
         document.getElementById("privacy-link").textContent = copy.privacy
         renderLangNav(locale)
+      }
+
+      function renderHero(entry, locale) {
+        const container = document.getElementById("hero")
+        const copy = UI[locale]
+        const heroPath = isRenderableWelcomeImagePath(entry?.heroImage)
+          ? entry.heroImage
+          : null
+        const additionalPaths = entry ? listAdditionalImagePaths(entry) : []
+
+        if (!heroPath && additionalPaths.length === 0) {
+          container.hidden = true
+          container.innerHTML = ""
+          return
+        }
+
+        const heroMaxWidth = resolveHeroImageMaxWidthCss(entry?.heroImageMaxWidth)
+        const heroStyle = heroMaxWidth ? ` style="max-width:${heroMaxWidth}"` : ""
+        const parts = []
+
+        if (heroPath) {
+          parts.push(
+            `<figure class="hero"><img src="${heroPath}" alt="${copy.heroAlt}"${heroStyle} loading="eager" /></figure>`
+          )
+        }
+
+        for (const [index, path] of additionalPaths.entries()) {
+          parts.push(
+            `<figure class="hero-extra"><img src="${path}" alt="${copy.heroAlt} ${index + 1}" loading="lazy" /></figure>`
+          )
+        }
+
+        container.hidden = false
+        container.innerHTML = parts.join("")
       }
 
       function renderHistory(entries, locale) {
@@ -300,9 +391,11 @@
           }
           const data = await res.json()
           const visible = filterEntriesThroughVersion(data, maxVersion)
+          renderHero(resolveHeroEntry(data, maxVersion), locale)
           renderHistory(visible, locale)
         } catch {
           const copy = UI[locale]
+          document.getElementById("hero").hidden = true
           document.getElementById("history").innerHTML =
             `<p class="error">${copy.loadError}</p>`
         }

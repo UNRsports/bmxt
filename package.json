@@ -12,10 +12,10 @@
     "url": "https://github.com/UNRsports/bmxt.git"
   },
   "scripts": {
-    "build": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && node scripts/build-background-services.mjs && wxt build",
-    "dev": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && node scripts/build-background-services.mjs && wxt",
-    "package": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && node scripts/build-background-services.mjs && wxt zip",
-    "postinstall": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && wxt prepare",
+    "build": "node scripts/copy-sql-wasm.mjs && node scripts/build-background-services.mjs && wxt build",
+    "dev": "node scripts/copy-sql-wasm.mjs && node scripts/build-background-services.mjs && wxt",
+    "package": "node scripts/copy-sql-wasm.mjs && node scripts/build-background-services.mjs && wxt zip",
+    "postinstall": "node scripts/copy-sql-wasm.mjs && wxt prepare",
     "codegen": "node scripts/codegen/run.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
     "check:generated": "pnpm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json lib/features/bmxt-core/registry/table.gen.ts lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",

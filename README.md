@@ -271,7 +271,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 |-------|--------|
 | **`aboutbmxt`** | Opens **`https://unrsports.github.io/bmxt/welcome.html`** via **`open_welcome_page`** (Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**). Query parameters **`lang`** (UI locale from settings) and **`v`** (installed manifest version) are appended. The terminal logs a short confirmation line. |
 
-**Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Version history bullets come from **`welcome-content.json`**. Maintainers edit **`lib/features/welcome/welcome-content.json`**; **`scripts/sync-welcome-docs.mjs`** copies it to **`docs/welcome-content.json`** on **`postinstall`** / **`dev`** / **`build`**. Each entry has **`version`**, **`ja`**, and **`en`** string arrays. The hero screenshot is static in **`docs/welcome.html`** (image under **`docs/welcome/`**).
+**Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
 **Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
@@ -856,7 +856,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
 | **`lib/features/`** | Feature modules (see table below) |
 | **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
-| **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`) |
+| **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
 | **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev) |
 
 <a id="main-sources"></a>
@@ -868,7 +868,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
 - `lib/features/side-picker/` — Shared side-column picker UI (panels, keyboard kernel, wrappers)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
-- `lib/features/welcome/` — Welcome tab URL builder and update hook; **`welcome-content.json`** (synced to **`docs/`**)
+- `lib/features/welcome/` — Welcome tab URL builder and update hook (opens hosted **`docs/welcome.html`**; content lives under **`docs/`** only)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
 - `lib/features/bmxt-core/` — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
@@ -882,7 +882,6 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
 - `scripts/copy-sql-wasm.mjs` — Copies sql.js WASM into **`public/assets/search-cache/`**
-- `scripts/sync-welcome-docs.mjs` — Syncs welcome JSON from **`lib/features/welcome/`** to **`docs/`**
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
 
@@ -893,7 +892,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 **Welcome page on extension update** (normal browser tab, separate from the in-window block)
 
-When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads version history from **`docs/welcome-content.json`** on GitHub Pages (source of truth: **`lib/features/welcome/welcome-content.json`**).
+When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
 **Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
@@ -910,7 +909,7 @@ Existing **session log** lines are still rendered **below** that block.
 
 1. Bump **`package.json`** → **`version`**.
 2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays (used by the in-window upgrade banner).
-3. Prepend a new object to **`lib/features/welcome/welcome-content.json`** (`version`, **`ja`** / **`en`** bullet arrays). Run **`pnpm run build`** or **`node scripts/sync-welcome-docs.mjs`** so **`docs/welcome-content.json`** is updated, then commit both files. Users open the page anytime with **`aboutbmxt`** or after install/update. To change the hero screenshot, edit **`docs/welcome.html`** and place images under **`docs/welcome/`**. Publish **`docs/`** to GitHub Pages so the live welcome page matches the repo.
+3. Prepend a new object to **`docs/welcome-content.json`** (`version`, **`ja`** / **`en`** bullet arrays; optional image fields). Place image files under **`docs/welcome/`**. Publish **`docs/`** to GitHub Pages so the live welcome page matches the repo. Users open the page anytime with **`aboutbmxt`** or after install/update.
 4. Build and ship.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
@@ -1239,7 +1238,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 |------|------|
 | **`aboutbmxt`** | **`https://unrsports.github.io/bmxt/welcome.html`** を **`open_welcome_page`** 経由で開く（Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**）。クエリ **`lang`**（設定の UI ロケール）と **`v`**（インストール済み manifest 版）を付与。ターミナルには短い確認行が出る。 |
 
-**ページ内容**はリポジトリの **`docs/`**（GitHub Pages）から配信されます。バージョン履歴の箇条書きは **`welcome-content.json`** から読み込みます。メンテナンス用の正本は **`lib/features/welcome/welcome-content.json`** で、**`scripts/sync-welcome-docs.mjs`** が **`postinstall`** / **`dev`** / **`build`** 時に **`docs/welcome-content.json`** へコピーします。各エントリは **`version`**, **`ja`**, **`en`** の文字列配列です。hero スクリーンショットは **`docs/welcome.html`** に静的に埋め込まれ、画像は **`docs/welcome/`** に置きます。
+**ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
 **関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
@@ -1809,7 +1808,7 @@ pnpm run dev
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
-| **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`） |
+| **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
 | **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発） |
 
 <a id="main-sources-ja"></a>
@@ -1824,7 +1823,7 @@ pnpm run dev
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
-- `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック。**`welcome-content.json`**（**`docs/`** へ sync）
+- `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック（ホストされた **`docs/welcome.html`** を開く；コンテンツは **`docs/`** のみ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
 - `lib/features/bmxt-core/` — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
@@ -1838,7 +1837,6 @@ pnpm run dev
 - `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
 - `scripts/copy-sql-wasm.mjs` — sql.js WASM を **`public/assets/search-cache/`** へコピー
-- `scripts/sync-welcome-docs.mjs` — **`lib/features/welcome/`** から **`docs/`** へ welcome JSON を sync
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
@@ -1849,7 +1847,7 @@ pnpm run dev
 
 **拡張機能更新時のウェルカムページ**（通常タブ。ウィンドウ内ブロックとは別）
 
-Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** から履歴を読み込みます（正本: **`lib/features/welcome/welcome-content.json`**）。
+Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
 **手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
@@ -1866,7 +1864,7 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 
 1. **`package.json`** の **`version`** を上げる。
 2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列。ウィンドウ内アップグレードバナー用）。
-3. **`lib/features/welcome/welcome-content.json`** の先頭に新オブジェクトを追加する（**`version`**, **`ja`** / **`en`** の配列）。**`pnpm run build`** または **`node scripts/sync-welcome-docs.mjs`** で **`docs/welcome-content.json`** を更新し、両方をコミットする。ユーザーは **`aboutbmxt`** または install/update 後にページを開ける。hero 画像を変える場合は **`docs/welcome.html`** と **`docs/welcome/`** を編集し、**`docs/`** を GitHub Pages に公開して live と揃える。
+3. **`docs/welcome-content.json`** の先頭に新オブジェクトを追加する（**`version`**, **`ja`** / **`en`** の配列；画像フィールドは任意）。画像ファイルは **`docs/welcome/`** に置く。**`docs/`** を GitHub Pages に公開して live と揃える。ユーザーは **`aboutbmxt`** または install/update 後にページを開ける。
 4. ビルドして配布する。
 
 **`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
