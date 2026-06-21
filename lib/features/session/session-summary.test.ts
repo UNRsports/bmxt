@@ -39,7 +39,8 @@ describe("buildSessionSummary", () => {
   })
 
   it("returns terminal only when empty", () => {
-    assert.equal(buildSessionSummary(undefined, false), "(terminal only)")
+    assert.equal(buildSessionSummary(undefined, false, "en"), "(terminal only)")
+    assert.equal(buildSessionSummary(undefined, false, "ja"), "(ターミナルのみ)")
   })
 })
 

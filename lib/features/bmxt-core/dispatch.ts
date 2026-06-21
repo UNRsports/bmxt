@@ -1,6 +1,7 @@
 import type { DispatchBundle } from "../dispatch"
 import { isSecondToken } from "../builtin-commands/command-subcommands.gen"
-import { setRunLocale } from "../setting/i18n/run-locale"
+import { t } from "../setting/i18n/messages"
+import { setRunLocale, getRunLocale } from "../setting/i18n/run-locale"
 import type { UiLocale } from "../setting/locale"
 import { parseHttpUrlCandidate, tokenize } from "./line-parse"
 import type { DispatchJson } from "./types"
@@ -58,7 +59,9 @@ export function dispatchFull(line: string, locale?: UiLocale): string {
   const canonical = resolveCanonical(cmdToken)
   if (!canonical) {
     return dispatchJsonString(
-      linesDispatch([`unknown command: ${cmdToken}. Type help.`])
+      linesDispatch([
+        t("cmd.error.unknownCommand", locale ?? getRunLocale(), { cmdToken })
+      ])
     )
   }
   const out = runCommand(canonical, args)

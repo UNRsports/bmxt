@@ -310,7 +310,7 @@ export function SettingPickerBody({
           </div>
         ) : null}
         {displayLines.length === 0 ? (
-          <div className="bmxt-tab-picker-empty">(no output)</div>
+          <div className="bmxt-tab-picker-empty">{t("plainPicker.noOutput", locale)}</div>
         ) : useVirtual ? (
           <div
             className="bmxt-plain-picker-virtual-track"

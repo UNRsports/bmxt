@@ -5,7 +5,8 @@
       "フレームワークをplasmoからwxtへ、パッケージ管理をnpmからpnpmへ移行"
     ],
     "en": [
-      ""
+      "Externalized the welcome page to reduce package size",
+      "Migrated the framework from Plasmo to WXT and package management from npm to pnpm"
     ]
   }
 }

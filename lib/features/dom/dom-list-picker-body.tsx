@@ -314,7 +314,11 @@ export function DomListPickerBody({
         autoComplete="off"
         wrap="off"
         aria-label={
-          searchMode ? "Search highlight" : commandMode ? "Command input" : "DOM picker keys"
+          searchMode
+            ? uiCopy.t("plainPicker.searchHint")
+            : commandMode
+              ? uiCopy.t("plainPicker.commandHint")
+              : uiCopy.t("dom.picker.inputAria.keys")
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
@@ -337,10 +341,10 @@ export function DomListPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-dom-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label="DOM tree"
+        aria-label={uiCopy.t("dom.picker.listAria")}
         aria-activedescendant={activeRowId}>
         {lines.length === 0 ? (
-          <div className="bmxt-tab-picker-empty">(no output)</div>
+          <div className="bmxt-tab-picker-empty">{uiCopy.t("plainPicker.noOutput")}</div>
         ) : (
           renderRows(0, lines.length)
         )}

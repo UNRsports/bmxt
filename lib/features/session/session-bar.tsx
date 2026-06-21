@@ -2,6 +2,7 @@
 
 import { resolveSessionDisplayName } from "./session-summary"
 import type { SessionPickerState } from "../side-picker/session/session-pickers"
+import { useUiCopy } from "../setting"
 
 type Props = {
   order: readonly string[]
@@ -22,12 +23,13 @@ export function SessionBar({
   navArmedByLeaf,
   onActivateSession
 }: Props) {
+  const uiCopy = useUiCopy()
   if (order.length < 2) {
     return null
   }
 
   return (
-    <div className="bmxt-session-bar" role="tablist" aria-label="Sessions">
+    <div className="bmxt-session-bar" role="tablist" aria-label={uiCopy.t("session.bar.aria")}>
       {order.map((sessionId, i) => {
         const index = i + 1
         const isActive = sessionId === activeId

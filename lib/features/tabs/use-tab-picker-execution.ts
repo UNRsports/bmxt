@@ -259,6 +259,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         tabIds,
         title: newGroupTitle,
         color,
+        locale: uiCopy.locale,
         onAppendLog,
         resolveCreateGroupPlan: resolvePickerCreateGroupPlan
       })

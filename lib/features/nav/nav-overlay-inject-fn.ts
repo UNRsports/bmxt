@@ -85,19 +85,19 @@ export function bmxtNavControlInjected(
   const MENU_ITEM_IDS = ["selectText", "saveImage", "reloadPage"]
   const COPY_MENU_ITEM_IDS = ["copySelection"]
   const LABELS_FALLBACK = {
-    selectText: "Select text",
-    saveImage: "Save image under cursor",
-    reloadPage: "Reload page",
-    copySelection: "Copy",
-    historyBack: "History back",
-    historyForward: "History forward",
+    selectText: "テキスト選択",
+    saveImage: "カーソル下の画像を保存",
+    reloadPage: "ページを再読み込み",
+    copySelection: "コピー",
+    historyBack: "履歴を戻る",
+    historyForward: "履歴を進む",
     menuSelectHint: "↑↓ · Enter",
     menuCopyHint: "Enter",
-    textSelStart: "Selection start: Enter · Esc cancel",
-    textSelEnd: "Selection end: Enter confirm · move to preview · Esc cancel",
-    typingLine1: "Type in the BMXt window",
-    typingLine2: "Text typed in BMXt appears here",
-    typingMultiline: "Shift+Enter for newline"
+    textSelStart: "選択開始: Enter · Esc 取消",
+    textSelEnd: "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消",
+    typingLine1: "BMXt ウィンドウで入力",
+    typingLine2: "入力したテキストがここに反映されます",
+    typingMultiline: "Shift+Enter で改行"
   }
   type OverlayLabels = typeof LABELS_FALLBACK
   let parsedLabels: OverlayLabels = LABELS_FALLBACK

@@ -1,5 +1,7 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import { searchCmdExitListLines, searchCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import { t } from "../../setting/i18n/messages"
 import {
   isSearchListScopeToken,
   normalizeSearchListDispatchLine,
@@ -35,9 +37,9 @@ function effectForScope(scope: string, pattern: string): ChromeEffect {
   }
 }
 
-function runList(args: string[]) {
+function runList(args: string[], locale: ReturnType<typeof getRunLocale>) {
   if (args.length < 2) {
-    return linesDispatch([...searchCmdUsageLines()])
+    return linesDispatch([...searchCmdUsageLines(locale)])
   }
   if (args.length === 2) {
     const pattern = ""
@@ -47,7 +49,10 @@ function runList(args: string[]) {
   }
   const third = normalizeSearchSecondToken(args[2])
   if (third.startsWith("--") && !isSearchListScopeToken(third)) {
-    return linesDispatch([`error: unknown search scope: ${args[2]}`, ...searchCmdUsageLines()])
+    return linesDispatch([
+      t("cmd.search.error.unknownScope", locale, { scope: args[2] }),
+      ...searchCmdUsageLines(locale)
+    ])
   }
   const hasScopeToken = isSearchListScopeToken(third)
   const scopes = hasScopeToken
@@ -59,29 +64,38 @@ function runList(args: string[]) {
     return effectsDispatch(scopes.map((scope) => effectForScope(scope, pattern)))
   } catch (e) {
     return linesDispatch([
-      `error: ${e instanceof Error ? e.message : String(e)}`,
-      ...searchCmdUsageLines()
+      t("cmd.search.error.generic", locale, {
+        message: e instanceof Error ? e.message : String(e)
+      }),
+      ...searchCmdUsageLines(locale)
     ])
   }
 }
 
 export function run(args: string[]) {
+  const locale = getRunLocale()
   if (!args[1]) {
-    return linesDispatch([cmdAvailableOptionsLine("search"), ...searchCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("search", locale), ...searchCmdUsageLines(locale)])
   }
   const headRaw = args[1]
   const headKey = normalizeSearchSecondToken(headRaw)
   if (!isSecondToken("search", headKey)) {
-    return linesDispatch([`error: unknown search option: ${headRaw}`, ...searchCmdUsageLines()])
+    return linesDispatch([
+      t("cmd.search.error.unknownOption", locale, { option: headRaw }),
+      ...searchCmdUsageLines(locale)
+    ])
   }
   if (headKey === "-list") {
-    return runList(args)
+    return runList(args, locale)
   }
   if (headKey === "-exit") {
     if (args.length !== 3 || normalizeSearchSecondToken(args[2]) !== "-list") {
-      return linesDispatch(["error: usage: search -exit -list", ...searchCmdUsageLines()])
+      return linesDispatch([
+        t("cmd.search.error.exitListUsage", locale),
+        ...searchCmdUsageLines(locale)
+      ])
     }
-    return linesDispatch(searchCmdExitListLines())
+    return linesDispatch(searchCmdExitListLines(locale))
   }
-  return linesDispatch([...searchCmdUsageLines()])
+  return linesDispatch([...searchCmdUsageLines(locale)])
 }

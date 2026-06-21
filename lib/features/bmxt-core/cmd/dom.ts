@@ -1,5 +1,7 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import { domCmdExitListLines, domCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import { t } from "../../setting/i18n/messages"
 import { stripInvisibleFormatChars } from "../line-parse"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
@@ -44,12 +46,16 @@ function runList(args: string[]) {
 }
 
 export function run(args: string[]) {
+  const locale = getRunLocale()
   if (!args[1]) {
-    return linesDispatch([cmdAvailableOptionsLine("dom"), ...domCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("dom", locale), ...domCmdUsageLines(locale)])
   }
   const first = args[1]
   if (!isSecondToken("dom", first)) {
-    return linesDispatch([`error: unknown dom option: ${first}`, ...domCmdUsageLines()])
+    return linesDispatch([
+      t("cmd.dom.error.unknownOption", locale, { option: first }),
+      ...domCmdUsageLines(locale)
+    ])
   }
   const firstLc = normalizeDomToken(first)
   if (firstLc === "-list") {
@@ -57,9 +63,15 @@ export function run(args: string[]) {
   }
   if (firstLc === "-exit") {
     if (args.length !== 3 || normalizeDomToken(args[2]) !== "-list") {
-      return linesDispatch(["error: usage: dom -exit -list", ...domCmdUsageLines()])
+      return linesDispatch([
+        t("cmd.dom.error.exitListUsage", locale),
+        ...domCmdUsageLines(locale)
+      ])
     }
-    return linesDispatch(domCmdExitListLines())
+    return linesDispatch(domCmdExitListLines(locale))
   }
-  return linesDispatch([`error: unknown dom option (internal): ${first}`, ...domCmdUsageLines()])
+  return linesDispatch([
+    t("cmd.dom.error.internal", locale, { option: first }),
+    ...domCmdUsageLines(locale)
+  ])
 }

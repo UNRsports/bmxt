@@ -242,10 +242,11 @@ function BmxtTerminalInner() {
             namesById: state.namesById,
             logsById: state.logsById,
             pickersBySession,
-            navArmedByLeaf
+            navArmedByLeaf,
+            locale: settings.locale
           })
         : [],
-    [navArmedByLeaf, pickersBySession, state]
+    [navArmedByLeaf, pickersBySession, settings.locale, state]
   )
 
   const pickersBySessionRef = useRef(pickersBySession)

@@ -1,9 +1,9 @@
 import { displayTitle } from "../tabs/picker-rows"
+import { t } from "../setting/i18n/messages"
+import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
 import { getWindowDisplayNamesMap, pruneWindowDisplayNames } from "../extension-storage/window-display-names"
 import { resolveMirrorBrowserWindowId } from "../tabs/resolve-mirror-browser-window"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
-import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
-import { t } from "../setting/i18n/messages"
 export { searchEntryOffersOpenDestination } from "../side-picker/model/picker-entry"
 
 export type SearchOpenDestinationKind = "new_window" | "window" | "group" | "ungrouped"
@@ -155,7 +155,8 @@ async function focusCreatedTab(tabId: number, windowId: number): Promise<void> {
  */
 export async function openUrlAtSearchDestination(
   urlRaw: string,
-  dest: SearchOpenDestinationRow
+  dest: SearchOpenDestinationRow,
+  locale: UiLocale = DEFAULT_UI_LOCALE
 ): Promise<string[]> {
   const url = normalizePickerOpenUrl(urlRaw)
 
@@ -167,14 +168,19 @@ export async function openUrlAtSearchDestination(
     const w = await chrome.windows.create(props)
     const line =
       url !== undefined
-        ? `opened new window ${w.id ?? "?"}: ${url}`
-        : `opened new window ${w.id ?? "?"}`
+        ? t("search.openDestination.newWindowWithUrl", locale, {
+            windowId: String(w.id ?? "?"),
+            url
+          })
+        : t("search.openDestination.newWindow", locale, {
+            windowId: String(w.id ?? "?")
+          })
     return [line]
   }
 
   const windowId = dest.windowId
   if (windowId === undefined) {
-    return ["search — invalid open destination (missing window)"]
+    return [t("search.openDestination.invalid", locale)]
   }
 
   const createProps: chrome.tabs.CreateProperties = { windowId }
@@ -196,12 +202,15 @@ export async function openUrlAtSearchDestination(
       }
     } catch (e2) {
       const reason2 = e2 instanceof Error ? e2.message : String(e2)
-      return [`search — could not open tab: ${reason}`, `fallback: ${reason2}`]
+      return [
+        t("search.openDestination.openFailed", locale, { reason }),
+        t("search.openDestination.fallbackFailed", locale, { reason: reason2 })
+      ]
     }
   }
 
   if (tab?.id === undefined) {
-    return ["search — could not open tab"]
+    return [t("search.openDestination.tabIdMissing", locale)]
   }
 
   if (dest.kind === "group" && dest.groupId !== undefined) {
@@ -210,7 +219,7 @@ export async function openUrlAtSearchDestination(
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e)
       await focusCreatedTab(tab.id, windowId)
-      return [`search — opened tab but could not add to group: ${reason}`]
+      return [t("search.openDestination.groupFailed", locale, { reason })]
     }
   }
 
@@ -223,5 +232,11 @@ export async function openUrlAtSearchDestination(
         ? "ungrouped"
         : `window ${windowId}`
   const urlPart = url !== undefined ? `: ${url}` : ""
-  return [`opened tab ${tab.id} in ${destLabel}${urlPart}`]
+  return [
+    t("search.openDestination.openedTab", locale, {
+      tabId: String(tab.id),
+      destLabel,
+      urlPart
+    })
+  ]
 }

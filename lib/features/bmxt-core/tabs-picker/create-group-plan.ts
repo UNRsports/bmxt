@@ -1,3 +1,7 @@
+import { t } from "../../setting/i18n/messages"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import type { UiLocale } from "../../setting/locale"
+
 export type CreateGroupPlanContext = {
   tabCount: number
   resolvedTabCount: number
@@ -13,43 +17,49 @@ export type CreateGroupPlanResult = {
   strategy: "moveWholeGroup" | "ungroupThenMoveTabs" | null
 }
 
-export function resolveCreateGroupPlan(ctx: CreateGroupPlanContext): CreateGroupPlanResult {
+export function resolveCreateGroupPlan(
+  ctx: CreateGroupPlanContext,
+  locale: UiLocale = getRunLocale()
+): CreateGroupPlanResult {
   if (ctx.tabCount === 0) {
     return {
       ok: false,
-      error: "選択されたタブがありません（一覧に戻り Tab で選び直してください）。",
+      error: t("tabs.picker.error.createGroup.noTabs", locale),
       strategy: null
     }
   }
   if (ctx.resolvedTabCount !== ctx.tabCount) {
     return {
       ok: false,
-      error: "選択したタブの一部が閉じられています。",
+      error: t("tabs.picker.error.createGroup.partialClosed", locale),
       strategy: null
     }
   }
   if (!ctx.sameWindow) {
     return {
       ok: false,
-      error: "選択したタブは同じウィンドウ内である必要があります。",
+      error: t("tabs.picker.error.createGroup.sameWindow", locale),
       strategy: null
     }
   }
   if (ctx.windowType !== "normal") {
     return {
       ok: false,
-      error:
-        "このウィンドウ種別ではタブグループを使えません（Chrome は通常ウィンドウ normal のみ）。popup・app・devtools などではグループ化できません。ウェブページを開いた通常ブラウザウィンドウのタブを選んでください。",
+      error: t("tabs.picker.error.createGroup.windowType", locale),
       strategy: null
     }
   }
   if (ctx.movingCount === 0) {
-    return { ok: false, error: "移動するタブ数が不正です", strategy: null }
+    return {
+      ok: false,
+      error: t("tabs.picker.error.createGroup.invalidMoveCount", locale),
+      strategy: null
+    }
   }
   if (ctx.movingCount > ctx.groupTabCount) {
     return {
       ok: false,
-      error: "移動対象タブがグループに含まれていません",
+      error: t("tabs.picker.error.createGroup.notInGroup", locale),
       strategy: null
     }
   }

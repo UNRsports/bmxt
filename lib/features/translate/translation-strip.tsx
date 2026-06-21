@@ -12,6 +12,7 @@ import {
   type TranslationPairId
 } from "./translation-pair"
 import type { TranslationResult } from "./translator-service"
+import { useUiCopy } from "../setting"
 
 export type TranslationBlock = TranslationResult & {
   id: number
@@ -269,6 +270,7 @@ export function TranslationStrip({
   alwaysVisible = false,
   sentenceHighlight
 }: Props) {
+  const uiCopy = useUiCopy()
   const fieldLabels = useMemo(() => getTranslationFieldLabels(pairId), [pairId])
 
   if (!alwaysVisible && buffer.length === 0 && !busy && !statusNote) {
@@ -278,7 +280,7 @@ export function TranslationStrip({
   const forward = resolveForwardDisplayText(buffer, blocks, busy, translatePending)
 
   return (
-    <div className="bmxt-typing-translate" role="region" aria-label="Translation preview">
+    <div className="bmxt-typing-translate" role="region" aria-label={uiCopy.t("translate.preview.aria")}>
       {statusNote ? (
         <div className="bmxt-typing-translate-status" role="status">
           {statusNote}

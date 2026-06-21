@@ -60,8 +60,8 @@ export function parseNavOverlayLabels(raw: string): NavOverlayLabels | null {
   }
 }
 
-/** EN: English fallback when labels are missing (inject runs outside BMXt React tree). */
-export const NAV_OVERLAY_LABELS_FALLBACK: NavOverlayLabels = buildNavOverlayLabels("en")
+/** EN: Japanese fallback when labels are missing (inject runs outside BMXt React tree). */
+export const NAV_OVERLAY_LABELS_FALLBACK: NavOverlayLabels = buildNavOverlayLabels("ja")
 
 let cachedLabelsJson = serializeNavOverlayLabels(NAV_OVERLAY_LABELS_FALLBACK)
 

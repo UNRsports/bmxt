@@ -558,10 +558,10 @@ export function SearchListPickerBody({
     lineCount > 0 && hi >= 0 && hi < lineCount ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
   const listAriaLabel = inDestinationView
-    ? "Search open targets"
+    ? uiCopy.t("search.picker.listAria.destination")
     : inDetailView
-      ? "Search result detail hits"
-      : "Search results"
+      ? uiCopy.t("search.picker.listAria.detail")
+      : uiCopy.t("search.picker.listAria.results")
 
   const renderResultsRows = (start: number, end: number): ReactNode[] => {
     const slice: ReactNode[] = []
@@ -682,7 +682,11 @@ export function SearchListPickerBody({
         autoComplete="off"
         wrap="off"
         aria-label={
-          searchMode ? "Search highlight" : commandMode ? "Command input" : "Search picker keys"
+          searchMode
+            ? uiCopy.t("plainPicker.searchHint")
+            : commandMode
+              ? uiCopy.t("plainPicker.commandHint")
+              : uiCopy.t("search.picker.listAria.keys")
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
@@ -740,7 +744,7 @@ export function SearchListPickerBody({
           </div>
         ) : null}
         {lineCount === 0 ? (
-          <div className="bmxt-tab-picker-empty">(no output)</div>
+          <div className="bmxt-tab-picker-empty">{uiCopy.t("plainPicker.noOutput")}</div>
         ) : statusOnly ? (
           statusLines.map((line, i) => (
             <SearchListStatusRow key={i} index={i} line={line} hi={hi} />

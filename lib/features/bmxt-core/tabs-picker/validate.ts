@@ -1,3 +1,6 @@
+import { t } from "../../setting/i18n/messages"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import type { UiLocale } from "../../setting/locale"
 import type { BulkSubMode, SelectKind } from "./model"
 
 export type ExecuteValidateContext = {
@@ -29,24 +32,27 @@ function effectiveSelectKind(ctx: ExecuteValidateContext): SelectKind | null {
   return null
 }
 
-export function validateExecute(ctx: ExecuteValidateContext): ExecuteValidation {
+export function validateExecute(
+  ctx: ExecuteValidateContext,
+  locale: UiLocale = getRunLocale()
+): ExecuteValidation {
   if (!ctx.bulkSubMode) {
     return {
       ok: false,
-      reason: "モード未選択です。←→で処理を選択してください。"
+      reason: t("tabs.picker.error.noBulkMode", locale)
     }
   }
   const kind = effectiveSelectKind(ctx)
   if (!kind) {
     return {
       ok: false,
-      reason: "選択対象がありません。Tabで選択してください。"
+      reason: t("tabs.picker.error.noSelection", locale)
     }
   }
   if (!allowed(kind, ctx.bulkSubMode)) {
     return {
       ok: false,
-      reason: "選択種別ではその処理を実行できません。"
+      reason: t("tabs.picker.error.invalidBulkForKind", locale)
     }
   }
   if (ctx.selectedTabCount === 0) {
@@ -58,7 +64,7 @@ export function validateExecute(ctx: ExecuteValidateContext): ExecuteValidation 
     if (!allowWithoutTabs) {
       return {
         ok: false,
-        reason: "処理対象のタブがありません。"
+        reason: t("tabs.picker.error.noTabsForAction", locale)
       }
     }
   }

@@ -350,7 +350,7 @@ export function PlainTextPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label="Results"
+        aria-label={uiCopy.t("plainPicker.listAria")}
         aria-activedescendant={activeRowId}
         onScroll={useVirtual ? onListScroll : undefined}>
         {lines.length >= PLAIN_PICKER_VIRTUALIZE_MIN ? (
@@ -366,7 +366,7 @@ export function PlainTextPickerBody({
           </div>
         ) : null}
         {lines.length === 0 ? (
-          <div className="bmxt-tab-picker-empty">(no output)</div>
+          <div className="bmxt-tab-picker-empty">{uiCopy.t("plainPicker.noOutput")}</div>
         ) : useVirtual ? (
           <div
             className="bmxt-plain-picker-virtual-track"

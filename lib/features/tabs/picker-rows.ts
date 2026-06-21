@@ -67,7 +67,7 @@ function formatGroupLabel(g: chrome.tabGroups.TabGroup | undefined, locale: UiLo
   if (!raw) {
     return t("tabs.picker.untitledGroup", locale, { color: g.color })
   }
-  return `【${displayTitle(raw)}】`
+  return `【${displayTitle(raw, locale)}】`
 }
 
 function tabUrl(t: chrome.tabs.Tab): string {
@@ -153,7 +153,7 @@ export async function buildTabPickerRows(
       seedTabPickerLiveFields(activeTabId, activeRawTitle, activeRawUrl)
     }
     const windowTitle =
-      customName !== undefined ? customName : displayTitle(activeRawTitle)
+      customName !== undefined ? customName : displayTitle(activeRawTitle, locale)
     rows.push({
       kind: "window",
       windowId: wid,

@@ -80,7 +80,9 @@ export function DomPromptRender({
         setExtra([uiCopy.t("domPrompt.denied")])
       } catch (err) {
         setExtra([
-          `error: permission request failed — ${err instanceof Error ? err.message : String(err)}`
+          uiCopy.t("domPrompt.permissionRequestFailed", {
+            message: err instanceof Error ? err.message : String(err)
+          })
         ])
       } finally {
         setBusy(false)
@@ -156,7 +158,7 @@ export function DomPromptRender({
       <div
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label="Permission notice">
+        aria-label={uiCopy.t("domPrompt.listAria")}>
         {allLines.map((ln, i) => {
           const hiRow = i === hi
           return (

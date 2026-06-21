@@ -1,4 +1,20 @@
 import type { SessionPickerState } from "../side-picker/session/session-pickers"
+import {
+  DEFAULT_UI_LOCALE,
+  pickUiLabel,
+  type BilingualUiLabel,
+  type UiLocale
+} from "../setting/locale.ts"
+
+const SESSION_SUMMARY_TERMINAL_ONLY: BilingualUiLabel = {
+  ja: "(ターミナルのみ)",
+  en: "(terminal only)"
+}
+
+const SESSION_SUMMARY_DOM_PROMPT: BilingualUiLabel = {
+  ja: "prompt",
+  en: "prompt"
+}
 
 export type SessionSwitchPickerMatchMode = "prefix" | "contains"
 
@@ -112,7 +128,8 @@ export function resolveSessionRowByDisplayName(
 
 export function buildSessionSummary(
   pickers: SessionPickerState | undefined,
-  navArmed: boolean
+  navArmed: boolean,
+  locale: UiLocale = DEFAULT_UI_LOCALE
 ): string {
   const parts: string[] = []
   if (pickers?.tabs) {
@@ -130,7 +147,8 @@ export function buildSessionSummary(
     const domDetail =
       pickers.dom.kind === "lines"
         ? pickers.dom.commandLine.replace(/^\s*dom\s+-list\s*/i, "").trim() || undefined
-        : pickers.dom.commandLine.replace(/^\s*dom\s+-list\s*/i, "").trim() || "prompt"
+        : pickers.dom.commandLine.replace(/^\s*dom\s+-list\s*/i, "").trim() ||
+          pickUiLabel(SESSION_SUMMARY_DOM_PROMPT, locale)
     appendPart(parts, "dom", domDetail)
   }
   if (pickers?.setting) {
@@ -140,7 +158,7 @@ export function buildSessionSummary(
     parts.push("nav")
   }
   if (parts.length === 0) {
-    return "(terminal only)"
+    return pickUiLabel(SESSION_SUMMARY_TERMINAL_ONLY, locale)
   }
   return parts.join("  ")
 }
@@ -170,9 +188,12 @@ export function deriveDefaultSessionName(input: {
   navArmed: boolean
   logs: readonly string[]
   fallbackIndex: number
+  locale?: UiLocale
 }): string {
-  const summary = buildSessionSummary(input.pickers, input.navArmed)
-  if (summary !== "(terminal only)") {
+  const locale = input.locale ?? DEFAULT_UI_LOCALE
+  const terminalOnly = pickUiLabel(SESSION_SUMMARY_TERMINAL_ONLY, locale)
+  const summary = buildSessionSummary(input.pickers, input.navArmed, locale)
+  if (summary !== terminalOnly) {
     return summary.length > MAX_SESSION_NAME_LEN ? summary.slice(0, MAX_SESSION_NAME_LEN) : summary
   }
   const lastCmd = lastCommandFromSessionLog(input.logs)
@@ -189,6 +210,7 @@ export function resolveSessionDisplayName(input: {
   pickers: SessionPickerState | undefined
   navArmed: boolean
   logs: readonly string[]
+  locale?: UiLocale
 }): string {
   const stored = input.namesById[input.sessionId]?.trim()
   if (stored && stored.length > 0) {
@@ -198,7 +220,8 @@ export function resolveSessionDisplayName(input: {
     pickers: input.pickers,
     navArmed: input.navArmed,
     logs: input.logs,
-    fallbackIndex: input.index
+    fallbackIndex: input.index,
+    locale: input.locale
   })
 }
 
@@ -209,20 +232,23 @@ export function buildSessionListRows(input: {
   logsById: Record<string, string[] | undefined>
   pickersBySession: Record<string, SessionPickerState | undefined>
   navArmedByLeaf: Record<string, boolean>
+  locale?: UiLocale
 }): SessionListRow[] {
+  const locale = input.locale ?? DEFAULT_UI_LOCALE
   return input.order.map((sessionId, i) => {
     const index = i + 1
     const pickers = input.pickersBySession[sessionId]
     const navArmed = input.navArmedByLeaf[sessionId] ?? false
     const logs = input.logsById[sessionId] ?? []
-    const summary = buildSessionSummary(pickers, navArmed)
+    const summary = buildSessionSummary(pickers, navArmed, locale)
     const displayName = resolveSessionDisplayName({
       sessionId,
       index,
       namesById: input.namesById,
       pickers,
       navArmed,
-      logs
+      logs,
+      locale
     })
     return {
       sessionId,

@@ -1954,7 +1954,7 @@ export function BmxtShell({
           await appendLogLines([
             logPrefix,
             uiCopy.t("setting.import.failed", {
-              message: "error" in result ? result.error : "unknown error"
+              message: "error" in result ? result.error : uiCopy.t("error.unknown")
             })
           ])
           return
@@ -2580,7 +2580,7 @@ export function BmxtShell({
           const msg =
             "error" in response && typeof response.error === "string"
               ? response.error
-              : "unknown error"
+              : uiCopy.t("error.unknown")
           void appendLogLines([
             `> ${trimmed}`,
             uiCopy.t("error.generic", { message: msg })
@@ -3423,7 +3423,11 @@ export function BmxtShell({
               autoComplete="off"
               wrap="off"
               tabIndex={promptPaneFocused ? 0 : -1}
-              aria-label={mode === "isearch" ? "Reverse incremental search" : "Command line"}
+              aria-label={
+                mode === "isearch"
+                  ? uiCopy.t("prompt.isearch.aria")
+                  : uiCopy.t("prompt.commandLine.aria")
+              }
               placeholder={
                 showNavTypingPlaceholder
                   ? navTypingMultiline

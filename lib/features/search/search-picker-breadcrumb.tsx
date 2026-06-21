@@ -18,7 +18,7 @@ export function SearchPickerBreadcrumb({
   const onDetail = view === "detail"
   const onDestination = view === "destination"
   return (
-    <div className="bmxt-search-picker-crumb" aria-label="Search picker navigation">
+    <div className="bmxt-search-picker-crumb" aria-label={uiCopy.t("search.picker.breadcrumb.aria")}>
       <span
         className={
           onResults

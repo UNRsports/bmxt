@@ -944,8 +944,8 @@
     "en": "Open target"
   },
   "search.openDestination.newWindow": {
-    "ja": "＋ 新しいウィンドウ",
-    "en": "＋ New window"
+    "ja": "新しいウィンドウ {windowId} を開きました",
+    "en": "opened new window {windowId}"
   },
   "search.openDestination.ungrouped": {
     "ja": "(グループなし)",
@@ -1598,5 +1598,349 @@
   "help.section.keys": {
     "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴（全セッション共通）   Ctrl+R  リバース i-search（再度: 古い一致）\n  Ctrl+← / Ctrl+→  セッション切り替え（複数セッション時）\n  Enter  実行または検索確定   Esc  検索キャンセル",
     "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history (shared across sessions)   Ctrl+R  reverse-i-search (again: older match)\n  Ctrl+← / Ctrl+→  switch sessions when multiple are open\n  Enter  run or accept search   Esc  cancel search"
+  },
+  "common.untitled": {
+    "ja": "(無題)",
+    "en": "(Untitled)"
+  },
+  "error.unknown": {
+    "ja": "不明なエラー",
+    "en": "unknown error"
+  },
+  "cmd.error.unknownCommand": {
+    "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
+    "en": "error: unknown command: {cmdToken}. Type help."
+  },
+  "cmd.tabs.error.unknownOption": {
+    "ja": "error: 不明な tabs オプション: {option}",
+    "en": "error: unknown tabs option: {option}"
+  },
+  "cmd.tabs.error.internalOutOfSync": {
+    "ja": "error: internal: tabs option out of sync (re-run pnpm run codegen)",
+    "en": "error: internal: tabs option out of sync (re-run pnpm run codegen)"
+  },
+  "cmd.tabs.error.invalidListUsage": {
+    "ja": "error: invalid tabs -list usage",
+    "en": "error: invalid tabs -list usage"
+  },
+  "cmd.tabs.error.exitListUsage": {
+    "ja": "error: usage: tabs -exit -list",
+    "en": "error: usage: tabs -exit -list"
+  },
+  "cmd.tabs.error.tooManyArgs": {
+    "ja": "error: too many arguments",
+    "en": "error: too many arguments"
+  },
+  "cmd.tabs.error.usageMoveurl": {
+    "ja": "usage: tabs -moveurl <http(s)-url>",
+    "en": "usage: tabs -moveurl <http(s)-url>"
+  },
+  "cmd.tabs.error.internalDispatchOutOfSync": {
+    "ja": "error: internal: tabs dispatch out of sync",
+    "en": "error: internal: tabs dispatch out of sync"
+  },
+  "cmd.dom.error.unknownOption": {
+    "ja": "error: 不明な dom オプション: {option}",
+    "en": "error: unknown dom option: {option}"
+  },
+  "cmd.dom.error.exitListUsage": {
+    "ja": "error: usage: dom -exit -list",
+    "en": "error: usage: dom -exit -list"
+  },
+  "cmd.dom.error.internal": {
+    "ja": "error: 不明な dom オプション (internal): {option}",
+    "en": "error: unknown dom option (internal): {option}"
+  },
+  "cmd.nav.error.unknownOption": {
+    "ja": "error: 不明な nav オプション: {option}",
+    "en": "error: unknown nav option: {option}"
+  },
+  "cmd.nav.error.internal": {
+    "ja": "error: 不明な nav オプション (internal): {option}",
+    "en": "error: unknown nav option (internal): {option}"
+  },
+  "cmd.search.error.unknownScope": {
+    "ja": "error: 不明な search スコープ: {scope}",
+    "en": "error: unknown search scope: {scope}"
+  },
+  "cmd.search.error.generic": {
+    "ja": "error: {message}",
+    "en": "error: {message}"
+  },
+  "cmd.search.error.unknownOption": {
+    "ja": "error: 不明な search オプション: {option}",
+    "en": "error: unknown search option: {option}"
+  },
+  "cmd.search.error.exitListUsage": {
+    "ja": "error: usage: search -exit -list",
+    "en": "error: usage: search -exit -list"
+  },
+  "cmd.translate.error.unknownOption": {
+    "ja": "error: 不明な translate オプション: {option}",
+    "en": "error: unknown translate option: {option}"
+  },
+  "cmd.translate.error.internal": {
+    "ja": "error: 不明な translate オプション (internal): {option}",
+    "en": "error: unknown translate option (internal): {option}"
+  },
+  "cmd.setting.error.unknownOption": {
+    "ja": "error: 不明な setting オプション: {option}",
+    "en": "error: unknown setting option: {option}"
+  },
+  "cmd.setting.error.internal": {
+    "ja": "error: 不明な setting オプション (internal): {option}",
+    "en": "error: unknown setting option (internal): {option}"
+  },
+  "cmd.group.usage.line": {
+    "ja": "usage: group new | group new <tabId> [tabId ...]",
+    "en": "usage: group new | group new <tabId> [tabId ...]"
+  },
+  "cmd.group.usage.interactive": {
+    "ja": "Interactive: BMXt で group new と入力して Enter（タブ ID 不要）。",
+    "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."
+  },
+  "cmd.group.usage.nonInteractive": {
+    "ja": "Non-interactive: group new <tabId> [tabId ...]",
+    "en": "Non-interactive: group new <tabId> [tabId ...]"
+  },
+  "cmd.close.usage": {
+    "ja": "usage: close <tabId>",
+    "en": "usage: close <tabId>"
+  },
+  "effect.openTab.activated": {
+    "ja": "タブ {tabId} をアクティブ化しました: {url}",
+    "en": "activated tab {tabId}: {url}"
+  },
+  "effect.openTab.openFailed": {
+    "ja": "error: {url} のタブを開けませんでした",
+    "en": "error: could not open tab for {url}"
+  },
+  "effect.openTab.openedNew": {
+    "ja": "新しいタブ {tabId} を開きました: {url}",
+    "en": "opened new tab {tabId}: {url}"
+  },
+  "effect.openUrlNewTab.failed": {
+    "ja": "error: {url} の新規タブを開けませんでした",
+    "en": "error: could not open new tab for {url}"
+  },
+  "effect.openUrlNewTab.opened": {
+    "ja": "新しいタブ {tabId} を開きました: {url}",
+    "en": "opened new tab {tabId}: {url}"
+  },
+  "effect.openUrlNewWindow.opened": {
+    "ja": "新しいウィンドウ {windowId} を開きました: {url}",
+    "en": "opened new window {windowId}: {url}"
+  },
+  "effect.navigateTab.noTarget": {
+    "ja": "現在のタブへ移動する対象がありません（通常ウィンドウでページを開いてください）",
+    "en": "no target tab for current navigation (focus a normal window with a page)"
+  },
+  "effect.navigateTab.done": {
+    "ja": "タブ {tabId} を移動しました: {url}",
+    "en": "navigated tab {tabId}: {url}"
+  },
+  "effect.closeTab.done": {
+    "ja": "タブ {tabId} を閉じました",
+    "en": "closed tab {tabId}"
+  },
+  "effect.groupNew.done": {
+    "ja": "グループ {groupId} を作成しました",
+    "en": "created group {groupId}"
+  },
+  "effect.clearLog.done": {
+    "ja": "(ログをクリアしました)",
+    "en": "(log cleared)"
+  },
+  "effect.openWelcomePage.done": {
+    "ja": "ウェルカムページを新しいタブで開きました",
+    "en": "opened welcome page in a new tab"
+  },
+  "effect.tabsNu.noUrl": {
+    "ja": "(現在のタブに URL がありません — 通常ウィンドウでページを開くか、タブ ID コンテキストを指定してください)",
+    "en": "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"
+  },
+  "tabs.picker.error.noBulkMode": {
+    "ja": "モード未選択です。←→で処理を選択してください。",
+    "en": "No mode selected. Use ←→ to choose an action."
+  },
+  "tabs.picker.error.noSelection": {
+    "ja": "選択対象がありません。Tabで選択してください。",
+    "en": "Nothing selected. Use Tab to select rows."
+  },
+  "tabs.picker.error.invalidBulkForKind": {
+    "ja": "選択種別ではその処理を実行できません。",
+    "en": "That action cannot run on the current selection kind."
+  },
+  "tabs.picker.error.noTabsForAction": {
+    "ja": "処理対象のタブがありません。",
+    "en": "No tabs to act on."
+  },
+  "tabs.picker.error.createGroup.noTabs": {
+    "ja": "選択されたタブがありません（一覧に戻り Tab で選び直してください）。",
+    "en": "No tabs selected (return to the list and use Tab to select again)."
+  },
+  "tabs.picker.error.createGroup.partialClosed": {
+    "ja": "選択したタブの一部が閉じられています。",
+    "en": "Some selected tabs were closed."
+  },
+  "tabs.picker.error.createGroup.sameWindow": {
+    "ja": "選択したタブは同じウィンドウ内である必要があります。",
+    "en": "Selected tabs must be in the same window."
+  },
+  "tabs.picker.error.createGroup.windowType": {
+    "ja": "このウィンドウ種別ではタブグループを使えません（Chrome は通常ウィンドウ normal のみ）。popup・app・devtools などではグループ化できません。ウェブページを開いた通常ブラウザウィンドウのタブを選んでください。",
+    "en": "Tab groups are not available in this window type (Chrome allows normal windows only). Choose tabs in a normal browser window with a web page."
+  },
+  "tabs.picker.error.createGroup.invalidMoveCount": {
+    "ja": "移動するタブ数が不正です",
+    "en": "Invalid number of tabs to move"
+  },
+  "tabs.picker.error.createGroup.notInGroup": {
+    "ja": "移動対象タブがグループに含まれていません",
+    "en": "Tabs to move are not in the group"
+  },
+  "tabs.picker.error.createGroup.planFailed": {
+    "ja": "グループ作成計画に失敗しました。",
+    "en": "Group creation plan failed."
+  },
+  "tabs.picker.error.createGroup.windowOpenFailed": {
+    "ja": "新しいウィンドウを開けませんでした",
+    "en": "Could not open a new window"
+  },
+  "tabs.picker.error.createGroup.tabIdMissing": {
+    "ja": "タブ ID を確定できませんでした",
+    "en": "Could not resolve tab id"
+  },
+  "tabs.picker.error.createGroup.failed": {
+    "ja": "グループ作成に失敗しました — {detail}",
+    "en": "Group creation failed — {detail}"
+  },
+  "tabs.picker.error.createGroup.success": {
+    "ja": "グループ {groupId} を新しいウィンドウ {windowId} に作成しました · {color} · \"{label}\"",
+    "en": "created group {groupId} in new window {windowId} · {color} · \"{label}\""
+  },
+  "plainPicker.noOutput": {
+    "ja": "(出力なし)",
+    "en": "(no output)"
+  },
+  "plainPicker.listAria": {
+    "ja": "結果",
+    "en": "Results"
+  },
+  "session.bar.aria": {
+    "ja": "セッション",
+    "en": "Sessions"
+  },
+  "translate.preview.aria": {
+    "ja": "翻訳プレビュー",
+    "en": "Translation preview"
+  },
+  "search.picker.breadcrumb.aria": {
+    "ja": "検索ピッカーナビゲーション",
+    "en": "Search picker navigation"
+  },
+  "search.picker.listAria.results": {
+    "ja": "検索結果",
+    "en": "Search results"
+  },
+  "search.picker.listAria.detail": {
+    "ja": "検索結果の詳細ヒット",
+    "en": "Search result detail hits"
+  },
+  "search.picker.listAria.destination": {
+    "ja": "検索の開き先",
+    "en": "Search open targets"
+  },
+  "search.picker.listAria.keys": {
+    "ja": "検索ピッカーのキー操作",
+    "en": "Search picker keys"
+  },
+  "dom.picker.listAria": {
+    "ja": "DOM ツリー",
+    "en": "DOM tree"
+  },
+  "dom.picker.inputAria.keys": {
+    "ja": "DOM ピッカーのキー操作",
+    "en": "DOM picker keys"
+  },
+  "domPrompt.listAria": {
+    "ja": "権限通知",
+    "en": "Permission notice"
+  },
+  "domPrompt.permissionRequestFailed": {
+    "ja": "error: 許可リクエストに失敗しました — {message}",
+    "en": "error: permission request failed — {message}"
+  },
+  "tabs.picker.inputAria.keys": {
+    "ja": "タブピッカーのキー操作",
+    "en": "Tab picker key input"
+  },
+  "tabs.picker.listAria": {
+    "ja": "タブ",
+    "en": "Tabs"
+  },
+  "session.summary.terminalOnly": {
+    "ja": "(ターミナルのみ)",
+    "en": "(terminal only)"
+  },
+  "session.summary.domPrompt": {
+    "ja": "prompt",
+    "en": "prompt"
+  },
+  "search.picker.starting": {
+    "ja": "search — 開始中…",
+    "en": "search — starting…"
+  },
+  "search.picker.noMatches": {
+    "ja": "(一致なし)",
+    "en": "(no matches)"
+  },
+  "prompt.commandLine.aria": {
+    "ja": "コマンドライン",
+    "en": "Command line"
+  },
+  "prompt.isearch.aria": {
+    "ja": "逆方向インクリメンタルサーチ",
+    "en": "Reverse incremental search"
+  },
+  "search.openDestination.invalid": {
+    "ja": "search — 開き先が無効です（ウィンドウがありません）",
+    "en": "search — invalid open destination (missing window)"
+  },
+  "search.openDestination.openFailed": {
+    "ja": "search — タブを開けませんでした: {reason}",
+    "en": "search — could not open tab: {reason}"
+  },
+  "search.openDestination.fallbackFailed": {
+    "ja": "フォールバック: {reason}",
+    "en": "fallback: {reason}"
+  },
+  "search.openDestination.tabIdMissing": {
+    "ja": "search — タブを開けませんでした",
+    "en": "search — could not open tab"
+  },
+  "search.openDestination.groupFailed": {
+    "ja": "search — タブは開きましたがグループに追加できませんでした: {reason}",
+    "en": "search — opened tab but could not add to group: {reason}"
+  },
+  "search.openDestination.openedTab": {
+    "ja": "タブ {tabId} を {destLabel} に開きました{urlPart}",
+    "en": "opened tab {tabId} in {destLabel}{urlPart}"
+  },
+  "search.openDestination.newWindowWithUrl": {
+    "ja": "新しいウィンドウ {windowId} を開きました: {url}",
+    "en": "opened new window {windowId}: {url}"
+  },
+  "search.scrollToMatch.failed": {
+    "ja": "search — 一致箇所へスクロールできませんでした（タブを再読み込みするか、サイトアクセスを許可してから再試行してください）",
+    "en": "search — could not scroll to match (reload the tab or grant site access, then try again)"
+  },
+  "translate.panel.sourceHeading": {
+    "ja": "原文（{lang}）",
+    "en": "Source ({lang})"
+  },
+  "translate.panel.forwardHeading": {
+    "ja": "訳（{lang}）",
+    "en": "Translation ({lang})"
   }
 }

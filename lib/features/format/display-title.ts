@@ -1,11 +1,18 @@
 /** Shorten titles for terminal / picker labels (shared SW + UI). */
 
+import { t } from "../setting/i18n/messages"
+import { getRunLocale } from "../setting/i18n/run-locale"
+import type { UiLocale } from "../setting/locale"
+
 const DISPLAY_TITLE_MAX = 96
 
-export function displayTitle(raw: string | undefined | null): string {
-  const t = (raw || "").trim().replace(/\s+/g, " ")
-  if (!t) {
-    return "(無題)"
+export function displayTitle(
+  raw: string | undefined | null,
+  locale: UiLocale = getRunLocale()
+): string {
+  const trimmed = (raw || "").trim().replace(/\s+/g, " ")
+  if (!trimmed) {
+    return t("common.untitled", locale)
   }
-  return t.length > DISPLAY_TITLE_MAX ? `${t.slice(0, DISPLAY_TITLE_MAX)}…` : t
+  return trimmed.length > DISPLAY_TITLE_MAX ? `${trimmed.slice(0, DISPLAY_TITLE_MAX)}…` : trimmed
 }

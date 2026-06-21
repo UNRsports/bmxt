@@ -1,6 +1,7 @@
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerListShell } from "../side-picker/chrome/picker-list-shell"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
+import { useUiCopy } from "../setting"
 import {
   TabPickerEditGroupMenuPanel,
   TabPickerEditGroupRenamePanel,
@@ -16,6 +17,7 @@ export type { TabPickerViewProps } from "./tab-picker-view-types"
 
 /** EN: Tabs column on UrlList picker shell (hierarchical list + bulk/edit panels). */
 export function TabsUrlListPicker(props: TabPickerViewProps) {
+  const uiCopy = useUiCopy()
   const {
     headLine,
     searchHighlightQuery,
@@ -135,9 +137,13 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
         searchMode ? (value) => setFilterQuery(value) : undefined
       }
       inputAriaLabel={
-        searchMode ? "Search highlight" : commandMode ? "Command input" : "Tab picker key input"
+        searchMode
+          ? uiCopy.t("plainPicker.searchHint")
+          : commandMode
+            ? uiCopy.t("plainPicker.commandHint")
+            : uiCopy.t("tabs.picker.inputAria.keys")
       }
-      listAriaLabel="Tabs"
+      listAriaLabel={uiCopy.t("tabs.picker.listAria")}
       listAriaMultiselectable
       listActivedescendant={
         visibleRowIndices[hi] !== undefined ? `bmxt-tab-row-${visibleRowIndices[hi]}` : undefined

@@ -7,6 +7,8 @@ import {
   tabsCmdSettingLines,
   tabsCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import { t } from "../../setting/i18n/messages"
 import { parseHttpUrlCandidate, stripInvisibleFormatChars } from "../line-parse"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
@@ -30,54 +32,76 @@ function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | nu
 }
 
 export function run(args: string[]) {
+  const locale = getRunLocale()
   if (!args[1]) {
-    return linesDispatch([cmdAvailableOptionsLine("tabs"), ...tabsCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("tabs", locale), ...tabsCmdUsageLines(locale)])
   }
   const first = args[1]
   if (!isSecondToken("tabs", first)) {
-    return linesDispatch([`error: unknown tabs option: ${first}`, ...tabsCmdUsageLines()])
+    return linesDispatch([
+      t("cmd.tabs.error.unknownOption", locale, { option: first }),
+      ...tabsCmdUsageLines(locale)
+    ])
   }
   const sub = normTabsFlag(args[1])
   if (!sub) {
     return linesDispatch([
-      "error: internal: tabs option out of sync (re-run pnpm run codegen)",
-      ...tabsCmdUsageLines()
+      t("cmd.tabs.error.internalOutOfSync", locale),
+      ...tabsCmdUsageLines(locale)
     ])
   }
   switch (sub) {
     case "l": {
       if (args.length > 3 || (args.length === 3 && args[2].toLowerCase() !== "-u")) {
-        return linesDispatch(["error: invalid tabs -list usage", ...tabsCmdUsageLines()])
+        return linesDispatch([
+          t("cmd.tabs.error.invalidListUsage", locale),
+          ...tabsCmdUsageLines(locale)
+        ])
       }
-      return linesDispatch(tabsCmdListLines())
+      return linesDispatch(tabsCmdListLines(locale))
     }
     case "e": {
       if (args.length !== 3 || args[2].toLowerCase() !== "-list") {
-        return linesDispatch(["error: usage: tabs -exit -list", ...tabsCmdUsageLines()])
+        return linesDispatch([
+          t("cmd.tabs.error.exitListUsage", locale),
+          ...tabsCmdUsageLines(locale)
+        ])
       }
-      return linesDispatch(tabsCmdExitListLines())
+      return linesDispatch(tabsCmdExitListLines(locale))
     }
     case "s": {
-      return linesDispatch(tabsCmdSettingLines())
+      return linesDispatch(tabsCmdSettingLines(locale))
     }
     case "n": {
       if (args.length > 2) {
-        return linesDispatch(["error: too many arguments", ...tabsCmdUsageLines()])
+        return linesDispatch([
+          t("cmd.tabs.error.tooManyArgs", locale),
+          ...tabsCmdUsageLines(locale)
+        ])
       }
       return effectsDispatch([{ kind: "tabs_nu" }])
     }
     case "m": {
       const urlPart = args.slice(2).join(" ").trim()
       if (!urlPart) {
-        return linesDispatch(["usage: tabs -moveurl <http(s)-url>", ...tabsCmdUsageLines()])
+        return linesDispatch([
+          t("cmd.tabs.error.usageMoveurl", locale),
+          ...tabsCmdUsageLines(locale)
+        ])
       }
       const url = parseHttpUrlCandidate(urlPart)
       if (!url) {
-        return linesDispatch(["usage: tabs -moveurl <http(s)-url>", ...tabsCmdUsageLines()])
+        return linesDispatch([
+          t("cmd.tabs.error.usageMoveurl", locale),
+          ...tabsCmdUsageLines(locale)
+        ])
       }
       return effectsDispatch([{ kind: "tabs_move_url", url }])
     }
     default:
-      return linesDispatch(["error: internal: tabs dispatch out of sync", ...tabsCmdUsageLines()])
+      return linesDispatch([
+        t("cmd.tabs.error.internalDispatchOutOfSync", locale),
+        ...tabsCmdUsageLines(locale)
+      ])
   }
 }

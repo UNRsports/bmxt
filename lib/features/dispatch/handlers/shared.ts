@@ -3,14 +3,17 @@
  */
 
 import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "../../extension-storage/keys"
+import { t } from "../../setting/i18n/messages"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import type { UiLocale } from "../../setting/locale"
 
 function parseHttpUrl(urlStr: string): string | null {
-  const t = urlStr.trim()
-  if (!t) {
+  const trimmed = urlStr.trim()
+  if (!trimmed) {
     return null
   }
   try {
-    const u = new URL(t)
+    const u = new URL(trimmed)
     if (u.protocol !== "http:" && u.protocol !== "https:") {
       return null
     }
@@ -20,7 +23,10 @@ function parseHttpUrl(urlStr: string): string | null {
   }
 }
 
-export async function tabsMoveUrl(normalized: string): Promise<string[]> {
+export async function tabsMoveUrl(
+  normalized: string,
+  locale: UiLocale = getRunLocale()
+): Promise<string[]> {
   const tabs = await chrome.tabs.query({})
   const httpTabs = tabs.filter(
     (tab) =>
@@ -31,14 +37,14 @@ export async function tabsMoveUrl(normalized: string): Promise<string[]> {
   const exact = httpTabs.find((tab) => tab.url === normalized)
   const byOpenedPrefix = httpTabs.find((tab) => tab.url!.startsWith(normalized))
   const byTypedPrefix = httpTabs.find((tab) => {
-    const tu = tab.url!
-    if (!normalized.startsWith(tu)) {
+    const tabUrl = tab.url!
+    if (!normalized.startsWith(tabUrl)) {
       return false
     }
-    if (normalized.length === tu.length) {
+    if (normalized.length === tabUrl.length) {
       return true
     }
-    const next = normalized[tu.length]
+    const next = normalized[tabUrl.length]
     return next === "/" || next === "?" || next === "#"
   })
   const pick = exact ?? byOpenedPrefix ?? byTypedPrefix
@@ -47,13 +53,23 @@ export async function tabsMoveUrl(normalized: string): Promise<string[]> {
     if (pick.windowId !== undefined) {
       await chrome.windows.update(pick.windowId, { focused: true })
     }
-    return [`activated tab ${pick.id}: ${pick.url}`]
+    return [
+      t("effect.openTab.activated", locale, {
+        tabId: String(pick.id),
+        url: pick.url ?? ""
+      })
+    ]
   }
   const created = await createTabInNormalBrowserWindow(normalized)
   if (!created) {
-    return [`error: could not open tab for ${normalized}`]
+    return [t("effect.openTab.openFailed", locale, { url: normalized })]
   }
-  return [`opened new tab ${created.id ?? "?"}: ${normalized}`]
+  return [
+    t("effect.openTab.openedNew", locale, {
+      tabId: String(created.id ?? "?"),
+      url: normalized
+    })
+  ]
 }
 
 export function parseHttpUrlForEffect(urlStr: string): string | null {

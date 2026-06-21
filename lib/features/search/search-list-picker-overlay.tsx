@@ -163,7 +163,7 @@ export function SearchListPickerOverlay({
 
   const statusLines = useMemo((): string[] => {
     if (loading) {
-      return progressLines.length > 0 ? [...progressLines] : ["search — starting…"]
+      return progressLines.length > 0 ? [...progressLines] : [uiCopy.t("search.picker.starting")]
     }
     if (entries.length > 0) {
       return []
@@ -171,8 +171,8 @@ export function SearchListPickerOverlay({
     if (emptyResultLines && emptyResultLines.length > 0) {
       return emptyResultLines
     }
-    return ["(no matches)"]
-  }, [loading, progressLines, entries.length, emptyResultLines])
+    return [uiCopy.t("search.picker.noMatches")]
+  }, [loading, progressLines, entries.length, emptyResultLines, uiCopy])
 
   const enterDestinationForEntry = useCallback(
     async (
