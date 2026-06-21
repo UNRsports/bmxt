@@ -16,7 +16,8 @@ const outfile = join(root, "public/background-services.js")
 await esbuild.build({
   entryPoints: [entry],
   bundle: true,
-  format: "esm",
+  format: "iife",
+  globalName: "BmxtBackgroundServices",
   platform: "browser",
   target: "es2022",
   outfile,
