@@ -433,7 +433,9 @@ export function useTabPickerPlainExtensions({
       setGroupPickIndex,
       shiftRangeAnchorHiRef,
       visibleRowIndices,
-      altKeyHeldRef
+      altKeyHeldRef,
+      enterActionView,
+      canEnterActionView
     ]
   )
 
@@ -652,7 +654,8 @@ export function useTabPickerPlainExtensions({
       setGroupNewPhase,
       setNewTabUrl,
       setNewTabUrlWindowId,
-      shiftRangeAnchorHiRef
+      shiftRangeAnchorHiRef,
+      exitActionView
     ]
   )
 
