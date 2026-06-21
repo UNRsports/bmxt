@@ -29,20 +29,41 @@ function verifyBuiltBackground() {
     console.error("Missing", backgroundPath, "— run pnpm run build first")
     process.exit(1)
   }
+  const servicesPath = path.join(outDir, "background-services.js")
+  if (!fs.existsSync(servicesPath)) {
+    console.error("Missing", servicesPath, "— run node scripts/build-background-services.mjs")
+    process.exit(1)
+  }
   const bg = fs.readFileSync(backgroundPath, "utf8")
-  const required = [
+  const services = fs.readFileSync(servicesPath, "utf8")
+  const shellRequired = [
     "bmxt_launch_perf",
     "[bmxt launch perf]",
     "shortcut-received",
+    "create-window-start",
     "create-window-done",
-    "launch-chain-done"
+    "launch-chain-done",
+    "background-services.js",
+    "RUN_CMD"
   ]
-  const missing = required.filter((token) => !bg.includes(token))
-  if (missing.length > 0) {
-    console.error("background.js missing expected tokens:", missing.join(", "))
+  const shellMissing = shellRequired.filter((token) => !bg.includes(token))
+  if (shellMissing.length > 0) {
+    console.error("background.js missing expected tokens:", shellMissing.join(", "))
+    process.exit(1)
+  }
+  if (bg.includes("runDispatch")) {
+    console.error("background.js still bundles runDispatch — split background-services")
+    process.exit(1)
+  }
+  if (!services.includes("registerBackgroundServices")) {
+    console.error("background-services.js missing registerBackgroundServices")
     process.exit(1)
   }
   console.log("background.js size KB:", Math.round(bg.length / 1024))
+  console.log(
+    "background-services.js size KB:",
+    Math.round(services.length / 1024)
+  )
   console.log("launch perf instrumentation: OK")
 }
 

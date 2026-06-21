@@ -23,6 +23,7 @@ out/
 dist/
 .cache/
 .wxt/
+public/background-services.js
 
 
 # --- Testing / coverage ---

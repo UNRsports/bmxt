@@ -15,6 +15,7 @@ import {
 } from "../side-picker"
 import { buildSessionListRows, SessionBar, type SessionListRow } from "../session"
 import { BmxtShell } from "./bmxt-shell"
+import { TerminalBootSplash } from "./terminal-boot-splash"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
@@ -384,7 +385,7 @@ function BmxtTerminalInner() {
   }, [state, setActiveSession])
 
   if (state === null || !upgradeBannerReady || !processUiReady) {
-    return <div className="bmxt-root bmxt-root--terminal-placeholder" />
+    return <TerminalBootSplash />
   }
 
   const sharedPaneProps = {

@@ -1,21 +1,35 @@
 import "../../bmxt-ui.css"
 
-import { BmxtTerminal } from "../../lib/features/bmxt-window/bmxt-terminal"
-import { useEffect } from "react"
-import { createRoot } from "react-dom/client"
+/**
+ * EN: Static HTML paints first; then load React shell + command core in parallel.
+ * JA: 静的 HTML を即表示し、React とコマンドコアを並列読み込み。
+ */
+void (async () => {
+  const rootEl = document.getElementById("root")
+  if (!rootEl) {
+    return
+  }
 
-function BmxtTabPage() {
-  useEffect(() => {
-    const title = chrome.i18n.getMessage("extensionName")
-    if (title) {
-      document.title = title
-    }
-  }, [])
+  const coreReady = import("../../lib/features/bmxt-core")
 
-  return <BmxtTerminal />
-}
+  const [{ createRoot }, { useEffect }, { BmxtTerminal }] = await Promise.all([
+    import("react-dom/client"),
+    import("react"),
+    import("../../lib/features/bmxt-window/bmxt-terminal")
+  ])
 
-const rootEl = document.getElementById("root")
-if (rootEl) {
+  await coreReady
+
+  function BmxtTabPage() {
+    useEffect(() => {
+      const title = chrome.i18n.getMessage("extensionName")
+      if (title) {
+        document.title = title
+      }
+    }, [])
+
+    return <BmxtTerminal />
+  }
+
   createRoot(rootEl).render(<BmxtTabPage />)
-}
+})()

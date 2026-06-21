@@ -9,6 +9,7 @@ export type LaunchPerfPhase =
   | "resolve-window-start"
   | "resolve-window-done"
   | "focus-window-done"
+  | "create-window-start"
   | "create-window-done"
   | "launch-chain-done"
 

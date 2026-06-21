@@ -7,6 +7,10 @@
     "ja": "help と入力して Enter。Tab でコマンドを補完します。",
     "en": "Type help and press Enter. Tab completes commands."
   },
+  "shell.bootLoading": {
+    "ja": "読み込み中…",
+    "en": "Loading…"
+  },
   "versionUpgrade.title": {
     "ja": "◆バージョンアップ — {version}",
     "en": "◆Version upgrade — {version}"

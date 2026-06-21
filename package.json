@@ -12,9 +12,9 @@
     "url": "https://github.com/UNRsports/bmxt.git"
   },
   "scripts": {
-    "dev": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && wxt",
-    "build": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && wxt build",
-    "package": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && wxt zip",
+    "build": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && node scripts/build-background-services.mjs && wxt build",
+    "dev": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && node scripts/build-background-services.mjs && wxt",
+    "package": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && node scripts/build-background-services.mjs && wxt zip",
     "postinstall": "node scripts/copy-sql-wasm.mjs && node scripts/sync-welcome-docs.mjs && wxt prepare",
     "codegen": "node scripts/codegen/run.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
@@ -40,6 +40,7 @@
     "@types/react-dom": "18.2.18",
     "@types/sql.js": "1.4.11",
     "@wxt-dev/module-react": "1.1.3",
+    "esbuild": "^0.25.0",
     "prettier": "3.2.4",
     "typescript": "5.3.3",
     "wxt": "0.20.7"
