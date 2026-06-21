@@ -18,9 +18,9 @@ export type ExecuteValidation = {
 function allowed(kind: SelectKind, mode: BulkSubMode): boolean {
   switch (kind) {
     case "window":
-      return mode === "close" || mode === "newTab" || mode === "edit"
+      return mode === "close" || mode === "newTab" || mode === "edit" || mode === "reload"
     case "group":
-      return mode === "move" || mode === "close" || mode === "newWindow" || mode === "edit"
+      return mode === "move" || mode === "close" || mode === "newWindow" || mode === "edit" || mode === "reload"
     case "tab":
       return mode !== "edit"
   }

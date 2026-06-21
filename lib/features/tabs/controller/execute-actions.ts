@@ -8,7 +8,19 @@ type MovePlan = {
   tabGroupIdsToMoveAsUnits: number[]
 }
 
-export type ExecutionIntent = "executeClose" | "executeMove" | "executeGroup" | "executeNewWindow"
+export async function executeReloadAction(params: { selectedTabIds: number[] }): Promise<void> {
+  if (params.selectedTabIds.length === 0) {
+    return
+  }
+  await Promise.all(params.selectedTabIds.map((tabId) => chrome.tabs.reload(tabId)))
+}
+
+export type ExecutionIntent =
+  | "executeClose"
+  | "executeMove"
+  | "executeGroup"
+  | "executeNewWindow"
+  | "executeReload"
 
 type GroupTarget = {
   createNew: boolean
@@ -209,5 +221,8 @@ export const EXECUTION_REGISTRY: Record<
       selectedTabIds: ctx.selectedTabIds,
       order: ctx.newWindowOrder
     })
+  },
+  executeReload: async (ctx) => {
+    await executeReloadAction({ selectedTabIds: ctx.selectedTabIds })
   }
 }

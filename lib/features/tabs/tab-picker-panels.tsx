@@ -1,8 +1,45 @@
 import type { KeyboardEvent, RefObject } from "react"
 import { useUiCopy } from "../setting"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
-import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
-import type { GroupChoice } from "./tab-picker-overlay-types"
+import { GROUP_EDIT_MENU_ITEMS, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
+import type { ActionMenuPanel, GroupChoice } from "./tab-picker-overlay-types"
+
+export function TabPickerActionMenuPanel({
+  panelRef,
+  actionMenuPanel
+}: {
+  panelRef: RefObject<HTMLDivElement | null>
+  actionMenuPanel: ActionMenuPanel
+}) {
+  const uiCopy = useUiCopy()
+  const items = actionMenuItemsForKind(actionMenuPanel.targetKind)
+  return (
+    <div
+      ref={panelRef}
+      className="bmxt-tab-picker-group-panel bmxt-tab-picker-action-menu-panel bmxt-scroll">
+      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.actionMenuTitle")}</div>
+      {actionMenuPanel.tabLabels.length > 0 ? (
+        <div className="bmxt-tab-picker-action-targets">
+          {actionMenuPanel.tabLabels.map((label, idx) => (
+            <div key={`${idx}-${label}`} className="bmxt-tab-picker-action-target-row">
+              {label}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {items.map((item, idx) => (
+        <div
+          key={item.id}
+          data-bmxt-action-pick={idx}
+          className={`bmxt-tab-picker-group-row${
+            idx === actionMenuPanel.pickIndex ? " bmxt-tab-picker-group-row--hi" : ""
+          }`}>
+          {uiCopy.t(item.messageKey)}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function TabPickerGroupTargetPanel({
   panelRef,

@@ -1,5 +1,12 @@
 export type SelectKind = "window" | "group" | "tab"
-export type BulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit"
+export type BulkSubMode =
+  | "move"
+  | "close"
+  | "newTab"
+  | "group"
+  | "newWindow"
+  | "edit"
+  | "reload"
 
 export type PickerState = {
   hi: number

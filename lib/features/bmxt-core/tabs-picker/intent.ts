@@ -20,6 +20,7 @@ export type EnterIntent =
   | "executeMove"
   | "executeGroup"
   | "executeNewWindow"
+  | "executeReload"
 
 export function resolveEnterIntent(ctx: EnterContext): EnterIntent {
   if (ctx.isShift) return "none"
@@ -38,6 +39,8 @@ export function resolveEnterIntent(ctx: EnterContext): EnterIntent {
       return "executeGroup"
     case "newWindow":
       return "executeNewWindow"
+    case "reload":
+      return "executeReload"
     default:
       return "confirmSelection"
   }

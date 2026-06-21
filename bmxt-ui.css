@@ -1760,6 +1760,31 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   background: #161b22;
 }
 
+.bmxt-tab-picker-action-menu-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(42%, 14em);
+  min-height: 0;
+}
+
+.bmxt-tab-picker-action-menu-panel .bmxt-tab-picker-action-targets {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 6.5em;
+  overflow-y: auto;
+  margin: 0 0 6px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid #30363d;
+}
+
+.bmxt-tab-picker-action-menu-panel .bmxt-tab-picker-group-head {
+  flex-shrink: 0;
+}
+
+.bmxt-tab-picker-action-menu-panel .bmxt-tab-picker-group-row {
+  flex-shrink: 0;
+}
+
 .bmxt-tab-picker-group-head {
   font-size: 10px;
   color: #8b949e;
@@ -1784,6 +1809,23 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-tab-picker-group-row--hi {
   background: #21262d;
   outline: 1px solid #a371f7;
+}
+
+.bmxt-tab-picker-action-targets {
+  margin: 0 0 6px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid #30363d;
+}
+
+.bmxt-tab-picker-action-target-row {
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  color: #c9d1d9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bmxt-tab-picker-new-group-meta {

@@ -13,7 +13,7 @@ import { resolveTabsPickerHeadline } from "../bmxt-core"
 import type { UiLocale } from "../setting/locale"
 
 export type PickerSelectKind = "window" | "group" | "tab"
-export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit"
+export type PickerBulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit" | "reload"
 
 export type PickerReducerState = {
   hi: number
@@ -36,6 +36,7 @@ type EnterIntent =
   | "executeMove"
   | "executeGroup"
   | "executeNewWindow"
+  | "executeReload"
 
 type PreviewDecision = {
   nextHi: number
@@ -264,6 +265,7 @@ export function resolvePickerHeadline(
     groupNewPhase: GroupNewPhase
     variant: PickerVariant
     editPanelKind?: string | null
+    actionMenuOpen?: boolean
   },
   locale: UiLocale
 ): string {
@@ -272,7 +274,8 @@ export function resolvePickerHeadline(
       bulkSubMode: context.bulkSubMode,
       groupNewPhase: context.groupNewPhase,
       variant: context.variant,
-      editPanelKind: context.editPanelKind ?? null
+      editPanelKind: context.editPanelKind ?? null,
+      actionMenuOpen: context.actionMenuOpen ?? false
     },
     locale
   )

@@ -9,6 +9,7 @@ import {
   NEW_GROUP_COLORS
 } from "./tab-picker-overlay-constants"
 import type {
+  ActionMenuPanel,
   BulkSubMode,
   EditPanel,
   GroupChoice,
@@ -73,6 +74,11 @@ export function useTabPickerKeyboard({
   isHostPaneFocused,
   sessionId,
   editPanel,
+  actionMenuPanel,
+  openActionMenuFromPicker,
+  closeActionMenu,
+  confirmActionMenuPick,
+  cycleActionMenuPick,
   openEditFromPicker,
   closeEdit,
   confirmWindowRename,
@@ -82,6 +88,8 @@ export function useTabPickerKeyboard({
   backFromGroupRename,
   collapseAtRow,
   expandAtRow,
+  isWindowExpanded,
+  isGroupExpanded,
   altKeyHeldRef,
   onExitToDetailBar
 }: {
@@ -138,6 +146,11 @@ export function useTabPickerKeyboard({
   isHostPaneFocused: boolean
   sessionId: string
   editPanel: EditPanel | null
+  actionMenuPanel: ActionMenuPanel | null
+  openActionMenuFromPicker: () => void
+  closeActionMenu: () => void
+  confirmActionMenuPick: () => void | Promise<void>
+  cycleActionMenuPick: (delta: number) => void
   openEditFromPicker: () => void | Promise<void>
   closeEdit: () => void
   confirmWindowRename: () => void | Promise<void>
@@ -147,6 +160,8 @@ export function useTabPickerKeyboard({
   backFromGroupRename: () => void
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
+  isWindowExpanded: (windowId: number) => boolean
+  isGroupExpanded: (windowId: number, groupId: number | null) => boolean
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
 }) {
@@ -210,6 +225,11 @@ export function useTabPickerKeyboard({
     setCommandListingHint,
     hlSearchPattern,
     editPanel,
+    actionMenuPanel,
+    openActionMenuFromPicker,
+    closeActionMenu,
+    confirmActionMenuPick,
+    cycleActionMenuPick,
     openEditFromPicker,
     closeEdit,
     confirmWindowRename,
@@ -219,6 +239,8 @@ export function useTabPickerKeyboard({
     backFromGroupRename,
     collapseAtRow,
     expandAtRow,
+    isWindowExpanded,
+    isGroupExpanded,
     altKeyHeldRef,
     onExitToDetailBar
   })
@@ -227,7 +249,7 @@ export function useTabPickerKeyboard({
     lineCount: visibleRowIndices.length,
     keyboardActive: isHostPaneFocused,
     sessionId,
-    enableCommandMode: true,
+    enableCommandMode: false,
     onReturnToPrompt,
     onConfirmLineIndex: () => {
       void confirmSelection()

@@ -1,5 +1,28 @@
-export type BulkSubMode = "move" | "close" | "newTab" | "group" | "newWindow" | "edit"
+export type BulkSubMode =
+  | "move"
+  | "close"
+  | "newTab"
+  | "group"
+  | "newWindow"
+  | "edit"
+  | "reload"
+
 export type SelectKind = "window" | "group" | "tab"
+
+export type ActionMenuItemId =
+  | "move"
+  | "close"
+  | "group"
+  | "newWindow"
+  | "newTab"
+  | "edit"
+  | "reload"
+
+export type ActionMenuPanel = {
+  pickIndex: number
+  targetKind: SelectKind
+  tabLabels: string[]
+}
 
 export type GroupEditMenuActionId = "rename" | "ungroup" | "deleteGroup"
 

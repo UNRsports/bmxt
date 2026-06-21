@@ -6,6 +6,7 @@ export type HeadlineContext = {
   groupNewPhase?: string
   variant?: string
   editPanelKind?: string | null
+  actionMenuOpen?: boolean
 }
 
 function commonPart(locale: UiLocale): string {
@@ -21,6 +22,11 @@ export function resolveHeadline(ctx: HeadlineContext, locale: UiLocale): string 
   const groupNewPhase = ctx.groupNewPhase ?? "tabs"
   const variant = ctx.variant ?? "default"
   const editPanelKind = ctx.editPanelKind ?? null
+  const actionMenuOpen = ctx.actionMenuOpen ?? false
+
+  if (actionMenuOpen && bulkSubMode === null && editPanelKind === null) {
+    return withCommon("tabs.picker.headline.actionMenu", locale)
+  }
 
   if (bulkSubMode === "group" && groupNewPhase === "meta") {
     return t("tabs.picker.headline.groupMeta", locale)
@@ -43,6 +49,8 @@ export function resolveHeadline(ctx: HeadlineContext, locale: UiLocale): string 
       return withCommon("tabs.picker.headline.group", locale)
     case "newWindow":
       return withCommon("tabs.picker.headline.newWindow", locale)
+    case "reload":
+      return withCommon("tabs.picker.headline.reload", locale)
     case "edit":
       if (editPanelKind === "windowRename") {
         return withCommon("tabs.picker.headline.editWindowRename", locale)

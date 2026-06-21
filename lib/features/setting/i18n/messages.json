@@ -1040,8 +1040,8 @@
     "en": "{star}[Window] {title}"
   },
   "tabs.picker.headline.common": {
-    "ja": "↑↓ 移動 · Shift+↑↓ 範囲 # · Tab # · : コマンド（move/close/group/nw/nt/edit · Tab 補完） · / ハイライト · Enter 確定 · :nohlsearch 解除 · Ctrl+Shift+↑↓ アクティブプレビュー · Enter 確定 · Esc # 解除 · prompt",
-    "en": "↑↓ move · Shift+↑↓ range # · Tab # · : commands (move/close/group/nw/nt/edit · Tab complete) · / highlight · Enter commit · :nohlsearch clears · Ctrl+Shift+↑↓ active preview · Enter confirm · Esc clear # · prompt"
+    "ja": "↑↓ 移動 · Shift+↑↓ 範囲 # · Tab # · ←/→ ツリー開閉 · 展開後→ 操作メニュー · / ハイライト · Enter 確定 · Alt+↑↓ プレビュー · Ctrl+Shift+↑↓ アクティブプレビュー · Esc # 解除 · prompt",
+    "en": "↑↓ move · Shift+↑↓ range # · Tab # · ←/→ tree fold · → menu when expanded · / highlight · Enter commit · Alt+↑↓ preview · Ctrl+Shift+↑↓ active preview · Esc clear # · prompt"
   },
   "tabs.picker.headline.default": {
     "ja": "Tab picker — {common}",
@@ -1066,6 +1066,14 @@
   "tabs.picker.headline.newWindow": {
     "ja": "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {common}",
     "en": "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {common}"
+  },
+  "tabs.picker.headline.reload": {
+    "ja": "Tab picker — [RELOAD] Enter で再読み込み · {common}",
+    "en": "Tab picker — [RELOAD] Enter to reload · {common}"
+  },
+  "tabs.picker.headline.actionMenu": {
+    "ja": "Tab picker — [MENU] ↑↓ 操作選択 · Enter 実行 · ← 一覧へ · {common}",
+    "en": "Tab picker — [MENU] ↑↓ pick action · Enter run · ← back to list · {common}"
   },
   "tabs.picker.headline.editWindowRename": {
     "ja": "Tab picker — [EDIT] ウィンドウ名 · Enter 確定 · Esc キャンセル · {common}",
@@ -1214,6 +1222,38 @@
   "tabs.picker.editMenu.deleteGroup": {
     "ja": "タブグループの削除",
     "en": "Delete tab group"
+  },
+  "tabs.picker.actionMenuTitle": {
+    "ja": "操作メニュー",
+    "en": "Action menu"
+  },
+  "tabs.picker.actionMenu.move": {
+    "ja": "移動",
+    "en": "Move"
+  },
+  "tabs.picker.actionMenu.close": {
+    "ja": "閉じる",
+    "en": "Close"
+  },
+  "tabs.picker.actionMenu.group": {
+    "ja": "グループ",
+    "en": "Group"
+  },
+  "tabs.picker.actionMenu.newWindow": {
+    "ja": "新しいウィンドウ",
+    "en": "New window"
+  },
+  "tabs.picker.actionMenu.newTab": {
+    "ja": "新しいタブ",
+    "en": "New tab"
+  },
+  "tabs.picker.actionMenu.edit": {
+    "ja": "編集",
+    "en": "Edit"
+  },
+  "tabs.picker.actionMenu.reload": {
+    "ja": "再読み込み",
+    "en": "Reload"
   },
   "tabs.picker.error.editOnTab": {
     "ja": "error: :edit はタブ行では使えません。ウィンドウ行またはタブグループ行を単体選択してください。",

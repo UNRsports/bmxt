@@ -417,6 +417,32 @@ export function expandTabPickerForTabId(rows: TabPickerRow[], tabId: number): bo
   return changed
 }
 
+/** EN: Toggle expand/collapse for window, group, or parent group of a tab row. */
+export function toggleTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): TabPickerFoldMutation {
+  if (row.kind === "window") {
+    if (isTabPickerWindowExpanded(row.windowId)) {
+      return collapseTabPickerAtRow(rows, row)
+    }
+    return expandTabPickerAtRow(rows, row)
+  }
+  if (row.kind === "group") {
+    if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
+      return collapseTabPickerAtRow(rows, row)
+    }
+    return expandTabPickerAtRow(rows, row)
+  }
+  if (row.kind === "tab") {
+    if (row.groupId === null) {
+      return { focusRowIdx: null, changed: false }
+    }
+    if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
+      return collapseTabPickerAtRow(rows, row)
+    }
+    return expandTabPickerAtRow(rows, row)
+  }
+  return { focusRowIdx: null, changed: false }
+}
+
 /** EN: Expand window or group for `row`; returns focus row and whether state changed. */
 export function expandTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): TabPickerFoldMutation {
   if (row.kind === "window") {

@@ -3,11 +3,12 @@ import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { parsePickerSearchNeedle } from "../side-picker/search/picker-search-needle"
 import { groupRowKey } from "./tab-picker-keyboard"
-import type { BulkSubMode, EditPanel, SelectKind } from "./tab-picker-overlay-types"
+import type { ActionMenuPanel, BulkSubMode, EditPanel, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
 import { tabPickerVisibleHiIndicesMatching } from "./picker-rows"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
+import { scrollPickerListRowIntoView } from "../side-picker/interaction/picker-list-scroll"
 
 type PickerGroupChoice = { id: number; windowId: number; label: string }
 
@@ -47,6 +48,8 @@ export function useTabPickerSyncAndLayoutEffects({
   isHostPaneFocused,
   editPanel,
   editPanelRef,
+  actionMenuPanel,
+  actionMenuPanelRef,
   setAnchorTabId
 }: {
   initialHi: number
@@ -85,6 +88,8 @@ export function useTabPickerSyncAndLayoutEffects({
   isHostPaneFocused: boolean
   editPanel: EditPanel | null
   editPanelRef: RefObject<HTMLDivElement | null>
+  actionMenuPanel: ActionMenuPanel | null
+  actionMenuPanelRef: RefObject<HTMLDivElement | null>
   setAnchorTabId: (tabId: number | null) => void
 }): { groupPanelRef: RefObject<HTMLDivElement | null> } {
   const groupPanelRef = useRef<HTMLDivElement>(null)
@@ -301,6 +306,40 @@ export function useTabPickerSyncAndLayoutEffects({
     )
     row?.scrollIntoView({ block: "nearest", behavior: "instant" })
   }, [editPanel, editPanelRef])
+
+  useLayoutEffect(() => {
+    if (actionMenuPanel === null) {
+      return
+    }
+    const rowIndex = visibleRowIndices[hi]
+    if (rowIndex === undefined) {
+      return
+    }
+    const rowEl = rowElRefs.current.get(rowIndex)
+    if (!rowEl) {
+      return
+    }
+    const listEl = rowEl.closest(".bmxt-tab-picker-list")
+    if (!(listEl instanceof HTMLElement)) {
+      return
+    }
+    const scrollHighlightedRow = (): void => {
+      scrollPickerListRowIntoView(listEl, rowEl, { alignStart: true })
+    }
+    scrollHighlightedRow()
+    requestAnimationFrame(scrollHighlightedRow)
+    requestAnimationFrame(() => requestAnimationFrame(scrollHighlightedRow))
+  }, [actionMenuPanel, hi, visibleRowIndices, rowElRefs])
+
+  useLayoutEffect(() => {
+    if (actionMenuPanel === null) {
+      return
+    }
+    const row = actionMenuPanelRef.current?.querySelector<HTMLElement>(
+      `[data-bmxt-action-pick="${actionMenuPanel.pickIndex}"]`
+    )
+    row?.scrollIntoView({ block: "nearest", behavior: "instant" })
+  }, [actionMenuPanel, actionMenuPanelRef])
 
   return { groupPanelRef }
 }

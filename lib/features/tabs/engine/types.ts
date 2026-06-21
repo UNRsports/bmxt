@@ -1,5 +1,6 @@
 import type { TabPickerRow } from "../picker-rows"
 import type {
+  ActionMenuPanel,
   BulkSubMode,
   EditPanel,
   GroupChoice,
@@ -37,6 +38,7 @@ export type TabPickerEngineState = {
   newTabUrl: string
   editPanel: EditPanel | null
   editTitle: string
+  actionMenuPanel: ActionMenuPanel | null
 }
 
 export type TabPickerEngineAction =

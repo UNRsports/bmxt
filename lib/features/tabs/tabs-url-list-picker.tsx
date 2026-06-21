@@ -1,8 +1,8 @@
-import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerListShell } from "../side-picker/chrome/picker-list-shell"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { useUiCopy } from "../setting"
 import {
+  TabPickerActionMenuPanel,
   TabPickerEditGroupMenuPanel,
   TabPickerEditGroupRenamePanel,
   TabPickerEditWindowRenamePanel,
@@ -21,8 +21,6 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
   const {
     headLine,
     searchHighlightQuery,
-    commandListingHintText,
-    commandAmbiguousPlaceholder,
     setInputEl,
     onInputKeyDown,
     onMetaTitleKeyDown,
@@ -51,6 +49,8 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     newTabUrl,
     setNewTabUrl,
     editPanel,
+    actionMenuPanel,
+    actionMenuPanelRef,
     groupMetaColorStripRef,
     newGroupTitle,
     setNewGroupTitle,
@@ -62,17 +62,14 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     searchMode,
     filterQuery,
     setFilterQuery,
-    commandMode,
-    commandBuffer,
-    setCommandBuffer,
-    setCommandListingHint,
-    commandListingHint,
     isHostPaneFocused,
     inputRef
   } = props
 
   const extraFooter =
-    bulkSubMode === "group" && variant === "default" && groupNewPhase !== "meta" ? (
+    actionMenuPanel !== null ? (
+      <TabPickerActionMenuPanel panelRef={actionMenuPanelRef} actionMenuPanel={actionMenuPanel} />
+    ) : bulkSubMode === "group" && variant === "default" && groupNewPhase !== "meta" ? (
       <TabPickerGroupTargetPanel
         panelRef={groupPanelRef}
         groupChoices={groupChoices}
@@ -118,19 +115,14 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
       headline={headLine}
       keyboardActive={isHostPaneFocused}
       searchMode={searchMode}
-      commandMode={commandMode}
+      commandMode={false}
       filterQuery={filterQuery}
-      commandBuffer={commandBuffer}
+      commandBuffer=""
       setInputEl={setInputEl}
       onInputKeyDown={onInputKeyDown}
       onInputChange={(value) => {
         if (searchMode) {
           setFilterQuery(value)
-        } else if (commandMode) {
-          setCommandBuffer(value)
-          if (value.trim() !== "") {
-            setCommandListingHint(false)
-          }
         }
       }}
       onCompositionEndSearch={
@@ -139,9 +131,7 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
       inputAriaLabel={
         searchMode
           ? uiCopy.t("plainPicker.searchHint")
-          : commandMode
-            ? uiCopy.t("plainPicker.commandHint")
-            : uiCopy.t("tabs.picker.inputAria.keys")
+          : uiCopy.t("tabs.picker.inputAria.keys")
       }
       listAriaLabel={uiCopy.t("tabs.picker.listAria")}
       listAriaMultiselectable
@@ -170,16 +160,7 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
       }
       extraFooter={extraFooter}
       searchFooter={searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
-      commandFooter={
-        commandMode ? (
-          <PickerCommandFooter
-            commandBuffer={commandBuffer}
-            showListingHint={commandListingHint}
-            listingHintText={commandListingHintText}
-            ambiguousPlaceholder={commandAmbiguousPlaceholder}
-          />
-        ) : null
-      }
+      commandFooter={null}
       inputRef={inputRef}
     />
   )

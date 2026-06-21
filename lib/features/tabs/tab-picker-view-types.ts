@@ -1,12 +1,10 @@
 import type { Dispatch, RefObject, SetStateAction } from "react"
 import type { TabPickerRow } from "./picker-rows"
-import type { BulkSubMode, EditPanel, GroupChoice } from "./tab-picker-overlay-types"
+import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice } from "./tab-picker-overlay-types"
 
 export type TabPickerViewProps = {
   headLine: string
   searchHighlightQuery: string
-  commandListingHintText: string
-  commandAmbiguousPlaceholder: string | null
   setInputEl: (el: HTMLTextAreaElement | null) => void
   onInputKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
   onMetaTitleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
@@ -35,6 +33,8 @@ export type TabPickerViewProps = {
   newTabUrl: string
   setNewTabUrl: Dispatch<SetStateAction<string>>
   editPanel: EditPanel | null
+  actionMenuPanel: ActionMenuPanel | null
+  actionMenuPanelRef: RefObject<HTMLDivElement | null>
   groupMetaColorStripRef: RefObject<HTMLDivElement | null>
   newGroupTitle: string
   setNewGroupTitle: Dispatch<SetStateAction<string>>
@@ -46,11 +46,6 @@ export type TabPickerViewProps = {
   searchMode: boolean
   filterQuery: string
   setFilterQuery: Dispatch<SetStateAction<string>>
-  commandMode: boolean
-  commandBuffer: string
-  setCommandBuffer: Dispatch<SetStateAction<string>>
-  setCommandListingHint: Dispatch<SetStateAction<boolean>>
-  commandListingHint: boolean
   isHostPaneFocused: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
 }
