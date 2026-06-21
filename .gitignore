@@ -8,24 +8,21 @@
 .pnp.*
 
 
-# --- npm（認証トークンやローカル設定の誤コミット防止）---
-.npmrc
-.npm/
+# --- pnpm ---
+.pnpm-store/
+# Do not commit registry tokens in .npmrc (save-exact=true is committed)
 
 
 # --- Cursor（ローカル状態・MCP 等。ルートの .cursorrules は対象外）---
 .cursor/
 
 
-# --- Build / bundler（Plasmo, Parcel, 汎用）---
+# --- Build / bundler（WXT, Vite, 汎用）---
+.output/
 out/
-build/
 dist/
-.parcel-cache/
 .cache/
-
-# Plasmo
-.plasmo
+.wxt/
 
 
 # --- Testing / coverage ---
@@ -46,9 +43,6 @@ dist/
 
 
 # --- Debug / package manager logs ---
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 *.log

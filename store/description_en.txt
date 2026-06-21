@@ -51,7 +51,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 - Fixed an issue where new tab groups could not be created in tabs mode
 
 0.4.5:
-- Cleaned up npm dependencies
+- Cleaned up dependencies (pnpm + WXT)
 - Renamed find to search (mode) with enhancements — subdivide results and jump directly to each element
 - Tab picker: expand/collapse window and tab group tree rows
 - Added tabs -setting -page-active (--auto / --manual) to toggle automatic tab activation on highlight

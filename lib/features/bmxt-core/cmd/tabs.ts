@@ -40,7 +40,7 @@ export function run(args: string[]) {
   const sub = normTabsFlag(args[1])
   if (!sub) {
     return linesDispatch([
-      "error: internal: tabs option out of sync (re-run npm run codegen)",
+      "error: internal: tabs option out of sync (re-run pnpm run codegen)",
       ...tabsCmdUsageLines()
     ])
   }

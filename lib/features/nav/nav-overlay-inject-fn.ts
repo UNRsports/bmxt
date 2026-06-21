@@ -40,7 +40,7 @@ export type NavInjectResult =
     }
   | { ok: false; reason?: string }
 
-/** Keep in sync with `contents/bmxt-nav-overlay.ts`. */
+/** Keep in sync with `entrypoints/bmxt-nav-overlay.content/`. */
 export const NAV_OVERLAY_CHANNEL = "bmxt-nav-v1"
 
 export type NavOverlayMessage = {

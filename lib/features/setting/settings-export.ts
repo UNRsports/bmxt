@@ -11,7 +11,7 @@ import { loadUiSettings, type UiSettings } from "./settings"
 import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
-import { buildZipArchive } from "./zip-store"
+import { buildZipArchive, parseZipArchive } from "./zip-store"
 
 export const SETTINGS_JSON_NAME = "settings.json"
 export const BG_IMAGE_ZIP_NAME = "background-image"
@@ -300,7 +300,6 @@ export async function exportUiSettingsZip(
 /** EN: Read a zip file from disk and return validated UI settings. */
 export async function readUiSettingsFromZipFile(file: File): Promise<UiSettings> {
   const buf = new Uint8Array(await file.arrayBuffer())
-  const { parseZipArchive } = await import("./zip-store")
   const entries = parseZipArchive(buf)
   const files = new Map<string, Uint8Array>()
   for (const entry of entries) {

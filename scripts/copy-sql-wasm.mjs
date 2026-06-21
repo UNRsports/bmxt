@@ -4,7 +4,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
-const destDir = join(root, "assets/search-cache")
+const destDir = join(root, "public/assets/search-cache")
 const srcWasm = join(root, "node_modules/sql.js/dist/sql-wasm.wasm")
 const destWasm = join(destDir, "sql-wasm.wasm")
 

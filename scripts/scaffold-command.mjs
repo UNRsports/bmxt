@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 新規コマンドの骨格を追加し、manifest に登録して `npm run codegen` する。
+ * 新規コマンドの骨格を追加し、manifest に登録して `pnpm run codegen` する。
  *
  * Usage: node scripts/scaffold-command.mjs <module> <canonical_name> [aliases...]
  * Example: node scripts/scaffold-command.mjs frobnicate frobnicate a b
