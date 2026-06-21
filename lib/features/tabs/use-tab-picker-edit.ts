@@ -19,6 +19,7 @@ import type { TabPickerRow } from "./picker-rows"
 import { groupRowKey } from "./tab-picker-keyboard"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { PickerReducerEvent } from "./state-machine"
+import { pickerMarkedCount } from "./use-tab-picker-derived-state"
 
 export type TabPickerEditParams = {
   rows: TabPickerRow[]
@@ -37,6 +38,14 @@ export type TabPickerEditParams = {
   clearMarkedViaReducer: () => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
   onRefreshRows?: () => Promise<void>
+}
+
+export type EditPickerSnapshot = {
+  markedKind: SelectKind | null
+  markedTabIds: number[]
+  markedWindowIds: number[]
+  markedGroupKeys: string[]
+  hi: number
 }
 
 export function useTabPickerEdit(p: TabPickerEditParams) {
@@ -72,78 +81,95 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     await onRefreshRows?.()
   }, [clearMarkedViaReducer, closeEdit, onRefreshRows])
 
-  const openEditFromPicker = useCallback(async () => {
-    const target = resolveEditTarget(
-      markedKind,
-      markedWindowIds,
-      markedGroupKeys,
-      rows,
-      visibleRowIndices,
-      hi
-    )
-    if (!target) {
-      const err = editTargetErrorMessage(
-        markedKind,
-        markedWindowIds,
-        markedGroupKeys,
+  const openEditFromPicker = useCallback(
+    async (snapshot?: EditPickerSnapshot) => {
+      const useMarkedKind = snapshot?.markedKind ?? markedKind
+      const useMarkedTabIds = snapshot?.markedTabIds ?? []
+      const useMarkedWindowIds = snapshot?.markedWindowIds ?? markedWindowIds
+      const useMarkedGroupKeys = snapshot?.markedGroupKeys ?? markedGroupKeys
+      const useHi = snapshot?.hi ?? hi
+      const useMarkedCount = snapshot
+        ? pickerMarkedCount(
+            useMarkedKind,
+            useMarkedTabIds,
+            useMarkedWindowIds,
+            useMarkedGroupKeys
+          )
+        : markedCount
+
+      const target = resolveEditTarget(
+        useMarkedKind,
+        useMarkedWindowIds,
+        useMarkedGroupKeys,
         rows,
         visibleRowIndices,
-        hi,
-        uiCopy.locale
+        useHi
       )
-      void onAppendLog?.([
-        err ?? uiCopy.t("tabs.picker.error.editNeedsWindowOrGroup")
-      ])
-      return
-    }
-
-    const rowIndex = visibleRowIndices[hi]
-    const row = rowIndex !== undefined ? rows[rowIndex] : undefined
-    if (markedCount === 0 && row) {
-      if (row.kind === "window") {
-        applyReducedState({
-          kind: "toggleCurrent",
-          row: { kind: "window", windowId: row.windowId }
-        })
-      } else if (row.kind === "group" && row.groupId !== null) {
-        applyReducedState({
-          kind: "toggleCurrent",
-          row: { kind: "group", groupKey: groupRowKey(row.windowId, row.groupId) }
-        })
+      if (!target) {
+        const err = editTargetErrorMessage(
+          useMarkedKind,
+          useMarkedWindowIds,
+          useMarkedGroupKeys,
+          rows,
+          visibleRowIndices,
+          useHi,
+          uiCopy.locale
+        )
+        void onAppendLog?.([
+          err ?? uiCopy.t("tabs.picker.error.editNeedsWindowOrGroup")
+        ])
+        return
       }
-    }
 
-    const panel = await buildInitialEditPanel(target)
-    const title = await loadEditTitleForPanel(
-      panel.kind === "windowRename"
-        ? panel
-        : panel.kind === "groupMenu"
-          ? {
-              kind: "groupRename",
-              windowId: panel.windowId,
-              groupId: panel.groupId,
-              groupKey: panel.groupKey
-            }
-          : panel
-    )
-    setEditTitle(title)
-    setEditPanel(panel)
-    setBulkSubMode("edit")
-  }, [
-    applyReducedState,
-    hi,
-    markedCount,
-    markedGroupKeys,
-    markedKind,
-    markedWindowIds,
-    onAppendLog,
-    rows,
-    setBulkSubMode,
-    setEditPanel,
-    setEditTitle,
-    visibleRowIndices,
-    uiCopy
-  ])
+      const rowIndex = visibleRowIndices[useHi]
+      const row = rowIndex !== undefined ? rows[rowIndex] : undefined
+      if (useMarkedCount === 0 && row) {
+        if (row.kind === "window") {
+          applyReducedState({
+            kind: "toggleCurrent",
+            row: { kind: "window", windowId: row.windowId }
+          })
+        } else if (row.kind === "group" && row.groupId !== null) {
+          applyReducedState({
+            kind: "toggleCurrent",
+            row: { kind: "group", groupKey: groupRowKey(row.windowId, row.groupId) }
+          })
+        }
+      }
+
+      const panel = await buildInitialEditPanel(target)
+      const title = await loadEditTitleForPanel(
+        panel.kind === "windowRename"
+          ? panel
+          : panel.kind === "groupMenu"
+            ? {
+                kind: "groupRename",
+                windowId: panel.windowId,
+                groupId: panel.groupId,
+                groupKey: panel.groupKey
+              }
+            : panel
+      )
+      setEditTitle(title)
+      setEditPanel(panel)
+      setBulkSubMode("edit")
+    },
+    [
+      applyReducedState,
+      hi,
+      markedCount,
+      markedGroupKeys,
+      markedKind,
+      markedWindowIds,
+      onAppendLog,
+      rows,
+      setBulkSubMode,
+      setEditPanel,
+      setEditTitle,
+      visibleRowIndices,
+      uiCopy
+    ]
+  )
 
   const confirmWindowRename = useCallback(async () => {
     if (editPanel?.kind !== "windowRename") {

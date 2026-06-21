@@ -38,7 +38,7 @@ export const COLOR_SWATCH_BG: Partial<Record<NewGroupPaletteColor, string>> = {
 /** 既存グループ一覧の「新規グループ」行（Chrome のグループ ID とは別物） */
 export const NEW_GROUP_LIST_SENTINEL = -1
 
-import type { ActionMenuItemId, SelectKind } from "./tab-picker-overlay-types"
+import type { ActionMenuItemId, GroupEditMenuActionId, SelectKind } from "./tab-picker-overlay-types"
 
 /** `:` コマンドモードの Tab 補完候補（レガシー; tabs ピッカーでは → メニューに移行） */
 export const TAB_PICKER_COMMAND_COMPLETIONS = [
@@ -134,3 +134,15 @@ export const GROUP_EDIT_MENU_ITEMS = [
   { id: "ungroup" as const, messageKey: "tabs.picker.editMenu.ungroup" as const },
   { id: "deleteGroup" as const, messageKey: "tabs.picker.editMenu.deleteGroup" as const }
 ] as const
+
+export type GroupEditMenuItemDef = {
+  id: GroupEditMenuActionId
+  messageKey:
+    | "tabs.picker.editMenu.rename"
+    | "tabs.picker.editMenu.ungroup"
+    | "tabs.picker.editMenu.deleteGroup"
+}
+
+export function groupEditMenuItems(): readonly GroupEditMenuItemDef[] {
+  return GROUP_EDIT_MENU_ITEMS
+}

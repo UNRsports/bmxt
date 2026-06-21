@@ -210,9 +210,13 @@ export function useTabPickerSyncAndLayoutEffects({
     const row = ri !== undefined ? rows[ri] : undefined
     const implicitWindowBulk =
       row?.kind === "window" &&
-      (bulkSubMode === "close" || bulkSubMode === "newTab")
+      (bulkSubMode === "close" || bulkSubMode === "newTab" || bulkSubMode === "reload")
+    const implicitRowBulk =
+      (row?.kind === "tab" && bulkSubMode === "reload") ||
+      (row?.kind === "group" &&
+        (bulkSubMode === "reload" || bulkSubMode === "newWindow"))
 
-    if (markedCount === 0 && !implicitWindowBulk && bulkSubMode !== "edit") {
+    if (markedCount === 0 && !implicitWindowBulk && !implicitRowBulk && bulkSubMode !== "edit") {
       setBulkSubMode(null)
       setMarkedKind(null)
       shiftRangeAnchorHiRef.current = null

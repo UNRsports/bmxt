@@ -430,27 +430,6 @@ export function useTabPickerController({
     onRefreshRows
   })
 
-  const {
-    openActionMenuFromPicker,
-    closeActionMenu,
-    cycleActionMenuPick,
-    confirmActionMenuPick
-  } = useTabPickerActionMenu({
-    rows,
-    visibleRowIndices,
-    hi,
-    markedKind,
-    markedTabIds,
-    markedWindowIds,
-    markedGroupKeys,
-    markedCount,
-    actionMenuPanel,
-    setActionMenuPanel,
-    setBulkSubMode,
-    applyReducedState,
-    openEditFromPicker
-  })
-
   const onPickerHighlightCreatedTab = useCallback(
     (tabId: number) => {
       setAnchorTabId(tabId)
@@ -464,7 +443,8 @@ export function useTabPickerController({
     confirmSelection,
     executeCreateNewGroup,
     executeOpenNewTabFromUrl,
-    runExecutionIntent
+    runExecutionIntent,
+    runExecutionIntentForSnapshot
   } = useTabPickerExecution({
     rows,
     visibleRowIndices,
@@ -491,12 +471,37 @@ export function useTabPickerController({
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
+    setBulkSubMode,
     onNewTabUrlPanelDone: () => {
       setNewTabUrlWindowId(null)
       setNewTabUrl("")
       setBulkSubMode(null)
     },
     onPickerHighlightCreatedTab
+  })
+
+  const {
+    openActionMenuFromPicker,
+    closeActionMenu,
+    cycleActionMenuPick,
+    confirmActionMenuPick
+  } = useTabPickerActionMenu({
+    rows,
+    visibleRowIndices,
+    hi,
+    moveDestHi,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys,
+    markedCount,
+    bulkSubMode,
+    actionMenuPanel,
+    dispatch,
+    setNewTabUrlWindowId,
+    setNewTabUrl,
+    openEditFromPicker,
+    runExecutionIntentForSnapshot
   })
 
   const { onMetaTitleKeyDown, onMetaColorKeyDown, onInputKeyDown } = useTabPickerKeyboard({

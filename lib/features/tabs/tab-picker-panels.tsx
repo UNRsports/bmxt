@@ -1,7 +1,7 @@
 import type { KeyboardEvent, RefObject } from "react"
 import { useUiCopy } from "../setting"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
-import { GROUP_EDIT_MENU_ITEMS, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
+import { groupEditMenuItems, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, GroupChoice } from "./tab-picker-overlay-types"
 
 export function TabPickerActionMenuPanel({
@@ -184,7 +184,7 @@ export function TabPickerEditGroupMenuPanel({
   return (
     <div ref={panelRef} className="bmxt-tab-picker-group-panel bmxt-scroll">
       <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.editGroupMenu")}</div>
-      {GROUP_EDIT_MENU_ITEMS.map((item, idx) => (
+      {groupEditMenuItems().map((item, idx) => (
         <div
           key={item.id}
           data-bmxt-edit-pick={idx}
