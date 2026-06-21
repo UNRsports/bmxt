@@ -19,7 +19,7 @@ import { TerminalBootSplash } from "./terminal-boot-splash"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
-import { appendLinesToSession } from "./terminal-sessions/state-storage"
+import { appendSessionLogFromUiAsync } from "./terminal-sessions/session-runtime-client"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -125,7 +125,7 @@ const SessionPaneView = memo(function SessionPaneView({
         navArmedByLeaf={navArmedByLeaf}
         onActivateSession={onActivateSession}
         onSetSessionDisplayName={onSetSessionDisplayName}
-        appendLogLines={(newLines) => appendLinesToSession(sessionId, newLines)}
+        appendLogLines={(newLines) => appendSessionLogFromUiAsync(sessionId, newLines)}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
         setSessionPickerSlot={setSessionPickerSlot}

@@ -8,6 +8,7 @@
 export type BackgroundServicesModule = {
   registerBackgroundServices(): void
   warmBackgroundServicesAsync(): Promise<void>
+  handleSessionRuntimeMessageAsync(message: Record<string, unknown>): Promise<unknown>
   runCommandMessage(
     line: string,
     sessionId?: string,

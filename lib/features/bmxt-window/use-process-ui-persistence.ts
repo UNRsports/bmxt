@@ -1,18 +1,19 @@
+/**
+ * EN: Process UI state (pickers, pane focus) — in-memory for the BMXt window lifetime.
+ * JA: ピッカー列・ペインフォーカスは BMXt ウィンドウ存続中メモリのみ。
+ */
+
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { pruneSessionPickersMap } from "../side-picker/session/session-pickers"
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
-import { PROCESS_UI_STATE_KEY } from "../extension-storage/keys"
+import { clearTabPickerFoldStateInMemory } from "../tabs/tab-picker-fold-state"
+import {
+  isSessionRuntimeOutboundMessage,
+  SESSION_CLEAR_MESSAGE
+} from "./terminal-sessions/session-runtime-protocol"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
-import {
-  readProcessUiStateFromStorage,
-  rebuildSessionPickersFromStorage,
-  serializeProcessUiState,
-  writeProcessUiStateToStorage
-} from "./process-ui-state-storage"
-
-const PERSIST_DEBOUNCE_MS = 250
 
 function pruneLeafRecord<T>(prev: Record<string, T>, validLeafIds: readonly string[]): Record<string, T> {
   let changed = false
@@ -67,55 +68,33 @@ export function useProcessUiPersistence(
   navArmedRef.current = navArmedByLeaf
   validLeafIdsRef.current = validLeafIds
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const stored = await readProcessUiStateFromStorage()
-      if (cancelled) {
-        return
-      }
-      if (stored) {
-        const rebuilt = await rebuildSessionPickersFromStorage(stored)
-        if (!cancelled) {
-          setPickersBySession(rebuilt.pickersBySession)
-          setPaneFocusByLeaf(rebuilt.paneFocusByLeaf)
-          setDetailBarIdByLeaf(rebuilt.detailBarIdByLeaf)
-          setModeToolbarOrderByLeaf(rebuilt.modeToolbarOrderByLeaf)
-          setNavArmedByLeaf(rebuilt.navArmedByLeaf)
-        }
-      }
-      if (!cancelled) {
-        setProcessUiReady(true)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
+  const resetProcessUiState = useCallback(() => {
+    setPickersBySession({})
+    setPaneFocusByLeaf({})
+    setDetailBarIdByLeaf({})
+    setModeToolbarOrderByLeaf({})
+    setNavArmedByLeaf({})
+    clearTabPickerFoldStateInMemory()
   }, [])
 
   useEffect(() => {
-    if (!processUiReady) {
-      return
-    }
-    const onChange: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (
-      changes,
-      area
+    setProcessUiReady(true)
+  }, [])
+
+  useEffect(() => {
+    const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
+      message
     ) => {
-      if (area !== "local") {
+      if (!isSessionRuntimeOutboundMessage(message)) {
         return
       }
-      const proc = changes[PROCESS_UI_STATE_KEY]
-      if (proc && proc.newValue === undefined) {
-        setPickersBySession({})
-        setPaneFocusByLeaf({})
-        setDetailBarIdByLeaf({})
-        setModeToolbarOrderByLeaf({})
-        setNavArmedByLeaf({})
+      if (message.type === SESSION_CLEAR_MESSAGE) {
+        resetProcessUiState()
       }
     }
-    chrome.storage.onChanged.addListener(onChange)
-    return () => chrome.storage.onChanged.removeListener(onChange)
-  }, [processUiReady])
+    chrome.runtime.onMessage.addListener(onRuntimeMessage)
+    return () => chrome.runtime.onMessage.removeListener(onRuntimeMessage)
+  }, [resetProcessUiState])
 
   useEffect(() => {
     if (validLeafIds.length === 0) {
@@ -127,52 +106,6 @@ export function useProcessUiPersistence(
     setModeToolbarOrderByLeaf((prev) => pruneLeafRecord(prev, validLeafIds))
     setNavArmedByLeaf((prev) => pruneLeafRecord(prev, validLeafIds))
   }, [validLeafIds])
-
-  const persistNow = useCallback(async () => {
-    const payload = serializeProcessUiState(
-      pickersRef.current,
-      paneFocusRef.current,
-      validLeafIdsRef.current,
-      detailBarIdRef.current,
-      modeToolbarOrderRef.current,
-      navArmedRef.current
-    )
-    await writeProcessUiStateToStorage(payload)
-  }, [])
-
-  useEffect(() => {
-    if (!processUiReady || !enabled || validLeafIds.length === 0) {
-      return
-    }
-    const timer = window.setTimeout(() => {
-      void persistNow()
-    }, PERSIST_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [
-    detailBarIdByLeaf,
-    enabled,
-    modeToolbarOrderByLeaf,
-    navArmedByLeaf,
-    paneFocusByLeaf,
-    persistNow,
-    pickersBySession,
-    processUiReady,
-    validLeafIds
-  ])
-
-  useEffect(() => {
-    if (!processUiReady || !enabled) {
-      return
-    }
-    const flush = () => {
-      if (validLeafIdsRef.current.length === 0) {
-        return
-      }
-      void persistNow()
-    }
-    window.addEventListener("pagehide", flush)
-    return () => window.removeEventListener("pagehide", flush)
-  }, [enabled, persistNow, processUiReady])
 
   const setPaneFocusForLeaf = useCallback((sessionId: string, target: PaneFocusTarget) => {
     setPaneFocusByLeaf((prev) => {

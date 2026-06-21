@@ -20,7 +20,9 @@ import {
   createSessionAndActivate,
   switchSessionNext,
   switchSessionPrev,
-  resetBmxtTerminalSessionsInStorage
+  resetBmxtTerminalSessionsInStorage,
+  setActiveSession,
+  setSessionDisplayName
 } from "../../lib/features/bmxt-window/terminal-sessions/state-storage"
 import { displayTitle } from "../../lib/features/format/display-title"
 import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
@@ -44,6 +46,18 @@ import {
   persistBmxtWindowId,
   readBmxtWindowIdInMemory
 } from "./window-state"
+import {
+  setupInMemorySessionRuntime,
+  readSessionSnapshotForInit
+} from "./session-runtime-broadcast"
+import {
+  SESSION_INIT_MESSAGE,
+  SESSION_UI_APPEND_LOG_MESSAGE,
+  SESSION_UI_SET_ACTIVE_MESSAGE,
+  SESSION_UI_SET_NAME_MESSAGE
+} from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-protocol"
+
+setupInMemorySessionRuntime()
 
 let lastFocusedNormalWindow: number | undefined
 let commandCoreWarmed = false
@@ -369,6 +383,51 @@ export async function resetBmxtFromShortcutAsync(
 ): Promise<void> {
   await resetBmxtTerminalSessionsInStorage()
   await openOrFocus()
+}
+
+export async function handleSessionRuntimeMessageAsync(
+  message: Record<string, unknown>
+): Promise<unknown> {
+  const type = message.type
+  if (type === SESSION_INIT_MESSAGE) {
+    const state = await readSessionSnapshotForInit()
+    return { ok: true, state }
+  }
+  if (type === SESSION_UI_APPEND_LOG_MESSAGE) {
+    const sessionId = message.sessionId
+    const lines = message.lines
+    if (typeof sessionId !== "string" || !Array.isArray(lines)) {
+      return { ok: false, error: "invalid SESSION_UI_APPEND_LOG" }
+    }
+    const safeLines: string[] = []
+    for (const line of lines) {
+      if (typeof line === "string") {
+        safeLines.push(line)
+      }
+    }
+    if (safeLines.length > 0) {
+      await appendLinesToSession(sessionId, safeLines)
+    }
+    return { ok: true }
+  }
+  if (type === SESSION_UI_SET_ACTIVE_MESSAGE) {
+    const sessionId = message.sessionId
+    if (typeof sessionId !== "string") {
+      return { ok: false, error: "invalid SESSION_UI_SET_ACTIVE" }
+    }
+    await setActiveSession(sessionId)
+    return { ok: true }
+  }
+  if (type === SESSION_UI_SET_NAME_MESSAGE) {
+    const sessionId = message.sessionId
+    const name = message.name
+    if (typeof sessionId !== "string" || typeof name !== "string") {
+      return { ok: false, error: "invalid SESSION_UI_SET_NAME" }
+    }
+    await setSessionDisplayName(sessionId, name)
+    return { ok: true }
+  }
+  return { ok: false, error: "unknown session message" }
 }
 
 export async function warmBackgroundServicesAsync(): Promise<void> {

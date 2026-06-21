@@ -4,6 +4,19 @@
  */
 
 import { loadBackgroundServicesAsync } from "./load-background-services"
+import {
+  SESSION_INIT_MESSAGE,
+  SESSION_UI_APPEND_LOG_MESSAGE,
+  SESSION_UI_SET_ACTIVE_MESSAGE,
+  SESSION_UI_SET_NAME_MESSAGE
+} from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-protocol"
+
+const SESSION_RUNTIME_MESSAGE_TYPES = new Set<string>([
+  SESSION_INIT_MESSAGE,
+  SESSION_UI_APPEND_LOG_MESSAGE,
+  SESSION_UI_SET_ACTIVE_MESSAGE,
+  SESSION_UI_SET_NAME_MESSAGE
+])
 
 type RunCmdMessage = {
   type?: string
@@ -45,6 +58,23 @@ export function setupMessageBridge(): void {
         void loadBackgroundServicesAsync()
           .then((services) => services.warmBackgroundServicesAsync())
           .then(() => safeSendResponse(sendResponse, { ok: true }))
+          .catch((e) =>
+            safeSendResponse(sendResponse, {
+              ok: false,
+              error: e instanceof Error ? e.message : String(e)
+            })
+          )
+        return true
+      }
+      if (
+        typeof message?.type === "string" &&
+        SESSION_RUNTIME_MESSAGE_TYPES.has(message.type)
+      ) {
+        void loadBackgroundServicesAsync()
+          .then((services) =>
+            services.handleSessionRuntimeMessageAsync(message as Record<string, unknown>)
+          )
+          .then((result) => safeSendResponse(sendResponse, result))
           .catch((e) =>
             safeSendResponse(sendResponse, {
               ok: false,

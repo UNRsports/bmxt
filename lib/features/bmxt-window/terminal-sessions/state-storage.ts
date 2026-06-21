@@ -9,7 +9,7 @@ import {
   TERMINAL_SESSIONS_KEY
 } from "../../extension-storage/keys"
 import { clearProcessUiStateStorage, readProcessUiStateFromStorage } from "../process-ui-state-storage"
-import { clearTabPickerFoldStateStorage } from "../../tabs/tab-picker-fold-state"
+import { clearTabPickerFoldStateInMemory, clearTabPickerFoldStateStorage } from "../../tabs/tab-picker-fold-state"
 import { sanitizeSessionName } from "../../session/session-summary"
 import { deriveDefaultSessionName } from "../../session/session-summary"
 import type { SessionPickerState } from "../../side-picker/session/session-pickers"
@@ -17,8 +17,41 @@ import type { SplitLayoutV1 } from "../split-layout/types"
 import { isValidLayout, listLeafIds } from "../split-layout/tree"
 import type { TerminalSessionsStateV1 } from "./types"
 
+type SessionRuntimeCallbacks = {
+  onStateChange: (state: TerminalSessionsStateV1) => void
+  onClear: () => void
+}
+
+let sessionRuntimeMode: "storage" | "memory" = "storage"
+let memorySessionState: TerminalSessionsStateV1 | null = null
+let sessionRuntimeCallbacks: SessionRuntimeCallbacks | null = null
+
+/** EN: SW runtime — session logs/metadata live in memory; UI syncs via messages. */
+export function enableInMemorySessionRuntime(callbacks: SessionRuntimeCallbacks): void {
+  sessionRuntimeMode = "memory"
+  sessionRuntimeCallbacks = callbacks
+}
+
+export function resetInMemorySessionRuntimeForTests(): void {
+  sessionRuntimeMode = "storage"
+  memorySessionState = null
+  sessionRuntimeCallbacks = null
+}
+
 /** 旧マルチペインセッションキー（移行のみ）。 */
 const LEGACY_SPLIT_KEY = "bmxt_split_session"
+
+const LEGACY_TERMINAL_STORAGE_KEYS = [
+  TERMINAL_SESSIONS_KEY,
+  SPLIT_LAYOUT_KEY,
+  ACTIVE_TERMINAL_SESSION_KEY,
+  SESSION_LOG_KEY,
+  LEGACY_SPLIT_KEY
+] as const
+
+async function removeLegacyTerminalStorageKeys(): Promise<void> {
+  await chrome.storage.local.remove([...LEGACY_TERMINAL_STORAGE_KEYS])
+}
 
 type LegacySplitSession = {
   v: 1
@@ -340,6 +373,9 @@ async function migrateStorageShapes(): Promise<void> {
 }
 
 export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsStateV1 | null> {
+  if (sessionRuntimeMode === "memory") {
+    return memorySessionState
+  }
   await migrateStorageShapes()
   const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY])
   return parseTerminalSessionsStorageValue(r[TERMINAL_SESSIONS_KEY])
@@ -354,6 +390,14 @@ export function parseTerminalSessionsStorageValue(raw: unknown): TerminalSession
 }
 
 export async function ensureTerminalSessionsState(): Promise<TerminalSessionsStateV1> {
+  if (sessionRuntimeMode === "memory") {
+    if (memorySessionState) {
+      return memorySessionState
+    }
+    const fresh = emptyState()
+    await persistTerminalSessionsState(fresh)
+    return fresh
+  }
   const cur = await readTerminalSessionsIfPresent()
   if (cur) {
     return cur
@@ -381,6 +425,11 @@ export async function persistTerminalSessionsState(
   state: TerminalSessionsStateV1
 ): Promise<void> {
   const normalized = ensureActiveInOrder(state)
+  if (sessionRuntimeMode === "memory") {
+    memorySessionState = normalized
+    sessionRuntimeCallbacks?.onStateChange(normalized)
+    return
+  }
   const body: StoredSessionsBodyV5 = {
     v: 5,
     logsById: normalized.logsById,
@@ -438,6 +487,12 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
 }
 
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
+  if (sessionRuntimeMode === "memory") {
+    memorySessionState = null
+    sessionRuntimeCallbacks?.onClear()
+    await removeLegacyTerminalStorageKeys()
+    return
+  }
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
     SPLIT_LAYOUT_KEY,
@@ -452,6 +507,15 @@ export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
 }
 
 export async function resetBmxtTerminalSessionsInStorage(): Promise<void> {
+  if (sessionRuntimeMode === "memory") {
+    memorySessionState = null
+    await chrome.storage.local.remove([CMD_HISTORY_KEY])
+    await clearTabPickerFoldStateInMemory()
+    const fresh = emptyState()
+    await persistTerminalSessionsState(fresh)
+    await removeLegacyTerminalStorageKeys()
+    return
+  }
   const fresh = emptyState()
   await chrome.storage.local.remove([
     ACTIVE_TERMINAL_SESSION_KEY,
@@ -524,7 +588,8 @@ async function resolveNewSessionName(
   if (sanitized) {
     return sanitized
   }
-  const processUi = await readProcessUiStateFromStorage()
+  const processUi =
+    sessionRuntimeMode === "memory" ? null : await readProcessUiStateFromStorage()
   const leaf = processUi?.byLeaf[fromSessionId]
   const pickers = leaf ? pickersFromStoredLeaf(leaf) : undefined
   const navArmed = leaf?.navArmed ?? false
