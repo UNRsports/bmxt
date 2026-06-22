@@ -1,5 +1,6 @@
 import { searchStatusHint } from "../setting/i18n/resolvers"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tModeStatus } from "../setting/i18n/ns/mode-status"
+import { useUiSettings } from "../setting/use-ui-settings"
 import {
   settingTokenForSearchPageActiveMode,
   type SearchPageActiveMode
@@ -13,7 +14,7 @@ type SearchStatusBarProps = {
 
 /** EN: Detail bar for the search list picker. */
 export function SearchStatusBar({ pattern, phase, pageActiveMode }: SearchStatusBarProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   const modeToken = settingTokenForSearchPageActiveMode(pageActiveMode)
   const stateLabel = pageActiveMode === "auto" ? "auto" : "manual"
   const patternMeta =
@@ -21,8 +22,9 @@ export function SearchStatusBar({ pattern, phase, pageActiveMode }: SearchStatus
       ? pattern.length > 48
         ? `${pattern.slice(0, 48)}…`
         : pattern
-      : uiCopy.t("modeStatus.search.noPattern")
-  const phasePrefix = phase === "loading" ? uiCopy.t("modeStatus.search.loadingPrefix") : ""
+      : tModeStatus("modeStatus.search.noPattern", uiSettings.locale)
+  const phasePrefix =
+    phase === "loading" ? tModeStatus("modeStatus.search.loadingPrefix", uiSettings.locale) : ""
   const meta = `${phasePrefix}page-active ${modeToken} · ${patternMeta}`
 
   return (
@@ -35,9 +37,9 @@ export function SearchStatusBar({ pattern, phase, pageActiveMode }: SearchStatus
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{meta}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {uiCopy.t("modeStatus.search.hint")}
+        {tModeStatus("modeStatus.search.hint", uiSettings.locale)}
         {" · "}
-        {searchStatusHint(uiCopy.locale, pageActiveMode)}
+        {searchStatusHint(uiSettings.locale, pageActiveMode)}
       </span>
     </div>
   )

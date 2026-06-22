@@ -1,5 +1,6 @@
 import type { KeyboardEvent, RefObject } from "react"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tTabs, type TabsMessageKey } from "../setting/i18n/ns/tabs"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import { groupEditMenuItems, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, GroupChoice } from "./tab-picker-overlay-types"
@@ -11,13 +12,15 @@ export function TabPickerActionMenuPanel({
   panelRef: RefObject<HTMLDivElement | null>
   actionMenuPanel: ActionMenuPanel
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   const items = actionMenuItemsForKind(actionMenuPanel.targetKind)
   return (
     <div
       ref={panelRef}
       className="bmxt-tab-picker-group-panel bmxt-tab-picker-action-menu-panel bmxt-scroll">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.actionMenuTitle")}</div>
+      <div className="bmxt-tab-picker-group-head">
+        {tTabs("tabs.picker.actionMenuTitle", uiSettings.locale)}
+      </div>
       {actionMenuPanel.tabLabels.length > 0 ? (
         <div className="bmxt-tab-picker-action-targets">
           {actionMenuPanel.tabLabels.map((label, idx) => (
@@ -34,7 +37,7 @@ export function TabPickerActionMenuPanel({
           className={`bmxt-tab-picker-group-row${
             idx === actionMenuPanel.pickIndex ? " bmxt-tab-picker-group-row--hi" : ""
           }`}>
-          {uiCopy.t(item.messageKey)}
+          {tTabs(item.messageKey as TabsMessageKey, uiSettings.locale)}
         </div>
       ))}
     </div>
@@ -50,12 +53,12 @@ export function TabPickerGroupTargetPanel({
   groupChoices: GroupChoice[]
   groupPickIndex: number
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   return (
     <div ref={panelRef} className="bmxt-tab-picker-group-panel bmxt-scroll">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.targetGroups")}</div>
+      <div className="bmxt-tab-picker-group-head">{tTabs("tabs.picker.targetGroups", uiSettings.locale)}</div>
       {groupChoices.length === 0 ? (
-        <div className="bmxt-tab-picker-group-empty">{uiCopy.t("tabs.picker.loadingGroups")}</div>
+        <div className="bmxt-tab-picker-group-empty">{tTabs("tabs.picker.loadingGroups", uiSettings.locale)}</div>
       ) : (
         groupChoices.map((g, idx) => (
           <div
@@ -89,14 +92,14 @@ export function TabPickerNewGroupMetaPanel({
   onMetaTitleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
   onMetaColorKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   const activeColor = NEW_GROUP_COLORS[newGroupColorIndex]
   return (
     <div className="bmxt-tab-picker-new-group-meta">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.newGroup")}</div>
+      <div className="bmxt-tab-picker-group-head">{tTabs("tabs.picker.newGroup", uiSettings.locale)}</div>
       <div className="bmxt-tab-picker-new-group-field">
         <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-new-group-title">
-          {uiCopy.t("tabs.picker.nameLabel")}
+          {tTabs("tabs.picker.nameLabel", uiSettings.locale)}
         </label>
         <input
           id="bmxt-new-group-title"
@@ -112,13 +115,13 @@ export function TabPickerNewGroupMetaPanel({
         />
       </div>
       <div className="bmxt-tab-picker-new-group-field">
-        <div className="bmxt-tab-picker-new-group-label">{uiCopy.t("tabs.picker.colorLabel")}</div>
+        <div className="bmxt-tab-picker-new-group-label">{tTabs("tabs.picker.colorLabel", uiSettings.locale)}</div>
         <div
           ref={groupMetaColorStripRef}
           className="bmxt-tab-picker-color-strip"
           tabIndex={0}
           role="listbox"
-          aria-label={uiCopy.t("tabs.picker.groupColorAria")}
+          aria-label={tTabs("tabs.picker.groupColorAria", uiSettings.locale)}
           aria-activedescendant={`bmxt-color-${activeColor}`}
           onKeyDown={onMetaColorKeyDown}>
           {NEW_GROUP_COLORS.map((c, i) => (
@@ -148,13 +151,13 @@ export function TabPickerEditWindowRenamePanel({
   onEditTitleChange: (value: string) => void
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   return (
     <div className="bmxt-tab-picker-new-group-meta">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.editWindowName")}</div>
+      <div className="bmxt-tab-picker-group-head">{tTabs("tabs.picker.editWindowName", uiSettings.locale)}</div>
       <div className="bmxt-tab-picker-new-group-field">
         <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-edit-window-title">
-          {uiCopy.t("tabs.picker.nameLabel")}
+          {tTabs("tabs.picker.nameLabel", uiSettings.locale)}
         </label>
         <input
           id="bmxt-edit-window-title"
@@ -180,10 +183,10 @@ export function TabPickerEditGroupMenuPanel({
   panelRef: RefObject<HTMLDivElement | null>
   pickIndex: number
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   return (
     <div ref={panelRef} className="bmxt-tab-picker-group-panel bmxt-scroll">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.editGroupMenu")}</div>
+      <div className="bmxt-tab-picker-group-head">{tTabs("tabs.picker.editGroupMenu", uiSettings.locale)}</div>
       {groupEditMenuItems().map((item, idx) => (
         <div
           key={item.id}
@@ -191,7 +194,7 @@ export function TabPickerEditGroupMenuPanel({
           className={`bmxt-tab-picker-group-row${
             idx === pickIndex ? " bmxt-tab-picker-group-row--hi" : ""
           }`}>
-          {uiCopy.t(item.messageKey)}
+          {tTabs(item.messageKey as TabsMessageKey, uiSettings.locale)}
         </div>
       ))}
     </div>
@@ -209,13 +212,13 @@ export function TabPickerEditGroupRenamePanel({
   onEditTitleChange: (value: string) => void
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   return (
     <div className="bmxt-tab-picker-new-group-meta">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.editGroupName")}</div>
+      <div className="bmxt-tab-picker-group-head">{tTabs("tabs.picker.editGroupName", uiSettings.locale)}</div>
       <div className="bmxt-tab-picker-new-group-field">
         <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-edit-group-title">
-          {uiCopy.t("tabs.picker.nameLabel")}
+          {tTabs("tabs.picker.nameLabel", uiSettings.locale)}
         </label>
         <input
           id="bmxt-edit-group-title"
@@ -245,13 +248,13 @@ export function TabPickerNewTabUrlPanel({
   onNewTabUrlChange: (value: string) => void
   onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   return (
     <div className="bmxt-tab-picker-new-group-meta">
-      <div className="bmxt-tab-picker-group-head">{uiCopy.t("tabs.picker.newTabPanel")}</div>
+      <div className="bmxt-tab-picker-group-head">{tTabs("tabs.picker.newTabPanel", uiSettings.locale)}</div>
       <div className="bmxt-tab-picker-new-group-field">
         <label className="bmxt-tab-picker-new-group-label" htmlFor="bmxt-new-tab-url">
-          {uiCopy.t("tabs.picker.urlLabel")}
+          {tTabs("tabs.picker.urlLabel", uiSettings.locale)}
         </label>
         <input
           id="bmxt-new-tab-url"

@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect } from "react"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice } from "./tab-picker-overlay-types"
 
@@ -9,16 +10,18 @@ export function useLoadGroupChoicesWhenBulkGroup(
   setGroupChoices: Dispatch<SetStateAction<GroupChoice[]>>,
   setGroupPickIndex: Dispatch<SetStateAction<number>>
 ) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   useEffect(() => {
     if (bulkSubMode !== "group") {
       return
     }
     let cancelled = false
-    const untitled = uiCopy.t("tabs.picker.groupChoiceUntitled")
-    const newGroupLabel = uiCopy.t("tabs.picker.groupChoiceNew")
+    const untitled = tTabs("tabs.picker.groupChoiceUntitled", uiSettings.locale)
+    const newGroupLabel = tTabs("tabs.picker.groupChoiceNew", uiSettings.locale)
     const winSuffix = (windowId: number) =>
-      uiCopy.t("tabs.picker.groupChoiceWinSuffix", { windowId: String(windowId) })
+      tTabs("tabs.picker.groupChoiceWinSuffix", uiSettings.locale, {
+        windowId: String(windowId)
+      })
     void (async () => {
       try {
         const gs = await chrome.tabGroups.query({})
@@ -57,5 +60,5 @@ export function useLoadGroupChoicesWhenBulkGroup(
     return () => {
       cancelled = true
     }
-  }, [bulkSubMode, setGroupChoices, setGroupPickIndex, uiCopy])
+  }, [bulkSubMode, setGroupChoices, setGroupPickIndex, uiSettings.locale])
 }
