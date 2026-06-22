@@ -2,7 +2,7 @@
 
 import { resolveSessionDisplayName } from "./session-summary"
 import type { SessionPickerState } from "../side-picker/session/session-pickers"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 
 type Props = {
   order: readonly string[]

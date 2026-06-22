@@ -12,7 +12,7 @@ import {
   type PickerSlotId,
   type SessionPickerState,
   type SessionPickersByLeaf
-} from "../side-picker"
+} from "../side-picker/session/session-pickers"
 import { buildSessionListRows, SessionBar, type SessionListRow } from "../session"
 import { BmxtShell } from "./bmxt-shell"
 import { TerminalBootSplash } from "./terminal-boot-splash"
@@ -32,7 +32,8 @@ import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
-import { UiSettingsProvider, useTerminalAppearance, useUiSettings } from "../setting"
+import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
+import { useTerminalAppearance } from "../setting/apply-appearance"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 

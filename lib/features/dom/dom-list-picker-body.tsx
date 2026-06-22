@@ -8,7 +8,7 @@ import {
   type MutableRefObject,
   type ReactNode
 } from "react"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"

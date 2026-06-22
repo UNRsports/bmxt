@@ -1,0 +1,350 @@
+{
+  "tabs.pageActive.choose": {
+    "ja": "tabs -setting -page-active: モードを選択 — {options}",
+    "en": "tabs -setting -page-active: choose mode — {options}"
+  },
+  "tabs.pageActive.set": {
+    "ja": "tabs: page-active を {token} に設定しました",
+    "en": "tabs: page-active set to {token}"
+  },
+  "tabs.picker.actionMenu.close": {
+    "ja": "閉じる",
+    "en": "Close"
+  },
+  "tabs.picker.actionMenu.edit": {
+    "ja": "編集",
+    "en": "Edit"
+  },
+  "tabs.picker.actionMenu.group": {
+    "ja": "グループ",
+    "en": "Group"
+  },
+  "tabs.picker.actionMenu.move": {
+    "ja": "移動",
+    "en": "Move"
+  },
+  "tabs.picker.actionMenu.newTab": {
+    "ja": "新しいタブ",
+    "en": "New tab"
+  },
+  "tabs.picker.actionMenu.newWindow": {
+    "ja": "新しいウィンドウ",
+    "en": "New window"
+  },
+  "tabs.picker.actionMenu.reload": {
+    "ja": "再読み込み",
+    "en": "Reload"
+  },
+  "tabs.picker.actionMenuTitle": {
+    "ja": "操作メニュー",
+    "en": "Action menu"
+  },
+  "tabs.picker.closed": {
+    "ja": "Tab picker を閉じました。",
+    "en": "Tab picker closed."
+  },
+  "tabs.picker.colorLabel": {
+    "ja": "色（← →）",
+    "en": "Color (← →)"
+  },
+  "tabs.picker.editGroupMenu": {
+    "ja": "タブグループの編集",
+    "en": "Edit tab group"
+  },
+  "tabs.picker.editGroupName": {
+    "ja": "グループ名",
+    "en": "Group name"
+  },
+  "tabs.picker.editMenu.deleteGroup": {
+    "ja": "タブグループの削除",
+    "en": "Delete tab group"
+  },
+  "tabs.picker.editMenu.rename": {
+    "ja": "名前の変更",
+    "en": "Rename"
+  },
+  "tabs.picker.editMenu.ungroup": {
+    "ja": "タブグループの解除",
+    "en": "Ungroup tabs"
+  },
+  "tabs.picker.editWindowName": {
+    "ja": "ウィンドウ名",
+    "en": "Window name"
+  },
+  "tabs.picker.empty": {
+    "ja": "(タブなし)",
+    "en": "(no tabs)"
+  },
+  "tabs.picker.error.createGroup.failed": {
+    "ja": "グループ作成に失敗しました — {detail}",
+    "en": "Group creation failed — {detail}"
+  },
+  "tabs.picker.error.createGroup.invalidMoveCount": {
+    "ja": "移動するタブ数が不正です",
+    "en": "Invalid number of tabs to move"
+  },
+  "tabs.picker.error.createGroup.noTabs": {
+    "ja": "選択されたタブがありません（一覧に戻り Tab で選び直してください）。",
+    "en": "No tabs selected (return to the list and use Tab to select again)."
+  },
+  "tabs.picker.error.createGroup.notInGroup": {
+    "ja": "移動対象タブがグループに含まれていません",
+    "en": "Tabs to move are not in the group"
+  },
+  "tabs.picker.error.createGroup.partialClosed": {
+    "ja": "選択したタブの一部が閉じられています。",
+    "en": "Some selected tabs were closed."
+  },
+  "tabs.picker.error.createGroup.planFailed": {
+    "ja": "グループ作成計画に失敗しました。",
+    "en": "Group creation plan failed."
+  },
+  "tabs.picker.error.createGroup.sameWindow": {
+    "ja": "選択したタブは同じウィンドウ内である必要があります。",
+    "en": "Selected tabs must be in the same window."
+  },
+  "tabs.picker.error.createGroup.success": {
+    "ja": "グループ {groupId} を新しいウィンドウ {windowId} に作成しました · {color} · \"{label}\"",
+    "en": "created group {groupId} in new window {windowId} · {color} · \"{label}\""
+  },
+  "tabs.picker.error.createGroup.tabIdMissing": {
+    "ja": "タブ ID を確定できませんでした",
+    "en": "Could not resolve tab id"
+  },
+  "tabs.picker.error.createGroup.windowOpenFailed": {
+    "ja": "新しいウィンドウを開けませんでした",
+    "en": "Could not open a new window"
+  },
+  "tabs.picker.error.createGroup.windowType": {
+    "ja": "このウィンドウ種別ではタブグループを使えません（Chrome は通常ウィンドウ normal のみ）。popup・app・devtools などではグループ化できません。ウェブページを開いた通常ブラウザウィンドウのタブを選んでください。",
+    "en": "Tab groups are not available in this window type (Chrome allows normal windows only). Choose tabs in a normal browser window with a web page."
+  },
+  "tabs.picker.error.createNoResponse": {
+    "ja": "tabs.create が応答しませんでした",
+    "en": "tabs.create did not respond"
+  },
+  "tabs.picker.error.editInvalidGroup": {
+    "ja": "error: :edit はタブグループ行を 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires a single valid tab group row."
+  },
+  "tabs.picker.error.editMultipleGroups": {
+    "ja": "error: :edit はタブグループを 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires exactly one selected tab group."
+  },
+  "tabs.picker.error.editMultipleWindows": {
+    "ja": "error: :edit はウィンドウを 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires exactly one selected window."
+  },
+  "tabs.picker.error.editNeedsWindowOrGroup": {
+    "ja": "error: :edit はウィンドウ行またはタブグループ行を 1 つだけ選択したときに使えます。",
+    "en": "error: :edit requires a single window or tab group row."
+  },
+  "tabs.picker.error.editOnTab": {
+    "ja": "error: :edit はタブ行では使えません。ウィンドウ行またはタブグループ行を単体選択してください。",
+    "en": "error: :edit cannot target a tab row. Select a single window or tab group row."
+  },
+  "tabs.picker.error.executeFailed": {
+    "ja": "実行できません。",
+    "en": "Cannot execute."
+  },
+  "tabs.picker.error.groupActionFailed": {
+    "ja": "error: タブグループの操作に失敗しました。",
+    "en": "error: tab group action failed."
+  },
+  "tabs.picker.error.groupNameSaveFailed": {
+    "ja": "error: グループ名の変更に失敗しました。",
+    "en": "error: failed to rename tab group."
+  },
+  "tabs.picker.error.invalidBulkForKind": {
+    "ja": "選択種別ではその処理を実行できません。",
+    "en": "That action cannot run on the current selection kind."
+  },
+  "tabs.picker.error.newTabFallbackFailed": {
+    "ja": "フォールバックにも失敗しました。",
+    "en": "Fallback create also failed."
+  },
+  "tabs.picker.error.newTabFallbackLine": {
+    "ja": "フォールバック: {message}",
+    "en": "Fallback: {message}"
+  },
+  "tabs.picker.error.newTabMoveFailed": {
+    "ja": "別ウィンドウへ移動できませんでした: {message}",
+    "en": "Could not move tab to target window: {message}"
+  },
+  "tabs.picker.error.newTabPrimary": {
+    "ja": "新規タブ: {message}",
+    "en": "New tab: {message}"
+  },
+  "tabs.picker.error.noBulkMode": {
+    "ja": "モード未選択です。←→で処理を選択してください。",
+    "en": "No mode selected. Use ←→ to choose an action."
+  },
+  "tabs.picker.error.noSelection": {
+    "ja": "選択対象がありません。Tabで選択してください。",
+    "en": "Nothing selected. Use Tab to select rows."
+  },
+  "tabs.picker.error.noTabsForAction": {
+    "ja": "処理対象のタブがありません。",
+    "en": "No tabs to act on."
+  },
+  "tabs.picker.error.windowNameSaveFailed": {
+    "ja": "error: ウィンドウ名の保存に失敗しました。",
+    "en": "error: failed to save window name."
+  },
+  "tabs.picker.groupChoiceNew": {
+    "ja": "＋ 新規グループ（名前・色を指定）",
+    "en": "＋ New group (name & color)"
+  },
+  "tabs.picker.groupChoiceUntitled": {
+    "ja": "(無題のグループ)",
+    "en": "(Untitled group)"
+  },
+  "tabs.picker.groupChoiceWinSuffix": {
+    "ja": " · win {windowId}",
+    "en": " · win {windowId}"
+  },
+  "tabs.picker.groupColorAria": {
+    "ja": "グループの色",
+    "en": "Group color"
+  },
+  "tabs.picker.headline.actionMenu": {
+    "ja": "Tab picker — [MENU] ↑↓ 操作選択 · Enter 実行 · ← 一覧へ · {common}",
+    "en": "Tab picker — [MENU] ↑↓ pick action · Enter run · ← back to list · {common}"
+  },
+  "tabs.picker.headline.close": {
+    "ja": "Tab picker — [CLOSE] Enter でウィンドウを閉じる / タブを閉じる · {common}",
+    "en": "Tab picker — [CLOSE] Enter close window / close tabs · {common}"
+  },
+  "tabs.picker.headline.common": {
+    "ja": "↑↓ 移動 · Shift+↑↓ 範囲 # · Tab # · ←/→ ツリー開閉 · 展開後→ 操作メニュー · / ハイライト · Enter 確定 · Alt+↑↓ プレビュー · Ctrl+Shift+↑↓ アクティブプレビュー · Esc # 解除 · prompt",
+    "en": "↑↓ move · Shift+↑↓ range # · Tab # · ←/→ tree fold · → menu when expanded · / highlight · Enter commit · Alt+↑↓ preview · Ctrl+Shift+↑↓ active preview · Esc clear # · prompt"
+  },
+  "tabs.picker.headline.default": {
+    "ja": "Tab picker — {common}",
+    "en": "Tab picker — {common}"
+  },
+  "tabs.picker.headline.edit": {
+    "ja": "Tab picker — [EDIT] · {common}",
+    "en": "Tab picker — [EDIT] · {common}"
+  },
+  "tabs.picker.headline.editGroupMenu": {
+    "ja": "Tab picker — [EDIT] ↑↓ 操作選択 · Enter 実行 · Esc キャンセル · {common}",
+    "en": "Tab picker — [EDIT] ↑↓ pick action · Enter run · Esc cancel · {common}"
+  },
+  "tabs.picker.headline.editGroupRename": {
+    "ja": "Tab picker — [EDIT] グループ名 · Enter 確定 · Esc で操作一覧へ · {common}",
+    "en": "Tab picker — [EDIT] group name · Enter confirm · Esc to action list · {common}"
+  },
+  "tabs.picker.headline.editWindowRename": {
+    "ja": "Tab picker — [EDIT] ウィンドウ名 · Enter 確定 · Esc キャンセル · {common}",
+    "en": "Tab picker — [EDIT] window name · Enter confirm · Esc cancel · {common}"
+  },
+  "tabs.picker.headline.group": {
+    "ja": "Tab picker — [GROUP] ↑↓ 既存 or 新規 · Enter · {common}",
+    "en": "Tab picker — [GROUP] ↑↓ existing or new · Enter · {common}"
+  },
+  "tabs.picker.headline.groupMeta": {
+    "ja": "Tab picker — [GROUP] 新規 · 名前・色 · Enter 確定 · Esc でターゲット一覧へ · Tab 名前↔色",
+    "en": "Tab picker — [GROUP] new · name/color · Enter confirm · Esc to target list · Tab name↔color"
+  },
+  "tabs.picker.headline.groupNewMeta": {
+    "ja": "group new — 名前・色 · Enter 確定 · Esc タブ一覧へ · Tab 名前↔色",
+    "en": "group new — name/color · Enter confirm · Esc to tab list · Tab name↔color"
+  },
+  "tabs.picker.headline.groupNewTabs": {
+    "ja": "group new — ↑↓ ハイライト · Tab で選択 · Enter で名前・色 · / 文字ハイライト · Esc",
+    "en": "group new — ↑↓ highlight · Tab select · Enter name/color · / char highlight · Esc"
+  },
+  "tabs.picker.headline.move": {
+    "ja": "Tab picker — [MOVE] ↑↓ 移動先 · Enter 適用 · {common}",
+    "en": "Tab picker — [MOVE] ↑↓ dest · Enter apply · {common}"
+  },
+  "tabs.picker.headline.newTab": {
+    "ja": "Tab picker — [NEW TAB] Enter で URL 入力 · {common}",
+    "en": "Tab picker — [NEW TAB] Enter URL input · {common}"
+  },
+  "tabs.picker.headline.newWindow": {
+    "ja": "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {common}",
+    "en": "Tab picker — [NEW WINDOW] Enter move # tabs to new window · {common}"
+  },
+  "tabs.picker.headline.reload": {
+    "ja": "Tab picker — [RELOAD] Enter で再読み込み · {common}",
+    "en": "Tab picker — [RELOAD] Enter to reload · {common}"
+  },
+  "tabs.picker.hint": {
+    "ja": "Tab picker — page-active {token} · ↑↓ 移動 · Alt+↑↓ プレビュー（manual） · Enter ジャンプ · Esc → prompt",
+    "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
+  },
+  "tabs.picker.inputAria.keys": {
+    "ja": "タブピッカーのキー操作",
+    "en": "Tab picker key input"
+  },
+  "tabs.picker.listAria": {
+    "ja": "タブ",
+    "en": "Tabs"
+  },
+  "tabs.picker.loadingGroups": {
+    "ja": "(読み込み中…)",
+    "en": "(loading…)"
+  },
+  "tabs.picker.nameLabel": {
+    "ja": "名前",
+    "en": "Name"
+  },
+  "tabs.picker.newGroup": {
+    "ja": "新しいグループ",
+    "en": "New group"
+  },
+  "tabs.picker.newTabPanel": {
+    "ja": "新しいタブ",
+    "en": "New tab"
+  },
+  "tabs.picker.notOpen": {
+    "ja": "このペインでは Tab picker は開いていません。",
+    "en": "Tab picker is not open in this pane."
+  },
+  "tabs.picker.targetGroups": {
+    "ja": "Target groups",
+    "en": "Target groups"
+  },
+  "tabs.picker.unknownGroup": {
+    "ja": "(不明なグループ)",
+    "en": "(unknown group)"
+  },
+  "tabs.picker.untitledGroup": {
+    "ja": "(無題のグループ) [{color}]",
+    "en": "(Untitled group) [{color}]"
+  },
+  "tabs.picker.urlLabel": {
+    "ja": "URL",
+    "en": "URL"
+  },
+  "tabs.picker.windowLabel": {
+    "ja": "{star}[ウィンドウ] {title}",
+    "en": "{star}[Window] {title}"
+  },
+  "tabs.setting.choose": {
+    "ja": "tabs -setting: オプションを選択 — -page-active",
+    "en": "tabs -setting: choose option — -page-active"
+  },
+  "tabs.setting.pageActiveCurrent": {
+    "ja": "現在の page-active: {token}",
+    "en": "current page-active: {token}"
+  },
+  "tabs.settingHint": {
+    "ja": "`-setting -page-active` でハイライト時のタブアクティブ化を切替（`--auto` 既定、`--manual` は Alt）。",
+    "en": "`-setting -page-active` controls tab preview on highlight (`--auto` default, `--manual` needs Alt)."
+  },
+  "tabs.status.auto": {
+    "ja": "↑↓ でハイライト移動時にタブをアクティブ化（ウィンドウは背面） · Enter でジャンプ",
+    "en": "↑↓ activates tab on highlight (window stays behind) · Enter to jump"
+  },
+  "tabs.status.manual": {
+    "ja": "Alt+↑↓ でタブをアクティブ化 · Enter でジャンプ · tabs -setting -page-active で切替",
+    "en": "Alt+↑↓ to activate tab · Enter to jump · tabs -setting -page-active to switch"
+  },
+  "tabs.usage": {
+    "ja": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
+    "en": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl"
+  }
+}

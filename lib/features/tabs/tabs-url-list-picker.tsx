@@ -1,6 +1,6 @@
 import { PickerListShell } from "../side-picker/chrome/picker-list-shell"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import {
   TabPickerActionMenuPanel,
   TabPickerEditGroupMenuPanel,

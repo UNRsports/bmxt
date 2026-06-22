@@ -3,8 +3,7 @@ import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-orde
 import type { ModeToolbarId } from "../mode-toolbar-order"
 import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "../detail-bar-focus"
-import type { SessionPickerState } from "../../side-picker"
-import type { PickerSlotId } from "../../side-picker"
+import type { SessionPickerState, PickerSlotId } from "../../side-picker/session/session-pickers"
 
 export type PickerManagerDeps = {
   sessionId: string

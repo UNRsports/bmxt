@@ -1,8 +1,9 @@
-import { useUiCopy } from "../setting"
+import { useUiLocale } from "../setting/use-ui-settings"
+import { tShell } from "../setting/i18n/ns/shell"
 
 /** EN: Shell chrome + loading row until the real prompt is interactive. */
 export function TerminalBootSplash() {
-  const uiCopy = useUiCopy()
+  const locale = useUiLocale()
 
   return (
     <div
@@ -18,7 +19,7 @@ export function TerminalBootSplash() {
       <div className="bmxt-boot-main">
         <span className="bmxt-boot-loading">
           <span className="bmxt-boot-loading-spinner" aria-hidden="true" />
-          {uiCopy.t("shell.bootLoading")}
+          {tShell("shell.bootLoading", locale)}
         </span>
       </div>
     </div>

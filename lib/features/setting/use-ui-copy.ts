@@ -4,7 +4,14 @@ import { t, type MessageKey, type MessageVars } from "./i18n/messages"
 import { useUiLocale } from "./use-ui-settings"
 import type { UiLocale } from "./locale"
 
-export function useUiCopy() {
+export type UiCopy = {
+  locale: UiLocale
+  t: (key: MessageKey, vars?: MessageVars) => string
+  lines: (entry: BilingualLines) => readonly string[]
+  bulletPrefix: string
+}
+
+export function useUiCopy(): UiCopy {
   const locale = useUiLocale()
   return useMemo(
     () => ({

@@ -1,7 +1,7 @@
 /** EN: `session -list` / `session -switch` — floating candidate menu (subcommand picker chrome). */
 
 import { useLayoutEffect, useRef } from "react"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import {
   formatSessionListCandidateLabel,
   formatSessionSwitchCandidateLabel,

@@ -3,7 +3,7 @@ import { DomListPickerBody } from "../../dom/dom-list-picker-body"
 import { DomPromptRender } from "../../dom/dom-prompt-render"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { domListPickerHeadline } from "../../setting/i18n/picker-headlines"
-import { useUiCopy } from "../../setting"
+import { useUiCopy } from "../../setting/use-ui-copy"
 
 export type DomPickerWrapperProps = {
   state: DomListPickerState

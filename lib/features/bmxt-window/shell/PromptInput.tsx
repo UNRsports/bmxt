@@ -1,5 +1,5 @@
 import React from "react"
-import type { UiCopy } from "../../setting/i18n/messages"
+import type { UiCopy } from "../../setting/use-ui-copy"
 import { CSP_DYNAMIC_SCOPE_ATTR } from "../csp-dynamic-stylesheet"
 import { TokenPickerPanel, type TokenPickerModel } from "../token-picker-panel"
 import { SessionListCandidatePanel, type SessionCandidatePanelVariant, type SessionListRow } from "../../session"

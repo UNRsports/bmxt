@@ -1,0 +1,58 @@
+{
+  "session.bar.aria": {
+    "ja": "セッション",
+    "en": "Sessions"
+  },
+  "session.number.invalid": {
+    "ja": "session: 番号 {n} は範囲外です（1–{max}）。`session` または `session -list` で一覧を開けます。",
+    "en": "session: number {n} is out of range (1–{max}). Use `session` or `session -list` for the switch list."
+  },
+  "session.number.switched": {
+    "ja": "session {n} に切り替えました。",
+    "en": "Switched to session {n}."
+  },
+  "session.picker.aria": {
+    "ja": "セッション切り替え候補",
+    "en": "Session switch candidates"
+  },
+  "session.picker.hint": {
+    "ja": "セッション一覧 — * がアクティブ · ↑↓ または 1–9 · Enter 切り替え · Esc → プロンプト · `session <n>` でも可",
+    "en": "Session list — * marks active · ↑↓ or 1–9 · Enter switch · Esc → prompt · or `session <n>`"
+  },
+  "session.settingName.invalid": {
+    "ja": "session: 無効なセッション名です（空・制御文字・改行は不可）。",
+    "en": "session: invalid session name (empty, control characters, or newlines)."
+  },
+  "session.settingName.placeholder": {
+    "ja": "セッション名 — Enter で保存 · Esc でキャンセル",
+    "en": "Session name — Enter save · Esc cancel"
+  },
+  "session.settingName.saved": {
+    "ja": "セッション名を「{name}」に変更しました。",
+    "en": "Session name set to \"{name}\"."
+  },
+  "session.summary.domPrompt": {
+    "ja": "prompt",
+    "en": "prompt"
+  },
+  "session.summary.terminalOnly": {
+    "ja": "(ターミナルのみ)",
+    "en": "(terminal only)"
+  },
+  "session.switch.aria": {
+    "ja": "セッション名による切り替え候補",
+    "en": "Switch session by name"
+  },
+  "session.switch.hint": {
+    "ja": "セッション切り替え — * がアクティブ · 入力で絞り込み · ↑↓ · Enter でコマンドに名前を入れる · もう一度 Enter で切り替え · Esc → プロンプト",
+    "en": "Session switch — * marks active · type to filter · ↑↓ · Enter insert name into command · Enter again to switch · Esc → prompt"
+  },
+  "session.switch.notFound": {
+    "ja": "session: セッション名「{name}」が見つかりません。`session -switch` で候補を表示できます。",
+    "en": "session: no session named \"{name}\". Use `session -switch` for the name menu."
+  },
+  "session.switch.switched": {
+    "ja": "セッション「{name}」に切り替えました。",
+    "en": "Switched to session \"{name}\"."
+  }
+}

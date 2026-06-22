@@ -1,7 +1,7 @@
 import type { MutableRefObject } from "react"
 import { useCallback } from "react"
 import { logBmxtKey } from "../debug/key-log"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import type { TabPickerRow } from "./picker-rows"
 import { mapVisibleIndicesToPlanRows } from "./tab-picker-plan-rows"
 import type { PickerReducerState } from "./state-machine"

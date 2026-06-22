@@ -14,7 +14,7 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../bmxt-window/csp-dynamic-stylesheet"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
@@ -37,7 +37,8 @@ import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
 import type { SearchOpenDestinationRow } from "./search-open-destination"
-import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
+import { resolveSearchHighlightAppearance } from "../setting/appearance"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { SearchPageActiveMode } from "./page-active-setting"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
 

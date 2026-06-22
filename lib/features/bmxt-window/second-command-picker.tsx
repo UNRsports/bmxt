@@ -1,6 +1,6 @@
 /** 第一コマンドのみ確定後に出す第二コマンド候補（IME 風リスト）。 */
 
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 
 export type SubCommandPickerModel = {
   /** 例: `tabs ` / `split `（末尾スペース付き continuation） */

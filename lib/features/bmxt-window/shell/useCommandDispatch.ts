@@ -17,6 +17,7 @@ import {
   parseSearchListPickerLine,
 } from "../../search/search-list-picker-input"
 import {
+  parseSessionListPickerLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
   parseSessionSwitchByNumberLine,
@@ -30,15 +31,23 @@ import {
   parseSettingIncompleteLine,
   parseSettingListPickerLine,
 } from "../../setting/setting-list-picker-input"
+import { buildTabPickerRows, resolveInitialTabPickerHighlightIndex } from "../../tabs/picker-rows"
 import {
   parseGroupNewInteractiveLine,
   parseTabsExitListLine,
-  parseTabsListPickerLine,
-  openTabPickerEngineForSession,
+  parseTabsListPickerLine
+} from "../../tabs/input"
+import { parseTabsSettingCommandLine } from "../../tabs/parse-tabs-setting-command"
+import {
+  saveTabsPageActiveMode,
+  settingTokenForPageActiveMode,
+  TABS_PAGE_ACTIVE_MODE_TOKENS,
+  type TabsPageActiveMode
+} from "../../tabs/page-active-setting"
+import {
   closeTabPickerEngineForSession,
-  resolveInitialTabPickerHighlightIndex,
-  buildTabPickerRows,
-} from "../../tabs"
+  openTabPickerEngineForSession
+} from "../../tabs/engine"
 import {
   listTranslationPairSettingTokens,
   parseTranslateCommandLine,
@@ -49,8 +58,9 @@ import {
 import { translateOnLogLine } from "../../setting/i18n/resolvers"
 import { buildHelpLines } from "../../bmxt-core/registry/help"
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
-import type { UiCopy } from "../../setting/i18n/messages"
+import type { UiCopy } from "../../setting/use-ui-copy"
 import type { UiSettings } from "../../setting/settings"
+import type { TranslationPairId } from "../../translate/translation-pair"
 
 export type CommandDispatchDeps = {
   sessionId: string
@@ -77,6 +87,10 @@ export type CommandDispatchDeps = {
   tabPressSeqRef: React.MutableRefObject<number>
   lineRef: React.MutableRefObject<string>
   sessionListPickerDismissedRef: React.MutableRefObject<boolean>
+  sessionNameTypingRef: React.MutableRefObject<boolean>
+  sessionListPickerHiRef: React.MutableRefObject<number | null>
+  setTabsPageActiveMode: (mode: TabsPageActiveMode) => void
+  switchSessionFromListPicker: (commandLine: string, pickHi: number) => void
   setMode: (mode: "normal" | "isearch") => void
   setLine: (line: string) => void
   setCursorPos: (pos: number) => void
@@ -89,7 +103,7 @@ export type CommandDispatchDeps = {
   setNavArmed: (armed: boolean) => void
   setNavActive: (active: boolean) => void
   setTranslateEnabled: (enabled: boolean) => void
-  setTranslatePairId: (id: string) => void
+  setTranslatePairId: (id: TranslationPairId) => void
   resetNavTranslateSession: () => void
   activatePaneFocus: (pane: string) => void
   teardownNav: () => Promise<void>
@@ -151,9 +165,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.tabPressSeqRef.current = 0
       void (async () => {
         try {
-          const { createSettingListPickerState } = await import("../../setting/setting-list-picker-input")
-          const state = await createSettingListPickerState()
-          await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("setting.picker.opened")])
+          const { createSettingListPickerState } = await import("../../setting/setting-list-picker-state")
+          const state = createSettingListPickerState(deps.uiSettings)
+          await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("setting.picker.hint")])
           deps.setSettingListPicker(deps.sessionId, state)
           deps.setModeToolbarOrder((prev: any) => activateModeToolbar(prev, "setting"))
         } catch (e) {
@@ -185,6 +199,85 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
       })()
+      return
+    }
+
+    if (parseTabsSettingCommandLine(trimmed) !== null) {
+      const tabsSettingCmd = parseTabsSettingCommandLine(trimmed)
+      if (tabsSettingCmd === null) {
+        return
+      }
+      deps.appendCommandToHistory(trimmed)
+      deps.setHistNavIndex(-1)
+      deps.tabPressSeqRef.current = 0
+      if (tabsSettingCmd.kind === "incomplete") {
+        const cont = "tabs "
+        deps.setLine(cont)
+        deps.setCursorPos(cont.length)
+        deps.lineRef.current = cont
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          deps.uiCopy.t("tabs.usage"),
+          deps.uiCopy.t("tabs.settingHint")
+        ])
+        deps.focusPrompt()
+        return
+      }
+      if (tabsSettingCmd.kind === "setting-incomplete") {
+        const cont = "tabs -setting "
+        deps.setLine(cont)
+        deps.setCursorPos(cont.length)
+        deps.lineRef.current = cont
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          deps.uiCopy.t("tabs.setting.choose"),
+          deps.uiCopy.t("tabs.setting.pageActiveCurrent", {
+            token: settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
+          })
+        ])
+        deps.focusPrompt()
+        return
+      }
+      if (tabsSettingCmd.kind === "page-active-incomplete") {
+        const cont = "tabs -setting -page-active "
+        deps.setLine(cont)
+        deps.setCursorPos(cont.length)
+        deps.lineRef.current = cont
+        const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          deps.uiCopy.t("tabs.pageActive.choose", { options }),
+          deps.uiCopy.t("setting.language.current", {
+            token: settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
+          })
+        ])
+        deps.focusPrompt()
+        return
+      }
+      deps.setLine("")
+      deps.setCursorPos(0)
+      deps.lineRef.current = ""
+      void (async () => {
+        await saveTabsPageActiveMode(tabsSettingCmd.mode)
+        deps.setTabsPageActiveMode(tabsSettingCmd.mode)
+        deps.tabsPageActiveModeRef.current = tabsSettingCmd.mode
+        const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
+        await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("tabs.pageActive.set", { token })])
+        deps.focusPrompt()
+      })()
+      return
+    }
+
+    if (deps.sessionNameTypingRef.current) {
+      deps.appendCommandToHistory(trimmed)
+      deps.saveSessionDisplayName(trimmed, [])
+      return
+    }
+
+    if (parseSessionListPickerLine(trimmed)) {
+      const activeIdx = deps.sessionListRows.findIndex((r) => r.isActive)
+      const pickHi = deps.sessionListPickerHiRef.current ?? (activeIdx >= 0 ? activeIdx : 0)
+      deps.switchSessionFromListPicker(trimmed, pickHi)
       return
     }
 
@@ -268,7 +361,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.tabPressSeqRef.current = 0
       void (async () => {
         try {
-          const { settingTokenForPageActiveMode } = await import("../../tabs")
+          const { settingTokenForPageActiveMode } = await import("../../tabs/page-active-setting")
           const rows = await buildTabPickerRows(showUrl, deps.uiSettings.locale)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)

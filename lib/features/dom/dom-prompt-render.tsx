@@ -7,7 +7,7 @@ import {
   type MutableRefObject
 } from "react"
 import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 
 type Props = {
   /** Lines returned by the failing handler (shown verbatim above the buttons). */

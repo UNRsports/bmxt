@@ -1,0 +1,14 @@
+{
+  "welcome.pageTitle": {
+    "ja": "BMXtへようこそ",
+    "en": "Welcome to BMXt"
+  },
+  "welcome.previewSubtitle": {
+    "ja": "プレビュー: URL の",
+    "en": "Preview: welcome content for"
+  },
+  "welcome.previewSuffix": {
+    "ja": "で指定した版のウェルカム内容を表示しています。",
+    "en": "(URL query)."
+  }
+}

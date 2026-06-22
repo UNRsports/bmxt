@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import type { SearchListPickerView } from "./search-list-picker-body"
 
 type SearchPickerBreadcrumbProps = {

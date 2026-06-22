@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect } from "react"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import { NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice } from "./tab-picker-overlay-types"
 

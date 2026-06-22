@@ -1,4 +1,4 @@
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 
 type DomStatusBarProps = {
   kind: "lines" | "prompt"

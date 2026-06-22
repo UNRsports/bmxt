@@ -24,7 +24,7 @@ import {
 import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import {
   previewSearchPickerDetailHitInBackground,

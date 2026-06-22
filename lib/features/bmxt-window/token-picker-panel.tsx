@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef } from "react"
 import type { ImeTokenTier } from "../command-line/ime-token-picker"
 import { imeTokenPickerHint } from "../command-line/ime-token-picker"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 
 const ITEM_ID_PREFIX = "bmxt-subcmd-item"
 

@@ -1,4 +1,5 @@
-import { tabsStatusHint, useUiCopy } from "../setting"
+import { tabsStatusHint } from "../setting/i18n/resolvers"
+import { useUiCopy } from "../setting/use-ui-copy"
 import {
   settingTokenForPageActiveMode,
   type TabsPageActiveMode

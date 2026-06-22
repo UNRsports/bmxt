@@ -1,4 +1,5 @@
-import { searchStatusHint, useUiCopy } from "../setting"
+import { searchStatusHint } from "../setting/i18n/resolvers"
+import { useUiCopy } from "../setting/use-ui-copy"
 import {
   settingTokenForSearchPageActiveMode,
   type SearchPageActiveMode

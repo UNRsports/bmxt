@@ -10,37 +10,36 @@ import {
   parseSessionSwitchWithLine,
   parseSessionSwitchByNumberLine,
   resolveSessionDisplayName,
-  resolveSessionRowByDisplayName,
-  buildSessionSwitchCommandLine,
   filterSessionSwitchPickerRows,
-  sanitizeSessionName,
   sessionSwitchCommandName,
   resolveSessionSwitchPickerState,
   SessionListCandidatePanel,
   type SessionCandidatePanelVariant,
   type SessionListRow
 } from "../session"
-import { continuationPromptAfterLoneFirstToken } from "../builtin-commands/command-subcommands.gen"
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../command-line"
 import {
-  buildTabPickerRows,
+  resolveInitialTabPickerHighlightIndex,
+  type TabPickerRow
+} from "../tabs/picker-rows"
+import {
   listTabsMoveUrlCandidates,
-  loadTabsPickerSettings,
   parseGroupNewInteractiveLine,
   parseTabsExitListLine,
   parseTabsListPickerLine,
-  parseTabsSettingCommandLine,
-  resolveInitialTabPickerHighlightIndex,
+  tabsMoveUrlCompletionZone
+} from "../tabs/input"
+import {
+  loadTabsPickerSettings,
   saveTabsPageActiveMode,
   settingTokenForPageActiveMode,
   TABS_PAGE_ACTIVE_MODE_TOKENS,
-  tabsMoveUrlCompletionZone,
-  type TabPickerRow,
-  type TabsPageActiveMode,
+  type TabsPageActiveMode
+} from "../tabs/page-active-setting"
+import {
   closeTabPickerEngineForSession,
   openTabPickerEngineForSession
-} from "../tabs"
-import { openSearchPickerEntry } from "../search/open-search-picker-entry"
+} from "../tabs/engine"
 import {
   loadSearchPickerSettings,
   saveSearchPageActiveMode,
@@ -49,14 +48,13 @@ import {
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
 import {
   openPickerSlots,
-  PickerRail,
-  pickerEntriesFromSearchLines,
-  usePickerRailPresence,
-  type PickerEntry,
   type PickerSlotId,
   type SessionPickerState,
   type SessionPickersByLeaf
-} from "../side-picker"
+} from "../side-picker/session/session-pickers"
+import { PickerRail } from "../side-picker/wrappers/picker-rail"
+import { usePickerRailPresence } from "../side-picker/wrappers/use-picker-rail-presence"
+import type { PickerEntry } from "../side-picker/model/picker-entry"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import {
   detailBarToPickerSlot,
@@ -70,36 +68,20 @@ import { useDetailBarKeyboard } from "./use-detail-bar-keyboard"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
 import { PromptInput } from "./shell/PromptInput"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
+import { useLogScroll } from "./shell/useLogScroll"
+import { useSessionPromptActions } from "./shell/useSessionPromptActions"
+import { useDomListShell } from "./shell/useDomListShell"
+import { useSearchListShell } from "./shell/useSearchListShell"
+import { useSettingPickerShell } from "./shell/useSettingPickerShell"
 import { usePickerManager } from "./shell/usePickerManager"
 import {
-  isSearchListContinuationPrompt,
-  isSearchListReadyToRun,
-  normalizeSearchListDispatchLine,
   parseSearchExitListLine,
   parseSearchListPickerLine,
-  searchListPatternFromLine,
   shouldShowSearchListPatternPlaceholder,
   type SearchListPickerState
 } from "../search/search-list-picker-input"
-import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs"
-import { useBatchedSearchLoadingProgress } from "../search/use-batched-search-loading-progress"
-import { resetSearchCacheFromSettings } from "../search/cache/search-cache-store"
-import {
-  isJobHandleActive,
-  mergeJobIntoDispatchContext,
-  shouldCancelJob,
-  useSessionJobRunner
-} from "../job"
-import { normalizeSearchPattern } from "../search/search-format"
-import {
-  isRetryableDomListOutput,
-  parseDomExitListLine,
-  parseDomListPickerLine,
-  type DomListPickerState
-} from "../dom/dom-list-picker-input"
-import type { DomListCapture } from "../dom/dom-list-capture"
-import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../dom/resolve-dom-list-target-tab"
-import { useDomListFollowTab } from "../dom/use-dom-list-follow-tab"
+import { isJobHandleActive, useSessionJobRunner } from "../job"
+import { parseDomExitListLine, parseDomListPickerLine, type DomListPickerState } from "../dom/dom-list-picker-input"
 import {
   NAV_ENTER_TYPING_EVENT,
   NAV_EXIT_TYPING_EVENT,
@@ -138,47 +120,24 @@ import {
   type TranslationPairId
 } from "../translate"
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
-import { buildHelpLines } from "../bmxt-core/registry/help"
+import { t } from "../setting/i18n/messages"
+import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolvers"
+import { setRunLocale } from "../setting/i18n/run-locale"
+import { settingTokenForUiLocale } from "../setting/locale"
+import { type SettingListPickerState } from "../setting/setting-list-picker-state"
 import {
-  bgImportErrorLine,
-  createSettingListPickerState,
-  exportUiSettingsZip,
-  fontSizeFromPickerIndex,
-  importUiSettingsZipFromFilePicker,
-  importBackgroundImageFromFilePicker,
   parseSettingExitListLine,
   parseSettingIncompleteLine,
-  parseSettingListPickerLine,
-  replaceUiSettings,
-  settingPickerApplyDraftToMain,
-  settingPickerGoToView,
-  settingPickerUpdateDraft,
-  settingTokenForUiLocale,
-  setRunLocale,
-  t,
-  formatBulletedLines,
-  translateOnLogLine,
-  versionUpgradeTitle,
-  useUiCopy,
-  useUiSettings,
-  type SettingEditField,
-  type SettingListPickerState,
-  type SettingPickerRow
-} from "../setting"
-import { searchPageProgressLabel } from "../search/sources/page-progress"
-import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
+  parseSettingListPickerLine
+} from "../setting/setting-list-picker-input"
+import { useUiCopy } from "../setting/use-ui-copy"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { logBmxtKey } from "../debug/key-log"
 import { matchesForSearch } from "./text-utils"
 import {
-  applyChromeEffects,
-  type DispatchChromeContext
-} from "../dispatch"
-import type { ChromeEffect } from "../dispatch/effect-types"
-import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
-  getCompletionCandidates,
-  runDispatch
+  getCompletionCandidates
 } from "../bmxt-core"
 import {
   useCallback,
@@ -194,86 +153,14 @@ import {
   useCspDynamicStyle
 } from "./csp-dynamic-stylesheet"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
+import {
+  measureFloatingPickerHostPosition,
+  shouldAutoSubmitAfterTokenPick,
+  shouldKeepSessionSwitchPickerOpen
+} from "./shell/bmxt-shell-prompt-helpers"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
 import type { TabPickerState } from "../side-picker/session/tab-picker-state"
-
-function shouldKeepSessionSwitchPickerOpen(
-  line: string,
-  cursor: number,
-  rows: readonly SessionListRow[]
-): boolean {
-  const state = resolveSessionSwitchPickerState(line, cursor)
-  if (state === null) {
-    return false
-  }
-  const trimmed = line.trim()
-  const name = parseSessionSwitchWithLine(trimmed)
-  if (name === null) {
-    return true
-  }
-  const row = resolveSessionRowByDisplayName(rows, name)
-  if (!row) {
-    return true
-  }
-  const canonicalName = sessionSwitchCommandName(row, rows)
-  const canonical = buildSessionSwitchCommandLine(row, rows)
-  if (trimmed !== canonical) {
-    return true
-  }
-  return state.namePrefix !== canonicalName
-}
-
-function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
-  return effects.some((e) => e.kind === "search_page")
-}
-
-function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
-  return (
-    parseDomListPickerLine(trimmed) !== null ||
-    parseNavEnterLine(trimmed) ||
-    parseNavExitLine(trimmed) ||
-    parseTabsListPickerLine(trimmed) !== null ||
-    isSessionSwitchUiLine(trimmed) ||
-    isSessionSettingNameUiLine(trimmed) ||
-    parseTabsExitListLine(trimmed) ||
-    parseSettingListPickerLine(trimmed) ||
-    parseSettingExitListLine(trimmed) ||
-    parseSearchExitListLine(trimmed) ||
-    parseDomExitListLine(trimmed) ||
-    parseGroupNewInteractiveLine(trimmed)
-  )
-}
-
-function measureFloatingPickerHostPosition(
-  cell: HTMLElement | null,
-  host: HTMLElement | null
-): { left: number; top: number } | null {
-  if (!cell) {
-    return null
-  }
-  const cr = cell.getBoundingClientRect()
-  const gap = 2
-  const hostW = host?.offsetWidth ?? 260
-  const hostH = host?.offsetHeight ?? 140
-  let left = cr.right + gap
-  const maxLeft = window.innerWidth - hostW - 8
-  if (left > maxLeft) {
-    left = Math.max(8, maxLeft)
-  } else {
-    left = Math.max(8, left)
-  }
-  let top = cr.bottom + gap
-  if (top + hostH > window.innerHeight - 8 && cr.top - gap - hostH >= 8) {
-    top = cr.top - gap - hostH
-  }
-  if (top + hostH > window.innerHeight - 8) {
-    top = Math.max(8, window.innerHeight - hostH - 8)
-  } else {
-    top = Math.max(8, top)
-  }
-  return { left, top }
-}
 
 type Props = {
   /** コマンド実行・ログ追記のスコープ（複数ターミナルセッション）。 */
@@ -437,23 +324,6 @@ export function BmxtShell({
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
   const jobRunner = useSessionJobRunner(sessionId)
-  const tabsPickerFocusTabIdRef = useRef<number | null>(null)
-  const tabPickerOpenRef = useRef(false)
-  useEffect(() => {
-    tabPickerOpenRef.current = tabPicker !== null
-  }, [tabPicker])
-  useEffect(() => {
-    if (tabPicker === null) {
-      tabsPickerFocusTabIdRef.current = null
-    }
-  }, [tabPicker])
-
-  const resolveDomListTargetTabId = useCallback(async (): Promise<number | undefined> => {
-    return resolveDomListTargetTabIdFromSources(
-      tabsPickerFocusTabIdRef.current,
-      tabPickerOpenRef.current
-    )
-  }, [])
   const [navActive, setNavActive] = useState(false)
   const [translateEnabled, setTranslateEnabled] = useState(false)
   const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
@@ -486,6 +356,30 @@ export function BmxtShell({
     },
     [onNavArmedChange]
   )
+
+  const {
+    runDomListAndShow,
+    onTabsPickerFocusTabId,
+    syncTabPickerOpen,
+    clearTabsPickerFocusTabId
+  } = useDomListShell({
+    sessionId,
+    uiLocale: uiSettings.locale,
+    uiCopy,
+    jobRunner,
+    domListPicker,
+    appendLogLines,
+    setDomListPicker,
+    setModeToolbarOrder
+  })
+  useEffect(() => {
+    if (tabPicker === null) {
+      clearTabsPickerFocusTabId()
+    }
+  }, [tabPicker, clearTabsPickerFocusTabId])
+  useEffect(() => {
+    syncTabPickerOpen(tabPicker !== null)
+  }, [tabPicker, syncTabPickerOpen])
 
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
@@ -558,12 +452,6 @@ export function BmxtShell({
   sessionPickerVariantRef.current = sessionPickerVariant
   const sessionListRowsRef = useRef(sessionListRows)
   sessionListRowsRef.current = sessionListRows
-  const {
-    lines: searchLoadingProgressLines,
-    reset: resetSearchLoadingProgress,
-    append: appendSearchLoadingProgress,
-    clear: clearSearchLoadingProgress
-  } = useBatchedSearchLoadingProgress()
 
   const [sessionNameTyping, setSessionNameTyping] = useState(false)
   const sessionNameTypingRef = useRef(sessionNameTyping)
@@ -600,7 +488,32 @@ export function BmxtShell({
   }, [sessionListRows, sessionPickerVariant, sessionListPickerHi, line, cursorPos])
   const sessionListPickerRowsRef = useRef(sessionListPickerRows)
   sessionListPickerRowsRef.current = sessionListPickerRows
-  const [logScrollable, setLogScrollable] = useState(false)
+  const {
+    searchLoadingProgressLines,
+    showSearchListPatternPlaceholder,
+    runSearchListSearch,
+    cancelSearchPageScan,
+    onOpenSearchPickerEntry,
+    clearSearchLoadingProgress
+  } = useSearchListShell({
+    sessionId,
+    uiLocale: uiSettings.locale,
+    uiCopy,
+    jobRunner,
+    line,
+    cursorPos,
+    appendLogLines,
+    setSearchListPicker,
+    setModeToolbarOrder,
+    setSubCmdPicker,
+    searchListPickerRef
+  })
+  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
+    lines,
+    mode,
+    line,
+    postUpgradeBanner
+  })
   const [isComposing, setIsComposing] = useState(false)
   const [compositionAnchor, setCompositionAnchor] = useState(0)
   const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
@@ -666,7 +579,6 @@ export function BmxtShell({
     searchPageActiveModeRef.current = searchPageActiveMode
   }, [searchPageActiveMode])
 
-  const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
   const isComposingRef = useRef(false)
   const compositionStartSnapshotRef = useRef("")
@@ -943,38 +855,6 @@ export function BmxtShell({
     }
   }, [iSearchMatches.length, iSearchCycle, iSearchMatches])
 
-  const syncLogScroll = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) {
-      return
-    }
-    const needs = el.scrollHeight > el.clientHeight + 1
-    setLogScrollable(needs)
-  }, [])
-
-  useLayoutEffect(() => {
-    syncLogScroll()
-  }, [lines, mode, line, syncLogScroll, postUpgradeBanner])
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) {
-      return
-    }
-    const ro = new ResizeObserver(() => syncLogScroll())
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [syncLogScroll])
-
-  useLayoutEffect(() => {
-    const el = scrollRef.current
-    if (!el) {
-      return
-    }
-    el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
-    requestAnimationFrame(() => syncLogScroll())
-  }, [lines, syncLogScroll, postUpgradeBanner])
-
   useLayoutEffect(() => {
     const ta = imeRef.current
     if (!ta || isComposing) {
@@ -1021,134 +901,39 @@ export function BmxtShell({
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
 
-  const closeSessionNameTyping = useCallback(() => {
-    setSessionNameTyping(false)
-    setLine("")
-    setCursorPos(0)
-    lineRef.current = ""
-    setHistNavIndex(-1)
-    tabPressSeqRef.current = 0
-    focusPrompt()
-  }, [focusPrompt])
-
-  const openSessionNameTyping = useCallback(
-    (commandLine: string) => {
-      setSubCmdPicker(null)
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
-      sessionListPickerDismissedRef.current = false
-      appendCommandToHistory(commandLine)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      const name = currentSessionDisplayNameRef.current
-      setSessionNameTyping(true)
-      setLine(name)
-      setCursorPos(name.length)
-      lineRef.current = name
-      void appendLogLines([`> ${commandLine}`])
-      queueMicrotask(() => {
-        const ta = imeRef.current
-        if (ta) {
-          ta.focus()
-          ta.setSelectionRange(0, name.length)
-        }
-      })
-    },
-    [appendCommandToHistory, appendLogLines]
-  )
-
-  const saveSessionDisplayName = useCallback(
-    (rawName: string, logLines: string[]) => {
-      const sanitized = sanitizeSessionName(rawName)
-      setSessionNameTyping(false)
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const out = [...logLines]
-        if (!sanitized) {
-          out.push(uiCopy.t("session.settingName.invalid"))
-          await appendLogLines(out)
-          focusPrompt()
-          return
-        }
-        await onSetSessionDisplayName(sessionId, sanitized)
-        out.push(uiCopy.t("session.settingName.saved", { name: sanitized }))
-        await appendLogLines(out)
-        focusPrompt()
-      })()
-    },
-    [appendLogLines, focusPrompt, onSetSessionDisplayName, sessionId, uiCopy]
-  )
-
-  const closeSessionListPicker = useCallback(() => {
-    sessionListPickerDismissedRef.current = true
-    setSessionListPickerHi(null)
-    setSessionPickerVariant(null)
-    focusPrompt()
-  }, [focusPrompt])
-
-  const switchSessionFromListPicker = useCallback(
-    (commandLine: string, pickHi: number) => {
-      const rows = sessionListPickerRowsRef.current
-      const row = rows[pickHi]
-      const variant = sessionPickerVariantRef.current
-      sessionListPickerDismissedRef.current = false
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
-      appendCommandToHistory(commandLine)
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${commandLine}`]
-        if (!row) {
-          logLines.push(
-            uiCopy.t("session.number.invalid", {
-              n: String(pickHi + 1),
-              max: String(rows.length)
-            })
-          )
-        } else {
-          logLines.push(
-            variant === "switch"
-              ? uiCopy.t("session.switch.switched", { name: row.displayName })
-              : uiCopy.t("session.number.switched", { n: String(row.index) })
-          )
-          await onActivateSession(row.sessionId)
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-    },
-    [appendCommandToHistory, appendLogLines, focusPrompt, onActivateSession, uiCopy]
-  )
-
-  const applySessionSwitchPick = useCallback(
-    (pickHi: number) => {
-      const visibleRows = sessionListPickerRowsRef.current
-      const allRows = sessionListRowsRef.current
-      const row = visibleRows[pickHi]
-      if (!row) {
-        return
-      }
-      sessionListPickerDismissedRef.current = true
-      setSessionListPickerHi(null)
-      setSessionPickerVariant(null)
-      const nextLine = buildSessionSwitchCommandLine(row, allRows)
-      lineRef.current = nextLine
-      setLine(nextLine)
-      setCursorPos(nextLine.length)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      focusPrompt()
-    },
-    [focusPrompt]
-  )
+  const {
+    closeSessionNameTyping,
+    openSessionNameTyping,
+    saveSessionDisplayName,
+    closeSessionListPicker,
+    switchSessionFromListPicker,
+    applySessionSwitchPick
+  } = useSessionPromptActions({
+    sessionId,
+    sessionListRows,
+    uiCopy,
+    appendCommandToHistory,
+    appendLogLines,
+    onActivateSession,
+    onSetSessionDisplayName,
+    focusPrompt,
+    setSubCmdPicker,
+    setLine,
+    setCursorPos,
+    setHistNavIndex,
+    tabPressSeqRef,
+    lineRef,
+    imeRef,
+    currentSessionDisplayNameRef,
+    sessionListPickerDismissedRef,
+    sessionListRowsRef,
+    sessionListPickerRowsRef,
+    sessionPickerVariantRef,
+    setSessionListPickerHi,
+    setSessionPickerVariant,
+    setSessionNameTyping,
+    sessionNameTypingRef
+  })
 
   useEffect(() => {
     const onEnter = (ev: Event) => {
@@ -1479,1091 +1264,86 @@ export function BmxtShell({
     return () => window.removeEventListener("focus", onWinFocus)
   }, [promptPaneFocused, focusPrompt])
 
-  const runDomListAndShow = useCallback(
-    async (
-      domListLine: string,
-      displayLine: string,
-      announce: boolean
-    ): Promise<void> => {
-      await jobRunner.start(
-        "dom-list",
-        async (job) => {
-          try {
-            await ensureBmxtCore()
-            const bundle = runDispatch(domListLine, uiSettings.locale)
-            if (shouldCancelJob(job)) {
-              return
-            }
-            if (bundle.ty === "lines") {
-              await appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
-              setDomListPicker(sessionId, null)
-              return
-            }
-            let domCapture: DomListCapture | undefined
-            const ctx = mergeJobIntoDispatchContext(
-              {
-                clearLog: async () => {},
-                exitPane: async () => [],
-                listWindows: async () => [],
-                focusInfo: async () => [],
-                resolveTabArg: async () => undefined,
-                resolveDomListTargetTabId,
-                onDomListCapture: (capture) => {
-                  domCapture = capture
-                },
-                commandSessionId: sessionId,
-                uiLocale: uiSettings.locale
-              },
-              job
-            )
-            const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
-            if (shouldCancelJob(job)) {
-              return
-            }
-            if (isRetryableDomListOutput(linesOut)) {
-              if (announce) {
-                await appendLogLines([
-                  `> ${displayLine}`,
-                  uiCopy.t("domPrompt.headline")
-                ])
-              }
-              setDomListPicker(sessionId, {
-                kind: "prompt",
-                message: linesOut,
-                commandLine: domListLine
-              })
-              setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
-              return
-            }
-            if (announce) {
-              await appendLogLines([`> ${displayLine}`, uiCopy.t("dom.listPicker")])
-            }
-            const targetTabId = await resolveDomListTargetTabId()
-            setDomListPicker(sessionId, {
-              kind: "lines",
-              lines: linesOut,
-              commandLine: domListLine,
-              targetTabId,
-              jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
-              headerLineCount: domCapture?.headerLineCount ?? linesOut.length
-            })
-            setModeToolbarOrder((prev) => activateModeToolbar(prev, "dom"))
-          } catch (e) {
-            if (shouldCancelJob(job)) {
-              return
-            }
-            await appendLogLines([
-              `> ${displayLine}`,
-              uiCopy.t("error.generic", {
-                message: e instanceof Error ? e.message : String(e)
-              })
-            ])
-            setDomListPicker(sessionId, null)
-          }
-        },
-        { meta: { line: domListLine } }
-      )
-    },
-    [
-      appendLogLines,
-      jobRunner,
-      sessionId,
-      setDomListPicker,
-      setModeToolbarOrder,
-      resolveDomListTargetTabId,
-      uiCopy,
-      uiSettings.locale
-    ]
-  )
-
-  const refreshDomListPicker = useCallback(
-    (commandLine: string) => runDomListAndShow(commandLine, commandLine, false),
-    [runDomListAndShow]
-  )
-
-  const { onTabsPickerFocusTabId: queueDomListFollowRefresh } = useDomListFollowTab({
-    domListPicker,
-    resolveTargetTabId: resolveDomListTargetTabId,
-    refreshDomList: refreshDomListPicker,
-    isDomListJobActive: () => jobRunner.isActive("dom-list")
-  })
-
-  const onTabsPickerFocusTabId = useCallback(
-    (tabId: number | null) => {
-      tabsPickerFocusTabIdRef.current = tabId
-      queueDomListFollowRefresh(tabId)
-    },
-    [queueDomListFollowRefresh]
-  )
-
   const promptLine = useCallback(
     () => imeRef.current?.value ?? lineRef.current,
     []
   )
 
-  const showSearchListPatternPlaceholder = useMemo(
-    () => shouldShowSearchListPatternPlaceholder(line, cursorPos),
-    [line, cursorPos]
-  )
-
-  const runSearchListSearch = useCallback(
-    async (_displayLine: string, searchListLine: string) => {
-      setSubCmdPicker(null)
-
-      const dispatchLine = normalizeSearchListDispatchLine(searchListLine)
-      const progressLabel = searchPageProgressLabel(dispatchLine)
-      const initialProgress = [`${progressLabel} — searching…`]
-      const searchPattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
-
-      resetSearchLoadingProgress(initialProgress)
-      setSearchListPicker(sessionId, {
-        phase: "loading",
-        progressLines: [],
-        entries: [],
-        pattern: searchPattern
-      })
-      setModeToolbarOrder((prev) => activateModeToolbar(prev, "search"))
-
-      await jobRunner.start(
-        "search-list",
-        async (job) => {
-          try {
-            await ensureBmxtCore()
-            if (shouldCancelJob(job)) {
-              return
-            }
-            await appendLogLines([`> ${dispatchLine}`])
-            const bundle = runDispatch(dispatchLine, uiSettings.locale)
-            if (shouldCancelJob(job)) {
-              return
-            }
-            if (bundle.ty === "lines") {
-              clearSearchLoadingProgress()
-              setSearchListPicker(sessionId, null)
-              await appendLogLines(bundle.lines ?? [])
-              return
-            }
-            const effects = bundle.effects ?? []
-            if (effectsIncludeSearchPage(effects) && !shouldCancelJob(job)) {
-              appendSearchLoadingProgress(uiCopy.t("search.pageScanHint"))
-            }
-            const ctx = mergeJobIntoDispatchContext(
-              {
-                clearLog: async () => {},
-                exitPane: async () => [],
-                listWindows: async () => [],
-                focusInfo: async () => [],
-                resolveTabArg: async () => undefined,
-                commandSessionId: sessionId,
-                uiLocale: uiSettings.locale
-              },
-              job,
-              {
-                searchPageProgressLabel: progressLabel,
-                onSearchPageProgress: async (message) => {
-                  if (!shouldCancelJob(job)) {
-                    appendSearchLoadingProgress(message)
-                  }
-                }
-              }
-            )
-            const linesOut = await applyChromeEffects(ctx, effects)
-            if (shouldCancelJob(job)) {
-              clearSearchLoadingProgress()
-              if (linesOut.length > 0) {
-                await appendLogLines(linesOut)
-              }
-              return
-            }
-            const parsed = pickerEntriesFromSearchLines(linesOut)
-            const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, searchPattern)
-            if (shouldCancelJob(job)) {
-              clearSearchLoadingProgress()
-              return
-            }
-            clearSearchLoadingProgress()
-            const emptyResultLines =
-              entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
-            setSearchListPicker(sessionId, {
-              phase: "results",
-              progressLines: [],
-              entries,
-              pattern: searchPattern,
-              emptyResultLines
-            })
-          } catch (e) {
-            clearSearchLoadingProgress()
-            if (!shouldCancelJob(job)) {
-              setSearchListPicker(sessionId, null)
-              await appendLogLines([
-                uiCopy.t("error.generic", {
-                  message: e instanceof Error ? e.message : String(e)
-                })
-              ])
-            }
-          }
-        },
-        { meta: { line: dispatchLine } }
-      )
-    },
-    [
-      appendLogLines,
-      appendSearchLoadingProgress,
-      clearSearchLoadingProgress,
-      jobRunner,
-      resetSearchLoadingProgress,
-      sessionId,
-      setSearchListPicker,
-      uiCopy,
-      uiSettings.locale
-    ]
-  )
-
-  const cancelSearchPageScan = useCallback(() => {
-    const job = jobRunner.getActive("search-list")
-    if (!isJobHandleActive(job)) {
-      return
-    }
-    jobRunner.cancelHandle(job)
-    clearSearchLoadingProgress()
-    void appendLogLines([
-      uiCopy.t("search.cancelledCtrlC"),
-      uiCopy.t("search.pageScanCancelled")
-    ])
-  }, [appendLogLines, clearSearchLoadingProgress, jobRunner, uiCopy])
-
-  const onSettingPickerStateChange = useCallback(
-    (next: SettingListPickerState) => {
-      setSettingListPicker(sessionId, next)
-    },
-    [sessionId, setSettingListPicker]
-  )
-
-  const onSettingPickerRowAction = useCallback(
-    async (row: SettingPickerRow, index: number) => {
-      const logPrefix = "setting -list"
-      const current = settingListPickerRef.current
-      if (!current) {
-        return
-      }
-      if (row.id === "save") {
-        const draft = current.draft
-        await replaceUiSettings(draft)
-        replaceUiSettingsState(draft)
-        closeSettingPickerColumn()
-        await appendLogLines([logPrefix, uiCopy.t("setting.picker.saved")])
-        return
-      }
-      if (row.id === "cancel") {
-        closeSettingPickerColumn()
-        await appendLogLines([logPrefix, uiCopy.t("setting.picker.cancelled")])
-        return
-      }
-      if (row.id === "locale-ja" || row.id === "locale-en") {
-        const locale = row.id === "locale-ja" ? "ja" : "en"
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(current, { locale })
-        )
-        return
-      }
-      if (row.id === "edit-picker-on") {
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(current, { editPicker: true })
-        )
-        return
-      }
-      if (row.id === "edit-picker-off") {
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(current, { editPicker: false })
-        )
-        return
-      }
-      if (row.id === "reset-yes") {
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(current, {
-            editPicker: false,
-            appearance: {
-              fg: null,
-              bgColor: null,
-              fontSize: null,
-              fontFamily: null,
-              bgImageDataUrl: null
-            },
-            picker: {
-              fg: null,
-              bgColor: null,
-              fontSize: null,
-              fontFamily: null,
-              bgImageDataUrl: null
-            }
-          })
-        )
-        return
-      }
-      if (row.id === "reset-no") {
-        return
-      }
-      if (row.id === "search-cache-reset-yes") {
-        try {
-          await resetSearchCacheFromSettings()
-          setSettingListPicker(sessionId, settingPickerGoToView("main", current))
-          await appendLogLines([logPrefix, uiCopy.t("setting.searchCache.resetDone")])
-        } catch (e) {
-          await appendLogLines([
-            logPrefix,
-            uiCopy.t("error.generic", {
-              message: e instanceof Error ? e.message : String(e)
-            })
-          ])
-        }
-        return
-      }
-      if (row.id === "search-cache-reset-no") {
-        return
-      }
-      if (row.id === "size") {
-        const fontSize = fontSizeFromPickerIndex(index)
-        if (fontSize === null) {
-          return
-        }
-        const patch =
-          current.view === "pickerFontSize"
-            ? { picker: { fontSize } }
-            : { appearance: { fontSize } }
-        setSettingListPicker(sessionId, settingPickerApplyDraftToMain(current, patch))
-        return
-      }
-      if (row.id === "bg-import") {
-        const result = await importBackgroundImageFromFilePicker()
-        if (result.ok === false) {
-          if (result.cancelled) {
-            await appendLogLines([logPrefix, uiCopy.t("setting.bgImport.cancelled")])
-          } else {
-            await appendLogLines([logPrefix, bgImportErrorLine(uiSettings.locale, result)])
-          }
-          return
-        }
-        const afterImport = settingListPickerRef.current ?? current
-        const bgPatch =
-          afterImport.view === "pickerBgImage"
-            ? { picker: { bgImageDataUrl: result.dataUrl } }
-            : { appearance: { bgImageDataUrl: result.dataUrl } }
-        setSettingListPicker(
-          sessionId,
-          settingPickerApplyDraftToMain(afterImport, bgPatch)
-        )
-        return
-      }
-      if (row.id === "bg-clear") {
-        const bgPatch =
-          current.view === "pickerBgImage"
-            ? { picker: { bgImageDataUrl: null } }
-            : { appearance: { bgImageDataUrl: null } }
-        setSettingListPicker(sessionId, settingPickerApplyDraftToMain(current, bgPatch))
-        return
-      }
-      if (row.id === "export") {
-        try {
-          const { filename } = await exportUiSettingsZip(current.draft)
-          await appendLogLines([logPrefix, uiCopy.t("setting.export.done", { filename })])
-        } catch (e) {
-          await appendLogLines([
-            logPrefix,
-            uiCopy.t("error.generic", {
-              message: e instanceof Error ? e.message : String(e)
-            })
-          ])
-        }
-        return
-      }
-      if (row.id === "import") {
-        const result = await importUiSettingsZipFromFilePicker()
-        if (result.ok === false) {
-          if ("cancelled" in result && result.cancelled) {
-            await appendLogLines([logPrefix, uiCopy.t("setting.import.cancelled")])
-            return
-          }
-          await appendLogLines([
-            logPrefix,
-            uiCopy.t("setting.import.failed", {
-              message: "error" in result ? result.error : uiCopy.t("error.unknown")
-            })
-          ])
-          return
-        }
-        const afterImport = settingListPickerRef.current ?? current
-        setSettingListPicker(sessionId, {
-          ...afterImport,
-          view: "main",
-          editing: false,
-          editDraft: "",
-          draft: result.settings
-        })
-        await appendLogLines([logPrefix, uiCopy.t("setting.picker.importDraft")])
-      }
-    },
-    [
-      appendLogLines,
-      closeSettingPickerColumn,
-      replaceUiSettingsState,
-      uiCopy
-    ]
-  )
-
-  const onSettingPickerApplyEdit = useCallback(
-    async (field: SettingEditField, value: string) => {
-      setSettingListPicker(sessionId, (current) => {
-        if (!current) {
-          return null
-        }
-        const layerPatch =
-          field === "fg" || field === "picker-fg"
-            ? { fg: value }
-            : field === "bg-color" || field === "picker-bg-color"
-              ? { bgColor: value }
-              : field === "search-hit-highlight"
-                ? { searchHitHighlightBg: value }
-                : field === "search-jump-highlight"
-                  ? { searchJumpHighlightBg: value }
-                  : { fontFamily: value }
-        const draftPatch =
-          field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
-            ? { picker: layerPatch }
-            : { appearance: layerPatch }
-        return settingPickerApplyDraftToMain(current, draftPatch)
-      })
-    },
-    [sessionId, setSettingListPicker]
-  )
-
-  const onSettingPickerEditInvalid = useCallback(async () => {
-    await appendLogLines([
-      "setting -list",
-      uiCopy.t("setting.prompt.editInvalid")
-    ])
-  }, [appendLogLines, uiCopy])
-
-  const onOpenSearchPickerEntry = useCallback(
-    async (
-      entry: PickerEntry,
-      matchIndex: number,
-      destination?: SearchOpenDestinationRow
-    ) => {
-      const pattern = searchListPickerRef.current?.pattern ?? ""
-      const ctx: DispatchChromeContext = {
-        clearLog: async () => {},
-        exitPane: async () => [],
-        listWindows: async () => [],
-        focusInfo: async () => [],
-        resolveTabArg: async () => undefined,
-        commandSessionId: sessionId,
-        uiLocale: uiSettings.locale
-      }
-      await openSearchPickerEntry(
-        entry,
-        matchIndex,
-        ctx,
-        (lines) => appendLogLines(lines),
-        pattern,
-        destination
-      )
-    },
-    [appendLogLines, sessionId, uiSettings.locale]
-  )
-
-  const submitLine = useCallback(() => {
-    allowEmptyFirstPickerSyncRef.current = false
-    imeTokenPickerDismissedRef.current = false
-    if (mode === "isearch") {
-      const pick = iSearchMatches[iSearchCycle]
-      const next = pick !== undefined ? pick : iSearchSnapshot
-      setMode("normal")
-      setLine(next)
-      setCursorPos(next.length)
-      setISearchCycle(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      focusPrompt()
-      return
-    }
-    const rawLine = promptLine()
-    const trimmed = rawLine.trim()
-    if (!trimmed) {
-      return
-    }
-
-    if (parseSettingIncompleteLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      const cont = "setting "
-      setLine(cont)
-      setCursorPos(cont.length)
-      lineRef.current = cont
-      void appendLogLines([`> ${trimmed}`, uiCopy.t("setting.usage")])
-      focusPrompt()
-      return
-    }
-
-    if (parseSettingListPickerLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        await appendLogLines([`> ${trimmed}`, uiCopy.t("setting.picker.hint")])
-        setSettingListPicker(sessionId, createSettingListPickerState(uiSettings))
-        setModeToolbarOrder((prev) => activateModeToolbar(prev, "setting"))
-      })()
-      return
-    }
-
-    if (parseSettingExitListLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        if (settingListPickerRef.current !== null) {
-          closeSettingPickerColumn()
-          logLines.push(uiCopy.t("setting.picker.closed"))
-        } else {
-          logLines.push(uiCopy.t("setting.picker.notOpen"))
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    const tabsSettingCmd = parseTabsSettingCommandLine(trimmed)
-    if (tabsSettingCmd !== null) {
-      appendCommandToHistory(trimmed)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      if (tabsSettingCmd.kind === "incomplete") {
-        const cont = "tabs "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
-        void appendLogLines([
-          `> ${trimmed}`,
-          uiCopy.t("tabs.usage"),
-          uiCopy.t("tabs.settingHint")
-        ])
-        focusPrompt()
-        return
-      }
-      if (tabsSettingCmd.kind === "setting-incomplete") {
-        const cont = "tabs -setting "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
-        void appendLogLines([
-          `> ${trimmed}`,
-          uiCopy.t("tabs.setting.choose"),
-          uiCopy.t("tabs.setting.pageActiveCurrent", {
-            token: settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
-          })
-        ])
-        focusPrompt()
-        return
-      }
-      if (tabsSettingCmd.kind === "page-active-incomplete") {
-        const cont = "tabs -setting -page-active "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
-        const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
-        void appendLogLines([
-          `> ${trimmed}`,
-          uiCopy.t("tabs.pageActive.choose", { options }),
-          uiCopy.t("setting.language.current", {
-            token: settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
-          })
-        ])
-        focusPrompt()
-        return
-      }
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
-      void (async () => {
-        await saveTabsPageActiveMode(tabsSettingCmd.mode)
-        setTabsPageActiveMode(tabsSettingCmd.mode)
-        const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
-        await appendLogLines([`> ${trimmed}`, uiCopy.t("tabs.pageActive.set", { token })])
-        focusPrompt()
-      })()
-      return
-    }
-
-    if (sessionNameTypingRef.current) {
-      appendCommandToHistory(trimmed)
-      saveSessionDisplayName(trimmed, [])
-      return
-    }
-
-    if (parseSessionSettingNameBareLine(trimmed)) {
-      openSessionNameTyping(trimmed)
-      return
-    }
-
-    const sessionSettingName = parseSessionSettingNameWithLine(trimmed)
-    if (sessionSettingName !== null) {
-      appendCommandToHistory(trimmed)
-      saveSessionDisplayName(sessionSettingName, [`> ${trimmed}`])
-      return
-    }
-
-    if (parseSessionListPickerLine(trimmed)) {
-      const activeIdx = sessionListRows.findIndex((r) => r.isActive)
-      const pickHi = sessionListPickerHiRef.current ?? (activeIdx >= 0 ? activeIdx : 0)
-      switchSessionFromListPicker(trimmed, pickHi)
-      return
-    }
-
-    const sessionSwitchName = parseSessionSwitchWithLine(trimmed)
-    if (sessionSwitchName !== null) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      const row = resolveSessionRowByDisplayName(sessionListRows, sessionSwitchName)
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        if (!row) {
-          logLines.push(uiCopy.t("session.switch.notFound", { name: sessionSwitchName }))
-        } else {
-          logLines.push(uiCopy.t("session.switch.switched", { name: row.displayName }))
-          await onActivateSession(row.sessionId)
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    if (parseSessionSwitchPickerLine(trimmed)) {
-      sessionListPickerDismissedRef.current = false
-      syncImeTokenPicker(lineRef.current, lineRef.current.length)
-      focusPrompt()
-      return
-    }
-
-    const sessionNumber = parseSessionSwitchByNumberLine(trimmed)
-    if (sessionNumber !== null) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      const row = sessionListRows[sessionNumber - 1]
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        if (!row) {
-          logLines.push(
-            uiCopy.t("session.number.invalid", {
-              n: String(sessionNumber),
-              max: String(sessionListRows.length)
-            })
-          )
-          await appendLogLines(logLines)
-          focusPrompt()
-          return
-        }
-        logLines.push(uiCopy.t("session.number.switched", { n: String(sessionNumber) }))
-        await appendLogLines(logLines)
-        await onActivateSession(row.sessionId)
-        focusPrompt()
-      })()
-      return
-    }
-
-    const listPicker = parseTabsListPickerLine(trimmed)
-    if (listPicker) {
-      const { showUrl } = listPicker
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        try {
-          const rows = await buildTabPickerRows(showUrl, uiSettings.locale)
-          const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
-          const pageActiveToken = settingTokenForPageActiveMode(tabsPageActiveModeRef.current)
-          await appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("tabs.picker.hint", { token: pageActiveToken })
-          ])
-          setTabPicker(sessionId, openTabPickerEngineForSession(sessionId, { rows, showUrl, initialHi }))
-          setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
-        } catch (e) {
-          await appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("error.generic", {
-              message: e instanceof Error ? e.message : String(e)
-            })
-          ])
-        }
-      })()
-      return
-    }
-
-    if (parseTabsExitListLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        if (tabPickerRef.current !== null) {
-          closeTabPickerEngineForSession(sessionId)
-          setTabPicker(sessionId, null)
-          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
-          activatePaneFocus("terminal")
-          logLines.push(uiCopy.t("tabs.picker.closed"))
-        } else {
-          logLines.push(uiCopy.t("tabs.picker.notOpen"))
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    if (parseSearchExitListLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        const hadActiveJob = jobRunner.isActive("search-list")
-        if (hadActiveJob) {
-          jobRunner.cancel("search-list")
-        }
-        clearSearchLoadingProgress()
-        if (searchListPickerRef.current !== null) {
-          setSearchListPicker(sessionId, null)
-          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "search"))
-          activatePaneFocus("terminal")
-          logLines.push(uiCopy.t("search.picker.closed"))
-        } else if (hadActiveJob) {
-          logLines.push(uiCopy.t("search.picker.cancelled"))
-        } else {
-          logLines.push(uiCopy.t("search.picker.notOpen"))
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    if (parseNavEnterLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      setNavArmed(true)
-      setNavActive(false)
-      setModeToolbarOrder((prev) => activateModeToolbar(prev, "nav"))
-      void (async () => {
-        const canPage = await canScriptHttpHostPages()
-        const logLines = [`> ${trimmed}`, uiCopy.t("nav.armedLog")]
-        if (!canPage) {
-          logLines.push(uiCopy.t("nav.hostAccessWarning"))
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    const translateCmd = parseTranslateCommandLine(trimmed)
-    if (translateCmd !== null) {
-      appendCommandToHistory(trimmed)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      if (translateCmd.kind === "incomplete") {
-        const cont = "translate "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
-        void appendLogLines([
-          `> ${trimmed}`,
-          uiCopy.t("translate.usage"),
-          uiCopy.t("translate.usageHint")
-        ])
-        focusPrompt()
-        return
-      }
-      if (translateCmd.kind === "setting-incomplete") {
-        const cont = "translate -setting "
-        setLine(cont)
-        setCursorPos(cont.length)
-        lineRef.current = cont
-        const options = listTranslationPairSettingTokens().join(" | ")
-        void appendLogLines([
-          `> ${trimmed}`,
-          uiCopy.t("translate.setting.choose", { options }),
-          uiCopy.t("setting.language.current", {
-            token: settingTokenForPairId(translatePairIdRef.current)
-          })
-        ])
-        focusPrompt()
-        return
-      }
-      setLine("")
-      setCursorPos(0)
-      lineRef.current = ""
-      void (async () => {
-        if (translateCmd.kind === "on") {
-          await saveTranslateEnabled(true)
-          setTranslateEnabled(true)
-          setModeToolbarOrder((prev) => activateModeToolbar(prev, "translate"))
-          await appendLogLines([
-            `> ${trimmed}`,
-            translateOnLogLine(
-              uiSettings.locale,
-              settingTokenForPairId(translatePairIdRef.current)
-            )
-          ])
-          focusPrompt()
-        } else if (translateCmd.kind === "off") {
-          await saveTranslateEnabled(false)
-          setTranslateEnabled(false)
-          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "translate"))
-          await appendLogLines([`> ${trimmed}`, uiCopy.t("translate.off")])
-          activatePaneFocus("terminal")
-        } else if (translateCmd.kind === "setting") {
-          await saveTranslatePair(translateCmd.pair)
-          setTranslatePairId(translateCmd.pair)
-          resetNavTranslateSession()
-          const token = settingTokenForPairId(translateCmd.pair)
-          await appendLogLines([`> ${trimmed}`, uiCopy.t("translate.pairSet", { token })])
-        }
-      })()
-      return
-    }
-
-    if (parseNavExitLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        if (navActiveRef.current) {
-          logLines.push(uiCopy.t("nav.exitActiveError"))
-        } else if (!navArmedRef.current) {
-          logLines.push(uiCopy.t("nav.notArmed"))
-        } else {
-          await teardownNav()
-          navPositionsRef.current = {}
-          setNavArmed(false)
-          setNavActive(false)
-          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "nav"))
-          logLines.push(uiCopy.t("nav.disarmed"))
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    if (parseDomExitListLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${trimmed}`]
-        const hadActiveDomJob = jobRunner.isActive("dom-list")
-        if (hadActiveDomJob) {
-          jobRunner.cancel("dom-list")
-        }
-        if (domListPickerRef.current !== null) {
-          setDomListPicker(sessionId, null)
-          setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "dom"))
-          activatePaneFocus("terminal")
-          logLines.push(uiCopy.t("dom.picker.closed"))
-        } else {
-          logLines.push(uiCopy.t("dom.picker.notOpen"))
-        }
-        await appendLogLines(logLines)
-        focusPrompt()
-      })()
-      return
-    }
-
-    if (parseGroupNewInteractiveLine(trimmed)) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void (async () => {
-        try {
-          const rows = await buildTabPickerRows(false, uiSettings.locale)
-          const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
-          await appendLogLines([`> ${trimmed}`, uiCopy.t("group.newPicker")])
-          setTabPicker(
-            sessionId,
-            openTabPickerEngineForSession(sessionId, {
-              rows,
-              showUrl: false,
-              initialHi,
-              variant: "groupNew"
-            })
-          )
-          setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
-        } catch (e) {
-          await appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("error.generic", {
-              message: e instanceof Error ? e.message : String(e)
-            })
-          ])
-        }
-      })()
-      return
-    }
-
-    const searchListLine = parseSearchListPickerLine(trimmed)
-    if (searchListLine !== null) {
-      if (isSearchListContinuationPrompt(rawLine)) {
-        appendCommandToHistory(trimmed)
-        const next = `${trimmed} `
-        lineRef.current = next
-        setLine(next)
-        setCursorPos(next.length)
-        setHistNavIndex(-1)
-        tabPressSeqRef.current = 0
-        setSubCmdPicker(null)
-        focusPrompt()
-        return
-      }
-      if (!isSearchListReadyToRun(trimmed, rawLine)) {
-        focusPrompt()
-        return
-      }
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      setSubCmdPicker(null)
-      void runSearchListSearch(trimmed, searchListLine)
-      return
-    }
-
-    if (trimmed === "help" || trimmed === "?") {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      void appendLogLines([`> ${trimmed}`, ...buildHelpLines(uiSettings.locale)])
-      focusPrompt()
-      return
-    }
-
-    const domListLine = parseDomListPickerLine(trimmed)
-    if (domListLine !== null) {
-      appendCommandToHistory(trimmed)
-      setLine("")
-      setCursorPos(0)
-      setHistNavIndex(-1)
-      tabPressSeqRef.current = 0
-      setSubCmdPicker(null)
-      void runDomListAndShow(domListLine, trimmed, /*announce*/ true)
-      return
-    }
-
-    appendCommandToHistory(trimmed)
-    const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
-    setLine("")
-    setCursorPos(0)
-    setHistNavIndex(-1)
-    tabPressSeqRef.current = 0
-    chrome.runtime.sendMessage(
-      { type: "RUN_CMD", line: trimmed, sessionId },
-      (response) => {
-        const err = chrome.runtime.lastError
-        if (err) {
-          void appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("error.dispatchFailed", { message: err.message })
-          ])
-          return
-        }
-        if (response && typeof response === "object" && "ok" in response && response.ok === false) {
-          const msg =
-            "error" in response && typeof response.error === "string"
-              ? response.error
-              : uiCopy.t("error.unknown")
-          void appendLogLines([
-            `> ${trimmed}`,
-            uiCopy.t("error.generic", { message: msg })
-          ])
-        }
-      }
-    )
-    if (continuationPrompt) {
-      setSubCmdPicker(null)
-      setLine(continuationPrompt)
-      setCursorPos(continuationPrompt.length)
-      lineRef.current = continuationPrompt
-    }
-    focusPrompt()
-  }, [
-    appendCommandToHistory,
-    appendLogLines,
-    focusPrompt,
-    iSearchCycle,
-    iSearchMatches,
-    iSearchSnapshot,
-    mode,
-    promptLine,
+  const {
+    onSettingPickerStateChange,
+    onSettingPickerRowAction,
+    onSettingPickerApplyEdit,
+    onSettingPickerEditInvalid
+  } = useSettingPickerShell({
     sessionId,
+    uiLocale: uiSettings.locale,
+    uiCopy,
+    appendLogLines,
     replaceUiSettingsState,
+    closeSettingPickerColumn,
+    setSettingListPicker,
+    settingListPickerRef
+  })
+
+  const { submitLine } = useCommandDispatch({
+    sessionId,
+    mode,
+    iSearchMatches,
+    iSearchCycle,
+    iSearchSnapshot,
+    sessionListRows,
     uiCopy,
     uiSettings,
+    navArmedRef,
+    navActiveRef,
+    navPositionsRef,
+    jobRunner,
+    tabPickerRef,
+    searchListPickerRef,
+    domListPickerRef,
+    settingListPickerRef,
+    tabsPageActiveModeRef,
+    translatePairIdRef,
+    promptLine,
+    allowEmptyFirstPickerSyncRef,
+    imeTokenPickerDismissedRef,
+    tabPressSeqRef,
+    lineRef,
+    sessionListPickerDismissedRef,
+    sessionNameTypingRef,
+    sessionListPickerHiRef,
+    setTabsPageActiveMode,
+    switchSessionFromListPicker,
+    setMode,
+    setLine,
+    setCursorPos,
+    setISearchCycle,
+    setHistNavIndex,
+    focusPrompt,
+    appendCommandToHistory,
+    appendLogLines,
+    setModeToolbarOrder,
+    setNavArmed,
+    setNavActive,
+    setTranslateEnabled,
+    setTranslatePairId,
+    resetNavTranslateSession,
     activatePaneFocus,
+    teardownNav,
+    clearSearchLoadingProgress,
     closeSettingPickerColumn,
     setTabPicker,
     setSearchListPicker,
+    setDomListPicker,
     setSettingListPicker,
+    setSubCmdPicker,
     runDomListAndShow,
     runSearchListSearch,
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
-    applySessionSwitchPick,
-    switchSessionFromListPicker,
-    onActivateSession,
-    sessionListRows,
-    setModeToolbarOrder,
-    setNavArmed,
-    setNavActive,
-    setSubCmdPicker,
-    teardownNav
-  ])
+    onActivateSession
+  })
 
   const applyTokenPickIndex = useCallback(
     (idx: number) => {

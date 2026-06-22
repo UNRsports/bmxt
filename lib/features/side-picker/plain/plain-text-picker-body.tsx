@@ -13,7 +13,7 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../../bmxt-window/csp-dynamic-stylesheet"
-import { useUiCopy } from "../../setting"
+import { useUiCopy } from "../../setting/use-ui-copy"
 import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"

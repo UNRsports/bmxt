@@ -1,0 +1,46 @@
+{
+  "help.builtInCommandsHeader": {
+    "ja": "組み込みコマンド:",
+    "en": "Built-in commands:"
+  },
+  "help.quickStart": {
+    "ja": "クイックスタート: `tabs` と入力して Enter、表示されたオプションを続けて入力します。",
+    "en": "Quick start: type `tabs` and press Enter, then continue with the shown options."
+  },
+  "help.section.dom": {
+    "ja": "dom（アクティブ対象タブのページ表示フィルタ）:\n  dom -list [--html|--react] [<pattern>] — この BMXt ペインで DOM list ピッカーを開く。\n  dom -exit -list  - この BMXt ペインの DOM list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "dom (page view filter on the active target tab):\n  dom -list [--html|--react] [<pattern>] — open DOM list picker in this BMXt pane.\n  dom -exit -list  - close DOM list picker in this BMXt pane (Esc returns to prompt only)."
+  },
+  "help.section.keys": {
+    "ja": "BMXt ウィンドウのキー:\n  1 つのターミナル表示（出力のあとプロンプト）；ウィンドウにフォーカスして入力。\n  left/right/home/end  現在行のカーソル移動。\n  Tab  コマンド補完（繰り返しで候補を巡回）。\n  up/down  コマンド履歴（全セッション共通）   Ctrl+R  リバース i-search（再度: 古い一致）\n  Ctrl+← / Ctrl+→  セッション切り替え（複数セッション時）\n  Enter  実行または検索確定   Esc  検索キャンセル",
+    "en": "BMXt window keys:\n  One terminal view (output then prompt); focus the window to type.\n  left/right/home/end  move cursor in the current line.\n  Tab  command completion (repeat to cycle matches).\n  up/down  command history (shared across sessions)   Ctrl+R  reverse-i-search (again: older match)\n  Ctrl+← / Ctrl+→  switch sessions when multiple are open\n  Enter  run or accept search   Esc  cancel search"
+  },
+  "help.section.search": {
+    "ja": "search（メモリ内検索；これらのコマンドでは永続化しません）:\n  search              - 利用可能なオプションを表示し、プロンプトを `search ` に戻して続きを入力。\n  search -list [<pattern>] — search list ピッカーを開く（`--all` またはパターンのみで全スコープ横断）。\n  search -exit -list  - この BMXt ペインの search list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "search (in-memory search; nothing persisted by these commands):\n  search              - show available options, then restore prompt to `search ` for continuation.\n  search -list [<pattern>] — open search list picker (cross-scope via `--all` or pattern-only line).\n  search -exit -list  - close search list picker in this BMXt pane (Esc returns to prompt only)."
+  },
+  "help.section.session": {
+    "ja": "session（ターミナルセッション切り替え）:\n  session                       - 第二コマンド候補をメニュー表示し、プロンプトを `session ` に戻す。\n  session <n>                   - 番号 n（1 始まり）のセッションへ切り替え。\n  session -list                 - 番号付き切り替えリスト（↑↓ · Enter · 1–9）。\n  session -switch [name]        - セッション名で切り替え（候補メニューまたは直接指定）。\n  session -new [name]           - 新規セッションを作成して切り替え。\n  session -setting-name [name]  - このセッションの表示名を変更。\n  session -next / -prev         - 次 / 前のセッションへ切り替え。\n  Ctrl+← / Ctrl+→              - 複数セッション時に前後へ切り替え。",
+    "en": "session (terminal session switching):\n  session                       - show second-command menu, then restore prompt to `session `.\n  session <n>                   - switch to session number n (1-based).\n  session -list                 - numbered switch list (↑↓ · Enter · 1–9).\n  session -switch [name]        - switch by session name (candidate menu or direct).\n  session -new [name]           - create a new session and switch to it.\n  session -setting-name [name]  - rename this session.\n  session -next / -prev         - switch to next / previous session.\n  Ctrl+← / Ctrl+→              - prev / next when multiple sessions exist."
+  },
+  "help.section.setting": {
+    "ja": "setting（グローバル UI — 表示言語とターミナル外観）:\n  setting              - `-list` / `-exit` を表示し、プロンプトを `setting ` に戻して続きを入力。\n  setting -list         - 設定ピッカーを開く（言語・外観・エクスポート/インポート）。\n  setting -exit -list  - この BMXt ペインの設定ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
+    "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -list / -exit, then restore prompt to `setting ` for continuation.\n  setting -list         - open settings picker (locale, appearance, export/import).\n  setting -exit -list  - close settings picker in this BMXt pane (Esc returns to prompt only)."
+  },
+  "help.section.tabs": {
+    "ja": "tabs（BMXt ウィンドウ / SW）:\n  tabs              - 利用可能なオプションを表示し、プロンプトを `tabs ` に戻して続きを入力。\n  tabs -list [-u]   - タブピッカーを開く（`-u` は各タイトル下に URL 行を表示）。\n  tabs -exit -list  - この BMXt ペインのタブピッカーを閉じる（Esc はプロンプトへ戻るのみ）。\n  tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー（保存）。\n  tabs -nowurl      - フォーカス中ウィンドウのアクティブタブの URL を表示。\n  tabs -moveurl <url> - 一致する URL のタブにフォーカス、なければ新規タブを開く。\n  picker `:` モード   - 空の Tab/Enter でターゲット別コマンドを薄く表示（tab/window/group）。",
+    "en": "tabs (BMXt window / SW):\n  tabs              - show available options, then restore prompt to `tabs ` for continuation.\n  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).\n  tabs -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tabs -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tabs -nowurl      - print current tab URL from active tab in focused window.\n  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
+  },
+  "help.section.translate": {
+    "ja": "translate（Chrome 組み込み Translator API、ja↔en）:\n  translate            - `-on` / `-off` / `-setting` を表示し、プロンプトを `translate ` に戻して続きを入力。\n  translate -on        - 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。\n  translate -off       - エディタ列を閉じ、アシストを無効化。\n  translate -setting   - 続けて `--ja-en` または `--en-ja`（Tab メニュー）；ペアを storage に保存。",
+    "en": "translate (Chrome built-in Translator API, ja↔en):\n  translate            - show -on / -off / -setting, then restore prompt to `translate ` for continuation.\n  translate -on        - enable translation assist (nav typing preview under prompt).\n  translate -off       - close editor column and disable assist.\n  translate -setting   - then `--ja-en` or `--en-ja` (Tab menu); saves pair to storage."
+  },
+  "help.section.url": {
+    "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",
+    "en": "URL (http/https, typed as a whole line):\n  <url>           - new tab\n  <url> .         - current tab (active tab in focused window)\n  <url> -nw       - new window"
+  },
+  "help.title": {
+    "ja": "BMXt - ブラウザコマンドシェル",
+    "en": "BMXt - browser command shell"
+  }
+}

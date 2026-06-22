@@ -3,7 +3,7 @@
  * JA: 検索ヒットを要素ごと複数行で整形。
  */
 
-import { stripInvisibleFormatChars } from "../bmxt-core/line-parse"
+import { stripInvisibleFormatChars } from "../format/normalize-for-match.ts"
 
 export type SearchScopeLabel = "history" | "bookmark" | "page"
 

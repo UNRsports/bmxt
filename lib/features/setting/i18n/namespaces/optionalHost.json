@@ -1,0 +1,10 @@
+{
+  "optionalHost.deniedError": {
+    "ja": "error: http(s) のサイトアクセスが許可されませんでした（任意ホスト権限）。",
+    "en": "error: http(s) site access was not granted (optional host permission)."
+  },
+  "optionalHost.deniedHint": {
+    "ja": "表示されたダイアログで許可するか、chrome://extensions の詳細でサイトへのアクセスを有効にしてから再度実行してください。",
+    "en": "Approve access when prompted, or enable site access for BMXt under chrome://extensions → Details."
+  }
+}

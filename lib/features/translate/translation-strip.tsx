@@ -12,7 +12,7 @@ import {
   type TranslationPairId
 } from "./translation-pair"
 import type { TranslationResult } from "./translator-service"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 
 export type TranslationBlock = TranslationResult & {
   id: number

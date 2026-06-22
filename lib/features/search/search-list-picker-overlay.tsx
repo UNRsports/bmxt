@@ -14,7 +14,7 @@ import {
   searchListPickerHeadline,
   searchListPickerLoadingHeadline
 } from "../setting/i18n/picker-headlines"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {

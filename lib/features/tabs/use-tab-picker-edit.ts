@@ -7,7 +7,7 @@ import {
 } from "./controller/edit-actions"
 import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import { groupEditMenuActionAtPickIndex } from "./group-edit-menu"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import type { EditPanel } from "./tab-picker-overlay-types"
 import {
   buildInitialEditPanel,

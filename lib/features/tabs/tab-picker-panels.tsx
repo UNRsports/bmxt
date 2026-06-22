@@ -1,5 +1,5 @@
 import type { KeyboardEvent, RefObject } from "react"
-import { useUiCopy } from "../setting"
+import { useUiCopy } from "../setting/use-ui-copy"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import { groupEditMenuItems, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, GroupChoice } from "./tab-picker-overlay-types"

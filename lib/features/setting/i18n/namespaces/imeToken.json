@@ -1,0 +1,14 @@
+{
+  "imeToken.hint.first": {
+    "ja": "第一コマンド · ↑↓ · Tab · Enter · Esc",
+    "en": "Command · ↑↓ · Tab · Enter · Esc"
+  },
+  "imeToken.hint.second": {
+    "ja": "第二コマンド · ↑↓ · Tab · Enter · Esc",
+    "en": "Subcommand · ↑↓ · Tab · Enter · Esc"
+  },
+  "imeToken.hint.third": {
+    "ja": "オプション · ↑↓ · Tab · Enter · Esc",
+    "en": "Option · ↑↓ · Tab · Enter · Esc"
+  }
+}
