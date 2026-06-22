@@ -110,6 +110,18 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
+**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Manifest overrides live in **`wxt.config.ts`** (not **`package.json`**). Entrypoints are under **`entrypoints/`**; static assets under **`public/`**; build output under **`.output/`** (dev: **`.output/chrome-mv3-dev`**, prod: **`.output/chrome-mv3`**).
+
+| Former (Plasmo / npm) | Current (WXT / pnpm) |
+|-----------------------|----------------------|
+| **`tabs/bmxt.tsx`** | **`entrypoints/bmxt/main.tsx`** (+ **`index.html`** → **`bmxt.html`**) |
+| **`background.ts`** (repo root) | **`entrypoints/background/index.ts`** |
+| **`contents/bmxt-nav-overlay.ts`** | **`entrypoints/bmxt-nav-overlay.content/index.ts`** |
+| **`locales/`** | **`public/_locales/`** |
+| **`build/chrome-mv3`** | **`.output/chrome-mv3`** |
+| Manifest in **`package.json`** | **`wxt.config.ts`** (+ **`version`** still in **`package.json`**) |
+| **`npm ci`** / **`package-lock.json`** | **`pnpm install --frozen-lockfile`** / **`pnpm-lock.yaml`** |
+
 <a id="key-specs"></a>
 
 ## Key Specs
@@ -143,6 +155,8 @@ Official releases are tagged in Git (`git tag`). To reproduce a store submission
 ### pnpm dependencies and security
 
 
+This repository uses **pnpm only** (`package.json` → **`packageManager`**, lockfile **`pnpm-lock.yaml`**). Do **not** run **`npm install`**, **`npm run …`**, **`npx …`**, or create **`package-lock.json`**. CI and README scripts use **`pnpm`** exclusively.
+
 **Direct dependencies** (see **`package.json`**) are **`react@18.2.0`**, **`react-dom@18.2.0`**, and **`sql.js@1.12.0`**. **WXT** (`wxt`, `@wxt-dev/module-react`) and other tooling are **devDependencies**. Almost all other packages are **transitive** (WXT uses Vite and related tooling).
 
 **Install for reproducibility**
@@ -162,11 +176,13 @@ pnpm install --frozen-lockfile
 pnpm run build
 ```
 
-**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). **`packageManager`** in **`package.json`** pins the pnpm version via Corepack.
+**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). **`packageManager`** in **`package.json`** pins the pnpm version via Corepack. On first clone, run **`corepack enable`** once so the pinned pnpm version is available.
 
-**CI** (**.github/workflows/ci.yml`**) runs **`pnpm install --frozen-lockfile`**, **`pnpm audit --audit-level=critical`**, **`verify:manifest`**, **`check:no-fetch`**, **`check:generated`**, **`tsc --noEmit`**, tests, and **`pnpm run build`**. **`pnpm audit fix --force`** must **not** be used without review.
+**CI** (**.github/workflows/ci.yml`**) runs **`pnpm install --frozen-lockfile`**, **`pnpm exec wxt prepare`**, **`pnpm audit --audit-level=critical`**, **`verify:manifest`**, **`check:no-fetch`**, **`check:generated`**, **`pnpm exec tsc --noEmit`**, tests, and **`pnpm run build`**. **`pnpm audit fix --force`** must **not** be used without review.
 
+**Known residual audit items** — **`pnpm audit`** may report **high** (and **moderate**) issues in WXT’s build-time toolchain (Vite, esbuild, etc.). These are **not shipped** in the extension bundle; CI gates on **critical** only. Do not “fix” them with **`pnpm audit fix --force`**.
 
+**Local verification (match CI):** **`pnpm run verify:manifest`** → **`pnpm run check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm test`** → **`pnpm run build`**.
 
 **After any dependency change**, run **`pnpm install --frozen-lockfile`**, **`pnpm run build`**, **`pnpm test`**, and **`pnpm audit --audit-level=critical`**, and commit **`package.json`** and **`pnpm-lock.yaml`** together.
 
@@ -836,7 +852,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** copies sql.js WASM into **`public/`**, syncs welcome JSON to **`docs/`**, and runs **`wxt prepare`**. See **[pnpm dependencies and security](#pnpm-dependencies)**.
+1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** copies sql.js WASM into **`public/`** and runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
 2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
 3. **Start dev:** From the repo root, run **`pnpm run dev`**. Leave this process running; it rebuilds the extension on file changes.
 4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
@@ -852,12 +868,15 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
 | **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
 | **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on http(s) pages |
-| **`public/`** | Static assets copied as-is: **`_locales/`**, **`icon.png`**, **`assets/search-cache/sql-wasm.wasm`** |
+| **`public/`** | Static assets copied as-is: **`_locales/`**, **`icon.png`**, **`assets/search-cache/sql-wasm.wasm`**, **`background-services.js`** |
 | **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
 | **`lib/features/`** | Feature modules (see table below) |
 | **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
-| **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev) |
+| **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
+
+**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`scripts/copy-sql-wasm.mjs`** → **`scripts/build-background-services.mjs`** → WXT. **`postinstall`** runs copy-sql-wasm + **`wxt prepare`** only.
 
 <a id="main-sources"></a>
 
@@ -882,6 +901,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
 - `scripts/copy-sql-wasm.mjs` — Copies sql.js WASM into **`public/assets/search-cache/`**
+- `scripts/build-background-services.mjs` — Bundles Service Worker helpers into **`public/background-services.js`**
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
 
@@ -1075,6 +1095,18 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
+**ツールチェーン（0.6.9 以降）:** 拡張シェルは **[WXT](https://wxt.dev/)** と **[pnpm](https://pnpm.io/)** のみでビルドします。**`npm`** / **`npm ci`** / **`npx`** / **`package-lock.json`** は**使わない** — lockfile は **`pnpm-lock.yaml`**。manifest 上書きは **`wxt.config.ts`**（**`package.json`** ではない）。エントリは **`entrypoints/`**、静的アセットは **`public/`**、出力は **`.output/`**（開発: **`.output/chrome-mv3-dev`**、本番: **`.output/chrome-mv3`**）。
+
+| 旧（Plasmo / npm） | 現行（WXT / pnpm） |
+|--------------------|--------------------|
+| **`tabs/bmxt.tsx`** | **`entrypoints/bmxt/main.tsx`**（+ **`index.html`** → **`bmxt.html`**） |
+| **`background.ts`**（リポジトリ直下） | **`entrypoints/background/index.ts`** |
+| **`contents/bmxt-nav-overlay.ts`** | **`entrypoints/bmxt-nav-overlay.content/index.ts`** |
+| **`locales/`** | **`public/_locales/`** |
+| **`build/chrome-mv3`** | **`.output/chrome-mv3`** |
+| manifest を **`package.json`** に記述 | **`wxt.config.ts`**（**`version`** は **`package.json`** のまま） |
+| **`npm ci`** / **`package-lock.json`** | **`pnpm install --frozen-lockfile`** / **`pnpm-lock.yaml`** |
+
 <a id="key-specs-ja"></a>
 
 ## 主要仕様
@@ -1108,6 +1140,8 @@ manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド�
 ### pnpm 依存関係とセキュリティ
 
 
+本リポジトリは **pnpm のみ**（**`package.json`** → **`packageManager`**、lockfile **`pnpm-lock.yaml`**）。**`npm install`** / **`npm run`** / **`npx`** および **`package-lock.json`** の生成は**禁止**。CI と README の手順も **pnpm** のみです。
+
 **直接依存**（**`package.json`**）は **`react@18.2.0`**、**`react-dom@18.2.0`**、**`sql.js@1.12.0`** です。**WXT**（`wxt`、`@wxt-dev/module-react`）等は **devDependencies**。その他は **間接依存**（Vite ツールチェーン等）です。
 
 **再現性のあるインストール**
@@ -1127,13 +1161,13 @@ pnpm install --frozen-lockfile
 pnpm run build
 ```
 
-**Node.js 版** — **`.nvmrc`** を参照。**`packageManager`** で pnpm 版を固定する。
+**Node.js 版** — **`.nvmrc`** を参照。**`packageManager`** で pnpm 版を固定する。初回 clone 時は **`corepack enable`** を一度実行する。
 
-**CI**（**.github/workflows/ci.yml`**）は **`pnpm install --frozen-lockfile`**、**`pnpm audit --audit-level=critical`**、**`verify:manifest`**、**`check:no-fetch`**、**`check:generated`**、**`tsc --noEmit`**、テスト、**`pnpm run build`** を実行する。**`pnpm audit fix --force`** は **使わない**（unsafe dependency bumpsを提案し、危険）。
+**CI**（**.github/workflows/ci.yml`**）は **`pnpm install --frozen-lockfile`**、**`pnpm exec wxt prepare`**、**`pnpm audit --audit-level=critical`**、**`verify:manifest`**、**`check:no-fetch`**、**`check:generated`**、**`pnpm exec tsc --noEmit`**、テスト、**`pnpm run build`** を実行する。**`pnpm audit fix --force`** は **使わない**（unsafe dependency bumpsを提案し、危険）。
 
+**残る audit（high / moderate）** — WXT のビルド専用ツールチェーンに **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。CI は **critical** のみで fail する。**`pnpm audit fix --force`** は安易に使わない。
 
-
-**残る audit（high / moderate）** — ビルド専用ツールチェーンに **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。CI は **critical** のみで fail する。**`pnpm audit fix --force`** は安易に使わない。
+**ローカル検証（CI と同一）:** **`pnpm run verify:manifest`** → **`pnpm run check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm test`** → **`pnpm run build`**。
 
 **依存関係を変更したら** **`pnpm install --frozen-lockfile`** → **`pnpm run build`** → **`pnpm test`** → **`pnpm audit --audit-level=critical`** を実行し、**`package.json`** と **`pnpm-lock.yaml`** を **セットでコミット**する。
 
@@ -1788,7 +1822,7 @@ pnpm run dev
 
 ### 開発時の起動
 
-1. **依存関係:** リポジトリ直下で **`pnpm install --frozen-lockfile`**（**`pnpm-lock.yaml`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`pnpm install`**。**postinstall** で sql.js WASM を **`public/`** へコピー、welcome JSON を **`docs/`** へ sync、**`wxt prepare`** を実行。**[pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)** を参照。
+1. **依存関係:** 初回は **`corepack enable`** のあと、リポジトリ直下で **`pnpm install --frozen-lockfile`**（**`pnpm-lock.yaml`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`pnpm install`**。**postinstall** で sql.js WASM を **`public/`** へコピーし **`wxt prepare`** を実行（**`.wxt/types/`** を生成）。**[pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)** を参照。
 2. **Codegen:** **`manifest/bmxt-codegen.json`** を編集したときは、**`pnpm run codegen`** で **`lib/features/bmxt-core/registry/`**・**`lib/features/dispatch/`**・**`lib/features/builtin-commands/`** の生成物を揃える。
 3. **開発サーバ:** リポジトリ直下で **`pnpm run dev`** を実行する。これは **`wxt`** で、`.output/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
 4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`.output/chrome-mv3-dev`** を指定する（WXT dev が出力するディレクトリ）。
@@ -1804,12 +1838,15 @@ pnpm run dev
 | **`entrypoints/background/`** | Service Worker（`index.ts`）— ウィンドウ起動・`runDispatch`・Effect |
 | **`entrypoints/bmxt/`** | 拡張 UI ページ → ビルド後 **`bmxt.html`**（`main.tsx` + `index.html`） |
 | **`entrypoints/bmxt-nav-overlay.content/`** | http(s) 向け Nav コンテンツスクリプト |
-| **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`assets/search-cache/sql-wasm.wasm`** |
+| **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`assets/search-cache/sql-wasm.wasm`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
+| **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
-| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発） |
+| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発）, **`*-chrome.zip`**（**`pnpm run package`**） |
+
+**ビルドスクリプト:** **`pnpm run dev`** / **`build`** / **`package`** は **`scripts/copy-sql-wasm.mjs`** → **`scripts/build-background-services.mjs`** → WXT の順。**`postinstall`** は copy-sql-wasm + **`wxt prepare`** のみ。
 
 <a id="main-sources-ja"></a>
 
@@ -1837,6 +1874,7 @@ pnpm run dev
 - `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
 - `scripts/copy-sql-wasm.mjs` — sql.js WASM を **`public/assets/search-cache/`** へコピー
+- `scripts/build-background-services.mjs` — Service Worker ヘルパーを **`public/background-services.js`** にバンドル
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
