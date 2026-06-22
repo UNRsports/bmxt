@@ -3,7 +3,7 @@
  */
 
 import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "../../extension-storage/keys"
-import { t } from "../../setting/i18n/messages"
+import { tEffect } from "../../setting/i18n/ns/effect"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
 
@@ -54,7 +54,7 @@ export async function tabsMoveUrl(
       await chrome.windows.update(pick.windowId, { focused: true })
     }
     return [
-      t("effect.openTab.activated", locale, {
+      tEffect("effect.openTab.activated", locale, {
         tabId: String(pick.id),
         url: pick.url ?? ""
       })
@@ -62,10 +62,10 @@ export async function tabsMoveUrl(
   }
   const created = await createTabInNormalBrowserWindow(normalized)
   if (!created) {
-    return [t("effect.openTab.openFailed", locale, { url: normalized })]
+    return [tEffect("effect.openTab.openFailed", locale, { url: normalized })]
   }
   return [
-    t("effect.openTab.openedNew", locale, {
+    tEffect("effect.openTab.openedNew", locale, {
       tabId: String(created.id ?? "?"),
       url: normalized
     })

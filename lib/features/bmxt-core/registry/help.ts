@@ -1,8 +1,8 @@
-import { t, type MessageKey } from "../../setting/i18n/messages"
+import { tHelp, type HelpMessageKey } from "../../setting/i18n/ns/help"
 import type { UiLocale } from "../../setting/locale"
 import { COMMANDS, cmdByName } from "./table.gen"
 
-const HELP_SECTION_KEYS: readonly MessageKey[] = [
+const HELP_SECTION_KEYS: readonly HelpMessageKey[] = [
   "help.section.tabs",
   "help.section.session",
   "help.section.dom",
@@ -13,8 +13,8 @@ const HELP_SECTION_KEYS: readonly MessageKey[] = [
   "help.section.keys"
 ]
 
-function appendSection(lines: string[], key: MessageKey, locale: UiLocale): void {
-  const block = t(key, locale)
+function appendSection(lines: string[], key: HelpMessageKey, locale: UiLocale): void {
+  const block = tHelp(key, locale)
   if (block.length === 0) {
     return
   }
@@ -24,10 +24,10 @@ function appendSection(lines: string[], key: MessageKey, locale: UiLocale): void
 export function buildHelpLines(locale: UiLocale): string[] {
   const names = [...COMMANDS.map((c) => c.name)].sort()
   const lines: string[] = [
-    t("help.title", locale),
-    t("help.quickStart", locale),
+    tHelp("help.title", locale),
+    tHelp("help.quickStart", locale),
     "",
-    t("help.builtInCommandsHeader", locale)
+    tHelp("help.builtInCommandsHeader", locale)
   ]
   for (const name of names) {
     const cmd = cmdByName(name)

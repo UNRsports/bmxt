@@ -1,7 +1,7 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import { searchCmdExitListLines, searchCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
-import { t } from "../../setting/i18n/messages"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import {
   isSearchListScopeToken,
   normalizeSearchListDispatchLine,
@@ -50,7 +50,7 @@ function runList(args: string[], locale: ReturnType<typeof getRunLocale>) {
   const third = normalizeSearchSecondToken(args[2])
   if (third.startsWith("--") && !isSearchListScopeToken(third)) {
     return linesDispatch([
-      t("cmd.search.error.unknownScope", locale, { scope: args[2] }),
+      tCmd("cmd.search.error.unknownScope", locale, { scope: args[2] }),
       ...searchCmdUsageLines(locale)
     ])
   }
@@ -64,7 +64,7 @@ function runList(args: string[], locale: ReturnType<typeof getRunLocale>) {
     return effectsDispatch(scopes.map((scope) => effectForScope(scope, pattern)))
   } catch (e) {
     return linesDispatch([
-      t("cmd.search.error.generic", locale, {
+      tCmd("cmd.search.error.generic", locale, {
         message: e instanceof Error ? e.message : String(e)
       }),
       ...searchCmdUsageLines(locale)
@@ -81,7 +81,7 @@ export function run(args: string[]) {
   const headKey = normalizeSearchSecondToken(headRaw)
   if (!isSecondToken("search", headKey)) {
     return linesDispatch([
-      t("cmd.search.error.unknownOption", locale, { option: headRaw }),
+      tCmd("cmd.search.error.unknownOption", locale, { option: headRaw }),
       ...searchCmdUsageLines(locale)
     ])
   }
@@ -91,7 +91,7 @@ export function run(args: string[]) {
   if (headKey === "-exit") {
     if (args.length !== 3 || normalizeSearchSecondToken(args[2]) !== "-list") {
       return linesDispatch([
-        t("cmd.search.error.exitListUsage", locale),
+        tCmd("cmd.search.error.exitListUsage", locale),
         ...searchCmdUsageLines(locale)
       ])
     }

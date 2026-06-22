@@ -1,4 +1,4 @@
-import { t } from "../../setting/i18n/messages"
+import { tTabs } from "../../setting/i18n/ns/tabs"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
 import type { BulkSubMode, SelectKind } from "./model"
@@ -39,20 +39,20 @@ export function validateExecute(
   if (!ctx.bulkSubMode) {
     return {
       ok: false,
-      reason: t("tabs.picker.error.noBulkMode", locale)
+      reason: tTabs("tabs.picker.error.noBulkMode", locale)
     }
   }
   const kind = effectiveSelectKind(ctx)
   if (!kind) {
     return {
       ok: false,
-      reason: t("tabs.picker.error.noSelection", locale)
+      reason: tTabs("tabs.picker.error.noSelection", locale)
     }
   }
   if (!allowed(kind, ctx.bulkSubMode)) {
     return {
       ok: false,
-      reason: t("tabs.picker.error.invalidBulkForKind", locale)
+      reason: tTabs("tabs.picker.error.invalidBulkForKind", locale)
     }
   }
   if (ctx.selectedTabCount === 0) {
@@ -64,7 +64,7 @@ export function validateExecute(
     if (!allowWithoutTabs) {
       return {
         ok: false,
-        reason: t("tabs.picker.error.noTabsForAction", locale)
+        reason: tTabs("tabs.picker.error.noTabsForAction", locale)
       }
     }
   }

@@ -1,4 +1,4 @@
-import { t } from "../setting/i18n/messages"
+import { tNav } from "../setting/i18n/ns/nav"
 import type { UiLocale } from "../setting/locale"
 
 /** EN: Serializable copy bundle passed into the page overlay (executeScript / content script). */
@@ -20,19 +20,19 @@ export type NavOverlayLabels = {
 
 export function buildNavOverlayLabels(locale: UiLocale): NavOverlayLabels {
   return {
-    selectText: t("nav.overlay.menu.selectText", locale),
-    saveImage: t("nav.overlay.menu.saveImage", locale),
-    reloadPage: t("nav.overlay.menu.reloadPage", locale),
-    copySelection: t("nav.overlay.menu.copySelection", locale),
-    historyBack: t("nav.overlay.menu.historyBack", locale),
-    historyForward: t("nav.overlay.menu.historyForward", locale),
-    menuSelectHint: t("nav.overlay.menu.selectHint", locale),
-    menuCopyHint: t("nav.overlay.menu.copyHint", locale),
-    textSelStart: t("nav.overlay.textSel.start", locale),
-    textSelEnd: t("nav.overlay.textSel.end", locale),
-    typingLine1: t("nav.overlay.typing.line1", locale),
-    typingLine2: t("nav.overlay.typing.line2", locale),
-    typingMultiline: t("nav.overlay.typing.multiline", locale)
+    selectText: tNav("nav.overlay.menu.selectText", locale),
+    saveImage: tNav("nav.overlay.menu.saveImage", locale),
+    reloadPage: tNav("nav.overlay.menu.reloadPage", locale),
+    copySelection: tNav("nav.overlay.menu.copySelection", locale),
+    historyBack: tNav("nav.overlay.menu.historyBack", locale),
+    historyForward: tNav("nav.overlay.menu.historyForward", locale),
+    menuSelectHint: tNav("nav.overlay.menu.selectHint", locale),
+    menuCopyHint: tNav("nav.overlay.menu.copyHint", locale),
+    textSelStart: tNav("nav.overlay.textSel.start", locale),
+    textSelEnd: tNav("nav.overlay.textSel.end", locale),
+    typingLine1: tNav("nav.overlay.typing.line1", locale),
+    typingLine2: tNav("nav.overlay.typing.line2", locale),
+    typingMultiline: tNav("nav.overlay.typing.multiline", locale)
   }
 }
 

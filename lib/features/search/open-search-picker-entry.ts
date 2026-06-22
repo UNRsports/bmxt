@@ -17,14 +17,14 @@ import {
 import type { ChromeEffect } from "../dispatch/effect-types"
 import type { DispatchChromeContext } from "../dispatch/dispatch-context"
 import { applyChromeEffects } from "../dispatch"
-import { t } from "../setting/i18n/messages"
+import { tSearch } from "../setting/i18n/ns/search"
 import { DEFAULT_UI_LOCALE } from "../setting/locale"
 
 const TAB_FOCUS_DELAY_MS = 120
 const TAB_LOAD_TIMEOUT_MS = 20000
 
 function scrollFailedLog(ctx: DispatchChromeContext): string {
-  return t("search.scrollToMatch.failed", ctx.uiLocale ?? DEFAULT_UI_LOCALE)
+  return tSearch("search.scrollToMatch.failed", ctx.uiLocale ?? DEFAULT_UI_LOCALE)
 }
 
 function sleep(ms: number): Promise<void> {

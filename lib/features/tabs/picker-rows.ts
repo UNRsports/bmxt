@@ -1,7 +1,7 @@
 /** Tab picker: structured rows for interactive UI + same grouping as legacy tabs list. */
 
 import { displayTitle } from "../format/display-title"
-import { t } from "../setting/i18n/messages"
+import { tTabs } from "../setting/i18n/ns/tabs"
 import { getRunLocale } from "../setting/i18n/run-locale"
 import type { UiLocale } from "../setting/locale"
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
@@ -61,11 +61,11 @@ function groupKey(tab: chrome.tabs.Tab): number | "none" {
 
 function formatGroupLabel(g: chrome.tabGroups.TabGroup | undefined, locale: UiLocale): string {
   if (!g) {
-    return t("tabs.picker.unknownGroup", locale)
+    return tTabs("tabs.picker.unknownGroup", locale)
   }
   const raw = (g.title || "").trim()
   if (!raw) {
-    return t("tabs.picker.untitledGroup", locale, { color: g.color })
+    return tTabs("tabs.picker.untitledGroup", locale, { color: g.color })
   }
   return `【${displayTitle(raw, locale)}】`
 }
@@ -159,7 +159,7 @@ export async function buildTabPickerRows(
       windowId: wid,
       windowTitle,
       usesActiveTabTitle,
-      label: t("tabs.picker.windowLabel", locale, {
+      label: tTabs("tabs.picker.windowLabel", locale, {
         star: tracked ? "*" : " ",
         title: windowTitle
       }),

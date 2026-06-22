@@ -1,6 +1,6 @@
 import type { DispatchBundle } from "../dispatch"
 import { isSecondToken } from "../builtin-commands/command-subcommands.gen"
-import { t } from "../setting/i18n/messages"
+import { tCmd } from "../setting/i18n/ns/cmd"
 import { setRunLocale, getRunLocale } from "../setting/i18n/run-locale"
 import type { UiLocale } from "../setting/locale"
 import { parseHttpUrlCandidate, tokenize } from "./line-parse"
@@ -60,7 +60,7 @@ export function dispatchFull(line: string, locale?: UiLocale): string {
   if (!canonical) {
     return dispatchJsonString(
       linesDispatch([
-        t("cmd.error.unknownCommand", locale ?? getRunLocale(), { cmdToken })
+        tCmd("cmd.error.unknownCommand", locale ?? getRunLocale(), { cmdToken })
       ])
     )
   }

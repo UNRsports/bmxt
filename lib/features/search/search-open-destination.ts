@@ -1,5 +1,6 @@
 import { displayTitle } from "../tabs/picker-rows"
-import { t } from "../setting/i18n/messages"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import { tSearch } from "../setting/i18n/ns/search"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
 import { getWindowDisplayNamesMap, pruneWindowDisplayNames } from "../extension-storage/window-display-names"
 import { resolveMirrorBrowserWindowId } from "../tabs/resolve-mirror-browser-window"
@@ -20,7 +21,7 @@ const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 function formatGroupLabel(g: chrome.tabGroups.TabGroup, locale: UiLocale): string {
   const raw = (g.title || "").trim()
   if (!raw) {
-    return t("search.openDestination.untitledGroup", locale, { color: g.color })
+    return tSearch("search.openDestination.untitledGroup", locale, { color: g.color })
   }
   return `【${displayTitle(raw)}】`
 }
@@ -92,7 +93,7 @@ export async function buildSearchOpenDestinationRows(
   )
 
   const rows: SearchOpenDestinationRow[] = [
-    { kind: "new_window", label: t("search.openDestination.newWindow", locale) }
+    { kind: "new_window", label: tSearch("search.openDestination.newWindow", locale) }
   ]
 
   for (const wid of windowOrder) {
@@ -105,7 +106,7 @@ export async function buildSearchOpenDestinationRows(
       customName !== undefined
         ? customName
         : displayTitle(active?.title ?? "")
-    const windowLabel = t("tabs.picker.windowLabel", locale, {
+    const windowLabel = tTabs("tabs.picker.windowLabel", locale, {
       star: tracked ? "*" : " ",
       title: windowTitle
     })
@@ -114,7 +115,7 @@ export async function buildSearchOpenDestinationRows(
     rows.push({
       kind: "ungrouped",
       windowId: wid,
-      label: t("search.openDestination.ungrouped", locale)
+      label: tSearch("search.openDestination.ungrouped", locale)
     })
 
     const windowGroups = (groupsByWindow.get(wid) ?? []).sort((a, b) => (a.id ?? 0) - (b.id ?? 0))
@@ -168,11 +169,11 @@ export async function openUrlAtSearchDestination(
     const w = await chrome.windows.create(props)
     const line =
       url !== undefined
-        ? t("search.openDestination.newWindowWithUrl", locale, {
+        ? tSearch("search.openDestination.newWindowWithUrl", locale, {
             windowId: String(w.id ?? "?"),
             url
           })
-        : t("search.openDestination.newWindow", locale, {
+        : tSearch("search.openDestination.newWindow", locale, {
             windowId: String(w.id ?? "?")
           })
     return [line]
@@ -180,7 +181,7 @@ export async function openUrlAtSearchDestination(
 
   const windowId = dest.windowId
   if (windowId === undefined) {
-    return [t("search.openDestination.invalid", locale)]
+    return [tSearch("search.openDestination.invalid", locale)]
   }
 
   const createProps: chrome.tabs.CreateProperties = { windowId }
@@ -203,14 +204,14 @@ export async function openUrlAtSearchDestination(
     } catch (e2) {
       const reason2 = e2 instanceof Error ? e2.message : String(e2)
       return [
-        t("search.openDestination.openFailed", locale, { reason }),
-        t("search.openDestination.fallbackFailed", locale, { reason: reason2 })
+        tSearch("search.openDestination.openFailed", locale, { reason }),
+        tSearch("search.openDestination.fallbackFailed", locale, { reason: reason2 })
       ]
     }
   }
 
   if (tab?.id === undefined) {
-    return [t("search.openDestination.tabIdMissing", locale)]
+    return [tSearch("search.openDestination.tabIdMissing", locale)]
   }
 
   if (dest.kind === "group" && dest.groupId !== undefined) {
@@ -219,7 +220,7 @@ export async function openUrlAtSearchDestination(
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e)
       await focusCreatedTab(tab.id, windowId)
-      return [t("search.openDestination.groupFailed", locale, { reason })]
+      return [tSearch("search.openDestination.groupFailed", locale, { reason })]
     }
   }
 
@@ -233,7 +234,7 @@ export async function openUrlAtSearchDestination(
         : `window ${windowId}`
   const urlPart = url !== undefined ? `: ${url}` : ""
   return [
-    t("search.openDestination.openedTab", locale, {
+    tSearch("search.openDestination.openedTab", locale, {
       tabId: String(tab.id),
       destLabel,
       urlPart

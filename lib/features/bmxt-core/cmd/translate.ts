@@ -7,7 +7,7 @@ import {
   translateCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
-import { t } from "../../setting/i18n/messages"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
 import { linesDispatch } from "../types"
 
@@ -28,7 +28,7 @@ export function run(args: string[]) {
   const first = args[1]
   if (!isSecondToken("translate", first)) {
     return linesDispatch([
-      t("cmd.translate.error.unknownOption", locale, { option: first }),
+      tCmd("cmd.translate.error.unknownOption", locale, { option: first }),
       ...translateCmdUsageLines(locale)
     ])
   }
@@ -43,7 +43,7 @@ export function run(args: string[]) {
     return linesDispatch(translateCmdSettingLines(locale))
   }
   return linesDispatch([
-    t("cmd.translate.error.internal", locale, { option: first }),
+    tCmd("cmd.translate.error.internal", locale, { option: first }),
     ...translateCmdUsageLines(locale)
   ])
 }

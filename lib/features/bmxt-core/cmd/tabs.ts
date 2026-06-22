@@ -8,7 +8,7 @@ import {
   tabsCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
-import { t } from "../../setting/i18n/messages"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import { parseHttpUrlCandidate, stripInvisibleFormatChars } from "../line-parse"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
@@ -39,14 +39,14 @@ export function run(args: string[]) {
   const first = args[1]
   if (!isSecondToken("tabs", first)) {
     return linesDispatch([
-      t("cmd.tabs.error.unknownOption", locale, { option: first }),
+      tCmd("cmd.tabs.error.unknownOption", locale, { option: first }),
       ...tabsCmdUsageLines(locale)
     ])
   }
   const sub = normTabsFlag(args[1])
   if (!sub) {
     return linesDispatch([
-      t("cmd.tabs.error.internalOutOfSync", locale),
+      tCmd("cmd.tabs.error.internalOutOfSync", locale),
       ...tabsCmdUsageLines(locale)
     ])
   }
@@ -54,7 +54,7 @@ export function run(args: string[]) {
     case "l": {
       if (args.length > 3 || (args.length === 3 && args[2].toLowerCase() !== "-u")) {
         return linesDispatch([
-          t("cmd.tabs.error.invalidListUsage", locale),
+          tCmd("cmd.tabs.error.invalidListUsage", locale),
           ...tabsCmdUsageLines(locale)
         ])
       }
@@ -63,7 +63,7 @@ export function run(args: string[]) {
     case "e": {
       if (args.length !== 3 || args[2].toLowerCase() !== "-list") {
         return linesDispatch([
-          t("cmd.tabs.error.exitListUsage", locale),
+          tCmd("cmd.tabs.error.exitListUsage", locale),
           ...tabsCmdUsageLines(locale)
         ])
       }
@@ -75,7 +75,7 @@ export function run(args: string[]) {
     case "n": {
       if (args.length > 2) {
         return linesDispatch([
-          t("cmd.tabs.error.tooManyArgs", locale),
+          tCmd("cmd.tabs.error.tooManyArgs", locale),
           ...tabsCmdUsageLines(locale)
         ])
       }
@@ -85,14 +85,14 @@ export function run(args: string[]) {
       const urlPart = args.slice(2).join(" ").trim()
       if (!urlPart) {
         return linesDispatch([
-          t("cmd.tabs.error.usageMoveurl", locale),
+          tCmd("cmd.tabs.error.usageMoveurl", locale),
           ...tabsCmdUsageLines(locale)
         ])
       }
       const url = parseHttpUrlCandidate(urlPart)
       if (!url) {
         return linesDispatch([
-          t("cmd.tabs.error.usageMoveurl", locale),
+          tCmd("cmd.tabs.error.usageMoveurl", locale),
           ...tabsCmdUsageLines(locale)
         ])
       }
@@ -100,7 +100,7 @@ export function run(args: string[]) {
     }
     default:
       return linesDispatch([
-        t("cmd.tabs.error.internalDispatchOutOfSync", locale),
+        tCmd("cmd.tabs.error.internalDispatchOutOfSync", locale),
         ...tabsCmdUsageLines(locale)
       ])
   }
