@@ -630,7 +630,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 - Rows are hierarchical: **`[window]`** → **`[tab group]`** (real Chrome tab groups only) → **tab rows**. **Tab rows** show a **favicon** when Chrome can resolve one for the page URL.
 - Tabs **not** in a Chrome group are listed **directly under their window** (there is no “(no group)” header row).
-- **Initially every window and group is expanded.** **←** on the highlighted row collapses that window or tab group (**→** expands). On a **tab** row, **←** / **→** affect the **parent tab group** (ungrouped tabs have no group to fold).
+- **Initially every window and group is expanded.** **←** on a highlighted **window** or **tab group** row collapses it (**→** expands). On a **tab** row, **←** moves focus to the detail bar; **→** opens the action menu.
 - Collapse/expand state is kept for the **BMXt process** lifetime (survives closing the BMXt window; cleared only on **`exit`** of the last pane — see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
 **Navigation and bulk**
@@ -1531,7 +1531,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | 通常時の `Enter` | search 結果: URL を開くまたは page ジャンプ；search 詳細: ページ内ジャンプ；search 開き先: 選択先へ開く | ハイライトタブをアクティブ化（列は開いたまま） |
 | `:` → `nohlsearch` | フィルタ・ハイライト解除 | 検索ハイライト解除 |
 | `n` / `N` | 結果行上の次／前マッチ | 次／前のマッチ行 |
-| `→` / `←` | search: タブ開=詳細／閉+history=開き先；dom: プロンプト行末で **詳細バー** | ハイライト中の **ウィンドウ** または **タブグループ** 行を閉じる／開く（タブ行は所属グループ） |
+| `→` / `←` | search: タブ開=詳細／閉+history=開き先；dom: プロンプト行末で **詳細バー** | **ウィンドウ** / **タブグループ** 行: 閉じる／開く；**タブ行**: **←** で詳細バー、**→** でアクションメニュー |
 | `Ctrl+←` / `Ctrl+→` | 列ストリップ（ターミナル ↔ 開列） | 同左 |
 | `Esc` | プロンプトへ、または search 詳細／開き先 → 結果一覧 | `#` → `:` → `/` → バルク → プロンプト |
 | `#` / `Tab` | — | マーク付け／複数選択 |
@@ -1623,7 +1623,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 - 行は階層表示: **`[ウィンドウ]`** → **`[タブグループ]`**（Chrome の実グループのみ）→ **タブ行**。**タブ行**にはページ URL から解決できる **ファビコン** を表示します。
 - Chrome グループに属さないタブは **ウィンドウ行の直下**に並びます（「(グループなし)」見出し行はありません）。
-- **初期状態はすべて展開**。**←** でハイライト中のウィンドウまたはタブグループを閉じ、**→** で開きます。**タブ行**では **←** / **→** は **所属タブグループ**に対して効きます（未グループのタブには折りたたみ対象がありません）。
+- **初期状態はすべて展開**。**←** でハイライト中の **ウィンドウ** または **タブグループ** 行を閉じ、**→** で開きます。**タブ行**では **←** で詳細バーへ、**→** でアクションメニューを開きます。
 - 開閉状態は **BMXt プロセス**存続中保持されます（BMXt ウィンドウを閉じても保持。**最後の 1 ペイン**の **`exit`** で消去 — [BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)）。
 
 **移動とバルク操作**
