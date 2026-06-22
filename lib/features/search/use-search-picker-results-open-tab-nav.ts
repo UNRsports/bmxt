@@ -25,7 +25,7 @@ import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-k
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
 import { resolveSearchHighlightAppearance } from "../setting/appearance"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tSearch } from "../setting/i18n/ns/search"
 import { useUiSettings } from "../setting/use-ui-settings"
 import {
   adjacentSearchPickerPreviewHi,
@@ -79,7 +79,8 @@ export function useSearchPickerResultsOpenTabNav({
   listScrollHintRef,
   baseExtensions
 }: UseSearchPickerResultsOpenTabNavOptions): UseSearchPickerResultsOpenTabNavResult {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const { settings } = useUiSettings()
   const altKeyHeldRef = useRef(false)
   const [altPreviewTick, setAltPreviewTick] = useState(0)
@@ -126,12 +127,12 @@ export function useSearchPickerResultsOpenTabNav({
     if (noticeTimerRef.current !== null) {
       window.clearTimeout(noticeTimerRef.current)
     }
-    setPreviewNotice(uiCopy.t("search.picker.noPreviewTarget"))
+    setPreviewNotice(tSearch("search.picker.noPreviewTarget", locale))
     noticeTimerRef.current = window.setTimeout(() => {
       setPreviewNotice(null)
       noticeTimerRef.current = null
     }, PREVIEW_NOTICE_MS)
-  }, [uiCopy])
+  }, [locale])
 
   const runPreview = useCallback(async () => {
     const index = hiRef.current

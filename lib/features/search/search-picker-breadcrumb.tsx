@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tSearch } from "../setting/i18n/ns/search"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { SearchListPickerView } from "./search-list-picker-body"
 
 type SearchPickerBreadcrumbProps = {
@@ -13,19 +14,22 @@ export function SearchPickerBreadcrumb({
   view,
   showDetailBeforeDestination = false
 }: SearchPickerBreadcrumbProps): ReactNode {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
   const onResults = view === "results"
   const onDetail = view === "detail"
   const onDestination = view === "destination"
+  const locale = uiSettings.locale
   return (
-    <div className="bmxt-search-picker-crumb" aria-label={uiCopy.t("search.picker.breadcrumb.aria")}>
+    <div
+      className="bmxt-search-picker-crumb"
+      aria-label={tSearch("search.picker.breadcrumb.aria", locale)}>
       <span
         className={
           onResults
             ? "bmxt-search-picker-crumb-segment bmxt-search-picker-crumb-segment--active"
             : "bmxt-search-picker-crumb-segment"
         }>
-        {uiCopy.t("search.picker.breadcrumb.results")}
+        {tSearch("search.picker.breadcrumb.results", locale)}
       </span>
       {onDetail || (onDestination && showDetailBeforeDestination) ? (
         <>
@@ -38,7 +42,7 @@ export function SearchPickerBreadcrumb({
                 ? "bmxt-search-picker-crumb-segment bmxt-search-picker-crumb-segment--active"
                 : "bmxt-search-picker-crumb-segment"
             }>
-            {uiCopy.t("search.picker.breadcrumb.detail")}
+            {tSearch("search.picker.breadcrumb.detail", locale)}
           </span>
         </>
       ) : null}
@@ -48,7 +52,7 @@ export function SearchPickerBreadcrumb({
             &gt;
           </span>
           <span className="bmxt-search-picker-crumb-segment bmxt-search-picker-crumb-segment--active">
-            {uiCopy.t("search.picker.breadcrumb.destination")}
+            {tSearch("search.picker.breadcrumb.destination", locale)}
           </span>
         </>
       ) : null}

@@ -62,6 +62,7 @@ import { usePromptPickers } from "./shell/usePromptPickers"
 import { useNavPromptBridge } from "./shell/useNavPromptBridge"
 import { usePaneFocusController } from "./shell/usePaneFocusController"
 import { useShellKeyboard } from "./shell/useShellKeyboard"
+import { useShellPromptCore } from "./shell/useShellPromptCore"
 import { usePickerManager } from "./shell/usePickerManager"
 import {
   parseSearchExitListLine,
@@ -83,7 +84,6 @@ import {
   deactivateModeToolbar,
   type ModeToolbarId
 } from "./mode-toolbar-order"
-import { promptMirrorSegments } from "../nav/nav-prompt-input"
 import {
   buildEnglishCommitText,
   DEFAULT_TRANSLATION_PAIR_ID,
@@ -111,26 +111,15 @@ import {
 } from "../setting/setting-list-picker-input"
 import { useUiCopy } from "../setting/use-ui-copy"
 import { useUiSettings } from "../setting/use-ui-settings"
-import { matchesForSearch } from "./text-utils"
-import {
-  ensureBmxtCore,
-  FALLBACK_COMPLETION_CANDIDATES,
-  getCompletionCandidates
-} from "../bmxt-core"
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type SetStateAction
 } from "react"
-import {
-} from "./csp-dynamic-stylesheet"
 import type { PostUpgradeBanner } from "./use-version-upgrade-banner"
-import {
-} from "./shell/bmxt-shell-prompt-helpers"
 
 export type { TabPickerState } from "../side-picker/session/tab-picker-state"
 import type { TabPickerState } from "../side-picker/session/tab-picker-state"
@@ -358,6 +347,68 @@ export function BmxtShell({
     navActiveRef.current = navActive
   }, [navActive])
 
+  const [sessionNameTyping, setSessionNameTyping] = useState(false)
+  const sessionNameTypingRef = useRef(sessionNameTyping)
+  sessionNameTypingRef.current = sessionNameTyping
+
+  const currentSessionDisplayName = useMemo(() => {
+    const index = sessionOrder.indexOf(sessionId)
+    return resolveSessionDisplayName({
+      sessionId,
+      index: index >= 0 ? index + 1 : 1,
+      namesById: sessionNamesById,
+      pickers: sessionPickers,
+      navArmed: navArmedByLeaf[sessionId] ?? false,
+      logs: sessionLogsById[sessionId] ?? []
+    })
+  }, [sessionId, sessionOrder, sessionNamesById, sessionLogsById, sessionPickers, navArmedByLeaf])
+  const currentSessionDisplayNameRef = useRef(currentSessionDisplayName)
+  currentSessionDisplayNameRef.current = currentSessionDisplayName
+
+  const {
+    mode,
+    setMode,
+    line,
+    setLine,
+    cursorPos,
+    setCursorPos,
+    isComposing,
+    setIsComposing,
+    compositionAnchor,
+    setCompositionAnchor,
+    localCompletion,
+    histNavIndex,
+    setHistNavIndex,
+    histDraft,
+    setHistDraft,
+    skipHistResetRef,
+    iSearchCycle,
+    setISearchCycle,
+    iSearchSnapshot,
+    setISearchSnapshot,
+    iSearchMatches,
+    iSearchPreview,
+    tabPressSeqRef,
+    lineRef,
+    cursorRef,
+    navPromptSnapRef,
+    completionCandidatesRef,
+    imeRef,
+    isComposingRef,
+    compositionStartSnapshotRef,
+    cursorMirrorCellRef,
+    subCmdPickerHostRef,
+    mirror,
+    promptLine
+  } = useShellPromptCore({ history, completionCandidates })
+
+  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
+    lines,
+    mode,
+    line,
+    postUpgradeBanner
+  })
+
   const {
     currentTabTitle: navCurrentTabTitle,
     overlayError: navOverlayError,
@@ -402,38 +453,6 @@ export function BmxtShell({
   })
 
   const navTextSelDone = navTextSelPhase === "done"
-
-
-  const [sessionNameTyping, setSessionNameTyping] = useState(false)
-  const sessionNameTypingRef = useRef(sessionNameTyping)
-  sessionNameTypingRef.current = sessionNameTyping
-
-  const currentSessionDisplayName = useMemo(() => {
-    const index = sessionOrder.indexOf(sessionId)
-    return resolveSessionDisplayName({
-      sessionId,
-      index: index >= 0 ? index + 1 : 1,
-      namesById: sessionNamesById,
-      pickers: sessionPickers,
-      navArmed: navArmedByLeaf[sessionId] ?? false,
-      logs: sessionLogsById[sessionId] ?? []
-    })
-  }, [sessionId, sessionOrder, sessionNamesById, sessionLogsById, sessionPickers, navArmedByLeaf])
-  const currentSessionDisplayNameRef = useRef(currentSessionDisplayName)
-  currentSessionDisplayNameRef.current = currentSessionDisplayName
-
-  const [mode, setMode] = useState<"normal" | "isearch">("normal")
-  const [line, setLine] = useState("")
-  const [cursorPos, setCursorPos] = useState(0)
-  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
-    lines,
-    mode,
-    line,
-    postUpgradeBanner
-  })
-  const [isComposing, setIsComposing] = useState(false)
-  const [compositionAnchor, setCompositionAnchor] = useState(0)
-  const [localCompletion, setLocalCompletion] = useState<string[]>(completionCandidates)
 
   const {
     blocks: navTranslateBlocks,
@@ -496,80 +515,6 @@ export function BmxtShell({
     searchPageActiveModeRef.current = searchPageActiveMode
   }, [searchPageActiveMode])
 
-  const imeRef = useRef<HTMLTextAreaElement>(null)
-  const isComposingRef = useRef(false)
-  const compositionStartSnapshotRef = useRef("")
-  const cursorMirrorCellRef = useRef<HTMLSpanElement>(null)
-  const subCmdPickerHostRef = useRef<HTMLDivElement>(null)
-
-  const [histNavIndex, setHistNavIndex] = useState(-1)
-  const [histDraft, setHistDraft] = useState("")
-  const skipHistResetRef = useRef(false)
-
-  const [iSearchCycle, setISearchCycle] = useState(0)
-  const [iSearchSnapshot, setISearchSnapshot] = useState("")
-
-  const tabPressSeqRef = useRef(0)
-  const lineRef = useRef("")
-  const cursorRef = useRef(0)
-  const navPromptSnapRef = useRef<{ line: string; cursor: number } | null>(null)
-  const completionCandidatesRef = useRef<string[]>([])
-  /** EN: Tab on empty line opened the first-command menu — keep showing until input/Esc/submit. */
-
-  useEffect(() => {
-    setLocalCompletion(completionCandidates)
-  }, [completionCandidates])
-
-  useEffect(() => {
-    completionCandidatesRef.current = localCompletion
-  }, [localCompletion])
-
-  useEffect(() => {
-    lineRef.current = line
-  }, [line])
-
-  useEffect(() => {
-    cursorRef.current = cursorPos
-  }, [cursorPos])
-
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        await ensureBmxtCore()
-        setLocalCompletion(getCompletionCandidates())
-      } catch {
-        setLocalCompletion(FALLBACK_COMPLETION_CANDIDATES)
-      }
-    })()
-  }, [])
-
-  const iSearchMatches = useMemo(
-    () => matchesForSearch(history, mode === "isearch" ? line : ""),
-    [history, line, mode]
-  )
-
-
-
-  useEffect(() => {
-    if (iSearchCycle >= iSearchMatches.length && iSearchMatches.length > 0) {
-      setISearchCycle(0)
-    }
-    if (iSearchMatches.length === 0) {
-      setISearchCycle(0)
-    }
-  }, [iSearchMatches.length, iSearchCycle, iSearchMatches])
-
-  useLayoutEffect(() => {
-    const ta = imeRef.current
-    if (!ta || isComposing) {
-      return
-    }
-    if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
-      ta.setSelectionRange(cursorPos, cursorPos)
-    }
-  }, [line, cursorPos, isComposing])
-
   const {
     subCmdPicker,
     setSubCmdPicker,
@@ -621,7 +566,6 @@ export function BmxtShell({
   } = useSearchListShell({
     sessionId,
     uiLocale: uiSettings.locale,
-    uiCopy,
     jobRunner,
     line,
     cursorPos,
@@ -734,11 +678,6 @@ export function BmxtShell({
   })
 
 
-
-  const promptLine = useCallback(
-    () => imeRef.current?.value ?? lineRef.current,
-    []
-  )
 
   const {
     onSettingPickerStateChange,
@@ -922,8 +861,6 @@ export function BmxtShell({
   const showNavTypingPlaceholder =
     navPageTyping && line.trim() === "" && !isComposing
   const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
-  const mirror = promptMirrorSegments(line, cursorPos, isComposing, compositionAnchor)
-  const iSearchPreview = iSearchMatches[iSearchCycle]
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
 
   const shellContent = (

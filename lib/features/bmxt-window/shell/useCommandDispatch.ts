@@ -31,6 +31,7 @@ import {
   parseSettingIncompleteLine,
   parseSettingListPickerLine,
 } from "../../setting/setting-list-picker-input"
+import { createSettingListPickerState } from "../../setting/setting-list-picker-state"
 import { buildTabPickerRows, resolveInitialTabPickerHighlightIndex } from "../../tabs/picker-rows"
 import {
   parseGroupNewInteractiveLine,
@@ -165,7 +166,6 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.tabPressSeqRef.current = 0
       void (async () => {
         try {
-          const { createSettingListPickerState } = await import("../../setting/setting-list-picker-state")
           const state = createSettingListPickerState(deps.uiSettings)
           await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("setting.picker.hint")])
           deps.setSettingListPicker(deps.sessionId, state)
@@ -361,7 +361,6 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.tabPressSeqRef.current = 0
       void (async () => {
         try {
-          const { settingTokenForPageActiveMode } = await import("../../tabs/page-active-setting")
           const rows = await buildTabPickerRows(showUrl, deps.uiSettings.locale)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
           const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)

@@ -16,8 +16,9 @@ import { useBatchedSearchLoadingProgress } from "../../search/use-batched-search
 import { pickerEntriesFromSearchLines } from "../../side-picker/model/from-search-lines"
 import type { PickerEntry } from "../../side-picker/model/picker-entry"
 import { isJobHandleActive, mergeJobIntoDispatchContext, shouldCancelJob, type JobRunner } from "../../job"
-import type { UiCopy } from "../../setting/use-ui-copy"
 import type { UiLocale } from "../../setting/locale"
+import { tSearch } from "../../setting/i18n/ns/search"
+import { tError } from "../../setting/i18n/ns/error"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { activateModeToolbar } from "../mode-toolbar-order"
 import { effectsIncludeSearchPage } from "./bmxt-shell-prompt-helpers"
@@ -25,7 +26,6 @@ import { effectsIncludeSearchPage } from "./bmxt-shell-prompt-helpers"
 export type UseSearchListShellOptions = {
   sessionId: string
   uiLocale: UiLocale
-  uiCopy: UiCopy
   jobRunner: JobRunner
   line: string
   cursorPos: number
@@ -89,7 +89,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
             }
             const effects = bundle.effects ?? []
             if (effectsIncludeSearchPage(effects) && !shouldCancelJob(job)) {
-              appendSearchLoadingProgress(options.uiCopy.t("search.pageScanHint"))
+              appendSearchLoadingProgress(tSearch("search.pageScanHint", options.uiLocale))
             }
             const ctx = mergeJobIntoDispatchContext(
               {
@@ -140,7 +140,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
             if (!shouldCancelJob(job)) {
               options.setSearchListPicker(options.sessionId, null)
               await options.appendLogLines([
-                options.uiCopy.t("error.generic", {
+                tError("error.generic", options.uiLocale, {
                   message: e instanceof Error ? e.message : String(e)
                 })
               ])
@@ -161,8 +161,8 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
     options.jobRunner.cancelHandle(job)
     clearSearchLoadingProgress()
     void options.appendLogLines([
-      options.uiCopy.t("search.cancelledCtrlC"),
-      options.uiCopy.t("search.pageScanCancelled")
+      tSearch("search.cancelledCtrlC", options.uiLocale),
+      tSearch("search.pageScanCancelled", options.uiLocale)
     ])
   }, [clearSearchLoadingProgress, options])
 

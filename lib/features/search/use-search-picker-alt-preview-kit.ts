@@ -24,7 +24,8 @@ import {
 import { usePickerAltKeyTracking } from "../side-picker/preview/use-picker-alt-key-tracking"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tSearch } from "../setting/i18n/ns/search"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import {
   previewSearchPickerDetailHitInBackground,
@@ -86,7 +87,8 @@ export function useSearchPickerAltPreviewKit({
   listScrollHintRef: listScrollHintRefOption,
   baseExtensions
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const altKeyHeldRef = useRef(false)
   const internalListScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
   const listScrollHintRef = listScrollHintRefOption ?? internalListScrollHintRef
@@ -142,12 +144,12 @@ export function useSearchPickerAltPreviewKit({
   )
 
   const showNoPreviewTargetNotice = useCallback(() => {
-    showPreviewNotice(uiCopy.t("search.picker.noDetailScrollTarget"))
-  }, [showPreviewNotice, uiCopy])
+    showPreviewNotice(tSearch("search.picker.noDetailScrollTarget", locale))
+  }, [showPreviewNotice, locale])
 
   const showPreviewScrollFailedNotice = useCallback(() => {
-    showPreviewNotice(uiCopy.t("search.picker.previewScrollFailed"))
-  }, [showPreviewNotice, uiCopy])
+    showPreviewNotice(tSearch("search.picker.previewScrollFailed", locale))
+  }, [showPreviewNotice, locale])
 
   const canPreviewCurrentSelection = useCallback(
     (rowIndex: number): boolean => {
