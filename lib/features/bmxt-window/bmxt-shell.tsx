@@ -68,6 +68,9 @@ import {
 } from "./detail-bar-focus"
 import { useDetailBarKeyboard } from "./use-detail-bar-keyboard"
 import { TokenPickerPanel, type TokenPickerModel } from "./token-picker-panel"
+import { PromptInput } from "./shell/PromptInput"
+import { useCommandDispatch } from "./shell/useCommandDispatch"
+import { usePickerManager } from "./shell/usePickerManager"
 import {
   isSearchListContinuationPrompt,
   isSearchListReadyToRun,
@@ -352,40 +355,31 @@ export function BmxtShell({
       scheduleTabPickerRowsRefresh()
     }
   }, [uiSettings.locale, scheduleTabPickerRowsRefresh])
-  const tabPicker = sessionPickers.tabs
-  const searchListPicker = sessionPickers.search
-  const domListPicker = sessionPickers.dom
-  const settingListPicker = sessionPickers.setting
-  const setTabPicker = useCallback(
-    (forSessionId: string, v: TabPickerState | null | ((prev: TabPickerState | null) => TabPickerState | null)) => {
-      setSessionPickerSlot(forSessionId, "tabs", v)
-    },
-    [setSessionPickerSlot]
-  )
-  const setSearchListPicker = useCallback(
-    (forSessionId: string, v: SearchListPickerState | null | ((prev: SearchListPickerState | null) => SearchListPickerState | null)) => {
-      setSessionPickerSlot(forSessionId, "search", v)
-    },
-    [setSessionPickerSlot]
-  )
-  const setDomListPicker = useCallback(
-    (forSessionId: string, v: DomListPickerState | null | ((prev: DomListPickerState | null) => DomListPickerState | null)) => {
-      setSessionPickerSlot(forSessionId, "dom", v)
-    },
-    [setSessionPickerSlot]
-  )
-  const setSettingListPicker = useCallback(
-    (forSessionId: string, v: SettingListPickerState | null | ((prev: SettingListPickerState | null) => SettingListPickerState | null)) => {
-      setSessionPickerSlot(forSessionId, "setting", v)
-    },
-    [setSessionPickerSlot]
-  )
-  /** tabs / search / dom / setting — 左ターミナル・右にピッカー列（複数可）。 */
-  const sidePickerOpen =
-    tabPicker !== null ||
-    searchListPicker !== null ||
-    domListPicker !== null ||
-    settingListPicker !== null
+  const translateEnabledRef = useRef(false)
+  const {
+    tabPicker,
+    searchListPicker,
+    domListPicker,
+    settingListPicker,
+    setTabPicker,
+    setSearchListPicker,
+    setDomListPicker,
+    setSettingListPicker,
+    sidePickerOpen
+  } = usePickerManager({
+    sessionId,
+    sessionPickers,
+    setSessionPickerSlot,
+    paneFocus,
+    onPaneFocusChange,
+    detailBarId,
+    onDetailBarIdChange,
+    modeToolbarOrder,
+    onModeToolbarOrderChange,
+    navArmed,
+    translateEnabled: translateEnabledRef.current
+  })
+
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
   const openPickersRef = useRef<readonly PickerSlotId[]>([])
@@ -465,7 +459,6 @@ export function BmxtShell({
   const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
     DEFAULT_TRANSLATION_PAIR_ID
   )
-  const translateEnabledRef = useRef(false)
   const translatePairIdRef = useRef<TranslationPairId>(DEFAULT_TRANSLATION_PAIR_ID)
   const [tabsPageActiveMode, setTabsPageActiveMode] = useState<TabsPageActiveMode>("auto")
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
@@ -672,63 +665,6 @@ export function BmxtShell({
   useEffect(() => {
     searchPageActiveModeRef.current = searchPageActiveMode
   }, [searchPageActiveMode])
-
-  useEffect(() => {
-    if (paneFocus === "detailBar" && detailBarId === null) {
-      const fallback = modeToolbarOrder[modeToolbarOrder.length - 1] ?? null
-      if (fallback !== null) {
-        setDetailBarId(fallback)
-        return
-      }
-      onPaneFocusChange("terminal")
-      return
-    }
-    if (paneFocus === "tabs" && tabPicker === null) {
-      onPaneFocusChange("terminal")
-      setDetailBarId(null)
-    } else if (paneFocus === "search" && searchListPicker === null) {
-      onPaneFocusChange("terminal")
-      setDetailBarId(null)
-    } else if (paneFocus === "dom" && domListPicker === null) {
-      onPaneFocusChange("terminal")
-      setDetailBarId(null)
-    } else if (paneFocus === "setting" && settingListPicker === null) {
-      onPaneFocusChange("terminal")
-      setDetailBarId(null)
-    } else if (paneFocus === "detailBar" && detailBarId !== null) {
-      if (detailBarId === "tabs" && tabPicker === null) {
-        onPaneFocusChange("terminal")
-        setDetailBarId(null)
-      } else if (detailBarId === "search" && searchListPicker === null) {
-        onPaneFocusChange("terminal")
-        setDetailBarId(null)
-      } else if (detailBarId === "dom" && domListPicker === null) {
-        onPaneFocusChange("terminal")
-        setDetailBarId(null)
-      } else if (detailBarId === "setting" && settingListPicker === null) {
-        onPaneFocusChange("terminal")
-        setDetailBarId(null)
-      } else if (detailBarId === "nav" && !navArmed) {
-        onPaneFocusChange("terminal")
-        setDetailBarId(null)
-      } else if (detailBarId === "translate" && !translateEnabled) {
-        onPaneFocusChange("terminal")
-        setDetailBarId(null)
-      }
-    }
-  }, [
-    detailBarId,
-    domListPicker,
-    modeToolbarOrder,
-    navArmed,
-    onPaneFocusChange,
-    paneFocus,
-    searchListPicker,
-    setDetailBarId,
-    settingListPicker,
-    tabPicker,
-    translateEnabled
-  ])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const imeRef = useRef<HTMLTextAreaElement>(null)
@@ -3396,80 +3332,37 @@ export function BmxtShell({
             </span>
           </div>
         ) : null}
-        <div
-          className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}${sessionNameTyping ? " bmxt-prompt-line--session-name-typing" : ""}`}>
-          <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
-          <div className="bmxt-prompt-field">
-            <div className="bmxt-prompt-mirror" aria-hidden>
-              <span>{mirror.before}</span>
-              {mirror.composition ? (
-                <span className="bmxt-prompt-composition">{mirror.composition}</span>
-              ) : (
-                <span
-                  ref={cursorMirrorCellRef}
-                  className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${promptPaneFocused ? "" : " bmxt-cursor-cell--inactive"}`}>
-                  {mirror.cur || "\u00a0"}
-                </span>
-              )}
-              <span>{mirror.after}</span>
-            </div>
-            <textarea
-              ref={imeRef}
-              className="bmxt-prompt-ime"
-              rows={1}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              autoComplete="off"
-              wrap="off"
-              tabIndex={promptPaneFocused ? 0 : -1}
-              aria-label={
-                mode === "isearch"
-                  ? uiCopy.t("prompt.isearch.aria")
-                  : uiCopy.t("prompt.commandLine.aria")
-              }
-              placeholder={
-                showNavTypingPlaceholder
-                  ? navTypingMultiline
-                    ? uiCopy.t("prompt.navTypingMultiline")
-                    : uiCopy.t("prompt.navTyping")
-                  : showSessionNameTypingPlaceholder
-                    ? uiCopy.t("session.settingName.placeholder")
-                  : showSearchListPatternPlaceholder
-                    ? uiCopy.t("prompt.searchListPattern")
-                    : mode === "normal" && line.trim() === ""
-                      ? uiCopy.t("prompt.placeholder")
-                      : undefined
-              }
-              value={navPromptValueControlled ? line : undefined}
-              readOnly={!promptPaneFocused}
-              onInput={onImeInput}
-              onBeforeInput={onBeforeInput}
-              onSelect={onImeSelect}
-              onKeyDown={onKeyDown}
-              onPaste={onPaste}
-              onCompositionStart={onCompositionStart}
-              onCompositionUpdate={onCompositionUpdate}
-              onCompositionEnd={onCompositionEnd}
-            />
-            {promptPickerOpen ? (
-              <div
-                ref={subCmdPickerHostRef}
-                className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
-                {...{ [CSP_DYNAMIC_SCOPE_ATTR]: promptPickerScopeId ?? subCmdPickerScopeId }}>
-                {subCmdPicker ? (
-                  <TokenPickerPanel model={subCmdPicker} />
-                ) : sessionListPickerHi !== null ? (
-                  <SessionListCandidatePanel
-                    rows={sessionListPickerRows}
-                    hi={sessionListPickerHi}
-                    variant={sessionPickerVariant ?? "list"}
-                  />
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <PromptInput
+          mode={mode}
+          line={line}
+          cursorPos={cursorPos}
+          isComposing={isComposing}
+          promptPaneFocused={promptPaneFocused}
+          navPageTyping={navPageTyping}
+          navTypingMultiline={navTypingMultiline}
+          sessionNameTyping={sessionNameTyping}
+          showSearchListPatternPlaceholder={showSearchListPatternPlaceholder}
+          mirror={mirror}
+          uiCopy={uiCopy}
+          imeRef={imeRef}
+          cursorMirrorCellRef={cursorMirrorCellRef}
+          subCmdPickerHostRef={subCmdPickerHostRef}
+          promptPickerOpen={promptPickerOpen}
+          promptPickerScopeId={promptPickerScopeId}
+          subCmdPickerScopeId={subCmdPickerScopeId}
+          subCmdPicker={subCmdPicker}
+          sessionListPickerHi={sessionListPickerHi}
+          sessionListPickerRows={sessionListPickerRows}
+          sessionPickerVariant={sessionPickerVariant}
+          onImeInput={onImeInput}
+          onBeforeInput={onBeforeInput}
+          onImeSelect={onImeSelect}
+          onKeyDown={onKeyDown}
+          onPaste={onPaste}
+          onCompositionStart={onCompositionStart}
+          onCompositionUpdate={onCompositionUpdate}
+          onCompositionEnd={onCompositionEnd}
+        />
         {navPageTyping && translateEnabled ? (
           <TranslationStrip
             pairId={translatePairId}
