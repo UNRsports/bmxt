@@ -34,15 +34,9 @@ export default defineConfig({
       "bookmarks"
     ],
     optional_host_permissions: ["http://*/*", "https://*/*"],
-    web_accessible_resources: [
-      {
-        resources: ["assets/search-cache/*"],
-        matches: ["<all_urls>"]
-      }
-    ],
     content_security_policy: {
       extension_pages:
-        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
+        "default-src 'self'; script-src 'self'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
     },
     commands: {
       "launch-bmxt": {

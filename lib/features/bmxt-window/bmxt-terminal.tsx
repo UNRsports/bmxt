@@ -31,7 +31,6 @@ import {
   flushPageBootPerf,
   markPageBootPhase
 } from "../launch/page-boot-perf"
-import { warmBackgroundServicesFromPageAsync } from "../launch/warm-background-services"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
@@ -224,8 +223,6 @@ function BmxtTerminalInner() {
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
 
-  const [backgroundReady, setBackgroundReady] = useState(false)
-
   const validSessionIds = useMemo(() => state?.order ?? [], [state?.order])
 
   const {
@@ -269,12 +266,6 @@ function BmxtTerminalInner() {
   }, [])
 
   useEffect(() => {
-    if (backgroundReady) {
-      markPageBootPhase("gate-background-ready")
-    }
-  }, [backgroundReady])
-
-  useEffect(() => {
     if (upgradeBannerReady) {
       markPageBootPhase("gate-upgrade-banner-ready")
     }
@@ -291,12 +282,6 @@ function BmxtTerminalInner() {
       markPageBootPhase("gate-session-state-ready")
     }
   }, [state])
-
-  useEffect(() => {
-    void warmBackgroundServicesFromPageAsync()
-      .then(() => setBackgroundReady(true))
-      .catch(() => setBackgroundReady(true))
-  }, [])
 
   useEffect(() => {
     void (async () => {
@@ -432,7 +417,7 @@ function BmxtTerminalInner() {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  const promptInteractive = state !== null && processUiReady && backgroundReady
+  const promptInteractive = state !== null && processUiReady
 
   useEffect(() => {
     if (!promptInteractive || promptPerfFlushedRef.current) {

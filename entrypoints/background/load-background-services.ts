@@ -7,7 +7,6 @@
 
 export type BackgroundServicesModule = {
   registerBackgroundServices(): void
-  warmBackgroundServicesAsync(): Promise<void>
   handleSessionRuntimeMessageAsync(message: Record<string, unknown>): Promise<unknown>
   runCommandMessage(
     line: string,
@@ -35,11 +34,16 @@ function readBackgroundServicesModule(): BackgroundServicesModule {
 
 export function loadBackgroundServicesAsync(): Promise<BackgroundServicesModule> {
   if (!servicesPromise) {
-    servicesPromise = Promise.resolve().then(() => {
-      const url = chrome.runtime.getURL("background-services.js")
-      importScripts(url)
-      return readBackgroundServicesModule()
-    })
+    servicesPromise = Promise.resolve()
+      .then(() => {
+        const url = chrome.runtime.getURL("background-services.js")
+        importScripts(url)
+        return readBackgroundServicesModule()
+      })
+      .catch((error) => {
+        servicesPromise = undefined
+        throw error
+      })
   }
   return servicesPromise
 }

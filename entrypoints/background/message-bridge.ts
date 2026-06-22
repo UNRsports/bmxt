@@ -51,29 +51,25 @@ function safeSendResponse(sendResponse: (response: unknown) => void, body: unkno
   }
 }
 
+function withBackgroundServices<T>(
+  run: (services: Awaited<ReturnType<typeof loadBackgroundServicesAsync>>) => Promise<T>
+): Promise<T> {
+  return loadBackgroundServicesAsync().then((services) => {
+    services.registerBackgroundServices()
+    return run(services)
+  })
+}
+
 export function setupMessageBridge(): void {
   chrome.runtime.onMessage.addListener(
     (message: RunCmdMessage & NavControlMessage, sender, sendResponse) => {
-      if (message?.type === "WARM_BACKGROUND") {
-        void loadBackgroundServicesAsync()
-          .then((services) => services.warmBackgroundServicesAsync())
-          .then(() => safeSendResponse(sendResponse, { ok: true }))
-          .catch((e) =>
-            safeSendResponse(sendResponse, {
-              ok: false,
-              error: e instanceof Error ? e.message : String(e)
-            })
-          )
-        return true
-      }
       if (
         typeof message?.type === "string" &&
         SESSION_RUNTIME_MESSAGE_TYPES.has(message.type)
       ) {
-        void loadBackgroundServicesAsync()
-          .then((services) =>
-            services.handleSessionRuntimeMessageAsync(message as Record<string, unknown>)
-          )
+        void withBackgroundServices((services) =>
+          services.handleSessionRuntimeMessageAsync(message as Record<string, unknown>)
+        )
           .then((result) => safeSendResponse(sendResponse, result))
           .catch((e) =>
             safeSendResponse(sendResponse, {
@@ -84,10 +80,9 @@ export function setupMessageBridge(): void {
         return true
       }
       if (message?.type === "RUN_CMD" && typeof message.line === "string") {
-        void loadBackgroundServicesAsync()
-          .then((services) =>
-            services.runCommandMessage(message.line!, message.sessionId, sender)
-          )
+        void withBackgroundServices((services) =>
+          services.runCommandMessage(message.line!, message.sessionId, sender)
+        )
           .then(() => safeSendResponse(sendResponse, { ok: true }))
           .catch((e) =>
             safeSendResponse(sendResponse, {
@@ -98,8 +93,7 @@ export function setupMessageBridge(): void {
         return true
       }
       if (message?.type === "NAV_CONTROL" && typeof message.tabId === "number") {
-        void loadBackgroundServicesAsync()
-          .then((services) => services.runNavControlMessage(message))
+        void withBackgroundServices((services) => services.runNavControlMessage(message))
           .then((result) => safeSendResponse(sendResponse, result))
           .catch((e) =>
             safeSendResponse(sendResponse, {

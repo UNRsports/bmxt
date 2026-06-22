@@ -9,15 +9,12 @@ import {
   markPageBootPhase,
   resetPageBootPerf
 } from "../../lib/features/launch/page-boot-perf"
-import { warmBackgroundServicesFromPageAsync } from "../../lib/features/launch/warm-background-services"
 import { startVersionUpgradePreflight } from "../../lib/features/bmxt-window/version-upgrade-preflight"
 
 resetPageBootPerf()
 installPageBootPerfConsoleHelpers()
 markPageBootPhase("page-script-start")
 startVersionUpgradePreflight()
-
-void warmBackgroundServicesFromPageAsync()
 
 void (async () => {
   const rootEl = document.getElementById("root")

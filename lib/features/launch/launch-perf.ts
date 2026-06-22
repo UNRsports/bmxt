@@ -19,7 +19,6 @@ export type LaunchPerfSnapshot = {
   ts: number
   phases: Record<string, number>
   launchChainMs?: number
-  warmSearchReason?: string
 }
 
 let originMs = 0
@@ -40,7 +39,6 @@ export function readLaunchPerfMarks(): ReadonlyMap<LaunchPerfPhase, number> {
 
 export async function flushLaunchPerf(extra?: {
   launchChainMs?: number
-  warmSearchReason?: string
 }): Promise<LaunchPerfSnapshot> {
   const payload: LaunchPerfSnapshot = {
     ts: Date.now(),

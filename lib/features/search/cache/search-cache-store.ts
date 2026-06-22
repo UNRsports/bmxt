@@ -1,28 +1,32 @@
 /**
- * EN: Single SQLite-backed store for all `search -list` cache scopes.
- * JA: search キャッシュの単一 SQLite 情報源（history / bookmark / page 共通）。
+ * EN: In-memory search cache for `search -list` history/bookmark scopes (no SQLite).
+ * JA: `search -list` 用の履歴・ブックマークキャッシュ（メモリのみ、SQLite なし）。
  */
 
+import {
+  JOB_DB_KEY,
+  SEARCH_CACHE_BOOKMARK_KEY,
+  SEARCH_CACHE_DB_KEY,
+  SEARCH_CACHE_HISTORY_KEY,
+  SEARCH_CACHE_PAGE_KEY
+} from "../../extension-storage/keys"
 import { HISTORY_LOOKBACK_MS, MAX_BOOKMARK_ROWS, MAX_HISTORY_RESULTS } from "../limits"
 import { bookmarkTreeRevision, flattenBookmarkTreeWithRevision } from "./bookmark-revision"
-import {
-  persistSearchCacheDb,
-  resetSearchCacheDatabase,
-  runSearchCacheTask,
-  runSearchCacheTaskAndPersist,
-  type SearchCacheDbSession
-} from "./db/search-cache-db"
-import {
-  META_BOOKMARK_REVISION,
-  META_HISTORY_LOOKBACK_MS,
-  META_HISTORY_MAX_LAST_VISIT,
-  META_HISTORY_MAX_RESULTS
-} from "./db/schema"
 import { isHistoryCacheEntryFresh } from "./stale"
 import type { BookmarkCacheEntry, HistoryCacheEntry } from "./types"
 
 const HISTORY_PROBE_MAX = 32
 const HISTORY_PROBE_WINDOW_MS = 60_000
+
+type HistoryCacheState = {
+  lookbackMs: number
+  maxResults: number
+  maxLastVisit: number
+  byUrl: Map<string, HistoryCacheEntry>
+}
+
+let historyCache: HistoryCacheState | null = null
+let bookmarkCache: { revision: string; entries: BookmarkCacheEntry[] } | null = null
 
 function historyEntryFromItem(it: chrome.history.HistoryItem): HistoryCacheEntry | null {
   const url = it.url ?? ""
@@ -52,14 +56,54 @@ async function fetchLiveHistoryEntries(): Promise<HistoryCacheEntry[]> {
   return out
 }
 
-function historyConfigMatches(session: SearchCacheDbSession): boolean {
-  return (
-    session.getMetaNumber(META_HISTORY_LOOKBACK_MS, -1) === HISTORY_LOOKBACK_MS &&
-    session.getMetaNumber(META_HISTORY_MAX_RESULTS, -1) === MAX_HISTORY_RESULTS
-  )
+function historyConfigMatches(state: HistoryCacheState): boolean {
+  return state.lookbackMs === HISTORY_LOOKBACK_MS && state.maxResults === MAX_HISTORY_RESULTS
 }
 
-async function historyProbeNeedsFullRefresh(session: SearchCacheDbSession): Promise<boolean> {
+function listCachedHistory(state: HistoryCacheState): HistoryCacheEntry[] {
+  const minTime = Date.now() - HISTORY_LOOKBACK_MS
+  const rows: HistoryCacheEntry[] = []
+  for (const row of state.byUrl.values()) {
+    if (row.lastVisitTime >= minTime) {
+      rows.push(row)
+    }
+  }
+  rows.sort((a, b) => b.lastVisitTime - a.lastVisitTime)
+  if (rows.length > MAX_HISTORY_RESULTS) {
+    return rows.slice(0, MAX_HISTORY_RESULTS)
+  }
+  return rows
+}
+
+function trimHistoryRows(state: HistoryCacheState): void {
+  const kept = listCachedHistory(state)
+  state.byUrl.clear()
+  let maxLastVisit = 0
+  for (const row of kept) {
+    state.byUrl.set(row.url, row)
+    if (row.lastVisitTime > maxLastVisit) {
+      maxLastVisit = row.lastVisitTime
+    }
+  }
+  state.maxLastVisit = maxLastVisit
+}
+
+function syncHistoryConfigMeta(state: HistoryCacheState): void {
+  state.lookbackMs = HISTORY_LOOKBACK_MS
+  state.maxResults = MAX_HISTORY_RESULTS
+  trimHistoryRows(state)
+}
+
+function emptyHistoryCache(): HistoryCacheState {
+  return {
+    lookbackMs: HISTORY_LOOKBACK_MS,
+    maxResults: MAX_HISTORY_RESULTS,
+    maxLastVisit: 0,
+    byUrl: new Map()
+  }
+}
+
+async function historyProbeNeedsFullRefresh(state: HistoryCacheState): Promise<boolean> {
   const probe = await chrome.history.search({
     text: "",
     maxResults: HISTORY_PROBE_MAX,
@@ -70,8 +114,8 @@ async function historyProbeNeedsFullRefresh(session: SearchCacheDbSession): Prom
     if (!row) {
       continue
     }
-    const cached = session.getHistoryRow(row.url)
-    if (!isHistoryCacheEntryFresh(cached ?? undefined, row.url, row.lastVisitTime)) {
+    const cached = state.byUrl.get(row.url)
+    if (!isHistoryCacheEntryFresh(cached, row.url, row.lastVisitTime)) {
       return true
     }
   }
@@ -83,137 +127,126 @@ async function historyProbeNeedsFullRefresh(session: SearchCacheDbSession): Prom
   if (!newestRow) {
     return false
   }
-  const maxCached = session.getMetaNumber(META_HISTORY_MAX_LAST_VISIT, 0)
-  return newestRow.lastVisitTime > maxCached
+  return newestRow.lastVisitTime > state.maxLastVisit
 }
 
-function syncHistoryConfigMeta(session: SearchCacheDbSession): void {
-  session.setMeta(META_HISTORY_LOOKBACK_MS, String(HISTORY_LOOKBACK_MS))
-  session.setMeta(META_HISTORY_MAX_RESULTS, String(MAX_HISTORY_RESULTS))
-  session.recomputeHistoryMaxLastVisit()
+let searchCacheListenersRegistered = false
+
+function isServiceWorkerContext(): boolean {
+  return typeof window === "undefined"
 }
 
-function listCachedHistory(session: SearchCacheDbSession): HistoryCacheEntry[] {
-  const minTime = Date.now() - HISTORY_LOOKBACK_MS
-  return session.listHistoryRows(MAX_HISTORY_RESULTS, minTime).map((row) => ({
-    url: row.url,
-    title: row.title,
-    lastVisitTime: row.lastVisitTime
-  }))
+function onHistoryVisited(item: chrome.history.HistoryItem): void {
+  void upsertHistoryCacheOnVisit(item)
 }
 
-/** EN: Resolve history rows — compare live Chrome data against the unified DB. */
-export async function resolveHistoryEntriesForSearch(): Promise<HistoryCacheEntry[]> {
-  return runSearchCacheTaskAndPersist(async (session) => {
-    const cached = listCachedHistory(session)
-    if (
-      cached.length > 0 &&
-      historyConfigMatches(session) &&
-      !(await historyProbeNeedsFullRefresh(session))
-    ) {
-      return cached
-    }
-
-    const live = await fetchLiveHistoryEntries()
-    for (const row of live) {
-      const existing = session.getHistoryRow(row.url)
-      if (isHistoryCacheEntryFresh(existing ?? undefined, row.url, row.lastVisitTime)) {
-        continue
-      }
-      session.upsertHistoryRow(row.url, row.title, row.lastVisitTime)
-    }
-    session.trimHistoryRows(MAX_HISTORY_RESULTS)
-    syncHistoryConfigMeta(session)
-    return listCachedHistory(session)
-  })
+function onBookmarkTreeChanged(): void {
+  void rebuildBookmarkSearchCache()
 }
 
-/** EN: Background `history.onVisited` — upsert into unified DB. */
-export async function upsertHistoryCacheOnVisit(item: chrome.history.HistoryItem): Promise<void> {
-  const row = historyEntryFromItem(item)
-  if (!row) {
+/** EN: Register Chrome listeners once — SW only, on first `search` use. */
+export function ensureSearchCacheBackgroundListeners(): void {
+  if (!isServiceWorkerContext() || searchCacheListenersRegistered) {
     return
   }
-  await runSearchCacheTaskAndPersist(async (session) => {
-    const existing = session.getHistoryRow(row.url)
-    if (existing && existing.lastVisitTime >= row.lastVisitTime) {
-      return
-    }
-    if (!historyConfigMatches(session)) {
-      syncHistoryConfigMeta(session)
-    }
-    session.upsertHistoryRow(row.url, row.title, row.lastVisitTime)
-    session.trimHistoryRows(MAX_HISTORY_RESULTS)
-    syncHistoryConfigMeta(session)
-  })
+  searchCacheListenersRegistered = true
+
+  chrome.history.onVisited.addListener(onHistoryVisited)
+  chrome.bookmarks.onCreated.addListener(onBookmarkTreeChanged)
+  chrome.bookmarks.onChanged.addListener(onBookmarkTreeChanged)
+  chrome.bookmarks.onMoved.addListener(onBookmarkTreeChanged)
+  chrome.bookmarks.onRemoved.addListener(onBookmarkTreeChanged)
 }
 
-/** EN: Warm history table on startup. */
-export async function warmSearchHistoryCache(): Promise<void> {
+function touchSearchCache(): void {
+  ensureSearchCacheBackgroundListeners()
+}
+
+/** EN: Resolve history rows — compare live Chrome data against in-memory cache. */
+export async function resolveHistoryEntriesForSearch(): Promise<HistoryCacheEntry[]> {
+  touchSearchCache()
+  let state = historyCache
+  if (state && historyConfigMatches(state)) {
+    const cached = listCachedHistory(state)
+    if (cached.length > 0 && !(await historyProbeNeedsFullRefresh(state))) {
+      return cached
+    }
+  }
+
+  if (!state || !historyConfigMatches(state)) {
+    state = emptyHistoryCache()
+    historyCache = state
+  }
+
   const live = await fetchLiveHistoryEntries()
-  await runSearchCacheTaskAndPersist(async (session) => {
-    for (const row of live) {
-      session.upsertHistoryRow(row.url, row.title, row.lastVisitTime)
+  for (const row of live) {
+    const existing = state.byUrl.get(row.url)
+    if (isHistoryCacheEntryFresh(existing, row.url, row.lastVisitTime)) {
+      continue
     }
-    session.trimHistoryRows(MAX_HISTORY_RESULTS)
-    syncHistoryConfigMeta(session)
-  })
+    state.byUrl.set(row.url, row)
+  }
+  syncHistoryConfigMeta(state)
+  return listCachedHistory(state)
 }
 
-/** EN: Resolve bookmark rows — compare tree revision against unified DB meta. */
+/** EN: Background `history.onVisited` — upsert in-memory cache when active. */
+export async function upsertHistoryCacheOnVisit(item: chrome.history.HistoryItem): Promise<void> {
+  const row = historyEntryFromItem(item)
+  if (!row || !historyCache) {
+    return
+  }
+  const state = historyCache
+  const existing = state.byUrl.get(row.url)
+  if (existing && existing.lastVisitTime >= row.lastVisitTime) {
+    return
+  }
+  if (!historyConfigMatches(state)) {
+    syncHistoryConfigMeta(state)
+  }
+  state.byUrl.set(row.url, row)
+  if (row.lastVisitTime > state.maxLastVisit) {
+    state.maxLastVisit = row.lastVisitTime
+  }
+  trimHistoryRows(state)
+}
+
+/** EN: Resolve bookmark rows — compare tree revision against in-memory cache. */
 export async function resolveBookmarkEntriesForSearch(): Promise<BookmarkCacheEntry[]> {
+  touchSearchCache()
   const tree = await chrome.bookmarks.getTree()
   const revision = bookmarkTreeRevision(tree)
-  return runSearchCacheTask(async (session) => {
-    const cachedRevision = session.getMeta(META_BOOKMARK_REVISION)
-    if (cachedRevision === revision) {
-      const rows = session.listBookmarkRows(MAX_BOOKMARK_ROWS)
-      if (rows.length > 0) {
-        return rows
-      }
-    }
-    const { entries } = flattenBookmarkTreeWithRevision(tree, MAX_BOOKMARK_ROWS)
-    session.clearBookmarkRows()
-    for (const row of entries) {
-      session.upsertBookmarkRow(row.url, row.title, row.dateAdded)
-    }
-    session.setMeta(META_BOOKMARK_REVISION, revision)
-    await persistSearchCacheDb()
-    return entries
-  })
+  if (bookmarkCache && bookmarkCache.revision === revision && bookmarkCache.entries.length > 0) {
+    return bookmarkCache.entries
+  }
+  const { entries } = flattenBookmarkTreeWithRevision(tree, MAX_BOOKMARK_ROWS)
+  bookmarkCache = { revision, entries }
+  return entries
 }
 
 /** EN: Rebuild bookmark rows after tree mutations. */
 export async function rebuildBookmarkSearchCache(): Promise<void> {
+  touchSearchCache()
   const tree = await chrome.bookmarks.getTree()
   const { revision, entries } = flattenBookmarkTreeWithRevision(tree, MAX_BOOKMARK_ROWS)
-  await runSearchCacheTaskAndPersist(async (session) => {
-    session.clearBookmarkRows()
-    for (const row of entries) {
-      session.upsertBookmarkRow(row.url, row.title, row.dateAdded)
-    }
-    session.setMeta(META_BOOKMARK_REVISION, revision)
-  })
+  bookmarkCache = { revision, entries }
 }
 
-/** EN: Warm bookmark table on startup. */
-export async function warmSearchBookmarkCache(): Promise<void> {
-  await rebuildBookmarkSearchCache()
-}
+/** EN: Legacy no-op — page scope is live-only. */
+export async function removePageCacheTab(_tabId: number): Promise<void> {}
 
-/** EN: Drop one legacy `page_tab` row (migration / tab navigation cleanup only). */
-export async function removePageCacheTab(tabId: number): Promise<void> {
-  await runSearchCacheTaskAndPersist(async (session) => {
-    session.deletePageTab(tabId)
-  })
-}
+/** EN: Legacy no-op — nothing to flush without SQLite. */
+export async function flushSearchCacheDb(): Promise<void> {}
 
-/** EN: Flush pending SQLite mutations after history/bookmark cache writes. */
-export async function flushSearchCacheDb(): Promise<void> {
-  await persistSearchCacheDb()
-}
-
-/** EN: Clear search cache DB from settings (separate from `reset-bmxt`). */
+/** EN: Clear in-memory cache and drop legacy storage blobs from settings. */
 export async function resetSearchCacheFromSettings(): Promise<void> {
-  await resetSearchCacheDatabase()
+  historyCache = null
+  bookmarkCache = null
+  await chrome.storage.local.remove([
+    SEARCH_CACHE_DB_KEY,
+    SEARCH_CACHE_HISTORY_KEY,
+    SEARCH_CACHE_BOOKMARK_KEY,
+    SEARCH_CACHE_PAGE_KEY,
+    JOB_DB_KEY
+  ])
 }

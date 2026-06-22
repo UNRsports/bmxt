@@ -12,10 +12,10 @@ describe("page boot perf", () => {
   it("records phases relative to reset origin", () => {
     resetPageBootPerf(100)
     markPageBootPhase("page-script-start")
-    markPageBootPhase("warm-background-done")
+    markPageBootPhase("terminal-mounted")
     const marks = readPageBootPerfMarks()
     assert.ok(marks.get("page-script-start")! >= 0)
-    assert.ok(marks.get("warm-background-done")! >= marks.get("page-script-start")!)
+    assert.ok(marks.get("terminal-mounted")! >= marks.get("page-script-start")!)
   })
 
   it("records each phase at most once", () => {

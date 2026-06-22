@@ -42,7 +42,7 @@ export const TABS_PICKER_SETTINGS_KEY = "bmxt_tabs_picker_settings_v1"
 /** Search list picker: page-active preview mode (`--auto` / `--manual`). */
 export const SEARCH_PICKER_SETTINGS_KEY = "bmxt_search_picker_settings_v1"
 
-/** Single SQLite blob (`sql.js`) — search metadata cache (`--history` / `--bookmark` only; not `--page` body). */
+/** @deprecated Legacy SQLite blob — removed; cleared via settings reset. */
 export const SEARCH_CACHE_DB_KEY = "bmxt_search_cache_db_v1"
 
 /** @deprecated Migrated into `SEARCH_CACHE_DB_KEY`. */
@@ -60,7 +60,7 @@ export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 
-/** SQLite blob (`sql.js`) — job lifecycle audit / recovery (UI + background runners). */
+/** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 
 export const MAX_SESSION_LOG_LINES = 500
