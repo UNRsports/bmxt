@@ -5,7 +5,9 @@
 
 export type WarmBackgroundResponse = { ok: true } | { ok: false; error?: string }
 
-export function warmBackgroundServicesFromPageAsync(): Promise<void> {
+let warmInFlight: Promise<void> | null = null
+
+function warmBackgroundServicesOnce(): Promise<void> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type: "WARM_BACKGROUND" }, (response: WarmBackgroundResponse) => {
       const err = chrome.runtime.lastError
@@ -24,4 +26,15 @@ export function warmBackgroundServicesFromPageAsync(): Promise<void> {
       resolve()
     })
   })
+}
+
+export function warmBackgroundServicesFromPageAsync(): Promise<void> {
+  if (warmInFlight) {
+    return warmInFlight
+  }
+  warmInFlight = warmBackgroundServicesOnce().catch((error) => {
+    warmInFlight = null
+    throw error
+  })
+  return warmInFlight
 }

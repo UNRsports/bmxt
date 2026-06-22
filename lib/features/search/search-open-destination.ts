@@ -2,8 +2,7 @@ import { displayTitle } from "../tabs/picker-rows"
 import { tTabs } from "../setting/i18n/ns/tabs"
 import { tSearch } from "../setting/i18n/ns/search"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
-import { getWindowDisplayNamesMap, pruneWindowDisplayNames } from "../extension-storage/window-display-names"
-import { resolveMirrorBrowserWindowId } from "../tabs/resolve-mirror-browser-window"
+import { loadPickerChromeContext } from "../tabs/picker-chrome-context"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 export { searchEntryOffersOpenDestination } from "../side-picker/model/picker-entry"
 
@@ -32,11 +31,10 @@ function formatGroupLabel(g: chrome.tabGroups.TabGroup, locale: UiLocale): strin
 export async function buildSearchOpenDestinationRows(
   locale: UiLocale = DEFAULT_UI_LOCALE
 ): Promise<SearchOpenDestinationRow[]> {
-  const [tabs, groups, winsMeta, trackedWindowId] = await Promise.all([
+  const [tabs, groups, winsMeta] = await Promise.all([
     chrome.tabs.query({}),
     chrome.tabGroups.query({}),
-    chrome.windows.getAll({ populate: false, windowTypes: ["normal"] }),
-    resolveMirrorBrowserWindowId()
+    chrome.windows.getAll({ populate: false, windowTypes: ["normal"] })
   ])
 
   const openWindowIds: number[] = []
@@ -45,8 +43,9 @@ export async function buildSearchOpenDestinationRows(
       openWindowIds.push(w.id)
     }
   }
-  await pruneWindowDisplayNames(openWindowIds)
-  const windowDisplayNames = await getWindowDisplayNamesMap()
+  const chromeContext = await loadPickerChromeContext(openWindowIds)
+  const windowDisplayNames = chromeContext.windowDisplayNames
+  const trackedWindowId = chromeContext.trackedWindowId
 
   const tabsByWindow = new Map<number, chrome.tabs.Tab[]>()
   for (const t of tabs) {
@@ -77,20 +76,6 @@ export async function buildSearchOpenDestinationRows(
   }
 
   const windowOrder = [...openWindowIds].sort((a, b) => a - b)
-  const activeTabByWindow = new Map<number, chrome.tabs.Tab>()
-  await Promise.all(
-    windowOrder.map(async (wid) => {
-      try {
-        const activeTabs = await chrome.tabs.query({ windowId: wid, active: true })
-        const t = activeTabs[0]
-        if (t) {
-          activeTabByWindow.set(wid, t)
-        }
-      } catch {
-        /* window may have closed */
-      }
-    })
-  )
 
   const rows: SearchOpenDestinationRow[] = [
     { kind: "new_window", label: tSearch("search.openDestination.newWindow", locale) }
@@ -98,8 +83,7 @@ export async function buildSearchOpenDestinationRows(
 
   for (const wid of windowOrder) {
     const wTabs = tabsByWindow.get(wid) ?? []
-    const active =
-      activeTabByWindow.get(wid) ?? wTabs.find((t) => t.active) ?? wTabs[0]
+    const active = wTabs.find((t) => t.active) ?? wTabs[0]
     const tracked = trackedWindowId !== undefined && wid === trackedWindowId
     const customName = windowDisplayNames.get(wid)
     const windowTitle =

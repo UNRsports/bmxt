@@ -1,4 +1,4 @@
-import { buildTabPickerRows, resolveInitialTabPickerHighlightIndex } from "../../../tabs/picker-rows"
+import { buildTabPickerRowsBundle, resolveInitialTabPickerHighlightIndex } from "../../../tabs/picker-rows"
 import { parseTabsExitListLine, parseTabsListPickerLine } from "../../../tabs/input"
 import {
   closeTabPickerEngineForSession,
@@ -26,18 +26,21 @@ export function tryHandleTabsListCommand(ctx: CommandDispatchContext): CommandDi
     recordCommandHistory(deps)
     void (async () => {
       try {
-        const rows = await buildTabPickerRows(showUrl, deps.uiSettings.locale)
-        const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
+        const { rows, lastNormalWindowId } = await buildTabPickerRowsBundle(
+          showUrl,
+          deps.uiSettings.locale
+        )
+        const initialHi = resolveInitialTabPickerHighlightIndex(rows, lastNormalWindowId)
         const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
-        await deps.appendLogLines([
-          `> ${trimmed}`,
-          tTabs("tabs.picker.hint", locale, { token: pageActiveToken })
-        ])
         deps.setTabPicker(
           deps.sessionId,
           openTabPickerEngineForSession(deps.sessionId, { rows, showUrl, initialHi })
         )
         deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          tTabs("tabs.picker.hint", locale, { token: pageActiveToken })
+        ])
       } catch (e) {
         await deps.appendLogLines([
           `> ${trimmed}`,

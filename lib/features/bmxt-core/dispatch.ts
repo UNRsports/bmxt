@@ -39,33 +39,34 @@ function tryUrlLine(trimmed: string): DispatchJson | null {
   return null
 }
 
-export function dispatchFull(line: string, locale?: UiLocale): string {
+function dispatchBundleInternal(line: string, locale?: UiLocale): DispatchJson {
   if (locale !== undefined) {
     setRunLocale(locale)
   }
   const trimmed = line.trim()
   if (!trimmed) {
-    return dispatchJsonString(linesDispatch([]))
+    return linesDispatch([])
   }
   const urlOut = tryUrlLine(trimmed)
   if (urlOut) {
-    return dispatchJsonString(urlOut)
+    return urlOut
   }
   const args = tokenize(trimmed)
   if (args.length === 0) {
-    return dispatchJsonString(linesDispatch([]))
+    return linesDispatch([])
   }
   const cmdToken = args[0].toLowerCase()
   const canonical = resolveCanonical(cmdToken)
   if (!canonical) {
-    return dispatchJsonString(
-      linesDispatch([
-        tCmd("cmd.error.unknownCommand", locale ?? getRunLocale(), { cmdToken })
-      ])
-    )
+    return linesDispatch([
+      tCmd("cmd.error.unknownCommand", locale ?? getRunLocale(), { cmdToken })
+    ])
   }
-  const out = runCommand(canonical, args)
-  return dispatchJsonString(out)
+  return runCommand(canonical, args)
+}
+
+export function dispatchFull(line: string, locale?: UiLocale): string {
+  return dispatchJsonString(dispatchBundleInternal(line, locale))
 }
 
 export function parseDispatchJson(raw: string): DispatchBundle {
@@ -81,7 +82,7 @@ export function parseDispatchJson(raw: string): DispatchBundle {
 
 export function runDispatch(line: string, locale?: UiLocale): DispatchBundle {
   try {
-    return parseDispatchJson(dispatchFull(line, locale))
+    return dispatchBundleInternal(line, locale)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return {

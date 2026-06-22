@@ -1,4 +1,4 @@
-import { buildTabPickerRows, resolveInitialTabPickerHighlightIndex } from "../../../tabs/picker-rows"
+import { buildTabPickerRowsBundle, resolveInitialTabPickerHighlightIndex } from "../../../tabs/picker-rows"
 import { parseGroupNewInteractiveLine } from "../../../tabs/input"
 import { openTabPickerEngineForSession } from "../../../tabs/engine"
 import { tGroup } from "../../../setting/i18n/ns/group"
@@ -23,9 +23,11 @@ export function tryHandleGroupNewCommand(ctx: CommandDispatchContext): CommandDi
   recordCommandHistory(deps)
   void (async () => {
     try {
-      const rows = await buildTabPickerRows(false, deps.uiSettings.locale)
-      const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
-      await deps.appendLogLines([`> ${trimmed}`, tGroup("group.newPicker", locale)])
+      const { rows, lastNormalWindowId } = await buildTabPickerRowsBundle(
+        false,
+        deps.uiSettings.locale
+      )
+      const initialHi = resolveInitialTabPickerHighlightIndex(rows, lastNormalWindowId)
       deps.setTabPicker(
         deps.sessionId,
         openTabPickerEngineForSession(deps.sessionId, {
@@ -36,6 +38,7 @@ export function tryHandleGroupNewCommand(ctx: CommandDispatchContext): CommandDi
         })
       )
       deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
+      void deps.appendLogLines([`> ${trimmed}`, tGroup("group.newPicker", locale)])
     } catch (e) {
       await deps.appendLogLines([
         `> ${trimmed}`,
