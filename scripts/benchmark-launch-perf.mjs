@@ -18,7 +18,7 @@ const backgroundPath = path.join(outDir, "background.js")
 function runLaunchUnitTests() {
   console.log("== launch unit tests ==")
   execSync(
-    "node --experimental-strip-types --test lib/features/launch/launch-perf.test.ts lib/features/launch/warm-search-scheduler.test.ts",
+    "node --experimental-strip-types --test lib/features/launch/launch-perf.test.ts lib/features/launch/page-boot-perf.test.ts lib/features/launch/warm-search-scheduler.test.ts",
     { cwd: root, stdio: "inherit" }
   )
 }
@@ -38,7 +38,7 @@ function verifyBuiltBackground() {
   const services = fs.readFileSync(servicesPath, "utf8")
   const shellRequired = [
     "bmxt_launch_perf",
-    "[bmxt launch perf]",
+    "[bmxt perf copy]",
     "shortcut-received",
     "create-window-start",
     "create-window-done",
@@ -150,8 +150,10 @@ function printChromeMeasurementHint() {
     "1. Load .output/chrome-mv3 unpacked, open chrome://extensions → Service Worker → Inspect"
   )
   console.log("2. Terminate SW, press Shift+Alt+C (launch-bmxt)")
-  console.log("3. Console shows: [bmxt launch perf] { phases, launchChainMs }")
-  console.log("4. chrome.storage.session.get('bmxt_launch_perf') for last snapshot")
+  console.log("3. Console shows: [bmxt perf copy] sw-launch: {...}")
+  console.log("4. Page DevTools: [bmxt perf copy] page-boot: {...} (after prompt appears)")
+  console.log("5. chrome.storage.session.get(['bmxt_launch_perf','bmxt_page_boot_perf'])")
+  console.log("6. Page DevTools: bmxtPerfReport() — re-print combined JSON")
   console.log("   focus path: phases.create-window-done absent; focus-window-done set")
   console.log("   cold open:  create-window-done ≈ time to window visible from SW")
 }

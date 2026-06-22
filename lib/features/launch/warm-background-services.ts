@@ -3,11 +3,14 @@
  * JA: プロンプト表示前に background-services.js を SW 側で読み込む。
  */
 
+import { markPageBootPhase } from "./page-boot-perf"
+
 export type WarmBackgroundResponse = { ok: true } | { ok: false; error?: string }
 
 let warmInFlight: Promise<void> | null = null
 
 function warmBackgroundServicesOnce(): Promise<void> {
+  markPageBootPhase("warm-background-start")
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type: "WARM_BACKGROUND" }, (response: WarmBackgroundResponse) => {
       const err = chrome.runtime.lastError
@@ -23,6 +26,7 @@ function warmBackgroundServicesOnce(): Promise<void> {
         reject(new Error(msg))
         return
       }
+      markPageBootPhase("warm-background-done")
       resolve()
     })
   })

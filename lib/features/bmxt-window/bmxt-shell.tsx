@@ -153,6 +153,8 @@ type Props = {
   scheduleTabPickerRowsRefresh: () => void
   /** マニフェスト更新後の初回起動のみ（ウェルカムと併せて表示）。 */
   postUpgradeBanner: PostUpgradeBanner | null
+  /** EN: Log-area welcome/banner wait; prompt is not blocked on this. */
+  upgradeBannerReady: boolean
   paneFocus: PaneFocusTarget
   onPaneFocusChange: (target: PaneFocusTarget) => void
   detailBarId: DetailBarId | null
@@ -184,6 +186,7 @@ export function BmxtShell({
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
+  upgradeBannerReady,
   paneFocus,
   onPaneFocusChange,
   detailBarId,
@@ -860,7 +863,7 @@ export function BmxtShell({
 
   const shellContent = (
     <>
-        {lines.length === 0 || postUpgradeBanner ? (
+        {upgradeBannerReady && (lines.length === 0 || postUpgradeBanner) ? (
           <div className="bmxt-hint">
             {tShell("shell.welcome", uiSettings.locale)}
             <br />
@@ -868,7 +871,7 @@ export function BmxtShell({
             {tShell("shell.helpHint", uiSettings.locale)}
           </div>
         ) : null}
-        {postUpgradeBanner ? (
+        {upgradeBannerReady && postUpgradeBanner ? (
           <div className="bmxt-version-upgrade">
             <div className="bmxt-version-upgrade-title">
               {versionUpgradeTitle(uiSettings.locale, postUpgradeBanner.version)}
