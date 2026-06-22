@@ -17,13 +17,13 @@ import {
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker
 } from "../../setting/settings-export"
-import type { UiCopy } from "../../setting/use-ui-copy"
 import type { UiSettings } from "../../setting/settings"
+import { tSetting } from "../../setting/i18n/ns/setting"
+import { tError } from "../../setting/i18n/ns/error"
 
 export type UseSettingPickerShellOptions = {
   sessionId: string
   uiLocale: UiSettings["locale"]
-  uiCopy: UiCopy
   appendLogLines: (lines: string[]) => Promise<void>
   replaceUiSettingsState: (settings: UiSettings) => void
   closeSettingPickerColumn: () => void
@@ -58,12 +58,12 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         await replaceUiSettings(draft)
         options.replaceUiSettingsState(draft)
         options.closeSettingPickerColumn()
-        await options.appendLogLines([logPrefix, options.uiCopy.t("setting.picker.saved")])
+        await options.appendLogLines([logPrefix, tSetting("setting.picker.saved", options.uiLocale)])
         return
       }
       if (row.id === "cancel") {
         options.closeSettingPickerColumn()
-        await options.appendLogLines([logPrefix, options.uiCopy.t("setting.picker.cancelled")])
+        await options.appendLogLines([logPrefix, tSetting("setting.picker.cancelled", options.uiLocale)])
         return
       }
       if (row.id === "locale-ja" || row.id === "locale-en") {
@@ -118,11 +118,11 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         try {
           await resetSearchCacheFromSettings()
           options.setSettingListPicker(options.sessionId, settingPickerGoToView("main", current))
-          await options.appendLogLines([logPrefix, options.uiCopy.t("setting.searchCache.resetDone")])
+          await options.appendLogLines([logPrefix, tSetting("setting.searchCache.resetDone", options.uiLocale)])
         } catch (e) {
           await options.appendLogLines([
             logPrefix,
-            options.uiCopy.t("error.generic", {
+            tError("error.generic", options.uiLocale, {
               message: e instanceof Error ? e.message : String(e)
             })
           ])
@@ -151,7 +151,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         const result = await importBackgroundImageFromFilePicker()
         if (result.ok === false) {
           if (result.cancelled) {
-            await options.appendLogLines([logPrefix, options.uiCopy.t("setting.bgImport.cancelled")])
+            await options.appendLogLines([logPrefix, tSetting("setting.bgImport.cancelled", options.uiLocale)])
           } else {
             await options.appendLogLines([
               logPrefix,
@@ -187,12 +187,12 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           const { filename } = await exportUiSettingsZip(current.draft)
           await options.appendLogLines([
             logPrefix,
-            options.uiCopy.t("setting.export.done", { filename })
+            tSetting("setting.export.done", options.uiLocale, { filename })
           ])
         } catch (e) {
           await options.appendLogLines([
             logPrefix,
-            options.uiCopy.t("error.generic", {
+            tError("error.generic", options.uiLocale, {
               message: e instanceof Error ? e.message : String(e)
             })
           ])
@@ -203,13 +203,13 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         const result = await importUiSettingsZipFromFilePicker()
         if (result.ok === false) {
           if ("cancelled" in result && result.cancelled) {
-            await options.appendLogLines([logPrefix, options.uiCopy.t("setting.import.cancelled")])
+            await options.appendLogLines([logPrefix, tSetting("setting.import.cancelled", options.uiLocale)])
             return
           }
           await options.appendLogLines([
             logPrefix,
-            options.uiCopy.t("setting.import.failed", {
-              message: "error" in result ? result.error : options.uiCopy.t("error.unknown")
+            tSetting("setting.import.failed", options.uiLocale, {
+              message: "error" in result ? result.error : tError("error.unknown", options.uiLocale)
             })
           ])
           return
@@ -222,7 +222,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           editDraft: "",
           draft: result.settings
         })
-        await options.appendLogLines([logPrefix, options.uiCopy.t("setting.picker.importDraft")])
+        await options.appendLogLines([logPrefix, tSetting("setting.picker.importDraft", options.uiLocale)])
       }
     },
     [options]
@@ -257,7 +257,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
   const onSettingPickerEditInvalid = useCallback(async () => {
     await options.appendLogLines([
       "setting -list",
-      options.uiCopy.t("setting.prompt.editInvalid")
+      tSetting("setting.prompt.editInvalid", options.uiLocale)
     ])
   }, [options])
 

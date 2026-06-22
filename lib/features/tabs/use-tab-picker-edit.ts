@@ -7,7 +7,8 @@ import {
 } from "./controller/edit-actions"
 import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import { groupEditMenuActionAtPickIndex } from "./group-edit-menu"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { EditPanel } from "./tab-picker-overlay-types"
 import {
   buildInitialEditPanel,
@@ -49,7 +50,8 @@ export type EditPickerSnapshot = {
 }
 
 export function useTabPickerEdit(p: TabPickerEditParams) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const {
     rows,
     visibleRowIndices,
@@ -113,10 +115,10 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
           rows,
           visibleRowIndices,
           useHi,
-          uiCopy.locale
+          locale
         )
         void onAppendLog?.([
-          err ?? uiCopy.t("tabs.picker.error.editNeedsWindowOrGroup")
+          err ?? tTabs("tabs.picker.error.editNeedsWindowOrGroup", locale)
         ])
         return
       }
@@ -167,7 +169,7 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
       setEditPanel,
       setEditTitle,
       visibleRowIndices,
-      uiCopy
+      locale
     ]
   )
 
@@ -178,11 +180,11 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     try {
       await applyWindowDisplayName(editPanel.windowId, editTitle)
     } catch {
-      void onAppendLog?.([uiCopy.t("tabs.picker.error.windowNameSaveFailed")])
+      void onAppendLog?.([tTabs("tabs.picker.error.windowNameSaveFailed", locale)])
       return
     }
     await finishEdit()
-  }, [editPanel, editTitle, finishEdit, onAppendLog, uiCopy])
+  }, [editPanel, editTitle, finishEdit, onAppendLog, locale])
 
   const confirmGroupRename = useCallback(async () => {
     if (editPanel?.kind !== "groupRename") {
@@ -191,11 +193,11 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     try {
       await applyTabGroupTitle(editPanel.groupId, editTitle)
     } catch {
-      void onAppendLog?.([uiCopy.t("tabs.picker.error.groupNameSaveFailed")])
+      void onAppendLog?.([tTabs("tabs.picker.error.groupNameSaveFailed", locale)])
       return
     }
     await finishEdit()
-  }, [editPanel, editTitle, finishEdit, onAppendLog, uiCopy])
+  }, [editPanel, editTitle, finishEdit, onAppendLog, locale])
 
   const runGroupMenuAction = useCallback(
     async (actionId: ReturnType<typeof groupEditMenuActionAtPickIndex>) => {
@@ -225,12 +227,12 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
           await removeTabGroup(editPanel.groupId)
         }
       } catch {
-        void onAppendLog?.([uiCopy.t("tabs.picker.error.groupActionFailed")])
+        void onAppendLog?.([tTabs("tabs.picker.error.groupActionFailed", locale)])
         return
       }
       await finishEdit()
     },
-    [editPanel, finishEdit, onAppendLog, setEditPanel, setEditTitle, uiCopy]
+    [editPanel, finishEdit, onAppendLog, setEditPanel, setEditTitle, locale]
   )
 
   const confirmGroupMenuPick = useCallback(async () => {

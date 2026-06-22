@@ -1,7 +1,8 @@
 /** EN: `session -list` / `session -switch` — floating candidate menu (subcommand picker chrome). */
 
 import { useLayoutEffect, useRef } from "react"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tSession, type SessionMessageKey } from "../setting/i18n/ns/session"
+import { useUiSettings } from "../setting/use-ui-settings"
 import {
   formatSessionListCandidateLabel,
   formatSessionSwitchCandidateLabel,
@@ -19,10 +20,13 @@ type Props = {
 }
 
 export function SessionListCandidatePanel({ rows, hi, variant }: Props) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const listRef = useRef<HTMLDivElement>(null)
-  const hintKey = variant === "switch" ? "session.switch.hint" : "session.picker.hint"
-  const ariaKey = variant === "switch" ? "session.switch.aria" : "session.picker.aria"
+  const hintKey: SessionMessageKey =
+    variant === "switch" ? "session.switch.hint" : "session.picker.hint"
+  const ariaKey: SessionMessageKey =
+    variant === "switch" ? "session.switch.aria" : "session.picker.aria"
 
   useLayoutEffect(() => {
     const list = listRef.current
@@ -34,8 +38,8 @@ export function SessionListCandidatePanel({ rows, hi, variant }: Props) {
   }, [hi, rows.length])
 
   return (
-    <div className="bmxt-subcmd-picker" role="listbox" aria-label={uiCopy.t(ariaKey)}>
-      <div className="bmxt-subcmd-picker-hint">{uiCopy.t(hintKey)}</div>
+    <div className="bmxt-subcmd-picker" role="listbox" aria-label={tSession(ariaKey, locale)}>
+      <div className="bmxt-subcmd-picker-hint">{tSession(hintKey, locale)}</div>
       <div ref={listRef} className="bmxt-subcmd-picker-list">
         {rows.map((row, i) => (
           <div

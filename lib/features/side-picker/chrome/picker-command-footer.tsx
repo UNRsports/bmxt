@@ -1,4 +1,5 @@
-import { useUiCopy } from "../../setting/use-ui-copy"
+import { tPicker } from "../../setting/i18n/ns/picker"
+import { useUiSettings } from "../../setting/use-ui-settings"
 
 export function PickerCommandFooter({
   commandBuffer,
@@ -12,7 +13,8 @@ export function PickerCommandFooter({
   /** 補完候補が 2 件以上のときのプレースホルダ行（Tab 循環の案内） */
   ambiguousPlaceholder: string | null
 }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const empty = commandBuffer.trim() === ""
   return (
     <div className="bmxt-tab-picker-filter bmxt-tab-picker-filter--command-col">
@@ -25,7 +27,7 @@ export function PickerCommandFooter({
             commandBuffer || " "
           )}
         </span>
-        <span className="bmxt-tab-picker-filter-hint">{uiCopy.t("picker.commandFooter.hint")}</span>
+        <span className="bmxt-tab-picker-filter-hint">{tPicker("picker.commandFooter.hint", locale)}</span>
       </div>
       {ambiguousPlaceholder ? (
         <div className="bmxt-tab-picker-command-ambiguous-placeholder" aria-live="polite">

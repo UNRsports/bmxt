@@ -59,7 +59,15 @@ import {
 import { translateOnLogLine } from "../../setting/i18n/resolvers"
 import { buildHelpLines } from "../../bmxt-core/registry/help"
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
-import type { UiCopy } from "../../setting/use-ui-copy"
+import { tSetting } from "../../setting/i18n/ns/setting"
+import { tTabs } from "../../setting/i18n/ns/tabs"
+import { tSession } from "../../setting/i18n/ns/session"
+import { tSearch } from "../../setting/i18n/ns/search"
+import { tNav } from "../../setting/i18n/ns/nav"
+import { tTranslate } from "../../setting/i18n/ns/translate"
+import { tDom } from "../../setting/i18n/ns/dom"
+import { tGroup } from "../../setting/i18n/ns/group"
+import { tError } from "../../setting/i18n/ns/error"
 import type { UiSettings } from "../../setting/settings"
 import type { TranslationPairId } from "../../translate/translation-pair"
 
@@ -70,7 +78,6 @@ export type CommandDispatchDeps = {
   iSearchCycle: number
   iSearchSnapshot: string
   sessionListRows: SessionListRow[]
-  uiCopy: UiCopy
   uiSettings: UiSettings
   navArmedRef: React.MutableRefObject<boolean>
   navActiveRef: React.MutableRefObject<boolean>
@@ -139,6 +146,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.focusPrompt()
       return
     }
+    const locale = deps.uiSettings.locale
     const rawLine = deps.promptLine()
     const trimmed = rawLine.trim()
     if (!trimmed) {
@@ -153,7 +161,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.setLine(cont)
       deps.setCursorPos(cont.length)
       deps.lineRef.current = cont
-      void deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("setting.usage")])
+      void deps.appendLogLines([`> ${trimmed}`, tSetting("setting.usage", locale)])
       deps.focusPrompt()
       return
     }
@@ -167,13 +175,13 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       void (async () => {
         try {
           const state = createSettingListPickerState(deps.uiSettings)
-          await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("setting.picker.hint")])
+          await deps.appendLogLines([`> ${trimmed}`, tSetting("setting.picker.hint", locale)])
           deps.setSettingListPicker(deps.sessionId, state)
           deps.setModeToolbarOrder((prev: any) => activateModeToolbar(prev, "setting"))
         } catch (e) {
           await deps.appendLogLines([
             `> ${trimmed}`,
-            deps.uiCopy.t("error.generic", {
+            tError("error.generic", locale, {
               message: e instanceof Error ? e.message : String(e)
             })
           ])
@@ -192,9 +200,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         const logLines = [`> ${trimmed}`]
         if (deps.settingListPickerRef.current !== null) {
           deps.closeSettingPickerColumn()
-          logLines.push(deps.uiCopy.t("setting.picker.closed"))
+          logLines.push(tSetting("setting.picker.closed", locale))
         } else {
-          logLines.push(deps.uiCopy.t("setting.picker.notOpen"))
+          logLines.push(tSetting("setting.picker.notOpen", locale))
         }
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
@@ -217,8 +225,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         deps.lineRef.current = cont
         void deps.appendLogLines([
           `> ${trimmed}`,
-          deps.uiCopy.t("tabs.usage"),
-          deps.uiCopy.t("tabs.settingHint")
+          tTabs("tabs.usage", locale),
+          tTabs("tabs.settingHint", locale)
         ])
         deps.focusPrompt()
         return
@@ -230,8 +238,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         deps.lineRef.current = cont
         void deps.appendLogLines([
           `> ${trimmed}`,
-          deps.uiCopy.t("tabs.setting.choose"),
-          deps.uiCopy.t("tabs.setting.pageActiveCurrent", {
+          tTabs("tabs.setting.choose", locale),
+          tTabs("tabs.setting.pageActiveCurrent", locale, {
             token: settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
           })
         ])
@@ -246,8 +254,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
         void deps.appendLogLines([
           `> ${trimmed}`,
-          deps.uiCopy.t("tabs.pageActive.choose", { options }),
-          deps.uiCopy.t("setting.language.current", {
+          tTabs("tabs.pageActive.choose", locale, { options }),
+          tSetting("setting.language.current", locale, {
             token: settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
           })
         ])
@@ -262,7 +270,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         deps.setTabsPageActiveMode(tabsSettingCmd.mode)
         deps.tabsPageActiveModeRef.current = tabsSettingCmd.mode
         const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
-        await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("tabs.pageActive.set", { token })])
+        await deps.appendLogLines([`> ${trimmed}`, tTabs("tabs.pageActive.set", locale, { token })])
         deps.focusPrompt()
       })()
       return
@@ -304,9 +312,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       void (async () => {
         const logLines = [`> ${trimmed}`]
         if (!row) {
-          logLines.push(deps.uiCopy.t("session.switch.notFound", { name: sessionSwitchName }))
+          logLines.push(tSession("session.switch.notFound", locale, { name: sessionSwitchName }))
         } else {
-          logLines.push(deps.uiCopy.t("session.switch.switched", { name: row.displayName }))
+          logLines.push(tSession("session.switch.switched", locale, { name: row.displayName }))
           await deps.onActivateSession(row.sessionId)
         }
         await deps.appendLogLines(logLines)
@@ -334,7 +342,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         const logLines = [`> ${trimmed}`]
         if (!row) {
           logLines.push(
-            deps.uiCopy.t("session.number.invalid", {
+            tSession("session.number.invalid", locale, {
               n: String(sessionNumber),
               max: String(deps.sessionListRows.length)
             })
@@ -343,7 +351,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           deps.focusPrompt()
           return
         }
-        logLines.push(deps.uiCopy.t("session.number.switched", { n: String(sessionNumber) }))
+        logLines.push(tSession("session.number.switched", locale, { n: String(sessionNumber) }))
         await deps.appendLogLines(logLines)
         await deps.onActivateSession(row.sessionId)
         deps.focusPrompt()
@@ -366,14 +374,14 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
           await deps.appendLogLines([
             `> ${trimmed}`,
-            deps.uiCopy.t("tabs.picker.hint", { token: pageActiveToken })
+            tTabs("tabs.picker.hint", locale, { token: pageActiveToken })
           ])
           deps.setTabPicker(deps.sessionId, openTabPickerEngineForSession(deps.sessionId, { rows, showUrl, initialHi }))
           deps.setModeToolbarOrder((prev: any) => activateModeToolbar(prev, "tabs"))
         } catch (e) {
           await deps.appendLogLines([
             `> ${trimmed}`,
-            deps.uiCopy.t("error.generic", {
+            tError("error.generic", locale, {
               message: e instanceof Error ? e.message : String(e)
             })
           ])
@@ -395,9 +403,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           deps.setTabPicker(deps.sessionId, null)
           deps.setModeToolbarOrder((prev: any) => deactivateModeToolbar(prev, "tabs"))
           deps.activatePaneFocus("terminal")
-          logLines.push(deps.uiCopy.t("tabs.picker.closed"))
+          logLines.push(tTabs("tabs.picker.closed", locale))
         } else {
-          logLines.push(deps.uiCopy.t("tabs.picker.notOpen"))
+          logLines.push(tTabs("tabs.picker.notOpen", locale))
         }
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
@@ -422,11 +430,11 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           deps.setSearchListPicker(deps.sessionId, null)
           deps.setModeToolbarOrder((prev: any) => deactivateModeToolbar(prev, "search"))
           deps.activatePaneFocus("terminal")
-          logLines.push(deps.uiCopy.t("search.picker.closed"))
+          logLines.push(tSearch("search.picker.closed", locale))
         } else if (hadActiveJob) {
-          logLines.push(deps.uiCopy.t("search.picker.cancelled"))
+          logLines.push(tSearch("search.picker.cancelled", locale))
         } else {
-          logLines.push(deps.uiCopy.t("search.picker.notOpen"))
+          logLines.push(tSearch("search.picker.notOpen", locale))
         }
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
@@ -445,9 +453,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       deps.setModeToolbarOrder((prev: any) => activateModeToolbar(prev, "nav"))
       void (async () => {
         const canPage = await canScriptHttpHostPages()
-        const logLines = [`> ${trimmed}`, deps.uiCopy.t("nav.armedLog")]
+        const logLines = [`> ${trimmed}`, tNav("nav.armedLog", locale)]
         if (!canPage) {
-          logLines.push(deps.uiCopy.t("nav.hostAccessWarning"))
+          logLines.push(tNav("nav.hostAccessWarning", locale))
         }
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
@@ -467,8 +475,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         deps.lineRef.current = cont
         void deps.appendLogLines([
           `> ${trimmed}`,
-          deps.uiCopy.t("translate.usage"),
-          deps.uiCopy.t("translate.usageHint")
+          tTranslate("translate.usage", locale),
+          tTranslate("translate.usageHint", locale)
         ])
         deps.focusPrompt()
         return
@@ -481,8 +489,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         const options = listTranslationPairSettingTokens().join(" | ")
         void deps.appendLogLines([
           `> ${trimmed}`,
-          deps.uiCopy.t("translate.setting.choose", { options }),
-          deps.uiCopy.t("setting.language.current", {
+          tTranslate("translate.setting.choose", locale, { options }),
+          tSetting("setting.language.current", locale, {
             token: settingTokenForPairId(deps.translatePairIdRef.current)
           })
         ])
@@ -509,14 +517,14 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           await saveTranslateEnabled(false)
           deps.setTranslateEnabled(false)
           deps.setModeToolbarOrder((prev: any) => deactivateModeToolbar(prev, "translate"))
-          await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("translate.off")])
+          await deps.appendLogLines([`> ${trimmed}`, tTranslate("translate.off", locale)])
           deps.activatePaneFocus("terminal")
         } else if (translateCmd.kind === "setting") {
           await saveTranslatePair(translateCmd.pair)
           deps.setTranslatePairId(translateCmd.pair)
           deps.resetNavTranslateSession()
           const token = settingTokenForPairId(translateCmd.pair)
-          await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("translate.pairSet", { token })])
+          await deps.appendLogLines([`> ${trimmed}`, tTranslate("translate.pairSet", locale, { token })])
         }
       })()
       return
@@ -531,16 +539,16 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       void (async () => {
         const logLines = [`> ${trimmed}`]
         if (deps.navActiveRef.current) {
-          logLines.push(deps.uiCopy.t("nav.exitActiveError"))
+          logLines.push(tNav("nav.exitActiveError", locale))
         } else if (!deps.navArmedRef.current) {
-          logLines.push(deps.uiCopy.t("nav.notArmed"))
+          logLines.push(tNav("nav.notArmed", locale))
         } else {
           await deps.teardownNav()
           deps.navPositionsRef.current = {}
           deps.setNavArmed(false)
           deps.setNavActive(false)
           deps.setModeToolbarOrder((prev: any) => deactivateModeToolbar(prev, "nav"))
-          logLines.push(deps.uiCopy.t("nav.disarmed"))
+          logLines.push(tNav("nav.disarmed", locale))
         }
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
@@ -564,9 +572,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           deps.setDomListPicker(deps.sessionId, null)
           deps.setModeToolbarOrder((prev: any) => deactivateModeToolbar(prev, "dom"))
           deps.activatePaneFocus("terminal")
-          logLines.push(deps.uiCopy.t("dom.picker.closed"))
+          logLines.push(tDom("dom.picker.closed", locale))
         } else {
-          logLines.push(deps.uiCopy.t("dom.picker.notOpen"))
+          logLines.push(tDom("dom.picker.notOpen", locale))
         }
         await deps.appendLogLines(logLines)
         deps.focusPrompt()
@@ -584,7 +592,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         try {
           const rows = await buildTabPickerRows(false, deps.uiSettings.locale)
           const initialHi = await resolveInitialTabPickerHighlightIndex(rows)
-          await deps.appendLogLines([`> ${trimmed}`, deps.uiCopy.t("group.newPicker")])
+          await deps.appendLogLines([`> ${trimmed}`, tGroup("group.newPicker", locale)])
           deps.setTabPicker(
             deps.sessionId,
             openTabPickerEngineForSession(deps.sessionId, {
@@ -598,7 +606,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         } catch (e) {
           await deps.appendLogLines([
             `> ${trimmed}`,
-            deps.uiCopy.t("error.generic", {
+            tError("error.generic", locale, {
               message: e instanceof Error ? e.message : String(e)
             })
           ])
@@ -671,7 +679,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         if (err) {
           void deps.appendLogLines([
             `> ${trimmed}`,
-            deps.uiCopy.t("error.dispatchFailed", { message: err.message })
+            tError("error.dispatchFailed", locale, { message: err.message })
           ])
           return
         }
@@ -679,10 +687,10 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
           const msg =
             "error" in response && typeof response.error === "string"
               ? response.error
-              : deps.uiCopy.t("error.unknown")
+              : tError("error.unknown", locale)
           void deps.appendLogLines([
             `> ${trimmed}`,
-            deps.uiCopy.t("error.generic", { message: msg })
+            tError("error.generic", locale, { message: msg })
           ])
         }
       }

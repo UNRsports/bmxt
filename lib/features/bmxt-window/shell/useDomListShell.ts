@@ -6,14 +6,15 @@ import { isRetryableDomListOutput, type DomListPickerState } from "../../dom/dom
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../../dom/use-dom-list-follow-tab"
 import { isJobHandleActive, mergeJobIntoDispatchContext, shouldCancelJob, type JobRunner } from "../../job"
-import type { UiCopy } from "../../setting/use-ui-copy"
+import { tDomPrompt } from "../../setting/i18n/ns/dom-prompt"
+import { tDom } from "../../setting/i18n/ns/dom"
+import { tError } from "../../setting/i18n/ns/error"
 import type { UiLocale } from "../../setting/locale"
 import { activateModeToolbar } from "../mode-toolbar-order"
 
 export type UseDomListShellOptions = {
   sessionId: string
   uiLocale: UiLocale
-  uiCopy: UiCopy
   jobRunner: JobRunner
   domListPicker: DomListPickerState | null
   appendLogLines: (lines: string[]) => Promise<void>
@@ -74,7 +75,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
               if (announce) {
                 await options.appendLogLines([
                   `> ${displayLine}`,
-                  options.uiCopy.t("domPrompt.headline")
+                  tDomPrompt("domPrompt.headline", options.uiLocale)
                 ])
               }
               options.setDomListPicker(options.sessionId, {
@@ -86,7 +87,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
               return
             }
             if (announce) {
-              await options.appendLogLines([`> ${displayLine}`, options.uiCopy.t("dom.listPicker")])
+              await options.appendLogLines([`> ${displayLine}`, tDom("dom.listPicker", options.uiLocale)])
             }
             const targetTabId = await resolveDomListTargetTabId()
             options.setDomListPicker(options.sessionId, {
@@ -104,7 +105,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
             }
             await options.appendLogLines([
               `> ${displayLine}`,
-              options.uiCopy.t("error.generic", {
+              tError("error.generic", options.uiLocale, {
                 message: e instanceof Error ? e.message : String(e)
               })
             ])

@@ -109,7 +109,6 @@ import {
   parseSettingIncompleteLine,
   parseSettingListPickerLine
 } from "../setting/setting-list-picker-input"
-import { useUiCopy } from "../setting/use-ui-copy"
 import { useUiSettings } from "../setting/use-ui-settings"
 import {
   useCallback,
@@ -195,7 +194,6 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
-  const uiCopy = useUiCopy()
   const prevUiLocaleRef = useRef(uiSettings.locale)
   useEffect(() => {
     setRunLocale(uiSettings.locale)
@@ -322,7 +320,6 @@ export function BmxtShell({
   } = useDomListShell({
     sessionId,
     uiLocale: uiSettings.locale,
-    uiCopy,
     jobRunner,
     domListPicker,
     appendLogLines,
@@ -590,7 +587,7 @@ export function BmxtShell({
   } = useSessionPromptActions({
     sessionId,
     sessionListRows,
-    uiCopy,
+    uiLocale: uiSettings.locale,
     appendCommandToHistory,
     appendLogLines,
     onActivateSession,
@@ -687,7 +684,6 @@ export function BmxtShell({
   } = useSettingPickerShell({
     sessionId,
     uiLocale: uiSettings.locale,
-    uiCopy,
     appendLogLines,
     replaceUiSettingsState,
     closeSettingPickerColumn,
@@ -702,7 +698,6 @@ export function BmxtShell({
     iSearchCycle,
     iSearchSnapshot,
     sessionListRows,
-    uiCopy,
     uiSettings,
     navArmedRef,
     navActiveRef,
@@ -876,10 +871,10 @@ export function BmxtShell({
         {postUpgradeBanner ? (
           <div className="bmxt-version-upgrade">
             <div className="bmxt-version-upgrade-title">
-              {versionUpgradeTitle(uiCopy.locale, postUpgradeBanner.version)}
+              {versionUpgradeTitle(uiSettings.locale, postUpgradeBanner.version)}
             </div>
             <div className="bmxt-version-upgrade-notes">
-              {formatBulletedLines(postUpgradeBanner, uiCopy.locale).map((line, i) => (
+              {formatBulletedLines(postUpgradeBanner, uiSettings.locale).map((line, i) => (
                 <div key={i}>{line}</div>
               ))}
             </div>
@@ -913,7 +908,7 @@ export function BmxtShell({
           sessionNameTyping={sessionNameTyping}
           showSearchListPatternPlaceholder={showSearchListPatternPlaceholder}
           mirror={mirror}
-          uiCopy={uiCopy}
+          uiLocale={uiSettings.locale}
           imeRef={imeRef}
           cursorMirrorCellRef={cursorMirrorCellRef}
           subCmdPickerHostRef={subCmdPickerHostRef}

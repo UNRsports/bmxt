@@ -1,5 +1,7 @@
 import React from "react"
-import type { UiCopy } from "../../setting/use-ui-copy"
+import { tPrompt } from "../../setting/i18n/ns/prompt"
+import { tSession } from "../../setting/i18n/ns/session"
+import type { UiLocale } from "../../setting/locale"
 import { CSP_DYNAMIC_SCOPE_ATTR } from "../csp-dynamic-stylesheet"
 import { TokenPickerPanel, type TokenPickerModel } from "../token-picker-panel"
 import { SessionListCandidatePanel, type SessionCandidatePanelVariant, type SessionListRow } from "../../session"
@@ -22,7 +24,7 @@ type PromptInputProps = {
   sessionNameTyping: boolean
   showSearchListPatternPlaceholder: boolean
   mirror: PromptMirrorSegments
-  uiCopy: UiCopy
+  uiLocale: UiLocale
   imeRef: React.RefObject<HTMLTextAreaElement>
   cursorMirrorCellRef: React.RefObject<HTMLSpanElement>
   subCmdPickerHostRef: React.RefObject<HTMLDivElement>
@@ -54,7 +56,7 @@ export function PromptInput({
   sessionNameTyping,
   showSearchListPatternPlaceholder,
   mirror,
-  uiCopy,
+  uiLocale,
   imeRef,
   cursorMirrorCellRef,
   subCmdPickerHostRef,
@@ -108,20 +110,20 @@ export function PromptInput({
           tabIndex={promptPaneFocused ? 0 : -1}
           aria-label={
             mode === "isearch"
-              ? uiCopy.t("prompt.isearch.aria")
-              : uiCopy.t("prompt.commandLine.aria")
+              ? tPrompt("prompt.isearch.aria", uiLocale)
+              : tPrompt("prompt.commandLine.aria", uiLocale)
           }
           placeholder={
             showNavTypingPlaceholder
               ? navTypingMultiline
-                ? uiCopy.t("prompt.navTypingMultiline")
-                : uiCopy.t("prompt.navTyping")
+                ? tPrompt("prompt.navTypingMultiline", uiLocale)
+                : tPrompt("prompt.navTyping", uiLocale)
               : showSessionNameTypingPlaceholder
-                ? uiCopy.t("session.settingName.placeholder")
+                ? tSession("session.settingName.placeholder", uiLocale)
               : showSearchListPatternPlaceholder
-                ? uiCopy.t("prompt.searchListPattern")
+                ? tPrompt("prompt.searchListPattern", uiLocale)
                 : mode === "normal" && line.trim() === ""
-                  ? uiCopy.t("prompt.placeholder")
+                  ? tPrompt("prompt.placeholder", uiLocale)
                   : undefined
           }
           value={navPromptValueControlled ? line : undefined}

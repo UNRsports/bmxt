@@ -6,12 +6,13 @@ import {
   type SessionCandidatePanelVariant,
   type SessionListRow
 } from "../../session"
-import type { UiCopy } from "../../setting/use-ui-copy"
+import { tSession } from "../../setting/i18n/ns/session"
+import type { UiSettings } from "../../setting/settings"
 
 export type UseSessionPromptActionsOptions = {
   sessionId: string
   sessionListRows: readonly SessionListRow[]
-  uiCopy: UiCopy
+  uiLocale: UiSettings["locale"]
   appendCommandToHistory: (cmd: string) => void
   appendLogLines: (lines: string[]) => Promise<void>
   onActivateSession: (sessionId: string) => Promise<void>
@@ -85,13 +86,13 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       void (async () => {
         const out = [...logLines]
         if (!sanitized) {
-          out.push(options.uiCopy.t("session.settingName.invalid"))
+          out.push(tSession("session.settingName.invalid", options.uiLocale))
           await options.appendLogLines(out)
           options.focusPrompt()
           return
         }
         await options.onSetSessionDisplayName(options.sessionId, sanitized)
-        out.push(options.uiCopy.t("session.settingName.saved", { name: sanitized }))
+        out.push(tSession("session.settingName.saved", options.uiLocale, { name: sanitized }))
         await options.appendLogLines(out)
         options.focusPrompt()
       })()
@@ -124,7 +125,7 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
         const logLines = [`> ${commandLine}`]
         if (!row) {
           logLines.push(
-            options.uiCopy.t("session.number.invalid", {
+            tSession("session.number.invalid", options.uiLocale, {
               n: String(pickHi + 1),
               max: String(rows.length)
             })
@@ -132,8 +133,8 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
         } else {
           logLines.push(
             variant === "switch"
-              ? options.uiCopy.t("session.switch.switched", { name: row.displayName })
-              : options.uiCopy.t("session.number.switched", { n: String(row.index) })
+              ? tSession("session.switch.switched", options.uiLocale, { name: row.displayName })
+              : tSession("session.number.switched", options.uiLocale, { n: String(row.index) })
           )
           await options.onActivateSession(row.sessionId)
         }

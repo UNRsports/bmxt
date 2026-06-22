@@ -1,4 +1,5 @@
-import { useUiCopy } from "../setting/use-ui-copy"
+import { tModeStatus } from "../setting/i18n/ns/mode-status"
+import { useUiSettings } from "../setting/use-ui-settings"
 
 type DomStatusBarProps = {
   kind: "lines" | "prompt"
@@ -6,7 +7,8 @@ type DomStatusBarProps = {
 
 /** EN: Detail bar for the dom list picker. */
 export function DomStatusBar({ kind }: DomStatusBarProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const stateLabel = kind === "prompt" ? "prompt" : "list"
 
   return (
@@ -19,11 +21,11 @@ export function DomStatusBar({ kind }: DomStatusBarProps) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">
         {kind === "prompt"
-          ? uiCopy.t("modeStatus.dom.permission")
-          : uiCopy.t("modeStatus.dom.list")}
+          ? tModeStatus("modeStatus.dom.permission", locale)
+          : tModeStatus("modeStatus.dom.list", locale)}
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {uiCopy.t("modeStatus.dom.hint")}
+        {tModeStatus("modeStatus.dom.hint", locale)}
       </span>
     </div>
   )

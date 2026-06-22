@@ -22,7 +22,7 @@ import { useTabPickerEdit } from "./use-tab-picker-edit"
 import { useTabPickerActionMenu } from "./use-tab-picker-action-menu"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
-import { useUiCopy } from "../setting/use-ui-copy"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
@@ -126,7 +126,8 @@ export function useTabPickerController({
   sessionId,
   onFocusTabIdChange
 }: Props): TabPickerViewProps | null {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const engineApi = useTabPickerEngineState(sessionId)
   useTabPickerLiveFieldsRevision()
 
@@ -588,9 +589,9 @@ export function useTabPickerController({
           editPanelKind: editPanel?.kind ?? null,
           actionMenuOpen: actionMenuPanel !== null
         },
-        uiCopy.locale
+        locale
       ),
-    [actionMenuPanel, bulkSubMode, editPanel?.kind, groupNewPhase, uiCopy.locale, variant]
+    [actionMenuPanel, bulkSubMode, editPanel?.kind, groupNewPhase, locale, variant]
   )
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
