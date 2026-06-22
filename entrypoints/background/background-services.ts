@@ -29,7 +29,7 @@ import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
 import { buildHelpLines } from "../../lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "../../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../../lib/features/setting/i18n/run-locale"
-import { t } from "../../lib/features/setting/i18n/messages"
+import { tWindows } from "../../lib/features/setting/i18n/ns/windows"
 import { BACKGROUND_JOB_SCOPE } from "../../lib/features/job/job-types"
 import { getJobRunner } from "../../lib/features/job/job-runner"
 import { runNavControlOnTab } from "../../lib/features/nav/run-nav-inject"
@@ -263,7 +263,7 @@ async function dispatch(
 async function listWindows(): Promise<string[]> {
   const wins = await chrome.windows.getAll({ populate: true })
   if (wins.length === 0) {
-    return [t("windows.none", getRunLocale())]
+    return [tWindows("windows.none", getRunLocale())]
   }
   return wins.map((w) => {
     const f = w.focused ? "*" : " "
