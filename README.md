@@ -141,7 +141,7 @@ Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built *
 
 **Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
-The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self' 'wasm-unsafe-eval'`** (sql.js WASM), **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`wxt.config.ts`** for the exact string.
+The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self'`**, **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`wxt.config.ts`** for the exact string.
 
 <a id="reproducible-builds"></a>
 
@@ -269,7 +269,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `bmxt_process_ui_v1` | Open picker slots per session (`tabs` / `search` / `dom` / `setting`) and `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
 
-**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab/search picker settings (`page-active`), search metadata cache (`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** titles and URLs only; **`--page`** body text is **not** stored), optional job audit log (`bmxt_job_db_v1`), last normal window id, welcome/version tracking keys.
+**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) may still be removed via **setting → reset-search-cache** but are no longer written (since **0.6.9**).
 
 **Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
 
@@ -289,7 +289,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -309,13 +309,13 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
 - **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**: history + bookmarks + open http(s) tab text). Tab after **`search -list `** completes **`--all`**, **`--history`**, **`--bookmark`**, or **`--page`** if you want a single scope (see **[How columns open](#picker-ui)**).
-- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all three effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use local SQLite metadata cache (`bmxt_search_cache_db_v1`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
+- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all three effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
 - In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
-- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to the search SQLite cache) and may trigger the extension’s **optional host permission** prompt the first time.
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) and may trigger the extension’s **optional host permission** prompt the first time.
 
 <a id="nav-mode"></a>
 
@@ -737,7 +737,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, `bmxt_ui_settings_v1`); see **[`setting`](#setting)**
 - **`lib/features/session/`** — terminal sessions (`session -list` / `-switch` inline pickers, session bar); see **[`session`](#session)**
-- **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional SQLite audit log; see **[Job execution](#job-execution)**
+- **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional in-memory audit log; see **[Job execution](#job-execution)**
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
@@ -759,11 +759,11 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 
 **Cancel:** **`Ctrl+C`** on the prompt, **`* -exit -list`** while a picker job is loading, or starting a new job of the same kind in the same scope (for **cancel-previous** kinds).
 
-**Optional audit log:** In the BMXt UI tab only, completed job records may be appended to a local SQLite blob in **`chrome.storage.local`** under **`bmxt_job_db_v1`** (pruned per scope). The Service Worker never loads this module — background **`run-cmd`** jobs use **`persist: false`**.
+**Optional audit log:** In the BMXt UI tab only, completed job records may be kept in an in-memory trail (`job-audit-memory`, pruned per scope). The Service Worker never loads this module — background **`run-cmd`** jobs use **`persist: false`**.
 
 **Search loading progress:** Progress lines for **`search -list`** are batched with **`requestAnimationFrame`** in the active shell (`use-batched-search-loading-progress.ts`) so heavy scans do not force every session pane to re-render; merged into the search picker when results arrive.
 
-**Implementation:** **`job-types.ts`**, **`job-runner.ts`**, **`job-handle.ts`**, **`use-session-job-runner.ts`**, **`dispatch-context-from-job.ts`**, optional DB under **`lib/features/job/db/`**.
+**Implementation:** **`job-types.ts`**, **`job-runner.ts`**, **`job-handle.ts`**, **`use-session-job-runner.ts`**, **`dispatch-context-from-job.ts`**, optional audit under **`lib/features/job/db/job-audit-memory.ts`**.
 
 <a id="add-new-built-in-command"></a>
 
@@ -868,7 +868,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
 | **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
 | **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on http(s) pages |
-| **`public/`** | Static assets copied as-is: **`_locales/`**, **`icon.png`**, **`assets/search-cache/sql-wasm.wasm`**, **`background-services.js`** |
+| **`public/`** | Static assets copied as-is: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
 | **`lib/features/`** | Feature modules (see table below) |
 | **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
@@ -876,7 +876,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
 | **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
 
-**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`scripts/copy-sql-wasm.mjs`** → **`scripts/build-background-services.mjs`** → WXT. **`postinstall`** runs copy-sql-wasm + **`wxt prepare`** only.
+**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`scripts/build-background-services.mjs`** → WXT. **`postinstall`** runs **`wxt prepare`** only.
 
 <a id="main-sources"></a>
 
@@ -894,13 +894,12 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
-- `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, SQLite metadata cache (`bmxt_search_cache_db_v1` for **`--history`** / **`--bookmark`** only)
-- `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional SQLite audit log (`bmxt_job_db_v1`)
+- `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
+- `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
 - `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
-- `scripts/copy-sql-wasm.mjs` — Copies sql.js WASM into **`public/assets/search-cache/`**
 - `scripts/build-background-services.mjs` — Bundles Service Worker helpers into **`public/background-services.js`**
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
@@ -914,7 +913,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1126,7 +1125,7 @@ manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド�
 
 **データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
-**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self' 'wasm-unsafe-eval'`**（sql.js WASM）、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`wxt.config.ts`** を参照してください。
+**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self'`**、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`wxt.config.ts`** を参照してください。
 
 <a id="reproducible-builds-ja"></a>
 
@@ -1254,7 +1253,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `bmxt_process_ui_v1` | セッションごとの開いているピッカー（`tabs` / `search` / `dom` / `setting`）と `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、検索メタデータキャッシュ（`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** の URL・タイトルのみ。**`--page`** 本文は**保存しない**）、任意のジョブ監査ログ（`bmxt_job_db_v1`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は **setting → reset-search-cache** で削除可能だが、**0.6.9** 以降は新規書き込みしない。
 
 **実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
 
@@ -1274,7 +1273,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -1601,13 +1600,13 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
 - **`search -list` のみ**（末尾スペースなし）+ **Enter** で **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** で横断検索（**`--all`**: 履歴 + ブックマーク + 開いている http(s) タブ本文）。**`search -list `** のあと Tab で **`--all`** / **`--history`** / **`--bookmark`** / **`--page`** を補完して単一スコープに限定できる（**[列の開き方](#picker-ui-ja)**）。
-- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は 3 スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査は SQLite メタデータキャッシュ（`bmxt_search_cache_db_v1`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
+- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は 3 スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査はプロセス内メモリキャッシュ（`search-cache-store`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
 - 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
-- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search SQLite には本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs-ja"></a>
 
@@ -1717,7 +1716,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、`bmxt_ui_settings_v1`）；**[`setting`](#setting-ja)** 参照
 - **`lib/features/session/`** — ターミナルセッション（`session -list` / `-switch` インライン候補、セッションバー）；**[`session`](#session-ja)** 参照
-- **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
+- **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
 - **`entrypoints/bmxt-nav-overlay.content/`** — http(s) 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
@@ -1741,11 +1740,11 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 **キャンセル:** プロンプトの **`Ctrl+C`**、走査中の **`* -exit -list`**、同一スコープで同種ジョブを再開始（**cancel-previous** 種別）。
 
-**任意の監査ログ:** BMXt UI タブでのみ、完了ジョブを **`bmxt_job_db_v1`**（SQLite blob、スコープごとに間引き）へ追記することがある。Service Worker はこのモジュールを読み込まない — バックグラウンド **`run-cmd`** は **`persist: false`**。
+**任意の監査ログ:** BMXt UI タブでのみ、完了ジョブをメモリ内トレイル（`job-audit-memory`、スコープごとに間引き）へ保持することがある。Service Worker はこのモジュールを読み込まない — バックグラウンド **`run-cmd`** は **`persist: false`**。
 
 **search 走査進捗:** **`search -list`** の進捗行はアクティブシェル内で **`requestAnimationFrame`** バッチ（`use-batched-search-loading-progress.ts`）し、全セッションペインの再描画を抑える。結果確定時に search ピッカーへマージする。
 
-**実装:** **`job-types.ts`**、**`job-runner.ts`**、**`job-handle.ts`**、**`use-session-job-runner.ts`**、**`dispatch-context-from-job.ts`**、DB は **`lib/features/job/db/`**（任意）。
+**実装:** **`job-types.ts`**、**`job-runner.ts`**、**`job-handle.ts`**、**`use-session-job-runner.ts`**、**`dispatch-context-from-job.ts`**、任意の監査は **`lib/features/job/db/job-audit-memory.ts`**。
 
 <a id="add-new-built-in-command-ja"></a>
 
@@ -1838,7 +1837,7 @@ pnpm run dev
 | **`entrypoints/background/`** | Service Worker（`index.ts`）— ウィンドウ起動・`runDispatch`・Effect |
 | **`entrypoints/bmxt/`** | 拡張 UI ページ → ビルド後 **`bmxt.html`**（`main.tsx` + `index.html`） |
 | **`entrypoints/bmxt-nav-overlay.content/`** | http(s) 向け Nav コンテンツスクリプト |
-| **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`assets/search-cache/sql-wasm.wasm`**, **`background-services.js`** |
+| **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
@@ -1846,7 +1845,7 @@ pnpm run dev
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
 | **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発）, **`*-chrome.zip`**（**`pnpm run package`**） |
 
-**ビルドスクリプト:** **`pnpm run dev`** / **`build`** / **`package`** は **`scripts/copy-sql-wasm.mjs`** → **`scripts/build-background-services.mjs`** → WXT の順。**`postinstall`** は copy-sql-wasm + **`wxt prepare`** のみ。
+**ビルドスクリプト:** **`pnpm run dev`** / **`build`** / **`package`** は **`scripts/build-background-services.mjs`** → WXT の順。**`postinstall`** は **`wxt prepare`** のみ。
 
 <a id="main-sources-ja"></a>
 
@@ -1867,13 +1866,12 @@ pnpm run dev
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
-- `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、SQLite メタデータキャッシュ（`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** のみ）
-- `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ（`bmxt_job_db_v1`）
+- `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
+- `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
 - `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
-- `scripts/copy-sql-wasm.mjs` — sql.js WASM を **`public/assets/search-cache/`** へコピー
 - `scripts/build-background-services.mjs` — Service Worker ヘルパーを **`public/background-services.js`** にバンドル
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
@@ -1887,7 +1885,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 

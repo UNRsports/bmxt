@@ -30,6 +30,13 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.6.9:
+- Externalized the welcome page to reduce package size
+- Migrated the framework from Plasmo to WXT and package management from npm to pnpm
+- Revised tabs mode picker interaction for a more intuitive flow with less hand and eye movement
+- Repository-wide refactoring as part of the framework migration
+- Removed WASM-based SQLite, which had been causing performance degradation
+
 0.6.0:
 - Changed the extension window to a dedicated popup window without a tab bar
 - Implemented SQLite caching for search mode alongside the search refresh and job-based execution model
