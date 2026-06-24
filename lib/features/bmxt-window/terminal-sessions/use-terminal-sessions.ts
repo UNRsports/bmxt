@@ -12,6 +12,7 @@ import {
   setActiveSessionFromUiAsync,
   setSessionNameFromUiAsync
 } from "./session-runtime-client"
+import { createEmptyTerminalSessionsState } from "./state-storage"
 import type { TerminalSessionsStateV1 } from "./types"
 
 function applySessionsState(
@@ -51,7 +52,7 @@ export function useTerminalSessions(): {
       })
       .catch(() => {
         if (!cancelled) {
-          commitSessionsState(null)
+          commitSessionsState(createEmptyTerminalSessionsState())
         }
       })
 

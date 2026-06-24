@@ -1,5 +1,6 @@
 import type { BilingualUiLabel } from "./translation-pair"
-import { pickUiLabel, useUiLocale } from "../setting"
+import { pickUiLabel } from "../setting/locale"
+import { useUiLocale } from "../setting/use-ui-settings"
 
 type Props = {
   label: BilingualUiLabel

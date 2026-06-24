@@ -1,18 +1,13 @@
 /** Tab picker: structured rows for interactive UI + same grouping as legacy tabs list. */
 
 import { displayTitle } from "../format/display-title"
-import { t } from "../setting/i18n/messages"
+import { tTabs } from "../setting/i18n/ns/tabs"
 import { getRunLocale } from "../setting/i18n/run-locale"
 import type { UiLocale } from "../setting/locale"
-import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"
-import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
+import { loadPickerChromeContext } from "./picker-chrome-context"
 import { normalizeTabGroupColor } from "./tab-picker-overlay-constants"
 import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
 import { resolveTabFaviconSrc } from "./tab-favicon-url"
-import {
-  getWindowDisplayNamesMap,
-  pruneWindowDisplayNames
-} from "../extension-storage/window-display-names"
 import {
   resolveLiveTabTitle,
   resolveLiveTabUrl,
@@ -61,11 +56,11 @@ function groupKey(tab: chrome.tabs.Tab): number | "none" {
 
 function formatGroupLabel(g: chrome.tabGroups.TabGroup | undefined, locale: UiLocale): string {
   if (!g) {
-    return t("tabs.picker.unknownGroup", locale)
+    return tTabs("tabs.picker.unknownGroup", locale)
   }
   const raw = (g.title || "").trim()
   if (!raw) {
-    return t("tabs.picker.untitledGroup", locale, { color: g.color })
+    return tTabs("tabs.picker.untitledGroup", locale, { color: g.color })
   }
   return `【${displayTitle(raw, locale)}】`
 }
@@ -76,28 +71,44 @@ function tabUrl(t: chrome.tabs.Tab): string {
 
 /** Build rows (window / group headers + tabs) for the picker. `showUrl` is stored per picker session for UI. */
 export async function buildTabPickerRows(
-  _showUrl: boolean,
+  showUrl: boolean,
   locale: UiLocale = getRunLocale()
 ): Promise<TabPickerRow[]> {
-  const tabs = await chrome.tabs.query({})
+  const bundle = await buildTabPickerRowsBundle(showUrl, locale)
+  return bundle.rows
+}
+
+export type TabPickerRowsBundle = {
+  rows: TabPickerRow[]
+  lastNormalWindowId: number | undefined
+}
+
+/** EN: Row build + highlight anchor in one pass (no extra storage read). */
+export async function buildTabPickerRowsBundle(
+  _showUrl: boolean,
+  locale: UiLocale = getRunLocale()
+): Promise<TabPickerRowsBundle> {
+  const [tabs, groups, winsMeta] = await Promise.all([
+    chrome.tabs.query({}),
+    chrome.tabGroups.query({}),
+    chrome.windows.getAll({ populate: false })
+  ])
   if (tabs.length === 0) {
-    return []
+    return { rows: [], lastNormalWindowId: undefined }
   }
-  const groups = await chrome.tabGroups.query({})
   const groupMeta = new Map<number, chrome.tabGroups.TabGroup>()
   for (const g of groups) {
     groupMeta.set(g.id, g)
   }
-  const winsMeta = await chrome.windows.getAll({ populate: false })
   const openWindowIds: number[] = []
   for (const w of winsMeta) {
     if (w.id !== undefined) {
       openWindowIds.push(w.id)
     }
   }
-  await pruneWindowDisplayNames(openWindowIds)
-  const windowDisplayNames = await getWindowDisplayNamesMap()
-  const trackedWindowId = await resolveMirrorBrowserWindowId()
+  const chromeContext = await loadPickerChromeContext(openWindowIds)
+  const windowDisplayNames = chromeContext.windowDisplayNames
+  const trackedWindowId = chromeContext.trackedWindowId
 
   const sorted = [...tabs].sort((a, b) => {
     const wa = a.windowId ?? 0
@@ -122,27 +133,12 @@ export async function buildTabPickerRows(
   const windowOrder = [...new Set(sorted.map((t) => t.windowId ?? 0))].sort((a, b) => a - b)
   const rows: TabPickerRow[] = []
 
-  const activeTabByWindow = new Map<number, chrome.tabs.Tab>()
-  await Promise.all(
-    windowOrder.map(async (wid) => {
-      try {
-        const activeTabs = await chrome.tabs.query({ windowId: wid, active: true })
-        const t = activeTabs[0]
-        if (t) {
-          activeTabByWindow.set(wid, t)
-        }
-      } catch {
-        /* window may have closed */
-      }
-    })
-  )
-
   for (const wid of windowOrder) {
     const wTabs = byWindow.get(wid)
     if (!wTabs?.length) {
       continue
     }
-    const active = activeTabByWindow.get(wid) ?? wTabs.find((t) => t.active) ?? wTabs[0]
+    const active = wTabs.find((t) => t.active) ?? wTabs[0]
     const tracked = trackedWindowId !== undefined && wid === trackedWindowId
     const customName = windowDisplayNames.get(wid)
     const usesActiveTabTitle = customName === undefined
@@ -159,7 +155,7 @@ export async function buildTabPickerRows(
       windowId: wid,
       windowTitle,
       usesActiveTabTitle,
-      label: t("tabs.picker.windowLabel", locale, {
+      label: tTabs("tabs.picker.windowLabel", locale, {
         star: tracked ? "*" : " ",
         title: windowTitle
       }),
@@ -202,7 +198,10 @@ export async function buildTabPickerRows(
     }
   }
 
-  return rows
+  return {
+    rows,
+    lastNormalWindowId: chromeContext.lastNormalWindowId
+  }
 }
 
 import {
@@ -334,12 +333,9 @@ export function initialTabPickerHighlightIndex(
   return pickTabRowIdx()
 }
 
-export async function resolveInitialTabPickerHighlightIndex(
-  rows: TabPickerRow[]
-): Promise<number> {
-  const r = await chrome.storage.local.get(LAST_NORMAL_WINDOW_KEY)
-  const wid = r[LAST_NORMAL_WINDOW_KEY]
-  const anchorWid =
-    typeof wid === "number" && Number.isInteger(wid) ? wid : undefined
-  return initialTabPickerHighlightIndex(rows, anchorWid)
+export function resolveInitialTabPickerHighlightIndex(
+  rows: TabPickerRow[],
+  lastNormalWindowId?: number
+): number {
+  return initialTabPickerHighlightIndex(rows, lastNormalWindowId)
 }

@@ -1,0 +1,38 @@
+{
+  "domPrompt.approve": {
+    "ja": "許可 (Enter / Y)",
+    "en": "Allow (Enter / Y)"
+  },
+  "domPrompt.approveBusy": {
+    "ja": "要求中…",
+    "en": "Requesting…"
+  },
+  "domPrompt.aria": {
+    "ja": "許可ダイアログ",
+    "en": "Permission prompt"
+  },
+  "domPrompt.denied": {
+    "ja": "ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc でプロンプトへ。",
+    "en": "Permission was not granted by the browser; keeping the picker open so you can retry."
+  },
+  "domPrompt.headline": {
+    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · Esc/N → プロンプト",
+    "en": "dom -list — permission / target check · Enter=Allow / Y · Esc/N → prompt"
+  },
+  "domPrompt.listAria": {
+    "ja": "権限通知",
+    "en": "Permission notice"
+  },
+  "domPrompt.permissionRequestFailed": {
+    "ja": "error: 許可リクエストに失敗しました — {message}",
+    "en": "error: permission request failed — {message}"
+  },
+  "domPrompt.return": {
+    "ja": "プロンプトへ (Esc / N)",
+    "en": "Return to prompt (Esc / N)"
+  },
+  "domPrompt.scrollHint": {
+    "ja": "↑↓ / j k でメッセージをスクロール",
+    "en": "↑↓ / j k to scroll messages"
+  }
+}

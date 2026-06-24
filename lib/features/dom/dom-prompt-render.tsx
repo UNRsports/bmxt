@@ -7,7 +7,8 @@ import {
   type MutableRefObject
 } from "react"
 import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
-import { useUiCopy } from "../setting"
+import { tDomPrompt } from "../setting/i18n/ns/dom-prompt"
+import { useUiSettings } from "../setting/use-ui-settings"
 
 type Props = {
   /** Lines returned by the failing handler (shown verbatim above the buttons). */
@@ -32,7 +33,8 @@ export function DomPromptRender({
   keyboardActive = false,
   pickerInputRef
 }: Props) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -77,10 +79,10 @@ export function DomPromptRender({
           onApprove()
           return
         }
-        setExtra([uiCopy.t("domPrompt.denied")])
+        setExtra([tDomPrompt("domPrompt.denied", locale)])
       } catch (err) {
         setExtra([
-          uiCopy.t("domPrompt.permissionRequestFailed", {
+          tDomPrompt("domPrompt.permissionRequestFailed", locale, {
             message: err instanceof Error ? err.message : String(err)
           })
         ])
@@ -88,7 +90,7 @@ export function DomPromptRender({
         setBusy(false)
       }
     })()
-  }, [busy, onApprove, onPermissionGranted, uiCopy])
+  }, [busy, onApprove, onPermissionGranted, locale])
 
   useEffect(() => {
     if (!keyboardActive) {
@@ -140,7 +142,7 @@ export function DomPromptRender({
 
   return (
     <div className="bmxt-tab-picker">
-      <div className="bmxt-tab-picker-head">{uiCopy.t("domPrompt.headline")}</div>
+      <div className="bmxt-tab-picker-head">{tDomPrompt("domPrompt.headline", locale)}</div>
       <textarea
         ref={setInputEl}
         className="bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
@@ -151,14 +153,14 @@ export function DomPromptRender({
         autoCorrect="off"
         autoComplete="off"
         wrap="off"
-        aria-label={uiCopy.t("domPrompt.aria")}
+        aria-label={tDomPrompt("domPrompt.aria", locale)}
         value=""
         onKeyDown={onInputKeyDown}
       />
       <div
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label={uiCopy.t("domPrompt.listAria")}>
+        aria-label={tDomPrompt("domPrompt.listAria", locale)}>
         {allLines.map((ln, i) => {
           const hiRow = i === hi
           return (
@@ -184,15 +186,15 @@ export function DomPromptRender({
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--primary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          {busy ? uiCopy.t("domPrompt.approveBusy") : uiCopy.t("domPrompt.approve")}
+          {busy ? tDomPrompt("domPrompt.approveBusy", locale) : tDomPrompt("domPrompt.approve", locale)}
         </span>
         <span
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--secondary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          {uiCopy.t("domPrompt.return")}
+          {tDomPrompt("domPrompt.return", locale)}
         </span>
-        <span className="bmxt-dom-prompt-footer-hint">{uiCopy.t("domPrompt.scrollHint")}</span>
+        <span className="bmxt-dom-prompt-footer-hint">{tDomPrompt("domPrompt.scrollHint", locale)}</span>
       </div>
     </div>
   )

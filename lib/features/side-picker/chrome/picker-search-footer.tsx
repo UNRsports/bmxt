@@ -1,12 +1,14 @@
-import { useUiCopy } from "../../setting"
+import { tPicker } from "../../setting/i18n/ns/picker"
+import { useUiSettings } from "../../setting/use-ui-settings"
 
 export function PickerSearchFooter({ filterQuery }: { filterQuery: string }) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   return (
     <div className="bmxt-tab-picker-filter">
       <span className="bmxt-tab-picker-filter-label">/</span>
       <span className="bmxt-tab-picker-filter-query">{filterQuery || " "}</span>
-      <span className="bmxt-tab-picker-filter-hint">{uiCopy.t("picker.searchFooter.hint")}</span>
+      <span className="bmxt-tab-picker-filter-hint">{tPicker("picker.searchFooter.hint", locale)}</span>
     </div>
   )
 }

@@ -79,7 +79,6 @@ export {
   type MessageVars,
   type NavStatusMode
 } from "./i18n"
-export { useUiCopy, useUiLocaleOrDefault } from "./use-ui-copy"
 export {
   parseSettingIncompleteLine,
   parseSettingListPickerLine,

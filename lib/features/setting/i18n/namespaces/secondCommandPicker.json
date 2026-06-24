@@ -1,0 +1,10 @@
+{
+  "secondCommandPicker.aria": {
+    "ja": "第二コマンド",
+    "en": "Second command"
+  },
+  "secondCommandPicker.hint": {
+    "ja": "第二コマンド · ↑↓ / Tab · Enter · Esc",
+    "en": "Second command · ↑↓ / Tab · Enter · Esc"
+  }
+}

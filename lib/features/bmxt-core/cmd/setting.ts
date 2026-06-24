@@ -6,7 +6,7 @@ import {
   settingCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
-import { t } from "../../setting/i18n/messages"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
 import { linesDispatch } from "../types"
 
@@ -24,7 +24,7 @@ export function run(args: string[]) {
   const first = args[1]
   if (!isSecondToken("setting", first)) {
     return linesDispatch([
-      t("cmd.setting.error.unknownOption", locale, { option: first }),
+      tCmd("cmd.setting.error.unknownOption", locale, { option: first }),
       ...settingCmdUsageLines(locale)
     ])
   }
@@ -36,7 +36,7 @@ export function run(args: string[]) {
     return linesDispatch(settingCmdExitLines(locale))
   }
   return linesDispatch([
-    t("cmd.setting.error.internal", locale, { option: first }),
+    tCmd("cmd.setting.error.internal", locale, { option: first }),
     ...settingCmdUsageLines(locale)
   ])
 }

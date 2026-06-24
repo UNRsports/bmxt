@@ -6,7 +6,7 @@ import {
 import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
-import type { MessageKey } from "./i18n/messages"
+import type { SettingMessageKey } from "./i18n/ns/setting"
 
 export const APPEARANCE_FLAG_TOKENS = [
   "--fg",
@@ -174,7 +174,7 @@ export function listAppearanceFlagTokens(): readonly AppearanceFlagToken[] {
 
 export type AppearancePatchResult =
   | { ok: true; patch: Partial<UiAppearance> }
-  | { ok: false; errorKey: MessageKey }
+  | { ok: false; errorKey: SettingMessageKey }
 
 export function buildAppearancePatch(
   flag: AppearanceFlagToken,

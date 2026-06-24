@@ -3,7 +3,7 @@ import { DomListPickerBody } from "../../dom/dom-list-picker-body"
 import { DomPromptRender } from "../../dom/dom-prompt-render"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { domListPickerHeadline } from "../../setting/i18n/picker-headlines"
-import { useUiCopy } from "../../setting"
+import { useUiSettings } from "../../setting/use-ui-settings"
 
 export type DomPickerWrapperProps = {
   state: DomListPickerState
@@ -25,7 +25,8 @@ export function DomPickerWrapper({
   pickerInputRef,
   sessionId
 }: DomPickerWrapperProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   if (state.kind === "prompt") {
     return (
       <DomPromptRender
@@ -40,7 +41,7 @@ export function DomPickerWrapper({
   const jumpPaths = state.jumpPaths ?? state.lines.map(() => null)
   return (
     <DomListPickerBody
-      headline={domListPickerHeadline(uiCopy.locale)}
+      headline={domListPickerHeadline(locale)}
       lines={state.lines}
       jumpPaths={jumpPaths}
       headerLineCount={state.headerLineCount ?? state.lines.length}

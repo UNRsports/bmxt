@@ -30,7 +30,7 @@ async function persistJobStartedLazy(
   kind: JobKind,
   meta?: JobMeta
 ): Promise<number> {
-  const { persistJobStarted } = await import("./db/job-db.ts")
+  const { persistJobStarted } = await import("./db/job-audit-memory.ts")
   return persistJobStarted(scopeId, kind, meta)
 }
 
@@ -39,7 +39,7 @@ async function persistJobFinishedLazy(
   status: Exclude<JobStatus, "running">,
   error: string | null = null
 ): Promise<void> {
-  const { persistJobFinished } = await import("./db/job-db.ts")
+  const { persistJobFinished } = await import("./db/job-audit-memory.ts")
   await persistJobFinished(id, status, error)
 }
 

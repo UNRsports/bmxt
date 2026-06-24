@@ -1,7 +1,8 @@
 import type { MutableRefObject } from "react"
 import { useCallback } from "react"
 import { logBmxtKey } from "../debug/key-log"
-import { useUiCopy } from "../setting"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { TabPickerRow } from "./picker-rows"
 import { mapVisibleIndicesToPlanRows } from "./tab-picker-plan-rows"
 import type { PickerReducerState } from "./state-machine"
@@ -65,7 +66,8 @@ export type TabPickerExecutionParams = {
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const {
     rows,
     visibleRowIndices,
@@ -175,7 +177,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onRefreshRows,
     rows,
     selectedTabIds,
-      uiCopy
+      locale
     ]
   )
 
@@ -263,7 +265,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         tabIds,
         title: newGroupTitle,
         color,
-        locale: uiCopy.locale,
+        locale: locale,
         onAppendLog,
         resolveCreateGroupPlan: resolvePickerCreateGroupPlan
       })
@@ -321,7 +323,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         }
 
         const primaryReason =
-          err?.message ?? uiCopy.t("tabs.picker.error.createNoResponse")
+          err?.message ?? tTabs("tabs.picker.error.createNoResponse", locale)
         logBmxtKey("picker", "tabs.create(windowId) fallback", { primaryReason })
 
         const fallbackCreate: chrome.tabs.CreateProperties =
@@ -330,10 +332,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           const err2 = chrome.runtime.lastError
           if (err2 || tab2?.id === undefined) {
             abortLogged([
-              uiCopy.t("tabs.picker.error.newTabPrimary", { message: primaryReason }),
+              tTabs("tabs.picker.error.newTabPrimary", locale, { message: primaryReason }),
               err2?.message
-                ? uiCopy.t("tabs.picker.error.newTabFallbackLine", { message: err2.message })
-                : uiCopy.t("tabs.picker.error.newTabFallbackFailed")
+                ? tTabs("tabs.picker.error.newTabFallbackLine", locale, { message: err2.message })
+                : tTabs("tabs.picker.error.newTabFallbackFailed", locale)
             ])
             return
           }
@@ -341,8 +343,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             const err3 = chrome.runtime.lastError
             if (err3 || moved?.id === undefined) {
               abortLogged([
-                uiCopy.t("tabs.picker.error.newTabPrimary", { message: primaryReason }),
-                uiCopy.t("tabs.picker.error.newTabMoveFailed", {
+                tTabs("tabs.picker.error.newTabPrimary", locale, { message: primaryReason }),
+                tTabs("tabs.picker.error.newTabMoveFailed", locale, {
                   message: err3?.message ?? "unknown"
                 })
               ])
@@ -359,7 +361,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       onPickerHighlightCreatedTab,
       onRefreshRows,
       setActiveTabId,
-      uiCopy
+      locale
     ]
   )
 
@@ -391,7 +393,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       if (!v.ok) {
         setBulkSubMode(null)
         void onAppendLog?.([
-          `error: ${v.reason ?? uiCopy.t("tabs.picker.error.executeFailed")}`
+          `error: ${v.reason ?? tTabs("tabs.picker.error.executeFailed", locale)}`
         ])
         return
       }
@@ -478,7 +480,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       setGroupNewPhase,
       setNewGroupColorIndex,
       setNewGroupTitle,
-      uiCopy,
+      locale,
       visibleRowIndices
     ]
   )

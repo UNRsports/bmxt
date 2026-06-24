@@ -1,4 +1,4 @@
-import { t } from "../setting/i18n/messages"
+import { tTabs } from "../setting/i18n/ns/tabs"
 import type { UiLocale } from "../setting/locale"
 import { displayTitle, type TabPickerRow } from "./picker-rows"
 import { resolveLiveTabTitle } from "./tab-picker-live-tab-fields"
@@ -28,7 +28,7 @@ export function formatWindowPickerLabel(
       }
     }
   }
-  return t("tabs.picker.windowLabel", locale, { star, title })
+  return tTabs("tabs.picker.windowLabel", locale, { star, title })
 }
 
 export { displayTitle }

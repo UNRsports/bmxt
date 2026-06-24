@@ -13,7 +13,8 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../../bmxt-window/csp-dynamic-stylesheet"
-import { useUiCopy } from "../../setting"
+import { tPlainPicker } from "../../setting/i18n/ns/plain-picker"
+import { useUiSettings } from "../../setting/use-ui-settings"
 import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../hooks/use-plain-picker-keyboard"
@@ -112,7 +113,8 @@ export function PlainTextPickerBody({
   onHiChange,
   statusOnly = false
 }: PlainTextPickerBodyProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -324,10 +326,10 @@ export function PlainTextPickerBody({
         wrap="off"
         aria-label={
           searchMode
-            ? uiCopy.t("plainPicker.searchHint")
+            ? tPlainPicker("plainPicker.searchHint", locale)
             : commandMode
-              ? uiCopy.t("plainPicker.commandHint")
-              : uiCopy.t("plainPicker.keysHint")
+              ? tPlainPicker("plainPicker.commandHint", locale)
+              : tPlainPicker("plainPicker.keysHint", locale)
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
@@ -350,7 +352,7 @@ export function PlainTextPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label={uiCopy.t("plainPicker.listAria")}
+        aria-label={tPlainPicker("plainPicker.listAria", locale)}
         aria-activedescendant={activeRowId}
         onScroll={useVirtual ? onListScroll : undefined}>
         {lines.length >= PLAIN_PICKER_VIRTUALIZE_MIN ? (
@@ -366,7 +368,7 @@ export function PlainTextPickerBody({
           </div>
         ) : null}
         {lines.length === 0 ? (
-          <div className="bmxt-tab-picker-empty">{uiCopy.t("plainPicker.noOutput")}</div>
+          <div className="bmxt-tab-picker-empty">{tPlainPicker("plainPicker.noOutput", locale)}</div>
         ) : useVirtual ? (
           <div
             className="bmxt-plain-picker-virtual-track"
@@ -386,7 +388,7 @@ export function PlainTextPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={urlListCommandListingHint(uiCopy.locale)}
+          listingHintText={urlListCommandListingHint(locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

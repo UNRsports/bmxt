@@ -4,24 +4,11 @@
  */
 
 import type { SearchPageMatch } from "../side-picker/model/picker-entry"
+import { normalizeForMatch } from "../format/normalize-for-match.ts"
 
 export type RawNeedleHit = {
   index: number
   length: number
-}
-
-function stripInvisibleFormatChars(s: string): string {
-  return s.replace(/[\uFEFF\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, "")
-}
-
-/** EN: Keep in sync with `lib/features/search/matcher.ts`. */
-function normalizeForMatch(s: string): string {
-  const t = stripInvisibleFormatChars(s)
-  try {
-    return t.normalize("NFKC").toLowerCase()
-  } catch {
-    return t.toLowerCase()
-  }
 }
 
 /**

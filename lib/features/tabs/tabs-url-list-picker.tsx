@@ -1,6 +1,8 @@
 import { PickerListShell } from "../side-picker/chrome/picker-list-shell"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
-import { useUiCopy } from "../setting"
+import { tPlainPicker } from "../setting/i18n/ns/plain-picker"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import { useUiSettings } from "../setting/use-ui-settings"
 import {
   TabPickerActionMenuPanel,
   TabPickerEditGroupMenuPanel,
@@ -17,7 +19,8 @@ export type { TabPickerViewProps } from "./tab-picker-view-types"
 
 /** EN: Tabs column on UrlList picker shell (hierarchical list + bulk/edit panels). */
 export function TabsUrlListPicker(props: TabPickerViewProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const {
     headLine,
     searchHighlightQuery,
@@ -130,10 +133,10 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
       }
       inputAriaLabel={
         searchMode
-          ? uiCopy.t("plainPicker.searchHint")
-          : uiCopy.t("tabs.picker.inputAria.keys")
+          ? tPlainPicker("plainPicker.searchHint", locale)
+          : tTabs("tabs.picker.inputAria.keys", locale)
       }
-      listAriaLabel={uiCopy.t("tabs.picker.listAria")}
+      listAriaLabel={tTabs("tabs.picker.listAria", locale)}
       listAriaMultiselectable
       listActivedescendant={
         visibleRowIndices[hi] !== undefined ? `bmxt-tab-row-${visibleRowIndices[hi]}` : undefined

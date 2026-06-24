@@ -14,7 +14,8 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../bmxt-window/csp-dynamic-stylesheet"
-import { useUiCopy } from "../setting"
+import { tSearch } from "../setting/i18n/ns/search"
+import { tPlainPicker } from "../setting/i18n/ns/plain-picker"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
@@ -37,7 +38,8 @@ import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
 import type { SearchOpenDestinationRow } from "./search-open-destination"
-import { resolveSearchHighlightAppearance, useUiSettings } from "../setting"
+import { resolveSearchHighlightAppearance } from "../setting/appearance"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { SearchPageActiveMode } from "./page-active-setting"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
 
@@ -239,7 +241,6 @@ export function SearchListPickerBody({
   destinationFromDetail = false,
   pageActiveMode = "auto"
 }: SearchListPickerBodyProps) {
-  const uiCopy = useUiCopy()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -392,6 +393,7 @@ export function SearchListPickerBody({
     detailHits.length > 0
 
   const { settings } = useUiSettings()
+  const locale = settings.locale
   const searchHighlightColors = useMemo(
     () => resolveSearchHighlightAppearance(settings.appearance),
     [settings.appearance]
@@ -558,10 +560,10 @@ export function SearchListPickerBody({
     lineCount > 0 && hi >= 0 && hi < lineCount ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
   const listAriaLabel = inDestinationView
-    ? uiCopy.t("search.picker.listAria.destination")
+    ? tSearch("search.picker.listAria.destination", locale)
     : inDetailView
-      ? uiCopy.t("search.picker.listAria.detail")
-      : uiCopy.t("search.picker.listAria.results")
+      ? tSearch("search.picker.listAria.detail", locale)
+      : tSearch("search.picker.listAria.results", locale)
 
   const renderResultsRows = (start: number, end: number): ReactNode[] => {
     const slice: ReactNode[] = []
@@ -683,10 +685,10 @@ export function SearchListPickerBody({
         wrap="off"
         aria-label={
           searchMode
-            ? uiCopy.t("plainPicker.searchHint")
+            ? tPlainPicker("plainPicker.searchHint", locale)
             : commandMode
-              ? uiCopy.t("plainPicker.commandHint")
-              : uiCopy.t("search.picker.listAria.keys")
+              ? tPlainPicker("plainPicker.commandHint", locale)
+              : tSearch("search.picker.listAria.keys", locale)
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
@@ -744,7 +746,7 @@ export function SearchListPickerBody({
           </div>
         ) : null}
         {lineCount === 0 ? (
-          <div className="bmxt-tab-picker-empty">{uiCopy.t("plainPicker.noOutput")}</div>
+          <div className="bmxt-tab-picker-empty">{tPlainPicker("plainPicker.noOutput", locale)}</div>
         ) : statusOnly ? (
           statusLines.map((line, i) => (
             <SearchListStatusRow key={i} index={i} line={line} hi={hi} />
@@ -795,7 +797,7 @@ export function SearchListPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={urlListCommandListingHint(uiCopy.locale)}
+          listingHintText={urlListCommandListingHint(locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

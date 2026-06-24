@@ -1,0 +1,18 @@
+{
+  "domList.captureFailed": {
+    "ja": "このページでは DOM を取得できませんでした。",
+    "en": "Could not capture DOM on this page."
+  },
+  "domList.noTarget": {
+    "ja": "対象タブがありません。通常のブラウザウィンドウでページを開いてください。",
+    "en": "No target tab — focus a normal browser window with a page."
+  },
+  "domList.unavailable": {
+    "ja": "dom -list — 表示不可",
+    "en": "dom -list — unavailable"
+  },
+  "domList.unscriptable": {
+    "ja": "権限のないページのため、本拡張機能では DOM を表示できません。",
+    "en": "This extension cannot show DOM on pages Chrome blocks from scripting (chrome://, Web Store, extension pages, etc.)."
+  }
+}

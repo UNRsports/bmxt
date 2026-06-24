@@ -1,9 +1,10 @@
+import type { MessageVars } from "./format-message"
+import { tCmd, type CmdMessageKey } from "./ns/cmd"
 import type { UiLocale } from "../locale"
 import { getRunLocale } from "./run-locale"
-import { t, type MessageKey, type MessageVars } from "./messages"
 
-function L(key: MessageKey, locale?: UiLocale, vars?: MessageVars): string {
-  return t(key, locale ?? getRunLocale(), vars)
+function L(key: CmdMessageKey, locale?: UiLocale, vars?: MessageVars): string {
+  return tCmd(key, locale ?? getRunLocale(), vars)
 }
 
 export function cmdAvailableOptionsLine(command: string, locale?: UiLocale): string {

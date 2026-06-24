@@ -245,20 +245,6 @@ export function useTabPickerPlainExtensions({
 
       if (isLeft) {
         if (row.kind === "tab") {
-          if (row.groupId !== null) {
-            const focusRowIdx = collapseAtRow(row)
-            if (focusRowIdx !== null) {
-              pickerStopEvent(e)
-              const newVisible = computeTabPickerVisibleRowIndices(rows)
-              const newHi = newVisible.indexOf(focusRowIdx)
-              if (newHi >= 0) {
-                setHi(newHi)
-              } else {
-                setHi((h) => Math.min(h, Math.max(0, newVisible.length - 1)))
-              }
-              return true
-            }
-          }
           if (onExitToDetailBar) {
             pickerStopEvent(e)
             onExitToDetailBar()

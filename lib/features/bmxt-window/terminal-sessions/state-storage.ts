@@ -97,7 +97,7 @@ export function newSessionId(): string {
   return `s_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
 }
 
-function emptyState(): TerminalSessionsStateV1 {
+export function createEmptyTerminalSessionsState(): TerminalSessionsStateV1 {
   const id = newSessionId()
   return {
     v: 2,
@@ -106,6 +106,10 @@ function emptyState(): TerminalSessionsStateV1 {
     activeId: id,
     namesById: {}
   }
+}
+
+function emptyState(): TerminalSessionsStateV1 {
+  return createEmptyTerminalSessionsState()
 }
 
 /** 旧: 単一キーに order + activeId を含むブロブ。 */

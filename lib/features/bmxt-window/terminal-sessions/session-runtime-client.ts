@@ -3,6 +3,7 @@
  * JA: BMXt UI から SW セッション状態へ送るメッセージ。
  */
 
+import { markPageBootPhase } from "../../launch/page-boot-perf"
 import {
   SESSION_INIT_MESSAGE,
   SESSION_UI_APPEND_LOG_MESSAGE,
@@ -26,6 +27,7 @@ function sendRuntimeMessage<T>(message: Record<string, unknown>): Promise<T> {
 }
 
 export async function initSessionRuntimeFromPageAsync(): Promise<TerminalSessionsStateV1> {
+  markPageBootPhase("session-init-start")
   const response = await sendRuntimeMessage<SessionInitResponse>({
     type: SESSION_INIT_MESSAGE
   })
@@ -36,6 +38,7 @@ export async function initSessionRuntimeFromPageAsync(): Promise<TerminalSession
         : "SESSION_INIT failed"
     throw new Error(msg)
   }
+  markPageBootPhase("session-init-done")
   return response.state
 }
 

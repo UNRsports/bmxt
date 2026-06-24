@@ -1,0 +1,126 @@
+{
+  "nav.armedLog": {
+    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · Enter クリック/入力 · nav -exit で終了）",
+    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · nav -exit to quit)"
+  },
+  "nav.disarmed": {
+    "ja": "nav を終了しました。",
+    "en": "nav disarmed."
+  },
+  "nav.exitActiveError": {
+    "ja": "error: 先に Alt で nav を OFF にしてから nav -exit を実行してください。",
+    "en": "error: turn nav off with Alt on the prompt first, then run nav -exit."
+  },
+  "nav.hostAccessWarning": {
+    "ja": "warning: http(s) のサイトアクセスが未許可です — Alt ON の前に許可するか、chrome://extensions でサイトアクセスを有効にしてください。",
+    "en": "warning: http(s) site access was not granted — allow it before Alt ON, or enable site access under chrome://extensions."
+  },
+  "nav.notArmed": {
+    "ja": "このペインでは nav は起動していません。",
+    "en": "nav is not armed in this pane."
+  },
+  "nav.overlay.error.generic": {
+    "ja": "オーバーレイエラー",
+    "en": "overlay failed"
+  },
+  "nav.overlay.error.injectNoResult": {
+    "ja": "注入結果なし",
+    "en": "inject no result"
+  },
+  "nav.overlay.error.noTargetTab": {
+    "ja": "対象タブがありません",
+    "en": "no target tab"
+  },
+  "nav.overlay.error.notScriptable": {
+    "ja": "このページではスクリプトできません",
+    "en": "page not scriptable"
+  },
+  "nav.overlay.error.permissionDenied": {
+    "ja": "サイトアクセスが拒否されました",
+    "en": "site access denied"
+  },
+  "nav.overlay.menu.copyHint": {
+    "ja": "Enter",
+    "en": "Enter"
+  },
+  "nav.overlay.menu.copySelection": {
+    "ja": "コピー",
+    "en": "Copy"
+  },
+  "nav.overlay.menu.historyBack": {
+    "ja": "履歴を戻る",
+    "en": "History back"
+  },
+  "nav.overlay.menu.historyForward": {
+    "ja": "履歴を進む",
+    "en": "History forward"
+  },
+  "nav.overlay.menu.reloadPage": {
+    "ja": "ページを再読み込み",
+    "en": "Reload page"
+  },
+  "nav.overlay.menu.saveImage": {
+    "ja": "カーソル下の画像を保存",
+    "en": "Save image under cursor"
+  },
+  "nav.overlay.menu.selectHint": {
+    "ja": "↑↓ · Enter",
+    "en": "↑↓ · Enter"
+  },
+  "nav.overlay.menu.selectText": {
+    "ja": "テキスト選択",
+    "en": "Select text"
+  },
+  "nav.overlay.textSel.end": {
+    "ja": "選択終了: Enter 確定 · 移動で範囲プレビュー · Esc 取消",
+    "en": "Selection end: Enter confirm · move to preview · Esc cancel"
+  },
+  "nav.overlay.textSel.start": {
+    "ja": "選択開始: Enter · Esc 取消",
+    "en": "Selection start: Enter · Esc cancel"
+  },
+  "nav.overlay.typing.line1": {
+    "ja": "BMXt ウィンドウで入力",
+    "en": "Type in the BMXt window"
+  },
+  "nav.overlay.typing.line2": {
+    "ja": "入力したテキストがここに反映されます",
+    "en": "Text typed in BMXt appears here"
+  },
+  "nav.overlay.typing.multiline": {
+    "ja": "Shift+Enter で改行",
+    "en": "Shift+Enter for newline"
+  },
+  "nav.status.copyClosed": {
+    "ja": "Esc で選択解除",
+    "en": "Esc to clear selection"
+  },
+  "nav.status.copyOpen": {
+    "ja": "コピー · Enter 実行 · Esc で選択解除",
+    "en": "Copy · Enter to run · Esc to clear selection"
+  },
+  "nav.status.idle": {
+    "ja": "↑↓←→ 移動 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · nav -exit で終了",
+    "en": "↑↓←→ move · Enter click/type · Ctrl menu · Alt toggle · nav -exit to quit"
+  },
+  "nav.status.menu": {
+    "ja": "↑↓ 項目 · Enter 実行 · ←→ 履歴 · Ctrl/Esc で閉じる",
+    "en": "↑↓ items · Enter run · ←→ history · Ctrl/Esc close"
+  },
+  "nav.status.selEnd": {
+    "ja": "↑↓ 移動 · 範囲プレビュー · Enter で確定 · Esc/Ctrl で取消",
+    "en": "↑↓ move · range preview · Enter to confirm · Esc/Ctrl to cancel"
+  },
+  "nav.status.selStart": {
+    "ja": "↑↓ 移動 · Enter で選択開始 · Esc/Ctrl で取消",
+    "en": "↑↓ move · Enter to start selection · Esc/Ctrl to cancel"
+  },
+  "nav.status.typing": {
+    "ja": "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル",
+    "en": "Type on the BMXt prompt · Alt hold to commit · Esc hold to cancel"
+  },
+  "nav.status.typingMultiline": {
+    "ja": "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル",
+    "en": "Type on the BMXt prompt · Shift+Enter newline · Alt hold to commit · Esc hold to cancel"
+  }
+}

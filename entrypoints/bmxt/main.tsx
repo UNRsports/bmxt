@@ -4,9 +4,17 @@ import "../../bmxt-ui.css"
  * EN: Static HTML paints first; then load React shell + command core in parallel.
  * JA: 静的 HTML を即表示し、React とコマンドコアを並列読み込み。
  */
-import { warmBackgroundServicesFromPageAsync } from "../../lib/features/launch/warm-background-services"
+import {
+  installPageBootPerfConsoleHelpers,
+  markPageBootPhase,
+  resetPageBootPerf
+} from "../../lib/features/launch/page-boot-perf"
+import { startVersionUpgradePreflight } from "../../lib/features/bmxt-window/version-upgrade-preflight"
 
-void warmBackgroundServicesFromPageAsync()
+resetPageBootPerf()
+installPageBootPerfConsoleHelpers()
+markPageBootPhase("page-script-start")
+startVersionUpgradePreflight()
 
 void (async () => {
   const rootEl = document.getElementById("root")
@@ -22,7 +30,10 @@ void (async () => {
     import("../../lib/features/bmxt-window/bmxt-terminal")
   ])
 
+  markPageBootPhase("react-chunks-loaded")
   await coreReady
+  markPageBootPhase("bmxt-core-ready")
+  markPageBootPhase("react-render-start")
 
   function BmxtTabPage() {
     useEffect(() => {

@@ -1,8 +1,10 @@
-import { useUiCopy } from "./index"
+import { tModeStatus } from "./i18n/ns/mode-status"
+import { useUiSettings } from "./use-ui-settings"
 
 /** EN: Detail bar for the setting list picker. */
 export function SettingStatusBar() {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
 
   return (
     <div className="bmxt-mode-status" role="status" aria-live="polite">
@@ -13,10 +15,10 @@ export function SettingStatusBar() {
         list
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">
-        {uiCopy.t("modeStatus.setting.meta")}
+        {tModeStatus("modeStatus.setting.meta", locale)}
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {uiCopy.t("modeStatus.setting.hint")}
+        {tModeStatus("modeStatus.setting.hint", locale)}
       </span>
     </div>
   )

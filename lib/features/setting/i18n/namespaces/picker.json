@@ -1,0 +1,18 @@
+{
+  "picker.commandAmbiguous.tabCycle": {
+    "ja": "Tab で循環: {commands}",
+    "en": "Tab to cycle: {commands}"
+  },
+  "picker.commandFooter.hint": {
+    "ja": "Enter 実行  Esc キャンセル",
+    "en": "Enter run  Esc cancel"
+  },
+  "picker.commandListing.nohlsearch": {
+    "ja": ":nohlsearch — 検索ハイライトを消す",
+    "en": ":nohlsearch — clear search highlight"
+  },
+  "picker.searchFooter.hint": {
+    "ja": "Enter で / 終了（ハイライト維持）· Esc キャンセル",
+    "en": "Enter ends / (keeps highlight) · Esc cancel"
+  }
+}

@@ -29,17 +29,12 @@ import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
 import { buildHelpLines } from "../../lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "../../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../../lib/features/setting/i18n/run-locale"
-import { t } from "../../lib/features/setting/i18n/messages"
+import { tWindows } from "../../lib/features/setting/i18n/ns/windows"
 import { BACKGROUND_JOB_SCOPE } from "../../lib/features/job/job-types"
 import { getJobRunner } from "../../lib/features/job/job-runner"
 import { runNavControlOnTab } from "../../lib/features/nav/run-nav-inject"
 import type { NavInjectAction } from "../../lib/features/nav/nav-overlay-inject-fn"
-import { openWelcomePageOnUpdateIfNeeded } from "../../lib/features/welcome"
-import { registerSearchCacheBackgroundListeners } from "../../lib/features/search/cache/background-listeners"
-import {
-  scheduleDeferredWarmSearchCachesForLifecycle,
-  ensureWarmSearchCachesStarted
-} from "../../lib/features/launch/warm-search-scheduler"
+import { ensureSearchCacheBackgroundListeners } from "../../lib/features/search/cache/background-listeners"
 import {
   clearBmxtWindowIdInMemory,
   hydrateBmxtWindowIdFromStorage,
@@ -60,7 +55,7 @@ import {
 setupInMemorySessionRuntime()
 
 let lastFocusedNormalWindow: number | undefined
-let commandCoreWarmed = false
+let backgroundServicesRegistered = false
 
 function senderWindowId(sender?: chrome.runtime.MessageSender): number | undefined {
   const tab = sender?.tab
@@ -187,7 +182,7 @@ async function runCommand(
 async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void> {
   const trimmed = line
   if (/^\s*search\b/i.test(trimmed)) {
-    ensureWarmSearchCachesStarted()
+    ensureSearchCacheBackgroundListeners()
   }
   const st0 = await ensureTerminalSessionsState()
   const sessionId = resolveSessionId(st0, sessionIdRaw)
@@ -263,7 +258,7 @@ async function dispatch(
 async function listWindows(): Promise<string[]> {
   const wins = await chrome.windows.getAll({ populate: true })
   if (wins.length === 0) {
-    return [t("windows.none", getRunLocale())]
+    return [tWindows("windows.none", getRunLocale())]
   }
   return wins.map((w) => {
     const f = w.focused ? "*" : " "
@@ -430,15 +425,6 @@ export async function handleSessionRuntimeMessageAsync(
   return { ok: false, error: "unknown session message" }
 }
 
-export async function warmBackgroundServicesAsync(): Promise<void> {
-  if (commandCoreWarmed) {
-    return
-  }
-  await ensureBmxtCore()
-  getJobRunner(BACKGROUND_JOB_SCOPE)
-  commandCoreWarmed = true
-}
-
 export async function runCommandMessage(
   line: string,
   sessionIdRaw?: string,
@@ -476,6 +462,11 @@ export async function runNavControlMessage(message: NavControlRequest): Promise<
 }
 
 export function registerBackgroundServices(): void {
+  if (backgroundServicesRegistered) {
+    return
+  }
+  backgroundServicesRegistered = true
+
   chrome.windows.onFocusChanged.addListener((windowId) => {
     if (windowId === chrome.windows.WINDOW_ID_NONE) {
       return
@@ -494,20 +485,6 @@ export function registerBackgroundServices(): void {
     })
   })
 
-  chrome.runtime.onInstalled.addListener((details) => {
-    hydrateLastWindowFromStorage()
-    void hydrateBmxtWindowIdFromStorage()
-    void openWelcomePageOnUpdateIfNeeded(details)
-    scheduleDeferredWarmSearchCachesForLifecycle("install")
-  })
-
-  chrome.runtime.onStartup.addListener(() => {
-    hydrateLastWindowFromStorage()
-    void hydrateBmxtWindowIdFromStorage()
-    scheduleDeferredWarmSearchCachesForLifecycle("browser-startup")
-  })
-
-  registerSearchCacheBackgroundListeners()
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
 }

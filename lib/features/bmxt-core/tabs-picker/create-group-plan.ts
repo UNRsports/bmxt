@@ -1,4 +1,4 @@
-import { t } from "../../setting/i18n/messages"
+import { tTabs } from "../../setting/i18n/ns/tabs"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
 
@@ -24,42 +24,42 @@ export function resolveCreateGroupPlan(
   if (ctx.tabCount === 0) {
     return {
       ok: false,
-      error: t("tabs.picker.error.createGroup.noTabs", locale),
+      error: tTabs("tabs.picker.error.createGroup.noTabs", locale),
       strategy: null
     }
   }
   if (ctx.resolvedTabCount !== ctx.tabCount) {
     return {
       ok: false,
-      error: t("tabs.picker.error.createGroup.partialClosed", locale),
+      error: tTabs("tabs.picker.error.createGroup.partialClosed", locale),
       strategy: null
     }
   }
   if (!ctx.sameWindow) {
     return {
       ok: false,
-      error: t("tabs.picker.error.createGroup.sameWindow", locale),
+      error: tTabs("tabs.picker.error.createGroup.sameWindow", locale),
       strategy: null
     }
   }
   if (ctx.windowType !== "normal") {
     return {
       ok: false,
-      error: t("tabs.picker.error.createGroup.windowType", locale),
+      error: tTabs("tabs.picker.error.createGroup.windowType", locale),
       strategy: null
     }
   }
   if (ctx.movingCount === 0) {
     return {
       ok: false,
-      error: t("tabs.picker.error.createGroup.invalidMoveCount", locale),
+      error: tTabs("tabs.picker.error.createGroup.invalidMoveCount", locale),
       strategy: null
     }
   }
   if (ctx.movingCount > ctx.groupTabCount) {
     return {
       ok: false,
-      error: t("tabs.picker.error.createGroup.notInGroup", locale),
+      error: tTabs("tabs.picker.error.createGroup.notInGroup", locale),
       strategy: null
     }
   }

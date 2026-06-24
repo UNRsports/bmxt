@@ -1,0 +1,54 @@
+{
+  "effect.clearLog.done": {
+    "ja": "(ログをクリアしました)",
+    "en": "(log cleared)"
+  },
+  "effect.closeTab.done": {
+    "ja": "タブ {tabId} を閉じました",
+    "en": "closed tab {tabId}"
+  },
+  "effect.groupNew.done": {
+    "ja": "グループ {groupId} を作成しました",
+    "en": "created group {groupId}"
+  },
+  "effect.navigateTab.done": {
+    "ja": "タブ {tabId} を移動しました: {url}",
+    "en": "navigated tab {tabId}: {url}"
+  },
+  "effect.navigateTab.noTarget": {
+    "ja": "現在のタブへ移動する対象がありません（通常ウィンドウでページを開いてください）",
+    "en": "no target tab for current navigation (focus a normal window with a page)"
+  },
+  "effect.openTab.activated": {
+    "ja": "タブ {tabId} をアクティブ化しました: {url}",
+    "en": "activated tab {tabId}: {url}"
+  },
+  "effect.openTab.openFailed": {
+    "ja": "error: {url} のタブを開けませんでした",
+    "en": "error: could not open tab for {url}"
+  },
+  "effect.openTab.openedNew": {
+    "ja": "新しいタブ {tabId} を開きました: {url}",
+    "en": "opened new tab {tabId}: {url}"
+  },
+  "effect.openUrlNewTab.failed": {
+    "ja": "error: {url} の新規タブを開けませんでした",
+    "en": "error: could not open new tab for {url}"
+  },
+  "effect.openUrlNewTab.opened": {
+    "ja": "新しいタブ {tabId} を開きました: {url}",
+    "en": "opened new tab {tabId}: {url}"
+  },
+  "effect.openUrlNewWindow.opened": {
+    "ja": "新しいウィンドウ {windowId} を開きました: {url}",
+    "en": "opened new window {windowId}: {url}"
+  },
+  "effect.openWelcomePage.done": {
+    "ja": "ウェルカムページを新しいタブで開きました",
+    "en": "opened welcome page in a new tab"
+  },
+  "effect.tabsNu.noUrl": {
+    "ja": "(現在のタブに URL がありません — 通常ウィンドウでページを開くか、タブ ID コンテキストを指定してください)",
+    "en": "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"
+  }
+}

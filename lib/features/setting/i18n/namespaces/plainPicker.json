@@ -1,0 +1,22 @@
+{
+  "plainPicker.commandHint": {
+    "ja": "コマンド入力",
+    "en": "Command input"
+  },
+  "plainPicker.keysHint": {
+    "ja": "ピッカー操作",
+    "en": "Plain picker keys"
+  },
+  "plainPicker.listAria": {
+    "ja": "結果",
+    "en": "Results"
+  },
+  "plainPicker.noOutput": {
+    "ja": "(出力なし)",
+    "en": "(no output)"
+  },
+  "plainPicker.searchHint": {
+    "ja": "検索ハイライト",
+    "en": "Search highlight"
+  }
+}

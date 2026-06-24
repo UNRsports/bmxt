@@ -12,7 +12,7 @@ import {
   type PickerSlotId,
   type SessionPickerState,
   type SessionPickersByLeaf
-} from "../side-picker"
+} from "../side-picker/session/session-pickers"
 import { buildSessionListRows, SessionBar, type SessionListRow } from "../session"
 import { BmxtShell } from "./bmxt-shell"
 import { TerminalBootSplash } from "./terminal-boot-splash"
@@ -27,12 +27,16 @@ import {
 } from "../bmxt-core"
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { disposeJobRunner } from "../job"
-import { warmBackgroundServicesFromPageAsync } from "../launch/warm-background-services"
+import {
+  flushPageBootPerf,
+  markPageBootPhase
+} from "../launch/page-boot-perf"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
-import { UiSettingsProvider, useTerminalAppearance, useUiSettings } from "../setting"
+import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
+import { useTerminalAppearance } from "../setting/apply-appearance"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 
@@ -73,6 +77,7 @@ type SessionPaneProps = {
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
+  upgradeBannerReady: boolean
   appendCommandToHistory: (cmd: string) => void
 }
 
@@ -103,6 +108,7 @@ const SessionPaneView = memo(function SessionPaneView({
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
+  upgradeBannerReady,
   appendCommandToHistory
 }: SessionPaneProps) {
   return (
@@ -132,6 +138,7 @@ const SessionPaneView = memo(function SessionPaneView({
         refreshTabPickerRows={refreshTabPickerRows}
         scheduleTabPickerRowsRefresh={scheduleTabPickerRowsRefresh}
         postUpgradeBanner={postUpgradeBanner}
+        upgradeBannerReady={upgradeBannerReady}
         paneFocus={paneFocus}
         onPaneFocusChange={(target) => setPaneFocusForLeaf(sessionId, target)}
         detailBarId={detailBarId}
@@ -185,6 +192,7 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
     prev.navArmed === next.navArmed &&
     prev.navArmedByLeaf === next.navArmedByLeaf &&
     prev.postUpgradeBanner === next.postUpgradeBanner &&
+    prev.upgradeBannerReady === next.upgradeBannerReady &&
     prev.setSessionPickerSlot === next.setSessionPickerSlot &&
     prev.setPaneFocusForLeaf === next.setPaneFocusForLeaf &&
     prev.setDetailBarIdForLeaf === next.setDetailBarIdForLeaf &&
@@ -214,8 +222,6 @@ function BmxtTerminalInner() {
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
-
-  const [backgroundReady, setBackgroundReady] = useState(false)
 
   const validSessionIds = useMemo(() => state?.order ?? [], [state?.order])
 
@@ -253,12 +259,29 @@ function BmxtTerminalInner() {
   pickersBySessionRef.current = pickersBySession
 
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const promptPerfFlushedRef = useRef(false)
 
   useEffect(() => {
-    void warmBackgroundServicesFromPageAsync()
-      .then(() => setBackgroundReady(true))
-      .catch(() => setBackgroundReady(true))
+    markPageBootPhase("terminal-mounted")
   }, [])
+
+  useEffect(() => {
+    if (upgradeBannerReady) {
+      markPageBootPhase("gate-upgrade-banner-ready")
+    }
+  }, [upgradeBannerReady])
+
+  useEffect(() => {
+    if (processUiReady) {
+      markPageBootPhase("gate-process-ui-ready")
+    }
+  }, [processUiReady])
+
+  useEffect(() => {
+    if (state !== null) {
+      markPageBootPhase("gate-session-state-ready")
+    }
+  }, [state])
 
   useEffect(() => {
     void (async () => {
@@ -394,7 +417,18 @@ function BmxtTerminalInner() {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  if (state === null || !upgradeBannerReady || !processUiReady || !backgroundReady) {
+  const promptInteractive = state !== null && processUiReady
+
+  useEffect(() => {
+    if (!promptInteractive || promptPerfFlushedRef.current) {
+      return
+    }
+    promptPerfFlushedRef.current = true
+    markPageBootPhase("prompt-interactive")
+    void flushPageBootPerf()
+  }, [promptInteractive])
+
+  if (!promptInteractive) {
     return <TerminalBootSplash />
   }
 
@@ -417,6 +451,7 @@ function BmxtTerminalInner() {
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,
+    upgradeBannerReady,
     appendCommandToHistory
   }
 

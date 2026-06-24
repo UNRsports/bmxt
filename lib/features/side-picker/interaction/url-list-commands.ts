@@ -1,5 +1,5 @@
 import type { UiLocale } from "../../setting/locale"
-import { t } from "../../setting/i18n/messages"
+import { tPicker } from "../../setting/i18n/ns/picker"
 
 export const URL_LIST_PICKER_COMMANDS = ["nohlsearch"] as const
 
@@ -12,5 +12,5 @@ export function filterUrlListCommandCompletions(prefix: string): string[] {
 }
 
 export function urlListCommandListingHint(locale: UiLocale): string {
-  return t("picker.commandListing.nohlsearch", locale)
+  return tPicker("picker.commandListing.nohlsearch", locale)
 }

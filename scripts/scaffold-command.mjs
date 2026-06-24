@@ -82,7 +82,7 @@ export function run(_args: string[]) {
     "utf8"
   )
 
-  execFileSync("npm", ["run", "codegen"], { cwd: root, stdio: "inherit" })
+  execFileSync("pnpm", ["run", "codegen"], { cwd: root, stdio: "inherit" })
   console.log(`scaffolded ${moduleName}.ts + manifest; run codegen ok`)
 }
 

@@ -1,4 +1,5 @@
-import { t } from "../../setting/i18n/messages"
+import { tCommon } from "../../setting/i18n/ns/common"
+import { tTabs } from "../../setting/i18n/ns/tabs"
 import type { UiLocale } from "../../setting/locale"
 
 type NewGroupCreateParams = {
@@ -34,7 +35,7 @@ const CREATE_GROUP_STRATEGY_EXECUTORS: Record<
     const created = await chrome.windows.create({ focused: true })
     const wid = created.id
     if (wid === undefined) {
-      throw new Error(t("tabs.picker.error.createGroup.windowOpenFailed", locale))
+      throw new Error(tTabs("tabs.picker.error.createGroup.windowOpenFailed", locale))
     }
     const movedGroup = await chrome.tabGroups.move(groupId, { windowId: wid, index: -1 })
     const effectiveGid = movedGroup?.id ?? groupId
@@ -56,13 +57,13 @@ const CREATE_GROUP_STRATEGY_EXECUTORS: Record<
     await chrome.tabs.ungroup(idsToMove)
     const firstId = idsToMove[0]
     if (firstId === undefined) {
-      throw new Error(t("tabs.picker.error.createGroup.tabIdMissing", locale))
+      throw new Error(tTabs("tabs.picker.error.createGroup.tabIdMissing", locale))
     }
     const restIds = idsToMove.slice(1)
     const created = await chrome.windows.create({ tabId: firstId, focused: true })
     const wid = created.id
     if (wid === undefined) {
-      throw new Error(t("tabs.picker.error.createGroup.windowOpenFailed", locale))
+      throw new Error(tTabs("tabs.picker.error.createGroup.windowOpenFailed", locale))
     }
     if (restIds.length > 0) {
       await chrome.tabs.move(restIds, { windowId: wid, index: -1 })
@@ -79,7 +80,7 @@ export async function executeCreateNewGroupAction(
   const trimmedTitle = params.title.trim()
   if (tabIds.length === 0) {
     await onAppendLog?.([
-      `error: ${t("tabs.picker.error.createGroup.noTabs", locale)}`
+      `error: ${tTabs("tabs.picker.error.createGroup.noTabs", locale)}`
     ])
     return false
   }
@@ -90,7 +91,7 @@ export async function executeCreateNewGroupAction(
     const resolvedTabCount = ok.length
     if (resolvedTabCount !== tabIds.length) {
       await onAppendLog?.([
-        `error: ${t("tabs.picker.error.createGroup.partialClosed", locale)}`
+        `error: ${tTabs("tabs.picker.error.createGroup.partialClosed", locale)}`
       ])
       return false
     }
@@ -99,7 +100,7 @@ export async function executeCreateNewGroupAction(
       winId !== undefined && !ok.some((tab) => tab.windowId !== winId)
     if (!sameWindow) {
       await onAppendLog?.([
-        `error: ${t("tabs.picker.error.createGroup.sameWindow", locale)}`
+        `error: ${tTabs("tabs.picker.error.createGroup.sameWindow", locale)}`
       ])
       return false
     }
@@ -108,7 +109,7 @@ export async function executeCreateNewGroupAction(
     const windowType = win?.type ?? null
     if (windowType !== "normal") {
       await onAppendLog?.([
-        `error: ${t("tabs.picker.error.createGroup.windowType", locale)}`
+        `error: ${tTabs("tabs.picker.error.createGroup.windowType", locale)}`
       ])
       return false
     }
@@ -142,11 +143,11 @@ export async function executeCreateNewGroupAction(
       movingCount
     })
     if (!allInGroup) {
-      throw new Error(t("tabs.picker.error.createGroup.notInGroup", locale))
+      throw new Error(tTabs("tabs.picker.error.createGroup.notInGroup", locale))
     }
     if (!plan.ok || !plan.strategy) {
       await onAppendLog?.([
-        `error: ${plan.error ?? t("tabs.picker.error.createGroup.planFailed", locale)}`
+        `error: ${plan.error ?? tTabs("tabs.picker.error.createGroup.planFailed", locale)}`
       ])
       return false
     }
@@ -154,13 +155,13 @@ export async function executeCreateNewGroupAction(
     const strategy = plan.strategy as CreateGroupStrategy
     const executor = CREATE_GROUP_STRATEGY_EXECUTORS[strategy]
     if (!executor) {
-      throw new Error(t("tabs.picker.error.createGroup.invalidMoveCount", locale))
+      throw new Error(tTabs("tabs.picker.error.createGroup.invalidMoveCount", locale))
     }
     const newWinId = await executor({ groupId, idsToMove, locale })
 
-    const label = trimmedTitle || t("common.untitled", locale)
+    const label = trimmedTitle || tCommon("common.untitled", locale)
     await onAppendLog?.([
-      t("tabs.picker.error.createGroup.success", locale, {
+      tTabs("tabs.picker.error.createGroup.success", locale, {
         groupId: String(groupId),
         windowId: String(newWinId),
         color,
@@ -171,7 +172,7 @@ export async function executeCreateNewGroupAction(
   } catch (err) {
     const detail = err instanceof Error ? err.message : typeof err === "string" ? err : String(err)
     await onAppendLog?.([
-      t("tabs.picker.error.createGroup.failed", locale, { detail })
+      tTabs("tabs.picker.error.createGroup.failed", locale, { detail })
     ])
     return false
   }

@@ -1,0 +1,38 @@
+{
+  "modeStatus.dom.hint": {
+    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー",
+    "en": "EOL → focus · ↑↓ move · ← prompt · → picker"
+  },
+  "modeStatus.dom.list": {
+    "ja": "DOM 一覧",
+    "en": "DOM list"
+  },
+  "modeStatus.dom.permission": {
+    "ja": "権限確認",
+    "en": "permission"
+  },
+  "modeStatus.search.hint": {
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+  },
+  "modeStatus.search.loadingPrefix": {
+    "ja": "loading · ",
+    "en": "loading · "
+  },
+  "modeStatus.search.noPattern": {
+    "ja": "（パターンなし）",
+    "en": "(no pattern)"
+  },
+  "modeStatus.setting.hint": {
+    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー",
+    "en": "EOL → focus · ↑↓ move · ← prompt · → picker"
+  },
+  "modeStatus.setting.meta": {
+    "ja": "UI 設定",
+    "en": "UI settings"
+  },
+  "modeStatus.tabs.hint": {
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+  }
+}

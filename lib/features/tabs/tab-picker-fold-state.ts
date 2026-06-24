@@ -378,17 +378,6 @@ export function collapseTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow):
     setTabPickerGroupExpanded(row.windowId, row.groupId, false)
     return { focusRowIdx, changed: true }
   }
-  if (row.kind === "tab") {
-    if (row.groupId === null) {
-      return { focusRowIdx: null, changed: false }
-    }
-    const focusRowIdx = findGroupRowIndex(rows, row.windowId, row.groupId)
-    if (!isTabPickerGroupExpanded(row.windowId, row.groupId)) {
-      return { focusRowIdx, changed: false }
-    }
-    setTabPickerGroupExpanded(row.windowId, row.groupId, false)
-    return { focusRowIdx, changed: true }
-  }
   return { focusRowIdx: null, changed: false }
 }
 
@@ -417,7 +406,7 @@ export function expandTabPickerForTabId(rows: TabPickerRow[], tabId: number): bo
   return changed
 }
 
-/** EN: Toggle expand/collapse for window, group, or parent group of a tab row. */
+/** EN: Toggle expand/collapse for a window or group row. */
 export function toggleTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): TabPickerFoldMutation {
   if (row.kind === "window") {
     if (isTabPickerWindowExpanded(row.windowId)) {
@@ -426,15 +415,6 @@ export function toggleTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): T
     return expandTabPickerAtRow(rows, row)
   }
   if (row.kind === "group") {
-    if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
-      return collapseTabPickerAtRow(rows, row)
-    }
-    return expandTabPickerAtRow(rows, row)
-  }
-  if (row.kind === "tab") {
-    if (row.groupId === null) {
-      return { focusRowIdx: null, changed: false }
-    }
     if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
       return collapseTabPickerAtRow(rows, row)
     }
@@ -454,17 +434,6 @@ export function expandTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): T
     return { focusRowIdx, changed: true }
   }
   if (row.kind === "group") {
-    const focusRowIdx = findGroupRowIndex(rows, row.windowId, row.groupId)
-    if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
-      return { focusRowIdx, changed: false }
-    }
-    setTabPickerGroupExpanded(row.windowId, row.groupId, true)
-    return { focusRowIdx, changed: true }
-  }
-  if (row.kind === "tab") {
-    if (row.groupId === null) {
-      return { focusRowIdx: null, changed: false }
-    }
     const focusRowIdx = findGroupRowIndex(rows, row.windowId, row.groupId)
     if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
       return { focusRowIdx, changed: false }

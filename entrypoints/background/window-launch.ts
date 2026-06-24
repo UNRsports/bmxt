@@ -8,7 +8,6 @@ import {
   markLaunchPhase,
   resetLaunchPerf
 } from "../../lib/features/launch/launch-perf"
-import { notifyInteractiveLaunchCompleted } from "../../lib/features/launch/warm-search-scheduler"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import {
   clearBmxtWindowIdInMemory,
@@ -32,7 +31,6 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
       await task()
     } finally {
       markLaunchPhase("launch-chain-done")
-      notifyInteractiveLaunchCompleted()
       await flushLaunchPerf({
         launchChainMs: Math.round(performance.now() - chainStart)
       })
@@ -43,7 +41,6 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
       await task()
     } finally {
       markLaunchPhase("launch-chain-done")
-      notifyInteractiveLaunchCompleted()
       await flushLaunchPerf({
         launchChainMs: Math.round(performance.now() - chainStart)
       })

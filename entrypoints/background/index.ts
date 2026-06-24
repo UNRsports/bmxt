@@ -1,16 +1,25 @@
-/** Service worker entry: fast window launch first; command core loads eagerly on SW wake. */
+/** Service worker entry: window launch first; heavy services load on demand. */
 
-import { scheduleDeferredWarmSearchCaches } from "../../lib/features/launch/warm-search-scheduler"
+import { openWelcomePageOnUpdateIfNeeded } from "../../lib/features/welcome"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import { setupMessageBridge } from "./message-bridge"
 import { setupWindowLaunch } from "./window-launch"
+import { hydrateBmxtWindowIdFromStorage } from "./window-state"
 
 export default defineBackground(() => {
   setupWindowLaunch()
   setupMessageBridge()
-  scheduleDeferredWarmSearchCaches()
-  void loadBackgroundServicesAsync().then((m) => {
-    m.registerBackgroundServices()
-    void m.warmBackgroundServicesAsync()
+
+  void loadBackgroundServicesAsync().then((services) => {
+    services.registerBackgroundServices()
+  })
+
+  chrome.runtime.onInstalled.addListener((details) => {
+    void hydrateBmxtWindowIdFromStorage()
+    void openWelcomePageOnUpdateIfNeeded(details)
+  })
+
+  chrome.runtime.onStartup.addListener(() => {
+    void hydrateBmxtWindowIdFromStorage()
   })
 })
