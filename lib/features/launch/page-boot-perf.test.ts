@@ -10,7 +10,7 @@ import {
 
 describe("page boot perf", () => {
   it("records phases relative to reset origin", () => {
-    resetPageBootPerf(100)
+    resetPageBootPerf(0)
     markPageBootPhase("page-script-start")
     markPageBootPhase("terminal-mounted")
     const marks = readPageBootPerfMarks()
@@ -19,7 +19,7 @@ describe("page boot perf", () => {
   })
 
   it("records each phase at most once", () => {
-    resetPageBootPerf(200)
+    resetPageBootPerf(0)
     markPageBootPhase("terminal-mounted")
     markPageBootPhase("terminal-mounted")
     const marks = readPageBootPerfMarks()
