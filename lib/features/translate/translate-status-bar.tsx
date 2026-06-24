@@ -1,4 +1,5 @@
-import { translateStatusHint, translateStatusMeta, useUiLocale } from "../setting"
+import { translateStatusHint, translateStatusMeta } from "../setting/i18n/resolvers"
+import { useUiLocale } from "../setting/use-ui-settings"
 import { getTranslationPairDef, type TranslationPairId } from "./translation-pair"
 
 type Props = {

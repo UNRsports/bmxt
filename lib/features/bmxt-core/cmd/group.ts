@@ -1,3 +1,5 @@
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
 
@@ -8,8 +10,9 @@ export const CMD: CmdMeta = {
 }
 
 export function run(args: string[]) {
+  const locale = getRunLocale()
   if (args[1]?.toLowerCase() !== "new") {
-    return linesDispatch(["usage: group new | group new <tabId> [tabId ...]"])
+    return linesDispatch([tCmd("cmd.group.usage.line", locale)])
   }
   const tabIds = args
     .slice(2)
@@ -17,8 +20,8 @@ export function run(args: string[]) {
     .filter((n) => Number.isFinite(n))
   if (tabIds.length === 0) {
     return linesDispatch([
-      "Interactive: in BMXt type  group new  and Enter (no tab ids).",
-      "Non-interactive: group new <tabId> [tabId ...]"
+      tCmd("cmd.group.usage.interactive", locale),
+      tCmd("cmd.group.usage.nonInteractive", locale)
     ])
   }
   return effectsDispatch([{ kind: "group_new", tab_ids: tabIds }])

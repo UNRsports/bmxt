@@ -1,19 +1,10 @@
 export { openWelcomePageOnUpdateIfNeeded } from "./open-welcome-on-update"
 export { openWelcomePageTab } from "./open-welcome-page-tab"
 export { shouldOpenWelcomePageOnUpdate } from "./should-open-welcome-on-update"
-export { WelcomePage } from "./welcome-page"
 export {
-  getWelcomeContentForVersion,
-  isRenderableWelcomeImagePath,
-  listWelcomeContentVersions,
-  listWelcomeImagePaths,
-  placeholderWelcomeContent,
-  resolveWelcomeImageUrl,
-  WELCOME_NONE_HERO_IMAGE,
-  type WelcomeContentEntry
-} from "./welcome-content"
-export {
-  resolveWelcomeDisplayVersion,
-  WELCOME_VERSION_QUERY_PARAM,
-  type WelcomeDisplayVersion
-} from "./welcome-version-resolve"
+  buildWelcomePageUrl,
+  isValidWelcomeVersionParam,
+  WELCOME_LANG_QUERY_PARAM,
+  WELCOME_PAGE_BASE_URL,
+  WELCOME_VERSION_QUERY_PARAM
+} from "./welcome-external-url"

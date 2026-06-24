@@ -11,6 +11,7 @@ import {
   computeTabPickerVisibleRowIndices,
   expandTabPickerAtRow,
   expandTabPickerForTabId,
+  toggleTabPickerAtRow,
   hydrateTabPickerFoldStateFromStorage,
   isTabPickerGroupExpanded,
   isTabPickerWindowExpanded,
@@ -25,6 +26,7 @@ export function useTabPickerFoldState(
   visibleRowIndices: number[]
   collapseAtRow: (row: TabPickerRow) => number | null
   expandAtRow: (row: TabPickerRow) => number | null
+  toggleAtRow: (row: TabPickerRow) => number | null
   expandForTabId: (tabId: number) => boolean
   isWindowExpanded: (windowId: number) => boolean
   isGroupExpanded: (windowId: number, groupId: number | null) => boolean
@@ -118,6 +120,21 @@ export function useTabPickerFoldState(
     [bump, rows]
   )
 
+  const toggleAtRow = useCallback(
+    (row: TabPickerRow): number | null => {
+      const { focusRowIdx, changed } = toggleTabPickerAtRow(rows, row)
+      if (focusRowIdx === null) {
+        return null
+      }
+      if (changed) {
+        void persistTabPickerFoldStateToStorage()
+        bump()
+      }
+      return focusRowIdx
+    },
+    [bump, rows]
+  )
+
   const expandForTabId = useCallback(
     (tabId: number): boolean => {
       const changed = expandTabPickerForTabId(rows, tabId)
@@ -175,6 +192,7 @@ export function useTabPickerFoldState(
     visibleRowIndices,
     collapseAtRow,
     expandAtRow,
+    toggleAtRow,
     expandForTabId,
     isWindowExpanded,
     isGroupExpanded,

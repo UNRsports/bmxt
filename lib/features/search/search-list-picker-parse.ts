@@ -3,6 +3,8 @@
  * JA: `search -list` のプロンプト解析（codegen・Chrome 非依存・テスト可能）。
  */
 
+import { wordBounds } from "../format/word-bounds.ts"
+
 const SEARCH_EXIT_LIST_RE = /^\s*search\s+-exit\s+-list\s*$/i
 
 const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page"])
@@ -141,18 +143,6 @@ export function searchListPatternFromLine(trimmed: string): string {
   return parts.slice(2).join(" ")
 }
 
-function tokenBoundsAt(s: string, pos: number): [number, number] {
-  let l = pos
-  while (l > 0 && !/\s/.test(s[l - 1]!)) {
-    l--
-  }
-  let r = pos
-  while (r < s.length && !/\s/.test(s[r]!)) {
-    r++
-  }
-  return [l, r]
-}
-
 /**
  * EN: Cursor still editing the optional scope token — show scope menu, not pattern placeholder.
  * JA: 任意スコープトークン入力中 — スコープメニューを表示し、パターン案内は出さない。
@@ -178,7 +168,7 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
     return false
   }
   const scopeEnd = scopeStart + third.length
-  const [l, r] = tokenBoundsAt(line, cursor)
+  const [l, r] = wordBounds(line, cursor)
   return l >= scopeStart && r <= scopeEnd
 }
 

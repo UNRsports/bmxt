@@ -1,5 +1,6 @@
 import type { ChromeEffect } from "../../effect-types"
 import type { DispatchChromeContext } from "../../dispatch-context"
+import { effectT } from "../effect-i18n"
 
 type E = Extract<ChromeEffect, { kind: "tabs_nu" }>
 
@@ -8,11 +9,9 @@ export async function applyTabsNuEffect(
   _e: E
 ): Promise<string[]> {
   const tab = await ctx.resolveTabArg(undefined)
-  const u = tab?.url
-  if (!u) {
-    return [
-      "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"
-    ]
+  const url = tab?.url
+  if (!url) {
+    return [effectT(ctx, "effect.tabsNu.noUrl")]
   }
-  return [u]
+  return [url]
 }

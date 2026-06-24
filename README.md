@@ -10,9 +10,9 @@
 - [♿️ Universal Design Intent](#universal-design-intent)
 - [Technical Overview](#technical-overview)
 - [Key Specs](#key-specs)
-  - [Permissions (`manifest` in `package.json`)](#permissions-manifest)
+  - [Permissions (`wxt.config.ts` manifest)](#permissions-manifest)
   - [Reproducible builds](#reproducible-builds)
-  - [npm dependencies and security](#npm-dependencies)
+  - [pnpm dependencies and security](#pnpm-dependencies)
 - [Command-line token model (first / second commands)](#command-line-token-model)
   - [Command List](#command-list)
   - [BMXt process lifecycle (`clear` / window close / `exit`)](#bmxt-process-lifecycle)
@@ -34,7 +34,8 @@
 - [Prompt Key Bindings](#prompt-key-bindings)
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
-  - [npm dependencies and security](#npm-dependencies)
+  - [pnpm dependencies and security](#pnpm-dependencies)
+  - [Project layout (WXT)](#project-layout)
   - [Main Sources](#main-sources)
   - [Version upgrade banner & release notes](#version-upgrade-banner)
 - [Production Build](#production-build)
@@ -72,7 +73,7 @@ Please also take a look at the demo video.
 ## 🛠 Seed Project
 
 
-This repository is a dedicated shell built with **Chrome Extension (Manifest V3) + [Plasmo](https://docs.plasmo.com/)**. It runs in its own dedicated popup window (tab bar–less single-page chrome via `chrome.windows.create({ type: "popup" })`), not the toolbar action popup. The author handles technical decision-making and verification/design/testing, while implementation is done 100% with an AI assistant (Cursor). At this stage, the project is positioned as a validation and seeding phase focused on eliminating behavioral breakage and polishing UX.
+This repository is a dedicated shell built with **Chrome Extension (Manifest V3) + [WXT](https://wxt.dev/)**. It runs in its own dedicated popup window (tab bar–less single-page chrome via `chrome.windows.create({ type: "popup" })`), not the toolbar action popup. The author handles technical decision-making and verification/design/testing, while implementation is done 100% with an AI assistant (Cursor). At this stage, the project is positioned as a validation and seeding phase focused on eliminating behavioral breakage and polishing UX.
 
 <a id="demo-video"></a>
 
@@ -103,73 +104,87 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 ## Technical Overview
 
 
-The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [Plasmo](https://docs.plasmo.com/) (Manifest V3).
+The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3): entrypoints under **`entrypoints/`**, static assets under **`public/`** (including **`_locales/`**), manifest overrides in **`wxt.config.ts`**, output under **`.output/`**.
 
 **Layout:** Command registry, dispatch, and built-in command logic live in **`lib/features/bmxt-core/`** (TypeScript); Chrome API effects and feature UI live under **`lib/features/<feature>/`** (see also `.cursorrules` in the repo root). **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
+**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Manifest overrides live in **`wxt.config.ts`** (not **`package.json`**). Entrypoints are under **`entrypoints/`**; static assets under **`public/`**; build output under **`.output/`** (dev: **`.output/chrome-mv3-dev`**, prod: **`.output/chrome-mv3`**).
+
+| Former (Plasmo / npm) | Current (WXT / pnpm) |
+|-----------------------|----------------------|
+| **`tabs/bmxt.tsx`** | **`entrypoints/bmxt/main.tsx`** (+ **`index.html`** → **`bmxt.html`**) |
+| **`background.ts`** (repo root) | **`entrypoints/background/index.ts`** |
+| **`contents/bmxt-nav-overlay.ts`** | **`entrypoints/bmxt-nav-overlay.content/index.ts`** |
+| **`locales/`** | **`public/_locales/`** |
+| **`build/chrome-mv3`** | **`.output/chrome-mv3`** |
+| Manifest in **`package.json`** | **`wxt.config.ts`** (+ **`version`** still in **`package.json`**) |
+| **`npm ci`** / **`package-lock.json`** | **`pnpm install --frozen-lockfile`** / **`pnpm-lock.yaml`** |
+
 <a id="key-specs"></a>
 
 ## Key Specs
 
-- **UI**: Extension page opened in a dedicated popup window without a tab bar (Plasmo route `tabs/bmxt`; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`tabs/bmxt.tsx`** is a thin entry that mounts it.
+- **UI**: Extension page opened in a dedicated popup window without a tab bar (WXT unlisted page `entrypoints/bmxt`; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`entrypoints/bmxt/main.tsx`** is a thin entry that mounts it.
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
 - **State**: Command output logs and command history are stored in `chrome.storage.local`. Keys and caps are defined in **`lib/features/extension-storage/keys.ts`**: **500** log lines (`bmxt_log`), **300** history entries (`bmxt_cmd_history`).
-- **Background**: Service Worker (`background.ts`) opens the window on icon click and handles command execution and tab operations.
+- **Background**: Service Worker (`entrypoints/background/index.ts`) opens the window on icon click and handles command execution and tab operations.
 - **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**).
 
 <a id="permissions-manifest"></a>
 
-### Permissions (`manifest` in `package.json`)
+### Permissions (`wxt.config.ts` manifest)
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, and `bookmarks`. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the Extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
+Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
-**Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`npm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
+**Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
-The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self'`**, **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`package.json`** for the exact string.
+The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self'`**, **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`wxt.config.ts`** for the exact string.
 
 <a id="reproducible-builds"></a>
 
 ### Reproducible builds
 
 
-Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`npm ci`** (uses **`package-lock.json`**; do **not** use **`npm install`** in CI or when you want an exact tree) then **`npm run codegen`** and **`npm run build`** (or **`npm run package`**) so the same dependency tree and codegen path apply. See **[npm dependencies and security](#npm-dependencies)** for lockfile policy, audit policy, and maintainer checks.
+Official releases are tagged in Git (`git tag`). To reproduce a store submission from source, check out that tag and run **`pnpm install --frozen-lockfile`** (uses **`pnpm-lock.yaml`**; do **not** use **`pnpm install`** in CI or when you want an exact tree) then **`pnpm run codegen`** and **`pnpm run build`** (or **`pnpm run package`**) so the same dependency tree and codegen path apply. See **[pnpm dependencies and security](#pnpm-dependencies)** for lockfile policy, audit policy, and maintainer checks.
 
-<a id="npm-dependencies"></a>
+<a id="pnpm-dependencies"></a>
 
-### npm dependencies and security
+### pnpm dependencies and security
 
 
-**Direct dependencies** (see **`package.json`**) are **`plasmo@0.90.5`**, **`react@18.2.0`**, and **`react-dom@18.2.0`**. Almost all other packages are **transitive** (Plasmo pulls in Parcel, `@plasmohq/*`, and related tooling).
+This repository uses **pnpm only** (`package.json` → **`packageManager`**, lockfile **`pnpm-lock.yaml`**). Do **not** run **`npm install`**, **`npm run …`**, **`npx …`**, or create **`package-lock.json`**. CI and README scripts use **`pnpm`** exclusively.
+
+**Direct dependencies** (see **`package.json`**) are **`react@18.2.0`**, **`react-dom@18.2.0`**, and **`sql.js@1.12.0`**. **WXT** (`wxt`, `@wxt-dev/module-react`) and other tooling are **devDependencies**. Almost all other packages are **transitive** (WXT uses Vite and related tooling).
 
 **Install for reproducibility**
 
 | Command | When to use |
 |---------|-------------|
-| **`npm ci`** | **Default** after clone, in CI, and before release builds. Installs **exactly** what **`package-lock.json`** records. |
-| **`npm install`** | Only when you intentionally change **`package.json`** (new devDependency, bump a direct dependency, etc.) and will commit the updated lockfile. |
+| **`pnpm install --frozen-lockfile`** | **Default** after clone, in CI, and before release builds. Installs **exactly** what **`pnpm-lock.yaml`** records. |
+| **`pnpm install`** | Only when you intentionally change **`package.json`** (new devDependency, bump a direct dependency, etc.) and will commit the updated lockfile. |
 
-**Dependency freeze (Plasmo 0.90.5)** — transitive versions are **not** overridden in **`package.json`**. The full tree is pinned in **`package-lock.json`** (exact versions + integrity hashes). Use **`npm ci`** everywhere you need a known-good tree until Plasmo / Parcel / `@plasmohq/*` release aligned updates. **`.npmrc`** is **gitignored** (never commit tokens or local registry config). When you run **`npm install`** to add a direct dependency, either pin the version in **`package.json`** yourself (no **`^`**) or set **`save-exact=true`** in your **local** **`~/.npmrc`** or project **`.npmrc`** (local only).
+**Lockfile policy** — transitive versions are **not** overridden in **`package.json`**. The full tree is pinned in **`pnpm-lock.yaml`**. Project **`.npmrc`** sets **`save-exact=true`** (do not commit registry tokens). When adding a direct dependency with **`pnpm add`**, pin the version in **`package.json`** (no **`^`**) or rely on **`save-exact=true`**.
 
 Recommended local flow after pulling lockfile changes:
 
 ```bash
 rm -rf node_modules
-npm ci
-npm run build
+pnpm install --frozen-lockfile
+pnpm run build
 ```
 
-**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). Do **not** add an **`engines`** field to **`package.json`**: with **Plasmo 0.90.5** it can break **`plasmo build`** (CSS/JSON asset resolution fails even though source files exist).
+**Node.js version** — use **`.nvmrc`** (recommended Node for this repo). **`packageManager`** in **`package.json`** pins the pnpm version via Corepack. On first clone, run **`corepack enable`** once so the pinned pnpm version is available.
 
-**CI** (**.github/workflows/ci.yml**) runs **`npm ci`**, **`npm audit --audit-level=critical`**, tests, and **`npm run build`**. **`npm audit fix --force`** must **not** be used: it suggests downgrading **`plasmo`** and is unsafe.
+**CI** (**.github/workflows/ci.yml`**) runs **`pnpm install --frozen-lockfile`**, **`pnpm exec wxt prepare`**, **`pnpm audit --audit-level=critical`**, **`verify:manifest`**, **`check:no-fetch`**, **`check:generated`**, **`pnpm exec tsc --noEmit`**, tests, and **`pnpm run build`**. **`pnpm audit fix --force`** must **not** be used without review.
 
-**`svgo@3.3.3`** is a **devDependency**: satisfies **htmlnano**’s optional peer and removes the Plasmo build warning about missing **svgo**.
+**Known residual audit items** — **`pnpm audit`** may report **high** (and **moderate**) issues in WXT’s build-time toolchain (Vite, esbuild, etc.). These are **not shipped** in the extension bundle; CI gates on **critical** only. Do not “fix” them with **`pnpm audit fix --force`**.
 
-**Known residual audit items** — **`npm audit`** may report **high** (and **moderate**) issues in Plasmo’s build-time toolchain (Parcel dev-server, **esbuild** via **tsup**, Svelte SSR in unused transformers). These are **not shipped** in the extension bundle; they require **Plasmo / Parcel upstream** updates. CI gates on **critical** only during the freeze. Do not “fix” them with **`npm audit fix --force`** or ad hoc **`@plasmohq/*`** version jumps (e.g. **`@plasmohq/parcel-resolver-post@0.4.6`** breaks **`plasmo build`** CSS/JSON resolution).
+**Local verification (match CI):** **`pnpm run verify:manifest`** → **`pnpm run check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm test`** → **`pnpm run build`**.
 
-**After any dependency change**, run **`npm ci`**, **`npm run build`**, **`npm test`**, and **`npm audit --audit-level=critical`**, and commit **`package.json`** and **`package-lock.json`** together.
+**After any dependency change**, run **`pnpm install --frozen-lockfile`**, **`pnpm run build`**, **`pnpm test`**, and **`pnpm audit --audit-level=critical`**, and commit **`package.json`** and **`pnpm-lock.yaml`** together.
 
 <a id="command-line-token-model"></a>
 
@@ -254,7 +269,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `bmxt_process_ui_v1` | Open picker slots per session (`tabs` / `search` / `dom` / `setting`) and `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
 
-**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab/search picker settings (`page-active`), search metadata cache (`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** titles and URLs only; **`--page`** body text is **not** stored), optional job audit log (`bmxt_job_db_v1`), last normal window id, welcome/version tracking keys.
+**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) may still be removed via **setting → reset-search-cache** but are no longer written (since **0.6.9**).
 
 **Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
 
@@ -266,22 +281,17 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 ### `aboutbmxt`
 
-**`aboutbmxt`** is a single-token built-in command (no second command). Run it from the BMXt prompt to open the extension **welcome page** (`tabs/welcome.html`) in a **new browser tab** (same URL and tab behavior as install/update auto-open).
+**`aboutbmxt`** is a single-token built-in command (no second command). Run it from the BMXt prompt to open the **welcome page on GitHub Pages** in a **new browser tab** (same URL and tab behavior as install/update auto-open).
 
 | Input | Effect |
 |-------|--------|
-| **`aboutbmxt`** | Opens **`tabs/welcome.html`** via **`open_welcome_page`** (Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**). The terminal logs a short confirmation line. |
+| **`aboutbmxt`** | Opens **`https://unrsports.github.io/bmxt/welcome.html`** via **`open_welcome_page`** (Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**). Query parameters **`lang`** (UI locale from settings) and **`v`** (installed manifest version) are appended. The terminal logs a short confirmation line. |
 
-**Page content** comes from **`lib/features/welcome/welcome-content.json`** for the **current manifest version** (same source as install/update auto-open). Each version entry may include:
+**Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-- **`ja`** / **`en`** — bullet lists shown on the page
-- **`heroImage`** — hero screenshot path under **`assets/welcome/`** (use **`"_none_heroImage"`** when there is no hero image)
-- **`heroImageMaxWidth`** — optional CSS **`max-width`** for the hero image (number → px, or a string such as **`"640px"`** / **`"80%"`**); layout is **width-based** (`width: 100%`, `height: auto`)
-- **`additionalImages`** — optional extra screenshots (paths starting with **`_none_`** are skipped)
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same welcome URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview of a specific JSON key, use **`chrome-extension://<extension-id>/tabs/welcome.html?version=0.6.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
-
-**Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, page UI **`lib/features/welcome/welcome-page.tsx`**.
+**Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
 <a id="dom-command"></a>
 
@@ -299,13 +309,13 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
 - **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**: history + bookmarks + open http(s) tab text). Tab after **`search -list `** completes **`--all`**, **`--history`**, **`--bookmark`**, or **`--page`** if you want a single scope (see **[How columns open](#picker-ui)**).
-- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all three effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use local SQLite metadata cache (`bmxt_search_cache_db_v1`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
+- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all three effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
 - In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
-- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to the search SQLite cache) and may trigger the extension’s **optional host permission** prompt the first time.
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) and may trigger the extension’s **optional host permission** prompt the first time.
 
 <a id="nav-mode"></a>
 
@@ -360,14 +370,14 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 **Pages and permissions**
 
 - **Scriptable http(s)** only (`chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
-- After installing or reloading the extension, **reload the target page once** so the Plasmo **content script** (`contents/bmxt-nav-overlay.ts`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
+- After installing or reloading the extension, **reload the target page once** so the WXT **content script** (`entrypoints/bmxt-nav-overlay.content/`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
 
 **Implementation**
 
 - **`lib/features/nav/`** — prompt parsing, status bar, session hook (`useNavMode`), inject snippet, Service Worker runner (`run-nav-inject.ts`).
 - **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; **Alt** / nav **Enter** / arrow keys on the prompt.
-- **`background.ts`** — `NAV_CONTROL` message runs inject on the target tab.
-- **`contents/bmxt-nav-overlay.ts`** — content script listener on http(s) pages.
+- **`entrypoints/background/index.ts`** — `NAV_CONTROL` message runs inject on the target tab.
+- **`entrypoints/bmxt-nav-overlay.content/`** — content script listener on http(s) pages.
 
 <a id="translate"></a>
 
@@ -636,7 +646,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 - Rows are hierarchical: **`[window]`** → **`[tab group]`** (real Chrome tab groups only) → **tab rows**. **Tab rows** show a **favicon** when Chrome can resolve one for the page URL.
 - Tabs **not** in a Chrome group are listed **directly under their window** (there is no “(no group)” header row).
-- **Initially every window and group is expanded.** **←** on the highlighted row collapses that window or tab group (**→** expands). On a **tab** row, **←** / **→** affect the **parent tab group** (ungrouped tabs have no group to fold).
+- **Initially every window and group is expanded.** **←** on a highlighted **window** or **tab group** row collapses it (**→** expands). On a **tab** row, **←** moves focus to the detail bar; **→** opens the action menu.
 - Collapse/expand state is kept for the **BMXt process** lifetime (survives closing the BMXt window; cleared only on **`exit`** of the last pane — see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
 **Navigation and bulk**
@@ -707,7 +717,7 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 ## Command Execution Architecture (Current)
 
 
-**Registry, help text, tokenization, URL-only lines, and built-in command `run` handlers** are implemented in **`lib/features/bmxt-core/`** (TypeScript). Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`npm run codegen`** regenerates **`lib/features/bmxt-core/registry/table.gen.ts`**, **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, **`completion-fallback.ts`**, and **`command-subcommands.gen.ts`** (completion + continuation helpers). Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`runDispatch`** / **`dispatchFull`** return terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion names come from **`allCompletionTokens()`** in the registry (same manifest as **`completion-fallback.ts`**).
+**Registry, help text, tokenization, URL-only lines, and built-in command `run` handlers** are implemented in **`lib/features/bmxt-core/`** (TypeScript). Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`pnpm run codegen`** regenerates **`lib/features/bmxt-core/registry/table.gen.ts`**, **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, **`completion-fallback.ts`**, and **`command-subcommands.gen.ts`** (completion + continuation helpers). Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`runDispatch`** / **`dispatchFull`** return terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion names come from **`allCompletionTokens()`** in the registry (same manifest as **`completion-fallback.ts`**).
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
@@ -717,7 +727,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 
 **Main directories:**
 
-- **`manifest/bmxt-codegen.json`** — single source for command registry + **`commands[].subcommands`** (second/third fixed tokens, tail kinds) + Effect schema + TS handler wiring (see **`npm run codegen`**)
+- **`manifest/bmxt-codegen.json`** — single source for command registry + **`commands[].subcommands`** (second/third fixed tokens, tail kinds) + Effect schema + TS handler wiring (see **`pnpm run codegen`**)
 - **`lib/features/bmxt-core/`** — `dispatch.ts`, `registry/`, `cmd/*.ts` (one module per built-in command: **`export const CMD`** + **`run`**; **`registry/table.gen.ts`** is **generated**), `tabs-picker/` (reducer and picker domain logic)
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, picker launch)
 - **`lib/features/side-picker/`** — shared side-column picker UI (panel host, `PickerListShell`, `usePlainPickerKeyboard`, interaction kernel, wrappers)
@@ -727,11 +737,11 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, `bmxt_ui_settings_v1`); see **[`setting`](#setting)**
 - **`lib/features/session/`** — terminal sessions (`session -list` / `-switch` inline pickers, session bar); see **[`session`](#session)**
-- **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional SQLite audit log; see **[Job execution](#job-execution)**
-- **`contents/bmxt-nav-overlay.ts`** — Plasmo content script on http(s) pages for nav overlay
+- **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional in-memory audit log; see **[Job execution](#job-execution)**
+- **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- **`background.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
+- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
 
 <a id="job-execution"></a>
 
@@ -744,16 +754,16 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 |----------|---------------|------------------|---------------|
 | `search-list` | session id | cancel-previous | `bmxt-shell.tsx` (`search -list`) |
 | `dom-list` | session id | cancel-previous | `bmxt-shell.tsx` (`dom -list`) |
-| `run-cmd` | `__background__` | parallel | `background.ts` (most `RUN_CMD` lines) |
+| `run-cmd` | `__background__` | parallel | `entrypoints/background/index.ts` (most `RUN_CMD` lines) |
 | `tab-picker-refresh` | `__terminal__` | coalesce-latest | tab-picker follow-tab refresh |
 
 **Cancel:** **`Ctrl+C`** on the prompt, **`* -exit -list`** while a picker job is loading, or starting a new job of the same kind in the same scope (for **cancel-previous** kinds).
 
-**Optional audit log:** In the BMXt UI tab only, completed job records may be appended to a local SQLite blob in **`chrome.storage.local`** under **`bmxt_job_db_v1`** (pruned per scope). The Service Worker never loads this module — background **`run-cmd`** jobs use **`persist: false`**.
+**Optional audit log:** In the BMXt UI tab only, completed job records may be kept in an in-memory trail (`job-audit-memory`, pruned per scope). The Service Worker never loads this module — background **`run-cmd`** jobs use **`persist: false`**.
 
 **Search loading progress:** Progress lines for **`search -list`** are batched with **`requestAnimationFrame`** in the active shell (`use-batched-search-loading-progress.ts`) so heavy scans do not force every session pane to re-render; merged into the search picker when results arrive.
 
-**Implementation:** **`job-types.ts`**, **`job-runner.ts`**, **`job-handle.ts`**, **`use-session-job-runner.ts`**, **`dispatch-context-from-job.ts`**, optional DB under **`lib/features/job/db/`**.
+**Implementation:** **`job-types.ts`**, **`job-runner.ts`**, **`job-handle.ts`**, **`use-session-job-runner.ts`**, **`dispatch-context-from-job.ts`**, optional audit under **`lib/features/job/db/job-audit-memory.ts`**.
 
 <a id="add-new-built-in-command"></a>
 
@@ -762,10 +772,10 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 For a consolidated checklist (scaffold, manifest, new effects, verification), see **[Command add procedure](#command-add-procedure)** below.
 
 
-1. Edit **`manifest/bmxt-codegen.json`** (`commands` / `effects` as needed). Optionally run **`npm run new:command -- <module> <name> [aliases...]`** to scaffold **`lib/features/bmxt-core/cmd/<module>.ts`** and manifest rows.
-2. Implement **`run`** in **`lib/features/bmxt-core/cmd/<module>.ts`**. Keep **`export const CMD`** in sync with the manifest (**`npm run verify:manifest`**).
-3. For new Chrome effects, add a **`handlers/effects/<file>.ts`** implementation and **`npm run codegen`**, then fill the handler referenced in the manifest.
-4. Run **`npm run codegen`** (if not already), then **`npm run verify:manifest`** and **`npm run check:generated`** (CI runs both).
+1. Edit **`manifest/bmxt-codegen.json`** (`commands` / `effects` as needed). Optionally run **`pnpm run new:command -- <module> <name> [aliases...]`** to scaffold **`lib/features/bmxt-core/cmd/<module>.ts`** and manifest rows.
+2. Implement **`run`** in **`lib/features/bmxt-core/cmd/<module>.ts`**. Keep **`export const CMD`** in sync with the manifest (**`pnpm run verify:manifest`**).
+3. For new Chrome effects, add a **`handlers/effects/<file>.ts`** implementation and **`pnpm run codegen`**, then fill the handler referenced in the manifest.
+4. Run **`pnpm run codegen`** (if not already), then **`pnpm run verify:manifest`** and **`pnpm run check:generated`** (CI runs both).
 
 <a id="command-add-procedure"></a>
 
@@ -774,25 +784,25 @@ For a consolidated checklist (scaffold, manifest, new effects, verification), se
 
 - **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Continuation and second-token Tab lists come from generated **`command-subcommands.gen.ts`** (from manifest **`subcommands`**).
 
-- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`lib/features/bmxt-core/registry/table.gen.ts`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**, **`lib/features/builtin-commands/command-subcommands.gen.ts`**. Regenerate them with **`npm run codegen`**.
-- **Recommended:** `npm run new:command -- <module> <canonical_name> [aliases...]` — creates **`lib/features/bmxt-core/cmd/<module>.ts`**, updates **`commands[]`** in the manifest, then runs **codegen**. Replace the stub in **`run`** and align **`usagePrimary`** in manifest and **`CMD.usagePrimary`** if the usage line should differ from the canonical name.
-- **Manual path:** Add a row under **`commands[]`** in the manifest, add **`lib/features/bmxt-core/cmd/<module>.ts`**, then **`npm run codegen`**.
-- **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`npm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return effects from **`run`** via **`effectsDispatch([...])`** as needed.
-- **Checks:** **`npm run verify:manifest`** (manifest vs every **`export const CMD`**) and **`npm run check:generated`** (no uncommitted drift in generated paths). CI runs both. Then **`npx tsc --noEmit`** and **`npm run build`** for a full extension build.
+- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`lib/features/bmxt-core/registry/table.gen.ts`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**, **`lib/features/builtin-commands/command-subcommands.gen.ts`**. Regenerate them with **`pnpm run codegen`**.
+- **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — creates **`lib/features/bmxt-core/cmd/<module>.ts`**, updates **`commands[]`** in the manifest, then runs **codegen**. Replace the stub in **`run`** and align **`usagePrimary`** in manifest and **`CMD.usagePrimary`** if the usage line should differ from the canonical name.
+- **Manual path:** Add a row under **`commands[]`** in the manifest, add **`lib/features/bmxt-core/cmd/<module>.ts`**, then **`pnpm run codegen`**.
+- **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`pnpm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return effects from **`run`** via **`effectsDispatch([...])`** as needed.
+- **Checks:** **`pnpm run verify:manifest`** (manifest vs every **`export const CMD`**) and **`pnpm run check:generated`** (no uncommitted drift in generated paths). CI runs both. Then **`pnpm exec tsc --noEmit`** and **`pnpm run build`** for a full extension build.
 
 #### Manifest `commands[].subcommands` (second / third tokens)
 
-Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics and argument parsing remain in **`lib/features/bmxt-core/cmd/<module>.ts`**; keep literals in sync—**`npm run verify:manifest`** checks each `head` appears in the TypeScript file).
+Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics and argument parsing remain in **`lib/features/bmxt-core/cmd/<module>.ts`**; keep literals in sync—**`pnpm run verify:manifest`** checks each `head` appears in the TypeScript file).
 
-**`npm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + lone-first-token continuation; includes **`isSecondToken`**). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
+**`pnpm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + lone-first-token continuation; includes **`isSecondToken`**). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
 
 ##### How to add second/third tokens (checklist)
 
 1. Edit **`manifest/bmxt-codegen.json`**: set **`subcommands`** to **`[]`** or a list of **`{ head, trailingTokens?, tail? }`** (see **`manifest/templates/command-with-subcommands.example.json`**).
-2. Run **`npm run codegen`** (regenerates **`command-subcommands.gen.ts`** and **`table.gen.ts`**).
-3. In **`lib/features/bmxt-core/cmd/<module>.ts`**, implement **`run`** and reference **each `head` as the same string literal** as in the manifest (required for **`npm run verify:manifest`**).
+2. Run **`pnpm run codegen`** (regenerates **`command-subcommands.gen.ts`** and **`table.gen.ts`**).
+3. In **`lib/features/bmxt-core/cmd/<module>.ts`**, implement **`run`** and reference **each `head` as the same string literal** as in the manifest (required for **`pnpm run verify:manifest`**).
 4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
-5. Run **`npm run verify:manifest`**, **`npm run check:generated`**, **`npx tsc --noEmit`**, then **`npm run build`** as needed.
+5. Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, then **`pnpm run build`** as needed.
 
 **Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports.
 
@@ -829,50 +839,68 @@ During IME composition, composition events are prioritized to avoid conflicts wi
 After installing dependencies, start the development build (see **Development startup** below for the full flow).
 
 ```bash
-npm ci        # preferred when package-lock.json is present
-npm run dev   # or pnpm dev
+pnpm install --frozen-lockfile        # preferred when pnpm-lock.yaml is present
+pnpm run dev   
 ```
 
-`npm run dev` runs **`plasmo dev`**: a watch build that updates **`build/chrome-mv3-dev`**. Keep the terminal process running while you work.
+`pnpm run dev` runs **`wxt`**: a watch build that updates **`.output/chrome-mv3-dev`**. Keep the terminal process running while you work.
 
-If you change **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** before reloading the extension so generated TypeScript stays in sync.
+If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** before reloading the extension so generated TypeScript stays in sync.
 
 <a id="development-startup"></a>
 
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** **`npm ci`** when **`package-lock.json`** is present (preferred). Use **`npm install`** only when you are updating dependencies and will refresh the lockfile. See **[npm dependencies and security](#npm-dependencies)**.
-2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`npm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
-3. **Start dev:** From the repo root, run **`npm run dev`**. Leave this process running; it rebuilds the extension on file changes.
-4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`build/chrome-mv3-dev`** (created by Plasmo dev).
+1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** copies sql.js WASM into **`public/`** and runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
+2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
+3. **Start dev:** From the repo root, run **`pnpm run dev`**. Leave this process running; it rebuilds the extension on file changes.
+4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
 5. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
-6. **After edits:** When Plasmo finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
+6. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
+
+<a id="project-layout"></a>
+
+### Project layout (WXT)
+
+| Path | Role |
+|------|------|
+| **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
+| **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
+| **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on http(s) pages |
+| **`public/`** | Static assets copied as-is: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
+| **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
+| **`lib/features/`** | Feature modules (see table below) |
+| **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
+| **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
+| **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
+
+**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`scripts/build-background-services.mjs`** → WXT. **`postinstall`** runs **`wxt prepare`** only.
 
 <a id="main-sources"></a>
 
 ### Main Sources
 
-- `tabs/bmxt.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
-- `bmxt-ui.css` — Window styles at repo root (imported from `tabs/bmxt.tsx`)
+- `entrypoints/bmxt/main.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
+- `bmxt-ui.css` — Window styles at repo root (imported from `entrypoints/bmxt/main.tsx`)
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
+- `lib/features/side-picker/` — Shared side-column picker UI (panels, keyboard kernel, wrappers)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
-- `lib/features/welcome/` — Post-update welcome page (`tabs/welcome.html`; content in **`welcome-content.json`**)
-- `tabs/welcome.tsx` — Welcome page entry
+- `lib/features/welcome/` — Welcome tab URL builder and update hook (opens hosted **`docs/welcome.html`**; content lives under **`docs/`** only)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
-- `background.ts` — Service Worker (window launch, `runDispatch`, effects)
 - `lib/features/bmxt-core/` — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
 - `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
-- `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, SQLite metadata cache (`bmxt_search_cache_db_v1` for **`--history`** / **`--bookmark`** only)
-- `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional SQLite audit log (`bmxt_job_db_v1`)
+- `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
+- `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
 - `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
-- `contents/bmxt-nav-overlay.ts` — Nav content script (http(s))
+- `scripts/build-background-services.mjs` — Bundles Service Worker helpers into **`public/background-services.js`**
 
 In development mode, edits trigger rebuilds. Reload the extension to verify updates.
 
@@ -883,9 +911,9 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 **Welcome page on extension update** (normal browser tab, separate from the in-window block)
 
-When Chrome reports **`install`** or **`update`**, **`background.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`tabs/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). Copy and optional screenshots come from **`lib/features/welcome/welcome-content.json`** (placeholder text if the version key is missing).
+When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `chrome-extension://<extension-id>/tabs/welcome.html?version=0.6.0` shows that entry from **`welcome-content.json`** (query omitted → current manifest version, same as before). Invalid `version` strings are ignored. Auto-open on update does not append query parameters.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -900,30 +928,37 @@ Existing **session log** lines are still rendered **below** that block.
 
 1. Bump **`package.json`** → **`version`**.
 2. Add a matching entry to **`lib/features/release-notes/release-notes.json`**. Keys must equal the version string exactly. Each entry has **`ja`** and **`en`** string arrays (used by the in-window upgrade banner).
-3. Optionally add **`lib/features/welcome/welcome-content.json`** for the welcome page (`ja` / `en` bullet arrays; **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**). Users can open that page anytime with **`aboutbmxt`** (same tab as install/update auto-open). Place image files under **`assets/welcome/`** (PNG, WebP, JPG, etc.) and reference them as `assets/welcome/<file>` in JSON. Plasmo copies that folder via **`web_accessible_resources`** in **`package.json`** (`assets/welcome/*`). After adding images, rebuild and reload the extension. Use **`"_none_heroImage"`** for **`heroImage`** when there is no hero shot. Paths starting with **`_none_`** in **`additionalImages`** are skipped.
+3. Prepend a new object to **`docs/welcome-content.json`** (`version`, **`ja`** / **`en`** bullet arrays; optional image fields). Place image files under **`docs/welcome/`**. Publish **`docs/`** to GitHub Pages so the live welcome page matches the repo. Users open the page anytime with **`aboutbmxt`** or after install/update.
 4. Build and ship.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
 
-**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-page.tsx`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-external-url.ts`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
 
 <a id="production-build"></a>
 
 ## Production Build
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 
-Artifacts are output under `build/chrome-mv3-prod`. For store submission zip, you can also run `npm run package`.
+Artifacts are output under `.output/chrome-mv3`. For store submission zip, you can also run `pnpm run package`.
 
 <a id="store-submission"></a>
 
 ## Store Submission (Reference)
 
 
-You can automate submission with the [Plasmo workflow](https://docs.plasmo.com/framework/workflows/submit) or [bpp](https://bpp.browser.market). Typical flow: register extension in store, prepare credentials, then connect CI.
+Build and package locally:
+
+```bash
+pnpm run build
+pnpm run package   # writes .output/*-chrome.zip
+```
+
+You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build`**, **`pnpm run package`**, and uploads **`.output/*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
 
 <a id="license"></a>
 
@@ -958,9 +993,9 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [♿️ ユニバーサルデザインの意図](#universal-design-intent-ja)
 - [技術概要](#technical-overview-ja)
 - [主要仕様](#key-specs-ja)
-  - [権限（`package.json` の manifest）](#permissions-manifest-ja)
+  - [権限（`wxt.config.ts` の manifest）](#permissions-manifest-ja)
   - [再現可能なビルド](#reproducible-builds-ja)
-  - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
+  - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
 - [コマンド一覧](#command-list-ja)
   - [BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）](#bmxt-process-lifecycle-ja)
@@ -982,7 +1017,8 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [プロンプトのキーバインド](#prompt-key-bindings-ja)
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
-  - [npm 依存関係とセキュリティ](#npm-dependencies-ja)
+  - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
+  - [プロジェクト構成（WXT）](#project-layout-ja)
   - [主なソース](#main-sources-ja)
   - [バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)
 - [本番ビルド](#production-build-ja)
@@ -1021,7 +1057,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 ## 🛠 シードプロジェクト
 
 
-このリポジトリは **Chrome 拡張（Manifest V3）＋ [Plasmo](https://docs.plasmo.com/)** で動く専用シェルです。BMXt は **タブバーなしの独立 popup ウィンドウ**（`chrome.windows.create({ type: "popup" })`）で動作します（ツールバーアイコン直下の action popup ではありません）。技術選定の判断と確認／設計／テストは作者自身が、実装には AI アシスタント（Cursor）を100%使用して進めており、現段階では「動作の破綻をなくし、手触りを磨く」ための検証・種まきのフェーズと位置づけています。
+このリポジトリは **Chrome 拡張（Manifest V3）＋ [WXT](https://wxt.dev/)** で動く専用シェルです。BMXt は **タブバーなしの独立 popup ウィンドウ**（`chrome.windows.create({ type: "popup" })`）で動作します（ツールバーアイコン直下の action popup ではありません）。技術選定の判断と確認／設計／テストは作者自身が、実装には AI アシスタント（Cursor）を100%使用して進めており、現段階では「動作の破綻をなくし、手触りを磨く」ための検証・種まきのフェーズと位置づけています。
 
 <a id="demo-video-ja"></a>
 
@@ -1052,73 +1088,87 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ## 技術概要
 
 
-以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[Plasmo](https://docs.plasmo.com/)（Manifest V3）でビルドしています。
+以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[WXT](https://wxt.dev/)（Manifest V3）でビルドしています。エントリは **`entrypoints/`**、静的アセットは **`public/`**（**`_locales/`** 含む）、manifest 上書きは **`wxt.config.ts`**、出力は **`.output/`** です。
 
 **配置:** コマンドのレジストリ・ディスパッチ・組み込みコマンド実装は **`lib/features/bmxt-core/`**（TypeScript）、Chrome API の実行や機能別 UI は **`lib/features/<feature>/`** に置く方針です（リポジトリ直下の **`.cursorrules`** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
+**ツールチェーン（0.6.9 以降）:** 拡張シェルは **[WXT](https://wxt.dev/)** と **[pnpm](https://pnpm.io/)** のみでビルドします。**`npm`** / **`npm ci`** / **`npx`** / **`package-lock.json`** は**使わない** — lockfile は **`pnpm-lock.yaml`**。manifest 上書きは **`wxt.config.ts`**（**`package.json`** ではない）。エントリは **`entrypoints/`**、静的アセットは **`public/`**、出力は **`.output/`**（開発: **`.output/chrome-mv3-dev`**、本番: **`.output/chrome-mv3`**）。
+
+| 旧（Plasmo / npm） | 現行（WXT / pnpm） |
+|--------------------|--------------------|
+| **`tabs/bmxt.tsx`** | **`entrypoints/bmxt/main.tsx`**（+ **`index.html`** → **`bmxt.html`**） |
+| **`background.ts`**（リポジトリ直下） | **`entrypoints/background/index.ts`** |
+| **`contents/bmxt-nav-overlay.ts`** | **`entrypoints/bmxt-nav-overlay.content/index.ts`** |
+| **`locales/`** | **`public/_locales/`** |
+| **`build/chrome-mv3`** | **`.output/chrome-mv3`** |
+| manifest を **`package.json`** に記述 | **`wxt.config.ts`**（**`version`** は **`package.json`** のまま） |
+| **`npm ci`** / **`package-lock.json`** | **`pnpm install --frozen-lockfile`** / **`pnpm-lock.yaml`** |
+
 <a id="key-specs-ja"></a>
 
 ## 主要仕様
 
-- **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（Plasmo のルート **`tabs/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`tabs/bmxt.tsx`** はそれをマウントする薄いエントリです。
+- **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（WXT の unlisted page **`entrypoints/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`entrypoints/bmxt/main.tsx`** はそれをマウントする薄いエントリです。
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
 - **状態**: コマンド出力ログとコマンド履歴は `chrome.storage.local` に保持。キーと上限は **`lib/features/extension-storage/keys.ts`** で定義（**ログ 500 行** `bmxt_log`、**履歴 300 件** `bmxt_cmd_history`）。
-- **バックグラウンド**: Service Worker（`background.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
+- **バックグラウンド**: Service Worker（`entrypoints/background/index.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
 - **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。
 
 <a id="permissions-manifest-ja"></a>
 
-### 権限（`package.json` の manifest）
+### 権限（`wxt.config.ts` の manifest）
 
 
-`tabs`, `tabGroups`, `storage`, `windows`, `scripting`, `history`, `bookmarks`。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
+manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
-**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`npm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
+**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
-**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self'`**、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`package.json`** を参照してください。
+**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self'`**、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`wxt.config.ts`** を参照してください。
 
 <a id="reproducible-builds-ja"></a>
 
 ### 再現可能なビルド
 
 
-公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`npm ci`**（**`package-lock.json`** 固定。CI や厳密な再現では **`npm install`** を使わない）のあと **`npm run codegen`** と **`npm run build`**（または **`npm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。lockfile 方針・監査・メンテ手順は **[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
+公式リリースは Git のタグで指します（`git tag`）。ストア提出物をソースから再現するには、そのタグを checkout し、**`pnpm install --frozen-lockfile`**（**`pnpm-lock.yaml`** 固定。CI や厳密な再現では **`pnpm install`** を使わない）のあと **`pnpm run codegen`** と **`pnpm run build`**（または **`pnpm run package`**）を実行し、依存ツリーと codegen 経路を揃えます。lockfile 方針・監査・メンテ手順は **[pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)** を参照。
 
-<a id="npm-dependencies-ja"></a>
+<a id="pnpm-dependencies-ja"></a>
 
-### npm 依存関係とセキュリティ
+### pnpm 依存関係とセキュリティ
 
 
-**直接依存**（**`package.json`**）は **`plasmo@0.90.5`**、**`react@18.2.0`**、**`react-dom@18.2.0`** のみです。その他の多数のパッケージは **間接依存**（Plasmo が Parcel・`@plasmohq/*` 等を引き込む）です。
+本リポジトリは **pnpm のみ**（**`package.json`** → **`packageManager`**、lockfile **`pnpm-lock.yaml`**）。**`npm install`** / **`npm run`** / **`npx`** および **`package-lock.json`** の生成は**禁止**。CI と README の手順も **pnpm** のみです。
+
+**直接依存**（**`package.json`**）は **`react@18.2.0`**、**`react-dom@18.2.0`**、**`sql.js@1.12.0`** です。**WXT**（`wxt`、`@wxt-dev/module-react`）等は **devDependencies**。その他は **間接依存**（Vite ツールチェーン等）です。
 
 **再現性のあるインストール**
 
 | コマンド | 用途 |
 |---------|------|
-| **`npm ci`** | **通常はこちら**（clone 後・CI・リリースビルド前）。**`package-lock.json`** どおりのツリーのみ入る。 |
-| **`npm install`** | **`package.json`** を意図的に変えるとき（devDependency・直接依存の版上げなど）のみ。更新した lockfile をコミットする。 |
+| **`pnpm install --frozen-lockfile`** | **通常はこちら**（clone 後・CI・リリースビルド前）。**`pnpm-lock.yaml`** どおりのツリーのみ入る。 |
+| **`pnpm install`** | **`package.json`** を意図的に変えるとき（devDependency・直接依存の版上げなど）のみ。更新した lockfile をコミットする。 |
 
-**依存凍結（Plasmo 0.90.5）** — **`package.json`** では **`overrides` を使わない**。推移依存の版は **`package-lock.json`** に exact + integrity で固定する。Plasmo / Parcel / `@plasmohq/*` の足並みが揃うまで、再現が必要な場面は **`npm ci`** のみ使う。**`.npmrc`** は **gitignore**（トークン・ローカル registry 設定をコミットしない）。直接依存を **`npm install`** で足すときは、**`package.json`** で版を **`^` なしで明示するか、**`save-exact=true`** を **ローカル**の **`~/.npmrc`** またはプロジェクト **`.npmrc`**（リポジトリ外／未コミット）に書く。
+**Lockfile 方針** — **`package.json`** では **`overrides` を使わない**。推移依存の版は **`pnpm-lock.yaml`** に exact + integrity で固定する。プロジェクト **`.npmrc`** は **`save-exact=true`** のみコミット（registry トークンは含めない）。直接依存を足すときは **`pnpm add`** で **`package.json`** に **`^` なしで版を明示する。
 
 lockfile 更新を pull したあとの推奨手順:
 
 ```bash
 rm -rf node_modules
-npm ci
-npm run build
+pnpm install --frozen-lockfile
+pnpm run build
 ```
 
-**Node.js 版** — **`.nvmrc`** を参照（このリポジトリの推奨 Node）。**`package.json`** に **`engines`** は **書かない**: **Plasmo 0.90.5** では **`plasmo build`** が失敗する（CSS/JSON の import 解決エラー。ソースファイルは存在するのに bundler が解決できない）。
+**Node.js 版** — **`.nvmrc`** を参照。**`packageManager`** で pnpm 版を固定する。初回 clone 時は **`corepack enable`** を一度実行する。
 
-**CI**（**.github/workflows/ci.yml`**）は **`npm ci`**、**`npm audit --audit-level=critical`**、テスト、**`npm run build`** を実行する。**`npm audit fix --force`** は **使わない**（`plasmo` のダウングレードを提案し、危険）。
+**CI**（**.github/workflows/ci.yml`**）は **`pnpm install --frozen-lockfile`**、**`pnpm exec wxt prepare`**、**`pnpm audit --audit-level=critical`**、**`verify:manifest`**、**`check:no-fetch`**、**`check:generated`**、**`pnpm exec tsc --noEmit`**、テスト、**`pnpm run build`** を実行する。**`pnpm audit fix --force`** は **使わない**（unsafe dependency bumpsを提案し、危険）。
 
-**`svgo@3.3.3`** は **devDependency**。htmlnano の optional peer を満たし、Plasmo ビルド時の **svgo** 警告を消す。
+**残る audit（high / moderate）** — WXT のビルド専用ツールチェーンに **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。CI は **critical** のみで fail する。**`pnpm audit fix --force`** は安易に使わない。
 
-**残る audit（high / moderate）** — Plasmo ビルド専用ツールチェーン（Parcel dev server、**tsup** 経由の **esbuild**、未使用 Svelte SSR 等）に **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。**Plasmo / Parcel の upstream 更新**待ち。凍結期間中の CI は **critical** のみで fail する。**`npm audit fix --force`** や **`@plasmohq/*`** の場当たり版上げ（例: **`@plasmohq/parcel-resolver-post@0.4.6`** は **`plasmo build`** の CSS/JSON 解決を壊す）で直そうとしない。
+**ローカル検証（CI と同一）:** **`pnpm run verify:manifest`** → **`pnpm run check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm test`** → **`pnpm run build`**。
 
-**依存関係を変更したら** **`npm ci`** → **`npm run build`** → **`npm test`** → **`npm audit --audit-level=critical`** を実行し、**`package.json`** と **`package-lock.json`** を **セットでコミット**する。
+**依存関係を変更したら** **`pnpm install --frozen-lockfile`** → **`pnpm run build`** → **`pnpm test`** → **`pnpm audit --audit-level=critical`** を実行し、**`package.json`** と **`pnpm-lock.yaml`** を **セットでコミット**する。
 
 <a id="command-line-token-model-ja"></a>
 
@@ -1203,7 +1253,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `bmxt_process_ui_v1` | セッションごとの開いているピッカー（`tabs` / `search` / `dom` / `setting`）と `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、検索メタデータキャッシュ（`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** の URL・タイトルのみ。**`--page`** 本文は**保存しない**）、任意のジョブ監査ログ（`bmxt_job_db_v1`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は **setting → reset-search-cache** で削除可能だが、**0.6.9** 以降は新規書き込みしない。
 
 **実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
 
@@ -1215,22 +1265,17 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### `aboutbmxt`
 
-**`aboutbmxt`** は第一コマンドのみの組み込みコマンド（第二コマンドなし）です。BMXt プロンプトから実行すると、拡張機能の **ウェルカムページ**（`tabs/welcome.html`）を **新しいブラウザタブ** で開きます（インストール／更新時の自動表示と同じ URL・タブ）。
+**`aboutbmxt`** は第一コマンドのみの組み込みコマンド（第二コマンドなし）です。BMXt プロンプトから実行すると、**GitHub Pages 上のウェルカムページ**を **新しいブラウザタブ** で開きます（インストール／更新時の自動表示と同じ URL・タブ）。
 
 | 入力 | 動作 |
 |------|------|
-| **`aboutbmxt`** | **`tabs/welcome.html`** を **`open_welcome_page`** 経由で開く（Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**）。ターミナルには短い確認行が出る。 |
+| **`aboutbmxt`** | **`https://unrsports.github.io/bmxt/welcome.html`** を **`open_welcome_page`** 経由で開く（Service Worker → **`openWelcomePageTab`** / **`chrome.tabs.create`**）。クエリ **`lang`**（設定の UI ロケール）と **`v`**（インストール済み manifest 版）を付与。ターミナルには短い確認行が出る。 |
 
-**ページ内容**は **manifest の現行バージョン** に対応する **`lib/features/welcome/welcome-content.json`** のエントリから読み込みます（インストール／更新時の自動表示と同じデータ源）。各版のオブジェクトには次を書けます。
+**ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-- **`ja`** / **`en`** — ページ上の箇条書き
-- **`heroImage`** — **`assets/welcome/`** 配下の hero 画像パス（画像なしは **`"_none_heroImage"`**）
-- **`heroImageMaxWidth`** — hero 画像の CSS **`max-width`**（数値は px、文字列は **`"640px"`** / **`"80%"`** など）。表示は **幅ベース**（`width: 100%`、`height: auto`）
-- **`additionalImages`** — 追加スクリーンショット（**`_none_`** で始まるパスはスキップ）
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。JSON の特定版を手動プレビューする場合は **`chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.6.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
-
-**実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、ページ UI **`lib/features/welcome/welcome-page.tsx`**。
+**実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
 <a id="nav-mode-ja"></a>
 
@@ -1285,14 +1330,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 **ページと権限**
 
 - **scriptable な http(s)** のみ（`chrome://`・ウェブストア・`chrome-extension://` 等は拒否）。注入失敗時はステータス帯に短い理由（例: **`site access denied`**）。
-- 拡張のインストール／再読み込み後は、対象ページを **一度再読み込み**して Plasmo **コンテンツスクリプト**（`contents/bmxt-nav-overlay.ts`）を登録することを推奨。未登録時は Service Worker が **`chrome.scripting.executeScript`** にフォールバック。
+- 拡張のインストール／再読み込み後は、対象ページを **一度再読み込み**して WXT **コンテンツスクリプト**（`entrypoints/bmxt-nav-overlay.content/`）を登録することを推奨。未登録時は Service Worker が **`chrome.scripting.executeScript`** にフォールバック。
 
 **実装**
 
 - **`lib/features/nav/`** — プロンプト解析、ステータス帯、セッションフック（`useNavMode`）、注入スニペット、SW ランナー（`run-nav-inject.ts`）。
 - **`lib/features/bmxt-window/bmxt-shell.tsx`** — **`nav -enter` / `nav -exit`** を `RUN_CMD` より前に処理。**Alt** / nav 用 **Enter** / 矢印キー。
-- **`background.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
-- **`contents/bmxt-nav-overlay.ts`** — http(s) ページ上のリスナー。
+- **`entrypoints/background/index.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
+- **`entrypoints/bmxt-nav-overlay.content/`** — http(s) ページ上のリスナー。
 
 <a id="translate-ja"></a>
 
@@ -1519,7 +1564,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | 通常時の `Enter` | search 結果: URL を開くまたは page ジャンプ；search 詳細: ページ内ジャンプ；search 開き先: 選択先へ開く | ハイライトタブをアクティブ化（列は開いたまま） |
 | `:` → `nohlsearch` | フィルタ・ハイライト解除 | 検索ハイライト解除 |
 | `n` / `N` | 結果行上の次／前マッチ | 次／前のマッチ行 |
-| `→` / `←` | search: タブ開=詳細／閉+history=開き先；dom: プロンプト行末で **詳細バー** | ハイライト中の **ウィンドウ** または **タブグループ** 行を閉じる／開く（タブ行は所属グループ） |
+| `→` / `←` | search: タブ開=詳細／閉+history=開き先；dom: プロンプト行末で **詳細バー** | **ウィンドウ** / **タブグループ** 行: 閉じる／開く；**タブ行**: **←** で詳細バー、**→** でアクションメニュー |
 | `Ctrl+←` / `Ctrl+→` | 列ストリップ（ターミナル ↔ 開列） | 同左 |
 | `Esc` | プロンプトへ、または search 詳細／開き先 → 結果一覧 | `#` → `:` → `/` → バルク → プロンプト |
 | `#` / `Tab` | — | マーク付け／複数選択 |
@@ -1555,13 +1600,13 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
 - **`search -list` のみ**（末尾スペースなし）+ **Enter** で **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** で横断検索（**`--all`**: 履歴 + ブックマーク + 開いている http(s) タブ本文）。**`search -list `** のあと Tab で **`--all`** / **`--history`** / **`--bookmark`** / **`--page`** を補完して単一スコープに限定できる（**[列の開き方](#picker-ui-ja)**）。
-- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は 3 スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査は SQLite メタデータキャッシュ（`bmxt_search_cache_db_v1`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
+- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は 3 スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査はプロセス内メモリキャッシュ（`search-cache-store`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
 - 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
-- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search SQLite には本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="tabs-man-tabs-ja"></a>
 
@@ -1611,7 +1656,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 - 行は階層表示: **`[ウィンドウ]`** → **`[タブグループ]`**（Chrome の実グループのみ）→ **タブ行**。**タブ行**にはページ URL から解決できる **ファビコン** を表示します。
 - Chrome グループに属さないタブは **ウィンドウ行の直下**に並びます（「(グループなし)」見出し行はありません）。
-- **初期状態はすべて展開**。**←** でハイライト中のウィンドウまたはタブグループを閉じ、**→** で開きます。**タブ行**では **←** / **→** は **所属タブグループ**に対して効きます（未グループのタブには折りたたみ対象がありません）。
+- **初期状態はすべて展開**。**←** でハイライト中の **ウィンドウ** または **タブグループ** 行を閉じ、**→** で開きます。**タブ行**では **←** で詳細バーへ、**→** でアクションメニューを開きます。
 - 開閉状態は **BMXt プロセス**存続中保持されます（BMXt ウィンドウを閉じても保持。**最後の 1 ペイン**の **`exit`** で消去 — [BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)）。
 
 **移動とバルク操作**
@@ -1654,7 +1699,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 ## コマンド実行アーキテクチャ（現状）
 
 
-**一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`npm run codegen`** で **`lib/features/bmxt-core/registry/table.gen.ts`**・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`**・**`command-subcommands.gen.ts`** を再生成します。組み込みコマンドの **`run`** は **`lib/features/bmxt-core/cmd/*.ts`**、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果をハンドラに振り分けます。Tab 補完はレジストリの **`allCompletionTokens()`**（manifest と同内容の **`completion-fallback.ts`** も生成）。
+**一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`pnpm run codegen`** で **`lib/features/bmxt-core/registry/table.gen.ts`**・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`**・**`command-subcommands.gen.ts`** を再生成します。組み込みコマンドの **`run`** は **`lib/features/bmxt-core/cmd/*.ts`**、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果をハンドラに振り分けます。Tab 補完はレジストリの **`allCompletionTokens()`**（manifest と同内容の **`completion-fallback.ts`** も生成）。
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
@@ -1662,7 +1707,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 **`exit`:** **`exit_pane`** Effect を返す。Service Worker は **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**のときは BMXt ウィンドウを閉じ、**プロセススコープの storage をすべて消去**する（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 
-- **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`npm run codegen`**）
+- **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`pnpm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI
 - **`lib/features/extension-storage/`** — ストレージキーと上限
@@ -1671,13 +1716,13 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、`bmxt_ui_settings_v1`）；**[`setting`](#setting-ja)** 参照
 - **`lib/features/session/`** — ターミナルセッション（`session -list` / `-switch` インライン候補、セッションバー）；**[`session`](#session-ja)** 参照
-- **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
-- **`contents/bmxt-nav-overlay.ts`** — http(s) 向け nav 用 Plasmo コンテンツスクリプト
+- **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
+- **`entrypoints/bmxt-nav-overlay.content/`** — http(s) 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
-- **`background.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` を包む → `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
+- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` を包む → `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
 
-manifest やコマンド実装を変えたら **`npm run codegen`** のあと **`npm run verify:manifest`** / **`npm run check:generated`** を実行し、必要なら **`npm run build`** してください。
+manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと **`pnpm run verify:manifest`** / **`pnpm run check:generated`** を実行し、必要なら **`pnpm run build`** してください。
 
 <a id="job-execution-ja"></a>
 
@@ -1690,16 +1735,16 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 |------------|--------------|------------|----------|
 | `search-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`search -list`） |
 | `dom-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`dom -list`） |
-| `run-cmd` | `__background__` | parallel | `background.ts` |
+| `run-cmd` | `__background__` | parallel | `entrypoints/background/index.ts` |
 | `tab-picker-refresh` | `__terminal__` | coalesce-latest | タブピッカー追従更新 |
 
 **キャンセル:** プロンプトの **`Ctrl+C`**、走査中の **`* -exit -list`**、同一スコープで同種ジョブを再開始（**cancel-previous** 種別）。
 
-**任意の監査ログ:** BMXt UI タブでのみ、完了ジョブを **`bmxt_job_db_v1`**（SQLite blob、スコープごとに間引き）へ追記することがある。Service Worker はこのモジュールを読み込まない — バックグラウンド **`run-cmd`** は **`persist: false`**。
+**任意の監査ログ:** BMXt UI タブでのみ、完了ジョブをメモリ内トレイル（`job-audit-memory`、スコープごとに間引き）へ保持することがある。Service Worker はこのモジュールを読み込まない — バックグラウンド **`run-cmd`** は **`persist: false`**。
 
 **search 走査進捗:** **`search -list`** の進捗行はアクティブシェル内で **`requestAnimationFrame`** バッチ（`use-batched-search-loading-progress.ts`）し、全セッションペインの再描画を抑える。結果確定時に search ピッカーへマージする。
 
-**実装:** **`job-types.ts`**、**`job-runner.ts`**、**`job-handle.ts`**、**`use-session-job-runner.ts`**、**`dispatch-context-from-job.ts`**、DB は **`lib/features/job/db/`**（任意）。
+**実装:** **`job-types.ts`**、**`job-runner.ts`**、**`job-handle.ts`**、**`use-session-job-runner.ts`**、**`dispatch-context-from-job.ts`**、任意の監査は **`lib/features/job/db/job-audit-memory.ts`**。
 
 <a id="add-new-built-in-command-ja"></a>
 
@@ -1708,10 +1753,10 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 手順の一覧（scaffold、manifest、新 Effect、検証）は下記 **[コマンド追加手順](#command-add-procedure-ja)** を参照。
 
 
-1. **`manifest/bmxt-codegen.json`** を編集する。必要なら **`npm run new:command -- <module> <name> [aliases...]`** で **`lib/features/bmxt-core/cmd/<module>.ts`** と manifest を追加。
-2. **`cmd/<module>.ts`** の **`run`** を実装。**`export const CMD`** を manifest と一致させる（**`npm run verify:manifest`**）。
-3. Chrome 用の新 Effect なら manifest の **`effects`** を足し **`npm run codegen`** のあと **`handlers/effects/`** に **`tsHandlerFile`** 相当の実装を置く。
-4. **`npm run codegen`** のあと **`verify:manifest`** / **`check:generated`** で確認（CI でも実行）。
+1. **`manifest/bmxt-codegen.json`** を編集する。必要なら **`pnpm run new:command -- <module> <name> [aliases...]`** で **`lib/features/bmxt-core/cmd/<module>.ts`** と manifest を追加。
+2. **`cmd/<module>.ts`** の **`run`** を実装。**`export const CMD`** を manifest と一致させる（**`pnpm run verify:manifest`**）。
+3. Chrome 用の新 Effect なら manifest の **`effects`** を足し **`pnpm run codegen`** のあと **`handlers/effects/`** に **`tsHandlerFile`** 相当の実装を置く。
+4. **`pnpm run codegen`** のあと **`verify:manifest`** / **`check:generated`** で確認（CI でも実行）。
 
 <a id="command-add-procedure-ja"></a>
 
@@ -1719,13 +1764,13 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 
 
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。continuation と第二トークン Tab 候補は **`command-subcommands.gen.ts`**（manifest の **`subcommands`** から生成）。
-- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない: **`table.gen.ts`**、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**、**`command-subcommands.gen.ts`**（いずれも **`npm run codegen`** で再生成）。
-- **手順（推奨）:** **`npm run new:command -- <module> <canonical_name> [aliases...]`** — **`lib/features/bmxt-core/cmd/<module>.ts`** と manifest を更新し **codegen** まで実行。
-- **手動で足す場合:** manifest の **`commands[]`** に追記 → **`lib/features/bmxt-core/cmd/<module>.ts`** → **`npm run codegen`**。
+- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない: **`table.gen.ts`**、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**、**`command-subcommands.gen.ts`**（いずれも **`pnpm run codegen`** で再生成）。
+- **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`lib/features/bmxt-core/cmd/<module>.ts`** と manifest を更新し **codegen** まで実行。
+- **手動で足す場合:** manifest の **`commands[]`** に追記 → **`lib/features/bmxt-core/cmd/<module>.ts`** → **`pnpm run codegen`**。
 - **ブラウザ連携（新しい `Effect`）:** manifest の **`effects[]`** → **codegen** → **`handlers/effects/<tsHandlerFile>.ts`** → **`run`** から **`effectsDispatch`**。
-- **検証:** **`verify:manifest`** / **`check:generated`** → **`npx tsc --noEmit`** → **`npm run build`**。
+- **検証:** **`verify:manifest`** / **`check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm run build`**。
 
-各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`lib/features/bmxt-core/cmd/<module>.ts`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`npm run verify:manifest`** が検査）。
+各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`lib/features/bmxt-core/cmd/<module>.ts`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`** が検査）。
 
 **手書きの `handlers/effects/*.ts`:** codegen の対象外。manifest の **`effects[]`** 変更後は生成型・**`apply-dispatch.gen.ts`** に**揃える**。
 
@@ -1764,50 +1809,70 @@ manifest やコマンド実装を変えたら **`npm run codegen`** のあと **
 依存関係のインストール後、開発ビルドを起動します（手順の全体像は **Development startup** / **開発時の起動** を参照）。
 
 ```bash
-npm ci        # package-lock.json があるときはこちら
-npm run dev   # または pnpm dev
+pnpm install --frozen-lockfile        # pnpm-lock.yaml があるときはこちら
+pnpm run dev   
 ```
 
-`npm run dev` は **`plasmo dev`**（ウォッチ付き開発ビルド）で、**`build/chrome-mv3-dev`** を更新します。作業中はターミナル上のプロセスを止めずに置いておきます。
+`pnpm run dev` は **`wxt`**（ウォッチ付き開発ビルド）で、**`.output/chrome-mv3-dev`** を更新します。作業中はターミナル上のプロセスを止めずに置いておきます。
 
-**`manifest/bmxt-codegen.json`** を編集したときは、拡張を再読み込みする前に **`npm run codegen`** を実行し、生成 TypeScript を揃えてください。
+**`manifest/bmxt-codegen.json`** を編集したときは、拡張を再読み込みする前に **`pnpm run codegen`** を実行し、生成 TypeScript を揃えてください。
 
 <a id="development-startup-ja"></a>
 
 ### 開発時の起動
 
-1. **依存関係:** リポジトリ直下で **`npm ci`**（**`package-lock.json`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`npm install`**。**[npm 依存関係とセキュリティ](#npm-dependencies-ja)** を参照。
-2. **Codegen:** **`manifest/bmxt-codegen.json`** を編集したときは、**`npm run codegen`** で **`lib/features/bmxt-core/registry/`**・**`lib/features/dispatch/`**・**`lib/features/builtin-commands/`** の生成物を揃える。
-3. **開発サーバ:** リポジトリ直下で **`npm run dev`** を実行する。これは **`plasmo dev`** で、`build/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
-4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`build/chrome-mv3-dev`** を指定する（Plasmo dev が出力するディレクトリ）。
+1. **依存関係:** 初回は **`corepack enable`** のあと、リポジトリ直下で **`pnpm install --frozen-lockfile`**（**`pnpm-lock.yaml`** があるときはこちらを優先）。依存を更新して lockfile を書き換えるときだけ **`pnpm install`**。**postinstall** で sql.js WASM を **`public/`** へコピーし **`wxt prepare`** を実行（**`.wxt/types/`** を生成）。**[pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)** を参照。
+2. **Codegen:** **`manifest/bmxt-codegen.json`** を編集したときは、**`pnpm run codegen`** で **`lib/features/bmxt-core/registry/`**・**`lib/features/dispatch/`**・**`lib/features/builtin-commands/`** の生成物を揃える。
+3. **開発サーバ:** リポジトリ直下で **`pnpm run dev`** を実行する。これは **`wxt`** で、`.output/chrome-mv3-dev` をウォッチビルドする。**プロセスは終了させず**ターミナルに置いておく。
+4. **Chrome に読み込み:** `chrome://extensions` を開き、**デベロッパーモード**をオンにして「パッケージ化されていない拡張機能を読み込む」から **`.output/chrome-mv3-dev`** を指定する（WXT dev が出力するディレクトリ）。
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
-6. **変更の反映:** 保存後、Plasmo の再ビルドが終わったら、拡張機能カードの **「再読み込み」**、または BMXt のタブ／ウィンドウの再読み込みで Service Worker・UI の変更を取り込む。
+6. **編集後:** WXT の再ビルドが終わったら、拡張機能カードの「再読み込み」（または BMXt タブの再読み込み）で Service Worker と UI に反映させる。
+
+<a id="project-layout-ja"></a>
+
+### プロジェクト構成（WXT）
+
+| パス | 役割 |
+|------|------|
+| **`entrypoints/background/`** | Service Worker（`index.ts`）— ウィンドウ起動・`runDispatch`・Effect |
+| **`entrypoints/bmxt/`** | 拡張 UI ページ → ビルド後 **`bmxt.html`**（`main.tsx` + `index.html`） |
+| **`entrypoints/bmxt-nav-overlay.content/`** | http(s) 向け Nav コンテンツスクリプト |
+| **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
+| **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
+| **`lib/features/`** | 機能モジュール（下表参照） |
+| **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
+| **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
+| **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
+| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発）, **`*-chrome.zip`**（**`pnpm run package`**） |
+
+**ビルドスクリプト:** **`pnpm run dev`** / **`build`** / **`package`** は **`scripts/build-background-services.mjs`** → WXT の順。**`postinstall`** は **`wxt prepare`** のみ。
 
 <a id="main-sources-ja"></a>
 
 ### 主なソース
 
-- `tabs/bmxt.tsx` — 拡張ページのエントリ（`BmxtTerminal` を描画するだけの薄いラッパ）
-- `bmxt-ui.css` — リポジトリ直下。ウィンドウ用スタイル（`tabs/bmxt.tsx` から import）
+- `entrypoints/bmxt/` — 拡張ページ（`main.tsx` + `index.html`；`BmxtTerminal` をマウント）
+- `entrypoints/background/` — Service Worker
+- `entrypoints/bmxt-nav-overlay.content/` — http(s) 向け content script
+- `bmxt-ui.css` — ウィンドウ用スタイル
+- `wxt.config.ts` — manifest オーバーライド
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
-- `lib/features/welcome/` — 更新後ウェルカムページ（`tabs/welcome.html`、本文は **`welcome-content.json`**）
-- `tabs/welcome.tsx` — ウェルカムページのエントリ
+- `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック（ホストされた **`docs/welcome.html`** を開く；コンテンツは **`docs/`** のみ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
-- `background.ts` — Service Worker（ウィンドウ起動・`runDispatch`・Effect 実行）
 - `lib/features/bmxt-core/` — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
-- `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、SQLite メタデータキャッシュ（`bmxt_search_cache_db_v1` — **`--history`** / **`--bookmark`** のみ）
-- `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意の SQLite 監査ログ（`bmxt_job_db_v1`）
+- `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
+- `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
 - `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
-- `contents/bmxt-nav-overlay.ts` — Nav 用コンテンツスクリプト（http(s)）
+- `scripts/build-background-services.mjs` — Service Worker ヘルパーを **`public/background-services.js`** にバンドル
 
 コードを編集すると、開発モードではビルドが更新されるので、拡張の「再読み込み」で反映を確認できます。
 
@@ -1818,9 +1883,9 @@ npm run dev   # または pnpm dev
 
 **拡張機能更新時のウェルカムページ**（通常タブ。ウィンドウ内ブロックとは別）
 
-Chrome が **`install`** または **`update`** を報告したとき、**`background.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`tabs/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。文言・任意のスクリーンショットは **`lib/features/welcome/welcome-content.json`**（キーが無い版はプレースホルダ）。
+Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `chrome-extension://<拡張機能ID>/tabs/welcome.html?version=0.6.0` で JSON の該当版を表示（クエリなし → manifest の現行版、従来どおり）。不正な `version` 文字列は無視。更新時の自動表示ではクエリは付けない。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 
@@ -1835,31 +1900,37 @@ Chrome が **`install`** または **`update`** を報告したとき、**`backg
 
 1. **`package.json`** の **`version`** を上げる。
 2. **`lib/features/release-notes/release-notes.json`** に、**同じバージョン文字列** をキーとするオブジェクトを追加する（**`ja`** / **`en`** の文字列配列。ウィンドウ内アップグレードバナー用）。
-3. 任意で **`lib/features/welcome/welcome-content.json`** にウェルカムページ用エントリを追加する（**`ja`** / **`en`** の配列。**`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**）。ユーザーは **`aboutbmxt`** でいつでもそのページを開ける（インストール／更新時の自動表示と同じタブ）。画像は **`assets/welcome/`** に置き、JSON では `assets/welcome/<ファイル名>` と書く（WebP 可）。**`package.json`** の **`web_accessible_resources`**（`assets/welcome/*`）経由でビルドに同梱される。追加・変更後はビルドと拡張の再読み込みが必要。画像なしは **`heroImage": "_none_heroImage"`**。
+3. **`docs/welcome-content.json`** の先頭に新オブジェクトを追加する（**`version`**, **`ja`** / **`en`** の配列；画像フィールドは任意）。画像ファイルは **`docs/welcome/`** に置く。**`docs/`** を GitHub Pages に公開して live と揃える。ユーザーは **`aboutbmxt`** または install/update 後にページを開ける。
 4. ビルドして配布する。
 
 **`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
 
-**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-page.tsx`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
+**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-external-url.ts`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
 
 <a id="production-build-ja"></a>
 
 ## 本番ビルド
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 
-成果物は `build/chrome-mv3-prod` 配下に出力されます。ストア提出用に zip する場合は `npm run package`（Plasmo のパッケージコマンド）も利用できます。
+成果物は `.output/chrome-mv3` 配下に出力されます。ストア提出用に zip する場合は `pnpm run package`（WXT の zipコマンド）も利用できます。
 
 <a id="store-submission-ja"></a>
 
 ## ストア提出（参考）
 
 
-[Plasmo の提出ワークフロー](https://docs.plasmo.com/framework/workflows/submit)や [bpp](https://bpp.browser.market) などの自動化を利用できます。初回はストア側で拡張を登録し、資格情報を整えてから CI 連携するのが一般的です。
+ローカルでビルド・zip:
 
+```bash
+pnpm run build
+pnpm run package   # .output/*-chrome.zip を出力
+```
+
+[WXT の公開ガイド](https://wxt.dev/guide/essentials/publishing) や [Browser Platform Publish (bpp)](https://bpp.browser.market) で自動提出できます。本リポジトリには **`.github/workflows/submit.yml`**（手動 **`workflow_dispatch`**）があり、**`pnpm run build`** → **`pnpm run package`** のあと **`.output/*-chrome.zip`** を **`PlasmoHQ/bpp@v3`** でアップロードします。ストア認証情報は GitHub secret **`SUBMIT_KEYS`** のみに置き、コミットしないでください。
 <a id="license-ja"></a>
 
 ## ライセンス

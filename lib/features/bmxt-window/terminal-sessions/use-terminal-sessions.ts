@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { TERMINAL_SESSIONS_KEY } from "../../extension-storage/keys"
 import {
   mergeSessionsStatePreservingStableRefs,
   sessionsUiSnapshotEqual
 } from "./sessions-ui-equality"
 import {
-  ensureTerminalSessionsState,
-  parseTerminalSessionsStorageValue,
-  readTerminalSessionsIfPresent,
-  setActiveSession,
-  setSessionDisplayName
-} from "./state-storage"
+  isSessionRuntimeOutboundMessage,
+  SESSION_CLEAR_MESSAGE
+} from "./session-runtime-protocol"
+import {
+  initSessionRuntimeFromPageAsync,
+  setActiveSessionFromUiAsync,
+  setSessionNameFromUiAsync
+} from "./session-runtime-client"
+import { createEmptyTerminalSessionsState } from "./state-storage"
 import type { TerminalSessionsStateV1 } from "./types"
 
 function applySessionsState(
@@ -41,63 +43,63 @@ export function useTerminalSessions(): {
   }, [])
 
   useEffect(() => {
-    void readTerminalSessionsIfPresent().then((s) => {
-      if (s) {
-        commitSessionsState(s)
-        return
-      }
-      void ensureTerminalSessionsState().then(commitSessionsState)
-    })
-
-    const onChange: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (
-      changes,
-      area
-    ) => {
-      if (area !== "local") {
-        return
-      }
-      const change = changes[TERMINAL_SESSIONS_KEY]
-      if (!change) {
-        return
-      }
-      if (change.newValue === undefined) {
-        void ensureTerminalSessionsState().then(commitSessionsState)
-        return
-      }
-      const parsed = parseTerminalSessionsStorageValue(change.newValue)
-      if (parsed) {
-        commitSessionsState(parsed)
-        return
-      }
-      void readTerminalSessionsIfPresent().then((s) => {
-        if (s) {
-          commitSessionsState(s)
-        } else {
-          void ensureTerminalSessionsState().then(commitSessionsState)
+    let cancelled = false
+    void initSessionRuntimeFromPageAsync()
+      .then((snapshot) => {
+        if (!cancelled) {
+          commitSessionsState(snapshot)
         }
       })
+      .catch(() => {
+        if (!cancelled) {
+          commitSessionsState(createEmptyTerminalSessionsState())
+        }
+      })
+
+    const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
+      message
+    ) => {
+      if (!isSessionRuntimeOutboundMessage(message)) {
+        return
+      }
+      if (message.type === SESSION_CLEAR_MESSAGE) {
+        commitSessionsState(null)
+        return
+      }
+      commitSessionsState(message.state)
     }
-    chrome.storage.onChanged.addListener(onChange)
-    return () => chrome.storage.onChanged.removeListener(onChange)
+    chrome.runtime.onMessage.addListener(onRuntimeMessage)
+    return () => {
+      cancelled = true
+      chrome.runtime.onMessage.removeListener(onRuntimeMessage)
+    }
   }, [commitSessionsState])
 
-  const activateSession = useCallback(async (sessionId: string) => {
-    const prev = stateRef.current
-    if (prev && prev.order.includes(sessionId) && prev.activeId !== sessionId) {
-      commitSessionsState({ ...prev, activeId: sessionId })
-    }
-    const next = await setActiveSession(sessionId)
-    if (next) {
-      commitSessionsState(next)
-    }
-  }, [commitSessionsState])
+  const activateSession = useCallback(
+    async (sessionId: string) => {
+      const prev = stateRef.current
+      if (prev && prev.order.includes(sessionId) && prev.activeId !== sessionId) {
+        commitSessionsState({ ...prev, activeId: sessionId })
+      }
+      try {
+        await setActiveSessionFromUiAsync(sessionId)
+      } catch {
+        /* snapshot broadcast restores authoritative activeId */
+      }
+    },
+    [commitSessionsState]
+  )
 
-  const renameSession = useCallback(async (sessionId: string, name: string) => {
-    const next = await setSessionDisplayName(sessionId, name)
-    if (next) {
-      commitSessionsState(next)
-    }
-  }, [commitSessionsState])
+  const renameSession = useCallback(
+    async (sessionId: string, name: string) => {
+      try {
+        await setSessionNameFromUiAsync(sessionId, name)
+      } catch {
+        /* snapshot broadcast restores authoritative names */
+      }
+    },
+    []
+  )
 
   return {
     state,

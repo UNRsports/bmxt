@@ -6,7 +6,15 @@ import { BG_IMAGE_MAX_BYTES } from "../appearance"
 import type { BgImageImportResult } from "../bg-image-import"
 import { pickUiLines, settingTokenForUiLocale, uiBulletPrefix, type BilingualLines, type UiLocale } from "../locale"
 import type { UiSettings } from "../settings"
-import { t, type MessageKey } from "./messages"
+import { tDomList } from "./ns/dom-list"
+import { tError } from "./ns/error"
+import { tNav, type NavMessageKey } from "./ns/nav"
+import { tOptionalHost } from "./ns/optional-host"
+import { tSearch } from "./ns/search"
+import { tSetting } from "./ns/setting"
+import { tTabs } from "./ns/tabs"
+import { tTranslate } from "./ns/translate"
+import { tVersionUpgrade } from "./ns/version-upgrade"
 
 export type NavStatusMode =
   | "typing"
@@ -18,7 +26,7 @@ export type NavStatusMode =
   | "menu"
   | "idle"
 
-const NAV_STATUS_KEY: Record<NavStatusMode, MessageKey> = {
+const NAV_STATUS_KEY: Record<NavStatusMode, NavMessageKey> = {
   typing: "nav.status.typing",
   typingMultiline: "nav.status.typingMultiline",
   selStart: "nav.status.selStart",
@@ -30,7 +38,7 @@ const NAV_STATUS_KEY: Record<NavStatusMode, MessageKey> = {
 }
 
 export function navStatusHint(locale: UiLocale, mode: NavStatusMode): string {
-  return t(NAV_STATUS_KEY[mode], locale)
+  return tNav(NAV_STATUS_KEY[mode], locale)
 }
 
 export function translateStatusMeta(
@@ -43,12 +51,12 @@ export function translateStatusMeta(
     return statusNote
   }
   if (busy) {
-    return t("translate.status.translating", locale)
+    return tTranslate("translate.status.translating", locale)
   }
   if (navTypingAssist) {
-    return t("translate.status.navTypingAssist", locale)
+    return tTranslate("translate.status.navTypingAssist", locale)
   }
-  return t("translate.status.assistOn", locale)
+  return tTranslate("translate.status.assistOn", locale)
 }
 
 export function translateStatusHint(
@@ -59,27 +67,32 @@ export function translateStatusHint(
 ): string {
   if (!navTypingAssist) {
     const pairLabel = getTranslationPairDef(pairId).statusLabel
-    return t("translate.status.hintOff", locale, { pairLabel })
+    return tTranslate("translate.status.hintOff", locale, { pairLabel })
   }
   const commitEn = getTranslationPairDef(pairId).commitLanguage === "en"
-  const commitHint = t(
+  const commitHint = tTranslate(
     commitEn ? "translate.status.commitEn" : "translate.status.commitJa",
     locale
   )
-  const base = t("translate.status.hintOnBase", locale, { commitHint })
-  return navTypingMultiline ? `${base}${t("translate.status.multilineSuffix", locale)}` : base
+  const base = tTranslate("translate.status.hintOnBase", locale, { commitHint })
+  return navTypingMultiline
+    ? `${base}${tTranslate("translate.status.multilineSuffix", locale)}`
+    : base
 }
 
 export function tabsStatusHint(locale: UiLocale, pageActiveMode: TabsPageActiveMode): string {
-  return t(pageActiveMode === "auto" ? "tabs.status.auto" : "tabs.status.manual", locale)
+  return tTabs(pageActiveMode === "auto" ? "tabs.status.auto" : "tabs.status.manual", locale)
 }
 
 export function searchStatusHint(locale: UiLocale, pageActiveMode: SearchPageActiveMode): string {
-  return t(pageActiveMode === "auto" ? "search.status.auto" : "search.status.manual", locale)
+  return tSearch(pageActiveMode === "auto" ? "search.status.auto" : "search.status.manual", locale)
 }
 
 export function optionalHostDeniedLines(locale: UiLocale): string[] {
-  return [t("optionalHost.deniedError", locale), t("optionalHost.deniedHint", locale)]
+  return [
+    tOptionalHost("optionalHost.deniedError", locale),
+    tOptionalHost("optionalHost.deniedHint", locale)
+  ]
 }
 
 export function formatBulletedLines(entry: BilingualLines, locale: UiLocale): string[] {
@@ -93,8 +106,8 @@ export function domListNoTargetLines(
   url: string
 ): string[] {
   return [
-    t("domList.unavailable", locale),
-    t("domList.noTarget", locale),
+    tDomList("domList.unavailable", locale),
+    tDomList("domList.noTarget", locale),
     `target: ${title}`,
     `url: ${url}`
   ]
@@ -107,8 +120,8 @@ export function domListUnscriptableLines(
   reason?: string
 ): string[] {
   const lines = [
-    t("domList.unavailable", locale),
-    t("domList.unscriptable", locale),
+    tDomList("domList.unavailable", locale),
+    tDomList("domList.unscriptable", locale),
     `target: ${title}`,
     `url: ${url}`
   ]
@@ -125,8 +138,8 @@ export function domListCaptureFailedLines(
   detail: string
 ): string[] {
   return [
-    t("domList.unavailable", locale),
-    t("domList.captureFailed", locale),
+    tDomList("domList.unavailable", locale),
+    tDomList("domList.captureFailed", locale),
     `detail: ${detail}`,
     `target: ${title}`,
     `url: ${url}`
@@ -134,42 +147,42 @@ export function domListCaptureFailedLines(
 }
 
 export function translateOnLogLine(locale: UiLocale, pairToken: string): string {
-  return t("translate.onLogLine", locale, { pairToken })
+  return tTranslate("translate.onLogLine", locale, { pairToken })
 }
 
 export function versionUpgradeTitle(locale: UiLocale, version: string): string {
-  return t("versionUpgrade.title", locale, { version })
+  return tVersionUpgrade("versionUpgrade.title", locale, { version })
 }
 
 export function errorLine(locale: UiLocale, message: string): string {
-  return t("error.generic", locale, { message })
+  return tError("error.generic", locale, { message })
 }
 
 export function dispatchFailedLine(locale: UiLocale, message: string): string {
-  return t("error.dispatchFailed", locale, { message })
+  return tError("error.dispatchFailed", locale, { message })
 }
 
 export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSettings): string[] {
   const { locale: uiLoc, appearance } = settings
-  const defaultLabel = t("setting.summary.default", locale)
+  const defaultLabel = tSetting("setting.summary.default", locale)
   const token = settingTokenForUiLocale(uiLoc)
   return [
-    t("setting.summary.locale", locale, { token }),
-    t("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
-    t("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
-    t("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),
-    t("setting.summary.font", locale, { value: appearance.fontFamily ?? defaultLabel }),
-    t("setting.summary.bgImage", locale, {
+    tSetting("setting.summary.locale", locale, { token }),
+    tSetting("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
+    tSetting("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
+    tSetting("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),
+    tSetting("setting.summary.font", locale, { value: appearance.fontFamily ?? defaultLabel }),
+    tSetting("setting.summary.bgImage", locale, {
       value: appearance.bgImageDataUrl
-        ? t("setting.summary.set", locale)
-        : t("setting.summary.none", locale)
+        ? tSetting("setting.summary.set", locale)
+        : tSetting("setting.summary.none", locale)
     })
   ]
 }
 
 export function bgImportErrorLine(locale: UiLocale, result: Extract<BgImageImportResult, { ok: false }>): string {
   if (result.errorKey === "setting.error.bgSize" || result.errorKey === "setting.error.bgEncodedSize") {
-    return t(result.errorKey, locale, { maxBytes: BG_IMAGE_MAX_BYTES })
+    return tSetting(result.errorKey, locale, { maxBytes: BG_IMAGE_MAX_BYTES })
   }
-  return t(result.errorKey, locale)
+  return tSetting(result.errorKey, locale)
 }

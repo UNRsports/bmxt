@@ -5,6 +5,7 @@ import {
   placeholderTexts,
   type ReleaseNotesEntry
 } from "../release-notes"
+import { readVersionUpgradePreflightAsync } from "./version-upgrade-preflight"
 
 export type PostUpgradeBanner = ReleaseNotesEntry & {
   version: string
@@ -14,7 +15,8 @@ export type PostUpgradeBanner = ReleaseNotesEntry & {
  * マニフェストのバージョンが前回起動時から変わっていれば一度だけバナー用データを返す。
  * 表示後、`LAST_SEEN_EXTENSION_VERSION_KEY` を現在バージョンに更新する。
  *
- * `ready` が true になるまで UI でログのみ先に出すなどのちらつきを避ける用途。
+ * `upgradeBannerReady` はログ領域のウェルカム／バナー表示待ち用。
+ * プロンプト操作可能かどうかには使わない（storage 待ちで入力をブロックしない）。
  */
 export function useVersionUpgradeBanner(): {
   postUpgradeBanner: PostUpgradeBanner | null
@@ -24,28 +26,33 @@ export function useVersionUpgradeBanner(): {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const v = chrome.runtime.getManifest().version
-    chrome.storage.local.get(LAST_SEEN_EXTENSION_VERSION_KEY, (r) => {
-      if (chrome.runtime.lastError) {
-        setReady(true)
+    let cancelled = false
+    const version = chrome.runtime.getManifest().version
+
+    void readVersionUpgradePreflightAsync().then((stored) => {
+      if (cancelled) {
         return
       }
-      const last = r[LAST_SEEN_EXTENSION_VERSION_KEY] as string | undefined
-      if (last === v) {
+      const last = stored[LAST_SEEN_EXTENSION_VERSION_KEY] as string | undefined
+      if (last === version) {
         setBanner(null)
         setReady(true)
         return
       }
-      const entry = getReleaseNotesForVersion(v)
+      const entry = getReleaseNotesForVersion(version)
       const ph = placeholderTexts()
       setBanner({
-        version: v,
+        version,
         ja: entry?.ja ?? ph.ja,
         en: entry?.en ?? ph.en
       })
-      void chrome.storage.local.set({ [LAST_SEEN_EXTENSION_VERSION_KEY]: v })
+      void chrome.storage.local.set({ [LAST_SEEN_EXTENSION_VERSION_KEY]: version })
       setReady(true)
     })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return { postUpgradeBanner: banner, upgradeBannerReady: ready }

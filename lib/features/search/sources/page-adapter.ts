@@ -16,7 +16,7 @@ import {
   type SearchPageProgress
 } from "./page-progress"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../../setting/locale"
-import { t } from "../../setting/i18n/messages"
+import { tSearch } from "../../setting/i18n/ns/search"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
 
@@ -167,7 +167,7 @@ export async function searchPageLines(
   if (scanned === 0 && tabs.length > 0) {
     return [
       "(no page text could be read from open http(s) tabs)",
-      t("search.pageNoTextHint", uiLocale),
+      tSearch("search.pageNoTextHint", uiLocale),
       `scanned ${scanned} tab(s), skipped ${skipped}, ${tabTotal} http(s) tab(s) open`
     ]
   }

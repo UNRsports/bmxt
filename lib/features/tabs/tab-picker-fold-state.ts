@@ -143,51 +143,18 @@ export function setTabPickerFoldActiveSession(sessionId: string): void {
   }
 }
 
-/** EN: Load fold state from `chrome.storage.local` (once per page context). */
+/** EN: In-memory fold snapshot for the active session (no storage I/O). */
+export async function persistTabPickerFoldStateToStorage(): Promise<void> {
+  persistActiveSessionSnapshot()
+}
+
+/** EN: Fold state is in-memory only; legacy storage is not read at runtime. */
 export function hydrateTabPickerFoldStateFromStorage(): Promise<void> {
   if (hydratePromise !== null) {
     return hydratePromise
   }
-  hydratePromise = (async () => {
-    try {
-      const r = await chrome.storage.local.get(TAB_PICKER_FOLD_STATE_KEY)
-      const parsed = parseStoredTabPickerFoldState(r[TAB_PICKER_FOLD_STATE_KEY])
-      if (parsed !== null) {
-        foldBySession.clear()
-        for (const [sessionId, snap] of Object.entries(parsed.bySession)) {
-          foldBySession.set(sessionId, snap)
-        }
-        if (activeSessionId !== null) {
-          const snap = foldBySession.get(activeSessionId)
-          if (snap) {
-            applySnapshotToActiveSets(snap)
-          }
-        }
-      }
-    } catch {
-      /* storage unavailable */
-    }
-  })()
+  hydratePromise = Promise.resolve()
   return hydratePromise
-}
-
-/** EN: Persist in-memory fold state (BMXt window close / SW sleep safe). */
-export async function persistTabPickerFoldStateToStorage(): Promise<void> {
-  persistActiveSessionSnapshot()
-  const bySession: Record<string, FoldSnapshot> = {}
-  for (const [sessionId, snap] of foldBySession) {
-    bySession[sessionId] = snap
-  }
-  const payload: StoredTabPickerFoldStateV2 = { v: 2, bySession }
-  try {
-    if (Object.keys(bySession).length === 0) {
-      await chrome.storage.local.remove(TAB_PICKER_FOLD_STATE_KEY)
-      return
-    }
-    await chrome.storage.local.set({ [TAB_PICKER_FOLD_STATE_KEY]: payload })
-  } catch {
-    /* ignore */
-  }
 }
 
 /** EN: Remove fold state for sessions no longer in the process. */
@@ -213,13 +180,18 @@ export function removeTabPickerFoldStateForSession(sessionId: string): void {
   }
 }
 
-/** EN: Clear fold state on BMXt `exit` full close (storage + in-memory). */
-export async function clearTabPickerFoldStateStorage(): Promise<void> {
+/** EN: Clear in-memory fold state only (no storage I/O). */
+export function clearTabPickerFoldStateInMemory(): void {
   foldBySession.clear()
   collapsedWindowIds.clear()
   collapsedGroupKeys.clear()
   activeSessionId = null
   hydratePromise = null
+}
+
+/** EN: Clear fold state on BMXt `exit` full close (storage + in-memory). */
+export async function clearTabPickerFoldStateStorage(): Promise<void> {
+  clearTabPickerFoldStateInMemory()
   try {
     await chrome.storage.local.remove(TAB_PICKER_FOLD_STATE_KEY)
   } catch {
@@ -406,17 +378,6 @@ export function collapseTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow):
     setTabPickerGroupExpanded(row.windowId, row.groupId, false)
     return { focusRowIdx, changed: true }
   }
-  if (row.kind === "tab") {
-    if (row.groupId === null) {
-      return { focusRowIdx: null, changed: false }
-    }
-    const focusRowIdx = findGroupRowIndex(rows, row.windowId, row.groupId)
-    if (!isTabPickerGroupExpanded(row.windowId, row.groupId)) {
-      return { focusRowIdx, changed: false }
-    }
-    setTabPickerGroupExpanded(row.windowId, row.groupId, false)
-    return { focusRowIdx, changed: true }
-  }
   return { focusRowIdx: null, changed: false }
 }
 
@@ -445,6 +406,23 @@ export function expandTabPickerForTabId(rows: TabPickerRow[], tabId: number): bo
   return changed
 }
 
+/** EN: Toggle expand/collapse for a window or group row. */
+export function toggleTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): TabPickerFoldMutation {
+  if (row.kind === "window") {
+    if (isTabPickerWindowExpanded(row.windowId)) {
+      return collapseTabPickerAtRow(rows, row)
+    }
+    return expandTabPickerAtRow(rows, row)
+  }
+  if (row.kind === "group") {
+    if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
+      return collapseTabPickerAtRow(rows, row)
+    }
+    return expandTabPickerAtRow(rows, row)
+  }
+  return { focusRowIdx: null, changed: false }
+}
+
 /** EN: Expand window or group for `row`; returns focus row and whether state changed. */
 export function expandTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): TabPickerFoldMutation {
   if (row.kind === "window") {
@@ -463,18 +441,5 @@ export function expandTabPickerAtRow(rows: TabPickerRow[], row: TabPickerRow): T
     setTabPickerGroupExpanded(row.windowId, row.groupId, true)
     return { focusRowIdx, changed: true }
   }
-  if (row.kind === "tab") {
-    if (row.groupId === null) {
-      return { focusRowIdx: null, changed: false }
-    }
-    const focusRowIdx = findGroupRowIndex(rows, row.windowId, row.groupId)
-    if (isTabPickerGroupExpanded(row.windowId, row.groupId)) {
-      return { focusRowIdx, changed: false }
-    }
-    setTabPickerGroupExpanded(row.windowId, row.groupId, true)
-    return { focusRowIdx, changed: true }
-  }
   return { focusRowIdx: null, changed: false }
 }
-
-void hydrateTabPickerFoldStateFromStorage()

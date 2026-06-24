@@ -1,34 +1,40 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.6.0",
+  "version": "0.6.9",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
   "repository": {
     "type": "git",
     "url": "https://github.com/UNRsports/bmxt.git"
   },
   "scripts": {
-    "dev": "node scripts/copy-sql-wasm.mjs && NODE_OPTIONS=--disable-warning=DEP0040 plasmo dev",
-    "build": "node scripts/copy-sql-wasm.mjs && NODE_OPTIONS=--disable-warning=DEP0040 plasmo build",
-    "package": "node scripts/copy-sql-wasm.mjs && NODE_OPTIONS=--disable-warning=DEP0040 plasmo package",
-    "postinstall": "node scripts/copy-sql-wasm.mjs",
+    "build": "node scripts/build-background-services.mjs && wxt build",
+    "dev": "node scripts/build-background-services.mjs && wxt",
+    "package": "node scripts/build-background-services.mjs && wxt zip",
+    "postinstall": "wxt prepare",
     "codegen": "node scripts/codegen/run.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
-    "check:generated": "npm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json lib/features/bmxt-core/registry/table.gen.ts lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",
+    "check:generated": "pnpm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json lib/features/bmxt-core/registry/table.gen.ts lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",
     "check:no-fetch": "node scripts/check-no-fetch.mjs",
-    "sync:completion-fallback": "npm run codegen",
-    "sync:effect-types": "npm run codegen",
-    "sync:generated-ts": "npm run codegen",
+    "sync:completion-fallback": "pnpm run codegen",
+    "sync:effect-types": "pnpm run codegen",
+    "sync:generated-ts": "pnpm run codegen",
     "new:command": "node scripts/scaffold-command.mjs",
-    "test": "node --experimental-strip-types --test lib/features/page-dom/needle-occurrence.test.ts lib/features/side-picker/model/from-search-lines.test.ts lib/features/side-picker/interaction/picker-list-scroll.test.ts lib/features/side-picker/preview/picker-alt-preview.test.ts lib/features/search/search-list-picker-input.test.ts lib/features/search/search-picker-preview-nav.test.ts lib/features/search/search-list-progress.test.ts lib/features/search/search-list-job.test.ts lib/features/job/job-handle.test.ts lib/features/job/job-runner.test.ts lib/features/search/search-picker-page-match.test.ts lib/features/search/search-picker-excerpt.test.ts lib/features/search/search-history-open-target.test.ts lib/features/search/search-arrow-right-target.test.ts lib/features/search/search-entry-detail-hits.test.ts lib/features/search/cache/search-cache.test.ts lib/features/nav/nav-parse.test.ts lib/features/nav/nav-prompt-input.test.ts lib/features/translate/sentence-boundary.test.ts lib/features/translate/translation-segments.test.ts lib/features/translate/translation-pair.test.ts lib/features/setting/setting.test.ts lib/features/setting/i18n/messages.test.ts lib/features/command-line/ime-token-picker.test.ts lib/features/welcome/welcome-content.test.ts lib/features/welcome/welcome-version-resolve.test.ts lib/features/welcome/should-open-welcome-on-update.test.ts lib/features/tabs/tab-favicon-url.test.ts lib/features/tabs/tab-picker-chrome-sync-filters.test.ts lib/features/tabs/tab-picker-live-tab-fields.test.ts lib/features/tabs/patch-tab-picker-rows.test.ts lib/features/session/session-input.test.ts lib/features/session/session-summary.test.ts lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.test.ts && node --test scripts/picker-search-jump.test.mjs"
+    "test": "node --experimental-strip-types --test lib/features/launch/launch-perf.test.ts lib/features/launch/page-boot-perf.test.ts lib/features/page-dom/needle-occurrence.test.ts lib/features/side-picker/model/from-search-lines.test.ts lib/features/side-picker/interaction/picker-list-scroll.test.ts lib/features/side-picker/preview/picker-alt-preview.test.ts lib/features/search/search-list-picker-input.test.ts lib/features/search/search-picker-preview-nav.test.ts lib/features/search/search-list-progress.test.ts lib/features/search/search-list-job.test.ts lib/features/job/job-handle.test.ts lib/features/job/job-runner.test.ts lib/features/search/search-picker-page-match.test.ts lib/features/search/search-picker-excerpt.test.ts lib/features/search/search-history-open-target.test.ts lib/features/search/search-arrow-right-target.test.ts lib/features/search/search-entry-detail-hits.test.ts lib/features/search/cache/search-cache.test.ts lib/features/nav/nav-parse.test.ts lib/features/nav/nav-prompt-input.test.ts lib/features/translate/sentence-boundary.test.ts lib/features/translate/translation-segments.test.ts lib/features/translate/translation-pair.test.ts lib/features/setting/setting.test.ts lib/features/setting/i18n/messages.test.ts lib/features/command-line/ime-token-picker.test.ts lib/features/welcome/welcome-content.test.ts lib/features/welcome/welcome-external-url.test.ts lib/features/welcome/should-open-welcome-on-update.test.ts lib/features/tabs/tab-favicon-url.test.ts lib/features/tabs/tab-picker-chrome-sync-filters.test.ts lib/features/tabs/tab-picker-live-tab-fields.test.ts lib/features/tabs/patch-tab-picker-rows.test.ts lib/features/session/session-input.test.ts lib/features/session/session-summary.test.ts lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.test.ts && node --test scripts/picker-search-jump.test.mjs",
+    "benchmark:launch": "node scripts/benchmark-launch-perf.mjs"
   },
   "dependencies": {
-    "plasmo": "0.90.5",
     "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "sql.js": "^1.12.0"
+    "react-dom": "18.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "shell-quote": "1.8.4"
+    }
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",
@@ -36,59 +42,10 @@
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
+    "@wxt-dev/module-react": "1.1.3",
+    "esbuild": "^0.25.0",
     "prettier": "3.2.4",
-    "svgo": "3.3.3",
-    "typescript": "5.3.3"
-  },
-  "manifest": {
-    "name": "__MSG_extensionName__",
-    "default_locale": "en",
-    "permissions": [
-      "favicon",
-      "tabs",
-      "tabGroups",
-      "storage",
-      "unlimitedStorage",
-      "windows",
-      "scripting",
-      "history",
-      "bookmarks"
-    ],
-    "optional_host_permissions": [
-      "http://*/*",
-      "https://*/*"
-    ],
-    "web_accessible_resources": [
-      {
-        "resources": [
-          "assets/welcome/*",
-          "assets/search-cache/*"
-        ],
-        "matches": [
-          "<all_urls>"
-        ]
-      }
-    ],
-    "content_security_policy": {
-      "extension_pages": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
-    },
-    "commands": {
-      "launch-bmxt": {
-        "suggested_key": {
-          "default": "Shift+Alt+C",
-          "mac": "Shift+Alt+C"
-        },
-        "description": "__MSG_commandLaunchBmxt__",
-        "global": true
-      },
-      "reset-bmxt": {
-        "suggested_key": {
-          "default": "Shift+Alt+R",
-          "mac": "Shift+Alt+R"
-        },
-        "description": "__MSG_commandResetBmxt__",
-        "global": true
-      }
-    }
+    "typescript": "5.3.3",
+    "wxt": "0.20.7"
   }
 }

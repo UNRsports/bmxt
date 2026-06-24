@@ -1,0 +1,150 @@
+{
+  "search.cancelledCtrlC": {
+    "ja": "search — 中断しました（Ctrl+C）",
+    "en": "search — cancelled (Ctrl+C)"
+  },
+  "search.openDestination.fallbackFailed": {
+    "ja": "フォールバック: {reason}",
+    "en": "fallback: {reason}"
+  },
+  "search.openDestination.groupFailed": {
+    "ja": "search — タブは開きましたがグループに追加できませんでした: {reason}",
+    "en": "search — opened tab but could not add to group: {reason}"
+  },
+  "search.openDestination.invalid": {
+    "ja": "search — 開き先が無効です（ウィンドウがありません）",
+    "en": "search — invalid open destination (missing window)"
+  },
+  "search.openDestination.newWindow": {
+    "ja": "新しいウィンドウ {windowId} を開きました",
+    "en": "opened new window {windowId}"
+  },
+  "search.openDestination.newWindowWithUrl": {
+    "ja": "新しいウィンドウ {windowId} を開きました: {url}",
+    "en": "opened new window {windowId}: {url}"
+  },
+  "search.openDestination.openFailed": {
+    "ja": "search — タブを開けませんでした: {reason}",
+    "en": "search — could not open tab: {reason}"
+  },
+  "search.openDestination.openedTab": {
+    "ja": "タブ {tabId} を {destLabel} に開きました{urlPart}",
+    "en": "opened tab {tabId} in {destLabel}{urlPart}"
+  },
+  "search.openDestination.tabIdMissing": {
+    "ja": "search — タブを開けませんでした",
+    "en": "search — could not open tab"
+  },
+  "search.openDestination.ungrouped": {
+    "ja": "(グループなし)",
+    "en": "(Ungrouped)"
+  },
+  "search.openDestination.untitledGroup": {
+    "ja": "(無題のグループ) [{color}]",
+    "en": "(Untitled group) [{color}]"
+  },
+  "search.pageNoTextHint": {
+    "ja": "サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
+    "en": "With site access enabled, reload the pages you want to search (F5), then run search -list --page again."
+  },
+  "search.pageScanCancelled": {
+    "ja": "ページ走査を中断しました。",
+    "en": "Page scan cancelled."
+  },
+  "search.pageScanHint": {
+    "ja": "タブが多いと時間がかかります。Ctrl+C で中断できます。",
+    "en": "Page scan may take a while when many tabs are open. Ctrl+C cancels."
+  },
+  "search.picker.breadcrumb.aria": {
+    "ja": "検索ピッカーナビゲーション",
+    "en": "Search picker navigation"
+  },
+  "search.picker.breadcrumb.destination": {
+    "ja": "開き先",
+    "en": "Open target"
+  },
+  "search.picker.breadcrumb.detail": {
+    "ja": "詳細一覧",
+    "en": "Detail List"
+  },
+  "search.picker.breadcrumb.results": {
+    "ja": "検索結果一覧",
+    "en": "Search Results"
+  },
+  "search.picker.cancelled": {
+    "ja": "Search list の検索をキャンセルしました。",
+    "en": "Search list search cancelled."
+  },
+  "search.picker.closed": {
+    "ja": "Search list picker を閉じました。",
+    "en": "Search list picker closed."
+  },
+  "search.picker.headline.destination": {
+    "ja": "search -list · 開き先 · ↑↓ · j/k · ← 戻る · Enter 開く · Esc → 戻る · Esc×2 → prompt",
+    "en": "search -list · open target · ↑↓ · j/k · ← back · Enter open · Esc → back · Esc×2 → prompt"
+  },
+  "search.picker.headline.detail": {
+    "ja": "search -list · 詳細 · ↑↓ · j/k · Ctrl+↑↓ 開タブヒット · Alt+↑↓ プレビュー（manual） · ← 戻る · Enter ジャンプ · Esc → 戻る · Esc×2 → prompt",
+    "en": "search -list · detail · ↑↓ · j/k · Ctrl+↑↓ open-tab hits · Alt+↑↓ preview (manual) · ← back · Enter jump · Esc → back · Esc×2 → prompt"
+  },
+  "search.picker.headline.list": {
+    "ja": "search -list · ↑↓ · j/k · Ctrl+↑↓ 開タブ行のみ · → 詳細 / 開き先 · Enter 開く · n/N · ← · Esc → prompt",
+    "en": "search -list · ↑↓ · j/k · Ctrl+↑↓ open-tab rows only · → detail / open target · Enter open · n/N · ← · Esc → prompt"
+  },
+  "search.picker.headline.loading": {
+    "ja": "search -list · 走査中… · Ctrl+C 中断 · search -exit -list",
+    "en": "search -list · scanning… · Ctrl+C cancel · search -exit -list"
+  },
+  "search.picker.listAria.destination": {
+    "ja": "検索の開き先",
+    "en": "Search open targets"
+  },
+  "search.picker.listAria.detail": {
+    "ja": "検索結果の詳細ヒット",
+    "en": "Search result detail hits"
+  },
+  "search.picker.listAria.keys": {
+    "ja": "検索ピッカーのキー操作",
+    "en": "Search picker keys"
+  },
+  "search.picker.listAria.results": {
+    "ja": "検索結果",
+    "en": "Search results"
+  },
+  "search.picker.noDetailScrollTarget": {
+    "ja": "search — ページ内ジャンプできるヒットがありません（タブ未 open またはスクロール不可）",
+    "en": "search — no in-page hits to jump (tab not open or not scrollable)"
+  },
+  "search.picker.noMatches": {
+    "ja": "(一致なし)",
+    "en": "(no matches)"
+  },
+  "search.picker.noPreviewTarget": {
+    "ja": "search — プレビューする対象がありません（開いているタブなし）",
+    "en": "search — nothing to preview (no open tabs)"
+  },
+  "search.picker.notOpen": {
+    "ja": "このペインでは Search list picker は開いていません。",
+    "en": "Search list picker is not open in this pane."
+  },
+  "search.picker.previewScrollFailed": {
+    "ja": "search — ページ内ジャンプに失敗しました（タブを再読み込みするか、サイトアクセスを確認してください）",
+    "en": "search — in-page jump failed (reload the tab or check site access)"
+  },
+  "search.picker.starting": {
+    "ja": "search — 開始中…",
+    "en": "search — starting…"
+  },
+  "search.scrollToMatch.failed": {
+    "ja": "search — 一致箇所へスクロールできませんでした（タブを再読み込みするか、サイトアクセスを許可してから再試行してください）",
+    "en": "search — could not scroll to match (reload the tab or grant site access, then try again)"
+  },
+  "search.status.auto": {
+    "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ",
+    "en": "↑↓ in-page preview on highlight (background) · Ctrl+↑↓ open-tab rows only · Enter jump"
+  },
+  "search.status.manual": {
+    "ja": "Alt+↑↓ でページ内プレビュー · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ · Alt で page-active 切替",
+    "en": "Alt+↑↓ for in-page preview · Ctrl+↑↓ open-tab rows only · Enter jump · Alt toggles page-active"
+  }
+}

@@ -2,6 +2,8 @@
 
 import { resolveSessionDisplayName } from "./session-summary"
 import type { SessionPickerState } from "../side-picker/session/session-pickers"
+import { tSession, type SessionMessageKey } from "../setting/i18n/ns/session"
+import { useUiSettings } from "../setting/use-ui-settings"
 
 type Props = {
   order: readonly string[]
@@ -22,12 +24,14 @@ export function SessionBar({
   navArmedByLeaf,
   onActivateSession
 }: Props) {
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   if (order.length < 2) {
     return null
   }
 
   return (
-    <div className="bmxt-session-bar" role="tablist" aria-label="Sessions">
+    <div className="bmxt-session-bar" role="tablist" aria-label={tSession("session.bar.aria", locale)}>
       {order.map((sessionId, i) => {
         const index = i + 1
         const isActive = sessionId === activeId

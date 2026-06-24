@@ -13,7 +13,8 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../bmxt-window/csp-dynamic-stylesheet"
-import { t } from "./i18n/messages"
+import { tPlainPicker } from "./i18n/ns/plain-picker"
+import { tSetting } from "./i18n/ns/setting"
 import type { UiLocale } from "./locale"
 import {
   computePlainPickerWindow,
@@ -266,7 +267,7 @@ export function SettingPickerBody({
   const textareaValue = editing ? state.editDraft : ""
   const textareaAria = editing
     ? settingPickerEditAriaLabel(state.view, locale)
-    : t("setting.picker.keysHint", locale)
+    : tSetting("setting.picker.keysHint", locale)
   const textareaClassName = editing
     ? "bmxt-tab-picker-filter-ime bmxt-setting-picker-edit-input"
     : "bmxt-tab-picker-filter-ime bmxt-picker-hidden-ime"
@@ -298,7 +299,7 @@ export function SettingPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label={t("setting.picker.listAria", locale)}
+        aria-label={tSetting("setting.picker.listAria", locale)}
         aria-activedescendant={editing ? undefined : activeRowId}
         onScroll={useVirtual ? syncWindowFromScroll : undefined}>
         {displayLines.length >= PLAIN_PICKER_VIRTUALIZE_MIN ? (
@@ -310,7 +311,7 @@ export function SettingPickerBody({
           </div>
         ) : null}
         {displayLines.length === 0 ? (
-          <div className="bmxt-tab-picker-empty">(no output)</div>
+          <div className="bmxt-tab-picker-empty">{tPlainPicker("plainPicker.noOutput", locale)}</div>
         ) : useVirtual ? (
           <div
             className="bmxt-plain-picker-virtual-track"
@@ -338,7 +339,7 @@ export function SettingPickerBody({
             className="bmxt-tab-picker-row bmxt-tab-picker-row--tab bmxt-setting-picker-row bmxt-tab-picker-row--status"
             role="listitem">
             <span className="bmxt-plain-picker-row-text">
-              {t("setting.picker.editingHint", locale)}
+              {tSetting("setting.picker.editingHint", locale)}
             </span>
           </div>
         ) : null}

@@ -8,7 +8,9 @@ import {
   type MutableRefObject,
   type ReactNode
 } from "react"
-import { useUiCopy } from "../setting"
+import { tPlainPicker } from "../setting/i18n/ns/plain-picker"
+import { tDom } from "../setting/i18n/ns/dom"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
@@ -130,7 +132,8 @@ export function DomListPickerBody({
   pickerInputRef,
   sessionId
 }: DomListPickerBodyProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -314,7 +317,11 @@ export function DomListPickerBody({
         autoComplete="off"
         wrap="off"
         aria-label={
-          searchMode ? "Search highlight" : commandMode ? "Command input" : "DOM picker keys"
+          searchMode
+            ? tPlainPicker("plainPicker.searchHint", locale)
+            : commandMode
+              ? tPlainPicker("plainPicker.commandHint", locale)
+              : tDom("dom.picker.inputAria.keys", locale)
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
@@ -337,10 +344,10 @@ export function DomListPickerBody({
         ref={listRef}
         className="bmxt-tab-picker-list bmxt-dom-picker-list bmxt-scroll bmxt-scroll--scrollable"
         role="listbox"
-        aria-label="DOM tree"
+        aria-label={tDom("dom.picker.listAria", locale)}
         aria-activedescendant={activeRowId}>
         {lines.length === 0 ? (
-          <div className="bmxt-tab-picker-empty">(no output)</div>
+          <div className="bmxt-tab-picker-empty">{tPlainPicker("plainPicker.noOutput", locale)}</div>
         ) : (
           renderRows(0, lines.length)
         )}
@@ -350,7 +357,7 @@ export function DomListPickerBody({
         <PickerCommandFooter
           commandBuffer={commandBuffer}
           showListingHint={commandListingHint}
-          listingHintText={urlListCommandListingHint(uiCopy.locale)}
+          listingHintText={urlListCommandListingHint(locale)}
           ambiguousPlaceholder={null}
         />
       ) : null}

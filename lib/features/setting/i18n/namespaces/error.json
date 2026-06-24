@@ -1,0 +1,14 @@
+{
+  "error.dispatchFailed": {
+    "ja": "error: command dispatch failed — {message}",
+    "en": "error: command dispatch failed — {message}"
+  },
+  "error.generic": {
+    "ja": "error: {message}",
+    "en": "error: {message}"
+  },
+  "error.unknown": {
+    "ja": "不明なエラー",
+    "en": "unknown error"
+  }
+}

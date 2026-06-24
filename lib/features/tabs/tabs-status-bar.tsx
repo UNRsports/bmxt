@@ -1,4 +1,6 @@
-import { tabsStatusHint, useUiCopy } from "../setting"
+import { tabsStatusHint } from "../setting/i18n/resolvers"
+import { tModeStatus } from "../setting/i18n/ns/mode-status"
+import { useUiSettings } from "../setting/use-ui-settings"
 import {
   settingTokenForPageActiveMode,
   type TabsPageActiveMode
@@ -9,7 +11,8 @@ type TabsStatusBarProps = {
 }
 
 export function TabsStatusBar({ pageActiveMode }: TabsStatusBarProps) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const modeToken = settingTokenForPageActiveMode(pageActiveMode)
   const stateLabel = pageActiveMode === "auto" ? "auto" : "manual"
 
@@ -23,9 +26,9 @@ export function TabsStatusBar({ pageActiveMode }: TabsStatusBarProps) {
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">page-active {modeToken}</span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
-        {uiCopy.t("modeStatus.tabs.hint")}
+        {tModeStatus("modeStatus.tabs.hint", locale)}
         {" · "}
-        {tabsStatusHint(uiCopy.locale, pageActiveMode)}
+        {tabsStatusHint(locale, pageActiveMode)}
       </span>
     </div>
   )

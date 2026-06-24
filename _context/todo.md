@@ -78,7 +78,7 @@ window capture + IME textarea
 - [x] `use-tab-picker-keyboard` → kernel 経由（search/command/pane strip/capture chain）
 - [x] tabs → UrlList 系シェル統合（`TabsUrlListPicker` + `useTabPickerPlainExtensions`）
 - [x] `usePlainPickerKeyboard`（find / dom プレーンリスト）
-- [x] `npx tsc --noEmit` / `npm test`（kernel 単体）
+- [x] `pnpm exec tsc --noEmit` / `pnpm test`（kernel 単体）
 
 ### フェーズ 2 — ② ピッカーパネル + ③B dom
 
@@ -131,7 +131,7 @@ window capture + IME textarea
 | リスト kernel | `lib/features/side-picker/interaction/picker-*.ts` |
 | tabs ラッパ / ビュー / コントローラ | `tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts` |
 | find ラッパ / パース | `url-list-picker-wrapper.tsx`, `model/from-find-lines.ts` |
-| テスト | `lib/features/side-picker/**/*.test.ts`, `scripts/picker-search-jump.test.mjs` — `npm test` |
+| テスト | `lib/features/side-picker/**/*.test.ts`, `scripts/picker-search-jump.test.mjs` — `pnpm test` |
 
 ---
 
@@ -141,7 +141,7 @@ window capture + IME textarea
 - [x] find ブロック → entry（`title` / `url` 行、`[none]` → `history` 表示）
 - [x] tabs window/group Enter（`focusWindow` / `activateFromGroup` — 既存 `resolveConfirmPlan`）
 - [x] 新ピッカー列の manifest / `*-exit -list` 命名（README 手順）
-- [x] kernel 単体テスト（`npm test`）；E2E は未導入
+- [x] kernel 単体テスト（`pnpm test`）；E2E は未導入
 - [x] tabs を UrlList 系へ完全統合（bulk/edit 込み・`usePlainPickerKeyboard` 一本化）
 
 **任意の仕上げ（ブロッカーではない）**
@@ -152,4 +152,4 @@ window capture + IME textarea
 
 ---
 
-*実装時は `npm run verify:manifest` / `npx tsc --noEmit` / `npm test` / README と整合させること。*
+*実装時は `pnpm run verify:manifest` / `pnpm exec tsc --noEmit` / `pnpm test` / README と整合させること。*

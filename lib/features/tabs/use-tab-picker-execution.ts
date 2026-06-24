@@ -1,9 +1,11 @@
 import type { MutableRefObject } from "react"
 import { useCallback } from "react"
 import { logBmxtKey } from "../debug/key-log"
-import { useUiCopy } from "../setting"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import { useUiSettings } from "../setting/use-ui-settings"
 import type { TabPickerRow } from "./picker-rows"
 import { mapVisibleIndicesToPlanRows } from "./tab-picker-plan-rows"
+import type { PickerReducerState } from "./state-machine"
 import {
   validatePickerExecute,
   resolvePickerTarget,
@@ -26,6 +28,7 @@ import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
+import { resolvePickerExecutionTabIds } from "./picker-selected-tab-ids"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
@@ -56,13 +59,15 @@ export type TabPickerExecutionParams = {
   onRefreshRows?: () => Promise<void>
   setSearchMode: (v: boolean) => void
   setFilterQuery: (v: string) => void
+  setBulkSubMode: (v: BulkSubMode | null) => void
   onNewTabUrlPanelDone?: () => void
   /** URL からタブ作成後、ピッカーでそのタブ行をハイライトする（refresh 前に呼ぶ） */
   onPickerHighlightCreatedTab?: (tabId: number) => void
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const {
     rows,
     visibleRowIndices,
@@ -89,6 +94,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
+    setBulkSubMode,
     onNewTabUrlPanelDone,
     onPickerHighlightCreatedTab
   } = p
@@ -171,7 +177,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onRefreshRows,
     rows,
     selectedTabIds,
-      uiCopy
+      locale
     ]
   )
 
@@ -259,6 +265,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         tabIds,
         title: newGroupTitle,
         color,
+        locale: locale,
         onAppendLog,
         resolveCreateGroupPlan: resolvePickerCreateGroupPlan
       })
@@ -316,7 +323,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         }
 
         const primaryReason =
-          err?.message ?? uiCopy.t("tabs.picker.error.createNoResponse")
+          err?.message ?? tTabs("tabs.picker.error.createNoResponse", locale)
         logBmxtKey("picker", "tabs.create(windowId) fallback", { primaryReason })
 
         const fallbackCreate: chrome.tabs.CreateProperties =
@@ -325,10 +332,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           const err2 = chrome.runtime.lastError
           if (err2 || tab2?.id === undefined) {
             abortLogged([
-              uiCopy.t("tabs.picker.error.newTabPrimary", { message: primaryReason }),
+              tTabs("tabs.picker.error.newTabPrimary", locale, { message: primaryReason }),
               err2?.message
-                ? uiCopy.t("tabs.picker.error.newTabFallbackLine", { message: err2.message })
-                : uiCopy.t("tabs.picker.error.newTabFallbackFailed")
+                ? tTabs("tabs.picker.error.newTabFallbackLine", locale, { message: err2.message })
+                : tTabs("tabs.picker.error.newTabFallbackFailed", locale)
             ])
             return
           }
@@ -336,8 +343,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             const err3 = chrome.runtime.lastError
             if (err3 || moved?.id === undefined) {
               abortLogged([
-                uiCopy.t("tabs.picker.error.newTabPrimary", { message: primaryReason }),
-                uiCopy.t("tabs.picker.error.newTabMoveFailed", {
+                tTabs("tabs.picker.error.newTabPrimary", locale, { message: primaryReason }),
+                tTabs("tabs.picker.error.newTabMoveFailed", locale, {
                   message: err3?.message ?? "unknown"
                 })
               ])
@@ -354,48 +361,63 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       onPickerHighlightCreatedTab,
       onRefreshRows,
       setActiveTabId,
-      uiCopy
+      locale
     ]
   )
 
-  const runExecutionIntent = useCallback(
-    async (intent: ExecutionIntent) => {
+  const runExecutionIntentForSnapshot = useCallback(
+    async (intent: ExecutionIntent, snapshot: PickerReducerState, tabIds: number[]) => {
       const implicitWid = implicitWindowIdFromPickerHi(
-        markedKind,
+        snapshot.markedKind,
         rows,
         visibleRowIndices,
-        hi
+        snapshot.hi
       )
+      const execTabIds =
+        intent === "executeReload" || intent === "executeNewWindow"
+          ? resolvePickerExecutionTabIds(rows, visibleRowIndices, snapshot, implicitWid)
+          : tabIds
       const v = validatePickerExecute(
-        { hi, moveDestHi, markedKind, markedTabIds, markedWindowIds, markedGroupKeys, bulkSubMode },
-        selectedTabIds.length,
+        {
+          hi: snapshot.hi,
+          moveDestHi: snapshot.moveDestHi,
+          markedKind: snapshot.markedKind,
+          markedTabIds: snapshot.markedTabIds,
+          markedWindowIds: snapshot.markedWindowIds,
+          markedGroupKeys: snapshot.markedGroupKeys,
+          bulkSubMode: snapshot.bulkSubMode
+        },
+        execTabIds.length,
         implicitWid
       )
       if (!v.ok) {
+        setBulkSubMode(null)
         void onAppendLog?.([
-          `error: ${v.reason ?? uiCopy.t("tabs.picker.error.executeFailed")}`
+          `error: ${v.reason ?? tTabs("tabs.picker.error.executeFailed", locale)}`
         ])
         return
       }
-      let execMarkedKind = markedKind
-      let execMarkedWindowIds = markedWindowIds
-      if (intent === "executeClose" && markedKind === null && implicitWid !== undefined) {
+      let execMarkedKind = snapshot.markedKind
+      let execMarkedWindowIds = snapshot.markedWindowIds
+      if (intent === "executeClose" && snapshot.markedKind === null && implicitWid !== undefined) {
         execMarkedKind = "window"
         execMarkedWindowIds = [implicitWid]
       }
       const ctx: Parameters<(typeof EXECUTION_REGISTRY)[ExecutionIntent]>[0] = {
         markedKind: execMarkedKind,
         markedWindowIds: execMarkedWindowIds,
-        selectedTabIds
+        selectedTabIds: execTabIds
       }
       if (intent === "executeMove") {
         const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
-        const target = resolvePickerTarget(moveDestHi, targetRows)
+        const target = resolvePickerTarget(snapshot.moveDestHi, targetRows)
         if (!target) {
+          setBulkSubMode(null)
           return
         }
-        const movePlan = resolvePickerMovePlan(execMarkedKind, target, markedGroupKeys)
+        const movePlan = resolvePickerMovePlan(execMarkedKind, target, snapshot.markedGroupKeys)
         if (!movePlan) {
+          setBulkSubMode(null)
           return
         }
         ctx.movePlan = movePlan
@@ -406,17 +428,18 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           NEW_GROUP_LIST_SENTINEL
         )
         if (!groupTarget) {
+          setBulkSubMode(null)
           return
         }
         ctx.groupTarget = groupTarget
         ctx.onOpenCreateNewMeta = () => {
-          newGroupTabIdsRef.current = [...selectedTabIds]
+          newGroupTabIdsRef.current = [...execTabIds]
           setNewGroupTitle("")
           setNewGroupColorIndex(0)
           setGroupNewPhase("meta")
         }
       } else if (intent === "executeNewWindow") {
-        const tabs = await Promise.all(selectedTabIds.map((id) => chrome.tabs.get(id)))
+        const tabs = await Promise.all(execTabIds.map((id) => chrome.tabs.get(id)))
         const base = resolvePickerNewWindowOrder(
           tabs
             .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
@@ -425,44 +448,69 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         ctx.newWindowOrder = {
           orderedIds: base.orderedIds,
           tabGroupIdsToMoveAsUnits:
-            markedKind === "group" ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys) : []
+            snapshot.markedKind === "group"
+              ? chromeTabGroupIdsFromMarkedGroupKeys(snapshot.markedGroupKeys)
+              : []
         }
       }
       try {
         await EXECUTION_REGISTRY[intent](ctx)
       } catch {
+        setBulkSubMode(null)
         return
       }
       if (intent === "executeGroup" && ctx.groupTarget?.createNew) {
         return
       }
       clearMarkedViaReducer()
+      setBulkSubMode(null)
       if (intent === "executeGroup") {
         setGroupNewPhase("tabs")
       }
       await onRefreshRows?.()
     },
     [
-      bulkSubMode,
       clearMarkedViaReducer,
       groupChoices,
       groupPickIndex,
+      onAppendLog,
+      onRefreshRows,
+      rows,
+      setBulkSubMode,
+      setGroupNewPhase,
+      setNewGroupColorIndex,
+      setNewGroupTitle,
+      locale,
+      visibleRowIndices
+    ]
+  )
+
+  const runExecutionIntent = useCallback(
+    async (intent: ExecutionIntent) => {
+      await runExecutionIntentForSnapshot(
+        intent,
+        {
+          hi,
+          moveDestHi,
+          markedKind,
+          markedTabIds,
+          markedWindowIds,
+          markedGroupKeys,
+          bulkSubMode
+        },
+        selectedTabIds
+      )
+    },
+    [
+      bulkSubMode,
       hi,
       markedGroupKeys,
       markedKind,
       markedTabIds,
       markedWindowIds,
       moveDestHi,
-      newGroupTabIdsRef,
-      onAppendLog,
-      onRefreshRows,
-      rows,
-      selectedTabIds,
-      setGroupNewPhase,
-      setNewGroupColorIndex,
-      setNewGroupTitle,
-      visibleRowIndices,
-      uiCopy
+      runExecutionIntentForSnapshot,
+      selectedTabIds
     ]
   )
 
@@ -475,6 +523,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     executeBulkNewWindow,
     executeCreateNewGroup,
     executeOpenNewTabFromUrl,
-    runExecutionIntent
+    runExecutionIntent,
+    runExecutionIntentForSnapshot
   }
 }

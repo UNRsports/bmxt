@@ -17,17 +17,12 @@ import { useTabPickerFoldState } from "./use-tab-picker-fold-state"
 import { useTabPickerExecution } from "./use-tab-picker-execution"
 import { useTabPickerSyncAndLayoutEffects } from "./use-tab-picker-sync-and-layout"
 import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
-import {
-  TAB_PICKER_COMMANDS_FOR_GROUP,
-  TAB_PICKER_COMMANDS_FOR_TAB,
-  TAB_PICKER_COMMANDS_FOR_WINDOW,
-  filterTabPickerCommandCompletions
-} from "./tab-picker-overlay-constants"
-import type { BulkSubMode, SelectKind } from "./tab-picker-overlay-types"
+import type { BulkSubMode } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
+import { useTabPickerActionMenu } from "./use-tab-picker-action-menu"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
-import { useUiCopy } from "../setting"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
@@ -66,7 +61,8 @@ const INACTIVE_ENGINE_STATE: TabPickerEngineState = {
   newTabUrlWindowId: null,
   newTabUrl: "",
   editPanel: null,
-  editTitle: ""
+  editTitle: "",
+  actionMenuPanel: null
 }
 
 const noopEngineDispatch: TabPickerEngineDispatch = () => {}
@@ -111,7 +107,8 @@ function useEngineFieldSetters(dispatch: TabPickerEngineDispatch) {
       setNewTabUrlWindowId: createTabPickerEngineFieldSetter(dispatch, "newTabUrlWindowId"),
       setNewTabUrl: createTabPickerEngineFieldSetter(dispatch, "newTabUrl"),
       setEditPanel: createTabPickerEngineFieldSetter(dispatch, "editPanel"),
-      setEditTitle: createTabPickerEngineFieldSetter(dispatch, "editTitle")
+      setEditTitle: createTabPickerEngineFieldSetter(dispatch, "editTitle"),
+      setActionMenuPanel: createTabPickerEngineFieldSetter(dispatch, "actionMenuPanel")
     }),
     [dispatch]
   )
@@ -129,7 +126,8 @@ export function useTabPickerController({
   sessionId,
   onFocusTabIdChange
 }: Props): TabPickerViewProps | null {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const engineApi = useTabPickerEngineState(sessionId)
   useTabPickerLiveFieldsRevision()
 
@@ -144,6 +142,7 @@ export function useTabPickerController({
     [pickerInputRef]
   )
   const editPanelRef = useRef<HTMLDivElement>(null)
+  const actionMenuPanelRef = useRef<HTMLDivElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
   const groupMetaColorStripRef = useRef<HTMLDivElement>(null)
   const newGroupTabIdsRef = useRef<number[]>([])
@@ -190,7 +189,8 @@ export function useTabPickerController({
     newTabUrlWindowId,
     newTabUrl,
     editPanel,
-    editTitle
+    editTitle,
+    actionMenuPanel
   } = state
 
   const setters = useEngineFieldSetters(dispatch)
@@ -217,19 +217,13 @@ export function useTabPickerController({
     setNewTabUrlWindowId,
     setNewTabUrl,
     setEditPanel,
-    setEditTitle
+    setEditTitle,
+    setActionMenuPanel
   } = setters
 
   useEffect(() => {
     anchorTabIdRef.current = state.anchorTabId
   }, [state.anchorTabId])
-
-  usePickerAltKeyTracking({
-    enabled: true,
-    altKeyHeldRef,
-    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
-    setAltPreviewTick
-  })
 
   const {
     visibleRowIndices,
@@ -240,6 +234,13 @@ export function useTabPickerController({
     isGroupExpanded,
     commitSearchFoldSession
   } = useTabPickerFoldState(rows, searchMode, filterQuery)
+
+  usePickerAltKeyTracking({
+    enabled: true,
+    altKeyHeldRef,
+    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
+    setAltPreviewTick
+  })
 
   const {
     markedTabSet,
@@ -329,6 +330,8 @@ export function useTabPickerController({
     isHostPaneFocused,
     editPanel,
     editPanelRef,
+    actionMenuPanel,
+    actionMenuPanelRef,
     setAnchorTabId
   })
 
@@ -346,7 +349,8 @@ export function useTabPickerController({
     bulkSubMode !== null ||
     groupNewPhase !== "tabs" ||
     newTabUrlWindowId !== null ||
-    commandMode
+    commandMode ||
+    actionMenuPanel !== null
 
   useMirrorBrowserActiveTab({
     enabled: variant === "default",
@@ -440,7 +444,8 @@ export function useTabPickerController({
     confirmSelection,
     executeCreateNewGroup,
     executeOpenNewTabFromUrl,
-    runExecutionIntent
+    runExecutionIntent,
+    runExecutionIntentForSnapshot
   } = useTabPickerExecution({
     rows,
     visibleRowIndices,
@@ -467,12 +472,37 @@ export function useTabPickerController({
     onRefreshRows,
     setSearchMode,
     setFilterQuery,
+    setBulkSubMode,
     onNewTabUrlPanelDone: () => {
       setNewTabUrlWindowId(null)
       setNewTabUrl("")
       setBulkSubMode(null)
     },
     onPickerHighlightCreatedTab
+  })
+
+  const {
+    openActionMenuFromPicker,
+    closeActionMenu,
+    cycleActionMenuPick,
+    confirmActionMenuPick
+  } = useTabPickerActionMenu({
+    rows,
+    visibleRowIndices,
+    hi,
+    moveDestHi,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys,
+    markedCount,
+    bulkSubMode,
+    actionMenuPanel,
+    dispatch,
+    setNewTabUrlWindowId,
+    setNewTabUrl,
+    openEditFromPicker,
+    runExecutionIntentForSnapshot
   })
 
   const { onMetaTitleKeyDown, onMetaColorKeyDown, onInputKeyDown } = useTabPickerKeyboard({
@@ -529,6 +559,11 @@ export function useTabPickerController({
     isHostPaneFocused,
     sessionId,
     editPanel,
+    actionMenuPanel,
+    openActionMenuFromPicker,
+    closeActionMenu,
+    confirmActionMenuPick,
+    cycleActionMenuPick,
     openEditFromPicker,
     closeEdit,
     confirmWindowRename,
@@ -538,6 +573,8 @@ export function useTabPickerController({
     backFromGroupRename,
     collapseAtRow,
     expandAtRow,
+    isWindowExpanded,
+    isGroupExpanded,
     altKeyHeldRef,
     onExitToDetailBar
   })
@@ -549,56 +586,15 @@ export function useTabPickerController({
           bulkSubMode,
           groupNewPhase,
           variant,
-          editPanelKind: editPanel?.kind ?? null
+          editPanelKind: editPanel?.kind ?? null,
+          actionMenuOpen: actionMenuPanel !== null
         },
-        uiCopy.locale
+        locale
       ),
-    [bulkSubMode, editPanel?.kind, groupNewPhase, uiCopy.locale, variant]
+    [actionMenuPanel, bulkSubMode, editPanel?.kind, groupNewPhase, locale, variant]
   )
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
-
-  const commandListingHintText = useMemo(() => {
-    const targetKind: SelectKind | null = (() => {
-      if (markedKind) {
-        return markedKind
-      }
-      const rowIndex = visibleRowIndices[hi]
-      const row = rowIndex === undefined ? undefined : rows[rowIndex]
-      if (!row) {
-        return null
-      }
-      if (row.kind === "tab") {
-        return "tab"
-      }
-      if (row.kind === "window") {
-        return "window"
-      }
-      return "group"
-    })()
-
-    const commands =
-      targetKind === "tab"
-        ? TAB_PICKER_COMMANDS_FOR_TAB
-        : targetKind === "window"
-          ? TAB_PICKER_COMMANDS_FOR_WINDOW
-          : targetKind === "group"
-            ? TAB_PICKER_COMMANDS_FOR_GROUP
-            : TAB_PICKER_COMMANDS_FOR_TAB
-    return commands.join(" · ")
-  }, [hi, markedKind, rows, visibleRowIndices])
-
-  const commandAmbiguousPlaceholder = useMemo(() => {
-    if (!commandMode || commandBuffer.trim() === "") {
-      return null
-    }
-    const matches = filterTabPickerCommandCompletions(commandBuffer)
-    const uniq = [...new Set(matches)]
-    if (uniq.length < 2) {
-      return null
-    }
-    return uiCopy.t("picker.commandAmbiguous.tabCycle", { commands: uniq.join(" · ") })
-  }, [commandBuffer, commandMode, uiCopy])
 
   const setRowRef = useCallback((rowIndex: number, el: HTMLDivElement | null) => {
     if (el) {
@@ -626,8 +622,6 @@ export function useTabPickerController({
   return {
     headLine,
     searchHighlightQuery,
-    commandListingHintText,
-    commandAmbiguousPlaceholder,
     setInputEl,
     onInputKeyDown,
     onMetaTitleKeyDown,
@@ -656,6 +650,8 @@ export function useTabPickerController({
     newTabUrl,
     setNewTabUrl,
     editPanel,
+    actionMenuPanel,
+    actionMenuPanelRef,
     groupMetaColorStripRef,
     newGroupTitle,
     setNewGroupTitle,
@@ -667,11 +663,6 @@ export function useTabPickerController({
     searchMode,
     filterQuery,
     setFilterQuery,
-    commandMode,
-    commandBuffer,
-    setCommandBuffer,
-    setCommandListingHint,
-    commandListingHint,
     isHostPaneFocused,
     inputRef
   }

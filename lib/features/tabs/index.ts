@@ -14,6 +14,7 @@ export {
 } from "./state-machine"
 export {
   buildTabPickerRows,
+  buildTabPickerRowsBundle,
   displayTitle,
   filterTabRowIndices,
   initialTabPickerHighlightIndex,

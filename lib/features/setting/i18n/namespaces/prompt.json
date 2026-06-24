@@ -1,0 +1,30 @@
+{
+  "prompt.appearanceResetConfirm": {
+    "ja": "y / n",
+    "en": "y / n"
+  },
+  "prompt.commandLine.aria": {
+    "ja": "コマンドライン",
+    "en": "Command line"
+  },
+  "prompt.isearch.aria": {
+    "ja": "逆方向インクリメンタルサーチ",
+    "en": "Reverse incremental search"
+  },
+  "prompt.navTyping": {
+    "ja": "BMXt ウィンドウで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル",
+    "en": "Type in BMXt window · Alt hold to commit · Esc hold to cancel"
+  },
+  "prompt.navTypingMultiline": {
+    "ja": "BMXt ウィンドウで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル · Shift+Enter で改行",
+    "en": "Type in BMXt window · Alt hold to commit · Esc hold to cancel · Shift+Enter newline"
+  },
+  "prompt.placeholder": {
+    "ja": "入力するか TAB キーで補完",
+    "en": "type or use TAB key"
+  },
+  "prompt.searchListPattern": {
+    "ja": "絞り込み語を入力 · Enter で実行",
+    "en": "type a filter or press Enter to run"
+  }
+}

@@ -1,3 +1,6 @@
+import { tTabs } from "../../setting/i18n/ns/tabs"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import type { UiLocale } from "../../setting/locale"
 import type { BulkSubMode, SelectKind } from "./model"
 
 export type ExecuteValidateContext = {
@@ -15,9 +18,9 @@ export type ExecuteValidation = {
 function allowed(kind: SelectKind, mode: BulkSubMode): boolean {
   switch (kind) {
     case "window":
-      return mode === "close" || mode === "newTab" || mode === "edit"
+      return mode === "close" || mode === "newTab" || mode === "edit" || mode === "reload"
     case "group":
-      return mode === "move" || mode === "close" || mode === "newWindow" || mode === "edit"
+      return mode === "move" || mode === "close" || mode === "newWindow" || mode === "edit" || mode === "reload"
     case "tab":
       return mode !== "edit"
   }
@@ -29,24 +32,27 @@ function effectiveSelectKind(ctx: ExecuteValidateContext): SelectKind | null {
   return null
 }
 
-export function validateExecute(ctx: ExecuteValidateContext): ExecuteValidation {
+export function validateExecute(
+  ctx: ExecuteValidateContext,
+  locale: UiLocale = getRunLocale()
+): ExecuteValidation {
   if (!ctx.bulkSubMode) {
     return {
       ok: false,
-      reason: "モード未選択です。←→で処理を選択してください。"
+      reason: tTabs("tabs.picker.error.noBulkMode", locale)
     }
   }
   const kind = effectiveSelectKind(ctx)
   if (!kind) {
     return {
       ok: false,
-      reason: "選択対象がありません。Tabで選択してください。"
+      reason: tTabs("tabs.picker.error.noSelection", locale)
     }
   }
   if (!allowed(kind, ctx.bulkSubMode)) {
     return {
       ok: false,
-      reason: "選択種別ではその処理を実行できません。"
+      reason: tTabs("tabs.picker.error.invalidBulkForKind", locale)
     }
   }
   if (ctx.selectedTabCount === 0) {
@@ -58,7 +64,7 @@ export function validateExecute(ctx: ExecuteValidateContext): ExecuteValidation 
     if (!allowWithoutTabs) {
       return {
         ok: false,
-        reason: "処理対象のタブがありません。"
+        reason: tTabs("tabs.picker.error.noTabsForAction", locale)
       }
     }
   }

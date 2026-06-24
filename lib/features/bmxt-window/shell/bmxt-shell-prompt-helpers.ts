@@ -1,0 +1,104 @@
+import type { ChromeEffect } from "../../dispatch/effect-types"
+import { parseDomExitListLine, parseDomListPickerLine } from "../../dom/dom-list-picker-input"
+import { parseNavEnterLine, parseNavExitLine } from "../../nav"
+import { parseSearchExitListLine } from "../../search/search-list-picker-input"
+import {
+  parseSettingExitListLine,
+  parseSettingListPickerLine
+} from "../../setting/setting-list-picker-input"
+import {
+  buildSessionSwitchCommandLine,
+  isSessionSettingNameUiLine,
+  isSessionSwitchUiLine,
+  parseSessionSwitchWithLine,
+  resolveSessionRowByDisplayName,
+  resolveSessionSwitchPickerState,
+  sessionSwitchCommandName,
+  type SessionListRow
+} from "../../session"
+import {
+  parseGroupNewInteractiveLine,
+  parseTabsExitListLine,
+  parseTabsListPickerLine
+} from "../../tabs/input"
+
+/** EN: Keep session switch picker open while the user is still editing the name. */
+export function shouldKeepSessionSwitchPickerOpen(
+  line: string,
+  cursor: number,
+  rows: readonly SessionListRow[]
+): boolean {
+  const state = resolveSessionSwitchPickerState(line, cursor)
+  if (state === null) {
+    return false
+  }
+  const trimmed = line.trim()
+  const name = parseSessionSwitchWithLine(trimmed)
+  if (name === null) {
+    return true
+  }
+  const row = resolveSessionRowByDisplayName(rows, name)
+  if (!row) {
+    return true
+  }
+  const canonicalName = sessionSwitchCommandName(row, rows)
+  const canonical = buildSessionSwitchCommandLine(row, rows)
+  if (trimmed !== canonical) {
+    return true
+  }
+  return state.namePrefix !== canonicalName
+}
+
+/** EN: True when dispatch effects include a page search. */
+export function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
+  return effects.some((e) => e.kind === "search_page")
+}
+
+/** EN: Auto-submit prompt after IME token pick for list-style commands. */
+export function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
+  return (
+    parseDomListPickerLine(trimmed) !== null ||
+    parseNavEnterLine(trimmed) ||
+    parseNavExitLine(trimmed) ||
+    parseTabsListPickerLine(trimmed) !== null ||
+    isSessionSwitchUiLine(trimmed) ||
+    isSessionSettingNameUiLine(trimmed) ||
+    parseTabsExitListLine(trimmed) ||
+    parseSettingListPickerLine(trimmed) ||
+    parseSettingExitListLine(trimmed) ||
+    parseSearchExitListLine(trimmed) ||
+    parseDomExitListLine(trimmed) ||
+    parseGroupNewInteractiveLine(trimmed)
+  )
+}
+
+/** EN: Position floating picker host beside a prompt cell using layout APIs only. */
+export function measureFloatingPickerHostPosition(
+  cell: HTMLElement | null,
+  host: HTMLElement | null
+): { left: number; top: number } | null {
+  if (!cell) {
+    return null
+  }
+  const cr = cell.getBoundingClientRect()
+  const gap = 2
+  const hostW = host?.offsetWidth ?? 260
+  const hostH = host?.offsetHeight ?? 140
+  let left = cr.right + gap
+  const maxLeft = window.innerWidth - hostW - 8
+  if (left > maxLeft) {
+    left = Math.max(8, maxLeft)
+  } else {
+    left = Math.max(8, left)
+  }
+  let top = cr.bottom + gap
+  if (top + hostH > window.innerHeight - 8 && cr.top - gap - hostH >= 8) {
+    top = cr.top - gap - hostH
+  }
+  if (top + hostH > window.innerHeight - 8) {
+    top = Math.max(8, window.innerHeight - hostH - 8)
+  } else {
+    top = Math.max(8, top)
+  }
+  return { left, top }
+}

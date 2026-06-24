@@ -5,7 +5,7 @@ import {
 } from "../extension-permissions/optional-http-hosts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
-import { t } from "../setting/i18n/messages"
+import { tNav } from "../setting/i18n/ns/nav"
 import type { UiLocale } from "../setting/locale"
 import { setNavOverlayLabelsForRun } from "./nav-overlay-labels"
 import { NAV_ARROW_STEP_PX } from "./nav-config"
@@ -57,16 +57,16 @@ export type UseNavModeOptions = {
 
 function overlayErrorLabel(reason: string | undefined, locale: UiLocale): string {
   if (!reason) {
-    return t("nav.overlay.error.generic", locale)
+    return tNav("nav.overlay.error.generic", locale)
   }
   if (reason === "permission-denied") {
-    return t("nav.overlay.error.permissionDenied", locale)
+    return tNav("nav.overlay.error.permissionDenied", locale)
   }
   if (reason === "not-scriptable") {
-    return t("nav.overlay.error.notScriptable", locale)
+    return tNav("nav.overlay.error.notScriptable", locale)
   }
   if (reason === "no-result" || reason === "no-sw-response") {
-    return t("nav.overlay.error.injectNoResult", locale)
+    return tNav("nav.overlay.error.injectNoResult", locale)
   }
   if (reason.startsWith("inject-failed:") || reason.startsWith("sw-message-failed:")) {
     return reason

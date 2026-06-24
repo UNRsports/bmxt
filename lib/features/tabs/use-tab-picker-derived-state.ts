@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import type { TabPickerRow } from "./picker-rows"
-import { groupRowKey } from "./tab-picker-keyboard"
 import type { SelectKind } from "./tab-picker-overlay-types"
+import { computeSelectedTabIdsFromMarks } from "./picker-selected-tab-ids"
 
 export function useTabPickerDerivedState(
   rows: TabPickerRow[],
@@ -31,34 +31,17 @@ export function useTabPickerDerivedState(
     return m
   }, [rows])
 
-  const selectedTabIds = useMemo(() => {
-    if (markedKind === "tab") {
-      return markedTabIds
-    }
-    if (markedKind === "window") {
-      const out: number[] = []
-      for (const r of rows) {
-        if (r.kind === "tab" && markedWindowSet.has(r.windowId)) {
-          out.push(r.tabId)
-        }
-      }
-      return out.sort((a, b) => a - b)
-    }
-    if (markedKind === "group") {
-      const out: number[] = []
-      for (const r of rows) {
-        if (r.kind !== "tab") {
-          continue
-        }
-        const k = groupRowKey(r.windowId, r.groupId)
-        if (markedGroupSet.has(k)) {
-          out.push(r.tabId)
-        }
-      }
-      return out.sort((a, b) => a - b)
-    }
-    return []
-  }, [markedGroupSet, markedKind, markedTabIds, markedWindowSet, rows])
+  const selectedTabIds = useMemo(
+    () =>
+      computeSelectedTabIdsFromMarks(
+        rows,
+        markedKind,
+        markedTabIds,
+        markedWindowIds,
+        markedGroupKeys
+      ),
+    [markedGroupKeys, markedKind, markedTabIds, markedWindowIds, rows]
+  )
 
   return {
     markedTabSet,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 新規コマンドの骨格を追加し、manifest に登録して `npm run codegen` する。
+ * 新規コマンドの骨格を追加し、manifest に登録して `pnpm run codegen` する。
  *
  * Usage: node scripts/scaffold-command.mjs <module> <canonical_name> [aliases...]
  * Example: node scripts/scaffold-command.mjs frobnicate frobnicate a b
@@ -82,7 +82,7 @@ export function run(_args: string[]) {
     "utf8"
   )
 
-  execFileSync("npm", ["run", "codegen"], { cwd: root, stdio: "inherit" })
+  execFileSync("pnpm", ["run", "codegen"], { cwd: root, stdio: "inherit" })
   console.log(`scaffolded ${moduleName}.ts + manifest; run codegen ok`)
 }
 

@@ -14,7 +14,7 @@ import {
   matchesSearchListScopeFilter,
   shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
-import { t } from "../setting/i18n/messages"
+import { tImeToken } from "../setting/i18n/ns/ime-token"
 import type { UiLocale } from "../setting/locale"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
 import {
@@ -40,26 +40,16 @@ export type ImeTokenPickerModel = {
   tier: ImeTokenTier
 }
 
-function tokenBounds(s: string, pos: number): [number, number] {
-  let l = pos
-  while (l > 0 && !/\s/.test(s[l - 1]!)) {
-    l--
-  }
-  let r = pos
-  while (r < s.length && !/\s/.test(s[r]!)) {
-    r++
-  }
-  return [l, r]
-}
+import { wordBounds } from "../format/word-bounds.ts"
 
 export function imeTokenPickerHint(tier: ImeTokenTier, locale: UiLocale): string {
   switch (tier) {
     case "first":
-      return t("imeToken.hint.first", locale)
+      return tImeToken("imeToken.hint.first", locale)
     case "second":
-      return t("imeToken.hint.second", locale)
+      return tImeToken("imeToken.hint.second", locale)
     case "third":
-      return t("imeToken.hint.third", locale)
+      return tImeToken("imeToken.hint.third", locale)
   }
 }
 
@@ -93,7 +83,7 @@ export function resolveImeTokenPicker(
     }
   }
 
-  const [l, r] = tokenBounds(line, cursor)
+  const [l, r] = wordBounds(line, cursor)
   const left = line.slice(0, l)
   const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
   const tokenIndex = tokensBefore.length

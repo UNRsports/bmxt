@@ -1,5 +1,5 @@
 import { getWindowDisplayName } from "../extension-storage/window-display-names"
-import { t } from "../setting/i18n/messages"
+import { tTabs } from "../setting/i18n/ns/tabs"
 import type { UiLocale } from "../setting/locale"
 import type { TabPickerRow } from "./picker-rows"
 import { getPickerRowAtHi } from "./tab-picker-bulk-window"
@@ -71,25 +71,25 @@ export function editTargetErrorMessage(
   locale: UiLocale
 ): string | null {
   if (markedKind === "tab") {
-    return t("tabs.picker.error.editOnTab", locale)
+    return tTabs("tabs.picker.error.editOnTab", locale)
   }
   if (markedKind === "window" && markedWindowIds.length > 1) {
-    return t("tabs.picker.error.editMultipleWindows", locale)
+    return tTabs("tabs.picker.error.editMultipleWindows", locale)
   }
   if (markedKind === "group" && markedGroupKeys.length > 1) {
-    return t("tabs.picker.error.editMultipleGroups", locale)
+    return tTabs("tabs.picker.error.editMultipleGroups", locale)
   }
   if (markedKind === "group" && markedGroupKeys.length === 1) {
     const ids = chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
     if (ids.length !== 1) {
-      return t("tabs.picker.error.editInvalidGroup", locale)
+      return tTabs("tabs.picker.error.editInvalidGroup", locale)
     }
   }
   const row = getPickerRowAtHi(rows, visibleRowIndices, hi)
   if (resolveEditTarget(markedKind, markedWindowIds, markedGroupKeys, rows, visibleRowIndices, hi)) {
     return null
   }
-  return t("tabs.picker.error.editNeedsWindowOrGroup", locale)
+  return tTabs("tabs.picker.error.editNeedsWindowOrGroup", locale)
 }
 
 export async function buildInitialEditPanel(target: EditTarget): Promise<EditPanel> {

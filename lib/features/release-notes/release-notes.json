@@ -1,12 +1,18 @@
 {
-  "0.6.0": {
+  "0.6.9": {
     "ja": [
-      "拡張機能のウィンドウを通常のポップアップウィンドウに変更",
-      "searchモードの刷新とジョブ制導入にあわせてsqliteによるキャッシュを実装"
+      "ウェルカムページを外部化してパッケージサイズを削減",
+      "フレームワークをplasmoからwxtへ、パッケージ管理をnpmからpnpmへ移行",
+      "tabsモードのピッカーにて操作方法を変更し、より直感的かつ操作と視線移動が減るように実装",
+      "フレームワーク移行に伴う、全体のリファクタリング",
+      "動作低下の原因となっていたwasmによるsqliteの採用を廃止"
     ],
     "en": [
-      "Changed the extension window to a dedicated popup window without a tab bar",
-      "Implemented SQLite caching for search mode alongside the search refresh and job-based execution model"
+      "Externalized the welcome page to reduce package size",
+      "Migrated the framework from Plasmo to WXT and package management from npm to pnpm",
+      "Revised tabs mode picker interaction for a more intuitive flow with less hand and eye movement",
+      "Repository-wide refactoring as part of the framework migration",
+      "Removed WASM-based SQLite, which had been causing performance degradation"
     ]
   }
 }

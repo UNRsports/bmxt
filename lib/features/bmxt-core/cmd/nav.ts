@@ -5,6 +5,8 @@ import {
   navCmdExitLines,
   navCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
+import { getRunLocale } from "../../setting/i18n/run-locale"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
 import { linesDispatch } from "../types"
 
@@ -15,19 +17,26 @@ export const CMD: CmdMeta = {
 }
 
 export function run(args: string[]) {
+  const locale = getRunLocale()
   if (!args[1]) {
-    return linesDispatch([cmdAvailableOptionsLine("nav"), ...navCmdUsageLines()])
+    return linesDispatch([cmdAvailableOptionsLine("nav", locale), ...navCmdUsageLines(locale)])
   }
   const first = args[1]
   if (!isSecondToken("nav", first)) {
-    return linesDispatch([`error: unknown nav option: ${first}`, ...navCmdUsageLines()])
+    return linesDispatch([
+      tCmd("cmd.nav.error.unknownOption", locale, { option: first }),
+      ...navCmdUsageLines(locale)
+    ])
   }
   const firstLc = first.toLowerCase()
   if (firstLc === "-enter") {
-    return linesDispatch(navCmdEnterLines())
+    return linesDispatch(navCmdEnterLines(locale))
   }
   if (firstLc === "-exit") {
-    return linesDispatch(navCmdExitLines())
+    return linesDispatch(navCmdExitLines(locale))
   }
-  return linesDispatch([`error: unknown nav option (internal): ${first}`, ...navCmdUsageLines()])
+  return linesDispatch([
+    tCmd("cmd.nav.error.internal", locale, { option: first }),
+    ...navCmdUsageLines(locale)
+  ])
 }

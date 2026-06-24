@@ -1,0 +1,70 @@
+{
+  "translate.off": {
+    "ja": "translate: OFF",
+    "en": "translate: OFF"
+  },
+  "translate.onLogLine": {
+    "ja": "translate: ON ({pairToken}) — nav typing でプロンプト下に訳プレビュー · Alt 長押しで送信",
+    "en": "translate: ON ({pairToken}) — nav typing preview under prompt · Alt hold to commit"
+  },
+  "translate.pairSet": {
+    "ja": "translate: ペアを {token} に設定しました",
+    "en": "translate: pair set to {token}"
+  },
+  "translate.panel.forwardHeading": {
+    "ja": "訳（{lang}）",
+    "en": "Translation ({lang})"
+  },
+  "translate.panel.sourceHeading": {
+    "ja": "原文（{lang}）",
+    "en": "Source ({lang})"
+  },
+  "translate.preview.aria": {
+    "ja": "翻訳プレビュー",
+    "en": "Translation preview"
+  },
+  "translate.setting.choose": {
+    "ja": "translate -setting: ペアを選択 — {options}",
+    "en": "translate -setting: choose pair — {options}"
+  },
+  "translate.status.assistOn": {
+    "ja": "アシスト ON",
+    "en": "assist ON"
+  },
+  "translate.status.commitEn": {
+    "ja": "Alt 長押しで英訳を送信",
+    "en": "Alt hold to send English"
+  },
+  "translate.status.commitJa": {
+    "ja": "Alt 長押しで和訳を送信",
+    "en": "Alt hold to send Japanese"
+  },
+  "translate.status.hintOff": {
+    "ja": "translate -off で無効化 · {pairLabel} · nav typing で訳 · 入力停止500msで 訳",
+    "en": "translate -off to disable · {pairLabel} · nav typing for preview · 500ms idle triggers translation"
+  },
+  "translate.status.hintOnBase": {
+    "ja": "nav typing · 入力停止500msで 訳 · {commitHint}",
+    "en": "nav typing · 500ms idle triggers translation · {commitHint}"
+  },
+  "translate.status.multilineSuffix": {
+    "ja": " · Shift+Enter で改行",
+    "en": " · Shift+Enter newline"
+  },
+  "translate.status.navTypingAssist": {
+    "ja": "nav typing アシスト",
+    "en": "nav typing assist"
+  },
+  "translate.status.translating": {
+    "ja": "翻訳中…",
+    "en": "translating…"
+  },
+  "translate.usage": {
+    "ja": "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja",
+    "en": "usage: translate -on | translate -off | translate -setting --ja-en | --en-ja"
+  },
+  "translate.usageHint": {
+    "ja": "`-on` で翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。`-setting` でペアを選びます。",
+    "en": "`-on` enables translation assist (nav typing preview under the prompt)."
+  }
+}

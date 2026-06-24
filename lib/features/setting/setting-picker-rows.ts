@@ -9,7 +9,7 @@ import {
   type UiAppearance
 } from "./appearance"
 import { MAX_FONT_SIZE_PX, MIN_FONT_SIZE_PX, parseFontSizePx } from "./validate-size"
-import { t, type MessageKey } from "./i18n/messages"
+import { tSetting, type SettingMessageKey } from "./i18n/ns/setting"
 import {
   listUiLocaleSettingTokens,
   settingTokenForUiLocale,
@@ -61,7 +61,7 @@ function displayOrDefault(
   locale: UiLocale
 ): string {
   if (value === null) {
-    return `${t("setting.summary.default", locale)} (${resolved})`
+    return `${tSetting("setting.summary.default", locale)} (${resolved})`
   }
   return value
 }
@@ -72,7 +72,7 @@ export function listFontSizePickerRows(locale: UiLocale): SettingPickerRow[] {
     const size = `${px}px`
     rows.push({
       id: "size",
-      line: t("setting.picker.fontSizeRow", locale, { size })
+      line: tSetting("setting.picker.fontSizeRow", locale, { size })
     })
   }
   return rows
@@ -150,7 +150,7 @@ function buildGlobalDetailRows(
     return [
       {
         id: "fg",
-        line: t("setting.picker.detail.fg", locale, {
+        line: tSetting("setting.picker.detail.fg", locale, {
           value: displayOrDefault(appearance.fg, resolved.fg, locale)
         })
       }
@@ -160,7 +160,7 @@ function buildGlobalDetailRows(
     return [
       {
         id: "bg-color",
-        line: t("setting.picker.detail.bgColor", locale, {
+        line: tSetting("setting.picker.detail.bgColor", locale, {
           value: displayOrDefault(appearance.bgColor, resolved.bgColor, locale)
         })
       }
@@ -169,7 +169,7 @@ function buildGlobalDetailRows(
   return [
     {
       id: "font",
-      line: t("setting.picker.detail.font", locale, {
+      line: tSetting("setting.picker.detail.font", locale, {
         value: displayOrDefault(appearance.fontFamily, resolved.fontFamily, locale)
       })
     }
@@ -186,7 +186,7 @@ function buildSearchHighlightDetailRows(
     return [
       {
         id: "search-hit-highlight",
-        line: t("setting.picker.detail.searchHitHighlight", locale, {
+        line: tSetting("setting.picker.detail.searchHitHighlight", locale, {
           value: displayOrDefault(appearance.searchHitHighlightBg, resolved.hitBg, locale)
         })
       }
@@ -195,7 +195,7 @@ function buildSearchHighlightDetailRows(
   return [
     {
       id: "search-jump-highlight",
-      line: t("setting.picker.detail.searchJumpHighlight", locale, {
+      line: tSetting("setting.picker.detail.searchJumpHighlight", locale, {
         value: displayOrDefault(appearance.searchJumpHighlightBg, resolved.jumpBg, locale)
       })
     }
@@ -213,7 +213,7 @@ function buildPickerDetailRows(
     return [
       {
         id: "fg-picker",
-        line: t("setting.picker.detail.fgPicker", locale, {
+        line: tSetting("setting.picker.detail.fgPicker", locale, {
           value: displayOrDefault(layer.fg, resolved.fg, locale)
         })
       }
@@ -223,7 +223,7 @@ function buildPickerDetailRows(
     return [
       {
         id: "bg-color-picker",
-        line: t("setting.picker.detail.bgColorPicker", locale, {
+        line: tSetting("setting.picker.detail.bgColorPicker", locale, {
           value: displayOrDefault(layer.bgColor, resolved.bgColor, locale)
         })
       }
@@ -232,7 +232,7 @@ function buildPickerDetailRows(
   return [
     {
       id: "font-picker",
-      line: t("setting.picker.detail.fontPicker", locale, {
+      line: tSetting("setting.picker.detail.fontPicker", locale, {
         value: displayOrDefault(layer.fontFamily, resolved.fontFamily, locale)
       })
     }
@@ -251,14 +251,14 @@ export function buildSettingPickerRows(
   if (view === "language") {
     return listUiLocaleSettingTokens().map((token) => ({
       id: token === "--japanese" ? "locale-ja" : "locale-en",
-      line: t("setting.picker.languageRow", locale, { token })
+      line: tSetting("setting.picker.languageRow", locale, { token })
     }))
   }
 
   if (view === "editPicker") {
     return [
-      { id: "edit-picker-on", line: t("setting.picker.editPickerOn", locale) },
-      { id: "edit-picker-off", line: t("setting.picker.editPickerOff", locale) }
+      { id: "edit-picker-on", line: tSetting("setting.picker.editPickerOn", locale) },
+      { id: "edit-picker-off", line: tSetting("setting.picker.editPickerOff", locale) }
     ]
   }
 
@@ -268,8 +268,8 @@ export function buildSettingPickerRows(
 
   if (view === "bgImage" || view === "pickerBgImage") {
     return [
-      { id: "bg-import", line: t("setting.picker.bgImport", locale) },
-      { id: "bg-clear", line: t("setting.picker.bgClear", locale) }
+      { id: "bg-import", line: tSetting("setting.picker.bgImport", locale) },
+      { id: "bg-clear", line: tSetting("setting.picker.bgClear", locale) }
     ]
   }
 
@@ -287,8 +287,8 @@ export function buildSettingPickerRows(
 
   if (view === "resetConfirm") {
     return [
-      { id: "reset-yes", line: t("setting.picker.resetYes", locale) },
-      { id: "reset-no", line: t("setting.picker.resetNo", locale) }
+      { id: "reset-yes", line: tSetting("setting.picker.resetYes", locale) },
+      { id: "reset-no", line: tSetting("setting.picker.resetNo", locale) }
     ]
   }
 
@@ -296,40 +296,40 @@ export function buildSettingPickerRows(
     return [
       {
         id: "search-cache-reset-yes",
-        line: t("setting.picker.searchCacheResetYes", locale)
+        line: tSetting("setting.picker.searchCacheResetYes", locale)
       },
       {
         id: "search-cache-reset-no",
-        line: t("setting.picker.searchCacheResetNo", locale)
+        line: tSetting("setting.picker.searchCacheResetNo", locale)
       }
     ]
   }
 
   const bgImageLabel = appearance.bgImageDataUrl
-    ? t("setting.summary.set", locale)
-    : t("setting.summary.none", locale)
+    ? tSetting("setting.summary.set", locale)
+    : tSetting("setting.summary.none", locale)
   const pickerBgImageLabel = appearance.picker.bgImageDataUrl
-    ? t("setting.summary.set", locale)
-    : t("setting.summary.none", locale)
+    ? tSetting("setting.summary.set", locale)
+    : tSetting("setting.summary.none", locale)
 
   const rows: SettingPickerRow[] = [
     {
       id: "language",
-      line: t("setting.picker.main.language", locale, {
+      line: tSetting("setting.picker.main.language", locale, {
         token: settingTokenForUiLocale(locale)
       })
     },
     {
       id: "edit-picker",
-      line: t("setting.picker.main.editPicker", locale, {
+      line: tSetting("setting.picker.main.editPicker", locale, {
         value: appearance.editPicker
-          ? t("setting.picker.editPickerStateOn", locale)
-          : t("setting.picker.editPickerStateOff", locale)
+          ? tSetting("setting.picker.editPickerStateOn", locale)
+          : tSetting("setting.picker.editPickerStateOff", locale)
       })
     },
     {
       id: "fg",
-      line: t("setting.picker.main.fg", locale, {
+      line: tSetting("setting.picker.main.fg", locale, {
         value: displayOrDefault(appearance.fg, resolvedGlobal.fg, locale)
       })
     }
@@ -338,7 +338,7 @@ export function buildSettingPickerRows(
   if (appearance.editPicker) {
     rows.push({
       id: "fg-picker",
-      line: t("setting.picker.main.fgPicker", locale, {
+      line: tSetting("setting.picker.main.fgPicker", locale, {
         value: displayOrDefault(appearance.picker.fg, resolvedPicker.fg, locale)
       })
     })
@@ -346,21 +346,21 @@ export function buildSettingPickerRows(
 
   rows.push({
     id: "bg-color",
-    line: t("setting.picker.main.bgColor", locale, {
+    line: tSetting("setting.picker.main.bgColor", locale, {
       value: displayOrDefault(appearance.bgColor, resolvedGlobal.bgColor, locale)
     })
   })
 
   rows.push({
     id: "search-hit-highlight",
-    line: t("setting.picker.main.searchHitHighlight", locale, {
+    line: tSetting("setting.picker.main.searchHitHighlight", locale, {
       value: displayOrDefault(appearance.searchHitHighlightBg, resolvedSearchHl.hitBg, locale)
     })
   })
 
   rows.push({
     id: "search-jump-highlight",
-    line: t("setting.picker.main.searchJumpHighlight", locale, {
+    line: tSetting("setting.picker.main.searchJumpHighlight", locale, {
       value: displayOrDefault(appearance.searchJumpHighlightBg, resolvedSearchHl.jumpBg, locale)
     })
   })
@@ -368,7 +368,7 @@ export function buildSettingPickerRows(
   if (appearance.editPicker) {
     rows.push({
       id: "bg-color-picker",
-      line: t("setting.picker.main.bgColorPicker", locale, {
+      line: tSetting("setting.picker.main.bgColorPicker", locale, {
         value: displayOrDefault(appearance.picker.bgColor, resolvedPicker.bgColor, locale)
       })
     })
@@ -376,7 +376,7 @@ export function buildSettingPickerRows(
 
   rows.push({
     id: "size",
-    line: t("setting.picker.main.size", locale, {
+    line: tSetting("setting.picker.main.size", locale, {
       value: displayOrDefault(appearance.fontSize, resolvedGlobal.fontSize, locale)
     })
   })
@@ -384,7 +384,7 @@ export function buildSettingPickerRows(
   if (appearance.editPicker) {
     rows.push({
       id: "size-picker",
-      line: t("setting.picker.main.sizePicker", locale, {
+      line: tSetting("setting.picker.main.sizePicker", locale, {
         value: displayOrDefault(appearance.picker.fontSize, resolvedPicker.fontSize, locale)
       })
     })
@@ -392,7 +392,7 @@ export function buildSettingPickerRows(
 
   rows.push({
     id: "font",
-    line: t("setting.picker.main.font", locale, {
+    line: tSetting("setting.picker.main.font", locale, {
       value: displayOrDefault(appearance.fontFamily, resolvedGlobal.fontFamily, locale)
     })
   })
@@ -400,7 +400,7 @@ export function buildSettingPickerRows(
   if (appearance.editPicker) {
     rows.push({
       id: "font-picker",
-      line: t("setting.picker.main.fontPicker", locale, {
+      line: tSetting("setting.picker.main.fontPicker", locale, {
         value: displayOrDefault(appearance.picker.fontFamily, resolvedPicker.fontFamily, locale)
       })
     })
@@ -408,40 +408,40 @@ export function buildSettingPickerRows(
 
   rows.push({
     id: "bg-image",
-    line: t("setting.picker.main.bgImage", locale, { value: bgImageLabel })
+    line: tSetting("setting.picker.main.bgImage", locale, { value: bgImageLabel })
   })
 
   if (appearance.editPicker) {
     rows.push({
       id: "bg-image-picker",
-      line: t("setting.picker.main.bgImagePicker", locale, { value: pickerBgImageLabel })
+      line: tSetting("setting.picker.main.bgImagePicker", locale, { value: pickerBgImageLabel })
     })
   }
 
   rows.push(
     {
       id: "reset-default",
-      line: t("setting.picker.main.reset", locale)
+      line: tSetting("setting.picker.main.reset", locale)
     },
     {
       id: "reset-search-cache",
-      line: t("setting.picker.main.resetSearchCache", locale)
+      line: tSetting("setting.picker.main.resetSearchCache", locale)
     },
     {
       id: "export",
-      line: t("setting.picker.main.export", locale)
+      line: tSetting("setting.picker.main.export", locale)
     },
     {
       id: "import",
-      line: t("setting.picker.main.import", locale)
+      line: tSetting("setting.picker.main.import", locale)
     },
     {
       id: "save",
-      line: t("setting.picker.main.save", locale)
+      line: tSetting("setting.picker.main.save", locale)
     },
     {
       id: "cancel",
-      line: t("setting.picker.main.cancel", locale)
+      line: tSetting("setting.picker.main.cancel", locale)
     }
   )
 
@@ -454,9 +454,9 @@ export function settingPickerHeadline(
   editing: boolean
 ): string {
   if (editing && isSettingDetailView(view)) {
-    return t("setting.picker.headline.editing", locale)
+    return tSetting("setting.picker.headline.editing", locale)
   }
-  const key: MessageKey =
+  const key: SettingMessageKey =
     view === "main"
       ? "setting.picker.headline.main"
       : view === "language"
@@ -492,7 +492,7 @@ export function settingPickerHeadline(
                                 : view === "searchCacheResetConfirm"
                                   ? "setting.picker.headline.searchCacheResetConfirm"
                                   : "setting.picker.headline.main"
-  return t(key, locale)
+  return tSetting(key, locale)
 }
 
 export function settingPickerEditAriaLabel(
@@ -500,27 +500,27 @@ export function settingPickerEditAriaLabel(
   locale: UiLocale
 ): string {
   if (view === "fg" || view === "fgPicker") {
-    return t(view === "fgPicker" ? "setting.picker.editAria.fgPicker" : "setting.picker.editAria.fg", locale)
+    return tSetting(view === "fgPicker" ? "setting.picker.editAria.fgPicker" : "setting.picker.editAria.fg", locale)
   }
   if (view === "bgColor" || view === "bgColorPicker") {
-    return t(
+    return tSetting(
       view === "bgColorPicker" ? "setting.picker.editAria.bgColorPicker" : "setting.picker.editAria.bgColor",
       locale
     )
   }
   if (view === "searchHitHighlight") {
-    return t("setting.picker.editAria.searchHitHighlight", locale)
+    return tSetting("setting.picker.editAria.searchHitHighlight", locale)
   }
   if (view === "searchJumpHighlight") {
-    return t("setting.picker.editAria.searchJumpHighlight", locale)
+    return tSetting("setting.picker.editAria.searchJumpHighlight", locale)
   }
   if (view === "font" || view === "fontPicker") {
-    return t(
+    return tSetting(
       view === "fontPicker" ? "setting.picker.editAria.fontPicker" : "setting.picker.editAria.font",
       locale
     )
   }
-  return t("setting.picker.editAria.generic", locale)
+  return tSetting("setting.picker.editAria.generic", locale)
 }
 
 export function settingPickerAllowsVerticalNav(view: SettingListPickerView): boolean {

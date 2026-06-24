@@ -38,7 +38,9 @@ export const COLOR_SWATCH_BG: Partial<Record<NewGroupPaletteColor, string>> = {
 /** 既存グループ一覧の「新規グループ」行（Chrome のグループ ID とは別物） */
 export const NEW_GROUP_LIST_SENTINEL = -1
 
-/** `:` コマンドモードの Tab 補完候補（`use-tab-picker-keyboard` と一致させること） */
+import type { ActionMenuItemId, GroupEditMenuActionId, SelectKind } from "./tab-picker-overlay-types"
+
+/** `:` コマンドモードの Tab 補完候補（レガシー; tabs ピッカーでは → メニューに移行） */
 export const TAB_PICKER_COMMAND_COMPLETIONS = [
   "move",
   "close",
@@ -53,6 +55,60 @@ export const TAB_PICKER_COMMAND_COMPLETIONS = [
 export function filterTabPickerCommandCompletions(commandBuffer: string): string[] {
   const p = commandBuffer.toLowerCase()
   return TAB_PICKER_COMMAND_COMPLETIONS.filter((c) => c.startsWith(p))
+}
+
+export const ACTION_MENU_ITEMS_FOR_TAB = [
+  { id: "move" as const, messageKey: "tabs.picker.actionMenu.move" as const },
+  { id: "close" as const, messageKey: "tabs.picker.actionMenu.close" as const },
+  { id: "group" as const, messageKey: "tabs.picker.actionMenu.group" as const },
+  { id: "newWindow" as const, messageKey: "tabs.picker.actionMenu.newWindow" as const },
+  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const }
+] as const
+
+export const ACTION_MENU_ITEMS_FOR_WINDOW = [
+  { id: "close" as const, messageKey: "tabs.picker.actionMenu.close" as const },
+  { id: "newTab" as const, messageKey: "tabs.picker.actionMenu.newTab" as const },
+  { id: "edit" as const, messageKey: "tabs.picker.actionMenu.edit" as const },
+  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const }
+] as const
+
+export const ACTION_MENU_ITEMS_FOR_GROUP = [
+  { id: "move" as const, messageKey: "tabs.picker.actionMenu.move" as const },
+  { id: "close" as const, messageKey: "tabs.picker.actionMenu.close" as const },
+  { id: "newWindow" as const, messageKey: "tabs.picker.actionMenu.newWindow" as const },
+  { id: "edit" as const, messageKey: "tabs.picker.actionMenu.edit" as const },
+  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const }
+] as const
+
+export type ActionMenuItemDef = {
+  id: ActionMenuItemId
+  messageKey:
+    | "tabs.picker.actionMenu.move"
+    | "tabs.picker.actionMenu.close"
+    | "tabs.picker.actionMenu.group"
+    | "tabs.picker.actionMenu.newWindow"
+    | "tabs.picker.actionMenu.newTab"
+    | "tabs.picker.actionMenu.edit"
+    | "tabs.picker.actionMenu.reload"
+}
+
+export function actionMenuItemsForKind(kind: SelectKind): readonly ActionMenuItemDef[] {
+  switch (kind) {
+    case "tab":
+      return ACTION_MENU_ITEMS_FOR_TAB
+    case "window":
+      return ACTION_MENU_ITEMS_FOR_WINDOW
+    case "group":
+      return ACTION_MENU_ITEMS_FOR_GROUP
+  }
+}
+
+export function actionMenuItemAtPickIndex(
+  kind: SelectKind,
+  pickIndex: number
+): ActionMenuItemId | null {
+  const item = actionMenuItemsForKind(kind)[pickIndex]
+  return item?.id ?? null
 }
 
 export const TAB_PICKER_COMMANDS_FOR_TAB = [
@@ -78,3 +134,15 @@ export const GROUP_EDIT_MENU_ITEMS = [
   { id: "ungroup" as const, messageKey: "tabs.picker.editMenu.ungroup" as const },
   { id: "deleteGroup" as const, messageKey: "tabs.picker.editMenu.deleteGroup" as const }
 ] as const
+
+export type GroupEditMenuItemDef = {
+  id: GroupEditMenuActionId
+  messageKey:
+    | "tabs.picker.editMenu.rename"
+    | "tabs.picker.editMenu.ungroup"
+    | "tabs.picker.editMenu.deleteGroup"
+}
+
+export function groupEditMenuItems(): readonly GroupEditMenuItemDef[] {
+  return GROUP_EDIT_MENU_ITEMS
+}

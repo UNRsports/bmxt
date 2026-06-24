@@ -1,4 +1,5 @@
-import { navStatusHint, useUiLocale } from "../setting"
+import { navStatusHint } from "../setting/i18n/resolvers"
+import { useUiLocale } from "../setting/use-ui-settings"
 
 type Props = {
   armed: boolean

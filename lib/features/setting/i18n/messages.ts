@@ -1,13 +1,14 @@
-import raw from "./messages.json"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../locale"
 import { formatMessage, type MessageVars } from "./format-message"
+import { MERGED_MESSAGES, type MergedMessageKey } from "./merge-namespace-messages"
 
-export type MessageKey = keyof typeof raw
+export type MessageKey = MergedMessageKey
 
 export type { MessageVars } from "./format-message"
 export { formatMessage } from "./format-message"
+export { MERGED_MESSAGES } from "./merge-namespace-messages"
 
-const MESSAGES = raw as Record<MessageKey, Partial<Record<UiLocale, string>>>
+const MESSAGES = MERGED_MESSAGES
 
 export function t(key: MessageKey, locale: UiLocale, vars?: MessageVars): string {
   const entry = MESSAGES[key]

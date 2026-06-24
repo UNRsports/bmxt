@@ -1,5 +1,5 @@
 import { bodyToTerminalLines } from "../page-dom/dom-terminal-lines"
-import { t } from "../setting/i18n/messages"
+import { tDomList } from "../setting/i18n/ns/dom-list"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
 import { bmxtDomShowInjected, type DomShowMode } from "../page-dom/injected-dom-show"
 import { domTreeGuideForDepth, parseDomTreeSourceLine } from "./dom-list-line-format"
@@ -82,7 +82,7 @@ export async function captureDomListForTab(
 ): Promise<DomListCapture> {
   const tabId = tab.id
   if (tabId === undefined) {
-    return noticeCapture([t("domList.unavailable", locale), t("domList.noTarget", locale)])
+    return noticeCapture([tDomList("domList.unavailable", locale), tDomList("domList.noTarget", locale)])
   }
 
   const mode: DomShowMode = flavor === "--react" ? "react" : "html"

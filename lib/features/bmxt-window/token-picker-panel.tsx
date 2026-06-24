@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef } from "react"
 import type { ImeTokenTier } from "../command-line/ime-token-picker"
 import { imeTokenPickerHint } from "../command-line/ime-token-picker"
-import { useUiCopy } from "../setting"
+import { useUiSettings } from "../setting/use-ui-settings"
 
 const ITEM_ID_PREFIX = "bmxt-subcmd-item"
 
@@ -20,9 +20,10 @@ type Props = {
 }
 
 export function TokenPickerPanel({ model }: Props) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const listRef = useRef<HTMLDivElement>(null)
-  const hint = imeTokenPickerHint(model.tier, uiCopy.locale)
+  const hint = imeTokenPickerHint(model.tier, locale)
 
   useLayoutEffect(() => {
     const list = listRef.current

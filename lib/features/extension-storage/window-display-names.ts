@@ -1,26 +1,20 @@
+import { invalidatePickerChromeContextCache } from "../tabs/picker-chrome-context"
 import { WINDOW_DISPLAY_NAMES_KEY } from "./keys"
+import {
+  parseWindowDisplayNamesStore,
+  pruneWindowDisplayNamesStore,
+  type WindowDisplayNamesStore,
+  windowDisplayNamesMapFromStore
+} from "./window-display-names-store"
 
-type Store = Record<string, string>
-
-async function readStore(): Promise<Store> {
+async function readStore(): Promise<WindowDisplayNamesStore> {
   const r = await chrome.storage.local.get(WINDOW_DISPLAY_NAMES_KEY)
-  const raw = r[WINDOW_DISPLAY_NAMES_KEY]
-  if (!raw || typeof raw !== "object") {
-    return {}
-  }
-  return raw as Store
+  return parseWindowDisplayNamesStore(r[WINDOW_DISPLAY_NAMES_KEY])
 }
 
 export async function getWindowDisplayNamesMap(): Promise<Map<number, string>> {
   const store = await readStore()
-  const out = new Map<number, string>()
-  for (const [k, v] of Object.entries(store)) {
-    const id = Number(k)
-    if (Number.isInteger(id) && typeof v === "string" && v.trim() !== "") {
-      out.set(id, v.trim())
-    }
-  }
-  return out
+  return windowDisplayNamesMapFromStore(store)
 }
 
 export async function getWindowDisplayName(windowId: number): Promise<string | undefined> {
@@ -43,21 +37,15 @@ export async function setWindowDisplayName(windowId: number, name: string): Prom
     store[key] = trimmed
   }
   await chrome.storage.local.set({ [WINDOW_DISPLAY_NAMES_KEY]: store })
+  invalidatePickerChromeContextCache()
 }
 
 /** 閉じたウィンドウのエントリを storage から除去する。 */
 export async function pruneWindowDisplayNames(openWindowIds: Iterable<number>): Promise<void> {
-  const open = new Set(openWindowIds)
   const store = await readStore()
-  let changed = false
-  for (const k of Object.keys(store)) {
-    const id = Number(k)
-    if (!open.has(id)) {
-      delete store[k]
-      changed = true
-    }
-  }
-  if (changed) {
-    await chrome.storage.local.set({ [WINDOW_DISPLAY_NAMES_KEY]: store })
+  const pruned = pruneWindowDisplayNamesStore(store, openWindowIds)
+  if (pruned.changed) {
+    await chrome.storage.local.set({ [WINDOW_DISPLAY_NAMES_KEY]: pruned.store })
+    invalidatePickerChromeContextCache()
   }
 }

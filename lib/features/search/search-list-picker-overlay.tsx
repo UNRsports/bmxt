@@ -14,7 +14,8 @@ import {
   searchListPickerHeadline,
   searchListPickerLoadingHeadline
 } from "../setting/i18n/picker-headlines"
-import { useUiCopy } from "../setting"
+import { tSearch } from "../setting/i18n/ns/search"
+import { useUiSettings } from "../setting/use-ui-settings"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import {
@@ -84,7 +85,8 @@ export function SearchListPickerOverlay({
   sessionId,
   pageActiveMode = "auto"
 }: Props) {
-  const uiCopy = useUiCopy()
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const { phase, entries, emptyResultLines, pattern = "" } = state
   const loading = phase === "loading"
   const progressLines = loading ? loadingProgressLines : state.progressLines
@@ -163,7 +165,7 @@ export function SearchListPickerOverlay({
 
   const statusLines = useMemo((): string[] => {
     if (loading) {
-      return progressLines.length > 0 ? [...progressLines] : ["search — starting…"]
+      return progressLines.length > 0 ? [...progressLines] : [tSearch("search.picker.starting", locale)]
     }
     if (entries.length > 0) {
       return []
@@ -171,8 +173,8 @@ export function SearchListPickerOverlay({
     if (emptyResultLines && emptyResultLines.length > 0) {
       return emptyResultLines
     }
-    return ["(no matches)"]
-  }, [loading, progressLines, entries.length, emptyResultLines])
+    return [tSearch("search.picker.noMatches", locale)]
+  }, [loading, progressLines, entries.length, emptyResultLines, locale])
 
   const enterDestinationForEntry = useCallback(
     async (
@@ -184,7 +186,7 @@ export function SearchListPickerOverlay({
       if (returnView === "detail") {
         void clearSearchPickerPageHighlightsForEntry(entry)
       }
-      const rows = await buildSearchOpenDestinationRows(uiCopy.locale)
+      const rows = await buildSearchOpenDestinationRows(locale)
       setDestinationEntryIndex(resultsIndex)
       setDestinationReturnView(returnView)
       setDestinationEntry(entry)
@@ -192,7 +194,7 @@ export function SearchListPickerOverlay({
       setDestinationRows(rows)
       setPickerView("destination")
     },
-    [uiCopy.locale]
+    [locale]
   )
 
   const handleArrowRight = useCallback(
@@ -247,7 +249,6 @@ export function SearchListPickerOverlay({
   )
 
   const headline = useMemo(() => {
-    const locale = uiCopy.locale
     if (loading) {
       return searchListPickerLoadingHeadline(locale)
     }
@@ -279,7 +280,7 @@ export function SearchListPickerOverlay({
     pickerView,
     detailEntry,
     destinationEntry,
-    uiCopy.locale,
+    locale,
     pattern
   ])
 

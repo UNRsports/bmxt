@@ -12,7 +12,7 @@ import {
   sessionCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
-import { t } from "../../setting/i18n/messages"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
 
@@ -39,7 +39,7 @@ export function run(args: string[]) {
   const sub = args[1].toLowerCase()
   if (!isSecondToken("session", args[1])) {
     return linesDispatch([
-      t("cmd.session.error.unknownOption", locale, { option: args[1] }),
+      tCmd("cmd.session.error.unknownOption", locale, { option: args[1] }),
       ...usageLines()
     ])
   }
@@ -47,12 +47,12 @@ export function run(args: string[]) {
     const rawName = args.slice(2).join(" ").trim()
     if (rawName.length > MAX_SESSION_NAME_LEN) {
       return linesDispatch([
-        t("cmd.session.error.nameTooLong", locale, { max: MAX_SESSION_NAME_LEN }),
+        tCmd("cmd.session.error.nameTooLong", locale, { max: MAX_SESSION_NAME_LEN }),
         ...usageLines()
       ])
     }
     if (rawName.length > 0 && sanitizeSessionName(rawName) === null) {
-      return linesDispatch([t("cmd.session.error.invalidName", locale), ...usageLines()])
+      return linesDispatch([tCmd("cmd.session.error.invalidName", locale), ...usageLines()])
     }
     return effectsDispatch([{ kind: "session_new", name: rawName }])
   }
@@ -60,12 +60,12 @@ export function run(args: string[]) {
     const rawName = args.slice(2).join(" ").trim()
     if (rawName.length > MAX_SESSION_NAME_LEN) {
       return linesDispatch([
-        t("cmd.session.error.nameTooLong", locale, { max: MAX_SESSION_NAME_LEN }),
+        tCmd("cmd.session.error.nameTooLong", locale, { max: MAX_SESSION_NAME_LEN }),
         ...usageLines()
       ])
     }
     if (rawName.length > 0 && sanitizeSessionName(rawName) === null) {
-      return linesDispatch([t("cmd.session.error.invalidName", locale), ...usageLines()])
+      return linesDispatch([tCmd("cmd.session.error.invalidName", locale), ...usageLines()])
     }
     if (sub === "-setting-name") {
       return linesDispatch(sessionCmdSettingNameUiLines(locale))
@@ -73,7 +73,7 @@ export function run(args: string[]) {
     return linesDispatch(sessionCmdSwitchUiLines(locale))
   }
   if (args.length > 2) {
-    return linesDispatch([t("cmd.session.error.tooManyArgs", locale), ...usageLines()])
+    return linesDispatch([tCmd("cmd.session.error.tooManyArgs", locale), ...usageLines()])
   }
   if (sub === "-next") {
     return effectsDispatch([{ kind: "session_next" }])
@@ -84,5 +84,5 @@ export function run(args: string[]) {
   if (sub === "-list") {
     return linesDispatch(sessionCmdListUiLines(locale))
   }
-  return linesDispatch([t("cmd.session.error.internal", locale), ...usageLines()])
+  return linesDispatch([tCmd("cmd.session.error.internal", locale), ...usageLines()])
 }

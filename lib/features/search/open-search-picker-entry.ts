@@ -17,12 +17,15 @@ import {
 import type { ChromeEffect } from "../dispatch/effect-types"
 import type { DispatchChromeContext } from "../dispatch/dispatch-context"
 import { applyChromeEffects } from "../dispatch"
+import { tSearch } from "../setting/i18n/ns/search"
+import { DEFAULT_UI_LOCALE } from "../setting/locale"
 
 const TAB_FOCUS_DELAY_MS = 120
 const TAB_LOAD_TIMEOUT_MS = 20000
 
-const SCROLL_FAILED_LOG =
-  "search — could not scroll to match (reload the tab or grant site access, then try again)"
+function scrollFailedLog(ctx: DispatchChromeContext): string {
+  return tSearch("search.scrollToMatch.failed", ctx.uiLocale ?? DEFAULT_UI_LOCALE)
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -133,7 +136,11 @@ export async function openSearchPickerEntry(
 ): Promise<void> {
   if (destination) {
     try {
-      const logLines = await openUrlAtSearchDestination(entry.url, destination)
+      const logLines = await openUrlAtSearchDestination(
+        entry.url,
+        destination,
+        ctx.uiLocale ?? DEFAULT_UI_LOCALE
+      )
       if (logLines.length > 0) {
         await appendLogLines(logLines)
       }
@@ -158,7 +165,7 @@ export async function openSearchPickerEntry(
         needle
       )
       if (!scrolled && match.lineNo > 0) {
-        await appendLogLines([SCROLL_FAILED_LOG])
+        await appendLogLines([scrollFailedLog(ctx)])
       }
     }
     return
@@ -169,7 +176,7 @@ export async function openSearchPickerEntry(
     if (jumped) {
       return
     }
-    await appendLogLines([SCROLL_FAILED_LOG])
+    await appendLogLines([scrollFailedLog(ctx)])
     return
   }
 

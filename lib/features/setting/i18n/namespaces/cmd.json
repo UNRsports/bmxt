@@ -1,0 +1,382 @@
+{
+  "cmd.close.usage": {
+    "ja": "usage: close <tabId>",
+    "en": "usage: close <tabId>"
+  },
+  "cmd.common.availableOptions": {
+    "ja": "{command}: 利用可能なオプション",
+    "en": "{command}: available options"
+  },
+  "cmd.dom.error.exitListUsage": {
+    "ja": "error: usage: dom -exit -list",
+    "en": "error: usage: dom -exit -list"
+  },
+  "cmd.dom.error.internal": {
+    "ja": "error: 不明な dom オプション (internal): {option}",
+    "en": "error: unknown dom option (internal): {option}"
+  },
+  "cmd.dom.error.unknownOption": {
+    "ja": "error: 不明な dom オプション: {option}",
+    "en": "error: unknown dom option: {option}"
+  },
+  "cmd.dom.exitList.detail": {
+    "ja": "DOM ピッカー列表示中に BMXt プロンプトで実行してください。",
+    "en": "Run that line in the BMXt window while the DOM picker column is open."
+  },
+  "cmd.dom.exitList.title": {
+    "ja": "DOM list picker は BMXt プロンプトから閉じます: dom -exit -list",
+    "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
+  },
+  "cmd.dom.usage.line1": {
+    "ja": "usage: dom -list [--html|--react] [<pattern>]   — DOM ピッカーを開く（既定 flavor: --html）",
+    "en": "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)"
+  },
+  "cmd.dom.usage.line2": {
+    "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
+    "en": "       dom -exit -list — close DOM list picker in this BMXt pane"
+  },
+  "cmd.dom.usage.listDetail": {
+    "ja": "-list は picker（search -list と同じクロム）。flavor: --html (default) | --react。",
+    "en": "-list opens a picker (same chrome as search -list); flavor pull-down: --html (default) | --react."
+  },
+  "cmd.dom.usage.patternDetail": {
+    "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
+    "en": "<pattern> is a case-insensitive substring filter on the output lines (no regex)."
+  },
+  "cmd.error.unknownCommand": {
+    "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
+    "en": "error: unknown command: {cmdToken}. Type help."
+  },
+  "cmd.group.usage.interactive": {
+    "ja": "Interactive: BMXt で group new と入力して Enter（タブ ID 不要）。",
+    "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."
+  },
+  "cmd.group.usage.line": {
+    "ja": "usage: group new | group new <tabId> [tabId ...]",
+    "en": "usage: group new | group new <tabId> [tabId ...]"
+  },
+  "cmd.group.usage.nonInteractive": {
+    "ja": "Non-interactive: group new <tabId> [tabId ...]",
+    "en": "Non-interactive: group new <tabId> [tabId ...]"
+  },
+  "cmd.nav.enter.detail": {
+    "ja": "BMXt プロンプトで `nav -enter` を実行し、コマンドライン上で Alt でページカーソルを切り替えます。",
+    "en": "Run `nav -enter` in the BMXt window; then Alt on the command line toggles the page cursor."
+  },
+  "cmd.nav.enter.title": {
+    "ja": "nav -enter — BMXt プロンプトから起動",
+    "en": "nav -enter — arm from the BMXt prompt"
+  },
+  "cmd.nav.error.internal": {
+    "ja": "error: 不明な nav オプション (internal): {option}",
+    "en": "error: unknown nav option (internal): {option}"
+  },
+  "cmd.nav.error.unknownOption": {
+    "ja": "error: 不明な nav オプション: {option}",
+    "en": "error: unknown nav option: {option}"
+  },
+  "cmd.nav.exit.detail": {
+    "ja": "先に Alt で nav を OFF にしてから、このペインで `nav -exit` を実行してください。",
+    "en": "Turn nav off with Alt first, then run `nav -exit` in this pane."
+  },
+  "cmd.nav.exit.title": {
+    "ja": "nav -exit — BMXt プロンプトから終了",
+    "en": "nav -exit — disarm from the BMXt prompt"
+  },
+  "cmd.nav.usage.altToggle": {
+    "ja": "起動中、プロンプトにフォーカスがあるとき Alt でページオーバーレイを ON/OFF します。",
+    "en": "While armed, Alt toggles the page overlay when this pane's prompt has focus."
+  },
+  "cmd.nav.usage.controls": {
+    "ja": "起動後はプロンプトで Alt がオーバーレイ ON/OFF。↑↓←→ で移動、Enter で左クリック相当。",
+    "en": "While armed, Alt toggles overlay on/off on the prompt. ↑↓←→ move; Enter clicks."
+  },
+  "cmd.nav.usage.line1": {
+    "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（プロンプトで Alt がオーバーレイ ON/OFF）",
+    "en": "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on prompt toggles overlay on/off)"
+  },
+  "cmd.nav.usage.line2": {
+    "ja": "       nav -exit        — nav を終了（先に Alt で OFF）",
+    "en": "       nav -exit        — disarm nav (turn Alt off first)"
+  },
+  "cmd.nav.usage.navTyping": {
+    "ja": "nav typing 翻訳: `translate -on` を使用（translate コマンド参照）。",
+    "en": "Nav typing translation: use `translate -on` (see translate command)."
+  },
+  "cmd.search.error.exitListUsage": {
+    "ja": "error: usage: search -exit -list",
+    "en": "error: usage: search -exit -list"
+  },
+  "cmd.search.error.generic": {
+    "ja": "error: {message}",
+    "en": "error: {message}"
+  },
+  "cmd.search.error.unknownOption": {
+    "ja": "error: 不明な search オプション: {option}",
+    "en": "error: unknown search option: {option}"
+  },
+  "cmd.search.error.unknownScope": {
+    "ja": "error: 不明な search スコープ: {scope}",
+    "en": "error: unknown search scope: {scope}"
+  },
+  "cmd.search.exitList.detail": {
+    "ja": "search ピッカー列表示中に BMXt プロンプトで実行してください。",
+    "en": "Run that line in the BMXt window while the search picker column is open."
+  },
+  "cmd.search.exitList.title": {
+    "ja": "Search list picker は BMXt プロンプトから閉じます: search -exit -list",
+    "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
+  },
+  "cmd.search.usage.line1": {
+    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page）",
+    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)"
+  },
+  "cmd.search.usage.line2": {
+    "ja": "       search -list --all|--history|--bookmark|--page [<pattern>]   — スコープ（--all は横断）",
+    "en": "       search -list --all|--history|--bookmark|--page [<pattern>]   — scope (--all = cross-scope)"
+  },
+  "cmd.search.usage.line3": {
+    "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
+    "en": "       search -exit -list — close search list picker in this BMXt pane"
+  },
+  "cmd.search.usage.pattern": {
+    "ja": "パターンは大文字小文字を区別しない部分一致です（v1 は正規表現なし）。",
+    "en": "Pattern is matched as a case-insensitive substring (no regex in v1)."
+  },
+  "cmd.search.usage.quotes": {
+    "ja": "パターンを ASCII 二重引用符で囲んでも除去されます（例: search -list \"…\"）。",
+    "en": "Optional ASCII double quotes around the pattern are stripped (e.g. search -list \"…\")."
+  },
+  "cmd.session.error.internal": {
+    "ja": "error: internal: session オプションが不整合です",
+    "en": "error: internal: session option out of sync"
+  },
+  "cmd.session.error.invalidName": {
+    "ja": "error: 無効なセッション名です（制御文字・改行は不可）",
+    "en": "error: invalid session name (no control characters or newlines)"
+  },
+  "cmd.session.error.nameTooLong": {
+    "ja": "error: セッション名が長すぎます（最大 {max} 文字）",
+    "en": "error: session name too long (max {max} characters)"
+  },
+  "cmd.session.error.tooManyArgs": {
+    "ja": "error: session はオプションを 1 つだけ指定できます（-new | -list | -switch | -next | -prev | -setting-name）",
+    "en": "error: session takes only one option (-new | -list | -switch | -next | -prev | -setting-name)"
+  },
+  "cmd.session.error.unknownOption": {
+    "ja": "error: 不明な session オプション: {option}",
+    "en": "error: unknown session option: {option}"
+  },
+  "cmd.session.listUi.detail": {
+    "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
+    "en": "Run it from the prompt in a BMXt terminal pane."
+  },
+  "cmd.session.listUi.title": {
+    "ja": "`session -list` は BMXt ウィンドウ UI で処理されます。",
+    "en": "`session -list` is handled in the BMXt window UI."
+  },
+  "cmd.session.runHint": {
+    "ja": "第一コマンドのみ実行するとこの案内を表示し、Tab 補完用にプロンプトを `session ` に戻します。",
+    "en": "Run session alone for this message; the prompt restores to `session ` for Tab completion."
+  },
+  "cmd.session.settingNameUi.detail": {
+    "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
+    "en": "Run it from the prompt in a BMXt terminal pane."
+  },
+  "cmd.session.settingNameUi.title": {
+    "ja": "`session -setting-name` は BMXt ウィンドウ UI で処理されます。",
+    "en": "`session -setting-name` is handled in the BMXt window UI."
+  },
+  "cmd.session.switchUi.detail": {
+    "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
+    "en": "Run it from the prompt in a BMXt terminal pane."
+  },
+  "cmd.session.switchUi.title": {
+    "ja": "`session -switch` は BMXt ウィンドウ UI で処理されます。",
+    "en": "`session -switch` is handled in the BMXt window UI."
+  },
+  "cmd.session.usage.line1": {
+    "ja": "usage: session                       — 第二トークンを選択（Tab または Enter メニュー）",
+    "en": "usage: session                       — choose a second token (Tab or Enter menu)"
+  },
+  "cmd.session.usage.line2": {
+    "ja": "       session <n>                  — セッション番号 n に切り替え（1 始まり）",
+    "en": "       session <n>                  — switch to session number n (1-based)"
+  },
+  "cmd.session.usage.line3": {
+    "ja": "       session -list                — 番号付き切り替えリスト（↑↓ · Enter · 1–9）",
+    "en": "       session -list                — switch list by number (↑↓ · Enter · 1–9)"
+  },
+  "cmd.session.usage.line4": {
+    "ja": "       session -switch [name]       — セッション名で切り替え（メニューまたは直接指定）",
+    "en": "       session -switch [name]       — switch by session name (menu or direct)"
+  },
+  "cmd.session.usage.line5": {
+    "ja": "       session -new [name]          — 新規セッション（切り替え）；表示名は任意",
+    "en": "       session -new [name]          — new session (switch to it); optional display name"
+  },
+  "cmd.session.usage.line6": {
+    "ja": "       session -setting-name [name] — このセッションの名前変更（プロンプトに現在名を表示）",
+    "en": "       session -setting-name [name] — rename this session (prompt pre-fills current name)"
+  },
+  "cmd.session.usage.line7": {
+    "ja": "       session -next                — 次のセッション",
+    "en": "       session -next                — next session"
+  },
+  "cmd.session.usage.line8": {
+    "ja": "       session -prev                — 前のセッション",
+    "en": "       session -prev                — previous session"
+  },
+  "cmd.session.usage.line9": {
+    "ja": "       Ctrl+Arrow                   — 複数セッション時に前後へ切り替え",
+    "en": "       Ctrl+Arrow                   — prev / next when multiple sessions exist"
+  },
+  "cmd.setting.error.internal": {
+    "ja": "error: 不明な setting オプション (internal): {option}",
+    "en": "error: unknown setting option (internal): {option}"
+  },
+  "cmd.setting.error.unknownOption": {
+    "ja": "error: 不明な setting オプション: {option}",
+    "en": "error: unknown setting option: {option}"
+  },
+  "cmd.setting.exit.detail": {
+    "ja": "このペインの設定ピッカーを閉じます。",
+    "en": "Closes the settings picker in this pane."
+  },
+  "cmd.setting.exit.title": {
+    "ja": "setting -exit -list — BMXt プロンプトから実行",
+    "en": "setting -exit -list — run from the BMXt prompt"
+  },
+  "cmd.setting.list.detail": {
+    "ja": "設定ピッカー列を開きます（↑↓ · Enter · Esc → プロンプト）。",
+    "en": "Opens the settings picker column (↑↓ · Enter · Esc → prompt)."
+  },
+  "cmd.setting.list.title": {
+    "ja": "setting -list — BMXt プロンプトから実行",
+    "en": "setting -list — run from the BMXt prompt"
+  },
+  "cmd.setting.usage.line1": {
+    "ja": "usage: setting -list       — 設定ピッカーを開く（言語・外観・エクスポート/インポート）",
+    "en": "usage: setting -list       — open settings picker (locale, appearance, export/import)"
+  },
+  "cmd.setting.usage.line2": {
+    "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
+    "en": "       setting -exit -list — close settings picker in this BMXt pane"
+  },
+  "cmd.tabs.error.exitListUsage": {
+    "ja": "error: usage: tabs -exit -list",
+    "en": "error: usage: tabs -exit -list"
+  },
+  "cmd.tabs.error.internalDispatchOutOfSync": {
+    "ja": "error: internal: tabs dispatch out of sync",
+    "en": "error: internal: tabs dispatch out of sync"
+  },
+  "cmd.tabs.error.internalOutOfSync": {
+    "ja": "error: internal: tabs option out of sync (re-run pnpm run codegen)",
+    "en": "error: internal: tabs option out of sync (re-run pnpm run codegen)"
+  },
+  "cmd.tabs.error.invalidListUsage": {
+    "ja": "error: invalid tabs -list usage",
+    "en": "error: invalid tabs -list usage"
+  },
+  "cmd.tabs.error.tooManyArgs": {
+    "ja": "error: too many arguments",
+    "en": "error: too many arguments"
+  },
+  "cmd.tabs.error.unknownOption": {
+    "ja": "error: 不明な tabs オプション: {option}",
+    "en": "error: unknown tabs option: {option}"
+  },
+  "cmd.tabs.error.usageMoveurl": {
+    "ja": "usage: tabs -moveurl <http(s)-url>",
+    "en": "usage: tabs -moveurl <http(s)-url>"
+  },
+  "cmd.tabs.exitList.title": {
+    "ja": "Tab picker は BMXt プロンプトから閉じます: tabs -exit -list",
+    "en": "Tab picker is closed from the BMXt prompt with: tabs -exit -list"
+  },
+  "cmd.tabs.list.title": {
+    "ja": "Tab picker は BMXt プロンプトから開きます: tabs -list または tabs -list -u",
+    "en": "Tab picker is opened from the BMXt prompt with: tabs -list or tabs -list -u"
+  },
+  "cmd.tabs.runHint": {
+    "ja": "実行例: tabs -list / tabs -list -u（ピッカーを開く）· tabs -exit -list（閉じる）· tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
+    "en": "Run: tabs -list or tabs -list -u (open picker). tabs -exit -list (close picker). tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl (current URL). tabs -moveurl <url> (jump or new tab)."
+  },
+  "cmd.tabs.setting.pageActive": {
+    "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
+    "en": "`--auto` activates the highlighted tab on move (default). `--manual` activates only with Alt."
+  },
+  "cmd.tabs.setting.title": {
+    "ja": "tabs -setting は BMXt プロンプトから: tabs -setting -page-active --auto または --manual",
+    "en": "tabs -setting is handled from the BMXt prompt with: tabs -setting -page-active --auto or --manual"
+  },
+  "cmd.tabs.usage.line1": {
+    "ja": "usage: tabs -list [-u]   — タブピッカー（`-u` は各タブ URL を表示）",
+    "en": "usage: tabs -list [-u]   — tab picker (optional -u: show each tab URL)"
+  },
+  "cmd.tabs.usage.line2": {
+    "ja": "       tabs -exit -list — この BMXt ペインのタブピッカーを閉じる",
+    "en": "       tabs -exit -list — close tab picker in this BMXt pane"
+  },
+  "cmd.tabs.usage.line3": {
+    "ja": "       tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー",
+    "en": "       tabs -setting -page-active --auto | --manual — page preview on highlight"
+  },
+  "cmd.tabs.usage.line4": {
+    "ja": "       tabs -moveurl <url> — URL のタブへ移動、なければ新規タブ",
+    "en": "       tabs -moveurl <url> — go to tab with URL or open new tab (Tab completes URLs in BMXt)"
+  },
+  "cmd.tabs.usage.line5": {
+    "ja": "       tabs -nowurl       — 現在のタブ URL を表示",
+    "en": "       tabs -nowurl       — show current tab URL"
+  },
+  "cmd.translate.error.internal": {
+    "ja": "error: 不明な translate オプション (internal): {option}",
+    "en": "error: unknown translate option (internal): {option}"
+  },
+  "cmd.translate.error.unknownOption": {
+    "ja": "error: 不明な translate オプション: {option}",
+    "en": "error: unknown translate option: {option}"
+  },
+  "cmd.translate.off.detail": {
+    "ja": "翻訳アシストを OFF にします。",
+    "en": "Disables translation assist."
+  },
+  "cmd.translate.off.title": {
+    "ja": "translate -off — BMXt プロンプトから実行",
+    "en": "translate -off — run from the BMXt prompt"
+  },
+  "cmd.translate.on.detail": {
+    "ja": "翻訳アシストを有効化。nav typing 時はプロンプト下に訳を表示します。",
+    "en": "Enables translation assist; nav typing shows preview under the prompt."
+  },
+  "cmd.translate.on.title": {
+    "ja": "translate -on — BMXt プロンプトから実行",
+    "en": "translate -on — run from the BMXt prompt"
+  },
+  "cmd.translate.setting.detail": {
+    "ja": "第三トークンに `--ja-en` / `--en-ja` を指定して翻訳ペアを保存します（Tab で第三トークン補完）。",
+    "en": "`translate -setting --ja-en` or `translate -setting --en-ja` (Tab completes third token)."
+  },
+  "cmd.translate.setting.title": {
+    "ja": "translate -setting — BMXt プロンプトから実行",
+    "en": "translate -setting — run from the BMXt prompt"
+  },
+  "cmd.translate.usage.detail": {
+    "ja": "`-on` でアシストを有効化。nav typing 時はプロンプト下に訳プレビュー。`-setting` で `--ja-en` / `--en-ja` を選べます。",
+    "en": "`-on` enables assist only; nav typing shows a translation preview under the prompt; Alt-hold commit sends the pair target language."
+  },
+  "cmd.translate.usage.line1": {
+    "ja": "usage: translate -on   — 翻訳アシストを有効化（nav typing プレビュー）",
+    "en": "usage: translate -on   — enable translation assist (nav typing preview under prompt)"
+  },
+  "cmd.translate.usage.line2": {
+    "ja": "       translate -off  — 翻訳アシストを無効化",
+    "en": "       translate -off  — disable translation assist"
+  },
+  "cmd.translate.usage.line3": {
+    "ja": "       translate -setting --ja-en | --en-ja  — 翻訳ペアを設定（保存）",
+    "en": "       translate -setting --ja-en | --en-ja  — set translation pair (saved)"
+  }
+}

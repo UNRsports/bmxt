@@ -13,7 +13,7 @@ import {
   domListNoTargetLines,
   domListUnscriptableLines,
   optionalHostDeniedLines
-} from "../../../setting/i18n"
+} from "../../../setting/i18n/resolvers"
 
 type E = Extract<ChromeEffect, { kind: "dom_list" }>
 

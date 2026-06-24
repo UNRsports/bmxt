@@ -2,11 +2,11 @@ import {
   BG_IMAGE_ALLOWED_MIME_TYPES,
   BG_IMAGE_MAX_BYTES
 } from "./appearance"
-import type { MessageKey } from "./i18n/messages"
+import type { SettingMessageKey } from "./i18n/ns/setting"
 
 export type BgImageImportResult =
   | { ok: true; dataUrl: string; mimeType: string; byteLength: number }
-  | { ok: false; errorKey: MessageKey; cancelled?: boolean }
+  | { ok: false; errorKey: SettingMessageKey; cancelled?: boolean }
 
 function isAllowedMimeType(mime: string): mime is (typeof BG_IMAGE_ALLOWED_MIME_TYPES)[number] {
   for (const allowed of BG_IMAGE_ALLOWED_MIME_TYPES) {
