@@ -694,7 +694,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
   - Window rows: `close` (`c`), `newtab` (`nt`), `edit`
   - Group rows: `move` (`m`), `close` (`c`), `newwindow` (`nw`), `edit`
 - In `:` command mode, pressing `Tab` or `Enter` with an empty command shows a dim placeholder of available commands for the current target (tab/window/group).
-- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter` to add `#` tabs (choose **new group** to open the name/color panel; **`Enter`** confirms creation; **`Esc`** returns to the tab list; **`Tab`** switches between name and color). **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
+- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. When the destination is a **tab group row** or a **tab inside a group**, marked tabs join that group; when the destination is **ungrouped**, marked tabs leave their current group. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter` to add `#` tabs without changing tab order (choose **new group** to open the name/color panel; **`Enter`** confirms creation; **`Esc`** returns to the tab list; **`Tab`** switches between name and color). **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
 - **Interactive `group new`** (prompt command, no tab ids): opens the tab picker in **group-new** variant — `Tab` marks tabs, **`Enter`** opens the same name/color panel as **[GROUP]** → new group; **`Enter`** again creates the group.
 - Use `/` for incremental search (`@` prefix for URL match). While filtering, **keyboard focus stays on the filter field**; the list highlights matches without taking typing focus. `Enter` focuses the highlighted tab while keeping the picker column open. **`Esc`** unwinds submodes in order: clear `#` → cancel `:` command mode → end `/` search → exit bulk submode → **return to the BMXt prompt** (column stays open). Close the column with **`tabs -exit -list`**.
 
@@ -1740,7 +1740,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
   - ウィンドウ行: `close`（`c`）、`newtab`（`nt`）、`edit`
   - グループ行: `move`（`m`）、`close`（`c`）、`newwindow`（`nw`）、`edit`
 - `:` コマンドモードでは、コマンド未入力のまま `Tab` または `Enter` を押すと、現在の対象（タブ／ウィンドウ／グループ）に応じた利用可能コマンドを薄いプレースホルダーで表示します。
-- **[MOVE]** は `↑`/`↓` で移動先タブを選び、`Enter` で `#` タブを一括移動します。
+- **[MOVE]** は `↑`/`↓` で移動先を選び、`Enter` で `#` タブを一括移動します。移動先が **タブグループ行** または **グループ内タブ** のときはそのグループに参加し、**未グループ** のときは現在のグループから外れます（**[GROUP]** を使わなくても別グループへ移動できます）。
 - **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します（**新しいグループ** を選ぶと名前・色パネルへ。**`Enter`** で作成確定、**`Esc`** でタブ一覧へ、**`Tab`** で名前↔色）。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
 - **対話的 `group new`**（プロンプトで tabId なし）: **group-new** variant のタブピッカー列を開く — `Tab` でタブ選択、**`Enter`** で **[GROUP]** → 新しいグループ と同じ名前・色パネルへ、再度 **`Enter`** で作成。
 - `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。絞り込み中は **フィルタ欄にキーボードフォーカスが残り**、一覧側に入力フォーカスが移らない。**`Esc`** の解除順は `#` 全解除 → `:` コマンドモード終了 → `/` 検索終了 → バルクサブモード終了 → **BMXt プロンプトへ**（列は開いたまま）。列を閉じるには **`tabs -exit -list`**。

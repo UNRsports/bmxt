@@ -64,10 +64,8 @@ export function resolveMovePlan(ctx: ResolveMovePlanContext): MovePlan | null {
   let shouldGroupToTargetAfterMove = false
   switch (ctx.targetKind) {
     case "tab":
-      if (isGroupSelection) {
-        shouldUngroupAfterMove = ctx.targetGroupId === null
-        shouldGroupToTargetAfterMove = ctx.targetGroupId !== null
-      }
+      shouldUngroupAfterMove = ctx.targetGroupId === null
+      shouldGroupToTargetAfterMove = ctx.targetGroupId !== null
       break
     case "window":
       break
