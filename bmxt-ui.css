@@ -1763,15 +1763,15 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-tab-picker-action-menu-panel {
   display: flex;
   flex-direction: column;
-  max-height: min(42%, 14em);
-  min-height: 0;
+  max-height: none;
+}
+
+.bmxt-tab-picker-action-menu-panel.bmxt-tab-picker-group-panel {
+  max-height: none;
 }
 
 .bmxt-tab-picker-action-menu-panel .bmxt-tab-picker-action-targets {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: 6.5em;
-  overflow-y: auto;
+  flex: 0 0 auto;
   margin: 0 0 6px;
   padding: 0 0 4px;
   border-bottom: 1px solid #30363d;
@@ -1823,9 +1823,9 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   padding: 2px 6px;
   margin: 0 -6px;
   color: #c9d1d9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .bmxt-tab-picker-new-group-meta {

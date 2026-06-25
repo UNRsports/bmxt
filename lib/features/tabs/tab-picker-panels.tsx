@@ -17,7 +17,7 @@ export function TabPickerActionMenuPanel({
   return (
     <div
       ref={panelRef}
-      className="bmxt-tab-picker-group-panel bmxt-tab-picker-action-menu-panel bmxt-scroll">
+      className="bmxt-tab-picker-group-panel bmxt-tab-picker-action-menu-panel">
       <div className="bmxt-tab-picker-group-head">
         {tTabs("tabs.picker.actionMenuTitle", uiSettings.locale)}
       </div>
