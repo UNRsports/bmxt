@@ -60,6 +60,15 @@ export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 /** UI settings storage mode (internal chrome.storage vs external directory). */
 export const UI_SETTINGS_STORAGE_CONFIG_KEY = "bmxt_ui_settings_storage_v1"
 
+/** Saved page snapshots (Markdown); mirrors UI settings storage mode. */
+export const SNAPSHOTS_STORAGE_KEY = "bmxt_snapshots_v1"
+
+/** Max Markdown body characters per snapshot (internal storage). */
+export const MAX_SNAPSHOT_BODY_CHARS = 200_000
+
+/** Max snapshot files kept in internal storage. */
+export const MAX_INTERNAL_SNAPSHOT_FILES = 500
+
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 

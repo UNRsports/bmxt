@@ -8,6 +8,7 @@ import { tryHandleNavEnterCommand } from "./command-dispatch/handle-nav-enter"
 import { tryHandleNavExitCommand } from "./command-dispatch/handle-nav-exit"
 import { tryHandleSearchExitCommand } from "./command-dispatch/handle-search-exit"
 import { tryHandleSearchListCommand } from "./command-dispatch/handle-search"
+import { tryHandleSnapshotSaveCommand } from "./command-dispatch/handle-snapshot"
 import { tryHandleSessionCommand } from "./command-dispatch/handle-session"
 import { tryHandleSettingCommand } from "./command-dispatch/handle-setting"
 import { tryHandleTabsListCommand } from "./command-dispatch/handle-tabs-list"
@@ -33,7 +34,8 @@ const DOMAIN_HANDLERS: readonly DomainHandler[] = [
   tryHandleGroupNewCommand,
   tryHandleSearchListCommand,
   tryHandleHelpCommand,
-  tryHandleDomListCommand
+  tryHandleDomListCommand,
+  tryHandleSnapshotSaveCommand
 ]
 
 function handleISearchExit(deps: CommandDispatchDeps): void {

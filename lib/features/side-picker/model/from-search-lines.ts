@@ -1,6 +1,6 @@
 import type { PickerEntry, PickerSource, SearchPageMatch } from "./picker-entry"
 
-const SEARCH_MERGE_SOURCES: PickerSource[] = ["history", "bookmark", "page"]
+const SEARCH_MERGE_SOURCES: PickerSource[] = ["history", "bookmark", "page", "snapshot"]
 
 function entrySearchSources(entry: PickerEntry): PickerSource[] {
   if (entry.sources && entry.sources.length > 0) {
@@ -12,7 +12,7 @@ function entrySearchSources(entry: PickerEntry): PickerSource[] {
   return []
 }
 
-const SCOPE_RE = /^\[(history|bookmark|page)\]$/i
+const SCOPE_RE = /^\[(history|bookmark|page|snapshot)\]$/i
 const MATCH_LINE_RE = /^L(\d+):\s*(.*)$/s
 
 function parseScope(label: string): PickerSource | null {
@@ -78,6 +78,7 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
     }
     let title = ""
     let url = ""
+    let fieldPath = ""
     let tabId: number | undefined
     let windowId: number | undefined
     const pageMatches: SearchPageMatch[] = []
@@ -89,6 +90,8 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
           title = field.value
         } else if (field.key === "url") {
           url = field.value
+        } else if (field.key === "path") {
+          fieldPath = field.value
         } else if (field.key === "tabid") {
           const n = Number.parseInt(field.value, 10)
           if (Number.isFinite(n)) {
@@ -114,21 +117,28 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
       continue
     }
     const normalizedMatches =
-      scope === "page" && pageMatches.length > 0
+      (scope === "page" || scope === "snapshot") && pageMatches.length > 0
         ? assignSnippetOccurrences(pageMatches)
         : undefined
+    const entryId =
+      scope === "page" && tabId != null
+        ? `page-tab-${tabId}`
+        : scope === "snapshot"
+          ? `snapshot-${entries.length}-${trimmedUrl}`
+          : `${scope}-${entries.length}-${trimmedUrl}`
     entries.push({
-      id:
-        scope === "page" && tabId != null
-          ? `page-tab-${tabId}`
-          : `${scope}-${entries.length}-${trimmedUrl}`,
+      id: entryId,
       source: scope,
       sources: [scope],
       title: title.trim() || trimmedUrl,
       url: trimmedUrl,
       tabId: scope === "page" ? tabId : undefined,
       windowId: scope === "page" ? windowId : undefined,
-      pageMatches: normalizedMatches
+      pageMatches: normalizedMatches,
+      meta:
+        scope === "snapshot" && fieldPath
+          ? { path: fieldPath }
+          : undefined
     })
     i++
   }

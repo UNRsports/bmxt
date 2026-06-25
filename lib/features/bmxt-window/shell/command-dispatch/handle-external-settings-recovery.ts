@@ -73,7 +73,8 @@ export function tryHandleExternalSettingsRecovery(
         logPrefix,
         tSetting("setting.storage.recovery.repickLoaded", locale, {
           directory: result.directoryName
-        })
+        }),
+        ...result.migrateLines
       ])
       return
     }
@@ -81,7 +82,8 @@ export function tryHandleExternalSettingsRecovery(
       logPrefix,
       tSetting("setting.storage.recovery.repickEmpty", locale, {
         directory: result.directoryName
-      })
+      }),
+      ...result.migrateLines
     ])
   })()
 

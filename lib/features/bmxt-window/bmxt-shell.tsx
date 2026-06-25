@@ -57,6 +57,7 @@ import { useLogScroll } from "./shell/useLogScroll"
 import { useSessionPromptActions } from "./shell/useSessionPromptActions"
 import { useDomListShell } from "./shell/useDomListShell"
 import { useSearchListShell } from "./shell/useSearchListShell"
+import { useSnapshotSaveShell } from "./shell/useSnapshotSaveShell"
 import { useSettingPickerShell } from "./shell/useSettingPickerShell"
 import { usePromptPickers } from "./shell/usePromptPickers"
 import { useNavPromptBridge } from "./shell/useNavPromptBridge"
@@ -582,6 +583,11 @@ export function BmxtShell({
     searchListPickerRef
   })
 
+  const { runSnapshotSave } = useSnapshotSaveShell({
+    uiLocale: uiSettings.locale,
+    appendLogLines
+  })
+
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => imeRef.current?.focus())
   }, [])
@@ -787,6 +793,7 @@ export function BmxtShell({
     setSubCmdPicker,
     runDomListAndShow,
     runSearchListSearch,
+    runSnapshotSave,
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,

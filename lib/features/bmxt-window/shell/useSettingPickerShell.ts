@@ -12,6 +12,7 @@ import {
   type SettingListPickerState
 } from "../../setting/setting-list-picker-state"
 import { replaceUiSettings } from "../../setting/settings"
+import { migrateSnapshotsToExternalBundleWithLog } from "../../snapshot/snapshot-external-migration"
 import {
   activateExternalUiSettingsStorage,
   activateInternalUiSettingsStorage,
@@ -215,6 +216,10 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           return
         }
         await activateExternalUiSettingsStorage(picked.handle, picked.directoryName)
+        const migrateLines = await migrateSnapshotsToExternalBundleWithLog(
+          picked.handle,
+          options.uiLocale
+        )
         const reloaded = await reloadUiSettingsFromExternalDirectory()
         if (reloaded.ok) {
           options.setSettingListPicker(options.sessionId, {
@@ -225,7 +230,8 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
             logPrefix,
             tSetting("setting.storage.externalActivatedLoaded", options.uiLocale, {
               directory: picked.directoryName
-            })
+            }),
+            ...migrateLines
           ])
         } else {
           options.setSettingListPicker(
@@ -236,7 +242,8 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
             logPrefix,
             tSetting("setting.storage.externalActivated", options.uiLocale, {
               directory: picked.directoryName
-            })
+            }),
+            ...migrateLines
           ])
         }
         return

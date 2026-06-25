@@ -44,11 +44,11 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page] [<pattern>] | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--all", "--history", "--bookmark", "--page"],
+          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot"],
           "tail": "rest"
         },
         {
@@ -180,6 +180,18 @@
       ]
     },
     {
+      "module": "snapshot",
+      "canonicalName": "snapshot",
+      "aliases": [],
+      "usagePrimary": "snapshot -save [<tabId>]",
+      "subcommands": [
+        {
+          "head": "-save",
+          "tail": "rest"
+        }
+      ]
+    },
+    {
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
@@ -251,6 +263,14 @@
       "fields": { "pattern": "string" },
       "tsHandlerFile": "search-page",
       "tsHandlerExport": "applySearchPageEffect"
+    },
+    {
+      "kind": "search_snapshot",
+      "rustVariant": "SearchSnapshot",
+      "shape": "record",
+      "fields": { "pattern": "string" },
+      "tsHandlerFile": "search-snapshot",
+      "tsHandlerExport": "applySearchSnapshotEffect"
     },
     {
       "kind": "group_new",

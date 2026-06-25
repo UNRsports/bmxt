@@ -58,6 +58,7 @@ export type CommandDispatchDeps = {
   setSubCmdPicker: (state: any) => void
   runDomListAndShow: (domListLine: string, trimmed: string, announce: boolean) => Promise<void>
   runSearchListSearch: (trimmed: string, searchListLine: any) => Promise<void>
+  runSnapshotSave: (trimmed: string, tabId?: string) => Promise<void>
   syncImeTokenPicker: (line: string, pos: number) => void
   openSessionNameTyping: (trimmed: string) => void
   saveSessionDisplayName: (name: string, lines: string[]) => void

@@ -14,6 +14,7 @@ describe("isSearchListReadyToRun", () => {
     assert.equal(isSearchListReadyToRun("search -list --history"), true)
     assert.equal(isSearchListReadyToRun("search -list --bookmark"), true)
     assert.equal(isSearchListReadyToRun("search -list --page"), true)
+    assert.equal(isSearchListReadyToRun("search -list --snapshot"), true)
     assert.equal(isSearchListReadyToRun("search -list --all"), true)
   })
 
@@ -44,7 +45,8 @@ describe("searchListEffectScopesForToken", () => {
     assert.deepEqual(searchListEffectScopesForToken("--all"), [
       "--history",
       "--bookmark",
-      "--page"
+      "--page",
+      "--snapshot"
     ])
   })
 

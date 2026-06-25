@@ -128,12 +128,12 @@
     "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
   },
   "cmd.search.usage.line1": {
-    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page）",
-    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)"
+    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page + snapshot）",
+    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page + snapshot)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list --all|--history|--bookmark|--page [<pattern>]   — スコープ（--all は横断）",
-    "en": "       search -list --all|--history|--bookmark|--page [<pattern>]   — scope (--all = cross-scope)"
+    "ja": "       search -list --all|--history|--bookmark|--page|--snapshot [<pattern>]   — スコープ（--all は横断）",
+    "en": "       search -list --all|--history|--bookmark|--page|--snapshot [<pattern>]   — scope (--all = cross-scope)"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -378,5 +378,41 @@
   "cmd.translate.usage.line3": {
     "ja": "       translate -setting --ja-en | --en-ja  — 翻訳ペアを設定（保存）",
     "en": "       translate -setting --ja-en | --en-ja  — set translation pair (saved)"
+  },
+  "cmd.snapshot.error.internal": {
+    "ja": "error: 不明な snapshot オプション (internal): {option}",
+    "en": "error: unknown snapshot option (internal): {option}"
+  },
+  "cmd.snapshot.error.unknownOption": {
+    "ja": "error: 不明な snapshot オプション: {option}",
+    "en": "error: unknown snapshot option: {option}"
+  },
+  "cmd.snapshot.migrate.done": {
+    "ja": "snapshot: 拡張機能内の {count} 件を外部ディレクトリへ移行しました",
+    "en": "snapshot: migrated {count} file(s) from extension storage to the external directory"
+  },
+  "cmd.snapshot.migrate.failed": {
+    "ja": "snapshot: 移行に失敗しました — {message}",
+    "en": "snapshot: migration failed — {message}"
+  },
+  "cmd.snapshot.save.done": {
+    "ja": "snapshot saved: {path} — {title}",
+    "en": "snapshot saved: {path} — {title}"
+  },
+  "cmd.snapshot.save.failed": {
+    "ja": "snapshot save failed: {message}",
+    "en": "snapshot save failed: {message}"
+  },
+  "cmd.snapshot.save.title": {
+    "ja": "snapshot -save は BMXt プロンプトから実行してください（アクティブタブまたは tabId を保存）。",
+    "en": "Run snapshot -save from the BMXt prompt (saves the active tab or optional tabId)."
+  },
+  "cmd.snapshot.usage.line1": {
+    "ja": "usage: snapshot -save [<tabId>]   — ページを Markdown スナップショットとして保存",
+    "en": "usage: snapshot -save [<tabId>]   — save page as a Markdown snapshot"
+  },
+  "cmd.snapshot.usage.line2": {
+    "ja": "       保存先は setting の storage モード（拡張機能内 / 外部ディレクトリ）に従います。",
+    "en": "       Storage follows setting storage mode (internal extension storage or external directory)."
   }
 }

@@ -7,11 +7,11 @@ import { wordBounds } from "../format/word-bounds.ts"
 
 const SEARCH_EXIT_LIST_RE = /^\s*search\s+-exit\s+-list\s*$/i
 
-const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page"])
+const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page", "--snapshot"])
 
-const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page"] as const
+const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page", "--snapshot"] as const
 
-const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page"] as const
+const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page", "--snapshot"] as const
 
 function searchListParts(trimmed: string): string[] {
   return trimmed.trim().split(/\s+/).filter((s) => s.length > 0)

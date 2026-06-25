@@ -98,6 +98,14 @@ export function searchCmdExitListLines(locale?: UiLocale): string[] {
   return [L("cmd.search.exitList.title", locale), L("cmd.search.exitList.detail", locale)]
 }
 
+export function snapshotCmdUsageLines(locale?: UiLocale): string[] {
+  return [L("cmd.snapshot.usage.line1", locale), L("cmd.snapshot.usage.line2", locale)]
+}
+
+export function snapshotCmdSaveLines(locale?: UiLocale): string[] {
+  return [L("cmd.snapshot.save.title", locale)]
+}
+
 export function translateCmdUsageLines(locale?: UiLocale): string[] {
   return [
     L("cmd.translate.usage.line1", locale),

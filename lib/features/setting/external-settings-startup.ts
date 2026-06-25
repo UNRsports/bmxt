@@ -1,3 +1,4 @@
+import { migrateSnapshotsToExternalBundleWithLog } from "../snapshot/snapshot-external-migration"
 import { tSetting } from "./i18n/ns/setting"
 import type { UiLocale } from "./locale"
 import {
@@ -41,7 +42,7 @@ export async function assessExternalSettingsBundleAtStartup(): Promise<ExternalS
 }
 
 export type ExternalSettingsRecoveryAnswerResult =
-  | { ok: true; kind: "repick"; loaded: boolean; directoryName: string }
+  | { ok: true; kind: "repick"; loaded: boolean; directoryName: string; migrateLines: string[] }
   | { ok: true; kind: "reset" }
   | { ok: false; kind: "invalid" }
   | { ok: false; kind: "pick_cancelled" }
@@ -73,6 +74,11 @@ export async function applyExternalSettingsRecoveryAnswer(
     }
   }
   await activateExternalUiSettingsStorage(picked.handle, picked.directoryName)
+  const cachedLocale = (await loadUiSettingsInternalCache()).locale
+  const migrateLines = await migrateSnapshotsToExternalBundleWithLog(
+    picked.handle,
+    cachedLocale
+  )
   const inspection = await inspectExternalSettingsBundle()
   if (inspection.status === "incomplete") {
     return {
@@ -86,11 +92,11 @@ export async function applyExternalSettingsRecoveryAnswer(
   if (reloaded.ok) {
     await mirrorUiSettingsToInternalCache(reloaded.settings)
     onSettingsCommitted(reloaded.settings)
-    return { ok: true, kind: "repick", loaded: true, directoryName: picked.directoryName }
+    return { ok: true, kind: "repick", loaded: true, directoryName: picked.directoryName, migrateLines }
   }
   const cached = await loadUiSettingsInternalCache()
   onSettingsCommitted(cached)
-  return { ok: true, kind: "repick", loaded: false, directoryName: picked.directoryName }
+  return { ok: true, kind: "repick", loaded: false, directoryName: picked.directoryName, migrateLines }
 }
 
 export function externalSettingsRecoveryFollowUpLogLines(
