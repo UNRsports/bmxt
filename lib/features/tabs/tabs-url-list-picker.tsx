@@ -70,9 +70,9 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
   } = props
 
   const extraFooter =
-    actionMenuPanel !== null ? (
-      <TabPickerActionMenuPanel panelRef={actionMenuPanelRef} actionMenuPanel={actionMenuPanel} />
-    ) : bulkSubMode === "group" && variant === "default" && groupNewPhase !== "meta" ? (
+    actionMenuPanel !== null
+      ? null
+      : bulkSubMode === "group" && variant === "default" && groupNewPhase !== "meta" ? (
       <TabPickerGroupTargetPanel
         panelRef={groupPanelRef}
         groupChoices={groupChoices}
@@ -114,57 +114,62 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     ) : null
 
   return (
-    <PickerListShell
-      headline={headLine}
-      keyboardActive={isHostPaneFocused}
-      searchMode={searchMode}
-      commandMode={false}
-      filterQuery={filterQuery}
-      commandBuffer=""
-      setInputEl={setInputEl}
-      onInputKeyDown={onInputKeyDown}
-      onInputChange={(value) => {
-        if (searchMode) {
-          setFilterQuery(value)
+    <div className="bmxt-tab-picker-action-menu-host">
+      <PickerListShell
+        headline={headLine}
+        keyboardActive={isHostPaneFocused}
+        searchMode={searchMode}
+        commandMode={false}
+        filterQuery={filterQuery}
+        commandBuffer=""
+        setInputEl={setInputEl}
+        onInputKeyDown={onInputKeyDown}
+        onInputChange={(value) => {
+          if (searchMode) {
+            setFilterQuery(value)
+          }
+        }}
+        onCompositionEndSearch={
+          searchMode ? (value) => setFilterQuery(value) : undefined
         }
-      }}
-      onCompositionEndSearch={
-        searchMode ? (value) => setFilterQuery(value) : undefined
-      }
-      inputAriaLabel={
-        searchMode
-          ? tPlainPicker("plainPicker.searchHint", locale)
-          : tTabs("tabs.picker.inputAria.keys", locale)
-      }
-      listAriaLabel={tTabs("tabs.picker.listAria", locale)}
-      listAriaMultiselectable
-      listActivedescendant={
-        visibleRowIndices[hi] !== undefined ? `bmxt-tab-row-${visibleRowIndices[hi]}` : undefined
-      }
-      listBody={
-        <TabPickerRowList
-          rows={rows}
-          visibleRowIndices={visibleRowIndices}
-          hi={hi}
-          moveDestHi={moveDestHi}
-          bulkSubMode={bulkSubMode}
-          markedWindowSet={markedWindowSet}
-          markedGroupSet={markedGroupSet}
-          markedTabSet={markedTabSet}
-          activeTabId={activeTabId}
-          trackedWindowId={trackedWindowId}
-          trackedWindowTitle={trackedWindowTitle}
-          showUrl={showUrl}
-          searchHighlightQuery={searchHighlightQuery}
-          setRowRef={setRowRef}
-          isWindowExpanded={isWindowExpanded}
-          isGroupExpanded={isGroupExpanded}
-        />
-      }
-      extraFooter={extraFooter}
-      searchFooter={searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
-      commandFooter={null}
-      inputRef={inputRef}
-    />
+        inputAriaLabel={
+          searchMode
+            ? tPlainPicker("plainPicker.searchHint", locale)
+            : tTabs("tabs.picker.inputAria.keys", locale)
+        }
+        listAriaLabel={tTabs("tabs.picker.listAria", locale)}
+        listAriaMultiselectable
+        listActivedescendant={
+          visibleRowIndices[hi] !== undefined ? `bmxt-tab-row-${visibleRowIndices[hi]}` : undefined
+        }
+        listBody={
+          <TabPickerRowList
+            rows={rows}
+            visibleRowIndices={visibleRowIndices}
+            hi={hi}
+            moveDestHi={moveDestHi}
+            bulkSubMode={bulkSubMode}
+            markedWindowSet={markedWindowSet}
+            markedGroupSet={markedGroupSet}
+            markedTabSet={markedTabSet}
+            activeTabId={activeTabId}
+            trackedWindowId={trackedWindowId}
+            trackedWindowTitle={trackedWindowTitle}
+            showUrl={showUrl}
+            searchHighlightQuery={searchHighlightQuery}
+            setRowRef={setRowRef}
+            isWindowExpanded={isWindowExpanded}
+            isGroupExpanded={isGroupExpanded}
+          />
+        }
+        extraFooter={extraFooter}
+        searchFooter={searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
+        commandFooter={null}
+        inputRef={inputRef}
+      />
+      {actionMenuPanel !== null ? (
+        <TabPickerActionMenuPanel panelRef={actionMenuPanelRef} actionMenuPanel={actionMenuPanel} />
+      ) : null}
+    </div>
   )
 }

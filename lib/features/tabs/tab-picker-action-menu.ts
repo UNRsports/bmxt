@@ -1,15 +1,20 @@
 import { groupRowKey } from "./tab-picker-keyboard"
 import { actionMenuItemsForKind } from "./tab-picker-overlay-constants"
-import type { ActionMenuPanel, SelectKind } from "./tab-picker-overlay-types"
+import type { ActionMenuPanel, ActionMenuTabTarget, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
 
-function tabTitleById(rows: TabPickerRow[], tabId: number): string {
+function tabTargetById(rows: TabPickerRow[], tabId: number): ActionMenuTabTarget {
   for (const row of rows) {
     if (row.kind === "tab" && row.tabId === tabId) {
-      return row.title
+      return {
+        tabId: row.tabId,
+        title: row.title,
+        url: row.url,
+        faviconSrc: row.faviconSrc
+      }
     }
   }
-  return `#${tabId}`
+  return { tabId, title: `#${tabId}`, url: "", faviconSrc: null }
 }
 
 function tabIdsForMarked(
@@ -94,31 +99,31 @@ export function resolveActionMenuTargetKind(
   return null
 }
 
-export function resolveActionMenuTabLabels(
+export function resolveActionMenuTabTargets(
   rows: TabPickerRow[],
   markedKind: SelectKind | null,
   markedTabIds: number[],
   markedWindowIds: number[],
   markedGroupKeys: string[],
   row: TabPickerRow | undefined
-): string[] {
+): ActionMenuTabTarget[] {
   const tabIds =
     markedKind !== null
       ? tabIdsForMarked(rows, markedKind, markedTabIds, markedWindowIds, markedGroupKeys)
       : row
         ? tabIdsForRow(rows, row)
         : []
-  return tabIds.map((id) => tabTitleById(rows, id))
+  return tabIds.map((id) => tabTargetById(rows, id))
 }
 
 export function buildActionMenuPanel(
   targetKind: SelectKind,
-  tabLabels: string[]
+  tabTargets: ActionMenuTabTarget[]
 ): ActionMenuPanel {
   return {
     pickIndex: 0,
     targetKind,
-    tabLabels
+    tabTargets
   }
 }
 

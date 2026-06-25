@@ -1,9 +1,14 @@
 import type { KeyboardEvent, RefObject } from "react"
 import { tTabs, type TabsMessageKey } from "../setting/i18n/ns/tabs"
 import { useUiSettings } from "../setting/use-ui-settings"
+import { displayTitle } from "./picker-rows"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import { groupEditMenuItems, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, GroupChoice } from "./tab-picker-overlay-types"
+import { resolveLiveTabFaviconSrc } from "./tab-picker-live-display"
+import { resolveLiveTabTitle, resolveLiveTabUrl } from "./tab-picker-live-tab-fields"
+import { TabPickerTabFavicon } from "./tab-picker-row-list"
+import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 
 export function TabPickerActionMenuPanel({
   panelRef,
@@ -13,33 +18,45 @@ export function TabPickerActionMenuPanel({
   actionMenuPanel: ActionMenuPanel
 }) {
   const { settings: uiSettings } = useUiSettings()
+  useTabPickerLiveFieldsRevision()
   const items = actionMenuItemsForKind(actionMenuPanel.targetKind)
   return (
     <div
       ref={panelRef}
-      className="bmxt-tab-picker-group-panel bmxt-tab-picker-action-menu-panel">
+      className="bmxt-tab-picker-group-panel bmxt-tab-picker-action-menu-panel bmxt-tab-picker-action-menu-panel--overlay">
       <div className="bmxt-tab-picker-group-head">
         {tTabs("tabs.picker.actionMenuTitle", uiSettings.locale)}
       </div>
-      {actionMenuPanel.tabLabels.length > 0 ? (
+      {actionMenuPanel.tabTargets.length > 0 ? (
         <div className="bmxt-tab-picker-action-targets">
-          {actionMenuPanel.tabLabels.map((label, idx) => (
-            <div key={`${idx}-${label}`} className="bmxt-tab-picker-action-target-row">
-              {label}
-            </div>
-          ))}
+          {actionMenuPanel.tabTargets.map((target) => {
+            const liveTitle = resolveLiveTabTitle(target.tabId, target.title)
+            const liveUrl = resolveLiveTabUrl(target.tabId, target.url)
+            const titleShown = displayTitle(liveTitle)
+            const faviconSrc = resolveLiveTabFaviconSrc(target.tabId, target.faviconSrc, liveUrl)
+            return (
+              <div key={target.tabId} className="bmxt-tab-picker-action-target-row">
+                <div className="bmxt-tab-picker-tab-title">
+                  {faviconSrc ? <TabPickerTabFavicon src={faviconSrc} /> : null}
+                  <span className="bmxt-tab-picker-action-target-title">{titleShown}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       ) : null}
-      {items.map((item, idx) => (
-        <div
-          key={item.id}
-          data-bmxt-action-pick={idx}
-          className={`bmxt-tab-picker-group-row${
-            idx === actionMenuPanel.pickIndex ? " bmxt-tab-picker-group-row--hi" : ""
-          }`}>
-          {tTabs(item.messageKey as TabsMessageKey, uiSettings.locale)}
-        </div>
-      ))}
+      <div className="bmxt-tab-picker-action-menu-items">
+        {items.map((item, idx) => (
+          <div
+            key={item.id}
+            data-bmxt-action-pick={idx}
+            className={`bmxt-tab-picker-group-row${
+              idx === actionMenuPanel.pickIndex ? " bmxt-tab-picker-group-row--hi" : ""
+            }`}>
+            {tTabs(item.messageKey as TabsMessageKey, uiSettings.locale)}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

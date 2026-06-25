@@ -10,7 +10,7 @@ import type {
   BulkSubMode,
   SelectKind
 } from "./tab-picker-overlay-types"
-import { buildActionMenuPanel, resolveActionMenuTabLabels, resolveActionMenuTargetKind } from "./tab-picker-action-menu"
+import { buildActionMenuPanel, resolveActionMenuTabTargets, resolveActionMenuTargetKind } from "./tab-picker-action-menu"
 import type { TabPickerEngineDispatch } from "./engine/types"
 import { getPickerRowAtHi, resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import {
@@ -144,7 +144,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     if (!targetKind) {
       return
     }
-    const tabLabels = resolveActionMenuTabLabels(
+    const tabTargets = resolveActionMenuTabTargets(
       rows,
       markedKind,
       markedTabIds,
@@ -156,7 +156,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
       type: "update",
       updater: (prev) => ({
         ...prev,
-        actionMenuPanel: buildActionMenuPanel(targetKind, tabLabels)
+        actionMenuPanel: buildActionMenuPanel(targetKind, tabTargets)
       })
     })
   }, [

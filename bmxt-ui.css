@@ -1760,6 +1760,16 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   background: #161b22;
 }
 
+.bmxt-tab-picker-action-menu-host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .bmxt-tab-picker-action-menu-panel {
   display: flex;
   flex-direction: column;
@@ -1768,6 +1778,34 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 
 .bmxt-tab-picker-action-menu-panel.bmxt-tab-picker-group-panel {
   max-height: none;
+}
+
+.bmxt-tab-picker-action-menu-panel--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin-top: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background-color: var(--bmxt-picker-bg);
+  background-image: var(--bmxt-picker-bg-image);
+  background-size: var(--bmxt-picker-bg-size);
+  background-position: var(--bmxt-picker-bg-position);
+  background-repeat: var(--bmxt-picker-bg-repeat);
+  padding: 8px 10px 10px;
+}
+
+.bmxt-tab-picker-action-menu-panel--overlay .bmxt-tab-picker-action-targets {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid #30363d;
+}
+
+.bmxt-tab-picker-action-menu-panel--overlay .bmxt-tab-picker-action-menu-items {
+  flex-shrink: 0;
 }
 
 .bmxt-tab-picker-action-menu-panel .bmxt-tab-picker-action-targets {
@@ -1823,6 +1861,20 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   padding: 2px 6px;
   margin: 0 -6px;
   color: #c9d1d9;
+}
+
+.bmxt-tab-picker-action-target-row .bmxt-tab-picker-tab-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  white-space: normal;
+  word-break: normal;
+}
+
+.bmxt-tab-picker-action-target-title {
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;

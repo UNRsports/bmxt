@@ -18,10 +18,17 @@ export type ActionMenuItemId =
   | "edit"
   | "reload"
 
+export type ActionMenuTabTarget = {
+  tabId: number
+  title: string
+  url: string
+  faviconSrc: string | null
+}
+
 export type ActionMenuPanel = {
   pickIndex: number
   targetKind: SelectKind
-  tabLabels: string[]
+  tabTargets: ActionMenuTabTarget[]
 }
 
 export type GroupEditMenuActionId = "rename" | "ungroup" | "deleteGroup"

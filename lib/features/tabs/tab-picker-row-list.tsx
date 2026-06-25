@@ -28,7 +28,7 @@ function renderHighlighted(text: string, needle: string, keyPrefix: string): Rea
   })
 }
 
-function TabPickerTabFavicon({ src }: { src: string }) {
+export function TabPickerTabFavicon({ src }: { src: string }) {
   return (
     <img
       className="bmxt-tab-picker-tab-favicon"
