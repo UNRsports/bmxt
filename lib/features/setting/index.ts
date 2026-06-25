@@ -142,6 +142,7 @@ export {
   assessExternalSettingsBundleAtStartup,
   externalSettingsRecoveryLogLines,
   applyExternalSettingsRecoveryAnswer,
+  type ExternalBundleMissingItem,
   type ExternalSettingsStartupAssessment,
   type ExternalSettingsRecoveryAnswerResult
 } from "./external-settings-startup"

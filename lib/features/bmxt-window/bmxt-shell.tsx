@@ -711,7 +711,8 @@ export function BmxtShell({
     void appendLogLines(
       externalSettingsRecoveryLogLines(
         uiSettings.locale,
-        externalSettingsRecovery.directoryName
+        externalSettingsRecovery.directoryName,
+        externalSettingsRecovery.missing
       )
     )
   }, [

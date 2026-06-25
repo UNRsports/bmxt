@@ -144,8 +144,8 @@ describe("setting list picker draft", () => {
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
-  it("maps reset-search-cache to confirm view", () => {
-    assert.equal(settingMainRowTargetView("reset-search-cache"), "searchCacheResetConfirm")
+  it("maps reset-default to confirm view", () => {
+    assert.equal(settingMainRowTargetView("reset-default"), "resetConfirm")
   })
 })
 

@@ -1,5 +1,4 @@
 import { useCallback } from "react"
-import { resetSearchCacheFromSettings } from "../../search/cache/search-cache-store"
 import { importBackgroundImageFromFilePicker } from "../../setting/bg-image-import"
 import { bgImportErrorLine } from "../../setting/i18n/resolvers"
 import type { SettingEditField } from "../../setting/setting-picker-edit"
@@ -126,24 +125,6 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         return
       }
       if (row.id === "reset-no") {
-        return
-      }
-      if (row.id === "search-cache-reset-yes") {
-        try {
-          await resetSearchCacheFromSettings()
-          options.setSettingListPicker(options.sessionId, settingPickerGoToView("main", current))
-          await options.appendLogLines([logPrefix, tSetting("setting.searchCache.resetDone", options.uiLocale)])
-        } catch (e) {
-          await options.appendLogLines([
-            logPrefix,
-            tError("error.generic", options.uiLocale, {
-              message: e instanceof Error ? e.message : String(e)
-            })
-          ])
-        }
-        return
-      }
-      if (row.id === "search-cache-reset-no") {
         return
       }
       if (row.id === "size") {

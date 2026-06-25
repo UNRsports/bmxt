@@ -12,6 +12,7 @@ import {
 import {
   applyExternalSettingsRecoveryAnswer,
   assessExternalSettingsBundleAtStartup,
+  type ExternalBundleMissingItem,
   type ExternalSettingsRecoveryAnswerResult
 } from "./external-settings-startup"
 import { useUiSettings } from "./use-ui-settings"
@@ -20,6 +21,7 @@ export type ExternalSettingsRecoveryContextValue = {
   pendingRef: React.MutableRefObject<boolean>
   pending: boolean
   directoryName: string | null
+  missing: readonly ExternalBundleMissingItem[]
   announcedRef: React.MutableRefObject<boolean>
   submitRecoveryAnswer: (trimmed: string) => Promise<ExternalSettingsRecoveryAnswerResult>
 }
@@ -34,6 +36,7 @@ export function ExternalSettingsRecoveryProvider({ children }: { children: React
   const announcedRef = useRef(false)
   const [pending, setPending] = useState(false)
   const [directoryName, setDirectoryName] = useState<string | null>(null)
+  const [missing, setMissing] = useState<ExternalBundleMissingItem[]>([])
 
   useEffect(() => {
     void assessExternalSettingsBundleAtStartup().then((assessment) => {
@@ -43,6 +46,7 @@ export function ExternalSettingsRecoveryProvider({ children }: { children: React
       pendingRef.current = true
       setPending(true)
       setDirectoryName(assessment.directoryName)
+      setMissing(assessment.missing)
     })
   }, [])
 
@@ -54,7 +58,13 @@ export function ExternalSettingsRecoveryProvider({ children }: { children: React
       if (result.ok) {
         pendingRef.current = false
         setPending(false)
+        setMissing([])
         void reloadSettings()
+        return result
+      }
+      if (result.kind === "bundle_incomplete") {
+        setDirectoryName(result.directoryName)
+        setMissing(result.missing)
       }
       return result
     },
@@ -66,10 +76,11 @@ export function ExternalSettingsRecoveryProvider({ children }: { children: React
       pendingRef,
       pending,
       directoryName,
+      missing,
       announcedRef,
       submitRecoveryAnswer
     }),
-    [directoryName, pending, submitRecoveryAnswer]
+    [directoryName, missing, pending, submitRecoveryAnswer]
   )
 
   return (

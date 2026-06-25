@@ -291,10 +291,6 @@
     "ja": "setting -list · reset（リセット） · ↑↓ · → 確定 · ← 一覧",
     "en": "setting -list · reset · ↑↓ · → confirm · ← list"
   },
-  "setting.picker.headline.searchCacheResetConfirm": {
-    "ja": "setting -list · search-cache reset · ↑↓ · → 確定 · ← 一覧",
-    "en": "setting -list · search-cache reset · ↑↓ · → confirm · ← list"
-  },
   "setting.picker.headline.searchHitHighlight": {
     "ja": "setting -list · search-hit-highlight（検索ヒット強調） · → 編集 · ← 一覧",
     "en": "setting -list · search-hit-highlight · → edit · ← list"
@@ -378,10 +374,6 @@
   "setting.picker.main.reset": {
     "ja": "reset-default — 外観を既定値に戻す",
     "en": "reset-default — restore appearance to defaults"
-  },
-  "setting.picker.main.resetSearchCache": {
-    "ja": "reset-search-cache — 履歴／ブックマークの search SQLite キャッシュを消去",
-    "en": "reset-search-cache — clear history/bookmark search SQLite cache"
   },
   "setting.picker.main.save": {
     "ja": "> 設定を保存して終了",
@@ -480,8 +472,40 @@
     "en": "setting: File System Access API is unavailable in this environment"
   },
   "setting.storage.recovery.warning": {
-    "ja": "setting: 外部保存先（{location}）に設定バンドル（settings.json 等）が見つかりません",
-    "en": "setting: external settings bundle (settings.json, etc.) not found at {location}"
+    "ja": "setting: 外部保存先（{location}）の設定バンドルに不足があります",
+    "en": "setting: external settings bundle at {location} is incomplete"
+  },
+  "setting.storage.recovery.missingHead": {
+    "ja": "setting: 不足している項目:",
+    "en": "setting: missing items:"
+  },
+  "setting.storage.recovery.missing.directoryHandle": {
+    "ja": "保存先フォルダの参照（ディレクトリハンドル）",
+    "en": "saved folder reference (directory handle)"
+  },
+  "setting.storage.recovery.missing.directoryPermission": {
+    "ja": "保存先フォルダへのアクセス権限",
+    "en": "permission to access the saved folder"
+  },
+  "setting.storage.recovery.missing.settingsJson": {
+    "ja": "設定ファイル ({file})",
+    "en": "settings file ({file})"
+  },
+  "setting.storage.recovery.missing.settingsJsonInvalid": {
+    "ja": "設定ファイルの内容が無効 ({file})",
+    "en": "invalid settings file content ({file})"
+  },
+  "setting.storage.recovery.missing.backgroundImage": {
+    "ja": "壁紙画像 ({file})",
+    "en": "background image ({file})"
+  },
+  "setting.storage.recovery.missing.pickerBackgroundImage": {
+    "ja": "ピッカー壁紙画像 ({file})",
+    "en": "picker background image ({file})"
+  },
+  "setting.storage.recovery.repickStillIncomplete": {
+    "ja": "setting: 選択した保存先（{location}）の設定バンドルにも不足があります",
+    "en": "setting: selected folder ({location}) bundle is also incomplete"
   },
   "setting.storage.recovery.locationUnknown": {
     "ja": "（保存先不明）",
@@ -551,14 +575,6 @@
     "ja": "setting: 設定を保存しました",
     "en": "setting: settings saved"
   },
-  "setting.picker.searchCacheResetNo": {
-    "ja": "n — キャンセル",
-    "en": "n — cancel"
-  },
-  "setting.picker.searchCacheResetYes": {
-    "ja": "y — search メタデータキャッシュ（履歴／ブックマーク SQLite）を消去",
-    "en": "y — clear search metadata cache (history/bookmark SQLite)"
-  },
   "setting.prompt.editBgColor": {
     "ja": "背景色 (hex、現在 {current}):",
     "en": "Background color (hex, current {current}):"
@@ -574,10 +590,6 @@
   "setting.prompt.editInvalid": {
     "ja": "入力が無効です。もう一度入力してください。",
     "en": "Invalid input. Try again."
-  },
-  "setting.searchCache.resetDone": {
-    "ja": "setting: search メタデータキャッシュ（SQLite）を消去しました",
-    "en": "setting: search metadata cache (SQLite) cleared"
   },
   "setting.summary.bgColor": {
     "ja": "bg-color: {value}",

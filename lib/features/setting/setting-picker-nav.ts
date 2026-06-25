@@ -36,8 +36,6 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "pickerBgImage"
     case "reset-default":
       return "resetConfirm"
-    case "reset-search-cache":
-      return "searchCacheResetConfirm"
     case "storage-pick-dir":
     case "storage-reload":
     case "export":
@@ -59,8 +57,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "pickerFontSize" ||
     view === "bgImage" ||
     view === "pickerBgImage" ||
-    view === "resetConfirm" ||
-    view === "searchCacheResetConfirm"
+    view === "resetConfirm"
   )
 }
 

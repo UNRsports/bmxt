@@ -1,4 +1,5 @@
 import { tSetting } from "../../../setting/i18n/ns/setting"
+import { externalSettingsRecoveryFollowUpLogLines } from "../../../setting/external-settings-startup"
 import {
   clearPrompt,
   recordCommandHistory,
@@ -45,6 +46,17 @@ export function tryHandleExternalSettingsRecovery(
           tSetting("setting.storage.recovery.pickFailed", locale, {
             message: result.message
           })
+        ])
+        return
+      }
+      if (result.kind === "bundle_incomplete") {
+        await deps.appendLogLines([
+          logPrefix,
+          ...externalSettingsRecoveryFollowUpLogLines(
+            locale,
+            result.directoryName,
+            result.missing
+          )
         ])
       }
       return

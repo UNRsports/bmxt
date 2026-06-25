@@ -81,6 +81,130 @@ function imageFileNamesFromExportJson(json: SettingsExportJson): string[] {
   return names
 }
 
+function isSettingsExportVersion(raw: unknown): raw is SettingsExportJson["version"] {
+  return raw === 1 || raw === 2
+}
+
+export type ExternalBundleMissingKind =
+  | "directory_handle"
+  | "directory_permission"
+  | "settings_json"
+  | "settings_json_invalid"
+  | "background_image"
+  | "picker_background_image"
+
+export type ExternalBundleMissingItem = {
+  kind: ExternalBundleMissingKind
+  fileName?: string
+}
+
+export type ExternalBundleInspection =
+  | { status: "not_external" }
+  | { status: "ok"; directoryName: string | null }
+  | {
+      status: "incomplete"
+      directoryName: string | null
+      missing: ExternalBundleMissingItem[]
+    }
+
+async function collectMissingReferencedImages(
+  handle: FileSystemDirectoryHandle,
+  parsed: SettingsExportJson,
+  missing: ExternalBundleMissingItem[]
+): Promise<void> {
+  const globalFile = parsed.appearance.bgImageFile
+  if (globalFile) {
+    const bytes = await readFileBytes(handle, globalFile)
+    if (!bytes) {
+      missing.push({ kind: "background_image", fileName: globalFile })
+    }
+  }
+  const pickerFile = parsed.appearance.picker.bgImageFile
+  if (pickerFile) {
+    const bytes = await readFileBytes(handle, pickerFile)
+    if (!bytes) {
+      missing.push({ kind: "picker_background_image", fileName: pickerFile })
+    }
+  }
+}
+
+/** EN: Verify external bundle contents on each BMXt window launch (external mode only). */
+export async function inspectExternalSettingsBundle(): Promise<ExternalBundleInspection> {
+  const config = await loadUiSettingsStorageConfig()
+  if (config.mode !== "external") {
+    return { status: "not_external" }
+  }
+
+  const handle = await loadUiSettingsDirectoryHandle()
+  if (!handle) {
+    return {
+      status: "incomplete",
+      directoryName: config.directoryName,
+      missing: [{ kind: "directory_handle" }]
+    }
+  }
+
+  const directoryName = config.directoryName ?? handle.name
+
+  const allowed = await verifyDirectoryPermission(handle, false)
+  if (!allowed) {
+    return {
+      status: "incomplete",
+      directoryName,
+      missing: [{ kind: "directory_permission" }]
+    }
+  }
+
+  const missing: ExternalBundleMissingItem[] = []
+  const jsonBytes = await readFileBytes(handle, SETTINGS_JSON_NAME)
+  if (!jsonBytes) {
+    missing.push({ kind: "settings_json", fileName: SETTINGS_JSON_NAME })
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(jsonBytes))
+  } catch {
+    missing.push({ kind: "settings_json_invalid", fileName: SETTINGS_JSON_NAME })
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    missing.push({ kind: "settings_json_invalid", fileName: SETTINGS_JSON_NAME })
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  const record = parsed as Record<string, unknown>
+  if (!isSettingsExportVersion(record.version)) {
+    missing.push({ kind: "settings_json_invalid", fileName: SETTINGS_JSON_NAME })
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  if (!record.appearance || typeof record.appearance !== "object") {
+    missing.push({ kind: "settings_json_invalid", fileName: SETTINGS_JSON_NAME })
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  await collectMissingReferencedImages(
+    handle,
+    record as SettingsExportJson,
+    missing
+  )
+  if (missing.length > 0) {
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  try {
+    await loadUiSettingsFromDirectory(handle)
+  } catch {
+    missing.push({ kind: "settings_json_invalid", fileName: SETTINGS_JSON_NAME })
+    return { status: "incomplete", directoryName, missing }
+  }
+
+  return { status: "ok", directoryName }
+}
+
 async function removeBundleFileIfPresent(
   dir: FileSystemDirectoryHandle,
   name: string

@@ -3,13 +3,6 @@
  * JA: `search -list` 用の履歴・ブックマークキャッシュ（メモリのみ、SQLite なし）。
  */
 
-import {
-  JOB_DB_KEY,
-  SEARCH_CACHE_BOOKMARK_KEY,
-  SEARCH_CACHE_DB_KEY,
-  SEARCH_CACHE_HISTORY_KEY,
-  SEARCH_CACHE_PAGE_KEY
-} from "../../extension-storage/keys"
 import { HISTORY_LOOKBACK_MS, MAX_BOOKMARK_ROWS, MAX_HISTORY_RESULTS } from "../limits"
 import { bookmarkTreeRevision, flattenBookmarkTreeWithRevision } from "./bookmark-revision"
 import { isHistoryCacheEntryFresh } from "./stale"
@@ -237,16 +230,3 @@ export async function removePageCacheTab(_tabId: number): Promise<void> {}
 
 /** EN: Legacy no-op — nothing to flush without SQLite. */
 export async function flushSearchCacheDb(): Promise<void> {}
-
-/** EN: Clear in-memory cache and drop legacy storage blobs from settings. */
-export async function resetSearchCacheFromSettings(): Promise<void> {
-  historyCache = null
-  bookmarkCache = null
-  await chrome.storage.local.remove([
-    SEARCH_CACHE_DB_KEY,
-    SEARCH_CACHE_HISTORY_KEY,
-    SEARCH_CACHE_BOOKMARK_KEY,
-    SEARCH_CACHE_PAGE_KEY,
-    JOB_DB_KEY
-  ])
-}

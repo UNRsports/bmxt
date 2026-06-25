@@ -269,7 +269,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `bmxt_process_ui_v1` | Open picker slots per session (`tabs` / `search` / `dom` / `setting`) and `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
 
-**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance; always written on save), UI settings **storage mode** (`bmxt_ui_settings_storage_v1` — internal vs external), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) may still be removed via **setting → reset-search-cache** but are no longer written (since **0.6.9**).
+**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance; always written on save), UI settings **storage mode** (`bmxt_ui_settings_storage_v1` — internal vs external), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) from versions before **0.6.9** may remain in `chrome.storage.local` until extension uninstall; they are no longer written.
 
 **Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
 
@@ -1289,7 +1289,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `bmxt_process_ui_v1` | セッションごとの開いているピッカー（`tabs` / `search` / `dom` / `setting`）と `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観；save 時に常に更新）、UI 設定**保存先モード**（`bmxt_ui_settings_storage_v1` — 拡張機能内／外部）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は **setting → reset-search-cache** で削除可能だが、**0.6.9** 以降は新規書き込みしない。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観；save 時に常に更新）、UI 設定**保存先モード**（`bmxt_ui_settings_storage_v1` — 拡張機能内／外部）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。**0.6.9** より前の旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は `chrome.storage.local` に残ることがあるが、新規書き込みはしない（拡張機能アンインストールで消去）。
 
 **実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
 

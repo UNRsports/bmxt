@@ -39,7 +39,6 @@ export type SettingPickerRowId =
   | "bg-import"
   | "bg-clear"
   | "reset-default"
-  | "reset-search-cache"
   | "storage"
   | "storage-mode-internal"
   | "storage-mode-external"
@@ -51,8 +50,6 @@ export type SettingPickerRowId =
   | "locale-en"
   | "reset-yes"
   | "reset-no"
-  | "search-cache-reset-yes"
-  | "search-cache-reset-no"
   | "save"
   | "cancel"
 
@@ -144,7 +141,7 @@ export function settingPickerInitialHi(
   if (view === "pickerBgImage") {
     return appearance.picker.bgImageDataUrl ? 1 : 0
   }
-  if (view === "resetConfirm" || view === "searchCacheResetConfirm") {
+  if (view === "resetConfirm") {
     return 1
   }
   return 0
@@ -330,19 +327,6 @@ export function buildSettingPickerRows(
     ]
   }
 
-  if (view === "searchCacheResetConfirm") {
-    return [
-      {
-        id: "search-cache-reset-yes",
-        line: tSetting("setting.picker.searchCacheResetYes", locale)
-      },
-      {
-        id: "search-cache-reset-no",
-        line: tSetting("setting.picker.searchCacheResetNo", locale)
-      }
-    ]
-  }
-
   const bgImageLabel = appearance.bgImageDataUrl
     ? tSetting("setting.summary.set", locale)
     : tSetting("setting.summary.none", locale)
@@ -482,10 +466,6 @@ export function buildSettingPickerRows(
       line: tSetting("setting.picker.main.reset", locale)
     },
     {
-      id: "reset-search-cache",
-      line: tSetting("setting.picker.main.resetSearchCache", locale)
-    },
-    {
       id: "export",
       line: tSetting("setting.picker.main.export", locale)
     },
@@ -549,9 +529,7 @@ export function settingPickerHeadline(
                               ? "setting.picker.headline.fontPicker"
                               : view === "resetConfirm"
                                 ? "setting.picker.headline.resetConfirm"
-                                : view === "searchCacheResetConfirm"
-                                  ? "setting.picker.headline.searchCacheResetConfirm"
-                                  : "setting.picker.headline.main"
+                                : "setting.picker.headline.main"
   return tSetting(key, locale)
 }
 

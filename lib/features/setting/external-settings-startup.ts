@@ -1,14 +1,17 @@
-import { parseAppearanceResetConfirmAnswer } from "./parse-appearance-reset-confirm"
 import { tSetting } from "./i18n/ns/setting"
 import type { UiLocale } from "./locale"
 import {
+  externalSettingsRecoveryLogLines,
+  formatExternalBundleMissingLine
+} from "./external-settings-recovery-log"
+import { parseAppearanceResetConfirmAnswer } from "./parse-appearance-reset-confirm"
+import {
   activateExternalUiSettingsStorage,
-  loadUiSettingsFromDirectory,
+  inspectExternalSettingsBundle,
   pickUiSettingsDirectory,
-  reloadUiSettingsFromExternalDirectory
+  reloadUiSettingsFromExternalDirectory,
+  type ExternalBundleMissingItem
 } from "./settings-external-storage"
-import { loadUiSettingsDirectoryHandle } from "./settings-handle-db"
-import { loadUiSettingsStorageConfig } from "./settings-storage-config"
 import {
   loadUiSettingsInternalCache,
   replaceUiSettings,
@@ -16,38 +19,23 @@ import {
   type UiSettings
 } from "./settings"
 
+export type { ExternalBundleMissingItem } from "./settings-external-storage"
+export { externalSettingsRecoveryLogLines, formatExternalBundleMissingLine } from "./external-settings-recovery-log"
+
 export type ExternalSettingsStartupAssessment =
   | { needsRecovery: false }
-  | { needsRecovery: true; directoryName: string | null }
+  | { needsRecovery: true; directoryName: string | null; missing: ExternalBundleMissingItem[] }
 
 export async function assessExternalSettingsBundleAtStartup(): Promise<ExternalSettingsStartupAssessment> {
-  const config = await loadUiSettingsStorageConfig()
-  if (config.mode !== "external") {
+  const inspection = await inspectExternalSettingsBundle()
+  if (inspection.status === "not_external" || inspection.status === "ok") {
     return { needsRecovery: false }
   }
-  const handle = await loadUiSettingsDirectoryHandle()
-  if (!handle) {
-    return { needsRecovery: true, directoryName: config.directoryName }
+  return {
+    needsRecovery: true,
+    directoryName: inspection.directoryName,
+    missing: inspection.missing
   }
-  try {
-    await loadUiSettingsFromDirectory(handle)
-    return { needsRecovery: false }
-  } catch {
-    return { needsRecovery: true, directoryName: config.directoryName }
-  }
-}
-
-export function externalSettingsRecoveryLogLines(
-  locale: UiLocale,
-  directoryName: string | null
-): string[] {
-  const location =
-    directoryName ??
-    tSetting("setting.storage.recovery.locationUnknown", locale)
-  return [
-    tSetting("setting.storage.recovery.warning", locale, { location }),
-    tSetting("setting.storage.recovery.prompt", locale)
-  ]
 }
 
 export type ExternalSettingsRecoveryAnswerResult =
@@ -56,6 +44,7 @@ export type ExternalSettingsRecoveryAnswerResult =
   | { ok: false; kind: "invalid" }
   | { ok: false; kind: "pick_cancelled" }
   | { ok: false; kind: "pick_failed"; message: string }
+  | { ok: false; kind: "bundle_incomplete"; directoryName: string; missing: ExternalBundleMissingItem[] }
 
 export async function applyExternalSettingsRecoveryAnswer(
   trimmed: string,
@@ -82,6 +71,15 @@ export async function applyExternalSettingsRecoveryAnswer(
     }
   }
   await activateExternalUiSettingsStorage(picked.handle, picked.directoryName)
+  const inspection = await inspectExternalSettingsBundle()
+  if (inspection.status === "incomplete") {
+    return {
+      ok: false,
+      kind: "bundle_incomplete",
+      directoryName: picked.directoryName,
+      missing: inspection.missing
+    }
+  }
   const reloaded = await reloadUiSettingsFromExternalDirectory()
   if (reloaded.ok) {
     await replaceUiSettings(reloaded.settings)
@@ -92,4 +90,20 @@ export async function applyExternalSettingsRecoveryAnswer(
   await replaceUiSettings(cached)
   onSettingsCommitted(cached)
   return { ok: true, kind: "repick", loaded: false, directoryName: picked.directoryName }
+}
+
+export function externalSettingsRecoveryFollowUpLogLines(
+  locale: UiLocale,
+  directoryName: string,
+  missing: readonly ExternalBundleMissingItem[]
+): string[] {
+  const lines = [
+    tSetting("setting.storage.recovery.repickStillIncomplete", locale, { location: directoryName }),
+    tSetting("setting.storage.recovery.missingHead", locale)
+  ]
+  for (const item of missing) {
+    lines.push(`  - ${formatExternalBundleMissingLine(locale, item)}`)
+  }
+  lines.push(tSetting("setting.storage.recovery.prompt", locale))
+  return lines
 }
