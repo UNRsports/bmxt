@@ -1,7 +1,8 @@
-import type { KeyboardEvent, RefObject } from "react"
+import { Fragment, type KeyboardEvent, type RefObject } from "react"
 import { tTabs, type TabsMessageKey } from "../setting/i18n/ns/tabs"
 import { useUiSettings } from "../setting/use-ui-settings"
 import { displayTitle } from "./picker-rows"
+import { actionMenuTargetDividerColor } from "./tab-picker-action-menu"
 import { NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
 import { groupEditMenuItems, actionMenuItemsForKind } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, GroupChoice } from "./tab-picker-overlay-types"
@@ -29,18 +30,27 @@ export function TabPickerActionMenuPanel({
       </div>
       {actionMenuPanel.tabTargets.length > 0 ? (
         <div className="bmxt-tab-picker-action-targets">
-          {actionMenuPanel.tabTargets.map((target) => {
+          {actionMenuPanel.tabTargets.map((target, idx) => {
             const liveTitle = resolveLiveTabTitle(target.tabId, target.title)
             const liveUrl = resolveLiveTabUrl(target.tabId, target.url)
             const titleShown = displayTitle(liveTitle)
             const faviconSrc = resolveLiveTabFaviconSrc(target.tabId, target.faviconSrc, liveUrl)
+            const dividerColor = actionMenuTargetDividerColor(target.groupColor, idx)
             return (
-              <div key={target.tabId} className="bmxt-tab-picker-action-target-row">
-                <div className="bmxt-tab-picker-tab-title">
-                  {faviconSrc ? <TabPickerTabFavicon src={faviconSrc} /> : null}
-                  <span className="bmxt-tab-picker-action-target-title">{titleShown}</span>
+              <Fragment key={target.tabId}>
+                {idx > 0 ? (
+                  <hr
+                    className={`bmxt-tab-picker-action-target-divider bmxt-tab-picker-group-accent--${dividerColor}`}
+                    aria-hidden
+                  />
+                ) : null}
+                <div className="bmxt-tab-picker-action-target-row">
+                  <div className="bmxt-tab-picker-tab-title">
+                    {faviconSrc ? <TabPickerTabFavicon src={faviconSrc} /> : null}
+                    <span className="bmxt-tab-picker-action-target-title">{titleShown}</span>
+                  </div>
                 </div>
-              </div>
+              </Fragment>
             )
           })}
         </div>

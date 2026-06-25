@@ -18,11 +18,14 @@ export type ActionMenuItemId =
   | "edit"
   | "reload"
 
+import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
+
 export type ActionMenuTabTarget = {
   tabId: number
   title: string
   url: string
   faviconSrc: string | null
+  groupColor: NewGroupPaletteColor | null
 }
 
 export type ActionMenuPanel = {

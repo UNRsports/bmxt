@@ -1,5 +1,6 @@
 import { groupRowKey } from "./tab-picker-keyboard"
-import { actionMenuItemsForKind } from "./tab-picker-overlay-constants"
+import { actionMenuItemsForKind, NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
+import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, ActionMenuTabTarget, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
 
@@ -10,11 +11,23 @@ function tabTargetById(rows: TabPickerRow[], tabId: number): ActionMenuTabTarget
         tabId: row.tabId,
         title: row.title,
         url: row.url,
-        faviconSrc: row.faviconSrc
+        faviconSrc: row.faviconSrc,
+        groupColor: row.groupColor
       }
     }
   }
-  return { tabId, title: `#${tabId}`, url: "", faviconSrc: null }
+  return { tabId, title: `#${tabId}`, url: "", faviconSrc: null, groupColor: null }
+}
+
+/** EN: Divider accent — tab group color when set, else palette cycle for ungrouped rows. */
+export function actionMenuTargetDividerColor(
+  groupColor: NewGroupPaletteColor | null,
+  index: number
+): NewGroupPaletteColor {
+  if (groupColor !== null) {
+    return groupColor
+  }
+  return NEW_GROUP_COLORS[index % NEW_GROUP_COLORS.length]
 }
 
 function tabIdsForMarked(
