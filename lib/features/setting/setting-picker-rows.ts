@@ -17,6 +17,7 @@ import {
 } from "./locale"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
+import type { UiSettingsStorageConfig } from "./settings-storage-config"
 
 export type SettingPickerRowId =
   | "language"
@@ -39,6 +40,11 @@ export type SettingPickerRowId =
   | "bg-clear"
   | "reset-default"
   | "reset-search-cache"
+  | "storage"
+  | "storage-mode-internal"
+  | "storage-mode-external"
+  | "storage-pick-dir"
+  | "storage-reload"
   | "export"
   | "import"
   | "locale-ja"
@@ -110,13 +116,17 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
 export function settingPickerInitialHi(
   view: SettingListPickerView,
   locale: UiLocale,
-  appearance: UiAppearance
+  appearance: UiAppearance,
+  storageConfig?: UiSettingsStorageConfig
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
+  }
+  if (view === "storageMode") {
+    return storageConfig?.mode === "external" ? 1 : 0
   }
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -239,10 +249,25 @@ function buildPickerDetailRows(
   ]
 }
 
+function storageModeSummaryLabel(
+  storageConfig: UiSettingsStorageConfig | undefined,
+  locale: UiLocale
+): string {
+  if (storageConfig?.mode === "external") {
+    const dir = storageConfig.directoryName
+    if (dir) {
+      return tSetting("setting.picker.storageModeExternalNamed", locale, { directory: dir })
+    }
+    return tSetting("setting.picker.storageModeExternal", locale)
+  }
+  return tSetting("setting.picker.storageModeInternal", locale)
+}
+
 export function buildSettingPickerRows(
   view: SettingListPickerView,
   locale: UiLocale,
-  appearance: UiAppearance
+  appearance: UiAppearance,
+  storageConfig?: UiSettingsStorageConfig
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -259,6 +284,19 @@ export function buildSettingPickerRows(
     return [
       { id: "edit-picker-on", line: tSetting("setting.picker.editPickerOn", locale) },
       { id: "edit-picker-off", line: tSetting("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "storageMode") {
+    return [
+      {
+        id: "storage-mode-internal",
+        line: tSetting("setting.picker.storageModeInternalRow", locale)
+      },
+      {
+        id: "storage-mode-external",
+        line: tSetting("setting.picker.storageModeExternalRow", locale)
+      }
     ]
   }
 
@@ -418,6 +456,26 @@ export function buildSettingPickerRows(
     })
   }
 
+  rows.push({
+    id: "storage",
+    line: tSetting("setting.picker.main.storage", locale, {
+      value: storageModeSummaryLabel(storageConfig, locale)
+    })
+  })
+
+  if (storageConfig?.mode === "external") {
+    rows.push(
+      {
+        id: "storage-pick-dir",
+        line: tSetting("setting.picker.main.storagePickDir", locale)
+      },
+      {
+        id: "storage-reload",
+        line: tSetting("setting.picker.main.storageReload", locale)
+      }
+    )
+  }
+
   rows.push(
     {
       id: "reset-default",
@@ -463,7 +521,9 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
-          : view === "fontSize"
+          : view === "storageMode"
+            ? "setting.picker.headline.storageMode"
+            : view === "fontSize"
             ? "setting.picker.headline.fontSize"
             : view === "pickerFontSize"
               ? "setting.picker.headline.pickerFontSize"

@@ -403,6 +403,82 @@
     "ja": "size（ピッカー）: {value}",
     "en": "size (picker): {value}"
   },
+  "setting.picker.main.storage": {
+    "ja": "storage（保存先）: {value}",
+    "en": "storage: {value}"
+  },
+  "setting.picker.main.storagePickDir": {
+    "ja": "storage-pick-dir — 外部保存フォルダを選び直す",
+    "en": "storage-pick-dir — choose external folder again"
+  },
+  "setting.picker.main.storageReload": {
+    "ja": "storage-reload — 外部フォルダから設定を読み込む（プレビュー）",
+    "en": "storage-reload — load settings from external folder (preview)"
+  },
+  "setting.picker.headline.storageMode": {
+    "ja": "setting -list · storage（保存先） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · storage · ↑↓ · Enter/→ select · ← list"
+  },
+  "setting.picker.storageModeExternal": {
+    "ja": "外部フォルダ",
+    "en": "external folder"
+  },
+  "setting.picker.storageModeExternalNamed": {
+    "ja": "外部フォルダ · {directory}",
+    "en": "external folder · {directory}"
+  },
+  "setting.picker.storageModeExternalRow": {
+    "ja": "外部フォルダ — ユーザー指定ディレクトリに settings.json を保存",
+    "en": "external folder — save settings.json to a user-chosen directory"
+  },
+  "setting.picker.storageModeInternal": {
+    "ja": "拡張機能内（既定）",
+    "en": "extension internal (default)"
+  },
+  "setting.picker.storageModeInternalRow": {
+    "ja": "拡張機能内 — chrome.storage.local に保存（既定）",
+    "en": "extension internal — save in chrome.storage.local (default)"
+  },
+  "setting.storage.directoryUpdated": {
+    "ja": "setting: 外部保存フォルダを {directory} に変更しました",
+    "en": "setting: external folder changed to {directory}"
+  },
+  "setting.storage.externalActivated": {
+    "ja": "setting: 外部保存を有効化しました（{directory}）— 既存の settings.json はありません",
+    "en": "setting: external storage enabled ({directory}) — no existing settings.json"
+  },
+  "setting.storage.externalActivatedLoaded": {
+    "ja": "setting: 外部保存を有効化し {directory} から設定を読み込みました（プレビュー）",
+    "en": "setting: external storage enabled; loaded settings from {directory} (preview)"
+  },
+  "setting.storage.externalWriteFailed": {
+    "ja": "setting: 拡張機能内には保存しましたが、外部フォルダへの書き込みに失敗しました",
+    "en": "setting: saved internally but failed to write to external folder"
+  },
+  "setting.storage.internalActivated": {
+    "ja": "setting: 拡張機能内保存に切り替えました",
+    "en": "setting: switched to extension internal storage"
+  },
+  "setting.storage.pickCancelled": {
+    "ja": "setting: フォルダ選択をキャンセルしました",
+    "en": "setting: folder selection cancelled"
+  },
+  "setting.storage.pickFailed": {
+    "ja": "setting: フォルダ選択に失敗しました — {message}",
+    "en": "setting: folder selection failed — {message}"
+  },
+  "setting.storage.reloadDraft": {
+    "ja": "setting: 外部フォルダから設定をプレビューに読み込みました（> 設定を保存して終了 で確定）",
+    "en": "setting: loaded external settings into preview (use save setting & exit to commit)"
+  },
+  "setting.storage.reloadFailed": {
+    "ja": "setting: 外部フォルダからの読み込みに失敗しました — {message}",
+    "en": "setting: failed to load from external folder — {message}"
+  },
+  "setting.storage.unavailable": {
+    "ja": "setting: この環境では File System Access API を利用できません",
+    "en": "setting: File System Access API is unavailable in this environment"
+  },
   "setting.picker.notOpen": {
     "ja": "setting: 設定ピッカーは開いていません",
     "en": "setting: settings picker is not open"

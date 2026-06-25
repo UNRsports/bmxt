@@ -19,6 +19,7 @@ import { isSettingDetailView } from "./setting-picker-nav"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import { SettingPickerPreview } from "./setting-picker-preview"
 import { resolveSettingPickerPreviewAppearance } from "./setting-picker-edit"
+import { useUiSettingsStorageConfig } from "./use-ui-settings-storage-config"
 
 export type SettingPickerWrapperProps = {
   state: SettingListPickerState
@@ -45,6 +46,7 @@ export function SettingPickerWrapper({
   pickerInputRef,
   sessionId
 }: SettingPickerWrapperProps) {
+  const storageConfig = useUiSettingsStorageConfig()
   const { draft } = state
   const locale = draft.locale
   const appearance = draft.appearance
@@ -53,8 +55,8 @@ export function SettingPickerWrapper({
     [state]
   )
   const rows = useMemo(
-    () => buildSettingPickerRows(state.view, locale, appearance),
-    [state.view, locale, appearance]
+    () => buildSettingPickerRows(state.view, locale, appearance, storageConfig),
+    [state.view, locale, appearance, storageConfig]
   )
   const lines = useMemo(() => rows.map((row) => row.line), [rows])
   const headline = settingPickerHeadline(state.view, locale, state.editing)
@@ -118,6 +120,7 @@ export function SettingPickerWrapper({
       pickerInputRef={pickerInputRef}
       sessionId={sessionId}
       preview={preview}
+      storageConfig={storageConfig}
     />
   )
 }

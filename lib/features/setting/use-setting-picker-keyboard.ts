@@ -2,8 +2,8 @@ import { useCallback, useMemo } from "react"
 import { runPickerWindowCaptureChain } from "../side-picker/interaction/picker-list-kernel"
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
-import type { SettingListPickerState } from "./setting-list-picker-state"
-import { settingPickerGoToView } from "./setting-list-picker-state"
+import type { UiSettingsStorageConfig } from "./settings-storage-config"
+import { settingPickerGoToView, type SettingListPickerState } from "./setting-list-picker-state"
 import {
   isArrowLeft,
   isArrowRight,
@@ -38,6 +38,7 @@ export type UseSettingPickerKeyboardOptions = {
   keyboardActive: boolean
   sessionId?: string
   callbacks: SettingPickerKeyboardCallbacks
+  storageConfig?: UiSettingsStorageConfig
 }
 
 export function useSettingPickerKeyboard({
@@ -48,7 +49,8 @@ export function useSettingPickerKeyboard({
   setHi,
   keyboardActive,
   sessionId,
-  callbacks
+  callbacks,
+  storageConfig
 }: UseSettingPickerKeyboardOptions): {
   onWindowKeydownCapture: (ev: KeyboardEvent) => void
   onInputKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
@@ -112,7 +114,12 @@ export function useSettingPickerKeyboard({
       }
       onStateChange(settingPickerGoToView(target, state))
       setHi(
-        settingPickerInitialHi(target, state.draft.locale, state.draft.appearance)
+        settingPickerInitialHi(
+          target,
+          state.draft.locale,
+          state.draft.appearance,
+          storageConfig
+        )
       )
       return
     }
@@ -135,7 +142,10 @@ export function useSettingPickerKeyboard({
     setHi,
     startEditing,
     state.editing,
-    state.view
+    state.view,
+    state.draft.appearance,
+    state.draft.locale,
+    storageConfig
   ])
 
   const handleArrowLeft = useCallback((): void => {

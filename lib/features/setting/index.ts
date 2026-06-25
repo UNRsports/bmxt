@@ -109,10 +109,31 @@ export {
   validateSettingEditValue
 } from "./setting-picker-edit"
 export {
+  buildUiSettingsStorageEntries,
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker,
   type SettingsExportJson
 } from "./settings-export"
+export {
+  activateExternalUiSettingsStorage,
+  activateInternalUiSettingsStorage,
+  isFileSystemAccessAvailable,
+  pickUiSettingsDirectory,
+  reloadUiSettingsFromExternalDirectory,
+  repickUiSettingsDirectory,
+  tryLoadUiSettingsFromExternal,
+  trySaveUiSettingsToExternal,
+  type ExternalStorageErrorCode,
+  type PickUiSettingsDirectoryResult
+} from "./settings-external-storage"
+export {
+  DEFAULT_UI_SETTINGS_STORAGE_CONFIG,
+  normalizeUiSettingsStorageConfig,
+  type UiSettingsStorageConfig,
+  type UiSettingsStorageMode
+} from "./settings-storage-mode"
+export { loadUiSettingsStorageConfig, saveUiSettingsStorageConfig } from "./settings-storage-config"
+export { useUiSettingsStorageConfig } from "./use-ui-settings-storage-config"
 export {
   clearUiBackgroundImage,
   formatUiSettingsSummary,

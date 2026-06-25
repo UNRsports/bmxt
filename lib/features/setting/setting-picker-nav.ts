@@ -8,6 +8,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "language"
     case "edit-picker":
       return "editPicker"
+    case "storage":
+      return "storageMode"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -36,6 +38,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "resetConfirm"
     case "reset-search-cache":
       return "searchCacheResetConfirm"
+    case "storage-pick-dir":
+    case "storage-reload":
     case "export":
     case "import":
     case "save":
@@ -50,6 +54,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
   return (
     view === "language" ||
     view === "editPicker" ||
+    view === "storageMode" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||

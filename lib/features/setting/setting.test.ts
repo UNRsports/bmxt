@@ -16,6 +16,10 @@ import {
 } from "./setting-list-picker-state.ts"
 import { settingMainRowTargetView } from "./setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
+import {
+  normalizeUiSettingsStorageConfig,
+  type UiSettingsStorageConfig
+} from "./settings-storage-mode.ts"
 import type { UiAppearance } from "./appearance.ts"
 
 function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearance {
@@ -146,6 +150,23 @@ describe("setting list picker input", () => {
     assert.equal(parseSettingListPickerLine("setting -list"), true)
     assert.equal(parseSettingExitListLine("setting -exit -list"), true)
     assert.equal(parseSettingListPickerLine("setting -language"), false)
+  })
+})
+
+describe("ui settings storage config", () => {
+  it("normalizes storage mode", () => {
+    assert.deepEqual(normalizeUiSettingsStorageConfig(null), {
+      mode: "internal",
+      directoryName: null
+    })
+    assert.deepEqual(
+      normalizeUiSettingsStorageConfig({ mode: "external", directoryName: "bmxt-config" }),
+      { mode: "external", directoryName: "bmxt-config" } satisfies UiSettingsStorageConfig
+    )
+    assert.deepEqual(normalizeUiSettingsStorageConfig({ mode: "bogus" as "internal" }), {
+      mode: "internal",
+      directoryName: null
+    })
   })
 })
 

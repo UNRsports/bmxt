@@ -57,6 +57,9 @@ export const SEARCH_CACHE_PAGE_KEY = "bmxt_search_cache_page_v1"
 /** Global UI: display locale and terminal appearance. */
 export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
 
+/** UI settings storage mode (internal chrome.storage vs external directory). */
+export const UI_SETTINGS_STORAGE_CONFIG_KEY = "bmxt_ui_settings_storage_v1"
+
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 

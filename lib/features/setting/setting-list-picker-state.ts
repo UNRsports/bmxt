@@ -20,6 +20,7 @@ export type SettingListPickerView =
   | "fontPicker"
   | "resetConfirm"
   | "searchCacheResetConfirm"
+  | "storageMode"
 
 export type SettingListPickerState = {
   view: SettingListPickerView

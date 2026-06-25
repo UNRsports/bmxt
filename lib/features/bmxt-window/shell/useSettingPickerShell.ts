@@ -14,6 +14,14 @@ import {
 } from "../../setting/setting-list-picker-state"
 import { replaceUiSettings } from "../../setting/settings"
 import {
+  activateExternalUiSettingsStorage,
+  activateInternalUiSettingsStorage,
+  isFileSystemAccessAvailable,
+  pickUiSettingsDirectory,
+  reloadUiSettingsFromExternalDirectory,
+  repickUiSettingsDirectory
+} from "../../setting/settings-external-storage"
+import {
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker
 } from "../../setting/settings-export"
@@ -55,10 +63,16 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
       }
       if (row.id === "save") {
         const draft = current.draft
-        await replaceUiSettings(draft)
+        const { externalWriteFailed } = await replaceUiSettings(draft)
         options.replaceUiSettingsState(draft)
         options.closeSettingPickerColumn()
-        await options.appendLogLines([logPrefix, tSetting("setting.picker.saved", options.uiLocale)])
+        const lines = [logPrefix, tSetting("setting.picker.saved", options.uiLocale)]
+        if (externalWriteFailed) {
+          lines.push(
+            tSetting("setting.storage.externalWriteFailed", options.uiLocale)
+          )
+        }
+        await options.appendLogLines(lines)
         return
       }
       if (row.id === "cancel") {
@@ -181,6 +195,130 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           settingPickerApplyDraftToMain(current, bgPatch)
         )
         return
+      }
+      if (row.id === "storage-mode-internal") {
+        await activateInternalUiSettingsStorage()
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("main", current)
+        )
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.storage.internalActivated", options.uiLocale)
+        ])
+        return
+      }
+      if (row.id === "storage-mode-external") {
+        if (!isFileSystemAccessAvailable()) {
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.unavailable", options.uiLocale)
+          ])
+          return
+        }
+        const picked = await pickUiSettingsDirectory()
+        if (!picked.ok) {
+          if ("cancelled" in picked && picked.cancelled) {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickCancelled", options.uiLocale)
+            ])
+          } else {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickFailed", options.uiLocale, {
+                message: "message" in picked ? picked.message : tError("error.unknown", options.uiLocale)
+              })
+            ])
+          }
+          return
+        }
+        await activateExternalUiSettingsStorage(picked.handle, picked.directoryName)
+        const reloaded = await reloadUiSettingsFromExternalDirectory()
+        if (reloaded.ok) {
+          options.setSettingListPicker(options.sessionId, {
+            ...settingPickerGoToView("main", current),
+            draft: reloaded.settings
+          })
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.externalActivatedLoaded", options.uiLocale, {
+              directory: picked.directoryName
+            })
+          ])
+        } else {
+          options.setSettingListPicker(
+            options.sessionId,
+            settingPickerGoToView("main", current)
+          )
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.externalActivated", options.uiLocale, {
+              directory: picked.directoryName
+            })
+          ])
+        }
+        return
+      }
+      if (row.id === "storage-pick-dir") {
+        if (!isFileSystemAccessAvailable()) {
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.unavailable", options.uiLocale)
+          ])
+          return
+        }
+        const picked = await repickUiSettingsDirectory()
+        if (!picked.ok) {
+          if ("cancelled" in picked && picked.cancelled) {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickCancelled", options.uiLocale)
+            ])
+          } else {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickFailed", options.uiLocale, {
+                message: "message" in picked ? picked.message : tError("error.unknown", options.uiLocale)
+              })
+            ])
+          }
+          return
+        }
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.storage.directoryUpdated", options.uiLocale, {
+            directory: picked.directoryName
+          })
+        ])
+        return
+      }
+      if (row.id === "storage-reload") {
+        const reloaded = await reloadUiSettingsFromExternalDirectory()
+        if (reloaded.ok) {
+          const afterReload = options.settingListPickerRef.current ?? current
+          options.setSettingListPicker(options.sessionId, {
+            ...afterReload,
+            view: "main",
+            editing: false,
+            editDraft: "",
+            draft: reloaded.settings
+          })
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.reloadDraft", options.uiLocale)
+          ])
+          return
+        }
+        if (reloaded.ok === false) {
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.reloadFailed", options.uiLocale, {
+              message: reloaded.message
+            })
+          ])
+          return
+        }
       }
       if (row.id === "export") {
         try {

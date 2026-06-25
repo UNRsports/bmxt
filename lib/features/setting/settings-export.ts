@@ -7,7 +7,7 @@ import {
   type UiAppearanceLayer
 } from "./appearance"
 import type { UiLocale } from "./locale"
-import { loadUiSettings, type UiSettings } from "./settings"
+import type { UiSettings } from "./settings"
 import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
@@ -269,11 +269,19 @@ export function parseSettingsExportJson(
 }
 
 /** EN: Package UI settings JSON + background image into a zip and save locally. */
-export async function exportUiSettingsZip(
-  settings?: UiSettings
-): Promise<{ filename: string }> {
-  const resolved = settings ?? (await loadUiSettings())
-  const json = buildSettingsExportJson(resolved)
+export async function exportUiSettingsZip(settings: UiSettings): Promise<{ filename: string }> {
+  const entries = buildUiSettingsStorageEntries(settings)
+  const zipBytes = buildZipArchive(entries)
+  const filename = exportZipFilename()
+  downloadBlob(new Blob([zipBytes], { type: "application/zip" }), filename)
+  return { filename }
+}
+
+/** EN: Loose files written to an external directory (same layout as zip export). */
+export function buildUiSettingsStorageEntries(
+  settings: UiSettings
+): { name: string; data: Uint8Array }[] {
+  const json = buildSettingsExportJson(settings)
   const entries: { name: string; data: Uint8Array }[] = [
     {
       name: SETTINGS_JSON_NAME,
@@ -289,12 +297,9 @@ export async function exportUiSettingsZip(
       entries.push({ name: fileName, data: decoded.bytes })
     }
   }
-  pushImage(json.appearance.bgImageFile, resolved.appearance.bgImageDataUrl)
-  pushImage(json.appearance.picker.bgImageFile, resolved.appearance.picker.bgImageDataUrl)
-  const zipBytes = buildZipArchive(entries)
-  const filename = exportZipFilename()
-  downloadBlob(new Blob([zipBytes], { type: "application/zip" }), filename)
-  return { filename }
+  pushImage(json.appearance.bgImageFile, settings.appearance.bgImageDataUrl)
+  pushImage(json.appearance.picker.bgImageFile, settings.appearance.picker.bgImageDataUrl)
+  return entries
 }
 
 /** EN: Read a zip file from disk and return validated UI settings. */
