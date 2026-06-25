@@ -62,6 +62,62 @@
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
 
+# UI settings persistence / UI 設定の永続化（`setting`）
+
+**EN — Scope:** UI locale and terminal/picker appearance edited in **`setting -list`**. Implementation lives in **`lib/features/setting/`**; storage keys in **`lib/features/extension-storage/keys.ts`**. See README § **`setting`** for user-facing behavior.
+
+**JA — 範囲:** **`setting -list`** で編集する UI 言語・ターミナル／ピッカー外観。実装は **`lib/features/setting/`**、キーは **`lib/features/extension-storage/keys.ts`**。利用者向け説明は README の **`setting`** 節。
+
+**EN — Internal storage (default):** Committed settings are always mirrored in **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`UI_SETTINGS_KEY`). Storage mode preference is **`bmxt_ui_settings_storage_v1`** (`UI_SETTINGS_STORAGE_CONFIG_KEY`): `{ mode: "internal" | "external", directoryName: string | null }`. Default is **`internal`** only.
+
+**JA — 拡張機能内（既定）:** 確定した設定は常に **`chrome.storage.local`** の **`bmxt_ui_settings_v1`** に保持。保存先モードは **`bmxt_ui_settings_storage_v1`**（`{ mode: "internal" | "external", directoryName }`）。**未設定時は `internal` のみ**。
+
+**EN — External storage (optional):** When **`mode: "external"`**, the BMXt UI page uses the **File System Access API** (user-picked folder; **no new manifest permission**). The writable **bundle root** is either the picked directory (if it already contains **`settings.json`**) or **`<picked>/bmxt-ui-settings/`** (`EXTERNAL_SETTINGS_BUNDLE_DIR` in **`settings-bundle-layout.ts`**). The directory handle is persisted in **IndexedDB** (`settings-handle-db.ts`). On **`> save setting`**, write the bundle to disk **and** update **`bmxt_ui_settings_v1`** (cache + Service Worker locale). On load, prefer the external bundle when readable; otherwise fall back to **`bmxt_ui_settings_v1`**.
+
+**JA — 外部保存（任意）:** **`mode: "external"`** のとき BMXt UI ページが **File System Access API** でユーザー指定フォルダに読み書き（**manifest 権限追加なし**）。バンドルルートは、直下に **`settings.json`** があればそのフォルダ、なければ **`<選んだフォルダ>/bmxt-ui-settings/`**（定数は **`settings-bundle-layout.ts`**）。ハンドルは **IndexedDB**（**`settings-handle-db.ts`**）。**`> save setting`** でバンドルをディスクへ書き、同時に **`bmxt_ui_settings_v1`** も更新。読み込みは外部バンドル優先、失敗時は内部にフォールバック。
+
+**EN — Backup bundle format (zip export/import and external directory):** Single canonical layout—**do not fork** without a migration path.
+
+| File | Role |
+|------|------|
+| **`settings.json`** | Portable JSON; **`version`** field (currently **2**). Image paths are **relative file names** in the same bundle (`bgImageFile`, `picker.bgImageFile`). |
+| **`background-image.{png,jpg,webp}`** | Global background image when set |
+| **`picker-background-image.{png,jpg,webp}`** | Picker-layer background when set |
+
+Zip download (**export**) and external directory (**save**) must use the same bytes/layout via **`buildUiSettingsStorageEntries`** / **`parseSettingsExportJson`** (`settings-export.ts`, `settings-bundle-layout.ts`). Stale image files in an external bundle are pruned on save (`listKnownBundleImageFileNames`).
+
+**JA — バックアップバンドル（zip と外部ディレクトリ共通）:** 次が正規レイアウト。**移行なしで分岐しない**。
+
+| ファイル | 役割 |
+|----------|------|
+| **`settings.json`** | ポータブル JSON（**`version`**、現行 **2**）。画像は同梱ファイル名を **`bgImageFile`** 等で参照。 |
+| **`background-image.*`** | 全体背景画像 |
+| **`picker-background-image.*`** | ピッカー個別背景 |
+
+zip **export** と外部 **save** は **`buildUiSettingsStorageEntries`** / **`parseSettingsExportJson`** で同一内容にする。外部保存時は不要画像を **`listKnownBundleImageFileNames`** で削除。
+
+**EN — Backward compatibility (required on every settings change):** Future version bumps and schema changes **must** keep user data loadable.
+
+1. **`settings.json`:** Bump **`version`** only with a parser branch in **`parseSettingsExportJson`**; **keep importing older versions** (today: **v1** and **v2**). New fields: optional in JSON; apply **`normalizeUiAppearance`** / **`normalizeUiSettingsStorageConfig`** for missing keys.
+2. **Do not rename** bundle file names (`settings.json`, `background-image`, `picker-background-image`, `bmxt-ui-settings/`) without a compatibility reader and migration notes in README.
+3. **`bmxt_ui_settings_v1`:** Treat stored objects as partial; normalize on read—never assume every key exists.
+4. **External + zip:** A bundle saved by an older release must import on a newer release via **`import`** or **storage-reload**; round-trip **export** after edit should remain valid.
+5. **Tests:** Add or extend tests in **`setting.test.ts`** (and import parsers) when changing version or layout constants.
+6. **Docs:** Update README **`setting`** (EN + JA) when behavior or on-disk format changes.
+
+**JA — 後方互換（設定変更時は必須）:** バージョンアップ・仕様変更後も、外部保存／zip バックアップ／内部 storage のデータを読めること。
+
+1. **`settings.json`:** **`version`** 更新時は **`parseSettingsExportJson`** に旧版分岐を残す（現状 **v1** / **v2**）。新フィールドは任意とし、**`normalizeUiAppearance`** 等で欠損を補う。
+2. バンドル内の**定番ファイル名・`bmxt-ui-settings/` 名**を変える場合は互換読み取りと README 記載が必須。
+3. **`bmxt_ui_settings_v1`** は部分オブジェクトとして読み、正規化する。
+4. 旧版が書いた外部バンドル／zip は新版で **import** または **storage-reload** 可能であること。
+5. 版数・レイアウト変更時は **`setting.test.ts`** 等で検証を追加。
+6. 挙動・オンディスク形式の変更時は README **`setting`**（日英）を更新。
+
+**EN — Key modules:** `settings.ts` (load/save), `settings-export.ts` (zip + JSON), `settings-external-storage.ts` (FSAAPI), `settings-bundle-layout.ts` (bundle constants), `settings-storage-mode.ts` / `settings-storage-config.ts`, `appearance.ts` (`normalizeUiAppearance`).
+
+**JA — 主要モジュール:** 上記と同様（`settings.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`appearance.ts`）。
+
 # Command-line model / コマンドラインの考え方（実装時は必ず守る）
 
 **EN — Terminology:** Treat the prompt as a **token sequence**. The **first command** is the initial keyword (e.g. `tabs`, `split`). A **second command** is the next fixed token when the feature is split into a subcommand or flag-style token (e.g. `-list`, `-row`). Document and implement them **in that order** (first, then second).

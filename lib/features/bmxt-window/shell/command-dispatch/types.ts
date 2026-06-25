@@ -1,3 +1,4 @@
+import type { ExternalSettingsRecoveryAnswerResult } from "../../../setting/external-settings-startup"
 import type { JobRunner } from "../../../job"
 import type { SessionListRow } from "../../../session"
 import type { UiSettings } from "../../../setting/settings"
@@ -61,6 +62,10 @@ export type CommandDispatchDeps = {
   openSessionNameTyping: (trimmed: string) => void
   saveSessionDisplayName: (name: string, lines: string[]) => void
   onActivateSession: (sessionId: string) => Promise<void>
+  externalSettingsRecoveryPendingRef: React.MutableRefObject<boolean>
+  submitExternalSettingsRecoveryAnswer?: (
+    trimmed: string
+  ) => Promise<ExternalSettingsRecoveryAnswerResult>
 }
 
 export type CommandDispatchContext = {

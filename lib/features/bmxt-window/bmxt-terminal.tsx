@@ -36,6 +36,7 @@ import { useProcessUiPersistence } from "./use-process-ui-persistence"
 import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
+import { ExternalSettingsRecoveryProvider } from "../setting/use-external-settings-recovery"
 import { useTerminalAppearance } from "../setting/apply-appearance"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
@@ -209,7 +210,9 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
 export function BmxtTerminal() {
   return (
     <UiSettingsProvider>
-      <BmxtTerminalInner />
+      <ExternalSettingsRecoveryProvider>
+        <BmxtTerminalInner />
+      </ExternalSettingsRecoveryProvider>
     </UiSettingsProvider>
   )
 }

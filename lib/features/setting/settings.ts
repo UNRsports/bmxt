@@ -10,7 +10,13 @@ import {
   parseUiLocale,
   type UiLocale
 } from "./locale"
-import { tryLoadUiSettingsFromExternal, trySaveUiSettingsToExternal } from "./settings-external-storage"
+import {
+  activateInternalUiSettingsStorage,
+  clearExternalUiSettingsStorage,
+  loadUiSettingsFromDirectory,
+  tryLoadUiSettingsFromExternal,
+  trySaveUiSettingsToExternal
+} from "./settings-external-storage"
 
 export type UiSettings = {
   locale: UiLocale
@@ -33,6 +39,21 @@ async function loadUiSettingsFromChromeStorage(): Promise<UiSettings> {
     locale: parseUiLocale(o.locale),
     appearance: normalizeUiAppearance(o.appearance as Partial<UiAppearance>)
   }
+}
+
+export async function loadUiSettingsInternalCache(): Promise<UiSettings> {
+  return loadUiSettingsFromChromeStorage()
+}
+
+export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings> {
+  const defaults: UiSettings = {
+    locale: DEFAULT_UI_LOCALE,
+    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
+  }
+  await saveUiSettingsToChromeStorage(defaults)
+  await activateInternalUiSettingsStorage()
+  await clearExternalUiSettingsStorage()
+  return defaults
 }
 
 export async function loadUiSettings(): Promise<UiSettings> {

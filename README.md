@@ -232,7 +232,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --ja-en` | Save **ja → en** pair (default); round-trip preview and nav commit use English on Alt hold |
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
-| `setting -list` | Open the **settings picker** column (UI locale, terminal appearance, optional per-picker appearance, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `setting -list` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, export/import zip); changes apply only after **`> save setting`** in the picker |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
 | `session -new [name]` | Create a new **terminal session** and switch to it; optional display name |
@@ -269,7 +269,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `bmxt_process_ui_v1` | Open picker slots per session (`tabs` / `search` / `dom` / `setting`) and `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
 
-**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) may still be removed via **setting → reset-search-cache** but are no longer written (since **0.6.9**).
+**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance; always written on save), UI settings **storage mode** (`bmxt_ui_settings_storage_v1` — internal vs external), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) may still be removed via **setting → reset-search-cache** but are no longer written (since **0.6.9**).
 
 **Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
 
@@ -420,7 +420,7 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 
 ### `setting` (`setting -list` / `setting -exit -list`)
 
-UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column. Persisted in **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
+UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column. **Default persistence** is **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). **Optional external storage** uses the File System Access API (user-chosen folder); mode is stored in **`bmxt_ui_settings_storage_v1`**. The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
 
 | Input | Effect |
 |-------|--------|
@@ -432,8 +432,41 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 
 - Edits in the picker update a **draft** only. The live BMXt UI keeps the **last saved** settings until you commit.
 - The **Preview** panel at the bottom of the picker reflects the draft (split **Terminal** / **Picker** panes when **`edit-picker: on`**).
-- **`> save setting`** — writes draft to **`bmxt_ui_settings_v1`** and applies immediately.
+- **`> save setting`** — writes draft to **`bmxt_ui_settings_v1`**, and to the **external settings bundle** when external mode is on; applies immediately.
 - **`> cancel setting`** — discards the draft and restores values from storage.
+
+**Storage (internal vs external)**
+
+| Mode | Behavior |
+|------|----------|
+| **Extension internal** (default) | Settings live only in **`bmxt_ui_settings_v1`**. No File System Access API. |
+| **External folder** | User picks a parent directory once. BMXt reads/writes a **settings bundle** under that parent (see below). **`bmxt_ui_settings_v1`** is still updated on every save (cache + background locale). On startup, load prefers the external bundle when readable; otherwise falls back to internal storage. |
+
+**Picker rows (storage):** **storage** — choose internal or external; when external is active, **storage-pick-dir** (change folder) and **storage-reload** (load bundle into draft preview). Switching storage mode commits immediately (not draft-only). **No new manifest permission** — folder access is granted at runtime via the browser picker.
+
+**Backup bundle format (zip export/import and external directory)**
+
+Zip **export**, zip **import**, and **external save** share one **canonical on-disk layout** (implemented in **`settings-export.ts`**, **`settings-bundle-layout.ts`**):
+
+```
+bmxt-ui-settings/          ← subdirectory under the picked parent (or the picked folder if it already contains settings.json)
+  settings.json            ← version field (currently 2); locale + appearance; image paths as relative file names
+  background-image.png     ← when global bg-image is set (jpg/webp extensions also used)
+  picker-background-image.*  ← when picker-specific bg-image is set
+```
+
+- **export** — downloads a zip with the same files (portable backup).
+- **import** — reads a zip into the picker **draft** (commit with **`> save setting`**).
+- **External save** — writes the same files into the bundle directory; removes stale `background-image.*` / `picker-background-image.*` files when images are cleared or replaced.
+
+**Backward compatibility**
+
+When changing UI settings shape or on-disk format in a release:
+
+1. **`settings.json`:** Bump **`version`** only with an import branch in **`parseSettingsExportJson`**; **older versions must keep importing** (today: **v1** and **v2**). New JSON fields are optional; runtime uses **`normalizeUiAppearance`** and related normalizers.
+2. **Bundle file names** (`settings.json`, `background-image`, `picker-background-image`, directory name **`bmxt-ui-settings`**) are stable contracts—rename only with a migration path and README update.
+3. Bundles and zips saved by **older extension versions** must remain loadable via **import** or **storage-reload** on newer versions.
+4. See **`.cursorrules`** § **UI settings persistence** for implementer rules (tests, docs).
 
 **Main list (picker)**
 
@@ -444,6 +477,9 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
 | **reset-default** | Confirm, then reset appearance draft to defaults |
+| **storage** | **Internal** (default) or **external folder** (File System Access API); see **Storage** above |
+| **storage-pick-dir** | (External mode) Re-pick the parent folder for the bundle |
+| **storage-reload** | (External mode) Load bundle (`settings.json` + images) into draft preview |
 | **export** | Download zip (`settings.json` v2 + `background-image.*`; optional `picker-background-image.*` when set) |
 | **import** | Load zip into draft (commit with **`> save setting`**) |
 | **`> save setting`** / **`> cancel setting`** | Commit or discard draft |
@@ -465,7 +501,7 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 
 Hex colors support live preview while typing in edit mode.
 
-**Implementation:** **`lib/features/setting/`** (`settings.ts`, `appearance.ts`, `apply-appearance.ts`, `setting-picker-*.tsx`, `settings-export.ts`), picker slot **`setting`** in **`lib/features/side-picker/`**, UI wiring in **`bmxt-shell.tsx`**.
+**Implementation:** **`lib/features/setting/`** (`settings.ts`, `appearance.ts`, `apply-appearance.ts`, `settings-export.ts`, `settings-external-storage.ts`, `settings-bundle-layout.ts`, `settings-storage-config.ts`, `setting-picker-*.tsx`), picker slot **`setting`** in **`lib/features/side-picker/`**, UI wiring in **`bmxt-shell.tsx`** and **`useSettingPickerShell.ts`**.
 
 <a id="session"></a>
 
@@ -735,7 +771,7 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
-- **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, `bmxt_ui_settings_v1`); see **[`setting`](#setting)**
+- **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, external bundle, `bmxt_ui_settings_v1`, `bmxt_ui_settings_storage_v1`); see **[`setting`](#setting)**
 - **`lib/features/session/`** — terminal sessions (`session -list` / `-switch` inline pickers, session bar); see **[`session`](#session)**
 - **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional in-memory audit log; see **[Job execution](#job-execution)**
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on http(s) pages for nav overlay
@@ -898,7 +934,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
-- `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
+- `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`, `settings-external-storage.ts`, `settings-bundle-layout.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
 - `scripts/build-background-services.mjs` — Bundles Service Worker helpers into **`public/background-services.js`**
 
@@ -1216,7 +1252,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --ja-en` | ペア **ja-en** を保存（既定）。往復プレビュー・nav Alt 確定は英語 |
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
-| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・ピッカー個別外観・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
+| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・**保存先**（拡張機能内／外部）・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
 | `session -new [name]` | 新しい **ターミナルセッション** を作成して切り替え。表示名は任意 |
@@ -1253,7 +1289,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `bmxt_process_ui_v1` | セッションごとの開いているピッカー（`tabs` / `search` / `dom` / `setting`）と `paneFocus` |
 | `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は **setting → reset-search-cache** で削除可能だが、**0.6.9** 以降は新規書き込みしない。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観；save 時に常に更新）、UI 設定**保存先モード**（`bmxt_ui_settings_storage_v1` — 拡張機能内／外部）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は **setting → reset-search-cache** で削除可能だが、**0.6.9** 以降は新規書き込みしない。
 
 **実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
 
@@ -1380,7 +1416,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### `setting`（`setting -list` / `setting -exit -list`）
 
-UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列で編集します。確定値は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
+UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列で編集します。**既定の永続化**は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）。**任意の外部保存**は File System Access API（ユーザーが選んだフォルダ）；モードは **`bmxt_ui_settings_storage_v1`** に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
 
 | 入力 | 動作 |
 |------|------|
@@ -1392,8 +1428,41 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 
 - ピッカー内の変更は **draft** のみ更新。ライブ UI は **`> save setting`** まで **最後に保存した**設定のまま。
 - ピッカー下部の **Preview** が draft を反映（**`edit-picker: on`** 時は **Terminal** / **Picker** を分割表示）。
-- **`> save setting`** — draft を **`bmxt_ui_settings_v1`** に書き込み即時反映。
+- **`> save setting`** — draft を **`bmxt_ui_settings_v1`** に書き込み、外部モード時は**設定バンドル**にも書き込み、即時反映。
 - **`> cancel setting`** — draft を破棄し storage の値に戻す。
+
+**保存先（拡張機能内／外部）**
+
+| モード | 動作 |
+|--------|------|
+| **拡張機能内**（既定） | 設定は **`bmxt_ui_settings_v1`** のみ。File System Access API は使わない。 |
+| **外部フォルダ** | ユーザーが親フォルダを一度選択。BMXt はその下の**設定バンドル**を読み書き（下記）。**`bmxt_ui_settings_v1`** も save のたびに更新（キャッシュ＋バックグラウンドの locale）。起動時は外部バンドルを優先読み込み；読めないときは内部にフォールバック。 |
+
+**ピッカー行（storage）:** **storage** — 拡張機能内／外部を選択；外部有効時は **storage-pick-dir**（フォルダ選び直し）、**storage-reload**（バンドルを draft プレビューに読み込み）。保存先の切り替えは**即時確定**（draft 待ちではない）。**manifest 権限の追加なし** — フォルダアクセスはブラウザのピッカーでランタイム許可。
+
+**バックアップバンドル形式（zip export/import と外部ディレクトリ共通）**
+
+zip **export**、zip **import**、**外部 save** は**同一のオンディスクレイアウト**（**`settings-export.ts`**、**`settings-bundle-layout.ts`**）:
+
+```
+bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.json があるフォルダを選んだ場合はそのフォルダ自体）
+  settings.json            ← version フィールド（現行 2）；locale・外観；画像は相対ファイル名
+  background-image.png     ← 全体 bg-image 設定時（jpg/webp も可）
+  picker-background-image.*  ← ピッカー個別 bg-image 設定時
+```
+
+- **export** — 同じファイル構成の zip をダウンロード（ポータブルバックアップ）。
+- **import** — zip をピッカー **draft** に読み込み（**`> save setting`** で確定）。
+- **外部 save** — バンドルディレクトリに同じファイルを書き込み；画像削除・差し替え時は古い `background-image.*` / `picker-background-image.*` を削除。
+
+**後方互換**
+
+リリースで UI 設定の形やオンディスク形式を変えるとき:
+
+1. **`settings.json`:** **`version`** を上げる場合は **`parseSettingsExportJson`** に旧版分岐を残す（現状 **v1** / **v2**）。新しい JSON フィールドは任意とし、実行時は **`normalizeUiAppearance`** 等で正規化。
+2. **バンドル内の定番ファイル名**（`settings.json`、`background-image`、`picker-background-image`、ディレクトリ名 **`bmxt-ui-settings`**）は安定した契約 — 変更する場合は移行経路と README 更新が必須。
+3. **旧バージョンの拡張機能**が書いたバンドル／zip は、新版で **import** または **storage-reload** により読み込めること。
+4. 実装者向けルール（テスト・ドキュメント）は **`.cursorrules`** の **UI 設定の永続化** 節を参照。
 
 **メイン一覧（ピッカー）**
 
@@ -1404,6 +1473,9 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
 | **reset-default** | 確認後、外観 draft を既定に戻す |
+| **storage** | **拡張機能内**（既定）または**外部フォルダ**（File System Access API）；**保存先** 参照 |
+| **storage-pick-dir** | （外部モード）バンドル用の親フォルダを選び直す |
+| **storage-reload** | （外部モード）バンドル（`settings.json` + 画像）を draft プレビューに読み込む |
 | **export** | zip ダウンロード（`settings.json` v2 + `background-image.*`；設定時は `picker-background-image.*` も） |
 | **import** | zip を draft に読み込み（**`> save setting`** で確定） |
 | **`> save setting`** / **`> cancel setting`** | 確定／破棄 |
@@ -1425,7 +1497,7 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 
 色（hex）は編集中にリアルタイムプレビュー。
 
-**実装:** **`lib/features/setting/`**（`settings.ts`、`appearance.ts`、`apply-appearance.ts`、`setting-picker-*.tsx`、`settings-export.ts`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`**。
+**実装:** **`lib/features/setting/`**（`settings.ts`、`appearance.ts`、`apply-appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`setting-picker-*.tsx`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`** と **`useSettingPickerShell.ts`**。
 
 <a id="session-ja"></a>
 
@@ -1714,7 +1786,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
-- **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、`bmxt_ui_settings_v1`）；**[`setting`](#setting-ja)** 参照
+- **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、外部バンドル、`bmxt_ui_settings_v1`、`bmxt_ui_settings_storage_v1`）；**[`setting`](#setting-ja)** 参照
 - **`lib/features/session/`** — ターミナルセッション（`session -list` / `-switch` インライン候補、セッションバー）；**[`session`](#session-ja)** 参照
 - **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
 - **`entrypoints/bmxt-nav-overlay.content/`** — http(s) 向け nav 用 WXT コンテンツスクリプト
@@ -1870,7 +1942,7 @@ pnpm run dev
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
-- `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
+- `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
 - `scripts/build-background-services.mjs` — Service Worker ヘルパーを **`public/background-services.js`** にバンドル
 

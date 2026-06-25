@@ -139,10 +139,24 @@ export {
 export { loadUiSettingsStorageConfig, saveUiSettingsStorageConfig } from "./settings-storage-config"
 export { useUiSettingsStorageConfig } from "./use-ui-settings-storage-config"
 export {
+  assessExternalSettingsBundleAtStartup,
+  externalSettingsRecoveryLogLines,
+  applyExternalSettingsRecoveryAnswer,
+  type ExternalSettingsStartupAssessment,
+  type ExternalSettingsRecoveryAnswerResult
+} from "./external-settings-startup"
+export {
+  ExternalSettingsRecoveryProvider,
+  useExternalSettingsRecovery,
+  type ExternalSettingsRecoveryContextValue
+} from "./use-external-settings-recovery"
+export {
   clearUiBackgroundImage,
   formatUiSettingsSummary,
   loadUiSettings,
+  loadUiSettingsInternalCache,
   replaceUiSettings,
+  resetUiSettingsToDefaultsAndInternal,
   resetUiAppearance,
   saveUiAppearancePatch,
   saveUiBackgroundImage,

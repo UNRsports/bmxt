@@ -1,4 +1,5 @@
 import { useCallback } from "react"
+import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
 import { tryHandleDomListCommand } from "./command-dispatch/handle-dom"
 import { dispatchFallbackCommand, tryHandleHelpCommand } from "./command-dispatch/handle-fallback"
@@ -68,6 +69,10 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       trimmed,
       rawLine,
       locale: deps.uiSettings.locale
+    }
+
+    if (tryHandleExternalSettingsRecovery(ctx) === "handled") {
+      return
     }
 
     for (const handler of DOMAIN_HANDLERS) {

@@ -110,6 +110,8 @@ import {
   parseSettingListPickerLine
 } from "../setting/setting-list-picker-input"
 import { useUiSettings } from "../setting/use-ui-settings"
+import { externalSettingsRecoveryLogLines } from "../setting/external-settings-startup"
+import { useExternalSettingsRecovery } from "../setting/use-external-settings-recovery"
 import {
   useCallback,
   useEffect,
@@ -197,6 +199,10 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
+  const externalSettingsRecovery = useExternalSettingsRecovery()
+  if (!externalSettingsRecovery) {
+    throw new Error("ExternalSettingsRecoveryProvider is required")
+  }
   const prevUiLocaleRef = useRef(uiSettings.locale)
   useEffect(() => {
     setRunLocale(uiSettings.locale)
@@ -694,6 +700,27 @@ export function BmxtShell({
     settingListPickerRef
   })
 
+  useEffect(() => {
+    if (!isFocusedPane || !externalSettingsRecovery.pending) {
+      return
+    }
+    if (externalSettingsRecovery.announcedRef.current) {
+      return
+    }
+    externalSettingsRecovery.announcedRef.current = true
+    void appendLogLines(
+      externalSettingsRecoveryLogLines(
+        uiSettings.locale,
+        externalSettingsRecovery.directoryName
+      )
+    )
+  }, [
+    appendLogLines,
+    externalSettingsRecovery,
+    isFocusedPane,
+    uiSettings.locale
+  ])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
     mode,
@@ -750,7 +777,9 @@ export function BmxtShell({
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
-    onActivateSession
+    onActivateSession,
+    externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
+    submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer
   })
 
 
