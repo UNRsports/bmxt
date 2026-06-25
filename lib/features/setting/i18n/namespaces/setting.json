@@ -451,6 +451,14 @@
     "ja": "setting: 拡張機能内保存に切り替えました",
     "en": "setting: switched to extension internal storage"
   },
+  "setting.storage.loadError.defaults": {
+    "ja": "setting: 既定の UI 設定で起動しました（外部ファイルを修正してください）",
+    "en": "setting: started with default UI settings (fix the external file)"
+  },
+  "setting.storage.loadError.warning": {
+    "ja": "setting: 外部保存先（{location}）の {file} を読み込めませんでした（JSON の記法不備など）",
+    "en": "setting: could not load {file} from external storage ({location}) — invalid JSON or schema"
+  },
   "setting.storage.pickCancelled": {
     "ja": "setting: フォルダ選択をキャンセルしました",
     "en": "setting: folder selection cancelled"

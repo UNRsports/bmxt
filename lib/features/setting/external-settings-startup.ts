@@ -14,10 +14,12 @@ import {
 } from "./settings-external-storage"
 import {
   loadUiSettingsInternalCache,
+  mirrorUiSettingsToInternalCache,
   replaceUiSettings,
   resetUiSettingsToDefaultsAndInternal,
   type UiSettings
 } from "./settings"
+import { bootstrapUiSettingsOnWindowLaunch } from "./ui-settings-bootstrap"
 
 export type { ExternalBundleMissingItem } from "./settings-external-storage"
 export { externalSettingsRecoveryLogLines, formatExternalBundleMissingLine } from "./external-settings-recovery-log"
@@ -27,14 +29,14 @@ export type ExternalSettingsStartupAssessment =
   | { needsRecovery: true; directoryName: string | null; missing: ExternalBundleMissingItem[] }
 
 export async function assessExternalSettingsBundleAtStartup(): Promise<ExternalSettingsStartupAssessment> {
-  const inspection = await inspectExternalSettingsBundle()
-  if (inspection.status === "not_external" || inspection.status === "ok") {
+  const result = await bootstrapUiSettingsOnWindowLaunch()
+  if (result.kind !== "needs_recovery") {
     return { needsRecovery: false }
   }
   return {
     needsRecovery: true,
-    directoryName: inspection.directoryName,
-    missing: inspection.missing
+    directoryName: result.directoryName,
+    missing: result.missing
   }
 }
 
@@ -82,12 +84,11 @@ export async function applyExternalSettingsRecoveryAnswer(
   }
   const reloaded = await reloadUiSettingsFromExternalDirectory()
   if (reloaded.ok) {
-    await replaceUiSettings(reloaded.settings)
+    await mirrorUiSettingsToInternalCache(reloaded.settings)
     onSettingsCommitted(reloaded.settings)
     return { ok: true, kind: "repick", loaded: true, directoryName: picked.directoryName }
   }
   const cached = await loadUiSettingsInternalCache()
-  await replaceUiSettings(cached)
   onSettingsCommitted(cached)
   return { ok: true, kind: "repick", loaded: false, directoryName: picked.directoryName }
 }

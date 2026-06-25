@@ -147,6 +147,11 @@ export {
   type ExternalSettingsRecoveryAnswerResult
 } from "./external-settings-startup"
 export {
+  bootstrapUiSettingsOnWindowLaunch,
+  externalSettingsLoadErrorLogLines,
+  type UiSettingsBootstrapResult
+} from "./ui-settings-bootstrap"
+export {
   ExternalSettingsRecoveryProvider,
   useExternalSettingsRecovery,
   type ExternalSettingsRecoveryContextValue
@@ -156,6 +161,8 @@ export {
   formatUiSettingsSummary,
   loadUiSettings,
   loadUiSettingsInternalCache,
+  mirrorUiSettingsToInternalCache,
+  applyDefaultUiSettingsToInternalCache,
   replaceUiSettings,
   resetUiSettingsToDefaultsAndInternal,
   resetUiAppearance,

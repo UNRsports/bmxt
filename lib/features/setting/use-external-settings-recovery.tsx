@@ -11,10 +11,13 @@ import {
 } from "react"
 import {
   applyExternalSettingsRecoveryAnswer,
-  assessExternalSettingsBundleAtStartup,
   type ExternalBundleMissingItem,
   type ExternalSettingsRecoveryAnswerResult
 } from "./external-settings-startup"
+import {
+  bootstrapUiSettingsOnWindowLaunch,
+  externalSettingsLoadErrorLogLines
+} from "./ui-settings-bootstrap"
 import { useUiSettings } from "./use-ui-settings"
 
 export type ExternalSettingsRecoveryContextValue = {
@@ -23,6 +26,8 @@ export type ExternalSettingsRecoveryContextValue = {
   directoryName: string | null
   missing: readonly ExternalBundleMissingItem[]
   announcedRef: React.MutableRefObject<boolean>
+  loadErrorLogLines: readonly string[] | null
+  loadErrorAnnouncedRef: React.MutableRefObject<boolean>
   submitRecoveryAnswer: (trimmed: string) => Promise<ExternalSettingsRecoveryAnswerResult>
 }
 
@@ -34,21 +39,33 @@ export function ExternalSettingsRecoveryProvider({ children }: { children: React
   const { replaceSettings, reloadSettings } = useUiSettings()
   const pendingRef = useRef(false)
   const announcedRef = useRef(false)
+  const loadErrorAnnouncedRef = useRef(false)
   const [pending, setPending] = useState(false)
   const [directoryName, setDirectoryName] = useState<string | null>(null)
   const [missing, setMissing] = useState<ExternalBundleMissingItem[]>([])
+  const [loadErrorLogLines, setLoadErrorLogLines] = useState<readonly string[] | null>(null)
 
   useEffect(() => {
-    void assessExternalSettingsBundleAtStartup().then((assessment) => {
-      if (!assessment.needsRecovery) {
+    void bootstrapUiSettingsOnWindowLaunch().then((result) => {
+      replaceSettings(result.settings)
+      if (result.kind === "needs_recovery") {
+        pendingRef.current = true
+        setPending(true)
+        setDirectoryName(result.directoryName)
+        setMissing(result.missing)
         return
       }
-      pendingRef.current = true
-      setPending(true)
-      setDirectoryName(assessment.directoryName)
-      setMissing(assessment.missing)
+      if (result.kind === "load_error") {
+        setLoadErrorLogLines(
+          externalSettingsLoadErrorLogLines(
+            result.settings.locale,
+            result.directoryName,
+            result.fileName
+          )
+        )
+      }
     })
-  }, [])
+  }, [replaceSettings])
 
   const submitRecoveryAnswer = useCallback(
     async (trimmed: string): Promise<ExternalSettingsRecoveryAnswerResult> => {
@@ -78,9 +95,11 @@ export function ExternalSettingsRecoveryProvider({ children }: { children: React
       directoryName,
       missing,
       announcedRef,
+      loadErrorLogLines,
+      loadErrorAnnouncedRef,
       submitRecoveryAnswer
     }),
-    [directoryName, missing, pending, submitRecoveryAnswer]
+    [directoryName, loadErrorLogLines, missing, pending, submitRecoveryAnswer]
   )
 
   return (

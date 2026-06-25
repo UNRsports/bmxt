@@ -56,9 +56,26 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
   return defaults
 }
 
+export async function mirrorUiSettingsToInternalCache(next: UiSettings): Promise<void> {
+  await saveUiSettingsToChromeStorage({
+    locale: next.locale,
+    appearance: normalizeUiAppearance(next.appearance)
+  })
+}
+
+export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSettings> {
+  const defaults: UiSettings = {
+    locale: DEFAULT_UI_LOCALE,
+    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
+  }
+  await saveUiSettingsToChromeStorage(defaults)
+  return defaults
+}
+
 export async function loadUiSettings(): Promise<UiSettings> {
   const external = await tryLoadUiSettingsFromExternal()
   if (external) {
+    await mirrorUiSettingsToInternalCache(external)
     return external
   }
   return loadUiSettingsFromChromeStorage()

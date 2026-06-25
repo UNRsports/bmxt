@@ -722,6 +722,18 @@ export function BmxtShell({
     uiSettings.locale
   ])
 
+  useEffect(() => {
+    const lines = externalSettingsRecovery.loadErrorLogLines
+    if (!isFocusedPane || !lines) {
+      return
+    }
+    if (externalSettingsRecovery.loadErrorAnnouncedRef.current) {
+      return
+    }
+    externalSettingsRecovery.loadErrorAnnouncedRef.current = true
+    void appendLogLines([...lines])
+  }, [appendLogLines, externalSettingsRecovery, isFocusedPane])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
     mode,
