@@ -403,6 +403,10 @@
     "ja": "snapshot save failed: {message}",
     "en": "snapshot save failed: {message}"
   },
+  "cmd.snapshot.save.notHttp": {
+    "ja": "snapshot save failed: http(s) ページではありません ({url})。tabs ピッカーで Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
+    "en": "snapshot save failed: not an http(s) page ({url}). Highlight a web page in the tabs picker or use snapshot -save <tabId>."
+  },
   "cmd.snapshot.save.title": {
     "ja": "snapshot -save は BMXt プロンプトから実行してください（アクティブタブまたは tabId を保存）。",
     "en": "Run snapshot -save from the BMXt prompt (saves the active tab or optional tabId)."

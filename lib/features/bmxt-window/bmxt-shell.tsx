@@ -584,6 +584,7 @@ export function BmxtShell({
   })
 
   const { runSnapshotSave } = useSnapshotSaveShell({
+    sessionId,
     uiLocale: uiSettings.locale,
     appendLogLines
   })

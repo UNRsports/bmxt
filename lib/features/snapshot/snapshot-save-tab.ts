@@ -1,6 +1,7 @@
-import { isHttpUrl } from "../url/is-http-url"
 import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
 import { MAX_PAGE_TEXT_CHARS } from "../search/limits"
+import { isHttpUrl } from "../url/is-http-url"
+import { resolveSnapshotTargetTab, type SnapshotTabResolveContext } from "./snapshot-resolve-tab"
 import { saveSnapshot } from "./snapshot-storage"
 import type { SnapshotSaveResult } from "./snapshot-types"
 
@@ -12,40 +13,30 @@ export type SnapshotSaveTabErrorCode =
 
 export type SnapshotSaveFromTabResult =
   | { ok: true; result: SnapshotSaveResult }
-  | { ok: false; code: SnapshotSaveTabErrorCode; message: string }
+  | { ok: false; code: SnapshotSaveTabErrorCode; message: string; url?: string }
 
-export async function resolveSnapshotTargetTab(
-  tabIdRaw: string | undefined
-): Promise<chrome.tabs.Tab | null> {
-  if (tabIdRaw !== undefined && tabIdRaw.trim().length > 0) {
-    const tabId = Number.parseInt(tabIdRaw.trim(), 10)
-    if (!Number.isFinite(tabId)) {
-      return null
-    }
-    try {
-      return await chrome.tabs.get(tabId)
-    } catch {
-      return null
-    }
-  }
-  const [active] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-  return active ?? null
-}
+export type SnapshotSaveFromTabOptions = SnapshotTabResolveContext
 
 export async function saveSnapshotFromTab(
-  tabIdRaw: string | undefined
+  tabIdRaw: string | undefined,
+  options: SnapshotSaveFromTabOptions = {}
 ): Promise<SnapshotSaveFromTabResult> {
-  const tab = await resolveSnapshotTargetTab(tabIdRaw)
+  const tab = await resolveSnapshotTargetTab(tabIdRaw, options)
   if (!tab || tab.id === undefined) {
     return { ok: false, code: "no_tab", message: "tab not found" }
   }
   const url = tab.url ?? ""
   if (!isHttpUrl(url)) {
-    return { ok: false, code: "not_scriptable", message: "tab is not an http(s) page" }
+    return {
+      ok: false,
+      code: "not_scriptable",
+      message: "tab is not an http(s) page",
+      url: url || "(no url)"
+    }
   }
   const bodyText = await readOpenTabInnerText(tab, MAX_PAGE_TEXT_CHARS)
   if (bodyText === null || bodyText.trim().length === 0) {
-    return { ok: false, code: "empty_body", message: "could not read page text" }
+    return { ok: false, code: "empty_body", message: "could not read page text", url }
   }
   const title = tab.title ?? ""
   try {
@@ -55,7 +46,8 @@ export async function saveSnapshotFromTab(
     return {
       ok: false,
       code: "save_failed",
-      message: e instanceof Error ? e.message : String(e)
+      message: e instanceof Error ? e.message : String(e),
+      url
     }
   }
 }
