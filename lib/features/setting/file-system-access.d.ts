@@ -19,6 +19,10 @@ interface FileSystemHandle {
   requestPermission(descriptor?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>
 }
 
+interface FileSystemDirectoryHandle {
+  removeEntry(name: string): Promise<void>
+}
+
 interface Window {
   showDirectoryPicker(options?: FileSystemDirectoryPickerOptions): Promise<FileSystemDirectoryHandle>
 }

@@ -1,9 +1,14 @@
 import {
   buildUiSettingsStorageEntries,
   parseSettingsExportJson,
-  SETTINGS_JSON_NAME,
   type SettingsExportJson
 } from "./settings-export"
+import {
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
+  SETTINGS_JSON_NAME
+} from "./settings-bundle-layout"
 import {
   clearUiSettingsDirectoryHandle,
   loadUiSettingsDirectoryHandle,
@@ -76,6 +81,43 @@ function imageFileNamesFromExportJson(json: SettingsExportJson): string[] {
   return names
 }
 
+async function removeBundleFileIfPresent(
+  dir: FileSystemDirectoryHandle,
+  name: string
+): Promise<void> {
+  try {
+    await dir.removeEntry(name)
+  } catch {
+    // absent or not removable
+  }
+}
+
+async function pruneStaleBundleImages(
+  dir: FileSystemDirectoryHandle,
+  currentFileNames: ReadonlySet<string>
+): Promise<void> {
+  for (const name of listKnownBundleImageFileNames()) {
+    if (!currentFileNames.has(name)) {
+      await removeBundleFileIfPresent(dir, name)
+    }
+  }
+}
+
+/** EN: Resolve bundle root: use picked dir when it already has settings.json, else create subdir. */
+export async function resolveExternalSettingsBundleDir(
+  picked: FileSystemDirectoryHandle
+): Promise<{ bundle: FileSystemDirectoryHandle; displayName: string }> {
+  const settingsAtRoot = await readFileBytes(picked, SETTINGS_JSON_NAME)
+  if (settingsAtRoot) {
+    return { bundle: picked, displayName: picked.name }
+  }
+  const bundle = await picked.getDirectoryHandle(EXTERNAL_SETTINGS_BUNDLE_DIR, { create: true })
+  return {
+    bundle,
+    displayName: formatExternalSettingsBundleDisplayName(picked.name)
+  }
+}
+
 async function readDirectorySettingsFiles(
   dir: FileSystemDirectoryHandle
 ): Promise<Map<string, Uint8Array>> {
@@ -125,12 +167,14 @@ export async function saveUiSettingsToDirectory(
     throw new Error("permission denied")
   }
   const entries = buildUiSettingsStorageEntries(settings)
+  const currentFileNames = new Set(entries.map((entry) => entry.name))
   for (const entry of entries) {
     const fileHandle = await dir.getFileHandle(entry.name, { create: true })
     const writable = await fileHandle.createWritable()
     await writable.write(entry.data)
     await writable.close()
   }
+  await pruneStaleBundleImages(dir, currentFileNames)
 }
 
 export async function pickUiSettingsDirectory(): Promise<PickUiSettingsDirectoryResult> {
@@ -142,11 +186,12 @@ export async function pickUiSettingsDirectory(): Promise<PickUiSettingsDirectory
     }
   }
   try {
-    const handle = await window.showDirectoryPicker({
+    const picked = await window.showDirectoryPicker({
       id: DIRECTORY_PICKER_ID,
       mode: "readwrite"
     })
-    const allowed = await verifyDirectoryPermission(handle, true)
+    const resolved = await resolveExternalSettingsBundleDir(picked)
+    const allowed = await verifyDirectoryPermission(resolved.bundle, true)
     if (!allowed) {
       return {
         ok: false,
@@ -154,7 +199,7 @@ export async function pickUiSettingsDirectory(): Promise<PickUiSettingsDirectory
         message: "directory permission denied"
       }
     }
-    return { ok: true, handle, directoryName: handle.name }
+    return { ok: true, handle: resolved.bundle, directoryName: resolved.displayName }
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
       return { ok: false, cancelled: true }

@@ -110,6 +110,9 @@ export {
 } from "./setting-picker-edit"
 export {
   buildUiSettingsStorageEntries,
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker,
   type SettingsExportJson
@@ -121,6 +124,7 @@ export {
   pickUiSettingsDirectory,
   reloadUiSettingsFromExternalDirectory,
   repickUiSettingsDirectory,
+  resolveExternalSettingsBundleDir,
   tryLoadUiSettingsFromExternal,
   trySaveUiSettingsToExternal,
   type ExternalStorageErrorCode,

@@ -12,10 +12,23 @@ import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
 import { buildZipArchive, parseZipArchive } from "./zip-store"
+import {
+  BG_IMAGE_BUNDLE_NAME,
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
+  PICKER_BG_IMAGE_BUNDLE_NAME,
+  SETTINGS_JSON_NAME
+} from "./settings-bundle-layout"
 
-export const SETTINGS_JSON_NAME = "settings.json"
-export const BG_IMAGE_ZIP_NAME = "background-image"
-export const PICKER_BG_IMAGE_ZIP_NAME = "picker-background-image"
+export {
+  BG_IMAGE_BUNDLE_NAME as BG_IMAGE_ZIP_NAME,
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
+  PICKER_BG_IMAGE_BUNDLE_NAME as PICKER_BG_IMAGE_ZIP_NAME,
+  SETTINGS_JSON_NAME
+} from "./settings-bundle-layout"
 
 type SettingsExportAppearanceV2 = {
   fg: string | null
@@ -115,14 +128,14 @@ export function buildSettingsExportJson(settings: UiSettings): SettingsExportJso
       bgColor: appearance.bgColor,
       fontSize: appearance.fontSize,
       fontFamily: appearance.fontFamily,
-      bgImageFile: bgImageFileName(appearance.bgImageDataUrl, BG_IMAGE_ZIP_NAME),
+      bgImageFile: bgImageFileName(appearance.bgImageDataUrl, BG_IMAGE_BUNDLE_NAME),
       editPicker: appearance.editPicker,
       picker: {
         fg: appearance.picker.fg,
         bgColor: appearance.picker.bgColor,
         fontSize: appearance.picker.fontSize,
         fontFamily: appearance.picker.fontFamily,
-        bgImageFile: bgImageFileName(appearance.picker.bgImageDataUrl, PICKER_BG_IMAGE_ZIP_NAME)
+        bgImageFile: bgImageFileName(appearance.picker.bgImageDataUrl, PICKER_BG_IMAGE_BUNDLE_NAME)
       }
     }
   }

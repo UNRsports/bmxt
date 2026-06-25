@@ -17,6 +17,11 @@ import {
 import { settingMainRowTargetView } from "./setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
 import {
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames
+} from "./settings-bundle-layout.ts"
+import {
   normalizeUiSettingsStorageConfig,
   type UiSettingsStorageConfig
 } from "./settings-storage-mode.ts"
@@ -167,6 +172,22 @@ describe("ui settings storage config", () => {
       mode: "internal",
       directoryName: null
     })
+  })
+})
+
+describe("external settings bundle", () => {
+  it("formats nested bundle display name", () => {
+    assert.equal(
+      formatExternalSettingsBundleDisplayName("Documents"),
+      `Documents/${EXTERNAL_SETTINGS_BUNDLE_DIR}`
+    )
+  })
+
+  it("lists known background image file names", () => {
+    const names = listKnownBundleImageFileNames()
+    assert.ok(names.includes("background-image.png"))
+    assert.ok(names.includes("picker-background-image.webp"))
+    assert.equal(names.length, 8)
   })
 })
 

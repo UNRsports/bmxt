@@ -428,8 +428,8 @@
     "en": "external folder · {directory}"
   },
   "setting.picker.storageModeExternalRow": {
-    "ja": "外部フォルダ — ユーザー指定ディレクトリに settings.json を保存",
-    "en": "external folder — save settings.json to a user-chosen directory"
+    "ja": "外部フォルダ — 指定先に bmxt-ui-settings/（settings.json + 背景画像）を保存",
+    "en": "external folder — save bmxt-ui-settings/ bundle (settings.json + background images)"
   },
   "setting.picker.storageModeInternal": {
     "ja": "拡張機能内（既定）",
@@ -444,12 +444,12 @@
     "en": "setting: external folder changed to {directory}"
   },
   "setting.storage.externalActivated": {
-    "ja": "setting: 外部保存を有効化しました（{directory}）— 既存の settings.json はありません",
-    "en": "setting: external storage enabled ({directory}) — no existing settings.json"
+    "ja": "setting: 外部保存を有効化しました（{directory}）— 既存の設定バンドルはありません",
+    "en": "setting: external storage enabled ({directory}) — no existing settings bundle"
   },
   "setting.storage.externalActivatedLoaded": {
-    "ja": "setting: 外部保存を有効化し {directory} から設定を読み込みました（プレビュー）",
-    "en": "setting: external storage enabled; loaded settings from {directory} (preview)"
+    "ja": "setting: 外部保存を有効化し {directory} から設定バンドル（画像含む）を読み込みました（プレビュー）",
+    "en": "setting: external storage enabled; loaded settings bundle (with images) from {directory} (preview)"
   },
   "setting.storage.externalWriteFailed": {
     "ja": "setting: 拡張機能内には保存しましたが、外部フォルダへの書き込みに失敗しました",
@@ -468,8 +468,8 @@
     "en": "setting: folder selection failed — {message}"
   },
   "setting.storage.reloadDraft": {
-    "ja": "setting: 外部フォルダから設定をプレビューに読み込みました（> 設定を保存して終了 で確定）",
-    "en": "setting: loaded external settings into preview (use save setting & exit to commit)"
+    "ja": "setting: 外部バンドル（settings.json + 画像）をプレビューに読み込みました（> 設定を保存して終了 で確定）",
+    "en": "setting: loaded external bundle (settings.json + images) into preview (use save setting & exit to commit)"
   },
   "setting.storage.reloadFailed": {
     "ja": "setting: 外部フォルダからの読み込みに失敗しました — {message}",
