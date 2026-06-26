@@ -1,4 +1,7 @@
 import { migrateSnapshotsToExternalBundleWithLog } from "../snapshot/snapshot-external-migration"
+import { migrateSnapshotsToVaultWithLog } from "../snapshot/snapshot-vault-migration"
+import { loadSnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
+import { loadSnapshotVaultDirectoryHandle } from "./settings-handle-db"
 import { tSetting } from "./i18n/ns/setting"
 import type { UiLocale } from "./locale"
 import {
@@ -75,10 +78,16 @@ export async function applyExternalSettingsRecoveryAnswer(
   }
   await activateExternalUiSettingsStorage(picked.handle, picked.directoryName)
   const cachedLocale = (await loadUiSettingsInternalCache()).locale
-  const migrateLines = await migrateSnapshotsToExternalBundleWithLog(
-    picked.handle,
-    cachedLocale
-  )
+  const snapshotConfig = await loadSnapshotStorageConfig()
+  let migrateLines: string[] = []
+  if (snapshotConfig.destination === "vault") {
+    const vaultHandle = await loadSnapshotVaultDirectoryHandle()
+    if (vaultHandle) {
+      migrateLines = await migrateSnapshotsToVaultWithLog(vaultHandle, cachedLocale)
+    }
+  } else {
+    migrateLines = await migrateSnapshotsToExternalBundleWithLog(picked.handle, cachedLocale)
+  }
   const inspection = await inspectExternalSettingsBundle()
   if (inspection.status === "incomplete") {
     return {

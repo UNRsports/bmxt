@@ -391,6 +391,10 @@
     "ja": "snapshot: 拡張機能内の {count} 件を外部ディレクトリへ移行しました",
     "en": "snapshot: migrated {count} file(s) from extension storage to the external directory"
   },
+  "cmd.snapshot.migrate.vaultDone": {
+    "ja": "snapshot: 拡張機能内の {count} 件を Obsidian Vault へ移行しました",
+    "en": "snapshot: migrated {count} file(s) from extension storage to the Obsidian vault"
+  },
   "cmd.snapshot.migrate.failed": {
     "ja": "snapshot: 移行に失敗しました — {message}",
     "en": "snapshot: migration failed — {message}"
@@ -416,7 +420,7 @@
     "en": "usage: snapshot -save [<tabId>]   — save page as a Markdown snapshot"
   },
   "cmd.snapshot.usage.line2": {
-    "ja": "       保存先は setting の storage モード（拡張機能内 / 外部ディレクトリ）に従います。",
-    "en": "       Storage follows setting storage mode (internal extension storage or external directory)."
+    "ja": "       保存先は setting の snapshot 保存先（設定と同梱 / Obsidian Vault）に従います。",
+    "en": "       Storage follows setting snapshot destination (bundled with settings / Obsidian vault)."
   }
 }

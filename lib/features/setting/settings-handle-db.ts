@@ -2,6 +2,7 @@ const DB_NAME = "bmxt_settings_fs_handles"
 const DB_VERSION = 1
 const STORE_NAME = "handles"
 const UI_SETTINGS_DIR_KEY = "ui_settings_directory"
+const SNAPSHOT_VAULT_DIR_KEY = "snapshot_vault_directory"
 
 type HandleRecord = {
   id: string
@@ -71,4 +72,25 @@ export async function loadUiSettingsDirectoryHandle(): Promise<FileSystemDirecto
 
 export async function clearUiSettingsDirectoryHandle(): Promise<void> {
   await runTx("readwrite", (store) => store.delete(UI_SETTINGS_DIR_KEY))
+}
+
+export async function saveSnapshotVaultDirectoryHandle(
+  handle: FileSystemDirectoryHandle
+): Promise<void> {
+  const record: HandleRecord = { id: SNAPSHOT_VAULT_DIR_KEY, handle }
+  await runTx("readwrite", (store) => store.put(record))
+}
+
+export async function loadSnapshotVaultDirectoryHandle(): Promise<FileSystemDirectoryHandle | null> {
+  const record = await runTx<HandleRecord | undefined>("readonly", (store) =>
+    store.get(SNAPSHOT_VAULT_DIR_KEY)
+  )
+  if (!record || !record.handle) {
+    return null
+  }
+  return record.handle
+}
+
+export async function clearSnapshotVaultDirectoryHandle(): Promise<void> {
+  await runTx("readwrite", (store) => store.delete(SNAPSHOT_VAULT_DIR_KEY))
 }

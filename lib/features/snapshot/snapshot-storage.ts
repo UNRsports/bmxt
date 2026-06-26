@@ -15,6 +15,13 @@ import {
   writeAllSnapshotsToExternalBundle,
   writeSnapshotToExternalDir
 } from "./snapshot-external-store"
+import { loadSnapshotStorageConfig } from "./snapshot-storage-config"
+import {
+  listVaultSnapshotDocuments,
+  writeAllSnapshotsToVault,
+  writeSnapshotToVaultDir
+} from "./snapshot-vault-store"
+import { getSnapshotVaultDirectoryHandle } from "./snapshot-vault-persistence"
 import type {
   SnapshotMigrationResult,
   SnapshotSaveInput,
@@ -30,6 +37,15 @@ function newSnapshotId(): string {
 }
 
 async function takenFileNames(): Promise<Set<string>> {
+  const snapshotConfig = await loadSnapshotStorageConfig()
+  if (snapshotConfig.destination === "vault") {
+    const docs = await listVaultSnapshotDocuments()
+    if (!docs) {
+      return new Set()
+    }
+    return new Set(docs.map((d) => d.meta.fileName))
+  }
+
   const config = await loadUiSettingsStorageConfig()
   if (config.mode === "external") {
     const docs = await listExternalSnapshotDocuments()
@@ -62,6 +78,16 @@ export async function saveSnapshot(input: SnapshotSaveInput): Promise<SnapshotSa
     savedAt
   }
 
+  const snapshotConfig = await loadSnapshotStorageConfig()
+  if (snapshotConfig.destination === "vault") {
+    const vaultRoot = await getSnapshotVaultDirectoryHandle()
+    if (!vaultRoot) {
+      throw new Error("obsidian vault directory handle missing")
+    }
+    const path = await writeSnapshotToVaultDir(vaultRoot, fileName, markdown, meta)
+    return { ok: true, fileName, path, title: meta.title, url: meta.url }
+  }
+
   const config = await loadUiSettingsStorageConfig()
   if (config.mode === "external") {
     const bundle = await getExternalBundleHandleForSnapshots()
@@ -79,6 +105,12 @@ export async function saveSnapshot(input: SnapshotSaveInput): Promise<SnapshotSa
 export async function listSnapshotDocumentsForSearch(): Promise<
   Array<{ meta: SnapshotEntryMeta; markdown: string; path: string }>
 > {
+  const snapshotConfig = await loadSnapshotStorageConfig()
+  if (snapshotConfig.destination === "vault") {
+    const docs = await listVaultSnapshotDocuments()
+    return docs ?? []
+  }
+
   const config = await loadUiSettingsStorageConfig()
   if (config.mode === "external") {
     const docs = await listExternalSnapshotDocuments()
@@ -103,6 +135,31 @@ export async function migrateSnapshotsInternalToExternal(
       meta: doc.meta
     }))
     const migrated = await writeAllSnapshotsToExternalBundle(bundle, payload)
+    await clearSnapshotsInternalStore()
+    return { ok: true, migrated }
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : String(e)
+    }
+  }
+}
+
+export async function migrateSnapshotsInternalToVault(
+  vaultRoot: FileSystemDirectoryHandle
+): Promise<SnapshotMigrationResult> {
+  const store = await loadSnapshotsInternalStore()
+  const docs = listInternalSnapshotDocuments(store)
+  if (docs.length === 0) {
+    return { ok: true, migrated: 0 }
+  }
+  try {
+    const payload = docs.map((doc) => ({
+      fileName: doc.meta.fileName,
+      markdown: doc.markdown,
+      meta: doc.meta
+    }))
+    const migrated = await writeAllSnapshotsToVault(vaultRoot, payload)
     await clearSnapshotsInternalStore()
     return { ok: true, migrated }
   } catch (e) {

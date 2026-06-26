@@ -23,6 +23,7 @@ import {
   scrollTopForPlainPickerIndex
 } from "../side-picker/plain/plain-text-picker-virtual"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
+import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import type { SettingPickerRow } from "./setting-picker-rows"
 import { settingPickerEditAriaLabel, settingPickerInitialHi } from "./setting-picker-rows"
@@ -74,6 +75,7 @@ export type SettingPickerBodyProps = {
   statusLines?: readonly string[]
   preview?: ReactNode
   storageConfig?: UiSettingsStorageConfig
+  snapshotStorageConfig?: SnapshotStorageConfig
 }
 
 export function SettingPickerBody({
@@ -90,7 +92,8 @@ export function SettingPickerBody({
   sessionId,
   statusLines = [],
   preview = null,
-  storageConfig
+  storageConfig,
+  snapshotStorageConfig
 }: SettingPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const setInputEl = useCallback(
@@ -118,9 +121,10 @@ export function SettingPickerBody({
         state.view,
         state.draft.locale,
         state.draft.appearance,
-        storageConfig
+        storageConfig,
+        snapshotStorageConfig
       ),
-    [state.view, state.draft.locale, state.draft.appearance, storageConfig]
+    [state.view, state.draft.locale, state.draft.appearance, storageConfig, snapshotStorageConfig]
   )
 
   useEffect(() => {
@@ -215,7 +219,8 @@ export function SettingPickerBody({
       ...keyboardCallbacks,
       onReturnToPrompt
     },
-    storageConfig
+    storageConfig,
+    snapshotStorageConfig
   })
 
   useLayoutEffect(() => {

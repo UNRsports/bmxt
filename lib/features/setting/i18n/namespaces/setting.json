@@ -407,6 +407,50 @@
     "ja": "storage-reload — 外部フォルダから設定を読み込む（プレビュー）",
     "en": "storage-reload — load settings from external folder (preview)"
   },
+  "setting.picker.main.snapshotStorage": {
+    "ja": "snapshot 保存先: {value}",
+    "en": "snapshot storage: {value}"
+  },
+  "setting.picker.main.snapshotVaultPickDir": {
+    "ja": "snapshot-vault-pick-dir — Obsidian Vault フォルダを選び直す",
+    "en": "snapshot-vault-pick-dir — choose Obsidian vault folder again"
+  },
+  "setting.picker.headline.snapshotStorageMode": {
+    "ja": "setting -list · snapshot 保存先 · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · snapshot storage · ↑↓ · Enter/→ select · ← list"
+  },
+  "setting.picker.snapshotStorageBundled": {
+    "ja": "設定と同梱（既定）",
+    "en": "bundled with settings (default)"
+  },
+  "setting.picker.snapshotStorageBundledRow": {
+    "ja": "設定と同梱 — 拡張機能内または外部 bmxt-ui-settings/snapshots/ に保存",
+    "en": "bundled — save in extension storage or external bmxt-ui-settings/snapshots/"
+  },
+  "setting.picker.snapshotStorageVault": {
+    "ja": "Obsidian Vault（未選択）",
+    "en": "Obsidian vault (not selected)"
+  },
+  "setting.picker.snapshotStorageVaultNamed": {
+    "ja": "Obsidian Vault · {directory}",
+    "en": "Obsidian vault · {directory}"
+  },
+  "setting.picker.snapshotStorageVaultRow": {
+    "ja": "Obsidian Vault — Vault 内の BMXt/snapshots/ に保存（設定とは独立）",
+    "en": "Obsidian vault — save to BMXt/snapshots/ inside the vault (separate from settings)"
+  },
+  "setting.snapshotStorage.bundledActivated": {
+    "ja": "snapshot 保存先を設定と同梱に切り替えました",
+    "en": "snapshot storage switched to bundled with settings"
+  },
+  "setting.snapshotStorage.vaultActivated": {
+    "ja": "snapshot 保存先を Obsidian Vault に設定しました — {directory}",
+    "en": "snapshot storage set to Obsidian vault — {directory}"
+  },
+  "setting.snapshotStorage.vaultDirectoryUpdated": {
+    "ja": "snapshot Obsidian Vault を更新しました — {directory}",
+    "en": "snapshot Obsidian vault updated — {directory}"
+  },
   "setting.picker.headline.storageMode": {
     "ja": "setting -list · storage（保存先） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · storage · ↑↓ · Enter/→ select · ← list"

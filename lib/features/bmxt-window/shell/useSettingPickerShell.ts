@@ -13,6 +13,15 @@ import {
 } from "../../setting/setting-list-picker-state"
 import { replaceUiSettings } from "../../setting/settings"
 import { migrateSnapshotsToExternalBundleWithLog } from "../../snapshot/snapshot-external-migration"
+import { migrateSnapshotsToVaultWithLog } from "../../snapshot/snapshot-vault-migration"
+import { loadSnapshotStorageConfig } from "../../snapshot/snapshot-storage-config"
+import {
+  activateBundledSnapshotStorage,
+  activateSnapshotVaultStorage,
+  pickSnapshotVaultDirectory,
+  repickSnapshotVaultDirectory
+} from "../../snapshot/snapshot-vault-persistence"
+import { formatSnapshotVaultDisplayName } from "../../snapshot/snapshot-vault-layout"
 import {
   activateExternalUiSettingsStorage,
   activateInternalUiSettingsStorage,
@@ -216,10 +225,11 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           return
         }
         await activateExternalUiSettingsStorage(picked.handle, picked.directoryName)
-        const migrateLines = await migrateSnapshotsToExternalBundleWithLog(
-          picked.handle,
-          options.uiLocale
-        )
+        const snapshotConfig = await loadSnapshotStorageConfig()
+        const migrateLines =
+          snapshotConfig.destination === "bundled"
+            ? await migrateSnapshotsToExternalBundleWithLog(picked.handle, options.uiLocale)
+            : []
         const reloaded = await reloadUiSettingsFromExternalDirectory()
         if (reloaded.ok) {
           options.setSettingListPicker(options.sessionId, {
@@ -277,6 +287,94 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           logPrefix,
           tSetting("setting.storage.directoryUpdated", options.uiLocale, {
             directory: picked.directoryName
+          })
+        ])
+        return
+      }
+      if (row.id === "snapshot-storage-bundled") {
+        await activateBundledSnapshotStorage()
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("main", current)
+        )
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.snapshotStorage.bundledActivated", options.uiLocale)
+        ])
+        return
+      }
+      if (row.id === "snapshot-storage-vault") {
+        if (!isFileSystemAccessAvailable()) {
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.unavailable", options.uiLocale)
+          ])
+          return
+        }
+        const picked = await pickSnapshotVaultDirectory()
+        if (!picked.ok) {
+          if ("cancelled" in picked && picked.cancelled) {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickCancelled", options.uiLocale)
+            ])
+          } else {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickFailed", options.uiLocale, {
+                message: "message" in picked ? picked.message : tError("error.unknown", options.uiLocale)
+              })
+            ])
+          }
+          return
+        }
+        await activateSnapshotVaultStorage(picked.handle, picked.directoryName)
+        const migrateLines = await migrateSnapshotsToVaultWithLog(
+          picked.handle,
+          options.uiLocale
+        )
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("main", current)
+        )
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.snapshotStorage.vaultActivated", options.uiLocale, {
+            directory: formatSnapshotVaultDisplayName(picked.directoryName)
+          }),
+          ...migrateLines
+        ])
+        return
+      }
+      if (row.id === "snapshot-vault-pick-dir") {
+        if (!isFileSystemAccessAvailable()) {
+          await options.appendLogLines([
+            logPrefix,
+            tSetting("setting.storage.unavailable", options.uiLocale)
+          ])
+          return
+        }
+        const picked = await repickSnapshotVaultDirectory()
+        if (!picked.ok) {
+          if ("cancelled" in picked && picked.cancelled) {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickCancelled", options.uiLocale)
+            ])
+          } else {
+            await options.appendLogLines([
+              logPrefix,
+              tSetting("setting.storage.pickFailed", options.uiLocale, {
+                message: "message" in picked ? picked.message : tError("error.unknown", options.uiLocale)
+              })
+            ])
+          }
+          return
+        }
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.snapshotStorage.vaultDirectoryUpdated", options.uiLocale, {
+            directory: formatSnapshotVaultDisplayName(picked.directoryName)
           })
         ])
         return

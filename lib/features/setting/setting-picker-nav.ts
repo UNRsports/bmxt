@@ -10,6 +10,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "editPicker"
     case "storage":
       return "storageMode"
+    case "snapshot-storage":
+      return "snapshotStorageMode"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -38,6 +40,7 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "resetConfirm"
     case "storage-pick-dir":
     case "storage-reload":
+    case "snapshot-vault-pick-dir":
     case "export":
     case "import":
     case "save":
@@ -53,6 +56,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "language" ||
     view === "editPicker" ||
     view === "storageMode" ||
+    view === "snapshotStorageMode" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||

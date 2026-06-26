@@ -63,6 +63,9 @@ export const UI_SETTINGS_STORAGE_CONFIG_KEY = "bmxt_ui_settings_storage_v1"
 /** Saved page snapshots (Markdown); mirrors UI settings storage mode. */
 export const SNAPSHOTS_STORAGE_KEY = "bmxt_snapshots_v1"
 
+/** Snapshot destination: bundled with UI settings vs separate Obsidian vault folder. */
+export const SNAPSHOT_STORAGE_CONFIG_KEY = "bmxt_snapshot_storage_v1"
+
 /** Max Markdown body characters per snapshot (internal storage). */
 export const MAX_SNAPSHOT_BODY_CHARS = 200_000
 

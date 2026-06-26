@@ -7,6 +7,37 @@ import {
   snapshotMarkdownBodyLines
 } from "./snapshot-markdown.ts"
 import { parseSnapshotSaveLine } from "./snapshot-save-input.ts"
+import {
+  formatSnapshotVaultDisplayName,
+  snapshotVaultRelativePath
+} from "./snapshot-vault-layout.ts"
+import { normalizeSnapshotStorageConfig } from "./snapshot-storage-mode.ts"
+
+describe("normalizeSnapshotStorageConfig", () => {
+  it("defaults to bundled destination", () => {
+    assert.deepEqual(normalizeSnapshotStorageConfig(null), {
+      destination: "bundled",
+      vaultDirectoryName: null
+    })
+  })
+
+  it("accepts vault destination with directory name", () => {
+    assert.deepEqual(
+      normalizeSnapshotStorageConfig({ destination: "vault", vaultDirectoryName: "MyVault" }),
+      { destination: "vault", vaultDirectoryName: "MyVault" }
+    )
+  })
+})
+
+describe("snapshotVaultRelativePath", () => {
+  it("builds BMXt/snapshots path", () => {
+    assert.equal(snapshotVaultRelativePath("2025-06-25-page.md"), "BMXt/snapshots/2025-06-25-page.md")
+    assert.equal(
+      formatSnapshotVaultDisplayName("MyVault"),
+      "MyVault/BMXt/snapshots"
+    )
+  })
+})
 
 describe("buildSnapshotMarkdown", () => {
   it("includes frontmatter and heading", () => {

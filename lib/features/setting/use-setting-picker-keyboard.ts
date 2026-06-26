@@ -3,6 +3,7 @@ import { runPickerWindowCaptureChain } from "../side-picker/interaction/picker-l
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
+import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
 import { settingPickerGoToView, type SettingListPickerState } from "./setting-list-picker-state"
 import {
   isArrowLeft,
@@ -39,6 +40,7 @@ export type UseSettingPickerKeyboardOptions = {
   sessionId?: string
   callbacks: SettingPickerKeyboardCallbacks
   storageConfig?: UiSettingsStorageConfig
+  snapshotStorageConfig?: SnapshotStorageConfig
 }
 
 export function useSettingPickerKeyboard({
@@ -50,7 +52,8 @@ export function useSettingPickerKeyboard({
   keyboardActive,
   sessionId,
   callbacks,
-  storageConfig
+  storageConfig,
+  snapshotStorageConfig
 }: UseSettingPickerKeyboardOptions): {
   onWindowKeydownCapture: (ev: KeyboardEvent) => void
   onInputKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
@@ -118,7 +121,8 @@ export function useSettingPickerKeyboard({
           target,
           state.draft.locale,
           state.draft.appearance,
-          storageConfig
+          storageConfig,
+          snapshotStorageConfig
         )
       )
       return
@@ -145,7 +149,8 @@ export function useSettingPickerKeyboard({
     state.view,
     state.draft.appearance,
     state.draft.locale,
-    storageConfig
+    storageConfig,
+    snapshotStorageConfig
   ])
 
   const handleArrowLeft = useCallback((): void => {

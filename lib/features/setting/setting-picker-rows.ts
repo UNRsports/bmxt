@@ -18,6 +18,8 @@ import {
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
+import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
+import { formatSnapshotVaultDisplayName } from "../snapshot/snapshot-vault-layout"
 
 export type SettingPickerRowId =
   | "language"
@@ -44,6 +46,10 @@ export type SettingPickerRowId =
   | "storage-mode-external"
   | "storage-pick-dir"
   | "storage-reload"
+  | "snapshot-storage"
+  | "snapshot-storage-bundled"
+  | "snapshot-storage-vault"
+  | "snapshot-vault-pick-dir"
   | "export"
   | "import"
   | "locale-ja"
@@ -114,7 +120,8 @@ export function settingPickerInitialHi(
   view: SettingListPickerView,
   locale: UiLocale,
   appearance: UiAppearance,
-  storageConfig?: UiSettingsStorageConfig
+  storageConfig?: UiSettingsStorageConfig,
+  snapshotStorageConfig?: SnapshotStorageConfig
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
@@ -124,6 +131,9 @@ export function settingPickerInitialHi(
   }
   if (view === "storageMode") {
     return storageConfig?.mode === "external" ? 1 : 0
+  }
+  if (view === "snapshotStorageMode") {
+    return snapshotStorageConfig?.destination === "vault" ? 1 : 0
   }
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -260,11 +270,28 @@ function storageModeSummaryLabel(
   return tSetting("setting.picker.storageModeInternal", locale)
 }
 
+function snapshotStorageSummaryLabel(
+  snapshotStorageConfig: SnapshotStorageConfig | undefined,
+  locale: UiLocale
+): string {
+  if (snapshotStorageConfig?.destination === "vault") {
+    const dir = snapshotStorageConfig.vaultDirectoryName
+    if (dir) {
+      return tSetting("setting.picker.snapshotStorageVaultNamed", locale, {
+        directory: formatSnapshotVaultDisplayName(dir)
+      })
+    }
+    return tSetting("setting.picker.snapshotStorageVault", locale)
+  }
+  return tSetting("setting.picker.snapshotStorageBundled", locale)
+}
+
 export function buildSettingPickerRows(
   view: SettingListPickerView,
   locale: UiLocale,
   appearance: UiAppearance,
-  storageConfig?: UiSettingsStorageConfig
+  storageConfig?: UiSettingsStorageConfig,
+  snapshotStorageConfig?: SnapshotStorageConfig
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -293,6 +320,19 @@ export function buildSettingPickerRows(
       {
         id: "storage-mode-external",
         line: tSetting("setting.picker.storageModeExternalRow", locale)
+      }
+    ]
+  }
+
+  if (view === "snapshotStorageMode") {
+    return [
+      {
+        id: "snapshot-storage-bundled",
+        line: tSetting("setting.picker.snapshotStorageBundledRow", locale)
+      },
+      {
+        id: "snapshot-storage-vault",
+        line: tSetting("setting.picker.snapshotStorageVaultRow", locale)
       }
     ]
   }
@@ -460,6 +500,20 @@ export function buildSettingPickerRows(
     )
   }
 
+  rows.push({
+    id: "snapshot-storage",
+    line: tSetting("setting.picker.main.snapshotStorage", locale, {
+      value: snapshotStorageSummaryLabel(snapshotStorageConfig, locale)
+    })
+  })
+
+  if (snapshotStorageConfig?.destination === "vault") {
+    rows.push({
+      id: "snapshot-vault-pick-dir",
+      line: tSetting("setting.picker.main.snapshotVaultPickDir", locale)
+    })
+  }
+
   rows.push(
     {
       id: "reset-default",
@@ -503,7 +557,9 @@ export function settingPickerHeadline(
           ? "setting.picker.headline.editPicker"
           : view === "storageMode"
             ? "setting.picker.headline.storageMode"
-            : view === "fontSize"
+            : view === "snapshotStorageMode"
+              ? "setting.picker.headline.snapshotStorageMode"
+              : view === "fontSize"
             ? "setting.picker.headline.fontSize"
             : view === "pickerFontSize"
               ? "setting.picker.headline.pickerFontSize"

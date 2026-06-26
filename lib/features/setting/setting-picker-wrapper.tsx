@@ -20,6 +20,7 @@ import type { SettingListPickerState } from "./setting-list-picker-state"
 import { SettingPickerPreview } from "./setting-picker-preview"
 import { resolveSettingPickerPreviewAppearance } from "./setting-picker-edit"
 import { useUiSettingsStorageConfig } from "./use-ui-settings-storage-config"
+import { useSnapshotStorageConfig } from "../snapshot/use-snapshot-storage-config"
 
 export type SettingPickerWrapperProps = {
   state: SettingListPickerState
@@ -47,6 +48,7 @@ export function SettingPickerWrapper({
   sessionId
 }: SettingPickerWrapperProps) {
   const storageConfig = useUiSettingsStorageConfig()
+  const snapshotStorageConfig = useSnapshotStorageConfig()
   const { draft } = state
   const locale = draft.locale
   const appearance = draft.appearance
@@ -55,8 +57,8 @@ export function SettingPickerWrapper({
     [state]
   )
   const rows = useMemo(
-    () => buildSettingPickerRows(state.view, locale, appearance, storageConfig),
-    [state.view, locale, appearance, storageConfig]
+    () => buildSettingPickerRows(state.view, locale, appearance, storageConfig, snapshotStorageConfig),
+    [state.view, locale, appearance, storageConfig, snapshotStorageConfig]
   )
   const lines = useMemo(() => rows.map((row) => row.line), [rows])
   const headline = settingPickerHeadline(state.view, locale, state.editing)
@@ -121,6 +123,7 @@ export function SettingPickerWrapper({
       sessionId={sessionId}
       preview={preview}
       storageConfig={storageConfig}
+      snapshotStorageConfig={snapshotStorageConfig}
     />
   )
 }
