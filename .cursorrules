@@ -62,6 +62,16 @@
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
 
+# Internationalization (i18n) / 国際化（i18n）
+
+**EN — Always i18n-first:** Treat **bilingual UI strings (EN + JA)** as the default for every user-visible change. Do **not** hard-code terminal log lines, picker labels, command usage/errors, status bars, or help text in source—add keys to the appropriate namespace under **`lib/features/setting/i18n/namespaces/`** (e.g. **`cmd.json`**, **`tabs.json`**, **`setting.json`**) and resolve them via **`tCmd`**, **`tTabs`**, **`tSetting`**, etc. When adding keys, update **`lib/features/setting/i18n/messages.test.ts`** expected key count if the test asserts catalog size.
+
+**JA — 常に i18n 前提:** 利用者に見える文言は **日英（EN + JA）** を既定とする。ターミナルログ・ピッカー表示・コマンド usage/エラー・ステータスバー・ヘルプなどをソースに**直書きしない**。**`lib/features/setting/i18n/namespaces/`**（**`cmd.json`**、**`tabs.json`**、**`setting.json`** 等）にキーを追加し、**`tCmd`** / **`tTabs`** / **`tSetting`** 等で参照する。キー追加時は **`messages.test.ts`** のカタログ件数アサーションがあれば合わせて更新する。
+
+**EN — Locale at runtime:** Use **`getRunLocale()`** / **`useUiSettings().locale`** (or the feature’s existing locale source) when emitting messages from non-React code or shell handlers. Placeholders use **`{name}`** in JSON and **`formatMessage`** / namespace translators—keep both locales grammatically natural.
+
+**JA — 実行時ロケール:** 非 React やシェルハンドラから出す文言は **`getRunLocale()`** / **`useUiSettings().locale`**（既存の取得方法）を使う。プレースホルダは JSON の **`{name}`** と **`formatMessage`**／名前空間 translator に従い、**両言語とも自然な文**にする。
+
 # UI settings persistence / UI 設定の永続化（`setting`）
 
 **EN — Scope:** UI locale and terminal/picker appearance edited in **`setting -list`**. Implementation lives in **`lib/features/setting/`**; storage keys in **`lib/features/extension-storage/keys.ts`**. See README § **`setting`** for user-facing behavior.

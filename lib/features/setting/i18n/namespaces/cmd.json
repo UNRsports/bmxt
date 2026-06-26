@@ -407,6 +407,10 @@
     "ja": "snapshot save failed: {message}",
     "en": "snapshot save failed: {message}"
   },
+  "cmd.snapshot.save.reloadAdvice": {
+    "ja": "ヒント: 対象タブを再読み込みしてから再試行してください（拡張機能のコンテンツスクリプトをページに適用するため）。",
+    "en": "Hint: reload the target tab and try again so the extension can inject its content script on that page."
+  },
   "cmd.snapshot.save.notHttp": {
     "ja": "snapshot save failed: http(s) ページではありません ({url})。tabs ピッカーで Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
     "en": "snapshot save failed: not an http(s) page ({url}). Highlight a web page in the tabs picker or use snapshot -save <tabId>."

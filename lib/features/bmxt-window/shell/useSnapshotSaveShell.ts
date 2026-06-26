@@ -1,8 +1,9 @@
 import { useCallback } from "react"
 import { parseSnapshotSaveLine } from "../../snapshot/snapshot-save-input"
+import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines"
+import { runSnapshotSaveForTabIds } from "../../snapshot/snapshot-save-runner"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab"
 import type { UiLocale } from "../../setting/locale"
-import { tCmd } from "../../setting/i18n/ns/cmd"
 
 export type UseSnapshotSaveShellOptions = {
   sessionId: string
@@ -20,29 +21,22 @@ export function useSnapshotSaveShell(options: UseSnapshotSaveShellOptions) {
       const resolvedTabId = tabId ?? parsed.tabId
       await options.appendLogLines([`> ${trimmed}`])
       const result = await saveSnapshotFromTab(resolvedTabId, { sessionId: options.sessionId })
-      if (result.ok === false) {
-        if (result.code === "not_scriptable") {
-          await options.appendLogLines([
-            tCmd("cmd.snapshot.save.notHttp", options.uiLocale, {
-              url: result.url ?? "(no url)"
-            })
-          ])
-          return
-        }
-        await options.appendLogLines([
-          tCmd("cmd.snapshot.save.failed", options.uiLocale, { message: result.message })
-        ])
-        return
-      }
-      await options.appendLogLines([
-        tCmd("cmd.snapshot.save.done", options.uiLocale, {
-          path: result.result.path,
-          title: result.result.title
-        })
-      ])
+      await options.appendLogLines(snapshotSaveLogLinesForResult(options.uiLocale, result))
     },
     [options]
   )
 
-  return { runSnapshotSave }
+  const runSnapshotSaveForTabIdsFromShell = useCallback(
+    async (tabIds: readonly number[]) => {
+      await runSnapshotSaveForTabIds({
+        sessionId: options.sessionId,
+        locale: options.uiLocale,
+        tabIds,
+        appendLogLines: options.appendLogLines
+      })
+    },
+    [options]
+  )
+
+  return { runSnapshotSave, runSnapshotSaveForTabIds: runSnapshotSaveForTabIdsFromShell }
 }

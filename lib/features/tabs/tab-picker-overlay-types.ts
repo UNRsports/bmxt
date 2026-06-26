@@ -17,6 +17,7 @@ export type ActionMenuItemId =
   | "newTab"
   | "edit"
   | "reload"
+  | "snapshot"
 
 import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
 

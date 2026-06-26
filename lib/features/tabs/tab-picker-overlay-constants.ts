@@ -62,14 +62,16 @@ export const ACTION_MENU_ITEMS_FOR_TAB = [
   { id: "close" as const, messageKey: "tabs.picker.actionMenu.close" as const },
   { id: "group" as const, messageKey: "tabs.picker.actionMenu.group" as const },
   { id: "newWindow" as const, messageKey: "tabs.picker.actionMenu.newWindow" as const },
-  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const }
+  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const },
+  { id: "snapshot" as const, messageKey: "tabs.picker.actionMenu.snapshot" as const }
 ] as const
 
 export const ACTION_MENU_ITEMS_FOR_WINDOW = [
   { id: "close" as const, messageKey: "tabs.picker.actionMenu.close" as const },
   { id: "newTab" as const, messageKey: "tabs.picker.actionMenu.newTab" as const },
   { id: "edit" as const, messageKey: "tabs.picker.actionMenu.edit" as const },
-  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const }
+  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const },
+  { id: "snapshot" as const, messageKey: "tabs.picker.actionMenu.snapshot" as const }
 ] as const
 
 export const ACTION_MENU_ITEMS_FOR_GROUP = [
@@ -77,7 +79,8 @@ export const ACTION_MENU_ITEMS_FOR_GROUP = [
   { id: "close" as const, messageKey: "tabs.picker.actionMenu.close" as const },
   { id: "newWindow" as const, messageKey: "tabs.picker.actionMenu.newWindow" as const },
   { id: "edit" as const, messageKey: "tabs.picker.actionMenu.edit" as const },
-  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const }
+  { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const },
+  { id: "snapshot" as const, messageKey: "tabs.picker.actionMenu.snapshot" as const }
 ] as const
 
 export type ActionMenuItemDef = {
@@ -90,6 +93,7 @@ export type ActionMenuItemDef = {
     | "tabs.picker.actionMenu.newTab"
     | "tabs.picker.actionMenu.edit"
     | "tabs.picker.actionMenu.reload"
+    | "tabs.picker.actionMenu.snapshot"
 }
 
 export function actionMenuItemsForKind(kind: SelectKind): readonly ActionMenuItemDef[] {

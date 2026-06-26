@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MutableRefObject
-} from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from "react"
+import { runSnapshotSaveForTabIds } from "../snapshot/snapshot-save-runner"
 import { resolvePickerHeadline, type PickerReducerEvent } from "./state-machine"
 import { useLoadGroupChoicesWhenBulkGroup } from "./use-load-group-choices"
 import { useMirrorBrowserActiveTab } from "./use-mirror-browser-active-tab"
@@ -481,6 +474,21 @@ export function useTabPickerController({
     onPickerHighlightCreatedTab
   })
 
+  const saveSnapshotsForPickerTabIds = useCallback(
+    async (tabIds: readonly number[]) => {
+      if (!onAppendLog) {
+        return
+      }
+      await runSnapshotSaveForTabIds({
+        sessionId,
+        locale,
+        tabIds,
+        appendLogLines: onAppendLog
+      })
+    },
+    [locale, onAppendLog, sessionId]
+  )
+
   const {
     openActionMenuFromPicker,
     closeActionMenu,
@@ -502,6 +510,7 @@ export function useTabPickerController({
     setNewTabUrlWindowId,
     setNewTabUrl,
     openEditFromPicker,
+    runSnapshotSaveForTabIds: saveSnapshotsForPickerTabIds,
     runExecutionIntentForSnapshot
   })
 

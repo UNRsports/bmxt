@@ -1,6 +1,7 @@
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab"
 import { getTabPickerEngine } from "../tabs/engine/store"
 import { isHttpUrl } from "../url/is-http-url"
+import { pickerHiTabId } from "./snapshot-picker-tab-id"
 
 export type SnapshotTabResolveContext = {
   sessionId?: string
@@ -47,8 +48,8 @@ async function findRecentHttpTab(): Promise<chrome.tabs.Tab | undefined> {
 }
 
 /**
- * EN: Resolve snapshot target without tabId — picker preview tab, then last normal window,
- *     then most recently accessed http(s) tab (BMXt popup must not win via lastFocusedWindow).
+ * EN: Resolve snapshot target without tabId — tabs picker `hi` row, then picker `activeTabId`,
+ *     then last normal window, then most recently accessed http(s) tab.
  */
 export async function resolveSnapshotTargetTab(
   tabIdRaw: string | undefined,
@@ -61,6 +62,14 @@ export async function resolveSnapshotTargetTab(
     }
     const tab = await tabById(tabId)
     return tab ?? null
+  }
+
+  const hiTabId = pickerHiTabId(ctx.sessionId)
+  if (hiTabId !== undefined) {
+    const hiTab = await tabById(hiTabId)
+    if (isScriptableTab(hiTab)) {
+      return hiTab
+    }
   }
 
   const pickerId = pickerActiveTabId(ctx.sessionId)
