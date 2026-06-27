@@ -33,6 +33,7 @@ export function DomPickerWrapper({
         message={state.message}
         onApprove={onApprove}
         onReturnToPrompt={onReturnToPrompt}
+        onExitToDetailBar={onExitToDetailBar}
         keyboardActive={keyboardActive}
         pickerInputRef={pickerInputRef}
       />

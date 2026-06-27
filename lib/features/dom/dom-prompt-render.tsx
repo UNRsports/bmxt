@@ -17,6 +17,8 @@ type Props = {
   onApprove: () => void
   /** EN: Esc / N — return focus to BMXt prompt; picker column stays open. */
   onReturnToPrompt: () => void
+  /** EN: ← — return focus to dom detail bar; picker column stays open. */
+  onExitToDetailBar?: () => void
   /** Notify parent that a permission grant succeeded (so it can re-dispatch). */
   onPermissionGranted?: () => void
   keyboardActive?: boolean
@@ -29,6 +31,7 @@ export function DomPromptRender({
   message,
   onApprove,
   onReturnToPrompt,
+  onExitToDetailBar,
   onPermissionGranted,
   keyboardActive = false,
   pickerInputRef
@@ -97,14 +100,26 @@ export function DomPromptRender({
       return
     }
     const onWin = (ev: KeyboardEvent) => {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey) {
+        return
+      }
+      if (ev.key === "ArrowLeft" || ev.code === "ArrowLeft") {
+        if (onExitToDetailBar) {
+          ev.preventDefault()
+          ev.stopImmediatePropagation()
+          onExitToDetailBar()
+        }
+        return
+      }
       if (ev.key === "Escape") {
         ev.preventDefault()
+        ev.stopImmediatePropagation()
         onReturnToPrompt()
       }
     }
     window.addEventListener("keydown", onWin, true)
     return () => window.removeEventListener("keydown", onWin, true)
-  }, [keyboardActive, onReturnToPrompt])
+  }, [keyboardActive, onExitToDetailBar, onReturnToPrompt])
 
   const onInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -112,6 +127,13 @@ export function DomPromptRender({
         return
       }
       if (e.nativeEvent.isComposing) {
+        return
+      }
+      if (e.key === "ArrowLeft" || e.code === "ArrowLeft") {
+        if (onExitToDetailBar) {
+          e.preventDefault()
+          onExitToDetailBar()
+        }
         return
       }
       if (e.key === "Escape" || e.key === "n" || e.key === "N") {
@@ -135,7 +157,7 @@ export function DomPromptRender({
         return
       }
     },
-    [keyboardActive, approve, message.length, onReturnToPrompt]
+    [keyboardActive, approve, message.length, onExitToDetailBar, onReturnToPrompt]
   )
 
   const allLines = [...message, ...(extra.length > 0 ? ["", ...extra] : [])]

@@ -17,6 +17,8 @@ export type UseDomListShellOptions = {
   uiLocale: UiLocale
   jobRunner: JobRunner
   domListPicker: DomListPickerState | null
+  /** EN: Tab-follow refresh while dom picker / detail bar is focused (not from prompt). */
+  domListFollowEnabled: boolean
   appendLogLines: (lines: string[]) => Promise<void>
   setDomListPicker: (sessionId: string, state: DomListPickerState | null) => void
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<unknown>>
@@ -50,7 +52,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
               if (shouldCancelJob(job)) {
                 return
               }
-              options.setDomListPicker(options.sessionId, null)
+              if (announce) {
+                options.setDomListPicker(options.sessionId, null)
+              }
               return
             }
             let domCapture: DomListCapture | undefined
@@ -121,7 +125,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
                 message: e instanceof Error ? e.message : String(e)
               })
             ])
-            options.setDomListPicker(options.sessionId, null)
+            if (announce) {
+              options.setDomListPicker(options.sessionId, null)
+            }
           }
         },
         { meta: { line: domListLine } }
@@ -137,6 +143,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
 
   const { onTabsPickerFocusTabId: queueDomListFollowRefresh } = useDomListFollowTab({
     domListPicker: options.domListPicker,
+    followEnabled: options.domListFollowEnabled,
     resolveTargetTabId: resolveDomListTargetTabId,
     refreshDomList: refreshDomListPicker,
     isDomListJobActive: () => options.jobRunner.isActive("dom-list")

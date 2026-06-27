@@ -8,8 +8,8 @@
     "en": "DOM list picker closed."
   },
   "dom.picker.headline": {
-    "ja": "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · → detail bar · Esc → prompt",
-    "en": "dom -list · ↑↓/j/k focus element + jump page · / · :nohlsearch · n/N · → detail bar · Esc → prompt"
+    "ja": "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt",
+    "en": "dom -list · ↑↓/j/k focus element + jump page · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"
   },
   "dom.picker.inputAria.keys": {
     "ja": "DOM ピッカーのキー操作",

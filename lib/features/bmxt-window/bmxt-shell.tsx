@@ -73,6 +73,7 @@ import {
 } from "../search/search-list-picker-input"
 import { isJobHandleActive, useSessionJobRunner } from "../job"
 import { parseDomExitListLine, parseDomListPickerLine, type DomListPickerState } from "../dom/dom-list-picker-input"
+import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
 import {
   parseNavEnterLine,
   parseNavExitLine,
@@ -322,6 +323,11 @@ export function BmxtShell({
     [onNavArmedChange]
   )
 
+  const domListFollowEnabled = useMemo(
+    () => isDomListPickerFollowEnabled(domListPicker, paneFocus, detailBarId),
+    [detailBarId, domListPicker, paneFocus]
+  )
+
   const {
     runDomListAndShow,
     onTabsPickerFocusTabId,
@@ -332,6 +338,7 @@ export function BmxtShell({
     uiLocale: uiSettings.locale,
     jobRunner,
     domListPicker,
+    domListFollowEnabled,
     appendLogLines,
     setDomListPicker,
     setModeToolbarOrder

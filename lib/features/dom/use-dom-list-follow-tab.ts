@@ -6,6 +6,8 @@ const FOLLOW_DEBOUNCE_MS = 300
 
 type Props = {
   domListPicker: DomListPickerState | null
+  /** EN: Follow only while dom picker / dom detail bar is focused — not from the prompt. */
+  followEnabled: boolean
   resolveTargetTabId: () => Promise<number | undefined>
   refreshDomList: (commandLine: string) => Promise<void>
   /** EN: When provided, skip refresh while a `dom-list` job is in flight. */
@@ -19,6 +21,7 @@ type Props = {
  */
 export function useDomListFollowTab({
   domListPicker,
+  followEnabled,
   resolveTargetTabId,
   refreshDomList,
   isDomListJobActive
@@ -30,7 +33,9 @@ export function useDomListFollowTab({
   const refreshRef = useRef(refreshDomList)
   const resolveRef = useRef(resolveTargetTabId)
   const domListPickerRef = useRef(domListPicker)
+  const followEnabledRef = useRef(followEnabled)
   const isActiveRef = useRef(isDomListJobActive)
+  followEnabledRef.current = followEnabled
   isActiveRef.current = isDomListJobActive
 
   useEffect(() => {
@@ -49,6 +54,9 @@ export function useDomListFollowTab({
   }, [domListPicker])
 
   const runRefreshIfNeeded = useCallback(async () => {
+    if (!followEnabledRef.current) {
+      return
+    }
     const picker = domListPickerRef.current
     if (!picker || picker.kind !== "lines") {
       return
@@ -68,6 +76,9 @@ export function useDomListFollowTab({
   }, [])
 
   const queueRefresh = useCallback(() => {
+    if (!followEnabledRef.current) {
+      return
+    }
     const picker = domListPickerRef.current
     if (!picker || picker.kind !== "lines") {
       return
@@ -89,7 +100,7 @@ export function useDomListFollowTab({
   )
 
   useEffect(() => {
-    if (domListPicker?.kind !== "lines") {
+    if (!followEnabled || domListPicker?.kind !== "lines") {
       return
     }
 
@@ -137,7 +148,7 @@ export function useDomListFollowTab({
         debounceRef.current = null
       }
     }
-  }, [domListPicker?.kind, domListPicker?.commandLine, queueRefresh])
+  }, [domListPicker?.kind, domListPicker?.commandLine, followEnabled, queueRefresh])
 
   return { onTabsPickerFocusTabId }
 }

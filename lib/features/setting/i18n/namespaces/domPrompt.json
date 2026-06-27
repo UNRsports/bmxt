@@ -16,8 +16,8 @@
     "en": "Permission was not granted by the browser; keeping the picker open so you can retry."
   },
   "domPrompt.headline": {
-    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · Esc/N → プロンプト",
-    "en": "dom -list — permission / target check · Enter=Allow / Y · Esc/N → prompt"
+    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · ← detail bar · Esc/N → プロンプト",
+    "en": "dom -list — permission / target check · Enter=Allow / Y · ← detail bar · Esc/N → prompt"
   },
   "domPrompt.listAria": {
     "ja": "権限通知",
