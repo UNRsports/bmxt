@@ -1,0 +1,171 @@
+/**
+ * EN: Injected — document-wide semantic filter for dom -list --with menu.
+ * JA: `--with` 機能メニュー用の意味論フィルタ（注入専用）。
+ */
+
+import {
+  buildPathForElement,
+  pathTargetsElement,
+  walkAllElements
+} from "./injected-dom-path.ts"
+
+type DomShowMode = "html" | "react"
+
+type SemanticKind = "link" | "image" | "form" | "button" | "heading"
+
+type ViewportEntryPayload = { line: string; path: number[] }
+
+type SemanticPayload = {
+  entries?: ViewportEntryPayload[]
+  truncated?: boolean
+}
+
+function classifyElement(el: Element): SemanticKind[] {
+  const kinds: SemanticKind[] = []
+  const tag = el.tagName.toLowerCase()
+  const role = (el.getAttribute("role") ?? "").toLowerCase()
+  const href = (el.getAttribute("href") ?? "").trim()
+  const inputType =
+    tag === "input" ? (el.getAttribute("type") ?? "text").toLowerCase() : null
+  const ce = el.getAttribute("contenteditable")
+
+  if (tag === "a") {
+    kinds.push("link")
+  }
+  if (tag === "area" && href.length > 0) {
+    kinds.push("link")
+  }
+  if (role === "link") {
+    kinds.push("link")
+  }
+  if (href.length > 0 && tag !== "base" && tag !== "link") {
+    kinds.push("link")
+  }
+  if (tag === "summary") {
+    kinds.push("link")
+  }
+
+  if (tag === "img" || tag === "picture") {
+    kinds.push("image")
+  }
+  if (tag === "svg") {
+    kinds.push("image")
+  }
+  if (tag === "object" || tag === "embed") {
+    kinds.push("image")
+  }
+  if (role === "img") {
+    kinds.push("image")
+  }
+  if (inputType === "image") {
+    kinds.push("image")
+  }
+
+  if (tag === "textarea" || tag === "select" || tag === "output") {
+    kinds.push("form")
+  }
+  if (
+    tag === "input" &&
+    inputType !== "button" &&
+    inputType !== "submit" &&
+    inputType !== "reset" &&
+    inputType !== "image"
+  ) {
+    kinds.push("form")
+  }
+  if (ce === "" || ce === "true" || ce === "plaintext-only") {
+    kinds.push("form")
+  }
+  if (
+    role === "textbox" ||
+    role === "combobox" ||
+    role === "searchbox" ||
+    role === "spinbutton" ||
+    role === "listbox"
+  ) {
+    kinds.push("form")
+  }
+
+  if (tag === "button") {
+    kinds.push("button")
+  }
+  if (tag === "input" && (inputType === "button" || inputType === "submit" || inputType === "reset")) {
+    kinds.push("button")
+  }
+  if (
+    role === "button" ||
+    role === "menuitem" ||
+    role === "menuitemcheckbox" ||
+    role === "menuitemradio"
+  ) {
+    kinds.push("button")
+  }
+
+  if (/^h[1-6]$/.test(tag)) {
+    kinds.push("heading")
+  }
+  if (role === "heading") {
+    kinds.push("heading")
+  }
+
+  return [...new Set(kinds)]
+}
+
+/** EN: All matching elements in document order — no walk depth cap. */
+export function bmxtDomSemanticEntriesInjected(
+  mode: DomShowMode,
+  kind: SemanticKind
+): SemanticPayload {
+  const maxResults = 500
+  const htmlSnippetMax = 220
+  const collected: ViewportEntryPayload[] = []
+  let truncated = false
+
+  function formatReactLine(el: Element): string {
+    let fiber = ""
+    const keys = Object.keys(el as unknown as Record<string, unknown>)
+    for (let i = 0; i < keys.length; i += 1) {
+      const k = keys[i]
+      if (k.startsWith("__reactFiber$") || k.startsWith("__reactProps$")) {
+        fiber = " [react-internal]"
+        break
+      }
+    }
+    const id = el.id ? "#" + el.id : ""
+    let cls = ""
+    const cn = el.className
+    if (typeof cn === "string" && cn) {
+      const parts = cn.split(/\s+/).filter(Boolean).slice(0, 4)
+      if (parts.length) {
+        cls = "." + parts.join(".")
+      }
+    }
+    return el.tagName.toLowerCase() + id + cls + fiber
+  }
+
+  function formatHtmlLine(el: Element): string {
+    let snippet = el.outerHTML.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
+    if (snippet.length > htmlSnippetMax) {
+      snippet = snippet.slice(0, htmlSnippetMax) + "…"
+    }
+    return snippet
+  }
+
+  walkAllElements((el) => {
+    if (truncated || !classifyElement(el).includes(kind)) {
+      return
+    }
+    const path = buildPathForElement(el)
+    if (path == null || !pathTargetsElement(path, el)) {
+      return
+    }
+    if (collected.length >= maxResults) {
+      truncated = true
+      return
+    }
+    const line = mode === "html" ? formatHtmlLine(el) : formatReactLine(el)
+    collected.push({ line, path: [...path] })
+  })
+
+  return { entries: collected, truncated }
+}

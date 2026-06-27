@@ -22,5 +22,13 @@
   "domList.viewportNoMatch": {
     "ja": "（ビューポート内に \"{pattern}\" に一致する要素なし）",
     "en": "(no viewport elements matched \"{pattern}\")"
+  },
+  "domList.semanticEmpty": {
+    "ja": "（ページ内に {kind} なし）",
+    "en": "(no {kind} elements on page)"
+  },
+  "domList.semanticTruncated": {
+    "ja": "（件数上限のため一部のみ表示）",
+    "en": "(showing partial list — result cap reached)"
   }
 }

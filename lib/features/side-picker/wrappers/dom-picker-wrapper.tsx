@@ -77,6 +77,7 @@ export function DomPickerWrapper({
       targetTabId={state.targetTabId}
       jumpActiveMode={jumpActiveMode}
       pickerMode={pickerMode}
+      flavor={state.flavor ?? "--html"}
       onReturnToPrompt={onReturnToPrompt}
       onExitToDetailBar={onExitToDetailBar}
       keyboardActive={keyboardActive}

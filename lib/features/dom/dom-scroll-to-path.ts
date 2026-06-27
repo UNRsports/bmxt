@@ -1,4 +1,7 @@
-import { bmxtDomScrollToPathInjected } from "../page-dom/injected-dom-scroll-to-path"
+import {
+  bmxtDomClearHighlightInjected,
+  bmxtDomScrollToPathInjected
+} from "../page-dom/injected-dom-scroll-to-path"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 
@@ -7,6 +10,8 @@ const TAB_FOCUS_DELAY_MS = 120
 export type DomListJumpOptions = {
   /** EN: Activate the tab and focus its browser window before scrolling. */
   focusWindow?: boolean
+  /** EN: Keep outline on the element until the next preview or clear. */
+  persistHighlight?: boolean
 }
 
 function sleep(ms: number): Promise<void> {
@@ -15,11 +20,15 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
-async function injectScrollToPath(tabId: number, path: readonly number[]): Promise<boolean> {
+async function injectScrollToPath(
+  tabId: number,
+  path: readonly number[],
+  persistHighlight: boolean
+): Promise<boolean> {
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: bmxtDomScrollToPathInjected,
-    args: [[...path]]
+    args: [[...path], { persist: persistHighlight }]
   })
   return Boolean((result as { ok?: boolean } | undefined)?.ok)
 }
@@ -46,16 +55,40 @@ export async function jumpDomListTargetToPath(
       })
       await sleep(TAB_FOCUS_DELAY_MS)
     }
-    return injectScrollToPath(tabId, path)
+    return injectScrollToPath(tabId, path, options.persistHighlight === true)
   } catch {
     return false
   }
 }
 
 /** EN: Preview jump — scroll/highlight without focusing the browser window. */
+export async function previewDomListTargetToPath(
+  tabId: number,
+  path: readonly number[]
+): Promise<boolean> {
+  return jumpDomListTargetToPath(tabId, path, { focusWindow: false, persistHighlight: true })
+}
+
+/** EN: Legacy alias for previewDomListTargetToPath. */
 export async function scrollDomListTargetToPath(
   tabId: number,
   path: readonly number[]
 ): Promise<boolean> {
-  return jumpDomListTargetToPath(tabId, path, { focusWindow: false })
+  return previewDomListTargetToPath(tabId, path)
+}
+
+/** EN: Remove persisted dom picker outline on the target tab. */
+export async function clearDomListTargetHighlight(tabId: number): Promise<void> {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    if (!isScriptablePageUrl(tab.url)) {
+      return
+    }
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: bmxtDomClearHighlightInjected
+    })
+  } catch {
+    /* tab gone or not scriptable */
+  }
 }

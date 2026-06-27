@@ -29,7 +29,7 @@ import {
 import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
 import { DomListPickerBodyWith } from "./dom-list-picker-body-with"
 import type { DomListCapture } from "./dom-list-capture"
-import type { DomPickerMode } from "./dom-picker-mode"
+import type { DomListFlavor, DomPickerMode } from "./dom-picker-mode"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
 
@@ -41,6 +41,7 @@ export type DomListPickerBodyProps = {
   targetTabId?: number
   jumpActiveMode?: DomPageActiveMode
   pickerMode?: DomPickerMode
+  flavor?: DomListFlavor
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   keyboardActive?: boolean
