@@ -17,7 +17,7 @@ function parentElementChain(el: Element): Element | null {
   return parent instanceof Element ? parent : null
 }
 
-function childIndex(parent: Element, child: Element): number {
+function childIndex(parent: Element | ShadowRoot, child: Element): number {
   for (let i = 0; i < parent.children.length; i += 1) {
     if (parent.children[i] === child) {
       return i
@@ -98,6 +98,11 @@ export function buildPathForElement(
     }
     const root = node.getRootNode()
     if (root instanceof ShadowRoot && root.host instanceof Element) {
+      const shadowChildIdx = childIndex(root, node)
+      if (shadowChildIdx < 0) {
+        return null
+      }
+      innerPath.unshift(shadowChildIdx)
       innerPath.unshift(DOM_PATH_SHADOW)
       node = root.host
       continue
@@ -124,8 +129,12 @@ export function buildPathForElement(
   return [...outerPath, DOM_PATH_IFRAME, ...innerPath]
 }
 
-export function pathTargetsElement(path: readonly number[], el: Element): boolean {
-  const resolved = resolveNodeFromPath(path)
+export function pathTargetsElement(
+  path: readonly number[],
+  el: Element,
+  topBody: Element = document.body
+): boolean {
+  const resolved = resolveNodeFromPath(path, topBody)
   return resolved === el
 }
 
