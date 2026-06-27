@@ -37,6 +37,11 @@ import {
   saveSearchPageActiveMode,
   type SearchPageActiveMode
 } from "../search/page-active-setting"
+import {
+  loadDomPickerSettings,
+  saveDomPageActiveMode,
+  type DomPageActiveMode
+} from "../dom/page-active-setting"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
 import {
   openPickerSlots,
@@ -300,6 +305,8 @@ export function BmxtShell({
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const [searchPageActiveMode, setSearchPageActiveMode] = useState<SearchPageActiveMode>("auto")
   const searchPageActiveModeRef = useRef<SearchPageActiveMode>("auto")
+  const [domPageActiveMode, setDomPageActiveMode] = useState<DomPageActiveMode>("auto")
+  const domPageActiveModeRef = useRef<DomPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -519,6 +526,10 @@ export function BmxtShell({
       setSearchPageActiveMode(s.pageActive)
       searchPageActiveModeRef.current = s.pageActive
     })
+    void loadDomPickerSettings().then((s) => {
+      setDomPageActiveMode(s.pageActive)
+      domPageActiveModeRef.current = s.pageActive
+    })
   }, [])
 
   useEffect(() => {
@@ -528,6 +539,10 @@ export function BmxtShell({
   useEffect(() => {
     searchPageActiveModeRef.current = searchPageActiveMode
   }, [searchPageActiveMode])
+
+  useEffect(() => {
+    domPageActiveModeRef.current = domPageActiveMode
+  }, [domPageActiveMode])
 
   const {
     subCmdPicker,
@@ -677,8 +692,10 @@ export function BmxtShell({
     translatePairIdRef,
     tabsPageActiveModeRef,
     searchPageActiveModeRef,
+    domPageActiveModeRef,
     setTabsPageActiveMode,
     setSearchPageActiveMode,
+    setDomPageActiveMode,
     setTranslatePairId,
     toggleNavActive,
     resetNavTranslateSession,
@@ -765,6 +782,7 @@ export function BmxtShell({
     domListPickerRef,
     settingListPickerRef,
     tabsPageActiveModeRef,
+    domPageActiveModeRef,
     translatePairIdRef,
     promptLine,
     allowEmptyFirstPickerSyncRef,
@@ -775,6 +793,7 @@ export function BmxtShell({
     sessionNameTypingRef,
     sessionListPickerHiRef,
     setTabsPageActiveMode,
+    setDomPageActiveMode,
     switchSessionFromListPicker,
     setMode,
     setLine,
@@ -1032,7 +1051,8 @@ export function BmxtShell({
           }}
           dom={{
             pickerOpen: domListPicker !== null,
-            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines"
+            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines",
+            pageActiveMode: domPageActiveMode
           }}
           setting={{
             pickerOpen: settingListPicker !== null
@@ -1103,6 +1123,7 @@ export function BmxtShell({
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
           tabsPageActiveMode={tabsPageActiveMode}
           searchPageActiveMode={searchPageActiveMode}
+          domPageActiveMode={domPageActiveMode}
         />
       </div>
     </div>

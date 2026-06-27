@@ -1,5 +1,10 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
-import { domCmdExitListLines, domCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
+import {
+  cmdAvailableOptionsLine,
+  domCmdExitListLines,
+  domCmdSettingLines,
+  domCmdUsageLines
+} from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import { stripInvisibleFormatChars } from "../line-parse"
@@ -9,7 +14,8 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "dom",
   aliases: [],
-  usagePrimary: "dom -list [--html|--react] [<pattern>] | dom -exit -list"
+  usagePrimary:
+    "dom -list [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active"
 }
 
 function normalizeDomToken(tok: string): string {
@@ -69,6 +75,9 @@ export function run(args: string[]) {
       ])
     }
     return linesDispatch(domCmdExitListLines(locale))
+  }
+  if (firstLc === "-setting") {
+    return linesDispatch(domCmdSettingLines(locale))
   }
   return linesDispatch([
     tCmd("cmd.dom.error.internal", locale, { option: first }),

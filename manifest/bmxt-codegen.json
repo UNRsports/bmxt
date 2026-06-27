@@ -19,7 +19,7 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--html|--react] [<pattern>] | dom -exit -list",
+      "usagePrimary": "dom -list [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active",
       "subcommands": [
         {
           "head": "-list",
@@ -29,6 +29,11 @@
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": ["-page-active"],
           "tail": "none"
         }
       ]

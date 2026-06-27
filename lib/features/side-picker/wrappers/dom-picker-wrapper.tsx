@@ -5,8 +5,11 @@ import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { domListPickerHeadline } from "../../setting/i18n/picker-headlines"
 import { useUiSettings } from "../../setting/use-ui-settings"
 
+import type { DomPageActiveMode } from "../../dom/page-active-setting"
+
 export type DomPickerWrapperProps = {
   state: DomListPickerState
+  jumpActiveMode?: DomPageActiveMode
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   onApprove: () => void
@@ -18,6 +21,7 @@ export type DomPickerWrapperProps = {
 /** EN: Layer ③B — dom -list (lines vs permission prompt). */
 export function DomPickerWrapper({
   state,
+  jumpActiveMode = "auto",
   onReturnToPrompt,
   onExitToDetailBar,
   onApprove,
@@ -47,6 +51,7 @@ export function DomPickerWrapper({
       jumpPaths={jumpPaths}
       headerLineCount={state.headerLineCount ?? state.lines.length}
       targetTabId={state.targetTabId}
+      jumpActiveMode={jumpActiveMode}
       onReturnToPrompt={onReturnToPrompt}
       onExitToDetailBar={onExitToDetailBar}
       keyboardActive={keyboardActive}

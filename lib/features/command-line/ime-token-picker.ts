@@ -17,6 +17,7 @@ import {
 import { tImeToken } from "../setting/i18n/ns/ime-token"
 import type { UiLocale } from "../setting/locale"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
+import { DOM_PAGE_ACTIVE_MODE_TOKENS } from "../dom/page-active-setting"
 import {
   matchCandidates,
   pickThirdTokenCandidates,
@@ -187,6 +188,13 @@ export function resolveImeTokenPicker(
     const third = tokensBefore[2]!.toLowerCase()
     if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
       const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+      if (cands.length === 0) {
+        return null
+      }
+      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+    }
+    if (canonical === "dom" && second === "-setting" && third === "-page-active") {
+      const cands = matchCandidates(DOM_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
       if (cands.length === 0) {
         return null
       }

@@ -22,6 +22,7 @@ export type CommandDispatchDeps = {
   domListPickerRef: React.MutableRefObject<any>
   settingListPickerRef: React.MutableRefObject<any>
   tabsPageActiveModeRef: React.MutableRefObject<any>
+  domPageActiveModeRef: React.MutableRefObject<any>
   translatePairIdRef: React.MutableRefObject<any>
   promptLine: () => string
   allowEmptyFirstPickerSyncRef: React.MutableRefObject<boolean>
@@ -32,6 +33,7 @@ export type CommandDispatchDeps = {
   sessionNameTypingRef: React.MutableRefObject<boolean>
   sessionListPickerHiRef: React.MutableRefObject<number | null>
   setTabsPageActiveMode: (mode: any) => void
+  setDomPageActiveMode: (mode: any) => void
   switchSessionFromListPicker: (commandLine: string, pickHi: number) => void
   setMode: (mode: "normal" | "isearch") => void
   setLine: (line: string) => void

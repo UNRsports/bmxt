@@ -18,7 +18,9 @@ import { urlListCommandListingHint } from "../side-picker/interaction/url-list-c
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import { plainPickerLineHighlightSegments } from "../side-picker/search/plain-picker-search"
 import { scrollDomPickerListToHi } from "./dom-picker-list-scroll"
-import { scrollDomListTargetToPath } from "./dom-scroll-to-path"
+import { jumpDomListTargetToPath } from "./dom-scroll-to-path"
+import { useDomPickerJumpPreview } from "./use-dom-picker-jump-preview"
+import type { DomPageActiveMode } from "./page-active-setting"
 import {
   classifyDomPickerLine,
   parseDomTreeTagParts,
@@ -27,7 +29,6 @@ import {
 import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
-const SCROLL_DEBOUNCE_MS = 120
 
 export type DomListPickerBodyProps = {
   headline: string
@@ -35,6 +36,7 @@ export type DomListPickerBodyProps = {
   jumpPaths: readonly (readonly number[] | null)[]
   headerLineCount: number
   targetTabId?: number
+  jumpActiveMode?: DomPageActiveMode
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   keyboardActive?: boolean
@@ -126,6 +128,7 @@ export function DomListPickerBody({
   jumpPaths,
   headerLineCount,
   targetTabId,
+  jumpActiveMode = "auto",
   onReturnToPrompt,
   onExitToDetailBar,
   keyboardActive = false,
@@ -146,6 +149,7 @@ export function DomListPickerBody({
   )
   const listRef = useRef<HTMLDivElement>(null)
   const jumpPathsRef = useRef(jumpPaths)
+  const targetTabIdRef = useRef(targetTabId)
   const [hi, setHi] = useState(0)
   const [searchMode, setSearchMode] = useState(false)
   const [filterQuery, setFilterQuery] = useState("")
@@ -157,6 +161,26 @@ export function DomListPickerBody({
   useEffect(() => {
     jumpPathsRef.current = jumpPaths
   }, [jumpPaths])
+
+  useEffect(() => {
+    targetTabIdRef.current = targetTabId
+  }, [targetTabId])
+
+  const jumpToRow = useCallback(async (index: number, focusWindow: boolean): Promise<void> => {
+    const path = jumpPathsRef.current[index]
+    const tabId = targetTabIdRef.current
+    if (path == null || tabId === undefined) {
+      return
+    }
+    await jumpDomListTargetToPath(tabId, path, { focusWindow })
+  }, [])
+
+  const onConfirmLineIndex = useCallback(
+    (index: number) => {
+      void jumpToRow(index, true)
+    },
+    [jumpToRow]
+  )
 
   const rowKinds = useMemo(
     () =>
@@ -207,6 +231,15 @@ export function DomListPickerBody({
     }
   }, [keyboardActive])
 
+  useDomPickerJumpPreview({
+    enabled: keyboardActive,
+    isHostPaneFocused: keyboardActive,
+    jumpActiveMode,
+    hi,
+    jumpPaths,
+    targetTabId
+  })
+
   const domVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
       if (!keyboardActive || e.ctrlKey || e.metaKey || e.altKey) {
@@ -254,6 +287,7 @@ export function DomListPickerBody({
     sessionId,
     enableCommandMode: true,
     onReturnToPrompt,
+    onConfirmLineIndex,
     hi,
     setHi,
     searchMode,
@@ -270,19 +304,6 @@ export function DomListPickerBody({
     matchLines: lines,
     extensions
   })
-
-  useEffect(() => {
-    const path = jumpPaths[hi]
-    if (path == null || targetTabId === undefined) {
-      return
-    }
-    const tabId = targetTabId
-    const pathCopy = path
-    const timer = window.setTimeout(() => {
-      void scrollDomListTargetToPath(tabId, pathCopy)
-    }, SCROLL_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [hi, jumpPaths, targetTabId])
 
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined

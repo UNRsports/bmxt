@@ -3,7 +3,8 @@
     "ja": [
       "tabsモードpicker動作の調整",
       "settingモードのデータ書き出し先を選択可能に実装",
-      "snapshotモードをobsidianと連携可能な形式で保存可能に実装"
+      "snapshotモードをobsidianと連携可能な形式で保存可能に実装",
+      "domモードの動作修正と改善"
     ],
     "en": [
       ""

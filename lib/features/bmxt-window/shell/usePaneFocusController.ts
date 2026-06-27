@@ -10,6 +10,10 @@ import {
   saveSearchPageActiveMode,
   type SearchPageActiveMode
 } from "../../search/page-active-setting"
+import {
+  saveDomPageActiveMode,
+  type DomPageActiveMode
+} from "../../dom/page-active-setting"
 import { saveTranslatePair, type TranslationPairId } from "../../translate"
 import { TRANSLATION_PAIR_IDS } from "../../translate/translation-pair"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
@@ -58,8 +62,10 @@ export type UsePaneFocusControllerOptions = {
   translatePairIdRef: React.MutableRefObject<TranslationPairId>
   tabsPageActiveModeRef: React.MutableRefObject<TabsPageActiveMode>
   searchPageActiveModeRef: React.MutableRefObject<SearchPageActiveMode>
+  domPageActiveModeRef: React.MutableRefObject<DomPageActiveMode>
   setTabsPageActiveMode: (mode: TabsPageActiveMode) => void
   setSearchPageActiveMode: (mode: SearchPageActiveMode) => void
+  setDomPageActiveMode: (mode: DomPageActiveMode) => void
   setTranslatePairId: (id: TranslationPairId) => void
   toggleNavActive: () => void
   resetNavTranslateSession: () => void
@@ -232,6 +238,15 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
     })
   }, [options])
 
+  const toggleDomPageActiveFromDetailBar = useCallback(() => {
+    const next: DomPageActiveMode =
+      options.domPageActiveModeRef.current === "auto" ? "manual" : "auto"
+    void saveDomPageActiveMode(next).then(() => {
+      options.setDomPageActiveMode(next)
+      options.domPageActiveModeRef.current = next
+    })
+  }, [options])
+
   const cycleTranslatePairFromDetailBar = useCallback(
     (direction: 1 | -1) => {
       const index = TRANSLATION_PAIR_IDS.indexOf(options.translatePairIdRef.current)
@@ -325,7 +340,8 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       toggleNavActive: handleToggleNavActive,
       cycleTranslatePair: cycleTranslatePairFromDetailBar,
       toggleTabsPageActive: toggleTabsPageActiveFromDetailBar,
-      toggleSearchPageActive: toggleSearchPageActiveFromDetailBar
+      toggleSearchPageActive: toggleSearchPageActiveFromDetailBar,
+      toggleDomPageActive: toggleDomPageActiveFromDetailBar
     }
   })
 

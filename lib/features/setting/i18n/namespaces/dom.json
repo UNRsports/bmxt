@@ -3,13 +3,21 @@
     "ja": "dom -list — ピッカー（Esc → prompt）",
     "en": "dom -list — picker (Esc → prompt)"
   },
+  "dom.pageActive.choose": {
+    "ja": "dom -setting -page-active: モードを選択 — {options}",
+    "en": "dom -setting -page-active: choose mode — {options}"
+  },
+  "dom.pageActive.set": {
+    "ja": "dom: page-active を {token} に設定しました",
+    "en": "dom: page-active set to {token}"
+  },
   "dom.picker.closed": {
     "ja": "DOM list picker を閉じました。",
     "en": "DOM list picker closed."
   },
   "dom.picker.headline": {
-    "ja": "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt",
-    "en": "dom -list · ↑↓/j/k focus element + jump page · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"
+    "ja": "dom -list · ↑↓/j/k 要素フォーカス · Enter タブ前面化ジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt",
+    "en": "dom -list · ↑↓/j/k focus element · Enter jump tab · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"
   },
   "dom.picker.inputAria.keys": {
     "ja": "DOM ピッカーのキー操作",
@@ -22,5 +30,29 @@
   "dom.picker.notOpen": {
     "ja": "このペインでは DOM list picker は開いていません。",
     "en": "DOM list picker is not open in this pane."
+  },
+  "dom.setting.choose": {
+    "ja": "dom -setting: オプションを選択 — -page-active",
+    "en": "dom -setting: choose option — -page-active"
+  },
+  "dom.setting.pageActiveCurrent": {
+    "ja": "現在の page-active: {token}",
+    "en": "current page-active: {token}"
+  },
+  "dom.settingHint": {
+    "ja": "`-setting -page-active` でハイライト時のページジャンププレビューを切替（`--auto` 既定、`--manual` は Alt）。",
+    "en": "`-setting -page-active` controls page jump preview on highlight (`--auto` default, `--manual` needs Alt)."
+  },
+  "dom.status.auto": {
+    "ja": "↑↓ でハイライト移動時にページ要素をプレビュー · Enter でジャンプ",
+    "en": "↑↓ previews page element on highlight · Enter to jump"
+  },
+  "dom.status.manual": {
+    "ja": "Alt+↑↓ でページ要素をプレビュー · Enter でジャンプ · dom -setting -page-active で切替",
+    "en": "Alt+↑↓ to preview page element · Enter to jump · dom -setting -page-active to switch"
+  },
+  "dom.usage": {
+    "ja": "usage: dom -list [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual",
+    "en": "usage: dom -list [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual"
   }
 }

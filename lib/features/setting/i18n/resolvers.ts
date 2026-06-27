@@ -2,6 +2,8 @@ import type { TranslationPairId } from "../../translate/translation-pair"
 import { getTranslationPairDef } from "../../translate/translation-pair"
 import type { SearchPageActiveMode } from "../../search/page-active-setting"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
+import type { DomPageActiveMode } from "../../dom/page-active-setting"
+import { tDom } from "./ns/dom"
 import { BG_IMAGE_MAX_BYTES } from "../appearance"
 import type { BgImageImportResult } from "../bg-image-import"
 import { pickUiLines, settingTokenForUiLocale, uiBulletPrefix, type BilingualLines, type UiLocale } from "../locale"
@@ -86,6 +88,10 @@ export function tabsStatusHint(locale: UiLocale, pageActiveMode: TabsPageActiveM
 
 export function searchStatusHint(locale: UiLocale, pageActiveMode: SearchPageActiveMode): string {
   return tSearch(pageActiveMode === "auto" ? "search.status.auto" : "search.status.manual", locale)
+}
+
+export function domStatusHint(locale: UiLocale, pageActiveMode: DomPageActiveMode): string {
+  return tDom(pageActiveMode === "auto" ? "dom.status.auto" : "dom.status.manual", locale)
 }
 
 export function optionalHostDeniedLines(locale: UiLocale): string[] {
