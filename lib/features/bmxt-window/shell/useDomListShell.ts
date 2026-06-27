@@ -47,6 +47,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
             }
             if (bundle.ty === "lines") {
               await options.appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
+              if (shouldCancelJob(job)) {
+                return
+              }
               options.setDomListPicker(options.sessionId, null)
               return
             }
@@ -78,6 +81,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
                   tDomPrompt("domPrompt.headline", options.uiLocale)
                 ])
               }
+              if (shouldCancelJob(job)) {
+                return
+              }
               options.setDomListPicker(options.sessionId, {
                 kind: "prompt",
                 message: linesOut,
@@ -89,7 +95,13 @@ export function useDomListShell(options: UseDomListShellOptions) {
             if (announce) {
               await options.appendLogLines([`> ${displayLine}`, tDom("dom.listPicker", options.uiLocale)])
             }
+            if (shouldCancelJob(job)) {
+              return
+            }
             const targetTabId = await resolveDomListTargetTabId()
+            if (shouldCancelJob(job)) {
+              return
+            }
             options.setDomListPicker(options.sessionId, {
               kind: "lines",
               lines: linesOut,

@@ -91,7 +91,11 @@ export { DomPickerWrapper, type DomPickerWrapperProps } from "./wrappers/dom-pic
 export { TabsPickerWrapper, type TabsPickerWrapperProps } from "./wrappers/tabs-picker-wrapper"
 export { SessionPickerColumns, type SessionPickerColumnsProps } from "./wrappers/session-picker-columns"
 export { PickerRail } from "./wrappers/picker-rail"
-export { usePickerRailPresence, PICKER_RAIL_MS } from "./wrappers/use-picker-rail-presence"
+export {
+  usePickerRailPresence,
+  PICKER_RAIL_MS,
+  resolveVisibleRailPickers
+} from "./wrappers/use-picker-rail-presence"
 export {
   EMPTY_SESSION_PICKERS,
   anyLeafHasPickerOpen,

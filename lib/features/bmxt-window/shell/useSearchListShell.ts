@@ -83,6 +83,9 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
             }
             if (bundle.ty === "lines") {
               clearSearchLoadingProgress()
+              if (shouldCancelJob(job)) {
+                return
+              }
               options.setSearchListPicker(options.sessionId, null)
               await options.appendLogLines(bundle.lines ?? [])
               return

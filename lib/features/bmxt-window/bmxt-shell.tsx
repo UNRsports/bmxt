@@ -254,7 +254,7 @@ export function BmxtShell({
     openPickers,
     sessionPickers
   )
-  const pickersForColumnOrder = railPickers.length > 0 ? railPickers : openPickers
+  const pickersForColumnOrder = railPickers
   const displayTabPicker = displaySessionPickers.tabs
   const displaySearchListPicker = displaySessionPickers.search
   const displayDomListPicker = displaySessionPickers.dom
