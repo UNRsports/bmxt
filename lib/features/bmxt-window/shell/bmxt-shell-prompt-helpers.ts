@@ -1,11 +1,8 @@
 import type { ChromeEffect } from "../../dispatch/effect-types"
-import { parseDomExitListLine, parseDomListPickerLine } from "../../dom/dom-list-picker-input"
+import { parseDomExitListLine } from "../../dom/dom-list-picker-input"
 import { parseNavEnterLine, parseNavExitLine } from "../../nav"
 import { parseSearchExitListLine } from "../../search/search-list-picker-input"
-import {
-  parseSettingExitListLine,
-  parseSettingListPickerLine
-} from "../../setting/setting-list-picker-input"
+import { parseSettingExitListLine } from "../../setting/setting-list-picker-input"
 import {
   buildSessionSwitchCommandLine,
   isSessionSettingNameUiLine,
@@ -16,11 +13,7 @@ import {
   sessionSwitchCommandName,
   type SessionListRow
 } from "../../session"
-import {
-  parseGroupNewInteractiveLine,
-  parseTabsExitListLine,
-  parseTabsListPickerLine
-} from "../../tabs/input"
+import { parseTabsExitListLine } from "../../tabs/input"
 
 /** EN: Keep session switch picker open while the user is still editing the name. */
 export function shouldKeepSessionSwitchPickerOpen(
@@ -54,21 +47,21 @@ export function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
   return effects.some((e) => e.kind === "search_page")
 }
 
-/** EN: Auto-submit prompt after IME token pick for list-style commands. */
+/**
+ * EN: Auto-submit on Enter while the IME picker is still open and the line is already
+ *     complete (typed manually). Picking a candidate never auto-submits — confirm with Enter again.
+ * JA: IME ピッカー表示中に Enter したとき、行が既に完成形なら即実行。候補選択後の自動実行はしない。
+ */
 export function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
   return (
-    parseDomListPickerLine(trimmed) !== null ||
     parseNavEnterLine(trimmed) ||
     parseNavExitLine(trimmed) ||
-    parseTabsListPickerLine(trimmed) !== null ||
     isSessionSwitchUiLine(trimmed) ||
     isSessionSettingNameUiLine(trimmed) ||
     parseTabsExitListLine(trimmed) ||
-    parseSettingListPickerLine(trimmed) ||
     parseSettingExitListLine(trimmed) ||
     parseSearchExitListLine(trimmed) ||
-    parseDomExitListLine(trimmed) ||
-    parseGroupNewInteractiveLine(trimmed)
+    parseDomExitListLine(trimmed)
   )
 }
 

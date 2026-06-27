@@ -14,6 +14,14 @@ import {
   matchesSearchListScopeFilter,
   shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
+import {
+  isDomListAwaitingMoreOptionsAtEol,
+  isEditingDomListOptionToken,
+  listDomListRemainingOptionCandidates,
+  matchesDomListOptionFilter,
+  shouldShowDomListPatternPlaceholder
+} from "../dom/dom-list-picker-parse.ts"
+import { domListLineHasFlavor } from "../dom/parse-dom-list-args.ts"
 import { tImeToken } from "../setting/i18n/ns/ime-token"
 import type { UiLocale } from "../setting/locale"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
@@ -43,6 +51,49 @@ export type ImeTokenPickerModel = {
 
 import { wordBounds } from "../format/word-bounds.ts"
 
+function resolveDomListOptionTokenPicker(
+  line: string,
+  cursor: number,
+  tokensBefore: readonly string[],
+  l: number,
+  r: number,
+  prefix: string,
+  matchMode: CandidateMatchMode
+): ImeTokenPickerModel | null {
+  if (tokensBefore[0]?.toLowerCase() !== "dom" || tokensBefore[1]?.toLowerCase() !== "-list") {
+    return null
+  }
+  if (shouldShowDomListPatternPlaceholder(line, cursor)) {
+    return null
+  }
+  const tokensAfterList = tokensBefore.slice(2)
+  if (domListLineHasFlavor(line.trim()) && !isEditingDomListOptionToken(line, cursor)) {
+    return null
+  }
+  const allRemaining = listDomListRemainingOptionCandidates(tokensAfterList, "")
+  if (allRemaining.length === 0) {
+    return null
+  }
+  const useFullListForMatch =
+    matchMode === "contains" ||
+    matchesDomListOptionFilter(prefix)
+  let filterMode: CandidateMatchMode = matchMode
+  if (useFullListForMatch && !prefix.startsWith("--")) {
+    filterMode = "contains"
+  }
+  const cands = pickThirdTokenCandidates(
+    allRemaining,
+    prefix,
+    matchMode,
+    useFullListForMatch,
+    filterMode
+  )
+  if (cands.length === 0) {
+    return null
+  }
+  return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+}
+
 export function imeTokenPickerHint(tier: ImeTokenTier, locale: UiLocale): string {
   switch (tier) {
     case "first":
@@ -68,6 +119,13 @@ export function resolveImeTokenPicker(
     return null
   }
 
+  if (
+    shouldShowDomListPatternPlaceholder(line, cursor) &&
+    !isDomListAwaitingMoreOptionsAtEol(line)
+  ) {
+    return null
+  }
+
   if (isSearchListAwaitingScopeOrPattern(line) && cursor >= line.length) {
     const canonicalSearch = resolveCanonical("search")
     if (canonicalSearch) {
@@ -80,6 +138,20 @@ export function resolveImeTokenPicker(
           candidates: [...scopeCandidates],
           tier: "third"
         }
+      }
+    }
+  }
+
+  if (isDomListAwaitingMoreOptionsAtEol(line) && cursor >= line.length) {
+    const parts = line.trim().split(/\s+/).filter(Boolean)
+    const cands = listDomListRemainingOptionCandidates(parts.slice(2), "")
+    if (cands.length > 0) {
+      return {
+        tokenStart: line.length,
+        tokenEnd: line.length,
+        prefix: "",
+        candidates: [...cands],
+        tier: "third"
       }
     }
   }
@@ -132,6 +204,20 @@ export function resolveImeTokenPicker(
     const secondWord = line.slice(l, r)
     const secondComplete = isSecondToken(canonical, secondWord)
     if (cursor >= line.length && secondComplete) {
+      if (canonical === "dom" && secondWord.toLowerCase() === "-list") {
+        const domPick = resolveDomListOptionTokenPicker(
+          line,
+          cursor,
+          tokensBefore,
+          line.length,
+          line.length,
+          "",
+          matchMode
+        )
+        if (domPick) {
+          return domPick
+        }
+      }
       const next = listThirdTokenCandidates(canonical, secondWord.toLowerCase(), "")
       if (next.length > 0) {
         return {
@@ -158,6 +244,21 @@ export function resolveImeTokenPicker(
 
   if (tokenIndex === 2) {
     const second = tokensBefore[1]!.toLowerCase()
+    if (canonical === "dom" && second === "-list") {
+      const domPick = resolveDomListOptionTokenPicker(
+        line,
+        cursor,
+        tokensBefore,
+        l,
+        r,
+        prefix,
+        matchMode
+      )
+      if (domPick) {
+        return domPick
+      }
+      return null
+    }
     const allThird = listThirdTokenCandidates(canonical, second, "")
     if (allThird.length === 0) {
       return null
@@ -183,22 +284,39 @@ export function resolveImeTokenPicker(
     return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
   }
 
-  if (tokenIndex === 3) {
+  if (tokenIndex >= 3) {
     const second = tokensBefore[1]!.toLowerCase()
-    const third = tokensBefore[2]!.toLowerCase()
-    if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
-      const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
-      if (cands.length === 0) {
-        return null
+    if (canonical === "dom" && second === "-list") {
+      const domPick = resolveDomListOptionTokenPicker(
+        line,
+        cursor,
+        tokensBefore,
+        l,
+        r,
+        prefix,
+        matchMode
+      )
+      if (domPick) {
+        return domPick
       }
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+      return null
     }
-    if (canonical === "dom" && second === "-setting" && third === "-page-active") {
-      const cands = matchCandidates(DOM_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
-      if (cands.length === 0) {
-        return null
+    if (tokenIndex === 3) {
+      const third = tokensBefore[2]!.toLowerCase()
+      if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
+        const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+        if (cands.length === 0) {
+          return null
+        }
+        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
       }
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+      if (canonical === "dom" && second === "-setting" && third === "-page-active") {
+        const cands = matchCandidates(DOM_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+        if (cands.length === 0) {
+          return null
+        }
+        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+      }
     }
   }
 

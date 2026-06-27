@@ -14,5 +14,13 @@
   "domList.unscriptable": {
     "ja": "権限のないページのため、本拡張機能では DOM を表示できません。",
     "en": "This extension cannot show DOM on pages Chrome blocks from scripting (chrome://, Web Store, extension pages, etc.)."
+  },
+  "domList.viewportEmpty": {
+    "ja": "（ビューポート内に要素なし）",
+    "en": "(no elements in viewport)"
+  },
+  "domList.viewportNoMatch": {
+    "ja": "（ビューポート内に \"{pattern}\" に一致する要素なし）",
+    "en": "(no viewport elements matched \"{pattern}\")"
   }
 }

@@ -339,7 +339,8 @@ export function BmxtShell({
     runDomListAndShow,
     onTabsPickerFocusTabId,
     syncTabPickerOpen,
-    clearTabsPickerFocusTabId
+    clearTabsPickerFocusTabId,
+    refreshDomViewportForPicker
   } = useDomListShell({
     sessionId,
     uiLocale: uiSettings.locale,
@@ -1121,6 +1122,20 @@ export function BmxtShell({
             void runDomListAndShow(cl, cl, false)
           }}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
+          onRefreshDomViewport={(state) => refreshDomViewportForPicker(state)}
+          onApplyDomViewportCapture={(capture) => {
+            setDomListPicker(sessionId, (prev) => {
+              if (!prev || prev.kind !== "lines") {
+                return prev
+              }
+              return {
+                ...prev,
+                lines: capture.lines,
+                jumpPaths: capture.jumpPaths,
+                headerLineCount: capture.headerLineCount
+              }
+            })
+          }}
           tabsPageActiveMode={tabsPageActiveMode}
           searchPageActiveMode={searchPageActiveMode}
           domPageActiveMode={domPageActiveMode}

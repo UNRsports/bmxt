@@ -2,7 +2,12 @@ import { useCallback, useRef } from "react"
 import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
 import { applyChromeEffects } from "../../dispatch"
 import type { DomListCapture } from "../../dom/dom-list-capture"
-import { isRetryableDomListOutput, type DomListPickerState } from "../../dom/dom-list-picker-input"
+import { captureDomViewportForTab } from "../../dom/dom-viewport-capture"
+import {
+  isRetryableDomListOutput,
+  parseDomListCommandLine,
+  type DomListPickerState
+} from "../../dom/dom-list-picker-input"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../../dom/use-dom-list-follow-tab"
 import { isJobHandleActive, mergeJobIntoDispatchContext, shouldCancelJob, type JobRunner } from "../../job"
@@ -106,13 +111,17 @@ export function useDomListShell(options: UseDomListShellOptions) {
             if (shouldCancelJob(job)) {
               return
             }
+            const parsed = parseDomListCommandLine(domListLine)
             options.setDomListPicker(options.sessionId, {
               kind: "lines",
               lines: linesOut,
               commandLine: domListLine,
               targetTabId,
               jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
-              headerLineCount: domCapture?.headerLineCount ?? linesOut.length
+              headerLineCount: domCapture?.headerLineCount ?? linesOut.length,
+              pickerMode: parsed?.pickerMode ?? "normal",
+              flavor: parsed?.flavor ?? "--html",
+              pattern: parsed?.pattern ?? ""
             })
             options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "dom"))
           } catch (e) {
@@ -165,9 +174,28 @@ export function useDomListShell(options: UseDomListShellOptions) {
     tabsPickerFocusTabIdRef.current = null
   }, [])
 
+  const refreshDomViewportForPicker = useCallback(
+    async (state: Extract<DomListPickerState, { kind: "lines" }>): Promise<DomListCapture | null> => {
+      const tabId = state.targetTabId
+      if (tabId === undefined) {
+        return null
+      }
+      try {
+        const tab = await chrome.tabs.get(tabId)
+        const flavor = state.flavor ?? "--html"
+        const pattern = state.pattern ?? ""
+        return await captureDomViewportForTab(tab, flavor, pattern, options.uiLocale)
+      } catch {
+        return null
+      }
+    },
+    [options.uiLocale]
+  )
+
   return {
     runDomListAndShow,
     refreshDomListPicker,
+    refreshDomViewportForPicker,
     onTabsPickerFocusTabId,
     syncTabPickerOpen,
     clearTabsPickerFocusTabId

@@ -16,12 +16,20 @@
     "en": "DOM list picker closed."
   },
   "dom.picker.headline": {
-    "ja": "dom -list · ↑↓/j/k 要素フォーカス · Enter タブ前面化ジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt",
-    "en": "dom -list · ↑↓/j/k focus element · Enter jump tab · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"
+    "ja": "dom -list --normal · ↑↓/j/k 要素フォーカス · Enter ジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt",
+    "en": "dom -list --normal · ↑↓/j/k focus element · Enter jump · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"
+  },
+  "dom.picker.headlineWith": {
+    "ja": "dom -list --with · ↑↓/j/k ページスクロール · Alt+↑↓ ピッカー内部スクロール · Enter ジャンプ · ← detail bar · Esc → prompt",
+    "en": "dom -list --with · ↑↓/j/k page scroll · Alt+↑↓ picker scroll · Enter jump · ← detail bar · Esc → prompt"
   },
   "dom.picker.inputAria.keys": {
     "ja": "DOM ピッカーのキー操作",
     "en": "DOM picker keys"
+  },
+  "dom.picker.inputAria.keysWith": {
+    "ja": "DOM ピッカー（--with）のキー操作",
+    "en": "DOM picker (--with) keys"
   },
   "dom.picker.listAria": {
     "ja": "DOM ツリー",
@@ -52,7 +60,7 @@
     "en": "Alt+↑↓ to preview page element · Enter to jump · dom -setting -page-active to switch"
   },
   "dom.usage": {
-    "ja": "usage: dom -list [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual",
-    "en": "usage: dom -list [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual"
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual"
   }
 }

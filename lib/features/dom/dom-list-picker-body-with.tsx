@@ -19,56 +19,84 @@ import { verticalNavDirection } from "../side-picker/interaction/picker-vertical
 import { plainPickerLineHighlightSegments } from "../side-picker/search/plain-picker-search"
 import { scrollDomPickerListToHi } from "./dom-picker-list-scroll"
 import { jumpDomListTargetToPath } from "./dom-scroll-to-path"
-import { useDomPickerJumpPreview } from "./use-dom-picker-jump-preview"
+import { scrollDomListTargetPage } from "./dom-scroll-page"
 import type { DomPageActiveMode } from "./page-active-setting"
+import type { DomListCapture } from "./dom-list-capture"
 import {
   classifyDomPickerLine,
   parseDomTreeTagParts,
   type DomPickerRowKind
 } from "./dom-list-line-format"
-import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
-import { DomListPickerBodyWith } from "./dom-list-picker-body-with"
-import type { DomListCapture } from "./dom-list-capture"
-import type { DomPickerMode } from "./dom-picker-mode"
+import { firstFocusableDomLineIndex } from "./dom-list-nav"
+import type { DomListPickerBodyProps } from "./dom-list-picker-body"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
+const PICKER_INTERNAL_SCROLL_PX = 48
+const VIEWPORT_REFRESH_DELAY_MS = 150
 
-export type DomListPickerBodyProps = {
-  headline: string
-  lines: string[]
-  jumpPaths: readonly (readonly number[] | null)[]
-  headerLineCount: number
-  targetTabId?: number
-  jumpActiveMode?: DomPageActiveMode
-  pickerMode?: DomPickerMode
-  onReturnToPrompt: () => void
-  onExitToDetailBar?: () => void
-  keyboardActive?: boolean
-  pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
-  sessionId?: string
-  onRefreshViewport?: () => Promise<DomListCapture | null>
-  onViewportCapture?: (capture: DomListCapture) => void
-}
-
-type DomListPickerBodyRouterProps = DomListPickerBodyProps
-
-export function DomListPickerBody(props: DomListPickerBodyRouterProps) {
-  if (props.pickerMode === "with") {
-    if (!props.onRefreshViewport || !props.onViewportCapture) {
-      return <DomListPickerBodyNormal {...props} />
-    }
-    return (
-      <DomListPickerBodyWith
-        {...props}
-        onRefreshViewport={props.onRefreshViewport}
-        onViewportCapture={props.onViewportCapture}
-      />
-    )
+function DomFlatRowContent({ line }: { line: string }): ReactNode {
+  if (line.startsWith("<")) {
+    return <span className="bmxt-dom-picker-html">{line}</span>
   }
-  return <DomListPickerBodyNormal {...props} />
+  const parts = parseDomTreeTagParts(line)
+  return (
+    <>
+      <span className="bmxt-dom-picker-tag">{parts.tag}</span>
+      {parts.idPart ? <span className="bmxt-dom-picker-id">{parts.idPart}</span> : null}
+      {parts.classPart ? <span className="bmxt-dom-picker-class">{parts.classPart}</span> : null}
+      {parts.suffix ? <span className="bmxt-dom-picker-suffix">{parts.suffix}</span> : null}
+    </>
+  )
 }
 
-function DomListPickerBodyNormal({
+function DomWithPickerRow({
+  index,
+  line,
+  hi,
+  rowKind,
+  searchHighlightQuery
+}: {
+  index: number
+  line: string
+  hi: number
+  rowKind: DomPickerRowKind
+  searchHighlightQuery: string
+}): ReactNode {
+  const hiRow = index === hi
+  const rowClass = `bmxt-dom-picker-row bmxt-dom-picker-row--${rowKind}${
+    hiRow ? " bmxt-dom-picker-row--hi" : ""
+  }`
+
+  return (
+    <div
+      id={`${ROW_ID_PREFIX}-${index}`}
+      role="option"
+      aria-selected={hiRow}
+      className={rowClass}>
+      {rowKind === "tree" ? (
+        <DomFlatRowContent line={line} />
+      ) : (
+        plainPickerLineHighlightSegments(line, searchHighlightQuery).map((seg, i) =>
+          seg.match ? (
+            <mark key={i} className="bmxt-tab-picker-search-hl">
+              {seg.text || "\u00a0"}
+            </mark>
+          ) : (
+            <span key={i}>{seg.text || "\u00a0"}</span>
+          )
+        )
+      )}
+    </div>
+  )
+}
+
+export type DomListPickerBodyWithProps = DomListPickerBodyProps & {
+  onRefreshViewport: () => Promise<DomListCapture | null>
+  onViewportCapture: (capture: DomListCapture) => void
+}
+
+/** EN: `--with` — ↑↓ scrolls page; Alt+↑↓ scrolls picker list; Enter jumps. */
+export function DomListPickerBodyWith({
   headline,
   lines,
   jumpPaths,
@@ -79,8 +107,10 @@ function DomListPickerBodyNormal({
   onExitToDetailBar,
   keyboardActive = false,
   pickerInputRef,
-  sessionId
-}: DomListPickerBodyProps) {
+  sessionId,
+  onRefreshViewport,
+  onViewportCapture
+}: DomListPickerBodyWithProps) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -96,6 +126,7 @@ function DomListPickerBodyNormal({
   const listRef = useRef<HTMLDivElement>(null)
   const jumpPathsRef = useRef(jumpPaths)
   const targetTabIdRef = useRef(targetTabId)
+  const refreshInFlightRef = useRef(false)
   const [hi, setHi] = useState(0)
   const [searchMode, setSearchMode] = useState(false)
   const [filterQuery, setFilterQuery] = useState("")
@@ -136,22 +167,40 @@ function DomListPickerBodyNormal({
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
 
-  const followListScrollToHi = useCallback(() => {
-    scrollDomPickerListToHi(listRef.current, ROW_ID_PREFIX, hi)
-    requestAnimationFrame(() => {
-      scrollDomPickerListToHi(listRef.current, ROW_ID_PREFIX, hi)
-    })
-  }, [hi])
+  const scrollPickerInternal = useCallback((direction: 1 | -1) => {
+    const el = listRef.current
+    if (!el) {
+      return
+    }
+    el.scrollBy({ top: direction * PICKER_INTERNAL_SCROLL_PX, behavior: "auto" })
+  }, [])
+
+  const scrollPageAndRefresh = useCallback(
+    async (direction: 1 | -1) => {
+      const tabId = targetTabIdRef.current
+      if (tabId === undefined || refreshInFlightRef.current) {
+        return
+      }
+      refreshInFlightRef.current = true
+      try {
+        await scrollDomListTargetPage(tabId, direction)
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, VIEWPORT_REFRESH_DELAY_MS)
+        })
+        const capture = await onRefreshViewport()
+        if (capture) {
+          onViewportCapture(capture)
+        }
+      } finally {
+        refreshInFlightRef.current = false
+      }
+    },
+    [onRefreshViewport, onViewportCapture]
+  )
 
   useEffect(() => {
     const first = firstFocusableDomLineIndex(jumpPaths)
     setHi(first >= 0 ? first : 0)
-    setSearchMode(false)
-    setFilterQuery("")
-    setHlSearchPattern("")
-    setCommandMode(false)
-    setCommandBuffer("")
-    setCommandListingHint(false)
     if (listRef.current) {
       listRef.current.scrollTop = 0
     }
@@ -165,57 +214,52 @@ function DomListPickerBodyNormal({
   }, [lines.length])
 
   useLayoutEffect(() => {
-    if (lines.length === 0) {
-      return
-    }
-    followListScrollToHi()
-  }, [followListScrollToHi, lines.length])
-
-  useLayoutEffect(() => {
     if (keyboardActive) {
       inputRef.current?.focus()
     }
   }, [keyboardActive])
 
-  useDomPickerJumpPreview({
-    enabled: keyboardActive,
-    isHostPaneFocused: keyboardActive,
-    jumpActiveMode,
-    hi,
-    jumpPaths,
-    targetTabId
-  })
+  useEffect(() => {
+    if (!keyboardActive || jumpActiveMode !== "auto") {
+      return
+    }
+    const path = jumpPaths[hi]
+    if (path == null || targetTabId === undefined) {
+      return
+    }
+    void jumpDomListTargetToPath(targetTabId, path, { focusWindow: false })
+  }, [hi, jumpActiveMode, jumpPaths, keyboardActive, lines, targetTabId])
 
-  const domVerticalNav = useCallback(
+  const domWithVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (!keyboardActive || e.ctrlKey || e.metaKey || e.altKey) {
+      if (!keyboardActive || e.ctrlKey || e.metaKey) {
         return false
       }
       const ev = e as KeyboardEvent & { isComposing?: boolean }
-      if (ev.isComposing || lines.length === 0) {
+      if (ev.isComposing || searchMode || commandMode) {
         return false
       }
       const dir = verticalNavDirection(e)
-      if (dir === "down") {
+      if (dir === null) {
+        return false
+      }
+      if (e.altKey) {
         e.preventDefault()
         e.stopPropagation()
-        setHi((h) => adjacentDomFocusHi(h, 1, jumpPathsRef.current, lines.length))
+        scrollPickerInternal(dir === "down" ? 1 : -1)
         return true
       }
-      if (dir === "up") {
-        e.preventDefault()
-        e.stopPropagation()
-        setHi((h) => adjacentDomFocusHi(h, -1, jumpPathsRef.current, lines.length))
-        return true
-      }
-      return false
+      e.preventDefault()
+      e.stopPropagation()
+      void scrollPageAndRefresh(dir === "down" ? 1 : -1)
+      return true
     },
-    [keyboardActive, lines.length]
+    [commandMode, keyboardActive, scrollPageAndRefresh, scrollPickerInternal, searchMode]
   )
 
   const extensions = useMemo(
     () => ({
-      customVerticalNav: domVerticalNav,
+      customVerticalNav: domWithVerticalNav,
       exitToDetailBar:
         onExitToDetailBar && !searchMode && !commandMode
           ? {
@@ -224,7 +268,7 @@ function DomListPickerBodyNormal({
             }
           : undefined
     }),
-    [commandMode, domVerticalNav, onExitToDetailBar, searchMode]
+    [commandMode, domWithVerticalNav, onExitToDetailBar, searchMode]
   )
 
   const { onInputKeyDown } = usePlainPickerKeyboard({
@@ -254,25 +298,15 @@ function DomListPickerBodyNormal({
   const activeRowId =
     lines.length > 0 && hi >= 0 && hi < lines.length ? `${ROW_ID_PREFIX}-${hi}` : undefined
 
-  const renderRows = (start: number, end: number) => {
-    const slice: ReactNode[] = []
-    for (let i = start; i < end; i++) {
-      slice.push(
-        <DomListPickerRow
-          key={i}
-          index={i}
-          line={lines[i]!}
-          hi={hi}
-          rowKind={rowKinds[i]!}
-          searchHighlightQuery={searchHighlightQuery}
-        />
-      )
+  useLayoutEffect(() => {
+    if (lines.length === 0) {
+      return
     }
-    return slice
-  }
+    scrollDomPickerListToHi(listRef.current, ROW_ID_PREFIX, hi)
+  }, [hi, lines.length])
 
   return (
-    <div className="bmxt-tab-picker bmxt-side-picker bmxt-dom-picker">
+    <div className="bmxt-tab-picker bmxt-side-picker bmxt-dom-picker bmxt-dom-picker--with">
       <div className="bmxt-tab-picker-head">{headline}</div>
       <textarea
         ref={setInputEl}
@@ -288,7 +322,7 @@ function DomListPickerBodyNormal({
             ? tPlainPicker("plainPicker.searchHint", locale)
             : commandMode
               ? tPlainPicker("plainPicker.commandHint", locale)
-              : tDom("dom.picker.inputAria.keys", locale)
+              : tDom("dom.picker.inputAria.keysWith", locale)
         }
         value={searchMode ? filterQuery : commandMode ? commandBuffer : ""}
         onChange={(e) => {
@@ -316,7 +350,16 @@ function DomListPickerBodyNormal({
         {lines.length === 0 ? (
           <div className="bmxt-tab-picker-empty">{tPlainPicker("plainPicker.noOutput", locale)}</div>
         ) : (
-          renderRows(0, lines.length)
+          lines.map((line, i) => (
+            <DomWithPickerRow
+              key={i}
+              index={i}
+              line={line}
+              hi={hi}
+              rowKind={rowKinds[i]!}
+              searchHighlightQuery={searchHighlightQuery}
+            />
+          ))
         )}
       </div>
       {searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
@@ -328,84 +371,6 @@ function DomListPickerBodyNormal({
           ambiguousPlaceholder={null}
         />
       ) : null}
-    </div>
-  )
-}
-
-function DomTreeRowContent({ line }: { line: string }): ReactNode {
-  const guideMatch = line.match(/^(?:(?:│ )*├ )/)
-  const guide = guideMatch ? guideMatch[0] : ""
-  const content = line.slice(guide.length)
-  const parts = parseDomTreeTagParts(content)
-  return (
-    <>
-      {guide ? <span className="bmxt-dom-picker-guide">{guide}</span> : null}
-      <span className="bmxt-dom-picker-tag">{parts.tag}</span>
-      {parts.idPart ? <span className="bmxt-dom-picker-id">{parts.idPart}</span> : null}
-      {parts.classPart ? <span className="bmxt-dom-picker-class">{parts.classPart}</span> : null}
-      {parts.suffix ? <span className="bmxt-dom-picker-suffix">{parts.suffix}</span> : null}
-    </>
-  )
-}
-
-function DomHtmlRowContent({ line }: { line: string }): ReactNode {
-  const guideMatch = line.match(/^(?:(?:│ )*├ )/)
-  const guide = guideMatch ? guideMatch[0] : ""
-  const content = line.slice(guide.length)
-  return (
-    <>
-      {guide ? <span className="bmxt-dom-picker-guide">{guide}</span> : null}
-      <span className="bmxt-dom-picker-html">{content}</span>
-    </>
-  )
-}
-
-function DomJumpableRowContent({ line }: { line: string }): ReactNode {
-  const guideMatch = line.match(/^(?:(?:│ )*├ )/)
-  const content = line.slice(guideMatch ? guideMatch[0].length : 0)
-  if (content.startsWith("<")) {
-    return <DomHtmlRowContent line={line} />
-  }
-  return <DomTreeRowContent line={line} />
-}
-
-function DomListPickerRow({
-  index,
-  line,
-  hi,
-  rowKind,
-  searchHighlightQuery
-}: {
-  index: number
-  line: string
-  hi: number
-  rowKind: DomPickerRowKind
-  searchHighlightQuery: string
-}): ReactNode {
-  const hiRow = index === hi
-  const rowClass = `bmxt-dom-picker-row bmxt-dom-picker-row--${rowKind}${
-    hiRow ? " bmxt-dom-picker-row--hi" : ""
-  }`
-
-  return (
-    <div
-      id={`${ROW_ID_PREFIX}-${index}`}
-      role="option"
-      aria-selected={hiRow}
-      className={rowClass}>
-      {rowKind === "tree" ? (
-        <DomJumpableRowContent line={line} />
-      ) : (
-        plainPickerLineHighlightSegments(line, searchHighlightQuery).map((seg, i) =>
-          seg.match ? (
-            <mark key={i} className="bmxt-tab-picker-search-hl">
-              {seg.text || "\u00a0"}
-            </mark>
-          ) : (
-            <span key={i}>{seg.text || "\u00a0"}</span>
-          )
-        )
-      )}
     </div>
   )
 }

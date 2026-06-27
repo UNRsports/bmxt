@@ -107,12 +107,6 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       options.setCursorPos(nextPos)
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
-      const trimmedNext = nextLine.trim()
-      if (shouldAutoSubmitAfterTokenPick(trimmedNext)) {
-        options.setSubCmdPicker(null)
-        queueMicrotask(() => options.submitLine())
-        return
-      }
       queueMicrotask(() => options.syncImeTokenPicker(nextLine, nextPos))
       options.focusPrompt()
     },

@@ -1,4 +1,5 @@
 import type { MutableRefObject, ReactNode } from "react"
+import type { DomListCapture } from "../../dom/dom-list-capture"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { SearchListPickerOverlay } from "../../search/search-list-picker-overlay"
 import type { PickerEntry } from "../model/picker-entry"
@@ -54,6 +55,10 @@ export type PickerColumnHostContext = {
   ) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
+  onRefreshDomViewport?: (
+    state: Extract<DomListPickerState, { kind: "lines" }>
+  ) => Promise<DomListCapture | null>
+  onApplyDomViewportCapture?: (capture: DomListCapture) => void
   tabsPageActiveMode?: TabsPageActiveMode
   searchPageActiveMode?: SearchPageActiveMode
   domPageActiveMode?: DomPageActiveMode
@@ -115,6 +120,8 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           pickerInputRef={ctx.domPickerInputRef}
           sessionId={ctx.sessionId}
           onApprove={ctx.onDomApprove}
+          onRefreshDomViewport={ctx.onRefreshDomViewport}
+          onApplyDomViewportCapture={ctx.onApplyDomViewportCapture}
         />
       </PickerPanelHost>
     ) : null,

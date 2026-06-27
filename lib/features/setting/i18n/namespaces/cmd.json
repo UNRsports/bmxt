@@ -11,6 +11,10 @@
     "ja": "error: usage: dom -exit -list",
     "en": "error: usage: dom -exit -list"
   },
+  "cmd.dom.error.listUsage": {
+    "ja": "error: usage: dom -list [--normal|--with] [--html|--react] [<pattern>] — `--html` または `--react` が必要です",
+    "en": "error: usage: dom -list [--normal|--with] [--html|--react] [<pattern>] — requires `--html` or `--react`"
+  },
   "cmd.dom.error.internal": {
     "ja": "error: 不明な dom オプション (internal): {option}",
     "en": "error: unknown dom option (internal): {option}"
@@ -28,8 +32,8 @@
     "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
   },
   "cmd.dom.usage.line1": {
-    "ja": "usage: dom -list [--html|--react] [<pattern>]   — DOM ピッカーを開く（既定 flavor: --html）",
-    "en": "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)"
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [<pattern>]   — DOM ピッカーを開く（既定: --normal --html）",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [<pattern>]   — open DOM picker (default: --normal --html)"
   },
   "cmd.dom.usage.line2": {
     "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
@@ -40,8 +44,8 @@
     "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
   },
   "cmd.dom.usage.listDetail": {
-    "ja": "-list は picker（search -list と同じクロム）。flavor: --html (default) | --react。",
-    "en": "-list opens a picker (same chrome as search -list); flavor pull-down: --html (default) | --react."
+    "ja": "-list は picker。`--normal`（ツリー全体）| `--with`（ビューポート連動）。flavor: --html (default) | --react。",
+    "en": "-list opens a picker. `--normal` (full tree) | `--with` (viewport-sync). flavor: --html (default) | --react."
   },
   "cmd.dom.usage.patternDetail": {
     "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
