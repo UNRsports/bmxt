@@ -15,6 +15,7 @@ import {
   isPageScrollNeedleRequest
 } from "../../lib/features/page-dom/page-scroll-needle-message"
 import { isPageScrollSnippetRequest } from "../../lib/features/page-dom/page-scroll-snippet-message"
+import { handleDomListInPageMessage } from "../../lib/features/page-dom/dom-list-in-page-handler"
 import {
   bmxtNavControlInjected,
   NAV_OVERLAY_CHANNEL,
@@ -64,6 +65,11 @@ export default defineContentScript({
             8000
           )
         )
+        return true
+      }
+      const domListResult = handleDomListInPageMessage(raw)
+      if (domListResult !== null) {
+        sendResponse(domListResult)
         return true
       }
       const msg = raw as NavOverlayMessage

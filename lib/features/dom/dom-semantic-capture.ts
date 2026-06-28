@@ -1,5 +1,6 @@
-import { bmxtDomSemanticEntriesInjected } from "../page-dom/injected-dom-semantic-entries.ts"
+import type { DomSemanticEntriesPayload } from "../page-dom/dom-list-in-page-message.ts"
 import type { DomShowMode } from "../page-dom/injected-dom-show.ts"
+import { runDomSemanticEntriesOnTab } from "../page-dom/run-dom-in-page.ts"
 import { tDomList } from "../setting/i18n/ns/dom-list.ts"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale.ts"
 import type { DomListCapture, DomTreeEntry } from "./dom-list-capture.ts"
@@ -9,17 +10,12 @@ import type { DomSemanticKind } from "./dom-semantic-kind.ts"
 import { domSemanticKindI18nKey } from "./dom-semantic-kind.ts"
 import { tDom } from "../setting/i18n/ns/dom.ts"
 
-type InjectedSemanticResult = {
-  entries?: Array<{ line?: string; path?: number[] }>
-  truncated?: boolean
-}
-
 function displayTitle(t: string | undefined): string {
   const s = (t ?? "").trim()
   return s.length > 0 ? s : "(untitled)"
 }
 
-function entriesFromInjected(result: InjectedSemanticResult): DomTreeEntry[] {
+function entriesFromInjected(result: DomSemanticEntriesPayload): DomTreeEntry[] {
   if (!Array.isArray(result.entries)) {
     return []
   }
@@ -68,15 +64,15 @@ export async function captureDomSemanticForTab(
   }
 
   const mode: DomShowMode = flavor === "--react" ? "react" : "html"
-  const [{ result }] = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: bmxtDomSemanticEntriesInjected,
-    args: [mode, kind]
-  })
-  const injected = (result ?? {}) as InjectedSemanticResult
-  const entries = entriesFromInjected(injected)
+  const injected = await runDomSemanticEntriesOnTab(tabId, mode, kind)
   const header = buildHeader(flavor, tab, kind, locale)
   const headerLineCount = header.length
+
+  if (injected === null) {
+    return noticeCapture([...header, tDomList("domList.captureFailed", locale)])
+  }
+
+  const entries = entriesFromInjected(injected)
 
   if (entries.length === 0) {
     return noticeCapture([

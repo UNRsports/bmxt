@@ -1,7 +1,7 @@
 import {
-  bmxtDomClearHighlightInjected,
-  bmxtDomScrollToPathInjected
-} from "../page-dom/injected-dom-scroll-to-path"
+  runDomClearHighlightOnTab,
+  runDomScrollToPathOnTab
+} from "../page-dom/run-dom-in-page"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 
@@ -18,19 +18,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms)
   })
-}
-
-async function injectScrollToPath(
-  tabId: number,
-  path: readonly number[],
-  persistHighlight: boolean
-): Promise<boolean> {
-  const [{ result }] = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: bmxtDomScrollToPathInjected,
-    args: [[...path], { persist: persistHighlight }]
-  })
-  return Boolean((result as { ok?: boolean } | undefined)?.ok)
 }
 
 /**
@@ -55,7 +42,7 @@ export async function jumpDomListTargetToPath(
       })
       await sleep(TAB_FOCUS_DELAY_MS)
     }
-    return injectScrollToPath(tabId, path, options.persistHighlight === true)
+    return runDomScrollToPathOnTab(tabId, path, options.persistHighlight === true)
   } catch {
     return false
   }
@@ -84,10 +71,7 @@ export async function clearDomListTargetHighlight(tabId: number): Promise<void> 
     if (!isScriptablePageUrl(tab.url)) {
       return
     }
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: bmxtDomClearHighlightInjected
-    })
+    await runDomClearHighlightOnTab(tabId)
   } catch {
     /* tab gone or not scriptable */
   }

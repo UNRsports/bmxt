@@ -1,6 +1,7 @@
 /**
- * EN: Injected — document-wide semantic filter for dom -list --with menu.
- * JA: `--with` 機能メニュー用の意味論フィルタ（注入専用）。
+ * EN: Document-wide semantic filter for dom -list --with menu — run in the content script
+ *     bundle (`dom-list-in-page-handler.ts`), not via bare `executeScript({ func })`.
+ * JA: `--with` 意味論フィルタ。常駐 CS バンドル内で実行（`executeScript({ func })` 単体不可）。
  */
 
 import {
