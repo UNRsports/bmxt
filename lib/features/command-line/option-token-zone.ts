@@ -1,5 +1,7 @@
 /** Cursor is in the first option token immediately after a `leadPattern` match (e.g. `tabs `, `split `). */
 
+import { resolveActiveCommandSegment } from "./compound/active-segment.ts"
+
 export type OptionTokenZone = {
   optionStart: number
   prefix: string
@@ -11,21 +13,30 @@ export function optionTokenZoneAfterLead(
   cursor: number,
   leadPattern: RegExp
 ): OptionTokenZone | null {
-  const m = leadPattern.exec(line)
+  const active = resolveActiveCommandSegment(line, cursor)
+  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const localCursor = active.localCursor
+
+  const m = leadPattern.exec(segmentLine)
   if (!m) {
     return null
   }
-  const optionStart = m.index + m[0].length
-  if (cursor < optionStart) {
+  const optionStartLocal = m.index + m[0].length
+  if (localCursor < optionStartLocal) {
     return null
   }
-  const optionEnd = optionStart + (line.slice(optionStart).match(/^[^\s]*/)?.[0].length ?? 0)
-  if (cursor > optionEnd) {
+  const optionEndLocal =
+    optionStartLocal + (segmentLine.slice(optionStartLocal).match(/^[^\s]*/)?.[0].length ?? 0)
+  if (localCursor > optionEndLocal) {
     return null
   }
-  const prefix = line.slice(optionStart, cursor)
+  const prefix = segmentLine.slice(optionStartLocal, localCursor)
   if (/\s/.test(prefix)) {
     return null
   }
-  return { optionStart, prefix, optionEnd }
+  return {
+    optionStart: active.segmentStart + optionStartLocal,
+    prefix,
+    optionEnd: active.segmentStart + optionEndLocal
+  }
 }

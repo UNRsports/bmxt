@@ -67,6 +67,7 @@ export type CommandDispatchDeps = {
   syncImeTokenPicker: (line: string, pos: number) => void
   openSessionNameTyping: (trimmed: string) => void
   saveSessionDisplayName: (name: string, lines: string[]) => void
+  onSetSessionDisplayName: (sessionId: string, name: string) => void | Promise<void>
   onActivateSession: (sessionId: string) => void | Promise<void>
   externalSettingsRecoveryPendingRef: React.MutableRefObject<boolean>
   submitExternalSettingsRecoveryAnswer?: (

@@ -831,6 +831,7 @@ export function BmxtShell({
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
+    onSetSessionDisplayName,
     onActivateSession,
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
     submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer

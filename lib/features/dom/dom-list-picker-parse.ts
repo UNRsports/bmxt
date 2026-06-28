@@ -3,6 +3,7 @@
  * JA: `dom -list` のオプショントークン解析（補完・プレースホルダ）。
  */
 
+import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import {
   DOM_LIST_OPTION_TOKENS_WITH_TAG,
@@ -139,18 +140,21 @@ export function isEditingDomListOptionToken(line: string, cursor: number): boole
 
 /** EN: Flavor fixed — free-text pattern tail; suppress option IME menu. */
 export function shouldShowDomListPatternPlaceholder(line: string, cursor: number): boolean {
-  const trimmed = line.trim()
-  if (isDomListContinuationPrompt(line)) {
+  const active = resolveActiveCommandSegment(line, cursor)
+  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const segmentCursor = active.localCursor
+  const trimmed = segmentLine.trim()
+  if (isDomListContinuationPrompt(segmentLine)) {
     return false
   }
   if (!trimmed.toLowerCase().startsWith("dom -list")) {
     return false
   }
-  if (isEditingDomListOptionToken(line, cursor)) {
+  if (isEditingDomListOptionToken(segmentLine, segmentCursor)) {
     return false
   }
   const parts = domListParts(trimmed)
-  if (parts.length === 2 && line.endsWith(" ")) {
+  if (parts.length === 2 && segmentLine.endsWith(" ")) {
     return false
   }
   if (parts.length < 3) {
