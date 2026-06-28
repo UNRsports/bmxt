@@ -9,6 +9,8 @@ export type PlainPickerKeyboardExtensions = {
   customVerticalNav?: (e: KeyboardEvent) => boolean
   isSearchJumpEnabled?: () => boolean
   matchIndices?: () => readonly number[]
+  /** EN: When set, replaces default `setHi` on `n`/`N` match jump. */
+  onSearchJump?: (targetHi: number) => void
   filterCommandCompletions?: (prefix: string) => readonly string[]
   onCommandEmptyEnter?: () => void
   onCommandEnter?: (buffer: string) => boolean

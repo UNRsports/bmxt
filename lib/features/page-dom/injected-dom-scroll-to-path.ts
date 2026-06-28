@@ -8,6 +8,7 @@ import { resolveNodeFromPath } from "./injected-dom-path.ts"
 
 type ScrollOptions = {
   persist?: boolean
+  instant?: boolean
 }
 
 let highlightEl: HTMLElement | null = null
@@ -28,7 +29,11 @@ export function bmxtDomScrollToPathInjected(path: number[], options: ScrollOptio
     return { ok: false }
   }
   try {
-    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
+    el.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior: options.instant ? "instant" : "smooth"
+    })
   } catch {
     el.scrollIntoView()
   }

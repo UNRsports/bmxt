@@ -13,6 +13,8 @@ export type DomListJumpOptions = {
   focusWindow?: boolean
   /** EN: Keep outline on the element until the next preview or clear. */
   persistHighlight?: boolean
+  /** EN: Scroll immediately (for picker viewport resync after search jump). */
+  instantScroll?: boolean
 }
 
 function sleep(ms: number): Promise<void> {
@@ -43,7 +45,10 @@ export async function jumpDomListTargetToPath(
       })
       await sleep(TAB_FOCUS_DELAY_MS)
     }
-    return runDomScrollToPathOnTab(tabId, path, options.persistHighlight === true)
+    return runDomScrollToPathOnTab(tabId, path, {
+      persistHighlight: options.persistHighlight === true,
+      instantScroll: options.instantScroll === true
+    })
   } catch {
     return false
   }

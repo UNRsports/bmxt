@@ -31,6 +31,8 @@ export type DomScrollToPathRequest = {
   channel: typeof DOM_SCROLL_TO_PATH_CHANNEL
   path: number[]
   persist?: boolean
+  /** EN: When true, scroll instantly so viewport capture can follow in the picker. */
+  instant?: boolean
 }
 
 export type DomClearHighlightRequest = {
@@ -93,6 +95,12 @@ export function isDomScrollToPathRequest(raw: unknown): raw is DomScrollToPathRe
     return false
   }
   const o = raw as DomScrollToPathRequest
+  if (o.persist !== undefined && typeof o.persist !== "boolean") {
+    return false
+  }
+  if (o.instant !== undefined && typeof o.instant !== "boolean") {
+    return false
+  }
   return o.channel === DOM_SCROLL_TO_PATH_CHANNEL && isIntegerPath(o.path)
 }
 

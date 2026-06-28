@@ -123,7 +123,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
               pickerMode: parsed?.pickerMode ?? "normal",
               flavor: parsed?.flavor ?? "--html",
               showTag: parsed?.showTag ?? false,
-              pattern: parsed?.pattern ?? ""
+              pattern: parsed?.pattern ?? "",
+              documentEntries: domCapture?.documentEntries,
+              documentTruncated: domCapture?.documentTruncated
             })
             options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "dom"))
           } catch (e) {

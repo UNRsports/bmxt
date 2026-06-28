@@ -81,7 +81,7 @@ export async function runDomSemanticEntriesOnTab(
 export async function runDomScrollToPathOnTab(
   tabId: number,
   path: readonly number[],
-  persistHighlight: boolean
+  options: { persistHighlight?: boolean; instantScroll?: boolean } = {}
 ): Promise<boolean> {
   if (!(await tabUrlOk(tabId))) {
     return false
@@ -89,7 +89,8 @@ export async function runDomScrollToPathOnTab(
   const request: DomScrollToPathRequest = {
     channel: DOM_SCROLL_TO_PATH_CHANNEL,
     path: [...path],
-    persist: persistHighlight
+    persist: options.persistHighlight === true,
+    instant: options.instantScroll === true
   }
   const result = await sendDomInPageMessage<DomScrollToPathRequest, DomScrollToPathResponse>(
     tabId,

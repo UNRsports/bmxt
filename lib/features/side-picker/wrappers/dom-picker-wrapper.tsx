@@ -79,6 +79,7 @@ export function DomPickerWrapper({
       pickerMode={pickerMode}
       flavor={state.flavor ?? "--html"}
       showTag={state.showTag === true}
+      documentEntries={state.documentEntries}
       onReturnToPrompt={onReturnToPrompt}
       onExitToDetailBar={onExitToDetailBar}
       keyboardActive={keyboardActive}

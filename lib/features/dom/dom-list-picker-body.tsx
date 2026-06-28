@@ -29,7 +29,7 @@ import {
 import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
 import { DomHtmlSnippetView } from "./dom-html-snippet-view"
 import { DomListPickerBodyWith } from "./dom-list-picker-body-with"
-import type { DomListCapture } from "./dom-list-capture"
+import type { DomListCapture, DomTreeEntry } from "./dom-list-capture"
 import type { DomListFlavor, DomPickerMode } from "./dom-picker-mode"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
@@ -44,6 +44,7 @@ export type DomListPickerBodyProps = {
   pickerMode?: DomPickerMode
   flavor?: DomListFlavor
   showTag?: boolean
+  documentEntries?: readonly DomTreeEntry[]
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   keyboardActive?: boolean

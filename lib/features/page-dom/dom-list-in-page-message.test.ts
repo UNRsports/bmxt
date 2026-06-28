@@ -73,7 +73,8 @@ describe("dom-list-in-page-message", () => {
       isDomScrollToPathRequest({
         channel: DOM_SCROLL_TO_PATH_CHANNEL,
         path: [0, 2, -1, 1],
-        persist: true
+        persist: true,
+        instant: true
       }),
       true
     )

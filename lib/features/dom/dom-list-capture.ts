@@ -5,6 +5,7 @@ import { bmxtDomShowInjected, type DomShowMode } from "../page-dom/injected-dom-
 import { domTreeGuideForDepth, parseDomTreeSourceLine } from "./dom-list-line-format"
 import { domPickerModeLabel, type DomListFlavor, type DomPickerMode } from "./dom-picker-mode"
 import { captureDomViewportForTab } from "./dom-viewport-capture"
+import { captureDomDocumentEntriesForTab } from "./dom-document-capture"
 
 export type DomTreeEntry = { line: string; path: readonly number[] }
 
@@ -12,6 +13,9 @@ export type DomListCapture = {
   lines: string[]
   jumpPaths: (readonly number[] | null)[]
   headerLineCount: number
+  /** EN: Full-page body entries for `--with` search (not including header rows). */
+  documentEntries?: readonly DomTreeEntry[]
+  documentTruncated?: boolean
 }
 
 type InjectedDomShowResult = {
@@ -86,7 +90,16 @@ export async function captureDomListForTab(
 ): Promise<DomListCapture> {
   const flav: DomListFlavor = flavor === "--react" ? "--react" : "--html"
   if (pickerMode === "with") {
-    return captureDomViewportForTab(tab, flav, pattern, locale, showTag)
+    const [{ entries: documentEntries, truncated: documentTruncated }, viewportCapture] =
+      await Promise.all([
+        captureDomDocumentEntriesForTab(tab, flav, locale, showTag),
+        captureDomViewportForTab(tab, flav, pattern, locale, showTag)
+      ])
+    return {
+      ...viewportCapture,
+      documentEntries,
+      documentTruncated
+    }
   }
   const tabId = tab.id
   if (tabId === undefined) {

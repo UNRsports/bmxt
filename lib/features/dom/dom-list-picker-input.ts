@@ -4,6 +4,7 @@
  */
 
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
+import type { DomTreeEntry } from "./dom-list-capture.ts"
 import type { DomListFlavor, DomPickerMode } from "./dom-picker-mode"
 import {
   isDomListAwaitingOptionsOrPattern,
@@ -90,6 +91,8 @@ export type DomListPickerState =
       flavor?: DomListFlavor
       showTag?: boolean
       pattern?: string
+      documentEntries?: readonly DomTreeEntry[]
+      documentTruncated?: boolean
     }
   | { kind: "prompt"; message: string[]; commandLine: string }
 

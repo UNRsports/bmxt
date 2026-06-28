@@ -36,7 +36,10 @@ export function handleDomListInPageMessage(raw: unknown): DomListInPageHandlerRe
     )
   }
   if (isDomScrollToPathRequest(raw)) {
-    return bmxtDomScrollToPathInjected(raw.path, { persist: raw.persist === true })
+    return bmxtDomScrollToPathInjected(raw.path, {
+      persist: raw.persist === true,
+      instant: raw.instant === true
+    })
   }
   if (isDomClearHighlightRequest(raw)) {
     return bmxtDomClearHighlightInjected()
