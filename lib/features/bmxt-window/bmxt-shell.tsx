@@ -147,9 +147,11 @@ type Props = {
   /** EN: Pre-built session list rows (avoids passing full `pickersBySession` into every shell). */
   sessionListRows: SessionListRow[]
   navArmedByLeaf: Record<string, boolean>
-  onActivateSession: (sessionId: string) => Promise<void>
-  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
-  appendLogLines: (newLines: string[]) => Promise<void>
+  onActivateSession: (sessionId: string) => void
+  onSetSessionDisplayName: (sessionId: string, name: string) => void
+  appendLogLines: (newLines: string[]) => void | Promise<void>
+  sessionOrderLength: number
+  applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
@@ -189,6 +191,8 @@ export function BmxtShell({
   onActivateSession,
   onSetSessionDisplayName,
   appendLogLines,
+  sessionOrderLength,
+  applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
   setSessionPickerSlot,
@@ -768,6 +772,8 @@ export function BmxtShell({
 
   const { submitLine } = useCommandDispatch({
     sessionId,
+    sessionOrderLength,
+    applyRunCmdPatches,
     mode,
     iSearchMatches,
     iSearchCycle,
@@ -825,6 +831,7 @@ export function BmxtShell({
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
+    onSetSessionDisplayName,
     onActivateSession,
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
     submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer

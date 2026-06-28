@@ -46,11 +46,13 @@ function noticeCapture(lines: string[]): DomListCapture {
 function buildHeader(
   pickerMode: DomPickerMode,
   flavor: DomListFlavor,
-  tab: chrome.tabs.Tab
+  tab: chrome.tabs.Tab,
+  showTag: boolean
 ): string[] {
   const modeToken = domPickerModeLabel(pickerMode)
+  const tagToken = showTag ? " --tag" : ""
   return [
-    `dom -list ${modeToken} (${flavor})`,
+    `dom -list ${modeToken} (${flavor})${tagToken}`,
     displayTitle(tab.title),
     tab.url ?? "(no url)",
     ""
@@ -65,7 +67,8 @@ export async function captureDomViewportForTab(
   tab: chrome.tabs.Tab,
   flavor: DomListFlavor,
   pattern: string,
-  locale: UiLocale = DEFAULT_UI_LOCALE
+  locale: UiLocale = DEFAULT_UI_LOCALE,
+  showTag = false
 ): Promise<DomListCapture> {
   const tabId = tab.id
   if (tabId === undefined) {
@@ -73,14 +76,15 @@ export async function captureDomViewportForTab(
   }
 
   const mode: DomShowMode = flavor === "--react" ? "react" : "html"
+  const emptyImageAltLabel = tDomList("domList.emptyImageAlt", locale)
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: bmxtDomViewportEntriesInjected,
-    args: [mode]
+    args: [mode, showTag, emptyImageAltLabel]
   })
   const injected = (result ?? {}) as InjectedViewportResult
   const entries = filterEntries(entriesFromInjected(injected), pattern)
-  const header = buildHeader("with", flavor, tab)
+  const header = buildHeader("with", flavor, tab, showTag)
   const headerLineCount = header.length
 
   if (entries.length === 0) {

@@ -16,7 +16,12 @@ import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { usePlainPickerKeyboard } from "../side-picker/hooks/use-plain-picker-keyboard"
 import { urlListCommandListingHint } from "../side-picker/interaction/url-list-commands"
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
-import { plainPickerLineHighlightSegments } from "../side-picker/search/plain-picker-search"
+import {
+  computePickerSearchJumpTarget,
+  pickerSearchJumpDirection
+} from "../side-picker/interaction/picker-search-jump"
+import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
+import { plainPickerLineHighlightSegments, plainPickerHiIndicesMatching } from "../side-picker/search/plain-picker-search"
 import { scrollDomPickerListToHi } from "./dom-picker-list-scroll"
 import type { DomListFlavor } from "./dom-picker-mode"
 import { captureDomSemanticForTab } from "./dom-semantic-capture"
@@ -26,6 +31,7 @@ import {
   type DomSemanticKind
 } from "./dom-semantic-kind"
 import {
+  activateDomListLinkAtPath,
   clearDomListTargetHighlight,
   jumpDomListTargetToPath,
   previewDomListTargetToPath
@@ -39,6 +45,14 @@ import {
   type DomPickerRowKind
 } from "./dom-list-line-format"
 import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
+import {
+  bodyEntriesFromCapture,
+  documentEntryAt,
+  documentLinesFromEntries,
+  findDisplayIndexForPath
+} from "./dom-with-document-store"
+import type { DomTreeEntry } from "./dom-list-capture"
+import { DomHtmlSnippetView } from "./dom-html-snippet-view"
 import type { DomListPickerBodyProps } from "./dom-list-picker-body"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
@@ -49,7 +63,7 @@ type WithPickerView = "viewport" | "semanticMenu" | "semanticFilter"
 
 function DomFlatRowContent({ line }: { line: string }): ReactNode {
   if (line.startsWith("<")) {
-    return <span className="bmxt-dom-picker-html">{line}</span>
+    return <DomHtmlSnippetView snippet={line} />
   }
   const parts = parseDomTreeTagParts(line)
   return (
@@ -67,18 +81,21 @@ function DomWithPickerRow({
   line,
   hi,
   rowKind,
-  searchHighlightQuery
+  searchHighlightQuery,
+  showTag
 }: {
   index: number
   line: string
   hi: number
   rowKind: DomPickerRowKind
   searchHighlightQuery: string
+  showTag: boolean
 }): ReactNode {
   const hiRow = index === hi
   const rowClass = `bmxt-dom-picker-row bmxt-dom-picker-row--${rowKind}${
     hiRow ? " bmxt-dom-picker-row--hi" : ""
   }`
+  const useTagContent = rowKind === "tree" && showTag
 
   return (
     <div
@@ -86,7 +103,7 @@ function DomWithPickerRow({
       role="option"
       aria-selected={hiRow}
       className={rowClass}>
-      {rowKind === "tree" ? (
+      {useTagContent ? (
         <DomFlatRowContent line={line} />
       ) : (
         plainPickerLineHighlightSegments(line, searchHighlightQuery).map((seg, i) =>
@@ -132,7 +149,7 @@ export type DomListPickerBodyWithProps = DomListPickerBodyProps & {
   onViewportCapture: (capture: DomListCapture) => void
 }
 
-/** EN: `--with` — ↑↓ page scroll; Alt+↑↓ list highlight + site outline; → semantic menu. */
+/** EN: `--with` — ↑↓ page scroll; Alt+↑↓ list highlight; → semantic menu (filter syncs to viewport). */
 export function DomListPickerBodyWith({
   headline,
   lines,
@@ -140,6 +157,8 @@ export function DomListPickerBodyWith({
   headerLineCount,
   targetTabId,
   flavor = "--html",
+  showTag = false,
+  documentEntries,
   jumpActiveMode: _jumpActiveMode = "auto",
   onReturnToPrompt,
   onExitToDetailBar,
@@ -168,10 +187,14 @@ export function DomListPickerBodyWith({
   const refreshInFlightRef = useRef(false)
   const semanticCaptureInFlightRef = useRef(false)
   const withViewRef = useRef<WithPickerView>("viewport")
+  const documentEntriesRef = useRef<readonly DomTreeEntry[]>(documentEntries ?? [])
+  const semanticDocumentEntriesRef = useRef<readonly DomTreeEntry[]>([])
+  const searchDocHiRef = useRef(-1)
   const [hi, setHi] = useState(0)
   const [withView, setWithView] = useState<WithPickerView>("viewport")
   const [semanticMenuHi, setSemanticMenuHi] = useState(0)
   const [activeSemanticKind, setActiveSemanticKind] = useState<DomSemanticKind | null>(null)
+  const activeSemanticKindRef = useRef<DomSemanticKind | null>(null)
   const [searchMode, setSearchMode] = useState(false)
   const [filterQuery, setFilterQuery] = useState("")
   const [hlSearchPattern, setHlSearchPattern] = useState("")
@@ -181,6 +204,7 @@ export function DomListPickerBodyWith({
 
   hiRef.current = hi
   withViewRef.current = withView
+  activeSemanticKindRef.current = activeSemanticKind
 
   useEffect(() => {
     jumpPathsRef.current = jumpPaths
@@ -189,6 +213,114 @@ export function DomListPickerBodyWith({
   useEffect(() => {
     targetTabIdRef.current = targetTabId
   }, [targetTabId])
+
+  useEffect(() => {
+    if (documentEntries) {
+      documentEntriesRef.current = documentEntries
+    }
+  }, [documentEntries])
+
+  const getDocumentEntriesForSearch = useCallback((): readonly DomTreeEntry[] => {
+    if (withViewRef.current === "semanticFilter") {
+      return semanticDocumentEntriesRef.current
+    }
+    return documentEntriesRef.current
+  }, [])
+
+  useEffect(() => {
+    if (hlSearchPattern === "") {
+      searchDocHiRef.current = -1
+      return
+    }
+    const entries = getDocumentEntriesForSearch()
+    const docLines = documentLinesFromEntries(entries)
+    const matches = plainPickerHiIndicesMatching(docLines, hlSearchPattern)
+    searchDocHiRef.current = matches[0] ?? -1
+  }, [activeSemanticKind, documentEntries, getDocumentEntriesForSearch, hlSearchPattern, withView])
+
+  const refreshDisplayedCapture = useCallback(async (): Promise<DomListCapture | null> => {
+    const tabId = targetTabIdRef.current
+    if (tabId === undefined) {
+      return null
+    }
+    if (withViewRef.current === "semanticFilter") {
+      const kind = activeSemanticKindRef.current
+      if (kind === null) {
+        return null
+      }
+      const tab = await chrome.tabs.get(tabId)
+      return captureDomSemanticForTab(tab, flavor, kind, locale, "viewport", showTag)
+    }
+    return onRefreshViewport()
+  }, [flavor, locale, onRefreshViewport, showTag])
+
+  const applyDisplayedCapture = useCallback(
+    (capture: DomListCapture, preferredPath?: readonly number[]): number => {
+      onViewportCapture(capture)
+      jumpPathsRef.current = capture.jumpPaths
+      if (preferredPath !== undefined) {
+        const matched = findDisplayIndexForPath(capture, preferredPath)
+        if (matched >= 0) {
+          return matched
+        }
+      }
+      const first = firstFocusableDomLineIndex(capture.jumpPaths)
+      return first >= 0 ? first : 0
+    },
+    [onViewportCapture]
+  )
+
+  const jumpToDocumentEntry = useCallback(
+    async (docIndex: number): Promise<void> => {
+      const entry = documentEntryAt(getDocumentEntriesForSearch(), docIndex)
+      const tabId = targetTabIdRef.current
+      if (entry == null || tabId === undefined) {
+        return
+      }
+      searchDocHiRef.current = docIndex
+      await jumpDomListTargetToPath(tabId, entry.path, {
+        focusWindow: false,
+        persistHighlight: true,
+        instantScroll: true
+      })
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, VIEWPORT_REFRESH_DELAY_MS)
+      })
+      let capture = await refreshDisplayedCapture()
+      if (!capture) {
+        return
+      }
+      if (findDisplayIndexForPath(capture, entry.path) < 0) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, VIEWPORT_REFRESH_DELAY_MS)
+        })
+        capture = await refreshDisplayedCapture()
+        if (!capture) {
+          return
+        }
+      }
+      const nextHi = applyDisplayedCapture(capture, entry.path)
+      setHi(nextHi)
+    },
+    [applyDisplayedCapture, getDocumentEntriesForSearch, refreshDisplayedCapture]
+  )
+
+  const onSearchCommit = useCallback(
+    (pattern: string) => {
+      if (withViewRef.current === "semanticMenu") {
+        return
+      }
+      const entries = getDocumentEntriesForSearch()
+      const docLines = documentLinesFromEntries(entries)
+      const matches = plainPickerHiIndicesMatching(docLines, pattern)
+      const first = matches[0]
+      if (first === undefined) {
+        return
+      }
+      void jumpToDocumentEntry(first)
+    },
+    [getDocumentEntriesForSearch, jumpToDocumentEntry]
+  )
 
   const previewRow = useCallback(async (index: number): Promise<void> => {
     const path = jumpPathsRef.current[index]
@@ -213,6 +345,18 @@ export function DomListPickerBodyWith({
       if (withViewRef.current !== "viewport" && withViewRef.current !== "semanticFilter") {
         return
       }
+      const path = jumpPathsRef.current[index]
+      const tabId = targetTabIdRef.current
+      if (path == null || tabId === undefined) {
+        return
+      }
+      if (
+        withViewRef.current === "semanticFilter" &&
+        activeSemanticKindRef.current === "link"
+      ) {
+        void activateDomListLinkAtPath(tabId, path, { focusWindow: true })
+        return
+      }
       void jumpToRow(index, true)
     },
     [jumpToRow]
@@ -225,6 +369,15 @@ export function DomListPickerBodyWith({
   )
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
+
+  const clearSearchState = useCallback(() => {
+    setSearchMode(false)
+    setFilterQuery("")
+    setHlSearchPattern("")
+    setCommandMode(false)
+    setCommandBuffer("")
+    setCommandListingHint(false)
+  }, [])
 
   const resetListHi = useCallback(() => {
     const first = firstFocusableDomLineIndex(jumpPathsRef.current)
@@ -246,21 +399,37 @@ export function DomListPickerBodyWith({
         await new Promise<void>((resolve) => {
           window.setTimeout(resolve, VIEWPORT_REFRESH_DELAY_MS)
         })
-        const capture = await onRefreshViewport()
+        const view = withViewRef.current
+        let capture: DomListCapture | null = null
+        if (view === "semanticFilter") {
+          const kind = activeSemanticKindRef.current
+          if (kind !== null) {
+            const tab = await chrome.tabs.get(tabId)
+            capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport", showTag)
+          }
+        } else {
+          capture = await onRefreshViewport()
+        }
         if (capture) {
           onViewportCapture(capture)
+          jumpPathsRef.current = capture.jumpPaths
+          if (hlSearchPattern === "") {
+            resetListHi()
+          }
         }
       } finally {
         refreshInFlightRef.current = false
       }
     },
-    [onRefreshViewport, onViewportCapture]
+    [flavor, hlSearchPattern, locale, onRefreshViewport, onViewportCapture, resetListHi, showTag]
   )
 
   const restoreViewportList = useCallback(async () => {
     if (semanticCaptureInFlightRef.current) {
       return
     }
+    clearSearchState()
+    semanticDocumentEntriesRef.current = []
     const capture = await onRefreshViewport()
     if (capture) {
       onViewportCapture(capture)
@@ -268,7 +437,7 @@ export function DomListPickerBodyWith({
     setWithView("viewport")
     setActiveSemanticKind(null)
     resetListHi()
-  }, [onRefreshViewport, onViewportCapture, resetListHi])
+  }, [clearSearchState, onRefreshViewport, onViewportCapture, resetListHi])
 
   const selectSemanticKind = useCallback(
     async (kind: DomSemanticKind) => {
@@ -276,18 +445,23 @@ export function DomListPickerBodyWith({
       if (tabId === undefined || semanticCaptureInFlightRef.current) {
         return
       }
+      clearSearchState()
       semanticCaptureInFlightRef.current = true
       try {
         const tab = await chrome.tabs.get(tabId)
-        const capture = await captureDomSemanticForTab(tab, flavor, kind, locale)
-        onViewportCapture(capture)
+        const [documentCapture, viewportCapture] = await Promise.all([
+          captureDomSemanticForTab(tab, flavor, kind, locale, "document", showTag),
+          captureDomSemanticForTab(tab, flavor, kind, locale, "viewport", showTag)
+        ])
+        semanticDocumentEntriesRef.current = bodyEntriesFromCapture(documentCapture)
+        onViewportCapture(viewportCapture)
         setActiveSemanticKind(kind)
         setWithView("semanticFilter")
-        const first = firstFocusableDomLineIndex(capture.jumpPaths)
+        const first = firstFocusableDomLineIndex(viewportCapture.jumpPaths)
         const nextHi = first >= 0 ? first : 0
         setHi(nextHi)
-        jumpPathsRef.current = capture.jumpPaths
-        const path = capture.jumpPaths[nextHi]
+        jumpPathsRef.current = viewportCapture.jumpPaths
+        const path = viewportCapture.jumpPaths[nextHi]
         if (path != null) {
           await previewDomListTargetToPath(tabId, path)
         }
@@ -295,15 +469,15 @@ export function DomListPickerBodyWith({
         semanticCaptureInFlightRef.current = false
       }
     },
-    [flavor, locale, onViewportCapture]
+    [clearSearchState, flavor, locale, onViewportCapture, showTag]
   )
 
   useEffect(() => {
-    if (withView !== "viewport") {
+    if (withView !== "viewport" && withView !== "semanticFilter") {
       return
     }
     resetListHi()
-  }, [jumpPaths, lines, resetListHi, withView])
+  }, [resetListHi, withView])
 
   useEffect(() => {
     if (lines.length === 0) {
@@ -365,9 +539,15 @@ export function DomListPickerBodyWith({
         return true
       }
       if (view === "semanticFilter") {
+        if (e.altKey) {
+          e.preventDefault()
+          e.stopPropagation()
+          moveListHighlight(dir === "down" ? 1 : -1)
+          return true
+        }
         e.preventDefault()
         e.stopPropagation()
-        moveListHighlight(dir === "down" ? 1 : -1)
+        void scrollPageAndRefresh(dir === "down" ? 1 : -1)
         return true
       }
       if (e.altKey) {
@@ -384,12 +564,56 @@ export function DomListPickerBodyWith({
     [commandMode, keyboardActive, moveListHighlight, scrollPageAndRefresh, searchMode]
   )
 
-  const subViewActive = withView !== "viewport"
+  const domSearchMatchIndices = useCallback((): number[] => {
+    const docLines = documentLinesFromEntries(getDocumentEntriesForSearch())
+    return plainPickerHiIndicesMatching(docLines, hlSearchPattern)
+  }, [getDocumentEntriesForSearch, hlSearchPattern])
+
+  const onDocumentSearchCaptureBefore = useCallback(
+    (ev: KeyboardEvent): boolean => {
+      if (
+        !keyboardActive ||
+        searchMode ||
+        commandMode ||
+        hlSearchPattern === "" ||
+        withViewRef.current === "semanticMenu"
+      ) {
+        return false
+      }
+      const dir = pickerSearchJumpDirection(ev)
+      if (dir === null) {
+        return false
+      }
+      const matches = domSearchMatchIndices()
+      if (matches.length === 0) {
+        pickerStopEvent(ev)
+        return true
+      }
+      const cur = searchDocHiRef.current
+      const curIdx = cur >= 0 && matches.includes(cur) ? cur : matches[0]!
+      const target = computePickerSearchJumpTarget(curIdx, matches, dir === "forward")
+      pickerStopEvent(ev)
+      void jumpToDocumentEntry(target)
+      return true
+    },
+    [
+      commandMode,
+      domSearchMatchIndices,
+      hlSearchPattern,
+      jumpToDocumentEntry,
+      keyboardActive,
+      searchMode
+    ]
+  )
+
+  const blockPickerChords = withView === "semanticMenu"
 
   const extensions = useMemo(
     () => ({
+      onCaptureBefore: onDocumentSearchCaptureBefore,
       customVerticalNav: domWithVerticalNav,
-      blockOpenChords: () => subViewActive,
+      blockOpenChords: () => blockPickerChords,
+      isSearchJumpEnabled: () => false,
       onInputBeforePlain: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (!keyboardActive || searchMode || commandMode) {
           return false
@@ -400,6 +624,7 @@ export function DomListPickerBodyWith({
             return false
           }
           e.preventDefault()
+          clearSearchState()
           setSemanticMenuHi(0)
           setWithView("semanticMenu")
           return true
@@ -434,6 +659,9 @@ export function DomListPickerBodyWith({
             }
           : undefined,
       onEsc: (e: KeyboardEvent) => {
+        if (searchMode || commandMode) {
+          return false
+        }
         const view = withViewRef.current
         if (view === "semanticMenu") {
           e.preventDefault()
@@ -450,7 +678,7 @@ export function DomListPickerBodyWith({
         return false
       },
       exitToDetailBar:
-        onExitToDetailBar && !searchMode && !commandMode && !subViewActive
+        onExitToDetailBar && !searchMode && !commandMode && !blockPickerChords
           ? {
               canExit: () => !searchMode && !commandMode && withViewRef.current === "viewport",
               onExit: onExitToDetailBar
@@ -458,15 +686,17 @@ export function DomListPickerBodyWith({
           : undefined
     }),
     [
+      blockPickerChords,
+      clearSearchState,
       commandMode,
       domWithVerticalNav,
       keyboardActive,
+      onDocumentSearchCaptureBefore,
       onExitToDetailBar,
       restoreViewportList,
       searchMode,
       selectSemanticKind,
       semanticMenuHi,
-      subViewActive,
       withView
     ]
   )
@@ -492,6 +722,7 @@ export function DomListPickerBodyWith({
     setCommandBuffer,
     setCommandListingHint,
     matchLines: lines,
+    onSearchCommit,
     extensions
   })
 
@@ -499,9 +730,13 @@ export function DomListPickerBodyWith({
     withView === "semanticMenu"
       ? tDom("dom.picker.semantic.menuHeadline", locale)
       : withView === "semanticFilter" && activeSemanticKind
-        ? tDom("dom.picker.semantic.filterHeadline", locale, {
-            kind: tDom(domSemanticKindI18nKey(activeSemanticKind), locale)
-          })
+        ? activeSemanticKind === "link"
+          ? tDom("dom.picker.semantic.filterHeadlineLink", locale, {
+              kind: tDom(domSemanticKindI18nKey(activeSemanticKind), locale)
+            })
+          : tDom("dom.picker.semantic.filterHeadline", locale, {
+              kind: tDom(domSemanticKindI18nKey(activeSemanticKind), locale)
+            })
         : headline
 
   const activeRowId =
@@ -539,7 +774,11 @@ export function DomListPickerBodyWith({
             ? tPlainPicker("plainPicker.searchHint", locale)
             : commandMode
               ? tPlainPicker("plainPicker.commandHint", locale)
-              : withView === "semanticMenu"
+              : withView === "semanticFilter"
+                ? activeSemanticKind === "link"
+                  ? tDom("dom.picker.inputAria.keysWithSemanticFilterLink", locale)
+                  : tDom("dom.picker.inputAria.keysWithSemanticFilter", locale)
+                : withView === "semanticMenu"
                 ? tDom("dom.picker.semantic.menuAria", locale)
                 : tDom("dom.picker.inputAria.keysWith", locale)
         }
@@ -590,6 +829,7 @@ export function DomListPickerBodyWith({
               hi={hi}
               rowKind={rowKinds[i]!}
               searchHighlightQuery={searchHighlightQuery}
+              showTag={showTag}
             />
           ))
         )}

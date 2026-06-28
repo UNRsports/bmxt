@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
+import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isJobHandleActive, type BmxtJobHandle } from "../../job"
 import { listTabsMoveUrlCandidates, tabsMoveUrlCompletionZone } from "../../tabs/input"
 import type { SessionCandidatePanelVariant } from "../../session"
@@ -8,7 +9,7 @@ import type { SearchListPickerState } from "../../search/search-list-picker-inpu
 import type { TokenPickerModel } from "../token-picker-panel"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
-import { shouldAutoSubmitAfterTokenPick } from "./bmxt-shell-prompt-helpers"
+import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
 
 export type UseShellKeyboardOptions = {
   navPageTyping: boolean
@@ -107,7 +108,15 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       options.setCursorPos(nextPos)
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
-      queueMicrotask(() => options.syncImeTokenPicker(nextLine, nextPos))
+      queueMicrotask(() => {
+        options.syncImeTokenPicker(nextLine, nextPos)
+        const active = resolveActiveCommandSegment(nextLine, nextPos)
+        const segmentTrimmed = active.segmentText.trim()
+        if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
+          options.setSubCmdPicker(null)
+          options.submitLine()
+        }
+      })
       options.focusPrompt()
     },
     [options]
@@ -301,8 +310,17 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         }
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault()
-          const trimmed = options.promptLine().trim()
-          if (shouldAutoSubmitAfterTokenPick(trimmed)) {
+          const line = options.promptLine()
+          const pos = options.cursorRef.current
+          const active = resolveActiveCommandSegment(line, pos)
+          const segmentTrimmed = active.segmentText.trim()
+          const pickedToken = subPick.candidates[subPick.hi]
+          if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
+            options.setSubCmdPicker(null)
+            options.submitLine()
+            return
+          }
+          if (shouldSubmitLoneFirstTokenFromPicker(segmentTrimmed, subPick.tier, pickedToken)) {
             options.setSubCmdPicker(null)
             options.submitLine()
             return

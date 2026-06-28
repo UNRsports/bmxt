@@ -1,4 +1,5 @@
 import { useCallback } from "react"
+import { lineHasAndOperator, runCompoundLine } from "../../command-line/compound"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
 import { tryHandleDomListCommand } from "./command-dispatch/handle-dom"
@@ -76,6 +77,11 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
     }
 
     if (tryHandleExternalSettingsRecovery(ctx) === "handled") {
+      return
+    }
+
+    if (lineHasAndOperator(trimmed)) {
+      void runCompoundLine(trimmed, deps, deps.uiSettings.locale)
       return
     }
 

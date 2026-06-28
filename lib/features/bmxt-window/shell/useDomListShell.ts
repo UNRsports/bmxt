@@ -24,7 +24,7 @@ export type UseDomListShellOptions = {
   domListPicker: DomListPickerState | null
   /** EN: Tab-follow refresh while dom picker / detail bar is focused (not from prompt). */
   domListFollowEnabled: boolean
-  appendLogLines: (lines: string[]) => Promise<void>
+  appendLogLines: (lines: string[]) => void | Promise<void>
   setDomListPicker: (sessionId: string, state: DomListPickerState | null) => void
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<unknown>>
 }
@@ -65,6 +65,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
             let domCapture: DomListCapture | undefined
             const ctx = mergeJobIntoDispatchContext(
               {
+                enqueueSessionPatch: () => {},
                 clearLog: async () => {},
                 exitPane: async () => [],
                 listWindows: async () => [],
@@ -121,7 +122,10 @@ export function useDomListShell(options: UseDomListShellOptions) {
               headerLineCount: domCapture?.headerLineCount ?? linesOut.length,
               pickerMode: parsed?.pickerMode ?? "normal",
               flavor: parsed?.flavor ?? "--html",
-              pattern: parsed?.pattern ?? ""
+              showTag: parsed?.showTag ?? false,
+              pattern: parsed?.pattern ?? "",
+              documentEntries: domCapture?.documentEntries,
+              documentTruncated: domCapture?.documentTruncated
             })
             options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "dom"))
           } catch (e) {
@@ -184,7 +188,8 @@ export function useDomListShell(options: UseDomListShellOptions) {
         const tab = await chrome.tabs.get(tabId)
         const flavor = state.flavor ?? "--html"
         const pattern = state.pattern ?? ""
-        return await captureDomViewportForTab(tab, flavor, pattern, options.uiLocale)
+        const showTag = state.showTag === true
+        return await captureDomViewportForTab(tab, flavor, pattern, options.uiLocale, showTag)
       } catch {
         return null
       }

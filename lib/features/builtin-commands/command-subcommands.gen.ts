@@ -18,7 +18,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "clear": [] as const,
   "close": [] as const,
   "dom": [
-    { head: "-list", trailingTokens: ["--normal","--with","--html","--react"] as const, tail: "rest" },
+    { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" }
   ] as const,

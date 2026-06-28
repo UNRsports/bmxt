@@ -11,6 +11,7 @@ describe("parseDomListArgsFromTokens", () => {
     assert.deepEqual(parseDomListArgsFromTokens(["--html"]), {
       pickerMode: "normal",
       flavor: "--html",
+      showTag: false,
       pattern: ""
     })
     assert.equal(parseDomListArgsFromTokens(["--normal"]), null)
@@ -20,6 +21,7 @@ describe("parseDomListArgsFromTokens", () => {
     assert.deepEqual(parseDomListArgsFromTokens(["--with", "--react", "foo"]), {
       pickerMode: "with",
       flavor: "--react",
+      showTag: false,
       pattern: "foo"
     })
   })
@@ -28,6 +30,22 @@ describe("parseDomListArgsFromTokens", () => {
     assert.deepEqual(parseDomListArgsFromTokens(["--html", "--with"]), {
       pickerMode: "with",
       flavor: "--html",
+      showTag: false,
+      pattern: ""
+    })
+  })
+
+  it("parses --tag only for --with mode", () => {
+    assert.deepEqual(parseDomListArgsFromTokens(["--with", "--html", "--tag"]), {
+      pickerMode: "with",
+      flavor: "--html",
+      showTag: true,
+      pattern: ""
+    })
+    assert.deepEqual(parseDomListArgsFromTokens(["--normal", "--html", "--tag"]), {
+      pickerMode: "normal",
+      flavor: "--html",
+      showTag: false,
       pattern: ""
     })
   })
@@ -38,6 +56,7 @@ describe("parseDomListCommandLine", () => {
     assert.deepEqual(parseDomListCommandLine("dom -list --with --html"), {
       pickerMode: "with",
       flavor: "--html",
+      showTag: false,
       pattern: ""
     })
   })

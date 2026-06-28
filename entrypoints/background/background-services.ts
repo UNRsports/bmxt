@@ -9,21 +9,12 @@ import {
 } from "../../lib/features/dispatch"
 import { LAST_NORMAL_WINDOW_KEY } from "../../lib/features/extension-storage/keys"
 import {
-  appendLinesToSession,
-  clearSessionLines,
-  exitOrCloseSessionInStorage,
-  readTerminalSessionsIfPresent,
-  ensureTerminalSessionsState,
   removeAllTerminalSessionsFromStorage,
-  setSessionLines,
-  resolveSessionId,
-  createSessionAndActivate,
-  switchSessionNext,
-  switchSessionPrev,
-  resetBmxtTerminalSessionsInStorage,
-  setActiveSession,
-  setSessionDisplayName
+  resetBmxtTerminalSessionsInStorage
 } from "../../lib/features/bmxt-window/terminal-sessions/state-storage"
+import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
+import type { SessionPatch } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
+import type { RunCmdResult } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
 import { displayTitle } from "../../lib/features/format/display-title"
 import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
 import { buildHelpLines } from "../../lib/features/bmxt-core/registry/help"
@@ -41,18 +32,6 @@ import {
   persistBmxtWindowId,
   readBmxtWindowIdInMemory
 } from "./window-state"
-import {
-  setupInMemorySessionRuntime,
-  readSessionSnapshotForInit
-} from "./session-runtime-broadcast"
-import {
-  SESSION_INIT_MESSAGE,
-  SESSION_UI_APPEND_LOG_MESSAGE,
-  SESSION_UI_SET_ACTIVE_MESSAGE,
-  SESSION_UI_SET_NAME_MESSAGE
-} from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-protocol"
-
-setupInMemorySessionRuntime()
 
 let lastFocusedNormalWindow: number | undefined
 let backgroundServicesRegistered = false
@@ -89,140 +68,151 @@ async function closeBmxtWindowOnly(hintWindowId?: number): Promise<void> {
   }
 }
 
-async function tryRunCommandWithoutWasm(
+function tryRunCommandWithoutWasm(
   sessionId: string,
-  trimmed: string
-): Promise<boolean> {
+  trimmed: string,
+  patches: SessionPatch[]
+): boolean {
   const lower = trimmed.toLowerCase()
   if (lower === "clear") {
-    await setSessionLines(sessionId, [`> ${trimmed}`, "(log cleared)"])
+    patches.push({
+      type: "setLog",
+      sessionId,
+      lines: [`> ${trimmed}`, "(log cleared)"]
+    })
     return true
   }
   if (lower === "exit") {
-    await exitBmxtWindowFull()
-    return true
+    return false
   }
   const newMatch = trimmed.match(/^\s*session\s+-new(?:\s+(.+))?\s*$/i)
   if (newMatch) {
     const rawName = (newMatch[1] ?? "").trim()
-    await createSessionAndActivate(sessionId, {
+    patches.push({
+      type: "createSession",
+      fromSessionId: sessionId,
       name: rawName.length > 0 ? rawName : undefined
     })
-    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
     return true
   }
   if (/^\s*session\s+-next\s*$/i.test(trimmed)) {
-    await switchSessionNext(sessionId)
-    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    patches.push({ type: "switchNext", anchorSessionId: sessionId })
+    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
     return true
   }
   if (/^\s*session\s+-prev\s*$/i.test(trimmed)) {
-    await switchSessionPrev(sessionId)
-    await appendLinesToSession(sessionId, [`> ${trimmed}`])
+    patches.push({ type: "switchPrev", anchorSessionId: sessionId })
+    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
     return true
   }
   return false
 }
 
-async function exitBmxtWindowFull(hintWindowId?: number): Promise<string[]> {
-  void closeBmxtWindowOnly(hintWindowId)
-  void removeAllTerminalSessionsFromStorage()
-  return ["(BMXt window closed, session log cleared)"]
-}
-
 async function runExitCommand(
-  sessionIdRaw?: string,
+  sessionIdRaw: string | undefined,
+  sessionOrderLength: number,
   sender?: chrome.runtime.MessageSender
-): Promise<void> {
+): Promise<RunCmdResult> {
   const hintWindowId = senderWindowId(sender)
-  const st = await readTerminalSessionsIfPresent()
-  const isLastOrEmpty = !st || st.order.length <= 1
+  const isLastOrEmpty = sessionOrderLength <= 1
 
   if (isLastOrEmpty) {
     void closeBmxtWindowOnly(hintWindowId)
     void removeAllTerminalSessionsFromStorage()
-    return
+    return { ok: true, patches: [], closeWindow: true }
   }
 
-  const st0 = await ensureTerminalSessionsState()
-  const sessionId = resolveSessionId(st0, sessionIdRaw)
-  const r = await exitOrCloseSessionInStorage(sessionId)
-  if (r.fullClose) {
-    void closeBmxtWindowOnly(hintWindowId)
-    return
-  }
-  if ("activeIdAfter" in r) {
-    await appendLinesToSession(r.activeIdAfter, [`> exit`])
+  const sessionId = sessionIdRaw ?? ""
+  return {
+    ok: true,
+    patches: [{ type: "exitSession", sessionId, appendExitLog: true }]
   }
 }
 
 async function runCommand(
   line: string,
-  sessionIdRaw?: string,
+  sessionIdRaw: string | undefined,
+  sessionOrderLength: number,
   sender?: chrome.runtime.MessageSender
-): Promise<void> {
+): Promise<RunCmdResult> {
   const trimmed = line.trim()
   if (!trimmed) {
-    return
+    return { ok: true, patches: [] }
   }
   if (trimmed.toLowerCase() === "exit") {
-    await runExitCommand(sessionIdRaw, sender)
-    return
+    return runExitCommand(sessionIdRaw, sessionOrderLength, sender)
   }
   const runner = getJobRunner(BACKGROUND_JOB_SCOPE)
-  await runner.start(
+  return runner.start(
     "run-cmd",
-    async () => {
-      await runCommandBody(trimmed, sessionIdRaw)
-    },
+    async () => runCommandBody(trimmed, sessionIdRaw, sessionOrderLength),
     { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
   )
 }
 
-async function runCommandBody(line: string, sessionIdRaw?: string): Promise<void> {
+async function runCommandBody(
+  line: string,
+  sessionIdRaw: string | undefined,
+  sessionOrderLength: number
+): Promise<RunCmdResult> {
   const trimmed = line
   if (/^\s*search\b/i.test(trimmed)) {
     ensureSearchCacheBackgroundListeners()
   }
-  const st0 = await ensureTerminalSessionsState()
-  const sessionId = resolveSessionId(st0, sessionIdRaw)
-
+  const sessionId = sessionIdRaw ?? ""
+  const patches: SessionPatch[] = []
   const exitOutcome = { fullClose: false as boolean }
 
   try {
     await ensureBmxtCore()
   } catch (e) {
-    if (await tryRunCommandWithoutWasm(sessionId, trimmed)) {
-      return
+    if (tryRunCommandWithoutWasm(sessionId, trimmed, patches)) {
+      return { ok: true, patches }
     }
-    await appendLinesToSession(sessionId, [
-      `> ${trimmed}`,
-      `error: ${e instanceof Error ? e.message : String(e)}`
-    ])
-    return
+    return {
+      ok: true,
+      patches: [
+        {
+          type: "appendLog",
+          sessionId,
+          lines: [`> ${trimmed}`, `error: ${e instanceof Error ? e.message : String(e)}`]
+        }
+      ]
+    }
   }
+
   const isClear = trimmed.toLowerCase() === "clear"
-  if (!isClear) {
-    await appendLinesToSession(sessionId, [`> ${trimmed}`])
-  }
   const more: string[] = []
   try {
-    more.push(...(await dispatch(trimmed, sessionId, exitOutcome)))
+    more.push(...(await dispatch(trimmed, sessionId, sessionOrderLength, patches, exitOutcome)))
   } catch (e) {
     more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
+
   if (isClear) {
-    await setSessionLines(sessionId, [`> ${trimmed}`, ...more])
-    return
+    patches.push({
+      type: "setLog",
+      sessionId,
+      lines: [`> ${trimmed}`, ...more]
+    })
+    return { ok: true, patches, closeWindow: exitOutcome.fullClose || undefined }
+  }
+
+  if (!isClear) {
+    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
   }
   if (more.length > 0) {
-    await appendLinesToSession(sessionId, more)
+    patches.push({ type: "appendLog", sessionId, lines: more })
   }
+  return { ok: true, patches, closeWindow: exitOutcome.fullClose || undefined }
 }
 
 async function dispatch(
   line: string,
   sessionId: string,
+  sessionOrderLength: number,
+  sessionPatches: SessionPatch[],
   exitOutcome: { fullClose: boolean }
 ): Promise<string[]> {
   const { locale } = await loadUiSettings()
@@ -236,15 +226,20 @@ async function dispatch(
     return bundle.lines ?? []
   }
   const ctx: DispatchChromeContext = {
+    enqueueSessionPatch: (patch) => {
+      sessionPatches.push(patch)
+    },
     clearLog: async () => {
-      await clearSessionLines(sessionId)
+      /* clear command replaces log via setLog patch in runCommandBody */
     },
     exitPane: async () => {
-      const r = await exitOrCloseSessionInStorage(sessionId)
-      exitOutcome.fullClose = r.fullClose
-      if (r.fullClose) {
-        await closeBmxtWindowOnly()
+      if (sessionOrderLength <= 1) {
+        exitOutcome.fullClose = true
+        void closeBmxtWindowOnly()
+        void removeAllTerminalSessionsFromStorage()
+        return []
       }
+      sessionPatches.push({ type: "exitSession", sessionId })
       return []
     },
     listWindows,
@@ -377,60 +372,23 @@ export async function resetBmxtFromShortcutAsync(
   openOrFocus: () => Promise<void>
 ): Promise<void> {
   await resetBmxtTerminalSessionsInStorage()
+  broadcastSessionClearToUi()
   await openOrFocus()
-}
-
-export async function handleSessionRuntimeMessageAsync(
-  message: Record<string, unknown>
-): Promise<unknown> {
-  const type = message.type
-  if (type === SESSION_INIT_MESSAGE) {
-    const state = await readSessionSnapshotForInit()
-    return { ok: true, state }
-  }
-  if (type === SESSION_UI_APPEND_LOG_MESSAGE) {
-    const sessionId = message.sessionId
-    const lines = message.lines
-    if (typeof sessionId !== "string" || !Array.isArray(lines)) {
-      return { ok: false, error: "invalid SESSION_UI_APPEND_LOG" }
-    }
-    const safeLines: string[] = []
-    for (const line of lines) {
-      if (typeof line === "string") {
-        safeLines.push(line)
-      }
-    }
-    if (safeLines.length > 0) {
-      await appendLinesToSession(sessionId, safeLines)
-    }
-    return { ok: true }
-  }
-  if (type === SESSION_UI_SET_ACTIVE_MESSAGE) {
-    const sessionId = message.sessionId
-    if (typeof sessionId !== "string") {
-      return { ok: false, error: "invalid SESSION_UI_SET_ACTIVE" }
-    }
-    await setActiveSession(sessionId)
-    return { ok: true }
-  }
-  if (type === SESSION_UI_SET_NAME_MESSAGE) {
-    const sessionId = message.sessionId
-    const name = message.name
-    if (typeof sessionId !== "string" || typeof name !== "string") {
-      return { ok: false, error: "invalid SESSION_UI_SET_NAME" }
-    }
-    await setSessionDisplayName(sessionId, name)
-    return { ok: true }
-  }
-  return { ok: false, error: "unknown session message" }
 }
 
 export async function runCommandMessage(
   line: string,
   sessionIdRaw?: string,
+  sessionOrderLength?: number,
   sender?: chrome.runtime.MessageSender
-): Promise<void> {
-  await runCommand(line, sessionIdRaw, sender)
+): Promise<RunCmdResult> {
+  const orderLen =
+    typeof sessionOrderLength === "number" && Number.isInteger(sessionOrderLength)
+      ? Math.max(0, sessionOrderLength)
+      : 1
+  const sessionId =
+    typeof sessionIdRaw === "string" && sessionIdRaw.length > 0 ? sessionIdRaw : undefined
+  return runCommand(line, sessionId, orderLen, sender)
 }
 
 export async function runNavControlMessage(message: NavControlRequest): Promise<unknown> {
@@ -487,4 +445,12 @@ export function registerBackgroundServices(): void {
 
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
+}
+
+;(globalThis as Record<string, unknown>).BmxtBackgroundServices = {
+  registerBackgroundServices,
+  runCommandMessage,
+  runNavControlMessage,
+  removeAllTerminalSessionsFromStorageAsync,
+  resetBmxtFromShortcutAsync
 }

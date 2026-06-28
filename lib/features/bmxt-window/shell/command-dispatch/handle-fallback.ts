@@ -1,5 +1,7 @@
 import { continuationPromptAfterLoneFirstToken } from "../../../builtin-commands/command-subcommands.gen"
 import { buildHelpLines } from "../../../bmxt-core/registry/help"
+import { isRunCmdResult } from "../../terminal-sessions/session-patches"
+import { runCommandFromUiAsync } from "../../terminal-sessions/session-runtime-client"
 import { tError } from "../../../setting/i18n/ns/error"
 import {
   clearPrompt,
@@ -30,29 +32,32 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
   const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
   clearPrompt(deps)
   recordCommandHistory(deps)
-  chrome.runtime.sendMessage(
-    { type: "RUN_CMD", line: trimmed, sessionId: deps.sessionId },
-    (response) => {
-      const err = chrome.runtime.lastError
-      if (err) {
+  void runCommandFromUiAsync(trimmed, deps.sessionId, deps.sessionOrderLength)
+    .then((response) => {
+      if (!isRunCmdResult(response)) {
         void deps.appendLogLines([
           `> ${trimmed}`,
-          tError("error.dispatchFailed", locale, { message: err.message })
+          tError("error.unknown", locale)
         ])
         return
       }
-      if (response && typeof response === "object" && "ok" in response && response.ok === false) {
-        const msg =
-          "error" in response && typeof response.error === "string"
-            ? response.error
-            : tError("error.unknown", locale)
+      if (response.ok === false) {
         void deps.appendLogLines([
           `> ${trimmed}`,
-          tError("error.generic", locale, { message: msg })
+          tError("error.generic", locale, { message: response.error })
         ])
+        return
       }
-    }
-  )
+      deps.applyRunCmdPatches(response.patches)
+    })
+    .catch((e) => {
+      void deps.appendLogLines([
+        `> ${trimmed}`,
+        tError("error.dispatchFailed", locale, {
+          message: e instanceof Error ? e.message : String(e)
+        })
+      ])
+    })
   if (continuationPrompt) {
     deps.setSubCmdPicker(null)
     deps.setLine(continuationPrompt)

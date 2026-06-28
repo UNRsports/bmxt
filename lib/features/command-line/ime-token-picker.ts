@@ -31,6 +31,7 @@ import {
   pickThirdTokenCandidates,
   type CandidateMatchMode
 } from "./ime-token-match"
+import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
 
@@ -112,6 +113,30 @@ export function resolveImeTokenPicker(
   firstCommandTokens: readonly string[],
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
+  const active = resolveActiveCommandSegment(line, cursor)
+  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const picked = resolveImeTokenPickerInSegment(
+    segmentLine,
+    active.localCursor,
+    firstCommandTokens,
+    opts
+  )
+  if (!picked) {
+    return null
+  }
+  return {
+    ...picked,
+    tokenStart: mapSegmentOffsetToLine(active.segmentStart, picked.tokenStart),
+    tokenEnd: mapSegmentOffsetToLine(active.segmentStart, picked.tokenEnd)
+  }
+}
+
+function resolveImeTokenPickerInSegment(
+  line: string,
+  cursor: number,
+  firstCommandTokens: readonly string[],
+  opts?: ResolveImeTokenPickerOptions
+): ImeTokenPickerModel | null {
   if (
     shouldShowSearchListPatternPlaceholder(line, cursor) &&
     !isSearchListAwaitingScopeOrPattern(line)
@@ -164,13 +189,6 @@ export function resolveImeTokenPicker(
   const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
 
   if (tokenIndex === 0) {
-    const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
-    if (prefix.length > 0 || allowEmptyFirstAll) {
-      const cands = matchCandidates(firstCommandTokens, prefix, matchMode)
-      if (cands.length > 0) {
-        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "first" }
-      }
-    }
     const cmdWord = line.slice(l, r)
     const canonical0 = resolveCanonical(cmdWord)
     if (
@@ -187,6 +205,13 @@ export function resolveImeTokenPicker(
           candidates: next,
           tier: "second"
         }
+      }
+    }
+    const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
+    if (prefix.length > 0 || allowEmptyFirstAll) {
+      const cands = matchCandidates(firstCommandTokens, prefix, matchMode)
+      if (cands.length > 0) {
+        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "first" }
       }
     }
     return null

@@ -8,7 +8,7 @@ import type { UiLocale } from "../../setting/locale"
 export type UseSnapshotSaveShellOptions = {
   sessionId: string
   uiLocale: UiLocale
-  appendLogLines: (lines: string[]) => Promise<void>
+  appendLogLines: (lines: string[]) => void | Promise<void>
 }
 
 export function useSnapshotSaveShell(options: UseSnapshotSaveShellOptions) {

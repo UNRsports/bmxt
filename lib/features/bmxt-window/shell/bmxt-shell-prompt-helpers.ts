@@ -14,6 +14,8 @@ import {
   type SessionListRow
 } from "../../session"
 import { parseTabsExitListLine } from "../../tabs/input"
+import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen"
+import type { ImeTokenTier } from "../../command-line/ime-token-picker"
 
 /** EN: Keep session switch picker open while the user is still editing the name. */
 export function shouldKeepSessionSwitchPickerOpen(
@@ -63,6 +65,27 @@ export function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
     parseSearchExitListLine(trimmed) ||
     parseDomExitListLine(trimmed)
   )
+}
+
+/**
+ * EN: Lone first token (e.g. `tabs`) + Enter in the first-tier picker → run submitLine
+ *     (usage / continuation to `tabs `), not re-insert the same token.
+ */
+export function shouldSubmitLoneFirstTokenFromPicker(
+  segmentTrimmed: string,
+  tier: ImeTokenTier,
+  pickedToken: string | undefined
+): boolean {
+  if (tier !== "first") {
+    return false
+  }
+  if (continuationPromptAfterLoneFirstToken(segmentTrimmed) === null) {
+    return false
+  }
+  if (!pickedToken) {
+    return false
+  }
+  return segmentTrimmed.toLowerCase() === pickedToken.toLowerCase()
 }
 
 /** EN: Position floating picker host beside a prompt cell using layout APIs only. */

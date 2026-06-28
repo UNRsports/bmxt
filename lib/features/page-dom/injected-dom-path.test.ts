@@ -86,8 +86,8 @@ describe("injected-dom-path", () => {
     assert.ok(host)
     host.attachShadow({ mode: "open" }).innerHTML = '<a href="/">link</a><img src="x.png">'
 
-    const links = bmxtDomSemanticEntriesInjected("html", "link")
-    const images = bmxtDomSemanticEntriesInjected("html", "image")
+    const links = bmxtDomSemanticEntriesInjected("html", "link", "document")
+    const images = bmxtDomSemanticEntriesInjected("html", "image", "document")
     assert.equal(links.entries?.length, 1)
     assert.equal(images.entries?.length, 1)
   })

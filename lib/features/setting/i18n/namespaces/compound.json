@@ -1,0 +1,26 @@
+{
+  "compound.error.continuation": {
+    "ja": "error: 連続実行では未完成のコマンドは使えません: {segment}",
+    "en": "error: incomplete command in compound line: {segment}"
+  },
+  "compound.error.emptySegment": {
+    "ja": "error: 空のコマンドセグメントです",
+    "en": "error: empty command segment"
+  },
+  "compound.error.interactive": {
+    "ja": "error: 連続実行では対話入力が必要なコマンドは使えません",
+    "en": "error: interactive commands are not supported in compound lines"
+  },
+  "compound.parseError": {
+    "ja": "error: コマンド連続の解析に失敗しました ({reason})",
+    "en": "error: failed to parse compound command ({reason})"
+  },
+  "compound.segment.header": {
+    "ja": "[{segment}]",
+    "en": "[{segment}]"
+  },
+  "compound.segment.skipped": {
+    "ja": "(skipped: previous command failed)",
+    "en": "(skipped: previous command failed)"
+  }
+}

@@ -27,8 +27,9 @@ import {
   type DomPickerRowKind
 } from "./dom-list-line-format"
 import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
+import { DomHtmlSnippetView } from "./dom-html-snippet-view"
 import { DomListPickerBodyWith } from "./dom-list-picker-body-with"
-import type { DomListCapture } from "./dom-list-capture"
+import type { DomListCapture, DomTreeEntry } from "./dom-list-capture"
 import type { DomListFlavor, DomPickerMode } from "./dom-picker-mode"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
@@ -42,6 +43,8 @@ export type DomListPickerBodyProps = {
   jumpActiveMode?: DomPageActiveMode
   pickerMode?: DomPickerMode
   flavor?: DomListFlavor
+  showTag?: boolean
+  documentEntries?: readonly DomTreeEntry[]
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   keyboardActive?: boolean
@@ -353,12 +356,7 @@ function DomHtmlRowContent({ line }: { line: string }): ReactNode {
   const guideMatch = line.match(/^(?:(?:│ )*├ )/)
   const guide = guideMatch ? guideMatch[0] : ""
   const content = line.slice(guide.length)
-  return (
-    <>
-      {guide ? <span className="bmxt-dom-picker-guide">{guide}</span> : null}
-      <span className="bmxt-dom-picker-html">{content}</span>
-    </>
-  )
+  return <DomHtmlSnippetView snippet={content} guide={guide || undefined} />
 }
 
 function DomJumpableRowContent({ line }: { line: string }): ReactNode {

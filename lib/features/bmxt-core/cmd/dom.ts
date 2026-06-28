@@ -16,7 +16,7 @@ export const CMD: CmdMeta = {
   name: "dom",
   aliases: [],
   usagePrimary:
-    "dom -list [--normal|--with] [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active"
+    "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active"
 }
 
 function normalizeDomToken(tok: string): string {
@@ -26,7 +26,7 @@ function normalizeDomToken(tok: string): string {
 function runList(args: string[]) {
   if (args.length === 2) {
     return effectsDispatch([
-      { kind: "dom_list", flavor: "--html", pattern: "", pickerMode: "normal" }
+      { kind: "dom_list", flavor: "--html", pattern: "", pickerMode: "normal", showTag: "false" }
     ])
   }
   const parsed = parseDomListArgsFromTokens(
@@ -44,7 +44,8 @@ function runList(args: string[]) {
       kind: "dom_list",
       flavor: parsed.flavor,
       pattern: parsed.pattern,
-      pickerMode: parsed.pickerMode
+      pickerMode: parsed.pickerMode,
+      showTag: parsed.showTag ? "true" : "false"
     }
   ])
 }

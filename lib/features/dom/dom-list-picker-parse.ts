@@ -3,17 +3,15 @@
  * JA: `dom -list` のオプショントークン解析（補完・プレースホルダ）。
  */
 
+import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import {
-  DOM_LIST_FLAVOR_TOKENS,
-  DOM_PICKER_MODE_TOKENS
+  DOM_LIST_OPTION_TOKENS_WITH_TAG,
+  DOM_LIST_SHOW_TAG_TOKEN
 } from "./dom-picker-mode.ts"
 import { domListLineHasFlavor } from "./parse-dom-list-args.ts"
 
-export const DOM_LIST_OPTION_TOKENS = [
-  ...DOM_PICKER_MODE_TOKENS,
-  ...DOM_LIST_FLAVOR_TOKENS
-] as const
+export const DOM_LIST_OPTION_TOKENS = DOM_LIST_OPTION_TOKENS_WITH_TAG
 
 function domListParts(trimmed: string): string[] {
   return trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
@@ -39,6 +37,7 @@ export function listDomListRemainingOptionCandidates(
   const hasWith = used.includes("--with")
   const hasHtml = used.includes("--html")
   const hasReact = used.includes("--react")
+  const hasTag = used.includes(DOM_LIST_SHOW_TAG_TOKEN)
 
   const remaining: string[] = []
   if (!hasNormal && !hasWith) {
@@ -46,6 +45,9 @@ export function listDomListRemainingOptionCandidates(
   }
   if (!hasHtml && !hasReact) {
     remaining.push("--html", "--react")
+  }
+  if (hasWith && !hasTag) {
+    remaining.push(DOM_LIST_SHOW_TAG_TOKEN)
   }
 
   const p = prefix.trim().toLowerCase()
@@ -138,18 +140,21 @@ export function isEditingDomListOptionToken(line: string, cursor: number): boole
 
 /** EN: Flavor fixed — free-text pattern tail; suppress option IME menu. */
 export function shouldShowDomListPatternPlaceholder(line: string, cursor: number): boolean {
-  const trimmed = line.trim()
-  if (isDomListContinuationPrompt(line)) {
+  const active = resolveActiveCommandSegment(line, cursor)
+  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const segmentCursor = active.localCursor
+  const trimmed = segmentLine.trim()
+  if (isDomListContinuationPrompt(segmentLine)) {
     return false
   }
   if (!trimmed.toLowerCase().startsWith("dom -list")) {
     return false
   }
-  if (isEditingDomListOptionToken(line, cursor)) {
+  if (isEditingDomListOptionToken(segmentLine, segmentCursor)) {
     return false
   }
   const parts = domListParts(trimmed)
-  if (parts.length === 2 && line.endsWith(" ")) {
+  if (parts.length === 2 && segmentLine.endsWith(" ")) {
     return false
   }
   if (parts.length < 3) {

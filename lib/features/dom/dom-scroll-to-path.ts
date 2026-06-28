@@ -1,7 +1,8 @@
 import {
-  bmxtDomClearHighlightInjected,
-  bmxtDomScrollToPathInjected
-} from "../page-dom/injected-dom-scroll-to-path"
+  runDomClearHighlightOnTab,
+  runDomClickLinkAtPathOnTab,
+  runDomScrollToPathOnTab
+} from "../page-dom/run-dom-in-page"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 
@@ -12,25 +13,14 @@ export type DomListJumpOptions = {
   focusWindow?: boolean
   /** EN: Keep outline on the element until the next preview or clear. */
   persistHighlight?: boolean
+  /** EN: Scroll immediately (for picker viewport resync after search jump). */
+  instantScroll?: boolean
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms)
   })
-}
-
-async function injectScrollToPath(
-  tabId: number,
-  path: readonly number[],
-  persistHighlight: boolean
-): Promise<boolean> {
-  const [{ result }] = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: bmxtDomScrollToPathInjected,
-    args: [[...path], { persist: persistHighlight }]
-  })
-  return Boolean((result as { ok?: boolean } | undefined)?.ok)
 }
 
 /**
@@ -55,7 +45,10 @@ export async function jumpDomListTargetToPath(
       })
       await sleep(TAB_FOCUS_DELAY_MS)
     }
-    return injectScrollToPath(tabId, path, options.persistHighlight === true)
+    return runDomScrollToPathOnTab(tabId, path, {
+      persistHighlight: options.persistHighlight === true,
+      instantScroll: options.instantScroll === true
+    })
   } catch {
     return false
   }
@@ -84,11 +77,36 @@ export async function clearDomListTargetHighlight(tabId: number): Promise<void> 
     if (!isScriptablePageUrl(tab.url)) {
       return
     }
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: bmxtDomClearHighlightInjected
-    })
+    await runDomClearHighlightOnTab(tabId)
   } catch {
     /* tab gone or not scriptable */
+  }
+}
+
+/**
+ * EN: Focus the target tab and activate the link at a DOM tree path (click).
+ * JA: 対象タブを前面化し、path のリンクをクリック相当で起動する。
+ */
+export async function activateDomListLinkAtPath(
+  tabId: number,
+  path: readonly number[],
+  options: Pick<DomListJumpOptions, "focusWindow"> = {}
+): Promise<boolean> {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    if (!isScriptablePageUrl(tab.url)) {
+      return false
+    }
+    if (options.focusWindow !== false && tab.windowId !== undefined) {
+      await executePickerFocusPlan({
+        kind: "activateTab",
+        tabId,
+        windowId: tab.windowId
+      })
+      await sleep(TAB_FOCUS_DELAY_MS)
+    }
+    return runDomClickLinkAtPathOnTab(tabId, path)
+  } catch {
+    return false
   }
 }

@@ -1,12 +1,14 @@
 /**
- * EN: Injected via `chrome.scripting.executeScript` — scroll to a body descendant by child-index path.
- * JA: 子インデックス列で body 配下の要素へスクロールする（注入専用・依存なし）。
+ * EN: Scroll/highlight by child-index path — run in the content script bundle
+ *     (`dom-list-in-page-handler.ts`), not via bare `executeScript({ func })`.
+ * JA: path ジャンプ／ハイライト。常駐 CS バンドル内で実行。
  */
 
 import { resolveNodeFromPath } from "./injected-dom-path.ts"
 
 type ScrollOptions = {
   persist?: boolean
+  instant?: boolean
 }
 
 let highlightEl: HTMLElement | null = null
@@ -27,7 +29,11 @@ export function bmxtDomScrollToPathInjected(path: number[], options: ScrollOptio
     return { ok: false }
   }
   try {
-    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
+    el.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior: options.instant ? "instant" : "smooth"
+    })
   } catch {
     el.scrollIntoView()
   }
