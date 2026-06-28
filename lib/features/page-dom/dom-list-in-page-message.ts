@@ -11,6 +11,8 @@ export const DOM_SCROLL_TO_PATH_CHANNEL = "bmxt-dom-scroll-to-path" as const
 
 export const DOM_CLEAR_HIGHLIGHT_CHANNEL = "bmxt-dom-clear-highlight" as const
 
+export const DOM_CLICK_LINK_PATH_CHANNEL = "bmxt-dom-click-link-path" as const
+
 export type DomSemanticEntriesPayload = {
   entries?: Array<{ line?: string; path?: number[] }>
   truncated?: boolean
@@ -35,9 +37,16 @@ export type DomClearHighlightRequest = {
   channel: typeof DOM_CLEAR_HIGHLIGHT_CHANNEL
 }
 
+export type DomClickLinkPathRequest = {
+  channel: typeof DOM_CLICK_LINK_PATH_CHANNEL
+  path: number[]
+}
+
 export type DomScrollToPathResponse = { ok: boolean }
 
 export type DomClearHighlightResponse = { ok: boolean }
+
+export type DomClickLinkPathResponse = { ok: boolean }
 
 function isDomShowMode(value: unknown): value is DomShowMode {
   return value === "html" || value === "react"
@@ -92,4 +101,12 @@ export function isDomClearHighlightRequest(raw: unknown): raw is DomClearHighlig
     return false
   }
   return (raw as DomClearHighlightRequest).channel === DOM_CLEAR_HIGHLIGHT_CHANNEL
+}
+
+export function isDomClickLinkPathRequest(raw: unknown): raw is DomClickLinkPathRequest {
+  if (!raw || typeof raw !== "object") {
+    return false
+  }
+  const o = raw as DomClickLinkPathRequest
+  return o.channel === DOM_CLICK_LINK_PATH_CHANNEL && isIntegerPath(o.path)
 }

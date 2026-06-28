@@ -35,6 +35,10 @@
     "ja": "DOM ピッカー（--with フィルタ）— ↑↓ ページ · Alt+↑↓ 選択",
     "en": "DOM picker (--with filter) — ↑↓ page · Alt+↑↓ select"
   },
+  "dom.picker.inputAria.keysWithSemanticFilterLink": {
+    "ja": "DOM ピッカー（--with リンク）— ↑↓ ページ · Alt+↑↓ 選択 · Enter でリンクを開く",
+    "en": "DOM picker (--with links) — ↑↓ page · Alt+↑↓ select · Enter follow link"
+  },
   "dom.picker.listAria": {
     "ja": "DOM ツリー",
     "en": "DOM tree"
@@ -46,6 +50,10 @@
   "dom.picker.semantic.filterHeadline": {
     "ja": "dom -list --with · {kind} · ↑↓/j/k ページスクロール · Alt+↑↓ 選択 · ← 一覧へ · Enter ジャンプ",
     "en": "dom -list --with · {kind} · ↑↓/j/k page scroll · Alt+↑↓ select · ← back to list · Enter jump"
+  },
+  "dom.picker.semantic.filterHeadlineLink": {
+    "ja": "dom -list --with · {kind} · ↑↓/j/k ページスクロール · Alt+↑↓ 選択 · ← 一覧へ · Enter リンクを開く",
+    "en": "dom -list --with · {kind} · ↑↓/j/k page scroll · Alt+↑↓ select · ← back to list · Enter follow link"
   },
   "dom.picker.semantic.form": {
     "ja": "フォーム部品",

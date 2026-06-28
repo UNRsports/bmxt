@@ -26,6 +26,7 @@ import {
   type DomSemanticKind
 } from "./dom-semantic-kind"
 import {
+  activateDomListLinkAtPath,
   clearDomListTargetHighlight,
   jumpDomListTargetToPath,
   previewDomListTargetToPath
@@ -218,6 +219,18 @@ export function DomListPickerBodyWith({
   const onConfirmLineIndex = useCallback(
     (index: number) => {
       if (withViewRef.current !== "viewport" && withViewRef.current !== "semanticFilter") {
+        return
+      }
+      const path = jumpPathsRef.current[index]
+      const tabId = targetTabIdRef.current
+      if (path == null || tabId === undefined) {
+        return
+      }
+      if (
+        withViewRef.current === "semanticFilter" &&
+        activeSemanticKindRef.current === "link"
+      ) {
+        void activateDomListLinkAtPath(tabId, path, { focusWindow: true })
         return
       }
       void jumpToRow(index, true)
@@ -522,9 +535,13 @@ export function DomListPickerBodyWith({
     withView === "semanticMenu"
       ? tDom("dom.picker.semantic.menuHeadline", locale)
       : withView === "semanticFilter" && activeSemanticKind
-        ? tDom("dom.picker.semantic.filterHeadline", locale, {
-            kind: tDom(domSemanticKindI18nKey(activeSemanticKind), locale)
-          })
+        ? activeSemanticKind === "link"
+          ? tDom("dom.picker.semantic.filterHeadlineLink", locale, {
+              kind: tDom(domSemanticKindI18nKey(activeSemanticKind), locale)
+            })
+          : tDom("dom.picker.semantic.filterHeadline", locale, {
+              kind: tDom(domSemanticKindI18nKey(activeSemanticKind), locale)
+            })
         : headline
 
   const activeRowId =
@@ -563,7 +580,9 @@ export function DomListPickerBodyWith({
             : commandMode
               ? tPlainPicker("plainPicker.commandHint", locale)
               : withView === "semanticFilter"
-                ? tDom("dom.picker.inputAria.keysWithSemanticFilter", locale)
+                ? activeSemanticKind === "link"
+                  ? tDom("dom.picker.inputAria.keysWithSemanticFilterLink", locale)
+                  : tDom("dom.picker.inputAria.keysWithSemanticFilter", locale)
                 : withView === "semanticMenu"
                 ? tDom("dom.picker.semantic.menuAria", locale)
                 : tDom("dom.picker.inputAria.keysWith", locale)

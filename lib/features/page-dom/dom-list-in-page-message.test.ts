@@ -2,9 +2,11 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   DOM_CLEAR_HIGHLIGHT_CHANNEL,
+  DOM_CLICK_LINK_PATH_CHANNEL,
   DOM_SCROLL_TO_PATH_CHANNEL,
   DOM_SEMANTIC_ENTRIES_CHANNEL,
   isDomClearHighlightRequest,
+  isDomClickLinkPathRequest,
   isDomScrollToPathRequest,
   isDomSemanticEntriesRequest
 } from "./dom-list-in-page-message.ts"
@@ -90,5 +92,22 @@ describe("dom-list-in-page-message", () => {
       true
     )
     assert.equal(isDomClearHighlightRequest({ channel: "other" }), false)
+  })
+
+  it("accepts click-link-path requests with integer paths", () => {
+    assert.equal(
+      isDomClickLinkPathRequest({
+        channel: DOM_CLICK_LINK_PATH_CHANNEL,
+        path: [0, 1, 2]
+      }),
+      true
+    )
+    assert.equal(
+      isDomClickLinkPathRequest({
+        channel: DOM_CLICK_LINK_PATH_CHANNEL,
+        path: [0, 1.5]
+      }),
+      false
+    )
   })
 })

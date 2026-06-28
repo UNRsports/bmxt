@@ -5,10 +5,13 @@ import type { DomSemanticKind } from "../dom/dom-semantic-kind.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
 import {
   DOM_CLEAR_HIGHLIGHT_CHANNEL,
+  DOM_CLICK_LINK_PATH_CHANNEL,
   DOM_SCROLL_TO_PATH_CHANNEL,
   DOM_SEMANTIC_ENTRIES_CHANNEL,
   type DomClearHighlightRequest,
   type DomClearHighlightResponse,
+  type DomClickLinkPathRequest,
+  type DomClickLinkPathResponse,
   type DomScrollToPathRequest,
   type DomScrollToPathResponse,
   type DomSemanticEntriesPayload,
@@ -102,4 +105,23 @@ export async function runDomClearHighlightOnTab(tabId: number): Promise<void> {
   }
   const request: DomClearHighlightRequest = { channel: DOM_CLEAR_HIGHLIGHT_CHANNEL }
   await sendDomInPageMessage<DomClearHighlightRequest, DomClearHighlightResponse>(tabId, request)
+}
+
+/** EN: Activate a link at a dom tree path — content script only. */
+export async function runDomClickLinkAtPathOnTab(
+  tabId: number,
+  path: readonly number[]
+): Promise<boolean> {
+  if (!(await tabUrlOk(tabId))) {
+    return false
+  }
+  const request: DomClickLinkPathRequest = {
+    channel: DOM_CLICK_LINK_PATH_CHANNEL,
+    path: [...path]
+  }
+  const result = await sendDomInPageMessage<DomClickLinkPathRequest, DomClickLinkPathResponse>(
+    tabId,
+    request
+  )
+  return Boolean(result?.ok)
 }

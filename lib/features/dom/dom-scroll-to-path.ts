@@ -1,5 +1,6 @@
 import {
   runDomClearHighlightOnTab,
+  runDomClickLinkAtPathOnTab,
   runDomScrollToPathOnTab
 } from "../page-dom/run-dom-in-page"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
@@ -74,5 +75,33 @@ export async function clearDomListTargetHighlight(tabId: number): Promise<void> 
     await runDomClearHighlightOnTab(tabId)
   } catch {
     /* tab gone or not scriptable */
+  }
+}
+
+/**
+ * EN: Focus the target tab and activate the link at a DOM tree path (click).
+ * JA: 対象タブを前面化し、path のリンクをクリック相当で起動する。
+ */
+export async function activateDomListLinkAtPath(
+  tabId: number,
+  path: readonly number[],
+  options: Pick<DomListJumpOptions, "focusWindow"> = {}
+): Promise<boolean> {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    if (!isScriptablePageUrl(tab.url)) {
+      return false
+    }
+    if (options.focusWindow !== false && tab.windowId !== undefined) {
+      await executePickerFocusPlan({
+        kind: "activateTab",
+        tabId,
+        windowId: tab.windowId
+      })
+      await sleep(TAB_FOCUS_DELAY_MS)
+    }
+    return runDomClickLinkAtPathOnTab(tabId, path)
+  } catch {
+    return false
   }
 }
