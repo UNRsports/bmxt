@@ -17,26 +17,19 @@ import type { SplitLayoutV1 } from "../split-layout/types"
 import { isValidLayout, listLeafIds } from "../split-layout/tree"
 import type { TerminalSessionsStateV1 } from "./types"
 
-type SessionRuntimeCallbacks = {
-  onStateChange: (state: TerminalSessionsStateV1) => void
-  onClear: () => void
-}
+export {
+  createEmptyTerminalSessionsState,
+  newSessionId,
+  resolveSessionId,
+  trimSessionLog
+} from "./session-state-ops"
 
-let sessionRuntimeMode: "storage" | "memory" = "storage"
-let memorySessionState: TerminalSessionsStateV1 | null = null
-let sessionRuntimeCallbacks: SessionRuntimeCallbacks | null = null
-
-/** EN: SW runtime — session logs/metadata live in memory; UI syncs via messages. */
-export function enableInMemorySessionRuntime(callbacks: SessionRuntimeCallbacks): void {
-  sessionRuntimeMode = "memory"
-  sessionRuntimeCallbacks = callbacks
-}
-
-export function resetInMemorySessionRuntimeForTests(): void {
-  sessionRuntimeMode = "storage"
-  memorySessionState = null
-  sessionRuntimeCallbacks = null
-}
+import {
+  createEmptyTerminalSessionsState,
+  newSessionId,
+  resolveSessionId,
+  trimSessionLog
+} from "./session-state-ops"
 
 /** 旧マルチペインセッションキー（移行のみ）。 */
 const LEGACY_SPLIT_KEY = "bmxt_split_session"
@@ -84,28 +77,6 @@ type StoredSessionsBodyV5 = {
   order: string[]
   activeId: string
   namesById: Record<string, string>
-}
-
-function trimLog(lines: string[]): string[] {
-  return lines.slice(-MAX_SESSION_LOG_LINES)
-}
-
-export function newSessionId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID()
-  }
-  return `s_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
-}
-
-export function createEmptyTerminalSessionsState(): TerminalSessionsStateV1 {
-  const id = newSessionId()
-  return {
-    v: 2,
-    logsById: { [id]: [] },
-    order: [id],
-    activeId: id,
-    namesById: {}
-  }
 }
 
 function emptyState(): TerminalSessionsStateV1 {
@@ -247,12 +218,12 @@ function ensureActiveInOrder(state: TerminalSessionsStateV1): TerminalSessionsSt
 async function legacyLinesFromSplitOrLog(): Promise<string[] | null> {
   const r = await chrome.storage.local.get([SESSION_LOG_KEY, LEGACY_SPLIT_KEY])
   if (Array.isArray(r[SESSION_LOG_KEY])) {
-    return trimLog(r[SESSION_LOG_KEY] as string[])
+    return trimSessionLog(r[SESSION_LOG_KEY] as string[])
   }
   const legacy = r[LEGACY_SPLIT_KEY] as LegacySplitSession | undefined
   if (legacy && legacy.v === 1 && legacy.paneLogs && legacy.focusedPaneId) {
     const lines = legacy.paneLogs[legacy.focusedPaneId] ?? []
-    return trimLog(lines)
+    return trimSessionLog(lines)
   }
   return null
 }
@@ -377,9 +348,6 @@ async function migrateStorageShapes(): Promise<void> {
 }
 
 export async function readTerminalSessionsIfPresent(): Promise<TerminalSessionsStateV1 | null> {
-  if (sessionRuntimeMode === "memory") {
-    return memorySessionState
-  }
   await migrateStorageShapes()
   const r = await chrome.storage.local.get([TERMINAL_SESSIONS_KEY])
   return parseTerminalSessionsStorageValue(r[TERMINAL_SESSIONS_KEY])
@@ -394,14 +362,6 @@ export function parseTerminalSessionsStorageValue(raw: unknown): TerminalSession
 }
 
 export async function ensureTerminalSessionsState(): Promise<TerminalSessionsStateV1> {
-  if (sessionRuntimeMode === "memory") {
-    if (memorySessionState) {
-      return memorySessionState
-    }
-    const fresh = emptyState()
-    await persistTerminalSessionsState(fresh)
-    return fresh
-  }
   const cur = await readTerminalSessionsIfPresent()
   if (cur) {
     return cur
@@ -429,11 +389,6 @@ export async function persistTerminalSessionsState(
   state: TerminalSessionsStateV1
 ): Promise<void> {
   const normalized = ensureActiveInOrder(state)
-  if (sessionRuntimeMode === "memory") {
-    memorySessionState = normalized
-    sessionRuntimeCallbacks?.onStateChange(normalized)
-    return
-  }
   const body: StoredSessionsBodyV5 = {
     v: 5,
     logsById: normalized.logsById,
@@ -442,16 +397,6 @@ export async function persistTerminalSessionsState(
     namesById: { ...normalized.namesById }
   }
   await chrome.storage.local.set({ [TERMINAL_SESSIONS_KEY]: body })
-}
-
-export function resolveSessionId(
-  state: TerminalSessionsStateV1,
-  requested: string | undefined
-): string {
-  if (requested && state.order.includes(requested)) {
-    return requested
-  }
-  return state.activeId
 }
 
 async function readFreshSessionsOrEnsure(): Promise<TerminalSessionsStateV1> {
@@ -470,7 +415,7 @@ export async function appendLinesToSession(
   const fresh = await readFreshSessionsOrEnsure()
   const id = resolveSessionId(fresh, sessionId)
   const prev = fresh.logsById[id] ?? []
-  const merged = trimLog([...prev, ...newLines])
+  const merged = trimSessionLog([...prev, ...newLines])
   await persistTerminalSessionsState({
     ...fresh,
     logsById: { ...fresh.logsById, [id]: merged }
@@ -482,7 +427,7 @@ export async function setSessionLines(sessionId: string, lines: string[]): Promi
   const id = resolveSessionId(fresh, sessionId)
   await persistTerminalSessionsState({
     ...fresh,
-    logsById: { ...fresh.logsById, [id]: trimLog(lines) }
+    logsById: { ...fresh.logsById, [id]: trimSessionLog(lines) }
   })
 }
 
@@ -491,12 +436,6 @@ export async function clearSessionLines(sessionId: string): Promise<void> {
 }
 
 export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
-  if (sessionRuntimeMode === "memory") {
-    memorySessionState = null
-    sessionRuntimeCallbacks?.onClear()
-    await removeLegacyTerminalStorageKeys()
-    return
-  }
   await chrome.storage.local.remove([
     TERMINAL_SESSIONS_KEY,
     SPLIT_LAYOUT_KEY,
@@ -511,16 +450,6 @@ export async function removeAllTerminalSessionsFromStorage(): Promise<void> {
 }
 
 export async function resetBmxtTerminalSessionsInStorage(): Promise<void> {
-  if (sessionRuntimeMode === "memory") {
-    memorySessionState = null
-    await chrome.storage.local.remove([CMD_HISTORY_KEY])
-    await clearTabPickerFoldStateInMemory()
-    const fresh = emptyState()
-    await persistTerminalSessionsState(fresh)
-    await removeLegacyTerminalStorageKeys()
-    return
-  }
-  const fresh = emptyState()
   await chrome.storage.local.remove([
     ACTIVE_TERMINAL_SESSION_KEY,
     SESSION_LOG_KEY,
@@ -528,11 +457,12 @@ export async function resetBmxtTerminalSessionsInStorage(): Promise<void> {
     SPLIT_LAYOUT_KEY,
     PROCESS_UI_STATE_KEY,
     TAB_PICKER_FOLD_STATE_KEY,
-    CMD_HISTORY_KEY
+    CMD_HISTORY_KEY,
+    TERMINAL_SESSIONS_KEY
   ])
   await clearTabPickerFoldStateStorage()
   await clearProcessUiStateStorage()
-  await persistTerminalSessionsState(fresh)
+  await removeLegacyTerminalStorageKeys()
 }
 
 export async function setActiveSession(
@@ -592,8 +522,7 @@ async function resolveNewSessionName(
   if (sanitized) {
     return sanitized
   }
-  const processUi =
-    sessionRuntimeMode === "memory" ? null : await readProcessUiStateFromStorage()
+  const processUi = await readProcessUiStateFromStorage()
   const leaf = processUi?.byLeaf[fromSessionId]
   const pickers = leaf ? pickersFromStoredLeaf(leaf) : undefined
   const navArmed = leaf?.navArmed ?? false

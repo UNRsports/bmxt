@@ -37,6 +37,11 @@ import {
   saveSearchPageActiveMode,
   type SearchPageActiveMode
 } from "../search/page-active-setting"
+import {
+  loadDomPickerSettings,
+  saveDomPageActiveMode,
+  type DomPageActiveMode
+} from "../dom/page-active-setting"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
 import {
   openPickerSlots,
@@ -73,6 +78,7 @@ import {
 } from "../search/search-list-picker-input"
 import { isJobHandleActive, useSessionJobRunner } from "../job"
 import { parseDomExitListLine, parseDomListPickerLine, type DomListPickerState } from "../dom/dom-list-picker-input"
+import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
 import {
   parseNavEnterLine,
   parseNavExitLine,
@@ -141,9 +147,11 @@ type Props = {
   /** EN: Pre-built session list rows (avoids passing full `pickersBySession` into every shell). */
   sessionListRows: SessionListRow[]
   navArmedByLeaf: Record<string, boolean>
-  onActivateSession: (sessionId: string) => Promise<void>
-  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
-  appendLogLines: (newLines: string[]) => Promise<void>
+  onActivateSession: (sessionId: string) => void
+  onSetSessionDisplayName: (sessionId: string, name: string) => void
+  appendLogLines: (newLines: string[]) => void | Promise<void>
+  sessionOrderLength: number
+  applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
@@ -183,6 +191,8 @@ export function BmxtShell({
   onActivateSession,
   onSetSessionDisplayName,
   appendLogLines,
+  sessionOrderLength,
+  applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
   setSessionPickerSlot,
@@ -254,7 +264,7 @@ export function BmxtShell({
     openPickers,
     sessionPickers
   )
-  const pickersForColumnOrder = railPickers.length > 0 ? railPickers : openPickers
+  const pickersForColumnOrder = railPickers
   const displayTabPicker = displaySessionPickers.tabs
   const displaySearchListPicker = displaySessionPickers.search
   const displayDomListPicker = displaySessionPickers.dom
@@ -299,6 +309,8 @@ export function BmxtShell({
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const [searchPageActiveMode, setSearchPageActiveMode] = useState<SearchPageActiveMode>("auto")
   const searchPageActiveModeRef = useRef<SearchPageActiveMode>("auto")
+  const [domPageActiveMode, setDomPageActiveMode] = useState<DomPageActiveMode>("auto")
+  const domPageActiveModeRef = useRef<DomPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -322,16 +334,23 @@ export function BmxtShell({
     [onNavArmedChange]
   )
 
+  const domListFollowEnabled = useMemo(
+    () => isDomListPickerFollowEnabled(domListPicker, paneFocus, detailBarId),
+    [detailBarId, domListPicker, paneFocus]
+  )
+
   const {
     runDomListAndShow,
     onTabsPickerFocusTabId,
     syncTabPickerOpen,
-    clearTabsPickerFocusTabId
+    clearTabsPickerFocusTabId,
+    refreshDomViewportForPicker
   } = useDomListShell({
     sessionId,
     uiLocale: uiSettings.locale,
     jobRunner,
     domListPicker,
+    domListFollowEnabled,
     appendLogLines,
     setDomListPicker,
     setModeToolbarOrder
@@ -512,6 +531,10 @@ export function BmxtShell({
       setSearchPageActiveMode(s.pageActive)
       searchPageActiveModeRef.current = s.pageActive
     })
+    void loadDomPickerSettings().then((s) => {
+      setDomPageActiveMode(s.pageActive)
+      domPageActiveModeRef.current = s.pageActive
+    })
   }, [])
 
   useEffect(() => {
@@ -521,6 +544,10 @@ export function BmxtShell({
   useEffect(() => {
     searchPageActiveModeRef.current = searchPageActiveMode
   }, [searchPageActiveMode])
+
+  useEffect(() => {
+    domPageActiveModeRef.current = domPageActiveMode
+  }, [domPageActiveMode])
 
   const {
     subCmdPicker,
@@ -670,8 +697,10 @@ export function BmxtShell({
     translatePairIdRef,
     tabsPageActiveModeRef,
     searchPageActiveModeRef,
+    domPageActiveModeRef,
     setTabsPageActiveMode,
     setSearchPageActiveMode,
+    setDomPageActiveMode,
     setTranslatePairId,
     toggleNavActive,
     resetNavTranslateSession,
@@ -743,6 +772,8 @@ export function BmxtShell({
 
   const { submitLine } = useCommandDispatch({
     sessionId,
+    sessionOrderLength,
+    applyRunCmdPatches,
     mode,
     iSearchMatches,
     iSearchCycle,
@@ -758,6 +789,7 @@ export function BmxtShell({
     domListPickerRef,
     settingListPickerRef,
     tabsPageActiveModeRef,
+    domPageActiveModeRef,
     translatePairIdRef,
     promptLine,
     allowEmptyFirstPickerSyncRef,
@@ -768,6 +800,7 @@ export function BmxtShell({
     sessionNameTypingRef,
     sessionListPickerHiRef,
     setTabsPageActiveMode,
+    setDomPageActiveMode,
     switchSessionFromListPicker,
     setMode,
     setLine,
@@ -798,6 +831,7 @@ export function BmxtShell({
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
+    onSetSessionDisplayName,
     onActivateSession,
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
     submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer
@@ -1025,7 +1059,8 @@ export function BmxtShell({
           }}
           dom={{
             pickerOpen: domListPicker !== null,
-            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines"
+            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines",
+            pageActiveMode: domPageActiveMode
           }}
           setting={{
             pickerOpen: settingListPicker !== null
@@ -1094,8 +1129,23 @@ export function BmxtShell({
             void runDomListAndShow(cl, cl, false)
           }}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
+          onRefreshDomViewport={(state) => refreshDomViewportForPicker(state)}
+          onApplyDomViewportCapture={(capture) => {
+            setDomListPicker(sessionId, (prev) => {
+              if (!prev || prev.kind !== "lines") {
+                return prev
+              }
+              return {
+                ...prev,
+                lines: capture.lines,
+                jumpPaths: capture.jumpPaths,
+                headerLineCount: capture.headerLineCount
+              }
+            })
+          }}
           tabsPageActiveMode={tabsPageActiveMode}
           searchPageActiveMode={searchPageActiveMode}
+          domPageActiveMode={domPageActiveMode}
         />
       </div>
     </div>

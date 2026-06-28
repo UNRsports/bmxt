@@ -66,7 +66,16 @@ export async function applyDomListEffect(
     return optionalHostDeniedLines(locale)
   }
   try {
-    const capture = await captureDomListForTab(tab, e.flavor, e.pattern, locale)
+    const pickerMode = e.pickerMode === "with" ? "with" : "normal"
+    const showTag = e.showTag === "true" && pickerMode === "with"
+    const capture = await captureDomListForTab(
+      tab,
+      e.flavor,
+      e.pattern,
+      locale,
+      pickerMode,
+      showTag
+    )
     ctx.onDomListCapture?.(capture)
     return capture.lines
   } catch (err) {

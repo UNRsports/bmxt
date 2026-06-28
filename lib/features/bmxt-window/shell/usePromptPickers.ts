@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
+import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import {
   filterSessionSwitchPickerRows,
   parseSessionListPickerLine,
@@ -167,10 +168,13 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         setSessionListPickerHi(null)
         return
       }
-      const switchState = resolveSessionSwitchPickerState(ln, pos)
+      const active = resolveActiveCommandSegment(ln, pos)
+      const segmentLine = ln.slice(active.segmentStart, active.segmentEnd)
+      const segmentCursor = active.localCursor
+      const switchState = resolveSessionSwitchPickerState(segmentLine, segmentCursor)
       if (switchState !== null) {
         const allRows = sessionListRowsRef.current
-        const keepOpen = shouldKeepSessionSwitchPickerOpen(ln, pos, allRows)
+        const keepOpen = shouldKeepSessionSwitchPickerOpen(segmentLine, segmentCursor, allRows)
         if (!keepOpen) {
           setSubCmdPicker(null)
           setSessionListPickerHi(null)
@@ -200,7 +204,7 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         })
         return
       }
-      if (parseSessionListPickerLine(ln)) {
+      if (parseSessionListPickerLine(segmentLine.trim())) {
         if (sessionListPickerDismissedRef.current) {
           setSubCmdPicker(null)
           setSessionListPickerHi(null)

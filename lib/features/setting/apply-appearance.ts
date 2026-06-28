@@ -1,4 +1,8 @@
 import {
+  domHtmlSyntaxDefaultsToCssDeclarations,
+  DOM_HTML_SYNTAX_CSS_VARS
+} from "../dom/dom-html-syntax"
+import {
   resolvePickerAppearance,
   resolveTerminalAppearance,
   type ResolvedTerminalAppearance,
@@ -60,8 +64,13 @@ export function appearanceToCssDeclarations(
 export function pickerAppearanceToCssDeclarations(
   appearance: UiAppearance
 ): Record<string, string | number> {
-  return resolvedToCssVarDeclarations(resolvePickerAppearance(appearance), "bmxt-picker")
+  return {
+    ...resolvedToCssVarDeclarations(resolvePickerAppearance(appearance), "bmxt-picker"),
+    ...domHtmlSyntaxDefaultsToCssDeclarations()
+  }
 }
+
+export { DOM_HTML_SYNTAX_CSS_VARS }
 
 /** EN: Map resolved theme to scoped preview (--bmxt-* on a subtree). */
 export function resolvedAppearanceToScopedDeclarations(

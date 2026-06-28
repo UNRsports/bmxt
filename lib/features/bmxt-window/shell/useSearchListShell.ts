@@ -29,7 +29,7 @@ export type UseSearchListShellOptions = {
   jobRunner: JobRunner
   line: string
   cursorPos: number
-  appendLogLines: (lines: string[]) => Promise<void>
+  appendLogLines: (lines: string[]) => void | Promise<void>
   setSearchListPicker: (sessionId: string, state: SearchListPickerState | null) => void
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<unknown>>
   setSubCmdPicker: (state: TokenPickerModel | null) => void
@@ -83,6 +83,9 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
             }
             if (bundle.ty === "lines") {
               clearSearchLoadingProgress()
+              if (shouldCancelJob(job)) {
+                return
+              }
               options.setSearchListPicker(options.sessionId, null)
               await options.appendLogLines(bundle.lines ?? [])
               return
@@ -93,6 +96,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
             }
             const ctx = mergeJobIntoDispatchContext(
               {
+                enqueueSessionPatch: () => {},
                 clearLog: async () => {},
                 exitPane: async () => [],
                 listWindows: async () => [],
@@ -174,6 +178,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
     ) => {
       const pattern = options.searchListPickerRef.current?.pattern ?? ""
       const ctx: DispatchChromeContext = {
+        enqueueSessionPatch: () => {},
         clearLog: async () => {},
         exitPane: async () => [],
         listWindows: async () => [],

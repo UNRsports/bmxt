@@ -1,35 +1,55 @@
 /**
- * EN: Injected via `chrome.scripting.executeScript` — scroll to a body descendant by child-index path.
- * JA: 子インデックス列で body 配下の要素へスクロールする（注入専用・依存なし）。
+ * EN: Scroll/highlight by child-index path — run in the content script bundle
+ *     (`dom-list-in-page-handler.ts`), not via bare `executeScript({ func })`.
+ * JA: path ジャンプ／ハイライト。常駐 CS バンドル内で実行。
  */
 
-export function bmxtDomScrollToPathInjected(path: number[]): { ok: boolean } {
-  function nodeFromPath(segments: number[]): Element | null {
-    if (segments.length === 0) {
-      return document.body
-    }
-    let node: Element | null = document.body
-    for (let i = 0; i < segments.length; i += 1) {
-      const idx = segments[i]!
-      const next = node?.children[idx] as Element | undefined
-      if (!next) {
-        return null
-      }
-      node = next
-    }
-    return node
-  }
+import { resolveNodeFromPath } from "./injected-dom-path.ts"
 
-  const el = nodeFromPath(path)
+type ScrollOptions = {
+  persist?: boolean
+  instant?: boolean
+}
+
+let highlightEl: HTMLElement | null = null
+let highlightPrev = { outline: "", outlineOffset: "" }
+
+function clearPersistedHighlight(): void {
+  if (!highlightEl) {
+    return
+  }
+  highlightEl.style.outline = highlightPrev.outline
+  highlightEl.style.outlineOffset = highlightPrev.outlineOffset
+  highlightEl = null
+}
+
+export function bmxtDomScrollToPathInjected(path: number[], options: ScrollOptions = {}): { ok: boolean } {
+  const el = resolveNodeFromPath(path)
   if (!el) {
     return { ok: false }
   }
   try {
-    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
+    el.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior: options.instant ? "instant" : "smooth"
+    })
   } catch {
     el.scrollIntoView()
   }
   const htmlEl = el as HTMLElement
+  if (options.persist) {
+    clearPersistedHighlight()
+    highlightPrev = {
+      outline: htmlEl.style.outline,
+      outlineOffset: htmlEl.style.outlineOffset
+    }
+    highlightEl = htmlEl
+    htmlEl.style.outline = "2px solid #58a6ff"
+    htmlEl.style.outlineOffset = "2px"
+    return { ok: true }
+  }
+  clearPersistedHighlight()
   const prevOutline = htmlEl.style.outline
   const prevOffset = htmlEl.style.outlineOffset
   htmlEl.style.outline = "2px solid #58a6ff"
@@ -38,5 +58,10 @@ export function bmxtDomScrollToPathInjected(path: number[]): { ok: boolean } {
     htmlEl.style.outline = prevOutline
     htmlEl.style.outlineOffset = prevOffset
   }, 1200)
+  return { ok: true }
+}
+
+export function bmxtDomClearHighlightInjected(): { ok: boolean } {
+  clearPersistedHighlight()
   return { ok: true }
 }

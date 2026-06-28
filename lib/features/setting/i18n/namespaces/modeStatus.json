@@ -1,7 +1,7 @@
 {
   "modeStatus.dom.hint": {
-    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー",
-    "en": "EOL → focus · ↑↓ move · ← prompt · → picker"
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
   },
   "modeStatus.dom.list": {
     "ja": "DOM 一覧",

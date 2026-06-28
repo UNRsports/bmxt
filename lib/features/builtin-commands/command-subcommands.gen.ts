@@ -18,8 +18,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "clear": [] as const,
   "close": [] as const,
   "dom": [
-    { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" },
-    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
+    { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
+    { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
   "search": [
@@ -114,7 +115,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "dom": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit"
+      return lower === "-list" || lower === "-exit" || lower === "-setting"
     }
     case "exit":
       return false

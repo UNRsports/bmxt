@@ -75,6 +75,7 @@ export function domCmdUsageLines(locale?: UiLocale): string[] {
   return [
     L("cmd.dom.usage.line1", locale),
     L("cmd.dom.usage.line2", locale),
+    L("cmd.dom.usage.line3", locale),
     L("cmd.dom.usage.listDetail", locale),
     L("cmd.dom.usage.patternDetail", locale)
   ]
@@ -82,6 +83,14 @@ export function domCmdUsageLines(locale?: UiLocale): string[] {
 
 export function domCmdExitListLines(locale?: UiLocale): string[] {
   return [L("cmd.dom.exitList.title", locale), L("cmd.dom.exitList.detail", locale)]
+}
+
+export function domCmdSettingLines(locale?: UiLocale): string[] {
+  return [
+    L("cmd.dom.setting.title", locale),
+    L("cmd.dom.setting.pageActive", locale),
+    L("cmd.dom.runHint", locale)
+  ]
 }
 
 export function searchCmdUsageLines(locale?: UiLocale): string[] {

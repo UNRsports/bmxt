@@ -19,16 +19,21 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--html|--react] [<pattern>] | dom -exit -list",
+      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--html", "--react"],
+          "trailingTokens": ["--normal", "--with", "--html", "--react", "--tag"],
           "tail": "rest"
         },
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": ["-page-active"],
           "tail": "none"
         }
       ]
@@ -229,7 +234,7 @@
       "kind": "dom_list",
       "rustVariant": "DomList",
       "shape": "record",
-      "fields": { "flavor": "string", "pattern": "string" },
+      "fields": { "flavor": "string", "pattern": "string", "pickerMode": "string", "showTag": "string" },
       "tsHandlerFile": "dom-list",
       "tsHandlerExport": "applyDomListEffect"
     },

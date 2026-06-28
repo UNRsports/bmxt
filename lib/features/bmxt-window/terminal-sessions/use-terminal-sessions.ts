@@ -1,61 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { deriveDefaultSessionName } from "../../session/session-summary"
 import {
-  mergeSessionsStatePreservingStableRefs,
-  sessionsUiSnapshotEqual
-} from "./sessions-ui-equality"
+  applySessionPatch,
+  applySessionPatches,
+  type ApplySessionPatchContext,
+  type SessionPatch
+} from "./session-patches"
 import {
-  isSessionRuntimeOutboundMessage,
-  SESSION_CLEAR_MESSAGE
-} from "./session-runtime-protocol"
-import {
-  initSessionRuntimeFromPageAsync,
-  setActiveSessionFromUiAsync,
-  setSessionNameFromUiAsync
-} from "./session-runtime-client"
-import { createEmptyTerminalSessionsState } from "./state-storage"
+  appendLinesToSessionState,
+  createEmptyTerminalSessionsState,
+  resolveExplicitOrSanitizedSessionName,
+  setActiveSessionState,
+  setSessionDisplayNameState
+} from "./session-state-ops"
+import { SESSION_CLEAR_MESSAGE, isSessionRuntimeOutboundMessage } from "./session-runtime-protocol"
 import type { TerminalSessionsStateV1 } from "./types"
 
-function applySessionsState(
-  prev: TerminalSessionsStateV1 | null,
-  next: TerminalSessionsStateV1 | null
-): TerminalSessionsStateV1 | null {
-  if (!next) {
-    return null
-  }
-  if (!prev) {
-    return next
-  }
-  const merged = mergeSessionsStatePreservingStableRefs(prev, next)
-  return sessionsUiSnapshotEqual(prev, merged) ? prev : merged
-}
-
-export function useTerminalSessions(): {
-  state: TerminalSessionsStateV1 | null
-  setActiveSession: (sessionId: string) => Promise<void>
-  setSessionDisplayName: (sessionId: string, name: string) => Promise<void>
+export function useTerminalSessions(sessionContext?: ApplySessionPatchContext): {
+  state: TerminalSessionsStateV1
+  appendLogLines: (sessionId: string, lines: string[]) => void
+  setActiveSession: (sessionId: string) => void
+  setSessionDisplayName: (sessionId: string, name: string) => void
+  applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
+  resetSessions: () => void
 } {
-  const [state, setState] = useState<TerminalSessionsStateV1 | null>(null)
-  const stateRef = useRef<TerminalSessionsStateV1 | null>(null)
+  const [state, setState] = useState<TerminalSessionsStateV1>(() =>
+    createEmptyTerminalSessionsState()
+  )
+  const stateRef = useRef(state)
   stateRef.current = state
+  const sessionContextRef = useRef(sessionContext)
+  sessionContextRef.current = sessionContext
 
-  const commitSessionsState = useCallback((next: TerminalSessionsStateV1 | null) => {
-    setState((prev) => applySessionsState(prev, next))
+  const commitState = useCallback((next: TerminalSessionsStateV1) => {
+    setState(next)
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-    void initSessionRuntimeFromPageAsync()
-      .then((snapshot) => {
-        if (!cancelled) {
-          commitSessionsState(snapshot)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          commitSessionsState(createEmptyTerminalSessionsState())
-        }
-      })
-
     const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
       message
     ) => {
@@ -63,47 +44,78 @@ export function useTerminalSessions(): {
         return
       }
       if (message.type === SESSION_CLEAR_MESSAGE) {
-        commitSessionsState(null)
-        return
+        commitState(createEmptyTerminalSessionsState())
       }
-      commitSessionsState(message.state)
     }
     chrome.runtime.onMessage.addListener(onRuntimeMessage)
-    return () => {
-      cancelled = true
-      chrome.runtime.onMessage.removeListener(onRuntimeMessage)
-    }
-  }, [commitSessionsState])
+    return () => chrome.runtime.onMessage.removeListener(onRuntimeMessage)
+  }, [commitState])
 
-  const activateSession = useCallback(
-    async (sessionId: string) => {
-      const prev = stateRef.current
-      if (prev && prev.order.includes(sessionId) && prev.activeId !== sessionId) {
-        commitSessionsState({ ...prev, activeId: sessionId })
+  const appendLogLines = useCallback(
+    (sessionId: string, lines: string[]) => {
+      if (lines.length === 0) {
+        return
       }
-      try {
-        await setActiveSessionFromUiAsync(sessionId)
-      } catch {
-        /* snapshot broadcast restores authoritative activeId */
-      }
-    },
-    [commitSessionsState]
-  )
-
-  const renameSession = useCallback(
-    async (sessionId: string, name: string) => {
-      try {
-        await setSessionNameFromUiAsync(sessionId, name)
-      } catch {
-        /* snapshot broadcast restores authoritative names */
-      }
+      setState((prev) => appendLinesToSessionState(prev, sessionId, lines))
     },
     []
   )
 
+  const setActiveSession = useCallback((sessionId: string) => {
+    setState((prev) => {
+      const next = setActiveSessionState(prev, sessionId)
+      return next ?? prev
+    })
+  }, [])
+
+  const setSessionDisplayName = useCallback((sessionId: string, name: string) => {
+    setState((prev) => {
+      const next = setSessionDisplayNameState(prev, sessionId, name)
+      return next ?? prev
+    })
+  }, [])
+
+  const applyRunCmdPatches = useCallback(
+    (patches: readonly SessionPatch[]) => {
+      if (patches.length === 0) {
+        return
+      }
+      setState((prev) => applySessionPatches(prev, patches, sessionContextRef.current))
+    },
+    []
+  )
+
+  const resetSessions = useCallback(() => {
+    commitState(createEmptyTerminalSessionsState())
+  }, [commitState])
+
   return {
     state,
-    setActiveSession: activateSession,
-    setSessionDisplayName: renameSession
+    appendLogLines,
+    setActiveSession,
+    setSessionDisplayName,
+    applyRunCmdPatches,
+    resetSessions
   }
 }
+
+export function buildDefaultNewSessionName(
+  fromSessionId: string,
+  explicitName: string | undefined,
+  state: TerminalSessionsStateV1,
+  pickers?: Parameters<typeof deriveDefaultSessionName>[0]["pickers"],
+  navArmed?: boolean
+): string {
+  const sanitized = resolveExplicitOrSanitizedSessionName(explicitName)
+  if (sanitized) {
+    return sanitized
+  }
+  return deriveDefaultSessionName({
+    pickers,
+    navArmed: navArmed ?? false,
+    logs: state.logsById[fromSessionId] ?? [],
+    fallbackIndex: state.order.length + 1
+  })
+}
+
+export { applySessionPatch, applySessionPatches }

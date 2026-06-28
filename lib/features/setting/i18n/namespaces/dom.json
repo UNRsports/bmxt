@@ -3,24 +3,108 @@
     "ja": "dom -list — ピッカー（Esc → prompt）",
     "en": "dom -list — picker (Esc → prompt)"
   },
+  "dom.pageActive.choose": {
+    "ja": "dom -setting -page-active: モードを選択 — {options}",
+    "en": "dom -setting -page-active: choose mode — {options}"
+  },
+  "dom.pageActive.set": {
+    "ja": "dom: page-active を {token} に設定しました",
+    "en": "dom: page-active set to {token}"
+  },
   "dom.picker.closed": {
     "ja": "DOM list picker を閉じました。",
     "en": "DOM list picker closed."
   },
   "dom.picker.headline": {
-    "ja": "dom -list · ↑↓/j/k 要素フォーカス＋ページへジャンプ · / · :nohlsearch · n/N · → detail bar · Esc → prompt",
-    "en": "dom -list · ↑↓/j/k focus element + jump page · / · :nohlsearch · n/N · → detail bar · Esc → prompt"
+    "ja": "dom -list --normal · ↑↓/j/k 要素フォーカス · Enter ジャンプ · / · :nohlsearch · n/N · ← detail bar · Esc → prompt",
+    "en": "dom -list --normal · ↑↓/j/k focus element · Enter jump · / · :nohlsearch · n/N · ← detail bar · Esc → prompt"
+  },
+  "dom.picker.headlineWith": {
+    "ja": "dom -list --with · ↑↓/j/k ページスクロール · Alt+↑↓ 要素ハイライト · → 機能メニュー · / · :nohlsearch · n/N · Enter ジャンプ · ← detail bar · Esc → prompt",
+    "en": "dom -list --with · ↑↓/j/k page scroll · Alt+↑↓ element highlight · → feature menu · / · :nohlsearch · n/N · Enter jump · ← detail bar · Esc → prompt"
   },
   "dom.picker.inputAria.keys": {
     "ja": "DOM ピッカーのキー操作",
     "en": "DOM picker keys"
   },
+  "dom.picker.inputAria.keysWith": {
+    "ja": "DOM ピッカー（--with）— ↑↓ ページ · Alt+↑↓ ハイライト · → メニュー · / 絞り込み",
+    "en": "DOM picker (--with) — ↑↓ page · Alt+↑↓ highlight · → menu · / filter"
+  },
+  "dom.picker.inputAria.keysWithSemanticFilter": {
+    "ja": "DOM ピッカー（--with フィルタ）— ↑↓ ページ · Alt+↑↓ 選択 · / 絞り込み",
+    "en": "DOM picker (--with filter) — ↑↓ page · Alt+↑↓ select · / filter"
+  },
+  "dom.picker.inputAria.keysWithSemanticFilterLink": {
+    "ja": "DOM ピッカー（--with リンク）— ↑↓ ページ · Alt+↑↓ 選択 · / 絞り込み · Enter でリンクを開く",
+    "en": "DOM picker (--with links) — ↑↓ page · Alt+↑↓ select · / filter · Enter follow link"
+  },
   "dom.picker.listAria": {
     "ja": "DOM ツリー",
     "en": "DOM tree"
   },
+  "dom.picker.semantic.button": {
+    "ja": "ボタン",
+    "en": "Button"
+  },
+  "dom.picker.semantic.filterHeadline": {
+    "ja": "dom -list --with · {kind} · ↑↓/j/k ページスクロール · Alt+↑↓ 選択 · / · :nohlsearch · n/N · ← 一覧へ · Enter ジャンプ",
+    "en": "dom -list --with · {kind} · ↑↓/j/k page scroll · Alt+↑↓ select · / · :nohlsearch · n/N · ← back to list · Enter jump"
+  },
+  "dom.picker.semantic.filterHeadlineLink": {
+    "ja": "dom -list --with · {kind} · ↑↓/j/k ページスクロール · Alt+↑↓ 選択 · / · :nohlsearch · n/N · ← 一覧へ · Enter リンクを開く",
+    "en": "dom -list --with · {kind} · ↑↓/j/k page scroll · Alt+↑↓ select · / · :nohlsearch · n/N · ← back to list · Enter follow link"
+  },
+  "dom.picker.semantic.form": {
+    "ja": "フォーム部品",
+    "en": "Form control"
+  },
+  "dom.picker.semantic.heading": {
+    "ja": "見出し",
+    "en": "Heading"
+  },
+  "dom.picker.semantic.image": {
+    "ja": "画像",
+    "en": "Image"
+  },
+  "dom.picker.semantic.link": {
+    "ja": "リンク",
+    "en": "Link"
+  },
+  "dom.picker.semantic.menuAria": {
+    "ja": "DOM 機能メニュー",
+    "en": "DOM feature menu"
+  },
+  "dom.picker.semantic.menuHeadline": {
+    "ja": "dom -list --with · 機能を選択 · ↑↓/j/k · Enter 確定 · ← 一覧へ",
+    "en": "dom -list --with · choose feature · ↑↓/j/k · Enter confirm · ← back to list"
+  },
   "dom.picker.notOpen": {
     "ja": "このペインでは DOM list picker は開いていません。",
     "en": "DOM list picker is not open in this pane."
+  },
+  "dom.setting.choose": {
+    "ja": "dom -setting: オプションを選択 — -page-active",
+    "en": "dom -setting: choose option — -page-active"
+  },
+  "dom.setting.pageActiveCurrent": {
+    "ja": "現在の page-active: {token}",
+    "en": "current page-active: {token}"
+  },
+  "dom.settingHint": {
+    "ja": "`-setting -page-active` でハイライト時のページジャンププレビューを切替（`--auto` 既定、`--manual` は Alt）。`--with` では Alt+↑↓ が要素ハイライト。",
+    "en": "`-setting -page-active` controls page jump preview on highlight (`--auto` default, `--manual` needs Alt). In `--with`, Alt+↑↓ moves element highlight."
+  },
+  "dom.status.auto": {
+    "ja": "↑↓ でハイライト移動時にページ要素をプレビュー · Enter でジャンプ",
+    "en": "↑↓ previews page element on highlight · Enter to jump"
+  },
+  "dom.status.manual": {
+    "ja": "Alt+↑↓ でページ要素をプレビュー · Enter でジャンプ · dom -setting -page-active で切替",
+    "en": "Alt+↑↓ to preview page element · Enter to jump · dom -setting -page-active to switch"
+  },
+  "dom.usage": {
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [<pattern>] | dom -exit -list | dom -setting -page-active --auto | --manual"
   }
 }
