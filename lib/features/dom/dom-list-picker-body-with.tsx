@@ -39,6 +39,7 @@ import {
   type DomPickerRowKind
 } from "./dom-list-line-format"
 import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "./dom-list-nav"
+import { DomHtmlSnippetView } from "./dom-html-snippet-view"
 import type { DomListPickerBodyProps } from "./dom-list-picker-body"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
@@ -49,7 +50,7 @@ type WithPickerView = "viewport" | "semanticMenu" | "semanticFilter"
 
 function DomFlatRowContent({ line }: { line: string }): ReactNode {
   if (line.startsWith("<")) {
-    return <span className="bmxt-dom-picker-html">{line}</span>
+    return <DomHtmlSnippetView snippet={line} />
   }
   const parts = parseDomTreeTagParts(line)
   return (

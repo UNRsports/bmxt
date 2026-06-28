@@ -1433,9 +1433,43 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   color: #c9d1d9;
 }
 
+.bmxt-dom-picker {
+  --bmxt-dom-hl-punct: #6e7681;
+  --bmxt-dom-hl-tag: #7ee787;
+  --bmxt-dom-hl-attr-name: #79c0ff;
+  --bmxt-dom-hl-attr-value: #a5d6ff;
+  --bmxt-dom-hl-text: #ffa657;
+  --bmxt-dom-hl-comment: #8b949e;
+}
+
 .bmxt-dom-picker-html {
-  color: #c9d1d9;
   word-break: break-all;
+}
+
+.bmxt-dom-hl-punct {
+  color: var(--bmxt-dom-hl-punct);
+}
+
+.bmxt-dom-hl-tag {
+  color: var(--bmxt-dom-hl-tag);
+}
+
+.bmxt-dom-hl-attr-name {
+  color: var(--bmxt-dom-hl-attr-name);
+}
+
+.bmxt-dom-hl-attr-value {
+  color: var(--bmxt-dom-hl-attr-value);
+}
+
+.bmxt-dom-hl-text {
+  color: var(--bmxt-dom-hl-text);
+  font-weight: 600;
+}
+
+.bmxt-dom-hl-comment {
+  color: var(--bmxt-dom-hl-comment);
+  font-style: italic;
 }
 
 .bmxt-tab-picker-tab-title {
