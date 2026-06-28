@@ -3,6 +3,7 @@
 
 import { isDomSemanticKind, type DomSemanticKind } from "../dom/dom-semantic-kind.ts"
 import type { DomShowMode } from "./injected-dom-show.ts"
+import type { DomSemanticCaptureScope } from "./injected-dom-semantic-entries.ts"
 
 export const DOM_SEMANTIC_ENTRIES_CHANNEL = "bmxt-dom-semantic-entries" as const
 
@@ -19,6 +20,7 @@ export type DomSemanticEntriesRequest = {
   channel: typeof DOM_SEMANTIC_ENTRIES_CHANNEL
   mode: DomShowMode
   kind: DomSemanticKind
+  scope?: DomSemanticCaptureScope
 }
 
 export type DomScrollToPathRequest = {
@@ -51,16 +53,22 @@ function isIntegerPath(value: unknown): value is number[] {
   return true
 }
 
+function isDomSemanticScope(value: unknown): value is DomSemanticCaptureScope {
+  return value === "document" || value === "viewport"
+}
+
 export function isDomSemanticEntriesRequest(raw: unknown): raw is DomSemanticEntriesRequest {
   if (!raw || typeof raw !== "object") {
     return false
   }
   const o = raw as DomSemanticEntriesRequest
-  return (
-    o.channel === DOM_SEMANTIC_ENTRIES_CHANNEL &&
-    isDomShowMode(o.mode) &&
-    isDomSemanticKind(o.kind)
-  )
+  if (o.channel !== DOM_SEMANTIC_ENTRIES_CHANNEL || !isDomShowMode(o.mode) || !isDomSemanticKind(o.kind)) {
+    return false
+  }
+  if (o.scope !== undefined && !isDomSemanticScope(o.scope)) {
+    return false
+  }
+  return true
 }
 
 export function isDomScrollToPathRequest(raw: unknown): raw is DomScrollToPathRequest {

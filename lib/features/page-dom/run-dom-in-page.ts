@@ -14,6 +14,7 @@ import {
   type DomSemanticEntriesPayload,
   type DomSemanticEntriesRequest
 } from "./dom-list-in-page-message.ts"
+import type { DomSemanticCaptureScope } from "./injected-dom-semantic-entries.ts"
 import type { DomShowMode } from "./injected-dom-show.ts"
 
 const CONTENT_SCRIPT_RETRY_DELAY_MS = 150
@@ -50,11 +51,12 @@ async function sendDomInPageMessage<TReq, TRes>(
   return null
 }
 
-/** EN: Full-document semantic filter — content script only. */
+/** EN: Semantic filter — content script only. */
 export async function runDomSemanticEntriesOnTab(
   tabId: number,
   mode: DomShowMode,
-  kind: DomSemanticKind
+  kind: DomSemanticKind,
+  scope: DomSemanticCaptureScope = "viewport"
 ): Promise<DomSemanticEntriesPayload | null> {
   if (!(await tabUrlOk(tabId))) {
     return null
@@ -62,7 +64,8 @@ export async function runDomSemanticEntriesOnTab(
   const request: DomSemanticEntriesRequest = {
     channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
     mode,
-    kind
+    kind,
+    scope
   }
   return sendDomInPageMessage<DomSemanticEntriesRequest, DomSemanticEntriesPayload>(tabId, request)
 }

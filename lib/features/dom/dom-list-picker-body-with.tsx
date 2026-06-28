@@ -132,7 +132,7 @@ export type DomListPickerBodyWithProps = DomListPickerBodyProps & {
   onViewportCapture: (capture: DomListCapture) => void
 }
 
-/** EN: `--with` — ↑↓ page scroll; Alt+↑↓ list highlight + site outline; → semantic menu. */
+/** EN: `--with` — ↑↓ page scroll; Alt+↑↓ list highlight; → semantic menu (filter syncs to viewport). */
 export function DomListPickerBodyWith({
   headline,
   lines,
@@ -172,6 +172,7 @@ export function DomListPickerBodyWith({
   const [withView, setWithView] = useState<WithPickerView>("viewport")
   const [semanticMenuHi, setSemanticMenuHi] = useState(0)
   const [activeSemanticKind, setActiveSemanticKind] = useState<DomSemanticKind | null>(null)
+  const activeSemanticKindRef = useRef<DomSemanticKind | null>(null)
   const [searchMode, setSearchMode] = useState(false)
   const [filterQuery, setFilterQuery] = useState("")
   const [hlSearchPattern, setHlSearchPattern] = useState("")
@@ -181,6 +182,7 @@ export function DomListPickerBodyWith({
 
   hiRef.current = hi
   withViewRef.current = withView
+  activeSemanticKindRef.current = activeSemanticKind
 
   useEffect(() => {
     jumpPathsRef.current = jumpPaths
@@ -246,7 +248,17 @@ export function DomListPickerBodyWith({
         await new Promise<void>((resolve) => {
           window.setTimeout(resolve, VIEWPORT_REFRESH_DELAY_MS)
         })
-        const capture = await onRefreshViewport()
+        const view = withViewRef.current
+        let capture: DomListCapture | null = null
+        if (view === "semanticFilter") {
+          const kind = activeSemanticKindRef.current
+          if (kind !== null) {
+            const tab = await chrome.tabs.get(tabId)
+            capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport")
+          }
+        } else {
+          capture = await onRefreshViewport()
+        }
         if (capture) {
           onViewportCapture(capture)
         }
@@ -254,7 +266,7 @@ export function DomListPickerBodyWith({
         refreshInFlightRef.current = false
       }
     },
-    [onRefreshViewport, onViewportCapture]
+    [flavor, locale, onRefreshViewport, onViewportCapture]
   )
 
   const restoreViewportList = useCallback(async () => {
@@ -279,7 +291,7 @@ export function DomListPickerBodyWith({
       semanticCaptureInFlightRef.current = true
       try {
         const tab = await chrome.tabs.get(tabId)
-        const capture = await captureDomSemanticForTab(tab, flavor, kind, locale)
+        const capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport")
         onViewportCapture(capture)
         setActiveSemanticKind(kind)
         setWithView("semanticFilter")
@@ -299,7 +311,7 @@ export function DomListPickerBodyWith({
   )
 
   useEffect(() => {
-    if (withView !== "viewport") {
+    if (withView !== "viewport" && withView !== "semanticFilter") {
       return
     }
     resetListHi()
@@ -365,9 +377,15 @@ export function DomListPickerBodyWith({
         return true
       }
       if (view === "semanticFilter") {
+        if (e.altKey) {
+          e.preventDefault()
+          e.stopPropagation()
+          moveListHighlight(dir === "down" ? 1 : -1)
+          return true
+        }
         e.preventDefault()
         e.stopPropagation()
-        moveListHighlight(dir === "down" ? 1 : -1)
+        void scrollPageAndRefresh(dir === "down" ? 1 : -1)
         return true
       }
       if (e.altKey) {
@@ -539,7 +557,9 @@ export function DomListPickerBodyWith({
             ? tPlainPicker("plainPicker.searchHint", locale)
             : commandMode
               ? tPlainPicker("plainPicker.commandHint", locale)
-              : withView === "semanticMenu"
+              : withView === "semanticFilter"
+                ? tDom("dom.picker.inputAria.keysWithSemanticFilter", locale)
+                : withView === "semanticMenu"
                 ? tDom("dom.picker.semantic.menuAria", locale)
                 : tDom("dom.picker.inputAria.keysWith", locale)
         }

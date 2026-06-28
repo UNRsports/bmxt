@@ -23,7 +23,7 @@ export type DomListInPageHandlerResult =
 /** EN: Returns a response when handled; `null` when the message is unrelated. */
 export function handleDomListInPageMessage(raw: unknown): DomListInPageHandlerResult | null {
   if (isDomSemanticEntriesRequest(raw)) {
-    return bmxtDomSemanticEntriesInjected(raw.mode, raw.kind)
+    return bmxtDomSemanticEntriesInjected(raw.mode, raw.kind, raw.scope ?? "viewport")
   }
   if (isDomScrollToPathRequest(raw)) {
     return bmxtDomScrollToPathInjected(raw.path, { persist: raw.persist === true })

@@ -1,4 +1,5 @@
 import type { DomSemanticEntriesPayload } from "../page-dom/dom-list-in-page-message.ts"
+import type { DomSemanticCaptureScope } from "../page-dom/injected-dom-semantic-entries.ts"
 import type { DomShowMode } from "../page-dom/injected-dom-show.ts"
 import { runDomSemanticEntriesOnTab } from "../page-dom/run-dom-in-page.ts"
 import { tDomList } from "../setting/i18n/ns/dom-list.ts"
@@ -51,12 +52,13 @@ function buildHeader(
   ]
 }
 
-/** EN: Full-document semantic filter for dom -list --with. */
+/** EN: Semantic filter for dom -list --with (viewport-synced by default). */
 export async function captureDomSemanticForTab(
   tab: chrome.tabs.Tab,
   flavor: DomListFlavor,
   kind: DomSemanticKind,
-  locale: UiLocale = DEFAULT_UI_LOCALE
+  locale: UiLocale = DEFAULT_UI_LOCALE,
+  scope: DomSemanticCaptureScope = "viewport"
 ): Promise<DomListCapture> {
   const tabId = tab.id
   if (tabId === undefined) {
@@ -64,7 +66,7 @@ export async function captureDomSemanticForTab(
   }
 
   const mode: DomShowMode = flavor === "--react" ? "react" : "html"
-  const injected = await runDomSemanticEntriesOnTab(tabId, mode, kind)
+  const injected = await runDomSemanticEntriesOnTab(tabId, mode, kind, scope)
   const header = buildHeader(flavor, tab, kind, locale)
   const headerLineCount = header.length
 
@@ -75,9 +77,11 @@ export async function captureDomSemanticForTab(
   const entries = entriesFromInjected(injected)
 
   if (entries.length === 0) {
+    const emptyKey =
+      scope === "viewport" ? "domList.semanticViewportEmpty" : "domList.semanticEmpty"
     return noticeCapture([
       ...header,
-      tDomList("domList.semanticEmpty", locale, { kind: tDom(domSemanticKindI18nKey(kind), locale) })
+      tDomList(emptyKey, locale, { kind: tDom(domSemanticKindI18nKey(kind), locale) })
     ])
   }
 

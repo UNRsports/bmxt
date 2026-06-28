@@ -27,6 +27,10 @@
     "ja": "（ページ内に {kind} なし）",
     "en": "(no {kind} elements on page)"
   },
+  "domList.semanticViewportEmpty": {
+    "ja": "（ビューポート内に {kind} なし）",
+    "en": "(no {kind} in viewport)"
+  },
   "domList.semanticTruncated": {
     "ja": "（件数上限のため一部のみ表示）",
     "en": "(showing partial list — result cap reached)"

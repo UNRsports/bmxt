@@ -31,6 +31,24 @@ describe("dom-list-in-page-message", () => {
       isDomSemanticEntriesRequest({
         channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
         mode: "html",
+        kind: "link",
+        scope: "viewport"
+      }),
+      true
+    )
+    assert.equal(
+      isDomSemanticEntriesRequest({
+        channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
+        mode: "html",
+        kind: "link",
+        scope: "invalid"
+      }),
+      false
+    )
+    assert.equal(
+      isDomSemanticEntriesRequest({
+        channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
+        mode: "html",
         kind: "unknown"
       }),
       false

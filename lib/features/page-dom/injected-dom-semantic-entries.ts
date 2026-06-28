@@ -9,10 +9,13 @@ import {
   pathTargetsElement,
   walkAllElements
 } from "./injected-dom-path.ts"
+import { isElementVisibleInViewport } from "./injected-dom-viewport-visible.ts"
 
 type DomShowMode = "html" | "react"
 
 type SemanticKind = "link" | "image" | "form" | "button" | "heading"
+
+export type DomSemanticCaptureScope = "document" | "viewport"
 
 type ViewportEntryPayload = { line: string; path: number[] }
 
@@ -112,14 +115,16 @@ function classifyElement(el: Element): SemanticKind[] {
   return [...new Set(kinds)]
 }
 
-/** EN: All matching elements in document order — no walk depth cap. */
+/** EN: Semantic matches — full document or viewport-visible only (`--with` filter mode). */
 export function bmxtDomSemanticEntriesInjected(
   mode: DomShowMode,
-  kind: SemanticKind
+  kind: SemanticKind,
+  scope: DomSemanticCaptureScope = "viewport"
 ): SemanticPayload {
-  const maxResults = 500
+  const maxDocumentResults = 500
+  const maxViewportVisible = 120
   const htmlSnippetMax = 220
-  const collected: ViewportEntryPayload[] = []
+  const collected: Array<{ line: string; path: number[]; top: number; left: number }> = []
   let truncated = false
 
   function formatReactLine(el: Element): string {
@@ -156,17 +161,32 @@ export function bmxtDomSemanticEntriesInjected(
     if (truncated || !classifyElement(el).includes(kind)) {
       return
     }
+    if (scope === "viewport" && !isElementVisibleInViewport(el)) {
+      return
+    }
     const path = buildPathForElement(el)
     if (path == null || !pathTargetsElement(path, el)) {
       return
     }
-    if (collected.length >= maxResults) {
+    const cap = scope === "viewport" ? maxViewportVisible : maxDocumentResults
+    if (collected.length >= cap) {
       truncated = true
       return
     }
     const line = mode === "html" ? formatHtmlLine(el) : formatReactLine(el)
-    collected.push({ line, path: [...path] })
+    const rect = el.getBoundingClientRect()
+    collected.push({ line, path: [...path], top: rect.top, left: rect.left })
   })
 
-  return { entries: collected, truncated }
+  if (scope === "viewport") {
+    collected.sort((a, b) => {
+      if (a.top !== b.top) {
+        return a.top - b.top
+      }
+      return a.left - b.left
+    })
+  }
+
+  const entries = collected.map(({ line, path }) => ({ line, path }))
+  return { entries, truncated }
 }

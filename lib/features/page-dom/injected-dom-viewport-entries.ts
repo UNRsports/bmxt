@@ -4,6 +4,7 @@
  */
 
 import type { DomShowMode } from "./injected-dom-show.ts"
+import { isElementVisibleInViewport } from "./injected-dom-viewport-visible.ts"
 
 type ViewportEntryPayload = { line: string; path: number[] }
 
@@ -50,19 +51,6 @@ export function bmxtDomViewportEntriesInjected(mode: DomShowMode): ViewportPaylo
     return snippet
   }
 
-  function isVisibleInViewport(el: Element): boolean {
-    const rect = el.getBoundingClientRect()
-    if (rect.width === 0 && rect.height === 0) {
-      return false
-    }
-    const vh = window.innerHeight
-    const vw = window.innerWidth
-    if (rect.bottom <= 0 || rect.top >= vh || rect.right <= 0 || rect.left >= vw) {
-      return false
-    }
-    return true
-  }
-
   function walk(node: Node, depth: number, path: number[]): void {
     if (!node || count >= maxNodes || depth > maxDepth) {
       return
@@ -72,7 +60,7 @@ export function bmxtDomViewportEntriesInjected(mode: DomShowMode): ViewportPaylo
     }
     const el = node as Element
     count += 1
-    if (isVisibleInViewport(el)) {
+    if (isElementVisibleInViewport(el)) {
       const rect = el.getBoundingClientRect()
       const line = mode === "html" ? formatHtmlLine(el) : formatReactLine(el)
       collected.push({
