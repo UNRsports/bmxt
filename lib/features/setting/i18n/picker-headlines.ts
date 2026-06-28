@@ -21,3 +21,7 @@ export function searchListPickerLoadingHeadline(locale: UiLocale): string {
 export function domListPickerHeadline(locale: UiLocale): string {
   return tDom("dom.picker.headline", locale)
 }
+
+export function domListPickerWithHeadline(locale: UiLocale): string {
+  return tDom("dom.picker.headlineWith", locale)
+}

@@ -2,7 +2,12 @@ import { useCallback, useRef } from "react"
 import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
 import { applyChromeEffects } from "../../dispatch"
 import type { DomListCapture } from "../../dom/dom-list-capture"
-import { isRetryableDomListOutput, type DomListPickerState } from "../../dom/dom-list-picker-input"
+import { captureDomViewportForTab } from "../../dom/dom-viewport-capture"
+import {
+  isRetryableDomListOutput,
+  parseDomListCommandLine,
+  type DomListPickerState
+} from "../../dom/dom-list-picker-input"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../../dom/use-dom-list-follow-tab"
 import { isJobHandleActive, mergeJobIntoDispatchContext, shouldCancelJob, type JobRunner } from "../../job"
@@ -17,7 +22,9 @@ export type UseDomListShellOptions = {
   uiLocale: UiLocale
   jobRunner: JobRunner
   domListPicker: DomListPickerState | null
-  appendLogLines: (lines: string[]) => Promise<void>
+  /** EN: Tab-follow refresh while dom picker / detail bar is focused (not from prompt). */
+  domListFollowEnabled: boolean
+  appendLogLines: (lines: string[]) => void | Promise<void>
   setDomListPicker: (sessionId: string, state: DomListPickerState | null) => void
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<unknown>>
 }
@@ -47,12 +54,18 @@ export function useDomListShell(options: UseDomListShellOptions) {
             }
             if (bundle.ty === "lines") {
               await options.appendLogLines([`> ${displayLine}`, ...(bundle.lines ?? [])])
-              options.setDomListPicker(options.sessionId, null)
+              if (shouldCancelJob(job)) {
+                return
+              }
+              if (announce) {
+                options.setDomListPicker(options.sessionId, null)
+              }
               return
             }
             let domCapture: DomListCapture | undefined
             const ctx = mergeJobIntoDispatchContext(
               {
+                enqueueSessionPatch: () => {},
                 clearLog: async () => {},
                 exitPane: async () => [],
                 listWindows: async () => [],
@@ -78,6 +91,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
                   tDomPrompt("domPrompt.headline", options.uiLocale)
                 ])
               }
+              if (shouldCancelJob(job)) {
+                return
+              }
               options.setDomListPicker(options.sessionId, {
                 kind: "prompt",
                 message: linesOut,
@@ -89,14 +105,27 @@ export function useDomListShell(options: UseDomListShellOptions) {
             if (announce) {
               await options.appendLogLines([`> ${displayLine}`, tDom("dom.listPicker", options.uiLocale)])
             }
+            if (shouldCancelJob(job)) {
+              return
+            }
             const targetTabId = await resolveDomListTargetTabId()
+            if (shouldCancelJob(job)) {
+              return
+            }
+            const parsed = parseDomListCommandLine(domListLine)
             options.setDomListPicker(options.sessionId, {
               kind: "lines",
               lines: linesOut,
               commandLine: domListLine,
               targetTabId,
               jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
-              headerLineCount: domCapture?.headerLineCount ?? linesOut.length
+              headerLineCount: domCapture?.headerLineCount ?? linesOut.length,
+              pickerMode: parsed?.pickerMode ?? "normal",
+              flavor: parsed?.flavor ?? "--html",
+              showTag: parsed?.showTag ?? false,
+              pattern: parsed?.pattern ?? "",
+              documentEntries: domCapture?.documentEntries,
+              documentTruncated: domCapture?.documentTruncated
             })
             options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "dom"))
           } catch (e) {
@@ -109,7 +138,9 @@ export function useDomListShell(options: UseDomListShellOptions) {
                 message: e instanceof Error ? e.message : String(e)
               })
             ])
-            options.setDomListPicker(options.sessionId, null)
+            if (announce) {
+              options.setDomListPicker(options.sessionId, null)
+            }
           }
         },
         { meta: { line: domListLine } }
@@ -125,6 +156,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
 
   const { onTabsPickerFocusTabId: queueDomListFollowRefresh } = useDomListFollowTab({
     domListPicker: options.domListPicker,
+    followEnabled: options.domListFollowEnabled,
     resolveTargetTabId: resolveDomListTargetTabId,
     refreshDomList: refreshDomListPicker,
     isDomListJobActive: () => options.jobRunner.isActive("dom-list")
@@ -146,9 +178,29 @@ export function useDomListShell(options: UseDomListShellOptions) {
     tabsPickerFocusTabIdRef.current = null
   }, [])
 
+  const refreshDomViewportForPicker = useCallback(
+    async (state: Extract<DomListPickerState, { kind: "lines" }>): Promise<DomListCapture | null> => {
+      const tabId = state.targetTabId
+      if (tabId === undefined) {
+        return null
+      }
+      try {
+        const tab = await chrome.tabs.get(tabId)
+        const flavor = state.flavor ?? "--html"
+        const pattern = state.pattern ?? ""
+        const showTag = state.showTag === true
+        return await captureDomViewportForTab(tab, flavor, pattern, options.uiLocale, showTag)
+      } catch {
+        return null
+      }
+    },
+    [options.uiLocale]
+  )
+
   return {
     runDomListAndShow,
     refreshDomListPicker,
+    refreshDomViewportForPicker,
     onTabsPickerFocusTabId,
     syncTabPickerOpen,
     clearTabsPickerFocusTabId

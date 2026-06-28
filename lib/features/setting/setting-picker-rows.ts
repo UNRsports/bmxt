@@ -17,6 +17,9 @@ import {
 } from "./locale"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
+import type { UiSettingsStorageConfig } from "./settings-storage-config"
+import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
+import { formatSnapshotVaultDisplayName } from "../snapshot/snapshot-vault-layout"
 
 export type SettingPickerRowId =
   | "language"
@@ -38,15 +41,21 @@ export type SettingPickerRowId =
   | "bg-import"
   | "bg-clear"
   | "reset-default"
-  | "reset-search-cache"
+  | "storage"
+  | "storage-mode-internal"
+  | "storage-mode-external"
+  | "storage-pick-dir"
+  | "storage-reload"
+  | "snapshot-storage"
+  | "snapshot-storage-bundled"
+  | "snapshot-storage-vault"
+  | "snapshot-vault-pick-dir"
   | "export"
   | "import"
   | "locale-ja"
   | "locale-en"
   | "reset-yes"
   | "reset-no"
-  | "search-cache-reset-yes"
-  | "search-cache-reset-no"
   | "save"
   | "cancel"
 
@@ -110,13 +119,21 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
 export function settingPickerInitialHi(
   view: SettingListPickerView,
   locale: UiLocale,
-  appearance: UiAppearance
+  appearance: UiAppearance,
+  storageConfig?: UiSettingsStorageConfig,
+  snapshotStorageConfig?: SnapshotStorageConfig
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
+  }
+  if (view === "storageMode") {
+    return storageConfig?.mode === "external" ? 1 : 0
+  }
+  if (view === "snapshotStorageMode") {
+    return snapshotStorageConfig?.destination === "vault" ? 1 : 0
   }
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -134,7 +151,7 @@ export function settingPickerInitialHi(
   if (view === "pickerBgImage") {
     return appearance.picker.bgImageDataUrl ? 1 : 0
   }
-  if (view === "resetConfirm" || view === "searchCacheResetConfirm") {
+  if (view === "resetConfirm") {
     return 1
   }
   return 0
@@ -239,10 +256,42 @@ function buildPickerDetailRows(
   ]
 }
 
+function storageModeSummaryLabel(
+  storageConfig: UiSettingsStorageConfig | undefined,
+  locale: UiLocale
+): string {
+  if (storageConfig?.mode === "external") {
+    const dir = storageConfig.directoryName
+    if (dir) {
+      return tSetting("setting.picker.storageModeExternalNamed", locale, { directory: dir })
+    }
+    return tSetting("setting.picker.storageModeExternal", locale)
+  }
+  return tSetting("setting.picker.storageModeInternal", locale)
+}
+
+function snapshotStorageSummaryLabel(
+  snapshotStorageConfig: SnapshotStorageConfig | undefined,
+  locale: UiLocale
+): string {
+  if (snapshotStorageConfig?.destination === "vault") {
+    const dir = snapshotStorageConfig.vaultDirectoryName
+    if (dir) {
+      return tSetting("setting.picker.snapshotStorageVaultNamed", locale, {
+        directory: formatSnapshotVaultDisplayName(dir)
+      })
+    }
+    return tSetting("setting.picker.snapshotStorageVault", locale)
+  }
+  return tSetting("setting.picker.snapshotStorageBundled", locale)
+}
+
 export function buildSettingPickerRows(
   view: SettingListPickerView,
   locale: UiLocale,
-  appearance: UiAppearance
+  appearance: UiAppearance,
+  storageConfig?: UiSettingsStorageConfig,
+  snapshotStorageConfig?: SnapshotStorageConfig
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -259,6 +308,32 @@ export function buildSettingPickerRows(
     return [
       { id: "edit-picker-on", line: tSetting("setting.picker.editPickerOn", locale) },
       { id: "edit-picker-off", line: tSetting("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "storageMode") {
+    return [
+      {
+        id: "storage-mode-internal",
+        line: tSetting("setting.picker.storageModeInternalRow", locale)
+      },
+      {
+        id: "storage-mode-external",
+        line: tSetting("setting.picker.storageModeExternalRow", locale)
+      }
+    ]
+  }
+
+  if (view === "snapshotStorageMode") {
+    return [
+      {
+        id: "snapshot-storage-bundled",
+        line: tSetting("setting.picker.snapshotStorageBundledRow", locale)
+      },
+      {
+        id: "snapshot-storage-vault",
+        line: tSetting("setting.picker.snapshotStorageVaultRow", locale)
+      }
     ]
   }
 
@@ -289,19 +364,6 @@ export function buildSettingPickerRows(
     return [
       { id: "reset-yes", line: tSetting("setting.picker.resetYes", locale) },
       { id: "reset-no", line: tSetting("setting.picker.resetNo", locale) }
-    ]
-  }
-
-  if (view === "searchCacheResetConfirm") {
-    return [
-      {
-        id: "search-cache-reset-yes",
-        line: tSetting("setting.picker.searchCacheResetYes", locale)
-      },
-      {
-        id: "search-cache-reset-no",
-        line: tSetting("setting.picker.searchCacheResetNo", locale)
-      }
     ]
   }
 
@@ -418,14 +480,44 @@ export function buildSettingPickerRows(
     })
   }
 
+  rows.push({
+    id: "storage",
+    line: tSetting("setting.picker.main.storage", locale, {
+      value: storageModeSummaryLabel(storageConfig, locale)
+    })
+  })
+
+  if (storageConfig?.mode === "external") {
+    rows.push(
+      {
+        id: "storage-pick-dir",
+        line: tSetting("setting.picker.main.storagePickDir", locale)
+      },
+      {
+        id: "storage-reload",
+        line: tSetting("setting.picker.main.storageReload", locale)
+      }
+    )
+  }
+
+  rows.push({
+    id: "snapshot-storage",
+    line: tSetting("setting.picker.main.snapshotStorage", locale, {
+      value: snapshotStorageSummaryLabel(snapshotStorageConfig, locale)
+    })
+  })
+
+  if (snapshotStorageConfig?.destination === "vault") {
+    rows.push({
+      id: "snapshot-vault-pick-dir",
+      line: tSetting("setting.picker.main.snapshotVaultPickDir", locale)
+    })
+  }
+
   rows.push(
     {
       id: "reset-default",
       line: tSetting("setting.picker.main.reset", locale)
-    },
-    {
-      id: "reset-search-cache",
-      line: tSetting("setting.picker.main.resetSearchCache", locale)
     },
     {
       id: "export",
@@ -463,7 +555,11 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
-          : view === "fontSize"
+          : view === "storageMode"
+            ? "setting.picker.headline.storageMode"
+            : view === "snapshotStorageMode"
+              ? "setting.picker.headline.snapshotStorageMode"
+              : view === "fontSize"
             ? "setting.picker.headline.fontSize"
             : view === "pickerFontSize"
               ? "setting.picker.headline.pickerFontSize"
@@ -489,9 +585,7 @@ export function settingPickerHeadline(
                               ? "setting.picker.headline.fontPicker"
                               : view === "resetConfirm"
                                 ? "setting.picker.headline.resetConfirm"
-                                : view === "searchCacheResetConfirm"
-                                  ? "setting.picker.headline.searchCacheResetConfirm"
-                                  : "setting.picker.headline.main"
+                                : "setting.picker.headline.main"
   return tSetting(key, locale)
 }
 

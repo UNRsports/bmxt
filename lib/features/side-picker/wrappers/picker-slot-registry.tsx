@@ -1,4 +1,5 @@
 import type { MutableRefObject, ReactNode } from "react"
+import type { DomListCapture } from "../../dom/dom-list-capture"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import { SearchListPickerOverlay } from "../../search/search-list-picker-overlay"
 import type { PickerEntry } from "../model/picker-entry"
@@ -12,6 +13,7 @@ import type { SearchListPickerState } from "../../search/search-list-picker-inpu
 import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
 import type { SearchPageActiveMode } from "../../search/page-active-setting"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
+import type { DomPageActiveMode } from "../../dom/page-active-setting"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
 import type { SettingPickerRow } from "../../setting/setting-picker-rows"
 import { SettingPickerWrapper } from "../../setting/setting-picker-wrapper"
@@ -53,8 +55,13 @@ export type PickerColumnHostContext = {
   ) => void
   onDomApprove: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
+  onRefreshDomViewport?: (
+    state: Extract<DomListPickerState, { kind: "lines" }>
+  ) => Promise<DomListCapture | null>
+  onApplyDomViewportCapture?: (capture: DomListCapture) => void
   tabsPageActiveMode?: TabsPageActiveMode
   searchPageActiveMode?: SearchPageActiveMode
+  domPageActiveMode?: DomPageActiveMode
   onExitToDetailBar: (slot: PickerSlotId) => void
   /** EN: Live loading log for search picker (not stored in `searchListPicker.progressLines`). */
   searchLoadingProgressLines?: readonly string[]
@@ -106,12 +113,15 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
       <PickerPanelHost>
         <DomPickerWrapper
           state={ctx.domListPicker}
+          jumpActiveMode={ctx.domPageActiveMode}
           onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
           onExitToDetailBar={() => ctx.onExitToDetailBar("dom")}
           keyboardActive={ctx.domPickerKeyboardActive}
           pickerInputRef={ctx.domPickerInputRef}
           sessionId={ctx.sessionId}
           onApprove={ctx.onDomApprove}
+          onRefreshDomViewport={ctx.onRefreshDomViewport}
+          onApplyDomViewportCapture={ctx.onApplyDomViewportCapture}
         />
       </PickerPanelHost>
     ) : null,

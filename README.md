@@ -16,6 +16,7 @@
 - [Command-line token model (first / second commands)](#command-line-token-model)
   - [Command List](#command-list)
   - [BMXt process lifecycle (`clear` / window close / `exit`)](#bmxt-process-lifecycle)
+  - [Terminal session state (UI source of truth)](#terminal-session-state)
   - [`aboutbmxt`](#aboutbmxt)
   - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
   - [`translate` (`translate -on` / `translate -off` / `translate -setting`)](#translate)
@@ -128,7 +129,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 - **UI**: Extension page opened in a dedicated popup window without a tab bar (WXT unlisted page `entrypoints/bmxt`; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`entrypoints/bmxt/main.tsx`** is a thin entry that mounts it.
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
-- **State**: Command output logs and command history are stored in `chrome.storage.local`. Keys and caps are defined in **`lib/features/extension-storage/keys.ts`**: **500** log lines (`bmxt_log`), **300** history entries (`bmxt_cmd_history`).
+- **State**: **Terminal session logs** (`logsById`, `order`, `activeId`, `namesById`), **open picker columns**, and **pane focus** live in the **BMXt UI page** (React) for the window lifetime — see **[Terminal session state (UI source of truth)](#terminal-session-state)**. **Prompt command history** is stored in **`chrome.storage.local`** (`bmxt_cmd_history`, cap **300** entries). **UI settings**, **page-active** picker prefs, and similar user metadata use other **`chrome.storage.local`** keys (**`lib/features/extension-storage/keys.ts`**).
 - **Background**: Service Worker (`entrypoints/background/index.ts`) opens the window on icon click and handles command execution and tab operations.
 - **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**).
 
@@ -139,7 +140,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
 
-**Data handling (aligned with the privacy policy and store text):** command output and typed history are handled primarily **in memory** for the UI; only capped fields are written to **`chrome.storage.local`** (see **`lib/features/extension-storage/keys.ts`**). The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
+**Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
 The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self'`**, **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`wxt.config.ts`** for the exact string.
 
@@ -232,7 +233,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --ja-en` | Save **ja → en** pair (default); round-trip preview and nav commit use English on Alt hold |
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
-| `setting -list` | Open the **settings picker** column (UI locale, terminal appearance, optional per-picker appearance, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `setting -list` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, export/import zip); changes apply only after **`> save setting`** in the picker |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
 | `session -new [name]` | Create a new **terminal session** and switch to it; optional display name |
@@ -244,38 +245,69 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `close` / `c <tabId>` | Close tab |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the active terminal session**; the BMXt window and all other persisted process state stay as they are. **Closing the BMXt window** (× button) or **`exit`** on the **last** session closes the window and **clears process-scoped storage** (terminal sessions, picker UI, tab-picker fold state). **Command history is kept** unless you use the **`reset-bmxt`** shortcut. **`exit`** with **multiple sessions** removes only the active session and switches to another. See **[BMXt process lifecycle](#bmxt-process-lifecycle)**.
+**Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the active terminal session**; the BMXt window and other in-memory session/picker state stay as they are. **Closing the BMXt window** (× button) or **`exit`** on the **last** session closes the window and **discards** all UI-held session logs and picker state (legacy **`chrome.storage.local`** process keys are cleaned up by the Service Worker). **Command history is kept** unless you use the **`reset-bmxt`** shortcut. **`exit`** with **multiple sessions** removes only the active session and switches to another. See **[BMXt process lifecycle](#bmxt-process-lifecycle)** and **[Terminal session state](#terminal-session-state)**.
 
 <a id="bmxt-process-lifecycle"></a>
 
 ### BMXt process lifecycle (`clear` / window close / `exit`)
 
-**Closing the BMXt window** (×) or **`exit`** on the **last** terminal session clears **process-scoped** session state from **`chrome.storage.local`** (terminal sessions, picker UI, tab-picker fold). **Prompt command history** (`bmxt_cmd_history`) survives and is available in the next session. Use the **`reset-bmxt`** shortcut to clear history too. Reopening BMXt (toolbar, **`launch-bmxt`**, etc.) starts a **fresh empty terminal** while history remains.
+**Closing the BMXt window** (×) or **`exit`** on the **last** terminal session closes the window and **ends the in-memory BMXt UI state** (session logs, picker columns, tab-picker fold in the UI). The Service Worker also **removes legacy process-scoped keys** from **`chrome.storage.local`** when appropriate. **Prompt command history** (`bmxt_cmd_history`) survives and is available in the next session. Use the **`reset-bmxt`** shortcut to clear history too. Reopening BMXt (toolbar, **`launch-bmxt`**, etc.) starts a **fresh empty terminal** while history remains.
 
-| Action | Session logs | Open picker columns & `paneFocus` | Tab picker tree fold | Command history |
-|--------|--------------|-------------------------------------|----------------------|-----------------|
+| Action | Session logs (UI) | Open picker columns & `paneFocus` | Tab picker tree fold | Command history |
+|--------|-------------------|-------------------------------------|----------------------|-----------------|
 | **`clear`** | Cleared (active session) | Kept | Kept | Kept |
-| **Close BMXt window** | **All cleared** | **Cleared** | **Cleared** | **Kept** |
+| **Close BMXt window** | **All cleared** (UI destroyed) | **Cleared** | **Cleared** | **Kept** |
 | **Reopen BMXt window** | Fresh empty | Cleared | Cleared | **Restored** |
 | **`exit`** (multiple sessions) | Active session removed; switches to another | That session’s pickers cleared | Kept | Kept |
 | **`exit`** (last session) | **All cleared** | **Cleared** | **Cleared** | **Kept** |
-| **`reset-bmxt` shortcut** | Cleared | Cleared | Cleared | **Cleared** |
+| **`reset-bmxt` shortcut** | Cleared (UI notified) | Cleared | Cleared | **Cleared** |
 
-**Process-scoped storage keys** (removed when the **last** pane **`exit`**s or the BMXt window is closed):
+**Legacy process-scoped storage keys** (removed on **last** **`exit`** or BMXt window close — **cleanup only**; runtime logs are **not** read from these keys while the window is open):
 
-| Key | Contents |
-|-----|----------|
-| `bmxt_terminal_sessions_v1` | Terminal sessions (v5): per-session logs, `order`, `activeId`, display `namesById` |
-| `bmxt_process_ui_v1` | Open picker slots per session (`tabs` / `search` / `dom` / `setting`) and `paneFocus` |
-| `bmxt_tab_picker_fold_v1` | Collapsed window / tab-group rows in the tab picker |
+| Key | Legacy role (cleanup) |
+|-----|------------------------|
+| `bmxt_terminal_sessions_v1` | Former on-disk session blob (v5); no longer authoritative at runtime |
+| `bmxt_process_ui_v1` | Former picker / `paneFocus` snapshot |
+| `bmxt_tab_picker_fold_v1` | Former tab-picker tree fold snapshot |
 
-**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) may still be removed via **setting → reset-search-cache** but are no longer written (since **0.6.9**).
+**Not cleared on process exit** (user / browser metadata): prompt command history (`bmxt_cmd_history`) — cleared only by **`reset-bmxt`** — custom window display names, UI settings (`bmxt_ui_settings_v1` — locale and appearance; always written on save), UI settings **storage mode** (`bmxt_ui_settings_storage_v1` — internal vs external), translation assist settings, tab/search picker settings (`page-active`), last normal window id, welcome/version tracking keys. Legacy SQLite cache keys (`bmxt_search_cache_db_v1`, `bmxt_job_db_v1`) from versions before **0.6.9** may remain in `chrome.storage.local` until extension uninstall; they are no longer written.
 
-**Implementation:** `removeAllTerminalSessionsFromStorage` in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**; UI persistence in **`lib/features/bmxt-window/process-ui-state-storage.ts`** and **`lib/features/tabs/tab-picker-fold-state.ts`**.
+**Implementation:** UI session store — **`lib/features/bmxt-window/terminal-sessions/use-terminal-sessions.ts`**, **`session-state-ops.ts`**, **`session-patches.ts`**; legacy storage cleanup — **`removeAllTerminalSessionsFromStorage`** in **`state-storage.ts`**; picker / pane UI — **`use-process-ui-persistence.ts`**; tab-picker fold — **`tab-picker-fold-state.ts`** (in-memory while the window is open).
 
 **Note:** **`tabs -exit -list`** (and other **`* -exit -list`**) only closes a picker column in the current session; it does **not** end the BMXt process or clear tab-picker fold state.
 
 **Terminal sessions and picker columns:** With **two or more** terminal sessions, **Ctrl+← / Ctrl+→** (BMXt window focused) cycles the active session. Inside the active session, **Ctrl+Left / Ctrl+Right** moves focus along **terminal → tabs → search → dom → setting** (only among open columns). See **[Picker UI (side columns)](#picker-ui)** and **[`session`](#session)**.
+
+<a id="terminal-session-state"></a>
+
+### Terminal session state (UI source of truth)
+
+While a BMXt window is open, **the extension page owns terminal session state**. The Service Worker runs Chrome API effects and returns **patches**; it does **not** keep session logs in memory across idle restarts.
+
+| Data | Authority | Lifetime |
+|------|-----------|----------|
+| Session logs, `order`, `activeId`, `namesById` | **BMXt UI** (`useTerminalSessions`) | BMXt window open |
+| Open picker slots, `paneFocus`, detail bars, nav armed | **BMXt UI** (`useProcessUiPersistence`) | BMXt window open |
+| Tab-picker fold / highlight (in-session) | **BMXt UI** (in-memory helpers) | BMXt window open |
+| Prompt command history | **`chrome.storage.local`** (`bmxt_cmd_history`) | Survives window close |
+| UI settings, page-active prefs | **`chrome.storage.local`** | Survives window close |
+
+**Why:** Service Workers can stop after idle time (Manifest V3). Keeping logs in the **long-lived UI page** avoids losing state when the worker cold-starts. This also keeps a clear boundary for future **multi-window** support (one UI instance per window).
+
+**`RUN_CMD` flow (fallback commands — e.g. `close`, `help`, `session -new`):**
+
+1. UI sends **`RUN_CMD`** with `{ line, sessionId, sessionOrderLength }`.
+2. Service Worker runs **`runDispatch`** / **`applyChromeEffects`** (tabs, scripting, etc.).
+3. SW returns **`{ ok: true, patches: SessionPatch[], closeWindow? }`** — no session snapshot push.
+4. UI applies patches locally via **`applyRunCmdPatches`** (`appendLog`, `setLog`, `createSession`, `exitSession`, …).
+
+**UI-local commands** (handled in **`bmxt-shell.tsx`** before **`RUN_CMD`**) — e.g. **`tabs -list`**, **`dom -list`**, **`session -switch`** — append logs and change pickers **directly** in React state.
+
+**Messages:** **`SESSION_INIT`**, **`SESSION_SNAPSHOT`**, and **`SESSION_UI_*`** are **removed**. The only SW → UI session notification is **`SESSION_CLEAR`** ( **`reset-bmxt`** shortcut: reset UI to a fresh empty session).
+
+**Modules:** **`session-state-ops.ts`** (pure transforms), **`session-patches.ts`** (patch types + apply), **`use-terminal-sessions.ts`** (React store), **`session-runtime-client.ts`** (`runCommandFromUiAsync`), **`entrypoints/background/background-services.ts`** (patch collection in dispatch context).
+
+**Service Worker idle:** UI state is unchanged when the worker restarts; the next **`RUN_CMD`** still returns patches applied to the **existing** UI session ids.
 
 <a id="aboutbmxt"></a>
 
@@ -420,7 +452,7 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 
 ### `setting` (`setting -list` / `setting -exit -list`)
 
-UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column. Persisted in **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
+UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column. **Default persistence** is **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). **Optional external storage** uses the File System Access API (user-chosen folder); mode is stored in **`bmxt_ui_settings_storage_v1`**. The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
 
 | Input | Effect |
 |-------|--------|
@@ -432,8 +464,41 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 
 - Edits in the picker update a **draft** only. The live BMXt UI keeps the **last saved** settings until you commit.
 - The **Preview** panel at the bottom of the picker reflects the draft (split **Terminal** / **Picker** panes when **`edit-picker: on`**).
-- **`> save setting`** — writes draft to **`bmxt_ui_settings_v1`** and applies immediately.
+- **`> save setting`** — writes draft to **`bmxt_ui_settings_v1`**, and to the **external settings bundle** when external mode is on; applies immediately.
 - **`> cancel setting`** — discards the draft and restores values from storage.
+
+**Storage (internal vs external)**
+
+| Mode | Behavior |
+|------|----------|
+| **Extension internal** (default) | Settings live only in **`bmxt_ui_settings_v1`**. No File System Access API. |
+| **External folder** | User picks a parent directory once. BMXt reads/writes a **settings bundle** under that parent (see below). **`bmxt_ui_settings_v1`** is still updated on every save (cache + background locale). On startup, load prefers the external bundle when readable; otherwise falls back to internal storage. |
+
+**Picker rows (storage):** **storage** — choose internal or external; when external is active, **storage-pick-dir** (change folder) and **storage-reload** (load bundle into draft preview). Switching storage mode commits immediately (not draft-only). **No new manifest permission** — folder access is granted at runtime via the browser picker.
+
+**Backup bundle format (zip export/import and external directory)**
+
+Zip **export**, zip **import**, and **external save** share one **canonical on-disk layout** (implemented in **`settings-export.ts`**, **`settings-bundle-layout.ts`**):
+
+```
+bmxt-ui-settings/          ← subdirectory under the picked parent (or the picked folder if it already contains settings.json)
+  settings.json            ← version field (currently 2); locale + appearance; image paths as relative file names
+  background-image.png     ← when global bg-image is set (jpg/webp extensions also used)
+  picker-background-image.*  ← when picker-specific bg-image is set
+```
+
+- **export** — downloads a zip with the same files (portable backup).
+- **import** — reads a zip into the picker **draft** (commit with **`> save setting`**).
+- **External save** — writes the same files into the bundle directory; removes stale `background-image.*` / `picker-background-image.*` files when images are cleared or replaced.
+
+**Backward compatibility**
+
+When changing UI settings shape or on-disk format in a release:
+
+1. **`settings.json`:** Bump **`version`** only with an import branch in **`parseSettingsExportJson`**; **older versions must keep importing** (today: **v1** and **v2**). New JSON fields are optional; runtime uses **`normalizeUiAppearance`** and related normalizers.
+2. **Bundle file names** (`settings.json`, `background-image`, `picker-background-image`, directory name **`bmxt-ui-settings`**) are stable contracts—rename only with a migration path and README update.
+3. Bundles and zips saved by **older extension versions** must remain loadable via **import** or **storage-reload** on newer versions.
+4. See **`.cursorrules`** § **UI settings persistence** for implementer rules (tests, docs).
 
 **Main list (picker)**
 
@@ -444,6 +509,9 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
 | **reset-default** | Confirm, then reset appearance draft to defaults |
+| **storage** | **Internal** (default) or **external folder** (File System Access API); see **Storage** above |
+| **storage-pick-dir** | (External mode) Re-pick the parent folder for the bundle |
+| **storage-reload** | (External mode) Load bundle (`settings.json` + images) into draft preview |
 | **export** | Download zip (`settings.json` v2 + `background-image.*`; optional `picker-background-image.*` when set) |
 | **import** | Load zip into draft (commit with **`> save setting`**) |
 | **`> save setting`** / **`> cancel setting`** | Commit or discard draft |
@@ -465,7 +533,7 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 
 Hex colors support live preview while typing in edit mode.
 
-**Implementation:** **`lib/features/setting/`** (`settings.ts`, `appearance.ts`, `apply-appearance.ts`, `setting-picker-*.tsx`, `settings-export.ts`), picker slot **`setting`** in **`lib/features/side-picker/`**, UI wiring in **`bmxt-shell.tsx`**.
+**Implementation:** **`lib/features/setting/`** (`settings.ts`, `appearance.ts`, `apply-appearance.ts`, `settings-export.ts`, `settings-external-storage.ts`, `settings-bundle-layout.ts`, `settings-storage-config.ts`, `setting-picker-*.tsx`), picker slot **`setting`** in **`lib/features/side-picker/`**, UI wiring in **`bmxt-shell.tsx`** and **`useSettingPickerShell.ts`**.
 
 <a id="session"></a>
 
@@ -473,7 +541,7 @@ Hex colors support live preview while typing in edit mode.
 
 BMXt supports **tmux-style terminal sessions** inside one BMXt window: several independent terminal contexts exist, but **only one is visible** at a time. Background sessions keep their own **log lines**, **open picker columns**, **nav armed** state, **detail bars**, and related per-session UI. **Command history** (`bmxt_cmd_history`) is **shared** across all terminal sessions so you can recall `session -switch <name>` lines with ↑/↓.
 
-Persistence is **`bmxt_terminal_sessions_v1`** (v5: `logsById`, `order`, `activeId`, `namesById`) in **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**. The Service Worker **`run`** for **`session -list`**, **`session -switch`**, and **`session -setting-name`** prints guidance only; switching and rename UX are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
+Persistence while the BMXt window is open is **in the UI page** (React): **`useTerminalSessions`** holds **`TerminalSessionsStateV1`**; see **[Terminal session state (UI source of truth)](#terminal-session-state)**. The Service Worker **`run`** for **`session -list`**, **`session -switch`**, and **`session -setting-name`** prints guidance only; switching and rename UX are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**. Commands such as **`session -new`**, **`session -next`**, and **`session -prev`** go through **`RUN_CMD`**; the SW returns **`SessionPatch`** entries and the UI applies them locally.
 
 | Input | Effect |
 |-------|--------|
@@ -493,7 +561,7 @@ Persistence is **`bmxt_terminal_sessions_v1`** (v5: `logsById`, `order`, `active
 - When **two or more** terminal sessions exist, a **session bar** at the top of the BMXt window lists them (`index` + display name). Click a tab to switch.
 - **Ctrl+←** / **Ctrl+→** (BMXt window focused, **2+** sessions) cycles the active session without closing background sessions.
 
-**Performance (switch / create):** Only the **active** session and **previously visited** sessions mount a full **`BmxtShell`**; never-visited background sessions use a lightweight placeholder until first visit. **`activeId`** updates optimistically on switch; **`chrome.storage.onChanged`** applies the incoming snapshot without an extra read. Unchanged log arrays are reused so inactive panes skip redundant re-renders (**`lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.ts`**). Long-running picker work in one session does not block prompt input in another (separate job runners per session id — see **[Job execution](#job-execution)**).
+**Performance (switch / create):** Only the **active** session and **previously visited** sessions mount a full **`BmxtShell`**; never-visited background sessions use a lightweight placeholder until first visit. **`activeId`** updates optimistically on switch; unchanged log arrays are reused so inactive panes skip redundant re-renders (**`lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.ts`**). Long-running picker work in one session does not block prompt input in another (separate job runners per session id — see **[Job execution](#job-execution)**).
 
 **Implementation:** **`lib/features/session/`** (`session-input.ts`, `session-summary.ts`, `session-list-candidate-panel.tsx`, `session-bar.tsx`), UI in **`bmxt-shell.tsx`** / **`bmxt-terminal.tsx`**, effects **`session_new`** / **`session_next`** / **`session_prev`** in **`lib/features/dispatch/handlers/effects/`**.
 
@@ -505,7 +573,7 @@ When a list picker is opened from the prompt, **`lib/features/bmxt-window/bmxt-s
 
 **Terminal (log + prompt)** | **tabs** (if open) | **search** (if open) | **dom** (if open) | **setting** (if open)
 
-Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `search` / `dom` / `setting` slots). While the BMXt process is alive, **open columns, `paneFocus`, tab-picker highlight/marks, and tree fold state** are persisted to **`chrome.storage.local`** and restored after closing and reopening the BMXt window (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**). **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom → setting).
+Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `search` / `dom` / `setting` slots). While the BMXt window is open, **open columns, `paneFocus`, tab-picker highlight/marks, and tree fold state** live in **UI memory** (not the Service Worker). Closing and reopening the BMXt window starts fresh (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**). **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom → setting).
 
 **Four layers (side picker)**
 
@@ -647,7 +715,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 - Rows are hierarchical: **`[window]`** → **`[tab group]`** (real Chrome tab groups only) → **tab rows**. **Tab rows** show a **favicon** when Chrome can resolve one for the page URL.
 - Tabs **not** in a Chrome group are listed **directly under their window** (there is no “(no group)” header row).
 - **Initially every window and group is expanded.** **←** on a highlighted **window** or **tab group** row collapses it (**→** expands). On a **tab** row, **←** moves focus to the detail bar; **→** opens the action menu.
-- Collapse/expand state is kept for the **BMXt process** lifetime (survives closing the BMXt window; cleared only on **`exit`** of the last pane — see [BMXt process lifecycle](#bmxt-process-lifecycle)).
+- Collapse/expand state is kept **while the BMXt window is open** (UI memory; discarded when the window closes — see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
 **Navigation and bulk**
 
@@ -658,7 +726,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
   - Window rows: `close` (`c`), `newtab` (`nt`), `edit`
   - Group rows: `move` (`m`), `close` (`c`), `newwindow` (`nw`), `edit`
 - In `:` command mode, pressing `Tab` or `Enter` with an empty command shows a dim placeholder of available commands for the current target (tab/window/group).
-- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter` to add `#` tabs (choose **new group** to open the name/color panel; **`Enter`** confirms creation; **`Esc`** returns to the tab list; **`Tab`** switches between name and color). **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
+- **[MOVE]** — navigate to destination with `↑`/`↓`, then `Enter` to move. When the destination is a **tab group row** or a **tab inside a group**, marked tabs join that group; when the destination is **ungrouped**, marked tabs leave their current group. **[CLOSE]** — `Enter` to close. **[GROUP]** — select target group with `↑`/`↓`, then `Enter` to add `#` tabs without changing tab order (choose **new group** to open the name/color panel; **`Enter`** confirms creation; **`Esc`** returns to the tab list; **`Tab`** switches between name and color). **[NEW WINDOW]** / **[NEW TAB]** — `Enter` to execute. **[EDIT]** — see [Tab picker `:edit`](#tabs-tab-picker-edit) below.
 - **Interactive `group new`** (prompt command, no tab ids): opens the tab picker in **group-new** variant — `Tab` marks tabs, **`Enter`** opens the same name/color panel as **[GROUP]** → new group; **`Enter`** again creates the group.
 - Use `/` for incremental search (`@` prefix for URL match). While filtering, **keyboard focus stays on the filter field**; the list highlights matches without taking typing focus. `Enter` focuses the highlighted tab while keeping the picker column open. **`Esc`** unwinds submodes in order: clear `#` → cancel `:` command mode → end `/` search → exit bulk submode → **return to the BMXt prompt** (column stays open). Close the column with **`tabs -exit -list`**.
 
@@ -721,9 +789,9 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`search -list`**, **`setting -list` / `setting -exit -list`**, **`session -list` / `session -switch` / `session -setting-name`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). For **`nav -enter`** and **`translate -on` / `-setting`**, arming / pair save and overlay or typing assist are UI-side; for **`setting -list`**, open/close and all draft edits are UI-side; for **`session -list` / `-switch` / `-setting-name`**, inline pickers and rename are UI-side; the Service Worker **`run`** for those commands only returns usage hints. Other subcommands and the rest of the command set go through **`runDispatch`** in the background. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; terminal sessions are under **[`session`](#session)**; UI settings are under **[`setting`](#setting)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`search -list`**, **`setting -list` / `setting -exit -list`**, **`session -list` / `session -switch` / `session -setting-name`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). Those paths update **UI session state** directly (logs, pickers, nav). Other commands send **`RUN_CMD`**; the Service Worker returns **`SessionPatch[]`** and the UI applies them (see **[Terminal session state](#terminal-session-state)**). The Service Worker **`run`** for UI-handled commands only returns usage hints when invoked. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; terminal sessions are under **[`session`](#session)**; UI settings are under **[`setting`](#setting)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
 
-**`exit`:** returns an **`exit_pane`** effect; the Service Worker closes the **active terminal session**. When it is the **last** session, it closes the BMXt window and clears **all process-scoped storage** (see [BMXt process lifecycle](#bmxt-process-lifecycle)).
+**`exit`:** returns an **`exit_pane`** effect; the Service Worker returns **`exitSession`** / **`closeWindow`** patches. The UI removes the active session or, when it is the **last** session, closes the BMXt window and clears legacy process storage (see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
 **Main directories:**
 
@@ -735,13 +803,13 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
-- **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, `bmxt_ui_settings_v1`); see **[`setting`](#setting)**
+- **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, external bundle, `bmxt_ui_settings_v1`, `bmxt_ui_settings_storage_v1`); see **[`setting`](#setting)**
 - **`lib/features/session/`** — terminal sessions (`session -list` / `-switch` inline pickers, session bar); see **[`session`](#session)**
 - **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional in-memory audit log; see **[Job execution](#job-execution)**
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
-- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` (`exit` → `exit_pane`; closes the pane or the tracked window when it is the last pane, then clears all process-scoped storage)
+- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
 
 <a id="job-execution"></a>
 
@@ -898,7 +966,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
-- `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`)
+- `lib/features/setting/` — UI settings picker (`setting -list`, `appearance.ts`, `settings-export.ts`, `settings-external-storage.ts`, `settings-bundle-layout.ts`)
 - `lib/features/session/` — Terminal sessions (`session-input.ts`, inline pickers, `session-bar.tsx`)
 - `scripts/build-background-services.mjs` — Bundles Service Worker helpers into **`public/background-services.js`**
 
@@ -999,6 +1067,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)
 - [コマンド一覧](#command-list-ja)
   - [BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）](#bmxt-process-lifecycle-ja)
+  - [ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)
   - [`aboutbmxt`](#aboutbmxt-ja)
   - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
   - [`translate`（`translate -on` / `translate -off` / `translate -setting`）](#translate-ja)
@@ -1112,7 +1181,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 - **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（WXT の unlisted page **`entrypoints/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`entrypoints/bmxt/main.tsx`** はそれをマウントする薄いエントリです。
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
-- **状態**: コマンド出力ログとコマンド履歴は `chrome.storage.local` に保持。キーと上限は **`lib/features/extension-storage/keys.ts`** で定義（**ログ 500 行** `bmxt_log`、**履歴 300 件** `bmxt_cmd_history`）。
+- **状態**: **ターミナルセッションのログ**（`logsById`、`order`、`activeId`、`namesById`）、**開いているピッカー列**、**ペインフォーカス**は **BMXt UI ページ**（React）が BMXt ウィンドウ存続中の正本 — **[ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)** 参照。**プロンプトのコマンド履歴**は **`chrome.storage.local`**（`bmxt_cmd_history`、上限 **300** 件）。**UI 設定**・**page-active** 等は別の **`chrome.storage.local`** キー（**`lib/features/extension-storage/keys.ts`**）。
 - **バックグラウンド**: Service Worker（`entrypoints/background/index.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
 - **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。
 
@@ -1123,7 +1192,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
 
-**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** コマンド出力・入力履歴は主に UI 用の**メモリ**で扱い、永続化は **`chrome.storage.local`** の上限付きフィールドのみ（キーは **`lib/features/extension-storage/keys.ts`**）。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、パッケージ manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
+**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** **ターミナルセッションの出力とピッカー UI** は BMXt ウィンドウが開いている間 **拡張 UI ページのメモリ**に保持（Service Worker には載せない）。**コマンド履歴**と **UI 設定**は上限付き **`chrome.storage.local`**（**`lib/features/extension-storage/keys.ts`**）。**`bmxt_terminal_sessions_v1`** 等の旧プロセスキーは **終了時の掃除**で削除されうるが、**実行中のログ正本ではない**。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
 **`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self'`**、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`wxt.config.ts`** を参照してください。
 
@@ -1216,7 +1285,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --ja-en` | ペア **ja-en** を保存（既定）。往復プレビュー・nav Alt 確定は英語 |
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
-| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・ピッカー個別外観・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
+| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・**保存先**（拡張機能内／外部）・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
 | `session -new [name]` | 新しい **ターミナルセッション** を作成して切り替え。表示名は任意 |
@@ -1228,38 +1297,69 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **アクティブなターミナルセッションの画面ログだけ**を消します。**BMXt ウィンドウを閉じる**（× ボタン）または **最後の 1 セッション**で **`exit`** すると、**プロセススコープの storage** を消去します（ターミナルセッション、ピッカー UI、タブツリー開閉）。**コマンド履歴は保持**され、**`reset-bmxt`** ショートカットを使ったときだけ消えます。**`exit`**（複数セッション）はアクティブなセッションだけを除去し、別セッションへ切り替えます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**。
+**補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **アクティブなターミナルセッションの画面ログだけ**を消します。**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**UI 上のセッション／ピッカー状態を破棄**し、Service Worker が **旧プロセス用 storage キーを掃除**します。**コマンド履歴は保持**され、**`reset-bmxt`** ショートカットを使ったときだけ消えます。**`exit`**（複数セッション）はアクティブなセッションだけを除去し、別セッションへ切り替えます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** と **[ターミナルセッション状態](#terminal-session-state-ja)**。
 
 <a id="bmxt-process-lifecycle-ja"></a>
 
 ### BMXt プロセスのライフサイクル（`clear` / ウィンドウ閉じ / `exit`）
 
-**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**プロセススコープ**のセッション状態（ターミナルセッション、ピッカー UI、タブツリー開閉）が **`chrome.storage.local`** から消えます。**プロンプトのコマンド履歴**（`bmxt_cmd_history`）は残り、次回起動後も ↑/↓ で辿れます。履歴も消すには **`reset-bmxt`** ショートカットを使います。BMXt を再度開くと **空のターミナル** で始まり、履歴だけ復元されます。
+**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**BMXt UI ページ上のメモリ状態**（セッションログ、ピッカー列、タブツリー開閉）が終了します。Service Worker は必要に応じ **旧プロセス用キー**を **`chrome.storage.local`** から削除します。**プロンプトのコマンド履歴**（`bmxt_cmd_history`）は残り、次回起動後も ↑/↓ で辿れます。履歴も消すには **`reset-bmxt`** ショートカットを使います。BMXt を再度開くと **空のターミナル** で始まり、履歴だけ復元されます。
 
-| 操作 | セッションログ | 開いているピッカー列・`paneFocus` | タブツリー開閉 | コマンド履歴 |
-|------|----------------|-----------------------------------|----------------|--------------|
+| 操作 | セッションログ（UI） | 開いているピッカー列・`paneFocus` | タブツリー開閉 | コマンド履歴 |
+|------|----------------------|-----------------------------------|----------------|--------------|
 | **`clear`** | 消去（アクティブセッション） | 保持 | 保持 | 保持 |
-| **BMXt ウィンドウを閉じる** | **すべて消去** | **消去** | **消去** | **保持** |
+| **BMXt ウィンドウを閉じる** | **すべて消去**（UI 破棄） | **消去** | **消去** | **保持** |
 | **BMXt ウィンドウを再度開く** | 空の新規 | 消去 | 消去 | **復元** |
 | **`exit`**（複数セッション） | アクティブセッション除去・別セッションへ切替 | 当該セッションのピッカー消去 | 保持 | 保持 |
 | **`exit`**（最後の 1 セッション） | **すべて消去** | **消去** | **消去** | **保持** |
-| **`reset-bmxt` ショートカット** | 消去 | 消去 | 消去 | **消去** |
+| **`reset-bmxt` ショートカット** | 消去（UI に通知） | 消去 | 消去 | **消去** |
 
-**プロセススコープの storage キー**（**最後の 1 ペイン**の **`exit`** または BMXt ウィンドウ × 閉じで削除）:
+**旧プロセススコープ storage キー**（**最後の 1 ペイン**の **`exit`** または BMXt ウィンドウ × — **掃除用**。実行中のログ正本**ではない**）:
 
-| キー | 内容 |
-|------|------|
-| `bmxt_terminal_sessions_v1` | ターミナルセッション（v5）: セッションごとのログ、`order`、`activeId`、表示名 `namesById` |
-| `bmxt_process_ui_v1` | セッションごとの開いているピッカー（`tabs` / `search` / `dom` / `setting`）と `paneFocus` |
-| `bmxt_tab_picker_fold_v1` | タブピッカーのウィンドウ／タブグループ行の開閉 |
+| キー | 旧来の役割（掃除） |
+|------|---------------------|
+| `bmxt_terminal_sessions_v1` | 旧オンディスクセッションブロブ（v5） |
+| `bmxt_process_ui_v1` | 旧ピッカー／`paneFocus` スナップショット |
+| `bmxt_tab_picker_fold_v1` | 旧タブピッカーツリー開閉 |
 
-**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は **setting → reset-search-cache** で削除可能だが、**0.6.9** 以降は新規書き込みしない。
+**プロセス終了時も消さないもの**（ユーザー／ブラウザメタデータ）: コマンド履歴（`bmxt_cmd_history` — **`reset-bmxt`** 時のみ消去）、ウィンドウ表示名、UI 設定（`bmxt_ui_settings_v1` — 言語・外観；save 時に常に更新）、UI 設定**保存先モード**（`bmxt_ui_settings_storage_v1` — 拡張機能内／外部）、翻訳アシスト設定、タブ／search ピッカー設定（`page-active`）、最後の通常ウィンドウ id、welcome／バージョン追跡キー。**0.6.9** より前の旧 SQLite キャッシュキー（`bmxt_search_cache_db_v1`、`bmxt_job_db_v1`）は `chrome.storage.local` に残ることがあるが、新規書き込みはしない（拡張機能アンインストールで消去）。
 
-**実装:** **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`** の `removeAllTerminalSessionsFromStorage`、UI 永続化は **`lib/features/bmxt-window/process-ui-state-storage.ts`** と **`lib/features/tabs/tab-picker-fold-state.ts`**。
+**実装:** UI セッション — **`use-terminal-sessions.ts`**、**`session-state-ops.ts`**、**`session-patches.ts`**；storage 掃除 — **`state-storage.ts`** の `removeAllTerminalSessionsFromStorage`；ピッカー／ペイン — **`use-process-ui-persistence.ts`**；タブツリー開閉 — **`tab-picker-fold-state.ts`**（ウィンドウ存続中はメモリ）。
 
 **補足:** **`tabs -exit -list`**（および他の **`* -exit -list`**）は当該ピッカー列を閉じるだけで、BMXt プロセスを終了したりタブツリー開閉状態を消したりしません。
 
 **ターミナルセッションとピッカー列:** **2 つ以上**のターミナルセッションがあるとき、BMXt ウィンドウにフォーカスがあれば **Ctrl+← / Ctrl+→** でアクティブセッションを循環します。アクティブセッション内では **Ctrl+← / Ctrl+→** で **ターミナル → tabs → search → dom → setting**（開いている列のみ）を移動します。詳細は **[ピッカー UI（横並び列）](#picker-ui-ja)** と **[`session`](#session-ja)**。
+
+<a id="terminal-session-state-ja"></a>
+
+### ターミナルセッション状態（UI が正本）
+
+BMXt ウィンドウが開いている間、**拡張 UI ページがターミナルセッション状態の正本**です。Service Worker は Chrome API 副作用を実行し **patch** を返すだけで、**アイドル停止後もログを保持しません**。
+
+| データ | 正本 | 存続 |
+|--------|------|------|
+| ログ、`order`、`activeId`、`namesById` | **BMXt UI**（`useTerminalSessions`） | ウィンドウ存続中 |
+| 開いているピッカー、`paneFocus`、詳細バー、nav armed | **BMXt UI**（`useProcessUiPersistence`） | ウィンドウ存続中 |
+| タブピッカー開閉／ハイライト（セッション内） | **BMXt UI**（メモリヘルパ） | ウィンドウ存続中 |
+| プロンプトコマンド履歴 | **`chrome.storage.local`**（`bmxt_cmd_history`） | ウィンドウ close 後も保持 |
+| UI 設定、page-active | **`chrome.storage.local`** | ウィンドウ close 後も保持 |
+
+**理由:** Manifest V3 では Service Worker はアイドルで停止しうる。**長寿命の UI ページ**にログを置くことで、SW コールドスタート後も状態が消えません。将来の **マルチウィンドウ**化でも境界が明確になります。
+
+**`RUN_CMD` フロー**（フォールバック — 例: `close`、`help`、`session -new`）:
+
+1. UI が **`RUN_CMD`**（`line`、`sessionId`、`sessionOrderLength`）を送信。
+2. SW が **`runDispatch`** / **`applyChromeEffects`** を実行。
+3. SW が **`{ ok: true, patches: SessionPatch[], closeWindow? }`** を返す（`SESSION_SNAPSHOT` 推送なし）。
+4. UI が **`applyRunCmdPatches`** でローカル適用（`appendLog`、`createSession`、`exitSession` 等）。
+
+**UI ローカルコマンド**（**`RUN_CMD` より前**の **`bmxt-shell.tsx`**）— 例: **`tabs -list`**、**`dom -list`**、**`session -switch`** — は React state を直接更新。
+
+**メッセージ:** **`SESSION_INIT`** / **`SESSION_SNAPSHOT`** / **`SESSION_UI_*`** は**廃止**。SW → UI のセッション通知は **`SESSION_CLEAR`**（**`reset-bmxt`** ショートカット）のみ。
+
+**モジュール:** **`session-state-ops.ts`**、**`session-patches.ts`**、**`use-terminal-sessions.ts`**、**`session-runtime-client.ts`**、**`background-services.ts`**。
+
+**SW アイドル:** UI 状態は変わらない。次の **`RUN_CMD`** も **既存の session id** に patch を適用する。
 
 <a id="aboutbmxt-ja"></a>
 
@@ -1380,7 +1480,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 ### `setting`（`setting -list` / `setting -exit -list`）
 
-UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列で編集します。確定値は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
+UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列で編集します。**既定の永続化**は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）。**任意の外部保存**は File System Access API（ユーザーが選んだフォルダ）；モードは **`bmxt_ui_settings_storage_v1`** に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
 
 | 入力 | 動作 |
 |------|------|
@@ -1392,8 +1492,41 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 
 - ピッカー内の変更は **draft** のみ更新。ライブ UI は **`> save setting`** まで **最後に保存した**設定のまま。
 - ピッカー下部の **Preview** が draft を反映（**`edit-picker: on`** 時は **Terminal** / **Picker** を分割表示）。
-- **`> save setting`** — draft を **`bmxt_ui_settings_v1`** に書き込み即時反映。
+- **`> save setting`** — draft を **`bmxt_ui_settings_v1`** に書き込み、外部モード時は**設定バンドル**にも書き込み、即時反映。
 - **`> cancel setting`** — draft を破棄し storage の値に戻す。
+
+**保存先（拡張機能内／外部）**
+
+| モード | 動作 |
+|--------|------|
+| **拡張機能内**（既定） | 設定は **`bmxt_ui_settings_v1`** のみ。File System Access API は使わない。 |
+| **外部フォルダ** | ユーザーが親フォルダを一度選択。BMXt はその下の**設定バンドル**を読み書き（下記）。**`bmxt_ui_settings_v1`** も save のたびに更新（キャッシュ＋バックグラウンドの locale）。起動時は外部バンドルを優先読み込み；読めないときは内部にフォールバック。 |
+
+**ピッカー行（storage）:** **storage** — 拡張機能内／外部を選択；外部有効時は **storage-pick-dir**（フォルダ選び直し）、**storage-reload**（バンドルを draft プレビューに読み込み）。保存先の切り替えは**即時確定**（draft 待ちではない）。**manifest 権限の追加なし** — フォルダアクセスはブラウザのピッカーでランタイム許可。
+
+**バックアップバンドル形式（zip export/import と外部ディレクトリ共通）**
+
+zip **export**、zip **import**、**外部 save** は**同一のオンディスクレイアウト**（**`settings-export.ts`**、**`settings-bundle-layout.ts`**）:
+
+```
+bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.json があるフォルダを選んだ場合はそのフォルダ自体）
+  settings.json            ← version フィールド（現行 2）；locale・外観；画像は相対ファイル名
+  background-image.png     ← 全体 bg-image 設定時（jpg/webp も可）
+  picker-background-image.*  ← ピッカー個別 bg-image 設定時
+```
+
+- **export** — 同じファイル構成の zip をダウンロード（ポータブルバックアップ）。
+- **import** — zip をピッカー **draft** に読み込み（**`> save setting`** で確定）。
+- **外部 save** — バンドルディレクトリに同じファイルを書き込み；画像削除・差し替え時は古い `background-image.*` / `picker-background-image.*` を削除。
+
+**後方互換**
+
+リリースで UI 設定の形やオンディスク形式を変えるとき:
+
+1. **`settings.json`:** **`version`** を上げる場合は **`parseSettingsExportJson`** に旧版分岐を残す（現状 **v1** / **v2**）。新しい JSON フィールドは任意とし、実行時は **`normalizeUiAppearance`** 等で正規化。
+2. **バンドル内の定番ファイル名**（`settings.json`、`background-image`、`picker-background-image`、ディレクトリ名 **`bmxt-ui-settings`**）は安定した契約 — 変更する場合は移行経路と README 更新が必須。
+3. **旧バージョンの拡張機能**が書いたバンドル／zip は、新版で **import** または **storage-reload** により読み込めること。
+4. 実装者向けルール（テスト・ドキュメント）は **`.cursorrules`** の **UI 設定の永続化** 節を参照。
 
 **メイン一覧（ピッカー）**
 
@@ -1404,6 +1537,9 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
 | **reset-default** | 確認後、外観 draft を既定に戻す |
+| **storage** | **拡張機能内**（既定）または**外部フォルダ**（File System Access API）；**保存先** 参照 |
+| **storage-pick-dir** | （外部モード）バンドル用の親フォルダを選び直す |
+| **storage-reload** | （外部モード）バンドル（`settings.json` + 画像）を draft プレビューに読み込む |
 | **export** | zip ダウンロード（`settings.json` v2 + `background-image.*`；設定時は `picker-background-image.*` も） |
 | **import** | zip を draft に読み込み（**`> save setting`** で確定） |
 | **`> save setting`** / **`> cancel setting`** | 確定／破棄 |
@@ -1425,7 +1561,7 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 
 色（hex）は編集中にリアルタイムプレビュー。
 
-**実装:** **`lib/features/setting/`**（`settings.ts`、`appearance.ts`、`apply-appearance.ts`、`setting-picker-*.tsx`、`settings-export.ts`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`**。
+**実装:** **`lib/features/setting/`**（`settings.ts`、`appearance.ts`、`apply-appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`setting-picker-*.tsx`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`** と **`useSettingPickerShell.ts`**。
 
 <a id="session-ja"></a>
 
@@ -1433,7 +1569,7 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 
 BMXt は **tmux 風のターミナルセッション**を1つの BMXt ウィンドウ内で扱います。複数の独立したターミナル文脈が存在しますが、**同時に表示されるのは1つだけ**です。非表示のセッションはそれぞれ **ログ行**・**開いているピッカー列**・**nav 起動**・**詳細バー** などの UI 状態を保持します。**コマンド履歴**（`bmxt_cmd_history`）は全ターミナルセッションで **共有** され、`session -switch <name>` のような行を ↑/↓ で呼び出せます。
 
-永続化は **`bmxt_terminal_sessions_v1`**（v5: `logsById`、`order`、`activeId`、`namesById`）。実装は **`lib/features/bmxt-window/terminal-sessions/state-storage.ts`**。Service Worker の **`run`** は **`session -list`** / **`session -switch`** / **`session -setting-name`** について利用案内のみ返し、切り替え・改名は **`RUN_CMD` より前**の **`bmxt-shell.tsx`** UI で処理します。
+BMXt ウィンドウが開いている間の保持は **UI ページ**（React）の **`useTerminalSessions`** — **[ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)** 参照。Service Worker の **`run`** は **`session -list`** / **`session -switch`** / **`session -setting-name`** について利用案内のみ。**`session -new`** / **`-next`** / **`-prev`** は **`RUN_CMD`** → **`SessionPatch`** を UI が適用。
 
 | 入力 | 動作 |
 |------|------|
@@ -1453,7 +1589,7 @@ BMXt は **tmux 風のターミナルセッション**を1つの BMXt ウィン�
 - **2 つ以上**のターミナルセッションがあるとき、BMXt ウィンドウ上部に **セッションバー**（番号 + 表示名）が表示されます。クリックで切り替え。
 - **Ctrl+←** / **Ctrl+→**（BMXt ウィンドウにフォーカス、**2+** セッション）でアクティブセッションを循環（バックグラウンドのセッションは維持）。
 
-**パフォーマンス（切り替え／作成）:** **アクティブ**なセッションと **一度でも表示した** セッションだけがフル **`BmxtShell`** をマウントする。未訪問のバックグラウンドセッションは軽量プレースホルダーのみ。切り替え時は **`activeId`** を楽観的に更新し、**`chrome.storage.onChanged`** は追加 **`get`** なしでスナップショットを反映する。変更のないログ配列は再利用し、非アクティブペインの再描画を抑える（**`lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.ts`**）。1 セッションの重いピッカー処理が別セッションのプロンプト入力をブロックしない（セッション id ごとの job runner — **[ジョブ実行](#job-execution-ja)** 参照）。
+**パフォーマンス（切り替え／作成）:** **アクティブ**なセッションと **一度でも表示した** セッションだけがフル **`BmxtShell`** をマウントする。未訪問のバックグラウンドセッションは軽量プレースホルダーのみ。切り替え時は **`activeId`** を楽観的に更新し、変更のないログ配列は再利用して非アクティブペインの再描画を抑える（**`sessions-ui-equality.ts`**）。1 セッションの重いピッカー処理が別セッションのプロンプト入力をブロックしない（セッション id ごとの job runner — **[ジョブ実行](#job-execution-ja)** 参照）。
 
 **実装:** **`lib/features/session/`**（`session-input.ts`、`session-summary.ts`、`session-list-candidate-panel.tsx`、`session-bar.tsx`）、UI は **`bmxt-shell.tsx`** / **`bmxt-terminal.tsx`**、Effect は **`session_new`** / **`session_next`** / **`session_prev`**（**`lib/features/dispatch/handlers/effects/`**）。
 
@@ -1465,7 +1601,7 @@ BMXt は **tmux 風のターミナルセッション**を1つの BMXt ウィン�
 
 **ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **search**（表示時） | **dom**（表示時） | **setting**（表示時）
 
-同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `search` / `dom` / `setting` スロット）。BMXt プロセスが存続する間、**開いている列・`paneFocus`・タブピッカーのハイライト／マーク・ツリー開閉**は **`chrome.storage.local`** に保存され、BMXt ウィンドウを閉じて開き直しても復元されます（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。列の描画は **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** の **`SessionPickerColumns`**（**`PICKER_SLOT_ORDER`**: tabs → search → dom → setting）。
+同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `search` / `dom` / `setting` スロット）。BMXt **ウィンドウが開いている間**、**開いている列・`paneFocus`・タブピッカーのハイライト／マーク・ツリー開閉**は **UI メモリ**に保持（Service Worker ではない）。ウィンドウを閉じて開き直すと新規状態（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。列の描画は **`SessionPickerColumns`**（**`PICKER_SLOT_ORDER`**: tabs → search → dom → setting）。
 
 **4 層（サイドピッカー）**
 
@@ -1657,7 +1793,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - 行は階層表示: **`[ウィンドウ]`** → **`[タブグループ]`**（Chrome の実グループのみ）→ **タブ行**。**タブ行**にはページ URL から解決できる **ファビコン** を表示します。
 - Chrome グループに属さないタブは **ウィンドウ行の直下**に並びます（「(グループなし)」見出し行はありません）。
 - **初期状態はすべて展開**。**←** でハイライト中の **ウィンドウ** または **タブグループ** 行を閉じ、**→** で開きます。**タブ行**では **←** で詳細バーへ、**→** でアクションメニューを開きます。
-- 開閉状態は **BMXt プロセス**存続中保持されます（BMXt ウィンドウを閉じても保持。**最後の 1 ペイン**の **`exit`** で消去 — [BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)）。
+- 開閉状態は **BMXt ウィンドウが開いている間** UI メモリに保持（ウィンドウを閉じると破棄 — [BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)）。
 
 **移動とバルク操作**
 
@@ -1668,7 +1804,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
   - ウィンドウ行: `close`（`c`）、`newtab`（`nt`）、`edit`
   - グループ行: `move`（`m`）、`close`（`c`）、`newwindow`（`nw`）、`edit`
 - `:` コマンドモードでは、コマンド未入力のまま `Tab` または `Enter` を押すと、現在の対象（タブ／ウィンドウ／グループ）に応じた利用可能コマンドを薄いプレースホルダーで表示します。
-- **[MOVE]** は `↑`/`↓` で移動先タブを選び、`Enter` で `#` タブを一括移動します。
+- **[MOVE]** は `↑`/`↓` で移動先を選び、`Enter` で `#` タブを一括移動します。移動先が **タブグループ行** または **グループ内タブ** のときはそのグループに参加し、**未グループ** のときは現在のグループから外れます（**[GROUP]** を使わなくても別グループへ移動できます）。
 - **[CLOSE]** は `Enter` で `#` タブを一括で閉じます。**[GROUP]** は `↑`/`↓` でグループ選択後、`Enter` で `#` タブを追加します（**新しいグループ** を選ぶと名前・色パネルへ。**`Enter`** で作成確定、**`Esc`** でタブ一覧へ、**`Tab`** で名前↔色）。**[NEW WINDOW]** は `Enter` で `#` タブを新規ウィンドウへ一括移動します。**[NEW TAB]** は `Enter` で URL 入力パネルへ進みます。
 - **対話的 `group new`**（プロンプトで tabId なし）: **group-new** variant のタブピッカー列を開く — `Tab` でタブ選択、**`Enter`** で **[GROUP]** → 新しいグループ と同じ名前・色パネルへ、再度 **`Enter`** で作成。
 - `/` でインクリメンタル検索（`@` 接頭で URL 部分一致）。絞り込み中は **フィルタ欄にキーボードフォーカスが残り**、一覧側に入力フォーカスが移らない。**`Esc`** の解除順は `#` 全解除 → `:` コマンドモード終了 → `/` 検索終了 → バルクサブモード終了 → **BMXt プロンプトへ**（列は開いたまま）。列を閉じるには **`tabs -exit -list`**。
@@ -1703,9 +1839,9 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`lib/features/bmxt-window/bmxt-shell.tsx`**）で処理します。例: **`tabs -list` / `tabs -list -u`**、**`* -exit -list`**（ピッカー列を閉じる）、**`dom -list`**、**`search -list`**、**`setting -list` / `setting -exit -list`**、**`session -list` / `session -switch` / `session -setting-name`**、**`translate -on` / `translate -off` / `translate -setting`**、**`nav -enter` / `nav -exit`**、**対話的な `group new`**（タブ ID なし）。**`nav -enter`** と **`translate -on` / `-setting`** の起動・ペア保存・オーバーレイ／typing アシスト、**`setting -list`** の開閉と draft 編集、**`session -list` / `-switch` / `-setting-name`** のインライン候補・改名は UI 側；Service Worker の **`run`** は利用案内行のみ。それ以外はバックグラウンドで **`runDispatch`** します。ピッカー列は **[ピッカー UI（横並び列）](#picker-ui-ja)**、ターミナルセッションは **[`session`](#session-ja)**、UI 設定は **[`setting`](#setting-ja)**、nav は **[Nav モード](#nav-mode-ja)**、翻訳は **[`translate`](#translate-ja)** を参照。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`bmxt-shell.tsx`**）で処理します。例: **`tabs -list`**、**`* -exit -list`**、**`dom -list`**、**`search -list`**、**`setting -list`**、**`session -list` / `-switch` / `-setting-name`**、**`translate -*`**、**`nav -enter` / `-exit`**、**対話的 `group new`**。これらは **UI の React state** を直接更新。それ以外は **`RUN_CMD`** → SW が **`SessionPatch[]`** を返し UI が適用（**[ターミナルセッション状態](#terminal-session-state-ja)**）。UI 処理コマンドを SW に送った場合の **`run`** は利用案内行のみ。
 
-**`exit`:** **`exit_pane`** Effect を返す。Service Worker は **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**のときは BMXt ウィンドウを閉じ、**プロセススコープの storage をすべて消去**する（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
+**`exit`:** **`exit_pane`** Effect → **`exitSession`** / **`closeWindow`** patch。最後の 1 セッションでは BMXt ウィンドウ close + 旧 storage 掃除（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`pnpm run codegen`**）
 - **`lib/features/bmxt-core/`** — `dispatch.ts`、`registry/`、`cmd/*.ts`（**`CMD` + `run`**；**`table.gen.ts`** は生成）、`tabs-picker/`
@@ -1714,13 +1850,13 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
-- **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、`bmxt_ui_settings_v1`）；**[`setting`](#setting-ja)** 参照
+- **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、外部バンドル、`bmxt_ui_settings_v1`、`bmxt_ui_settings_storage_v1`）；**[`setting`](#setting-ja)** 参照
 - **`lib/features/session/`** — ターミナルセッション（`session -list` / `-switch` インライン候補、セッションバー）；**[`session`](#session-ja)** 参照
 - **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
 - **`entrypoints/bmxt-nav-overlay.content/`** — http(s) 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — 補完・continuation の生成物
-- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` を包む → `runDispatch` → lines / `applyChromeEffects`（`exit` → `exit_pane`；最後の 1 ペインなら追跡ウィンドウを閉じ、プロセススコープの storage をすべて消去）
+- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyChromeEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
 
 manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと **`pnpm run verify:manifest`** / **`pnpm run check:generated`** を実行し、必要なら **`pnpm run build`** してください。
 
@@ -1870,7 +2006,7 @@ pnpm run dev
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
-- `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`）
+- `lib/features/setting/` — 設定ピッカー（`setting -list`、`appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`）
 - `lib/features/session/` — ターミナルセッション（`session-input.ts`、インライン候補、`session-bar.tsx`）
 - `scripts/build-background-services.mjs` — Service Worker ヘルパーを **`public/background-services.js`** にバンドル
 

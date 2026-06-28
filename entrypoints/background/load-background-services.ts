@@ -5,14 +5,16 @@
  * Service workers cannot use dynamic import(); use importScripts() + IIFE global instead.
  */
 
+import type { RunCmdResult } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
+
 export type BackgroundServicesModule = {
   registerBackgroundServices(): void
-  handleSessionRuntimeMessageAsync(message: Record<string, unknown>): Promise<unknown>
   runCommandMessage(
     line: string,
     sessionId?: string,
+    sessionOrderLength?: number,
     sender?: chrome.runtime.MessageSender
-  ): Promise<void>
+  ): Promise<RunCmdResult>
   runNavControlMessage(message: Record<string, unknown>): Promise<unknown>
   removeAllTerminalSessionsFromStorageAsync(): Promise<void>
   resetBmxtFromShortcutAsync(openOrFocus: () => Promise<void>): Promise<void>

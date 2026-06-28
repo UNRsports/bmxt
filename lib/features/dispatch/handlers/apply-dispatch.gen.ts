@@ -17,6 +17,7 @@ import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
 import { applySearchBookmarkEffect } from "./effects/search-bookmark"
 import { applySearchHistoryEffect } from "./effects/search-history"
 import { applySearchPageEffect } from "./effects/search-page"
+import { applySearchSnapshotEffect } from "./effects/search-snapshot"
 import { applySessionNewEffect } from "./effects/session-new"
 import { applySessionNextEffect } from "./effects/session-next"
 import { applySessionPrevEffect } from "./effects/session-prev"
@@ -52,6 +53,8 @@ export async function applyOne(
       return applySearchHistoryEffect(ctx, e)
     case "search_page":
       return applySearchPageEffect(ctx, e)
+    case "search_snapshot":
+      return applySearchSnapshotEffect(ctx, e)
     case "session_new":
       return applySessionNewEffect(ctx, e)
     case "session_next":

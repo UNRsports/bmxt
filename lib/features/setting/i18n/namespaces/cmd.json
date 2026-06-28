@@ -11,6 +11,10 @@
     "ja": "error: usage: dom -exit -list",
     "en": "error: usage: dom -exit -list"
   },
+  "cmd.dom.error.listUsage": {
+    "ja": "error: usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] — `--html` または `--react` が必要です",
+    "en": "error: usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] — requires `--html` or `--react`"
+  },
   "cmd.dom.error.internal": {
     "ja": "error: 不明な dom オプション (internal): {option}",
     "en": "error: unknown dom option (internal): {option}"
@@ -28,20 +32,36 @@
     "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
   },
   "cmd.dom.usage.line1": {
-    "ja": "usage: dom -list [--html|--react] [<pattern>]   — DOM ピッカーを開く（既定 flavor: --html）",
-    "en": "usage: dom -list [--html|--react] [<pattern>]   — open DOM picker (default flavor: --html)"
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — DOM ピッカーを開く（既定: --normal --html）",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — open DOM picker (default: --normal --html)"
   },
   "cmd.dom.usage.line2": {
     "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
     "en": "       dom -exit -list — close DOM list picker in this BMXt pane"
   },
+  "cmd.dom.usage.line3": {
+    "ja": "       dom -setting -page-active --auto | --manual — ハイライト時のページジャンププレビュー",
+    "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
+  },
   "cmd.dom.usage.listDetail": {
-    "ja": "-list は picker（search -list と同じクロム）。flavor: --html (default) | --react。",
-    "en": "-list opens a picker (same chrome as search -list); flavor pull-down: --html (default) | --react."
+    "ja": "-list は picker。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
+    "en": "-list opens a picker. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
   },
   "cmd.dom.usage.patternDetail": {
     "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
     "en": "<pattern> is a case-insensitive substring filter on the output lines (no regex)."
+  },
+  "cmd.dom.setting.pageActive": {
+    "ja": "       dom -setting -page-active --auto | --manual — ハイライト時のページジャンププレビュー",
+    "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
+  },
+  "cmd.dom.setting.title": {
+    "ja": "dom -setting — DOM ピッカーの page-active を設定（BMXt プロンプトから）",
+    "en": "dom -setting — configure DOM picker page-active from the BMXt prompt"
+  },
+  "cmd.dom.runHint": {
+    "ja": "実行例: dom -setting -page-active --auto または --manual",
+    "en": "Run: dom -setting -page-active --auto or --manual"
   },
   "cmd.error.unknownCommand": {
     "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
@@ -128,12 +148,12 @@
     "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
   },
   "cmd.search.usage.line1": {
-    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page）",
-    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page)"
+    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page + snapshot）",
+    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page + snapshot)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list --all|--history|--bookmark|--page [<pattern>]   — スコープ（--all は横断）",
-    "en": "       search -list --all|--history|--bookmark|--page [<pattern>]   — scope (--all = cross-scope)"
+    "ja": "       search -list --all|--history|--bookmark|--page|--snapshot [<pattern>]   — スコープ（--all は横断）",
+    "en": "       search -list --all|--history|--bookmark|--page|--snapshot [<pattern>]   — scope (--all = cross-scope)"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -378,5 +398,53 @@
   "cmd.translate.usage.line3": {
     "ja": "       translate -setting --ja-en | --en-ja  — 翻訳ペアを設定（保存）",
     "en": "       translate -setting --ja-en | --en-ja  — set translation pair (saved)"
+  },
+  "cmd.snapshot.error.internal": {
+    "ja": "error: 不明な snapshot オプション (internal): {option}",
+    "en": "error: unknown snapshot option (internal): {option}"
+  },
+  "cmd.snapshot.error.unknownOption": {
+    "ja": "error: 不明な snapshot オプション: {option}",
+    "en": "error: unknown snapshot option: {option}"
+  },
+  "cmd.snapshot.migrate.done": {
+    "ja": "snapshot: 拡張機能内の {count} 件を外部ディレクトリへ移行しました",
+    "en": "snapshot: migrated {count} file(s) from extension storage to the external directory"
+  },
+  "cmd.snapshot.migrate.vaultDone": {
+    "ja": "snapshot: 拡張機能内の {count} 件を Obsidian Vault へ移行しました",
+    "en": "snapshot: migrated {count} file(s) from extension storage to the Obsidian vault"
+  },
+  "cmd.snapshot.migrate.failed": {
+    "ja": "snapshot: 移行に失敗しました — {message}",
+    "en": "snapshot: migration failed — {message}"
+  },
+  "cmd.snapshot.save.done": {
+    "ja": "snapshot saved: {path} — {title}",
+    "en": "snapshot saved: {path} — {title}"
+  },
+  "cmd.snapshot.save.failed": {
+    "ja": "snapshot save failed: {message}",
+    "en": "snapshot save failed: {message}"
+  },
+  "cmd.snapshot.save.reloadAdvice": {
+    "ja": "ヒント: 対象タブを再読み込みしてから再試行してください（拡張機能のコンテンツスクリプトをページに適用するため）。",
+    "en": "Hint: reload the target tab and try again so the extension can inject its content script on that page."
+  },
+  "cmd.snapshot.save.notHttp": {
+    "ja": "snapshot save failed: http(s) ページではありません ({url})。tabs ピッカーで Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
+    "en": "snapshot save failed: not an http(s) page ({url}). Highlight a web page in the tabs picker or use snapshot -save <tabId>."
+  },
+  "cmd.snapshot.save.title": {
+    "ja": "snapshot -save は BMXt プロンプトから実行してください（アクティブタブまたは tabId を保存）。",
+    "en": "Run snapshot -save from the BMXt prompt (saves the active tab or optional tabId)."
+  },
+  "cmd.snapshot.usage.line1": {
+    "ja": "usage: snapshot -save [<tabId>]   — ページを Markdown スナップショットとして保存",
+    "en": "usage: snapshot -save [<tabId>]   — save page as a Markdown snapshot"
+  },
+  "cmd.snapshot.usage.line2": {
+    "ja": "       保存先は setting の snapshot 保存先（設定と同梱 / Obsidian Vault）に従います。",
+    "en": "       Storage follows setting snapshot destination (bundled with settings / Obsidian vault)."
   }
 }

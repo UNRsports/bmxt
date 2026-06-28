@@ -7,15 +7,28 @@ import {
   type UiAppearanceLayer
 } from "./appearance"
 import type { UiLocale } from "./locale"
-import { loadUiSettings, type UiSettings } from "./settings"
+import type { UiSettings } from "./settings"
 import { parseHexColor } from "./validate-color"
 import { parseFontFamily } from "./validate-font"
 import { parseFontSizePx } from "./validate-size"
 import { buildZipArchive, parseZipArchive } from "./zip-store"
+import {
+  BG_IMAGE_BUNDLE_NAME,
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
+  PICKER_BG_IMAGE_BUNDLE_NAME,
+  SETTINGS_JSON_NAME
+} from "./settings-bundle-layout"
 
-export const SETTINGS_JSON_NAME = "settings.json"
-export const BG_IMAGE_ZIP_NAME = "background-image"
-export const PICKER_BG_IMAGE_ZIP_NAME = "picker-background-image"
+export {
+  BG_IMAGE_BUNDLE_NAME as BG_IMAGE_ZIP_NAME,
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
+  PICKER_BG_IMAGE_BUNDLE_NAME as PICKER_BG_IMAGE_ZIP_NAME,
+  SETTINGS_JSON_NAME
+} from "./settings-bundle-layout"
 
 type SettingsExportAppearanceV2 = {
   fg: string | null
@@ -115,14 +128,14 @@ export function buildSettingsExportJson(settings: UiSettings): SettingsExportJso
       bgColor: appearance.bgColor,
       fontSize: appearance.fontSize,
       fontFamily: appearance.fontFamily,
-      bgImageFile: bgImageFileName(appearance.bgImageDataUrl, BG_IMAGE_ZIP_NAME),
+      bgImageFile: bgImageFileName(appearance.bgImageDataUrl, BG_IMAGE_BUNDLE_NAME),
       editPicker: appearance.editPicker,
       picker: {
         fg: appearance.picker.fg,
         bgColor: appearance.picker.bgColor,
         fontSize: appearance.picker.fontSize,
         fontFamily: appearance.picker.fontFamily,
-        bgImageFile: bgImageFileName(appearance.picker.bgImageDataUrl, PICKER_BG_IMAGE_ZIP_NAME)
+        bgImageFile: bgImageFileName(appearance.picker.bgImageDataUrl, PICKER_BG_IMAGE_BUNDLE_NAME)
       }
     }
   }
@@ -269,11 +282,19 @@ export function parseSettingsExportJson(
 }
 
 /** EN: Package UI settings JSON + background image into a zip and save locally. */
-export async function exportUiSettingsZip(
-  settings?: UiSettings
-): Promise<{ filename: string }> {
-  const resolved = settings ?? (await loadUiSettings())
-  const json = buildSettingsExportJson(resolved)
+export async function exportUiSettingsZip(settings: UiSettings): Promise<{ filename: string }> {
+  const entries = buildUiSettingsStorageEntries(settings)
+  const zipBytes = buildZipArchive(entries)
+  const filename = exportZipFilename()
+  downloadBlob(new Blob([zipBytes], { type: "application/zip" }), filename)
+  return { filename }
+}
+
+/** EN: Loose files written to an external directory (same layout as zip export). */
+export function buildUiSettingsStorageEntries(
+  settings: UiSettings
+): { name: string; data: Uint8Array }[] {
+  const json = buildSettingsExportJson(settings)
   const entries: { name: string; data: Uint8Array }[] = [
     {
       name: SETTINGS_JSON_NAME,
@@ -289,12 +310,9 @@ export async function exportUiSettingsZip(
       entries.push({ name: fileName, data: decoded.bytes })
     }
   }
-  pushImage(json.appearance.bgImageFile, resolved.appearance.bgImageDataUrl)
-  pushImage(json.appearance.picker.bgImageFile, resolved.appearance.picker.bgImageDataUrl)
-  const zipBytes = buildZipArchive(entries)
-  const filename = exportZipFilename()
-  downloadBlob(new Blob([zipBytes], { type: "application/zip" }), filename)
-  return { filename }
+  pushImage(json.appearance.bgImageFile, settings.appearance.bgImageDataUrl)
+  pushImage(json.appearance.picker.bgImageFile, settings.appearance.picker.bgImageDataUrl)
+  return entries
 }
 
 /** EN: Read a zip file from disk and return validated UI settings. */

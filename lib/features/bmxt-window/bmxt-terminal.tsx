@@ -19,7 +19,8 @@ import { TerminalBootSplash } from "./terminal-boot-splash"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
-import { appendSessionLogFromUiAsync } from "./terminal-sessions/session-runtime-client"
+import { buildDefaultNewSessionName, useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
+import type { ApplySessionPatchContext } from "./terminal-sessions/session-patches"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
@@ -33,9 +34,9 @@ import {
 } from "../launch/page-boot-perf"
 import { useCommandHistory } from "./use-command-history"
 import { useProcessUiPersistence } from "./use-process-ui-persistence"
-import { useTerminalSessions } from "./terminal-sessions/use-terminal-sessions"
 import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
+import { ExternalSettingsRecoveryProvider } from "../setting/use-external-settings-recovery"
 import { useTerminalAppearance } from "../setting/apply-appearance"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
@@ -72,8 +73,11 @@ type SessionPaneProps = {
   navArmed: boolean
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
   navArmedByLeaf: Record<string, boolean>
-  onActivateSession: (sessionId: string) => Promise<void>
-  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
+  onActivateSession: (sessionId: string) => void
+  onSetSessionDisplayName: (sessionId: string, name: string) => void
+  appendLogLines: (newLines: string[]) => void | Promise<void>
+  sessionOrderLength: number
+  applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
   postUpgradeBanner: import("./use-version-upgrade-banner").PostUpgradeBanner | null
@@ -105,6 +109,9 @@ const SessionPaneView = memo(function SessionPaneView({
   navArmedByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
+  appendLogLines,
+  sessionOrderLength,
+  applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
   postUpgradeBanner,
@@ -131,7 +138,9 @@ const SessionPaneView = memo(function SessionPaneView({
         navArmedByLeaf={navArmedByLeaf}
         onActivateSession={onActivateSession}
         onSetSessionDisplayName={onSetSessionDisplayName}
-        appendLogLines={(newLines) => appendSessionLogFromUiAsync(sessionId, newLines)}
+        appendLogLines={appendLogLines}
+        sessionOrderLength={sessionOrderLength}
+        applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
         setSessionPickerSlot={setSessionPickerSlot}
@@ -209,7 +218,9 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
 export function BmxtTerminal() {
   return (
     <UiSettingsProvider>
-      <BmxtTerminalInner />
+      <ExternalSettingsRecoveryProvider>
+        <BmxtTerminalInner />
+      </ExternalSettingsRecoveryProvider>
     </UiSettingsProvider>
   )
 }
@@ -218,12 +229,35 @@ function BmxtTerminalInner() {
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
-  const { state, setActiveSession, setSessionDisplayName } = useTerminalSessions()
+  const pickersBySessionRef = useRef<SessionPickersByLeaf>({})
+  const navArmedByLeafRef = useRef<Record<string, boolean>>({})
+
+  const sessionPatchContext = useMemo<ApplySessionPatchContext>(
+    () => ({
+      deriveNewSessionName: (fromSessionId, explicitName, sessionState) =>
+        buildDefaultNewSessionName(
+          fromSessionId,
+          explicitName,
+          sessionState,
+          sessionPickersOrEmpty(pickersBySessionRef.current, fromSessionId),
+          navArmedByLeafRef.current[fromSessionId] ?? false
+        )
+    }),
+    []
+  )
+
+  const {
+    state,
+    appendLogLines: appendLogLinesToSession,
+    setActiveSession,
+    setSessionDisplayName,
+    applyRunCmdPatches
+  } = useTerminalSessions(sessionPatchContext)
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
 
-  const validSessionIds = useMemo(() => state?.order ?? [], [state?.order])
+  const validSessionIds = useMemo(() => state.order, [state.order])
 
   const {
     pickersBySession,
@@ -237,26 +271,31 @@ function BmxtTerminalInner() {
     navArmedByLeaf,
     setNavArmedForLeaf,
     processUiReady
-  } = useProcessUiPersistence(validSessionIds, state !== null)
+  } = useProcessUiPersistence(validSessionIds, true)
+
+  pickersBySessionRef.current = pickersBySession
+  navArmedByLeafRef.current = navArmedByLeaf
 
   const sessionListRows = useMemo(
     () =>
-      state
-        ? buildSessionListRows({
-            order: state.order,
-            activeId: state.activeId,
-            namesById: state.namesById,
-            logsById: state.logsById,
-            pickersBySession,
-            navArmedByLeaf,
-            locale: settings.locale
-          })
-        : [],
+      buildSessionListRows({
+        order: state.order,
+        activeId: state.activeId,
+        namesById: state.namesById,
+        logsById: state.logsById,
+        pickersBySession,
+        navArmedByLeaf,
+        locale: settings.locale
+      }),
     [navArmedByLeaf, pickersBySession, settings.locale, state]
   )
 
-  const pickersBySessionRef = useRef(pickersBySession)
-  pickersBySessionRef.current = pickersBySession
+  const appendLogLinesForSession = useCallback(
+    (sessionId: string, lines: string[]) => {
+      appendLogLinesToSession(sessionId, lines)
+    },
+    [appendLogLinesToSession]
+  )
 
   const rootRef = useRef<HTMLDivElement | null>(null)
   const promptPerfFlushedRef = useRef(false)
@@ -278,10 +317,8 @@ function BmxtTerminalInner() {
   }, [processUiReady])
 
   useEffect(() => {
-    if (state !== null) {
-      markPageBootPhase("gate-session-state-ready")
-    }
-  }, [state])
+    markPageBootPhase("gate-session-state-ready")
+  }, [])
 
   useEffect(() => {
     void (async () => {
@@ -295,20 +332,14 @@ function BmxtTerminalInner() {
   }, [])
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     pruneTabPickerFoldSessions(state.order)
     setTabPickerFoldActiveSession(state.activeId)
-  }, [state?.activeId, state?.order])
+  }, [state.activeId, state.order])
 
   const prevSessionOrderRef = useRef<readonly string[]>([])
   const [mountedSessionIds, setMountedSessionIds] = useState<ReadonlySet<string>>(() => new Set())
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     setMountedSessionIds((prev) => {
       if (prev.has(state.activeId)) {
         return prev
@@ -317,12 +348,9 @@ function BmxtTerminalInner() {
       next.add(state.activeId)
       return next
     })
-  }, [state?.activeId])
+  }, [state.activeId])
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     const prev = prevSessionOrderRef.current
     for (const sessionId of prev) {
       if (!state.order.includes(sessionId)) {
@@ -338,7 +366,7 @@ function BmxtTerminalInner() {
       }
     }
     prevSessionOrderRef.current = state.order
-  }, [state?.order])
+  }, [state.order])
 
   const setSessionPickerSlot = useCallback(
     <K extends PickerSlotId>(
@@ -385,9 +413,6 @@ function BmxtTerminalInner() {
   }, [pickersBySession])
 
   useEffect(() => {
-    if (!state) {
-      return
-    }
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.metaKey || e.altKey) {
         return
@@ -410,14 +435,14 @@ function BmxtTerminalInner() {
       const nextIdx = (from + delta + state.order.length) % state.order.length
       const nextId = state.order[nextIdx]
       if (nextId) {
-        void setActiveSession(nextId)
+        setActiveSession(nextId)
       }
     }
     window.addEventListener("keydown", onKey, true)
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  const promptInteractive = state !== null && processUiReady
+  const promptInteractive = processUiReady
 
   useEffect(() => {
     if (!promptInteractive || promptPerfFlushedRef.current) {
@@ -448,6 +473,8 @@ function BmxtTerminalInner() {
     navArmedByLeaf,
     onActivateSession: setActiveSession,
     onSetSessionDisplayName: setSessionDisplayName,
+    sessionOrderLength: state.order.length,
+    applyRunCmdPatches,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,
@@ -464,9 +491,7 @@ function BmxtTerminalInner() {
         logsById={state.logsById}
         pickersBySession={pickersBySession}
         navArmedByLeaf={navArmedByLeaf}
-        onActivateSession={(id) => {
-          void setActiveSession(id)
-        }}
+        onActivateSession={setActiveSession}
       />
       <div className="bmxt-session-stack">
         {state.order.map((sessionId) => {
@@ -480,6 +505,7 @@ function BmxtTerminalInner() {
               sessionId={sessionId}
               isActive={isActive}
               lines={state.logsById[sessionId] ?? []}
+              appendLogLines={(lines) => appendLogLinesForSession(sessionId, lines)}
               sessionPickers={sessionPickersOrEmpty(pickersBySession, sessionId)}
               paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
               detailBarId={detailBarIdByLeaf[sessionId] ?? null}

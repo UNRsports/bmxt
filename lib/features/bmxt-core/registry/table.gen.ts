@@ -17,6 +17,7 @@ import * as nav from "../cmd/nav"
 import * as translate from "../cmd/translate"
 import * as aboutbmxt from "../cmd/aboutbmxt"
 import * as session from "../cmd/session"
+import * as snapshot from "../cmd/snapshot"
 import * as setting from "../cmd/setting"
 
 export const COMMANDS: readonly CmdMeta[] = [
@@ -32,6 +33,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   translate.CMD,
   aboutbmxt.CMD,
   session.CMD,
+  snapshot.CMD,
   setting.CMD
 ]
 
@@ -51,6 +53,7 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: translate.CMD.name, run: translate.run },
   { name: aboutbmxt.CMD.name, run: aboutbmxt.run },
   { name: session.CMD.name, run: session.run },
+  { name: snapshot.CMD.name, run: snapshot.run },
   { name: setting.CMD.name, run: setting.run }
 ]
 

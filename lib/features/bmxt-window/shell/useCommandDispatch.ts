@@ -1,12 +1,16 @@
 import { useCallback } from "react"
+import { lineHasAndOperator, runCompoundLine } from "../../command-line/compound"
+import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
 import { tryHandleDomListCommand } from "./command-dispatch/handle-dom"
+import { tryHandleDomSettingCommand } from "./command-dispatch/handle-dom-setting"
 import { dispatchFallbackCommand, tryHandleHelpCommand } from "./command-dispatch/handle-fallback"
 import { tryHandleGroupNewCommand } from "./command-dispatch/handle-group"
 import { tryHandleNavEnterCommand } from "./command-dispatch/handle-nav-enter"
 import { tryHandleNavExitCommand } from "./command-dispatch/handle-nav-exit"
 import { tryHandleSearchExitCommand } from "./command-dispatch/handle-search-exit"
 import { tryHandleSearchListCommand } from "./command-dispatch/handle-search"
+import { tryHandleSnapshotSaveCommand } from "./command-dispatch/handle-snapshot"
 import { tryHandleSessionCommand } from "./command-dispatch/handle-session"
 import { tryHandleSettingCommand } from "./command-dispatch/handle-setting"
 import { tryHandleTabsListCommand } from "./command-dispatch/handle-tabs-list"
@@ -22,6 +26,7 @@ type DomainHandler = (ctx: CommandDispatchContext) => "handled" | "not_handled"
 const DOMAIN_HANDLERS: readonly DomainHandler[] = [
   tryHandleSettingCommand,
   tryHandleTabsSettingCommand,
+  tryHandleDomSettingCommand,
   tryHandleSessionCommand,
   tryHandleTabsListCommand,
   tryHandleSearchExitCommand,
@@ -32,7 +37,8 @@ const DOMAIN_HANDLERS: readonly DomainHandler[] = [
   tryHandleGroupNewCommand,
   tryHandleSearchListCommand,
   tryHandleHelpCommand,
-  tryHandleDomListCommand
+  tryHandleDomListCommand,
+  tryHandleSnapshotSaveCommand
 ]
 
 function handleISearchExit(deps: CommandDispatchDeps): void {
@@ -68,6 +74,15 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       trimmed,
       rawLine,
       locale: deps.uiSettings.locale
+    }
+
+    if (tryHandleExternalSettingsRecovery(ctx) === "handled") {
+      return
+    }
+
+    if (lineHasAndOperator(trimmed)) {
+      void runCompoundLine(trimmed, deps, deps.uiSettings.locale)
+      return
     }
 
     for (const handler of DOMAIN_HANDLERS) {

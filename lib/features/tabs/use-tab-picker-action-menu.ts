@@ -10,7 +10,7 @@ import type {
   BulkSubMode,
   SelectKind
 } from "./tab-picker-overlay-types"
-import { buildActionMenuPanel, resolveActionMenuTabLabels, resolveActionMenuTargetKind } from "./tab-picker-action-menu"
+import { buildActionMenuPanel, resolveActionMenuTabTargets, resolveActionMenuTargetKind } from "./tab-picker-action-menu"
 import type { TabPickerEngineDispatch } from "./engine/types"
 import { getPickerRowAtHi, resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import {
@@ -103,6 +103,7 @@ export type TabPickerActionMenuParams = {
   setNewTabUrlWindowId: (windowId: number | null) => void
   setNewTabUrl: (url: string) => void
   openEditFromPicker: (snapshot?: EditPickerSnapshot) => void | Promise<void>
+  runSnapshotSaveForTabIds: (tabIds: readonly number[]) => Promise<void>
   runExecutionIntentForSnapshot: (
     intent: ExecutionIntent,
     snapshot: PickerReducerState,
@@ -127,6 +128,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     setNewTabUrlWindowId,
     setNewTabUrl,
     openEditFromPicker,
+    runSnapshotSaveForTabIds,
     runExecutionIntentForSnapshot
   } = p
 
@@ -144,7 +146,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     if (!targetKind) {
       return
     }
-    const tabLabels = resolveActionMenuTabLabels(
+    const tabTargets = resolveActionMenuTabTargets(
       rows,
       markedKind,
       markedTabIds,
@@ -156,7 +158,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
       type: "update",
       updater: (prev) => ({
         ...prev,
-        actionMenuPanel: buildActionMenuPanel(targetKind, tabLabels)
+        actionMenuPanel: buildActionMenuPanel(targetKind, tabTargets)
       })
     })
   }, [
@@ -246,6 +248,68 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
       bulkSubMode
     })
     const markedSlice = applyImplicitMark(baseSlice, row, markedCount)
+
+    const selectedTabIds = resolvePickerExecutionTabIds(
+      rows,
+      visibleRowIndices,
+      markedSlice,
+      resolveTargetWindowIdForWindowBulk(
+        markedSlice.markedKind,
+        markedSlice.markedWindowIds,
+        rows,
+        visibleRowIndices,
+        markedSlice.hi
+      ) ?? undefined
+    )
+
+    if (actionId === "newTab") {
+      dispatch({
+        type: "update",
+        updater: (prev) => ({
+          ...prev,
+          actionMenuPanel: null,
+          hi: markedSlice.hi,
+          moveDestHi: markedSlice.moveDestHi,
+          markedKind: markedSlice.markedKind,
+          markedTabIds: markedSlice.markedTabIds,
+          markedWindowIds: markedSlice.markedWindowIds,
+          markedGroupKeys: markedSlice.markedGroupKeys,
+          bulkSubMode: "newTab"
+        })
+      })
+      const wid = resolveTargetWindowIdForWindowBulk(
+        markedSlice.markedKind,
+        markedSlice.markedWindowIds,
+        rows,
+        visibleRowIndices,
+        hi
+      )
+      if (wid !== null) {
+        setNewTabUrlWindowId(wid)
+        setNewTabUrl("")
+      }
+      return
+    }
+
+    if (actionId === "snapshot") {
+      dispatch({
+        type: "update",
+        updater: (prev) => ({
+          ...prev,
+          actionMenuPanel: null,
+          hi: markedSlice.hi,
+          moveDestHi: markedSlice.moveDestHi,
+          markedKind: markedSlice.markedKind,
+          markedTabIds: markedSlice.markedTabIds,
+          markedWindowIds: markedSlice.markedWindowIds,
+          markedGroupKeys: markedSlice.markedGroupKeys,
+          bulkSubMode: null
+        })
+      })
+      await runSnapshotSaveForTabIds(selectedTabIds)
+      return
+    }
+
     const nextBulkSubMode = actionId as BulkSubMode
 
     dispatch({
@@ -262,34 +326,6 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
         bulkSubMode: nextBulkSubMode
       })
     })
-
-    const selectedTabIds = resolvePickerExecutionTabIds(
-      rows,
-      visibleRowIndices,
-      markedSlice,
-      resolveTargetWindowIdForWindowBulk(
-        markedSlice.markedKind,
-        markedSlice.markedWindowIds,
-        rows,
-        visibleRowIndices,
-        markedSlice.hi
-      ) ?? undefined
-    )
-
-    if (actionId === "newTab") {
-      const wid = resolveTargetWindowIdForWindowBulk(
-        markedSlice.markedKind,
-        markedSlice.markedWindowIds,
-        rows,
-        visibleRowIndices,
-        hi
-      )
-      if (wid !== null) {
-        setNewTabUrlWindowId(wid)
-        setNewTabUrl("")
-      }
-      return
-    }
 
     if (IMMEDIATE_MENU_ACTIONS.has(actionId)) {
       const intent = intentForImmediateAction(actionId)
@@ -310,7 +346,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     markedWindowIds,
     moveDestHi,
     openEditFromPicker,
-    rows,
+    runSnapshotSaveForTabIds,
     runExecutionIntentForSnapshot,
     setNewTabUrl,
     setNewTabUrlWindowId,

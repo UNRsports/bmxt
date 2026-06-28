@@ -1,4 +1,4 @@
-export type PickerSource = "tab" | "history" | "bookmark" | "page"
+export type PickerSource = "tab" | "history" | "bookmark" | "page" | "snapshot"
 
 /** EN: One innerText line hit inside an open tab (`search -list --page`). */
 export type SearchPageMatch = {
@@ -17,14 +17,14 @@ export type PickerEntry = {
   tabId?: number
   windowId?: number
   groupId?: number | null
-  /** EN: Grouped line hits when `source === "page"` (one picker row per tab). */
+  /** EN: Grouped line hits when `source === "page"` or `source === "snapshot"`. */
   pageMatches?: SearchPageMatch[]
   /** EN: Search hits merged by URL — which scopes matched (history / bookmark / page). */
   sources?: PickerSource[]
   meta?: Record<string, string>
 }
 
-const SEARCH_SOURCE_ORDER: PickerSource[] = ["history", "bookmark", "page"]
+const SEARCH_SOURCE_ORDER: PickerSource[] = ["history", "bookmark", "page", "snapshot"]
 
 /** EN: Ordered scope labels for a merged search row. */
 export function pickerEntrySearchSources(entry: PickerEntry): PickerSource[] {

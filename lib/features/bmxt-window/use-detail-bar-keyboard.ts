@@ -53,6 +53,7 @@ export type DetailBarKeyboardActions = {
   cycleTranslatePair: (direction: 1 | -1) => void
   toggleTabsPageActive?: () => void
   toggleSearchPageActive?: () => void
+  toggleDomPageActive?: () => void
 }
 
 export type UseDetailBarKeyboardOptions = {
@@ -197,6 +198,10 @@ export function useDetailBarKeyboard({
         }
         if (current === "search") {
           actionsRef.current.toggleSearchPageActive?.()
+          return
+        }
+        if (current === "dom") {
+          actionsRef.current.toggleDomPageActive?.()
         }
         return
       }

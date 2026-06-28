@@ -17,7 +17,7 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "search",
   aliases: [],
-  usagePrimary: "search -list [--all|--history|--bookmark|--page] [<pattern>] | search -exit -list"
+  usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list"
 }
 
 function normalizeSearchSecondToken(head: string): string {
@@ -32,6 +32,8 @@ function effectForScope(scope: string, pattern: string): ChromeEffect {
       return { kind: "search_bookmark", pattern }
     case "--page":
       return { kind: "search_page", pattern }
+    case "--snapshot":
+      return { kind: "search_snapshot", pattern }
     default:
       throw new Error(`bad search scope (${scope})`)
   }

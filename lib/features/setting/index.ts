@@ -109,15 +109,62 @@ export {
   validateSettingEditValue
 } from "./setting-picker-edit"
 export {
+  buildUiSettingsStorageEntries,
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames,
   exportUiSettingsZip,
   importUiSettingsZipFromFilePicker,
   type SettingsExportJson
 } from "./settings-export"
 export {
+  activateExternalUiSettingsStorage,
+  activateInternalUiSettingsStorage,
+  isFileSystemAccessAvailable,
+  pickUiSettingsDirectory,
+  reloadUiSettingsFromExternalDirectory,
+  repickUiSettingsDirectory,
+  resolveExternalSettingsBundleDir,
+  tryLoadUiSettingsFromExternal,
+  trySaveUiSettingsToExternal,
+  type ExternalStorageErrorCode,
+  type PickUiSettingsDirectoryResult
+} from "./settings-external-storage"
+export {
+  DEFAULT_UI_SETTINGS_STORAGE_CONFIG,
+  normalizeUiSettingsStorageConfig,
+  type UiSettingsStorageConfig,
+  type UiSettingsStorageMode
+} from "./settings-storage-mode"
+export { loadUiSettingsStorageConfig, saveUiSettingsStorageConfig } from "./settings-storage-config"
+export { useUiSettingsStorageConfig } from "./use-ui-settings-storage-config"
+export {
+  assessExternalSettingsBundleAtStartup,
+  externalSettingsRecoveryLogLines,
+  applyExternalSettingsRecoveryAnswer,
+  type ExternalBundleMissingItem,
+  type ExternalSettingsStartupAssessment,
+  type ExternalSettingsRecoveryAnswerResult
+} from "./external-settings-startup"
+export {
+  bootstrapUiSettingsOnWindowLaunch,
+  externalSettingsLoadErrorLogLines,
+  type UiSettingsBootstrapResult
+} from "./ui-settings-bootstrap"
+export {
+  ExternalSettingsRecoveryProvider,
+  useExternalSettingsRecovery,
+  type ExternalSettingsRecoveryContextValue
+} from "./use-external-settings-recovery"
+export {
   clearUiBackgroundImage,
   formatUiSettingsSummary,
   loadUiSettings,
+  loadUiSettingsInternalCache,
+  mirrorUiSettingsToInternalCache,
+  applyDefaultUiSettingsToInternalCache,
   replaceUiSettings,
+  resetUiSettingsToDefaultsAndInternal,
   resetUiAppearance,
   saveUiAppearancePatch,
   saveUiBackgroundImage,

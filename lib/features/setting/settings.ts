@@ -10,6 +10,13 @@ import {
   parseUiLocale,
   type UiLocale
 } from "./locale"
+import {
+  activateInternalUiSettingsStorage,
+  clearExternalUiSettingsStorage,
+  loadUiSettingsFromDirectory,
+  tryLoadUiSettingsFromExternal,
+  trySaveUiSettingsToExternal
+} from "./settings-external-storage"
 
 export type UiSettings = {
   locale: UiLocale
@@ -21,7 +28,7 @@ const DEFAULT_SETTINGS: UiSettings = {
   appearance: { ...DEFAULT_UI_APPEARANCE, picker: { ...DEFAULT_UI_APPEARANCE.picker } }
 }
 
-export async function loadUiSettings(): Promise<UiSettings> {
+async function loadUiSettingsFromChromeStorage(): Promise<UiSettings> {
   const r = await chrome.storage.local.get(UI_SETTINGS_KEY)
   const raw = r[UI_SETTINGS_KEY]
   if (!raw || typeof raw !== "object") {
@@ -34,10 +41,64 @@ export async function loadUiSettings(): Promise<UiSettings> {
   }
 }
 
-async function saveUiSettings(next: UiSettings): Promise<void> {
+export async function loadUiSettingsInternalCache(): Promise<UiSettings> {
+  return loadUiSettingsFromChromeStorage()
+}
+
+export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings> {
+  const defaults: UiSettings = {
+    locale: DEFAULT_UI_LOCALE,
+    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
+  }
+  await saveUiSettingsToChromeStorage(defaults)
+  await activateInternalUiSettingsStorage()
+  await clearExternalUiSettingsStorage()
+  return defaults
+}
+
+export async function mirrorUiSettingsToInternalCache(next: UiSettings): Promise<void> {
+  await saveUiSettingsToChromeStorage({
+    locale: next.locale,
+    appearance: normalizeUiAppearance(next.appearance)
+  })
+}
+
+export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSettings> {
+  const defaults: UiSettings = {
+    locale: DEFAULT_UI_LOCALE,
+    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
+  }
+  await saveUiSettingsToChromeStorage(defaults)
+  return defaults
+}
+
+export async function loadUiSettings(): Promise<UiSettings> {
+  const external = await tryLoadUiSettingsFromExternal()
+  if (external) {
+    await mirrorUiSettingsToInternalCache(external)
+    return external
+  }
+  return loadUiSettingsFromChromeStorage()
+}
+
+async function saveUiSettingsToChromeStorage(next: UiSettings): Promise<void> {
   await chrome.storage.local.set({
     [UI_SETTINGS_KEY]: next satisfies UiSettings
   })
+}
+
+async function saveUiSettings(next: UiSettings): Promise<{ externalWriteFailed: boolean }> {
+  const normalized: UiSettings = {
+    locale: next.locale,
+    appearance: normalizeUiAppearance(next.appearance)
+  }
+  await saveUiSettingsToChromeStorage(normalized)
+  try {
+    await trySaveUiSettingsToExternal(normalized)
+    return { externalWriteFailed: false }
+  } catch {
+    return { externalWriteFailed: true }
+  }
 }
 
 export async function saveUiLocale(locale: UiLocale): Promise<void> {
@@ -67,8 +128,8 @@ export async function clearUiBackgroundImage(): Promise<void> {
   await saveUiAppearancePatch({ bgImageDataUrl: null })
 }
 
-export async function replaceUiSettings(next: UiSettings): Promise<void> {
-  await saveUiSettings({
+export async function replaceUiSettings(next: UiSettings): Promise<{ externalWriteFailed: boolean }> {
+  return saveUiSettings({
     locale: next.locale,
     appearance: normalizeUiAppearance(next.appearance)
   })

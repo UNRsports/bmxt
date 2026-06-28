@@ -3,6 +3,9 @@ import { tDomList } from "../setting/i18n/ns/dom-list"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
 import { bmxtDomShowInjected, type DomShowMode } from "../page-dom/injected-dom-show"
 import { domTreeGuideForDepth, parseDomTreeSourceLine } from "./dom-list-line-format"
+import { domPickerModeLabel, type DomListFlavor, type DomPickerMode } from "./dom-picker-mode"
+import { captureDomViewportForTab } from "./dom-viewport-capture"
+import { captureDomDocumentEntriesForTab } from "./dom-document-capture"
 
 export type DomTreeEntry = { line: string; path: readonly number[] }
 
@@ -10,6 +13,9 @@ export type DomListCapture = {
   lines: string[]
   jumpPaths: (readonly number[] | null)[]
   headerLineCount: number
+  /** EN: Full-page body entries for `--with` search (not including header rows). */
+  documentEntries?: readonly DomTreeEntry[]
+  documentTruncated?: boolean
 }
 
 type InjectedDomShowResult = {
@@ -78,14 +84,29 @@ export async function captureDomListForTab(
   tab: chrome.tabs.Tab,
   flavor: string,
   pattern: string,
-  locale: UiLocale = DEFAULT_UI_LOCALE
+  locale: UiLocale = DEFAULT_UI_LOCALE,
+  pickerMode: DomPickerMode = "normal",
+  showTag = false
 ): Promise<DomListCapture> {
+  const flav: DomListFlavor = flavor === "--react" ? "--react" : "--html"
+  if (pickerMode === "with") {
+    const [{ entries: documentEntries, truncated: documentTruncated }, viewportCapture] =
+      await Promise.all([
+        captureDomDocumentEntriesForTab(tab, flav, locale, showTag),
+        captureDomViewportForTab(tab, flav, pattern, locale, showTag)
+      ])
+    return {
+      ...viewportCapture,
+      documentEntries,
+      documentTruncated
+    }
+  }
   const tabId = tab.id
   if (tabId === undefined) {
     return noticeCapture([tDomList("domList.unavailable", locale), tDomList("domList.noTarget", locale)])
   }
 
-  const mode: DomShowMode = flavor === "--react" ? "react" : "html"
+  const mode: DomShowMode = flav === "--react" ? "react" : "html"
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId },
     func: bmxtDomShowInjected,
@@ -95,7 +116,7 @@ export async function captureDomListForTab(
   const entries = filterEntries(entriesFromInjected(injected, mode), pattern)
 
   const header = [
-    `dom -list (${flavor})`,
+    `dom -list ${domPickerModeLabel("normal")} (${flav})`,
     displayTitle(tab.title),
     tab.url ?? "(no url)",
     ""

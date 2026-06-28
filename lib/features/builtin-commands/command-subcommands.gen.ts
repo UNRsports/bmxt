@@ -18,12 +18,13 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "clear": [] as const,
   "close": [] as const,
   "dom": [
-    { head: "-list", trailingTokens: ["--html","--react"] as const, tail: "rest" },
-    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
+    { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag"] as const, tail: "rest" },
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
+    { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
   "search": [
-    { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page"] as const, tail: "rest" },
+    { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page","--snapshot"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "group": [] as const,
@@ -52,6 +53,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-next", trailingTokens: [] as const, tail: "none" },
     { head: "-prev", trailingTokens: [] as const, tail: "none" },
     { head: "-setting-name", trailingTokens: [] as const, tail: "rest" }
+  ] as const,
+  "snapshot": [
+    { head: "-save", trailingTokens: [] as const, tail: "rest" }
   ] as const,
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
@@ -111,7 +115,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "dom": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit"
+      return lower === "-list" || lower === "-exit" || lower === "-setting"
     }
     case "exit":
       return false
@@ -140,6 +144,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     case "session": {
       const lower = token.toLowerCase()
       return lower === "-new" || lower === "-list" || lower === "-switch" || lower === "-next" || lower === "-prev" || lower === "-setting-name"
+    }
+    case "snapshot": {
+      const lower = token.toLowerCase()
+      return lower === "-save"
     }
     case "setting": {
       const lower = token.toLowerCase()

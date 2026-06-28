@@ -35,6 +35,10 @@
     "ja": "再読み込み",
     "en": "Reload"
   },
+  "tabs.picker.actionMenu.snapshot": {
+    "ja": "スナップショット",
+    "en": "Snapshot"
+  },
   "tabs.picker.actionMenuTitle": {
     "ja": "操作メニュー",
     "en": "Action menu"

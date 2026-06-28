@@ -19,7 +19,8 @@ export type SettingListPickerView =
   | "bgColorPicker"
   | "fontPicker"
   | "resetConfirm"
-  | "searchCacheResetConfirm"
+  | "storageMode"
+  | "snapshotStorageMode"
 
 export type SettingListPickerState = {
   view: SettingListPickerView

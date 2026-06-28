@@ -15,6 +15,7 @@ export function tryHandleDomListCommand(ctx: CommandDispatchContext): CommandDis
     clearPrompt(deps)
     recordCommandHistory(deps)
     deps.setSubCmdPicker(null)
+    deps.jobRunner.cancel("dom-list")
     void deps.runDomListAndShow(domListLine, trimmed, true)
     return "handled"
   }

@@ -1,5 +1,6 @@
 /** BMXt prompt parsing for `tabs` subcommands (picker line, move-URL Tab completion). */
 
+import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { listSecondTokenCandidatesByCommand } from "../builtin-commands/command-subcommands.gen"
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
 
@@ -61,16 +62,20 @@ export function tabsMoveUrlCompletionZone(
   line: string,
   cursor: number
 ): { urlStart: number; prefix: string; tokenEnd: number } | null {
-  const m = TABS_MOVE_URL_PREFIX_RE.exec(line)
+  const active = resolveActiveCommandSegment(line, cursor)
+  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const localCursor = active.localCursor
+  const m = TABS_MOVE_URL_PREFIX_RE.exec(segmentLine)
   if (!m) {
     return null
   }
-  const urlStart = m.index + m[0].length
-  if (cursor < urlStart) {
+  const urlStartLocal = m.index + m[0].length
+  if (localCursor < urlStartLocal) {
     return null
   }
+  const urlStart = active.segmentStart + urlStartLocal
   const tokenEnd = urlTokenEnd(line, urlStart)
-  if (cursor > tokenEnd) {
+  if (localCursor > tokenEnd - active.segmentStart) {
     return null
   }
   const prefix = line.slice(urlStart, cursor)

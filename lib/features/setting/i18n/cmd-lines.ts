@@ -75,6 +75,7 @@ export function domCmdUsageLines(locale?: UiLocale): string[] {
   return [
     L("cmd.dom.usage.line1", locale),
     L("cmd.dom.usage.line2", locale),
+    L("cmd.dom.usage.line3", locale),
     L("cmd.dom.usage.listDetail", locale),
     L("cmd.dom.usage.patternDetail", locale)
   ]
@@ -82,6 +83,14 @@ export function domCmdUsageLines(locale?: UiLocale): string[] {
 
 export function domCmdExitListLines(locale?: UiLocale): string[] {
   return [L("cmd.dom.exitList.title", locale), L("cmd.dom.exitList.detail", locale)]
+}
+
+export function domCmdSettingLines(locale?: UiLocale): string[] {
+  return [
+    L("cmd.dom.setting.title", locale),
+    L("cmd.dom.setting.pageActive", locale),
+    L("cmd.dom.runHint", locale)
+  ]
 }
 
 export function searchCmdUsageLines(locale?: UiLocale): string[] {
@@ -96,6 +105,14 @@ export function searchCmdUsageLines(locale?: UiLocale): string[] {
 
 export function searchCmdExitListLines(locale?: UiLocale): string[] {
   return [L("cmd.search.exitList.title", locale), L("cmd.search.exitList.detail", locale)]
+}
+
+export function snapshotCmdUsageLines(locale?: UiLocale): string[] {
+  return [L("cmd.snapshot.usage.line1", locale), L("cmd.snapshot.usage.line2", locale)]
+}
+
+export function snapshotCmdSaveLines(locale?: UiLocale): string[] {
+  return [L("cmd.snapshot.save.title", locale)]
 }
 
 export function translateCmdUsageLines(locale?: UiLocale): string[] {

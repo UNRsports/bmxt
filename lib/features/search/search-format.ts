@@ -5,7 +5,7 @@
 
 import { stripInvisibleFormatChars } from "../format/normalize-for-match.ts"
 
-export type SearchScopeLabel = "history" | "bookmark" | "page"
+export type SearchScopeLabel = "history" | "bookmark" | "page" | "snapshot"
 
 /** EN: Strip optional ASCII quotes from a `search -list` pattern token sequence. */
 export function normalizeSearchPattern(raw: string): string {

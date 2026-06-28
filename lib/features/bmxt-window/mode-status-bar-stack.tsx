@@ -8,6 +8,7 @@ import type { TranslationPairId } from "../translate/translation-pair"
 import { TranslateStatusBar } from "../translate/translate-status-bar"
 import { TabsStatusBar } from "../tabs/tabs-status-bar"
 import type { TabsPageActiveMode } from "../tabs/page-active-setting"
+import type { DomPageActiveMode } from "../dom/page-active-setting"
 import type { DetailBarId } from "./detail-bar-focus"
 import type { ModeToolbarId } from "./mode-toolbar-order"
 
@@ -46,6 +47,7 @@ type SearchProps = {
 type DomProps = {
   pickerOpen: boolean
   kind: "lines" | "prompt"
+  pageActiveMode: DomPageActiveMode
 }
 
 type SettingProps = {
@@ -132,7 +134,7 @@ export function ModeStatusBarStack({
           "dom",
           focusedDetailBarId,
           detailBarFocusActive,
-          <DomStatusBar kind={dom.kind} />
+          <DomStatusBar kind={dom.kind} pageActiveMode={dom.pageActiveMode} />
         )
       ]
     }

@@ -1,18 +1,14 @@
 {
-  "0.6.9": {
+  "0.7.1": {
     "ja": [
-      "ウェルカムページを外部化してパッケージサイズを削減",
-      "フレームワークをplasmoからwxtへ、パッケージ管理をnpmからpnpmへ移行",
-      "tabsモードのピッカーにて操作方法を変更し、より直感的かつ操作と視線移動が減るように実装",
-      "フレームワーク移行に伴う、全体のリファクタリング",
-      "動作低下の原因となっていたwasmによるsqliteの採用を廃止"
+      "tabsモードpicker動作の調整",
+      "settingモードのデータ書き出し先を選択可能に実装",
+      "snapshotモードをobsidianと連携可能な形式で保存可能に実装",
+      "domコマンドpickerを利用した既存機能を「--normal」モードとし、新規--withモードを追加し動作修正と改善を実装",
+      "&&による複数コマンドが実行可能なように実装"
     ],
     "en": [
-      "Externalized the welcome page to reduce package size",
-      "Migrated the framework from Plasmo to WXT and package management from npm to pnpm",
-      "Revised tabs mode picker interaction for a more intuitive flow with less hand and eye movement",
-      "Repository-wide refactoring as part of the framework migration",
-      "Removed WASM-based SQLite, which had been causing performance degradation"
+      ""
     ]
   }
 }

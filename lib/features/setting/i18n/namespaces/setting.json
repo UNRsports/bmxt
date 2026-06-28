@@ -291,10 +291,6 @@
     "ja": "setting -list · reset（リセット） · ↑↓ · → 確定 · ← 一覧",
     "en": "setting -list · reset · ↑↓ · → confirm · ← list"
   },
-  "setting.picker.headline.searchCacheResetConfirm": {
-    "ja": "setting -list · search-cache reset · ↑↓ · → 確定 · ← 一覧",
-    "en": "setting -list · search-cache reset · ↑↓ · → confirm · ← list"
-  },
   "setting.picker.headline.searchHitHighlight": {
     "ja": "setting -list · search-hit-highlight（検索ヒット強調） · → 編集 · ← 一覧",
     "en": "setting -list · search-hit-highlight · → edit · ← list"
@@ -379,10 +375,6 @@
     "ja": "reset-default — 外観を既定値に戻す",
     "en": "reset-default — restore appearance to defaults"
   },
-  "setting.picker.main.resetSearchCache": {
-    "ja": "reset-search-cache — 履歴／ブックマークの search SQLite キャッシュを消去",
-    "en": "reset-search-cache — clear history/bookmark search SQLite cache"
-  },
   "setting.picker.main.save": {
     "ja": "> 設定を保存して終了",
     "en": "> save setting & exit"
@@ -402,6 +394,202 @@
   "setting.picker.main.sizePicker": {
     "ja": "size（ピッカー）: {value}",
     "en": "size (picker): {value}"
+  },
+  "setting.picker.main.storage": {
+    "ja": "storage（保存先）: {value}",
+    "en": "storage: {value}"
+  },
+  "setting.picker.main.storagePickDir": {
+    "ja": "storage-pick-dir — 外部保存フォルダを選び直す",
+    "en": "storage-pick-dir — choose external folder again"
+  },
+  "setting.picker.main.storageReload": {
+    "ja": "storage-reload — 外部フォルダから設定を読み込む（プレビュー）",
+    "en": "storage-reload — load settings from external folder (preview)"
+  },
+  "setting.picker.main.snapshotStorage": {
+    "ja": "snapshot 保存先: {value}",
+    "en": "snapshot storage: {value}"
+  },
+  "setting.picker.main.snapshotVaultPickDir": {
+    "ja": "snapshot-vault-pick-dir — Obsidian Vault フォルダを選び直す",
+    "en": "snapshot-vault-pick-dir — choose Obsidian vault folder again"
+  },
+  "setting.picker.headline.snapshotStorageMode": {
+    "ja": "setting -list · snapshot 保存先 · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · snapshot storage · ↑↓ · Enter/→ select · ← list"
+  },
+  "setting.picker.snapshotStorageBundled": {
+    "ja": "設定と同梱（既定）",
+    "en": "bundled with settings (default)"
+  },
+  "setting.picker.snapshotStorageBundledRow": {
+    "ja": "設定と同梱 — 拡張機能内または外部 bmxt-ui-settings/snapshots/ に保存",
+    "en": "bundled — save in extension storage or external bmxt-ui-settings/snapshots/"
+  },
+  "setting.picker.snapshotStorageVault": {
+    "ja": "Obsidian Vault（未選択）",
+    "en": "Obsidian vault (not selected)"
+  },
+  "setting.picker.snapshotStorageVaultNamed": {
+    "ja": "Obsidian Vault · {directory}",
+    "en": "Obsidian vault · {directory}"
+  },
+  "setting.picker.snapshotStorageVaultRow": {
+    "ja": "Obsidian Vault — Vault 内の BMXt/snapshots/ に保存（設定とは独立）",
+    "en": "Obsidian vault — save to BMXt/snapshots/ inside the vault (separate from settings)"
+  },
+  "setting.snapshotStorage.bundledActivated": {
+    "ja": "snapshot 保存先を設定と同梱に切り替えました",
+    "en": "snapshot storage switched to bundled with settings"
+  },
+  "setting.snapshotStorage.vaultActivated": {
+    "ja": "snapshot 保存先を Obsidian Vault に設定しました — {directory}",
+    "en": "snapshot storage set to Obsidian vault — {directory}"
+  },
+  "setting.snapshotStorage.vaultDirectoryUpdated": {
+    "ja": "snapshot Obsidian Vault を更新しました — {directory}",
+    "en": "snapshot Obsidian vault updated — {directory}"
+  },
+  "setting.picker.headline.storageMode": {
+    "ja": "setting -list · storage（保存先） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · storage · ↑↓ · Enter/→ select · ← list"
+  },
+  "setting.picker.storageModeExternal": {
+    "ja": "外部フォルダ",
+    "en": "external folder"
+  },
+  "setting.picker.storageModeExternalNamed": {
+    "ja": "外部フォルダ · {directory}",
+    "en": "external folder · {directory}"
+  },
+  "setting.picker.storageModeExternalRow": {
+    "ja": "外部フォルダ — 指定先に bmxt-ui-settings/（settings.json + 背景画像）を保存",
+    "en": "external folder — save bmxt-ui-settings/ bundle (settings.json + background images)"
+  },
+  "setting.picker.storageModeInternal": {
+    "ja": "拡張機能内（既定）",
+    "en": "extension internal (default)"
+  },
+  "setting.picker.storageModeInternalRow": {
+    "ja": "拡張機能内 — chrome.storage.local に保存（既定）",
+    "en": "extension internal — save in chrome.storage.local (default)"
+  },
+  "setting.storage.directoryUpdated": {
+    "ja": "setting: 外部保存フォルダを {directory} に変更しました",
+    "en": "setting: external folder changed to {directory}"
+  },
+  "setting.storage.externalActivated": {
+    "ja": "setting: 外部保存を有効化しました（{directory}）— 既存の設定バンドルはありません",
+    "en": "setting: external storage enabled ({directory}) — no existing settings bundle"
+  },
+  "setting.storage.externalActivatedLoaded": {
+    "ja": "setting: 外部保存を有効化し {directory} から設定バンドル（画像含む）を読み込みました（プレビュー）",
+    "en": "setting: external storage enabled; loaded settings bundle (with images) from {directory} (preview)"
+  },
+  "setting.storage.externalWriteFailed": {
+    "ja": "setting: 拡張機能内には保存しましたが、外部フォルダへの書き込みに失敗しました",
+    "en": "setting: saved internally but failed to write to external folder"
+  },
+  "setting.storage.internalActivated": {
+    "ja": "setting: 拡張機能内保存に切り替えました",
+    "en": "setting: switched to extension internal storage"
+  },
+  "setting.storage.loadError.defaults": {
+    "ja": "setting: 既定の UI 設定で起動しました（外部ファイルを修正してください）",
+    "en": "setting: started with default UI settings (fix the external file)"
+  },
+  "setting.storage.loadError.warning": {
+    "ja": "setting: 外部保存先（{location}）の {file} を読み込めませんでした（JSON の記法不備など）",
+    "en": "setting: could not load {file} from external storage ({location}) — invalid JSON or schema"
+  },
+  "setting.storage.pickCancelled": {
+    "ja": "setting: フォルダ選択をキャンセルしました",
+    "en": "setting: folder selection cancelled"
+  },
+  "setting.storage.pickFailed": {
+    "ja": "setting: フォルダ選択に失敗しました — {message}",
+    "en": "setting: folder selection failed — {message}"
+  },
+  "setting.storage.reloadDraft": {
+    "ja": "setting: 外部バンドル（settings.json + 画像）をプレビューに読み込みました（> 設定を保存して終了 で確定）",
+    "en": "setting: loaded external bundle (settings.json + images) into preview (use save setting & exit to commit)"
+  },
+  "setting.storage.reloadFailed": {
+    "ja": "setting: 外部フォルダからの読み込みに失敗しました — {message}",
+    "en": "setting: failed to load from external folder — {message}"
+  },
+  "setting.storage.unavailable": {
+    "ja": "setting: この環境では File System Access API を利用できません",
+    "en": "setting: File System Access API is unavailable in this environment"
+  },
+  "setting.storage.recovery.warning": {
+    "ja": "setting: 外部保存先（{location}）の設定バンドルに不足があります",
+    "en": "setting: external settings bundle at {location} is incomplete"
+  },
+  "setting.storage.recovery.missingHead": {
+    "ja": "setting: 不足している項目:",
+    "en": "setting: missing items:"
+  },
+  "setting.storage.recovery.missing.directoryHandle": {
+    "ja": "保存先フォルダの参照（ディレクトリハンドル）",
+    "en": "saved folder reference (directory handle)"
+  },
+  "setting.storage.recovery.missing.directoryPermission": {
+    "ja": "保存先フォルダへのアクセス権限",
+    "en": "permission to access the saved folder"
+  },
+  "setting.storage.recovery.missing.settingsJson": {
+    "ja": "設定ファイル ({file})",
+    "en": "settings file ({file})"
+  },
+  "setting.storage.recovery.missing.settingsJsonInvalid": {
+    "ja": "設定ファイルの内容が無効 ({file})",
+    "en": "invalid settings file content ({file})"
+  },
+  "setting.storage.recovery.missing.backgroundImage": {
+    "ja": "壁紙画像 ({file})",
+    "en": "background image ({file})"
+  },
+  "setting.storage.recovery.missing.pickerBackgroundImage": {
+    "ja": "ピッカー壁紙画像 ({file})",
+    "en": "picker background image ({file})"
+  },
+  "setting.storage.recovery.repickStillIncomplete": {
+    "ja": "setting: 選択した保存先（{location}）の設定バンドルにも不足があります",
+    "en": "setting: selected folder ({location}) bundle is also incomplete"
+  },
+  "setting.storage.recovery.locationUnknown": {
+    "ja": "（保存先不明）",
+    "en": "(location unknown)"
+  },
+  "setting.storage.recovery.prompt": {
+    "ja": "新しい保存先フォルダを選びますか？ [y/n]（y: フォルダ選択 / n: 設定を初期化して拡張機能内保存に戻す）",
+    "en": "Choose a new settings folder? [y/n] (y: folder picker / n: reset settings and use extension internal storage)"
+  },
+  "setting.storage.recovery.invalid": {
+    "ja": "y または n で回答してください",
+    "en": "Answer y or n"
+  },
+  "setting.storage.recovery.pickCancelled": {
+    "ja": "setting: フォルダ選択をキャンセルしました（y/n を再度入力してください）",
+    "en": "setting: folder selection cancelled (answer y/n again)"
+  },
+  "setting.storage.recovery.pickFailed": {
+    "ja": "setting: フォルダ選択に失敗しました — {message}",
+    "en": "setting: folder selection failed — {message}"
+  },
+  "setting.storage.recovery.resetDone": {
+    "ja": "setting: 設定を初期化し、拡張機能内保存に切り替えました",
+    "en": "setting: settings reset; switched to extension internal storage"
+  },
+  "setting.storage.recovery.repickLoaded": {
+    "ja": "setting: 外部保存先を {directory} に変更し、設定バンドルを読み込みました",
+    "en": "setting: external folder set to {directory}; settings bundle loaded"
+  },
+  "setting.storage.recovery.repickEmpty": {
+    "ja": "setting: 外部保存先を {directory} に変更しました（バンドルは空のため現在の設定を維持）",
+    "en": "setting: external folder set to {directory} (bundle empty; keeping current settings)"
   },
   "setting.picker.notOpen": {
     "ja": "setting: 設定ピッカーは開いていません",
@@ -439,14 +627,6 @@
     "ja": "setting: 設定を保存しました",
     "en": "setting: settings saved"
   },
-  "setting.picker.searchCacheResetNo": {
-    "ja": "n — キャンセル",
-    "en": "n — cancel"
-  },
-  "setting.picker.searchCacheResetYes": {
-    "ja": "y — search メタデータキャッシュ（履歴／ブックマーク SQLite）を消去",
-    "en": "y — clear search metadata cache (history/bookmark SQLite)"
-  },
   "setting.prompt.editBgColor": {
     "ja": "背景色 (hex、現在 {current}):",
     "en": "Background color (hex, current {current}):"
@@ -462,10 +642,6 @@
   "setting.prompt.editInvalid": {
     "ja": "入力が無効です。もう一度入力してください。",
     "en": "Invalid input. Try again."
-  },
-  "setting.searchCache.resetDone": {
-    "ja": "setting: search メタデータキャッシュ（SQLite）を消去しました",
-    "en": "setting: search metadata cache (SQLite) cleared"
   },
   "setting.summary.bgColor": {
     "ja": "bg-color: {value}",

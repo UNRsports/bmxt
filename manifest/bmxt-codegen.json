@@ -19,16 +19,21 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--html|--react] [<pattern>] | dom -exit -list",
+      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--html", "--react"],
+          "trailingTokens": ["--normal", "--with", "--html", "--react", "--tag"],
           "tail": "rest"
         },
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": ["-page-active"],
           "tail": "none"
         }
       ]
@@ -44,11 +49,11 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page] [<pattern>] | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--all", "--history", "--bookmark", "--page"],
+          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot"],
           "tail": "rest"
         },
         {
@@ -180,6 +185,18 @@
       ]
     },
     {
+      "module": "snapshot",
+      "canonicalName": "snapshot",
+      "aliases": [],
+      "usagePrimary": "snapshot -save [<tabId>]",
+      "subcommands": [
+        {
+          "head": "-save",
+          "tail": "rest"
+        }
+      ]
+    },
+    {
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
@@ -217,7 +234,7 @@
       "kind": "dom_list",
       "rustVariant": "DomList",
       "shape": "record",
-      "fields": { "flavor": "string", "pattern": "string" },
+      "fields": { "flavor": "string", "pattern": "string", "pickerMode": "string", "showTag": "string" },
       "tsHandlerFile": "dom-list",
       "tsHandlerExport": "applyDomListEffect"
     },
@@ -251,6 +268,14 @@
       "fields": { "pattern": "string" },
       "tsHandlerFile": "search-page",
       "tsHandlerExport": "applySearchPageEffect"
+    },
+    {
+      "kind": "search_snapshot",
+      "rustVariant": "SearchSnapshot",
+      "shape": "record",
+      "fields": { "pattern": "string" },
+      "tsHandlerFile": "search-snapshot",
+      "tsHandlerExport": "applySearchSnapshotEffect"
     },
     {
       "kind": "group_new",

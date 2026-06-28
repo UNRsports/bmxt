@@ -52,10 +52,6 @@ export function UiSettingsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    void reloadSettings()
-  }, [reloadSettings])
-
-  useEffect(() => {
     const onChange: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (changes, area) => {
       if (area !== "local") {
         return

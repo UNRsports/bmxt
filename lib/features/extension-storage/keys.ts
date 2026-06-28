@@ -42,6 +42,9 @@ export const TABS_PICKER_SETTINGS_KEY = "bmxt_tabs_picker_settings_v1"
 /** Search list picker: page-active preview mode (`--auto` / `--manual`). */
 export const SEARCH_PICKER_SETTINGS_KEY = "bmxt_search_picker_settings_v1"
 
+/** DOM list picker: page-active jump preview mode (`--auto` / `--manual`). */
+export const DOM_PICKER_SETTINGS_KEY = "bmxt_dom_picker_settings_v1"
+
 /** @deprecated Legacy SQLite blob — removed; cleared via settings reset. */
 export const SEARCH_CACHE_DB_KEY = "bmxt_search_cache_db_v1"
 
@@ -56,6 +59,21 @@ export const SEARCH_CACHE_PAGE_KEY = "bmxt_search_cache_page_v1"
 
 /** Global UI: display locale and terminal appearance. */
 export const UI_SETTINGS_KEY = "bmxt_ui_settings_v1"
+
+/** UI settings storage mode (internal chrome.storage vs external directory). */
+export const UI_SETTINGS_STORAGE_CONFIG_KEY = "bmxt_ui_settings_storage_v1"
+
+/** Saved page snapshots (Markdown); mirrors UI settings storage mode. */
+export const SNAPSHOTS_STORAGE_KEY = "bmxt_snapshots_v1"
+
+/** Snapshot destination: bundled with UI settings vs separate Obsidian vault folder. */
+export const SNAPSHOT_STORAGE_CONFIG_KEY = "bmxt_snapshot_storage_v1"
+
+/** Max Markdown body characters per snapshot (internal storage). */
+export const MAX_SNAPSHOT_BODY_CHARS = 200_000
+
+/** Max snapshot files kept in internal storage. */
+export const MAX_INTERNAL_SNAPSHOT_FILES = 500
 
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"

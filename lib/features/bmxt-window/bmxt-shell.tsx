@@ -37,6 +37,11 @@ import {
   saveSearchPageActiveMode,
   type SearchPageActiveMode
 } from "../search/page-active-setting"
+import {
+  loadDomPickerSettings,
+  saveDomPageActiveMode,
+  type DomPageActiveMode
+} from "../dom/page-active-setting"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination"
 import {
   openPickerSlots,
@@ -57,6 +62,7 @@ import { useLogScroll } from "./shell/useLogScroll"
 import { useSessionPromptActions } from "./shell/useSessionPromptActions"
 import { useDomListShell } from "./shell/useDomListShell"
 import { useSearchListShell } from "./shell/useSearchListShell"
+import { useSnapshotSaveShell } from "./shell/useSnapshotSaveShell"
 import { useSettingPickerShell } from "./shell/useSettingPickerShell"
 import { usePromptPickers } from "./shell/usePromptPickers"
 import { useNavPromptBridge } from "./shell/useNavPromptBridge"
@@ -72,6 +78,7 @@ import {
 } from "../search/search-list-picker-input"
 import { isJobHandleActive, useSessionJobRunner } from "../job"
 import { parseDomExitListLine, parseDomListPickerLine, type DomListPickerState } from "../dom/dom-list-picker-input"
+import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
 import {
   parseNavEnterLine,
   parseNavExitLine,
@@ -110,6 +117,8 @@ import {
   parseSettingListPickerLine
 } from "../setting/setting-list-picker-input"
 import { useUiSettings } from "../setting/use-ui-settings"
+import { externalSettingsRecoveryLogLines } from "../setting/external-settings-startup"
+import { useExternalSettingsRecovery } from "../setting/use-external-settings-recovery"
 import {
   useCallback,
   useEffect,
@@ -138,9 +147,11 @@ type Props = {
   /** EN: Pre-built session list rows (avoids passing full `pickersBySession` into every shell). */
   sessionListRows: SessionListRow[]
   navArmedByLeaf: Record<string, boolean>
-  onActivateSession: (sessionId: string) => Promise<void>
-  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
-  appendLogLines: (newLines: string[]) => Promise<void>
+  onActivateSession: (sessionId: string) => void
+  onSetSessionDisplayName: (sessionId: string, name: string) => void
+  appendLogLines: (newLines: string[]) => void | Promise<void>
+  sessionOrderLength: number
+  applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
   /** 第1引数でセッションを固定（非同期完了後も正しいターミナルに紐づく）。 */
@@ -180,6 +191,8 @@ export function BmxtShell({
   onActivateSession,
   onSetSessionDisplayName,
   appendLogLines,
+  sessionOrderLength,
+  applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
   setSessionPickerSlot,
@@ -197,6 +210,10 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
+  const externalSettingsRecovery = useExternalSettingsRecovery()
+  if (!externalSettingsRecovery) {
+    throw new Error("ExternalSettingsRecoveryProvider is required")
+  }
   const prevUiLocaleRef = useRef(uiSettings.locale)
   useEffect(() => {
     setRunLocale(uiSettings.locale)
@@ -247,7 +264,7 @@ export function BmxtShell({
     openPickers,
     sessionPickers
   )
-  const pickersForColumnOrder = railPickers.length > 0 ? railPickers : openPickers
+  const pickersForColumnOrder = railPickers
   const displayTabPicker = displaySessionPickers.tabs
   const displaySearchListPicker = displaySessionPickers.search
   const displayDomListPicker = displaySessionPickers.dom
@@ -292,6 +309,8 @@ export function BmxtShell({
   const tabsPageActiveModeRef = useRef<TabsPageActiveMode>("auto")
   const [searchPageActiveMode, setSearchPageActiveMode] = useState<SearchPageActiveMode>("auto")
   const searchPageActiveModeRef = useRef<SearchPageActiveMode>("auto")
+  const [domPageActiveMode, setDomPageActiveMode] = useState<DomPageActiveMode>("auto")
+  const domPageActiveModeRef = useRef<DomPageActiveMode>("auto")
   const navTranslateBlocksRef = useRef<readonly TranslationBlock[]>([])
   const flushNavTranslateRef = useRef<() => Promise<void>>(async () => {})
   const setNavTranslateCommitErrorRef = useRef<(message: string | null) => void>(() => {})
@@ -315,16 +334,23 @@ export function BmxtShell({
     [onNavArmedChange]
   )
 
+  const domListFollowEnabled = useMemo(
+    () => isDomListPickerFollowEnabled(domListPicker, paneFocus, detailBarId),
+    [detailBarId, domListPicker, paneFocus]
+  )
+
   const {
     runDomListAndShow,
     onTabsPickerFocusTabId,
     syncTabPickerOpen,
-    clearTabsPickerFocusTabId
+    clearTabsPickerFocusTabId,
+    refreshDomViewportForPicker
   } = useDomListShell({
     sessionId,
     uiLocale: uiSettings.locale,
     jobRunner,
     domListPicker,
+    domListFollowEnabled,
     appendLogLines,
     setDomListPicker,
     setModeToolbarOrder
@@ -505,6 +531,10 @@ export function BmxtShell({
       setSearchPageActiveMode(s.pageActive)
       searchPageActiveModeRef.current = s.pageActive
     })
+    void loadDomPickerSettings().then((s) => {
+      setDomPageActiveMode(s.pageActive)
+      domPageActiveModeRef.current = s.pageActive
+    })
   }, [])
 
   useEffect(() => {
@@ -514,6 +544,10 @@ export function BmxtShell({
   useEffect(() => {
     searchPageActiveModeRef.current = searchPageActiveMode
   }, [searchPageActiveMode])
+
+  useEffect(() => {
+    domPageActiveModeRef.current = domPageActiveMode
+  }, [domPageActiveMode])
 
   const {
     subCmdPicker,
@@ -574,6 +608,12 @@ export function BmxtShell({
     setModeToolbarOrder,
     setSubCmdPicker,
     searchListPickerRef
+  })
+
+  const { runSnapshotSave } = useSnapshotSaveShell({
+    sessionId,
+    uiLocale: uiSettings.locale,
+    appendLogLines
   })
 
   const focusPrompt = useCallback(() => {
@@ -657,8 +697,10 @@ export function BmxtShell({
     translatePairIdRef,
     tabsPageActiveModeRef,
     searchPageActiveModeRef,
+    domPageActiveModeRef,
     setTabsPageActiveMode,
     setSearchPageActiveMode,
+    setDomPageActiveMode,
     setTranslatePairId,
     toggleNavActive,
     resetNavTranslateSession,
@@ -694,8 +736,44 @@ export function BmxtShell({
     settingListPickerRef
   })
 
+  useEffect(() => {
+    if (!isFocusedPane || !externalSettingsRecovery.pending) {
+      return
+    }
+    if (externalSettingsRecovery.announcedRef.current) {
+      return
+    }
+    externalSettingsRecovery.announcedRef.current = true
+    void appendLogLines(
+      externalSettingsRecoveryLogLines(
+        uiSettings.locale,
+        externalSettingsRecovery.directoryName,
+        externalSettingsRecovery.missing
+      )
+    )
+  }, [
+    appendLogLines,
+    externalSettingsRecovery,
+    isFocusedPane,
+    uiSettings.locale
+  ])
+
+  useEffect(() => {
+    const lines = externalSettingsRecovery.loadErrorLogLines
+    if (!isFocusedPane || !lines) {
+      return
+    }
+    if (externalSettingsRecovery.loadErrorAnnouncedRef.current) {
+      return
+    }
+    externalSettingsRecovery.loadErrorAnnouncedRef.current = true
+    void appendLogLines([...lines])
+  }, [appendLogLines, externalSettingsRecovery, isFocusedPane])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
+    sessionOrderLength,
+    applyRunCmdPatches,
     mode,
     iSearchMatches,
     iSearchCycle,
@@ -711,6 +789,7 @@ export function BmxtShell({
     domListPickerRef,
     settingListPickerRef,
     tabsPageActiveModeRef,
+    domPageActiveModeRef,
     translatePairIdRef,
     promptLine,
     allowEmptyFirstPickerSyncRef,
@@ -721,6 +800,7 @@ export function BmxtShell({
     sessionNameTypingRef,
     sessionListPickerHiRef,
     setTabsPageActiveMode,
+    setDomPageActiveMode,
     switchSessionFromListPicker,
     setMode,
     setLine,
@@ -747,10 +827,14 @@ export function BmxtShell({
     setSubCmdPicker,
     runDomListAndShow,
     runSearchListSearch,
+    runSnapshotSave,
     syncImeTokenPicker,
     openSessionNameTyping,
     saveSessionDisplayName,
-    onActivateSession
+    onSetSessionDisplayName,
+    onActivateSession,
+    externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
+    submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer
   })
 
 
@@ -975,7 +1059,8 @@ export function BmxtShell({
           }}
           dom={{
             pickerOpen: domListPicker !== null,
-            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines"
+            kind: domListPicker?.kind === "prompt" ? "prompt" : "lines",
+            pageActiveMode: domPageActiveMode
           }}
           setting={{
             pickerOpen: settingListPicker !== null
@@ -1044,8 +1129,23 @@ export function BmxtShell({
             void runDomListAndShow(cl, cl, false)
           }}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
+          onRefreshDomViewport={(state) => refreshDomViewportForPicker(state)}
+          onApplyDomViewportCapture={(capture) => {
+            setDomListPicker(sessionId, (prev) => {
+              if (!prev || prev.kind !== "lines") {
+                return prev
+              }
+              return {
+                ...prev,
+                lines: capture.lines,
+                jumpPaths: capture.jumpPaths,
+                headerLineCount: capture.headerLineCount
+              }
+            })
+          }}
           tabsPageActiveMode={tabsPageActiveMode}
           searchPageActiveMode={searchPageActiveMode}
+          domPageActiveMode={domPageActiveMode}
         />
       </div>
     </div>

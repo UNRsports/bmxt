@@ -148,7 +148,13 @@ export function usePlainPickerKeyboard({
         }
         return []
       },
-      onJump: (target) => setHi(target)
+      onJump: (target) => {
+        if (extensions?.onSearchJump) {
+          extensions.onSearchJump(target)
+        } else {
+          setHi(target)
+        }
+      }
     }),
     [
       defaultSearchJumpEnabled,

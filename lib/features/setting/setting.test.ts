@@ -16,6 +16,15 @@ import {
 } from "./setting-list-picker-state.ts"
 import { settingMainRowTargetView } from "./setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
+import {
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames
+} from "./settings-bundle-layout.ts"
+import {
+  normalizeUiSettingsStorageConfig,
+  type UiSettingsStorageConfig
+} from "./settings-storage-mode.ts"
 import type { UiAppearance } from "./appearance.ts"
 
 function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearance {
@@ -135,8 +144,8 @@ describe("setting list picker draft", () => {
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
-  it("maps reset-search-cache to confirm view", () => {
-    assert.equal(settingMainRowTargetView("reset-search-cache"), "searchCacheResetConfirm")
+  it("maps reset-default to confirm view", () => {
+    assert.equal(settingMainRowTargetView("reset-default"), "resetConfirm")
   })
 })
 
@@ -146,6 +155,39 @@ describe("setting list picker input", () => {
     assert.equal(parseSettingListPickerLine("setting -list"), true)
     assert.equal(parseSettingExitListLine("setting -exit -list"), true)
     assert.equal(parseSettingListPickerLine("setting -language"), false)
+  })
+})
+
+describe("ui settings storage config", () => {
+  it("normalizes storage mode", () => {
+    assert.deepEqual(normalizeUiSettingsStorageConfig(null), {
+      mode: "internal",
+      directoryName: null
+    })
+    assert.deepEqual(
+      normalizeUiSettingsStorageConfig({ mode: "external", directoryName: "bmxt-config" }),
+      { mode: "external", directoryName: "bmxt-config" } satisfies UiSettingsStorageConfig
+    )
+    assert.deepEqual(normalizeUiSettingsStorageConfig({ mode: "bogus" as "internal" }), {
+      mode: "internal",
+      directoryName: null
+    })
+  })
+})
+
+describe("external settings bundle", () => {
+  it("formats nested bundle display name", () => {
+    assert.equal(
+      formatExternalSettingsBundleDisplayName("Documents"),
+      `Documents/${EXTERNAL_SETTINGS_BUNDLE_DIR}`
+    )
+  })
+
+  it("lists known background image file names", () => {
+    const names = listKnownBundleImageFileNames()
+    assert.ok(names.includes("background-image.png"))
+    assert.ok(names.includes("picker-background-image.webp"))
+    assert.equal(names.length, 8)
   })
 })
 

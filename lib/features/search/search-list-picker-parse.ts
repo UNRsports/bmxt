@@ -3,15 +3,16 @@
  * JA: `search -list` のプロンプト解析（codegen・Chrome 非依存・テスト可能）。
  */
 
+import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 
 const SEARCH_EXIT_LIST_RE = /^\s*search\s+-exit\s+-list\s*$/i
 
-const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page"])
+const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page", "--snapshot"])
 
-const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page"] as const
+const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page", "--snapshot"] as const
 
-const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page"] as const
+const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page", "--snapshot"] as const
 
 function searchListParts(trimmed: string): string[] {
   return trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
@@ -174,18 +175,21 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
 
 /** EN: Show pattern placeholder; suppress scope IME menu. */
 export function shouldShowSearchListPatternPlaceholder(line: string, cursor: number): boolean {
-  const trimmed = line.trim()
-  if (isSearchListContinuationPrompt(line)) {
+  const active = resolveActiveCommandSegment(line, cursor)
+  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const segmentCursor = active.localCursor
+  const trimmed = segmentLine.trim()
+  if (isSearchListContinuationPrompt(segmentLine)) {
     return false
   }
   if (!trimmed.toLowerCase().startsWith("search -list")) {
     return false
   }
-  if (isEditingSearchListScopeToken(line, cursor)) {
+  if (isEditingSearchListScopeToken(segmentLine, segmentCursor)) {
     return false
   }
   const parts = searchListParts(trimmed)
-  if (parts.length === 2 && line.endsWith(" ")) {
+  if (parts.length === 2 && segmentLine.endsWith(" ")) {
     return true
   }
   if (parts.length >= 3 && isSearchListScopeToken(parts[2]!)) {

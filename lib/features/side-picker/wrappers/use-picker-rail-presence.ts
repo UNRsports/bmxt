@@ -4,6 +4,14 @@ import type { PickerSlotId, SessionPickerState } from "../session/session-picker
 /** EN: Must match `.bmxt-picker-rail` flex transition in bmxt-ui.css. */
 export const PICKER_RAIL_MS = 280
 
+/** EN: Live open slots win over animating rail so columns stay visible when state recovers. */
+export function resolveVisibleRailPickers(
+  openPickers: readonly PickerSlotId[],
+  railPickers: readonly PickerSlotId[]
+): readonly PickerSlotId[] {
+  return openPickers.length > 0 ? openPickers : railPickers
+}
+
 export function usePickerRailPresence(
   openPickers: readonly PickerSlotId[],
   sessionPickers: SessionPickerState
@@ -16,6 +24,8 @@ export function usePickerRailPresence(
   const prevOpenRef = useRef(openPickers)
   const prevSessionPickersRef = useRef(sessionPickers)
   const frozenSessionPickersRef = useRef<SessionPickerState | null>(null)
+  const openPickersRef = useRef(openPickers)
+  openPickersRef.current = openPickers
   const [railPickers, setRailPickers] = useState<readonly PickerSlotId[]>(openPickers)
   const [railExpanded, setRailExpanded] = useState(openPickers.length > 0)
 
@@ -75,6 +85,9 @@ export function usePickerRailPresence(
     if (railPickers.length > 0) {
       setRailExpanded(false)
       closeTimer = window.setTimeout(() => {
+        if (openPickersRef.current.length > 0) {
+          return
+        }
         setRailPickers([])
         frozenSessionPickersRef.current = null
       }, PICKER_RAIL_MS)
@@ -88,5 +101,7 @@ export function usePickerRailPresence(
     }
   }, [openPickers, railPickers.length])
 
-  return { railPickers, railExpanded, displaySessionPickers }
+  const visibleRailPickers = resolveVisibleRailPickers(openPickers, railPickers)
+
+  return { railPickers: visibleRailPickers, railExpanded, displaySessionPickers }
 }

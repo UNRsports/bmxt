@@ -24,7 +24,7 @@ export {
   shouldShowSearchListPatternPlaceholder
 } from "./search-list-picker-parse"
 
-/** After `search -list ` — scope token `--all` | `--history` | `--bookmark` | `--page`. */
+/** After `search -list ` — scope token `--all` | `--history` | `--bookmark` | `--page` | `--snapshot`. */
 const SEARCH_LIST_LEAD_RE = /^\s*search\s+-list\s+/i
 
 export function searchListScopeCompletionZone(
