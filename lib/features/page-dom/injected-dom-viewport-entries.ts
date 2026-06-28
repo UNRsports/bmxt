@@ -3,6 +3,7 @@
  * JA: ビューポート内の可視要素を画面上位置順 + path で返す（注入専用）。
  */
 
+import { formatDomElementLine } from "./injected-dom-display-line.ts"
 import type { DomShowMode } from "./injected-dom-show.ts"
 import { isElementVisibleInViewport } from "./injected-dom-viewport-visible.ts"
 
@@ -13,43 +14,18 @@ type ViewportPayload = {
 }
 
 /** EN: Same flavor as `bmxtDomShowInjected`, filtered to viewport-visible nodes. */
-export function bmxtDomViewportEntriesInjected(mode: DomShowMode): ViewportPayload {
+export function bmxtDomViewportEntriesInjected(
+  mode: DomShowMode,
+  showTag: boolean,
+  emptyImageAltLabel: string
+): ViewportPayload {
   const maxNodes = 2500
   const maxDepth = 48
   const maxVisible = 120
   const htmlSnippetMax = 220
+  const display = showTag ? "tag" : "text"
   const collected: Array<{ line: string; path: number[]; top: number; left: number }> = []
   let count = 0
-
-  function formatReactLine(el: Element): string {
-    let fiber = ""
-    const keys = Object.keys(el as unknown as Record<string, unknown>)
-    for (let i = 0; i < keys.length; i += 1) {
-      const k = keys[i]
-      if (k.startsWith("__reactFiber$") || k.startsWith("__reactProps$")) {
-        fiber = " [react-internal]"
-        break
-      }
-    }
-    const id = el.id ? "#" + el.id : ""
-    let cls = ""
-    const cn = el.className
-    if (typeof cn === "string" && cn) {
-      const parts = cn.split(/\s+/).filter(Boolean).slice(0, 4)
-      if (parts.length) {
-        cls = "." + parts.join(".")
-      }
-    }
-    return el.tagName.toLowerCase() + id + cls + fiber
-  }
-
-  function formatHtmlLine(el: Element): string {
-    let snippet = el.outerHTML.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
-    if (snippet.length > htmlSnippetMax) {
-      snippet = snippet.slice(0, htmlSnippetMax) + "…"
-    }
-    return snippet
-  }
 
   function walk(node: Node, depth: number, path: number[]): void {
     if (!node || count >= maxNodes || depth > maxDepth) {
@@ -62,7 +38,7 @@ export function bmxtDomViewportEntriesInjected(mode: DomShowMode): ViewportPaylo
     count += 1
     if (isElementVisibleInViewport(el)) {
       const rect = el.getBoundingClientRect()
-      const line = mode === "html" ? formatHtmlLine(el) : formatReactLine(el)
+      const line = formatDomElementLine(el, mode, display, emptyImageAltLabel, htmlSnippetMax)
       collected.push({
         line,
         path: path.slice(),

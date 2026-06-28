@@ -88,6 +88,7 @@ export type DomListPickerState =
       headerLineCount?: number
       pickerMode?: DomPickerMode
       flavor?: DomListFlavor
+      showTag?: boolean
       pattern?: string
     }
   | { kind: "prompt"; message: string[]; commandLine: string }

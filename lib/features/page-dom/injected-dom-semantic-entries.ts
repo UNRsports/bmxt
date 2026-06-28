@@ -9,6 +9,7 @@ import {
   pathTargetsElement,
   walkAllElements
 } from "./injected-dom-path.ts"
+import { formatDomElementLine } from "./injected-dom-display-line.ts"
 import { isElementVisibleInViewport } from "./injected-dom-viewport-visible.ts"
 
 type DomShowMode = "html" | "react"
@@ -119,43 +120,16 @@ function classifyElement(el: Element): SemanticKind[] {
 export function bmxtDomSemanticEntriesInjected(
   mode: DomShowMode,
   kind: SemanticKind,
-  scope: DomSemanticCaptureScope = "viewport"
+  scope: DomSemanticCaptureScope = "viewport",
+  showTag = false,
+  emptyImageAltLabel = "no alt"
 ): SemanticPayload {
   const maxDocumentResults = 500
   const maxViewportVisible = 120
   const htmlSnippetMax = 220
+  const display = showTag ? "tag" : "text"
   const collected: Array<{ line: string; path: number[]; top: number; left: number }> = []
   let truncated = false
-
-  function formatReactLine(el: Element): string {
-    let fiber = ""
-    const keys = Object.keys(el as unknown as Record<string, unknown>)
-    for (let i = 0; i < keys.length; i += 1) {
-      const k = keys[i]
-      if (k.startsWith("__reactFiber$") || k.startsWith("__reactProps$")) {
-        fiber = " [react-internal]"
-        break
-      }
-    }
-    const id = el.id ? "#" + el.id : ""
-    let cls = ""
-    const cn = el.className
-    if (typeof cn === "string" && cn) {
-      const parts = cn.split(/\s+/).filter(Boolean).slice(0, 4)
-      if (parts.length) {
-        cls = "." + parts.join(".")
-      }
-    }
-    return el.tagName.toLowerCase() + id + cls + fiber
-  }
-
-  function formatHtmlLine(el: Element): string {
-    let snippet = el.outerHTML.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
-    if (snippet.length > htmlSnippetMax) {
-      snippet = snippet.slice(0, htmlSnippetMax) + "…"
-    }
-    return snippet
-  }
 
   walkAllElements((el) => {
     if (truncated || !classifyElement(el).includes(kind)) {
@@ -173,7 +147,7 @@ export function bmxtDomSemanticEntriesInjected(
       truncated = true
       return
     }
-    const line = mode === "html" ? formatHtmlLine(el) : formatReactLine(el)
+    const line = formatDomElementLine(el, mode, display, emptyImageAltLabel, htmlSnippetMax)
     const rect = el.getBoundingClientRect()
     collected.push({ line, path: [...path], top: rect.top, left: rect.left })
   })

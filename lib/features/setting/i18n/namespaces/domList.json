@@ -34,5 +34,9 @@
   "domList.semanticTruncated": {
     "ja": "（件数上限のため一部のみ表示）",
     "en": "(showing partial list — result cap reached)"
+  },
+  "domList.emptyImageAlt": {
+    "ja": "altなし",
+    "en": "no alt"
   }
 }

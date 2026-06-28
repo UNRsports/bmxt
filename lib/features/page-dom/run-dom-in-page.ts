@@ -56,7 +56,9 @@ export async function runDomSemanticEntriesOnTab(
   tabId: number,
   mode: DomShowMode,
   kind: DomSemanticKind,
-  scope: DomSemanticCaptureScope = "viewport"
+  scope: DomSemanticCaptureScope = "viewport",
+  showTag = false,
+  emptyImageAltLabel = "no alt"
 ): Promise<DomSemanticEntriesPayload | null> {
   if (!(await tabUrlOk(tabId))) {
     return null
@@ -65,7 +67,9 @@ export async function runDomSemanticEntriesOnTab(
     channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
     mode,
     kind,
-    scope
+    scope,
+    showTag,
+    emptyImageAltLabel
   }
   return sendDomInPageMessage<DomSemanticEntriesRequest, DomSemanticEntriesPayload>(tabId, request)
 }

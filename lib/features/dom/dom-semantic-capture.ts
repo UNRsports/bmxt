@@ -40,12 +40,14 @@ function buildHeader(
   flavor: DomListFlavor,
   tab: chrome.tabs.Tab,
   kind: DomSemanticKind,
-  locale: UiLocale
+  locale: UiLocale,
+  showTag: boolean
 ): string[] {
   const modeToken = domPickerModeLabel("with")
   const kindLabel = tDom(domSemanticKindI18nKey(kind), locale)
+  const tagToken = showTag ? " --tag" : ""
   return [
-    `dom -list ${modeToken} (${flavor}) · ${kindLabel}`,
+    `dom -list ${modeToken} (${flavor})${tagToken} · ${kindLabel}`,
     displayTitle(tab.title),
     tab.url ?? "(no url)",
     ""
@@ -58,7 +60,8 @@ export async function captureDomSemanticForTab(
   flavor: DomListFlavor,
   kind: DomSemanticKind,
   locale: UiLocale = DEFAULT_UI_LOCALE,
-  scope: DomSemanticCaptureScope = "viewport"
+  scope: DomSemanticCaptureScope = "viewport",
+  showTag = false
 ): Promise<DomListCapture> {
   const tabId = tab.id
   if (tabId === undefined) {
@@ -66,8 +69,16 @@ export async function captureDomSemanticForTab(
   }
 
   const mode: DomShowMode = flavor === "--react" ? "react" : "html"
-  const injected = await runDomSemanticEntriesOnTab(tabId, mode, kind, scope)
-  const header = buildHeader(flavor, tab, kind, locale)
+  const emptyImageAltLabel = tDomList("domList.emptyImageAlt", locale)
+  const injected = await runDomSemanticEntriesOnTab(
+    tabId,
+    mode,
+    kind,
+    scope,
+    showTag,
+    emptyImageAltLabel
+  )
+  const header = buildHeader(flavor, tab, kind, locale, showTag)
   const headerLineCount = header.length
 
   if (injected === null) {

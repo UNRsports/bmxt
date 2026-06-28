@@ -5,15 +5,12 @@
 
 import { wordBounds } from "../format/word-bounds.ts"
 import {
-  DOM_LIST_FLAVOR_TOKENS,
-  DOM_PICKER_MODE_TOKENS
+  DOM_LIST_OPTION_TOKENS_WITH_TAG,
+  DOM_LIST_SHOW_TAG_TOKEN
 } from "./dom-picker-mode.ts"
 import { domListLineHasFlavor } from "./parse-dom-list-args.ts"
 
-export const DOM_LIST_OPTION_TOKENS = [
-  ...DOM_PICKER_MODE_TOKENS,
-  ...DOM_LIST_FLAVOR_TOKENS
-] as const
+export const DOM_LIST_OPTION_TOKENS = DOM_LIST_OPTION_TOKENS_WITH_TAG
 
 function domListParts(trimmed: string): string[] {
   return trimmed.trim().split(/\s+/).filter((s) => s.length > 0)
@@ -39,6 +36,7 @@ export function listDomListRemainingOptionCandidates(
   const hasWith = used.includes("--with")
   const hasHtml = used.includes("--html")
   const hasReact = used.includes("--react")
+  const hasTag = used.includes(DOM_LIST_SHOW_TAG_TOKEN)
 
   const remaining: string[] = []
   if (!hasNormal && !hasWith) {
@@ -46,6 +44,9 @@ export function listDomListRemainingOptionCandidates(
   }
   if (!hasHtml && !hasReact) {
     remaining.push("--html", "--react")
+  }
+  if (hasWith && !hasTag) {
+    remaining.push(DOM_LIST_SHOW_TAG_TOKEN)
   }
 
   const p = prefix.trim().toLowerCase()

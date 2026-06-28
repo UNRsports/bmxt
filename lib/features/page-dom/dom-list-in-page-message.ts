@@ -21,6 +21,8 @@ export type DomSemanticEntriesRequest = {
   mode: DomShowMode
   kind: DomSemanticKind
   scope?: DomSemanticCaptureScope
+  showTag?: boolean
+  emptyImageAltLabel?: string
 }
 
 export type DomScrollToPathRequest = {
@@ -66,6 +68,12 @@ export function isDomSemanticEntriesRequest(raw: unknown): raw is DomSemanticEnt
     return false
   }
   if (o.scope !== undefined && !isDomSemanticScope(o.scope)) {
+    return false
+  }
+  if (o.showTag !== undefined && typeof o.showTag !== "boolean") {
+    return false
+  }
+  if (o.emptyImageAltLabel !== undefined && typeof o.emptyImageAltLabel !== "string") {
     return false
   }
   return true

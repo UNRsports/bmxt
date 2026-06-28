@@ -1,5 +1,6 @@
 import {
   parseDomListFlavorToken,
+  parseDomListShowTagToken,
   parseDomPickerModeToken,
   type DomListFlavor,
   type DomPickerMode
@@ -9,6 +10,7 @@ import { stripInvisibleFormatChars } from "../bmxt-core/line-parse.ts"
 export type ParsedDomListArgs = {
   pickerMode: DomPickerMode
   flavor: DomListFlavor
+  showTag: boolean
   pattern: string
 }
 
@@ -29,6 +31,7 @@ function normalizeDomPattern(raw: string): string {
 export function parseDomListArgsFromTokens(tokens: readonly string[]): ParsedDomListArgs | null {
   let pickerMode: DomPickerMode = "normal"
   let flavor: DomListFlavor | null = null
+  let showTag = false
   const patternParts: string[] = []
 
   for (const raw of tokens) {
@@ -43,6 +46,10 @@ export function parseDomListArgsFromTokens(tokens: readonly string[]): ParsedDom
       flavor = flav
       continue
     }
+    if (parseDomListShowTagToken(tok) === true) {
+      showTag = true
+      continue
+    }
     patternParts.push(raw)
   }
 
@@ -53,6 +60,7 @@ export function parseDomListArgsFromTokens(tokens: readonly string[]): ParsedDom
   return {
     pickerMode,
     flavor,
+    showTag: pickerMode === "with" ? showTag : false,
     pattern: normalizeDomPattern(patternParts.join(" "))
   }
 }

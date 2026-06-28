@@ -43,6 +43,7 @@ export type DomListPickerBodyProps = {
   jumpActiveMode?: DomPageActiveMode
   pickerMode?: DomPickerMode
   flavor?: DomListFlavor
+  showTag?: boolean
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
   keyboardActive?: boolean

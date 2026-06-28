@@ -121,6 +121,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
               headerLineCount: domCapture?.headerLineCount ?? linesOut.length,
               pickerMode: parsed?.pickerMode ?? "normal",
               flavor: parsed?.flavor ?? "--html",
+              showTag: parsed?.showTag ?? false,
               pattern: parsed?.pattern ?? ""
             })
             options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "dom"))
@@ -184,7 +185,8 @@ export function useDomListShell(options: UseDomListShellOptions) {
         const tab = await chrome.tabs.get(tabId)
         const flavor = state.flavor ?? "--html"
         const pattern = state.pattern ?? ""
-        return await captureDomViewportForTab(tab, flavor, pattern, options.uiLocale)
+        const showTag = state.showTag === true
+        return await captureDomViewportForTab(tab, flavor, pattern, options.uiLocale, showTag)
       } catch {
         return null
       }

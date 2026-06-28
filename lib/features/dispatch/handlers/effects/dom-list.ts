@@ -67,7 +67,15 @@ export async function applyDomListEffect(
   }
   try {
     const pickerMode = e.pickerMode === "with" ? "with" : "normal"
-    const capture = await captureDomListForTab(tab, e.flavor, e.pattern, locale, pickerMode)
+    const showTag = e.showTag === "true" && pickerMode === "with"
+    const capture = await captureDomListForTab(
+      tab,
+      e.flavor,
+      e.pattern,
+      locale,
+      pickerMode,
+      showTag
+    )
     ctx.onDomListCapture?.(capture)
     return capture.lines
   } catch (err) {

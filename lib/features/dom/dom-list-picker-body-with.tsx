@@ -68,18 +68,21 @@ function DomWithPickerRow({
   line,
   hi,
   rowKind,
-  searchHighlightQuery
+  searchHighlightQuery,
+  showTag
 }: {
   index: number
   line: string
   hi: number
   rowKind: DomPickerRowKind
   searchHighlightQuery: string
+  showTag: boolean
 }): ReactNode {
   const hiRow = index === hi
   const rowClass = `bmxt-dom-picker-row bmxt-dom-picker-row--${rowKind}${
     hiRow ? " bmxt-dom-picker-row--hi" : ""
   }`
+  const useTagContent = rowKind === "tree" && showTag
 
   return (
     <div
@@ -87,7 +90,7 @@ function DomWithPickerRow({
       role="option"
       aria-selected={hiRow}
       className={rowClass}>
-      {rowKind === "tree" ? (
+      {useTagContent ? (
         <DomFlatRowContent line={line} />
       ) : (
         plainPickerLineHighlightSegments(line, searchHighlightQuery).map((seg, i) =>
@@ -141,6 +144,7 @@ export function DomListPickerBodyWith({
   headerLineCount,
   targetTabId,
   flavor = "--html",
+  showTag = false,
   jumpActiveMode: _jumpActiveMode = "auto",
   onReturnToPrompt,
   onExitToDetailBar,
@@ -255,7 +259,7 @@ export function DomListPickerBodyWith({
           const kind = activeSemanticKindRef.current
           if (kind !== null) {
             const tab = await chrome.tabs.get(tabId)
-            capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport")
+            capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport", showTag)
           }
         } else {
           capture = await onRefreshViewport()
@@ -267,7 +271,7 @@ export function DomListPickerBodyWith({
         refreshInFlightRef.current = false
       }
     },
-    [flavor, locale, onRefreshViewport, onViewportCapture]
+    [flavor, locale, onRefreshViewport, onViewportCapture, showTag]
   )
 
   const restoreViewportList = useCallback(async () => {
@@ -292,7 +296,7 @@ export function DomListPickerBodyWith({
       semanticCaptureInFlightRef.current = true
       try {
         const tab = await chrome.tabs.get(tabId)
-        const capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport")
+        const capture = await captureDomSemanticForTab(tab, flavor, kind, locale, "viewport", showTag)
         onViewportCapture(capture)
         setActiveSemanticKind(kind)
         setWithView("semanticFilter")
@@ -308,7 +312,7 @@ export function DomListPickerBodyWith({
         semanticCaptureInFlightRef.current = false
       }
     },
-    [flavor, locale, onViewportCapture]
+    [flavor, locale, onViewportCapture, showTag]
   )
 
   useEffect(() => {
@@ -611,6 +615,7 @@ export function DomListPickerBodyWith({
               hi={hi}
               rowKind={rowKinds[i]!}
               searchHighlightQuery={searchHighlightQuery}
+              showTag={showTag}
             />
           ))
         )}

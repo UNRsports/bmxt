@@ -32,9 +32,20 @@ describe("dom-list-in-page-message", () => {
         channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
         mode: "html",
         kind: "link",
-        scope: "viewport"
+        scope: "viewport",
+        showTag: true,
+        emptyImageAltLabel: "altなし"
       }),
       true
+    )
+    assert.equal(
+      isDomSemanticEntriesRequest({
+        channel: DOM_SEMANTIC_ENTRIES_CHANNEL,
+        mode: "html",
+        kind: "link",
+        showTag: "yes"
+      }),
+      false
     )
     assert.equal(
       isDomSemanticEntriesRequest({

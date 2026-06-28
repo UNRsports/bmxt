@@ -81,11 +81,12 @@ export async function captureDomListForTab(
   flavor: string,
   pattern: string,
   locale: UiLocale = DEFAULT_UI_LOCALE,
-  pickerMode: DomPickerMode = "normal"
+  pickerMode: DomPickerMode = "normal",
+  showTag = false
 ): Promise<DomListCapture> {
   const flav: DomListFlavor = flavor === "--react" ? "--react" : "--html"
   if (pickerMode === "with") {
-    return captureDomViewportForTab(tab, flav, pattern, locale)
+    return captureDomViewportForTab(tab, flav, pattern, locale, showTag)
   }
   const tabId = tab.id
   if (tabId === undefined) {
