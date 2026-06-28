@@ -1,22 +1,38 @@
-BMXt is a UI demonstration for keyboard-centric browser operation on Chrome.
-It exists because the author is not satisfied with today’s out-of-the-box browser experience.
+◆Introduction
 
-It has a terminal-style prompt and log, but rather than being a classic terminal emulator alone, it is designed as a broad command surface for steering the whole browser—so you can keep your hands on the keyboard in a relaxed posture and cut down on how often you reach for tabs and windows.
+We are conducting an experiment to fundamentally rethink browser operation, without relying on AI or other technologies, and completing the process entirely locally.
 
-Command output and typed command history are handled primarily in memory for the UI; only capped fields are persisted in chrome.storage.local. The extension page and service worker are not designed to call fetch() against arbitrary third-party HTTPS URLs (the packaged manifest’s CSP, including connect-src, reinforces this). Optional http(s) site access is requested at runtime only when you run commands that inject scripts into web pages.
+Have you ever experienced any of the following?
 
-◆About the name — a play on Browser Manipulator X Terminal:
+・Using the mouse to operate the browser is cumbersome.
 
-- X
-  - UX improvement
-  - A hope that many different people can use it in crossover ways
-  - Exponential growth and open-ended possibility through combining commands
-- t
-  - The first letter of Terminal
-  - The idea of an extension layered onto your browser, carried in the letter t
+・You keep many tabs open because you feel anxious about not being able to see things immediately if they're not open.
 
-The road has only just begun, but the author values your voices—so they decided to publish on the Chrome Web Store.
-They believe the keyboard in front of you can take you “anywhere,” and will keep stacking features while building BMXt as a tool that stays human-centered.
+・Even with many tabs open, finding what you're looking for and managing them is difficult.
+
+The author has always felt dissatisfied with these points during their work, and more precisely, decided to realize their desire for "efficient browsing from a perspective other than tabs!"
+
+◆Development Methodology
+
+Fortunately, in this age where "coding is easy" thanks to AI, all code generation is done by AI, and development is being carried out through rapid trial and error.
+
+However, the most important thing we prioritize is the following:
+
+1) The extension must operate entirely locally.
+We strictly adhere to using only libraries, including external LLMs (AI) via APIs, etc., that are always contained within packages.
+
+2) No AI Used
+You might be thinking, "But it's made with AI!", and that's a valid point. However, as mentioned in the "◆Introduction," we are committed to "not using LLM for the extension's operation."
+The programs included in the extension operate and process data purely mechanically, and we strive for high precision and completeness as a "tool" by correcting any bugs.
+
+◆About the Developer
+
+This extension is currently being developed by one person.
+The developer has experience developing and operating a template engine that was built from scratch and designed to withstand many years of use, using self-taught methods. Therefore, they always maintain strong guidelines, specifications, and their own aesthetics, and do not engage in development that relies solely on AI. However, it is also true that they have concerns about using unfamiliar languages ​​and frameworks with the help of AI.
+
+For this reason, this extension is a "demo," and while it is free to use, please understand that it may always contain some bugs, and use it at your own risk.
+
+We would also appreciate any feedback you may have after trying it out. Please send it to the address below.
 
 
 ◆Feedback
