@@ -24,7 +24,7 @@ export type UseDomListShellOptions = {
   domListPicker: DomListPickerState | null
   /** EN: Tab-follow refresh while dom picker / detail bar is focused (not from prompt). */
   domListFollowEnabled: boolean
-  appendLogLines: (lines: string[]) => Promise<void>
+  appendLogLines: (lines: string[]) => void | Promise<void>
   setDomListPicker: (sessionId: string, state: DomListPickerState | null) => void
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<unknown>>
 }
@@ -65,6 +65,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
             let domCapture: DomListCapture | undefined
             const ctx = mergeJobIntoDispatchContext(
               {
+                enqueueSessionPatch: () => {},
                 clearLog: async () => {},
                 exitPane: async () => [],
                 listWindows: async () => [],

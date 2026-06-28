@@ -4,24 +4,12 @@
  */
 
 import { loadBackgroundServicesAsync } from "./load-background-services"
-import {
-  SESSION_INIT_MESSAGE,
-  SESSION_UI_APPEND_LOG_MESSAGE,
-  SESSION_UI_SET_ACTIVE_MESSAGE,
-  SESSION_UI_SET_NAME_MESSAGE
-} from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-protocol"
-
-const SESSION_RUNTIME_MESSAGE_TYPES = new Set<string>([
-  SESSION_INIT_MESSAGE,
-  SESSION_UI_APPEND_LOG_MESSAGE,
-  SESSION_UI_SET_ACTIVE_MESSAGE,
-  SESSION_UI_SET_NAME_MESSAGE
-])
 
 type RunCmdMessage = {
   type?: string
   line?: string
   sessionId?: string
+  sessionOrderLength?: number
 }
 
 type NavControlMessage = {
@@ -63,27 +51,16 @@ function withBackgroundServices<T>(
 export function setupMessageBridge(): void {
   chrome.runtime.onMessage.addListener(
     (message: RunCmdMessage & NavControlMessage, sender, sendResponse) => {
-      if (
-        typeof message?.type === "string" &&
-        SESSION_RUNTIME_MESSAGE_TYPES.has(message.type)
-      ) {
-        void withBackgroundServices((services) =>
-          services.handleSessionRuntimeMessageAsync(message as Record<string, unknown>)
-        )
-          .then((result) => safeSendResponse(sendResponse, result))
-          .catch((e) =>
-            safeSendResponse(sendResponse, {
-              ok: false,
-              error: e instanceof Error ? e.message : String(e)
-            })
-          )
-        return true
-      }
       if (message?.type === "RUN_CMD" && typeof message.line === "string") {
         void withBackgroundServices((services) =>
-          services.runCommandMessage(message.line!, message.sessionId, sender)
+          services.runCommandMessage(
+            message.line!,
+            message.sessionId,
+            message.sessionOrderLength,
+            sender
+          )
         )
-          .then(() => safeSendResponse(sendResponse, { ok: true }))
+          .then((result) => safeSendResponse(sendResponse, result))
           .catch((e) =>
             safeSendResponse(sendResponse, {
               ok: false,

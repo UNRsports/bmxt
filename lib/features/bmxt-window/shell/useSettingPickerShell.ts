@@ -41,7 +41,7 @@ import { tError } from "../../setting/i18n/ns/error"
 export type UseSettingPickerShellOptions = {
   sessionId: string
   uiLocale: UiSettings["locale"]
-  appendLogLines: (lines: string[]) => Promise<void>
+  appendLogLines: (lines: string[]) => void | Promise<void>
   replaceUiSettingsState: (settings: UiSettings) => void
   closeSettingPickerColumn: () => void
   setSettingListPicker: (

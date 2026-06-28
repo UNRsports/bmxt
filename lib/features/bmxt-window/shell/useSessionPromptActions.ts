@@ -14,9 +14,9 @@ export type UseSessionPromptActionsOptions = {
   sessionListRows: readonly SessionListRow[]
   uiLocale: UiSettings["locale"]
   appendCommandToHistory: (cmd: string) => void
-  appendLogLines: (lines: string[]) => Promise<void>
-  onActivateSession: (sessionId: string) => Promise<void>
-  onSetSessionDisplayName: (sessionId: string, name: string) => Promise<void>
+  appendLogLines: (lines: string[]) => void | Promise<void>
+  onActivateSession: (sessionId: string) => void | Promise<void>
+  onSetSessionDisplayName: (sessionId: string, name: string) => void | Promise<void>
   focusPrompt: () => void
   setSubCmdPicker: (state: TokenPickerModel | null) => void
   setLine: (line: string) => void
