@@ -1,5 +1,5 @@
 {
-  "0.7.1": {
+  "0.7.5": {
     "ja": [
       "tabsモードpicker動作の調整",
       "settingモードのデータ書き出し先を選択可能に実装",
@@ -8,7 +8,11 @@
       "&&による複数コマンドが実行可能なように実装"
     ],
     "en": [
-      ""
+      "Adjusted tabs mode picker behavior",
+      "Added selectable export destinations for setting data",
+      "Added snapshot mode to save pages in an Obsidian-compatible format",
+      "Refactored the dom picker: existing behavior is `--normal`; added `--with` with fixes and improvements",
+      "Added support for running multiple commands with `&&`"
     ]
   }
 }

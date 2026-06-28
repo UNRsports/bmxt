@@ -218,10 +218,10 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
 | `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
-| `dom -list [--html\|--react] [<pattern>]` | Open a read-only DOM picker column for the active tab (same picker chrome as `search -list`); flavor `--html` (default) or `--react`; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
+| `dom -list [--normal\|--with] [--html\|--react] [<pattern>]` | Open a read-only DOM picker column for the active tab (same picker chrome as `search -list`); mode **`--normal`** (full tree; default) or **`--with`** (viewport-sync scroll + visible elements); flavor **`--html`** (default) or **`--react`**; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
-| `search -list [--all\|--history\|--bookmark\|--page] [<pattern>]` | Open a search picker column. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, and open http(s) tab text in parallel; single-scope flags limit to one source. Scan progress shows inside the picker (batched updates). **→** opens a **detail list** (subdivided hits) or **`[history]`** **open-target** tree; **←** returns to results. Case-insensitive substring (no regex in v1) |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Open a search picker column. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel; single-scope flags limit to one source. Scan progress shows inside the picker (batched updates). **→** opens a **detail list** (subdivided hits) or **`[history]`** **open-target** tree; **←** returns to results. Case-insensitive substring (no regex in v1) |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
@@ -233,7 +233,8 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --ja-en` | Save **ja → en** pair (default); round-trip preview and nav commit use English on Alt hold |
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
-| `setting -list` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `setting -list` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
 | `session -new [name]` | Create a new **terminal session** and switch to it; optional display name |
@@ -244,6 +245,8 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session <n>` | Switch to terminal session number **n** (1-based) |
 | `close` / `c <tabId>` | Close tab |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
+
+**Compound commands (`&&`):** Join multiple commands on one line with **`&&`** (quoted regions and `\&&` escapes are respected). Segments run **left to right**; after the first failure, remaining segments are skipped. Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`session -list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
 
 **Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the active terminal session**; the BMXt window and other in-memory session/picker state stay as they are. **Closing the BMXt window** (× button) or **`exit`** on the **last** session closes the window and **discards** all UI-held session logs and picker state (legacy **`chrome.storage.local`** process keys are cleaned up by the Service Worker). **Command history is kept** unless you use the **`reset-bmxt`** shortcut. **`exit`** with **multiple sessions** removes only the active session and switches to another. See **[BMXt process lifecycle](#bmxt-process-lifecycle)** and **[Terminal session state](#terminal-session-state)**.
 
@@ -321,7 +324,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -330,9 +333,11 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 ### `dom`
 
 - Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
-- **`dom -list` only** + **Enter** opens the **`--html` / `--react` flavor menu** (third token required before the picker runs); see **[How columns open](#picker-ui)**.
-- **`dom -list --html` …** / **`dom -list --react` …** resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and stream a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
-- **`--html`** (default) vs **`--react`** only changes how nodes are labeled in the picker UI.
+- **`dom -list` only** + **Enter** opens the **`--normal` / `--with` / `--html` / `--react` option menu** (mode and flavor must be chosen before the picker runs); see **[How columns open](#picker-ui)**.
+- **`dom -list [--normal|--with] [--html|--react] …`** resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and stream a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
+- **`--normal`** (default when omitted) — full DOM tree; **`↑`/`↓`** (or **`j`/`k`**) focus jumpable element rows; the target tab scrolls to the highlighted node (debounced). **`Alt+↑`/`↓`** preview page jump when **`--manual`** page-active is set.
+- **`--with`** — **`↑`/`↓`** (or **`j`/`k`**) scroll the page; viewport-visible elements are shown in a flat list; **`Alt+↑`/`↓`** move element highlight inside the picker. **`→`** opens a feature menu (links, tags, etc.).
+- **`--html`** (default flavor) vs **`--react`** only changes how nodes are labeled in the picker UI.
 - Any tokens after the optional flavor flag are joined into a single **substring** filter on the printed lines (ASCII case fold); **not** a regular expression. ASCII `"…"` / `'…'` around the pattern are stripped once.
 
 <a id="search-command"></a>
@@ -340,14 +345,39 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 ### `search`
 
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
-- **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**: history + bookmarks + open http(s) tab text). Tab after **`search -list `** completes **`--all`**, **`--history`**, **`--bookmark`**, or **`--page`** if you want a single scope (see **[How columns open](#picker-ui)**).
-- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all three effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
+- **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**: history + bookmarks + open http(s) tab text + saved snapshots). Tab after **`search -list `** completes **`--all`**, **`--history`**, **`--bookmark`**, **`--page`**, or **`--snapshot`** if you want a single scope (see **[How columns open](#picker-ui)**).
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. **`--snapshot`** searches saved Markdown snapshots (internal, external bundle, or Obsidian vault — see **[`snapshot`](#snapshot)**). Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
 - In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
 - Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) and may trigger the extension’s **optional host permission** prompt the first time.
+
+<a id="snapshot"></a>
+
+### `snapshot` (`snapshot -save`)
+
+Save an http(s) tab as a **Markdown snapshot** with **YAML frontmatter** (`title`, `url`, `savedAt`, `source: bmxt`) for **Obsidian** and similar tools. The Service Worker **`run`** for **`snapshot`** prints usage only; **`snapshot -save`** is **UI-handled** in **`bmxt-shell.tsx`**.
+
+| Input | Effect |
+|-------|--------|
+| Bare **`snapshot`** + **Enter** | Prints usage and restores **`snapshot `** (continuation). Tab completes **`-save`**. |
+| **`snapshot -save`** + **Enter** | Saves the **active tab of the last-focused normal browser window** (same target resolution as **`dom -list`**). |
+| **`snapshot -save <tabId>`** + **Enter** | Saves the given tab id. |
+
+You can also start a save from the **tabs picker** action menu (`:snapshot`).
+
+**Storage destination** (configured in **`setting -list`**, not draft-only):
+
+| Mode | Location |
+|------|----------|
+| **Bundled with settings** (default) | **`chrome.storage.local`** (`bmxt_snapshots_v1`) when settings are internal; **`bmxt-ui-settings/snapshots/`** under the external settings bundle when external mode is on |
+| **Obsidian vault** | User-picked vault folder → **`BMXt/snapshots/`** inside the vault (independent of settings bundle path) |
+
+Saved snapshots are searchable with **`search -list --snapshot`** (included in **`--all`**).
+
+**Implementation:** **`lib/features/snapshot/`** (`snapshot-save-tab.ts`, `snapshot-markdown.ts`, `snapshot-storage.ts`, `snapshot-vault-store.ts`), effect **`search_snapshot`** for the search picker, config key **`bmxt_snapshot_storage_v1`**.
 
 <a id="nav-mode"></a>
 
@@ -512,6 +542,7 @@ When changing UI settings shape or on-disk format in a release:
 | **storage** | **Internal** (default) or **external folder** (File System Access API); see **Storage** above |
 | **storage-pick-dir** | (External mode) Re-pick the parent folder for the bundle |
 | **storage-reload** | (External mode) Load bundle (`settings.json` + images) into draft preview |
+| **snapshot storage** | **Bundled with settings** (default) or **Obsidian vault** (File System Access API); **snapshot-vault-pick-dir** re-picks the vault when vault mode is active |
 | **export** | Download zip (`settings.json` v2 + `background-image.*`; optional `picker-background-image.*` when set) |
 | **import** | Load zip into draft (commit with **`> save setting`**) |
 | **`> save setting`** / **`> cancel setting`** | Commit or discard draft |
@@ -637,9 +668,9 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 | `group new` (no tab ids) | Opens the tab picker in **group-new** variant |
 | `search -list` only (no trailing space) + **Enter** | Restores the prompt to **`search -list `** (continuation) |
 | `search -list ` + **Enter** | Runs cross-scope **`--all`** search (progress in picker), then shows results in the search column |
-| `search -list [--all|--history|--bookmark|--page] [<pattern>]` + **Enter** | Runs search for the chosen scope (or all three with **`--all`**) |
-| `dom -list` only + **Enter** | Shows the `--html` / `--react` flavor menu |
-| `dom -list --html` or `--react` … + **Enter** | Fetches DOM output, opens the dom column |
+| `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]` + **Enter** | Runs search for the chosen scope (or all scopes with **`--all`**) |
+| `dom -list` only + **Enter** | Shows the `--normal` / `--with` / `--html` / `--react` option menu |
+| `dom -list [--normal|--with] [--html|--react] …` + **Enter** | Fetches DOM output, opens the dom column |
 | `setting -list` + **Enter** | Opens the settings picker column (see **[`setting`](#setting)**) |
 | `translate -on` + **Enter** | Enables translation assist (prompt stays focused) |
 
@@ -656,7 +687,7 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 - **`n`** / **`N`** — jump among matches on the **results** row (when a row has multiple page matches).
 - **`→`** / **`←`** — **search only:** **`→`** opens **detail** when the tab is open (subdivided hits), else **`[history]`** **open-target** when the tab is closed; **`←`** steps back. **`Esc`** in detail or open-target returns to results first.
 - **`Ctrl+Left` / `Ctrl+Right`** — move along the pane strip (see above).
-- **dom only:** **`↑` / `↓`** (or **`j` / `k`**) move focus among **jumpable** element rows; the **target tab scrolls** to the highlighted node (debounced). Header/metadata lines without a DOM path are skipped.
+- **dom only:** **`--normal`:** **`↑` / `↓`** (or **`j` / `k`**) move focus among **jumpable** element rows; the **target tab scrolls** to the highlighted node (debounced). **`--with`:** **`↑` / `↓`** scroll the page; **`Alt+↑`/`↓`** move element highlight. Header/metadata lines without a DOM path are skipped.
 
 **Common picker keys (authoritative)**
 
@@ -801,6 +832,8 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/side-picker/`** — shared side-column picker UI (panel host, `PickerListShell`, `usePlainPickerKeyboard`, interaction kernel, wrappers)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
+- **`lib/features/snapshot/`** — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
+- **`lib/features/command-line/compound/`** — **`&&`** compound command parsing and sequential execution
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, external bundle, `bmxt_ui_settings_v1`, `bmxt_ui_settings_storage_v1`); see **[`setting`](#setting)**
@@ -963,6 +996,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
+- `lib/features/snapshot/` — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
@@ -981,7 +1015,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1270,10 +1304,10 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
 | `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
-| `dom -list [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカー列で閲覧（`search -list` と同系 UI）。`--html`（既定）／`--react`。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
+| `dom -list [--normal\|--with] [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカー列で閲覧（`search -list` と同系 UI）。mode **`--normal`**（ツリー全体・既定）／**`--with`**（ページスクロール連動・ビューポート可視要素）。flavor **`--html`**（既定）／**`--react`**。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
-| `search -list [--all\|--history\|--bookmark\|--page] [<pattern>]` | 検索ピッカー列。**`--all`**（スコープ無しで **`search -list `** を実行したときの既定）は履歴・ブックマーク・開いている http(s) タブ本文を並列走査。単一スコープフラグで限定可能。走査進捗はピッカー内表示（バッチ更新）。**→** で **詳細一覧** または **`[history]`** の **開き先** ツリー。**←** で結果一覧へ。部分一致（v1 正規表現なし） |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索ピッカー列。**`--all`**（スコープ無しで **`search -list `** を実行したときの既定）は履歴・ブックマーク・開いている http(s) タブ本文・保存済み snapshot を並列走査。単一スコープフラグで限定可能。走査進捗はピッカー内表示（バッチ更新）。**→** で **詳細一覧** または **`[history]`** の **開き先** ツリー。**←** で結果一覧へ。部分一致（v1 正規表現なし） |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
@@ -1285,7 +1319,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --ja-en` | ペア **ja-en** を保存（既定）。往復プレビュー・nav Alt 確定は英語 |
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
-| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・**保存先**（拡張機能内／外部）・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
+| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・**保存先**（拡張機能内／外部）・**snapshot 保存先**（設定と同梱／Obsidian Vault）・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
+| `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
 | `session -new [name]` | 新しい **ターミナルセッション** を作成して切り替え。表示名は任意 |
@@ -1296,6 +1331,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session <n>` | ターミナルセッション番号 **n**（1 始まり）へ切り替え |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
+
+**複合コマンド（`&&`）:** 1 行に **`&&`** で複数コマンドを並べる（クォート内と `\&&` エスケープは演算子にしない）。**左から順**に実行し、最初の失敗以降のセグメントはスキップ。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`session -list`、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。
 
 **補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **アクティブなターミナルセッションの画面ログだけ**を消します。**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**UI 上のセッション／ピッカー状態を破棄**し、Service Worker が **旧プロセス用 storage キーを掃除**します。**コマンド履歴は保持**され、**`reset-bmxt`** ショートカットを使ったときだけ消えます。**`exit`**（複数セッション）はアクティブなセッションだけを除去し、別セッションへ切り替えます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** と **[ターミナルセッション状態](#terminal-session-state-ja)**。
 
@@ -1373,7 +1410,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -1540,6 +1577,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 | **storage** | **拡張機能内**（既定）または**外部フォルダ**（File System Access API）；**保存先** 参照 |
 | **storage-pick-dir** | （外部モード）バンドル用の親フォルダを選び直す |
 | **storage-reload** | （外部モード）バンドル（`settings.json` + 画像）を draft プレビューに読み込む |
+| **snapshot 保存先** | **設定と同梱**（既定）または **Obsidian Vault**（File System Access API）；Vault モード時は **snapshot-vault-pick-dir** で Vault を選び直す |
 | **export** | zip ダウンロード（`settings.json` v2 + `background-image.*`；設定時は `picker-background-image.*` も） |
 | **import** | zip を draft に読み込み（**`> save setting`** で確定） |
 | **`> save setting`** / **`> cancel setting`** | 確定／破棄 |
@@ -1665,9 +1703,9 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 | `group new`（タブ ID なし） | **group-new** variant のタブピッカー列 |
 | `search -list` のみ（末尾スペースなし）+ **Enter** | **`search -list `** に復帰（continuation） |
 | `search -list ` + **Enter** | 横断検索 **`--all`** を実行（進捗はピッカー内）後、search 列に結果表示 |
-| `search -list [--all|--history|--bookmark|--page] [<pattern>]` + **Enter** | 選択スコープ（**`--all`** は 3 スコープ並列）で検索実行 |
-| `dom -list` のみ + **Enter** | `--html` / `--react` の flavor メニュー |
-| `dom -list --html` または `--react` … + **Enter** | DOM 取得後、dom 列を開く |
+| `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]` + **Enter** | 選択スコープ（**`--all`** は全スコープ並列）で検索実行 |
+| `dom -list` のみ + **Enter** | `--normal` / `--with` / `--html` / `--react` のオプションメニュー |
+| `dom -list [--normal|--with] [--html|--react] …` + **Enter** | DOM 取得後、dom 列を開く |
 | `setting -list` + **Enter** | 設定ピッカー列を開く（**[`setting`](#setting-ja)** 参照） |
 | `translate -on` + **Enter** | 翻訳アシストを有効化（プロンプトにフォーカス維持） |
 
@@ -1684,7 +1722,7 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 - **`n`** / **`N`** — 結果行上の複数マッチ間を移動（1 行に複数 page ヒットがあるとき）。
 - **`→`** / **`←`** — **search のみ:** タブが開いていれば **詳細一覧**、閉じていれば **`[history]`** の **開き先**（詳細ヒットの有無は不問）。**`←`** で戻る。詳細・開き先の **`Esc`** は先に結果一覧へ戻る。
 - **`Ctrl+←` / `Ctrl+→`** — ペイン内の列ストリップ移動（上記フォーカス節）。
-- **dom のみ:** **`↑` / `↓`**（または **`j` / `k`**）で **ジャンプ可能な要素行**にフォーカスを移すと、**対象タブがハイライトノードへスクロール**（debounce）。DOM path のない行はスキップ。
+- **dom のみ:** **`--normal`:** **`↑` / `↓`**（または **`j` / `k`**）で **ジャンプ可能な要素行**にフォーカスを移すと、**対象タブがハイライトノードへスクロール**（debounce）。**`--with`:** **`↑` / `↓`** でページスクロール；**`Alt+↑`/`↓`** で要素ハイライト。DOM path のない行はスキップ。
 
 **共通キー（正）**
 
@@ -1726,23 +1764,50 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
-- **`dom -list` のみ** + **Enter** では **`--html` / `--react` の flavor メニュー**を開く（第三トークン確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
-- **`dom -list --html` …** / **`dom -list --react` …** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`search -list --page` 系と同じ系統）。
-- **`--html`**（既定）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
+- **`dom -list` のみ** + **Enter** では **`--normal` / `--with` / `--html` / `--react` のオプションメニュー**を開く（mode と flavor 確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
+- **`dom -list [--normal|--with] [--html|--react] …`** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`search -list --page` 系と同じ系統）。
+- **`--normal`**（省略時は既定）— 全 DOM ツリー；**`↑`/`↓`**（または **`j`/`k`**）でジャンプ可能行にフォーカス；対象タブが該当ノードへスクロール。**`--manual`** page-active 時は **`Alt+↑`/`↓`** でページジャンププレビュー。
+- **`--with`** — **`↑`/`↓`**（または **`j`/`k`**）でページスクロール；ビューポート内要素をフラット表示；**`Alt+↑`/`↓`** でピッカー内の要素ハイライト。**`→`** で機能メニュー（リンク等）。
+- **`--html`**（既定 flavor）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
 - flavor の後ろのトークンはすべて連結され、出力行に対する**部分一致**フィルタになる（大文字小文字は ASCII 範囲で折りたたみ）。**正規表現ではない**。パターンを ASCII の `"` / `'` で1重に囲んだ場合は外側を1回だけ除去する。
 
 ### `search`
 
 
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
-- **`search -list` のみ**（末尾スペースなし）+ **Enter** で **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** で横断検索（**`--all`**: 履歴 + ブックマーク + 開いている http(s) タブ本文）。**`search -list `** のあと Tab で **`--all`** / **`--history`** / **`--bookmark`** / **`--page`** を補完して単一スコープに限定できる（**[列の開き方](#picker-ui-ja)**）。
-- **`search -list [--all|--history|--bookmark|--page] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は 3 スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査はプロセス内メモリキャッシュ（`search-cache-store`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
+- **`search -list` のみ**（末尾スペースなし）+ **Enter** → **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** → 横断検索 **`--all`**（history + bookmark + page + snapshot）。**`search -list `** の後は Tab で **`--all`** / **`--history`** / **`--bookmark`** / **`--page`** / **`--snapshot`** を補完（**[列の開き方](#picker-ui-ja)**）。
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は全スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査はプロセス内メモリキャッシュ（`search-cache-store`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。**`--snapshot`** は保存済み Markdown snapshot を検索（内部／外部バンドル／Obsidian Vault — **[`snapshot`](#snapshot-ja)** 参照）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
 - 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
 - パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
+
+<a id="snapshot-ja"></a>
+
+### `snapshot`（`snapshot -save`）
+
+http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / `url` / `savedAt` / `source: bmxt`）として保存し、**Obsidian** 等と連携できる形式にします。Service Worker の **`run`** は usage のみ；**`snapshot -save`** は **`bmxt-shell.tsx`** が UI 処理します。
+
+| 入力 | 動作 |
+|------|------|
+| 裸の **`snapshot`** + **Enter** | 利用案内を表示し **`snapshot `** に復帰（continuation）。Tab で **`-save`** を補完。 |
+| **`snapshot -save`** + **Enter** | **直前にフォーカスした通常ウィンドウのアクティブタブ**を保存（タブ解決は **`dom -list`** と同系）。 |
+| **`snapshot -save <tabId>`** + **Enter** | 指定 tabId を保存。 |
+
+**tabs ピッカー**のアクションメニュー（`:snapshot`）からも起動できます。
+
+**保存先**（**`setting -list`** で設定。draft 待ちではない）:
+
+| モード | 場所 |
+|--------|------|
+| **設定と同梱**（既定） | 設定が内部のとき **`chrome.storage.local`**（`bmxt_snapshots_v1`）；外部モードのとき外部設定バンドル内 **`bmxt-ui-settings/snapshots/`** |
+| **Obsidian Vault** | ユーザー指定 Vault → Vault 内 **`BMXt/snapshots/`**（設定バンドルとは独立） |
+
+保存済み snapshot は **`search -list --snapshot`**（**`--all`** に含む）で検索できます。
+
+**実装:** **`lib/features/snapshot/`**（`snapshot-save-tab.ts`、`snapshot-markdown.ts`、`snapshot-storage.ts`、`snapshot-vault-store.ts`）、search 用 Effect **`search_snapshot`**、設定キー **`bmxt_snapshot_storage_v1`**。
 
 <a id="tabs-man-tabs-ja"></a>
 
@@ -2003,6 +2068,7 @@ pnpm run dev
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
+- `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
@@ -2021,7 +2087,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.6.9` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 

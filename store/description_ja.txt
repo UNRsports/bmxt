@@ -44,6 +44,13 @@ https://x.com/ny0n150226
 
 
 ◆バージョン履歴
+0.7.5：
+・tabsモードpicker動作の調整
+・settingモードのデータ書き出し先を選択可能に実装
+・snapshotモードをobsidianと連携可能な形式で保存可能に実装
+・domコマンドpickerを利用した既存機能を「--normal」モードとし、新規--withモードを追加し動作修正と改善を実装
+・&&による複数コマンドが実行可能なように実装
+
 0.6.9：
 ・ウェルカムページを外部化してパッケージサイズを削減
 ・フレームワークをplasmoからwxtへ、パッケージ管理をnpmからpnpmへ移行
@@ -130,17 +137,18 @@ https://x.com/ny0n150226
 | `tabs -nowurl` | 現在タブの URL を表示。 |
 | `tabs -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。設定は保存される |
 | `dom` | 利用案内を表示。単体で Enter すると `dom `（末尾スペース付き）へ入力復元し、続きのトークンを待つ |
-| `dom -list [--html|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカーで閲覧（`search -list` と同系の UI）。`--html`（既定）または `--react`。`<pattern>` 省略可。指定時は出力行の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。↑/↓ で要素行にフォーカスすると対象タブが該当ノードへスクロール。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
+| `dom -list [--normal|--with] [--html|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカーで閲覧（`search -list` と同系 UI）。mode `--normal`（ツリー全体・既定）または `--with`（ページスクロール連動・ビューポート可視要素）。flavor `--html`（既定）／`--react`。`<pattern>` 省略可。大文字小文字を区別しない部分一致（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
 | `nav` | 利用案内を表示。単体で Enter すると `nav `（末尾スペース付き）へ入力復元 |
 | `nav -enter` | nav モードを起動（armed）。Alt で対象タブの仮想カーソルオーバーレイ ON/OFF。↑↓←→ 移動、Enter クリック／入力、Ctrl でコンテキストメニュー（テキスト選択・画像保存・再読込など） |
 | `nav -exit` | nav を完全終了（事前に Alt でオーバーレイ OFF） |
 | `search` | 利用案内を表示。単体で Enter すると `search `（末尾スペース付き）へ入力復元 |
-| `search -list [--all|--history|--bookmark|--page] [<pattern>]` | 検索ピッカー列。**`--all`**（スコープ無しで **`search -list `** を実行したときの既定）は履歴・ブックマーク・開いている http(s) タブ本文を並列走査。単一スコープフラグで限定可能。走査進捗はピッカー内表示、結果確定後に非表示。**→** で行ごとの詳細一覧または **`[history]`** の開き先ツリー、詳細行の **Enter** でページ内の該当箇所へジャンプ（http(s)）。大文字小文字を区別しない部分一致（v1 正規表現なし） |
+| `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]` | 検索ピッカー列。**`--all`**（スコープ無しで **`search -list `** を実行したときの既定）は履歴・ブックマーク・開いている http(s) タブ本文・保存済み snapshot を並列走査。単一スコープフラグで限定可能。走査進捗はピッカー内表示、結果確定後に非表示。**→** で行ごとの詳細一覧または **`[history]`** の開き先ツリー、詳細行の **Enter** でページ内の該当箇所へジャンプ（http(s)）。大文字小文字を区別しない部分一致（v1 正規表現なし） |
 | `search -exit -list` | search ピッカー列を閉じる（検索中ならキャンセル） |
 | `close` / `c <tabId>` | タブを閉じる |
 | `group new <tabId> …` | グループ作成 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
-| `setting -list` | 設定ピッカー列を開く（UI 言語・外観・ピッカー個別外観・export/import zip）。`> save setting` で確定 |
+| `setting -list` | 設定ピッカー列を開く（UI 言語・外観・ピッカー個別外観・保存先 internal/external・snapshot 保存先 bundled/Obsidian Vault・export/import zip）。`> save setting` で確定 |
+| `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は setting の snapshot 保存先設定に従う |
 | `setting -exit -list` | 設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（1 BMXt ウィンドウ内の tmux 風ターミナルセッション） |
 | `session -new [name]` | 新しいターミナルセッションを作成して切り替え。表示名は任意 |

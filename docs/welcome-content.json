@@ -3,6 +3,26 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.7.5",
+    "en": [
+      "Adjusted tabs mode picker behavior",
+      "Added selectable export destinations for setting data",
+      "Added snapshot mode to save pages in an Obsidian-compatible format",
+      "Refactored the dom picker: existing behavior is `--normal`; added `--with` with fixes and improvements",
+      "Added support for running multiple commands with `&&`"
+    ],
+    "ja": [
+      "tabsモードpicker動作の調整",
+      "settingモードのデータ書き出し先を選択可能に実装",
+      "snapshotモードをobsidianと連携可能な形式で保存可能に実装",
+      "domコマンドpickerを利用した既存機能を「--normal」モードとし、新規--withモードを追加し動作修正と改善を実装",
+      "&&による複数コマンドが実行可能なように実装"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.6.9",
     "en": [
       "Externalized the welcome page to reduce package size",
