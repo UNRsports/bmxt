@@ -93,18 +93,39 @@ async function findGroupableTargetWindowId(
   return wid
 }
 
+export type RelocatedTabs = {
+  tabIds: number[]
+  windowId: number
+}
+
 export async function relocateTabsToGroupableWindow(
   tabIds: number[],
   locale: UiLocale,
   sourceWindowId?: number
-): Promise<number[]> {
+): Promise<RelocatedTabs> {
   const targetWinId = await findGroupableTargetWindowId(sourceWindowId, locale)
   const moved = await chrome.tabs.move(tabIds, { windowId: targetWinId, index: -1 })
   const relocated = moved.map((tab) => tab.id).filter((id): id is number => id !== undefined)
   if (relocated.length !== tabIds.length) {
     throw new Error(tTabs("tabs.picker.error.createGroup.tabIdMissing", locale))
   }
-  return relocated
+  return { tabIds: relocated, windowId: targetWinId }
+}
+
+function newGroupInWindowOptions(tabIds: number[], windowId: number): chrome.tabs.GroupOptions {
+  return {
+    tabIds,
+    createProperties: { windowId }
+  }
+}
+
+async function resolveTabWindowId(tabIds: number[]): Promise<number | undefined> {
+  const firstId = tabIds[0]
+  if (firstId === undefined) {
+    return undefined
+  }
+  const tab = await chrome.tabs.get(firstId).catch(() => undefined)
+  return tab?.windowId
 }
 
 export async function groupTabsResilient(
@@ -112,13 +133,18 @@ export async function groupTabsResilient(
   locale: UiLocale,
   sourceWindowId?: number
 ): Promise<number> {
-  try {
-    return await callChromeTabsGroup({ tabIds })
-  } catch (err) {
-    if (!isGroupingNotSupportedError(err)) {
-      throw err
+  let windowId = sourceWindowId ?? (await resolveTabWindowId(tabIds))
+
+  if (windowId !== undefined) {
+    try {
+      return await callChromeTabsGroup(newGroupInWindowOptions(tabIds, windowId))
+    } catch (err) {
+      if (!isGroupingNotSupportedError(err)) {
+        throw err
+      }
     }
-    const relocated = await relocateTabsToGroupableWindow(tabIds, locale, sourceWindowId)
-    return await callChromeTabsGroup({ tabIds: relocated })
   }
+
+  const relocated = await relocateTabsToGroupableWindow(tabIds, locale, sourceWindowId)
+  return await callChromeTabsGroup(newGroupInWindowOptions(relocated.tabIds, relocated.windowId))
 }

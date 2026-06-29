@@ -79,7 +79,8 @@ async function resolveTabsForGroupCreate(
   const windowType = win?.type ?? null
   let effectiveTabIds = tabIds
   if (windowType !== "normal") {
-    effectiveTabIds = await relocateTabsToGroupableWindow(tabIds, locale, sourceWindowId)
+    const relocated = await relocateTabsToGroupableWindow(tabIds, locale, sourceWindowId)
+    effectiveTabIds = relocated.tabIds
   }
 
   const effectiveTabs = await Promise.all(

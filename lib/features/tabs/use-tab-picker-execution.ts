@@ -283,11 +283,13 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       if (ok) {
         newGroupTabIdsRef.current = []
         clearMarkedViaReducer()
-        setGroupNewPhase("tabs")
+        await onRefreshRows?.()
+      } else {
         await onRefreshRows?.()
       }
+      setGroupNewPhase("tabs")
     } catch {
-      /* handled in controller */
+      setGroupNewPhase("tabs")
     } finally {
       groupCreateInFlightRef.current = false
     }
