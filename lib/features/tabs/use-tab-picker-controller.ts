@@ -449,6 +449,7 @@ export function useTabPickerController({
     markedWindowIds,
     markedGroupKeys,
     bulkSubMode,
+    variant,
     selectedTabIds,
     groupChoices,
     groupPickIndex,

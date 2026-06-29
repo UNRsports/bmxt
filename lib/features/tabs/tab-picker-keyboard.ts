@@ -1,7 +1,9 @@
 export {
+  isJkVerticalNavKey,
   isPhysicalArrowDown,
   isPhysicalArrowUp,
   isReservedSplitPaneVerticalNav,
+  physicalArrowVerticalNavDirection,
   verticalNavDirection
 } from "../side-picker/interaction/picker-vertical-nav"
 

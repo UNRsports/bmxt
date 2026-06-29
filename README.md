@@ -695,7 +695,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 | Key / gesture | search / dom lines | Tab picker (`tabs -list`) |
 |---------------|------------------|---------------------------|
-| `j` / `k`, `↑` / `↓` | Move highlight; search **`--auto`**: preview open-tab rows on move | Move highlight (reducer `moveHi`); **`--auto`**: also activates tab in background window |
+| `j` / `k`, `↑` / `↓` | Move highlight; search **`--auto`**: preview open-tab rows on move | **`↑` / `↓`** only — move highlight (`moveHi`); **`--auto`**: also activates tab in background window |
 | `Ctrl+↑` / `Ctrl+↓` | **search only:** jump among **open-tab** result/detail rows (animated scroll; **`--auto`** previews) | — |
 | `Alt+↑` / `Alt+↓` | **search only, `--manual` page-active:** preview highlighted row in background tab | **`--manual` only:** activate highlighted tab in background window |
 | `/` | Search mode; `@` prefix matches URL substring | Same; filters visible rows |
@@ -796,7 +796,7 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 
 **Entry:** **`TabsPickerWrapper`** → **`useTabPickerController`** → **`TabsUrlListPicker`** (`PickerListShell` + **`TabPickerRowList`** + bulk/edit panels). **`TabPickerOverlay`** remains a deprecated alias of the same stack.
 
-- **Global capture**: **`usePlainPickerKeyboard`** registers **`useWindowKeydownCapture`** so **↑/↓/j/k**, `/`, `:`, `n`/`N`, and **Enter** work even when focus is not on the picker’s invisible IME `textarea` (e.g. after clicking the list). The same chain runs from the textarea’s **`onInputKeyDown`** when the event reaches it.
+- **Global capture**: **`usePlainPickerKeyboard`** registers **`useWindowKeydownCapture`** so **↑/↓** (tabs picker: arrows only, no **`j`/`k`**), `/`, `:`, `n`/`N`, and **Enter** work even when focus is not on the picker’s invisible IME `textarea` (e.g. after clicking the list). The same chain runs from the textarea’s **`onInputKeyDown`** when the event reaches it.
 - **Tabs-only keys**: **`useTabPickerPlainExtensions`** supplies **`PlainPickerKeyboardExtensions`** — custom vertical nav (bulk move/group, Shift range, Ctrl+Shift preview), layered **`Esc`**, **`Tab`** / `#` toggle, **`:`** bulk commands (`parsePickerCommand` in `use-tab-picker-plain-extensions.ts`; short aliases e.g. `m` → `move`; **`edit`** has no alias), and tab-specific **Enter** intents (including **new-group meta** name/color confirmation via window capture **`onNormalEnter`**). Wired from **`use-tab-picker-keyboard.ts`**.
 - **Reducer (TypeScript)**: Transitions go through **`runTabsPickerReduce`** in **`lib/features/bmxt-core/tabs-picker/reducer.ts`**. State and events use **camelCase** keys (e.g. `kind: "moveHi"`, `visibleLen`).
 - **Shift + arrows**: **Range selection** applies **`moveHi` then `selectRange`** in one synchronous chain (**`applyReducedStateSequence`** in the controller/keyboard path). Two separate React updates in the same handler would read a **stale `hi`** for the second call and could break range extension.
@@ -1730,7 +1730,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 | キー / 操作 | search / dom 行一覧 | タブピッカー（`tabs -list`） |
 |-------------|-------------------|------------------------------|
-| `j` / `k`, `↑` / `↓` | ハイライト移動；search **`--auto`**: 開き済みタブ行を移動時プレビュー | ハイライト移動（`moveHi`）；**`--auto`**: 背面ウィンドウ内タブもアクティブ化 |
+| `j` / `k`, `↑` / `↓` | ハイライト移動；search **`--auto`**: 開き済みタブ行を移動時プレビュー | **`↑` / `↓`** のみ — ハイライト移動（`moveHi`）；**`--auto`**: 背面ウィンドウ内タブもアクティブ化 |
 | `Ctrl+↑` / `Ctrl+↓` | **search のみ:** **開き済みタブ**の結果／詳細行のみジャンプ（アニメーションスクロール；**`--auto`** でプレビュー） | — |
 | `Alt+↑` / `Alt+↓` | **search のみ、`--manual` page-active:** 背面タブをプレビュー（通常の **`↑`/`↓`** ハイライトは維持） | **`--manual` のみ:** 背面ウィンドウ内でハイライトタブをアクティブ化 |
 | `/` | 検索モード（`@` で URL 部分一致） | 同左（可視行を絞る） |
@@ -1880,7 +1880,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 **入口:** **`TabsPickerWrapper`** → **`useTabPickerController`** → **`TabsUrlListPicker`**（`PickerListShell` + **`TabPickerRowList`** + bulk/edit パネル）。**`TabPickerOverlay`** は同一スタックの非推奨エイリアス。
 
-- **ウィンドウキャプチャ**: **`usePlainPickerKeyboard`** が **`useWindowKeydownCapture`** で **↑/↓/j/k**, `/`, `:`, `n`/`N`, **Enter** を拾います（リストクリック後など IME `textarea` 以外にフォーカスがあっても動作）。textarea の **`onInputKeyDown`** でも同じチェーンを実行します。
+- **ウィンドウキャプチャ**: **`usePlainPickerKeyboard`** が **`useWindowKeydownCapture`** で **↑/↓**（tabs ピッカーは矢印のみ、**`j`/`k` なし**）、`/`, `:`, `n`/`N`, **Enter** を拾います（リストクリック後など IME `textarea` 以外にフォーカスがあっても動作）。textarea の **`onInputKeyDown`** でも同じチェーンを実行します。
 - **tabs 固有キー**: **`useTabPickerPlainExtensions`** が **`PlainPickerKeyboardExtensions`** を供給 — バルク時の縦移動、Shift 範囲、Ctrl+Shift プレビュー、段階 **`Esc`**, **`Tab`** / `#`, **`:`** バルクコマンド（`use-tab-picker-plain-extensions.ts` の `parsePickerCommand`、短縮例 `m` → `move`、**`edit`** はエイリアスなし）、tabs 向け **Enter** 意図（**新規グループ meta** の名前・色確定は window capture の **`onNormalEnter`** 経由）。配線は **`use-tab-picker-keyboard.ts`**。
 - **リデューサ（TypeScript）**: 状態遷移は **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**。イベント／状態は **`kind: "moveHi"`** や **`visibleLen`** など **camelCase**。
 - **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
@@ -2069,6 +2069,7 @@ pnpm run dev
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
+- `lib/features/command-line/compound/` — **`&&`** 複合コマンドの解析と逐次実行
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）

@@ -1,6 +1,11 @@
 import { tCommon } from "../../setting/i18n/ns/common"
 import { tTabs } from "../../setting/i18n/ns/tabs"
 import type { UiLocale } from "../../setting/locale"
+import {
+  callChromeTabGroupsUpdate,
+  groupTabsResilient,
+  relocateTabsToGroupableWindow
+} from "./chrome-tab-groups"
 
 type NewGroupCreateParams = {
   tabIds: number[]
@@ -19,12 +24,107 @@ type NewGroupCreateParams = {
   }) => { ok: boolean; error: string | null; strategy: "moveWholeGroup" | "ungroupThenMoveTabs" | null }
 }
 
+type GroupCreateBaseParams = {
+  tabIds: number[]
+  title: string
+  color: string
+  locale: UiLocale
+  onAppendLog?: (lines: string[]) => void | Promise<void>
+}
+
 type CreateGroupStrategy = "moveWholeGroup" | "ungroupThenMoveTabs"
 
 type StrategyContext = {
   groupId: number
   idsToMove: number[]
   locale: UiLocale
+}
+
+type ResolvedTabsForGroup = {
+  tabIds: number[]
+  tabs: chrome.tabs.Tab[]
+  sameWindow: boolean
+  windowType: string | null
+  sourceWindowId: number | undefined
+}
+
+async function resolveTabsForGroupCreate(
+  tabIds: number[],
+  locale: UiLocale,
+  onAppendLog?: (lines: string[]) => void | Promise<void>
+): Promise<ResolvedTabsForGroup | null> {
+  if (tabIds.length === 0) {
+    await onAppendLog?.([`error: ${tTabs("tabs.picker.error.createGroup.noTabs", locale)}`])
+    return null
+  }
+
+  const tabs = await Promise.all(tabIds.map((id) => chrome.tabs.get(id).catch(() => undefined)))
+  const ok = tabs.filter((tab): tab is chrome.tabs.Tab => tab !== undefined)
+  if (ok.length !== tabIds.length) {
+    await onAppendLog?.([
+      `error: ${tTabs("tabs.picker.error.createGroup.partialClosed", locale)}`
+    ])
+    return null
+  }
+
+  const sourceWindowId = ok[0]?.windowId
+  const sameWindow =
+    sourceWindowId !== undefined && !ok.some((tab) => tab.windowId !== sourceWindowId)
+  if (!sameWindow) {
+    await onAppendLog?.([`error: ${tTabs("tabs.picker.error.createGroup.sameWindow", locale)}`])
+    return null
+  }
+
+  const win = await chrome.windows.get(sourceWindowId!).catch(() => undefined)
+  const windowType = win?.type ?? null
+  let effectiveTabIds = tabIds
+  if (windowType !== "normal") {
+    const relocated = await relocateTabsToGroupableWindow(tabIds, locale, sourceWindowId)
+    effectiveTabIds = relocated.tabIds
+  }
+
+  const effectiveTabs = await Promise.all(
+    effectiveTabIds.map((id) => chrome.tabs.get(id).catch(() => undefined))
+  )
+  const resolved = effectiveTabs.filter((tab): tab is chrome.tabs.Tab => tab !== undefined)
+  if (resolved.length !== effectiveTabIds.length) {
+    await onAppendLog?.([
+      `error: ${tTabs("tabs.picker.error.createGroup.partialClosed", locale)}`
+    ])
+    return null
+  }
+
+  const effectiveWinId = resolved[0]?.windowId
+  const effectiveSameWindow =
+    effectiveWinId !== undefined && !resolved.some((tab) => tab.windowId !== effectiveWinId)
+  if (!effectiveSameWindow) {
+    await onAppendLog?.([`error: ${tTabs("tabs.picker.error.createGroup.sameWindow", locale)}`])
+    return null
+  }
+
+  const effectiveWin = await chrome.windows.get(effectiveWinId!).catch(() => undefined)
+  return {
+    tabIds: effectiveTabIds,
+    tabs: resolved,
+    sameWindow: effectiveSameWindow,
+    windowType: effectiveWin?.type ?? null,
+    sourceWindowId: effectiveWinId
+  }
+}
+
+async function applyGroupMetadata(
+  groupId: number,
+  title: string,
+  color: string
+): Promise<void> {
+  const trimmedTitle = title.trim()
+  const updatePayload: chrome.tabGroups.UpdateProperties = {
+    color: color as chrome.tabGroups.UpdateProperties["color"]
+  }
+  if (trimmedTitle.length > 0) {
+    updatePayload.title = trimmedTitle
+  }
+  await callChromeTabGroupsUpdate(groupId, updatePayload)
 }
 
 const CREATE_GROUP_STRATEGY_EXECUTORS: Record<
@@ -72,56 +172,62 @@ const CREATE_GROUP_STRATEGY_EXECUTORS: Record<
   }
 }
 
-/** 成功時は true（呼び出し側でタブピッカーを維持したまま UI を戻す） */
-export async function executeCreateNewGroupAction(
-  params: NewGroupCreateParams
+/** `[GROUP]` → 新しいグループ: 同じウィンドウ内でグループ化のみ（タブ順は維持） */
+export async function executeCreateGroupInPlaceAction(
+  params: GroupCreateBaseParams
 ): Promise<boolean> {
-  const { tabIds, color, locale, onAppendLog } = params
+  const { color, locale, onAppendLog } = params
   const trimmedTitle = params.title.trim()
-  if (tabIds.length === 0) {
+
+  try {
+    const resolved = await resolveTabsForGroupCreate(params.tabIds, locale, onAppendLog)
+    if (!resolved) {
+      return false
+    }
+
+    const groupId = await groupTabsResilient(
+      resolved.tabIds,
+      locale,
+      resolved.sourceWindowId
+    )
+    await applyGroupMetadata(groupId, trimmedTitle, color)
+
+    const label = trimmedTitle || tCommon("common.untitled", locale)
     await onAppendLog?.([
-      `error: ${tTabs("tabs.picker.error.createGroup.noTabs", locale)}`
+      tTabs("tabs.picker.error.createGroup.successInPlace", locale, {
+        groupId: String(groupId),
+        color,
+        label
+      })
+    ])
+    return true
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : typeof err === "string" ? err : String(err)
+    await onAppendLog?.([
+      tTabs("tabs.picker.error.createGroup.failed", locale, { detail })
     ])
     return false
   }
+}
+
+/** `group new` 対話フロー: グループ化後に新しいウィンドウへ移動 */
+export async function executeCreateNewGroupAction(
+  params: NewGroupCreateParams
+): Promise<boolean> {
+  const { color, locale, onAppendLog } = params
+  const trimmedTitle = params.title.trim()
 
   try {
-    const tabs = await Promise.all(tabIds.map((id) => chrome.tabs.get(id).catch(() => undefined)))
-    const ok = tabs.filter((tab): tab is chrome.tabs.Tab => tab !== undefined)
-    const resolvedTabCount = ok.length
-    if (resolvedTabCount !== tabIds.length) {
-      await onAppendLog?.([
-        `error: ${tTabs("tabs.picker.error.createGroup.partialClosed", locale)}`
-      ])
-      return false
-    }
-    const winId = ok[0]?.windowId
-    const sameWindow =
-      winId !== undefined && !ok.some((tab) => tab.windowId !== winId)
-    if (!sameWindow) {
-      await onAppendLog?.([
-        `error: ${tTabs("tabs.picker.error.createGroup.sameWindow", locale)}`
-      ])
+    const resolved = await resolveTabsForGroupCreate(params.tabIds, locale, onAppendLog)
+    if (!resolved) {
       return false
     }
 
-    const win = await chrome.windows.get(winId!).catch(() => undefined)
-    const windowType = win?.type ?? null
-    if (windowType !== "normal") {
-      await onAppendLog?.([
-        `error: ${tTabs("tabs.picker.error.createGroup.windowType", locale)}`
-      ])
-      return false
-    }
+    const { tabIds, sameWindow, windowType, sourceWindowId } = resolved
+    const resolvedTabCount = tabIds.length
 
-    const groupId = await chrome.tabs.group({ tabIds })
-    const updatePayload: chrome.tabGroups.UpdateProperties = {
-      color: color as chrome.tabGroups.UpdateProperties["color"]
-    }
-    if (trimmedTitle.length > 0) {
-      updatePayload.title = trimmedTitle
-    }
-    await chrome.tabGroups.update(groupId, updatePayload)
+    const groupId = await groupTabsResilient(tabIds, locale, sourceWindowId)
+    await applyGroupMetadata(groupId, trimmedTitle, color)
 
     const groupedTabs = await chrome.tabs.query({ groupId })
     const groupTabCount = groupedTabs.length

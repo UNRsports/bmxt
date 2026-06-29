@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: June 19, 2026</p>
+          <p class="muted">Last updated: June 29, 2026</p>
         </div>
       </header>
 
@@ -214,9 +214,9 @@
         <h3>4.4 Local storage (extension storage)</h3>
         <p>
           The Extension uses <code>chrome.storage.local</code> to persist data on your device. It also
-          declares the <code>unlimitedStorage</code> permission so local SQLite blobs (search metadata cache,
-          optional job audit log) and user-imported UI background images can exceed Chrome’s default extension
-          storage quota. Everything below remains on your device, including:
+          declares the <code>unlimitedStorage</code> permission so user-imported UI background images and
+          other local data can exceed Chrome’s default extension storage quota. Everything below remains on
+          your device, including:
         </p>
         <ul>
           <li>
@@ -258,7 +258,10 @@
           <li>
             <strong>UI settings</strong> — display locale, terminal and picker appearance (colors, fonts,
             sizes), and optional background images you import (<code>bmxt_ui_settings_v1</code>). Imported
-            images are stored on your device as data URLs in this storage.
+            images are stored on your device as data URLs in this storage. Storage mode preference (internal
+            extension storage vs. an external folder you pick with the File System Access API;
+            <code>bmxt_ui_settings_storage_v1</code>). When external mode is on, <code>&gt; save setting</code>
+            writes a settings bundle to that folder on your device.
           </li>
           <li>
             <strong>Tab picker page-active mode</strong> — whether highlight moves auto-activate tabs
@@ -383,10 +386,8 @@
           Command handling and UI logic in official builds are implemented in <strong>TypeScript</strong> and
           run locally in the extension page and service worker. Earlier versions bundled WebAssembly compiled
           from Rust for command processing; that was <strong>removed in version 0.3.5</strong> to reduce
-          package size. Current builds do not download WebAssembly from the network. They still ship a
-          packaged <strong>sql.js</strong> WebAssembly module used only on your device for local SQLite
-          (search metadata cache and optional job audit log). The packaged manifest’s Content Security Policy
-          includes <code>wasm-unsafe-eval</code> for that bundled module only.
+          package size. Current builds do not download WebAssembly from the network and do not ship bundled
+          WebAssembly modules. Search metadata caching uses in-process memory only (see section 4.4).
         </p>
 
         <h2>6. Remote code</h2>
@@ -553,9 +554,8 @@
         <h3>4.4 ローカルストレージ（拡張機能ストレージ）</h3>
         <p>
           <code>chrome.storage.local</code> を用いて端末内にデータを保存します。また
-          <code>unlimitedStorage</code> 権限を宣言し、ローカル SQLite blob（検索メタデータキャッシュ、任意の
-          ジョブ監査ログ）やユーザーが import した UI 背景画像が Chrome の既定の拡張機能 storage quota を
-          超えても保存できるようにしています。以下はいずれも端末内に留まります。
+          <code>unlimitedStorage</code> 権限を宣言し、ユーザーが import した UI 背景画像などのローカルデータが
+          Chrome の既定の拡張機能 storage quota を超えても保存できるようにしています。以下はいずれも端末内に留まります。
         </p>
         <ul>
           <li>
@@ -591,6 +591,9 @@
           <li>
             <strong>UI 設定</strong> — 表示言語、ターミナル／ピッカー外観（色・フォント・サイズ）、ユーザーが import
             した背景画像（<code>bmxt_ui_settings_v1</code>）。import した画像は data URL として端末内 storage に保存。
+            保存先モード（拡張機能内 storage か、File System Access API で選んだ外部フォルダか；
+            <code>bmxt_ui_settings_storage_v1</code>）。外部モード時は <code>&gt; save setting</code> で
+            設定バンドルをそのフォルダへ書き込みます。
           </li>
           <li>
             <strong>タブピッカーの page-active 設定</strong> — ハイライト移動時のタブ自動アクティブ化
@@ -700,9 +703,8 @@
           公式ビルドのコマンド処理と UI ロジックは <strong>TypeScript</strong> で実装され、拡張ページとサービスワーカー上で
           ローカルに実行されます。旧バージョンでは Rust 由来の WebAssembly をコマンド処理に同梱していましたが、
           <strong>バージョン 0.3.5 で廃止</strong>しパッケージサイズを縮小しています。現行ビルドはネットワークから
-          WebAssembly を取得しません。ローカル SQLite（検索メタデータキャッシュ、任意のジョブ監査ログ）向けに、同梱の
-          <strong>sql.js</strong> WebAssembly モジュールのみを端末上で使用します。パッケージ manifest の CSP には、
-          その同梱モジュール向けに <code>wasm-unsafe-eval</code> が含まれます。
+          WebAssembly を取得せず、同梱の WebAssembly モジュールもありません。検索メタデータキャッシュは
+          プロセス内メモリのみを使用します（4.4 節参照）。
         </p>
 
         <h2>6. リモートコード</h2>

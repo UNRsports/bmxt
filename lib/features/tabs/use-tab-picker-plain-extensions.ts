@@ -4,14 +4,14 @@ import { useCallback, useMemo, useRef } from "react"
 import type { PlainPickerKeyboardExtensions } from "../side-picker/interaction/plain-picker-keyboard-extensions"
 import { pickerStopEvent } from "../side-picker/interaction/picker-key-event"
 import { isPickerAltBlockedChord } from "../side-picker/preview/picker-alt-chord"
-import { pickerAltVerticalNavDirection } from "../side-picker/preview/picker-alt-vertical-nav"
 import {
   groupRowKey,
+  isJkVerticalNavKey,
   isPhysicalArrowDown,
   isPhysicalArrowUp,
-  isReservedSplitPaneVerticalNav,
-  verticalNavDirection
+  isReservedSplitPaneVerticalNav
 } from "./tab-picker-keyboard"
+import { tabsPickerAltVerticalNavDirection } from "./tabs-picker-vertical-nav"
 import { tabPickerVisibleHiIndicesMatching, type TabPickerRow } from "./picker-rows"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
@@ -26,6 +26,19 @@ import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
+
+function isTabPickerFooterTextMode(
+  groupNewPhase: "tabs" | "meta",
+  newTabUrlWindowId: number | null,
+  editPanel: EditPanel | null
+): boolean {
+  return (
+    groupNewPhase === "meta" ||
+    newTabUrlWindowId !== null ||
+    editPanel?.kind === "windowRename" ||
+    editPanel?.kind === "groupRename"
+  )
+}
 
 export function useTabPickerPlainExtensions({
   rows,
@@ -171,6 +184,20 @@ export function useTabPickerPlainExtensions({
 
   const onCaptureBefore = useCallback(
     (e: KeyboardEvent): boolean => {
+      if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        const ev = e as KeyboardEvent & { isComposing?: boolean }
+        if (!ev.isComposing && isJkVerticalNavKey(e)) {
+          if (isTabPickerFooterTextMode(groupNewPhase, newTabUrlWindowId, editPanel)) {
+            const ae = document.activeElement
+            if (ae === groupMetaTitleRef.current) {
+              return true
+            }
+          }
+          pickerStopEvent(e)
+          return true
+        }
+      }
+
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
         return false
       }
@@ -285,6 +312,7 @@ export function useTabPickerPlainExtensions({
       commandMode,
       editPanel,
       expandAtRow,
+      groupMetaTitleRef,
       groupNewPhase,
       hi,
       isGroupExpanded,
@@ -301,10 +329,14 @@ export function useTabPickerPlainExtensions({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
+      if (isJkVerticalNavKey(e)) {
+        pickerStopEvent(e)
+        return true
+      }
       if (isPickerAltBlockedChord(e)) {
         return false
       }
-      const navDir = pickerAltVerticalNavDirection(e, altKeyHeldRef)
+      const navDir = tabsPickerAltVerticalNavDirection(e, altKeyHeldRef)
       if (navDir === null) {
         return false
       }
@@ -313,19 +345,15 @@ export function useTabPickerPlainExtensions({
         return false
       }
 
-      if (
-        groupNewPhase === "meta" ||
-        newTabUrlWindowId !== null ||
-        editPanel?.kind === "windowRename" ||
-        editPanel?.kind === "groupRename"
-      ) {
+      if (isTabPickerFooterTextMode(groupNewPhase, newTabUrlWindowId, editPanel)) {
+        pickerStopEvent(e)
         const ae = document.activeElement
-        if (
-          ae === groupMetaTitleRef.current ||
-          groupMetaColorStripRef.current?.contains(ae ?? null)
-        ) {
-          return false
+        const onColorStrip =
+          groupMetaColorStripRef.current?.contains(ae ?? null) ?? false
+        if (!onColorStrip && ae !== groupMetaTitleRef.current) {
+          groupMetaTitleRef.current?.focus()
         }
+        return true
       }
 
       if (actionMenuPanel !== null) {
