@@ -21,6 +21,23 @@ export function verticalNavDirection(
   return null
 }
 
+/** 物理 ↑↓ のみ（tabs ピッカーなど j/k 非対応の列用） */
+export function physicalArrowVerticalNavDirection(
+  e: Pick<KeyboardEvent, "key" | "code">
+): "up" | "down" | null {
+  if (e.key === "ArrowDown" || e.code === "ArrowDown") {
+    return "down"
+  }
+  if (e.key === "ArrowUp" || e.code === "ArrowUp") {
+    return "up"
+  }
+  return null
+}
+
+export function isJkVerticalNavKey(e: Pick<KeyboardEvent, "key" | "code">): boolean {
+  return verticalNavDirection(e) !== null && physicalArrowVerticalNavDirection(e) === null
+}
+
 export function isPhysicalArrowDown(e: Pick<KeyboardEvent, "key" | "code">): boolean {
   return e.key === "ArrowDown" || e.code === "ArrowDown"
 }

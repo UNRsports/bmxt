@@ -23,7 +23,10 @@ import {
   executeMoveAction,
   executeNewWindowAction
 } from "./controller/execute-actions"
-import { executeCreateNewGroupAction } from "./controller/create-new-group"
+import {
+  executeCreateGroupInPlaceAction,
+  executeCreateNewGroupAction
+} from "./controller/create-new-group"
 import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
@@ -43,6 +46,7 @@ export type TabPickerExecutionParams = {
   markedWindowIds: number[]
   markedGroupKeys: string[]
   bulkSubMode: BulkSubMode | null
+  variant: "default" | "groupNew"
   selectedTabIds: number[]
   groupChoices: GroupChoice[]
   groupPickIndex: number
@@ -78,6 +82,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     markedWindowIds,
     markedGroupKeys,
     bulkSubMode,
+    variant,
     selectedTabIds,
     groupChoices,
     groupPickIndex,
@@ -261,16 +266,22 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
 
     groupCreateInFlightRef.current = true
     try {
-      const ok = await executeCreateNewGroupAction({
+      const createParams = {
         tabIds,
         title: newGroupTitle,
         color,
-        locale: locale,
-        onAppendLog,
-        resolveCreateGroupPlan: resolvePickerCreateGroupPlan
-      })
-      newGroupTabIdsRef.current = []
+        locale,
+        onAppendLog
+      }
+      const ok =
+        variant === "groupNew"
+          ? await executeCreateNewGroupAction({
+              ...createParams,
+              resolveCreateGroupPlan: resolvePickerCreateGroupPlan
+            })
+          : await executeCreateGroupInPlaceAction(createParams)
       if (ok) {
+        newGroupTabIdsRef.current = []
         clearMarkedViaReducer()
         setGroupNewPhase("tabs")
         await onRefreshRows?.()
@@ -288,7 +299,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     newGroupTitle,
     onAppendLog,
     onRefreshRows,
-    setGroupNewPhase
+    setGroupNewPhase,
+    variant
   ])
 
   const executeOpenNewTabFromUrl = useCallback(

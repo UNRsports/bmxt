@@ -111,6 +111,10 @@
     "ja": "グループ {groupId} を新しいウィンドウ {windowId} に作成しました · {color} · \"{label}\"",
     "en": "created group {groupId} in new window {windowId} · {color} · \"{label}\""
   },
+  "tabs.picker.error.createGroup.successInPlace": {
+    "ja": "グループ {groupId} を作成しました · {color} · \"{label}\"",
+    "en": "created group {groupId} · {color} · \"{label}\""
+  },
   "tabs.picker.error.createGroup.tabIdMissing": {
     "ja": "タブ ID を確定できませんでした",
     "en": "Could not resolve tab id"
