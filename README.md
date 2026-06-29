@@ -2069,6 +2069,7 @@ pnpm run dev
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
+- `lib/features/command-line/compound/` — **`&&`** 複合コマンドの解析と逐次実行
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）

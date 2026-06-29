@@ -49,7 +49,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 0.7.5:
 - Adjusted tabs mode picker behavior
 - Added selectable export destinations for setting data
-- Added snapshot mode to save pages in an Obsidian-compatible format
+- Implemented snapshot: save web pages as Markdown to a directory of your choice
 - Refactored the dom picker: existing behavior is `--normal`; added `--with` with fixes and improvements
 - Added support for running multiple commands with `&&`
 
