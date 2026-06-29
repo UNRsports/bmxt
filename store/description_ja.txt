@@ -36,7 +36,6 @@ APIなどによる外部LLM（AI）はもちろん、ライブラリ類も常に
 ◆フィードバック
 ・拡張機能を使用してみてのご感想やご希望
 https://github.com/UNRsports/bmxt/issues
-https://x.com/ny0n150226
 
 
 ◆免責事項

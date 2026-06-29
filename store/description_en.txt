@@ -38,7 +38,6 @@ We would also appreciate any feedback you may have after trying it out. Please s
 ◆Feedback
 - Feedback and wishes from using the extension
 https://github.com/UNRsports/bmxt/issues
-https://x.com/ny0n150226
 
 
 ◆Disclaimer
