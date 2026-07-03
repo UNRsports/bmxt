@@ -2,12 +2,13 @@ import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
   cmdAvailableOptionsLine,
   domCmdExitListLines,
+  domCmdListPickerLines,
   domCmdSettingLines,
   domCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import { tCmd } from "../../setting/i18n/ns/cmd"
-import { parseDomListArgsFromTokens } from "../../dom/parse-dom-list-args"
+import { parseDomListLine } from "../../dom/dom-list-parse"
 import { stripInvisibleFormatChars } from "../line-parse"
 import type { CmdMeta } from "../types"
 import { effectsDispatch, linesDispatch } from "../types"
@@ -16,7 +17,7 @@ export const CMD: CmdMeta = {
   name: "dom",
   aliases: [],
   usagePrimary:
-    "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active"
+    "dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>] | dom -exit -list | dom -setting -page-active"
 }
 
 function normalizeDomToken(tok: string): string {
@@ -24,20 +25,17 @@ function normalizeDomToken(tok: string): string {
 }
 
 function runList(args: string[]) {
-  if (args.length === 2) {
-    return effectsDispatch([
-      { kind: "dom_list", flavor: "--html", pattern: "", pickerMode: "normal", showTag: "false" }
-    ])
-  }
-  const parsed = parseDomListArgsFromTokens(
-    args.slice(2).map((a) => stripInvisibleFormatChars(a))
-  )
+  const locale = getRunLocale()
+  const line = args.map((arg) => stripInvisibleFormatChars(arg)).join(" ")
+  const parsed = parseDomListLine(line)
   if (parsed === null) {
-    const locale = getRunLocale()
     return linesDispatch([
       tCmd("cmd.dom.error.listUsage", locale),
       ...domCmdUsageLines(locale)
     ])
+  }
+  if (parsed.picker) {
+    return linesDispatch(domCmdListPickerLines(locale))
   }
   return effectsDispatch([
     {

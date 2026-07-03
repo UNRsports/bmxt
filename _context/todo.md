@@ -258,25 +258,25 @@ manifest `trailingTokens` に `"--picker"` を追加（codegen 経由）。
 
 #### Phase 2 — パイプ基盤
 
-- [ ] `parsePipeSegments` / `runPipeLine`
-- [ ] `SegmentOutcome` + compound 拡張
-- [ ] `tabs -list | close` 等の consumer
+- [x] `parsePipeSegments` / `runPipeLine`
+- [x] `SegmentOutcome` + compound 拡張
+- [x] `tabs -list | close` 等の consumer
 
 #### Phase 3 — `dom -list`, `search -list`
 
-- [ ] DOM cap 撤廃 + `ListResult` 化
-- [ ] search レコード正規化
-- [ ] `--picker` 分岐
+- [x] DOM cap 撤廃 + `ListResult` 化
+- [x] search レコード正規化（`search_list` effect + `search.hit` ListResult）
+- [x] `--picker` 分岐
 
 #### Phase 4 — `session -list`, `setting -list`
 
-- [ ] 各 `-list` plain + `--picker`
+- [x] 各 `-list` plain + `--picker`
 
 #### Phase 5 — 仕上げ
 
-- [ ] `MAX_SESSION_LOG_LINES` 方針
-- [ ] README / store / release-notes
-- [ ] compound eligibility 更新
+- [x] `MAX_SESSION_LOG_LINES` 方針（500 → 5000）
+- [x] README / store / release-notes
+- [x] compound eligibility 更新
 
 ### 8.8 関連ファイル（新規・変更）
 

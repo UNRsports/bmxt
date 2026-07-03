@@ -1,0 +1,22 @@
+{
+  "pipe.close.noTabs": {
+    "ja": "error: パイプ入力に tabs.tab レコードがありません",
+    "en": "error: pipe input has no tabs.tab records"
+  },
+  "pipe.error.noStdin": {
+    "ja": "error: パイプ入力がありません",
+    "en": "error: no pipe input"
+  },
+  "pipe.error.notProducer": {
+    "ja": "error: パイプの先頭コマンドは `-list` 列挙コマンドである必要があります: {stage}",
+    "en": "error: pipe head must be a `-list` producer: {stage}"
+  },
+  "pipe.error.picker": {
+    "ja": "error: パイプでは `--picker` は使えません",
+    "en": "error: `--picker` is not supported in a pipe"
+  },
+  "pipe.error.unsupportedConsumer": {
+    "ja": "error: 未対応のパイプ先コマンド: {stage}",
+    "en": "error: unsupported pipe consumer: {stage}"
+  }
+}

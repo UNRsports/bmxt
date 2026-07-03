@@ -146,5 +146,9 @@
   "search.status.manual": {
     "ja": "Alt+↑↓ でページ内プレビュー · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ · Alt で page-active 切替",
     "en": "Alt+↑↓ for in-page preview · Ctrl+↑↓ open-tab rows only · Enter jump · Alt toggles page-active"
+  },
+  "search.list.empty": {
+    "ja": "（検索結果なし）",
+    "en": "(no search hits)"
   }
 }

@@ -152,7 +152,8 @@ describe("setting list picker draft", () => {
 describe("setting list picker input", () => {
   it("parses -list and -exit -list", () => {
     assert.equal(parseSettingIncompleteLine("setting"), true)
-    assert.equal(parseSettingListPickerLine("setting -list"), true)
+    assert.equal(parseSettingListPickerLine("setting -list"), false)
+    assert.equal(parseSettingListPickerLine("setting -list --picker"), true)
     assert.equal(parseSettingExitListLine("setting -exit -list"), true)
     assert.equal(parseSettingListPickerLine("setting -language"), false)
   })

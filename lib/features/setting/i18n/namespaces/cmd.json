@@ -63,6 +63,10 @@
     "ja": "実行例: dom -setting -page-active --auto または --manual",
     "en": "Run: dom -setting -page-active --auto or --manual"
   },
+  "cmd.dom.listPicker.title": {
+    "ja": "DOM list picker は BMXt プロンプトから開きます: dom -list --picker",
+    "en": "DOM list picker is opened from the BMXt prompt with: dom -list --picker"
+  },
   "cmd.error.unknownCommand": {
     "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
     "en": "error: unknown command: {cmdToken}. Type help."
@@ -147,13 +151,17 @@
     "ja": "Search list picker は BMXt プロンプトから閉じます: search -exit -list",
     "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
   },
+  "cmd.search.listPicker.title": {
+    "ja": "Search list picker は BMXt プロンプトから開きます: search -list --picker",
+    "en": "Search list picker is opened from the BMXt prompt with: search -list --picker"
+  },
   "cmd.search.usage.line1": {
-    "ja": "usage: search -list [<pattern>]   — search ピッカーを開く（history + bookmark + page + snapshot）",
-    "en": "usage: search -list [<pattern>]   — open search picker (history + bookmark + page + snapshot)"
+    "ja": "usage: search -list [<pattern>]   — 検索結果をプレーン一覧（既定は --all 相当）",
+    "en": "usage: search -list [<pattern>]   — plain search hits (default scopes = --all)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list --all|--history|--bookmark|--page|--snapshot [<pattern>]   — スコープ（--all は横断）",
-    "en": "       search -list --all|--history|--bookmark|--page|--snapshot [<pattern>]   — scope (--all = cross-scope)"
+    "ja": "       search -list --picker [--all|--history|--bookmark|--page|--snapshot] [<pattern>]   — 検索ピッカー列",
+    "en": "       search -list --picker [--all|--history|--bookmark|--page|--snapshot] [<pattern>]   — search picker column"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -194,6 +202,14 @@
   "cmd.session.listUi.title": {
     "ja": "`session -list` は BMXt ウィンドウ UI で処理されます。",
     "en": "`session -list` is handled in the BMXt window UI."
+  },
+  "cmd.session.listPicker.title": {
+    "ja": "Session list picker は BMXt プロンプトから開きます: session -list --picker",
+    "en": "Session list picker is opened from the BMXt prompt with: session -list --picker"
+  },
+  "cmd.session.listPlain.hint": {
+    "ja": "session -list — BMXt プロンプトから実行（プレーン一覧）",
+    "en": "session -list — run from the BMXt prompt (plain list)"
   },
   "cmd.session.runHint": {
     "ja": "第一コマンドのみ実行するとこの案内を表示し、Tab 補完用にプロンプトを `session ` に戻します。",
@@ -274,6 +290,14 @@
   "cmd.setting.list.title": {
     "ja": "setting -list — BMXt プロンプトから実行",
     "en": "setting -list — run from the BMXt prompt"
+  },
+  "cmd.setting.listPicker.title": {
+    "ja": "Setting picker は BMXt プロンプトから開きます: setting -list --picker",
+    "en": "Setting picker is opened from the BMXt prompt with: setting -list --picker"
+  },
+  "cmd.setting.listPlain.hint": {
+    "ja": "setting -list — BMXt プロンプトから実行（プレーン一覧）",
+    "en": "setting -list — run from the BMXt prompt (plain list)"
   },
   "cmd.setting.usage.line1": {
     "ja": "usage: setting -list       — 設定ピッカーを開く（言語・外観・エクスポート/インポート）",

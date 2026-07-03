@@ -11,12 +11,7 @@ type ShowPayload = { kind: string; body: string; entries?: DomTreeEntryPayload[]
 
 /** EN: `-html`: per-element HTML snippets + paths; `body` keeps full documentElement.outerHTML for logs. */
 export function bmxtDomShowInjected(mode: DomShowMode): ShowPayload {
-  const MAX = 200000
-  const maxNodes = 2500
-  const maxDepth = 48
-  const htmlSnippetMax = 220
   const entries: DomTreeEntryPayload[] = []
-  let count = 0
 
   function formatReactLine(el: Element, depth: number): string {
     let fiber = ""
@@ -43,30 +38,20 @@ export function bmxtDomShowInjected(mode: DomShowMode): ShowPayload {
 
   function formatHtmlLine(el: Element, depth: number): string {
     const indent = "  ".repeat(depth)
-    let snippet = el.outerHTML.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
-    if (snippet.length > htmlSnippetMax) {
-      snippet = snippet.slice(0, htmlSnippetMax) + "…"
-    }
+    const snippet = el.outerHTML.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim()
     return indent + snippet
   }
 
   function walk(node: Node, depth: number, path: number[]): void {
-    if (!node || count >= maxNodes || depth > maxDepth) {
-      return
-    }
-    if (node.nodeType !== 1) {
+    if (!node || node.nodeType !== 1) {
       return
     }
     const el = node as Element
-    count += 1
     const line = mode === "html" ? formatHtmlLine(el, depth) : formatReactLine(el, depth)
     entries.push({ line, path: path.slice() })
     const kids = el.children
     for (let j = 0; j < kids.length; j += 1) {
       walk(kids[j], depth + 1, [...path, j])
-      if (count >= maxNodes) {
-        return
-      }
     }
   }
 
@@ -78,13 +63,9 @@ export function bmxtDomShowInjected(mode: DomShowMode): ShowPayload {
   if (mode === "html") {
     const doc = document.documentElement
     const html = doc ? doc.outerHTML : ""
-    const body = html.length > MAX ? html.slice(0, MAX) + "\n…(truncated)" : html
-    return { kind: "html", body, entries }
+    return { kind: "html", body: html, entries }
   }
 
-  let body = entries.map((e) => e.line).join("\n")
-  if (body.length > MAX) {
-    body = body.slice(0, MAX) + "\n…(truncated)"
-  }
+  const body = entries.map((e) => e.line).join("\n")
   return { kind: "react", body, entries }
 }

@@ -1,10 +1,14 @@
 {
   "0.7.7": {
     "ja": [
-      "パイプ処理導入"
+      "パイプ処理導入（例: tabs -list | close）",
+      "-list 系コマンドの出力規格化（plain 既定・--picker で UI）",
+      "DOM 一覧の取得上限撤廃、セッションログ上限 5000 行"
     ],
     "en": [
-      ""
+      "Pipe chains (e.g. tabs -list | close)",
+      "-list commands: plain output by default, --picker for UI columns",
+      "Removed DOM list capture caps; session log buffer raised to 5000 lines"
     ]
   }
 }

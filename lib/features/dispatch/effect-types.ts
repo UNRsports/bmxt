@@ -4,6 +4,7 @@
  */
 
 export type ChromeEffect =
+  | { dispatch_line: string; kind: "search_list" }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { kind: "clear_log" }
   | { kind: "close_tab"; tab_id: number }

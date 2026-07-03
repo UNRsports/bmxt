@@ -209,18 +209,4 @@ export function parseSearchExitListLine(trimmed: string): boolean {
   return SEARCH_EXIT_LIST_RE.test(trimmed.trim())
 }
 
-/** EN: Enter opens search list picker when the line is a completed `search -list …` dispatch. */
-export function parseSearchListPickerLine(trimmed: string): string | null {
-  const t = trimmed.trim()
-  const parts = searchListParts(t)
-  if (parts.length < 2) {
-    return null
-  }
-  if (parts[0]!.toLowerCase() !== "search") {
-    return null
-  }
-  if (parts[1]!.toLowerCase() !== "-list") {
-    return null
-  }
-  return t
-}
+export { parseSearchListPickerLine } from "./search-list-parse.ts"

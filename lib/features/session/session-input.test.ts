@@ -15,7 +15,8 @@ import {
 
 describe("parseSessionListPickerLine", () => {
   it("parseSessionListPickerLine", () => {
-    assert.equal(parseSessionListPickerLine("session -list"), true)
+    assert.equal(parseSessionListPickerLine("session -list"), false)
+    assert.equal(parseSessionListPickerLine("session -list --picker"), true)
     assert.equal(parseSessionListPickerLine("session"), false)
   })
 })

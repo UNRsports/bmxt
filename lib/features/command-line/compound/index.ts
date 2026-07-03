@@ -6,6 +6,8 @@ export type {
   SegmentOutcomeCode
 } from "./types.ts"
 export { lineHasAndOperator, parseAndSegments } from "./parse-and-segments.ts"
+export { lineHasPipeOperator, parsePipeSegments } from "./parse-pipe-segments.ts"
+export { lineHasCompoundOperator } from "./line-has-compound-operator.ts"
 export {
   isCompoundPromptLine,
   mapSegmentOffsetToLine,

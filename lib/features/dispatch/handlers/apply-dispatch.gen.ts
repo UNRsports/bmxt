@@ -16,6 +16,7 @@ import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
 import { applySearchBookmarkEffect } from "./effects/search-bookmark"
 import { applySearchHistoryEffect } from "./effects/search-history"
+import { applySearchListEffect } from "./effects/search-list"
 import { applySearchPageEffect } from "./effects/search-page"
 import { applySearchSnapshotEffect } from "./effects/search-snapshot"
 import { applySessionNewEffect } from "./effects/session-new"
@@ -52,6 +53,8 @@ export async function applyOne(
       return applySearchBookmarkEffect(ctx, e)
     case "search_history":
       return applySearchHistoryEffect(ctx, e)
+    case "search_list":
+      return applySearchListEffect(ctx, e)
     case "search_page":
       return applySearchPageEffect(ctx, e)
     case "search_snapshot":

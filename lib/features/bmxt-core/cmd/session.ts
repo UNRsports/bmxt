@@ -5,12 +5,13 @@ import {
 } from "../../session/session-summary"
 import {
   cmdAvailableOptionsLine,
-  sessionCmdListUiLines,
+  sessionCmdListPickerLines,
   sessionCmdRunHintLine,
   sessionCmdSettingNameUiLines,
   sessionCmdSwitchUiLines,
   sessionCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
+import { parseSessionListLine } from "../../session/session-list-parse"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
@@ -20,7 +21,7 @@ export const CMD: CmdMeta = {
   name: "session",
   aliases: [],
   usagePrimary:
-    "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]"
+    "session -new [name] | session -list [--picker] | session -switch [name] | session -next | session -prev | session -setting-name [name]"
 }
 
 function usageLines(): string[] {
@@ -82,7 +83,14 @@ export function run(args: string[]) {
     return effectsDispatch([{ kind: "session_prev" }])
   }
   if (sub === "-list") {
-    return linesDispatch(sessionCmdListUiLines(locale))
+    const listLine = parseSessionListLine(args.join(" "))
+    if (listLine?.picker) {
+      return linesDispatch(sessionCmdListPickerLines(locale))
+    }
+    return linesDispatch([
+      tCmd("cmd.session.listPlain.hint", locale),
+      sessionCmdRunHintLine(locale)
+    ])
   }
   return linesDispatch([tCmd("cmd.session.error.internal", locale), ...usageLines()])
 }

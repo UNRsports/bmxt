@@ -20,6 +20,7 @@ import { parseSnapshotSaveLine } from "../../snapshot/snapshot-save-input.ts"
 import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines.ts"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab.ts"
 import {
+  parseSessionListLine,
   parseSessionListPickerLine,
   parseSessionSettingNameWithLine,
   parseSessionSwitchByNumberLine,
@@ -27,11 +28,16 @@ import {
   resolveSessionRowByDisplayName,
   sanitizeSessionName
 } from "../../session/index.ts"
+import { buildSessionListResult } from "../../session/session-list-result.ts"
+import { formatSessionListPlainLines } from "../../session/session-list-plain.ts"
 import { createSettingListPickerState } from "../../setting/setting-list-picker-state.ts"
 import {
   parseSettingExitListLine,
+  parseSettingListLine,
   parseSettingListPickerLine
 } from "../../setting/setting-list-picker-input.ts"
+import { buildSettingListResult } from "../../setting/setting-list-result.ts"
+import { formatSettingListPlainLines } from "../../setting/setting-list-plain.ts"
 import {
   parseTranslateCommandLine,
   saveTranslateEnabled,
@@ -104,6 +110,12 @@ async function runSettingSegment(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome | null> {
+  const settingList = parseSettingListLine(segment)
+  if (settingList !== null && !settingList.picker) {
+    const result = buildSettingListResult(deps.uiSettings, locale)
+    return segmentSuccess(formatSettingListPlainLines(result, locale))
+  }
+
   if (parseSettingListPickerLine(segment)) {
     try {
       const state = createSettingListPickerState(deps.uiSettings)
@@ -171,6 +183,12 @@ async function runSessionSegment(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome | null> {
+  const sessionList = parseSessionListLine(segment)
+  if (sessionList !== null && !sessionList.picker) {
+    const result = buildSessionListResult(deps.sessionListRows)
+    return segmentSuccess(formatSessionListPlainLines(result, locale, false))
+  }
+
   if (parseSessionListPickerLine(segment)) {
     return segmentFailure("interactive", [tCompound("compound.error.interactive", locale)])
   }

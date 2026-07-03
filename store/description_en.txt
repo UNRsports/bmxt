@@ -133,27 +133,32 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `clear` | Clear logs |
 | `exit` | Close the active terminal session; when it is the last session, close the BMXt window and clear process-scoped state |
 | `tabs` | Show available options, then restore the prompt to `tabs ` (with a trailing space) for continued input |
-| `tabs -list [-u]` | Open the tab picker; supports search, multi-select marker `#`, and bulk modes; `/` searches tab titles, Enter highlights matches, `n` jumps between them |
+| `tabs -list [-u]` | List open tabs as plain tree (IDs included); `-u` adds URLs |
+| `tabs -list --picker [-u]` | Open tab picker; search, multi-select `#`, bulk modes; `/` searches titles, Enter highlights, `n` jumps matches |
 | `tabs -moveurl <url>` | Focus a tab with the given URL or open a new tab (http/https) |
 | `tabs -nowurl` | Show the current tab’s URL |
 | `tabs -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved setting |
 | `dom` | Print available options; Enter alone restores the prompt to `dom ` (trailing space) for the next token |
-| `dom -list [--normal|--with] [--html|--react] [<pattern>]` | Open a read-only DOM picker for the active tab (same picker chrome as `search -list`); mode `--normal` (full tree; default) or `--with` (viewport-sync scroll + visible elements); flavor `--html` (default) or `--react`; optional `<pattern>` filters rendered lines with a case-insensitive substring (not a regex). Scriptable http(s) pages only; may prompt for optional site access |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | Plain DOM list from active tab (default `--normal --html`); optional substring filter; scriptable http(s) only |
+| `dom -list --picker …` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; may prompt for optional site access |
 | `nav` | Print usage; Enter alone restores the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, reload, history) |
 | `nav -exit` | Fully disarm nav (turn the overlay **OFF** with **Alt** first) |
 | `search` | Print available options; Enter alone restores the prompt to `search ` for `-list` |
-| `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]` | Open a search picker column. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel; single-scope flags limit to one source. Scan progress appears inside the picker and hides when results arrive. **→** opens a detail list of hits per row or **`[history]`** open-target tree; **Enter** on a detail row jumps to that match in the page (http(s)). Case-insensitive substring match (no regex in v1) |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = `--all`). Case-insensitive substring (no regex in v1) |
+| `search -list --picker …` | Search picker column; in-picker progress; detail view and `[history]` open-target tree |
 | `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
 | `close` / `c <tabId>` | Close a tab |
 | `group new <tabId> …` | Create a group |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
-| `setting -list` | Open the settings picker column (UI locale, terminal appearance, optional per-picker appearance, storage internal/external, snapshot storage bundled/Obsidian vault, export/import zip); changes apply only after `> save setting` in the picker |
+| `setting -list` | Plain list of current UI settings |
+| `setting -list --picker` | Open settings picker column; commit with `> save setting` |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows setting snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (tmux-style terminal sessions in one BMXt window) |
 | `session -new [name]` | Create a new terminal session and switch to it; optional display name |
-| `session -list` | Inline session picker on the prompt (↑↓ · Enter / 1–9 switches immediately by index) |
+| `session -list` | Plain list of terminal sessions |
+| `session -list --picker` | Inline session picker on the prompt (↑↓ · Enter / 1–9) |
 | `session -switch [name]` | Inline session picker by display name (type to filter · Enter inserts `session -switch <name>` · Enter again runs switch) |
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session |

@@ -1,4 +1,5 @@
 import {
+  parseSessionListLine,
   parseSessionListPickerLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
@@ -7,6 +8,8 @@ import {
   parseSessionSwitchWithLine,
   resolveSessionRowByDisplayName
 } from "../../../session"
+import { buildSessionListResult } from "../../../session/session-list-result"
+import { formatSessionListPlainLines } from "../../../session/session-list-plain"
 import { tSession } from "../../../setting/i18n/ns/session"
 import {
   clearPrompt,
@@ -28,6 +31,20 @@ export function tryHandleSessionCommand(ctx: CommandDispatchContext): CommandDis
     const activeIdx = deps.sessionListRows.findIndex((r) => r.isActive)
     const pickHi = deps.sessionListPickerHiRef.current ?? (activeIdx >= 0 ? activeIdx : 0)
     deps.switchSessionFromListPicker(trimmed, pickHi)
+    return "handled"
+  }
+
+  const sessionList = parseSessionListLine(trimmed)
+  if (sessionList !== null && !sessionList.picker) {
+    deps.appendCommandToHistory(trimmed)
+    clearPrompt(deps)
+    recordCommandHistory(deps)
+    const result = buildSessionListResult(deps.sessionListRows)
+    void deps.appendLogLines([
+      `> ${trimmed}`,
+      ...formatSessionListPlainLines(result, locale, false)
+    ])
+    deps.focusPrompt()
     return "handled"
   }
 

@@ -1,3 +1,4 @@
+import type { ListResult } from "../list-output/types.ts"
 import type { SegmentOutcome, SegmentOutcomeCode } from "./types.ts"
 
 /** EN: Infer segment success from terminal log lines (background / captured output). */
@@ -23,8 +24,11 @@ export function classifyOutcomeFromLines(lines: readonly string[]): Pick<
   return { ok: true, code: "ok" }
 }
 
-export function segmentSuccess(lines: readonly string[]): SegmentOutcome {
-  return { ok: true, code: "ok", lines: [...lines] }
+export function segmentSuccess(
+  lines: readonly string[],
+  listResult?: ListResult
+): SegmentOutcome {
+  return { ok: true, code: "ok", lines: [...lines], listResult }
 }
 
 export function segmentFailure(

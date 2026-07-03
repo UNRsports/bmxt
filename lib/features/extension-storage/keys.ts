@@ -81,5 +81,5 @@ export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 
-export const MAX_SESSION_LOG_LINES = 500
+export const MAX_SESSION_LOG_LINES = 5000
 export const MAX_CMD_HISTORY_LINES = 300

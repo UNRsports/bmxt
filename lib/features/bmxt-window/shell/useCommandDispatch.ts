@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { lineHasAndOperator, runCompoundLine } from "../../command-line/compound"
+import { lineHasCompoundOperator, runCompoundLine } from "../../command-line/compound"
 import { effectiveCommandLocale } from "../../setting/effective-command-locale"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
@@ -86,7 +86,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       return
     }
 
-    if (lineHasAndOperator(trimmed)) {
+    if (lineHasCompoundOperator(trimmed)) {
       void runCompoundLine(trimmed, deps, commandLocale)
       return
     }

@@ -1,16 +1,15 @@
 /** BMXt prompt parsing for `session` subcommands. */
 
-const SESSION_LIST_RE = /^\s*session\s+-list\s*$/i
+export {
+  parseSessionListLine,
+  parseSessionListPickerLine
+} from "./session-list-parse.ts"
+
 const SESSION_SWITCH_BARE_RE = /^\s*session\s+-switch\s*$/i
 const SESSION_SWITCH_WITH_RE = /^\s*session\s+-switch\s+(.+)$/i
 const SESSION_NUMBER_RE = /^\s*session\s+(\d+)\s*$/i
 const SESSION_SETTING_NAME_BARE_RE = /^\s*session\s+-setting-name\s*$/i
 const SESSION_SETTING_NAME_WITH_RE = /^\s*session\s+-setting-name\s+(.+)$/i
-
-/** `session -list` — full line must match. */
-export function parseSessionListPickerLine(trimmed: string): boolean {
-  return SESSION_LIST_RE.test(trimmed.trim())
-}
 
 /** `session -switch` with no name — open name-based switch menu on the prompt line. */
 export function parseSessionSwitchPickerLine(trimmed: string): boolean {

@@ -18,13 +18,13 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "clear": [] as const,
   "close": [] as const,
   "dom": [
-    { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag"] as const, tail: "rest" },
+    { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag","--picker"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
   "search": [
-    { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page","--snapshot"] as const, tail: "rest" },
+    { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page","--snapshot","--picker"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "group": [] as const,
@@ -48,7 +48,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "aboutbmxt": [] as const,
   "session": [
     { head: "-new", trailingTokens: [] as const, tail: "rest" },
-    { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-list", trailingTokens: ["--picker"] as const, tail: "none" },
     { head: "-switch", trailingTokens: [] as const, tail: "rest" },
     { head: "-next", trailingTokens: [] as const, tail: "none" },
     { head: "-prev", trailingTokens: [] as const, tail: "none" },
@@ -58,7 +58,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-save", trailingTokens: [] as const, tail: "rest" }
   ] as const,
   "setting": [
-    { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-list", trailingTokens: ["--picker"] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const
 }

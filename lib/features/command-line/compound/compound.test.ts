@@ -1,6 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { lineHasAndOperator, parseAndSegments } from "./parse-and-segments.ts"
+import { lineHasPipeOperator, parsePipeSegments } from "./parse-pipe-segments.ts"
 import { classifyOutcomeFromLines } from "./classify-outcome.ts"
 import { resolveActiveCommandSegment } from "./active-segment.ts"
 
@@ -44,6 +45,39 @@ describe("parseAndSegments", () => {
     assert.deepEqual(parseAndSegments("tabs -list &&   && clear"), {
       ok: false,
       error: "empty_segment"
+    })
+  })
+})
+
+describe("lineHasPipeOperator", () => {
+  it("is false for a single command", () => {
+    assert.equal(lineHasPipeOperator("tabs -list"), false)
+  })
+
+  it("is true for pipe lines", () => {
+    assert.equal(lineHasPipeOperator("tabs -list | close"), true)
+  })
+})
+
+describe("parsePipeSegments", () => {
+  it("splits on | outside quotes", () => {
+    assert.deepEqual(parsePipeSegments("tabs -list | close"), {
+      ok: true,
+      segments: ["tabs -list", "close"]
+    })
+  })
+
+  it("ignores | inside single quotes", () => {
+    assert.deepEqual(parsePipeSegments("echo 'a | b' | clear"), {
+      ok: true,
+      segments: ["echo 'a | b'", "clear"]
+    })
+  })
+
+  it("supports escaped |", () => {
+    assert.deepEqual(parsePipeSegments(String.raw`tabs -list | dom \| -list`), {
+      ok: true,
+      segments: ["tabs -list", "dom | -list"]
     })
   })
 })

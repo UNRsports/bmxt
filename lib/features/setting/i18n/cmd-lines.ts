@@ -37,6 +37,10 @@ export function settingCmdListLines(locale?: UiLocale): string[] {
   return [L("cmd.setting.list.title", locale), L("cmd.setting.list.detail", locale)]
 }
 
+export function settingCmdListPickerLines(locale?: UiLocale): string[] {
+  return [L("cmd.setting.listPicker.title", locale), L("cmd.setting.list.detail", locale)]
+}
+
 export function settingCmdExitLines(locale?: UiLocale): string[] {
   return [L("cmd.setting.exit.title", locale), L("cmd.setting.exit.detail", locale)]
 }
@@ -89,6 +93,10 @@ export function domCmdExitListLines(locale?: UiLocale): string[] {
   return [L("cmd.dom.exitList.title", locale), L("cmd.dom.exitList.detail", locale)]
 }
 
+export function domCmdListPickerLines(locale?: UiLocale): string[] {
+  return [L("cmd.dom.listPicker.title", locale), L("cmd.dom.runHint", locale)]
+}
+
 export function domCmdSettingLines(locale?: UiLocale): string[] {
   return [
     L("cmd.dom.setting.title", locale),
@@ -109,6 +117,10 @@ export function searchCmdUsageLines(locale?: UiLocale): string[] {
 
 export function searchCmdExitListLines(locale?: UiLocale): string[] {
   return [L("cmd.search.exitList.title", locale), L("cmd.search.exitList.detail", locale)]
+}
+
+export function searchCmdListPickerLines(locale?: UiLocale): string[] {
+  return [L("cmd.search.listPicker.title", locale)]
 }
 
 export function snapshotCmdUsageLines(locale?: UiLocale): string[] {
@@ -160,6 +172,10 @@ export function sessionCmdRunHintLine(locale?: UiLocale): string {
 
 export function sessionCmdListUiLines(locale?: UiLocale): string[] {
   return [L("cmd.session.listUi.title", locale), L("cmd.session.listUi.detail", locale)]
+}
+
+export function sessionCmdListPickerLines(locale?: UiLocale): string[] {
+  return [L("cmd.session.listPicker.title", locale), sessionCmdRunHintLine(locale)]
 }
 
 export function sessionCmdSwitchUiLines(locale?: UiLocale): string[] {

@@ -212,16 +212,19 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `clear` | Clear logs |
 | `exit` | Close the **active terminal session**; when it is the **last** session, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `tabs` | Show available options, then restore prompt to `tabs ` for option input |
-| `tabs -list [-u]` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
+| `tabs -list [-u]` | List open tabs as a plain tree (IDs included); `-u` adds URLs |
+| `tabs -list --picker [-u]` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
 | `tabs -exit -list` | Close tab picker column in this session (including `group new` picker) |
 | `tabs -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved in `chrome.storage.local` |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
 | `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
-| `dom -list [--normal\|--with] [--html\|--react] [<pattern>]` | Open a read-only DOM picker column for the active tab (same picker chrome as `search -list`); mode **`--normal`** (full tree; default) or **`--with`** (viewport-sync scroll + visible elements); flavor **`--html`** (default) or **`--react`**; optional case-insensitive substring filter on rendered lines (not a regex); scriptable http(s) only; may prompt for optional site access |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | List DOM nodes from the active tab as plain lines (default **`--normal --html`**); optional case-insensitive substring filter; scriptable http(s) only |
+| `dom -list --picker …` | Open a read-only DOM picker column (same picker chrome as `search -list --picker`); mode **`--normal`** or **`--with`**; flavor **`--html`** or **`--react`** |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Open a search picker column. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel; single-scope flags limit to one source. Scan progress shows inside the picker (batched updates). **→** opens a **detail list** (subdivided hits) or **`[history]`** **open-target** tree; **←** returns to results. Case-insensitive substring (no regex in v1) |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). Case-insensitive substring (no regex in v1) |
+| `search -list --picker …` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
@@ -233,20 +236,25 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --ja-en` | Save **ja → en** pair (default); round-trip preview and nav commit use English on Alt hold |
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
-| `setting -list` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `setting -list` | Plain list of current UI settings (locale, appearance, storage mode summary) |
+| `setting -list --picker` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, export/import zip); changes apply only after **`> save setting`** in the picker |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
 | `session -new [name]` | Create a new **terminal session** and switch to it; optional display name |
-| `session -list` | Inline session picker on the prompt (↑↓ · **Enter** / **1–9** switches immediately by index) |
+| `session -list` | Plain list of terminal sessions (index, display name, active marker) |
+| `session -list --picker` | Inline session picker on the prompt (↑↓ · **Enter** / **1–9** switches immediately by index) |
 | `session -switch [name]` | Inline session picker by **display name** (type to filter · **Enter** inserts `session -switch <name>` · **Enter** again runs switch); direct `session -switch <name>` also works |
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session (bare: prompt pre-filled with current display name) |
 | `session <n>` | Switch to terminal session number **n** (1-based) |
 | `close` / `c <tabId>` | Close tab |
+| `close` / `c` (pipe) | With pipe input from `tabs -list`, close every listed tab (see **Pipes** below) |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Compound commands (`&&`):** Join multiple commands on one line with **`&&`** (quoted regions and `\&&` escapes are respected). Segments run **left to right**; after the first failure, remaining segments are skipped. Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`session -list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
+**Compound commands (`&&`):** Join multiple commands on one line with **`&&`** (quoted regions and `\&&` escapes are respected). Segments run **left to right**; after the first failure, remaining segments are skipped. Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`--picker` on any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
+
+**Pipes (`|`):** Within each **`&&`** segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tabs -list | close`**. Producers: plain **`tabs -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Consumers (v1): **`close`** / **`c`** with no tab id (reads **`tabs.tab`** records). **`--picker`** cannot appear in a pipe chain.
 
 **Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the active terminal session**; the BMXt window and other in-memory session/picker state stay as they are. **Closing the BMXt window** (× button) or **`exit`** on the **last** session closes the window and **discards** all UI-held session logs and picker state (legacy **`chrome.storage.local`** process keys are cleaned up by the Service Worker). **Command history is kept** unless you use the **`reset-bmxt`** shortcut. **`exit`** with **multiple sessions** removes only the active session and switches to another. See **[BMXt process lifecycle](#bmxt-process-lifecycle)** and **[Terminal session state](#terminal-session-state)**.
 
@@ -1298,16 +1306,19 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `clear` | ログをクリア |
 | `exit` | **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**なら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `tabs` | 利用可能オプションを表示し、続けて `tabs `（末尾スペース付き）へ入力復元 |
-| `tabs -list [-u]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。 |
+| `tabs -list [-u]` | 開いているタブを ID 付きプレーン一覧（`-u` で URL 行付き） |
+| `tabs -list --picker [-u]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応 |
 | `tabs -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
 | `tabs -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。`chrome.storage.local` に保存 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
 | `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
-| `dom -list [--normal\|--with] [--html\|--react] [<pattern>]` | アクティブタブの DOM を読み取り専用ピッカー列で閲覧（`search -list` と同系 UI）。mode **`--normal`**（ツリー全体・既定）／**`--with`**（ページスクロール連動・ビューポート可視要素）。flavor **`--html`**（既定）／**`--react`**。任意の大文字小文字を区別しない部分一致フィルタ（正規表現なし）。scriptable な http(s) のみ。実行時にオプションのサイト権限を求めることがある |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 **`--normal --html`**）。任意の部分一致フィルタ。scriptable な http(s) のみ |
+| `dom -list --picker …` | DOM 読み取り専用ピッカー列（`search -list --picker` と同系 UI）。mode **`--normal`**／**`--with`**、flavor **`--html`**／**`--react`** |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索ピッカー列。**`--all`**（スコープ無しで **`search -list `** を実行したときの既定）は履歴・ブックマーク・開いている http(s) タブ本文・保存済み snapshot を並列走査。単一スコープフラグで限定可能。走査進捗はピッカー内表示（バッチ更新）。**→** で **詳細一覧** または **`[history]`** の **開き先** ツリー。**←** で結果一覧へ。部分一致（v1 正規表現なし） |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。部分一致（v1 正規表現なし） |
+| `search -list --picker …` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
@@ -1319,20 +1330,25 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --ja-en` | ペア **ja-en** を保存（既定）。往復プレビュー・nav Alt 確定は英語 |
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
-| `setting -list` | **設定ピッカー**列を開く（UI 言語・外観・**保存先**（拡張機能内／外部）・**snapshot 保存先**（設定と同梱／Obsidian Vault）・zip 入出力）。変更はピッカー内 **`> save setting`** で確定 |
+| `setting -list` | 現在の UI 設定をプレーン一覧 |
+| `setting -list --picker` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・zip 入出力）。**`> save setting`** で確定 |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
 | `session -new [name]` | 新しい **ターミナルセッション** を作成して切り替え。表示名は任意 |
-| `session -list` | プロンプト上のインライン候補（↑↓ · **Enter** / **1–9** で番号指定の即時切り替え） |
+| `session -list` | ターミナルセッションのプレーン一覧 |
+| `session -list --picker` | プロンプト上のインライン候補（↑↓ · **Enter** / **1–9** で即時切り替え） |
 | `session -switch [name]` | 表示名によるインライン候補（入力で絞り込み · **Enter** で `session -switch <name>` を挿入 · もう一度 **Enter** で実行）。`session -switch <name>` 直打ちも可 |
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
 | `session <n>` | ターミナルセッション番号 **n**（1 始まり）へ切り替え |
 | `close` / `c <tabId>` | タブを閉じる |
+| `close` / `c`（パイプ） | `tabs -list` のパイプ入力から列挙されたタブをすべて閉じる（**パイプ** 参照） |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**複合コマンド（`&&`）:** 1 行に **`&&`** で複数コマンドを並べる（クォート内と `\&&` エスケープは演算子にしない）。**左から順**に実行し、最初の失敗以降のセグメントはスキップ。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`session -list`、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。
+**複合コマンド（`&&`）:** 1 行に **`&&`** で複数コマンドを並べる（クォート内と `\&&` エスケープは演算子にしない）。**左から順**に実行し、最初の失敗以降のセグメントはスキップ。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`-list` の **`--picker`**、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。
+
+**パイプ（`|`）:** 各 **`&&`** セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` エスケープは演算子にしない）。例: **`tabs -list | close`**。producer: プレーン **`tabs -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。consumer（v1）: タブ ID なしの **`close`** / **`c`**（**`tabs.tab`** レコードを読む）。パイプ内では **`--picker`** 不可。
 
 **補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **アクティブなターミナルセッションの画面ログだけ**を消します。**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**UI 上のセッション／ピッカー状態を破棄**し、Service Worker が **旧プロセス用 storage キーを掃除**します。**コマンド履歴は保持**され、**`reset-bmxt`** ショートカットを使ったときだけ消えます。**`exit`**（複数セッション）はアクティブなセッションだけを除去し、別セッションへ切り替えます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** と **[ターミナルセッション状態](#terminal-session-state-ja)**。
 

@@ -13,6 +13,8 @@ export type SegmentOutcome = {
   code: SegmentOutcomeCode
   lines: string[]
   errorMessage?: string
+  /** EN: Structured `-list` output passed to a pipe consumer. */
+  listResult?: import("../list-output/types.ts").ListResult
 }
 
 export type ParseAndSegmentsResult =

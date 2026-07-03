@@ -5,12 +5,14 @@ import {
 } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { parseAndSegments } from "./parse-and-segments.ts"
+import { parsePipeSegments } from "./parse-pipe-segments.ts"
 import {
   formatParseErrorBlock,
   formatSegmentBlock,
   formatSkippedSegmentBlock
 } from "./format-compound-log.ts"
 import { runSegment } from "./run-segment.ts"
+import { runPipeChain } from "../pipe/run-pipe-chain.ts"
 import type { CompoundRunResult } from "./types.ts"
 
 export async function runCompoundLine(
@@ -56,7 +58,28 @@ export async function runCompoundLine(
       continue
     }
 
-    const outcome = await runSegment(text, deps, locale)
+    const pipeParsed = parsePipeSegments(text)
+    if (pipeParsed.ok === false) {
+      await deps.appendLogLines(formatParseErrorBlock(text, pipeParsed.error, locale))
+      results.push({
+        index,
+        text,
+        outcome: {
+          ok: false,
+          code: "parse",
+          lines: []
+        },
+        skipped: false
+      })
+      priorFailed = true
+      stoppedAt = index
+      continue
+    }
+
+    const outcome =
+      pipeParsed.segments.length > 1
+        ? await runPipeChain(pipeParsed.segments, deps, locale)
+        : await runSegment(text, deps, locale)
     await deps.appendLogLines(formatSegmentBlock(text, outcome, locale))
     results.push({ index, text, outcome, skipped: false })
 

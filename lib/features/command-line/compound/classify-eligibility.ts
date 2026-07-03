@@ -1,5 +1,4 @@
 import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen.ts"
-import { isDomListAwaitingFlavor } from "../../dom/dom-list-picker-input.ts"
 import { parseDomSettingCommandLine } from "../../dom/parse-dom-setting-command.ts"
 import {
   parseSessionListPickerLine,
@@ -77,10 +76,6 @@ export function classifyCompoundEligibility(
     translateCmd.kind !== "off" &&
     translateCmd.kind !== "setting"
   ) {
-    return continuationFailure(trimmed, locale)
-  }
-
-  if (isDomListAwaitingFlavor(trimmed)) {
     return continuationFailure(trimmed, locale)
   }
 
