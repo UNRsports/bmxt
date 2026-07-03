@@ -32,7 +32,7 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
   const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
   clearPrompt(deps)
   recordCommandHistory(deps)
-  void runCommandFromUiAsync(trimmed, deps.sessionId, deps.sessionOrderLength)
+  void runCommandFromUiAsync(trimmed, deps.sessionId, deps.sessionOrderLength, locale)
     .then((response) => {
       if (!isRunCmdResult(response)) {
         void deps.appendLogLines([

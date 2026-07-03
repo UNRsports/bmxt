@@ -20,6 +20,7 @@ import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
 import { buildHelpLines } from "../../lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "../../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../../lib/features/setting/i18n/run-locale"
+import type { UiLocale } from "../../lib/features/setting/locale"
 import { tWindows } from "../../lib/features/setting/i18n/ns/windows"
 import { BACKGROUND_JOB_SCOPE } from "../../lib/features/job/job-types"
 import { getJobRunner } from "../../lib/features/job/job-runner"
@@ -134,7 +135,8 @@ async function runCommand(
   line: string,
   sessionIdRaw: string | undefined,
   sessionOrderLength: number,
-  sender?: chrome.runtime.MessageSender
+  sender?: chrome.runtime.MessageSender,
+  localeOverride?: UiLocale
 ): Promise<RunCmdResult> {
   const trimmed = line.trim()
   if (!trimmed) {
@@ -146,7 +148,7 @@ async function runCommand(
   const runner = getJobRunner(BACKGROUND_JOB_SCOPE)
   return runner.start(
     "run-cmd",
-    async () => runCommandBody(trimmed, sessionIdRaw, sessionOrderLength),
+    async () => runCommandBody(trimmed, sessionIdRaw, sessionOrderLength, localeOverride),
     { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
   )
 }
@@ -154,7 +156,8 @@ async function runCommand(
 async function runCommandBody(
   line: string,
   sessionIdRaw: string | undefined,
-  sessionOrderLength: number
+  sessionOrderLength: number,
+  localeOverride?: UiLocale
 ): Promise<RunCmdResult> {
   const trimmed = line
   if (/^\s*search\b/i.test(trimmed)) {
@@ -185,7 +188,9 @@ async function runCommandBody(
   const isClear = trimmed.toLowerCase() === "clear"
   const more: string[] = []
   try {
-    more.push(...(await dispatch(trimmed, sessionId, sessionOrderLength, patches, exitOutcome)))
+    more.push(
+      ...(await dispatch(trimmed, sessionId, sessionOrderLength, patches, exitOutcome, localeOverride))
+    )
   } catch (e) {
     more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
@@ -213,9 +218,11 @@ async function dispatch(
   sessionId: string,
   sessionOrderLength: number,
   sessionPatches: SessionPatch[],
-  exitOutcome: { fullClose: boolean }
+  exitOutcome: { fullClose: boolean },
+  localeOverride?: UiLocale
 ): Promise<string[]> {
-  const { locale } = await loadUiSettings()
+  const locale =
+    localeOverride ?? (await loadUiSettings()).locale
   setRunLocale(locale)
   const trimmed = line.trim()
   if (trimmed === "help" || trimmed === "?") {
@@ -245,7 +252,8 @@ async function dispatch(
     listWindows,
     focusInfo,
     resolveTabArg,
-    commandSessionId: sessionId
+    commandSessionId: sessionId,
+    uiLocale: locale
   }
   return applyChromeEffects(ctx, bundle.effects ?? [])
 }
@@ -380,7 +388,8 @@ export async function runCommandMessage(
   line: string,
   sessionIdRaw?: string,
   sessionOrderLength?: number,
-  sender?: chrome.runtime.MessageSender
+  sender?: chrome.runtime.MessageSender,
+  localeRaw?: string
 ): Promise<RunCmdResult> {
   const orderLen =
     typeof sessionOrderLength === "number" && Number.isInteger(sessionOrderLength)
@@ -388,7 +397,9 @@ export async function runCommandMessage(
       : 1
   const sessionId =
     typeof sessionIdRaw === "string" && sessionIdRaw.length > 0 ? sessionIdRaw : undefined
-  return runCommand(line, sessionId, orderLen, sender)
+  const localeOverride =
+    localeRaw === "en" || localeRaw === "ja" ? localeRaw : undefined
+  return runCommand(line, sessionId, orderLen, sender, localeOverride)
 }
 
 export async function runNavControlMessage(message: NavControlRequest): Promise<unknown> {

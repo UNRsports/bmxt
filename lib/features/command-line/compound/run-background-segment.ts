@@ -16,7 +16,8 @@ export async function runBackgroundSegment(
     const response = await runCommandFromUiAsync(
       segment,
       deps.sessionId,
-      deps.sessionOrderLength
+      deps.sessionOrderLength,
+      locale
     )
     if (!isRunCmdResult(response)) {
       const msg = tError("error.unknown", locale)

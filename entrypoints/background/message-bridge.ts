@@ -10,6 +10,7 @@ type RunCmdMessage = {
   line?: string
   sessionId?: string
   sessionOrderLength?: number
+  locale?: string
 }
 
 type NavControlMessage = {
@@ -57,7 +58,8 @@ export function setupMessageBridge(): void {
             message.line!,
             message.sessionId,
             message.sessionOrderLength,
-            sender
+            sender,
+            message.locale
           )
         )
           .then((result) => safeSendResponse(sendResponse, result))

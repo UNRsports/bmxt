@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { lineHasAndOperator, runCompoundLine } from "../../command-line/compound"
+import { effectiveCommandLocale } from "../../setting/effective-command-locale"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
 import { tryHandleDomListCommand } from "./command-dispatch/handle-dom"
@@ -69,11 +70,16 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       return
     }
 
+    const commandLocale = effectiveCommandLocale(
+      deps.uiSettings,
+      deps.settingListPickerRef.current
+    )
+
     const ctx: CommandDispatchContext = {
       deps,
       trimmed,
       rawLine,
-      locale: deps.uiSettings.locale
+      locale: commandLocale
     }
 
     if (tryHandleExternalSettingsRecovery(ctx) === "handled") {
@@ -81,7 +87,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
     }
 
     if (lineHasAndOperator(trimmed)) {
-      void runCompoundLine(trimmed, deps, deps.uiSettings.locale)
+      void runCompoundLine(trimmed, deps, commandLocale)
       return
     }
 

@@ -1210,6 +1210,7 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   min-height: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
   padding: 8px 10px 10px;
   background-color: var(--bmxt-picker-bg);
   background-image: var(--bmxt-picker-bg-image);

@@ -428,11 +428,42 @@ export function BmxtShell({
     promptLine
   } = useShellPromptCore({ history, completionCandidates })
 
-  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
+  const promptFootSignature = useMemo(
+    () =>
+      [
+        modeToolbarOrder.join(","),
+        detailBarId ?? "",
+        paneFocus,
+        settingListPicker !== null ? "1" : "0",
+        tabPicker !== null ? "1" : "0",
+        searchListPicker !== null ? "1" : "0",
+        domListPicker !== null ? "1" : "0",
+        navArmed ? "1" : "0",
+        navActive ? "1" : "0",
+        mode,
+        String(line.length)
+      ].join("|"),
+    [
+      modeToolbarOrder,
+      detailBarId,
+      paneFocus,
+      settingListPicker,
+      tabPicker,
+      searchListPicker,
+      domListPicker,
+      navArmed,
+      navActive,
+      mode,
+      line.length
+    ]
+  )
+
+  const { scrollRef, scrollAnchorRef, logScrollable, syncLogScroll } = useLogScroll({
     lines,
     mode,
     line,
-    postUpgradeBanner
+    postUpgradeBanner,
+    promptFootSignature
   })
 
   const {
@@ -1066,7 +1097,7 @@ export function BmxtShell({
             pickerOpen: settingListPicker !== null
           }}
         />
-        <div className="bmxt-scroll-anchor" aria-hidden />
+        <div ref={scrollAnchorRef} className="bmxt-scroll-anchor" aria-hidden />
     </>
   )
 
