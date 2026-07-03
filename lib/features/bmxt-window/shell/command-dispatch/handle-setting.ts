@@ -4,8 +4,7 @@ import {
   parseSettingListLine,
   parseSettingListPickerLine
 } from "../../../setting/setting-list-picker-input"
-import { buildSettingListResult } from "../../../setting/setting-list-result"
-import { formatSettingListPlainLines } from "../../../setting/setting-list-plain"
+import { tryRunPlainListCommand } from "../../../command-line/list-commands"
 import { createSettingListPickerState } from "../../../setting/setting-list-picker-state"
 import { tSetting } from "../../../setting/i18n/ns/setting"
 import { tError } from "../../../setting/i18n/ns/error"
@@ -56,12 +55,11 @@ export function tryHandleSettingCommand(ctx: CommandDispatchContext): CommandDis
     deps.appendCommandToHistory(trimmed)
     clearPrompt(deps)
     recordCommandHistory(deps)
-    const result = buildSettingListResult(deps.uiSettings, locale)
-    void deps.appendLogLines([
-      `> ${trimmed}`,
-      ...formatSettingListPlainLines(result, locale)
-    ])
-    deps.focusPrompt()
+    void (async () => {
+      const lines = await tryRunPlainListCommand(trimmed, { locale, deps })
+      await deps.appendLogLines([`> ${trimmed}`, ...(lines ?? [])])
+      deps.focusPrompt()
+    })()
     return "handled"
   }
 

@@ -295,3 +295,47 @@ manifest `trailingTokens` に `"--picker"` を追加（codegen 経由）。
 - `tabs -list` デフォルトが picker → plain ツリー
 - picker は `tabs -list --picker` に移行
 - release-notes `0.7.7`「パイプ処理導入」と整合
+
+---
+
+## 9. POSIX 整理 — `-list` レジストリと実行経路の統一
+
+各 `-list` コマンドを **registry エントリ 1 本**で登録し、plain 出力は **単一ランナー**経由に集約する。
+
+### 9.1 目的
+
+| 項目 | 内容 |
+|------|------|
+| レジストリ | `LIST_COMMAND_ENTRIES` に parse / fetch / format を集約 |
+| 実行経路 | SW effect・UI handler・compound・pipe が同じ `ListResult` → plain パスを共有 |
+| 拡張 | 新 `-list` は `*-list-command.ts` 追加 + registry 1 行 |
+
+### 9.2 レイヤー
+
+```
+lib/features/<feature>/*-list-command.ts   … プラグイン（parse / fetch / format）
+lib/features/command-line/list-commands/   … registry + tryRunPlainListCommand
+lib/features/command-line/list-output/     … ListResult 規格（変更なし）
+```
+
+### 9.3 実装チェックリスト
+
+- [x] `list-commands/types.ts` — `ListCommandEntry`, `ListCommandFetchContext`
+- [x] 各 feature `*-list-command.ts`（tabs / dom / search / session / setting）
+- [x] `list-commands/registry.ts` — `LIST_COMMAND_ENTRIES`, `matchPlainListCommand`
+- [x] `list-commands/run-plain.ts` — `tryRunPlainListCommand`, `runPlainListForCommandId`
+- [x] effect ハンドラを registry 経由に統一（`dom -list` 含む ListResult 化）
+- [x] `handle-session` / `handle-setting` / `run-ui-segment` を `tryRunPlainListCommand` 化
+- [x] `pipe/list-producer.ts` 削除 → registry に移行
+- [x] `dom-list-fetch.ts` — エラー系も `ListResult` 経由
+- [x] `list-commands.test.ts`（matcher 層 — fetch は dynamic import）
+- [x] 新コマンド追加手順を README に追記（`*-list-command.ts` + `registry.ts` matcher 1 行）
+
+### 9.4 関連ファイル
+
+| 用途 | パス |
+|------|------|
+| レジストリ | `lib/features/command-line/list-commands/*` |
+| プラグイン例 | `lib/features/tabs/tabs-list-command.ts` |
+| DOM fetch 統一 | `lib/features/dom/dom-list-fetch.ts` |
+| パイプ | `lib/features/command-line/pipe/run-pipe-chain.ts` |

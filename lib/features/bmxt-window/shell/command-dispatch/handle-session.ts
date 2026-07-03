@@ -8,8 +8,7 @@ import {
   parseSessionSwitchWithLine,
   resolveSessionRowByDisplayName
 } from "../../../session"
-import { buildSessionListResult } from "../../../session/session-list-result"
-import { formatSessionListPlainLines } from "../../../session/session-list-plain"
+import { tryRunPlainListCommand } from "../../../command-line/list-commands"
 import { tSession } from "../../../setting/i18n/ns/session"
 import {
   clearPrompt,
@@ -39,12 +38,11 @@ export function tryHandleSessionCommand(ctx: CommandDispatchContext): CommandDis
     deps.appendCommandToHistory(trimmed)
     clearPrompt(deps)
     recordCommandHistory(deps)
-    const result = buildSessionListResult(deps.sessionListRows)
-    void deps.appendLogLines([
-      `> ${trimmed}`,
-      ...formatSessionListPlainLines(result, locale, false)
-    ])
-    deps.focusPrompt()
+    void (async () => {
+      const lines = await tryRunPlainListCommand(trimmed, { locale, deps })
+      await deps.appendLogLines([`> ${trimmed}`, ...(lines ?? [])])
+      deps.focusPrompt()
+    })()
     return "handled"
   }
 

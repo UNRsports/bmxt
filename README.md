@@ -24,11 +24,12 @@
   - [`session` (terminal sessions)](#session)
   - [`tabs` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
-  - [Tab Picker (`tabs -list` / `tabs -list -u`)](#tabs-tab-picker)
+  - [Tab Picker (`tabs -list --picker` / `tabs -list --picker -u`)](#tabs-tab-picker)
   - [Tab picker `:edit` (window & tab group)](#tabs-tab-picker-edit)
   - [Tab picker — implementation (keyboard & reducer)](#tabs-tab-picker-impl)
   - [URL Lines (`http` / `https`)](#url-lines)
 - [Command Execution Architecture (Current)](#command-execution-architecture)
+  - [`-list` output registry](#list-commands-registry)
   - [Job execution (background work)](#job-execution)
   - [Add a New Built-in Command](#add-new-built-in-command)
   - [Command add procedure](#command-add-procedure)
@@ -312,7 +313,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 3. SW returns **`{ ok: true, patches: SessionPatch[], closeWindow? }`** — no session snapshot push.
 4. UI applies patches locally via **`applyRunCmdPatches`** (`appendLog`, `setLog`, `createSession`, `exitSession`, …).
 
-**UI-local commands** (handled in **`bmxt-shell.tsx`** before **`RUN_CMD`**) — e.g. **`tabs -list`**, **`dom -list`**, **`session -switch`** — append logs and change pickers **directly** in React state.
+**UI-local commands** (handled in **`bmxt-shell.tsx`** before **`RUN_CMD`**) — e.g. **`* -list --picker`**, **`* -exit -list`**, **`session -list`** / **`setting -list`** (plain), **`session -switch`**, **`translate -on`**, **`nav -enter`** — append logs and change pickers **directly** in React state. **Plain** **`tabs -list`**, **`dom -list`**, and **`search -list`** go through **`RUN_CMD`** and the **`-list` registry** (see **[`-list` output registry](#list-commands-registry)**).
 
 **Messages:** **`SESSION_INIT`**, **`SESSION_SNAPSHOT`**, and **`SESSION_UI_*`** are **removed**. The only SW → UI session notification is **`SESSION_CLEAR`** ( **`reset-bmxt`** shortcut: reset UI to a fresh empty session).
 
@@ -341,8 +342,9 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 ### `dom`
 
 - Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
-- **`dom -list` only** + **Enter** opens the **`--normal` / `--with` / `--html` / `--react` option menu** (mode and flavor must be chosen before the picker runs); see **[How columns open](#picker-ui)**.
-- **`dom -list [--normal|--with] [--html|--react] …`** resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and stream a flattened DOM outline into the picker. **Scriptable http(s)** pages only (`chrome://`, the Chrome Web Store, `chrome-extension://`, etc. are rejected with an error line). **Optional host permission** may be requested before injection, like other page-reading commands.
+- **`dom -list`** + **Enter** (plain, default **`--normal --html`**) runs via **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** plain lines in the session log (full output + scroll; summary footer). **Scriptable http(s)** only; optional host permission may be requested.
+- **`dom -list --picker …`** + **Enter** opens the DOM picker column (UI path). Bare **`dom -list --picker`** may show the **`--normal` / `--with` / `--html` / `--react` option menu** before the column opens; see **[How columns open](#picker-ui)**.
+- **`dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`** (with or without **`--picker`**) resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and produce DOM rows. **`chrome://`**, the Chrome Web Store, `chrome-extension://`, etc. are rejected with error lines.
 - **`--normal`** (default when omitted) — full DOM tree; **`↑`/`↓`** (or **`j`/`k`**) focus jumpable element rows; the target tab scrolls to the highlighted node (debounced). **`Alt+↑`/`↓`** preview page jump when **`--manual`** page-active is set.
 - **`--with`** — **`↑`/`↓`** (or **`j`/`k`**) scroll the page; viewport-visible elements are shown in a flat list; **`Alt+↑`/`↓`** move element highlight inside the picker. **`→`** opens a feature menu (links, tags, etc.).
 - **`--html`** (default flavor) vs **`--react`** only changes how nodes are labeled in the picker UI.
@@ -353,8 +355,8 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 ### `search`
 
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
-- **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**: history + bookmarks + open http(s) tab text + saved snapshots). Tab after **`search -list `** completes **`--all`**, **`--history`**, **`--bookmark`**, **`--page`**, or **`--snapshot`** if you want a single scope (see **[How columns open](#picker-ui)**).
-- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** opens the same list picker chrome as `dom -list`. **`--all`** dispatches all effect scopes in parallel. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** (and the page leg of **`--all`**) reads each open http(s) tab **live** — page body text is **not** cached or auto-prefetched. **`--snapshot`** searches saved Markdown snapshots (internal, external bundle, or Obsidian vault — see **[`snapshot`](#snapshot)**). Progress lines appear **inside the picker** (rAF-batched in the active shell) and are hidden when results arrive.
+- **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**) as **plain** output via **`RUN_CMD`** → **`search_list`** effect (or use **`search -list --picker`** for the picker column).
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list --picker …`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open http(s) tab **live**. **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
 - In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
@@ -495,7 +497,8 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 | Input | Effect |
 |-------|--------|
 | Bare **`setting`** + **Enter** | Prints usage and restores **`setting `** (continuation). Tab completes **`-list`** / **`-exit`** (then **`-list`** for exit). |
-| **`setting -list`** + **Enter** | Opens the **setting** picker column with a draft copy of current settings. |
+| **`setting -list`** + **Enter** | **Plain** list of current UI settings (`setting.field` rows via **`-list` registry**). |
+| **`setting -list --picker`** + **Enter** | Opens the **setting** picker column with a draft copy of current settings. |
 | **`setting -exit -list`** + **Enter** | Closes the setting picker column in this session (does not write storage). |
 
 **Draft, preview, commit**
@@ -586,7 +589,8 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 |-------|--------|
 | Bare **`session`** + **Enter** | Prints usage and restores **`session `** (continuation). Tab completes second tokens. |
 | **`session -new [name]`** + **Enter** | Effect **`session_new`**: create session, switch to it. Name omitted → auto from open pickers or last non-session command in the source log. |
-| **`session -list`** + **Enter** | Opens an **inline floating candidate menu** on the prompt (not a side column). Labels `*n  displayName`. **↑↓** · **Enter** / **1–9** switch **immediately** (command recorded as `session -list`). |
+| **`session -list`** + **Enter** | **Plain** numbered session list in the log (`session.row` via **`-list` registry**). |
+| **`session -list --picker`** + **Enter** | Opens an **inline floating candidate menu** on the prompt (not a side column). Labels `*n  displayName`. **↑↓** · **Enter** / **1–9** switch **immediately**. |
 | **`session -switch`** (or Tab-pick **`-switch`**) | Opens the **inline name menu** with all sessions (`*displayName`). **Does not** auto-insert the active session name. |
 | **`session -switch`** menu | **Type** to filter (incremental **contains**, same model as the second-command token picker). Menu stays until **Enter** or **Esc** (even while filtering). **Enter** inserts the canonical line `session -switch <name>` into the prompt (picker closes). **Enter** again executes the switch and appends the full line to history. **Esc** dismisses the menu. |
 | **`session -switch <name>`** + **Enter** | Direct switch by display name (duplicate names use `name (index)` in the command line). |
@@ -668,21 +672,23 @@ Each bar shows mode-specific hints (e.g. tabs/search: `EOL → focus · ← prom
 
 Service Worker **`run`** for `*-exit -list` prints usage hints only; the window UI performs the actual close.
 
-**How columns open (UI-first)**
+**How columns open (UI-first — `--picker` or picker-only flows)**
 
 | Input | Behavior |
 |-------|----------|
-| `tabs -list` / `tabs -list -u` | Opens the tab picker column |
+| `tabs -list --picker` / `tabs -list --picker -u` | Opens the tab picker column |
 | `group new` (no tab ids) | Opens the tab picker in **group-new** variant |
 | `search -list` only (no trailing space) + **Enter** | Restores the prompt to **`search -list `** (continuation) |
-| `search -list ` + **Enter** | Runs cross-scope **`--all`** search (progress in picker), then shows results in the search column |
-| `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]` + **Enter** | Runs search for the chosen scope (or all scopes with **`--all`**) |
-| `dom -list` only + **Enter** | Shows the `--normal` / `--with` / `--html` / `--react` option menu |
-| `dom -list [--normal|--with] [--html|--react] …` + **Enter** | Fetches DOM output, opens the dom column |
-| `setting -list` + **Enter** | Opens the settings picker column (see **[`setting`](#setting)**) |
+| `search -list --picker` only + **Enter** | Restores **`search -list --picker `** or shows scope menu (see **[`search`](#search-command)**) |
+| `search -list --picker …` + **Enter** | Runs search in the **search** picker column |
+| `dom -list --picker` only + **Enter** | Shows `--normal` / `--with` / `--html` / `--react` option menu when mode/flavor unset |
+| `dom -list --picker [--normal|--with] [--html|--react] …` + **Enter** | Fetches DOM output, opens the dom column |
+| `setting -list --picker` + **Enter** | Opens the settings picker column (see **[`setting`](#setting)**) |
 | `translate -on` + **Enter** | Enables translation assist (prompt stays focused) |
 
-**Settings picker column (`setting -list`)**
+**Plain `-list` (terminal log, no column)** — default for **`tabs -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`** without **`--picker`**. Output uses schema **`bmxt-list/1`**; see **[`-list` output registry](#list-commands-registry)**.
+
+**Settings picker column (`setting -list --picker`)**
 
 - Draft / preview / **`> save setting`** / **`> cancel setting`** — see **[`setting`](#setting)**.
 - **`Esc`** at the column top level returns to the **prompt** (column stays open); **`setting -exit -list`** closes it.
@@ -701,7 +707,7 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 
 Headline strings in the UI come from **`lib/features/side-picker/interaction/picker-headlines.ts`** (search/dom) and **`lib/features/bmxt-core/tabs-picker/headline.ts`** (tabs, mode-dependent). Keep this table aligned when changing shortcuts.
 
-| Key / gesture | search / dom lines | Tab picker (`tabs -list`) |
+| Key / gesture | search / dom lines | Tab picker (`tabs -list --picker`) |
 |---------------|------------------|---------------------------|
 | `j` / `k`, `↑` / `↓` | Move highlight; search **`--auto`**: preview open-tab rows on move | **`↑` / `↓`** only — move highlight (`moveHi`); **`--auto`**: also activates tab in background window |
 | `Ctrl+↑` / `Ctrl+↓` | **search only:** jump among **open-tab** result/detail rows (animated scroll; **`--auto`** previews) | — |
@@ -739,7 +745,8 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 ### `tabs` (subcommands)
 
 - `tabs` alone prints available options and restores the prompt to `tabs ` so users can continue with the next token.
-- `tabs -list [-u]`: open tab picker column (`-u` includes URL rows).
+- `tabs -list` / `tabs -list -u`: plain tab tree in the log (**`RUN_CMD`**).
+- `tabs -list --picker` / `tabs -list --picker -u`: open tab picker column (`-u` includes URL rows).
 - `tabs -exit -list`: close tab picker column in this session.
 - `tabs -setting -page-active --auto | --manual`: configure tab preview on highlight. **`--auto`** (default): moving highlight activates the tab in the background window. **`--manual`**: only **Alt+↑↓** (or holding **Alt**) activates; **Enter** still jumps to the highlighted tab and brings its window forward. Persisted in **`chrome.storage.local`**; a **tabs** status strip under the prompt shows the current mode while the tab picker is open.
 - `tabs -nowurl`: print current tab URL.
@@ -747,7 +754,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 
 <a id="tabs-tab-picker"></a>
 
-### Tab Picker (`tabs -list` / `tabs -list -u`)
+### Tab Picker (`tabs -list --picker` / `tabs -list --picker -u`)
 
 **Tree layout**
 
@@ -828,7 +835,41 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 
 The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD` reaches the Service Worker—e.g. **`tabs -list` / `tabs -list -u`**, **`* -exit -list`** (close picker columns), **`dom -list`**, **`search -list`**, **`setting -list` / `setting -exit -list`**, **`session -list` / `session -switch` / `session -setting-name`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). Those paths update **UI session state** directly (logs, pickers, nav). Other commands send **`RUN_CMD`**; the Service Worker returns **`SessionPatch[]`** and the UI applies them (see **[Terminal session state](#terminal-session-state)**). The Service Worker **`run`** for UI-handled commands only returns usage hints when invoked. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; terminal sessions are under **[`session`](#session)**; UI settings are under **[`setting`](#setting)**; nav overlay behavior is under **[Nav mode](#nav-mode)**; translation assist is under **[`translate`](#translate)**.
+**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD`—e.g. **`* -list --picker`**, **`* -exit -list`** (close picker columns), **`session -list`** / **`setting -list`** (plain, UI state), **`session -switch` / `session -setting-name`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). **Plain** **`tabs -list`**, **`dom -list`**, and **`search -list`** use **`RUN_CMD`** → Service Worker effects → the shared **`-list` registry** (same **`ListResult`** formatter as UI plain paths). Other commands send **`RUN_CMD`**; the Service Worker returns **`SessionPatch[]`** and the UI applies them (see **[Terminal session state](#terminal-session-state)**). Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; terminal sessions under **[`session`](#session)**; UI settings under **[`setting`](#setting)**; nav under **[Nav mode](#nav-mode)**; translation under **[`translate`](#translate)**.
+
+<a id="list-commands-registry"></a>
+
+### `-list` output registry
+
+All **plain** `-list` subcommands share one pipeline (POSIX-style: one schema, one formatter, pluggable producers):
+
+```
+token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (+ summary footer)
+                                      ↓
+                               pipe stdin (`|` consumers, e.g. close)
+```
+
+| Module | Role |
+|--------|------|
+| **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` types, `formatListPlainLines`, pipe TSV (`format-pipe.ts`), summary line |
+| **`lib/features/command-line/list-commands/`** | Matcher table (`LIST_COMMAND_MATCHERS`), `matchPlainListCommand`, `tryRunPlainListCommand`, `runPlainListForCommandId`; heavy plugins loaded via **dynamic import** |
+| **`lib/features/<feature>/*-list-command.ts`** | Per-command plugin: parse match, `fetchListResult`, `formatPlainLines` |
+| **`lib/features/<feature>/*-list-result.ts`** | Domain data → `ListRecord[]` |
+| **`lib/features/dispatch/handlers/effects/*-list.ts`** | Service Worker: thin `runPlainListForCommandId` wrapper |
+
+**Who runs plain `-list`:**
+
+| Command | Plain path | `--picker` path |
+|---------|------------|-----------------|
+| `tabs -list` | `RUN_CMD` → `tabs_list` | UI (`handle-tabs-list.ts`) |
+| `dom -list` | `RUN_CMD` → `dom_list` | UI (`handle-dom.ts` → picker column + `dom-list` job) |
+| `search -list` | `RUN_CMD` → `search_list` | UI (`handle-search.ts` → `search-list` job) |
+| `session -list` | UI → `tryRunPlainListCommand` | UI inline picker |
+| `setting -list` | UI → `tryRunPlainListCommand` | UI settings picker column |
+
+**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` uses `matchPlainListCommand` + `fetchListResultForCommand` to pass **`ListResult`** between segments (v1 consumer: **`close`** on **`tabs.tab`** records).
+
+**Adding a new `-list` producer** — see the checklist under **[Command add procedure](#command-add-procedure)**.
 
 **`exit`:** returns an **`exit_pane`** effect; the Service Worker returns **`exitSession`** / **`closeWindow`** patches. The UI removes the active session or, when it is the **last** session, closes the BMXt window and clears legacy process storage (see [BMXt process lifecycle](#bmxt-process-lifecycle)).
 
@@ -841,6 +882,9 @@ The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/snapshot/`** — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
+- **`lib/features/command-line/list-output/`** — canonical **`-list`** plain/pipe output (`ListResult`, `bmxt-list/1`)
+- **`lib/features/command-line/list-commands/`** — **`-list` producer registry** and unified plain runner (`tryRunPlainListCommand`)
+- **`lib/features/command-line/pipe/`** — **`|`** pipe chains (`run-pipe-chain.ts`)
 - **`lib/features/command-line/compound/`** — **`&&`** compound command parsing and sequential execution
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
@@ -861,8 +905,8 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 
 | Job kind | Typical scope | Supersede policy | Where started |
 |----------|---------------|------------------|---------------|
-| `search-list` | session id | cancel-previous | `bmxt-shell.tsx` (`search -list`) |
-| `dom-list` | session id | cancel-previous | `bmxt-shell.tsx` (`dom -list`) |
+| `search-list` | session id | cancel-previous | `bmxt-shell.tsx` (`search -list --picker`) |
+| `dom-list` | session id | cancel-previous | `bmxt-shell.tsx` (`dom -list --picker`) |
 | `run-cmd` | `__background__` | parallel | `entrypoints/background/index.ts` (most `RUN_CMD` lines) |
 | `tab-picker-refresh` | `__terminal__` | coalesce-latest | tab-picker follow-tab refresh |
 
@@ -913,7 +957,15 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
 5. Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, then **`pnpm run build`** as needed.
 
-**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports.
+**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
+
+#### Adding a plain `-list` producer (registry plugin)
+
+1. In **`lib/features/<feature>/`**, add **`*-list-result.ts`** (domain → `ListResult`) and **`*-list-command.ts`** (`ListCommandEntry`: `fetchListResult` + `formatPlainLines`). Reuse **`formatListPlainLines`** / **`appendListPlainSummary`** from **`list-output/`**.
+2. In **`lib/features/command-line/list-commands/registry.ts`**, append a **matcher** row to **`LIST_COMMAND_MATCHERS`** (`matchPlain`, `usesPicker`, `runtime`) and a **`loadListCommandEntry`** case.
+3. If the command needs Chrome APIs from the Service Worker, add manifest **`effects[]`** entry (e.g. **`foo_list`**) → **codegen** → **`handlers/effects/foo-list.ts`** calling **`runPlainListForCommandId("foo", …)`**. If data lives only in the UI (like **`session`** / **`setting`**), use **`runtime: "ui"`** and wire **`tryRunPlainListCommand`** in the UI handler or **`run-ui-segment.ts`**.
+4. Extend **`ListRecordKind`** in **`list-output/types.ts`** when introducing new record kinds; add tests under the feature or **`list-commands/list-commands.test.ts`**.
+5. Update **`manifest/bmxt-codegen.json`** (`trailingTokens` for **`--picker`** when applicable), **`bmxt-core/cmd/<module>.ts`** (plain → effect or UI hint; **`--picker`** → picker hint lines), i18n, and this README / **`_context/map_command.csv`**.
 
 <a id="prompt-key-bindings"></a>
 
@@ -1005,6 +1057,10 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
 - `lib/features/snapshot/` — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
+- `lib/features/command-line/list-output/` — `-list` schema and plain/pipe formatters (`ListResult`, `bmxt-list/1`)
+- `lib/features/command-line/list-commands/` — `-list` producer registry (`*-list-command.ts` plugins, `tryRunPlainListCommand`)
+- `lib/features/command-line/pipe/` — pipe (`|`) chains
+- `lib/features/command-line/compound/` — compound (`&&`) parsing and execution
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
@@ -1117,11 +1173,12 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [`session`（ターミナルセッション）](#session-ja)
   - [`tabs`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
-  - [タブピッカー（`tabs -list` / `tabs -list -u`）](#tabs-tab-picker-ja)
+  - [タブピッカー（`tabs -list --picker` / `tabs -list --picker -u`）](#tabs-tab-picker-ja)
   - [タブピッカー `:edit`（ウィンドウ名・タブグループ）](#tabs-tab-picker-edit-ja)
   - [タブピッカー — 実装（キー配信とリデューサ）](#tabs-tab-picker-impl-ja)
   - [URL（`http` / `https` 行）](#url-lines-ja)
 - [コマンド実行アーキテクチャ（現状）](#command-execution-architecture-ja)
+  - [`-list` 出力レジストリ](#list-commands-registry-ja)
   - [ジョブ実行（バックグラウンド処理）](#job-execution-ja)
   - [組み込みコマンドの追加](#add-new-built-in-command-ja)
   - [コマンド追加手順](#command-add-procedure-ja)
@@ -1406,7 +1463,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 3. SW が **`{ ok: true, patches: SessionPatch[], closeWindow? }`** を返す（`SESSION_SNAPSHOT` 推送なし）。
 4. UI が **`applyRunCmdPatches`** でローカル適用（`appendLog`、`createSession`、`exitSession` 等）。
 
-**UI ローカルコマンド**（**`RUN_CMD` より前**の **`bmxt-shell.tsx`**）— 例: **`tabs -list`**、**`dom -list`**、**`session -switch`** — は React state を直接更新。
+**UI ローカルコマンド**（**`RUN_CMD` より前**の **`bmxt-shell.tsx`**）— 例: **`* -list --picker`**、**`* -exit -list`**、**`session -list`** / **`setting -list`**（プレーン）、**`session -switch`**、**`translate -on`**、**`nav -enter`** — は React state を直接更新。**プレーン**の **`tabs -list`**、**`dom -list`**、**`search -list`** は **`RUN_CMD`** と **`-list` レジストリ**経由（**[`-list` 出力レジストリ](#list-commands-registry-ja)** 参照）。
 
 **メッセージ:** **`SESSION_INIT`** / **`SESSION_SNAPSHOT`** / **`SESSION_UI_*`** は**廃止**。SW → UI のセッション通知は **`SESSION_CLEAR`**（**`reset-bmxt`** ショートカット）のみ。
 
@@ -1538,7 +1595,8 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 | 入力 | 動作 |
 |------|------|
 | 単独 **`setting`** + **Enter** | 利用案内を表示し、**`setting `** に復帰（continuation）。Tab 補完は **`-list`** / **`-exit`**（exit は続けて **`-list`**）。 |
-| **`setting -list`** + **Enter** | 現在設定の **draft** を持った **setting** ピッカー列を開く。 |
+| **`setting -list`** + **Enter** | 現在 UI 設定の **プレーン一覧**（**`-list` レジストリ**の `setting.field` 行）。 |
+| **`setting -list --picker`** + **Enter** | 現在設定の **draft** を持った **setting** ピッカー列を開く。 |
 | **`setting -exit -list`** + **Enter** | 当該セッションの設定ピッカー列を閉じる（storage には書かない）。 |
 
 **draft・プレビュー・確定**
@@ -1629,7 +1687,8 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 |------|------|
 | 裸の **`session`** + **Enter** | 利用案内を表示し **`session `** に復帰（continuation）。Tab で第二トークンを補完。 |
 | **`session -new [name]`** + **Enter** | Effect **`session_new`**：セッション作成後に切り替え。名前省略時は元セッションの開いているピッカーまたは最後の非 session コマンドから自動命名。 |
-| **`session -list`** + **Enter** | プロンプト上の **インライン浮動候補**（横並び列ではない）。表示は `*n  表示名`。**↑↓** · **Enter** / **1–9** で **即時切り替え**（履歴には `session -list`）。 |
+| **`session -list`** + **Enter** | ターミナルセッションの **プレーン一覧**（ログに `session.row` 行。**`-list` レジストリ**）。 |
+| **`session -list --picker`** + **Enter** | プロンプト上の **インライン浮動候補**（横並び列ではない）。表示は `*n  表示名`。**↑↓** · **Enter** / **1–9** で **即時切り替え**。 |
 | **`session -switch`**（または Tab で **`-switch`** 選択） | 全セッションの **名前候補メニュー**を表示（`*表示名`）。**アクティブセッション名の自動挿入はしない**。 |
 | **`session -switch` 候補メニュー** | **入力で絞り込み**（インクリメンタル **contains**。第二コマンドピッカーと同系）。**Enter** または **Esc** まで表示を維持（絞り込み中も同様）。**Enter** で `session -switch <name>` をプロンプトに挿入（メニュー閉じ）。**もう一度 Enter** で切り替え実行・履歴に完全行を記録。**Esc** でメニュー閉じ。 |
 | **`session -switch <name>`** + **Enter** | 表示名で直接切り替え（重複名はコマンド行で `名前 (番号)`）。 |
@@ -1711,21 +1770,22 @@ search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示�
 
 Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで、実際の閉じる処理はウィンドウ UI が行います。
 
-**列の開き方（UI 優先）**
+**列の開き方（UI 優先 — `--picker` またはピッカー専用フロー）**
 
 | 入力 | 動作 |
 |------|------|
-| `tabs -list` / `tabs -list -u` | タブピッカー列を開く |
+| `tabs -list --picker` / `tabs -list --picker -u` | タブピッカー列を開く |
 | `group new`（タブ ID なし） | **group-new** variant のタブピッカー列 |
 | `search -list` のみ（末尾スペースなし）+ **Enter** | **`search -list `** に復帰（continuation） |
-| `search -list ` + **Enter** | 横断検索 **`--all`** を実行（進捗はピッカー内）後、search 列に結果表示 |
-| `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]` + **Enter** | 選択スコープ（**`--all`** は全スコープ並列）で検索実行 |
-| `dom -list` のみ + **Enter** | `--normal` / `--with` / `--html` / `--react` のオプションメニュー |
-| `dom -list [--normal|--with] [--html|--react] …` + **Enter** | DOM 取得後、dom 列を開く |
-| `setting -list` + **Enter** | 設定ピッカー列を開く（**[`setting`](#setting-ja)** 参照） |
+| `search -list --picker …` + **Enter** | **search** ピッカー列で検索実行 |
+| `dom -list --picker` のみ + **Enter** | mode／flavor 未確定時は `--normal` / `--with` / `--html` / `--react` のオプションメニュー |
+| `dom -list --picker [--normal|--with] [--html|--react] …` + **Enter** | DOM 取得後、dom 列を開く |
+| `setting -list --picker` + **Enter** | 設定ピッカー列を開く（**[`setting`](#setting-ja)** 参照） |
 | `translate -on` + **Enter** | 翻訳アシストを有効化（プロンプトにフォーカス維持） |
 
-**設定ピッカー列（`setting -list`）**
+**プレーン `-list`（ターミナルログ・列なし）** — **`--picker` なし**の **`tabs -list`** / **`dom -list`** / **`search -list`** / **`session -list`** / **`setting -list`** が既定。出力スキーマは **`bmxt-list/1`**（**[`-list` 出力レジストリ](#list-commands-registry-ja)** 参照）。
+
+**設定ピッカー列（`setting -list --picker`）**
 
 - draft / プレビュー / **`> save setting`** / **`> cancel setting`** — **[`setting`](#setting-ja)** 参照。
 - 列最上位の **`Esc`** は **プロンプト**へ（列は開いたまま）。閉じるは **`setting -exit -list`**。
@@ -1744,7 +1804,7 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 
 UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headlines.ts`**（search/dom）と **`lib/features/bmxt-core/tabs-picker/headline.ts`**（tabs・モード別）。ショートカットを変えたらこの表も更新する。
 
-| キー / 操作 | search / dom 行一覧 | タブピッカー（`tabs -list`） |
+| キー / 操作 | search / dom 行一覧 | タブピッカー（`tabs -list --picker`） |
 |-------------|-------------------|------------------------------|
 | `j` / `k`, `↑` / `↓` | ハイライト移動；search **`--auto`**: 開き済みタブ行を移動時プレビュー | **`↑` / `↓`** のみ — ハイライト移動（`moveHi`）；**`--auto`**: 背面ウィンドウ内タブもアクティブ化 |
 | `Ctrl+↑` / `Ctrl+↓` | **search のみ:** **開き済みタブ**の結果／詳細行のみジャンプ（アニメーションスクロール；**`--auto`** でプレビュー） | — |
@@ -1780,8 +1840,9 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
-- **`dom -list` のみ** + **Enter** では **`--normal` / `--with` / `--html` / `--react` のオプションメニュー**を開く（mode と flavor 確定後に picker 実行）。詳細は **[列の開き方](#picker-ui-ja)**。
-- **`dom -list [--normal|--with] [--html|--react] …`** は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に、`chrome.scripting` で読み取り専用ヘルパーを注入し、DOM のフラットなアウトラインをピッカーに流し込む。**Chrome が拡張スクリプトを許可する通常の http(s) ページ**のみ（`chrome://`・ウェブストア・`chrome-extension://` 等はエラー）。注入前に**オプションのホスト権限**を確認し、必要なら実行時プロンプトが出る（`search -list --page` 系と同じ系統）。
+- **`dom -list`** + **Enter**（プレーン、既定 **`--normal --html`**）は **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** プレーン行をログに出力（フル出力＋スクロール、末尾サマリー）。scriptable な http(s) のみ。オプションのホスト権限を求めることがある。
+- **`dom -list --picker …`** + **Enter** で DOM ピッカー列を開く（UI 経路）。裸の **`dom -list --picker`** では mode／flavor 未確定時にオプションメニューを表示することがある（**[列の開き方](#picker-ui-ja)**）。
+- **`dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`**（**`--picker` の有無を問わず**）は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に DOM 行を取得する。**`chrome://`** 等はエラー行。
 - **`--normal`**（省略時は既定）— 全 DOM ツリー；**`↑`/`↓`**（または **`j`/`k`**）でジャンプ可能行にフォーカス；対象タブが該当ノードへスクロール。**`--manual`** page-active 時は **`Alt+↑`/`↓`** でページジャンププレビュー。
 - **`--with`** — **`↑`/`↓`**（または **`j`/`k`**）でページスクロール；ビューポート内要素をフラット表示；**`Alt+↑`/`↓`** でピッカー内の要素ハイライト。**`→`** で機能メニュー（リンク等）。
 - **`--html`**（既定 flavor）と **`--react`** はピッカー上のノード表示ラベルの違いのみ。
@@ -1791,8 +1852,8 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
-- **`search -list` のみ**（末尾スペースなし）+ **Enter** → **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** → 横断検索 **`--all`**（history + bookmark + page + snapshot）。**`search -list `** の後は Tab で **`--all`** / **`--history`** / **`--bookmark`** / **`--page`** / **`--snapshot`** を補完（**[列の開き方](#picker-ui-ja)**）。
-- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** は `dom -list` と同系のリストピッカー。**`--all`** は全スコープを並列 dispatch する。**`--history`** / **`--bookmark`** の再走査はプロセス内メモリキャッシュ（`search-cache-store`）を利用することがある。**`--page`**（および **`--all`** の page 部分）は開いている http(s) タブから**都度 live 読み取り**（本文のキャッシュ・バックグラウンド先読みなし）。**`--snapshot`** は保存済み Markdown snapshot を検索（内部／外部バンドル／Obsidian Vault — **[`snapshot`](#snapshot-ja)** 参照）。走査中の進捗はピッカー内に表示（アクティブシェルで rAF バッチ）し、結果確定後に非表示にする。
+- **`search -list` のみ**（末尾スペースなし）+ **Enter** → **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** → 横断検索 **`--all`** を **プレーン**出力（**`RUN_CMD`** → **`search_list`**）。ピッカー列は **`search -list --picker`**。
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`**（プレーン）は **`search.hit`** 行を **`-list` レジストリ**で出力。**`search -list --picker …`** は search ピッカー列を開く。キャッシュ・live 読み取り・snapshot の詳細は英語節 **[`search`](#search-command)** と同様。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
 - 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
@@ -1830,7 +1891,8 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 ### `tabs` (subcommands)
 
 - **`tabs` 単体**は利用可能オプションを表示し、続けて **`tabs `**（末尾スペース付き）へ入力を復元します。
-- **`tabs -list [-u]`**：タブピッカー列を開きます（`-u` で URL 行付き）。
+- **`tabs -list` / `tabs -list -u`**：タブツリーをログにプレーン出力（**`RUN_CMD`**）。
+- **`tabs -list --picker` / `tabs -list --picker -u`**：タブピッカー列を開く（`-u` で URL 行付き）。
 - **`tabs -exit -list`**：当該セッションのタブピッカー列を閉じます。
 - **`tabs -setting -page-active --auto | --manual`**：ハイライト移動時のタブプレビューを設定。**`--auto`**（既定）: ハイライト移動で背面ウィンドウ内のタブをアクティブ化。**`--manual`**: **Alt+↑↓**（または **Alt** 押下）時のみアクティブ化。**Enter** は従来どおりハイライトタブへジャンプしてウィンドウを前面化。設定は **`chrome.storage.local`** に保存。タブピッカー表示中はプロンプト下の **tabs** ステータス列に現在モードを表示。
 - **`tabs -nowurl`**：現在タブの URL を表示します。
@@ -1867,7 +1929,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 <a id="tabs-tab-picker-ja"></a>
 <a id="tabs-tab-picker-impl-ja"></a>
 
-### タブピッカー（`tabs -list` / `tabs -list -u`）
+### タブピッカー（`tabs -list --picker` / `tabs -list --picker -u`）
 
 **ツリー構造**
 
@@ -1920,7 +1982,41 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`bmxt-shell.tsx`**）で処理します。例: **`tabs -list`**、**`* -exit -list`**、**`dom -list`**、**`search -list`**、**`setting -list`**、**`session -list` / `-switch` / `-setting-name`**、**`translate -*`**、**`nav -enter` / `-exit`**、**対話的 `group new`**。これらは **UI の React state** を直接更新。それ以外は **`RUN_CMD`** → SW が **`SessionPatch[]`** を返し UI が適用（**[ターミナルセッション状態](#terminal-session-state-ja)**）。UI 処理コマンドを SW に送った場合の **`run`** は利用案内行のみ。
+**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`bmxt-shell.tsx`**）で処理します。例: **`* -list --picker`**、**`* -exit -list`**、**`session -list`** / **`setting -list`**（プレーン・UI 状態）、**`session -switch` / `session -setting-name`**、**`translate -*`**、**`nav -enter` / `-exit`**、**対話的 `group new`**。**プレーン**の **`tabs -list`**、**`dom -list`**、**`search -list`** は **`RUN_CMD`** → SW effect → 共通 **`-list` レジストリ**（UI プレーン経路と同一の **`ListResult`** 整形）。それ以外は **`RUN_CMD`** → **`SessionPatch[]`** を UI が適用（**[ターミナルセッション状態](#terminal-session-state-ja)**）。
+
+<a id="list-commands-registry-ja"></a>
+
+### `-list` 出力レジストリ
+
+**プレーン**の各 `-list` は次の単一パイプラインを共有します（POSIX 風: 1 スキーマ・1 整形・プラグイン式 producer）:
+
+```
+トークン行 → matcher（registry）→ ListResult（bmxt-list/1）→ プレーン行（+ サマリー）
+                                    ↓
+                             パイプ stdin（`|` consumer、例: close）
+```
+
+| モジュール | 役割 |
+|-----------|------|
+| **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` 型、`formatListPlainLines`、パイプ TSV、サマリー行 |
+| **`lib/features/command-line/list-commands/`** | matcher 表、`matchPlainListCommand`、`tryRunPlainListCommand`、`runPlainListForCommandId`（重い plugin は dynamic import） |
+| **`lib/features/<feature>/*-list-command.ts`** | コマンド別 plugin（`fetchListResult` / `formatPlainLines`） |
+| **`lib/features/<feature>/*-list-result.ts`** | ドメインデータ → `ListRecord[]` |
+| **`lib/features/dispatch/handlers/effects/*-list.ts`** | SW: `runPlainListForCommandId` の薄いラッパ |
+
+**プレーン `-list` の実行経路:**
+
+| コマンド | プレーン | `--picker` |
+|---------|----------|------------|
+| `tabs -list` | `RUN_CMD` → `tabs_list` | UI（`handle-tabs-list.ts`） |
+| `dom -list` | `RUN_CMD` → `dom_list` | UI（`handle-dom.ts` → ピッカー列 + `dom-list` ジョブ） |
+| `search -list` | `RUN_CMD` → `search_list` | UI（`handle-search.ts` → `search-list` ジョブ） |
+| `session -list` | UI → `tryRunPlainListCommand` | UI インライン候補 |
+| `setting -list` | UI → `tryRunPlainListCommand` | UI 設定ピッカー列 |
+
+**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が `matchPlainListCommand` で **`ListResult`** をセグメント間受け渡し（v1 consumer: **`tabs.tab`** に対する **`close`**）。
+
+**新規 `-list` producer** — **[コマンド追加手順](#command-add-procedure-ja)** のチェックリストを参照。
 
 **`exit`:** **`exit_pane`** Effect → **`exitSession`** / **`closeWindow`** patch。最後の 1 セッションでは BMXt ウィンドウ close + 旧 storage 掃除（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 
@@ -1929,6 +2025,10 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI
 - **`lib/features/extension-storage/`** — ストレージキーと上限
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
+- **`lib/features/command-line/list-output/`** — **`-list`** 出力規格（`ListResult`、`bmxt-list/1`）
+- **`lib/features/command-line/list-commands/`** — **`-list` producer レジストリ**（`tryRunPlainListCommand`）
+- **`lib/features/command-line/pipe/`** — パイプ（`|`）チェーン
+- **`lib/features/command-line/compound/`** — **`&&`** 複合コマンド
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、外部バンドル、`bmxt_ui_settings_v1`、`bmxt_ui_settings_storage_v1`）；**[`setting`](#setting-ja)** 参照
@@ -1950,8 +2050,8 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 | ジョブ種別 | 典型スコープ | 上書き方針 | 起動箇所 |
 |------------|--------------|------------|----------|
-| `search-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`search -list`） |
-| `dom-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`dom -list`） |
+| `search-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`search -list --picker`） |
+| `dom-list` | セッション id | cancel-previous | `bmxt-shell.tsx`（`dom -list --picker`） |
 | `run-cmd` | `__background__` | parallel | `entrypoints/background/index.ts` |
 | `tab-picker-refresh` | `__terminal__` | coalesce-latest | タブピッカー追従更新 |
 
@@ -1989,7 +2089,15 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`lib/features/bmxt-core/cmd/<module>.ts`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`** が検査）。
 
-**手書きの `handlers/effects/*.ts`:** codegen の対象外。manifest の **`effects[]`** 変更後は生成型・**`apply-dispatch.gen.ts`** に**揃える**。
+**手書きの `handlers/effects/*.ts`:** codegen の対象外。manifest の **`effects[]`** 変更後は生成型・**`apply-dispatch.gen.ts`** に**揃える**。**`-list`** effect は **`lib/features/command-line/list-commands/`** の **`runPlainListForCommandId`** を呼び、整形ロジックを重複させない。
+
+#### プレーン `-list` producer の追加（registry プラグイン）
+
+1. **`lib/features/<feature>/`** に **`*-list-result.ts`**（ドメイン → `ListResult`）と **`*-list-command.ts`**（`ListCommandEntry`）を追加。整形は **`list-output/`** の **`formatListPlainLines`** / **`appendListPlainSummary`** を再利用。
+2. **`lib/features/command-line/list-commands/registry.ts`** の **`LIST_COMMAND_MATCHERS`** に matcher を 1 行追加し、**`loadListCommandEntry`** に case を追加。
+3. Chrome API が要る場合は manifest **`effects[]`**（例: **`foo_list`**）→ **codegen** → **`handlers/effects/foo-list.ts`** で **`runPlainListForCommandId`**。データが UI のみ（**`session`** / **`setting`** 同様）なら **`runtime: "ui"`** とし、UI ハンドラまたは **`run-ui-segment.ts`** で **`tryRunPlainListCommand`**。
+4. 新 record kind は **`list-output/types.ts`** の **`ListRecordKind`** を拡張。テストは feature または **`list-commands/list-commands.test.ts`** に追加。
+5. **`manifest/bmxt-codegen.json`**（**`--picker`** の **`trailingTokens`**）、**`bmxt-core/cmd/<module>.ts`**、i18n、本 README / **`_context/map_command.csv`** を更新。
 
 **リファクタ前（Rust/WASM）との比較:** コマンド登録・補完・Effect・ディスパッチを **manifest + codegen** で揃え、**`bmxt-core/cmd/*.ts`** と **`handlers/effects/`** に実装を分ける。ビルドは **Node/TypeScript のみ**（Rust ツールチェーン不要）。
 
@@ -2085,6 +2193,9 @@ pnpm run dev
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
+- `lib/features/command-line/list-output/` — **`-list`** 規格と plain／pipe 整形（`ListResult`、`bmxt-list/1`）
+- `lib/features/command-line/list-commands/` — **`-list` producer レジストリ**（`*-list-command.ts` プラグイン、`tryRunPlainListCommand`）
+- `lib/features/command-line/pipe/` — パイプ（`|`）チェーン
 - `lib/features/command-line/compound/` — **`&&`** 複合コマンドの解析と逐次実行
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ

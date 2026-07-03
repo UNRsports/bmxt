@@ -9,10 +9,10 @@ import { runSegment } from "../compound/run-segment.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tPipe } from "../../setting/i18n/ns/pipe.ts"
 import {
-  fetchListResultForProducer,
-  matchListProducer,
+  fetchListResultForCommand,
+  matchPlainListCommand,
   segmentUsesListPicker
-} from "./list-producer.ts"
+} from "../list-commands/index.ts"
 import { tryRunPipeConsumer } from "./consumers/close-from-tabs.ts"
 
 export async function attachListResultToOutcome(
@@ -24,12 +24,12 @@ export async function attachListResultToOutcome(
   if (!outcome.ok) {
     return outcome
   }
-  const match = matchListProducer(segment)
+  const match = matchPlainListCommand(segment)
   if (match === null) {
     return outcome
   }
   try {
-    const listResult = await fetchListResultForProducer(match, deps, locale)
+    const listResult = await fetchListResultForCommand(match, { locale, deps })
     return { ...outcome, listResult }
   } catch {
     return outcome
