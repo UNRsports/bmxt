@@ -2,7 +2,7 @@ import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
   cmdAvailableOptionsLine,
   tabsCmdExitListLines,
-  tabsCmdListLines,
+  tabsCmdListPickerLines,
   tabsCmdRunHintLine,
   tabsCmdSettingLines,
   tabsCmdUsageLines
@@ -17,7 +17,7 @@ export const CMD: CmdMeta = {
   name: "tabs",
   aliases: [],
   usagePrimary:
-    "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
+    "tabs -list [-u] [--picker] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
 }
 
 function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | null {
@@ -29,6 +29,30 @@ function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | nu
   if (a === "-moveurl") return "m"
   if (a === "-nowurl") return "n"
   return null
+}
+
+type TabsListArgs =
+  | { ok: true; showUrl: boolean; picker: boolean }
+  | { ok: false }
+
+function parseTabsListArgs(args: string[]): TabsListArgs {
+  let showUrl = false
+  let picker = false
+  for (let index = 2; index < args.length; index += 1) {
+    const token = stripInvisibleFormatChars(args[index] ?? "")
+      .trim()
+      .toLowerCase()
+    if (token === "-u") {
+      showUrl = true
+      continue
+    }
+    if (token === "--picker") {
+      picker = true
+      continue
+    }
+    return { ok: false }
+  }
+  return { ok: true, showUrl, picker }
 }
 
 export function run(args: string[]) {
@@ -52,13 +76,19 @@ export function run(args: string[]) {
   }
   switch (sub) {
     case "l": {
-      if (args.length > 3 || (args.length === 3 && args[2].toLowerCase() !== "-u")) {
+      const parsed = parseTabsListArgs(args)
+      if (!parsed.ok) {
         return linesDispatch([
           tCmd("cmd.tabs.error.invalidListUsage", locale),
           ...tabsCmdUsageLines(locale)
         ])
       }
-      return linesDispatch(tabsCmdListLines(locale))
+      if (parsed.picker) {
+        return linesDispatch(tabsCmdListPickerLines(locale))
+      }
+      return effectsDispatch([
+        { kind: "tabs_list", show_url: parsed.showUrl ? "true" : "false" }
+      ])
     }
     case "e": {
       if (args.length !== 3 || args[2].toLowerCase() !== "-list") {

@@ -20,6 +20,7 @@ export type ChromeEffect =
   | { kind: "session_new"; name: string }
   | { kind: "session_next" }
   | { kind: "session_prev" }
+  | { kind: "tabs_list"; show_url: string }
   | { kind: "tabs_move_url"; url: string }
   | { kind: "tabs_nu" }
 

@@ -30,7 +30,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "group": [] as const,
   "help": [] as const,
   "tabs": [
-    { head: "-list", trailingTokens: ["-u"] as const, tail: "none" },
+    { head: "-list", trailingTokens: ["-u","--picker"] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },

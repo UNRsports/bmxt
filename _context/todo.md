@@ -153,3 +153,145 @@ window capture + IME textarea
 ---
 
 *実装時は `pnpm run verify:manifest` / `pnpm exec tsc --noEmit` / `pnpm test` / README と整合させること。*
+
+---
+
+## 8. パイプ処理・`-list` 出力規格化・`--picker` リファクタ
+
+BMXt ターミナルに Unix 風 **`|`（パイプ）** を導入するにあたり、各コマンドの **第二トークン以降の出力を `ListResult` で厳密に規格化**し、既存 picker は **第三トークン `--picker`** に移す。
+
+### 8.1 目的
+
+| 項目 | 内容 |
+|------|------|
+| パイプ | 左セグメントの規格化出力 → 右セグメント stdin |
+| `-list` | 「第一コマンドの列挙」が本体。picker は `--picker` 時のみ |
+| 上限撤廃 | データ取得層の DOM/行数 cap を撤廃。表示は Linux 慣習（フル出力 + スクロール + サマリー行） |
+| picker | 同一 `ListResult` から `toPickerRows()` で既存 UI を起動 |
+
+### 8.2 共通規格：`ListResult`
+
+モジュール: `lib/features/command-line/list-output/`
+
+```
+fetch（Chrome API / content script）
+    ↓
+ListResult（ListRecord[] — 上限なし・唯一の正本）
+    ↓
+┌─────────────┬──────────────┬─────────────────┐
+│ formatPlain │ formatPipe   │ toPickerRows    │
+│ ターミナル   │ パイプ stdin  │ --picker UI     │
+└─────────────┴──────────────┴─────────────────┘
+```
+
+- スキーマ ID: `bmxt-list/1`
+- `ListRecord`: `{ kind, fields, display?, pipeLine? }`
+- i18n は `display.label` のみ。`fields` は locale 非依存（ID・URL 等）
+- パイプ行: `kind\tkey=val\t...`（TSV + key=value）
+
+### 8.3 コマンド別レコード種別
+
+| コマンド | record kinds | 備考 |
+|----------|--------------|------|
+| `tabs -list` | `tabs.window`, `tabs.group`, `tabs.tab` | pilot（Phase 1） |
+| `dom -list` | `dom.node`, `dom.notice` | デフォルト `--normal --html` |
+| `search -list` | `search.hit` | scope 別 fields |
+| `session -list` | `session.row` | index + sessionId + displayName |
+| `setting -list` | `setting.field` | key + value + category |
+
+### 8.4 `--picker` リファクタ（全 `-list` ファミリー共通）
+
+| 旧 | 新 |
+|----|-----|
+| `tabs -list` → picker 即起動 | `tabs -list` → plain ツリー（ID 付き） |
+| picker 起動 | `tabs -list --picker`（`-u` 併用可） |
+| `dom -list` → flavor continuation | `dom -list` → デフォルト flavor で plain |
+
+manifest `trailingTokens` に `"--picker"` を追加（codegen 経由）。
+
+### 8.5 上限撤廃と Linux 慣習（表示層）
+
+**撤廃（データ取得層）**
+
+- `dom-terminal-lines.ts`: `MAX_TERMINAL_LINES`, `MAX_LINE_CHARS`
+- `injected-dom-show.ts`: `maxNodes`, `maxDepth`, snippet cap
+- `injected-dom-flat-entries.ts`: viewport/document cap
+
+**Linux 慣習（表示層）**
+
+1. フル出力をログに追加（プログラム側で中間打ち切りしない）
+2. 既存スクロール（`useLogScroll`）で閲覧
+3. 末尾サマリー: `-- total N lines (scroll to view) --`
+4. 長行は CSS wrap
+
+**要調整**
+
+- `MAX_SESSION_LOG_LINES = 500` — 大出力時 scrollback 相当に拡張または別バッファ
+
+### 8.6 パイプ（Phase 2 以降）
+
+- `parsePipeSegments`（`&&` と同型のクォート・エスケープ）
+- `SegmentOutcome.listResult` でセグメント間受け渡し
+- 型互換チェック（例: `tabs.tab.tabId` → `close`）
+
+### 8.7 実装フェーズ
+
+#### Phase 0 — `list-output` 基盤
+
+- [x] `list-output/types.ts` — `ListResult`, `ListRecord`, schema 定数
+- [x] `list-output/format-plain.ts` — plain 行 + サマリー行
+- [x] `list-output/format-pipe.ts` — パイプ行生成
+- [x] `list-output/list-output.test.ts`
+
+#### Phase 1 — `tabs -list` pilot
+
+- [x] manifest: `tabs -list` に `--picker` trailingToken、effect `tabs_list`
+- [x] `pnpm run codegen`
+- [x] `tabs/tabs-list-result.ts` — `buildTabPickerRowsBundle` → `ListResult`
+- [x] `tabs/tabs-list-plain.ts` — plain 整形（`-u` 対応）
+- [x] `dispatch/handlers/effects/tabs-list.ts`
+- [x] `bmxt-core/cmd/tabs.ts` — plain → effect、`--picker` → UI 委譲ヒント
+- [x] `tabs/input.ts` — `parseTabsListLine` / `--picker` 必須化
+- [x] `handle-tabs-list.ts` / `run-ui-segment.ts` — `--picker` のみ picker（パーサ変更で自動）
+- [x] i18n `cmd.json` usage 更新
+- [x] テスト追加
+
+#### Phase 2 — パイプ基盤
+
+- [ ] `parsePipeSegments` / `runPipeLine`
+- [ ] `SegmentOutcome` + compound 拡張
+- [ ] `tabs -list | close` 等の consumer
+
+#### Phase 3 — `dom -list`, `search -list`
+
+- [ ] DOM cap 撤廃 + `ListResult` 化
+- [ ] search レコード正規化
+- [ ] `--picker` 分岐
+
+#### Phase 4 — `session -list`, `setting -list`
+
+- [ ] 各 `-list` plain + `--picker`
+
+#### Phase 5 — 仕上げ
+
+- [ ] `MAX_SESSION_LOG_LINES` 方針
+- [ ] README / store / release-notes
+- [ ] compound eligibility 更新
+
+### 8.8 関連ファイル（新規・変更）
+
+| 用途 | パス |
+|------|------|
+| 出力規格 | `lib/features/command-line/list-output/*` |
+| tabs 列挙 | `lib/features/tabs/tabs-list-result.ts`, `tabs-list-format.ts` |
+| effect | `lib/features/dispatch/handlers/effects/tabs-list.ts` |
+| manifest | `manifest/bmxt-codegen.json` |
+| パーサ | `lib/features/tabs/input.ts` |
+| UI handler | `handle-tabs-list.ts`, `run-ui-segment.ts` |
+| cmd | `lib/features/bmxt-core/cmd/tabs.ts` |
+
+### 8.9 破壊的変更
+
+- `tabs -list` デフォルトが picker → plain ツリー
+- picker は `tabs -list --picker` に移行
+- release-notes `0.7.7`「パイプ処理導入」と整合

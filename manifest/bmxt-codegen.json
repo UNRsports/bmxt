@@ -81,11 +81,11 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
+      "usagePrimary": "tabs -list [-u] [--picker] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["-u"],
+          "trailingTokens": ["-u", "--picker"],
           "tail": "none"
         },
         {
@@ -352,6 +352,14 @@
       "shape": "unit",
       "tsHandlerFile": "tabs-nu",
       "tsHandlerExport": "applyTabsNuEffect"
+    },
+    {
+      "kind": "tabs_list",
+      "rustVariant": "TabsList",
+      "shape": "record",
+      "fields": { "show_url": "string" },
+      "tsHandlerFile": "tabs-list",
+      "tsHandlerExport": "applyTabsListEffect"
     }
   ]
 }

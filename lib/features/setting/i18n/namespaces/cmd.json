@@ -316,12 +316,16 @@
     "en": "Tab picker is closed from the BMXt prompt with: tabs -exit -list"
   },
   "cmd.tabs.list.title": {
-    "ja": "Tab picker は BMXt プロンプトから開きます: tabs -list または tabs -list -u",
-    "en": "Tab picker is opened from the BMXt prompt with: tabs -list or tabs -list -u"
+    "ja": "tabs -list — ウィンドウ／グループ／タブを ID 付きでターミナルに列挙",
+    "en": "tabs -list — list windows, groups, and tabs with IDs in the terminal"
+  },
+  "cmd.tabs.listPicker.title": {
+    "ja": "Tab picker は BMXt プロンプトから開きます: tabs -list --picker（`-u` で URL 表示）",
+    "en": "Tab picker is opened from the BMXt prompt with: tabs -list --picker (optional -u for URLs)"
   },
   "cmd.tabs.runHint": {
-    "ja": "実行例: tabs -list / tabs -list -u（ピッカーを開く）· tabs -exit -list（閉じる）· tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
-    "en": "Run: tabs -list or tabs -list -u (open picker). tabs -exit -list (close picker). tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl (current URL). tabs -moveurl <url> (jump or new tab)."
+    "ja": "実行例: tabs -list / tabs -list -u / tabs -list --picker · tabs -exit -list · tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
+    "en": "Run: tabs -list / tabs -list -u / tabs -list --picker. tabs -exit -list. tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl. tabs -moveurl <url>."
   },
   "cmd.tabs.setting.pageActive": {
     "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
@@ -332,8 +336,8 @@
     "en": "tabs -setting is handled from the BMXt prompt with: tabs -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tabs -list [-u]   — タブピッカー（`-u` は各タブ URL を表示）",
-    "en": "usage: tabs -list [-u]   — tab picker (optional -u: show each tab URL)"
+    "ja": "usage: tabs -list [-u] [--picker]   — タブ列挙（`-u` は URL、`--picker` はピッカー UI）",
+    "en": "usage: tabs -list [-u] [--picker]   — list tabs (-u: URLs; --picker: interactive UI)"
   },
   "cmd.tabs.usage.line2": {
     "ja": "       tabs -exit -list — この BMXt ペインのタブピッカーを閉じる",

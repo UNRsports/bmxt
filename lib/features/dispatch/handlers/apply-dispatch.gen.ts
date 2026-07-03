@@ -21,6 +21,7 @@ import { applySearchSnapshotEffect } from "./effects/search-snapshot"
 import { applySessionNewEffect } from "./effects/session-new"
 import { applySessionNextEffect } from "./effects/session-next"
 import { applySessionPrevEffect } from "./effects/session-prev"
+import { applyTabsListEffect } from "./effects/tabs-list"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
 import { applyTabsNuEffect } from "./effects/tabs-nu"
 
@@ -61,6 +62,8 @@ export async function applyOne(
       return applySessionNextEffect(ctx, e)
     case "session_prev":
       return applySessionPrevEffect(ctx, e)
+    case "tabs_list":
+      return applyTabsListEffect(ctx, e)
     case "tabs_move_url":
       return applyTabsMoveUrlEffect(ctx, e)
     case "tabs_nu":

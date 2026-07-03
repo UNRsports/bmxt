@@ -55,6 +55,10 @@ export function tabsCmdRunHintLine(locale?: UiLocale): string {
   return L("cmd.tabs.runHint", locale)
 }
 
+export function tabsCmdListPickerLines(locale?: UiLocale): string[] {
+  return [L("cmd.tabs.listPicker.title", locale), tabsCmdRunHintLine(locale)]
+}
+
 export function tabsCmdListLines(locale?: UiLocale): string[] {
   return [L("cmd.tabs.list.title", locale), tabsCmdRunHintLine(locale)]
 }

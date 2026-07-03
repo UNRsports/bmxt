@@ -351,6 +351,34 @@
     "ja": "Alt+↑↓ でタブをアクティブ化 · Enter でジャンプ · tabs -setting -page-active で切替",
     "en": "Alt+↑↓ to activate tab · Enter to jump · tabs -setting -page-active to switch"
   },
+  "tabs.list.plain.group": {
+    "ja": "グループ id={groupId} {label}",
+    "en": "group id={groupId} {label}"
+  },
+  "tabs.list.plain.groupIdNone": {
+    "ja": "なし",
+    "en": "none"
+  },
+  "tabs.list.plain.tab": {
+    "ja": "タブ id={tabId} \"{title}\"",
+    "en": "tab id={tabId} \"{title}\""
+  },
+  "tabs.list.plain.tabActive": {
+    "ja": "タブ id={tabId} アクティブ \"{title}\"",
+    "en": "tab id={tabId} active \"{title}\""
+  },
+  "tabs.list.plain.urlDetail": {
+    "ja": "url={url}",
+    "en": "url={url}"
+  },
+  "tabs.list.plain.window": {
+    "ja": "ウィンドウ id={windowId} \"{title}\"",
+    "en": "window id={windowId} \"{title}\""
+  },
+  "tabs.list.plain.windowFocused": {
+    "ja": "ウィンドウ id={windowId} フォーカス \"{title}\"",
+    "en": "window id={windowId} focused \"{title}\""
+  },
   "tabs.usage": {
     "ja": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
     "en": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl"
