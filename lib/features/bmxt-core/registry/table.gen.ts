@@ -18,6 +18,7 @@ import * as translate from "../cmd/translate"
 import * as aboutbmxt from "../cmd/aboutbmxt"
 import * as session from "../cmd/session"
 import * as snapshot from "../cmd/snapshot"
+import * as picker from "../cmd/picker"
 import * as setting from "../cmd/setting"
 
 export const COMMANDS: readonly CmdMeta[] = [
@@ -34,6 +35,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   aboutbmxt.CMD,
   session.CMD,
   snapshot.CMD,
+  picker.CMD,
   setting.CMD
 ]
 
@@ -54,6 +56,7 @@ export const COMMAND_RUNNERS: ReadonlyArray<{
   { name: aboutbmxt.CMD.name, run: aboutbmxt.run },
   { name: session.CMD.name, run: session.run },
   { name: snapshot.CMD.name, run: snapshot.run },
+  { name: picker.CMD.name, run: picker.run },
   { name: setting.CMD.name, run: setting.run }
 ]
 

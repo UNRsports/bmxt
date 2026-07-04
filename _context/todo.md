@@ -366,7 +366,7 @@ lib/features/command-line/list-output/     … ListResult 規格（変更なし�
 | P5 | **論理 AND `&&`** | **実装済み** — `&&` / `||` / `;` | 維持；**`||` / `;`** を同じパーサ族で追加 |
 | P6 | **クォート・エスケープ** | **実装済み** — 演算子 + リダイレクト | 全演算子・リダイレクトトークンに拡張 |
 | P7 | **コマンド解釈の単一入口** | **実装済み** — `commands/runCommand` + `COMMAND_ENTRIES` + background `RUN_CMD` | **`CommandEntry` 1 本**（tryRun / runtime: `ui` \| `background`） |
-| P8 | **対話 UI は opt-in** | **実装済み** — `--picker`、continuation | compound / pipe からは除外（現行どおり） |
+| P8 | **対話 UI は opt-in** | **実装済み** — `| picker`（§11）、continuation | bare `picker` は usage；列はパイプ consumer |
 | P9 | **適合性テスト** | **実装済み** — `conformance/posix-profile.test.ts` | **プロファイル別 conformance スイート**（演算子・終了状態・パイプ） |
 
 **永久にスコープ外（準拠対象外と明記）**
@@ -467,3 +467,57 @@ Phase G（文書・conformance）
 - [ ] 既存手動スモーク（tabs / find / dom / session / setting / pipe）が退行していない（実装完了後の人手確認）
 
 **プロファイル完了。** プロダクト拡張（追加 pipe consumer、OS パスへのリダイレクト等）はプロファイル外。
+
+---
+
+## 11. `picker` コマンド独立 — `--picker` 廃止・`| picker` へ
+
+### 11.1 目的
+
+| 項目 | 内容 |
+|------|------|
+| `-list` | **列挙のみ**（`ListResult` / plain 行）。対話 UI を起動しない |
+| `picker` | **第一コマンド**として独立。パイプ consumer として stdin の `ListResult` を受け、サイド列（または session フローティング）で走査しやすくする |
+| 起動 | `tabs -list \| picker` / `search -list … \| picker` 等。**`picker` 単体**は usage（i18n）のみ |
+| 廃止 | 全 `-list` ファミリーの第三トークン **`--picker`** |
+
+### 11.2 セマンティクス
+
+```
+producer (-list)  →  ListResult（正本）
+                      ├─ 終端なし     → formatPlain（ターミナル）
+                      ├─ | close      → 副作用 consumer
+                      └─ | picker     → UI sink（列を開いて exit 0）
+```
+
+- パイプ完了 ≠ 列クローズ。列の寿命はセッション（`-exit -list` 等）。
+- **tabs ライブ更新**は起動経路に依存しない。列 open 後、`useTabPickerChromeSync` + live-fields（Watch 層）が Chrome を監視し続ける。stdin の `ListResult` は kind 判定と初期表示用；tabs の正本は常に `chrome.tabs.*`。
+- `picker` は汎用 UI 層（`lib/features/picker/` + 既存 `side-picker/`）。ドメイン別 Watch（tabs chrome-sync 等）は feature 側アダプタとして列ライフサイクルにぶら下がる。
+
+### 11.3 kind → slot
+
+| `ListRecord` kind 族 | 開く UI |
+|----------------------|---------|
+| `tabs.*` | tabs サイド列（live watch 付き） |
+| `search.hit` | search サイド列（スナップショット表示） |
+| `dom.node` / `dom.notice` | dom サイド列 |
+| `session.row` | session フローティング候補 |
+| `setting.field` | setting サイド列（既存エディタ） |
+
+混在族はエラー（stderr + exit 1）。`picker -u` は tabs 列の URL 表示 opt-in。
+
+### 11.4 対象外（従来どおり別経路）
+
+- `group new`（ID なし）の tabs 列（group-new variant）
+- `session -switch` の名前補完フローティング
+- 各 `*-exit -list`（列クローズ）
+
+### 11.5 実装チェックリスト
+
+- [x] `_context/todo.md` §11
+- [x] manifest: `picker` コマンド追加；各 `-list` から `--picker` trailingToken 削除
+- [x] `lib/features/bmxt-core/cmd/picker.ts` — 単体は usage
+- [x] `lib/features/picker/` — match / open-from-list-result / usage
+- [x] pipe consumer registry に `picker` 登録
+- [x] UI handlers / `run-ui-segment` / list-commands から `--picker` 分岐削除
+- [x] i18n（cmd / pipe）・README・テスト・codegen

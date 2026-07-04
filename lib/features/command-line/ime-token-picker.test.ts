@@ -24,8 +24,7 @@ const SEARCH_LIST_OPTIONS = [
   "--history",
   "--bookmark",
   "--page",
-  "--snapshot",
-  "--picker"
+  "--snapshot"
 ] as const
 
 describe("pickThirdTokenCandidates", () => {
@@ -54,10 +53,10 @@ describe("pickThirdTokenCandidates", () => {
     )
   })
 
-  it("keeps --picker while typing pi", () => {
+  it("keeps --page while typing pa", () => {
     const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
       SEARCH_LIST_OPTIONS,
-      "pi",
+      "pa",
       "prefix"
     )
     assert.equal(useFullCandidateList, true)
@@ -65,16 +64,16 @@ describe("pickThirdTokenCandidates", () => {
     assert.deepEqual(
       pickThirdTokenCandidates(
         SEARCH_LIST_OPTIONS,
-        "pi",
+        "pa",
         "prefix",
         useFullCandidateList,
         filterMode
       ),
-      ["--picker"]
+      ["--page"]
     )
   })
 
-  it("narrows p to --page and --picker", () => {
+  it("narrows p to --page", () => {
     const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
       SEARCH_LIST_OPTIONS,
       "p",
@@ -88,15 +87,15 @@ describe("pickThirdTokenCandidates", () => {
         useFullCandidateList,
         filterMode
       ),
-      ["--page", "--picker"]
+      ["--page"]
     )
   })
 })
 
 describe("matchesOptionTokenFilter", () => {
   it("matches option bodies and dashed prefixes", () => {
-    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "pi"), true)
-    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "--pi"), true)
+    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "pa"), true)
+    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "--pa"), true)
     assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "zz"), false)
   })
 })
@@ -110,7 +109,6 @@ describe("matchCandidates", () => {
   })
 
   it("matches option bodies in prefix mode", () => {
-    assert.deepEqual(matchCandidates(["--picker", "--page"], "pi", "prefix"), ["--picker"])
+    assert.deepEqual(matchCandidates(["--page", "--all"], "pa", "prefix"), ["--page"])
   })
 })
-

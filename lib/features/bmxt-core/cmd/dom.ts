@@ -2,7 +2,6 @@ import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
   cmdAvailableOptionsLine,
   domCmdExitListLines,
-  domCmdListPickerLines,
   domCmdSettingLines,
   domCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
@@ -17,7 +16,7 @@ export const CMD: CmdMeta = {
   name: "dom",
   aliases: [],
   usagePrimary:
-    "dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>] | dom -exit -list | dom -setting -page-active"
+    "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active"
 }
 
 function normalizeDomToken(tok: string): string {
@@ -33,9 +32,6 @@ function runList(args: string[]) {
       tCmd("cmd.dom.error.listUsage", locale),
       ...domCmdUsageLines(locale)
     ])
-  }
-  if (parsed.picker) {
-    return linesDispatch(domCmdListPickerLines(locale))
   }
   return effectsDispatch([
     {

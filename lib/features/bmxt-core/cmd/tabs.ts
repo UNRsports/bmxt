@@ -2,8 +2,6 @@ import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
   cmdAvailableOptionsLine,
   tabsCmdExitListLines,
-  tabsCmdListPickerLines,
-  tabsCmdRunHintLine,
   tabsCmdSettingLines,
   tabsCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
@@ -17,7 +15,7 @@ export const CMD: CmdMeta = {
   name: "tabs",
   aliases: [],
   usagePrimary:
-    "tabs -list [-u] [--picker] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
+    "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
 }
 
 function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | null {
@@ -31,13 +29,10 @@ function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | nu
   return null
 }
 
-type TabsListArgs =
-  | { ok: true; showUrl: boolean; picker: boolean }
-  | { ok: false }
+type TabsListArgs = { ok: true; showUrl: boolean } | { ok: false }
 
 function parseTabsListArgs(args: string[]): TabsListArgs {
   let showUrl = false
-  let picker = false
   for (let index = 2; index < args.length; index += 1) {
     const token = stripInvisibleFormatChars(args[index] ?? "")
       .trim()
@@ -46,13 +41,9 @@ function parseTabsListArgs(args: string[]): TabsListArgs {
       showUrl = true
       continue
     }
-    if (token === "--picker") {
-      picker = true
-      continue
-    }
     return { ok: false }
   }
-  return { ok: true, showUrl, picker }
+  return { ok: true, showUrl }
 }
 
 export function run(args: string[]) {
@@ -82,9 +73,6 @@ export function run(args: string[]) {
           tCmd("cmd.tabs.error.invalidListUsage", locale),
           ...tabsCmdUsageLines(locale)
         ])
-      }
-      if (parsed.picker) {
-        return linesDispatch(tabsCmdListPickerLines(locale))
       }
       return effectsDispatch([
         { kind: "tabs_list", show_url: parsed.showUrl ? "true" : "false" }

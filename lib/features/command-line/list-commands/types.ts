@@ -14,7 +14,6 @@ export type ListCommandMatcher = {
   readonly command: string
   readonly runtime: ListCommandRuntime
   matchPlain(segment: string): unknown | null
-  usesPicker(segment: string): boolean
 }
 
 export type ListCommandFetchContext = {
@@ -31,7 +30,6 @@ export type ListCommandEntry<TMatch = unknown> = {
   readonly command: string
   readonly runtime: ListCommandRuntime
   matchPlain(segment: string): TMatch | null
-  usesPicker(segment: string): boolean
   fetchListResult(match: TMatch, ctx: ListCommandFetchContext): Promise<ListResult>
   formatPlainLines(result: ListResult, locale: UiLocale, match: TMatch): string[]
 }

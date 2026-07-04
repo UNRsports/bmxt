@@ -1,6 +1,5 @@
 import {
   parseSessionListLine,
-  parseSessionListPickerLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
   parseSessionSwitchByNumberLine,
@@ -26,15 +25,8 @@ export function tryHandleSessionCommand(ctx: CommandDispatchContext): CommandDis
     return "handled"
   }
 
-  if (parseSessionListPickerLine(trimmed)) {
-    const activeIdx = deps.sessionListRows.findIndex((r) => r.isActive)
-    const pickHi = deps.sessionListPickerHiRef.current ?? (activeIdx >= 0 ? activeIdx : 0)
-    deps.switchSessionFromListPicker(trimmed, pickHi)
-    return "handled"
-  }
-
   const sessionList = parseSessionListLine(trimmed)
-  if (sessionList !== null && !sessionList.picker) {
+  if (sessionList !== null) {
     deps.appendCommandToHistory(trimmed)
     clearPrompt(deps)
     recordCommandHistory(deps)

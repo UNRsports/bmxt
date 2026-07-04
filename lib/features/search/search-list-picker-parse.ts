@@ -12,11 +12,8 @@ const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page",
 
 const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page", "--snapshot"] as const
 
-/** EN: All fixed third tokens after `search -list` (scopes + `--picker`). */
-export const SEARCH_LIST_OPTION_TOKENS = [
-  ...SEARCH_LIST_SCOPE_ORDER,
-  "--picker"
-] as const
+/** EN: All fixed third tokens after `search -list` (scopes). */
+export const SEARCH_LIST_OPTION_TOKENS = [...SEARCH_LIST_SCOPE_ORDER] as const
 
 const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page", "--snapshot"] as const
 
@@ -72,8 +69,8 @@ export function matchesSearchListScopeFilter(token: string): boolean {
 }
 
 /**
- * EN: Third token still narrowing any `search -list` option (`pi` → `--picker`, `pa` → `--page`).
- * JA: `search -list` の任意オプション絞り込み中か（`--picker` 含む）。
+ * EN: Third token still narrowing any `search -list` option (`pa` → `--page`).
+ * JA: `search -list` の任意オプション絞り込み中か。
  */
 export function matchesSearchListOptionFilter(
   token: string,
@@ -154,9 +151,6 @@ export function isSearchListReadyToRun(trimmed: string, line?: string): boolean 
   if (isSearchListScopeToken(third)) {
     return true
   }
-  if (third === "--picker") {
-    return true
-  }
   if (third.startsWith("--")) {
     return false
   }
@@ -195,8 +189,7 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
   if (!matchesSearchListOptionFilter(third) && !third.startsWith("--")) {
     return false
   }
-  const isCompleteOption =
-    isSearchListScopeToken(third) || third.toLowerCase() === "--picker"
+  const isCompleteOption = isSearchListScopeToken(third)
   if (!isCompleteOption) {
     return true
   }
@@ -231,9 +224,6 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
   if (parts.length >= 3 && isSearchListScopeToken(parts[2]!)) {
     return searchListPatternFromLine(trimmed).length === 0
   }
-  if (parts.length >= 3 && parts[2]!.toLowerCase() === "--picker") {
-    return false
-  }
   if (parts.length >= 3 && matchesSearchListOptionFilter(parts[2]!)) {
     return false
   }
@@ -247,5 +237,3 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
 export function parseSearchExitListLine(trimmed: string): boolean {
   return SEARCH_EXIT_LIST_RE.test(trimmed.trim())
 }
-
-export { parseSearchListPickerLine } from "./search-list-parse.ts"

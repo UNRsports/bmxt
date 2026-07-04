@@ -63,6 +63,8 @@ export type CommandDispatchDeps = {
   setSearchListPicker: (sessionId: string, state: any) => void
   setDomListPicker: (sessionId: string, state: any) => void
   setSettingListPicker: (sessionId: string, state: any) => void
+  /** EN: Open the floating session-list candidate panel (pipe `session -list | picker`). */
+  openSessionListPicker: () => void
   setSubCmdPicker: (state: any) => void
   runDomListAndShow: (domListLine: string, trimmed: string, announce: boolean) => Promise<void>
   runSearchListSearch: (trimmed: string, searchListLine: any) => Promise<void>

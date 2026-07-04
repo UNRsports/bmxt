@@ -1,15 +1,12 @@
-/** EN: Parse `tabs -list` tokens (`-u`, `--picker`). */
+/** EN: Parse `tabs -list` tokens (`-u`). */
 
 import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { listSecondTokenCandidatesByCommand } from "../builtin-commands/command-subcommands.gen"
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
-import {
-  parseTabsListLine,
-  parseTabsListPickerLine
-} from "./tabs-list-parse.ts"
+import { parseTabsListLine } from "./tabs-list-parse.ts"
 
 export type { TabsListLineOptions } from "./tabs-list-parse.ts"
-export { parseTabsListLine, parseTabsListPickerLine } from "./tabs-list-parse.ts"
+export { parseTabsListLine } from "./tabs-list-parse.ts"
 
 const TABS_LIST_PREFIX_RE = /^\s*tabs\s+-list\b/i
 
@@ -45,7 +42,7 @@ export function tabsOptionCompletionZone(
   return optionTokenZoneAfterLead(line, cursor, TABS_OPTION_LEAD_RE)
 }
 
-/** EN: Tab zone after `tabs -list ` for third-token completion (`-u`, `--picker`). */
+/** EN: Tab zone after `tabs -list ` for third-token completion (`-u`). */
 export function tabsListOptionCompletionZone(
   line: string,
   cursor: number
@@ -58,7 +55,7 @@ export function listTabsOptionCandidates(prefix: string): string[] {
 }
 
 export function listTabsListThirdTokenCandidates(prefix: string): string[] {
-  const tokens = ["-u", "--picker"]
+  const tokens = ["-u"]
   const normalized = prefix.toLowerCase()
   return tokens.filter((token) => token.startsWith(normalized))
 }

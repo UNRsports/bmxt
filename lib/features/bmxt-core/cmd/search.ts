@@ -1,5 +1,5 @@
 import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
-import { searchCmdExitListLines, searchCmdListPickerLines, searchCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
+import { searchCmdExitListLines, searchCmdUsageLines, cmdAvailableOptionsLine } from "../../setting/i18n/cmd-lines"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import { parseSearchListLine } from "../../search/search-list-parse"
@@ -10,7 +10,7 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "search",
   aliases: [],
-  usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--picker] [<pattern>] | search -exit -list"
+  usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list"
 }
 
 function normalizeSearchSecondToken(head: string): string {
@@ -22,9 +22,6 @@ function runList(args: string[], locale: ReturnType<typeof getRunLocale>) {
   const parsed = parseSearchListLine(line)
   if (parsed === null) {
     return linesDispatch([...searchCmdUsageLines(locale)])
-  }
-  if (parsed.picker) {
-    return linesDispatch(searchCmdListPickerLines(locale))
   }
   return effectsDispatch([{ kind: "search_list", dispatch_line: parsed.dispatchLine }])
 }

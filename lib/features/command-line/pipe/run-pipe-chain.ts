@@ -10,11 +10,7 @@ import { isExitSuccess } from "../compound/exit-status.ts"
 import { runSegment } from "../compound/run-segment.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tPipe } from "../../setting/i18n/ns/pipe.ts"
-import {
-  fetchListResultForCommand,
-  matchPlainListCommand,
-  segmentUsesListPicker
-} from "../list-commands/index.ts"
+import { fetchListResultForCommand, matchPlainListCommand } from "../list-commands/index.ts"
 import { tryRunPipeConsumer } from "./consumers/index.ts"
 
 export async function attachListResultToOutcome(
@@ -44,12 +40,6 @@ function classifyPipeStageEligibility(
   stageIndex: number,
   deps: CommandDispatchDeps
 ): ReturnType<typeof classifyCompoundEligibility> {
-  if (segmentUsesListPicker(stage)) {
-    return {
-      eligible: false,
-      outcome: segmentFailure("interactive", [tPipe("pipe.error.picker", locale)])
-    }
-  }
   if (stageIndex > 0) {
     return { eligible: true }
   }
@@ -115,7 +105,10 @@ export async function runPipeChain(
     if (!isExitSuccess(outcome.exitStatus)) {
       return prependAccumulated(outcome, allStdout, allStderr)
     }
-    allStdout.push(...outcome.stdout)
+    // EN: In a pipe, producer stdout feeds the consumer (ListResult), not the terminal.
+    if (stages.length === 1) {
+      allStdout.push(...outcome.stdout)
+    }
     allStderr.push(...outcome.stderr)
 
     const enriched = await attachListResultToOutcome(stage, outcome, deps, locale)

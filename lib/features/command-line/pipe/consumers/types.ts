@@ -12,6 +12,7 @@ export type PipeConsumerEntry = {
   run: (
     listResult: ListResult,
     deps: CommandDispatchDeps,
-    locale: UiLocale
+    locale: UiLocale,
+    segment: string
   ) => Promise<SegmentOutcome>
 }

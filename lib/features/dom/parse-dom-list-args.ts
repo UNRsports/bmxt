@@ -1,5 +1,4 @@
 import {
-  DOM_LIST_PICKER_TOKEN,
   parseDomListFlavorToken,
   parseDomListShowTagToken,
   parseDomPickerModeToken,
@@ -37,9 +36,6 @@ export function parseDomListArgsFromTokens(tokens: readonly string[]): ParsedDom
 
   for (const raw of tokens) {
     const tok = stripInvisibleFormatChars(raw.trim()).toLowerCase()
-    if (tok === DOM_LIST_PICKER_TOKEN) {
-      continue
-    }
     const mode = parseDomPickerModeToken(tok)
     if (mode !== null) {
       pickerMode = mode
@@ -53,6 +49,9 @@ export function parseDomListArgsFromTokens(tokens: readonly string[]): ParsedDom
     if (parseDomListShowTagToken(tok) === true) {
       showTag = true
       continue
+    }
+    if (tok.startsWith("--")) {
+      return null
     }
     patternParts.push(raw)
   }

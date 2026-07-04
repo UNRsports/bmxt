@@ -3,7 +3,6 @@ import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import {
   filterSessionSwitchPickerRows,
-  parseSessionListPickerLine,
   resolveSessionSwitchPickerState,
   type SessionCandidatePanelVariant,
   type SessionListRow
@@ -202,17 +201,6 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
           const activeIdx = filtered.findIndex((r) => r.isActive)
           return activeIdx >= 0 ? activeIdx : 0
         })
-        return
-      }
-      if (parseSessionListPickerLine(segmentLine.trim())) {
-        if (sessionListPickerDismissedRef.current) {
-          setSubCmdPicker(null)
-          setSessionListPickerHi(null)
-          setSessionPickerVariant(null)
-          return
-        }
-        setSubCmdPicker(null)
-        openSessionPicker("list")
         return
       }
       sessionListPickerDismissedRef.current = false

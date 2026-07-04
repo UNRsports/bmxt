@@ -50,13 +50,8 @@ describe("parseDomListArgsFromTokens", () => {
     })
   })
 
-  it("ignores --picker so it is not treated as pattern", () => {
-    assert.deepEqual(parseDomListArgsFromTokens(["--with", "--html", "--picker"]), {
-      pickerMode: "with",
-      flavor: "--html",
-      showTag: false,
-      pattern: ""
-    })
+  it("rejects unknown option tokens such as --picker", () => {
+    assert.equal(parseDomListArgsFromTokens(["--with", "--html", "--picker"]), null)
   })
 })
 

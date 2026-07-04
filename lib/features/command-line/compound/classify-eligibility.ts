@@ -1,15 +1,14 @@
 import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen.ts"
 import { parseDomSettingCommandLine } from "../../dom/parse-dom-setting-command.ts"
 import {
-  parseSessionListPickerLine,
   parseSessionSettingNameBareLine,
   parseSessionSwitchPickerLine
 } from "../../session/session-input.ts"
 import {
   isSearchListContinuationPrompt,
-  isSearchListReadyToRun,
-  parseSearchListPickerLine
+  isSearchListReadyToRun
 } from "../../search/search-list-picker-input.ts"
+import { parseSearchListLine } from "../../search/search-list-parse.ts"
 import { parseSettingIncompleteLine } from "../../setting/setting-list-picker-input.ts"
 import { parseTabsSettingCommandLine } from "../../tabs/parse-tabs-setting-command.ts"
 import { parseTranslateCommandLine } from "../../translate/parse-translate-command.ts"
@@ -79,15 +78,12 @@ export function classifyCompoundEligibility(
     return continuationFailure(trimmed, locale)
   }
 
-  if (parseSearchListPickerLine(trimmed) !== null) {
+  if (parseSearchListLine(trimmed) !== null) {
     if (isSearchListContinuationPrompt(trimmed) || !isSearchListReadyToRun(trimmed, trimmed)) {
       return continuationFailure(trimmed, locale)
     }
   }
 
-  if (parseSessionListPickerLine(trimmed)) {
-    return interactiveFailure(locale)
-  }
   if (parseSessionSwitchPickerLine(trimmed)) {
     return interactiveFailure(locale)
   }

@@ -6,12 +6,10 @@ export type DomListFlavor = "--html" | "--react"
 export const DOM_PICKER_MODE_TOKENS = ["--normal", "--with"] as const
 export const DOM_LIST_FLAVOR_TOKENS = ["--html", "--react"] as const
 export const DOM_LIST_SHOW_TAG_TOKEN = "--tag" as const
-export const DOM_LIST_PICKER_TOKEN = "--picker" as const
 export const DOM_LIST_OPTION_TOKENS_WITH_TAG = [
   ...DOM_PICKER_MODE_TOKENS,
   ...DOM_LIST_FLAVOR_TOKENS,
-  DOM_LIST_SHOW_TAG_TOKEN,
-  DOM_LIST_PICKER_TOKEN
+  DOM_LIST_SHOW_TAG_TOKEN
 ] as const
 
 export function parseDomListShowTagToken(token: string): boolean | null {

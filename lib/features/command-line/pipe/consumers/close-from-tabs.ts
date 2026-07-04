@@ -56,5 +56,6 @@ export const closePipeConsumer: PipeConsumerEntry = {
   id: "close",
   match: isClosePipeConsumer,
   acceptsKinds: CLOSE_ACCEPTS_KINDS,
-  run: runCloseFromTabsListResult
+  run: (listResult, deps, locale, _segment) =>
+    runCloseFromTabsListResult(listResult, deps, locale)
 }

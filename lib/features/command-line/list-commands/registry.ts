@@ -23,13 +23,10 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
     runtime: "service_worker",
     matchPlain(segment) {
       const parsed = parseTabsListLine(segment)
-      if (parsed === null || parsed.picker) {
+      if (parsed === null) {
         return null
       }
       return { showUrl: parsed.showUrl }
-    },
-    usesPicker(segment) {
-      return parseTabsListLine(segment)?.picker === true
     }
   },
   {
@@ -38,7 +35,7 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
     runtime: "service_worker",
     matchPlain(segment) {
       const parsed = parseDomListLine(segment)
-      if (parsed === null || parsed.picker) {
+      if (parsed === null) {
         return null
       }
       return {
@@ -47,9 +44,6 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
         showTag: parsed.showTag,
         pattern: parsed.pattern
       }
-    },
-    usesPicker(segment) {
-      return parseDomListLine(segment)?.picker === true
     }
   },
   {
@@ -58,13 +52,10 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
     runtime: "ui",
     matchPlain(segment) {
       const parsed = parseSessionListLine(segment)
-      if (parsed === null || parsed.picker) {
+      if (parsed === null) {
         return null
       }
       return {}
-    },
-    usesPicker(segment) {
-      return parseSessionListLine(segment)?.picker === true
     }
   },
   {
@@ -73,13 +64,10 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
     runtime: "ui",
     matchPlain(segment) {
       const parsed = parseSettingListLine(segment)
-      if (parsed === null || parsed.picker) {
+      if (parsed === null) {
         return null
       }
       return {}
-    },
-    usesPicker(segment) {
-      return parseSettingListLine(segment)?.picker === true
     }
   },
   {
@@ -88,13 +76,10 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
     runtime: "service_worker",
     matchPlain(segment) {
       const parsed = parseSearchListLine(segment)
-      if (parsed === null || parsed.picker) {
+      if (parsed === null) {
         return null
       }
       return { dispatchLine: parsed.dispatchLine }
-    },
-    usesPicker(segment) {
-      return parseSearchListLine(segment)?.picker === true
     }
   }
 ] as const
@@ -133,16 +118,6 @@ export function matchPlainListCommand(segment: string): MatchedListCommand | nul
     }
   }
   return null
-}
-
-export function segmentUsesListPicker(segment: string): boolean {
-  const trimmed = segment.trim()
-  for (const matcher of LIST_COMMAND_MATCHERS) {
-    if (matcher.usesPicker(trimmed)) {
-      return true
-    }
-  }
-  return false
 }
 
 export async function fetchListResultForCommand(

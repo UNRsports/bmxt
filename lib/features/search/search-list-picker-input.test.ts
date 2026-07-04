@@ -78,17 +78,17 @@ describe("isSearchListScopeToken", () => {
 })
 
 describe("matchesSearchListOptionFilter", () => {
-  it("includes --picker partials", () => {
+  it("includes scope partials", () => {
     assert.equal(matchesSearchListOptionFilter("p"), true)
-    assert.equal(matchesSearchListOptionFilter("pi"), true)
-    assert.equal(matchesSearchListOptionFilter("--pi"), true)
+    assert.equal(matchesSearchListOptionFilter("pa"), true)
+    assert.equal(matchesSearchListOptionFilter("--pa"), true)
     assert.equal(matchesSearchListOptionFilter("zz"), false)
   })
 })
 
 describe("shouldShowSearchListPatternPlaceholder", () => {
-  it("suppresses pattern placeholder while typing --picker", () => {
-    assert.equal(shouldShowSearchListPatternPlaceholder("search -list pi", 14), false)
+  it("suppresses pattern placeholder while typing a scope partial", () => {
+    assert.equal(shouldShowSearchListPatternPlaceholder("search -list pa", 14), false)
     assert.equal(shouldShowSearchListPatternPlaceholder("search -list p", 13), false)
   })
 
@@ -98,8 +98,8 @@ describe("shouldShowSearchListPatternPlaceholder", () => {
 })
 
 describe("isSearchListReadyToRun option partials", () => {
-  it("blocks partial --picker and scopes", () => {
-    assert.equal(isSearchListReadyToRun("search -list pi"), false)
-    assert.equal(isSearchListReadyToRun("search -list --pick"), false)
+  it("blocks partial scopes", () => {
+    assert.equal(isSearchListReadyToRun("search -list pa"), false)
+    assert.equal(isSearchListReadyToRun("search -list --pag"), false)
   })
 })

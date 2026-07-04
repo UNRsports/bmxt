@@ -12,13 +12,10 @@ export const tabsListCommand: ListCommandEntry<TabsListMatch> = {
   runtime: "service_worker",
   matchPlain(segment) {
     const parsed = parseTabsListLine(segment)
-    if (parsed === null || parsed.picker) {
+    if (parsed === null) {
       return null
     }
     return { showUrl: parsed.showUrl }
-  },
-  usesPicker(segment) {
-    return parseTabsListLine(segment)?.picker === true
   },
   async fetchListResult(match, ctx) {
     return fetchTabsListResult({ showUrl: match.showUrl, locale: ctx.locale })

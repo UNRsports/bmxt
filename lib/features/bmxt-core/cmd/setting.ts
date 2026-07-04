@@ -2,10 +2,8 @@ import { isSecondToken } from "../../builtin-commands/command-subcommands.gen"
 import {
   cmdAvailableOptionsLine,
   settingCmdExitLines,
-  settingCmdListPickerLines,
   settingCmdUsageLines
 } from "../../setting/i18n/cmd-lines"
-import { parseSettingListLine } from "../../setting/setting-list-parse"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { CmdMeta } from "../types"
@@ -14,7 +12,7 @@ import { linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "setting",
   aliases: [],
-  usagePrimary: "setting -list [--picker] | setting -exit -list"
+  usagePrimary: "setting -list | setting -exit -list"
 }
 
 export function run(args: string[]) {
@@ -31,10 +29,6 @@ export function run(args: string[]) {
   }
   const firstLc = first.toLowerCase()
   if (firstLc === "-list") {
-    const listLine = parseSettingListLine(args.join(" "))
-    if (listLine?.picker) {
-      return linesDispatch(settingCmdListPickerLines(locale))
-    }
     return linesDispatch([
       tCmd("cmd.setting.listPlain.hint", locale),
       ...settingCmdUsageLines(locale)

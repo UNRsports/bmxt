@@ -1,24 +1,9 @@
-import { parseDomListPickerLine } from "../../../dom/dom-list-picker-input"
-import {
-  clearPrompt,
-  recordCommandHistory,
-  type CommandDispatchContext,
-  type CommandDispatchResult
-} from "./types"
+import type { CommandDispatchContext, CommandDispatchResult } from "./types"
 
-export function tryHandleDomListCommand(ctx: CommandDispatchContext): CommandDispatchResult {
-  const { deps, trimmed } = ctx
-
-  const domListLine = parseDomListPickerLine(trimmed)
-  if (domListLine !== null) {
-    deps.appendCommandToHistory(trimmed)
-    clearPrompt(deps)
-    recordCommandHistory(deps)
-    deps.setSubCmdPicker(null)
-    deps.jobRunner.cancel("dom-list")
-    void deps.runDomListAndShow(domListLine, trimmed, true)
-    return "handled"
-  }
-
+/**
+ * EN: Plain `dom -list` runs via the `-list` registry / background path.
+ * Picker UI is `dom -list … | picker` only.
+ */
+export function tryHandleDomListCommand(_ctx: CommandDispatchContext): CommandDispatchResult {
   return "not_handled"
 }

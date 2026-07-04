@@ -12,47 +12,30 @@ describe("listDomListRemainingOptionCandidates", () => {
       "--normal",
       "--with",
       "--html",
-      "--react",
-      "--picker"
+      "--react"
     ])
   })
 
-  it("offers flavor, --tag, and --picker after --with is set", () => {
+  it("offers flavor and --tag after --with is set", () => {
     assert.deepEqual(listDomListRemainingOptionCandidates(["--with"], ""), [
       "--html",
       "--react",
-      "--tag",
-      "--picker"
+      "--tag"
     ])
   })
 
-  it("offers --tag and --picker after --with and flavor are set", () => {
-    assert.deepEqual(listDomListRemainingOptionCandidates(["--with", "--html"], ""), [
-      "--tag",
-      "--picker"
-    ])
+  it("offers --tag after --with and flavor are set", () => {
+    assert.deepEqual(listDomListRemainingOptionCandidates(["--with", "--html"], ""), ["--tag"])
   })
 
-  it("offers only --picker when mode, flavor, and --tag are set", () => {
-    assert.deepEqual(listDomListRemainingOptionCandidates(["--with", "--html", "--tag"], ""), [
-      "--picker"
-    ])
-  })
-
-  it("offers no options when --picker is already present with full options", () => {
-    assert.deepEqual(
-      listDomListRemainingOptionCandidates(["--with", "--html", "--tag", "--picker"], ""),
-      []
-    )
+  it("offers no options when mode, flavor, and --tag are set", () => {
+    assert.deepEqual(listDomListRemainingOptionCandidates(["--with", "--html", "--tag"], ""), [])
   })
 
   it("prefix-filters partial tokens", () => {
     assert.deepEqual(listDomListRemainingOptionCandidates([], "--h"), ["--html"])
     assert.deepEqual(listDomListRemainingOptionCandidates(["--with"], "--r"), ["--react"])
     assert.deepEqual(listDomListRemainingOptionCandidates(["--with", "--html"], "--t"), ["--tag"])
-    assert.deepEqual(listDomListRemainingOptionCandidates(["--with", "--html"], "--p"), [
-      "--picker"
-    ])
   })
 })
 
@@ -61,11 +44,7 @@ describe("isDomListAwaitingMoreOptionsAtEol", () => {
     assert.equal(isDomListAwaitingMoreOptionsAtEol("dom -list "), true)
     assert.equal(isDomListAwaitingMoreOptionsAtEol("dom -list --with "), true)
     assert.equal(isDomListAwaitingMoreOptionsAtEol("dom -list --with --html "), true)
-    assert.equal(isDomListAwaitingMoreOptionsAtEol("dom -list --with --html --tag "), true)
-    assert.equal(
-      isDomListAwaitingMoreOptionsAtEol("dom -list --with --html --tag --picker "),
-      false
-    )
+    assert.equal(isDomListAwaitingMoreOptionsAtEol("dom -list --with --html --tag "), false)
   })
 })
 
@@ -74,7 +53,7 @@ describe("matchesDomListOptionFilter", () => {
     assert.equal(matchesDomListOptionFilter("--h"), true)
     assert.equal(matchesDomListOptionFilter("html"), true)
     assert.equal(matchesDomListOptionFilter("tag"), true)
-    assert.equal(matchesDomListOptionFilter("picker"), true)
+    assert.equal(matchesDomListOptionFilter("picker"), false)
     assert.equal(matchesDomListOptionFilter("foo"), false)
   })
 })

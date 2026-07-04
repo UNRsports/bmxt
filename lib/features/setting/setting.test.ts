@@ -7,7 +7,7 @@ import { parseFontSizePx } from "./validate-size.ts"
 import {
   parseSettingExitListLine,
   parseSettingIncompleteLine,
-  parseSettingListPickerLine
+  parseSettingListLine
 } from "./setting-list-picker-input.ts"
 import {
   createSettingListPickerState,
@@ -149,13 +149,13 @@ describe("setting list picker draft", () => {
   })
 })
 
-describe("setting list picker input", () => {
+describe("setting list input", () => {
   it("parses -list and -exit -list", () => {
     assert.equal(parseSettingIncompleteLine("setting"), true)
-    assert.equal(parseSettingListPickerLine("setting -list"), false)
-    assert.equal(parseSettingListPickerLine("setting -list --picker"), true)
+    assert.deepEqual(parseSettingListLine("setting -list"), {})
+    assert.equal(parseSettingListLine("setting -list --picker"), null)
     assert.equal(parseSettingExitListLine("setting -exit -list"), true)
-    assert.equal(parseSettingListPickerLine("setting -language"), false)
+    assert.equal(parseSettingListLine("setting -language"), null)
   })
 })
 

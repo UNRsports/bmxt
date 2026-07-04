@@ -16,11 +16,7 @@ import {
   resolveInitialTabPickerHighlightIndex,
   type TabPickerRow
 } from "../tabs/picker-rows"
-import {
-  parseGroupNewInteractiveLine,
-  parseTabsExitListLine,
-  parseTabsListPickerLine,
-} from "../tabs/input"
+import { parseGroupNewInteractiveLine, parseTabsExitListLine } from "../tabs/input"
 import {
   loadTabsPickerSettings,
   saveTabsPageActiveMode,
@@ -72,12 +68,11 @@ import { useShellPromptCore } from "./shell/useShellPromptCore"
 import { usePickerManager } from "./shell/usePickerManager"
 import {
   parseSearchExitListLine,
-  parseSearchListPickerLine,
   shouldShowSearchListPatternPlaceholder,
   type SearchListPickerState
 } from "../search/search-list-picker-input"
 import { isJobHandleActive, useSessionJobRunner } from "../job"
-import { parseDomExitListLine, parseDomListPickerLine, type DomListPickerState } from "../dom/dom-list-picker-input"
+import { parseDomExitListLine, type DomListPickerState } from "../dom/dom-list-picker-input"
 import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
 import {
   parseNavEnterLine,
@@ -113,8 +108,7 @@ import { settingTokenForUiLocale } from "../setting/locale"
 import { type SettingListPickerState } from "../setting/setting-list-picker-state"
 import {
   parseSettingExitListLine,
-  parseSettingIncompleteLine,
-  parseSettingListPickerLine
+  parseSettingIncompleteLine
 } from "../setting/setting-list-picker-input"
 import { useUiSettings } from "../setting/use-ui-settings"
 import { externalSettingsRecoveryLogLines } from "../setting/external-settings-startup"
@@ -603,6 +597,7 @@ export function BmxtShell({
     imeTokenPickerDismissedRef,
     dismissImeTokenPicker,
     closePromptPickerUi,
+    openSessionPicker,
     syncImeTokenPicker,
     promptPickerOpen,
     promptPickerScopeId,
@@ -804,6 +799,11 @@ export function BmxtShell({
     void appendLogLines([...lines])
   }, [appendLogLines, externalSettingsRecovery, isFocusedPane])
 
+  const openSessionListPicker = useCallback(() => {
+    sessionListPickerDismissedRef.current = false
+    openSessionPicker("list")
+  }, [openSessionPicker, sessionListPickerDismissedRef])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
@@ -858,6 +858,7 @@ export function BmxtShell({
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    openSessionListPicker,
     setSubCmdPicker,
     runDomListAndShow,
     runSearchListSearch,

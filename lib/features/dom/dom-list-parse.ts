@@ -1,4 +1,4 @@
-/** EN: Parse `dom -list` tokens (`--picker`, mode, flavor, pattern). */
+/** EN: Parse `dom -list` tokens (mode, flavor, pattern). */
 
 import {
   parseDomListFlavorToken,
@@ -10,7 +10,6 @@ import {
 import { stripInvisibleFormatChars } from "../bmxt-core/line-parse.ts"
 
 export type DomListLineOptions = {
-  picker: boolean
   pickerMode: DomPickerMode
   flavor: DomListFlavor
   showTag: boolean
@@ -35,7 +34,7 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: Parse `dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>]`.
+ * EN: Parse `dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`.
  * JA: デフォルト flavor は `--html`。
  */
 export function parseDomListLine(trimmed: string): DomListLineOptions | null {
@@ -50,7 +49,6 @@ export function parseDomListLine(trimmed: string): DomListLineOptions | null {
     return null
   }
 
-  let picker = false
   let pickerMode: DomPickerMode = "normal"
   let flavor: DomListFlavor = "--html"
   let showTag = false
@@ -59,10 +57,6 @@ export function parseDomListLine(trimmed: string): DomListLineOptions | null {
   for (let index = 2; index < parts.length; index += 1) {
     const raw = parts[index]!
     const token = normalizeToken(raw)
-    if (token === "--picker") {
-      picker = true
-      continue
-    }
     const mode = parseDomPickerModeToken(token)
     if (mode !== null) {
       pickerMode = mode
@@ -77,38 +71,16 @@ export function parseDomListLine(trimmed: string): DomListLineOptions | null {
       showTag = true
       continue
     }
+    if (token.startsWith("--")) {
+      return null
+    }
     patternParts.push(raw)
   }
 
   return {
-    picker,
     pickerMode,
     flavor,
     showTag: pickerMode === "with" ? showTag : false,
     pattern: normalizeDomPattern(patternParts.join(" "))
   }
-}
-
-/** EN: `dom -list --picker` — opens DOM list picker UI. */
-export function parseDomListPickerLine(trimmed: string): DomListLineOptions | null {
-  const parsed = parseDomListLine(trimmed)
-  if (parsed === null || !parsed.picker) {
-    return null
-  }
-  return parsed
-}
-
-/**
- * EN: Dispatch line for picker capture — `--picker` removed so `runDispatch` emits `dom_list`.
- * JA: picker 用 dispatch 行。`--picker` を除き `runDispatch` が `dom_list` effect を出すようにする。
- */
-export function domListPickerDispatchLine(trimmed: string): string | null {
-  if (parseDomListPickerLine(trimmed) === null) {
-    return null
-  }
-  return trimmed
-    .trim()
-    .split(/\s+/)
-    .filter((token) => token.toLowerCase() !== "--picker")
-    .join(" ")
 }

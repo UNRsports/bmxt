@@ -11,6 +11,7 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "group",
   "help",
   "nav",
+  "picker",
   "search",
   "session",
   "setting",

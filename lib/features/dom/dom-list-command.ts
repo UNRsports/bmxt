@@ -11,7 +11,7 @@ export const domListCommand: ListCommandEntry<DomListMatch> = {
   runtime: "service_worker",
   matchPlain(segment) {
     const parsed = parseDomListLine(segment)
-    if (parsed === null || parsed.picker) {
+    if (parsed === null) {
       return null
     }
     return {
@@ -20,9 +20,6 @@ export const domListCommand: ListCommandEntry<DomListMatch> = {
       showTag: parsed.showTag,
       pattern: parsed.pattern
     }
-  },
-  usesPicker(segment) {
-    return parseDomListLine(segment)?.picker === true
   },
   async fetchListResult(match, ctx) {
     return fetchDomListResultUnified({

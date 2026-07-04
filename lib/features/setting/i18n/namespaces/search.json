@@ -3,6 +3,42 @@
     "ja": "search — 中断しました（Ctrl+C）",
     "en": "search — cancelled (Ctrl+C)"
   },
+  "search.list.empty": {
+    "ja": "（検索結果なし）",
+    "en": "(no search hits)"
+  },
+  "search.list.error.failed": {
+    "ja": "error: 検索に失敗しました: {message}",
+    "en": "error: search failed: {message}"
+  },
+  "search.list.progress.scope": {
+    "ja": "search — {scope} を検索中…",
+    "en": "search — searching {scope}…"
+  },
+  "search.list.progress.scopeDone": {
+    "ja": "search — {scope} 完了",
+    "en": "search — {scope} done"
+  },
+  "search.list.progress.start": {
+    "ja": "search — 検索を開始しています…",
+    "en": "search — starting…"
+  },
+  "search.list.scope.bookmark": {
+    "ja": "ブックマーク",
+    "en": "bookmarks"
+  },
+  "search.list.scope.history": {
+    "ja": "履歴",
+    "en": "history"
+  },
+  "search.list.scope.page": {
+    "ja": "ページ本文",
+    "en": "page text"
+  },
+  "search.list.scope.snapshot": {
+    "ja": "スナップショット",
+    "en": "snapshots"
+  },
   "search.openDestination.fallbackFailed": {
     "ja": "フォールバック: {reason}",
     "en": "fallback: {reason}"
@@ -46,6 +82,18 @@
   "search.pageNoTextHint": {
     "ja": "サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
     "en": "With site access enabled, reload the pages you want to search (F5), then run search -list --page again."
+  },
+  "search.pageProgress.done": {
+    "ja": "{label} — 完了（読取 {scanned}・スキップ {skipped}・確認 {tabTotal}）",
+    "en": "{label} — finished ({scanned} read, {skipped} skipped, {tabTotal} checked)"
+  },
+  "search.pageProgress.start": {
+    "ja": "{label} — 開いている http(s) タブ {tabTotal} 件の本文を走査中…",
+    "en": "{label} — scanning visible text in {tabTotal} open http(s) tab(s)…"
+  },
+  "search.pageProgress.tick": {
+    "ja": "{label} — {tabIndex}/{tabTotal} タブ確認済み（読取 {scanned}・スキップ {skipped}）",
+    "en": "{label} — {tabIndex}/{tabTotal} tab(s) checked ({scanned} read, {skipped} skipped)"
   },
   "search.pageScanCancelled": {
     "ja": "ページ走査を中断しました。",
@@ -127,6 +175,10 @@
     "ja": "このペインでは Search list picker は開いていません。",
     "en": "Search list picker is not open in this pane."
   },
+  "search.picker.opened": {
+    "ja": "search ピッカー列を開きました",
+    "en": "Opened search picker column"
+  },
   "search.picker.previewScrollFailed": {
     "ja": "search — ページ内ジャンプに失敗しました（タブを再読み込みするか、サイトアクセスを確認してください）",
     "en": "search — in-page jump failed (reload the tab or check site access)"
@@ -146,53 +198,5 @@
   "search.status.manual": {
     "ja": "Alt+↑↓ でページ内プレビュー · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ · Alt で page-active 切替",
     "en": "Alt+↑↓ for in-page preview · Ctrl+↑↓ open-tab rows only · Enter jump · Alt toggles page-active"
-  },
-  "search.list.empty": {
-    "ja": "（検索結果なし）",
-    "en": "(no search hits)"
-  },
-  "search.list.progress.start": {
-    "ja": "search — 検索を開始しています…",
-    "en": "search — starting…"
-  },
-  "search.list.progress.scope": {
-    "ja": "search — {scope} を検索中…",
-    "en": "search — searching {scope}…"
-  },
-  "search.list.progress.scopeDone": {
-    "ja": "search — {scope} 完了",
-    "en": "search — {scope} done"
-  },
-  "search.list.scope.history": {
-    "ja": "履歴",
-    "en": "history"
-  },
-  "search.list.scope.bookmark": {
-    "ja": "ブックマーク",
-    "en": "bookmarks"
-  },
-  "search.list.scope.page": {
-    "ja": "ページ本文",
-    "en": "page text"
-  },
-  "search.list.scope.snapshot": {
-    "ja": "スナップショット",
-    "en": "snapshots"
-  },
-  "search.list.error.failed": {
-    "ja": "error: 検索に失敗しました: {message}",
-    "en": "error: search failed: {message}"
-  },
-  "search.pageProgress.start": {
-    "ja": "{label} — 開いている http(s) タブ {tabTotal} 件の本文を走査中…",
-    "en": "{label} — scanning visible text in {tabTotal} open http(s) tab(s)…"
-  },
-  "search.pageProgress.tick": {
-    "ja": "{label} — {tabIndex}/{tabTotal} タブ確認済み（読取 {scanned}・スキップ {skipped}）",
-    "en": "{label} — {tabIndex}/{tabTotal} tab(s) checked ({scanned} read, {skipped} skipped)"
-  },
-  "search.pageProgress.done": {
-    "ja": "{label} — 完了（読取 {scanned}・スキップ {skipped}・確認 {tabTotal}）",
-    "en": "{label} — finished ({scanned} read, {skipped} skipped, {tabTotal} checked)"
   }
 }

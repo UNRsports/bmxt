@@ -7,7 +7,6 @@ import { resolveActiveCommandSegment } from "../command-line/compound/active-seg
 import { wordBounds } from "../format/word-bounds.ts"
 import {
   DOM_LIST_OPTION_TOKENS_WITH_TAG,
-  DOM_LIST_PICKER_TOKEN,
   DOM_LIST_SHOW_TAG_TOKEN
 } from "./dom-picker-mode.ts"
 import { domListLineHasFlavor } from "./parse-dom-list-args.ts"
@@ -39,7 +38,6 @@ export function listDomListRemainingOptionCandidates(
   const hasHtml = used.includes("--html")
   const hasReact = used.includes("--react")
   const hasTag = used.includes(DOM_LIST_SHOW_TAG_TOKEN)
-  const hasPicker = used.includes(DOM_LIST_PICKER_TOKEN)
 
   const remaining: string[] = []
   if (!hasNormal && !hasWith) {
@@ -50,9 +48,6 @@ export function listDomListRemainingOptionCandidates(
   }
   if (hasWith && !hasTag) {
     remaining.push(DOM_LIST_SHOW_TAG_TOKEN)
-  }
-  if (!hasPicker) {
-    remaining.push(DOM_LIST_PICKER_TOKEN)
   }
 
   const p = prefix.trim().toLowerCase()

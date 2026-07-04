@@ -1,14 +1,10 @@
 import {
   parseSettingExitListLine,
   parseSettingIncompleteLine,
-  parseSettingListLine,
-  parseSettingListPickerLine
+  parseSettingListLine
 } from "../../../setting/setting-list-picker-input"
 import { tryRunPlainListCommand } from "../../../command-line/list-commands"
-import { createSettingListPickerState } from "../../../setting/setting-list-picker-state"
 import { tSetting } from "../../../setting/i18n/ns/setting"
-import { tError } from "../../../setting/i18n/ns/error"
-import { activateModeToolbar } from "../../mode-toolbar-order"
 import {
   setContinuationPrompt,
   clearPrompt,
@@ -28,30 +24,8 @@ export function tryHandleSettingCommand(ctx: CommandDispatchContext): CommandDis
     return "handled"
   }
 
-  if (parseSettingListPickerLine(trimmed)) {
-    deps.appendCommandToHistory(trimmed)
-    clearPrompt(deps)
-    recordCommandHistory(deps)
-    void (async () => {
-      try {
-        const state = createSettingListPickerState(deps.uiSettings)
-        await deps.appendLogLines([`> ${trimmed}`, tSetting("setting.picker.hint", locale)])
-        deps.setSettingListPicker(deps.sessionId, state)
-        deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "setting"))
-      } catch (e) {
-        await deps.appendLogLines([
-          `> ${trimmed}`,
-          tError("error.generic", locale, {
-            message: e instanceof Error ? e.message : String(e)
-          })
-        ])
-      }
-    })()
-    return "handled"
-  }
-
   const settingList = parseSettingListLine(trimmed)
-  if (settingList !== null && !settingList.picker) {
+  if (settingList !== null) {
     deps.appendCommandToHistory(trimmed)
     clearPrompt(deps)
     recordCommandHistory(deps)

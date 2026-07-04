@@ -109,7 +109,7 @@ describe("BMXt POSIX Profile — list operators (P5)", () => {
 describe("BMXt POSIX Profile — pipe consumers (P4)", () => {
   it("registers close and checks kind compatibility", () => {
     assert.equal(isClosePipeConsumer("close"), true)
-    assert.deepEqual(CLOSE_ACCEPTS_KINDS, ["tabs.tab"])
+    assert.deepEqual(CLOSE_ACCEPTS_KINDS, ["tabs.tab"] as const)
 
     const tabsList: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,

@@ -3,6 +3,10 @@
     "ja": "error: パイプ入力に tabs.tab レコードがありません",
     "en": "error: pipe input has no tabs.tab records"
   },
+  "pipe.error.kindMismatch": {
+    "ja": "error: パイプ先 {stage} はレコード種別 [{kinds}] のみ受け付けます",
+    "en": "error: pipe consumer {stage} accepts only record kinds [{kinds}]"
+  },
   "pipe.error.noStdin": {
     "ja": "error: パイプ入力がありません",
     "en": "error: no pipe input"
@@ -11,16 +15,16 @@
     "ja": "error: パイプの先頭コマンドは `-list` 列挙コマンドである必要があります: {stage}",
     "en": "error: pipe head must be a `-list` producer: {stage}"
   },
-  "pipe.error.picker": {
-    "ja": "error: パイプでは `--picker` は使えません",
-    "en": "error: `--picker` is not supported in a pipe"
-  },
   "pipe.error.unsupportedConsumer": {
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
   },
-  "pipe.error.kindMismatch": {
-    "ja": "error: パイプ先 {stage} はレコード種別 [{kinds}] のみ受け付けます",
-    "en": "error: pipe consumer {stage} accepts only record kinds [{kinds}]"
+  "pipe.picker.empty": {
+    "ja": "error: picker に渡すリストが空です",
+    "en": "error: picker received an empty list"
+  },
+  "pipe.picker.mixedKinds": {
+    "ja": "error: picker は単一コマンド族の ListResult のみ受け付けます（混在不可）",
+    "en": "error: picker accepts ListResult from a single command family only (no mixed kinds)"
   }
 }

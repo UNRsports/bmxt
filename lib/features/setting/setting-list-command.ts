@@ -11,13 +11,10 @@ export const settingListCommand: ListCommandEntry<SettingListMatch> = {
   runtime: "ui",
   matchPlain(segment) {
     const parsed = parseSettingListLine(segment)
-    if (parsed === null || parsed.picker) {
+    if (parsed === null) {
       return null
     }
     return {}
-  },
-  usesPicker(segment) {
-    return parseSettingListLine(segment)?.picker === true
   },
   async fetchListResult(_match, ctx) {
     if (ctx.deps === undefined) {

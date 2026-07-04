@@ -1,12 +1,12 @@
 import { buildHelpLines } from "../../bmxt-core/registry/help.ts"
-import { parseDomExitListLine, parseDomListPickerLine } from "../../dom/dom-list-picker-input.ts"
+import { parseDomExitListLine } from "../../dom/dom-list-picker-input.ts"
 import {
   saveDomPageActiveMode,
   settingTokenForDomPageActiveMode
 } from "../../dom/page-active-setting.ts"
 import { parseDomSettingCommandLine } from "../../dom/parse-dom-setting-command.ts"
 import { canScriptHttpHostPages } from "../../extension-permissions/optional-http-hosts.ts"
-import { parseGroupNewInteractiveLine, parseTabsExitListLine, parseTabsListPickerLine } from "../../tabs/input.ts"
+import { parseGroupNewInteractiveLine, parseTabsExitListLine } from "../../tabs/input.ts"
 import { buildTabPickerRowsBundle, resolveInitialTabPickerHighlightIndex } from "../../tabs/picker-rows.ts"
 import { closeTabPickerEngineForSession, openTabPickerEngineForSession } from "../../tabs/engine"
 import {
@@ -15,12 +15,11 @@ import {
 } from "../../tabs/page-active-setting.ts"
 import { parseTabsSettingCommandLine } from "../../tabs/parse-tabs-setting-command.ts"
 import { parseNavEnterLine, parseNavExitLine } from "../../nav/index.ts"
-import { parseSearchExitListLine, parseSearchListPickerLine } from "../../search/search-list-picker-input.ts"
+import { parseSearchExitListLine } from "../../search/search-list-picker-input.ts"
 import { parseSnapshotSaveLine } from "../../snapshot/snapshot-save-input.ts"
 import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines.ts"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab.ts"
 import {
-  parseSessionListPickerLine,
   parseSessionSettingNameWithLine,
   parseSessionSwitchByNumberLine,
   parseSessionSwitchWithLine,
@@ -28,11 +27,7 @@ import {
   sanitizeSessionName
 } from "../../session/index.ts"
 import { tryRunPlainListCommand } from "../list-commands/index.ts"
-import { createSettingListPickerState } from "../../setting/setting-list-picker-state.ts"
-import {
-  parseSettingExitListLine,
-  parseSettingListPickerLine
-} from "../../setting/setting-list-picker-input.ts"
+import { parseSettingExitListLine } from "../../setting/setting-list-picker-input.ts"
 import {
   parseTranslateCommandLine,
   saveTranslateEnabled,
@@ -42,7 +37,6 @@ import {
 import { translateOnLogLine } from "../../setting/i18n/resolvers.ts"
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
-import { tCompound } from "../../setting/i18n/ns/compound.ts"
 import { tDom } from "../../setting/i18n/ns/dom.ts"
 import { tError } from "../../setting/i18n/ns/error.ts"
 import { tGroup } from "../../setting/i18n/ns/group.ts"
@@ -54,16 +48,7 @@ import { tTabs } from "../../setting/i18n/ns/tabs.ts"
 import { tTranslate } from "../../setting/i18n/ns/translate.ts"
 import { activateModeToolbar, deactivateModeToolbar } from "../../bmxt-window/mode-toolbar-order.ts"
 import { mountTabPickerLoadingColumn } from "../../bmxt-window/shell/command-dispatch/open-tab-picker-column.ts"
-import {
-  classifyOutcomeFromLines,
-  segmentFailure,
-  segmentSuccess
-} from "./classify-outcome.ts"
-import {
-  drainCapturedLines,
-  resetCapturedLines,
-  wrapCompoundDeps
-} from "./compound-deps.ts"
+import { segmentFailure, segmentSuccess } from "./classify-outcome.ts"
 import type { SegmentOutcome } from "./types.ts"
 
 /** EN: UI command runners registered in `commands/registry.ts` (order = dispatch order). */
@@ -93,20 +78,6 @@ async function runSettingSegment(
   const plainLines = await tryRunPlainListCommand(segment, { locale, deps })
   if (plainLines !== null) {
     return segmentSuccess(plainLines)
-  }
-
-  if (parseSettingListPickerLine(segment)) {
-    try {
-      const state = createSettingListPickerState(deps.uiSettings)
-      deps.setSettingListPicker(deps.sessionId, state)
-      deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "setting"))
-      return segmentSuccess([tSetting("setting.picker.hint", locale)])
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e)
-      return segmentFailure("runtime", [
-        tError("error.generic", locale, { message })
-      ], message)
-    }
   }
 
   if (parseSettingExitListLine(segment)) {
@@ -167,10 +138,6 @@ async function runSessionSegment(
     return segmentSuccess(plainLines)
   }
 
-  if (parseSessionListPickerLine(segment)) {
-    return segmentFailure("interactive", [tCompound("compound.error.interactive", locale)])
-  }
-
   const settingName = parseSessionSettingNameWithLine(segment)
   if (settingName !== null) {
     const sanitized = sanitizeSessionName(settingName)
@@ -222,38 +189,6 @@ async function runTabsListSegment(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome | null> {
-  const listPicker = parseTabsListPickerLine(segment)
-  if (listPicker) {
-    const { showUrl } = listPicker
-    deps.setTabPicker(deps.sessionId, mountTabPickerLoadingColumn(deps.sessionId, showUrl))
-    deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
-    try {
-      const { rows, lastNormalWindowId } = await buildTabPickerRowsBundle(
-        showUrl,
-        deps.uiSettings.locale
-      )
-      const initialHi = resolveInitialTabPickerHighlightIndex(rows, lastNormalWindowId)
-      const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
-      deps.setTabPicker(
-        deps.sessionId,
-        openTabPickerEngineForSession(deps.sessionId, { rows, showUrl, initialHi })
-      )
-      return segmentSuccess([
-        tTabs("tabs.picker.hint", locale, { token: pageActiveToken })
-      ])
-    } catch (e) {
-      if (deps.tabPickerRef.current?.rows.length === 0) {
-        closeTabPickerEngineForSession(deps.sessionId)
-        deps.setTabPicker(deps.sessionId, null)
-        deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
-      }
-      const message = e instanceof Error ? e.message : String(e)
-      return segmentFailure("runtime", [
-        tError("error.generic", locale, { message })
-      ], message)
-    }
-  }
-
   if (parseTabsExitListLine(segment)) {
     const lines: string[] = []
     if (deps.tabPickerRef.current !== null) {
@@ -444,32 +379,13 @@ async function runGroupNewSegment(
 }
 
 async function runSearchListSegment(
-  segment: string,
-  deps: CommandDispatchDeps,
-  locale: UiLocale
+  _segment: string,
+  _deps: CommandDispatchDeps,
+  _locale: UiLocale
 ): Promise<SegmentOutcome | null> {
-  const dispatchLine = parseSearchListPickerLine(segment)
-  if (dispatchLine === null) {
-    return null
-  }
-
-  const wrap = wrapCompoundDeps(deps)
-  wrap.deps.setSubCmdPicker(null)
-  await wrap.deps.runSearchListSearch(segment, dispatchLine)
-  const captured = drainCapturedLines(wrap)
-
-  if (wrap.deps.searchListPickerRef.current !== null) {
-    return segmentSuccess(captured)
-  }
-
-  const classified = classifyOutcomeFromLines(captured)
-  if (classified.ok === false) {
-    return segmentFailure(classified.code, captured, classified.errorMessage)
-  }
-  if (captured.length > 0) {
-    return segmentFailure("runtime", captured)
-  }
-  return segmentFailure("runtime", [tError("error.unknown", locale)])
+  // EN: Plain `search -list` is handled by `plain-list` CommandEntry.
+  // Picker UI is `search -list … | picker` only.
+  return null
 }
 
 async function runHelpSegment(
@@ -484,36 +400,13 @@ async function runHelpSegment(
 }
 
 async function runDomListSegment(
-  segment: string,
-  deps: CommandDispatchDeps,
-  locale: UiLocale
+  _segment: string,
+  _deps: CommandDispatchDeps,
+  _locale: UiLocale
 ): Promise<SegmentOutcome | null> {
-  const dispatchLine = parseDomListPickerLine(segment)
-  if (dispatchLine === null) {
-    return null
-  }
-
-  deps.jobRunner.cancel("dom-list")
-  deps.setSubCmdPicker(null)
-  const wrap = wrapCompoundDeps(deps)
-  resetCapturedLines(wrap)
-  await wrap.deps.runDomListAndShow(dispatchLine, segment, false)
-  const captured = drainCapturedLines(wrap)
-
-  if (wrap.deps.domListPickerRef.current !== null) {
-    const lines =
-      captured.length > 0 ? captured : [tDom("dom.listPicker", locale)]
-    return segmentSuccess(lines)
-  }
-
-  const classified = classifyOutcomeFromLines(captured)
-  if (classified.ok === false) {
-    return segmentFailure(classified.code, captured, classified.errorMessage)
-  }
-  if (captured.length > 0) {
-    return segmentFailure("runtime", captured)
-  }
-  return segmentFailure("runtime", [tError("error.unknown", locale)])
+  // EN: Plain `dom -list` is handled by `plain-list` CommandEntry.
+  // Picker UI is `dom -list … | picker` only.
+  return null
 }
 
 async function runSnapshotSegment(

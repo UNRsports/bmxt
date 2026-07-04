@@ -4,7 +4,7 @@ import {
   isSessionSettingNameUiLine,
   isSessionSwitchByNameUiLine,
   isSessionSwitchUiLine,
-  parseSessionListPickerLine,
+  parseSessionListLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
   parseSessionSwitchPickerLine,
@@ -13,11 +13,11 @@ import {
   resolveSessionSwitchPickerState
 } from "./session-input.ts"
 
-describe("parseSessionListPickerLine", () => {
-  it("parseSessionListPickerLine", () => {
-    assert.equal(parseSessionListPickerLine("session -list"), false)
-    assert.equal(parseSessionListPickerLine("session -list --picker"), true)
-    assert.equal(parseSessionListPickerLine("session"), false)
+describe("parseSessionListLine", () => {
+  it("parses session -list only", () => {
+    assert.deepEqual(parseSessionListLine("session -list"), {})
+    assert.equal(parseSessionListLine("session -list --picker"), null)
+    assert.equal(parseSessionListLine("session"), null)
   })
 })
 

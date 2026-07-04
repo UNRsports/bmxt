@@ -11,13 +11,13 @@
     "ja": "error: usage: dom -exit -list",
     "en": "error: usage: dom -exit -list"
   },
-  "cmd.dom.error.listUsage": {
-    "ja": "error: usage: dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>]",
-    "en": "error: usage: dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>]"
-  },
   "cmd.dom.error.internal": {
     "ja": "error: 不明な dom オプション (internal): {option}",
     "en": "error: unknown dom option (internal): {option}"
+  },
+  "cmd.dom.error.listUsage": {
+    "ja": "error: usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]",
+    "en": "error: usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]"
   },
   "cmd.dom.error.unknownOption": {
     "ja": "error: 不明な dom オプション: {option}",
@@ -31,9 +31,25 @@
     "ja": "DOM list picker は BMXt プロンプトから閉じます: dom -exit -list",
     "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
   },
+  "cmd.dom.listPicker.title": {
+    "ja": "DOM list picker はパイプで開きます: dom -list … | picker",
+    "en": "DOM list picker is opened with: dom -list … | picker"
+  },
+  "cmd.dom.runHint": {
+    "ja": "実行例: dom -setting -page-active --auto または --manual",
+    "en": "Run: dom -setting -page-active --auto or --manual"
+  },
+  "cmd.dom.setting.pageActive": {
+    "ja": "       dom -setting -page-active --auto | --manual — ハイライト時のページジャンププレビュー",
+    "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
+  },
+  "cmd.dom.setting.title": {
+    "ja": "dom -setting — DOM ピッカーの page-active を設定（BMXt プロンプトから）",
+    "en": "dom -setting — configure DOM picker page-active from the BMXt prompt"
+  },
   "cmd.dom.usage.line1": {
-    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>]   — 既定はプレーン出力（--normal --html）。`--picker` で DOM ピッカー",
-    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>]   — plain output by default (--normal --html); `--picker` opens DOM picker"
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — 既定はプレーン出力（--normal --html）。ピッカーは `dom -list … | picker`",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — plain output by default (--normal --html); picker: `dom -list … | picker`"
   },
   "cmd.dom.usage.line2": {
     "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
@@ -44,28 +60,12 @@
     "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
   },
   "cmd.dom.usage.listDetail": {
-    "ja": "-list は既定でプレーン出力。`--picker` で DOM ピッカー列。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
-    "en": "-list prints plain output by default; `--picker` opens the DOM picker column. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
+    "ja": "-list はプレーン出力。ピッカーは `dom -list … | picker`。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
+    "en": "-list prints plain output. Open the picker with `dom -list … | picker`. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
   },
   "cmd.dom.usage.patternDetail": {
     "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
     "en": "<pattern> is a case-insensitive substring filter on the output lines (no regex)."
-  },
-  "cmd.dom.setting.pageActive": {
-    "ja": "       dom -setting -page-active --auto | --manual — ハイライト時のページジャンププレビュー",
-    "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
-  },
-  "cmd.dom.setting.title": {
-    "ja": "dom -setting — DOM ピッカーの page-active を設定（BMXt プロンプトから）",
-    "en": "dom -setting — configure DOM picker page-active from the BMXt prompt"
-  },
-  "cmd.dom.runHint": {
-    "ja": "実行例: dom -setting -page-active --auto または --manual",
-    "en": "Run: dom -setting -page-active --auto or --manual"
-  },
-  "cmd.dom.listPicker.title": {
-    "ja": "DOM list picker は BMXt プロンプトから開きます: dom -list --picker",
-    "en": "DOM list picker is opened from the BMXt prompt with: dom -list --picker"
   },
   "cmd.error.unknownCommand": {
     "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
@@ -127,6 +127,22 @@
     "ja": "nav typing 翻訳: `translate -on` を使用（translate コマンド参照）。",
     "en": "Nav typing translation: use `translate -on` (see translate command)."
   },
+  "cmd.picker.usage.line1": {
+    "ja": "usage: <list-command> | picker [-u]",
+    "en": "usage: <list-command> | picker [-u]"
+  },
+  "cmd.picker.usage.line2": {
+    "ja": "  picker はパイプ専用です。`-list` の列挙結果を受け取り、サイド列（または session 候補）で走査します。",
+    "en": "  picker is pipe-only. It receives `-list` output and opens a side column (or session candidates) for browsing."
+  },
+  "cmd.picker.usage.line3": {
+    "ja": "  例: tabs -list | picker · tabs -list -u | picker -u · search -list foo | picker · setting -list | picker",
+    "en": "  Examples: tabs -list | picker · tabs -list -u | picker -u · search -list foo | picker · setting -list | picker"
+  },
+  "cmd.picker.usage.line4": {
+    "ja": "  `-u` は tabs 列の URL 表示用。単体の `picker` では何も開きません。",
+    "en": "  `-u` shows URLs in the tabs column. Bare `picker` does not open a column."
+  },
   "cmd.search.error.exitListUsage": {
     "ja": "error: usage: search -exit -list",
     "en": "error: usage: search -exit -list"
@@ -152,16 +168,16 @@
     "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
   },
   "cmd.search.listPicker.title": {
-    "ja": "Search list picker は BMXt プロンプトから開きます: search -list --picker",
-    "en": "Search list picker is opened from the BMXt prompt with: search -list --picker"
+    "ja": "Search list picker はパイプで開きます: search -list … | picker",
+    "en": "Search list picker is opened with: search -list … | picker"
   },
   "cmd.search.usage.line1": {
     "ja": "usage: search -list [<pattern>]   — 検索結果をプレーン一覧（既定は --all 相当）",
     "en": "usage: search -list [<pattern>]   — plain search hits (default scopes = --all)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list --picker [--all|--history|--bookmark|--page|--snapshot] [<pattern>]   — 検索ピッカー列",
-    "en": "       search -list --picker [--all|--history|--bookmark|--page|--snapshot] [<pattern>]   — search picker column"
+    "ja": "       search -list … | picker [--all|--history|--bookmark|--page|--snapshot] [<pattern>]   — 検索ピッカー列",
+    "en": "       search -list … | picker [--all|--history|--bookmark|--page|--snapshot] [<pattern>]   — search picker column"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -195,6 +211,14 @@
     "ja": "error: 不明な session オプション: {option}",
     "en": "error: unknown session option: {option}"
   },
+  "cmd.session.listPicker.title": {
+    "ja": "Session list picker はパイプで開きます: session -list | picker",
+    "en": "Session list picker is opened with: session -list | picker"
+  },
+  "cmd.session.listPlain.hint": {
+    "ja": "session -list — BMXt プロンプトから実行（プレーン一覧）",
+    "en": "session -list — run from the BMXt prompt (plain list)"
+  },
   "cmd.session.listUi.detail": {
     "ja": "BMXt ターミナルペインのプロンプトから実行してください。",
     "en": "Run it from the prompt in a BMXt terminal pane."
@@ -202,14 +226,6 @@
   "cmd.session.listUi.title": {
     "ja": "`session -list` は BMXt ウィンドウ UI で処理されます。",
     "en": "`session -list` is handled in the BMXt window UI."
-  },
-  "cmd.session.listPicker.title": {
-    "ja": "Session list picker は BMXt プロンプトから開きます: session -list --picker",
-    "en": "Session list picker is opened from the BMXt prompt with: session -list --picker"
-  },
-  "cmd.session.listPlain.hint": {
-    "ja": "session -list — BMXt プロンプトから実行（プレーン一覧）",
-    "en": "session -list — run from the BMXt prompt (plain list)"
   },
   "cmd.session.runHint": {
     "ja": "第一コマンドのみ実行するとこの案内を表示し、Tab 補完用にプロンプトを `session ` に戻します。",
@@ -292,8 +308,8 @@
     "en": "setting -list — run from the BMXt prompt"
   },
   "cmd.setting.listPicker.title": {
-    "ja": "Setting picker は BMXt プロンプトから開きます: setting -list --picker",
-    "en": "Setting picker is opened from the BMXt prompt with: setting -list --picker"
+    "ja": "Setting picker はパイプで開きます: setting -list | picker",
+    "en": "Setting picker is opened with: setting -list | picker"
   },
   "cmd.setting.listPlain.hint": {
     "ja": "setting -list — BMXt プロンプトから実行（プレーン一覧）",
@@ -306,6 +322,54 @@
   "cmd.setting.usage.line2": {
     "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
     "en": "       setting -exit -list — close settings picker in this BMXt pane"
+  },
+  "cmd.snapshot.error.internal": {
+    "ja": "error: 不明な snapshot オプション (internal): {option}",
+    "en": "error: unknown snapshot option (internal): {option}"
+  },
+  "cmd.snapshot.error.unknownOption": {
+    "ja": "error: 不明な snapshot オプション: {option}",
+    "en": "error: unknown snapshot option: {option}"
+  },
+  "cmd.snapshot.migrate.done": {
+    "ja": "snapshot: 拡張機能内の {count} 件を外部ディレクトリへ移行しました",
+    "en": "snapshot: migrated {count} file(s) from extension storage to the external directory"
+  },
+  "cmd.snapshot.migrate.failed": {
+    "ja": "snapshot: 移行に失敗しました — {message}",
+    "en": "snapshot: migration failed — {message}"
+  },
+  "cmd.snapshot.migrate.vaultDone": {
+    "ja": "snapshot: 拡張機能内の {count} 件を Obsidian Vault へ移行しました",
+    "en": "snapshot: migrated {count} file(s) from extension storage to the Obsidian vault"
+  },
+  "cmd.snapshot.save.done": {
+    "ja": "snapshot saved: {path} — {title}",
+    "en": "snapshot saved: {path} — {title}"
+  },
+  "cmd.snapshot.save.failed": {
+    "ja": "snapshot save failed: {message}",
+    "en": "snapshot save failed: {message}"
+  },
+  "cmd.snapshot.save.notHttp": {
+    "ja": "snapshot save failed: http(s) ページではありません ({url})。tabs ピッカーで Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
+    "en": "snapshot save failed: not an http(s) page ({url}). Highlight a web page in the tabs picker or use snapshot -save <tabId>."
+  },
+  "cmd.snapshot.save.reloadAdvice": {
+    "ja": "ヒント: 対象タブを再読み込みしてから再試行してください（拡張機能のコンテンツスクリプトをページに適用するため）。",
+    "en": "Hint: reload the target tab and try again so the extension can inject its content script on that page."
+  },
+  "cmd.snapshot.save.title": {
+    "ja": "snapshot -save は BMXt プロンプトから実行してください（アクティブタブまたは tabId を保存）。",
+    "en": "Run snapshot -save from the BMXt prompt (saves the active tab or optional tabId)."
+  },
+  "cmd.snapshot.usage.line1": {
+    "ja": "usage: snapshot -save [<tabId>]   — ページを Markdown スナップショットとして保存",
+    "en": "usage: snapshot -save [<tabId>]   — save page as a Markdown snapshot"
+  },
+  "cmd.snapshot.usage.line2": {
+    "ja": "       保存先は setting の snapshot 保存先（設定と同梱 / Obsidian Vault）に従います。",
+    "en": "       Storage follows setting snapshot destination (bundled with settings / Obsidian vault)."
   },
   "cmd.tabs.error.exitListUsage": {
     "ja": "error: usage: tabs -exit -list",
@@ -344,12 +408,12 @@
     "en": "tabs -list — list windows, groups, and tabs with IDs in the terminal"
   },
   "cmd.tabs.listPicker.title": {
-    "ja": "Tab picker は BMXt プロンプトから開きます: tabs -list --picker（`-u` で URL 表示）",
-    "en": "Tab picker is opened from the BMXt prompt with: tabs -list --picker (optional -u for URLs)"
+    "ja": "Tab picker はパイプで開きます: tabs -list | picker（`picker -u` で URL 表示）",
+    "en": "Tab picker is opened with: tabs -list | picker (optional `picker -u` for URLs)"
   },
   "cmd.tabs.runHint": {
-    "ja": "実行例: tabs -list / tabs -list -u / tabs -list --picker · tabs -exit -list · tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
-    "en": "Run: tabs -list / tabs -list -u / tabs -list --picker. tabs -exit -list. tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl. tabs -moveurl <url>."
+    "ja": "実行例: tabs -list / tabs -list -u / tabs -list | picker · tabs -exit -list · tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
+    "en": "Run: tabs -list / tabs -list -u / tabs -list | picker. tabs -exit -list. tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl. tabs -moveurl <url>."
   },
   "cmd.tabs.setting.pageActive": {
     "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
@@ -360,8 +424,8 @@
     "en": "tabs -setting is handled from the BMXt prompt with: tabs -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tabs -list [-u] [--picker]   — タブ列挙（`-u` は URL、`--picker` はピッカー UI）",
-    "en": "usage: tabs -list [-u] [--picker]   — list tabs (-u: URLs; --picker: interactive UI)"
+    "ja": "usage: tabs -list [-u]   — タブ列挙（`-u` は URL）。ピッカーは `tabs -list | picker`",
+    "en": "usage: tabs -list [-u]   — list tabs (-u: URLs). Picker: `tabs -list | picker`"
   },
   "cmd.tabs.usage.line2": {
     "ja": "       tabs -exit -list — この BMXt ペインのタブピッカーを閉じる",
@@ -426,53 +490,5 @@
   "cmd.translate.usage.line3": {
     "ja": "       translate -setting --ja-en | --en-ja  — 翻訳ペアを設定（保存）",
     "en": "       translate -setting --ja-en | --en-ja  — set translation pair (saved)"
-  },
-  "cmd.snapshot.error.internal": {
-    "ja": "error: 不明な snapshot オプション (internal): {option}",
-    "en": "error: unknown snapshot option (internal): {option}"
-  },
-  "cmd.snapshot.error.unknownOption": {
-    "ja": "error: 不明な snapshot オプション: {option}",
-    "en": "error: unknown snapshot option: {option}"
-  },
-  "cmd.snapshot.migrate.done": {
-    "ja": "snapshot: 拡張機能内の {count} 件を外部ディレクトリへ移行しました",
-    "en": "snapshot: migrated {count} file(s) from extension storage to the external directory"
-  },
-  "cmd.snapshot.migrate.vaultDone": {
-    "ja": "snapshot: 拡張機能内の {count} 件を Obsidian Vault へ移行しました",
-    "en": "snapshot: migrated {count} file(s) from extension storage to the Obsidian vault"
-  },
-  "cmd.snapshot.migrate.failed": {
-    "ja": "snapshot: 移行に失敗しました — {message}",
-    "en": "snapshot: migration failed — {message}"
-  },
-  "cmd.snapshot.save.done": {
-    "ja": "snapshot saved: {path} — {title}",
-    "en": "snapshot saved: {path} — {title}"
-  },
-  "cmd.snapshot.save.failed": {
-    "ja": "snapshot save failed: {message}",
-    "en": "snapshot save failed: {message}"
-  },
-  "cmd.snapshot.save.reloadAdvice": {
-    "ja": "ヒント: 対象タブを再読み込みしてから再試行してください（拡張機能のコンテンツスクリプトをページに適用するため）。",
-    "en": "Hint: reload the target tab and try again so the extension can inject its content script on that page."
-  },
-  "cmd.snapshot.save.notHttp": {
-    "ja": "snapshot save failed: http(s) ページではありません ({url})。tabs ピッカーで Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
-    "en": "snapshot save failed: not an http(s) page ({url}). Highlight a web page in the tabs picker or use snapshot -save <tabId>."
-  },
-  "cmd.snapshot.save.title": {
-    "ja": "snapshot -save は BMXt プロンプトから実行してください（アクティブタブまたは tabId を保存）。",
-    "en": "Run snapshot -save from the BMXt prompt (saves the active tab or optional tabId)."
-  },
-  "cmd.snapshot.usage.line1": {
-    "ja": "usage: snapshot -save [<tabId>]   — ページを Markdown スナップショットとして保存",
-    "en": "usage: snapshot -save [<tabId>]   — save page as a Markdown snapshot"
-  },
-  "cmd.snapshot.usage.line2": {
-    "ja": "       保存先は setting の snapshot 保存先（設定と同梱 / Obsidian Vault）に従います。",
-    "en": "       Storage follows setting snapshot destination (bundled with settings / Obsidian vault)."
   }
 }

@@ -19,11 +19,11 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [--picker] [<pattern>] | dom -exit -list | dom -setting -page-active",
+      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--normal", "--with", "--html", "--react", "--tag", "--picker"],
+          "trailingTokens": ["--normal", "--with", "--html", "--react", "--tag"],
           "tail": "rest"
         },
         {
@@ -49,11 +49,11 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--picker] [<pattern>] | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot", "--picker"],
+          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot"],
           "tail": "rest"
         },
         {
@@ -81,11 +81,11 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u] [--picker] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
+      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["-u", "--picker"],
+          "trailingTokens": ["-u"],
           "tail": "none"
         },
         {
@@ -156,7 +156,7 @@
       "module": "session",
       "canonicalName": "session",
       "aliases": [],
-      "usagePrimary": "session -new [name] | session -list [--picker] | session -switch [name] | session -next | session -prev | session -setting-name [name]",
+      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]",
       "subcommands": [
         {
           "head": "-new",
@@ -164,7 +164,6 @@
         },
         {
           "head": "-list",
-          "trailingTokens": ["--picker"],
           "tail": "none"
         },
         {
@@ -198,14 +197,20 @@
       ]
     },
     {
+      "module": "picker",
+      "canonicalName": "picker",
+      "aliases": [],
+      "usagePrimary": "picker",
+      "subcommands": []
+    },
+    {
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list [--picker] | setting -exit -list",
+      "usagePrimary": "setting -list | setting -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--picker"],
           "tail": "none"
         },
         {

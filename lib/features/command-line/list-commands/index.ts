@@ -4,8 +4,7 @@ export {
   formatPlainLinesForCommand,
   getListCommandById,
   loadListCommandEntry,
-  matchPlainListCommand,
-  segmentUsesListPicker
+  matchPlainListCommand
 } from "./registry.ts"
 export type {
   ListCommandEntry,

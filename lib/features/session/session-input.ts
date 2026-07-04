@@ -1,9 +1,6 @@
 /** BMXt prompt parsing for `session` subcommands. */
 
-export {
-  parseSessionListLine,
-  parseSessionListPickerLine
-} from "./session-list-parse.ts"
+export { parseSessionListLine } from "./session-list-parse.ts"
 
 const SESSION_SWITCH_BARE_RE = /^\s*session\s+-switch\s*$/i
 const SESSION_SWITCH_WITH_RE = /^\s*session\s+-switch\s+(.+)$/i

@@ -1,6 +1,6 @@
 /** EN: Prompt parsing for `setting -list` / `setting -exit -list`. */
 
-export { parseSettingListLine, parseSettingListPickerLine } from "./setting-list-parse.ts"
+export { parseSettingListLine } from "./setting-list-parse.ts"
 
 const SETTING_INCOMPLETE_RE = /^\s*setting\s*$/i
 const SETTING_EXIT_LIST_RE = /^\s*setting\s+-exit\s+-list\s*$/i

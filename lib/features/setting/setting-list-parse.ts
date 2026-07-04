@@ -1,8 +1,6 @@
-/** EN: Parse `setting -list [--picker]`. */
+/** EN: Parse `setting -list`. */
 
-export type SettingListLineOptions = {
-  picker: boolean
-}
+export type SettingListLineOptions = Record<string, never>
 
 function normalizeToken(token: string): string {
   return token.trim().toLowerCase()
@@ -10,7 +8,7 @@ function normalizeToken(token: string): string {
 
 export function parseSettingListLine(trimmed: string): SettingListLineOptions | null {
   const parts = trimmed.trim().split(/\s+/).filter((part) => part.length > 0)
-  if (parts.length < 2) {
+  if (parts.length !== 2) {
     return null
   }
   if (normalizeToken(parts[0]!) !== "setting") {
@@ -20,21 +18,5 @@ export function parseSettingListLine(trimmed: string): SettingListLineOptions | 
     return null
   }
 
-  let picker = false
-  for (let index = 2; index < parts.length; index += 1) {
-    const token = normalizeToken(parts[index]!)
-    if (token === "--picker") {
-      picker = true
-      continue
-    }
-    return null
-  }
-
-  return { picker }
-}
-
-/** EN: `setting -list --picker` — open settings picker UI. */
-export function parseSettingListPickerLine(trimmed: string): boolean {
-  const parsed = parseSettingListLine(trimmed)
-  return parsed !== null && parsed.picker
+  return {}
 }

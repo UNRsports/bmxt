@@ -22,7 +22,6 @@ export {
   matchesSearchListScopeFilter,
   normalizeSearchListDispatchLine,
   parseSearchExitListLine,
-  parseSearchListPickerLine,
   searchListDefaultEffectScopes,
   searchListEffectScopesForToken,
   searchListPatternFromLine,
