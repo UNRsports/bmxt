@@ -351,7 +351,7 @@ export function useTabPickerPlainExtensions({
         const onColorStrip =
           groupMetaColorStripRef.current?.contains(ae ?? null) ?? false
         if (!onColorStrip && ae !== groupMetaTitleRef.current) {
-          groupMetaTitleRef.current?.focus()
+          groupMetaTitleRef.current?.focus({ preventScroll: true })
         }
         return true
       }
@@ -665,31 +665,31 @@ export function useTabPickerPlainExtensions({
         stop()
         setNewTabUrlWindowId(null)
         setNewTabUrl("")
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return true
       }
       if (editPanel?.kind === "groupRename") {
         stop()
         backFromGroupRename()
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return true
       }
       if (actionMenuPanel !== null) {
         stop()
         closeActionMenu()
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return true
       }
       if (editPanel !== null) {
         stop()
         closeEdit()
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return true
       }
       if (groupNewPhase === "meta") {
         stop()
         setGroupNewPhase("tabs")
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return true
       }
       if (markedCount > 0) {

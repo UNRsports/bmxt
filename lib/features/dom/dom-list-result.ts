@@ -14,8 +14,20 @@ export function domCaptureToListResult(
   }
 ): ListResult {
   const records: ListRecord[] = []
+  const headerLines = capture.lines.slice(0, capture.headerLineCount)
   const dataLines = capture.lines.slice(capture.headerLineCount)
   const dataPaths = capture.jumpPaths.slice(capture.headerLineCount)
+
+  for (const line of headerLines) {
+    if (line.trim().length === 0) {
+      continue
+    }
+    records.push({
+      kind: "dom.notice",
+      fields: { notice: "header" },
+      display: { label: line }
+    })
+  }
 
   for (let index = 0; index < dataLines.length; index += 1) {
     const line = dataLines[index]!

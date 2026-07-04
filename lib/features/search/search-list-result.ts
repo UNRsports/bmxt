@@ -6,14 +6,53 @@ import {
   searchPickerSummaryLine
 } from "../side-picker/model/picker-entry.ts"
 
+function noticeRecordsFromAdapterLines(
+  adapterLines: readonly string[],
+  pattern: string
+): ListRecord[] {
+  const records: ListRecord[] = []
+  let index = 0
+  for (const line of adapterLines) {
+    if (line.trim().length === 0) {
+      continue
+    }
+    index += 1
+    records.push({
+      kind: "search.hit",
+      fields: {
+        index,
+        source: "notice",
+        title: line,
+        url: "",
+        tabId: null,
+        hitCount: 0,
+        pattern
+      },
+      display: { label: line }
+    })
+  }
+  return records
+}
+
 export function buildSearchListResult(
   entries: readonly PickerEntry[],
-  pattern: string
+  pattern: string,
+  adapterLines: readonly string[] = []
 ): ListResult {
+  if (entries.length === 0) {
+    return {
+      schema: LIST_OUTPUT_SCHEMA,
+      command: "search",
+      subcommand: "-list",
+      records: noticeRecordsFromAdapterLines(adapterLines, pattern)
+    }
+  }
+
   const records: ListRecord[] = entries.map((entry, index) => {
     const sources = pickerEntrySearchSources(entry)
     const sourceLabel = sources.length > 0 ? sources.join(",") : entry.source
     const hitCount = entry.pageMatches?.length ?? 0
+    const summary = searchPickerSummaryLine(entry)
     return {
       kind: "search.hit",
       fields: {
@@ -26,7 +65,8 @@ export function buildSearchListResult(
         pattern
       },
       display: {
-        label: searchPickerSummaryLine(entry)
+        label: summary,
+        detail: entry.url
       },
       pipeLine: [
         "search.hit",

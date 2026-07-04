@@ -281,7 +281,7 @@ export function useTabPickerKeyboard({
           e.preventDefault()
           setNewTabUrlWindowId(null)
           setNewTabUrl("")
-          requestAnimationFrame(() => inputRef.current?.focus())
+          requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
           return
         }
         if (e.key === "Enter") {
@@ -298,7 +298,7 @@ export function useTabPickerKeyboard({
         if (e.key === "Escape") {
           e.preventDefault()
           closeEdit()
-          requestAnimationFrame(() => inputRef.current?.focus())
+          requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
           return
         }
         if (e.key === "Enter") {
@@ -312,7 +312,7 @@ export function useTabPickerKeyboard({
         if (e.key === "Escape") {
           e.preventDefault()
           backFromGroupRename()
-          requestAnimationFrame(() => groupMetaTitleRef.current?.focus())
+          requestAnimationFrame(() => groupMetaTitleRef.current?.focus({ preventScroll: true }))
           return
         }
         if (e.key === "Enter") {
@@ -325,7 +325,7 @@ export function useTabPickerKeyboard({
       if (e.key === "Escape") {
         e.preventDefault()
         setGroupNewPhase("tabs")
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return
       }
       if (e.key === "Enter") {
@@ -335,7 +335,7 @@ export function useTabPickerKeyboard({
       }
       if (e.key === "Tab") {
         e.preventDefault()
-        requestAnimationFrame(() => groupMetaColorStripRef.current?.focus())
+        requestAnimationFrame(() => groupMetaColorStripRef.current?.focus({ preventScroll: true }))
       }
     },
     [
@@ -363,7 +363,7 @@ export function useTabPickerKeyboard({
       if (e.key === "Escape") {
         e.preventDefault()
         setGroupNewPhase("tabs")
-        requestAnimationFrame(() => inputRef.current?.focus())
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
         return
       }
       if (e.key === "Enter") {
@@ -385,7 +385,7 @@ export function useTabPickerKeyboard({
       }
       if (e.key === "Tab") {
         e.preventDefault()
-        requestAnimationFrame(() => groupMetaTitleRef.current?.focus())
+        requestAnimationFrame(() => groupMetaTitleRef.current?.focus({ preventScroll: true }))
       }
     },
     [

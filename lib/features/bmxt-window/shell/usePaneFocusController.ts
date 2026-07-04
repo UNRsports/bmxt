@@ -133,11 +133,11 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       requestAnimationFrame(() => {
         const input = pickerInputRefForSlot(slot).current
         if (input) {
-          input.focus()
+          input.focus({ preventScroll: true })
           return
         }
         requestAnimationFrame(() => {
-          pickerInputRefForSlot(slot).current?.focus()
+          pickerInputRefForSlot(slot).current?.focus({ preventScroll: true })
         })
       })
     },

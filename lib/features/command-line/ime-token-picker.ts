@@ -11,14 +11,12 @@ import {
 import { resolveCanonical } from "../bmxt-core/registry"
 import {
   isSearchListAwaitingScopeOrPattern,
-  matchesSearchListScopeFilter,
   shouldShowSearchListPatternPlaceholder
 } from "../search/search-list-picker-input"
 import {
   isDomListAwaitingMoreOptionsAtEol,
   isEditingDomListOptionToken,
   listDomListRemainingOptionCandidates,
-  matchesDomListOptionFilter,
   shouldShowDomListPatternPlaceholder
 } from "../dom/dom-list-picker-parse.ts"
 import { domListLineHasFlavor } from "../dom/parse-dom-list-args.ts"
@@ -29,6 +27,7 @@ import { DOM_PAGE_ACTIVE_MODE_TOKENS } from "../dom/page-active-setting"
 import {
   matchCandidates,
   pickThirdTokenCandidates,
+  resolveOptionTokenFilterModes,
   type CandidateMatchMode
 } from "./ime-token-match"
 import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
@@ -75,18 +74,16 @@ function resolveDomListOptionTokenPicker(
   if (allRemaining.length === 0) {
     return null
   }
-  const useFullListForMatch =
-    matchMode === "contains" ||
-    matchesDomListOptionFilter(prefix)
-  let filterMode: CandidateMatchMode = matchMode
-  if (useFullListForMatch && !prefix.startsWith("--")) {
-    filterMode = "contains"
-  }
+  const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+    allRemaining,
+    prefix,
+    matchMode
+  )
   const cands = pickThirdTokenCandidates(
     allRemaining,
     prefix,
     matchMode,
-    useFullListForMatch,
+    useFullCandidateList,
     filterMode
   )
   if (cands.length === 0) {
@@ -288,19 +285,16 @@ function resolveImeTokenPickerInSegment(
     if (allThird.length === 0) {
       return null
     }
-    const isSearchListScopeTier = canonical === "search" && second === "-list"
-    const useFullListForMatch =
-      matchMode === "contains" ||
-      (isSearchListScopeTier && matchesSearchListScopeFilter(prefix))
-    let filterMode: CandidateMatchMode = matchMode
-    if (isSearchListScopeTier && useFullListForMatch && !prefix.startsWith("--")) {
-      filterMode = "contains"
-    }
+    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+      allThird,
+      prefix,
+      matchMode
+    )
     const cands = pickThirdTokenCandidates(
       allThird,
       prefix,
       matchMode,
-      useFullListForMatch,
+      useFullCandidateList,
       filterMode
     )
     if (cands.length === 0) {

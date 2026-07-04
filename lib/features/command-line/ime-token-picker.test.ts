@@ -1,6 +1,11 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { matchCandidates, pickThirdTokenCandidates } from "./ime-token-match.ts"
+import {
+  matchCandidates,
+  matchesOptionTokenFilter,
+  pickThirdTokenCandidates,
+  resolveOptionTokenFilterModes
+} from "./ime-token-match.ts"
 
 const SETTING_APPEARANCE_FLAGS = [
   "--fg",
@@ -13,6 +18,15 @@ const SETTING_APPEARANCE_FLAGS = [
 ] as const
 
 const TRANSLATE_SETTING_PAIRS = ["--ja-en", "--en-ja"] as const
+
+const SEARCH_LIST_OPTIONS = [
+  "--all",
+  "--history",
+  "--bookmark",
+  "--page",
+  "--snapshot",
+  "--picker"
+] as const
 
 describe("pickThirdTokenCandidates", () => {
   it("filters with contains while the picker menu is open", () => {
@@ -39,6 +53,52 @@ describe("pickThirdTokenCandidates", () => {
       []
     )
   })
+
+  it("keeps --picker while typing pi", () => {
+    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+      SEARCH_LIST_OPTIONS,
+      "pi",
+      "prefix"
+    )
+    assert.equal(useFullCandidateList, true)
+    assert.equal(filterMode, "contains")
+    assert.deepEqual(
+      pickThirdTokenCandidates(
+        SEARCH_LIST_OPTIONS,
+        "pi",
+        "prefix",
+        useFullCandidateList,
+        filterMode
+      ),
+      ["--picker"]
+    )
+  })
+
+  it("narrows p to --page and --picker", () => {
+    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+      SEARCH_LIST_OPTIONS,
+      "p",
+      "prefix"
+    )
+    assert.deepEqual(
+      pickThirdTokenCandidates(
+        SEARCH_LIST_OPTIONS,
+        "p",
+        "prefix",
+        useFullCandidateList,
+        filterMode
+      ),
+      ["--page", "--picker"]
+    )
+  })
+})
+
+describe("matchesOptionTokenFilter", () => {
+  it("matches option bodies and dashed prefixes", () => {
+    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "pi"), true)
+    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "--pi"), true)
+    assert.equal(matchesOptionTokenFilter(SEARCH_LIST_OPTIONS, "zz"), false)
+  })
 })
 
 describe("matchCandidates", () => {
@@ -48,4 +108,9 @@ describe("matchCandidates", () => {
     ])
     assert.deepEqual(matchCandidates(["-language", "-appearance"], "-l", "prefix"), ["-language"])
   })
+
+  it("matches option bodies in prefix mode", () => {
+    assert.deepEqual(matchCandidates(["--picker", "--page"], "pi", "prefix"), ["--picker"])
+  })
 })
+

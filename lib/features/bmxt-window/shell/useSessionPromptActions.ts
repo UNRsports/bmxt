@@ -66,7 +66,7 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       queueMicrotask(() => {
         const ta = options.imeRef.current
         if (ta) {
-          ta.focus()
+          ta.focus({ preventScroll: true })
           ta.setSelectionRange(0, name.length)
         }
       })

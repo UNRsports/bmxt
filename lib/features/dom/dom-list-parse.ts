@@ -97,3 +97,18 @@ export function parseDomListPickerLine(trimmed: string): DomListLineOptions | nu
   }
   return parsed
 }
+
+/**
+ * EN: Dispatch line for picker capture — `--picker` removed so `runDispatch` emits `dom_list`.
+ * JA: picker 用 dispatch 行。`--picker` を除き `runDispatch` が `dom_list` effect を出すようにする。
+ */
+export function domListPickerDispatchLine(trimmed: string): string | null {
+  if (parseDomListPickerLine(trimmed) === null) {
+    return null
+  }
+  return trimmed
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.toLowerCase() !== "--picker")
+    .join(" ")
+}

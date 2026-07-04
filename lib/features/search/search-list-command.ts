@@ -11,7 +11,8 @@ export type SearchListMatch = {
 
 function stubSearchDispatchCtx(
   deps: CommandDispatchDeps | undefined,
-  locale: UiLocale
+  locale: UiLocale,
+  onProgress?: (message: string) => Promise<void>
 ): DispatchChromeContext {
   return {
     enqueueSessionPatch: () => {},
@@ -21,7 +22,8 @@ function stubSearchDispatchCtx(
     focusInfo: async () => [],
     resolveTabArg: async () => undefined,
     commandSessionId: deps?.sessionId ?? "",
-    uiLocale: locale
+    uiLocale: locale,
+    onSearchPageProgress: onProgress
   }
 }
 
@@ -40,11 +42,19 @@ export const searchListCommand: ListCommandEntry<SearchListMatch> = {
     return parseSearchListLine(segment)?.picker === true
   },
   async fetchListResult(match, ctx) {
-    const dispatchCtx = ctx.dispatchCtx ?? stubSearchDispatchCtx(ctx.deps, ctx.locale)
+    const onProgress =
+      ctx.deps !== undefined
+        ? async (message: string): Promise<void> => {
+            await ctx.deps!.appendLogLines([message], "stdout")
+          }
+        : undefined
+    const dispatchCtx =
+      ctx.dispatchCtx ?? stubSearchDispatchCtx(ctx.deps, ctx.locale, onProgress)
     return fetchSearchListResult({
       dispatchLine: match.dispatchLine,
       locale: ctx.locale,
-      ctx: dispatchCtx
+      ctx: dispatchCtx,
+      onProgress
     })
   },
   formatPlainLines(result, locale) {

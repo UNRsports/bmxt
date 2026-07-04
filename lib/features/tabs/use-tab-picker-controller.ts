@@ -616,7 +616,7 @@ export function useTabPickerController({
 
   useLayoutEffect(() => {
     if (isHostPaneFocused) {
-      inputRef.current?.focus()
+      inputRef.current?.focus({ preventScroll: true })
     }
   }, [isHostPaneFocused])
 

@@ -448,13 +448,14 @@ async function runSearchListSegment(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome | null> {
-  if (parseSearchListPickerLine(segment) === null) {
+  const dispatchLine = parseSearchListPickerLine(segment)
+  if (dispatchLine === null) {
     return null
   }
 
   const wrap = wrapCompoundDeps(deps)
   wrap.deps.setSubCmdPicker(null)
-  await wrap.deps.runSearchListSearch(segment, segment)
+  await wrap.deps.runSearchListSearch(segment, dispatchLine)
   const captured = drainCapturedLines(wrap)
 
   if (wrap.deps.searchListPickerRef.current !== null) {
@@ -487,7 +488,8 @@ async function runDomListSegment(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome | null> {
-  if (parseDomListPickerLine(segment) === null) {
+  const dispatchLine = parseDomListPickerLine(segment)
+  if (dispatchLine === null) {
     return null
   }
 
@@ -495,7 +497,7 @@ async function runDomListSegment(
   deps.setSubCmdPicker(null)
   const wrap = wrapCompoundDeps(deps)
   resetCapturedLines(wrap)
-  await wrap.deps.runDomListAndShow(segment, segment, false)
+  await wrap.deps.runDomListAndShow(dispatchLine, segment, false)
   const captured = drainCapturedLines(wrap)
 
   if (wrap.deps.domListPickerRef.current !== null) {

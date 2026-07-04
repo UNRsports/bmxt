@@ -12,6 +12,12 @@ const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page",
 
 const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page", "--snapshot"] as const
 
+/** EN: All fixed third tokens after `search -list` (scopes + `--picker`). */
+export const SEARCH_LIST_OPTION_TOKENS = [
+  ...SEARCH_LIST_SCOPE_ORDER,
+  "--picker"
+] as const
+
 const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page", "--snapshot"] as const
 
 function searchListParts(trimmed: string): string[] {
@@ -62,14 +68,39 @@ export function normalizeSearchListDispatchLine(trimmed: string): string {
  * JA: 第三トークンがスコープ候補の絞り込み中か（`pa` や `--p` など）。
  */
 export function matchesSearchListScopeFilter(token: string): boolean {
+  return matchesSearchListOptionFilter(token, SEARCH_LIST_SCOPE_ORDER)
+}
+
+/**
+ * EN: Third token still narrowing any `search -list` option (`pi` → `--picker`, `pa` → `--page`).
+ * JA: `search -list` の任意オプション絞り込み中か（`--picker` 含む）。
+ */
+export function matchesSearchListOptionFilter(
+  token: string,
+  candidates: readonly string[] = SEARCH_LIST_OPTION_TOKENS
+): boolean {
   const t = token.trim().toLowerCase()
   if (!t) {
     return false
   }
-  if (t.startsWith("--")) {
-    return SEARCH_LIST_SCOPE_ORDER.some((s) => s.startsWith(t))
+  const tBody = t.replace(/^-+/, "")
+  for (const candidate of candidates) {
+    const c = candidate.toLowerCase()
+    const cBody = c.replace(/^-+/, "")
+    if (t.startsWith("-")) {
+      if (c.startsWith(t) || (tBody.length > 0 && cBody.startsWith(tBody))) {
+        return true
+      }
+      continue
+    }
+    if (cBody.startsWith(tBody)) {
+      return true
+    }
+    if (tBody.length >= 2 && (c.includes(t) || cBody.includes(tBody))) {
+      return true
+    }
   }
-  return SEARCH_LIST_SCOPE_ORDER.some((s) => s.includes(t))
+  return false
 }
 
 /**
@@ -123,10 +154,13 @@ export function isSearchListReadyToRun(trimmed: string, line?: string): boolean 
   if (isSearchListScopeToken(third)) {
     return true
   }
+  if (third === "--picker") {
+    return true
+  }
   if (third.startsWith("--")) {
     return false
   }
-  if (matchesSearchListScopeFilter(parts[2]!)) {
+  if (matchesSearchListOptionFilter(parts[2]!)) {
     return false
   }
   return true
@@ -145,8 +179,8 @@ export function searchListPatternFromLine(trimmed: string): string {
 }
 
 /**
- * EN: Cursor still editing the optional scope token — show scope menu, not pattern placeholder.
- * JA: 任意スコープトークン入力中 — スコープメニューを表示し、パターン案内は出さない。
+ * EN: Cursor still editing a fixed option token — show option menu, not pattern placeholder.
+ * JA: 固定オプショントークン入力中 — オプションメニューを表示し、パターン案内は出さない。
  */
 export function isEditingSearchListScopeToken(line: string, cursor: number): boolean {
   const trimmed = line.trim()
@@ -158,10 +192,12 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
     return false
   }
   const third = parts[2]!
-  if (!matchesSearchListScopeFilter(third) && !third.startsWith("--")) {
+  if (!matchesSearchListOptionFilter(third) && !third.startsWith("--")) {
     return false
   }
-  if (!isSearchListScopeToken(third)) {
+  const isCompleteOption =
+    isSearchListScopeToken(third) || third.toLowerCase() === "--picker"
+  if (!isCompleteOption) {
     return true
   }
   const scopeStart = line.toLowerCase().indexOf(third.toLowerCase())
@@ -195,7 +231,10 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
   if (parts.length >= 3 && isSearchListScopeToken(parts[2]!)) {
     return searchListPatternFromLine(trimmed).length === 0
   }
-  if (parts.length >= 3 && matchesSearchListScopeFilter(parts[2]!)) {
+  if (parts.length >= 3 && parts[2]!.toLowerCase() === "--picker") {
+    return false
+  }
+  if (parts.length >= 3 && matchesSearchListOptionFilter(parts[2]!)) {
     return false
   }
   if (parts.length >= 3 && !parts[2]!.startsWith("--")) {

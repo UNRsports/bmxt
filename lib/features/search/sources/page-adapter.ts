@@ -34,7 +34,7 @@ export async function searchPageLines(
     if (p.phase === "tick" && !shouldEmitSearchPageProgress(p.tabIndex, p.tabTotal)) {
       return
     }
-    await onProgress(formatSearchPageProgress(progressLabel, p))
+    await onProgress(formatSearchPageProgress(progressLabel, p, uiLocale))
   }
   let activeTabId: number | undefined
   try {

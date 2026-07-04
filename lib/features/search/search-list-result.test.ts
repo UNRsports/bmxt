@@ -21,4 +21,15 @@ describe("buildSearchListResult", () => {
     assert.equal(result.records[0]!.fields.source, "history")
     assert.match(result.records[0]!.display?.label ?? "", /Example/)
   })
+
+  it("keeps adapter notice lines when there are no openable hits", () => {
+    const result = buildSearchListResult([], "privacy", [
+      "(no history matches — pattern is case-insensitive substring, or empty pattern for all)",
+      "(no bookmark matches — pattern is case-insensitive substring, or empty pattern for all)"
+    ])
+    assert.equal(result.records.length, 2)
+    assert.equal(result.records[0]!.fields.source, "notice")
+    assert.match(result.records[0]!.display?.label ?? "", /no history matches/)
+  })
 })
+

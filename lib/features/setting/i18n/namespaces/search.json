@@ -150,5 +150,49 @@
   "search.list.empty": {
     "ja": "（検索結果なし）",
     "en": "(no search hits)"
+  },
+  "search.list.progress.start": {
+    "ja": "search — 検索を開始しています…",
+    "en": "search — starting…"
+  },
+  "search.list.progress.scope": {
+    "ja": "search — {scope} を検索中…",
+    "en": "search — searching {scope}…"
+  },
+  "search.list.progress.scopeDone": {
+    "ja": "search — {scope} 完了",
+    "en": "search — {scope} done"
+  },
+  "search.list.scope.history": {
+    "ja": "履歴",
+    "en": "history"
+  },
+  "search.list.scope.bookmark": {
+    "ja": "ブックマーク",
+    "en": "bookmarks"
+  },
+  "search.list.scope.page": {
+    "ja": "ページ本文",
+    "en": "page text"
+  },
+  "search.list.scope.snapshot": {
+    "ja": "スナップショット",
+    "en": "snapshots"
+  },
+  "search.list.error.failed": {
+    "ja": "error: 検索に失敗しました: {message}",
+    "en": "error: search failed: {message}"
+  },
+  "search.pageProgress.start": {
+    "ja": "{label} — 開いている http(s) タブ {tabTotal} 件の本文を走査中…",
+    "en": "{label} — scanning visible text in {tabTotal} open http(s) tab(s)…"
+  },
+  "search.pageProgress.tick": {
+    "ja": "{label} — {tabIndex}/{tabTotal} タブ確認済み（読取 {scanned}・スキップ {skipped}）",
+    "en": "{label} — {tabIndex}/{tabTotal} tab(s) checked ({scanned} read, {skipped} skipped)"
+  },
+  "search.pageProgress.done": {
+    "ja": "{label} — 完了（読取 {scanned}・スキップ {skipped}・確認 {tabTotal}）",
+    "en": "{label} — finished ({scanned} read, {skipped} skipped, {tabTotal} checked)"
   }
 }

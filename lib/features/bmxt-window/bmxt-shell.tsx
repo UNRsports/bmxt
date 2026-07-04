@@ -651,7 +651,7 @@ export function BmxtShell({
   })
 
   const focusPrompt = useCallback(() => {
-    requestAnimationFrame(() => imeRef.current?.focus())
+    requestAnimationFrame(() => imeRef.current?.focus({ preventScroll: true }))
   }, [])
 
   const {

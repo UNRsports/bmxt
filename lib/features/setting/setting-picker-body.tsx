@@ -225,7 +225,7 @@ export function SettingPickerBody({
 
   useLayoutEffect(() => {
     if (keyboardActive) {
-      inputRef.current?.focus()
+      inputRef.current?.focus({ preventScroll: true })
     } else {
       inputRef.current?.blur()
     }
@@ -239,7 +239,7 @@ export function SettingPickerBody({
     if (!el) {
       return
     }
-    el.focus()
+    el.focus({ preventScroll: true })
     const end = el.value.length
     el.setSelectionRange(end, end)
   }, [keyboardActive, state.editing, state.view])

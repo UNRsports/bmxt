@@ -4,9 +4,11 @@ import {
   isSearchListAllScopeToken,
   isSearchListReadyToRun,
   isSearchListScopeToken,
+  matchesSearchListOptionFilter,
   normalizeSearchListDispatchLine,
   searchListEffectScopesForToken,
-  searchListPatternFromLine
+  searchListPatternFromLine,
+  shouldShowSearchListPatternPlaceholder
 } from "./search-list-picker-parse.ts"
 
 describe("isSearchListReadyToRun", () => {
@@ -72,5 +74,32 @@ describe("isSearchListScopeToken", () => {
   it("includes --all", () => {
     assert.equal(isSearchListScopeToken("--all"), true)
     assert.equal(isSearchListAllScopeToken("--ALL"), true)
+  })
+})
+
+describe("matchesSearchListOptionFilter", () => {
+  it("includes --picker partials", () => {
+    assert.equal(matchesSearchListOptionFilter("p"), true)
+    assert.equal(matchesSearchListOptionFilter("pi"), true)
+    assert.equal(matchesSearchListOptionFilter("--pi"), true)
+    assert.equal(matchesSearchListOptionFilter("zz"), false)
+  })
+})
+
+describe("shouldShowSearchListPatternPlaceholder", () => {
+  it("suppresses pattern placeholder while typing --picker", () => {
+    assert.equal(shouldShowSearchListPatternPlaceholder("search -list pi", 14), false)
+    assert.equal(shouldShowSearchListPatternPlaceholder("search -list p", 13), false)
+  })
+
+  it("shows pattern placeholder for non-option text", () => {
+    assert.equal(shouldShowSearchListPatternPlaceholder("search -list github", 19), true)
+  })
+})
+
+describe("isSearchListReadyToRun option partials", () => {
+  it("blocks partial --picker and scopes", () => {
+    assert.equal(isSearchListReadyToRun("search -list pi"), false)
+    assert.equal(isSearchListReadyToRun("search -list --pick"), false)
   })
 })
