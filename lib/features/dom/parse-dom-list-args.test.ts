@@ -49,6 +49,15 @@ describe("parseDomListArgsFromTokens", () => {
       pattern: ""
     })
   })
+
+  it("ignores --picker so it is not treated as pattern", () => {
+    assert.deepEqual(parseDomListArgsFromTokens(["--with", "--html", "--picker"]), {
+      pickerMode: "with",
+      flavor: "--html",
+      showTag: false,
+      pattern: ""
+    })
+  })
 })
 
 describe("parseDomListCommandLine", () => {

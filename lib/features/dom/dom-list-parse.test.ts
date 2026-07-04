@@ -12,6 +12,16 @@ describe("parseDomListLine", () => {
       pattern: ""
     })
   })
+
+  it("defaults flavor and keeps --with when --picker is present", () => {
+    assert.deepEqual(parseDomListLine("dom -list --with --picker"), {
+      picker: true,
+      pickerMode: "with",
+      flavor: "--html",
+      showTag: false,
+      pattern: ""
+    })
+  })
 })
 
 describe("domListPickerDispatchLine", () => {
