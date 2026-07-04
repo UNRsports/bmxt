@@ -4,13 +4,21 @@ import {
   recordCommandHistory
 } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
-import { parseAndSegments } from "./parse-and-segments.ts"
+import { parseCompoundSegments } from "./parse-compound-segments.ts"
 import { parsePipeSegments } from "./parse-pipe-segments.ts"
+import { appendCompoundLogBlock } from "./append-compound-log.ts"
 import {
   formatParseErrorBlock,
   formatSegmentBlock,
   formatSkippedSegmentBlock
 } from "./format-compound-log.ts"
+import {
+  compoundShouldStop,
+  EXIT_MISUSE,
+  EXIT_SUCCESS,
+  shouldRunAfterOperator
+} from "./exit-status.ts"
+import { segmentFailure } from "./classify-outcome.ts"
 import { runSegment } from "./run-segment.ts"
 import { runPipeChain } from "../pipe/run-pipe-chain.ts"
 import type { CompoundRunResult } from "./types.ts"
@@ -20,13 +28,14 @@ export async function runCompoundLine(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<CompoundRunResult> {
-  const parsed = parseAndSegments(fullLine)
+  const parsed = parseCompoundSegments(fullLine)
   if (parsed.ok === false) {
-    await deps.appendLogLines(formatParseErrorBlock(fullLine, parsed.error, locale))
+    await appendCompoundLogBlock(deps, formatParseErrorBlock(fullLine, parsed.error, locale))
     return {
       inputLine: fullLine,
       segments: [],
-      stoppedAt: null
+      stoppedAt: null,
+      exitStatus: EXIT_MISUSE
     }
   }
 
@@ -35,24 +44,25 @@ export async function runCompoundLine(
   recordCommandHistory(deps)
   deps.setSubCmdPicker(null)
 
-  await deps.appendLogLines([`> ${fullLine}`])
+  await deps.appendLogLines([`> ${fullLine}`], "stdout")
 
-  let priorFailed = false
   const results: CompoundRunResult["segments"] = []
   let stoppedAt: number | null = null
+  let exitStatus = EXIT_SUCCESS
+  let priorExitStatus = EXIT_SUCCESS
 
   for (let index = 0; index < parsed.segments.length; index += 1) {
     const text = parsed.segments[index]!
-    if (priorFailed) {
-      await deps.appendLogLines(formatSkippedSegmentBlock(text, locale))
+    const operator = index === 0 ? null : parsed.operators[index - 1]!
+    const shouldRun =
+      operator === null ? true : shouldRunAfterOperator(operator, priorExitStatus)
+
+    if (!shouldRun) {
+      await appendCompoundLogBlock(deps, formatSkippedSegmentBlock(text, locale))
       results.push({
         index,
         text,
-        outcome: {
-          ok: false,
-          code: "cancelled",
-          lines: []
-        },
+        outcome: segmentFailure("cancelled", []),
         skipped: true
       })
       continue
@@ -60,19 +70,19 @@ export async function runCompoundLine(
 
     const pipeParsed = parsePipeSegments(text)
     if (pipeParsed.ok === false) {
-      await deps.appendLogLines(formatParseErrorBlock(text, pipeParsed.error, locale))
+      const outcome = segmentFailure("parse", [])
+      await appendCompoundLogBlock(deps, formatParseErrorBlock(text, pipeParsed.error, locale))
       results.push({
         index,
         text,
-        outcome: {
-          ok: false,
-          code: "parse",
-          lines: []
-        },
+        outcome,
         skipped: false
       })
-      priorFailed = true
-      stoppedAt = index
+      priorExitStatus = outcome.exitStatus
+      exitStatus = outcome.exitStatus
+      if (compoundShouldStop(outcome.exitStatus)) {
+        stoppedAt = index
+      }
       continue
     }
 
@@ -80,11 +90,12 @@ export async function runCompoundLine(
       pipeParsed.segments.length > 1
         ? await runPipeChain(pipeParsed.segments, deps, locale)
         : await runSegment(text, deps, locale)
-    await deps.appendLogLines(formatSegmentBlock(text, outcome, locale))
+    await appendCompoundLogBlock(deps, formatSegmentBlock(text, outcome, locale))
     results.push({ index, text, outcome, skipped: false })
+    priorExitStatus = outcome.exitStatus
+    exitStatus = outcome.exitStatus
 
-    if (!outcome.ok) {
-      priorFailed = true
+    if (compoundShouldStop(outcome.exitStatus)) {
       stoppedAt = index
     }
   }
@@ -94,6 +105,7 @@ export async function runCompoundLine(
   return {
     inputLine: fullLine,
     segments: results,
-    stoppedAt
+    stoppedAt,
+    exitStatus
   }
 }

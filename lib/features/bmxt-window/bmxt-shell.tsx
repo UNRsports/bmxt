@@ -149,7 +149,10 @@ type Props = {
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => void
   onSetSessionDisplayName: (sessionId: string, name: string) => void
-  appendLogLines: (newLines: string[]) => void | Promise<void>
+  appendLogLines: (
+    newLines: string[],
+    channel?: import("../command-line/command-output.ts").LogChannel
+  ) => void | Promise<void>
   sessionOrderLength: number
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void

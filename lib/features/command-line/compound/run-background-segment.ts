@@ -30,7 +30,7 @@ export async function runBackgroundSegment(
     deps.applyRunCmdPatches(response.patches)
     const lines = extractLogLinesFromPatches(response.patches, deps.sessionId)
     const classified = classifyOutcomeFromLines(lines)
-    if (!classified.ok) {
+    if (classified.ok === false) {
       return segmentFailure(classified.code, lines, classified.errorMessage)
     }
     return segmentSuccess(lines)

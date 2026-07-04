@@ -1,10 +1,12 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
+import { runCommand } from "../commands/run-command.ts"
 import { classifyCompoundEligibility } from "./classify-eligibility.ts"
-import { runBackgroundSegment } from "./run-background-segment.ts"
-import { tryRunUiSegment } from "./run-ui-segment.ts"
 import type { SegmentOutcome } from "./types.ts"
 
+/**
+ * EN: Run one compound/pipe segment via the CommandEntry registry (POSIX Profile P7).
+ */
 export async function runSegment(
   segment: string,
   deps: CommandDispatchDeps,
@@ -19,10 +21,5 @@ export async function runSegment(
     return eligibility.outcome
   }
 
-  const uiOutcome = await tryRunUiSegment(segment, deps, locale)
-  if (uiOutcome !== null) {
-    return uiOutcome
-  }
-
-  return runBackgroundSegment(segment, deps, locale)
+  return runCommand(segment, deps, locale)
 }

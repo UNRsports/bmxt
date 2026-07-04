@@ -2,15 +2,18 @@ import type { ListResult } from "../../list-output/types.ts"
 import type { CommandDispatchDeps } from "../../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../../setting/locale.ts"
 import { runBackgroundSegment } from "../../compound/run-background-segment.ts"
-import { segmentFailure, segmentSuccess } from "../../compound/classify-outcome.ts"
+import {
+  segmentFailure,
+  segmentSuccess,
+  withMergedLines
+} from "../../compound/classify-outcome.ts"
+import { isExitSuccess } from "../../compound/exit-status.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
+import { CLOSE_ACCEPTS_KINDS, isClosePipeConsumer } from "./close-match.ts"
+import type { PipeConsumerEntry } from "./types.ts"
 
-const CLOSE_PIPE_RE = /^\s*(close|c)\s*$/i
-
-export function isClosePipeConsumer(segment: string): boolean {
-  return CLOSE_PIPE_RE.test(segment.trim())
-}
+export { isClosePipeConsumer } from "./close-match.ts"
 
 function tabIdsFromListResult(listResult: ListResult): number[] {
   const ids: number[] = []
@@ -36,25 +39,22 @@ export async function runCloseFromTabsListResult(
     return segmentFailure("runtime", [tPipe("pipe.close.noTabs", locale)])
   }
 
-  const lines: string[] = []
+  const stdout: string[] = []
+  const stderr: string[] = []
   for (const tabId of tabIds) {
     const outcome = await runBackgroundSegment(`close ${tabId}`, deps, locale)
-    lines.push(...outcome.lines)
-    if (!outcome.ok) {
-      return segmentFailure(outcome.code, lines, outcome.errorMessage)
+    stdout.push(...outcome.stdout)
+    stderr.push(...outcome.stderr)
+    if (!isExitSuccess(outcome.exitStatus)) {
+      return withMergedLines(outcome, stdout, stderr)
     }
   }
-  return segmentSuccess(lines)
+  return withMergedLines(segmentSuccess(stdout), stdout, stderr)
 }
 
-export async function tryRunPipeConsumer(
-  segment: string,
-  listResult: ListResult,
-  deps: CommandDispatchDeps,
-  locale: UiLocale
-): Promise<SegmentOutcome | null> {
-  if (isClosePipeConsumer(segment)) {
-    return runCloseFromTabsListResult(listResult, deps, locale)
-  }
-  return null
+export const closePipeConsumer: PipeConsumerEntry = {
+  id: "close",
+  match: isClosePipeConsumer,
+  acceptsKinds: CLOSE_ACCEPTS_KINDS,
+  run: runCloseFromTabsListResult
 }

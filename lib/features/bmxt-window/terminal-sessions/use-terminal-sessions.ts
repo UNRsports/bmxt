@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  encodeLogLines,
+  type LogChannel
+} from "../../command-line/command-output.ts"
 import { deriveDefaultSessionName } from "../../session/session-summary"
 import {
   applySessionPatch,
@@ -18,7 +22,7 @@ import type { TerminalSessionsStateV1 } from "./types"
 
 export function useTerminalSessions(sessionContext?: ApplySessionPatchContext): {
   state: TerminalSessionsStateV1
-  appendLogLines: (sessionId: string, lines: string[]) => void
+  appendLogLines: (sessionId: string, lines: string[], channel?: LogChannel) => void
   setActiveSession: (sessionId: string) => void
   setSessionDisplayName: (sessionId: string, name: string) => void
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
@@ -52,11 +56,12 @@ export function useTerminalSessions(sessionContext?: ApplySessionPatchContext): 
   }, [commitState])
 
   const appendLogLines = useCallback(
-    (sessionId: string, lines: string[]) => {
+    (sessionId: string, lines: string[], channel: LogChannel = "stdout") => {
       if (lines.length === 0) {
         return
       }
-      setState((prev) => appendLinesToSessionState(prev, sessionId, lines))
+      const encoded = encodeLogLines(lines, channel)
+      setState((prev) => appendLinesToSessionState(prev, sessionId, encoded))
     },
     []
   )

@@ -66,39 +66,24 @@ import {
 } from "./compound-deps.ts"
 import type { SegmentOutcome } from "./types.ts"
 
-export async function tryRunUiSegment(
-  segment: string,
-  deps: CommandDispatchDeps,
-  locale: UiLocale
-): Promise<SegmentOutcome | null> {
-  const runners: Array<
-    (segment: string, deps: CommandDispatchDeps, locale: UiLocale) => Promise<SegmentOutcome | null>
-  > = [
-    runSettingSegment,
-    runTabsSettingSegment,
-    runDomSettingSegment,
-    runSessionSegment,
-    runTabsListSegment,
-    runSearchExitSegment,
-    runNavEnterSegment,
-    runTranslateSegment,
-    runNavExitSegment,
-    runDomExitSegment,
-    runGroupNewSegment,
-    runSearchListSegment,
-    runHelpSegment,
-    runDomListSegment,
-    runSnapshotSegment
-  ]
-
-  for (const run of runners) {
-    const outcome = await run(segment, deps, locale)
-    if (outcome !== null) {
-      return outcome
-    }
-  }
-  return null
-}
+/** EN: UI command runners registered in `commands/registry.ts` (order = dispatch order). */
+export const UI_COMMAND_RUNNERS = {
+  setting: runSettingSegment,
+  tabsSetting: runTabsSettingSegment,
+  domSetting: runDomSettingSegment,
+  session: runSessionSegment,
+  tabsList: runTabsListSegment,
+  searchExit: runSearchExitSegment,
+  navEnter: runNavEnterSegment,
+  translate: runTranslateSegment,
+  navExit: runNavExitSegment,
+  domExit: runDomExitSegment,
+  groupNew: runGroupNewSegment,
+  searchList: runSearchListSegment,
+  help: runHelpSegment,
+  domList: runDomListSegment,
+  snapshot: runSnapshotSegment
+} as const
 
 async function runSettingSegment(
   segment: string,
@@ -477,7 +462,7 @@ async function runSearchListSegment(
   }
 
   const classified = classifyOutcomeFromLines(captured)
-  if (!classified.ok) {
+  if (classified.ok === false) {
     return segmentFailure(classified.code, captured, classified.errorMessage)
   }
   if (captured.length > 0) {
@@ -520,7 +505,7 @@ async function runDomListSegment(
   }
 
   const classified = classifyOutcomeFromLines(captured)
-  if (!classified.ok) {
+  if (classified.ok === false) {
     return segmentFailure(classified.code, captured, classified.errorMessage)
   }
   if (captured.length > 0) {

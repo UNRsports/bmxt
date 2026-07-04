@@ -253,9 +253,13 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `close` / `c` (pipe) | With pipe input from `tabs -list`, close every listed tab (see **Pipes** below) |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
-**Compound commands (`&&`):** Join multiple commands on one line with **`&&`** (quoted regions and `\&&` escapes are respected). Segments run **left to right**; after the first failure, remaining segments are skipped. Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`--picker` on any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
+**Compound commands (`&&` / `||` / `;`):** Join multiple commands on one line with **`&&`**, **`||`**, or **`;`** (quoted regions and `\&&` / `\||` / `\;` escapes are respected). Segments run **left to right** with shell-style short-circuit: **`&&`** runs the next segment only after exit status **0**, **`||`** only after a non-zero status, **`;`** always. Each segment returns a numeric **exit status** (0 = success; usage/parse = 2; unknown command = 127; other failures = 1). Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`--picker` on any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
 
-**Pipes (`|`):** Within each **`&&`** segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tabs -list | close`**. Producers: plain **`tabs -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Consumers (v1): **`close`** / **`c`** with no tab id (reads **`tabs.tab`** records). **`--picker`** cannot appear in a pipe chain.
+**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tabs -list | close`**. Producers: plain **`tabs -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Consumers are registered under **`lib/features/command-line/pipe/consumers/`** (v1: **`close`** / **`c`** with no tab id, accepts **`tabs.tab`** records). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**. **`--picker`** cannot appear in a pipe chain.
+
+**Redirects (`>` / `>>` / `2>` / `2>>`):** Within a segment, redirect **stdout** (`>` / `>>`) or **stderr** (`2>` / `2>>`) to a **null sink** only: **`null`** or **`/dev/null`** (quoted regions and `\>` escapes are respected). The redirected channel is discarded from the terminal log. Other targets are rejected (exit status **2**). OS file paths are out of scope.
+
+**BMXt POSIX Profile:** BMXt is **not** a full IEEE Std 1003.1 shell. The interactive terminal follows a documented profile: argv-style segments, numeric exit status, stdout/stderr channels (stderr lines render in a distinct color), `|` with a producer/consumer registry, list operators **`&&` / `||` / `;`**, null-sink redirects, and a single **`CommandEntry`** registry for compound/pipe segment dispatch (`lib/features/command-line/commands/`). Background commands fall through to Service Worker **`RUN_CMD`** (effects remain Chrome adapters). Out of scope: job control, subshells, command substitution, OS file descriptors, and external process launch.
 
 **Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the active terminal session**; the BMXt window and other in-memory session/picker state stay as they are. **Closing the BMXt window** (× button) or **`exit`** on the **last** session closes the window and **discards** all UI-held session logs and picker state (legacy **`chrome.storage.local`** process keys are cleaned up by the Service Worker). **Command history is kept** unless you use the **`reset-bmxt`** shortcut. **`exit`** with **multiple sessions** removes only the active session and switches to another. See **[BMXt process lifecycle](#bmxt-process-lifecycle)** and **[Terminal session state](#terminal-session-state)**.
 
@@ -867,7 +871,7 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 | `session -list` | UI → `tryRunPlainListCommand` | UI inline picker |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI settings picker column |
 
-**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` uses `matchPlainListCommand` + `fetchListResultForCommand` to pass **`ListResult`** between segments (v1 consumer: **`close`** on **`tabs.tab`** records).
+**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` uses `matchPlainListCommand` + `fetchListResultForCommand` to pass **`ListResult`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (v1: **`close`** on **`tabs.tab`** records, with kind-compatibility checks).
 
 **Adding a new `-list` producer** — see the checklist under **[Command add procedure](#command-add-procedure)**.
 
@@ -884,8 +888,10 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 - **`lib/features/snapshot/`** — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
 - **`lib/features/command-line/list-output/`** — canonical **`-list`** plain/pipe output (`ListResult`, `bmxt-list/1`)
 - **`lib/features/command-line/list-commands/`** — **`-list` producer registry** and unified plain runner (`tryRunPlainListCommand`)
-- **`lib/features/command-line/pipe/`** — **`|`** pipe chains (`run-pipe-chain.ts`)
-- **`lib/features/command-line/compound/`** — **`&&`** compound command parsing and sequential execution
+- **`lib/features/command-line/commands/`** — **`CommandEntry`** registry (`runCommand`), null-sink redirects, plain-list composition
+- **`lib/features/command-line/command-output.ts`** — stdout/stderr channels and session-log encoding
+- **`lib/features/command-line/pipe/`** — **`|`** pipe chains (`run-pipe-chain.ts`, **`pipe/consumers/`** registry)
+- **`lib/features/command-line/compound/`** — list operators **`&&` / `||` / `;`**, exit status, sequential execution
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, external bundle, `bmxt_ui_settings_v1`, `bmxt_ui_settings_storage_v1`); see **[`setting`](#setting)**
@@ -942,6 +948,8 @@ For a consolidated checklist (scaffold, manifest, new effects, verification), se
 - **Manual path:** Add a row under **`commands[]`** in the manifest, add **`lib/features/bmxt-core/cmd/<module>.ts`**, then **`pnpm run codegen`**.
 - **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`pnpm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return effects from **`run`** via **`effectsDispatch([...])`** as needed.
 - **Checks:** **`pnpm run verify:manifest`** (manifest vs every **`export const CMD`**) and **`pnpm run check:generated`** (no uncommitted drift in generated paths). CI runs both. Then **`pnpm exec tsc --noEmit`** and **`pnpm run build`** for a full extension build.
+- **Shell `CommandEntry` (compound / pipe):** Segment execution goes through **`lib/features/command-line/commands/`** (`COMMAND_ENTRIES` + background `RUN_CMD` fallback). UI-only behaviors used inside compound lines register a **`CommandEntry`** (`tryRun` returns `SegmentOutcome | null`) in **`commands/registry.ts`** and implement the runner (often in **`compound/run-ui-segment.ts`**). Plain **`-list`** is the **`plain-list`** entry (composes **`list-commands`**). Interactive prompt submit still uses **`useCommandDispatch`** domain handlers for prompt chrome (`> line`, history); keep those handlers aligned with the same feature modules.
+- **Plain `-list` producer:** Add **`lib/features/<feature>/*-list-command.ts`**, register the matcher in **`list-commands/registry.ts`**, and ensure **`plain-list`** / manifest **`--picker`** behavior stay consistent (see **`-list` output** above).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
 
@@ -1059,8 +1067,10 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/snapshot/` — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
 - `lib/features/command-line/list-output/` — `-list` schema and plain/pipe formatters (`ListResult`, `bmxt-list/1`)
 - `lib/features/command-line/list-commands/` — `-list` producer registry (`*-list-command.ts` plugins, `tryRunPlainListCommand`)
-- `lib/features/command-line/pipe/` — pipe (`|`) chains
-- `lib/features/command-line/compound/` — compound (`&&`) parsing and execution
+- `lib/features/command-line/commands/` — `CommandEntry` registry (`runCommand`), null-sink redirects
+- `lib/features/command-line/command-output.ts` — stdout/stderr channels and session-log encoding
+- `lib/features/command-line/pipe/` — pipe (`|`) chains and consumer registry
+- `lib/features/command-line/compound/` — list operators (`&&` / `||` / `;`), exit status, sequential execution
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
@@ -1403,9 +1413,13 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `close` / `c`（パイプ） | `tabs -list` のパイプ入力から列挙されたタブをすべて閉じる（**パイプ** 参照） |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
-**複合コマンド（`&&`）:** 1 行に **`&&`** で複数コマンドを並べる（クォート内と `\&&` エスケープは演算子にしない）。**左から順**に実行し、最初の失敗以降のセグメントはスキップ。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`-list` の **`--picker`**、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。
+**複合コマンド（`&&` / `||` / `;`）:** 1 行に **`&&`**・**`||`**・**`;`** で複数コマンドを並べる（クォート内と `\&&` / `\||` / `\;` は演算子にしない）。**左から順**に実行し、シェル同様に短絡する（**`&&`** は終了状態 **0** のときのみ次へ、**`||`** は非 0 のときのみ、**`;`** は常に）。各セグメントは数値の **exit status** を返す（0 = 成功、usage/parse = 2、不明コマンド = 127、その他失敗 = 1）。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`-list` の **`--picker`**、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。
 
-**パイプ（`|`）:** 各 **`&&`** セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` エスケープは演算子にしない）。例: **`tabs -list | close`**。producer: プレーン **`tabs -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。consumer（v1）: タブ ID なしの **`close`** / **`c`**（**`tabs.tab`** レコードを読む）。パイプ内では **`--picker`** 不可。
+**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` は演算子にしない）。例: **`tabs -list | close`**。producer: プレーン **`tabs -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。consumer は **`lib/features/command-line/pipe/consumers/`** に登録（v1: タブ ID なしの **`close`** / **`c`**、**`tabs.tab`** を受理）。種別不一致・未対応 consumer は終了状態 **1** と **stderr**。パイプ内では **`--picker`** 不可。
+
+**リダイレクト（`>` / `>>` / `2>` / `2>>`）:** セグメント内で **stdout**（`>` / `>>`）または **stderr**（`2>` / `2>>`）を **null シンク**（**`null`** または **`/dev/null`**）へだけ向けられる（クォート内と `\>` は演算子にしない）。向けたチャネルはターミナルログから捨てる。それ以外のターゲットは拒否（終了状態 **2**）。OS パスへの書き込みは対象外。
+
+**BMXt POSIX Profile:** BMXt は IEEE Std 1003.1 シェルの完全実装ではない。対話ターミナルは文書化されたプロファイルに従う（argv 風セグメント、数値 exit status、stdout/stderr チャネル、producer/consumer レジストリ付き `|`、リスト演算子 **`&&` / `||` / `;`**、null シンクリダイレクト、compound/pipe 用 **`CommandEntry`** レジストリ）。background コマンドは Service Worker **`RUN_CMD`** にフォールバック（effect は Chrome アダプタ）。対象外: ジョブ制御、サブシェル、コマンド置換、OS の FD、外部プロセス起動。
 
 **補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **アクティブなターミナルセッションの画面ログだけ**を消します。**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**UI 上のセッション／ピッカー状態を破棄**し、Service Worker が **旧プロセス用 storage キーを掃除**します。**コマンド履歴は保持**され、**`reset-bmxt`** ショートカットを使ったときだけ消えます。**`exit`**（複数セッション）はアクティブなセッションだけを除去し、別セッションへ切り替えます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** と **[ターミナルセッション状態](#terminal-session-state-ja)**。
 
@@ -2014,7 +2028,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 | `session -list` | UI → `tryRunPlainListCommand` | UI インライン候補 |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI 設定ピッカー列 |
 
-**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が `matchPlainListCommand` で **`ListResult`** をセグメント間受け渡し（v1 consumer: **`tabs.tab`** に対する **`close`**）。
+**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が `matchPlainListCommand` で **`ListResult`** をセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（v1: **`tabs.tab`** に対する **`close`**、種別互換チェック付き）。
 
 **新規 `-list` producer** — **[コマンド追加手順](#command-add-procedure-ja)** のチェックリストを参照。
 
@@ -2027,8 +2041,10 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
 - **`lib/features/command-line/list-output/`** — **`-list`** 出力規格（`ListResult`、`bmxt-list/1`）
 - **`lib/features/command-line/list-commands/`** — **`-list` producer レジストリ**（`tryRunPlainListCommand`）
-- **`lib/features/command-line/pipe/`** — パイプ（`|`）チェーン
-- **`lib/features/command-line/compound/`** — **`&&`** 複合コマンド
+- **`lib/features/command-line/commands/`** — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト、plain-list 合成
+- **`lib/features/command-line/command-output.ts`** — stdout/stderr チャネルとセッションログ符号化
+- **`lib/features/command-line/pipe/`** — パイプ（`|`）チェーン（**`pipe/consumers/`** レジストリ）
+- **`lib/features/command-line/compound/`** — リスト演算子 **`&&` / `||` / `;`**、exit status、逐次実行
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、外部バンドル、`bmxt_ui_settings_v1`、`bmxt_ui_settings_storage_v1`）；**[`setting`](#setting-ja)** 参照
@@ -2086,6 +2102,8 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **手動で足す場合:** manifest の **`commands[]`** に追記 → **`lib/features/bmxt-core/cmd/<module>.ts`** → **`pnpm run codegen`**。
 - **ブラウザ連携（新しい `Effect`）:** manifest の **`effects[]`** → **codegen** → **`handlers/effects/<tsHandlerFile>.ts`** → **`run`** から **`effectsDispatch`**。
 - **検証:** **`verify:manifest`** / **`check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm run build`**。
+- **シェル `CommandEntry`（compound / pipe）:** セグメント実行は **`lib/features/command-line/commands/`**（**`COMMAND_ENTRIES`** + background **`RUN_CMD`** フォールバック）。compound 内で使う UI 専用挙動は **`commands/registry.ts`** に **`CommandEntry`**（`tryRun` が `SegmentOutcome | null`）を登録し、ランナーを実装（多くは **`compound/run-ui-segment.ts`**）。プレーン **`-list`** は **`plain-list`** エントリ（**`list-commands`** を合成）。対話プロンプトの submit は従来どおり **`useCommandDispatch`** の domain handler（`> line`・履歴など）。同じ feature モジュールと挙動を揃える。
+- **プレーン `-list` producer:** **`*-list-command.ts`** を追加し **`list-commands/registry.ts`** に matcher を登録。**`plain-list`** / manifest **`--picker`** と整合させる。
 
 各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`lib/features/bmxt-core/cmd/<module>.ts`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`** が検査）。
 
@@ -2195,8 +2213,10 @@ pnpm run dev
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
 - `lib/features/command-line/list-output/` — **`-list`** 規格と plain／pipe 整形（`ListResult`、`bmxt-list/1`）
 - `lib/features/command-line/list-commands/` — **`-list` producer レジストリ**（`*-list-command.ts` プラグイン、`tryRunPlainListCommand`）
-- `lib/features/command-line/pipe/` — パイプ（`|`）チェーン
-- `lib/features/command-line/compound/` — **`&&`** 複合コマンドの解析と逐次実行
+- `lib/features/command-line/commands/` — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト
+- `lib/features/command-line/command-output.ts` — stdout/stderr チャネルとセッションログ符号化
+- `lib/features/command-line/pipe/` — パイプ（`|`）チェーンと consumer レジストリ
+- `lib/features/command-line/compound/` — リスト演算子（`&&` / `||` / `;`）、exit status、逐次実行
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）

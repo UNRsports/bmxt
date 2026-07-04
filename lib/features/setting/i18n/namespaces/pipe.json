@@ -18,5 +18,9 @@
   "pipe.error.unsupportedConsumer": {
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
+  },
+  "pipe.error.kindMismatch": {
+    "ja": "error: パイプ先 {stage} はレコード種別 [{kinds}] のみ受け付けます",
+    "en": "error: pipe consumer {stage} accepts only record kinds [{kinds}]"
   }
 }

@@ -3,8 +3,10 @@ import type { UiLocale } from "../../setting/locale.ts"
 import { classifyCompoundEligibility } from "../compound/classify-eligibility.ts"
 import {
   segmentFailure,
-  segmentSuccess
+  segmentSuccess,
+  withMergedLines
 } from "../compound/classify-outcome.ts"
+import { isExitSuccess } from "../compound/exit-status.ts"
 import { runSegment } from "../compound/run-segment.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tPipe } from "../../setting/i18n/ns/pipe.ts"
@@ -13,7 +15,7 @@ import {
   matchPlainListCommand,
   segmentUsesListPicker
 } from "../list-commands/index.ts"
-import { tryRunPipeConsumer } from "./consumers/close-from-tabs.ts"
+import { tryRunPipeConsumer } from "./consumers/index.ts"
 
 export async function attachListResultToOutcome(
   segment: string,
@@ -21,7 +23,7 @@ export async function attachListResultToOutcome(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome> {
-  if (!outcome.ok) {
+  if (!isExitSuccess(outcome.exitStatus)) {
     return outcome
   }
   const match = matchPlainListCommand(segment)
@@ -54,53 +56,80 @@ function classifyPipeStageEligibility(
   return classifyCompoundEligibility(stage, locale, deps.sessionNameTypingRef.current)
 }
 
+function prependAccumulated(
+  outcome: SegmentOutcome,
+  allStdout: readonly string[],
+  allStderr: readonly string[]
+): SegmentOutcome {
+  return withMergedLines(
+    outcome,
+    [...allStdout, ...outcome.stdout],
+    [...allStderr, ...outcome.stderr]
+  )
+}
+
 export async function runPipeChain(
   stages: readonly string[],
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome> {
   let listResult = undefined as SegmentOutcome["listResult"]
-  const allLines: string[] = []
+  const allStdout: string[] = []
+  const allStderr: string[] = []
 
   for (let index = 0; index < stages.length; index += 1) {
     const stage = stages[index]!.trim()
     const eligibility = classifyPipeStageEligibility(stage, locale, index, deps)
     if (eligibility.eligible === false) {
-      return eligibility.outcome
+      return prependAccumulated(eligibility.outcome, allStdout, allStderr)
     }
 
     if (index > 0) {
       if (listResult === undefined) {
-        return segmentFailure("runtime", [tPipe("pipe.error.noStdin", locale)])
+        return prependAccumulated(
+          segmentFailure("runtime", [tPipe("pipe.error.noStdin", locale)]),
+          allStdout,
+          allStderr
+        )
       }
       const consumerOutcome = await tryRunPipeConsumer(stage, listResult, deps, locale)
       if (consumerOutcome === null) {
-        return segmentFailure("runtime", [
-          tPipe("pipe.error.unsupportedConsumer", locale, { stage })
-        ])
+        return prependAccumulated(
+          segmentFailure("runtime", [
+            tPipe("pipe.error.unsupportedConsumer", locale, { stage })
+          ]),
+          allStdout,
+          allStderr
+        )
       }
-      if (!consumerOutcome.ok) {
-        return { ...consumerOutcome, lines: [...allLines, ...consumerOutcome.lines] }
+      if (!isExitSuccess(consumerOutcome.exitStatus)) {
+        return prependAccumulated(consumerOutcome, allStdout, allStderr)
       }
-      allLines.push(...consumerOutcome.lines)
+      allStdout.push(...consumerOutcome.stdout)
+      allStderr.push(...consumerOutcome.stderr)
       listResult = consumerOutcome.listResult
       continue
     }
 
     const outcome = await runSegment(stage, deps, locale)
-    if (!outcome.ok) {
-      return { ...outcome, lines: [...allLines, ...outcome.lines] }
+    if (!isExitSuccess(outcome.exitStatus)) {
+      return prependAccumulated(outcome, allStdout, allStderr)
     }
-    allLines.push(...outcome.lines)
+    allStdout.push(...outcome.stdout)
+    allStderr.push(...outcome.stderr)
 
     const enriched = await attachListResultToOutcome(stage, outcome, deps, locale)
     listResult = enriched.listResult
     if (stages.length > 1 && listResult === undefined) {
-      return segmentFailure("runtime", [
-        tPipe("pipe.error.notProducer", locale, { stage })
-      ])
+      return prependAccumulated(
+        segmentFailure("runtime", [
+          tPipe("pipe.error.notProducer", locale, { stage })
+        ]),
+        allStdout,
+        allStderr
+      )
     }
   }
 
-  return segmentSuccess(allLines, listResult)
+  return withMergedLines(segmentSuccess(allStdout, listResult), allStdout, allStderr)
 }

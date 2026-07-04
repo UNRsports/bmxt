@@ -75,7 +75,10 @@ type SessionPaneProps = {
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => void
   onSetSessionDisplayName: (sessionId: string, name: string) => void
-  appendLogLines: (newLines: string[]) => void | Promise<void>
+  appendLogLines: (
+    newLines: string[],
+    channel?: import("../command-line/command-output.ts").LogChannel
+  ) => void | Promise<void>
   sessionOrderLength: number
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
@@ -291,8 +294,12 @@ function BmxtTerminalInner() {
   )
 
   const appendLogLinesForSession = useCallback(
-    (sessionId: string, lines: string[]) => {
-      appendLogLinesToSession(sessionId, lines)
+    (
+      sessionId: string,
+      lines: string[],
+      channel?: import("../command-line/command-output.ts").LogChannel
+    ) => {
+      appendLogLinesToSession(sessionId, lines, channel)
     },
     [appendLogLinesToSession]
   )
@@ -505,7 +512,9 @@ function BmxtTerminalInner() {
               sessionId={sessionId}
               isActive={isActive}
               lines={state.logsById[sessionId] ?? []}
-              appendLogLines={(lines) => appendLogLinesForSession(sessionId, lines)}
+              appendLogLines={(lines, channel) =>
+                appendLogLinesForSession(sessionId, lines, channel)
+              }
               sessionPickers={sessionPickersOrEmpty(pickersBySession, sessionId)}
               paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
               detailBarId={detailBarIdByLeaf[sessionId] ?? null}

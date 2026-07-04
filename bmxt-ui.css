@@ -499,6 +499,10 @@ body {
   padding: 0;
 }
 
+.bmxt-out-line--stderr {
+  color: #ff7b72;
+}
+
 .bmxt-shell {
   outline: none;
 }

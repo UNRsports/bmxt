@@ -359,15 +359,15 @@ lib/features/command-line/list-output/     … ListResult 規格（変更なし�
 
 | # | 要件 | 現状 | 目標 |
 |---|------|------|------|
-| P1 | **コマンド = argv 列 → 実行 → 終了状態** | `SegmentOutcome` はあるが code が内部用 | 全セグメントが **数値 exit status（0 = 成功）** を返す |
-| P2 | **標準出力** | ターミナルログ行 + `-list` は `ListResult` | 成功時の**正本は `ListResult` または plain 行**；ログはその投影 |
-| P3 | **標準エラー** | 未分離（usage / runtime も同一ログ） | **stderr 相当チャネル**（見た目はターミナルでも種別を分離） |
-| P4 | **パイプ `\|`** | `ListResult` 受け渡し、consumer は `close` のみ | **registry 化された consumer**；型互換チェック付き |
-| P5 | **論理 AND `&&`** | 実装済み | 維持；**`||` / `;`** を同じパーサ族で追加 |
-| P6 | **クォート・エスケープ** | `&&` / `\|` で実装済み | 全演算子・リダイレクトトークンに拡張 |
-| P7 | **コマンド解釈の単一入口** | `-list` は registry、他は `run-ui-segment` runner 配列 + SW effect | **`CommandEntry` 1 本**（parse / run / runtime: `ui` \| `background`） |
-| P8 | **対話 UI は opt-in** | `--picker`、continuation | compound / pipe からは除外（現行どおり） |
-| P9 | **適合性テスト** | compound / list-commands の単体テスト | **プロファイル別 conformance スイート**（演算子・終了状態・パイプ） |
+| P1 | **コマンド = argv 列 → 実行 → 終了状態** | **実装済み** — `exitStatus`（0/1/2/127） | 全セグメントが **数値 exit status（0 = 成功）** を返す |
+| P2 | **標準出力** | **実装済み** — `stdout` + `ListResult` | 成功時の**正本は `ListResult` または plain 行**；ログはその投影 |
+| P3 | **標準エラー** | **実装済み** — `stderr` + CSS | **stderr 相当チャネル**（見た目はターミナルでも種別を分離） |
+| P4 | **パイプ `\|`** | **実装済み** — consumer registry | **registry 化された consumer**；型互換チェック付き |
+| P5 | **論理 AND `&&`** | **実装済み** — `&&` / `||` / `;` | 維持；**`||` / `;`** を同じパーサ族で追加 |
+| P6 | **クォート・エスケープ** | **実装済み** — 演算子 + リダイレクト | 全演算子・リダイレクトトークンに拡張 |
+| P7 | **コマンド解釈の単一入口** | **実装済み** — `commands/runCommand` + `COMMAND_ENTRIES` + background `RUN_CMD` | **`CommandEntry` 1 本**（tryRun / runtime: `ui` \| `background`） |
+| P8 | **対話 UI は opt-in** | **実装済み** — `--picker`、continuation | compound / pipe からは除外（現行どおり） |
+| P9 | **適合性テスト** | **実装済み** — `conformance/posix-profile.test.ts` | **プロファイル別 conformance スイート**（演算子・終了状態・パイプ） |
 
 **永久にスコープ外（準拠対象外と明記）**
 
@@ -378,70 +378,70 @@ lib/features/command-line/list-output/     … ListResult 規格（変更なし�
 
 ### 10.3 現状ギャップ（§9 完了後）
 
-- [ ] exit status の数値化と compound / pipe への一貫適用
-- [ ] stdout / stderr チャネル分離
-- [ ] 全コマンドの `CommandEntry` 化（`-list` 以外）
-- [ ] パイプ consumer のプラグイン registry（`close` 以外）
-- [ ] `||` / `;` 演算子
-- [ ] リダイレクト（任意：`> file` を設定エクスポート等に限定するかは別決）
-- [ ] BMXt POSIX Profile の README 節 + conformance テスト
+- [x] exit status の数値化と compound / pipe への一貫適用
+- [x] stdout / stderr チャネル分離
+- [x] 全コマンドの `CommandEntry` 化（compound/pipe 経路；background は `RUN_CMD` フォールバック）
+- [x] パイプ consumer のプラグイン registry（`close` を registry 登録；追加 consumer はプロダクト拡張）
+- [x] `||` / `;` 演算子
+- [x] リダイレクト（null シンクのみ: `null` / `/dev/null`）
+- [x] BMXt POSIX Profile の README 節 + conformance テスト
 
 ### 10.4 実装フェーズ
 
 #### Phase A — 終了状態（exit status）の正規化
 
-- [ ] `SegmentOutcome` に `exitStatus: number`（0 = 成功）を追加；既存 `code` は内部分類として維持
-- [ ] `code` → `exitStatus` の対応表を 1 モジュールに固定（usage=2, unknown=127 等 — **profile 文書化**）
-- [ ] `runCompoundLine` / `runPipeChain` が **左セグメントの exitStatus** で短絡（`&&` / 将来 `||`）
-- [ ] compound ログ末尾に **exit status サマリー**（任意・デバッグ用）
-- [ ] テスト: `compound.test.ts` / `pipe` 系に status アサーション
+- [x] `SegmentOutcome` に `exitStatus: number`（0 = 成功）を追加；既存 `code` は内部分類として維持
+- [x] `code` → `exitStatus` の対応表を 1 モジュールに固定（usage=2, unknown=127 等 — **profile 文書化**）
+- [x] `runCompoundLine` / `runPipeChain` が **左セグメントの exitStatus** で短絡（`&&` / `||`）
+- [x] `CompoundRunResult.exitStatus` で全体終了状態を返す（ログ末尾サマリーは任意・未表示）
+- [x] テスト: `compound.test.ts` / conformance に status アサーション
 
 #### Phase B — stdout / stderr 分離
 
-- [ ] `CommandOutput { stdout: string[]; stderr: string[]; listResult?: ListResult; exitStatus: number }` 型を定義
-- [ ] `appendLogLines` を **channel 付き**に拡張（または stderr 専用 deps）
-- [ ] usage / parse error → stderr、成功列挙 → stdout（ターミナル CSS で区別可能に）
-- [ ] `formatListPlainLines` は stdout のみ；サマリー行も stdout
+- [x] `CommandOutput { stdout: string[]; stderr: string[]; listResult?: ListResult; exitStatus: number }` 型を定義
+- [x] `appendLogLines` を **channel 付き**に拡張（または stderr 専用 deps）
+- [x] usage / parse error → stderr、成功列挙 → stdout（ターミナル CSS で区別可能に）
+- [x] `formatListPlainLines` は stdout のみ；サマリー行も stdout
 
 #### Phase C — 全コマンド `CommandEntry` レジストリ
 
-- [ ] `lib/features/command-line/commands/types.ts` — `CommandEntry`（id, match, parse, run, runtime）
-- [ ] `commands/registry.ts` — manifest `commands[]` と整合する登録表（codegen 連携を検討）
-- [ ] 既存 `run-ui-segment` の runner 配列を **registry 順の dispatch** に置換
-- [ ] SW `RUN_CMD` path も同一 `run()` を呼ぶ（effect は Chrome 副作用の adapter のみ）
-- [ ] `-list` は既存 `list-commands` を `CommandEntry` の special case または composition で接続
-- [ ] 新コマンド追加手順を README 更新（manifest + `CommandEntry` 1 本）
+- [x] `lib/features/command-line/commands/types.ts` — `CommandEntry`（id, tryRun, runtime）
+- [x] `commands/registry.ts` — `COMMAND_ENTRIES` + `BACKGROUND_COMMAND_ENTRY`（`RUN_CMD`）
+- [x] 既存 `run-ui-segment` の runner 配列を **registry 順の dispatch** に置換（`runCommand`）
+- [x] background は同一 `runCommand` から `RUN_CMD` へフォールバック（effect は Chrome adapter）
+- [x] `-list` は `plain-list` entry が `list-commands` を composition
+- [x] 新コマンド追加手順を README 更新（manifest + shell `CommandEntry`）
 
 #### Phase D — パイプ consumer registry
 
-- [ ] `lib/features/command-line/pipe/consumers/types.ts` — `PipeConsumerEntry`（match, acceptsKinds, run）
-- [ ] `close` を registry 登録に移行
-- [ ] 型互換: producer `ListRecordKind` と consumer `acceptsKinds` の不一致時は **exit 1 + stderr**
-- [ ] 候補 consumer（優先度は別途）: `tabs -list | group -new`、filter 系、`session -switch`（要設計）
-- [ ] `run-pipe-chain.ts` が producer registry + consumer registry のみ参照
+- [x] `lib/features/command-line/pipe/consumers/types.ts` — `PipeConsumerEntry`（match, acceptsKinds, run）
+- [x] `close` を registry 登録に移行
+- [x] 型互換: producer `ListRecordKind` と consumer `acceptsKinds` の不一致時は **exit 1 + stderr**
+- [x] 候補 consumer はプロダクト拡張（プロファイル外）— registry プラグインで追加可能
+- [x] `run-pipe-chain.ts` が producer registry + consumer registry のみ参照
 
 #### Phase E — 演算子拡張（`||` / `;`）
 
-- [ ] `parse-and-segments.ts` を **演算子テーブル**化（`&&` 実装を一般化）
-- [ ] `;` — 前の exit status に関わらず次を実行
-- [ ] `||` — 前が非 0 のときのみ次を実行
-- [ ] エスケープ: `\;`, `\|\|`, クォート内は演算子無効（`&&` と同型）
-- [ ] `classifyCompoundEligibility` を全演算子で共有
-- [ ] conformance テスト追加
+- [x] `parse-and-segments.ts` を **演算子テーブル**化（`&&` 実装を一般化 → `parse-compound-segments.ts`）
+- [x] `;` — 前の exit status に関わらず次を実行
+- [x] `||` — 前が非 0 のときのみ次を実行
+- [x] エスケープ: `\;`, `\||`, クォート内は演算子無効（`&&` と同型）
+- [x] `classifyCompoundEligibility` を全演算子で共有
+- [x] conformance テスト追加
 
-#### Phase F — リダイレクト（任意・プロダクト判断後）
+#### Phase F — リダイレクト（null シンク）
 
-- [ ] スコープ決定: ターミナルログのみ vs `setting` エクスポート等
-- [ ] `>`, `>>` のトークン解析（Phase E パーサ拡張）
-- [ ] stdout / stderr リダイレクトのセマンティクス文書化
-- [ ] 実装 + テスト
+- [x] スコープ決定: **null シンクのみ**（`null` / `/dev/null`）。OS パス・設定エクスポートは対象外
+- [x] `>`, `>>`, `2>`, `2>>` のトークン解析（クォート・`\>` エスケープ）
+- [x] stdout / stderr リダイレクトのセマンティクス文書化（README）
+- [x] 実装 + テスト
 
 #### Phase G — 準拠宣言と回帰防止
 
-- [ ] README に **「BMXt POSIX Profile」** 節（EN + JA）：準拠範囲・非準拠の明示
-- [ ] `_context/map_command.csv` に shell 層モジュール行を追記
-- [ ] `lib/features/command-line/conformance/` — profile 別テストスイート
-- [ ] release-notes に breaking / 準拠マイルストーンを記載
+- [x] README に **「BMXt POSIX Profile」** 節（EN + JA）：準拠範囲・非準拠の明示
+- [x] `_context/map_command.csv` に shell 層モジュール行を追記
+- [x] `lib/features/command-line/conformance/` — profile 別テストスイート
+- [x] release-notes に準拠マイルストーンを記載（`0.7.7`）
 
 ### 10.5 依存関係（推奨順）
 
@@ -461,7 +461,9 @@ Phase G（文書・conformance）
 
 ### 10.6 完了判定
 
-- [ ] P1–P9（§10.2）が実装とテストでカバーされている
-- [ ] README BMXt POSIX Profile が利用者向けに公開されている
-- [ ] `pnpm test` に conformance スイートが含まれ CI で通る
-- [ ] 既存手動スモーク（tabs / find / dom / session / setting / pipe）が退行していない
+- [x] P1–P9（§10.2）が実装とテストでカバーされている
+- [x] README BMXt POSIX Profile が利用者向けに公開されている
+- [x] `pnpm test` に conformance スイートが含まれ CI で通る
+- [ ] 既存手動スモーク（tabs / find / dom / session / setting / pipe）が退行していない（実装完了後の人手確認）
+
+**プロファイル完了。** プロダクト拡張（追加 pipe consumer、OS パスへのリダイレクト等）はプロファイル外。

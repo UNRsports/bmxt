@@ -1,8 +1,23 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { lineHasAndOperator, parseAndSegments } from "./parse-and-segments.ts"
+import { parseCompoundSegments } from "./parse-compound-segments.ts"
 import { lineHasPipeOperator, parsePipeSegments } from "./parse-pipe-segments.ts"
-import { classifyOutcomeFromLines } from "./classify-outcome.ts"
+import {
+  classifyOutcomeFromLines,
+  segmentFailure,
+  segmentSuccess
+} from "./classify-outcome.ts"
+import {
+  EXIT_FAILURE,
+  EXIT_MISUSE,
+  EXIT_NOT_FOUND,
+  EXIT_SUCCESS,
+  compoundShouldStop,
+  exitStatusForCode,
+  isExitSuccess,
+  shouldRunAfterOperator
+} from "./exit-status.ts"
 import { resolveActiveCommandSegment } from "./active-segment.ts"
 
 describe("parseAndSegments", () => {
@@ -90,6 +105,70 @@ describe("lineHasAndOperator", () => {
   it("is true for compound lines", () => {
     assert.equal(lineHasAndOperator("tabs -list && clear"), true)
   })
+
+  it("is true for || and ;", () => {
+    assert.equal(lineHasAndOperator("tabs -list || clear"), true)
+    assert.equal(lineHasAndOperator("tabs -list ; clear"), true)
+  })
+})
+
+describe("parseCompoundSegments", () => {
+  it("splits on || and records operators", () => {
+    assert.deepEqual(parseCompoundSegments("tabs -list || clear"), {
+      ok: true,
+      segments: ["tabs -list", "clear"],
+      operators: ["||"]
+    })
+  })
+
+  it("splits on ; and records operators", () => {
+    assert.deepEqual(parseCompoundSegments("tabs -list ; clear"), {
+      ok: true,
+      segments: ["tabs -list", "clear"],
+      operators: [";"]
+    })
+  })
+
+  it("supports mixed operators left-to-right", () => {
+    assert.deepEqual(parseCompoundSegments("a && b || c ; d"), {
+      ok: true,
+      segments: ["a", "b", "c", "d"],
+      operators: ["&&", "||", ";"]
+    })
+  })
+
+  it("supports escaped || and ;", () => {
+    assert.deepEqual(parseCompoundSegments(String.raw`echo \|| x ; clear`), {
+      ok: true,
+      segments: ["echo || x", "clear"],
+      operators: [";"]
+    })
+  })
+
+  it("does not treat single | as a list operator", () => {
+    assert.deepEqual(parseCompoundSegments("tabs -list | close"), {
+      ok: true,
+      segments: ["tabs -list | close"],
+      operators: []
+    })
+  })
+})
+
+describe("shouldRunAfterOperator", () => {
+  it("runs && only after success", () => {
+    assert.equal(shouldRunAfterOperator("&&", EXIT_SUCCESS), true)
+    assert.equal(shouldRunAfterOperator("&&", EXIT_FAILURE), false)
+  })
+
+  it("runs || only after failure", () => {
+    assert.equal(shouldRunAfterOperator("||", EXIT_SUCCESS), false)
+    assert.equal(shouldRunAfterOperator("||", EXIT_FAILURE), true)
+  })
+
+  it("always runs after ;", () => {
+    assert.equal(shouldRunAfterOperator(";", EXIT_SUCCESS), true)
+    assert.equal(shouldRunAfterOperator(";", EXIT_FAILURE), true)
+  })
 })
 
 describe("classifyOutcomeFromLines", () => {
@@ -111,12 +190,69 @@ describe("classifyOutcomeFromLines", () => {
   })
 })
 
+describe("exitStatusForCode", () => {
+  it("maps profile codes to POSIX-inspired statuses", () => {
+    assert.equal(exitStatusForCode("ok"), EXIT_SUCCESS)
+    assert.equal(exitStatusForCode("runtime"), EXIT_FAILURE)
+    assert.equal(exitStatusForCode("interactive"), EXIT_FAILURE)
+    assert.equal(exitStatusForCode("cancelled"), EXIT_FAILURE)
+    assert.equal(exitStatusForCode("usage"), EXIT_MISUSE)
+    assert.equal(exitStatusForCode("parse"), EXIT_MISUSE)
+    assert.equal(exitStatusForCode("continuation"), EXIT_MISUSE)
+    assert.equal(exitStatusForCode("unknown"), EXIT_NOT_FOUND)
+  })
+})
+
+describe("segmentSuccess / segmentFailure", () => {
+  it("sets exitStatus 0 on success and keeps ok in sync", () => {
+    const out = segmentSuccess(["line"])
+    assert.equal(out.exitStatus, EXIT_SUCCESS)
+    assert.equal(out.ok, true)
+    assert.equal(out.ok, isExitSuccess(out.exitStatus))
+    assert.deepEqual(out.stdout, ["line"])
+    assert.deepEqual(out.stderr, [])
+    assert.deepEqual(out.lines, ["line"])
+  })
+
+  it("sets usage to exit status 2 on stderr", () => {
+    const out = segmentFailure("usage", ["usage: tabs -list"])
+    assert.equal(out.exitStatus, EXIT_MISUSE)
+    assert.equal(out.ok, false)
+    assert.equal(compoundShouldStop(out.exitStatus), true)
+    assert.deepEqual(out.stdout, [])
+    assert.deepEqual(out.stderr, ["usage: tabs -list"])
+    assert.deepEqual(out.lines, ["usage: tabs -list"])
+  })
+
+  it("sets unknown to exit status 127", () => {
+    const out = segmentFailure("unknown", ["error: unknown command: foo"])
+    assert.equal(out.exitStatus, EXIT_NOT_FOUND)
+    assert.equal(compoundShouldStop(out.exitStatus), true)
+  })
+
+  it("does not stop compound on success", () => {
+    assert.equal(compoundShouldStop(EXIT_SUCCESS), false)
+  })
+})
+
 describe("resolveActiveCommandSegment", () => {
   it("uses the segment after && for completion context", () => {
     const line = "tabs -list && dom -list"
     const active = resolveActiveCommandSegment(line, line.length)
     assert.equal(active.segmentText, "dom -list")
     assert.equal(active.segmentStart, line.indexOf("dom"))
+  })
+
+  it("uses the segment after || for completion context", () => {
+    const line = "tabs -list || clear"
+    const active = resolveActiveCommandSegment(line, line.length)
+    assert.equal(active.segmentText, "clear")
+  })
+
+  it("uses the segment after ; for completion context", () => {
+    const line = "tabs -list ; clear"
+    const active = resolveActiveCommandSegment(line, line.length)
+    assert.equal(active.segmentText, "clear")
   })
 
   it("keeps first segment when cursor is before &&", () => {

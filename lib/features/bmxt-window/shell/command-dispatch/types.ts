@@ -45,7 +45,10 @@ export type CommandDispatchDeps = {
   setHistNavIndex: (index: number) => void
   focusPrompt: () => void
   appendCommandToHistory: (cmd: string) => void
-  appendLogLines: (lines: string[]) => void | Promise<void>
+  appendLogLines: (
+    lines: string[],
+    channel?: import("../../../command-line/command-output.ts").LogChannel
+  ) => void | Promise<void>
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<any>>
   setNavArmed: (armed: boolean) => void
   setNavActive: (active: boolean) => void
