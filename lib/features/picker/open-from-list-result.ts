@@ -20,7 +20,7 @@ import { tSearch } from "../setting/i18n/ns/search.ts"
 import { tDom } from "../setting/i18n/ns/dom.ts"
 import { tSession } from "../setting/i18n/ns/session.ts"
 import { tSetting } from "../setting/i18n/ns/setting.ts"
-import { tPipe } from "../setting/i18n/ns/pipe.ts"
+import { tCmd } from "../setting/i18n/ns/cmd.ts"
 import { tError } from "../setting/i18n/ns/error.ts"
 import type { UiLocale } from "../setting/locale.ts"
 import {
@@ -30,25 +30,28 @@ import {
 import type { SegmentOutcome } from "../command-line/compound/types.ts"
 import { domPickerLinesFromListResult } from "./from-list-result/dom-lines.ts"
 import { pickerEntriesFromSearchListResult } from "./from-list-result/search-entries.ts"
-import type { PickerConsumerOptions } from "./match.ts"
 import { resolvePickerFamily } from "./resolve-family.ts"
 
+export type OpenPickerOptions = {
+  showUrl: boolean
+}
+
 /**
- * EN: Open the appropriate picker UI from pipe stdin `ListResult`.
- * JA: パイプ stdin の `ListResult` から対応する picker UI を開く。
+ * EN: Open the appropriate picker UI from a list producer `ListResult`.
+ * JA: 列挙 producer の `ListResult` から対応する picker UI を開く。
  */
 export async function openPickerFromListResult(
   listResult: ListResult,
-  options: PickerConsumerOptions,
+  options: OpenPickerOptions,
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome> {
   const resolved = resolvePickerFamily(listResult)
   if (resolved.ok === false) {
     if (resolved.reason === "mixed") {
-      return segmentFailure("runtime", [tPipe("pipe.picker.mixedKinds", locale)])
+      return segmentFailure("runtime", [tCmd("cmd.picker.error.mixedKinds", locale)])
     }
-    return segmentFailure("runtime", [tPipe("pipe.picker.empty", locale)])
+    return segmentFailure("runtime", [tCmd("cmd.picker.error.empty", locale)])
   }
 
   switch (resolved.family) {

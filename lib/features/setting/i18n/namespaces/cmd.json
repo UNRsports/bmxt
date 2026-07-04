@@ -32,8 +32,8 @@
     "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
   },
   "cmd.dom.listPicker.title": {
-    "ja": "DOM list picker はパイプで開きます: dom -list … | picker",
-    "en": "DOM list picker is opened with: dom -list … | picker"
+    "ja": "DOM list picker は次のように開きます: picker dom -list …",
+    "en": "DOM list picker is opened with: picker dom -list …"
   },
   "cmd.dom.runHint": {
     "ja": "実行例: dom -setting -page-active --auto または --manual",
@@ -48,8 +48,8 @@
     "en": "dom -setting — configure DOM picker page-active from the BMXt prompt"
   },
   "cmd.dom.usage.line1": {
-    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — 既定はプレーン出力（--normal --html）。ピッカーは `dom -list … | picker`",
-    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — plain output by default (--normal --html); picker: `dom -list … | picker`"
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — 既定はプレーン出力（--normal --html）。ピッカーは `picker dom -list …`",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — plain output by default (--normal --html); picker: `picker dom -list …`"
   },
   "cmd.dom.usage.line2": {
     "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
@@ -60,8 +60,8 @@
     "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
   },
   "cmd.dom.usage.listDetail": {
-    "ja": "-list はプレーン出力。ピッカーは `dom -list … | picker`。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
-    "en": "-list prints plain output. Open the picker with `dom -list … | picker`. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
+    "ja": "-list はプレーン出力。ピッカーは `picker dom -list …`。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
+    "en": "-list prints plain output. Open the picker with `picker dom -list …`. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
   },
   "cmd.dom.usage.patternDetail": {
     "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
@@ -127,21 +127,37 @@
     "ja": "nav typing 翻訳: `translate -on` を使用（translate コマンド参照）。",
     "en": "Nav typing translation: use `translate -on` (see translate command)."
   },
+  "cmd.picker.error.empty": {
+    "ja": "error: 表示するリストが空です",
+    "en": "error: list to display is empty"
+  },
+  "cmd.picker.error.mixedKinds": {
+    "ja": "error: picker は単一コマンド族のリストのみ表示できます（混在不可）",
+    "en": "error: picker can display a list from a single command family only (no mixed kinds)"
+  },
+  "cmd.picker.error.notListProducer": {
+    "ja": "error: picker の後は `-list` 列挙コマンドが必要です: {segment}",
+    "en": "error: picker requires a `-list` producer command: {segment}"
+  },
+  "cmd.picker.error.uiOnly": {
+    "ja": "error: picker は BMXt ウィンドウから実行してください（例: picker tabs -list）",
+    "en": "error: run picker from the BMXt window (e.g. picker tabs -list)"
+  },
   "cmd.picker.usage.line1": {
-    "ja": "usage: <list-command> | picker [-u]",
-    "en": "usage: <list-command> | picker [-u]"
+    "ja": "usage: picker <list-command>",
+    "en": "usage: picker <list-command>"
   },
   "cmd.picker.usage.line2": {
-    "ja": "  picker はパイプ専用です。`-list` の列挙結果を受け取り、サイド列（または session 候補）で走査します。",
-    "en": "  picker is pipe-only. It receives `-list` output and opens a side column (or session candidates) for browsing."
+    "ja": "  先頭の `picker` で、続く `-list` 列挙をサイド列（または session 候補）に表示します。",
+    "en": "  Prefix `picker` displays the following `-list` output in a side column (or session candidates)."
   },
   "cmd.picker.usage.line3": {
-    "ja": "  例: tabs -list | picker · tabs -list -u | picker -u · search -list foo | picker · setting -list | picker",
-    "en": "  Examples: tabs -list | picker · tabs -list -u | picker -u · search -list foo | picker · setting -list | picker"
+    "ja": "  例: picker tabs -list · picker tabs -list -u · picker search -list foo · picker setting -list",
+    "en": "  Examples: picker tabs -list · picker tabs -list -u · picker search -list foo · picker setting -list"
   },
   "cmd.picker.usage.line4": {
-    "ja": "  `-u` は tabs 列の URL 表示用。単体の `picker` では何も開きません。",
-    "en": "  `-u` shows URLs in the tabs column. Bare `picker` does not open a column."
+    "ja": "  単体の `picker` では何も開きません。パイプ `|` は使いません。",
+    "en": "  Bare `picker` does not open a column. Do not use a pipe `|`."
   },
   "cmd.search.error.exitListUsage": {
     "ja": "error: usage: search -exit -list",
@@ -168,8 +184,8 @@
     "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
   },
   "cmd.search.listPicker.title": {
-    "ja": "Search list picker はパイプで開きます: search -list … | picker",
-    "en": "Search list picker is opened with: search -list … | picker"
+    "ja": "Search list picker は次のように開きます: picker search -list …",
+    "en": "Search list picker is opened with: picker search -list …"
   },
   "cmd.search.usage.line1": {
     "ja": "usage: search -list [<pattern>]   — 検索結果をプレーン一覧（既定は --all 相当）",
@@ -212,8 +228,8 @@
     "en": "error: unknown session option: {option}"
   },
   "cmd.session.listPicker.title": {
-    "ja": "Session list picker はパイプで開きます: session -list | picker",
-    "en": "Session list picker is opened with: session -list | picker"
+    "ja": "Session list picker は次のように開きます: picker session -list",
+    "en": "Session list picker is opened with: picker session -list"
   },
   "cmd.session.listPlain.hint": {
     "ja": "session -list — BMXt プロンプトから実行（プレーン一覧）",
@@ -308,8 +324,8 @@
     "en": "setting -list — run from the BMXt prompt"
   },
   "cmd.setting.listPicker.title": {
-    "ja": "Setting picker はパイプで開きます: setting -list | picker",
-    "en": "Setting picker is opened with: setting -list | picker"
+    "ja": "Setting picker は次のように開きます: picker setting -list",
+    "en": "Setting picker is opened with: picker setting -list"
   },
   "cmd.setting.listPlain.hint": {
     "ja": "setting -list — BMXt プロンプトから実行（プレーン一覧）",
@@ -408,12 +424,12 @@
     "en": "tabs -list — list windows, groups, and tabs with IDs in the terminal"
   },
   "cmd.tabs.listPicker.title": {
-    "ja": "Tab picker はパイプで開きます: tabs -list | picker（`picker -u` で URL 表示）",
-    "en": "Tab picker is opened with: tabs -list | picker (optional `picker -u` for URLs)"
+    "ja": "Tab picker は次のように開きます: picker tabs -list（`tabs -list -u` で URL 表示）",
+    "en": "Tab picker is opened with: picker tabs -list (optional `tabs -list -u` for URLs)"
   },
   "cmd.tabs.runHint": {
-    "ja": "実行例: tabs -list / tabs -list -u / tabs -list | picker · tabs -exit -list · tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
-    "en": "Run: tabs -list / tabs -list -u / tabs -list | picker. tabs -exit -list. tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl. tabs -moveurl <url>."
+    "ja": "実行例: tabs -list / tabs -list -u / picker tabs -list · tabs -exit -list · tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
+    "en": "Run: tabs -list / tabs -list -u / picker tabs -list. tabs -exit -list. tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl. tabs -moveurl <url>."
   },
   "cmd.tabs.setting.pageActive": {
     "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
@@ -424,8 +440,8 @@
     "en": "tabs -setting is handled from the BMXt prompt with: tabs -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tabs -list [-u]   — タブ列挙（`-u` は URL）。ピッカーは `tabs -list | picker`",
-    "en": "usage: tabs -list [-u]   — list tabs (-u: URLs). Picker: `tabs -list | picker`"
+    "ja": "usage: tabs -list [-u]   — タブ列挙（`-u` は URL）。ピッカーは `picker tabs -list`",
+    "en": "usage: tabs -list [-u]   — list tabs (-u: URLs). Picker: `picker tabs -list`"
   },
   "cmd.tabs.usage.line2": {
     "ja": "       tabs -exit -list — この BMXt ペインのタブピッカーを閉じる",

@@ -1,26 +1,18 @@
-/** EN: Parse standalone / pipe-consumer `picker` segments. */
+/** EN: Parse prefix-form `picker` / `picker <list-command>`. */
 
-export type PickerConsumerOptions = {
-  showUrl: boolean
-}
+export type PickerPrefixParse =
+  | { kind: "usage" }
+  | { kind: "run"; producerSegment: string }
 
 function normalizeToken(token: string): string {
   return token.trim().toLowerCase()
 }
 
 /**
- * EN: True when the segment is exactly `picker` or `picker -u` (pipe consumer / bare command).
- * JA: セグメントが `picker` または `picker -u` のとき真。
+ * EN: Parse `picker` (usage) or `picker <list-command>` (open picker for that list).
+ * JA: `picker`（usage）または `picker <list-command>`（その列挙をピッカー表示）。
  */
-export function isPickerCommandSegment(segment: string): boolean {
-  return parsePickerConsumerSegment(segment) !== null
-}
-
-/**
- * EN: Parse `picker` / `picker -u`. Other tokens → null.
- * JA: `picker` / `picker -u` のみ。それ以外は null。
- */
-export function parsePickerConsumerSegment(segment: string): PickerConsumerOptions | null {
+export function parsePickerPrefixLine(segment: string): PickerPrefixParse | null {
   const parts = segment.trim().split(/\s+/).filter((part) => part.length > 0)
   if (parts.length === 0) {
     return null
@@ -28,16 +20,16 @@ export function parsePickerConsumerSegment(segment: string): PickerConsumerOptio
   if (normalizeToken(parts[0]!) !== "picker") {
     return null
   }
-
-  let showUrl = false
-  for (let index = 1; index < parts.length; index += 1) {
-    const token = normalizeToken(parts[index]!)
-    if (token === "-u") {
-      showUrl = true
-      continue
-    }
-    return null
+  if (parts.length === 1) {
+    return { kind: "usage" }
   }
+  return {
+    kind: "run",
+    producerSegment: parts.slice(1).join(" ")
+  }
+}
 
-  return { showUrl }
+/** EN: True when the segment is a `picker` prefix command (bare or with producer). */
+export function isPickerPrefixCommand(segment: string): boolean {
+  return parsePickerPrefixLine(segment) !== null
 }

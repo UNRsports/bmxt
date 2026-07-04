@@ -14,6 +14,7 @@ import { tryHandleSearchListCommand } from "./command-dispatch/handle-search"
 import { tryHandleSnapshotSaveCommand } from "./command-dispatch/handle-snapshot"
 import { tryHandleSessionCommand } from "./command-dispatch/handle-session"
 import { tryHandleSettingCommand } from "./command-dispatch/handle-setting"
+import { tryHandlePickerCommand } from "./command-dispatch/handle-picker"
 import { tryHandleTabsListCommand } from "./command-dispatch/handle-tabs-list"
 import { tryHandleTabsSettingCommand } from "./command-dispatch/handle-tabs-setting"
 import { tryHandleTranslateCommand } from "./command-dispatch/handle-translate"
@@ -25,6 +26,7 @@ type DomainHandler = (ctx: CommandDispatchContext) => "handled" | "not_handled"
 
 /** EN: Order matches legacy monolithic submitLine (first match wins). */
 const DOMAIN_HANDLERS: readonly DomainHandler[] = [
+  tryHandlePickerCommand,
   tryHandleSettingCommand,
   tryHandleTabsSettingCommand,
   tryHandleDomSettingCommand,

@@ -18,13 +18,5 @@
   "pipe.error.unsupportedConsumer": {
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
-  },
-  "pipe.picker.empty": {
-    "ja": "error: picker に渡すリストが空です",
-    "en": "error: picker received an empty list"
-  },
-  "pipe.picker.mixedKinds": {
-    "ja": "error: picker は単一コマンド族の ListResult のみ受け付けます（混在不可）",
-    "en": "error: picker accepts ListResult from a single command family only (no mixed kinds)"
   }
 }

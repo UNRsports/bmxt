@@ -200,7 +200,7 @@
       "module": "picker",
       "canonicalName": "picker",
       "aliases": [],
-      "usagePrimary": "picker",
+      "usagePrimary": "picker <list-command>",
       "subcommands": []
     },
     {

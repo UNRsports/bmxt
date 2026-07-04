@@ -366,7 +366,7 @@ lib/features/command-line/list-output/     … ListResult 規格（変更なし�
 | P5 | **論理 AND `&&`** | **実装済み** — `&&` / `||` / `;` | 維持；**`||` / `;`** を同じパーサ族で追加 |
 | P6 | **クォート・エスケープ** | **実装済み** — 演算子 + リダイレクト | 全演算子・リダイレクトトークンに拡張 |
 | P7 | **コマンド解釈の単一入口** | **実装済み** — `commands/runCommand` + `COMMAND_ENTRIES` + background `RUN_CMD` | **`CommandEntry` 1 本**（tryRun / runtime: `ui` \| `background`） |
-| P8 | **対話 UI は opt-in** | **実装済み** — `| picker`（§11）、continuation | bare `picker` は usage；列はパイプ consumer |
+| P8 | **対話 UI は opt-in** | **実装済み** — `picker <list>`（§11）、continuation | bare `picker` は usage；列はプレフィックス起動 |
 | P9 | **適合性テスト** | **実装済み** — `conformance/posix-profile.test.ts` | **プロファイル別 conformance スイート**（演算子・終了状態・パイプ） |
 
 **永久にスコープ外（準拠対象外と明記）**
@@ -470,29 +470,33 @@ Phase G（文書・conformance）
 
 ---
 
-## 11. `picker` コマンド独立 — `--picker` 廃止・`| picker` へ
+## 11. `picker` コマンド独立 — `--picker` 廃止・プレフィックス形式
 
 ### 11.1 目的
 
 | 項目 | 内容 |
 |------|------|
 | `-list` | **列挙のみ**（`ListResult` / plain 行）。対話 UI を起動しない |
-| `picker` | **第一コマンド**として独立。パイプ consumer として stdin の `ListResult` を受け、サイド列（または session フローティング）で走査しやすくする |
-| 起動 | `tabs -list \| picker` / `search -list … \| picker` 等。**`picker` 単体**は usage（i18n）のみ |
-| 廃止 | 全 `-list` ファミリーの第三トークン **`--picker`** |
+| `picker` | **第一コマンド**として独立。続く `-list` 列挙をサイド列（または session 候補）で走査しやすくする |
+| 起動 | **`picker tabs -list`** / **`picker search -list …`** 等（意図を先に書く）。**`picker` 単体**は usage（i18n）のみ |
+| 廃止 | 全 `-list` の第三トークン **`--picker`**、および **`… \| picker`** パイプ形式 |
 
 ### 11.2 セマンティクス
 
 ```
-producer (-list)  →  ListResult（正本）
-                      ├─ 終端なし     → formatPlain（ターミナル）
-                      ├─ | close      → 副作用 consumer
-                      └─ | picker     → UI sink（列を開いて exit 0）
+picker <list-command>
+    │
+    ├─ bare `picker`     → usage（i18n）
+    └─ producer (-list)  → ListResult → open picker UI（exit 0）
+
+tabs -list               → formatPlain（ターミナル）
+tabs -list | close       → パイプ consumer（副作用・picker とは別）
 ```
 
-- パイプ完了 ≠ 列クローズ。列の寿命はセッション（`-exit -list` 等）。
-- **tabs ライブ更新**は起動経路に依存しない。列 open 後、`useTabPickerChromeSync` + live-fields（Watch 層）が Chrome を監視し続ける。stdin の `ListResult` は kind 判定と初期表示用；tabs の正本は常に `chrome.tabs.*`。
-- `picker` は汎用 UI 層（`lib/features/picker/` + 既存 `side-picker/`）。ドメイン別 Watch（tabs chrome-sync 等）は feature 側アダプタとして列ライフサイクルにぶら下がる。
+- **意図先行:** これから行う動作（ピッカー表示）を先に定義し、対象の列挙コマンドを続ける。`|` は不要（入力しづらい・UI 起動はデータ変換ではない）。
+- 列の寿命はセッション（`-exit -list` 等）。`picker` コマンドの終了 ≠ 列クローズ。
+- **tabs ライブ更新**は起動経路に依存しない。列 open 後、`useTabPickerChromeSync` + live-fields が Chrome を監視。tabs の正本は常に `chrome.tabs.*`。
+- URL 表示は producer 側（`picker tabs -list -u`）。
 
 ### 11.3 kind → slot
 
@@ -504,20 +508,20 @@ producer (-list)  →  ListResult（正本）
 | `session.row` | session フローティング候補 |
 | `setting.field` | setting サイド列（既存エディタ） |
 
-混在族はエラー（stderr + exit 1）。`picker -u` は tabs 列の URL 表示 opt-in。
+混在族・非 `-list` 後続はエラー（stderr + exit 非 0）。
 
 ### 11.4 対象外（従来どおり別経路）
 
 - `group new`（ID なし）の tabs 列（group-new variant）
 - `session -switch` の名前補完フローティング
 - 各 `*-exit -list`（列クローズ）
+- パイプ consumer（`close` 等）— `picker` はプレフィックス専用
 
 ### 11.5 実装チェックリスト
 
-- [x] `_context/todo.md` §11
-- [x] manifest: `picker` コマンド追加；各 `-list` から `--picker` trailingToken 削除
-- [x] `lib/features/bmxt-core/cmd/picker.ts` — 単体は usage
-- [x] `lib/features/picker/` — match / open-from-list-result / usage
-- [x] pipe consumer registry に `picker` 登録
-- [x] UI handlers / `run-ui-segment` / list-commands から `--picker` 分岐削除
-- [x] i18n（cmd / pipe）・README・テスト・codegen
+- [x] `_context/todo.md` §11（プレフィックス形式）
+- [x] manifest: `picker` コマンド；各 `-list` から `--picker` 削除
+- [x] `lib/features/picker/` — prefix parse / run / open-from-list-result
+- [x] `CommandEntry` + UI handler（`picker` を `plain-list` より前に登録）
+- [x] pipe consumer から `picker` を外す（`close` のみ）
+- [x] i18n・README・テスト・codegen

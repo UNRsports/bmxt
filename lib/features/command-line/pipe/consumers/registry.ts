@@ -5,17 +5,13 @@ import { segmentFailure } from "../../compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
 import { closePipeConsumer } from "./close-from-tabs.ts"
-import { pickerPipeConsumer } from "./picker-from-list.ts"
 import { listResultAcceptsKinds } from "./list-result-accepts-kinds.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
 export { listResultAcceptsKinds } from "./list-result-accepts-kinds.ts"
 
 /** EN: Registered pipe consumers (right-hand side of `|`). */
-export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
-  pickerPipeConsumer,
-  closePipeConsumer
-]
+export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [closePipeConsumer]
 
 export function matchPipeConsumer(segment: string): PipeConsumerEntry | null {
   const trimmed = segment.trim()

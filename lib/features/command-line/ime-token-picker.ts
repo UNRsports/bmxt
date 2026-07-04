@@ -31,6 +31,7 @@ import {
   type CandidateMatchMode
 } from "./ime-token-match"
 import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
+import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
 
@@ -128,12 +129,78 @@ export function resolveImeTokenPicker(
   }
 }
 
+function remapPickerProducerTier(tier: ImeTokenTier): ImeTokenTier {
+  if (tier === "first") {
+    return "second"
+  }
+  if (tier === "second") {
+    return "third"
+  }
+  return "third"
+}
+
+/**
+ * EN: `picker <list-command>…` — complete the producer segment as a normal command line.
+ * JA: `picker <list-command>…` — 後続を通常のコマンド行として補完する。
+ */
+function resolvePickerPrefixedTokenPicker(
+  line: string,
+  cursor: number,
+  opts?: ResolveImeTokenPickerOptions
+): ImeTokenPickerModel | null {
+  const prefixMatch = /^(\s*)picker(\s+)/i.exec(line)
+  if (prefixMatch === null) {
+    return null
+  }
+  const producerStart = prefixMatch[0].length
+  if (cursor < producerStart) {
+    return null
+  }
+
+  const producerLine = line.slice(producerStart)
+  const producerCursor = cursor - producerStart
+
+  if (producerLine.trim().length === 0) {
+    return {
+      tokenStart: producerStart,
+      tokenEnd: producerStart,
+      prefix: "",
+      candidates: [...PICKER_LIST_PRODUCER_TOKENS],
+      tier: "second"
+    }
+  }
+
+  const picked = resolveImeTokenPickerInSegment(
+    producerLine,
+    producerCursor,
+    PICKER_LIST_PRODUCER_TOKENS,
+    {
+      ...opts,
+      emptyFirstPrefixShowsAll: true
+    }
+  )
+  if (picked === null) {
+    return null
+  }
+  return {
+    ...picked,
+    tokenStart: picked.tokenStart + producerStart,
+    tokenEnd: picked.tokenEnd + producerStart,
+    tier: remapPickerProducerTier(picked.tier)
+  }
+}
+
 function resolveImeTokenPickerInSegment(
   line: string,
   cursor: number,
   firstCommandTokens: readonly string[],
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
+  const pickerPrefixed = resolvePickerPrefixedTokenPicker(line, cursor, opts)
+  if (pickerPrefixed !== null) {
+    return pickerPrefixed
+  }
+
   if (
     shouldShowSearchListPatternPlaceholder(line, cursor) &&
     !isSearchListAwaitingScopeOrPattern(line)
@@ -188,6 +255,15 @@ function resolveImeTokenPickerInSegment(
   if (tokenIndex === 0) {
     const cmdWord = line.slice(l, r)
     const canonical0 = resolveCanonical(cmdWord)
+    if (canonical0 === "picker" && cursor >= line.length) {
+      return {
+        tokenStart: line.length,
+        tokenEnd: line.length,
+        prefix: "",
+        candidates: [...PICKER_LIST_PRODUCER_TOKENS],
+        tier: "second"
+      }
+    }
     if (
       canonical0 &&
       cursor >= line.length &&
