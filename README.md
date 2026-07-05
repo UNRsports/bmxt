@@ -30,6 +30,7 @@
   - [URL Lines (`http` / `https`)](#url-lines)
 - [Command Execution Architecture (Current)](#command-execution-architecture)
   - [`-list` output registry](#list-commands-registry)
+  - [bmxtRule (inter-command stream)](#bmxt-rule)
   - [Job execution (background work)](#job-execution)
   - [Add a New Built-in Command](#add-new-built-in-command)
   - [Command add procedure](#command-add-procedure)
@@ -255,7 +256,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **Compound commands (`&&` / `||` / `;`):** Join multiple commands on one line with **`&&`**, **`||`**, or **`;`** (quoted regions and `\&&` / `\||` / `\;` escapes are respected). Segments run **left to right** with shell-style short-circuit: **`&&`** runs the next segment only after exit status **0**, **`||`** only after a non-zero status, **`;`** always. Each segment returns a numeric **exit status** (0 = success; usage/parse = 2; unknown command = 127; other failures = 1). Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`picker <list>` after any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
 
-**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tabs -list | close`**. Producers: plain **`tabs -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Consumers are registered under **`lib/features/command-line/pipe/consumers/`** (v1: **`close`** / **`c`** with no tab id, accepts **`tabs.tab`** records). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**. Interactive UI is opened with **`picker <list-command>`** (prefix form; not a pipe).
+**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tabs -list | close`**. Producers: plain **`tabs -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**, extensible `[key, value]` entry arrays — see **[bmxtRule](#bmxt-rule)**); plain producer lines are not logged in a multi-stage pipe. Consumers are registered under **`lib/features/command-line/pipe/consumers/`** (v1: **`close`** / **`c`** with no tab id, accepts **`page.open`** records). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**. Interactive UI is opened with **`picker <list-command>`** (prefix form; not a pipe).
 
 **Redirects (`>` / `>>` / `2>` / `2>>`):** Within a segment, redirect **stdout** (`>` / `>>`) or **stderr** (`2>` / `2>>`) to a **null sink** only: **`null`** or **`/dev/null`** (quoted regions and `\>` escapes are respected). The redirected channel is discarded from the terminal log. Other targets are rejected (exit status **2**). OS file paths are out of scope.
 
@@ -850,12 +851,14 @@ All **plain** `-list` subcommands share one pipeline (POSIX-style: one schema, o
 ```
 token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (+ summary footer)
                                       ↓
-                               pipe stdin (`|` consumers, e.g. close)
+                               bmxtRule stream (bmxt-rule/1) → pipe consumer (e.g. close)
 ```
 
 | Module | Role |
 |--------|------|
-| **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` types, `formatListPlainLines`, pipe TSV (`format-pipe.ts`), summary line |
+| **`lib/features/bmxt-rule/`** | **bmxtRule** inter-command stream (`BmxtRuleStream`, validate, NDJSON serialize, `from-list-result` adapter) |
+| **`manifest/bmxt-rule.json`** | Kind catalog and field hints (extensible; single source for the stream spec) |
+| **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` types, `formatListPlainLines`, legacy TSV (`format-pipe.ts`), summary line |
 | **`lib/features/command-line/list-commands/`** | Matcher table (`LIST_COMMAND_MATCHERS`), `matchPlainListCommand`, `tryRunPlainListCommand`, `runPlainListForCommandId`; heavy plugins loaded via **dynamic import** |
 | **`lib/features/<feature>/*-list-command.ts`** | Per-command plugin: parse match, `fetchListResult`, `formatPlainLines` |
 | **`lib/features/<feature>/*-list-result.ts`** | Domain data → `ListRecord[]` |
@@ -871,7 +874,44 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 | `session -list` | UI → `tryRunPlainListCommand` | UI inline picker |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI settings picker column |
 
-**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` uses `matchPlainListCommand` + `fetchListResultForCommand` to pass **`ListResult`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (v1: **`close`** on **`tabs.tab`** records, with kind-compatibility checks).
+**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (v1: **`close`** on **`page.open`** records, with kind-compatibility checks).
+
+<a id="bmxt-rule"></a>
+
+### bmxtRule (inter-command stream)
+
+**bmxtRule** is BMXt’s structured stream for **pipe** and future inter-command handoff. Schema id: **`bmxt-rule/1`**. Catalog: **`manifest/bmxt-rule.json`**.
+
+Each record uses an **extensible entry array** — attributes are `[key, value]` pairs so kinds can gain or drop fields without breaking older consumers:
+
+```json
+{
+  "schema": "bmxt-rule/1",
+  "producer": [["command", "tabs"], ["subcommand", "-list"]],
+  "records": [
+    {
+      "kind": "page.open",
+      "entries": [
+        ["url", "https://example.com"],
+        ["pageTitle", "Example"],
+        ["tabId", 42],
+        ["windowId", 1],
+        ["active", true]
+      ]
+    }
+  ]
+}
+```
+
+| Kind | Domain | Typical keys |
+|------|--------|----------------|
+| **`page.open`** | Open http(s) tab | `url`, `pageTitle`, `tabId`, `windowId`, `groupId`, `active`, `favicon` |
+| **`page.window`** / **`page.group`** | Tab tree containers | `windowId`, `focused`, `label`, … |
+| **`bookmark`** | Bookmark | `url`, `pageTitle`, `dateAdded`, … |
+| **`history`** | History visit | `url`, `pageTitle`, `lastVisitTime`, … |
+| **`markdown.file`** | Saved snapshot | `url`, `pageTitle`, `fileName`, `savedAt`, … |
+
+**Runtime:** pipe stages pass **`BmxtRuleStream` in memory** (same shape as JSON). NDJSON projection is for fixtures, export, and tests (`lib/features/bmxt-rule/fixtures/`). **Plain `-list`** still prints human-oriented lines (**`bmxt-list/1`**); only **multi-stage `|`** uses bmxtRule between commands. Legacy **`ListResult`** remains for picker and plain formatters; adapters live in **`lib/features/bmxt-rule/adapters/from-list-result.ts`** and per-feature helpers (e.g. **`tabs-bmxt-rule.ts`**).
 
 **Adding a new `-list` producer** — see the checklist under **[Command add procedure](#command-add-procedure)**.
 
@@ -886,7 +926,9 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
 - **`lib/features/page-dom/`** — injected DOM helpers and formatters (`dom -list`)
 - **`lib/features/snapshot/`** — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
-- **`lib/features/command-line/list-output/`** — canonical **`-list`** plain/pipe output (`ListResult`, `bmxt-list/1`)
+- **`lib/features/bmxt-rule/`** — **bmxtRule** stream (`bmxt-rule/1`, validate, serialize, adapters)
+- **`manifest/bmxt-rule.json`** — bmxtRule kind catalog (extensible entry arrays)
+- **`lib/features/command-line/list-output/`** — canonical **`-list`** plain output (`ListResult`, `bmxt-list/1`)
 - **`lib/features/command-line/list-commands/`** — **`-list` producer registry** and unified plain runner (`tryRunPlainListCommand`)
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** registry (`runCommand`), null-sink redirects, plain-list composition
 - **`lib/features/command-line/command-output.ts`** — stdout/stderr channels and session-log encoding
@@ -1065,7 +1107,9 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
 - `lib/features/snapshot/` — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
-- `lib/features/command-line/list-output/` — `-list` schema and plain/pipe formatters (`ListResult`, `bmxt-list/1`)
+- `lib/features/bmxt-rule/` — **bmxtRule** stream (`bmxt-rule/1`, validate, serialize, adapters)
+- `manifest/bmxt-rule.json` — bmxtRule kind catalog
+- `lib/features/command-line/list-output/` — `-list` schema and plain formatters (`ListResult`, `bmxt-list/1`)
 - `lib/features/command-line/list-commands/` — `-list` producer registry (`*-list-command.ts` plugins, `tryRunPlainListCommand`)
 - `lib/features/command-line/commands/` — `CommandEntry` registry (`runCommand`), null-sink redirects
 - `lib/features/command-line/command-output.ts` — stdout/stderr channels and session-log encoding
@@ -1189,6 +1233,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [URL（`http` / `https` 行）](#url-lines-ja)
 - [コマンド実行アーキテクチャ（現状）](#command-execution-architecture-ja)
   - [`-list` 出力レジストリ](#list-commands-registry-ja)
+  - [bmxtRule（コマンド間ストリーム）](#bmxt-rule-ja)
   - [ジョブ実行（バックグラウンド処理）](#job-execution-ja)
   - [組み込みコマンドの追加](#add-new-built-in-command-ja)
   - [コマンド追加手順](#command-add-procedure-ja)
@@ -1415,7 +1460,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **複合コマンド（`&&` / `||` / `;`）:** 1 行に **`&&`**・**`||`**・**`;`** で複数コマンドを並べる（クォート内と `\&&` / `\||` / `\;` は演算子にしない）。**左から順**に実行し、シェル同様に短絡する（**`&&`** は終了状態 **0** のときのみ次へ、**`||`** は非 0 のときのみ、**`;`** は常に）。各セグメントは数値の **exit status** を返す（0 = 成功、usage/parse = 2、不明コマンド = 127、その他失敗 = 1）。continuation のみの入力（裸の `dom` 等）や対話ピッカー（裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。ピッカー列は **`picker <list>`** で開く。
 
-**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` は演算子にしない）。例: **`tabs -list | close`**。producer: プレーン **`tabs -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。consumer は **`lib/features/command-line/pipe/consumers/`** に登録（v1: タブ ID なしの **`close`** / **`c`**、**`tabs.tab`** を受理）。種別不一致・未対応 consumer は終了状態 **1** と **stderr**。対話 UI は **`picker <list>`** で開く（例: **`picker tabs -list`**）。
+**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` は演算子にしない）。例: **`tabs -list | close`**。producer: プレーン **`tabs -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。段間では **`bmxtRule`** ストリーム（**`bmxt-rule/1`**、拡張可能な `[key, value]` 配列 — **[bmxtRule](#bmxt-rule-ja)** 参照）を渡し、複数段パイプでは producer のプレーン行はログに出しません。consumer は **`lib/features/command-line/pipe/consumers/`** に登録（v1: タブ ID なしの **`close`** / **`c`**、**`page.open`** を受理）。種別不一致・未対応 consumer は終了状態 **1** と **stderr**。対話 UI は **`picker <list>`** で開く（例: **`picker tabs -list`**）。
 
 **リダイレクト（`>` / `>>` / `2>` / `2>>`）:** セグメント内で **stdout**（`>` / `>>`）または **stderr**（`2>` / `2>>`）を **null シンク**（**`null`** または **`/dev/null`**）へだけ向けられる（クォート内と `\>` は演算子にしない）。向けたチャネルはターミナルログから捨てる。それ以外のターゲットは拒否（終了状態 **2**）。OS パスへの書き込みは対象外。
 
@@ -2007,12 +2052,14 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 ```
 トークン行 → matcher（registry）→ ListResult（bmxt-list/1）→ プレーン行（+ サマリー）
                                     ↓
-                             パイプ stdin（`|` consumer、例: close）
+                             bmxtRule ストリーム（bmxt-rule/1）→ パイプ consumer（例: close）
 ```
 
 | モジュール | 役割 |
 |-----------|------|
-| **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` 型、`formatListPlainLines`、パイプ TSV、サマリー行 |
+| **`lib/features/bmxt-rule/`** | **bmxtRule** コマンド間ストリーム（`BmxtRuleStream`、検証、NDJSON、`from-list-result` adapter） |
+| **`manifest/bmxt-rule.json`** | kind カタログとフィールドヒント（拡張可能・規格の単一ソース） |
+| **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` 型、`formatListPlainLines`、レガシー TSV、サマリー行 |
 | **`lib/features/command-line/list-commands/`** | matcher 表、`matchPlainListCommand`、`tryRunPlainListCommand`、`runPlainListForCommandId`（重い plugin は dynamic import） |
 | **`lib/features/<feature>/*-list-command.ts`** | コマンド別 plugin（`fetchListResult` / `formatPlainLines`） |
 | **`lib/features/<feature>/*-list-result.ts`** | ドメインデータ → `ListRecord[]` |
@@ -2028,7 +2075,25 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 | `session -list` | UI → `tryRunPlainListCommand` | UI インライン候補 |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI 設定ピッカー列 |
 
-**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が `matchPlainListCommand` で **`ListResult`** をセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（v1: **`tabs.tab`** に対する **`close`**、種別互換チェック付き）。
+**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（v1: **`page.open`** に対する **`close`**、種別互換チェック付き）。
+
+<a id="bmxt-rule-ja"></a>
+
+### bmxtRule（コマンド間ストリーム）
+
+**bmxtRule** は **パイプ**および将来のコマンド間受け渡し用の構造化ストリーム規格です。スキーマ ID: **`bmxt-rule/1`**。カタログ: **`manifest/bmxt-rule.json`**。
+
+各レコードは **拡張可能な entry 配列**（`[key, value]` の列）を持ち、kind ごとに属性の増減があっても古い consumer を壊しにくくします。
+
+| kind | ドメイン | 主なキー |
+|------|----------|----------|
+| **`page.open`** | 開いている http(s) タブ | `url`, `pageTitle`, `tabId`, `windowId`, `groupId`, `active`, `favicon` |
+| **`page.window`** / **`page.group`** | タブツリー容器 | `windowId`, `focused`, `label`, … |
+| **`bookmark`** | ブックマーク | `url`, `pageTitle`, `dateAdded`, … |
+| **`history`** | 履歴 | `url`, `pageTitle`, `lastVisitTime`, … |
+| **`markdown.file`** | 保存済み snapshot | `url`, `pageTitle`, `fileName`, `savedAt`, … |
+
+**ランタイム:** パイプ段はメモリ上の **`BmxtRuleStream`**（JSON と同型）を渡します。NDJSON は fixture・export・テスト用（**`lib/features/bmxt-rule/fixtures/`**）。**単独 `-list`** は従来どおり人間向けプレーン行（**`bmxt-list/1`**）；**複数段 `|`** のときだけ段間で bmxtRule を使います。ピッカー／プレーン整形用の **`ListResult`** は残し、**`lib/features/bmxt-rule/adapters/from-list-result.ts`** および feature 別ヘルパ（例: **`tabs-bmxt-rule.ts`**）で変換します。
 
 **新規 `-list` producer** — **[コマンド追加手順](#command-add-procedure-ja)** のチェックリストを参照。
 
@@ -2039,7 +2104,9 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`lib/features/bmxt-window/`** — BMXt ウィンドウのメイン UI
 - **`lib/features/extension-storage/`** — ストレージキーと上限
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
-- **`lib/features/command-line/list-output/`** — **`-list`** 出力規格（`ListResult`、`bmxt-list/1`）
+- **`lib/features/bmxt-rule/`** — **bmxtRule** ストリーム（`bmxt-rule/1`、検証、serialize、adapter）
+- **`manifest/bmxt-rule.json`** — bmxtRule kind カタログ
+- **`lib/features/command-line/list-output/`** — **`-list`** 出力規格（`ListResult`、`bmxt-list/1`）プレーン表示
 - **`lib/features/command-line/list-commands/`** — **`-list` producer レジストリ**（`tryRunPlainListCommand`）
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト、plain-list 合成
 - **`lib/features/command-line/command-output.ts`** — stdout/stderr チャネルとセッションログ符号化
@@ -2211,7 +2278,8 @@ pnpm run dev
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
-- `lib/features/command-line/list-output/` — **`-list`** 規格と plain／pipe 整形（`ListResult`、`bmxt-list/1`）
+- `lib/features/bmxt-rule/` — **bmxtRule** 規格（`bmxt-rule/1`）と adapter
+- `lib/features/command-line/list-output/` — **`-list`** 規格と plain 整形（`ListResult`、`bmxt-list/1`）
 - `lib/features/command-line/list-commands/` — **`-list` producer レジストリ**（`*-list-command.ts` プラグイン、`tryRunPlainListCommand`）
 - `lib/features/command-line/commands/` — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト
 - `lib/features/command-line/command-output.ts` — stdout/stderr チャネルとセッションログ符号化

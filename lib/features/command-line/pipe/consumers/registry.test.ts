@@ -1,46 +1,41 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
+import { BMXT_RULE_SCHEMA } from "../../../bmxt-rule/types.ts"
+import { bmxtRuleStreamFromListResult } from "../../../bmxt-rule/adapters/from-list-result.ts"
+import { CLOSE_ACCEPTS_BMXT_RULE_KINDS } from "./close-match.ts"
+import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
 import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../list-output/types.ts"
-import { CLOSE_ACCEPTS_KINDS, isClosePipeConsumer } from "./close-match.ts"
-import { listResultAcceptsKinds } from "./list-result-accepts-kinds.ts"
 
 function listResult(kinds: ListResult["records"][number]["kind"][]): ListResult {
   return {
     schema: LIST_OUTPUT_SCHEMA,
     command: "tabs",
     subcommand: "-list",
-    records: kinds.map((kind) => ({ kind, fields: {} }))
+    records: kinds.map((kind) => ({ kind, fields: kind === "tabs.tab" ? { tabId: 1 } : {} }))
   }
 }
 
-describe("isClosePipeConsumer", () => {
-  it("matches close", () => {
-    assert.equal(isClosePipeConsumer("close"), true)
-    assert.equal(isClosePipeConsumer("c"), true)
+describe("bmxtRuleStreamAcceptsKinds", () => {
+  it("accepts empty stdin", () => {
+    const stream = bmxtRuleStreamFromListResult(listResult([]))
+    assert.equal(bmxtRuleStreamAcceptsKinds(stream, CLOSE_ACCEPTS_BMXT_RULE_KINDS), true)
   })
 
-  it("rejects unknown consumers", () => {
-    assert.equal(isClosePipeConsumer("group -new"), false)
-    assert.equal(isClosePipeConsumer("picker"), false)
-  })
-})
-
-describe("listResultAcceptsKinds", () => {
-  it("accepts empty records", () => {
-    assert.equal(listResultAcceptsKinds(listResult([]), CLOSE_ACCEPTS_KINDS), true)
+  it("accepts when at least one page.open record exists", () => {
+    const stream = bmxtRuleStreamFromListResult(listResult(["tabs.window", "tabs.tab"]))
+    assert.equal(bmxtRuleStreamAcceptsKinds(stream, CLOSE_ACCEPTS_BMXT_RULE_KINDS), true)
+    assert.equal(stream.records.some((record) => record.kind === "page.open"), true)
   })
 
-  it("accepts when at least one kind matches", () => {
-    assert.equal(
-      listResultAcceptsKinds(listResult(["tabs.window", "tabs.tab"]), CLOSE_ACCEPTS_KINDS),
-      true
-    )
-  })
-
-  it("rejects when no kind matches", () => {
-    assert.equal(
-      listResultAcceptsKinds(listResult(["session.row"]), CLOSE_ACCEPTS_KINDS),
-      false
-    )
+  it("rejects incompatible kinds", () => {
+    const sessions: ListResult = {
+      schema: LIST_OUTPUT_SCHEMA,
+      command: "session",
+      subcommand: "-list",
+      records: [{ kind: "session.row", fields: {} }]
+    }
+    const stream = bmxtRuleStreamFromListResult(sessions)
+    assert.equal(bmxtRuleStreamAcceptsKinds(stream, CLOSE_ACCEPTS_BMXT_RULE_KINDS), false)
+    assert.equal(stream.schema, BMXT_RULE_SCHEMA)
   })
 })

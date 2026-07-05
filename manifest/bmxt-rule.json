@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "streamSchema": "bmxt-rule/1",
+  "description": "BMXt inter-command stream (bmxtRule). Records use extensible [key, value] entry arrays.",
+  "kinds": [
+    {
+      "id": "page.open",
+      "domain": "page",
+      "description": "Open http(s) browser tab",
+      "coreKeys": ["url", "pageTitle"],
+      "optionalKeys": ["tabId", "windowId", "groupId", "active", "favicon"]
+    },
+    {
+      "id": "page.window",
+      "domain": "page",
+      "description": "Browser window container row",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["windowId", "focused", "url"]
+    },
+    {
+      "id": "page.group",
+      "domain": "page",
+      "description": "Tab group container row",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["windowId", "groupId", "label", "url"]
+    },
+    {
+      "id": "bookmark",
+      "domain": "bookmark",
+      "description": "Bookmark entry",
+      "coreKeys": ["url", "pageTitle"],
+      "optionalKeys": ["dateAdded", "bookmarkId"]
+    },
+    {
+      "id": "history",
+      "domain": "history",
+      "description": "History visit entry",
+      "coreKeys": ["url", "pageTitle"],
+      "optionalKeys": ["lastVisitTime", "visitCount"]
+    },
+    {
+      "id": "markdown.file",
+      "domain": "markdown",
+      "description": "Saved Markdown snapshot file",
+      "coreKeys": ["url", "pageTitle"],
+      "optionalKeys": ["id", "fileName", "savedAt", "source"]
+    },
+    {
+      "id": "search.hit",
+      "domain": "search",
+      "description": "Search projection row (may normalize to domain kinds later)",
+      "coreKeys": ["url", "pageTitle"],
+      "optionalKeys": ["index", "source", "tabId", "hitCount", "pattern"]
+    },
+    {
+      "id": "dom.node",
+      "domain": "dom",
+      "description": "DOM list node row",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["path", "tag", "snippet", "url", "tabId"]
+    },
+    {
+      "id": "dom.notice",
+      "domain": "dom",
+      "description": "DOM list notice line",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["notice"]
+    },
+    {
+      "id": "session.row",
+      "domain": "session",
+      "description": "Terminal session row",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["sessionId", "active", "name"]
+    },
+    {
+      "id": "setting.field",
+      "domain": "setting",
+      "description": "UI setting field row",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["key", "value"]
+    }
+  ]
+}

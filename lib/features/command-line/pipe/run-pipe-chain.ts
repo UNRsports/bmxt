@@ -1,5 +1,6 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
+import { bmxtRuleStreamFromListResult } from "../../bmxt-rule/index.ts"
 import { classifyCompoundEligibility } from "../compound/classify-eligibility.ts"
 import {
   segmentFailure,
@@ -13,7 +14,7 @@ import { tPipe } from "../../setting/i18n/ns/pipe.ts"
 import { fetchListResultForCommand, matchPlainListCommand } from "../list-commands/index.ts"
 import { tryRunPipeConsumer } from "./consumers/index.ts"
 
-export async function attachListResultToOutcome(
+export async function attachBmxtRuleStreamToOutcome(
   segment: string,
   outcome: SegmentOutcome,
   deps: CommandDispatchDeps,
@@ -28,11 +29,15 @@ export async function attachListResultToOutcome(
   }
   try {
     const listResult = await fetchListResultForCommand(match, { locale, deps })
-    return { ...outcome, listResult }
+    const bmxtRuleStream = bmxtRuleStreamFromListResult(listResult)
+    return { ...outcome, listResult, bmxtRuleStream }
   } catch {
     return outcome
   }
 }
+
+/** @deprecated Use attachBmxtRuleStreamToOutcome */
+export const attachListResultToOutcome = attachBmxtRuleStreamToOutcome
 
 function classifyPipeStageEligibility(
   stage: string,
@@ -63,7 +68,7 @@ export async function runPipeChain(
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome> {
-  let listResult = undefined as SegmentOutcome["listResult"]
+  let bmxtRuleStream = undefined as SegmentOutcome["bmxtRuleStream"]
   const allStdout: string[] = []
   const allStderr: string[] = []
 
@@ -75,14 +80,14 @@ export async function runPipeChain(
     }
 
     if (index > 0) {
-      if (listResult === undefined) {
+      if (bmxtRuleStream === undefined) {
         return prependAccumulated(
           segmentFailure("runtime", [tPipe("pipe.error.noStdin", locale)]),
           allStdout,
           allStderr
         )
       }
-      const consumerOutcome = await tryRunPipeConsumer(stage, listResult, deps, locale)
+      const consumerOutcome = await tryRunPipeConsumer(stage, bmxtRuleStream, deps, locale)
       if (consumerOutcome === null) {
         return prependAccumulated(
           segmentFailure("runtime", [
@@ -97,7 +102,7 @@ export async function runPipeChain(
       }
       allStdout.push(...consumerOutcome.stdout)
       allStderr.push(...consumerOutcome.stderr)
-      listResult = consumerOutcome.listResult
+      bmxtRuleStream = consumerOutcome.bmxtRuleStream
       continue
     }
 
@@ -105,15 +110,15 @@ export async function runPipeChain(
     if (!isExitSuccess(outcome.exitStatus)) {
       return prependAccumulated(outcome, allStdout, allStderr)
     }
-    // EN: In a pipe, producer stdout feeds the consumer (ListResult), not the terminal.
+    // EN: In a pipe, producer stdout feeds the consumer (bmxtRule stream), not the terminal.
     if (stages.length === 1) {
       allStdout.push(...outcome.stdout)
     }
     allStderr.push(...outcome.stderr)
 
-    const enriched = await attachListResultToOutcome(stage, outcome, deps, locale)
-    listResult = enriched.listResult
-    if (stages.length > 1 && listResult === undefined) {
+    const enriched = await attachBmxtRuleStreamToOutcome(stage, outcome, deps, locale)
+    bmxtRuleStream = enriched.bmxtRuleStream
+    if (stages.length > 1 && bmxtRuleStream === undefined) {
       return prependAccumulated(
         segmentFailure("runtime", [
           tPipe("pipe.error.notProducer", locale, { stage })
@@ -124,5 +129,9 @@ export async function runPipeChain(
     }
   }
 
-  return withMergedLines(segmentSuccess(allStdout, listResult), allStdout, allStderr)
+  return withMergedLines(
+    segmentSuccess(allStdout, undefined, bmxtRuleStream),
+    allStdout,
+    allStderr
+  )
 }

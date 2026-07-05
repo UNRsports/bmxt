@@ -1,5 +1,6 @@
 import { mergeOutputLines } from "../command-output.ts"
 import type { ListResult } from "../list-output/types.ts"
+import type { BmxtRuleStream } from "../../bmxt-rule/types.ts"
 import { EXIT_SUCCESS, exitStatusForCode } from "./exit-status.ts"
 import type { SegmentOutcome, SegmentOutcomeCode } from "./types.ts"
 
@@ -31,7 +32,8 @@ export function classifyOutcomeFromLines(lines: readonly string[]): ClassifiedOu
 
 export function segmentSuccess(
   lines: readonly string[],
-  listResult?: ListResult
+  listResult?: ListResult,
+  bmxtRuleStream?: BmxtRuleStream
 ): SegmentOutcome {
   const stdout = [...lines]
   const stderr: string[] = []
@@ -42,7 +44,8 @@ export function segmentSuccess(
     stdout,
     stderr,
     lines: mergeOutputLines(stdout, stderr),
-    listResult
+    listResult,
+    bmxtRuleStream
   }
 }
 

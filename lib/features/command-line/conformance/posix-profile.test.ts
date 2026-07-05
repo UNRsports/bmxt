@@ -25,8 +25,9 @@ import {
   isNullRedirectTarget,
   parseRedirects
 } from "../commands/parse-redirect.ts"
-import { CLOSE_ACCEPTS_KINDS, isClosePipeConsumer } from "../pipe/consumers/close-match.ts"
-import { listResultAcceptsKinds } from "../pipe/consumers/list-result-accepts-kinds.ts"
+import { CLOSE_ACCEPTS_BMXT_RULE_KINDS, isClosePipeConsumer } from "../pipe/consumers/close-match.ts"
+import { bmxtRuleStreamAcceptsKinds } from "../pipe/consumers/stream-accepts-kinds.ts"
+import { bmxtRuleStreamFromListResult } from "../../bmxt-rule/adapters/from-list-result.ts"
 import { LIST_OUTPUT_SCHEMA, type ListResult } from "../list-output/types.ts"
 
 /** EN: Keep in sync with `commands/registry.ts` (avoid importing UI/i18n modules in tests). */
@@ -108,9 +109,9 @@ describe("BMXt POSIX Profile — list operators (P5)", () => {
 })
 
 describe("BMXt POSIX Profile — pipe consumers (P4)", () => {
-  it("registers close and checks kind compatibility", () => {
+  it("registers close and checks bmxtRule kind compatibility", () => {
     assert.equal(isClosePipeConsumer("close"), true)
-    assert.deepEqual(CLOSE_ACCEPTS_KINDS, ["tabs.tab"] as const)
+    assert.deepEqual(CLOSE_ACCEPTS_BMXT_RULE_KINDS, ["page.open"] as const)
 
     const tabsList: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
@@ -121,7 +122,8 @@ describe("BMXt POSIX Profile — pipe consumers (P4)", () => {
         { kind: "tabs.tab", fields: { tabId: 1 } }
       ]
     }
-    assert.equal(listResultAcceptsKinds(tabsList, CLOSE_ACCEPTS_KINDS), true)
+    const stream = bmxtRuleStreamFromListResult(tabsList)
+    assert.equal(bmxtRuleStreamAcceptsKinds(stream, CLOSE_ACCEPTS_BMXT_RULE_KINDS), true)
 
     const sessions: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
@@ -129,7 +131,8 @@ describe("BMXt POSIX Profile — pipe consumers (P4)", () => {
       subcommand: "-list",
       records: [{ kind: "session.row", fields: {} }]
     }
-    assert.equal(listResultAcceptsKinds(sessions, CLOSE_ACCEPTS_KINDS), false)
+    const sessionStream = bmxtRuleStreamFromListResult(sessions)
+    assert.equal(bmxtRuleStreamAcceptsKinds(sessionStream, CLOSE_ACCEPTS_BMXT_RULE_KINDS), false)
   })
 })
 

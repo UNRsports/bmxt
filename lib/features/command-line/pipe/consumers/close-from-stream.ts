@@ -1,4 +1,4 @@
-import type { ListResult } from "../../list-output/types.ts"
+import type { BmxtRuleStream } from "../../../bmxt-rule/types.ts"
 import type { CommandDispatchDeps } from "../../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../../setting/locale.ts"
 import { runBackgroundSegment } from "../../compound/run-background-segment.ts"
@@ -10,31 +10,18 @@ import {
 import { isExitSuccess } from "../../compound/exit-status.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
-import { CLOSE_ACCEPTS_KINDS, isClosePipeConsumer } from "./close-match.ts"
+import { CLOSE_ACCEPTS_BMXT_RULE_KINDS, isClosePipeConsumer } from "./close-match.ts"
+import { tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
 export { isClosePipeConsumer } from "./close-match.ts"
 
-function tabIdsFromListResult(listResult: ListResult): number[] {
-  const ids: number[] = []
-  for (const record of listResult.records) {
-    if (record.kind !== "tabs.tab") {
-      continue
-    }
-    const tabId = Number(record.fields.tabId)
-    if (Number.isFinite(tabId) && tabId > 0) {
-      ids.push(tabId)
-    }
-  }
-  return ids
-}
-
-export async function runCloseFromTabsListResult(
-  listResult: ListResult,
+export async function runCloseFromBmxtRuleStream(
+  stream: BmxtRuleStream,
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome> {
-  const tabIds = tabIdsFromListResult(listResult)
+  const tabIds = tabIdsFromBmxtRuleStream(stream)
   if (tabIds.length === 0) {
     return segmentFailure("runtime", [tPipe("pipe.close.noTabs", locale)])
   }
@@ -55,7 +42,6 @@ export async function runCloseFromTabsListResult(
 export const closePipeConsumer: PipeConsumerEntry = {
   id: "close",
   match: isClosePipeConsumer,
-  acceptsKinds: CLOSE_ACCEPTS_KINDS,
-  run: (listResult, deps, locale, _segment) =>
-    runCloseFromTabsListResult(listResult, deps, locale)
+  acceptsKinds: CLOSE_ACCEPTS_BMXT_RULE_KINDS,
+  run: (stream, deps, locale, _segment) => runCloseFromBmxtRuleStream(stream, deps, locale)
 }

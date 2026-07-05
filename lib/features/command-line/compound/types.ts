@@ -25,8 +25,10 @@ export type SegmentOutcome = {
    */
   lines: string[]
   errorMessage?: string
-  /** EN: Structured `-list` output passed to a pipe consumer. */
+  /** EN: Structured `-list` output (legacy `bmxt-list/1`; plain / picker). */
   listResult?: import("../list-output/types.ts").ListResult
+  /** EN: Inter-command stream (`bmxt-rule/1`) for pipe consumers. */
+  bmxtRuleStream?: import("../../bmxt-rule/types.ts").BmxtRuleStream
 }
 
 export type ParseAndSegmentsResult =

@@ -1,14 +1,14 @@
-import type { ListResult } from "../../list-output/types.ts"
+import type { BmxtRuleStream } from "../../../bmxt-rule/types.ts"
 import type { CommandDispatchDeps } from "../../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../../setting/locale.ts"
 import { segmentFailure } from "../../compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
-import { closePipeConsumer } from "./close-from-tabs.ts"
-import { listResultAcceptsKinds } from "./list-result-accepts-kinds.ts"
+import { closePipeConsumer } from "./close-from-stream.ts"
+import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
-export { listResultAcceptsKinds } from "./list-result-accepts-kinds.ts"
+export { bmxtRuleStreamAcceptsKinds, tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
 
 /** EN: Registered pipe consumers (right-hand side of `|`). */
 export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [closePipeConsumer]
@@ -25,7 +25,7 @@ export function matchPipeConsumer(segment: string): PipeConsumerEntry | null {
 
 export async function tryRunPipeConsumer(
   segment: string,
-  listResult: ListResult,
+  stream: BmxtRuleStream,
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome | null> {
@@ -33,11 +33,11 @@ export async function tryRunPipeConsumer(
   if (entry === null) {
     return null
   }
-  if (!listResultAcceptsKinds(listResult, entry.acceptsKinds)) {
+  if (!bmxtRuleStreamAcceptsKinds(stream, entry.acceptsKinds)) {
     const kinds = entry.acceptsKinds.join(", ")
     return segmentFailure("runtime", [
       tPipe("pipe.error.kindMismatch", locale, { stage: segment.trim(), kinds })
     ])
   }
-  return entry.run(listResult, deps, locale, segment)
+  return entry.run(stream, deps, locale, segment)
 }
