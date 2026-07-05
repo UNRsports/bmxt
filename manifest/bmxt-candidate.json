@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "profileSchema": "bmxt-candidate/1",
+  "description": "BMXt prompt candidate menu — tier resolution, compound/pipe segment contexts, and runtime data sources.",
+  "profile": {
+    "tierNames": ["first", "second", "third", "rest"],
+    "filter": {
+      "menuClosed": "prefix",
+      "menuOpen": "contains",
+      "optionTokenBodyMatch": true,
+      "substringMinLength": 2
+    },
+    "openTriggers": ["tab", "continuationAfterLoneFirstToken", "emptyPrefixWhileMenuEligible"],
+    "closeTriggers": ["escape", "dismissFlag", "isearchMode", "navTyping", "sessionNameTyping", "imeComposing"],
+    "selection": {
+      "keys": ["enter", "tab", "digit1to9", "arrowUpDown"],
+      "appendTrailingSpaceAtEol": true,
+      "resyncNextTierAfterPick": true
+    },
+    "ui": {
+      "panelKind": "inline_token",
+      "role": "listbox",
+      "hintNamespace": "imeToken"
+    },
+    "segmentContexts": [
+      {
+        "id": "compound.afterListOperator",
+        "description": "Fresh command segment after a list operator (&&, ||, or ;).",
+        "when": {
+          "cursorInEmptyTailSegment": true,
+          "precededByOperator": ["&&", "||", ";"]
+        },
+        "resetToTier": "first",
+        "candidateSource": "registry.firstCommands",
+        "openOnTab": true,
+        "openOnEmptyPrefixWhenMenuEligible": true
+      },
+      {
+        "id": "pipe.afterPipeOperator",
+        "description": "First token of a pipe consumer stage immediately after |.",
+        "when": {
+          "cursorInPipeStage": true,
+          "pipeStageIndexMin": 1,
+          "tokenIndex": 0
+        },
+        "resetToTier": "first",
+        "candidateSource": "registry.pipeConsumers",
+        "openOnTab": true,
+        "openOnEmptyPrefixWhenMenuEligible": true
+      },
+      {
+        "id": "pipe.producerSegment",
+        "description": "Tokens before | in a pipe chain follow normal command zones (e.g. tabs -list).",
+        "when": {
+          "cursorInPipeStage": true,
+          "pipeStageIndex": 0
+        },
+        "followCommandZones": true
+      },
+      {
+        "id": "default.commandLine",
+        "description": "Single-segment line or mid-token editing.",
+        "when": {},
+        "followCommandZones": true
+      }
+    ],
+    "manifestCodegenRef": "manifest/bmxt-codegen.json",
+    "notes": [
+      "First/second fixed tokens come from bmxt-codegen commands[].subcommands (codegen → command-subcommands.gen.ts).",
+      "Compound segment spans include an empty tail after list operators while typing (scanCompoundSegmentSpans).",
+      "Pipe stage index is 0 for the producer, 1+ for consumers within the same compound segment."
+    ]
+  },
+  "dataSources": [
+    {
+      "id": "browser.openTabUrls",
+      "domain": "browser",
+      "description": "Distinct http(s) URLs from open tabs (normal windows).",
+      "valueKind": "url",
+      "chromeApis": ["tabs.query"],
+      "filterDefault": "prefix",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-open-tab-urls.ts"
+    },
+    {
+      "id": "browser.openTabTitles",
+      "domain": "browser",
+      "description": "Titles of open http(s) tabs.",
+      "valueKind": "string",
+      "chromeApis": ["tabs.query"],
+      "filterDefault": "contains",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-open-tab-titles.ts"
+    },
+    {
+      "id": "browser.tabIds",
+      "domain": "browser",
+      "description": "Numeric tab IDs from the current tab tree (same scope as tabs -list).",
+      "valueKind": "integer",
+      "chromeApis": ["tabs.query"],
+      "filterDefault": "prefix",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-tab-ids.ts"
+    },
+    {
+      "id": "browser.windowLabels",
+      "domain": "browser",
+      "description": "Window container labels from the tabs -list tree (page.window rows).",
+      "valueKind": "string",
+      "chromeApis": ["tabs.query"],
+      "filterDefault": "contains",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-window-labels.ts"
+    },
+    {
+      "id": "browser.tabGroupLabels",
+      "domain": "browser",
+      "description": "Tab group labels from the tabs -list tree (page.group rows).",
+      "valueKind": "string",
+      "chromeApis": ["tabs.query", "tabGroups.query"],
+      "filterDefault": "contains",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-tab-group-labels.ts"
+    },
+    {
+      "id": "browser.historyUrls",
+      "domain": "browser",
+      "description": "Recent history visit URLs (chrome.history).",
+      "valueKind": "url",
+      "chromeApis": ["history.search"],
+      "filterDefault": "prefix",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-history-urls.ts"
+    },
+    {
+      "id": "browser.historyTitles",
+      "domain": "browser",
+      "description": "Recent history visit titles.",
+      "valueKind": "string",
+      "chromeApis": ["history.search"],
+      "filterDefault": "contains",
+      "implementation": "lib/features/bmxt-candidate/providers/browser-history-titles.ts"
+    },
+    {
+      "id": "ui.commandHistory",
+      "domain": "ui",
+      "description": "Prior prompt lines (bmxt_cmd_history in chrome.storage.local).",
+      "valueKind": "commandLine",
+      "chromeApis": ["storage.local"],
+      "filterDefault": "contains",
+      "implementation": "lib/features/bmxt-candidate/providers/ui-command-history.ts"
+    },
+    {
+      "id": "ui.sessionNames",
+      "domain": "ui",
+      "description": "Display names of terminal sessions in the active BMXt window.",
+      "valueKind": "string",
+      "filterDefault": "contains",
+      "implementation": "lib/features/session/session-switch-candidates.ts"
+    }
+  ],
+  "registrySources": [
+    {
+      "id": "registry.firstCommands",
+      "description": "Canonical first commands from bmxt-codegen (no short aliases in the menu)."
+    },
+    {
+      "id": "registry.pipeConsumers",
+      "description": "Registered pipe consumer first tokens (lib/features/command-line/pipe/consumers/registry.ts)."
+    },
+    {
+      "id": "manifest.subcommands.head",
+      "description": "Second tokens from commands[].subcommands[].head."
+    },
+    {
+      "id": "manifest.subcommands.trailingTokens",
+      "description": "Fixed third+ tokens from commands[].subcommands[].trailingTokens."
+    }
+  ],
+  "commands": [
+    {
+      "command": "clear",
+      "zones": []
+    },
+    {
+      "command": "close",
+      "zones": [
+        {
+          "tier": "rest",
+          "tokenIndexMin": 1,
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles"]
+            }
+          ],
+          "ui": "inline_token"
+        }
+      ]
+    },
+    {
+      "command": "dom",
+      "zones": [
+        { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
+        {
+          "when": { "second": "-list" },
+          "tier": "third",
+          "sources": [
+            { "kind": "manifest.static", "from": "manifest.subcommands.trailingTokens" },
+            { "kind": "plugin.feature", "provider": "dom.listRemainingOptions" }
+          ],
+          "suppressWhen": ["dom.patternPlaceholder"]
+        },
+        {
+          "when": { "second": "-list" },
+          "tier": "rest",
+          "sources": [
+            { "kind": "runtime.dynamic", "provider": "browser.openTabUrls" },
+            { "kind": "runtime.dynamic", "provider": "browser.historyUrls" }
+          ],
+          "suppressWhen": ["dom.optionTokenEditing"]
+        }
+      ]
+    },
+    {
+      "command": "exit",
+      "zones": []
+    },
+    {
+      "command": "search",
+      "zones": [
+        { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
+        {
+          "when": { "second": "-list" },
+          "tier": "third",
+          "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.trailingTokens" }]
+        },
+        {
+          "when": { "second": "-list" },
+          "tier": "rest",
+          "sources": [
+            { "kind": "runtime.dynamic", "provider": "browser.openTabUrls" },
+            { "kind": "runtime.dynamic", "provider": "browser.historyUrls" },
+            { "kind": "runtime.dynamic", "provider": "browser.openTabTitles" },
+            { "kind": "runtime.dynamic", "provider": "browser.historyTitles" },
+            { "kind": "runtime.dynamic", "provider": "ui.commandHistory" }
+          ],
+          "suppressWhen": ["search.scopeOrPatternAwaiting"]
+        }
+      ]
+    },
+    {
+      "command": "group",
+      "zones": [
+        {
+          "when": { "second": "new" },
+          "tier": "rest",
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles", "browser.openTabUrls"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "command": "help",
+      "zones": []
+    },
+    {
+      "command": "tabs",
+      "zones": [
+        { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
+        {
+          "when": { "second": "-list" },
+          "tier": "third",
+          "sources": [{ "kind": "manifest.static", "tokens": ["-u"] }]
+        },
+        {
+          "when": { "second": "-moveurl" },
+          "tier": "rest",
+          "sources": [
+            { "kind": "runtime.dynamic", "provider": "browser.openTabUrls" },
+            { "kind": "runtime.dynamic", "provider": "browser.historyUrls" }
+          ],
+          "ui": "tab_cycle_or_inline_token"
+        },
+        {
+          "when": { "second": "-setting", "third": "-page-active" },
+          "tier": "rest",
+          "sources": [{ "kind": "plugin.feature", "provider": "tabs.pageActiveModes" }]
+        }
+      ]
+    },
+    {
+      "command": "nav",
+      "zones": [{ "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] }]
+    },
+    {
+      "command": "translate",
+      "zones": [
+        { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
+        {
+          "when": { "second": "-setting" },
+          "tier": "third",
+          "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.trailingTokens" }]
+        }
+      ]
+    },
+    {
+      "command": "aboutbmxt",
+      "zones": []
+    },
+    {
+      "command": "session",
+      "zones": [
+        { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
+        {
+          "when": { "second": "-switch" },
+          "tier": "rest",
+          "sources": [{ "kind": "runtime.dynamic", "provider": "ui.sessionNames" }],
+          "ui": "inline_entity"
+        },
+        {
+          "when": { "second": "-new" },
+          "tier": "rest",
+          "sources": [
+            { "kind": "runtime.dynamic", "provider": "ui.sessionNames" },
+            { "kind": "runtime.dynamic", "provider": "ui.commandHistory" }
+          ]
+        },
+        {
+          "when": { "second": "-setting-name" },
+          "tier": "rest",
+          "sources": [{ "kind": "runtime.dynamic", "provider": "ui.sessionNames" }]
+        }
+      ]
+    },
+    {
+      "command": "snapshot",
+      "zones": [
+        {
+          "when": { "second": "-save" },
+          "tier": "rest",
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "command": "picker",
+      "zones": [
+        {
+          "tier": "second",
+          "sources": [{ "kind": "plugin.feature", "provider": "picker.listProducerCommands" }],
+          "tierRemap": { "first": "second", "second": "third", "third": "third" }
+        }
+      ]
+    },
+    {
+      "command": "setting",
+      "zones": [{ "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] }]
+    }
+  ]
+}

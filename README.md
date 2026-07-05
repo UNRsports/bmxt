@@ -31,6 +31,7 @@
 - [Command Execution Architecture (Current)](#command-execution-architecture)
   - [`-list` output registry](#list-commands-registry)
   - [bmxtRule (inter-command stream)](#bmxt-rule)
+  - [bmxtCandidate (prompt candidate menu)](#bmxt-candidate)
   - [Job execution (background work)](#job-execution)
   - [Add a New Built-in Command](#add-new-built-in-command)
   - [Command add procedure](#command-add-procedure)
@@ -858,6 +859,8 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 |--------|------|
 | **`lib/features/bmxt-rule/`** | **bmxtRule** inter-command stream (`BmxtRuleStream`, validate, NDJSON serialize, `from-list-result` adapter) |
 | **`manifest/bmxt-rule.json`** | Kind catalog and field hints (extensible; single source for the stream spec) |
+| **`lib/features/bmxt-candidate/`** | **bmxtCandidate** prompt menu spec (catalog loader, validate, runtime provider registry) |
+| **`manifest/bmxt-candidate.json`** | Candidate menu profile, compound/pipe segment contexts, per-command zones, data sources |
 | **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` types, `formatListPlainLines`, legacy TSV (`format-pipe.ts`), summary line |
 | **`lib/features/command-line/list-commands/`** | Matcher table (`LIST_COMMAND_MATCHERS`), `matchPlainListCommand`, `tryRunPlainListCommand`, `runPlainListForCommandId`; heavy plugins loaded via **dynamic import** |
 | **`lib/features/<feature>/*-list-command.ts`** | Per-command plugin: parse match, `fetchListResult`, `formatPlainLines` |
@@ -915,7 +918,39 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 
 **Adding a new `-list` producer** — see the checklist under **[Command add procedure](#command-add-procedure)**.
 
-**`exit`:** returns an **`exit_pane`** effect; the Service Worker returns **`exitSession`** / **`closeWindow`** patches. The UI removes the active session or, when it is the **last** session, closes the BMXt window and clears legacy process storage (see [BMXt process lifecycle](#bmxt-process-lifecycle)).
+<a id="bmxt-candidate"></a>
+
+### bmxtCandidate (prompt candidate menu)
+
+**bmxtCandidate** is BMXt’s specification for the **inline floating candidate menu** on the prompt (Tab / continuation / real-time filtering). Schema id: **`bmxt-candidate/1`**. Catalog: **`manifest/bmxt-candidate.json`**.
+
+| Layer | Role |
+|-------|------|
+| **Profile** | Tier names (`first` / `second` / `third` / `rest`), filter modes (`prefix` while closed, `contains` while open), open/close triggers, selection keys |
+| **Segment contexts** | When **`&&`**, **`||`**, **`;`**, or **`|`** starts a fresh token span, which candidate set to show |
+| **Command zones** | Per-command tier bindings (manifest static tokens + runtime providers) |
+| **Data sources** | Browser/UI facts commands may read for dynamic candidates |
+
+**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tabs -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (v1: `close` / `c`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
+
+**Runtime data sources** (commands declare which they use in `commands[].zones`):
+
+| Source id | Domain | Typical use |
+|-----------|--------|-------------|
+| **`browser.openTabUrls`** | Open http(s) tabs | `tabs -moveurl`, `search -list` pattern, `dom -list` pattern |
+| **`browser.openTabTitles`** | Tab titles | Labels for tab ids; search pattern hints |
+| **`browser.tabIds`** | Tab tree ids | `close`, `group new`, `snapshot -save` |
+| **`browser.windowLabels`** | Window rows | `snapshot -save` picker labels |
+| **`browser.tabGroupLabels`** | Group rows | `snapshot -save` picker labels |
+| **`browser.historyUrls`** / **`browser.historyTitles`** | History | URL/title completion on rest tails |
+| **`ui.commandHistory`** | Prompt history | `search -list` pattern, `session -new` name hints |
+| **`ui.sessionNames`** | Session display names | `session -switch`, `-new`, `-setting-name` |
+
+**Merge rule:** For the cursor tier, matching **`commands[].zones`** are filtered by `when`, each **`sources[]`** entry contributes values, duplicates are removed in order, then the profile **filter** is applied on every keystroke while the menu is open.
+
+**Runtime:** Today **`resolveImeTokenPicker`** implements most behavior; **`lib/features/bmxt-candidate/`** holds the catalog, validation, and **`BMXT_CANDIDATE_PROVIDERS`** registry. Adapters under **`providers/`** will replace ad-hoc feature lookups incrementally.
+
+**Adding candidates for a command** — extend **`manifest/bmxt-candidate.json`** (`commands[].zones` + optional new **`dataSources[]`** row), implement the provider, wire **`BMXT_CANDIDATE_PROVIDERS`**, and keep **`manifest/bmxt-codegen.json`** `subcommands` in sync for fixed tokens.
 
 **Main directories:**
 
@@ -928,6 +963,8 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`lib/features/snapshot/`** — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
 - **`lib/features/bmxt-rule/`** — **bmxtRule** stream (`bmxt-rule/1`, validate, serialize, adapters)
 - **`manifest/bmxt-rule.json`** — bmxtRule kind catalog (extensible entry arrays)
+- **`lib/features/bmxt-candidate/`** — **bmxtCandidate** prompt menu spec (catalog loader, validate, provider registry)
+- **`manifest/bmxt-candidate.json`** — candidate menu profile, segment contexts, command zones, data sources
 - **`lib/features/command-line/list-output/`** — canonical **`-list`** plain output (`ListResult`, `bmxt-list/1`)
 - **`lib/features/command-line/list-commands/`** — **`-list` producer registry** and unified plain runner (`tryRunPlainListCommand`)
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** registry (`runCommand`), null-sink redirects, plain-list composition
@@ -1234,6 +1271,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [コマンド実行アーキテクチャ（現状）](#command-execution-architecture-ja)
   - [`-list` 出力レジストリ](#list-commands-registry-ja)
   - [bmxtRule（コマンド間ストリーム）](#bmxt-rule-ja)
+  - [bmxtCandidate（プロンプト候補メニュー）](#bmxt-candidate-ja)
   - [ジョブ実行（バックグラウンド処理）](#job-execution-ja)
   - [組み込みコマンドの追加](#add-new-built-in-command-ja)
   - [コマンド追加手順](#command-add-procedure-ja)
@@ -2059,6 +2097,8 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 |-----------|------|
 | **`lib/features/bmxt-rule/`** | **bmxtRule** コマンド間ストリーム（`BmxtRuleStream`、検証、NDJSON、`from-list-result` adapter） |
 | **`manifest/bmxt-rule.json`** | kind カタログとフィールドヒント（拡張可能・規格の単一ソース） |
+| **`lib/features/bmxt-candidate/`** | **bmxtCandidate** プロンプト候補メニュー規格（catalog loader、validate、provider registry） |
+| **`manifest/bmxt-candidate.json`** | 候補メニュー profile、compound/pipe コンテキスト、コマンド zone、data source 一覧 |
 | **`lib/features/command-line/list-output/`** | `ListResult` / `ListRecord` 型、`formatListPlainLines`、レガシー TSV、サマリー行 |
 | **`lib/features/command-line/list-commands/`** | matcher 表、`matchPlainListCommand`、`tryRunPlainListCommand`、`runPlainListForCommandId`（重い plugin は dynamic import） |
 | **`lib/features/<feature>/*-list-command.ts`** | コマンド別 plugin（`fetchListResult` / `formatPlainLines`） |
@@ -2097,6 +2137,40 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 **新規 `-list` producer** — **[コマンド追加手順](#command-add-procedure-ja)** のチェックリストを参照。
 
+<a id="bmxt-candidate-ja"></a>
+
+### bmxtCandidate（プロンプト候補メニュー）
+
+**bmxtCandidate** はプロンプト上の **インライン浮動候補メニュー**（Tab 補完・continuation・入力に連動した絞り込み）の規格です。スキーマ ID: **`bmxt-candidate/1`**。カタログ: **`manifest/bmxt-candidate.json`**。
+
+| レイヤ | 役割 |
+|--------|------|
+| **Profile** | tier（`first` / `second` / `third` / `rest`）、filter（閉=`prefix`、開=`contains`）、開閉トリガ、確定キー |
+| **Segment contexts** | **`&&` / `||` / `;` / `|`** の直後にどの候補集合を出すか |
+| **Command zones** | コマンド別 tier 結び付け（manifest 固定トークン + runtime provider） |
+| **Data sources** | コマンドが参照してよいブラウザ／UI 事実 |
+
+**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tabs -list`）、**stage 1+** は **`registry.pipeConsumers`**（v1: `close` / `c`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
+
+**ランタイム data source**（`commands[].zones` で宣言）:
+
+| source id | ドメイン | 主な用途 |
+|-----------|----------|----------|
+| **`browser.openTabUrls`** | 開いている http(s) タブ | `tabs -moveurl`、`search -list` pattern、`dom -list` pattern |
+| **`browser.openTabTitles`** | タブタイトル | tabId ラベル、search pattern ヒント |
+| **`browser.tabIds`** | タブツリー ID | `close`、`group new`、`snapshot -save` |
+| **`browser.windowLabels`** | ウィンドウ行 | `snapshot -save` ラベル |
+| **`browser.tabGroupLabels`** | グループ行 | `snapshot -save` ラベル |
+| **`browser.historyUrls`** / **`browser.historyTitles`** | 履歴 | rest tail の URL／タイトル補完 |
+| **`ui.commandHistory`** | プロンプト履歴 | `search -list` pattern、`session -new` 名前ヒント |
+| **`ui.sessionNames`** | セッション表示名 | `session -switch` / `-new` / `-setting-name` |
+
+**合成規則:** カーソル tier に対し `commands[].zones` を `when` で絞り、各 **`sources[]`** の値を **順序保持で重複除去**し、メニュー表示中は profile の **filter** を毎キー入力で適用。
+
+**ランタイム:** 現状は **`resolveImeTokenPicker`** が大半を実装。**`lib/features/bmxt-candidate/`** に catalog・検証・**`BMXT_CANDIDATE_PROVIDERS`** レジストリを置き、**`providers/`** adapter で feature 直書きを段階的に置き換える。
+
+**候補の追加** — **`manifest/bmxt-candidate.json`**（`commands[].zones` + 必要なら **`dataSources[]`**）を更新し provider を実装して **`BMXT_CANDIDATE_PROVIDERS`** に登録。固定トークンは **`manifest/bmxt-codegen.json`** の **`subcommands`** と同期。
+
 **`exit`:** **`exit_pane`** Effect → **`exitSession`** / **`closeWindow`** patch。最後の 1 セッションでは BMXt ウィンドウ close + 旧 storage 掃除（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 
 - **`manifest/bmxt-codegen.json`** — コマンド一覧・**`commands[].subcommands`**・Effect スキーマ・TS ハンドラ配線の単一ソース（**`pnpm run codegen`**）
@@ -2106,6 +2180,8 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`lib/features/page-dom/`** — DOM 注入ヘルパー（`dom -list`）
 - **`lib/features/bmxt-rule/`** — **bmxtRule** ストリーム（`bmxt-rule/1`、検証、serialize、adapter）
 - **`manifest/bmxt-rule.json`** — bmxtRule kind カタログ
+- **`lib/features/bmxt-candidate/`** — **bmxtCandidate** 規格（catalog、validate、provider registry）
+- **`manifest/bmxt-candidate.json`** — 候補メニュー profile・segment contexts・command zones
 - **`lib/features/command-line/list-output/`** — **`-list`** 出力規格（`ListResult`、`bmxt-list/1`）プレーン表示
 - **`lib/features/command-line/list-commands/`** — **`-list` producer レジストリ**（`tryRunPlainListCommand`）
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト、plain-list 合成
