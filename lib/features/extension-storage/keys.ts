@@ -21,6 +21,9 @@ export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 /** BMXt UI ウィンドウ ID（SW 再起動後もフォーカスできるよう background が保持）。 */
 export const BMXT_WINDOW_ID_KEY = "bmxt_shell_window_id"
 
+/** BMXt UI ポップアップ窓の最後の outer サイズ（width / height）。 */
+export const BMXT_WINDOW_BOUNDS_KEY = "bmxt_shell_window_bounds"
+
 /** タブピッカー用: Chrome ウィンドウ ID → ユーザー定義の表示名。 */
 export const WINDOW_DISPLAY_NAMES_KEY = "bmxt_window_display_names_v1"
 

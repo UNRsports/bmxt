@@ -4,6 +4,7 @@
  */
 
 import { BMXT_WINDOW_ID_KEY } from "../../lib/features/extension-storage/keys"
+import { loadBmxtWindowBoundsAsync } from "./window-bounds"
 
 /** WXT unlisted page path for the BMXt UI. */
 export const BMXT_PAGE = "bmxt.html"
@@ -35,11 +36,12 @@ export async function focusBmxtWindow(windowId: number): Promise<void> {
 
 export async function createBmxtWindowAsync(): Promise<number | undefined> {
   const url = chrome.runtime.getURL(BMXT_PAGE)
+  const bounds = await loadBmxtWindowBoundsAsync()
   const w = await chrome.windows.create({
     url,
     type: "popup",
-    width: 780,
-    height: 580,
+    width: bounds.width,
+    height: bounds.height,
     focused: true
   })
   if (w.id !== undefined) {

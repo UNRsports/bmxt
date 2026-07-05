@@ -10,6 +10,11 @@ import {
 } from "../../lib/features/launch/launch-perf"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import {
+  flushPersistBmxtWindowBounds,
+  normalizeBmxtWindowBounds,
+  schedulePersistBmxtWindowBounds
+} from "./window-bounds"
+import {
   clearBmxtWindowIdInMemory,
   createBmxtWindowAsync,
   focusBmxtWindow,
@@ -20,6 +25,23 @@ import {
   reconcileDuplicateBmxtWindowsAsync,
   resolveBmxtWindowIdFastAsync
 } from "./window-state"
+
+function setupBmxtWindowBoundsTracking(): void {
+  chrome.windows.onBoundsChanged.addListener((window) => {
+    void (async () => {
+      await hydrateBmxtWindowIdFromStorage()
+      const bmxtWindowId = readBmxtWindowIdInMemory()
+      if (bmxtWindowId === undefined || window.id !== bmxtWindowId) {
+        return
+      }
+      const bounds = normalizeBmxtWindowBounds(window.width, window.height)
+      if (bounds === null) {
+        return
+      }
+      schedulePersistBmxtWindowBounds(bounds)
+    })()
+  })
+}
 
 /** EN: Serialize launches so rapid shortcuts do not open multiple windows. */
 let bmxtWindowLaunchChain: Promise<void> = Promise.resolve()
@@ -79,10 +101,13 @@ function openOrFocusBmxtWindow(): void {
 }
 
 export function setupWindowLaunch(): void {
+  setupBmxtWindowBoundsTracking()
+
   chrome.windows.onRemoved.addListener((windowId) => {
     if (readBmxtWindowIdInMemory() !== windowId) {
       return
     }
+    flushPersistBmxtWindowBounds()
     clearBmxtWindowIdInMemory()
     void persistBmxtWindowId(undefined)
     void loadBackgroundServicesAsync().then((services) =>
