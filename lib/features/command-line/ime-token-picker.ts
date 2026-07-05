@@ -31,6 +31,7 @@ import {
   type CandidateMatchMode
 } from "./ime-token-match"
 import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
+import { isFirstTierPrependPick, shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
@@ -284,7 +285,10 @@ function resolveImeTokenPickerInSegment(
     if (prefix.length > 0 || allowEmptyFirstAll) {
       const cands = matchCandidates(firstCommandTokens, prefix, matchMode)
       if (cands.length > 0) {
-        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "first" }
+        const insertAtCursor = shouldInsertTokenPickAtCursor(line, cursor, l, r, "first")
+        const tokenStart = insertAtCursor ? cursor : l
+        const tokenEnd = insertAtCursor ? cursor : r
+        return { tokenStart, tokenEnd, prefix, candidates: cands, tier: "first" }
       }
     }
     return null

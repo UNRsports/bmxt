@@ -12,6 +12,8 @@ import {
   sanitizeNavTypingDomValueWithCursor,
   sanitizeNavTypingInsertText
 } from "../../nav/nav-prompt-input"
+import { isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
+import { wordBounds } from "../../format/word-bounds.ts"
 
 export type UseNavPromptBridgeOptions = {
   navPageTyping: boolean
@@ -275,34 +277,73 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
 
   const onBeforeInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
-      if (!options.navPageTyping || options.isComposingRef.current) {
+      if (options.isComposingRef.current) {
         return
       }
       const ta = e.currentTarget
       const native = e.nativeEvent as InputEvent
-      const shift = (native as InputEvent & { getModifierState(key: string): boolean }).getModifierState(
-        "Shift"
-      )
-      if (navTypingShouldPreventLineBreakInput(native.inputType, shift, options.navTypingMultiline)) {
-        e.preventDefault()
-        return
-      }
-      if (native.inputType === "insertLineBreak" || native.inputType === "insertParagraph") {
-        e.preventDefault()
-        const chunk = sanitizeNavTypingInsertText("\n", shift, options.navTypingMultiline)
-        if (!chunk) {
+
+      if (options.navPageTyping) {
+        const shift = (native as InputEvent & { getModifierState(key: string): boolean }).getModifierState(
+          "Shift"
+        )
+        if (navTypingShouldPreventLineBreakInput(native.inputType, shift, options.navTypingMultiline)) {
+          e.preventDefault()
           return
         }
-        const { next, cursor } = navTypingInsert(
-          options.lineRef.current,
-          ta.selectionStart,
-          ta.selectionEnd,
-          chunk
-        )
-        applyNavTypingMutation(ta, next, cursor)
+        if (native.inputType === "insertLineBreak" || native.inputType === "insertParagraph") {
+          e.preventDefault()
+          const chunk = sanitizeNavTypingInsertText("\n", shift, options.navTypingMultiline)
+          if (!chunk) {
+            return
+          }
+          const { next, cursor } = navTypingInsert(
+            options.lineRef.current,
+            ta.selectionStart,
+            ta.selectionEnd,
+            chunk
+          )
+          applyNavTypingMutation(ta, next, cursor)
+        }
+        return
       }
+
+      if (
+        !options.promptPaneFocused ||
+        options.mode === "isearch" ||
+        native.inputType !== "insertText" ||
+        !native.data ||
+        native.data.length === 0 ||
+        /\s/.test(native.data)
+      ) {
+        return
+      }
+
+      const start = ta.selectionStart
+      const end = ta.selectionEnd
+      if (start !== end) {
+        return
+      }
+
+      const line = options.lineRef.current
+      const [wordStart] = wordBounds(line, start)
+      const prefix = line.slice(wordStart, start)
+      if (
+        start !== wordStart ||
+        prefix.length > 0 ||
+        !isFirstTierPrependPick(line, start, "first")
+      ) {
+        return
+      }
+
+      e.preventDefault()
+      const next = line.slice(0, start) + native.data + " " + line.slice(start)
+      const nextCursor = start + native.data.length
+      options.setHistNavIndex(-1)
+      options.tabPressSeqRef.current = 0
+      applyPromptLine(next, nextCursor, ta)
     },
-    [applyNavTypingMutation, options]
+    [applyNavTypingMutation, applyPromptLine, options]
   )
 
   const onPaste = useCallback(

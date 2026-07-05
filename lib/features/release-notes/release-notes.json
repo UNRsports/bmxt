@@ -1,15 +1,10 @@
 {
   "0.7.7": {
     "ja": [
-      "パイプ処理導入（例: tabs -list | close）",
-      "-list 系コマンドの出力規格化（plain 既定・--picker で UI）",
-      "BMXt POSIX Profile: exit status、stdout/stderr、&& / || / ;、null シンクリダイレクト、CommandEntry レジストリ"
+      "コマンド間および候補メニューの規格化実装と、それに合わせたリファクタリング"
     ],
     "en": [
-      "Pipe chains (e.g. tabs -list | close)",
-      "-list commands: plain output by default, --picker for UI columns",
-      "Removed DOM list capture caps; session log buffer raised to 5000 lines",
-      "BMXt POSIX Profile: exit status, stdout/stderr, && / || / ;, null-sink redirects, CommandEntry registry"
+      ""
     ]
   }
 }

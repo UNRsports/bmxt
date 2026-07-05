@@ -9,6 +9,7 @@ import type { SearchListPickerState } from "../../search/search-list-picker-inpu
 import type { TokenPickerModel } from "../token-picker-panel"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
+import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
 
 export type UseShellKeyboardOptions = {
@@ -89,13 +90,19 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         return
       }
       const cur = options.lineRef.current
+      const cursor = options.cursorRef.current
       const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
+      const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)
       let nextLine: string
       let nextPos: number
       if (appendAtEnd) {
         const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
         nextLine = `${cur}${sep}${tok} `
         nextPos = nextLine.length
+      } else if (prependFirstCommand) {
+        const built = buildFirstTierPrependPickLine(cur, cursor, tok)
+        nextLine = built.line
+        nextPos = built.cursor
       } else {
         const addTrailing = s.tokenEnd >= cur.length
         nextLine = addTrailing
