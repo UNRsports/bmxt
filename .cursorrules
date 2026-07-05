@@ -36,25 +36,17 @@
 - **安全な関数・ライブラリの選択**:
   - 脆弱性が指摘されている古い関数や、安全性が検証されていない外部ライブラリの提案は禁止します。Rustであればコンパイラの安全機能を最大限に活かし、Python/TypeScriptでは依存関係の安全性を意識したコードにすること。
 
-# Package manager (pnpm) / パッケージマネージャ（pnpm）
+# Package manager (pnpm)
 
-**EN — pnpm only:** This repository uses **pnpm** (`package.json` → `"packageManager"`, lockfile **`pnpm-lock.yaml`**). Do **not** run **`npm install`**, **`npm run …`**, **`npx …`**, or create **`package-lock.json`**. CI (`.github/workflows/ci.yml`) and README use pnpm exclusively. When suggesting terminal commands, documenting workflows, or editing scripts that spawn package-manager subprocesses, use pnpm only.
+This repository uses **pnpm** only (`pnpm-lock.yaml`). Do **not** run `npm install`, `npm run`, `npx`, or create `package-lock.json`.
 
-- **Install:** `pnpm install --frozen-lockfile` (CI, clone, release builds); `pnpm install` only when intentionally updating `package.json` and committing the lockfile.
-- **Scripts:** `pnpm run <script>` or the shorthand `pnpm <script>` when defined (e.g. `pnpm test`, `ppnpm run build`, `ppnpm run codegen`).
-- **Binaries:** `pnpm exec <bin>` (e.g. `pnpm exec tsc --noEmit`, `pnpm exec wxt prepare`) — **not** `npx`.
-- **Verification (match CI):** `ppnpm run verify:manifest` → `ppnpm run check:generated` → `pnpm exec tsc --noEmit` → `pnpm test` → `ppnpm run build`.
-- **In Node scripts:** call **`pnpm run …`** or the underlying **`node scripts/…`** entry directly; never hard-code **`npm`**.
+- **Install:** `pnpm install --frozen-lockfile` (CI/clone); `pnpm install` only when updating `package.json` and committing the lockfile.
+- **Scripts:** `pnpm run <script>` or `pnpm <script>` when defined.
+- **Binaries:** `pnpm exec <bin>` — not `npx`.
+- **Verification (match CI):** `pnpm run verify:manifest` → `pnpm run check:generated` → `pnpm exec tsc --noEmit` → `pnpm test` → `pnpm run build`.
+- **Node scripts:** call `pnpm run …` or `node scripts/…` directly; never hard-code `npm`.
 
-**JA — pnpm のみ:** 本リポジトリは **pnpm** 前提（**`pnpm-lock.yaml`** が正）。**`npm install` / `npm run` / `npx`** および **`package-lock.json`** の生成は**禁止**。ターミナルコマンドの提案・手順書・子プロセス起動を書くときも **pnpm のみ** を使う。
-
-- **インストール:** `pnpm install --frozen-lockfile`（CI・clone・リリースビルド）。`package.json` を意図的に更新して lockfile をコミットするときだけ `pnpm install`。
-- **スクリプト:** `pnpm run <script>` または定義済みなら `pnpm <script>`（例: `pnpm test`, `ppnpm run build`, `ppnpm run codegen`）。
-- **バイナリ:** `pnpm exec <bin>`（例: `pnpm exec tsc --noEmit`）— **`npx` は使わない**。
-- **検証（CI と同一）:** `ppnpm run verify:manifest` → `ppnpm run check:generated` → `pnpm exec tsc --noEmit` → `pnpm test` → `ppnpm run build`。
-- **Node スクリプト内:** **`pnpm run …`** または **`node scripts/…`** を直接呼ぶ。**`npm` をハードコードしない**。
-
-# Directory organization rules
+# Directory organization
 
 - Keep the repository root minimal; avoid adding new feature implementation files at root.
 - Place feature code under `lib/features/<feature>/` and colocate related UI, parsing, and domain logic there.
@@ -62,104 +54,24 @@
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
 
-# Internationalization (i18n) / 国際化（i18n）
+# Project skills (domain workflows)
 
-**EN — Always i18n-first:** Treat **bilingual UI strings (EN + JA)** as the default for every user-visible change. Do **not** hard-code terminal log lines, picker labels, command usage/errors, status bars, or help text in source—add keys to the appropriate namespace under **`lib/features/setting/i18n/namespaces/`** (e.g. **`cmd.json`**, **`tabs.json`**, **`setting.json`**) and resolve them via **`tCmd`**, **`tTabs`**, **`tSetting`**, etc. When adding keys, update **`lib/features/setting/i18n/messages.test.ts`** expected key count if the test asserts catalog size.
+Detailed BMXt workflows live in **`.cursor/skills/`** (also visible in Cursor Settings → Rules). Read the matching skill when the task applies:
 
-**JA — 常に i18n 前提:** 利用者に見える文言は **日英（EN + JA）** を既定とする。ターミナルログ・ピッカー表示・コマンド usage/エラー・ステータスバー・ヘルプなどをソースに**直書きしない**。**`lib/features/setting/i18n/namespaces/`**（**`cmd.json`**、**`tabs.json`**、**`setting.json`** 等）にキーを追加し、**`tCmd`** / **`tTabs`** / **`tSetting`** 等で参照する。キー追加時は **`messages.test.ts`** のカタログ件数アサーションがあれば合わせて更新する。
+| Skill | When to use |
+|-------|-------------|
+| **`bmxt-i18n`** | User-visible strings (EN + JA); no hard-coded UI text |
+| **`bmxt-ui-settings`** | `setting -list`, settings export/import, storage, bundle format |
+| **`bmxt-add-command`** | New/changed commands, subcommands, effects, manifest/codegen |
 
-**EN — Locale at runtime:** Use **`getRunLocale()`** / **`useUiSettings().locale`** (or the feature’s existing locale source) when emitting messages from non-React code or shell handlers. Placeholders use **`{name}`** in JSON and **`formatMessage`** / namespace translators—keep both locales grammatically natural.
+## i18n (summary)
 
-**JA — 実行時ロケール:** 非 React やシェルハンドラから出す文言は **`getRunLocale()`** / **`useUiSettings().locale`**（既存の取得方法）を使う。プレースホルダは JSON の **`{name}`** と **`formatMessage`**／名前空間 translator に従い、**両言語とも自然な文**にする。
+User-visible text = **EN + JA**. Add keys under `lib/features/setting/i18n/namespaces/` (`cmd.json`, `tabs.json`, `setting.json`); resolve via `tCmd`, `tTabs`, `tSetting`. Non-React: `getRunLocale()`. Details: skill **`bmxt-i18n`**.
 
-# UI settings persistence / UI 設定の永続化（`setting`）
+## Command-line model (summary)
 
-**EN — Scope:** UI locale and terminal/picker appearance edited in **`setting -list`**. Implementation lives in **`lib/features/setting/`**; storage keys in **`lib/features/extension-storage/keys.ts`**. See README § **`setting`** for user-facing behavior.
+First command → second command; no short aliases for first/second tiers; continuation when second is required. Details: skill **`bmxt-add-command`**.
 
-**JA — 範囲:** **`setting -list`** で編集する UI 言語・ターミナル／ピッカー外観。実装は **`lib/features/setting/`**、キーは **`lib/features/extension-storage/keys.ts`**。利用者向け説明は README の **`setting`** 節。
+## UI settings (summary)
 
-**EN — Internal storage (default):** Committed settings are always mirrored in **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`UI_SETTINGS_KEY`). Storage mode preference is **`bmxt_ui_settings_storage_v1`** (`UI_SETTINGS_STORAGE_CONFIG_KEY`): `{ mode: "internal" | "external", directoryName: string | null }`. Default is **`internal`** only.
-
-**JA — 拡張機能内（既定）:** 確定した設定は常に **`chrome.storage.local`** の **`bmxt_ui_settings_v1`** に保持。保存先モードは **`bmxt_ui_settings_storage_v1`**（`{ mode: "internal" | "external", directoryName }`）。**未設定時は `internal` のみ**。
-
-**EN — External storage (optional):** When **`mode: "external"`**, the BMXt UI page uses the **File System Access API** (user-picked folder; **no new manifest permission**). The writable **bundle root** is either the picked directory (if it already contains **`settings.json`**) or **`<picked>/bmxt-ui-settings/`** (`EXTERNAL_SETTINGS_BUNDLE_DIR` in **`settings-bundle-layout.ts`**). The directory handle is persisted in **IndexedDB** (`settings-handle-db.ts`). On **`> save setting`**, write the bundle to disk **and** update **`bmxt_ui_settings_v1`** (cache + Service Worker locale). On load, prefer the external bundle when readable; otherwise fall back to **`bmxt_ui_settings_v1`**.
-
-**JA — 外部保存（任意）:** **`mode: "external"`** のとき BMXt UI ページが **File System Access API** でユーザー指定フォルダに読み書き（**manifest 権限追加なし**）。バンドルルートは、直下に **`settings.json`** があればそのフォルダ、なければ **`<選んだフォルダ>/bmxt-ui-settings/`**（定数は **`settings-bundle-layout.ts`**）。ハンドルは **IndexedDB**（**`settings-handle-db.ts`**）。**`> save setting`** でバンドルをディスクへ書き、同時に **`bmxt_ui_settings_v1`** も更新。読み込みは外部バンドル優先、失敗時は内部にフォールバック。
-
-**EN — Backup bundle format (zip export/import and external directory):** Single canonical layout—**do not fork** without a migration path.
-
-| File | Role |
-|------|------|
-| **`settings.json`** | Portable JSON; **`version`** field (currently **2**). Image paths are **relative file names** in the same bundle (`bgImageFile`, `picker.bgImageFile`). |
-| **`background-image.{png,jpg,webp}`** | Global background image when set |
-| **`picker-background-image.{png,jpg,webp}`** | Picker-layer background when set |
-
-Zip download (**export**) and external directory (**save**) must use the same bytes/layout via **`buildUiSettingsStorageEntries`** / **`parseSettingsExportJson`** (`settings-export.ts`, `settings-bundle-layout.ts`). Stale image files in an external bundle are pruned on save (`listKnownBundleImageFileNames`).
-
-**JA — バックアップバンドル（zip と外部ディレクトリ共通）:** 次が正規レイアウト。**移行なしで分岐しない**。
-
-| ファイル | 役割 |
-|----------|------|
-| **`settings.json`** | ポータブル JSON（**`version`**、現行 **2**）。画像は同梱ファイル名を **`bgImageFile`** 等で参照。 |
-| **`background-image.*`** | 全体背景画像 |
-| **`picker-background-image.*`** | ピッカー個別背景 |
-
-zip **export** と外部 **save** は **`buildUiSettingsStorageEntries`** / **`parseSettingsExportJson`** で同一内容にする。外部保存時は不要画像を **`listKnownBundleImageFileNames`** で削除。
-
-**EN — Backward compatibility (required on every settings change):** Future version bumps and schema changes **must** keep user data loadable.
-
-1. **`settings.json`:** Bump **`version`** only with a parser branch in **`parseSettingsExportJson`**; **keep importing older versions** (today: **v1** and **v2**). New fields: optional in JSON; apply **`normalizeUiAppearance`** / **`normalizeUiSettingsStorageConfig`** for missing keys.
-2. **Do not rename** bundle file names (`settings.json`, `background-image`, `picker-background-image`, `bmxt-ui-settings/`) without a compatibility reader and migration notes in README.
-3. **`bmxt_ui_settings_v1`:** Treat stored objects as partial; normalize on read—never assume every key exists.
-4. **External + zip:** A bundle saved by an older release must import on a newer release via **`import`** or **storage-reload**; round-trip **export** after edit should remain valid.
-5. **Tests:** Add or extend tests in **`setting.test.ts`** (and import parsers) when changing version or layout constants.
-6. **Docs:** Update README **`setting`** (EN + JA) when behavior or on-disk format changes.
-
-**JA — 後方互換（設定変更時は必須）:** バージョンアップ・仕様変更後も、外部保存／zip バックアップ／内部 storage のデータを読めること。
-
-1. **`settings.json`:** **`version`** 更新時は **`parseSettingsExportJson`** に旧版分岐を残す（現状 **v1** / **v2**）。新フィールドは任意とし、**`normalizeUiAppearance`** 等で欠損を補う。
-2. バンドル内の**定番ファイル名・`bmxt-ui-settings/` 名**を変える場合は互換読み取りと README 記載が必須。
-3. **`bmxt_ui_settings_v1`** は部分オブジェクトとして読み、正規化する。
-4. 旧版が書いた外部バンドル／zip は新版で **import** または **storage-reload** 可能であること。
-5. 版数・レイアウト変更時は **`setting.test.ts`** 等で検証を追加。
-6. 挙動・オンディスク形式の変更時は README **`setting`**（日英）を更新。
-
-**EN — Key modules:** `settings.ts` (load/save), `settings-export.ts` (zip + JSON), `settings-external-storage.ts` (FSAAPI), `settings-bundle-layout.ts` (bundle constants), `settings-storage-mode.ts` / `settings-storage-config.ts`, `appearance.ts` (`normalizeUiAppearance`).
-
-**JA — 主要モジュール:** 上記と同様（`settings.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`appearance.ts`）。
-
-# Command-line model / コマンドラインの考え方（実装時は必ず守る）
-
-**EN — Terminology:** Treat the prompt as a **token sequence**. The **first command** is the initial keyword (e.g. `tabs`, `split`). A **second command** is the next fixed token when the feature is split into a subcommand or flag-style token (e.g. `-list`, `-row`). Document and implement them **in that order** (first, then second).
-
-**JA — 用語:** プロンプト入力を **トークン列** とみなす。**第一コマンド**は先頭のキーワード（例: `tabs`, `split`）。機能を分割するときの次トークンを **第二コマンド**と呼ぶ（例: `-list`, `-row`）。仕様・実装・説明は **第一 → 第二** の順で表記する。
-
-**EN — No abbreviations for first/second commands:** Do **not** register shortened spellings for either tier in this model (e.g. do **not** accept or complete `-l` for `-list`). **Tab completion** must target the **canonical full** first and second tokens only. Older top-level aliases documented in the README (e.g. `help`/`?`) may remain for backward compatibility; **do not** add new short aliases when introducing **new** first/second command families.
-
-**JA — 短縮形なし:** 第一コマンド・第二コマンドのいずれにも **短縮別名を設けない**（例: `-list` を `-l` のように書かせない・補完させない）。**Tab キーによる補完**は **正式表記のトークン**のみを候補とする。README にある従来のトップレベル別名（例: `help`/`?`）は後方互換で残りうるが、**新規**の第一＋第二コマンド族では第一・第二いずれにも短縮を増やさない。
-
-**EN — Enter when a second command is required:** If a first command **does nothing useful** without a configured second command, **Enter** after typing **only** the first command must: (1) print usage / a **placeholder** that shows the expected second-command shape, and (2) **restore the prompt** to `firstCommand ` (first command plus one ASCII space) with the **cursor at the end**, waiting for the rest of the input. Implement this via the shared **continuation** mechanism, not ad hoc per command.
-
-**JA — 第二コマンド必須時の Enter:** 第二コマンドが **ないと第一コマンドを実質動かせない** 設計のとき、**第一コマンドだけ**の状態で **Enter** を押したら、(1) 利用案内または **第二コマンドのプレースホルダ**を表示し、(2) プロンプトを **`第一コマンド `**（末尾に半角スペース 1 つ）に戻し、**末尾にカーソル**を置いて続きの入力を待つ。これは **再利用可能な continuation** で実装し、コマンドごとの one-off にしない。
-
-# Adding built-in commands / 組み込みコマンドの追加
-
-**EN — Single source:** `manifest/bmxt-codegen.json`. Run **`pnpm run codegen`**. Do **not** hand-edit generated files: `lib/features/bmxt-core/registry/table.gen.ts`, `lib/features/dispatch/effect-types.ts`, `lib/features/dispatch/handlers/apply-dispatch.gen.ts`, `lib/features/builtin-commands/completion-fallback.ts`, `lib/features/builtin-commands/command-subcommands.gen.ts`.
-
-**JA — 単一ソース:** **`manifest/bmxt-codegen.json`**。再生成は **`pnpm run codegen`**。次は**手で編集しない**: **`lib/features/bmxt-core/registry/table.gen.ts`**、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**、**`command-subcommands.gen.ts`**。
-
-**EN — Typical flow:** (1) `pnpm run new:command -- <module> <canonical_name> [aliases...]` *or* edit manifest `commands[]`, add `lib/features/bmxt-core/cmd/<module>.ts`, then **`pnpm run codegen`**. (2) Implement **`run`**; keep **`export const CMD`** aligned with the manifest (**`pnpm run verify:manifest`**). (3) New Chrome effects: extend manifest `effects[]`, codegen, implement `lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts` (`tsHandlerExport`), return effects from **`run`** via **`effectsDispatch([...])`** as needed. (4) Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, then **`pnpm exec tsc --noEmit`** and **`pnpm run build`** as needed. Details: README § Command add procedure.
-
-**JA — 通常の流れ:** (1) **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** または manifest の **`commands[]`** を編集し **`lib/features/bmxt-core/cmd/<module>.ts`** を追加して **codegen**。 (2) **`run`** を実装、**`export const CMD`** を manifest と一致（**`pnpm run verify:manifest`**）。 (3) 新 Effect: manifest の **`effects[]`** → **codegen** → **`handlers/effects/<tsHandlerFile>.ts`** に **`tsHandlerExport`** を実装し、**`run`** から **`effectsDispatch`** で返す。 (4) **`verify:manifest`** / **`check:generated`**、**`pnpm exec tsc --noEmit`**、必要なら **`pnpm run build`**。詳細は README の **コマンド追加手順**。
-
-**EN — How to add `subcommands` (second / third tokens):** (1) In **`manifest/bmxt-codegen.json`**, set **`commands[].subcommands`** to **`[]`** or **`{ head, trailingTokens?, tail? }[]`** (template: **`manifest/templates/command-with-subcommands.example.json`**). (2) Run **`pnpm run codegen`**. (3) In **`lib/features/bmxt-core/cmd/<module>.ts`**, use the **same string literal** for each **`head`** as in the manifest (**`pnpm run verify:manifest`** enforces this). (4) Implement **`run`** (dispatch, optional args); align with **`tail`** hints where relevant. (5) For Tab completion of optional **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** from **`command-subcommands.gen.ts`** and wire a completion zone in the shell if needed. (6) **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, **`pnpm run build`** as needed. Same checklist is spelled out under README **Command add procedure** → **`subcommands`**.
-
-**JA — 第二・第三トークン（`subcommands`）の足し方:** (1) **`manifest/bmxt-codegen.json`** の **`commands[].subcommands`** を **`[]`** または **`{ head, trailingTokens?, tail? }[]`** にする（雛形は **`manifest/templates/command-with-subcommands.example.json`**）。 (2) **`pnpm run codegen`**。 (3) **`lib/features/bmxt-core/cmd/<module>.ts`** で各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`** が検査）。 (4) **`run`** で振る舞いを実装（**`tail`** ヒントと整合）。 (5) 第三トークンの Tab 補完が要る場合は **`command-subcommands.gen.ts`** の **`listThirdTokenCandidates`** と、必要ならシェル側の補完ゾーン。 (6) **`verify:manifest`** → **`check:generated`** → **`pnpm exec tsc --noEmit`** → 必要なら **`pnpm run build`**。README の **コマンド追加手順**内 **`subcommands`** にも同じチェックリストを記載。
-
-**EN — Hand-written `handlers/effects/*.ts`:** Not overwritten by codegen. After changing **`effects[]`** and running codegen, update the matching handler so types/exports stay in sync with generated **`ChromeEffect`** / **`apply-dispatch.gen.ts`**—that is **consistency**, not a file conflict with codegen.
-
-**JA — `handlers/effects/*.ts`:** codegen の**上書き対象外**。manifest の **`effects[]`** 変更後は、対応するハンドラを生成済みの型・ディスパッチに**合わせる**（**整合の問題**）。
-
-**EN — Ease vs old workflow:** One manifest + codegen keeps registry, TS types, completion fallback, and dispatch aligned; implement command logic in **`lib/features/bmxt-core/cmd/*.ts`** and Chrome side effects in **`handlers/effects/`**.
-
-**JA — 負担の変化:** **manifest と codegen** でレジストリ・型・補完・ディスパッチを揃え、**`bmxt-core/cmd/*.ts`** と **`handlers/effects/`** に実装を分ける。
+Internal `bmxt_ui_settings_v1`; optional external FSAAPI bundle; single zip/disk layout; backward compatibility required. Details: skill **`bmxt-ui-settings`**.

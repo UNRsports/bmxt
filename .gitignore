@@ -13,8 +13,10 @@
 # Do not commit registry tokens in .npmrc (save-exact=true is committed)
 
 
-# --- Cursor（ローカル状態・MCP 等。ルートの .cursorrules は対象外）---
-.cursor/
+# --- Cursor（ローカル状態・MCP 等。ルートの .cursorrules と .cursor/skills/ は対象外）---
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 
 
 # --- Build / bundler（WXT, Vite, 汎用）---
