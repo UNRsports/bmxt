@@ -1,0 +1,262 @@
+/**
+ * EN: Nav spatial snap — collect viewport targets, highlight, link activation (page context).
+ * JA: nav 用の矩形スナップ（候補収集・ハイライト・リンク起動）。
+ */
+
+import {
+  adjacentCandidateIndexByRect,
+  findCandidateIndexByPath,
+  nearestCandidateIndexByPoint,
+  pathsEqual,
+  spatialDirFromDelta,
+  type SpatialRect,
+  type SpatialRectDir
+} from "../page-dom/spatial-element-nav.ts"
+import { buildPathForElement, resolveNodeFromPath, walkAllElements } from "../page-dom/injected-dom-path.ts"
+import { isElementVisibleInViewport } from "../page-dom/injected-dom-viewport-visible.ts"
+
+export type NavSpatialCandidates = {
+  paths: number[][]
+  boxes: SpatialRect[]
+}
+
+const NAV_SPATIAL_MAX_CANDIDATES = 200
+
+let navSpatialHighlightEl: HTMLElement | null = null
+let navSpatialHighlightPrev = { outline: "", outlineOffset: "" }
+
+export function clearNavSpatialHighlight(): void {
+  if (!navSpatialHighlightEl) {
+    return
+  }
+  navSpatialHighlightEl.style.outline = navSpatialHighlightPrev.outline
+  navSpatialHighlightEl.style.outlineOffset = navSpatialHighlightPrev.outlineOffset
+  navSpatialHighlightEl = null
+}
+
+export function setNavSpatialHighlight(el: Element | null): void {
+  clearNavSpatialHighlight()
+  if (!(el instanceof HTMLElement)) {
+    return
+  }
+  navSpatialHighlightPrev = {
+    outline: el.style.outline,
+    outlineOffset: el.style.outlineOffset
+  }
+  navSpatialHighlightEl = el
+  el.style.outline = "2px solid #58a6ff"
+  el.style.outlineOffset = "2px"
+}
+
+function rectFromElement(el: Element): SpatialRect {
+  const r = el.getBoundingClientRect()
+  return { x: r.left, y: r.top, w: r.width, h: r.height }
+}
+
+function centerOfRect(box: SpatialRect): { x: number; y: number } {
+  return { x: Math.round(box.x + box.w / 2), y: Math.round(box.y + box.h / 2) }
+}
+
+function isNavSpatialTarget(el: Element): boolean {
+  if (!(el instanceof HTMLElement)) {
+    return false
+  }
+  if (!isElementVisibleInViewport(el)) {
+    return false
+  }
+  const tag = el.tagName.toLowerCase()
+  const role = (el.getAttribute("role") ?? "").toLowerCase()
+  if (tag === "a") {
+    return el.hasAttribute("href")
+  }
+  if (tag === "area") {
+    return el.hasAttribute("href")
+  }
+  if (tag === "summary") {
+    return true
+  }
+  if (role === "link") {
+    return true
+  }
+  const href = (el.getAttribute("href") ?? "").trim()
+  if (href.length > 0 && tag !== "base" && tag !== "link") {
+    return true
+  }
+  if (tag === "button" || role === "button") {
+    return !el.hasAttribute("disabled")
+  }
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+    return !el.disabled && !(el instanceof HTMLInputElement && el.readOnly)
+  }
+  if (el.isContentEditable) {
+    return true
+  }
+  const tabIndex = el.tabIndex
+  return tabIndex >= 0
+}
+
+function dedupNavSpatialCandidates(
+  raw: Array<{ el: Element; path: number[]; box: SpatialRect }>
+): NavSpatialCandidates {
+  const kept = raw.filter((item, i) => {
+    for (let j = 0; j < raw.length; j += 1) {
+      if (i === j) {
+        continue
+      }
+      const other = raw[j]!
+      if (item.el !== other.el && item.el.contains(other.el) && isNavSpatialTarget(other.el)) {
+        return false
+      }
+    }
+    return true
+  })
+  const paths: number[][] = []
+  const boxes: SpatialRect[] = []
+  for (const item of kept) {
+    paths.push(item.path)
+    boxes.push(item.box)
+  }
+  return { paths, boxes }
+}
+
+export function collectNavSpatialCandidates(): NavSpatialCandidates {
+  const raw: Array<{ el: Element; path: number[]; box: SpatialRect }> = []
+  walkAllElements((el) => {
+    if (raw.length >= NAV_SPATIAL_MAX_CANDIDATES) {
+      return
+    }
+    if (!isNavSpatialTarget(el)) {
+      return
+    }
+    const path = buildPathForElement(el)
+    if (path == null) {
+      return
+    }
+    raw.push({ el, path, box: rectFromElement(el) })
+  })
+  return dedupNavSpatialCandidates(raw)
+}
+
+export function resolveNavSpatialElement(path: readonly number[] | null): Element | null {
+  if (path == null) {
+    return null
+  }
+  return resolveNodeFromPath(path)
+}
+
+export function syncNavSpatialSelectionIndex(
+  candidates: NavSpatialCandidates,
+  selectedPath: number[] | null
+): number {
+  const byPath = findCandidateIndexByPath(candidates.paths, selectedPath)
+  if (byPath >= 0) {
+    return byPath
+  }
+  return candidates.paths.length > 0 ? 0 : -1
+}
+
+export function pickInitialNavSpatialIndex(candidates: NavSpatialCandidates, px: number, py: number): number {
+  if (candidates.boxes.length === 0) {
+    return -1
+  }
+  return nearestCandidateIndexByPoint(candidates.boxes, px, py)
+}
+
+export function navSpatialMoveIndex(
+  candidates: NavSpatialCandidates,
+  fromIndex: number,
+  dx: number,
+  dy: number
+): number {
+  const dir: SpatialRectDir | null = spatialDirFromDelta(dx, dy)
+  if (dir === null || fromIndex < 0) {
+    return fromIndex
+  }
+  const next = adjacentCandidateIndexByRect(candidates.boxes, fromIndex, dir)
+  return next ?? fromIndex
+}
+
+export function navSpatialPointerForIndex(
+  candidates: NavSpatialCandidates,
+  index: number
+): { x: number; y: number; path: number[] | null } {
+  if (index < 0 || index >= candidates.boxes.length) {
+    return { x: 0, y: 0, path: null }
+  }
+  const center = centerOfRect(candidates.boxes[index]!)
+  return { x: center.x, y: center.y, path: candidates.paths[index]! }
+}
+
+export function scrollNavSpatialTargetIntoView(el: Element): void {
+  try {
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
+  } catch {
+    el.scrollIntoView()
+  }
+}
+
+export function resolveNavLinkClickTarget(el: Element): Element | null {
+  const tag = el.tagName.toLowerCase()
+  if (tag === "a" || tag === "area" || tag === "summary") {
+    return el
+  }
+  const role = (el.getAttribute("role") ?? "").toLowerCase()
+  if (role === "link") {
+    return el
+  }
+  const href = (el.getAttribute("href") ?? "").trim()
+  if (href.length > 0 && tag !== "base" && tag !== "link") {
+    return el
+  }
+  return el.closest("a[href], area[href], [role='link'], summary")
+}
+
+export function isNavLinkTarget(el: Element | null): boolean {
+  return resolveNavLinkClickTarget(el) !== null
+}
+
+export function navSpatialClickElement(el: Element): void {
+  const htmlEl = el as HTMLElement
+  const rect = htmlEl.getBoundingClientRect()
+  const cx = rect.left + rect.width / 2
+  const cy = rect.top + rect.height / 2
+  if (typeof MouseEvent === "function") {
+    const opts: MouseEventInit = {
+      bubbles: true,
+      cancelable: true,
+      view: globalThis.window ?? undefined,
+      clientX: cx,
+      clientY: cy,
+      button: 0
+    }
+    htmlEl.dispatchEvent(new MouseEvent("pointerdown", opts))
+    htmlEl.dispatchEvent(new MouseEvent("mousedown", opts))
+    htmlEl.dispatchEvent(new MouseEvent("pointerup", opts))
+    htmlEl.dispatchEvent(new MouseEvent("mouseup", opts))
+    htmlEl.dispatchEvent(new MouseEvent("click", opts))
+  }
+  if (typeof htmlEl.click === "function") {
+    htmlEl.click()
+  }
+}
+
+export function activateNavLinkAtPath(path: readonly number[]): boolean {
+  const el = resolveNodeFromPath(path)
+  if (!el) {
+    return false
+  }
+  const target = resolveNavLinkClickTarget(el)
+  if (!target) {
+    return false
+  }
+  scrollNavSpatialTargetIntoView(target)
+  navSpatialClickElement(target)
+  return true
+}
+
+export function pathsEqualNav(a: readonly number[] | null, b: readonly number[] | null): boolean {
+  if (a == null || b == null) {
+    return a === b
+  }
+  return pathsEqual(a, b)
+}

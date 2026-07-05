@@ -8,7 +8,6 @@ import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown
 import { tNav } from "../setting/i18n/ns/nav"
 import type { UiLocale } from "../setting/locale"
 import { setNavOverlayLabelsForRun } from "./nav-overlay-labels"
-import { NAV_ARROW_STEP_PX } from "./nav-config"
 import { attachNavKeyHold } from "./nav-key-hold"
 import type { NavInjectTextSelPhase } from "./nav-overlay-inject-fn"
 import type { NavControlResult } from "./nav-tab-bridge"
@@ -77,13 +76,13 @@ function overlayErrorLabel(reason: string | undefined, locale: UiLocale): string
 function arrowDelta(key: string): { dx: number; dy: number } | null {
   switch (key) {
     case "ArrowLeft":
-      return { dx: -NAV_ARROW_STEP_PX, dy: 0 }
+      return { dx: -1, dy: 0 }
     case "ArrowRight":
-      return { dx: NAV_ARROW_STEP_PX, dy: 0 }
+      return { dx: 1, dy: 0 }
     case "ArrowUp":
-      return { dx: 0, dy: -NAV_ARROW_STEP_PX }
+      return { dx: 0, dy: -1 }
     case "ArrowDown":
-      return { dx: 0, dy: NAV_ARROW_STEP_PX }
+      return { dx: 0, dy: 1 }
     default:
       return null
   }

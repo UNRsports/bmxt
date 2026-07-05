@@ -1,8 +1,24 @@
 /**
  * EN: Injected function for `chrome.scripting.executeScript` — must live in the SW bundle
- *     with the caller (`run-nav-inject.ts`). No imports/exports on the function itself.
- * JA: `executeScript` 用。import/export 不可の単体関数。
+ *     with the caller (`run-nav-inject.ts`). Spatial helpers live in `nav-spatial-in-page.ts`.
+ * JA: `executeScript` 用。矩形スナップは `nav-spatial-in-page.ts`。
  */
+
+import {
+  activateNavLinkAtPath,
+  clearNavSpatialHighlight,
+  collectNavSpatialCandidates,
+  isNavLinkTarget,
+  navSpatialClickElement,
+  navSpatialMoveIndex,
+  navSpatialPointerForIndex,
+  pickInitialNavSpatialIndex,
+  resolveNavSpatialElement,
+  scrollNavSpatialTargetIntoView,
+  setNavSpatialHighlight,
+  syncNavSpatialSelectionIndex,
+  type NavSpatialCandidates
+} from "./nav-spatial-in-page.ts"
 
 export type NavInjectAction =
   | "start"
@@ -136,6 +152,10 @@ export function bmxtNavControlInjected(
     textSelStartX: number
     textSelStartY: number
     labels: OverlayLabels
+    spatialPaths: number[][]
+    spatialBoxes: NavSpatialCandidates["boxes"]
+    spatialIndex: number
+    selectedPath: number[] | null
   }
 
   function sessionWin(): { bmxtNav?: NavSession } {
@@ -159,6 +179,18 @@ export function bmxtNavControlInjected(
     }
     if (typeof sess.textSelStartY !== "number") {
       sess.textSelStartY = 0
+    }
+    if (!Array.isArray(sess.spatialPaths)) {
+      sess.spatialPaths = []
+    }
+    if (!Array.isArray(sess.spatialBoxes)) {
+      sess.spatialBoxes = []
+    }
+    if (typeof sess.spatialIndex !== "number") {
+      sess.spatialIndex = -1
+    }
+    if (sess.selectedPath != null && !Array.isArray(sess.selectedPath)) {
+      sess.selectedPath = null
     }
   }
 
@@ -636,6 +668,7 @@ export function bmxtNavControlInjected(
   }
 
   function removeSession(): void {
+    clearNavSpatialHighlight()
     const w = sessionWin()
     const cur = w.bmxtNav
     if (cur) {
@@ -779,6 +812,96 @@ export function bmxtNavControlInjected(
     return { typingMultiline: sess.typingMultiline, initialValue: sess.typingSnapshot }
   }
 
+  function spatialCandidatesFromSession(sess: NavSession): NavSpatialCandidates {
+    return { paths: sess.spatialPaths, boxes: sess.spatialBoxes }
+  }
+
+  function refreshSpatialCandidates(sess: NavSession): void {
+    const collected = collectNavSpatialCandidates()
+    sess.spatialPaths = collected.paths
+    sess.spatialBoxes = collected.boxes
+    sess.spatialIndex = syncNavSpatialSelectionIndex(collected, sess.selectedPath)
+  }
+
+  function applySpatialIndex(sess: NavSession, index: number): void {
+    const candidates = spatialCandidatesFromSession(sess)
+    const pointer = navSpatialPointerForIndex(candidates, index)
+    sess.spatialIndex = index
+    sess.selectedPath = pointer.path
+    sess.x = pointer.x
+    sess.y = pointer.y
+    sess.root.style.left = sess.x + "px"
+    sess.root.style.top = sess.y + "px"
+    const el = resolveNavSpatialElement(pointer.path)
+    if (el) {
+      scrollNavSpatialTargetIntoView(el)
+      setNavSpatialHighlight(el)
+    } else {
+      setNavSpatialHighlight(null)
+      scrollCursorIntoView(sess.x, sess.y)
+    }
+  }
+
+  function initSpatialSelection(sess: NavSession, px: number, py: number): void {
+    refreshSpatialCandidates(sess)
+    const candidates = spatialCandidatesFromSession(sess)
+    if (candidates.paths.length === 0) {
+      sess.spatialIndex = -1
+      sess.selectedPath = null
+      return
+    }
+    const index = pickInitialNavSpatialIndex(candidates, px, py)
+    applySpatialIndex(sess, index)
+  }
+
+  function spatialMoveSelection(sess: NavSession, dx: number, dy: number): void {
+    refreshSpatialCandidates(sess)
+    if (sess.spatialIndex < 0 && sess.spatialPaths.length > 0) {
+      initSpatialSelection(sess, sess.x, sess.y)
+      return
+    }
+    const candidates = spatialCandidatesFromSession(sess)
+    const nextIndex = navSpatialMoveIndex(candidates, sess.spatialIndex, dx, dy)
+    if (nextIndex === sess.spatialIndex) {
+      return
+    }
+    applySpatialIndex(sess, nextIndex)
+  }
+
+  function clickSelectedSpatial(sess: NavSession): {
+    editableFocused: boolean
+    typingMultiline?: boolean
+    initialValue?: string
+  } {
+    const el = resolveNavSpatialElement(sess.selectedPath)
+    if (!el) {
+      return clickAt(sess.x, sess.y)
+    }
+    if (isNavLinkTarget(el)) {
+      const path = sess.selectedPath
+      if (path != null && activateNavLinkAtPath(path)) {
+        endTypingUi(sess)
+        return { editableFocused: false }
+      }
+    }
+    const editable = resolveEditable(el)
+    if (editable) {
+      scrollNavSpatialTargetIntoView(editable)
+      focusEditableAt(editable, sess.x, sess.y)
+      const info = beginTypingUi(sess, editable)
+      editable.blur()
+      return {
+        editableFocused: true,
+        typingMultiline: info.typingMultiline,
+        initialValue: info.initialValue
+      }
+    }
+    scrollNavSpatialTargetIntoView(el)
+    navSpatialClickElement(el)
+    endTypingUi(sess)
+    return { editableFocused: false }
+  }
+
   function installAt(px: number, py: number): NavInjectResult {
     const prevTyping = sessionWin().bmxtNav?.typingEl ?? null
     removeSession()
@@ -818,12 +941,16 @@ export function bmxtNavControlInjected(
       textSelPhase: "idle",
       textSelStartX: 0,
       textSelStartY: 0,
-      labels: parsedLabels
+      labels: parsedLabels,
+      spatialPaths: [],
+      spatialBoxes: [],
+      spatialIndex: -1,
+      selectedPath: null
     }
     if (prevTyping) {
       prevTyping.blur()
     }
-    scrollCursorIntoView(cx, cy)
+    initSpatialSelection(sessionWin().bmxtNav!, cx, cy)
     return navOk(sessionWin().bmxtNav!, { menuOpen: false })
   }
 
@@ -1105,13 +1232,7 @@ export function bmxtNavControlInjected(
       if (!sess.typingActive) {
         sess.typingEl = null
       }
-      const maxX = Math.max(0, window.innerWidth - 1)
-      const maxY = Math.max(0, window.innerHeight - 1)
-      sess.x = clampCoord(sess.x + dx, maxX)
-      sess.y = clampCoord(sess.y + dy, maxY)
-      sess.root.style.left = sess.x + "px"
-      sess.root.style.top = sess.y + "px"
-      scrollCursorIntoView(sess.x, sess.y)
+      spatialMoveSelection(sess, dx, dy)
       if (sess.textSelPhase === "end") {
         previewTextSelection(sess)
       }
@@ -1187,7 +1308,7 @@ export function bmxtNavControlInjected(
     }
 
     if (action === "click") {
-      const clickRes = clickAt(sess.x, sess.y)
+      const clickRes = clickSelectedSpatial(sess)
       return {
         ok: true,
         x: sess.x,
