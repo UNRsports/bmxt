@@ -9,8 +9,8 @@ describe("list-commands registry", () => {
     assert.equal(matched!.entry.id, "tabs")
   })
 
-  it("matches tabs -list -u", () => {
-    const matched = matchPlainListCommand("tabs -list -u")
+  it("matches tabs -list -url", () => {
+    const matched = matchPlainListCommand("tabs -list -url")
     assert.notEqual(matched, null)
     assert.deepEqual(matched!.match, { showUrl: true })
   })

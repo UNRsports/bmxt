@@ -32,7 +32,7 @@ import { LIST_OUTPUT_SCHEMA, type ListResult } from "../list-output/types.ts"
 
 /** EN: Keep in sync with `commands/registry.ts` (avoid importing UI/i18n modules in tests). */
 const EXPECTED_COMMAND_ENTRY_IDS = [
-  "picker",
+  "browse",
   "plain-list",
   "setting",
   "tabs-setting",
@@ -164,8 +164,8 @@ describe("BMXt POSIX Profile — redirects (P6)", () => {
 })
 
 describe("BMXt POSIX Profile — CommandEntry registry (P7)", () => {
-  it("places picker then plain-list ahead of other UI entries", () => {
-    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[0], "picker")
+  it("places browse then plain-list ahead of other UI entries", () => {
+    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[0], "browse")
     assert.equal(EXPECTED_COMMAND_ENTRY_IDS[1], "plain-list")
     assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("help"))
     assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("background") === false)

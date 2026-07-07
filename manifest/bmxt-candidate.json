@@ -271,7 +271,7 @@
         {
           "when": { "second": "-list" },
           "tier": "third",
-          "sources": [{ "kind": "manifest.static", "tokens": ["-u"] }]
+          "sources": [{ "kind": "manifest.static", "tokens": ["-url"] }]
         },
         {
           "when": { "second": "-moveurl" },
@@ -350,7 +350,7 @@
       ]
     },
     {
-      "command": "picker",
+      "command": "browse",
       "zones": [
         {
           "tier": "second",

@@ -1,4 +1,4 @@
-/** EN: Parse `tabs -list` tokens (`-u`). */
+/** EN: Parse `tabs -list` tokens (`-url`). */
 
 import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { listSecondTokenCandidatesByCommand } from "../builtin-commands/command-subcommands.gen"
@@ -42,7 +42,7 @@ export function tabsOptionCompletionZone(
   return optionTokenZoneAfterLead(line, cursor, TABS_OPTION_LEAD_RE)
 }
 
-/** EN: Tab zone after `tabs -list ` for third-token completion (`-u`). */
+/** EN: Tab zone after `tabs -list ` for third-token completion (`-url`). */
 export function tabsListOptionCompletionZone(
   line: string,
   cursor: number
@@ -55,7 +55,7 @@ export function listTabsOptionCandidates(prefix: string): string[] {
 }
 
 export function listTabsListThirdTokenCandidates(prefix: string): string[] {
-  const tokens = ["-u"]
+  const tokens = ["-url"]
   const normalized = prefix.toLowerCase()
   return tokens.filter((token) => token.startsWith(normalized))
 }

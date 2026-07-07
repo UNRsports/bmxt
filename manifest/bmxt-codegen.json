@@ -81,11 +81,11 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
+      "usagePrimary": "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["-u"],
+          "trailingTokens": ["-url"],
           "tail": "none"
         },
         {
@@ -197,10 +197,10 @@
       ]
     },
     {
-      "module": "picker",
-      "canonicalName": "picker",
+      "module": "browse",
+      "canonicalName": "browse",
       "aliases": [],
-      "usagePrimary": "picker <list-command>",
+      "usagePrimary": "browse <list-command>",
       "subcommands": []
     },
     {

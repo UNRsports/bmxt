@@ -15,7 +15,7 @@ export const CMD: CmdMeta = {
   name: "tabs",
   aliases: [],
   usagePrimary:
-    "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
+    "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
 }
 
 function normTabsFlag(arg: string | undefined): "l" | "e" | "s" | "m" | "n" | null {
@@ -37,7 +37,7 @@ function parseTabsListArgs(args: string[]): TabsListArgs {
     const token = stripInvisibleFormatChars(args[index] ?? "")
       .trim()
       .toLowerCase()
-    if (token === "-u") {
+    if (token === "-url") {
       showUrl = true
       continue
     }

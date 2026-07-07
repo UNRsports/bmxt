@@ -141,15 +141,15 @@ function remapPickerProducerTier(tier: ImeTokenTier): ImeTokenTier {
 }
 
 /**
- * EN: `picker <list-command>…` — complete the producer segment as a normal command line.
- * JA: `picker <list-command>…` — 後続を通常のコマンド行として補完する。
+ * EN: `browse <list-command>…` — complete the producer segment as a normal command line.
+ * JA: `browse <list-command>…` — 後続を通常のコマンド行として補完する。
  */
 function resolvePickerPrefixedTokenPicker(
   line: string,
   cursor: number,
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
-  const prefixMatch = /^(\s*)picker(\s+)/i.exec(line)
+  const prefixMatch = /^(\s*)browse(\s+)/i.exec(line)
   if (prefixMatch === null) {
     return null
   }
@@ -256,7 +256,7 @@ function resolveImeTokenPickerInSegment(
   if (tokenIndex === 0) {
     const cmdWord = line.slice(l, r)
     const canonical0 = resolveCanonical(cmdWord)
-    if (canonical0 === "picker" && cursor >= line.length) {
+    if (canonical0 === "browse" && cursor >= line.length) {
       return {
         tokenStart: line.length,
         tokenEnd: line.length,

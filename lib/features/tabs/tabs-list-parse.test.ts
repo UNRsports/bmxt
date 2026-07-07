@@ -7,8 +7,8 @@ describe("parseTabsListLine", () => {
     assert.deepEqual(parseTabsListLine("tabs -list"), { showUrl: false })
   })
 
-  it("parses -u", () => {
-    assert.deepEqual(parseTabsListLine("tabs -list -u"), { showUrl: true })
+  it("parses -url", () => {
+    assert.deepEqual(parseTabsListLine("tabs -list -url"), { showUrl: true })
   })
 
   it("rejects --picker and unknown tokens", () => {

@@ -30,7 +30,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "group": [] as const,
   "help": [] as const,
   "tabs": [
-    { head: "-list", trailingTokens: ["-u"] as const, tail: "none" },
+    { head: "-list", trailingTokens: ["-url"] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
@@ -57,7 +57,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "snapshot": [
     { head: "-save", trailingTokens: [] as const, tail: "rest" }
   ] as const,
-  "picker": [] as const,
+  "browse": [] as const,
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
@@ -150,7 +150,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-save"
     }
-    case "picker":
+    case "browse":
       return false
     case "setting": {
       const lower = token.toLowerCase()

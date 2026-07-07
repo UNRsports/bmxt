@@ -39,7 +39,7 @@ export function isFirstTierPrependPick(line: string, cursor: number, tier: ImeTo
   return false
 }
 
-/** EN: Build `picker setting -list` from a prepend pick — drops the filter prefix, keeps the tail. */
+/** EN: Build `browse setting -list` from a prepend pick — drops the filter prefix, keeps the tail. */
 export function buildFirstTierPrependPickLine(
   line: string,
   cursor: number,

@@ -30,22 +30,22 @@ describe("isFirstTierPrependPick", () => {
 
 describe("buildFirstTierPrependPickLine", () => {
   it("prepends picker before setting -list from line start", () => {
-    assert.deepEqual(buildFirstTierPrependPickLine("setting -list", 0, "picker"), {
-      line: "picker setting -list",
+    assert.deepEqual(buildFirstTierPrependPickLine("setting -list", 0, "browse"), {
+      line: "browse setting -list",
       cursor: 7
     })
   })
 
   it("drops spaced filter prefix pi", () => {
-    assert.deepEqual(buildFirstTierPrependPickLine("pi setting -list", 2, "picker"), {
-      line: "picker setting -list",
+    assert.deepEqual(buildFirstTierPrependPickLine("pi setting -list", 2, "browse"), {
+      line: "browse setting -list",
       cursor: 7
     })
   })
 
   it("drops merged filter prefix pi", () => {
-    assert.deepEqual(buildFirstTierPrependPickLine("pisetting -list", 2, "picker"), {
-      line: "picker setting -list",
+    assert.deepEqual(buildFirstTierPrependPickLine("pisetting -list", 2, "browse"), {
+      line: "browse setting -list",
       cursor: 7
     })
   })

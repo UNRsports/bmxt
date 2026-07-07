@@ -113,7 +113,7 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       const row = rows[pickHi]
       const variant = options.sessionPickerVariantRef.current
       const logCommandLine =
-        commandLine.trim().length > 0 ? commandLine.trim() : "picker session -list"
+        commandLine.trim().length > 0 ? commandLine.trim() : "browse session -list"
       options.sessionListPickerDismissedRef.current = false
       options.setSessionListPickerHi(null)
       options.setSessionPickerVariant(null)

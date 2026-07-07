@@ -9,8 +9,8 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: Parse `tabs -list [-u]` — full line must match (no extra args).
- * JA: 第三トークン以降は `-u` のみ。
+ * EN: Parse `tabs -list [-url]` — full line must match (no extra args).
+ * JA: 第三トークン以降は `-url` のみ。
  */
 export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
   const parts = trimmed.trim().split(/\s+/).filter((part) => part.length > 0)
@@ -27,7 +27,7 @@ export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
   let showUrl = false
   for (let index = 2; index < parts.length; index += 1) {
     const token = normalizeToken(parts[index]!)
-    if (token === "-u") {
+    if (token === "-url") {
       showUrl = true
       continue
     }

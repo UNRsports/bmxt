@@ -380,7 +380,7 @@
     "en": "window id={windowId} focused \"{title}\""
   },
   "tabs.usage": {
-    "ja": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
-    "en": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl"
+    "ja": "usage: tabs -list [-url] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
+    "en": "usage: tabs -list [-url] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl"
   }
 }

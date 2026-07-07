@@ -13,7 +13,7 @@ import { tError } from "../setting/i18n/ns/error.ts"
 import type { UiLocale } from "../setting/locale.ts"
 import { parsePickerPrefixLine } from "./match.ts"
 import { openPickerFromListResult } from "./open-from-list-result.ts"
-import { pickerUsageLines } from "./usage.ts"
+import { browseUsageLines } from "./usage.ts"
 
 function showUrlFromTabsMatch(match: unknown): boolean {
   if (match === null || typeof match !== "object") {
@@ -24,10 +24,10 @@ function showUrlFromTabsMatch(match: unknown): boolean {
 }
 
 /**
- * EN: Run prefix-form `picker` / `picker <list-command>`.
- * JA: プレフィックス形式の `picker` / `picker <list-command>` を実行する。
+ * EN: Run prefix-form `browse` / `browse <list-command>`.
+ * JA: プレフィックス形式の `browse` / `browse <list-command>` を実行する。
  */
-export async function runPickerCommand(
+export async function runBrowseCommand(
   segment: string,
   deps: CommandDispatchDeps,
   locale: UiLocale
@@ -38,16 +38,16 @@ export async function runPickerCommand(
   }
 
   if (parsed.kind === "usage") {
-    return segmentSuccess(pickerUsageLines(locale))
+    return segmentSuccess(browseUsageLines(locale))
   }
 
   const matched = matchPlainListCommand(parsed.producerSegment)
   if (matched === null) {
     return segmentFailure("usage", [
-      tCmd("cmd.picker.error.notListProducer", locale, {
+      tCmd("cmd.browse.error.notListProducer", locale, {
         segment: parsed.producerSegment
       }),
-      ...pickerUsageLines(locale)
+      ...browseUsageLines(locale)
     ])
   }
 

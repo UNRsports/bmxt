@@ -49,9 +49,9 @@ export async function openPickerFromListResult(
   const resolved = resolvePickerFamily(listResult)
   if (resolved.ok === false) {
     if (resolved.reason === "mixed") {
-      return segmentFailure("runtime", [tCmd("cmd.picker.error.mixedKinds", locale)])
+      return segmentFailure("runtime", [tCmd("cmd.browse.error.mixedKinds", locale)])
     }
-    return segmentFailure("runtime", [tCmd("cmd.picker.error.empty", locale)])
+    return segmentFailure("runtime", [tCmd("cmd.browse.error.empty", locale)])
   }
 
   switch (resolved.family) {

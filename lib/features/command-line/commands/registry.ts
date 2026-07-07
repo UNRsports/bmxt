@@ -1,6 +1,6 @@
 import { UI_COMMAND_RUNNERS } from "../compound/run-ui-segment.ts"
 import { runBackgroundSegment } from "../compound/run-background-segment.ts"
-import { runPickerCommandEntry } from "./picker-entry.ts"
+import { runBrowseCommandEntry } from "./browse-entry.ts"
 import { runPlainListCommandEntry } from "./plain-list-entry.ts"
 import type { CommandEntry } from "./types.ts"
 
@@ -11,7 +11,7 @@ import type { CommandEntry } from "./types.ts"
  * Keep id order in sync with `commands.test.ts` / `conformance/posix-profile.test.ts`.
  */
 export const COMMAND_ENTRIES: readonly CommandEntry[] = [
-  { id: "picker", runtime: "ui", tryRun: runPickerCommandEntry },
+  { id: "browse", runtime: "ui", tryRun: runBrowseCommandEntry },
   { id: "plain-list", runtime: "ui", tryRun: runPlainListCommandEntry },
   { id: "setting", runtime: "ui", tryRun: UI_COMMAND_RUNNERS.setting },
   { id: "tabs-setting", runtime: "ui", tryRun: UI_COMMAND_RUNNERS.tabsSetting },

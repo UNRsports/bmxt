@@ -9,7 +9,7 @@ import { segmentFailure, segmentSuccess } from "../compound/classify-outcome.ts"
 
 /** EN: Expected registry order (kept in sync with `registry.ts` — no i18n import). */
 const EXPECTED_COMMAND_ENTRY_IDS = [
-  "picker",
+  "browse",
   "plain-list",
   "setting",
   "tabs-setting",
@@ -29,8 +29,8 @@ const EXPECTED_COMMAND_ENTRY_IDS = [
 ] as const
 
 describe("COMMAND_ENTRIES order", () => {
-  it("documents picker then plain-list and UI entries", () => {
-    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[0], "picker")
+  it("documents browse then plain-list and UI entries", () => {
+    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[0], "browse")
     assert.equal(EXPECTED_COMMAND_ENTRY_IDS[1], "plain-list")
     assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("help"))
     assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("session"))

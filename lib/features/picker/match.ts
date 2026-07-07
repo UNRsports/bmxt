@@ -1,4 +1,4 @@
-/** EN: Parse prefix-form `picker` / `picker <list-command>`. */
+/** EN: Parse prefix-form `browse` / `browse <list-command>`. */
 
 export type PickerPrefixParse =
   | { kind: "usage" }
@@ -9,15 +9,15 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: Parse `picker` (usage) or `picker <list-command>` (open picker for that list).
- * JA: `picker`（usage）または `picker <list-command>`（その列挙をピッカー表示）。
+ * EN: Parse `browse` (usage) or `browse <list-command>` (open picker for that list).
+ * JA: `browse`（usage）または `browse <list-command>`（その列挙をピッカー表示）。
  */
 export function parsePickerPrefixLine(segment: string): PickerPrefixParse | null {
   const parts = segment.trim().split(/\s+/).filter((part) => part.length > 0)
   if (parts.length === 0) {
     return null
   }
-  if (normalizeToken(parts[0]!) !== "picker") {
+  if (normalizeToken(parts[0]!) !== "browse") {
     return null
   }
   if (parts.length === 1) {
@@ -29,7 +29,7 @@ export function parsePickerPrefixLine(segment: string): PickerPrefixParse | null
   }
 }
 
-/** EN: True when the segment is a `picker` prefix command (bare or with producer). */
+/** EN: True when the segment is a `browse` prefix command (bare or with producer). */
 export function isPickerPrefixCommand(segment: string): boolean {
   return parsePickerPrefixLine(segment) !== null
 }

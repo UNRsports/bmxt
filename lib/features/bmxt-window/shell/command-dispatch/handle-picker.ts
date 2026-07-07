@@ -1,4 +1,4 @@
-import { runPickerCommand } from "../../../picker/run-picker-command"
+import { runBrowseCommand } from "../../../picker/run-picker-command"
 import { parsePickerPrefixLine } from "../../../picker/match"
 import {
   clearPrompt,
@@ -21,10 +21,10 @@ export function tryHandlePickerCommand(ctx: CommandDispatchContext): CommandDisp
 
   if (parsed.kind === "usage") {
     void (async () => {
-      const outcome = await runPickerCommand(trimmed, deps, locale)
+      const outcome = await runBrowseCommand(trimmed, deps, locale)
       const usageLines = outcome?.stdout ?? []
       await deps.appendLogLines([`> ${trimmed}`, ...usageLines], "stdout")
-      setContinuationPrompt(deps, "picker ")
+      setContinuationPrompt(deps, "browse ")
     })()
     return "handled"
   }
@@ -32,7 +32,7 @@ export function tryHandlePickerCommand(ctx: CommandDispatchContext): CommandDisp
   clearPrompt(deps)
 
   void (async () => {
-    const outcome = await runPickerCommand(trimmed, deps, locale)
+    const outcome = await runBrowseCommand(trimmed, deps, locale)
     if (outcome === null) {
       return
     }
