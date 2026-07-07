@@ -1,7 +1,7 @@
 {
   "nav.armedLog": {
-    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · Enter クリック/入力 · nav -exit で終了）",
-    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · nav -exit to quit)"
+    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
+    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
   },
   "nav.disarmed": {
     "ja": "nav を終了しました。",
@@ -100,8 +100,8 @@
     "en": "Copy · Enter to run · Esc to clear selection"
   },
   "nav.status.idle": {
-    "ja": "↑↓←→ 移動 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · nav -exit で終了",
-    "en": "↑↓←→ move · Enter click/type · Ctrl menu · Alt toggle · nav -exit to quit"
+    "ja": "↑↓←→ 移動 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
+    "en": "↑↓←→ move · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
   },
   "nav.status.menu": {
     "ja": "↑↓ 項目 · Enter 実行 · ←→ 履歴 · Ctrl/Esc で閉じる",

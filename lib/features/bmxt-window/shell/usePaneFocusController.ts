@@ -16,9 +16,10 @@ import {
 } from "../../dom/page-active-setting"
 import { saveTranslatePair, type TranslationPairId } from "../../translate"
 import { TRANSLATION_PAIR_IDS } from "../../translate/translation-pair"
+import type { NavPositionsByTab } from "../../nav"
+import type { UiLocale } from "../../setting/locale"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import type { JobRunner } from "../../job"
-import type { UiLocale } from "../../setting/locale"
 import {
   detailBarToPickerSlot,
   isPickerDetailBar,
@@ -33,6 +34,7 @@ import { openPickerSlots, type PickerSlotId, type SessionPickerState } from "../
 import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
 import { activateModeToolbar, deactivateModeToolbar, type ModeToolbarId } from "../mode-toolbar-order"
 import { closeBrowsePickerColumn } from "./close-browse-picker-column"
+import { closeNavFromDetailBar } from "./close-nav-from-detail-bar"
 
 export type UsePaneFocusControllerOptions = {
   sessionId: string
@@ -101,6 +103,10 @@ export type UsePaneFocusControllerOptions = {
     value: DomListPickerState | null | ((prev: DomListPickerState | null) => DomListPickerState | null)
   ) => void
   clearSearchLoadingProgress: () => void
+  teardownNav: () => Promise<void>
+  navPositionsRef: React.MutableRefObject<NavPositionsByTab>
+  setNavArmed: (armed: boolean) => void
+  setNavActive: (active: boolean) => void
 }
 
 /** EN: Picker / detail-bar focus, column order, and layout side-effects. */
@@ -304,6 +310,23 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
     options.focusPrompt()
   }, [activatePaneFocus, closeSettingPickerColumn, options])
 
+  const exitNavFromDetailBar = useCallback(() => {
+    void (async () => {
+      const message = await closeNavFromDetailBar({
+        locale: options.uiLocale,
+        navArmed: options.navArmed,
+        teardownNav: options.teardownNav,
+        navPositionsRef: options.navPositionsRef,
+        setNavArmed: options.setNavArmed,
+        setNavActive: options.setNavActive,
+        setModeToolbarOrder: options.setModeToolbarOrder,
+        activatePaneFocus
+      })
+      void options.appendLogLines([message])
+      options.focusPrompt()
+    })()
+  }, [activatePaneFocus, options])
+
   const isDetailBarVisible = useCallback(
     (id: DetailBarId): boolean => {
       if (id === "nav") {
@@ -379,6 +402,7 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       enterPickerFromDetailBar,
       exitDetailBarToTerminal,
       exitBrowseFromDetailBar,
+      exitNavFromDetailBar,
       toggleNavActive: handleToggleNavActive,
       cycleTranslatePair: cycleTranslatePairFromDetailBar,
       toggleTabsPageActive: toggleTabsPageActiveFromDetailBar,

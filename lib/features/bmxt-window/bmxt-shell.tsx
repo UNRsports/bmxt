@@ -752,7 +752,11 @@ export function BmxtShell({
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
-    clearSearchLoadingProgress
+    clearSearchLoadingProgress,
+    teardownNav,
+    navPositionsRef,
+    setNavArmed,
+    setNavActive
   })
 
 

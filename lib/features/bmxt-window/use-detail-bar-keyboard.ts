@@ -6,7 +6,7 @@ import {
 } from "../translate/translation-pair"
 import {
   cycleDetailBarId,
-  isCtrlCloseBrowseKey,
+  isCtrlCloseDetailBarKey,
   isPickerDetailBar,
   resolveDetailBarFocusTarget,
   type DetailBarId
@@ -60,6 +60,7 @@ export type DetailBarKeyboardActions = {
   enterPickerFromDetailBar: () => void
   exitDetailBarToTerminal: () => void
   exitBrowseFromDetailBar: () => void
+  exitNavFromDetailBar: () => void
   toggleNavActive: () => void
   cycleTranslatePair: (direction: 1 | -1) => void
   toggleTabsPageActive?: () => void
@@ -154,11 +155,19 @@ export function useDetailBarKeyboard({
 
       const current = detailBarIdRef.current
 
-      if (isCtrlCloseBrowseKey(e) && current !== null && isPickerDetailBar(current)) {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        actionsRef.current.exitBrowseFromDetailBar()
-        return
+      if (isCtrlCloseDetailBarKey(e) && current !== null) {
+        if (isPickerDetailBar(current)) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          actionsRef.current.exitBrowseFromDetailBar()
+          return
+        }
+        if (current === "nav") {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          actionsRef.current.exitNavFromDetailBar()
+          return
+        }
       }
 
       const horiz = isPlainHorizontal(e)
