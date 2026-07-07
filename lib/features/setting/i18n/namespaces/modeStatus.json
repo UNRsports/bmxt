@@ -1,7 +1,7 @@
 {
   "modeStatus.dom.hint": {
-    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
-    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · 詳細バー Ctrl+C で終了 · Tab←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · detail bar Ctrl+C exit · Tab ←/→ detail bar"
   },
   "modeStatus.dom.list": {
     "ja": "DOM 一覧",
@@ -12,8 +12,8 @@
     "en": "permission"
   },
   "modeStatus.search.hint": {
-    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
-    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · 詳細バー Ctrl+C で終了 · Tab←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · detail bar Ctrl+C exit · Tab ←/→ detail bar"
   },
   "modeStatus.search.loadingPrefix": {
     "ja": "loading · ",
@@ -24,15 +24,15 @@
     "en": "(no pattern)"
   },
   "modeStatus.setting.hint": {
-    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー",
-    "en": "EOL → focus · ↑↓ move · ← prompt · → picker"
+    "ja": "末尾→で選択 · ↑↓ で移動 · ← でプロンプト · → でピッカー · 詳細バー Ctrl+C で終了",
+    "en": "EOL → focus · ↑↓ move · ← prompt · → picker · detail bar Ctrl+C exit"
   },
   "modeStatus.setting.meta": {
     "ja": "UI 設定",
     "en": "UI settings"
   },
   "modeStatus.tabs.hint": {
-    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー",
-    "en": "EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar"
+    "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · 詳細バー Ctrl+C で終了 · Tab←/→で詳細バー",
+    "en": "EOL → focus · ← prompt · Alt page-active · → picker · detail bar Ctrl+C exit · Tab ←/→ detail bar"
   }
 }

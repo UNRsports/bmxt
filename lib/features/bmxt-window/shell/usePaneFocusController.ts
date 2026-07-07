@@ -17,7 +17,8 @@ import {
 import { saveTranslatePair, type TranslationPairId } from "../../translate"
 import { TRANSLATION_PAIR_IDS } from "../../translate/translation-pair"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
-import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
+import type { JobRunner } from "../../job"
+import type { UiLocale } from "../../setting/locale"
 import {
   detailBarToPickerSlot,
   isPickerDetailBar,
@@ -29,7 +30,9 @@ import {
 import { useDetailBarKeyboard } from "../use-detail-bar-keyboard"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { openPickerSlots, type PickerSlotId, type SessionPickerState } from "../../side-picker/session/session-pickers"
+import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
 import { activateModeToolbar, deactivateModeToolbar, type ModeToolbarId } from "../mode-toolbar-order"
+import { closeBrowsePickerColumn } from "./close-browse-picker-column"
 
 export type UsePaneFocusControllerOptions = {
   sessionId: string
@@ -85,6 +88,19 @@ export type UsePaneFocusControllerOptions = {
     forSessionId: string,
     value: SettingListPickerState | null | ((prev: SettingListPickerState | null) => SettingListPickerState | null)
   ) => void
+  uiLocale: UiLocale
+  jobRunner: JobRunner
+  appendLogLines: (lines: string[]) => void | Promise<void>
+  setTabPicker: (sessionId: string, state: TabPickerState | null) => void
+  setSearchListPicker: (
+    sessionId: string,
+    value: SearchListPickerState | null | ((prev: SearchListPickerState | null) => SearchListPickerState | null)
+  ) => void
+  setDomListPicker: (
+    sessionId: string,
+    value: DomListPickerState | null | ((prev: DomListPickerState | null) => DomListPickerState | null)
+  ) => void
+  clearSearchLoadingProgress: () => void
 }
 
 /** EN: Picker / detail-bar focus, column order, and layout side-effects. */
@@ -263,6 +279,31 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
     [options]
   )
 
+  const exitBrowseFromDetailBar = useCallback(() => {
+    const id = options.detailBarId
+    if (id === null || !isPickerDetailBar(id)) {
+      return
+    }
+    const message = closeBrowsePickerColumn(id, {
+      sessionId: options.sessionId,
+      locale: options.uiLocale,
+      jobRunner: options.jobRunner,
+      isTabPickerOpen: options.tabPicker !== null,
+      isSearchPickerOpen: options.searchListPicker !== null,
+      isDomPickerOpen: options.domListPicker !== null,
+      isSettingPickerOpen: options.settingListPicker !== null,
+      setTabPicker: options.setTabPicker,
+      setSearchListPicker: options.setSearchListPicker,
+      setDomListPicker: options.setDomListPicker,
+      closeSettingPickerColumn,
+      setModeToolbarOrder: options.setModeToolbarOrder,
+      activatePaneFocus,
+      clearSearchLoadingProgress: options.clearSearchLoadingProgress
+    })
+    void options.appendLogLines([message])
+    options.focusPrompt()
+  }, [activatePaneFocus, closeSettingPickerColumn, options])
+
   const isDetailBarVisible = useCallback(
     (id: DetailBarId): boolean => {
       if (id === "nav") {
@@ -337,6 +378,7 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       activateDetailBar,
       enterPickerFromDetailBar,
       exitDetailBarToTerminal,
+      exitBrowseFromDetailBar,
       toggleNavActive: handleToggleNavActive,
       cycleTranslatePair: cycleTranslatePairFromDetailBar,
       toggleTabsPageActive: toggleTabsPageActiveFromDetailBar,

@@ -6,6 +6,7 @@ import {
 } from "../translate/translation-pair"
 import {
   cycleDetailBarId,
+  isCtrlCloseBrowseKey,
   isPickerDetailBar,
   resolveDetailBarFocusTarget,
   type DetailBarId
@@ -45,10 +46,20 @@ function isTabDetailBarCycleKey(e: KeyboardEvent): boolean {
   return e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey
 }
 
+export function cycleTranslationPairId(
+  current: TranslationPairId,
+  direction: 1 | -1
+): TranslationPairId {
+  const index = TRANSLATION_PAIR_IDS.indexOf(current)
+  const next = (index + direction + TRANSLATION_PAIR_IDS.length) % TRANSLATION_PAIR_IDS.length
+  return TRANSLATION_PAIR_IDS[next]!
+}
+
 export type DetailBarKeyboardActions = {
   activateDetailBar: (id: DetailBarId) => void
   enterPickerFromDetailBar: () => void
   exitDetailBarToTerminal: () => void
+  exitBrowseFromDetailBar: () => void
   toggleNavActive: () => void
   cycleTranslatePair: (direction: 1 | -1) => void
   toggleTabsPageActive?: () => void
@@ -71,15 +82,6 @@ export type UseDetailBarKeyboardOptions = {
   /** EN: True when the prompt caret is at end-of-line (→ enters detail bar). */
   isCaretAtPromptEnd: () => boolean
   actions: DetailBarKeyboardActions
-}
-
-export function cycleTranslationPairId(
-  current: TranslationPairId,
-  direction: 1 | -1
-): TranslationPairId {
-  const index = TRANSLATION_PAIR_IDS.indexOf(current)
-  const next = (index + direction + TRANSLATION_PAIR_IDS.length) % TRANSLATION_PAIR_IDS.length
-  return TRANSLATION_PAIR_IDS[next]!
 }
 
 export function useDetailBarKeyboard({
@@ -151,6 +153,14 @@ export function useDetailBarKeyboard({
       }
 
       const current = detailBarIdRef.current
+
+      if (isCtrlCloseBrowseKey(e) && current !== null && isPickerDetailBar(current)) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        actionsRef.current.exitBrowseFromDetailBar()
+        return
+      }
+
       const horiz = isPlainHorizontal(e)
 
       if (horiz === "left") {

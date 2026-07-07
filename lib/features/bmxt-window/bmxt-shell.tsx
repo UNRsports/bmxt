@@ -745,7 +745,14 @@ export function BmxtShell({
     openPickers,
     focusPrompt,
     closePromptPickerUi,
-    setSettingListPicker
+    setSettingListPicker,
+    uiLocale: uiSettings.locale,
+    jobRunner,
+    appendLogLines,
+    setTabPicker,
+    setSearchListPicker,
+    setDomListPicker,
+    clearSearchLoadingProgress
   })
 
 
