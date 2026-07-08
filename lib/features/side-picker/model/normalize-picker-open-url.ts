@@ -1,22 +1,17 @@
-/** ピッカーから開く URL。空は新規タブ既定ページ。 */
+import { parseOpenHttpUrl } from "../../url/parse-open-http-url.ts"
+
+/** EN: Picker open URL — http(s) only; bare hostnames get https://. */
 export function normalizePickerOpenUrl(raw: string): string | undefined {
   const t = raw.trim()
   if (t === "") {
     return undefined
   }
-  if (/^(chrome-extension:|chrome:|about:|file:|https?:|moz-extension:)/i.test(t)) {
-    return t
+  const direct = parseOpenHttpUrl(t)
+  if (direct !== null) {
+    return direct
   }
-  try {
-    new URL(t)
-    return t
-  } catch {
-    const withScheme = /^[\w-]+:\/\//.test(t) ? t : `https://${t}`
-    try {
-      new URL(withScheme)
-      return withScheme
-    } catch {
-      return t
-    }
+  if (/^[\w-]+:\/\//.test(t)) {
+    return undefined
   }
+  return parseOpenHttpUrl(`https://${t}`) ?? undefined
 }

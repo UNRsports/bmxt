@@ -17,7 +17,7 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: Parse `search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`.
+ * EN: Parse `search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>]`.
  */
 export function parseSearchListLine(trimmed: string): SearchListLineOptions | null {
   const parts = trimmed.trim().split(/\s+/).filter((part) => part.length > 0)

@@ -79,6 +79,18 @@
     "ja": "(無題のグループ) [{color}]",
     "en": "(Untitled group) [{color}]"
   },
+  "search.pageLongSkipped.rerunHint": {
+    "ja": "全文を走査するには search -list --page --unlimit [<pattern>] を再実行してください。",
+    "en": "To scan full page text, rerun search -list --page --unlimit [<pattern>]."
+  },
+  "search.pageLongSkipped.row": {
+    "ja": "  tab {tabId} · {title} · {url} · ~{length} chars",
+    "en": "  tab {tabId} · {title} · {url} · ~{length} chars"
+  },
+  "search.pageLongSkipped.summary": {
+    "ja": "（{count} 件のタブが {limit} 文字を超えたため本文を走査しませんでした）",
+    "en": "({count} tab(s) exceeded {limit} chars — body not scanned; see rows below)"
+  },
   "search.pageNoTextHint": {
     "ja": "サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
     "en": "With site access enabled, reload the pages you want to search (F5), then run search -list --page again."

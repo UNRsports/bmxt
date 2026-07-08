@@ -24,7 +24,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "exit": [] as const,
   "search": [
-    { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page","--snapshot"] as const, tail: "rest" },
+    { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page","--snapshot","--unlimit"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
   ] as const,
   "group": [] as const,

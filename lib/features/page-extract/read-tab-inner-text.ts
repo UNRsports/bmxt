@@ -1,5 +1,6 @@
 import {
   bmxtExtractPageInnerTextInPage,
+  bmxtProbePageInnerTextLengthInPage,
   PAGE_EXTRACT_CHANNEL,
   type PageExtractRequest
 } from "./page-extract-message"
@@ -54,6 +55,41 @@ export async function readTabInnerText(tabId: number, maxChars: number): Promise
   return null
 }
 
+async function readTabInnerTextLength(tabId: number): Promise<number | null> {
+  const msg: PageExtractRequest = {
+    channel: PAGE_EXTRACT_CHANNEL,
+    maxChars: 0,
+    lengthOnly: true
+  }
+  try {
+    const length = await withTimeout(
+      chrome.tabs.sendMessage<PageExtractRequest, number>(tabId, msg),
+      TAB_READ_TIMEOUT_MS
+    )
+    if (length !== "timeout" && typeof length === "number") {
+      return length
+    }
+  } catch {
+    /* content script not loaded on this tab */
+  }
+  try {
+    const results = await withTimeout(
+      chrome.scripting.executeScript({
+        target: { tabId },
+        func: bmxtProbePageInnerTextLengthInPage,
+        args: []
+      }),
+      TAB_READ_TIMEOUT_MS
+    )
+    if (results !== "timeout" && results?.[0]?.result != null && typeof results[0].result === "number") {
+      return results[0].result
+    }
+  } catch {
+    /* host permission or Chrome-blocked page */
+  }
+  return null
+}
+
 /** EN: Live read for one open tab — no SQLite / storage cache. */
 export async function readOpenTabInnerText(
   tab: chrome.tabs.Tab,
@@ -64,4 +100,13 @@ export async function readOpenTabInnerText(
     return null
   }
   return readTabInnerText(tabId, maxChars)
+}
+
+/** EN: innerText length for one open tab without reading body text into the SW. */
+export async function probeOpenTabInnerTextLength(tab: chrome.tabs.Tab): Promise<number | null> {
+  const tabId = tab.id
+  if (tabId === undefined) {
+    return null
+  }
+  return readTabInnerTextLength(tabId)
 }

@@ -8,7 +8,7 @@ import { tSearch } from "../setting/i18n/ns/search.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
 import { searchEffectsForDispatchLine } from "./search-list-effects.ts"
 import { buildSearchListResult } from "./search-list-result.ts"
-import { normalizeSearchListDispatchLine, searchListPatternFromLine } from "./search-list-picker-parse.ts"
+import { normalizeSearchListDispatchLine, parseSearchListPageOptions, searchListPatternFromLine } from "./search-list-picker-parse.ts"
 import { normalizeSearchPattern } from "./search-format.ts"
 import { searchPageProgressLabel } from "./sources/page-progress.ts"
 import { pickerEntriesFromSearchLines } from "../side-picker/model/from-search-lines.ts"
@@ -39,10 +39,12 @@ function scopeLabelForEffect(effect: ChromeEffect, locale: UiLocale): string {
 export async function fetchSearchListResult(options: SearchListFetchOptions): Promise<ListResult> {
   const dispatchLine = normalizeSearchListDispatchLine(options.dispatchLine)
   const pattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
+  const pageOptions = parseSearchListPageOptions(dispatchLine)
   const effects = searchEffectsForDispatchLine(dispatchLine)
   const onProgress = options.onProgress
   const ctx: DispatchChromeContext = {
     ...options.ctx,
+    searchPageUnlimit: pageOptions.unlimit,
     onSearchPageProgress: onProgress ?? options.ctx.onSearchPageProgress,
     searchPageProgressLabel:
       options.ctx.searchPageProgressLabel ?? searchPageProgressLabel(dispatchLine)
@@ -66,7 +68,8 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   }
 
   const parsed = pickerEntriesFromSearchLines(linesOut)
-  const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern)
+  const maxPageTextChars = pageOptions.unlimit ? 0 : undefined
+  const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
   return buildSearchListResult(entries, pattern, linesOut)
 }
 

@@ -10,7 +10,7 @@ import { effectsDispatch, linesDispatch } from "../types"
 export const CMD: CmdMeta = {
   name: "search",
   aliases: [],
-  usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list"
+  usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list"
 }
 
 function normalizeSearchSecondToken(head: string): string {

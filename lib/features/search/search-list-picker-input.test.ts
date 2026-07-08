@@ -6,6 +6,7 @@ import {
   isSearchListScopeToken,
   matchesSearchListOptionFilter,
   normalizeSearchListDispatchLine,
+  parseSearchListPageOptions,
   searchListEffectScopesForToken,
   searchListPatternFromLine,
   shouldShowSearchListPatternPlaceholder
@@ -17,7 +18,7 @@ describe("isSearchListReadyToRun", () => {
     assert.equal(isSearchListReadyToRun("search -list --bookmark"), true)
     assert.equal(isSearchListReadyToRun("search -list --page"), true)
     assert.equal(isSearchListReadyToRun("search -list --snapshot"), true)
-    assert.equal(isSearchListReadyToRun("search -list --all"), true)
+    assert.equal(isSearchListReadyToRun("search -list --page --unlimit"), true)
   })
 
   it("allows scope with trailing pattern", () => {
@@ -67,6 +68,23 @@ describe("normalizeSearchListDispatchLine", () => {
       normalizeSearchListDispatchLine("search -list --page foo"),
       "search -list --page foo"
     )
+    assert.equal(
+      normalizeSearchListDispatchLine("search -list --page --unlimit foo"),
+      "search -list --page --unlimit foo"
+    )
+  })
+})
+
+describe("parseSearchListPageOptions", () => {
+  it("detects --unlimit", () => {
+    assert.deepEqual(parseSearchListPageOptions("search -list --page --unlimit foo"), {
+      unlimit: true
+    })
+    assert.deepEqual(parseSearchListPageOptions("search -list --page foo"), { unlimit: false })
+  })
+
+  it("excludes --unlimit from pattern", () => {
+    assert.equal(searchListPatternFromLine("search -list --page --unlimit foo bar"), "foo bar")
   })
 })
 

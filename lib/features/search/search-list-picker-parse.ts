@@ -12,8 +12,13 @@ const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page",
 
 const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page", "--snapshot"] as const
 
+const SEARCH_LIST_MODIFIER_ORDER = ["--unlimit"] as const
+
 /** EN: All fixed third tokens after `search -list` (scopes). */
-export const SEARCH_LIST_OPTION_TOKENS = [...SEARCH_LIST_SCOPE_ORDER] as const
+export const SEARCH_LIST_OPTION_TOKENS = [
+  ...SEARCH_LIST_SCOPE_ORDER,
+  ...SEARCH_LIST_MODIFIER_ORDER
+] as const
 
 const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page", "--snapshot"] as const
 
@@ -24,6 +29,45 @@ function searchListParts(trimmed: string): string[] {
 /** EN: Optional third-token scope flags after `search -list` (manifest `trailingTokens`). */
 export function isSearchListScopeToken(token: string): boolean {
   return SEARCH_LIST_SCOPE.has(token.toLowerCase())
+}
+
+/** EN: Modifiers for page scan (`--unlimit` lifts MAX_PAGE_TEXT_CHARS). */
+export function isSearchListModifierToken(token: string): boolean {
+  const lower = token.toLowerCase()
+  for (const modifier of SEARCH_LIST_MODIFIER_ORDER) {
+    if (modifier === lower) {
+      return true
+    }
+  }
+  return false
+}
+
+export type SearchListPageOptions = {
+  unlimit: boolean
+}
+
+/** EN: Parse page-scan modifiers from a normalized `search -list …` line. */
+export function parseSearchListPageOptions(dispatchLine: string): SearchListPageOptions {
+  const parts = searchListParts(dispatchLine)
+  let unlimit = false
+  for (let index = 2; index < parts.length; index += 1) {
+    const token = parts[index]!.toLowerCase()
+    if (isSearchListModifierToken(token)) {
+      if (token === "--unlimit") {
+        unlimit = true
+      }
+      continue
+    }
+    if (isSearchListScopeToken(token)) {
+      continue
+    }
+    break
+  }
+  return { unlimit }
+}
+
+function isSearchListFixedToken(token: string): boolean {
+  return isSearchListScopeToken(token) || isSearchListModifierToken(token)
 }
 
 /** EN: `--all` — cross-scope search (history + bookmark + page). */
@@ -148,7 +192,7 @@ export function isSearchListReadyToRun(trimmed: string, line?: string): boolean 
     return line !== undefined && line.endsWith(" ")
   }
   const third = parts[2]!.toLowerCase()
-  if (isSearchListScopeToken(third)) {
+  if (isSearchListFixedToken(third)) {
     return true
   }
   if (third.startsWith("--")) {
@@ -166,10 +210,15 @@ export function searchListPatternFromLine(trimmed: string): string {
   if (parts.length <= 2) {
     return ""
   }
-  if (isSearchListScopeToken(parts[2]!)) {
-    return parts.length <= 3 ? "" : parts.slice(3).join(" ")
+  const patternParts: string[] = []
+  for (let index = 2; index < parts.length; index += 1) {
+    const token = parts[index]!
+    if (isSearchListFixedToken(token)) {
+      continue
+    }
+    patternParts.push(token)
   }
-  return parts.slice(2).join(" ")
+  return patternParts.join(" ")
 }
 
 /**
@@ -189,7 +238,7 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
   if (!matchesSearchListOptionFilter(third) && !third.startsWith("--")) {
     return false
   }
-  const isCompleteOption = isSearchListScopeToken(third)
+  const isCompleteOption = isSearchListFixedToken(third)
   if (!isCompleteOption) {
     return true
   }
@@ -221,7 +270,7 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
   if (parts.length === 2 && segmentLine.endsWith(" ")) {
     return true
   }
-  if (parts.length >= 3 && isSearchListScopeToken(parts[2]!)) {
+  if (parts.length >= 3 && isSearchListFixedToken(parts[2]!)) {
     return searchListPatternFromLine(trimmed).length === 0
   }
   if (parts.length >= 3 && matchesSearchListOptionFilter(parts[2]!)) {

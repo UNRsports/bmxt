@@ -49,11 +49,11 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot"],
+          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot", "--unlimit"],
           "tail": "rest"
         },
         {

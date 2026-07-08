@@ -20,6 +20,7 @@ import {
   PICKER_BG_IMAGE_BUNDLE_NAME,
   SETTINGS_JSON_NAME
 } from "./settings-bundle-layout"
+import { sanitizeBundleBgImageFileName } from "./sanitize-bundle-bg-image-file-name.ts"
 
 export {
   BG_IMAGE_BUNDLE_NAME as BG_IMAGE_ZIP_NAME,
@@ -176,14 +177,15 @@ function loadBgImageFromZip(
   bgImageFile: string | null | undefined,
   files: Map<string, Uint8Array>
 ): string | null {
-  if (!bgImageFile) {
+  const safeName = sanitizeBundleBgImageFileName(bgImageFile)
+  if (!safeName) {
     return null
   }
-  const imgBytes = files.get(bgImageFile)
+  const imgBytes = files.get(safeName)
   if (!imgBytes) {
     return null
   }
-  const ext = bgImageFile.split(".").pop()?.toLowerCase() ?? ""
+  const ext = safeName.split(".").pop()?.toLowerCase() ?? ""
   const mime =
     ext === "png"
       ? "image/png"

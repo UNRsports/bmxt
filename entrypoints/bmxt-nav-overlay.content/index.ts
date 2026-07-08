@@ -5,6 +5,7 @@
 
 import {
   bmxtExtractPageInnerTextInPage,
+  bmxtProbePageInnerTextLengthInPage,
   isPageExtractRequest
 } from "../../lib/features/page-extract/page-extract-message"
 import { bmxtFindPageScrollToSnippetInjected } from "../../lib/features/page-dom/injected-find-page-scroll-to-snippet"
@@ -29,7 +30,11 @@ export default defineContentScript({
   main() {
     chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
       if (isPageExtractRequest(raw)) {
-        sendResponse(bmxtExtractPageInnerTextInPage(raw.maxChars))
+        if (raw.lengthOnly === true) {
+          sendResponse(bmxtProbePageInnerTextLengthInPage())
+        } else {
+          sendResponse(bmxtExtractPageInnerTextInPage(raw.maxChars))
+        }
         return true
       }
       if (isPageScrollNeedleRequest(raw)) {

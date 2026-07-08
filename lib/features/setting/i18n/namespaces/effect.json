@@ -31,6 +31,10 @@
     "ja": "新しいタブ {tabId} を開きました: {url}",
     "en": "opened new tab {tabId}: {url}"
   },
+  "effect.openUrl.rejected": {
+    "ja": "error: http(s) 以外の URL は開けません: {url}",
+    "en": "error: only http(s) URLs can be opened: {url}"
+  },
   "effect.openUrlNewTab.failed": {
     "ja": "error: {url} の新規タブを開けませんでした",
     "en": "error: could not open new tab for {url}"

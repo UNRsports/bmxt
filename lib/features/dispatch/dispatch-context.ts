@@ -20,6 +20,8 @@ export type DispatchChromeContext = {
   resolveDomListTargetTabId?: () => Promise<number | undefined>
   /** EN: Receives structured DOM picker rows when `dom_list` runs (picker-direct path). */
   onDomListCapture?: (capture: DomListCapture) => void
+  /** EN: When true, `search_page` reads full innerText ( `--unlimit` ). */
+  searchPageUnlimit?: boolean
   /** EN: Throttled progress while `search_page` scans open tabs. */
   onSearchPageProgress?: (message: string) => Promise<void>
   /** EN: Label prefix for progress lines (e.g. `search -list --page`). */
