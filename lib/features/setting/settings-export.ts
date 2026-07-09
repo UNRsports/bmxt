@@ -5,13 +5,13 @@ import {
   normalizeUiAppearance,
   type UiAppearance,
   type UiAppearanceLayer
-} from "./appearance"
-import type { UiLocale } from "./locale"
-import type { UiSettings } from "./settings"
-import { parseHexColor } from "./validate-color"
-import { parseFontFamily } from "./validate-font"
-import { parseFontSizePx } from "./validate-size"
-import { buildZipArchive, parseZipArchive } from "./zip-store"
+} from "./appearance.ts"
+import type { UiLocale } from "./locale.ts"
+import type { UiSettings } from "./settings.ts"
+import { parseHexColor } from "./validate-color.ts"
+import { parseFontFamily } from "./validate-font.ts"
+import { parseFontSizePx } from "./validate-size.ts"
+import { buildZipArchive, parseZipArchive } from "./zip-store.ts"
 import {
   BG_IMAGE_BUNDLE_NAME,
   EXTERNAL_SETTINGS_BUNDLE_DIR,
@@ -19,7 +19,7 @@ import {
   listKnownBundleImageFileNames,
   PICKER_BG_IMAGE_BUNDLE_NAME,
   SETTINGS_JSON_NAME
-} from "./settings-bundle-layout"
+} from "./settings-bundle-layout.ts"
 import { sanitizeBundleBgImageFileName } from "./sanitize-bundle-bg-image-file-name.ts"
 
 export {
@@ -29,7 +29,7 @@ export {
   listKnownBundleImageFileNames,
   PICKER_BG_IMAGE_BUNDLE_NAME as PICKER_BG_IMAGE_ZIP_NAME,
   SETTINGS_JSON_NAME
-} from "./settings-bundle-layout"
+} from "./settings-bundle-layout.ts"
 
 type SettingsExportAppearanceV2 = {
   fg: string | null
@@ -37,6 +37,8 @@ type SettingsExportAppearanceV2 = {
   fontSize: string | null
   fontFamily: string | null
   bgImageFile: string | null
+  searchHitHighlightBg: string | null
+  searchJumpHighlightBg: string | null
   editPicker: boolean
   picker: {
     fg: string | null
@@ -130,6 +132,8 @@ export function buildSettingsExportJson(settings: UiSettings): SettingsExportJso
       fontSize: appearance.fontSize,
       fontFamily: appearance.fontFamily,
       bgImageFile: bgImageFileName(appearance.bgImageDataUrl, BG_IMAGE_BUNDLE_NAME),
+      searchHitHighlightBg: appearance.searchHitHighlightBg,
+      searchJumpHighlightBg: appearance.searchJumpHighlightBg,
       editPicker: appearance.editPicker,
       picker: {
         fg: appearance.picker.fg,
@@ -224,12 +228,26 @@ function parseLayerFromExport(
   return { fg, bgColor, fontSize, fontFamily, bgImageDataUrl }
 }
 
+function parseSearchHighlightColorsFromExport(
+  raw: Record<string, unknown>
+): Pick<UiAppearance, "searchHitHighlightBg" | "searchJumpHighlightBg"> {
+  return {
+    searchHitHighlightBg:
+      typeof raw.searchHitHighlightBg === "string" ? raw.searchHitHighlightBg : null,
+    searchJumpHighlightBg:
+      typeof raw.searchJumpHighlightBg === "string" ? raw.searchJumpHighlightBg : null
+  }
+}
+
 function parseAppearanceFromExportV1(
   raw: Record<string, unknown>,
   files: Map<string, Uint8Array>
 ): UiAppearance {
   const layer = parseLayerFromExport(raw, files, "bgImageFile")
-  return normalizeUiAppearance(layer)
+  return normalizeUiAppearance({
+    ...layer,
+    ...parseSearchHighlightColorsFromExport(raw)
+  })
 }
 
 function parseAppearanceFromExportV2(
@@ -243,6 +261,7 @@ function parseAppearanceFromExportV2(
     : { ...DEFAULT_UI_APPEARANCE_LAYER }
   return normalizeUiAppearance({
     ...global,
+    ...parseSearchHighlightColorsFromExport(raw as unknown as Record<string, unknown>),
     editPicker: raw.editPicker === true,
     picker
   })

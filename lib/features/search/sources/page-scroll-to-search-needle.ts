@@ -1,6 +1,7 @@
 import { bmxtScrollToSearchNeedleInjected } from "../../page-dom/injected-scroll-to-search-needle"
 import {
   PAGE_SCROLL_NEEDLE_CHANNEL,
+  resolveNeedleHighlightColors,
   type BmxtNeedleHighlightColorsPayload,
   type PageScrollNeedleRequest,
   type PageScrollNeedleResponse
@@ -43,7 +44,7 @@ function buildScrollRequest(options: ScrollSearchPageToNeedleOptions): PageScrol
     request.lineHitIndex = options.lineHitIndex
   }
   if (options.highlightColors) {
-    request.highlightColors = options.highlightColors
+    request.highlightColors = resolveNeedleHighlightColors(options.highlightColors)
   }
   if (options.activeOnly) {
     request.activeOnly = true
@@ -73,10 +74,7 @@ async function scrollViaExecuteScript(
   tabId: number,
   request: PageScrollNeedleRequest
 ): Promise<boolean> {
-  const colors = request.highlightColors
-  const hitBg = colors?.hitBg ?? "#ffc9dd"
-  const jumpBg = colors?.jumpBg ?? "#ffdb4d"
-  const fg = colors?.fg ?? "#0d1117"
+  const colors = resolveNeedleHighlightColors(request.highlightColors)
   const persistMs = request.persistMs ?? 0
   try {
     const [{ result }] = await chrome.scripting.executeScript({
@@ -88,9 +86,9 @@ async function scrollViaExecuteScript(
         request.snippetHint,
         persistMs,
         request.globalOccurrence ?? -1,
-        hitBg,
-        jumpBg,
-        fg,
+        colors.hitBg,
+        colors.jumpBg,
+        colors.fg,
         request.activeOnly ?? false,
         request.lineHitIndex ?? -1
       ]

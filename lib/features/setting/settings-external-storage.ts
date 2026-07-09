@@ -3,6 +3,7 @@ import {
   parseSettingsExportJson,
   type SettingsExportJson
 } from "./settings-export"
+import { sanitizeBundleBgImageFileName } from "./sanitize-bundle-bg-image-file-name.ts"
 import {
   EXTERNAL_SETTINGS_BUNDLE_DIR,
   formatExternalSettingsBundleDisplayName,
@@ -70,13 +71,19 @@ async function readFileBytes(
   }
 }
 
+function safeBundleImageFileName(raw: string | null | undefined): string | null {
+  return sanitizeBundleBgImageFileName(raw)
+}
+
 function imageFileNamesFromExportJson(json: SettingsExportJson): string[] {
   const names: string[] = []
-  if (json.appearance.bgImageFile) {
-    names.push(json.appearance.bgImageFile)
+  const globalFile = safeBundleImageFileName(json.appearance.bgImageFile)
+  if (globalFile) {
+    names.push(globalFile)
   }
-  if (json.appearance.picker.bgImageFile) {
-    names.push(json.appearance.picker.bgImageFile)
+  const pickerFile = safeBundleImageFileName(json.appearance.picker.bgImageFile)
+  if (pickerFile) {
+    names.push(pickerFile)
   }
   return names
 }
@@ -112,14 +119,14 @@ async function collectMissingReferencedImages(
   parsed: SettingsExportJson,
   missing: ExternalBundleMissingItem[]
 ): Promise<void> {
-  const globalFile = parsed.appearance.bgImageFile
+  const globalFile = safeBundleImageFileName(parsed.appearance.bgImageFile)
   if (globalFile) {
     const bytes = await readFileBytes(handle, globalFile)
     if (!bytes) {
       missing.push({ kind: "background_image", fileName: globalFile })
     }
   }
-  const pickerFile = parsed.appearance.picker.bgImageFile
+  const pickerFile = safeBundleImageFileName(parsed.appearance.picker.bgImageFile)
   if (pickerFile) {
     const bytes = await readFileBytes(handle, pickerFile)
     if (!bytes) {

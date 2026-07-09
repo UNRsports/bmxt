@@ -13,7 +13,8 @@ import { bmxtScrollToSearchNeedleInjected } from "../../lib/features/page-dom/in
 import { bmxtClearSearchNeedleHighlightInjected } from "../../lib/features/page-dom/injected-clear-search-needle"
 import {
   isPageClearNeedleRequest,
-  isPageScrollNeedleRequest
+  isPageScrollNeedleRequest,
+  resolveNeedleHighlightColors
 } from "../../lib/features/page-dom/page-scroll-needle-message"
 import { isPageScrollSnippetRequest } from "../../lib/features/page-dom/page-scroll-snippet-message"
 import { handleDomListInPageMessage } from "../../lib/features/page-dom/dom-list-in-page-handler"
@@ -38,10 +39,7 @@ export default defineContentScript({
         return true
       }
       if (isPageScrollNeedleRequest(raw)) {
-        const colors = raw.highlightColors
-        const hitBg = colors?.hitBg ?? "#ffc9dd"
-        const jumpBg = colors?.jumpBg ?? "#ffdb4d"
-        const fg = colors?.fg ?? "#0d1117"
+        const colors = resolveNeedleHighlightColors(raw.highlightColors)
         sendResponse(
           bmxtScrollToSearchNeedleInjected(
             raw.searchNeedle,
@@ -49,9 +47,9 @@ export default defineContentScript({
             raw.snippetHint,
             raw.persistMs ?? 0,
             raw.globalOccurrence ?? -1,
-            hitBg,
-            jumpBg,
-            fg,
+            colors.hitBg,
+            colors.jumpBg,
+            colors.fg,
             raw.activeOnly ?? false,
             raw.lineHitIndex ?? -1
           )

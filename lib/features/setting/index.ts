@@ -11,6 +11,7 @@ export {
   listAppearanceFlagTokens,
   normalizeUiAppearance,
   parseAppearanceFlagToken,
+  parseStoredOptionalHexColor,
   resolvePickerAppearance,
   resolveSearchHighlightAppearance,
   resolveTerminalAppearance,
