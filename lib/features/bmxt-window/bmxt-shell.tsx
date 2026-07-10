@@ -55,6 +55,7 @@ import {
 import { PromptInput } from "./shell/PromptInput"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import { useLogScroll } from "./shell/useLogScroll"
+import { usePromptTypingFocus } from "./shell/usePromptTypingFocus"
 import { useSessionPromptActions } from "./shell/useSessionPromptActions"
 import { useDomListShell } from "./shell/useDomListShell"
 import { useSearchListShell } from "./shell/useSearchListShell"
@@ -455,7 +456,7 @@ export function BmxtShell({
     ]
   )
 
-  const { scrollRef, scrollAnchorRef, logScrollable, syncLogScroll } = useLogScroll({
+  const { scrollRef, scrollAnchorRef, logScrollable, scrollPromptFootIntoView } = useLogScroll({
     lines,
     mode,
     line,
@@ -645,9 +646,13 @@ export function BmxtShell({
     appendLogLines
   })
 
-  const focusPrompt = useCallback(() => {
-    requestAnimationFrame(() => imeRef.current?.focus({ preventScroll: true }))
+  const focusPromptNow = useCallback(() => {
+    imeRef.current?.focus({ preventScroll: true })
   }, [])
+
+  const focusPrompt = useCallback(() => {
+    requestAnimationFrame(() => focusPromptNow())
+  }, [focusPromptNow])
 
   const {
     closeSessionNameTyping,
@@ -886,6 +891,7 @@ export function BmxtShell({
 
 
   const {
+    applyPromptLine,
     onImeInput,
     onImeSelect,
     onBeforeInput,
@@ -920,6 +926,56 @@ export function BmxtShell({
     syncImeTokenPicker,
     focusPrompt,
     resetNavTranslateSession
+  })
+
+  const insertPrintableWhenReclaiming = useCallback(
+    (ch: string) => {
+      const ta = imeRef.current
+      const base = ta?.value ?? lineRef.current
+      const start = ta?.selectionStart ?? cursorRef.current
+      const end = ta?.selectionEnd ?? cursorRef.current
+      const nextLine = base.slice(0, start) + ch + base.slice(end)
+      const nextCursor = start + ch.length
+      if (ta) {
+        ta.value = nextLine
+      }
+      applyPromptLine(nextLine, nextCursor, ta)
+    },
+    [applyPromptLine, cursorRef, imeRef, lineRef]
+  )
+
+  const deleteBackwardWhenReclaiming = useCallback(() => {
+    const ta = imeRef.current
+    const base = ta?.value ?? lineRef.current
+    const start = ta?.selectionStart ?? cursorRef.current
+    const end = ta?.selectionEnd ?? cursorRef.current
+    if (start !== end) {
+      const nextLine = base.slice(0, start) + base.slice(end)
+      if (ta) {
+        ta.value = nextLine
+      }
+      applyPromptLine(nextLine, start, ta)
+      return
+    }
+    if (start <= 0) {
+      return
+    }
+    const nextLine = base.slice(0, start - 1) + base.slice(start)
+    const nextCursor = start - 1
+    if (ta) {
+      ta.value = nextLine
+    }
+    applyPromptLine(nextLine, nextCursor, ta)
+  }, [applyPromptLine, cursorRef, imeRef, lineRef])
+
+  usePromptTypingFocus({
+    enabled: promptPaneFocused,
+    imeRef,
+    logScrollRef: scrollRef,
+    focusPromptNow,
+    scrollPromptFootIntoView,
+    insertPrintableWhenReclaiming,
+    deleteBackwardWhenReclaiming
   })
 
   const { onKeyDown } = useShellKeyboard({
@@ -985,10 +1041,6 @@ export function BmxtShell({
     promptLine
   })
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
-  const navPromptValueControlled = !navPageTyping
-  const showNavTypingPlaceholder =
-    navPageTyping && line.trim() === "" && !isComposing
-  const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
 
   const shellContent = (
@@ -1123,8 +1175,32 @@ export function BmxtShell({
         data-bmxt-session-id={sessionId}
         data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
         <div
-          className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
-          <div ref={scrollRef} className={shellScrollClassName}>
+          className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}
+          onMouseDown={(e) => {
+            if (e.button !== 0) {
+              return
+            }
+            if (!(e.target instanceof Element)) {
+              return
+            }
+            if (e.target.closest("a, button, input, textarea, select")) {
+              return
+            }
+            // EN: Log-line mousedown must not yank IME focus — drag-select needs it.
+            // Typing / non-select mouseup reclaim focus via usePromptTypingFocus.
+            if (e.target.closest(".bmxt-out-line, .bmxt-hint, .bmxt-version-upgrade")) {
+              if (paneFocus !== "terminal") {
+                activatePaneFocus("terminal")
+              }
+              return
+            }
+            if (paneFocus !== "terminal") {
+              activatePaneFocus("terminal")
+              return
+            }
+            focusPromptNow()
+          }}>
+          <div ref={scrollRef} className={shellScrollClassName} tabIndex={-1}>
             {shellContent}
           </div>
         </div>

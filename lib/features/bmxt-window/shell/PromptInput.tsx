@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { tPrompt } from "../../setting/i18n/ns/prompt"
 import { tSession } from "../../setting/i18n/ns/session"
 import type { UiLocale } from "../../setting/locale"
@@ -79,6 +79,29 @@ export function PromptInput({
   const navPromptValueControlled = !navPageTyping
   const showNavTypingPlaceholder = navPageTyping && line.trim() === "" && !isComposing
   const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
+  const [imeDomFocused, setImeDomFocused] = useState(false)
+
+  useEffect(() => {
+    if (!promptPaneFocused) {
+      setImeDomFocused(false)
+      return
+    }
+    const ta = imeRef.current
+    if (!ta) {
+      return
+    }
+    setImeDomFocused(document.activeElement === ta)
+    const onFocus = () => setImeDomFocused(true)
+    const onBlur = () => setImeDomFocused(false)
+    ta.addEventListener("focus", onFocus)
+    ta.addEventListener("blur", onBlur)
+    return () => {
+      ta.removeEventListener("focus", onFocus)
+      ta.removeEventListener("blur", onBlur)
+    }
+  }, [promptPaneFocused, imeRef])
+
+  const caretActive = promptPaneFocused && imeDomFocused
 
   return (
     <div
@@ -92,7 +115,7 @@ export function PromptInput({
           ) : (
             <span
               ref={cursorMirrorCellRef}
-              className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${promptPaneFocused ? "" : " bmxt-cursor-cell--inactive"}`}>
+              className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${caretActive ? "" : " bmxt-cursor-cell--inactive"}`}>
               {mirror.cur || "\u00a0"}
             </span>
           )}
