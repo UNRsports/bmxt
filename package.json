@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.7.5",
+  "version": "0.7.7",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -46,7 +46,7 @@
     "esbuild": "^0.25.0",
     "linkedom": "0.18.5",
     "prettier": "3.2.4",
-    "typescript": "5.3.3",
+    "typescript": "6.0.3",
     "wxt": "0.20.7"
   }
 }

@@ -307,7 +307,8 @@ export async function exportUiSettingsZip(settings: UiSettings): Promise<{ filen
   const entries = buildUiSettingsStorageEntries(settings)
   const zipBytes = buildZipArchive(entries)
   const filename = exportZipFilename()
-  downloadBlob(new Blob([zipBytes], { type: "application/zip" }), filename)
+  const zipBlobPart = new Uint8Array(zipBytes)
+  downloadBlob(new Blob([zipBlobPart], { type: "application/zip" }), filename)
   return { filename }
 }
 

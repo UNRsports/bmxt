@@ -302,7 +302,7 @@ export async function saveUiSettingsToDirectory(
   for (const entry of entries) {
     const fileHandle = await dir.getFileHandle(entry.name, { create: true })
     const writable = await fileHandle.createWritable()
-    await writable.write(entry.data)
+    await writable.write(new Uint8Array(entry.data))
     await writable.close()
   }
   await pruneStaleBundleImages(dir, currentFileNames)
