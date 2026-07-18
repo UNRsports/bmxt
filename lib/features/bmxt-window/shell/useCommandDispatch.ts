@@ -7,7 +7,6 @@ import { effectiveCommandLocale } from "../../setting/effective-command-locale"
 import { applyUiAction } from "./apply-ui-action"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { dispatchFallbackCommand } from "./command-dispatch/handle-fallback"
-import { tryHandlePickerCommand } from "./command-dispatch/handle-picker"
 import {
   clearPrompt,
   recordCommandHistory,
@@ -90,9 +89,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       return
     }
 
-    if (tryHandlePickerCommand(ctx) === "handled") {
-      return
-    }
+    // browse / command grammar goes through WASM after ensureBmxtCore (not early TS handlers),
+    // so compound lines like `browse tabs -list && …` are split first.
 
     void (async () => {
       try {
