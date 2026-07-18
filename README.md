@@ -29,6 +29,7 @@
   - [Tab picker — implementation (keyboard & reducer)](#tabs-tab-picker-impl)
   - [URL Lines (`http` / `https`)](#url-lines)
 - [Command Execution Architecture (Current)](#command-execution-architecture)
+  - [Inter-command vocabulary (closed IR)](#inter-command-vocabulary)
   - [`-list` output registry](#list-commands-registry)
   - [bmxtRule (inter-command stream)](#bmxt-rule)
   - [bmxtCandidate (prompt candidate menu)](#bmxt-candidate)
@@ -875,7 +876,24 @@ prompt / RUN_CMD
 
 The tab picker’s **`runTabsPickerReduce`** (and related planners) are WASM-backed wrappers under **`lib/features/bmxt-core/tabs-picker/`** (see **Tab picker — implementation** under **`tabs`**).
 
-**UI host:** Enter in the BMXt window calls WASM first (`useCommandDispatch` → `applyUiAction`). Context-only gates remain: external settings recovery, session name typing, and open-picker prefix commands. Compound / pipe **planning** is WASM; the **execution loop** stays in TypeScript (`command-line/`). Effect-producing lines still use **`RUN_CMD`** → Service Worker → **`SessionPatch[]`**. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are under **[Picker UI (side columns)](#picker-ui)**; sessions under **[`session`](#session)**; settings under **[`setting`](#setting)**; nav under **[Nav mode](#nav-mode)**; translation under **[`translate`](#translate)**.
+**UI host:** Enter in the BMXt window calls WASM first (`useCommandDispatch` → `applyUiAction`). Context-only gates remain: external settings recovery and session name typing. Compound / pipe **planning** is WASM; the **execution loop** stays in TypeScript (`command-line/`). Effect-producing lines still use **`RUN_CMD`** → Service Worker → **`SessionPatch[]`**. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are under **[Picker UI (side columns)](#picker-ui)**; sessions under **[`session`](#session)**; settings under **[`setting`](#setting)**; nav under **[Nav mode](#nav-mode)**; translation under **[`translate`](#translate)**.
+
+<a id="inter-command-vocabulary"></a>
+
+### Inter-command vocabulary (closed IR)
+
+Commands must not wire to each other by name. They communicate only through a **closed vocabulary**:
+
+| Channel | Schema / type | Role |
+|---------|----------------|------|
+| **DispatchBundle** | `lines` \| `effects` \| `ui` \| `msgs` | Rust → host plan after `run` / `classify` |
+| **ListResult** | `bmxt-list/1` | Plain `-list` / picker projection |
+| **BmxtRuleStream** | `bmxt-rule/1` | Pipe `|` stage handoff (from ListResult via adapter) |
+| **Exit status** | `0` / `1` / `2` / `127` | Compound `&&` / `||` / `;` sequencing |
+
+**Index (code):** `lib/features/command-line/inter-command/` — `LIST_KIND_TO_BMXT_RULE_KIND`, `preferredCommandAddPath()`, channel constants.
+
+**Rule:** Prefer **reusing** an existing Effect, UiAction, ListRecordKind, or pipe `acceptsKinds`. **Extend** a catalog only when reuse is impossible (see **[Command add procedure](#command-add-procedure)** and **`manifest/templates/`**).
 
 <a id="list-commands-registry"></a>
 
@@ -1000,6 +1018,8 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`lib/features/bmxt-candidate/`** — **bmxtCandidate** prompt menu spec (catalog loader, validate, provider registry)
 - **`manifest/bmxt-candidate.json`** — candidate menu profile, segment contexts, command zones, data sources
 - **`lib/features/command-line/list-output/`** — canonical **`-list`** plain output (`ListResult`, `bmxt-list/1`)
+- **`lib/features/command-line/inter-command/`** — closed vocabulary index (`LIST_KIND_TO_BMXT_RULE_KIND`, add-path helper)
+- **`manifest/templates/`** — new-command checklist and reuse / list / pipe templates
 - **`lib/features/command-line/list-commands/`** — **`-list` producer registry** and unified plain runner (`tryRunPlainListCommand`)
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** registry (`runCommand`), null-sink redirects, plain-list composition
 - **`lib/features/command-line/command-output.ts`** — stdout/stderr channels and session-log encoding
@@ -1041,28 +1061,32 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 
 ### Add a New Built-in Command
 
-For a consolidated checklist (scaffold, manifest, new effects, verification), see **[Command add procedure](#command-add-procedure)** below.
+Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first). For the full checklist (scaffold, reuse vs extend, verification), see **[Command add procedure](#command-add-procedure)** below.
 
 
-1. Edit **`manifest/bmxt-codegen.json`** (`commands` / `effects` as needed). Optionally run **`pnpm run new:command -- <module> <name> [aliases...]`** to scaffold **`crates/bmxt-core/src/cmd/<module>.rs`** and manifest rows.
-2. Implement **`run`** in **`crates/bmxt-core/src/cmd/<module>.rs`** (wire in **`cmd/mod.rs`**). Keep registry metadata in sync via codegen (**`pnpm run verify:manifest`**).
-3. For new Chrome effects, add a **`handlers/effects/<file>.ts`** implementation and **`pnpm run codegen`**, then fill the handler referenced in the manifest. For UI-only outcomes, return **`UiActionIR`** and handle it in **`apply-ui-action.ts`**.
-4. Run **`pnpm run codegen`** (if not already), **`pnpm run build:wasm`**, then **`pnpm run verify:manifest`** and **`pnpm run check:generated`** (CI runs these).
+1. Prefer **reusing** existing Effect / UiAction / list kinds (`manifest/templates/`).
+2. Edit **`manifest/bmxt-codegen.json`** and/or run **`pnpm run new:command -- <module> <name> [aliases...]`**.
+3. Implement **`run`** in **`crates/bmxt-core/src/cmd/<module>.rs`**. Extend TS executors **only** when the closed vocabulary cannot express the command.
+4. Run **`pnpm run codegen`**, **`pnpm run build:wasm`**, then **`verify:manifest`** / **`check:generated`**.
 
 <a id="command-add-procedure"></a>
 
 ### Command add procedure
 
 
+- **Vocabulary first:** Follow **[Inter-command vocabulary](#inter-command-vocabulary)**. Start from **`manifest/templates/new-command.checklist.md`** (decision tree + checklists). Examples: **`command-reuse-effects.example.rs`**, **`command-reuse-ui-action.example.rs`**, **`command-list-producer.steps.md`**, **`pipe-consumer.steps.md`**.
 - **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Continuation and second-token Tab lists come from generated **`command-subcommands.gen.ts`** (from manifest **`subcommands`**).
 
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
-- **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Implement **`run`** and align **`usagePrimary`**.
+- **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Then implement **`run`** using a template under **`manifest/templates/`**.
 - **Manual path:** Add **`commands[]`** row + **`crates/bmxt-core/src/cmd/<module>.rs`** + wire **`cmd/mod.rs`**, then **`pnpm run codegen`** and **`pnpm run build:wasm`**.
-- **Chrome / new `Effect`:** Add **`effects[]`** → codegen → implement **`handlers/effects/<tsHandlerFile>.ts`**. Return effects from Rust **`run`** as JSON `ChromeEffect` (codegen `rustVariant`).
+- **Reuse path (prefer):** Return only existing **`ChromeEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
+- **Extend path (only if needed):**
+  - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
+  - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
+  - **List / pipe kinds:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer registry
 - **Checks:** **`verify:manifest`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
-- **Compound / pipe:** Planning is WASM; the host loop is **`command-line/`** (`runDispatch` per segment → UiAction apply or background `RUN_CMD`).
-- **Plain `-list` producer:** Add **`lib/features/<feature>/*-list-command.ts`**, register the matcher in **`list-commands/registry.ts`**, and ensure **`plain-list`** / **`browse <list>`** behavior stay consistent (see **`-list` output** above).
+- **Compound / pipe:** Planning is WASM; the host loop is **`command-line/`** (`runDispatch` per segment → UiAction apply or background `RUN_CMD`). Pipe handoff is **bmxtRule** only (not command-name coupling).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
 
@@ -1074,7 +1098,7 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 
 1. Edit **`manifest/bmxt-codegen.json`**: set **`subcommands`** to **`[]`** or a list of **`{ head, trailingTokens?, tail? }`** (see **`manifest/templates/command-with-subcommands.example.json`**).
 2. Run **`pnpm run codegen`** (regenerates **`command-subcommands.gen.ts`** and **`table.gen.ts`**).
-3. In **`lib/features/bmxt-core/cmd/<module>.ts`**, implement **`run`** and reference **each `head` as the same string literal** as in the manifest (required for **`pnpm run verify:manifest`**).
+3. In **`crates/bmxt-core/src/cmd/<module>.rs`**, implement **`run`** and reference **each `head` as the same string literal** as in the manifest (required for **`pnpm run verify:manifest`**).
 4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
 5. Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, then **`pnpm run build`** as needed.
 
@@ -1082,11 +1106,13 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 
 #### Adding a plain `-list` producer (registry plugin)
 
-1. In **`lib/features/<feature>/`**, add **`*-list-result.ts`** (domain → `ListResult`) and **`*-list-command.ts`** (`ListCommandEntry`: `fetchListResult` + `formatPlainLines`). Reuse **`formatListPlainLines`** / **`appendListPlainSummary`** from **`list-output/`**.
-2. In **`lib/features/command-line/list-commands/registry.ts`**, append a **matcher** row to **`LIST_COMMAND_MATCHERS`** (`matchPlain`, `usesPicker`, `runtime`) and a **`loadListCommandEntry`** case.
-3. If the command needs Chrome APIs from the Service Worker, add manifest **`effects[]`** entry (e.g. **`foo_list`**) → **codegen** → **`handlers/effects/foo-list.ts`** calling **`runPlainListForCommandId("foo", …)`**. If data lives only in the UI (like **`session`** / **`setting`**), use **`runtime: "ui"`** and wire **`tryRunPlainListCommand`** in the UI handler or **`run-ui-segment.ts`**.
-4. Extend **`ListRecordKind`** in **`list-output/types.ts`** when introducing new record kinds; add tests under the feature or **`list-commands/list-commands.test.ts`**.
-5. Update **`manifest/bmxt-codegen.json`**, **`bmxt-core/cmd/<module>.ts`**, register **`browse <list>`** kind routing if needed, i18n, and this README / **`_context/map_command.csv`**.
+Follow **`manifest/templates/command-list-producer.steps.md`**. Summary:
+
+1. In **`lib/features/<feature>/`**, add **`*-list-result.ts`** (domain → `ListResult`) and **`*-list-command.ts`** (`ListCommandEntry`: `fetchListResult` + `formatPlainLines`). Reuse **`formatListPlainLines`** / **`appendListPlainSummary`** from **`list-output/`**. Prefer **existing** `ListRecordKind` values.
+2. In **`lib/features/command-line/list-commands/registry.ts`**, append a **matcher** row to **`LIST_COMMAND_MATCHERS`** and a **`loadListCommandEntry`** case.
+3. If the command needs Chrome APIs from the Service Worker, add manifest **`effects[]`** entry → **codegen** → **`handlers/effects/*.ts`** calling **`runPlainListForCommandId`**. If data lives only in the UI (like **`session`** / **`setting`**), use **`runtime: "ui"`** and **`tryRunPlainListCommand`**.
+4. New kinds: extend **`ListRecordKind`**, **`inter-command/vocabulary.ts`**, **`manifest/bmxt-rule.json`**, and **`from-list-result.ts`**.
+5. Update **`manifest/bmxt-codegen.json`**, **`crates/bmxt-core/src/cmd/<module>.rs`**, **`browse <list>`** routing if needed, i18n, this README, and **`_context/map_command.csv`**.
 
 <a id="prompt-key-bindings"></a>
 
@@ -1187,6 +1213,8 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/bmxt-rule/` — **bmxtRule** stream (`bmxt-rule/1`, validate, serialize, adapters)
 - `manifest/bmxt-rule.json` — bmxtRule kind catalog
 - `lib/features/command-line/list-output/` — `-list` schema and plain formatters (`ListResult`, `bmxt-list/1`)
+- `lib/features/command-line/inter-command/` — closed inter-command vocabulary index
+- `manifest/templates/` — new-command templates (checklist, reuse examples)
 - `lib/features/command-line/list-commands/` — `-list` producer registry (`*-list-command.ts` plugins, `tryRunPlainListCommand`)
 - `lib/features/command-line/commands/` — `CommandEntry` registry (`runCommand`), null-sink redirects
 - `lib/features/command-line/command-output.ts` — stdout/stderr channels and session-log encoding
@@ -1309,6 +1337,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [タブピッカー — 実装（キー配信とリデューサ）](#tabs-tab-picker-impl-ja)
   - [URL（`http` / `https` 行）](#url-lines-ja)
 - [コマンド実行アーキテクチャ（現状）](#command-execution-architecture-ja)
+  - [コマンド間語彙（閉じた IR）](#inter-command-vocabulary-ja)
   - [`-list` 出力レジストリ](#list-commands-registry-ja)
   - [bmxtRule（コマンド間ストリーム）](#bmxt-rule-ja)
   - [bmxtCandidate（プロンプト候補メニュー）](#bmxt-candidate-ja)
@@ -2140,7 +2169,24 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 タブピッカー計画は WASM 経由の **`runTabsPickerReduce`** 等（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
-**UI ホスト:** Enter は WASM 分類が先（`useCommandDispatch`）。コンテキスト専用ゲート（外部設定復旧・session 名入力・開いているピッカー）のみ TS 側に残します。compound/pipe の**計画**は WASM、**実行ループ**は TS。Effect 系は従来どおり **`RUN_CMD`** → **`SessionPatch[]`**（**[ターミナルセッション状態](#terminal-session-state-ja)**）。
+**UI ホスト:** Enter は WASM 分類が先（`useCommandDispatch`）。コンテキスト専用ゲート（外部設定復旧・session 名入力）のみ TS 側に残します。compound/pipe の**計画**は WASM、**実行ループ**は TS。Effect 系は従来どおり **`RUN_CMD`** → **`SessionPatch[]`**（**[ターミナルセッション状態](#terminal-session-state-ja)**）。
+
+<a id="inter-command-vocabulary-ja"></a>
+
+### コマンド間語彙（閉じた IR）
+
+コマンド同士は**名前で直結しない**。連絡は次の**閉じた語彙**のみ:
+
+| 経路 | スキーマ / 型 | 役割 |
+|------|----------------|------|
+| **DispatchBundle** | `lines` \| `effects` \| `ui` \| `msgs` | Rust → ホスト（`run` / `classify` の計画） |
+| **ListResult** | `bmxt-list/1` | プレーン `-list` / ピッカー投影 |
+| **BmxtRuleStream** | `bmxt-rule/1` | パイプ `|` 段間受け渡し（ListResult から変換） |
+| **終了状態** | `0` / `1` / `2` / `127` | compound `&&` / `||` / `;` |
+
+**索引（コード）:** `lib/features/command-line/inter-command/` — 種類マップ・`preferredCommandAddPath()` など。
+
+**原則:** 既存の Effect / UiAction / ListRecordKind / pipe `acceptsKinds` の**再利用を優先**。足りないときだけカタログを**拡張**（**[コマンド追加手順](#command-add-procedure-ja)** と **`manifest/templates/`**）。
 
 <a id="list-commands-registry-ja"></a>
 
@@ -2244,6 +2290,8 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`lib/features/bmxt-candidate/`** — **bmxtCandidate** 規格（catalog、validate、provider registry）
 - **`manifest/bmxt-candidate.json`** — 候補メニュー profile・segment contexts・command zones
 - **`lib/features/command-line/list-output/`** — **`-list`** 出力規格（`ListResult`、`bmxt-list/1`）プレーン表示
+- **`lib/features/command-line/inter-command/`** — 閉じたコマンド間語彙の索引
+- **`manifest/templates/`** — 新コマンド checklist / 再利用例
 - **`lib/features/command-line/list-commands/`** — **`-list` producer レジストリ**（`tryRunPlainListCommand`）
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト、plain-list 合成
 - **`lib/features/command-line/command-output.ts`** — stdout/stderr チャネルとセッションログ符号化
@@ -2287,41 +2335,45 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 ### 組み込みコマンドの追加
 
-手順の一覧（scaffold、manifest、新 Effect、検証）は下記 **[コマンド追加手順](#command-add-procedure-ja)** を参照。
+起点は **`manifest/templates/new-command.checklist.md`**（語彙優先）。詳細は **[コマンド追加手順](#command-add-procedure-ja)**。
 
 
-1. **`manifest/bmxt-codegen.json`** を編集する。必要なら **`pnpm run new:command -- <module> <name> [aliases...]`** で **`lib/features/bmxt-core/cmd/<module>.ts`** と manifest を追加。
-2. **`cmd/<module>.ts`** の **`run`** を実装。**`export const CMD`** を manifest と一致させる（**`pnpm run verify:manifest`**）。
-3. Chrome 用の新 Effect なら manifest の **`effects`** を足し **`pnpm run codegen`** のあと **`handlers/effects/`** に **`tsHandlerFile`** 相当の実装を置く。
-4. **`pnpm run codegen`** のあと **`verify:manifest`** / **`check:generated`** で確認（CI でも実行）。
+1. 既存 Effect / UiAction / list kind の**再利用を優先**（`manifest/templates/`）。
+2. **`manifest/bmxt-codegen.json`** を編集、または **`pnpm run new:command -- <module> <name> [aliases...]`**。
+3. **`crates/bmxt-core/src/cmd/<module>.rs`** に **`run`** を実装。閉じた語彙で足りないときだけ TS 実行器を拡張。
+4. **`pnpm run codegen`** / **`build:wasm`** のあと **`verify:manifest`** / **`check:generated`**。
 
 <a id="command-add-procedure-ja"></a>
 
 ### コマンド追加手順
 
 
+- **語彙優先:** **[コマンド間語彙](#inter-command-vocabulary-ja)** に従う。起点は **`manifest/templates/new-command.checklist.md`**（決定木 + チェックリスト）。例: **`command-reuse-effects.example.rs`**、**`command-reuse-ui-action.example.rs`**、**`command-list-producer.steps.md`**、**`pipe-consumer.steps.md`**。
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。continuation と第二トークン Tab 候補は **`command-subcommands.gen.ts`**（manifest の **`subcommands`** から生成）。
-- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。次は手編集しない: **`table.gen.ts`**、**`effect-types.ts`**、**`apply-dispatch.gen.ts`**、**`completion-fallback.ts`**、**`command-subcommands.gen.ts`**（いずれも **`pnpm run codegen`** で再生成）。
-- **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`lib/features/bmxt-core/cmd/<module>.ts`** と manifest を更新し **codegen** まで実行。
-- **手動で足す場合:** manifest の **`commands[]`** に追記 → **`lib/features/bmxt-core/cmd/<module>.ts`** → **`pnpm run codegen`**。
-- **ブラウザ連携（新しい `Effect`）:** manifest の **`effects[]`** → **codegen** → **`handlers/effects/<tsHandlerFile>.ts`** → **`run`** から **`effectsDispatch`**。
-- **検証:** **`verify:manifest`** / **`check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm run build`**。
-- **シェル `CommandEntry`（compound / pipe）:** セグメント実行は **`lib/features/command-line/commands/`**（**`COMMAND_ENTRIES`** + background **`RUN_CMD`** フォールバック）。compound 内で使う UI 専用挙動は **`commands/registry.ts`** に **`CommandEntry`**（`tryRun` が `SegmentOutcome | null`）を登録し、ランナーを実装（多くは **`compound/run-ui-segment.ts`**）。プレーン **`-list`** は **`plain-list`** エントリ（**`list-commands`** を合成）。対話プロンプトの submit は従来どおり **`useCommandDispatch`** の domain handler（`> line`・履歴など）。同じ feature モジュールと挙動を揃える。
-- **プレーン `-list` producer:** **`*-list-command.ts`** を追加し **`list-commands/registry.ts`** に matcher を登録。**`plain-list`** / **`browse <list>`** と整合させる。
+- **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
+- **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
+- **再利用パス（推奨）:** 既存 **`ChromeEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
+- **拡張パス（必要なときだけ）:**
+  - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
+  - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
+  - **List / pipe kind:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer
+- **検証:** **`verify:manifest`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
+- **compound / pipe:** 計画は WASM、実行ループは **`command-line/`**。パイプ段間は **bmxtRule のみ**（コマンド名直結禁止）。
 
-各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`lib/features/bmxt-core/cmd/<module>.ts`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`** が検査）。
+各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`crates/bmxt-core/src/cmd/<module>.rs`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`**）。
 
-**手書きの `handlers/effects/*.ts`:** codegen の対象外。manifest の **`effects[]`** 変更後は生成型・**`apply-dispatch.gen.ts`** に**揃える**。**`-list`** effect は **`lib/features/command-line/list-commands/`** の **`runPlainListForCommandId`** を呼び、整形ロジックを重複させない。
+**手書きの `handlers/effects/*.ts`:** codegen の対象外。**`-list`** effect は **`runPlainListForCommandId`** を呼び、整形を重複させない。
 
-#### プレーン `-list` producer の追加（registry プラグイン）
+#### プレーン `-list` producer の追加
 
-1. **`lib/features/<feature>/`** に **`*-list-result.ts`**（ドメイン → `ListResult`）と **`*-list-command.ts`**（`ListCommandEntry`）を追加。整形は **`list-output/`** の **`formatListPlainLines`** / **`appendListPlainSummary`** を再利用。
-2. **`lib/features/command-line/list-commands/registry.ts`** の **`LIST_COMMAND_MATCHERS`** に matcher を 1 行追加し、**`loadListCommandEntry`** に case を追加。
-3. Chrome API が要る場合は manifest **`effects[]`**（例: **`foo_list`**）→ **codegen** → **`handlers/effects/foo-list.ts`** で **`runPlainListForCommandId`**。データが UI のみ（**`session`** / **`setting`** 同様）なら **`runtime: "ui"`** とし、UI ハンドラまたは **`run-ui-segment.ts`** で **`tryRunPlainListCommand`**。
-4. 新 record kind は **`list-output/types.ts`** の **`ListRecordKind`** を拡張。テストは feature または **`list-commands/list-commands.test.ts`** に追加。
-5. **`manifest/bmxt-codegen.json`**、**`bmxt-core/cmd/<module>.ts`**、必要なら **`browse <list>`** の kind ルーティング、i18n、本 README / **`_context/map_command.csv`** を更新。
+詳細は **`manifest/templates/command-list-producer.steps.md`**。要点:
 
-**アーキテクチャ:** コマンド意味論は **Rust/WASM（`crates/bmxt-core`）**、Chrome Effect 実行と React UI は **TypeScript**。正本は **manifest + codegen**（TS と Rust を二重出力）。
+1. **`*-list-result.ts`** / **`*-list-command.ts`** を追加し **`list-commands/registry.ts`** に登録。既存 **`ListRecordKind`** を優先。
+2. SW が要る場合は Effect + **`runPlainListForCommandId`**。UI のみなら **`runtime: "ui"`**。
+3. 新 kind は vocabulary / **`bmxt-rule.json`** / adapter まで一式。
+4. README / **`_context/map_command.csv`** / i18n を更新。
+
+**アーキテクチャ:** コマンド意味論は **Rust/WASM（`crates/bmxt-core`）**、Chrome / UI 執行は **TypeScript**。正本は **manifest + codegen**。
 
 <a id="prompt-key-bindings-ja"></a>
 
@@ -2418,6 +2470,8 @@ pnpm run dev
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
 - `lib/features/bmxt-rule/` — **bmxtRule** 規格（`bmxt-rule/1`）と adapter
 - `lib/features/command-line/list-output/` — **`-list`** 規格と plain 整形（`ListResult`、`bmxt-list/1`）
+- `lib/features/command-line/inter-command/` — 閉じたコマンド間語彙の索引
+- `manifest/templates/` — 新コマンドテンプレート
 - `lib/features/command-line/list-commands/` — **`-list` producer レジストリ**（`*-list-command.ts` プラグイン、`tryRunPlainListCommand`）
 - `lib/features/command-line/commands/` — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト
 - `lib/features/command-line/command-output.ts` — stdout/stderr チャネルとセッションログ符号化

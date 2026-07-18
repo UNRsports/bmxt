@@ -49,7 +49,11 @@ function main() {
     process.exit(1)
   }
 
-  const body = `use crate::ir::{msgs_from_keys, DispatchBundle};
+  const body = `//! Scaffolded by scripts/scaffold-command.mjs
+//! Next: pick a path in manifest/templates/new-command.checklist.md
+//! Examples: command-reuse-effects.example.rs | command-reuse-ui-action.example.rs
+
+use crate::ir::{msgs_from_keys, DispatchBundle};
 
 pub fn run(_args: &[String]) -> DispatchBundle {
     msgs_from_keys(&["cmd.error.unknownCommand"])
@@ -87,6 +91,7 @@ pub fn run(_args: &[String]) -> DispatchBundle {
   execFileSync("pnpm", ["run", "codegen"], { cwd: root, stdio: "inherit" })
 
   console.log(`scaffed crates/bmxt-core/src/cmd/${moduleName}.rs and updated manifest + codegen`)
+  console.log(`Next: manifest/templates/new-command.checklist.md`)
 }
 
 main()

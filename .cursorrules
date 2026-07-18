@@ -62,7 +62,7 @@ Detailed BMXt workflows live in **`.cursor/skills/`** (also visible in Cursor Se
 |-------|-------------|
 | **`bmxt-i18n`** | User-visible strings (EN + JA); no hard-coded UI text |
 | **`bmxt-ui-settings`** | `setting -list`, settings export/import, storage, bundle format |
-| **`bmxt-add-command`** | New/changed commands, subcommands, effects, Rust cmd + manifest/codegen |
+| **`bmxt-add-command`** | New/changed commands; prefer closed inter-command vocabulary reuse (`manifest/templates/`); Rust cmd + manifest/codegen |
 
 ## i18n (summary)
 
@@ -70,7 +70,7 @@ User-visible text = **EN + JA**. Add keys under `lib/features/setting/i18n/names
 
 ## Command-line model (summary)
 
-First command → second command; no short aliases for first/second tiers; continuation when second is required. Details: skill **`bmxt-add-command`**.
+First command → second command; no short aliases for first/second tiers; continuation when second is required. Inter-command handoff uses closed IR only (`DispatchBundle` / `ListResult` / `bmxtRule` / exit status) — see **`lib/features/command-line/inter-command/`** and skill **`bmxt-add-command`**.
 
 ## UI settings (summary)
 

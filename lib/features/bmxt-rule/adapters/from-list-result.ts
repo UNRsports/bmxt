@@ -1,4 +1,8 @@
 import type { ListFieldValue, ListRecord, ListResult } from "../../command-line/list-output/types.ts"
+import {
+  bmxtRuleKindForSearchHitSource,
+  LIST_KIND_TO_BMXT_RULE_KIND
+} from "../../command-line/inter-command/vocabulary.ts"
 import { BMXT_RULE_SCHEMA, type BmxtRuleRecord, type BmxtRuleScalar, type BmxtRuleStream } from "../types.ts"
 import { bmxtRuleProducer, bmxtRuleRecord } from "../entries.ts"
 
@@ -16,27 +20,10 @@ function stringScalar(value: ListFieldValue | undefined, fallback = ""): string 
   return String(value)
 }
 
-function searchHitTargetKind(source: string): string {
-  const normalized = source.toLowerCase()
-  if (normalized.includes("bookmark")) {
-    return "bookmark"
-  }
-  if (normalized.includes("history")) {
-    return "history"
-  }
-  if (normalized.includes("snapshot")) {
-    return "markdown.file"
-  }
-  if (normalized.includes("page") || normalized.includes("tab")) {
-    return "page.open"
-  }
-  return "search.hit"
-}
-
 function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
   switch (record.kind) {
     case "tabs.tab":
-      return bmxtRuleRecord("page.open", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.tab"], {
         url: stringScalar(record.fields.url),
         pageTitle: stringScalar(record.fields.title),
         tabId: toScalar(record.fields.tabId) ?? null,
@@ -45,14 +32,14 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         active: toScalar(record.fields.active) ?? false
       })
     case "tabs.window":
-      return bmxtRuleRecord("page.window", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.window"], {
         pageTitle: stringScalar(record.fields.title),
         windowId: toScalar(record.fields.windowId) ?? null,
         focused: toScalar(record.fields.focused) ?? false,
         url: ""
       })
     case "tabs.group":
-      return bmxtRuleRecord("page.group", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.group"], {
         pageTitle: stringScalar(record.fields.label),
         label: stringScalar(record.fields.label),
         windowId: toScalar(record.fields.windowId) ?? null,
@@ -61,7 +48,7 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
       })
     case "search.hit": {
       const source = stringScalar(record.fields.source, "search")
-      const kind = searchHitTargetKind(source)
+      const kind = bmxtRuleKindForSearchHitSource(source)
       const fields: Record<string, BmxtRuleScalar> = {
         url: stringScalar(record.fields.url),
         pageTitle: stringScalar(record.fields.title),
@@ -74,19 +61,19 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
       return bmxtRuleRecord(kind, fields)
     }
     case "dom.node":
-      return bmxtRuleRecord("dom.node", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["dom.node"], {
         pageTitle: stringScalar(record.display?.label ?? record.fields.line),
         index: toScalar(record.fields.index) ?? null,
         path: stringScalar(record.fields.path),
         line: stringScalar(record.fields.line)
       })
     case "dom.notice":
-      return bmxtRuleRecord("dom.notice", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["dom.notice"], {
         pageTitle: stringScalar(record.display?.label),
         notice: stringScalar(record.fields.notice)
       })
     case "session.row":
-      return bmxtRuleRecord("session.row", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["session.row"], {
         pageTitle: stringScalar(record.fields.displayName),
         index: toScalar(record.fields.index) ?? null,
         sessionId: stringScalar(record.fields.sessionId),
@@ -94,7 +81,7 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         name: stringScalar(record.fields.displayName)
       })
     case "setting.field":
-      return bmxtRuleRecord("setting.field", {
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["setting.field"], {
         pageTitle: stringScalar(record.display?.label ?? record.fields.key),
         key: stringScalar(record.fields.key),
         value: stringScalar(record.fields.value)

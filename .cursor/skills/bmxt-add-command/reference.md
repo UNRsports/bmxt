@@ -58,5 +58,7 @@ pnpm run build
 
 ## Further reading
 
-- README § Command add procedure (EN + JA)
+- README § Inter-command vocabulary / Command add procedure (EN + JA)
 - README § Command-line token model (first / second commands)
+- `manifest/templates/new-command.checklist.md`
+- `lib/features/command-line/inter-command/`
