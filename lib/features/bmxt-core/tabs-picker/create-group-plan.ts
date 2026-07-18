@@ -2,6 +2,7 @@ import { tTabs, type TabsMessageKey } from "../../setting/i18n/ns/tabs"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
 import { wasmTabsPickerCreateGroupPlan } from "../wasm-host"
+import { parseWasmJson } from "./parse-wasm-json"
 
 export type CreateGroupPlanContext = {
   tabCount: number
@@ -16,14 +17,6 @@ export type CreateGroupPlanResult = {
   ok: boolean
   error: string | null
   strategy: "moveWholeGroup" | "ungroupThenMoveTabs" | null
-}
-
-function parseWasmJson<T>(raw: string): T {
-  const parsed = JSON.parse(raw) as T | { error?: string }
-  if (parsed && typeof parsed === "object" && "error" in parsed && parsed.error) {
-    throw new Error(String(parsed.error))
-  }
-  return parsed as T
 }
 
 function localizeError(error: string | null, locale: UiLocale): string | null {

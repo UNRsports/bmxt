@@ -22,8 +22,13 @@ pub struct ResolveConfirmContext {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ConfirmPlan {
+    // EN: Internally tagged enums do not apply enum-level rename_all to variant fields.
+    // JA: タグ付き enum では enum の rename_all がバリアント内フィールドに効かない。
+    #[serde(rename_all = "camelCase")]
     ActivateTab { tab_id: i64, window_id: i64 },
+    #[serde(rename_all = "camelCase")]
     FocusWindow { window_id: i64 },
+    #[serde(rename_all = "camelCase")]
     ActivateFromGroup { window_id: i64, group_id: Option<i64> },
 }
 
@@ -120,5 +125,36 @@ pub fn resolve_move_plan_json(context_json: &str) -> String {
             format!(r#"{{"error":"{}"}}"#, e)
         }),
         Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn confirm_plan_serializes_camel_case_fields() {
+        let ctx = ResolveConfirmContext {
+            hi: 0,
+            rows: vec![ConfirmRow {
+                kind: "tab".to_string(),
+                tab_id: Some(9),
+                window_id: Some(2),
+                group_id: None,
+            }],
+        };
+        let plan = resolve_confirm_plan(&ctx).expect("plan");
+        let json = serde_json::to_string(&plan).unwrap();
+        assert!(json.contains(r#""tabId":9"#), "{json}");
+        assert!(json.contains(r#""windowId":2"#), "{json}");
+        assert!(!json.contains("tab_id"), "{json}");
+    }
+
+    #[test]
+    fn confirm_plan_json_accepts_camel_case_context() {
+        let ctx = r#"{"hi":0,"rows":[{"kind":"window","windowId":5}]}"#;
+        let raw = resolve_confirm_plan_json(ctx);
+        assert!(raw.contains(r#""kind":"focusWindow""#), "{raw}");
+        assert!(raw.contains(r#""windowId":5"#), "{raw}");
     }
 }

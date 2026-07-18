@@ -55,14 +55,21 @@ pub struct RangeSelectInput {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PickerEvent {
+    // EN: Internally tagged enums do not apply enum-level rename_all to variant fields.
+    // JA: タグ付き enum では enum の rename_all がバリアント内フィールドに効かない。
+    #[serde(rename_all = "camelCase")]
     MoveHi { delta: i32, visible_len: i32 },
+    #[serde(rename_all = "camelCase")]
     MoveDest { delta: i32, visible_len: i32 },
+    #[serde(rename_all = "camelCase")]
     CycleSubMode {
         direction: i32,
         #[serde(skip_serializing_if = "Option::is_none")]
         implicit_kind: Option<SelectKind>,
     },
+    #[serde(rename_all = "camelCase")]
     ToggleCurrent { row: CurrentRow },
+    #[serde(rename_all = "camelCase")]
     SelectRange { input: RangeSelectInput },
     ClearMarked,
 }

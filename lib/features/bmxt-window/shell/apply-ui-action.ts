@@ -652,6 +652,7 @@ function applyGroupNewFromSelection(ctx: CommandDispatchContext): boolean {
           variant: "groupNew"
         })
       )
+      ctx.deps.activatePaneFocus("tabs")
       void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, tGroup("group.newPicker", ctx.locale)])
     } catch (e) {
       if (ctx.deps.tabPickerRef.current?.rows.length === 0) {
@@ -691,6 +692,7 @@ async function applyGroupNewSegment(ctx: CommandDispatchContext): Promise<Segmen
         variant: "groupNew"
       })
     )
+    ctx.deps.activatePaneFocus("tabs")
     return segmentSuccess([tGroup("group.newPicker", ctx.locale)])
   } catch (e) {
     if (ctx.deps.tabPickerRef.current?.rows.length === 0) {

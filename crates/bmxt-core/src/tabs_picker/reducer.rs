@@ -219,6 +219,7 @@ pub fn reduce_with_loose_event_fallback(
     struct Loose {
         kind: Option<String>,
         delta: Option<i32>,
+        #[serde(alias = "visibleLen")]
         visible_len: Option<i32>,
     }
     let v: Loose = serde_json::from_str(event_json).ok()?;
@@ -253,4 +254,50 @@ pub fn reduce_json(state_json: &str, event_json: &str) -> String {
     };
     let next = reduce(&state, &event);
     serde_json::to_string(&next).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tabs_picker::model::PickerState;
+
+    fn empty_state() -> PickerState {
+        PickerState {
+            hi: 0,
+            move_dest_hi: 0,
+            marked_kind: None,
+            marked_tab_ids: Vec::new(),
+            marked_window_ids: Vec::new(),
+            marked_group_keys: Vec::new(),
+            bulk_sub_mode: None,
+        }
+    }
+
+    #[test]
+    fn move_hi_accepts_ts_camel_case_json() {
+        let state = serde_json::to_string(&empty_state()).unwrap();
+        let event = r#"{"kind":"moveHi","delta":1,"visibleLen":10}"#;
+        let raw = reduce_json(&state, event);
+        let next: PickerState = serde_json::from_str(&raw).expect(raw.as_str());
+        assert_eq!(next.hi, 1);
+    }
+
+    #[test]
+    fn cycle_sub_mode_accepts_implicit_kind_camel_case() {
+        let state = serde_json::to_string(&empty_state()).unwrap();
+        let event = r#"{"kind":"cycleSubMode","direction":1,"implicitKind":"tab"}"#;
+        let raw = reduce_json(&state, event);
+        let next: PickerState = serde_json::from_str(&raw).expect(raw.as_str());
+        assert_eq!(next.bulk_sub_mode, Some(BulkSubMode::Move));
+    }
+
+    #[test]
+    fn toggle_current_accepts_camel_case_row_ids() {
+        let state = serde_json::to_string(&empty_state()).unwrap();
+        let event = r#"{"kind":"toggleCurrent","row":{"kind":"tab","tabId":42,"windowId":1}}"#;
+        let raw = reduce_json(&state, event);
+        let next: PickerState = serde_json::from_str(&raw).expect(raw.as_str());
+        assert_eq!(next.marked_kind, Some(SelectKind::Tab));
+        assert_eq!(next.marked_tab_ids, vec![42]);
+    }
 }

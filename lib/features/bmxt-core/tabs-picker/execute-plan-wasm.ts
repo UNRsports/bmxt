@@ -2,14 +2,7 @@ import {
   wasmTabsPickerConfirmPlan,
   wasmTabsPickerMovePlan
 } from "../wasm-host.ts"
-
-function parseWasmJson<T>(raw: string): T {
-  const parsed = JSON.parse(raw) as T | { error?: string }
-  if (parsed && typeof parsed === "object" && "error" in parsed && parsed.error) {
-    throw new Error(String(parsed.error))
-  }
-  return parsed as T
-}
+import { parseWasmJson } from "./parse-wasm-json.ts"
 
 export function resolveTabsPickerConfirmPlan<TContext, TResult>(context: TContext): TResult {
   const raw = wasmTabsPickerConfirmPlan(JSON.stringify(context))

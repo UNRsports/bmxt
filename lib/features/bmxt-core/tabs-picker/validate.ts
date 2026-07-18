@@ -3,6 +3,7 @@ import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
 import { wasmTabsPickerValidateExecute } from "../wasm-host"
 import type { BulkSubMode, SelectKind } from "./model"
+import { parseWasmJson } from "./parse-wasm-json"
 
 export type ExecuteValidateContext = {
   markedKind: SelectKind | null
@@ -14,14 +15,6 @@ export type ExecuteValidateContext = {
 export type ExecuteValidation = {
   ok: boolean
   reason: string | null
-}
-
-function parseWasmJson<T>(raw: string): T {
-  const parsed = JSON.parse(raw) as T | { error?: string }
-  if (parsed && typeof parsed === "object" && "error" in parsed && parsed.error) {
-    throw new Error(String(parsed.error))
-  }
-  return parsed as T
 }
 
 function localizeReason(reason: string | null, locale: UiLocale): string | null {
