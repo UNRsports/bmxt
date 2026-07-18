@@ -693,3 +693,205 @@ Phase 2 は Phase 1 のキー生成を前提とする。Phase 4 は Phase 2 の�
 - [x] 一度同定・成功したキーが、同一 scope でインクリメンタル再到達できる（N2 再利用）— 実装済み；手動確認は残
 - [x] `debugger` 権限なし；既存 nav typing / menu が退行していない — コードパス維持；手動回帰は残
 - [x] README Nav mode（EN + JA）に仕様が書かれている
+
+---
+
+## 13. Rust/WASM コマンドコア — TS はブラウザ I/O と UI 表示のみ
+
+最終目標: **コマンドの意味論（parse / 検証 / パイプ計画 / Effect 計画）は Rust（WASM）**、**TypeScript は Chrome API・content script・React 表示に徹する**。TS はコマンド文法を「知らず」、WASM が返した結果（行・Effect IR・UI アクション IR）を実行・表示するだけにする。
+
+関連: §8（パイプ / `ListResult`）、§9–10（POSIX / `-list` 経路）、§11（`picker` プレフィックス）。本節はそれらの **実行エンジン置き場** を Rust に移す工程。
+
+### 13.1 目的・境界
+
+| 層 | 責務 | 置き場（目標） |
+|----|------|----------------|
+| コマンド意味論 | tokenize、registry、オプション検証、compound/pipe 計画、tabs-picker 計画 | **Rust crate → WASM** |
+| Effect 実行 | `chrome.*`、storage、scripting、job/cancel | **TS** `lib/features/dispatch/` |
+| ページ DOM / サイト UI | nav overlay、dom inject、search_page | **TS** content script + feature モジュール |
+| 表示 | ターミナルログ、picker、status、i18n 展開 | **TS** React（`bmxt-window` / `side-picker`） |
+
+**やらないこと（WASM 内禁止）**
+
+- `chrome.*` / DOM / React への直接呼び出し
+- 非同期 Chrome オーケストレーション本体（進捗・キャンセルは TS）
+
+**歴史的背景**
+
+- かつて Rust/WASM コマンドコアがあったが TS + codegen に移行済み（現状 `Cargo.toml` なし）
+- `manifest/bmxt-codegen.json` の `effects[].rustVariant`、`ensureBmxtCore()` no-op、`tryRunCommandWithoutWasm` は残骸
+- SQLite（sql.js）WASM は SW 性能悪化で廃止済み → **コマンド WASM はサイズ・冷起動を厳守**
+
+### 13.2 目標アーキテクチャ
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ TS: BMXt UI（React）                                     │
+│  - prompt / picker / status / log 表示のみ               │
+│  - 行 + locale + 最小コンテキストを渡す                  │
+│  - コマンド名分岐なし（DOMAIN_HANDLERS 廃止）              │
+└────────────────────────────┬─────────────────────────────┘
+                             │ classify / run（同期計画）
+┌────────────────────────────▼─────────────────────────────┐
+│ Rust WASM: bmxt-core                                     │
+│  - parse / registry / options / pipe / compound          │
+│  - 戻り値（JSON）:                                       │
+│      { ty: "lines", … }                                  │
+│      { ty: "effects", effects: ChromeEffect[] }          │
+│      { ty: "ui", action: UiActionIR }   ← picker 等      │
+│      { ty: "msgs", keys + params }      ← i18n キー      │
+└────────────────────────────┬─────────────────────────────┘
+                             │
+┌────────────────────────────▼─────────────────────────────┐
+│ TS: host                                                 │
+│  - applyChromeEffects（既存 dispatch/）                  │
+│  - UiActionIR → React（open picker slot 等）             │
+│  - msgs → tCmd / tTabs / tSetting                        │
+│  - SessionPatch 収集・表示                               │
+└──────────────────────────────────────────────────────────┘
+```
+
+**正本:** `manifest/bmxt-codegen.json`  
+codegen が **TS Effect 型 + apply スイッチ** と **Rust `ChromeEffect` / レジストリ** を両方生成する。
+
+### 13.3 ワイヤー形式（設計固定案）
+
+| 項目 | 方針 |
+|------|------|
+| Effect IR | 既存 `ChromeEffect`（JSON）を正。Rust enum は `rustVariant` と 1:1 |
+| UI アクション | 新規 `UiActionIR`（例: `open_picker { kind, options }`）。TS は kind の意味を知らずスロット実行のみ |
+| i18n | WASM は **安定キー + params** を返す。文言カタログは TS の `lib/features/setting/i18n/` のみ |
+| locale | `run(line, locale)` / `classify(line, locale)` の引数で渡す（`getRunLocale` スレッドローカルは廃止方向） |
+| `ListResult` | スキーマは §8 準拠。計画は Rust、Chrome からの実データ取得は TS effect |
+
+### 13.4 現状ギャップ（移行前）
+
+| 経路 | 現状 | 目標 |
+|------|------|------|
+| SW `runDispatch` | TS `bmxt-core/cmd/*` | WASM |
+| UI `DOMAIN_HANDLERS` | Enter 時にコマンド別 TS 分岐 | WASM `UiActionIR` のみ |
+| `command-line` `COMMAND_ENTRIES` | シェル所有権 + UI 副作用 | 計画は WASM、実行は host |
+| 補完・continuation | TS registry / codegen | WASM または生成テーブルを opaque 参照 |
+| `tabs-picker/*` 計画 | TS 純関数 | WASM（適用は TS） |
+| compound / pipe | TS `command-line/` | 計画層 WASM（§8 と整合） |
+
+### 13.5 実装フェーズ
+
+#### Phase 0 — 設計固定・計測ベースライン
+
+- [ ] 本節（§13）を正とし、§13.3 のワイヤー形式を確定
+- [ ] `ChromeEffect` / `DispatchBundle` の現行 JSON をスナップショット（互換契約）
+- [ ] SW 起動・初回 `RUN_CMD` のベンチ（`scripts/benchmark-launch-perf.mjs` 等）をベースライン記録
+- [ ] WASM 予算: バイナリサイズ上限・初回 instantiate 上限（数値を README / CI に書く）
+- [ ] 依存: §8–11 のパイプ / `-list` / picker 経路が「計画と実行が分離」していることを確認
+
+#### Phase 1 — ツールチェーン + codegen 二重出力
+
+- [ ] `crates/bmxt-core/`（仮）: `wasm-bindgen`、edition / MSRV 固定
+- [ ] CI: `rustup` + `wasm-pack`（または同等）。README から「Node/TS only」記述を更新
+- [ ] codegen: `effects[].rustVariant` + `fields` → Rust `ChromeEffect` enum 生成
+- [ ] codegen: `commands[]` → Rust レジストリ表（名前・第二トークン）生成
+- [ ] WXT 梱包: `*.wasm` + glue を拡張パッケージに含める
+- [ ] `ensureBmxtCore()` を実初期化に復帰（失敗時は既存 `tryRunCommandWithoutWasm`）
+- [ ] `pnpm run verify:manifest` / `check:generated` に Rust 生成物チェックを追加
+
+#### Phase 2 — SW 経路の最小移植（pilot）
+
+- [ ] WASM: `run(line, locale) -> DispatchBundle` JSON（まずは数コマンド）
+- [ ] pilot 候補: `clear` / `close` / URL 行（`open_url_*` / navigate）など Effect が薄いもの
+- [ ] SW: feature flag または段階切替で `runDispatch` 本体を WASM に委譲
+- [ ] TS `bmxt-core/cmd/*` の該当分は薄い互換 shim → 削除
+- [ ] 単体: Rust 側テスト + 既存 TS 適合テストの同等ケース
+- [ ] ベンチ: SW 冷起動・初回コマンドが予算内
+
+#### Phase 3 — 全 built-in `cmd/*.run` + registry
+
+- [ ] `bmxt-core/cmd/*.ts` を順次 Rust 化（`tabs` / `search` / `dom` / `session` / `setting` 等）
+- [ ] `line-parse` / `resolveCanonical` / URL 行ルールを Rust へ
+- [ ] TS `COMMAND_RUNNERS` 生成を廃止または WASM 呼び出しラッパのみ残す
+- [ ] i18n: エラー・usage をキー返却に統一（埋め込み文言をやめる）
+- [ ] `runDispatch` / `parseDispatchJson` の TS 実装を「WASM 呼び + JSON parse」に縮小
+
+#### Phase 4 — tabs-picker 計画層
+
+- [ ] `tabs-picker` の reducer / validate / execute-plan / create-group-plan を Rust へ
+- [ ] TS は Chrome 適用（focus / move / group）と UI バインドのみ
+- [ ] 既存 tabs picker 手動スモーク相当の回帰（計画 JSON の golden test）
+
+#### Phase 5 — compound / pipe 計画を WASM へ
+
+- [ ] `parsePipeSegments` / compound 解析・exit-status 方針を Rust へ（§8 / §10 と契約維持）
+- [ ] セグメント実行ループは TS host（各セグメント: WASM 計画 → Effect/UI 実行 → 次 stdin）
+- [ ] `ListResult` の型互換チェックを Rust 側に寄せる（取得は TS）
+
+#### Phase 6 — UI 非認知化（最終目標）
+
+- [ ] `UiActionIR` を定義・codegen（open picker、nav mode 切替ヒント等）
+- [ ] `useCommandDispatch` の `DOMAIN_HANDLERS` を廃止し、WASM `classify`/`run` 結果のみで分岐
+- [ ] `COMMAND_ENTRIES` の「コマンド知識」を WASM に集約。TS は実行器レジストリ（opaque id → 関数）
+- [ ] 補完・continuation: UI は WASM（または生成 opaque 表）に問い合わせ、コマンド文字列をハードコードしない
+- [ ] 残存する「コマンド名 if 分岐」を grep しゼロにする（許容: codegen 生成の apply スイッチと i18n キー）
+
+#### Phase 7 — 仕上げ・文書
+
+- [ ] 旧 TS `bmxt-core/cmd` / 不要 shim / コメント（「Rust が返した…」の残骸整理）を削除
+- [ ] README（EN + JA）: アーキテクチャ図、開発時 Rust 手順、WASM 予算
+- [ ] welcome / release-notes: ユーザー向けは「内部実装」程度に短く
+- [ ] `_context/map_command.csv` 更新
+- [ ] `pnpm run verify:manifest` → `check:generated` → `tsc` → `test` → `build` + Rust test + 起動ベンチ
+
+### 13.6 依存関係（推奨順）
+
+```
+Phase 0（契約・予算）
+    ↓
+Phase 1（crate + codegen）
+    ↓
+Phase 2（SW pilot） ──→ Phase 3（全 cmd）
+                            ↓
+                      Phase 4（tabs-picker）
+                            ↓
+                      Phase 5（pipe/compound）
+                            ↓
+                      Phase 6（UI 非認知）
+                            ↓
+                      Phase 7（文書・掃除）
+```
+
+- Phase 2 完了まで **本番デフォルトは TS のまま**（flag off）を推奨。
+- Phase 6 は Phase 3 必須。UI ハンドラが残っていると「TS はコマンドを知らない」は未達。
+- §8 パイプ強化やサイト UI 操作の追加 Effect は、**IR 追加 + TS executor** で先行可能（Rust 移植を待たない）。
+
+### 13.7 関連ファイル（予定）
+
+| 用途 | パス |
+|------|------|
+| 正本 | `manifest/bmxt-codegen.json` |
+| codegen | `scripts/codegen/run.mjs`（Rust 出力追加） |
+| Rust コア | `crates/bmxt-core/`（新規） |
+| TS 実行器 | `lib/features/dispatch/`（維持・拡張） |
+| 現行 TS コア（縮退） | `lib/features/bmxt-core/` |
+| UI 入口 | `lib/features/bmxt-window/shell/useCommandDispatch.ts` |
+| シェル計画（移行元） | `lib/features/command-line/` |
+| SW 読込 | `entrypoints/background/`（`ensureBmxtCore` 復帰） |
+| i18n | `lib/features/setting/i18n/namespaces/`（キーのみ WASM 参照） |
+
+### 13.8 リスクと完了判定
+
+**リスク**
+
+| リスク | 緩和 |
+|--------|------|
+| SW での WASM 冷起動悪化 | 遅延 init、サイズ上限、ベンチ CI、pilot 段階で flag |
+| 三重経路（DOMAIN / COMMAND_ENTRIES / core） | Phase 6 で一本化。途中は「SW のみ WASM」を許容 |
+| i18n 二重管理 | キー返却のみ。カタログは TS 単一 |
+| codegen / CI 複雑化 | `check:generated` に Rust 出力を含める |
+| サイト UI 操作の複雑化 | Effect / UiAction を増やすだけ。WASM に DOM を持ち込まない |
+
+**完了判定**
+
+- [ ] コマンド文法・オプション・パイプ計画の正本が Rust（WASM）にあり、TS に同等ロジックが残っていない
+- [ ] TS の Enter 経路にコマンド名ハードコード分岐がない（`UiActionIR` / Effect 実行のみ）
+- [ ] Chrome / DOM / React は従来どおり TS のみ
+- [ ] 起動・初回コマンドが予算内；`verify` / `tsc` / `test` / `build` / Rust test 緑
+- [ ] README に境界図と開発手順（EN + JA）
