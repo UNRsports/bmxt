@@ -11,7 +11,8 @@ export type CommandRuntime = "ui" | "background"
 
 /**
  * EN: One shell-layer command entry (parse/match + run).
- * Compound / pipe segments resolve through `COMMAND_ENTRIES` only.
+ * Compound / pipe segments resolve through WASM `runDispatch` + UiAction apply
+ * (see `run-command.ts`); `COMMAND_ENTRIES` is empty.
  */
 export type CommandEntry = {
   readonly id: string

@@ -43,30 +43,36 @@ function main() {
     process.exit(1)
   }
 
-  const cmdPath = join(root, "lib", "features", "bmxt-core", "cmd", `${moduleName}.ts`)
+  const cmdPath = join(root, "crates", "bmxt-core", "src", "cmd", `${moduleName}.rs`)
   if (existsSync(cmdPath)) {
     console.error(`file already exists: ${cmdPath}`)
     process.exit(1)
   }
 
-  const aliasInner =
-    aliases.length > 0 ? aliases.map((a) => JSON.stringify(a)).join(", ") : ""
+  const body = `use crate::ir::{msgs_from_keys, DispatchBundle};
 
-  const body = `import type { CmdMeta } from "../types"
-import { linesDispatch } from "../types"
-
-export const CMD: CmdMeta = {
-  name: ${JSON.stringify(canonicalName)},
-  aliases: [${aliasInner}],
-  usagePrimary: ${JSON.stringify(canonicalName)}
-}
-
-export function run(_args: string[]) {
-  return linesDispatch(["not implemented (edit ${moduleName}.ts)"])
+pub fn run(_args: &[String]) -> DispatchBundle {
+    msgs_from_keys(&["cmd.error.unknownCommand"])
 }
 `
 
   writeFileSync(cmdPath, body + "\n", "utf8")
+
+  const modPath = join(root, "crates", "bmxt-core", "src", "cmd", "mod.rs")
+  let modRs = readFileSync(modPath, "utf8")
+  if (!modRs.includes(`pub mod ${moduleName};`)) {
+    modRs = modRs.replace(
+      "mod helpers;",
+      `pub mod ${moduleName};\n\nmod helpers;`
+    )
+  }
+  if (!modRs.includes(`"${canonicalName}" =>`)) {
+    modRs = modRs.replace(
+      `_ => crate::ir::msgs(vec![crate::ir::msg_param(`,
+      `"${canonicalName}" => ${moduleName}::run(args),\n        _ => crate::ir::msgs(vec![crate::ir::msg_param(`
+    )
+  }
+  writeFileSync(modPath, modRs, "utf8")
 
   manifest.commands.push({
     module: moduleName,
@@ -76,14 +82,11 @@ export function run(_args: string[]) {
     subcommands: []
   })
 
-  writeFileSync(
-    manifestPath,
-    JSON.stringify(manifest, null, 2) + "\n",
-    "utf8"
-  )
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n", "utf8")
 
   execFileSync("pnpm", ["run", "codegen"], { cwd: root, stdio: "inherit" })
-  console.log(`scaffolded ${moduleName}.ts + manifest; run codegen ok`)
+
+  console.log(`scaffed crates/bmxt-core/src/cmd/${moduleName}.rs and updated manifest + codegen`)
 }
 
 main()

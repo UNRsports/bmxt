@@ -1,51 +1,14 @@
-import type { BulkSubMode, PickerState } from "./model"
+import { wasmTabsPickerEnterIntent } from "../wasm-host"
 
-export type PickerVariant = "default" | "groupNew"
-export type GroupNewPhase = "tabs" | "meta"
-
-export type EnterContext = {
-  state: PickerState
-  variant: PickerVariant
-  groupNewPhase: GroupNewPhase
-  selectedTabCount: number
-  isShift: boolean
-}
-
-export type EnterIntent =
-  | "none"
-  | "confirmSelection"
-  | "openGroupMeta"
-  | "openNewTabUrlMeta"
-  | "executeClose"
-  | "executeMove"
-  | "executeGroup"
-  | "executeNewWindow"
-  | "executeReload"
-
-export function resolveEnterIntent(ctx: EnterContext): EnterIntent {
-  if (ctx.isShift) return "none"
-  if (ctx.variant === "groupNew" && ctx.groupNewPhase === "tabs") {
-    if (ctx.selectedTabCount > 0) return "openGroupMeta"
-    return "confirmSelection"
+function parseWasmJson<T>(raw: string): T {
+  const parsed = JSON.parse(raw) as T | { error?: string }
+  if (parsed && typeof parsed === "object" && "error" in parsed && parsed.error) {
+    throw new Error(String(parsed.error))
   }
-  switch (ctx.state.bulkSubMode) {
-    case "newTab":
-      return "openNewTabUrlMeta"
-    case "close":
-      return "executeClose"
-    case "move":
-      return "executeMove"
-    case "group":
-      return "executeGroup"
-    case "newWindow":
-      return "executeNewWindow"
-    case "reload":
-      return "executeReload"
-    default:
-      return "confirmSelection"
-  }
+  return parsed as T
 }
 
 export function resolveTabsPickerEnterIntent<TContext, TIntent>(context: TContext): TIntent {
-  return resolveEnterIntent(context as EnterContext) as TIntent
+  const raw = wasmTabsPickerEnterIntent(JSON.stringify(context))
+  return parseWasmJson<TIntent>(raw)
 }

@@ -1,15 +1,16 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { segmentFailure } from "../compound/classify-outcome.ts"
+import { dispatchSegmentUiOutcome } from "../compound/apply-segment-bundle.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tCompound } from "../../setting/i18n/ns/compound.ts"
 import { applyRedirectsToOutcome } from "./apply-redirect.ts"
 import { isNullRedirectTarget, parseRedirects } from "./parse-redirect.ts"
-import { BACKGROUND_COMMAND_ENTRY, COMMAND_ENTRIES } from "./registry.ts"
+import { BACKGROUND_COMMAND_ENTRY } from "./registry.ts"
 
 /**
  * EN: Single shell entry for segment execution (compound / pipe).
- * Parses redirects, dispatches `COMMAND_ENTRIES`, then background `RUN_CMD`.
+ * Parses redirects, dispatches via WASM `runDispatch`, then background `RUN_CMD`.
  */
 export async function runCommand(
   segment: string,
@@ -33,12 +34,12 @@ export async function runCommand(
     }
   }
 
-  const outcome = await dispatchCommandEntries(parsed.command, deps, locale)
+  const outcome = await dispatchSegment(segment, deps, locale)
   return applyRedirectsToOutcome(outcome, parsed.redirects)
 }
 
 /**
- * EN: Try UI registry entries only; `null` when no entry owns the segment.
+ * EN: Try WASM UI dispatch only; `null` when segment is effects-only (no UI action).
  */
 export async function tryRunUiCommand(
   segment: string,
@@ -62,29 +63,37 @@ export async function tryRunUiCommand(
     }
   }
 
-  for (const entry of COMMAND_ENTRIES) {
-    const outcome = await entry.tryRun(parsed.command, deps, locale)
-    if (outcome !== null) {
-      return applyRedirectsToOutcome(outcome, parsed.redirects)
-    }
+  const { bundle, uiOutcome } = await dispatchSegmentUiOutcome(parsed.command, deps, locale)
+  if (bundle.ty === "lines") {
+    return applyRedirectsToOutcome(uiOutcome ?? segmentFailure("unknown", []), parsed.redirects)
+  }
+  if (uiOutcome !== null) {
+    return applyRedirectsToOutcome(uiOutcome, parsed.redirects)
   }
   return null
 }
 
-async function dispatchCommandEntries(
+async function dispatchSegment(
   commandText: string,
   deps: CommandDispatchDeps,
   locale: UiLocale
 ): Promise<SegmentOutcome> {
-  for (const entry of COMMAND_ENTRIES) {
-    const outcome = await entry.tryRun(commandText, deps, locale)
-    if (outcome !== null) {
-      return outcome
+  const { bundle, uiOutcome } = await dispatchSegmentUiOutcome(commandText, deps, locale)
+
+  if (bundle.ty === "lines") {
+    return uiOutcome ?? segmentFailure("unknown", [`error: unknown command: ${commandText}`])
+  }
+
+  if (uiOutcome !== null) {
+    return uiOutcome
+  }
+
+  if (bundle.ty === "effects") {
+    const background = await BACKGROUND_COMMAND_ENTRY.tryRun(commandText, deps, locale)
+    if (background !== null) {
+      return background
     }
   }
-  const background = await BACKGROUND_COMMAND_ENTRY.tryRun(commandText, deps, locale)
-  if (background !== null) {
-    return background
-  }
+
   return segmentFailure("unknown", [`error: unknown command: ${commandText}`])
 }

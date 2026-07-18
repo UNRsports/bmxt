@@ -25,6 +25,18 @@ function runLaunchUnitTests() {
 
 function verifyBuiltBackground() {
   console.log("\n== built background checks ==")
+  const wasmPath = path.join(root, "public/bmxt_core_bg.wasm")
+  if (!fs.existsSync(wasmPath)) {
+    console.error("Missing", wasmPath, "— run pnpm run build:wasm first")
+    process.exit(1)
+  }
+  const wasmBytes = fs.statSync(wasmPath).size
+  const wasmKiB = wasmBytes / 1024
+  console.log("bmxt_core_bg.wasm size KiB:", Math.round(wasmKiB))
+  if (wasmKiB > 400) {
+    console.error("bmxt_core_bg.wasm exceeds 400 KiB budget")
+    process.exit(1)
+  }
   if (!fs.existsSync(backgroundPath)) {
     console.error("Missing", backgroundPath, "— run pnpm run build first")
     process.exit(1)

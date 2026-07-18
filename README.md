@@ -110,7 +110,7 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 
 The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3): entrypoints under **`entrypoints/`**, static assets under **`public/`** (including **`_locales/`**), manifest overrides in **`wxt.config.ts`**, output under **`.output/`**.
 
-**Layout:** Command registry, dispatch, and built-in command logic live in **`lib/features/bmxt-core/`** (TypeScript); Chrome API effects and feature UI live under **`lib/features/<feature>/`** (see also `.cursorrules` in the repo root). **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
+**Layout:** Command **semantics** (parse / registry / options / pipe·compound plans / tabs-picker plans) live in **Rust → WASM** (`crates/bmxt-core/`, packaged under **`lib/wasm/bmxt-core/`**). TypeScript owns Chrome API effects (`lib/features/dispatch/`), content scripts, and React UI (`lib/features/<feature>/`). Thin host glue is in **`lib/features/bmxt-core/`** (`runDispatch`, `ensureBmxtCore`, UiAction apply). See also `.cursorrules`. **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
@@ -857,11 +857,25 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 ## Command Execution Architecture (Current)
 
 
-**Registry, help text, tokenization, URL-only lines, and built-in command `run` handlers** are implemented in **`lib/features/bmxt-core/`** (TypeScript). Authoritative lists live in **`manifest/bmxt-codegen.json`**; **`pnpm run codegen`** regenerates **`lib/features/bmxt-core/registry/table.gen.ts`**, **`effect-types.ts`**, **`apply-dispatch.gen.ts`**, **`completion-fallback.ts`**, and **`command-subcommands.gen.ts`** (completion + continuation helpers). Hand-written per-effect logic lives in **`lib/features/dispatch/handlers/effects/`**. At runtime, **`runDispatch`** / **`dispatchFull`** return terminal **`lines`** or JSON **`effects`**; **`apply-one`** dispatches to those handlers (`apply-effects.ts`). Tab completion names come from **`allCompletionTokens()`** in the registry (same manifest as **`completion-fallback.ts`**).
+**Authoritative lists** live in **`manifest/bmxt-codegen.json`**. **`pnpm run codegen`** regenerates TS metadata (`registry/table.gen.ts`, `effect-types.ts`, `ui-action-types.ts`, `apply-dispatch.gen.ts`, completion helpers) **and** Rust tables (`crates/bmxt-core/src/generated/`). Built-in command **`run`** logic is in **`crates/bmxt-core/src/cmd/*.rs`**. Chrome effects are applied in **`lib/features/dispatch/handlers/effects/`**.
 
-The tab picker’s **`runTabsPickerReduce`** lives in **`lib/features/bmxt-core/tabs-picker/reducer.ts`** (see **Tab picker — implementation** under **`tabs`**).
+**Runtime boundary**
 
-**Exception — UI-handled first:** some inputs are handled in the BMXt window UI (`lib/features/bmxt-window/bmxt-shell.tsx`) *before* `RUN_CMD`—e.g. **`browse <list-command>`**, **`* -exit -list`** (close picker columns), **`session -list`** / **`setting -list`** (plain, UI state), **`session -switch` / `session -setting-name`**, **`translate -on` / `translate -off` / `translate -setting`**, **`nav -enter` / `nav -exit`**, and **interactive `group new`** (no tab ids). **Plain** **`tabs -list`**, **`dom -list`**, and **`search -list`** use **`RUN_CMD`** → Service Worker effects → the shared **`-list` registry** (same **`ListResult`** formatter as UI plain paths). Other commands send **`RUN_CMD`**; the Service Worker returns **`SessionPatch[]`** and the UI applies them (see **[Terminal session state](#terminal-session-state)**). Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are documented under **[Picker UI (side columns)](#picker-ui)**; terminal sessions under **[`session`](#session)**; UI settings under **[`setting`](#setting)**; nav under **[Nav mode](#nav-mode)**; translation under **[`translate`](#translate)**.
+```
+prompt / RUN_CMD
+  → ensureBmxtCore()  (lazy WASM init; budget: bmxt_core_bg.wasm ≤ 400 KiB)
+  → run(line, locale) / classify  (Rust WASM)
+  → { ty: lines | effects | ui | msgs }
+       msgs → TS i18n expand (tCmd / tHelp / …)
+       effects → applyChromeEffects (SW) or RUN_CMD round-trip
+       ui → applyUiAction (React host; opaque kinds only)
+```
+
+**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + [wasm-pack](https://rustwasm.github.io/wasm-pack/). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
+
+The tab picker’s **`runTabsPickerReduce`** (and related planners) are WASM-backed wrappers under **`lib/features/bmxt-core/tabs-picker/`** (see **Tab picker — implementation** under **`tabs`**).
+
+**UI host:** Enter in the BMXt window calls WASM first (`useCommandDispatch` → `applyUiAction`). Context-only gates remain: external settings recovery, session name typing, and open-picker prefix commands. Compound / pipe **planning** is WASM; the **execution loop** stays in TypeScript (`command-line/`). Effect-producing lines still use **`RUN_CMD`** → Service Worker → **`SessionPatch[]`**. Picker layout, focus, **`Esc` → prompt**, and **`-exit -list`** are under **[Picker UI (side columns)](#picker-ui)**; sessions under **[`session`](#session)**; settings under **[`setting`](#setting)**; nav under **[Nav mode](#nav-mode)**; translation under **[`translate`](#translate)**.
 
 <a id="list-commands-registry"></a>
 
@@ -975,7 +989,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 **Main directories:**
 
 - **`manifest/bmxt-codegen.json`** — single source for command registry + **`commands[].subcommands`** (second/third fixed tokens, tail kinds) + Effect schema + TS handler wiring (see **`pnpm run codegen`**)
-- **`lib/features/bmxt-core/`** — `dispatch.ts`, `registry/`, `cmd/*.ts` (one module per built-in command: **`export const CMD`** + **`run`**; **`registry/table.gen.ts`** is **generated**), `tabs-picker/` (reducer and picker domain logic)
+- **`crates/bmxt-core/`** — Rust `cmd/*.rs` + plans; **`lib/features/bmxt-core/`** — TS WASM host, registry metadata, tabs-picker wrappers
 - **`lib/features/bmxt-window/`** — main BMXt window UI (log, prompt, IME, picker launch)
 - **`lib/features/side-picker/`** — shared side-column picker UI (panel host, `PickerListShell`, `usePlainPickerKeyboard`, interaction kernel, wrappers)
 - **`lib/features/extension-storage/`** — `chrome.storage.local` keys and log/history caps
@@ -1030,10 +1044,10 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 For a consolidated checklist (scaffold, manifest, new effects, verification), see **[Command add procedure](#command-add-procedure)** below.
 
 
-1. Edit **`manifest/bmxt-codegen.json`** (`commands` / `effects` as needed). Optionally run **`pnpm run new:command -- <module> <name> [aliases...]`** to scaffold **`lib/features/bmxt-core/cmd/<module>.ts`** and manifest rows.
-2. Implement **`run`** in **`lib/features/bmxt-core/cmd/<module>.ts`**. Keep **`export const CMD`** in sync with the manifest (**`pnpm run verify:manifest`**).
-3. For new Chrome effects, add a **`handlers/effects/<file>.ts`** implementation and **`pnpm run codegen`**, then fill the handler referenced in the manifest.
-4. Run **`pnpm run codegen`** (if not already), then **`pnpm run verify:manifest`** and **`pnpm run check:generated`** (CI runs both).
+1. Edit **`manifest/bmxt-codegen.json`** (`commands` / `effects` as needed). Optionally run **`pnpm run new:command -- <module> <name> [aliases...]`** to scaffold **`crates/bmxt-core/src/cmd/<module>.rs`** and manifest rows.
+2. Implement **`run`** in **`crates/bmxt-core/src/cmd/<module>.rs`** (wire in **`cmd/mod.rs`**). Keep registry metadata in sync via codegen (**`pnpm run verify:manifest`**).
+3. For new Chrome effects, add a **`handlers/effects/<file>.ts`** implementation and **`pnpm run codegen`**, then fill the handler referenced in the manifest. For UI-only outcomes, return **`UiActionIR`** and handle it in **`apply-ui-action.ts`**.
+4. Run **`pnpm run codegen`** (if not already), **`pnpm run build:wasm`**, then **`pnpm run verify:manifest`** and **`pnpm run check:generated`** (CI runs these).
 
 <a id="command-add-procedure"></a>
 
@@ -1042,17 +1056,17 @@ For a consolidated checklist (scaffold, manifest, new effects, verification), se
 
 - **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Continuation and second-token Tab lists come from generated **`command-subcommands.gen.ts`** (from manifest **`subcommands`**).
 
-- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`lib/features/bmxt-core/registry/table.gen.ts`**, **`lib/features/dispatch/effect-types.ts`**, **`lib/features/dispatch/handlers/apply-dispatch.gen.ts`**, **`lib/features/builtin-commands/completion-fallback.ts`**, **`lib/features/builtin-commands/command-subcommands.gen.ts`**. Regenerate them with **`pnpm run codegen`**.
-- **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — creates **`lib/features/bmxt-core/cmd/<module>.ts`**, updates **`commands[]`** in the manifest, then runs **codegen**. Replace the stub in **`run`** and align **`usagePrimary`** in manifest and **`CMD.usagePrimary`** if the usage line should differ from the canonical name.
-- **Manual path:** Add a row under **`commands[]`** in the manifest, add **`lib/features/bmxt-core/cmd/<module>.ts`**, then **`pnpm run codegen`**.
-- **Chrome / new `Effect`:** Add an entry under **`effects[]`** in the manifest → **`pnpm run codegen`** → implement **`lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`** using the **`tsHandlerExport`** name from the manifest → return effects from **`run`** via **`effectsDispatch([...])`** as needed.
-- **Checks:** **`pnpm run verify:manifest`** (manifest vs every **`export const CMD`**) and **`pnpm run check:generated`** (no uncommitted drift in generated paths). CI runs both. Then **`pnpm exec tsc --noEmit`** and **`pnpm run build`** for a full extension build.
-- **Shell `CommandEntry` (compound / pipe):** Segment execution goes through **`lib/features/command-line/commands/`** (`COMMAND_ENTRIES` + background `RUN_CMD` fallback). UI-only behaviors used inside compound lines register a **`CommandEntry`** (`tryRun` returns `SegmentOutcome | null`) in **`commands/registry.ts`** and implement the runner (often in **`compound/run-ui-segment.ts`**). Plain **`-list`** is the **`plain-list`** entry (composes **`list-commands`**). Interactive prompt submit still uses **`useCommandDispatch`** domain handlers for prompt chrome (`> line`, history); keep those handlers aligned with the same feature modules.
+- **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
+- **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Implement **`run`** and align **`usagePrimary`**.
+- **Manual path:** Add **`commands[]`** row + **`crates/bmxt-core/src/cmd/<module>.rs`** + wire **`cmd/mod.rs`**, then **`pnpm run codegen`** and **`pnpm run build:wasm`**.
+- **Chrome / new `Effect`:** Add **`effects[]`** → codegen → implement **`handlers/effects/<tsHandlerFile>.ts`**. Return effects from Rust **`run`** as JSON `ChromeEffect` (codegen `rustVariant`).
+- **Checks:** **`verify:manifest`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
+- **Compound / pipe:** Planning is WASM; the host loop is **`command-line/`** (`runDispatch` per segment → UiAction apply or background `RUN_CMD`).
 - **Plain `-list` producer:** Add **`lib/features/<feature>/*-list-command.ts`**, register the matcher in **`list-commands/registry.ts`**, and ensure **`plain-list`** / **`browse <list>`** behavior stay consistent (see **`-list` output** above).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
 
-Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics and argument parsing remain in **`lib/features/bmxt-core/cmd/<module>.ts`**; keep literals in sync—**`pnpm run verify:manifest`** checks each `head` appears in the TypeScript file).
+Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics live in **`crates/bmxt-core/src/cmd/<module>.rs`**; keep literals in sync—**`pnpm run verify:manifest`** checks each `head` appears in the Rust cmd file).
 
 **`pnpm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + lone-first-token continuation; includes **`isSecondToken`**). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
 
@@ -1121,12 +1135,13 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** copies sql.js WASM into **`public/`** and runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
-2. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** once so generated files under **`lib/features/bmxt-core/registry/`**, **`lib/features/dispatch/`**, and **`lib/features/builtin-commands/`** match the manifest.
-3. **Start dev:** From the repo root, run **`pnpm run dev`**. Leave this process running; it rebuilds the extension on file changes.
-4. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
-5. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
-6. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
+1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
+2. **Rust toolchain (command core):** `rustup target add wasm32-unknown-unknown` and install **wasm-pack**. CI uses the same. Optional local check: **`cargo test -p bmxt-core`**.
+3. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** so TS + Rust generated files match the manifest.
+4. **Start dev:** From the repo root, run **`pnpm run dev`** (runs **`build:wasm`** then background-services then WXT). Leave this process running; it rebuilds the extension on file changes.
+5. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
+6. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
+7. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
 
 <a id="project-layout"></a>
 
@@ -1137,7 +1152,9 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
 | **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
 | **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on http(s) pages |
-| **`public/`** | Static assets copied as-is: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
+| **`public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
+| **`crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
+| **`lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
 | **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
 | **`lib/features/`** | Feature modules (see table below) |
 | **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
@@ -1145,7 +1162,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
 | **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
 
-**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`scripts/build-background-services.mjs`** → WXT. **`postinstall`** runs **`wxt prepare`** only.
+**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`build:wasm`** → **`build-background-services`** → WXT. **`postinstall`** runs **`wxt prepare`** only. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
 
 <a id="main-sources"></a>
 
@@ -1159,8 +1176,10 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/welcome/` — Welcome tab URL builder and update hook (opens hosted **`docs/welcome.html`**; content lives under **`docs/`** only)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
-- `lib/features/bmxt-core/` — Command registry, dispatch, `cmd/*.ts`, tab picker reducer (**`registry/table.gen.ts`** is generated)
-- `lib/features/dispatch/` — Generated dispatch + hand-written **`handlers/effects/`**
+- `crates/bmxt-core/` — Rust command core (`src/cmd/*.rs`, compound/pipe, tabs_picker); WASM exports
+- `lib/features/bmxt-core/` — TS host: `wasm-host.ts`, `dispatch.ts` (WASM call + msgs expand), registry metadata, tabs-picker wrappers
+- `lib/features/dispatch/` — Generated Effect/UiAction types + hand-written **`handlers/effects/`**
+- `lib/features/bmxt-window/shell/apply-ui-action.ts` — Opaque `UiActionIR` → React/UI effects
 - `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
@@ -1372,7 +1391,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[WXT](https://wxt.dev/)（Manifest V3）でビルドしています。エントリは **`entrypoints/`**、静的アセットは **`public/`**（**`_locales/`** 含む）、manifest 上書きは **`wxt.config.ts`**、出力は **`.output/`** です。
 
-**配置:** コマンドのレジストリ・ディスパッチ・組み込みコマンド実装は **`lib/features/bmxt-core/`**（TypeScript）、Chrome API の実行や機能別 UI は **`lib/features/<feature>/`** に置く方針です（リポジトリ直下の **`.cursorrules`** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
+**配置:** コマンド意味論（parse / レジストリ / パイプ計画など）は **Rust → WASM**（`crates/bmxt-core/`）。TypeScript は Chrome Effect・content script・React UI と薄いホスト（`lib/features/bmxt-core/` の `runDispatch` / `ensureBmxtCore`、`apply-ui-action`）に徹します（**`.cursorrules`** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
@@ -2097,7 +2116,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 - **ウィンドウキャプチャ**: **`usePlainPickerKeyboard`** が **`useWindowKeydownCapture`** で **↑/↓**（tabs ピッカーは矢印のみ、**`j`/`k` なし**）、`/`, `:`, `n`/`N`, **Enter** を拾います（リストクリック後など IME `textarea` 以外にフォーカスがあっても動作）。textarea の **`onInputKeyDown`** でも同じチェーンを実行します。
 - **tabs 固有キー**: **`useTabPickerPlainExtensions`** が **`PlainPickerKeyboardExtensions`** を供給 — バルク時の縦移動、Shift 範囲、Ctrl+Shift プレビュー、段階 **`Esc`**, **`Tab`** / `#`, **`:`** バルクコマンド（`use-tab-picker-plain-extensions.ts` の `parsePickerCommand`、短縮例 `m` → `move`、**`edit`** はエイリアスなし）、tabs 向け **Enter** 意図（**新規グループ meta** の名前・色確定は window capture の **`onNormalEnter`** 経由）。配線は **`use-tab-picker-keyboard.ts`**。
-- **リデューサ（TypeScript）**: 状態遷移は **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**。イベント／状態は **`kind: "moveHi"`** や **`visibleLen`** など **camelCase**。
+- **リデューサ（Rust/WASM）**: 状態遷移は **`runTabsPickerReduce`**（WASM）。イベント／状態は **`kind: "moveHi"`** や **`visibleLen`** など **camelCase**。
 - **Shift + 矢印**: **`moveHi` の直後に `selectRange`** を **`applyReducedStateSequence`** で **1 チェーン**にまとめています。同一ハンドラ内で `setState` を二度叩くと、2 回目が **古い `hi`** を見て範囲が正しく伸びないことがありました。
 - **`:edit` UI**: 対象判定・エラー文は **`lib/features/tabs/resolve-edit-entry.ts`**。パネルと Chrome／storage 副作用は **`use-tab-picker-edit.ts`**、**`controller/edit-actions.ts`**、**`extension-storage/window-display-names.ts`**（仕様は [タブピッカー `:edit`](#tabs-tab-picker-edit-ja)）。
 - **ピッカー表示中のプロンプト**: **`lib/features/bmxt-window/bmxt-terminal.tsx`** でピッカー表示中はメイン textarea の **↑/↓/j/k をコマンド履歴に使わない**ようにし、ピッカーと競合しないようにしています。
@@ -2115,11 +2134,13 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 ## コマンド実行アーキテクチャ（現状）
 
 
-**一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`pnpm run codegen`** で **`lib/features/bmxt-core/registry/table.gen.ts`**・**`effect-types.ts`**・**`apply-dispatch.gen.ts`**・**`completion-fallback.ts`**・**`command-subcommands.gen.ts`** を再生成します。組み込みコマンドの **`run`** は **`lib/features/bmxt-core/cmd/*.ts`**、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`** に置きます。Service Worker では **`dispatchFull`** が **`lines` / `effects`** を返し、**`apply-one`** が効果をハンドラに振り分けます。Tab 補完はレジストリの **`allCompletionTokens()`**（manifest と同内容の **`completion-fallback.ts`** も生成）。
+**一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。
 
-タブピッカーは **`lib/features/bmxt-core/tabs-picker/reducer.ts`** の **`runTabsPickerReduce`**（詳細は **`tabs`** の **タブピッカー — 実装**）。
+**実行境界:** `ensureBmxtCore` → WASM `run`/`classify` → `{ lines | effects | ui | msgs }`（`msgs` は TS の i18n で展開）。WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。開発: Rust + wasm-pack、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
 
-**例外（先に UI 側）:** 一部の入力は Service Worker の `RUN_CMD` より前に BMXt ウィンドウ UI（**`bmxt-shell.tsx`**）で処理します。例: **`browse <list-command>`**、**`* -exit -list`**、**`session -list`** / **`setting -list`**（プレーン・UI 状態）、**`session -switch` / `session -setting-name`**、**`translate -*`**、**`nav -enter` / `-exit`**、**対話的 `group new`**。**プレーン**の **`tabs -list`**、**`dom -list`**、**`search -list`** は **`RUN_CMD`** → SW effect → 共通 **`-list` レジストリ**（UI プレーン経路と同一の **`ListResult`** 整形）。それ以外は **`RUN_CMD`** → **`SessionPatch[]`** を UI が適用（**[ターミナルセッション状態](#terminal-session-state-ja)**）。
+タブピッカー計画は WASM 経由の **`runTabsPickerReduce`** 等（詳細は **`tabs`** の **タブピッカー — 実装**）。
+
+**UI ホスト:** Enter は WASM 分類が先（`useCommandDispatch`）。コンテキスト専用ゲート（外部設定復旧・session 名入力・開いているピッカー）のみ TS 側に残します。compound/pipe の**計画**は WASM、**実行ループ**は TS。Effect 系は従来どおり **`RUN_CMD`** → **`SessionPatch[]`**（**[ターミナルセッション状態](#terminal-session-state-ja)**）。
 
 <a id="list-commands-registry-ja"></a>
 
@@ -2300,7 +2321,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 4. 新 record kind は **`list-output/types.ts`** の **`ListRecordKind`** を拡張。テストは feature または **`list-commands/list-commands.test.ts`** に追加。
 5. **`manifest/bmxt-codegen.json`**、**`bmxt-core/cmd/<module>.ts`**、必要なら **`browse <list>`** の kind ルーティング、i18n、本 README / **`_context/map_command.csv`** を更新。
 
-**リファクタ前（Rust/WASM）との比較:** コマンド登録・補完・Effect・ディスパッチを **manifest + codegen** で揃え、**`bmxt-core/cmd/*.ts`** と **`handlers/effects/`** に実装を分ける。ビルドは **Node/TypeScript のみ**（Rust ツールチェーン不要）。
+**アーキテクチャ:** コマンド意味論は **Rust/WASM（`crates/bmxt-core`）**、Chrome Effect 実行と React UI は **TypeScript**。正本は **manifest + codegen**（TS と Rust を二重出力）。
 
 <a id="prompt-key-bindings-ja"></a>
 
@@ -2389,7 +2410,7 @@ pnpm run dev
 - `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック（ホストされた **`docs/welcome.html`** を開く；コンテンツは **`docs/`** のみ）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
-- `lib/features/bmxt-core/` — コマンドレジストリ・ディスパッチ・`cmd/*.ts`・タブピッカーリデューサ（**`registry/table.gen.ts`** は codegen）
+- `crates/bmxt-core/` — Rust/WASM コマンドコア；`lib/features/bmxt-core/` — TS ホスト（`wasm-host` / `dispatch` / tabs-picker ラッパ）
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）

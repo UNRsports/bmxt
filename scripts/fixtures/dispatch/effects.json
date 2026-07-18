@@ -1,0 +1,88 @@
+[
+  { "line": "", "expect": { "ty": "lines", "lines": [] } },
+  { "line": "clear", "expect": { "ty": "effects", "effects": [{ "kind": "clear_log" }] } },
+  { "line": "exit", "expect": { "ty": "effects", "effects": [{ "kind": "exit_pane" }] } },
+  { "line": "aboutbmxt", "expect": { "ty": "effects", "effects": [{ "kind": "open_welcome_page" }] } },
+  { "line": "close 42", "expect": { "ty": "effects", "effects": [{ "kind": "close_tab", "tab_id": 42 }] } },
+  { "line": "c 7", "expect": { "ty": "effects", "effects": [{ "kind": "close_tab", "tab_id": 7 }] } },
+  {
+    "line": "https://example.com",
+    "expect": { "ty": "effects", "effects": [{ "kind": "open_url_new_tab", "url": "https://example.com" }] }
+  },
+  {
+    "line": "https://example.com .",
+    "expect": { "ty": "effects", "effects": [{ "kind": "navigate_current_tab", "url": "https://example.com" }] }
+  },
+  {
+    "line": "https://example.com -nw",
+    "expect": { "ty": "effects", "effects": [{ "kind": "open_url_new_window", "url": "https://example.com" }] }
+  },
+  {
+    "line": "tabs -list",
+    "expect": { "ty": "effects", "effects": [{ "kind": "tabs_list", "show_url": "false" }] }
+  },
+  {
+    "line": "tabs -list -url",
+    "expect": { "ty": "effects", "effects": [{ "kind": "tabs_list", "show_url": "true" }] }
+  },
+  { "line": "tabs -nowurl", "expect": { "ty": "effects", "effects": [{ "kind": "tabs_nu" }] } },
+  {
+    "line": "tabs -moveurl https://example.com/path",
+    "expect": { "ty": "effects", "effects": [{ "kind": "tabs_move_url", "url": "https://example.com/path" }] }
+  },
+  {
+    "line": "search -list",
+    "expect": {
+      "ty": "effects",
+      "effects": [{ "kind": "search_list", "dispatch_line": "search -list --all" }]
+    }
+  },
+  {
+    "line": "search -list --page foo",
+    "expect": {
+      "ty": "effects",
+      "effects": [{ "kind": "search_list", "dispatch_line": "search -list --page foo" }]
+    }
+  },
+  {
+    "line": "dom -list",
+    "expect": {
+      "ty": "effects",
+      "effects": [
+        {
+          "kind": "dom_list",
+          "flavor": "--html",
+          "pattern": "",
+          "pickerMode": "normal",
+          "showTag": "false"
+        }
+      ]
+    }
+  },
+  {
+    "line": "dom -list --with --react --tag pat",
+    "expect": {
+      "ty": "effects",
+      "effects": [
+        {
+          "kind": "dom_list",
+          "flavor": "--react",
+          "pattern": "pat",
+          "pickerMode": "with",
+          "showTag": "true"
+        }
+      ]
+    }
+  },
+  { "line": "group new 1 2 3", "expect": { "ty": "effects", "effects": [{ "kind": "group_new", "tab_ids": [1, 2, 3] }] } },
+  { "line": "session -next", "expect": { "ty": "effects", "effects": [{ "kind": "session_next" }] } },
+  { "line": "session -prev", "expect": { "ty": "effects", "effects": [{ "kind": "session_prev" }] } },
+  { "line": "session -new work", "expect": { "ty": "effects", "effects": [{ "kind": "session_new", "name": "work" }] } },
+  {
+    "line": "unknowncmd",
+    "expect": {
+      "ty": "msgs",
+      "msgs": [{ "key": "cmd.error.unknownCommand", "params": { "cmdToken": "unknowncmd" } }]
+    }
+  }
+]

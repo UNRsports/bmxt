@@ -1,88 +1,58 @@
 import type { DispatchBundle } from "../dispatch"
-import { isSecondToken } from "../builtin-commands/command-subcommands.gen"
-import { tCmd } from "../setting/i18n/ns/cmd"
-import { setRunLocale, getRunLocale } from "../setting/i18n/run-locale"
+import { getRunLocale, setRunLocale } from "../setting/i18n/run-locale"
 import type { UiLocale } from "../setting/locale"
-import { parseHttpUrlCandidate, tokenize } from "./line-parse"
-import type { DispatchJson } from "./types"
-import { effectsDispatch, linesDispatch } from "./types"
-import { resolveCanonical, runCommand } from "./registry"
+import { expandDispatchMsgs } from "./expand-msgs"
+import { isBmxtCoreReady, wasmRun } from "./wasm-host"
 
-function dispatchJsonString(out: DispatchJson): string {
-  return JSON.stringify(out)
-}
-
-function tryUrlLine(trimmed: string): DispatchJson | null {
-  const nwSuffixes = [" -nw", " -nW", " -Nw", " -NW"] as const
-  for (const suf of nwSuffixes) {
-    if (trimmed.endsWith(suf)) {
-      const inner = trimmed.slice(0, -suf.length).trimEnd()
-      const url = parseHttpUrlCandidate(inner)
-      if (url) {
-        return effectsDispatch([{ kind: "open_url_new_window", url }])
-      }
+function normalizeBundle(bundle: DispatchBundle, locale: UiLocale): DispatchBundle {
+  if (bundle.ty === "msgs") {
+    return {
+      ty: "lines",
+      lines: expandDispatchMsgs(bundle.msgs ?? [], locale)
     }
   }
-  if (trimmed.endsWith(" .")) {
-    const inner = trimmed.slice(0, -2).trimEnd()
-    const url = parseHttpUrlCandidate(inner)
-    if (url) {
-      return effectsDispatch([{ kind: "navigate_current_tab", url }])
-    }
-  }
-  if (!/\s/.test(trimmed)) {
-    const url = parseHttpUrlCandidate(trimmed)
-    if (url) {
-      return effectsDispatch([{ kind: "open_url_new_tab", url }])
-    }
-  }
-  return null
-}
-
-function dispatchBundleInternal(line: string, locale?: UiLocale): DispatchJson {
-  if (locale !== undefined) {
-    setRunLocale(locale)
-  }
-  const trimmed = line.trim()
-  if (!trimmed) {
-    return linesDispatch([])
-  }
-  const urlOut = tryUrlLine(trimmed)
-  if (urlOut) {
-    return urlOut
-  }
-  const args = tokenize(trimmed)
-  if (args.length === 0) {
-    return linesDispatch([])
-  }
-  const cmdToken = args[0].toLowerCase()
-  const canonical = resolveCanonical(cmdToken)
-  if (!canonical) {
-    return linesDispatch([
-      tCmd("cmd.error.unknownCommand", locale ?? getRunLocale(), { cmdToken })
-    ])
-  }
-  return runCommand(canonical, args)
-}
-
-export function dispatchFull(line: string, locale?: UiLocale): string {
-  return dispatchJsonString(dispatchBundleInternal(line, locale))
+  return bundle
 }
 
 export function parseDispatchJson(raw: string): DispatchBundle {
   const o = JSON.parse(raw) as DispatchBundle
-  if (o.ty === "lines") {
-    return { ty: "lines", lines: o.lines ?? [] }
+  switch (o.ty) {
+    case "lines":
+      return { ty: "lines", lines: o.lines ?? [] }
+    case "effects":
+      return { ty: "effects", effects: o.effects ?? [] }
+    case "ui":
+      return { ty: "ui", action: o.action ?? { kind: "picker_pass" } }
+    case "msgs":
+      return { ty: "msgs", msgs: o.msgs ?? [] }
+    default:
+      throw new Error(`BMXt: unknown dispatch ty ${(o as { ty?: string }).ty}`)
   }
-  if (o.ty === "effects") {
-    return { ty: "effects", effects: o.effects ?? [] }
+}
+
+export function dispatchFull(line: string, locale?: UiLocale): string {
+  if (!isBmxtCoreReady()) {
+    throw new Error("BMXt core WASM not initialized; call ensureBmxtCore() first")
   }
-  throw new Error(`BMXt: unknown dispatch ty ${(o as { ty?: string }).ty}`)
+  const loc = locale ?? getRunLocale()
+  if (locale !== undefined) {
+    setRunLocale(locale)
+  }
+  return wasmRun(line, loc)
 }
 
 export function runDispatch(line: string, locale?: UiLocale): DispatchBundle {
+  if (!isBmxtCoreReady()) {
+    throw new Error("BMXt core WASM not initialized; call ensureBmxtCore() first")
+  }
+  const loc = locale ?? getRunLocale()
+  if (locale !== undefined) {
+    setRunLocale(locale)
+  }
   try {
-    return dispatchBundleInternal(line, locale)
+    const raw = wasmRun(line, loc)
+    const bundle = parseDispatchJson(raw)
+    return normalizeBundle(bundle, loc)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return {

@@ -1,8 +1,9 @@
 /**
  * BMXt POSIX Profile — conformance checks for exit status, channels, operators, and pipes.
  */
-import { describe, it } from "node:test"
+import { before, describe, it } from "node:test"
 import assert from "node:assert/strict"
+import { ensureBmxtCoreForTests } from "../../bmxt-core/test-ensure-wasm.ts"
 import { segmentFailure, segmentSuccess } from "../compound/classify-outcome.ts"
 import {
   EXIT_FAILURE,
@@ -30,26 +31,12 @@ import { bmxtRuleStreamAcceptsKinds } from "../pipe/consumers/stream-accepts-kin
 import { bmxtRuleStreamFromListResult } from "../../bmxt-rule/adapters/from-list-result.ts"
 import { LIST_OUTPUT_SCHEMA, type ListResult } from "../list-output/types.ts"
 
-/** EN: Keep in sync with `commands/registry.ts` (avoid importing UI/i18n modules in tests). */
-const EXPECTED_COMMAND_ENTRY_IDS = [
-  "browse",
-  "plain-list",
-  "setting",
-  "tabs-setting",
-  "dom-setting",
-  "session",
-  "tabs-list",
-  "search-exit",
-  "nav-enter",
-  "translate",
-  "nav-exit",
-  "dom-exit",
-  "group-new",
-  "search-list",
-  "help",
-  "dom-list",
-  "snapshot"
-] as const
+/** EN: Keep in sync with `commands/registry.ts` — WASM owns grammar (Phase 6). */
+const EXPECTED_COMMAND_ENTRY_IDS = [] as const
+
+before(() => {
+  ensureBmxtCoreForTests()
+})
 
 describe("BMXt POSIX Profile — exit status (P1)", () => {
   it("maps codes to profile statuses", () => {
@@ -164,11 +151,9 @@ describe("BMXt POSIX Profile — redirects (P6)", () => {
 })
 
 describe("BMXt POSIX Profile — CommandEntry registry (P7)", () => {
-  it("places browse then plain-list ahead of other UI entries", () => {
-    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[0], "browse")
-    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[1], "plain-list")
-    assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("help"))
-    assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("background") === false)
+  it("uses empty COMMAND_ENTRIES; WASM classifies segments", () => {
+    assert.equal(EXPECTED_COMMAND_ENTRY_IDS.length, 0)
+    assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("background" as never) === false)
   })
 })
 

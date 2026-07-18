@@ -22,39 +22,44 @@ Read [reference.md](reference.md) for subcommand templates, generated files, and
 ```
 Task progress:
 - [ ] Manifest updated (commands[] / subcommands / effects[])
-- [ ] lib/features/bmxt-core/cmd/<module>.ts added or updated
-- [ ] pnpm run codegen
-- [ ] run implemented; export const CMD aligned with manifest
+- [ ] crates/bmxt-core/src/cmd/<module>.rs added or updated (+ cmd/mod.rs)
+- [ ] pnpm run codegen (+ Rust generated registry/effects)
+- [ ] run implemented; subcommand head literals match manifest
 - [ ] New effects: handler in lib/features/dispatch/handlers/effects/
-- [ ] pnpm run verify:manifest → pnpm run check:generated → pnpm exec tsc --noEmit → pnpm test → pnpm run build (as needed)
+- [ ] New UiAction kinds: apply-ui-action.ts + codegen ui-action-types if needed
+- [ ] pnpm run build:wasm
+- [ ] pnpm run verify:manifest → check:generated → cargo test -p bmxt-core → tsc → test → build
 ```
 
 ## Typical flow
 
-1. **Scaffold:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` *or* edit `manifest/bmxt-codegen.json` `commands[]`, add `lib/features/bmxt-core/cmd/<module>.ts`, then **`pnpm run codegen`**.
-2. **Implement `run`:** Keep **`export const CMD`** aligned with manifest (`pnpm run verify:manifest`).
-3. **New Chrome effects:** Extend manifest `effects[]` → codegen → implement `lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts` (`tsHandlerExport`) → return from **`run`** via **`effectsDispatch([...])`** when needed.
-4. **Verify:** `pnpm run verify:manifest`, `pnpm run check:generated`, `pnpm exec tsc --noEmit`, `pnpm run build` as needed. See README § Command add procedure.
+1. **Scaffold:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` *or* edit `manifest/bmxt-codegen.json` `commands[]`, add `crates/bmxt-core/src/cmd/<module>.rs`, wire `cmd/mod.rs`, then **`pnpm run codegen`**.
+2. **Implement `run`:** Return `DispatchBundle` JSON (`lines` / `effects` / `ui` / `msgs` with i18n keys). **`pnpm run verify:manifest`** checks Rust cmd literals + registry.
+3. **New Chrome effects:** Extend manifest `effects[]` → codegen → implement `lib/features/dispatch/handlers/effects/<tsHandlerFile>.ts`.
+4. **UI-only:** Return `UiActionIR`; handle in `lib/features/bmxt-window/shell/apply-ui-action.ts` (no command-name branching in Enter path).
+5. **Verify:** `verify:manifest`, `check:generated`, `build:wasm`, `cargo test -p bmxt-core`, `tsc`, `test`, `build`.
 
 ## Subcommands (second / third tokens)
 
-1. Set `commands[].subcommands` to `[]` or `{ head, trailingTokens?, tail? }[]` (template: `manifest/templates/command-with-subcommands.example.json`).
+1. Set `commands[].subcommands` to `[]` or `{ head, trailingTokens?, tail? }[]`.
 2. `pnpm run codegen`.
-3. In `cmd/<module>.ts`, use the **same string literal** for each `head` as in the manifest.
-4. Implement `run` (dispatch, optional args); align with `tail` hints.
-5. Third-token Tab completion: use `listThirdTokenCandidates` from `command-subcommands.gen.ts`; wire shell completion zone if needed.
+3. In `crates/bmxt-core/src/cmd/<module>.rs`, use the **same string literal** for each `head`.
+4. Implement `run`; align with `tail` hints.
+5. Tab completion: `command-subcommands.gen.ts` (from manifest).
 
 ## Codegen rules
 
 - **Single source:** `manifest/bmxt-codegen.json`. Run **`pnpm run codegen`**. Do **not** hand-edit:
   - `lib/features/bmxt-core/registry/table.gen.ts`
-  - `lib/features/dispatch/effect-types.ts`
+  - `lib/features/dispatch/effect-types.ts`, `ui-action-types.ts`
   - `lib/features/dispatch/handlers/apply-dispatch.gen.ts`
-  - `lib/features/builtin-commands/completion-fallback.ts`
-  - `lib/features/builtin-commands/command-subcommands.gen.ts`
-- **`handlers/effects/*.ts`:** Not overwritten by codegen. After `effects[]` changes, update matching handler for generated `ChromeEffect` / `apply-dispatch.gen.ts` types.
+  - `lib/features/builtin-commands/completion-fallback.ts`, `command-subcommands.gen.ts`
+  - `crates/bmxt-core/src/generated/chrome_effect.rs`, `registry_table.rs`
+- **`handlers/effects/*.ts`:** Not overwritten by codegen.
 
 ## Layout
 
-- Command logic: **`lib/features/bmxt-core/cmd/*.ts`**
+- Command semantics: **`crates/bmxt-core/src/cmd/*.rs`** (WASM)
+- TS host: **`lib/features/bmxt-core/`** (`wasm-host`, `dispatch`, registry metadata)
 - Chrome side effects: **`lib/features/dispatch/handlers/effects/`**
+- UI actions: **`lib/features/bmxt-window/shell/apply-ui-action.ts`**

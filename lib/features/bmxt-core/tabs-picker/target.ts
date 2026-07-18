@@ -1,33 +1,14 @@
-export type TargetRow = {
-  kind: string
-  tabId?: number
-  windowId?: number
-  groupId?: number | null
-}
+import { wasmTabsPickerTarget } from "../wasm-host"
 
-export type ResolveTargetContext = {
-  moveDestHi: number
-  rows: TargetRow[]
-}
-
-export type ResolvedTarget = {
-  kind: string
-  tabId: number | null
-  windowId: number | null
-  groupId: number | null
-}
-
-export function resolveTarget(ctx: ResolveTargetContext): ResolvedTarget | null {
-  const row = ctx.rows[ctx.moveDestHi]
-  if (!row) return null
-  return {
-    kind: row.kind,
-    tabId: row.tabId ?? null,
-    windowId: row.windowId ?? null,
-    groupId: row.groupId ?? null
+function parseWasmJson<T>(raw: string): T {
+  const parsed = JSON.parse(raw) as T | { error?: string }
+  if (parsed && typeof parsed === "object" && "error" in parsed && parsed.error) {
+    throw new Error(String(parsed.error))
   }
+  return parsed as T
 }
 
 export function resolveTabsPickerTarget<TContext, TResult>(context: TContext): TResult {
-  return resolveTarget(context as ResolveTargetContext) as TResult
+  const raw = wasmTabsPickerTarget(JSON.stringify(context))
+  return parseWasmJson<TResult>(raw)
 }

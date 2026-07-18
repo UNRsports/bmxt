@@ -69,47 +69,6 @@ async function closeBmxtWindowOnly(hintWindowId?: number): Promise<void> {
   }
 }
 
-function tryRunCommandWithoutWasm(
-  sessionId: string,
-  trimmed: string,
-  patches: SessionPatch[]
-): boolean {
-  const lower = trimmed.toLowerCase()
-  if (lower === "clear") {
-    patches.push({
-      type: "setLog",
-      sessionId,
-      lines: [`> ${trimmed}`, "(log cleared)"]
-    })
-    return true
-  }
-  if (lower === "exit") {
-    return false
-  }
-  const newMatch = trimmed.match(/^\s*session\s+-new(?:\s+(.+))?\s*$/i)
-  if (newMatch) {
-    const rawName = (newMatch[1] ?? "").trim()
-    patches.push({
-      type: "createSession",
-      fromSessionId: sessionId,
-      name: rawName.length > 0 ? rawName : undefined
-    })
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-    return true
-  }
-  if (/^\s*session\s+-next\s*$/i.test(trimmed)) {
-    patches.push({ type: "switchNext", anchorSessionId: sessionId })
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-    return true
-  }
-  if (/^\s*session\s+-prev\s*$/i.test(trimmed)) {
-    patches.push({ type: "switchPrev", anchorSessionId: sessionId })
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-    return true
-  }
-  return false
-}
-
 async function runExitCommand(
   sessionIdRaw: string | undefined,
   sessionOrderLength: number,
@@ -170,9 +129,6 @@ async function runCommandBody(
   try {
     await ensureBmxtCore()
   } catch (e) {
-    if (tryRunCommandWithoutWasm(sessionId, trimmed, patches)) {
-      return { ok: true, patches }
-    }
     return {
       ok: true,
       patches: [

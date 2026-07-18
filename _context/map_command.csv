@@ -1,4 +1,5 @@
-clear,,,,,clear,`RUN_CMD` → Effect: clear_log。SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
+# Engine: command semantics = crates/bmxt-core (Rust/WASM); TS = effects + UiAction apply + i18n. Budget: bmxt_core_bg.wasm ≤ 400 KiB.
+clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
 close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。,第二トークン相当は可変 tabId（manifest subcommands なし）
 dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** `RUN_CMD` → Effect `dom_list` → **`-list` レジストリ**（`dom-list-fetch.ts` / `dom-list-command.ts`）→ `ListResult`（`bmxt-list/1`）→ ターミナルログ（フル出力+サマリー）。既定 `--normal --html`。対象タブは直前フォーカス通常ウィンドウのアクティブ tab（scriptable http(s) のみ・optional host permission）。ピッカーは `browse dom -list …`（browse 列 UI）。閉じるは `dom -exit -list`。,0.7.7 プレーン既定。§11 browse プレフィックス。`list-commands` registry 経由
 dom,-list,--normal,rest,,（同上）,trailingTokens の一つ。ピッカー mode `--normal`（全 DOM ツリー・既定相当）。`--with` と排他。,

@@ -1,6 +1,7 @@
-import { tTabs } from "../../setting/i18n/ns/tabs"
+import { tTabs, type TabsMessageKey } from "../../setting/i18n/ns/tabs"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
+import { wasmTabsPickerCreateGroupPlan } from "../wasm-host"
 
 export type CreateGroupPlanContext = {
   tabCount: number
@@ -17,58 +18,37 @@ export type CreateGroupPlanResult = {
   strategy: "moveWholeGroup" | "ungroupThenMoveTabs" | null
 }
 
-export function resolveCreateGroupPlan(
-  ctx: CreateGroupPlanContext,
-  locale: UiLocale = getRunLocale()
-): CreateGroupPlanResult {
-  if (ctx.tabCount === 0) {
-    return {
-      ok: false,
-      error: tTabs("tabs.picker.error.createGroup.noTabs", locale),
-      strategy: null
-    }
+function parseWasmJson<T>(raw: string): T {
+  const parsed = JSON.parse(raw) as T | { error?: string }
+  if (parsed && typeof parsed === "object" && "error" in parsed && parsed.error) {
+    throw new Error(String(parsed.error))
   }
-  if (ctx.resolvedTabCount !== ctx.tabCount) {
-    return {
-      ok: false,
-      error: tTabs("tabs.picker.error.createGroup.partialClosed", locale),
-      strategy: null
-    }
-  }
-  if (!ctx.sameWindow) {
-    return {
-      ok: false,
-      error: tTabs("tabs.picker.error.createGroup.sameWindow", locale),
-      strategy: null
-    }
-  }
-  if (ctx.windowType !== "normal") {
-    return {
-      ok: false,
-      error: tTabs("tabs.picker.error.createGroup.windowType", locale),
-      strategy: null
-    }
-  }
-  if (ctx.movingCount === 0) {
-    return {
-      ok: false,
-      error: tTabs("tabs.picker.error.createGroup.invalidMoveCount", locale),
-      strategy: null
-    }
-  }
-  if (ctx.movingCount > ctx.groupTabCount) {
-    return {
-      ok: false,
-      error: tTabs("tabs.picker.error.createGroup.notInGroup", locale),
-      strategy: null
-    }
-  }
-  if (ctx.movingCount === ctx.groupTabCount) {
-    return { ok: true, error: null, strategy: "moveWholeGroup" }
-  }
-  return { ok: true, error: null, strategy: "ungroupThenMoveTabs" }
+  return parsed as T
 }
 
-export function resolveTabsPickerCreateGroupPlan<TContext, TResult>(context: TContext): TResult {
-  return resolveCreateGroupPlan(context as CreateGroupPlanContext) as TResult
+function localizeError(error: string | null, locale: UiLocale): string | null {
+  if (!error) {
+    return null
+  }
+  if (error.startsWith("tabs.")) {
+    return tTabs(error as TabsMessageKey, locale)
+  }
+  return error
+}
+
+export function resolveTabsPickerCreateGroupPlan<TContext, TResult>(
+  context: TContext,
+  locale: UiLocale = getRunLocale()
+): TResult {
+  const raw = wasmTabsPickerCreateGroupPlan(JSON.stringify(context))
+  const parsed = parseWasmJson<{
+    ok: boolean
+    error: string | null
+    strategy: string | null
+  }>(raw)
+  return {
+    ok: parsed.ok,
+    error: localizeError(parsed.error, locale),
+    strategy: parsed.strategy as CreateGroupPlanResult["strategy"]
+  } as TResult
 }

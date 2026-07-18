@@ -50,7 +50,7 @@ This repository uses **pnpm** only (`pnpm-lock.yaml`). Do **not** run `npm insta
 
 - Keep the repository root minimal; avoid adding new feature implementation files at root.
 - Place feature code under `lib/features/<feature>/` and colocate related UI, parsing, and domain logic there.
-- Keep command **dispatch, registry, and built-in command `run` implementations** in **`lib/features/bmxt-core/`**; keep Chrome API effects in **`lib/features/dispatch/`**, and reference other feature code from `lib/features/*`.
+- Keep command **semantics** (`run` / parse / plans) in **`crates/bmxt-core/`** (Rust → WASM); keep the TS host (`runDispatch`, `ensureBmxtCore`, tabs-picker wrappers) in **`lib/features/bmxt-core/`**; keep Chrome API effects in **`lib/features/dispatch/`**, UiAction apply in **`lib/features/bmxt-window/shell/apply-ui-action.ts`**, and reference other feature code from `lib/features/*`.
 - Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
 
@@ -62,7 +62,7 @@ Detailed BMXt workflows live in **`.cursor/skills/`** (also visible in Cursor Se
 |-------|-------------|
 | **`bmxt-i18n`** | User-visible strings (EN + JA); no hard-coded UI text |
 | **`bmxt-ui-settings`** | `setting -list`, settings export/import, storage, bundle format |
-| **`bmxt-add-command`** | New/changed commands, subcommands, effects, manifest/codegen |
+| **`bmxt-add-command`** | New/changed commands, subcommands, effects, Rust cmd + manifest/codegen |
 
 ## i18n (summary)
 

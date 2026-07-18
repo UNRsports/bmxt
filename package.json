@@ -12,13 +12,14 @@
     "url": "https://github.com/UNRsports/bmxt.git"
   },
   "scripts": {
-    "build": "node scripts/build-background-services.mjs && wxt build",
-    "dev": "node scripts/build-background-services.mjs && wxt",
-    "package": "node scripts/build-background-services.mjs && wxt zip",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build": "node scripts/build-wasm.mjs && node scripts/build-background-services.mjs && wxt build",
+    "dev": "node scripts/build-wasm.mjs && node scripts/build-background-services.mjs && wxt",
+    "package": "node scripts/build-wasm.mjs && node scripts/build-background-services.mjs && wxt zip",
     "postinstall": "wxt prepare",
     "codegen": "node scripts/codegen/run.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
-    "check:generated": "pnpm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json lib/features/bmxt-core/registry/table.gen.ts lib/features/dispatch/effect-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts",
+    "check:generated": "pnpm run codegen && git diff --exit-code -- manifest/bmxt-codegen.json lib/features/bmxt-core/registry/table.gen.ts lib/features/dispatch/effect-types.ts lib/features/dispatch/ui-action-types.ts lib/features/dispatch/handlers/apply-dispatch.gen.ts lib/features/builtin-commands/completion-fallback.ts lib/features/builtin-commands/command-subcommands.gen.ts crates/bmxt-core/src/generated/chrome_effect.rs crates/bmxt-core/src/generated/registry_table.rs",
     "check:no-fetch": "node scripts/check-no-fetch.mjs",
     "sync:completion-fallback": "pnpm run codegen",
     "sync:effect-types": "pnpm run codegen",

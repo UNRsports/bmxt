@@ -1,5 +1,4 @@
 import { continuationPromptAfterLoneFirstToken } from "../../../builtin-commands/command-subcommands.gen"
-import { buildHelpLines } from "../../../bmxt-core/registry/help"
 import {
   isRunCmdResult,
   type SessionPatch
@@ -9,24 +8,8 @@ import { tError } from "../../../setting/i18n/ns/error"
 import {
   clearPrompt,
   recordCommandHistory,
-  type CommandDispatchContext,
-  type CommandDispatchResult
+  type CommandDispatchContext
 } from "./types"
-
-export function tryHandleHelpCommand(ctx: CommandDispatchContext): CommandDispatchResult {
-  const { deps, trimmed } = ctx
-
-  if (trimmed !== "help" && trimmed !== "?") {
-    return "not_handled"
-  }
-
-  deps.appendCommandToHistory(trimmed)
-  clearPrompt(deps)
-  recordCommandHistory(deps)
-  void deps.appendLogLines([`> ${trimmed}`, ...buildHelpLines(deps.uiSettings.locale)])
-  deps.focusPrompt()
-  return "handled"
-}
 
 /** EN: Drop prompt-echo lines already written by the UI before RUN_CMD returns. */
 function patchesWithoutPromptEcho(patches: readonly SessionPatch[]): SessionPatch[] {

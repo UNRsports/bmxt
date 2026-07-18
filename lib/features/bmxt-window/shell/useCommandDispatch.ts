@@ -1,48 +1,21 @@
 import { useCallback } from "react"
 import { lineHasCompoundOperator, runCompoundLine } from "../../command-line/compound"
+import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen"
+import { ensureBmxtCore } from "../../bmxt-core/wasm-host"
+import { runDispatch } from "../../bmxt-core/dispatch"
 import { effectiveCommandLocale } from "../../setting/effective-command-locale"
+import { applyUiAction } from "./apply-ui-action"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
-import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
-import { tryHandleDomListCommand } from "./command-dispatch/handle-dom"
-import { tryHandleDomSettingCommand } from "./command-dispatch/handle-dom-setting"
-import { dispatchFallbackCommand, tryHandleHelpCommand } from "./command-dispatch/handle-fallback"
-import { tryHandleGroupNewCommand } from "./command-dispatch/handle-group"
-import { tryHandleNavEnterCommand } from "./command-dispatch/handle-nav-enter"
-import { tryHandleNavExitCommand } from "./command-dispatch/handle-nav-exit"
-import { tryHandleSearchExitCommand } from "./command-dispatch/handle-search-exit"
-import { tryHandleSearchListCommand } from "./command-dispatch/handle-search"
-import { tryHandleSnapshotSaveCommand } from "./command-dispatch/handle-snapshot"
-import { tryHandleSessionCommand } from "./command-dispatch/handle-session"
-import { tryHandleSettingCommand } from "./command-dispatch/handle-setting"
+import { dispatchFallbackCommand } from "./command-dispatch/handle-fallback"
 import { tryHandlePickerCommand } from "./command-dispatch/handle-picker"
-import { tryHandleTabsListCommand } from "./command-dispatch/handle-tabs-list"
-import { tryHandleTabsSettingCommand } from "./command-dispatch/handle-tabs-setting"
-import { tryHandleTranslateCommand } from "./command-dispatch/handle-translate"
-import type { CommandDispatchContext, CommandDispatchDeps } from "./command-dispatch/types"
+import {
+  clearPrompt,
+  recordCommandHistory,
+  type CommandDispatchContext,
+  type CommandDispatchDeps
+} from "./command-dispatch/types"
 
 export type { CommandDispatchDeps } from "./command-dispatch/types"
-
-type DomainHandler = (ctx: CommandDispatchContext) => "handled" | "not_handled"
-
-/** EN: Order matches legacy monolithic submitLine (first match wins). */
-const DOMAIN_HANDLERS: readonly DomainHandler[] = [
-  tryHandlePickerCommand,
-  tryHandleSettingCommand,
-  tryHandleTabsSettingCommand,
-  tryHandleDomSettingCommand,
-  tryHandleSessionCommand,
-  tryHandleTabsListCommand,
-  tryHandleSearchExitCommand,
-  tryHandleNavEnterCommand,
-  tryHandleTranslateCommand,
-  tryHandleNavExitCommand,
-  tryHandleDomExitCommand,
-  tryHandleGroupNewCommand,
-  tryHandleSearchListCommand,
-  tryHandleHelpCommand,
-  tryHandleDomListCommand,
-  tryHandleSnapshotSaveCommand
-]
 
 function handleISearchExit(deps: CommandDispatchDeps): void {
   const pick = deps.iSearchMatches[deps.iSearchCycle]
@@ -53,6 +26,31 @@ function handleISearchExit(deps: CommandDispatchDeps): void {
   deps.setISearchCycle(0)
   deps.setHistNavIndex(-1)
   deps.tabPressSeqRef.current = 0
+  deps.focusPrompt()
+}
+
+function tryHandleSessionNameTyping(ctx: CommandDispatchContext): boolean {
+  if (!ctx.deps.sessionNameTypingRef.current) {
+    return false
+  }
+  ctx.deps.appendCommandToHistory(ctx.trimmed)
+  ctx.deps.saveSessionDisplayName(ctx.trimmed, [])
+  return true
+}
+
+function handleLinesBundle(ctx: CommandDispatchContext, lines: string[]): void {
+  const { deps, trimmed } = ctx
+  deps.appendCommandToHistory(trimmed)
+  clearPrompt(deps)
+  recordCommandHistory(deps)
+  void deps.appendLogLines([`> ${trimmed}`, ...lines])
+  const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
+  if (continuationPrompt) {
+    deps.setSubCmdPicker(null)
+    deps.setLine(continuationPrompt)
+    deps.setCursorPos(continuationPrompt.length)
+    deps.lineRef.current = continuationPrompt
+  }
   deps.focusPrompt()
 }
 
@@ -88,18 +86,55 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       return
     }
 
-    if (lineHasCompoundOperator(trimmed)) {
-      void runCompoundLine(trimmed, deps, commandLocale)
+    if (tryHandleSessionNameTyping(ctx)) {
       return
     }
 
-    for (const handler of DOMAIN_HANDLERS) {
-      if (handler(ctx) === "handled") {
-        return
-      }
+    if (tryHandlePickerCommand(ctx) === "handled") {
+      return
     }
 
-    dispatchFallbackCommand(ctx)
+    void (async () => {
+      try {
+        await ensureBmxtCore()
+      } catch (e) {
+        deps.appendCommandToHistory(trimmed)
+        clearPrompt(deps)
+        recordCommandHistory(deps)
+        const message = e instanceof Error ? e.message : String(e)
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          `error: BMXt core failed to load (${message})`
+        ])
+        deps.focusPrompt()
+        return
+      }
+
+      if (lineHasCompoundOperator(trimmed)) {
+        void runCompoundLine(trimmed, deps, commandLocale)
+        return
+      }
+
+      const bundle = runDispatch(trimmed, commandLocale)
+
+      if (bundle.ty === "ui" && bundle.action) {
+        if (applyUiAction(bundle.action, ctx)) {
+          return
+        }
+      }
+
+      if (bundle.ty === "lines") {
+        handleLinesBundle(ctx, bundle.lines ?? [])
+        return
+      }
+
+      if (bundle.ty === "effects") {
+        dispatchFallbackCommand(ctx)
+        return
+      }
+
+      dispatchFallbackCommand(ctx)
+    })()
   }, [deps])
 
   return { submitLine }

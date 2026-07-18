@@ -779,66 +779,66 @@ codegen が **TS Effect 型 + apply スイッチ** と **Rust `ChromeEffect` / �
 
 #### Phase 0 — 設計固定・計測ベースライン
 
-- [ ] 本節（§13）を正とし、§13.3 のワイヤー形式を確定
-- [ ] `ChromeEffect` / `DispatchBundle` の現行 JSON をスナップショット（互換契約）
-- [ ] SW 起動・初回 `RUN_CMD` のベンチ（`scripts/benchmark-launch-perf.mjs` 等）をベースライン記録
-- [ ] WASM 予算: バイナリサイズ上限・初回 instantiate 上限（数値を README / CI に書く）
-- [ ] 依存: §8–11 のパイプ / `-list` / picker 経路が「計画と実行が分離」していることを確認
+- [x] 本節（§13）を正とし、§13.3 のワイヤー形式を確定
+- [x] `ChromeEffect` / `DispatchBundle` の現行 JSON をスナップショット（互換契約）
+- [x] SW 起動・初回 `RUN_CMD` のベンチ（`scripts/benchmark-launch-perf.mjs` 等）をベースライン記録
+- [x] WASM 予算: バイナリサイズ上限・初回 instantiate 上限（数値を README / CI に書く）
+- [x] 依存: §8–11 のパイプ / `-list` / picker 経路が「計画と実行が分離」していることを確認
 
 #### Phase 1 — ツールチェーン + codegen 二重出力
 
-- [ ] `crates/bmxt-core/`（仮）: `wasm-bindgen`、edition / MSRV 固定
-- [ ] CI: `rustup` + `wasm-pack`（または同等）。README から「Node/TS only」記述を更新
-- [ ] codegen: `effects[].rustVariant` + `fields` → Rust `ChromeEffect` enum 生成
-- [ ] codegen: `commands[]` → Rust レジストリ表（名前・第二トークン）生成
-- [ ] WXT 梱包: `*.wasm` + glue を拡張パッケージに含める
-- [ ] `ensureBmxtCore()` を実初期化に復帰（失敗時は既存 `tryRunCommandWithoutWasm`）
-- [ ] `pnpm run verify:manifest` / `check:generated` に Rust 生成物チェックを追加
+- [x] `crates/bmxt-core/`（仮）: `wasm-bindgen`、edition / MSRV 固定
+- [x] CI: `rustup` + `wasm-pack`（または同等）。README から「Node/TS only」記述を更新
+- [x] codegen: `effects[].rustVariant` + `fields` → Rust `ChromeEffect` enum 生成
+- [x] codegen: `commands[]` → Rust レジストリ表（名前・第二トークン）生成
+- [x] WXT 梱包: `*.wasm` + glue を拡張パッケージに含める
+- [x] `ensureBmxtCore()` を実初期化に復帰（失敗時は既存 `tryRunCommandWithoutWasm`）
+- [x] `pnpm run verify:manifest` / `check:generated` に Rust 生成物チェックを追加
 
 #### Phase 2 — SW 経路の最小移植（pilot）
 
-- [ ] WASM: `run(line, locale) -> DispatchBundle` JSON（まずは数コマンド）
-- [ ] pilot 候補: `clear` / `close` / URL 行（`open_url_*` / navigate）など Effect が薄いもの
-- [ ] SW: feature flag または段階切替で `runDispatch` 本体を WASM に委譲
-- [ ] TS `bmxt-core/cmd/*` の該当分は薄い互換 shim → 削除
-- [ ] 単体: Rust 側テスト + 既存 TS 適合テストの同等ケース
-- [ ] ベンチ: SW 冷起動・初回コマンドが予算内
+- [x] WASM: `run(line, locale) -> DispatchBundle` JSON（まずは数コマンド）
+- [x] pilot 候補: `clear` / `close` / URL 行（`open_url_*` / navigate）など Effect が薄いもの
+- [x] SW: feature flag または段階切替で `runDispatch` 本体を WASM に委譲
+- [x] TS `bmxt-core/cmd/*` の該当分は薄い互換 shim → 削除
+- [x] 単体: Rust 側テスト + 既存 TS 適合テストの同等ケース
+- [x] ベンチ: SW 冷起動・初回コマンドが予算内
 
 #### Phase 3 — 全 built-in `cmd/*.run` + registry
 
-- [ ] `bmxt-core/cmd/*.ts` を順次 Rust 化（`tabs` / `search` / `dom` / `session` / `setting` 等）
-- [ ] `line-parse` / `resolveCanonical` / URL 行ルールを Rust へ
-- [ ] TS `COMMAND_RUNNERS` 生成を廃止または WASM 呼び出しラッパのみ残す
-- [ ] i18n: エラー・usage をキー返却に統一（埋め込み文言をやめる）
-- [ ] `runDispatch` / `parseDispatchJson` の TS 実装を「WASM 呼び + JSON parse」に縮小
+- [x] `bmxt-core/cmd/*.ts` を順次 Rust 化（`tabs` / `search` / `dom` / `session` / `setting` 等）
+- [x] `line-parse` / `resolveCanonical` / URL 行ルールを Rust へ
+- [x] TS `COMMAND_RUNNERS` 生成を廃止または WASM 呼び出しラッパのみ残す
+- [x] i18n: エラー・usage をキー返却に統一（埋め込み文言をやめる）
+- [x] `runDispatch` / `parseDispatchJson` の TS 実装を「WASM 呼び + JSON parse」に縮小
 
 #### Phase 4 — tabs-picker 計画層
 
-- [ ] `tabs-picker` の reducer / validate / execute-plan / create-group-plan を Rust へ
-- [ ] TS は Chrome 適用（focus / move / group）と UI バインドのみ
-- [ ] 既存 tabs picker 手動スモーク相当の回帰（計画 JSON の golden test）
+- [x] `tabs-picker` の reducer / validate / execute-plan / create-group-plan を Rust へ
+- [x] TS は Chrome 適用（focus / move / group）と UI バインドのみ
+- [x] 既存 tabs picker 手動スモーク相当の回帰（計画 JSON の golden test）
 
 #### Phase 5 — compound / pipe 計画を WASM へ
 
-- [ ] `parsePipeSegments` / compound 解析・exit-status 方針を Rust へ（§8 / §10 と契約維持）
-- [ ] セグメント実行ループは TS host（各セグメント: WASM 計画 → Effect/UI 実行 → 次 stdin）
-- [ ] `ListResult` の型互換チェックを Rust 側に寄せる（取得は TS）
+- [x] `parsePipeSegments` / compound 解析・exit-status 方針を Rust へ（§8 / §10 と契約維持）
+- [x] セグメント実行ループは TS host（各セグメント: WASM 計画 → Effect/UI 実行 → 次 stdin）
+- [x] `ListResult` の型互換チェックを Rust 側に寄せる（取得は TS）
 
 #### Phase 6 — UI 非認知化（最終目標）
 
-- [ ] `UiActionIR` を定義・codegen（open picker、nav mode 切替ヒント等）
-- [ ] `useCommandDispatch` の `DOMAIN_HANDLERS` を廃止し、WASM `classify`/`run` 結果のみで分岐
-- [ ] `COMMAND_ENTRIES` の「コマンド知識」を WASM に集約。TS は実行器レジストリ（opaque id → 関数）
-- [ ] 補完・continuation: UI は WASM（または生成 opaque 表）に問い合わせ、コマンド文字列をハードコードしない
-- [ ] 残存する「コマンド名 if 分岐」を grep しゼロにする（許容: codegen 生成の apply スイッチと i18n キー）
+- [x] `UiActionIR` を定義・codegen（open picker、nav mode 切替ヒント等）
+- [x] `useCommandDispatch` の `DOMAIN_HANDLERS` を廃止し、WASM `classify`/`run` 結果のみで分岐
+- [x] `COMMAND_ENTRIES` の「コマンド知識」を WASM に集約。TS は実行器レジストリ（opaque id → 関数）
+- [x] 補完・continuation: UI は WASM（または生成 opaque 表）に問い合わせ、コマンド文字列をハードコードしない
+- [x] 残存する「コマンド名 if 分岐」を grep しゼロにする（許容: codegen 生成の apply スイッチと i18n キー）
 
 #### Phase 7 — 仕上げ・文書
 
-- [ ] 旧 TS `bmxt-core/cmd` / 不要 shim / コメント（「Rust が返した…」の残骸整理）を削除
-- [ ] README（EN + JA）: アーキテクチャ図、開発時 Rust 手順、WASM 予算
-- [ ] welcome / release-notes: ユーザー向けは「内部実装」程度に短く
-- [ ] `_context/map_command.csv` 更新
-- [ ] `pnpm run verify:manifest` → `check:generated` → `tsc` → `test` → `build` + Rust test + 起動ベンチ
+- [x] 旧 TS `bmxt-core/cmd` / 不要 shim / コメント（「Rust が返した…」の残骸整理）を削除
+- [x] README（EN + JA）: アーキテクチャ図、開発時 Rust 手順、WASM 予算
+- [x] welcome / release-notes: ユーザー向けは「内部実装」程度に短く
+- [x] `_context/map_command.csv` 更新
+- [x] `pnpm run verify:manifest` → `check:generated` → `tsc` → `test` → `build` + Rust test + 起動ベンチ
 
 ### 13.6 依存関係（推奨順）
 
@@ -890,8 +890,8 @@ Phase 2（SW pilot） ──→ Phase 3（全 cmd）
 
 **完了判定**
 
-- [ ] コマンド文法・オプション・パイプ計画の正本が Rust（WASM）にあり、TS に同等ロジックが残っていない
-- [ ] TS の Enter 経路にコマンド名ハードコード分岐がない（`UiActionIR` / Effect 実行のみ）
-- [ ] Chrome / DOM / React は従来どおり TS のみ
-- [ ] 起動・初回コマンドが予算内；`verify` / `tsc` / `test` / `build` / Rust test 緑
-- [ ] README に境界図と開発手順（EN + JA）
+- [x] コマンド文法・オプション・パイプ計画の正本が Rust（WASM）にあり、TS に同等ロジックが残っていない
+- [x] TS の Enter 経路にコマンド名ハードコード分岐がない（`UiActionIR` / Effect 実行のみ）
+- [x] Chrome / DOM / React は従来どおり TS のみ
+- [x] 起動・初回コマンドが予算内；`verify` / `tsc` / `test` / `build` / Rust test 緑
+- [x] README に境界図と開発手順（EN + JA）

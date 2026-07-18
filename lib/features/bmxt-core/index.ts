@@ -1,31 +1,59 @@
 /**
- * BMXt コマンドコア（TypeScript）。Chrome API は `lib/features/dispatch` 側。
+ * BMXt コマンドコア — 意味論は Rust/WASM、Chrome API は `lib/features/dispatch` 側。
  */
 
 export { FALLBACK_COMPLETION_CANDIDATES } from "../builtin-commands"
 export { runDispatch, dispatchFull, parseDispatchJson } from "./dispatch"
 export { allCompletionTokens, canonicalCommandNames, resolveCanonical } from "./registry"
+export {
+  ensureBmxtCore,
+  ensureBmxtCoreFromBytes,
+  isBmxtCoreReady,
+  wasmClassify,
+  wasmCompletionTokens,
+  wasmParseCompound,
+  wasmParsePipe,
+  wasmPlanCompound,
+  wasmRun,
+  wasmTabsPickerConfirmPlan,
+  wasmTabsPickerCreateGroupPlan,
+  wasmTabsPickerEnterIntent,
+  wasmTabsPickerMovePlan,
+  wasmTabsPickerReduce,
+  wasmTabsPickerTarget,
+  wasmTabsPickerValidateExecute
+} from "./wasm-host"
 export { runTabsPickerReduce } from "./tabs-picker/reducer"
 export { resolveTabsPickerEnterIntent } from "./tabs-picker/intent"
-export { resolveTabsPickerPreview } from "./tabs-picker/preview"
 export { validateTabsPickerExecute } from "./tabs-picker/validate"
 export { resolveTabsPickerTarget } from "./tabs-picker/target"
-export { resolveTabsPickerGroupTarget } from "./tabs-picker/group-target"
-export { resolveTabsPickerNewWindowOrder } from "./tabs-picker/new-window"
-export { resolveTabsPickerConfirmPlan, resolveTabsPickerMovePlan } from "./tabs-picker/execute-plan"
+export { resolveTabsPickerConfirmPlan, resolveTabsPickerMovePlan } from "./tabs-picker/execute-plan-wasm"
 export { resolveTabsPickerCreateGroupPlan } from "./tabs-picker/create-group-plan"
 export { resolveTabsPickerHeadline } from "./tabs-picker/headline"
+export { resolveTabsPickerPreview } from "./tabs-picker/preview"
+export { resolveTabsPickerGroupTarget } from "./tabs-picker/group-target"
+export { resolveTabsPickerNewWindowOrder } from "./tabs-picker/new-window"
 
 import { canonicalCommandNames } from "./registry"
+import { isBmxtCoreReady, wasmCompletionTokens } from "./wasm-host"
 
 let cachedCompletion: string[] | null = null
 
-/** 互換のため残す（WASM 初期化は不要）。 */
-export async function ensureBmxtCore(): Promise<void> {}
-
 export function getCompletionCandidates(): string[] {
   if (!cachedCompletion) {
-    cachedCompletion = canonicalCommandNames()
+    if (isBmxtCoreReady()) {
+      try {
+        cachedCompletion = JSON.parse(wasmCompletionTokens()) as string[]
+      } catch {
+        cachedCompletion = canonicalCommandNames()
+      }
+    } else {
+      cachedCompletion = canonicalCommandNames()
+    }
   }
   return cachedCompletion
+}
+
+export function resetCompletionCandidatesCache(): void {
+  cachedCompletion = null
 }

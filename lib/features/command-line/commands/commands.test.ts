@@ -7,34 +7,12 @@ import {
 } from "./parse-redirect.ts"
 import { segmentFailure, segmentSuccess } from "../compound/classify-outcome.ts"
 
-/** EN: Expected registry order (kept in sync with `registry.ts` — no i18n import). */
-const EXPECTED_COMMAND_ENTRY_IDS = [
-  "browse",
-  "plain-list",
-  "setting",
-  "tabs-setting",
-  "dom-setting",
-  "session",
-  "tabs-list",
-  "search-exit",
-  "nav-enter",
-  "translate",
-  "nav-exit",
-  "dom-exit",
-  "group-new",
-  "search-list",
-  "help",
-  "dom-list",
-  "snapshot"
-] as const
+/** EN: Kept in sync with `registry.ts` — grammar entries live in WASM (Phase 6). */
+const EXPECTED_COMMAND_ENTRY_IDS = [] as const
 
 describe("COMMAND_ENTRIES order", () => {
-  it("documents browse then plain-list and UI entries", () => {
-    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[0], "browse")
-    assert.equal(EXPECTED_COMMAND_ENTRY_IDS[1], "plain-list")
-    assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("help"))
-    assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("session"))
-    assert.ok(EXPECTED_COMMAND_ENTRY_IDS.includes("snapshot"))
+  it("delegates segment grammar to WASM (empty registry)", () => {
+    assert.equal(EXPECTED_COMMAND_ENTRY_IDS.length, 0)
   })
 })
 

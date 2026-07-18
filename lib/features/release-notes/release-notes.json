@@ -5,10 +5,12 @@
       "pickerコマンドを「browse」に変更",
       "tabsなど各詳細バー表示UIをctrl+cで終了可能に実装",
       "typescript6へのアップと、コード細部の修正",
-      "nav: カーソル下の識別ラベル（kind:key）表示、/ による属性インクリメンタルジャンプ、成功 activate の origin 学習"
+      "nav: カーソル下の識別ラベル（kind:key）表示、/ による属性インクリメンタルジャンプ、成功 activate の origin 学習",
+      "内部: コマンド解釈コアを Rust/WASM に移し、UI は表示とブラウザ API 実行に専念"
     ],
     "en": [
-      "nav: identity HUD (kind:key), / incremental attribute jump, learn successful activates per origin"
+      "nav: identity HUD (kind:key), / incremental attribute jump, learn successful activates per origin",
+      "Internal: command semantics now run in Rust/WASM; the UI focuses on display and browser I/O"
     ]
   }
 }

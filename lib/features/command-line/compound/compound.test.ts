@@ -1,8 +1,13 @@
-import { describe, it } from "node:test"
+import { before, describe, it } from "node:test"
 import assert from "node:assert/strict"
+import { ensureBmxtCoreForTests } from "../../bmxt-core/test-ensure-wasm.ts"
 import { lineHasAndOperator, parseAndSegments } from "./parse-and-segments.ts"
 import { parseCompoundSegments } from "./parse-compound-segments.ts"
 import { lineHasPipeOperator, parsePipeSegments } from "./parse-pipe-segments.ts"
+
+before(() => {
+  ensureBmxtCoreForTests()
+})
 import {
   classifyOutcomeFromLines,
   segmentFailure,
