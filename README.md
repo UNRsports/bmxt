@@ -29,6 +29,7 @@
   - [Tab picker — implementation (keyboard & reducer)](#tabs-tab-picker-impl)
   - [URL Lines (`http` / `https`)](#url-lines)
 - [Command Execution Architecture (Current)](#command-execution-architecture)
+  - [Prompt semantics (Rust SoT)](#prompt-semantics-sot)
   - [Inter-command vocabulary (closed IR)](#inter-command-vocabulary)
   - [`-list` output registry](#list-commands-registry)
   - [bmxtRule (inter-command stream)](#bmxt-rule)
@@ -200,7 +201,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 1. **First command, then second command** — Name the **first command** (e.g. `tabs`, `session`) and, when applicable, the **second command** next (e.g. `-list`, `-new`). Documentation and parsing follow that order.
 2. **No abbreviated spellings for first/second commands** — Do not register alternate short forms for either tier (e.g. do **not** map `-l` to `-list`). **Tab completion** should offer **canonical full tokens** only for this pattern. Older top-level aliases in the README (e.g. `help`/`?`) may remain for backward compatibility; **do not** add new short aliases when introducing **new** first/second families.
-3. **Enter when a second command is required** — If the first command is **not actionable** without a configured second command, pressing **Enter** with only the first token must show **usage or a placeholder** for the missing second token, then **restore the prompt** to `firstCommand ` (first command plus one trailing ASCII space) with the **cursor at the end**, ready to type the rest. Implement this through the shared **continuation** path (see **`.cursorrules`** and the first bullet under **[Command add procedure](#command-add-procedure)**), not one-off handlers per command.
+3. **Enter when a second command is required** — If the first command is **not actionable** without a configured second command, pressing **Enter** with only the first token must show **usage or a placeholder** for the missing second token, then **restore the prompt** to `firstCommand ` (first command plus one trailing ASCII space) with the **cursor at the end**, ready to type the rest. **Rust** returns `msgs` + `promptPrefix` (e.g. via `require_second_token` / `msgs_with_prompt`); the TS host only expands i18n and calls `setContinuationPrompt`. Do **not** invent Enter continuation in TypeScript (see **[Prompt semantics (Rust SoT)](#prompt-semantics-sot)** and **[Command add procedure](#command-add-procedure)**).
 
 <a id="command-list"></a>
 
@@ -869,10 +870,24 @@ prompt / RUN_CMD
   → { ty: lines | effects | ui | msgs }
        msgs → TS expand-msgs (+ optional promptPrefix → setContinuationPrompt)
        effects → applyChromeEffects (SW) or RUN_CMD round-trip
-       ui → applyUiAction (React host; opaque kinds only)
+       ui → applyUiAction (React host; opaque kinds only — no grammar re-parse)
 ```
 
-**Prompt semantics (SoT):** Rust owns usage/error **keys**, Enter **continuation** (`msgs.promptPrefix`), and incomplete `-setting` plans. TypeScript expands i18n, paints the log/prompt, and applies Chrome / opaque UiAction only. Live UI state (current page-active token, picker open/closed) may fill host sentinels before expand. Details: `_context/todo.md` §14. Inter-command channels: **[Inter-command vocabulary](#inter-command-vocabulary)**.
+<a id="prompt-semantics-sot"></a>
+
+### Prompt semantics (Rust SoT)
+
+**Current status (see `_context/todo.md` §14):** Phase **A** (msgs + `promptPrefix` Enter continuation) and Phase **B** (incomplete `tabs` / `dom` / `translate` `-setting` planned in Rust) are **done**. Phase **C** (WASM `complete(line, cursor)` / shrink IME command branches) and Phase **D** (remaining host key choice, e.g. help section lists) are **documented, not built**.
+
+| Owner | Responsibility |
+|-------|----------------|
+| **Rust (WASM)** | usage/error **keys**, Enter **continuation** (`msgs.promptPrefix`), incomplete `-setting` plans, any prompt-facing *choice* of what to show |
+| **TypeScript** | `expand-msgs` / React paint, opaque `applyUiAction`, Chrome `handlers/effects/*` |
+| **Host-only OK** | Live UI state (picker open/closed, current page-active / translate pair tokens via sentinels), Chrome list row data, IME *filter* UX |
+
+**Enter continuation:** lone first token (e.g. `tabs`) → Rust `msgs` + `promptPrefix: "tabs "` → host `setContinuationPrompt`. Generated `continuationPromptAfterLoneFirstToken` remains for **IME / compound eligibility** only — not for Enter.
+
+**Incomplete `-setting`:** e.g. `tabs -setting` / `dom -setting` / `translate -setting` → msgs + prefix; complete apply → UiAction with fields (`tabs_setting` `{ mode }`, `dom_setting` `{ mode }`, `translate_setting` `{ pair }`). Map: **`_context/map_command.csv`**. Inter-command channels: **[Inter-command vocabulary](#inter-command-vocabulary)**.
 
 **Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + [wasm-pack](https://rustwasm.github.io/wasm-pack/). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
 
@@ -1034,7 +1049,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional in-memory audit log; see **[Job execution](#job-execution)**
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on http(s) pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
-- **`lib/features/builtin-commands/`** — generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
+- **`lib/features/builtin-commands/`** — generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
 - **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
 
 <a id="job-execution"></a>
@@ -1077,7 +1092,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 
 
 - **Vocabulary first:** Follow **[Inter-command vocabulary](#inter-command-vocabulary)**. Start from **`manifest/templates/new-command.checklist.md`** (decision tree + checklists). Examples: **`command-reuse-effects.example.rs`**, **`command-reuse-ui-action.example.rs`**, **`command-list-producer.steps.md`**, **`pipe-consumer.steps.md`**.
-- **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens, **Enter** → placeholder + prompt restore `first ` when a second command is required). Continuation and second-token Tab lists come from generated **`command-subcommands.gen.ts`** (from manifest **`subcommands`**).
+- **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens). When a second token is required, **Enter** on the lone first token must return Rust **`msgs` + `promptPrefix`** (`require_second_token` / `msgs_with_prompt`) — do **not** add TS Enter continuation. Second-token **Tab** lists come from generated **`command-subcommands.gen.ts`** (manifest **`subcommands`**). See **[Prompt semantics (Rust SoT)](#prompt-semantics-sot)**.
 
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
 - **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Then implement **`run`** using a template under **`manifest/templates/`**.
@@ -1094,7 +1109,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 
 Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics live in **`crates/bmxt-core/src/cmd/<module>.rs`**; keep literals in sync—**`pnpm run verify:manifest`** checks each `head` appears in the Rust cmd file).
 
-**`pnpm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + lone-first-token continuation; includes **`isSecondToken`**). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
+**`pnpm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + IME/eligibility helpers such as **`continuationPromptAfterLoneFirstToken`** / **`isSecondToken`**). **Enter** continuation itself is owned by Rust (`promptPrefix`). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
 
 ##### How to add second/third tokens (checklist)
 
@@ -1115,6 +1130,8 @@ Follow **`manifest/templates/command-list-producer.steps.md`**. Summary:
 3. If the command needs Chrome APIs from the Service Worker, add manifest **`effects[]`** entry → **codegen** → **`handlers/effects/*.ts`** calling **`runPlainListForCommandId`**. If data lives only in the UI (like **`session`** / **`setting`**), use **`runtime: "ui"`** and **`tryRunPlainListCommand`**.
 4. New kinds: extend **`ListRecordKind`**, **`inter-command/vocabulary.ts`**, **`manifest/bmxt-rule.json`**, and **`from-list-result.ts`**.
 5. Update **`manifest/bmxt-codegen.json`**, **`crates/bmxt-core/src/cmd/<module>.rs`**, **`browse <list>`** routing if needed, i18n, this README, and **`_context/map_command.csv`**.
+
+**Architecture reminder:** Prompt-facing meaning (usage keys, `promptPrefix`, incomplete `-setting` plans) is **Rust/WASM**; TypeScript is the paint host + Chrome executor. See **[Prompt semantics (Rust SoT)](#prompt-semantics-sot)**.
 
 <a id="prompt-key-bindings"></a>
 
@@ -1208,7 +1225,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 - `lib/features/bmxt-core/` — TS host: `wasm-host.ts`, `dispatch.ts` (WASM call + msgs expand), registry metadata, tabs-picker wrappers
 - `lib/features/dispatch/` — Generated Effect/UiAction types + hand-written **`handlers/effects/`**
 - `lib/features/bmxt-window/shell/apply-ui-action.ts` — Opaque `UiActionIR` → React/UI effects
-- `lib/features/builtin-commands/` — Generated **`completion-fallback.ts`**, **`command-subcommands.gen.ts`**
+- `lib/features/builtin-commands/` — Generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`)
 - `lib/features/snapshot/` — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
@@ -1339,6 +1356,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [タブピッカー — 実装（キー配信とリデューサ）](#tabs-tab-picker-impl-ja)
   - [URL（`http` / `https` 行）](#url-lines-ja)
 - [コマンド実行アーキテクチャ（現状）](#command-execution-architecture-ja)
+  - [プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)
   - [コマンド間語彙（閉じた IR）](#inter-command-vocabulary-ja)
   - [`-list` 出力レジストリ](#list-commands-registry-ja)
   - [bmxtRule（コマンド間ストリーム）](#bmxt-rule-ja)
@@ -1511,7 +1529,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 1. **第一コマンド → 第二コマンド** — 先頭の **第一コマンド**（例: `tabs`, `session`）に続き、サブコマンドやフラグ形式の **第二コマンド**（例: `-list`, `-new`）がある場合は、その順で表記・解釈する。
 2. **第一・第二とも短縮形を設けない** — いずれの段でも `-list` を `-l` のように省略した別名は設けない。**Tab 補完**の対象は **正式な表記のトークン**に限る。README にある従来のトップレベル別名（例: `help`/`?`）は後方互換で残りうるが、**新規**の第一＋第二コマンド族では第一・第二いずれにも短縮を増やさない。
-3. **第二コマンドが必須のときの Enter** — 第二コマンドがないと第一コマンドを実質動かせない場合、**第一コマンドだけ**で **Enter** を押すと、不足している第二コマンドの **利用案内またはプレースホルダ**を表示したうえで、プロンプトを **`第一コマンド `**（末尾に半角スペース 1 つ）に戻し、**末尾にカーソル**を置いて続きの入力を待つ。これは **再利用可能な continuation** で実装する（リポジトリ直下の **`.cursorrules`** および **[コマンド追加手順](#command-add-procedure-ja)** の先頭箇条と整合させる）。
+3. **第二コマンドが必須のときの Enter** — 第二コマンドがないと第一コマンドを実質動かせない場合、**第一コマンドだけ**で **Enter** を押すと、不足している第二コマンドの **利用案内またはプレースホルダ**を表示したうえで、プロンプトを **`第一コマンド `**（末尾に半角スペース 1 つ）に戻し、**末尾にカーソル**を置いて続きの入力を待つ。**Rust** が `msgs` + `promptPrefix` を返す（`require_second_token` / `msgs_with_prompt` 等）。TS ホストは i18n 展開と `setContinuationPrompt` のみ。Enter 用 continuation を TypeScript で新設しない（**[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**・**[コマンド追加手順](#command-add-procedure-ja)**）。
 
 <a id="command-list-ja"></a>
 
@@ -2167,9 +2185,34 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 **一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。
 
-**実行境界:** `ensureBmxtCore` → WASM `run`/`classify` → `{ lines | effects | ui | msgs }`（`msgs` は TS の expand-msgs；任意の `promptPrefix` で continuation）。WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
+**実行境界:**
 
-**プロンプト意味の正本:** usage/error の **キー**、Enter **continuation**（`promptPrefix`）、不完全な `-setting` 計画は **Rust**。TS は i18n 展開・ログ／プロンプト描画・Chrome／不透明 UiAction 適用のみ。ライブ UI 状態（page-active 現在値など）は expand 前のホストセンチネル埋めのみ可。詳細: `_context/todo.md` §14。コマンド間経路は **[コマンド間語彙](#inter-command-vocabulary-ja)**。
+```
+Enter / RUN_CMD
+  → ensureBmxtCore → WASM run / classify
+  → { lines | effects | ui | msgs }
+       msgs → TS expand-msgs（任意の promptPrefix → setContinuationPrompt）
+       effects → Chrome 執行
+       ui → applyUiAction（描画／状態適用のみ・文法再解釈しない）
+```
+
+WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
+
+<a id="prompt-semantics-sot-ja"></a>
+
+### プロンプト意味の正本（Rust）
+
+**現状（`_context/todo.md` §14）:** Phase **A**（msgs + `promptPrefix` による Enter continuation）と Phase **B**（不完全な `tabs` / `dom` / `translate` `-setting` を Rust 計画）は **完了**。Phase **C**（WASM `complete(line, cursor)` / IME コマンド分岐の縮小）と Phase **D**（help 等の残るホスト側キー選択）は **todo 記載のみ・未実装**。
+
+| 担当 | 責務 |
+|------|------|
+| **Rust（WASM）** | usage/error の **キー**、Enter **continuation**（`promptPrefix`）、不完全 `-setting` 計画、プロンプトに「何を出すか」の決定 |
+| **TypeScript** | `expand-msgs` / React 描画、不透明 `applyUiAction`、Chrome `handlers/effects/*` |
+| **ホストのみ許容** | ライブ UI 状態（ピッカー開閉、page-active / 翻訳ペアの現在値＝センチネル埋め）、Chrome 列挙データ、IME のフィルタ UX |
+
+**Enter continuation:** 単独第一トークン（例 `tabs`）→ Rust の `msgs` + `promptPrefix: "tabs "` → ホスト `setContinuationPrompt`。生成ヘルパ `continuationPromptAfterLoneFirstToken` は **IME / compound eligibility 用**のみ（Enter では使わない）。
+
+**不完全 `-setting`:** 例 `tabs -setting` / `dom -setting` / `translate -setting` → msgs + prefix；適用完了 → フィールド付き UiAction。対応表: **`_context/map_command.csv`**。コマンド間経路: **[コマンド間語彙](#inter-command-vocabulary-ja)**。
 
 開発: Rust + wasm-pack、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
 
@@ -2310,7 +2353,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
 - **`entrypoints/bmxt-nav-overlay.content/`** — http(s) 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
-- **`lib/features/builtin-commands/`** — 補完・continuation の生成物
+- **`lib/features/builtin-commands/`** — Tab 補完・IME/eligibility 用生成物（Enter continuation の正本は Rust `promptPrefix`）
 - **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyChromeEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
 
 manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと **`pnpm run verify:manifest`** / **`pnpm run check:generated`** を実行し、必要なら **`pnpm run build`** してください。
@@ -2355,7 +2398,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 
 - **語彙優先:** **[コマンド間語彙](#inter-command-vocabulary-ja)** に従う。起点は **`manifest/templates/new-command.checklist.md`**（決定木 + チェックリスト）。例: **`command-reuse-effects.example.rs`**、**`command-reuse-ui-action.example.rs`**、**`command-list-producer.steps.md`**、**`pipe-consumer.steps.md`**。
-- **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。continuation と第二トークン Tab 候補は **`command-subcommands.gen.ts`**（manifest の **`subcommands`** から生成）。
+- **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。第二トークン必須のとき、単独第一トークンの **Enter** は Rust の **`msgs` + `promptPrefix`**（`require_second_token` / `msgs_with_prompt`）で返す — TS 側に Enter continuation を足さない。第二トークンの **Tab** 候補は **`command-subcommands.gen.ts`**（manifest **`subcommands`**）。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 - **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
 - **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
 - **再利用パス（推奨）:** 既存 **`ChromeEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
@@ -2379,7 +2422,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 3. 新 kind は vocabulary / **`bmxt-rule.json`** / adapter まで一式。
 4. README / **`_context/map_command.csv`** / i18n を更新。
 
-**アーキテクチャ:** コマンド意味論は **Rust/WASM（`crates/bmxt-core`）**、Chrome / UI 執行は **TypeScript**。正本は **manifest + codegen**。
+**アーキテクチャ:** コマンド意味論・プロンプト意味（usage キー / `promptPrefix` / 不完全 `-setting`）は **Rust/WASM（`crates/bmxt-core`）**、描画ホストと Chrome 執行は **TypeScript**。正本は **manifest + codegen**。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 
 <a id="prompt-key-bindings-ja"></a>
 
@@ -2470,7 +2513,7 @@ pnpm run dev
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
 - `crates/bmxt-core/` — Rust/WASM コマンドコア；`lib/features/bmxt-core/` — TS ホスト（`wasm-host` / `dispatch` / tabs-picker ラッパ）
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
-- `lib/features/builtin-commands/` — **`completion-fallback.ts`**・**`command-subcommands.gen.ts`**（manifest から codegen）
+- `lib/features/builtin-commands/` — Tab / IME 用生成物（`completion-fallback.ts`・`command-subcommands.gen.ts`）。Enter continuation の正本は Rust `promptPrefix`
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`）
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
