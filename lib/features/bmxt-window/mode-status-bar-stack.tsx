@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { KeyboardEvent, ReactNode, RefObject } from "react"
 import { DomStatusBar } from "../dom/dom-status-bar"
 import { NavStatusBar } from "../nav"
 import { SearchStatusBar } from "../search/search-status-bar"
@@ -24,6 +24,9 @@ type NavProps = {
   jumpMatchCount?: number
   targetLabel?: string | null
   activateError?: string | null
+  jumpInputRef?: RefObject<HTMLInputElement | null>
+  onJumpQueryChange?: (value: string) => void
+  onJumpInputKeyDown?: (e: KeyboardEvent<HTMLInputElement>) => void
   tabTitle: string | null
   overlayError: string | null
 }
@@ -177,6 +180,9 @@ export function ModeStatusBarStack({
             jumpMatchCount={nav.jumpMatchCount}
             targetLabel={nav.targetLabel}
             activateError={nav.activateError}
+            jumpInputRef={nav.jumpInputRef}
+            onJumpQueryChange={nav.onJumpQueryChange}
+            onJumpInputKeyDown={nav.onJumpInputKeyDown}
             tabTitle={nav.tabTitle}
             overlayError={nav.overlayError}
           />

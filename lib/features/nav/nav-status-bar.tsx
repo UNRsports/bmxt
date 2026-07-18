@@ -1,3 +1,9 @@
+import {
+  useEffect,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject
+} from "react"
 import { navActivateErrorLabel, navStatusHint } from "../setting/i18n/resolvers"
 import { tNav } from "../setting/i18n/ns/nav"
 import { useUiLocale } from "../setting/use-ui-settings"
@@ -16,6 +22,10 @@ type Props = {
   activateError?: string | null
   tabTitle: string | null
   overlayError?: string | null
+  /** EN: Detail-bar IME field — updates jump query (composition-safe). */
+  onJumpQueryChange?: (value: string) => void
+  onJumpInputKeyDown?: (e: ReactKeyboardEvent<HTMLInputElement>) => void
+  jumpInputRef?: RefObject<HTMLInputElement | null>
 }
 
 export function NavStatusBar({
@@ -31,9 +41,32 @@ export function NavStatusBar({
   targetLabel = null,
   activateError = null,
   tabTitle,
-  overlayError = null
+  overlayError = null,
+  onJumpQueryChange,
+  onJumpInputKeyDown,
+  jumpInputRef
 }: Props) {
   const locale = useUiLocale()
+  const localJumpInputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = jumpInputRef ?? localJumpInputRef
+
+  useEffect(() => {
+    if (!jumpMode) {
+      return
+    }
+    const el = inputRef.current
+    if (!el) {
+      return
+    }
+    el.focus()
+    const len = el.value.length
+    try {
+      el.setSelectionRange(len, len)
+    } catch {
+      /* ignore */
+    }
+  }, [jumpMode, inputRef])
+
   if (!armed) {
     return null
   }
@@ -77,17 +110,14 @@ export function NavStatusBar({
           : menuOpen
             ? "menu"
             : "idle"
+  const matchPart =
+    jumpMode && jumpQuery.length > 0 && jumpMatchCount === 0
+      ? tNav("nav.jump.noMatch", locale)
+      : jumpMode && jumpMatchCount > 0
+        ? String(jumpMatchCount)
+        : ""
   let metaExtra = ""
-  if (jumpMode) {
-    const q = jumpQuery.length > 0 ? jumpQuery : ""
-    const matchPart =
-      jumpQuery.length > 0 && jumpMatchCount === 0
-        ? tNav("nav.jump.noMatch", locale)
-        : jumpMatchCount > 0
-          ? `${jumpMatchCount}`
-          : ""
-    metaExtra = q.length > 0 ? `/${q}${matchPart ? ` · ${matchPart}` : ""}` : "/"
-  } else if (targetLabel && targetLabel.length > 0) {
+  if (!jumpMode && targetLabel && targetLabel.length > 0) {
     metaExtra = targetLabel
   }
   const metaLabel = metaExtra.length > 0 ? `${tabLabel} · ${metaExtra}` : tabLabel
@@ -101,6 +131,38 @@ export function NavStatusBar({
         {modeLabel}
       </span>
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--meta">{metaLabel}</span>
+      {jumpMode ? (
+        <span className="bmxt-mode-status-seg bmxt-mode-status-seg--jump">
+          <span className="bmxt-mode-status-jump-prefix" aria-hidden="true">
+            /
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            className="bmxt-mode-status-jump-input"
+            value={jumpQuery}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
+            maxLength={200}
+            aria-label={tNav("nav.jump.inputAria", locale)}
+            placeholder={tNav("nav.jump.inputPlaceholder", locale)}
+            onChange={(e) => {
+              onJumpQueryChange?.(e.target.value)
+            }}
+            onCompositionEnd={(e) => {
+              onJumpQueryChange?.(e.currentTarget.value)
+            }}
+            onKeyDown={(e) => {
+              onJumpInputKeyDown?.(e)
+            }}
+          />
+          {matchPart.length > 0 ? (
+            <span className="bmxt-mode-status-jump-match">{matchPart}</span>
+          ) : null}
+        </span>
+      ) : null}
       <span className="bmxt-mode-status-seg bmxt-mode-status-seg--hint">
         {navStatusHint(locale, hintMode)}
       </span>

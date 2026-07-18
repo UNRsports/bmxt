@@ -104,8 +104,16 @@
     "en": "↑↓←→ move · / jump · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
   },
   "nav.status.jump": {
-    "ja": "/ 属性ジャンプ · 文字入力で絞込 · ↑↓ 候補 · Enter 実行 · Esc 解除（overlay は維持）",
-    "en": "/ attribute jump · type to filter · ↑↓ matches · Enter activate · Esc leave jump (overlay stays)"
+    "ja": "詳細バーで入力（IME 可）· ↑↓ 候補 · Enter 実行 · Esc 解除",
+    "en": "Type in the detail bar (IME OK) · ↑↓ matches · Enter activate · Esc leave"
+  },
+  "nav.jump.inputAria": {
+    "ja": "nav インクリメンタルジャンプの検索",
+    "en": "nav incremental jump search"
+  },
+  "nav.jump.inputPlaceholder": {
+    "ja": "リンク名・alt・URL 断片…",
+    "en": "link text, alt, URL fragment…"
   },
   "nav.activate.error.inert": {
     "ja": "この要素は操作できません",

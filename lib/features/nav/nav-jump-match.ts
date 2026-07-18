@@ -3,6 +3,8 @@
  * JA: 識別キー（＋学習済み）に対するインクリメンタル一致。
  */
 
+import { normalizeForMatch } from "../format/normalize-for-match.ts"
+
 export type NavJumpCandidate = {
   index: number
   matchKeys: string[]
@@ -16,7 +18,11 @@ export type NavJumpMatchResult = {
 }
 
 function normalizeQuery(query: string): string {
-  return query.replace(/\s+/g, " ").trim().toLowerCase()
+  return normalizeForMatch(query.replace(/\s+/g, " ").trim())
+}
+
+function normalizeKey(key: string): string {
+  return normalizeForMatch(key)
 }
 
 function bestKeyScore(matchKeys: string[], q: string): number {
@@ -25,7 +31,7 @@ function bestKeyScore(matchKeys: string[], q: string): number {
   }
   let best = 0
   for (const key of matchKeys) {
-    const k = key.toLowerCase()
+    const k = normalizeKey(key)
     if (k === q) {
       best = Math.max(best, 100)
       continue
@@ -55,7 +61,9 @@ export function rankNavJumpMatches(
     return { rankedIndices: candidates.map((c) => c.index) }
   }
 
-  const learnedLower = learnedKeys.map((k) => k.toLowerCase()).filter((k) => k.length > 0)
+  const learnedLower = learnedKeys
+    .map((k) => normalizeKey(k))
+    .filter((k) => k.length > 0)
   const learnedHitsQuery = learnedLower.filter((k) => k.includes(q) || q.includes(k))
 
   type Scored = { index: number; score: number; confidence: number }

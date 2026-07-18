@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject
+} from "react"
 import {
   canScriptHttpHostPages,
   requestOptionalHttpHostAccess
@@ -236,6 +243,9 @@ export function useNavMode({
   jumpQuery: string
   targetLabel: string | null
   jumpMatchCount: number
+  jumpInputRef: RefObject<HTMLInputElement | null>
+  onJumpQueryChange: (value: string) => void
+  onJumpInputKeyDown: (e: ReactKeyboardEvent<HTMLInputElement>) => void
   toggleActive: () => void
   teardownAll: () => Promise<void>
   navKeyboardEnabled: boolean
@@ -249,6 +259,7 @@ export function useNavMode({
   const [targetLabel, setTargetLabel] = useState<string | null>(null)
   const [jumpMatchCount, setJumpMatchCount] = useState(0)
   const [activateError, setActivateError] = useState<string | null>(null)
+  const jumpInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setNavOverlayLabelsForRun(uiLocale)
@@ -304,6 +315,10 @@ export function useNavMode({
     setJumpMode(false)
     setJumpQuery("")
     setJumpMatchCount(0)
+    const jumpEl = jumpInputRef.current
+    if (jumpEl && document.activeElement === jumpEl) {
+      jumpEl.blur()
+    }
   }, [])
 
   const exitTypingMode = useCallback((tabId: number | null) => {
@@ -534,6 +549,62 @@ export function useNavMode({
     dispatchEnterTyping({ multiline, initialValue })
   }, [])
 
+  const activateJumpSelection = useCallback(() => {
+    const tabId = lastOverlayTabRef.current
+    if (tabId === null) {
+      return
+    }
+    void clickNavOverlayOnTab(tabId).then((res) => {
+      applyNavInjectState(res, navUiSetters, navUiRefs)
+      applyTargetFromResult(res)
+      void rememberActivation(res)
+      if (res.ok && res.editableFocused) {
+        clearJumpMode()
+        enterTypingFromClick(res)
+      } else if (res.ok && !res.activateError) {
+        clearJumpMode()
+      }
+    })
+  }, [applyTargetFromResult, clearJumpMode, enterTypingFromClick, rememberActivation])
+
+  const onJumpQueryChange = useCallback(
+    (value: string) => {
+      const next = value.length > 200 ? value.slice(0, 200) : value
+      jumpQueryRef.current = next
+      setJumpQuery(next)
+      void runJumpQuery(next)
+    },
+    [runJumpQuery]
+  )
+
+  const onJumpInputKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLInputElement>) => {
+      const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean }
+      if (native.isComposing || e.key === "Process") {
+        return
+      }
+      if (e.key === "Escape") {
+        e.preventDefault()
+        e.stopPropagation()
+        clearJumpMode()
+        return
+      }
+      if (e.key === "Enter") {
+        e.preventDefault()
+        e.stopPropagation()
+        activateJumpSelection()
+        return
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault()
+        e.stopPropagation()
+        const delta = e.key === "ArrowDown" ? 1 : -1
+        void runJumpQuery(jumpQueryRef.current, delta)
+      }
+    },
+    [activateJumpSelection, clearJumpMode, runJumpQuery]
+  )
+
   useEffect(() => {
     if (!armed) {
       void teardownAll()
@@ -671,76 +742,23 @@ export function useNavMode({
       }
 
       if (jumpModeRef.current) {
-        const ev = e as KeyboardEvent & { isComposing?: boolean }
-        if (ev.isComposing && e.key !== "Escape") {
-          return
-        }
+        const jumpEl = jumpInputRef.current
+        const jumpFocused = jumpEl != null && document.activeElement === jumpEl
         if (e.key === "Escape") {
           e.preventDefault()
           e.stopPropagation()
           clearJumpMode()
           return
         }
-        if (e.key === "Enter") {
-          e.preventDefault()
-          e.stopPropagation()
-          void clickNavOverlayOnTab(tabId).then((res) => {
-            applyNavResult(res)
-            void rememberActivation(res)
-            if (res.ok && res.editableFocused) {
-              clearJumpMode()
-              enterTypingFromClick(res)
-            } else if (res.ok && !res.activateError) {
-              clearJumpMode()
-            }
-          })
-          return
-        }
-        if (e.key === "Backspace") {
-          e.preventDefault()
-          e.stopPropagation()
-          const next = jumpQueryRef.current.slice(0, -1)
-          jumpQueryRef.current = next
-          setJumpQuery(next)
-          void runJumpQuery(next)
-          return
-        }
-        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-          e.preventDefault()
-          e.stopPropagation()
-          const delta = e.key === "ArrowDown" ? 1 : -1
-          void runJumpQuery(jumpQueryRef.current, delta)
-          return
-        }
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-          e.preventDefault()
-          e.stopPropagation()
-          clearJumpMode()
-          const delta = arrowDelta(e.key)
-          if (delta) {
-            void moveNavOverlayOnTab(tabId, delta.dx, delta.dy).then((res) => {
-              if (res.ok) {
-                savePosition(tabId, { x: res.x, y: res.y })
-              }
-              applyNavResult(res)
-            })
+        if (!jumpFocused) {
+          if (e.key !== "Alt" && e.key !== "Control") {
+            e.preventDefault()
+            e.stopPropagation()
+            jumpEl?.focus()
           }
           return
         }
-        if (e.key === "Alt" || e.key === "Control" || e.ctrlKey || e.metaKey) {
-          return
-        }
-        if (e.key.length === 1) {
-          e.preventDefault()
-          e.stopPropagation()
-          const next = jumpQueryRef.current + e.key
-          if (next.length > 200) {
-            return
-          }
-          jumpQueryRef.current = next
-          setJumpQuery(next)
-          void runJumpQuery(next)
-        }
+        /* EN: Jump IME input is focused — let composition / printable reach the field. */
         return
       }
 
@@ -866,6 +884,9 @@ export function useNavMode({
         setJumpQuery("")
         setActivateError(null)
         void runJumpQuery("")
+        queueMicrotask(() => {
+          jumpInputRef.current?.focus()
+        })
         return
       }
 
@@ -923,6 +944,9 @@ export function useNavMode({
     jumpQuery,
     targetLabel,
     jumpMatchCount,
+    jumpInputRef,
+    onJumpQueryChange,
+    onJumpInputKeyDown,
     toggleActive,
     teardownAll,
     navKeyboardEnabled,

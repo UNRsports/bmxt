@@ -437,11 +437,10 @@ Saved snapshots are searchable with **`search -list --snapshot`** (included in *
 | Key | Effect |
 |-----|--------|
 | **/** | Enter jump mode (overlay stays **ON**; status shows **`jump`**) |
-| printable | Narrow candidates by substring match on identity keys |
+| printable / IME | Narrow candidates in the **detail-bar** search field (Japanese IME composition supported) |
 | **↑ / ↓** | Cycle among current matches |
-| **Enter** | Activate the highlighted match (same rules as normal **Enter**) |
+| **Enter** | Activate the highlighted match (ignored while IME is composing) |
 | **Esc** | Leave jump mode (overlay stays **ON**) |
-| **← / →** | Leave jump mode and move spatially |
 
 This is **not** a Vimium-style full-page hint overlay; it is explore-with-HUD then reuse-by-attribute.
 
@@ -1648,11 +1647,10 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 | キー | 動作 |
 |------|------|
 | **/** | ジャンプモードへ（オーバーレイは **ON** のまま。ステータスは **`jump`**） |
-| 文字入力 | 識別キーの部分一致で候補を絞り、先頭候補へカーソル移動 |
+| 文字入力 / IME | **詳細バー**の検索欄で候補を絞込（日本語 IME の変換に対応） |
 | **↑ / ↓** | 一致候補を循環 |
-| **Enter** | ハイライト中の候補を activate（通常の **Enter** と同じ規則） |
+| **Enter** | ハイライト中の候補を activate（IME 変換中は無視） |
 | **Esc** | ジャンプ解除（オーバーレイは **ON** のまま） |
-| **← / →** | ジャンプ解除して空間移動 |
 
 Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性で再到達**が目的。
 

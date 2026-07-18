@@ -634,6 +634,50 @@ body {
   font-size: 10px;
 }
 
+.bmxt-mode-status-seg--jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 10rem;
+  max-width: min(28rem, 50vw);
+  color: #c9d1d9;
+}
+
+.bmxt-mode-status-jump-prefix {
+  font-weight: 600;
+  color: #58a6ff;
+  user-select: none;
+}
+
+.bmxt-mode-status-jump-input {
+  flex: 1;
+  min-width: 6rem;
+  max-width: 22rem;
+  margin: 0;
+  padding: 1px 6px;
+  border: 1px solid #388bfd;
+  border-radius: 3px;
+  background: #0d1117;
+  color: #e6edf3;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.35;
+  outline: none;
+  user-select: text;
+}
+
+.bmxt-mode-status-jump-input:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.35);
+}
+
+.bmxt-mode-status-jump-match {
+  flex-shrink: 0;
+  color: #8b949e;
+  font-size: 10px;
+  user-select: none;
+}
+
 .bmxt-prompt-line--nav-typing .bmxt-prompt-field {
   outline: 1px solid #58a6ff;
   outline-offset: 1px;

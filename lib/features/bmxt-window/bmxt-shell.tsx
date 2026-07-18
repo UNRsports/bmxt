@@ -476,6 +476,9 @@ export function BmxtShell({
     jumpQuery: navJumpQuery,
     targetLabel: navTargetLabel,
     jumpMatchCount: navJumpMatchCount,
+    jumpInputRef: navJumpInputRef,
+    onJumpQueryChange: navOnJumpQueryChange,
+    onJumpInputKeyDown: navOnJumpInputKeyDown,
     toggleActive: toggleNavActive,
     teardownAll: teardownNav,
     navKeyboardEnabled,
@@ -1144,6 +1147,9 @@ export function BmxtShell({
             jumpMatchCount: navJumpMatchCount,
             targetLabel: navTargetLabel,
             activateError: navActivateError,
+            jumpInputRef: navJumpInputRef,
+            onJumpQueryChange: navOnJumpQueryChange,
+            onJumpInputKeyDown: navOnJumpInputKeyDown,
             tabTitle: navCurrentTabTitle,
             overlayError: navOverlayError
           }}
