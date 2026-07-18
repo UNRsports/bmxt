@@ -1,4 +1,5 @@
-# Engine: command semantics = crates/bmxt-core (Rust/WASM); TS = effects + UiAction apply + i18n.
+# Engine: command semantics = crates/bmxt-core (Rust/WASM); TS = paint + Chrome effects + UiAction apply + i18n expand.
+# Prompt semantics SoT = Rust (usage/error keys, msgs.promptPrefix continuation, incomplete -setting plans). Enter must not invent continuation in TS.
 # Inter-command vocabulary (closed): DispatchBundle | ListResult(bmxt-list/1) | BmxtRuleStream(bmxt-rule/1) | exit status — see lib/features/command-line/inter-command/ and manifest/templates/.
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
@@ -21,8 +22,8 @@ group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `g
 help,,,,?,"help, ?",UiAction `show_help` または lines。,
 browse,,,,,browse <list-command>,UiAction `browse` → ListResult kind 族で列を開く。,語彙: UiAction browse + list kinds
 tabs,-list,,none,,tabs -list [-url] | tabs -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
-tabs,-setting,,none,,（同上）,UiAction `tabs_setting` 系 continuation。,
-tabs,-setting,-page-active,none,,tabs -setting -page-active --auto | --manual,第三 `-page-active` continuation。,
+tabs,-setting,,none,,（同上）,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。,
+tabs,-setting,-page-active,none,,tabs -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tabs -setting -page-active `。,
 tabs,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。,
 tabs,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。,
 tabs,-list,-url,none,,（同上）,`-url` 表示。,
@@ -33,7 +34,7 @@ nav,-enter,,none,,nav -enter | nav -exit,UiAction `nav_arm`。,
 nav,-exit,,none,,（同上）,UiAction `nav_disarm`。,
 translate,-on,,none,,translate -on | translate -off | translate -setting,UiAction `translate_on`。,
 translate,-off,,none,,（同上）,UiAction `translate_off`。,
-translate,-setting,,none,,（同上）,continuation → UiAction `translate_setting`。,
+translate,-setting,,none,,（同上）,不完全: msgs + promptPrefix。完了: UiAction `translate_setting` { pair }。,
 translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。,
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。,
 setting,,,,,setting -list | setting -exit -list,continuation `setting `。,

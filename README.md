@@ -867,10 +867,12 @@ prompt / RUN_CMD
   → ensureBmxtCore()  (lazy WASM init; budget: bmxt_core_bg.wasm ≤ 400 KiB)
   → run(line, locale) / classify  (Rust WASM)
   → { ty: lines | effects | ui | msgs }
-       msgs → TS i18n expand (tCmd / tHelp / …)
+       msgs → TS expand-msgs (+ optional promptPrefix → setContinuationPrompt)
        effects → applyChromeEffects (SW) or RUN_CMD round-trip
        ui → applyUiAction (React host; opaque kinds only)
 ```
+
+**Prompt semantics (SoT):** Rust owns usage/error **keys**, Enter **continuation** (`msgs.promptPrefix`), and incomplete `-setting` plans. TypeScript expands i18n, paints the log/prompt, and applies Chrome / opaque UiAction only. Live UI state (current page-active token, picker open/closed) may fill host sentinels before expand. Details: `_context/todo.md` §14. Inter-command channels: **[Inter-command vocabulary](#inter-command-vocabulary)**.
 
 **Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + [wasm-pack](https://rustwasm.github.io/wasm-pack/). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
 
@@ -2165,7 +2167,11 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 
 **一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。
 
-**実行境界:** `ensureBmxtCore` → WASM `run`/`classify` → `{ lines | effects | ui | msgs }`（`msgs` は TS の i18n で展開）。WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。開発: Rust + wasm-pack、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
+**実行境界:** `ensureBmxtCore` → WASM `run`/`classify` → `{ lines | effects | ui | msgs }`（`msgs` は TS の expand-msgs；任意の `promptPrefix` で continuation）。WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
+
+**プロンプト意味の正本:** usage/error の **キー**、Enter **continuation**（`promptPrefix`）、不完全な `-setting` 計画は **Rust**。TS は i18n 展開・ログ／プロンプト描画・Chrome／不透明 UiAction 適用のみ。ライブ UI 状態（page-active 現在値など）は expand 前のホストセンチネル埋めのみ可。詳細: `_context/todo.md` §14。コマンド間経路は **[コマンド間語彙](#inter-command-vocabulary-ja)**。
+
+開発: Rust + wasm-pack、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
 
 タブピッカー計画は WASM 経由の **`runTabsPickerReduce`** 等（詳細は **`tabs`** の **タブピッカー — 実装**）。
 

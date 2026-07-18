@@ -38,10 +38,27 @@ pub fn require_second_token(
         for key in usage_keys {
             keys.push(msg_key(key));
         }
-        return Err(msgs(keys));
+        return Err(crate::ir::msgs_with_prompt(
+            keys,
+            format!("{canonical} "),
+        ));
     };
     if !is_second_token(canonical, first) {
         return Err(unknown_option(canonical, first, usage_keys));
     }
     Ok(normalize_token(first))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn require_second_token_emits_prompt_prefix() {
+        let err = require_second_token("tabs", &["tabs".to_string()], &["cmd.tabs.usage.line1"])
+            .expect_err("missing second");
+        let raw = serde_json::to_string(&err).unwrap();
+        assert!(raw.contains(r#""promptPrefix":"tabs ""#), "{raw}");
+        assert!(raw.contains("cmd.common.availableOptions"), "{raw}");
+    }
 }

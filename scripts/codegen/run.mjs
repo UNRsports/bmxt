@@ -115,15 +115,15 @@ const UI_ACTIONS = [
   { kind: "group_new_from_selection" },
   { kind: "translate_on" },
   { kind: "translate_off" },
-  { kind: "translate_setting" },
+  { kind: "translate_setting", fields: { pair: "string" } },
   { kind: "snapshot_save", fields: { line: "string" } },
   { kind: "setting_list" },
   { kind: "setting_exit_list" },
   { kind: "tabs_exit_list" },
-  { kind: "tabs_setting" },
+  { kind: "tabs_setting", fields: { mode: "string" } },
   { kind: "search_exit_list" },
   { kind: "dom_exit_list" },
-  { kind: "dom_setting" },
+  { kind: "dom_setting", fields: { mode: "string" } },
   { kind: "browse", fields: { line: "string" } },
   { kind: "picker_pass" }
 ]
@@ -173,6 +173,8 @@ export type DispatchBundle = {
   effects?: ChromeEffect[]
   action?: UiActionIR
   msgs?: DispatchMsg[]
+  /** EN: Optional prompt restore after msgs (Rust prompt semantic SoT). */
+  promptPrefix?: string
 }
 `
   return header.endsWith("\n") ? header : header + "\n"

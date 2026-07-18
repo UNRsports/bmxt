@@ -20,7 +20,15 @@ pub enum DispatchBundle {
     #[serde(rename = "ui")]
     Ui { action: UiAction },
     #[serde(rename = "msgs")]
-    Msgs { msgs: Vec<Msg> },
+    Msgs {
+        msgs: Vec<Msg>,
+        #[serde(
+            default,
+            skip_serializing_if = "Option::is_none",
+            rename = "promptPrefix"
+        )]
+        prompt_prefix: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,7 +59,7 @@ pub enum UiAction {
     #[serde(rename = "translate_off")]
     TranslateOff,
     #[serde(rename = "translate_setting")]
-    TranslateSetting,
+    TranslateSetting { pair: String },
     #[serde(rename = "snapshot_save")]
     SnapshotSave { line: String },
     #[serde(rename = "setting_list")]
@@ -61,13 +69,13 @@ pub enum UiAction {
     #[serde(rename = "tabs_exit_list")]
     TabsExitList,
     #[serde(rename = "tabs_setting")]
-    TabsSetting,
+    TabsSetting { mode: String },
     #[serde(rename = "search_exit_list")]
     SearchExitList,
     #[serde(rename = "dom_exit_list")]
     DomExitList,
     #[serde(rename = "dom_setting")]
-    DomSetting,
+    DomSetting { mode: String },
     #[serde(rename = "browse")]
     Browse { line: String },
     #[serde(rename = "picker_pass")]
@@ -87,7 +95,17 @@ pub fn ui(action: UiAction) -> DispatchBundle {
 }
 
 pub fn msgs(msgs: Vec<Msg>) -> DispatchBundle {
-    DispatchBundle::Msgs { msgs }
+    DispatchBundle::Msgs {
+        msgs,
+        prompt_prefix: None,
+    }
+}
+
+pub fn msgs_with_prompt(msgs: Vec<Msg>, prompt_prefix: impl Into<String>) -> DispatchBundle {
+    DispatchBundle::Msgs {
+        msgs,
+        prompt_prefix: Some(prompt_prefix.into()),
+    }
 }
 
 pub fn msg_key(key: &str) -> Msg {

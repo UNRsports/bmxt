@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn unknown_command_returns_msg() {
         match run_line("notacommand") {
-            DispatchBundle::Msgs { msgs } => {
+            DispatchBundle::Msgs { msgs, .. } => {
                 assert_eq!(msgs[0].key, "cmd.error.unknownCommand");
             }
             other => panic!("expected msgs, got {other:?}"),

@@ -1,10 +1,12 @@
 import type { DispatchMsg } from "../dispatch/effect-types"
 import type { MessageVars } from "../setting/i18n/format-message"
 import { tCmd, type CmdMessageKey } from "../setting/i18n/ns/cmd"
+import { tDom, type DomMessageKey } from "../setting/i18n/ns/dom"
 import { tHelp, type HelpMessageKey } from "../setting/i18n/ns/help"
 import { tNav, type NavMessageKey } from "../setting/i18n/ns/nav"
 import { tSetting, type SettingMessageKey } from "../setting/i18n/ns/setting"
 import { tTabs, type TabsMessageKey } from "../setting/i18n/ns/tabs"
+import { tTranslate, type TranslateMessageKey } from "../setting/i18n/ns/translate"
 import type { UiLocale } from "../setting/locale"
 
 function messageVars(params: DispatchMsg["params"]): MessageVars | undefined {
@@ -41,6 +43,12 @@ export function expandDispatchMsg(msg: DispatchMsg, locale: UiLocale): string[] 
   }
   if (key.startsWith("nav.")) {
     return [tNav(key as NavMessageKey, locale, vars)]
+  }
+  if (key.startsWith("dom.")) {
+    return [tDom(key as DomMessageKey, locale, vars)]
+  }
+  if (key.startsWith("translate.")) {
+    return [tTranslate(key as TranslateMessageKey, locale, vars)]
   }
   return [key]
 }

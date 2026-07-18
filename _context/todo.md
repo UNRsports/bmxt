@@ -895,3 +895,50 @@ Phase 2（SW pilot） ──→ Phase 3（全 cmd）
 - [x] Chrome / DOM / React は従来どおり TS のみ
 - [x] 起動・初回コマンドが予算内；`verify` / `tsc` / `test` / `build` / Rust test 緑
 - [x] README に境界図と開発手順（EN + JA）
+
+---
+
+## 14. プロンプト意味内容の正本 = Rust / TS = 描画ホスト + Chrome 執行器
+
+### 14.1 境界
+
+| 担当 | 責務 |
+|------|------|
+| **Rust（WASM）** | usage/error の **キー選択**、continuation **prefix**、不完全 `-setting` 計画、プロンプトに「何を出すか」の決定 |
+| **TS** | `expand-msgs` / React 描画、opaque `UiAction` 適用、Chrome `handlers/effects/*` |
+| **ホストのみ許容** | ピッカー開閉など **ライブ UI 状態**に依存する文言、Chrome 列挙データ、IME のフィルタ UX |
+
+コマンド間連絡は閉じた語彙（`DispatchBundle` / `ListResult` / `bmxtRule` / exit status）。索引: `lib/features/command-line/inter-command/`。
+
+```
+Enter → ensureBmxtCore → WASM run
+  → msgs (+ optional promptPrefix) | effects | ui
+       msgs → TS expand-msgs → ログ描画 + promptPrefix なら setContinuationPrompt
+       effects → Chrome 執行
+       ui → applyUiAction（描画／状態適用のみ・文法再解釈しない）
+```
+
+### 14.2 Phase A — msgs + `promptPrefix`（Enter continuation）
+
+- [x] `DispatchBundle::Msgs` に optional `promptPrefix`
+- [x] `require_second_token` が欠けた第二トークンで msgs + `"{canonical} "`
+- [x] Enter 経路から `continuationPromptAfterLoneFirstToken` 事後付与を削除
+- [x] ホスト英語エラーを i18n キー化
+
+### 14.3 Phase B — deep incomplete `-setting` を Rust 計画化
+
+- [x] `tabs` / `dom` / `translate` の不完全チェーンは msgs + promptPrefix（または適用専用 UiAction）
+- [x] `apply-ui-action` は不完全系の再パースをしない（適用のみ）
+- [ ] compound eligibility の parse-* 依存は Phase C で WASM 寄せ（残件）
+
+### 14.4 Phase C — 補完候補コンテンツ（未着手）
+
+- [ ] WASM `complete(line, cursor)`（第一〜第三固定トークン）
+- [ ] `ime-token-picker` のコマンド名分岐を縮小／廃止
+- [ ] `bmxt-candidate.json` を runtime エンジンとして接続または退役方針を確定
+
+### 14.5 Phase D — 残るキー選択の掃除（未着手）
+
+- [ ] help セクションキー列を Rust から msgs で返す
+- [ ] browse / snapshot 等ホスト経路のキー選択を msgs に寄せる
+- [ ] grep: expand-msgs / codegen apply 以外でコマンド名からプロンプト文言を選んでいないこと

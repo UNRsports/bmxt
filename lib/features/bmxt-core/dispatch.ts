@@ -1,14 +1,27 @@
-import type { DispatchBundle } from "../dispatch"
+import type { DispatchBundle, DispatchMsg } from "../dispatch"
 import { getRunLocale, setRunLocale } from "../setting/i18n/run-locale"
+import { tError } from "../setting/i18n/ns/error"
 import type { UiLocale } from "../setting/locale"
 import { expandDispatchMsgs } from "./expand-msgs"
 import { isBmxtCoreReady, wasmRun } from "./wasm-host"
 
-function normalizeBundle(bundle: DispatchBundle, locale: UiLocale): DispatchBundle {
+export type RunDispatchOptions = {
+  /** EN: Optional enrichment of msgs params (host live state) before expand. */
+  enrichMsgs?: (msgs: DispatchMsg[]) => DispatchMsg[]
+}
+
+function normalizeBundle(
+  bundle: DispatchBundle,
+  locale: UiLocale,
+  enrichMsgs?: (msgs: DispatchMsg[]) => DispatchMsg[]
+): DispatchBundle {
   if (bundle.ty === "msgs") {
+    const rawMsgs = bundle.msgs ?? []
+    const msgs = enrichMsgs ? enrichMsgs(rawMsgs) : rawMsgs
     return {
       ty: "lines",
-      lines: expandDispatchMsgs(bundle.msgs ?? [], locale)
+      lines: expandDispatchMsgs(msgs, locale),
+      promptPrefix: bundle.promptPrefix
     }
   }
   return bundle
@@ -24,7 +37,11 @@ export function parseDispatchJson(raw: string): DispatchBundle {
     case "ui":
       return { ty: "ui", action: o.action ?? { kind: "picker_pass" } }
     case "msgs":
-      return { ty: "msgs", msgs: o.msgs ?? [] }
+      return {
+        ty: "msgs",
+        msgs: o.msgs ?? [],
+        promptPrefix: o.promptPrefix
+      }
     default:
       throw new Error(`BMXt: unknown dispatch ty ${(o as { ty?: string }).ty}`)
   }
@@ -41,7 +58,11 @@ export function dispatchFull(line: string, locale?: UiLocale): string {
   return wasmRun(line, loc)
 }
 
-export function runDispatch(line: string, locale?: UiLocale): DispatchBundle {
+export function runDispatch(
+  line: string,
+  locale?: UiLocale,
+  options?: RunDispatchOptions
+): DispatchBundle {
   if (!isBmxtCoreReady()) {
     throw new Error("BMXt core WASM not initialized; call ensureBmxtCore() first")
   }
@@ -52,14 +73,14 @@ export function runDispatch(line: string, locale?: UiLocale): DispatchBundle {
   try {
     const raw = wasmRun(line, loc)
     const bundle = parseDispatchJson(raw)
-    return normalizeBundle(bundle, loc)
+    return normalizeBundle(bundle, loc, options?.enrichMsgs)
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
+    const message = e instanceof Error ? e.message : String(e)
     return {
       ty: "lines",
       lines: [
-        `error: dispatch failed (${msg})`,
-        "Reload the BMXt window / extension if this persists."
+        tError("error.dispatchFailed", loc, { message }),
+        tError("error.reloadHint", loc)
       ]
     }
   }

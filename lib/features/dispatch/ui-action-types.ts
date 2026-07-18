@@ -16,14 +16,14 @@ export type UiActionIR =
   | { kind: "group_new_from_selection" }
   | { kind: "translate_on" }
   | { kind: "translate_off" }
-  | { kind: "translate_setting" }
+  | { kind: "translate_setting"; pair: string }
   | { kind: "snapshot_save"; line: string }
   | { kind: "setting_list" }
   | { kind: "setting_exit_list" }
   | { kind: "tabs_exit_list" }
-  | { kind: "tabs_setting" }
+  | { kind: "tabs_setting"; mode: string }
   | { kind: "search_exit_list" }
   | { kind: "dom_exit_list" }
-  | { kind: "dom_setting" }
+  | { kind: "dom_setting"; mode: string }
   | { kind: "browse"; line: string }
   | { kind: "picker_pass" }

@@ -1,4 +1,8 @@
 {
+  "error.coreFailedToLoad": {
+    "ja": "error: BMXt core の読み込みに失敗しました（{message}）",
+    "en": "error: BMXt core failed to load ({message})"
+  },
   "error.dispatchFailed": {
     "ja": "error: command dispatch failed — {message}",
     "en": "error: command dispatch failed — {message}"
@@ -10,5 +14,9 @@
   "error.unknown": {
     "ja": "不明なエラー",
     "en": "unknown error"
+  },
+  "error.reloadHint": {
+    "ja": "BMXt ウィンドウ / 拡張機能を再読み込みしてください。",
+    "en": "Reload the BMXt window / extension if this persists."
   }
 }

@@ -1,5 +1,7 @@
 use crate::cmd::helpers::{self, normalize_token};
-use crate::ir::{effects, msg_key, msg_param, msgs, ui, ChromeEffect, DispatchBundle, UiAction};
+use crate::ir::{
+    effects, msg_key, msg_param, msgs, msgs_with_prompt, ui, ChromeEffect, DispatchBundle, UiAction,
+};
 use crate::line_parse::strip_invisible_format_chars;
 
 const USAGE_KEYS: &[&str] = &[
@@ -9,6 +11,8 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.dom.usage.listDetail",
     "cmd.dom.usage.patternDetail",
 ];
+
+const HOST_PAGE_ACTIVE_TOKEN: &str = "__HOST_DOM_PAGE_ACTIVE__";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DomListOptions {
@@ -88,9 +92,7 @@ fn parse_dom_list_line(trimmed: &str) -> Option<DomListOptions> {
         pattern_parts.push(raw.clone());
     }
 
-    if picker_mode == "with" {
-        // show_tag only applies in with mode (TS behavior)
-    } else {
+    if picker_mode != "with" {
         show_tag = false;
     }
 
@@ -102,6 +104,14 @@ fn parse_dom_list_line(trimmed: &str) -> Option<DomListOptions> {
     })
 }
 
+fn usage_msgs(extra: crate::ir::Msg) -> DispatchBundle {
+    let mut msgs_vec = vec![extra];
+    for key in USAGE_KEYS {
+        msgs_vec.push(msg_key(key));
+    }
+    msgs(msgs_vec)
+}
+
 fn run_list(args: &[String]) -> DispatchBundle {
     let line: String = args
         .iter()
@@ -109,11 +119,7 @@ fn run_list(args: &[String]) -> DispatchBundle {
         .collect::<Vec<_>>()
         .join(" ");
     let Some(parsed) = parse_dom_list_line(&line) else {
-        let mut msgs_vec = vec![msg_key("cmd.dom.error.listUsage")];
-        for key in USAGE_KEYS {
-            msgs_vec.push(msg_key(key));
-        }
-        return msgs(msgs_vec);
+        return usage_msgs(msg_key("cmd.dom.error.listUsage"));
     };
     effects(vec![ChromeEffect::DomList {
         flavor: parsed.flavor,
@@ -127,6 +133,51 @@ fn run_list(args: &[String]) -> DispatchBundle {
     }])
 }
 
+fn run_dom_setting(args: &[String]) -> DispatchBundle {
+    if args.len() == 2 {
+        return msgs_with_prompt(
+            vec![
+                msg_key("dom.setting.choose"),
+                msg_param(
+                    "dom.setting.pageActiveCurrent",
+                    "token",
+                    HOST_PAGE_ACTIVE_TOKEN,
+                ),
+            ],
+            "dom -setting ",
+        );
+    }
+    if args.len() == 3 {
+        if normalize_token(&args[2]) != "-page-active" {
+            return usage_msgs(msg_param("cmd.dom.error.unknownOption", "option", &args[2]));
+        }
+        return msgs_with_prompt(
+            vec![
+                msg_param("dom.pageActive.choose", "options", "--auto | --manual"),
+                msg_param(
+                    "dom.setting.pageActiveCurrent",
+                    "token",
+                    HOST_PAGE_ACTIVE_TOKEN,
+                ),
+            ],
+            "dom -setting -page-active ",
+        );
+    }
+    if args.len() == 4 && normalize_token(&args[2]) == "-page-active" {
+        let mode = match normalize_token(&args[3]).as_str() {
+            "--auto" => Some("auto"),
+            "--manual" => Some("manual"),
+            _ => None,
+        };
+        if let Some(mode) = mode {
+            return ui(UiAction::DomSetting {
+                mode: mode.to_string(),
+            });
+        }
+    }
+    usage_msgs(msg_key("cmd.dom.error.listUsage"))
+}
+
 pub fn run(args: &[String]) -> DispatchBundle {
     let first_lc = match helpers::require_second_token("dom", args, USAGE_KEYS) {
         Ok(v) => v,
@@ -138,22 +189,14 @@ pub fn run(args: &[String]) -> DispatchBundle {
         "-exit" => {
             if args.len() != 3 || normalize_token(args.get(2).map(String::as_str).unwrap_or("")) != "-list"
             {
-                let mut msgs_vec = vec![msg_key("cmd.dom.error.exitListUsage")];
-                for key in USAGE_KEYS {
-                    msgs_vec.push(msg_key(key));
-                }
-                return msgs(msgs_vec);
+                return usage_msgs(msg_key("cmd.dom.error.exitListUsage"));
             }
             ui(UiAction::DomExitList)
         }
-        "-setting" => ui(UiAction::DomSetting),
+        "-setting" => run_dom_setting(args),
         _ => {
             let option = args.get(1).map(String::as_str).unwrap_or("");
-            let mut msgs_vec = vec![msg_param("cmd.dom.error.internal", "option", option)];
-            for key in USAGE_KEYS {
-                msgs_vec.push(msg_key(key));
-            }
-            msgs(msgs_vec)
+            usage_msgs(msg_param("cmd.dom.error.internal", "option", option))
         }
     }
 }

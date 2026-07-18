@@ -2,11 +2,9 @@ import { buildHelpLines } from "../../bmxt-core/registry/help"
 import { tryRunPlainListCommand } from "../../command-line/list-commands"
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
-import { parseDomSettingCommandLine } from "../../dom/parse-dom-setting-command"
 import {
   saveDomPageActiveMode,
-  settingTokenForDomPageActiveMode,
-  DOM_PAGE_ACTIVE_MODE_TOKENS
+  settingTokenForDomPageActiveMode
 } from "../../dom/page-active-setting"
 import { canScriptHttpHostPages } from "../../extension-permissions/optional-http-hosts"
 import { runBrowseCommand } from "../../picker/run-picker-command"
@@ -26,18 +24,16 @@ import { tTranslate } from "../../setting/i18n/ns/translate"
 import { translateOnLogLine } from "../../setting/i18n/resolvers"
 import { closeTabPickerEngineForSession, openTabPickerEngineForSession } from "../../tabs/engine"
 import { buildTabPickerRowsBundle, resolveInitialTabPickerHighlightIndex } from "../../tabs/picker-rows"
-import { parseTabsSettingCommandLine } from "../../tabs/parse-tabs-setting-command"
 import {
   saveTabsPageActiveMode,
-  settingTokenForPageActiveMode,
-  TABS_PAGE_ACTIVE_MODE_TOKENS
+  settingTokenForPageActiveMode
 } from "../../tabs/page-active-setting"
 import {
-  listTranslationPairSettingTokens,
-  parseTranslateCommandLine,
+  pairIdFromSettingToken,
   saveTranslateEnabled,
   saveTranslatePair,
-  settingTokenForPairId
+  settingTokenForPairId,
+  type TranslationPairId
 } from "../../translate"
 import type { UiActionIR } from "../../dispatch/ui-action-types"
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
@@ -78,13 +74,13 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
     case "tabs_exit_list":
       return applyTabsExitList(ctx)
     case "tabs_setting":
-      return applyTabsSetting(ctx)
+      return applyTabsSetting(ctx, action.mode)
     case "search_exit_list":
       return applySearchExitList(ctx)
     case "dom_exit_list":
       return applyDomExitList(ctx)
     case "dom_setting":
-      return applyDomSetting(ctx)
+      return applyDomSetting(ctx, action.mode)
     case "session_list":
       return applySessionList(ctx)
     case "session_switch":
@@ -98,7 +94,7 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
     case "translate_off":
       return applyTranslateOff(ctx)
     case "translate_setting":
-      return applyTranslateSetting(ctx)
+      return applyTranslateSetting(ctx, action.pair)
     case "snapshot_save":
       return applySnapshotSave(ctx, action.line)
     case "browse":
@@ -139,13 +135,13 @@ export async function applyUiActionForSegment(
     case "tabs_exit_list":
       return applyTabsExitListSegment(ctx)
     case "tabs_setting":
-      return applyTabsSettingSegment(ctx)
+      return applyTabsSettingSegment(ctx, action.mode)
     case "search_exit_list":
       return applySearchExitListSegment(ctx)
     case "dom_exit_list":
       return applyDomExitListSegment(ctx)
     case "dom_setting":
-      return applyDomSettingSegment(ctx)
+      return applyDomSettingSegment(ctx, action.mode)
     case "session_list":
       return applyPlainListSegment(ctx, ctx.trimmed)
     case "session_switch":
@@ -159,7 +155,7 @@ export async function applyUiActionForSegment(
     case "translate_off":
       return applyTranslateOffSegment(ctx)
     case "translate_setting":
-      return applyTranslateSettingSegment(ctx)
+      return applyTranslateSettingSegment(ctx, action.pair)
     case "snapshot_save":
       return applySnapshotSaveSegment(ctx, action.line)
     case "browse":
@@ -330,68 +326,36 @@ async function applyTabsExitListSegment(ctx: CommandDispatchContext): Promise<Se
   return segmentSuccess(lines)
 }
 
-function applyTabsSetting(ctx: CommandDispatchContext): boolean {
-  const tabsSettingCmd = parseTabsSettingCommandLine(ctx.trimmed)
-  if (tabsSettingCmd === null) {
+function applyTabsSetting(ctx: CommandDispatchContext, modeRaw: string): boolean {
+  const mode = modeRaw === "manual" ? "manual" : modeRaw === "auto" ? "auto" : null
+  if (mode === null) {
     return false
   }
-
-  recordOnly(ctx)
-  if (tabsSettingCmd.kind === "incomplete") {
-    setContinuationPrompt(ctx.deps, "tabs ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tTabs("tabs.usage", ctx.locale),
-      tTabs("tabs.settingHint", ctx.locale)
-    ])
-    return true
-  }
-  if (tabsSettingCmd.kind === "setting-incomplete") {
-    setContinuationPrompt(ctx.deps, "tabs -setting ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tTabs("tabs.setting.choose", ctx.locale),
-      tTabs("tabs.setting.pageActiveCurrent", ctx.locale, {
-        token: settingTokenForPageActiveMode(ctx.deps.tabsPageActiveModeRef.current)
-      })
-    ])
-    return true
-  }
-  if (tabsSettingCmd.kind === "page-active-incomplete") {
-    setContinuationPrompt(ctx.deps, "tabs -setting -page-active ")
-    const options = TABS_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tTabs("tabs.pageActive.choose", ctx.locale, { options }),
-      tSetting("setting.language.current", ctx.locale, {
-        token: settingTokenForPageActiveMode(ctx.deps.tabsPageActiveModeRef.current)
-      })
-    ])
-    return true
-  }
-
-  clearPrompt(ctx.deps)
+  finishCommand(ctx)
   ctx.deps.lineRef.current = ""
   void (async () => {
-    await saveTabsPageActiveMode(tabsSettingCmd.mode)
-    ctx.deps.setTabsPageActiveMode(tabsSettingCmd.mode)
-    ctx.deps.tabsPageActiveModeRef.current = tabsSettingCmd.mode
-    const token = settingTokenForPageActiveMode(tabsSettingCmd.mode)
+    await saveTabsPageActiveMode(mode)
+    ctx.deps.setTabsPageActiveMode(mode)
+    ctx.deps.tabsPageActiveModeRef.current = mode
+    const token = settingTokenForPageActiveMode(mode)
     await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, tTabs("tabs.pageActive.set", ctx.locale, { token })])
     ctx.deps.focusPrompt()
   })()
   return true
 }
 
-async function applyTabsSettingSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const cmd = parseTabsSettingCommandLine(ctx.trimmed)
-  if (cmd === null || cmd.kind !== "page-active") {
-    return segmentFailure("continuation", [`continuation required: ${ctx.trimmed}`])
+async function applyTabsSettingSegment(
+  ctx: CommandDispatchContext,
+  modeRaw: string
+): Promise<SegmentOutcome> {
+  const mode = modeRaw === "manual" ? "manual" : modeRaw === "auto" ? "auto" : null
+  if (mode === null) {
+    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
   }
-  await saveTabsPageActiveMode(cmd.mode)
-  ctx.deps.setTabsPageActiveMode(cmd.mode)
-  ctx.deps.tabsPageActiveModeRef.current = cmd.mode
-  const token = settingTokenForPageActiveMode(cmd.mode)
+  await saveTabsPageActiveMode(mode)
+  ctx.deps.setTabsPageActiveMode(mode)
+  ctx.deps.tabsPageActiveModeRef.current = mode
+  const token = settingTokenForPageActiveMode(mode)
   return segmentSuccess([tTabs("tabs.pageActive.set", ctx.locale, { token })])
 }
 
@@ -479,68 +443,36 @@ async function applyDomExitListSegment(ctx: CommandDispatchContext): Promise<Seg
   return segmentSuccess(lines)
 }
 
-function applyDomSetting(ctx: CommandDispatchContext): boolean {
-  const domSettingCmd = parseDomSettingCommandLine(ctx.trimmed)
-  if (domSettingCmd === null) {
+function applyDomSetting(ctx: CommandDispatchContext, modeRaw: string): boolean {
+  const mode = modeRaw === "manual" ? "manual" : modeRaw === "auto" ? "auto" : null
+  if (mode === null) {
     return false
   }
-
-  recordOnly(ctx)
-  if (domSettingCmd.kind === "incomplete") {
-    setContinuationPrompt(ctx.deps, "dom ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tDom("dom.usage", ctx.locale),
-      tDom("dom.settingHint", ctx.locale)
-    ])
-    return true
-  }
-  if (domSettingCmd.kind === "setting-incomplete") {
-    setContinuationPrompt(ctx.deps, "dom -setting ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tDom("dom.setting.choose", ctx.locale),
-      tDom("dom.setting.pageActiveCurrent", ctx.locale, {
-        token: settingTokenForDomPageActiveMode(ctx.deps.domPageActiveModeRef.current)
-      })
-    ])
-    return true
-  }
-  if (domSettingCmd.kind === "page-active-incomplete") {
-    setContinuationPrompt(ctx.deps, "dom -setting -page-active ")
-    const options = DOM_PAGE_ACTIVE_MODE_TOKENS.join(" | ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tDom("dom.pageActive.choose", ctx.locale, { options }),
-      tSetting("setting.language.current", ctx.locale, {
-        token: settingTokenForDomPageActiveMode(ctx.deps.domPageActiveModeRef.current)
-      })
-    ])
-    return true
-  }
-
-  clearPrompt(ctx.deps)
+  finishCommand(ctx)
   ctx.deps.lineRef.current = ""
   void (async () => {
-    await saveDomPageActiveMode(domSettingCmd.mode)
-    ctx.deps.setDomPageActiveMode(domSettingCmd.mode)
-    ctx.deps.domPageActiveModeRef.current = domSettingCmd.mode
-    const token = settingTokenForDomPageActiveMode(domSettingCmd.mode)
+    await saveDomPageActiveMode(mode)
+    ctx.deps.setDomPageActiveMode(mode)
+    ctx.deps.domPageActiveModeRef.current = mode
+    const token = settingTokenForDomPageActiveMode(mode)
     await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, tDom("dom.pageActive.set", ctx.locale, { token })])
     ctx.deps.focusPrompt()
   })()
   return true
 }
 
-async function applyDomSettingSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const cmd = parseDomSettingCommandLine(ctx.trimmed)
-  if (cmd === null || cmd.kind !== "page-active") {
-    return segmentFailure("continuation", [`continuation required: ${ctx.trimmed}`])
+async function applyDomSettingSegment(
+  ctx: CommandDispatchContext,
+  modeRaw: string
+): Promise<SegmentOutcome> {
+  const mode = modeRaw === "manual" ? "manual" : modeRaw === "auto" ? "auto" : null
+  if (mode === null) {
+    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
   }
-  await saveDomPageActiveMode(cmd.mode)
-  ctx.deps.setDomPageActiveMode(cmd.mode)
-  ctx.deps.domPageActiveModeRef.current = cmd.mode
-  const token = settingTokenForDomPageActiveMode(cmd.mode)
+  await saveDomPageActiveMode(mode)
+  ctx.deps.setDomPageActiveMode(mode)
+  ctx.deps.domPageActiveModeRef.current = mode
+  const token = settingTokenForDomPageActiveMode(mode)
   return segmentSuccess([tDom("dom.pageActive.set", ctx.locale, { token })])
 }
 
@@ -757,65 +689,45 @@ async function applyTranslateOffSegment(ctx: CommandDispatchContext): Promise<Se
   return segmentSuccess([tTranslate("translate.off", ctx.locale)])
 }
 
-function applyTranslateSetting(ctx: CommandDispatchContext): boolean {
-  const translateCmd = parseTranslateCommandLine(ctx.trimmed)
-  if (translateCmd === null) {
+function applyTranslateSetting(ctx: CommandDispatchContext, pairRaw: string): boolean {
+  const pair: TranslationPairId | null =
+    pairRaw === "ja-en" || pairRaw === "en-ja"
+      ? pairRaw
+      : pairIdFromSettingToken(pairRaw)
+  if (pair === null) {
     return false
   }
-
-  recordOnly(ctx)
-  if (translateCmd.kind === "incomplete") {
-    setContinuationPrompt(ctx.deps, "translate ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tTranslate("translate.usage", ctx.locale),
-      tTranslate("translate.usageHint", ctx.locale)
-    ])
-    return true
-  }
-  if (translateCmd.kind === "setting-incomplete") {
-    setContinuationPrompt(ctx.deps, "translate -setting ")
-    const options = listTranslationPairSettingTokens().join(" | ")
-    void ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tTranslate("translate.setting.choose", ctx.locale, { options }),
-      tSetting("setting.language.current", ctx.locale, {
-        token: settingTokenForPairId(ctx.deps.translatePairIdRef.current)
-      })
-    ])
-    return true
-  }
-
-  clearPrompt(ctx.deps)
+  finishCommand(ctx)
   ctx.deps.lineRef.current = ""
   void (async () => {
-    if (translateCmd.kind === "setting") {
-      await saveTranslatePair(translateCmd.pair)
-      ctx.deps.setTranslatePairId(translateCmd.pair)
-      ctx.deps.resetNavTranslateSession()
-      const token = settingTokenForPairId(translateCmd.pair)
-      await ctx.deps.appendLogLines([
-        `> ${ctx.trimmed}`,
-        tTranslate("translate.pairSet", ctx.locale, { token })
-      ])
-    }
+    await saveTranslatePair(pair)
+    ctx.deps.setTranslatePairId(pair)
+    ctx.deps.resetNavTranslateSession()
+    const token = settingTokenForPairId(pair)
+    await ctx.deps.appendLogLines([
+      `> ${ctx.trimmed}`,
+      tTranslate("translate.pairSet", ctx.locale, { token })
+    ])
     ctx.deps.focusPrompt()
   })()
   return true
 }
 
-async function applyTranslateSettingSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const translateCmd = parseTranslateCommandLine(ctx.trimmed)
-  if (translateCmd === null) {
-    return segmentFailure("unknown", [`error: unknown command: ${ctx.trimmed}`])
+async function applyTranslateSettingSegment(
+  ctx: CommandDispatchContext,
+  pairRaw: string
+): Promise<SegmentOutcome> {
+  const pair: TranslationPairId | null =
+    pairRaw === "ja-en" || pairRaw === "en-ja"
+      ? pairRaw
+      : pairIdFromSettingToken(pairRaw)
+  if (pair === null) {
+    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
   }
-  if (translateCmd.kind !== "setting") {
-    return segmentFailure("continuation", [`continuation required: ${ctx.trimmed}`])
-  }
-  await saveTranslatePair(translateCmd.pair)
-  ctx.deps.setTranslatePairId(translateCmd.pair)
+  await saveTranslatePair(pair)
+  ctx.deps.setTranslatePairId(pair)
   ctx.deps.resetNavTranslateSession()
-  const token = settingTokenForPairId(translateCmd.pair)
+  const token = settingTokenForPairId(pair)
   return segmentSuccess([tTranslate("translate.pairSet", ctx.locale, { token })])
 }
 

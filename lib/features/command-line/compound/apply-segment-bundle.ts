@@ -3,6 +3,8 @@ import { runDispatch } from "../../bmxt-core/dispatch"
 import { ensureBmxtCore } from "../../bmxt-core/wasm-host"
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types"
 import { applyUiActionForSegment } from "../../bmxt-window/shell/apply-ui-action"
+import { enrichHostMsgParams } from "../../bmxt-window/shell/enrich-host-msg-params"
+import { setContinuationPrompt } from "../../bmxt-window/shell/command-dispatch/types"
 import type { UiLocale } from "../../setting/locale"
 import { segmentSuccess } from "./classify-outcome"
 import type { SegmentOutcome } from "./types"
@@ -35,8 +37,13 @@ export async function dispatchSegmentUiOutcome(
   locale: UiLocale
 ): Promise<{ bundle: DispatchBundle; uiOutcome: SegmentOutcome | null }> {
   await ensureBmxtCore()
-  const bundle = runDispatch(segment, locale)
+  const bundle = runDispatch(segment, locale, {
+    enrichMsgs: (msgs) => enrichHostMsgParams(msgs, deps)
+  })
   if (bundle.ty === "lines") {
+    if (bundle.promptPrefix !== undefined && bundle.promptPrefix.length > 0) {
+      setContinuationPrompt(deps, bundle.promptPrefix)
+    }
     return { bundle, uiOutcome: segmentSuccess(bundle.lines ?? []) }
   }
   const uiOutcome = await applySegmentBundle(bundle, segment, deps, locale)

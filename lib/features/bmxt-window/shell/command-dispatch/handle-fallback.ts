@@ -1,4 +1,3 @@
-import { continuationPromptAfterLoneFirstToken } from "../../../builtin-commands/command-subcommands.gen"
 import {
   isRunCmdResult,
   type SessionPatch
@@ -32,7 +31,6 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
   const { deps, trimmed, locale } = ctx
 
   deps.appendCommandToHistory(trimmed)
-  const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
   clearPrompt(deps)
   recordCommandHistory(deps)
   // EN: Echo immediately — search / dom plain paths can take seconds before patches arrive.
@@ -62,11 +60,5 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
         "stderr"
       )
     })
-  if (continuationPrompt) {
-    deps.setSubCmdPicker(null)
-    deps.setLine(continuationPrompt)
-    deps.setCursorPos(continuationPrompt.length)
-    deps.lineRef.current = continuationPrompt
-  }
   deps.focusPrompt()
 }

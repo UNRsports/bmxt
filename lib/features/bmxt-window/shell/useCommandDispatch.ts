@@ -1,18 +1,20 @@
 import { useCallback } from "react"
 import { lineHasCompoundOperator, runCompoundLine } from "../../command-line/compound"
-import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen"
 import { ensureBmxtCore } from "../../bmxt-core/wasm-host"
 import { runDispatch } from "../../bmxt-core/dispatch"
 import { effectiveCommandLocale } from "../../setting/effective-command-locale"
+import { tError } from "../../setting/i18n/ns/error"
 import { applyUiAction } from "./apply-ui-action"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { dispatchFallbackCommand } from "./command-dispatch/handle-fallback"
 import {
   clearPrompt,
   recordCommandHistory,
+  setContinuationPrompt,
   type CommandDispatchContext,
   type CommandDispatchDeps
 } from "./command-dispatch/types"
+import { enrichHostMsgParams } from "./enrich-host-msg-params"
 
 export type { CommandDispatchDeps } from "./command-dispatch/types"
 
@@ -37,18 +39,18 @@ function tryHandleSessionNameTyping(ctx: CommandDispatchContext): boolean {
   return true
 }
 
-function handleLinesBundle(ctx: CommandDispatchContext, lines: string[]): void {
+function handleLinesBundle(
+  ctx: CommandDispatchContext,
+  lines: string[],
+  promptPrefix?: string
+): void {
   const { deps, trimmed } = ctx
   deps.appendCommandToHistory(trimmed)
   clearPrompt(deps)
   recordCommandHistory(deps)
   void deps.appendLogLines([`> ${trimmed}`, ...lines])
-  const continuationPrompt = continuationPromptAfterLoneFirstToken(trimmed)
-  if (continuationPrompt) {
-    deps.setSubCmdPicker(null)
-    deps.setLine(continuationPrompt)
-    deps.setCursorPos(continuationPrompt.length)
-    deps.lineRef.current = continuationPrompt
+  if (promptPrefix !== undefined && promptPrefix.length > 0) {
+    setContinuationPrompt(deps, promptPrefix)
   }
   deps.focusPrompt()
 }
@@ -89,9 +91,6 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       return
     }
 
-    // browse / command grammar goes through WASM after ensureBmxtCore (not early TS handlers),
-    // so compound lines like `browse tabs -list && …` are split first.
-
     void (async () => {
       try {
         await ensureBmxtCore()
@@ -102,7 +101,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         const message = e instanceof Error ? e.message : String(e)
         void deps.appendLogLines([
           `> ${trimmed}`,
-          `error: BMXt core failed to load (${message})`
+          tError("error.coreFailedToLoad", commandLocale, { message }),
+          tError("error.reloadHint", commandLocale)
         ])
         deps.focusPrompt()
         return
@@ -113,7 +113,9 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         return
       }
 
-      const bundle = runDispatch(trimmed, commandLocale)
+      const bundle = runDispatch(trimmed, commandLocale, {
+        enrichMsgs: (msgs) => enrichHostMsgParams(msgs, deps)
+      })
 
       if (bundle.ty === "ui" && bundle.action) {
         if (applyUiAction(bundle.action, ctx)) {
@@ -122,7 +124,7 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       }
 
       if (bundle.ty === "lines") {
-        handleLinesBundle(ctx, bundle.lines ?? [])
+        handleLinesBundle(ctx, bundle.lines ?? [], bundle.promptPrefix)
         return
       }
 
