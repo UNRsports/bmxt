@@ -22,7 +22,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "dom",
         aliases: &[],
-        usage_primary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active",
+        usage_primary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help",
     },
     CmdMeta {
         name: "exit",
@@ -32,7 +32,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "search",
         aliases: &[],
-        usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list",
+        usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
     },
     CmdMeta {
         name: "group",
@@ -47,7 +47,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "tabs",
         aliases: &[],
-        usage_primary: "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
+        usage_primary: "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl | tabs help",
     },
     CmdMeta {
         name: "nav",
@@ -57,7 +57,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "translate",
         aliases: &[],
-        usage_primary: "translate -on | translate -off | translate -setting",
+        usage_primary: "translate -on | translate -off | translate -setting | translate help",
     },
     CmdMeta {
         name: "aboutbmxt",
@@ -67,7 +67,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "session",
         aliases: &[],
-        usage_primary: "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]",
+        usage_primary: "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name] | session help",
     },
     CmdMeta {
         name: "snapshot",
@@ -82,7 +82,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "setting",
         aliases: &[],
-        usage_primary: "setting -list | setting -exit -list",
+        usage_primary: "setting -list | setting -exit -list | setting help",
     },
 ];
 
@@ -110,19 +110,19 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
     match canonical {
         "clear" => false,
         "close" => false,
-        "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting"),
+        "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
-        "search" => matches!(lower.as_str(), "-list" | "-exit"),
+        "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "group" => false,
         "help" => false,
-        "tabs" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl"),
+        "tabs" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "help"),
         "nav" => matches!(lower.as_str(), "-enter" | "-exit"),
-        "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting"),
+        "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
         "aboutbmxt" => false,
-        "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name"),
+        "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
-        "setting" => matches!(lower.as_str(), "-list" | "-exit"),
+        "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         _ => false,
     }
 }

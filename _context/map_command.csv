@@ -6,7 +6,7 @@
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
 close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。パイプ右辺 `close`/`c` は bmxtRule `page.open` consumer（tabId 省略可）。,第二トークン相当は可変 tabId（manifest subcommands なし）。pipe consumer は語彙 `acceptsKinds` で接続
-dom,,,,,dom …,単独 `dom` + Enter: msgs + promptPrefix `dom `（require_second_token）。,
+dom,,,,,dom …,単独 `dom` + Enter: msgs + promptPrefix `dom `（require_second_token）。第二候補に `help`。,
 dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** `RUN_CMD` → Effect `dom_list` → **`-list` レジストリ**（`dom-list-fetch.ts` / `dom-list-command.ts`）→ `ListResult`（`bmxt-list/1`）→ ターミナルログ。ピッカーは `browse dom -list …`。閉じるは `dom -exit -list`。パイプ時は bmxtRule（`dom.node` / `dom.notice`）。,語彙: ListResult→bmxtRule
 dom,-list,--normal,rest,,（同上）,trailingTokens。mode `--normal`。`--with` と排他。,
 dom,-list,--with,rest,,（同上）,trailingTokens。mode `--with`。`--normal` と排他。,
@@ -18,7 +18,7 @@ dom,-setting,,none,,dom -setting | dom -setting -page-active --auto\|--manual,�
 dom,-setting,-page-active,none,,dom -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `dom -setting -page-active `。,
 dom,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
 dom,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。mode=manual。,
-search,,,,,search …,単独 `search` + Enter: msgs + promptPrefix `search `。,
+search,,,,,search …,単独 `search` + Enter: msgs + promptPrefix `search `。第二候補に `help`。,
 search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。ピッカーは `browse search -list …`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map
 search,-list,--all,rest,,（同上）,scope `--all`。,
 search,-list,--history,rest,,（同上）,scope `--history`。,
@@ -29,7 +29,7 @@ search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
 group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
 help,,,,?,"help, ?",UiAction `show_help` または lines。キー列の正本寄せは §14 Phase D。,
 browse,,,,,browse <list-command>,UiAction `browse` → ListResult kind 族で列を開く。,語彙: UiAction browse + list kinds
-tabs,,,,,tabs …,単独 `tabs` + Enter: msgs + promptPrefix `tabs `（require_second_token）。,
+tabs,,,,,tabs …,単独 `tabs` + Enter: msgs + promptPrefix `tabs `（require_second_token）。第二候補に `help`（マニュアル）。,
 tabs,-list,,none,,tabs -list [-url] | tabs -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
 tabs,-setting,,none,,tabs -setting | tabs -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
 tabs,-setting,-page-active,none,,tabs -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tabs -setting -page-active `。,
@@ -39,23 +39,24 @@ tabs,-list,-url,none,,（同上）,`-url` 表示。,
 tabs,-exit,-list,none,,tabs -exit -list,UiAction `tabs_exit_list`。,
 tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,Effect: tabs_move_url。,
 tabs,-nowurl,,none,,tabs -nowurl,Effect: tabs_nu。,
+tabs,help,,none,,tabs help,msgs `help.section.tabs`（コマンド別マニュアル）。,
 nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。,
 nav,-enter,,none,,nav -enter | nav -exit,UiAction `nav_arm`。,
 nav,-exit,,none,,（同上）,UiAction `nav_disarm`。,
-translate,,,,,translate …,単独 `translate` + Enter: msgs + promptPrefix `translate `。,
+translate,,,,,translate …,単独 `translate` + Enter: msgs + promptPrefix `translate `。第二候補に `help`。,
 translate,-on,,none,,translate -on | translate -off | translate -setting,UiAction `translate_on`。,
 translate,-off,,none,,（同上）,UiAction `translate_off`。,
 translate,-setting,,none,,translate -setting | translate -setting --ja-en\|--en-ja,不完全: msgs + promptPrefix。完了: UiAction `translate_setting` { pair }。ホストセンチネル `__HOST_TRANSLATE_PAIR__`。,
 translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAction pair=ja-en。,
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
-setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。,
+setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
 setting,-list,,none,,setting -list,UiAction `setting_list` / plain `setting.field`。,
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
 aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page。,
 exit,,,,,exit,Effect: exit_pane。,
-session,,,,,session …,単独 `session` + Enter: msgs + promptPrefix `session `。Effect（new/next/prev）または UiAction（list/switch/setting-name）。,語彙: Effect + UiAction
+session,,,,,session …,単独 `session` + Enter: msgs + promptPrefix `session `。Effect（new/next/prev）または UiAction（list/switch/setting-name）。第二候補に `help`。,語彙: Effect + UiAction
 session,-new,,rest,,session -new [name],Effect: session_new。,
 session,-list,,none,,session -list,ListResult `session.row`。,
 session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,

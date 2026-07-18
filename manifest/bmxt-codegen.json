@@ -19,7 +19,7 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active",
+      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help",
       "subcommands": [
         {
           "head": "-list",
@@ -35,6 +35,10 @@
           "head": "-setting",
           "trailingTokens": ["-page-active"],
           "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
         }
       ]
     },
@@ -49,7 +53,7 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
       "subcommands": [
         {
           "head": "-list",
@@ -59,6 +63,10 @@
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -81,7 +89,7 @@
       "module": "tabs",
       "canonicalName": "tabs",
       "aliases": [],
-      "usagePrimary": "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
+      "usagePrimary": "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl | tabs help",
       "subcommands": [
         {
           "head": "-list",
@@ -104,6 +112,10 @@
         },
         {
           "head": "-nowurl",
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -128,7 +140,7 @@
       "module": "translate",
       "canonicalName": "translate",
       "aliases": [],
-      "usagePrimary": "translate -on | translate -off | translate -setting",
+      "usagePrimary": "translate -on | translate -off | translate -setting | translate help",
       "subcommands": [
         {
           "head": "-on",
@@ -141,6 +153,10 @@
         {
           "head": "-setting",
           "trailingTokens": ["--ja-en", "--en-ja"],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -156,7 +172,7 @@
       "module": "session",
       "canonicalName": "session",
       "aliases": [],
-      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]",
+      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name] | session help",
       "subcommands": [
         {
           "head": "-new",
@@ -181,6 +197,10 @@
         {
           "head": "-setting-name",
           "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
         }
       ]
     },
@@ -207,7 +227,7 @@
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list | setting -exit -list",
+      "usagePrimary": "setting -list | setting -exit -list | setting help",
       "subcommands": [
         {
           "head": "-list",
@@ -216,6 +236,10 @@
         {
           "head": "-exit",
           "trailingTokens": ["-list"],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]

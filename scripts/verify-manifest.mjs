@@ -13,7 +13,7 @@ const root = join(__dirname, "..")
 const manifestPath = join(root, "manifest", "bmxt-codegen.json")
 const registryPath = join(root, "crates", "bmxt-core", "src", "generated", "registry_table.rs")
 
-function verifySubcommandHeadsInSource(c, rs) {
+function verifySubcommandHeadsInSource(c, rs, helpCmdSource) {
   if (!Array.isArray(c.subcommands)) {
     throw new Error(`${c.module}: missing or invalid subcommands[]`)
   }
@@ -25,6 +25,15 @@ function verifySubcommandHeadsInSource(c, rs) {
       throw new Error(`${c.module}: invalid subcommand entry`)
     }
     const literal = JSON.stringify(br.head)
+    // EN: `help` second token is handled centrally in help_cmd.rs (try_section_help).
+    if (br.head === "help") {
+      if (!helpCmdSource.includes(literal)) {
+        throw new Error(
+          `${c.module}: subcommand head "help" must appear as literal ${literal} in crates/bmxt-core/src/cmd/help_cmd.rs`
+        )
+      }
+      continue
+    }
     if (!rs.includes(literal)) {
       throw new Error(
         `${c.module}: subcommand head ${JSON.stringify(br.head)} must appear as literal ${literal} in crates/bmxt-core/src/cmd/${c.module}.rs`
@@ -45,6 +54,8 @@ function verifyCanonicalInRegistry(c, registry) {
 function main() {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
   const registry = readFileSync(registryPath, "utf8")
+  const helpCmdPath = join(root, "crates", "bmxt-core", "src", "cmd", "help_cmd.rs")
+  const helpCmdSource = readFileSync(helpCmdPath, "utf8")
   const cmds = manifest.commands
 
   for (const c of cmds) {
@@ -56,7 +67,7 @@ function main() {
       throw new Error(`Rust cmd file missing for module ${c.module}: ${p}`)
     }
     verifyCanonicalInRegistry(c, registry)
-    verifySubcommandHeadsInSource(c, rs)
+    verifySubcommandHeadsInSource(c, rs, helpCmdSource)
   }
 
   console.log(`verify-manifest ok (${cmds.length} commands, Rust cmd + registry_table.rs)`)

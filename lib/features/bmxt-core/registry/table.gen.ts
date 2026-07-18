@@ -19,7 +19,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "dom",
     aliases: [] as const,
-    usagePrimary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active"
+    usagePrimary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help"
   },
   {
     name: "exit",
@@ -29,7 +29,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "search",
     aliases: [] as const,
-    usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list"
+    usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help"
   },
   {
     name: "group",
@@ -44,7 +44,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "tabs",
     aliases: [] as const,
-    usagePrimary: "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl"
+    usagePrimary: "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl | tabs help"
   },
   {
     name: "nav",
@@ -54,7 +54,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "translate",
     aliases: [] as const,
-    usagePrimary: "translate -on | translate -off | translate -setting"
+    usagePrimary: "translate -on | translate -off | translate -setting | translate help"
   },
   {
     name: "aboutbmxt",
@@ -64,7 +64,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "session",
     aliases: [] as const,
-    usagePrimary: "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]"
+    usagePrimary: "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name] | session help"
   },
   {
     name: "snapshot",
@@ -79,7 +79,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "setting",
     aliases: [] as const,
-    usagePrimary: "setting -list | setting -exit -list"
+    usagePrimary: "setting -list | setting -exit -list | setting help"
   }
 ]
 

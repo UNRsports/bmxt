@@ -42,9 +42,9 @@ function validateCommandsSubcommands(commands) {
       if (!br || typeof br !== "object") {
         throw new Error(`commands[].module=${c.module}: invalid subcommand branch`)
       }
-      if (typeof br.head !== "string" || !br.head.startsWith("-")) {
+      if (typeof br.head !== "string" || !(br.head.startsWith("-") || br.head === "help")) {
         throw new Error(
-          `commands[].module=${c.module}: each subcommand needs string "head" starting with "-" (got ${JSON.stringify(br?.head)})`
+          `commands[].module=${c.module}: each subcommand needs string "head" starting with "-" or literal "help" (got ${JSON.stringify(br?.head)})`
         )
       }
       const hl = br.head.toLowerCase()

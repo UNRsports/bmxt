@@ -71,6 +71,10 @@
     "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
     "en": "error: unknown command: {cmdToken}. Type help."
   },
+  "cmd.error.unknownCommandSuggest": {
+    "ja": "error: 不明なコマンド: {cmdToken}。候補: {suggestions}。help と入力してください。",
+    "en": "error: unknown command: {cmdToken}. Suggestions: {suggestions}. Type help."
+  },
   "cmd.group.usage.interactive": {
     "ja": "Interactive: BMXt で group new と入力して Enter（タブ ID 不要）。",
     "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."

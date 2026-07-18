@@ -20,12 +20,14 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "dom": [
     { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
-    { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" }
+    { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "exit": [] as const,
   "search": [
     { head: "-list", trailingTokens: ["--all","--history","--bookmark","--page","--snapshot","--unlimit"] as const, tail: "rest" },
-    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "group": [] as const,
   "help": [] as const,
@@ -34,7 +36,8 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
-    { head: "-nowurl", trailingTokens: [] as const, tail: "none" }
+    { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "nav": [
     { head: "-enter", trailingTokens: [] as const, tail: "none" },
@@ -43,7 +46,8 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "translate": [
     { head: "-on", trailingTokens: [] as const, tail: "none" },
     { head: "-off", trailingTokens: [] as const, tail: "none" },
-    { head: "-setting", trailingTokens: ["--ja-en","--en-ja"] as const, tail: "none" }
+    { head: "-setting", trailingTokens: ["--ja-en","--en-ja"] as const, tail: "none" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "aboutbmxt": [] as const,
   "session": [
@@ -52,7 +56,8 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-switch", trailingTokens: [] as const, tail: "rest" },
     { head: "-next", trailingTokens: [] as const, tail: "none" },
     { head: "-prev", trailingTokens: [] as const, tail: "none" },
-    { head: "-setting-name", trailingTokens: [] as const, tail: "rest" }
+    { head: "-setting-name", trailingTokens: [] as const, tail: "rest" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "snapshot": [
     { head: "-save", trailingTokens: [] as const, tail: "rest" }
@@ -60,7 +65,8 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "browse": [] as const,
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
-    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" }
+    { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const
 }
 
@@ -116,13 +122,13 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "dom": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "help"
     }
     case "exit":
       return false
     case "search": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit"
+      return lower === "-list" || lower === "-exit" || lower === "help"
     }
     case "group":
       return false
@@ -130,7 +136,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "tabs": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "help"
     }
     case "nav": {
       const lower = token.toLowerCase()
@@ -138,13 +144,13 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "translate": {
       const lower = token.toLowerCase()
-      return lower === "-on" || lower === "-off" || lower === "-setting"
+      return lower === "-on" || lower === "-off" || lower === "-setting" || lower === "help"
     }
     case "aboutbmxt":
       return false
     case "session": {
       const lower = token.toLowerCase()
-      return lower === "-new" || lower === "-list" || lower === "-switch" || lower === "-next" || lower === "-prev" || lower === "-setting-name"
+      return lower === "-new" || lower === "-list" || lower === "-switch" || lower === "-next" || lower === "-prev" || lower === "-setting-name" || lower === "help"
     }
     case "snapshot": {
       const lower = token.toLowerCase()
@@ -154,7 +160,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "setting": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit"
+      return lower === "-list" || lower === "-exit" || lower === "help"
     }
     default:
       return false

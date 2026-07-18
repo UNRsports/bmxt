@@ -19,6 +19,9 @@ pub mod translate;
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
+    if let Some(bundle) = help_cmd::try_section_help(canonical, args) {
+        return bundle;
+    }
     match canonical {
         "clear" => clear::run(args),
         "close" => close::run(args),

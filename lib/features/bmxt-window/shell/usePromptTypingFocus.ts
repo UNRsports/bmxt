@@ -39,7 +39,11 @@ function selectionIntersects(root: HTMLElement | null): boolean {
   return root.contains(anchor)
 }
 
-function isClipboardChord(e: KeyboardEvent): boolean {
+function isModifierOnlyKey(e: Pick<KeyboardEvent, "key">): boolean {
+  return e.key === "Control" || e.key === "Meta" || e.key === "Alt" || e.key === "Shift"
+}
+
+function isClipboardChord(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {
   if (!e.ctrlKey && !e.metaKey) {
     return false
   }
@@ -47,7 +51,27 @@ function isClipboardChord(e: KeyboardEvent): boolean {
     return false
   }
   const key = e.key.toLowerCase()
-  return key === "c" || key === "x" || key === "a"
+  return key === "c" || key === "x" || key === "a" || key === "v"
+}
+
+/**
+ * EN: Keep log selection for modifier chords (Ctrl/Cmd alone or with C/X/A/V).
+ * Printable typing still reclaims the prompt.
+ */
+export function shouldPreserveLogSelectionOnKey(
+  e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">,
+  hasLogSelection: boolean
+): boolean {
+  if (!hasLogSelection) {
+    return false
+  }
+  if (isModifierOnlyKey(e)) {
+    return true
+  }
+  if (e.ctrlKey || e.metaKey) {
+    return true
+  }
+  return false
 }
 
 function isPrintableReclaimKey(e: KeyboardEvent): string | null {
@@ -90,7 +114,11 @@ export function usePromptTypingFocus(options: UsePromptTypingFocusOptions): void
       }
 
       const logRoot = options.logScrollRef.current
-      if (isClipboardChord(e) && selectionIntersects(logRoot)) {
+      const hasLogSelection = selectionIntersects(logRoot)
+      if (isClipboardChord(e) && hasLogSelection) {
+        return
+      }
+      if (shouldPreserveLogSelectionOnKey(e, hasLogSelection)) {
         return
       }
 

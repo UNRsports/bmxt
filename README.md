@@ -223,6 +223,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `tabs -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved in `chrome.storage.local` |
 | `tabs -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
 | `tabs -nowurl` | Print current tab URL |
+| `tabs help` | Show the `tabs` manual section |
 | `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
 | `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | List DOM nodes from the active tab as plain lines (default **`--normal --html`**); optional case-insensitive substring filter; scriptable http(s) only |
 | `browse dom -list …` | Open a read-only DOM picker column (same picker chrome as `browse search -list …`); mode **`--normal`** or **`--with`**; flavor **`--html`** or **`--react`** |
@@ -779,6 +780,7 @@ Headline strings in the UI come from **`lib/features/side-picker/interaction/pic
 - `tabs -setting -page-active --auto | --manual`: configure tab preview on highlight. **`--auto`** (default): moving highlight activates the tab in the background window. **`--manual`**: only **Alt+↑↓** (or holding **Alt**) activates; **Enter** still jumps to the highlighted tab and brings its window forward. Persisted in **`chrome.storage.local`**; a **tabs** status strip under the prompt shows the current mode while the tab picker is open.
 - `tabs -nowurl`: print current tab URL.
 - `tabs -moveurl <url>`: activate matching http(s) tab and bring its window to front, or open a new tab if none matches. After `tabs -moveurl ` (trailing space), **Tab** cycles open http(s) tab URLs as completion candidates.
+- `tabs help`: show the `tabs` manual section (also listed in the second-command candidate menu).
 
 <a id="tabs-tab-picker"></a>
 
@@ -1107,7 +1109,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
 
-Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, starting with `-`), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics live in **`crates/bmxt-core/src/cmd/<module>.rs`**; keep literals in sync—**`pnpm run verify:manifest`** checks each `head` appears in the Rust cmd file).
+Every command row **must** include **`subcommands`**: use **`[]`** when the command has no fixed second-token family (e.g. `clear`). Non-empty arrays declare **canonical second tokens** (`head`, normally starting with `-`; literal **`help`** is allowed for per-command manuals), optional **fixed third tokens** after that head (`trailingTokens`, e.g. `-u` after `tabs -list`), and an optional **`tail`** hint for tooling: **`none`** | **`rest_http_url`** | **`rest`** (dispatch semantics live in **`crates/bmxt-core/src/cmd/<module>.rs`**; keep literals in sync—**`pnpm run verify:manifest`** checks each `head` appears in the Rust cmd file, except **`help`** which is handled in **`help_cmd.rs`**).
 
 **`pnpm run codegen`** emits **`lib/features/builtin-commands/command-subcommands.gen.ts`** (Tab completion + IME/eligibility helpers such as **`continuationPromptAfterLoneFirstToken`** / **`isSecondToken`**). **Enter** continuation itself is owned by Rust (`promptPrefix`). Copy from **`manifest/templates/command-with-subcommands.example.json`** when adding a new first+second family.
 
@@ -1551,6 +1553,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tabs -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。`chrome.storage.local` に保存 |
 | `tabs -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
 | `tabs -nowurl` | 現在タブの URL を表示。 |
+| `tabs help` | `tabs` のマニュアル節を表示 |
 | `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
 | `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 **`--normal --html`**）。任意の部分一致フィルタ。scriptable な http(s) のみ |
 | `browse dom -list …` | DOM 読み取り専用ピッカー列（`browse search -list …` と同系 UI）。mode **`--normal`**／**`--with`**、flavor **`--html`**／**`--react`** |
@@ -2102,6 +2105,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 - **`tabs -setting -page-active --auto | --manual`**：ハイライト移動時のタブプレビューを設定。**`--auto`**（既定）: ハイライト移動で背面ウィンドウ内のタブをアクティブ化。**`--manual`**: **Alt+↑↓**（または **Alt** 押下）時のみアクティブ化。**Enter** は従来どおりハイライトタブへジャンプしてウィンドウを前面化。設定は **`chrome.storage.local`** に保存。タブピッカー表示中はプロンプト下の **tabs** ステータス列に現在モードを表示。
 - **`tabs -nowurl`**：現在タブの URL を表示します。
 - **`tabs -moveurl <url>`**：該当 http(s) タブをアクティブにしウィンドウを前面化。一致がなければ新規タブで開く。プロンプト上で `tabs -moveurl ` の直後に **Tab** を押すと、開いている http(s) タブの URL を補完候補として循環します。
+- **`tabs help`**：`tabs` のマニュアル節を表示（第二コマンド候補メニューにも掲載）。
 
 <a id="tabs-tab-picker-edit-ja"></a>
 
@@ -2409,7 +2413,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **検証:** **`verify:manifest`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
 - **compound / pipe:** 計画は WASM、実行ループは **`command-line/`**。パイプ段間は **bmxtRule のみ**（コマンド名直結禁止）。
 
-各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`crates/bmxt-core/src/cmd/<module>.rs`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`**）。
+各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`crates/bmxt-core/src/cmd/<module>.rs`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`**）。例外として第二トークン **`help`**（コマンド別マニュアル）は **`help_cmd.rs`** で中央処理する。`head` は通常 `-` 始まりだが、マニュアル用のリテラル **`help`** を許可する。
 
 **手書きの `handlers/effects/*.ts`:** codegen の対象外。**`-list`** effect は **`runPlainListForCommandId`** を呼び、整形を重複させない。
 
