@@ -525,3 +525,171 @@ tabs -list | close       → パイプ consumer（副作用・picker とは別�
 - [x] `CommandEntry` + UI handler（`picker` を `plain-list` より前に登録）
 - [x] pipe consumer から `picker` を外す（`close` のみ）
 - [x] i18n・README・テスト・codegen
+
+---
+
+## 12. nav インクリメンタルジャンプ — 探索同定 + 属性指定で直接到達
+
+現在の **nav モード**（仮想カーソル / 空間スナップ / 合成 activate）に、**要素属性のインクリメンタル指定による直接ジャンプ**と、**カーソル探索で同定した識別子の再利用**を足す。Vimium 型の全画面ヒント競争ではなく、**探索 → 同定 → 再利用**で「直感 + 再操作の確実さ」を取る。
+
+### 12.1 目的
+
+| # | 機能 | 内容 |
+|---|------|------|
+| **N1** | インクリメンタル直接ジャンプ | nav overlay **ON** 時、リンク等の属性断片（accessible name / `alt` / リンクテキスト / URL の安定部分 等）をインクリメンタル入力し、一致候補へカーソル（または選択）を飛ばして activate 可能にする |
+| **N2** | カーソル同定 → ラベル表示 → クリック / 学習 | 初回は nav カーソルで指し示し、対象の識別ラベル（`alt` / URL / name 等）をその場表示したうえでクリック。よく行くサイトでは **N1** で同じ識別子へ直接ジャンプ |
+
+**非目標（本節スコープ外）**
+
+- `chrome.debugger` / CDP AOM への依存（デバッガバナー回避）
+- Vimium 互換の全画面一時ヒント（`f` ラベル撒き）の再実装
+- 任意 UI（canvas / ドラッグ）の完全カバー
+
+### 12.2 セマンティクス（ユーザー体験）
+
+```
+nav -enter → Alt で overlay ON
+    │
+    ├─ 矢印 … 既存どおり空間移動 / スナップ
+    ├─ カーソル下 … 識別ラベル HUD（name / alt / href 断片 / 分類）
+    ├─ Enter … 分類に応じた activate（既存 + 強化）
+    │
+    └─ インクリメンタルモード（キーは未決・§12.7）
+           クエリ入力 → 候補絞り込み → ジャンプ → Enter で activate
+```
+
+- **探索（N2）:** 指した要素をヒューリスティック分類し、表示用・記憶用のキーを生成する。
+- **再利用（N1）:** 同一オリジン（または URL パターン）内で、キーに対するインクリメンタル一致で候補へ飛ぶ。
+- **activate:** 座標クリックより、解決済み要素への直接操作を優先（§12.4）。
+
+### 12.3 要素分類・識別キー（ヒューリスティック）
+
+カーソル下（または候補）について、自分→祖先を歩き **確信度つき分類**する（boolean の「機能あり」よりスコア分類）。
+
+| 分類 | 主な信号 | 識別キー候補（優先順の目安） |
+|------|----------|------------------------------|
+| `link` | `a[href]`, `area`, `role=link` | pathname+query 安定部 → リンクテキスト → `aria-label` |
+| `button-like` | `button`, `role=button`, 標準 input | accessible name → `aria-label` → 可視テキスト |
+| `editable` | input/textarea/contenteditable | `name` / `id` / label テキスト（既存 typing と連携） |
+| `media` | `img[alt]`, 画像リンク | `alt` → 親リンク href |
+| `maybe-interactive` | `cursor:pointer`, tabindex≥0 のみ | 弱キー + 要カーソル確認 |
+| `inert` | aria-hidden / disabled / pointer-events:none | ジャンプ対象外 |
+
+- `addEventListener` のみの要素は content script から列挙不可 → `maybe` 止まりを許容。
+- 内側テキストノードではなく **実ターゲット**（親の `a` 等）を解決してからキー化。
+- 同一ページ内の衝突時は短い識別子や親コンテキストを付与。
+
+実装の置き場（案）: `lib/features/nav/nav-target-classify.ts`（ページ注入側と共有可能な純関数）+ 既存 `nav-spatial-in-page.ts` との接続。
+
+### 12.4 activate 方針
+
+| 分類 | 優先アクション |
+|------|----------------|
+| `link` / `button-like` | 解決要素へ `click()` 系を **1 回**（現行の二重 dispatch を整理） |
+| `editable` | 既存 typing mode |
+| `maybe-interactive` | 要素中心へのポインタイベント → 失敗時は HUD で明示 |
+| 失敗 | 再分類・再解決を **1 回**まで；それでもだめなら status エラー |
+
+インクリメンタルジャンプ後の Enter も、座標ではなく **解決済み path / 要素** を正本とする。
+
+### 12.5 学習・サイト再利用（N2 → N1）
+
+| 項目 | 方針 |
+|------|------|
+| 記憶タイミング | カーソル同定後の成功 activate、または明示「ピン」（UI 未決） |
+| キー | §12.3 の識別キー + `record` kind（link 等） |
+| スコープ | `origin` 必須。任意で path プレフィックス（SPA 対策は後段） |
+| 保存先 | まず **セッション / メモリ**；永続は `chrome.storage.local`（設定 skill に合わせる）。外部 zip は後回し可 |
+| 腐ったキー | ジャンプ 0 件 or activate 失敗 → 候補から落とし、再探索を促す |
+
+よく行くサイトでは、学習済み + ページ上の現行候補をマージしてインクリメンタル対象にする。
+
+### 12.6 実装フェーズ
+
+#### Phase 0 — 設計固定・現状整理
+
+- [ ] 本節（§12）を正とし、キーバインド・HUD 文言・永続の最小範囲を §12.7 で決める
+- [ ] 現行 `navSpatialClickElement` の二重イベント有無を確認し、Phase 3 の整理対象に落とす
+- [ ] 関連: `lib/features/nav/*`, `entrypoints/bmxt-nav-overlay.content/`, README Nav mode
+
+#### Phase 1 — その場分類 + ラベル HUD（N2 の「指して見せる」）
+
+- [ ] `nav-target-classify.ts` — 分類・識別キー生成・実ターゲット解決（単体テスト）
+- [ ] overlay / inject: カーソル下（スナップ中は選択要素）のラベルを HUD 表示
+- [ ] status strip または overlay 近傍に `link:…` / `button:…` / `maybe:…` を短く出す
+- [ ] i18n（`nav` namespace）EN + JA
+- [ ] 手動: 通常リンク・アイコンボタン・内側 span・inert の見え方
+
+#### Phase 2 — インクリメンタル直接ジャンプ（N1）
+
+- [ ] overlay ON + terminal focus 時のインクリメンタル UI（プロンプト流用 or 専用バッファ — §12.7）
+- [ ] ページ候補収集（既存 spatial 候補を拡張: name/alt/href インデックス）
+- [ ] クエリで絞り込み → 先頭/選択候補へカーソル移動（`scrollIntoView` + highlight）
+- [ ] Enter で §12.4 activate；Esc でインクリメンタル解除（overlay は維持）
+- [ ] 単体: マッチング・衝突・0 件
+- [ ] 手動: URL 断片 / リンクテキスト / alt でのジャンプ
+
+#### Phase 3 — activate 信頼性の底上げ
+
+- [ ] 分類別 activate に分岐；合成 MouseEvent 乱発を抑制
+- [ ] `elementFromPoint` 再検証は座標フォールバック時のみ
+- [ ] 失敗理由を status / i18n で返す
+- [ ] 回帰: 既存 typing / context menu / text select
+
+#### Phase 4 — 学習と「よく行くサイト」再利用（N2 完成）
+
+- [ ] 成功 activate 時に (scope, kind, key, 任意 meta) を記録
+- [ ] インクリメンタル候補 = ページ現行 ∪ 学習済み（同一 scope）
+- [ ] 腐ったエントリの無効化
+- [ ] 永続化（optional）: storage キー設計・上限・削除 UX の最小
+- [ ] README Nav mode に N1/N2 を追記
+
+#### Phase 5 — 仕上げ
+
+- [ ] README / store / release-notes（ユーザー向け短い説明）
+- [ ] `_context/map_command.csv` に nav 関連モジュール行があれば更新
+- [ ] `pnpm exec tsc --noEmit` / `pnpm test` / 手動スモーク（nav + translate 併用）
+
+### 12.7 未決（実装前に決める）
+
+- [ ] インクリメンタル起動キー（例: `/` はピッカーと衝突しうる → nav 専用の要検討）
+- [ ] HUD の置き場（overlay 吹き出し vs status strip vs 両方）
+- [ ] 学習のオプトイン（常時自動 vs 明示ピン）
+- [ ] 永続の要否と UI（`setting` 連携するか）
+- [ ] SPA 向け scope（origin のみか path プレフィックスか）
+
+### 12.8 依存関係
+
+```
+Phase 0（設計）
+    ↓
+Phase 1（分類 + HUD） ──→ Phase 3（activate）
+    ↓                         ↑
+Phase 2（インクリメンタル） ──┘
+    ↓
+Phase 4（学習・再利用）
+    ↓
+Phase 5（文書・回帰）
+```
+
+Phase 2 は Phase 1 のキー生成を前提とする。Phase 4 は Phase 2 の候補パイプに学習を載せる。
+
+### 12.9 関連ファイル（予定）
+
+| 用途 | パス |
+|------|------|
+| 分類・キー | `lib/features/nav/nav-target-classify.ts`（新規） |
+| 空間候補 | `lib/features/nav/nav-spatial-in-page.ts` |
+| inject / overlay | `lib/features/nav/nav-overlay-inject-fn.ts`, `entrypoints/bmxt-nav-overlay.content/` |
+| セッション hook | `lib/features/nav/use-nav-mode.ts` |
+| bridge | `lib/features/nav/nav-tab-bridge.ts`, `run-nav-inject.ts` |
+| i18n | `lib/features/setting/i18n/namespaces/`（`nav`） |
+| 学習永続（任意） | `lib/features/nav/` 配下 + storage（`bmxt-ui-settings` skill に合わせる） |
+
+### 12.10 完了判定
+
+- [ ] overlay ON でカーソル下が分類・識別ラベル付きで分かる（N2 探索）
+- [ ] 属性断片のインクリメンタルで候補へジャンプし activate できる（N1）
+- [ ] 一度同定・成功したキーが、同一 scope でインクリメンタル再到達できる（N2 再利用）
+- [ ] `debugger` 権限なし；既存 nav typing / menu が退行していない
+- [ ] README Nav mode（EN + JA）に仕様が書かれている
