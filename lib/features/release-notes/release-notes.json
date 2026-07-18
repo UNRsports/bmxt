@@ -4,10 +4,11 @@
       "コマンド間および候補メニューの規格化実装と、それに合わせたリファクタリング",
       "pickerコマンドを「browse」に変更",
       "tabsなど各詳細バー表示UIをctrl+cで終了可能に実装",
-      "typescript6へのアップと、コード細部の修正"
+      "typescript6へのアップと、コード細部の修正",
+      "nav: カーソル下の識別ラベル（kind:key）表示、/ による属性インクリメンタルジャンプ、成功 activate の origin 学習"
     ],
     "en": [
-      ""
+      "nav: identity HUD (kind:key), / incremental attribute jump, learn successful activates per origin"
     ]
   }
 }

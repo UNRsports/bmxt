@@ -1,7 +1,7 @@
 {
   "nav.armedLog": {
-    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
-    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
+    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · / ジャンプ · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
+    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · / jump · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
   },
   "nav.disarmed": {
     "ja": "nav を終了しました。",
@@ -100,8 +100,28 @@
     "en": "Copy · Enter to run · Esc to clear selection"
   },
   "nav.status.idle": {
-    "ja": "↑↓←→ 移動 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
-    "en": "↑↓←→ move · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
+    "ja": "↑↓←→ 移動 · / ジャンプ · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
+    "en": "↑↓←→ move · / jump · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
+  },
+  "nav.status.jump": {
+    "ja": "/ 属性ジャンプ · 文字入力で絞込 · ↑↓ 候補 · Enter 実行 · Esc 解除（overlay は維持）",
+    "en": "/ attribute jump · type to filter · ↑↓ matches · Enter activate · Esc leave jump (overlay stays)"
+  },
+  "nav.activate.error.inert": {
+    "ja": "この要素は操作できません",
+    "en": "this target is not interactive"
+  },
+  "nav.activate.error.failed": {
+    "ja": "activate に失敗しました — カーソルで再同定してください",
+    "en": "activate failed — re-identify with the cursor"
+  },
+  "nav.activate.error.missing": {
+    "ja": "対象要素が見つかりません",
+    "en": "target element not found"
+  },
+  "nav.jump.noMatch": {
+    "ja": "一致なし",
+    "en": "no match"
   },
   "nav.status.menu": {
     "ja": "↑↓ 項目 · Enter 実行 · ←→ 履歴 · Ctrl/Esc で閉じる",

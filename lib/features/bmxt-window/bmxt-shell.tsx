@@ -467,10 +467,15 @@ export function BmxtShell({
   const {
     currentTabTitle: navCurrentTabTitle,
     overlayError: navOverlayError,
+    activateError: navActivateError,
     typingMode: navPageTyping,
     typingMultiline: navTypingMultiline,
     menuOpen: navMenuOpen,
     textSelPhase: navTextSelPhase,
+    jumpMode: navJumpMode,
+    jumpQuery: navJumpQuery,
+    targetLabel: navTargetLabel,
+    jumpMatchCount: navJumpMatchCount,
     toggleActive: toggleNavActive,
     teardownAll: teardownNav,
     navKeyboardEnabled,
@@ -1134,6 +1139,11 @@ export function BmxtShell({
             typingMultiline: navTypingMultiline,
             menuOpen: navMenuOpen,
             textSelPhase: navTextSelPhase,
+            jumpMode: navJumpMode,
+            jumpQuery: navJumpQuery,
+            jumpMatchCount: navJumpMatchCount,
+            targetLabel: navTargetLabel,
+            activateError: navActivateError,
             tabTitle: navCurrentTabTitle,
             overlayError: navOverlayError
           }}

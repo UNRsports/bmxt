@@ -19,6 +19,11 @@ type NavProps = {
   typingMultiline: boolean
   menuOpen: boolean
   textSelPhase: "start" | "end" | "done" | "idle" | null
+  jumpMode?: boolean
+  jumpQuery?: string
+  jumpMatchCount?: number
+  targetLabel?: string | null
+  activateError?: string | null
   tabTitle: string | null
   overlayError: string | null
 }
@@ -167,6 +172,11 @@ export function ModeStatusBarStack({
             typingMultiline={nav.typingMultiline}
             menuOpen={nav.menuOpen}
             textSelPhase={nav.textSelPhase}
+            jumpMode={nav.jumpMode}
+            jumpQuery={nav.jumpQuery}
+            jumpMatchCount={nav.jumpMatchCount}
+            targetLabel={nav.targetLabel}
+            activateError={nav.activateError}
             tabTitle={nav.tabTitle}
             overlayError={nav.overlayError}
           />

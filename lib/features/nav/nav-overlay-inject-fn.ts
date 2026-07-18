@@ -6,9 +6,10 @@
 
 import {
   activateNavLinkAtPath,
+  activateNavSpatialPath,
   clearNavSpatialHighlight,
   collectNavSpatialCandidates,
-  isNavLinkTarget,
+  identifyNavSpatialPath,
   navSpatialClickElement,
   navSpatialMoveIndex,
   navSpatialPointerForIndex,
@@ -17,14 +18,18 @@ import {
   scrollNavSpatialTargetIntoView,
   setNavSpatialHighlight,
   syncNavSpatialSelectionIndex,
+  type NavSpatialCandidateMeta,
   type NavSpatialCandidates
 } from "./nav-spatial-in-page.ts"
+import { parseNavJumpQueryPayload, rankNavJumpMatches } from "./nav-jump-match.ts"
+import { formatNavTargetLabel, identifyNavElement } from "./nav-target-classify.ts"
 
 export type NavInjectAction =
   | "start"
   | "stop"
   | "move"
   | "click"
+  | "jumpQuery"
   | "forwardKey"
   | "insertText"
   | "deleteBackward"
@@ -53,6 +58,14 @@ export type NavInjectResult =
       menuVariant?: NavInjectMenuVariant
       /** EN: Plain text to copy in BMXt (user gesture); set by copy menu action. */
       navCopiedText?: string
+      /** EN: Short identity label under cursor (`link:…` / `button-like:…`). */
+      targetLabel?: string
+      pageOrigin?: string
+      jumpMatchCount?: number
+      jumpMatchIndex?: number
+      activatedKind?: string
+      activatedKey?: string
+      activateError?: string
     }
   | { ok: false; reason?: string }
 
@@ -154,8 +167,11 @@ export function bmxtNavControlInjected(
     labels: OverlayLabels
     spatialPaths: number[][]
     spatialBoxes: NavSpatialCandidates["boxes"]
+    spatialMetas: NavSpatialCandidateMeta[]
     spatialIndex: number
     selectedPath: number[] | null
+    jumpRankedIndices: number[]
+    jumpRankIndex: number
   }
 
   function sessionWin(): { bmxtNav?: NavSession } {
@@ -186,11 +202,20 @@ export function bmxtNavControlInjected(
     if (!Array.isArray(sess.spatialBoxes)) {
       sess.spatialBoxes = []
     }
+    if (!Array.isArray(sess.spatialMetas)) {
+      sess.spatialMetas = []
+    }
     if (typeof sess.spatialIndex !== "number") {
       sess.spatialIndex = -1
     }
     if (sess.selectedPath != null && !Array.isArray(sess.selectedPath)) {
       sess.selectedPath = null
+    }
+    if (!Array.isArray(sess.jumpRankedIndices)) {
+      sess.jumpRankedIndices = []
+    }
+    if (typeof sess.jumpRankIndex !== "number") {
+      sess.jumpRankIndex = 0
     }
   }
 
@@ -332,6 +357,26 @@ export function bmxtNavControlInjected(
     return sess.menuVariant === "copy" ? COPY_MENU_ITEM_IDS : MENU_ITEM_IDS
   }
 
+  function currentTargetLabel(sess: NavSession): string {
+    const meta = sess.spatialIndex >= 0 ? sess.spatialMetas[sess.spatialIndex] : undefined
+    if (meta && meta.label.length > 0) {
+      return meta.label
+    }
+    const identity = identifyNavSpatialPath(sess.selectedPath)
+    if (identity) {
+      return formatNavTargetLabel(identity)
+    }
+    return ""
+  }
+
+  function pageOriginSafe(): string {
+    try {
+      return typeof location !== "undefined" ? location.origin : ""
+    } catch {
+      return ""
+    }
+  }
+
   function navOk(sess: NavSession, extra: Record<string, unknown> = {}): NavInjectResult {
     return {
       ok: true,
@@ -340,8 +385,21 @@ export function bmxtNavControlInjected(
       menuOpen: sess.menuOpen,
       textSelPhase: sess.textSelPhase,
       menuVariant: sess.menuVariant,
+      targetLabel: currentTargetLabel(sess),
+      pageOrigin: pageOriginSafe(),
+      jumpMatchCount: sess.jumpRankedIndices.length,
+      jumpMatchIndex: sess.jumpRankedIndices.length > 0 ? sess.jumpRankIndex : -1,
       ...extra
     }
+  }
+
+  function createTargetHudElement(label: string): HTMLElement {
+    const div = document.createElement("div")
+    div.setAttribute("data-bmxt-nav-target-hud", "1")
+    div.style.cssText =
+      "margin-top:4px;padding:3px 7px;max-width:260px;font:600 10px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;color:#e6edf3;background:rgba(15,23,42,0.92);border:1px solid rgba(88,166,255,0.45);border-radius:5px;box-shadow:0 2px 8px rgba(0,0,0,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none"
+    div.textContent = label
+    return div
   }
 
   function createMenuElement(sess: NavSession): HTMLElement | null {
@@ -739,6 +797,11 @@ export function bmxtNavControlInjected(
       sess.root.appendChild(createTypingHintElement(sess.typingMultiline, sess.labels))
     } else if (sess.textSelPhase === "start" || sess.textSelPhase === "end") {
       sess.root.appendChild(createTextSelHintElement(sess.textSelPhase, sess.labels))
+    } else if (!sess.menuOpen) {
+      const label = currentTargetLabel(sess)
+      if (label.length > 0) {
+        sess.root.appendChild(createTargetHudElement(label))
+      }
     }
 
     const menu = createMenuElement(sess)
@@ -813,13 +876,14 @@ export function bmxtNavControlInjected(
   }
 
   function spatialCandidatesFromSession(sess: NavSession): NavSpatialCandidates {
-    return { paths: sess.spatialPaths, boxes: sess.spatialBoxes }
+    return { paths: sess.spatialPaths, boxes: sess.spatialBoxes, metas: sess.spatialMetas }
   }
 
   function refreshSpatialCandidates(sess: NavSession): void {
     const collected = collectNavSpatialCandidates()
     sess.spatialPaths = collected.paths
     sess.spatialBoxes = collected.boxes
+    sess.spatialMetas = collected.metas
     sess.spatialIndex = syncNavSpatialSelectionIndex(collected, sess.selectedPath)
   }
 
@@ -840,6 +904,42 @@ export function bmxtNavControlInjected(
       setNavSpatialHighlight(null)
       scrollCursorIntoView(sess.x, sess.y)
     }
+    renderOverlayRoot(sess)
+  }
+
+  function applyJumpQuery(sess: NavSession, raw: string): NavInjectResult {
+    if (sess.typingActive || sess.menuOpen) {
+      return { ok: false, reason: "jump-unavailable" }
+    }
+    if (sess.textSelPhase !== "idle") {
+      return { ok: false, reason: "jump-unavailable" }
+    }
+    const { query, learned, cycleDelta } = parseNavJumpQueryPayload(raw)
+    refreshSpatialCandidates(sess)
+    const jumpCandidates = sess.spatialMetas.map((meta, index) => ({
+      index,
+      matchKeys: meta.matchKeys,
+      kind: meta.kind,
+      confidence: meta.confidence
+    }))
+    const ranked = rankNavJumpMatches(jumpCandidates, query, learned)
+    sess.jumpRankedIndices = ranked.rankedIndices
+    if (ranked.rankedIndices.length === 0) {
+      sess.jumpRankIndex = 0
+      renderOverlayRoot(sess)
+      return navOk(sess, { jumpMatchCount: 0, jumpMatchIndex: -1 })
+    }
+    let rankIndex = sess.jumpRankIndex
+    if (cycleDelta !== 0) {
+      rankIndex =
+        (rankIndex + cycleDelta + ranked.rankedIndices.length) % ranked.rankedIndices.length
+    } else {
+      rankIndex = 0
+    }
+    sess.jumpRankIndex = rankIndex
+    const spatialIndex = ranked.rankedIndices[rankIndex]!
+    applySpatialIndex(sess, spatialIndex)
+    return navOk(sess)
   }
 
   function initSpatialSelection(sess: NavSession, px: number, py: number): void {
@@ -872,34 +972,86 @@ export function bmxtNavControlInjected(
     editableFocused: boolean
     typingMultiline?: boolean
     initialValue?: string
+    activatedKind?: string
+    activatedKey?: string
+    activateError?: string
   } {
     const el = resolveNavSpatialElement(sess.selectedPath)
     if (!el) {
       return clickAt(sess.x, sess.y)
     }
-    if (isNavLinkTarget(el)) {
-      const path = sess.selectedPath
-      if (path != null && activateNavLinkAtPath(path)) {
-        endTypingUi(sess)
-        return { editableFocused: false }
+    const identity = identifyNavElement(el)
+    if (identity.kind === "editable") {
+      const editable = resolveEditable(el)
+      if (editable) {
+        scrollNavSpatialTargetIntoView(editable)
+        focusEditableAt(editable, sess.x, sess.y)
+        const info = beginTypingUi(sess, editable)
+        editable.blur()
+        return {
+          editableFocused: true,
+          typingMultiline: info.typingMultiline,
+          initialValue: info.initialValue,
+          activatedKind: identity.kind,
+          activatedKey: identity.key
+        }
       }
     }
-    const editable = resolveEditable(el)
-    if (editable) {
-      scrollNavSpatialTargetIntoView(editable)
-      focusEditableAt(editable, sess.x, sess.y)
-      const info = beginTypingUi(sess, editable)
-      editable.blur()
-      return {
-        editableFocused: true,
-        typingMultiline: info.typingMultiline,
-        initialValue: info.initialValue
+    if (identity.kind === "link" || identity.kind === "button-like" || identity.kind === "media") {
+      const path = sess.selectedPath
+      if (path != null) {
+        const activated =
+          identity.kind === "link"
+            ? { ok: activateNavLinkAtPath(path), identity }
+            : activateNavSpatialPath(path)
+        endTypingUi(sess)
+        if (activated.ok) {
+          return {
+            editableFocused: false,
+            activatedKind: identity.kind,
+            activatedKey: identity.key
+          }
+        }
+        return {
+          editableFocused: false,
+          activateError: "activate-failed",
+          activatedKind: identity.kind,
+          activatedKey: identity.key
+        }
       }
+    }
+    if (identity.kind === "maybe-interactive") {
+      const path = sess.selectedPath
+      if (path != null) {
+        const activated = activateNavSpatialPath(path)
+        endTypingUi(sess)
+        if (activated.ok) {
+          return {
+            editableFocused: false,
+            activatedKind: identity.kind,
+            activatedKey: identity.key
+          }
+        }
+        return {
+          editableFocused: false,
+          activateError: "activate-failed",
+          activatedKind: identity.kind,
+          activatedKey: identity.key
+        }
+      }
+    }
+    if (identity.kind === "inert") {
+      endTypingUi(sess)
+      return { editableFocused: false, activateError: "inert" }
     }
     scrollNavSpatialTargetIntoView(el)
     navSpatialClickElement(el)
     endTypingUi(sess)
-    return { editableFocused: false }
+    return {
+      editableFocused: false,
+      activatedKind: identity.kind,
+      activatedKey: identity.key
+    }
   }
 
   function installAt(px: number, py: number): NavInjectResult {
@@ -944,8 +1096,11 @@ export function bmxtNavControlInjected(
       labels: parsedLabels,
       spatialPaths: [],
       spatialBoxes: [],
+      spatialMetas: [],
       spatialIndex: -1,
-      selectedPath: null
+      selectedPath: null,
+      jumpRankedIndices: [],
+      jumpRankIndex: 0
     }
     if (prevTyping) {
       prevTyping.blur()
@@ -982,10 +1137,13 @@ export function bmxtNavControlInjected(
     editableFocused: boolean
     typingMultiline?: boolean
     initialValue?: string
+    activatedKind?: string
+    activatedKey?: string
+    activateError?: string
   } {
     const top = document.elementFromPoint(cx, cy)
     if (!top) {
-      return { editableFocused: false }
+      return { editableFocused: false, activateError: "missing" }
     }
     const editable = resolveEditable(top)
     const el = top as HTMLElement
@@ -993,37 +1151,48 @@ export function bmxtNavControlInjected(
       "a,button,[role='button'],input,textarea,select,label,summary,[tabindex]"
     )
     const target = (editable || closest || el) as HTMLElement
-    const opts: MouseEventInit = {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-      clientX: cx,
-      clientY: cy,
-      button: 0
-    }
-    target.dispatchEvent(new MouseEvent("pointerdown", opts))
-    target.dispatchEvent(new MouseEvent("mousedown", opts))
-    target.dispatchEvent(new MouseEvent("pointerup", opts))
-    target.dispatchEvent(new MouseEvent("mouseup", opts))
-    target.dispatchEvent(new MouseEvent("click", opts))
-    if (typeof target.click === "function") {
-      target.click()
-    }
-    const focusTarget = editable ?? resolveEditable(document.activeElement)
-    const sess = sessionWin().bmxtNav
-    if (focusTarget && sess) {
-      const info = beginTypingUi(sess, focusTarget)
-      focusTarget.blur()
-      return {
-        editableFocused: true,
-        typingMultiline: info.typingMultiline,
-        initialValue: info.initialValue
+    const identity = identifyNavElement(target)
+    if (identity.kind === "editable" || editable) {
+      const focusTarget = editable ?? resolveEditable(target)
+      const sess = sessionWin().bmxtNav
+      if (focusTarget && sess) {
+        const info = beginTypingUi(sess, focusTarget)
+        focusTarget.blur()
+        return {
+          editableFocused: true,
+          typingMultiline: info.typingMultiline,
+          initialValue: info.initialValue,
+          activatedKind: "editable",
+          activatedKey: identity.key
+        }
       }
     }
+    if (typeof target.click === "function") {
+      target.click()
+    } else {
+      const opts: MouseEventInit = {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: cx,
+        clientY: cy,
+        button: 0
+      }
+      target.dispatchEvent(new MouseEvent("pointerdown", opts))
+      target.dispatchEvent(new MouseEvent("mousedown", opts))
+      target.dispatchEvent(new MouseEvent("pointerup", opts))
+      target.dispatchEvent(new MouseEvent("mouseup", opts))
+      target.dispatchEvent(new MouseEvent("click", opts))
+    }
+    const sess = sessionWin().bmxtNav
     if (sess) {
       endTypingUi(sess)
     }
-    return { editableFocused: false }
+    return {
+      editableFocused: false,
+      activatedKind: identity.kind,
+      activatedKey: identity.key
+    }
   }
 
   function dispatchInputEvent(target: HTMLElement, inputType: string, data: string | null): void {
@@ -1228,10 +1397,16 @@ export function bmxtNavControlInjected(
       return installAt(c.x, c.y)
     }
 
+    if (action === "jumpQuery") {
+      return applyJumpQuery(sess, text)
+    }
+
     if (action === "move") {
       if (!sess.typingActive) {
         sess.typingEl = null
       }
+      sess.jumpRankedIndices = []
+      sess.jumpRankIndex = 0
       spatialMoveSelection(sess, dx, dy)
       if (sess.textSelPhase === "end") {
         previewTextSelection(sess)
@@ -1315,7 +1490,12 @@ export function bmxtNavControlInjected(
         y: sess.y,
         editableFocused: clickRes.editableFocused,
         typingMultiline: clickRes.typingMultiline,
-        initialValue: clickRes.initialValue
+        initialValue: clickRes.initialValue,
+        targetLabel: currentTargetLabel(sess),
+        pageOrigin: pageOriginSafe(),
+        activatedKind: clickRes.activatedKind,
+        activatedKey: clickRes.activatedKey,
+        activateError: clickRes.activateError
       }
     }
 

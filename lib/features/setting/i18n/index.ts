@@ -44,6 +44,7 @@ export {
   errorLine,
   formatBulletedLines,
   formatUiSettingsSummaryLines,
+  navActivateErrorLabel,
   navStatusHint,
   optionalHostDeniedLines,
   searchStatusHint,

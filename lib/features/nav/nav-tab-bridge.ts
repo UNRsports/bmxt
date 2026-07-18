@@ -1,5 +1,6 @@
 import { displayTitle } from "../format/display-title"
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab"
+import { serializeNavJumpQueryPayload } from "./nav-jump-match"
 import { getNavOverlayLabelsJson } from "./nav-overlay-labels"
 import { runNavControlOnTab, type NavControlResult, type NavKeyForward } from "./run-nav-inject"
 
@@ -46,6 +47,16 @@ export async function moveNavOverlayOnTab(
 
 export async function clickNavOverlayOnTab(tabId: number): Promise<NavControlResult> {
   return runNavControlViaBackground(tabId, "click", false, 0, 0)
+}
+
+export async function jumpQueryNavOverlayOnTab(
+  tabId: number,
+  query: string,
+  learned: readonly string[],
+  cycleDelta = 0
+): Promise<NavControlResult> {
+  const text = serializeNavJumpQueryPayload(query, learned, cycleDelta)
+  return runNavControlViaBackground(tabId, "jumpQuery", false, 0, 0, 0, 0, undefined, text)
 }
 
 export async function clearNavTypingOnTab(tabId: number): Promise<NavControlResult> {

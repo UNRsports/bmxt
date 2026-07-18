@@ -14,10 +14,27 @@ import {
 } from "../page-dom/spatial-element-nav.ts"
 import { buildPathForElement, resolveNodeFromPath, walkAllElements } from "../page-dom/injected-dom-path.ts"
 import { isElementVisibleInViewport } from "../page-dom/injected-dom-viewport-visible.ts"
+import { activateNavTargetByKind } from "./nav-activate.ts"
+import {
+  formatNavTargetLabel,
+  identifyNavElement,
+  resolveNavRealTarget,
+  type NavTargetIdentity,
+  type NavTargetKind
+} from "./nav-target-classify.ts"
+
+export type NavSpatialCandidateMeta = {
+  kind: NavTargetKind
+  label: string
+  matchKeys: string[]
+  confidence: number
+  key: string
+}
 
 export type NavSpatialCandidates = {
   paths: number[][]
   boxes: SpatialRect[]
+  metas: NavSpatialCandidateMeta[]
 }
 
 const NAV_SPATIAL_MAX_CANDIDATES = 200
@@ -95,6 +112,17 @@ function isNavSpatialTarget(el: Element): boolean {
   return tabIndex >= 0
 }
 
+function metaFromElement(el: Element): NavSpatialCandidateMeta {
+  const identity = identifyNavElement(el)
+  return {
+    kind: identity.kind,
+    label: formatNavTargetLabel(identity),
+    matchKeys: identity.matchKeys,
+    confidence: identity.confidence,
+    key: identity.key
+  }
+}
+
 function dedupNavSpatialCandidates(
   raw: Array<{ el: Element; path: number[]; box: SpatialRect }>
 ): NavSpatialCandidates {
@@ -112,11 +140,15 @@ function dedupNavSpatialCandidates(
   })
   const paths: number[][] = []
   const boxes: SpatialRect[] = []
+  const metas: NavSpatialCandidateMeta[] = []
   for (const item of kept) {
-    paths.push(item.path)
-    boxes.push(item.box)
+    const real = resolveNavRealTarget(item.el)
+    const path = buildPathForElement(real) ?? item.path
+    paths.push(path)
+    boxes.push(rectFromElement(real))
+    metas.push(metaFromElement(real))
   }
-  return { paths, boxes }
+  return { paths, boxes, metas }
 }
 
 export function collectNavSpatialCandidates(): NavSpatialCandidates {
@@ -215,8 +247,13 @@ export function isNavLinkTarget(el: Element | null): boolean {
   return resolveNavLinkClickTarget(el) !== null
 }
 
+/** EN: Prefer single `click()`; pointer cascade only when `click` is unavailable. */
 export function navSpatialClickElement(el: Element): void {
   const htmlEl = el as HTMLElement
+  if (typeof htmlEl.click === "function") {
+    htmlEl.click()
+    return
+  }
   const rect = htmlEl.getBoundingClientRect()
   const cx = rect.left + rect.width / 2
   const cy = rect.top + rect.height / 2
@@ -235,9 +272,14 @@ export function navSpatialClickElement(el: Element): void {
     htmlEl.dispatchEvent(new MouseEvent("mouseup", opts))
     htmlEl.dispatchEvent(new MouseEvent("click", opts))
   }
-  if (typeof htmlEl.click === "function") {
-    htmlEl.click()
+}
+
+export function identifyNavSpatialPath(path: readonly number[] | null): NavTargetIdentity | null {
+  const el = resolveNavSpatialElement(path)
+  if (!el) {
+    return null
   }
+  return identifyNavElement(el)
 }
 
 export function activateNavLinkAtPath(path: readonly number[]): boolean {
@@ -245,13 +287,32 @@ export function activateNavLinkAtPath(path: readonly number[]): boolean {
   if (!el) {
     return false
   }
-  const target = resolveNavLinkClickTarget(el)
+  const target = resolveNavLinkClickTarget(el) ?? resolveNavRealTarget(el)
   if (!target) {
     return false
   }
   scrollNavSpatialTargetIntoView(target)
-  navSpatialClickElement(target)
-  return true
+  const identity = identifyNavElement(target)
+  const outcome = activateNavTargetByKind(target, identity.kind)
+  return outcome.ok
+}
+
+export function activateNavSpatialPath(path: readonly number[]): {
+  ok: boolean
+  identity: NavTargetIdentity | null
+} {
+  const el = resolveNodeFromPath(path)
+  if (!el) {
+    return { ok: false, identity: null }
+  }
+  const target = resolveNavRealTarget(el)
+  scrollNavSpatialTargetIntoView(target)
+  const identity = identifyNavElement(target)
+  if (identity.kind === "editable" || identity.kind === "inert") {
+    return { ok: false, identity }
+  }
+  const outcome = activateNavTargetByKind(target, identity.kind)
+  return { ok: outcome.ok, identity }
 }
 
 export function pathsEqualNav(a: readonly number[] | null, b: readonly number[] | null): boolean {

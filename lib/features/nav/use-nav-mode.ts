@@ -12,9 +12,15 @@ import { attachNavKeyHold } from "./nav-key-hold"
 import type { NavInjectTextSelPhase } from "./nav-overlay-inject-fn"
 import type { NavControlResult } from "./nav-tab-bridge"
 import {
+  forgetNavLearnedTarget,
+  listNavLearnedKeysForOrigin,
+  recordNavLearnedTarget
+} from "./nav-learned-targets"
+import {
   applyNavTypingOnTab,
   clearNavTypingOnTab,
   clickNavOverlayOnTab,
+  jumpQueryNavOverlayOnTab,
   moveNavOverlayOnTab,
   navMenuInputOnTab,
   resolveActiveTargetTabId,
@@ -221,10 +227,15 @@ export function useNavMode({
 }: UseNavModeOptions): {
   currentTabTitle: string | null
   overlayError: string | null
+  activateError: string | null
   typingMode: boolean
   typingMultiline: boolean
   menuOpen: boolean
   textSelPhase: NavInjectTextSelPhase | null
+  jumpMode: boolean
+  jumpQuery: string
+  targetLabel: string | null
+  jumpMatchCount: number
   toggleActive: () => void
   teardownAll: () => Promise<void>
   navKeyboardEnabled: boolean
@@ -233,6 +244,11 @@ export function useNavMode({
 } {
   const [currentTabTitle, setCurrentTabTitle] = useState<string | null>(null)
   const [overlayError, setOverlayError] = useState<string | null>(null)
+  const [jumpMode, setJumpMode] = useState(false)
+  const [jumpQuery, setJumpQuery] = useState("")
+  const [targetLabel, setTargetLabel] = useState<string | null>(null)
+  const [jumpMatchCount, setJumpMatchCount] = useState(0)
+  const [activateError, setActivateError] = useState<string | null>(null)
 
   useEffect(() => {
     setNavOverlayLabelsForRun(uiLocale)
@@ -245,6 +261,9 @@ export function useNavMode({
   const armedRef = useRef(armed)
   const typingModeRef = useRef(typingMode)
   const typingMultilineRef = useRef(typingMultiline)
+  const jumpModeRef = useRef(false)
+  const jumpQueryRef = useRef("")
+  const pageOriginRef = useRef("")
   const menuOpenRef = useRef(false)
   const menuSuspendedRef = useRef(false)
   const textSelPhaseRef = useRef<NavInjectTextSelPhase | null>(null)
@@ -260,6 +279,8 @@ export function useNavMode({
   armedRef.current = armed
   typingModeRef.current = typingMode
   typingMultilineRef.current = typingMultiline
+  jumpModeRef.current = jumpMode
+  jumpQueryRef.current = jumpQuery
   getTypingBufferRef.current = getTypingBuffer
   resolveTypingCommitTextRef.current = resolveTypingCommitText
 
@@ -277,6 +298,14 @@ export function useNavMode({
   const navTypingMode =
     armed && active && isFocusedPane && paneFocus === "terminal" && typingMode
 
+  const clearJumpMode = useCallback(() => {
+    jumpModeRef.current = false
+    jumpQueryRef.current = ""
+    setJumpMode(false)
+    setJumpQuery("")
+    setJumpMatchCount(0)
+  }, [])
+
   const exitTypingMode = useCallback((tabId: number | null) => {
     const wasTyping = typingModeRef.current
     setTypingMode(false)
@@ -288,6 +317,64 @@ export function useNavMode({
       dispatchExitTyping()
     }
   }, [])
+
+  const applyTargetFromResult = useCallback((res: NavControlResult) => {
+    if (!res.ok) {
+      return
+    }
+    if (typeof res.targetLabel === "string") {
+      setTargetLabel(res.targetLabel.length > 0 ? res.targetLabel : null)
+    }
+    if (typeof res.pageOrigin === "string" && res.pageOrigin.length > 0) {
+      pageOriginRef.current = res.pageOrigin
+    }
+    if (typeof res.jumpMatchCount === "number") {
+      setJumpMatchCount(res.jumpMatchCount)
+    }
+  }, [])
+
+  const rememberActivation = useCallback(async (res: NavControlResult) => {
+    if (!res.ok) {
+      return
+    }
+    if (res.activateError) {
+      setActivateError(res.activateError)
+      if (res.activatedKey && pageOriginRef.current) {
+        await forgetNavLearnedTarget(pageOriginRef.current, res.activatedKey)
+      }
+      return
+    }
+    setActivateError(null)
+    const kind = res.activatedKind
+    const key = res.activatedKey
+    const origin = typeof res.pageOrigin === "string" ? res.pageOrigin : pageOriginRef.current
+    if (!kind || !key || !origin || kind === "inert" || kind === "editable") {
+      return
+    }
+    await recordNavLearnedTarget(origin, kind, key)
+  }, [])
+
+  const runJumpQuery = useCallback(
+    async (query: string, cycleDelta = 0) => {
+      const tabId = lastOverlayTabRef.current
+      if (tabId === null) {
+        return
+      }
+      const origin = pageOriginRef.current
+      const learned = origin.length > 0 ? await listNavLearnedKeysForOrigin(origin) : []
+      const res = await jumpQueryNavOverlayOnTab(tabId, query, learned, cycleDelta)
+      applyNavInjectState(res, navUiSetters, navUiRefs)
+      applyTargetFromResult(res)
+      if (res.ok && res.jumpMatchCount === 0 && query.trim().length > 0) {
+        for (const key of learned) {
+          if (key.toLowerCase().includes(query.trim().toLowerCase())) {
+            await forgetNavLearnedTarget(origin, key)
+          }
+        }
+      }
+    },
+    [applyTargetFromResult]
+  )
 
   const savePosition = useCallback(
     (tabId: number, point: NavPoint) => {
@@ -327,15 +414,17 @@ export function useNavMode({
         savePosition(tabId, { x: res.x, y: res.y })
         setOverlayError(null)
         applyNavInjectState(res, navUiSetters, navUiRefs)
+        applyTargetFromResult(res)
       } else {
         const reason = "reason" in res ? res.reason : undefined
         setOverlayError(overlayErrorLabel(reason, uiLocale))
+        setTargetLabel(null)
       }
       lastOverlayTabRef.current = tabId
       setCurrentTabTitle(await resolveTabDisplayTitle(tabId))
       return res.ok ? undefined : "reason" in res ? res.reason : undefined
     },
-    [exitTypingMode, positionsRef, savePosition, uiLocale]
+    [applyTargetFromResult, exitTypingMode, positionsRef, savePosition, uiLocale]
   )
 
   const teardownAll = useCallback(async () => {
@@ -347,13 +436,17 @@ export function useNavMode({
       tabs.add(Number(id))
     }
     exitTypingMode(lastOverlayTabRef.current)
+    clearJumpMode()
+    setTargetLabel(null)
+    setActivateError(null)
+    pageOriginRef.current = ""
     resetNavUiState(navUiRefs, navUiSetters)
     await Promise.all([...tabs].map((id) => stopNavOverlayOnTab(id)))
     lastOverlayTabRef.current = null
     setCurrentTabTitle(null)
     setOverlayError(null)
     useCenterOnNextShowRef.current = true
-  }, [exitTypingMode, positionsRef])
+  }, [clearJumpMode, exitTypingMode, positionsRef])
 
   const showOverlayOnActiveTab = useCallback(async () => {
     const tabId = await resolveActiveTargetTabId()
@@ -384,6 +477,9 @@ export function useNavMode({
       useCenterOnNextShowRef.current = true
     } else {
       exitTypingMode(lastOverlayTabRef.current)
+      clearJumpMode()
+      setTargetLabel(null)
+      setActivateError(null)
       resetNavUiState(navUiRefs, navUiSetters)
     }
     setActive(next)
@@ -392,7 +488,15 @@ export function useNavMode({
     } else {
       void syncOverlayForTab(lastOverlayTabRef.current ?? undefined, false, false)
     }
-  }, [exitTypingMode, isFocusedPane, paneFocus, setActive, showOverlayOnActiveTab, syncOverlayForTab])
+  }, [
+    clearJumpMode,
+    exitTypingMode,
+    isFocusedPane,
+    paneFocus,
+    setActive,
+    showOverlayOnActiveTab,
+    syncOverlayForTab
+  ])
 
   const commitTyping = useCallback(async () => {
     const tabId = lastOverlayTabRef.current
@@ -449,12 +553,14 @@ export function useNavMode({
     const onActivated = (info: chrome.tabs.TabActiveInfo) => {
       useCenterOnNextShowRef.current = false
       exitTypingMode(lastOverlayTabRef.current)
+      clearJumpMode()
+      setActivateError(null)
       resetNavUiState(navUiRefs, navUiSetters)
       void syncOverlayForTab(info.tabId, true, false)
     }
     chrome.tabs.onActivated.addListener(onActivated)
     return () => chrome.tabs.onActivated.removeListener(onActivated)
-  }, [armed, active, exitTypingMode, syncOverlayForTab])
+  }, [armed, active, clearJumpMode, exitTypingMode, syncOverlayForTab])
 
   useEffect(() => {
     if (!armed || !active) {
@@ -483,9 +589,16 @@ export function useNavMode({
     })
   }, [navTypingMode, cancelTyping, commitTyping])
 
-  const applyNavResult = useCallback((res: NavControlResult) => {
-    applyNavInjectState(res, navUiSetters, navUiRefs)
-  }, [])
+  const applyNavResult = useCallback(
+    (res: NavControlResult) => {
+      applyNavInjectState(res, navUiSetters, navUiRefs)
+      applyTargetFromResult(res)
+      if (res.ok && !res.activateError) {
+        setActivateError(null)
+      }
+    },
+    [applyTargetFromResult]
+  )
 
   const navProcessFocused = isFocusedPane && paneFocus === "terminal"
 
@@ -553,6 +666,80 @@ export function useNavMode({
           e.preventDefault()
           e.stopPropagation()
           return
+        }
+        return
+      }
+
+      if (jumpModeRef.current) {
+        const ev = e as KeyboardEvent & { isComposing?: boolean }
+        if (ev.isComposing && e.key !== "Escape") {
+          return
+        }
+        if (e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          clearJumpMode()
+          return
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          e.stopPropagation()
+          void clickNavOverlayOnTab(tabId).then((res) => {
+            applyNavResult(res)
+            void rememberActivation(res)
+            if (res.ok && res.editableFocused) {
+              clearJumpMode()
+              enterTypingFromClick(res)
+            } else if (res.ok && !res.activateError) {
+              clearJumpMode()
+            }
+          })
+          return
+        }
+        if (e.key === "Backspace") {
+          e.preventDefault()
+          e.stopPropagation()
+          const next = jumpQueryRef.current.slice(0, -1)
+          jumpQueryRef.current = next
+          setJumpQuery(next)
+          void runJumpQuery(next)
+          return
+        }
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault()
+          e.stopPropagation()
+          const delta = e.key === "ArrowDown" ? 1 : -1
+          void runJumpQuery(jumpQueryRef.current, delta)
+          return
+        }
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault()
+          e.stopPropagation()
+          clearJumpMode()
+          const delta = arrowDelta(e.key)
+          if (delta) {
+            void moveNavOverlayOnTab(tabId, delta.dx, delta.dy).then((res) => {
+              if (res.ok) {
+                savePosition(tabId, { x: res.x, y: res.y })
+              }
+              applyNavResult(res)
+            })
+          }
+          return
+        }
+        if (e.key === "Alt" || e.key === "Control" || e.ctrlKey || e.metaKey) {
+          return
+        }
+        if (e.key.length === 1) {
+          e.preventDefault()
+          e.stopPropagation()
+          const next = jumpQueryRef.current + e.key
+          if (next.length > 200) {
+            return
+          }
+          jumpQueryRef.current = next
+          setJumpQuery(next)
+          void runJumpQuery(next)
         }
         return
       }
@@ -670,10 +857,24 @@ export function useNavMode({
         return
       }
 
+      if (e.key === "/") {
+        e.preventDefault()
+        e.stopPropagation()
+        jumpModeRef.current = true
+        jumpQueryRef.current = ""
+        setJumpMode(true)
+        setJumpQuery("")
+        setActivateError(null)
+        void runJumpQuery("")
+        return
+      }
+
       if (e.key === "Enter") {
         e.preventDefault()
         e.stopPropagation()
         void clickNavOverlayOnTab(tabId).then((res) => {
+          applyNavResult(res)
+          void rememberActivation(res)
           if (res.ok && res.editableFocused) {
             enterTypingFromClick(res)
           }
@@ -694,7 +895,18 @@ export function useNavMode({
         applyNavResult(res)
       })
     },
-    [armed, active, applyNavResult, enterTypingFromClick, isFocusedPane, paneFocus, savePosition]
+    [
+      armed,
+      active,
+      applyNavResult,
+      clearJumpMode,
+      enterTypingFromClick,
+      isFocusedPane,
+      paneFocus,
+      rememberActivation,
+      runJumpQuery,
+      savePosition
+    ]
   )
 
   useWindowKeydownCapture(onWindowKeydownCapture)
@@ -702,10 +914,15 @@ export function useNavMode({
   return {
     currentTabTitle,
     overlayError,
+    activateError,
     typingMode,
     typingMultiline,
     menuOpen,
     textSelPhase,
+    jumpMode,
+    jumpQuery,
+    targetLabel,
+    jumpMatchCount,
     toggleActive,
     teardownAll,
     navKeyboardEnabled,

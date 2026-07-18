@@ -608,55 +608,55 @@ nav -enter → Alt で overlay ON
 
 #### Phase 0 — 設計固定・現状整理
 
-- [ ] 本節（§12）を正とし、キーバインド・HUD 文言・永続の最小範囲を §12.7 で決める
-- [ ] 現行 `navSpatialClickElement` の二重イベント有無を確認し、Phase 3 の整理対象に落とす
-- [ ] 関連: `lib/features/nav/*`, `entrypoints/bmxt-nav-overlay.content/`, README Nav mode
+- [x] 本節（§12）を正とし、キーバインド・HUD 文言・永続の最小範囲を §12.7 で決める
+- [x] 現行 `navSpatialClickElement` の二重イベント有無を確認し、Phase 3 の整理対象に落とす（MouseEvent 連鎖 + `click()` 二重 → 単一 `click()` 優先へ）
+- [x] 関連: `lib/features/nav/*`, `entrypoints/bmxt-nav-overlay.content/`, README Nav mode
 
 #### Phase 1 — その場分類 + ラベル HUD（N2 の「指して見せる」）
 
-- [ ] `nav-target-classify.ts` — 分類・識別キー生成・実ターゲット解決（単体テスト）
-- [ ] overlay / inject: カーソル下（スナップ中は選択要素）のラベルを HUD 表示
-- [ ] status strip または overlay 近傍に `link:…` / `button:…` / `maybe:…` を短く出す
-- [ ] i18n（`nav` namespace）EN + JA
+- [x] `nav-target-classify.ts` — 分類・識別キー生成・実ターゲット解決（単体テスト）
+- [x] overlay / inject: カーソル下（スナップ中は選択要素）のラベルを HUD 表示
+- [x] status strip または overlay 近傍に `link:…` / `button:…` / `maybe:…` を短く出す
+- [x] i18n（`nav` namespace）EN + JA
 - [ ] 手動: 通常リンク・アイコンボタン・内側 span・inert の見え方
 
 #### Phase 2 — インクリメンタル直接ジャンプ（N1）
 
-- [ ] overlay ON + terminal focus 時のインクリメンタル UI（プロンプト流用 or 専用バッファ — §12.7）
-- [ ] ページ候補収集（既存 spatial 候補を拡張: name/alt/href インデックス）
-- [ ] クエリで絞り込み → 先頭/選択候補へカーソル移動（`scrollIntoView` + highlight）
-- [ ] Enter で §12.4 activate；Esc でインクリメンタル解除（overlay は維持）
-- [ ] 単体: マッチング・衝突・0 件
+- [x] overlay ON + terminal focus 時のインクリメンタル UI（専用バッファ + status `jump` — `/`）
+- [x] ページ候補収集（既存 spatial 候補を拡張: name/alt/href インデックス）
+- [x] クエリで絞り込み → 先頭/選択候補へカーソル移動（`scrollIntoView` + highlight）
+- [x] Enter で §12.4 activate；Esc でインクリメンタル解除（overlay は維持）
+- [x] 単体: マッチング・衝突・0 件
 - [ ] 手動: URL 断片 / リンクテキスト / alt でのジャンプ
 
 #### Phase 3 — activate 信頼性の底上げ
 
-- [ ] 分類別 activate に分岐；合成 MouseEvent 乱発を抑制
-- [ ] `elementFromPoint` 再検証は座標フォールバック時のみ
-- [ ] 失敗理由を status / i18n で返す
-- [ ] 回帰: 既存 typing / context menu / text select
+- [x] 分類別 activate に分岐；合成 MouseEvent 乱発を抑制
+- [x] `elementFromPoint` 再検証は座標フォールバック時のみ
+- [x] 失敗理由を status / i18n で返す
+- [ ] 回帰: 既存 typing / context menu / text select（手動）
 
 #### Phase 4 — 学習と「よく行くサイト」再利用（N2 完成）
 
-- [ ] 成功 activate 時に (scope, kind, key, 任意 meta) を記録
-- [ ] インクリメンタル候補 = ページ現行 ∪ 学習済み（同一 scope）
-- [ ] 腐ったエントリの無効化
-- [ ] 永続化（optional）: storage キー設計・上限・削除 UX の最小
-- [ ] README Nav mode に N1/N2 を追記
+- [x] 成功 activate 時に (scope, kind, key, 任意 meta) を記録
+- [x] インクリメンタル候補 = ページ現行 ∪ 学習済み（同一 scope）
+- [x] 腐ったエントリの無効化
+- [x] 永続化（optional）: storage キー設計・上限・削除 UX の最小（`bmxt_nav_learned_targets_v1`）
+- [x] README Nav mode に N1/N2 を追記
 
 #### Phase 5 — 仕上げ
 
-- [ ] README / store / release-notes（ユーザー向け短い説明）
-- [ ] `_context/map_command.csv` に nav 関連モジュール行があれば更新
-- [ ] `pnpm exec tsc --noEmit` / `pnpm test` / 手動スモーク（nav + translate 併用）
+- [x] README / store / release-notes（ユーザー向け短い説明）
+- [x] `_context/map_command.csv` に nav 関連モジュール行があれば更新
+- [x] `pnpm exec tsc --noEmit` / `pnpm test`（手動スモーク nav + translate 併用は残）
 
-### 12.7 未決（実装前に決める）
+### 12.7 設計固定（実装前提）
 
-- [ ] インクリメンタル起動キー（例: `/` はピッカーと衝突しうる → nav 専用の要検討）
-- [ ] HUD の置き場（overlay 吹き出し vs status strip vs 両方）
-- [ ] 学習のオプトイン（常時自動 vs 明示ピン）
-- [ ] 永続の要否と UI（`setting` 連携するか）
-- [ ] SPA 向け scope（origin のみか path プレフィックスか）
+- [x] インクリメンタル起動キー: **`/`**（overlay ON + terminal フォーカス時のみ。picker は `paneFocus` 別系統のため衝突しない）
+- [x] HUD: **overlay 吹き出し + status strip の短い `kind:key`**（両方）
+- [x] 学習: **成功 activate 時に自動記録**（明示ピン UI は後回し）
+- [x] 永続: **`chrome.storage.local`**（`bmxt_nav_learned_targets_v1`、origin 単位・上限付き）。`setting` UI / zip は後回し
+- [x] SPA scope: **origin のみ**（path プレフィックスは後段）
 
 ### 12.8 依存関係
 
@@ -688,8 +688,8 @@ Phase 2 は Phase 1 のキー生成を前提とする。Phase 4 は Phase 2 の�
 
 ### 12.10 完了判定
 
-- [ ] overlay ON でカーソル下が分類・識別ラベル付きで分かる（N2 探索）
-- [ ] 属性断片のインクリメンタルで候補へジャンプし activate できる（N1）
-- [ ] 一度同定・成功したキーが、同一 scope でインクリメンタル再到達できる（N2 再利用）
-- [ ] `debugger` 権限なし；既存 nav typing / menu が退行していない
-- [ ] README Nav mode（EN + JA）に仕様が書かれている
+- [x] overlay ON でカーソル下が分類・識別ラベル付きで分かる（N2 探索）— 実装済み；手動確認は残
+- [x] 属性断片のインクリメンタルで候補へジャンプし activate できる（N1）— 実装済み；手動確認は残
+- [x] 一度同定・成功したキーが、同一 scope でインクリメンタル再到達できる（N2 再利用）— 実装済み；手動確認は残
+- [x] `debugger` 権限なし；既存 nav typing / menu が退行していない — コードパス維持；手動回帰は残
+- [x] README Nav mode（EN + JA）に仕様が書かれている

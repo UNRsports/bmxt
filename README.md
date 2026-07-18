@@ -420,10 +420,30 @@ Saved snapshots are searchable with **`search -list --snapshot`** (included in *
 
 | Key | Effect |
 |-----|--------|
-| **↑ / ↓ / ← / →** | Move virtual cursor (viewport auto-scrolls near edges) |
-| **Enter** | Left-click at cursor; on **input**, **textarea**, or **contenteditable**, open **typing mode** instead (type on the BMXt command line) |
+| **↑ / ↓ / ← / →** | Move virtual cursor (viewport auto-scrolls near edges); snaps to interactive targets when present |
+| **/** | Start **incremental attribute jump** (type fragments of link text / `alt` / URL path / accessible name; see below) |
+| **Enter** | Activate the resolved target under the cursor (`click()` once for links/buttons; **typing mode** for editables) |
 | **Ctrl** (tap) | Open the on-page **context menu** at the cursor |
 | **Alt** (tap) | Toggle overlay **OFF** (ignored while **typing mode** is active) |
+
+**Target identity (explore → reuse)**
+
+- While the overlay is **ON**, the cursor shows a short HUD label such as **`link:/docs`** or **`button-like:Save`**, and the status strip repeats the same **`kind:key`**.
+- Classification is heuristic (`link` / `button-like` / `editable` / `media` / `maybe-interactive` / `inert`) from the real target (ancestor `<a>` / button when you land on an inner span).
+- After a **successful** activate, BMXt **learns** the identity key for that **page origin** (`chrome.storage.local` key **`bmxt_nav_learned_targets_v1`**) so later **`/`** jumps can prefer familiar targets. Stale keys (zero matches or failed activate) are dropped.
+
+**Incremental jump (`/`)**
+
+| Key | Effect |
+|-----|--------|
+| **/** | Enter jump mode (overlay stays **ON**; status shows **`jump`**) |
+| printable | Narrow candidates by substring match on identity keys |
+| **↑ / ↓** | Cycle among current matches |
+| **Enter** | Activate the highlighted match (same rules as normal **Enter**) |
+| **Esc** | Leave jump mode (overlay stays **ON**) |
+| **← / →** | Leave jump mode and move spatially |
+
+This is **not** a Vimium-style full-page hint overlay; it is explore-with-HUD then reuse-by-attribute.
 
 **Context menu** (**Ctrl**): **↑ / ↓** choose a row, **Enter** run, **← / →** browser **back** / **forward**, **Ctrl** or **Esc** close without running.
 
@@ -439,7 +459,7 @@ After text selection, **Copy** + **Enter** writes the selection to the system cl
 
 When **`translate -on`** is active, typing mode also shows a **source → target → source** round-trip preview strip under the prompt (completed sentences end with `。` `.` `!` `?` `！` `？`, etc.). **Alt hold** commit sends the **target language** for the saved pair (**English** with **`--ja-en`**, **Japanese** with **`--en-ja`**) assembled from translation blocks (see **[`translate`](#translate)**), not the raw buffer.
 
-The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **typing**, **menu**, **sel-start** / **sel-end**, **copy**, plus the target tab title or a short error.
+The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **jump**, **typing**, **menu**, **sel-start** / **sel-end**, **copy**, plus the target tab title, **`kind:key`**, or a short error.
 
 **Tab changes while armed**
 
@@ -449,11 +469,12 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **t
 
 - **Scriptable http(s)** only (`chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
 - After installing or reloading the extension, **reload the target page once** so the WXT **content script** (`entrypoints/bmxt-nav-overlay.content/`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
+- Nav does **not** use the **`debugger`** permission / CDP AOM.
 
 **Implementation**
 
-- **`lib/features/nav/`** — prompt parsing, status bar, session hook (`useNavMode`), inject snippet, Service Worker runner (`run-nav-inject.ts`).
-- **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; **Alt** / nav **Enter** / arrow keys on the prompt.
+- **`lib/features/nav/`** — prompt parsing, status bar, session hook (`useNavMode`), target classify / jump match / learned keys, inject snippet, Service Worker runner (`run-nav-inject.ts`).
+- **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; **Alt** / nav **Enter** / **`/`** jump / arrow keys on the prompt.
 - **`entrypoints/background/index.ts`** — `NAV_CONTROL` message runs inject on the target tab.
 - **`entrypoints/bmxt-nav-overlay.content/`** — content script listener on http(s) pages.
 
@@ -1073,7 +1094,8 @@ Applies when the prompt `textarea` is focused.
 
 - **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (BMXt window active; terminal prompt column focused). Short **Alt** is ignored during **typing mode**; **Alt hold** (~500ms) commits typed text instead.
 - **↑ / ↓ / ← / →** — When overlay is **ON**, move the virtual cursor (not command history). When a **tabs / search / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
-- **Enter** — When overlay is **ON**, left-click at the virtual cursor, or enter **typing mode** on editable fields.
+- **/** — When overlay is **ON**, start incremental attribute jump (type to filter · **↑ / ↓** cycle · **Enter** activate · **Esc** leave jump).
+- **Enter** — When overlay is **ON**, activate the resolved target, or enter **typing mode** on editable fields.
 - **Ctrl** (tap, overlay **ON**) — Open the nav **context menu** at the cursor (**↑ / ↓** choose, **Enter** run, **← / →** history, **Ctrl** / **Esc** close). See **[Nav mode](#nav-mode)**.
 - **Esc hold** (~500ms, **typing mode**) — Cancel typing and restore the previous field value.
 
@@ -1609,10 +1631,30 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 | キー | 動作 |
 |------|------|
-| **↑ / ↓ / ← / →** | 仮想カーソル移動（端付近でビューポート自動スクロール） |
-| **Enter** | カーソル位置で左クリック相当。**input** / **textarea** / **contenteditable** では **typing モード**（BMXt コマンドラインから入力） |
+| **↑ / ↓ / ← / →** | 仮想カーソル移動（端付近でビューポート自動スクロール）。操作可能要素へスナップ |
+| **/** | **属性インクリメンタルジャンプ**開始（リンクテキスト / `alt` / URL パス / accessible name の断片で絞込。下記） |
+| **Enter** | 解決済みターゲットを activate（リンク・ボタンは `click()` 1 回。編集可能なら **typing モード**） |
 | **Ctrl**（タップ） | カーソル位置に **コンテキストメニュー**を表示 |
 | **Alt**（タップ） | オーバーレイ **OFF**（**typing** 中は無視） |
+
+**対象の同定（探索 → 再利用）**
+
+- オーバーレイ **ON** 中、カーソル横に **`link:/docs`** や **`button-like:Save`** のような短い HUD、ステータス帯にも同じ **`kind:key`** を表示。
+- 分類はヒューリスティック（`link` / `button-like` / `editable` / `media` / `maybe-interactive` / `inert`）。内側の span でも親の `<a>` / button を実ターゲットとして解決。
+- **成功した activate** の識別キーを **ページ origin** 単位で学習（`chrome.storage.local` の **`bmxt_nav_learned_targets_v1`**）。以降の **`/`** ジャンプで馴染みのキーを優先。0 件一致や activate 失敗のキーは削除。
+
+**インクリメンタルジャンプ（`/`）**
+
+| キー | 動作 |
+|------|------|
+| **/** | ジャンプモードへ（オーバーレイは **ON** のまま。ステータスは **`jump`**） |
+| 文字入力 | 識別キーの部分一致で候補を絞り、先頭候補へカーソル移動 |
+| **↑ / ↓** | 一致候補を循環 |
+| **Enter** | ハイライト中の候補を activate（通常の **Enter** と同じ規則） |
+| **Esc** | ジャンプ解除（オーバーレイは **ON** のまま） |
+| **← / →** | ジャンプ解除して空間移動 |
+
+Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性で再到達**が目的。
 
 **コンテキストメニュー**（**Ctrl**）: **↑ / ↓** で項目選択、**Enter** で実行、**← / →** でブラウザ **戻る** / **進む**、**Ctrl** または **Esc** で閉じる。
 
@@ -1628,7 +1670,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **`translate -on`** 中は typing でもプロンプト下に **原文 → 訳 → 再訳** の往復プレビューが出ます（文の終わりは `。` `.` `!` `?` `！` `？` など）。**Alt 長押し**確定では生の入力ではなく、保存ペアの **訳（target 言語）** をブロックから組み立てて送ります（**`--ja-en`** は英語、**`--en-ja`** は日本語。詳細は **[`translate`](#translate-ja)**）。
 
-プロンプト下のステータス帯は **`nav`**・**ON/OFF**・**typing**・**menu**・**sel-start** / **sel-end**・**copy** などと、対象タブ名または短いエラーを表示。
+プロンプト下のステータス帯は **`nav`**・**ON/OFF**・**jump**・**typing**・**menu**・**sel-start** / **sel-end**・**copy** などと、対象タブ名・**`kind:key`**・短いエラーを表示。**`debugger`** 権限 / CDP AOM は使わない。
 
 **armed 中のタブ切替**
 
@@ -2281,7 +2323,8 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 - **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（BMXt ウィンドウがアクティブで、ターミナル列にフォーカス）。**typing** 中の短い **Alt** は無視。**Alt 長押し**（約 500ms）は入力確定。
 - **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は仮想カーソル移動（コマンド履歴ではない）。**tabs / search / dom** ピッカー列にフォーカスがあるときはピッカー操作。
-- **Enter** — オーバーレイ **ON** 時、左クリック相当、または編集可能要素で **typing モード**。
+- **/** — オーバーレイ **ON** 時、属性インクリメンタルジャンプ（文字で絞込 · **↑ / ↓** 循環 · **Enter** 実行 · **Esc** 解除）。
+- **Enter** — オーバーレイ **ON** 時、解決済みターゲットを activate、または編集可能要素で **typing モード**。
 - **Ctrl**（タップ、オーバーレイ **ON**）— カーソル位置の **コンテキストメニュー**（**↑ / ↓** 選択、**Enter** 実行、**← / →** 履歴、**Ctrl** / **Esc** で閉じる）。詳細は **[Nav モード](#nav-mode-ja)**。
 - **Esc 長押し**（約 500ms、**typing** 中）— 入力取消（フィールドを元に戻す）。
 

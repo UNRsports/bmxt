@@ -36,6 +36,9 @@ export const LAST_SEEN_WELCOME_VERSION_KEY = "bmxt_last_seen_welcome_version"
 /** Nav typing / translate editor — Chrome 内蔵 Translator（ja↔en 往復表示）。 */
 export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
 
+/** Nav incremental jump — learned identity keys per page origin. */
+export const NAV_LEARNED_TARGETS_KEY = "bmxt_nav_learned_targets_v1"
+
 /** Tab picker: collapsed window / group tree per session (`exit` full close until persisted). */
 export const TAB_PICKER_FOLD_STATE_KEY = "bmxt_tab_picker_fold_v1"
 
