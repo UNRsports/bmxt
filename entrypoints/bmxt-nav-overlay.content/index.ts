@@ -1,6 +1,6 @@
 /**
- * EN: Content script — nav overlay listener on http(s) pages.
- * JA: 常駐 CS。BMXt タブ UI からの sendMessage を受け、オーバーレイを操作する。
+ * EN: Content script — nav overlay + in-page float prompt host on http(s) pages.
+ * JA: 常駐 CS。nav オーバーレイとサイト上フロート・プロンプトを扱う。
  */
 
 import {
@@ -23,6 +23,8 @@ import {
   NAV_OVERLAY_CHANNEL,
   type NavOverlayMessage
 } from "../../lib/features/nav/nav-overlay-inject-fn"
+import { isBmxtFloatHostRequest } from "../../lib/features/bmxt-float/float-host-message"
+import { applyFloatHostAction } from "../../lib/features/bmxt-float/install-float-host"
 
 export default defineContentScript({
   matches: ["https://*/*", "http://*/*"],
@@ -30,6 +32,10 @@ export default defineContentScript({
   runAt: "document_idle",
   main() {
     chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
+      if (isBmxtFloatHostRequest(raw)) {
+        sendResponse(applyFloatHostAction(raw.action ?? "toggle"))
+        return true
+      }
       if (isPageExtractRequest(raw)) {
         if (raw.lengthOnly === true) {
           sendResponse(bmxtProbePageInnerTextLengthInPage())

@@ -8,7 +8,9 @@ import {
   markLaunchPhase,
   resetLaunchPerf
 } from "../../lib/features/launch/launch-perf"
+import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import { loadBackgroundServicesAsync } from "./load-background-services"
+import { setupFloatLaunch } from "./float-launch"
 import {
   flushPersistBmxtWindowBounds,
   normalizeBmxtWindowBounds,
@@ -102,6 +104,7 @@ function openOrFocusBmxtWindow(): void {
 
 export function setupWindowLaunch(): void {
   setupBmxtWindowBoundsTracking()
+  setupFloatLaunch(chrome.commands.onCommand)
 
   chrome.windows.onRemoved.addListener((windowId) => {
     if (readBmxtWindowIdInMemory() !== windowId) {
@@ -110,6 +113,7 @@ export function setupWindowLaunch(): void {
     flushPersistBmxtWindowBounds()
     clearBmxtWindowIdInMemory()
     void persistBmxtWindowId(undefined)
+    broadcastSessionClearToUi("popup")
     void loadBackgroundServicesAsync().then((services) =>
       services.removeAllTerminalSessionsFromStorageAsync()
     )

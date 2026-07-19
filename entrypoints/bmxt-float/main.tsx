@@ -1,8 +1,8 @@
 import "../../bmxt-ui.css"
 
 /**
- * EN: Static HTML paints first; then load React shell + command core in parallel.
- * JA: 静的 HTML を即表示し、React とコマンドコアを並列読み込み。
+ * EN: Float host page — same shell as the popup window, independent process UI.
+ * JA: フロート用ページ。ポップアップと同じシェルを独立プロセスとして載せる。
  */
 import {
   installPageBootPerfConsoleHelpers,
@@ -10,6 +10,8 @@ import {
   resetPageBootPerf
 } from "../../lib/features/launch/page-boot-perf"
 import { startVersionUpgradePreflight } from "../../lib/features/bmxt-window/version-upgrade-preflight"
+
+document.documentElement.classList.add("bmxt-float-page")
 
 resetPageBootPerf()
 installPageBootPerfConsoleHelpers()
@@ -35,16 +37,13 @@ void (async () => {
   markPageBootPhase("bmxt-core-ready")
   markPageBootPhase("react-render-start")
 
-  function BmxtTabPage() {
+  function BmxtFloatPage() {
     useEffect(() => {
-      const title = chrome.i18n.getMessage("extensionName")
-      if (title) {
-        document.title = title
-      }
+      document.title = "BMXt Float"
     }, [])
 
-    return <BmxtTerminal hostKind="popup" />
+    return <BmxtTerminal hostKind="float" />
   }
 
-  createRoot(rootEl).render(<BmxtTabPage />)
+  createRoot(rootEl).render(<BmxtFloatPage />)
 })()

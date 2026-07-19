@@ -9,6 +9,10 @@ import { pruneSessionPickersMap } from "../side-picker/session/session-pickers"
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
 import { clearTabPickerFoldStateInMemory } from "../tabs/tab-picker-fold-state"
 import {
+  sessionClearAppliesToHost,
+  type BmxtHostKind
+} from "./bmxt-host-kind"
+import {
   isSessionRuntimeOutboundMessage,
   SESSION_CLEAR_MESSAGE
 } from "./terminal-sessions/session-runtime-protocol"
@@ -29,7 +33,8 @@ function pruneLeafRecord<T>(prev: Record<string, T>, validLeafIds: readonly stri
 
 export function useProcessUiPersistence(
   validLeafIds: readonly string[],
-  enabled: boolean
+  enabled: boolean,
+  hostKind: BmxtHostKind = "popup"
 ): {
   pickersBySession: SessionPickersByLeaf
   setPickersBySession: Dispatch<SetStateAction<SessionPickersByLeaf>>
@@ -68,6 +73,9 @@ export function useProcessUiPersistence(
   navArmedRef.current = navArmedByLeaf
   validLeafIdsRef.current = validLeafIds
 
+  const hostKindRef = useRef(hostKind)
+  hostKindRef.current = hostKind
+
   const resetProcessUiState = useCallback(() => {
     setPickersBySession({})
     setPaneFocusByLeaf({})
@@ -89,6 +97,9 @@ export function useProcessUiPersistence(
         return
       }
       if (message.type === SESSION_CLEAR_MESSAGE) {
+        if (!sessionClearAppliesToHost(message.host, hostKindRef.current)) {
+          return
+        }
         resetProcessUiState()
       }
     }

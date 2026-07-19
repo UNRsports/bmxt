@@ -28,6 +28,12 @@ html {
   color-scheme: dark;
 }
 
+/* Float host page (iframe) — same tokens; fill the iframe viewport */
+html.bmxt-float-page .bmxt-root--terminal {
+  min-height: 0;
+}
+
+
 body {
   margin: 0;
   padding: 0;

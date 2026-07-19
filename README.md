@@ -136,7 +136,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
 - **State**: **Terminal session logs** (`logsById`, `order`, `activeId`, `namesById`), **open picker columns**, and **pane focus** live in the **BMXt UI page** (React) for the window lifetime — see **[Terminal session state (UI source of truth)](#terminal-session-state)**. **Prompt command history** is stored in **`chrome.storage.local`** (`bmxt_cmd_history`, cap **300** entries). **UI settings**, **page-active** picker prefs, and similar user metadata use other **`chrome.storage.local`** keys (**`lib/features/extension-storage/keys.ts`**).
 - **Background**: Service Worker (`entrypoints/background/index.ts`) opens the window on icon click and handles command execution and tab operations.
-- **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**).
+- **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**); **`toggle-bmxt-float`** (default **Shift+Alt+F**) shows or hides the in-page float prompt on the active http(s) tab (independent UI process; shares prompt command history with the popup window).
 
 <a id="permissions-manifest"></a>
 
@@ -324,7 +324,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **UI-local commands** (handled in **`bmxt-shell.tsx`** before **`RUN_CMD`**) — e.g. **`browse <list-command>`**, **`* -exit -list`**, **`session -list`** / **`setting -list`** (plain), **`session -switch`**, **`translate -on`**, **`nav -enter`** — append logs and change pickers **directly** in React state. **Plain** **`tabs -list`**, **`dom -list`**, and **`search -list`** go through **`RUN_CMD`** and the **`-list` registry** (see **[`-list` output registry](#list-commands-registry)**).
 
-**Messages:** **`SESSION_INIT`**, **`SESSION_SNAPSHOT`**, and **`SESSION_UI_*`** are **removed**. The only SW → UI session notification is **`SESSION_CLEAR`** ( **`reset-bmxt`** shortcut: reset UI to a fresh empty session).
+**Messages:** **`SESSION_INIT`**, **`SESSION_SNAPSHOT`**, and **`SESSION_UI_*`** are **removed**. The only SW → UI session notification is **`SESSION_CLEAR`** with **`host`**: **`"popup"`** | **`"float"`** | **`"all"`** (popup window close clears popup only; **`reset-bmxt`** uses **`"all"`**).
 
 **Modules:** **`session-state-ops.ts`** (pure transforms), **`session-patches.ts`** (patch types + apply), **`use-terminal-sessions.ts`** (React store), **`session-runtime-client.ts`** (`runCommandFromUiAsync`), **`entrypoints/background/background-services.ts`** (patch collection in dispatch context).
 
@@ -1468,7 +1468,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
 - **状態**: **ターミナルセッションのログ**（`logsById`、`order`、`activeId`、`namesById`）、**開いているピッカー列**、**ペインフォーカス**は **BMXt UI ページ**（React）が BMXt ウィンドウ存続中の正本 — **[ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)** 参照。**プロンプトのコマンド履歴**は **`chrome.storage.local`**（`bmxt_cmd_history`、上限 **300** 件）。**UI 設定**・**page-active** 等は別の **`chrome.storage.local`** キー（**`lib/features/extension-storage/keys.ts`**）。
 - **バックグラウンド**: Service Worker（`entrypoints/background/index.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
-- **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。
+- **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。**`toggle-bmxt-float`**（既定 **Shift+Alt+F**）でアクティブな http(s) タブ上のサイト内フロート・プロンプトを表示／非表示（ポップアップ窓とは独立プロセス；プロンプトのコマンド履歴のみ共有）。
 
 <a id="permissions-manifest-ja"></a>
 
@@ -1656,7 +1656,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **UI ローカルコマンド**（**`RUN_CMD` より前**の **`bmxt-shell.tsx`**）— 例: **`browse <list-command>`**、**`* -exit -list`**、**`session -list`** / **`setting -list`**（プレーン）、**`session -switch`**、**`translate -on`**、**`nav -enter`** — は React state を直接更新。**プレーン**の **`tabs -list`**、**`dom -list`**、**`search -list`** は **`RUN_CMD`** と **`-list` レジストリ**経由（**[`-list` 出力レジストリ](#list-commands-registry-ja)** 参照）。
 
-**メッセージ:** **`SESSION_INIT`** / **`SESSION_SNAPSHOT`** / **`SESSION_UI_*`** は**廃止**。SW → UI のセッション通知は **`SESSION_CLEAR`**（**`reset-bmxt`** ショートカット）のみ。
+**メッセージ:** **`SESSION_INIT`** / **`SESSION_SNAPSHOT`** / **`SESSION_UI_*`** は**廃止**。SW → UI のセッション通知は **`SESSION_CLEAR`**（**`host`**: **`"popup"`** | **`"float"`** | **`"all"`**。ポップアップ閉鎖は popup のみ；**`reset-bmxt`** は **`"all"`**）。
 
 **モジュール:** **`session-state-ops.ts`**、**`session-patches.ts`**、**`use-terminal-sessions.ts`**、**`session-runtime-client.ts`**、**`background-services.ts`**。
 

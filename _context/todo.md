@@ -942,3 +942,53 @@ Enter → ensureBmxtCore → WASM run
 - [x] help セクションキー列を Rust から msgs で返す
 - [x] browse / snapshot 等ホスト経路のキー選択を msgs（`expand-msgs`）に寄せる
 - [x] grep: expand-msgs / codegen apply 以外でコマンド名からプロンプト文言を選んでいないこと（`prompt-key-sot.test.ts`）
+
+---
+
+## 15. サイト上フロート・プロンプト（実証）
+
+既存ポップアップ窓はそのまま。サイト上に拡張ページ iframe のフロートを載せ、`BmxtTerminal` を見た目ラップで再利用する。セッションはホスト独立、コマンド履歴（`bmxt_cmd_history`）のみ共有。
+
+### 15.0 方針
+
+- 実行コア／シェル本体は再利用。フロートはホスト生命周期＋外観のみ
+- CS → iframe（`bmxt-float.html`）→ 既存 `BmxtTerminal`
+- ショートカット `toggle-bmxt-float`（既定 Shift+Alt+F）でアクティブタブをトグル
+- `SESSION_CLEAR` は `host: popup | float | all`。ポップアップ閉鎖は float を消さない。`reset-bmxt` は両ホストクリア＋履歴クリア
+
+### 15.1 WAR + フロート用エントリ
+
+- [x] `entrypoints/bmxt-float/`（unlisted）+ `hostKind="float"`
+- [x] `web_accessible_resources` に `bmxt-float.html`
+- [x] フロート用薄いホスト／ページ CSS
+
+### 15.2 ホスト独立（SESSION_CLEAR）
+
+- [x] `SESSION_CLEAR` に `host` 付与
+- [x] リスナーは自ホスト／`all` のみ反応
+- [x] ポップアップ閉鎖 → `host: "popup"`；`reset-bmxt` → `host: "all"`
+- [x] `BmxtTerminal` に `hostKind` props
+
+### 15.3 CS ホストレイヤ + トグル
+
+- [x] `lib/features/bmxt-float/`（メッセージ＋ DOM ホスト）
+- [x] CS で iframe 表示／非表示（閉じても iframe は破棄せずセッション保持）
+- [x] 非スクリプト可能 URL では no-op
+
+### 15.4 ショートカット
+
+- [x] `toggle-bmxt-float` + EN/JA `_locales`
+- [x] SW → アクティブタブへ `TOGGLE_BMXT_FLOAT`
+- [x] README shortcuts 一行追記
+
+### 15.5 実証確認
+
+- [ ] 両ホスト同時：履歴 ↑↓ 共有（ブラウザ手元スモーク）
+- [ ] ポップアップ閉鎖後もフロートのログ残存（ブラウザ手元スモーク）
+- [ ] ショートカットでトグル（ブラウザ手元スモーク）
+- [ ] フロートから `help` 等の既存コマンド実行（ブラウザ手元スモーク）
+- [x] `tsc` / `wxt build` 緑；`bmxt-host-kind` 単体テスト緑；成果物に `bmxt-float.html` + WAR + `toggle-bmxt-float`
+### 15.6 既知・後回し
+
+- nav フォーカスモデルの全面見直しは実証外
+- 複数タブ同時フロート同期なし（アクティブタブのみ）

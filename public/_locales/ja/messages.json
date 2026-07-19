@@ -14,5 +14,9 @@
   "commandResetBmxt": {
     "message": "BMXt ターミナルをリセットする",
     "description": "BMXt ターミナルを初期状態に戻し、ウィンドウを開く／最前面に出すグローバルショートカットの説明。"
+  },
+  "commandToggleBmxtFloat": {
+    "message": "現在のページで BMXt フロート・プロンプトを切り替える",
+    "description": "アクティブタブ上のサイト内フロート・プロンプトを表示／非表示するグローバルショートカットの説明。"
   }
 }

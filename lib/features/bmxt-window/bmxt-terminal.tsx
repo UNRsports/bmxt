@@ -38,6 +38,7 @@ import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
 import { ExternalSettingsRecoveryProvider } from "../setting/use-external-settings-recovery"
 import { useTerminalAppearance } from "../setting/apply-appearance"
+import type { BmxtHostKind } from "./bmxt-host-kind"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 
@@ -218,17 +219,19 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
   )
 }
 
-export function BmxtTerminal() {
+export function BmxtTerminal(props: { hostKind?: BmxtHostKind } = {}) {
+  const hostKind = props.hostKind ?? "popup"
   return (
     <UiSettingsProvider>
       <ExternalSettingsRecoveryProvider>
-        <BmxtTerminalInner />
+        <BmxtTerminalInner hostKind={hostKind} />
       </ExternalSettingsRecoveryProvider>
     </UiSettingsProvider>
   )
 }
 
-function BmxtTerminalInner() {
+function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
+  const { hostKind } = props
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
@@ -255,7 +258,7 @@ function BmxtTerminalInner() {
     setActiveSession,
     setSessionDisplayName,
     applyRunCmdPatches
-  } = useTerminalSessions(sessionPatchContext)
+  } = useTerminalSessions(sessionPatchContext, hostKind)
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
@@ -274,7 +277,7 @@ function BmxtTerminalInner() {
     navArmedByLeaf,
     setNavArmedForLeaf,
     processUiReady
-  } = useProcessUiPersistence(validSessionIds, true)
+  } = useProcessUiPersistence(validSessionIds, true, hostKind)
 
   pickersBySessionRef.current = pickersBySession
   navArmedByLeafRef.current = navArmedByLeaf

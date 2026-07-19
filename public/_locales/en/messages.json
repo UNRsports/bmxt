@@ -14,5 +14,9 @@
   "commandResetBmxt": {
     "message": "Reset the BMXt terminal",
     "description": "Label for the global keyboard shortcut that resets BMXt to a fresh state and opens or focuses the window."
+  },
+  "commandToggleBmxtFloat": {
+    "message": "Toggle BMXt float prompt on the current page",
+    "description": "Label for the global keyboard shortcut that shows or hides the in-page BMXt float prompt on the active tab."
   }
 }

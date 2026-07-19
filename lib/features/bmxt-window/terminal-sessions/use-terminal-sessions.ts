@@ -17,10 +17,17 @@ import {
   setActiveSessionState,
   setSessionDisplayNameState
 } from "./session-state-ops"
+import {
+  sessionClearAppliesToHost,
+  type BmxtHostKind
+} from "../bmxt-host-kind"
 import { SESSION_CLEAR_MESSAGE, isSessionRuntimeOutboundMessage } from "./session-runtime-protocol"
 import type { TerminalSessionsStateV1 } from "./types"
 
-export function useTerminalSessions(sessionContext?: ApplySessionPatchContext): {
+export function useTerminalSessions(
+  sessionContext?: ApplySessionPatchContext,
+  hostKind: BmxtHostKind = "popup"
+): {
   state: TerminalSessionsStateV1
   appendLogLines: (sessionId: string, lines: string[], channel?: LogChannel) => void
   setActiveSession: (sessionId: string) => void
@@ -35,6 +42,8 @@ export function useTerminalSessions(sessionContext?: ApplySessionPatchContext): 
   stateRef.current = state
   const sessionContextRef = useRef(sessionContext)
   sessionContextRef.current = sessionContext
+  const hostKindRef = useRef(hostKind)
+  hostKindRef.current = hostKind
 
   const commitState = useCallback((next: TerminalSessionsStateV1) => {
     setState(next)
@@ -48,6 +57,9 @@ export function useTerminalSessions(sessionContext?: ApplySessionPatchContext): 
         return
       }
       if (message.type === SESSION_CLEAR_MESSAGE) {
+        if (!sessionClearAppliesToHost(message.host, hostKindRef.current)) {
+          return
+        }
         commitState(createEmptyTerminalSessionsState())
       }
     }

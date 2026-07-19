@@ -336,7 +336,7 @@ export async function resetBmxtFromShortcutAsync(
   openOrFocus: () => Promise<void>
 ): Promise<void> {
   await resetBmxtTerminalSessionsInStorage()
-  broadcastSessionClearToUi()
+  broadcastSessionClearToUi("all")
   await openOrFocus()
 }
 
