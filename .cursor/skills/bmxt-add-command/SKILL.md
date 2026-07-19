@@ -29,7 +29,8 @@ Index: `lib/features/command-line/inter-command/`. **Prefer reuse**; extend cata
 
 - Prompt = **token sequence**. **First command** = initial keyword (`tabs`, `split`). **Second command** = next fixed token (`-list`, `-row`). Document and implement **first → second**.
 - **No short aliases** for first/second tiers (do not accept or complete `-l` for `-list`). Tab completion = canonical full tokens only. Legacy top-level aliases in README (e.g. `help`/`?`) may remain; do not add new short aliases for new first/second families.
-- When a first command is **not actionable** without a second command, **Enter** on first token alone must: (1) show usage/placeholder for the second token, (2) restore prompt to `firstCommand ` (trailing ASCII space, cursor at end). Implement in **Rust** via `msgs` + `promptPrefix` (`require_second_token` / `msgs_with_prompt`). The TS host only expands msgs and calls `setContinuationPrompt` — **do not** add Enter-path continuation in TypeScript (`continuationPromptAfterLoneFirstToken` is for IME/eligibility only).
+- When a first command is **not actionable** without a second command, **Enter** on first token alone must: (1) show usage/placeholder for the second token, (2) restore prompt to `firstCommand ` (trailing ASCII space, cursor at end). Implement in **Rust** via `msgs` + `promptPrefix` (`require_second_token` / `msgs_with_prompt`). The TS host only expands msgs and calls `setContinuationPrompt` — **do not** add Enter-path continuation in TypeScript (`continuationPromptAfterLoneFirstToken` is for IME helpers only; compound eligibility uses WASM `compound_segment_eligibility`).
+- Fixed-token Tab/IME candidates (tiers 1–3) come from WASM **`complete(line, cursor)`**; host IME keeps filter UX and live overlays only.
 
 ## Checklist
 

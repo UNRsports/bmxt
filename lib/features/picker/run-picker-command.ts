@@ -8,12 +8,11 @@ import {
   segmentSuccess
 } from "../command-line/compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../command-line/compound/types.ts"
-import { tCmd } from "../setting/i18n/ns/cmd.ts"
 import { tError } from "../setting/i18n/ns/error.ts"
 import type { UiLocale } from "../setting/locale.ts"
 import { parsePickerPrefixLine } from "./match.ts"
 import { openPickerFromListResult } from "./open-from-list-result.ts"
-import { browseUsageLines } from "./usage.ts"
+import { browseNotListProducerLines, browseUsageLines } from "./usage.ts"
 
 function showUrlFromTabsMatch(match: unknown): boolean {
   if (match === null || typeof match !== "object") {
@@ -43,12 +42,7 @@ export async function runBrowseCommand(
 
   const matched = matchPlainListCommand(parsed.producerSegment)
   if (matched === null) {
-    return segmentFailure("usage", [
-      tCmd("cmd.browse.error.notListProducer", locale, {
-        segment: parsed.producerSegment
-      }),
-      ...browseUsageLines(locale)
-    ])
+    return segmentFailure("usage", browseNotListProducerLines(locale, parsed.producerSegment))
   }
 
   try {

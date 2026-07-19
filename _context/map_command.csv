@@ -1,7 +1,7 @@
 # Engine: command semantics = crates/bmxt-core (Rust/WASM); TS = paint host + Chrome effects + opaque UiAction apply + i18n expand-msgs.
 # Prompt semantics SoT = Rust (usage/error keys, msgs.promptPrefix Enter continuation, incomplete -setting plans). See README § Prompt semantics / _context/todo.md §14.
-# Status: Phase A+B done; Phase C (WASM complete) / D (remaining host key choice) deferred.
-# Enter must not invent continuation in TS (continuationPromptAfterLoneFirstToken = IME/eligibility only).
+# Status: Phase A–D done (WASM complete + compound eligibility; bmxt-candidate = design/validate catalog; help/browse/snapshot keys via msgs/expand-msgs).
+# Enter must not invent continuation in TS (continuationPromptAfterLoneFirstToken = IME helpers only).
 # Inter-command vocabulary (closed): DispatchBundle | ListResult(bmxt-list/1) | BmxtRuleStream(bmxt-rule/1) | exit status — see lib/features/command-line/inter-command/ and manifest/templates/.
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
@@ -27,7 +27,7 @@ search,-list,--page,rest,,（同上）,scope `--page`。,
 search,-list,--snapshot,rest,,（同上）,scope `--snapshot`。,
 search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
 group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
-help,,,,?,"help, ?",UiAction `show_help` または lines。キー列の正本寄せは §14 Phase D。,
+help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,browse <list-command>,UiAction `browse` → ListResult kind 族で列を開く。,語彙: UiAction browse + list kinds
 tabs,,,,,tabs …,単独 `tabs` + Enter: msgs + promptPrefix `tabs `（require_second_token）。第二候補に `help`（マニュアル）。,
 tabs,-list,,none,,tabs -list [-url] | tabs -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
@@ -71,7 +71,7 @@ session,-setting-name,,rest,,session -setting-name [name],UiAction `session_sett
 （内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status。segment の promptPrefix もホスト適用。,
 （内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。,
 （内部）,bmxt-rule,,,,lib/features/bmxt-rule/,bmxt-rule/1。カタログ manifest/bmxt-rule.json。,
-（内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。runtime 接続は §14 Phase C。,
+（内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。設計・検証カタログ（固定トークン runtime は WASM `complete`）。,
 （内部）,list-output,,,,lib/features/command-line/list-output/,bmxt-list/1。,
 （内部）,list-commands-registry,,,,lib/features/command-line/list-commands/,-list producer レジストリ。,
 （内部）,command-output,,,,lib/features/command-line/command-output.ts,stdout/stderr。,

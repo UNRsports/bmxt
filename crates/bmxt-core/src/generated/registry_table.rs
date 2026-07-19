@@ -8,6 +8,12 @@ pub struct CmdMeta {
     pub usage_primary: &'static str,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubcommandBranch {
+    pub head: &'static str,
+    pub trailing_tokens: &'static [&'static str],
+}
+
 pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "clear",
@@ -86,6 +92,150 @@ pub const COMMANDS: &[CmdMeta] = &[
     },
 ];
 
+static BRANCHES_DOM: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &["--normal", "--with", "--html", "--react", "--tag"],
+    },
+    SubcommandBranch {
+        head: "-exit",
+        trailing_tokens: &["-list"],
+    },
+    SubcommandBranch {
+        head: "-setting",
+        trailing_tokens: &["-page-active"],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_SEARCH: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &["--all", "--history", "--bookmark", "--page", "--snapshot", "--unlimit"],
+    },
+    SubcommandBranch {
+        head: "-exit",
+        trailing_tokens: &["-list"],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_TABS: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &["-url"],
+    },
+    SubcommandBranch {
+        head: "-exit",
+        trailing_tokens: &["-list"],
+    },
+    SubcommandBranch {
+        head: "-setting",
+        trailing_tokens: &["-page-active"],
+    },
+    SubcommandBranch {
+        head: "-moveurl",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-nowurl",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_NAV: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-enter",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-exit",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_TRANSLATE: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-on",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-off",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-setting",
+        trailing_tokens: &["--ja-en", "--en-ja"],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_SESSION: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-new",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-switch",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-next",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-prev",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-setting-name",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_SNAPSHOT: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-save",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_SETTING: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-exit",
+        trailing_tokens: &["-list"],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -124,5 +274,27 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "browse" => false,
         "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         _ => false,
+    }
+}
+
+/** EN: Manifest `subcommands` branches for fixed-token completion (tiers 2–3). */
+pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
+    match canonical {
+        "clear" => &[],
+        "close" => &[],
+        "dom" => BRANCHES_DOM,
+        "exit" => &[],
+        "search" => BRANCHES_SEARCH,
+        "group" => &[],
+        "help" => &[],
+        "tabs" => BRANCHES_TABS,
+        "nav" => BRANCHES_NAV,
+        "translate" => BRANCHES_TRANSLATE,
+        "aboutbmxt" => &[],
+        "session" => BRANCHES_SESSION,
+        "snapshot" => BRANCHES_SNAPSHOT,
+        "browse" => &[],
+        "setting" => BRANCHES_SETTING,
+        _ => &[],
     }
 }

@@ -3,6 +3,10 @@
     "ja": "組み込みコマンド:",
     "en": "Built-in commands:"
   },
+  "help.spacer": {
+    "ja": "",
+    "en": ""
+  },
   "help.quickStart": {
     "ja": "クイックスタート: `tabs` と入力して Enter、表示されたオプションを続けて入力します。",
     "en": "Quick start: type `tabs` and press Enter, then continue with the shown options."

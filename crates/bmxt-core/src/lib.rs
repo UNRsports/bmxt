@@ -1,5 +1,7 @@
 mod cmd;
+mod complete;
 mod compound;
+mod compound_eligibility;
 pub mod dispatch;
 mod generated;
 pub mod ir;
@@ -90,6 +92,18 @@ pub fn completion_tokens() -> String {
     })
 }
 
+/** EN: Fixed-token completion for tiers 1–3; JSON object or `null`. */
+#[wasm_bindgen]
+pub fn complete(line: &str, cursor: usize) -> String {
+    complete::complete_json(line, cursor)
+}
+
+/** EN: Compound/pipe segment eligibility from `run` plan shape. */
+#[wasm_bindgen]
+pub fn compound_segment_eligibility(segment: &str) -> String {
+    compound_eligibility::classify_segment_json(segment)
+}
+
 #[cfg(test)]
 mod wasm_api_tests {
     use super::*;
@@ -99,5 +113,19 @@ mod wasm_api_tests {
         let raw = completion_tokens();
         let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
         assert!(v.is_array());
+    }
+
+    #[test]
+    fn complete_returns_object_or_null() {
+        let raw = complete("tabs ", 5);
+        let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert!(v.is_object() || v.is_null());
+    }
+
+    #[test]
+    fn compound_segment_eligibility_json() {
+        let raw = compound_segment_eligibility("tabs");
+        let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(v["kind"], "continuation");
     }
 }

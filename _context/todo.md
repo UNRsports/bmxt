@@ -929,16 +929,16 @@ Enter → ensureBmxtCore → WASM run
 
 - [x] `tabs` / `dom` / `translate` の不完全チェーンは msgs + promptPrefix（または適用専用 UiAction）
 - [x] `apply-ui-action` は不完全系の再パースをしない（適用のみ）
-- [ ] compound eligibility の parse-* 依存は Phase C で WASM 寄せ（残件）
+- [x] compound eligibility の parse-* 依存は Phase C で WASM 寄せ
 
-### 14.4 Phase C — 補完候補コンテンツ（未着手）
+### 14.4 Phase C — 補完候補コンテンツ
 
-- [ ] WASM `complete(line, cursor)`（第一〜第三固定トークン）
-- [ ] `ime-token-picker` のコマンド名分岐を縮小／廃止
-- [ ] `bmxt-candidate.json` を runtime エンジンとして接続または退役方針を確定
+- [x] WASM `complete(line, cursor)`（第一〜第三固定トークン）
+- [x] `ime-token-picker` のコマンド名分岐を縮小／廃止（固定トークンは WASM；ホストはライブオーバーレイのみ）
+- [x] `bmxt-candidate.json` を runtime エンジンとして退役方針を確定（設計・検証カタログ + 任意ライブ provider；固定トークン正本は WASM `complete`）
 
-### 14.5 Phase D — 残るキー選択の掃除（未着手）
+### 14.5 Phase D — 残るキー選択の掃除
 
-- [ ] help セクションキー列を Rust から msgs で返す
-- [ ] browse / snapshot 等ホスト経路のキー選択を msgs に寄せる
-- [ ] grep: expand-msgs / codegen apply 以外でコマンド名からプロンプト文言を選んでいないこと
+- [x] help セクションキー列を Rust から msgs で返す
+- [x] browse / snapshot 等ホスト経路のキー選択を msgs（`expand-msgs`）に寄せる
+- [x] grep: expand-msgs / codegen apply 以外でコマンド名からプロンプト文言を選んでいないこと（`prompt-key-sot.test.ts`）

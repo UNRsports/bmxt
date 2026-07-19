@@ -1,4 +1,4 @@
-use crate::ir::{msg_key, msgs, ui, DispatchBundle, UiAction};
+use crate::ir::{msg_key, msgs_with_prompt, ui, DispatchBundle, UiAction};
 
 const USAGE_KEYS: &[&str] = &[
     "cmd.browse.usage.line1",
@@ -9,11 +9,17 @@ const USAGE_KEYS: &[&str] = &[
 
 pub fn run(args: &[String]) -> DispatchBundle {
     if args.len() <= 1 {
-        return msgs(USAGE_KEYS.iter().map(|k| msg_key(k)).collect());
+        return msgs_with_prompt(
+            USAGE_KEYS.iter().map(|k| msg_key(k)).collect(),
+            "browse ",
+        );
     }
     let line = args.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
     if line.trim().is_empty() {
-        return msgs(USAGE_KEYS.iter().map(|k| msg_key(k)).collect());
+        return msgs_with_prompt(
+            USAGE_KEYS.iter().map(|k| msg_key(k)).collect(),
+            "browse ",
+        );
     }
     ui(UiAction::Browse { line })
 }

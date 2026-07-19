@@ -1,7 +1,8 @@
 /**
- * EN: IME-style token picker — first / second / third fixed tokens from manifest subcommands.
+ * EN: IME-style token picker — fixed tokens from WASM `complete`; host overlays for live UI.
  */
 
+import { isBmxtCoreReady, wasmComplete } from "../bmxt-core/wasm-host"
 import {
   getSubcommandBranches,
   isSecondToken,
@@ -31,8 +32,9 @@ import {
   type CandidateMatchMode
 } from "./ime-token-match"
 import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
-import { isFirstTierPrependPick, shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
+import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
+import { wordBounds } from "../format/word-bounds.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
 
@@ -51,7 +53,264 @@ export type ImeTokenPickerModel = {
   tier: ImeTokenTier
 }
 
-import { wordBounds } from "../format/word-bounds.ts"
+type WasmCompleteHit = {
+  tokenStart: number
+  tokenEnd: number
+  prefix: string
+  candidates: string[]
+  tier: string
+}
+
+function parseWasmCompleteHit(raw: string): WasmCompleteHit | null {
+  if (raw === "null" || raw.length === 0) {
+    return null
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== "object") {
+      return null
+    }
+    const o = parsed as Record<string, unknown>
+    if (
+      typeof o.tokenStart !== "number" ||
+      typeof o.tokenEnd !== "number" ||
+      typeof o.prefix !== "string" ||
+      !Array.isArray(o.candidates) ||
+      typeof o.tier !== "string"
+    ) {
+      return null
+    }
+    const candidates = o.candidates.filter((c): c is string => typeof c === "string")
+    if (candidates.length === 0) {
+      return null
+    }
+    return {
+      tokenStart: o.tokenStart,
+      tokenEnd: o.tokenEnd,
+      prefix: o.prefix,
+      candidates,
+      tier: o.tier
+    }
+  } catch {
+    return null
+  }
+}
+
+function tierFromWasm(tier: string): ImeTokenTier | null {
+  if (tier === "first" || tier === "second" || tier === "third") {
+    return tier
+  }
+  return null
+}
+
+function applyHostFilter(
+  hit: ImeTokenPickerModel,
+  matchMode: CandidateMatchMode
+): ImeTokenPickerModel | null {
+  const filtered = matchCandidates(hit.candidates, hit.prefix, matchMode)
+  if (filtered.length === 0) {
+    return null
+  }
+  return { ...hit, candidates: filtered }
+}
+
+/** EN: Prefer WASM fixed-token complete; fall back to generated tables when WASM is cold. */
+function resolveFixedTokenPicker(
+  line: string,
+  cursor: number,
+  firstCommandTokens: readonly string[],
+  opts?: ResolveImeTokenPickerOptions
+): ImeTokenPickerModel | null {
+  const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
+  if (isBmxtCoreReady()) {
+    const hit = parseWasmCompleteHit(wasmComplete(line, cursor))
+    if (hit !== null) {
+      const tier = tierFromWasm(hit.tier)
+      if (tier !== null) {
+        let model: ImeTokenPickerModel = {
+          tokenStart: hit.tokenStart,
+          tokenEnd: hit.tokenEnd,
+          prefix: hit.prefix,
+          candidates: hit.candidates,
+          tier
+        }
+        if (tier === "first") {
+          const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
+          if (hit.prefix.length === 0 && !allowEmptyFirstAll) {
+            return null
+          }
+          if (allowEmptyFirstAll && hit.prefix.length === 0) {
+            const cands = matchCandidates(firstCommandTokens, "", matchMode)
+            if (cands.length === 0) {
+              return null
+            }
+            const [l, r] = wordBounds(line, cursor)
+            const insertAtCursor = shouldInsertTokenPickAtCursor(line, cursor, l, r, "first")
+            return {
+              tokenStart: insertAtCursor ? cursor : l,
+              tokenEnd: insertAtCursor ? cursor : r,
+              prefix: "",
+              candidates: cands,
+              tier: "first"
+            }
+          }
+          const [l, r] = wordBounds(line, cursor)
+          const insertAtCursor = shouldInsertTokenPickAtCursor(line, cursor, l, r, "first")
+          if (insertAtCursor) {
+            model = { ...model, tokenStart: cursor, tokenEnd: cursor }
+          }
+        }
+        if (tier === "third" && matchMode === "contains") {
+          const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+            model.candidates,
+            model.prefix,
+            matchMode
+          )
+          const cands = pickThirdTokenCandidates(
+            model.candidates,
+            model.prefix,
+            matchMode,
+            useFullCandidateList,
+            filterMode
+          )
+          if (cands.length === 0) {
+            return null
+          }
+          return { ...model, candidates: cands }
+        }
+        return applyHostFilter(model, matchMode)
+      }
+    }
+    if (opts?.emptyFirstPrefixShowsAll === true) {
+      const [l, r] = wordBounds(line, cursor)
+      const tokensBefore = line.slice(0, l).trim() ? line.slice(0, l).trim().split(/\s+/) : []
+      if (tokensBefore.length === 0) {
+        const cands = matchCandidates(firstCommandTokens, line.slice(l, cursor), matchMode)
+        if (cands.length > 0) {
+          const insertAtCursor = shouldInsertTokenPickAtCursor(line, cursor, l, r, "first")
+          return {
+            tokenStart: insertAtCursor ? cursor : l,
+            tokenEnd: insertAtCursor ? cursor : r,
+            prefix: line.slice(l, cursor),
+            candidates: cands,
+            tier: "first"
+          }
+        }
+      }
+    }
+    return null
+  }
+  return resolveFixedTokenPickerFallback(line, cursor, firstCommandTokens, opts)
+}
+
+function resolveFixedTokenPickerFallback(
+  line: string,
+  cursor: number,
+  firstCommandTokens: readonly string[],
+  opts?: ResolveImeTokenPickerOptions
+): ImeTokenPickerModel | null {
+  const [l, r] = wordBounds(line, cursor)
+  const left = line.slice(0, l)
+  const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
+  const tokenIndex = tokensBefore.length
+  const prefix = line.slice(l, cursor)
+  const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
+
+  if (tokenIndex === 0) {
+    const cmdWord = line.slice(l, r)
+    const canonical0 = resolveCanonical(cmdWord)
+    if (
+      canonical0 &&
+      cursor >= line.length &&
+      getSubcommandBranches(canonical0).length > 0
+    ) {
+      const next = listSecondTokenCandidatesByCommand(canonical0, "")
+      if (next.length > 0) {
+        return {
+          tokenStart: line.length,
+          tokenEnd: line.length,
+          prefix: "",
+          candidates: next,
+          tier: "second"
+        }
+      }
+    }
+    const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
+    if (prefix.length > 0 || allowEmptyFirstAll) {
+      const cands = matchCandidates(firstCommandTokens, prefix, matchMode)
+      if (cands.length > 0) {
+        const insertAtCursor = shouldInsertTokenPickAtCursor(line, cursor, l, r, "first")
+        return {
+          tokenStart: insertAtCursor ? cursor : l,
+          tokenEnd: insertAtCursor ? cursor : r,
+          prefix,
+          candidates: cands,
+          tier: "first"
+        }
+      }
+    }
+    return null
+  }
+
+  const canonical = resolveCanonical(tokensBefore[0]!)
+  if (!canonical || getSubcommandBranches(canonical).length === 0) {
+    return null
+  }
+
+  if (tokenIndex === 1) {
+    const secondWord = line.slice(l, r)
+    const secondComplete = isSecondToken(canonical, secondWord)
+    if (cursor >= line.length && secondComplete) {
+      const next = listThirdTokenCandidates(canonical, secondWord.toLowerCase(), "")
+      if (next.length > 0) {
+        return {
+          tokenStart: line.length,
+          tokenEnd: line.length,
+          prefix: "",
+          candidates: next,
+          tier: "third"
+        }
+      }
+    }
+    const rawSecond =
+      matchMode === "contains"
+        ? listSecondTokenCandidatesByCommand(canonical, "")
+        : listSecondTokenCandidatesByCommand(canonical, prefix)
+    const cands = matchCandidates(rawSecond, prefix, matchMode).filter(
+      (c) => !(secondComplete && c.toLowerCase() === secondWord.toLowerCase())
+    )
+    if (cands.length > 0) {
+      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
+    }
+    return null
+  }
+
+  if (tokenIndex === 2) {
+    const second = tokensBefore[1]!.toLowerCase()
+    const allThird = listThirdTokenCandidates(canonical, second, "")
+    if (allThird.length === 0) {
+      return null
+    }
+    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+      allThird,
+      prefix,
+      matchMode
+    )
+    const cands = pickThirdTokenCandidates(
+      allThird,
+      prefix,
+      matchMode,
+      useFullCandidateList,
+      filterMode
+    )
+    if (cands.length === 0) {
+      return null
+    }
+    return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+  }
+
+  return null
+}
 
 function resolveDomListOptionTokenPicker(
   line: string,
@@ -92,6 +351,38 @@ function resolveDomListOptionTokenPicker(
     return null
   }
   return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+}
+
+function resolvePageActiveModePicker(
+  line: string,
+  cursor: number
+): ImeTokenPickerModel | null {
+  const [l, r] = wordBounds(line, cursor)
+  const left = line.slice(0, l)
+  const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
+  if (tokensBefore.length !== 3) {
+    return null
+  }
+  const canonical = resolveCanonical(tokensBefore[0]!)
+  const second = tokensBefore[1]!.toLowerCase()
+  const third = tokensBefore[2]!.toLowerCase()
+  const prefix = line.slice(l, cursor)
+  const matchMode: CandidateMatchMode = "prefix"
+  if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
+    const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+    if (cands.length === 0) {
+      return null
+    }
+    return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+  }
+  if (canonical === "dom" && second === "-setting" && third === "-page-active") {
+    const cands = matchCandidates(DOM_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
+    if (cands.length === 0) {
+      return null
+    }
+    return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+  }
+  return null
 }
 
 export function imeTokenPickerHint(tier: ImeTokenTier, locale: UiLocale): string {
@@ -217,18 +508,9 @@ function resolveImeTokenPickerInSegment(
   }
 
   if (isSearchListAwaitingScopeOrPattern(line) && cursor >= line.length) {
-    const canonicalSearch = resolveCanonical("search")
-    if (canonicalSearch) {
-      const scopeCandidates = listThirdTokenCandidates(canonicalSearch, "-list", "")
-      if (scopeCandidates.length > 0) {
-        return {
-          tokenStart: line.length,
-          tokenEnd: line.length,
-          prefix: "",
-          candidates: [...scopeCandidates],
-          tier: "third"
-        }
-      }
+    const fixed = resolveFixedTokenPicker(line, cursor, firstCommandTokens, opts)
+    if (fixed !== null && fixed.tier === "third") {
+      return fixed
     }
   }
 
@@ -255,8 +537,7 @@ function resolveImeTokenPickerInSegment(
 
   if (tokenIndex === 0) {
     const cmdWord = line.slice(l, r)
-    const canonical0 = resolveCanonical(cmdWord)
-    if (canonical0 === "browse" && cursor >= line.length) {
+    if (resolveCanonical(cmdWord) === "browse" && cursor >= line.length) {
       return {
         tokenStart: line.length,
         tokenEnd: line.length,
@@ -265,159 +546,35 @@ function resolveImeTokenPickerInSegment(
         tier: "second"
       }
     }
-    if (
-      canonical0 &&
-      cursor >= line.length &&
-      getSubcommandBranches(canonical0).length > 0
-    ) {
-      const next = listSecondTokenCandidatesByCommand(canonical0, "")
-      if (next.length > 0) {
-        return {
-          tokenStart: line.length,
-          tokenEnd: line.length,
-          prefix: "",
-          candidates: next,
-          tier: "second"
-        }
-      }
-    }
-    const allowEmptyFirstAll = opts?.emptyFirstPrefixShowsAll === true
-    if (prefix.length > 0 || allowEmptyFirstAll) {
-      const cands = matchCandidates(firstCommandTokens, prefix, matchMode)
-      if (cands.length > 0) {
-        const insertAtCursor = shouldInsertTokenPickAtCursor(line, cursor, l, r, "first")
-        const tokenStart = insertAtCursor ? cursor : l
-        const tokenEnd = insertAtCursor ? cursor : r
-        return { tokenStart, tokenEnd, prefix, candidates: cands, tier: "first" }
-      }
-    }
-    return null
   }
 
-  const canonical = resolveCanonical(tokensBefore[0]!)
-  if (!canonical) {
-    return null
-  }
-  if (getSubcommandBranches(canonical).length === 0) {
-    return null
+  const pageActive = resolvePageActiveModePicker(line, cursor)
+  if (pageActive !== null) {
+    return pageActive
   }
 
-  if (tokenIndex === 1) {
-    const secondWord = line.slice(l, r)
-    const secondComplete = isSecondToken(canonical, secondWord)
-    if (cursor >= line.length && secondComplete) {
-      if (canonical === "dom" && secondWord.toLowerCase() === "-list") {
-        const domPick = resolveDomListOptionTokenPicker(
-          line,
-          cursor,
-          tokensBefore,
-          line.length,
-          line.length,
-          "",
-          matchMode
-        )
-        if (domPick) {
-          return domPick
-        }
-      }
-      const next = listThirdTokenCandidates(canonical, secondWord.toLowerCase(), "")
-      if (next.length > 0) {
-        return {
-          tokenStart: line.length,
-          tokenEnd: line.length,
-          prefix: "",
-          candidates: next,
-          tier: "third"
-        }
-      }
-    }
-    const rawSecond =
-      matchMode === "contains"
-        ? listSecondTokenCandidatesByCommand(canonical, "")
-        : listSecondTokenCandidatesByCommand(canonical, prefix)
-    const cands = matchCandidates(rawSecond, prefix, matchMode).filter(
-      (c) => !(secondComplete && c.toLowerCase() === secondWord.toLowerCase())
-    )
-    if (cands.length > 0) {
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
-    }
-    return null
-  }
-
-  if (tokenIndex === 2) {
-    const second = tokensBefore[1]!.toLowerCase()
-    if (canonical === "dom" && second === "-list") {
+  if (tokenIndex >= 1) {
+    const canonical = resolveCanonical(tokensBefore[0]!)
+    if (canonical === "dom" && tokensBefore[1]?.toLowerCase() === "-list") {
+      const atEolAfterSecond =
+        tokenIndex === 1 && cursor >= line.length && isSecondToken(canonical, line.slice(l, r))
       const domPick = resolveDomListOptionTokenPicker(
         line,
         cursor,
         tokensBefore,
-        l,
-        r,
-        prefix,
+        atEolAfterSecond ? line.length : l,
+        atEolAfterSecond ? line.length : r,
+        atEolAfterSecond ? "" : prefix,
         matchMode
       )
-      if (domPick) {
+      if (domPick !== null) {
         return domPick
       }
-      return null
-    }
-    const allThird = listThirdTokenCandidates(canonical, second, "")
-    if (allThird.length === 0) {
-      return null
-    }
-    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
-      allThird,
-      prefix,
-      matchMode
-    )
-    const cands = pickThirdTokenCandidates(
-      allThird,
-      prefix,
-      matchMode,
-      useFullCandidateList,
-      filterMode
-    )
-    if (cands.length === 0) {
-      return null
-    }
-    return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
-  }
-
-  if (tokenIndex >= 3) {
-    const second = tokensBefore[1]!.toLowerCase()
-    if (canonical === "dom" && second === "-list") {
-      const domPick = resolveDomListOptionTokenPicker(
-        line,
-        cursor,
-        tokensBefore,
-        l,
-        r,
-        prefix,
-        matchMode
-      )
-      if (domPick) {
-        return domPick
-      }
-      return null
-    }
-    if (tokenIndex === 3) {
-      const third = tokensBefore[2]!.toLowerCase()
-      if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
-        const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
-        if (cands.length === 0) {
-          return null
-        }
-        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
-      }
-      if (canonical === "dom" && second === "-setting" && third === "-page-active") {
-        const cands = matchCandidates(DOM_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
-        if (cands.length === 0) {
-          return null
-        }
-        return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
+      if (tokenIndex >= 2) {
+        return null
       }
     }
   }
 
-  return null
+  return resolveFixedTokenPicker(line, cursor, firstCommandTokens, opts)
 }

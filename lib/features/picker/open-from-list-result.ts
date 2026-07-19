@@ -20,7 +20,7 @@ import { tSearch } from "../setting/i18n/ns/search.ts"
 import { tDom } from "../setting/i18n/ns/dom.ts"
 import { tSession } from "../setting/i18n/ns/session.ts"
 import { tSetting } from "../setting/i18n/ns/setting.ts"
-import { tCmd } from "../setting/i18n/ns/cmd.ts"
+import { browseEmptyLines, browseMixedKindsLines } from "./usage.ts"
 import { tError } from "../setting/i18n/ns/error.ts"
 import type { UiLocale } from "../setting/locale.ts"
 import {
@@ -49,9 +49,9 @@ export async function openPickerFromListResult(
   const resolved = resolvePickerFamily(listResult)
   if (resolved.ok === false) {
     if (resolved.reason === "mixed") {
-      return segmentFailure("runtime", [tCmd("cmd.browse.error.mixedKinds", locale)])
+      return segmentFailure("runtime", browseMixedKindsLines(locale))
     }
-    return segmentFailure("runtime", [tCmd("cmd.browse.error.empty", locale)])
+    return segmentFailure("runtime", browseEmptyLines(locale))
   }
 
   switch (resolved.family) {

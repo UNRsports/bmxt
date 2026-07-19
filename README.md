@@ -879,17 +879,19 @@ prompt / RUN_CMD
 
 ### Prompt semantics (Rust SoT)
 
-**Current status (see `_context/todo.md` §14):** Phase **A** (msgs + `promptPrefix` Enter continuation) and Phase **B** (incomplete `tabs` / `dom` / `translate` `-setting` planned in Rust) are **done**. Phase **C** (WASM `complete(line, cursor)` / shrink IME command branches) and Phase **D** (remaining host key choice, e.g. help section lists) are **documented, not built**.
+**Current status (see `_context/todo.md` §14):** Phase **A**–**D** are **done**. Fixed-token Tab/IME content comes from WASM **`complete(line, cursor)`**; compound eligibility from WASM **`compound_segment_eligibility`**. Host keeps live UI overlays (browse producers, `dom -list` remaining options, page-active modes, IME filter UX). **`manifest/bmxt-candidate.json`** is a **design/validate catalog** (not the fixed-token runtime engine).
 
 | Owner | Responsibility |
 |-------|----------------|
-| **Rust (WASM)** | usage/error **keys**, Enter **continuation** (`msgs.promptPrefix`), incomplete `-setting` plans, any prompt-facing *choice* of what to show |
+| **Rust (WASM)** | usage/error **keys**, Enter **continuation** (`msgs.promptPrefix`), incomplete `-setting` plans, **`complete`**, compound eligibility, help section key lists, any prompt-facing *choice* of what to show |
 | **TypeScript** | `expand-msgs` / React paint, opaque `applyUiAction`, Chrome `handlers/effects/*` |
-| **Host-only OK** | Live UI state (picker open/closed, current page-active / translate pair tokens via sentinels), Chrome list row data, IME *filter* UX |
+| **Host-only OK** | Live UI state (picker open/closed, current page-active / translate pair tokens via sentinels), Chrome list row data / outcome→msgs mapping, IME *filter* UX |
 
-**Enter continuation:** lone first token (e.g. `tabs`) → Rust `msgs` + `promptPrefix: "tabs "` → host `setContinuationPrompt`. Generated `continuationPromptAfterLoneFirstToken` remains for **IME / compound eligibility** only — not for Enter.
+**Enter continuation:** lone first token (e.g. `tabs`) → Rust `msgs` + `promptPrefix: "tabs "` → host `setContinuationPrompt`. Generated `continuationPromptAfterLoneFirstToken` remains for **IME helpers** only — not for Enter or compound eligibility.
 
 **Incomplete `-setting`:** e.g. `tabs -setting` / `dom -setting` / `translate -setting` → msgs + prefix; complete apply → UiAction with fields (`tabs_setting` `{ mode }`, `dom_setting` `{ mode }`, `translate_setting` `{ pair }`). Map: **`_context/map_command.csv`**. Inter-command channels: **[Inter-command vocabulary](#inter-command-vocabulary)**.
+
+**Tab / IME fixed tokens:** WASM **`complete(line, cursor)`** (tiers 1–3 from codegen subcommands). `resolveImeTokenPicker` calls it when WASM is ready and applies host filter UX + live overlays.
 
 **Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + [wasm-pack](https://rustwasm.github.io/wasm-pack/). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
 
@@ -1019,9 +1021,9 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 
 **Merge rule:** For the cursor tier, matching **`commands[].zones`** are filtered by `when`, each **`sources[]`** entry contributes values, duplicates are removed in order, then the profile **filter** is applied on every keystroke while the menu is open.
 
-**Runtime:** Today **`resolveImeTokenPicker`** implements most behavior; **`lib/features/bmxt-candidate/`** holds the catalog, validation, and **`BMXT_CANDIDATE_PROVIDERS`** registry. Adapters under **`providers/`** will replace ad-hoc feature lookups incrementally.
+**Runtime:** Fixed tokens (tiers 1–3) come from WASM **`complete`**. **`resolveImeTokenPicker`** applies host filter UX and live overlays (browse producers, `dom -list` remaining options, page-active modes). **`manifest/bmxt-candidate.json`** + **`lib/features/bmxt-candidate/`** are a **design/validate catalog** and optional live-provider stubs — **not** the fixed-token runtime engine. **`BMXT_CANDIDATE_PROVIDERS`** may later supply Chrome/UI dynamic candidates only.
 
-**Adding candidates for a command** — extend **`manifest/bmxt-candidate.json`** (`commands[].zones` + optional new **`dataSources[]`** row), implement the provider, wire **`BMXT_CANDIDATE_PROVIDERS`**, and keep **`manifest/bmxt-codegen.json`** `subcommands` in sync for fixed tokens.
+**Adding fixed-token candidates for a command** — extend **`manifest/bmxt-codegen.json`** `subcommands` (codegen → WASM registry + `command-subcommands.gen.ts` fallback). For catalog documentation of zones/dataSources, update **`manifest/bmxt-candidate.json`** in sync.
 
 **Main directories:**
 
@@ -2206,17 +2208,19 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 
 ### プロンプト意味の正本（Rust）
 
-**現状（`_context/todo.md` §14）:** Phase **A**（msgs + `promptPrefix` による Enter continuation）と Phase **B**（不完全な `tabs` / `dom` / `translate` `-setting` を Rust 計画）は **完了**。Phase **C**（WASM `complete(line, cursor)` / IME コマンド分岐の縮小）と Phase **D**（help 等の残るホスト側キー選択）は **todo 記載のみ・未実装**。
+**現状（`_context/todo.md` §14）:** Phase **A**–**D** は **完了**。固定トークンの Tab/IME 候補は WASM **`complete(line, cursor)`**、compound eligibility は WASM **`compound_segment_eligibility`**。ホストはライブ UI オーバーレイ（browse producer、`dom -list` 残オプション、page-active モード、IME フィルタ UX）のみ。**`manifest/bmxt-candidate.json`** は **設計・検証用カタログ**（固定トークンのランタイムエンジンではない）。
 
 | 担当 | 責務 |
 |------|------|
-| **Rust（WASM）** | usage/error の **キー**、Enter **continuation**（`promptPrefix`）、不完全 `-setting` 計画、プロンプトに「何を出すか」の決定 |
+| **Rust（WASM）** | usage/error の **キー**、Enter **continuation**（`promptPrefix`）、不完全 `-setting` 計画、**`complete`**、compound eligibility、help セクションキー列、プロンプトに「何を出すか」の決定 |
 | **TypeScript** | `expand-msgs` / React 描画、不透明 `applyUiAction`、Chrome `handlers/effects/*` |
-| **ホストのみ許容** | ライブ UI 状態（ピッカー開閉、page-active / 翻訳ペアの現在値＝センチネル埋め）、Chrome 列挙データ、IME のフィルタ UX |
+| **ホストのみ許容** | ライブ UI 状態（ピッカー開閉、page-active / 翻訳ペアの現在値＝センチネル埋め）、Chrome 列挙データ / 結果→msgs 対応、IME のフィルタ UX |
 
-**Enter continuation:** 単独第一トークン（例 `tabs`）→ Rust の `msgs` + `promptPrefix: "tabs "` → ホスト `setContinuationPrompt`。生成ヘルパ `continuationPromptAfterLoneFirstToken` は **IME / compound eligibility 用**のみ（Enter では使わない）。
+**Enter continuation:** 単独第一トークン（例 `tabs`）→ Rust の `msgs` + `promptPrefix: "tabs "` → ホスト `setContinuationPrompt`。生成ヘルパ `continuationPromptAfterLoneFirstToken` は **IME 用**のみ（Enter / compound eligibility では使わない）。
 
 **不完全 `-setting`:** 例 `tabs -setting` / `dom -setting` / `translate -setting` → msgs + prefix；適用完了 → フィールド付き UiAction。対応表: **`_context/map_command.csv`**。コマンド間経路: **[コマンド間語彙](#inter-command-vocabulary-ja)**。
+
+**Tab / IME 固定トークン:** WASM **`complete(line, cursor)`**（codegen `subcommands` の第一〜第三段）。`resolveImeTokenPicker` は WASM 準備後にこれを呼び、ホスト側フィルタ UX とライブオーバーレイを載せる。
 
 開発: Rust + wasm-pack、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
 
@@ -2327,9 +2331,9 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 
 **合成規則:** カーソル tier に対し `commands[].zones` を `when` で絞り、各 **`sources[]`** の値を **順序保持で重複除去**し、メニュー表示中は profile の **filter** を毎キー入力で適用。
 
-**ランタイム:** 現状は **`resolveImeTokenPicker`** が大半を実装。**`lib/features/bmxt-candidate/`** に catalog・検証・**`BMXT_CANDIDATE_PROVIDERS`** レジストリを置き、**`providers/`** adapter で feature 直書きを段階的に置き換える。
+**ランタイム:** 固定トークン（第一〜第三段）は WASM **`complete`**。**`resolveImeTokenPicker`** がホスト側フィルタ UX とライブオーバーレイ（browse producer、`dom -list` 残オプション、page-active）を載せる。**`manifest/bmxt-candidate.json`** と **`lib/features/bmxt-candidate/`** は **設計・検証用カタログ**と任意のライブ provider 差し込み口であり、固定トークンのランタイムエンジンではない。**`BMXT_CANDIDATE_PROVIDERS`** は将来 Chrome/UI 動的候補のみを供給しうる。
 
-**候補の追加** — **`manifest/bmxt-candidate.json`**（`commands[].zones` + 必要なら **`dataSources[]`**）を更新し provider を実装して **`BMXT_CANDIDATE_PROVIDERS`** に登録。固定トークンは **`manifest/bmxt-codegen.json`** の **`subcommands`** と同期。
+**固定トークン候補の追加** — **`manifest/bmxt-codegen.json`** の `subcommands` を更新（codegen → WASM レジストリ + `command-subcommands.gen.ts` フォールバック）。zone / dataSource の文書化は **`manifest/bmxt-candidate.json`** を同期更新。
 
 **`exit`:** **`exit_pane`** Effect → **`exitSession`** / **`closeWindow`** patch。最後の 1 セッションでは BMXt ウィンドウ close + 旧 storage 掃除（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。
 

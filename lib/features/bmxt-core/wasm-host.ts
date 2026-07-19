@@ -5,7 +5,9 @@
 
 import init, {
   classify,
+  complete,
   completion_tokens,
+  compound_segment_eligibility,
   initSync,
   parse_compound,
   parse_pipe,
@@ -100,6 +102,16 @@ export function wasmPlanCompound(line: string): string {
 export function wasmCompletionTokens(): string {
   assertReady()
   return completion_tokens()
+}
+
+export function wasmComplete(line: string, cursor: number): string {
+  assertReady()
+  return complete(line, cursor)
+}
+
+export function wasmCompoundSegmentEligibility(segment: string): string {
+  assertReady()
+  return compound_segment_eligibility(segment)
 }
 
 export function wasmTabsPickerReduce(stateJson: string, eventJson: string): string {

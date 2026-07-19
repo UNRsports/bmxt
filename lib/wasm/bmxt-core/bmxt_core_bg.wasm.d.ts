@@ -2,7 +2,9 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const classify: (a: number, b: number, c: number, d: number, e: number) => void;
+export const complete: (a: number, b: number, c: number, d: number) => void;
 export const completion_tokens: (a: number) => void;
+export const compound_segment_eligibility: (a: number, b: number, c: number) => void;
 export const compound_should_stop: (a: number) => number;
 export const parse_compound: (a: number, b: number, c: number) => void;
 export const parse_pipe: (a: number, b: number, c: number) => void;

@@ -3,7 +3,17 @@
 
 export function classify(line: string, locale: string): string;
 
+/**
+ * EN: Fixed-token completion for tiers 1–3; JSON object or `null`.
+ */
+export function complete(line: string, cursor: number): string;
+
 export function completion_tokens(): string;
+
+/**
+ * EN: Compound/pipe segment eligibility from `run` plan shape.
+ */
+export function compound_segment_eligibility(segment: string): string;
 
 export function compound_should_stop(exit_status: number): boolean;
 
@@ -36,7 +46,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly classify: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly complete: (a: number, b: number, c: number, d: number) => void;
     readonly completion_tokens: (a: number) => void;
+    readonly compound_segment_eligibility: (a: number, b: number, c: number) => void;
     readonly compound_should_stop: (a: number) => number;
     readonly parse_compound: (a: number, b: number, c: number) => void;
     readonly parse_pipe: (a: number, b: number, c: number) => void;
