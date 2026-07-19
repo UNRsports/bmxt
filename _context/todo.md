@@ -992,3 +992,11 @@ Enter → ensureBmxtCore → WASM run
 
 - nav フォーカスモデルの全面見直しは実証外
 - 複数タブ同時フロート同期なし（アクティブタブのみ）
+
+### 15.7 フロート自動退避（nav 等との重なり）
+
+- [x] 障害物セレクタ: `[data-bmxt-nav]` / menu / hint / target-hud / textsel-hint（パディング付き）
+- [x] 四隅スロット（既定 bottom-right）。重なり時は空き隅へ；障害消失で既定へ復帰
+- [x] `left`/`top` 遷移アニメ（~420ms）＋移動中ハイライト（影／枠）
+- [x] MutationObserver + resize で追従；`float-host-placement` 単体テスト
+- [x] 自要素 style 変更で `transition: none` が上書きされないよう、フロート自身の mutation を無視＋移動中は avoid 抑制
