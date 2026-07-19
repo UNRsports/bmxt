@@ -241,6 +241,8 @@ export function useNavMode({
   textSelPhase: NavInjectTextSelPhase | null
   jumpMode: boolean
   jumpQuery: string
+  /** EN: Committed `/` pattern (browse-like); empty when no active filter. */
+  jumpFilter: string
   targetLabel: string | null
   jumpMatchCount: number
   jumpInputRef: RefObject<HTMLInputElement | null>
@@ -256,6 +258,7 @@ export function useNavMode({
   const [overlayError, setOverlayError] = useState<string | null>(null)
   const [jumpMode, setJumpMode] = useState(false)
   const [jumpQuery, setJumpQuery] = useState("")
+  const [jumpFilter, setJumpFilter] = useState("")
   const [targetLabel, setTargetLabel] = useState<string | null>(null)
   const [jumpMatchCount, setJumpMatchCount] = useState(0)
   const [activateError, setActivateError] = useState<string | null>(null)
@@ -274,6 +277,7 @@ export function useNavMode({
   const typingMultilineRef = useRef(typingMultiline)
   const jumpModeRef = useRef(false)
   const jumpQueryRef = useRef("")
+  const jumpFilterRef = useRef("")
   const pageOriginRef = useRef("")
   const menuOpenRef = useRef(false)
   const menuSuspendedRef = useRef(false)
@@ -292,6 +296,7 @@ export function useNavMode({
   typingMultilineRef.current = typingMultiline
   jumpModeRef.current = jumpMode
   jumpQueryRef.current = jumpQuery
+  jumpFilterRef.current = jumpFilter
   getTypingBufferRef.current = getTypingBuffer
   resolveTypingCommitTextRef.current = resolveTypingCommitText
 
@@ -309,17 +314,27 @@ export function useNavMode({
   const navTypingMode =
     armed && active && isFocusedPane && paneFocus === "terminal" && typingMode
 
-  const clearJumpMode = useCallback(() => {
+  const clearJumpCompose = useCallback(() => {
     jumpModeRef.current = false
     jumpQueryRef.current = ""
     setJumpMode(false)
     setJumpQuery("")
-    setJumpMatchCount(0)
     const jumpEl = jumpInputRef.current
     if (jumpEl && document.activeElement === jumpEl) {
       jumpEl.blur()
     }
   }, [])
+
+  const clearJumpFilter = useCallback(() => {
+    jumpFilterRef.current = ""
+    setJumpFilter("")
+    setJumpMatchCount(0)
+  }, [])
+
+  const clearJumpMode = useCallback(() => {
+    clearJumpCompose()
+    clearJumpFilter()
+  }, [clearJumpCompose, clearJumpFilter])
 
   const exitTypingMode = useCallback((tabId: number | null) => {
     const wasTyping = typingModeRef.current
@@ -370,17 +385,17 @@ export function useNavMode({
   }, [])
 
   const runJumpQuery = useCallback(
-    async (query: string, cycleDelta = 0) => {
+    async (query: string, cycleDelta = 0, preview = false) => {
       const tabId = lastOverlayTabRef.current
       if (tabId === null) {
         return
       }
       const origin = pageOriginRef.current
       const learned = origin.length > 0 ? await listNavLearnedKeysForOrigin(origin) : []
-      const res = await jumpQueryNavOverlayOnTab(tabId, query, learned, cycleDelta)
+      const res = await jumpQueryNavOverlayOnTab(tabId, query, learned, cycleDelta, preview)
       applyNavInjectState(res, navUiSetters, navUiRefs)
       applyTargetFromResult(res)
-      if (res.ok && res.jumpMatchCount === 0 && query.trim().length > 0) {
+      if (res.ok && res.jumpMatchCount === 0 && query.trim().length > 0 && !preview) {
         for (const key of learned) {
           if (key.toLowerCase().includes(query.trim().toLowerCase())) {
             await forgetNavLearnedTarget(origin, key)
@@ -389,6 +404,17 @@ export function useNavMode({
       }
     },
     [applyTargetFromResult]
+  )
+
+  const cycleJumpMatches = useCallback(
+    (delta: number) => {
+      const filter = jumpFilterRef.current
+      if (filter.trim().length === 0) {
+        return
+      }
+      void runJumpQuery(filter, delta, false)
+    },
+    [runJumpQuery]
   )
 
   const savePosition = useCallback(
@@ -567,12 +593,25 @@ export function useNavMode({
     })
   }, [applyTargetFromResult, clearJumpMode, enterTypingFromClick, rememberActivation])
 
+  const commitJumpFilter = useCallback(() => {
+    const query = jumpQueryRef.current.trim()
+    if (query.length === 0) {
+      clearJumpMode()
+      void runJumpQuery("", 0, true)
+      return
+    }
+    jumpFilterRef.current = query
+    setJumpFilter(query)
+    clearJumpCompose()
+    void runJumpQuery(query, 0, false)
+  }, [clearJumpCompose, clearJumpMode, runJumpQuery])
+
   const onJumpQueryChange = useCallback(
     (value: string) => {
       const next = value.length > 200 ? value.slice(0, 200) : value
       jumpQueryRef.current = next
       setJumpQuery(next)
-      void runJumpQuery(next)
+      void runJumpQuery(next, 0, true)
     },
     [runJumpQuery]
   )
@@ -587,22 +626,17 @@ export function useNavMode({
         e.preventDefault()
         e.stopPropagation()
         clearJumpMode()
+        void runJumpQuery("", 0, true)
         return
       }
       if (e.key === "Enter") {
         e.preventDefault()
         e.stopPropagation()
-        activateJumpSelection()
+        commitJumpFilter()
         return
       }
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        e.preventDefault()
-        e.stopPropagation()
-        const delta = e.key === "ArrowDown" ? 1 : -1
-        void runJumpQuery(jumpQueryRef.current, delta)
-      }
     },
-    [activateJumpSelection, clearJumpMode, runJumpQuery]
+    [clearJumpMode, commitJumpFilter, runJumpQuery]
   )
 
   useEffect(() => {
@@ -748,6 +782,7 @@ export function useNavMode({
           e.preventDefault()
           e.stopPropagation()
           clearJumpMode()
+          void runJumpQuery("", 0, true)
           return
         }
         if (!jumpFocused) {
@@ -760,6 +795,63 @@ export function useNavMode({
         }
         /* EN: Jump IME input is focused — let composition / printable reach the field. */
         return
+      }
+
+      if (jumpFilterRef.current.trim().length > 0) {
+        if (e.key === "Escape") {
+          e.preventDefault()
+          e.stopPropagation()
+          clearJumpMode()
+          void runJumpQuery("", 0, true)
+          return
+        }
+        if (e.key === "/") {
+          e.preventDefault()
+          e.stopPropagation()
+          clearJumpMode()
+          void runJumpQuery("", 0, true)
+          jumpModeRef.current = true
+          jumpQueryRef.current = ""
+          setJumpMode(true)
+          setJumpQuery("")
+          setActivateError(null)
+          queueMicrotask(() => {
+            jumpInputRef.current?.focus()
+          })
+          return
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          e.stopPropagation()
+          activateJumpSelection()
+          return
+        }
+        const evFilter = e as KeyboardEvent & { isComposing?: boolean }
+        if (!evFilter.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (e.key === "n" && !e.shiftKey) {
+            e.preventDefault()
+            e.stopPropagation()
+            cycleJumpMatches(1)
+            return
+          }
+          if (e.key === "N" && e.shiftKey) {
+            e.preventDefault()
+            e.stopPropagation()
+            cycleJumpMatches(-1)
+            return
+          }
+          const arrow = arrowDelta(e.key)
+          if (arrow) {
+            e.preventDefault()
+            e.stopPropagation()
+            const delta =
+              arrow.dx > 0 || arrow.dy > 0 ? 1 : arrow.dx < 0 || arrow.dy < 0 ? -1 : 0
+            if (delta !== 0) {
+              cycleJumpMatches(delta)
+            }
+            return
+          }
+        }
       }
 
       if (isTextSelPickingRef(navUiRefs)) {
@@ -878,12 +970,13 @@ export function useNavMode({
       if (e.key === "/") {
         e.preventDefault()
         e.stopPropagation()
+        clearJumpFilter()
         jumpModeRef.current = true
         jumpQueryRef.current = ""
         setJumpMode(true)
         setJumpQuery("")
         setActivateError(null)
-        void runJumpQuery("")
+        void runJumpQuery("", 0, true)
         queueMicrotask(() => {
           jumpInputRef.current?.focus()
         })
@@ -917,10 +1010,13 @@ export function useNavMode({
       })
     },
     [
+      activateJumpSelection,
       armed,
       active,
       applyNavResult,
+      clearJumpFilter,
       clearJumpMode,
+      cycleJumpMatches,
       enterTypingFromClick,
       isFocusedPane,
       paneFocus,
@@ -942,6 +1038,7 @@ export function useNavMode({
     textSelPhase,
     jumpMode,
     jumpQuery,
+    jumpFilter,
     targetLabel,
     jumpMatchCount,
     jumpInputRef,

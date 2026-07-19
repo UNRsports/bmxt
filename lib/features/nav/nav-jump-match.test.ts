@@ -46,15 +46,22 @@ describe("nav-jump-match", () => {
   })
 
   it("serializes and parses jump payload", () => {
-    const raw = serializeNavJumpQueryPayload("ab", ["k1"], 1)
+    const raw = serializeNavJumpQueryPayload("ab", ["k1"], 1, true)
     const parsed = parseNavJumpQueryPayload(raw)
     assert.equal(parsed.query, "ab")
     assert.deepEqual(parsed.learned, ["k1"])
     assert.equal(parsed.cycleDelta, 1)
+    assert.equal(parsed.preview, true)
+  })
+
+  it("defaults preview to false", () => {
+    const parsed = parseNavJumpQueryPayload(serializeNavJumpQueryPayload("x", [], 0))
+    assert.equal(parsed.preview, false)
   })
 
   it("falls back to plain query string", () => {
     const parsed = parseNavJumpQueryPayload("plain")
     assert.equal(parsed.query, "plain")
+    assert.equal(parsed.preview, false)
   })
 })

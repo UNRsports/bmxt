@@ -4,6 +4,7 @@
  */
 
 import type { UiLocale } from "../../setting/locale"
+import type { BmxtHostKind } from "../bmxt-host-kind"
 import type { RunCmdResult } from "./session-patches"
 
 function sendRuntimeMessage<T>(message: Record<string, unknown>): Promise<T> {
@@ -23,13 +24,15 @@ export async function runCommandFromUiAsync(
   line: string,
   sessionId: string,
   sessionOrderLength: number,
-  locale?: UiLocale
+  locale?: UiLocale,
+  hostKind: BmxtHostKind = "popup"
 ): Promise<RunCmdResult> {
   const message: Record<string, unknown> = {
     type: "RUN_CMD",
     line,
     sessionId,
-    sessionOrderLength
+    sessionOrderLength,
+    hostKind
   }
   if (locale === "en" || locale === "ja") {
     message.locale = locale

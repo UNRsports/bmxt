@@ -677,6 +677,18 @@ body {
   box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.35);
 }
 
+.bmxt-mode-status-jump-committed {
+  flex: 1;
+  min-width: 4rem;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e6edf3;
+  font-size: 11px;
+  user-select: none;
+}
+
 .bmxt-mode-status-jump-match {
   flex-shrink: 0;
   color: #8b949e;

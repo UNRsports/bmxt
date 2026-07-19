@@ -53,9 +53,10 @@ export async function jumpQueryNavOverlayOnTab(
   tabId: number,
   query: string,
   learned: readonly string[],
-  cycleDelta = 0
+  cycleDelta = 0,
+  preview = false
 ): Promise<NavControlResult> {
-  const text = serializeNavJumpQueryPayload(query, learned, cycleDelta)
+  const text = serializeNavJumpQueryPayload(query, learned, cycleDelta, preview)
   return runNavControlViaBackground(tabId, "jumpQuery", false, 0, 0, 0, 0, undefined, text)
 }
 

@@ -1,7 +1,7 @@
 {
   "nav.armedLog": {
-    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · / ジャンプ · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
-    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · / jump · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
+    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · / ページ全体検索 · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
+    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · / whole-page search · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
   },
   "nav.disarmed": {
     "ja": "nav を終了しました。",
@@ -100,20 +100,24 @@
     "en": "Copy · Enter to run · Esc to clear selection"
   },
   "nav.status.idle": {
-    "ja": "↑↓←→ 移動 · / ジャンプ · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
-    "en": "↑↓←→ move · / jump · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
+    "ja": "↑↓←→ 移動 · / ページ全体検索 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
+    "en": "↑↓←→ move · / whole-page search · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
   },
   "nav.status.jump": {
-    "ja": "詳細バーで入力（IME 可）· ↑↓ 候補 · Enter 実行 · Esc 解除",
-    "en": "Type in the detail bar (IME OK) · ↑↓ matches · Enter activate · Esc leave"
+    "ja": "詳細バーで入力（IME 可）· Enter で確定 · Esc 取消",
+    "en": "Type in the detail bar (IME OK) · Enter confirm · Esc cancel"
+  },
+  "nav.status.jumpFilter": {
+    "ja": "n/N または ↑↓←→ で候補 · Enter 実行 · Esc 解除 · / 再検索",
+    "en": "n/N or arrows cycle · Enter activate · Esc clear · / search again"
   },
   "nav.jump.inputAria": {
-    "ja": "nav インクリメンタルジャンプの検索",
-    "en": "nav incremental jump search"
+    "ja": "nav ページ内ジャンプの検索",
+    "en": "nav in-page jump search"
   },
   "nav.jump.inputPlaceholder": {
-    "ja": "リンク名・alt・URL 断片…",
-    "en": "link text, alt, URL fragment…"
+    "ja": "リンク名・alt・URL 断片（ページ全体）…",
+    "en": "link text, alt, URL fragment (whole page)…"
   },
   "nav.activate.error.inert": {
     "ja": "この要素は操作できません",

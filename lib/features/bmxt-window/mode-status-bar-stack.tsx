@@ -21,6 +21,7 @@ type NavProps = {
   textSelPhase: "start" | "end" | "done" | "idle" | null
   jumpMode?: boolean
   jumpQuery?: string
+  jumpFilter?: string
   jumpMatchCount?: number
   targetLabel?: string | null
   activateError?: string | null
@@ -177,6 +178,7 @@ export function ModeStatusBarStack({
             textSelPhase={nav.textSelPhase}
             jumpMode={nav.jumpMode}
             jumpQuery={nav.jumpQuery}
+            jumpFilter={nav.jumpFilter}
             jumpMatchCount={nav.jumpMatchCount}
             targetLabel={nav.targetLabel}
             activateError={nav.activateError}

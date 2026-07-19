@@ -17,6 +17,7 @@ import {
   resolveNavSpatialElement,
   scrollNavSpatialTargetIntoView,
   setNavSpatialHighlight,
+  syncNavSpatialCursorToElement,
   syncNavSpatialSelectionIndex,
   type NavSpatialCandidateMeta,
   type NavSpatialCandidates
@@ -879,8 +880,11 @@ export function bmxtNavControlInjected(
     return { paths: sess.spatialPaths, boxes: sess.spatialBoxes, metas: sess.spatialMetas }
   }
 
-  function refreshSpatialCandidates(sess: NavSession): void {
-    const collected = collectNavSpatialCandidates()
+  function refreshSpatialCandidates(
+    sess: NavSession,
+    scope: "viewport" | "document" = "viewport"
+  ): void {
+    const collected = collectNavSpatialCandidates(scope)
     sess.spatialPaths = collected.paths
     sess.spatialBoxes = collected.boxes
     sess.spatialMetas = collected.metas
@@ -892,15 +896,24 @@ export function bmxtNavControlInjected(
     const pointer = navSpatialPointerForIndex(candidates, index)
     sess.spatialIndex = index
     sess.selectedPath = pointer.path
-    sess.x = pointer.x
-    sess.y = pointer.y
-    sess.root.style.left = sess.x + "px"
-    sess.root.style.top = sess.y + "px"
     const el = resolveNavSpatialElement(pointer.path)
     if (el) {
+      // EN: Scroll first, then pin cursor to the live rect (pre-scroll boxes drift after scroll).
       scrollNavSpatialTargetIntoView(el)
+      const synced = syncNavSpatialCursorToElement(el)
+      sess.x = synced.x
+      sess.y = synced.y
+      if (index >= 0 && index < sess.spatialBoxes.length) {
+        sess.spatialBoxes[index] = synced.box
+      }
+      sess.root.style.left = sess.x + "px"
+      sess.root.style.top = sess.y + "px"
       setNavSpatialHighlight(el)
     } else {
+      sess.x = pointer.x
+      sess.y = pointer.y
+      sess.root.style.left = sess.x + "px"
+      sess.root.style.top = sess.y + "px"
       setNavSpatialHighlight(null)
       scrollCursorIntoView(sess.x, sess.y)
     }
@@ -914,8 +927,15 @@ export function bmxtNavControlInjected(
     if (sess.textSelPhase !== "idle") {
       return { ok: false, reason: "jump-unavailable" }
     }
-    const { query, learned, cycleDelta } = parseNavJumpQueryPayload(raw)
-    refreshSpatialCandidates(sess)
+    const { query, learned, cycleDelta, preview } = parseNavJumpQueryPayload(raw)
+    // EN: Whole-page candidates for `/` (off-screen included).
+    refreshSpatialCandidates(sess, "document")
+    if (query.trim().length === 0) {
+      sess.jumpRankedIndices = []
+      sess.jumpRankIndex = 0
+      renderOverlayRoot(sess)
+      return navOk(sess, { jumpMatchCount: 0, jumpMatchIndex: -1 })
+    }
     const jumpCandidates = sess.spatialMetas.map((meta, index) => ({
       index,
       matchKeys: meta.matchKeys,
@@ -928,6 +948,14 @@ export function bmxtNavControlInjected(
       sess.jumpRankIndex = 0
       renderOverlayRoot(sess)
       return navOk(sess, { jumpMatchCount: 0, jumpMatchIndex: -1 })
+    }
+    // EN: Preview while typing — count only; Enter commit / n·N / arrows move the cursor.
+    if (preview && cycleDelta === 0) {
+      renderOverlayRoot(sess)
+      return navOk(sess, {
+        jumpMatchCount: ranked.rankedIndices.length,
+        jumpMatchIndex: -1
+      })
     }
     let rankIndex = sess.jumpRankIndex
     if (cycleDelta !== 0) {
@@ -985,6 +1013,11 @@ export function bmxtNavControlInjected(
       const editable = resolveEditable(el)
       if (editable) {
         scrollNavSpatialTargetIntoView(editable)
+        const synced = syncNavSpatialCursorToElement(editable)
+        sess.x = synced.x
+        sess.y = synced.y
+        sess.root.style.left = sess.x + "px"
+        sess.root.style.top = sess.y + "px"
         focusEditableAt(editable, sess.x, sess.y)
         const info = beginTypingUi(sess, editable)
         editable.blur()

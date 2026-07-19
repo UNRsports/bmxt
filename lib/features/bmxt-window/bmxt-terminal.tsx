@@ -81,6 +81,7 @@ type SessionPaneProps = {
     channel?: import("../command-line/command-output.ts").LogChannel
   ) => void | Promise<void>
   sessionOrderLength: number
+  hostKind: import("./bmxt-host-kind").BmxtHostKind
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -115,6 +116,7 @@ const SessionPaneView = memo(function SessionPaneView({
   onSetSessionDisplayName,
   appendLogLines,
   sessionOrderLength,
+  hostKind,
   applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
@@ -144,6 +146,7 @@ const SessionPaneView = memo(function SessionPaneView({
         onSetSessionDisplayName={onSetSessionDisplayName}
         appendLogLines={appendLogLines}
         sessionOrderLength={sessionOrderLength}
+        hostKind={hostKind}
         applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -484,6 +487,7 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
     onActivateSession: setActiveSession,
     onSetSessionDisplayName: setSessionDisplayName,
     sessionOrderLength: state.order.length,
+    hostKind,
     applyRunCmdPatches,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,

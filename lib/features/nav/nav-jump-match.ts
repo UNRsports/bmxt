@@ -105,10 +105,11 @@ export function parseNavJumpQueryPayload(raw: string): {
   query: string
   learned: string[]
   cycleDelta: number
+  preview: boolean
 } {
   const trimmed = raw.trim()
   if (trimmed.length === 0) {
-    return { query: "", learned: [], cycleDelta: 0 }
+    return { query: "", learned: [], cycleDelta: 0, preview: false }
   }
   if (trimmed.startsWith("{")) {
     try {
@@ -116,6 +117,7 @@ export function parseNavJumpQueryPayload(raw: string): {
         query?: unknown
         learned?: unknown
         cycleDelta?: unknown
+        preview?: unknown
       }
       const query = typeof o.query === "string" ? o.query : ""
       const learned = Array.isArray(o.learned)
@@ -125,22 +127,25 @@ export function parseNavJumpQueryPayload(raw: string): {
         typeof o.cycleDelta === "number" && Number.isFinite(o.cycleDelta)
           ? Math.trunc(o.cycleDelta)
           : 0
-      return { query, learned, cycleDelta }
+      const preview = o.preview === true
+      return { query, learned, cycleDelta, preview }
     } catch {
-      return { query: trimmed, learned: [], cycleDelta: 0 }
+      return { query: trimmed, learned: [], cycleDelta: 0, preview: false }
     }
   }
-  return { query: trimmed, learned: [], cycleDelta: 0 }
+  return { query: trimmed, learned: [], cycleDelta: 0, preview: false }
 }
 
 export function serializeNavJumpQueryPayload(
   query: string,
   learned: readonly string[],
-  cycleDelta = 0
+  cycleDelta = 0,
+  preview = false
 ): string {
   return JSON.stringify({
     query,
     learned: [...learned],
-    cycleDelta
+    cycleDelta,
+    preview
   })
 }

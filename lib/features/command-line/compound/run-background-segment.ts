@@ -17,7 +17,8 @@ export async function runBackgroundSegment(
       segment,
       deps.sessionId,
       deps.sessionOrderLength,
-      locale
+      locale,
+      deps.hostKind
     )
     if (!isRunCmdResult(response)) {
       const msg = tError("error.unknown", locale)

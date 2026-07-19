@@ -13,7 +13,10 @@ import {
   type SpatialRectDir
 } from "../page-dom/spatial-element-nav.ts"
 import { buildPathForElement, resolveNodeFromPath, walkAllElements } from "../page-dom/injected-dom-path.ts"
-import { isElementVisibleInViewport } from "../page-dom/injected-dom-viewport-visible.ts"
+import {
+  isElementLaidOut,
+  isElementVisibleInViewport
+} from "../page-dom/injected-dom-viewport-visible.ts"
 import { activateNavTargetByKind } from "./nav-activate.ts"
 import {
   formatNavTargetLabel,
@@ -37,7 +40,11 @@ export type NavSpatialCandidates = {
   metas: NavSpatialCandidateMeta[]
 }
 
-const NAV_SPATIAL_MAX_CANDIDATES = 200
+const NAV_SPATIAL_MAX_VIEWPORT = 200
+const NAV_SPATIAL_MAX_DOCUMENT = 800
+
+/** EN: Viewport = arrow snap; document = `/` jump (includes off-screen). */
+export type NavSpatialCollectScope = "viewport" | "document"
 
 let navSpatialHighlightEl: HTMLElement | null = null
 let navSpatialHighlightPrev = { outline: "", outlineOffset: "" }
@@ -74,11 +81,15 @@ function centerOfRect(box: SpatialRect): { x: number; y: number } {
   return { x: Math.round(box.x + box.w / 2), y: Math.round(box.y + box.h / 2) }
 }
 
-function isNavSpatialTarget(el: Element): boolean {
+function isNavSpatialTarget(el: Element, scope: NavSpatialCollectScope): boolean {
   if (!(el instanceof HTMLElement)) {
     return false
   }
-  if (!isElementVisibleInViewport(el)) {
+  if (scope === "viewport") {
+    if (!isElementVisibleInViewport(el)) {
+      return false
+    }
+  } else if (!isElementLaidOut(el)) {
     return false
   }
   const tag = el.tagName.toLowerCase()
@@ -124,7 +135,8 @@ function metaFromElement(el: Element): NavSpatialCandidateMeta {
 }
 
 function dedupNavSpatialCandidates(
-  raw: Array<{ el: Element; path: number[]; box: SpatialRect }>
+  raw: Array<{ el: Element; path: number[]; box: SpatialRect }>,
+  scope: NavSpatialCollectScope
 ): NavSpatialCandidates {
   const kept = raw.filter((item, i) => {
     for (let j = 0; j < raw.length; j += 1) {
@@ -132,7 +144,11 @@ function dedupNavSpatialCandidates(
         continue
       }
       const other = raw[j]!
-      if (item.el !== other.el && item.el.contains(other.el) && isNavSpatialTarget(other.el)) {
+      if (
+        item.el !== other.el &&
+        item.el.contains(other.el) &&
+        isNavSpatialTarget(other.el, scope)
+      ) {
         return false
       }
     }
@@ -151,13 +167,17 @@ function dedupNavSpatialCandidates(
   return { paths, boxes, metas }
 }
 
-export function collectNavSpatialCandidates(): NavSpatialCandidates {
+export function collectNavSpatialCandidates(
+  scope: NavSpatialCollectScope = "viewport"
+): NavSpatialCandidates {
+  const max =
+    scope === "document" ? NAV_SPATIAL_MAX_DOCUMENT : NAV_SPATIAL_MAX_VIEWPORT
   const raw: Array<{ el: Element; path: number[]; box: SpatialRect }> = []
   walkAllElements((el) => {
-    if (raw.length >= NAV_SPATIAL_MAX_CANDIDATES) {
+    if (raw.length >= max) {
       return
     }
-    if (!isNavSpatialTarget(el)) {
+    if (!isNavSpatialTarget(el, scope)) {
       return
     }
     const path = buildPathForElement(el)
@@ -166,7 +186,7 @@ export function collectNavSpatialCandidates(): NavSpatialCandidates {
     }
     raw.push({ el, path, box: rectFromElement(el) })
   })
-  return dedupNavSpatialCandidates(raw)
+  return dedupNavSpatialCandidates(raw, scope)
 }
 
 export function resolveNavSpatialElement(path: readonly number[] | null): Element | null {
@@ -219,9 +239,27 @@ export function navSpatialPointerForIndex(
   return { x: center.x, y: center.y, path: candidates.paths[index]! }
 }
 
+/**
+ * EN: Live viewport center + box for an element (call after any scroll that may move it).
+ * JA: スクロール後に使う実要素のビューポート中心と矩形。
+ */
+export function syncNavSpatialCursorToElement(el: Element): {
+  x: number
+  y: number
+  box: SpatialRect
+} {
+  const box = rectFromElement(el)
+  const center = centerOfRect(box)
+  return { x: center.x, y: center.y, box }
+}
+
+/**
+ * EN: Scroll only if needed (`nearest`); instant so the nav cursor can re-sync immediately.
+ * JA: 見えていれば動かさない。即時スクロール後にカーソル座標を合わせられるようにする。
+ */
 export function scrollNavSpatialTargetIntoView(el: Element): void {
   try {
-    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
+    el.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" })
   } catch {
     el.scrollIntoView()
   }

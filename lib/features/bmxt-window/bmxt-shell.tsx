@@ -149,6 +149,8 @@ type Props = {
     channel?: import("../command-line/command-output.ts").LogChannel
   ) => void | Promise<void>
   sessionOrderLength: number
+  /** EN: popup vs in-page float — drives `exit` host policy. */
+  hostKind?: import("./bmxt-host-kind").BmxtHostKind
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -190,6 +192,7 @@ export function BmxtShell({
   onSetSessionDisplayName,
   appendLogLines,
   sessionOrderLength,
+  hostKind = "popup",
   applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
@@ -474,6 +477,7 @@ export function BmxtShell({
     textSelPhase: navTextSelPhase,
     jumpMode: navJumpMode,
     jumpQuery: navJumpQuery,
+    jumpFilter: navJumpFilter,
     targetLabel: navTargetLabel,
     jumpMatchCount: navJumpMatchCount,
     jumpInputRef: navJumpInputRef,
@@ -831,6 +835,7 @@ export function BmxtShell({
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
+    hostKind,
     applyRunCmdPatches,
     mode,
     iSearchMatches,
@@ -1144,6 +1149,7 @@ export function BmxtShell({
             textSelPhase: navTextSelPhase,
             jumpMode: navJumpMode,
             jumpQuery: navJumpQuery,
+            jumpFilter: navJumpFilter,
             jumpMatchCount: navJumpMatchCount,
             targetLabel: navTargetLabel,
             activateError: navActivateError,

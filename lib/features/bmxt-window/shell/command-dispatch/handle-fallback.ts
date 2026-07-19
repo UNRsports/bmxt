@@ -35,7 +35,13 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
   recordCommandHistory(deps)
   // EN: Echo immediately — search / dom plain paths can take seconds before patches arrive.
   void deps.appendLogLines([`> ${trimmed}`], "stdout")
-  void runCommandFromUiAsync(trimmed, deps.sessionId, deps.sessionOrderLength, locale)
+  void runCommandFromUiAsync(
+    trimmed,
+    deps.sessionId,
+    deps.sessionOrderLength,
+    locale,
+    deps.hostKind
+  )
     .then((response) => {
       if (!isRunCmdResult(response)) {
         void deps.appendLogLines([tError("error.unknown", locale)], "stderr")

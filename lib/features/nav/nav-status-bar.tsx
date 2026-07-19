@@ -17,6 +17,8 @@ type Props = {
   textSelPhase?: "start" | "end" | "done" | "idle" | null
   jumpMode?: boolean
   jumpQuery?: string
+  /** EN: Committed filter after Enter (browse-like); shown when not composing. */
+  jumpFilter?: string
   jumpMatchCount?: number
   targetLabel?: string | null
   activateError?: string | null
@@ -37,6 +39,7 @@ export function NavStatusBar({
   textSelPhase = null,
   jumpMode = false,
   jumpQuery = "",
+  jumpFilter = "",
   jumpMatchCount = 0,
   targetLabel = null,
   activateError = null,
@@ -78,46 +81,52 @@ export function NavStatusBar({
         ? `${tabTitle ?? "no tab"} — ${activateLabel}`
         : (tabTitle ?? "no tab")
   const textSelPicking = textSelPhase === "start" || textSelPhase === "end"
+  const filterActive = !jumpMode && jumpFilter.length > 0
   const modeLabel = typingMode
     ? "typing"
     : jumpMode
       ? "jump"
-      : textSelPicking
-        ? textSelPhase === "start"
-          ? "sel-start"
-          : "sel-end"
-        : menuOpen
-          ? textSelPhase === "done"
-            ? "copy"
-            : "menu"
-          : active
-            ? "ON"
-            : "OFF (Alt toggles)"
+      : filterActive
+        ? "find"
+        : textSelPicking
+          ? textSelPhase === "start"
+            ? "sel-start"
+            : "sel-end"
+          : menuOpen
+            ? textSelPhase === "done"
+              ? "copy"
+              : "menu"
+            : active
+              ? "ON"
+              : "OFF (Alt toggles)"
   const hintMode = typingMode
     ? typingMultiline
       ? "typingMultiline"
       : "typing"
     : jumpMode
       ? "jump"
-      : textSelPicking
-        ? textSelPhase === "start"
-          ? "selStart"
-          : "selEnd"
-        : textSelPhase === "done"
-          ? menuOpen
-            ? "copyOpen"
-            : "copyClosed"
-          : menuOpen
-            ? "menu"
-            : "idle"
+      : filterActive
+        ? "jumpFilter"
+        : textSelPicking
+          ? textSelPhase === "start"
+            ? "selStart"
+            : "selEnd"
+          : textSelPhase === "done"
+            ? menuOpen
+              ? "copyOpen"
+              : "copyClosed"
+            : menuOpen
+              ? "menu"
+              : "idle"
+  const activeQuery = jumpMode ? jumpQuery : jumpFilter
   const matchPart =
-    jumpMode && jumpQuery.length > 0 && jumpMatchCount === 0
+    (jumpMode || filterActive) && activeQuery.length > 0 && jumpMatchCount === 0
       ? tNav("nav.jump.noMatch", locale)
-      : jumpMode && jumpMatchCount > 0
+      : (jumpMode || filterActive) && jumpMatchCount > 0
         ? String(jumpMatchCount)
         : ""
   let metaExtra = ""
-  if (!jumpMode && targetLabel && targetLabel.length > 0) {
+  if (!jumpMode && !filterActive && targetLabel && targetLabel.length > 0) {
     metaExtra = targetLabel
   }
   const metaLabel = metaExtra.length > 0 ? `${tabLabel} · ${metaExtra}` : tabLabel
@@ -158,6 +167,16 @@ export function NavStatusBar({
               onJumpInputKeyDown?.(e)
             }}
           />
+          {matchPart.length > 0 ? (
+            <span className="bmxt-mode-status-jump-match">{matchPart}</span>
+          ) : null}
+        </span>
+      ) : filterActive ? (
+        <span className="bmxt-mode-status-seg bmxt-mode-status-seg--jump">
+          <span className="bmxt-mode-status-jump-prefix" aria-hidden="true">
+            /
+          </span>
+          <span className="bmxt-mode-status-jump-committed">{jumpFilter}</span>
           {matchPart.length > 0 ? (
             <span className="bmxt-mode-status-jump-match">{matchPart}</span>
           ) : null}

@@ -22,16 +22,28 @@ export async function toggleBmxtFloatOnActiveTabAsync(): Promise<void> {
   if (!isScriptablePageUrl(tab.url)) {
     return
   }
+  await sendFloatHostAction(tab.id, "toggle")
+}
+
+/** EN: Hide the in-page float prompt on a tab (e.g. `exit` from float host). */
+export async function hideBmxtFloatOnTabAsync(tabId: number): Promise<void> {
+  await sendFloatHostAction(tabId, "hide")
+}
+
+async function sendFloatHostAction(
+  tabId: number,
+  action: "toggle" | "show" | "hide"
+): Promise<void> {
   try {
-    const response = (await chrome.tabs.sendMessage(tab.id, {
+    const response = (await chrome.tabs.sendMessage(tabId, {
       type: BMXT_FLOAT_MESSAGE_TYPE,
-      action: "toggle"
+      action
     })) as BmxtFloatHostResponse | undefined
     if (response && response.ok === false) {
       return
     }
   } catch {
-    // Content script missing or host permission not granted — proof stage: no-op.
+    // Content script missing or host permission not granted — no-op.
   }
 }
 

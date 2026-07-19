@@ -5,10 +5,13 @@ import type { SessionListRow } from "../../../session"
 import type { UiSettings } from "../../../setting/settings"
 import type { UiLocale } from "../../../setting/locale"
 import type { TranslationPairId } from "../../../translate/translation-pair"
+import type { BmxtHostKind } from "../../bmxt-host-kind"
 
 export type CommandDispatchDeps = {
   sessionId: string
   sessionOrderLength: number
+  /** EN: Which UI document is running the command (`exit` closes popup vs hides float). */
+  hostKind: BmxtHostKind
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   mode: "normal" | "isearch"
   iSearchMatches: string[]

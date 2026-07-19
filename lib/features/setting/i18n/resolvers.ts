@@ -27,6 +27,7 @@ export type NavStatusMode =
   | "copyClosed"
   | "menu"
   | "jump"
+  | "jumpFilter"
   | "idle"
 
 const NAV_STATUS_KEY: Record<NavStatusMode, NavMessageKey> = {
@@ -38,6 +39,7 @@ const NAV_STATUS_KEY: Record<NavStatusMode, NavMessageKey> = {
   copyClosed: "nav.status.copyClosed",
   menu: "nav.status.menu",
   jump: "nav.status.jump",
+  jumpFilter: "nav.status.jumpFilter",
   idle: "nav.status.idle"
 }
 
