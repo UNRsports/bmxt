@@ -31,7 +31,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.org/wasm-pack/installer/init.sh -sSf | sh
+        run: bash scripts/install-wasm-pack.sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

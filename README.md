@@ -893,7 +893,7 @@ prompt / RUN_CMD
 
 **Tab / IME fixed tokens:** WASM **`complete(line, cursor)`** (tiers 1–3 from codegen subcommands). `resolveImeTokenPicker` calls it when WASM is ready and applies host filter UX + live overlays.
 
-**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + [wasm-pack](https://rustwasm.github.io/wasm-pack/). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
+**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + **wasm-pack** (`bash scripts/install-wasm-pack.sh`, pins **0.15.0**; see [wasm-pack](https://wasm-bindgen.github.io/wasm-pack/)). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
 
 The tab picker’s **`runTabsPickerReduce`** (and related planners) are WASM-backed wrappers under **`lib/features/bmxt-core/tabs-picker/`** (see **Tab picker — implementation** under **`tabs`**).
 
@@ -1185,7 +1185,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 
 
 1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
-2. **Rust toolchain (command core):** `rustup target add wasm32-unknown-unknown` and install **wasm-pack**. CI uses the same. Optional local check: **`cargo test -p bmxt-core`**.
+2. **Rust toolchain (command core):** `rustup target add wasm32-unknown-unknown` and **`bash scripts/install-wasm-pack.sh`** (pinned **wasm-pack 0.15.0**; CI uses the same). Optional local check: **`cargo test -p bmxt-core`**.
 3. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** so TS + Rust generated files match the manifest.
 4. **Start dev:** From the repo root, run **`pnpm run dev`** (runs **`build:wasm`** then background-services then WXT). Leave this process running; it rebuilds the extension on file changes.
 5. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
@@ -2222,7 +2222,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 
 **Tab / IME 固定トークン:** WASM **`complete(line, cursor)`**（codegen `subcommands` の第一〜第三段）。`resolveImeTokenPicker` は WASM 準備後にこれを呼び、ホスト側フィルタ UX とライブオーバーレイを載せる。
 
-開発: Rust + wasm-pack、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
+開発: Rust + **`bash scripts/install-wasm-pack.sh`**（wasm-pack **0.15.0** 固定）、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
 
 タブピッカー計画は WASM 経由の **`runTabsPickerReduce`** 等（詳細は **`tabs`** の **タブピッカー — 実装**）。
 
