@@ -82,6 +82,9 @@ type SessionPaneProps = {
   ) => void | Promise<void>
   sessionOrderLength: number
   hostKind: import("./bmxt-host-kind").BmxtHostKind
+  floatTabId: number | null
+  restoredNavActive: boolean
+  processUiReady: boolean
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -117,6 +120,9 @@ const SessionPaneView = memo(function SessionPaneView({
   appendLogLines,
   sessionOrderLength,
   hostKind,
+  floatTabId,
+  restoredNavActive,
+  processUiReady,
   applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
@@ -147,6 +153,9 @@ const SessionPaneView = memo(function SessionPaneView({
         appendLogLines={appendLogLines}
         sessionOrderLength={sessionOrderLength}
         hostKind={hostKind}
+        floatTabId={floatTabId}
+        restoredNavActive={restoredNavActive}
+        processUiReady={processUiReady}
         applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -207,6 +216,8 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
     prev.modeToolbarOrder === next.modeToolbarOrder &&
     prev.navArmed === next.navArmed &&
     prev.navArmedByLeaf === next.navArmedByLeaf &&
+    prev.restoredNavActive === next.restoredNavActive &&
+    prev.processUiReady === next.processUiReady &&
     prev.postUpgradeBanner === next.postUpgradeBanner &&
     prev.upgradeBannerReady === next.upgradeBannerReady &&
     prev.setSessionPickerSlot === next.setSessionPickerSlot &&
@@ -222,19 +233,22 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
   )
 }
 
-export function BmxtTerminal(props: { hostKind?: BmxtHostKind } = {}) {
+export function BmxtTerminal(
+  props: { hostKind?: BmxtHostKind; floatTabId?: number | null } = {}
+) {
   const hostKind = props.hostKind ?? "popup"
+  const floatTabId = props.floatTabId ?? null
   return (
     <UiSettingsProvider>
       <ExternalSettingsRecoveryProvider>
-        <BmxtTerminalInner hostKind={hostKind} />
+        <BmxtTerminalInner hostKind={hostKind} floatTabId={floatTabId} />
       </ExternalSettingsRecoveryProvider>
     </UiSettingsProvider>
   )
 }
 
-function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
-  const { hostKind } = props
+function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number | null }) {
+  const { hostKind, floatTabId } = props
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
@@ -257,11 +271,12 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
 
   const {
     state,
+    sessionsReady,
     appendLogLines: appendLogLinesToSession,
     setActiveSession,
     setSessionDisplayName,
     applyRunCmdPatches
-  } = useTerminalSessions(sessionPatchContext, hostKind)
+  } = useTerminalSessions(sessionPatchContext, hostKind, floatTabId)
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
@@ -279,8 +294,9 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
     setModeToolbarOrderForLeaf,
     navArmedByLeaf,
     setNavArmedForLeaf,
+    restoredNavActive,
     processUiReady
-  } = useProcessUiPersistence(validSessionIds, true, hostKind)
+  } = useProcessUiPersistence(validSessionIds, true, hostKind, floatTabId, sessionsReady)
 
   pickersBySessionRef.current = pickersBySession
   navArmedByLeafRef.current = navArmedByLeaf
@@ -330,8 +346,10 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
   }, [processUiReady])
 
   useEffect(() => {
-    markPageBootPhase("gate-session-state-ready")
-  }, [])
+    if (sessionsReady) {
+      markPageBootPhase("gate-session-state-ready")
+    }
+  }, [sessionsReady])
 
   useEffect(() => {
     void (async () => {
@@ -455,7 +473,7 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  const promptInteractive = processUiReady
+  const promptInteractive = processUiReady && sessionsReady
 
   useEffect(() => {
     if (!promptInteractive || promptPerfFlushedRef.current) {
@@ -488,6 +506,9 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
     onSetSessionDisplayName: setSessionDisplayName,
     sessionOrderLength: state.order.length,
     hostKind,
+    floatTabId,
+    restoredNavActive,
+    processUiReady,
     applyRunCmdPatches,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,

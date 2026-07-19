@@ -26,7 +26,7 @@ void (async () => {
 
   const coreReady = import("../../lib/features/bmxt-core")
 
-  const [{ createRoot }, { useEffect }, { BmxtTerminal }] = await Promise.all([
+  const [{ createRoot }, { useEffect, useMemo }, { BmxtTerminal }] = await Promise.all([
     import("react-dom/client"),
     import("react"),
     import("../../lib/features/bmxt-window/bmxt-terminal")
@@ -38,11 +38,27 @@ void (async () => {
   markPageBootPhase("react-render-start")
 
   function BmxtFloatPage() {
+    const floatTabId = useMemo(() => {
+      try {
+        const raw = new URLSearchParams(window.location.search).get("tabId")
+        if (raw === null || raw.length === 0) {
+          return null
+        }
+        const parsed = Number(raw)
+        if (!Number.isInteger(parsed) || parsed < 0) {
+          return null
+        }
+        return parsed
+      } catch {
+        return null
+      }
+    }, [])
+
     useEffect(() => {
       document.title = "BMXt Float"
     }, [])
 
-    return <BmxtTerminal hostKind="float" />
+    return <BmxtTerminal hostKind="float" floatTabId={floatTabId} />
   }
 
   createRoot(rootEl).render(<BmxtFloatPage />)

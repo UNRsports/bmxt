@@ -5,6 +5,11 @@ import {
 } from "../../command-line/command-output.ts"
 import { deriveDefaultSessionName } from "../../session/session-summary"
 import {
+  clearFloatTerminalSessionsForTab,
+  loadFloatTerminalSessionsForTab,
+  saveFloatTerminalSessionsForTab
+} from "../../bmxt-float/float-terminal-session-storage.ts"
+import {
   applySessionPatch,
   applySessionPatches,
   type ApplySessionPatchContext,
@@ -26,9 +31,11 @@ import type { TerminalSessionsStateV1 } from "./types"
 
 export function useTerminalSessions(
   sessionContext?: ApplySessionPatchContext,
-  hostKind: BmxtHostKind = "popup"
+  hostKind: BmxtHostKind = "popup",
+  floatTabId: number | null = null
 ): {
   state: TerminalSessionsStateV1
+  sessionsReady: boolean
   appendLogLines: (sessionId: string, lines: string[], channel?: LogChannel) => void
   setActiveSession: (sessionId: string) => void
   setSessionDisplayName: (sessionId: string, name: string) => void
@@ -38,16 +45,60 @@ export function useTerminalSessions(
   const [state, setState] = useState<TerminalSessionsStateV1>(() =>
     createEmptyTerminalSessionsState()
   )
+  const [sessionsReady, setSessionsReady] = useState(hostKind !== "float")
   const stateRef = useRef(state)
   stateRef.current = state
   const sessionContextRef = useRef(sessionContext)
   sessionContextRef.current = sessionContext
   const hostKindRef = useRef(hostKind)
   hostKindRef.current = hostKind
+  const floatTabIdRef = useRef(floatTabId)
+  floatTabIdRef.current = floatTabId
+  const persistReadyRef = useRef(false)
 
   const commitState = useCallback((next: TerminalSessionsStateV1) => {
     setState(next)
   }, [])
+
+  useEffect(() => {
+    if (hostKind !== "float") {
+      setSessionsReady(true)
+      persistReadyRef.current = false
+      return
+    }
+    let cancelled = false
+    persistReadyRef.current = false
+    setSessionsReady(false)
+    const tabId = floatTabId
+    if (tabId === null) {
+      setSessionsReady(true)
+      return
+    }
+    void loadFloatTerminalSessionsForTab(tabId).then((stored) => {
+      if (cancelled) {
+        return
+      }
+      if (stored !== null) {
+        commitState(stored)
+      }
+      persistReadyRef.current = true
+      setSessionsReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [commitState, floatTabId, hostKind])
+
+  useEffect(() => {
+    if (hostKind !== "float" || !sessionsReady || !persistReadyRef.current) {
+      return
+    }
+    const tabId = floatTabIdRef.current
+    if (tabId === null) {
+      return
+    }
+    void saveFloatTerminalSessionsForTab(tabId, state)
+  }, [hostKind, sessionsReady, state])
 
   useEffect(() => {
     const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
@@ -61,6 +112,10 @@ export function useTerminalSessions(
           return
         }
         commitState(createEmptyTerminalSessionsState())
+        const tabId = floatTabIdRef.current
+        if (hostKindRef.current === "float" && tabId !== null) {
+          void clearFloatTerminalSessionsForTab(tabId)
+        }
       }
     }
     chrome.runtime.onMessage.addListener(onRuntimeMessage)
@@ -108,6 +163,7 @@ export function useTerminalSessions(
 
   return {
     state,
+    sessionsReady,
     appendLogLines,
     setActiveSession,
     setSessionDisplayName,

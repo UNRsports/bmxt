@@ -96,7 +96,7 @@ async function runExitCommand(
   if (action.kind === "hideFloat") {
     const tabId = action.tabId ?? senderTabId(sender)
     if (typeof tabId === "number") {
-      void hideBmxtFloatOnTabAsync(tabId)
+      void hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
     }
     broadcastSessionClearToUi("float")
     return { ok: true, patches: [] }
@@ -242,7 +242,7 @@ async function dispatch(
       if (action.kind === "hideFloat") {
         const tabId = action.tabId ?? senderTabId(sender)
         if (typeof tabId === "number") {
-          void hideBmxtFloatOnTabAsync(tabId)
+          void hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
         }
         broadcastSessionClearToUi("float")
         return []

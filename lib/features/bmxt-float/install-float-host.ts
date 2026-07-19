@@ -4,7 +4,11 @@
  * JA: bmxt-float.html 用の固定レイヤ。nav 等と重なると四隅へアニメ付き退避。非表示でも iframe 保持。
  */
 
-import type { BmxtFloatHostAction, BmxtFloatHostResponse } from "./float-host-message"
+import type {
+  BmxtFloatHostAction,
+  BmxtFloatHostResponse
+} from "./float-host-message"
+import { BMXT_FLOAT_VISIBILITY_MESSAGE_TYPE } from "./float-host-message"
 import {
   FLOAT_DEFAULT_CORNER,
   FLOAT_OBSTACLE_PAD_PX,
@@ -35,6 +39,7 @@ type FloatHostState = {
   root: HTMLDivElement
   iframe: HTMLIFrameElement
   visible: boolean
+  tabId: number | null
   corner: FloatCorner
   /** EN: Ignore avoid passes until this time (ms since epoch) while a move animates. */
   suppressAvoidUntilMs: number
@@ -357,8 +362,43 @@ function applyHostChrome(root: HTMLDivElement, iframe: HTMLIFrameElement, closeB
   iframe.allow = ""
 }
 
-function ensureHost(): FloatHostState {
+function floatPageUrl(tabId: number | null): string {
+  const base = chrome.runtime.getURL(FLOAT_PAGE)
+  if (tabId === null || !Number.isInteger(tabId) || tabId < 0) {
+    return base
+  }
+  return `${base}?tabId=${tabId}`
+}
+
+function reportFloatVisibilityToSw(
+  tabId: number | null,
+  visible: boolean,
+  clearSessions = false
+): void {
+  if (tabId === null || !Number.isInteger(tabId) || tabId < 0) {
+    return
+  }
+  try {
+    void chrome.runtime.sendMessage({
+      type: BMXT_FLOAT_VISIBILITY_MESSAGE_TYPE,
+      tabId,
+      visible,
+      clearSessions
+    })
+  } catch {
+    /* SW unavailable */
+  }
+}
+
+function ensureHost(tabId: number | null = null): FloatHostState {
   if (hostState !== null) {
+    if (tabId !== null && hostState.tabId !== tabId) {
+      hostState.tabId = tabId
+      const nextSrc = floatPageUrl(tabId)
+      if (hostState.iframe.src !== nextSrc) {
+        hostState.iframe.src = nextSrc
+      }
+    }
     return hostState
   }
 
@@ -374,12 +414,13 @@ function ensureHost(): FloatHostState {
   const closeBtn = document.createElement("button")
   const iframe = document.createElement("iframe")
   applyHostChrome(root, iframe, closeBtn)
-  iframe.src = chrome.runtime.getURL(FLOAT_PAGE)
+  iframe.src = floatPageUrl(tabId)
 
   const state: FloatHostState = {
     root,
     iframe,
     visible: false,
+    tabId,
     corner: FLOAT_DEFAULT_CORNER,
     suppressAvoidUntilMs: 0,
     avoidRaf: null,
@@ -394,6 +435,14 @@ function ensureHost(): FloatHostState {
     event.preventDefault()
     event.stopPropagation()
     setFloatHostVisible(false)
+    reportFloatVisibilityToSw(state.tabId, false, false)
+  })
+
+  iframe.addEventListener("load", () => {
+    if (hostState !== state || !state.visible) {
+      return
+    }
+    focusFloatIframe(state)
   })
 
   root.appendChild(closeBtn)
@@ -408,6 +457,23 @@ function ensureHost(): FloatHostState {
   return state
 }
 
+function focusFloatIframe(state: FloatHostState): void {
+  try {
+    state.iframe.focus({ preventScroll: true })
+  } catch {
+    try {
+      state.iframe.focus()
+    } catch {
+      /* focus unavailable */
+    }
+  }
+  try {
+    state.iframe.contentWindow?.focus()
+  } catch {
+    /* cross-origin or unloaded */
+  }
+}
+
 function setFloatHostVisible(visible: boolean): boolean {
   const state = ensureHost()
   state.visible = visible
@@ -416,6 +482,15 @@ function setFloatHostVisible(visible: boolean): boolean {
     startAvoidWatch(state)
     // First paint: place instantly, then allow animated moves for later obstacle changes.
     scheduleAvoidPass(false)
+    // EN: Return keyboard focus to float so nav stays operable after page navigation.
+    queueMicrotask(() => {
+      focusFloatIframe(state)
+    })
+    window.setTimeout(() => {
+      if (hostState === state && state.visible) {
+        focusFloatIframe(state)
+      }
+    }, 120)
   } else {
     stopAvoidWatch(state)
     clearMovingChrome(state)
@@ -424,8 +499,11 @@ function setFloatHostVisible(visible: boolean): boolean {
   return state.visible
 }
 
-export function applyFloatHostAction(action: BmxtFloatHostAction = "toggle"): BmxtFloatHostResponse {
-  const state = ensureHost()
+export function applyFloatHostAction(
+  action: BmxtFloatHostAction = "toggle",
+  tabId: number | null = null
+): BmxtFloatHostResponse {
+  const state = ensureHost(tabId)
   if (action === "show") {
     return { ok: true, visible: setFloatHostVisible(true) }
   }

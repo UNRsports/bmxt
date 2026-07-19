@@ -1,9 +1,14 @@
 /**
- * EN: Process UI state (pickers, pane focus) — in-memory for the BMXt window lifetime.
- * JA: ピッカー列・ペインフォーカスは BMXt ウィンドウ存続中メモリのみ。
+ * EN: Process UI state (pickers, pane focus) — in-memory for popup; session-persisted for float.
+ * JA: ピッカー列・ペインフォーカス。ポップアップはメモリのみ、フロートはタブ別 session 永続。
  */
 
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react"
+import {
+  clearFloatBrowseStateForTab,
+  loadFloatBrowseStateForTab,
+  patchFloatBrowseStateForTab
+} from "../bmxt-float/float-browse-state-storage.ts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { pruneSessionPickersMap } from "../side-picker/session/session-pickers"
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
@@ -34,7 +39,13 @@ function pruneLeafRecord<T>(prev: Record<string, T>, validLeafIds: readonly stri
 export function useProcessUiPersistence(
   validLeafIds: readonly string[],
   enabled: boolean,
-  hostKind: BmxtHostKind = "popup"
+  hostKind: BmxtHostKind = "popup",
+  floatTabId: number | null = null,
+  /**
+   * EN: Float must wait for terminal sessions so leaf ids match before hydrate/prune.
+   * JA: フロートはセッション ID 確定後にハイドレート／prune する。
+   */
+  sessionsReady = true
 ): {
   pickersBySession: SessionPickersByLeaf
   setPickersBySession: Dispatch<SetStateAction<SessionPickersByLeaf>>
@@ -49,6 +60,7 @@ export function useProcessUiPersistence(
   ) => void
   navArmedByLeaf: Record<string, boolean>
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
+  restoredNavActive: boolean
   processUiReady: boolean
 } {
   const [pickersBySession, setPickersBySession] = useState<SessionPickersByLeaf>({})
@@ -58,23 +70,17 @@ export function useProcessUiPersistence(
     Record<string, ModeToolbarId[]>
   >({})
   const [navArmedByLeaf, setNavArmedByLeaf] = useState<Record<string, boolean>>({})
-  const [processUiReady, setProcessUiReady] = useState(false)
+  const [restoredNavActive, setRestoredNavActive] = useState(false)
+  const [processUiReady, setProcessUiReady] = useState(hostKind !== "float")
 
-  const pickersRef = useRef(pickersBySession)
-  const paneFocusRef = useRef(paneFocusByLeaf)
-  const detailBarIdRef = useRef(detailBarIdByLeaf)
-  const modeToolbarOrderRef = useRef(modeToolbarOrderByLeaf)
-  const navArmedRef = useRef(navArmedByLeaf)
   const validLeafIdsRef = useRef(validLeafIds)
-  pickersRef.current = pickersBySession
-  paneFocusRef.current = paneFocusByLeaf
-  detailBarIdRef.current = detailBarIdByLeaf
-  modeToolbarOrderRef.current = modeToolbarOrderByLeaf
-  navArmedRef.current = navArmedByLeaf
+  const persistReadyRef = useRef(false)
   validLeafIdsRef.current = validLeafIds
 
   const hostKindRef = useRef(hostKind)
   hostKindRef.current = hostKind
+  const floatTabIdRef = useRef(floatTabId)
+  floatTabIdRef.current = floatTabId
 
   const resetProcessUiState = useCallback(() => {
     setPickersBySession({})
@@ -82,12 +88,73 @@ export function useProcessUiPersistence(
     setDetailBarIdByLeaf({})
     setModeToolbarOrderByLeaf({})
     setNavArmedByLeaf({})
+    setRestoredNavActive(false)
     clearTabPickerFoldStateInMemory()
   }, [])
 
   useEffect(() => {
-    setProcessUiReady(true)
-  }, [])
+    if (hostKind !== "float") {
+      setProcessUiReady(true)
+      persistReadyRef.current = false
+      return
+    }
+    // EN: Wait for restored session leaf ids — otherwise prune drops navArmed for the real leaf.
+    if (!sessionsReady) {
+      persistReadyRef.current = false
+      setProcessUiReady(false)
+      return
+    }
+    let cancelled = false
+    persistReadyRef.current = false
+    setProcessUiReady(false)
+    const tabId = floatTabId
+    if (tabId === null) {
+      persistReadyRef.current = true
+      setProcessUiReady(true)
+      return
+    }
+    void loadFloatBrowseStateForTab(tabId).then((stored) => {
+      if (cancelled) {
+        return
+      }
+      if (stored !== null) {
+        setNavArmedByLeaf(stored.navArmedByLeaf)
+        setPaneFocusByLeaf(stored.paneFocusByLeaf)
+        setDetailBarIdByLeaf(stored.detailBarIdByLeaf)
+        setModeToolbarOrderByLeaf(stored.modeToolbarOrderByLeaf)
+        setRestoredNavActive(stored.navActive)
+      }
+      persistReadyRef.current = true
+      setProcessUiReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [floatTabId, hostKind, sessionsReady])
+
+  useEffect(() => {
+    if (hostKind !== "float" || !processUiReady || !persistReadyRef.current) {
+      return
+    }
+    const tabId = floatTabIdRef.current
+    if (tabId === null) {
+      return
+    }
+    // EN: Patch leaf fields only — never rewrite navActive (shell owns that field).
+    void patchFloatBrowseStateForTab(tabId, {
+      navArmedByLeaf,
+      paneFocusByLeaf,
+      detailBarIdByLeaf,
+      modeToolbarOrderByLeaf
+    })
+  }, [
+    detailBarIdByLeaf,
+    hostKind,
+    modeToolbarOrderByLeaf,
+    navArmedByLeaf,
+    paneFocusByLeaf,
+    processUiReady
+  ])
 
   useEffect(() => {
     const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
@@ -101,6 +168,10 @@ export function useProcessUiPersistence(
           return
         }
         resetProcessUiState()
+        const tabId = floatTabIdRef.current
+        if (hostKindRef.current === "float" && tabId !== null) {
+          void clearFloatBrowseStateForTab(tabId)
+        }
       }
     }
     chrome.runtime.onMessage.addListener(onRuntimeMessage)
@@ -111,12 +182,17 @@ export function useProcessUiPersistence(
     if (validLeafIds.length === 0) {
       return
     }
+    // EN: Float — skip prune until hydrate finished so a temp empty session id
+    //     cannot drop restored navArmed keys for the real leaf.
+    if (hostKind === "float" && !processUiReady) {
+      return
+    }
     setPickersBySession((prev) => pruneSessionPickersMap(prev, validLeafIds))
     setPaneFocusByLeaf((prev) => pruneLeafRecord(prev, validLeafIds))
     setDetailBarIdByLeaf((prev) => pruneLeafRecord(prev, validLeafIds))
     setModeToolbarOrderByLeaf((prev) => pruneLeafRecord(prev, validLeafIds))
     setNavArmedByLeaf((prev) => pruneLeafRecord(prev, validLeafIds))
-  }, [validLeafIds])
+  }, [hostKind, processUiReady, validLeafIds])
 
   const setPaneFocusForLeaf = useCallback((sessionId: string, target: PaneFocusTarget) => {
     setPaneFocusByLeaf((prev) => {
@@ -175,6 +251,7 @@ export function useProcessUiPersistence(
     setModeToolbarOrderForLeaf,
     navArmedByLeaf,
     setNavArmedForLeaf,
+    restoredNavActive,
     processUiReady
   }
 }

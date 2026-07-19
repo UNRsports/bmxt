@@ -65,6 +65,11 @@ export type UseNavModeOptions = {
   /** EN: `translate -on` assist — suspend nav Ctrl menu while BMXt focus is outside nav. */
   translateAssistActive?: boolean
   uiLocale: UiLocale
+  /**
+   * EN: Prefer this tab for overlay inject (float host tab). Falls back to active-window target.
+   * JA: フロート宿主タブを優先してオーバーレイ注入（なければ通常の対象タブ解決）。
+   */
+  hostTabId?: number | null
 }
 
 function overlayErrorLabel(reason: string | undefined, locale: UiLocale): string {
@@ -230,7 +235,8 @@ export function useNavMode({
   getTypingBuffer,
   resolveTypingCommitText,
   translateAssistActive = false,
-  uiLocale
+  uiLocale,
+  hostTabId = null
 }: UseNavModeOptions): {
   currentTabTitle: string | null
   overlayError: string | null
@@ -489,19 +495,39 @@ export function useNavMode({
     useCenterOnNextShowRef.current = true
   }, [clearJumpMode, exitTypingMode, positionsRef])
 
+  const hostTabIdRef = useRef(hostTabId)
+  hostTabIdRef.current = hostTabId
+
   const showOverlayOnActiveTab = useCallback(async () => {
-    const tabId = await resolveActiveTargetTabId()
+    const preferred = hostTabIdRef.current
+    const tabId =
+      typeof preferred === "number" && Number.isInteger(preferred) && preferred >= 0
+        ? preferred
+        : await resolveActiveTargetTabId()
     if (tabId === undefined) {
       setOverlayError("no target tab")
       return
     }
     const useCenter = useCenterOnNextShowRef.current
     useCenterOnNextShowRef.current = false
-    const reason = await syncOverlayForTab(tabId, true, useCenter)
+    let reason = await syncOverlayForTab(tabId, true, useCenter)
     if (reason === "permission-denied" && !(await canScriptHttpHostPages())) {
       const granted = await requestOptionalHttpHostAccess()
       if (granted) {
-        await syncOverlayForTab(tabId, true, useCenter)
+        reason = await syncOverlayForTab(tabId, true, useCenter)
+      }
+    }
+    // EN: After navigation CS may still be booting — retry briefly so nav stays usable.
+    if (reason !== undefined) {
+      await new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), 200)
+      })
+      reason = await syncOverlayForTab(tabId, true, false)
+      if (reason !== undefined) {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => resolve(), 450)
+        })
+        await syncOverlayForTab(tabId, true, false)
       }
     }
   }, [syncOverlayForTab])
@@ -640,9 +666,29 @@ export function useNavMode({
   )
 
   useEffect(() => {
+    if (!armed || !active) {
+      return
+    }
+    // EN: Keep overlay alive after remount / navigation (float restores armed+active).
+    void showOverlayOnActiveTab().then(() => {
+      try {
+        window.focus()
+      } catch {
+        /* ignore */
+      }
+    })
+  }, [armed, active, showOverlayOnActiveTab])
+
+  const wasArmedRef = useRef(armed)
+  useEffect(() => {
+    const wasArmed = wasArmedRef.current
+    wasArmedRef.current = armed
     if (!armed) {
       void teardownAll()
-      setActive(false)
+      // EN: Clear active only when disarming after armed — not on initial false during float hydrate.
+      if (wasArmed) {
+        setActive(false)
+      }
       setTypingMode(false)
       setTypingMultiline(false)
       resetNavUiState(navUiRefs, navUiSetters)
@@ -672,6 +718,24 @@ export function useNavMode({
       return
     }
     const onUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (changeInfo.status === "complete") {
+        const hostId = hostTabIdRef.current
+        const overlayTab = lastOverlayTabRef.current
+        const matchesHost =
+          typeof hostId === "number" && hostId === tabId
+        const matchesOverlay = overlayTab === tabId
+        if (matchesHost || matchesOverlay) {
+          // EN: Same-tab navigation — re-inject so the cursor is immediately usable.
+          useCenterOnNextShowRef.current = false
+          void syncOverlayForTab(tabId, true, false).then(() => {
+            try {
+              window.focus()
+            } catch {
+              /* ignore */
+            }
+          })
+        }
+      }
       if (tabId !== lastOverlayTabRef.current) {
         return
       }
@@ -681,7 +745,7 @@ export function useNavMode({
     }
     chrome.tabs.onUpdated.addListener(onUpdated)
     return () => chrome.tabs.onUpdated.removeListener(onUpdated)
-  }, [armed, active])
+  }, [armed, active, syncOverlayForTab])
 
   useEffect(() => {
     return attachNavKeyHold(navTypingMode, {

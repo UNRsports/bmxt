@@ -84,6 +84,21 @@ export const MAX_INTERNAL_SNAPSHOT_FILES = 500
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 
+/**
+ * EN: Per-tab float terminal sessions in `chrome.storage.session` (same-tab nav survival).
+ * JA: タブ別フロート・セッション（session ストレージ。同一タブ遷移で維持）。
+ */
+export const FLOAT_TERMINAL_BY_TAB_KEY = "bmxt_float_terminal_by_tab_v1"
+
+/** EN: Tab ids that should re-show the float after navigation. */
+export const FLOAT_VISIBLE_TAB_IDS_KEY = "bmxt_float_visible_tab_ids_v1"
+
+/**
+ * EN: Per-tab float nav/process UI browse state in `chrome.storage.session`.
+ * JA: タブ別フロートの nav／プロセス UI（session ストレージ）。
+ */
+export const FLOAT_BROWSE_STATE_BY_TAB_KEY = "bmxt_float_browse_state_by_tab_v1"
+
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 

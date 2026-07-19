@@ -31,9 +31,15 @@ export default defineContentScript({
   allFrames: false,
   runAt: "document_idle",
   main() {
-    chrome.runtime.onMessage.addListener((raw, _sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((raw, sender, sendResponse) => {
       if (isBmxtFloatHostRequest(raw)) {
-        sendResponse(applyFloatHostAction(raw.action ?? "toggle"))
+        const tabId =
+          typeof raw.tabId === "number"
+            ? raw.tabId
+            : typeof sender.tab?.id === "number"
+              ? sender.tab.id
+              : null
+        sendResponse(applyFloatHostAction(raw.action ?? "toggle", tabId))
         return true
       }
       if (isPageExtractRequest(raw)) {
