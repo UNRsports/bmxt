@@ -37,21 +37,13 @@ export { resolveTabsPickerGroupTarget } from "./tabs-picker/group-target"
 export { resolveTabsPickerNewWindowOrder } from "./tabs-picker/new-window"
 
 import { canonicalCommandNames } from "./registry"
-import { isBmxtCoreReady, wasmCompletionTokens } from "./wasm-host"
 
 let cachedCompletion: string[] | null = null
 
+/** EN: Canonical first-command names only (IME menu / Tab list; alphabetical; no aliases). */
 export function getCompletionCandidates(): string[] {
   if (!cachedCompletion) {
-    if (isBmxtCoreReady()) {
-      try {
-        cachedCompletion = JSON.parse(wasmCompletionTokens()) as string[]
-      } catch {
-        cachedCompletion = canonicalCommandNames()
-      }
-    } else {
-      cachedCompletion = canonicalCommandNames()
-    }
+    cachedCompletion = canonicalCommandNames()
   }
   return cachedCompletion
 }

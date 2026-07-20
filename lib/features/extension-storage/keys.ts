@@ -16,6 +16,10 @@ export const ACTIVE_TERMINAL_SESSION_KEY = "bmxt_active_terminal_session"
 export const SPLIT_LAYOUT_KEY = "bmxt_split_layout_v1"
 
 export const CMD_HISTORY_KEY = "bmxt_cmd_history"
+
+/** IME token-candidate menu MRU (all tiers; newest first). */
+export const TOKEN_CANDIDATE_MRU_KEY = "bmxt_token_candidate_mru_v1"
+
 export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 
 /** BMXt UI ウィンドウ ID（SW 再起動後もフォーカスできるよう background が保持）。 */

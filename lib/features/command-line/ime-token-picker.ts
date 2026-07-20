@@ -35,6 +35,7 @@ import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/
 import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
 import { wordBounds } from "../format/word-bounds.ts"
+import { rankTokenCandidates } from "./token-candidate-mru.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
 
@@ -112,6 +113,11 @@ function applyHostFilter(
     return null
   }
   return { ...hit, candidates: filtered }
+}
+
+/** EN: All tiers — MRU (newest first), then unused A–Z. */
+function finalizeCandidateOrder(hit: ImeTokenPickerModel): ImeTokenPickerModel {
+  return { ...hit, candidates: rankTokenCandidates(hit.candidates) }
 }
 
 /** EN: Prefer WASM fixed-token complete; fall back to generated tables when WASM is cold. */
@@ -414,11 +420,11 @@ export function resolveImeTokenPicker(
   if (!picked) {
     return null
   }
-  return {
+  return finalizeCandidateOrder({
     ...picked,
     tokenStart: mapSegmentOffsetToLine(active.segmentStart, picked.tokenStart),
     tokenEnd: mapSegmentOffsetToLine(active.segmentStart, picked.tokenEnd)
-  }
+  })
 }
 
 function remapPickerProducerTier(tier: ImeTokenTier): ImeTokenTier {
