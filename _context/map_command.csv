@@ -40,9 +40,9 @@ tabs,-exit,-list,none,,tabs -exit -list,UiAction `tabs_exit_list`。,
 tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,Effect: tabs_move_url。,
 tabs,-nowurl,,none,,tabs -nowurl,Effect: tabs_nu。,
 tabs,help,,none,,tabs help,msgs `help.section.tabs`（コマンド別マニュアル）。,
-nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。,
-nav,-enter,,none,,nav -enter | nav -exit,UiAction `nav_arm`。,
-nav,-exit,,none,,（同上）,UiAction `nav_disarm`。,
+nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`。,キー操作の正本は README § Nav mode（EN/JA）
+nav,-enter,,none,,nav -enter | nav -exit,UiAction `nav_arm`。オーバーレイは Alt まで非表示。Alt は nav 詳細バー（または armed 中プロンプト）から ON/OFF。,**ON 中:** フォーカスは nav 詳細バー固定。矢印=要素スナップ、Shift+矢印=12px 自由移動、Shift 解放で現在位置を再スキャン（resyncSpatial）。typing のみ一時プロンプト。`NAV_CONTROL` / `lib/features/nav/`
+nav,-exit,,none,,（同上）,UiAction `nav_disarm`。オーバーレイ ON のままではエラー（先に Alt で OFF）。,
 translate,,,,,translate …,単独 `translate` + Enter: msgs + promptPrefix `translate `。第二候補に `help`。,
 translate,-on,,none,,translate -on | translate -off | translate -setting,UiAction `translate_on`。,
 translate,-off,,none,,（同上）,UiAction `translate_off`。,

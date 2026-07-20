@@ -233,7 +233,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `browse search -list …` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
-| `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** on the prompt |
+| `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
 | `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
 | `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Enable translation assist (nav typing preview under the prompt; see **[`translate`](#translate)**) |
@@ -414,20 +414,23 @@ Saved snapshots are searchable with **`search -list --snapshot`** (included in *
 
 **After `nav -enter` — Alt toggles overlay ON/OFF**
 
-- Requires the **BMXt window** to be active and **keyboard focus on the terminal prompt column** (`paneFocus === "terminal"`). **Ctrl+← / Ctrl+→** to a **tabs / search / dom** picker column **suspends** nav keys until you return focus to the prompt.
-- Each **Alt** press toggles overlay **ON** or **OFF**.
-- **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **↑ / ↓ / ← / →** move the virtual cursor (default **12px** per step; configurable later in `lib/features/nav/nav-config.ts`). **Enter** performs a **left-click** on the element under the cursor, or enters **typing mode** when the target is an editable field (see below).
-- **OFF:** removes the overlay from the current tab; nav stays **armed** until **`nav -exit`**.
+- Requires the **BMXt window** to be active and focus on this pane’s **terminal** or **detail bar** strip. **Ctrl+← / Ctrl+→** to a **tabs / search / dom** picker column **suspends** nav keys until you return.
+- Each **Alt** press toggles overlay **ON** or **OFF** (from the **nav detail bar**, or from the prompt while armed).
+- **ON:** injects or updates the overlay on the target tab. The cursor appears at the **viewport center** on each **ON** (not at the OS mouse position). **Keyboard focus stays on the nav detail bar** while the overlay is **ON** (so further detail-bar operations can be added later). **↑ / ↓ / ← / →** jump between interactive elements (spatial snap). **Shift+↑ / ↓ / ← / →** free-move the pointer by **12px** per step (`NAV_ARROW_STEP_PX` in `lib/features/nav/nav-config.ts`). Releasing **Shift** after a free-move **re-scans** targets at the current pointer (no rollback to the previous snap). **Enter** activates the target under the cursor, or enters **typing mode** when the target is editable (see below).
+- **OFF:** removes the overlay from the current tab; nav stays **armed** until **`nav -exit`**. Focus remains on the **nav detail bar**.
 
-**Overlay keys (ON, terminal prompt focused)**
+**Overlay keys (ON, nav detail bar focused)**
 
 | Key | Effect |
 |-----|--------|
-| **↑ / ↓ / ← / →** | Move virtual cursor (viewport auto-scrolls near edges); snaps to interactive targets when present |
+| **↑ / ↓ / ← / →** | Jump to the next interactive target in that direction (spatial snap; viewport auto-scrolls as needed) |
+| **Shift+↑ / ↓ / ← / →** | Free-move the pointer by **12px** (no per-step target recollect); on **Shift** release, re-scan and highlight the nearest target at the pointer |
 | **/** | Start **incremental attribute jump** (type fragments of link text / `alt` / URL path / accessible name; see below) |
 | **Enter** | Activate the resolved target under the cursor (`click()` once for links/buttons; **typing mode** for editables) |
 | **Ctrl** (tap) | Open the on-page **context menu** at the cursor |
 | **Alt** (tap) | Toggle overlay **OFF** (ignored while **typing mode** is active) |
+
+While **ON**, **←** does **not** leave the detail bar for the prompt (arrows belong to the page cursor). **Tab** / vertical bar cycling is also suspended. **Typing mode** temporarily moves focus to the prompt for IME input; leaving typing restores the nav detail bar.
 
 **Target identity (explore → reuse)**
 
@@ -451,7 +454,7 @@ This is **not** a Vimium-style full-page hint overlay; it is explore-with-HUD th
 
 | Item | Action |
 |------|--------|
-| Select text | Range pick: **↑ / ↓** move, **Enter** set **start**, move again, **Enter** set **end**; selection is applied and a **Copy** row appears |
+| Select text | Range pick: **↑ / ↓** (or **Shift+arrows** free-move) move, **Enter** set **start**, move again, **Enter** set **end**; selection is applied and a **Copy** row appears |
 | Save image under cursor | Download the image at the pointer (http(s) URL) |
 | Reload page | Reload the target tab |
 
@@ -476,7 +479,8 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **j
 **Implementation**
 
 - **`lib/features/nav/`** — prompt parsing, status bar, session hook (`useNavMode`), target classify / jump match / learned keys, inject snippet, Service Worker runner (`run-nav-inject.ts`).
-- **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; **Alt** / nav **Enter** / **`/`** jump / arrow keys on the prompt.
+- **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; wires nav with the detail-bar focus controller.
+- **`lib/features/bmxt-window/shell/usePaneFocusController.ts`** / **`use-detail-bar-keyboard.ts`** — while overlay **ON**, keep focus on the **nav** detail bar; **Alt** toggles from the bar.
 - **`entrypoints/background/index.ts`** — `NAV_CONTROL` message runs inject on the target tab.
 - **`entrypoints/bmxt-nav-overlay.content/`** — content script listener on http(s) pages.
 
@@ -679,12 +683,13 @@ While a picker is open (or nav / translate assist is active), a **detail bar** a
 | Key | Effect |
 |-----|--------|
 | **`→`** (caret at **end-of-line**) | Select the leftmost visible detail bar |
-| **`←`** (from a detail bar) | Return focus to the prompt |
-| **`Tab`** / **`Shift+Tab`** | Cycle among visible detail bars |
-| **`Alt`** (tabs / search detail bar) | Toggle **`--auto` / `--manual`** page-active (persisted) |
+| **`←`** (from a detail bar) | Return focus to the prompt (**blocked while nav overlay is ON** — arrows drive the page cursor) |
+| **`Tab`** / **`Shift+Tab`** | Cycle among visible detail bars (**suspended while nav overlay is ON**) |
+| **`Alt`** (tabs / search / dom detail bar) | Toggle **`--auto` / `--manual`** page-active (persisted) |
+| **`Alt`** (nav detail bar) | Toggle nav overlay **ON** / **OFF** |
 | **`→`** (from a detail bar) | Enter the matching picker column (column moves left with animation) |
 
-Each bar shows mode-specific hints (e.g. tabs/search: `EOL → focus · ← prompt · Alt page-active · → picker · tab ←/→ detail bar`). **`useDetailBarKeyboard`** in **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** wires these keys.
+While the nav overlay is **ON**, focus **stays on the nav detail bar** (typing mode is the temporary exception). Each bar shows mode-specific hints. **`useDetailBarKeyboard`** in **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** wires these keys.
 
 **`Esc` vs closing**
 
@@ -1148,14 +1153,14 @@ Applies when the prompt `textarea` is focused.
 - **Tab** — Command completion (cycle candidates; IME-style token picker for fixed tokens; after **Enter** leaves a lone first command such as `tabs `, a **second-command candidate list** may appear — ↑/↓, Tab, Enter, Esc)
 - **Up / Down** — Command history
 - **Ctrl+R** — Reverse incremental search
-- **Enter** — Execute command (when **nav** overlay is **ON** and the terminal prompt column has focus, **Enter** sends a **click** to the page instead — see **[Nav mode](#nav-mode)**)
+- **Enter** — Execute command (when **nav** overlay is **ON** and the nav detail bar has focus, **Enter** sends a **click** to the page instead — see **[Nav mode](#nav-mode)**)
 - **Shift+Enter** — Insert newline
 - **Esc** — Cancel reverse search
 
 **While nav is armed** (`nav -enter`):
 
-- **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (BMXt window active; terminal prompt column focused). Short **Alt** is ignored during **typing mode**; **Alt hold** (~500ms) commits typed text instead.
-- **↑ / ↓ / ← / →** — When overlay is **ON**, move the virtual cursor (not command history). When a **tabs / search / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
+- **Alt** — Toggle nav overlay **ON** / **OFF** on the target browser tab (from the **nav detail bar**, or from the prompt while armed). Short **Alt** is ignored during **typing mode**; **Alt hold** (~500ms) commits typed text instead. While **ON**, focus stays on the **nav detail bar**.
+- **↑ / ↓ / ← / →** — When overlay is **ON**, jump between interactive targets (spatial snap). **Shift+arrows** free-move by **12px**; releasing **Shift** re-scans at the pointer. When a **tabs / search / dom** picker column has focus (**Ctrl+← / Ctrl+→**), arrows operate the picker instead.
 - **/** — When overlay is **ON**, start incremental attribute jump (type to filter · **↑ / ↓** cycle · **Enter** activate · **Esc** leave jump).
 - **Enter** — When overlay is **ON**, activate the resolved target, or enter **typing mode** on editable fields.
 - **Ctrl** (tap, overlay **ON**) — Open the nav **context menu** at the cursor (**↑ / ↓** choose, **Enter** run, **← / →** history, **Ctrl** / **Esc** close). See **[Nav mode](#nav-mode)**.
@@ -1565,7 +1570,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `browse search -list …` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
-| `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt** を押すまで表示しない |
+| `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt**（詳細バーまたはプロンプト）を押すまで表示しない |
 | `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |
 | `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` / `-off` / `-setting` 用） |
 | `translate -on` | 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー。**[`translate`](#translate-ja)** 参照） |
@@ -1694,20 +1699,23 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **`nav -enter` 後 — Alt でオーバーレイ ON/OFF**
 
-- **BMXt ウィンドウがアクティブ**で、**ターミナル列（プロンプト）にフォーカス**があるときのみ（`paneFocus === "terminal"`）。**Ctrl+← / Ctrl+→** で **tabs / search / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
-- **Alt** のたびにオーバーレイを **ON** / **OFF** 切替。
-- **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。**↑ / ↓ / ← / →** で仮想カーソルを移動（既定 **12px**／ステップ。`lib/features/nav/nav-config.ts` で将来調整可）。**Enter** でカーソル下を **左クリック**相当、または編集可能要素なら **typing モード**へ（下記）。
-- **OFF:** 当該タブのオーバーレイを除去。nav は **armed** のまま **`nav -exit`** まで継続。
+- **BMXt ウィンドウがアクティブ**で、当該ペインの **ターミナル**または**詳細バー**にフォーカスがあるとき。**Ctrl+← / Ctrl+→** で **tabs / search / dom** ピッカー列に移ると、nav のキーは無効（ピッカー操作に戻る）。
+- **Alt** のたびにオーバーレイを **ON** / **OFF** 切替（**nav 詳細バー**から、または armed 中のプロンプトから）。
+- **ON:** 対象タブにオーバーレイを注入・更新。カーソルは毎回 **ビューポート中央**から開始（OS のマウス位置ではない）。オーバーレイ **ON** 中は **キーボードフォーカスを nav 詳細バーに固定**（今後の詳細バー操作追加を想定）。**↑ / ↓ / ← / →** は操作可能要素間の **空間スナップ**。**Shift+↑ / ↓ / ← / →** は **12px** 刻みの自由移動（`NAV_ARROW_STEP_PX`、`lib/features/nav/nav-config.ts`）。自由移動後に **Shift を離す**と、現在ポインタ位置で候補を **再スキャン**し、旧スナップ位置へ戻らない。**Enter** でカーソル下を activate、または編集可能要素なら **typing モード**へ（下記）。
+- **OFF:** 当該タブのオーバーレイを除去。nav は **armed** のまま **`nav -exit`** まで継続。フォーカスは **nav 詳細バー**に残る。
 
-**オーバーレイ ON 時のキー（ターミナル列・プロンプトにフォーカス）**
+**オーバーレイ ON 時のキー（nav 詳細バーにフォーカス）**
 
 | キー | 動作 |
 |------|------|
-| **↑ / ↓ / ← / →** | 仮想カーソル移動（端付近でビューポート自動スクロール）。操作可能要素へスナップ |
+| **↑ / ↓ / ← / →** | その方向の次の操作可能要素へジャンプ（空間スナップ。必要に応じビューポート自動スクロール） |
+| **Shift+↑ / ↓ / ← / →** | ポインタを **12px** 自由移動（ステップごとの候補再収集なし）。**Shift 解放**で現在位置の最近傍ターゲットを再スキャン・ハイライト |
 | **/** | **属性インクリメンタルジャンプ**開始（リンクテキスト / `alt` / URL パス / accessible name の断片で絞込。下記） |
 | **Enter** | 解決済みターゲットを activate（リンク・ボタンは `click()` 1 回。編集可能なら **typing モード**） |
 | **Ctrl**（タップ） | カーソル位置に **コンテキストメニュー**を表示 |
 | **Alt**（タップ） | オーバーレイ **OFF**（**typing** 中は無視） |
+
+**ON** 中は **←** で詳細バーからプロンプトへ抜けない（矢印はページカーソル用）。**Tab** / 上下でのバー循環も停止。**typing モード**中のみ一時的にプロンプトへフォーカスし、終了後は nav 詳細バーへ戻る。
 
 **対象の同定（探索 → 再利用）**
 
@@ -1731,7 +1739,7 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 
 | 項目 | 動作 |
 |------|------|
-| テキスト選択 | **↑ / ↓** で移動、**Enter** で **開始**、再度移動して **Enter** で **終了** → 範囲選択後 **コピー** 行 |
+| テキスト選択 | **↑ / ↓**（または **Shift+矢印** の自由移動）で移動、**Enter** で **開始**、再度移動して **Enter** で **終了** → 範囲選択後 **コピー** 行 |
 | カーソル下の画像を保存 | ポインタ下の画像をダウンロード（http(s) URL） |
 | ページを再読み込み | 対象タブを再読み込み |
 
@@ -1755,7 +1763,8 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 **実装**
 
 - **`lib/features/nav/`** — プロンプト解析、ステータス帯、セッションフック（`useNavMode`）、注入スニペット、SW ランナー（`run-nav-inject.ts`）。
-- **`lib/features/bmxt-window/bmxt-shell.tsx`** — **`nav -enter` / `nav -exit`** を `RUN_CMD` より前に処理。**Alt** / nav 用 **Enter** / 矢印キー。
+- **`lib/features/bmxt-window/bmxt-shell.tsx`** — **`nav -enter` / `nav -exit`** を `RUN_CMD` より前に処理。詳細バーフォーカス制御と接続。
+- **`lib/features/bmxt-window/shell/usePaneFocusController.ts`** / **`use-detail-bar-keyboard.ts`** — オーバーレイ **ON** 中は **nav** 詳細バーにフォーカス固定。**Alt** で切替。
 - **`entrypoints/background/index.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
 - **`entrypoints/bmxt-nav-overlay.content/`** — http(s) ページ上のリスナー。
 
@@ -1958,12 +1967,13 @@ search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示�
 | キー | 動作 |
 |------|------|
 | **`→`**（キャレットが **行末**） | 左端の表示中詳細バーを選択 |
-| **`←`**（詳細バーから） | プロンプトへ戻る |
-| **`Tab`** / **`Shift+Tab`** | 表示中の詳細バーを循環 |
-| **`Alt`**（tabs / search 詳細バー） | **`--auto` / `--manual`** page-active を切替（保存される） |
+| **`←`**（詳細バーから） | プロンプトへ戻る（**nav オーバーレイ ON 中は無効** — 矢印はページカーソル用） |
+| **`Tab`** / **`Shift+Tab`** | 表示中の詳細バーを循環（**nav オーバーレイ ON 中は停止**） |
+| **`Alt`**（tabs / search / dom 詳細バー） | **`--auto` / `--manual`** page-active を切替（保存される） |
+| **`Alt`**（nav 詳細バー） | nav オーバーレイ **ON** / **OFF** |
 | **`→`**（詳細バーから） | 対応するピッカー列へ入る（列は左へアニメーション） |
 
-各バーにはモード別ヒント（例: tabs/search: `末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · タブ←/→で詳細バー`）が出ます。配線は **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** の **`useDetailBarKeyboard`**。
+nav オーバーレイ **ON** 中はフォーカスを **nav 詳細バーに固定**（typing モードのみ一時例外）。各バーにはモード別ヒントが出ます。配線は **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** の **`useDetailBarKeyboard`**。
 
 **`Esc` と閉じる操作**
 
@@ -2443,14 +2453,14 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **Tab** — コマンド補完（繰り返しで候補循環。固定トークン用 IME 風ピッカー。`tabs ` など第一コマンドのみで **Enter** したあとは **第二コマンド候補リスト** が出ることあり — ↑/↓・Tab・Enter・Esc）
 - **↑ / ↓** — コマンド履歴
 - **Ctrl+R** — 逆方向インクリメンタルサーチ（続けて押すと古い一致へ）
-- **Enter** — コマンド実行（逆検索モードでは確定）。**nav** オーバーレイが **ON** でターミナル列にフォーカスがあるときは、ページ上の **クリック**（**[Nav モード](#nav-mode-ja)**）
+- **Enter** — コマンド実行（逆検索モードでは確定）。**nav** オーバーレイが **ON** で **nav 詳細バー**にフォーカスがあるときは、ページ上の **クリック**（**[Nav モード](#nav-mode-ja)**）
 - **Shift+Enter** — 改行を入力可能
 - **Esc** — 逆検索のキャンセル
 
 **nav 起動中**（`nav -enter` 後）:
 
-- **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（BMXt ウィンドウがアクティブで、ターミナル列にフォーカス）。**typing** 中の短い **Alt** は無視。**Alt 長押し**（約 500ms）は入力確定。
-- **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は仮想カーソル移動（コマンド履歴ではない）。**tabs / search / dom** ピッカー列にフォーカスがあるときはピッカー操作。
+- **Alt** — 対象ブラウザタブの nav オーバーレイ **ON** / **OFF**（**nav 詳細バー**から、または armed 中のプロンプトから）。**typing** 中の短い **Alt** は無視。**Alt 長押し**（約 500ms）は入力確定。**ON** 中はフォーカスを **nav 詳細バー**に固定。
+- **↑ / ↓ / ← / →** — オーバーレイ **ON** 時は操作可能要素間ジャンプ（空間スナップ）。**Shift+矢印** は **12px** 自由移動、**Shift 解放**で現在位置を再スキャン。**tabs / search / dom** ピッカー列にフォーカスがあるときはピッカー操作。
 - **/** — オーバーレイ **ON** 時、属性インクリメンタルジャンプ（文字で絞込 · **↑ / ↓** 循環 · **Enter** 実行 · **Esc** 解除）。
 - **Enter** — オーバーレイ **ON** 時、解決済みターゲットを activate、または編集可能要素で **typing モード**。
 - **Ctrl**（タップ、オーバーレイ **ON**）— カーソル位置の **コンテキストメニュー**（**↑ / ↓** 選択、**Enter** 実行、**← / →** 履歴、**Ctrl** / **Esc** で閉じる）。詳細は **[Nav モード](#nav-mode-ja)**。
