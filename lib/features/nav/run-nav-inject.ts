@@ -58,7 +58,8 @@ export async function runNavControlOnTab(
   dy = 0,
   keyForward?: NavKeyForward,
   text?: string,
-  labelsJson?: string
+  labelsJson?: string,
+  freeMove = false
 ): Promise<NavControlResult> {
   if (!(await tabUrlOk(tabId))) {
     return { ok: false, reason: "not-scriptable" }
@@ -75,6 +76,7 @@ export async function runNavControlOnTab(
     y,
     dx,
     dy,
+    freeMove: freeMove || undefined,
     key: k,
     code,
     ctrlKey: keyForward?.ctrlKey,
@@ -110,6 +112,7 @@ export async function runNavControlOnTab(
         y,
         dx,
         dy,
+        freeMove ? 1 : 0,
         k,
         code,
         keyForward?.ctrlKey ? 1 : 0,

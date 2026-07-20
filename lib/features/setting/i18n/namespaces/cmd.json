@@ -116,8 +116,8 @@
     "en": "While armed, Alt toggles the page overlay when this pane's prompt has focus."
   },
   "cmd.nav.usage.controls": {
-    "ja": "起動後はプロンプトで Alt がオーバーレイ ON/OFF。↑↓←→ で移動、Enter で左クリック相当。",
-    "en": "While armed, Alt toggles overlay on/off on the prompt. ↑↓←→ move; Enter clicks."
+    "ja": "起動後はプロンプトで Alt がオーバーレイ ON/OFF。↑↓←→ で要素ジャンプ、Shift+↑↓←→ で自由移動、Enter で左クリック相当。",
+    "en": "While armed, Alt toggles overlay on/off on the prompt. ↑↓←→ jump elements; Shift+↑↓←→ free move; Enter clicks."
   },
   "cmd.nav.usage.line1": {
     "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（プロンプトで Alt がオーバーレイ ON/OFF）",

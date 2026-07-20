@@ -1,7 +1,7 @@
 {
   "nav.armedLog": {
-    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 移動 · / ページ全体検索 · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
-    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ move · / whole-page search · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
+    "ja": "nav — 起動済み（プロンプトで Alt がページカーソル ON/OFF · ↑↓←→ 要素ジャンプ · Shift+↑↓←→ 自由移動 · / ページ全体検索 · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
+    "en": "nav — armed (Alt on prompt toggles page cursor ON/OFF · ↑↓←→ element jump · Shift+↑↓←→ free move · / whole-page search · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"
   },
   "nav.disarmed": {
     "ja": "nav を終了しました。",
@@ -100,8 +100,8 @@
     "en": "Copy · Enter to run · Esc to clear selection"
   },
   "nav.status.idle": {
-    "ja": "↑↓←→ 移動 · / ページ全体検索 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
-    "en": "↑↓←→ move · / whole-page search · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
+    "ja": "↑↓←→ 要素ジャンプ · Shift+↑↓←→ 自由移動 · / ページ全体検索 · Enter クリック/入力 · Ctrl メニュー · Alt 切替 · 詳細バー Ctrl+C または nav -exit で終了",
+    "en": "↑↓←→ element jump · Shift+↑↓←→ free move · / whole-page search · Enter click/type · Ctrl menu · Alt toggle · detail bar Ctrl+C or nav -exit to quit"
   },
   "nav.status.jump": {
     "ja": "詳細バーで入力（IME 可）· Enter で確定 · Esc 取消",
@@ -140,12 +140,12 @@
     "en": "↑↓ items · Enter run · ←→ history · Ctrl/Esc close"
   },
   "nav.status.selEnd": {
-    "ja": "↑↓ 移動 · 範囲プレビュー · Enter で確定 · Esc/Ctrl で取消",
-    "en": "↑↓ move · range preview · Enter to confirm · Esc/Ctrl to cancel"
+    "ja": "↑↓ 要素ジャンプ · Shift+↑↓ 自由移動 · 範囲プレビュー · Enter で確定 · Esc/Ctrl で取消",
+    "en": "↑↓ element jump · Shift+↑↓ free move · range preview · Enter to confirm · Esc/Ctrl to cancel"
   },
   "nav.status.selStart": {
-    "ja": "↑↓ 移動 · Enter で選択開始 · Esc/Ctrl で取消",
-    "en": "↑↓ move · Enter to start selection · Esc/Ctrl to cancel"
+    "ja": "↑↓ 要素ジャンプ · Shift+↑↓ 自由移動 · Enter で選択開始 · Esc/Ctrl で取消",
+    "en": "↑↓ element jump · Shift+↑↓ free move · Enter to start selection · Esc/Ctrl to cancel"
   },
   "nav.status.typing": {
     "ja": "BMXt コマンドラインで入力 · Alt 長押しで送信 · Esc 長押しでキャンセル",

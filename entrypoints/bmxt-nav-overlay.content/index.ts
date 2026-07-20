@@ -98,6 +98,7 @@ export default defineContentScript({
         msg.y,
         msg.dx,
         msg.dy,
+        msg.freeMove ? 1 : 0,
         msg.key ?? "",
         msg.code ?? "",
         msg.ctrlKey ? 1 : 0,

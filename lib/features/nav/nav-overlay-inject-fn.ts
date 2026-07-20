@@ -81,6 +81,8 @@ export type NavOverlayMessage = {
   y: number
   dx: number
   dy: number
+  /** EN: Shift+arrow — pixel step (`dx`/`dy`) instead of spatial element snap. */
+  freeMove?: boolean
   key?: string
   code?: string
   ctrlKey?: boolean
@@ -98,6 +100,7 @@ export function bmxtNavControlInjected(
   y: number,
   dx: number,
   dy: number,
+  freeMove = 0,
   key = "",
   code = "",
   ctrlKey = 0,
@@ -996,6 +999,34 @@ export function bmxtNavControlInjected(
     applySpatialIndex(sess, nextIndex)
   }
 
+  function syncSpatialHighlightAtPoint(sess: NavSession, px: number, py: number): void {
+    refreshSpatialCandidates(sess)
+    const candidates = spatialCandidatesFromSession(sess)
+    if (candidates.paths.length === 0) {
+      sess.spatialIndex = -1
+      sess.selectedPath = null
+      setNavSpatialHighlight(null)
+      renderOverlayRoot(sess)
+      return
+    }
+    const index = pickInitialNavSpatialIndex(candidates, px, py)
+    sess.spatialIndex = index
+    sess.selectedPath = index >= 0 ? candidates.paths[index]! : null
+    setNavSpatialHighlight(resolveNavSpatialElement(sess.selectedPath))
+    renderOverlayRoot(sess)
+  }
+
+  function pixelMoveCursor(sess: NavSession, dx: number, dy: number): void {
+    const maxX = Math.max(0, window.innerWidth - 1)
+    const maxY = Math.max(0, window.innerHeight - 1)
+    sess.x = clampCoord(sess.x + dx, maxX)
+    sess.y = clampCoord(sess.y + dy, maxY)
+    sess.root.style.left = sess.x + "px"
+    sess.root.style.top = sess.y + "px"
+    scrollCursorIntoView(sess.x, sess.y)
+    syncSpatialHighlightAtPoint(sess, sess.x, sess.y)
+  }
+
   function clickSelectedSpatial(sess: NavSession): {
     editableFocused: boolean
     typingMultiline?: boolean
@@ -1440,7 +1471,11 @@ export function bmxtNavControlInjected(
       }
       sess.jumpRankedIndices = []
       sess.jumpRankIndex = 0
-      spatialMoveSelection(sess, dx, dy)
+      if (freeMove === 1) {
+        pixelMoveCursor(sess, dx, dy)
+      } else {
+        spatialMoveSelection(sess, dx, dy)
+      }
       if (sess.textSelPhase === "end") {
         previewTextSelection(sess)
       }

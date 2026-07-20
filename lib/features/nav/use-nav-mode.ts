@@ -15,6 +15,7 @@ import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown
 import { tNav } from "../setting/i18n/ns/nav"
 import type { UiLocale } from "../setting/locale"
 import { setNavOverlayLabelsForRun } from "./nav-overlay-labels"
+import { NAV_ARROW_STEP_PX } from "./nav-config"
 import { attachNavKeyHold } from "./nav-key-hold"
 import type { NavInjectTextSelPhase } from "./nav-overlay-inject-fn"
 import type { NavControlResult } from "./nav-tab-bridge"
@@ -101,6 +102,22 @@ function arrowDelta(key: string): { dx: number; dy: number } | null {
       return { dx: 0, dy: -1 }
     case "ArrowDown":
       return { dx: 0, dy: 1 }
+    default:
+      return null
+  }
+}
+
+function arrowMoveDelta(key: string, freeMove: boolean): { dx: number; dy: number } | null {
+  const step = freeMove ? NAV_ARROW_STEP_PX : 1
+  switch (key) {
+    case "ArrowLeft":
+      return { dx: -step, dy: 0 }
+    case "ArrowRight":
+      return { dx: step, dy: 0 }
+    case "ArrowUp":
+      return { dx: 0, dy: -step }
+    case "ArrowDown":
+      return { dx: 0, dy: step }
     default:
       return null
   }
@@ -939,11 +956,11 @@ export function useNavMode({
           void textSelMarkOnTab(tabId).then(applyNavResult)
           return
         }
-        const delta = arrowDelta(e.key)
+        const delta = arrowMoveDelta(e.key, e.shiftKey)
         if (delta) {
           e.preventDefault()
           e.stopPropagation()
-          void moveNavOverlayOnTab(tabId, delta.dx, delta.dy).then((res) => {
+          void moveNavOverlayOnTab(tabId, delta.dx, delta.dy, e.shiftKey).then((res) => {
             if (res.ok) {
               savePosition(tabId, { x: res.x, y: res.y })
             }
@@ -1060,13 +1077,13 @@ export function useNavMode({
         return
       }
 
-      const delta = arrowDelta(e.key)
+      const delta = arrowMoveDelta(e.key, e.shiftKey)
       if (!delta) {
         return
       }
       e.preventDefault()
       e.stopPropagation()
-      void moveNavOverlayOnTab(tabId, delta.dx, delta.dy).then((res) => {
+      void moveNavOverlayOnTab(tabId, delta.dx, delta.dy, e.shiftKey).then((res) => {
         if (res.ok) {
           savePosition(tabId, { x: res.x, y: res.y })
         }

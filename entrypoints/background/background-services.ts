@@ -352,6 +352,7 @@ type NavControlRequest = {
   y?: number
   dx?: number
   dy?: number
+  freeMove?: boolean
   key?: string
   code?: string
   ctrlKey?: boolean
@@ -432,7 +433,8 @@ export async function runNavControlMessage(message: NavControlRequest): Promise<
         }
       : undefined,
     typeof message.text === "string" ? message.text : undefined,
-    typeof message.labelsJson === "string" ? message.labelsJson : undefined
+    typeof message.labelsJson === "string" ? message.labelsJson : undefined,
+    Boolean(message.freeMove)
   )
 }
 

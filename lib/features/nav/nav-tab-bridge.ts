@@ -40,9 +40,10 @@ export async function stopNavOverlayOnTab(tabId: number): Promise<void> {
 export async function moveNavOverlayOnTab(
   tabId: number,
   dx: number,
-  dy: number
+  dy: number,
+  freeMove = false
 ): Promise<NavControlResult> {
-  return runNavControlViaBackground(tabId, "move", false, 0, 0, dx, dy)
+  return runNavControlViaBackground(tabId, "move", false, 0, 0, dx, dy, undefined, undefined, freeMove)
 }
 
 export async function clickNavOverlayOnTab(tabId: number): Promise<NavControlResult> {
@@ -121,7 +122,8 @@ async function runNavControlViaBackground(
   dx = 0,
   dy = 0,
   keyForward?: NavKeyForward,
-  text?: string
+  text?: string,
+  freeMove = false
 ): Promise<NavControlResult> {
   try {
     const res = await chrome.runtime.sendMessage({
@@ -133,6 +135,7 @@ async function runNavControlViaBackground(
       y,
       dx,
       dy,
+      freeMove: freeMove || undefined,
       key: keyForward?.key,
       code: keyForward?.code,
       ctrlKey: keyForward?.ctrlKey,
