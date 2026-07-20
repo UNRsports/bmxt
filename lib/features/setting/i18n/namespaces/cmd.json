@@ -112,16 +112,16 @@
     "en": "nav -exit — disarm from the BMXt prompt"
   },
   "cmd.nav.usage.altToggle": {
-    "ja": "起動中、プロンプトにフォーカスがあるとき Alt でページオーバーレイを ON/OFF します。",
-    "en": "While armed, Alt toggles the page overlay when this pane's prompt has focus."
+    "ja": "起動中、詳細バー（またはプロンプト）で Alt がページオーバーレイを ON/OFF します。ON 中は詳細バーにフォーカスを置きます。",
+    "en": "While armed, Alt on the detail bar (or prompt) toggles the page overlay. While ON, focus stays on the detail bar."
   },
   "cmd.nav.usage.controls": {
-    "ja": "起動後はプロンプトで Alt がオーバーレイ ON/OFF。↑↓←→ で要素ジャンプ、Shift+↑↓←→ で自由移動、Enter で左クリック相当。",
-    "en": "While armed, Alt toggles overlay on/off on the prompt. ↑↓←→ jump elements; Shift+↑↓←→ free move; Enter clicks."
+    "ja": "起動後は詳細バーで Alt がオーバーレイ ON/OFF（ON 中は詳細バーにフォーカス）。↑↓←→ で要素ジャンプ、Shift+↑↓←→ で自由移動、Enter で左クリック相当。",
+    "en": "While armed, Alt on the detail bar toggles overlay on/off (focus stays on the detail bar while ON). ↑↓←→ jump elements; Shift+↑↓←→ free move; Enter clicks."
   },
   "cmd.nav.usage.line1": {
-    "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（プロンプトで Alt がオーバーレイ ON/OFF）",
-    "en": "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on prompt toggles overlay on/off)"
+    "ja": "usage: nav -enter       — この BMXt ペインで nav を起動（詳細バーで Alt がオーバーレイ ON/OFF）",
+    "en": "usage: nav -enter       — arm nav mode in this BMXt pane (Alt on the detail bar toggles overlay on/off)"
   },
   "cmd.nav.usage.line2": {
     "ja": "       nav -exit        — nav を終了（先に Alt で OFF）",

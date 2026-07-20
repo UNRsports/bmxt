@@ -1248,6 +1248,10 @@ export function BmxtShell({
             if (e.target.closest("a, button, input, textarea, select")) {
               return
             }
+            // EN: Nav cursor ON keeps detail-bar focus — do not yank to the prompt (typing is the exception).
+            if (navActive && !navPageTyping) {
+              return
+            }
             // EN: Log-line mousedown must not yank IME focus — drag-select needs it.
             // Typing / non-select mouseup reclaim focus via usePromptTypingFocus.
             if (e.target.closest(".bmxt-out-line, .bmxt-hint, .bmxt-version-upgrade")) {

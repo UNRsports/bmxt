@@ -29,6 +29,7 @@ export type NavInjectAction =
   | "start"
   | "stop"
   | "move"
+  | "resyncSpatial"
   | "click"
   | "jumpQuery"
   | "forwardKey"
@@ -999,7 +1000,49 @@ export function bmxtNavControlInjected(
     applySpatialIndex(sess, nextIndex)
   }
 
-  function syncSpatialHighlightAtPoint(sess: NavSession, px: number, py: number): void {
+  /**
+   * EN: Free-move (Shift+arrow) — update pointer only.
+   *     Skip spatial recollect (expensive on dense pages); snap re-resolves on next element jump / click.
+   * JA: Shift+矢印の自由移動は座標のみ更新。候補再収集はしない（密なページで遅延するため）。
+   */
+  function pixelMoveCursor(sess: NavSession, dx: number, dy: number): void {
+    const maxX = Math.max(0, window.innerWidth - 1)
+    const maxY = Math.max(0, window.innerHeight - 1)
+    sess.x = clampCoord(sess.x + dx, maxX)
+    sess.y = clampCoord(sess.y + dy, maxY)
+    sess.root.style.left = sess.x + "px"
+    sess.root.style.top = sess.y + "px"
+
+    const hadSpatial = sess.spatialIndex >= 0 || sess.selectedPath != null
+    if (hadSpatial) {
+      sess.spatialIndex = -1
+      sess.selectedPath = null
+      setNavSpatialHighlight(null)
+      renderOverlayRoot(sess)
+    }
+
+    scrollCursorIntoViewForFreeMove(sess.x, sess.y)
+  }
+
+  /** EN: Free-move scroll — full nested walk only near the viewport edge. */
+  function scrollCursorIntoViewForFreeMove(cx: number, cy: number): void {
+    const margin = NAV_SCROLL_MARGIN
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const nearEdge =
+      cx < margin || cx > vw - margin || cy < margin || cy > vh - margin
+    if (!nearEdge) {
+      return
+    }
+    scrollCursorIntoView(cx, cy)
+  }
+
+  /**
+   * EN: After Shift free-move — recollect targets and select nearest at the current pointer
+   *     without yanking the cursor back to a previous snap center.
+   * JA: Shift 自由移動後、現在座標で候補を再収集し最近傍を選択（旧スナップ位置へ戻さない）。
+   */
+  function resyncSpatialAtCursor(sess: NavSession): void {
     refreshSpatialCandidates(sess)
     const candidates = spatialCandidatesFromSession(sess)
     if (candidates.paths.length === 0) {
@@ -1009,22 +1052,18 @@ export function bmxtNavControlInjected(
       renderOverlayRoot(sess)
       return
     }
-    const index = pickInitialNavSpatialIndex(candidates, px, py)
+    const index = pickInitialNavSpatialIndex(candidates, sess.x, sess.y)
     sess.spatialIndex = index
     sess.selectedPath = index >= 0 ? candidates.paths[index]! : null
+    if (index >= 0 && index < sess.spatialBoxes.length) {
+      const el = resolveNavSpatialElement(sess.selectedPath)
+      if (el) {
+        const synced = syncNavSpatialCursorToElement(el)
+        sess.spatialBoxes[index] = synced.box
+      }
+    }
     setNavSpatialHighlight(resolveNavSpatialElement(sess.selectedPath))
     renderOverlayRoot(sess)
-  }
-
-  function pixelMoveCursor(sess: NavSession, dx: number, dy: number): void {
-    const maxX = Math.max(0, window.innerWidth - 1)
-    const maxY = Math.max(0, window.innerHeight - 1)
-    sess.x = clampCoord(sess.x + dx, maxX)
-    sess.y = clampCoord(sess.y + dy, maxY)
-    sess.root.style.left = sess.x + "px"
-    sess.root.style.top = sess.y + "px"
-    scrollCursorIntoView(sess.x, sess.y)
-    syncSpatialHighlightAtPoint(sess, sess.x, sess.y)
   }
 
   function clickSelectedSpatial(sess: NavSession): {
@@ -1463,6 +1502,19 @@ export function bmxtNavControlInjected(
 
     if (action === "jumpQuery") {
       return applyJumpQuery(sess, text)
+    }
+
+    if (action === "resyncSpatial") {
+      if (!sess.typingActive) {
+        sess.typingEl = null
+      }
+      sess.jumpRankedIndices = []
+      sess.jumpRankIndex = 0
+      resyncSpatialAtCursor(sess)
+      if (sess.textSelPhase === "end") {
+        previewTextSelection(sess)
+      }
+      return navOk(sess)
     }
 
     if (action === "move") {

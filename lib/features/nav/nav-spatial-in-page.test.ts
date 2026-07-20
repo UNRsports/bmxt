@@ -3,6 +3,7 @@ import { describe, it } from "node:test"
 import {
   navSpatialPointerForIndex,
   syncNavSpatialCursorToElement,
+  syncNavSpatialSelectionIndex,
   type NavSpatialCandidates
 } from "./nav-spatial-in-page.ts"
 
@@ -52,5 +53,32 @@ describe("nav-spatial-in-page cursor sync", () => {
       y: 210,
       box: { x: 100, y: 200, w: 50, h: 20 }
     })
+  })
+
+  it("syncNavSpatialSelectionIndex keeps -1 when no selected path", () => {
+    const candidates: NavSpatialCandidates = {
+      paths: [[0], [1]],
+      boxes: [
+        { x: 0, y: 0, w: 10, h: 10 },
+        { x: 20, y: 0, w: 10, h: 10 }
+      ],
+      metas: [
+        {
+          kind: "link",
+          label: "a",
+          matchKeys: ["a"],
+          confidence: 1,
+          key: "a"
+        },
+        {
+          kind: "link",
+          label: "b",
+          matchKeys: ["b"],
+          confidence: 1,
+          key: "b"
+        }
+      ]
+    }
+    assert.equal(syncNavSpatialSelectionIndex(candidates, null), -1)
   })
 })

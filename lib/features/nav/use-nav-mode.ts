@@ -33,6 +33,7 @@ import {
   navMenuInputOnTab,
   resolveActiveTargetTabId,
   resolveTabDisplayTitle,
+  resyncNavSpatialOnTab,
   revertNavTypingOnTab,
   startNavOverlayOnTab,
   stopNavOverlayOnTab,
@@ -325,11 +326,13 @@ export function useNavMode({
 
   const textSelPicking = isTextSelPickingPhase(textSelPhase)
 
+  /** EN: Cursor ON — control focus is the nav detail bar (prompt only while typing). */
+  const navDetailBarFocused = isFocusedPane && paneFocus === "detailBar"
+
   const navKeyboardEnabled =
     armed &&
     active &&
-    isFocusedPane &&
-    paneFocus === "terminal" &&
+    navDetailBarFocused &&
     !typingMode &&
     !menuOpen &&
     !textSelPicking
@@ -447,6 +450,13 @@ export function useNavMode({
     [positionsRef]
   )
 
+  /** EN: Coalesce Shift+arrow free-moves while a prior inject is in flight (key-repeat). */
+  const freeMoveInFlightRef = useRef(false)
+  const freeMovePendingRef = useRef<{ tabId: number; dx: number; dy: number } | null>(null)
+  /** EN: Free-move happened — resync spatial at pointer when Shift is released. */
+  const freeMoveDirtyRef = useRef(false)
+  const freeMoveNeedsResyncRef = useRef(false)
+
   const syncOverlayForTab = useCallback(
     async (
       tabId: number | undefined,
@@ -492,6 +502,10 @@ export function useNavMode({
   )
 
   const teardownAll = useCallback(async () => {
+    freeMoveInFlightRef.current = false
+    freeMovePendingRef.current = null
+    freeMoveDirtyRef.current = false
+    freeMoveNeedsResyncRef.current = false
     const tabs = new Set<number>()
     if (lastOverlayTabRef.current !== null) {
       tabs.add(lastOverlayTabRef.current)
@@ -786,7 +800,87 @@ export function useNavMode({
     [applyTargetFromResult]
   )
 
-  const navProcessFocused = isFocusedPane && paneFocus === "terminal"
+  const runResyncSpatialAtCursor = useCallback(
+    (tabId: number) => {
+      freeMoveDirtyRef.current = false
+      freeMoveNeedsResyncRef.current = false
+      void resyncNavSpatialOnTab(tabId).then((res) => {
+        if (res.ok) {
+          savePosition(tabId, { x: res.x, y: res.y })
+        }
+        applyNavResult(res)
+      })
+    },
+    [applyNavResult, savePosition]
+  )
+
+  const dispatchOverlayMove = useCallback(
+    (tabId: number, dx: number, dy: number, freeMove: boolean) => {
+      if (!freeMove) {
+        freeMoveDirtyRef.current = false
+        freeMoveNeedsResyncRef.current = false
+        void moveNavOverlayOnTab(tabId, dx, dy, false).then((res) => {
+          if (res.ok) {
+            savePosition(tabId, { x: res.x, y: res.y })
+          }
+          applyNavResult(res)
+        })
+        return
+      }
+
+      freeMoveDirtyRef.current = true
+
+      if (freeMoveInFlightRef.current) {
+        const pending = freeMovePendingRef.current
+        if (pending && pending.tabId === tabId) {
+          pending.dx += dx
+          pending.dy += dy
+        } else {
+          freeMovePendingRef.current = { tabId, dx, dy }
+        }
+        return
+      }
+
+      freeMoveInFlightRef.current = true
+      void moveNavOverlayOnTab(tabId, dx, dy, true).then((res) => {
+        freeMoveInFlightRef.current = false
+        if (res.ok) {
+          savePosition(tabId, { x: res.x, y: res.y })
+        }
+        applyNavResult(res)
+        const pending = freeMovePendingRef.current
+        if (pending) {
+          freeMovePendingRef.current = null
+          if (pending.dx !== 0 || pending.dy !== 0) {
+            dispatchOverlayMove(pending.tabId, pending.dx, pending.dy, true)
+            return
+          }
+        }
+        if (freeMoveNeedsResyncRef.current) {
+          runResyncSpatialAtCursor(tabId)
+        }
+      })
+    },
+    [applyNavResult, runResyncSpatialAtCursor, savePosition]
+  )
+
+  const requestResyncAfterFreeMove = useCallback(
+    (tabId: number) => {
+      if (!freeMoveDirtyRef.current) {
+        return
+      }
+      if (freeMoveInFlightRef.current || freeMovePendingRef.current !== null) {
+        freeMoveNeedsResyncRef.current = true
+        return
+      }
+      runResyncSpatialAtCursor(tabId)
+    },
+    [runResyncSpatialAtCursor]
+  )
+
+  const navProcessFocused =
+    isFocusedPane &&
+    (paneFocus === "detailBar" || (paneFocus === "terminal" && typingMode))
 
   useEffect(() => {
     if (!armed || !active) {
@@ -829,7 +923,7 @@ export function useNavMode({
 
   const onWindowKeydownCapture = useCallback(
     (e: KeyboardEvent) => {
-      if (!armed || !active || !isFocusedPane || paneFocus !== "terminal") {
+      if (!armed || !active || !isFocusedPane) {
         return
       }
       const tabId = lastOverlayTabRef.current
@@ -838,6 +932,9 @@ export function useNavMode({
       }
 
       if (typingModeRef.current) {
+        if (paneFocus !== "terminal") {
+          return
+        }
         if (e.key === "Escape" || e.key === "Alt") {
           return
         }
@@ -853,6 +950,10 @@ export function useNavMode({
           e.stopPropagation()
           return
         }
+        return
+      }
+
+      if (paneFocus !== "detailBar") {
         return
       }
 
@@ -960,12 +1061,7 @@ export function useNavMode({
         if (delta) {
           e.preventDefault()
           e.stopPropagation()
-          void moveNavOverlayOnTab(tabId, delta.dx, delta.dy, e.shiftKey).then((res) => {
-            if (res.ok) {
-              savePosition(tabId, { x: res.x, y: res.y })
-            }
-            applyNavResult(res)
-          })
+          dispatchOverlayMove(tabId, delta.dx, delta.dy, e.shiftKey)
         }
         return
       }
@@ -1083,12 +1179,7 @@ export function useNavMode({
       }
       e.preventDefault()
       e.stopPropagation()
-      void moveNavOverlayOnTab(tabId, delta.dx, delta.dy, e.shiftKey).then((res) => {
-        if (res.ok) {
-          savePosition(tabId, { x: res.x, y: res.y })
-        }
-        applyNavResult(res)
-      })
+      dispatchOverlayMove(tabId, delta.dx, delta.dy, e.shiftKey)
     },
     [
       activateJumpSelection,
@@ -1098,6 +1189,7 @@ export function useNavMode({
       clearJumpFilter,
       clearJumpMode,
       cycleJumpMatches,
+      dispatchOverlayMove,
       enterTypingFromClick,
       isFocusedPane,
       paneFocus,
@@ -1108,6 +1200,30 @@ export function useNavMode({
   )
 
   useWindowKeydownCapture(onWindowKeydownCapture)
+
+  useEffect(() => {
+    if (!armed || !active || !isFocusedPane) {
+      return
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== "Shift") {
+        return
+      }
+      if (paneFocus !== "detailBar") {
+        return
+      }
+      if (typingModeRef.current || menuOpenRef.current || jumpModeRef.current) {
+        return
+      }
+      const tabId = lastOverlayTabRef.current
+      if (tabId === null) {
+        return
+      }
+      requestResyncAfterFreeMove(tabId)
+    }
+    window.addEventListener("keyup", onKeyUp, true)
+    return () => window.removeEventListener("keyup", onKeyUp, true)
+  }, [armed, active, isFocusedPane, paneFocus, requestResyncAfterFreeMove])
 
   return {
     currentTabTitle,

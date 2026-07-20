@@ -46,6 +46,11 @@ export async function moveNavOverlayOnTab(
   return runNavControlViaBackground(tabId, "move", false, 0, 0, dx, dy, undefined, undefined, freeMove)
 }
 
+/** EN: After Shift free-move — snap selection to nearest target at the current pointer. */
+export async function resyncNavSpatialOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "resyncSpatial", false, 0, 0)
+}
+
 export async function clickNavOverlayOnTab(tabId: number): Promise<NavControlResult> {
   return runNavControlViaBackground(tabId, "click", false, 0, 0)
 }

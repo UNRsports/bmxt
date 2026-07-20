@@ -173,6 +173,10 @@ export function useDetailBarKeyboard({
       const horiz = isPlainHorizontal(e)
 
       if (horiz === "left") {
+        // EN: While nav cursor is ON, ← is page-cursor move — do not leave the detail bar.
+        if (navClaimsArrows()) {
+          return
+        }
         e.preventDefault()
         e.stopImmediatePropagation()
         actionsRef.current.exitDetailBarToTerminal()

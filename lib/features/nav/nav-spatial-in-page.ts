@@ -200,6 +200,10 @@ export function syncNavSpatialSelectionIndex(
   candidates: NavSpatialCandidates,
   selectedPath: number[] | null
 ): number {
+  // EN: No selection (e.g. after free-move) — do not fall back to index 0 (that snaps to the wrong element).
+  if (selectedPath == null) {
+    return -1
+  }
   const byPath = findCandidateIndexByPath(candidates.paths, selectedPath)
   if (byPath >= 0) {
     return byPath

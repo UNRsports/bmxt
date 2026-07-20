@@ -233,14 +233,10 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
   }, [activateDetailBar, options.navArmedRef])
 
   const handleToggleNavActive = useCallback(() => {
-    const turningOn = !options.navActiveRef.current
     options.toggleNavActive()
-    if (turningOn) {
-      focusTerminalForNavControl()
-    } else {
-      focusNavDetailBar()
-    }
-  }, [focusNavDetailBar, focusTerminalForNavControl, options])
+    // EN: Cursor ON/OFF both keep the nav detail bar focused (future ops; typing temporarily uses the prompt).
+    focusNavDetailBar()
+  }, [focusNavDetailBar, options])
 
   const toggleTabsPageActiveFromDetailBar = useCallback(() => {
     const next: TabsPageActiveMode =
@@ -429,18 +425,29 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
   useLayoutEffect(() => {
     const wasActive = prevNavActiveRef.current
     prevNavActiveRef.current = options.navActive
-    if (wasActive && !options.navActive && options.navArmed) {
-      focusNavDetailBar()
+    if (!options.navArmed) {
       return
     }
-    if (options.navActive && options.paneFocus !== "terminal") {
-      focusTerminalForNavControl()
+    // EN: Editable typing needs the prompt IME — park focus on the terminal while typing.
+    if (options.navActive && options.navPageTyping) {
+      if (options.paneFocus !== "terminal") {
+        focusTerminalForNavControl()
+      }
+      return
+    }
+    // EN: Cursor ON (and after OFF while still armed) — keep the nav detail bar focused.
+    if (options.navActive || wasActive) {
+      if (options.paneFocus !== "detailBar" || options.detailBarId !== "nav") {
+        focusNavDetailBar()
+      }
     }
   }, [
     focusNavDetailBar,
     focusTerminalForNavControl,
+    options.detailBarId,
     options.navActive,
     options.navArmed,
+    options.navPageTyping,
     options.paneFocus
   ])
 
