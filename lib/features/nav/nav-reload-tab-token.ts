@@ -85,13 +85,16 @@ export function findNavReloadTabTokenSpans(line: string): NavReloadTabTokenSpan[
   return spans
 }
 
-/** EN: True when the caret is on a `#t:<id>` block (inside or at either edge). */
+/** EN: True when the caret is on a `#t:<id>` block (inside, either edge, or trailing space). */
 export function isNavReloadTabBlockFocused(
   line: string,
   cursor: number,
   span: NavReloadTabTokenSpan
 ): boolean {
-  return cursor >= span.start && cursor <= span.end
+  if (cursor >= span.start && cursor <= span.end) {
+    return true
+  }
+  return cursor === span.end + 1 && line[span.end] === " "
 }
 
 /**
@@ -206,8 +209,8 @@ function removeNavReloadTabSpan(
 }
 
 /**
- * EN: If Backspace at `cursor` would delete into a `#t:<id>` block, return the
- * line/cursor after removing that whole block (and one adjacent space when appropriate).
+ * EN: If Backspace at `cursor` would delete into a `#t:<id>` block (including the
+ *     optional trailing space after it), remove that whole block in one step.
  */
 export function deleteNavReloadTabBlockAtCursor(
   line: string,
@@ -218,7 +221,12 @@ export function deleteNavReloadTabBlockAtCursor(
   }
   const spans = findNavReloadTabTokenSpans(line)
   for (const span of spans) {
-    if (cursor > span.start && cursor <= span.end) {
+    let zoneEnd = span.end
+    if (line[zoneEnd] === " ") {
+      zoneEnd += 1
+    }
+    // EN: Caret on the token, or on its trailing separator space → erase the block.
+    if (cursor > span.start && cursor <= zoneEnd) {
       return removeNavReloadTabSpan(line, span)
     }
   }
@@ -239,6 +247,10 @@ export function deleteNavReloadTabBlockForwardAtCursor(
   const spans = findNavReloadTabTokenSpans(line)
   for (const span of spans) {
     if (cursor >= span.start && cursor < span.end) {
+      return removeNavReloadTabSpan(line, span)
+    }
+    // EN: Caret on the trailing space after the token — still erase the block.
+    if (cursor === span.end && line[span.end] === " ") {
       return removeNavReloadTabSpan(line, span)
     }
   }
@@ -290,7 +302,32 @@ export type NavReloadTabCandidate = {
   label: string
   tabId: number
   title: string
+  url: string
   faviconSrc: string | null
+}
+
+/**
+ * EN: Incremental filter for `nav -reload` tab menu.
+ * - bare needle → title contains (case-insensitive)
+ * - `@…` → URL contains (case-insensitive); bare `@` matches all
+ */
+export function matchesNavReloadTabNeedle(
+  title: string,
+  url: string,
+  prefix: string
+): boolean {
+  const raw = prefix.trim()
+  if (raw.length === 0) {
+    return true
+  }
+  if (raw.startsWith("@")) {
+    const urlNeedle = raw.slice(1).trim().toLowerCase()
+    if (urlNeedle.length === 0) {
+      return true
+    }
+    return url.toLowerCase().includes(urlNeedle)
+  }
+  return title.toLowerCase().includes(raw.toLowerCase())
 }
 
 /** EN: Open tabs in normal browser windows (excludes BMXt shell window). */
@@ -300,7 +337,6 @@ export async function listNavReloadTabCandidates(
   const stored = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
   const bmxtWin = stored[BMXT_WINDOW_ID_KEY] as number | undefined
   const tabs = await chrome.tabs.query({})
-  const needle = prefix.trim().toLowerCase()
   const out: NavReloadTabCandidate[] = []
   for (const tab of tabs) {
     if (tab.id === undefined) {
@@ -311,16 +347,19 @@ export async function listNavReloadTabCandidates(
     }
     const title = (tab.title ?? "").trim() || "(no title)"
     const rawUrl = typeof tab.url === "string" ? tab.url : ""
+    if (!matchesNavReloadTabNeedle(title, rawUrl, prefix)) {
+      continue
+    }
     const faviconSrc = resolveTabFaviconSrc(rawUrl)
     const insertToken = formatNavReloadTabToken(tab.id)
-    const label = `${title}  [#t:${tab.id}]`
-    if (needle.length > 0) {
-      const hay = `${title} ${tab.id} ${insertToken}`.toLowerCase()
-      if (!hay.includes(needle) && !insertToken.toLowerCase().startsWith(needle)) {
-        continue
-      }
-    }
-    out.push({ insertToken, label, tabId: tab.id, title, faviconSrc })
+    out.push({
+      insertToken,
+      label: title,
+      tabId: tab.id,
+      title,
+      url: rawUrl,
+      faviconSrc
+    })
   }
   out.sort((a, b) => a.tabId - b.tabId)
   return out

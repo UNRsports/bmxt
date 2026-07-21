@@ -60,6 +60,7 @@ import {
   findNavReloadTabTokenSpans,
   type NavReloadTabChipMeta
 } from "../nav/nav-reload-tab-token"
+import { rewriteHashTTokensInLogLines } from "../nav/nav-tab-ref-log-rewrite"
 import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url"
 import { useLogScroll } from "./shell/useLogScroll"
 import { usePromptTypingFocus } from "./shell/usePromptTypingFocus"
@@ -111,6 +112,7 @@ import {
 } from "../translate"
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
 import { tShell } from "../setting/i18n/ns/shell"
+import { tNav } from "../setting/i18n/ns/nav"
 import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolvers"
 import { setRunLocale } from "../setting/i18n/run-locale"
 import { settingTokenForUiLocale } from "../setting/locale"
@@ -203,7 +205,7 @@ export function BmxtShell({
   navArmedByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
-  appendLogLines,
+  appendLogLines: appendLogLinesProp,
   sessionOrderLength,
   hostKind = "popup",
   floatTabId = null,
@@ -227,6 +229,23 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
+  const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
+  const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
+  const appendLogLines = useCallback(
+    (
+      newLines: string[],
+      channel?: import("../command-line/command-output.ts").LogChannel
+    ) => {
+      const pendingTitle = tNav("nav.reload.chipPending", uiSettings.locale)
+      const rewritten = rewriteHashTTokensInLogLines(
+        newLines,
+        navReloadTabMetaRef.current,
+        pendingTitle
+      )
+      return appendLogLinesProp(rewritten, channel)
+    },
+    [appendLogLinesProp, uiSettings.locale]
+  )
   const externalSettingsRecovery = useExternalSettingsRecovery()
   if (!externalSettingsRecovery) {
     throw new Error("ExternalSettingsRecoveryProvider is required")
@@ -416,8 +435,6 @@ export function BmxtShell({
   const navConfirmClosePendingRef = useRef<
     import("../nav/nav-confirm-close").NavConfirmClosePending | null
   >(null)
-  const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
-  const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
   useEffect(() => {
     navArmedRef.current = navArmed
   }, [navArmed])
@@ -509,7 +526,7 @@ export function BmxtShell({
           navReloadTabMetaRef.current.set(span.tabId, {
             title,
             faviconSrc: resolveTabFaviconSrc(rawUrl),
-            label: `${title}  [#t:${span.tabId}]`
+            label: title
           })
           added = true
         } catch {

@@ -170,5 +170,9 @@
   "nav.status.typingMultiline": {
     "ja": "BMXt コマンドラインで入力 · Shift+Enter で改行 · Alt 長押しで送信 · Esc 長押しでキャンセル",
     "en": "Type on the BMXt prompt · Shift+Enter newline · Alt hold to commit · Esc hold to cancel"
+  },
+  "nav.reload.chipPending": {
+    "ja": "タブ",
+    "en": "Tab"
   }
 }

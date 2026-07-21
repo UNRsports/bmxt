@@ -39,6 +39,7 @@ import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
 import { ExternalSettingsRecoveryProvider } from "../setting/use-external-settings-recovery"
 import { useTerminalAppearance } from "../setting/apply-appearance"
 import type { BmxtHostKind } from "./bmxt-host-kind"
+import { useFloatTabFocusGuard } from "./shell/useFloatTabFocusGuard"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 
@@ -249,6 +250,7 @@ export function BmxtTerminal(
 
 function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number | null }) {
   const { hostKind, floatTabId } = props
+  useFloatTabFocusGuard(hostKind === "float")
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 

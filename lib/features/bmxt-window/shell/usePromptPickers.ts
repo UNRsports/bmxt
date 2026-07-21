@@ -250,7 +250,6 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
             const candidateLabels = filtered.map((c) => c.label)
             const candidateRows = filtered.map((c) => ({
               title: c.title,
-              detail: `[#t:${c.tabId}]`,
               faviconSrc: c.faviconSrc
             }))
             const sameSlot =

@@ -1,6 +1,7 @@
 import type { ChromeEffect } from "../../effect-types"
 import type { DispatchChromeContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
+import { resolveTabRefDisplay, tabRefEffectLine } from "./tab-ref-effect-line"
 
 type E = Extract<ChromeEffect, { kind: "close_current_tab" }>
 
@@ -13,18 +14,11 @@ export async function applyCloseCurrentTabEffect(
     return [effectT(ctx, "effect.closeCurrentTab.noTarget")]
   }
   const tabId = tab.id
+  const display = await resolveTabRefDisplay(tab)
   try {
     await chrome.tabs.remove(tabId)
   } catch {
-    return [
-      effectT(ctx, "effect.closeCurrentTab.failed", {
-        tabId: String(tabId)
-      })
-    ]
+    return [tabRefEffectLine(ctx, "effect.closeCurrentTab.failed", display)]
   }
-  return [
-    effectT(ctx, "effect.closeCurrentTab.done", {
-      tabId: String(tabId)
-    })
-  ]
+  return [tabRefEffectLine(ctx, "effect.closeCurrentTab.done", display)]
 }

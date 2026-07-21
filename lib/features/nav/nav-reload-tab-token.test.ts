@@ -7,6 +7,7 @@ import {
   formatNavReloadTabToken,
   isNavReloadTabBlockFocused,
   moveNavReloadTabBlockCaret,
+  matchesNavReloadTabNeedle,
   navReloadTabCompletionZone,
   parseNavReloadTabToken,
   snapNavReloadTabBlockCaret,
@@ -34,6 +35,14 @@ describe("nav-reload-tab-token", () => {
     assert.ok(result)
     assert.equal(result.line, "nav -reload ")
     assert.equal(result.cursor, "nav -reload ".length)
+  })
+
+  it("deletes the whole block when backspace is on the trailing space after #t:id", () => {
+    const line = "nav -reload #t:12 "
+    const afterSpace = line.length
+    const result = deleteNavReloadTabBlockAtCursor(line, afterSpace)
+    assert.ok(result)
+    assert.equal(result.line, "nav -reload ")
   })
 
   it("deletes a whole block on forward delete at #t:id start", () => {
@@ -75,6 +84,17 @@ describe("nav-reload-tab-token", () => {
     // EN: Mid-token snaps forward to block end.
     assert.equal(moveNavReloadTabBlockCaret(line, spans[1]!.start + 2, 1), b)
     assert.equal(snapNavReloadTabBlockCaret(line, spans[1]!.start + 2), b)
+  })
+
+  it("filters tab candidates by title or @url", () => {
+    assert.equal(matchesNavReloadTabNeedle("Hello World", "https://ex.com/a", ""), true)
+    assert.equal(matchesNavReloadTabNeedle("Hello World", "https://ex.com/a", "hello"), true)
+    assert.equal(matchesNavReloadTabNeedle("Hello World", "https://ex.com/a", "xyz"), false)
+    assert.equal(matchesNavReloadTabNeedle("Hello", "https://github.com/x", "@github"), true)
+    assert.equal(matchesNavReloadTabNeedle("Hello", "https://example.com", "@github"), false)
+    assert.equal(matchesNavReloadTabNeedle("Hello", "https://github.com/x", "@"), true)
+    // EN: Bare needle does not search URL.
+    assert.equal(matchesNavReloadTabNeedle("Hello", "https://github.com/x", "github"), false)
   })
 
   it("detects completion zone after nav -reload ", () => {

@@ -509,6 +509,68 @@ body {
   color: #ff7b72;
 }
 
+.bmxt-log-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: min(28em, 100%);
+  box-sizing: border-box;
+  margin: 0 0.1em;
+  padding: 0 0.25em;
+  border-radius: 0.2em;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  gap: 0.25em;
+  line-height: 1.35;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.bmxt-log-tab-chip-favicon {
+  display: inline-block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.bmxt-log-tab-chip-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* EN: Result lines — favicon + title only, no chip chrome (distinct from command echo). */
+.bmxt-log-tab-plain {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 0.35em;
+  line-height: 1.35;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.bmxt-log-tab-plain-favicon {
+  display: inline-block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.bmxt-log-tab-plain-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bmxt-shell {
   outline: none;
 }

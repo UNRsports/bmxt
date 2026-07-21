@@ -4,11 +4,14 @@ import {
   isNavReloadTabBlockFocused,
   type NavReloadTabChipMeta
 } from "../../nav/nav-reload-tab-token"
+import { tNav } from "../../setting/i18n/ns/nav"
+import type { UiLocale } from "../../setting/locale"
 
 export type PromptMirrorCaretOptions = {
   caretActive: boolean
   cursorMirrorCellRef: RefObject<HTMLSpanElement | null>
   composition: string
+  locale: UiLocale
 }
 
 function renderPlainWithCaret(
@@ -50,12 +53,14 @@ function renderPlainWithCaret(
 }
 
 function PromptTabChip(props: {
-  token: string
   meta: NavReloadTabChipMeta | undefined
   focused: boolean
+  locale: UiLocale
 }): ReactElement {
-  const title = (props.meta?.title ?? props.token).trim() || "(no title)"
-  const fullLabel = props.meta?.label ?? props.token
+  // EN: Never surface `#t:<id>` on the chip face — wire token stays internal.
+  const pending = tNav("nav.reload.chipPending", props.locale)
+  const title = props.meta?.title?.trim() || pending
+  const fullLabel = props.meta?.label?.trim() || title
   return (
     <span
       className={`bmxt-prompt-chip${props.focused ? " bmxt-prompt-chip--focused" : ""}`}
@@ -80,15 +85,15 @@ function PromptTabChip(props: {
 }
 
 function PromptTabChipRow(props: {
-  token: string
   meta: NavReloadTabChipMeta | undefined
   focused: boolean
   showCaretAfter: boolean
   caretOpts: PromptMirrorCaretOptions | null
+  locale: UiLocale
 }): ReactElement {
   return (
     <span className="bmxt-prompt-chip-row">
-      <PromptTabChip token={props.token} meta={props.meta} focused={props.focused} />
+      <PromptTabChip meta={props.meta} focused={props.focused} locale={props.locale} />
       {props.showCaretAfter && props.caretOpts && !props.caretOpts.composition ? (
         <span
           ref={props.caretOpts.cursorMirrorCellRef}
@@ -165,17 +170,19 @@ export function renderPromptMirrorLine(
     }
 
     const focused = isNavReloadTabBlockFocused(line, cursorPos, span)
-    const caretAtChipEnd = focused && cursorPos === span.end
+    const caretAtChipEnd =
+      focused &&
+      (cursorPos === span.end || (cursorPos === span.end + 1 && line[span.end] === " "))
     const caretInsideChip = focused && cursorPos > span.start && cursorPos < span.end
     const showCaret = (caretAtChipEnd || caretInsideChip) && !caretPlaced
     chipRows.push(
       <PromptTabChipRow
         key={`chip-row-${span.start}-${span.tabId}`}
-        token={span.token}
         meta={tabMeta?.get(span.tabId)}
         focused={focused}
         showCaretAfter={showCaret}
         caretOpts={caretOpts}
+        locale={caretOpts.locale}
       />
     )
     if (showCaret) {
@@ -224,7 +231,8 @@ export function renderPromptMirrorLine(
  */
 export function renderPromptMirrorChipsOnly(
   text: string,
-  tabMeta: ReadonlyMap<number, NavReloadTabChipMeta> | undefined
+  tabMeta: ReadonlyMap<number, NavReloadTabChipMeta> | undefined,
+  locale: UiLocale
 ): ReactNode {
   if (text.length === 0) {
     return null
@@ -247,11 +255,7 @@ export function renderPromptMirrorChipsOnly(
     }
     chipRows.push(
       <span key={`chip-row-${span.start}-${span.tabId}`} className="bmxt-prompt-chip-row">
-        <PromptTabChip
-          token={span.token}
-          meta={tabMeta?.get(span.tabId)}
-          focused={false}
-        />
+        <PromptTabChip meta={tabMeta?.get(span.tabId)} focused={false} locale={locale} />
       </span>
     )
     cursor = span.end

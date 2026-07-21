@@ -56,48 +56,48 @@
     "en": "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"
   },
   "effect.tabGoBack.done": {
-    "ja": "タブ {tabId} で履歴を戻しました",
-    "en": "went back in tab {tabId}"
+    "ja": "{tab}",
+    "en": "{tab}"
   },
   "effect.tabGoBack.failed": {
-    "ja": "error: タブ {tabId} で履歴を戻せませんでした",
-    "en": "error: could not go back in tab {tabId}"
+    "ja": "error: {tab} で履歴を戻せませんでした",
+    "en": "error: could not go back in {tab}"
   },
   "effect.tabGoBack.noTarget": {
     "ja": "履歴バックの対象タブがありません（通常ウィンドウでページを開いてください）",
     "en": "no target tab for history back (focus a normal window with a page)"
   },
   "effect.tabGoForward.done": {
-    "ja": "タブ {tabId} で履歴を進めました",
-    "en": "went forward in tab {tabId}"
+    "ja": "{tab}",
+    "en": "{tab}"
   },
   "effect.tabGoForward.failed": {
-    "ja": "error: タブ {tabId} で履歴を進められませんでした",
-    "en": "error: could not go forward in tab {tabId}"
+    "ja": "error: {tab} で履歴を進められませんでした",
+    "en": "error: could not go forward in {tab}"
   },
   "effect.tabGoForward.noTarget": {
     "ja": "履歴フォアードの対象タブがありません（通常ウィンドウでページを開いてください）",
     "en": "no target tab for history forward (focus a normal window with a page)"
   },
   "effect.tabReload.done": {
-    "ja": "タブ {tabId} を再読み込みしました",
-    "en": "reloaded tab {tabId}"
+    "ja": "{tab}",
+    "en": "{tab}"
   },
   "effect.tabReload.failed": {
-    "ja": "error: タブ {tabId} を再読み込みできませんでした",
-    "en": "error: could not reload tab {tabId}"
+    "ja": "error: {tab} を再読み込みできませんでした",
+    "en": "error: could not reload {tab}"
   },
   "effect.tabReload.noTarget": {
     "ja": "リロードの対象タブがありません（通常ウィンドウでページを開いてください）",
     "en": "no target tab for reload (focus a normal window with a page)"
   },
   "effect.closeCurrentTab.done": {
-    "ja": "タブ {tabId} を閉じました",
-    "en": "closed tab {tabId}"
+    "ja": "{tab}",
+    "en": "{tab}"
   },
   "effect.closeCurrentTab.failed": {
-    "ja": "error: タブ {tabId} を閉じられませんでした",
-    "en": "error: could not close tab {tabId}"
+    "ja": "error: {tab} を閉じられませんでした",
+    "en": "error: could not close {tab}"
   },
   "effect.closeCurrentTab.noTarget": {
     "ja": "閉じる対象のタブがありません",

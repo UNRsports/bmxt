@@ -11,7 +11,7 @@ import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
 import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
-import { moveNavReloadTabBlockCaret } from "../../nav/nav-reload-tab-token"
+import { moveNavReloadTabBlockCaret, deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor } from "../../nav/nav-reload-tab-token"
 
 export type UseShellKeyboardOptions = {
   navPageTyping: boolean
@@ -440,13 +440,15 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
 
       if (e.key === "Tab") {
+        // EN: Tab is completion-only in the prompt — never move browser/page focus
+        //     (critical for the float iframe, which would otherwise tab out to the host page).
+        e.preventDefault()
         options.imeTokenPickerDismissedRef.current = false
         options.sessionListPickerDismissedRef.current = false
         const curLn = options.lineRef.current
         const pos = options.cursorRef.current
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
         if (muZone) {
-          e.preventDefault()
           void (async () => {
             const cands = await listTabsMoveUrlCandidates(muZone.prefix)
             if (cands.length === 0) {
@@ -464,7 +466,6 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           return
         }
         if (curLn.trim() === "") {
-          e.preventDefault()
           options.allowEmptyFirstPickerSyncRef.current = true
           options.tabPickerOpenRequestRef.current = true
           options.syncImeTokenPicker(curLn, pos)
@@ -474,12 +475,12 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           emptyFirstPrefixShowsAll: true
         })
         if (imePick && imePick.candidates.length > 0) {
-          e.preventDefault()
           options.tabPressSeqRef.current = 0
           options.tabPickerOpenRequestRef.current = true
           options.syncImeTokenPicker(curLn, pos)
           return
         }
+        return
       }
 
       if (e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -534,6 +535,39 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         options.setHistNavIndex(-1)
         applyHistoryLine(options.histDraft)
         return
+      }
+
+      if (
+        (e.key === "Backspace" || e.key === "Delete") &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        options.mode === "normal" &&
+        options.promptPaneFocused &&
+        !options.navPageTyping &&
+        !options.navKeyboardEnabled &&
+        !options.navTypingMode &&
+        !options.navMenuOpen &&
+        options.sessionListPickerHiRef.current === null &&
+        !options.sessionNameTypingRef.current &&
+        options.subCmdPickerRef.current === null
+      ) {
+        const line = options.lineRef.current
+        const pos = options.cursorRef.current
+        const blocked =
+          e.key === "Backspace"
+            ? deleteNavReloadTabBlockAtCursor(line, pos)
+            : deleteNavReloadTabBlockForwardAtCursor(line, pos)
+        if (blocked) {
+          e.preventDefault()
+          options.lineRef.current = blocked.line
+          options.setHistNavIndex(-1)
+          options.tabPressSeqRef.current = 0
+          options.setLine(blocked.line)
+          options.setCursorPos(blocked.cursor)
+          options.syncImeTokenPicker(blocked.line, blocked.cursor)
+          return
+        }
       }
 
       if (

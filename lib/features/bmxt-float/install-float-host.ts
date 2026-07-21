@@ -49,6 +49,10 @@ type FloatHostState = {
   observer: MutationObserver | null
   onResize: (() => void) | null
   onTransitionEnd: ((event: TransitionEvent) => void) | null
+  /** EN: Last keydown was Tab — used to reclaim focus if Tab escapes the iframe. */
+  lastKeyWasTab: boolean
+  onDocKeyDown: ((event: KeyboardEvent) => void) | null
+  onDocFocusIn: ((event: FocusEvent) => void) | null
 }
 
 let hostState: FloatHostState | null = null
@@ -338,6 +342,7 @@ function applyHostChrome(root: HTMLDivElement, iframe: HTMLIFrameElement, closeB
   closeBtn.type = "button"
   closeBtn.textContent = "×"
   closeBtn.setAttribute("aria-label", "Hide BMXt float")
+  closeBtn.tabIndex = -1
   closeBtn.style.position = "absolute"
   closeBtn.style.top = "4px"
   closeBtn.style.right = "6px"
@@ -428,7 +433,10 @@ function ensureHost(tabId: number | null = null): FloatHostState {
     movingTimer: null,
     observer: null,
     onResize: null,
-    onTransitionEnd: null
+    onTransitionEnd: null,
+    lastKeyWasTab: false,
+    onDocKeyDown: null,
+    onDocFocusIn: null
   }
 
   closeBtn.addEventListener("click", (event) => {
@@ -444,6 +452,27 @@ function ensureHost(tabId: number | null = null): FloatHostState {
     }
     focusFloatIframe(state)
   })
+
+  state.onDocKeyDown = (event: KeyboardEvent) => {
+    state.lastKeyWasTab = event.key === "Tab"
+  }
+  state.onDocFocusIn = (event: FocusEvent) => {
+    if (!state.visible || !state.lastKeyWasTab) {
+      return
+    }
+    const target = event.target
+    if (!(target instanceof Node)) {
+      return
+    }
+    if (state.root.contains(target)) {
+      return
+    }
+    // EN: Tab left the float iframe into the host page — pull focus back.
+    state.lastKeyWasTab = false
+    focusFloatIframe(state)
+  }
+  document.addEventListener("keydown", state.onDocKeyDown, true)
+  document.addEventListener("focusin", state.onDocFocusIn, true)
 
   root.appendChild(closeBtn)
   root.appendChild(iframe)

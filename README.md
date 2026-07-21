@@ -236,7 +236,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
 | `nav -exit` | Disarm nav mode (turn Alt overlay **off** first) |
 | `nav -back` / `-forward` | History back / forward on the **target** active tab |
-| `nav -reload` | Reload the target active tab; with a trailing space, open a **tab candidate** menu (favicon + wrapping full title) and insert `#t:<id>` **blocks** — each block on its own single-line row (favicon + ellipsis title; Backspace/Delete remove a whole block) |
+| `nav -reload` | Reload the target active tab; with a trailing space, open a **tab candidate** menu (favicon + title; type to filter by title, `@` + text to filter by URL) and insert `#t:<id>` **blocks** — each block on its own single-line row (Backspace/Delete remove a whole block) |
 | `nav -close` | Close the target tab after **y/n** confirm |
 | `nav -windowclose` | Close the **window that contains the target tab** after **y/n** confirm (never the BMXt window) |
 | `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
@@ -1578,7 +1578,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt**（詳細バーまたはプロンプト）を押すまで表示しない |
 | `nav -exit` | nav モードを終了（先に Alt でオーバーレイ **OFF**） |
 | `nav -back` / `-forward` | 操作先アクティブタブの履歴バック／進む |
-| `nav -reload` | 操作先アクティブタブをリロード。末尾スペースで **タブ候補**メニュー（ファビコン＋タイトル全文折り返し）。選択は `#t:<id>` **ブロックを1行ずつ**（ファビコン＋省略タイトル。Backspace/Delete はブロック単位削除） |
+| `nav -reload` | 操作先アクティブタブをリロード。末尾スペースで **タブ候補**メニュー（ファビコン＋タイトル。入力でタイトル絞り込み、`@` で URL 絞り込み）。選択は `#t:<id>` **ブロックを1行ずつ**（Backspace/Delete はブロック単位削除） |
 | `nav -close` | 操作先タブを閉じる（**y/n** 確認） |
 | `nav -windowclose` | **操作先タブが含まれるウィンドウ**を閉じる（**y/n** 確認。BMXt 窓は閉じない） |
 | `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |

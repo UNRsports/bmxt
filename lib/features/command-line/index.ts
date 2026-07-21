@@ -16,3 +16,10 @@ export {
   type CommandOutput,
   type LogChannel
 } from "./command-output.ts"
+export {
+  encodeTabRefInline,
+  logLineHasTabRef,
+  parseTabRefLogSegments,
+  type TabRefLogMeta,
+  type TabRefLogSegment
+} from "./tab-ref-log.ts"

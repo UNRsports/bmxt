@@ -10,7 +10,8 @@ const ITEM_ID_PREFIX = "bmxt-subcmd-item"
 /** EN: Structured row for live candidates (e.g. `nav -reload` tabs). */
 export type TokenPickerCandidateRow = {
   title: string
-  detail: string
+  /** EN: Optional secondary line (omitted for nav reload tab rows). */
+  detail?: string
   faviconSrc: string | null
 }
 
@@ -81,7 +82,9 @@ export function TokenPickerPanel({ model }: Props) {
                   )}
                   <span className="bmxt-subcmd-picker-item-body">
                     <span className="bmxt-subcmd-picker-item-title">{row.title}</span>
-                    <span className="bmxt-subcmd-picker-item-detail">{row.detail}</span>
+                    {row.detail ? (
+                      <span className="bmxt-subcmd-picker-item-detail">{row.detail}</span>
+                    ) : null}
                   </span>
                 </>
               ) : (

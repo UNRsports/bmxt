@@ -1052,7 +1052,7 @@ Enter → ensureBmxtCore → WASM run
 - [x] `nav.rs` + effect handlers
 - [x] UiAction confirm + ホスト pending（windowclose 文言含む）
 - [x] `#t:<id>` チップ mirror（1行ブロックを縦積み・省略タイトル）+ 原子 Backspace/Delete
-- [x] `nav -reload ` タブ候補メニュー（ファビコン+タイトル全文折り返し、`[#t:id]` は別行）
+- [x] `nav -reload ` タブ候補メニュー（ファビコン+タイトル、タイトル/`@`URL インクリメンタル絞込）
 - [x] i18n EN+JA / README / `map_command.csv`
 - [x] verify チェーン（tsc / pnpm test / cargo test / codegen）
 - [ ] ブラウザ手元スモーク（reload 候補・チップ削除・close/windowclose y/n）

@@ -129,15 +129,16 @@ export function PromptInput({
         <div ref={promptMirrorRef} className="bmxt-prompt-mirror" aria-hidden>
           {mirror.composition ? (
             <>
-              <span>{renderPromptMirrorChipsOnly(mirror.before, navReloadTabMeta)}</span>
+              <span>{renderPromptMirrorChipsOnly(mirror.before, navReloadTabMeta, uiLocale)}</span>
               <span className="bmxt-prompt-composition">{mirror.composition}</span>
-              <span>{renderPromptMirrorChipsOnly(mirror.after, navReloadTabMeta)}</span>
+              <span>{renderPromptMirrorChipsOnly(mirror.after, navReloadTabMeta, uiLocale)}</span>
             </>
           ) : (
             renderPromptMirrorLine(line, cursorPos, navReloadTabMeta, {
               caretActive,
               cursorMirrorCellRef,
-              composition: ""
+              composition: "",
+              locale: uiLocale
             })
           )}
         </div>

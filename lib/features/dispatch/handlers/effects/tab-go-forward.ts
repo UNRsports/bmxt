@@ -1,6 +1,7 @@
 import type { ChromeEffect } from "../../effect-types"
 import type { DispatchChromeContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
+import { resolveTabRefDisplay, tabRefEffectLine } from "./tab-ref-effect-line"
 
 type E = Extract<ChromeEffect, { kind: "tab_go_forward" }>
 
@@ -12,18 +13,11 @@ export async function applyTabGoForwardEffect(
   if (!tab?.id) {
     return [effectT(ctx, "effect.tabGoForward.noTarget")]
   }
+  const display = await resolveTabRefDisplay(tab)
   try {
     await chrome.tabs.goForward(tab.id)
   } catch {
-    return [
-      effectT(ctx, "effect.tabGoForward.failed", {
-        tabId: String(tab.id)
-      })
-    ]
+    return [tabRefEffectLine(ctx, "effect.tabGoForward.failed", display)]
   }
-  return [
-    effectT(ctx, "effect.tabGoForward.done", {
-      tabId: String(tab.id)
-    })
-  ]
+  return [tabRefEffectLine(ctx, "effect.tabGoForward.done", display)]
 }

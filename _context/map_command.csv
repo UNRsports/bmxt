@@ -45,7 +45,7 @@ nav,-enter,,none,,nav -enter | …,UiAction `nav_arm`。オーバーレイは Al
 nav,-exit,,none,,（同上）,UiAction `nav_disarm`。オーバーレイ ON のままではエラー（先に Alt で OFF）。,
 nav,-back,,none,,nav -back,Effect `tab_go_back`（操作先アクティブタブ）。,
 nav,-forward,,none,,nav -forward,Effect `tab_go_forward`。,
-nav,-reload,,rest,,nav -reload [#t:<id>…],Effect `tab_reload`。引数なし=アクティブ。`nav -reload ` でタブ候補（ファビコン+タイトル全文折り返し）→`#t:<id>` チップは1行ブロックを縦に並べる（はみ出し防止、原子 Backspace/Delete）。,
+nav,-reload,,rest,,nav -reload [#t:<id>…],Effect `tab_reload`。引数なし=アクティブ。`nav -reload ` でタブ候補（ファビコン+タイトル。入力でタイトル絞込、`@`でURL絞込）→`#t:<id>` チップは1行ブロック縦積み（原子 Backspace/Delete）。,
 nav,-close,,none,,nav -close,UiAction `nav_confirm_close` target=tab → y/n → `close_current_tab`（`--confirmed` はホスト専用）。,
 nav,-windowclose,,none,,nav -windowclose,UiAction confirm（操作先タブを含むウィンドウ）→ `close_current_window`。BMXt 窓は拒否。,
 translate,,,,,translate …,単独 `translate` + Enter: msgs + promptPrefix `translate `。第二候補に `help`。,

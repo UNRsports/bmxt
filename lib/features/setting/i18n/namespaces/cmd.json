@@ -128,8 +128,8 @@
     "en": "       nav -exit        — disarm nav (turn Alt off first)"
   },
   "cmd.nav.usage.line3": {
-    "ja": "       nav -back | -forward | -reload [#t:<tabId>…] — 履歴／リロード（引数なしは操作先アクティブタブ。`-reload ` でタブ候補）",
-    "en": "       nav -back | -forward | -reload [#t:<tabId>…] — history / reload (bare -reload = active target tab; `nav -reload ` opens tab candidates)"
+    "ja": "       nav -back | -forward | -reload [#t:<tabId>…] — 履歴／リロード（引数なしは操作先アクティブタブ。`-reload ` でタブ候補・タイトル入力で絞込・`@` で URL 絞込）",
+    "en": "       nav -back | -forward | -reload [#t:<tabId>…] — history / reload (bare -reload = active target tab; `nav -reload ` opens tab candidates; type to filter title, `@` filters URL)"
   },
   "cmd.nav.usage.line4": {
     "ja": "       nav -close | -windowclose — タブ／操作先タブのウィンドウを閉じる（y/n 確認あり）",
