@@ -54,6 +54,13 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
+import {
+  deleteNavReloadTabBlockAtCursor,
+  deleteNavReloadTabBlockForwardAtCursor,
+  findNavReloadTabTokenSpans,
+  type NavReloadTabChipMeta
+} from "../nav/nav-reload-tab-token"
+import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url"
 import { useLogScroll } from "./shell/useLogScroll"
 import { usePromptTypingFocus } from "./shell/usePromptTypingFocus"
 import { useSessionPromptActions } from "./shell/useSessionPromptActions"
@@ -406,6 +413,11 @@ export function BmxtShell({
 
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
+  const navConfirmClosePendingRef = useRef<
+    import("../nav/nav-confirm-close").NavConfirmClosePending | null
+  >(null)
+  const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
+  const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
   useEffect(() => {
     navArmedRef.current = navArmed
   }, [navArmed])
@@ -467,6 +479,51 @@ export function BmxtShell({
     mirror,
     promptLine
   } = useShellPromptCore({ history, completionCandidates })
+
+  const navReloadTabMeta = useMemo(
+    () => new Map(navReloadTabMetaRef.current),
+    // EN: Refresh chip faces when picker fills meta, or when line tokens change.
+    [navReloadTabMetaRev, line]
+  )
+
+  useEffect(() => {
+    const spans = findNavReloadTabTokenSpans(line)
+    const missing = spans.filter((s) => !navReloadTabMetaRef.current.has(s.tabId))
+    if (missing.length === 0) {
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      let added = false
+      for (const span of missing) {
+        if (cancelled) {
+          return
+        }
+        try {
+          const tab = await chrome.tabs.get(span.tabId)
+          if (cancelled || navReloadTabMetaRef.current.has(span.tabId)) {
+            continue
+          }
+          const title = (tab.title ?? "").trim() || "(no title)"
+          const rawUrl = typeof tab.url === "string" ? tab.url : ""
+          navReloadTabMetaRef.current.set(span.tabId, {
+            title,
+            faviconSrc: resolveTabFaviconSrc(rawUrl),
+            label: `${title}  [#t:${span.tabId}]`
+          })
+          added = true
+        } catch {
+          /* EN: Tab may already be closed — keep token fallback face. */
+        }
+      }
+      if (added && !cancelled) {
+        setNavReloadTabMetaRev((n) => n + 1)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [line])
 
   const promptFootSignature = useMemo(
     () =>
@@ -669,7 +726,9 @@ export function BmxtShell({
     sessionNameTypingRef,
     scrollRef,
     cursorMirrorCellRef,
-    subCmdPickerHostRef
+    subCmdPickerHostRef,
+    navReloadTabMetaRef,
+    onNavReloadTabMetaUpdated: () => setNavReloadTabMetaRev((n) => n + 1)
   })
 
   const {
@@ -938,7 +997,8 @@ export function BmxtShell({
     onSetSessionDisplayName,
     onActivateSession,
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
-    submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer
+    submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer,
+    navConfirmClosePendingRef
   })
 
 
@@ -1013,12 +1073,51 @@ export function BmxtShell({
     if (start <= 0) {
       return
     }
+    const blocked = deleteNavReloadTabBlockAtCursor(base, start)
+    if (blocked) {
+      if (ta) {
+        ta.value = blocked.line
+      }
+      applyPromptLine(blocked.line, blocked.cursor, ta)
+      return
+    }
     const nextLine = base.slice(0, start - 1) + base.slice(start)
     const nextCursor = start - 1
     if (ta) {
       ta.value = nextLine
     }
     applyPromptLine(nextLine, nextCursor, ta)
+  }, [applyPromptLine, cursorRef, imeRef, lineRef])
+
+  const deleteForwardWhenReclaiming = useCallback(() => {
+    const ta = imeRef.current
+    const base = ta?.value ?? lineRef.current
+    const start = ta?.selectionStart ?? cursorRef.current
+    const end = ta?.selectionEnd ?? cursorRef.current
+    if (start !== end) {
+      const nextLine = base.slice(0, start) + base.slice(end)
+      if (ta) {
+        ta.value = nextLine
+      }
+      applyPromptLine(nextLine, start, ta)
+      return
+    }
+    if (start >= base.length) {
+      return
+    }
+    const blocked = deleteNavReloadTabBlockForwardAtCursor(base, start)
+    if (blocked) {
+      if (ta) {
+        ta.value = blocked.line
+      }
+      applyPromptLine(blocked.line, blocked.cursor, ta)
+      return
+    }
+    const nextLine = base.slice(0, start) + base.slice(start + 1)
+    if (ta) {
+      ta.value = nextLine
+    }
+    applyPromptLine(nextLine, start, ta)
   }, [applyPromptLine, cursorRef, imeRef, lineRef])
 
   usePromptTypingFocus({
@@ -1028,7 +1127,8 @@ export function BmxtShell({
     focusPromptNow,
     scrollPromptFootIntoView,
     insertPrintableWhenReclaiming,
-    deleteBackwardWhenReclaiming
+    deleteBackwardWhenReclaiming,
+    deleteForwardWhenReclaiming
   })
 
   const { onKeyDown } = useShellKeyboard({
@@ -1157,6 +1257,7 @@ export function BmxtShell({
           sessionListPickerHi={sessionListPickerHi}
           sessionListPickerRows={sessionListPickerRows}
           sessionPickerVariant={sessionPickerVariant}
+          navReloadTabMeta={navReloadTabMeta}
           onImeInput={onImeInput}
           onBeforeInput={onBeforeInput}
           onImeSelect={onImeSelect}

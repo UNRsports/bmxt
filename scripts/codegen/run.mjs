@@ -106,6 +106,7 @@ const UI_ACTIONS = [
   { kind: "show_help" },
   { kind: "nav_arm" },
   { kind: "nav_disarm" },
+  { kind: "nav_confirm_close", fields: { target: "string" } },
   { kind: "open_plain_list", fields: { list_id: "string", line: "string" } },
   { kind: "close_picker", fields: { slot: "string" } },
   { kind: "continuation_prompt", fields: { prefix: "string" } },

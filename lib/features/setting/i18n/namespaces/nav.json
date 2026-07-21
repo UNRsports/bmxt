@@ -1,4 +1,20 @@
 {
+  "nav.confirm.close": {
+    "ja": "タブを閉じます。よろしいですか？ [y/n]",
+    "en": "Close this tab? [y/n]"
+  },
+  "nav.confirm.windowclose": {
+    "ja": "操作先のタブが含まれるウィンドウを閉じます。よろしいですか？ [y/n]",
+    "en": "Close the window that contains the target tab? [y/n]"
+  },
+  "nav.confirm.cancelled": {
+    "ja": "キャンセルしました",
+    "en": "cancelled"
+  },
+  "nav.confirm.invalid": {
+    "ja": "y または n で答えてください",
+    "en": "answer with y or n"
+  },
   "nav.armedLog": {
     "ja": "nav — 起動済み（詳細バーで Alt がページカーソル ON/OFF · ON 中は詳細バーにフォーカス · ↑↓←→ 要素ジャンプ · Shift+↑↓←→ 自由移動 · / ページ全体検索 · Enter クリック/入力 · 詳細バー Ctrl+C または nav -exit で終了）",
     "en": "nav — armed (Alt on the detail bar toggles page cursor ON/OFF · focus stays on the detail bar while ON · ↑↓←→ element jump · Shift+↑↓←→ free move · / whole-page search · Enter click/type · detail bar Ctrl+C or nav -exit to quit)"

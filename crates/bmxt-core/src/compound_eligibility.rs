@@ -34,6 +34,9 @@ fn classify_bundle(bundle: &DispatchBundle) -> CompoundSegmentKind {
         DispatchBundle::Ui {
             action: UiAction::SessionSettingName { name },
         } if name.trim().is_empty() => CompoundSegmentKind::Interactive,
+        DispatchBundle::Ui {
+            action: UiAction::NavConfirmClose { .. },
+        } => CompoundSegmentKind::Interactive,
         _ => CompoundSegmentKind::Eligible,
     }
 }

@@ -136,6 +136,8 @@ pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
                     tier: "third".to_string(),
                 });
             }
+            // EN: Complete second with no third fixed tokens — no sibling-head menu.
+            return None;
         }
         let raw_second = second_token_heads(canonical);
         let mut cands = prefix_filter(&raw_second, &prefix);
@@ -218,5 +220,19 @@ mod tests {
     fn no_hit_on_empty_first_prefix() {
         assert!(complete_line("", 0).is_none());
         assert!(complete_line("   ", 3).is_none());
+    }
+
+    #[test]
+    fn no_hit_when_nav_back_complete_at_eol() {
+        let line = "nav -back";
+        assert!(complete_line(line, line.len()).is_none());
+    }
+
+    #[test]
+    fn still_completes_partial_nav_second() {
+        let line = "nav -ba";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert_eq!(hit.tier, "second");
+        assert!(hit.candidates.iter().any(|c| c == "-back"));
     }
 }

@@ -1000,3 +1000,59 @@ Enter → ensureBmxtCore → WASM run
 - [x] `left`/`top` 遷移アニメ（~420ms）＋移動中ハイライト（影／枠）
 - [x] MutationObserver + resize で追従；`float-host-placement` 単体テスト
 - [x] 自要素 style 変更で `transition: none` が上書きされないよう、フロート自身の mutation を無視＋移動中は avoid 抑制
+
+---
+
+## 16. `nav` 第二トークン拡張 — 履歴 / リロード / 閉じる
+
+**状態:** 実装済み（ブラウザ手元スモークは残）。  
+**関連:** §12（nav overlay）、§13（WASM + TS effect）、skill `bmxt-add-command` / `bmxt-i18n`。
+
+### 16.1 要望（第一 → 第二）
+
+| 第二トークン | 意味 | 備考 |
+|--------------|------|------|
+| `-back` | 履歴バック | 即時（操作先アクティブタブ） |
+| `-forward` | 履歴を進む | 即時 |
+| `-reload` | サイトリロード | 下記 **16.1.1** |
+| `-close` | タブを閉じる | 実行前に「タブを閉じる」旨の **y/n 確認** |
+| `-windowclose` | 操作先タブが含まれるウィンドウを閉じる | 確認文にその旨を明記（下記） |
+
+既存 `-enter` / `-exit` は維持。短いエイリアスは付けない。
+
+#### 16.1.1 追加仕様（確定）
+
+1. **`-windowclose`**  
+   「操作先のタブが含まれるウィンドウを閉じる」コマンド。y/n 確認時にその旨を明記する。BMXt 自身のウィンドウは閉じない。
+2. **`nav -reload`（引数なし）**  
+   アクティブになっている操作先タブに対してリロードする。
+3. **`nav -reload `（第二トークンのあと半角スペース）**  
+   候補メニューを開き、現在のタブ一覧から選択させる。
+4. **選択タブのコマンドライン表現**  
+   Cursor の `@` ファイル指定と同様、ブロック形状で並べる。削除時は **ブロック単位**（1 文字ずつではない）で消せる。
+
+### 16.2 現状ギャップ
+
+- `nav` は `UiAction::NavArm` / `NavDisarm` のみ。
+- CLI 用の goBack / goForward / reload / close_current_* effect なし。
+- プロンプトに `@` 風チップ／原子削除は未実装（新規）。
+- y/n pending のコマンド共通語彙なし → **nav 専用 UiAction + ホスト pending**。
+
+### 16.3 設計方針
+
+1. 即時系 → `ChromeEffect` + `chrome.tabs.goBack` / `goForward` / `reload`。
+2. `-reload` 引数: ワイヤ `#t:<id>`。空 → カレント。複数可。
+3. `-reload ` 候補: ホスト overlay（タブ一覧）。pick → `#t:<id>` をチップ表示で挿入。
+4. 破壊系 → `UiAction::NavConfirmClose { target }` + ホスト pending；y/n は `parseAppearanceResetConfirmAnswer` 同型。
+5. `close_current_tab` / `close_current_window`（unit）。window は操作先タブの `windowId`（BMXt 窓除外）。
+
+### 16.4 実装チェックリスト
+
+- [x] `manifest/bmxt-codegen.json` — subcommands + effects；codegen UiAction
+- [x] `nav.rs` + effect handlers
+- [x] UiAction confirm + ホスト pending（windowclose 文言含む）
+- [x] `#t:<id>` チップ mirror（1行ブロックを縦積み・省略タイトル）+ 原子 Backspace/Delete
+- [x] `nav -reload ` タブ候補メニュー（ファビコン+タイトル全文折り返し、`[#t:id]` は別行）
+- [x] i18n EN+JA / README / `map_command.csv`
+- [x] verify チェーン（tsc / pnpm test / cargo test / codegen）
+- [ ] ブラウザ手元スモーク（reload 候補・チップ削除・close/windowclose y/n）

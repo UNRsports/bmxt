@@ -32,8 +32,8 @@ describe("formatMessage", () => {
 describe("namespace message catalogs", () => {
   const messages = loadNamespaceMessages()
 
-  it("loads 654 keys across namespace JSON files", () => {
-    assert.equal(Object.keys(messages).length, 654)
+  it("loads 679 keys across namespace JSON files", () => {
+    assert.equal(Object.keys(messages).length, 679)
   })
 
   it("pairs ja and en for shell.welcome", () => {

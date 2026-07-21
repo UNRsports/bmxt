@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 pub enum ChromeEffect {
     #[serde(rename = "clear_log")]
     ClearLog,
+    #[serde(rename = "close_current_tab")]
+    CloseCurrentTab,
+    #[serde(rename = "close_current_window")]
+    CloseCurrentWindow,
     #[serde(rename = "close_tab")]
     CloseTab {
     tab_id: i64,
@@ -71,6 +75,14 @@ pub enum ChromeEffect {
     SessionNext,
     #[serde(rename = "session_prev")]
     SessionPrev,
+    #[serde(rename = "tab_go_back")]
+    TabGoBack,
+    #[serde(rename = "tab_go_forward")]
+    TabGoForward,
+    #[serde(rename = "tab_reload")]
+    TabReload {
+    tab_ids: Vec<i64>,
+    },
     #[serde(rename = "tabs_list")]
     TabsList {
     show_url: String,

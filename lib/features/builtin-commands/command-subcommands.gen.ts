@@ -41,7 +41,12 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "nav": [
     { head: "-enter", trailingTokens: [] as const, tail: "none" },
-    { head: "-exit", trailingTokens: [] as const, tail: "none" }
+    { head: "-exit", trailingTokens: [] as const, tail: "none" },
+    { head: "-back", trailingTokens: [] as const, tail: "none" },
+    { head: "-forward", trailingTokens: [] as const, tail: "none" },
+    { head: "-reload", trailingTokens: [] as const, tail: "rest" },
+    { head: "-close", trailingTokens: [] as const, tail: "none" },
+    { head: "-windowclose", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "translate": [
     { head: "-on", trailingTokens: [] as const, tail: "none" },
@@ -140,7 +145,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "nav": {
       const lower = token.toLowerCase()
-      return lower === "-enter" || lower === "-exit"
+      return lower === "-enter" || lower === "-exit" || lower === "-back" || lower === "-forward" || lower === "-reload" || lower === "-close" || lower === "-windowclose"
     }
     case "translate": {
       const lower = token.toLowerCase()

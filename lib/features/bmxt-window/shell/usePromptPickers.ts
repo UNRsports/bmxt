@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
+import { isCompleteSecondTokenWithoutFurtherFixedTokens } from "../../command-line/second-token-picker.ts"
 import {
   filterSessionSwitchPickerRows,
   resolveSessionSwitchPickerState,
@@ -11,6 +12,13 @@ import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { useCspDynamicStyle } from "../csp-dynamic-stylesheet"
 import { shouldKeepSessionSwitchPickerOpen, measureFloatingPickerHostPosition } from "./bmxt-shell-prompt-helpers"
+import {
+  findNavReloadTabTokenSpans,
+  listNavReloadTabCandidates,
+  navReloadTabChipMetaFromCandidate,
+  navReloadTabCompletionZone,
+  type NavReloadTabChipMeta
+} from "../../nav/nav-reload-tab-token"
 
 export type UsePromptPickersOptions = {
   sessionId: string
@@ -26,6 +34,8 @@ export type UsePromptPickersOptions = {
   scrollRef: React.RefObject<HTMLDivElement | null>
   cursorMirrorCellRef: React.RefObject<HTMLSpanElement | null>
   subCmdPickerHostRef: React.RefObject<HTMLDivElement | null>
+  navReloadTabMetaRef: React.MutableRefObject<Map<number, NavReloadTabChipMeta>>
+  onNavReloadTabMetaUpdated: () => void
 }
 
 /** EN: IME / subcmd / session-list floating pickers on the prompt. */
@@ -123,6 +133,8 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     setSubCmdPicker(null)
   }, [])
 
+  const navReloadPickGenRef = useRef(0)
+
   const closePromptPickerUi = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
     tabPickerOpenRequestRef.current = false
@@ -206,6 +218,70 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       sessionListPickerDismissedRef.current = false
       setSessionListPickerHi(null)
       setSessionPickerVariant(null)
+
+      const reloadZone = navReloadTabCompletionZone(ln, pos)
+      if (reloadZone !== null) {
+        if (imeTokenPickerDismissedRef.current) {
+          setSubCmdPicker(null)
+          return
+        }
+        const gen = ++navReloadPickGenRef.current
+        const selected = new Set(
+          findNavReloadTabTokenSpans(ln).map((s) => s.tabId)
+        )
+        void listNavReloadTabCandidates(reloadZone.prefix).then((cands) => {
+          if (gen !== navReloadPickGenRef.current) {
+            return
+          }
+          const filtered = cands.filter((c) => !selected.has(c.tabId))
+          if (filtered.length === 0) {
+            setSubCmdPicker(null)
+            return
+          }
+          for (const c of filtered) {
+            options.navReloadTabMetaRef.current.set(
+              c.tabId,
+              navReloadTabChipMetaFromCandidate(c)
+            )
+          }
+          options.onNavReloadTabMetaUpdated()
+          setSubCmdPicker((prev) => {
+            const candidates = filtered.map((c) => c.insertToken)
+            const candidateLabels = filtered.map((c) => c.label)
+            const candidateRows = filtered.map((c) => ({
+              title: c.title,
+              detail: `[#t:${c.tabId}]`,
+              faviconSrc: c.faviconSrc
+            }))
+            const sameSlot =
+              prev !== null &&
+              prev.tokenStart === reloadZone.tokenStart &&
+              prev.tokenEnd === reloadZone.tokenEnd &&
+              prev.tier === "third" &&
+              prev.candidates.length === candidates.length &&
+              prev.candidates.every((c, i) => c === candidates[i])
+            if (sameSlot && prev) {
+              return {
+                ...prev,
+                candidateLabels,
+                candidateRows,
+                hi: Math.min(prev.hi, candidates.length - 1)
+              }
+            }
+            return {
+              tokenStart: reloadZone.tokenStart,
+              tokenEnd: reloadZone.tokenEnd,
+              candidates,
+              candidateLabels,
+              candidateRows,
+              hi: 0,
+              tier: "third"
+            }
+          })
+        })
+        return
+      }
+
       if (imeTokenPickerDismissedRef.current) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
@@ -223,6 +299,31 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       allowEmptyFirstPickerSyncRef.current = false
       tabPickerOpenRequestRef.current = false
       if (!resolved) {
+        // EN: Complete second with no further fixed tokens (e.g. `nav -back`) — close.
+        // Do not leave a hollow “第二コマンド” popup that steals Enter.
+        if (isCompleteSecondTokenWithoutFurtherFixedTokens(ln, pos)) {
+          setSubCmdPicker(null)
+          allowEmptyFirstPickerSyncRef.current = false
+          tabPickerOpenRequestRef.current = false
+          return
+        }
+        // EN: Keep an already-open menu alive through empty filter steps so further
+        // keystrokes can re-narrow without requiring Tab again.
+        if (mayOpenPicker && pickerAlreadyOpen) {
+          setSubCmdPicker((prev) => {
+            if (!prev) {
+              return null
+            }
+            return {
+              ...prev,
+              candidates: [],
+              candidateLabels: undefined,
+              candidateRows: undefined,
+              hi: 0
+            }
+          })
+          return
+        }
         setSubCmdPicker(null)
         return
       }
@@ -250,7 +351,7 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         }
       })
     },
-    [openSessionPicker, options.mode, options.navPageTyping, options.paneFocusRef, options.sessionNameTypingRef]
+    [openSessionPicker, options.mode, options.navPageTyping, options.navReloadTabMetaRef, options.onNavReloadTabMetaUpdated, options.paneFocusRef, options.sessionNameTypingRef]
   )
 
   useEffect(() => {

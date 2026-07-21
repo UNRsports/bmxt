@@ -27,6 +27,17 @@ const SEARCH_LIST_OPTIONS = [
   "--snapshot"
 ] as const
 
+/** EN: Same heads as `nav` second tokens (filter behavior under test). */
+const NAV_SECOND_HEADS = [
+  "-enter",
+  "-exit",
+  "-back",
+  "-forward",
+  "-reload",
+  "-close",
+  "-windowclose"
+] as const
+
 describe("pickThirdTokenCandidates", () => {
   it("filters with contains while the picker menu is open", () => {
     assert.deepEqual(
@@ -110,5 +121,36 @@ describe("matchCandidates", () => {
 
   it("matches option bodies in prefix mode", () => {
     assert.deepEqual(matchCandidates(["--page", "--all"], "pa", "prefix"), ["--page"])
+  })
+})
+
+describe("nav second-token incremental filter (host full-list path)", () => {
+  it("finds -reload / -windowclose from option bodies while menu is open", () => {
+    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+      NAV_SECOND_HEADS,
+      "re",
+      "contains"
+    )
+    assert.equal(useFullCandidateList, true)
+    const reHits = matchCandidates(NAV_SECOND_HEADS, "re", filterMode)
+    assert.ok(reHits.includes("-reload"))
+
+    const winHits = matchCandidates(NAV_SECOND_HEADS, "win", "contains")
+    assert.deepEqual(winHits, ["-windowclose"])
+  })
+
+  it("finds -reload from dashed prefix", () => {
+    assert.deepEqual(matchCandidates(NAV_SECOND_HEADS, "-re", "contains"), ["-reload"])
+  })
+
+  it("promotes full list for bare letter prefix so menu does not go empty", () => {
+    const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+      NAV_SECOND_HEADS,
+      "r",
+      "prefix"
+    )
+    assert.equal(useFullCandidateList, true)
+    const hits = matchCandidates(NAV_SECOND_HEADS, "r", filterMode)
+    assert.ok(hits.includes("-reload"))
   })
 })

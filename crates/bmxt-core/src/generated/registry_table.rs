@@ -58,7 +58,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "nav",
         aliases: &[],
-        usage_primary: "nav -enter | nav -exit",
+        usage_primary: "nav -enter | nav -exit | nav -back | nav -forward | nav -reload | nav -close | nav -windowclose",
     },
     CmdMeta {
         name: "translate",
@@ -160,6 +160,26 @@ static BRANCHES_NAV: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-exit",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-back",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-forward",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-reload",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-close",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-windowclose",
         trailing_tokens: &[],
     },
 ];
@@ -266,7 +286,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "group" => false,
         "help" => false,
         "tabs" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "help"),
-        "nav" => matches!(lower.as_str(), "-enter" | "-exit"),
+        "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-back" | "-forward" | "-reload" | "-close" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
         "aboutbmxt" => false,
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),

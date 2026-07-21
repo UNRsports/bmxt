@@ -14,6 +14,7 @@ import {
 } from "../../nav/nav-prompt-input"
 import { isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import { wordBounds } from "../../format/word-bounds.ts"
+import { deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor, snapNavReloadTabBlockCaret } from "../../nav/nav-reload-tab-token"
 
 export type UseNavPromptBridgeOptions = {
   navPageTyping: boolean
@@ -270,7 +271,11 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
     if (!ta || options.isComposing) {
       return
     }
-    const pos = ta.selectionEnd
+    const rawPos = ta.selectionEnd
+    const pos = snapNavReloadTabBlockCaret(ta.value, rawPos)
+    if (pos !== rawPos) {
+      ta.setSelectionRange(pos, pos)
+    }
     options.setCursorPos(pos)
     options.syncImeTokenPicker(ta.value, pos)
   }, [options])
@@ -306,6 +311,30 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
           applyNavTypingMutation(ta, next, cursor)
         }
         return
+      }
+
+      if (
+        !options.navPageTyping &&
+        options.promptPaneFocused &&
+        options.mode === "normal" &&
+        (native.inputType === "deleteContentBackward" ||
+          native.inputType === "deleteContentForward")
+      ) {
+        const start = ta.selectionStart
+        const end = ta.selectionEnd
+        if (start === end) {
+          const blocked =
+            native.inputType === "deleteContentBackward"
+              ? deleteNavReloadTabBlockAtCursor(options.lineRef.current, start)
+              : deleteNavReloadTabBlockForwardAtCursor(options.lineRef.current, start)
+          if (blocked) {
+            e.preventDefault()
+            options.setHistNavIndex(-1)
+            options.tabPressSeqRef.current = 0
+            applyPromptLine(blocked.line, blocked.cursor, ta)
+            return
+          }
+        }
       }
 
       if (

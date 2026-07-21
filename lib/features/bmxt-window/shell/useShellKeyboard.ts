@@ -11,6 +11,7 @@ import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
 import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
+import { moveNavReloadTabBlockCaret } from "../../nav/nav-reload-tab-token"
 
 export type UseShellKeyboardOptions = {
   navPageTyping: boolean
@@ -322,6 +323,12 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           const active = resolveActiveCommandSegment(line, pos)
           const segmentTrimmed = active.segmentText.trim()
           const pickedToken = subPick.candidates[subPick.hi]
+          // EN: Hollow / empty candidate list must not swallow Enter (e.g. stale keep-alive).
+          if (subPick.candidates.length === 0) {
+            options.setSubCmdPicker(null)
+            options.submitLine()
+            return
+          }
           if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
             options.setSubCmdPicker(null)
             options.submitLine()
@@ -527,6 +534,33 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         options.setHistNavIndex(-1)
         applyHistoryLine(options.histDraft)
         return
+      }
+
+      if (
+        (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        options.mode === "normal" &&
+        options.promptPaneFocused &&
+        !options.navPageTyping &&
+        !options.navKeyboardEnabled &&
+        !options.navTypingMode &&
+        !options.navMenuOpen &&
+        options.sessionListPickerHiRef.current === null &&
+        !options.sessionNameTypingRef.current &&
+        options.subCmdPickerRef.current === null
+      ) {
+        const direction: -1 | 1 = e.key === "ArrowRight" ? 1 : -1
+        const line = options.lineRef.current
+        const pos = options.cursorRef.current
+        const next = moveNavReloadTabBlockCaret(line, pos, direction)
+        if (next !== null && next !== pos) {
+          e.preventDefault()
+          options.setCursorPos(next)
+          options.syncImeTokenPicker(line, next)
+          return
+        }
       }
 
       if (

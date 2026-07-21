@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { tPrompt } from "../../setting/i18n/ns/prompt"
 import { tSession } from "../../setting/i18n/ns/session"
 import type { UiLocale } from "../../setting/locale"
 import { CSP_DYNAMIC_SCOPE_ATTR } from "../csp-dynamic-stylesheet"
 import { TokenPickerPanel, type TokenPickerModel } from "../token-picker-panel"
 import { SessionListCandidatePanel, type SessionCandidatePanelVariant, type SessionListRow } from "../../session"
+import { renderPromptMirrorChipsOnly, renderPromptMirrorLine } from "./prompt-mirror-chips"
+import type { NavReloadTabChipMeta } from "../../nav/nav-reload-tab-token"
 
 type PromptMirrorSegments = {
   before: string
@@ -35,6 +37,7 @@ type PromptInputProps = {
   sessionListPickerHi: number | null
   sessionListPickerRows: SessionListRow[]
   sessionPickerVariant: SessionCandidatePanelVariant | null
+  navReloadTabMeta: ReadonlyMap<number, NavReloadTabChipMeta>
   onImeInput: React.FormEventHandler<HTMLTextAreaElement>
   onBeforeInput: React.FormEventHandler<HTMLTextAreaElement>
   onImeSelect: React.ReactEventHandler<HTMLTextAreaElement>
@@ -67,6 +70,7 @@ export function PromptInput({
   sessionListPickerHi,
   sessionListPickerRows,
   sessionPickerVariant,
+  navReloadTabMeta,
   onImeInput,
   onBeforeInput,
   onImeSelect,
@@ -102,24 +106,40 @@ export function PromptInput({
   }, [promptPaneFocused, imeRef])
 
   const caretActive = promptPaneFocused && imeDomFocused
+  const promptFieldRef = useRef<HTMLDivElement>(null)
+  const promptMirrorRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const field = promptFieldRef.current
+    const mirror = promptMirrorRef.current
+    const ta = imeRef.current
+    if (!field || !mirror || !ta) {
+      return
+    }
+    const next = Math.max(mirror.scrollHeight, Math.ceil(1.35 * 16))
+    field.style.minHeight = `${next}px`
+    ta.style.minHeight = `${next}px`
+  }, [line, cursorPos, navReloadTabMeta, mirror.composition, imeRef])
 
   return (
     <div
       className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}${sessionNameTyping ? " bmxt-prompt-line--session-name-typing" : ""}`}>
       <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
-      <div className="bmxt-prompt-field">
-        <div className="bmxt-prompt-mirror" aria-hidden>
-          <span>{mirror.before}</span>
+      <div ref={promptFieldRef} className="bmxt-prompt-field">
+        <div ref={promptMirrorRef} className="bmxt-prompt-mirror" aria-hidden>
           {mirror.composition ? (
-            <span className="bmxt-prompt-composition">{mirror.composition}</span>
+            <>
+              <span>{renderPromptMirrorChipsOnly(mirror.before, navReloadTabMeta)}</span>
+              <span className="bmxt-prompt-composition">{mirror.composition}</span>
+              <span>{renderPromptMirrorChipsOnly(mirror.after, navReloadTabMeta)}</span>
+            </>
           ) : (
-            <span
-              ref={cursorMirrorCellRef}
-              className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${caretActive ? "" : " bmxt-cursor-cell--inactive"}`}>
-              {mirror.cur || "\u00a0"}
-            </span>
+            renderPromptMirrorLine(line, cursorPos, navReloadTabMeta, {
+              caretActive,
+              cursorMirrorCellRef,
+              composition: ""
+            })
           )}
-          <span>{mirror.after}</span>
         </div>
         <textarea
           ref={imeRef}

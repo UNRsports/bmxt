@@ -49,7 +49,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "nav",
     aliases: [] as const,
-    usagePrimary: "nav -enter | nav -exit"
+    usagePrimary: "nav -enter | nav -exit | nav -back | nav -forward | nav -reload | nav -close | nav -windowclose"
   },
   {
     name: "translate",

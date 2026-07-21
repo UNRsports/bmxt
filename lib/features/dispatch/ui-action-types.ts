@@ -7,6 +7,7 @@ export type UiActionIR =
   | { kind: "show_help" }
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
+  | { kind: "nav_confirm_close"; target: string }
   | { kind: "open_plain_list"; line: string; list_id: string }
   | { kind: "close_picker"; slot: string }
   | { kind: "continuation_prompt"; prefix: string }

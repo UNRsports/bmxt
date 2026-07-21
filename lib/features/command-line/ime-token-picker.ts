@@ -36,22 +36,15 @@ import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import { rankTokenCandidates } from "./token-candidate-mru.ts"
+import type { ImeTokenPickerModel, ImeTokenTier } from "./ime-token-picker-model.ts"
+import { resolveSecondTokenPickerHit } from "./second-token-picker.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
-
-export type ImeTokenTier = "first" | "second" | "third"
+export type { ImeTokenPickerModel, ImeTokenTier } from "./ime-token-picker-model.ts"
 
 export type ResolveImeTokenPickerOptions = {
   emptyFirstPrefixShowsAll?: boolean
   candidateMatch?: CandidateMatchMode
-}
-
-export type ImeTokenPickerModel = {
-  tokenStart: number
-  tokenEnd: number
-  prefix: string
-  candidates: string[]
-  tier: ImeTokenTier
 }
 
 type WasmCompleteHit = {
@@ -166,6 +159,14 @@ function resolveFixedTokenPicker(
             model = { ...model, tokenStart: cursor, tokenEnd: cursor }
           }
         }
+        if (tier === "second") {
+          const secondHit = resolveSecondTokenPickerHit(line, cursor, matchMode)
+          if (secondHit !== null) {
+            return secondHit
+          }
+          // EN: Complete second with no third tokens → close menu (resolved null).
+          return null
+        }
         if (tier === "third" && matchMode === "contains") {
           const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
             model.candidates,
@@ -203,6 +204,14 @@ function resolveFixedTokenPicker(
           }
         }
       }
+    }
+    // EN: WASM prefix-empty None — still resolve second-token incremental filter from tables.
+    const secondHit = resolveSecondTokenPickerHit(line, cursor, matchMode)
+    if (secondHit !== null) {
+      return secondHit
+    }
+    if (matchMode === "contains") {
+      return resolveFixedTokenPickerFallback(line, cursor, firstCommandTokens, opts)
     }
     return null
   }
@@ -264,31 +273,7 @@ function resolveFixedTokenPickerFallback(
   }
 
   if (tokenIndex === 1) {
-    const secondWord = line.slice(l, r)
-    const secondComplete = isSecondToken(canonical, secondWord)
-    if (cursor >= line.length && secondComplete) {
-      const next = listThirdTokenCandidates(canonical, secondWord.toLowerCase(), "")
-      if (next.length > 0) {
-        return {
-          tokenStart: line.length,
-          tokenEnd: line.length,
-          prefix: "",
-          candidates: next,
-          tier: "third"
-        }
-      }
-    }
-    const rawSecond =
-      matchMode === "contains"
-        ? listSecondTokenCandidatesByCommand(canonical, "")
-        : listSecondTokenCandidatesByCommand(canonical, prefix)
-    const cands = matchCandidates(rawSecond, prefix, matchMode).filter(
-      (c) => !(secondComplete && c.toLowerCase() === secondWord.toLowerCase())
-    )
-    if (cands.length > 0) {
-      return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "second" }
-    }
-    return null
+    return resolveSecondTokenPickerHit(line, cursor, matchMode)
   }
 
   if (tokenIndex === 2) {

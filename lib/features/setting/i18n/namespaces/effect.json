@@ -54,5 +54,73 @@
   "effect.tabsNu.noUrl": {
     "ja": "(現在のタブに URL がありません — 通常ウィンドウでページを開くか、タブ ID コンテキストを指定してください)",
     "en": "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"
+  },
+  "effect.tabGoBack.done": {
+    "ja": "タブ {tabId} で履歴を戻しました",
+    "en": "went back in tab {tabId}"
+  },
+  "effect.tabGoBack.failed": {
+    "ja": "error: タブ {tabId} で履歴を戻せませんでした",
+    "en": "error: could not go back in tab {tabId}"
+  },
+  "effect.tabGoBack.noTarget": {
+    "ja": "履歴バックの対象タブがありません（通常ウィンドウでページを開いてください）",
+    "en": "no target tab for history back (focus a normal window with a page)"
+  },
+  "effect.tabGoForward.done": {
+    "ja": "タブ {tabId} で履歴を進めました",
+    "en": "went forward in tab {tabId}"
+  },
+  "effect.tabGoForward.failed": {
+    "ja": "error: タブ {tabId} で履歴を進められませんでした",
+    "en": "error: could not go forward in tab {tabId}"
+  },
+  "effect.tabGoForward.noTarget": {
+    "ja": "履歴フォアードの対象タブがありません（通常ウィンドウでページを開いてください）",
+    "en": "no target tab for history forward (focus a normal window with a page)"
+  },
+  "effect.tabReload.done": {
+    "ja": "タブ {tabId} を再読み込みしました",
+    "en": "reloaded tab {tabId}"
+  },
+  "effect.tabReload.failed": {
+    "ja": "error: タブ {tabId} を再読み込みできませんでした",
+    "en": "error: could not reload tab {tabId}"
+  },
+  "effect.tabReload.noTarget": {
+    "ja": "リロードの対象タブがありません（通常ウィンドウでページを開いてください）",
+    "en": "no target tab for reload (focus a normal window with a page)"
+  },
+  "effect.closeCurrentTab.done": {
+    "ja": "タブ {tabId} を閉じました",
+    "en": "closed tab {tabId}"
+  },
+  "effect.closeCurrentTab.failed": {
+    "ja": "error: タブ {tabId} を閉じられませんでした",
+    "en": "error: could not close tab {tabId}"
+  },
+  "effect.closeCurrentTab.noTarget": {
+    "ja": "閉じる対象のタブがありません",
+    "en": "no target tab to close"
+  },
+  "effect.closeCurrentWindow.done": {
+    "ja": "ウィンドウ {windowId} を閉じました（操作先タブを含む）",
+    "en": "closed window {windowId} (containing the target tab)"
+  },
+  "effect.closeCurrentWindow.failed": {
+    "ja": "error: ウィンドウ {windowId} を閉じられませんでした",
+    "en": "error: could not close window {windowId}"
+  },
+  "effect.closeCurrentWindow.noTarget": {
+    "ja": "閉じる対象のウィンドウがありません（操作先タブがありません）",
+    "en": "no target window to close (no target tab)"
+  },
+  "effect.closeCurrentWindow.rejectedBmxt": {
+    "ja": "error: BMXt ウィンドウは閉じられません",
+    "en": "error: cannot close the BMXt window"
+  },
+  "effect.closeCurrentWindow.rejectedType": {
+    "ja": "error: 通常ウィンドウ以外は閉じられません (windowId={windowId})",
+    "en": "error: only normal windows can be closed (windowId={windowId})"
   }
 }

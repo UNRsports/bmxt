@@ -13,6 +13,7 @@ import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-
 import { resolveSessionRowByDisplayName } from "../../session"
 import { parseSnapshotSaveLine } from "../../snapshot/snapshot-save-input"
 import { tDom } from "../../setting/i18n/ns/dom"
+import { tCmd } from "../../setting/i18n/ns/cmd"
 import { tError } from "../../setting/i18n/ns/error"
 import { tGroup } from "../../setting/i18n/ns/group"
 import { tNav } from "../../setting/i18n/ns/nav"
@@ -38,12 +39,14 @@ import {
 import type { UiActionIR } from "../../dispatch/ui-action-types"
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
 import { mountTabPickerLoadingColumn } from "./command-dispatch/open-tab-picker-column"
+import { beginNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
 import {
   clearPrompt,
   recordCommandHistory,
   setContinuationPrompt,
   type CommandDispatchContext
 } from "./command-dispatch/types"
+import { parseNavConfirmCloseTarget } from "../../nav/nav-confirm-close"
 
 function finishCommand(ctx: CommandDispatchContext): void {
   ctx.deps.appendCommandToHistory(ctx.trimmed)
@@ -67,6 +70,8 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applyNavArm(ctx)
     case "nav_disarm":
       return applyNavDisarm(ctx)
+    case "nav_confirm_close":
+      return applyNavConfirmClose(ctx, action.target)
     case "setting_list":
       return applySettingList(ctx)
     case "setting_exit_list":
@@ -128,6 +133,10 @@ export async function applyUiActionForSegment(
       return applyNavArmSegment(ctx)
     case "nav_disarm":
       return applyNavDisarmSegment(ctx)
+    case "nav_confirm_close":
+          return segmentFailure("interactive", [
+            tCmd("cmd.nav.confirm.compoundBlocked", ctx.locale)
+          ])
     case "setting_list":
       return applyPlainListSegment(ctx, ctx.trimmed)
     case "setting_exit_list":
@@ -251,6 +260,15 @@ async function applyNavDisarmSegment(ctx: CommandDispatchContext): Promise<Segme
   ctx.deps.setNavActive(false)
   ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "nav"))
   return segmentSuccess([tNav("nav.disarmed", ctx.locale)])
+}
+
+function applyNavConfirmClose(ctx: CommandDispatchContext, targetRaw: string): boolean {
+  const target = parseNavConfirmCloseTarget(targetRaw)
+  if (!target) {
+    return false
+  }
+  beginNavConfirmClose(ctx, target)
+  return true
 }
 
 function applySettingList(ctx: CommandDispatchContext): boolean {

@@ -234,6 +234,11 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter` or `-exit` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
+| `nav -exit` | Disarm nav mode (turn Alt overlay **off** first) |
+| `nav -back` / `-forward` | History back / forward on the **target** active tab |
+| `nav -reload` | Reload the target active tab; with a trailing space, open a **tab candidate** menu (favicon + wrapping full title) and insert `#t:<id>` **blocks** — each block on its own single-line row (favicon + ellipsis title; Backspace/Delete remove a whole block) |
+| `nav -close` | Close the target tab after **y/n** confirm |
+| `nav -windowclose` | Close the **window that contains the target tab** after **y/n** confirm (never the BMXt window) |
 | `nav -exit` | Fully disarm nav in this pane (**Alt** must have turned the overlay **OFF** first) |
 | `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Enable translation assist (nav typing preview under the prompt; see **[`translate`](#translate)**) |
@@ -1571,6 +1576,11 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` または `-exit` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt**（詳細バーまたはプロンプト）を押すまで表示しない |
+| `nav -exit` | nav モードを終了（先に Alt でオーバーレイ **OFF**） |
+| `nav -back` / `-forward` | 操作先アクティブタブの履歴バック／進む |
+| `nav -reload` | 操作先アクティブタブをリロード。末尾スペースで **タブ候補**メニュー（ファビコン＋タイトル全文折り返し）。選択は `#t:<id>` **ブロックを1行ずつ**（ファビコン＋省略タイトル。Backspace/Delete はブロック単位削除） |
+| `nav -close` | 操作先タブを閉じる（**y/n** 確認） |
+| `nav -windowclose` | **操作先タブが含まれるウィンドウ**を閉じる（**y/n** 確認。BMXt 窓は閉じない） |
 | `nav -exit` | nav を完全終了（事前に **Alt** でオーバーレイを **OFF** にすること） |
 | `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` / `-off` / `-setting` 用） |
 | `translate -on` | 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー。**[`translate`](#translate-ja)** 参照） |

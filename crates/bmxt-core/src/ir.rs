@@ -40,6 +40,10 @@ pub enum UiAction {
     NavArm,
     #[serde(rename = "nav_disarm")]
     NavDisarm,
+    /// EN: Host shows y/n confirm then runs close_current_tab / close_current_window.
+    /// `target` is `"tab"` or `"window"`.
+    #[serde(rename = "nav_confirm_close")]
+    NavConfirmClose { target: String },
     #[serde(rename = "open_plain_list")]
     OpenPlainList { list_id: String, line: String },
     #[serde(rename = "close_picker")]

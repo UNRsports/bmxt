@@ -6,6 +6,7 @@ import { effectiveCommandLocale } from "../../setting/effective-command-locale"
 import { tError } from "../../setting/i18n/ns/error"
 import { applyUiAction } from "./apply-ui-action"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
+import { tryHandleNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
 import { dispatchFallbackCommand } from "./command-dispatch/handle-fallback"
 import {
   clearPrompt,
@@ -84,6 +85,10 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
     }
 
     if (tryHandleExternalSettingsRecovery(ctx) === "handled") {
+      return
+    }
+
+    if (tryHandleNavConfirmClose(ctx) === "handled") {
       return
     }
 

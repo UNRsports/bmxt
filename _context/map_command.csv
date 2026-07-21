@@ -40,9 +40,14 @@ tabs,-exit,-list,none,,tabs -exit -list,UiAction `tabs_exit_list`。,
 tabs,-moveurl,,rest_http_url,,tabs -moveurl <url>,Effect: tabs_move_url。,
 tabs,-nowurl,,none,,tabs -nowurl,Effect: tabs_nu。,
 tabs,help,,none,,tabs help,msgs `help.section.tabs`（コマンド別マニュアル）。,
-nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`。,キー操作の正本は README § Nav mode（EN/JA）
-nav,-enter,,none,,nav -enter | nav -exit,UiAction `nav_arm`。オーバーレイは Alt まで非表示。Alt は nav 詳細バー（または armed 中プロンプト）から ON/OFF。,**ON 中:** フォーカスは nav 詳細バー固定。矢印=要素スナップ、Shift+矢印=12px 自由移動、Shift 解放で現在位置を再スキャン（resyncSpatial）。typing のみ一時プロンプト。`NAV_CONTROL` / `lib/features/nav/`
+nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`/`-back`/`-forward`/`-reload`/`-close`/`-windowclose`。,キー操作の正本は README § Nav mode（EN/JA）
+nav,-enter,,none,,nav -enter | …,UiAction `nav_arm`。オーバーレイは Alt まで非表示。Alt は nav 詳細バー（または armed 中プロンプト）から ON/OFF。,**ON 中:** フォーカスは nav 詳細バー固定。矢印=要素スナップ、Shift+矢印=12px 自由移動、Shift 解放で現在位置を再スキャン（resyncSpatial）。typing のみ一時プロンプト。`NAV_CONTROL` / `lib/features/nav/`
 nav,-exit,,none,,（同上）,UiAction `nav_disarm`。オーバーレイ ON のままではエラー（先に Alt で OFF）。,
+nav,-back,,none,,nav -back,Effect `tab_go_back`（操作先アクティブタブ）。,
+nav,-forward,,none,,nav -forward,Effect `tab_go_forward`。,
+nav,-reload,,rest,,nav -reload [#t:<id>…],Effect `tab_reload`。引数なし=アクティブ。`nav -reload ` でタブ候補（ファビコン+タイトル全文折り返し）→`#t:<id>` チップは1行ブロックを縦に並べる（はみ出し防止、原子 Backspace/Delete）。,
+nav,-close,,none,,nav -close,UiAction `nav_confirm_close` target=tab → y/n → `close_current_tab`（`--confirmed` はホスト専用）。,
+nav,-windowclose,,none,,nav -windowclose,UiAction confirm（操作先タブを含むウィンドウ）→ `close_current_window`。BMXt 窓は拒否。,
 translate,,,,,translate …,単独 `translate` + Enter: msgs + promptPrefix `translate `。第二候補に `help`。,
 translate,-on,,none,,translate -on | translate -off | translate -setting,UiAction `translate_on`。,
 translate,-off,,none,,（同上）,UiAction `translate_off`。,

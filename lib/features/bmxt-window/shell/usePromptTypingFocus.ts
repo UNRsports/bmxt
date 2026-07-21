@@ -11,6 +11,8 @@ type UsePromptTypingFocusOptions = {
   insertPrintableWhenReclaiming: (ch: string) => void
   /** EN: Delete one code unit before the caret when Backspace reclaims focus. */
   deleteBackwardWhenReclaiming: () => void
+  /** EN: Delete one code unit after the caret when Delete reclaims focus. */
+  deleteForwardWhenReclaiming?: () => void
 }
 
 function isEditableField(node: EventTarget | null): boolean {
@@ -122,12 +124,18 @@ export function usePromptTypingFocus(options: UsePromptTypingFocusOptions): void
         return
       }
 
-      // EN: Already on the IME — still jump to the prompt foot when typing (scrollback).
       if (imeOwnsFocus()) {
         const printableWhileFocused = isPrintableReclaimKey(e)
         const backspaceWhileFocused =
           e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey
-        if (printableWhileFocused !== null || backspaceWhileFocused || e.key === "Enter") {
+        const deleteWhileFocused =
+          e.key === "Delete" && !e.ctrlKey && !e.metaKey && !e.altKey
+        if (
+          printableWhileFocused !== null ||
+          backspaceWhileFocused ||
+          deleteWhileFocused ||
+          e.key === "Enter"
+        ) {
           options.scrollPromptFootIntoView()
         }
         return
@@ -135,6 +143,7 @@ export function usePromptTypingFocus(options: UsePromptTypingFocusOptions): void
 
       const printable = isPrintableReclaimKey(e)
       const isBackspace = e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey
+      const isDelete = e.key === "Delete" && !e.ctrlKey && !e.metaKey && !e.altKey
 
       options.scrollPromptFootIntoView()
       options.focusPromptNow()
@@ -149,6 +158,12 @@ export function usePromptTypingFocus(options: UsePromptTypingFocusOptions): void
         e.preventDefault()
         e.stopPropagation()
         options.deleteBackwardWhenReclaiming()
+        return
+      }
+      if (isDelete && options.deleteForwardWhenReclaiming) {
+        e.preventDefault()
+        e.stopPropagation()
+        options.deleteForwardWhenReclaiming()
       }
     }
 

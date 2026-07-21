@@ -124,7 +124,7 @@
       "module": "nav",
       "canonicalName": "nav",
       "aliases": [],
-      "usagePrimary": "nav -enter | nav -exit",
+      "usagePrimary": "nav -enter | nav -exit | nav -back | nav -forward | nav -reload | nav -close | nav -windowclose",
       "subcommands": [
         {
           "head": "-enter",
@@ -132,6 +132,26 @@
         },
         {
           "head": "-exit",
+          "tail": "none"
+        },
+        {
+          "head": "-back",
+          "tail": "none"
+        },
+        {
+          "head": "-forward",
+          "tail": "none"
+        },
+        {
+          "head": "-reload",
+          "tail": "rest"
+        },
+        {
+          "head": "-close",
+          "tail": "none"
+        },
+        {
+          "head": "-windowclose",
           "tail": "none"
         }
       ]
@@ -254,6 +274,20 @@
       "tsHandlerExport": "applyClearLogEffect"
     },
     {
+      "kind": "close_current_tab",
+      "rustVariant": "CloseCurrentTab",
+      "shape": "unit",
+      "tsHandlerFile": "close-current-tab",
+      "tsHandlerExport": "applyCloseCurrentTabEffect"
+    },
+    {
+      "kind": "close_current_window",
+      "rustVariant": "CloseCurrentWindow",
+      "shape": "unit",
+      "tsHandlerFile": "close-current-window",
+      "tsHandlerExport": "applyCloseCurrentWindowEffect"
+    },
+    {
       "kind": "close_tab",
       "rustVariant": "CloseTab",
       "shape": "record",
@@ -323,6 +357,28 @@
       "fields": { "url": "string" },
       "tsHandlerFile": "navigate-current-tab",
       "tsHandlerExport": "applyNavigateCurrentTabEffect"
+    },
+    {
+      "kind": "tab_go_back",
+      "rustVariant": "TabGoBack",
+      "shape": "unit",
+      "tsHandlerFile": "tab-go-back",
+      "tsHandlerExport": "applyTabGoBackEffect"
+    },
+    {
+      "kind": "tab_go_forward",
+      "rustVariant": "TabGoForward",
+      "shape": "unit",
+      "tsHandlerFile": "tab-go-forward",
+      "tsHandlerExport": "applyTabGoForwardEffect"
+    },
+    {
+      "kind": "tab_reload",
+      "rustVariant": "TabReload",
+      "shape": "record",
+      "fields": { "tab_ids": "vec_i32" },
+      "tsHandlerFile": "tab-reload",
+      "tsHandlerExport": "applyTabReloadEffect"
     },
     {
       "kind": "open_url_new_tab",
