@@ -1056,3 +1056,119 @@ Enter → ensureBmxtCore → WASM run
 - [x] i18n EN+JA / README / `map_command.csv`
 - [x] verify チェーン（tsc / pnpm test / cargo test / codegen）
 - [ ] ブラウザ手元スモーク（reload 候補・チップ削除・close/windowclose y/n）
+
+
+---
+
+## 17. WASM 司令塔 / TS 実行器の完全棲み分け（Host IR 汎用化）
+
+**状態:** 実装済み（§17 Phase A–E）。手元スモークは任意。  
+**関連:** §13（WASM コア）、§14（プロンプト意味 SoT）、skill `bmxt-add-command`、計画 `wasm_host_ir_split`。
+
+### 17.0 目的・到達点
+
+| 層 | 責務 |
+|----|------|
+| **Rust（WASM）** | 文法・補完・continuation・compound/pipe 計画・どの Host IR を出すか・msg キー選択 |
+| **閉じた Host IR** | `DispatchBundle`（`lines` / `msgs` / `effects` / `ui`）+ `ListResult` / `bmxtRule` / exit status |
+| **TypeScript** | IR kind ごとの実行器（Chrome / React / storage）。**コマンド文字列・argv 意味を解釈しない** |
+
+- **やる:** ドメイン名 UiAction / `-list` argv 再パース / pipe・IME・SW のコマンド名分岐を閉じた primitive に畳む。
+- **やらない:** Chrome API 反射の汎用 VM（既存 `effects[]` codegen 方針を維持）。
+- **不可避の例外:** 新しい *能力*（未登録の Chrome 操作や UI プリミティブ）を足すときだけ manifest 拡張 + 薄い TS handler。新 *コマンド*（既存能力の組み合わせ）は Rust `cmd/*.rs` のみ。
+
+**完了判定:** 既存 IR だけで表現できる新コマンドを **TS ゼロ差分**で追加できる（デモ: 既存 effect/ui を返す薄い alias）。
+
+### 17.1 現状ギャップ
+
+1. ドメイン名 UiAction（`tabs_setting` / `dom_exit_list` / `search_exit_list` 等）と巨大な `apply-ui-action.ts`
+2. `-list` argv の二重パース（`list-commands/registry.ts` + 各 `*-list-parse.ts`）
+3. pipe / browse のコマンド名結合（consumer match・producer 許可リスト）
+4. IME オーバーレイが `dom` / `search` / `tab` / `browse` で分岐
+5. UiAction の二重 SoT（`ir.rs` + codegen 内ハードコード `UI_ACTIONS`）
+6. SW の `help` / `?` / `clear` 特例
+
+### 17.2 目標 Host IR（汎用 UiAction）
+
+| チャネル | 目標 |
+|----------|------|
+| `msgs` / `lines` | 現状維持（キー + params）。文言カタログは TS i18n のみ |
+| `effects` | 閉じた `ChromeEffect`（codegen）。payload はコマンド名ではない |
+| `ui` | ドメイン別 kind を廃止し少数の汎用 kind へ |
+| List / Rule | 計画は WASM。ホストは `list_id` / `kind` で fetch・投影（行文字列の再マッチ禁止） |
+
+**畳み込み方針:**
+
+- `open_plain_list { list_id, line }` / `close_picker { slot }` — 既定を正とする
+- `set_mode { feature_id, mode }` ← `tabs_setting` / `dom_setting` / `translate_*`
+- `exit_list { list_id }` ← `*_exit_list`
+- `nav_*` — 機能 primitive として維持可
+- `browse` → `open_picker { producer_id, line }`（許可は WASM 計画または opaque id）
+- `session_*` / `snapshot_save` — 汎用パラメータ付き kind として維持または同等 primitive
+
+### 17.3 Phase A — SoT 統一と契約固定
+
+- [x] `UiAction` を `manifest/bmxt-codegen.json`（`uiActions[]`）へ移し、`effects[]` と同様に Rust + TS 型を codegen
+- [x] codegen のハードコード `UI_ACTIONS` を削除し manifest 読み込みに置換
+- [x] Host IR バージョン（`bmxt-host/2`）と互換方針を README（EN+JA）/ `inter-command/` 索引に明記
+- [x] 許容 grep ルールを文書化: TS に残ってよいのは codegen switch・i18n キー・実行器 id。**コマンド canonical 名の意味分岐は禁止**
+
+### 17.4 Phase B — UiAction 汎用化
+
+- [x] Rust `cmd/*.rs` の戻りを新 primitive に置換（挙動不変；golden / 既存テスト）
+- [x] 移行中は旧 kind → 新 primitive の二重対応（ホスト）、完了後に旧 kind 削除
+- [x] `apply-ui-action.ts` を feature_id / list_id レジストリ参照の thin 実行器に縮退
+- [x] `if (cmd === "tab")` 系のドメイン分岐をゼロ化
+
+### 17.5 Phase C — List / browse / pipe の非認知化
+
+- [x] plain `-list` / browse / pipe 入口でホストが argv を再パースしない（WASM が `list_id` または既存 `*_list` effect を返す）
+- [x] `*-list-parse.ts` のシェル経路利用を縮退／削除
+- [x] `list-commands/registry.ts` のコマンドマッチ廃止（`list_id` レジストリのみ）
+- [x] `list-producers.ts` のハードコード許可リスト廃止（opaque producer_id）
+- [x] pipe consumer は bmxtRule `acceptsKinds` のみ（コマンド文字列マッチ廃止）
+
+### 17.6 Phase D — IME / SW 掃除
+
+- [x] 固定トークンは WASM `complete` のみ；ライブ候補は opaque hint（slot / source_id）で載せ、ホストはデータ供給のみ
+- [x] `ime-token-picker.ts` の `dom` / `search` / `tab` / `browse` 意味分岐を除去
+- [x] SW の `help` / `?` / `clear` 特例を通常 `run` → bundle 経路に吸収
+
+### 17.7 Phase E — 検証と開発体験
+
+- [x] CI / `verify` にコマンド名意味分岐ゲート（`lib/features/**`；許容: codegen / i18n / 実行器 id）
+- [x] skill `bmxt-add-command` / `manifest/templates/` を「再利用パス = Rust のみ」完了条件に更新
+- [x] デモ: 既存 IR のみの薄い alias コマンドを **TS ゼロ差分**で追加し完了を実証
+- [x] `verify:manifest` → `check:generated` → `cargo test -p bmxt-core` → `tsc` → `pnpm test` → `build` + WASM サイズ予算
+
+### 17.8 依存順・リスク
+
+```
+Phase A（SoT / 契約）
+    ↓
+Phase B（UiAction 汎用化）
+    ↓
+Phase C（list / browse / pipe）
+    ↓
+Phase D（IME / SW）
+    ↓
+Phase E（ゲート・スキル・実証）
+```
+
+| リスク | 緩和 |
+|--------|------|
+| 巨大 `apply-ui-action` 一括置換 | 旧→新 alias 二重対応のあと削除 |
+| list 経路回帰 | ListResult / picker golden と既存 `*-list` テストを Phase C ゲートに |
+| WASM 肥大 | DOM/Chrome は持ち込まない；≤400 KiB を各 Phase で計測 |
+| i18n | 文言は TS。Rust はキー選択のみ（カタログ追加 ≠ 意味論） |
+
+### 17.9 主戦場ファイル
+
+| 用途 | パス |
+|------|------|
+| SoT / IR | `crates/bmxt-core/src/ir.rs`, `manifest/bmxt-codegen.json`, `scripts/codegen/run.mjs` |
+| UI 適用 | `lib/features/bmxt-window/shell/apply-ui-action.ts`, `useCommandDispatch.ts` |
+| List / pipe | `lib/features/command-line/list-commands/`, `pipe/`, 各 `*-list-parse.ts` |
+| IME | `lib/features/command-line/ime-token-picker.ts` |
+| SW | `entrypoints/background/background-services.ts` |
+| 文書 | README アーキテクチャ節、`.cursor/skills/bmxt-add-command/` |

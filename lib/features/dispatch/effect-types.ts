@@ -40,22 +40,12 @@ export type UiActionIR =
   | { kind: "open_plain_list"; line: string; list_id: string }
   | { kind: "close_picker"; slot: string }
   | { kind: "continuation_prompt"; prefix: string }
-  | { kind: "session_list" }
   | { kind: "session_switch"; name: string }
   | { kind: "session_setting_name"; name: string }
   | { kind: "group_new_from_selection" }
-  | { kind: "translate_on" }
-  | { kind: "translate_off" }
-  | { kind: "translate_setting"; pair: string }
+  | { kind: "set_mode"; feature_id: string; mode: string }
   | { kind: "snapshot_save"; line: string }
-  | { kind: "setting_list" }
-  | { kind: "setting_exit_list" }
-  | { kind: "tabs_exit_list" }
-  | { kind: "tabs_setting"; mode: string }
-  | { kind: "search_exit_list" }
-  | { kind: "dom_exit_list" }
-  | { kind: "dom_setting"; mode: string }
-  | { kind: "browse"; line: string }
+  | { kind: "open_picker"; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
 
 export type DispatchBundle = {

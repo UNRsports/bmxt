@@ -2,14 +2,24 @@
  * EN: Closed inter-command vocabulary — channels commands use to talk without knowing each other.
  * JA: 閉じたコマンド間語彙 — コマンド同士が相手実装を知らずに連絡する経路。
  *
+ * Host IR version: **bmxt-host/2** (generic UiAction primitives; command names are not host semantics).
+ * Compatibility: WASM emits only catalog kinds from `manifest/bmxt-codegen.json` (`effects[]`, `uiActions[]`).
+ * Extending a catalog requires codegen + a thin TS executor; new *commands* that reuse catalogs need Rust only.
+ *
  * Layers (do not bypass with ad-hoc command-name coupling):
  * 1. DispatchBundle — Rust → host (lines | effects | ui | msgs)
  * 2. ListResult (bmxt-list/1) — plain `-list` / picker projection
  * 3. BmxtRuleStream (bmxt-rule/1) — pipe `|` stage handoff
  * 4. Compound exit status — `&&` / `||` / `;` sequencing
+ *
+ * Grep policy (TS host): codegen switches, i18n keys, and executor ids (`list_id` / effect `kind` /
+ * overlay id) may appear. Canonical command-name semantic branches are forbidden (`pnpm run verify:host-blind`).
  */
 
 import type { ListRecordKind } from "../list-output/types.ts"
+
+/** EN: Host Instruction Set contract id (documentation / verify). */
+export const BMXT_HOST_IR_VERSION = "bmxt-host/2" as const
 
 /** EN: Host-visible bundle channels from WASM `run` / `classify`. */
 export const DISPATCH_BUNDLE_CHANNELS = ["lines", "effects", "ui", "msgs"] as const

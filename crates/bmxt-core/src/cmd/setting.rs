@@ -10,8 +10,13 @@ pub fn run(args: &[String]) -> DispatchBundle {
     };
 
     match first_lc.as_str() {
-        "-list" => ui(UiAction::SettingList),
-        "-exit" => ui(UiAction::SettingExitList),
+        "-list" => ui(UiAction::OpenPlainList {
+            list_id: "setting".to_string(),
+            line: "setting -list".to_string(),
+        }),
+        "-exit" => ui(UiAction::ClosePicker {
+            slot: "setting".to_string(),
+        }),
         _ => {
             let option = args.get(1).map(String::as_str).unwrap_or("");
             let mut msgs_vec = vec![msg_param("cmd.setting.error.internal", "option", option)];

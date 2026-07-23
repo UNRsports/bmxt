@@ -128,6 +128,16 @@ export async function fetchListResultForCommand(
   return entry.fetchListResult(matched.match, ctx)
 }
 
+/** EN: Fetch `ListResult` for a registry id + pre-parsed match (UiAction `open_picker`). */
+export async function fetchListResultById(
+  id: ListCommandId,
+  match: unknown,
+  ctx: ListCommandFetchContext
+): Promise<ListResult> {
+  const entry = await loadListCommandEntry(id)
+  return entry.fetchListResult(match, ctx)
+}
+
 export function formatPlainLinesForCommand(
   matched: MatchedListCommand,
   result: ListResult,

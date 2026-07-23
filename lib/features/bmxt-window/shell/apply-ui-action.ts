@@ -1,17 +1,24 @@
 import { buildHelpLines } from "../../bmxt-core/registry/help"
-import { tryRunPlainListCommand } from "../../command-line/list-commands"
+import {
+  fetchListResultById,
+  runPlainListForCommandId,
+  type ListCommandFetchContext,
+  type ListCommandId
+} from "../../command-line/list-commands"
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
 import {
   saveDomPageActiveMode,
   settingTokenForDomPageActiveMode
 } from "../../dom/page-active-setting"
+import { parseDomListLine } from "../../dom/dom-list-parse"
 import { canScriptHttpHostPages } from "../../extension-permissions/optional-http-hosts"
-import { runBrowseCommand } from "../../picker/run-picker-command"
+import { openPickerFromListResult } from "../../picker/open-from-list-result"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab"
 import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines"
 import { resolveSessionRowByDisplayName } from "../../session"
 import { parseSnapshotSaveLine } from "../../snapshot/snapshot-save-input"
+import { parseSearchListLine } from "../../search/search-list-parse"
 import { tDom } from "../../setting/i18n/ns/dom"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import { tError } from "../../setting/i18n/ns/error"
@@ -59,6 +66,110 @@ function recordOnly(ctx: CommandDispatchContext): void {
   recordCommandHistory(ctx.deps)
 }
 
+function listFetchContext(ctx: CommandDispatchContext): ListCommandFetchContext {
+  return { locale: ctx.locale, deps: ctx.deps }
+}
+
+function parseListCommandId(raw: string): ListCommandId | null {
+  if (
+    raw === "tabs" ||
+    raw === "dom" ||
+    raw === "search" ||
+    raw === "session" ||
+    raw === "setting"
+  ) {
+    return raw
+  }
+  return null
+}
+
+function resolveListLine(ctx: CommandDispatchContext, lineFromAction: string): string {
+  if (lineFromAction.trim().length > 0) {
+    return lineFromAction
+  }
+  return ctx.trimmed
+}
+
+type ListMatchResult =
+  | { ok: true; match: unknown }
+  | { ok: false; errorLine: string }
+
+function buildPlainListMatch(listId: ListCommandId, line: string): ListMatchResult {
+  switch (listId) {
+    case "session":
+    case "setting":
+      return { ok: true, match: {} }
+    case "tabs":
+      return { ok: true, match: { showUrl: false } }
+    case "dom": {
+      const parsed = parseDomListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return {
+        ok: true,
+        match: {
+          flavor: parsed.flavor,
+          pickerMode: parsed.pickerMode,
+          showTag: parsed.showTag,
+          pattern: parsed.pattern
+        }
+      }
+    }
+    case "search": {
+      const parsed = parseSearchListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { dispatchLine: parsed.dispatchLine } }
+    }
+    default: {
+      const _exhaustive: never = listId
+      return { ok: false, errorLine: String(_exhaustive) }
+    }
+  }
+}
+
+function buildPickerListMatch(
+  listId: ListCommandId,
+  line: string,
+  showUrlRaw: string
+): ListMatchResult {
+  switch (listId) {
+    case "session":
+    case "setting":
+      return { ok: true, match: {} }
+    case "tabs":
+      return { ok: true, match: { showUrl: showUrlRaw === "true" } }
+    case "dom": {
+      const parsed = parseDomListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return {
+        ok: true,
+        match: {
+          flavor: parsed.flavor,
+          pickerMode: parsed.pickerMode,
+          showTag: parsed.showTag,
+          pattern: parsed.pattern
+        }
+      }
+    }
+    case "search": {
+      const parsed = parseSearchListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { dispatchLine: parsed.dispatchLine } }
+    }
+    default: {
+      const _exhaustive: never = listId
+      return { ok: false, errorLine: String(_exhaustive) }
+    }
+  }
+}
+
 /** Apply opaque UiActionIR from WASM. Returns true if handled. */
 export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): boolean {
   switch (action.kind) {
@@ -72,44 +183,24 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applyNavDisarm(ctx)
     case "nav_confirm_close":
       return applyNavConfirmClose(ctx, action.target)
-    case "setting_list":
-      return applySettingList(ctx)
-    case "setting_exit_list":
-      return applySettingExitList(ctx)
-    case "tabs_exit_list":
-      return applyTabsExitList(ctx)
-    case "tabs_setting":
-      return applyTabsSetting(ctx, action.mode)
-    case "search_exit_list":
-      return applySearchExitList(ctx)
-    case "dom_exit_list":
-      return applyDomExitList(ctx)
-    case "dom_setting":
-      return applyDomSetting(ctx, action.mode)
-    case "session_list":
-      return applySessionList(ctx)
+    case "open_plain_list":
+      return applyOpenPlainList(ctx, action.list_id, action.line)
+    case "open_picker":
+      return applyOpenPicker(ctx, action.list_id, action.line, action.show_url)
+    case "close_picker":
+      return applyClosePicker(ctx, action.slot)
+    case "continuation_prompt":
+      return applyContinuationPrompt(ctx, action.prefix)
     case "session_switch":
       return applySessionSwitch(ctx, action.name)
     case "session_setting_name":
       return applySessionSettingName(ctx, action.name)
     case "group_new_from_selection":
       return applyGroupNewFromSelection(ctx)
-    case "translate_on":
-      return applyTranslateOn(ctx)
-    case "translate_off":
-      return applyTranslateOff(ctx)
-    case "translate_setting":
-      return applyTranslateSetting(ctx, action.pair)
+    case "set_mode":
+      return applySetMode(ctx, action.feature_id, action.mode)
     case "snapshot_save":
       return applySnapshotSave(ctx, action.line)
-    case "browse":
-      return applyBrowse(ctx, action.line)
-    case "open_plain_list":
-      return applyOpenPlainList(ctx, action.line)
-    case "close_picker":
-      return applyClosePicker(ctx, action.slot)
-    case "continuation_prompt":
-      return applyContinuationPrompt(ctx, action.prefix)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -134,49 +225,25 @@ export async function applyUiActionForSegment(
     case "nav_disarm":
       return applyNavDisarmSegment(ctx)
     case "nav_confirm_close":
-          return segmentFailure("interactive", [
-            tCmd("cmd.nav.confirm.compoundBlocked", ctx.locale)
-          ])
-    case "setting_list":
-      return applyPlainListSegment(ctx, ctx.trimmed)
-    case "setting_exit_list":
-      return applySettingExitListSegment(ctx)
-    case "tabs_exit_list":
-      return applyTabsExitListSegment(ctx)
-    case "tabs_setting":
-      return applyTabsSettingSegment(ctx, action.mode)
-    case "search_exit_list":
-      return applySearchExitListSegment(ctx)
-    case "dom_exit_list":
-      return applyDomExitListSegment(ctx)
-    case "dom_setting":
-      return applyDomSettingSegment(ctx, action.mode)
-    case "session_list":
-      return applyPlainListSegment(ctx, ctx.trimmed)
+      return segmentFailure("interactive", [tCmd("cmd.nav.confirm.compoundBlocked", ctx.locale)])
+    case "open_plain_list":
+      return applyOpenPlainListSegment(ctx, action.list_id, action.line)
+    case "open_picker":
+      return applyOpenPickerSegment(ctx, action.list_id, action.line, action.show_url)
+    case "close_picker":
+      return applyClosePickerSegment(ctx, action.slot)
+    case "continuation_prompt":
+      return segmentFailure("continuation", [`continuation required: ${ctx.trimmed}`])
     case "session_switch":
       return applySessionSwitchSegment(ctx, action.name)
     case "session_setting_name":
       return applySessionSettingNameSegment(ctx, action.name)
     case "group_new_from_selection":
       return applyGroupNewSegment(ctx)
-    case "translate_on":
-      return applyTranslateOnSegment(ctx)
-    case "translate_off":
-      return applyTranslateOffSegment(ctx)
-    case "translate_setting":
-      return applyTranslateSettingSegment(ctx, action.pair)
+    case "set_mode":
+      return applySetModeSegment(ctx, action.feature_id, action.mode)
     case "snapshot_save":
       return applySnapshotSaveSegment(ctx, action.line)
-    case "browse":
-      return applyBrowseSegment(ctx, action.line)
-    case "open_plain_list":
-      return applyPlainListSegment(ctx, action.line)
-    case "close_picker":
-      return applyClosePickerSegment(ctx, action.slot)
-    case "continuation_prompt":
-      return segmentFailure("continuation", [
-        `continuation required: ${ctx.trimmed}`
-      ])
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -271,77 +338,52 @@ function applyNavConfirmClose(ctx: CommandDispatchContext, targetRaw: string): b
   return true
 }
 
-function applySettingList(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const lines = await tryRunPlainListCommand(ctx.trimmed, {
-      locale: ctx.locale,
-      deps: ctx.deps
-    })
-    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...(lines ?? [])])
-    ctx.deps.focusPrompt()
-  })()
-  return true
-}
-
-function applySettingExitList(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const logLines = [`> ${ctx.trimmed}`]
-    if (ctx.deps.settingListPickerRef.current !== null) {
-      ctx.deps.closeSettingPickerColumn()
-      logLines.push(tSetting("setting.picker.closed", ctx.locale))
-    } else {
-      logLines.push(tSetting("setting.picker.notOpen", ctx.locale))
-    }
-    await ctx.deps.appendLogLines(logLines)
-    ctx.deps.focusPrompt()
-  })()
-  return true
-}
-
-async function applySettingExitListSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const lines: string[] = []
-  if (ctx.deps.settingListPickerRef.current !== null) {
-    ctx.deps.closeSettingPickerColumn()
-    lines.push(tSetting("setting.picker.closed", ctx.locale))
-  } else {
-    lines.push(tSetting("setting.picker.notOpen", ctx.locale))
+function applySetMode(ctx: CommandDispatchContext, featureId: string, modeRaw: string): boolean {
+  switch (featureId) {
+    case "tabs":
+      return applyTabsSetting(ctx, modeRaw)
+    case "dom":
+      return applyDomSetting(ctx, modeRaw)
+    case "translate":
+      if (modeRaw === "on") {
+        return applyTranslateOn(ctx)
+      }
+      if (modeRaw === "off") {
+        return applyTranslateOff(ctx)
+      }
+      if (modeRaw === "ja-en" || modeRaw === "en-ja") {
+        return applyTranslateSetting(ctx, modeRaw)
+      }
+      return false
+    default:
+      return false
   }
-  return segmentSuccess(lines)
 }
 
-function applyTabsExitList(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const logLines = [`> ${ctx.trimmed}`]
-    if (ctx.deps.tabPickerRef.current !== null) {
-      closeTabPickerEngineForSession(ctx.deps.sessionId)
-      ctx.deps.setTabPicker(ctx.deps.sessionId, null)
-      ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
-      ctx.deps.activatePaneFocus("terminal")
-      logLines.push(tTabs("tabs.picker.closed", ctx.locale))
-    } else {
-      logLines.push(tTabs("tabs.picker.notOpen", ctx.locale))
-    }
-    await ctx.deps.appendLogLines(logLines)
-    ctx.deps.focusPrompt()
-  })()
-  return true
-}
-
-async function applyTabsExitListSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const lines: string[] = []
-  if (ctx.deps.tabPickerRef.current !== null) {
-    closeTabPickerEngineForSession(ctx.deps.sessionId)
-    ctx.deps.setTabPicker(ctx.deps.sessionId, null)
-    ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "tabs"))
-    ctx.deps.activatePaneFocus("terminal")
-    lines.push(tTabs("tabs.picker.closed", ctx.locale))
-  } else {
-    lines.push(tTabs("tabs.picker.notOpen", ctx.locale))
+async function applySetModeSegment(
+  ctx: CommandDispatchContext,
+  featureId: string,
+  modeRaw: string
+): Promise<SegmentOutcome> {
+  switch (featureId) {
+    case "tabs":
+      return applyTabsSettingSegment(ctx, modeRaw)
+    case "dom":
+      return applyDomSettingSegment(ctx, modeRaw)
+    case "translate":
+      if (modeRaw === "on") {
+        return applyTranslateOnSegment(ctx)
+      }
+      if (modeRaw === "off") {
+        return applyTranslateOffSegment(ctx)
+      }
+      if (modeRaw === "ja-en" || modeRaw === "en-ja") {
+        return applyTranslateSettingSegment(ctx, modeRaw)
+      }
+      return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
+    default:
+      return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
   }
-  return segmentSuccess(lines)
 }
 
 function applyTabsSetting(ctx: CommandDispatchContext, modeRaw: string): boolean {
@@ -377,90 +419,6 @@ async function applyTabsSettingSegment(
   return segmentSuccess([tTabs("tabs.pageActive.set", ctx.locale, { token })])
 }
 
-function applySearchExitList(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const logLines = [`> ${ctx.trimmed}`]
-    const hadActiveJob = ctx.deps.jobRunner.isActive("search-list")
-    if (hadActiveJob) {
-      ctx.deps.jobRunner.cancel("search-list")
-    }
-    ctx.deps.clearSearchLoadingProgress()
-    if (ctx.deps.searchListPickerRef.current !== null) {
-      ctx.deps.setSearchListPicker(ctx.deps.sessionId, null)
-      ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "search"))
-      ctx.deps.activatePaneFocus("terminal")
-      logLines.push(tSearch("search.picker.closed", ctx.locale))
-    } else if (hadActiveJob) {
-      logLines.push(tSearch("search.picker.cancelled", ctx.locale))
-    } else {
-      logLines.push(tSearch("search.picker.notOpen", ctx.locale))
-    }
-    await ctx.deps.appendLogLines(logLines)
-    ctx.deps.focusPrompt()
-  })()
-  return true
-}
-
-async function applySearchExitListSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const lines: string[] = []
-  const hadActiveJob = ctx.deps.jobRunner.isActive("search-list")
-  if (hadActiveJob) {
-    ctx.deps.jobRunner.cancel("search-list")
-  }
-  ctx.deps.clearSearchLoadingProgress()
-  if (ctx.deps.searchListPickerRef.current !== null) {
-    ctx.deps.setSearchListPicker(ctx.deps.sessionId, null)
-    ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "search"))
-    ctx.deps.activatePaneFocus("terminal")
-    lines.push(tSearch("search.picker.closed", ctx.locale))
-  } else if (hadActiveJob) {
-    lines.push(tSearch("search.picker.cancelled", ctx.locale))
-  } else {
-    lines.push(tSearch("search.picker.notOpen", ctx.locale))
-  }
-  return segmentSuccess(lines)
-}
-
-function applyDomExitList(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const logLines = [`> ${ctx.trimmed}`]
-    const hadActiveDomJob = ctx.deps.jobRunner.isActive("dom-list")
-    if (hadActiveDomJob) {
-      ctx.deps.jobRunner.cancel("dom-list")
-    }
-    if (ctx.deps.domListPickerRef.current !== null) {
-      ctx.deps.setDomListPicker(ctx.deps.sessionId, null)
-      ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "dom"))
-      ctx.deps.activatePaneFocus("terminal")
-      logLines.push(tDom("dom.picker.closed", ctx.locale))
-    } else {
-      logLines.push(tDom("dom.picker.notOpen", ctx.locale))
-    }
-    await ctx.deps.appendLogLines(logLines)
-    ctx.deps.focusPrompt()
-  })()
-  return true
-}
-
-async function applyDomExitListSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
-  const lines: string[] = []
-  const hadActiveDomJob = ctx.deps.jobRunner.isActive("dom-list")
-  if (hadActiveDomJob) {
-    ctx.deps.jobRunner.cancel("dom-list")
-  }
-  if (ctx.deps.domListPickerRef.current !== null) {
-    ctx.deps.setDomListPicker(ctx.deps.sessionId, null)
-    ctx.deps.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "dom"))
-    ctx.deps.activatePaneFocus("terminal")
-    lines.push(tDom("dom.picker.closed", ctx.locale))
-  } else {
-    lines.push(tDom("dom.picker.notOpen", ctx.locale))
-  }
-  return segmentSuccess(lines)
-}
-
 function applyDomSetting(ctx: CommandDispatchContext, modeRaw: string): boolean {
   const mode = modeRaw === "manual" ? "manual" : modeRaw === "auto" ? "auto" : null
   if (mode === null) {
@@ -492,30 +450,6 @@ async function applyDomSettingSegment(
   ctx.deps.domPageActiveModeRef.current = mode
   const token = settingTokenForDomPageActiveMode(mode)
   return segmentSuccess([tDom("dom.pageActive.set", ctx.locale, { token })])
-}
-
-function applySessionList(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const lines = await tryRunPlainListCommand(ctx.trimmed, {
-      locale: ctx.locale,
-      deps: ctx.deps
-    })
-    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...(lines ?? [])])
-    ctx.deps.focusPrompt()
-  })()
-  return true
-}
-
-async function applyPlainListSegment(
-  ctx: CommandDispatchContext,
-  line: string
-): Promise<SegmentOutcome> {
-  const lines = await tryRunPlainListCommand(line, { locale: ctx.locale, deps: ctx.deps })
-  if (lines === null) {
-    return segmentFailure("unknown", [`error: unknown command: ${line}`])
-  }
-  return segmentSuccess(lines)
 }
 
 function applySessionSwitch(ctx: CommandDispatchContext, name: string): boolean {
@@ -782,53 +716,148 @@ async function applySnapshotSaveSegment(
   return segmentFailure("runtime", lines, lines[0])
 }
 
-function applyBrowse(ctx: CommandDispatchContext, line: string): boolean {
-  const browseLine = line.trim().length > 0 ? `browse ${line}` : ctx.trimmed
+function applyOpenPlainList(
+  ctx: CommandDispatchContext,
+  listIdRaw: string,
+  lineFromAction: string
+): boolean {
+  const listId = parseListCommandId(listIdRaw)
+  if (listId === null) {
+    return false
+  }
+  const line = resolveListLine(ctx, lineFromAction)
+  const matchResult = buildPlainListMatch(listId, line)
+  if (matchResult.ok === false) {
+    return false
+  }
+  finishCommand(ctx)
+  void (async () => {
+    try {
+      const lines = await runPlainListForCommandId(
+        listId,
+        matchResult.match,
+        listFetchContext(ctx)
+      )
+      await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...lines])
+    } catch (e) {
+      await ctx.deps.appendLogLines([
+        `> ${ctx.trimmed}`,
+        tError("error.generic", ctx.locale, {
+          message: e instanceof Error ? e.message : String(e)
+        })
+      ])
+    }
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyOpenPlainListSegment(
+  ctx: CommandDispatchContext,
+  listIdRaw: string,
+  lineFromAction: string
+): Promise<SegmentOutcome> {
+  const listId = parseListCommandId(listIdRaw)
+  if (listId === null) {
+    return segmentFailure("unknown", [`error: unknown list: ${listIdRaw}`])
+  }
+  const line = resolveListLine(ctx, lineFromAction)
+  const matchResult = buildPlainListMatch(listId, line)
+  if (matchResult.ok === false) {
+    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: line })])
+  }
+  try {
+    const lines = await runPlainListForCommandId(
+      listId,
+      matchResult.match,
+      listFetchContext(ctx)
+    )
+    return segmentSuccess(lines)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return segmentFailure("runtime", [tError("error.generic", ctx.locale, { message })], message)
+  }
+}
+
+function applyOpenPicker(
+  ctx: CommandDispatchContext,
+  listIdRaw: string,
+  lineFromAction: string,
+  showUrlRaw: string
+): boolean {
+  const listId = parseListCommandId(listIdRaw)
+  if (listId === null) {
+    return false
+  }
+  const line = resolveListLine(ctx, lineFromAction)
+  const matchResult = buildPickerListMatch(listId, line, showUrlRaw)
+  if (matchResult.ok === false) {
+    return false
+  }
   recordOnly(ctx)
   ctx.deps.setSubCmdPicker(null)
-
   void (async () => {
-    const outcome = await runBrowseCommand(browseLine, ctx.deps, ctx.locale)
-    if (outcome === null) {
-      return
-    }
-    if (outcome.code === "usage") {
+    try {
+      const listResult = await fetchListResultById(
+        listId,
+        matchResult.match,
+        listFetchContext(ctx)
+      )
+      const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
+      const outcome = await openPickerFromListResult(
+        listResult,
+        { showUrl },
+        ctx.deps,
+        ctx.locale
+      )
+      clearPrompt(ctx.deps)
       await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...outcome.stdout], "stdout")
-      setContinuationPrompt(ctx.deps, "browse ")
-      return
-    }
-    clearPrompt(ctx.deps)
-    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...outcome.stdout], "stdout")
-    if (outcome.stderr.length > 0) {
-      await ctx.deps.appendLogLines(outcome.stderr, "stderr")
-    }
-    if (outcome.exitStatus !== 0) {
+      if (outcome.stderr.length > 0) {
+        await ctx.deps.appendLogLines(outcome.stderr, "stderr")
+      }
+      if (outcome.exitStatus !== 0) {
+        ctx.deps.focusPrompt()
+      }
+    } catch (e) {
+      await ctx.deps.appendLogLines([
+        `> ${ctx.trimmed}`,
+        tError("error.generic", ctx.locale, {
+          message: e instanceof Error ? e.message : String(e)
+        })
+      ])
       ctx.deps.focusPrompt()
     }
   })()
   return true
 }
 
-async function applyBrowseSegment(
+async function applyOpenPickerSegment(
   ctx: CommandDispatchContext,
-  line: string
+  listIdRaw: string,
+  lineFromAction: string,
+  showUrlRaw: string
 ): Promise<SegmentOutcome> {
-  const browseLine = line.trim().length > 0 ? `browse ${line}` : ctx.trimmed
-  const outcome = await runBrowseCommand(browseLine, ctx.deps, ctx.locale)
-  if (outcome === null) {
-    return segmentFailure("unknown", [`error: unknown command: ${ctx.trimmed}`])
+  const listId = parseListCommandId(listIdRaw)
+  if (listId === null) {
+    return segmentFailure("unknown", [`error: unknown list: ${listIdRaw}`])
   }
-  return outcome
-}
-
-function applyOpenPlainList(ctx: CommandDispatchContext, line: string): boolean {
-  finishCommand(ctx)
-  void (async () => {
-    const lines = await tryRunPlainListCommand(line, { locale: ctx.locale, deps: ctx.deps })
-    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...(lines ?? [])])
-    ctx.deps.focusPrompt()
-  })()
-  return true
+  const line = resolveListLine(ctx, lineFromAction)
+  const matchResult = buildPickerListMatch(listId, line, showUrlRaw)
+  if (matchResult.ok === false) {
+    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: line })])
+  }
+  try {
+    const listResult = await fetchListResultById(
+      listId,
+      matchResult.match,
+      listFetchContext(ctx)
+    )
+    const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
+    return openPickerFromListResult(listResult, { showUrl }, ctx.deps, ctx.locale)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return segmentFailure("runtime", [tError("error.generic", ctx.locale, { message })], message)
+  }
 }
 
 function applyClosePicker(ctx: CommandDispatchContext, slot: string): boolean {

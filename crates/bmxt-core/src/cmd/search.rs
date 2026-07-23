@@ -60,7 +60,9 @@ pub fn run(args: &[String]) -> DispatchBundle {
                 }
                 return msgs(msgs_vec);
             }
-            ui(UiAction::SearchExitList)
+            ui(UiAction::ClosePicker {
+                slot: "search".to_string(),
+            })
         }
         _ => msgs_from_keys(USAGE_KEYS),
     }

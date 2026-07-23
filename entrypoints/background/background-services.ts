@@ -17,7 +17,6 @@ import type { SessionPatch } from "../../lib/features/bmxt-window/terminal-sessi
 import type { RunCmdResult } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
 import { displayTitle } from "../../lib/features/format/display-title"
 import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
-import { buildHelpLines } from "../../lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "../../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../../lib/features/setting/i18n/run-locale"
 import type { UiLocale } from "../../lib/features/setting/locale"
@@ -164,7 +163,7 @@ async function runCommandBody(
     }
   }
 
-  const isClear = trimmed.toLowerCase() === "clear"
+  const replaceLog = { value: false }
   const more: string[] = []
   try {
     more.push(
@@ -176,14 +175,15 @@ async function runCommandBody(
         exitOutcome,
         localeOverride,
         hostKind,
-        sender
+        sender,
+        replaceLog
       ))
     )
   } catch (e) {
     more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
 
-  if (isClear) {
+  if (replaceLog.value) {
     patches.push({
       type: "setLog",
       sessionId,
@@ -192,9 +192,7 @@ async function runCommandBody(
     return { ok: true, patches, closeWindow: exitOutcome.fullClose || undefined }
   }
 
-  if (!isClear) {
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-  }
+  patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
   if (more.length > 0) {
     patches.push({ type: "appendLog", sessionId, lines: more })
   }
@@ -209,15 +207,12 @@ async function dispatch(
   exitOutcome: { fullClose: boolean },
   localeOverride?: UiLocale,
   hostKind: BmxtHostKind = "popup",
-  sender?: chrome.runtime.MessageSender
+  sender?: chrome.runtime.MessageSender,
+  replaceLog?: { value: boolean }
 ): Promise<string[]> {
   const locale =
     localeOverride ?? (await loadUiSettings()).locale
   setRunLocale(locale)
-  const trimmed = line.trim()
-  if (trimmed === "help" || trimmed === "?") {
-    return buildHelpLines(locale)
-  }
   const bundle = runDispatch(line, locale)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
@@ -227,7 +222,9 @@ async function dispatch(
       sessionPatches.push(patch)
     },
     clearLog: async () => {
-      /* clear command replaces log via setLog patch in runCommandBody */
+      if (replaceLog) {
+        replaceLog.value = true
+      }
     },
     exitPane: async () => {
       const action = resolveExitHostAction({

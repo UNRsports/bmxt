@@ -170,7 +170,8 @@ fn run_dom_setting(args: &[String]) -> DispatchBundle {
             _ => None,
         };
         if let Some(mode) = mode {
-            return ui(UiAction::DomSetting {
+            return ui(UiAction::SetMode {
+                feature_id: "dom".to_string(),
                 mode: mode.to_string(),
             });
         }
@@ -191,7 +192,9 @@ pub fn run(args: &[String]) -> DispatchBundle {
             {
                 return usage_msgs(msg_key("cmd.dom.error.exitListUsage"));
             }
-            ui(UiAction::DomExitList)
+            ui(UiAction::ClosePicker {
+                slot: "dom".to_string(),
+            })
         }
         "-setting" => run_dom_setting(args),
         _ => {

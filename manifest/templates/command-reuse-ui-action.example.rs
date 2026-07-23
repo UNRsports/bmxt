@@ -13,5 +13,10 @@ pub fn run(args: &[String]) -> DispatchBundle {
     if line.trim().is_empty() {
         return msgs(vec![msg_key("cmd.browse.usage.line1")]);
     }
-    ui(UiAction::Browse { line })
+    // EN: Prefer generic Host IR kinds (bmxt-host/2); no new TS executor.
+    ui(UiAction::OpenPicker {
+        list_id: "tabs".to_string(),
+        line: line.trim().to_string(),
+        show_url: "false".to_string(),
+    })
 }

@@ -122,7 +122,8 @@ fn run_tabs_setting(args: &[String]) -> DispatchBundle {
             _ => None,
         };
         if let Some(mode) = mode {
-            return ui(UiAction::TabsSetting {
+            return ui(UiAction::SetMode {
+                feature_id: "tabs".to_string(),
                 mode: mode.to_string(),
             });
         }
@@ -155,7 +156,9 @@ pub fn run(args: &[String]) -> DispatchBundle {
             if args.len() != 3 || normalize_token(&args[2]) != "-list" {
                 return usage_msgs(msg_key("cmd.tabs.error.exitListUsage"));
             }
-            ui(UiAction::TabsExitList)
+            ui(UiAction::ClosePicker {
+                slot: "tabs".to_string(),
+            })
         }
         "-setting" => run_tabs_setting(args),
         "-nowurl" => {

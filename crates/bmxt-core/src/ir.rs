@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub use crate::generated::ChromeEffect;
+pub use crate::generated::UiAction;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Msg {
@@ -29,61 +30,6 @@ pub enum DispatchBundle {
         )]
         prompt_prefix: Option<String>,
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind")]
-pub enum UiAction {
-    #[serde(rename = "show_help")]
-    ShowHelp,
-    #[serde(rename = "nav_arm")]
-    NavArm,
-    #[serde(rename = "nav_disarm")]
-    NavDisarm,
-    /// EN: Host shows y/n confirm then runs close_current_tab / close_current_window.
-    /// `target` is `"tab"` or `"window"`.
-    #[serde(rename = "nav_confirm_close")]
-    NavConfirmClose { target: String },
-    #[serde(rename = "open_plain_list")]
-    OpenPlainList { list_id: String, line: String },
-    #[serde(rename = "close_picker")]
-    ClosePicker { slot: String },
-    #[serde(rename = "continuation_prompt")]
-    ContinuationPrompt { prefix: String },
-    #[serde(rename = "session_list")]
-    SessionList,
-    #[serde(rename = "session_switch")]
-    SessionSwitch { name: String },
-    #[serde(rename = "session_setting_name")]
-    SessionSettingName { name: String },
-    #[serde(rename = "group_new_from_selection")]
-    GroupNewFromSelection,
-    #[serde(rename = "translate_on")]
-    TranslateOn,
-    #[serde(rename = "translate_off")]
-    TranslateOff,
-    #[serde(rename = "translate_setting")]
-    TranslateSetting { pair: String },
-    #[serde(rename = "snapshot_save")]
-    SnapshotSave { line: String },
-    #[serde(rename = "setting_list")]
-    SettingList,
-    #[serde(rename = "setting_exit_list")]
-    SettingExitList,
-    #[serde(rename = "tabs_exit_list")]
-    TabsExitList,
-    #[serde(rename = "tabs_setting")]
-    TabsSetting { mode: String },
-    #[serde(rename = "search_exit_list")]
-    SearchExitList,
-    #[serde(rename = "dom_exit_list")]
-    DomExitList,
-    #[serde(rename = "dom_setting")]
-    DomSetting { mode: String },
-    #[serde(rename = "browse")]
-    Browse { line: String },
-    #[serde(rename = "picker_pass")]
-    PickerPass,
 }
 
 pub fn lines(lines: Vec<String>) -> DispatchBundle {

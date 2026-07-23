@@ -17,7 +17,7 @@ pub struct SubcommandBranch {
 pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "clear",
-        aliases: &[],
+        aliases: &["cls"],
         usage_primary: "clear",
     },
     CmdMeta {

@@ -8,7 +8,7 @@ import type { CmdMeta } from "../types"
 export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "clear",
-    aliases: [] as const,
+    aliases: ["cls"] as const,
     usagePrimary: "clear"
   },
   {

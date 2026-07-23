@@ -112,7 +112,10 @@ pub fn run(args: &[String]) -> DispatchBundle {
             if args.len() > 2 {
                 return usage_bundle(vec![msg_key("cmd.session.error.tooManyArgs")]);
             }
-            ui(UiAction::SessionList)
+            ui(UiAction::OpenPlainList {
+                list_id: "session".to_string(),
+                line: "session -list".to_string(),
+            })
         }
         _ => usage_bundle(vec![msg_key("cmd.session.error.internal")]),
     }

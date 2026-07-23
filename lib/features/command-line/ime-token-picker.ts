@@ -5,26 +5,12 @@
 import { isBmxtCoreReady, wasmComplete } from "../bmxt-core/wasm-host"
 import {
   getSubcommandBranches,
-  isSecondToken,
   listSecondTokenCandidatesByCommand,
   listThirdTokenCandidates
 } from "../builtin-commands/command-subcommands.gen"
 import { resolveCanonical } from "../bmxt-core/registry"
-import {
-  isSearchListAwaitingScopeOrPattern,
-  shouldShowSearchListPatternPlaceholder
-} from "../search/search-list-picker-input"
-import {
-  isDomListAwaitingMoreOptionsAtEol,
-  isEditingDomListOptionToken,
-  listDomListRemainingOptionCandidates,
-  shouldShowDomListPatternPlaceholder
-} from "../dom/dom-list-picker-parse.ts"
-import { domListLineHasFlavor } from "../dom/parse-dom-list-args.ts"
 import { tImeToken } from "../setting/i18n/ns/ime-token"
 import type { UiLocale } from "../setting/locale"
-import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
-import { DOM_PAGE_ACTIVE_MODE_TOKENS } from "../dom/page-active-setting"
 import {
   matchCandidates,
   pickThirdTokenCandidates,
@@ -33,19 +19,25 @@ import {
 } from "./ime-token-match"
 import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
 import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
-import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import { rankTokenCandidates } from "./token-candidate-mru.ts"
-import type { ImeTokenPickerModel, ImeTokenTier } from "./ime-token-picker-model.ts"
+import type {
+  ImeTokenPickerModel,
+  ImeTokenTier,
+  ResolveImeTokenPickerOptions
+} from "./ime-token-picker-model.ts"
 import { resolveSecondTokenPickerHit } from "./second-token-picker.ts"
+import {
+  resolveImeLiveOverlayResult,
+  runWithImeLiveOverlayContext
+} from "./ime-live-overlays.ts"
 
 export type { CandidateMatchMode } from "./ime-token-match"
-export type { ImeTokenPickerModel, ImeTokenTier } from "./ime-token-picker-model.ts"
-
-export type ResolveImeTokenPickerOptions = {
-  emptyFirstPrefixShowsAll?: boolean
-  candidateMatch?: CandidateMatchMode
-}
+export type {
+  ImeTokenPickerModel,
+  ImeTokenTier,
+  ResolveImeTokenPickerOptions
+} from "./ime-token-picker-model.ts"
 
 type WasmCompleteHit = {
   tokenStart: number
@@ -303,79 +295,6 @@ function resolveFixedTokenPickerFallback(
   return null
 }
 
-function resolveDomListOptionTokenPicker(
-  line: string,
-  cursor: number,
-  tokensBefore: readonly string[],
-  l: number,
-  r: number,
-  prefix: string,
-  matchMode: CandidateMatchMode
-): ImeTokenPickerModel | null {
-  if (tokensBefore[0]?.toLowerCase() !== "dom" || tokensBefore[1]?.toLowerCase() !== "-list") {
-    return null
-  }
-  if (shouldShowDomListPatternPlaceholder(line, cursor)) {
-    return null
-  }
-  const tokensAfterList = tokensBefore.slice(2)
-  if (domListLineHasFlavor(line.trim()) && !isEditingDomListOptionToken(line, cursor)) {
-    return null
-  }
-  const allRemaining = listDomListRemainingOptionCandidates(tokensAfterList, "")
-  if (allRemaining.length === 0) {
-    return null
-  }
-  const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
-    allRemaining,
-    prefix,
-    matchMode
-  )
-  const cands = pickThirdTokenCandidates(
-    allRemaining,
-    prefix,
-    matchMode,
-    useFullCandidateList,
-    filterMode
-  )
-  if (cands.length === 0) {
-    return null
-  }
-  return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
-}
-
-function resolvePageActiveModePicker(
-  line: string,
-  cursor: number
-): ImeTokenPickerModel | null {
-  const [l, r] = wordBounds(line, cursor)
-  const left = line.slice(0, l)
-  const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
-  if (tokensBefore.length !== 3) {
-    return null
-  }
-  const canonical = resolveCanonical(tokensBefore[0]!)
-  const second = tokensBefore[1]!.toLowerCase()
-  const third = tokensBefore[2]!.toLowerCase()
-  const prefix = line.slice(l, cursor)
-  const matchMode: CandidateMatchMode = "prefix"
-  if (canonical === "tab" && second === "-setting" && third === "-page-active") {
-    const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
-    if (cands.length === 0) {
-      return null
-    }
-    return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
-  }
-  if (canonical === "dom" && second === "-setting" && third === "-page-active") {
-    const cands = matchCandidates(DOM_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
-    if (cands.length === 0) {
-      return null
-    }
-    return { tokenStart: l, tokenEnd: r, prefix, candidates: cands, tier: "third" }
-  }
-  return null
-}
-
 export function imeTokenPickerHint(tier: ImeTokenTier, locale: UiLocale): string {
   switch (tier) {
     case "first":
@@ -412,160 +331,40 @@ export function resolveImeTokenPicker(
   })
 }
 
-function remapPickerProducerTier(tier: ImeTokenTier): ImeTokenTier {
-  if (tier === "first") {
-    return "second"
-  }
-  if (tier === "second") {
-    return "third"
-  }
-  return "third"
-}
-
-/**
- * EN: `browse <list-command>…` — complete the producer segment as a normal command line.
- * JA: `browse <list-command>…` — 後続を通常のコマンド行として補完する。
- */
-function resolvePickerPrefixedTokenPicker(
-  line: string,
-  cursor: number,
-  opts?: ResolveImeTokenPickerOptions
-): ImeTokenPickerModel | null {
-  const prefixMatch = /^(\s*)browse(\s+)/i.exec(line)
-  if (prefixMatch === null) {
-    return null
-  }
-  const producerStart = prefixMatch[0].length
-  if (cursor < producerStart) {
-    return null
-  }
-
-  const producerLine = line.slice(producerStart)
-  const producerCursor = cursor - producerStart
-
-  if (producerLine.trim().length === 0) {
-    return {
-      tokenStart: producerStart,
-      tokenEnd: producerStart,
-      prefix: "",
-      candidates: [...PICKER_LIST_PRODUCER_TOKENS],
-      tier: "second"
-    }
-  }
-
-  const picked = resolveImeTokenPickerInSegment(
-    producerLine,
-    producerCursor,
-    PICKER_LIST_PRODUCER_TOKENS,
-    {
-      ...opts,
-      emptyFirstPrefixShowsAll: true
-    }
-  )
-  if (picked === null) {
-    return null
-  }
-  return {
-    ...picked,
-    tokenStart: picked.tokenStart + producerStart,
-    tokenEnd: picked.tokenEnd + producerStart,
-    tier: remapPickerProducerTier(picked.tier)
-  }
-}
-
 function resolveImeTokenPickerInSegment(
   line: string,
   cursor: number,
   firstCommandTokens: readonly string[],
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
-  const pickerPrefixed = resolvePickerPrefixedTokenPicker(line, cursor, opts)
-  if (pickerPrefixed !== null) {
-    return pickerPrefixed
-  }
-
-  if (
-    shouldShowSearchListPatternPlaceholder(line, cursor) &&
-    !isSearchListAwaitingScopeOrPattern(line)
-  ) {
-    return null
-  }
-
-  if (
-    shouldShowDomListPatternPlaceholder(line, cursor) &&
-    !isDomListAwaitingMoreOptionsAtEol(line)
-  ) {
-    return null
-  }
-
-  if (isSearchListAwaitingScopeOrPattern(line) && cursor >= line.length) {
-    const fixed = resolveFixedTokenPicker(line, cursor, firstCommandTokens, opts)
-    if (fixed !== null && fixed.tier === "third") {
-      return fixed
-    }
-  }
-
-  if (isDomListAwaitingMoreOptionsAtEol(line) && cursor >= line.length) {
-    const parts = line.trim().split(/\s+/).filter(Boolean)
-    const cands = listDomListRemainingOptionCandidates(parts.slice(2), "")
-    if (cands.length > 0) {
-      return {
-        tokenStart: line.length,
-        tokenEnd: line.length,
-        prefix: "",
-        candidates: [...cands],
-        tier: "third"
-      }
-    }
-  }
-
-  const [l, r] = wordBounds(line, cursor)
-  const left = line.slice(0, l)
-  const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
-  const tokenIndex = tokensBefore.length
-  const prefix = line.slice(l, cursor)
   const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
 
-  if (tokenIndex === 0) {
-    const cmdWord = line.slice(l, r)
-    if (resolveCanonical(cmdWord) === "browse" && cursor >= line.length) {
-      return {
-        tokenStart: line.length,
-        tokenEnd: line.length,
-        prefix: "",
-        candidates: [...PICKER_LIST_PRODUCER_TOKENS],
-        tier: "second"
-      }
-    }
+  const wasmPick = resolveFixedTokenPicker(line, cursor, firstCommandTokens, opts)
+  if (wasmPick !== null) {
+    return wasmPick
   }
 
-  const pageActive = resolvePageActiveModePicker(line, cursor)
-  if (pageActive !== null) {
-    return pageActive
+  const overlayResult = runWithImeLiveOverlayContext(
+    {
+      firstCommandTokens,
+      resolveNestedSegment: (nestedLine, nestedCursor, nestedTokens, nestedOpts) =>
+        resolveImeTokenPickerInSegment(nestedLine, nestedCursor, nestedTokens, nestedOpts),
+      resolveFixedTokenPicker
+    },
+    () => resolveImeLiveOverlayResult(line, cursor, opts)
+  )
+  if (overlayResult.type === "suppress") {
+    return null
+  }
+  if (overlayResult.type === "pick") {
+    return overlayResult.model
   }
 
-  if (tokenIndex >= 1) {
-    const canonical = resolveCanonical(tokensBefore[0]!)
-    if (canonical === "dom" && tokensBefore[1]?.toLowerCase() === "-list") {
-      const atEolAfterSecond =
-        tokenIndex === 1 && cursor >= line.length && isSecondToken(canonical, line.slice(l, r))
-      const domPick = resolveDomListOptionTokenPicker(
-        line,
-        cursor,
-        tokensBefore,
-        atEolAfterSecond ? line.length : l,
-        atEolAfterSecond ? line.length : r,
-        atEolAfterSecond ? "" : prefix,
-        matchMode
-      )
-      if (domPick !== null) {
-        return domPick
-      }
-      if (tokenIndex >= 2) {
-        return null
-      }
-    }
+  if (!isBmxtCoreReady()) {
+    return resolveFixedTokenPickerFallback(line, cursor, firstCommandTokens, opts)
   }
-
-  return resolveFixedTokenPicker(line, cursor, firstCommandTokens, opts)
+  if (matchMode === "contains") {
+    return resolveFixedTokenPickerFallback(line, cursor, firstCommandTokens, opts)
+  }
+  return null
 }

@@ -41,8 +41,9 @@ fn run_translate_setting(args: &[String]) -> DispatchBundle {
             _ => None,
         };
         if let Some(pair) = pair {
-            return ui(UiAction::TranslateSetting {
-                pair: pair.to_string(),
+            return ui(UiAction::SetMode {
+                feature_id: "translate".to_string(),
+                mode: pair.to_string(),
             });
         }
     }
@@ -60,8 +61,14 @@ pub fn run(args: &[String]) -> DispatchBundle {
     };
 
     match first_lc.as_str() {
-        "-on" => ui(UiAction::TranslateOn),
-        "-off" => ui(UiAction::TranslateOff),
+        "-on" => ui(UiAction::SetMode {
+            feature_id: "translate".to_string(),
+            mode: "on".to_string(),
+        }),
+        "-off" => ui(UiAction::SetMode {
+            feature_id: "translate".to_string(),
+            mode: "off".to_string(),
+        }),
         "-setting" => run_translate_setting(args),
         _ => {
             let option = args.get(1).map(String::as_str).unwrap_or("");

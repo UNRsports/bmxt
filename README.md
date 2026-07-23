@@ -870,7 +870,7 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 ## Command Execution Architecture (Current)
 
 
-**Authoritative lists** live in **`manifest/bmxt-codegen.json`**. **`pnpm run codegen`** regenerates TS metadata (`registry/table.gen.ts`, `effect-types.ts`, `ui-action-types.ts`, `apply-dispatch.gen.ts`, completion helpers) **and** Rust tables (`crates/bmxt-core/src/generated/`). Built-in command **`run`** logic is in **`crates/bmxt-core/src/cmd/*.rs`**. Chrome effects are applied in **`lib/features/dispatch/handlers/effects/`**.
+**Authoritative lists** live in **`manifest/bmxt-codegen.json`** (`commands[]`, `effects[]`, **`uiActions[]`**). **`pnpm run codegen`** regenerates TS metadata (`registry/table.gen.ts`, `effect-types.ts`, `ui-action-types.ts`, `apply-dispatch.gen.ts`, completion helpers) **and** Rust tables (`crates/bmxt-core/src/generated/` including **`ui_action.rs`**). Built-in command **`run`** logic is in **`crates/bmxt-core/src/cmd/*.rs`**. Chrome effects are applied in **`lib/features/dispatch/handlers/effects/`**. Host IR contract: **`bmxt-host/2`** (generic UiAction primitives; see `lib/features/command-line/inter-command/`). Command-name semantic branches in the TS host are gated by **`pnpm run verify:host-blind`**.
 
 **Runtime boundary**
 
@@ -2207,7 +2207,7 @@ http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / 
 ## コマンド実行アーキテクチャ（現状）
 
 
-**一覧の真実**は **`manifest/bmxt-codegen.json`** です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。
+**一覧の真実**は **`manifest/bmxt-codegen.json`**（`commands[]`・`effects[]`・**`uiActions[]`**）です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`・**`ui_action.rs` 含む**）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。Host IR 契約は **`bmxt-host/2`**（`lib/features/command-line/inter-command/`）。TS ホストのコマンド名意味分岐は **`pnpm run verify:host-blind`** で検査します。
 
 **実行境界:**
 

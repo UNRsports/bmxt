@@ -1,5 +1,6 @@
 export {
   LIST_COMMAND_ENTRIES,
+  fetchListResultById,
   fetchListResultForCommand,
   formatPlainLinesForCommand,
   getListCommandById,
@@ -14,4 +15,9 @@ export type {
   ListCommandRuntime,
   MatchedListCommand
 } from "./types.ts"
-export { runPlainListForCommandId, tryRunPlainListCommand } from "./run-plain.ts"
+export {
+  fetchAndFormatPlainListById,
+  runPlainListById,
+  runPlainListForCommandId,
+  tryRunPlainListCommand
+} from "./run-plain.ts"
