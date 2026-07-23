@@ -1,19 +1,22 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { formatNavConfirmCloseLockedPrefix } from "./nav-confirm-close.ts"
+import {
+  parseNavConfirmCloseAnswer,
+  parseNavConfirmCloseTarget
+} from "./nav-confirm-close.ts"
 
-describe("formatNavConfirmCloseLockedPrefix", () => {
-  it("appends a colon when missing", () => {
-    assert.equal(
-      formatNavConfirmCloseLockedPrefix("Close this tab? [y/n]"),
-      "Close this tab? [y/n]:"
-    )
+describe("parseNavConfirmCloseTarget", () => {
+  it("accepts tab and window", () => {
+    assert.equal(parseNavConfirmCloseTarget("tab"), "tab")
+    assert.equal(parseNavConfirmCloseTarget("window"), "window")
+    assert.equal(parseNavConfirmCloseTarget("other"), null)
   })
+})
 
-  it("does not double the colon", () => {
-    assert.equal(
-      formatNavConfirmCloseLockedPrefix("Close this tab? [y/n]:"),
-      "Close this tab? [y/n]:"
-    )
+describe("parseNavConfirmCloseAnswer", () => {
+  it("parses y/n answers", () => {
+    assert.equal(parseNavConfirmCloseAnswer("y"), "yes")
+    assert.equal(parseNavConfirmCloseAnswer("n"), "no")
+    assert.equal(parseNavConfirmCloseAnswer("tabs -list"), "invalid")
   })
 })

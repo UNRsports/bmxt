@@ -1041,11 +1041,8 @@ export function BmxtShell({
   })
 
   const getPromptLockedPrefix = useCallback((): string | null => {
-    const pending = navConfirmClosePendingRef.current
-    if (!pending) {
-      return null
-    }
-    return pending.lockedPrefix
+    // EN: Close confirm uses log + free y/n (not a locked prompt prefix).
+    return null
   }, [])
 
   const {
