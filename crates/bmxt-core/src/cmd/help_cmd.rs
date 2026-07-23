@@ -16,7 +16,7 @@ const FULL_HELP_SECTION_KEYS: &[&str] = &[
 /** EN: Map first command → help.section.* key when a dedicated manual exists. */
 fn section_key_for_command(canonical: &str) -> Option<&'static str> {
     match canonical {
-        "tabs" => Some("help.section.tabs"),
+        "tab" => Some("help.section.tabs"),
         "dom" => Some("help.section.dom"),
         "search" => Some("help.section.search"),
         "session" => Some("help.section.session"),
@@ -73,8 +73,8 @@ mod tests {
 
     #[test]
     fn tabs_help_emits_section_msg() {
-        let args = vec!["tabs".to_string(), "help".to_string()];
-        match try_section_help("tabs", &args) {
+        let args = vec!["tab".to_string(), "help".to_string()];
+        match try_section_help("tab", &args) {
             Some(DispatchBundle::Msgs { msgs, .. }) => {
                 assert_eq!(msgs[0].key, "help.section.tabs");
             }
@@ -84,8 +84,8 @@ mod tests {
 
     #[test]
     fn non_help_second_token_is_none() {
-        let args = vec!["tabs".to_string(), "-list".to_string()];
-        assert!(try_section_help("tabs", &args).is_none());
+        let args = vec!["tab".to_string(), "-list".to_string()];
+        assert!(try_section_help("tab", &args).is_none());
     }
 
     #[test]

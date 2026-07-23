@@ -16,7 +16,7 @@ const EXTRA_FIXED_CANDIDATE_TOKENS = [
   "search",
   "session",
   "setting",
-  "tabs",
+  "tab",
   "--auto",
   "--manual"
 ] as const

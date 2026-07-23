@@ -50,7 +50,7 @@ export function resolvePickerFamily(listResult: ListResult): ResolvePickerFamily
 
 function familyFromCommandName(command: string): PickerListFamily | null {
   const name = command.trim().toLowerCase()
-  if (name === "tabs") return "tabs"
+  if (name === "tab") return "tabs"
   if (name === "search") return "search"
   if (name === "dom") return "dom"
   if (name === "session") return "session"

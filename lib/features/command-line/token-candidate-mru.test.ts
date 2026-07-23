@@ -37,8 +37,8 @@ describe("rankTokenCandidates", () => {
 describe("extractFixedCandidateTokensFromLine", () => {
   it("extracts first/second/third fixed tokens and skips free text", () => {
     resetTokenCandidateMruMemoryCacheForTests()
-    assert.deepEqual(extractFixedCandidateTokensFromLine("tabs -list -url"), [
-      "tabs",
+    assert.deepEqual(extractFixedCandidateTokensFromLine("tab -list -url"), [
+      "tab",
       "-list",
       "-url"
     ])

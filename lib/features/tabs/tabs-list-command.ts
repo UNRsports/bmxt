@@ -8,7 +8,7 @@ export type TabsListMatch = {
 
 export const tabsListCommand: ListCommandEntry<TabsListMatch> = {
   id: "tabs",
-  command: "tabs",
+  command: "tab",
   runtime: "service_worker",
   matchPlain(segment) {
     const parsed = parseTabsListLine(segment)

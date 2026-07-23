@@ -27,9 +27,9 @@ import { resolveActiveCommandSegment } from "./active-segment.ts"
 
 describe("parseAndSegments", () => {
   it("splits on && outside quotes", () => {
-    assert.deepEqual(parseAndSegments("tabs -list && dom -list --html"), {
+    assert.deepEqual(parseAndSegments("tab -list && dom -list --html"), {
       ok: true,
-      segments: ["tabs -list", "dom -list --html"]
+      segments: ["tab -list", "dom -list --html"]
     })
   })
 
@@ -41,28 +41,28 @@ describe("parseAndSegments", () => {
   })
 
   it("ignores && inside double quotes", () => {
-    assert.deepEqual(parseAndSegments('tabs -list && "a && b"'), {
+    assert.deepEqual(parseAndSegments('tab -list && "a && b"'), {
       ok: true,
-      segments: ["tabs -list", '"a && b"']
+      segments: ["tab -list", '"a && b"']
     })
   })
 
   it("supports escaped &&", () => {
-    assert.deepEqual(parseAndSegments(String.raw`tabs -list && dom \&& -list`), {
+    assert.deepEqual(parseAndSegments(String.raw`tab -list && dom \&& -list`), {
       ok: true,
-      segments: ["tabs -list", "dom && -list"]
+      segments: ["tab -list", "dom && -list"]
     })
   })
 
   it("rejects dangling operator", () => {
-    assert.deepEqual(parseAndSegments("tabs -list &&"), {
+    assert.deepEqual(parseAndSegments("tab -list &&"), {
       ok: false,
       error: "dangling_operator"
     })
   })
 
   it("rejects empty segment between operators", () => {
-    assert.deepEqual(parseAndSegments("tabs -list &&   && clear"), {
+    assert.deepEqual(parseAndSegments("tab -list &&   && clear"), {
       ok: false,
       error: "empty_segment"
     })
@@ -71,19 +71,19 @@ describe("parseAndSegments", () => {
 
 describe("lineHasPipeOperator", () => {
   it("is false for a single command", () => {
-    assert.equal(lineHasPipeOperator("tabs -list"), false)
+    assert.equal(lineHasPipeOperator("tab -list"), false)
   })
 
   it("is true for pipe lines", () => {
-    assert.equal(lineHasPipeOperator("tabs -list | close"), true)
+    assert.equal(lineHasPipeOperator("tab -list | close"), true)
   })
 })
 
 describe("parsePipeSegments", () => {
   it("splits on | outside quotes", () => {
-    assert.deepEqual(parsePipeSegments("tabs -list | close"), {
+    assert.deepEqual(parsePipeSegments("tab -list | close"), {
       ok: true,
-      segments: ["tabs -list", "close"]
+      segments: ["tab -list", "close"]
     })
   })
 
@@ -95,41 +95,41 @@ describe("parsePipeSegments", () => {
   })
 
   it("supports escaped |", () => {
-    assert.deepEqual(parsePipeSegments(String.raw`tabs -list | dom \| -list`), {
+    assert.deepEqual(parsePipeSegments(String.raw`tab -list | dom \| -list`), {
       ok: true,
-      segments: ["tabs -list", "dom | -list"]
+      segments: ["tab -list", "dom | -list"]
     })
   })
 })
 
 describe("lineHasAndOperator", () => {
   it("is false for a single command", () => {
-    assert.equal(lineHasAndOperator("tabs -list"), false)
+    assert.equal(lineHasAndOperator("tab -list"), false)
   })
 
   it("is true for compound lines", () => {
-    assert.equal(lineHasAndOperator("tabs -list && clear"), true)
+    assert.equal(lineHasAndOperator("tab -list && clear"), true)
   })
 
   it("is true for || and ;", () => {
-    assert.equal(lineHasAndOperator("tabs -list || clear"), true)
-    assert.equal(lineHasAndOperator("tabs -list ; clear"), true)
+    assert.equal(lineHasAndOperator("tab -list || clear"), true)
+    assert.equal(lineHasAndOperator("tab -list ; clear"), true)
   })
 })
 
 describe("parseCompoundSegments", () => {
   it("splits on || and records operators", () => {
-    assert.deepEqual(parseCompoundSegments("tabs -list || clear"), {
+    assert.deepEqual(parseCompoundSegments("tab -list || clear"), {
       ok: true,
-      segments: ["tabs -list", "clear"],
+      segments: ["tab -list", "clear"],
       operators: ["||"]
     })
   })
 
   it("splits on ; and records operators", () => {
-    assert.deepEqual(parseCompoundSegments("tabs -list ; clear"), {
+    assert.deepEqual(parseCompoundSegments("tab -list ; clear"), {
       ok: true,
-      segments: ["tabs -list", "clear"],
+      segments: ["tab -list", "clear"],
       operators: [";"]
     })
   })
@@ -151,9 +151,9 @@ describe("parseCompoundSegments", () => {
   })
 
   it("does not treat single | as a list operator", () => {
-    assert.deepEqual(parseCompoundSegments("tabs -list | close"), {
+    assert.deepEqual(parseCompoundSegments("tab -list | close"), {
       ok: true,
-      segments: ["tabs -list | close"],
+      segments: ["tab -list | close"],
       operators: []
     })
   })
@@ -178,7 +178,7 @@ describe("shouldRunAfterOperator", () => {
 
 describe("classifyOutcomeFromLines", () => {
   it("detects error lines", () => {
-    const out = classifyOutcomeFromLines(["error: usage: tabs -moveurl <url>"])
+    const out = classifyOutcomeFromLines(["error: usage: tab -moveurl <url>"])
     assert.equal(out.ok, false)
     assert.equal(out.code, "runtime")
   })
@@ -220,13 +220,13 @@ describe("segmentSuccess / segmentFailure", () => {
   })
 
   it("sets usage to exit status 2 on stderr", () => {
-    const out = segmentFailure("usage", ["usage: tabs -list"])
+    const out = segmentFailure("usage", ["usage: tab -list"])
     assert.equal(out.exitStatus, EXIT_MISUSE)
     assert.equal(out.ok, false)
     assert.equal(compoundShouldStop(out.exitStatus), true)
     assert.deepEqual(out.stdout, [])
-    assert.deepEqual(out.stderr, ["usage: tabs -list"])
-    assert.deepEqual(out.lines, ["usage: tabs -list"])
+    assert.deepEqual(out.stderr, ["usage: tab -list"])
+    assert.deepEqual(out.lines, ["usage: tab -list"])
   })
 
   it("sets unknown to exit status 127", () => {
@@ -242,34 +242,34 @@ describe("segmentSuccess / segmentFailure", () => {
 
 describe("resolveActiveCommandSegment", () => {
   it("uses the segment after && for completion context", () => {
-    const line = "tabs -list && dom -list"
+    const line = "tab -list && dom -list"
     const active = resolveActiveCommandSegment(line, line.length)
     assert.equal(active.segmentText, "dom -list")
     assert.equal(active.segmentStart, line.indexOf("dom"))
   })
 
   it("uses the segment after || for completion context", () => {
-    const line = "tabs -list || clear"
+    const line = "tab -list || clear"
     const active = resolveActiveCommandSegment(line, line.length)
     assert.equal(active.segmentText, "clear")
   })
 
   it("uses the segment after ; for completion context", () => {
-    const line = "tabs -list ; clear"
+    const line = "tab -list ; clear"
     const active = resolveActiveCommandSegment(line, line.length)
     assert.equal(active.segmentText, "clear")
   })
 
   it("keeps first segment when cursor is before &&", () => {
-    const line = "tabs -list && dom -list"
+    const line = "tab -list && dom -list"
     const active = resolveActiveCommandSegment(line, 4)
-    assert.equal(active.segmentText, "tabs -list")
+    assert.equal(active.segmentText, "tab -list")
   })
 
   it("includes trailing whitespace in segment bounds for second-token completion", () => {
-    const line = "tabs "
+    const line = "tab "
     const active = resolveActiveCommandSegment(line, line.length)
-    assert.equal(active.segmentText, "tabs")
+    assert.equal(active.segmentText, "tab")
     assert.equal(active.segmentEnd, line.length)
     assert.equal(active.localCursor, line.length)
   })

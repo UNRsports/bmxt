@@ -336,7 +336,7 @@ function emitTsCommandSubcommands(commands) {
   lines.push("  return branches.map((b) => b.head).filter((h) => h.toLowerCase().startsWith(p))")
   lines.push("}")
   lines.push("")
-  lines.push("/** Optional third fixed tokens after `secondTokenLower` (e.g. `-u` after `tabs -list`). */")
+  lines.push("/** Optional third fixed tokens after `secondTokenLower` (e.g. `-u` after `tab -list`). */")
   lines.push("export function listThirdTokenCandidates(")
   lines.push("  canonicalName: string,")
   lines.push("  secondTokenLower: string,")

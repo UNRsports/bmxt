@@ -126,6 +126,17 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         if (applyUiAction(bundle.action, ctx)) {
           return
         }
+        // EN: Unhandled UI must not fall through to effect fallback (clears prompt; SW ignores UI).
+        deps.appendCommandToHistory(trimmed)
+        recordCommandHistory(deps)
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          tError("error.dispatchFailed", commandLocale, {
+            message: `unhandled ui action: ${bundle.action.kind}`
+          })
+        ])
+        deps.focusPrompt()
+        return
       }
 
       if (bundle.ty === "lines") {

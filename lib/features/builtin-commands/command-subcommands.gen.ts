@@ -31,21 +31,21 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "group": [] as const,
   "help": [] as const,
-  "tabs": [
+  "tab": [
     { head: "-list", trailingTokens: ["-url"] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
+    { head: "-back", trailingTokens: [] as const, tail: "none" },
+    { head: "-forward", trailingTokens: [] as const, tail: "none" },
+    { head: "-reload", trailingTokens: [] as const, tail: "rest" },
+    { head: "-close", trailingTokens: [] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "nav": [
     { head: "-enter", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: [] as const, tail: "none" },
-    { head: "-back", trailingTokens: [] as const, tail: "none" },
-    { head: "-forward", trailingTokens: [] as const, tail: "none" },
-    { head: "-reload", trailingTokens: [] as const, tail: "rest" },
-    { head: "-close", trailingTokens: [] as const, tail: "none" },
     { head: "-windowclose", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "translate": [
@@ -90,7 +90,7 @@ export function listSecondTokenCandidatesByCommand(
   return branches.map((b) => b.head).filter((h) => h.toLowerCase().startsWith(p))
 }
 
-/** Optional third fixed tokens after `secondTokenLower` (e.g. `-u` after `tabs -list`). */
+/** Optional third fixed tokens after `secondTokenLower` (e.g. `-u` after `tab -list`). */
 export function listThirdTokenCandidates(
   canonicalName: string,
   secondTokenLower: string,
@@ -139,13 +139,13 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "help":
       return false
-    case "tabs": {
+    case "tab": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "help"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "-back" || lower === "-forward" || lower === "-reload" || lower === "-close" || lower === "help"
     }
     case "nav": {
       const lower = token.toLowerCase()
-      return lower === "-enter" || lower === "-exit" || lower === "-back" || lower === "-forward" || lower === "-reload" || lower === "-close" || lower === "-windowclose"
+      return lower === "-enter" || lower === "-exit" || lower === "-windowclose"
     }
     case "translate": {
       const lower = token.toLowerCase()

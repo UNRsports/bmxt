@@ -10,7 +10,7 @@ pub fn unknown_option(command: &str, option: &str, usage_keys: &[&str]) -> Dispa
     let mut keys = vec![match command {
         "dom" => msg_param("cmd.dom.error.unknownOption", "option", option),
         "search" => msg_param("cmd.search.error.unknownOption", "option", option),
-        "tabs" => msg_param("cmd.tabs.error.unknownOption", "option", option),
+        "tab" => msg_param("cmd.tabs.error.unknownOption", "option", option),
         "nav" => msg_param("cmd.nav.error.unknownOption", "option", option),
         "translate" => msg_param("cmd.translate.error.unknownOption", "option", option),
         "session" => msg_param("cmd.session.error.unknownOption", "option", option),
@@ -55,10 +55,10 @@ mod tests {
 
     #[test]
     fn require_second_token_emits_prompt_prefix() {
-        let err = require_second_token("tabs", &["tabs".to_string()], &["cmd.tabs.usage.line1"])
+        let err = require_second_token("tab", &["tab".to_string()], &["cmd.tabs.usage.line1"])
             .expect_err("missing second");
         let raw = serde_json::to_string(&err).unwrap();
-        assert!(raw.contains(r#""promptPrefix":"tabs ""#), "{raw}");
+        assert!(raw.contains(r#""promptPrefix":"tab ""#), "{raw}");
         assert!(raw.contains("cmd.common.availableOptions"), "{raw}");
     }
 }

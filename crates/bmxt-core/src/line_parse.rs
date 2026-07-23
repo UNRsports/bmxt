@@ -48,12 +48,12 @@ mod tests {
 
     #[test]
     fn tokenize_splits_whitespace() {
-        assert_eq!(tokenize("  tabs  -list  "), vec!["tabs", "-list"]);
+        assert_eq!(tokenize("  tab  -list  "), vec!["tab", "-list"]);
     }
 
     #[test]
     fn strip_invisible_format_chars_removes_bom() {
-        assert_eq!(strip_invisible_format_chars("\u{FEFF}tabs"), "tabs");
+        assert_eq!(strip_invisible_format_chars("\u{FEFF}tab"), "tab");
     }
 
     #[test]

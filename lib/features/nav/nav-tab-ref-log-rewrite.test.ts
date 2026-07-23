@@ -16,10 +16,10 @@ describe("rewriteHashTTokensForLog", () => {
         }
       ]
     ])
-    const out = rewriteHashTTokensForLog("> nav -reload #t:42", meta, "Tab")
+    const out = rewriteHashTTokensForLog("> tab -reload #t:42", meta, "Tab")
     assert.equal(out.includes("#t:"), false)
     assert.deepEqual(parseTabRefLogSegments(out), [
-      { kind: "text", text: "> nav -reload " },
+      { kind: "text", text: "> tab -reload " },
       {
         kind: "tabRef",
         meta: {

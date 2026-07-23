@@ -9,7 +9,7 @@ import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../list-output/types.ts"
 function listResult(kinds: ListResult["records"][number]["kind"][]): ListResult {
   return {
     schema: LIST_OUTPUT_SCHEMA,
-    command: "tabs",
+    command: "tab",
     subcommand: "-list",
     records: kinds.map((kind) => ({ kind, fields: kind === "tabs.tab" ? { tabId: 1 } : {} }))
   }

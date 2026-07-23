@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn lone_tabs_is_continuation() {
         assert_eq!(
-            classify_segment("tabs").kind,
+            classify_segment("tab").kind,
             CompoundSegmentKind::Continuation
         );
     }
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn tabs_list_is_eligible() {
         assert_eq!(
-            classify_segment("tabs -list").kind,
+            classify_segment("tab -list").kind,
             CompoundSegmentKind::Eligible
         );
     }
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn incomplete_tabs_setting_is_continuation() {
         assert_eq!(
-            classify_segment("tabs -setting").kind,
+            classify_segment("tab -setting").kind,
             CompoundSegmentKind::Continuation
         );
     }

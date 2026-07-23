@@ -1,4 +1,4 @@
-/** Cursor is in the first option token immediately after a `leadPattern` match (e.g. `tabs `, `split `). */
+/** Cursor is in the first option token immediately after a `leadPattern` match (e.g. `tab `, `split `). */
 
 import { resolveActiveCommandSegment } from "./compound/active-segment.ts"
 

@@ -359,7 +359,7 @@ function resolvePageActiveModePicker(
   const third = tokensBefore[2]!.toLowerCase()
   const prefix = line.slice(l, cursor)
   const matchMode: CandidateMatchMode = "prefix"
-  if (canonical === "tabs" && second === "-setting" && third === "-page-active") {
+  if (canonical === "tab" && second === "-setting" && third === "-page-active") {
     const cands = matchCandidates(TABS_PAGE_ACTIVE_MODE_TOKENS, prefix, matchMode)
     if (cands.length === 0) {
       return null

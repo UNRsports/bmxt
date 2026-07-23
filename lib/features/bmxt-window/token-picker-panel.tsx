@@ -7,7 +7,7 @@ import { useUiSettings } from "../setting/use-ui-settings"
 
 const ITEM_ID_PREFIX = "bmxt-subcmd-item"
 
-/** EN: Structured row for live candidates (e.g. `nav -reload` tabs). */
+/** EN: Structured row for live candidates (e.g. `tab -reload` tabs). */
 export type TokenPickerCandidateRow = {
   title: string
   /** EN: Optional secondary line (omitted for nav reload tab rows). */

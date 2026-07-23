@@ -1,9 +1,11 @@
 import { tNav } from "../../../setting/i18n/ns/nav"
 import { tError } from "../../../setting/i18n/ns/error"
 import {
+  formatNavConfirmCloseLockedPrefix,
   parseNavConfirmCloseAnswer,
   type NavConfirmCloseTarget
 } from "../../../nav/nav-confirm-close"
+import { answerAfterLockedPrefix } from "../prompt-locked-prefix"
 import {
   isRunCmdResult,
   type SessionPatch
@@ -12,6 +14,7 @@ import { runCommandFromUiAsync } from "../../terminal-sessions/session-runtime-c
 import {
   clearPrompt,
   recordCommandHistory,
+  setContinuationPrompt,
   type CommandDispatchContext,
   type CommandDispatchResult
 } from "./types"
@@ -41,6 +44,13 @@ function patchesWithoutPromptEcho(patches: readonly SessionPatch[]): SessionPatc
   return out
 }
 
+function restoreLockedConfirmPrompt(
+  deps: CommandDispatchContext["deps"],
+  lockedPrefix: string
+): void {
+  setContinuationPrompt(deps, lockedPrefix)
+}
+
 export function tryHandleNavConfirmClose(
   ctx: CommandDispatchContext
 ): CommandDispatchResult {
@@ -50,43 +60,51 @@ export function tryHandleNavConfirmClose(
     return "not_handled"
   }
 
-  const { deps, trimmed, locale } = ctx
-  clearPrompt(deps)
+  const { deps, locale, rawLine } = ctx
+  const lockedPrefix = pending.lockedPrefix
+  // EN: Confirm prompt not applied yet (or stale command still in the buffer) — restore, do not parse.
+  if (!rawLine.startsWith(lockedPrefix)) {
+    restoreLockedConfirmPrompt(deps, lockedPrefix)
+    return "handled"
+  }
+
+  const answerRaw = answerAfterLockedPrefix(rawLine, lockedPrefix)
+  const answer = parseNavConfirmCloseAnswer(answerRaw)
+  const confirmLine = lockedPrefix + answerRaw.trimEnd()
+
   recordCommandHistory(deps)
 
-  const answer = parseNavConfirmCloseAnswer(trimmed)
   if (answer === "invalid") {
-    void deps.appendLogLines([
-      `> ${trimmed}`,
-      tNav("nav.confirm.invalid", locale)
-    ])
-    deps.focusPrompt()
+    void deps.appendLogLines([confirmLine, tNav("nav.confirm.invalid", locale)])
+    restoreLockedConfirmPrompt(deps, lockedPrefix)
     return "handled"
   }
   if (answer === "no") {
     pendingRef.current = null
-    void deps.appendLogLines([
-      `> ${trimmed}`,
-      tNav("nav.confirm.cancelled", locale)
-    ])
+    clearPrompt(deps)
+    void deps.appendLogLines([confirmLine, tNav("nav.confirm.cancelled", locale)])
     deps.focusPrompt()
     return "handled"
   }
 
   pendingRef.current = null
+  clearPrompt(deps)
   const confirmedLine =
     pending.target === "window"
       ? "nav -windowclose --confirmed"
-      : "nav -close --confirmed"
-  void deps.appendLogLines([`> ${trimmed}`], "stdout")
-  void runCommandFromUiAsync(
-    confirmedLine,
-    deps.sessionId,
-    deps.sessionOrderLength,
-    locale,
-    deps.hostKind
-  )
-    .then((response) => {
+      : "tab -close --confirmed"
+  void (async () => {
+    await Promise.resolve(deps.appendLogLines([confirmLine], "stdout"))
+    // EN: Float host dies with the closed tab — persist logs before RUN_CMD removes it.
+    await deps.flushFloatPersist()
+    try {
+      const response = await runCommandFromUiAsync(
+        confirmedLine,
+        deps.sessionId,
+        deps.sessionOrderLength,
+        locale,
+        deps.hostKind
+      )
       if (!isRunCmdResult(response)) {
         void deps.appendLogLines([tError("error.unknown", locale)], "stderr")
         return
@@ -98,9 +116,9 @@ export function tryHandleNavConfirmClose(
         )
         return
       }
+      // EN: Popup keeps the result log here; float may already be gone (handoff owns it).
       deps.applyRunCmdPatches(patchesWithoutPromptEcho(response.patches))
-    })
-    .catch((e) => {
+    } catch (e) {
       void deps.appendLogLines(
         [
           tError("error.dispatchFailed", locale, {
@@ -109,7 +127,8 @@ export function tryHandleNavConfirmClose(
         ],
         "stderr"
       )
-    })
+    }
+  })()
   deps.focusPrompt()
   return "handled"
 }
@@ -118,15 +137,14 @@ export function beginNavConfirmClose(
   ctx: CommandDispatchContext,
   target: NavConfirmCloseTarget
 ): void {
-  ctx.deps.navConfirmClosePendingRef.current = { target }
+  const question = tNav(confirmMessageKey(target), ctx.locale)
+  const lockedPrefix = formatNavConfirmCloseLockedPrefix(question)
   ctx.deps.appendCommandToHistory(ctx.trimmed)
-  clearPrompt(ctx.deps)
   recordCommandHistory(ctx.deps)
-  void (async () => {
-    await ctx.deps.appendLogLines([
-      `> ${ctx.trimmed}`,
-      tNav(confirmMessageKey(target), ctx.locale)
-    ])
-    ctx.deps.focusPrompt()
-  })()
+  ctx.deps.setSubCmdPicker(null)
+  // EN: Apply locked confirm prompt synchronously — do not wait on log I/O.
+  //     Pending is set after the prompt so clamp cannot rewrite the prior command line.
+  setContinuationPrompt(ctx.deps, lockedPrefix)
+  ctx.deps.navConfirmClosePendingRef.current = { target, lockedPrefix }
+  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`])
 }

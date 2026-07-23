@@ -197,20 +197,29 @@ mod tests {
     fn completes_first_token_prefix() {
         let hit = complete_line("ta", 2).expect("hit");
         assert_eq!(hit.tier, "first");
-        assert!(hit.candidates.iter().any(|c| c == "tabs"));
+        assert!(hit.candidates.iter().any(|c| c == "tab"));
     }
 
     #[test]
     fn completes_second_after_tabs_space() {
-        let line = "tabs ";
+        let line = "tab ";
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "second");
         assert!(hit.candidates.iter().any(|c| c == "-list"));
     }
 
     #[test]
+    fn completes_second_for_complete_first_without_trailing_space() {
+        let line = "tab";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert_eq!(hit.tier, "second");
+        assert!(hit.candidates.iter().any(|c| c == "-list"));
+        assert!(hit.candidates.iter().any(|c| c == "-close"));
+    }
+
+    #[test]
     fn completes_third_after_tabs_list() {
-        let line = "tabs -list ";
+        let line = "tab -list ";
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "third");
         assert!(hit.candidates.iter().any(|c| c == "-url"));
@@ -223,16 +232,24 @@ mod tests {
     }
 
     #[test]
-    fn no_hit_when_nav_back_complete_at_eol() {
-        let line = "nav -back";
+    fn no_hit_when_tab_back_complete_at_eol() {
+        let line = "tab -back";
         assert!(complete_line(line, line.len()).is_none());
     }
 
     #[test]
-    fn still_completes_partial_nav_second() {
-        let line = "nav -ba";
+    fn still_completes_partial_tab_second() {
+        let line = "tab -ba";
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "second");
         assert!(hit.candidates.iter().any(|c| c == "-back"));
+    }
+
+    #[test]
+    fn still_completes_partial_nav_windowclose() {
+        let line = "nav -wi";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert_eq!(hit.tier, "second");
+        assert!(hit.candidates.iter().any(|c| c == "-windowclose"));
     }
 }

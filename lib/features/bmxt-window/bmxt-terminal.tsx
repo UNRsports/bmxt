@@ -86,6 +86,7 @@ type SessionPaneProps = {
   floatTabId: number | null
   restoredNavActive: boolean
   processUiReady: boolean
+  flushFloatPersist: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -124,6 +125,7 @@ const SessionPaneView = memo(function SessionPaneView({
   floatTabId,
   restoredNavActive,
   processUiReady,
+  flushFloatPersist,
   applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
@@ -157,6 +159,7 @@ const SessionPaneView = memo(function SessionPaneView({
         floatTabId={floatTabId}
         restoredNavActive={restoredNavActive}
         processUiReady={processUiReady}
+        flushFloatPersist={flushFloatPersist}
         applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -277,7 +280,8 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     appendLogLines: appendLogLinesToSession,
     setActiveSession,
     setSessionDisplayName,
-    applyRunCmdPatches
+    applyRunCmdPatches,
+    flushFloatPersist: flushFloatSessionsPersist
   } = useTerminalSessions(sessionPatchContext, hostKind, floatTabId)
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
@@ -297,8 +301,14 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     navArmedByLeaf,
     setNavArmedForLeaf,
     restoredNavActive,
-    processUiReady
+    processUiReady,
+    flushFloatBrowsePersist
   } = useProcessUiPersistence(validSessionIds, true, hostKind, floatTabId, sessionsReady)
+
+  const flushFloatPersist = useCallback(async () => {
+    await flushFloatSessionsPersist()
+    await flushFloatBrowsePersist()
+  }, [flushFloatBrowsePersist, flushFloatSessionsPersist])
 
   pickersBySessionRef.current = pickersBySession
   navArmedByLeafRef.current = navArmedByLeaf
@@ -512,6 +522,7 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     restoredNavActive,
     processUiReady,
     applyRunCmdPatches,
+    flushFloatPersist,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,

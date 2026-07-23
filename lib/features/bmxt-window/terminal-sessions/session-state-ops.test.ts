@@ -10,9 +10,9 @@ describe("session-state-ops", () => {
   it("appendLinesToSessionState keeps session id", () => {
     const base = createEmptyTerminalSessionsState()
     const sessionId = base.activeId
-    const next = appendLinesToSessionState(base, sessionId, ["> tabs -list", "hint"])
+    const next = appendLinesToSessionState(base, sessionId, ["> tab -list", "hint"])
     expect(next.order).toEqual(base.order)
-    expect(next.logsById[sessionId]).toEqual(["> tabs -list", "hint"])
+    expect(next.logsById[sessionId]).toEqual(["> tab -list", "hint"])
   })
 
   it("exitSessionState on last session marks fullClose", () => {

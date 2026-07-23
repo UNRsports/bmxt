@@ -1,5 +1,5 @@
 /**
- * 複数の Effect ハンドラで共有する URL 正規化と tabs -moveurl 相当のジャンプ。
+ * 複数の Effect ハンドラで共有する URL 正規化と tab -moveurl 相当のジャンプ。
  */
 
 import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "../../extension-storage/keys"

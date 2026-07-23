@@ -13,7 +13,7 @@ const sampleRecord: ListRecord = {
 
 const sampleResult: ListResult = {
   schema: LIST_OUTPUT_SCHEMA,
-  command: "tabs",
+  command: "tab",
   subcommand: "-list",
   records: [sampleRecord]
 }

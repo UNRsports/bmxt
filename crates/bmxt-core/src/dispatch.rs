@@ -105,12 +105,12 @@ mod tests {
 
     #[test]
     fn unknown_command_prefix_suggests_registry_match() {
-        match run_line("tab") {
+        match run_line("ta") {
             DispatchBundle::Msgs { msgs, .. } => {
                 assert_eq!(msgs[0].key, "cmd.error.unknownCommandSuggest");
                 let params = msgs[0].params.as_ref().expect("params");
-                assert_eq!(params.get("cmdToken").map(String::as_str), Some("tab"));
-                assert_eq!(params.get("suggestions").map(String::as_str), Some("tabs"));
+                assert_eq!(params.get("cmdToken").map(String::as_str), Some("ta"));
+                assert_eq!(params.get("suggestions").map(String::as_str), Some("tab"));
             }
             other => panic!("expected msgs, got {other:?}"),
         }

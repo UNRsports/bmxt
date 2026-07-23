@@ -11,13 +11,13 @@ describe("browse prefix match", () => {
   })
 
   it("parses browse with list producer", () => {
-    assert.deepEqual(parsePickerPrefixLine("browse tabs -list"), {
+    assert.deepEqual(parsePickerPrefixLine("browse tab -list"), {
       kind: "run",
-      producerSegment: "tabs -list"
+      producerSegment: "tab -list"
     })
-    assert.deepEqual(parsePickerPrefixLine("browse tabs -list -url"), {
+    assert.deepEqual(parsePickerPrefixLine("browse tab -list -url"), {
       kind: "run",
-      producerSegment: "tabs -list -url"
+      producerSegment: "tab -list -url"
     })
     assert.deepEqual(parsePickerPrefixLine("browse search -list foo"), {
       kind: "run",
@@ -26,8 +26,8 @@ describe("browse prefix match", () => {
   })
 
   it("rejects non-browse segments", () => {
-    assert.equal(parsePickerPrefixLine("tabs -list"), null)
-    assert.equal(isPickerPrefixCommand("tabs -list | browse"), false)
+    assert.equal(parsePickerPrefixLine("tab -list"), null)
+    assert.equal(isPickerPrefixCommand("tab -list | browse"), false)
   })
 })
 
@@ -35,7 +35,7 @@ describe("resolvePickerFamily", () => {
   it("resolves tabs family", () => {
     const listResult: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
-      command: "tabs",
+      command: "tab",
       subcommand: "-list",
       records: [
         { kind: "tabs.window", fields: {} },
@@ -48,7 +48,7 @@ describe("resolvePickerFamily", () => {
   it("rejects mixed families", () => {
     const listResult: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
-      command: "tabs",
+      command: "tab",
       subcommand: "-list",
       records: [
         { kind: "tabs.tab", fields: {} },

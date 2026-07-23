@@ -16,10 +16,10 @@ describe("encodeLogLine / decodeLogLine", () => {
   })
 
   it("round-trips stderr with the in-band prefix", () => {
-    const encoded = encodeLogLine("usage: tabs -list", "stderr")
+    const encoded = encodeLogLine("usage: tab -list", "stderr")
     assert.equal(encoded.startsWith(STDERR_LOG_PREFIX), true)
     assert.deepEqual(decodeLogLine(encoded), {
-      text: "usage: tabs -list",
+      text: "usage: tab -list",
       channel: "stderr"
     })
   })

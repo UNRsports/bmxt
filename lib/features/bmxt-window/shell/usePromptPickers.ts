@@ -298,7 +298,7 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       allowEmptyFirstPickerSyncRef.current = false
       tabPickerOpenRequestRef.current = false
       if (!resolved) {
-        // EN: Complete second with no further fixed tokens (e.g. `nav -back`) — close.
+        // EN: Complete second with no further fixed tokens (e.g. `tab -back`) — close.
         // Do not leave a hollow “第二コマンド” popup that steals Enter.
         if (isCompleteSecondTokenWithoutFurtherFixedTokens(ln, pos)) {
           setSubCmdPicker(null)

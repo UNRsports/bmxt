@@ -30,7 +30,7 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "search" => search::run(args),
         "group" => group::run(args),
         "help" => help_cmd::run(args),
-        "tabs" => tabs::run(args),
+        "tab" => tabs::run(args),
         "nav" => nav::run(args),
         "translate" => translate::run(args),
         "aboutbmxt" => aboutbmxt::run(args),

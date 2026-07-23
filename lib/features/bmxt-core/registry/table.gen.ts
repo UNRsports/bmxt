@@ -42,14 +42,14 @@ export const COMMANDS: readonly CmdMeta[] = [
     usagePrimary: "help"
   },
   {
-    name: "tabs",
+    name: "tab",
     aliases: [] as const,
-    usagePrimary: "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl | tabs help"
+    usagePrimary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help"
   },
   {
     name: "nav",
     aliases: [] as const,
-    usagePrimary: "nav -enter | nav -exit | nav -back | nav -forward | nav -reload | nav -close | nav -windowclose"
+    usagePrimary: "nav -enter | nav -exit | nav -windowclose"
   },
   {
     name: "translate",

@@ -1,4 +1,4 @@
-/** EN: Parse `tabs -list` line tokens without Chrome / completion dependencies. */
+/** EN: Parse `tab -list` line tokens without Chrome / completion dependencies. */
 
 export type TabsListLineOptions = {
   showUrl: boolean
@@ -9,7 +9,7 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: Parse `tabs -list [-url]` — full line must match (no extra args).
+ * EN: Parse `tab -list [-url]` — full line must match (no extra args).
  * JA: 第三トークン以降は `-url` のみ。
  */
 export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
@@ -17,7 +17,7 @@ export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
   if (parts.length < 2) {
     return null
   }
-  if (normalizeToken(parts[0]!) !== "tabs") {
+  if (normalizeToken(parts[0]!) !== "tab") {
     return null
   }
   if (normalizeToken(parts[1]!) !== "-list") {

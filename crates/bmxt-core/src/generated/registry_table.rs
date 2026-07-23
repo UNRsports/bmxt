@@ -51,14 +51,14 @@ pub const COMMANDS: &[CmdMeta] = &[
         usage_primary: "help",
     },
     CmdMeta {
-        name: "tabs",
+        name: "tab",
         aliases: &[],
-        usage_primary: "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl | tabs help",
+        usage_primary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help",
     },
     CmdMeta {
         name: "nav",
         aliases: &[],
-        usage_primary: "nav -enter | nav -exit | nav -back | nav -forward | nav -reload | nav -close | nav -windowclose",
+        usage_primary: "nav -enter | nav -exit | nav -windowclose",
     },
     CmdMeta {
         name: "translate",
@@ -126,7 +126,7 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
     },
 ];
 
-static BRANCHES_TABS: &[SubcommandBranch] = &[
+static BRANCHES_TAB: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-list",
         trailing_tokens: &["-url"],
@@ -148,21 +148,6 @@ static BRANCHES_TABS: &[SubcommandBranch] = &[
         trailing_tokens: &[],
     },
     SubcommandBranch {
-        head: "help",
-        trailing_tokens: &[],
-    },
-];
-
-static BRANCHES_NAV: &[SubcommandBranch] = &[
-    SubcommandBranch {
-        head: "-enter",
-        trailing_tokens: &[],
-    },
-    SubcommandBranch {
-        head: "-exit",
-        trailing_tokens: &[],
-    },
-    SubcommandBranch {
         head: "-back",
         trailing_tokens: &[],
     },
@@ -176,6 +161,21 @@ static BRANCHES_NAV: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-close",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_NAV: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-enter",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-exit",
         trailing_tokens: &[],
     },
     SubcommandBranch {
@@ -285,8 +285,8 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "group" => false,
         "help" => false,
-        "tabs" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "help"),
-        "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-back" | "-forward" | "-reload" | "-close" | "-windowclose"),
+        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "-back" | "-forward" | "-reload" | "-close" | "help"),
+        "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
         "aboutbmxt" => false,
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
@@ -307,7 +307,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "search" => BRANCHES_SEARCH,
         "group" => &[],
         "help" => &[],
-        "tabs" => BRANCHES_TABS,
+        "tab" => BRANCHES_TAB,
         "nav" => BRANCHES_NAV,
         "translate" => BRANCHES_TRANSLATE,
         "aboutbmxt" => &[],

@@ -1,7 +1,7 @@
 {
   "schema": "bmxt-rule/1",
   "producer": [
-    ["command", "tabs"],
+    ["command", "tab"],
     ["subcommand", "-list"]
   ],
   "records": [

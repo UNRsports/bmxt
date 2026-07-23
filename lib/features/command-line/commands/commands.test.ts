@@ -18,17 +18,17 @@ describe("COMMAND_ENTRIES order", () => {
 
 describe("parseRedirects", () => {
   it("leaves a bare command unchanged", () => {
-    assert.deepEqual(parseRedirects("tabs -list"), {
+    assert.deepEqual(parseRedirects("tab -list"), {
       ok: true,
-      command: "tabs -list",
+      command: "tab -list",
       redirects: []
     })
   })
 
   it("parses stdout and stderr null sinks", () => {
-    assert.deepEqual(parseRedirects("tabs -list > null 2> /dev/null"), {
+    assert.deepEqual(parseRedirects("tab -list > null 2> /dev/null"), {
       ok: true,
-      command: "tabs -list",
+      command: "tab -list",
       redirects: [
         { channel: "stdout", mode: "write", target: "null" },
         { channel: "stderr", mode: "write", target: "/dev/null" }

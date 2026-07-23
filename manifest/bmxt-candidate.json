@@ -50,7 +50,7 @@
       },
       {
         "id": "pipe.producerSegment",
-        "description": "Tokens before | in a pipe chain follow normal command zones (e.g. tabs -list).",
+        "description": "Tokens before | in a pipe chain follow normal command zones (e.g. tab -list).",
         "when": {
           "cursorInPipeStage": true,
           "pipeStageIndex": 0
@@ -93,7 +93,7 @@
     {
       "id": "browser.tabIds",
       "domain": "browser",
-      "description": "Numeric tab IDs from the current tab tree (same scope as tabs -list).",
+      "description": "Numeric tab IDs from the current tab tree (same scope as tab -list).",
       "valueKind": "integer",
       "chromeApis": ["tabs.query"],
       "filterDefault": "prefix",
@@ -102,7 +102,7 @@
     {
       "id": "browser.windowLabels",
       "domain": "browser",
-      "description": "Window container labels from the tabs -list tree (page.window rows).",
+      "description": "Window container labels from the tab -list tree (page.window rows).",
       "valueKind": "string",
       "chromeApis": ["tabs.query"],
       "filterDefault": "contains",
@@ -111,7 +111,7 @@
     {
       "id": "browser.tabGroupLabels",
       "domain": "browser",
-      "description": "Tab group labels from the tabs -list tree (page.group rows).",
+      "description": "Tab group labels from the tab -list tree (page.group rows).",
       "valueKind": "string",
       "chromeApis": ["tabs.query", "tabGroups.query"],
       "filterDefault": "contains",
@@ -265,7 +265,7 @@
       "zones": []
     },
     {
-      "command": "tabs",
+      "command": "tab",
       "zones": [
         { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
         {
@@ -286,6 +286,17 @@
           "when": { "second": "-setting", "third": "-page-active" },
           "tier": "rest",
           "sources": [{ "kind": "plugin.feature", "provider": "tabs.pageActiveModes" }]
+        },
+        {
+          "when": { "second": "-reload" },
+          "tier": "rest",
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
+            }
+          ]
         }
       ]
     },

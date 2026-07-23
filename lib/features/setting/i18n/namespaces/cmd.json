@@ -128,20 +128,12 @@
     "en": "       nav -exit        — disarm nav (turn Alt off first)"
   },
   "cmd.nav.usage.line3": {
-    "ja": "       nav -back | -forward | -reload [#t:<tabId>…] — 履歴／リロード（引数なしは操作先アクティブタブ。`-reload ` でタブ候補・タイトル入力で絞込・`@` で URL 絞込）",
-    "en": "       nav -back | -forward | -reload [#t:<tabId>…] — history / reload (bare -reload = active target tab; `nav -reload ` opens tab candidates; type to filter title, `@` filters URL)"
-  },
-  "cmd.nav.usage.line4": {
-    "ja": "       nav -close | -windowclose — タブ／操作先タブのウィンドウを閉じる（y/n 確認あり）",
-    "en": "       nav -close | -windowclose — close tab / window containing the target tab (y/n confirm)"
-  },
-  "cmd.nav.error.badReloadToken": {
-    "ja": "error: 不正なリロード対象トークンです: {token}（形式: #t:<tabId>）",
-    "en": "error: invalid reload tab token: {token} (expected #t:<tabId>)"
+    "ja": "       nav -windowclose — 操作先タブを含むウィンドウを閉じる（y/n 確認あり。BMXt 窓は閉じない）",
+    "en": "       nav -windowclose — close the window containing the target tab (y/n confirm; never the BMXt window)"
   },
   "cmd.nav.confirm.compoundBlocked": {
-    "ja": "error: nav -close / -windowclose は複合コマンド内では使えません（確認が必要なため）",
-    "en": "error: nav -close / -windowclose cannot run in a compound line (confirmation required)"
+    "ja": "error: tab -close / nav -windowclose は複合コマンド内では使えません（確認が必要なため）",
+    "en": "error: tab -close / nav -windowclose cannot run in a compound line (confirmation required)"
   },
   "cmd.nav.usage.navTyping": {
     "ja": "nav typing 翻訳: `translate -on` を使用（translate コマンド参照）。",
@@ -160,8 +152,8 @@
     "en": "error: browse requires a `-list` producer command: {segment}"
   },
   "cmd.browse.error.uiOnly": {
-    "ja": "error: browse は BMXt ウィンドウから実行してください（例: browse tabs -list）",
-    "en": "error: run browse from the BMXt window (e.g. browse tabs -list)"
+    "ja": "error: browse は BMXt ウィンドウから実行してください（例: browse tab -list）",
+    "en": "error: run browse from the BMXt window (e.g. browse tab -list)"
   },
   "cmd.browse.usage.line1": {
     "ja": "usage: browse <list-command>",
@@ -172,8 +164,8 @@
     "en": "  Prefix `browse` displays the following `-list` output in a side column (or session candidates)."
   },
   "cmd.browse.usage.line3": {
-    "ja": "  例: browse tabs -list · browse tabs -list -url · browse search -list foo · browse setting -list",
-    "en": "  Examples: browse tabs -list · browse tabs -list -url · browse search -list foo · browse setting -list"
+    "ja": "  例: browse tab -list · browse tab -list -url · browse search -list foo · browse setting -list",
+    "en": "  Examples: browse tab -list · browse tab -list -url · browse search -list foo · browse setting -list"
   },
   "cmd.browse.usage.line4": {
     "ja": "  単体の `browse` では何も開きません。パイプ `|` は使いません。",
@@ -408,8 +400,8 @@
     "en": "       Storage follows setting snapshot destination (bundled with settings / Obsidian vault)."
   },
   "cmd.tabs.error.exitListUsage": {
-    "ja": "error: usage: tabs -exit -list",
-    "en": "error: usage: tabs -exit -list"
+    "ja": "error: usage: tab -exit -list",
+    "en": "error: usage: tab -exit -list"
   },
   "cmd.tabs.error.internalDispatchOutOfSync": {
     "ja": "error: internal: tabs dispatch out of sync",
@@ -420,64 +412,76 @@
     "en": "error: internal: tabs option out of sync (re-run pnpm run codegen)"
   },
   "cmd.tabs.error.invalidListUsage": {
-    "ja": "error: invalid tabs -list usage",
-    "en": "error: invalid tabs -list usage"
+    "ja": "error: invalid tab -list usage",
+    "en": "error: invalid tab -list usage"
   },
   "cmd.tabs.error.tooManyArgs": {
     "ja": "error: too many arguments",
     "en": "error: too many arguments"
   },
   "cmd.tabs.error.unknownOption": {
-    "ja": "error: 不明な tabs オプション: {option}",
-    "en": "error: unknown tabs option: {option}"
+    "ja": "error: 不明な tab オプション: {option}",
+    "en": "error: unknown tab option: {option}"
+  },
+  "cmd.tabs.error.badReloadToken": {
+    "ja": "error: 不正なリロード対象トークンです: {token}（形式: #t:<tabId>）",
+    "en": "error: invalid reload tab token: {token} (expected #t:<tabId>)"
   },
   "cmd.tabs.error.usageMoveurl": {
-    "ja": "usage: tabs -moveurl <http(s)-url>",
-    "en": "usage: tabs -moveurl <http(s)-url>"
+    "ja": "usage: tab -moveurl <http(s)-url>",
+    "en": "usage: tab -moveurl <http(s)-url>"
   },
   "cmd.tabs.exitList.title": {
-    "ja": "Tab picker は BMXt プロンプトから閉じます: tabs -exit -list",
-    "en": "Tab picker is closed from the BMXt prompt with: tabs -exit -list"
+    "ja": "Tab picker は BMXt プロンプトから閉じます: tab -exit -list",
+    "en": "Tab picker is closed from the BMXt prompt with: tab -exit -list"
   },
   "cmd.tabs.list.title": {
-    "ja": "tabs -list — ウィンドウ／グループ／タブを ID 付きでターミナルに列挙",
-    "en": "tabs -list — list windows, groups, and tabs with IDs in the terminal"
+    "ja": "tab -list — ウィンドウ／グループ／タブを ID 付きでターミナルに列挙",
+    "en": "tab -list — list windows, groups, and tabs with IDs in the terminal"
   },
   "cmd.tabs.listPicker.title": {
-    "ja": "Tab picker は次のように開きます: browse tabs -list（`tabs -list -url` で URL 表示）",
-    "en": "Tab picker is opened with: browse tabs -list (optional `tabs -list -url` for URLs)"
+    "ja": "Tab picker は次のように開きます: browse tab -list（`tab -list -url` で URL 表示）",
+    "en": "Tab picker is opened with: browse tab -list (optional `tab -list -url` for URLs)"
   },
   "cmd.tabs.runHint": {
-    "ja": "実行例: tabs -list / tabs -list -url / browse tabs -list · tabs -exit -list · tabs -setting -page-active --auto | --manual · tabs -nowurl · tabs -moveurl <url>",
-    "en": "Run: tabs -list / tabs -list -url / browse tabs -list. tabs -exit -list. tabs -setting -page-active --auto | --manual (from BMXt prompt). tabs -nowurl. tabs -moveurl <url>."
+    "ja": "実行例: tab -list / tab -list -url / browse tab -list · tab -exit -list · tab -setting -page-active --auto | --manual · tab -nowurl · tab -moveurl <url> · tab -back | -forward | -reload | -close",
+    "en": "Run: tab -list / tab -list -url / browse tab -list. tab -exit -list. tab -setting -page-active --auto | --manual (from BMXt prompt). tab -nowurl. tab -moveurl <url>. tab -back | -forward | -reload | -close."
   },
   "cmd.tabs.setting.pageActive": {
     "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
     "en": "`--auto` activates the highlighted tab on move (default). `--manual` activates only with Alt."
   },
   "cmd.tabs.setting.title": {
-    "ja": "tabs -setting は BMXt プロンプトから: tabs -setting -page-active --auto または --manual",
-    "en": "tabs -setting is handled from the BMXt prompt with: tabs -setting -page-active --auto or --manual"
+    "ja": "tab -setting は BMXt プロンプトから: tab -setting -page-active --auto または --manual",
+    "en": "tab -setting is handled from the BMXt prompt with: tab -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tabs -list [-url]   — タブ列挙（`-url` は URL）。列 UI は `browse tabs -list`",
-    "en": "usage: tabs -list [-url]   — list tabs (-url: URLs). Column UI: `browse tabs -list`"
+    "ja": "usage: tab -list [-url]   — タブ列挙（`-url` は URL）。列 UI は `browse tab -list`",
+    "en": "usage: tab -list [-url]   — list tabs (-url: URLs). Column UI: `browse tab -list`"
   },
   "cmd.tabs.usage.line2": {
-    "ja": "       tabs -exit -list — この BMXt ペインのタブピッカーを閉じる",
-    "en": "       tabs -exit -list — close tab picker in this BMXt pane"
+    "ja": "       tab -exit -list — この BMXt ペインのタブピッカーを閉じる",
+    "en": "       tab -exit -list — close tab picker in this BMXt pane"
   },
   "cmd.tabs.usage.line3": {
-    "ja": "       tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー",
-    "en": "       tabs -setting -page-active --auto | --manual — page preview on highlight"
+    "ja": "       tab -setting -page-active --auto | --manual — ハイライト時のタブプレビュー",
+    "en": "       tab -setting -page-active --auto | --manual — page preview on highlight"
   },
   "cmd.tabs.usage.line4": {
-    "ja": "       tabs -moveurl <url> — URL のタブへ移動、なければ新規タブ",
-    "en": "       tabs -moveurl <url> — go to tab with URL or open new tab (Tab completes URLs in BMXt)"
+    "ja": "       tab -moveurl <url> — URL のタブへ移動、なければ新規タブ",
+    "en": "       tab -moveurl <url> — go to tab with URL or open new tab (Tab completes URLs in BMXt)"
   },
   "cmd.tabs.usage.line5": {
-    "ja": "       tabs -nowurl       — 現在のタブ URL を表示",
-    "en": "       tabs -nowurl       — show current tab URL"
+    "ja": "       tab -nowurl       — 現在のタブ URL を表示",
+    "en": "       tab -nowurl       — show current tab URL"
+  },
+  "cmd.tabs.usage.line6": {
+    "ja": "       tab -back | -forward | -reload [#t:<tabId>…] — 履歴／リロード（引数なしは操作先アクティブタブ。`-reload ` でタブ候補・タイトル入力で絞込・`@` で URL 絞込）",
+    "en": "       tab -back | -forward | -reload [#t:<tabId>…] — history / reload (bare -reload = active target tab; `tab -reload ` opens tab candidates; type to filter title, `@` filters URL)"
+  },
+  "cmd.tabs.usage.line7": {
+    "ja": "       tab -close — 操作先タブを閉じる（y/n 確認あり）",
+    "en": "       tab -close — close the target tab (y/n confirm)"
   },
   "cmd.translate.error.internal": {
     "ja": "error: 不明な translate オプション (internal): {option}",

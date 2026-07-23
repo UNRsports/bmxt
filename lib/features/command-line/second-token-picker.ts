@@ -9,7 +9,7 @@ import {
   listSecondTokenCandidatesByCommand,
   listThirdTokenCandidates
 } from "../builtin-commands/command-subcommands.gen.ts"
-import { resolveCanonical } from "../bmxt-core/registry/index.ts"
+import { COMMANDS } from "../bmxt-core/registry/table.gen.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import {
   matchCandidates,
@@ -20,9 +20,24 @@ import type { ImeTokenPickerModel } from "./ime-token-picker-model.ts"
 
 export type { ImeTokenPickerModel }
 
+function resolveCanonical(cmd: string): string | null {
+  const k = cmd.toLowerCase()
+  for (const c of COMMANDS) {
+    if (c.name === k) {
+      return c.name
+    }
+    for (const a of c.aliases) {
+      if (a.toLowerCase() === k) {
+        return c.name
+      }
+    }
+  }
+  return null
+}
+
 /**
  * EN: Cursor is at/after a complete second token with no further fixed-token menu
- *     (e.g. `nav -back` / `nav -back `). Empty-filter keep-alive must not leave a hollow popup.
+ *     (e.g. `tab -back` / `tab -back `). Empty-filter keep-alive must not leave a hollow popup.
  */
 export function isCompleteSecondTokenWithoutFurtherFixedTokens(
   line: string,
@@ -49,6 +64,9 @@ export function isCompleteSecondTokenWithoutFurtherFixedTokens(
 /**
  * EN: Second-token menu while open must filter the full head list (option-body / contains).
  * WASM `complete` only prefix-matches the dashed form and returns null for `r` → `-reload`.
+ *
+ * Also covers complete first command at EOL without a trailing space (`tab` + Tab): same as
+ * WASM `complete_line` when `token_index == 0` and the word is a known first command.
  */
 export function resolveSecondTokenPickerHit(
   line: string,
@@ -58,6 +76,31 @@ export function resolveSecondTokenPickerHit(
   const [l, r] = wordBounds(line, cursor)
   const left = line.slice(0, l)
   const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
+
+  // EN: `tab` (no trailing space) at EOL — offer second heads for insert at end of line.
+  if (tokensBefore.length === 0) {
+    const cmdWord = line.slice(l, r)
+    const canonical0 = resolveCanonical(cmdWord)
+    if (
+      !canonical0 ||
+      cursor < line.length ||
+      getSubcommandBranches(canonical0).length === 0
+    ) {
+      return null
+    }
+    const rawSecond = listSecondTokenCandidatesByCommand(canonical0, "")
+    if (rawSecond.length === 0) {
+      return null
+    }
+    return {
+      tokenStart: line.length,
+      tokenEnd: line.length,
+      prefix: "",
+      candidates: rawSecond,
+      tier: "second"
+    }
+  }
+
   if (tokensBefore.length !== 1) {
     return null
   }

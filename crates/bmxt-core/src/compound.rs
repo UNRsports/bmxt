@@ -346,9 +346,9 @@ mod tests {
 
     #[test]
     fn parse_pipe_splits_outside_quotes() {
-        match parse_pipe_segments("tabs -list | close") {
+        match parse_pipe_segments("tab -list | close") {
             ParsePipeSegmentsResult::Ok { segments, .. } => {
-                assert_eq!(segments, vec!["tabs -list", "close"]);
+                assert_eq!(segments, vec!["tab -list", "close"]);
             }
             other => panic!("{other:?}"),
         }
@@ -356,9 +356,9 @@ mod tests {
 
     #[test]
     fn parse_compound_records_operators() {
-        match parse_compound_segments("tabs -list || clear") {
+        match parse_compound_segments("tab -list || clear") {
             ParseCompoundSegmentsResult::Ok(parsed) => {
-                assert_eq!(parsed.segments, vec!["tabs -list", "clear"]);
+                assert_eq!(parsed.segments, vec!["tab -list", "clear"]);
                 assert_eq!(parsed.operators, vec!["||"]);
             }
             other => panic!("{other:?}"),

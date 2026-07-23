@@ -41,6 +41,8 @@ export function useTerminalSessions(
   setSessionDisplayName: (sessionId: string, name: string) => void
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   resetSessions: () => void
+  /** EN: Await writing the current float sessions blob (no-op for popup). */
+  flushFloatPersist: () => Promise<void>
 } {
   const [state, setState] = useState<TerminalSessionsStateV1>(() =>
     createEmptyTerminalSessionsState()
@@ -57,6 +59,7 @@ export function useTerminalSessions(
   const persistReadyRef = useRef(false)
 
   const commitState = useCallback((next: TerminalSessionsStateV1) => {
+    stateRef.current = next
     setState(next)
   }, [])
 
@@ -128,7 +131,11 @@ export function useTerminalSessions(
         return
       }
       const encoded = encodeLogLines(lines, channel)
-      setState((prev) => appendLinesToSessionState(prev, sessionId, encoded))
+      setState((prev) => {
+        const next = appendLinesToSessionState(prev, sessionId, encoded)
+        stateRef.current = next
+        return next
+      })
     },
     []
   )
@@ -152,7 +159,11 @@ export function useTerminalSessions(
       if (patches.length === 0) {
         return
       }
-      setState((prev) => applySessionPatches(prev, patches, sessionContextRef.current))
+      setState((prev) => {
+        const next = applySessionPatches(prev, patches, sessionContextRef.current)
+        stateRef.current = next
+        return next
+      })
     },
     []
   )
@@ -161,6 +172,20 @@ export function useTerminalSessions(
     commitState(createEmptyTerminalSessionsState())
   }, [commitState])
 
+  const flushFloatPersist = useCallback(async () => {
+    if (hostKindRef.current !== "float") {
+      return
+    }
+    const tabId = floatTabIdRef.current
+    if (tabId === null) {
+      return
+    }
+    if (!persistReadyRef.current) {
+      return
+    }
+    await saveFloatTerminalSessionsForTab(tabId, stateRef.current)
+  }, [])
+
   return {
     state,
     sessionsReady,
@@ -168,7 +193,8 @@ export function useTerminalSessions(
     setActiveSession,
     setSessionDisplayName,
     applyRunCmdPatches,
-    resetSessions
+    resetSessions,
+    flushFloatPersist
   }
 }
 

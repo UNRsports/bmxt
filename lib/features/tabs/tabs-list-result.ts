@@ -63,7 +63,7 @@ export function tabPickerRowsToListResult(
   }
   return {
     schema: LIST_OUTPUT_SCHEMA,
-    command: "tabs",
+    command: "tab",
     subcommand: "-list",
     records
   }

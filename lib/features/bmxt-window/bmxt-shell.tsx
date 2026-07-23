@@ -60,6 +60,7 @@ import {
   findNavReloadTabTokenSpans,
   type NavReloadTabChipMeta
 } from "../nav/nav-reload-tab-token"
+import { lockedPrefixBlocksDelete } from "./shell/prompt-locked-prefix"
 import { rewriteHashTTokensInLogLines } from "../nav/nav-tab-ref-log-rewrite"
 import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url"
 import { useLogScroll } from "./shell/useLogScroll"
@@ -166,6 +167,8 @@ type Props = {
   /** EN: Restored nav overlay ON after float remount. */
   restoredNavActive?: boolean
   processUiReady?: boolean
+  /** EN: Float — flush sessions/browse before `tab -close` removes the host tab. */
+  flushFloatPersist?: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -211,6 +214,7 @@ export function BmxtShell({
   floatTabId = null,
   restoredNavActive = false,
   processUiReady = true,
+  flushFloatPersist: flushFloatPersistProp,
   applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
@@ -948,6 +952,22 @@ export function BmxtShell({
     openSessionPicker("list")
   }, [openSessionPicker, sessionListPickerDismissedRef])
 
+  const syncPromptDom = useCallback((nextLine: string, cursor: number) => {
+    const ta = imeRef.current
+    if (!ta) {
+      return
+    }
+    ta.value = nextLine
+    const pos = Math.max(0, Math.min(cursor, nextLine.length))
+    ta.setSelectionRange(pos, pos)
+  }, [])
+
+  const flushFloatPersist = useCallback(async () => {
+    if (flushFloatPersistProp) {
+      await flushFloatPersistProp()
+    }
+  }, [flushFloatPersistProp])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
@@ -971,6 +991,8 @@ export function BmxtShell({
     domPageActiveModeRef,
     translatePairIdRef,
     promptLine,
+    syncPromptDom,
+    flushFloatPersist,
     allowEmptyFirstPickerSyncRef,
     imeTokenPickerDismissedRef,
     tabPressSeqRef,
@@ -1018,7 +1040,13 @@ export function BmxtShell({
     navConfirmClosePendingRef
   })
 
-
+  const getPromptLockedPrefix = useCallback((): string | null => {
+    const pending = navConfirmClosePendingRef.current
+    if (!pending) {
+      return null
+    }
+    return pending.lockedPrefix
+  }, [])
 
   const {
     applyPromptLine,
@@ -1055,15 +1083,21 @@ export function BmxtShell({
     setCompositionAnchor,
     syncImeTokenPicker,
     focusPrompt,
-    resetNavTranslateSession
+    resetNavTranslateSession,
+    getPromptLockedPrefix
   })
 
   const insertPrintableWhenReclaiming = useCallback(
     (ch: string) => {
       const ta = imeRef.current
       const base = ta?.value ?? lineRef.current
-      const start = ta?.selectionStart ?? cursorRef.current
-      const end = ta?.selectionEnd ?? cursorRef.current
+      const locked = getPromptLockedPrefix()
+      let start = ta?.selectionStart ?? cursorRef.current
+      let end = ta?.selectionEnd ?? cursorRef.current
+      if (locked && locked.length > 0) {
+        start = Math.max(start, locked.length)
+        end = Math.max(end, locked.length)
+      }
       const nextLine = base.slice(0, start) + ch + base.slice(end)
       const nextCursor = start + ch.length
       if (ta) {
@@ -1071,7 +1105,7 @@ export function BmxtShell({
       }
       applyPromptLine(nextLine, nextCursor, ta)
     },
-    [applyPromptLine, cursorRef, imeRef, lineRef]
+    [applyPromptLine, cursorRef, getPromptLockedPrefix, imeRef, lineRef]
   )
 
   const deleteBackwardWhenReclaiming = useCallback(() => {
@@ -1079,6 +1113,20 @@ export function BmxtShell({
     const base = ta?.value ?? lineRef.current
     const start = ta?.selectionStart ?? cursorRef.current
     const end = ta?.selectionEnd ?? cursorRef.current
+    const locked = getPromptLockedPrefix()
+    if (
+      locked &&
+      locked.length > 0 &&
+      lockedPrefixBlocksDelete(
+        locked,
+        start,
+        end,
+        start !== end ? "deleteByCut" : "deleteContentBackward"
+      )
+    ) {
+      applyPromptLine(base, Math.max(locked.length, start), ta)
+      return
+    }
     if (start !== end) {
       const nextLine = base.slice(0, start) + base.slice(end)
       if (ta) {
@@ -1104,13 +1152,27 @@ export function BmxtShell({
       ta.value = nextLine
     }
     applyPromptLine(nextLine, nextCursor, ta)
-  }, [applyPromptLine, cursorRef, imeRef, lineRef])
+  }, [applyPromptLine, cursorRef, getPromptLockedPrefix, imeRef, lineRef])
 
   const deleteForwardWhenReclaiming = useCallback(() => {
     const ta = imeRef.current
     const base = ta?.value ?? lineRef.current
     const start = ta?.selectionStart ?? cursorRef.current
     const end = ta?.selectionEnd ?? cursorRef.current
+    const locked = getPromptLockedPrefix()
+    if (
+      locked &&
+      locked.length > 0 &&
+      lockedPrefixBlocksDelete(
+        locked,
+        start,
+        end,
+        start !== end ? "deleteByCut" : "deleteContentForward"
+      )
+    ) {
+      applyPromptLine(base, Math.max(locked.length, start), ta)
+      return
+    }
     if (start !== end) {
       const nextLine = base.slice(0, start) + base.slice(end)
       if (ta) {
@@ -1135,7 +1197,7 @@ export function BmxtShell({
       ta.value = nextLine
     }
     applyPromptLine(nextLine, start, ta)
-  }, [applyPromptLine, cursorRef, imeRef, lineRef])
+  }, [applyPromptLine, cursorRef, getPromptLockedPrefix, imeRef, lineRef])
 
   usePromptTypingFocus({
     enabled: promptPaneFocused,
@@ -1208,7 +1270,8 @@ export function BmxtShell({
     applySessionSwitchPick,
     switchSessionFromListPicker,
     handleToggleNavActive,
-    promptLine
+    promptLine,
+    getPromptLockedPrefix
   })
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`

@@ -19,7 +19,7 @@ type ListCommandMatcherDef = ListCommandMatcher
 const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
   {
     id: "tabs",
-    command: "tabs",
+    command: "tab",
     runtime: "service_worker",
     matchPlain(segment) {
       const parsed = parseTabsListLine(segment)

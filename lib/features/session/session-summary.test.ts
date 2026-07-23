@@ -47,7 +47,7 @@ describe("buildSessionSummary", () => {
 describe("lastCommandFromSessionLog", () => {
   it("skips session commands", () => {
     const cmd = lastCommandFromSessionLog([
-      "> tabs -list",
+      "> tab -list",
       "> session -new",
       "> search foo"
     ])
@@ -65,7 +65,7 @@ describe("deriveDefaultSessionName", () => {
         setting: null
       },
       navArmed: false,
-      logs: ["> tabs -list"],
+      logs: ["> tab -list"],
       fallbackIndex: 2
     })
     assert.equal(name, "search:foo")

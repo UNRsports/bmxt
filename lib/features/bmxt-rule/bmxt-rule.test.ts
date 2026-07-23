@@ -51,7 +51,7 @@ describe("bmxtRule adapter from ListResult", () => {
   it("maps tabs.tab to page.open with entry arrays", () => {
     const listResult: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
-      command: "tabs",
+      command: "tab",
       subcommand: "-list",
       records: [
         {
@@ -69,7 +69,7 @@ describe("bmxtRule adapter from ListResult", () => {
     }
     const stream = bmxtRuleStreamFromListResult(listResult)
     assert.equal(stream.schema, BMXT_RULE_SCHEMA)
-    assert.equal(getBmxtRuleProducerEntry(stream.producer, "command"), "tabs")
+    assert.equal(getBmxtRuleProducerEntry(stream.producer, "command"), "tab")
     assert.equal(stream.records.length, 1)
     assert.equal(stream.records[0]!.kind, "page.open")
     assert.equal(getBmxtRuleEntry(stream.records[0]!, "tabId"), 7)

@@ -68,9 +68,9 @@ describe("BMXt POSIX Profile — stdout/stderr (P3)", () => {
   })
 
   it("encodes stderr for session log storage", () => {
-    const encoded = encodeLogLine("usage: tabs -list", "stderr")
+    const encoded = encodeLogLine("usage: tab -list", "stderr")
     assert.deepEqual(decodeLogLine(encoded), {
-      text: "usage: tabs -list",
+      text: "usage: tab -list",
       channel: "stderr"
     })
   })
@@ -102,7 +102,7 @@ describe("BMXt POSIX Profile — pipe consumers (P4)", () => {
 
     const tabsList: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
-      command: "tabs",
+      command: "tab",
       subcommand: "-list",
       records: [
         { kind: "tabs.window", fields: {} },

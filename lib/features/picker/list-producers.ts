@@ -7,7 +7,7 @@ export const PICKER_LIST_PRODUCER_TOKENS = [
   "search",
   "session",
   "setting",
-  "tabs"
+  "tab"
 ] as const
 
 export type PickerListProducerToken = (typeof PICKER_LIST_PRODUCER_TOKENS)[number]

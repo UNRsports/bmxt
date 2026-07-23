@@ -6,9 +6,12 @@
 import { clearFloatTerminalSessionsForTab } from "../../lib/features/bmxt-float/float-terminal-session-storage"
 import { clearFloatBrowseStateForTab } from "../../lib/features/bmxt-float/float-browse-state-storage"
 import {
-  BMXT_FLOAT_MESSAGE_TYPE,
-  isBmxtFloatVisibilityMessage,
-  type BmxtFloatHostResponse
+  sendFloatHostAction,
+  showBmxtFloatOnTabAsync
+} from "../../lib/features/bmxt-float/float-host-control"
+import { tryDeliverPendingFloatHandoff } from "../../lib/features/bmxt-float/float-tab-handoff"
+import {
+  isBmxtFloatVisibilityMessage
 } from "../../lib/features/bmxt-float/float-host-message"
 import {
   clearFloatDesiredVisibleOnTab,
@@ -21,26 +24,6 @@ import { isScriptablePageUrl } from "../../lib/features/url/is-scriptable-page-u
 async function resolveActiveTabAsync(): Promise<chrome.tabs.Tab | undefined> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
   return tabs[0]
-}
-
-async function sendFloatHostAction(
-  tabId: number,
-  action: "toggle" | "show" | "hide"
-): Promise<boolean | null> {
-  try {
-    const response = (await chrome.tabs.sendMessage(tabId, {
-      type: BMXT_FLOAT_MESSAGE_TYPE,
-      action,
-      tabId
-    })) as BmxtFloatHostResponse | undefined
-    if (!response || response.ok === false) {
-      return null
-    }
-    return response.visible
-  } catch {
-    // Content script missing or host permission not granted — no-op.
-    return null
-  }
 }
 
 async function applyDesiredVisibility(
@@ -80,19 +63,13 @@ export async function hideBmxtFloatOnTabAsync(
   await applyDesiredVisibility(tabId, false, clearSessions)
 }
 
-export async function showBmxtFloatOnTabAsync(tabId: number): Promise<void> {
-  const tab = await chrome.tabs.get(tabId).catch(() => undefined)
-  if (!tab || !isScriptablePageUrl(tab.url)) {
-    return
-  }
-  const visible = await sendFloatHostAction(tabId, "show")
-  if (visible === true) {
-    await setFloatDesiredVisibleOnTab(tabId, true)
-  }
-}
+export { showBmxtFloatOnTabAsync }
 
 async function reShowFloatIfDesired(tabId: number, url: string | undefined): Promise<void> {
   await hydrateFloatVisibleTabs()
+  if (await tryDeliverPendingFloatHandoff(tabId, url, showBmxtFloatOnTabAsync)) {
+    return
+  }
   if (!isFloatDesiredVisibleOnTab(tabId)) {
     return
   }
@@ -148,6 +125,14 @@ export function setupFloatLaunch(
       return
     }
     void reShowFloatIfDesired(tabId, tab.url ?? changeInfo.url)
+  })
+
+  chrome.tabs.onActivated.addListener((activeInfo) => {
+    void chrome.tabs.get(activeInfo.tabId).then((tab) => {
+      void tryDeliverPendingFloatHandoff(activeInfo.tabId, tab.url, showBmxtFloatOnTabAsync)
+    }).catch(() => {
+      /* tab may be gone */
+    })
   })
 
   chrome.tabs.onRemoved.addListener((tabId) => {

@@ -117,14 +117,14 @@ mod wasm_api_tests {
 
     #[test]
     fn complete_returns_object_or_null() {
-        let raw = complete("tabs ", 5);
+        let raw = complete("tab ", 5);
         let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
         assert!(v.is_object() || v.is_null());
     }
 
     #[test]
     fn compound_segment_eligibility_json() {
-        let raw = compound_segment_eligibility("tabs");
+        let raw = compound_segment_eligibility("tab");
         let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
         assert_eq!(v["kind"], "continuation");
     }

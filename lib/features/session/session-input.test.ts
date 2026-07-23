@@ -65,7 +65,7 @@ describe("resolveSessionSwitchPickerState", () => {
 
   it("returns null before -switch is complete", () => {
     assert.equal(resolveSessionSwitchPickerState("session -sw", 11), null)
-    assert.equal(resolveSessionSwitchPickerState("tabs -switch", 12), null)
+    assert.equal(resolveSessionSwitchPickerState("tab -switch", 12), null)
   })
 })
 

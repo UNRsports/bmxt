@@ -103,6 +103,12 @@ export const FLOAT_VISIBLE_TAB_IDS_KEY = "bmxt_float_visible_tab_ids_v1"
  */
 export const FLOAT_BROWSE_STATE_BY_TAB_KEY = "bmxt_float_browse_state_by_tab_v1"
 
+/**
+ * EN: Float sessions/browse waiting for a scriptable tab after close onto a non-scriptable page.
+ * JA: 非スクリプト可能ページへ閉じたあとに、利用可能タブまで待つフロート引き継ぎ。
+ */
+export const FLOAT_PENDING_HANDOFF_KEY = "bmxt_float_pending_handoff_v1"
+
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 

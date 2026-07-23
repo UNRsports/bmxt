@@ -3,20 +3,20 @@ import assert from "node:assert/strict"
 import { matchPlainListCommand } from "./registry.ts"
 
 describe("list-commands registry", () => {
-  it("matches plain tabs -list", () => {
-    const matched = matchPlainListCommand("tabs -list")
+  it("matches plain tab -list", () => {
+    const matched = matchPlainListCommand("tab -list")
     assert.notEqual(matched, null)
     assert.equal(matched!.entry.id, "tabs")
   })
 
-  it("matches tabs -list -url", () => {
-    const matched = matchPlainListCommand("tabs -list -url")
+  it("matches tab -list -url", () => {
+    const matched = matchPlainListCommand("tab -list -url")
     assert.notEqual(matched, null)
     assert.deepEqual(matched!.match, { showUrl: true })
   })
 
-  it("rejects unknown tokens on tabs -list", () => {
-    assert.equal(matchPlainListCommand("tabs -list --picker"), null)
+  it("rejects unknown tokens on tab -list", () => {
+    assert.equal(matchPlainListCommand("tab -list --picker"), null)
   })
 
   it("matches plain search -list", () => {

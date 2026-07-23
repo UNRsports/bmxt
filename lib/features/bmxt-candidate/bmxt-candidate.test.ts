@@ -41,7 +41,7 @@ describe("bmxtCandidate catalog", () => {
     assert.ok(ids.includes("ui.sessionNames"))
   })
 
-  it("binds close and tabs -moveurl to tab/history sources", () => {
+  it("binds close and tab -moveurl to tab/history sources", () => {
     const catalog = loadBmxtCandidateCatalog()
     const close = catalog.commands.find((c) => c.command === "close")
     const closeProviders =
@@ -50,7 +50,7 @@ describe("bmxtCandidate catalog", () => {
       ) ?? []
     assert.ok(closeProviders.includes("browser.tabIds"))
 
-    const tabs = catalog.commands.find((c) => c.command === "tabs")
+    const tabs = catalog.commands.find((c) => c.command === "tab")
     const moveUrlZone = tabs?.zones.find((zone) => zone.when?.second === "-moveurl")
     const moveUrlProviders =
       moveUrlZone?.sources.flatMap((source) =>

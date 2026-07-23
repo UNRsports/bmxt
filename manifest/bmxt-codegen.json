@@ -87,9 +87,9 @@
     },
     {
       "module": "tabs",
-      "canonicalName": "tabs",
+      "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tabs -list [-url] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl | tabs help",
+      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help",
       "subcommands": [
         {
           "head": "-list",
@@ -115,26 +115,6 @@
           "tail": "none"
         },
         {
-          "head": "help",
-          "tail": "none"
-        }
-      ]
-    },
-    {
-      "module": "nav",
-      "canonicalName": "nav",
-      "aliases": [],
-      "usagePrimary": "nav -enter | nav -exit | nav -back | nav -forward | nav -reload | nav -close | nav -windowclose",
-      "subcommands": [
-        {
-          "head": "-enter",
-          "tail": "none"
-        },
-        {
-          "head": "-exit",
-          "tail": "none"
-        },
-        {
           "head": "-back",
           "tail": "none"
         },
@@ -148,6 +128,26 @@
         },
         {
           "head": "-close",
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "nav",
+      "canonicalName": "nav",
+      "aliases": [],
+      "usagePrimary": "nav -enter | nav -exit | nav -windowclose",
+      "subcommands": [
+        {
+          "head": "-enter",
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
           "tail": "none"
         },
         {

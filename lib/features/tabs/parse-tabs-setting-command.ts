@@ -10,10 +10,10 @@ export type TabsSettingCommandParse =
   | { kind: "page-active"; mode: TabsPageActiveMode }
   | null
 
-/** EN: `tabs -setting -page-active [--auto|--manual]` | lone `tabs`. */
+/** EN: `tab -setting -page-active [--auto|--manual]` | lone `tab`. */
 export function parseTabsSettingCommandLine(trimmed: string): TabsSettingCommandParse {
   const parts = trimmed.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0 || parts[0]!.toLowerCase() !== "tabs") {
+  if (parts.length === 0 || parts[0]!.toLowerCase() !== "tab") {
     return null
   }
   if (parts.length === 1) {

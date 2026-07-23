@@ -62,6 +62,8 @@ export function useProcessUiPersistence(
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
   restoredNavActive: boolean
   processUiReady: boolean
+  /** EN: Float only — write current leaf browse fields to session storage. */
+  flushFloatBrowsePersist: () => Promise<void>
 } {
   const [pickersBySession, setPickersBySession] = useState<SessionPickersByLeaf>({})
   const [paneFocusByLeaf, setPaneFocusByLeaf] = useState<Record<string, PaneFocusTarget>>({})
@@ -240,6 +242,27 @@ export function useProcessUiPersistence(
     })
   }, [])
 
+  const flushFloatBrowsePersist = useCallback(async () => {
+    if (hostKindRef.current !== "float") {
+      return
+    }
+    const tabId = floatTabIdRef.current
+    if (tabId === null || !persistReadyRef.current) {
+      return
+    }
+    await patchFloatBrowseStateForTab(tabId, {
+      navArmedByLeaf,
+      paneFocusByLeaf,
+      detailBarIdByLeaf,
+      modeToolbarOrderByLeaf
+    })
+  }, [
+    detailBarIdByLeaf,
+    modeToolbarOrderByLeaf,
+    navArmedByLeaf,
+    paneFocusByLeaf
+  ])
+
   return {
     pickersBySession,
     setPickersBySession,
@@ -252,6 +275,7 @@ export function useProcessUiPersistence(
     navArmedByLeaf,
     setNavArmedForLeaf,
     restoredNavActive,
-    processUiReady
+    processUiReady,
+    flushFloatBrowsePersist
   }
 }

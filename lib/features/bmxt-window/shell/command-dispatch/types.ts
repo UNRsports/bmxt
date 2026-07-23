@@ -31,6 +31,10 @@ export type CommandDispatchDeps = {
   domPageActiveModeRef: React.MutableRefObject<any>
   translatePairIdRef: React.MutableRefObject<any>
   promptLine: () => string
+  /** EN: Keep the textarea DOM in sync with lineRef (confirm / clear). */
+  syncPromptDom: (line: string, cursor: number) => void
+  /** EN: Float only — flush sessions/browse to session storage before tab close. */
+  flushFloatPersist: () => Promise<void>
   allowEmptyFirstPickerSyncRef: React.MutableRefObject<boolean>
   imeTokenPickerDismissedRef: React.MutableRefObject<boolean>
   tabPressSeqRef: React.MutableRefObject<number>
@@ -81,7 +85,7 @@ export type CommandDispatchDeps = {
   submitExternalSettingsRecoveryAnswer?: (
     trimmed: string
   ) => Promise<ExternalSettingsRecoveryAnswerResult>
-  /** EN: Pending y/n for `nav -close` / `nav -windowclose`. */
+  /** EN: Pending y/n for `tab -close` / `nav -windowclose`. */
   navConfirmClosePendingRef: React.MutableRefObject<
     import("../../../nav/nav-confirm-close").NavConfirmClosePending | null
   >
@@ -104,11 +108,14 @@ export function recordCommandHistory(deps: CommandDispatchDeps): void {
 export function clearPrompt(deps: CommandDispatchDeps): void {
   deps.setLine("")
   deps.setCursorPos(0)
+  deps.lineRef.current = ""
+  deps.syncPromptDom("", 0)
 }
 
 export function setContinuationPrompt(deps: CommandDispatchDeps, continuation: string): void {
+  deps.lineRef.current = continuation
   deps.setLine(continuation)
   deps.setCursorPos(continuation.length)
-  deps.lineRef.current = continuation
+  deps.syncPromptDom(continuation, continuation.length)
   deps.focusPrompt()
 }
