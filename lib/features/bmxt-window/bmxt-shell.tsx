@@ -82,6 +82,7 @@ import {
   type SearchListPickerState
 } from "../search/search-list-picker-input"
 import { isJobHandleActive, useSessionJobRunner } from "../job"
+import { useCommandBusyIndicator } from "./shell/command-busy"
 import { parseDomExitListLine, type DomListPickerState } from "../dom/dom-list-picker-input"
 import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
 import {
@@ -113,6 +114,7 @@ import {
 } from "../translate"
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
 import { tShell } from "../setting/i18n/ns/shell"
+import { tSearch } from "../setting/i18n/ns/search"
 import { tNav } from "../setting/i18n/ns/nav"
 import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolvers"
 import { setRunLocale } from "../setting/i18n/run-locale"
@@ -339,6 +341,41 @@ export function BmxtShell({
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
   const jobRunner = useSessionJobRunner(sessionId)
+  const {
+    isCommandBusy,
+    showCommandBusy,
+    commandBusyLabel,
+    beginCommandBusy,
+    updateCommandBusyMessage,
+    updateCommandBusyProgress,
+    endCommandBusy,
+    isBusyTokenActive
+  } = useCommandBusyIndicator()
+  const isCommandBusyRef = useRef(false)
+  useEffect(() => {
+    isCommandBusyRef.current = isCommandBusy
+  }, [isCommandBusy])
+
+  const cancelCommandBusy = useCallback(() => {
+    const hadSearch = isJobHandleActive(jobRunner.getActive("search-list"))
+    const hadRunCmd = isJobHandleActive(jobRunner.getActive("run-cmd"))
+    if (!hadSearch && !hadRunCmd && !isCommandBusyRef.current) {
+      return
+    }
+    if (hadSearch) {
+      jobRunner.cancel("search-list")
+    }
+    if (hadRunCmd) {
+      jobRunner.cancel("run-cmd")
+    }
+    endCommandBusy()
+    if (hadSearch) {
+      void appendLogLines([tSearch("search.cancelledCtrlC", uiSettings.locale)])
+    } else {
+      void appendLogLines([tShell("shell.commandBusy.cancelled", uiSettings.locale)])
+    }
+  }, [appendLogLines, endCommandBusy, jobRunner, uiSettings.locale])
+
   const [navActive, setNavActive] = useState(false)
   const [navActivePersistReady, setNavActivePersistReady] = useState(hostKind !== "float")
   const floatNavActiveRestoredRef = useRef(false)
@@ -983,6 +1020,13 @@ export function BmxtShell({
     navActiveRef,
     navPositionsRef,
     jobRunner,
+    beginCommandBusy,
+    updateCommandBusyMessage,
+    updateCommandBusyProgress,
+    endCommandBusy,
+    isCommandBusy: () => isCommandBusyRef.current,
+    isBusyTokenActive,
+    cancelCommandBusy,
     tabPickerRef,
     searchListPickerRef,
     domListPickerRef,
@@ -1262,6 +1306,8 @@ export function BmxtShell({
     syncImeTokenPicker,
     dismissImeTokenPicker,
     cancelSearchPageScan,
+    cancelCommandBusy,
+    isCommandBusy: () => isCommandBusyRef.current,
     closeSessionNameTyping,
     closeSessionListPicker,
     applySessionSwitchPick,
@@ -1322,6 +1368,9 @@ export function BmxtShell({
           navTypingMultiline={navTypingMultiline}
           sessionNameTyping={sessionNameTyping}
           showSearchListPatternPlaceholder={showSearchListPatternPlaceholder}
+          isCommandBusy={isCommandBusy}
+          showCommandBusy={showCommandBusy}
+          commandBusyLabel={commandBusyLabel}
           mirror={mirror}
           uiLocale={uiSettings.locale}
           imeRef={imeRef}

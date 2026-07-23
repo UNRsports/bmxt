@@ -6,6 +6,7 @@ import type { UiSettings } from "../../../setting/settings"
 import type { UiLocale } from "../../../setting/locale"
 import type { TranslationPairId } from "../../../translate/translation-pair"
 import type { BmxtHostKind } from "../../bmxt-host-kind"
+import type { CommandBusyProgress, CommandBusyToken } from "../command-busy"
 
 export type CommandDispatchDeps = {
   sessionId: string
@@ -23,6 +24,14 @@ export type CommandDispatchDeps = {
   navActiveRef: React.MutableRefObject<boolean>
   navPositionsRef: React.MutableRefObject<any>
   jobRunner: JobRunner
+  /** EN: Prompt busy indicator for commands expected to take ≥1s before results. */
+  beginCommandBusy: (message: string) => CommandBusyToken
+  updateCommandBusyMessage: (token: CommandBusyToken, message: string) => void
+  updateCommandBusyProgress: (token: CommandBusyToken, progress: CommandBusyProgress) => void
+  endCommandBusy: (token?: CommandBusyToken) => void
+  isCommandBusy: () => boolean
+  isBusyTokenActive: (token: CommandBusyToken) => boolean
+  cancelCommandBusy: () => void
   tabPickerRef: React.MutableRefObject<any>
   searchListPickerRef: React.MutableRefObject<any>
   domListPickerRef: React.MutableRefObject<any>

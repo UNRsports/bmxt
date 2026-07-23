@@ -3,7 +3,11 @@ import {
   type SessionPatch
 } from "../../terminal-sessions/session-patches"
 import { runCommandFromUiAsync } from "../../terminal-sessions/session-runtime-client"
+import { parseSearchListLine } from "../../../search/search-list-parse"
+import { runSearchListPlainOnUi } from "../../../search/run-search-list-plain-ui"
+import { shouldCancelJob } from "../../../job"
 import { tError } from "../../../setting/i18n/ns/error"
+import { tShell } from "../../../setting/i18n/ns/shell"
 import {
   clearPrompt,
   recordCommandHistory,
@@ -30,41 +34,67 @@ function patchesWithoutPromptEcho(patches: readonly SessionPatch[]): SessionPatc
 export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
   const { deps, trimmed, locale } = ctx
 
+  // EN: Plain search runs on the UI thread so the prompt busy indicator and Ctrl+C work.
+  if (parseSearchListLine(trimmed) !== null) {
+    void runSearchListPlainOnUi(deps, trimmed, trimmed, locale)
+    return
+  }
+
   deps.appendCommandToHistory(trimmed)
   clearPrompt(deps)
   recordCommandHistory(deps)
-  // EN: Echo immediately — search / dom plain paths can take seconds before patches arrive.
+  // EN: Echo immediately — SW paths can take seconds before patches arrive.
   void deps.appendLogLines([`> ${trimmed}`], "stdout")
-  void runCommandFromUiAsync(
-    trimmed,
-    deps.sessionId,
-    deps.sessionOrderLength,
-    locale,
-    deps.hostKind
-  )
-    .then((response) => {
-      if (!isRunCmdResult(response)) {
-        void deps.appendLogLines([tError("error.unknown", locale)], "stderr")
-        return
-      }
-      if (response.ok === false) {
+
+  const busyToken = deps.beginCommandBusy(tShell("shell.commandBusy.working", locale))
+  deps.jobRunner.cancel("run-cmd")
+
+  void deps.jobRunner.start(
+    "run-cmd",
+    async (job) => {
+      try {
+        const response = await runCommandFromUiAsync(
+          trimmed,
+          deps.sessionId,
+          deps.sessionOrderLength,
+          locale,
+          deps.hostKind
+        )
+        if (shouldCancelJob(job)) {
+          return
+        }
+        if (!isRunCmdResult(response)) {
+          void deps.appendLogLines([tError("error.unknown", locale)], "stderr")
+          return
+        }
+        if (response.ok === false) {
+          void deps.appendLogLines(
+            [tError("error.generic", locale, { message: response.error })],
+            "stderr"
+          )
+          return
+        }
+        if (!deps.isBusyTokenActive(busyToken)) {
+          return
+        }
+        deps.applyRunCmdPatches(patchesWithoutPromptEcho(response.patches))
+      } catch (e) {
+        if (shouldCancelJob(job) || !deps.isBusyTokenActive(busyToken)) {
+          return
+        }
         void deps.appendLogLines(
-          [tError("error.generic", locale, { message: response.error })],
+          [
+            tError("error.dispatchFailed", locale, {
+              message: e instanceof Error ? e.message : String(e)
+            })
+          ],
           "stderr"
         )
-        return
+      } finally {
+        deps.endCommandBusy(busyToken)
       }
-      deps.applyRunCmdPatches(patchesWithoutPromptEcho(response.patches))
-    })
-    .catch((e) => {
-      void deps.appendLogLines(
-        [
-          tError("error.dispatchFailed", locale, {
-            message: e instanceof Error ? e.message : String(e)
-          })
-        ],
-        "stderr"
-      )
-    })
+    },
+    { meta: { line: trimmed }, persist: false }
+  )
   deps.focusPrompt()
 }

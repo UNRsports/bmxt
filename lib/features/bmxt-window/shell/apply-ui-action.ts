@@ -27,6 +27,7 @@ import { tNav } from "../../setting/i18n/ns/nav"
 import { tSearch } from "../../setting/i18n/ns/search"
 import { tSession } from "../../setting/i18n/ns/session"
 import { tSetting } from "../../setting/i18n/ns/setting"
+import { tShell } from "../../setting/i18n/ns/shell"
 import { tTabs } from "../../setting/i18n/ns/tabs"
 import { tTranslate } from "../../setting/i18n/ns/translate"
 import { translateOnLogLine } from "../../setting/i18n/resolvers"
@@ -732,20 +733,27 @@ function applyOpenPlainList(
   }
   finishCommand(ctx)
   void (async () => {
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`])
+    const busyToken = ctx.deps.beginCommandBusy(tShell("shell.commandBusy.working", ctx.locale))
     try {
       const lines = await runPlainListForCommandId(
         listId,
         matchResult.match,
         listFetchContext(ctx)
       )
-      await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...lines])
+      if (ctx.deps.isBusyTokenActive(busyToken)) {
+        await ctx.deps.appendLogLines(lines)
+      }
     } catch (e) {
-      await ctx.deps.appendLogLines([
-        `> ${ctx.trimmed}`,
-        tError("error.generic", ctx.locale, {
-          message: e instanceof Error ? e.message : String(e)
-        })
-      ])
+      if (ctx.deps.isBusyTokenActive(busyToken)) {
+        await ctx.deps.appendLogLines([
+          tError("error.generic", ctx.locale, {
+            message: e instanceof Error ? e.message : String(e)
+          })
+        ])
+      }
+    } finally {
+      ctx.deps.endCommandBusy(busyToken)
     }
     ctx.deps.focusPrompt()
   })()
@@ -797,12 +805,17 @@ function applyOpenPicker(
   recordOnly(ctx)
   ctx.deps.setSubCmdPicker(null)
   void (async () => {
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`], "stdout")
+    const busyToken = ctx.deps.beginCommandBusy(tShell("shell.commandBusy.working", ctx.locale))
     try {
       const listResult = await fetchListResultById(
         listId,
         matchResult.match,
         listFetchContext(ctx)
       )
+      if (!ctx.deps.isBusyTokenActive(busyToken)) {
+        return
+      }
       const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
       const outcome = await openPickerFromListResult(
         listResult,
@@ -811,7 +824,9 @@ function applyOpenPicker(
         ctx.locale
       )
       clearPrompt(ctx.deps)
-      await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...outcome.stdout], "stdout")
+      if (outcome.stdout.length > 0) {
+        await ctx.deps.appendLogLines(outcome.stdout, "stdout")
+      }
       if (outcome.stderr.length > 0) {
         await ctx.deps.appendLogLines(outcome.stderr, "stderr")
       }
@@ -819,13 +834,17 @@ function applyOpenPicker(
         ctx.deps.focusPrompt()
       }
     } catch (e) {
+      if (!ctx.deps.isBusyTokenActive(busyToken)) {
+        return
+      }
       await ctx.deps.appendLogLines([
-        `> ${ctx.trimmed}`,
         tError("error.generic", ctx.locale, {
           message: e instanceof Error ? e.message : String(e)
         })
       ])
       ctx.deps.focusPrompt()
+    } finally {
+      ctx.deps.endCommandBusy(busyToken)
     }
   })()
   return true

@@ -1,7 +1,13 @@
 import type { CommandDispatchDeps } from "../bmxt-window/shell/command-dispatch/types.ts"
+import {
+  clearPrompt,
+  recordCommandHistory
+} from "../bmxt-window/shell/command-dispatch/types.ts"
 import type { DispatchChromeContext } from "../dispatch"
+import { mergeJobIntoDispatchContext, shouldCancelJob } from "../job"
 import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
+import { tShell } from "../setting/i18n/ns/shell.ts"
 import {
   fetchSearchListResult,
   formatSearchListPlainLines
@@ -30,8 +36,8 @@ function buildSearchDispatchCtx(
 }
 
 /**
- * EN: Run plain `search -list` on the BMXt UI thread with live progress lines.
- * JA: plain `search -list` を UI で実行し、進捗行を逐次ログへ出す。
+ * EN: Run plain `search -list` on the BMXt UI thread with busy indicator + Ctrl+C cancel.
+ * JA: plain `search -list` を UI で実行し、プロンプト上ビジー表示と Ctrl+C 中断に対応する。
  */
 export async function runSearchListPlainOnUi(
   deps: CommandDispatchDeps,
@@ -40,26 +46,62 @@ export async function runSearchListPlainOnUi(
   locale: UiLocale
 ): Promise<void> {
   const dispatchLine = normalizeSearchListDispatchLine(dispatchLineRaw)
+  deps.appendCommandToHistory(displayLine.trim())
+  clearPrompt(deps)
+  recordCommandHistory(deps)
+
   await deps.appendLogLines([`> ${displayLine}`], "stdout")
 
-  const onProgress = async (message: string): Promise<void> => {
-    await deps.appendLogLines([message], "stdout")
-  }
+  const busyToken = deps.beginCommandBusy(tShell("shell.commandBusy.searching", locale))
 
-  try {
-    const result = await fetchSearchListResult({
-      dispatchLine,
-      locale,
-      ctx: buildSearchDispatchCtx(deps, locale, dispatchLine, onProgress),
-      onProgress
-    })
-    const plainLines = formatSearchListPlainLines(result, locale)
-    await deps.appendLogLines(plainLines, "stdout")
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e)
-    await deps.appendLogLines(
-      [tSearch("search.list.error.failed", locale, { message })],
-      "stderr"
-    )
-  }
+  await deps.jobRunner.start(
+    "search-list",
+    async (job) => {
+      const onProgress = async (message: string): Promise<void> => {
+        if (shouldCancelJob(job)) {
+          return
+        }
+        await deps.appendLogLines([message], "stdout")
+      }
+
+      try {
+        const baseCtx = buildSearchDispatchCtx(deps, locale, dispatchLine, onProgress)
+        const ctx = mergeJobIntoDispatchContext(baseCtx, job, {
+          onSearchPageProgress: onProgress,
+          searchPageProgressLabel: searchPageProgressLabel(dispatchLine)
+        })
+        const result = await fetchSearchListResult({
+          dispatchLine,
+          locale,
+          ctx,
+          onProgress,
+          onBusyProgress: (progress) => {
+            if (shouldCancelJob(job)) {
+              return
+            }
+            deps.updateCommandBusyProgress(busyToken, progress)
+          }
+        })
+        if (shouldCancelJob(job)) {
+          return
+        }
+        const plainLines = formatSearchListPlainLines(result, locale)
+        await deps.appendLogLines(plainLines, "stdout")
+      } catch (e) {
+        if (shouldCancelJob(job)) {
+          return
+        }
+        const message = e instanceof Error ? e.message : String(e)
+        await deps.appendLogLines(
+          [tSearch("search.list.error.failed", locale, { message })],
+          "stderr"
+        )
+      } finally {
+        deps.endCommandBusy(busyToken)
+      }
+    },
+    { meta: { line: dispatchLine } }
+  )
+
+  deps.focusPrompt()
 }

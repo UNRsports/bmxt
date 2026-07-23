@@ -32,6 +32,8 @@ type SearchPageLongTab = {
 
 export type SearchPageLinesOptions = {
   unlimit?: boolean
+  /** EN: Structured progress for the prompt busy overall indicator. */
+  onProgressInfo?: (progress: SearchPageProgress) => void | Promise<void>
 }
 
 function appendLongPageNotices(
@@ -71,7 +73,11 @@ export async function searchPageLines(
 ): Promise<string[]> {
   const unlimit = options.unlimit === true
   const maxPageTextChars = unlimit ? 0 : MAX_PAGE_TEXT_CHARS
+  const onProgressInfo = options.onProgressInfo
   const emit = async (p: SearchPageProgress) => {
+    if (onProgressInfo) {
+      await onProgressInfo(p)
+    }
     if (!onProgress) {
       return
     }

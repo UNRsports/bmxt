@@ -1176,16 +1176,51 @@ body {
   }
 }
 
-/* find -list search in progress (shown after ~450ms) */
-.bmxt-prompt-spinner {
-  flex-shrink: 0;
-  width: 12px;
-  height: 12px;
-  margin-right: 6px;
-  border: 2px solid #30363d;
-  border-top-color: #58a6ff;
-  border-radius: 50%;
-  animation: bmxt-spin 0.75s linear infinite;
+/* Long-running command — prompt input locked (no `>`; Ctrl+C only). */
+.bmxt-prompt-line--busy {
+  position: relative;
+  align-items: center;
+  min-height: calc(1.35 * 16px);
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(110, 118, 129, 0.12);
+  outline: 1px dashed rgba(139, 148, 158, 0.45);
+  outline-offset: -1px;
+  cursor: default;
+}
+
+.bmxt-prompt-busy {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #8b949e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  pointer-events: none;
+  letter-spacing: 0.01em;
+}
+
+.bmxt-prompt-busy--animated {
+  color: #c9d1d9;
+}
+
+.bmxt-prompt-ime--busy-lock {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  caret-color: transparent;
+  cursor: default;
+  resize: none;
 }
 
 @keyframes bmxt-spin {

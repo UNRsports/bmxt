@@ -25,6 +25,11 @@ type PromptInputProps = {
   navTypingMultiline: boolean
   sessionNameTyping: boolean
   showSearchListPatternPlaceholder: boolean
+  /** EN: Command work in flight — prompt is input-locked (Ctrl+C only). */
+  isCommandBusy: boolean
+  /** EN: True after the delay — braille frames are active on the busy label. */
+  showCommandBusy: boolean
+  commandBusyLabel: string
   mirror: PromptMirrorSegments
   uiLocale: UiLocale
   imeRef: React.RefObject<HTMLTextAreaElement>
@@ -58,6 +63,9 @@ export function PromptInput({
   navTypingMultiline,
   sessionNameTyping,
   showSearchListPatternPlaceholder,
+  isCommandBusy,
+  showCommandBusy,
+  commandBusyLabel,
   mirror,
   uiLocale,
   imeRef,
@@ -113,13 +121,60 @@ export function PromptInput({
     const field = promptFieldRef.current
     const mirror = promptMirrorRef.current
     const ta = imeRef.current
-    if (!field || !mirror || !ta) {
+    if (!field || !mirror || !ta || isCommandBusy) {
       return
     }
     const next = Math.max(mirror.scrollHeight, Math.ceil(1.35 * 16))
     field.style.minHeight = `${next}px`
     ta.style.minHeight = `${next}px`
-  }, [line, cursorPos, navReloadTabMeta, mirror.composition, imeRef])
+  }, [line, cursorPos, navReloadTabMeta, mirror.composition, imeRef, isCommandBusy])
+
+  useLayoutEffect(() => {
+    if (!isCommandBusy || !promptPaneFocused) {
+      return
+    }
+    const ta = imeRef.current
+    if (ta && document.activeElement !== ta) {
+      ta.focus()
+    }
+  }, [isCommandBusy, promptPaneFocused, imeRef])
+
+  const blockBusyInput = (e: { preventDefault: () => void }) => {
+    e.preventDefault()
+  }
+
+  if (isCommandBusy) {
+    return (
+      <div className="bmxt-prompt-line bmxt-prompt-line--busy" aria-busy="true">
+        <span
+          className={`bmxt-prompt-busy${showCommandBusy ? " bmxt-prompt-busy--animated" : ""}`}
+          role="status"
+          aria-live="polite">
+          {commandBusyLabel}
+        </span>
+        <textarea
+          ref={imeRef}
+          className="bmxt-prompt-ime bmxt-prompt-ime--busy-lock"
+          rows={1}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          wrap="off"
+          tabIndex={promptPaneFocused ? 0 : -1}
+          aria-label={commandBusyLabel}
+          value=""
+          readOnly
+          onKeyDown={onKeyDown}
+          onBeforeInput={blockBusyInput}
+          onPaste={blockBusyInput}
+          onCompositionStart={blockBusyInput}
+          onCompositionUpdate={blockBusyInput}
+          onCompositionEnd={blockBusyInput}
+        />
+      </div>
+    )
+  }
 
   return (
     <div
@@ -164,11 +219,11 @@ export function PromptInput({
                 : tPrompt("prompt.navTyping", uiLocale)
               : showSessionNameTypingPlaceholder
                 ? tSession("session.settingName.placeholder", uiLocale)
-              : showSearchListPatternPlaceholder
-                ? tPrompt("prompt.searchListPattern", uiLocale)
-                : mode === "normal" && line.trim() === ""
-                  ? tPrompt("prompt.placeholder", uiLocale)
-                  : undefined
+                : showSearchListPatternPlaceholder
+                  ? tPrompt("prompt.searchListPattern", uiLocale)
+                  : mode === "normal" && line.trim() === ""
+                    ? tPrompt("prompt.placeholder", uiLocale)
+                    : undefined
           }
           value={navPromptValueControlled ? line : undefined}
           readOnly={!promptPaneFocused}

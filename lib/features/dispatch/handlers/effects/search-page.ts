@@ -16,6 +16,9 @@ export async function applySearchPageEffect(
     ctx.searchPageProgressLabel ?? "search -list --page",
     shouldCancel,
     ctx.uiLocale ?? DEFAULT_UI_LOCALE,
-    { unlimit: ctx.searchPageUnlimit === true }
+    {
+      unlimit: ctx.searchPageUnlimit === true,
+      onProgressInfo: ctx.onSearchPageProgressInfo
+    }
   )
 }

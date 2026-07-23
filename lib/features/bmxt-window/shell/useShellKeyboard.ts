@@ -69,6 +69,9 @@ export type UseShellKeyboardOptions = {
   syncImeTokenPicker: (line: string, pos: number) => void
   dismissImeTokenPicker: () => void
   cancelSearchPageScan: () => void
+  /** EN: Cancel prompt-side busy work (plain search / SW fallback). */
+  cancelCommandBusy: () => void
+  isCommandBusy: () => boolean
   closeSessionNameTyping: () => void
   closeSessionListPicker: () => void
   applySessionSwitchPick: (pickHi: number) => void
@@ -186,6 +189,21 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
 
       if (!options.promptPaneFocused) {
+        return
+      }
+
+      if (options.isCommandBusy()) {
+        if (
+          e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          (e.key === "c" || e.key === "C")
+        ) {
+          e.preventDefault()
+          options.cancelCommandBusy()
+          return
+        }
+        e.preventDefault()
         return
       }
 
