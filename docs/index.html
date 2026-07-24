@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: June 29, 2026</p>
+          <p class="muted">Last updated: July 24, 2026</p>
         </div>
       </header>
 
@@ -147,9 +147,11 @@
             <li>
               BMXt is a <strong>local productivity tool</strong>: a command-style UI for tabs, tab groups,
               browser windows, and related tasks you initiate (including optional page inspection, search
-              across history or bookmarks or open pages, an optional keyboard nav overlay, optional UI locale
-              and appearance settings via <code>setting -list</code>, and optional translation assist when you
-              run <code>translate -on</code>).
+              across history or bookmarks or open pages, an optional keyboard nav overlay, an optional in-page
+              float prompt, optional UI locale and appearance settings via <code>setting -list</code>, and
+              optional translation assist when you run <code>translate -on</code>). Command interpretation runs
+              locally via a <strong>bundled</strong> Rust/WebAssembly module; the UI and Chrome API effects run
+              in TypeScript on your device.
             </li>
             <li>
               We do <strong>not</strong> sell your personal information. We do <strong>not</strong> run
@@ -164,15 +166,16 @@
               extension state from BMXt for the purposes described in this policy.
             </li>
             <li>
-              Command output and typed history are handled primarily <strong>in memory</strong> for the UI;
-              only capped fields are written to <code>chrome.storage.local</code>. Text you type during nav
-              typing for translation previews stays in session memory and is not saved to storage as typed
-              content; only translation assist on/off and your chosen language pair are persisted locally. The
-              Extension UI and service worker are not designed to call <code>fetch()</code> against arbitrary
-              third-party HTTPS URLs; <code>connect-src</code> in the packaged manifest reinforces that (Chrome
-              Web Store delivery and browser updates are separate). Optional <code>http://*/*</code> and
+              Terminal session logs and open picker UI live primarily <strong>in the BMXt UI page memory</strong>
+              while a window or float host is open; only capped fields (for example command history and UI
+              settings) are written to <code>chrome.storage.local</code>. Text you type during nav typing for
+              translation previews stays in session memory and is not saved to storage as typed content; only
+              translation assist on/off and your chosen language pair are persisted locally. The Extension UI
+              and service worker are not designed to call <code>fetch()</code> against arbitrary third-party
+              HTTPS URLs; <code>connect-src 'self'</code> in the packaged manifest reinforces that (Chrome Web
+              Store delivery and browser updates are separate). Optional <code>http://*/*</code> and
               <code>https://*/*</code> access is requested <strong>at runtime</strong> only when you run
-              commands that inject into web pages.
+              commands that inject into web pages (including the optional float prompt and nav overlay).
             </li>
             <li>
               When translation assist is on, text you type may be processed by Chrome’s built-in
@@ -213,44 +216,35 @@
         </p>
         <h3>4.4 Local storage (extension storage)</h3>
         <p>
-          The Extension uses <code>chrome.storage.local</code> to persist data on your device. It also
-          declares the <code>unlimitedStorage</code> permission so user-imported UI background images and
-          other local data can exceed Chrome’s default extension storage quota. Everything below remains on
-          your device, including:
+          The Extension uses <code>chrome.storage.local</code> (and, for the optional in-page float prompt,
+          <code>chrome.storage.session</code>) to keep data on your device. It also declares the
+          <code>unlimitedStorage</code> permission so user-imported UI background images and other local data
+          can exceed Chrome’s default extension storage quota. Everything below remains on your device.
+        </p>
+        <p>
+          <strong>Runtime source of truth for terminal sessions:</strong> while a BMXt popup window or float
+          host is open, session logs, open picker columns, pane focus, and tab-picker fold state live in the
+          <strong>BMXt UI page memory</strong> (not as the authoritative store in
+          <code>chrome.storage.local</code>). Closing the BMXt window or running <code>exit</code> on the last
+          terminal session discards that in-memory state. Legacy keys such as
+          <code>bmxt_terminal_sessions_v1</code>, <code>bmxt_process_ui_v1</code>, and
+          <code>bmxt_tab_picker_fold_v1</code> may still be <strong>removed for cleanup</strong> on process exit
+          but are not the runtime source of truth for logs or picker layout.
         </p>
         <ul>
           <li>
             <strong>Command history</strong> — recent commands you typed in the Extension UI (subject to
-            limits enforced in the Extension). Cleared when you use the <code>reset-bmxt</code> shortcut;
-            otherwise kept across BMXt window close and process exit.
-          </li>
-          <li>
-            <strong>Session log</strong> — text output shown in the Extension UI (subject to line limits).
-            Removed when you close the BMXt window or run <code>exit</code> on the last terminal session.
+            limits enforced in the Extension; <code>bmxt_cmd_history</code>). Cleared when you use the
+            <code>reset-bmxt</code> shortcut; otherwise kept across BMXt window close and process exit. Shared
+            between the popup window and the optional float prompt.
           </li>
           <li>
             <strong>Last focused normal window</strong> — a window identifier used to route focus-related
             behavior within the Extension.
           </li>
           <li>
-            <strong>Terminal sessions</strong> — log text, session order, and optional session display names
-            you set via the <code>session</code> command for tmux-style terminal sessions inside one BMXt
-            window (<code>bmxt_terminal_sessions_v1</code>). Removed on BMXt window close or last-session
-            <code>exit</code>.
-          </li>
-          <li>
-            <strong>Process UI state</strong> — which picker columns are open and keyboard focus among
-            terminal / picker columns (<code>bmxt_process_ui_v1</code>). Removed on BMXt window close or
-            last-pane <code>exit</code>.
-          </li>
-          <li>
-            <strong>Tab picker tree fold state</strong> — collapsed window or tab-group rows in the tab
-            picker (<code>bmxt_tab_picker_fold_v1</code>). Removed on BMXt window close or last-pane
-            <code>exit</code>.
-          </li>
-          <li>
-            <strong>BMXt window identifier</strong> — so the Extension can reopen or focus its UI window after
-            a service worker restart.
+            <strong>BMXt window identifier / bounds</strong> — so the Extension can reopen or focus its UI
+            window after a service worker restart, and remember the last outer size.
           </li>
           <li>
             <strong>Custom window display names</strong> — labels you set in the tab picker edit flow.
@@ -284,17 +278,31 @@
           </li>
           <li>
             <strong>Saved page snapshots</strong> — Markdown files with YAML frontmatter created when you run
-            <code>snapshot -save</code> (or from the tabs picker). Stored in extension internal storage
+            <code>snapshot -save</code> (or from the tab picker). Stored in extension internal storage
             (<code>bmxt_snapshots_v1</code>), under your external settings bundle
-            (<code>bmxt-ui-settings/snapshots/</code>), or in an Obsidian vault folder you pick in
+            <code>bmxt-ui-settings/snapshots/</code>), or in an Obsidian vault folder you pick in
             <code>setting -list</code> (<code>bmxt_snapshot_storage_v1</code>). Searchable with
             <code>search -list --snapshot</code>. BMXt does not upload snapshots to UNRsports servers.
           </li>
           <li>
+            <strong>Nav learned targets</strong> — after a successful nav activate, short identity keys
+            (<code>kind:key</code>) may be stored per page origin (<code>bmxt_nav_learned_targets_v1</code>) so
+            later <code>/</code> jumps can prefer familiar targets. Stale keys are dropped. Remains on device
+            until cleared by uninstall or related resets.
+          </li>
+          <li>
+            <strong>Float prompt session state</strong> — when you use the optional in-page float prompt
+            (<code>toggle-bmxt-float</code>), per-tab terminal session and browse UI state may be kept in
+            <code>chrome.storage.session</code> (for example <code>bmxt_float_terminal_by_tab_v1</code>,
+            <code>bmxt_float_browse_state_by_tab_v1</code>, related visibility / handoff keys) so the float can
+            survive same-tab navigation. This stays on your device for the browser session and is not sent to
+            UNRsports servers. Closing the popup window does not by itself clear the float host.
+          </li>
+          <li>
             <strong>Job audit log (optional)</strong> — when long-running picker or command work runs in the
-            BMXt UI tab, completed job records may be kept in UI tab memory for the current session.
-            The service worker does not persist this data. Legacy SQLite key <code>bmxt_job_db_v1</code> from
-            versions before 0.6.9 may remain until uninstall but is no longer written.
+            BMXt UI, completed job records may be kept in UI memory for the current session. The service worker
+            does not persist this data. Legacy SQLite key <code>bmxt_job_db_v1</code> from versions before 0.6.9
+            may remain until uninstall but is no longer written.
           </li>
           <li>
             <strong>Last seen extension version</strong> — used only to show an in-UI release-notes notice
@@ -311,13 +319,15 @@
           </li>
         </ul>
         <p>
-          When you close the BMXt window or run <code>exit</code> on the last terminal session,
-          process-scoped entries above (session logs, open picker state, tab-picker fold) are removed from
-          storage. Command history, UI settings, translation assist preferences, picker page-active settings,
-          search metadata cache (history/bookmark titles and URLs only; not page body), optional job audit log,
-          custom window display names, and version-tracking keys remain until you clear them (for example
-          <strong>setting -list → reset-search-cache</strong> for the search metadata cache,
-          the <code>reset-bmxt</code> shortcut for command history, or uninstalling the Extension).
+          When you close the BMXt window or run <code>exit</code> on the last terminal session, in-memory
+          process-scoped UI state (session logs, open picker columns, tab-picker fold) is discarded; legacy
+          process keys may be cleaned from storage. Command history, UI settings, translation assist
+          preferences, picker page-active settings, search metadata cache (history/bookmark titles and URLs
+          only; not page body), nav learned targets, optional job audit log, custom window display names, and
+          version-tracking keys remain until you clear them (for example
+          <strong>setting -list → reset-search-cache</strong> for the search metadata cache, the
+          <code>reset-bmxt</code> shortcut for command history and both popup/float hosts, or uninstalling the
+          Extension).
         </p>
         <p>
           If you use <code>setting -list</code> to export or import a settings zip, the file is written to or
@@ -339,16 +349,18 @@
           For ordinary http(s) pages (not chrome://, extension, or Chrome Web Store pages), the Extension may
           use the <code>scripting</code> permission together with <strong>optional</strong>
           <code>http://*/*</code> and <code>https://*/*</code> host access (granted when prompted, or in
-          extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>.
-          Examples: <code>search -list --page</code> (reads visible text from open tabs when you run the
-          command, without persisting page content to extension storage), <code>dom -list</code> (page
-          structure in <code>--normal</code> or viewport-sync <code>--with</code> mode, and scrolling to an
-          element you pick in the list), <code>snapshot -save</code> (saves page text as Markdown with YAML
-          frontmatter to a location you configure in <code>setting -list</code>), and <code>nav -enter</code>
-          (a keyboard nav overlay on the active tab for move, click, type, and related actions you control
-          from the Extension UI). When translation assist is enabled, text you enter during nav typing in the Extension
-          UI may also be processed as described in section 4.7. Nav may use a lightweight content script
-          registered for http(s) pages, with
+          extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>
+          or toggle a related UI host. Examples: <code>search -list --page</code> (reads visible text from open
+          tabs when you run the command, without persisting page content to extension storage),
+          <code>dom -list</code> (page structure in <code>--normal</code> or viewport-sync
+          <code>--with</code> mode, and scrolling to an element you pick in the list),
+          <code>snapshot -save</code> (saves page text as Markdown with YAML frontmatter to a location you
+          configure in <code>setting -list</code>), <code>nav -enter</code> (a keyboard nav overlay on the
+          active tab for move, click, type, and related actions you control from the Extension UI), and the
+          optional <strong>in-page float prompt</strong> (<code>toggle-bmxt-float</code>, which loads a
+          packaged extension page into the active tab). When translation assist is enabled, text you enter
+          during nav typing in the Extension UI may also be processed as described in section 4.7. Nav may use
+          a lightweight content script registered for http(s) pages, with
           <code>chrome.scripting.executeScript</code> as a fallback when that script is not loaded. That
           processing is intended to occur <strong>on your device</strong>; the Extension is not designed to add
           new persistent stores for those results or to upload page content to UNRsports servers as part of
@@ -383,11 +395,18 @@
 
         <h2>5. Extension code</h2>
         <p>
-          Command handling and UI logic in official builds are implemented in <strong>TypeScript</strong> and
-          run locally in the extension page and service worker. Earlier versions bundled WebAssembly compiled
-          from Rust for command processing; that was <strong>removed in version 0.3.5</strong> to reduce
-          package size. Current builds do not download WebAssembly from the network and do not ship bundled
-          WebAssembly modules. Search metadata caching uses in-process memory only (see section 4.4).
+          Official builds implement Chrome API effects and the React UI in <strong>TypeScript</strong>, and
+          command interpretation (parse, registry, plans, and related prompt semantics) in
+          <strong>Rust compiled to WebAssembly</strong>. Both run <strong>locally</strong> in the extension
+          page and/or service worker. The WebAssembly module (<code>bmxt_core_bg.wasm</code>) is
+          <strong>bundled in the extension package</strong> and loaded from the extension’s own origin
+          (<code>'self'</code>). BMXt does <strong>not</strong> download WebAssembly from the network for this
+          purpose. The packaged Content Security Policy includes <code>script-src 'self' 'wasm-unsafe-eval'</code>
+          so the browser may compile and instantiate that local module; this is <strong>not</strong> a
+          permission to fetch or run remote scripts, and it does not relax <code>connect-src 'self'</code>.
+          Search metadata caching uses in-process memory only (see section 4.4). (An earlier series removed
+          bundled WASM in version 0.3.5 for package size; current releases again ship a local WASM command
+          core.)
         </p>
 
         <h2>6. Remote code</h2>
@@ -428,10 +447,10 @@
         <h2>8. Legal bases and use limitations</h2>
         <p>
           We process the information described above solely to provide the Extension’s stated functionality
-          (managing tabs, groups, and windows; optional page inspection, search, nav overlay, UI locale and
-          appearance settings, and translation assist through user-initiated commands) and to maintain
-          minimal local UI state. We do not use this information for creditworthiness, lending decisions, or
-          unrelated profiling.
+          (managing tabs, groups, and windows; optional page inspection, search, nav overlay, in-page float
+          prompt, UI locale and appearance settings, and translation assist through user-initiated commands)
+          and to maintain minimal local UI state. We do not use this information for creditworthiness, lending
+          decisions, or unrelated profiling.
         </p>
 
         <h2>9. Children’s privacy</h2>
@@ -492,8 +511,10 @@
             <li>
               BMXt は、タブ・タブグループ・ブラウザウィンドウ等を<strong>専用のコマンド UI
               から操作する</strong>ローカル向け生産性ツールです（ページ構造の参照・履歴／ブックマーク／ページ内検索、
-              任意のキーボードナビオーバーレイ、<code>setting -list</code> による UI 言語・外観設定、
-              <code>translate -on</code> 実行時の任意の翻訳アシストなど、ユーザーが起動した機能を含みます）。
+              任意のキーボードナビオーバーレイ、任意のサイト内フロート・プロンプト、<code>setting -list</code> による
+              UI 言語・外観設定、<code>translate -on</code> 実行時の任意の翻訳アシストなど、ユーザーが起動した機能を含みます）。
+              コマンド解釈は<strong>同梱</strong>の Rust/WebAssembly モジュールで端末上に実行し、UI と Chrome API 効果は
+              TypeScript で端末上に実行します。
             </li>
             <li>
               当方が提供する公式ビルドにおいて、本拡張機能内に <strong>広告目的の分析ツールを組み込み、利用者の
@@ -508,12 +529,14 @@
               運用していません。
             </li>
             <li>
-              コマンド出力・入力履歴は主に UI 用の<strong>メモリ</strong>で扱い、永続化は上限付きの
-              <code>chrome.storage.local</code> のみです。翻訳アシスト用の nav typing 入力はプレビュー用に
-              セッション内メモリで扱い、入力本文そのものは storage に保存しません。翻訳アシストの ON/OFF と
-              言語ペア設定のみがローカルに保存されます。拡張ページ・サービスワーカーから <code>fetch()</code>
-              で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP（<code>connect-src</code>
-              等）はその補助線です（ストア配信・ブラウザ更新は別）。ページへのスクリプト注入が要るコマンドのときだけ、
+              ターミナルセッションのログおよび開いているピッカー UI は、ウィンドウまたはフロート・ホストが開いている間は
+              主に <strong>BMXt UI ページのメモリ</strong>で扱い、永続化は上限付きのフィールド（コマンド履歴や UI
+              設定など）を <code>chrome.storage.local</code> に書き込みます。翻訳アシスト用の nav typing 入力は
+              プレビュー用にセッション内メモリで扱い、入力本文そのものは storage に保存しません。翻訳アシストの
+              ON/OFF と言語ペア設定のみがローカルに保存されます。拡張ページ・サービスワーカーから
+              <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP
+              （<code>connect-src 'self'</code>）はその補助線です（ストア配信・ブラウザ更新は別）。ページへの
+              スクリプト注入が要るコマンド（任意のフロート・プロンプトや nav オーバーレイを含む）のときだけ、
               オプションの <code>http://*/*</code> / <code>https://*/*</code> を<strong>実行時</strong>に求めます。
             </li>
             <li>
@@ -553,37 +576,32 @@
 
         <h3>4.4 ローカルストレージ（拡張機能ストレージ）</h3>
         <p>
-          <code>chrome.storage.local</code> を用いて端末内にデータを保存します。また
+          <code>chrome.storage.local</code>（任意のサイト内フロート・プロンプトでは加えて
+          <code>chrome.storage.session</code>）を用いて端末内にデータを保持します。また
           <code>unlimitedStorage</code> 権限を宣言し、ユーザーが import した UI 背景画像などのローカルデータが
           Chrome の既定の拡張機能 storage quota を超えても保存できるようにしています。以下はいずれも端末内に留まります。
         </p>
+        <p>
+          <strong>ターミナルセッションの実行時の正本:</strong> BMXt ポップアップ窓またはフロート・ホストが開いている間、
+          セッションログ・開いているピッカー列・ペインフォーカス・タブピッカーのツリー開閉は
+          <strong>BMXt UI ページのメモリ</strong>が正本です（<code>chrome.storage.local</code> を権威ある保存先とはしません）。
+          BMXt ウィンドウを閉じる、または最後のターミナルセッションで <code>exit</code> すると、そのメモリ上の状態は
+          破棄されます。旧キー（<code>bmxt_terminal_sessions_v1</code>、<code>bmxt_process_ui_v1</code>、
+          <code>bmxt_tab_picker_fold_v1</code> 等）はプロセス終了時の<strong>掃除</strong>のために削除されることが
+          ありますが、ログやピッカー配置の実行時の正本ではありません。
+        </p>
         <ul>
           <li>
-            <strong>コマンド履歴</strong> — 本拡張機能 UI に入力されたコマンドの履歴（拡張機能側で上限あり）。
-            <code>reset-bmxt</code> ショートカット使用時に消去。それ以外は BMXt ウィンドウ閉じ／プロセス終了後も保持。
-          </li>
-          <li>
-            <strong>セッションログ</strong> — UI に表示するログ出力（行数に上限あり）。BMXt ウィンドウを閉じる、または
-            最後のターミナルセッションで <code>exit</code> したときに消去。
+            <strong>コマンド履歴</strong> — 本拡張機能 UI に入力されたコマンドの履歴（拡張機能側で上限あり；
+            <code>bmxt_cmd_history</code>）。<code>reset-bmxt</code> ショートカット使用時に消去。それ以外は
+            BMXt ウィンドウ閉じ／プロセス終了後も保持。ポップアップ窓と任意のフロート・プロンプトで共有。
           </li>
           <li>
             <strong>最後にフォーカスした通常ウィンドウ</strong> — フォーカス関連の動作のために用いるウィンドウ ID。
           </li>
           <li>
-            <strong>ターミナルセッション</strong> — 1 つの BMXt ウィンドウ内の tmux 風ターミナルセッション向けログ、
-            順序、および <code>session</code> コマンドで設定した任意のセッション表示名
-            （<code>bmxt_terminal_sessions_v1</code>）。BMXt ウィンドウ閉じ／最後のセッション <code>exit</code> で消去。
-          </li>
-          <li>
-            <strong>プロセス UI 状態</strong> — 開いているピッカー列とターミナル／ピッカー間のフォーカス
-            （<code>bmxt_process_ui_v1</code>）。BMXt ウィンドウ閉じ／最後のペイン <code>exit</code> で消去。
-          </li>
-          <li>
-            <strong>タブピッカーのツリー開閉状態</strong> — ウィンドウ／タブグループ行の折りたたみ
-            （<code>bmxt_tab_picker_fold_v1</code>）。BMXt ウィンドウ閉じ／最後のペイン <code>exit</code> で消去。
-          </li>
-          <li>
-            <strong>BMXt ウィンドウ ID</strong> — サービスワーカー再起動後も UI ウィンドウを開き直す／フォーカスするため。
+            <strong>BMXt ウィンドウ ID／サイズ</strong> — サービスワーカー再起動後も UI ウィンドウを開き直す／
+            フォーカスするため、および最後の outer サイズの記憶。
           </li>
           <li>
             <strong>ウィンドウ表示名</strong> — タブピッカーの編集で設定した表示ラベル。
@@ -614,14 +632,27 @@
             （0.6.9 より前の旧 SQLite キー <code>bmxt_search_cache_db_v1</code> は新規書き込みされません。）
           </li>
           <li>
-            <strong>保存済みページ snapshot</strong> — <code>snapshot -save</code>（または tabs ピッカー）実行時に
+            <strong>保存済みページ snapshot</strong> — <code>snapshot -save</code>（またはタブピッカー）実行時に
             YAML frontmatter 付き Markdown として保存。拡張機能内 storage（<code>bmxt_snapshots_v1</code>）、
             外部設定バンドル（<code>bmxt-ui-settings/snapshots/</code>）、または
             <code>setting -list</code> で指定した Obsidian Vault 内（<code>bmxt_snapshot_storage_v1</code>）。
             <code>search -list --snapshot</code> で検索可能。UNRsports サーバーへアップロードしません。
           </li>
           <li>
-            <strong>ジョブ監査ログ（任意）</strong> — BMXt UI タブで長時間処理を実行したとき、完了ジョブを
+            <strong>nav 学習ターゲット</strong> — 成功した activate のあと、ページ origin ごとに短い識別キー
+            （<code>kind:key</code>）を <code>bmxt_nav_learned_targets_v1</code> に保存し、後続の <code>/</code>
+            ジャンプで既知の対象を優先することがあります。陳腐化したキーは削除されます。アンインストール等まで端末内に保持。
+          </li>
+          <li>
+            <strong>フロート・プロンプトのセッション状態</strong> — 任意のサイト内フロート（<code>toggle-bmxt-float</code>）
+            利用時、タブ別のターミナルセッションや browse UI 状態を <code>chrome.storage.session</code>
+            （例: <code>bmxt_float_terminal_by_tab_v1</code>、<code>bmxt_float_browse_state_by_tab_v1</code>、
+            表示／引き継ぎ関連キー）に保持し、同一タブ内の遷移でもフロートを維持できるようにします。ブラウザ
+            セッション内の端末上のデータであり、UNRsports サーバーへ送信しません。ポップアップ窓を閉じても
+            フロート・ホストはそれだけでは消えません。
+          </li>
+          <li>
+            <strong>ジョブ監査ログ（任意）</strong> — BMXt UI で長時間処理を実行したとき、完了ジョブを
             当該セッションの UI メモリに記録することがある（サービスワーカーは永続化しない）。
             0.6.9 より前の旧 SQLite キー <code>bmxt_job_db_v1</code> が残ることがあるが、新規書き込みはしない。
           </li>
@@ -638,11 +669,13 @@
           </li>
         </ul>
         <p>
-          BMXt ウィンドウを閉じる、または最後のターミナルセッションで <code>exit</code> すると、上記のうちプロセススコープの
-          データ（セッションログ、開いているピッカー状態、タブツリー開閉）は storage から消えます。
-          コマンド履歴、UI 設定、翻訳アシスト設定、ピッカー page-active 設定、検索メタデータキャッシュ（履歴／ブックマークの URL・タイトルのみ。<code>--page</code> 本文は含まない）、任意のジョブ監査ログ、
-          ウィンドウ表示名、バージョン追跡キーは、
-          <code>reset-bmxt</code> ショートカット（コマンド履歴も消去）、setting -list の reset-search-cache（検索メタデータキャッシュ）、拡張機能のアンインストール等で消すまで保持されます。
+          BMXt ウィンドウを閉じる、または最後のターミナルセッションで <code>exit</code> すると、プロセススコープの
+          UI 状態（セッションログ、開いているピッカー列、タブツリー開閉）はメモリから破棄され、旧プロセス用キーは
+          storage から掃除されることがあります。コマンド履歴、UI 設定、翻訳アシスト設定、ピッカー page-active
+          設定、検索メタデータキャッシュ（履歴／ブックマークの URL・タイトルのみ。<code>--page</code> 本文は含まない）、
+          nav 学習ターゲット、任意のジョブ監査ログ、ウィンドウ表示名、バージョン追跡キーは、
+          <code>reset-bmxt</code> ショートカット（コマンド履歴と popup／float 両ホストのクリア）、setting -list の
+          reset-search-cache（検索メタデータキャッシュ）、拡張機能のアンインストール等で消すまで保持されます。
         </p>
         <p>
           <code>setting -list</code> で設定 zip を export／import する場合、ファイルはブラウザのダウンロードまたは
@@ -662,15 +695,17 @@
         </p>
         <p>
           通常の http(s) ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア等を除く）では、
-          ユーザーがコマンドを実行したときに限り、<code>scripting</code> 権限と<strong>オプション</strong>の
-          <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは拡張機能の詳細設定で許可されたとき）により、
-          同梱の小さなヘルパースクリプトを実行します。例:
+          ユーザーがコマンドを実行したとき、または関連する UI ホストを切り替えたときに限り、<code>scripting</code>
+          権限と<strong>オプション</strong>の <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは
+          拡張機能の詳細設定で許可されたとき）により、同梱の小さなヘルパースクリプトを実行します。例:
           <code>search -list --page</code>（コマンド実行時に開いているタブの可視テキストを都度読み取り。本文は拡張機能 storage に永続化しない）、<code>dom -list</code>（<code>--normal</code> またはビューポート連動の <code>--with</code> モードでのページ構造一覧と、
           一覧で選んだ要素へのスクロール）、<code>snapshot -save</code>（<code>setting -list</code> で指定した保存先へ
           YAML frontmatter 付き Markdown を保存）、<code>nav -enter</code>（アクティブタブ上のキーボードナビオーバーレイによる
-          移動・クリック・入力など、本拡張機能 UI からの操作）。翻訳アシストが ON のとき、本拡張機能 UI での nav
-          typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では http(s) 向けの軽量コンテンツスクリプトを
-          用い、未読み込み時は <code>chrome.scripting.executeScript</code> にフォールバックします。これらは
+          移動・クリック・入力など、本拡張機能 UI からの操作）、任意の<strong>サイト内フロート・プロンプト</strong>
+          （<code>toggle-bmxt-float</code>。同梱の拡張ページをアクティブタブへ読み込み）。翻訳アシストが ON のとき、
+          本拡張機能 UI での nav typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では
+          http(s) 向けの軽量コンテンツスクリプトを用い、未読み込み時は
+          <code>chrome.scripting.executeScript</code> にフォールバックします。これらは
           <strong>端末上</strong>で行う想定であり、当該結果を新たな永続ストアに蓄えたり、ページ内容を UNRsports の
           サーバーに送信したりする設計にはしていません。
         </p>
@@ -700,11 +735,17 @@
 
         <h2>5. 拡張機能のコード</h2>
         <p>
-          公式ビルドのコマンド処理と UI ロジックは <strong>TypeScript</strong> で実装され、拡張ページとサービスワーカー上で
-          ローカルに実行されます。旧バージョンでは Rust 由来の WebAssembly をコマンド処理に同梱していましたが、
-          <strong>バージョン 0.3.5 で廃止</strong>しパッケージサイズを縮小しています。現行ビルドはネットワークから
-          WebAssembly を取得せず、同梱の WebAssembly モジュールもありません。検索メタデータキャッシュは
-          プロセス内メモリのみを使用します（4.4 節参照）。
+          公式ビルドでは、Chrome API 効果と React UI を <strong>TypeScript</strong> で、コマンド解釈（parse・
+          レジストリ・計画・関連するプロンプト意味）を <strong>Rust を WebAssembly にコンパイルしたもの</strong>で
+          実装し、いずれも拡張ページおよび／またはサービスワーカー上で<strong>ローカルに</strong>実行します。
+          WebAssembly モジュール（<code>bmxt_core_bg.wasm</code>）は<strong>拡張機能パッケージに同梱</strong>され、
+          拡張機能自身のオリジン（<code>'self'</code>）から読み込みます。この目的でネットワークから
+          WebAssembly を取得することはありません。パッケージ CSP の
+          <code>script-src 'self' 'wasm-unsafe-eval'</code> は、その<strong>端末内モジュール</strong>のコンパイル／
+          インスタンス化を許可するためのものであり、リモートスクリプトの取得・実行を許すものではなく、
+          <code>connect-src 'self'</code> を緩和するものでもありません。検索メタデータキャッシュは
+          プロセス内メモリのみを使用します（4.4 節参照）。（過去の系列では 0.3.5 で同梱 WASM を廃止しましたが、
+          現行リリースは再びローカルな WASM コマンドコアを同梱します。）
         </p>
 
         <h2>6. リモートコード</h2>
@@ -740,8 +781,8 @@
         <h2>8. 利用目的の制限</h2>
         <p>
           上記の情報は、本拡張機能が明示する機能（ユーザーが開始したタブ・グループ・ウィンドウの管理、任意のページ参照・
-          検索・ナビオーバーレイ・UI 言語／外観設定・翻訳アシスト）および最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、
-          これらと無関係なプロファイル目的には用いません。
+          検索・ナビオーバーレイ・サイト内フロート・プロンプト・UI 言語／外観設定・翻訳アシスト）および最小限の UI
+          状態の維持のためにのみ用います。与信・融資の判断、これらと無関係なプロファイル目的には用いません。
         </p>
 
         <h2>9. 児童のプライバシー</h2>
