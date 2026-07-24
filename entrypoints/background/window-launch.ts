@@ -8,7 +8,14 @@ import {
   markLaunchPhase,
   resetLaunchPerf
 } from "../../lib/features/launch/launch-perf"
+import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import { loadBackgroundServicesAsync } from "./load-background-services"
+import { setupFloatLaunch } from "./float-launch"
+import {
+  flushPersistBmxtWindowBounds,
+  normalizeBmxtWindowBounds,
+  schedulePersistBmxtWindowBounds
+} from "./window-bounds"
 import {
   clearBmxtWindowIdInMemory,
   createBmxtWindowAsync,
@@ -20,6 +27,23 @@ import {
   reconcileDuplicateBmxtWindowsAsync,
   resolveBmxtWindowIdFastAsync
 } from "./window-state"
+
+function setupBmxtWindowBoundsTracking(): void {
+  chrome.windows.onBoundsChanged.addListener((window) => {
+    void (async () => {
+      await hydrateBmxtWindowIdFromStorage()
+      const bmxtWindowId = readBmxtWindowIdInMemory()
+      if (bmxtWindowId === undefined || window.id !== bmxtWindowId) {
+        return
+      }
+      const bounds = normalizeBmxtWindowBounds(window.width, window.height)
+      if (bounds === null) {
+        return
+      }
+      schedulePersistBmxtWindowBounds(bounds)
+    })()
+  })
+}
 
 /** EN: Serialize launches so rapid shortcuts do not open multiple windows. */
 let bmxtWindowLaunchChain: Promise<void> = Promise.resolve()
@@ -79,12 +103,17 @@ function openOrFocusBmxtWindow(): void {
 }
 
 export function setupWindowLaunch(): void {
+  setupBmxtWindowBoundsTracking()
+  setupFloatLaunch(chrome.commands.onCommand)
+
   chrome.windows.onRemoved.addListener((windowId) => {
     if (readBmxtWindowIdInMemory() !== windowId) {
       return
     }
+    flushPersistBmxtWindowBounds()
     clearBmxtWindowIdInMemory()
     void persistBmxtWindowId(undefined)
+    broadcastSessionClearToUi("popup")
     void loadBackgroundServicesAsync().then((services) =>
       services.removeAllTerminalSessionsFromStorageAsync()
     )

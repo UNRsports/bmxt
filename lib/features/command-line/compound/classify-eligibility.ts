@@ -1,19 +1,4 @@
-import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen.ts"
-import { isDomListAwaitingFlavor } from "../../dom/dom-list-picker-input.ts"
-import { parseDomSettingCommandLine } from "../../dom/parse-dom-setting-command.ts"
-import {
-  parseSessionListPickerLine,
-  parseSessionSettingNameBareLine,
-  parseSessionSwitchPickerLine
-} from "../../session/session-input.ts"
-import {
-  isSearchListContinuationPrompt,
-  isSearchListReadyToRun,
-  parseSearchListPickerLine
-} from "../../search/search-list-picker-input.ts"
-import { parseSettingIncompleteLine } from "../../setting/setting-list-picker-input.ts"
-import { parseTabsSettingCommandLine } from "../../tabs/parse-tabs-setting-command.ts"
-import { parseTranslateCommandLine } from "../../translate/parse-translate-command.ts"
+import { isBmxtCoreReady, wasmCompoundSegmentEligibility } from "../../bmxt-core/wasm-host.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { tCompound } from "../../setting/i18n/ns/compound.ts"
 import type { SegmentOutcome } from "./types.ts"
@@ -23,7 +8,30 @@ export type CompoundEligibility =
   | { eligible: true }
   | { eligible: false; outcome: SegmentOutcome }
 
-/** EN: Reject continuation / interactive segments inside a compound line. */
+type WasmEligibilityKind = "eligible" | "continuation" | "interactive" | "empty"
+
+function parseEligibilityKind(raw: string): WasmEligibilityKind {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== "object") {
+      return "eligible"
+    }
+    const kind = (parsed as { kind?: unknown }).kind
+    if (
+      kind === "eligible" ||
+      kind === "continuation" ||
+      kind === "interactive" ||
+      kind === "empty"
+    ) {
+      return kind
+    }
+  } catch {
+    /* fall through */
+  }
+  return "eligible"
+}
+
+/** EN: Reject continuation / interactive segments inside a compound line (WASM SoT). */
 export function classifyCompoundEligibility(
   segment: string,
   locale: UiLocale,
@@ -46,60 +54,25 @@ export function classifyCompoundEligibility(
     }
   }
 
-  const loneContinuation = continuationPromptAfterLoneFirstToken(trimmed)
-  if (loneContinuation !== null) {
+  if (!isBmxtCoreReady()) {
+    throw new Error(
+      "BMXt core WASM not initialized; call ensureBmxtCore() before classifyCompoundEligibility"
+    )
+  }
+
+  const kind = parseEligibilityKind(wasmCompoundSegmentEligibility(trimmed))
+  if (kind === "empty") {
     return {
       eligible: false,
-      outcome: segmentFailure("continuation", [
-        tCompound("compound.error.continuation", locale, { segment: trimmed })
-      ])
+      outcome: segmentFailure("parse", [tCompound("compound.error.emptySegment", locale)])
     }
   }
-
-  if (parseSettingIncompleteLine(trimmed)) {
+  if (kind === "continuation") {
     return continuationFailure(trimmed, locale)
   }
-
-  const tabsSetting = parseTabsSettingCommandLine(trimmed)
-  if (tabsSetting !== null && tabsSetting.kind !== "page-active") {
-    return continuationFailure(trimmed, locale)
-  }
-
-  const domSetting = parseDomSettingCommandLine(trimmed)
-  if (domSetting !== null && domSetting.kind !== "page-active") {
-    return continuationFailure(trimmed, locale)
-  }
-
-  const translateCmd = parseTranslateCommandLine(trimmed)
-  if (
-    translateCmd !== null &&
-    translateCmd.kind !== "on" &&
-    translateCmd.kind !== "off" &&
-    translateCmd.kind !== "setting"
-  ) {
-    return continuationFailure(trimmed, locale)
-  }
-
-  if (isDomListAwaitingFlavor(trimmed)) {
-    return continuationFailure(trimmed, locale)
-  }
-
-  if (parseSearchListPickerLine(trimmed) !== null) {
-    if (isSearchListContinuationPrompt(trimmed) || !isSearchListReadyToRun(trimmed, trimmed)) {
-      return continuationFailure(trimmed, locale)
-    }
-  }
-
-  if (parseSessionListPickerLine(trimmed)) {
+  if (kind === "interactive") {
     return interactiveFailure(locale)
   }
-  if (parseSessionSwitchPickerLine(trimmed)) {
-    return interactiveFailure(locale)
-  }
-  if (parseSessionSettingNameBareLine(trimmed)) {
-    return interactiveFailure(locale)
-  }
-
   return { eligible: true }
 }
 

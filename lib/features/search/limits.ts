@@ -13,4 +13,4 @@ export const HISTORY_LOOKBACK_MS = 90 * 24 * 60 * 60 * 1000
 export const MAX_BOOKMARK_ROWS = 5000
 
 /** EN: Max characters of innerText read per tab; 0 = no truncation. JA: タブ innerText 上限（0 は切り詰めなし）。 */
-export const MAX_PAGE_TEXT_CHARS = 0
+export const MAX_PAGE_TEXT_CHARS = 500_000

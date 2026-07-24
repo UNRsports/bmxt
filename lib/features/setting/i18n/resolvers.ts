@@ -26,6 +26,8 @@ export type NavStatusMode =
   | "copyOpen"
   | "copyClosed"
   | "menu"
+  | "jump"
+  | "jumpFilter"
   | "idle"
 
 const NAV_STATUS_KEY: Record<NavStatusMode, NavMessageKey> = {
@@ -36,7 +38,25 @@ const NAV_STATUS_KEY: Record<NavStatusMode, NavMessageKey> = {
   copyOpen: "nav.status.copyOpen",
   copyClosed: "nav.status.copyClosed",
   menu: "nav.status.menu",
+  jump: "nav.status.jump",
+  jumpFilter: "nav.status.jumpFilter",
   idle: "nav.status.idle"
+}
+
+export function navActivateErrorLabel(reason: string | null | undefined, locale: UiLocale): string | null {
+  if (!reason) {
+    return null
+  }
+  if (reason === "inert") {
+    return tNav("nav.activate.error.inert", locale)
+  }
+  if (reason === "missing") {
+    return tNav("nav.activate.error.missing", locale)
+  }
+  if (reason === "activate-failed") {
+    return tNav("nav.activate.error.failed", locale)
+  }
+  return reason
 }
 
 export function navStatusHint(locale: UiLocale, mode: NavStatusMode): string {

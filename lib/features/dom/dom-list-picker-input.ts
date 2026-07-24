@@ -1,6 +1,6 @@
 /**
- * EN: Prompt parsing / Tab zone for `dom -list` (find-list と同型の picker 起動フロー).
- * JA: `dom -list` のプロンプト解析・Tab 補完（`find -list` と同型の段取り）。
+ * EN: Prompt parsing / Tab zone for `dom -list`.
+ * JA: `dom -list` のプロンプト解析・Tab 補完。
  */
 
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
@@ -10,7 +10,7 @@ import {
   isDomListAwaitingOptionsOrPattern,
   listDomListRemainingOptionCandidates
 } from "./dom-list-picker-parse.ts"
-import { domListLineHasFlavor, parseDomListCommandLine } from "./parse-dom-list-args.ts"
+import { parseDomListCommandLine } from "./parse-dom-list-args.ts"
 export { isDomListPermissionPromptOutput as isRetryableDomListOutput } from "./dom-list-prompt-eligibility"
 
 /** After `dom -list ` — optional mode / flavor tokens */
@@ -23,34 +23,8 @@ export function parseDomExitListLine(trimmed: string): boolean {
   return DOM_EXIT_LIST_RE.test(trimmed.trim())
 }
 
-/**
- * EN: Enter opens dom -list picker when flavor is specified among third+ tokens.
- * JA: `--html` / `--react` が含まれるときだけ picker を起動する。
- */
-export function parseDomListPickerLine(trimmed: string): string | null {
-  if (!domListLineHasFlavor(trimmed)) {
-    return null
-  }
-  return trimmed.trim()
-}
-
-/**
- * EN: True when the line is `dom -list` with optional mode tokens but no flavor yet.
- * JA: flavor 未指定の `dom -list`（モードのみ可）かを判定。
- */
-export function isDomListAwaitingFlavor(trimmed: string): boolean {
-  const t = trimmed.trim()
-  const parts = t.split(/\s+/).filter((s) => s.length > 0)
-  if (parts.length < 2) {
-    return false
-  }
-  if (parts[0]!.toLowerCase() !== "dom") {
-    return false
-  }
-  if (parts[1]!.toLowerCase() !== "-list") {
-    return false
-  }
-  return !domListLineHasFlavor(t)
+export function isDomListAwaitingFlavor(_trimmed: string): boolean {
+  return false
 }
 
 export { isDomListAwaitingOptionsOrPattern } from "./dom-list-picker-parse.ts"

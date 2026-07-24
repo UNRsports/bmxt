@@ -4,7 +4,7 @@ import { parseDomSettingCommandLine } from "./parse-dom-setting-command.ts"
 
 describe("parseDomSettingCommandLine", () => {
   it("returns null for non-dom commands", () => {
-    assert.equal(parseDomSettingCommandLine("tabs -setting"), null)
+    assert.equal(parseDomSettingCommandLine("tab -setting"), null)
   })
 
   it("parses incomplete dom", () => {

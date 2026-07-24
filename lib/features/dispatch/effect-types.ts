@@ -4,8 +4,11 @@
  */
 
 export type ChromeEffect =
+  | { dispatch_line: string; kind: "search_list" }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { kind: "clear_log" }
+  | { kind: "close_current_tab" }
+  | { kind: "close_current_window" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }
   | { kind: "group_new"; tab_ids: number[] }
@@ -20,11 +23,37 @@ export type ChromeEffect =
   | { kind: "session_new"; name: string }
   | { kind: "session_next" }
   | { kind: "session_prev" }
+  | { kind: "tab_go_back" }
+  | { kind: "tab_go_forward" }
+  | { kind: "tab_reload"; tab_ids: number[] }
+  | { kind: "tabs_list"; show_url: string }
   | { kind: "tabs_move_url"; url: string }
   | { kind: "tabs_nu" }
 
+export type DispatchMsg = { key: string; params?: Record<string, string> }
+
+export type UiActionIR =
+  | { kind: "show_help" }
+  | { kind: "nav_arm" }
+  | { kind: "nav_disarm" }
+  | { kind: "nav_confirm_close"; target: string }
+  | { kind: "open_plain_list"; line: string; list_id: string }
+  | { kind: "close_picker"; slot: string }
+  | { kind: "continuation_prompt"; prefix: string }
+  | { kind: "session_switch"; name: string }
+  | { kind: "session_setting_name"; name: string }
+  | { kind: "group_new_from_selection" }
+  | { kind: "set_mode"; feature_id: string; mode: string }
+  | { kind: "snapshot_save"; line: string }
+  | { kind: "open_picker"; line: string; list_id: string; show_url: string }
+  | { kind: "picker_pass" }
+
 export type DispatchBundle = {
-  ty: "lines" | "effects"
+  ty: "lines" | "effects" | "ui" | "msgs"
   lines?: string[]
   effects?: ChromeEffect[]
+  action?: UiActionIR
+  msgs?: DispatchMsg[]
+  /** EN: Optional prompt restore after msgs (Rust prompt semantic SoT). */
+  promptPrefix?: string
 }

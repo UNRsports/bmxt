@@ -1,4 +1,5 @@
 import { bmxtFindPageScrollToSnippetInjected } from "../../page-dom/injected-find-page-scroll-to-snippet"
+import { resolveNeedleHighlightColors } from "../../page-dom/page-scroll-needle-message"
 import {
   PAGE_SCROLL_SNIPPET_CHANNEL,
   type PageScrollSnippetRequest,
@@ -35,13 +36,12 @@ async function scrollViaExecuteScript(
   persistMs: number,
   highlightColors?: { hitBg: string; jumpBg: string; fg: string }
 ): Promise<boolean> {
-  const jumpBg = highlightColors?.jumpBg ?? "#ffdb4d"
-  const fg = highlightColors?.fg ?? "#0d1117"
+  const colors = resolveNeedleHighlightColors(highlightColors)
   try {
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId },
       func: bmxtFindPageScrollToSnippetInjected,
-      args: [request.snippet, request.occurrence, persistMs, jumpBg, fg]
+      args: [request.snippet, request.occurrence, persistMs, colors.jumpBg, colors.fg]
     })
     return Boolean((result as PageScrollSnippetResponse | undefined)?.ok)
   } catch {

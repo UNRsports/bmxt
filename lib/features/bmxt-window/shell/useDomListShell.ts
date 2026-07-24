@@ -5,9 +5,9 @@ import type { DomListCapture } from "../../dom/dom-list-capture"
 import { captureDomViewportForTab } from "../../dom/dom-viewport-capture"
 import {
   isRetryableDomListOutput,
-  parseDomListCommandLine,
   type DomListPickerState
 } from "../../dom/dom-list-picker-input"
+import { parseDomListLine } from "../../dom/dom-list-parse"
 import { resolveDomListTargetTabId as resolveDomListTargetTabIdFromSources } from "../../dom/resolve-dom-list-target-tab"
 import { useDomListFollowTab } from "../../dom/use-dom-list-follow-tab"
 import { isJobHandleActive, mergeJobIntoDispatchContext, shouldCancelJob, type JobRunner } from "../../job"
@@ -96,7 +96,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
               }
               options.setDomListPicker(options.sessionId, {
                 kind: "prompt",
-                message: linesOut,
+                message: domCapture?.lines ?? linesOut,
                 commandLine: domListLine
               })
               options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "dom"))
@@ -112,14 +112,17 @@ export function useDomListShell(options: UseDomListShellOptions) {
             if (shouldCancelJob(job)) {
               return
             }
-            const parsed = parseDomListCommandLine(domListLine)
+            // EN: Prefer capture lines (aligned with jumpPaths). Effect returns plain
+            //     terminal lines (summary footer) which must not feed the picker UI.
+            const pickerLines = domCapture?.lines ?? linesOut
+            const parsed = parseDomListLine(domListLine)
             options.setDomListPicker(options.sessionId, {
               kind: "lines",
-              lines: linesOut,
+              lines: pickerLines,
               commandLine: domListLine,
               targetTabId,
-              jumpPaths: domCapture?.jumpPaths ?? linesOut.map(() => null),
-              headerLineCount: domCapture?.headerLineCount ?? linesOut.length,
+              jumpPaths: domCapture?.jumpPaths ?? pickerLines.map(() => null),
+              headerLineCount: domCapture?.headerLineCount ?? pickerLines.length,
               pickerMode: parsed?.pickerMode ?? "normal",
               flavor: parsed?.flavor ?? "--html",
               showTag: parsed?.showTag ?? false,

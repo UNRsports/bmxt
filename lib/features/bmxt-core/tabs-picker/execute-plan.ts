@@ -88,11 +88,3 @@ export function resolveMovePlan(ctx: ResolveMovePlanContext): MovePlan | null {
     tabGroupIdsToMoveAsUnits
   }
 }
-
-export function resolveTabsPickerConfirmPlan<TContext, TResult>(context: TContext): TResult {
-  return resolveConfirmPlan(context as ResolveConfirmContext) as TResult
-}
-
-export function resolveTabsPickerMovePlan<TContext, TResult>(context: TContext): TResult {
-  return resolveMovePlan(context as ResolveMovePlanContext) as TResult
-}

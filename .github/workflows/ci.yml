@@ -26,6 +26,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: bash scripts/install-wasm-pack.sh
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -35,14 +42,20 @@ jobs:
       - name: Audit dependencies (fail on critical severity)
         run: pnpm audit --audit-level critical
 
-      - name: Verify manifest vs cmd CMD blocks
+      - name: Verify manifest vs Rust cmd + registry
         run: pnpm run verify:manifest
 
       - name: No fetch() in extension pages / SW sources
         run: pnpm run check:no-fetch
 
-      - name: Generated TS matches manifest (codegen + git diff)
+      - name: Generated TS/Rust matches manifest (codegen + git diff)
         run: pnpm run check:generated
+
+      - name: Rust tests (bmxt-core)
+        run: cargo test -p bmxt-core
+
+      - name: Build WASM
+        run: pnpm run build:wasm
 
       - name: Typecheck
         run: pnpm exec tsc --noEmit

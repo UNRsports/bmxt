@@ -1,4 +1,4 @@
-import { lineHasAndOperator } from "./parse-and-segments.ts"
+import { lineHasListOperator } from "./parse-compound-segments.ts"
 
 export type CompoundSegmentSpan = {
   /** EN: Start index in the full prompt line (inclusive). */
@@ -40,13 +40,27 @@ function pushSegmentSpan(
   })
 }
 
-/** EN: Segment spans for completion — includes an empty tail after `&&` while typing. */
+function matchListOperatorLength(line: string, i: number): number {
+  const ch = line[i]!
+  if (ch === "&" && i + 1 < line.length && line[i + 1] === "&") {
+    return 2
+  }
+  if (ch === "|" && i + 1 < line.length && line[i + 1] === "|") {
+    return 2
+  }
+  if (ch === ";") {
+    return 1
+  }
+  return 0
+}
+
+/** EN: Segment spans for completion — includes an empty tail after list operators while typing. */
 export function scanCompoundSegmentSpans(line: string): CompoundSegmentSpan[] {
   const spans: CompoundSegmentSpan[] = []
   let segmentRawStart = 0
   let i = 0
   const n = line.length
-  let foundAnd = false
+  let foundOperator = false
 
   while (i < n) {
     const ch = line[i]!
@@ -74,10 +88,21 @@ export function scanCompoundSegmentSpans(line: string): CompoundSegmentSpan[] {
       continue
     }
 
-    if (ch === "&" && i + 1 < n && line[i + 1] === "&") {
-      foundAnd = true
-      pushSegmentSpan(line, segmentRawStart, i, spans, spans.length > 0)
+    if (ch === "\\" && i + 2 < n && line[i + 1] === "|" && line[i + 2] === "|") {
+      i += 3
+      continue
+    }
+
+    if (ch === "\\" && i + 1 < n && line[i + 1] === ";") {
       i += 2
+      continue
+    }
+
+    const opLen = matchListOperatorLength(line, i)
+    if (opLen > 0) {
+      foundOperator = true
+      pushSegmentSpan(line, segmentRawStart, i, spans, spans.length > 0)
+      i += opLen
       segmentRawStart = i
       while (segmentRawStart < n && line[segmentRawStart] === " ") {
         segmentRawStart += 1
@@ -89,7 +114,7 @@ export function scanCompoundSegmentSpans(line: string): CompoundSegmentSpan[] {
     i += 1
   }
 
-  pushSegmentSpan(line, segmentRawStart, n, spans, foundAnd)
+  pushSegmentSpan(line, segmentRawStart, n, spans, foundOperator)
 
   if (spans.length === 0) {
     const trimmed = line.trim()
@@ -165,7 +190,7 @@ function toActiveSegment(span: CompoundSegmentSpan, cursor: number): ActiveComma
 }
 
 export function isCompoundPromptLine(line: string): boolean {
-  return lineHasAndOperator(line)
+  return lineHasListOperator(line)
 }
 
 export function mapSegmentOffsetToLine(segmentStart: number, localOffset: number): number {

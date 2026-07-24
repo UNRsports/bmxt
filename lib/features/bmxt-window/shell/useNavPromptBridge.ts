@@ -12,6 +12,13 @@ import {
   sanitizeNavTypingDomValueWithCursor,
   sanitizeNavTypingInsertText
 } from "../../nav/nav-prompt-input"
+import { isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
+import { wordBounds } from "../../format/word-bounds.ts"
+import { deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor, snapNavReloadTabBlockCaret } from "../../nav/nav-reload-tab-token"
+import {
+  clampPromptLockedPrefix,
+  lockedPrefixBlocksDelete
+} from "./prompt-locked-prefix"
 
 export type UseNavPromptBridgeOptions = {
   navPageTyping: boolean
@@ -40,6 +47,8 @@ export type UseNavPromptBridgeOptions = {
   syncImeTokenPicker: (line: string, pos: number) => void
   focusPrompt: () => void
   resetNavTranslateSession: () => void
+  /** EN: Active immutable prompt prefix (confirm y/n), or null. */
+  getPromptLockedPrefix: () => string | null
 }
 
 /** EN: Nav typing event bridge and prompt composition / input handlers. */
@@ -167,13 +176,21 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
       ta?: HTMLTextAreaElement | null,
       opts?: { preserveSelection?: boolean }
     ) => {
-      options.lineRef.current = nextLine
-      options.setLine(nextLine)
-      options.setCursorPos(nextCursor)
-      options.syncImeTokenPicker(nextLine, nextCursor)
+      const locked = options.getPromptLockedPrefix()
+      let line = nextLine
+      let cursor = nextCursor
+      if (locked !== null && locked.length > 0) {
+        const clamped = clampPromptLockedPrefix(line, cursor, locked)
+        line = clamped.line
+        cursor = clamped.cursor
+      }
+      options.lineRef.current = line
+      options.setLine(line)
+      options.setCursorPos(cursor)
+      options.syncImeTokenPicker(line, cursor)
       if (ta && !opts?.preserveSelection) {
         queueMicrotask(() => {
-          ta.setSelectionRange(nextCursor, nextCursor)
+          ta.setSelectionRange(cursor, cursor)
         })
       }
     },
@@ -268,41 +285,154 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
     if (!ta || options.isComposing) {
       return
     }
-    const pos = ta.selectionEnd
-    options.setCursorPos(pos)
-    options.syncImeTokenPicker(ta.value, pos)
+    const locked = options.getPromptLockedPrefix()
+    let rawPos = ta.selectionEnd
+    let value = ta.value
+    if (locked !== null && locked.length > 0) {
+      const clamped = clampPromptLockedPrefix(value, rawPos, locked)
+      if (clamped.line !== value) {
+        value = clamped.line
+        ta.value = value
+      }
+      rawPos = clamped.cursor
+    }
+    const pos = snapNavReloadTabBlockCaret(value, rawPos)
+    const lockedMin = locked?.length ?? 0
+    const finalPos = Math.max(lockedMin, pos)
+    if (finalPos !== ta.selectionStart || finalPos !== ta.selectionEnd) {
+      ta.setSelectionRange(finalPos, finalPos)
+    }
+    options.setCursorPos(finalPos)
+    options.syncImeTokenPicker(value, finalPos)
   }, [options])
 
   const onBeforeInput = useCallback(
     (e: React.FormEvent<HTMLTextAreaElement>) => {
-      if (!options.navPageTyping || options.isComposingRef.current) {
+      if (options.isComposingRef.current) {
         return
       }
       const ta = e.currentTarget
       const native = e.nativeEvent as InputEvent
-      const shift = (native as InputEvent & { getModifierState(key: string): boolean }).getModifierState(
-        "Shift"
-      )
-      if (navTypingShouldPreventLineBreakInput(native.inputType, shift, options.navTypingMultiline)) {
-        e.preventDefault()
-        return
-      }
-      if (native.inputType === "insertLineBreak" || native.inputType === "insertParagraph") {
-        e.preventDefault()
-        const chunk = sanitizeNavTypingInsertText("\n", shift, options.navTypingMultiline)
-        if (!chunk) {
+
+      if (options.navPageTyping) {
+        const shift = (native as InputEvent & { getModifierState(key: string): boolean }).getModifierState(
+          "Shift"
+        )
+        if (navTypingShouldPreventLineBreakInput(native.inputType, shift, options.navTypingMultiline)) {
+          e.preventDefault()
           return
         }
-        const { next, cursor } = navTypingInsert(
-          options.lineRef.current,
-          ta.selectionStart,
-          ta.selectionEnd,
-          chunk
-        )
-        applyNavTypingMutation(ta, next, cursor)
+        if (native.inputType === "insertLineBreak" || native.inputType === "insertParagraph") {
+          e.preventDefault()
+          const chunk = sanitizeNavTypingInsertText("\n", shift, options.navTypingMultiline)
+          if (!chunk) {
+            return
+          }
+          const { next, cursor } = navTypingInsert(
+            options.lineRef.current,
+            ta.selectionStart,
+            ta.selectionEnd,
+            chunk
+          )
+          applyNavTypingMutation(ta, next, cursor)
+        }
+        return
       }
+
+      if (
+        !options.navPageTyping &&
+        options.promptPaneFocused &&
+        options.mode === "normal" &&
+        (native.inputType === "deleteContentBackward" ||
+          native.inputType === "deleteContentForward" ||
+          native.inputType === "deleteByCut")
+      ) {
+        const locked = options.getPromptLockedPrefix()
+        const start = ta.selectionStart
+        const end = ta.selectionEnd
+        if (
+          locked !== null &&
+          locked.length > 0 &&
+          lockedPrefixBlocksDelete(
+            locked,
+            start,
+            end,
+            native.inputType === "deleteContentForward"
+              ? "deleteContentForward"
+              : native.inputType === "deleteByCut"
+                ? "deleteByCut"
+                : "deleteContentBackward"
+          )
+        ) {
+          e.preventDefault()
+          applyPromptLine(options.lineRef.current, Math.max(locked.length, start), ta)
+          return
+        }
+        if (start === end) {
+          const blocked =
+            native.inputType === "deleteContentBackward"
+              ? deleteNavReloadTabBlockAtCursor(options.lineRef.current, start)
+              : deleteNavReloadTabBlockForwardAtCursor(options.lineRef.current, start)
+          if (blocked) {
+            e.preventDefault()
+            options.setHistNavIndex(-1)
+            options.tabPressSeqRef.current = 0
+            applyPromptLine(blocked.line, blocked.cursor, ta)
+            return
+          }
+        }
+      }
+
+      if (
+        !options.promptPaneFocused ||
+        options.mode === "isearch" ||
+        native.inputType !== "insertText" ||
+        !native.data ||
+        native.data.length === 0 ||
+        /\s/.test(native.data)
+      ) {
+        return
+      }
+
+      const locked = options.getPromptLockedPrefix()
+      let start = ta.selectionStart
+      let end = ta.selectionEnd
+      if (locked !== null && locked.length > 0) {
+        if (start < locked.length || end < locked.length) {
+          e.preventDefault()
+          const next =
+            options.lineRef.current.slice(0, locked.length) +
+            native.data +
+            options.lineRef.current.slice(Math.max(end, locked.length))
+          options.setHistNavIndex(-1)
+          options.tabPressSeqRef.current = 0
+          applyPromptLine(next, locked.length + native.data.length, ta)
+        }
+        return
+      }
+      if (start !== end) {
+        return
+      }
+
+      const line = options.lineRef.current
+      const [wordStart] = wordBounds(line, start)
+      const prefix = line.slice(wordStart, start)
+      if (
+        start !== wordStart ||
+        prefix.length > 0 ||
+        !isFirstTierPrependPick(line, start, "first")
+      ) {
+        return
+      }
+
+      e.preventDefault()
+      const next = line.slice(0, start) + native.data + " " + line.slice(start)
+      const nextCursor = start + native.data.length
+      options.setHistNavIndex(-1)
+      options.tabPressSeqRef.current = 0
+      applyPromptLine(next, nextCursor, ta)
     },
-    [applyNavTypingMutation, options]
+    [applyNavTypingMutation, applyPromptLine, options]
   )
 
   const onPaste = useCallback(
@@ -313,8 +443,13 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
       e.preventDefault()
       options.allowEmptyFirstPickerSyncRef.current = false
       const ta = e.currentTarget
-      const start = ta.selectionStart
-      const end = ta.selectionEnd
+      const locked = options.getPromptLockedPrefix()
+      let start = ta.selectionStart
+      let end = ta.selectionEnd
+      if (locked !== null && locked.length > 0) {
+        start = Math.max(start, locked.length)
+        end = Math.max(end, locked.length)
+      }
       const raw = e.clipboardData.getData("text/plain")
       const t = options.navPageTyping && options.navTypingMultiline ? raw : raw.replace(/[\r\n]+/g, " ")
       const curLn = options.lineRef.current
@@ -324,12 +459,9 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
       if (options.mode === "isearch") {
         options.setISearchCycle(0)
       }
-      options.lineRef.current = next
-      options.setLine(next)
-      options.setCursorPos(start + t.length)
-      options.syncImeTokenPicker(next, start + t.length)
+      applyPromptLine(next, start + t.length, ta)
     },
-    [options]
+    [applyPromptLine, options]
   )
 
   const onCompositionStart = useCallback(

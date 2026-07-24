@@ -256,10 +256,10 @@ export function useTabPickerSyncAndLayoutEffects({
       editPanel?.kind === "groupRename"
     ) {
       inputRef.current?.blur()
-      groupMetaTitleRef.current?.focus()
+      groupMetaTitleRef.current?.focus({ preventScroll: true })
       return
     }
-    inputRef.current?.focus()
+    inputRef.current?.focus({ preventScroll: true })
   }, [
     editPanel,
     groupNewPhase,

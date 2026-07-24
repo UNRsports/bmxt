@@ -3,6 +3,7 @@ import { describe, it } from "node:test"
 import {
   computePickerColumnOrder,
   cycleDetailBarId,
+  isCtrlCloseDetailBarKey,
   listVisibleDetailBars,
   resolveDetailBarFocusTarget,
   resolvePickerColumnOrder
@@ -56,5 +57,21 @@ describe("detail bar focus helpers", () => {
     assert.equal(resolveDetailBarFocusTarget(bars, "search"), "search")
     assert.equal(resolveDetailBarFocusTarget(bars, "dom"), "nav")
     assert.equal(resolveDetailBarFocusTarget([], "tabs"), null)
+  })
+})
+
+describe("isCtrlCloseDetailBarKey", () => {
+  it("matches Ctrl+C", () => {
+    assert.equal(
+      isCtrlCloseDetailBarKey({ ctrlKey: true, metaKey: false, altKey: false, shiftKey: false, key: "c" }),
+      true
+    )
+  })
+
+  it("rejects Ctrl+Shift+C", () => {
+    assert.equal(
+      isCtrlCloseDetailBarKey({ ctrlKey: true, metaKey: false, altKey: false, shiftKey: true, key: "c" }),
+      false
+    )
   })
 })

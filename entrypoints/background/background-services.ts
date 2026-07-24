@@ -17,9 +17,9 @@ import type { SessionPatch } from "../../lib/features/bmxt-window/terminal-sessi
 import type { RunCmdResult } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
 import { displayTitle } from "../../lib/features/format/display-title"
 import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
-import { buildHelpLines } from "../../lib/features/bmxt-core/registry/help"
 import { loadUiSettings } from "../../lib/features/setting/settings"
 import { setRunLocale, getRunLocale } from "../../lib/features/setting/i18n/run-locale"
+import type { UiLocale } from "../../lib/features/setting/locale"
 import { tWindows } from "../../lib/features/setting/i18n/ns/windows"
 import { BACKGROUND_JOB_SCOPE } from "../../lib/features/job/job-types"
 import { getJobRunner } from "../../lib/features/job/job-runner"
@@ -32,16 +32,22 @@ import {
   persistBmxtWindowId,
   readBmxtWindowIdInMemory
 } from "./window-state"
+import { hideBmxtFloatOnTabAsync } from "./float-launch"
+import {
+  resolveExitHostAction,
+  resolveHostKindForExit
+} from "../../lib/features/bmxt-window/exit-host-policy"
+import type { BmxtHostKind } from "../../lib/features/bmxt-window/bmxt-host-kind"
 
 let lastFocusedNormalWindow: number | undefined
 let backgroundServicesRegistered = false
 
-function senderWindowId(sender?: chrome.runtime.MessageSender): number | undefined {
-  const tab = sender?.tab
-  if (!tab || typeof tab.windowId !== "number") {
+function senderTabId(sender?: chrome.runtime.MessageSender): number | undefined {
+  const id = sender?.tab?.id
+  if (typeof id !== "number" || !Number.isInteger(id)) {
     return undefined
   }
-  return tab.windowId
+  return id
 }
 
 async function closeBmxtWindowById(windowId: number): Promise<void> {
@@ -56,11 +62,8 @@ async function closeBmxtWindowById(windowId: number): Promise<void> {
   }
 }
 
-async function closeBmxtWindowOnly(hintWindowId?: number): Promise<void> {
-  if (hintWindowId !== undefined) {
-    await closeBmxtWindowById(hintWindowId)
-    return
-  }
+/** EN: Close the BMXt popup window only (never a normal browser window from a float tab). */
+async function closeBmxtWindowOnly(): Promise<void> {
   await hydrateBmxtWindowIdFromStorage()
   const wid = readBmxtWindowIdInMemory()
   if (wid !== undefined) {
@@ -68,85 +71,62 @@ async function closeBmxtWindowOnly(hintWindowId?: number): Promise<void> {
   }
 }
 
-function tryRunCommandWithoutWasm(
-  sessionId: string,
-  trimmed: string,
-  patches: SessionPatch[]
-): boolean {
-  const lower = trimmed.toLowerCase()
-  if (lower === "clear") {
-    patches.push({
-      type: "setLog",
-      sessionId,
-      lines: [`> ${trimmed}`, "(log cleared)"]
-    })
-    return true
-  }
-  if (lower === "exit") {
-    return false
-  }
-  const newMatch = trimmed.match(/^\s*session\s+-new(?:\s+(.+))?\s*$/i)
-  if (newMatch) {
-    const rawName = (newMatch[1] ?? "").trim()
-    patches.push({
-      type: "createSession",
-      fromSessionId: sessionId,
-      name: rawName.length > 0 ? rawName : undefined
-    })
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-    return true
-  }
-  if (/^\s*session\s+-next\s*$/i.test(trimmed)) {
-    patches.push({ type: "switchNext", anchorSessionId: sessionId })
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-    return true
-  }
-  if (/^\s*session\s+-prev\s*$/i.test(trimmed)) {
-    patches.push({ type: "switchPrev", anchorSessionId: sessionId })
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-    return true
-  }
-  return false
-}
-
 async function runExitCommand(
   sessionIdRaw: string | undefined,
   sessionOrderLength: number,
-  sender?: chrome.runtime.MessageSender
+  sender?: chrome.runtime.MessageSender,
+  hostKindRaw?: unknown
 ): Promise<RunCmdResult> {
-  const hintWindowId = senderWindowId(sender)
-  const isLastOrEmpty = sessionOrderLength <= 1
+  const hostKind = resolveHostKindForExit(hostKindRaw, sender)
+  const action = resolveExitHostAction({
+    hostKind,
+    sessionOrderLength,
+    senderTabId: senderTabId(sender)
+  })
 
-  if (isLastOrEmpty) {
-    void closeBmxtWindowOnly(hintWindowId)
-    void removeAllTerminalSessionsFromStorage()
-    return { ok: true, patches: [], closeWindow: true }
+  if (action.kind === "exitSession") {
+    const sessionId = sessionIdRaw ?? ""
+    return {
+      ok: true,
+      patches: [{ type: "exitSession", sessionId, appendExitLog: true }]
+    }
   }
 
-  const sessionId = sessionIdRaw ?? ""
-  return {
-    ok: true,
-    patches: [{ type: "exitSession", sessionId, appendExitLog: true }]
+  if (action.kind === "hideFloat") {
+    const tabId = action.tabId ?? senderTabId(sender)
+    if (typeof tabId === "number") {
+      void hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
+    }
+    broadcastSessionClearToUi("float")
+    return { ok: true, patches: [] }
   }
+
+  void closeBmxtWindowOnly()
+  void removeAllTerminalSessionsFromStorage()
+  broadcastSessionClearToUi("popup")
+  return { ok: true, patches: [], closeWindow: true }
 }
 
 async function runCommand(
   line: string,
   sessionIdRaw: string | undefined,
   sessionOrderLength: number,
-  sender?: chrome.runtime.MessageSender
+  sender?: chrome.runtime.MessageSender,
+  localeOverride?: UiLocale,
+  hostKind?: BmxtHostKind
 ): Promise<RunCmdResult> {
   const trimmed = line.trim()
   if (!trimmed) {
     return { ok: true, patches: [] }
   }
   if (trimmed.toLowerCase() === "exit") {
-    return runExitCommand(sessionIdRaw, sessionOrderLength, sender)
+    return runExitCommand(sessionIdRaw, sessionOrderLength, sender, hostKind)
   }
   const runner = getJobRunner(BACKGROUND_JOB_SCOPE)
   return runner.start(
     "run-cmd",
-    async () => runCommandBody(trimmed, sessionIdRaw, sessionOrderLength),
+    async () =>
+      runCommandBody(trimmed, sessionIdRaw, sessionOrderLength, localeOverride, sender, hostKind),
     { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
   )
 }
@@ -154,7 +134,10 @@ async function runCommand(
 async function runCommandBody(
   line: string,
   sessionIdRaw: string | undefined,
-  sessionOrderLength: number
+  sessionOrderLength: number,
+  localeOverride?: UiLocale,
+  sender?: chrome.runtime.MessageSender,
+  hostKindRaw?: unknown
 ): Promise<RunCmdResult> {
   const trimmed = line
   if (/^\s*search\b/i.test(trimmed)) {
@@ -163,13 +146,11 @@ async function runCommandBody(
   const sessionId = sessionIdRaw ?? ""
   const patches: SessionPatch[] = []
   const exitOutcome = { fullClose: false as boolean }
+  const hostKind = resolveHostKindForExit(hostKindRaw, sender)
 
   try {
     await ensureBmxtCore()
   } catch (e) {
-    if (tryRunCommandWithoutWasm(sessionId, trimmed, patches)) {
-      return { ok: true, patches }
-    }
     return {
       ok: true,
       patches: [
@@ -182,15 +163,27 @@ async function runCommandBody(
     }
   }
 
-  const isClear = trimmed.toLowerCase() === "clear"
+  const replaceLog = { value: false }
   const more: string[] = []
   try {
-    more.push(...(await dispatch(trimmed, sessionId, sessionOrderLength, patches, exitOutcome)))
+    more.push(
+      ...(await dispatch(
+        trimmed,
+        sessionId,
+        sessionOrderLength,
+        patches,
+        exitOutcome,
+        localeOverride,
+        hostKind,
+        sender,
+        replaceLog
+      ))
+    )
   } catch (e) {
     more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
   }
 
-  if (isClear) {
+  if (replaceLog.value) {
     patches.push({
       type: "setLog",
       sessionId,
@@ -199,9 +192,7 @@ async function runCommandBody(
     return { ok: true, patches, closeWindow: exitOutcome.fullClose || undefined }
   }
 
-  if (!isClear) {
-    patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
-  }
+  patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
   if (more.length > 0) {
     patches.push({ type: "appendLog", sessionId, lines: more })
   }
@@ -213,14 +204,15 @@ async function dispatch(
   sessionId: string,
   sessionOrderLength: number,
   sessionPatches: SessionPatch[],
-  exitOutcome: { fullClose: boolean }
+  exitOutcome: { fullClose: boolean },
+  localeOverride?: UiLocale,
+  hostKind: BmxtHostKind = "popup",
+  sender?: chrome.runtime.MessageSender,
+  replaceLog?: { value: boolean }
 ): Promise<string[]> {
-  const { locale } = await loadUiSettings()
+  const locale =
+    localeOverride ?? (await loadUiSettings()).locale
   setRunLocale(locale)
-  const trimmed = line.trim()
-  if (trimmed === "help" || trimmed === "?") {
-    return buildHelpLines(locale)
-  }
   const bundle = runDispatch(line, locale)
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
@@ -230,22 +222,39 @@ async function dispatch(
       sessionPatches.push(patch)
     },
     clearLog: async () => {
-      /* clear command replaces log via setLog patch in runCommandBody */
+      if (replaceLog) {
+        replaceLog.value = true
+      }
     },
     exitPane: async () => {
-      if (sessionOrderLength <= 1) {
-        exitOutcome.fullClose = true
-        void closeBmxtWindowOnly()
-        void removeAllTerminalSessionsFromStorage()
+      const action = resolveExitHostAction({
+        hostKind,
+        sessionOrderLength,
+        senderTabId: senderTabId(sender)
+      })
+      if (action.kind === "exitSession") {
+        sessionPatches.push({ type: "exitSession", sessionId })
         return []
       }
-      sessionPatches.push({ type: "exitSession", sessionId })
+      if (action.kind === "hideFloat") {
+        const tabId = action.tabId ?? senderTabId(sender)
+        if (typeof tabId === "number") {
+          void hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
+        }
+        broadcastSessionClearToUi("float")
+        return []
+      }
+      exitOutcome.fullClose = true
+      void closeBmxtWindowOnly()
+      void removeAllTerminalSessionsFromStorage()
+      broadcastSessionClearToUi("popup")
       return []
     },
     listWindows,
     focusInfo,
     resolveTabArg,
-    commandSessionId: sessionId
+    commandSessionId: sessionId,
+    uiLocale: locale
   }
   return applyChromeEffects(ctx, bundle.effects ?? [])
 }
@@ -340,6 +349,7 @@ type NavControlRequest = {
   y?: number
   dx?: number
   dy?: number
+  freeMove?: boolean
   key?: string
   code?: string
   ctrlKey?: boolean
@@ -372,7 +382,7 @@ export async function resetBmxtFromShortcutAsync(
   openOrFocus: () => Promise<void>
 ): Promise<void> {
   await resetBmxtTerminalSessionsInStorage()
-  broadcastSessionClearToUi()
+  broadcastSessionClearToUi("all")
   await openOrFocus()
 }
 
@@ -380,7 +390,9 @@ export async function runCommandMessage(
   line: string,
   sessionIdRaw?: string,
   sessionOrderLength?: number,
-  sender?: chrome.runtime.MessageSender
+  sender?: chrome.runtime.MessageSender,
+  localeRaw?: string,
+  hostKindRaw?: unknown
 ): Promise<RunCmdResult> {
   const orderLen =
     typeof sessionOrderLength === "number" && Number.isInteger(sessionOrderLength)
@@ -388,7 +400,10 @@ export async function runCommandMessage(
       : 1
   const sessionId =
     typeof sessionIdRaw === "string" && sessionIdRaw.length > 0 ? sessionIdRaw : undefined
-  return runCommand(line, sessionId, orderLen, sender)
+  const localeOverride =
+    localeRaw === "en" || localeRaw === "ja" ? localeRaw : undefined
+  const hostKind = resolveHostKindForExit(hostKindRaw, sender)
+  return runCommand(line, sessionId, orderLen, sender, localeOverride, hostKind)
 }
 
 export async function runNavControlMessage(message: NavControlRequest): Promise<unknown> {
@@ -415,7 +430,8 @@ export async function runNavControlMessage(message: NavControlRequest): Promise<
         }
       : undefined,
     typeof message.text === "string" ? message.text : undefined,
-    typeof message.labelsJson === "string" ? message.labelsJson : undefined
+    typeof message.labelsJson === "string" ? message.labelsJson : undefined,
+    Boolean(message.freeMove)
   )
 }
 

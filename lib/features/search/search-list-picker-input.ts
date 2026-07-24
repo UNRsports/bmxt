@@ -4,6 +4,10 @@
  */
 
 import { listThirdTokenCandidates } from "../builtin-commands/command-subcommands.gen"
+import {
+  pickThirdTokenCandidates,
+  resolveOptionTokenFilterModes
+} from "../command-line/ime-token-match.ts"
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
 import type { PickerEntry } from "../side-picker/model/picker-entry"
 
@@ -14,10 +18,10 @@ export {
   isSearchListContinuationPrompt,
   isSearchListReadyToRun,
   isSearchListScopeToken,
+  matchesSearchListOptionFilter,
   matchesSearchListScopeFilter,
   normalizeSearchListDispatchLine,
   parseSearchExitListLine,
-  parseSearchListPickerLine,
   searchListDefaultEffectScopes,
   searchListEffectScopesForToken,
   searchListPatternFromLine,
@@ -35,7 +39,13 @@ export function searchListScopeCompletionZone(
 }
 
 export function listSearchListScopeCandidates(prefix: string): string[] {
-  return listThirdTokenCandidates("search", "-list", prefix)
+  const all = listThirdTokenCandidates("search", "-list", "")
+  const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
+    all,
+    prefix,
+    "prefix"
+  )
+  return pickThirdTokenCandidates(all, prefix, "prefix", useFullCandidateList, filterMode)
 }
 
 export type SearchListPickerState = {

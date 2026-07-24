@@ -43,7 +43,7 @@ void (async () => {
       }
     }, [])
 
-    return <BmxtTerminal />
+    return <BmxtTerminal hostKind="popup" />
   }
 
   createRoot(rootEl).render(<BmxtTabPage />)

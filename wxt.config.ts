@@ -36,7 +36,7 @@ export default defineConfig({
     optional_host_permissions: ["http://*/*", "https://*/*"],
     content_security_policy: {
       extension_pages:
-        "default-src 'self'; script-src 'self'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
     },
     commands: {
       "launch-bmxt": {
@@ -54,8 +54,22 @@ export default defineConfig({
         },
         description: "__MSG_commandResetBmxt__",
         global: true
+      },
+      "toggle-bmxt-float": {
+        suggested_key: {
+          default: "Shift+Alt+F",
+          mac: "Shift+Alt+F"
+        },
+        description: "__MSG_commandToggleBmxtFloat__",
+        global: true
       }
     },
+    web_accessible_resources: [
+      {
+        resources: ["bmxt-float.html"],
+        matches: ["http://*/*", "https://*/*"]
+      }
+    ],
     action: {
       default_icon: {
         16: "icon.png",

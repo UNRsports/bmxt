@@ -3,7 +3,8 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "strict": false
+    "strict": false,
+    "types": ["chrome", "node"]
   },
   "exclude": ["node_modules", "**/*.test.ts"]
 }

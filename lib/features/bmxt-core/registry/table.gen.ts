@@ -4,57 +4,83 @@
  */
 
 import type { CmdMeta } from "../types"
-import type { DispatchJson } from "../types"
-import * as clear from "../cmd/clear"
-import * as close from "../cmd/close"
-import * as dom from "../cmd/dom"
-import * as exit from "../cmd/exit"
-import * as search from "../cmd/search"
-import * as group from "../cmd/group"
-import * as help_cmd from "../cmd/help_cmd"
-import * as tabs from "../cmd/tabs"
-import * as nav from "../cmd/nav"
-import * as translate from "../cmd/translate"
-import * as aboutbmxt from "../cmd/aboutbmxt"
-import * as session from "../cmd/session"
-import * as snapshot from "../cmd/snapshot"
-import * as setting from "../cmd/setting"
 
 export const COMMANDS: readonly CmdMeta[] = [
-  clear.CMD,
-  close.CMD,
-  dom.CMD,
-  exit.CMD,
-  search.CMD,
-  group.CMD,
-  help_cmd.CMD,
-  tabs.CMD,
-  nav.CMD,
-  translate.CMD,
-  aboutbmxt.CMD,
-  session.CMD,
-  snapshot.CMD,
-  setting.CMD
-]
-
-export const COMMAND_RUNNERS: ReadonlyArray<{
-  readonly name: string
-  readonly run: (args: string[]) => DispatchJson
-}> = [
-  { name: clear.CMD.name, run: clear.run },
-  { name: close.CMD.name, run: close.run },
-  { name: dom.CMD.name, run: dom.run },
-  { name: exit.CMD.name, run: exit.run },
-  { name: search.CMD.name, run: search.run },
-  { name: group.CMD.name, run: group.run },
-  { name: help_cmd.CMD.name, run: help_cmd.run },
-  { name: tabs.CMD.name, run: tabs.run },
-  { name: nav.CMD.name, run: nav.run },
-  { name: translate.CMD.name, run: translate.run },
-  { name: aboutbmxt.CMD.name, run: aboutbmxt.run },
-  { name: session.CMD.name, run: session.run },
-  { name: snapshot.CMD.name, run: snapshot.run },
-  { name: setting.CMD.name, run: setting.run }
+  {
+    name: "clear",
+    aliases: ["cls"] as const,
+    usagePrimary: "clear"
+  },
+  {
+    name: "close",
+    aliases: ["c"] as const,
+    usagePrimary: "close <tabId>"
+  },
+  {
+    name: "dom",
+    aliases: [] as const,
+    usagePrimary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help"
+  },
+  {
+    name: "exit",
+    aliases: [] as const,
+    usagePrimary: "exit"
+  },
+  {
+    name: "search",
+    aliases: [] as const,
+    usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help"
+  },
+  {
+    name: "group",
+    aliases: [] as const,
+    usagePrimary: "group new"
+  },
+  {
+    name: "help",
+    aliases: ["?"] as const,
+    usagePrimary: "help"
+  },
+  {
+    name: "tab",
+    aliases: [] as const,
+    usagePrimary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help"
+  },
+  {
+    name: "nav",
+    aliases: [] as const,
+    usagePrimary: "nav -enter | nav -exit | nav -windowclose"
+  },
+  {
+    name: "translate",
+    aliases: [] as const,
+    usagePrimary: "translate -on | translate -off | translate -setting | translate help"
+  },
+  {
+    name: "aboutbmxt",
+    aliases: [] as const,
+    usagePrimary: "aboutbmxt"
+  },
+  {
+    name: "session",
+    aliases: [] as const,
+    usagePrimary: "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name] | session help"
+  },
+  {
+    name: "snapshot",
+    aliases: [] as const,
+    usagePrimary: "snapshot -save [<tabId>]"
+  },
+  {
+    name: "browse",
+    aliases: [] as const,
+    usagePrimary: "browse <list-command>"
+  },
+  {
+    name: "setting",
+    aliases: [] as const,
+    usagePrimary: "setting -list | setting -exit -list | setting help"
+  }
 ]
 
 export function cmdByName(name: string): CmdMeta | undefined {

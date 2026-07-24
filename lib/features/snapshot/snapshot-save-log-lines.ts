@@ -1,30 +1,40 @@
+import { expandDispatchMsgs } from "../bmxt-core/expand-msgs.ts"
 import type { UiLocale } from "../setting/locale"
-import { tCmd } from "../setting/i18n/ns/cmd.ts"
 import type { SnapshotSaveFromTabResult } from "./snapshot-save-tab"
 
-/** EN: Terminal log lines for one `snapshot -save` attempt (no prompt echo). */
+/** EN: Terminal log lines for one `snapshot -save` attempt (Chrome outcome → msgs expand). */
 export function snapshotSaveLogLinesForResult(
   locale: UiLocale,
   result: SnapshotSaveFromTabResult
 ): string[] {
   if (result.ok === true) {
-    return [
-      tCmd("cmd.snapshot.save.done", locale, {
-        path: result.result.path,
-        title: result.result.title
-      })
-    ]
+    return expandDispatchMsgs(
+      [
+        {
+          key: "cmd.snapshot.save.done",
+          params: { path: result.result.path, title: result.result.title }
+        }
+      ],
+      locale
+    )
   }
   if (result.code === "not_scriptable") {
-    return [
-      tCmd("cmd.snapshot.save.notHttp", locale, {
-        url: result.url ?? "(no url)"
-      })
-    ]
+    return expandDispatchMsgs(
+      [
+        {
+          key: "cmd.snapshot.save.notHttp",
+          params: { url: result.url ?? "(no url)" }
+        }
+      ],
+      locale
+    )
   }
-  const lines = [tCmd("cmd.snapshot.save.failed", locale, { message: result.message })]
+  const msgs = [{ key: "cmd.snapshot.save.failed", params: { message: result.message } }]
   if (result.code === "empty_body") {
-    lines.push(tCmd("cmd.snapshot.save.reloadAdvice", locale))
+    return expandDispatchMsgs(
+      [...msgs, { key: "cmd.snapshot.save.reloadAdvice" }],
+      locale
+    )
   }
-  return lines
+  return expandDispatchMsgs(msgs, locale)
 }

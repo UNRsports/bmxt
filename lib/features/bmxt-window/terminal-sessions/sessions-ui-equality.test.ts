@@ -15,7 +15,7 @@ function baseState(): TerminalSessionsStateV1 {
     namesById: { a: "one", b: "two" },
     logsById: {
       a: ["> help"],
-      b: ["> tabs -list"]
+      b: ["> tab -list"]
     }
   }
 }

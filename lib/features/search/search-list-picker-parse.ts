@@ -12,6 +12,14 @@ const SEARCH_LIST_SCOPE = new Set(["--all", "--history", "--bookmark", "--page",
 
 const SEARCH_LIST_SCOPE_ORDER = ["--all", "--history", "--bookmark", "--page", "--snapshot"] as const
 
+const SEARCH_LIST_MODIFIER_ORDER = ["--unlimit"] as const
+
+/** EN: All fixed third tokens after `search -list` (scopes). */
+export const SEARCH_LIST_OPTION_TOKENS = [
+  ...SEARCH_LIST_SCOPE_ORDER,
+  ...SEARCH_LIST_MODIFIER_ORDER
+] as const
+
 const SEARCH_LIST_EFFECT_SCOPES = ["--history", "--bookmark", "--page", "--snapshot"] as const
 
 function searchListParts(trimmed: string): string[] {
@@ -21,6 +29,45 @@ function searchListParts(trimmed: string): string[] {
 /** EN: Optional third-token scope flags after `search -list` (manifest `trailingTokens`). */
 export function isSearchListScopeToken(token: string): boolean {
   return SEARCH_LIST_SCOPE.has(token.toLowerCase())
+}
+
+/** EN: Modifiers for page scan (`--unlimit` lifts MAX_PAGE_TEXT_CHARS). */
+export function isSearchListModifierToken(token: string): boolean {
+  const lower = token.toLowerCase()
+  for (const modifier of SEARCH_LIST_MODIFIER_ORDER) {
+    if (modifier === lower) {
+      return true
+    }
+  }
+  return false
+}
+
+export type SearchListPageOptions = {
+  unlimit: boolean
+}
+
+/** EN: Parse page-scan modifiers from a normalized `search -list …` line. */
+export function parseSearchListPageOptions(dispatchLine: string): SearchListPageOptions {
+  const parts = searchListParts(dispatchLine)
+  let unlimit = false
+  for (let index = 2; index < parts.length; index += 1) {
+    const token = parts[index]!.toLowerCase()
+    if (isSearchListModifierToken(token)) {
+      if (token === "--unlimit") {
+        unlimit = true
+      }
+      continue
+    }
+    if (isSearchListScopeToken(token)) {
+      continue
+    }
+    break
+  }
+  return { unlimit }
+}
+
+function isSearchListFixedToken(token: string): boolean {
+  return isSearchListScopeToken(token) || isSearchListModifierToken(token)
 }
 
 /** EN: `--all` — cross-scope search (history + bookmark + page). */
@@ -62,14 +109,39 @@ export function normalizeSearchListDispatchLine(trimmed: string): string {
  * JA: 第三トークンがスコープ候補の絞り込み中か（`pa` や `--p` など）。
  */
 export function matchesSearchListScopeFilter(token: string): boolean {
+  return matchesSearchListOptionFilter(token, SEARCH_LIST_SCOPE_ORDER)
+}
+
+/**
+ * EN: Third token still narrowing any `search -list` option (`pa` → `--page`).
+ * JA: `search -list` の任意オプション絞り込み中か。
+ */
+export function matchesSearchListOptionFilter(
+  token: string,
+  candidates: readonly string[] = SEARCH_LIST_OPTION_TOKENS
+): boolean {
   const t = token.trim().toLowerCase()
   if (!t) {
     return false
   }
-  if (t.startsWith("--")) {
-    return SEARCH_LIST_SCOPE_ORDER.some((s) => s.startsWith(t))
+  const tBody = t.replace(/^-+/, "")
+  for (const candidate of candidates) {
+    const c = candidate.toLowerCase()
+    const cBody = c.replace(/^-+/, "")
+    if (t.startsWith("-")) {
+      if (c.startsWith(t) || (tBody.length > 0 && cBody.startsWith(tBody))) {
+        return true
+      }
+      continue
+    }
+    if (cBody.startsWith(tBody)) {
+      return true
+    }
+    if (tBody.length >= 2 && (c.includes(t) || cBody.includes(tBody))) {
+      return true
+    }
   }
-  return SEARCH_LIST_SCOPE_ORDER.some((s) => s.includes(t))
+  return false
 }
 
 /**
@@ -120,13 +192,13 @@ export function isSearchListReadyToRun(trimmed: string, line?: string): boolean 
     return line !== undefined && line.endsWith(" ")
   }
   const third = parts[2]!.toLowerCase()
-  if (isSearchListScopeToken(third)) {
+  if (isSearchListFixedToken(third)) {
     return true
   }
   if (third.startsWith("--")) {
     return false
   }
-  if (matchesSearchListScopeFilter(parts[2]!)) {
+  if (matchesSearchListOptionFilter(parts[2]!)) {
     return false
   }
   return true
@@ -138,15 +210,20 @@ export function searchListPatternFromLine(trimmed: string): string {
   if (parts.length <= 2) {
     return ""
   }
-  if (isSearchListScopeToken(parts[2]!)) {
-    return parts.length <= 3 ? "" : parts.slice(3).join(" ")
+  const patternParts: string[] = []
+  for (let index = 2; index < parts.length; index += 1) {
+    const token = parts[index]!
+    if (isSearchListFixedToken(token)) {
+      continue
+    }
+    patternParts.push(token)
   }
-  return parts.slice(2).join(" ")
+  return patternParts.join(" ")
 }
 
 /**
- * EN: Cursor still editing the optional scope token — show scope menu, not pattern placeholder.
- * JA: 任意スコープトークン入力中 — スコープメニューを表示し、パターン案内は出さない。
+ * EN: Cursor still editing a fixed option token — show option menu, not pattern placeholder.
+ * JA: 固定オプショントークン入力中 — オプションメニューを表示し、パターン案内は出さない。
  */
 export function isEditingSearchListScopeToken(line: string, cursor: number): boolean {
   const trimmed = line.trim()
@@ -158,10 +235,11 @@ export function isEditingSearchListScopeToken(line: string, cursor: number): boo
     return false
   }
   const third = parts[2]!
-  if (!matchesSearchListScopeFilter(third) && !third.startsWith("--")) {
+  if (!matchesSearchListOptionFilter(third) && !third.startsWith("--")) {
     return false
   }
-  if (!isSearchListScopeToken(third)) {
+  const isCompleteOption = isSearchListFixedToken(third)
+  if (!isCompleteOption) {
     return true
   }
   const scopeStart = line.toLowerCase().indexOf(third.toLowerCase())
@@ -192,10 +270,10 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
   if (parts.length === 2 && segmentLine.endsWith(" ")) {
     return true
   }
-  if (parts.length >= 3 && isSearchListScopeToken(parts[2]!)) {
+  if (parts.length >= 3 && isSearchListFixedToken(parts[2]!)) {
     return searchListPatternFromLine(trimmed).length === 0
   }
-  if (parts.length >= 3 && matchesSearchListScopeFilter(parts[2]!)) {
+  if (parts.length >= 3 && matchesSearchListOptionFilter(parts[2]!)) {
     return false
   }
   if (parts.length >= 3 && !parts[2]!.startsWith("--")) {
@@ -207,20 +285,4 @@ export function shouldShowSearchListPatternPlaceholder(line: string, cursor: num
 /** `search -exit -list` — close search list picker in this pane (full line must match). */
 export function parseSearchExitListLine(trimmed: string): boolean {
   return SEARCH_EXIT_LIST_RE.test(trimmed.trim())
-}
-
-/** EN: Enter opens search list picker when the line is a completed `search -list …` dispatch. */
-export function parseSearchListPickerLine(trimmed: string): string | null {
-  const t = trimmed.trim()
-  const parts = searchListParts(t)
-  if (parts.length < 2) {
-    return null
-  }
-  if (parts[0]!.toLowerCase() !== "search") {
-    return null
-  }
-  if (parts[1]!.toLowerCase() !== "-list") {
-    return null
-  }
-  return t
 }

@@ -30,13 +30,14 @@ function assignSnippetOccurrences(matches: SearchPageMatch[]): SearchPageMatch[]
 async function refreshPageMatchGlobalsFromTab(
   entry: PickerEntry,
   tab: chrome.tabs.Tab,
-  needle: string
+  needle: string,
+  readMaxChars: number
 ): Promise<SearchPageMatch[] | undefined> {
   const matches = entry.pageMatches
   if (!matches || matches.length === 0) {
     return undefined
   }
-  const text = await readOpenTabInnerText(tab, MAX_PAGE_TEXT_CHARS)
+  const text = await readOpenTabInnerText(tab, readMaxChars)
   if (text === null) {
     return matches
   }
@@ -52,7 +53,8 @@ async function refreshPageMatchGlobalsFromTab(
  */
 export async function enrichSearchPickerEntriesFromOpenTabs(
   entries: PickerEntry[],
-  pattern: string
+  pattern: string,
+  maxPageTextChars?: number
 ): Promise<PickerEntry[]> {
   const needle = pattern.trim()
   if (!needle || entries.length === 0) {
@@ -75,6 +77,8 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
     return entries
   }
 
+  const readMaxChars = maxPageTextChars ?? MAX_PAGE_TEXT_CHARS
+
   const out: PickerEntry[] = []
   for (const entry of entries) {
     const key = normalizeUrlForSearchDedup(entry.url)
@@ -86,7 +90,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
 
     const hasBodyHits = (entry.pageMatches ?? []).some((m) => m.lineNo > 0)
     if (hasBodyHits) {
-      const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab, needle)
+      const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab, needle, readMaxChars)
       out.push({
         ...entry,
         tabId: entry.tabId ?? tab.id,
@@ -96,7 +100,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
       continue
     }
 
-    const text = await readOpenTabInnerText(tab, MAX_PAGE_TEXT_CHARS)
+    const text = await readOpenTabInnerText(tab, readMaxChars)
     const pageMatches = collectPageMatchesForTab(tab.title ?? "", text, needle)
     const bodyMatches = pageMatches.filter((m) => m.lineNo > 0)
     if (bodyMatches.length === 0) {

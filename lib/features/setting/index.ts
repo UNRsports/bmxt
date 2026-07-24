@@ -11,6 +11,7 @@ export {
   listAppearanceFlagTokens,
   normalizeUiAppearance,
   parseAppearanceFlagToken,
+  parseStoredOptionalHexColor,
   resolvePickerAppearance,
   resolveSearchHighlightAppearance,
   resolveTerminalAppearance,
@@ -81,7 +82,6 @@ export {
 } from "./i18n"
 export {
   parseSettingIncompleteLine,
-  parseSettingListPickerLine,
   parseSettingExitListLine
 } from "./setting-list-picker-input"
 export {

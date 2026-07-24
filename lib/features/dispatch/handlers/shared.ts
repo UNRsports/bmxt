@@ -1,27 +1,12 @@
 /**
- * 複数の Effect ハンドラで共有する URL 正規化と tabs -moveurl 相当のジャンプ。
+ * 複数の Effect ハンドラで共有する URL 正規化と tab -moveurl 相当のジャンプ。
  */
 
 import { BMXT_WINDOW_ID_KEY, LAST_NORMAL_WINDOW_KEY } from "../../extension-storage/keys"
 import { tEffect } from "../../setting/i18n/ns/effect"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
-
-function parseHttpUrl(urlStr: string): string | null {
-  const trimmed = urlStr.trim()
-  if (!trimmed) {
-    return null
-  }
-  try {
-    const u = new URL(trimmed)
-    if (u.protocol !== "http:" && u.protocol !== "https:") {
-      return null
-    }
-    return u.href
-  } catch {
-    return null
-  }
-}
+import { parseOpenHttpUrl } from "../../url/parse-open-http-url.ts"
 
 export async function tabsMoveUrl(
   normalized: string,
@@ -73,7 +58,7 @@ export async function tabsMoveUrl(
 }
 
 export function parseHttpUrlForEffect(urlStr: string): string | null {
-  return parseHttpUrl(urlStr)
+  return parseOpenHttpUrl(urlStr)
 }
 
 /** EN: Prefer last focused normal browser window — never the BMXt shell window. */

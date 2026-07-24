@@ -2,10 +2,10 @@ import {
   DEFAULT_SEARCH_HIT_HIGHLIGHT_BG,
   DEFAULT_SEARCH_HIGHLIGHT_FG,
   DEFAULT_SEARCH_JUMP_HIGHLIGHT_BG
-} from "../page-dom/injected-needle-highlight"
-import { parseHexColor } from "./validate-color"
-import { parseFontFamily } from "./validate-font"
-import { parseFontSizePx } from "./validate-size"
+} from "../page-dom/injected-needle-highlight.ts"
+import { parseHexColor } from "./validate-color.ts"
+import { parseFontFamily } from "./validate-font.ts"
+import { parseFontSizePx } from "./validate-size.ts"
 import type { SettingMessageKey } from "./i18n/ns/setting"
 
 export const APPEARANCE_FLAG_TOKENS = [
@@ -78,6 +78,14 @@ export type ResolvedTerminalAppearance = {
   bgImageDataUrl: string | null
 }
 
+/** EN: Optional hex from storage / import — invalid values become null. */
+export function parseStoredOptionalHexColor(raw: unknown): string | null {
+  if (typeof raw !== "string") {
+    return null
+  }
+  return parseHexColor(raw)
+}
+
 function parseAppearanceLayer(raw: unknown): UiAppearanceLayer {
   if (!raw || typeof raw !== "object") {
     return { ...DEFAULT_UI_APPEARANCE_LAYER }
@@ -108,10 +116,8 @@ export function normalizeUiAppearance(raw: Partial<UiAppearance> | null | undefi
     bgImageDataUrl: raw.bgImageDataUrl ?? null,
     editPicker: raw.editPicker === true,
     picker: parseAppearanceLayer(raw.picker),
-    searchHitHighlightBg:
-      typeof raw.searchHitHighlightBg === "string" ? raw.searchHitHighlightBg : null,
-    searchJumpHighlightBg:
-      typeof raw.searchJumpHighlightBg === "string" ? raw.searchJumpHighlightBg : null
+    searchHitHighlightBg: parseStoredOptionalHexColor(raw.searchHitHighlightBg),
+    searchJumpHighlightBg: parseStoredOptionalHexColor(raw.searchJumpHighlightBg)
   }
 }
 
@@ -152,8 +158,10 @@ export function resolveSearchHighlightAppearance(
   appearance: UiAppearance
 ): ResolvedSearchHighlightAppearance {
   return {
-    hitBg: appearance.searchHitHighlightBg ?? DEFAULT_SEARCH_HIT_HIGHLIGHT_BG,
-    jumpBg: appearance.searchJumpHighlightBg ?? DEFAULT_SEARCH_JUMP_HIGHLIGHT_BG,
+    hitBg:
+      appearance.searchHitHighlightBg ?? DEFAULT_SEARCH_HIT_HIGHLIGHT_BG,
+    jumpBg:
+      appearance.searchJumpHighlightBg ?? DEFAULT_SEARCH_JUMP_HIGHLIGHT_BG,
     fg: DEFAULT_SEARCH_HIGHLIGHT_FG
   }
 }

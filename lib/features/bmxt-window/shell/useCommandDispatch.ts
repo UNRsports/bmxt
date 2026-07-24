@@ -1,45 +1,23 @@
 import { useCallback } from "react"
-import { lineHasAndOperator, runCompoundLine } from "../../command-line/compound"
+import { lineHasCompoundOperator, runCompoundLine } from "../../command-line/compound"
+import { ensureBmxtCore } from "../../bmxt-core/wasm-host"
+import { runDispatch } from "../../bmxt-core/dispatch"
+import { effectiveCommandLocale } from "../../setting/effective-command-locale"
+import { tError } from "../../setting/i18n/ns/error"
+import { applyUiAction } from "./apply-ui-action"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
-import { tryHandleDomExitCommand } from "./command-dispatch/handle-dom-exit"
-import { tryHandleDomListCommand } from "./command-dispatch/handle-dom"
-import { tryHandleDomSettingCommand } from "./command-dispatch/handle-dom-setting"
-import { dispatchFallbackCommand, tryHandleHelpCommand } from "./command-dispatch/handle-fallback"
-import { tryHandleGroupNewCommand } from "./command-dispatch/handle-group"
-import { tryHandleNavEnterCommand } from "./command-dispatch/handle-nav-enter"
-import { tryHandleNavExitCommand } from "./command-dispatch/handle-nav-exit"
-import { tryHandleSearchExitCommand } from "./command-dispatch/handle-search-exit"
-import { tryHandleSearchListCommand } from "./command-dispatch/handle-search"
-import { tryHandleSnapshotSaveCommand } from "./command-dispatch/handle-snapshot"
-import { tryHandleSessionCommand } from "./command-dispatch/handle-session"
-import { tryHandleSettingCommand } from "./command-dispatch/handle-setting"
-import { tryHandleTabsListCommand } from "./command-dispatch/handle-tabs-list"
-import { tryHandleTabsSettingCommand } from "./command-dispatch/handle-tabs-setting"
-import { tryHandleTranslateCommand } from "./command-dispatch/handle-translate"
-import type { CommandDispatchContext, CommandDispatchDeps } from "./command-dispatch/types"
+import { tryHandleNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
+import { dispatchFallbackCommand } from "./command-dispatch/handle-fallback"
+import {
+  clearPrompt,
+  recordCommandHistory,
+  setContinuationPrompt,
+  type CommandDispatchContext,
+  type CommandDispatchDeps
+} from "./command-dispatch/types"
+import { enrichHostMsgParams } from "./enrich-host-msg-params"
 
 export type { CommandDispatchDeps } from "./command-dispatch/types"
-
-type DomainHandler = (ctx: CommandDispatchContext) => "handled" | "not_handled"
-
-/** EN: Order matches legacy monolithic submitLine (first match wins). */
-const DOMAIN_HANDLERS: readonly DomainHandler[] = [
-  tryHandleSettingCommand,
-  tryHandleTabsSettingCommand,
-  tryHandleDomSettingCommand,
-  tryHandleSessionCommand,
-  tryHandleTabsListCommand,
-  tryHandleSearchExitCommand,
-  tryHandleNavEnterCommand,
-  tryHandleTranslateCommand,
-  tryHandleNavExitCommand,
-  tryHandleDomExitCommand,
-  tryHandleGroupNewCommand,
-  tryHandleSearchListCommand,
-  tryHandleHelpCommand,
-  tryHandleDomListCommand,
-  tryHandleSnapshotSaveCommand
-]
 
 function handleISearchExit(deps: CommandDispatchDeps): void {
   const pick = deps.iSearchMatches[deps.iSearchCycle]
@@ -50,6 +28,31 @@ function handleISearchExit(deps: CommandDispatchDeps): void {
   deps.setISearchCycle(0)
   deps.setHistNavIndex(-1)
   deps.tabPressSeqRef.current = 0
+  deps.focusPrompt()
+}
+
+function tryHandleSessionNameTyping(ctx: CommandDispatchContext): boolean {
+  if (!ctx.deps.sessionNameTypingRef.current) {
+    return false
+  }
+  ctx.deps.appendCommandToHistory(ctx.trimmed)
+  ctx.deps.saveSessionDisplayName(ctx.trimmed, [])
+  return true
+}
+
+function handleLinesBundle(
+  ctx: CommandDispatchContext,
+  lines: string[],
+  promptPrefix?: string
+): void {
+  const { deps, trimmed } = ctx
+  deps.appendCommandToHistory(trimmed)
+  clearPrompt(deps)
+  recordCommandHistory(deps)
+  void deps.appendLogLines([`> ${trimmed}`, ...lines])
+  if (promptPrefix !== undefined && promptPrefix.length > 0) {
+    setContinuationPrompt(deps, promptPrefix)
+  }
   deps.focusPrompt()
 }
 
@@ -69,29 +72,85 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
       return
     }
 
+    const commandLocale = effectiveCommandLocale(
+      deps.uiSettings,
+      deps.settingListPickerRef.current
+    )
+
     const ctx: CommandDispatchContext = {
       deps,
       trimmed,
       rawLine,
-      locale: deps.uiSettings.locale
+      locale: commandLocale
     }
 
     if (tryHandleExternalSettingsRecovery(ctx) === "handled") {
       return
     }
 
-    if (lineHasAndOperator(trimmed)) {
-      void runCompoundLine(trimmed, deps, deps.uiSettings.locale)
+    if (tryHandleNavConfirmClose(ctx) === "handled") {
       return
     }
 
-    for (const handler of DOMAIN_HANDLERS) {
-      if (handler(ctx) === "handled") {
-        return
-      }
+    if (tryHandleSessionNameTyping(ctx)) {
+      return
     }
 
-    dispatchFallbackCommand(ctx)
+    void (async () => {
+      try {
+        await ensureBmxtCore()
+      } catch (e) {
+        deps.appendCommandToHistory(trimmed)
+        clearPrompt(deps)
+        recordCommandHistory(deps)
+        const message = e instanceof Error ? e.message : String(e)
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          tError("error.coreFailedToLoad", commandLocale, { message }),
+          tError("error.reloadHint", commandLocale)
+        ])
+        deps.focusPrompt()
+        return
+      }
+
+      if (lineHasCompoundOperator(trimmed)) {
+        void runCompoundLine(trimmed, deps, commandLocale)
+        return
+      }
+
+      const bundle = runDispatch(trimmed, commandLocale, {
+        enrichMsgs: (msgs) => enrichHostMsgParams(msgs, deps)
+      })
+
+      if (bundle.ty === "ui" && bundle.action) {
+        if (applyUiAction(bundle.action, ctx)) {
+          return
+        }
+        // EN: Unhandled UI must not fall through to effect fallback (clears prompt; SW ignores UI).
+        deps.appendCommandToHistory(trimmed)
+        recordCommandHistory(deps)
+        void deps.appendLogLines([
+          `> ${trimmed}`,
+          tError("error.dispatchFailed", commandLocale, {
+            message: `unhandled ui action: ${bundle.action.kind}`
+          })
+        ])
+        deps.focusPrompt()
+        return
+      }
+
+      if (bundle.ty === "lines") {
+        handleLinesBundle(ctx, bundle.lines ?? [], bundle.promptPrefix)
+        return
+      }
+
+      if (bundle.ty === "effects") {
+        dispatchFallbackCommand(ctx)
+        return
+      }
+
+      dispatchFallbackCommand(ctx)
+    })()
   }, [deps])
 
   return { submitLine }

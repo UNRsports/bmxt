@@ -16,8 +16,10 @@ import {
 } from "../../dom/page-active-setting"
 import { saveTranslatePair, type TranslationPairId } from "../../translate"
 import { TRANSLATION_PAIR_IDS } from "../../translate/translation-pair"
+import type { NavPositionsByTab } from "../../nav"
+import type { UiLocale } from "../../setting/locale"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
-import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
+import type { JobRunner } from "../../job"
 import {
   detailBarToPickerSlot,
   isPickerDetailBar,
@@ -29,7 +31,10 @@ import {
 import { useDetailBarKeyboard } from "../use-detail-bar-keyboard"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { openPickerSlots, type PickerSlotId, type SessionPickerState } from "../../side-picker/session/session-pickers"
+import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
 import { activateModeToolbar, deactivateModeToolbar, type ModeToolbarId } from "../mode-toolbar-order"
+import { closeBrowsePickerColumn } from "./close-browse-picker-column"
+import { closeNavFromDetailBar } from "./close-nav-from-detail-bar"
 
 export type UsePaneFocusControllerOptions = {
   sessionId: string
@@ -85,6 +90,23 @@ export type UsePaneFocusControllerOptions = {
     forSessionId: string,
     value: SettingListPickerState | null | ((prev: SettingListPickerState | null) => SettingListPickerState | null)
   ) => void
+  uiLocale: UiLocale
+  jobRunner: JobRunner
+  appendLogLines: (lines: string[]) => void | Promise<void>
+  setTabPicker: (sessionId: string, state: TabPickerState | null) => void
+  setSearchListPicker: (
+    sessionId: string,
+    value: SearchListPickerState | null | ((prev: SearchListPickerState | null) => SearchListPickerState | null)
+  ) => void
+  setDomListPicker: (
+    sessionId: string,
+    value: DomListPickerState | null | ((prev: DomListPickerState | null) => DomListPickerState | null)
+  ) => void
+  clearSearchLoadingProgress: () => void
+  teardownNav: () => Promise<void>
+  navPositionsRef: React.MutableRefObject<NavPositionsByTab>
+  setNavArmed: (armed: boolean) => void
+  setNavActive: (active: boolean) => void
 }
 
 /** EN: Picker / detail-bar focus, column order, and layout side-effects. */
@@ -133,11 +155,11 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       requestAnimationFrame(() => {
         const input = pickerInputRefForSlot(slot).current
         if (input) {
-          input.focus()
+          input.focus({ preventScroll: true })
           return
         }
         requestAnimationFrame(() => {
-          pickerInputRefForSlot(slot).current?.focus()
+          pickerInputRefForSlot(slot).current?.focus({ preventScroll: true })
         })
       })
     },
@@ -211,14 +233,10 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
   }, [activateDetailBar, options.navArmedRef])
 
   const handleToggleNavActive = useCallback(() => {
-    const turningOn = !options.navActiveRef.current
     options.toggleNavActive()
-    if (turningOn) {
-      focusTerminalForNavControl()
-    } else {
-      focusNavDetailBar()
-    }
-  }, [focusNavDetailBar, focusTerminalForNavControl, options])
+    // EN: Cursor ON/OFF both keep the nav detail bar focused (future ops; typing temporarily uses the prompt).
+    focusNavDetailBar()
+  }, [focusNavDetailBar, options])
 
   const toggleTabsPageActiveFromDetailBar = useCallback(() => {
     const next: TabsPageActiveMode =
@@ -262,6 +280,48 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
     },
     [options]
   )
+
+  const exitBrowseFromDetailBar = useCallback(() => {
+    const id = options.detailBarId
+    if (id === null || !isPickerDetailBar(id)) {
+      return
+    }
+    const message = closeBrowsePickerColumn(id, {
+      sessionId: options.sessionId,
+      locale: options.uiLocale,
+      jobRunner: options.jobRunner,
+      isTabPickerOpen: options.tabPicker !== null,
+      isSearchPickerOpen: options.searchListPicker !== null,
+      isDomPickerOpen: options.domListPicker !== null,
+      isSettingPickerOpen: options.settingListPicker !== null,
+      setTabPicker: options.setTabPicker,
+      setSearchListPicker: options.setSearchListPicker,
+      setDomListPicker: options.setDomListPicker,
+      closeSettingPickerColumn,
+      setModeToolbarOrder: options.setModeToolbarOrder,
+      activatePaneFocus,
+      clearSearchLoadingProgress: options.clearSearchLoadingProgress
+    })
+    void options.appendLogLines([message])
+    options.focusPrompt()
+  }, [activatePaneFocus, closeSettingPickerColumn, options])
+
+  const exitNavFromDetailBar = useCallback(() => {
+    void (async () => {
+      const message = await closeNavFromDetailBar({
+        locale: options.uiLocale,
+        navArmed: options.navArmed,
+        teardownNav: options.teardownNav,
+        navPositionsRef: options.navPositionsRef,
+        setNavArmed: options.setNavArmed,
+        setNavActive: options.setNavActive,
+        setModeToolbarOrder: options.setModeToolbarOrder,
+        activatePaneFocus
+      })
+      void options.appendLogLines([message])
+      options.focusPrompt()
+    })()
+  }, [activatePaneFocus, options])
 
   const isDetailBarVisible = useCallback(
     (id: DetailBarId): boolean => {
@@ -337,6 +397,8 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       activateDetailBar,
       enterPickerFromDetailBar,
       exitDetailBarToTerminal,
+      exitBrowseFromDetailBar,
+      exitNavFromDetailBar,
       toggleNavActive: handleToggleNavActive,
       cycleTranslatePair: cycleTranslatePairFromDetailBar,
       toggleTabsPageActive: toggleTabsPageActiveFromDetailBar,
@@ -363,18 +425,29 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
   useLayoutEffect(() => {
     const wasActive = prevNavActiveRef.current
     prevNavActiveRef.current = options.navActive
-    if (wasActive && !options.navActive && options.navArmed) {
-      focusNavDetailBar()
+    if (!options.navArmed) {
       return
     }
-    if (options.navActive && options.paneFocus !== "terminal") {
-      focusTerminalForNavControl()
+    // EN: Editable typing needs the prompt IME — park focus on the terminal while typing.
+    if (options.navActive && options.navPageTyping) {
+      if (options.paneFocus !== "terminal") {
+        focusTerminalForNavControl()
+      }
+      return
+    }
+    // EN: Cursor ON (and after OFF while still armed) — keep the nav detail bar focused.
+    if (options.navActive || wasActive) {
+      if (options.paneFocus !== "detailBar" || options.detailBarId !== "nav") {
+        focusNavDetailBar()
+      }
     }
   }, [
     focusNavDetailBar,
     focusTerminalForNavControl,
+    options.detailBarId,
     options.navActive,
     options.navArmed,
+    options.navPageTyping,
     options.paneFocus
   ])
 

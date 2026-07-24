@@ -22,5 +22,13 @@
   "compound.segment.skipped": {
     "ja": "(skipped: previous command failed)",
     "en": "(skipped: previous command failed)"
+  },
+  "compound.redirect.unsupportedTarget": {
+    "ja": "error: 未対応のリダイレクト先です: {target}（null または /dev/null のみ）",
+    "en": "error: unsupported redirect target: {target} (use null or /dev/null)"
+  },
+  "compound.redirect.parseError": {
+    "ja": "error: リダイレクトの解析に失敗しました ({reason})",
+    "en": "error: failed to parse redirect ({reason})"
   }
 }

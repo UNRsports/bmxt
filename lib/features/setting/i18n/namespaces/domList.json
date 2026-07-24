@@ -38,5 +38,9 @@
   "domList.emptyImageAlt": {
     "ja": "altなし",
     "en": "no alt"
+  },
+  "domList.empty": {
+    "ja": "（列挙結果なし）",
+    "en": "(no list records)"
   }
 }

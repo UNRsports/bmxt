@@ -1,8 +1,7 @@
-import type { DispatchJson } from "../types"
-import { COMMANDS, COMMAND_RUNNERS, cmdByName } from "./table.gen"
+import { COMMANDS, cmdByName } from "./table.gen"
 
 export { buildHelpLines } from "./help"
-export { COMMANDS, COMMAND_RUNNERS, cmdByName }
+export { COMMANDS, cmdByName }
 
 export function resolveCanonical(cmd: string): string | null {
   const k = cmd.toLowerCase()
@@ -13,17 +12,6 @@ export function resolveCanonical(cmd: string): string | null {
     }
   }
   return null
-}
-
-export function runCommand(canonical: string, args: string[]): DispatchJson {
-  const runner = COMMAND_RUNNERS.find((r) => r.name === canonical)
-  if (!runner) {
-    return {
-      ty: "lines",
-      lines: [`internal: unhandled command ${canonical}`]
-    }
-  }
-  return runner.run(args)
 }
 
 export function allCompletionTokens(): string[] {

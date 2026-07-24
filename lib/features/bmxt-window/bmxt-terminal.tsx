@@ -38,6 +38,8 @@ import { useVersionUpgradeBanner } from "./use-version-upgrade-banner"
 import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
 import { ExternalSettingsRecoveryProvider } from "../setting/use-external-settings-recovery"
 import { useTerminalAppearance } from "../setting/apply-appearance"
+import type { BmxtHostKind } from "./bmxt-host-kind"
+import { useFloatTabFocusGuard } from "./shell/useFloatTabFocusGuard"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 
@@ -75,8 +77,16 @@ type SessionPaneProps = {
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => void
   onSetSessionDisplayName: (sessionId: string, name: string) => void
-  appendLogLines: (newLines: string[]) => void | Promise<void>
+  appendLogLines: (
+    newLines: string[],
+    channel?: import("../command-line/command-output.ts").LogChannel
+  ) => void | Promise<void>
   sessionOrderLength: number
+  hostKind: import("./bmxt-host-kind").BmxtHostKind
+  floatTabId: number | null
+  restoredNavActive: boolean
+  processUiReady: boolean
+  flushFloatPersist: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -111,6 +121,11 @@ const SessionPaneView = memo(function SessionPaneView({
   onSetSessionDisplayName,
   appendLogLines,
   sessionOrderLength,
+  hostKind,
+  floatTabId,
+  restoredNavActive,
+  processUiReady,
+  flushFloatPersist,
   applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
@@ -140,6 +155,11 @@ const SessionPaneView = memo(function SessionPaneView({
         onSetSessionDisplayName={onSetSessionDisplayName}
         appendLogLines={appendLogLines}
         sessionOrderLength={sessionOrderLength}
+        hostKind={hostKind}
+        floatTabId={floatTabId}
+        restoredNavActive={restoredNavActive}
+        processUiReady={processUiReady}
+        flushFloatPersist={flushFloatPersist}
         applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -200,6 +220,8 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
     prev.modeToolbarOrder === next.modeToolbarOrder &&
     prev.navArmed === next.navArmed &&
     prev.navArmedByLeaf === next.navArmedByLeaf &&
+    prev.restoredNavActive === next.restoredNavActive &&
+    prev.processUiReady === next.processUiReady &&
     prev.postUpgradeBanner === next.postUpgradeBanner &&
     prev.upgradeBannerReady === next.upgradeBannerReady &&
     prev.setSessionPickerSlot === next.setSessionPickerSlot &&
@@ -215,17 +237,23 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
   )
 }
 
-export function BmxtTerminal() {
+export function BmxtTerminal(
+  props: { hostKind?: BmxtHostKind; floatTabId?: number | null } = {}
+) {
+  const hostKind = props.hostKind ?? "popup"
+  const floatTabId = props.floatTabId ?? null
   return (
     <UiSettingsProvider>
       <ExternalSettingsRecoveryProvider>
-        <BmxtTerminalInner />
+        <BmxtTerminalInner hostKind={hostKind} floatTabId={floatTabId} />
       </ExternalSettingsRecoveryProvider>
     </UiSettingsProvider>
   )
 }
 
-function BmxtTerminalInner() {
+function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number | null }) {
+  const { hostKind, floatTabId } = props
+  useFloatTabFocusGuard(hostKind === "float")
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
@@ -248,11 +276,13 @@ function BmxtTerminalInner() {
 
   const {
     state,
+    sessionsReady,
     appendLogLines: appendLogLinesToSession,
     setActiveSession,
     setSessionDisplayName,
-    applyRunCmdPatches
-  } = useTerminalSessions(sessionPatchContext)
+    applyRunCmdPatches,
+    flushFloatPersist: flushFloatSessionsPersist
+  } = useTerminalSessions(sessionPatchContext, hostKind, floatTabId)
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
@@ -270,8 +300,15 @@ function BmxtTerminalInner() {
     setModeToolbarOrderForLeaf,
     navArmedByLeaf,
     setNavArmedForLeaf,
-    processUiReady
-  } = useProcessUiPersistence(validSessionIds, true)
+    restoredNavActive,
+    processUiReady,
+    flushFloatBrowsePersist
+  } = useProcessUiPersistence(validSessionIds, true, hostKind, floatTabId, sessionsReady)
+
+  const flushFloatPersist = useCallback(async () => {
+    await flushFloatSessionsPersist()
+    await flushFloatBrowsePersist()
+  }, [flushFloatBrowsePersist, flushFloatSessionsPersist])
 
   pickersBySessionRef.current = pickersBySession
   navArmedByLeafRef.current = navArmedByLeaf
@@ -291,8 +328,12 @@ function BmxtTerminalInner() {
   )
 
   const appendLogLinesForSession = useCallback(
-    (sessionId: string, lines: string[]) => {
-      appendLogLinesToSession(sessionId, lines)
+    (
+      sessionId: string,
+      lines: string[],
+      channel?: import("../command-line/command-output.ts").LogChannel
+    ) => {
+      appendLogLinesToSession(sessionId, lines, channel)
     },
     [appendLogLinesToSession]
   )
@@ -317,8 +358,10 @@ function BmxtTerminalInner() {
   }, [processUiReady])
 
   useEffect(() => {
-    markPageBootPhase("gate-session-state-ready")
-  }, [])
+    if (sessionsReady) {
+      markPageBootPhase("gate-session-state-ready")
+    }
+  }, [sessionsReady])
 
   useEffect(() => {
     void (async () => {
@@ -442,7 +485,7 @@ function BmxtTerminalInner() {
     return () => window.removeEventListener("keydown", onKey, true)
   }, [state, setActiveSession])
 
-  const promptInteractive = processUiReady
+  const promptInteractive = processUiReady && sessionsReady
 
   useEffect(() => {
     if (!promptInteractive || promptPerfFlushedRef.current) {
@@ -474,7 +517,12 @@ function BmxtTerminalInner() {
     onActivateSession: setActiveSession,
     onSetSessionDisplayName: setSessionDisplayName,
     sessionOrderLength: state.order.length,
+    hostKind,
+    floatTabId,
+    restoredNavActive,
+    processUiReady,
     applyRunCmdPatches,
+    flushFloatPersist,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,
@@ -505,7 +553,9 @@ function BmxtTerminalInner() {
               sessionId={sessionId}
               isActive={isActive}
               lines={state.logsById[sessionId] ?? []}
-              appendLogLines={(lines) => appendLogLinesForSession(sessionId, lines)}
+              appendLogLines={(lines, channel) =>
+                appendLogLinesForSession(sessionId, lines, channel)
+              }
               sessionPickers={sessionPickersOrEmpty(pickersBySession, sessionId)}
               paneFocus={paneFocusByLeaf[sessionId] ?? "terminal"}
               detailBarId={detailBarIdByLeaf[sessionId] ?? null}

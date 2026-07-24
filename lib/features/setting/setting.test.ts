@@ -7,7 +7,7 @@ import { parseFontSizePx } from "./validate-size.ts"
 import {
   parseSettingExitListLine,
   parseSettingIncompleteLine,
-  parseSettingListPickerLine
+  parseSettingListLine
 } from "./setting-list-picker-input.ts"
 import {
   createSettingListPickerState,
@@ -26,6 +26,7 @@ import {
   type UiSettingsStorageConfig
 } from "./settings-storage-mode.ts"
 import type { UiAppearance } from "./appearance.ts"
+import { parseSettingsExportJson } from "./settings-export.ts"
 
 function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearance {
   return {
@@ -81,6 +82,62 @@ describe("parseHexColor", () => {
   it("rejects non-hex", () => {
     assert.equal(parseHexColor("red"), null)
     assert.equal(parseHexColor("#gggggg"), null)
+  })
+})
+
+describe("parseSettingsExportJson search highlight colors", () => {
+  it("validates highlight colors from zip JSON", () => {
+    const json = JSON.stringify({
+      version: 2,
+      locale: "en",
+      appearance: {
+        fg: null,
+        bgColor: null,
+        fontSize: null,
+        fontFamily: null,
+        bgImageFile: null,
+        searchHitHighlightBg: "#ffc9dd",
+        searchJumpHighlightBg: '#fff;}body{background:red}/*',
+        editPicker: false,
+        picker: {
+          fg: null,
+          bgColor: null,
+          fontSize: null,
+          fontFamily: null,
+          bgImageFile: null
+        }
+      }
+    })
+    const settings = parseSettingsExportJson(json, new Map())
+    assert.equal(settings.appearance.searchHitHighlightBg, "#ffc9dd")
+    assert.equal(settings.appearance.searchJumpHighlightBg, null)
+  })
+
+  it("rejects invalid highlight colors on storage-shaped normalize path", () => {
+    const json = JSON.stringify({
+      version: 2,
+      locale: "ja",
+      appearance: {
+        fg: null,
+        bgColor: null,
+        fontSize: null,
+        fontFamily: null,
+        bgImageFile: null,
+        searchHitHighlightBg: "red",
+        searchJumpHighlightBg: "#abc",
+        editPicker: false,
+        picker: {
+          fg: null,
+          bgColor: null,
+          fontSize: null,
+          fontFamily: null,
+          bgImageFile: null
+        }
+      }
+    })
+    const settings = parseSettingsExportJson(json, new Map())
+    assert.equal(settings.appearance.searchHitHighlightBg, null)
+    assert.equal(settings.appearance.searchJumpHighlightBg, "#aabbcc")
   })
 })
 
@@ -149,12 +206,13 @@ describe("setting list picker draft", () => {
   })
 })
 
-describe("setting list picker input", () => {
+describe("setting list input", () => {
   it("parses -list and -exit -list", () => {
     assert.equal(parseSettingIncompleteLine("setting"), true)
-    assert.equal(parseSettingListPickerLine("setting -list"), true)
+    assert.deepEqual(parseSettingListLine("setting -list"), {})
+    assert.equal(parseSettingListLine("setting -list --picker"), null)
     assert.equal(parseSettingExitListLine("setting -exit -list"), true)
-    assert.equal(parseSettingListPickerLine("setting -language"), false)
+    assert.equal(parseSettingListLine("setting -language"), null)
   })
 })
 

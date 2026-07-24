@@ -16,11 +16,7 @@ import {
   resolveInitialTabPickerHighlightIndex,
   type TabPickerRow
 } from "../tabs/picker-rows"
-import {
-  parseGroupNewInteractiveLine,
-  parseTabsExitListLine,
-  parseTabsListPickerLine,
-} from "../tabs/input"
+import { parseGroupNewInteractiveLine, parseTabsExitListLine } from "../tabs/input"
 import {
   loadTabsPickerSettings,
   saveTabsPageActiveMode,
@@ -58,7 +54,17 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
+import {
+  deleteNavReloadTabBlockAtCursor,
+  deleteNavReloadTabBlockForwardAtCursor,
+  findNavReloadTabTokenSpans,
+  type NavReloadTabChipMeta
+} from "../nav/nav-reload-tab-token"
+import { lockedPrefixBlocksDelete } from "./shell/prompt-locked-prefix"
+import { rewriteHashTTokensInLogLines } from "../nav/nav-tab-ref-log-rewrite"
+import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url"
 import { useLogScroll } from "./shell/useLogScroll"
+import { usePromptTypingFocus } from "./shell/usePromptTypingFocus"
 import { useSessionPromptActions } from "./shell/useSessionPromptActions"
 import { useDomListShell } from "./shell/useDomListShell"
 import { useSearchListShell } from "./shell/useSearchListShell"
@@ -72,12 +78,12 @@ import { useShellPromptCore } from "./shell/useShellPromptCore"
 import { usePickerManager } from "./shell/usePickerManager"
 import {
   parseSearchExitListLine,
-  parseSearchListPickerLine,
   shouldShowSearchListPatternPlaceholder,
   type SearchListPickerState
 } from "../search/search-list-picker-input"
 import { isJobHandleActive, useSessionJobRunner } from "../job"
-import { parseDomExitListLine, parseDomListPickerLine, type DomListPickerState } from "../dom/dom-list-picker-input"
+import { useCommandBusyIndicator } from "./shell/command-busy"
+import { parseDomExitListLine, type DomListPickerState } from "../dom/dom-list-picker-input"
 import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
 import {
   parseNavEnterLine,
@@ -85,6 +91,7 @@ import {
   useNavMode,
   type NavPositionsByTab
 } from "../nav"
+import { patchFloatBrowseStateForTab } from "../bmxt-float/float-browse-state-storage"
 import { ModeStatusBarStack } from "./mode-status-bar-stack"
 import {
   activateModeToolbar,
@@ -107,14 +114,15 @@ import {
 } from "../translate"
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
 import { tShell } from "../setting/i18n/ns/shell"
+import { tSearch } from "../setting/i18n/ns/search"
+import { tNav } from "../setting/i18n/ns/nav"
 import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolvers"
 import { setRunLocale } from "../setting/i18n/run-locale"
 import { settingTokenForUiLocale } from "../setting/locale"
 import { type SettingListPickerState } from "../setting/setting-list-picker-state"
 import {
   parseSettingExitListLine,
-  parseSettingIncompleteLine,
-  parseSettingListPickerLine
+  parseSettingIncompleteLine
 } from "../setting/setting-list-picker-input"
 import { useUiSettings } from "../setting/use-ui-settings"
 import { externalSettingsRecoveryLogLines } from "../setting/external-settings-startup"
@@ -149,8 +157,20 @@ type Props = {
   navArmedByLeaf: Record<string, boolean>
   onActivateSession: (sessionId: string) => void
   onSetSessionDisplayName: (sessionId: string, name: string) => void
-  appendLogLines: (newLines: string[]) => void | Promise<void>
+  appendLogLines: (
+    newLines: string[],
+    channel?: import("../command-line/command-output.ts").LogChannel
+  ) => void | Promise<void>
   sessionOrderLength: number
+  /** EN: popup vs in-page float — drives `exit` host policy. */
+  hostKind?: import("./bmxt-host-kind").BmxtHostKind
+  /** EN: Hosting tab id when `hostKind` is float (browse-state persistence). */
+  floatTabId?: number | null
+  /** EN: Restored nav overlay ON after float remount. */
+  restoredNavActive?: boolean
+  processUiReady?: boolean
+  /** EN: Float — flush sessions/browse before `tab -close` removes the host tab. */
+  flushFloatPersist?: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -190,8 +210,13 @@ export function BmxtShell({
   navArmedByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
-  appendLogLines,
+  appendLogLines: appendLogLinesProp,
   sessionOrderLength,
+  hostKind = "popup",
+  floatTabId = null,
+  restoredNavActive = false,
+  processUiReady = true,
+  flushFloatPersist: flushFloatPersistProp,
   applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
@@ -210,6 +235,23 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
+  const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
+  const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
+  const appendLogLines = useCallback(
+    (
+      newLines: string[],
+      channel?: import("../command-line/command-output.ts").LogChannel
+    ) => {
+      const pendingTitle = tNav("nav.reload.chipPending", uiSettings.locale)
+      const rewritten = rewriteHashTTokensInLogLines(
+        newLines,
+        navReloadTabMetaRef.current,
+        pendingTitle
+      )
+      return appendLogLinesProp(rewritten, channel)
+    },
+    [appendLogLinesProp, uiSettings.locale]
+  )
   const externalSettingsRecovery = useExternalSettingsRecovery()
   if (!externalSettingsRecovery) {
     throw new Error("ExternalSettingsRecoveryProvider is required")
@@ -299,7 +341,72 @@ export function BmxtShell({
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
   const jobRunner = useSessionJobRunner(sessionId)
+  const {
+    isCommandBusy,
+    showCommandBusy,
+    commandBusyLabel,
+    beginCommandBusy,
+    updateCommandBusyMessage,
+    updateCommandBusyProgress,
+    endCommandBusy,
+    isBusyTokenActive
+  } = useCommandBusyIndicator()
+  const isCommandBusyRef = useRef(false)
+  useEffect(() => {
+    isCommandBusyRef.current = isCommandBusy
+  }, [isCommandBusy])
+
+  const cancelCommandBusy = useCallback(() => {
+    const hadSearch = isJobHandleActive(jobRunner.getActive("search-list"))
+    const hadRunCmd = isJobHandleActive(jobRunner.getActive("run-cmd"))
+    if (!hadSearch && !hadRunCmd && !isCommandBusyRef.current) {
+      return
+    }
+    if (hadSearch) {
+      jobRunner.cancel("search-list")
+    }
+    if (hadRunCmd) {
+      jobRunner.cancel("run-cmd")
+    }
+    endCommandBusy()
+    if (hadSearch) {
+      void appendLogLines([tSearch("search.cancelledCtrlC", uiSettings.locale)])
+    } else {
+      void appendLogLines([tShell("shell.commandBusy.cancelled", uiSettings.locale)])
+    }
+  }, [appendLogLines, endCommandBusy, jobRunner, uiSettings.locale])
+
   const [navActive, setNavActive] = useState(false)
+  const [navActivePersistReady, setNavActivePersistReady] = useState(hostKind !== "float")
+  const floatNavActiveRestoredRef = useRef(false)
+  useEffect(() => {
+    if (hostKind !== "float") {
+      return
+    }
+    if (!processUiReady) {
+      // EN: Allow another restore after float re-hydrate (sessions → browse).
+      floatNavActiveRestoredRef.current = false
+      setNavActivePersistReady(false)
+      return
+    }
+    if (floatNavActiveRestoredRef.current) {
+      return
+    }
+    floatNavActiveRestoredRef.current = true
+    if (restoredNavActive) {
+      setNavActive(true)
+    }
+    // EN: Gate persist until restore applied — otherwise initial false wipes nav ON across remount.
+    setNavActivePersistReady(true)
+  }, [hostKind, processUiReady, restoredNavActive])
+
+  useEffect(() => {
+    if (hostKind !== "float" || floatTabId === null || !processUiReady || !navActivePersistReady) {
+      return
+    }
+    void patchFloatBrowseStateForTab(floatTabId, { navActive })
+  }, [floatTabId, hostKind, navActive, navActivePersistReady, processUiReady])
+
   const [translateEnabled, setTranslateEnabled] = useState(false)
   const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
     DEFAULT_TRANSLATION_PAIR_ID
@@ -366,6 +473,9 @@ export function BmxtShell({
 
   const navArmedRef = useRef(false)
   const navActiveRef = useRef(false)
+  const navConfirmClosePendingRef = useRef<
+    import("../nav/nav-confirm-close").NavConfirmClosePending | null
+  >(null)
   useEffect(() => {
     navArmedRef.current = navArmed
   }, [navArmed])
@@ -428,20 +538,105 @@ export function BmxtShell({
     promptLine
   } = useShellPromptCore({ history, completionCandidates })
 
-  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
+  const navReloadTabMeta = useMemo(
+    () => new Map(navReloadTabMetaRef.current),
+    // EN: Refresh chip faces when picker fills meta, or when line tokens change.
+    [navReloadTabMetaRev, line]
+  )
+
+  useEffect(() => {
+    const spans = findNavReloadTabTokenSpans(line)
+    const missing = spans.filter((s) => !navReloadTabMetaRef.current.has(s.tabId))
+    if (missing.length === 0) {
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      let added = false
+      for (const span of missing) {
+        if (cancelled) {
+          return
+        }
+        try {
+          const tab = await chrome.tabs.get(span.tabId)
+          if (cancelled || navReloadTabMetaRef.current.has(span.tabId)) {
+            continue
+          }
+          const title = (tab.title ?? "").trim() || "(no title)"
+          const rawUrl = typeof tab.url === "string" ? tab.url : ""
+          navReloadTabMetaRef.current.set(span.tabId, {
+            title,
+            faviconSrc: resolveTabFaviconSrc(rawUrl),
+            label: title
+          })
+          added = true
+        } catch {
+          /* EN: Tab may already be closed — keep token fallback face. */
+        }
+      }
+      if (added && !cancelled) {
+        setNavReloadTabMetaRev((n) => n + 1)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [line])
+
+  const promptFootSignature = useMemo(
+    () =>
+      [
+        modeToolbarOrder.join(","),
+        detailBarId ?? "",
+        paneFocus,
+        settingListPicker !== null ? "1" : "0",
+        tabPicker !== null ? "1" : "0",
+        searchListPicker !== null ? "1" : "0",
+        domListPicker !== null ? "1" : "0",
+        navArmed ? "1" : "0",
+        navActive ? "1" : "0",
+        mode,
+        String(line.length)
+      ].join("|"),
+    [
+      modeToolbarOrder,
+      detailBarId,
+      paneFocus,
+      settingListPicker,
+      tabPicker,
+      searchListPicker,
+      domListPicker,
+      navArmed,
+      navActive,
+      mode,
+      line.length
+    ]
+  )
+
+  const { scrollRef, scrollAnchorRef, logScrollable, scrollPromptFootIntoView } = useLogScroll({
     lines,
     mode,
     line,
-    postUpgradeBanner
+    postUpgradeBanner,
+    promptFootSignature
   })
 
   const {
     currentTabTitle: navCurrentTabTitle,
     overlayError: navOverlayError,
+    activateError: navActivateError,
     typingMode: navPageTyping,
     typingMultiline: navTypingMultiline,
     menuOpen: navMenuOpen,
     textSelPhase: navTextSelPhase,
+    jumpMode: navJumpMode,
+    jumpQuery: navJumpQuery,
+    jumpFilter: navJumpFilter,
+    targetLabel: navTargetLabel,
+    jumpMatchCount: navJumpMatchCount,
+    jumpInputRef: navJumpInputRef,
+    onJumpQueryChange: navOnJumpQueryChange,
+    onJumpInputKeyDown: navOnJumpInputKeyDown,
     toggleActive: toggleNavActive,
     teardownAll: teardownNav,
     navKeyboardEnabled,
@@ -475,7 +670,8 @@ export function BmxtShell({
         throw e
       }
     },
-    uiLocale: uiSettings.locale
+    uiLocale: uiSettings.locale,
+    hostTabId: hostKind === "float" ? floatTabId : null
   })
 
   const navTextSelDone = navTextSelPhase === "done"
@@ -569,6 +765,7 @@ export function BmxtShell({
     imeTokenPickerDismissedRef,
     dismissImeTokenPicker,
     closePromptPickerUi,
+    openSessionPicker,
     syncImeTokenPicker,
     promptPickerOpen,
     promptPickerScopeId,
@@ -587,7 +784,9 @@ export function BmxtShell({
     sessionNameTypingRef,
     scrollRef,
     cursorMirrorCellRef,
-    subCmdPickerHostRef
+    subCmdPickerHostRef,
+    navReloadTabMetaRef,
+    onNavReloadTabMetaUpdated: () => setNavReloadTabMetaRev((n) => n + 1)
   })
 
   const {
@@ -616,9 +815,13 @@ export function BmxtShell({
     appendLogLines
   })
 
-  const focusPrompt = useCallback(() => {
-    requestAnimationFrame(() => imeRef.current?.focus())
+  const focusPromptNow = useCallback(() => {
+    imeRef.current?.focus({ preventScroll: true })
   }, [])
+
+  const focusPrompt = useCallback(() => {
+    requestAnimationFrame(() => focusPromptNow())
+  }, [focusPromptNow])
 
   const {
     closeSessionNameTyping,
@@ -716,7 +919,18 @@ export function BmxtShell({
     openPickers,
     focusPrompt,
     closePromptPickerUi,
-    setSettingListPicker
+    setSettingListPicker,
+    uiLocale: uiSettings.locale,
+    jobRunner,
+    appendLogLines,
+    setTabPicker,
+    setSearchListPicker,
+    setDomListPicker,
+    clearSearchLoadingProgress,
+    teardownNav,
+    navPositionsRef,
+    setNavArmed,
+    setNavActive
   })
 
 
@@ -770,9 +984,31 @@ export function BmxtShell({
     void appendLogLines([...lines])
   }, [appendLogLines, externalSettingsRecovery, isFocusedPane])
 
+  const openSessionListPicker = useCallback(() => {
+    sessionListPickerDismissedRef.current = false
+    openSessionPicker("list")
+  }, [openSessionPicker, sessionListPickerDismissedRef])
+
+  const syncPromptDom = useCallback((nextLine: string, cursor: number) => {
+    const ta = imeRef.current
+    if (!ta) {
+      return
+    }
+    ta.value = nextLine
+    const pos = Math.max(0, Math.min(cursor, nextLine.length))
+    ta.setSelectionRange(pos, pos)
+  }, [])
+
+  const flushFloatPersist = useCallback(async () => {
+    if (flushFloatPersistProp) {
+      await flushFloatPersistProp()
+    }
+  }, [flushFloatPersistProp])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
+    hostKind,
     applyRunCmdPatches,
     mode,
     iSearchMatches,
@@ -784,6 +1020,13 @@ export function BmxtShell({
     navActiveRef,
     navPositionsRef,
     jobRunner,
+    beginCommandBusy,
+    updateCommandBusyMessage,
+    updateCommandBusyProgress,
+    endCommandBusy,
+    isCommandBusy: () => isCommandBusyRef.current,
+    isBusyTokenActive,
+    cancelCommandBusy,
     tabPickerRef,
     searchListPickerRef,
     domListPickerRef,
@@ -792,6 +1035,8 @@ export function BmxtShell({
     domPageActiveModeRef,
     translatePairIdRef,
     promptLine,
+    syncPromptDom,
+    flushFloatPersist,
     allowEmptyFirstPickerSyncRef,
     imeTokenPickerDismissedRef,
     tabPressSeqRef,
@@ -824,6 +1069,7 @@ export function BmxtShell({
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    openSessionListPicker,
     setSubCmdPicker,
     runDomListAndShow,
     runSearchListSearch,
@@ -834,12 +1080,17 @@ export function BmxtShell({
     onSetSessionDisplayName,
     onActivateSession,
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
-    submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer
+    submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer,
+    navConfirmClosePendingRef
   })
 
-
+  const getPromptLockedPrefix = useCallback((): string | null => {
+    // EN: Close confirm uses log + free y/n (not a locked prompt prefix).
+    return null
+  }, [])
 
   const {
+    applyPromptLine,
     onImeInput,
     onImeSelect,
     onBeforeInput,
@@ -873,7 +1124,131 @@ export function BmxtShell({
     setCompositionAnchor,
     syncImeTokenPicker,
     focusPrompt,
-    resetNavTranslateSession
+    resetNavTranslateSession,
+    getPromptLockedPrefix
+  })
+
+  const insertPrintableWhenReclaiming = useCallback(
+    (ch: string) => {
+      const ta = imeRef.current
+      const base = ta?.value ?? lineRef.current
+      const locked = getPromptLockedPrefix()
+      let start = ta?.selectionStart ?? cursorRef.current
+      let end = ta?.selectionEnd ?? cursorRef.current
+      if (locked && locked.length > 0) {
+        start = Math.max(start, locked.length)
+        end = Math.max(end, locked.length)
+      }
+      const nextLine = base.slice(0, start) + ch + base.slice(end)
+      const nextCursor = start + ch.length
+      if (ta) {
+        ta.value = nextLine
+      }
+      applyPromptLine(nextLine, nextCursor, ta)
+    },
+    [applyPromptLine, cursorRef, getPromptLockedPrefix, imeRef, lineRef]
+  )
+
+  const deleteBackwardWhenReclaiming = useCallback(() => {
+    const ta = imeRef.current
+    const base = ta?.value ?? lineRef.current
+    const start = ta?.selectionStart ?? cursorRef.current
+    const end = ta?.selectionEnd ?? cursorRef.current
+    const locked = getPromptLockedPrefix()
+    if (
+      locked &&
+      locked.length > 0 &&
+      lockedPrefixBlocksDelete(
+        locked,
+        start,
+        end,
+        start !== end ? "deleteByCut" : "deleteContentBackward"
+      )
+    ) {
+      applyPromptLine(base, Math.max(locked.length, start), ta)
+      return
+    }
+    if (start !== end) {
+      const nextLine = base.slice(0, start) + base.slice(end)
+      if (ta) {
+        ta.value = nextLine
+      }
+      applyPromptLine(nextLine, start, ta)
+      return
+    }
+    if (start <= 0) {
+      return
+    }
+    const blocked = deleteNavReloadTabBlockAtCursor(base, start)
+    if (blocked) {
+      if (ta) {
+        ta.value = blocked.line
+      }
+      applyPromptLine(blocked.line, blocked.cursor, ta)
+      return
+    }
+    const nextLine = base.slice(0, start - 1) + base.slice(start)
+    const nextCursor = start - 1
+    if (ta) {
+      ta.value = nextLine
+    }
+    applyPromptLine(nextLine, nextCursor, ta)
+  }, [applyPromptLine, cursorRef, getPromptLockedPrefix, imeRef, lineRef])
+
+  const deleteForwardWhenReclaiming = useCallback(() => {
+    const ta = imeRef.current
+    const base = ta?.value ?? lineRef.current
+    const start = ta?.selectionStart ?? cursorRef.current
+    const end = ta?.selectionEnd ?? cursorRef.current
+    const locked = getPromptLockedPrefix()
+    if (
+      locked &&
+      locked.length > 0 &&
+      lockedPrefixBlocksDelete(
+        locked,
+        start,
+        end,
+        start !== end ? "deleteByCut" : "deleteContentForward"
+      )
+    ) {
+      applyPromptLine(base, Math.max(locked.length, start), ta)
+      return
+    }
+    if (start !== end) {
+      const nextLine = base.slice(0, start) + base.slice(end)
+      if (ta) {
+        ta.value = nextLine
+      }
+      applyPromptLine(nextLine, start, ta)
+      return
+    }
+    if (start >= base.length) {
+      return
+    }
+    const blocked = deleteNavReloadTabBlockForwardAtCursor(base, start)
+    if (blocked) {
+      if (ta) {
+        ta.value = blocked.line
+      }
+      applyPromptLine(blocked.line, blocked.cursor, ta)
+      return
+    }
+    const nextLine = base.slice(0, start) + base.slice(start + 1)
+    if (ta) {
+      ta.value = nextLine
+    }
+    applyPromptLine(nextLine, start, ta)
+  }, [applyPromptLine, cursorRef, getPromptLockedPrefix, imeRef, lineRef])
+
+  usePromptTypingFocus({
+    enabled: promptPaneFocused,
+    imeRef,
+    logScrollRef: scrollRef,
+    focusPromptNow,
+    scrollPromptFootIntoView,
+    insertPrintableWhenReclaiming,
+    deleteBackwardWhenReclaiming,
+    deleteForwardWhenReclaiming
   })
 
   const { onKeyDown } = useShellKeyboard({
@@ -931,18 +1306,17 @@ export function BmxtShell({
     syncImeTokenPicker,
     dismissImeTokenPicker,
     cancelSearchPageScan,
+    cancelCommandBusy,
+    isCommandBusy: () => isCommandBusyRef.current,
     closeSessionNameTyping,
     closeSessionListPicker,
     applySessionSwitchPick,
     switchSessionFromListPicker,
     handleToggleNavActive,
-    promptLine
+    promptLine,
+    getPromptLockedPrefix
   })
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
-  const navPromptValueControlled = !navPageTyping
-  const showNavTypingPlaceholder =
-    navPageTyping && line.trim() === "" && !isComposing
-  const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
 
   const shellContent = (
@@ -994,6 +1368,9 @@ export function BmxtShell({
           navTypingMultiline={navTypingMultiline}
           sessionNameTyping={sessionNameTyping}
           showSearchListPatternPlaceholder={showSearchListPatternPlaceholder}
+          isCommandBusy={isCommandBusy}
+          showCommandBusy={showCommandBusy}
+          commandBusyLabel={commandBusyLabel}
           mirror={mirror}
           uiLocale={uiSettings.locale}
           imeRef={imeRef}
@@ -1006,6 +1383,7 @@ export function BmxtShell({
           sessionListPickerHi={sessionListPickerHi}
           sessionListPickerRows={sessionListPickerRows}
           sessionPickerVariant={sessionPickerVariant}
+          navReloadTabMeta={navReloadTabMeta}
           onImeInput={onImeInput}
           onBeforeInput={onBeforeInput}
           onImeSelect={onImeSelect}
@@ -1036,6 +1414,15 @@ export function BmxtShell({
             typingMultiline: navTypingMultiline,
             menuOpen: navMenuOpen,
             textSelPhase: navTextSelPhase,
+            jumpMode: navJumpMode,
+            jumpQuery: navJumpQuery,
+            jumpFilter: navJumpFilter,
+            jumpMatchCount: navJumpMatchCount,
+            targetLabel: navTargetLabel,
+            activateError: navActivateError,
+            jumpInputRef: navJumpInputRef,
+            onJumpQueryChange: navOnJumpQueryChange,
+            onJumpInputKeyDown: navOnJumpInputKeyDown,
             tabTitle: navCurrentTabTitle,
             overlayError: navOverlayError
           }}
@@ -1066,7 +1453,7 @@ export function BmxtShell({
             pickerOpen: settingListPicker !== null
           }}
         />
-        <div className="bmxt-scroll-anchor" aria-hidden />
+        <div ref={scrollAnchorRef} className="bmxt-scroll-anchor" aria-hidden />
     </>
   )
 
@@ -1077,8 +1464,36 @@ export function BmxtShell({
         data-bmxt-session-id={sessionId}
         data-bmxt-leaf-focused={isFocusedPane ? "" : undefined}>
         <div
-          className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}>
-          <div ref={scrollRef} className={shellScrollClassName}>
+          className={`bmxt-split-terminal-pane${promptPaneFocused ? " bmxt-split-pane--focused" : ""}`}
+          onMouseDown={(e) => {
+            if (e.button !== 0) {
+              return
+            }
+            if (!(e.target instanceof Element)) {
+              return
+            }
+            if (e.target.closest("a, button, input, textarea, select")) {
+              return
+            }
+            // EN: Nav cursor ON keeps detail-bar focus — do not yank to the prompt (typing is the exception).
+            if (navActive && !navPageTyping) {
+              return
+            }
+            // EN: Log-line mousedown must not yank IME focus — drag-select needs it.
+            // Typing / non-select mouseup reclaim focus via usePromptTypingFocus.
+            if (e.target.closest(".bmxt-out-line, .bmxt-hint, .bmxt-version-upgrade")) {
+              if (paneFocus !== "terminal") {
+                activatePaneFocus("terminal")
+              }
+              return
+            }
+            if (paneFocus !== "terminal") {
+              activatePaneFocus("terminal")
+              return
+            }
+            focusPromptNow()
+          }}>
+          <div ref={scrollRef} className={shellScrollClassName} tabIndex={-1}>
             {shellContent}
           </div>
         </div>

@@ -679,6 +679,10 @@
     "ja": "size: {value}",
     "en": "size: {value}"
   },
+  "setting.list.empty": {
+    "ja": "（設定項目なし）",
+    "en": "(no setting fields)"
+  },
   "setting.usage": {
     "ja": "usage: setting -list | setting -exit -list",
     "en": "usage: setting -list | setting -exit -list"

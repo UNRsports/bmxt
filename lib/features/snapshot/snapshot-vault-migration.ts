@@ -1,5 +1,5 @@
+import { expandDispatchMsgs } from "../bmxt-core/expand-msgs.ts"
 import type { UiLocale } from "../setting/locale"
-import { tCmd } from "../setting/i18n/ns/cmd"
 import { migrateSnapshotsInternalToVault } from "./snapshot-storage"
 
 /** EN: Move internal snapshots to the Obsidian vault folder after destination switch. */
@@ -9,10 +9,21 @@ export async function migrateSnapshotsToVaultWithLog(
 ): Promise<string[]> {
   const result = await migrateSnapshotsInternalToVault(vaultRoot)
   if (result.ok === false) {
-    return [tCmd("cmd.snapshot.migrate.failed", locale, { message: result.error })]
+    return expandDispatchMsgs(
+      [{ key: "cmd.snapshot.migrate.failed", params: { message: result.error } }],
+      locale
+    )
   }
   if (result.migrated > 0) {
-    return [tCmd("cmd.snapshot.migrate.vaultDone", locale, { count: String(result.migrated) })]
+    return expandDispatchMsgs(
+      [
+        {
+          key: "cmd.snapshot.migrate.vaultDone",
+          params: { count: String(result.migrated) }
+        }
+      ],
+      locale
+    )
   }
   return []
 }

@@ -1,0 +1,29 @@
+{
+  "schema": "bmxt-rule/1",
+  "producer": [
+    ["command", "tab"],
+    ["subcommand", "-list"]
+  ],
+  "records": [
+    {
+      "kind": "page.window",
+      "entries": [
+        ["pageTitle", "Window 1"],
+        ["windowId", 1],
+        ["focused", true],
+        ["url", ""]
+      ]
+    },
+    {
+      "kind": "page.open",
+      "entries": [
+        ["url", "https://example.com"],
+        ["pageTitle", "Example"],
+        ["tabId", 42],
+        ["windowId", 1],
+        ["groupId", null],
+        ["active", true]
+      ]
+    }
+  ]
+}

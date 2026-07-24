@@ -3,7 +3,8 @@ import { promptMirrorSegments } from "../../nav/nav-prompt-input"
 import {
   ensureBmxtCore,
   FALLBACK_COMPLETION_CANDIDATES,
-  getCompletionCandidates
+  getCompletionCandidates,
+  resetCompletionCandidatesCache
 } from "../../bmxt-core"
 import { matchesForSearch } from "../text-utils"
 
@@ -62,6 +63,7 @@ export function useShellPromptCore(options: UseShellPromptCoreOptions) {
     void (async () => {
       try {
         await ensureBmxtCore()
+        resetCompletionCandidatesCache()
         setLocalCompletion(getCompletionCandidates())
       } catch {
         setLocalCompletion(FALLBACK_COMPLETION_CANDIDATES)

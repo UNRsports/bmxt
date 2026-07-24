@@ -13,27 +13,6 @@ export {
   searchListPickerHeadline,
   searchListPickerLoadingHeadline
 } from "./picker-headlines"
-export {
-  domCmdExitListLines,
-  domCmdUsageLines,
-  navCmdEnterLines,
-  navCmdExitLines,
-  navCmdUsageLines,
-  searchCmdExitListLines,
-  searchCmdUsageLines,
-  settingCmdExitLines,
-  settingCmdListLines,
-  settingCmdUsageLines,
-  tabsCmdExitListLines,
-  tabsCmdListLines,
-  tabsCmdRunHintLine,
-  tabsCmdSettingLines,
-  tabsCmdUsageLines,
-  translateCmdOffLines,
-  translateCmdOnLines,
-  translateCmdSettingLines,
-  translateCmdUsageLines
-} from "./cmd-lines"
 export { getRunLocale, setRunLocale } from "./run-locale"
 export {
   bgImportErrorLine,
@@ -44,6 +23,7 @@ export {
   errorLine,
   formatBulletedLines,
   formatUiSettingsSummaryLines,
+  navActivateErrorLabel,
   navStatusHint,
   optionalHostDeniedLines,
   searchStatusHint,

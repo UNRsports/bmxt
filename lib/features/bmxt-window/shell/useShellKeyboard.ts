@@ -9,7 +9,10 @@ import type { SearchListPickerState } from "../../search/search-list-picker-inpu
 import type { TokenPickerModel } from "../token-picker-panel"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
+import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
+import { moveNavReloadTabBlockCaret, deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor } from "../../nav/nav-reload-tab-token"
+import { lockedPrefixBlocksDelete } from "./prompt-locked-prefix"
 
 export type UseShellKeyboardOptions = {
   navPageTyping: boolean
@@ -66,12 +69,17 @@ export type UseShellKeyboardOptions = {
   syncImeTokenPicker: (line: string, pos: number) => void
   dismissImeTokenPicker: () => void
   cancelSearchPageScan: () => void
+  /** EN: Cancel prompt-side busy work (plain search / SW fallback). */
+  cancelCommandBusy: () => void
+  isCommandBusy: () => boolean
   closeSessionNameTyping: () => void
   closeSessionListPicker: () => void
   applySessionSwitchPick: (pickHi: number) => void
   switchSessionFromListPicker: (commandLine: string, pickHi: number) => void
   handleToggleNavActive: () => void
   promptLine: () => string
+  /** EN: Active immutable prompt prefix (confirm y/n), or null. */
+  getPromptLockedPrefix: () => string | null
 }
 
 /** EN: Prompt keyboard handling (history, isearch, token/session pickers, submit). */
@@ -89,13 +97,19 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         return
       }
       const cur = options.lineRef.current
+      const cursor = options.cursorRef.current
       const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
+      const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)
       let nextLine: string
       let nextPos: number
       if (appendAtEnd) {
         const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
         nextLine = `${cur}${sep}${tok} `
         nextPos = nextLine.length
+      } else if (prependFirstCommand) {
+        const built = buildFirstTierPrependPickLine(cur, cursor, tok)
+        nextLine = built.line
+        nextPos = built.cursor
       } else {
         const addTrailing = s.tokenEnd >= cur.length
         nextLine = addTrailing
@@ -175,6 +189,21 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
 
       if (!options.promptPaneFocused) {
+        return
+      }
+
+      if (options.isCommandBusy()) {
+        if (
+          e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          (e.key === "c" || e.key === "C")
+        ) {
+          e.preventDefault()
+          options.cancelCommandBusy()
+          return
+        }
+        e.preventDefault()
         return
       }
 
@@ -315,6 +344,12 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           const active = resolveActiveCommandSegment(line, pos)
           const segmentTrimmed = active.segmentText.trim()
           const pickedToken = subPick.candidates[subPick.hi]
+          // EN: Hollow / empty candidate list must not swallow Enter (e.g. stale keep-alive).
+          if (subPick.candidates.length === 0) {
+            options.setSubCmdPicker(null)
+            options.submitLine()
+            return
+          }
           if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
             options.setSubCmdPicker(null)
             options.submitLine()
@@ -426,13 +461,18 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
 
       if (e.key === "Tab") {
+        // EN: Tab is completion-only in the prompt — never move browser/page focus
+        //     (critical for the float iframe, which would otherwise tab out to the host page).
+        e.preventDefault()
+        if (options.getPromptLockedPrefix()) {
+          return
+        }
         options.imeTokenPickerDismissedRef.current = false
         options.sessionListPickerDismissedRef.current = false
         const curLn = options.lineRef.current
         const pos = options.cursorRef.current
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
         if (muZone) {
-          e.preventDefault()
           void (async () => {
             const cands = await listTabsMoveUrlCandidates(muZone.prefix)
             if (cands.length === 0) {
@@ -450,7 +490,6 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           return
         }
         if (curLn.trim() === "") {
-          e.preventDefault()
           options.allowEmptyFirstPickerSyncRef.current = true
           options.tabPickerOpenRequestRef.current = true
           options.syncImeTokenPicker(curLn, pos)
@@ -460,12 +499,12 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           emptyFirstPrefixShowsAll: true
         })
         if (imePick && imePick.candidates.length > 0) {
-          e.preventDefault()
           options.tabPressSeqRef.current = 0
           options.tabPickerOpenRequestRef.current = true
           options.syncImeTokenPicker(curLn, pos)
           return
         }
+        return
       }
 
       if (e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -474,7 +513,13 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         }
       }
 
+      const lockedPrefix = options.getPromptLockedPrefix()
+
       if (e.key === "ArrowUp" && !options.navKeyboardEnabled && !options.navTypingMode) {
+        if (lockedPrefix) {
+          e.preventDefault()
+          return
+        }
         if (
           options.sessionListPickerHiRef.current !== null ||
           options.sessionNameTypingRef.current
@@ -501,6 +546,10 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
 
       if (e.key === "ArrowDown" && !options.navKeyboardEnabled && !options.navTypingMode) {
+        if (lockedPrefix) {
+          e.preventDefault()
+          return
+        }
         if (
           options.sessionListPickerHiRef.current !== null ||
           options.sessionNameTypingRef.current
@@ -520,6 +569,100 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         options.setHistNavIndex(-1)
         applyHistoryLine(options.histDraft)
         return
+      }
+
+      if (
+        lockedPrefix &&
+        lockedPrefix.length > 0 &&
+        (e.key === "Home" || e.key === "ArrowLeft") &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        options.mode === "normal" &&
+        options.promptPaneFocused &&
+        !options.navPageTyping
+      ) {
+        const pos = options.cursorRef.current
+        if (e.key === "Home" || pos <= lockedPrefix.length) {
+          e.preventDefault()
+          options.setCursorPos(lockedPrefix.length)
+          options.syncImeTokenPicker(options.lineRef.current, lockedPrefix.length)
+          return
+        }
+      }
+
+      if (
+        (e.key === "Backspace" || e.key === "Delete") &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        options.mode === "normal" &&
+        options.promptPaneFocused &&
+        !options.navPageTyping &&
+        !options.navKeyboardEnabled &&
+        !options.navTypingMode &&
+        !options.navMenuOpen &&
+        options.sessionListPickerHiRef.current === null &&
+        !options.sessionNameTypingRef.current &&
+        options.subCmdPickerRef.current === null
+      ) {
+        const line = options.lineRef.current
+        const pos = options.cursorRef.current
+        if (
+          lockedPrefix &&
+          lockedPrefix.length > 0 &&
+          lockedPrefixBlocksDelete(
+            lockedPrefix,
+            pos,
+            pos,
+            e.key === "Backspace" ? "deleteContentBackward" : "deleteContentForward"
+          )
+        ) {
+          e.preventDefault()
+          options.setCursorPos(lockedPrefix.length)
+          return
+        }
+        const blocked =
+          e.key === "Backspace"
+            ? deleteNavReloadTabBlockAtCursor(line, pos)
+            : deleteNavReloadTabBlockForwardAtCursor(line, pos)
+        if (blocked) {
+          e.preventDefault()
+          options.lineRef.current = blocked.line
+          options.setHistNavIndex(-1)
+          options.tabPressSeqRef.current = 0
+          options.setLine(blocked.line)
+          options.setCursorPos(blocked.cursor)
+          options.syncImeTokenPicker(blocked.line, blocked.cursor)
+          return
+        }
+      }
+
+      if (
+        (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        options.mode === "normal" &&
+        options.promptPaneFocused &&
+        !options.navPageTyping &&
+        !options.navKeyboardEnabled &&
+        !options.navTypingMode &&
+        !options.navMenuOpen &&
+        options.sessionListPickerHiRef.current === null &&
+        !options.sessionNameTypingRef.current &&
+        options.subCmdPickerRef.current === null
+      ) {
+        const direction: -1 | 1 = e.key === "ArrowRight" ? 1 : -1
+        const line = options.lineRef.current
+        const pos = options.cursorRef.current
+        const next = moveNavReloadTabBlockCaret(line, pos, direction)
+        if (next !== null && next !== pos) {
+          e.preventDefault()
+          options.setCursorPos(next)
+          options.syncImeTokenPicker(line, next)
+          return
+        }
       }
 
       if (

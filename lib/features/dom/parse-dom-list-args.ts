@@ -50,6 +50,9 @@ export function parseDomListArgsFromTokens(tokens: readonly string[]): ParsedDom
       showTag = true
       continue
     }
+    if (tok.startsWith("--")) {
+      return null
+    }
     patternParts.push(raw)
   }
 

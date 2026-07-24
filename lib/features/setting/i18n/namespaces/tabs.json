@@ -1,7 +1,7 @@
 {
   "tabs.pageActive.choose": {
-    "ja": "tabs -setting -page-active: モードを選択 — {options}",
-    "en": "tabs -setting -page-active: choose mode — {options}"
+    "ja": "tab -setting -page-active: モードを選択 — {options}",
+    "en": "tab -setting -page-active: choose mode — {options}"
   },
   "tabs.pageActive.set": {
     "ja": "tabs: page-active を {token} に設定しました",
@@ -332,8 +332,8 @@
     "en": "{star}[Window] {title}"
   },
   "tabs.setting.choose": {
-    "ja": "tabs -setting: オプションを選択 — -page-active",
-    "en": "tabs -setting: choose option — -page-active"
+    "ja": "tab -setting: オプションを選択 — -page-active",
+    "en": "tab -setting: choose option — -page-active"
   },
   "tabs.setting.pageActiveCurrent": {
     "ja": "現在の page-active: {token}",
@@ -348,11 +348,39 @@
     "en": "↑↓ activates tab on highlight (window stays behind) · Enter to jump"
   },
   "tabs.status.manual": {
-    "ja": "Alt+↑↓ でタブをアクティブ化 · Enter でジャンプ · tabs -setting -page-active で切替",
-    "en": "Alt+↑↓ to activate tab · Enter to jump · tabs -setting -page-active to switch"
+    "ja": "Alt+↑↓ でタブをアクティブ化 · Enter でジャンプ · tab -setting -page-active で切替",
+    "en": "Alt+↑↓ to activate tab · Enter to jump · tab -setting -page-active to switch"
+  },
+  "tabs.list.plain.group": {
+    "ja": "グループ id={groupId} {label}",
+    "en": "group id={groupId} {label}"
+  },
+  "tabs.list.plain.groupIdNone": {
+    "ja": "なし",
+    "en": "none"
+  },
+  "tabs.list.plain.tab": {
+    "ja": "タブ id={tabId} \"{title}\"",
+    "en": "tab id={tabId} \"{title}\""
+  },
+  "tabs.list.plain.tabActive": {
+    "ja": "タブ id={tabId} アクティブ \"{title}\"",
+    "en": "tab id={tabId} active \"{title}\""
+  },
+  "tabs.list.plain.urlDetail": {
+    "ja": "url={url}",
+    "en": "url={url}"
+  },
+  "tabs.list.plain.window": {
+    "ja": "ウィンドウ id={windowId} \"{title}\"",
+    "en": "window id={windowId} \"{title}\""
+  },
+  "tabs.list.plain.windowFocused": {
+    "ja": "ウィンドウ id={windowId} フォーカス \"{title}\"",
+    "en": "window id={windowId} focused \"{title}\""
   },
   "tabs.usage": {
-    "ja": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl",
-    "en": "usage: tabs -list [-u] | tabs -exit -list | tabs -setting -page-active --auto | --manual | tabs -moveurl <url> | tabs -nowurl"
+    "ja": "usage: tab -list [-url] | tab -exit -list | tab -setting -page-active --auto | --manual | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close",
+    "en": "usage: tab -list [-url] | tab -exit -list | tab -setting -page-active --auto | --manual | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close"
   }
 }

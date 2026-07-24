@@ -1,7 +1,9 @@
-import { tTabs } from "../../setting/i18n/ns/tabs"
+import { tTabs, type TabsMessageKey } from "../../setting/i18n/ns/tabs"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 import type { UiLocale } from "../../setting/locale"
+import { wasmTabsPickerValidateExecute } from "../wasm-host"
 import type { BulkSubMode, SelectKind } from "./model"
+import { parseWasmJson } from "./parse-wasm-json"
 
 export type ExecuteValidateContext = {
   markedKind: SelectKind | null
@@ -15,62 +17,24 @@ export type ExecuteValidation = {
   reason: string | null
 }
 
-function allowed(kind: SelectKind, mode: BulkSubMode): boolean {
-  switch (kind) {
-    case "window":
-      return mode === "close" || mode === "newTab" || mode === "edit" || mode === "reload"
-    case "group":
-      return mode === "move" || mode === "close" || mode === "newWindow" || mode === "edit" || mode === "reload"
-    case "tab":
-      return mode !== "edit"
+function localizeReason(reason: string | null, locale: UiLocale): string | null {
+  if (!reason) {
+    return null
   }
+  if (reason.startsWith("tabs.")) {
+    return tTabs(reason as TabsMessageKey, locale)
+  }
+  return reason
 }
 
-function effectiveSelectKind(ctx: ExecuteValidateContext): SelectKind | null {
-  if (ctx.markedKind) return ctx.markedKind
-  if (ctx.implicitWindowId !== undefined) return "window"
-  return null
-}
-
-export function validateExecute(
-  ctx: ExecuteValidateContext,
+export function validateTabsPickerExecute<TContext, TResult>(
+  context: TContext,
   locale: UiLocale = getRunLocale()
-): ExecuteValidation {
-  if (!ctx.bulkSubMode) {
-    return {
-      ok: false,
-      reason: tTabs("tabs.picker.error.noBulkMode", locale)
-    }
-  }
-  const kind = effectiveSelectKind(ctx)
-  if (!kind) {
-    return {
-      ok: false,
-      reason: tTabs("tabs.picker.error.noSelection", locale)
-    }
-  }
-  if (!allowed(kind, ctx.bulkSubMode)) {
-    return {
-      ok: false,
-      reason: tTabs("tabs.picker.error.invalidBulkForKind", locale)
-    }
-  }
-  if (ctx.selectedTabCount === 0) {
-    const allowWithoutTabs =
-      (kind === "window" && ctx.bulkSubMode === "close") ||
-      (kind === "window" && ctx.bulkSubMode === "newTab") ||
-      (kind === "window" && ctx.bulkSubMode === "edit") ||
-      (kind === "group" && ctx.bulkSubMode === "edit")
-    if (!allowWithoutTabs) {
-      return {
-        ok: false,
-        reason: tTabs("tabs.picker.error.noTabsForAction", locale)
-      }
-    }
-  }
-  return { ok: true, reason: null }
-}
-
-export function validateTabsPickerExecute<TContext, TResult>(context: TContext): TResult {
-  return validateExecute(context as ExecuteValidateContext) as TResult
+): TResult {
+  const raw = wasmTabsPickerValidateExecute(JSON.stringify(context))
+  const parsed = parseWasmJson<ExecuteValidation>(raw)
+  return {
+    ok: parsed.ok,
+    reason: localizeReason(parsed.reason, locale)
+  } as TResult
 }

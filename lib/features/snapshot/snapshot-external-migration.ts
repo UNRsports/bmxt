@@ -1,5 +1,5 @@
+import { expandDispatchMsgs } from "../bmxt-core/expand-msgs.ts"
 import type { UiLocale } from "../setting/locale"
-import { tCmd } from "../setting/i18n/ns/cmd"
 import { migrateSnapshotsInternalToExternal } from "./snapshot-storage"
 
 /** EN: Move internal snapshots to external bundle after storage mode switch. */
@@ -9,10 +9,21 @@ export async function migrateSnapshotsToExternalBundleWithLog(
 ): Promise<string[]> {
   const result = await migrateSnapshotsInternalToExternal(bundle)
   if (result.ok === false) {
-    return [tCmd("cmd.snapshot.migrate.failed", locale, { message: result.error })]
+    return expandDispatchMsgs(
+      [{ key: "cmd.snapshot.migrate.failed", params: { message: result.error } }],
+      locale
+    )
   }
   if (result.migrated > 0) {
-    return [tCmd("cmd.snapshot.migrate.done", locale, { count: String(result.migrated) })]
+    return expandDispatchMsgs(
+      [
+        {
+          key: "cmd.snapshot.migrate.done",
+          params: { count: String(result.migrated) }
+        }
+      ],
+      locale
+    )
   }
   return []
 }

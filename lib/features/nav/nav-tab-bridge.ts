@@ -1,5 +1,6 @@
 import { displayTitle } from "../format/display-title"
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab"
+import { serializeNavJumpQueryPayload } from "./nav-jump-match"
 import { getNavOverlayLabelsJson } from "./nav-overlay-labels"
 import { runNavControlOnTab, type NavControlResult, type NavKeyForward } from "./run-nav-inject"
 
@@ -39,13 +40,30 @@ export async function stopNavOverlayOnTab(tabId: number): Promise<void> {
 export async function moveNavOverlayOnTab(
   tabId: number,
   dx: number,
-  dy: number
+  dy: number,
+  freeMove = false
 ): Promise<NavControlResult> {
-  return runNavControlViaBackground(tabId, "move", false, 0, 0, dx, dy)
+  return runNavControlViaBackground(tabId, "move", false, 0, 0, dx, dy, undefined, undefined, freeMove)
+}
+
+/** EN: After Shift free-move — snap selection to nearest target at the current pointer. */
+export async function resyncNavSpatialOnTab(tabId: number): Promise<NavControlResult> {
+  return runNavControlViaBackground(tabId, "resyncSpatial", false, 0, 0)
 }
 
 export async function clickNavOverlayOnTab(tabId: number): Promise<NavControlResult> {
   return runNavControlViaBackground(tabId, "click", false, 0, 0)
+}
+
+export async function jumpQueryNavOverlayOnTab(
+  tabId: number,
+  query: string,
+  learned: readonly string[],
+  cycleDelta = 0,
+  preview = false
+): Promise<NavControlResult> {
+  const text = serializeNavJumpQueryPayload(query, learned, cycleDelta, preview)
+  return runNavControlViaBackground(tabId, "jumpQuery", false, 0, 0, 0, 0, undefined, text)
 }
 
 export async function clearNavTypingOnTab(tabId: number): Promise<NavControlResult> {
@@ -109,7 +127,8 @@ async function runNavControlViaBackground(
   dx = 0,
   dy = 0,
   keyForward?: NavKeyForward,
-  text?: string
+  text?: string,
+  freeMove = false
 ): Promise<NavControlResult> {
   try {
     const res = await chrome.runtime.sendMessage({
@@ -121,6 +140,7 @@ async function runNavControlViaBackground(
       y,
       dx,
       dy,
+      freeMove: freeMove || undefined,
       key: keyForward?.key,
       code: keyForward?.code,
       ctrlKey: keyForward?.ctrlKey,

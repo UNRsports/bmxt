@@ -54,5 +54,9 @@
   "session.switch.switched": {
     "ja": "セッション「{name}」に切り替えました。",
     "en": "Switched to session \"{name}\"."
+  },
+  "session.list.empty": {
+    "ja": "（セッションなし）",
+    "en": "(no sessions)"
   }
 }

@@ -16,7 +16,9 @@ export async function runBackgroundSegment(
     const response = await runCommandFromUiAsync(
       segment,
       deps.sessionId,
-      deps.sessionOrderLength
+      deps.sessionOrderLength,
+      locale,
+      deps.hostKind
     )
     if (!isRunCmdResult(response)) {
       const msg = tError("error.unknown", locale)
@@ -29,7 +31,7 @@ export async function runBackgroundSegment(
     deps.applyRunCmdPatches(response.patches)
     const lines = extractLogLinesFromPatches(response.patches, deps.sessionId)
     const classified = classifyOutcomeFromLines(lines)
-    if (!classified.ok) {
+    if (classified.ok === false) {
       return segmentFailure(classified.code, lines, classified.errorMessage)
     }
     return segmentSuccess(lines)

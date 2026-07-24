@@ -25,7 +25,6 @@ export {
   listTabsOptionCandidates,
   listTabsMoveUrlCandidates,
   parseGroupNewInteractiveLine,
-  parseTabsListPickerLine,
   parseTabsExitListLine,
   tabsOptionCompletionZone,
   tabsMoveUrlCompletionZone

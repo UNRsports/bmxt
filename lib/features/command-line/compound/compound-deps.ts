@@ -10,7 +10,7 @@ export function wrapCompoundDeps(deps: CommandDispatchDeps): CompoundDepsWrap {
   const capturedLines: string[] = []
   const wrapped: CommandDispatchDeps = {
     ...deps,
-    appendLogLines: async (lines: string[]) => {
+    appendLogLines: async (lines: string[], _channel) => {
       for (const line of lines) {
         if (!line.startsWith("> ")) {
           capturedLines.push(line)

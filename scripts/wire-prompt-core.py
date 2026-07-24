@@ -87,11 +87,12 @@ insert = '''  currentSessionDisplayNameRef.current = currentSessionDisplayName
     promptLine
   } = useShellPromptCore({ history, completionCandidates })
 
-  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
+  const { scrollRef, logScrollable, scrollPromptFootIntoView } = useLogScroll({
     lines,
     mode,
     line,
-    postUpgradeBanner
+    postUpgradeBanner,
+    promptFootSignature: ""
   })
 
 ''' + nav_block + "\n"
@@ -102,11 +103,12 @@ if "useShellPromptCore({" not in text:
     text = text.replace(anchor, insert, 1)
 
 # Remove duplicate useLogScroll if still present before useSentenceTranslate
-dup = '''  const { scrollRef, logScrollable, syncLogScroll } = useLogScroll({
+dup = '''  const { scrollRef, logScrollable, scrollPromptFootIntoView } = useLogScroll({
     lines,
     mode,
     line,
-    postUpgradeBanner
+    postUpgradeBanner,
+    promptFootSignature: ""
   })
   const [isComposing, setIsComposing] = useState(false)
   const [compositionAnchor, setCompositionAnchor] = useState(0)

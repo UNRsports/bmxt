@@ -1,10 +1,12 @@
-import React from "react"
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { tPrompt } from "../../setting/i18n/ns/prompt"
 import { tSession } from "../../setting/i18n/ns/session"
 import type { UiLocale } from "../../setting/locale"
 import { CSP_DYNAMIC_SCOPE_ATTR } from "../csp-dynamic-stylesheet"
 import { TokenPickerPanel, type TokenPickerModel } from "../token-picker-panel"
 import { SessionListCandidatePanel, type SessionCandidatePanelVariant, type SessionListRow } from "../../session"
+import { renderPromptMirrorChipsOnly, renderPromptMirrorLine } from "./prompt-mirror-chips"
+import type { NavReloadTabChipMeta } from "../../nav/nav-reload-tab-token"
 
 type PromptMirrorSegments = {
   before: string
@@ -23,6 +25,11 @@ type PromptInputProps = {
   navTypingMultiline: boolean
   sessionNameTyping: boolean
   showSearchListPatternPlaceholder: boolean
+  /** EN: Command work in flight — prompt is input-locked (Ctrl+C only). */
+  isCommandBusy: boolean
+  /** EN: True after the delay — braille frames are active on the busy label. */
+  showCommandBusy: boolean
+  commandBusyLabel: string
   mirror: PromptMirrorSegments
   uiLocale: UiLocale
   imeRef: React.RefObject<HTMLTextAreaElement>
@@ -35,6 +42,7 @@ type PromptInputProps = {
   sessionListPickerHi: number | null
   sessionListPickerRows: SessionListRow[]
   sessionPickerVariant: SessionCandidatePanelVariant | null
+  navReloadTabMeta: ReadonlyMap<number, NavReloadTabChipMeta>
   onImeInput: React.FormEventHandler<HTMLTextAreaElement>
   onBeforeInput: React.FormEventHandler<HTMLTextAreaElement>
   onImeSelect: React.ReactEventHandler<HTMLTextAreaElement>
@@ -55,6 +63,9 @@ export function PromptInput({
   navTypingMultiline,
   sessionNameTyping,
   showSearchListPatternPlaceholder,
+  isCommandBusy,
+  showCommandBusy,
+  commandBusyLabel,
   mirror,
   uiLocale,
   imeRef,
@@ -67,6 +78,7 @@ export function PromptInput({
   sessionListPickerHi,
   sessionListPickerRows,
   sessionPickerVariant,
+  navReloadTabMeta,
   onImeInput,
   onBeforeInput,
   onImeSelect,
@@ -79,24 +91,111 @@ export function PromptInput({
   const navPromptValueControlled = !navPageTyping
   const showNavTypingPlaceholder = navPageTyping && line.trim() === "" && !isComposing
   const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
+  const [imeDomFocused, setImeDomFocused] = useState(false)
+
+  useEffect(() => {
+    if (!promptPaneFocused) {
+      setImeDomFocused(false)
+      return
+    }
+    const ta = imeRef.current
+    if (!ta) {
+      return
+    }
+    setImeDomFocused(document.activeElement === ta)
+    const onFocus = () => setImeDomFocused(true)
+    const onBlur = () => setImeDomFocused(false)
+    ta.addEventListener("focus", onFocus)
+    ta.addEventListener("blur", onBlur)
+    return () => {
+      ta.removeEventListener("focus", onFocus)
+      ta.removeEventListener("blur", onBlur)
+    }
+  }, [promptPaneFocused, imeRef])
+
+  const caretActive = promptPaneFocused && imeDomFocused
+  const promptFieldRef = useRef<HTMLDivElement>(null)
+  const promptMirrorRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const field = promptFieldRef.current
+    const mirror = promptMirrorRef.current
+    const ta = imeRef.current
+    if (!field || !mirror || !ta || isCommandBusy) {
+      return
+    }
+    const next = Math.max(mirror.scrollHeight, Math.ceil(1.35 * 16))
+    field.style.minHeight = `${next}px`
+    ta.style.minHeight = `${next}px`
+  }, [line, cursorPos, navReloadTabMeta, mirror.composition, imeRef, isCommandBusy])
+
+  useLayoutEffect(() => {
+    if (!isCommandBusy || !promptPaneFocused) {
+      return
+    }
+    const ta = imeRef.current
+    if (ta && document.activeElement !== ta) {
+      ta.focus()
+    }
+  }, [isCommandBusy, promptPaneFocused, imeRef])
+
+  const blockBusyInput = (e: { preventDefault: () => void }) => {
+    e.preventDefault()
+  }
+
+  if (isCommandBusy) {
+    return (
+      <div className="bmxt-prompt-line bmxt-prompt-line--busy" aria-busy="true">
+        <span
+          className={`bmxt-prompt-busy${showCommandBusy ? " bmxt-prompt-busy--animated" : ""}`}
+          role="status"
+          aria-live="polite">
+          {commandBusyLabel}
+        </span>
+        <textarea
+          ref={imeRef}
+          className="bmxt-prompt-ime bmxt-prompt-ime--busy-lock"
+          rows={1}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          wrap="off"
+          tabIndex={promptPaneFocused ? 0 : -1}
+          aria-label={commandBusyLabel}
+          value=""
+          readOnly
+          onKeyDown={onKeyDown}
+          onBeforeInput={blockBusyInput}
+          onPaste={blockBusyInput}
+          onCompositionStart={blockBusyInput}
+          onCompositionUpdate={blockBusyInput}
+          onCompositionEnd={blockBusyInput}
+        />
+      </div>
+    )
+  }
 
   return (
     <div
       className={`bmxt-prompt-line${navPageTyping ? " bmxt-prompt-line--nav-typing" : ""}${sessionNameTyping ? " bmxt-prompt-line--session-name-typing" : ""}`}>
       <span className="bmxt-prompt-glyph">{mode === "isearch" ? "?" : ">"}</span>
-      <div className="bmxt-prompt-field">
-        <div className="bmxt-prompt-mirror" aria-hidden>
-          <span>{mirror.before}</span>
+      <div ref={promptFieldRef} className="bmxt-prompt-field">
+        <div ref={promptMirrorRef} className="bmxt-prompt-mirror" aria-hidden>
           {mirror.composition ? (
-            <span className="bmxt-prompt-composition">{mirror.composition}</span>
+            <>
+              <span>{renderPromptMirrorChipsOnly(mirror.before, navReloadTabMeta, uiLocale)}</span>
+              <span className="bmxt-prompt-composition">{mirror.composition}</span>
+              <span>{renderPromptMirrorChipsOnly(mirror.after, navReloadTabMeta, uiLocale)}</span>
+            </>
           ) : (
-            <span
-              ref={cursorMirrorCellRef}
-              className={`bmxt-cursor-cell${mirror.cur ? "" : " bmxt-cursor-cell--eol"}${promptPaneFocused ? "" : " bmxt-cursor-cell--inactive"}`}>
-              {mirror.cur || "\u00a0"}
-            </span>
+            renderPromptMirrorLine(line, cursorPos, navReloadTabMeta, {
+              caretActive,
+              cursorMirrorCellRef,
+              composition: "",
+              locale: uiLocale
+            })
           )}
-          <span>{mirror.after}</span>
         </div>
         <textarea
           ref={imeRef}
@@ -120,11 +219,11 @@ export function PromptInput({
                 : tPrompt("prompt.navTyping", uiLocale)
               : showSessionNameTypingPlaceholder
                 ? tSession("session.settingName.placeholder", uiLocale)
-              : showSearchListPatternPlaceholder
-                ? tPrompt("prompt.searchListPattern", uiLocale)
-                : mode === "normal" && line.trim() === ""
-                  ? tPrompt("prompt.placeholder", uiLocale)
-                  : undefined
+                : showSearchListPatternPlaceholder
+                  ? tPrompt("prompt.searchListPattern", uiLocale)
+                  : mode === "normal" && line.trim() === ""
+                    ? tPrompt("prompt.placeholder", uiLocale)
+                    : undefined
           }
           value={navPromptValueControlled ? line : undefined}
           readOnly={!promptPaneFocused}

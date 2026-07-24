@@ -14,7 +14,12 @@ import {
   type SessionListRow
 } from "../../session"
 import { parseTabsExitListLine } from "../../tabs/input"
-import { continuationPromptAfterLoneFirstToken } from "../../builtin-commands/command-subcommands.gen"
+import {
+  continuationPromptAfterLoneFirstToken,
+  getSubcommandBranches,
+  isSecondToken
+} from "../../builtin-commands/command-subcommands.gen"
+import { resolveCanonical } from "../../bmxt-core/registry"
 import type { ImeTokenTier } from "../../command-line/ime-token-picker"
 
 /** EN: Keep session switch picker open while the user is still editing the name. */
@@ -50,14 +55,40 @@ export function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
 }
 
 /**
+ * EN: Two-token line whose second head needs no further tokens (`tail: none`, e.g. `tab -back`).
+ * JA: 後続不要な二語コマンド（`tail: none`、例: `tab -back`）はピッカー確定後も即実行する。
+ */
+function isCompleteSecondWithTailNone(trimmed: string): boolean {
+  const parts = trimmed.trim().split(/\s+/).filter(Boolean)
+  if (parts.length !== 2) {
+    return false
+  }
+  const canonical = resolveCanonical(parts[0]!)
+  if (!canonical) {
+    return false
+  }
+  const second = parts[1]!
+  if (!isSecondToken(canonical, second)) {
+    return false
+  }
+  const branches = getSubcommandBranches(canonical)
+  const br = branches.find((b) => b.head.toLowerCase() === second.toLowerCase())
+  if (!br) {
+    return false
+  }
+  return br.trailingTokens.length === 0 && br.tail === "none"
+}
+
+/**
  * EN: Auto-submit on Enter while the IME picker is still open and the line is already
- *     complete (typed manually). Picking a candidate never auto-submits — confirm with Enter again.
- * JA: IME ピッカー表示中に Enter したとき、行が既に完成形なら即実行。候補選択後の自動実行はしない。
+ *     complete (typed manually), or after picking a `tail: none` second token (e.g. `tab -back`).
+ * JA: IME ピッカー表示中に Enter したとき、行が既に完成形なら即実行。`tail: none` の第二トークン確定後も即実行。
  */
 export function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
   return (
     parseNavEnterLine(trimmed) ||
     parseNavExitLine(trimmed) ||
+    isCompleteSecondWithTailNone(trimmed) ||
     isSessionSwitchUiLine(trimmed) ||
     isSessionSettingNameUiLine(trimmed) ||
     parseTabsExitListLine(trimmed) ||
@@ -68,8 +99,8 @@ export function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {
 }
 
 /**
- * EN: Lone first token (e.g. `tabs`) + Enter in the first-tier picker → run submitLine
- *     (usage / continuation to `tabs `), not re-insert the same token.
+ * EN: Lone first token (e.g. `tab`) + Enter in the first-tier picker → run submitLine
+ *     (usage / continuation to `tab `), not re-insert the same token.
  */
 export function shouldSubmitLoneFirstTokenFromPicker(
   segmentTrimmed: string,

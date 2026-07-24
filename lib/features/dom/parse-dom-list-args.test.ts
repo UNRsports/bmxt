@@ -49,6 +49,10 @@ describe("parseDomListArgsFromTokens", () => {
       pattern: ""
     })
   })
+
+  it("rejects unknown option tokens such as --picker", () => {
+    assert.equal(parseDomListArgsFromTokens(["--with", "--html", "--picker"]), null)
+  })
 })
 
 describe("parseDomListCommandLine", () => {

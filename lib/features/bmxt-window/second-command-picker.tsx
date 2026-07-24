@@ -4,7 +4,7 @@ import { tSecondCommandPicker } from "../setting/i18n/ns/second-command-picker"
 import { useUiSettings } from "../setting/use-ui-settings"
 
 export type SubCommandPickerModel = {
-  /** 例: `tabs ` / `split `（末尾スペース付き continuation） */
+  /** 例: `tab ` / `split `（末尾スペース付き continuation） */
   continuation: string
   candidates: string[]
   hi: number

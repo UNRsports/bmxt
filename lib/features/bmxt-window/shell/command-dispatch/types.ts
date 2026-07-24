@@ -5,10 +5,14 @@ import type { SessionListRow } from "../../../session"
 import type { UiSettings } from "../../../setting/settings"
 import type { UiLocale } from "../../../setting/locale"
 import type { TranslationPairId } from "../../../translate/translation-pair"
+import type { BmxtHostKind } from "../../bmxt-host-kind"
+import type { CommandBusyProgress, CommandBusyToken } from "../command-busy"
 
 export type CommandDispatchDeps = {
   sessionId: string
   sessionOrderLength: number
+  /** EN: Which UI document is running the command (`exit` closes popup vs hides float). */
+  hostKind: BmxtHostKind
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   mode: "normal" | "isearch"
   iSearchMatches: string[]
@@ -20,6 +24,14 @@ export type CommandDispatchDeps = {
   navActiveRef: React.MutableRefObject<boolean>
   navPositionsRef: React.MutableRefObject<any>
   jobRunner: JobRunner
+  /** EN: Prompt busy indicator for commands expected to take ≥1s before results. */
+  beginCommandBusy: (message: string) => CommandBusyToken
+  updateCommandBusyMessage: (token: CommandBusyToken, message: string) => void
+  updateCommandBusyProgress: (token: CommandBusyToken, progress: CommandBusyProgress) => void
+  endCommandBusy: (token?: CommandBusyToken) => void
+  isCommandBusy: () => boolean
+  isBusyTokenActive: (token: CommandBusyToken) => boolean
+  cancelCommandBusy: () => void
   tabPickerRef: React.MutableRefObject<any>
   searchListPickerRef: React.MutableRefObject<any>
   domListPickerRef: React.MutableRefObject<any>
@@ -28,6 +40,10 @@ export type CommandDispatchDeps = {
   domPageActiveModeRef: React.MutableRefObject<any>
   translatePairIdRef: React.MutableRefObject<any>
   promptLine: () => string
+  /** EN: Keep the textarea DOM in sync with lineRef (confirm / clear). */
+  syncPromptDom: (line: string, cursor: number) => void
+  /** EN: Float only — flush sessions/browse to session storage before tab close. */
+  flushFloatPersist: () => Promise<void>
   allowEmptyFirstPickerSyncRef: React.MutableRefObject<boolean>
   imeTokenPickerDismissedRef: React.MutableRefObject<boolean>
   tabPressSeqRef: React.MutableRefObject<number>
@@ -45,7 +61,10 @@ export type CommandDispatchDeps = {
   setHistNavIndex: (index: number) => void
   focusPrompt: () => void
   appendCommandToHistory: (cmd: string) => void
-  appendLogLines: (lines: string[]) => void | Promise<void>
+  appendLogLines: (
+    lines: string[],
+    channel?: import("../../../command-line/command-output.ts").LogChannel
+  ) => void | Promise<void>
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<any>>
   setNavArmed: (armed: boolean) => void
   setNavActive: (active: boolean) => void
@@ -60,6 +79,8 @@ export type CommandDispatchDeps = {
   setSearchListPicker: (sessionId: string, state: any) => void
   setDomListPicker: (sessionId: string, state: any) => void
   setSettingListPicker: (sessionId: string, state: any) => void
+  /** EN: Open the floating session-list candidate panel (pipe `session -list | picker`). */
+  openSessionListPicker: () => void
   setSubCmdPicker: (state: any) => void
   runDomListAndShow: (domListLine: string, trimmed: string, announce: boolean) => Promise<void>
   runSearchListSearch: (trimmed: string, searchListLine: any) => Promise<void>
@@ -73,6 +94,10 @@ export type CommandDispatchDeps = {
   submitExternalSettingsRecoveryAnswer?: (
     trimmed: string
   ) => Promise<ExternalSettingsRecoveryAnswerResult>
+  /** EN: Pending y/n for `tab -close` / `nav -windowclose`. */
+  navConfirmClosePendingRef: React.MutableRefObject<
+    import("../../../nav/nav-confirm-close").NavConfirmClosePending | null
+  >
 }
 
 export type CommandDispatchContext = {
@@ -92,11 +117,14 @@ export function recordCommandHistory(deps: CommandDispatchDeps): void {
 export function clearPrompt(deps: CommandDispatchDeps): void {
   deps.setLine("")
   deps.setCursorPos(0)
+  deps.lineRef.current = ""
+  deps.syncPromptDom("", 0)
 }
 
 export function setContinuationPrompt(deps: CommandDispatchDeps, continuation: string): void {
+  deps.lineRef.current = continuation
   deps.setLine(continuation)
   deps.setCursorPos(continuation.length)
-  deps.lineRef.current = continuation
+  deps.syncPromptDom(continuation, continuation.length)
   deps.focusPrompt()
 }

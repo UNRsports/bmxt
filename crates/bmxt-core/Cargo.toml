@@ -1,0 +1,25 @@
+[package]
+name = "bmxt-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.78"
+description = "BMXt command core (parse / registry / plans) compiled to WASM"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = false

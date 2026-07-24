@@ -16,10 +16,17 @@ export const ACTIVE_TERMINAL_SESSION_KEY = "bmxt_active_terminal_session"
 export const SPLIT_LAYOUT_KEY = "bmxt_split_layout_v1"
 
 export const CMD_HISTORY_KEY = "bmxt_cmd_history"
+
+/** IME token-candidate menu MRU (all tiers; newest first). */
+export const TOKEN_CANDIDATE_MRU_KEY = "bmxt_token_candidate_mru_v1"
+
 export const LAST_NORMAL_WINDOW_KEY = "bmxt_last_normal_window"
 
 /** BMXt UI ウィンドウ ID（SW 再起動後もフォーカスできるよう background が保持）。 */
 export const BMXT_WINDOW_ID_KEY = "bmxt_shell_window_id"
+
+/** BMXt UI ポップアップ窓の最後の outer サイズ（width / height）。 */
+export const BMXT_WINDOW_BOUNDS_KEY = "bmxt_shell_window_bounds"
 
 /** タブピッカー用: Chrome ウィンドウ ID → ユーザー定義の表示名。 */
 export const WINDOW_DISPLAY_NAMES_KEY = "bmxt_window_display_names_v1"
@@ -32,6 +39,9 @@ export const LAST_SEEN_WELCOME_VERSION_KEY = "bmxt_last_seen_welcome_version"
 
 /** Nav typing / translate editor — Chrome 内蔵 Translator（ja↔en 往復表示）。 */
 export const TYPING_TRANSLATE_KEY = "bmxt_typing_translate_v1"
+
+/** Nav incremental jump — learned identity keys per page origin. */
+export const NAV_LEARNED_TARGETS_KEY = "bmxt_nav_learned_targets_v1"
 
 /** Tab picker: collapsed window / group tree per session (`exit` full close until persisted). */
 export const TAB_PICKER_FOLD_STATE_KEY = "bmxt_tab_picker_fold_v1"
@@ -78,8 +88,29 @@ export const MAX_INTERNAL_SNAPSHOT_FILES = 500
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 
+/**
+ * EN: Per-tab float terminal sessions in `chrome.storage.session` (same-tab nav survival).
+ * JA: タブ別フロート・セッション（session ストレージ。同一タブ遷移で維持）。
+ */
+export const FLOAT_TERMINAL_BY_TAB_KEY = "bmxt_float_terminal_by_tab_v1"
+
+/** EN: Tab ids that should re-show the float after navigation. */
+export const FLOAT_VISIBLE_TAB_IDS_KEY = "bmxt_float_visible_tab_ids_v1"
+
+/**
+ * EN: Per-tab float nav/process UI browse state in `chrome.storage.session`.
+ * JA: タブ別フロートの nav／プロセス UI（session ストレージ）。
+ */
+export const FLOAT_BROWSE_STATE_BY_TAB_KEY = "bmxt_float_browse_state_by_tab_v1"
+
+/**
+ * EN: Float sessions/browse waiting for a scriptable tab after close onto a non-scriptable page.
+ * JA: 非スクリプト可能ページへ閉じたあとに、利用可能タブまで待つフロート引き継ぎ。
+ */
+export const FLOAT_PENDING_HANDOFF_KEY = "bmxt_float_pending_handoff_v1"
+
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 
-export const MAX_SESSION_LOG_LINES = 500
+export const MAX_SESSION_LOG_LINES = 5000
 export const MAX_CMD_HISTORY_LINES = 300

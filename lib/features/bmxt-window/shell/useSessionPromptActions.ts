@@ -66,7 +66,7 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       queueMicrotask(() => {
         const ta = options.imeRef.current
         if (ta) {
-          ta.focus()
+          ta.focus({ preventScroll: true })
           ta.setSelectionRange(0, name.length)
         }
       })
@@ -112,17 +112,19 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       const rows = options.sessionListPickerRowsRef.current
       const row = rows[pickHi]
       const variant = options.sessionPickerVariantRef.current
+      const logCommandLine =
+        commandLine.trim().length > 0 ? commandLine.trim() : "browse session -list"
       options.sessionListPickerDismissedRef.current = false
       options.setSessionListPickerHi(null)
       options.setSessionPickerVariant(null)
-      options.appendCommandToHistory(commandLine)
+      options.appendCommandToHistory(logCommandLine)
       options.setLine("")
       options.setCursorPos(0)
       options.lineRef.current = ""
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
       void (async () => {
-        const logLines = [`> ${commandLine}`]
+        const logLines = [`> ${logCommandLine}`]
         if (!row) {
           logLines.push(
             tSession("session.number.invalid", options.uiLocale, {

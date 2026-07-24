@@ -3,9 +3,13 @@
     "ja": "組み込みコマンド:",
     "en": "Built-in commands:"
   },
+  "help.spacer": {
+    "ja": "",
+    "en": ""
+  },
   "help.quickStart": {
-    "ja": "クイックスタート: `tabs` と入力して Enter、表示されたオプションを続けて入力します。",
-    "en": "Quick start: type `tabs` and press Enter, then continue with the shown options."
+    "ja": "クイックスタート: `tab` と入力して Enter、表示されたオプションを続けて入力します。",
+    "en": "Quick start: type `tab` and press Enter, then continue with the shown options."
   },
   "help.section.dom": {
     "ja": "dom（アクティブ対象タブのページ表示フィルタ）:\n  dom -list [--html|--react] [<pattern>] — この BMXt ペインで DOM list ピッカーを開く。\n  dom -exit -list  - この BMXt ペインの DOM list ピッカーを閉じる（Esc はプロンプトへ戻るのみ）。",
@@ -28,8 +32,8 @@
     "en": "setting (global UI — locale and terminal appearance):\n  setting              - show -list / -exit, then restore prompt to `setting ` for continuation.\n  setting -list         - open settings picker (locale, appearance, export/import).\n  setting -exit -list  - close settings picker in this BMXt pane (Esc returns to prompt only)."
   },
   "help.section.tabs": {
-    "ja": "tabs（BMXt ウィンドウ / SW）:\n  tabs              - 利用可能なオプションを表示し、プロンプトを `tabs ` に戻して続きを入力。\n  tabs -list [-u]   - タブピッカーを開く（`-u` は各タイトル下に URL 行を表示）。\n  tabs -exit -list  - この BMXt ペインのタブピッカーを閉じる（Esc はプロンプトへ戻るのみ）。\n  tabs -setting -page-active --auto | --manual — ハイライト時のタブプレビュー（保存）。\n  tabs -nowurl      - フォーカス中ウィンドウのアクティブタブの URL を表示。\n  tabs -moveurl <url> - 一致する URL のタブにフォーカス、なければ新規タブを開く。\n  picker `:` モード   - 空の Tab/Enter でターゲット別コマンドを薄く表示（tab/window/group）。",
-    "en": "tabs (BMXt window / SW):\n  tabs              - show available options, then restore prompt to `tabs ` for continuation.\n  tabs -list [-u]   - open tab picker (`-u` shows URL rows under each title).\n  tabs -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tabs -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tabs -nowurl      - print current tab URL from active tab in focused window.\n  tabs -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
+    "ja": "tab（BMXt ウィンドウ / SW）:\n  tab              - 利用可能なオプションを表示し、プロンプトを `tab ` に戻して続きを入力。\n  tab -list [-url]   - タブを ID 付きでターミナルに列挙（`-url` は各タイトル下に URL 行）。列 UI は `browse tab -list`。\n  tab -exit -list  - この BMXt ペインのタブピッカーを閉じる（Esc はプロンプトへ戻るのみ）。\n  tab -setting -page-active --auto | --manual — ハイライト時のタブプレビュー（保存）。\n  tab -nowurl      - フォーカス中ウィンドウのアクティブタブの URL を表示。\n  tab -moveurl <url> - 一致する URL のタブにフォーカス、なければ新規タブを開く。\n  tab -back / -forward — 操作先アクティブタブの履歴バック／進む。\n  tab -reload [#t:<id>…] — リロード（引数なしはアクティブ。末尾スペースでタブ候補）。\n  tab -close — 操作先タブを閉じる（y/n 確認）。\n  picker `:` モード   - 空の Tab/Enter でターゲット別コマンドを薄く表示（tab/window/group）。",
+    "en": "tab (BMXt window / SW):\n  tab              - show available options, then restore prompt to `tab ` for continuation.\n  tab -list [-url]   - list tabs with IDs in the terminal (`-url` shows URL rows). Column UI: `browse tab -list`.\n  tab -exit -list  - close tab picker in this BMXt pane (Esc returns to prompt only).\n  tab -setting -page-active --auto | --manual — tab preview on highlight (saved).\n  tab -nowurl      - print current tab URL from active tab in focused window.\n  tab -moveurl <url> - focus matching URL tab or open a new tab if none match.\n  tab -back / -forward — history back / forward on the target active tab.\n  tab -reload [#t:<id>…] — reload (bare = active; trailing space opens tab candidates).\n  tab -close — close the target tab (y/n confirm).\n  picker `:` mode   - empty Tab/Enter shows dim target-aware commands (tab/window/group)."
   },
   "help.section.translate": {
     "ja": "translate（Chrome 組み込み Translator API、ja↔en）:\n  translate            - `-on` / `-off` / `-setting` を表示し、プロンプトを `translate ` に戻して続きを入力。\n  translate -on        - 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。\n  translate -off       - エディタ列を閉じ、アシストを無効化。\n  translate -setting   - 続けて `--ja-en` または `--en-ja`（Tab メニュー）；ペアを storage に保存。",

@@ -12,6 +12,22 @@ export function isPickerDetailBar(id: DetailBarId): id is PickerDetailBarId {
   return (PICKER_DETAIL_BAR_IDS as readonly string[]).includes(id)
 }
 
+/** EN: Ctrl+C on the detail bar — exit browse column or disarm nav. */
+export function isCtrlCloseDetailBarKey(
+  e: Pick<KeyboardEvent, "ctrlKey" | "metaKey" | "altKey" | "shiftKey" | "key">
+): boolean {
+  return (
+    e.ctrlKey &&
+    !e.metaKey &&
+    !e.altKey &&
+    !e.shiftKey &&
+    (e.key === "c" || e.key === "C")
+  )
+}
+
+/** @deprecated Use `isCtrlCloseDetailBarKey`. */
+export const isCtrlCloseBrowseKey = isCtrlCloseDetailBarKey
+
 export function detailBarToPickerSlot(id: PickerDetailBarId): PickerSlotId {
   return id
 }

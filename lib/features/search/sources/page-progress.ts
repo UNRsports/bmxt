@@ -1,3 +1,7 @@
+import type { UiLocale } from "../../setting/locale.ts"
+import { DEFAULT_UI_LOCALE } from "../../setting/locale.ts"
+import { tSearch } from "../../setting/i18n/ns/search.ts"
+
 export type SearchPageProgress = {
   phase: "start" | "tick" | "done"
   tabIndex: number
@@ -7,14 +11,25 @@ export type SearchPageProgress = {
 }
 
 /** EN: Progress line for `search -list --page` tab scan. */
-export function formatSearchPageProgress(label: string, p: SearchPageProgress): string {
+export function formatSearchPageProgress(
+  label: string,
+  p: SearchPageProgress,
+  locale: UiLocale = DEFAULT_UI_LOCALE
+): string {
+  const params = {
+    label,
+    tabIndex: String(p.tabIndex),
+    tabTotal: String(p.tabTotal),
+    scanned: String(p.scanned),
+    skipped: String(p.skipped)
+  }
   if (p.phase === "start") {
-    return `${label} — scanning visible text in ${p.tabTotal} open http(s) tab(s)…`
+    return tSearch("search.pageProgress.start", locale, params)
   }
   if (p.phase === "done") {
-    return `${label} — finished (${p.scanned} read, ${p.skipped} skipped, ${p.tabTotal} checked)`
+    return tSearch("search.pageProgress.done", locale, params)
   }
-  return `${label} — ${p.tabIndex}/${p.tabTotal} tab(s) checked (${p.scanned} read, ${p.skipped} skipped)`
+  return tSearch("search.pageProgress.tick", locale, params)
 }
 
 export function searchPageProgressLabel(dispatchLine: string): string {
@@ -30,6 +45,9 @@ export function searchPageProgressLabel(dispatchLine: string): string {
   }
   if (t.includes("search -list") && t.includes("--page")) {
     return "search -list --page"
+  }
+  if (t.includes("search -list") && t.includes("--snapshot")) {
+    return "search -list --snapshot"
   }
   return "search -list"
 }

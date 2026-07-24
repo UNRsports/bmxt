@@ -3,6 +3,10 @@ import {
   CMD_HISTORY_KEY,
   MAX_CMD_HISTORY_LINES
 } from "../extension-storage/keys"
+import {
+  ensureTokenCandidateMruLoaded,
+  recordTokenCandidatesFromLine
+} from "../command-line/token-candidate-mru"
 
 export function useCommandHistory(): {
   history: string[]
@@ -11,6 +15,7 @@ export function useCommandHistory(): {
   const [history, setHistory] = useState<string[]>([])
 
   useEffect(() => {
+    void ensureTokenCandidateMruLoaded()
     chrome.storage.local.get([CMD_HISTORY_KEY], (r) => {
       setHistory((r[CMD_HISTORY_KEY] as string[] | undefined) ?? [])
     })
@@ -34,6 +39,7 @@ export function useCommandHistory(): {
     if (!trimmed) {
       return
     }
+    recordTokenCandidatesFromLine(trimmed)
     setHistory((prev) => {
       const next = [...prev, trimmed].slice(-MAX_CMD_HISTORY_LINES)
       void chrome.storage.local.set({ [CMD_HISTORY_KEY]: next })

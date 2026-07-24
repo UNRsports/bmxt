@@ -1,32 +1,31 @@
-/** BMXt prompt parsing for `tabs` subcommands (picker line, move-URL Tab completion). */
+/** EN: Parse `tab -list` tokens (`-url`). */
 
 import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { listSecondTokenCandidatesByCommand } from "../builtin-commands/command-subcommands.gen"
 import { optionTokenZoneAfterLead } from "../command-line/option-token-zone"
+import { parseTabsListLine } from "./tabs-list-parse.ts"
 
-/** `group new` with no tab ids - opens interactive new-group picker. */
+export type { TabsListLineOptions } from "./tabs-list-parse.ts"
+export { parseTabsListLine } from "./tabs-list-parse.ts"
+
+const TABS_LIST_PREFIX_RE = /^\s*tab\s+-list\b/i
+
+const TABS_EXIT_LIST_RE = /^\s*tab\s+-exit\s+-list\s*$/i
+
 const GROUP_NEW_INTERACTIVE_RE = /^\s*group\s+new\s*$/i
 
-const TABS_LIST_RE =
-  /^\s*tabs\s+-list(?:\s+-[uU])?\s*$/i
+const TABS_MOVE_URL_PREFIX_RE = /^\s*tab\s+-moveurl\s*/i
 
-const TABS_EXIT_LIST_RE = /^\s*tabs\s+-exit\s+-list\s*$/i
+const TABS_OPTION_LEAD_RE = /^\s*tab\s+/i
 
-const TABS_MOVE_URL_PREFIX_RE = /^\s*tabs\s+-moveurl\s*/i
+const TABS_LIST_LEAD_RE = /^\s*tab\s+-list\s+/i
 
-const TABS_OPTION_LEAD_RE = /^\s*tabs\s+/i
-
-/** `tabs -list` / optional `-u` - full line must match (no extra args). */
-export function parseTabsListPickerLine(trimmed: string): { showUrl: boolean } | null {
-  const t = trimmed.trim()
-  if (!TABS_LIST_RE.test(t)) {
-    return null
-  }
-  const showUrl = /\s+-[uU]\s*$/i.test(t)
-  return { showUrl }
+/** EN: True when the line starts with `tab -list` (before option validation). */
+export function isTabsListLine(trimmed: string): boolean {
+  return TABS_LIST_PREFIX_RE.test(trimmed.trim())
 }
 
-/** `tabs -exit -list` — close tab picker in this pane (full line must match). */
+/** `tab -exit -list` — close tab picker in this pane (full line must match). */
 export function parseTabsExitListLine(trimmed: string): boolean {
   return TABS_EXIT_LIST_RE.test(trimmed.trim())
 }
@@ -43,8 +42,22 @@ export function tabsOptionCompletionZone(
   return optionTokenZoneAfterLead(line, cursor, TABS_OPTION_LEAD_RE)
 }
 
+/** EN: Tab zone after `tab -list ` for third-token completion (`-url`). */
+export function tabsListOptionCompletionZone(
+  line: string,
+  cursor: number
+): { optionStart: number; prefix: string; optionEnd: number } | null {
+  return optionTokenZoneAfterLead(line, cursor, TABS_LIST_LEAD_RE)
+}
+
 export function listTabsOptionCandidates(prefix: string): string[] {
-  return listSecondTokenCandidatesByCommand("tabs", prefix)
+  return listSecondTokenCandidatesByCommand("tab", prefix)
+}
+
+export function listTabsListThirdTokenCandidates(prefix: string): string[] {
+  const tokens = ["-url"]
+  const normalized = prefix.toLowerCase()
+  return tokens.filter((token) => token.startsWith(normalized))
 }
 
 function urlTokenEnd(line: string, urlStart: number): number {
@@ -55,7 +68,7 @@ function urlTokenEnd(line: string, urlStart: number): number {
 }
 
 /**
- * When the cursor is in the URL token after `tabs -moveurl`, return indices and prefix for filtering.
+ * When the cursor is in the URL token after `tab -moveurl`, return indices and prefix for filtering.
  * Returns null if not in move-URL completion zone.
  */
 export function tabsMoveUrlCompletionZone(

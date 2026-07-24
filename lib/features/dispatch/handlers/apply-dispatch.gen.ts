@@ -6,6 +6,8 @@
 import type { ChromeEffect } from "../effect-types"
 import type { DispatchChromeContext } from "../dispatch-context"
 import { applyClearLogEffect } from "./effects/clear-log"
+import { applyCloseCurrentTabEffect } from "./effects/close-current-tab"
+import { applyCloseCurrentWindowEffect } from "./effects/close-current-window"
 import { applyCloseTabEffect } from "./effects/close-tab"
 import { applyDomListEffect } from "./effects/dom-list"
 import { applyExitPaneEffect } from "./effects/exit-pane"
@@ -16,11 +18,16 @@ import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
 import { applySearchBookmarkEffect } from "./effects/search-bookmark"
 import { applySearchHistoryEffect } from "./effects/search-history"
+import { applySearchListEffect } from "./effects/search-list"
 import { applySearchPageEffect } from "./effects/search-page"
 import { applySearchSnapshotEffect } from "./effects/search-snapshot"
 import { applySessionNewEffect } from "./effects/session-new"
 import { applySessionNextEffect } from "./effects/session-next"
 import { applySessionPrevEffect } from "./effects/session-prev"
+import { applyTabGoBackEffect } from "./effects/tab-go-back"
+import { applyTabGoForwardEffect } from "./effects/tab-go-forward"
+import { applyTabReloadEffect } from "./effects/tab-reload"
+import { applyTabsListEffect } from "./effects/tabs-list"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
 import { applyTabsNuEffect } from "./effects/tabs-nu"
 
@@ -31,6 +38,10 @@ export async function applyOne(
   switch (e.kind) {
     case "clear_log":
       return applyClearLogEffect(ctx, e)
+    case "close_current_tab":
+      return applyCloseCurrentTabEffect(ctx, e)
+    case "close_current_window":
+      return applyCloseCurrentWindowEffect(ctx, e)
     case "close_tab":
       return applyCloseTabEffect(ctx, e)
     case "dom_list":
@@ -51,6 +62,8 @@ export async function applyOne(
       return applySearchBookmarkEffect(ctx, e)
     case "search_history":
       return applySearchHistoryEffect(ctx, e)
+    case "search_list":
+      return applySearchListEffect(ctx, e)
     case "search_page":
       return applySearchPageEffect(ctx, e)
     case "search_snapshot":
@@ -61,6 +74,14 @@ export async function applyOne(
       return applySessionNextEffect(ctx, e)
     case "session_prev":
       return applySessionPrevEffect(ctx, e)
+    case "tab_go_back":
+      return applyTabGoBackEffect(ctx, e)
+    case "tab_go_forward":
+      return applyTabGoForwardEffect(ctx, e)
+    case "tab_reload":
+      return applyTabReloadEffect(ctx, e)
+    case "tabs_list":
+      return applyTabsListEffect(ctx, e)
     case "tabs_move_url":
       return applyTabsMoveUrlEffect(ctx, e)
     case "tabs_nu":

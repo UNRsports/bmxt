@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * `manifest/bmxt-codegen.json` の `commands` が各 `cmd/{module}.ts` の `export const CMD` と一致するか、
- * かつ `subcommands[].head` が TS ソース内に同じ文字列リテラルで現れるか検証する。
+ * `manifest/bmxt-codegen.json` の `commands` が Rust `cmd/{module}.rs` および
+ * `registry_table.rs` と一致するか検証する。
  */
 
 import { readFileSync } from "node:fs"
@@ -11,39 +11,9 @@ import { fileURLToPath } from "node:url"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
 const manifestPath = join(root, "manifest", "bmxt-codegen.json")
+const registryPath = join(root, "crates", "bmxt-core", "src", "generated", "registry_table.rs")
 
-function parseAliases(aliasesStr) {
-  const s = aliasesStr.trim()
-  if (!s) return []
-  const out = []
-  const re = /"([^"]*)"/g
-  let m
-  while ((m = re.exec(s)) !== null) {
-    out.push(m[1])
-  }
-  return out
-}
-
-function extractCmdMeta(ts) {
-  const idx = ts.indexOf("export const CMD")
-  if (idx < 0) {
-    throw new Error("export const CMD block not found")
-  }
-  const slice = ts.slice(idx, idx + 800)
-  const nameM = slice.match(/name:\s*"([^"]*)"/)
-  const uM = slice.match(/usagePrimary:\s*"([^"]*)"/)
-  const aM = slice.match(/aliases:\s*\[([^\]]*)\]/)
-  if (!nameM || !uM || !aM) {
-    throw new Error("could not parse CMD block")
-  }
-  return {
-    name: nameM[1],
-    usagePrimary: uM[1],
-    aliases: parseAliases(aM[1])
-  }
-}
-
-function verifySubcommandHeadsInSource(c, ts) {
+function verifySubcommandHeadsInSource(c, rs, helpCmdSource) {
   if (!Array.isArray(c.subcommands)) {
     throw new Error(`${c.module}: missing or invalid subcommands[]`)
   }
@@ -55,48 +25,52 @@ function verifySubcommandHeadsInSource(c, ts) {
       throw new Error(`${c.module}: invalid subcommand entry`)
     }
     const literal = JSON.stringify(br.head)
-    if (!ts.includes(literal)) {
+    // EN: `help` second token is handled centrally in help_cmd.rs (try_section_help).
+    if (br.head === "help") {
+      if (!helpCmdSource.includes(literal)) {
+        throw new Error(
+          `${c.module}: subcommand head "help" must appear as literal ${literal} in crates/bmxt-core/src/cmd/help_cmd.rs`
+        )
+      }
+      continue
+    }
+    if (!rs.includes(literal)) {
       throw new Error(
-        `${c.module}: subcommand head ${JSON.stringify(br.head)} must appear as literal ${literal} in cmd/${c.module}.ts`
+        `${c.module}: subcommand head ${JSON.stringify(br.head)} must appear as literal ${literal} in crates/bmxt-core/src/cmd/${c.module}.rs`
       )
     }
   }
 }
 
+function verifyCanonicalInRegistry(c, registry) {
+  const nameLit = JSON.stringify(c.canonicalName)
+  if (!registry.includes(`name: ${nameLit},`)) {
+    throw new Error(
+      `${c.module}: canonicalName ${nameLit} not found in crates/bmxt-core/src/generated/registry_table.rs`
+    )
+  }
+}
+
 function main() {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
+  const registry = readFileSync(registryPath, "utf8")
+  const helpCmdPath = join(root, "crates", "bmxt-core", "src", "cmd", "help_cmd.rs")
+  const helpCmdSource = readFileSync(helpCmdPath, "utf8")
   const cmds = manifest.commands
 
   for (const c of cmds) {
-    const p = join(root, "lib", "features", "bmxt-core", "cmd", `${c.module}.ts`)
-    let ts
+    const p = join(root, "crates", "bmxt-core", "src", "cmd", `${c.module}.rs`)
+    let rs
     try {
-      ts = readFileSync(p, "utf8")
+      rs = readFileSync(p, "utf8")
     } catch {
-      throw new Error(`cmd file missing for module ${c.module}: ${p}`)
+      throw new Error(`Rust cmd file missing for module ${c.module}: ${p}`)
     }
-    const meta = extractCmdMeta(ts)
-    if (meta.name !== c.canonicalName) {
-      throw new Error(
-        `${c.module}: CMD.name is "${meta.name}" but manifest canonicalName is "${c.canonicalName}"`
-      )
-    }
-    const em = [...meta.aliases].sort().join("|")
-    const ex = [...c.aliases].sort().join("|")
-    if (em !== ex) {
-      throw new Error(
-        `${c.module}: aliases mismatch manifest=[${c.aliases}] ts=[${meta.aliases}]`
-      )
-    }
-    if (meta.usagePrimary !== c.usagePrimary) {
-      throw new Error(
-        `${c.module}: usagePrimary manifest="${c.usagePrimary}" ts="${meta.usagePrimary}"`
-      )
-    }
-    verifySubcommandHeadsInSource(c, ts)
+    verifyCanonicalInRegistry(c, registry)
+    verifySubcommandHeadsInSource(c, rs, helpCmdSource)
   }
 
-  console.log(`verify-manifest ok (${cmds.length} commands)`)
+  console.log(`verify-manifest ok (${cmds.length} commands, Rust cmd + registry_table.rs)`)
 }
 
 main()

@@ -23,29 +23,17 @@ export function bmxtDomFlatEntriesInjected(
   emptyImageAltLabel: string,
   scope: DomFlatEntriesScope = "viewport"
 ): FlatEntriesPayload {
-  const maxNodes = scope === "viewport" ? 2500 : 8000
-  const maxDepth = 48
-  const maxResults = scope === "viewport" ? 120 : 2500
-  const htmlSnippetMax = 220
+  const htmlSnippetMax = 0
   const display = showTag ? "tag" : "text"
   const collected: Array<{ line: string; path: number[]; top: number; left: number }> = []
-  let count = 0
   let truncated = false
 
   function walk(node: Node, depth: number, path: number[]): void {
-    if (!node || count >= maxNodes || depth > maxDepth || truncated) {
-      return
-    }
-    if (node.nodeType !== 1) {
+    if (!node || node.nodeType !== 1 || truncated) {
       return
     }
     const el = node as Element
-    count += 1
     if (scope === "document" || isElementVisibleInViewport(el)) {
-      if (collected.length >= maxResults) {
-        truncated = true
-        return
-      }
       const rect = el.getBoundingClientRect()
       const line = formatDomElementLine(el, mode, display, emptyImageAltLabel, htmlSnippetMax)
       collected.push({
@@ -58,9 +46,6 @@ export function bmxtDomFlatEntriesInjected(
     const kids = el.children
     for (let j = 0; j < kids.length; j += 1) {
       walk(kids[j], depth + 1, [...path, j])
-      if (count >= maxNodes || truncated) {
-        return
-      }
     }
   }
 

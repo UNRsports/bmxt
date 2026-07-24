@@ -53,6 +53,7 @@ describe("matchesDomListOptionFilter", () => {
     assert.equal(matchesDomListOptionFilter("--h"), true)
     assert.equal(matchesDomListOptionFilter("html"), true)
     assert.equal(matchesDomListOptionFilter("tag"), true)
+    assert.equal(matchesDomListOptionFilter("picker"), false)
     assert.equal(matchesDomListOptionFilter("foo"), false)
   })
 })

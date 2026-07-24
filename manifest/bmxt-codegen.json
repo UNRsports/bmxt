@@ -4,14 +4,18 @@
     {
       "module": "clear",
       "canonicalName": "clear",
-      "aliases": [],
+      "aliases": [
+        "cls"
+      ],
       "usagePrimary": "clear",
       "subcommands": []
     },
     {
       "module": "close",
       "canonicalName": "close",
-      "aliases": ["c"],
+      "aliases": [
+        "c"
+      ],
       "usagePrimary": "close <tabId>",
       "subcommands": []
     },
@@ -19,21 +23,35 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active",
+      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--normal", "--with", "--html", "--react", "--tag"],
+          "trailingTokens": [
+            "--normal",
+            "--with",
+            "--html",
+            "--react",
+            "--tag"
+          ],
           "tail": "rest"
         },
         {
           "head": "-exit",
-          "trailingTokens": ["-list"],
+          "trailingTokens": [
+            "-list"
+          ],
           "tail": "none"
         },
         {
           "head": "-setting",
-          "trailingTokens": ["-page-active"],
+          "trailingTokens": [
+            "-page-active"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -49,16 +67,29 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--all", "--history", "--bookmark", "--page", "--snapshot"],
+          "trailingTokens": [
+            "--all",
+            "--history",
+            "--bookmark",
+            "--page",
+            "--snapshot",
+            "--unlimit"
+          ],
           "tail": "rest"
         },
         {
           "head": "-exit",
-          "trailingTokens": ["-list"],
+          "trailingTokens": [
+            "-list"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -73,29 +104,37 @@
     {
       "module": "help_cmd",
       "canonicalName": "help",
-      "aliases": ["?"],
+      "aliases": [
+        "?"
+      ],
       "usagePrimary": "help",
       "subcommands": []
     },
     {
       "module": "tabs",
-      "canonicalName": "tabs",
+      "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tabs -list [-u] | tabs -exit -list | tabs -setting -page-active | tabs -moveurl <url> | tabs -nowurl",
+      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help",
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["-u"],
+          "trailingTokens": [
+            "-url"
+          ],
           "tail": "none"
         },
         {
           "head": "-exit",
-          "trailingTokens": ["-list"],
+          "trailingTokens": [
+            "-list"
+          ],
           "tail": "none"
         },
         {
           "head": "-setting",
-          "trailingTokens": ["-page-active"],
+          "trailingTokens": [
+            "-page-active"
+          ],
           "tail": "none"
         },
         {
@@ -105,6 +144,26 @@
         {
           "head": "-nowurl",
           "tail": "none"
+        },
+        {
+          "head": "-back",
+          "tail": "none"
+        },
+        {
+          "head": "-forward",
+          "tail": "none"
+        },
+        {
+          "head": "-reload",
+          "tail": "rest"
+        },
+        {
+          "head": "-close",
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
         }
       ]
     },
@@ -112,7 +171,7 @@
       "module": "nav",
       "canonicalName": "nav",
       "aliases": [],
-      "usagePrimary": "nav -enter | nav -exit",
+      "usagePrimary": "nav -enter | nav -exit | nav -windowclose",
       "subcommands": [
         {
           "head": "-enter",
@@ -121,6 +180,10 @@
         {
           "head": "-exit",
           "tail": "none"
+        },
+        {
+          "head": "-windowclose",
+          "tail": "none"
         }
       ]
     },
@@ -128,7 +191,7 @@
       "module": "translate",
       "canonicalName": "translate",
       "aliases": [],
-      "usagePrimary": "translate -on | translate -off | translate -setting",
+      "usagePrimary": "translate -on | translate -off | translate -setting | translate help",
       "subcommands": [
         {
           "head": "-on",
@@ -140,7 +203,14 @@
         },
         {
           "head": "-setting",
-          "trailingTokens": ["--ja-en", "--en-ja"],
+          "trailingTokens": [
+            "--ja-en",
+            "--en-ja"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -156,7 +226,7 @@
       "module": "session",
       "canonicalName": "session",
       "aliases": [],
-      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name]",
+      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name] | session help",
       "subcommands": [
         {
           "head": "-new",
@@ -181,6 +251,10 @@
         {
           "head": "-setting-name",
           "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
         }
       ]
     },
@@ -197,10 +271,17 @@
       ]
     },
     {
+      "module": "browse",
+      "canonicalName": "browse",
+      "aliases": [],
+      "usagePrimary": "browse <list-command>",
+      "subcommands": []
+    },
+    {
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list | setting -exit -list",
+      "usagePrimary": "setting -list | setting -exit -list | setting help",
       "subcommands": [
         {
           "head": "-list",
@@ -208,7 +289,13 @@
         },
         {
           "head": "-exit",
-          "trailingTokens": ["-list"],
+          "trailingTokens": [
+            "-list"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
           "tail": "none"
         }
       ]
@@ -223,10 +310,26 @@
       "tsHandlerExport": "applyClearLogEffect"
     },
     {
+      "kind": "close_current_tab",
+      "rustVariant": "CloseCurrentTab",
+      "shape": "unit",
+      "tsHandlerFile": "close-current-tab",
+      "tsHandlerExport": "applyCloseCurrentTabEffect"
+    },
+    {
+      "kind": "close_current_window",
+      "rustVariant": "CloseCurrentWindow",
+      "shape": "unit",
+      "tsHandlerFile": "close-current-window",
+      "tsHandlerExport": "applyCloseCurrentWindowEffect"
+    },
+    {
       "kind": "close_tab",
       "rustVariant": "CloseTab",
       "shape": "record",
-      "fields": { "tab_id": "i32" },
+      "fields": {
+        "tab_id": "i32"
+      },
       "tsHandlerFile": "close-tab",
       "tsHandlerExport": "applyCloseTabEffect"
     },
@@ -234,7 +337,12 @@
       "kind": "dom_list",
       "rustVariant": "DomList",
       "shape": "record",
-      "fields": { "flavor": "string", "pattern": "string", "pickerMode": "string", "showTag": "string" },
+      "fields": {
+        "flavor": "string",
+        "pattern": "string",
+        "pickerMode": "string",
+        "showTag": "string"
+      },
       "tsHandlerFile": "dom-list",
       "tsHandlerExport": "applyDomListEffect"
     },
@@ -249,7 +357,9 @@
       "kind": "search_bookmark",
       "rustVariant": "SearchBookmark",
       "shape": "record",
-      "fields": { "pattern": "string" },
+      "fields": {
+        "pattern": "string"
+      },
       "tsHandlerFile": "search-bookmark",
       "tsHandlerExport": "applySearchBookmarkEffect"
     },
@@ -257,7 +367,9 @@
       "kind": "search_history",
       "rustVariant": "SearchHistory",
       "shape": "record",
-      "fields": { "pattern": "string" },
+      "fields": {
+        "pattern": "string"
+      },
       "tsHandlerFile": "search-history",
       "tsHandlerExport": "applySearchHistoryEffect"
     },
@@ -265,7 +377,9 @@
       "kind": "search_page",
       "rustVariant": "SearchPage",
       "shape": "record",
-      "fields": { "pattern": "string" },
+      "fields": {
+        "pattern": "string"
+      },
       "tsHandlerFile": "search-page",
       "tsHandlerExport": "applySearchPageEffect"
     },
@@ -273,7 +387,9 @@
       "kind": "search_snapshot",
       "rustVariant": "SearchSnapshot",
       "shape": "record",
-      "fields": { "pattern": "string" },
+      "fields": {
+        "pattern": "string"
+      },
       "tsHandlerFile": "search-snapshot",
       "tsHandlerExport": "applySearchSnapshotEffect"
     },
@@ -281,7 +397,9 @@
       "kind": "group_new",
       "rustVariant": "GroupNew",
       "shape": "record",
-      "fields": { "tab_ids": "vec_i32" },
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
       "tsHandlerFile": "group-new",
       "tsHandlerExport": "applyGroupNewEffect"
     },
@@ -289,15 +407,43 @@
       "kind": "navigate_current_tab",
       "rustVariant": "NavigateCurrentTab",
       "shape": "record",
-      "fields": { "url": "string" },
+      "fields": {
+        "url": "string"
+      },
       "tsHandlerFile": "navigate-current-tab",
       "tsHandlerExport": "applyNavigateCurrentTabEffect"
+    },
+    {
+      "kind": "tab_go_back",
+      "rustVariant": "TabGoBack",
+      "shape": "unit",
+      "tsHandlerFile": "tab-go-back",
+      "tsHandlerExport": "applyTabGoBackEffect"
+    },
+    {
+      "kind": "tab_go_forward",
+      "rustVariant": "TabGoForward",
+      "shape": "unit",
+      "tsHandlerFile": "tab-go-forward",
+      "tsHandlerExport": "applyTabGoForwardEffect"
+    },
+    {
+      "kind": "tab_reload",
+      "rustVariant": "TabReload",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "tab-reload",
+      "tsHandlerExport": "applyTabReloadEffect"
     },
     {
       "kind": "open_url_new_tab",
       "rustVariant": "OpenUrlNewTab",
       "shape": "record",
-      "fields": { "url": "string" },
+      "fields": {
+        "url": "string"
+      },
       "tsHandlerFile": "open-url-new-tab",
       "tsHandlerExport": "applyOpenUrlNewTabEffect"
     },
@@ -305,7 +451,9 @@
       "kind": "open_url_new_window",
       "rustVariant": "OpenUrlNewWindow",
       "shape": "record",
-      "fields": { "url": "string" },
+      "fields": {
+        "url": "string"
+      },
       "tsHandlerFile": "open-url-new-window",
       "tsHandlerExport": "applyOpenUrlNewWindowEffect"
     },
@@ -320,7 +468,9 @@
       "kind": "session_new",
       "rustVariant": "SessionNew",
       "shape": "record",
-      "fields": { "name": "string" },
+      "fields": {
+        "name": "string"
+      },
       "tsHandlerFile": "session-new",
       "tsHandlerExport": "applySessionNewEffect"
     },
@@ -342,9 +492,21 @@
       "kind": "tabs_move_url",
       "rustVariant": "TabsMoveUrl",
       "shape": "record",
-      "fields": { "url": "string" },
+      "fields": {
+        "url": "string"
+      },
       "tsHandlerFile": "tabs-move-url",
       "tsHandlerExport": "applyTabsMoveUrlEffect"
+    },
+    {
+      "kind": "search_list",
+      "rustVariant": "SearchList",
+      "shape": "record",
+      "fields": {
+        "dispatch_line": "string"
+      },
+      "tsHandlerFile": "search-list",
+      "tsHandlerExport": "applySearchListEffect"
     },
     {
       "kind": "tabs_nu",
@@ -352,6 +514,119 @@
       "shape": "unit",
       "tsHandlerFile": "tabs-nu",
       "tsHandlerExport": "applyTabsNuEffect"
+    },
+    {
+      "kind": "tabs_list",
+      "rustVariant": "TabsList",
+      "shape": "record",
+      "fields": {
+        "show_url": "string"
+      },
+      "tsHandlerFile": "tabs-list",
+      "tsHandlerExport": "applyTabsListEffect"
+    }
+  ],
+  "uiActions": [
+    {
+      "kind": "show_help",
+      "rustVariant": "ShowHelp",
+      "shape": "unit"
+    },
+    {
+      "kind": "nav_arm",
+      "rustVariant": "NavArm",
+      "shape": "unit"
+    },
+    {
+      "kind": "nav_disarm",
+      "rustVariant": "NavDisarm",
+      "shape": "unit"
+    },
+    {
+      "kind": "nav_confirm_close",
+      "rustVariant": "NavConfirmClose",
+      "shape": "record",
+      "fields": {
+        "target": "string"
+      }
+    },
+    {
+      "kind": "open_plain_list",
+      "rustVariant": "OpenPlainList",
+      "shape": "record",
+      "fields": {
+        "list_id": "string",
+        "line": "string"
+      }
+    },
+    {
+      "kind": "close_picker",
+      "rustVariant": "ClosePicker",
+      "shape": "record",
+      "fields": {
+        "slot": "string"
+      }
+    },
+    {
+      "kind": "continuation_prompt",
+      "rustVariant": "ContinuationPrompt",
+      "shape": "record",
+      "fields": {
+        "prefix": "string"
+      }
+    },
+    {
+      "kind": "session_switch",
+      "rustVariant": "SessionSwitch",
+      "shape": "record",
+      "fields": {
+        "name": "string"
+      }
+    },
+    {
+      "kind": "session_setting_name",
+      "rustVariant": "SessionSettingName",
+      "shape": "record",
+      "fields": {
+        "name": "string"
+      }
+    },
+    {
+      "kind": "group_new_from_selection",
+      "rustVariant": "GroupNewFromSelection",
+      "shape": "unit"
+    },
+    {
+      "kind": "set_mode",
+      "rustVariant": "SetMode",
+      "shape": "record",
+      "fields": {
+        "feature_id": "string",
+        "mode": "string"
+      }
+    },
+    {
+      "kind": "snapshot_save",
+      "rustVariant": "SnapshotSave",
+      "shape": "record",
+      "fields": {
+        "line": "string"
+      }
+    },
+    {
+      "kind": "open_picker",
+      "rustVariant": "OpenPicker",
+      "shape": "record",
+      "fields": {
+        "list_id": "string",
+        "line": "string",
+        "show_url": "string"
+      }
+    },
+    {
+      "kind": "picker_pass",
+      "rustVariant": "PickerPass",
+      "shape": "unit"
     }
   ]
 }

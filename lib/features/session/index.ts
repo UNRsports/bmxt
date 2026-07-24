@@ -2,7 +2,7 @@ export {
   isSessionSettingNameUiLine,
   isSessionSwitchByNameUiLine,
   isSessionSwitchUiLine,
-  parseSessionListPickerLine,
+  parseSessionListLine,
   parseSessionSettingNameBareLine,
   parseSessionSettingNameWithLine,
   parseSessionSwitchPickerLine,
