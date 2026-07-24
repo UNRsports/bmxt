@@ -12,9 +12,15 @@
       "tabs コマンドを tab に改名。履歴・リロード・タブ閉じを nav から tab へ移動（nav は -enter/-exit/-windowclose）"
     ],
     "en": [
-      "nav: identity HUD (kind:key), / incremental attribute jump, learn successful activates per origin",
-      "Internal: command semantics now run in Rust/WASM; the UI focuses on display and browser I/O",
-      "Renamed tabs command to tab; moved history/reload/tab-close from nav onto tab (nav keeps -enter/-exit/-windowclose)"
+      "Improved the in-tab float prompt so you can use it alongside the popup window",
+      "Standardized inter-command and candidate-menu specifications, with matching refactoring",
+      "Renamed the picker command to browse",
+      "Detail bars (tab and others) can now be closed with Ctrl+C",
+      "Upgraded to TypeScript 6 and applied minor code fixes",
+      "nav: show identity label (kind:key) under the cursor; incremental attribute jump with /; learn origins after successful activate",
+      "Started implementing direct browser operations via nav commands without relying on browse",
+      "Internal: moved the command-interpretation core to Rust/WASM; UI focuses on display and browser API execution",
+      "Renamed tabs to tab. Moved history, reload, and tab close from nav to tab (nav keeps -enter/-exit/-windowclose)"
     ]
   }
 }

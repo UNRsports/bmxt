@@ -28,8 +28,8 @@ search,-list,--snapshot,rest,,（同上）,scope `--snapshot`。,
 search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
 group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
-browse,,,,,browse <list-command>,UiAction `browse` → ListResult kind 族で列を開く。,語彙: UiAction browse + list kinds
-tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）とタブ操作（`-back`/`-forward`/`-reload`/`-close`）。,
+browse,,,,,browse <list-command>,UiAction `browse` → ListResult kind 族で列を開く。詳細バー **Ctrl+C** で対応列を閉じる（`tab`/`search`/`dom`/`setting`）。,語彙: UiAction browse + list kinds。旧 `picker` / 第三 `--picker` 廃止（0.8.0 改名）
+tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）とタブ操作（`-back`/`-forward`/`-reload`/`-close`）。,0.8.0: 旧 `tabs` 改名。履歴・reload・close は nav から移管
 tab,-list,,none,,tab -list [-url] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
 tab,-setting,,none,,tab -setting | tab -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
 tab,-setting,-page-active,none,,tab -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tab -setting -page-active `。,
@@ -40,8 +40,8 @@ tab,-exit,-list,none,,tab -exit -list,UiAction `tabs_exit_list`。,
 tab,-moveurl,,rest_http_url,,tab -moveurl <url>,Effect: tabs_move_url。,
 tab,-nowurl,,none,,tab -nowurl,Effect: tabs_nu。,
 tab,help,,none,,tab help,msgs `help.section.tabs`（コマンド別マニュアル）。,
-nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`/`-windowclose`。,キー操作の正本は README § Nav mode（EN/JA）
-nav,-enter,,none,,nav -enter | …,UiAction `nav_arm`。オーバーレイは Alt まで非表示。Alt は nav 詳細バー（または armed 中プロンプト）から ON/OFF。,**ON 中:** フォーカスは nav 詳細バー固定。矢印=要素スナップ、Shift+矢印=12px 自由移動、Shift 解放で現在位置を再スキャン（resyncSpatial）。typing のみ一時プロンプト。`NAV_CONTROL` / `lib/features/nav/`
+nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`/`-windowclose`。,キー操作の正本は README § Nav mode（EN/JA）。0.8.0: 履歴・reload・tab close は `tab` へ移管
+nav,-enter,,none,,nav -enter | …,UiAction `nav_arm`。オーバーレイは Alt まで非表示。Alt は nav 詳細バー（または armed 中プロンプト）から ON/OFF。,**ON 中:** フォーカスは nav 詳細バー固定。矢印=要素スナップ、Shift+矢印=12px 自由移動、Shift 解放で現在位置を再スキャン（resyncSpatial）。HUD `kind:key`。`/` 属性インクリメンタルジャンプ。成功 activate で origin 学習（`bmxt_nav_learned_targets_v1`）。詳細バー **Ctrl+C** で disarm。typing のみ一時プロンプト。`NAV_CONTROL` / `lib/features/nav/`
 nav,-exit,,none,,（同上）,UiAction `nav_disarm`。オーバーレイ ON のままではエラー（先に Alt で OFF）。,
 tab,-back,,none,,tab -back,Effect `tab_go_back`（操作先アクティブタブ）。,
 tab,-forward,,none,,tab -forward,Effect `tab_go_forward`。,
@@ -68,11 +68,13 @@ session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,
 session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
 session,-setting-name,,rest,,session -setting-name [name],UiAction `session_setting_name`。,
-（内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A+B 完了 / C・D 未着手
-（内部）,inter-command-vocabulary,,,,lib/features/command-line/inter-command/,"閉じたコマンド間語彙の索引。DispatchBundle チャネル、LIST_KIND_TO_BMXT_RULE_KIND、preferredCommandAddPath。テンプレート: manifest/templates/。",語彙再利用優先
+（内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
+（内部）,inter-command-vocabulary,,,,lib/features/command-line/inter-command/,"閉じたコマンド間語彙の索引。DispatchBundle チャネル、LIST_KIND_TO_BMXT_RULE_KIND、preferredCommandAddPath。テンプレート: manifest/templates/。",語彙再利用優先。0.8.0 規格化
 （内部）,job-runner,,,,lib/features/job/,JobRunner per scope（search-list/dom-list/run-cmd/tab-picker-refresh）。,
 （内部）,terminal-session-state,,,,lib/features/bmxt-window/terminal-sessions/,UI が session 正本。SW は SessionPatch[] のみ。,
-（内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。build:wasm。CSP wasm-unsafe-eval。",
+（内部）,bmxt-float,,,,lib/features/bmxt-float/ + entrypoints/bmxt-float/,"サイト内フロート・プロンプト（`hostKind=float`）。ショートカット `toggle-bmxt-float`（既定 Shift+Alt+F）。`SESSION_CLEAR` の `host`: popup|float|all。ポップアップ閉鎖は float を消さない。コマンド履歴（`bmxt_cmd_history`）のみ popup と共有。",0.8.0
+（内部）,detail-bar-ctrl-c,,,,lib/features/bmxt-window/detail-bar-focus.ts + use-detail-bar-keyboard.ts,"詳細バー上 **Ctrl+C**: picker 系は browse 列クローズ、nav は disarm（`close-nav-from-detail-bar.ts`）。",0.8.0
+（内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6
 （内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status。segment の promptPrefix もホスト適用。,
 （内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。,
 （内部）,bmxt-rule,,,,lib/features/bmxt-rule/,bmxt-rule/1。カタログ manifest/bmxt-rule.json。,

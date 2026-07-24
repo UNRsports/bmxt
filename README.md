@@ -346,7 +346,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -689,9 +689,10 @@ While a picker is open (or nav / translate assist is active), a **detail bar** a
 | **`→`** (caret at **end-of-line**) | Select the leftmost visible detail bar |
 | **`←`** (from a detail bar) | Return focus to the prompt (**blocked while nav overlay is ON** — arrows drive the page cursor) |
 | **`Tab`** / **`Shift+Tab`** | Cycle among visible detail bars (**suspended while nav overlay is ON**) |
-| **`Alt`** (tabs / search / dom detail bar) | Toggle **`--auto` / `--manual`** page-active (persisted) |
+| **`Alt`** (tab / search / dom detail bar) | Toggle **`--auto` / `--manual`** page-active (persisted) |
 | **`Alt`** (nav detail bar) | Toggle nav overlay **ON** / **OFF** |
 | **`→`** (from a detail bar) | Enter the matching picker column (column moves left with animation) |
+| **`Ctrl+C`** (from a detail bar) | Close the matching browse column (**tab** / **search** / **dom** / **setting**), or **disarm nav** when the **nav** detail bar is selected |
 
 While the nav overlay is **ON**, focus **stays on the nav detail bar** (typing mode is the temporary exception). Each bar shows mode-specific hints. **`useDetailBarKeyboard`** in **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** wires these keys.
 
@@ -1270,7 +1271,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1687,7 +1688,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -1977,9 +1978,10 @@ search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示�
 | **`→`**（キャレットが **行末**） | 左端の表示中詳細バーを選択 |
 | **`←`**（詳細バーから） | プロンプトへ戻る（**nav オーバーレイ ON 中は無効** — 矢印はページカーソル用） |
 | **`Tab`** / **`Shift+Tab`** | 表示中の詳細バーを循環（**nav オーバーレイ ON 中は停止**） |
-| **`Alt`**（tabs / search / dom 詳細バー） | **`--auto` / `--manual`** page-active を切替（保存される） |
+| **`Alt`**（tab / search / dom 詳細バー） | **`--auto` / `--manual`** page-active を切替（保存される） |
 | **`Alt`**（nav 詳細バー） | nav オーバーレイ **ON** / **OFF** |
 | **`→`**（詳細バーから） | 対応するピッカー列へ入る（列は左へアニメーション） |
+| **`Ctrl+C`**（詳細バーから） | 対応する browse 列を閉じる（**tab** / **search** / **dom** / **setting**）。**nav** 詳細バー選択時は **nav を disarm** |
 
 nav オーバーレイ **ON** 中はフォーカスを **nav 詳細バーに固定**（typing モードのみ一時例外）。各バーにはモード別ヒントが出ます。配線は **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** の **`useDetailBarKeyboard`**。
 
@@ -2570,7 +2572,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.7.5` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 
