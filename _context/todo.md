@@ -1172,3 +1172,80 @@ Phase E（ゲート・スキル・実証）
 | IME | `lib/features/command-line/ime-token-picker.ts` |
 | SW | `entrypoints/background/background-services.ts` |
 | 文書 | README アーキテクチャ節、`.cursor/skills/bmxt-add-command/` |
+
+---
+
+## 18. `back` / `forward` 独立化 — 履歴ナビを first コマンド + pipe consumer へ
+
+**状態:** 仕様確定・未実装。  
+**関連:** §16（旧 nav 履歴・のち `tab -back`/`-forward`）、§8 / §10（pipe consumer・`close` 先例）、skill `bmxt-add-command` / `bmxt-i18n`。
+
+### 18.1 動機（違和感の整理）
+
+現状の `tab -back` / `tab -forward` への違和感:
+
+1. **語彙:** 「履歴を進める」は `-forward` で適切（Chrome `goForward` / UI Forward と一致）。問題は語ではなく **`tab` 配下であること**。
+2. **粒度:** 履歴ナビはタブ**管理**（`-list` / `-setting` / `-close`）ではなく、タブに対する**動詞**。独立 first コマンドの方がパイプ一括（複数タブ）にも向く。
+3. **ホットパス:** 最頻の「ページを戻る／進む」を **1 コマンド（第一トークンのみ）** で遂行したい。`tab -back` は常に 2 トークンで重い。
+
+### 18.2 確定仕様
+
+| 形 | 意味 |
+|----|------|
+| `back`（引数なし） | 操作先アクティブタブで履歴バック（即時・確認なし） |
+| `forward`（引数なし） | 操作先アクティブタブで履歴を進む（即時・確認なし） |
+| `… \| back` | 左辺 `bmxtRule` ストリーム内タブを一括バック |
+| `… \| forward` | 同上で一括 forward |
+
+- **パイプ向き:** producer → consumer。`{tabs} | back` / `{tabs} | forward`（`forward | {tabs}` は不可。`tab -list | close` と同型）。
+- **短いエイリアス**（`b` / `f` 等）は付けない（first/second 短縮禁止ルール）。
+- **effect 再利用:** 既存 `tab_go_back` / `tab_go_forward`（必要なら複数 `tabId` 対応に拡張）。新規 Chrome API 能力は原則不要。
+- **先例:** `close`（明示 ID / `| close`）と二層。履歴はホットパスを **bare first で完結**させる点が `close`（ID 必須）と意図的に異なる。
+
+#### 18.2.1 `tab` 配下の扱い
+
+- `tab -back` / `tab -forward` は **削除**するか、移行期間のみ薄い互換（非推奨）を残す。実装時にどちらかを選ぶ（推奨: 削除してドキュメント・i18n・fixture を一掃）。
+- `tab -reload` / `tab -close` は本節の必須範囲外。`reload` の first + pipe 化は将来の一貫性候補として後回し可。
+
+#### 18.2.2 やらない案（却下）
+
+- `history -back` 等の別 first + 第二トークン → ホットパスが再び 2 トークンになり 18.1-3 を満たさない。
+- `tab` 配下のまま pipe だけ足す → consumer 名が不自然で `close` 先例とずれる。
+- first/second 短別名の追加。
+
+### 18.3 設計方針（実装パス）
+
+1. **reuse-effects:** Rust `cmd/back.rs` / `cmd/forward.rs`（または単一モジュール）が `ChromeEffect::TabGoBack` / `TabGoForward` を返す。bare 実行は操作先タブ（現行 `resolveTabArg` 相当）。
+2. **extend-pipe-consumer:** `close` と同型で `PIPE_CONSUMER_ENTRIES` に `back` / `forward` を登録。`acceptsKinds` は tab 系（`close` と揃える）。ストリーム → tabId 列 → 各タブへ effect（または `runBackgroundSegment`）。
+3. **effect 拡張（必要時のみ）:** 現行 handler が操作先タブ固定なら、`tab_id` 付き payload または複数回 effect でバッチ対応。
+4. **コマンドモデル:** `back` / `forward` は第二トークン不要の完結 first（continuation しない）。Tab 補完は canonical 名のみ。
+5. **文書:** README / help / `map_command.csv` / store 説明の該当行を更新。§16 の「nav/tab 履歴」記述から独立コマンドへ参照を移す。
+
+### 18.4 実装チェックリスト
+
+```
+Task progress:
+- [ ] 決定: `tab -back`/`-forward` 削除 vs 互換残し
+- [ ] manifest `commands[]` に `back` / `forward`（subcommands なし）
+- [ ] `tab` から `-back` / `-forward` を外す（削除方針の場合）
+- [ ] crates/bmxt-core `cmd/back.rs` / `forward.rs`（+ `cmd/mod.rs`）
+- [ ] pnpm run codegen + build:wasm
+- [ ] pipe consumer: `back` / `forward`（close と同型・acceptsKinds）
+- [ ] effect: 単一／複数 tabId 対応（不足分のみ extend）
+- [ ] dispatch fixtures / ime・second-token テスト更新
+- [ ] i18n EN+JA（cmd / help / pipe）
+- [ ] README / `_context/map_command.csv` / 必要なら store 文言
+- [ ] verify:manifest → verify:host-blind → check:generated → cargo test -p bmxt-core → tsc → test → build
+- [ ] ブラウザ手元スモーク（bare / パイプ一括 / 履歴末端の失敗メッセージ）
+```
+
+### 18.5 主戦場ファイル
+
+| 用途 | パス |
+|------|------|
+| SoT | `manifest/bmxt-codegen.json` |
+| 意味 | `crates/bmxt-core/src/cmd/tabs.rs`（削除側）、新規 `back` / `forward` |
+| Effect | `lib/features/dispatch/handlers/effects/tab-go-back.ts` / `tab-go-forward.ts` |
+| Pipe | `lib/features/command-line/pipe/consumers/`（`close-*` を型に） |
+| i18n | `lib/features/setting/i18n/namespaces/cmd.json` / `help.json` / pipe ns |
+| 文書 | README、`_context/map_command.csv` |
