@@ -344,7 +344,8 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
           tokenEnd: resolved.tokenEnd,
           candidates: resolved.candidates,
           hi,
-          tier: resolved.tier
+          tier: resolved.tier,
+          pipeAvailable: resolved.pipeAvailable
         }
       })
     },

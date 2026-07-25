@@ -19,6 +19,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **手元スモーク**
 
+- [ ] `tab -list` 候補から `| browse` を選べる（第三段に `-url` とパイプ継続）
 - [ ] `tab -list` → 履歴で `| browse` 追記 → タブ列が開く
 - [ ] `tab -list -url | browse` · `setting -list | browse` · `session -list | browse`
 - [ ] `search -list foo | browse` · `dom -list --html | browse`

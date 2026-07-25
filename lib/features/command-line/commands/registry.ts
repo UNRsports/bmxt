@@ -12,7 +12,10 @@ export const COMMAND_ENTRIES: readonly CommandEntry[] = []
 export const BACKGROUND_COMMAND_ENTRY: CommandEntry = {
   id: "background",
   runtime: "background",
-  tryRun: async (segment, deps, locale) => runBackgroundSegment(segment, deps, locale)
+  tryRun: async (segment, deps, locale, options) =>
+    runBackgroundSegment(segment, deps, locale, {
+      suppressLogPatches: options?.suppressLogPatches === true
+    })
 }
 
 export function listCommandEntryIds(): string[] {

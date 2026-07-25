@@ -10,5 +10,9 @@
   "imeToken.hint.third": {
     "ja": "オプション · ↑↓ · Tab · Enter · Esc",
     "en": "Option · ↑↓ · Tab · Enter · Esc"
+  },
+  "imeToken.hint.pipeAvailable": {
+    "ja": "|（パイプ接続可能）",
+    "en": "| (pipeable)"
   }
 }

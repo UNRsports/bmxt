@@ -1258,11 +1258,19 @@ body {
 
 .bmxt-subcmd-picker-hint {
   flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5em;
   padding: 6px 10px 4px;
   color: #8b949e;
   font-size: 11px;
   line-height: 1.4;
   border-bottom: 1px solid #21262d;
+}
+
+.bmxt-subcmd-picker-hint-pipe {
+  color: #8b949e;
 }
 
 .bmxt-subcmd-picker-list {

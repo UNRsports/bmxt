@@ -10,6 +10,10 @@ import type { TokenPickerModel } from "../token-picker-panel"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
 import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
+import {
+  buildPipeContinuationPickLine,
+  isPipeContinuationCandidate
+} from "../../command-line/pipe/pipe-continuation-candidates.ts"
 import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
 import { applyTabChipPickToLine, tabChipCompletionZone } from "../../nav/tab-chip-token"
 import { parseNavReloadTabToken } from "../../nav/nav-reload-tab-token"
@@ -117,6 +121,10 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           s.tokenEnd,
           tabIdFromChipPick
         )
+        nextLine = built.line
+        nextPos = built.cursor
+      } else if (isPipeContinuationCandidate(tok)) {
+        const built = buildPipeContinuationPickLine(cur, s.tokenStart, s.tokenEnd, tok)
         nextLine = built.line
         nextPos = built.cursor
       } else {

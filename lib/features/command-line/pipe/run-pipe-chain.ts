@@ -144,7 +144,10 @@ export async function runPipeChain(
       continue
     }
 
-    const outcome = await runSegment(stage, deps, locale)
+    const outcome = await runSegment(stage, deps, locale, {
+      // EN: Pipe producer feeds the consumer stream only — do not echo plain `-list` into the log.
+      suppressLogPatches: stages.length > 1
+    })
     if (!isExitSuccess(outcome.exitStatus)) {
       return prependAccumulated(outcome, allStdout, allStderr)
     }

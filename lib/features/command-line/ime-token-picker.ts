@@ -2,13 +2,13 @@
  * EN: IME-style token picker — fixed tokens from WASM `complete`; host overlays for live UI.
  */
 
-import { isBmxtCoreReady, wasmComplete } from "../bmxt-core/wasm-host"
+import { isBmxtCoreReady, wasmComplete } from "../bmxt-core/wasm-host.ts"
 import {
   getSubcommandBranches,
   listSecondTokenCandidatesByCommand,
   listThirdTokenCandidates
-} from "../builtin-commands/command-subcommands.gen"
-import { resolveCanonical } from "../bmxt-core/registry"
+} from "../builtin-commands/command-subcommands.gen.ts"
+import { resolveCanonical } from "../bmxt-core/registry/index.ts"
 import { tImeToken } from "../setting/i18n/ns/ime-token"
 import type { UiLocale } from "../setting/locale"
 import {
@@ -20,6 +20,8 @@ import {
 import { resolveActiveCommandSegment } from "./compound/active-segment.ts"
 import { resolveActivePipeStage } from "./compound/pipe-stage-spans.ts"
 import { listPipeConsumerCompletionTokens } from "./pipe/consumers/completion-tokens.ts"
+import { applyPipeContinuationCandidates } from "./pipe/pipe-continuation-candidates.ts"
+import { stageLineHasPipeProducerFirstCommand } from "./pipe/pipe-producer-first.ts"
 import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import { rankTokenCandidates } from "./token-candidate-mru.ts"
@@ -321,21 +323,29 @@ export function resolveImeTokenPicker(
   const stageLine = segmentLine.slice(pipe.stageStart, pipe.stageEnd)
   const stageTokens =
     pipe.stageIndex >= 1 ? listPipeConsumerCompletionTokens() : firstCommandTokens
-  const picked = resolveImeTokenPickerInSegment(
+  let picked = resolveImeTokenPickerInSegment(
     stageLine,
     pipe.localCursor,
     stageTokens,
     opts
   )
+  if (pipe.stageIndex === 0) {
+    picked = applyPipeContinuationCandidates(picked, stageLine, pipe.localCursor, opts)
+  }
   if (!picked) {
     return null
   }
   const stageAbsStart = active.segmentStart + pipe.stageStart
-  return finalizeCandidateOrder({
+  const ordered = finalizeCandidateOrder({
     ...picked,
     tokenStart: stageAbsStart + picked.tokenStart,
     tokenEnd: stageAbsStart + picked.tokenEnd
   })
+  // EN: Second/third tier — first command already on the stage line.
+  // First tier uses the highlighted candidate in TokenPickerPanel.
+  const pipeAvailable =
+    ordered.tier === "first" ? false : stageLineHasPipeProducerFirstCommand(stageLine)
+  return { ...ordered, pipeAvailable }
 }
 
 function resolveImeTokenPickerInSegment(
