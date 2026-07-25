@@ -30,5 +30,13 @@
   "pipe.error.unsupportedConsumer": {
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
+  },
+  "pipe.tabChip.activateFailed": {
+    "ja": "error: タブをアクティブにできませんでした（id={tabId}）",
+    "en": "error: could not activate tab (id={tabId})"
+  },
+  "pipe.tabChip.movedTo": {
+    "ja": "{title}へ移動しました。",
+    "en": "Moved to {title}."
   }
 }

@@ -1253,7 +1253,7 @@ Task progress:
 
 ---
 
-## 19. `tab:` チップ指定 — パイプ左辺の効率的タブ選択
+## 19. `tab:` チップ指定 — Enter でアクティブ / Space で複数選択
 
 **状態:** 実装済み（ブラウザ手元スモークは残）。  
 **関連:** §18（`back` / `forward` / `reload` / `close` 独立 + pipe）、skill `bmxt-i18n`。
@@ -1265,17 +1265,20 @@ Task progress:
 | `tab:` | 開いているタブ候補（ファビコン＋タイトル） |
 | `tab:{語句}` | タブ名 contains 絞込 |
 | `tab::{語句}` | URL contains 絞込（候補に URL 行） |
-| 選択 | `#t:<id>` チップに置換し `tab:` を再付与（連続選択） |
+| 選択 | `#t:<id>` チップに置換し候補を閉じる（`tab:` 再付与なし） |
+| Enter（チップのみ） | 最後のチップのタブをアクティブ＋ウィンドウフォーカス |
+| 半角スペース | 候補を再表示して追加選択（パイプ用） |
 | Esc / ↑(先頭) | 候補を閉じる |
-| `#t:… \| back` 等 | 合成 `page.open` producer → 既存 consumer |
+| `#t:… \| reload` 等 | 合成 `page.open` producer → 既存 consumer |
 
 `tab` コマンドとは別トークン。動詞側へのタブ候補は付けない（§18）。
 
 ### 19.2 実装チェックリスト
 
-- [x] `tabChipCompletionZone` + title/URL filter（`lib/features/nav/tab-chip-token.ts`）
+- [x] `tabChipCompletionZone` + title/URL filter + Space 継続ゾーン（`lib/features/nav/tab-chip-token.ts`）
 - [x] `usePromptPickers` ライブ候補
-- [x] pick → `#t:id` + `tab:` 再付与（`useShellKeyboard`）
+- [x] pick → `#t:id` のみ（候補閉じる）
+- [x] chip-only Enter → `tryActivateTabChipSegment`（`run-segment.ts`）
 - [x] `parseTabChipProducerSegment` + `runPipeChain` 合成 producer
 - [x] i18n / README / map_command / help.section.tabChip
 - [ ] ブラウザ手元スモーク

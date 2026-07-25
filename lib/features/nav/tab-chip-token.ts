@@ -1,6 +1,6 @@
 /**
- * EN: `tab:` / `tab::` live tab picker — multi-select chips (`#t:<id>`) for pipe LHS.
- * JA: `tab:` / `tab::` ライブ候補 — パイプ左辺用 `#t:<id>` 複数選択。
+ * EN: `tab:` / `tab::` live tab picker — `#t:<id>` chips; Space continues; Enter activates.
+ * JA: `tab:` / `tab::` ライブ候補 — `#t:<id>` チップ。Space で継続選択、Enter でアクティブ。
  */
 
 import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
@@ -9,6 +9,7 @@ import {
   formatNavReloadTabToken,
   listNavReloadTabCandidates,
   navReloadTabChipMetaFromCandidate,
+  parseNavReloadTabToken,
   type NavReloadTabCandidate,
   type NavReloadTabChipMeta
 } from "./nav-reload-tab-token.ts"
@@ -18,7 +19,7 @@ export type TabChipFilterMode = "title" | "url"
 export type TabChipCompletionZone = {
   tokenStart: number
   tokenEnd: number
-  /** EN: Filter needle after `tab:` or `tab::` (may be empty). */
+  /** EN: Filter needle after `tab:` / `tab::` or after chips + Space (may be empty). */
   needle: string
   mode: TabChipFilterMode
 }
@@ -29,8 +30,26 @@ export function isTabChipTriggerToken(token: string): boolean {
   return /^tab::/i.test(t) || /^tab:/i.test(t)
 }
 
+/** EN: True when every whitespace token is a `#t:<id>` chip (and at least one exists). */
+export function isOnlyTabChipTokens(text: string): boolean {
+  const trimmed = text.trim()
+  if (trimmed.length === 0) {
+    return false
+  }
+  const tokens = trimmed.split(/\s+/).filter((t) => t.length > 0)
+  if (tokens.length === 0) {
+    return false
+  }
+  for (const tok of tokens) {
+    if (parseNavReloadTabToken(tok) === null) {
+      return false
+    }
+  }
+  return true
+}
+
 /**
- * EN: Parse `tab:` / `tab::{needle}` / `tab:{needle}` at the token under the caret.
+ * EN: Parse `tab:` / `tab::{needle}` / continuation after chips (Space / title needle).
  * Does not match `tab` (command) or `tab -list`.
  */
 export function tabChipCompletionZone(
@@ -52,9 +71,6 @@ export function tabChipCompletionZone(
     tokenEndLocal += 1
   }
   const token = segmentLine.slice(tokenStartLocal, tokenEndLocal)
-  if (token.length === 0) {
-    return null
-  }
 
   const urlMatch = /^tab::(.*)$/i.exec(token)
   if (urlMatch) {
@@ -68,7 +84,6 @@ export function tabChipCompletionZone(
 
   const titleMatch = /^tab:(.*)$/i.exec(token)
   if (titleMatch) {
-    // EN: `tab::` already handled; bare `tab:` or `tab:needle` is title mode.
     return {
       tokenStart: active.segmentStart + tokenStartLocal,
       tokenEnd: active.segmentStart + tokenEndLocal,
@@ -77,7 +92,31 @@ export function tabChipCompletionZone(
     }
   }
 
-  return null
+  // EN: Continuation — only after one or more `#t:` chips (Space reopens / title filter).
+  const prefix = segmentLine.slice(0, tokenStartLocal)
+  if (!isOnlyTabChipTokens(prefix)) {
+    return null
+  }
+
+  if (token.length === 0) {
+    return {
+      tokenStart: active.segmentStart + tokenStartLocal,
+      tokenEnd: active.segmentStart + tokenEndLocal,
+      needle: "",
+      mode: "title"
+    }
+  }
+
+  if (parseNavReloadTabToken(token) !== null) {
+    return null
+  }
+
+  return {
+    tokenStart: active.segmentStart + tokenStartLocal,
+    tokenEnd: active.segmentStart + tokenEndLocal,
+    needle: token,
+    mode: "title"
+  }
 }
 
 /** EN: Title / URL filter for `tab:` picker (case-insensitive contains). */
@@ -121,7 +160,10 @@ export async function listTabChipCandidates(
   return out
 }
 
-/** EN: After pick: replace trigger with `#t:<id> ` and re-append `tab:` for continued selection. */
+/**
+ * EN: After pick: replace trigger / needle / empty slot with `#t:<id>` only (no `tab:` re-append).
+ * Menu closes on next sync because caret sits on/after a chip with no continuation zone.
+ */
 export function applyTabChipPickToLine(
   line: string,
   tokenStart: number,
@@ -129,8 +171,8 @@ export function applyTabChipPickToLine(
   tabId: number
 ): { line: string; cursor: number } {
   const chip = formatNavReloadTabToken(tabId)
-  const nextLine = `${line.slice(0, tokenStart)}${chip} tab:${line.slice(tokenEnd)}`
-  const cursor = tokenStart + chip.length + " tab:".length
+  const nextLine = `${line.slice(0, tokenStart)}${chip}${line.slice(tokenEnd)}`
+  const cursor = tokenStart + chip.length
   return { line: nextLine, cursor }
 }
 

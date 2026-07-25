@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { lineHasCompoundOperator, runCompoundLine } from "../../command-line/compound"
+import { parseTabChipProducerSegment } from "../../command-line/pipe/producers/tab-chip-producer"
 import { ensureBmxtCore } from "../../bmxt-core/wasm-host"
 import { runDispatch } from "../../bmxt-core/dispatch"
 import { effectiveCommandLocale } from "../../setting/effective-command-locale"
@@ -113,7 +114,8 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
         return
       }
 
-      if (lineHasCompoundOperator(trimmed)) {
+      // EN: `#t:<id>…` (chip-only) must use host activate / pipe path — not WASM unknown-command.
+      if (lineHasCompoundOperator(trimmed) || parseTabChipProducerSegment(trimmed) !== null) {
         void runCompoundLine(trimmed, deps, commandLocale)
         return
       }

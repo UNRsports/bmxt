@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   applyTabChipPickToLine,
+  isOnlyTabChipTokens,
   isTabChipTriggerToken,
   matchesTabChipNeedle,
   tabChipCompletionZone
@@ -46,6 +47,53 @@ describe("tabChipCompletionZone", () => {
     assert.equal(zone.tokenStart, line.indexOf("tab:"))
     assert.equal(zone.mode, "title")
   })
+
+  it("reopens after chips + trailing space", () => {
+    const line = "#t:12 "
+    const zone = tabChipCompletionZone(line, line.length)
+    assert.ok(zone)
+    assert.equal(zone.mode, "title")
+    assert.equal(zone.needle, "")
+    assert.equal(zone.tokenStart, line.length)
+    assert.equal(zone.tokenEnd, line.length)
+  })
+
+  it("filters by plain title needle after chips + space", () => {
+    const line = "#t:12 foo"
+    const zone = tabChipCompletionZone(line, line.length)
+    assert.ok(zone)
+    assert.equal(zone.mode, "title")
+    assert.equal(zone.needle, "foo")
+    assert.equal(zone.tokenStart, line.indexOf("foo"))
+  })
+
+  it("detects tab:: after chips", () => {
+    const line = "#t:12 tab::bar"
+    const zone = tabChipCompletionZone(line, line.length)
+    assert.ok(zone)
+    assert.equal(zone.mode, "url")
+    assert.equal(zone.needle, "bar")
+  })
+
+  it("does not open on chip-only line without trailing space", () => {
+    const line = "#t:12"
+    assert.equal(tabChipCompletionZone(line, line.length), null)
+  })
+
+  it("does not treat bare text as continuation without chips", () => {
+    assert.equal(tabChipCompletionZone("foo", 3), null)
+    assert.equal(tabChipCompletionZone("foo ", 4), null)
+  })
+})
+
+describe("isOnlyTabChipTokens", () => {
+  it("requires at least one chip", () => {
+    assert.equal(isOnlyTabChipTokens(""), false)
+    assert.equal(isOnlyTabChipTokens("   "), false)
+    assert.equal(isOnlyTabChipTokens("#t:1"), true)
+    assert.equal(isOnlyTabChipTokens("#t:1 #t:2"), true)
+    assert.equal(isOnlyTabChipTokens("#t:1 back"), false)
+  })
 })
 
 describe("matchesTabChipNeedle", () => {
@@ -71,17 +119,25 @@ describe("isTabChipTriggerToken", () => {
 })
 
 describe("applyTabChipPickToLine", () => {
-  it("replaces trigger with chip and reappends tab:", () => {
+  it("replaces trigger with chip only (no tab: reappend)", () => {
     const line = "tab:"
     const out = applyTabChipPickToLine(line, 0, 4, 42)
-    assert.equal(out.line, "#t:42 tab:")
-    assert.equal(out.cursor, "#t:42 tab:".length)
+    assert.equal(out.line, "#t:42")
+    assert.equal(out.cursor, "#t:42".length)
   })
 
-  it("keeps prior chips", () => {
+  it("keeps prior chips and does not reappend tab:", () => {
     const line = "#t:1 tab:foo"
     const start = line.indexOf("tab:")
     const out = applyTabChipPickToLine(line, start, line.length, 2)
-    assert.equal(out.line, "#t:1 #t:2 tab:")
+    assert.equal(out.line, "#t:1 #t:2")
+    assert.equal(out.cursor, "#t:1 #t:2".length)
+  })
+
+  it("inserts at empty continuation after space", () => {
+    const line = "#t:1 "
+    const out = applyTabChipPickToLine(line, line.length, line.length, 2)
+    assert.equal(out.line, "#t:1 #t:2")
+    assert.equal(out.cursor, "#t:1 #t:2".length)
   })
 })
