@@ -32,14 +32,26 @@ describe("formatMessage", () => {
 describe("namespace message catalogs", () => {
   const messages = loadNamespaceMessages()
 
-  it("loads 698 keys across namespace JSON files", () => {
-    assert.equal(Object.keys(messages).length, 698)
+  it("loads 699 keys across namespace JSON files", () => {
+    assert.equal(Object.keys(messages).length, 699)
   })
 
   it("pairs ja and en for shell.welcome", () => {
     const entry = messages["shell.welcome"]
     assert.equal(entry?.ja, "BMXtへようこそ！本プログラムはテストバージョンです。")
     assert.equal(entry?.en, "Welcome to BMXt! This program is a test version.")
+  })
+
+  it("pairs ja and en for shell.reloadHint", () => {
+    const entry = messages["shell.reloadHint"]
+    assert.equal(
+      entry?.ja,
+      "⚠️タブやサイト内の操作を行う場合は、最初にページをリロードして拡張機能のスクリプトがページ内で有効化するようにしてください。⚠️"
+    )
+    assert.equal(
+      entry?.en,
+      "⚠️ To operate on tabs or within a page, reload the page first so the extension scripts are active on that page. ⚠️"
+    )
   })
 
   it("supports version placeholder", () => {

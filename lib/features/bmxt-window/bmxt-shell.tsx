@@ -1325,8 +1325,10 @@ export function BmxtShell({
           <div className="bmxt-hint">
             {tShell("shell.welcome", uiSettings.locale)}
             <br />
-            <br />
             {tShell("shell.helpHint", uiSettings.locale)}
+            <br />
+            <br />
+            {tShell("shell.reloadHint", uiSettings.locale)}
           </div>
         ) : null}
         {upgradeBannerReady && postUpgradeBanner ? (
