@@ -65,4 +65,15 @@ describe("namespace message catalogs", () => {
     assert.equal(messages["prompt.placeholder"]?.ja, "入力するか TAB キーで補完")
     assert.equal(messages["prompt.placeholder"]?.en, "type or use TAB key")
   })
+
+  it("pads setting -list | browse notice with blank lines above and below", () => {
+    assert.equal(
+      messages["setting.list.notice.useBrowse"]?.ja,
+      "設定の変更には下記コマンドを使用してください。"
+    )
+    assert.equal(
+      messages["setting.list.notice.useBrowse"]?.en,
+      "To change settings, use the command below."
+    )
+  })
 })

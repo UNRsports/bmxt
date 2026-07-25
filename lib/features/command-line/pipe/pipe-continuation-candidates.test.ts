@@ -3,7 +3,9 @@ import { describe, it } from "node:test"
 import {
   applyPipeContinuationCandidates,
   buildPipeContinuationPickLine,
+  candidatesIncludePipeContinuation,
   isPipeContinuationCandidate,
+  isPipeContinuationOfferZone,
   listPipeContinuationCandidateTokens,
   matchPipeContinuationCandidates,
   mergeOptionAndPipeContinuationCandidates,
@@ -21,7 +23,7 @@ describe("listPipeContinuationCandidateTokens", () => {
   })
 })
 
-describe("stageLineOffersPipeContinuations", () => {
+describe("isPipeContinuationOfferZone / stageLineOffersPipeContinuations", () => {
   it("accepts tab -list with optional trailing options", () => {
     assert.equal(stageLineOffersPipeContinuations("tab -list"), true)
     assert.equal(stageLineOffersPipeContinuations("tab -list "), true)
@@ -32,6 +34,11 @@ describe("stageLineOffersPipeContinuations", () => {
     assert.equal(stageLineOffersPipeContinuations("tab"), false)
     assert.equal(stageLineOffersPipeContinuations("tab -nowurl"), false)
     assert.equal(stageLineOffersPipeContinuations("help -list"), false)
+  })
+
+  it("offers at EOL on complete -list without trailing space", () => {
+    const line = "setting -list"
+    assert.equal(isPipeContinuationOfferZone(line, line.length), true)
   })
 })
 
@@ -90,6 +97,35 @@ describe("applyPipeContinuationCandidates", () => {
     assert.ok(hit!.candidates.includes("| close"))
   })
 
+  it("offers pipe continuations for setting -list at EOL without trailing space", () => {
+    const line = "setting -list"
+    const hit = applyPipeContinuationCandidates(null, line, line.length)
+    assert.ok(hit)
+    assert.equal(hit!.tier, "third")
+    assert.equal(hit!.tokenStart, line.length)
+    assert.equal(hit!.tokenEnd, line.length)
+    assert.ok(hit!.candidates.includes("| browse"))
+  })
+
+  it("replaces stale second-tier -list menu with pipe continuations at EOL", () => {
+    const line = "setting -list"
+    const hit = applyPipeContinuationCandidates(
+      {
+        tokenStart: "setting ".length,
+        tokenEnd: line.length,
+        prefix: "-list",
+        candidates: ["-list", "-exit"],
+        tier: "second"
+      },
+      line,
+      line.length
+    )
+    assert.ok(hit)
+    assert.equal(hit!.tier, "third")
+    assert.ok(hit!.candidates.includes("| browse"))
+    assert.ok(!hit!.candidates.includes("-list"))
+  })
+
   it("narrows to pipe continuations when prefix is |", () => {
     const line = "tab -list |"
     const hit = applyPipeContinuationCandidates(
@@ -137,5 +173,10 @@ describe("isPipeContinuationCandidate", () => {
     assert.equal(isPipeContinuationCandidate("| browse"), true)
     assert.equal(isPipeContinuationCandidate("-url"), false)
     assert.equal(isPipeContinuationCandidate("browse"), false)
+  })
+
+  it("candidatesIncludePipeContinuation scans the list", () => {
+    assert.equal(candidatesIncludePipeContinuation(["-url", "| browse"]), true)
+    assert.equal(candidatesIncludePipeContinuation(["-url"]), false)
   })
 })

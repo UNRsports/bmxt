@@ -63,9 +63,11 @@ export const TerminalLogLines = memo(function TerminalLogLines({ lines }: Props)
         const { text, channel } = decodeLogLine(ln)
         const className =
           channel === "stderr" ? "bmxt-out-line bmxt-out-line--stderr" : "bmxt-out-line"
+        // EN: Empty strings collapse to zero-height divs — keep a visible blank row.
+        const displayText = text.length === 0 ? "\u00a0" : text
         return (
           <div key={i} className={className}>
-            {renderLogLineText(text)}
+            {renderLogLineText(displayText)}
           </div>
         )
       })}

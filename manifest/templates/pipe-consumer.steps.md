@@ -20,7 +20,17 @@ Consumers read **`BmxtRuleStream`** (`bmxt-rule/1`), never command-specific stru
 
 ## Candidate menu (producer stage)
 
-After a list-producer first command and `-list` (stage 0, third-token zone), the IME token menu also lists **pipe continuations** derived from the same `PIPE_CONSUMER_COMPLETION_IDS` (display `| browse`, insert ` | browse`, …). Do not maintain a second catalog for this — adding a consumer to the registry is enough for both the right-hand stage (after `|`) and these left-hand continuations.
+After a list-producer first command and **complete `-list`** (stage 0), the IME token menu lists **pipe continuations** from `PIPE_CONSUMER_COMPLETION_IDS` (display `| browse`, insert ` | browse`, …).
+
+Offer zone (any of):
+
+- Cursor in the third+ token zone after `-list` (including a trailing space: `setting -list `)
+- Cursor at EOL on the complete `-list` word with **no** trailing space (`setting -list`)
+- An existing third-tier hit for the same stage (e.g. `tab -list` option menu) — merge pipe tokens into it
+
+**Auto-open / Enter:** When the resolved menu includes `| …` continuations and the token prefix is empty, open the menu without Tab. Enter on a bare complete `-list` line opens that menu instead of submitting (second Enter / pick applies `| browse` and runs). Esc then Enter still runs the plain `-list`.
+
+Do not maintain a second catalog — registering a consumer is enough for both the right-hand stage (after `|`) and these left-hand continuations.
 
 ## Candidate menu (consumer stage)
 

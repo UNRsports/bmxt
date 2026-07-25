@@ -12,9 +12,10 @@ import { logBmxtKey } from "../../debug/key-log"
 import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import {
   buildPipeContinuationPickLine,
+  candidatesIncludePipeContinuation,
   isPipeContinuationCandidate
 } from "../../command-line/pipe/pipe-continuation-candidates.ts"
-import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
+import { shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
 import { applyTabChipPickToLine, tabChipCompletionZone } from "../../nav/tab-chip-token"
 import { parseNavReloadTabToken } from "../../nav/nav-reload-tab-token"
 import { moveNavReloadTabBlockCaret, deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor } from "../../nav/nav-reload-tab-token"
@@ -127,7 +128,7 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         const built = buildPipeContinuationPickLine(cur, s.tokenStart, s.tokenEnd, tok)
         nextLine = built.line
         nextPos = built.cursor
-        // EN: Continuation completes the consumer — do not leave a redundant first-tier menu.
+        // EN: Continuation completes the consumer — leave the full line visible for confirm Enter.
         options.setSubCmdPicker(null)
       } else {
         const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
@@ -153,14 +154,10 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       options.setCursorPos(nextPos)
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
+      // EN: Candidate Enter only commits into the line. Command runs on a later confirm Enter
+      //     once the full prompt is visible (and any next-tier menu has been offered).
       queueMicrotask(() => {
         options.syncImeTokenPicker(nextLine, nextPos)
-        const active = resolveActiveCommandSegment(nextLine, nextPos)
-        const segmentTrimmed = active.segmentText.trim()
-        if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
-          options.setSubCmdPicker(null)
-          options.submitLine()
-        }
       })
       options.focusPrompt()
     },
@@ -381,16 +378,13 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
             options.submitLine()
             return
           }
-          if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
-            options.setSubCmdPicker(null)
-            options.submitLine()
-            return
-          }
+          // EN: Lone first token (e.g. `tab`) → usage / continuation via submit, not re-insert.
           if (shouldSubmitLoneFirstTokenFromPicker(segmentTrimmed, subPick.tier, pickedToken)) {
             options.setSubCmdPicker(null)
             options.submitLine()
             return
           }
+          // EN: Otherwise Enter only commits the highlighted candidate into the prompt.
           applyTokenPickIndex(subPick.hi)
           return
         }
@@ -708,6 +702,29 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         !options.sessionNameTypingRef.current
       ) {
         e.preventDefault()
+        // EN: Prefer offering `| browse`… once before bare submit. After Esc dismiss, submit as-is.
+        if (
+          options.subCmdPickerRef.current === null &&
+          !options.imeTokenPickerDismissedRef.current
+        ) {
+          const line = options.lineRef.current
+          const pos = options.cursorRef.current
+          const imePick = resolveImeTokenPicker(
+            line,
+            pos,
+            options.completionCandidatesRef.current,
+            { emptyFirstPrefixShowsAll: true }
+          )
+          if (
+            imePick !== null &&
+            imePick.prefix.length === 0 &&
+            candidatesIncludePipeContinuation(imePick.candidates)
+          ) {
+            options.tabPickerOpenRequestRef.current = true
+            options.syncImeTokenPicker(line, pos)
+            return
+          }
+        }
         options.submitLine()
       }
     },

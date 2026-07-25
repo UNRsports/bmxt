@@ -23,6 +23,16 @@ export function isPipeContinuationCandidate(token: string): boolean {
   return /^\|\s+\S/.test(token.trim())
 }
 
+/** EN: Menu includes at least one `| …` continuation (open / prefer over bare submit). */
+export function candidatesIncludePipeContinuation(candidates: readonly string[]): boolean {
+  for (const token of candidates) {
+    if (isPipeContinuationCandidate(token)) {
+      return true
+    }
+  }
+  return false
+}
+
 /**
  * EN: Stage line is a list producer with `-list` already present (may still be typing options).
  * JA: 第一が list プロデューサーかつ第二が `-list`。
@@ -39,16 +49,60 @@ export function stageLineOffersPipeContinuations(stageLine: string): boolean {
 }
 
 /**
- * EN: True when the cursor is on the third+ token after `cmd -list` (options / pipe continuations).
+ * EN: True when the cursor may accept `| browse`… after a list producer `-list`.
+ * Covers: third+ token zone, trailing space after `-list`, and complete `-list` at EOL (no space).
  */
-export function isThirdTokenZoneAfterList(stageLine: string, cursor: number): boolean {
+export function isPipeContinuationOfferZone(stageLine: string, cursor: number): boolean {
   if (!stageLineOffersPipeContinuations(stageLine)) {
     return false
   }
-  const [l] = wordBounds(stageLine, cursor)
+  const [l, r] = wordBounds(stageLine, cursor)
   const left = stageLine.slice(0, l)
   const tokensBefore = left.trim() ? left.trim().split(/\s+/).filter((p) => p.length > 0) : []
-  return tokensBefore.length >= 2 && tokensBefore[1]!.toLowerCase() === "-list"
+
+  if (tokensBefore.length >= 2 && tokensBefore[1]!.toLowerCase() === "-list") {
+    return true
+  }
+
+  // EN: `setting -list` at EOL — cursor still on the complete `-list` word (no trailing space yet).
+  if (
+    tokensBefore.length === 1 &&
+    PIPE_PRODUCER_FIRST.has(tokensBefore[0]!.toLowerCase())
+  ) {
+    const word = stageLine.slice(l, r)
+    if (word.toLowerCase() !== "-list") {
+      return false
+    }
+    if (cursor < r) {
+      return false
+    }
+    const after = stageLine.slice(r)
+    if (after.length > 0 && !/^\s*$/.test(after)) {
+      return false
+    }
+    return true
+  }
+
+  return false
+}
+
+/** @deprecated Use `isPipeContinuationOfferZone`. */
+export function isThirdTokenZoneAfterList(stageLine: string, cursor: number): boolean {
+  return isPipeContinuationOfferZone(stageLine, cursor)
+}
+
+function isCursorOnCompleteListSecond(stageLine: string, cursor: number): boolean {
+  const [l, r] = wordBounds(stageLine, cursor)
+  const left = stageLine.slice(0, l)
+  const tokensBefore = left.trim() ? left.trim().split(/\s+/).filter((p) => p.length > 0) : []
+  if (tokensBefore.length !== 1) {
+    return false
+  }
+  if (!PIPE_PRODUCER_FIRST.has(tokensBefore[0]!.toLowerCase())) {
+    return false
+  }
+  const word = stageLine.slice(l, r)
+  return word.toLowerCase() === "-list" && cursor >= r
 }
 
 /**
@@ -121,6 +175,8 @@ export function mergeOptionAndPipeContinuationCandidates(
 
 /**
  * EN: Merge `| browse`… into third-tier picks on list producers; synthesize when options are empty.
+ * Also offers continuations when `-list` is complete at EOL (with or without trailing space).
+ * Stale second-tier menus on a complete `-list` word are replaced by the pipe menu.
  */
 export function applyPipeContinuationCandidates(
   hit: ImeTokenPickerModel | null,
@@ -128,19 +184,49 @@ export function applyPipeContinuationCandidates(
   cursor: number,
   opts?: ResolveImeTokenPickerOptions
 ): ImeTokenPickerModel | null {
-  if (!isThirdTokenZoneAfterList(stageLine, cursor)) {
+  if (!stageLineOffersPipeContinuations(stageLine)) {
     return hit
   }
-  if (hit !== null && hit.tier !== "third") {
-    return hit
+
+  const onCompleteListWord = isCursorOnCompleteListSecond(stageLine, cursor)
+  // EN: Do not keep `-list` / sibling second heads once `-list` is complete — offer `| …`.
+  let effectiveHit = hit
+  if (onCompleteListWord && hit !== null && hit.tier === "second") {
+    effectiveHit = null
+  }
+
+  if (effectiveHit !== null && effectiveHit.tier !== "third") {
+    return effectiveHit
+  }
+
+  const inOfferZone = isPipeContinuationOfferZone(stageLine, cursor)
+  const mergeExistingThird = effectiveHit !== null && effectiveHit.tier === "third"
+  if (!inOfferZone && !mergeExistingThird) {
+    return effectiveHit
   }
 
   const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
   const [l, r] = wordBounds(stageLine, cursor)
-  const prefix = hit?.prefix ?? stageLine.slice(l, cursor)
-  const tokenStart = hit?.tokenStart ?? l
-  const tokenEnd = hit?.tokenEnd ?? r
-  const optionCandidates = hit?.candidates ?? []
+
+  let prefix: string
+  let tokenStart: number
+  let tokenEnd: number
+  if (effectiveHit !== null) {
+    prefix = effectiveHit.prefix
+    tokenStart = effectiveHit.tokenStart
+    tokenEnd = effectiveHit.tokenEnd
+  } else if (onCompleteListWord) {
+    // EN: Append after `-list` — do not replace the second token.
+    prefix = ""
+    tokenStart = stageLine.length
+    tokenEnd = stageLine.length
+  } else {
+    prefix = stageLine.slice(l, cursor)
+    tokenStart = l
+    tokenEnd = r
+  }
+
+  const optionCandidates = effectiveHit?.candidates ?? []
   const merged = mergeOptionAndPipeContinuationCandidates(
     optionCandidates,
     prefix,

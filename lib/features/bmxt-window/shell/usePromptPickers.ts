@@ -3,6 +3,7 @@ import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isCompleteSecondTokenWithoutFurtherFixedTokens } from "../../command-line/second-token-picker.ts"
 import { isCompletePipeConsumerWithoutFurtherTokens } from "../../command-line/pipe/pipe-consumer-first-picker.ts"
+import { candidatesIncludePipeContinuation } from "../../command-line/pipe/pipe-continuation-candidates.ts"
 import {
   filterSessionSwitchPickerRows,
   resolveSessionSwitchPickerState,
@@ -289,11 +290,17 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       const pickerAlreadyOpen = subCmdPickerRef.current !== null
       const tabOpenRequested = tabPickerOpenRequestRef.current
       const emptyFirstTab = allowEmptyFirstPickerSyncRef.current
-      const mayOpenPicker = pickerAlreadyOpen || tabOpenRequested || emptyFirstTab
       const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
-        emptyFirstPrefixShowsAll: mayOpenPicker,
+        emptyFirstPrefixShowsAll: pickerAlreadyOpen || tabOpenRequested || emptyFirstTab,
         candidateMatch: incrementalPickerMatchMode(pickerAlreadyOpen)
       })
+      // EN: Auto-open when `-list` is complete and `| browse`… are available (no Tab required).
+      const autoOpenPipeContinuation =
+        resolved !== null &&
+        resolved.prefix.length === 0 &&
+        candidatesIncludePipeContinuation(resolved.candidates)
+      const mayOpenPicker =
+        pickerAlreadyOpen || tabOpenRequested || emptyFirstTab || autoOpenPipeContinuation
       allowEmptyFirstPickerSyncRef.current = false
       tabPickerOpenRequestRef.current = false
       if (!resolved) {
