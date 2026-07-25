@@ -16,7 +16,6 @@ import {
 import { domListLineHasFlavor } from "../dom/parse-dom-list-args.ts"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
 import { DOM_PAGE_ACTIVE_MODE_TOKENS } from "../dom/page-active-setting"
-import { PICKER_LIST_PRODUCER_TOKENS } from "../picker/list-producers.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import { isSecondToken } from "../builtin-commands/command-subcommands.gen"
 import {
@@ -27,7 +26,6 @@ import {
 } from "./ime-token-match"
 import type {
   ImeTokenPickerModel,
-  ImeTokenTier,
   ResolveImeTokenPickerOptions
 } from "./ime-token-picker-model.ts"
 
@@ -75,86 +73,6 @@ export function runWithImeLiveOverlayContext<T>(
   } finally {
     overlayContext = prev
   }
-}
-
-function remapPickerProducerTier(tier: ImeTokenTier): ImeTokenTier {
-  if (tier === "first") {
-    return "second"
-  }
-  if (tier === "second") {
-    return "third"
-  }
-  return "third"
-}
-
-function resolveBrowseProducerOverlayResult(
-  line: string,
-  cursor: number,
-  opts?: ResolveImeTokenPickerOptions
-): ImeLiveOverlayResolveResult {
-  const ctx = overlayContext
-  if (ctx === null) {
-    return { type: "none" }
-  }
-
-  const prefixMatch = /^(\s*)browse(\s+)/i.exec(line)
-  if (prefixMatch !== null) {
-    const producerStart = prefixMatch[0].length
-    if (cursor >= producerStart) {
-      const producerLine = line.slice(producerStart)
-      const producerCursor = cursor - producerStart
-
-      if (producerLine.trim().length === 0) {
-        return {
-          type: "pick",
-          model: {
-            tokenStart: producerStart,
-            tokenEnd: producerStart,
-            prefix: "",
-            candidates: [...PICKER_LIST_PRODUCER_TOKENS],
-            tier: "second"
-          }
-        }
-      }
-
-      const picked = ctx.resolveNestedSegment(producerLine, producerCursor, PICKER_LIST_PRODUCER_TOKENS, {
-        ...opts,
-        emptyFirstPrefixShowsAll: true
-      })
-      if (picked !== null) {
-        return {
-          type: "pick",
-          model: {
-            ...picked,
-            tokenStart: picked.tokenStart + producerStart,
-            tokenEnd: picked.tokenEnd + producerStart,
-            tier: remapPickerProducerTier(picked.tier)
-          }
-        }
-      }
-    }
-  }
-
-  const [l, r] = wordBounds(line, cursor)
-  const left = line.slice(0, l)
-  const tokensBefore = left.trim() ? left.trim().split(/\s+/) : []
-  if (tokensBefore.length === 0) {
-    const cmdWord = line.slice(l, r)
-    if (resolveCanonical(cmdWord) === "browse" && cursor >= line.length) {
-      return {
-        type: "pick",
-        model: {
-          tokenStart: line.length,
-          tokenEnd: line.length,
-          prefix: "",
-          candidates: [...PICKER_LIST_PRODUCER_TOKENS],
-          tier: "second"
-        }
-      }
-    }
-  }
-
-  return { type: "none" }
 }
 
 function resolvePageActiveModeOverlayResult(
@@ -326,7 +244,6 @@ type ImeLiveOverlayProviderImpl = {
 }
 
 const IME_LIVE_OVERLAY_PROVIDER_IMPLS: readonly ImeLiveOverlayProviderImpl[] = [
-  { id: "browse-producer", resolveResult: resolveBrowseProducerOverlayResult },
   { id: "page-active-mode", resolveResult: resolvePageActiveModeOverlayResult },
   { id: "dom-list-options", resolveResult: resolveDomListOverlayResult },
   { id: "search-list-scope", resolveResult: resolveSearchListOverlayResult }

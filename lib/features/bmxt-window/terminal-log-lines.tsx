@@ -8,10 +8,13 @@ type Props = {
 
 function LogTabRef(props: { meta: TabRefLogMeta }): ReactElement {
   const title = props.meta.title.trim() || "(no title)"
+  const url = typeof props.meta.url === "string" ? props.meta.url.trim() : ""
+  const showUrl = url.length > 0
+  const tooltip = showUrl ? `${title}\n${url}` : title
   const className =
     props.meta.appearance === "chip" ? "bmxt-log-tab-chip" : "bmxt-log-tab-plain"
   return (
-    <span className={className} title={title}>
+    <span className={className} title={tooltip}>
       {props.meta.faviconSrc ? (
         <img
           className={
@@ -38,6 +41,7 @@ function LogTabRef(props: { meta: TabRefLogMeta }): ReactElement {
         }>
         {title}
       </span>
+      {showUrl ? <span className="bmxt-log-tab-chip-url">{url}</span> : null}
     </span>
   )
 }
@@ -63,9 +67,11 @@ export const TerminalLogLines = memo(function TerminalLogLines({ lines }: Props)
         const { text, channel } = decodeLogLine(ln)
         const className =
           channel === "stderr" ? "bmxt-out-line bmxt-out-line--stderr" : "bmxt-out-line"
+        // EN: Empty strings collapse to zero-height divs — keep a visible blank row.
+        const displayText = text.length === 0 ? "\u00a0" : text
         return (
           <div key={i} className={className}>
-            {renderLogLineText(text)}
+            {renderLogLineText(displayText)}
           </div>
         )
       })}

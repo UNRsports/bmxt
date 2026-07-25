@@ -22,5 +22,9 @@
   "shell.welcome": {
     "ja": "BMXtへようこそ！本プログラムはテストバージョンです。",
     "en": "Welcome to BMXt! This program is a test version."
+  },
+  "shell.reloadHint": {
+    "ja": "⚠️タブやサイト内の操作を行う場合は、最初にページをリロードして拡張機能のスクリプトがページ内で有効化するようにしてください。⚠️",
+    "en": "⚠️ To operate on tabs or within a page, reload the page first so the extension scripts are active on that page. ⚠️"
   }
 }

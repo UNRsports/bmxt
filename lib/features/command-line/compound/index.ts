@@ -32,6 +32,12 @@ export {
   type ActiveCommandSegment,
   type CompoundSegmentSpan
 } from "./active-segment.ts"
+export {
+  resolveActivePipeStage,
+  scanPipeStageSpans,
+  type ActivePipeStage,
+  type PipeStageSpan
+} from "./pipe-stage-spans.ts"
 export { classifyCompoundEligibility } from "./classify-eligibility.ts"
 export {
   classifyOutcomeFromLines,

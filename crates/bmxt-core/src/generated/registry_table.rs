@@ -21,9 +21,14 @@ pub const COMMANDS: &[CmdMeta] = &[
         usage_primary: "clear",
     },
     CmdMeta {
+        name: "back",
+        aliases: &[],
+        usage_primary: "back | … | back",
+    },
+    CmdMeta {
         name: "close",
         aliases: &["c"],
-        usage_primary: "close <tabId>",
+        usage_primary: "close | close <tabId> | … | close",
     },
     CmdMeta {
         name: "dom",
@@ -51,9 +56,19 @@ pub const COMMANDS: &[CmdMeta] = &[
         usage_primary: "help",
     },
     CmdMeta {
+        name: "forward",
+        aliases: &[],
+        usage_primary: "forward | … | forward",
+    },
+    CmdMeta {
+        name: "reload",
+        aliases: &[],
+        usage_primary: "reload | … | reload",
+    },
+    CmdMeta {
         name: "tab",
         aliases: &[],
-        usage_primary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help",
+        usage_primary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
     },
     CmdMeta {
         name: "nav",
@@ -83,7 +98,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "browse",
         aliases: &[],
-        usage_primary: "browse <list-command>",
+        usage_primary: "<list-command> | browse",
     },
     CmdMeta {
         name: "setting",
@@ -145,22 +160,6 @@ static BRANCHES_TAB: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-nowurl",
-        trailing_tokens: &[],
-    },
-    SubcommandBranch {
-        head: "-back",
-        trailing_tokens: &[],
-    },
-    SubcommandBranch {
-        head: "-forward",
-        trailing_tokens: &[],
-    },
-    SubcommandBranch {
-        head: "-reload",
-        trailing_tokens: &[],
-    },
-    SubcommandBranch {
-        head: "-close",
         trailing_tokens: &[],
     },
     SubcommandBranch {
@@ -279,13 +278,16 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
     let lower = token.to_ascii_lowercase();
     match canonical {
         "clear" => false,
+        "back" => false,
         "close" => false,
         "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "group" => false,
         "help" => false,
-        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "-back" | "-forward" | "-reload" | "-close" | "help"),
+        "forward" => false,
+        "reload" => false,
+        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "help"),
         "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
         "aboutbmxt" => false,
@@ -301,12 +303,15 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
 pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
     match canonical {
         "clear" => &[],
+        "back" => &[],
         "close" => &[],
         "dom" => BRANCHES_DOM,
         "exit" => &[],
         "search" => BRANCHES_SEARCH,
         "group" => &[],
         "help" => &[],
+        "forward" => &[],
+        "reload" => &[],
         "tab" => BRANCHES_TAB,
         "nav" => BRANCHES_NAV,
         "translate" => BRANCHES_TRANSLATE,

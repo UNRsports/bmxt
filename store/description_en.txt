@@ -52,7 +52,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 - Detail bars (tab and others) can now be closed with Ctrl+C
 - Upgraded to TypeScript 6 and applied minor code fixes
 - nav: show identity label (kind:key) under the cursor; incremental attribute jump with /; learn origins after successful activate
-- Started implementing direct browser operations via nav commands without relying on browse
+- Started implementing direct tab operations via independent commands (tab, back, reload, and related) without relying on browse
 - Internal: moved the command-interpretation core to Rust/WASM; UI focuses on display and browser API execution
 - Renamed tabs to tab. Moved history, reload, and tab close from nav to tab (nav keeps -enter/-exit/-windowclose)
 
@@ -146,18 +146,19 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `exit` | Close the active terminal session; when it is the last session, close the BMXt window and clear process-scoped state |
 | `tab` | Show available options, then restore the prompt to `tab ` (with a trailing space) for continued input |
 | `tab -list [-url]` | List open tabs as plain tree (IDs included); `-url` adds URLs |
-| `browse tab -list [-url]` | Open tab picker column; search, multi-select `#`, bulk modes; `/` searches titles, Enter highlights, `n` jumps matches |
+| `tab -list [-url] | browse` | Open tab picker column; search, multi-select `#`, bulk modes; `/` searches titles, Enter highlights, `n` jumps matches |
 | `tab -exit -list` | Close tab picker column in this session (including `group new` picker) |
 | `tab -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved setting |
 | `tab -moveurl <url>` | Focus a tab with the given URL or open a new tab (http/https) |
 | `tab -nowurl` | Show the current tab’s URL |
 | `tab help` | Show the `tab` manual section |
-| `tab -back` / `-forward` | History back / forward on the target active tab |
-| `tab -reload` | Reload the target active tab; with a trailing space, open a tab candidate menu and insert `#t:<id>` blocks |
-| `tab -close` | Close the target tab after y/n confirm |
+| `back` | History back on the target active tab. Batch: `tab -list \| back` |
+| `forward` | History forward on the target active tab. Batch: `tab -list \| forward` |
+| `reload` | Reload the target active tab. Batch: `tab -list \| reload` |
+| `close` / `c` | Close the target tab after y/n confirm; `close <tabId>` / `c <tabId>` closes that id without confirm. Batch: `tab -list \| close` |
 | `dom` | Print available options; Enter alone restores the prompt to `dom ` (trailing space) for the next token |
 | `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | Plain DOM list from active tab (default `--normal --html`); optional substring filter; scriptable http(s) only |
-| `browse dom -list …` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; may prompt for optional site access |
+| `dom -list … | browse` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; may prompt for optional site access |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `nav` | Print usage; Enter alone restores the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, etc.); **/** incremental attribute jump; identity label `kind:key` |
@@ -165,20 +166,18 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `nav -windowclose` | Close the window that contains the target tab after y/n confirm (never the BMXt window) |
 | `search` | Print available options; Enter alone restores the prompt to `search ` for `-list` |
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = `--all`). Case-insensitive substring (no regex in v1) |
-| `browse search -list …` | Search picker column; in-picker progress; detail view and `[history]` open-target tree |
+| `search -list … | browse` | Search picker column; in-picker progress; detail view and `[history]` open-target tree |
 | `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
-| `close` / `c <tabId>` | Close a tab |
-| `close` / `c` (pipe) | With pipe input from `tab -list`, close every listed tab (e.g. `tab -list \| close`) |
 | `group new` / `group new <tabId> …` | Create a tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings |
-| `browse setting -list` | Open settings picker column; commit with `> save setting` |
+| `setting -list | browse` | Open settings picker column; commit with `> save setting` |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows setting snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (tmux-style terminal sessions in one BMXt window) |
 | `session -new [name]` | Create a new terminal session and switch to it; optional display name |
 | `session -list` | Plain list of terminal sessions |
-| `browse session -list` | Inline session picker on the prompt (↑↓ · Enter / 1–9) |
+| `session -list | browse` | Inline session picker on the prompt (↑↓ · Enter / 1–9) |
 | `session -switch [name]` | Inline session picker by display name (type to filter · Enter inserts `session -switch <name>` · Enter again runs switch) |
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session |
@@ -188,6 +187,6 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `translate -off` | Disable translation assist |
 | `translate -setting --ja-en` / `--en-ja` | Save the translation pair for nav typing assist |
 | `notes` | Show release notes for the current extension version; `notes <version>` for a specific version (e.g. `0.1.1`); `notes --list` lists versions that have entries |
-| `browse <list-command>` | Open a list as a picker column / inline UI (e.g. `browse tab -list`); plain `-list` prints to the log |
+| `<list-command> | browse` | Open a list as a picker column / inline UI (e.g. `tab -list | browse`); plain `-list` prints to the log |
 
 Shortcuts (chrome://extensions/shortcuts): `launch-bmxt` (default Shift+Alt+C), `reset-bmxt` (default Shift+Alt+R), `toggle-bmxt-float` (default Shift+Alt+F — in-page float prompt on the active http(s) tab).

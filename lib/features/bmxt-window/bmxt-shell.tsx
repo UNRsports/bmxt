@@ -169,7 +169,7 @@ type Props = {
   /** EN: Restored nav overlay ON after float remount. */
   restoredNavActive?: boolean
   processUiReady?: boolean
-  /** EN: Float — flush sessions/browse before `tab -close` removes the host tab. */
+  /** EN: Float — flush sessions/browse before `close` removes the host tab. */
   flushFloatPersist?: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
@@ -567,7 +567,8 @@ export function BmxtShell({
           navReloadTabMetaRef.current.set(span.tabId, {
             title,
             faviconSrc: resolveTabFaviconSrc(rawUrl),
-            label: title
+            label: title,
+            url: rawUrl
           })
           added = true
         } catch {
@@ -1325,8 +1326,10 @@ export function BmxtShell({
           <div className="bmxt-hint">
             {tShell("shell.welcome", uiSettings.locale)}
             <br />
-            <br />
             {tShell("shell.helpHint", uiSettings.locale)}
+            <br />
+            <br />
+            {tShell("shell.reloadHint", uiSettings.locale)}
           </div>
         ) : null}
         {upgradeBannerReady && postUpgradeBanner ? (

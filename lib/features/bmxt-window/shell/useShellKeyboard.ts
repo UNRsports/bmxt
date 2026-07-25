@@ -10,7 +10,14 @@ import type { TokenPickerModel } from "../token-picker-panel"
 import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
 import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
-import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
+import {
+  buildPipeContinuationPickLine,
+  candidatesIncludePipeContinuation,
+  isPipeContinuationCandidate
+} from "../../command-line/pipe/pipe-continuation-candidates.ts"
+import { shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
+import { applyTabChipPickToLine, tabChipCompletionZone } from "../../nav/tab-chip-token"
+import { parseNavReloadTabToken } from "../../nav/nav-reload-tab-token"
 import { moveNavReloadTabBlockCaret, deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor } from "../../nav/nav-reload-tab-token"
 import { lockedPrefixBlocksDelete } from "./prompt-locked-prefix"
 
@@ -98,38 +105,60 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
       const cur = options.lineRef.current
       const cursor = options.cursorRef.current
-      const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
-      const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)
+      const tabIdFromChipPick = parseNavReloadTabToken(tok)
+      const chipZone =
+        tabIdFromChipPick !== null ? tabChipCompletionZone(cur, cursor) : null
       let nextLine: string
       let nextPos: number
-      if (appendAtEnd) {
-        const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
-        nextLine = `${cur}${sep}${tok} `
-        nextPos = nextLine.length
-      } else if (prependFirstCommand) {
-        const built = buildFirstTierPrependPickLine(cur, cursor, tok)
+      if (
+        chipZone !== null &&
+        tabIdFromChipPick !== null &&
+        chipZone.tokenStart === s.tokenStart &&
+        chipZone.tokenEnd === s.tokenEnd
+      ) {
+        const built = applyTabChipPickToLine(
+          cur,
+          s.tokenStart,
+          s.tokenEnd,
+          tabIdFromChipPick,
+          chipZone.mode
+        )
         nextLine = built.line
         nextPos = built.cursor
+      } else if (isPipeContinuationCandidate(tok)) {
+        const built = buildPipeContinuationPickLine(cur, s.tokenStart, s.tokenEnd, tok)
+        nextLine = built.line
+        nextPos = built.cursor
+        // EN: Continuation completes the consumer — leave the full line visible for confirm Enter.
+        options.setSubCmdPicker(null)
       } else {
-        const addTrailing = s.tokenEnd >= cur.length
-        nextLine = addTrailing
-          ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
-          : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
-        nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
+        const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
+        const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)
+        if (appendAtEnd) {
+          const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
+          nextLine = `${cur}${sep}${tok} `
+          nextPos = nextLine.length
+        } else if (prependFirstCommand) {
+          const built = buildFirstTierPrependPickLine(cur, cursor, tok)
+          nextLine = built.line
+          nextPos = built.cursor
+        } else {
+          const addTrailing = s.tokenEnd >= cur.length
+          nextLine = addTrailing
+            ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
+            : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
+          nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
+        }
       }
       options.lineRef.current = nextLine
       options.setLine(nextLine)
       options.setCursorPos(nextPos)
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
+      // EN: Candidate Enter only commits into the line. Command runs on a later confirm Enter
+      //     once the full prompt is visible (and any next-tier menu has been offered).
       queueMicrotask(() => {
         options.syncImeTokenPicker(nextLine, nextPos)
-        const active = resolveActiveCommandSegment(nextLine, nextPos)
-        const segmentTrimmed = active.segmentText.trim()
-        if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
-          options.setSubCmdPicker(null)
-          options.submitLine()
-        }
       })
       options.focusPrompt()
     },
@@ -163,8 +192,10 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
   const applyHistoryLine = useCallback(
     (text: string) => {
       options.allowEmptyFirstPickerSyncRef.current = false
+      options.imeTokenPickerDismissedRef.current = false
       options.skipHistResetRef.current = true
       options.tabPressSeqRef.current = 0
+      options.lineRef.current = text
       options.setLine(text)
       options.setCursorPos(text.length)
     },
@@ -350,16 +381,13 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
             options.submitLine()
             return
           }
-          if (shouldAutoSubmitAfterTokenPick(segmentTrimmed)) {
-            options.setSubCmdPicker(null)
-            options.submitLine()
-            return
-          }
+          // EN: Lone first token (e.g. `tab`) → usage / continuation via submit, not re-insert.
           if (shouldSubmitLoneFirstTokenFromPicker(segmentTrimmed, subPick.tier, pickedToken)) {
             options.setSubCmdPicker(null)
             options.submitLine()
             return
           }
+          // EN: Otherwise Enter only commits the highlighted candidate into the prompt.
           applyTokenPickIndex(subPick.hi)
           return
         }
@@ -487,6 +515,13 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
             options.setLine(newLine)
             options.setCursorPos(muZone.urlStart + rep.length)
           })()
+          return
+        }
+        // EN: `tab:` / `tab::` (and chip continuation) — open live tab candidates.
+        if (tabChipCompletionZone(curLn, pos) !== null) {
+          options.tabPressSeqRef.current = 0
+          options.tabPickerOpenRequestRef.current = true
+          options.syncImeTokenPicker(curLn, pos)
           return
         }
         if (curLn.trim() === "") {
@@ -677,6 +712,29 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         !options.sessionNameTypingRef.current
       ) {
         e.preventDefault()
+        // EN: Prefer offering `| browse`… once before bare submit. After Esc dismiss, submit as-is.
+        if (
+          options.subCmdPickerRef.current === null &&
+          !options.imeTokenPickerDismissedRef.current
+        ) {
+          const line = options.lineRef.current
+          const pos = options.cursorRef.current
+          const imePick = resolveImeTokenPicker(
+            line,
+            pos,
+            options.completionCandidatesRef.current,
+            { emptyFirstPrefixShowsAll: true }
+          )
+          if (
+            imePick !== null &&
+            imePick.prefix.length === 0 &&
+            candidatesIncludePipeContinuation(imePick.candidates)
+          ) {
+            options.tabPickerOpenRequestRef.current = true
+            options.syncImeTokenPicker(line, pos)
+            return
+          }
+        }
         options.submitLine()
       }
     },

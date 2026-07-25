@@ -30,13 +30,8 @@ const SEARCH_LIST_OPTIONS = [
 /** EN: Same heads as `nav` second tokens (filter behavior under test). */
 const NAV_SECOND_HEADS = ["-enter", "-exit", "-windowclose"] as const
 
-/** EN: Tab-ops second tokens that moved from `nav` onto `tab`. */
-const TAB_OPS_SECOND_HEADS = [
-  "-back",
-  "-forward",
-  "-reload",
-  "-close"
-] as const
+/** EN: Standalone tab-verb first tokens (filter behavior under test). */
+const TAB_VERB_FIRST_TOKENS = ["back", "forward", "reload", "close"] as const
 
 describe("pickThirdTokenCandidates", () => {
   it("filters with contains while the picker menu is open", () => {
@@ -131,30 +126,30 @@ describe("nav second-token incremental filter (host full-list path)", () => {
   })
 })
 
-describe("tab ops second-token incremental filter (host full-list path)", () => {
-  it("finds -reload from option bodies while menu is open", () => {
+describe("tab verb first-token incremental filter (host full-list path)", () => {
+  it("finds reload from option bodies while menu is open", () => {
     const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
-      TAB_OPS_SECOND_HEADS,
+      TAB_VERB_FIRST_TOKENS,
       "re",
       "contains"
     )
     assert.equal(useFullCandidateList, true)
-    const reHits = matchCandidates(TAB_OPS_SECOND_HEADS, "re", filterMode)
-    assert.ok(reHits.includes("-reload"))
+    const reHits = matchCandidates(TAB_VERB_FIRST_TOKENS, "re", filterMode)
+    assert.ok(reHits.includes("reload"))
   })
 
-  it("finds -reload from dashed prefix", () => {
-    assert.deepEqual(matchCandidates(TAB_OPS_SECOND_HEADS, "-re", "contains"), ["-reload"])
+  it("finds reload from prefix", () => {
+    assert.deepEqual(matchCandidates(TAB_VERB_FIRST_TOKENS, "re", "contains"), ["reload"])
   })
 
   it("promotes full list for bare letter prefix so menu does not go empty", () => {
     const { useFullCandidateList, filterMode } = resolveOptionTokenFilterModes(
-      TAB_OPS_SECOND_HEADS,
+      TAB_VERB_FIRST_TOKENS,
       "r",
       "prefix"
     )
     assert.equal(useFullCandidateList, true)
-    const hits = matchCandidates(TAB_OPS_SECOND_HEADS, "r", filterMode)
-    assert.ok(hits.includes("-reload"))
+    const hits = matchCandidates(TAB_VERB_FIRST_TOKENS, "r", filterMode)
+    assert.ok(hits.includes("reload"))
   })
 })

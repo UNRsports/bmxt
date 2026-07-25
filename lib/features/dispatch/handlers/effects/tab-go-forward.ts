@@ -7,17 +7,33 @@ type E = Extract<ChromeEffect, { kind: "tab_go_forward" }>
 
 export async function applyTabGoForwardEffect(
   ctx: DispatchChromeContext,
-  _e: E
+  e: E
 ): Promise<string[]> {
-  const tab = await ctx.resolveTabArg(undefined)
-  if (!tab?.id) {
-    return [effectT(ctx, "effect.tabGoForward.noTarget")]
+  const lines: string[] = []
+  const ids = e.tab_ids.filter((id) => Number.isInteger(id) && id >= 0)
+
+  if (ids.length === 0) {
+    const tab = await ctx.resolveTabArg(undefined)
+    if (!tab?.id) {
+      return [effectT(ctx, "effect.tabGoForward.noTarget")]
+    }
+    const display = await resolveTabRefDisplay(tab)
+    try {
+      await chrome.tabs.goForward(tab.id)
+    } catch {
+      return [tabRefEffectLine(ctx, "effect.tabGoForward.failed", display)]
+    }
+    return [tabRefEffectLine(ctx, "effect.tabGoForward.done", display)]
   }
-  const display = await resolveTabRefDisplay(tab)
-  try {
-    await chrome.tabs.goForward(tab.id)
-  } catch {
-    return [tabRefEffectLine(ctx, "effect.tabGoForward.failed", display)]
+
+  for (const tabId of ids) {
+    const display = await resolveTabRefDisplay(tabId)
+    try {
+      await chrome.tabs.goForward(tabId)
+      lines.push(tabRefEffectLine(ctx, "effect.tabGoForward.done", display))
+    } catch {
+      lines.push(tabRefEffectLine(ctx, "effect.tabGoForward.failed", display))
+    }
   }
-  return [tabRefEffectLine(ctx, "effect.tabGoForward.done", display)]
+  return lines
 }

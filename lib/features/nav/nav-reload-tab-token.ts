@@ -1,8 +1,8 @@
 /**
- * EN: `tab -reload` tab block tokens (`#t:<id>`) — parse, atomic delete, completion zone.
+ * EN: Legacy `#t:<id>` chip helpers (prompt mirror / log rewrite).
+ * Tab-verb targeting is bare command (active) or pipe (`tab -list | back`); no live tab picker.
  */
 
-import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys.ts"
 import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url.ts"
 
@@ -11,8 +11,6 @@ export const NAV_RELOAD_TAB_TOKEN_RE = /^#t:(\d+)$/
 /** EN: Default visible title length inside a prompt chip (code points). */
 export const NAV_RELOAD_CHIP_TITLE_MAX_CHARS = 24
 
-const NAV_RELOAD_LEAD_RE = /^\s*tab\s+-reload\s+/i
-
 export type NavReloadTabTokenSpan = {
   start: number
   end: number
@@ -20,12 +18,14 @@ export type NavReloadTabTokenSpan = {
   token: string
 }
 
-/** EN: Display metadata for a selected `#t:<id>` chip in the prompt mirror. */
+/** EN: Display metadata for a selected `#t:<id>` chip in the prompt mirror / log. */
 export type NavReloadTabChipMeta = {
   title: string
   faviconSrc: string | null
-  /** EN: Picker row label (title + id); also used as native tooltip. */
+  /** EN: Picker row / tooltip label (title only — never tab id). */
   label: string
+  /** EN: Tab URL when known (log `tab::` chips show title + url). */
+  url: string
 }
 
 /** EN: Format a tab id as a prompt block token. */
@@ -113,7 +113,7 @@ export function snapNavReloadTabBlockCaret(line: string, cursor: number): number
 
 /**
  * EN: ArrowLeft/ArrowRight — jump one `#t:<id>` block at a time when in the chip region.
- * Returns null when the browser default character move should run (e.g. still in `tab -reload `).
+ * Returns null when the browser default character move should run (e.g. still in `reload `).
  */
 export function moveNavReloadTabBlockCaret(
   line: string,
@@ -258,43 +258,14 @@ export function deleteNavReloadTabBlockForwardAtCursor(
 }
 
 /**
- * EN: Completion zone after `tab -reload ` for picking open tabs.
- * Returns null when the cursor is not in that rest zone.
+ * EN: Completion zone for live tab pickers on tab-verbs — disabled.
+ * Targeting is bare (active) or pipe; do not open a `command {tabs}` menu.
  */
 export function navReloadTabCompletionZone(
-  line: string,
-  cursor: number
+  _line: string,
+  _cursor: number
 ): { tokenStart: number; tokenEnd: number; prefix: string } | null {
-  const active = resolveActiveCommandSegment(line, cursor)
-  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
-  const localCursor = active.localCursor
-  const lead = NAV_RELOAD_LEAD_RE.exec(segmentLine)
-  if (!lead) {
-    return null
-  }
-  const restStartLocal = lead[0]!.length
-  if (localCursor < restStartLocal) {
-    return null
-  }
-  const beforeCursor = segmentLine.slice(0, localCursor)
-  const lastSpace = beforeCursor.lastIndexOf(" ")
-  const tokenStartLocal = lastSpace >= restStartLocal - 1 ? lastSpace + 1 : restStartLocal
-  let tokenEndLocal = localCursor
-  while (tokenEndLocal < segmentLine.length && !/\s/.test(segmentLine[tokenEndLocal]!)) {
-    tokenEndLocal += 1
-  }
-  const prefix = segmentLine.slice(tokenStartLocal, localCursor)
-  if (prefix.startsWith("#t:") && parseNavReloadTabToken(prefix) !== null && localCursor === tokenEndLocal) {
-    /* EN: Cursor at end of a complete block — still allow adding another after space only. */
-    if (localCursor < segmentLine.length && segmentLine[localCursor] !== " ") {
-      return null
-    }
-  }
-  return {
-    tokenStart: active.segmentStart + tokenStartLocal,
-    tokenEnd: active.segmentStart + tokenEndLocal,
-    prefix
-  }
+  return null
 }
 
 export type NavReloadTabCandidate = {
@@ -307,7 +278,7 @@ export type NavReloadTabCandidate = {
 }
 
 /**
- * EN: Incremental filter for `tab -reload` tab menu.
+ * EN: Incremental filter for reload/back/forward tab menu.
  * - bare needle → title contains (case-insensitive)
  * - `@…` → URL contains (case-insensitive); bare `@` matches all
  */
@@ -372,6 +343,7 @@ export function navReloadTabChipMetaFromCandidate(
   return {
     title: candidate.title,
     faviconSrc: candidate.faviconSrc,
-    label: candidate.label
+    label: candidate.label,
+    url: candidate.url
   }
 }

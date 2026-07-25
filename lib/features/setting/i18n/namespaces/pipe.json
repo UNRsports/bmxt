@@ -1,7 +1,19 @@
 {
+  "pipe.back.noTabs": {
+    "ja": "error: パイプ入力に履歴バック対象のタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tab records for back"
+  },
   "pipe.close.noTabs": {
     "ja": "error: パイプ入力に tabs.tab レコードがありません",
     "en": "error: pipe input has no tabs.tab records"
+  },
+  "pipe.forward.noTabs": {
+    "ja": "error: パイプ入力に進められるタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tab records for forward"
+  },
+  "pipe.reload.noTabs": {
+    "ja": "error: パイプ入力にリロード対象のタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tab records for reload"
   },
   "pipe.error.kindMismatch": {
     "ja": "error: パイプ先 {stage} はレコード種別 [{kinds}] のみ受け付けます",
@@ -18,5 +30,21 @@
   "pipe.error.unsupportedConsumer": {
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
+  },
+  "pipe.browse.noListResult": {
+    "ja": "error: browse には `-list` 列挙の ListResult が必要です（例: tab -list | browse）",
+    "en": "error: browse requires a `-list` ListResult (e.g. tab -list | browse)"
+  },
+  "pipe.tabChip.activateFailed": {
+    "ja": "error: タブをアクティブにできませんでした",
+    "en": "error: could not activate tab"
+  },
+  "pipe.tabChip.movedTo": {
+    "ja": "{title}へ移動しました。",
+    "en": "Moved to {title}."
+  },
+  "pipe.tabChip.multiActivateForbidden": {
+    "ja": "error: タブ移動は一つのタブを指定してください。複数のタブ指定後は「|（パイプ）」による接続で他コマンドにより一括操作をする前提となります",
+    "en": "error: activate one tab only. After selecting multiple tabs, connect with `|` (pipe) to batch other commands"
   }
 }

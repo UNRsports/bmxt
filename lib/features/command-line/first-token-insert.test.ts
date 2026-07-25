@@ -29,24 +29,31 @@ describe("isFirstTierPrependPick", () => {
 })
 
 describe("buildFirstTierPrependPickLine", () => {
-  it("prepends picker before setting -list from line start", () => {
+  it("appends | browse when picking browse over setting -list", () => {
     assert.deepEqual(buildFirstTierPrependPickLine("setting -list", 0, "browse"), {
-      line: "browse setting -list",
-      cursor: 7
+      line: "setting -list | browse",
+      cursor: "setting -list | browse".length
     })
   })
 
-  it("drops spaced filter prefix pi", () => {
+  it("drops spaced filter prefix pi then appends | browse", () => {
     assert.deepEqual(buildFirstTierPrependPickLine("pi setting -list", 2, "browse"), {
-      line: "browse setting -list",
-      cursor: 7
+      line: "setting -list | browse",
+      cursor: "setting -list | browse".length
     })
   })
 
-  it("drops merged filter prefix pi", () => {
+  it("drops merged filter prefix pi then appends | browse", () => {
     assert.deepEqual(buildFirstTierPrependPickLine("pisetting -list", 2, "browse"), {
-      line: "browse setting -list",
-      cursor: 7
+      line: "setting -list | browse",
+      cursor: "setting -list | browse".length
+    })
+  })
+
+  it("still prepends non-browse first tokens", () => {
+    assert.deepEqual(buildFirstTierPrependPickLine("setting -list", 0, "help"), {
+      line: "help setting -list",
+      cursor: 5
     })
   })
 })

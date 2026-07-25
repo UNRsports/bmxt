@@ -10,6 +10,8 @@ export type TabRefLogMeta = {
   title: string
   faviconSrc: string | null
   appearance: TabRefLogAppearance
+  /** EN: Optional URL face for `tab::` command-echo chips (never tab id). */
+  url?: string | null
 }
 
 const TAB_REF_PREFIX = "\u001ftab-ref:"
@@ -20,7 +22,8 @@ export function encodeTabRefInline(meta: TabRefLogMeta): string {
   const payload: TabRefLogMeta = {
     title: meta.title,
     faviconSrc: meta.faviconSrc,
-    appearance: meta.appearance
+    appearance: meta.appearance,
+    url: meta.url ?? null
   }
   return `${TAB_REF_PREFIX}${JSON.stringify(payload)}${TAB_REF_SUFFIX}`
 }
@@ -84,10 +87,17 @@ function tryParseTabRefPayload(raw: string): TabRefLogMeta | null {
           : null
     const appearance: TabRefLogAppearance =
       record.appearance === "chip" ? "chip" : "plain"
+    const url =
+      record.url === null || record.url === undefined
+        ? null
+        : typeof record.url === "string"
+          ? record.url
+          : null
     return {
       title: record.title,
       faviconSrc,
-      appearance
+      appearance,
+      url
     }
   } catch {
     return null

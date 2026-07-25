@@ -94,7 +94,7 @@ export type CommandDispatchDeps = {
   submitExternalSettingsRecoveryAnswer?: (
     trimmed: string
   ) => Promise<ExternalSettingsRecoveryAnswerResult>
-  /** EN: Pending y/n for `tab -close` / `nav -windowclose`. */
+  /** EN: Pending y/n for `close` / `nav -windowclose`. */
   navConfirmClosePendingRef: React.MutableRefObject<
     import("../../../nav/nav-confirm-close").NavConfirmClosePending | null
   >

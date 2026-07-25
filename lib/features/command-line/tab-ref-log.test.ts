@@ -22,7 +22,8 @@ describe("encodeTabRefInline / parseTabRefLogSegments", () => {
         meta: {
           title: "Example",
           faviconSrc: "chrome-extension://x/_favicon/?pageUrl=https%3A%2F%2Fe.example%2F",
-          appearance: "plain"
+          appearance: "plain",
+          url: null
         }
       }
     ])
@@ -35,14 +36,40 @@ describe("encodeTabRefInline / parseTabRefLogSegments", () => {
       appearance: "plain"
     })
     assert.deepEqual(parseTabRefLogSegments(chip), [
-      { kind: "tabRef", meta: { title: "ドキュメント", faviconSrc: null, appearance: "plain" } }
+      {
+        kind: "tabRef",
+        meta: { title: "ドキュメント", faviconSrc: null, appearance: "plain", url: null }
+      }
     ])
   })
 
   it("defaults missing appearance to plain", () => {
     const legacy = `\u001ftab-ref:${JSON.stringify({ title: "X", faviconSrc: null })}\u001f`
     assert.deepEqual(parseTabRefLogSegments(legacy), [
-      { kind: "tabRef", meta: { title: "X", faviconSrc: null, appearance: "plain" } }
+      {
+        kind: "tabRef",
+        meta: { title: "X", faviconSrc: null, appearance: "plain", url: null }
+      }
+    ])
+  })
+
+  it("round-trips optional url on chip appearance", () => {
+    const chip = encodeTabRefInline({
+      title: "GitHub",
+      faviconSrc: null,
+      appearance: "chip",
+      url: "https://github.com/x"
+    })
+    assert.deepEqual(parseTabRefLogSegments(chip), [
+      {
+        kind: "tabRef",
+        meta: {
+          title: "GitHub",
+          faviconSrc: null,
+          appearance: "chip",
+          url: "https://github.com/x"
+        }
+      }
     ])
   })
 

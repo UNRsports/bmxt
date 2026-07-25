@@ -37,7 +37,7 @@ function resolveCanonical(cmd: string): string | null {
 
 /**
  * EN: Cursor is at/after a complete second token with no further fixed-token menu
- *     (e.g. `tab -back` / `tab -back `). Empty-filter keep-alive must not leave a hollow popup.
+ *     (e.g. `tab -nowurl` / `tab -nowurl `). Empty-filter keep-alive must not leave a hollow popup.
  */
 export function isCompleteSecondTokenWithoutFurtherFixedTokens(
   line: string,

@@ -1,6 +1,7 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
+import type { RunCommandOptions } from "./run-command.ts"
 
 /**
  * EN: Where a command runs in the BMXt POSIX Profile.
@@ -23,6 +24,7 @@ export type CommandEntry = {
   tryRun: (
     segment: string,
     deps: CommandDispatchDeps,
-    locale: UiLocale
+    locale: UiLocale,
+    options?: RunCommandOptions
   ) => Promise<SegmentOutcome | null>
 }

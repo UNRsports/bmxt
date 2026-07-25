@@ -31,3 +31,4 @@ export {
   parseBmxtRuleStreamJson
 } from "./serialize.ts"
 export { bmxtRuleStreamFromListResult } from "./adapters/from-list-result.ts"
+export { bmxtRuleStreamFromTabIds } from "./adapters/from-tab-ids.ts"

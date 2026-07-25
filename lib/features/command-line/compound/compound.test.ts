@@ -184,7 +184,7 @@ describe("classifyOutcomeFromLines", () => {
   })
 
   it("detects unknown command lines", () => {
-    const out = classifyOutcomeFromLines(["error: unknown command: foo. Type help."])
+    const out = classifyOutcomeFromLines(['error: unknown command: "foo" was entered.'])
     assert.equal(out.ok, false)
     assert.equal(out.code, "unknown")
   })

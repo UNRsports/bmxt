@@ -542,6 +542,17 @@ body {
   white-space: nowrap;
 }
 
+.bmxt-log-tab-chip-url {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 18em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.72;
+  font-size: 0.92em;
+}
+
 /* EN: Result lines — favicon + title only, no chip chrome (distinct from command echo). */
 .bmxt-log-tab-plain {
   display: inline-flex;
@@ -1258,11 +1269,19 @@ body {
 
 .bmxt-subcmd-picker-hint {
   flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.5em;
   padding: 6px 10px 4px;
   color: #8b949e;
   font-size: 11px;
   line-height: 1.4;
   border-bottom: 1px solid #21262d;
+}
+
+.bmxt-subcmd-picker-hint-pipe {
+  color: #8b949e;
 }
 
 .bmxt-subcmd-picker-list {

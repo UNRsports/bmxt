@@ -8,6 +8,14 @@ import { applyRedirectsToOutcome } from "./apply-redirect.ts"
 import { isNullRedirectTarget, parseRedirects } from "./parse-redirect.ts"
 import { BACKGROUND_COMMAND_ENTRY } from "./registry.ts"
 
+export type RunCommandOptions = {
+  /**
+   * EN: When true, background `RUN_CMD` skips appendLog/setLog patches (pipe producers).
+   * JA: true のとき background `RUN_CMD` のログ patch を適用しない（パイプ左辺用）。
+   */
+  suppressLogPatches?: boolean
+}
+
 /**
  * EN: Single shell entry for segment execution (compound / pipe).
  * Parses redirects, dispatches via WASM `runDispatch`, then background `RUN_CMD`.
@@ -15,7 +23,8 @@ import { BACKGROUND_COMMAND_ENTRY } from "./registry.ts"
 export async function runCommand(
   segment: string,
   deps: CommandDispatchDeps,
-  locale: UiLocale
+  locale: UiLocale,
+  options?: RunCommandOptions
 ): Promise<SegmentOutcome> {
   const parsed = parseRedirects(segment)
   if (parsed.ok === false) {
@@ -34,7 +43,7 @@ export async function runCommand(
     }
   }
 
-  const outcome = await dispatchSegment(segment, deps, locale)
+  const outcome = await dispatchSegment(segment, deps, locale, options)
   return applyRedirectsToOutcome(outcome, parsed.redirects)
 }
 
@@ -76,7 +85,8 @@ export async function tryRunUiCommand(
 async function dispatchSegment(
   commandText: string,
   deps: CommandDispatchDeps,
-  locale: UiLocale
+  locale: UiLocale,
+  options?: RunCommandOptions
 ): Promise<SegmentOutcome> {
   const { bundle, uiOutcome } = await dispatchSegmentUiOutcome(commandText, deps, locale)
 
@@ -89,7 +99,7 @@ async function dispatchSegment(
   }
 
   if (bundle.ty === "effects") {
-    const background = await BACKGROUND_COMMAND_ENTRY.tryRun(commandText, deps, locale)
+    const background = await BACKGROUND_COMMAND_ENTRY.tryRun(commandText, deps, locale, options)
     if (background !== null) {
       return background
     }

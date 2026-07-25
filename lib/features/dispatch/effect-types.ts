@@ -23,8 +23,8 @@ export type ChromeEffect =
   | { kind: "session_new"; name: string }
   | { kind: "session_next" }
   | { kind: "session_prev" }
-  | { kind: "tab_go_back" }
-  | { kind: "tab_go_forward" }
+  | { kind: "tab_go_back"; tab_ids: number[] }
+  | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
   | { kind: "tabs_list"; show_url: string }
   | { kind: "tabs_move_url"; url: string }

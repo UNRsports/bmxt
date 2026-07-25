@@ -28,11 +28,11 @@ export function clampPromptLockedPrefix(
     if (lockedPrefix.startsWith(nextLine)) {
       // EN: Deletion ate into the locked region — restore prefix, empty answer.
       nextLine = lockedPrefix
-    } else if (nextLine.length <= 8 && !/\s/.test(nextLine)) {
-      // EN: Short paste / select-all replace — treat buffer as the answer only.
+    } else if (nextLine.length <= 3 && !/\s/.test(nextLine)) {
+      // EN: Short paste / select-all replace (y/n/yes/no) — treat buffer as the answer only.
       nextLine = lockedPrefix + nextLine
     } else {
-      // EN: Stale command line still in the buffer (e.g. `tab -close`) — drop it.
+      // EN: Stale command line still in the buffer (e.g. `close`) — drop it.
       nextLine = lockedPrefix
     }
   }

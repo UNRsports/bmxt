@@ -3,11 +3,13 @@
 import { useLayoutEffect, useRef } from "react"
 import type { ImeTokenTier } from "../command-line/ime-token-picker"
 import { imeTokenPickerHint } from "../command-line/ime-token-picker"
+import { isPipeProducerFirstCommand } from "../command-line/pipe/pipe-producer-first.ts"
+import { tImeToken } from "../setting/i18n/ns/ime-token"
 import { useUiSettings } from "../setting/use-ui-settings"
 
 const ITEM_ID_PREFIX = "bmxt-subcmd-item"
 
-/** EN: Structured row for live candidates (e.g. `tab -reload` tabs). */
+/** EN: Structured row for live candidates (e.g. `reload` tabs). */
 export type TokenPickerCandidateRow = {
   title: string
   /** EN: Optional secondary line (omitted for nav reload tab rows). */
@@ -25,6 +27,8 @@ export type TokenPickerModel = {
   candidateRows?: TokenPickerCandidateRow[]
   hi: number
   tier: ImeTokenTier
+  /** EN: Stage already has a pipe-producer first command (second/third tier). */
+  pipeAvailable?: boolean
 }
 
 type Props = {
@@ -36,6 +40,11 @@ export function TokenPickerPanel({ model }: Props) {
   const locale = uiSettings.locale
   const listRef = useRef<HTMLDivElement>(null)
   const hint = imeTokenPickerHint(model.tier, locale)
+  const hi = Math.min(Math.max(0, model.hi), Math.max(0, model.candidates.length - 1))
+  const pipeAvailable =
+    model.tier === "first"
+      ? isPipeProducerFirstCommand(model.candidates[hi] ?? "")
+      : model.pipeAvailable === true
   const useRows =
     Array.isArray(model.candidateRows) &&
     model.candidateRows.length === model.candidates.length
@@ -45,13 +54,19 @@ export function TokenPickerPanel({ model }: Props) {
     if (!list || model.candidates.length === 0) {
       return
     }
-    const hi = Math.min(Math.max(0, model.hi), model.candidates.length - 1)
     list.querySelector<HTMLElement>(`#${ITEM_ID_PREFIX}-${hi}`)?.scrollIntoView({ block: "nearest" })
-  }, [model.hi, model.candidates.length])
+  }, [hi, model.candidates.length])
 
   return (
     <div className="bmxt-subcmd-picker" role="listbox" aria-label={hint}>
-      <div className="bmxt-subcmd-picker-hint">{hint}</div>
+      <div className="bmxt-subcmd-picker-hint">
+        <span>{hint}</span>
+        {pipeAvailable ? (
+          <span className="bmxt-subcmd-picker-hint-pipe">
+            {tImeToken("imeToken.hint.pipeAvailable", locale)}
+          </span>
+        ) : null}
+      </div>
       <div ref={listRef} className="bmxt-subcmd-picker-list">
         {model.candidates.map((c, i) => {
           const row = useRows ? model.candidateRows![i] : null

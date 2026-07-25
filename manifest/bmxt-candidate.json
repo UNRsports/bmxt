@@ -93,7 +93,7 @@
     {
       "id": "browser.tabIds",
       "domain": "browser",
-      "description": "Numeric tab IDs from the current tab tree (same scope as tab -list).",
+      "description": "Numeric tab IDs from the current tab tree (same scope as tab -list). Host `tab:` chip picker uses chrome.tabs.query directly.",
       "valueKind": "integer",
       "chromeApis": ["tabs.query"],
       "filterDefault": "prefix",
@@ -177,21 +177,20 @@
       "zones": []
     },
     {
+      "command": "back",
+      "zones": []
+    },
+    {
       "command": "close",
-      "zones": [
-        {
-          "tier": "rest",
-          "tokenIndexMin": 1,
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles"]
-            }
-          ],
-          "ui": "inline_token"
-        }
-      ]
+      "zones": []
+    },
+    {
+      "command": "forward",
+      "zones": []
+    },
+    {
+      "command": "reload",
+      "zones": []
     },
     {
       "command": "dom",
@@ -286,17 +285,6 @@
           "when": { "second": "-setting", "third": "-page-active" },
           "tier": "rest",
           "sources": [{ "kind": "plugin.feature", "provider": "tabs.pageActiveModes" }]
-        },
-        {
-          "when": { "second": "-reload" },
-          "tier": "rest",
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
-            }
-          ]
         }
       ]
     },
@@ -362,13 +350,7 @@
     },
     {
       "command": "browse",
-      "zones": [
-        {
-          "tier": "second",
-          "sources": [{ "kind": "plugin.feature", "provider": "picker.listProducerCommands" }],
-          "tierRemap": { "first": "second", "second": "third", "third": "third" }
-        }
-      ]
+      "zones": []
     },
     {
       "command": "setting",

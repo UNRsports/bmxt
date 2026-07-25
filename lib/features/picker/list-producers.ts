@@ -1,6 +1,6 @@
 /**
- * EN: First-command tokens that `browse` may wrap — derived from list_id registry metadata.
- * JA: `browse` が包める第一コマンド — list_id レジストリのメタデータから導出。
+ * EN: First-command tokens that produce `-list` output (for docs / overlays).
+ * JA: `-list` 列挙を出す第一コマンド（文書・オーバーレイ用）。
  */
 
 import { LIST_COMMAND_ENTRIES } from "../command-line/list-commands/registry.ts"

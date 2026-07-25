@@ -30,18 +30,26 @@
     "line": "tab -moveurl https://example.com/path",
     "expect": { "ty": "effects", "effects": [{ "kind": "tabs_move_url", "url": "https://example.com/path" }] }
   },
-  { "line": "tab -back", "expect": { "ty": "effects", "effects": [{ "kind": "tab_go_back" }] } },
-  { "line": "tab -forward", "expect": { "ty": "effects", "effects": [{ "kind": "tab_go_forward" }] } },
+  { "line": "back", "expect": { "ty": "effects", "effects": [{ "kind": "tab_go_back", "tab_ids": [] }] } },
+  { "line": "forward", "expect": { "ty": "effects", "effects": [{ "kind": "tab_go_forward", "tab_ids": [] }] } },
   {
-    "line": "tab -reload",
+    "line": "reload",
     "expect": { "ty": "effects", "effects": [{ "kind": "tab_reload", "tab_ids": [] }] }
   },
   {
-    "line": "tab -reload #t:12 #t:34",
+    "line": "reload 12 34",
     "expect": { "ty": "effects", "effects": [{ "kind": "tab_reload", "tab_ids": [12, 34] }] }
   },
   {
-    "line": "tab -close --confirmed",
+    "line": "back 12",
+    "expect": { "ty": "effects", "effects": [{ "kind": "tab_go_back", "tab_ids": [12] }] }
+  },
+  {
+    "line": "forward 7",
+    "expect": { "ty": "effects", "effects": [{ "kind": "tab_go_forward", "tab_ids": [7] }] }
+  },
+  {
+    "line": "close --confirmed",
     "expect": { "ty": "effects", "effects": [{ "kind": "close_current_tab" }] }
   },
   {

@@ -5,9 +5,13 @@
 # Inter-command vocabulary (closed): DispatchBundle | ListResult(bmxt-list/1) | BmxtRuleStream(bmxt-rule/1) | exit status — see lib/features/command-line/inter-command/ and manifest/templates/.
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
-close,,,,c,close <tabId>,args[1] を整数 tabId として解釈し Effect: close_tab。非数値なら usage 行を返す。パイプ右辺 `close`/`c` は bmxtRule `page.open` consumer（tabId 省略可）。,第二トークン相当は可変 tabId（manifest subcommands なし）。pipe consumer は語彙 `acceptsKinds` で接続
+close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`（パイプ内部）。タブ候補 UI なし。,pipe consumer は語彙 `acceptsKinds` で接続。0.8.0: tab/nav 配下から独立 first
+back,,,,,back | … | back,引数なし=操作先アクティブ即時。Effect `tab_go_back` { tab_ids: [] }。パイプ右辺 `back` は page.open → 内部で `back <tabId>`。タブ候補 UI なし。,独立 first。0.8.0: tab/nav 配下から独立。複数指定はパイプのみ（左辺は `tab -list` または `tab:` チップ `#t:…`）
+forward,,,,,forward | … | forward,引数なし=操作先即時。Effect `tab_go_forward`。パイプ `… | forward`。タブ候補 UI なし。,独立 first。0.8.0
+reload,,,,,reload | … | reload,引数なし=操作先即時。Effect `tab_reload`。パイプ `… | reload`。旧 `#t:` チップ候補は廃止。,独立 first。0.8.0
+（ホスト）,tab:,,,,tab: | tab:{needle} | tab::{needle} | Space後継続 | #t:… Enter,ライブタブ候補。選択→`#t:<id>` のみ（候補閉じる）。Enter=最後のチップをアクティブ。Space=候補再表示で複数選択。パイプ: `#t:… | back` 等。,`tab-chip-token.ts` + `tab-chip-producer.ts` + `tab-chip-activate.ts`。`tab` コマンドとは別トークン。0.8.0
 dom,,,,,dom …,単独 `dom` + Enter: msgs + promptPrefix `dom `（require_second_token）。第二候補に `help`。,
-dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** `RUN_CMD` → Effect `dom_list` → **`-list` レジストリ**（`dom-list-fetch.ts` / `dom-list-command.ts`）→ `ListResult`（`bmxt-list/1`）→ ターミナルログ。ピッカーは `browse dom -list …`。閉じるは `dom -exit -list`。パイプ時は bmxtRule（`dom.node` / `dom.notice`）。,語彙: ListResult→bmxtRule
+dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** `RUN_CMD` → Effect `dom_list` → **`-list` レジストリ**（`dom-list-fetch.ts` / `dom-list-command.ts`）→ `ListResult`（`bmxt-list/1`）→ ターミナルログ。ピッカーは `dom -list … | browse`。閉じるは `dom -exit -list`。パイプ時は bmxtRule（`dom.node` / `dom.notice`）。,語彙: ListResult→bmxtRule
 dom,-list,--normal,rest,,（同上）,trailingTokens。mode `--normal`。`--with` と排他。,
 dom,-list,--with,rest,,（同上）,trailingTokens。mode `--with`。`--normal` と排他。,
 dom,-list,--html,rest,,（同上）,trailingTokens。flavor `--html`。`--react` と排他。,
@@ -19,7 +23,7 @@ dom,-setting,-page-active,none,,dom -setting -page-active --auto | --manual,不�
 dom,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
 dom,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。mode=manual。,
 search,,,,,search …,単独 `search` + Enter: msgs + promptPrefix `search `。第二候補に `help`。,
-search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。ピッカーは `browse search -list …`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map
+search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map
 search,-list,--all,rest,,（同上）,scope `--all`。,
 search,-list,--history,rest,,（同上）,scope `--history`。,
 search,-list,--bookmark,rest,,（同上）,scope `--bookmark`。,
@@ -28,9 +32,9 @@ search,-list,--snapshot,rest,,（同上）,scope `--snapshot`。,
 search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
 group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
-browse,,,,,browse <list-command>,UiAction `browse` → ListResult kind 族で列を開く。詳細バー **Ctrl+C** で対応列を閉じる（`tab`/`search`/`dom`/`setting`）。,語彙: UiAction browse + list kinds。旧 `picker` / 第三 `--picker` 廃止（0.8.0 改名）
-tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）とタブ操作（`-back`/`-forward`/`-reload`/`-close`）。,0.8.0: 旧 `tabs` 改名。履歴・reload・close は nav から移管
-tab,-list,,none,,tab -list [-url] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
+browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
+tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`（browse 非依存の直接操作）。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化
+tab,-list,,none,,tab -list [-url] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。ピッカーは `tab -list | browse`。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
 tab,-setting,,none,,tab -setting | tab -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
 tab,-setting,-page-active,none,,tab -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tab -setting -page-active `。,
 tab,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
@@ -40,13 +44,9 @@ tab,-exit,-list,none,,tab -exit -list,UiAction `tabs_exit_list`。,
 tab,-moveurl,,rest_http_url,,tab -moveurl <url>,Effect: tabs_move_url。,
 tab,-nowurl,,none,,tab -nowurl,Effect: tabs_nu。,
 tab,help,,none,,tab help,msgs `help.section.tabs`（コマンド別マニュアル）。,
-nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`/`-windowclose`。,キー操作の正本は README § Nav mode（EN/JA）。0.8.0: 履歴・reload・tab close は `tab` へ移管
+nav,,,,,nav …,単独 `nav` + Enter: msgs + promptPrefix `nav `。第二候補 `-enter`/`-exit`/`-windowclose`。,キー操作の正本は README § Nav mode（EN/JA）。履歴・reload・tab close は独立コマンドへ
 nav,-enter,,none,,nav -enter | …,UiAction `nav_arm`。オーバーレイは Alt まで非表示。Alt は nav 詳細バー（または armed 中プロンプト）から ON/OFF。,**ON 中:** フォーカスは nav 詳細バー固定。矢印=要素スナップ、Shift+矢印=12px 自由移動、Shift 解放で現在位置を再スキャン（resyncSpatial）。HUD `kind:key`。`/` 属性インクリメンタルジャンプ。成功 activate で origin 学習（`bmxt_nav_learned_targets_v1`）。詳細バー **Ctrl+C** で disarm。typing のみ一時プロンプト。`NAV_CONTROL` / `lib/features/nav/`
 nav,-exit,,none,,（同上）,UiAction `nav_disarm`。オーバーレイ ON のままではエラー（先に Alt で OFF）。,
-tab,-back,,none,,tab -back,Effect `tab_go_back`（操作先アクティブタブ）。,
-tab,-forward,,none,,tab -forward,Effect `tab_go_forward`。,
-tab,-reload,,rest,,tab -reload [#t:<id>…],Effect `tab_reload`。引数なし=アクティブ。`tab -reload ` でタブ候補（ファビコン+タイトル。入力でタイトル絞込、`@`でURL絞込）→`#t:<id>` チップは1行ブロック縦積み（原子 Backspace/Delete）。,
-tab,-close,,none,,tab -close,UiAction `nav_confirm_close` target=tab → y/n → `close_current_tab`（`--confirmed` はホスト専用）。,
 nav,-windowclose,,none,,nav -windowclose,UiAction confirm（操作先タブを含むウィンドウ）→ `close_current_window`。BMXt 窓は拒否。,
 translate,,,,,translate …,単独 `translate` + Enter: msgs + promptPrefix `translate `。第二候補に `help`。,
 translate,-on,,none,,translate -on | translate -off | translate -setting,UiAction `translate_on`。,
@@ -55,7 +55,7 @@ translate,-setting,,none,,translate -setting | translate -setting --ja-en\|--en-
 translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAction pair=ja-en。,
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
 setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
-setting,-list,,none,,setting -list,UiAction `setting_list` / plain `setting.field`。,
+setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き）。ピッカーは `setting -list | browse`。,
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
@@ -63,7 +63,7 @@ aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page。,
 exit,,,,,exit,Effect: exit_pane。,
 session,,,,,session …,単独 `session` + Enter: msgs + promptPrefix `session `。Effect（new/next/prev）または UiAction（list/switch/setting-name）。第二候補に `help`。,語彙: Effect + UiAction
 session,-new,,rest,,session -new [name],Effect: session_new。,
-session,-list,,none,,session -list,ListResult `session.row`。,
+session,-list,,none,,session -list,ListResult `session.row`。ピッカーは `session -list | browse`。,
 session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,
 session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
@@ -76,7 +76,7 @@ session,-setting-name,,rest,,session -setting-name [name],UiAction `session_sett
 （内部）,detail-bar-ctrl-c,,,,lib/features/bmxt-window/detail-bar-focus.ts + use-detail-bar-keyboard.ts,"詳細バー上 **Ctrl+C**: picker 系は browse 列クローズ、nav は disarm（`close-nav-from-detail-bar.ts`）。",0.8.0
 （内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6
 （内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status。segment の promptPrefix もホスト適用。,
-（内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。,
+（内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。`browse` は UI consumer（ListResult 必須）。,
 （内部）,bmxt-rule,,,,lib/features/bmxt-rule/,bmxt-rule/1。カタログ manifest/bmxt-rule.json。,
 （内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。設計・検証カタログ（固定トークン runtime は WASM `complete`）。,
 （内部）,list-output,,,,lib/features/command-line/list-output/,bmxt-list/1。,

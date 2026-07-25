@@ -683,6 +683,14 @@
     "ja": "（設定項目なし）",
     "en": "(no setting fields)"
   },
+  "setting.list.notice.showing": {
+    "ja": "⚠️現在の設定内容を一覧表示しています",
+    "en": "⚠️ Showing the current settings (read-only list)"
+  },
+  "setting.list.notice.useBrowse": {
+    "ja": "設定の変更には下記コマンドを使用してください。",
+    "en": "To change settings, use the command below."
+  },
   "setting.usage": {
     "ja": "usage: setting -list | setting -exit -list",
     "en": "usage: setting -list | setting -exit -list"

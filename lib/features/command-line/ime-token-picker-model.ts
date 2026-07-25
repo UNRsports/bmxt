@@ -15,4 +15,9 @@ export type ImeTokenPickerModel = {
   prefix: string
   candidates: string[]
   tier: ImeTokenTier
+  /**
+   * EN: When true, the stage’s first command can feed `|` (show pipe-available hint).
+   * For tier `first`, the panel may also derive this from the highlighted candidate.
+   */
+  pipeAvailable?: boolean
 }

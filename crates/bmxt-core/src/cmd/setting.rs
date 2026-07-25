@@ -1,7 +1,11 @@
 use crate::cmd::helpers;
 use crate::ir::{msg_key, msg_param, msgs, ui, DispatchBundle, UiAction};
 
-const USAGE_KEYS: &[&str] = &["cmd.setting.usage.line1", "cmd.setting.usage.line2"];
+const USAGE_KEYS: &[&str] = &[
+    "cmd.setting.usage.line1",
+    "cmd.setting.usage.line2",
+    "cmd.setting.usage.line3",
+];
 
 pub fn run(args: &[String]) -> DispatchBundle {
     let first_lc = match helpers::require_second_token("setting", args, USAGE_KEYS) {

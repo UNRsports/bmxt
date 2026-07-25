@@ -29,7 +29,7 @@ describe("clampPromptLockedPrefix", () => {
   })
 
   it("drops a stale command line instead of concatenating it", () => {
-    const out = clampPromptLockedPrefix("tab -close", 10, PREFIX)
+    const out = clampPromptLockedPrefix("close", 5, PREFIX)
     assert.equal(out.line, PREFIX)
     assert.equal(out.cursor, PREFIX.length)
   })

@@ -39,7 +39,12 @@ export function isFirstTierPrependPick(line: string, cursor: number, tier: ImeTo
   return false
 }
 
-/** EN: Build `browse setting -list` from a prepend pick — drops the filter prefix, keeps the tail. */
+/**
+ * EN: Build the next line when picking a first-tier token over an existing command.
+ * JA: 既存コマンド行の上で第一トークンを選んだときの次行を組み立てる。
+ *
+ * Special case: picking `browse` appends ` | browse` (pipe consumer), not a prefix.
+ */
 export function buildFirstTierPrependPickLine(
   line: string,
   cursor: number,
@@ -59,6 +64,12 @@ export function buildFirstTierPrependPickLine(
     const afterFirst = parts.slice(1)
     const stripped = parts[0]!.slice(prefix.length)
     tail = stripped.length > 0 ? [stripped, ...afterFirst].join(" ") : afterFirst.join(" ")
+  }
+
+  if (pickedToken.trim().toLowerCase() === "browse") {
+    const nextLine = `${leading}${tail} | browse`
+    const nextPos = nextLine.length
+    return { line: nextLine, cursor: nextPos }
   }
 
   const nextLine = `${leading}${pickedToken} ${tail}`

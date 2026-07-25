@@ -32,14 +32,26 @@ describe("formatMessage", () => {
 describe("namespace message catalogs", () => {
   const messages = loadNamespaceMessages()
 
-  it("loads 684 keys across namespace JSON files", () => {
-    assert.equal(Object.keys(messages).length, 684)
+  it("loads 705 keys across namespace JSON files", () => {
+    assert.equal(Object.keys(messages).length, 705)
   })
 
   it("pairs ja and en for shell.welcome", () => {
     const entry = messages["shell.welcome"]
     assert.equal(entry?.ja, "BMXtへようこそ！本プログラムはテストバージョンです。")
     assert.equal(entry?.en, "Welcome to BMXt! This program is a test version.")
+  })
+
+  it("pairs ja and en for shell.reloadHint", () => {
+    const entry = messages["shell.reloadHint"]
+    assert.equal(
+      entry?.ja,
+      "⚠️タブやサイト内の操作を行う場合は、最初にページをリロードして拡張機能のスクリプトがページ内で有効化するようにしてください。⚠️"
+    )
+    assert.equal(
+      entry?.en,
+      "⚠️ To operate on tabs or within a page, reload the page first so the extension scripts are active on that page. ⚠️"
+    )
   })
 
   it("supports version placeholder", () => {
@@ -52,5 +64,16 @@ describe("namespace message catalogs", () => {
     assert.equal(messages["help.title"]?.en, "BMXt - browser command shell")
     assert.equal(messages["prompt.placeholder"]?.ja, "入力するか TAB キーで補完")
     assert.equal(messages["prompt.placeholder"]?.en, "type or use TAB key")
+  })
+
+  it("pads setting -list | browse notice with blank lines above and below", () => {
+    assert.equal(
+      messages["setting.list.notice.useBrowse"]?.ja,
+      "設定の変更には下記コマンドを使用してください。"
+    )
+    assert.equal(
+      messages["setting.list.notice.useBrowse"]?.en,
+      "To change settings, use the command below."
+    )
   })
 })

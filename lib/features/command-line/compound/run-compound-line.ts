@@ -4,6 +4,7 @@ import {
   recordCommandHistory
 } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
+import { parseTabChipProducerSegment } from "../pipe/producers/tab-chip-producer.ts"
 import { parseCompoundSegments } from "./parse-compound-segments.ts"
 import { parsePipeSegments } from "./parse-pipe-segments.ts"
 import { appendCompoundLogBlock } from "./append-compound-log.ts"
@@ -21,7 +22,35 @@ import {
 import { segmentFailure } from "./classify-outcome.ts"
 import { runSegment } from "./run-segment.ts"
 import { runPipeChain } from "../pipe/run-pipe-chain.ts"
-import type { CompoundRunResult } from "./types.ts"
+import type { CompoundRunResult, SegmentOutcome } from "./types.ts"
+import type { CompoundLogBlock } from "./format-compound-log.ts"
+
+/** EN: Chip-only activate — show move message without `[{segment}]` echo. */
+function formatChipOnlyActivateBlock(outcome: SegmentOutcome): CompoundLogBlock {
+  return {
+    stdout: [...outcome.stdout],
+    stderr: [...outcome.stderr]
+  }
+}
+
+function formatOutcomeBlock(
+  text: string,
+  outcome: SegmentOutcome,
+  locale: UiLocale,
+  pipeStageCount: number
+): CompoundLogBlock {
+  if (
+    pipeStageCount === 1 &&
+    parseTabChipProducerSegment(text) !== null
+  ) {
+    return formatChipOnlyActivateBlock(outcome)
+  }
+  // EN: Quiet success (pipe batch default) — prompt echo only; no `[{segment}]` / per-tab noise.
+  if (outcome.ok && outcome.stdout.length === 0 && outcome.stderr.length === 0) {
+    return { stdout: [], stderr: [] }
+  }
+  return formatSegmentBlock(text, outcome, locale)
+}
 
 export async function runCompoundLine(
   fullLine: string,
@@ -90,7 +119,10 @@ export async function runCompoundLine(
       pipeParsed.segments.length > 1
         ? await runPipeChain(pipeParsed.segments, deps, locale)
         : await runSegment(text, deps, locale)
-    await appendCompoundLogBlock(deps, formatSegmentBlock(text, outcome, locale))
+    await appendCompoundLogBlock(
+      deps,
+      formatOutcomeBlock(text, outcome, locale, pipeParsed.segments.length)
+    )
     results.push({ index, text, outcome, skipped: false })
     priorExitStatus = outcome.exitStatus
     exitStatus = outcome.exitStatus
