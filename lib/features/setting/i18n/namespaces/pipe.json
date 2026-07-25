@@ -31,6 +31,10 @@
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
   },
+  "pipe.browse.noListResult": {
+    "ja": "error: browse には `-list` 列挙の ListResult が必要です（例: tab -list | browse）",
+    "en": "error: browse requires a `-list` ListResult (e.g. tab -list | browse)"
+  },
   "pipe.tabChip.activateFailed": {
     "ja": "error: タブをアクティブにできませんでした（id={tabId}）",
     "en": "error: could not activate tab (id={tabId})"

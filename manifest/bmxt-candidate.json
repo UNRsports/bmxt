@@ -350,13 +350,7 @@
     },
     {
       "command": "browse",
-      "zones": [
-        {
-          "tier": "second",
-          "sources": [{ "kind": "plugin.feature", "provider": "picker.listProducerCommands" }],
-          "tierRemap": { "first": "second", "second": "third", "third": "third" }
-        }
-      ]
+      "zones": []
     },
     {
       "command": "setting",

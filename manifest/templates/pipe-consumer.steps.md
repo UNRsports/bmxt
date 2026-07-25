@@ -3,6 +3,7 @@
 See also: `new-command.checklist.md` → **extend-pipe-consumer**.
 
 Consumers read **`BmxtRuleStream`** (`bmxt-rule/1`), never command-specific structs.
+**UI consumers** (e.g. `| browse`) may also read the producer **`ListResult`** via `PipeConsumerRunContext` — still no producer command-name branching.
 
 ## Steps
 
@@ -10,8 +11,8 @@ Consumers read **`BmxtRuleStream`** (`bmxt-rule/1`), never command-specific stru
 2. Add `lib/features/command-line/pipe/consumers/<name>.ts`:
    - `match(segment)`
    - `acceptsKinds: readonly string[]`
-   - `run(stream, deps, locale, segment) → SegmentOutcome`
-3. Register in `pipe/consumers/registry.ts`.
+   - `run(stream, deps, locale, segment, context) → SegmentOutcome`
+3. Register in `pipe/consumers/registry.ts` and `PIPE_CONSUMER_COMPLETION_IDS`.
 4. Optional: Tab candidates via `manifest/bmxt-candidate.json` (`registry.pipeConsumers`).
 5. Rust side usually unchanged (consumer is host execution). Producer remains a `-list` command.
 6. Tests: kind mismatch → exit 1; happy path closes/acts on accepted kinds.
@@ -19,6 +20,6 @@ Consumers read **`BmxtRuleStream`** (`bmxt-rule/1`), never command-specific stru
 
 ## Contract
 
-- Stage 0 (left of `|`) must produce `ListResult` → converted to bmxtRule.
+- Stage 0 (left of `|`) must produce `ListResult` → converted to bmxtRule (and keep `listResult` for UI consumers).
 - Stage 1+ must match a registered consumer; unsupported → `pipe.error.unsupportedConsumer`.
-- Do not parse producer command names inside the consumer — filter by **kind** + entries only.
+- Do not parse producer command names inside the consumer — filter by **kind** + entries / `ListResult` only.

@@ -144,7 +144,7 @@ https://github.com/UNRsports/bmxt/issues
 | `exit` | アクティブなターミナルセッションを閉じる。最後の 1 セッションなら BMXt ウィンドウを閉じプロセススコープの状態を消去 |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |
 | `tab -list [-url]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL 行付き） |
-| `browse tab -list [-url]` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。`/` でタイトル検索、Enter でハイライト、`n` でジャンプ |
+| `tab -list [-url] | browse` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。`/` でタイトル検索、Enter でハイライト、`n` でジャンプ |
 | `tab -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
 | `tab -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。設定は保存される |
 | `tab -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https） |
@@ -155,7 +155,7 @@ https://github.com/UNRsports/bmxt/issues
 | `tab -close` | 操作先タブを閉じる（y/n 確認） |
 | `dom` | 利用案内を表示。単体で Enter すると `dom `（末尾スペース付き）へ入力復元し、続きのトークンを待つ |
 | `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 `--normal --html`）。部分一致フィルタ可。scriptable な http(s) のみ |
-| `browse dom -list …` | DOM 読み取り専用ピッカー列。`--normal`/`--with`、`--html`/`--react` |
+| `dom -list … | browse` | DOM 読み取り専用ピッカー列。`--normal`/`--with`、`--html`/`--react` |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `nav` | 利用案内を表示。単体で Enter すると `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose`） |
 | `nav -enter` | nav モードを起動（armed）。Alt で対象タブの仮想カーソルオーバーレイ ON/OFF。↑↓←→ 移動、Enter クリック／入力、Ctrl でコンテキストメニュー（テキスト選択・画像保存など）、**/** で属性インクリメンタルジャンプ、識別ラベル `kind:key` |
@@ -163,20 +163,20 @@ https://github.com/UNRsports/bmxt/issues
 | `nav -windowclose` | 操作先タブが含まれるウィンドウを閉じる（y/n 確認。BMXt 窓は閉じない） |
 | `search` | 利用案内を表示。単体で Enter すると `search `（末尾スペース付き）へ入力復元 |
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は `--all` 相当） |
-| `browse search -list …` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
+| `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | search ピッカー列を閉じる（検索中ならキャンセル） |
 | `close` / `c <tabId>` | タブを閉じる |
 | `close` / `c`（パイプ） | `tab -list` のパイプ入力から列挙されたタブをすべて閉じる（例: `tab -list \| close`） |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `browse setting -list` | 設定ピッカー列を開く。`> save setting` で確定 |
+| `setting -list | browse` | 設定ピッカー列を開く。`> save setting` で確定 |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は setting の snapshot 保存先設定に従う |
 | `setting -exit -list` | 設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（1 BMXt ウィンドウ内の tmux 風ターミナルセッション） |
 | `session -new [name]` | 新しいターミナルセッションを作成して切り替え。表示名は任意 |
 | `session -list` | ターミナルセッションのプレーン一覧 |
-| `browse session -list` | プロンプト上のインライン候補（↑↓ · Enter / 1–9） |
+| `session -list | browse` | プロンプト上のインライン候補（↑↓ · Enter / 1–9） |
 | `session -switch [name]` | 表示名によるインライン候補（入力で絞り込み · Enter で `session -switch <name>` を挿入 · もう一度 Enter で実行） |
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更 |
@@ -186,6 +186,6 @@ https://github.com/UNRsports/bmxt/issues
 | `translate -off` | 翻訳アシストを無効化 |
 | `translate -setting --ja-en` / `--en-ja` | nav typing 用の翻訳ペアを保存 |
 | `notes` | 現在の拡張機能バージョンのリリースノートを表示。`notes <version>` で該当版（例: `0.1.1`）。`notes --list` でエントリがある版一覧 |
-| `browse <list-command>` | 一覧をピッカー列／インライン UI で開く（例: `browse tab -list`）。プレーン `-list` はログ出力 |
+| `<list-command> | browse` | 一覧をピッカー列／インライン UI で開く（例: `tab -list | browse`）。プレーン `-list` はログ出力 |
 
 ショートカット（chrome://extensions/shortcuts）: `launch-bmxt`（既定 Shift+Alt+C）、`reset-bmxt`（既定 Shift+Alt+R）、`toggle-bmxt-float`（既定 Shift+Alt+F — アクティブな http(s) タブ上のサイト内フロート・プロンプト）

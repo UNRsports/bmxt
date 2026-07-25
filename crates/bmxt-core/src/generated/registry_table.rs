@@ -98,7 +98,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "browse",
         aliases: &[],
-        usage_primary: "browse <list-command>",
+        usage_primary: "<list-command> | browse",
     },
     CmdMeta {
         name: "setting",

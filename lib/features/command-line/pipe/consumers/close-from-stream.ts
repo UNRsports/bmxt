@@ -45,5 +45,6 @@ export const closePipeConsumer: PipeConsumerEntry = {
   id: "close",
   match: isClosePipeConsumer,
   acceptsKinds: CLOSE_ACCEPTS_BMXT_RULE_KINDS,
-  run: (stream, deps, locale, _segment) => runCloseFromBmxtRuleStream(stream, deps, locale)
+  run: (stream, deps, locale, _segment, _context) =>
+    runCloseFromBmxtRuleStream(stream, deps, locale)
 }

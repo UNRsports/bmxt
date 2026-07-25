@@ -89,7 +89,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "browse",
     aliases: [] as const,
-    usagePrimary: "browse <list-command>"
+    usagePrimary: "<list-command> | browse"
   },
   {
     name: "setting",

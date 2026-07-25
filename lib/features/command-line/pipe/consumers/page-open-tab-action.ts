@@ -33,7 +33,7 @@ export function makePageOpenTabActionConsumer(
     id: spec.id,
     match: spec.match,
     acceptsKinds: PAGE_OPEN_TAB_ACTION_ACCEPTS_KINDS,
-    run: (stream, deps, locale, _segment) =>
+    run: (stream, deps, locale, _segment, _context) =>
       runPageOpenTabActionFromStream(stream, deps, locale, spec)
   }
 }

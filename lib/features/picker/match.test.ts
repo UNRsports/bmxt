@@ -1,33 +1,24 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { isPickerPrefixCommand, parsePickerPrefixLine } from "./match.ts"
+import { isBrowsePipeConsumer, BROWSE_ACCEPTS_BMXT_RULE_KINDS } from "../command-line/pipe/consumers/browse-match.ts"
 import { resolvePickerFamily } from "./resolve-family.ts"
 import { LIST_OUTPUT_SCHEMA, type ListResult } from "../command-line/list-output/types.ts"
 
-describe("browse prefix match", () => {
-  it("parses bare browse as usage", () => {
-    assert.deepEqual(parsePickerPrefixLine("browse"), { kind: "usage" })
-    assert.equal(isPickerPrefixCommand("browse"), true)
+describe("browse pipe consumer match", () => {
+  it("matches bare browse", () => {
+    assert.equal(isBrowsePipeConsumer("browse"), true)
+    assert.equal(isBrowsePipeConsumer("  BROWSE  "), true)
   })
 
-  it("parses browse with list producer", () => {
-    assert.deepEqual(parsePickerPrefixLine("browse tab -list"), {
-      kind: "run",
-      producerSegment: "tab -list"
-    })
-    assert.deepEqual(parsePickerPrefixLine("browse tab -list -url"), {
-      kind: "run",
-      producerSegment: "tab -list -url"
-    })
-    assert.deepEqual(parsePickerPrefixLine("browse search -list foo"), {
-      kind: "run",
-      producerSegment: "search -list foo"
-    })
+  it("rejects prefix or extra args", () => {
+    assert.equal(isBrowsePipeConsumer("browse tab -list"), false)
+    assert.equal(isBrowsePipeConsumer("tab -list | browse"), false)
   })
 
-  it("rejects non-browse segments", () => {
-    assert.equal(parsePickerPrefixLine("tab -list"), null)
-    assert.equal(isPickerPrefixCommand("tab -list | browse"), false)
+  it("accepts all list-derived bmxtRule kinds", () => {
+    assert.ok(BROWSE_ACCEPTS_BMXT_RULE_KINDS.includes("page.open"))
+    assert.ok(BROWSE_ACCEPTS_BMXT_RULE_KINDS.includes("setting.field"))
+    assert.ok(BROWSE_ACCEPTS_BMXT_RULE_KINDS.includes("session.row"))
   })
 })
 

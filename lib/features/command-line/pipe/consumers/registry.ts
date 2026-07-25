@@ -4,12 +4,13 @@ import type { UiLocale } from "../../../setting/locale.ts"
 import { segmentFailure } from "../../compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
+import { browsePipeConsumer } from "./browse-from-list.ts"
 import { closePipeConsumer } from "./close-from-stream.ts"
 import { backPipeConsumer } from "./back-from-stream.ts"
 import { forwardPipeConsumer } from "./forward-from-stream.ts"
 import { reloadPipeConsumer } from "./reload-from-stream.ts"
 import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
-import type { PipeConsumerEntry } from "./types.ts"
+import type { PipeConsumerEntry, PipeConsumerRunContext } from "./types.ts"
 
 export { bmxtRuleStreamAcceptsKinds, tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
 export {
@@ -19,6 +20,7 @@ export {
 
 /** EN: Registered pipe consumers (right-hand side of `|`). */
 export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
+  browsePipeConsumer,
   backPipeConsumer,
   forwardPipeConsumer,
   reloadPipeConsumer,
@@ -39,7 +41,8 @@ export async function tryRunPipeConsumer(
   segment: string,
   stream: BmxtRuleStream,
   deps: CommandDispatchDeps,
-  locale: UiLocale
+  locale: UiLocale,
+  context: PipeConsumerRunContext
 ): Promise<SegmentOutcome | null> {
   const entry = matchPipeConsumer(segment)
   if (entry === null) {
@@ -51,5 +54,5 @@ export async function tryRunPipeConsumer(
       tPipe("pipe.error.kindMismatch", locale, { stage: segment.trim(), kinds })
     ])
   }
-  return entry.run(stream, deps, locale, segment)
+  return entry.run(stream, deps, locale, segment, context)
 }

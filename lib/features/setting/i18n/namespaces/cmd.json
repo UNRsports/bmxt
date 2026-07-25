@@ -56,8 +56,8 @@
     "en": "DOM list picker is closed from the BMXt prompt with: dom -exit -list"
   },
   "cmd.dom.listPicker.title": {
-    "ja": "DOM list picker は次のように開きます: browse dom -list …",
-    "en": "DOM list picker is opened with: browse dom -list …"
+    "ja": "DOM list picker は次のように開きます: dom -list … | browse",
+    "en": "DOM list picker is opened with: dom -list … | browse"
   },
   "cmd.dom.runHint": {
     "ja": "実行例: dom -setting -page-active --auto または --manual",
@@ -72,8 +72,8 @@
     "en": "dom -setting — configure DOM picker page-active from the BMXt prompt"
   },
   "cmd.dom.usage.line1": {
-    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — 既定はプレーン出力（--normal --html）。列 UI は `browse dom -list …`",
-    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — plain output by default (--normal --html); column UI: `browse dom -list …`"
+    "ja": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — 既定はプレーン出力（--normal --html）。列 UI は `dom -list … | browse`",
+    "en": "usage: dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]   — plain output by default (--normal --html); column UI: `dom -list … | browse`"
   },
   "cmd.dom.usage.line2": {
     "ja": "       dom -exit -list — この BMXt ペインの DOM list ピッカーを閉じる",
@@ -84,8 +84,8 @@
     "en": "       dom -setting -page-active --auto | --manual — page jump preview on highlight"
   },
   "cmd.dom.usage.listDetail": {
-    "ja": "-list はプレーン出力。列 UI は `browse dom -list …`。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
-    "en": "-list prints plain output. Open the column with `browse dom -list …`. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
+    "ja": "-list はプレーン出力。列 UI は `dom -list … | browse`。`--normal`（ツリー全体）| `--with`（ビューポート連動・既定は表示テキスト、`--tag` でタグ/HTML）。flavor: --html (default) | --react。",
+    "en": "-list prints plain output. Open the column with `dom -list … | browse`. `--normal` (full tree) | `--with` (viewport-sync; visible text by default, `--tag` for tag/HTML). flavor: --html (default) | --react."
   },
   "cmd.dom.usage.patternDetail": {
     "ja": "<pattern> は出力行に対する大文字小文字無視の部分一致フィルタ（正規表現なし）。",
@@ -172,28 +172,32 @@
     "en": "error: browse can display a list from a single command family only (no mixed kinds)"
   },
   "cmd.browse.error.notListProducer": {
-    "ja": "error: browse の後は `-list` 列挙コマンドが必要です: {segment}",
-    "en": "error: browse requires a `-list` producer command: {segment}"
+    "ja": "error: browse は `-list` 列挙のパイプ右辺として使います（例: tab -list | browse）: {segment}",
+    "en": "error: use browse as a pipe consumer after a `-list` producer (e.g. tab -list | browse): {segment}"
+  },
+  "cmd.browse.error.usePipe": {
+    "ja": "error: プレフィックス形式は廃止されました。`{segment} | browse` を使ってください",
+    "en": "error: prefix form is removed. Use `{segment} | browse`"
   },
   "cmd.browse.error.uiOnly": {
-    "ja": "error: browse は BMXt ウィンドウから実行してください（例: browse tab -list）",
-    "en": "error: run browse from the BMXt window (e.g. browse tab -list)"
+    "ja": "error: browse は BMXt ウィンドウから実行してください（例: tab -list | browse）",
+    "en": "error: run browse from the BMXt window (e.g. tab -list | browse)"
   },
   "cmd.browse.usage.line1": {
-    "ja": "usage: browse <list-command>",
-    "en": "usage: browse <list-command>"
+    "ja": "usage: <list-command> | browse",
+    "en": "usage: <list-command> | browse"
   },
   "cmd.browse.usage.line2": {
-    "ja": "  先頭の `browse` で、続く `-list` 列挙をサイド列（または session 候補）に表示します。",
-    "en": "  Prefix `browse` displays the following `-list` output in a side column (or session candidates)."
+    "ja": "  `-list` 列挙のあとに `| browse` でサイド列（または session 候補）を開きます。",
+    "en": "  Pipe a `-list` producer into `| browse` to open a side column (or session candidates)."
   },
   "cmd.browse.usage.line3": {
-    "ja": "  例: browse tab -list · browse tab -list -url · browse search -list foo · browse setting -list",
-    "en": "  Examples: browse tab -list · browse tab -list -url · browse search -list foo · browse setting -list"
+    "ja": "  例: tab -list | browse · tab -list -url | browse · search -list foo | browse · setting -list | browse",
+    "en": "  Examples: tab -list | browse · tab -list -url | browse · search -list foo | browse · setting -list | browse"
   },
   "cmd.browse.usage.line4": {
-    "ja": "  単体の `browse` では何も開きません。パイプ `|` は使いません。",
-    "en": "  Bare `browse` does not open a column. Do not use a pipe `|`."
+    "ja": "  単体の `browse` では何も開きません。列を開くには `<list-command> | browse` を使います。",
+    "en": "  Bare `browse` does not open a column. Open a column with `<list-command> | browse`."
   },
   "cmd.search.error.exitListUsage": {
     "ja": "error: usage: search -exit -list",
@@ -220,16 +224,16 @@
     "en": "Search list picker is closed from the BMXt prompt with: search -exit -list"
   },
   "cmd.search.listPicker.title": {
-    "ja": "Search list picker は次のように開きます: browse search -list …",
-    "en": "Search list picker is opened with: browse search -list …"
+    "ja": "Search list picker は次のように開きます: search -list … | browse",
+    "en": "Search list picker is opened with: search -list … | browse"
   },
   "cmd.search.usage.line1": {
     "ja": "usage: search -list [<pattern>]   — 検索結果をプレーン一覧（既定は --all 相当）",
     "en": "usage: search -list [<pattern>]   — plain search hits (default scopes = --all)"
   },
   "cmd.search.usage.line2": {
-    "ja": "       search -list … — プレーン出力。列 UI: browse search -list …",
-    "en": "       search -list … — plain output. Column UI: browse search -list …"
+    "ja": "       search -list … — プレーン出力。列 UI: search -list … | browse",
+    "en": "       search -list … — plain output. Column UI: search -list … | browse"
   },
   "cmd.search.usage.line3": {
     "ja": "       search -exit -list — この BMXt ペインの search list ピッカーを閉じる",
@@ -264,8 +268,8 @@
     "en": "error: unknown session option: {option}"
   },
   "cmd.session.listPicker.title": {
-    "ja": "Session list picker は次のように開きます: browse session -list",
-    "en": "Session list picker is opened with: browse session -list"
+    "ja": "Session list picker は次のように開きます: session -list | browse",
+    "en": "Session list picker is opened with: session -list | browse"
   },
   "cmd.session.listPlain.hint": {
     "ja": "session -list — BMXt プロンプトから実行（プレーン一覧）",
@@ -352,26 +356,30 @@
     "en": "setting -exit -list — run from the BMXt prompt"
   },
   "cmd.setting.list.detail": {
-    "ja": "設定ピッカー列を開きます（↑↓ · Enter · Esc → プロンプト）。",
-    "en": "Opens the settings picker column (↑↓ · Enter · Esc → prompt)."
+    "ja": "現在の UI 設定をプレーン一覧します。変更は `setting -list | browse`。",
+    "en": "Prints a plain list of current UI settings. To edit: `setting -list | browse`."
   },
   "cmd.setting.list.title": {
     "ja": "setting -list — BMXt プロンプトから実行",
     "en": "setting -list — run from the BMXt prompt"
   },
   "cmd.setting.listPicker.title": {
-    "ja": "Setting picker は次のように開きます: browse setting -list",
-    "en": "Setting picker is opened with: browse setting -list"
+    "ja": "Setting picker は次のように開きます: setting -list | browse",
+    "en": "Setting picker is opened with: setting -list | browse"
   },
   "cmd.setting.listPlain.hint": {
     "ja": "setting -list — BMXt プロンプトから実行（プレーン一覧）",
     "en": "setting -list — run from the BMXt prompt (plain list)"
   },
   "cmd.setting.usage.line1": {
-    "ja": "usage: setting -list       — 設定ピッカーを開く（言語・外観・エクスポート/インポート）",
-    "en": "usage: setting -list       — open settings picker (locale, appearance, export/import)"
+    "ja": "usage: setting -list              — 現在の設定をプレーン一覧",
+    "en": "usage: setting -list              — plain list of current settings"
   },
   "cmd.setting.usage.line2": {
+    "ja": "       setting -list | browse     — 設定ピッカー列を開く",
+    "en": "       setting -list | browse     — open settings picker column"
+  },
+  "cmd.setting.usage.line3": {
     "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
     "en": "       setting -exit -list — close settings picker in this BMXt pane"
   },
@@ -460,12 +468,12 @@
     "en": "tab -list — list windows, groups, and tabs with IDs in the terminal"
   },
   "cmd.tabs.listPicker.title": {
-    "ja": "Tab picker は次のように開きます: browse tab -list（`tab -list -url` で URL 表示）",
-    "en": "Tab picker is opened with: browse tab -list (optional `tab -list -url` for URLs)"
+    "ja": "Tab picker は次のように開きます: tab -list | browse（`tab -list -url | browse` で URL 表示）",
+    "en": "Tab picker is opened with: tab -list | browse (optional `tab -list -url | browse` for URLs)"
   },
   "cmd.tabs.runHint": {
-    "ja": "実行例: tab -list / tab -list -url / browse tab -list · tab -exit -list · tab -setting -page-active --auto | --manual · tab -nowurl · tab -moveurl <url>（履歴・リロード・閉じるは back / forward / reload / close）",
-    "en": "Run: tab -list / tab -list -url / browse tab -list. tab -exit -list. tab -setting -page-active --auto | --manual (from BMXt prompt). tab -nowurl. tab -moveurl <url>. History / reload / close: back | forward | reload | close."
+    "ja": "実行例: tab -list / tab -list -url / tab -list | browse · tab -exit -list · tab -setting -page-active --auto | --manual · tab -nowurl · tab -moveurl <url>（履歴・リロード・閉じるは back / forward / reload / close）",
+    "en": "Run: tab -list / tab -list -url / tab -list | browse. tab -exit -list. tab -setting -page-active --auto | --manual (from BMXt prompt). tab -nowurl. tab -moveurl <url>. History / reload / close: back | forward | reload | close."
   },
   "cmd.tabs.setting.pageActive": {
     "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
@@ -476,8 +484,8 @@
     "en": "tab -setting is handled from the BMXt prompt with: tab -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tab -list [-url]   — タブ列挙（`-url` は URL）。列 UI は `browse tab -list`",
-    "en": "usage: tab -list [-url]   — list tabs (-url: URLs). Column UI: `browse tab -list`"
+    "ja": "usage: tab -list [-url]   — タブ列挙（`-url` は URL）。列 UI は `tab -list | browse`",
+    "en": "usage: tab -list [-url]   — list tabs (-url: URLs). Column UI: `tab -list | browse`"
   },
   "cmd.tabs.usage.line2": {
     "ja": "       tab -exit -list — この BMXt ペインのタブピッカーを閉じる",

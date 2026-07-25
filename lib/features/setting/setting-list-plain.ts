@@ -8,6 +8,11 @@ export function formatSettingListPlainLines(result: ListResult, locale: UiLocale
   if (result.records.length === 0) {
     return [tSetting("setting.list.empty", locale)]
   }
+  const notice = [
+    tSetting("setting.list.notice.showing", locale),
+    tSetting("setting.list.notice.useBrowse", locale),
+    ""
+  ]
   const body = formatListPlainLines(result)
-  return appendListPlainSummary(body, result.records.length, locale)
+  return appendListPlainSummary([...notice, ...body], result.records.length, locale)
 }

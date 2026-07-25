@@ -279,7 +279,7 @@
       "module": "browse",
       "canonicalName": "browse",
       "aliases": [],
-      "usagePrimary": "browse <list-command>",
+      "usagePrimary": "<list-command> | browse",
       "subcommands": []
     },
     {
