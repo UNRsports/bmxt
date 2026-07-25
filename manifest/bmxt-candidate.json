@@ -178,68 +178,19 @@
     },
     {
       "command": "back",
-      "zones": [
-        {
-          "tier": "rest",
-          "tokenIndexMin": 1,
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
-            }
-          ]
-        }
-      ]
+      "zones": []
     },
     {
       "command": "close",
-      "zones": [
-        {
-          "tier": "rest",
-          "tokenIndexMin": 1,
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles"]
-            }
-          ],
-          "ui": "inline_token"
-        }
-      ]
+      "zones": []
     },
     {
       "command": "forward",
-      "zones": [
-        {
-          "tier": "rest",
-          "tokenIndexMin": 1,
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
-            }
-          ]
-        }
-      ]
+      "zones": []
     },
     {
       "command": "reload",
-      "zones": [
-        {
-          "tier": "rest",
-          "tokenIndexMin": 1,
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
-            }
-          ]
-        }
-      ]
+      "zones": []
     },
     {
       "command": "dom",

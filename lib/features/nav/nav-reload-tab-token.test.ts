@@ -22,40 +22,40 @@ describe("nav-reload-tab-token", () => {
   })
 
   it("finds spans in a line", () => {
-    const spans = findNavReloadTabTokenSpans("reload #t:1 #t:99")
+    const spans = findNavReloadTabTokenSpans("echo #t:1 #t:99")
     assert.equal(spans.length, 2)
     assert.equal(spans[0]?.tabId, 1)
     assert.equal(spans[1]?.tabId, 99)
   })
 
   it("deletes a whole block on backspace into #t:id", () => {
-    const line = "reload #t:12 "
+    const line = "echo #t:12 "
     const atEndOfToken = line.indexOf("#t:12") + "#t:12".length
     const result = deleteNavReloadTabBlockAtCursor(line, atEndOfToken)
     assert.ok(result)
-    assert.equal(result.line, "reload ")
-    assert.equal(result.cursor, "reload ".length)
+    assert.equal(result.line, "echo ")
+    assert.equal(result.cursor, "echo ".length)
   })
 
   it("deletes the whole block when backspace is on the trailing space after #t:id", () => {
-    const line = "reload #t:12 "
+    const line = "echo #t:12 "
     const afterSpace = line.length
     const result = deleteNavReloadTabBlockAtCursor(line, afterSpace)
     assert.ok(result)
-    assert.equal(result.line, "reload ")
+    assert.equal(result.line, "echo ")
   })
 
   it("deletes a whole block on forward delete at #t:id start", () => {
-    const line = "reload #t:12 "
+    const line = "echo #t:12 "
     const atStart = line.indexOf("#t:12")
     const result = deleteNavReloadTabBlockForwardAtCursor(line, atStart)
     assert.ok(result)
-    assert.equal(result.line, "reload ")
-    assert.equal(result.cursor, "reload ".length)
+    assert.equal(result.line, "echo ")
+    assert.equal(result.cursor, "echo ".length)
   })
 
   it("treats caret on a block as focused for chip UI", () => {
-    const line = "reload #t:12"
+    const line = "echo #t:12"
     const span = findNavReloadTabTokenSpans(line)[0]!
     assert.equal(isNavReloadTabBlockFocused(line, span.start, span), true)
     assert.equal(isNavReloadTabBlockFocused(line, span.end, span), true)
@@ -69,7 +69,7 @@ describe("nav-reload-tab-token", () => {
   })
 
   it("moves caret one #t: block at a time", () => {
-    const line = "reload #t:1 #t:22 #t:333"
+    const line = "echo #t:1 #t:22 #t:333"
     const spans = findNavReloadTabTokenSpans(line)
     assert.equal(spans.length, 3)
     const a = spans[0]!.end
@@ -94,15 +94,10 @@ describe("nav-reload-tab-token", () => {
     assert.equal(matchesNavReloadTabNeedle("Hello", "https://github.com/x", "github"), false)
   })
 
-  it("detects completion zone after reload ", () => {
-    const zone = navReloadTabCompletionZone("reload ", "reload ".length)
-    assert.ok(zone)
-    assert.equal(zone.prefix, "")
-    assert.equal(navReloadTabCompletionZone("reload", "reload".length), null)
-  })
-
-  it("detects completion zone after back ", () => {
-    const zone = navReloadTabCompletionZone("back ", "back ".length)
-    assert.ok(zone)
+  it("does not open a live tab completion zone for tab-verbs", () => {
+    assert.equal(navReloadTabCompletionZone("back ", "back ".length), null)
+    assert.equal(navReloadTabCompletionZone("forward ", "forward ".length), null)
+    assert.equal(navReloadTabCompletionZone("reload ", "reload ".length), null)
+    assert.equal(navReloadTabCompletionZone("back", "back".length), null)
   })
 })

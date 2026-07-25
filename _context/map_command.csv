@@ -5,10 +5,10 @@
 # Inter-command vocabulary (closed): DispatchBundle | ListResult(bmxt-list/1) | BmxtRuleStream(bmxt-rule/1) | exit status — see lib/features/command-line/inter-command/ and manifest/templates/.
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
-close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` target=tab → y/n → `close --confirmed` → `close_current_tab`。数値 tabId: Effect `close_tab`。パイプ右辺 `close`/`c` は bmxtRule `page.open` consumer。,第二トークン相当は可変 tabId（manifest subcommands なし）。pipe consumer は語彙 `acceptsKinds` で接続
-back,,,,,back [#t:<id>…] | … | back,引数なし=操作先アクティブ。`#t:<id>` 可。Effect `tab_go_back` { tab_ids }。パイプ右辺 `back` は page.open consumer。,独立 first。チップ候補は `reload`/`forward` と同系（nav-reload-tab-token lead）
-forward,,,,,forward [#t:<id>…] | … | forward,引数なし=操作先。Effect `tab_go_forward` { tab_ids }。パイプ `… | forward`。,独立 first
-reload,,,,,reload [#t:<id>…] | … | reload,引数なし=操作先。Effect `tab_reload`。`reload ` でタブ候補→`#t:<id>` チップ。パイプ `… | reload`。,0.8.x: `tab -reload` から独立
+close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`（パイプ内部）。タブ候補 UI なし。,pipe consumer は語彙 `acceptsKinds` で接続
+back,,,,,back | … | back,引数なし=操作先アクティブ即時。Effect `tab_go_back` { tab_ids: [] }。パイプ右辺 `back` は page.open → 内部で `back <tabId>`。タブ候補 UI なし。,独立 first。複数指定はパイプのみ
+forward,,,,,forward | … | forward,引数なし=操作先即時。Effect `tab_go_forward`。パイプ `… | forward`。タブ候補 UI なし。,独立 first
+reload,,,,,reload | … | reload,引数なし=操作先即時。Effect `tab_reload`。パイプ `… | reload`。旧 `#t:` チップ候補は廃止。,独立 first
 dom,,,,,dom …,単独 `dom` + Enter: msgs + promptPrefix `dom `（require_second_token）。第二候補に `help`。,
 dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** `RUN_CMD` → Effect `dom_list` → **`-list` レジストリ**（`dom-list-fetch.ts` / `dom-list-command.ts`）→ `ListResult`（`bmxt-list/1`）→ ターミナルログ。ピッカーは `browse dom -list …`。閉じるは `dom -exit -list`。パイプ時は bmxtRule（`dom.node` / `dom.notice`）。,語彙: ListResult→bmxtRule
 dom,-list,--normal,rest,,（同上）,trailingTokens。mode `--normal`。`--with` と排他。,

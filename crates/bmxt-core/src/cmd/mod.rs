@@ -19,7 +19,6 @@ pub mod snapshot;
 pub mod tabs;
 pub mod translate;
 
-mod hash_t_tab_ids;
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {

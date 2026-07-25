@@ -42,5 +42,5 @@ export const reloadPipeConsumer = makePageOpenTabActionConsumer({
   commandName: "reload",
   match: isReloadPipeConsumer,
   noTabsKey: "pipe.reload.noTabs",
-  formatSegment: (tabId) => `reload #t:${tabId}`
+  formatSegment: (tabId) => `reload ${tabId}`
 })

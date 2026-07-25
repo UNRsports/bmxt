@@ -1,16 +1,33 @@
-use crate::cmd::hash_t_tab_ids::parse_hash_t_tab_ids;
-use crate::ir::{effects, ChromeEffect, DispatchBundle};
+use crate::ir::{effects, msg_key, msgs, ChromeEffect, DispatchBundle};
 
+/** EN: Bare `forward` → active tab. Numeric ids → pipe/programmatic targets only (no picker). */
 pub fn run(args: &[String]) -> DispatchBundle {
-    match parse_hash_t_tab_ids(
-        args,
-        1,
-        "cmd.forward.error.badTabToken",
-        "cmd.forward.usage",
-    ) {
+    match parse_optional_tab_ids(args) {
         Ok(tab_ids) => effects(vec![ChromeEffect::TabGoForward { tab_ids }]),
-        Err(bundle) => bundle,
+        Err(()) => msgs(vec![
+            msg_key("cmd.forward.error.badArgs"),
+            msg_key("cmd.forward.usage"),
+        ]),
     }
+}
+
+fn parse_optional_tab_ids(args: &[String]) -> Result<Vec<i64>, ()> {
+    let mut ids = Vec::new();
+    for raw in args.iter().skip(1) {
+        let tok = raw.trim();
+        if tok.is_empty() {
+            continue;
+        }
+        match tok.parse::<i64>() {
+            Ok(id) if id >= 0 => {
+                if !ids.contains(&id) {
+                    ids.push(id);
+                }
+            }
+            _ => return Err(()),
+        }
+    }
+    Ok(ids)
 }
 
 #[cfg(test)]
@@ -31,8 +48,8 @@ mod tests {
     }
 
     #[test]
-    fn parses_tab_tokens() {
-        let bundle = run(&["forward".into(), "#t:7".into()]);
+    fn parses_numeric_ids() {
+        let bundle = run(&["forward".into(), "7".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => match &effects[0] {
                 ChromeEffect::TabGoForward { tab_ids } => assert_eq!(tab_ids, &vec![7]),

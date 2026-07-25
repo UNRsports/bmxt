@@ -235,10 +235,10 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
 | `nav -exit` | Disarm nav mode (turn Alt overlay **off** first) |
-| `back` | History back on the **target** active tab; optional `#t:<id>…` (trailing space opens tab candidates) |
-| `forward` | History forward on the target active tab; optional `#t:<id>…` |
-| `reload` | Reload the target active tab; with a trailing space, open a **tab candidate** menu (favicon + title; type to filter by title, `@` + text to filter by URL) and insert `#t:<id>` **blocks** — each block on its own single-line row (Backspace/Delete remove a whole block) |
-| `close` | Close the target tab after **y/n** confirm; `close <tabId>` closes that id without confirm |
+| `back` | History back on the **target** active tab (immediate). Batch: `tab -list \| back` |
+| `forward` | History forward on the target active tab (immediate). Batch: `tab -list \| forward` |
+| `reload` | Reload the target active tab (immediate). Batch: `tab -list \| reload` |
+| `close` | Close the target tab after **y/n** confirm; `close <tabId>` closes that id without confirm. Batch: `tab -list \| close` |
 | `nav -windowclose` | Close the **window that contains the target tab** after **y/n** confirm (never the BMXt window) |
 | `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Enable translation assist (nav typing preview under the prompt; see **[`translate`](#translate)**) |
@@ -1024,7 +1024,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 |-----------|--------|-------------|
 | **`browser.openTabUrls`** | Open http(s) tabs | `tab -moveurl`, `search -list` pattern, `dom -list` pattern |
 | **`browser.openTabTitles`** | Tab titles | Labels for tab ids; search pattern hints |
-| **`browser.tabIds`** | Tab tree ids | `close`, `back`, `forward`, `reload`, `group new`, `snapshot -save` |
+| **`browser.tabIds`** | Tab tree ids | `group new`, `snapshot -save` |
 | **`browser.windowLabels`** | Window rows | `snapshot -save` picker labels |
 | **`browser.tabGroupLabels`** | Group rows | `snapshot -save` picker labels |
 | **`browser.historyUrls`** / **`browser.historyTitles`** | History | URL/title completion on rest tails |
@@ -1579,10 +1579,10 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt**（詳細バーまたはプロンプト）を押すまで表示しない |
 | `nav -exit` | nav モードを終了（先に Alt でオーバーレイ **OFF**） |
-| `back` | 操作先アクティブタブの履歴バック。任意で `#t:<id>…`（末尾スペースでタブ候補） |
-| `forward` | 操作先アクティブタブの履歴を進む。任意で `#t:<id>…` |
-| `reload` | 操作先アクティブタブをリロード。末尾スペースで **タブ候補**メニュー（ファビコン＋タイトル。入力でタイトル絞り込み、`@` で URL 絞り込み）。選択は `#t:<id>` **ブロックを1行ずつ**（Backspace/Delete はブロック単位削除） |
-| `close` | 操作先タブを閉じる（**y/n** 確認）。`close <tabId>` は確認なしで当該 ID を閉じる |
+| `back` | 操作先アクティブタブの履歴バック（即時）。一括: `tab -list \| back` |
+| `forward` | 操作先アクティブタブの履歴を進む（即時）。一括: `tab -list \| forward` |
+| `reload` | 操作先アクティブタブをリロード（即時）。一括: `tab -list \| reload` |
+| `close` | 操作先タブを閉じる（**y/n** 確認）。`close <tabId>` は確認なし。一括: `tab -list \| close` |
 | `nav -windowclose` | **操作先タブが含まれるウィンドウ**を閉じる（**y/n** 確認。BMXt 窓は閉じない） |
 | `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` / `-off` / `-setting` 用） |
 | `translate -on` | 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー。**[`translate`](#translate-ja)** 参照） |
@@ -2346,7 +2346,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 |-----------|----------|----------|
 | **`browser.openTabUrls`** | 開いている http(s) タブ | `tab -moveurl`、`search -list` pattern、`dom -list` pattern |
 | **`browser.openTabTitles`** | タブタイトル | tabId ラベル、search pattern ヒント |
-| **`browser.tabIds`** | タブツリー ID | `close`、`back`、`forward`、`reload`、`group new`、`snapshot -save` |
+| **`browser.tabIds`** | タブツリー ID | `group new`、`snapshot -save` |
 | **`browser.windowLabels`** | ウィンドウ行 | `snapshot -save` ラベル |
 | **`browser.tabGroupLabels`** | グループ行 | `snapshot -save` ラベル |
 | **`browser.historyUrls`** / **`browser.historyTitles`** | 履歴 | rest tail の URL／タイトル補完 |

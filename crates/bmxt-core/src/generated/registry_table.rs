@@ -23,7 +23,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "back",
         aliases: &[],
-        usage_primary: "back [#t:<tabId>…] | … | back",
+        usage_primary: "back | … | back",
     },
     CmdMeta {
         name: "close",
@@ -58,12 +58,12 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "forward",
         aliases: &[],
-        usage_primary: "forward [#t:<tabId>…] | … | forward",
+        usage_primary: "forward | … | forward",
     },
     CmdMeta {
         name: "reload",
         aliases: &[],
-        usage_primary: "reload [#t:<tabId>…] | … | reload",
+        usage_primary: "reload | … | reload",
     },
     CmdMeta {
         name: "tab",

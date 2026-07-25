@@ -1,8 +1,8 @@
 /**
- * EN: `reload` / `back` / `forward` tab block tokens (`#t:<id>`) — parse, atomic delete, completion zone.
+ * EN: Legacy `#t:<id>` chip helpers (prompt mirror / log rewrite).
+ * Tab-verb targeting is bare command (active) or pipe (`tab -list | back`); no live tab picker.
  */
 
-import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys.ts"
 import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url.ts"
 
@@ -10,8 +10,6 @@ export const NAV_RELOAD_TAB_TOKEN_RE = /^#t:(\d+)$/
 
 /** EN: Default visible title length inside a prompt chip (code points). */
 export const NAV_RELOAD_CHIP_TITLE_MAX_CHARS = 24
-
-const NAV_RELOAD_LEAD_RE = /^\s*(?:reload|back|forward)\s+/i
 
 export type NavReloadTabTokenSpan = {
   start: number
@@ -258,43 +256,14 @@ export function deleteNavReloadTabBlockForwardAtCursor(
 }
 
 /**
- * EN: Completion zone after `reload ` / `back ` / `forward ` for picking open tabs.
- * Returns null when the cursor is not in that rest zone.
+ * EN: Completion zone for live tab pickers on tab-verbs — disabled.
+ * Targeting is bare (active) or pipe; do not open a `command {tabs}` menu.
  */
 export function navReloadTabCompletionZone(
-  line: string,
-  cursor: number
+  _line: string,
+  _cursor: number
 ): { tokenStart: number; tokenEnd: number; prefix: string } | null {
-  const active = resolveActiveCommandSegment(line, cursor)
-  const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
-  const localCursor = active.localCursor
-  const lead = NAV_RELOAD_LEAD_RE.exec(segmentLine)
-  if (!lead) {
-    return null
-  }
-  const restStartLocal = lead[0]!.length
-  if (localCursor < restStartLocal) {
-    return null
-  }
-  const beforeCursor = segmentLine.slice(0, localCursor)
-  const lastSpace = beforeCursor.lastIndexOf(" ")
-  const tokenStartLocal = lastSpace >= restStartLocal - 1 ? lastSpace + 1 : restStartLocal
-  let tokenEndLocal = localCursor
-  while (tokenEndLocal < segmentLine.length && !/\s/.test(segmentLine[tokenEndLocal]!)) {
-    tokenEndLocal += 1
-  }
-  const prefix = segmentLine.slice(tokenStartLocal, localCursor)
-  if (prefix.startsWith("#t:") && parseNavReloadTabToken(prefix) !== null && localCursor === tokenEndLocal) {
-    /* EN: Cursor at end of a complete block — still allow adding another after space only. */
-    if (localCursor < segmentLine.length && segmentLine[localCursor] !== " ") {
-      return null
-    }
-  }
-  return {
-    tokenStart: active.segmentStart + tokenStartLocal,
-    tokenEnd: active.segmentStart + tokenEndLocal,
-    prefix
-  }
+  return null
 }
 
 export type NavReloadTabCandidate = {

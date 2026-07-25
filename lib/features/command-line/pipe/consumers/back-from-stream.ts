@@ -42,5 +42,5 @@ export const backPipeConsumer = makePageOpenTabActionConsumer({
   commandName: "back",
   match: isBackPipeConsumer,
   noTabsKey: "pipe.back.noTabs",
-  formatSegment: (tabId) => `back #t:${tabId}`
+  formatSegment: (tabId) => `back ${tabId}`
 })

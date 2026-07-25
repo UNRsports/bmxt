@@ -1,31 +1,31 @@
 {
-  "cmd.close.usage": {
-    "ja": "usage: close | close <tabId> | … | close",
-    "en": "usage: close | close <tabId> | … | close"
-  },
   "cmd.back.usage": {
-    "ja": "usage: back [#t:<tabId>…] | … | back",
-    "en": "usage: back [#t:<tabId>…] | … | back"
+    "ja": "usage: back  — 操作先タブを戻る。複数タブは `tab -list | back`",
+    "en": "usage: back  — go back on the target tab. For multiple tabs: `tab -list | back`"
   },
-  "cmd.back.error.badTabToken": {
-    "ja": "error: 不正なタブ指定です: {token}（形式: #t:<id>）",
-    "en": "error: bad tab token: {token} (expected #t:<id>)"
+  "cmd.back.error.badArgs": {
+    "ja": "error: back の引数が不正です（操作先は `back`、複数は `tab -list | back`）",
+    "en": "error: invalid back argument (active tab: `back`; multiple: `tab -list | back`)"
   },
   "cmd.forward.usage": {
-    "ja": "usage: forward [#t:<tabId>…] | … | forward",
-    "en": "usage: forward [#t:<tabId>…] | … | forward"
+    "ja": "usage: forward  — 操作先タブを進む。複数タブは `tab -list | forward`",
+    "en": "usage: forward  — go forward on the target tab. For multiple tabs: `tab -list | forward`"
   },
-  "cmd.forward.error.badTabToken": {
-    "ja": "error: 不正なタブ指定です: {token}（形式: #t:<id>）",
-    "en": "error: bad tab token: {token} (expected #t:<id>)"
+  "cmd.forward.error.badArgs": {
+    "ja": "error: forward の引数が不正です（操作先は `forward`、複数は `tab -list | forward`）",
+    "en": "error: invalid forward argument (active tab: `forward`; multiple: `tab -list | forward`)"
   },
   "cmd.reload.usage": {
-    "ja": "usage: reload [#t:<tabId>…] | … | reload",
-    "en": "usage: reload [#t:<tabId>…] | … | reload"
+    "ja": "usage: reload  — 操作先タブをリロード。複数タブは `tab -list | reload`",
+    "en": "usage: reload  — reload the target tab. For multiple tabs: `tab -list | reload`"
   },
-  "cmd.reload.error.badTabToken": {
-    "ja": "error: 不正なタブ指定です: {token}（形式: #t:<id>）",
-    "en": "error: bad tab token: {token} (expected #t:<id>)"
+  "cmd.reload.error.badArgs": {
+    "ja": "error: reload の引数が不正です（操作先は `reload`、複数は `tab -list | reload`）",
+    "en": "error: invalid reload argument (active tab: `reload`; multiple: `tab -list | reload`)"
+  },
+  "cmd.close.usage": {
+    "ja": "usage: close  — 操作先タブを閉じる（y/n）。複数タブは `tab -list | close`。明示 ID は `close <tabId>`",
+    "en": "usage: close  — close the target tab (y/n). For multiple tabs: `tab -list | close`. Explicit id: `close <tabId>`"
   },
   "cmd.common.availableOptions": {
     "ja": "{command}: 利用可能なオプション",

@@ -41,14 +41,19 @@ describe("bmxtCandidate catalog", () => {
     assert.ok(ids.includes("ui.sessionNames"))
   })
 
-  it("binds close and tab -moveurl to tab/history sources", () => {
+  it("binds group new and tab -moveurl to tab/history sources; close has no rest picker", () => {
     const catalog = loadBmxtCandidateCatalog()
     const close = catalog.commands.find((c) => c.command === "close")
-    const closeProviders =
-      close?.zones.flatMap((zone) =>
-        zone.sources.flatMap((source) => (source.kind === "runtime.dynamic" ? [source.provider] : []))
+    assert.ok(close)
+    assert.equal(close!.zones.length, 0)
+
+    const group = catalog.commands.find((c) => c.command === "group")
+    const groupNewZone = group?.zones.find((zone) => zone.when?.second === "new")
+    const groupProviders =
+      groupNewZone?.sources.flatMap((source) =>
+        source.kind === "runtime.dynamic" ? [source.provider] : []
       ) ?? []
-    assert.ok(closeProviders.includes("browser.tabIds"))
+    assert.ok(groupProviders.includes("browser.tabIds"))
 
     const tabs = catalog.commands.find((c) => c.command === "tab")
     const moveUrlZone = tabs?.zones.find((zone) => zone.when?.second === "-moveurl")

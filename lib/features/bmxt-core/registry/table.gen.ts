@@ -14,7 +14,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "back",
     aliases: [] as const,
-    usagePrimary: "back [#t:<tabId>…] | … | back"
+    usagePrimary: "back | … | back"
   },
   {
     name: "close",
@@ -49,12 +49,12 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "forward",
     aliases: [] as const,
-    usagePrimary: "forward [#t:<tabId>…] | … | forward"
+    usagePrimary: "forward | … | forward"
   },
   {
     name: "reload",
     aliases: [] as const,
-    usagePrimary: "reload [#t:<tabId>…] | … | reload"
+    usagePrimary: "reload | … | reload"
   },
   {
     name: "tab",

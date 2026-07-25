@@ -1192,15 +1192,16 @@ Phase E（ゲート・スキル・実証）
 
 | 形 | 意味 |
 |----|------|
-| `back`（引数なし） | 操作先アクティブタブで履歴バック（即時・確認なし） |
-| `forward`（引数なし） | 操作先アクティブタブで履歴を進む（即時・確認なし） |
-| `… \| back` | 左辺 `bmxtRule` ストリーム内タブを一括バック |
-| `… \| forward` | 同上で一括 forward |
+| `back`（引数なし） | 操作先アクティブタブで履歴バック（即時・確認なし・**タブ候補 UI なし**） |
+| `forward`（引数なし） | 操作先アクティブタブで履歴を進む（即時・**タブ候補 UI なし**） |
+| `reload`（引数なし） | 操作先アクティブタブをリロード（即時・**タブ候補 UI なし**） |
+| `close`（引数なし） | 操作先タブを閉じる（y/n・**タブ候補 UI なし**） |
+| `… \| back` / `forward` / `reload` / `close` | 左辺 `bmxtRule`（`page.open`）のタブを一括操作 |
 
-- **パイプ向き:** producer → consumer。`{tabs} | back` / `{tabs} | forward`（`forward | {tabs}` は不可。`tab -list | close` と同型）。
-- **短いエイリアス**（`b` / `f` 等）は付けない（first/second 短縮禁止ルール）。
-- **effect 再利用:** 既存 `tab_go_back` / `tab_go_forward`（必要なら複数 `tabId` 対応に拡張）。新規 Chrome API 能力は原則不要。
-- **先例:** `close`（明示 ID / `| close`）と二層。履歴はホットパスを **bare first で完結**させる点が `close`（ID 必須）と意図的に異なる。
+- **向き:** `{tabs} | back`（`back {tabs}` や `back ` での候補メニューは**禁止**）。
+- パイプ内部ワイヤのみ数値 tabId（`back 12` 等）。ユーザー向けの `#t:` チップ／候補ピッカーは廃止。
+- **短いエイリアス**は付けない（`close` の既存 `c` のみ維持）。
+- **effect 再利用:** `tab_go_back` / `tab_go_forward` / `tab_reload`（`tab_ids`）。
 
 #### 18.2.1 `tab` 配下の扱い
 

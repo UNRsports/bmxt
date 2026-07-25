@@ -14,7 +14,7 @@
       "module": "back",
       "canonicalName": "back",
       "aliases": [],
-      "usagePrimary": "back [#t:<tabId>…] | … | back",
+      "usagePrimary": "back | … | back",
       "subcommands": []
     },
     {
@@ -121,14 +121,14 @@
       "module": "forward",
       "canonicalName": "forward",
       "aliases": [],
-      "usagePrimary": "forward [#t:<tabId>…] | … | forward",
+      "usagePrimary": "forward | … | forward",
       "subcommands": []
     },
     {
       "module": "reload",
       "canonicalName": "reload",
       "aliases": [],
-      "usagePrimary": "reload [#t:<tabId>…] | … | reload",
+      "usagePrimary": "reload | … | reload",
       "subcommands": []
     },
     {

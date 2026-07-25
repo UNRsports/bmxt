@@ -42,5 +42,5 @@ export const forwardPipeConsumer = makePageOpenTabActionConsumer({
   commandName: "forward",
   match: isForwardPipeConsumer,
   noTabsKey: "pipe.forward.noTabs",
-  formatSegment: (tabId) => `forward #t:${tabId}`
+  formatSegment: (tabId) => `forward ${tabId}`
 })
