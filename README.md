@@ -116,7 +116,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
-**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Manifest overrides live in **`wxt.config.ts`** (not **`package.json`**). Entrypoints are under **`entrypoints/`**; static assets under **`public/`**; build output under **`.output/`** (dev: **`.output/chrome-mv3-dev`**, prod: **`.output/chrome-mv3`**).
+**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Manifest overrides live in **`wxt.config.ts`** (not **`package.json`**). Entrypoints are under **`entrypoints/`**; static assets under **`public/`**; build output under **`.output/`** (dev: **`.output/chrome-mv3-dev`**, prod: **`.output/chrome-mv3`**). Since **0.8.0**, TypeScript is **6.x** and command interpretation runs in a bundled **Rust → WASM** core (`crates/bmxt-core/`).
 
 | Former (Plasmo / npm) | Current (WXT / pnpm) |
 |-----------------------|----------------------|
@@ -1334,7 +1334,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 ## Roadmap
 
 1. UI and behavior: design, implementation, and testing
-2. Refine key operations in the core tabs mode
+2. Refine key operations in the core **tab** command / picker flows
 3. Add history and bookmark operations
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
@@ -1462,7 +1462,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
-**ツールチェーン（0.6.9 以降）:** 拡張シェルは **[WXT](https://wxt.dev/)** と **[pnpm](https://pnpm.io/)** のみでビルドします。**`npm`** / **`npm ci`** / **`npx`** / **`package-lock.json`** は**使わない** — lockfile は **`pnpm-lock.yaml`**。manifest 上書きは **`wxt.config.ts`**（**`package.json`** ではない）。エントリは **`entrypoints/`**、静的アセットは **`public/`**、出力は **`.output/`**（開発: **`.output/chrome-mv3-dev`**、本番: **`.output/chrome-mv3`**）。
+**ツールチェーン（0.6.9 以降）:** 拡張シェルは **[WXT](https://wxt.dev/)** と **[pnpm](https://pnpm.io/)** のみでビルドします。**`npm`** / **`npm ci`** / **`npx`** / **`package-lock.json`** は**使わない** — lockfile は **`pnpm-lock.yaml`**。manifest 上書きは **`wxt.config.ts`**（**`package.json`** ではない）。エントリは **`entrypoints/`**、静的アセットは **`public/`**、出力は **`.output/`**（開発: **`.output/chrome-mv3-dev`**、本番: **`.output/chrome-mv3`**）。**0.8.0** 以降は TypeScript **6.x**、コマンド解釈は同梱の **Rust → WASM** コア（`crates/bmxt-core/`）で実行します。
 
 | 旧（Plasmo / npm） | 現行（WXT / pnpm） |
 |--------------------|--------------------|
@@ -2638,7 +2638,7 @@ pnpm run package   # .output/*-chrome.zip を出力
 ## ロードマップ
 
 1. UI および動作の設計／実装／テスト
-2. 基本となる tabs モードでのキー操作見直し
+2. 基本となる **tab** コマンド／ピッカー操作の見直し
 3. 履歴、ブックマーク操作
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など

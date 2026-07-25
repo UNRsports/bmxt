@@ -50,7 +50,7 @@ https://github.com/UNRsports/bmxt/issues
 ・tabsなど各詳細バー表示UIをctrl+cで終了可能に実装
 ・typescript6へのアップと、コード細部の修正
 ・nav: カーソル下の識別ラベル（kind:key）表示、/ による属性インクリメンタルジャンプ、成功 activate の origin 学習
-・navコマンドを使用し、browse機能に依らないコマンドによる直接操作を実装開始
+・tabコマンドや、backやreloadなどタブ操作コマンドを独立させ、browse機能に依らないコマンドによる直接操作を実装開始
 ・内部: コマンド解釈コアを Rust/WASM に移し、UI は表示とブラウザ API 実行に専念
 ・tabs コマンドを tab に改名。履歴・リロード・タブ閉じを nav から tab へ移動（nav は -enter/-exit/-windowclose）
 
@@ -150,9 +150,10 @@ https://github.com/UNRsports/bmxt/issues
 | `tab -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https） |
 | `tab -nowurl` | 現在タブの URL を表示 |
 | `tab help` | `tab` のマニュアル節を表示 |
-| `tab -back` / `-forward` | 操作先アクティブタブの履歴バック／進む |
-| `tab -reload` | 操作先アクティブタブをリロード。末尾スペースでタブ候補メニューを開き `#t:<id>` ブロックを挿入 |
-| `tab -close` | 操作先タブを閉じる（y/n 確認） |
+| `back` | 操作先アクティブタブの履歴バック。一括: `tab -list \| back` |
+| `forward` | 操作先アクティブタブの履歴進む。一括: `tab -list \| forward` |
+| `reload` | 操作先アクティブタブをリロード。一括: `tab -list \| reload` |
+| `close` / `c` | 操作先タブを閉じる（y/n 確認）。`close <tabId>` / `c <tabId>` は確認なし。一括: `tab -list \| close` |
 | `dom` | 利用案内を表示。単体で Enter すると `dom `（末尾スペース付き）へ入力復元し、続きのトークンを待つ |
 | `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 `--normal --html`）。部分一致フィルタ可。scriptable な http(s) のみ |
 | `dom -list … | browse` | DOM 読み取り専用ピッカー列。`--normal`/`--with`、`--html`/`--react` |
@@ -165,8 +166,6 @@ https://github.com/UNRsports/bmxt/issues
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は `--all` 相当） |
 | `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | search ピッカー列を閉じる（検索中ならキャンセル） |
-| `close` / `c <tabId>` | タブを閉じる |
-| `close` / `c`（パイプ） | `tab -list` のパイプ入力から列挙されたタブをすべて閉じる（例: `tab -list \| close`） |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |

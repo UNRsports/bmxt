@@ -11,7 +11,7 @@
       "Detail bars (tab and others) can now be closed with Ctrl+C",
       "Upgraded to TypeScript 6 and applied minor code fixes",
       "nav: show identity label (kind:key) under the cursor; incremental attribute jump with /; learn origins after successful activate",
-      "Started implementing direct browser operations via nav commands without relying on browse",
+      "Started implementing direct tab operations via independent commands (tab, back, reload, and related) without relying on browse",
       "Internal: moved the command-interpretation core to Rust/WASM; UI focuses on display and browser API execution",
       "Renamed tabs to tab. Moved history, reload, and tab close from nav to tab (nav keeps -enter/-exit/-windowclose)"
     ],
@@ -22,7 +22,7 @@
       "tabsなど各詳細バー表示UIをctrl+cで終了可能に実装",
       "typescript6へのアップと、コード細部の修正",
       "nav: カーソル下の識別ラベル（kind:key）表示、/ による属性インクリメンタルジャンプ、成功 activate の origin 学習",
-      "navコマンドを使用し、browse機能に依らないコマンドによる直接操作を実装開始",
+      "tabコマンドや、backやreloadなどタブ操作コマンドを独立させ、browse機能に依らないコマンドによる直接操作を実装開始",
       "内部: コマンド解釈コアを Rust/WASM に移し、UI は表示とブラウザ API 実行に専念",
       "tabs コマンドを tab に改名。履歴・リロード・タブ閉じを nav から tab へ移動（nav は -enter/-exit/-windowclose）"
     ]

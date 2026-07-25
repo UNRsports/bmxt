@@ -5,11 +5,11 @@
 # Inter-command vocabulary (closed): DispatchBundle | ListResult(bmxt-list/1) | BmxtRuleStream(bmxt-rule/1) | exit status — see lib/features/command-line/inter-command/ and manifest/templates/.
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
-close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`（パイプ内部）。タブ候補 UI なし。,pipe consumer は語彙 `acceptsKinds` で接続
-back,,,,,back | … | back,引数なし=操作先アクティブ即時。Effect `tab_go_back` { tab_ids: [] }。パイプ右辺 `back` は page.open → 内部で `back <tabId>`。タブ候補 UI なし。,独立 first。複数指定はパイプのみ（左辺は `tab -list` または `tab:` チップ `#t:…`）
-forward,,,,,forward | … | forward,引数なし=操作先即時。Effect `tab_go_forward`。パイプ `… | forward`。タブ候補 UI なし。,独立 first
-reload,,,,,reload | … | reload,引数なし=操作先即時。Effect `tab_reload`。パイプ `… | reload`。旧 `#t:` チップ候補は廃止。,独立 first
-（ホスト）,tab:,,,,tab: | tab:{needle} | tab::{needle} | Space後継続 | #t:… Enter,ライブタブ候補。選択→`#t:<id>` のみ（候補閉じる）。Enter=最後のチップをアクティブ。Space=候補再表示で複数選択。パイプ: `#t:… | back` 等。,`tab-chip-token.ts` + `tab-chip-producer.ts` + `tab-chip-activate.ts`。`tab` コマンドとは別トークン
+close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`（パイプ内部）。タブ候補 UI なし。,pipe consumer は語彙 `acceptsKinds` で接続。0.8.0: tab/nav 配下から独立 first
+back,,,,,back | … | back,引数なし=操作先アクティブ即時。Effect `tab_go_back` { tab_ids: [] }。パイプ右辺 `back` は page.open → 内部で `back <tabId>`。タブ候補 UI なし。,独立 first。0.8.0: tab/nav 配下から独立。複数指定はパイプのみ（左辺は `tab -list` または `tab:` チップ `#t:…`）
+forward,,,,,forward | … | forward,引数なし=操作先即時。Effect `tab_go_forward`。パイプ `… | forward`。タブ候補 UI なし。,独立 first。0.8.0
+reload,,,,,reload | … | reload,引数なし=操作先即時。Effect `tab_reload`。パイプ `… | reload`。旧 `#t:` チップ候補は廃止。,独立 first。0.8.0
+（ホスト）,tab:,,,,tab: | tab:{needle} | tab::{needle} | Space後継続 | #t:… Enter,ライブタブ候補。選択→`#t:<id>` のみ（候補閉じる）。Enter=最後のチップをアクティブ。Space=候補再表示で複数選択。パイプ: `#t:… | back` 等。,`tab-chip-token.ts` + `tab-chip-producer.ts` + `tab-chip-activate.ts`。`tab` コマンドとは別トークン。0.8.0
 dom,,,,,dom …,単独 `dom` + Enter: msgs + promptPrefix `dom `（require_second_token）。第二候補に `help`。,
 dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** `RUN_CMD` → Effect `dom_list` → **`-list` レジストリ**（`dom-list-fetch.ts` / `dom-list-command.ts`）→ `ListResult`（`bmxt-list/1`）→ ターミナルログ。ピッカーは `dom -list … | browse`。閉じるは `dom -exit -list`。パイプ時は bmxtRule（`dom.node` / `dom.notice`）。,語彙: ListResult→bmxtRule
 dom,-list,--normal,rest,,（同上）,trailingTokens。mode `--normal`。`--with` と排他。,
@@ -33,7 +33,7 @@ search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
 group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
-tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化
+tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`（browse 非依存の直接操作）。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化
 tab,-list,,none,,tab -list [-url] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。ピッカーは `tab -list | browse`。パイプ時 page.window/group/open。,語彙: ListResult→bmxtRule
 tab,-setting,,none,,tab -setting | tab -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
 tab,-setting,-page-active,none,,tab -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tab -setting -page-active `。,
