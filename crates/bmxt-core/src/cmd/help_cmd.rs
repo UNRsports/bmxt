@@ -8,6 +8,7 @@ const FULL_HELP_SECTION_KEYS: &[&str] = &[
     "help.section.forward",
     "help.section.reload",
     "help.section.close",
+    "help.section.tabChip",
     "help.section.session",
     "help.section.dom",
     "help.section.translate",

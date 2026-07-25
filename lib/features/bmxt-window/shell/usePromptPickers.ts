@@ -13,12 +13,13 @@ import type { TokenPickerModel } from "../token-picker-panel"
 import { useCspDynamicStyle } from "../csp-dynamic-stylesheet"
 import { shouldKeepSessionSwitchPickerOpen, measureFloatingPickerHostPosition } from "./bmxt-shell-prompt-helpers"
 import {
-  findNavReloadTabTokenSpans,
-  listNavReloadTabCandidates,
   navReloadTabChipMetaFromCandidate,
-  navReloadTabCompletionZone,
   type NavReloadTabChipMeta
 } from "../../nav/nav-reload-tab-token"
+import {
+  listTabChipCandidates,
+  tabChipCompletionZone
+} from "../../nav/tab-chip-token"
 
 export type UsePromptPickersOptions = {
   sessionId: string
@@ -219,26 +220,22 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       setSessionListPickerHi(null)
       setSessionPickerVariant(null)
 
-      const reloadZone = navReloadTabCompletionZone(ln, pos)
-      if (reloadZone !== null) {
+      const tabChipZone = tabChipCompletionZone(ln, pos)
+      if (tabChipZone !== null) {
         if (imeTokenPickerDismissedRef.current) {
           setSubCmdPicker(null)
           return
         }
         const gen = ++navReloadPickGenRef.current
-        const selected = new Set(
-          findNavReloadTabTokenSpans(ln).map((s) => s.tabId)
-        )
-        void listNavReloadTabCandidates(reloadZone.prefix).then((cands) => {
+        void listTabChipCandidates(tabChipZone, ln).then((cands) => {
           if (gen !== navReloadPickGenRef.current) {
             return
           }
-          const filtered = cands.filter((c) => !selected.has(c.tabId))
-          if (filtered.length === 0) {
+          if (cands.length === 0) {
             setSubCmdPicker(null)
             return
           }
-          for (const c of filtered) {
+          for (const c of cands) {
             options.navReloadTabMetaRef.current.set(
               c.tabId,
               navReloadTabChipMetaFromCandidate(c)
@@ -246,16 +243,17 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
           }
           options.onNavReloadTabMetaUpdated()
           setSubCmdPicker((prev) => {
-            const candidates = filtered.map((c) => c.insertToken)
-            const candidateLabels = filtered.map((c) => c.label)
-            const candidateRows = filtered.map((c) => ({
+            const candidates = cands.map((c) => c.insertToken)
+            const candidateLabels = cands.map((c) => c.label)
+            const candidateRows = cands.map((c) => ({
               title: c.title,
+              detail: tabChipZone.mode === "url" ? c.url || undefined : undefined,
               faviconSrc: c.faviconSrc
             }))
             const sameSlot =
               prev !== null &&
-              prev.tokenStart === reloadZone.tokenStart &&
-              prev.tokenEnd === reloadZone.tokenEnd &&
+              prev.tokenStart === tabChipZone.tokenStart &&
+              prev.tokenEnd === tabChipZone.tokenEnd &&
               prev.tier === "third" &&
               prev.candidates.length === candidates.length &&
               prev.candidates.every((c, i) => c === candidates[i])
@@ -268,8 +266,8 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               }
             }
             return {
-              tokenStart: reloadZone.tokenStart,
-              tokenEnd: reloadZone.tokenEnd,
+              tokenStart: tabChipZone.tokenStart,
+              tokenEnd: tabChipZone.tokenEnd,
               candidates,
               candidateLabels,
               candidateRows,

@@ -1250,3 +1250,32 @@ Task progress:
 | Pipe | `lib/features/command-line/pipe/consumers/`（`close-*` を型に） |
 | i18n | `lib/features/setting/i18n/namespaces/cmd.json` / `help.json` / pipe ns |
 | 文書 | README、`_context/map_command.csv` |
+
+---
+
+## 19. `tab:` チップ指定 — パイプ左辺の効率的タブ選択
+
+**状態:** 実装済み（ブラウザ手元スモークは残）。  
+**関連:** §18（`back` / `forward` / `reload` / `close` 独立 + pipe）、skill `bmxt-i18n`。
+
+### 19.1 仕様
+
+| 入力 | 意味 |
+|------|------|
+| `tab:` | 開いているタブ候補（ファビコン＋タイトル） |
+| `tab:{語句}` | タブ名 contains 絞込 |
+| `tab::{語句}` | URL contains 絞込（候補に URL 行） |
+| 選択 | `#t:<id>` チップに置換し `tab:` を再付与（連続選択） |
+| Esc / ↑(先頭) | 候補を閉じる |
+| `#t:… \| back` 等 | 合成 `page.open` producer → 既存 consumer |
+
+`tab` コマンドとは別トークン。動詞側へのタブ候補は付けない（§18）。
+
+### 19.2 実装チェックリスト
+
+- [x] `tabChipCompletionZone` + title/URL filter（`lib/features/nav/tab-chip-token.ts`）
+- [x] `usePromptPickers` ライブ候補
+- [x] pick → `#t:id` + `tab:` 再付与（`useShellKeyboard`）
+- [x] `parseTabChipProducerSegment` + `runPipeChain` 合成 producer
+- [x] i18n / README / map_command / help.section.tabChip
+- [ ] ブラウザ手元スモーク

@@ -1,6 +1,7 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { bmxtRuleStreamFromListResult } from "../../bmxt-rule/index.ts"
+import { bmxtRuleStreamFromTabIds } from "../../bmxt-rule/adapters/from-tab-ids.ts"
 import { classifyCompoundEligibility } from "../compound/classify-eligibility.ts"
 import {
   segmentFailure,
@@ -13,6 +14,7 @@ import type { SegmentOutcome } from "../compound/types.ts"
 import { tPipe } from "../../setting/i18n/ns/pipe.ts"
 import { fetchListResultForCommand, matchPlainListCommand } from "../list-commands/index.ts"
 import { tryRunPipeConsumer } from "./consumers/index.ts"
+import { parseTabChipProducerSegment } from "./producers/tab-chip-producer.ts"
 
 export async function attachBmxtRuleStreamToOutcome(
   segment: string,
@@ -103,6 +105,16 @@ export async function runPipeChain(
       allStdout.push(...consumerOutcome.stdout)
       allStderr.push(...consumerOutcome.stderr)
       bmxtRuleStream = consumerOutcome.bmxtRuleStream
+      continue
+    }
+
+    // EN: Synthetic producer — `#t:<id>…` chips (optional trailing `tab:`) → page.open stream.
+    const chipIds = parseTabChipProducerSegment(stage)
+    if (chipIds !== null) {
+      bmxtRuleStream = bmxtRuleStreamFromTabIds(chipIds)
+      if (stages.length === 1) {
+        // EN: Chips alone (no consumer) — nothing to print; stream available for chaining.
+      }
       continue
     }
 

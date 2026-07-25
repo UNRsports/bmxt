@@ -93,7 +93,7 @@
     {
       "id": "browser.tabIds",
       "domain": "browser",
-      "description": "Numeric tab IDs from the current tab tree (same scope as tab -list).",
+      "description": "Numeric tab IDs from the current tab tree (same scope as tab -list). Host `tab:` chip picker uses chrome.tabs.query directly.",
       "valueKind": "integer",
       "chromeApis": ["tabs.query"],
       "filterDefault": "prefix",

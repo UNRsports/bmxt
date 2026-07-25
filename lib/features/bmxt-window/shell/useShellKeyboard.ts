@@ -11,6 +11,8 @@ import type { TabPickerState } from "../../side-picker/session/tab-picker-state"
 import { logBmxtKey } from "../../debug/key-log"
 import { buildFirstTierPrependPickLine, isFirstTierPrependPick } from "../../command-line/first-token-insert.ts"
 import { shouldAutoSubmitAfterTokenPick, shouldSubmitLoneFirstTokenFromPicker } from "./bmxt-shell-prompt-helpers"
+import { applyTabChipPickToLine, tabChipCompletionZone } from "../../nav/tab-chip-token"
+import { parseNavReloadTabToken } from "../../nav/nav-reload-tab-token"
 import { moveNavReloadTabBlockCaret, deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor } from "../../nav/nav-reload-tab-token"
 import { lockedPrefixBlocksDelete } from "./prompt-locked-prefix"
 
@@ -98,24 +100,43 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
       }
       const cur = options.lineRef.current
       const cursor = options.cursorRef.current
-      const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
-      const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)
+      const tabIdFromChipPick = parseNavReloadTabToken(tok)
+      const chipZone =
+        tabIdFromChipPick !== null ? tabChipCompletionZone(cur, cursor) : null
       let nextLine: string
       let nextPos: number
-      if (appendAtEnd) {
-        const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
-        nextLine = `${cur}${sep}${tok} `
-        nextPos = nextLine.length
-      } else if (prependFirstCommand) {
-        const built = buildFirstTierPrependPickLine(cur, cursor, tok)
+      if (
+        chipZone !== null &&
+        tabIdFromChipPick !== null &&
+        chipZone.tokenStart === s.tokenStart &&
+        chipZone.tokenEnd === s.tokenEnd
+      ) {
+        const built = applyTabChipPickToLine(
+          cur,
+          s.tokenStart,
+          s.tokenEnd,
+          tabIdFromChipPick
+        )
         nextLine = built.line
         nextPos = built.cursor
       } else {
-        const addTrailing = s.tokenEnd >= cur.length
-        nextLine = addTrailing
-          ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
-          : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
-        nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
+        const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
+        const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)
+        if (appendAtEnd) {
+          const sep = cur.length > 0 && !/\s$/.test(cur) ? " " : ""
+          nextLine = `${cur}${sep}${tok} `
+          nextPos = nextLine.length
+        } else if (prependFirstCommand) {
+          const built = buildFirstTierPrependPickLine(cur, cursor, tok)
+          nextLine = built.line
+          nextPos = built.cursor
+        } else {
+          const addTrailing = s.tokenEnd >= cur.length
+          nextLine = addTrailing
+            ? cur.slice(0, s.tokenStart) + tok + " " + cur.slice(s.tokenEnd)
+            : cur.slice(0, s.tokenStart) + tok + cur.slice(s.tokenEnd)
+          nextPos = s.tokenStart + tok.length + (addTrailing ? 1 : 0)
+        }
       }
       options.lineRef.current = nextLine
       options.setLine(nextLine)

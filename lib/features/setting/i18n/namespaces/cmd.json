@@ -92,12 +92,12 @@
     "en": "<pattern> is a case-insensitive substring filter on the output lines (no regex)."
   },
   "cmd.error.unknownCommand": {
-    "ja": "error: 不明なコマンド: {cmdToken}。help と入力してください。",
-    "en": "error: unknown command: {cmdToken}. Type help."
+    "ja": "error: 不明なコマンド: \"{cmdToken}\"が入力されました。",
+    "en": "error: unknown command: \"{cmdToken}\" was entered."
   },
   "cmd.error.unknownCommandSuggest": {
-    "ja": "error: 不明なコマンド: {cmdToken}。候補: {suggestions}。help と入力してください。",
-    "en": "error: unknown command: {cmdToken}. Suggestions: {suggestions}. Type help."
+    "ja": "error: 不明なコマンド: \"{cmdToken}\"が入力されました。候補: {suggestions}。",
+    "en": "error: unknown command: \"{cmdToken}\" was entered. Suggestions: {suggestions}."
   },
   "cmd.group.usage.interactive": {
     "ja": "Interactive: BMXt で group new と入力して Enter（タブ ID 不要）。",
