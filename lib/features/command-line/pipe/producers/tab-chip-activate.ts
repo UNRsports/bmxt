@@ -52,9 +52,7 @@ export async function tryActivateTabChipSegment(
   const tabId = ids[0]!
   const result = await activateTabChipById(tabId)
   if (!result.ok) {
-    return segmentFailure("runtime", [
-      tPipe("pipe.tabChip.activateFailed", locale, { tabId: String(tabId) })
-    ])
+    return segmentFailure("runtime", [tPipe("pipe.tabChip.activateFailed", locale)])
   }
   return segmentSuccess([
     tPipe("pipe.tabChip.movedTo", locale, { title: result.title })

@@ -567,7 +567,8 @@ export function BmxtShell({
           navReloadTabMetaRef.current.set(span.tabId, {
             title,
             faviconSrc: resolveTabFaviconSrc(rawUrl),
-            label: title
+            label: title,
+            url: rawUrl
           })
           added = true
         } catch {

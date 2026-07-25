@@ -18,12 +18,14 @@ export type NavReloadTabTokenSpan = {
   token: string
 }
 
-/** EN: Display metadata for a selected `#t:<id>` chip in the prompt mirror. */
+/** EN: Display metadata for a selected `#t:<id>` chip in the prompt mirror / log. */
 export type NavReloadTabChipMeta = {
   title: string
   faviconSrc: string | null
-  /** EN: Picker row label (title + id); also used as native tooltip. */
+  /** EN: Picker row / tooltip label (title only — never tab id). */
   label: string
+  /** EN: Tab URL when known (log `tab::` chips show title + url). */
+  url: string
 }
 
 /** EN: Format a tab id as a prompt block token. */
@@ -341,6 +343,7 @@ export function navReloadTabChipMetaFromCandidate(
   return {
     title: candidate.title,
     faviconSrc: candidate.faviconSrc,
-    label: candidate.label
+    label: candidate.label,
+    url: candidate.url
   }
 }

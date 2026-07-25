@@ -36,8 +36,8 @@
     "en": "error: browse requires a `-list` ListResult (e.g. tab -list | browse)"
   },
   "pipe.tabChip.activateFailed": {
-    "ja": "error: タブをアクティブにできませんでした（id={tabId}）",
-    "en": "error: could not activate tab (id={tabId})"
+    "ja": "error: タブをアクティブにできませんでした",
+    "en": "error: could not activate tab"
   },
   "pipe.tabChip.movedTo": {
     "ja": "{title}へ移動しました。",

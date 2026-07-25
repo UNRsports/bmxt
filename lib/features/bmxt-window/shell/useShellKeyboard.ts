@@ -120,7 +120,8 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
           cur,
           s.tokenStart,
           s.tokenEnd,
-          tabIdFromChipPick
+          tabIdFromChipPick,
+          chipZone.mode
         )
         nextLine = built.line
         nextPos = built.cursor
@@ -191,8 +192,10 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
   const applyHistoryLine = useCallback(
     (text: string) => {
       options.allowEmptyFirstPickerSyncRef.current = false
+      options.imeTokenPickerDismissedRef.current = false
       options.skipHistResetRef.current = true
       options.tabPressSeqRef.current = 0
+      options.lineRef.current = text
       options.setLine(text)
       options.setCursorPos(text.length)
     },
@@ -512,6 +515,13 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
             options.setLine(newLine)
             options.setCursorPos(muZone.urlStart + rep.length)
           })()
+          return
+        }
+        // EN: `tab:` / `tab::` (and chip continuation) — open live tab candidates.
+        if (tabChipCompletionZone(curLn, pos) !== null) {
+          options.tabPressSeqRef.current = 0
+          options.tabPickerOpenRequestRef.current = true
+          options.syncImeTokenPicker(curLn, pos)
           return
         }
         if (curLn.trim() === "") {

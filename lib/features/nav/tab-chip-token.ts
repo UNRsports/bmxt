@@ -31,7 +31,10 @@ export function isTabChipTriggerToken(token: string): boolean {
   return /^tab::/i.test(t) || /^tab:/i.test(t)
 }
 
-/** EN: True when every whitespace token is a `#t:<id>` chip (and at least one exists). */
+/**
+ * EN: True when tokens are only `#t:<id>` chips and optional `tab:` / `tab::…` triggers,
+ *     with at least one chip (producer / continuation prefix).
+ */
 export function isOnlyTabChipTokens(text: string): boolean {
   const trimmed = text.trim()
   if (trimmed.length === 0) {
@@ -41,12 +44,23 @@ export function isOnlyTabChipTokens(text: string): boolean {
   if (tokens.length === 0) {
     return false
   }
+  let sawChip = false
   for (const tok of tokens) {
-    if (parseNavReloadTabToken(tok) === null) {
-      return false
+    if (parseNavReloadTabToken(tok) !== null) {
+      sawChip = true
+      continue
     }
+    if (isTabChipTriggerToken(tok)) {
+      continue
+    }
+    return false
   }
-  return true
+  return sawChip
+}
+
+/** EN: `tab:` (title) or `tab::` (url) command introducer for history / log echo. */
+export function tabChipCommandPrefix(mode: TabChipFilterMode): "tab:" | "tab::" {
+  return mode === "url" ? "tab::" : "tab:"
 }
 
 /**
@@ -100,8 +114,23 @@ export function tabChipCompletionZone(
     }
   }
 
-  // EN: Continuation — only after one or more `#t:` chips (Space reopens / title filter).
+  // EN: `tab: ` / `tab:: ` with no chip yet (e.g. history recall then delete chip) — reopen filter.
   const prefix = stageLine.slice(0, tokenStartLocal)
+  const prefixTrimmed = prefix.trim()
+  if (
+    parseNavReloadTabToken(token) === null &&
+    !isTabChipTriggerToken(token) &&
+    (/^tab::$/i.test(prefixTrimmed) || /^tab:$/i.test(prefixTrimmed))
+  ) {
+    return {
+      tokenStart: absBase + tokenStartLocal,
+      tokenEnd: absBase + tokenEndLocal,
+      needle: token,
+      mode: /^tab::/i.test(prefixTrimmed) ? "url" : "title"
+    }
+  }
+
+  // EN: Continuation — only after one or more `#t:` chips (Space reopens / title filter).
   if (!isOnlyTabChipTokens(prefix)) {
     return null
   }
@@ -169,19 +198,30 @@ export async function listTabChipCandidates(
 }
 
 /**
- * EN: After pick: replace trigger / needle / empty slot with `#t:<id>` only (no `tab:` re-append).
- * Menu closes on next sync because caret sits on/after a chip with no continuation zone.
+ * EN: After pick: keep `tab:` / `tab::` command prefix + `#t:<id>` wire chip (id stays internal).
+ * JA: 選択後は `tab:` / `tab::` を残し、ワイヤは `#t:<id>`（UI には ID を出さない）。
+ * Menu closes on next sync when caret sits on/after a chip with no continuation zone.
  */
 export function applyTabChipPickToLine(
   line: string,
   tokenStart: number,
   tokenEnd: number,
-  tabId: number
+  tabId: number,
+  mode: TabChipFilterMode = "title"
 ): { line: string; cursor: number } {
   const chip = formatNavReloadTabToken(tabId)
-  const nextLine = `${line.slice(0, tokenStart)}${chip}${line.slice(tokenEnd)}`
-  const cursor = tokenStart + chip.length
-  return { line: nextLine, cursor }
+  const beforeTrimEnd = line.slice(0, tokenStart).replace(/\s+$/, "")
+  const after = line.slice(tokenEnd).replace(/^\s+/, "")
+  const commandPrefix = tabChipCommandPrefix(mode)
+
+  let head: string
+  if (beforeTrimEnd.length === 0) {
+    head = `${commandPrefix} ${chip}`
+  } else {
+    head = `${beforeTrimEnd} ${chip}`
+  }
+  const nextLine = after.length === 0 ? head : `${head} ${after}`
+  return { line: nextLine, cursor: head.length }
 }
 
 export { navReloadTabChipMetaFromCandidate, formatNavReloadTabToken }

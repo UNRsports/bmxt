@@ -48,6 +48,34 @@ describe("tabChipCompletionZone", () => {
     assert.equal(zone.mode, "title")
   })
 
+  it("reopens after bare tab: with trailing space (no chip yet)", () => {
+    const line = "tab: "
+    const zone = tabChipCompletionZone(line, line.length)
+    assert.ok(zone)
+    assert.equal(zone.mode, "title")
+    assert.equal(zone.needle, "")
+    assert.equal(zone.tokenStart, line.length)
+    assert.equal(zone.tokenEnd, line.length)
+  })
+
+  it("reopens after bare tab:: with trailing space", () => {
+    const line = "tab:: "
+    const zone = tabChipCompletionZone(line, line.length)
+    assert.ok(zone)
+    assert.equal(zone.mode, "url")
+    assert.equal(zone.needle, "")
+  })
+
+  it("reopens after tab: chips + trailing space", () => {
+    const line = "tab: #t:12 "
+    const zone = tabChipCompletionZone(line, line.length)
+    assert.ok(zone)
+    assert.equal(zone.mode, "title")
+    assert.equal(zone.needle, "")
+    assert.equal(zone.tokenStart, line.length)
+    assert.equal(zone.tokenEnd, line.length)
+  })
+
   it("reopens after chips + trailing space", () => {
     const line = "#t:12 "
     const zone = tabChipCompletionZone(line, line.length)
@@ -97,6 +125,8 @@ describe("isOnlyTabChipTokens", () => {
     assert.equal(isOnlyTabChipTokens("   "), false)
     assert.equal(isOnlyTabChipTokens("#t:1"), true)
     assert.equal(isOnlyTabChipTokens("#t:1 #t:2"), true)
+    assert.equal(isOnlyTabChipTokens("tab: #t:1"), true)
+    assert.equal(isOnlyTabChipTokens("tab:: #t:1 #t:2"), true)
     assert.equal(isOnlyTabChipTokens("#t:1 back"), false)
   })
 })
@@ -124,25 +154,32 @@ describe("isTabChipTriggerToken", () => {
 })
 
 describe("applyTabChipPickToLine", () => {
-  it("replaces trigger with chip only (no tab: reappend)", () => {
+  it("keeps tab: command prefix when picking from bare tab:", () => {
     const line = "tab:"
-    const out = applyTabChipPickToLine(line, 0, 4, 42)
-    assert.equal(out.line, "#t:42")
-    assert.equal(out.cursor, "#t:42".length)
+    const out = applyTabChipPickToLine(line, 0, 4, 42, "title")
+    assert.equal(out.line, "tab: #t:42")
+    assert.equal(out.cursor, "tab: #t:42".length)
   })
 
-  it("keeps prior chips and does not reappend tab:", () => {
-    const line = "#t:1 tab:foo"
-    const start = line.indexOf("tab:")
-    const out = applyTabChipPickToLine(line, start, line.length, 2)
-    assert.equal(out.line, "#t:1 #t:2")
-    assert.equal(out.cursor, "#t:1 #t:2".length)
+  it("keeps tab:: command prefix for url-mode pick", () => {
+    const line = "tab::git"
+    const out = applyTabChipPickToLine(line, 0, line.length, 7, "url")
+    assert.equal(out.line, "tab:: #t:7")
+    assert.equal(out.cursor, "tab:: #t:7".length)
+  })
+
+  it("appends chip after prior chips without duplicating tab:", () => {
+    const line = "tab: #t:1 tab:foo"
+    const start = line.indexOf("tab:foo")
+    const out = applyTabChipPickToLine(line, start, line.length, 2, "title")
+    assert.equal(out.line, "tab: #t:1 #t:2")
+    assert.equal(out.cursor, "tab: #t:1 #t:2".length)
   })
 
   it("inserts at empty continuation after space", () => {
-    const line = "#t:1 "
-    const out = applyTabChipPickToLine(line, line.length, line.length, 2)
-    assert.equal(out.line, "#t:1 #t:2")
-    assert.equal(out.cursor, "#t:1 #t:2".length)
+    const line = "tab: #t:1 "
+    const out = applyTabChipPickToLine(line, line.length, line.length, 2, "title")
+    assert.equal(out.line, "tab: #t:1 #t:2")
+    assert.equal(out.cursor, "tab: #t:1 #t:2".length)
   })
 })
