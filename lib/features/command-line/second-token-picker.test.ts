@@ -11,8 +11,8 @@ describe("resolveSecondTokenPickerHit", () => {
     assert.equal(hit!.tokenStart, line.length)
     assert.equal(hit!.prefix, "")
     assert.ok(hit!.candidates.includes("-list"))
-    assert.ok(hit!.candidates.includes("-close"))
-    assert.ok(hit!.candidates.includes("-reload"))
+    assert.ok(!hit!.candidates.includes("-close"))
+    assert.ok(!hit!.candidates.includes("-reload"))
   })
 
   it("offers second heads after trailing space", () => {
@@ -24,7 +24,7 @@ describe("resolveSecondTokenPickerHit", () => {
   })
 
   it("returns null for a complete second with no third tokens", () => {
-    const line = "tab -back"
+    const line = "tab -nowurl"
     assert.equal(resolveSecondTokenPickerHit(line, line.length, "prefix"), null)
   })
 })

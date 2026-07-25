@@ -1,5 +1,5 @@
 /**
- * EN: `tab -reload` tab block tokens (`#t:<id>`) — parse, atomic delete, completion zone.
+ * EN: `reload` / `back` / `forward` tab block tokens (`#t:<id>`) — parse, atomic delete, completion zone.
  */
 
 import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
@@ -11,7 +11,7 @@ export const NAV_RELOAD_TAB_TOKEN_RE = /^#t:(\d+)$/
 /** EN: Default visible title length inside a prompt chip (code points). */
 export const NAV_RELOAD_CHIP_TITLE_MAX_CHARS = 24
 
-const NAV_RELOAD_LEAD_RE = /^\s*tab\s+-reload\s+/i
+const NAV_RELOAD_LEAD_RE = /^\s*(?:reload|back|forward)\s+/i
 
 export type NavReloadTabTokenSpan = {
   start: number
@@ -113,7 +113,7 @@ export function snapNavReloadTabBlockCaret(line: string, cursor: number): number
 
 /**
  * EN: ArrowLeft/ArrowRight — jump one `#t:<id>` block at a time when in the chip region.
- * Returns null when the browser default character move should run (e.g. still in `tab -reload `).
+ * Returns null when the browser default character move should run (e.g. still in `reload `).
  */
 export function moveNavReloadTabBlockCaret(
   line: string,
@@ -258,7 +258,7 @@ export function deleteNavReloadTabBlockForwardAtCursor(
 }
 
 /**
- * EN: Completion zone after `tab -reload ` for picking open tabs.
+ * EN: Completion zone after `reload ` / `back ` / `forward ` for picking open tabs.
  * Returns null when the cursor is not in that rest zone.
  */
 export function navReloadTabCompletionZone(
@@ -307,7 +307,7 @@ export type NavReloadTabCandidate = {
 }
 
 /**
- * EN: Incremental filter for `tab -reload` tab menu.
+ * EN: Incremental filter for reload/back/forward tab menu.
  * - bare needle → title contains (case-insensitive)
  * - `@…` → URL contains (case-insensitive); bare `@` matches all
  */

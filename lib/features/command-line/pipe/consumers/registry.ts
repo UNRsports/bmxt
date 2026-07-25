@@ -5,13 +5,21 @@ import { segmentFailure } from "../../compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
 import { closePipeConsumer } from "./close-from-stream.ts"
+import { backPipeConsumer } from "./back-from-stream.ts"
+import { forwardPipeConsumer } from "./forward-from-stream.ts"
+import { reloadPipeConsumer } from "./reload-from-stream.ts"
 import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
 export { bmxtRuleStreamAcceptsKinds, tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
 
 /** EN: Registered pipe consumers (right-hand side of `|`). */
-export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [closePipeConsumer]
+export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
+  backPipeConsumer,
+  forwardPipeConsumer,
+  reloadPipeConsumer,
+  closePipeConsumer
+]
 
 export function matchPipeConsumer(segment: string): PipeConsumerEntry | null {
   const trimmed = segment.trim()

@@ -11,12 +11,19 @@
       "subcommands": []
     },
     {
+      "module": "back",
+      "canonicalName": "back",
+      "aliases": [],
+      "usagePrimary": "back [#t:<tabId>…] | … | back",
+      "subcommands": []
+    },
+    {
       "module": "close",
       "canonicalName": "close",
       "aliases": [
         "c"
       ],
-      "usagePrimary": "close <tabId>",
+      "usagePrimary": "close | close <tabId> | … | close",
       "subcommands": []
     },
     {
@@ -111,10 +118,24 @@
       "subcommands": []
     },
     {
+      "module": "forward",
+      "canonicalName": "forward",
+      "aliases": [],
+      "usagePrimary": "forward [#t:<tabId>…] | … | forward",
+      "subcommands": []
+    },
+    {
+      "module": "reload",
+      "canonicalName": "reload",
+      "aliases": [],
+      "usagePrimary": "reload [#t:<tabId>…] | … | reload",
+      "subcommands": []
+    },
+    {
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help",
+      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
       "subcommands": [
         {
           "head": "-list",
@@ -143,22 +164,6 @@
         },
         {
           "head": "-nowurl",
-          "tail": "none"
-        },
-        {
-          "head": "-back",
-          "tail": "none"
-        },
-        {
-          "head": "-forward",
-          "tail": "none"
-        },
-        {
-          "head": "-reload",
-          "tail": "rest"
-        },
-        {
-          "head": "-close",
           "tail": "none"
         },
         {
@@ -416,14 +421,20 @@
     {
       "kind": "tab_go_back",
       "rustVariant": "TabGoBack",
-      "shape": "unit",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
       "tsHandlerFile": "tab-go-back",
       "tsHandlerExport": "applyTabGoBackEffect"
     },
     {
       "kind": "tab_go_forward",
       "rustVariant": "TabGoForward",
-      "shape": "unit",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
       "tsHandlerFile": "tab-go-forward",
       "tsHandlerExport": "applyTabGoForwardEffect"
     },

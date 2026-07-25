@@ -235,9 +235,10 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
 | `nav -exit` | Disarm nav mode (turn Alt overlay **off** first) |
-| `tab -back` / `-forward` | History back / forward on the **target** active tab |
-| `tab -reload` | Reload the target active tab; with a trailing space, open a **tab candidate** menu (favicon + title; type to filter by title, `@` + text to filter by URL) and insert `#t:<id>` **blocks** — each block on its own single-line row (Backspace/Delete remove a whole block) |
-| `tab -close` | Close the target tab after **y/n** confirm |
+| `back` | History back on the **target** active tab; optional `#t:<id>…` (trailing space opens tab candidates) |
+| `forward` | History forward on the target active tab; optional `#t:<id>…` |
+| `reload` | Reload the target active tab; with a trailing space, open a **tab candidate** menu (favicon + title; type to filter by title, `@` + text to filter by URL) and insert `#t:<id>` **blocks** — each block on its own single-line row (Backspace/Delete remove a whole block) |
+| `close` | Close the target tab after **y/n** confirm; `close <tabId>` closes that id without confirm |
 | `nav -windowclose` | Close the **window that contains the target tab** after **y/n** confirm (never the BMXt window) |
 | `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Enable translation assist (nav typing preview under the prompt; see **[`translate`](#translate)**) |
@@ -258,13 +259,14 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session (bare: prompt pre-filled with current display name) |
 | `session <n>` | Switch to terminal session number **n** (1-based) |
-| `close` / `c <tabId>` | Close tab |
+| `close` / `c <tabId>` | Close tab by id (no confirm) |
 | `close` / `c` (pipe) | With pipe input from `tab -list`, close every listed tab (see **Pipes** below) |
+| `back` / `forward` / `reload` (pipe) | Same producer → batch history / reload on listed tabs |
 | `group new` / `group new <tabId> …` | Create tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 
 **Compound commands (`&&` / `||` / `;`):** Join multiple commands on one line with **`&&`**, **`||`**, or **`;`** (quoted regions and `\&&` / `\||` / `\;` escapes are respected). Segments run **left to right** with shell-style short-circuit: **`&&`** runs the next segment only after exit status **0**, **`||`** only after a non-zero status, **`;`** always. Each segment returns a numeric **exit status** (0 = success; usage/parse = 2; unknown command = 127; other failures = 1). Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`browse <list>` after any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
 
-**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tab -list | close`**. Producers: plain **`tab -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**, extensible `[key, value]` entry arrays — see **[bmxtRule](#bmxt-rule)**); plain producer lines are not logged in a multi-stage pipe. Consumers are registered under **`lib/features/command-line/pipe/consumers/`** (v1: **`close`** / **`c`** with no tab id, accepts **`page.open`** records). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**. Interactive UI is opened with **`browse <list-command>`** (prefix form; not a pipe).
+**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **`-list` producer** and a consumer with **`|`** (quoted regions and `\|` escapes are respected). Example: **`tab -list | close`**. Producers: plain **`tab -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**, extensible `[key, value]` entry arrays — see **[bmxtRule](#bmxt-rule)**); plain producer lines are not logged in a multi-stage pipe. Consumers are registered under **`lib/features/command-line/pipe/consumers/`** (**`back`**, **`forward`**, **`reload`**, **`close`** / **`c`** with no tab id, accept **`page.open`** records). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**. Interactive UI is opened with **`browse <list-command>`** (prefix form; not a pipe).
 
 **Redirects (`>` / `>>` / `2>` / `2>>`):** Within a segment, redirect **stdout** (`>` / `>>`) or **stderr** (`2>` / `2>>`) to a **null sink** only: **`null`** or **`/dev/null`** (quoted regions and `\>` escapes are respected). The redirected channel is discarded from the terminal log. Other targets are rejected (exit status **2**). OS file paths are out of scope.
 
@@ -960,7 +962,7 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 | `session -list` | UI → `tryRunPlainListCommand` | UI inline picker |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI settings picker column |
 
-**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (v1: **`close`** on **`page.open`** records, with kind-compatibility checks).
+**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (**`back`**, **`forward`**, **`reload`**, **`close`** on **`page.open`** records, with kind-compatibility checks).
 
 <a id="bmxt-rule"></a>
 
@@ -1014,7 +1016,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 | **Command zones** | Per-command tier bindings (manifest static tokens + runtime providers) |
 | **Data sources** | Browser/UI facts commands may read for dynamic candidates |
 
-**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tab -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (v1: `close` / `c`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
+**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tab -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (`back` / `forward` / `reload` / `close` / `c`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
 
 **Runtime data sources** (commands declare which they use in `commands[].zones`):
 
@@ -1022,7 +1024,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 |-----------|--------|-------------|
 | **`browser.openTabUrls`** | Open http(s) tabs | `tab -moveurl`, `search -list` pattern, `dom -list` pattern |
 | **`browser.openTabTitles`** | Tab titles | Labels for tab ids; search pattern hints |
-| **`browser.tabIds`** | Tab tree ids | `close`, `group new`, `snapshot -save` |
+| **`browser.tabIds`** | Tab tree ids | `close`, `back`, `forward`, `reload`, `group new`, `snapshot -save` |
 | **`browser.windowLabels`** | Window rows | `snapshot -save` picker labels |
 | **`browser.tabGroupLabels`** | Group rows | `snapshot -save` picker labels |
 | **`browser.historyUrls`** / **`browser.historyTitles`** | History | URL/title completion on rest tails |
@@ -1577,9 +1579,10 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt**（詳細バーまたはプロンプト）を押すまで表示しない |
 | `nav -exit` | nav モードを終了（先に Alt でオーバーレイ **OFF**） |
-| `tab -back` / `-forward` | 操作先アクティブタブの履歴バック／進む |
-| `tab -reload` | 操作先アクティブタブをリロード。末尾スペースで **タブ候補**メニュー（ファビコン＋タイトル。入力でタイトル絞り込み、`@` で URL 絞り込み）。選択は `#t:<id>` **ブロックを1行ずつ**（Backspace/Delete はブロック単位削除） |
-| `tab -close` | 操作先タブを閉じる（**y/n** 確認） |
+| `back` | 操作先アクティブタブの履歴バック。任意で `#t:<id>…`（末尾スペースでタブ候補） |
+| `forward` | 操作先アクティブタブの履歴を進む。任意で `#t:<id>…` |
+| `reload` | 操作先アクティブタブをリロード。末尾スペースで **タブ候補**メニュー（ファビコン＋タイトル。入力でタイトル絞り込み、`@` で URL 絞り込み）。選択は `#t:<id>` **ブロックを1行ずつ**（Backspace/Delete はブロック単位削除） |
+| `close` | 操作先タブを閉じる（**y/n** 確認）。`close <tabId>` は確認なしで当該 ID を閉じる |
 | `nav -windowclose` | **操作先タブが含まれるウィンドウ**を閉じる（**y/n** 確認。BMXt 窓は閉じない） |
 | `translate` | 利用案内を表示し、続けて `translate ` へ入力復元（`-on` / `-off` / `-setting` 用） |
 | `translate -on` | 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー。**[`translate`](#translate-ja)** 参照） |
@@ -1600,13 +1603,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
 | `session <n>` | ターミナルセッション番号 **n**（1 始まり）へ切り替え |
-| `close` / `c <tabId>` | タブを閉じる |
+| `close` / `c <tabId>` | タブを ID 指定で閉じる（確認なし） |
 | `close` / `c`（パイプ） | `tab -list` のパイプ入力から列挙されたタブをすべて閉じる（**パイプ** 参照） |
+| `back` / `forward` / `reload`（パイプ） | 同じ producer → 列挙タブの一括バック／進む／リロード |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 
 **複合コマンド（`&&` / `||` / `;`）:** 1 行に **`&&`**・**`||`**・**`;`** で複数コマンドを並べる（クォート内と `\&&` / `\||` / `\;` は演算子にしない）。**左から順**に実行し、シェル同様に短絡する（**`&&`** は終了状態 **0** のときのみ次へ、**`||`** は非 0 のときのみ、**`;`** は常に）。各セグメントは数値の **exit status** を返す（0 = 成功、usage/parse = 2、不明コマンド = 127、その他失敗 = 1）。continuation のみの入力（裸の `dom` 等）や対話ピッカー（裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。ピッカー列は **`browse <list>`** で開く。
 
-**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` は演算子にしない）。例: **`tab -list | close`**。producer: プレーン **`tab -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。段間では **`bmxtRule`** ストリーム（**`bmxt-rule/1`**、拡張可能な `[key, value]` 配列 — **[bmxtRule](#bmxt-rule-ja)** 参照）を渡し、複数段パイプでは producer のプレーン行はログに出しません。consumer は **`lib/features/command-line/pipe/consumers/`** に登録（v1: タブ ID なしの **`close`** / **`c`**、**`page.open`** を受理）。種別不一致・未対応 consumer は終了状態 **1** と **stderr**。対話 UI は **`browse <list>`** で開く（例: **`browse tab -list`**）。
+**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **`-list` 列挙**と consumer を **`|`** で連結（クォート内と `\|` は演算子にしない）。例: **`tab -list | close`**。producer: プレーン **`tab -list`**、**`dom -list`**、**`search -list`**、**`session -list`**、**`setting -list`**。段間では **`bmxtRule`** ストリーム（**`bmxt-rule/1`**、拡張可能な `[key, value]` 配列 — **[bmxtRule](#bmxt-rule-ja)** 参照）を渡し、複数段パイプでは producer のプレーン行はログに出しません。consumer は **`lib/features/command-line/pipe/consumers/`** に登録（**`back`**、**`forward`**、**`reload`**、タブ ID なしの **`close`** / **`c`**、**`page.open`** を受理）。種別不一致・未対応 consumer は終了状態 **1** と **stderr**。対話 UI は **`browse <list>`** で開く（例: **`browse tab -list`**）。
 
 **リダイレクト（`>` / `>>` / `2>` / `2>>`）:** セグメント内で **stdout**（`>` / `>>`）または **stderr**（`2>` / `2>>`）を **null シンク**（**`null`** または **`/dev/null`**）へだけ向けられる（クォート内と `\>` は演算子にしない）。向けたチャネルはターミナルログから捨てる。それ以外のターゲットは拒否（終了状態 **2**）。OS パスへの書き込みは対象外。
 
@@ -2299,7 +2303,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | `session -list` | UI → `tryRunPlainListCommand` | UI インライン候補 |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI 設定ピッカー列 |
 
-**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（v1: **`page.open`** に対する **`close`**、種別互換チェック付き）。
+**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（**`page.open`** に対する **`back`** / **`forward`** / **`reload`** / **`close`**、種別互換チェック付き）。
 
 <a id="bmxt-rule-ja"></a>
 
@@ -2334,7 +2338,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | **Command zones** | コマンド別 tier 結び付け（manifest 固定トークン + runtime provider） |
 | **Data sources** | コマンドが参照してよいブラウザ／UI 事実 |
 
-**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tab -list`）、**stage 1+** は **`registry.pipeConsumers`**（v1: `close` / `c`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
+**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tab -list`）、**stage 1+** は **`registry.pipeConsumers`**（`back` / `forward` / `reload` / `close` / `c`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
 
 **ランタイム data source**（`commands[].zones` で宣言）:
 
@@ -2342,7 +2346,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 |-----------|----------|----------|
 | **`browser.openTabUrls`** | 開いている http(s) タブ | `tab -moveurl`、`search -list` pattern、`dom -list` pattern |
 | **`browser.openTabTitles`** | タブタイトル | tabId ラベル、search pattern ヒント |
-| **`browser.tabIds`** | タブツリー ID | `close`、`group new`、`snapshot -save` |
+| **`browser.tabIds`** | タブツリー ID | `close`、`back`、`forward`、`reload`、`group new`、`snapshot -save` |
 | **`browser.windowLabels`** | ウィンドウ行 | `snapshot -save` ラベル |
 | **`browser.tabGroupLabels`** | グループ行 | `snapshot -save` ラベル |
 | **`browser.historyUrls`** / **`browser.historyTitles`** | 履歴 | rest tail の URL／タイトル補完 |

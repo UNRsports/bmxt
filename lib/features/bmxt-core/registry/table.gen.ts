@@ -12,9 +12,14 @@ export const COMMANDS: readonly CmdMeta[] = [
     usagePrimary: "clear"
   },
   {
+    name: "back",
+    aliases: [] as const,
+    usagePrimary: "back [#t:<tabId>…] | … | back"
+  },
+  {
     name: "close",
     aliases: ["c"] as const,
-    usagePrimary: "close <tabId>"
+    usagePrimary: "close | close <tabId> | … | close"
   },
   {
     name: "dom",
@@ -42,9 +47,19 @@ export const COMMANDS: readonly CmdMeta[] = [
     usagePrimary: "help"
   },
   {
+    name: "forward",
+    aliases: [] as const,
+    usagePrimary: "forward [#t:<tabId>…] | … | forward"
+  },
+  {
+    name: "reload",
+    aliases: [] as const,
+    usagePrimary: "reload [#t:<tabId>…] | … | reload"
+  },
+  {
     name: "tab",
     aliases: [] as const,
-    usagePrimary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -back | tab -forward | tab -reload | tab -close | tab help"
+    usagePrimary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help"
   },
   {
     name: "nav",

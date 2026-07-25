@@ -1,7 +1,19 @@
 {
+  "pipe.back.noTabs": {
+    "ja": "error: パイプ入力に履歴バック対象のタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tab records for back"
+  },
   "pipe.close.noTabs": {
     "ja": "error: パイプ入力に tabs.tab レコードがありません",
     "en": "error: pipe input has no tabs.tab records"
+  },
+  "pipe.forward.noTabs": {
+    "ja": "error: パイプ入力に進められるタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tab records for forward"
+  },
+  "pipe.reload.noTabs": {
+    "ja": "error: パイプ入力にリロード対象のタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tab records for reload"
   },
   "pipe.error.kindMismatch": {
     "ja": "error: パイプ先 {stage} はレコード種別 [{kinds}] のみ受け付けます",

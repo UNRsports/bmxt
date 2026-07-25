@@ -55,8 +55,8 @@ export function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
 }
 
 /**
- * EN: Two-token line whose second head needs no further tokens (`tail: none`, e.g. `tab -back`).
- * JA: 後続不要な二語コマンド（`tail: none`、例: `tab -back`）はピッカー確定後も即実行する。
+ * EN: Two-token line whose second head needs no further tokens (`tail: none`, e.g. `tab -nowurl`).
+ * JA: 後続不要な二語コマンド（`tail: none`、例: `tab -nowurl`）はピッカー確定後も即実行する。
  */
 function isCompleteSecondWithTailNone(trimmed: string): boolean {
   const parts = trimmed.trim().split(/\s+/).filter(Boolean)
@@ -81,7 +81,7 @@ function isCompleteSecondWithTailNone(trimmed: string): boolean {
 
 /**
  * EN: Auto-submit on Enter while the IME picker is still open and the line is already
- *     complete (typed manually), or after picking a `tail: none` second token (e.g. `tab -back`).
+ *     complete (typed manually), or after picking a `tail: none` second token (e.g. `tab -nowurl`).
  * JA: IME ピッカー表示中に Enter したとき、行が既に完成形なら即実行。`tail: none` の第二トークン確定後も即実行。
  */
 export function shouldAutoSubmitAfterTokenPick(trimmed: string): boolean {

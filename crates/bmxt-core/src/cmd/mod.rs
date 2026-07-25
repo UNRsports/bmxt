@@ -1,14 +1,17 @@
 use crate::ir::DispatchBundle;
 
 pub mod aboutbmxt;
+pub mod back;
 pub mod browse;
 pub mod clear;
 pub mod close;
 pub mod dom;
 pub mod exit;
+pub mod forward;
 pub mod group;
 pub mod help_cmd;
 pub mod nav;
+pub mod reload;
 pub mod search;
 pub mod session;
 pub mod setting;
@@ -16,6 +19,7 @@ pub mod snapshot;
 pub mod tabs;
 pub mod translate;
 
+mod hash_t_tab_ids;
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
@@ -24,7 +28,10 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
     }
     match canonical {
         "clear" => clear::run(args),
+        "back" => back::run(args),
         "close" => close::run(args),
+        "forward" => forward::run(args),
+        "reload" => reload::run(args),
         "dom" => dom::run(args),
         "exit" => exit::run(args),
         "search" => search::run(args),

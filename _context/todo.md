@@ -1177,8 +1177,8 @@ Phase E（ゲート・スキル・実証）
 
 ## 18. `back` / `forward` 独立化 — 履歴ナビを first コマンド + pipe consumer へ
 
-**状態:** 仕様確定・未実装。  
-**関連:** §16（旧 nav 履歴・のち `tab -back`/`-forward`）、§8 / §10（pipe consumer・`close` 先例）、skill `bmxt-add-command` / `bmxt-i18n`。
+**状態:** 実装済み（ブラウザ手元スモークは残）。`tab -back`/`-forward`/`-reload`/`-close` は削除し、独立 first + pipe へ移行。  
+**関連:** §16（旧 nav 履歴・のち `tab -*`）、§8 / §10（pipe consumer・`close` 先例）、skill `bmxt-add-command` / `bmxt-i18n`。
 
 ### 18.1 動機（違和感の整理）
 
@@ -1204,8 +1204,8 @@ Phase E（ゲート・スキル・実証）
 
 #### 18.2.1 `tab` 配下の扱い
 
-- `tab -back` / `tab -forward` は **削除**するか、移行期間のみ薄い互換（非推奨）を残す。実装時にどちらかを選ぶ（推奨: 削除してドキュメント・i18n・fixture を一掃）。
-- `tab -reload` / `tab -close` は本節の必須範囲外。`reload` の first + pipe 化は将来の一貫性候補として後回し可。
+- `tab -back` / `tab -forward` / `tab -reload` / `tab -close` は **削除**（互換なし）。
+- 独立 first: `back` / `forward` / `reload` / `close`（パイプ右辺も同名）。
 
 #### 18.2.2 やらない案（却下）
 
@@ -1225,17 +1225,17 @@ Phase E（ゲート・スキル・実証）
 
 ```
 Task progress:
-- [ ] 決定: `tab -back`/`-forward` 削除 vs 互換残し
-- [ ] manifest `commands[]` に `back` / `forward`（subcommands なし）
-- [ ] `tab` から `-back` / `-forward` を外す（削除方針の場合）
-- [ ] crates/bmxt-core `cmd/back.rs` / `forward.rs`（+ `cmd/mod.rs`）
-- [ ] pnpm run codegen + build:wasm
-- [ ] pipe consumer: `back` / `forward`（close と同型・acceptsKinds）
-- [ ] effect: 単一／複数 tabId 対応（不足分のみ extend）
-- [ ] dispatch fixtures / ime・second-token テスト更新
-- [ ] i18n EN+JA（cmd / help / pipe）
-- [ ] README / `_context/map_command.csv` / 必要なら store 文言
-- [ ] verify:manifest → verify:host-blind → check:generated → cargo test -p bmxt-core → tsc → test → build
+- [x] 決定: `tab -back`/`-forward`/`-reload`/`-close` 削除（互換なし）
+- [x] manifest `commands[]` に `back` / `forward` / `reload`；`close` usage 更新
+- [x] `tab` から `-back` / `-forward` / `-reload` / `-close` を外す
+- [x] crates/bmxt-core `cmd/back.rs` / `forward.rs` / `reload.rs` + `close.rs` 更新（+ `cmd/mod.rs`）
+- [x] pnpm run codegen + build:wasm
+- [x] pipe consumer: `back` / `forward` / `reload` / `close`（page.open）
+- [x] effect: `tab_go_back` / `tab_go_forward` を `tab_ids` 対応
+- [x] dispatch fixtures / ime・second-token テスト更新
+- [x] i18n EN+JA（cmd / help / pipe）+ help.section.*
+- [x] README / `_context/map_command.csv`
+- [x] verify:manifest → verify:host-blind → cargo test -p bmxt-core → tsc → test（build は手元）
 - [ ] ブラウザ手元スモーク（bare / パイプ一括 / 履歴末端の失敗メッセージ）
 ```
 

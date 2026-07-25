@@ -4,6 +4,10 @@ use crate::ir::{msg_key, msgs, ui, DispatchBundle, Msg, UiAction};
 /** EN: Ordered full-help section keys (host expands via expand-msgs). */
 const FULL_HELP_SECTION_KEYS: &[&str] = &[
     "help.section.tabs",
+    "help.section.back",
+    "help.section.forward",
+    "help.section.reload",
+    "help.section.close",
     "help.section.session",
     "help.section.dom",
     "help.section.translate",
@@ -17,6 +21,10 @@ const FULL_HELP_SECTION_KEYS: &[&str] = &[
 fn section_key_for_command(canonical: &str) -> Option<&'static str> {
     match canonical {
         "tab" => Some("help.section.tabs"),
+        "back" => Some("help.section.back"),
+        "forward" => Some("help.section.forward"),
+        "reload" => Some("help.section.reload"),
+        "close" => Some("help.section.close"),
         "dom" => Some("help.section.dom"),
         "search" => Some("help.section.search"),
         "session" => Some("help.section.session"),

@@ -177,6 +177,22 @@
       "zones": []
     },
     {
+      "command": "back",
+      "zones": [
+        {
+          "tier": "rest",
+          "tokenIndexMin": 1,
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "command": "close",
       "zones": [
         {
@@ -190,6 +206,38 @@
             }
           ],
           "ui": "inline_token"
+        }
+      ]
+    },
+    {
+      "command": "forward",
+      "zones": [
+        {
+          "tier": "rest",
+          "tokenIndexMin": 1,
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "command": "reload",
+      "zones": [
+        {
+          "tier": "rest",
+          "tokenIndexMin": 1,
+          "sources": [
+            {
+              "kind": "runtime.dynamic",
+              "provider": "browser.tabIds",
+              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
+            }
+          ]
         }
       ]
     },
@@ -286,17 +334,6 @@
           "when": { "second": "-setting", "third": "-page-active" },
           "tier": "rest",
           "sources": [{ "kind": "plugin.feature", "provider": "tabs.pageActiveModes" }]
-        },
-        {
-          "when": { "second": "-reload" },
-          "tier": "rest",
-          "sources": [
-            {
-              "kind": "runtime.dynamic",
-              "provider": "browser.tabIds",
-              "labelFields": ["browser.openTabTitles", "browser.windowLabels", "browser.tabGroupLabels"]
-            }
-          ]
         }
       ]
     },

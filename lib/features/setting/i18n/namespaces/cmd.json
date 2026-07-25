@@ -1,7 +1,31 @@
 {
   "cmd.close.usage": {
-    "ja": "usage: close <tabId>",
-    "en": "usage: close <tabId>"
+    "ja": "usage: close | close <tabId> | … | close",
+    "en": "usage: close | close <tabId> | … | close"
+  },
+  "cmd.back.usage": {
+    "ja": "usage: back [#t:<tabId>…] | … | back",
+    "en": "usage: back [#t:<tabId>…] | … | back"
+  },
+  "cmd.back.error.badTabToken": {
+    "ja": "error: 不正なタブ指定です: {token}（形式: #t:<id>）",
+    "en": "error: bad tab token: {token} (expected #t:<id>)"
+  },
+  "cmd.forward.usage": {
+    "ja": "usage: forward [#t:<tabId>…] | … | forward",
+    "en": "usage: forward [#t:<tabId>…] | … | forward"
+  },
+  "cmd.forward.error.badTabToken": {
+    "ja": "error: 不正なタブ指定です: {token}（形式: #t:<id>）",
+    "en": "error: bad tab token: {token} (expected #t:<id>)"
+  },
+  "cmd.reload.usage": {
+    "ja": "usage: reload [#t:<tabId>…] | … | reload",
+    "en": "usage: reload [#t:<tabId>…] | … | reload"
+  },
+  "cmd.reload.error.badTabToken": {
+    "ja": "error: 不正なタブ指定です: {token}（形式: #t:<id>）",
+    "en": "error: bad tab token: {token} (expected #t:<id>)"
   },
   "cmd.common.availableOptions": {
     "ja": "{command}: 利用可能なオプション",
@@ -132,8 +156,8 @@
     "en": "       nav -windowclose — close the window containing the target tab (y/n confirm; never the BMXt window)"
   },
   "cmd.nav.confirm.compoundBlocked": {
-    "ja": "error: tab -close / nav -windowclose は複合コマンド内では使えません（確認が必要なため）",
-    "en": "error: tab -close / nav -windowclose cannot run in a compound line (confirmation required)"
+    "ja": "error: close / nav -windowclose は複合コマンド内では使えません（確認が必要なため）",
+    "en": "error: close / nav -windowclose cannot run in a compound line (confirmation required)"
   },
   "cmd.nav.usage.navTyping": {
     "ja": "nav typing 翻訳: `translate -on` を使用（translate コマンド参照）。",
@@ -423,10 +447,6 @@
     "ja": "error: 不明な tab オプション: {option}",
     "en": "error: unknown tab option: {option}"
   },
-  "cmd.tabs.error.badReloadToken": {
-    "ja": "error: 不正なリロード対象トークンです: {token}（形式: #t:<tabId>）",
-    "en": "error: invalid reload tab token: {token} (expected #t:<tabId>)"
-  },
   "cmd.tabs.error.usageMoveurl": {
     "ja": "usage: tab -moveurl <http(s)-url>",
     "en": "usage: tab -moveurl <http(s)-url>"
@@ -444,8 +464,8 @@
     "en": "Tab picker is opened with: browse tab -list (optional `tab -list -url` for URLs)"
   },
   "cmd.tabs.runHint": {
-    "ja": "実行例: tab -list / tab -list -url / browse tab -list · tab -exit -list · tab -setting -page-active --auto | --manual · tab -nowurl · tab -moveurl <url> · tab -back | -forward | -reload | -close",
-    "en": "Run: tab -list / tab -list -url / browse tab -list. tab -exit -list. tab -setting -page-active --auto | --manual (from BMXt prompt). tab -nowurl. tab -moveurl <url>. tab -back | -forward | -reload | -close."
+    "ja": "実行例: tab -list / tab -list -url / browse tab -list · tab -exit -list · tab -setting -page-active --auto | --manual · tab -nowurl · tab -moveurl <url>（履歴・リロード・閉じるは back / forward / reload / close）",
+    "en": "Run: tab -list / tab -list -url / browse tab -list. tab -exit -list. tab -setting -page-active --auto | --manual (from BMXt prompt). tab -nowurl. tab -moveurl <url>. History / reload / close: back | forward | reload | close."
   },
   "cmd.tabs.setting.pageActive": {
     "ja": "`--auto` は移動時にタブをアクティブ化（既定）。`--manual` は Alt 時のみ。",
@@ -474,14 +494,6 @@
   "cmd.tabs.usage.line5": {
     "ja": "       tab -nowurl       — 現在のタブ URL を表示",
     "en": "       tab -nowurl       — show current tab URL"
-  },
-  "cmd.tabs.usage.line6": {
-    "ja": "       tab -back | -forward | -reload [#t:<tabId>…] — 履歴／リロード（引数なしは操作先アクティブタブ。`-reload ` でタブ候補・タイトル入力で絞込・`@` で URL 絞込）",
-    "en": "       tab -back | -forward | -reload [#t:<tabId>…] — history / reload (bare -reload = active target tab; `tab -reload ` opens tab candidates; type to filter title, `@` filters URL)"
-  },
-  "cmd.tabs.usage.line7": {
-    "ja": "       tab -close — 操作先タブを閉じる（y/n 確認あり）",
-    "en": "       tab -close — close the target tab (y/n confirm)"
   },
   "cmd.translate.error.internal": {
     "ja": "error: 不明な translate オプション (internal): {option}",

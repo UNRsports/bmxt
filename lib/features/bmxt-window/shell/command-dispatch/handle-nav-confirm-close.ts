@@ -71,7 +71,7 @@ export function tryHandleNavConfirmClose(
   const confirmedLine =
     pending.target === "window"
       ? "nav -windowclose --confirmed"
-      : "tab -close --confirmed"
+      : "close --confirmed"
   void (async () => {
     await Promise.resolve(deps.appendLogLines([`> ${trimmed}`], "stdout"))
     // EN: Float host dies with the closed tab — persist logs before RUN_CMD removes it.

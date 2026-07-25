@@ -214,7 +214,7 @@ mod tests {
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "second");
         assert!(hit.candidates.iter().any(|c| c == "-list"));
-        assert!(hit.candidates.iter().any(|c| c == "-close"));
+        assert!(hit.candidates.iter().any(|c| c == "-nowurl"));
     }
 
     #[test]
@@ -232,17 +232,17 @@ mod tests {
     }
 
     #[test]
-    fn no_hit_when_tab_back_complete_at_eol() {
-        let line = "tab -back";
+    fn no_hit_when_tab_nowurl_complete_at_eol() {
+        let line = "tab -nowurl";
         assert!(complete_line(line, line.len()).is_none());
     }
 
     #[test]
     fn still_completes_partial_tab_second() {
-        let line = "tab -ba";
+        let line = "tab -no";
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "second");
-        assert!(hit.candidates.iter().any(|c| c == "-back"));
+        assert!(hit.candidates.iter().any(|c| c == "-nowurl"));
     }
 
     #[test]

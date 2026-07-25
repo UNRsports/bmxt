@@ -16,6 +16,7 @@ const EMPTY_BRANCHES: readonly CommandSubcommandBranch[] = []
 /** canonicalName → declared second-token branches (from manifest `subcommands`). */
 export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcommandBranch[]> = {
   "clear": [] as const,
+  "back": [] as const,
   "close": [] as const,
   "dom": [
     { head: "-list", trailingTokens: ["--normal","--with","--html","--react","--tag"] as const, tail: "rest" },
@@ -31,16 +32,14 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "group": [] as const,
   "help": [] as const,
+  "forward": [] as const,
+  "reload": [] as const,
   "tab": [
     { head: "-list", trailingTokens: ["-url"] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
-    { head: "-back", trailingTokens: [] as const, tail: "none" },
-    { head: "-forward", trailingTokens: [] as const, tail: "none" },
-    { head: "-reload", trailingTokens: [] as const, tail: "rest" },
-    { head: "-close", trailingTokens: [] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "nav": [
@@ -123,6 +122,8 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
   switch (canonicalCmd) {
     case "clear":
       return false
+    case "back":
+      return false
     case "close":
       return false
     case "dom": {
@@ -139,9 +140,13 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "help":
       return false
+    case "forward":
+      return false
+    case "reload":
+      return false
     case "tab": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "-back" || lower === "-forward" || lower === "-reload" || lower === "-close" || lower === "help"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "help"
     }
     case "nav": {
       const lower = token.toLowerCase()
