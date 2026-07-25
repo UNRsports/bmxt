@@ -38,5 +38,9 @@
   "pipe.tabChip.movedTo": {
     "ja": "{title}へ移動しました。",
     "en": "Moved to {title}."
+  },
+  "pipe.tabChip.multiActivateForbidden": {
+    "ja": "error: タブ移動は一つのタブを指定してください。複数のタブ指定後は「|（パイプ）」による接続で他コマンドにより一括操作をする前提となります",
+    "en": "error: activate one tab only. After selecting multiple tabs, connect with `|` (pipe) to batch other commands"
   }
 }

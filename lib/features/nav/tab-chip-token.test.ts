@@ -84,6 +84,11 @@ describe("tabChipCompletionZone", () => {
     assert.equal(tabChipCompletionZone("foo", 3), null)
     assert.equal(tabChipCompletionZone("foo ", 4), null)
   })
+
+  it("does not open on pipe consumer stage after |", () => {
+    const line = "#t:12 #t:34 |"
+    assert.equal(tabChipCompletionZone(line, line.length), null)
+  })
 })
 
 describe("isOnlyTabChipTokens", () => {

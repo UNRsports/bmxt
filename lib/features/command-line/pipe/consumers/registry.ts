@@ -12,6 +12,10 @@ import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
 export { bmxtRuleStreamAcceptsKinds, tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
+export {
+  listPipeConsumerCompletionTokens,
+  PIPE_CONSUMER_COMPLETION_IDS
+} from "./completion-tokens.ts"
 
 /** EN: Registered pipe consumers (right-hand side of `|`). */
 export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [

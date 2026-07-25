@@ -1266,10 +1266,11 @@ Task progress:
 | `tab:{語句}` | タブ名 contains 絞込 |
 | `tab::{語句}` | URL contains 絞込（候補に URL 行） |
 | 選択 | `#t:<id>` チップに置換し候補を閉じる（`tab:` 再付与なし） |
-| Enter（チップのみ） | 最後のチップのタブをアクティブ＋ウィンドウフォーカス |
-| 半角スペース | 候補を再表示して追加選択（パイプ用） |
+| Enter（チップ1つ） | そのタブをアクティブ＋ウィンドウフォーカス |
+| Enter（チップ2つ以上） | エラー（パイプで一括操作する前提） |
+| `|` のあと Tab | パイプ先候補（back / forward / reload / close / c） |
 | Esc / ↑(先頭) | 候補を閉じる |
-| `#t:… \| reload` 等 | 合成 `page.open` producer → 既存 consumer |
+| `#t:… \| reload` 等 | 合成 `page.open` producer → 既存 consumer（成功時は入力エコーのみ。詳細ログは将来の `log` 等で） |
 
 `tab` コマンドとは別トークン。動詞側へのタブ候補は付けない（§18）。
 

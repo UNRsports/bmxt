@@ -1,5 +1,7 @@
 export {
   PIPE_CONSUMER_ENTRIES,
+  listPipeConsumerCompletionTokens,
+  PIPE_CONSUMER_COMPLETION_IDS,
   matchPipeConsumer,
   tryRunPipeConsumer,
   bmxtRuleStreamAcceptsKinds,

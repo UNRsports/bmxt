@@ -29,14 +29,16 @@ export async function runCloseFromBmxtRuleStream(
   const stdout: string[] = []
   const stderr: string[] = []
   for (const tabId of tabIds) {
-    const outcome = await runBackgroundSegment(`close ${tabId}`, deps, locale)
-    stdout.push(...outcome.stdout)
+    const outcome = await runBackgroundSegment(`close ${tabId}`, deps, locale, {
+      suppressLogPatches: true
+    })
     stderr.push(...outcome.stderr)
     if (!isExitSuccess(outcome.exitStatus)) {
+      stdout.push(...outcome.stdout)
       return withMergedLines(outcome, stdout, stderr)
     }
   }
-  return withMergedLines(segmentSuccess(stdout), stdout, stderr)
+  return withMergedLines(segmentSuccess([]), [], stderr)
 }
 
 export const closePipeConsumer: PipeConsumerEntry = {

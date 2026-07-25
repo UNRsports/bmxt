@@ -17,7 +17,9 @@ import {
   resolveOptionTokenFilterModes,
   type CandidateMatchMode
 } from "./ime-token-match"
-import { mapSegmentOffsetToLine, resolveActiveCommandSegment } from "./compound/active-segment.ts"
+import { resolveActiveCommandSegment } from "./compound/active-segment.ts"
+import { resolveActivePipeStage } from "./compound/pipe-stage-spans.ts"
+import { listPipeConsumerCompletionTokens } from "./pipe/consumers/completion-tokens.ts"
 import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import { rankTokenCandidates } from "./token-candidate-mru.ts"
@@ -315,19 +317,24 @@ export function resolveImeTokenPicker(
 ): ImeTokenPickerModel | null {
   const active = resolveActiveCommandSegment(line, cursor)
   const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
+  const pipe = resolveActivePipeStage(segmentLine, active.localCursor)
+  const stageLine = segmentLine.slice(pipe.stageStart, pipe.stageEnd)
+  const stageTokens =
+    pipe.stageIndex >= 1 ? listPipeConsumerCompletionTokens() : firstCommandTokens
   const picked = resolveImeTokenPickerInSegment(
-    segmentLine,
-    active.localCursor,
-    firstCommandTokens,
+    stageLine,
+    pipe.localCursor,
+    stageTokens,
     opts
   )
   if (!picked) {
     return null
   }
+  const stageAbsStart = active.segmentStart + pipe.stageStart
   return finalizeCandidateOrder({
     ...picked,
-    tokenStart: mapSegmentOffsetToLine(active.segmentStart, picked.tokenStart),
-    tokenEnd: mapSegmentOffsetToLine(active.segmentStart, picked.tokenEnd)
+    tokenStart: stageAbsStart + picked.tokenStart,
+    tokenEnd: stageAbsStart + picked.tokenEnd
   })
 }
 

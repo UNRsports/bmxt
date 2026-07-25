@@ -1,6 +1,6 @@
 /**
- * EN: Activate the last `#t:<id>` chip when a chip-only segment is submitted (no pipe).
- * JA: チップのみの行を Enter したとき、最後の `#t:<id>` タブをアクティブにする。
+ * EN: Activate a single `#t:<id>` chip when a chip-only segment is submitted (no pipe).
+ * JA: チップのみの行を Enter したとき、単一 `#t:<id>` ならそのタブをアクティブにする。
  */
 
 import type { UiLocale } from "../../../setting/locale.ts"
@@ -34,7 +34,7 @@ export async function activateTabChipById(tabId: number): Promise<ActivateTabChi
 }
 
 /**
- * EN: If `segment` is chip-only, activate the last chip tab. Null when not a chip segment.
+ * EN: If `segment` is chip-only, activate when exactly one chip. Null when not a chip segment.
  */
 export async function tryActivateTabChipSegment(
   segment: string,
@@ -44,7 +44,12 @@ export async function tryActivateTabChipSegment(
   if (ids === null || ids.length === 0) {
     return null
   }
-  const tabId = ids[ids.length - 1]!
+  if (ids.length > 1) {
+    return segmentFailure("runtime", [
+      tPipe("pipe.tabChip.multiActivateForbidden", locale)
+    ])
+  }
+  const tabId = ids[0]!
   const result = await activateTabChipById(tabId)
   if (!result.ok) {
     return segmentFailure("runtime", [

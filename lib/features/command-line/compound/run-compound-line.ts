@@ -41,10 +41,13 @@ function formatOutcomeBlock(
 ): CompoundLogBlock {
   if (
     pipeStageCount === 1 &&
-    outcome.ok &&
     parseTabChipProducerSegment(text) !== null
   ) {
     return formatChipOnlyActivateBlock(outcome)
+  }
+  // EN: Quiet success (pipe batch default) — prompt echo only; no `[{segment}]` / per-tab noise.
+  if (outcome.ok && outcome.stdout.length === 0 && outcome.stderr.length === 0) {
+    return { stdout: [], stderr: [] }
   }
   return formatSegmentBlock(text, outcome, locale)
 }

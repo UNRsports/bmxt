@@ -4,6 +4,7 @@
  */
 
 import { resolveActiveCommandSegment } from "../command-line/compound/active-segment.ts"
+import { resolveActivePipeStage } from "../command-line/compound/pipe-stage-spans.ts"
 import {
   findNavReloadTabTokenSpans,
   formatNavReloadTabToken,
@@ -50,7 +51,7 @@ export function isOnlyTabChipTokens(text: string): boolean {
 
 /**
  * EN: Parse `tab:` / `tab::{needle}` / continuation after chips (Space / title needle).
- * Does not match `tab` (command) or `tab -list`.
+ * Does not match `tab` (command) or `tab -list`. Ignores pipe consumer stages (after `|`).
  */
 export function tabChipCompletionZone(
   line: string,
@@ -58,25 +59,32 @@ export function tabChipCompletionZone(
 ): TabChipCompletionZone | null {
   const active = resolveActiveCommandSegment(line, cursor)
   const segmentLine = line.slice(active.segmentStart, active.segmentEnd)
-  const localCursor = active.localCursor
-  if (localCursor < 0 || localCursor > segmentLine.length) {
+  const pipe = resolveActivePipeStage(segmentLine, active.localCursor)
+  if (pipe.stageIndex >= 1) {
     return null
   }
 
-  const before = segmentLine.slice(0, localCursor)
+  const stageLine = segmentLine.slice(pipe.stageStart, pipe.stageEnd)
+  const localCursor = pipe.localCursor
+  if (localCursor < 0 || localCursor > stageLine.length) {
+    return null
+  }
+
+  const before = stageLine.slice(0, localCursor)
   const lastSpace = before.lastIndexOf(" ")
   const tokenStartLocal = lastSpace + 1
   let tokenEndLocal = localCursor
-  while (tokenEndLocal < segmentLine.length && !/\s/.test(segmentLine[tokenEndLocal]!)) {
+  while (tokenEndLocal < stageLine.length && !/\s/.test(stageLine[tokenEndLocal]!)) {
     tokenEndLocal += 1
   }
-  const token = segmentLine.slice(tokenStartLocal, tokenEndLocal)
+  const token = stageLine.slice(tokenStartLocal, tokenEndLocal)
+  const absBase = active.segmentStart + pipe.stageStart
 
   const urlMatch = /^tab::(.*)$/i.exec(token)
   if (urlMatch) {
     return {
-      tokenStart: active.segmentStart + tokenStartLocal,
-      tokenEnd: active.segmentStart + tokenEndLocal,
+      tokenStart: absBase + tokenStartLocal,
+      tokenEnd: absBase + tokenEndLocal,
       needle: urlMatch[1] ?? "",
       mode: "url"
     }
@@ -85,23 +93,23 @@ export function tabChipCompletionZone(
   const titleMatch = /^tab:(.*)$/i.exec(token)
   if (titleMatch) {
     return {
-      tokenStart: active.segmentStart + tokenStartLocal,
-      tokenEnd: active.segmentStart + tokenEndLocal,
+      tokenStart: absBase + tokenStartLocal,
+      tokenEnd: absBase + tokenEndLocal,
       needle: titleMatch[1] ?? "",
       mode: "title"
     }
   }
 
   // EN: Continuation — only after one or more `#t:` chips (Space reopens / title filter).
-  const prefix = segmentLine.slice(0, tokenStartLocal)
+  const prefix = stageLine.slice(0, tokenStartLocal)
   if (!isOnlyTabChipTokens(prefix)) {
     return null
   }
 
   if (token.length === 0) {
     return {
-      tokenStart: active.segmentStart + tokenStartLocal,
-      tokenEnd: active.segmentStart + tokenEndLocal,
+      tokenStart: absBase + tokenStartLocal,
+      tokenEnd: absBase + tokenEndLocal,
       needle: "",
       mode: "title"
     }
@@ -112,8 +120,8 @@ export function tabChipCompletionZone(
   }
 
   return {
-    tokenStart: active.segmentStart + tokenStartLocal,
-    tokenEnd: active.segmentStart + tokenEndLocal,
+    tokenStart: absBase + tokenStartLocal,
+    tokenEnd: absBase + tokenEndLocal,
     needle: token,
     mode: "title"
   }
