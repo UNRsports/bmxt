@@ -22,6 +22,10 @@ Consumers read **`BmxtRuleStream`** (`bmxt-rule/1`), never command-specific stru
 
 After a list-producer first command and `-list` (stage 0, third-token zone), the IME token menu also lists **pipe continuations** derived from the same `PIPE_CONSUMER_COMPLETION_IDS` (display `| browse`, insert ` | browse`, …). Do not maintain a second catalog for this — adding a consumer to the registry is enough for both the right-hand stage (after `|`) and these left-hand continuations.
 
+## Candidate menu (consumer stage)
+
+On stage ≥ 1, first-token candidates come from `listPipeConsumerCompletionTokens()`. When the current word is already an **exact complete** consumer (e.g. `… | browse` or `… | browse `), the menu must **not** re-offer that same token (and must not reopen the full list after a trailing space). Partial prefixes (`bro`) still offer `browse`.
+
 ## Contract
 
 - Stage 0 (left of `|`) must produce `ListResult` → converted to bmxtRule (and keep `listResult` for UI consumers).

@@ -127,6 +127,8 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         const built = buildPipeContinuationPickLine(cur, s.tokenStart, s.tokenEnd, tok)
         nextLine = built.line
         nextPos = built.cursor
+        // EN: Continuation completes the consumer — do not leave a redundant first-tier menu.
+        options.setSubCmdPicker(null)
       } else {
         const appendAtEnd = s.tokenStart === s.tokenEnd && s.tokenStart >= cur.length
         const prependFirstCommand = isFirstTierPrependPick(cur, cursor, s.tier)

@@ -21,6 +21,7 @@ import { resolveActiveCommandSegment } from "./compound/active-segment.ts"
 import { resolveActivePipeStage } from "./compound/pipe-stage-spans.ts"
 import { listPipeConsumerCompletionTokens } from "./pipe/consumers/completion-tokens.ts"
 import { applyPipeContinuationCandidates } from "./pipe/pipe-continuation-candidates.ts"
+import { suppressExactCompletePipeConsumerFirstPicker } from "./pipe/pipe-consumer-first-picker.ts"
 import { stageLineHasPipeProducerFirstCommand } from "./pipe/pipe-producer-first.ts"
 import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
 import { wordBounds } from "../format/word-bounds.ts"
@@ -331,6 +332,12 @@ export function resolveImeTokenPicker(
   )
   if (pipe.stageIndex === 0) {
     picked = applyPipeContinuationCandidates(picked, stageLine, pipe.localCursor, opts)
+  } else {
+    picked = suppressExactCompletePipeConsumerFirstPicker(
+      picked,
+      stageLine,
+      pipe.localCursor
+    )
   }
   if (!picked) {
     return null

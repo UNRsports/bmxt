@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isCompleteSecondTokenWithoutFurtherFixedTokens } from "../../command-line/second-token-picker.ts"
+import { isCompletePipeConsumerWithoutFurtherTokens } from "../../command-line/pipe/pipe-consumer-first-picker.ts"
 import {
   filterSessionSwitchPickerRows,
   resolveSessionSwitchPickerState,
@@ -299,6 +300,13 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         // EN: Complete second with no further fixed tokens (e.g. `tab -nowurl`) — close.
         // Do not leave a hollow “第二コマンド” popup that steals Enter.
         if (isCompleteSecondTokenWithoutFurtherFixedTokens(ln, pos)) {
+          setSubCmdPicker(null)
+          allowEmptyFirstPickerSyncRef.current = false
+          tabPickerOpenRequestRef.current = false
+          return
+        }
+        // EN: Complete pipe consumer (`… | browse`) — close; do not keep-alive hollow 第一コマンド.
+        if (isCompletePipeConsumerWithoutFurtherTokens(ln, pos)) {
           setSubCmdPicker(null)
           allowEmptyFirstPickerSyncRef.current = false
           tabPickerOpenRequestRef.current = false
