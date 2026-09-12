@@ -53,6 +53,7 @@ import {
   type DetailBarId
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
+import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
   deleteNavReloadTabBlockAtCursor,
@@ -288,6 +289,11 @@ export function BmxtShell({
     navArmed,
     translateEnabled: translateEnabledRef.current
   })
+
+  // EN: Draft host-ui while setting picker is open so PC can preview mobile before save.
+  const hostUiModeEffective =
+    settingListPicker !== null ? settingListPicker.draft.hostUiMode : uiSettings.hostUiMode
+  const { formFactor: hostUiFormFactor, showExtraKeys } = useHostUiFormFactor(hostUiModeEffective)
 
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
@@ -1252,7 +1258,7 @@ export function BmxtShell({
     deleteForwardWhenReclaiming
   })
 
-  const { onKeyDown } = useShellKeyboard({
+  const { onKeyDown, applyTokenPickIndex } = useShellKeyboard({
     navPageTyping,
     navTypingMultiline,
     promptPaneFocused,
@@ -1317,6 +1323,32 @@ export function BmxtShell({
     promptLine,
     getPromptLockedPrefix
   })
+
+  // EN: Pointer candidate UX (tap-to-pick + outside dismiss) is mobile-only.
+  //     Desktop keeps 0.8.0 keyboard-centric picker close (Esc / ↑ at top).
+  const isMobileHostUi = hostUiFormFactor === "mobile"
+  const onPickTokenIndex = isMobileHostUi ? applyTokenPickIndex : undefined
+  const onPickSessionIndex = isMobileHostUi
+    ? (pickHi: number) => {
+        const commandLine = lineRef.current.trim()
+        if (sessionPickerVariant === "switch") {
+          applySessionSwitchPick(pickHi)
+        } else {
+          switchSessionFromListPicker(commandLine, pickHi)
+        }
+      }
+    : undefined
+  const onDismissPromptPickerOutside = useCallback(() => {
+    if (subCmdPickerRef.current !== null) {
+      dismissImeTokenPicker()
+      return
+    }
+    if (sessionListPickerHiRef.current !== null) {
+      closeSessionListPicker()
+    }
+  }, [closeSessionListPicker, dismissImeTokenPicker, sessionListPickerHiRef, subCmdPickerRef])
+  const onDismissOutside = isMobileHostUi ? onDismissPromptPickerOutside : undefined
+
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
 
@@ -1395,7 +1427,21 @@ export function BmxtShell({
           onCompositionStart={onCompositionStart}
           onCompositionUpdate={onCompositionUpdate}
           onCompositionEnd={onCompositionEnd}
+          onPickTokenIndex={onPickTokenIndex}
+          onPickSessionIndex={onPickSessionIndex}
+          onDismissOutside={onDismissOutside}
         />
+        {showExtraKeys ? (
+          <ExtraKeysBar
+            locale={uiSettings.locale}
+            imeRef={imeRef}
+            promptPaneFocused={promptPaneFocused}
+            getCursorPos={() => cursorRef.current}
+            setCursorPos={setCursorPos}
+            getLineLength={() => lineRef.current.length}
+            lockedPrefixLength={getPromptLockedPrefix()?.length ?? 0}
+          />
+        ) : null}
         {navPageTyping && translateEnabled ? (
           <TranslationStrip
             pairId={translatePairId}
@@ -1461,7 +1507,7 @@ export function BmxtShell({
   )
 
   return (
-    <div className="bmxt-shell-root">
+    <div className="bmxt-shell-root" data-bmxt-host-ui={hostUiFormFactor}>
       <div
         className="bmxt-terminal-split"
         data-bmxt-session-id={sessionId}

@@ -8,6 +8,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "language"
     case "edit-picker":
       return "editPicker"
+    case "host-ui":
+      return "hostUi"
     case "storage":
       return "storageMode"
     case "snapshot-storage":
@@ -55,6 +57,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
   return (
     view === "language" ||
     view === "editPicker" ||
+    view === "hostUi" ||
     view === "storageMode" ||
     view === "snapshotStorageMode" ||
     view === "fontSize" ||

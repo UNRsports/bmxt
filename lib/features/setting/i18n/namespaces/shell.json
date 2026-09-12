@@ -26,5 +26,53 @@
   "shell.reloadHint": {
     "ja": "⚠️タブやサイト内の操作を行う場合は、最初にページをリロードして拡張機能のスクリプトがページ内で有効化するようにしてください。⚠️",
     "en": "⚠️ To operate on tabs or within a page, reload the page first so the extension scripts are active on that page. ⚠️"
+  },
+  "shell.extraKeys.toolbar": {
+    "ja": "ターミナル補助キー",
+    "en": "Terminal extra keys"
+  },
+  "shell.extraKeys.key.ctrl": {
+    "ja": "Ctrl（次のキーに付与）",
+    "en": "Ctrl (sticky for next key)"
+  },
+  "shell.extraKeys.key.shift": {
+    "ja": "Shift（次のキーに付与）",
+    "en": "Shift (sticky for next key)"
+  },
+  "shell.extraKeys.key.alt": {
+    "ja": "Alt（次のキーに付与。もう一度で Alt 単体）",
+    "en": "Alt (sticky; tap again for bare Alt)"
+  },
+  "shell.extraKeys.key.esc": {
+    "ja": "Escape",
+    "en": "Escape"
+  },
+  "shell.extraKeys.key.tab": {
+    "ja": "Tab（補完）",
+    "en": "Tab (completion)"
+  },
+  "shell.extraKeys.key.enter": {
+    "ja": "Enter",
+    "en": "Enter"
+  },
+  "shell.extraKeys.key.up": {
+    "ja": "上矢印",
+    "en": "Arrow up"
+  },
+  "shell.extraKeys.key.down": {
+    "ja": "下矢印",
+    "en": "Arrow down"
+  },
+  "shell.extraKeys.key.left": {
+    "ja": "左矢印",
+    "en": "Arrow left"
+  },
+  "shell.extraKeys.key.right": {
+    "ja": "右矢印",
+    "en": "Arrow right"
+  },
+  "shell.extraKeys.key.ctrlC": {
+    "ja": "Ctrl+C（中断）",
+    "en": "Ctrl+C (cancel)"
   }
 }

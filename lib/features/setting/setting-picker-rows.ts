@@ -15,6 +15,7 @@ import {
   settingTokenForUiLocale,
   type UiLocale
 } from "./locale"
+import type { HostUiMode } from "./host-ui-mode.ts"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
@@ -26,6 +27,10 @@ export type SettingPickerRowId =
   | "edit-picker"
   | "edit-picker-on"
   | "edit-picker-off"
+  | "host-ui"
+  | "host-ui-auto"
+  | "host-ui-desktop"
+  | "host-ui-mobile"
   | "fg"
   | "fg-picker"
   | "bg-color"
@@ -115,19 +120,39 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
   return index
 }
 
+function hostUiModeStateLabel(mode: HostUiMode, locale: UiLocale): string {
+  if (mode === "mobile") {
+    return tSetting("setting.picker.hostUiStateMobile", locale)
+  }
+  if (mode === "desktop") {
+    return tSetting("setting.picker.hostUiStateDesktop", locale)
+  }
+  return tSetting("setting.picker.hostUiStateAuto", locale)
+}
+
 /** EN: Highlight index when entering a choice sub-list (current draft value). */
 export function settingPickerInitialHi(
   view: SettingListPickerView,
   locale: UiLocale,
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
-  snapshotStorageConfig?: SnapshotStorageConfig
+  snapshotStorageConfig?: SnapshotStorageConfig,
+  hostUiMode: HostUiMode = "auto"
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
+  }
+  if (view === "hostUi") {
+    if (hostUiMode === "desktop") {
+      return 1
+    }
+    if (hostUiMode === "mobile") {
+      return 2
+    }
+    return 0
   }
   if (view === "storageMode") {
     return storageConfig?.mode === "external" ? 1 : 0
@@ -291,7 +316,8 @@ export function buildSettingPickerRows(
   locale: UiLocale,
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
-  snapshotStorageConfig?: SnapshotStorageConfig
+  snapshotStorageConfig?: SnapshotStorageConfig,
+  hostUiMode: HostUiMode = "auto"
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -308,6 +334,14 @@ export function buildSettingPickerRows(
     return [
       { id: "edit-picker-on", line: tSetting("setting.picker.editPickerOn", locale) },
       { id: "edit-picker-off", line: tSetting("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "hostUi") {
+    return [
+      { id: "host-ui-auto", line: tSetting("setting.picker.hostUiAuto", locale) },
+      { id: "host-ui-desktop", line: tSetting("setting.picker.hostUiDesktop", locale) },
+      { id: "host-ui-mobile", line: tSetting("setting.picker.hostUiMobile", locale) }
     ]
   }
 
@@ -387,6 +421,12 @@ export function buildSettingPickerRows(
         value: appearance.editPicker
           ? tSetting("setting.picker.editPickerStateOn", locale)
           : tSetting("setting.picker.editPickerStateOff", locale)
+      })
+    },
+    {
+      id: "host-ui",
+      line: tSetting("setting.picker.main.hostUi", locale, {
+        value: hostUiModeStateLabel(hostUiMode, locale)
       })
     },
     {
@@ -555,6 +595,8 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
+          : view === "hostUi"
+            ? "setting.picker.headline.hostUi"
           : view === "storageMode"
             ? "setting.picker.headline.storageMode"
             : view === "snapshotStorageMode"

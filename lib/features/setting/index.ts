@@ -163,6 +163,7 @@ export {
   loadUiSettingsInternalCache,
   mirrorUiSettingsToInternalCache,
   applyDefaultUiSettingsToInternalCache,
+  normalizeUiSettings,
   replaceUiSettings,
   resetUiSettingsToDefaultsAndInternal,
   resetUiAppearance,
@@ -171,6 +172,16 @@ export {
   saveUiLocale,
   type UiSettings
 } from "./settings"
+export {
+  DEFAULT_HOST_UI_MODE,
+  HOST_UI_MODE_TOKENS,
+  isHostUiMode,
+  normalizeHostUiMode,
+  resolveExtraKeysVisible,
+  resolveHostUiFormFactor,
+  type HostUiFormFactor,
+  type HostUiMode
+} from "./host-ui-mode.ts"
 export { buildAppearancePatch } from "./appearance"
 export { UiSettingsProvider, useUiLocale, useUiSettings } from "./use-ui-settings"
 export { parseHexColor, previewHexColor } from "./validate-color"

@@ -9,6 +9,7 @@ import {
 } from "react"
 import { UI_SETTINGS_KEY } from "../extension-storage/keys"
 import type { UiAppearance } from "./appearance"
+import { DEFAULT_HOST_UI_MODE, type HostUiMode } from "./host-ui-mode.ts"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "./locale"
 import { loadUiSettings, type UiSettings } from "./settings"
 
@@ -16,6 +17,7 @@ type UiSettingsContextValue = {
   settings: UiSettings
   setLocale: (locale: UiLocale) => void
   setAppearance: (patch: Partial<UiAppearance>) => void
+  setHostUiMode: (mode: HostUiMode) => void
   replaceSettings: (next: UiSettings) => void
   reloadSettings: () => Promise<void>
 }
@@ -24,6 +26,7 @@ const UiSettingsContext = createContext<UiSettingsContextValue | null>(null)
 
 const INITIAL: UiSettings = {
   locale: DEFAULT_UI_LOCALE,
+  hostUiMode: DEFAULT_HOST_UI_MODE,
   appearance: {
     fg: null,
     bgColor: null,
@@ -76,6 +79,10 @@ export function UiSettingsProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  const setHostUiMode = useCallback((mode: HostUiMode) => {
+    setSettings((prev) => ({ ...prev, hostUiMode: mode }))
+  }, [])
+
   const replaceSettings = useCallback((next: UiSettings) => {
     setSettings(next)
   }, [])
@@ -85,10 +92,11 @@ export function UiSettingsProvider({ children }: { children: ReactNode }) {
       settings,
       setLocale,
       setAppearance,
+      setHostUiMode,
       replaceSettings,
       reloadSettings
     }),
-    [settings, setLocale, setAppearance, replaceSettings, reloadSettings]
+    [settings, setLocale, setAppearance, setHostUiMode, replaceSettings, reloadSettings]
   )
 
   return <UiSettingsContext.Provider value={value}>{children}</UiSettingsContext.Provider>

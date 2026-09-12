@@ -111,6 +111,27 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
+      if (row.id === "host-ui-auto") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { hostUiMode: "auto" })
+        )
+        return
+      }
+      if (row.id === "host-ui-desktop") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { hostUiMode: "desktop" })
+        )
+        return
+      }
+      if (row.id === "host-ui-mobile") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { hostUiMode: "mobile" })
+        )
+        return
+      }
       if (row.id === "reset-yes") {
         options.setSettingListPicker(
           options.sessionId,

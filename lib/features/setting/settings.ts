@@ -4,6 +4,11 @@ import {
   normalizeUiAppearance,
   type UiAppearance
 } from "./appearance"
+import {
+  DEFAULT_HOST_UI_MODE,
+  normalizeHostUiMode,
+  type HostUiMode
+} from "./host-ui-mode.ts"
 import { formatUiSettingsSummaryLines } from "./i18n/resolvers"
 import {
   DEFAULT_UI_LOCALE,
@@ -21,24 +26,48 @@ import {
 export type UiSettings = {
   locale: UiLocale
   appearance: UiAppearance
+  /**
+   * EN: Host UI form factor preference.
+   *     `auto` → Android mobile, else desktop; override with `desktop` / `mobile`.
+   */
+  hostUiMode: HostUiMode
 }
 
-const DEFAULT_SETTINGS: UiSettings = {
-  locale: DEFAULT_UI_LOCALE,
-  appearance: { ...DEFAULT_UI_APPEARANCE, picker: { ...DEFAULT_UI_APPEARANCE.picker } }
+function pickHostUiModeFromPartial(raw: Record<string, unknown>): HostUiMode {
+  if ("hostUiMode" in raw) {
+    return normalizeHostUiMode(raw.hostUiMode)
+  }
+  // EN: Migrate early 0.8.2 local `extraKeysMode` (on/off/auto).
+  if ("extraKeysMode" in raw) {
+    return normalizeHostUiMode(raw.extraKeysMode)
+  }
+  return DEFAULT_HOST_UI_MODE
+}
+
+/** EN: Normalize partial storage / import objects (backward compatible). */
+export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined): UiSettings {
+  if (!raw || typeof raw !== "object") {
+    return {
+      locale: DEFAULT_UI_LOCALE,
+      appearance: normalizeUiAppearance(null),
+      hostUiMode: DEFAULT_HOST_UI_MODE
+    }
+  }
+  const record = raw as Record<string, unknown>
+  return {
+    locale: parseUiLocale(raw.locale),
+    appearance: normalizeUiAppearance(raw.appearance),
+    hostUiMode: pickHostUiModeFromPartial(record)
+  }
 }
 
 async function loadUiSettingsFromChromeStorage(): Promise<UiSettings> {
   const r = await chrome.storage.local.get(UI_SETTINGS_KEY)
   const raw = r[UI_SETTINGS_KEY]
   if (!raw || typeof raw !== "object") {
-    return { ...DEFAULT_SETTINGS, appearance: normalizeUiAppearance(null) }
+    return normalizeUiSettings(null)
   }
-  const o = raw as Record<string, unknown>
-  return {
-    locale: parseUiLocale(o.locale),
-    appearance: normalizeUiAppearance(o.appearance as Partial<UiAppearance>)
-  }
+  return normalizeUiSettings(raw as Partial<UiSettings>)
 }
 
 export async function loadUiSettingsInternalCache(): Promise<UiSettings> {
@@ -46,10 +75,11 @@ export async function loadUiSettingsInternalCache(): Promise<UiSettings> {
 }
 
 export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings> {
-  const defaults: UiSettings = {
+  const defaults = normalizeUiSettings({
     locale: DEFAULT_UI_LOCALE,
-    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
-  }
+    appearance: DEFAULT_UI_APPEARANCE,
+    hostUiMode: DEFAULT_HOST_UI_MODE
+  })
   await saveUiSettingsToChromeStorage(defaults)
   await activateInternalUiSettingsStorage()
   await clearExternalUiSettingsStorage()
@@ -57,17 +87,15 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
 }
 
 export async function mirrorUiSettingsToInternalCache(next: UiSettings): Promise<void> {
-  await saveUiSettingsToChromeStorage({
-    locale: next.locale,
-    appearance: normalizeUiAppearance(next.appearance)
-  })
+  await saveUiSettingsToChromeStorage(normalizeUiSettings(next))
 }
 
 export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSettings> {
-  const defaults: UiSettings = {
+  const defaults = normalizeUiSettings({
     locale: DEFAULT_UI_LOCALE,
-    appearance: normalizeUiAppearance(DEFAULT_UI_APPEARANCE)
-  }
+    appearance: DEFAULT_UI_APPEARANCE,
+    hostUiMode: DEFAULT_HOST_UI_MODE
+  })
   await saveUiSettingsToChromeStorage(defaults)
   return defaults
 }
@@ -88,10 +116,7 @@ async function saveUiSettingsToChromeStorage(next: UiSettings): Promise<void> {
 }
 
 async function saveUiSettings(next: UiSettings): Promise<{ externalWriteFailed: boolean }> {
-  const normalized: UiSettings = {
-    locale: next.locale,
-    appearance: normalizeUiAppearance(next.appearance)
-  }
+  const normalized = normalizeUiSettings(next)
   await saveUiSettingsToChromeStorage(normalized)
   try {
     await trySaveUiSettingsToExternal(normalized)
@@ -129,10 +154,7 @@ export async function clearUiBackgroundImage(): Promise<void> {
 }
 
 export async function replaceUiSettings(next: UiSettings): Promise<{ externalWriteFailed: boolean }> {
-  return saveUiSettings({
-    locale: next.locale,
-    appearance: normalizeUiAppearance(next.appearance)
-  })
+  return saveUiSettings(next)
 }
 
 export function formatUiSettingsSummary(settings: UiSettings, locale: UiLocale): string[] {

@@ -133,7 +133,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ## Key Specs
 
 - **UI**: Extension page opened in a dedicated popup window without a tab bar (WXT unlisted page `entrypoints/bmxt`; `chrome.windows.create({ type: "popup" })`). The window UI is implemented in **`lib/features/bmxt-window/`** (`BmxtTerminal`); **`entrypoints/bmxt/main.tsx`** is a thin entry that mounts it.
-- **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field.
+- **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav on **desktop** **host-ui**; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field. **mobile** **host-ui** (since **0.8.2**, default on Android / Android Vivaldi): soft key bar plus pointer select / outside-tap dismiss for prompt candidate menus.
 - **State**: **Terminal session logs** (`logsById`, `order`, `activeId`, `namesById`), **open picker columns**, and **pane focus** live in the **BMXt UI page** (React) for the window lifetime — see **[Terminal session state (UI source of truth)](#terminal-session-state)**. **Prompt command history** is stored in **`chrome.storage.local`** (`bmxt_cmd_history`, cap **300** entries). **UI settings**, **page-active** picker prefs, and similar user metadata use other **`chrome.storage.local`** keys (**`lib/features/extension-storage/keys.ts`**).
 - **Background**: Service Worker (`entrypoints/background/index.ts`) opens the window on icon click and handles command execution and tab operations.
 - **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**); **`toggle-bmxt-float`** (default **Shift+Alt+F**) shows or hides the in-page float prompt on the active http(s) tab (independent UI process; shares prompt command history with the popup window).
@@ -350,7 +350,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -588,6 +588,7 @@ When changing UI settings shape or on-disk format in a release:
 |-----|--------|
 | **language** | `--japanese` / `--english` (UI display language) |
 | **edit-picker** | **`on`** — show extra rows to customize picker columns separately; **`off`** — picker columns follow global appearance |
+| **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force layout. **mobile** (since **0.8.2**): soft key bar; prompt candidate menus support tap-to-select and outside-tap dismiss. **desktop**: keyboard-centric candidate close (**Esc** / **↑** at top), matching **0.8.0** |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
 | **reset-default** | Confirm, then reset appearance draft to defaults |
@@ -1275,7 +1276,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1479,7 +1480,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ## 主要仕様
 
 - **UI**: タブバーなしの独立 popup ウィンドウで動く拡張ページ（WXT の unlisted page **`entrypoints/bmxt`**、`chrome.windows.create({ type: "popup" })`）。実装の本体は **`lib/features/bmxt-window/`**（`BmxtTerminal`）で、**`entrypoints/bmxt/main.tsx`** はそれをマウントする薄いエントリです。
-- **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。
+- **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**desktop** の **host-ui** では **キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。**mobile** の **host-ui**（**0.8.2** 以降。Android／Android 版 Vivaldi では既定）では補助キーバーに加え、プロンプト候補のタップ確定／外タップで閉じる。
 - **状態**: **ターミナルセッションのログ**（`logsById`、`order`、`activeId`、`namesById`）、**開いているピッカー列**、**ペインフォーカス**は **BMXt UI ページ**（React）が BMXt ウィンドウ存続中の正本 — **[ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)** 参照。**プロンプトのコマンド履歴**は **`chrome.storage.local`**（`bmxt_cmd_history`、上限 **300** 件）。**UI 設定**・**page-active** 等は別の **`chrome.storage.local`** キー（**`lib/features/extension-storage/keys.ts`**）。
 - **バックグラウンド**: Service Worker（`entrypoints/background/index.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
 - **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。**`toggle-bmxt-float`**（既定 **Shift+Alt+F**）でアクティブな http(s) タブ上のサイト内フロート・プロンプトを表示／非表示（ポップアップ窓とは独立プロセス；プロンプトのコマンド履歴のみ共有）。
@@ -1696,7 +1697,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -1881,6 +1882,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 |----|------|
 | **language** | `--japanese` / `--english`（UI 表示言語） |
 | **edit-picker** | **`on`** — ピッカー列専用の行を追加；**`off`** — ピッカー列は全体外観に従う |
+| **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — 強制切替。**mobile**（**0.8.2** 以降）: 補助キーバー、プロンプト候補のタップ確定／外タップで閉じる。**desktop**: **0.8.0** 相当のキーボード中心（**Esc** / 先頭で **↑**） |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
 | **reset-default** | 確認後、外観 draft を既定に戻す |
@@ -2580,7 +2582,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 

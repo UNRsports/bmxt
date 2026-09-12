@@ -1004,6 +1004,72 @@ body {
   padding-bottom: 6px;
 }
 
+.bmxt-extra-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 6px;
+  padding: 4px 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.bmxt-extra-keys-btn {
+  box-sizing: border-box;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.55rem;
+  margin: 0;
+  border: 1px solid rgba(201, 209, 217, 0.28);
+  border-radius: 4px;
+  background: rgba(22, 27, 34, 0.92);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bmxt-extra-keys-btn:active {
+  background: rgba(48, 54, 61, 0.95);
+}
+
+.bmxt-extra-keys-btn--mod {
+  font-weight: 600;
+}
+
+.bmxt-extra-keys-btn--lit {
+  border-color: rgba(88, 166, 255, 0.65);
+  background: rgba(56, 139, 253, 0.22);
+  color: #79c0ff;
+}
+
+/* EN: Mobile form factor (auto on Android, or host-ui: mobile override on PC). */
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] {
+  min-width: 0;
+}
+
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-terminal-split,
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-split-terminal-pane,
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-scroll {
+  min-width: 0;
+}
+
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-extra-keys {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-bottom: 0;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bmxt-bg, #0d1117) 92%, transparent);
+}
+
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-extra-keys-btn {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
 .bmxt-prompt-field {
   flex: 1;
   min-width: 0;
@@ -1489,6 +1555,18 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-out-line a,
 .bmxt-version-upgrade a {
   cursor: pointer;
+}
+
+.bmxt-subcmd-picker-item--pickable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.bmxt-subcmd-picker-item--pickable:hover,
+.bmxt-subcmd-picker-item--pickable.bmxt-subcmd-picker-item--hi {
+  background: #30363d;
 }
 
 /* Tab picker / side-picker list chrome (tmux-style) */

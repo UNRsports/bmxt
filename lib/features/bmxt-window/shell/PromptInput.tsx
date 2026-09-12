@@ -51,6 +51,15 @@ type PromptInputProps = {
   onCompositionStart: React.CompositionEventHandler<HTMLTextAreaElement>
   onCompositionUpdate: React.CompositionEventHandler<HTMLTextAreaElement>
   onCompositionEnd: React.CompositionEventHandler<HTMLTextAreaElement>
+  /** EN: Mobile host UI only — tap/click a token candidate (Enter-equivalent). */
+  onPickTokenIndex?: (index: number) => void
+  /** EN: Mobile host UI only — tap/click a session candidate (Enter-equivalent). */
+  onPickSessionIndex?: (index: number) => void
+  /**
+   * EN: Mobile host UI only — pointer outside the floating candidate menu → dismiss
+   *     (Esc-equivalent). Desktop omits this; close via Esc / ↑ at top.
+   */
+  onDismissOutside?: () => void
 }
 
 export function PromptInput({
@@ -86,12 +95,39 @@ export function PromptInput({
   onPaste,
   onCompositionStart,
   onCompositionUpdate,
-  onCompositionEnd
+  onCompositionEnd,
+  onPickTokenIndex,
+  onPickSessionIndex,
+  onDismissOutside
 }: PromptInputProps) {
   const navPromptValueControlled = !navPageTyping
   const showNavTypingPlaceholder = navPageTyping && line.trim() === "" && !isComposing
   const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
   const [imeDomFocused, setImeDomFocused] = useState(false)
+
+  useEffect(() => {
+    if (!promptPickerOpen || !onDismissOutside) {
+      return
+    }
+    const onPointerDownCapture = (e: PointerEvent) => {
+      const host = subCmdPickerHostRef.current
+      if (!host) {
+        return
+      }
+      const target = e.target
+      if (!(target instanceof Node)) {
+        return
+      }
+      if (host.contains(target)) {
+        return
+      }
+      onDismissOutside()
+    }
+    document.addEventListener("pointerdown", onPointerDownCapture, true)
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownCapture, true)
+    }
+  }, [promptPickerOpen, onDismissOutside, subCmdPickerHostRef])
 
   useEffect(() => {
     if (!promptPaneFocused) {
@@ -242,12 +278,13 @@ export function PromptInput({
             className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
             {...{ [CSP_DYNAMIC_SCOPE_ATTR]: promptPickerScopeId ?? subCmdPickerScopeId }}>
             {subCmdPicker ? (
-              <TokenPickerPanel model={subCmdPicker} />
+              <TokenPickerPanel model={subCmdPicker} onPickIndex={onPickTokenIndex} />
             ) : sessionListPickerHi !== null ? (
               <SessionListCandidatePanel
                 rows={sessionListPickerRows}
                 hi={sessionListPickerHi}
                 variant={sessionPickerVariant ?? "list"}
+                onPickIndex={onPickSessionIndex}
               />
             ) : null}
           </div>
