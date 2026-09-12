@@ -55,6 +55,8 @@ type PromptInputProps = {
   onPickTokenIndex?: (index: number) => void
   /** EN: Mobile host UI — tap/click a session candidate (Enter-equivalent). */
   onPickSessionIndex?: (index: number) => void
+  /** EN: Pointer outside the floating candidate menu → dismiss (Esc-equivalent). */
+  onDismissOutside?: () => void
 }
 
 export function PromptInput({
@@ -92,12 +94,37 @@ export function PromptInput({
   onCompositionUpdate,
   onCompositionEnd,
   onPickTokenIndex,
-  onPickSessionIndex
+  onPickSessionIndex,
+  onDismissOutside
 }: PromptInputProps) {
   const navPromptValueControlled = !navPageTyping
   const showNavTypingPlaceholder = navPageTyping && line.trim() === "" && !isComposing
   const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
   const [imeDomFocused, setImeDomFocused] = useState(false)
+
+  useEffect(() => {
+    if (!promptPickerOpen || !onDismissOutside) {
+      return
+    }
+    const onPointerDownCapture = (e: PointerEvent) => {
+      const host = subCmdPickerHostRef.current
+      if (!host) {
+        return
+      }
+      const target = e.target
+      if (!(target instanceof Node)) {
+        return
+      }
+      if (host.contains(target)) {
+        return
+      }
+      onDismissOutside()
+    }
+    document.addEventListener("pointerdown", onPointerDownCapture, true)
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownCapture, true)
+    }
+  }, [promptPickerOpen, onDismissOutside, subCmdPickerHostRef])
 
   useEffect(() => {
     if (!promptPaneFocused) {

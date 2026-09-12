@@ -1337,6 +1337,15 @@ export function BmxtShell({
           }
         }
       : undefined
+  const onDismissPromptPickerOutside = useCallback(() => {
+    if (subCmdPickerRef.current !== null) {
+      dismissImeTokenPicker()
+      return
+    }
+    if (sessionListPickerHiRef.current !== null) {
+      closeSessionListPicker()
+    }
+  }, [closeSessionListPicker, dismissImeTokenPicker, sessionListPickerHiRef, subCmdPickerRef])
 
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
@@ -1418,6 +1427,7 @@ export function BmxtShell({
           onCompositionEnd={onCompositionEnd}
           onPickTokenIndex={onPickTokenIndex}
           onPickSessionIndex={onPickSessionIndex}
+          onDismissOutside={onDismissPromptPickerOutside}
         />
         {showExtraKeys ? (
           <ExtraKeysBar
