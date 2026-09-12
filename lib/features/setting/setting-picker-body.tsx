@@ -122,9 +122,17 @@ export function SettingPickerBody({
         state.draft.locale,
         state.draft.appearance,
         storageConfig,
-        snapshotStorageConfig
+        snapshotStorageConfig,
+        state.draft.extraKeysMode
       ),
-    [state.view, state.draft.locale, state.draft.appearance, storageConfig, snapshotStorageConfig]
+    [
+      state.view,
+      state.draft.locale,
+      state.draft.appearance,
+      state.draft.extraKeysMode,
+      storageConfig,
+      snapshotStorageConfig
+    ]
   )
 
   useEffect(() => {

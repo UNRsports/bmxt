@@ -223,6 +223,30 @@
     "ja": "オン",
     "en": "on"
   },
+  "setting.picker.extraKeysAuto": {
+    "ja": "auto — Android のみ表示",
+    "en": "auto — show on Android only"
+  },
+  "setting.picker.extraKeysOn": {
+    "ja": "on — 常に表示",
+    "en": "on — always show"
+  },
+  "setting.picker.extraKeysOff": {
+    "ja": "off — 非表示",
+    "en": "off — hide"
+  },
+  "setting.picker.extraKeysStateAuto": {
+    "ja": "auto",
+    "en": "auto"
+  },
+  "setting.picker.extraKeysStateOn": {
+    "ja": "オン",
+    "en": "on"
+  },
+  "setting.picker.extraKeysStateOff": {
+    "ja": "オフ",
+    "en": "off"
+  },
   "setting.picker.editingHint": {
     "ja": "Enter でプレビュー反映 · Esc でキャンセル",
     "en": "Enter to preview · Esc to cancel"
@@ -246,6 +270,10 @@
   "setting.picker.headline.editPicker": {
     "ja": "setting -list · edit-picker（ピッカー個別編集） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · edit-picker · ↑↓ · Enter/→ select · ← list"
+  },
+  "setting.picker.headline.extraKeys": {
+    "ja": "setting -list · extra-keys（補助キーバー） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · extra-keys · ↑↓ · Enter/→ select · ← list"
   },
   "setting.picker.headline.editing": {
     "ja": "setting -list · 編集中 — 入力欄に値を入力 · Enter でプレビュー反映 · Esc キャンセル",
@@ -342,6 +370,10 @@
   "setting.picker.main.editPicker": {
     "ja": "edit-picker（ピッカー個別編集）: {value}",
     "en": "edit-picker: {value}"
+  },
+  "setting.picker.main.extraKeys": {
+    "ja": "extra-keys（補助キーバー）: {value}",
+    "en": "extra-keys: {value}"
   },
   "setting.picker.main.export": {
     "ja": "export — settings.json + 背景画像を zip で保存",
@@ -666,6 +698,10 @@
   "setting.summary.locale": {
     "ja": "locale: {token}",
     "en": "locale: {token}"
+  },
+  "setting.summary.extraKeys": {
+    "ja": "extra-keys: {value}",
+    "en": "extra-keys: {value}"
   },
   "setting.summary.none": {
     "ja": "（なし）",

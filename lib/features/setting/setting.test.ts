@@ -162,12 +162,14 @@ describe("setting list picker draft", () => {
   it("creates draft from committed settings", () => {
     const state = createSettingListPickerState({
       locale: "en",
+      extraKeysMode: "auto",
       appearance: testAppearance({
         fg: "#ffffff",
         fontSize: "14px"
       })
     })
     assert.equal(state.draft.locale, "en")
+    assert.equal(state.draft.extraKeysMode, "auto")
     assert.equal(state.draft.appearance.fg, "#ffffff")
     assert.equal(state.draft.appearance.fontSize, "14px")
   })
@@ -175,6 +177,7 @@ describe("setting list picker draft", () => {
   it("updates draft without touching view", () => {
     const base = createSettingListPickerState({
       locale: "ja",
+      extraKeysMode: "auto",
       appearance: testAppearance(null)
     })
     const next = settingPickerUpdateDraft(
@@ -189,20 +192,25 @@ describe("setting list picker draft", () => {
   it("applies draft and returns to main atomically", () => {
     const base = createSettingListPickerState({
       locale: "en",
+      extraKeysMode: "off",
       appearance: testAppearance(null)
     })
     const next = settingPickerApplyDraftToMain(
       { ...base, view: "language", editing: true, editDraft: "#ff0000" },
-      { locale: "ja", appearance: { fg: "#aabbcc" } }
+      { locale: "ja", extraKeysMode: "on", appearance: { fg: "#aabbcc" } }
     )
     assert.equal(next.view, "main")
     assert.equal(next.editing, false)
     assert.equal(next.editDraft, "")
     assert.equal(next.draft.locale, "ja")
+    assert.equal(next.draft.extraKeysMode, "on")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
   it("maps reset-default to confirm view", () => {
     assert.equal(settingMainRowTargetView("reset-default"), "resetConfirm")
+  })
+  it("maps extra-keys to extraKeys view", () => {
+    assert.equal(settingMainRowTargetView("extra-keys"), "extraKeys")
   })
 })
 

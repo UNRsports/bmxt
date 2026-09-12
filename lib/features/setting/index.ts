@@ -163,6 +163,7 @@ export {
   loadUiSettingsInternalCache,
   mirrorUiSettingsToInternalCache,
   applyDefaultUiSettingsToInternalCache,
+  normalizeUiSettings,
   replaceUiSettings,
   resetUiSettingsToDefaultsAndInternal,
   resetUiAppearance,
@@ -171,6 +172,14 @@ export {
   saveUiLocale,
   type UiSettings
 } from "./settings"
+export {
+  DEFAULT_EXTRA_KEYS_MODE,
+  EXTRA_KEYS_MODE_TOKENS,
+  isExtraKeysMode,
+  normalizeExtraKeysMode,
+  resolveExtraKeysVisible,
+  type ExtraKeysMode
+} from "./extra-keys-mode.ts"
 export { buildAppearancePatch } from "./appearance"
 export { UiSettingsProvider, useUiLocale, useUiSettings } from "./use-ui-settings"
 export { parseHexColor, previewHexColor } from "./validate-color"

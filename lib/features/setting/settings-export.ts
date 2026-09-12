@@ -6,6 +6,7 @@ import {
   type UiAppearance,
   type UiAppearanceLayer
 } from "./appearance.ts"
+import { normalizeExtraKeysMode, type ExtraKeysMode } from "./extra-keys-mode.ts"
 import type { UiLocale } from "./locale.ts"
 import type { UiSettings } from "./settings.ts"
 import { parseHexColor } from "./validate-color.ts"
@@ -53,6 +54,8 @@ export type SettingsExportJson = {
   version: 2
   exportedAt: string
   locale: UiLocale
+  /** EN: Optional for older bundles; missing → auto on import. */
+  extraKeysMode?: ExtraKeysMode
   appearance: SettingsExportAppearanceV2
 }
 
@@ -121,11 +124,12 @@ function bgImageFileName(
 }
 
 export function buildSettingsExportJson(settings: UiSettings): SettingsExportJson {
-  const { locale, appearance } = settings
+  const { locale, appearance, extraKeysMode } = settings
   return {
     version: 2,
     exportedAt: new Date().toISOString(),
     locale,
+    extraKeysMode,
     appearance: {
       fg: appearance.fg,
       bgColor: appearance.bgColor,
@@ -299,7 +303,11 @@ export function parseSettingsExportJson(
     o.version === 2
       ? parseAppearanceFromExportV2(o.appearance as SettingsExportAppearanceV2, files)
       : parseAppearanceFromExportV1(o.appearance as Record<string, unknown>, files)
-  return { locale: o.locale, appearance }
+  return {
+    locale: o.locale,
+    appearance,
+    extraKeysMode: normalizeExtraKeysMode(o.extraKeysMode)
+  }
 }
 
 /** EN: Package UI settings JSON + background image into a zip and save locally. */

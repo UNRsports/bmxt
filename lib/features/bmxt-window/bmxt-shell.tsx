@@ -53,6 +53,7 @@ import {
   type DetailBarId
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
+import { ExtraKeysBar, useExtraKeysVisible } from "./extra-keys"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
   deleteNavReloadTabBlockAtCursor,
@@ -235,6 +236,7 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
+  const showExtraKeys = useExtraKeysVisible(uiSettings.extraKeysMode)
   const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
   const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
   const appendLogLines = useCallback(
@@ -1396,6 +1398,17 @@ export function BmxtShell({
           onCompositionUpdate={onCompositionUpdate}
           onCompositionEnd={onCompositionEnd}
         />
+        {showExtraKeys ? (
+          <ExtraKeysBar
+            locale={uiSettings.locale}
+            imeRef={imeRef}
+            promptPaneFocused={promptPaneFocused}
+            getCursorPos={() => cursorRef.current}
+            setCursorPos={setCursorPos}
+            getLineLength={() => lineRef.current.length}
+            lockedPrefixLength={getPromptLockedPrefix()?.length ?? 0}
+          />
+        ) : null}
         {navPageTyping && translateEnabled ? (
           <TranslationStrip
             pairId={translatePairId}

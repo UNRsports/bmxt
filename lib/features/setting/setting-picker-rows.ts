@@ -15,6 +15,7 @@ import {
   settingTokenForUiLocale,
   type UiLocale
 } from "./locale"
+import type { ExtraKeysMode } from "./extra-keys-mode.ts"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
@@ -26,6 +27,10 @@ export type SettingPickerRowId =
   | "edit-picker"
   | "edit-picker-on"
   | "edit-picker-off"
+  | "extra-keys"
+  | "extra-keys-auto"
+  | "extra-keys-on"
+  | "extra-keys-off"
   | "fg"
   | "fg-picker"
   | "bg-color"
@@ -115,19 +120,39 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
   return index
 }
 
+function extraKeysModeStateLabel(mode: ExtraKeysMode, locale: UiLocale): string {
+  if (mode === "on") {
+    return tSetting("setting.picker.extraKeysStateOn", locale)
+  }
+  if (mode === "off") {
+    return tSetting("setting.picker.extraKeysStateOff", locale)
+  }
+  return tSetting("setting.picker.extraKeysStateAuto", locale)
+}
+
 /** EN: Highlight index when entering a choice sub-list (current draft value). */
 export function settingPickerInitialHi(
   view: SettingListPickerView,
   locale: UiLocale,
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
-  snapshotStorageConfig?: SnapshotStorageConfig
+  snapshotStorageConfig?: SnapshotStorageConfig,
+  extraKeysMode: ExtraKeysMode = "auto"
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
+  }
+  if (view === "extraKeys") {
+    if (extraKeysMode === "on") {
+      return 1
+    }
+    if (extraKeysMode === "off") {
+      return 2
+    }
+    return 0
   }
   if (view === "storageMode") {
     return storageConfig?.mode === "external" ? 1 : 0
@@ -291,7 +316,8 @@ export function buildSettingPickerRows(
   locale: UiLocale,
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
-  snapshotStorageConfig?: SnapshotStorageConfig
+  snapshotStorageConfig?: SnapshotStorageConfig,
+  extraKeysMode: ExtraKeysMode = "auto"
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -308,6 +334,14 @@ export function buildSettingPickerRows(
     return [
       { id: "edit-picker-on", line: tSetting("setting.picker.editPickerOn", locale) },
       { id: "edit-picker-off", line: tSetting("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "extraKeys") {
+    return [
+      { id: "extra-keys-auto", line: tSetting("setting.picker.extraKeysAuto", locale) },
+      { id: "extra-keys-on", line: tSetting("setting.picker.extraKeysOn", locale) },
+      { id: "extra-keys-off", line: tSetting("setting.picker.extraKeysOff", locale) }
     ]
   }
 
@@ -387,6 +421,12 @@ export function buildSettingPickerRows(
         value: appearance.editPicker
           ? tSetting("setting.picker.editPickerStateOn", locale)
           : tSetting("setting.picker.editPickerStateOff", locale)
+      })
+    },
+    {
+      id: "extra-keys",
+      line: tSetting("setting.picker.main.extraKeys", locale, {
+        value: extraKeysModeStateLabel(extraKeysMode, locale)
       })
     },
     {
@@ -555,6 +595,8 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
+          : view === "extraKeys"
+            ? "setting.picker.headline.extraKeys"
           : view === "storageMode"
             ? "setting.picker.headline.storageMode"
             : view === "snapshotStorageMode"

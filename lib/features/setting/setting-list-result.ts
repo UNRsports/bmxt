@@ -10,9 +10,14 @@ export function buildSettingListResult(
   uiSettings: UiSettings,
   locale: UiLocale
 ): ListResult {
-  const rows = buildSettingPickerRows("main", locale, uiSettings.appearance).filter(
-    (row) => !PLAIN_LIST_EXCLUDED_ROW_IDS.has(row.id)
-  )
+  const rows = buildSettingPickerRows(
+    "main",
+    locale,
+    uiSettings.appearance,
+    undefined,
+    undefined,
+    uiSettings.extraKeysMode
+  ).filter((row) => !PLAIN_LIST_EXCLUDED_ROW_IDS.has(row.id))
   const records: ListRecord[] = rows.map((row) => ({
     kind: "setting.field",
     fields: {

@@ -111,6 +111,27 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
+      if (row.id === "extra-keys-auto") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { extraKeysMode: "auto" })
+        )
+        return
+      }
+      if (row.id === "extra-keys-on") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { extraKeysMode: "on" })
+        )
+        return
+      }
+      if (row.id === "extra-keys-off") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { extraKeysMode: "off" })
+        )
+        return
+      }
       if (row.id === "reset-yes") {
         options.setSettingListPicker(
           options.sessionId,

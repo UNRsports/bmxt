@@ -57,8 +57,16 @@ export function SettingPickerWrapper({
     [state]
   )
   const rows = useMemo(
-    () => buildSettingPickerRows(state.view, locale, appearance, storageConfig, snapshotStorageConfig),
-    [state.view, locale, appearance, storageConfig, snapshotStorageConfig]
+    () =>
+      buildSettingPickerRows(
+        state.view,
+        locale,
+        appearance,
+        storageConfig,
+        snapshotStorageConfig,
+        draft.extraKeysMode
+      ),
+    [state.view, locale, appearance, storageConfig, snapshotStorageConfig, draft.extraKeysMode]
   )
   const lines = useMemo(() => rows.map((row) => row.line), [rows])
   const headline = settingPickerHeadline(state.view, locale, state.editing)
