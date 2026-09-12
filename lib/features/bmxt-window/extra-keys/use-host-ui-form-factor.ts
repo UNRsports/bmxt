@@ -8,12 +8,20 @@ import { detectAndroidPlatform } from "./detect-android-platform"
 
 export type UseHostUiFormFactorResult = {
   formFactor: HostUiFormFactor
-  /** EN: Soft extra-keys bar — shown in mobile form factor. */
+  /**
+   * EN: Soft extra-keys bar — shown in mobile form factor only.
+   *     Same gate as pointer candidate pick / outside dismiss in BmxtShell.
+   */
   showExtraKeys: boolean
   platformReady: boolean
 }
 
-/** EN: Resolve effective desktop/mobile UI from preference + Android detect. */
+/**
+ * EN: Resolve effective desktop/mobile UI from preference + Android detect.
+ * JA: 設定と Android 検出から desktop / mobile を解決する。
+ *     mobile: ExtraKeys・候補タップ確定・候補外タップ dismiss。
+ *     desktop: 0.8.0 相当のキーボード中心候補操作。
+ */
 export function useHostUiFormFactor(mode: HostUiMode): UseHostUiFormFactorResult {
   const [isAndroid, setIsAndroid] = useState(false)
   const [platformReady, setPlatformReady] = useState(false)

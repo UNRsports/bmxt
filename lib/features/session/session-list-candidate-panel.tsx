@@ -18,7 +18,8 @@ type Props = {
   hi: number
   variant: SessionCandidatePanelVariant
   /**
-   * EN: When set (mobile host UI), pointer/tap selects a row (same as Enter on that row).
+   * EN: When set (mobile host UI only), pointer/tap selects a row (same as Enter on that row).
+   *     Desktop omits this prop; keyboard navigation only.
    */
   onPickIndex?: (index: number) => void
 }

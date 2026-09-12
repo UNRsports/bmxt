@@ -34,7 +34,8 @@ export type TokenPickerModel = {
 type Props = {
   model: TokenPickerModel
   /**
-   * EN: When set (mobile host UI), pointer/tap selects a candidate (same as Enter on that row).
+   * EN: When set (mobile host UI only), pointer/tap selects a candidate (same as Enter on that row).
+   *     Desktop omits this prop; keyboard navigation only.
    *     `mousedown` preventDefault keeps the prompt IME focused.
    */
   onPickIndex?: (index: number) => void

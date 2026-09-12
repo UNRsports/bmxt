@@ -51,11 +51,14 @@ type PromptInputProps = {
   onCompositionStart: React.CompositionEventHandler<HTMLTextAreaElement>
   onCompositionUpdate: React.CompositionEventHandler<HTMLTextAreaElement>
   onCompositionEnd: React.CompositionEventHandler<HTMLTextAreaElement>
-  /** EN: Mobile host UI — tap/click a token candidate (Enter-equivalent). */
+  /** EN: Mobile host UI only — tap/click a token candidate (Enter-equivalent). */
   onPickTokenIndex?: (index: number) => void
-  /** EN: Mobile host UI — tap/click a session candidate (Enter-equivalent). */
+  /** EN: Mobile host UI only — tap/click a session candidate (Enter-equivalent). */
   onPickSessionIndex?: (index: number) => void
-  /** EN: Pointer outside the floating candidate menu → dismiss (Esc-equivalent). */
+  /**
+   * EN: Mobile host UI only — pointer outside the floating candidate menu → dismiss
+   *     (Esc-equivalent). Desktop omits this; close via Esc / ↑ at top.
+   */
   onDismissOutside?: () => void
 }
 

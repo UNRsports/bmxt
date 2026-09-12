@@ -1,6 +1,9 @@
 /**
- * EN: Host UI form factor — drives soft keys and mobile layout class.
- * JA: ホスト UI 形態 — 補助キーとモバイル用レイアウトクラスを駆動する。
+ * EN: Host UI form factor — drives soft keys, mobile layout class, and pointer
+ *     candidate UX (tap-to-pick / outside dismiss). Desktop keeps keyboard-only
+ *     candidate close (Esc / ↑ at top), matching 0.8.0.
+ * JA: ホスト UI 形態 — 補助キー・モバイル用レイアウト・候補の pointer 操作を駆動する。
+ *     desktop は 0.8.0 相当のキーボード中心。
  *
  * Default `auto`: Android → mobile, otherwise desktop (install / runtime detect).
  * Manual `desktop` / `mobile` overrides for PC testing.

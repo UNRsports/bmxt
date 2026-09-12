@@ -1324,19 +1324,20 @@ export function BmxtShell({
     getPromptLockedPrefix
   })
 
-  const onPickTokenIndex =
-    hostUiFormFactor === "mobile" ? applyTokenPickIndex : undefined
-  const onPickSessionIndex =
-    hostUiFormFactor === "mobile"
-      ? (pickHi: number) => {
-          const commandLine = lineRef.current.trim()
-          if (sessionPickerVariant === "switch") {
-            applySessionSwitchPick(pickHi)
-          } else {
-            switchSessionFromListPicker(commandLine, pickHi)
-          }
+  // EN: Pointer candidate UX (tap-to-pick + outside dismiss) is mobile-only.
+  //     Desktop keeps 0.8.0 keyboard-centric picker close (Esc / ↑ at top).
+  const isMobileHostUi = hostUiFormFactor === "mobile"
+  const onPickTokenIndex = isMobileHostUi ? applyTokenPickIndex : undefined
+  const onPickSessionIndex = isMobileHostUi
+    ? (pickHi: number) => {
+        const commandLine = lineRef.current.trim()
+        if (sessionPickerVariant === "switch") {
+          applySessionSwitchPick(pickHi)
+        } else {
+          switchSessionFromListPicker(commandLine, pickHi)
         }
-      : undefined
+      }
+    : undefined
   const onDismissPromptPickerOutside = useCallback(() => {
     if (subCmdPickerRef.current !== null) {
       dismissImeTokenPicker()
@@ -1346,6 +1347,7 @@ export function BmxtShell({
       closeSessionListPicker()
     }
   }, [closeSessionListPicker, dismissImeTokenPicker, sessionListPickerHiRef, subCmdPickerRef])
+  const onDismissOutside = isMobileHostUi ? onDismissPromptPickerOutside : undefined
 
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
@@ -1427,7 +1429,7 @@ export function BmxtShell({
           onCompositionEnd={onCompositionEnd}
           onPickTokenIndex={onPickTokenIndex}
           onPickSessionIndex={onPickSessionIndex}
-          onDismissOutside={onDismissPromptPickerOutside}
+          onDismissOutside={onDismissOutside}
         />
         {showExtraKeys ? (
           <ExtraKeysBar
