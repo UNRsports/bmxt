@@ -17,14 +17,25 @@ type Props = {
   rows: SessionListRow[]
   hi: number
   variant: SessionCandidatePanelVariant
+  /**
+   * EN: When set (mobile host UI), pointer/tap selects a row (same as Enter on that row).
+   */
+  onPickIndex?: (index: number) => void
 }
 
-export function SessionListCandidatePanel({ rows, hi, variant }: Props) {
+export function SessionListCandidatePanel({ rows, hi, variant, onPickIndex }: Props) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
   const listRef = useRef<HTMLDivElement>(null)
+  const pointerSelect = typeof onPickIndex === "function"
   const hintKey: SessionMessageKey =
-    variant === "switch" ? "session.switch.hint" : "session.picker.hint"
+    variant === "switch"
+      ? pointerSelect
+        ? "session.switch.hintPointer"
+        : "session.switch.hint"
+      : pointerSelect
+        ? "session.picker.hintPointer"
+        : "session.picker.hint"
   const ariaKey: SessionMessageKey =
     variant === "switch" ? "session.switch.aria" : "session.picker.aria"
 
@@ -49,7 +60,21 @@ export function SessionListCandidatePanel({ rows, hi, variant }: Props) {
             aria-selected={i === hi}
             className={`bmxt-subcmd-picker-item${i === hi ? " bmxt-subcmd-picker-item--hi" : ""}${
               row.isActive ? " bmxt-subcmd-picker-item--active-session" : ""
-            }`}>
+            }${pointerSelect ? " bmxt-subcmd-picker-item--pickable" : ""}`}
+            onMouseDown={
+              pointerSelect
+                ? (e) => {
+                    e.preventDefault()
+                  }
+                : undefined
+            }
+            onClick={
+              pointerSelect
+                ? () => {
+                    onPickIndex(i)
+                  }
+                : undefined
+            }>
             {variant === "switch"
               ? formatSessionSwitchCandidateLabel(row, rows)
               : formatSessionListCandidateLabel(row)}

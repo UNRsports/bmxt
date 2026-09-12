@@ -51,6 +51,10 @@ type PromptInputProps = {
   onCompositionStart: React.CompositionEventHandler<HTMLTextAreaElement>
   onCompositionUpdate: React.CompositionEventHandler<HTMLTextAreaElement>
   onCompositionEnd: React.CompositionEventHandler<HTMLTextAreaElement>
+  /** EN: Mobile host UI — tap/click a token candidate (Enter-equivalent). */
+  onPickTokenIndex?: (index: number) => void
+  /** EN: Mobile host UI — tap/click a session candidate (Enter-equivalent). */
+  onPickSessionIndex?: (index: number) => void
 }
 
 export function PromptInput({
@@ -86,7 +90,9 @@ export function PromptInput({
   onPaste,
   onCompositionStart,
   onCompositionUpdate,
-  onCompositionEnd
+  onCompositionEnd,
+  onPickTokenIndex,
+  onPickSessionIndex
 }: PromptInputProps) {
   const navPromptValueControlled = !navPageTyping
   const showNavTypingPlaceholder = navPageTyping && line.trim() === "" && !isComposing
@@ -242,12 +248,13 @@ export function PromptInput({
             className="bmxt-subcmd-picker-host bmxt-subcmd-picker-host--positioned"
             {...{ [CSP_DYNAMIC_SCOPE_ATTR]: promptPickerScopeId ?? subCmdPickerScopeId }}>
             {subCmdPicker ? (
-              <TokenPickerPanel model={subCmdPicker} />
+              <TokenPickerPanel model={subCmdPicker} onPickIndex={onPickTokenIndex} />
             ) : sessionListPickerHi !== null ? (
               <SessionListCandidatePanel
                 rows={sessionListPickerRows}
                 hi={sessionListPickerHi}
                 variant={sessionPickerVariant ?? "list"}
+                onPickIndex={onPickSessionIndex}
               />
             ) : null}
           </div>

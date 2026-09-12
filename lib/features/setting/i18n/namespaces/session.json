@@ -19,6 +19,10 @@
     "ja": "セッション一覧 — * がアクティブ · ↑↓ または 1–9 · Enter 切り替え · Esc → プロンプト · `session <n>` でも可",
     "en": "Session list — * marks active · ↑↓ or 1–9 · Enter switch · Esc → prompt · or `session <n>`"
   },
+  "session.picker.hintPointer": {
+    "ja": "セッション一覧 — * がアクティブ · タップまたは ↑↓ / 1–9 · Enter 切り替え · Esc → プロンプト",
+    "en": "Session list — * marks active · tap or ↑↓ / 1–9 · Enter switch · Esc → prompt"
+  },
   "session.settingName.invalid": {
     "ja": "session: 無効なセッション名です（空・制御文字・改行は不可）。",
     "en": "session: invalid session name (empty, control characters, or newlines)."
@@ -46,6 +50,10 @@
   "session.switch.hint": {
     "ja": "セッション切り替え — * がアクティブ · 入力で絞り込み · ↑↓ · Enter でコマンドに名前を入れる · もう一度 Enter で切り替え · Esc → プロンプト",
     "en": "Session switch — * marks active · type to filter · ↑↓ · Enter insert name into command · Enter again to switch · Esc → prompt"
+  },
+  "session.switch.hintPointer": {
+    "ja": "セッション切り替え — * がアクティブ · タップまたは入力で絞り込み · ↑↓ · Enter で名前挿入 · もう一度 Enter で切り替え · Esc",
+    "en": "Session switch — * marks active · tap or type to filter · ↑↓ · Enter insert name · Enter again to switch · Esc"
   },
   "session.switch.notFound": {
     "ja": "session: セッション名「{name}」が見つかりません。`session -switch` で候補を表示できます。",

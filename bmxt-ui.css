@@ -1557,6 +1557,18 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   cursor: pointer;
 }
 
+.bmxt-subcmd-picker-item--pickable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.bmxt-subcmd-picker-item--pickable:hover,
+.bmxt-subcmd-picker-item--pickable.bmxt-subcmd-picker-item--hi {
+  background: #30363d;
+}
+
 /* Tab picker / side-picker list chrome (tmux-style) */
 .bmxt-tab-picker,
 .bmxt-side-picker {

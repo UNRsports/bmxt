@@ -33,13 +33,33 @@ export type TokenPickerModel = {
 
 type Props = {
   model: TokenPickerModel
+  /**
+   * EN: When set (mobile host UI), pointer/tap selects a candidate (same as Enter on that row).
+   *     `mousedown` preventDefault keeps the prompt IME focused.
+   */
+  onPickIndex?: (index: number) => void
 }
 
-export function TokenPickerPanel({ model }: Props) {
+function pointerHintKey(
+  tier: ImeTokenTier
+): "imeToken.hint.firstPointer" | "imeToken.hint.secondPointer" | "imeToken.hint.thirdPointer" {
+  if (tier === "first") {
+    return "imeToken.hint.firstPointer"
+  }
+  if (tier === "second") {
+    return "imeToken.hint.secondPointer"
+  }
+  return "imeToken.hint.thirdPointer"
+}
+
+export function TokenPickerPanel({ model, onPickIndex }: Props) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
   const listRef = useRef<HTMLDivElement>(null)
-  const hint = imeTokenPickerHint(model.tier, locale)
+  const pointerSelect = typeof onPickIndex === "function"
+  const hint = pointerSelect
+    ? tImeToken(pointerHintKey(model.tier), locale)
+    : imeTokenPickerHint(model.tier, locale)
   const hi = Math.min(Math.max(0, model.hi), Math.max(0, model.candidates.length - 1))
   const pipeAvailable =
     model.tier === "first"
@@ -76,7 +96,21 @@ export function TokenPickerPanel({ model }: Props) {
               id={`${ITEM_ID_PREFIX}-${i}`}
               role="option"
               aria-selected={i === model.hi}
-              className={`bmxt-subcmd-picker-item${useRows ? " bmxt-subcmd-picker-item--row" : ""}${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}`}>
+              className={`bmxt-subcmd-picker-item${useRows ? " bmxt-subcmd-picker-item--row" : ""}${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}${pointerSelect ? " bmxt-subcmd-picker-item--pickable" : ""}`}
+              onMouseDown={
+                pointerSelect
+                  ? (e) => {
+                      e.preventDefault()
+                    }
+                  : undefined
+              }
+              onClick={
+                pointerSelect
+                  ? () => {
+                      onPickIndex(i)
+                    }
+                  : undefined
+              }>
               {row ? (
                 <>
                   {row.faviconSrc ? (

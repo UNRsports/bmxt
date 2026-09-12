@@ -1258,7 +1258,7 @@ export function BmxtShell({
     deleteForwardWhenReclaiming
   })
 
-  const { onKeyDown } = useShellKeyboard({
+  const { onKeyDown, applyTokenPickIndex } = useShellKeyboard({
     navPageTyping,
     navTypingMultiline,
     promptPaneFocused,
@@ -1323,6 +1323,21 @@ export function BmxtShell({
     promptLine,
     getPromptLockedPrefix
   })
+
+  const onPickTokenIndex =
+    hostUiFormFactor === "mobile" ? applyTokenPickIndex : undefined
+  const onPickSessionIndex =
+    hostUiFormFactor === "mobile"
+      ? (pickHi: number) => {
+          const commandLine = lineRef.current.trim()
+          if (sessionPickerVariant === "switch") {
+            applySessionSwitchPick(pickHi)
+          } else {
+            switchSessionFromListPicker(commandLine, pickHi)
+          }
+        }
+      : undefined
+
   /** EN: Controlled `value` fights browser/IME inserts during nav page-field typing. */
   const shellScrollClassName = `bmxt-scroll bmxt-shell ${logScrollable ? "bmxt-scroll--scrollable" : "bmxt-scroll--noscroll"}`
 
@@ -1401,6 +1416,8 @@ export function BmxtShell({
           onCompositionStart={onCompositionStart}
           onCompositionUpdate={onCompositionUpdate}
           onCompositionEnd={onCompositionEnd}
+          onPickTokenIndex={onPickTokenIndex}
+          onPickSessionIndex={onPickSessionIndex}
         />
         {showExtraKeys ? (
           <ExtraKeysBar
