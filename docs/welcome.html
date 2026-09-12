@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      Release notes body: docs/welcome-content.json (newest first; includes 0.8.2).
+      Preview: welcome.html?lang=ja&v=0.8.2  |  omit v for full history.
+    -->
     <title>BMXt — Welcome</title>
     <link rel="icon" type="image/png" href="icon.png" />
     <style>
@@ -13,6 +17,9 @@
         --muted: #555;
         --border: #e5e5e5;
         --accent: #2563eb;
+        --page-pad-x: 1.25rem;
+        --page-pad-y: 2rem;
+        --touch-min: 44px;
       }
       * {
         box-sizing: border-box;
@@ -24,11 +31,15 @@
         line-height: 1.65;
         color: var(--fg);
         background: var(--bg);
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
       }
       .wrap {
         max-width: 44rem;
         margin: 0 auto;
-        padding: 2rem 1.25rem 4rem;
+        padding: var(--page-pad-y) max(var(--page-pad-x), env(safe-area-inset-right))
+          calc(var(--page-pad-y) + env(safe-area-inset-bottom))
+          max(var(--page-pad-x), env(safe-area-inset-left));
       }
       header {
         display: flex;
@@ -42,11 +53,13 @@
         width: 48px;
         height: 48px;
         border-radius: 10px;
+        flex-shrink: 0;
       }
       header h1 {
         margin: 0;
         font-size: 1.5rem;
         font-weight: 700;
+        overflow-wrap: anywhere;
       }
       header p {
         margin: 0.25rem 0 0;
@@ -56,9 +69,17 @@
       nav.lang {
         margin-bottom: 1.5rem;
         font-size: 0.95rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem 0.5rem;
       }
       nav.lang a {
         color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--touch-min);
+        padding: 0.25rem 0.35rem;
       }
       .hero {
         margin: 0 0 2rem;
@@ -88,6 +109,7 @@
       }
       ul.notes li {
         margin: 0.35rem 0;
+        overflow-wrap: anywhere;
       }
       .muted {
         color: var(--muted);
@@ -109,6 +131,21 @@
       }
       footer a {
         color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--touch-min);
+      }
+      @media (max-width: 480px) {
+        :root {
+          --page-pad-x: 1rem;
+          --page-pad-y: 1.25rem;
+        }
+        header h1 {
+          font-size: 1.25rem;
+        }
+        h2.version {
+          font-size: 1.05rem;
+        }
       }
     </style>
   </head>
@@ -140,6 +177,7 @@
           pageSubtitle: "バージョン履歴",
           pageSubtitleThrough: "バージョン履歴（v{version} まで）",
           historyHeading: "リリースノート",
+          versionHeading: "バージョン {version}",
           heroAlt: "BMXt の基本的な使い方",
           langNav: "言語:",
           footer: "本プログラムはテストバージョンです。",
@@ -152,6 +190,7 @@
           pageSubtitle: "Version history",
           pageSubtitleThrough: "Version history (through v{version})",
           historyHeading: "Release notes",
+          versionHeading: "Version {version}",
           heroAlt: "How to use BMXt",
           langNav: "Language:",
           footer: "This program is a test version.",
@@ -166,6 +205,16 @@
       const VERSION_PARAM = "v"
       const VERSION_PARAM_RE = /^\d+(\.\d+)*$/
       const WELCOME_NONE_HERO_IMAGE = "_none_heroImage"
+
+      /** EN: Escape text before interpolating into HTML (welcome-content.json notes). */
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;")
+      }
 
       function isRenderableWelcomeImagePath(path) {
         if (!path || path === WELCOME_NONE_HERO_IMAGE || path.startsWith("_none_")) {
@@ -331,13 +380,13 @@
 
         if (heroPath) {
           parts.push(
-            `<figure class="hero"><img src="${heroPath}" alt="${copy.heroAlt}"${heroStyle} loading="eager" /></figure>`
+            `<figure class="hero"><img src="${escapeHtml(heroPath)}" alt="${escapeHtml(copy.heroAlt)}"${heroStyle} loading="eager" /></figure>`
           )
         }
 
         for (const [index, path] of additionalPaths.entries()) {
           parts.push(
-            `<figure class="hero-extra"><img src="${path}" alt="${copy.heroAlt} ${index + 1}" loading="lazy" /></figure>`
+            `<figure class="hero-extra"><img src="${escapeHtml(path)}" alt="${escapeHtml(`${copy.heroAlt} ${index + 1}`)}" loading="lazy" /></figure>`
           )
         }
 
@@ -350,7 +399,7 @@
         const copy = UI[locale]
 
         if (!Array.isArray(entries) || entries.length === 0) {
-          container.innerHTML = `<p class="muted">${copy.empty}</p>`
+          container.innerHTML = `<p class="muted">${escapeHtml(copy.empty)}</p>`
           return
         }
 
@@ -361,12 +410,16 @@
         const sections = sorted.map((entry) => {
           const lines = pickLines(entry, locale)
           const items = lines
-            .map((line) => `<li>${line}</li>`)
+            .map((line) => `<li>${escapeHtml(line)}</li>`)
             .join("")
-          return `<section><h2 class="version">Version ${entry.version}</h2><ul class="notes">${items}</ul></section>`
+          const heading = copy.versionHeading.replace(
+            "{version}",
+            escapeHtml(entry.version)
+          )
+          return `<section><h2 class="version">${heading}</h2><ul class="notes">${items}</ul></section>`
         })
 
-        container.innerHTML = `<h2 class="version">${copy.historyHeading}</h2>${sections.join("")}`
+        container.innerHTML = `<h2 class="version">${escapeHtml(copy.historyHeading)}</h2>${sections.join("")}`
       }
 
       async function main() {
@@ -388,7 +441,7 @@
           const copy = UI[locale]
           document.getElementById("hero").hidden = true
           document.getElementById("history").innerHTML =
-            `<p class="error">${copy.loadError}</p>`
+            `<p class="error">${escapeHtml(copy.loadError)}</p>`
         }
       }
 
