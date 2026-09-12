@@ -55,7 +55,7 @@ translate,-setting,,none,,translate -setting | translate -setting --ja-en\|--en-
 translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAction pair=ja-en。,
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
 setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
-setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き）。ピッカーは `setting -list | browse`。,
+setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き。locale / appearance / **host-ui** / storage 等）。ピッカーは `setting -list | browse`。,0.8.2: host-ui（auto|desktop|mobile）
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
@@ -74,6 +74,7 @@ session,-setting-name,,rest,,session -setting-name [name],UiAction `session_sett
 （内部）,terminal-session-state,,,,lib/features/bmxt-window/terminal-sessions/,UI が session 正本。SW は SessionPatch[] のみ。,
 （内部）,bmxt-float,,,,lib/features/bmxt-float/ + entrypoints/bmxt-float/,"サイト内フロート・プロンプト（`hostKind=float`）。ショートカット `toggle-bmxt-float`（既定 Shift+Alt+F）。`SESSION_CLEAR` の `host`: popup|float|all。ポップアップ閉鎖は float を消さない。コマンド履歴（`bmxt_cmd_history`）のみ popup と共有。",0.8.0
 （内部）,detail-bar-ctrl-c,,,,lib/features/bmxt-window/detail-bar-focus.ts + use-detail-bar-keyboard.ts,"詳細バー上 **Ctrl+C**: picker 系は browse 列クローズ、nav は disarm（`close-nav-from-detail-bar.ts`）。",0.8.0
+（内部）,host-ui,,,,lib/features/setting/host-ui-mode.ts + lib/features/bmxt-window/extra-keys/,"`hostUiMode` auto|desktop|mobile（`bmxt_ui_settings_v1`）。`resolveHostUiFormFactor` + Android 検出。**mobile**: ExtraKeys・候補タップ確定・外タップ dismiss。**desktop**: 0.8.0 相当のキーボード中心候補閉じ。",0.8.2
 （内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6
 （内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status。segment の promptPrefix もホスト適用。,
 （内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。`browse` は UI consumer（ListResult 必須）。,

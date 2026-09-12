@@ -3,6 +3,18 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.8.2",
+    "en": [
+      "Implemented UI support for smartphone use, now that Chrome extensions are available on Android Vivaldi"
+    ],
+    "ja": [
+      "android版vivaldiにてchrome拡張機能が使用可能になったため、スマートフォンでの利用も考慮したUIを実装"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.8.0",
     "en": [
       "Improved the in-tab float prompt so you can use it alongside the popup window",

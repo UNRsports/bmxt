@@ -4,6 +4,7 @@
       "android版vivaldiにてchrome拡張機能が使用可能になったため、スマートフォンでの利用も考慮したUIを実装"
     ],
     "en": [
+      "Implemented UI support for smartphone use, now that Chrome extensions are available on Android Vivaldi"
     ]
   }
 }

@@ -148,7 +148,7 @@
               BMXt is a <strong>local productivity tool</strong>: a command-style UI for tabs, tab groups,
               browser windows, and related tasks you initiate (including optional page inspection, search
               across history or bookmarks or open pages, an optional keyboard nav overlay, an optional in-page
-              float prompt, optional UI locale and appearance settings via <code>setting -list</code>, and
+              float prompt, optional UI locale, host-ui, and appearance settings via <code>setting -list</code>, and
               optional translation assist when you run <code>translate -on</code>). Command interpretation runs
               locally via a <strong>bundled</strong> Rust/WebAssembly module; the UI and Chrome API effects run
               in TypeScript on your device.
@@ -250,7 +250,9 @@
             <strong>Custom window display names</strong> — labels you set in the tab picker edit flow.
           </li>
           <li>
-            <strong>UI settings</strong> — display locale, terminal and picker appearance (colors, fonts,
+            <strong>UI settings</strong> — display locale, <strong>host-ui</strong> form factor
+            (<code>auto</code> / <code>desktop</code> / <code>mobile</code>; Android defaults to mobile layout),
+            terminal and picker appearance (colors, fonts,
             sizes), and optional background images you import (<code>bmxt_ui_settings_v1</code>). Imported
             images are stored on your device as data URLs in this storage. Storage mode preference (internal
             extension storage vs. an external folder you pick with the File System Access API;
@@ -448,7 +450,7 @@
         <p>
           We process the information described above solely to provide the Extension’s stated functionality
           (managing tabs, groups, and windows; optional page inspection, search, nav overlay, in-page float
-          prompt, UI locale and appearance settings, and translation assist through user-initiated commands)
+          prompt, UI locale, host-ui, and appearance settings, and translation assist through user-initiated commands)
           and to maintain minimal local UI state. We do not use this information for creditworthiness, lending
           decisions, or unrelated profiling.
         </p>
@@ -512,7 +514,7 @@
               BMXt は、タブ・タブグループ・ブラウザウィンドウ等を<strong>専用のコマンド UI
               から操作する</strong>ローカル向け生産性ツールです（ページ構造の参照・履歴／ブックマーク／ページ内検索、
               任意のキーボードナビオーバーレイ、任意のサイト内フロート・プロンプト、<code>setting -list</code> による
-              UI 言語・外観設定、<code>translate -on</code> 実行時の任意の翻訳アシストなど、ユーザーが起動した機能を含みます）。
+              UI 言語・host-ui・外観設定、<code>translate -on</code> 実行時の任意の翻訳アシストなど、ユーザーが起動した機能を含みます）。
               コマンド解釈は<strong>同梱</strong>の Rust/WebAssembly モジュールで端末上に実行し、UI と Chrome API 効果は
               TypeScript で端末上に実行します。
             </li>
@@ -607,7 +609,9 @@
             <strong>ウィンドウ表示名</strong> — タブピッカーの編集で設定した表示ラベル。
           </li>
           <li>
-            <strong>UI 設定</strong> — 表示言語、ターミナル／ピッカー外観（色・フォント・サイズ）、ユーザーが import
+            <strong>UI 設定</strong> — 表示言語、<strong>host-ui</strong>（PC／スマホ表示:
+            <code>auto</code> / <code>desktop</code> / <code>mobile</code>。Android では mobile が既定）、
+            ターミナル／ピッカー外観（色・フォント・サイズ）、ユーザーが import
             した背景画像（<code>bmxt_ui_settings_v1</code>）。import した画像は data URL として端末内 storage に保存。
             保存先モード（拡張機能内 storage か、File System Access API で選んだ外部フォルダか；
             <code>bmxt_ui_settings_storage_v1</code>）。外部モード時は <code>&gt; save setting</code> で
@@ -781,7 +785,7 @@
         <h2>8. 利用目的の制限</h2>
         <p>
           上記の情報は、本拡張機能が明示する機能（ユーザーが開始したタブ・グループ・ウィンドウの管理、任意のページ参照・
-          検索・ナビオーバーレイ・サイト内フロート・プロンプト・UI 言語／外観設定・翻訳アシスト）および最小限の UI
+          検索・ナビオーバーレイ・サイト内フロート・プロンプト・UI 言語／host-ui／外観設定・翻訳アシスト）および最小限の UI
           状態の維持のためにのみ用います。与信・融資の判断、これらと無関係なプロファイル目的には用いません。
         </p>
 
