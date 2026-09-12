@@ -189,18 +189,18 @@ export function dispatchFailedLine(locale: UiLocale, message: string): string {
 }
 
 export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSettings): string[] {
-  const { locale: uiLoc, appearance, extraKeysMode } = settings
+  const { locale: uiLoc, appearance, hostUiMode } = settings
   const defaultLabel = tSetting("setting.summary.default", locale)
   const token = settingTokenForUiLocale(uiLoc)
-  const extraKeysLabel =
-    extraKeysMode === "on"
-      ? tSetting("setting.picker.extraKeysStateOn", locale)
-      : extraKeysMode === "off"
-        ? tSetting("setting.picker.extraKeysStateOff", locale)
-        : tSetting("setting.picker.extraKeysStateAuto", locale)
+  const hostUiLabel =
+    hostUiMode === "mobile"
+      ? tSetting("setting.picker.hostUiStateMobile", locale)
+      : hostUiMode === "desktop"
+        ? tSetting("setting.picker.hostUiStateDesktop", locale)
+        : tSetting("setting.picker.hostUiStateAuto", locale)
   return [
     tSetting("setting.summary.locale", locale, { token }),
-    tSetting("setting.summary.extraKeys", locale, { value: extraKeysLabel }),
+    tSetting("setting.summary.hostUi", locale, { value: hostUiLabel }),
     tSetting("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
     tSetting("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
     tSetting("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),

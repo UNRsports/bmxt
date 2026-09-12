@@ -64,9 +64,9 @@ export function SettingPickerWrapper({
         appearance,
         storageConfig,
         snapshotStorageConfig,
-        draft.extraKeysMode
+        draft.hostUiMode
       ),
-    [state.view, locale, appearance, storageConfig, snapshotStorageConfig, draft.extraKeysMode]
+    [state.view, locale, appearance, storageConfig, snapshotStorageConfig, draft.hostUiMode]
   )
   const lines = useMemo(() => rows.map((row) => row.line), [rows])
   const headline = settingPickerHeadline(state.view, locale, state.editing)

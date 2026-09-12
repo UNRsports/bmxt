@@ -1045,6 +1045,31 @@ body {
   color: #79c0ff;
 }
 
+/* EN: Mobile form factor (auto on Android, or host-ui: mobile override on PC). */
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] {
+  min-width: 0;
+}
+
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-terminal-split,
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-split-terminal-pane,
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-scroll {
+  min-width: 0;
+}
+
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-extra-keys {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-bottom: 0;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bmxt-bg, #0d1117) 92%, transparent);
+}
+
+.bmxt-shell-root[data-bmxt-host-ui="mobile"] .bmxt-extra-keys-btn {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
 .bmxt-prompt-field {
   flex: 1;
   min-width: 0;

@@ -53,7 +53,7 @@ import {
   type DetailBarId
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
-import { ExtraKeysBar, useExtraKeysVisible } from "./extra-keys"
+import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
   deleteNavReloadTabBlockAtCursor,
@@ -236,7 +236,6 @@ export function BmxtShell({
   onNavArmedChange
 }: Props) {
   const { settings: uiSettings, replaceSettings: replaceUiSettingsState } = useUiSettings()
-  const showExtraKeys = useExtraKeysVisible(uiSettings.extraKeysMode)
   const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
   const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
   const appendLogLines = useCallback(
@@ -290,6 +289,11 @@ export function BmxtShell({
     navArmed,
     translateEnabled: translateEnabledRef.current
   })
+
+  // EN: Draft host-ui while setting picker is open so PC can preview mobile before save.
+  const hostUiModeEffective =
+    settingListPicker !== null ? settingListPicker.draft.hostUiMode : uiSettings.hostUiMode
+  const { formFactor: hostUiFormFactor, showExtraKeys } = useHostUiFormFactor(hostUiModeEffective)
 
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
   const isFocusedPaneRef = useRef(isFocusedPane)
@@ -1474,7 +1478,7 @@ export function BmxtShell({
   )
 
   return (
-    <div className="bmxt-shell-root">
+    <div className="bmxt-shell-root" data-bmxt-host-ui={hostUiFormFactor}>
       <div
         className="bmxt-terminal-split"
         data-bmxt-session-id={sessionId}

@@ -1,5 +1,5 @@
 import type { UiAppearance, UiAppearanceLayer } from "./appearance"
-import { DEFAULT_EXTRA_KEYS_MODE, type ExtraKeysMode } from "./extra-keys-mode.ts"
+import { DEFAULT_HOST_UI_MODE, type HostUiMode } from "./host-ui-mode.ts"
 import type { UiLocale } from "./locale"
 import type { UiSettings } from "./settings"
 
@@ -7,7 +7,7 @@ export type SettingListPickerView =
   | "main"
   | "language"
   | "editPicker"
-  | "extraKeys"
+  | "hostUi"
   | "fontSize"
   | "pickerFontSize"
   | "bgImage"
@@ -45,7 +45,7 @@ export const DEFAULT_SETTING_LIST_PICKER_NAV: Pick<
 export type SettingDraftPatch = {
   locale?: UiLocale
   editPicker?: boolean
-  extraKeysMode?: ExtraKeysMode
+  hostUiMode?: HostUiMode
   appearance?: Partial<UiAppearanceLayer>
   picker?: Partial<UiAppearanceLayer>
 }
@@ -55,7 +55,7 @@ export function createSettingListPickerState(committed: UiSettings): SettingList
     ...DEFAULT_SETTING_LIST_PICKER_NAV,
     draft: {
       locale: committed.locale,
-      extraKeysMode: committed.extraKeysMode ?? DEFAULT_EXTRA_KEYS_MODE,
+      hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
@@ -83,8 +83,8 @@ function applyDraftPatch(
   if (patch.locale !== undefined) {
     draft = { ...draft, locale: patch.locale }
   }
-  if (patch.extraKeysMode !== undefined) {
-    draft = { ...draft, extraKeysMode: patch.extraKeysMode }
+  if (patch.hostUiMode !== undefined) {
+    draft = { ...draft, hostUiMode: patch.hostUiMode }
   }
   const nextAppearance = { ...draft.appearance, picker: { ...draft.appearance.picker } }
   if (patch.editPicker !== undefined) {
@@ -126,7 +126,7 @@ export function settingPickerRevertDraft(
     ...DEFAULT_SETTING_LIST_PICKER_NAV,
     draft: {
       locale: committed.locale,
-      extraKeysMode: committed.extraKeysMode ?? DEFAULT_EXTRA_KEYS_MODE,
+      hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }

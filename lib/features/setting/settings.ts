@@ -5,10 +5,10 @@ import {
   type UiAppearance
 } from "./appearance"
 import {
-  DEFAULT_EXTRA_KEYS_MODE,
-  normalizeExtraKeysMode,
-  type ExtraKeysMode
-} from "./extra-keys-mode.ts"
+  DEFAULT_HOST_UI_MODE,
+  normalizeHostUiMode,
+  type HostUiMode
+} from "./host-ui-mode.ts"
 import { formatUiSettingsSummaryLines } from "./i18n/resolvers"
 import {
   DEFAULT_UI_LOCALE,
@@ -26,8 +26,22 @@ import {
 export type UiSettings = {
   locale: UiLocale
   appearance: UiAppearance
-  /** EN: Soft Tab/Ctrl/arrow bar — auto shows on Android. */
-  extraKeysMode: ExtraKeysMode
+  /**
+   * EN: Host UI form factor preference.
+   *     `auto` → Android mobile, else desktop; override with `desktop` / `mobile`.
+   */
+  hostUiMode: HostUiMode
+}
+
+function pickHostUiModeFromPartial(raw: Record<string, unknown>): HostUiMode {
+  if ("hostUiMode" in raw) {
+    return normalizeHostUiMode(raw.hostUiMode)
+  }
+  // EN: Migrate early 0.8.2 local `extraKeysMode` (on/off/auto).
+  if ("extraKeysMode" in raw) {
+    return normalizeHostUiMode(raw.extraKeysMode)
+  }
+  return DEFAULT_HOST_UI_MODE
 }
 
 /** EN: Normalize partial storage / import objects (backward compatible). */
@@ -36,13 +50,14 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
     return {
       locale: DEFAULT_UI_LOCALE,
       appearance: normalizeUiAppearance(null),
-      extraKeysMode: DEFAULT_EXTRA_KEYS_MODE
+      hostUiMode: DEFAULT_HOST_UI_MODE
     }
   }
+  const record = raw as Record<string, unknown>
   return {
     locale: parseUiLocale(raw.locale),
     appearance: normalizeUiAppearance(raw.appearance),
-    extraKeysMode: normalizeExtraKeysMode(raw.extraKeysMode)
+    hostUiMode: pickHostUiModeFromPartial(record)
   }
 }
 
@@ -63,7 +78,7 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
   const defaults = normalizeUiSettings({
     locale: DEFAULT_UI_LOCALE,
     appearance: DEFAULT_UI_APPEARANCE,
-    extraKeysMode: DEFAULT_EXTRA_KEYS_MODE
+    hostUiMode: DEFAULT_HOST_UI_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)
   await activateInternalUiSettingsStorage()
@@ -79,7 +94,7 @@ export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSetting
   const defaults = normalizeUiSettings({
     locale: DEFAULT_UI_LOCALE,
     appearance: DEFAULT_UI_APPEARANCE,
-    extraKeysMode: DEFAULT_EXTRA_KEYS_MODE
+    hostUiMode: DEFAULT_HOST_UI_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)
   return defaults

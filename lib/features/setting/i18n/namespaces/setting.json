@@ -223,29 +223,29 @@
     "ja": "オン",
     "en": "on"
   },
-  "setting.picker.extraKeysAuto": {
-    "ja": "auto — Android のみ表示",
-    "en": "auto — show on Android only"
+  "setting.picker.hostUiAuto": {
+    "ja": "auto — インストール時判定（Android はスマホ）",
+    "en": "auto — install-time detect (Android → mobile)"
   },
-  "setting.picker.extraKeysOn": {
-    "ja": "on — 常に表示",
-    "en": "on — always show"
+  "setting.picker.hostUiDesktop": {
+    "ja": "desktop — PC 表示（補助キーバーなし）",
+    "en": "desktop — PC layout (no soft key bar)"
   },
-  "setting.picker.extraKeysOff": {
-    "ja": "off — 非表示",
-    "en": "off — hide"
+  "setting.picker.hostUiMobile": {
+    "ja": "mobile — スマホ表示（補助キーバーなど）",
+    "en": "mobile — phone layout (soft key bar, …)"
   },
-  "setting.picker.extraKeysStateAuto": {
+  "setting.picker.hostUiStateAuto": {
     "ja": "auto",
     "en": "auto"
   },
-  "setting.picker.extraKeysStateOn": {
-    "ja": "オン",
-    "en": "on"
+  "setting.picker.hostUiStateDesktop": {
+    "ja": "desktop",
+    "en": "desktop"
   },
-  "setting.picker.extraKeysStateOff": {
-    "ja": "オフ",
-    "en": "off"
+  "setting.picker.hostUiStateMobile": {
+    "ja": "mobile",
+    "en": "mobile"
   },
   "setting.picker.editingHint": {
     "ja": "Enter でプレビュー反映 · Esc でキャンセル",
@@ -271,9 +271,9 @@
     "ja": "setting -list · edit-picker（ピッカー個別編集） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · edit-picker · ↑↓ · Enter/→ select · ← list"
   },
-  "setting.picker.headline.extraKeys": {
-    "ja": "setting -list · extra-keys（補助キーバー） · ↑↓ · Enter/→ 選択 · ← 一覧",
-    "en": "setting -list · extra-keys · ↑↓ · Enter/→ select · ← list"
+  "setting.picker.headline.hostUi": {
+    "ja": "setting -list · host-ui（PC／スマホ表示） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · host-ui (PC / phone layout) · ↑↓ · Enter/→ select · ← list"
   },
   "setting.picker.headline.editing": {
     "ja": "setting -list · 編集中 — 入力欄に値を入力 · Enter でプレビュー反映 · Esc キャンセル",
@@ -371,9 +371,9 @@
     "ja": "edit-picker（ピッカー個別編集）: {value}",
     "en": "edit-picker: {value}"
   },
-  "setting.picker.main.extraKeys": {
-    "ja": "extra-keys（補助キーバー）: {value}",
-    "en": "extra-keys: {value}"
+  "setting.picker.main.hostUi": {
+    "ja": "host-ui（PC／スマホ表示）: {value}",
+    "en": "host-ui (PC / phone layout): {value}"
   },
   "setting.picker.main.export": {
     "ja": "export — settings.json + 背景画像を zip で保存",
@@ -699,9 +699,9 @@
     "ja": "locale: {token}",
     "en": "locale: {token}"
   },
-  "setting.summary.extraKeys": {
-    "ja": "extra-keys: {value}",
-    "en": "extra-keys: {value}"
+  "setting.summary.hostUi": {
+    "ja": "host-ui: {value}",
+    "en": "host-ui: {value}"
   },
   "setting.summary.none": {
     "ja": "（なし）",

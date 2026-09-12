@@ -588,6 +588,7 @@ When changing UI settings shape or on-disk format in a release:
 |-----|--------|
 | **language** | `--japanese` / `--english` (UI display language) |
 | **edit-picker** | **`on`** — show extra rows to customize picker columns separately; **`off`** — picker columns follow global appearance |
+| **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force PC or phone layout (soft key bar, etc.) for testing on desktop |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
 | **reset-default** | Confirm, then reset appearance draft to defaults |
@@ -1881,6 +1882,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 |----|------|
 | **language** | `--japanese` / `--english`（UI 表示言語） |
 | **edit-picker** | **`on`** — ピッカー列専用の行を追加；**`off`** — ピッカー列は全体外観に従う |
+| **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — PC 上でスマホ表示（補助キーバー等）を試すための強制切替 |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
 | **reset-default** | 確認後、外観 draft を既定に戻す |

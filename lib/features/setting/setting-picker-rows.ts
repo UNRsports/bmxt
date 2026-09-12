@@ -15,7 +15,7 @@ import {
   settingTokenForUiLocale,
   type UiLocale
 } from "./locale"
-import type { ExtraKeysMode } from "./extra-keys-mode.ts"
+import type { HostUiMode } from "./host-ui-mode.ts"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
@@ -27,10 +27,10 @@ export type SettingPickerRowId =
   | "edit-picker"
   | "edit-picker-on"
   | "edit-picker-off"
-  | "extra-keys"
-  | "extra-keys-auto"
-  | "extra-keys-on"
-  | "extra-keys-off"
+  | "host-ui"
+  | "host-ui-auto"
+  | "host-ui-desktop"
+  | "host-ui-mobile"
   | "fg"
   | "fg-picker"
   | "bg-color"
@@ -120,14 +120,14 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
   return index
 }
 
-function extraKeysModeStateLabel(mode: ExtraKeysMode, locale: UiLocale): string {
-  if (mode === "on") {
-    return tSetting("setting.picker.extraKeysStateOn", locale)
+function hostUiModeStateLabel(mode: HostUiMode, locale: UiLocale): string {
+  if (mode === "mobile") {
+    return tSetting("setting.picker.hostUiStateMobile", locale)
   }
-  if (mode === "off") {
-    return tSetting("setting.picker.extraKeysStateOff", locale)
+  if (mode === "desktop") {
+    return tSetting("setting.picker.hostUiStateDesktop", locale)
   }
-  return tSetting("setting.picker.extraKeysStateAuto", locale)
+  return tSetting("setting.picker.hostUiStateAuto", locale)
 }
 
 /** EN: Highlight index when entering a choice sub-list (current draft value). */
@@ -137,7 +137,7 @@ export function settingPickerInitialHi(
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
   snapshotStorageConfig?: SnapshotStorageConfig,
-  extraKeysMode: ExtraKeysMode = "auto"
+  hostUiMode: HostUiMode = "auto"
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
@@ -145,11 +145,11 @@ export function settingPickerInitialHi(
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
   }
-  if (view === "extraKeys") {
-    if (extraKeysMode === "on") {
+  if (view === "hostUi") {
+    if (hostUiMode === "desktop") {
       return 1
     }
-    if (extraKeysMode === "off") {
+    if (hostUiMode === "mobile") {
       return 2
     }
     return 0
@@ -317,7 +317,7 @@ export function buildSettingPickerRows(
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
   snapshotStorageConfig?: SnapshotStorageConfig,
-  extraKeysMode: ExtraKeysMode = "auto"
+  hostUiMode: HostUiMode = "auto"
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -337,11 +337,11 @@ export function buildSettingPickerRows(
     ]
   }
 
-  if (view === "extraKeys") {
+  if (view === "hostUi") {
     return [
-      { id: "extra-keys-auto", line: tSetting("setting.picker.extraKeysAuto", locale) },
-      { id: "extra-keys-on", line: tSetting("setting.picker.extraKeysOn", locale) },
-      { id: "extra-keys-off", line: tSetting("setting.picker.extraKeysOff", locale) }
+      { id: "host-ui-auto", line: tSetting("setting.picker.hostUiAuto", locale) },
+      { id: "host-ui-desktop", line: tSetting("setting.picker.hostUiDesktop", locale) },
+      { id: "host-ui-mobile", line: tSetting("setting.picker.hostUiMobile", locale) }
     ]
   }
 
@@ -424,9 +424,9 @@ export function buildSettingPickerRows(
       })
     },
     {
-      id: "extra-keys",
-      line: tSetting("setting.picker.main.extraKeys", locale, {
-        value: extraKeysModeStateLabel(extraKeysMode, locale)
+      id: "host-ui",
+      line: tSetting("setting.picker.main.hostUi", locale, {
+        value: hostUiModeStateLabel(hostUiMode, locale)
       })
     },
     {
@@ -595,8 +595,8 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
-          : view === "extraKeys"
-            ? "setting.picker.headline.extraKeys"
+          : view === "hostUi"
+            ? "setting.picker.headline.hostUi"
           : view === "storageMode"
             ? "setting.picker.headline.storageMode"
             : view === "snapshotStorageMode"

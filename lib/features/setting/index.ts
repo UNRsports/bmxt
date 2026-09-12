@@ -173,13 +173,15 @@ export {
   type UiSettings
 } from "./settings"
 export {
-  DEFAULT_EXTRA_KEYS_MODE,
-  EXTRA_KEYS_MODE_TOKENS,
-  isExtraKeysMode,
-  normalizeExtraKeysMode,
+  DEFAULT_HOST_UI_MODE,
+  HOST_UI_MODE_TOKENS,
+  isHostUiMode,
+  normalizeHostUiMode,
   resolveExtraKeysVisible,
-  type ExtraKeysMode
-} from "./extra-keys-mode.ts"
+  resolveHostUiFormFactor,
+  type HostUiFormFactor,
+  type HostUiMode
+} from "./host-ui-mode.ts"
 export { buildAppearancePatch } from "./appearance"
 export { UiSettingsProvider, useUiLocale, useUiSettings } from "./use-ui-settings"
 export { parseHexColor, previewHexColor } from "./validate-color"

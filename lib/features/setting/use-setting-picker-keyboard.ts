@@ -123,7 +123,7 @@ export function useSettingPickerKeyboard({
           state.draft.appearance,
           storageConfig,
           snapshotStorageConfig,
-          state.draft.extraKeysMode
+          state.draft.hostUiMode
         )
       )
       return
@@ -150,7 +150,7 @@ export function useSettingPickerKeyboard({
     state.view,
     state.draft.appearance,
     state.draft.locale,
-    state.draft.extraKeysMode,
+    state.draft.hostUiMode,
     storageConfig,
     snapshotStorageConfig
   ])

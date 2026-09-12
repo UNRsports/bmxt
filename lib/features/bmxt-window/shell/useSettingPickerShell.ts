@@ -111,24 +111,24 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
-      if (row.id === "extra-keys-auto") {
+      if (row.id === "host-ui-auto") {
         options.setSettingListPicker(
           options.sessionId,
-          settingPickerApplyDraftToMain(current, { extraKeysMode: "auto" })
+          settingPickerApplyDraftToMain(current, { hostUiMode: "auto" })
         )
         return
       }
-      if (row.id === "extra-keys-on") {
+      if (row.id === "host-ui-desktop") {
         options.setSettingListPicker(
           options.sessionId,
-          settingPickerApplyDraftToMain(current, { extraKeysMode: "on" })
+          settingPickerApplyDraftToMain(current, { hostUiMode: "desktop" })
         )
         return
       }
-      if (row.id === "extra-keys-off") {
+      if (row.id === "host-ui-mobile") {
         options.setSettingListPicker(
           options.sessionId,
-          settingPickerApplyDraftToMain(current, { extraKeysMode: "off" })
+          settingPickerApplyDraftToMain(current, { hostUiMode: "mobile" })
         )
         return
       }
