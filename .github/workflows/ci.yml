@@ -54,14 +54,20 @@ jobs:
       - name: Rust tests (bmxt-core)
         run: cargo test -p bmxt-core
 
-      - name: Build WASM
+      - name: Build WASM (includes TS↔Rust boundary gate)
         run: pnpm run build:wasm
 
       - name: Typecheck
         run: pnpm exec tsc --noEmit
 
-      - name: Test
+      - name: Unit tests
         run: pnpm test
 
       - name: Build extension
         run: pnpm run build
+
+      - name: Install Playwright Chromium
+        run: pnpm run test:e2e:install
+
+      - name: E2E (prompt / CJK caret)
+        run: xvfb-run -a pnpm run test:e2e
