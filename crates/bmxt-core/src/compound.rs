@@ -97,6 +97,12 @@ fn read_double_quoted(line: &str, start: usize) -> Option<usize> {
     None
 }
 
+/// EN: `read_*_quoted` returns a Unicode scalar index; never byte-slice with it.
+/// JA: `read_*_quoted` は Unicode スカラー索引を返す。バイトスライスに使わないこと。
+fn take_chars_inclusive(line: &str, end_char_inclusive: usize) -> String {
+    line.chars().take(end_char_inclusive + 1).collect()
+}
+
 fn char_at(line: &str, i: usize) -> Option<char> {
     line.chars().nth(i)
 }
@@ -132,7 +138,7 @@ pub fn parse_pipe_segments(line: &str) -> ParsePipeSegmentsResult {
                     error: ParseSegmentError::UnclosedQuote,
                 };
             };
-            current.push_str(&slice[..=end]);
+            current.push_str(&take_chars_inclusive(&slice, end));
             i += end + 1;
             continue;
         }
@@ -144,7 +150,7 @@ pub fn parse_pipe_segments(line: &str) -> ParsePipeSegmentsResult {
                     error: ParseSegmentError::UnclosedQuote,
                 };
             };
-            current.push_str(&slice[..=end]);
+            current.push_str(&take_chars_inclusive(&slice, end));
             i += end + 1;
             continue;
         }
@@ -216,7 +222,7 @@ pub fn parse_compound_segments(line: &str) -> ParseCompoundSegmentsResult {
                     error: ParseSegmentError::UnclosedQuote,
                 };
             };
-            current.push_str(&slice[..=end]);
+            current.push_str(&take_chars_inclusive(&slice, end));
             i += end + 1;
             continue;
         }
@@ -228,7 +234,7 @@ pub fn parse_compound_segments(line: &str) -> ParseCompoundSegmentsResult {
                     error: ParseSegmentError::UnclosedQuote,
                 };
             };
-            current.push_str(&slice[..=end]);
+            current.push_str(&take_chars_inclusive(&slice, end));
             i += end + 1;
             continue;
         }
@@ -360,6 +366,27 @@ mod tests {
             ParseCompoundSegmentsResult::Ok(parsed) => {
                 assert_eq!(parsed.segments, vec!["tab -list", "clear"]);
                 assert_eq!(parsed.operators, vec!["||"]);
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_compound_keeps_cjk_inside_single_quotes() {
+        match parse_compound_segments("tab -list && echo 'リスト'") {
+            ParseCompoundSegmentsResult::Ok(parsed) => {
+                assert_eq!(parsed.segments, vec!["tab -list", "echo 'リスト'"]);
+                assert_eq!(parsed.operators, vec!["&&"]);
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_pipe_keeps_cjk_inside_double_quotes() {
+        match parse_pipe_segments(r#"echo "日本語" | browse"#) {
+            ParsePipeSegmentsResult::Ok { segments, .. } => {
+                assert_eq!(segments, vec![r#"echo "日本語""#, "browse"]);
             }
             other => panic!("{other:?}"),
         }

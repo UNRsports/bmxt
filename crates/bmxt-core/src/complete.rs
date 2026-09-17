@@ -18,10 +18,26 @@ fn is_ascii_whitespace(b: u8) -> bool {
     b == b' ' || b == b'\t' || b == b'\n' || b == b'\r'
 }
 
-/** EN: Whitespace-delimited token bounds under `pos` (byte index; ASCII command lines). */
+/**
+ * EN: Floor `pos` to a UTF-8 char boundary (JS may pass a UTF-16 index by mistake).
+ * JA: `pos` を UTF-8 文字境界へ切り下げ（JS の UTF-16 指数が誤って渡っても panic しない）。
+ */
+fn clamp_to_char_boundary(line: &str, pos: usize) -> usize {
+    let pos = pos.min(line.len());
+    if line.is_char_boundary(pos) {
+        return pos;
+    }
+    let mut p = pos;
+    while p > 0 && !line.is_char_boundary(p) {
+        p -= 1;
+    }
+    p
+}
+
+/** EN: Whitespace-delimited token bounds under `pos` (UTF-8 byte index). */
 fn word_bounds(line: &str, pos: usize) -> (usize, usize) {
     let bytes = line.as_bytes();
-    let pos = pos.min(bytes.len());
+    let pos = clamp_to_char_boundary(line, pos);
     let mut l = pos;
     while l > 0 && !is_ascii_whitespace(bytes[l - 1]) {
         l -= 1;
@@ -67,7 +83,7 @@ fn third_token_candidates(canonical: &str, second_lower: &str) -> Vec<String> {
  * Returns `None` when no fixed-token menu applies (host may add live/Chrome candidates).
  */
 pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
-    let cursor = cursor.min(line.len());
+    let cursor = clamp_to_char_boundary(line, cursor);
     let (l, r) = word_bounds(line, cursor);
     let left = &line[..l];
     let tokens_before: Vec<&str> = if left.trim().is_empty() {
@@ -251,5 +267,24 @@ mod tests {
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "second");
         assert!(hit.candidates.iter().any(|c| c == "-windowclose"));
+    }
+
+    #[test]
+    fn does_not_panic_on_mid_utf8_cursor_inside_cjk() {
+        let line = "search -list --all リスト | browse";
+        // EN: JS UTF-16 indexes 20/21 land mid-character if mistaken for UTF-8 bytes.
+        assert!(complete_line(line, 20).is_none());
+        assert!(complete_line(line, 21).is_none());
+        let json = complete_json(line, 20);
+        assert_eq!(json, "null");
+    }
+
+    #[test]
+    fn completes_safely_at_cjk_char_boundaries() {
+        let line = "search -list --all リスト | browse";
+        let start_of_pattern = "search -list --all ".len();
+        assert!(line.is_char_boundary(start_of_pattern));
+        assert!(complete_line(line, start_of_pattern).is_none());
+        assert!(complete_line(line, line.len()).is_none());
     }
 }

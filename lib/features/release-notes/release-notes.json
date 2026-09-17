@@ -1,10 +1,10 @@
 {
-  "0.8.2": {
+  "0.8.3": {
     "ja": [
-      "android版vivaldiにてchrome拡張機能が使用可能になったため、スマートフォンでの利用も考慮したUIを実装"
+      "プロンプトにて日本語テキストに対するキャレット処理に不具合があり表示が消える現象を修正"
     ],
     "en": [
-      "Implemented UI support for smartphone use, now that Chrome extensions are available on Android Vivaldi"
+      "Fixed a caret-handling bug for Japanese text in the prompt that caused the display to disappear"
     ]
   }
 }

@@ -62,3 +62,9 @@ if (kib > maxKiB) {
   console.error(`WASM size ${kib.toFixed(1)} KiB exceeds ${maxKiB} KiB budget`)
   process.exit(1)
 }
+
+execFileSync(process.execPath, [join(root, "scripts", "verify-wasm-boundary.mjs")], {
+  cwd: root,
+  stdio: "inherit"
+})
+

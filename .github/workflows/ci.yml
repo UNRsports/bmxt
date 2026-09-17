@@ -42,26 +42,5 @@ jobs:
       - name: Audit dependencies (fail on critical severity)
         run: pnpm audit --audit-level critical
 
-      - name: Verify manifest vs Rust cmd + registry
-        run: pnpm run verify:manifest
-
-      - name: No fetch() in extension pages / SW sources
-        run: pnpm run check:no-fetch
-
-      - name: Generated TS/Rust matches manifest (codegen + git diff)
-        run: pnpm run check:generated
-
-      - name: Rust tests (bmxt-core)
-        run: cargo test -p bmxt-core
-
-      - name: Build WASM
-        run: pnpm run build:wasm
-
-      - name: Typecheck
-        run: pnpm exec tsc --noEmit
-
-      - name: Test
-        run: pnpm test
-
-      - name: Build extension
-        run: pnpm run build
+      - name: Verify (same as local `pnpm run verify`)
+        run: pnpm run verify
