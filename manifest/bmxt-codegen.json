@@ -71,6 +71,13 @@
       "subcommands": []
     },
     {
+      "module": "switchwindow",
+      "canonicalName": "switchwindow",
+      "aliases": [],
+      "usagePrimary": "switchwindow",
+      "subcommands": []
+    },
+    {
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
@@ -357,6 +364,13 @@
       "shape": "unit",
       "tsHandlerFile": "exit-pane",
       "tsHandlerExport": "applyExitPaneEffect"
+    },
+    {
+      "kind": "switch_window",
+      "rustVariant": "SwitchWindow",
+      "shape": "unit",
+      "tsHandlerFile": "switch-window",
+      "tsHandlerExport": "applySwitchWindowEffect"
     },
     {
       "kind": "search_bookmark",

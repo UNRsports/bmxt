@@ -6,6 +6,7 @@
 import type { UiLocale } from "../../setting/locale"
 import type { BmxtHostKind } from "../bmxt-host-kind"
 import type { RunCmdResult } from "./session-patches"
+import type { HostSwitchSnapshot } from "../../bmxt-float/host-switch-snapshot"
 
 function sendRuntimeMessage<T>(message: Record<string, unknown>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -25,7 +26,8 @@ export async function runCommandFromUiAsync(
   sessionId: string,
   sessionOrderLength: number,
   locale?: UiLocale,
-  hostKind: BmxtHostKind = "popup"
+  hostKind: BmxtHostKind = "popup",
+  hostSnapshot?: HostSwitchSnapshot
 ): Promise<RunCmdResult> {
   const message: Record<string, unknown> = {
     type: "RUN_CMD",
@@ -36,6 +38,9 @@ export async function runCommandFromUiAsync(
   }
   if (locale === "en" || locale === "ja") {
     message.locale = locale
+  }
+  if (hostSnapshot !== undefined) {
+    message.hostSnapshot = hostSnapshot
   }
   const response = await sendRuntimeMessage<RunCmdResult>(message)
   if (!response || typeof response !== "object" || !("ok" in response)) {

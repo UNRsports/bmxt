@@ -156,6 +156,10 @@ type Props = {
   /** EN: Pre-built session list rows (avoids passing full `pickersBySession` into every shell). */
   sessionListRows: SessionListRow[]
   navArmedByLeaf: Record<string, boolean>
+  /** EN: Full leaf maps for `switchwindow` host snapshot. */
+  paneFocusByLeaf: Record<string, PaneFocusTarget>
+  detailBarIdByLeaf: Record<string, DetailBarId | null>
+  modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
   onActivateSession: (sessionId: string) => void
   onSetSessionDisplayName: (sessionId: string, name: string) => void
   appendLogLines: (
@@ -209,6 +213,9 @@ export function BmxtShell({
   sessionLogsById,
   sessionListRows,
   navArmedByLeaf,
+  paneFocusByLeaf,
+  detailBarIdByLeaf,
+  modeToolbarOrderByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
   appendLogLines: appendLogLinesProp,
@@ -1012,10 +1019,55 @@ export function BmxtShell({
     }
   }, [flushFloatPersistProp])
 
+  const getHostSnapshot = useCallback((): import("../bmxt-float/host-switch-snapshot").HostSwitchSnapshot => {
+    const logsById: Record<string, string[]> = {}
+    const namesById: Record<string, string> = {}
+    for (const id of sessionOrder) {
+      logsById[id] = sessionLogsById[id] ?? []
+      const name = sessionNamesById[id]
+      if (typeof name === "string" && name.length > 0) {
+        namesById[id] = name
+      }
+    }
+    const snapshot: import("../bmxt-float/host-switch-snapshot").HostSwitchSnapshot = {
+      sessions: {
+        v: 2,
+        order: [...sessionOrder],
+        activeId: activeSessionId,
+        logsById,
+        namesById
+      },
+      browse: {
+        v: 1,
+        navActive,
+        navArmedByLeaf: { ...navArmedByLeaf },
+        paneFocusByLeaf: { ...paneFocusByLeaf },
+        detailBarIdByLeaf: { ...detailBarIdByLeaf },
+        modeToolbarOrderByLeaf: { ...modeToolbarOrderByLeaf }
+      }
+    }
+    if (typeof floatTabId === "number" && Number.isInteger(floatTabId) && floatTabId >= 0) {
+      snapshot.floatTabId = floatTabId
+    }
+    return snapshot
+  }, [
+    activeSessionId,
+    detailBarIdByLeaf,
+    floatTabId,
+    modeToolbarOrderByLeaf,
+    navActive,
+    navArmedByLeaf,
+    paneFocusByLeaf,
+    sessionLogsById,
+    sessionNamesById,
+    sessionOrder
+  ])
+
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
     hostKind,
+    getHostSnapshot,
     applyRunCmdPatches,
     mode,
     iSearchMatches,
@@ -1259,6 +1311,8 @@ export function BmxtShell({
   })
 
   const { onKeyDown, applyTokenPickIndex } = useShellKeyboard({
+    hostKind,
+    floatTabId,
     navPageTyping,
     navTypingMultiline,
     promptPaneFocused,

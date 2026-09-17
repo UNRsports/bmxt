@@ -58,7 +58,8 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
           deps.sessionId,
           deps.sessionOrderLength,
           locale,
-          deps.hostKind
+          deps.hostKind,
+          deps.getHostSnapshot()
         )
         if (shouldCancelJob(job)) {
           return

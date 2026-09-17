@@ -82,7 +82,8 @@ export function tryHandleNavConfirmClose(
         deps.sessionId,
         deps.sessionOrderLength,
         locale,
-        deps.hostKind
+        deps.hostKind,
+        deps.getHostSnapshot()
       )
       if (!isRunCmdResult(response)) {
         void deps.appendLogLines([tError("error.unknown", locale)], "stderr")

@@ -32,6 +32,11 @@ export const COMMANDS: readonly CmdMeta[] = [
     usagePrimary: "exit"
   },
   {
+    name: "switchwindow",
+    aliases: [] as const,
+    usagePrimary: "switchwindow"
+  },
+  {
     name: "search",
     aliases: [] as const,
     usagePrimary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help"

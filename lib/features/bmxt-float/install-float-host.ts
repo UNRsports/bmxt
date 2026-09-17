@@ -1,10 +1,13 @@
 /**
  * EN: Fixed-position iframe host for bmxt-float.html (keeps iframe across hide).
- *     Auto-moves to a free corner when overlapping nav (or similar) page UI, with animation.
- * JA: bmxt-float.html 用の固定レイヤ。nav 等と重なると四隅へアニメ付き退避。非表示でも iframe 保持。
+ *     Free-form rect (persisted); auto-moves to a free corner when overlapping nav UI (policy B:
+ *     size kept, position overwritten and persisted).
+ * JA: bmxt-float.html 用の固定レイヤ。自由矩形を記憶。nav 等と重なると四隅へ退避（方針 B:
+ *     サイズ維持・位置上書き＋記憶）。
  */
 
 import type {
+  BmxtFloatGeometryResponse,
   BmxtFloatHostAction,
   BmxtFloatHostResponse
 } from "./float-host-message"
@@ -19,6 +22,18 @@ import {
   type FloatCorner,
   type FloatRect
 } from "./float-host-placement"
+import {
+  clampFloatGeometry,
+  defaultFloatGeometry,
+  nudgeFloatGeometry,
+  type FloatGeometryArrow,
+  type FloatGeometryNudgeMode
+} from "./float-geometry"
+import {
+  loadFloatGeometryAsync,
+  persistFloatGeometryNow,
+  schedulePersistFloatGeometry
+} from "./float-geometry-storage"
 
 const HOST_ROOT_ID = "bmxt-float-host-root"
 const FLOAT_PAGE = "bmxt-float.html"
@@ -40,7 +55,9 @@ type FloatHostState = {
   iframe: HTMLIFrameElement
   visible: boolean
   tabId: number | null
+  rect: FloatRect
   corner: FloatCorner
+  geometryReady: boolean
   /** EN: Ignore avoid passes until this time (ms since epoch) while a move animates. */
   suppressAvoidUntilMs: number
   avoidRaf: number | null
@@ -56,26 +73,6 @@ type FloatHostState = {
 }
 
 let hostState: FloatHostState | null = null
-
-function readCssPxSize(value: string, fallback: number): number {
-  const parsed = Number.parseFloat(value)
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return fallback
-  }
-  return parsed
-}
-
-function measureFloatSize(root: HTMLDivElement): { width: number; height: number } {
-  const rect = root.getBoundingClientRect()
-  if (rect.width > 0 && rect.height > 0) {
-    return { width: rect.width, height: rect.height }
-  }
-  const style = window.getComputedStyle(root)
-  return {
-    width: readCssPxSize(style.width, Math.min(520, window.innerWidth - FLOAT_VIEWPORT_MARGIN_PX * 2)),
-    height: readCssPxSize(style.height, Math.min(360, window.innerHeight - FLOAT_VIEWPORT_MARGIN_PX * 2))
-  }
-}
 
 function collectObstacleRects(): FloatRect[] {
   const nodes = document.querySelectorAll(OBSTACLE_SELECTOR)
@@ -138,44 +135,29 @@ function mutationRelevantToAvoidance(records: MutationRecord[], root: HTMLElemen
   return false
 }
 
-function targetLeftTop(
-  root: HTMLDivElement,
-  corner: FloatCorner
-): { left: string; top: string } {
-  const size = measureFloatSize(root)
-  const rect = cornerToRect(
-    corner,
-    window.innerWidth,
-    window.innerHeight,
-    size.width,
-    size.height,
-    FLOAT_VIEWPORT_MARGIN_PX
-  )
-  return {
-    left: `${Math.round(rect.left)}px`,
-    top: `${Math.round(rect.top)}px`
-  }
-}
-
-function applyPositionInstant(root: HTMLDivElement, left: string, top: string): void {
-  root.style.transition = "none"
-  root.style.left = left
-  root.style.top = top
+function applyRectToRoot(root: HTMLDivElement, rect: FloatRect): void {
+  root.style.width = `${Math.round(rect.width)}px`
+  root.style.height = `${Math.round(rect.height)}px`
+  root.style.left = `${Math.round(rect.left)}px`
+  root.style.top = `${Math.round(rect.top)}px`
   root.style.right = "auto"
   root.style.bottom = "auto"
-  // Commit instant geometry before re-enabling transition for later moves.
+}
+
+function applyPositionInstant(root: HTMLDivElement, rect: FloatRect): void {
+  root.style.transition = "none"
+  applyRectToRoot(root, rect)
   void root.offsetWidth
   root.style.transition = POSITION_TRANSITION
 }
 
-function applyPositionAnimated(root: HTMLDivElement, left: string, top: string): void {
-  // Transition must be active on the *current* left/top before the target changes.
+function applyPositionAnimated(root: HTMLDivElement, left: number, top: number): void {
   root.style.transition = POSITION_TRANSITION
   void root.offsetWidth
   root.setAttribute("data-bmxt-float-moving", "")
   root.style.boxShadow = "0 12px 40px rgba(88, 166, 255, 0.55), 0 0 0 2px rgba(88, 166, 255, 0.85)"
-  root.style.left = left
-  root.style.top = top
+  root.style.left = `${Math.round(left)}px`
+  root.style.top = `${Math.round(top)}px`
   root.style.right = "auto"
   root.style.bottom = "auto"
 }
@@ -191,57 +173,148 @@ function clearMovingChrome(state: FloatHostState): void {
   state.root.style.transition = POSITION_TRANSITION
 }
 
-function setCorner(state: FloatHostState, corner: FloatCorner, animate: boolean): void {
-  const { left, top } = targetLeftTop(state.root, corner)
-  const samePos = state.root.style.left === left && state.root.style.top === top
-  const sameCorner = state.corner === corner
-  if (sameCorner && samePos) {
+function commitRect(
+  state: FloatHostState,
+  rect: FloatRect,
+  options: { animate: boolean; persist: boolean; immediatePersist?: boolean }
+): void {
+  const next = clampFloatGeometry(rect, window.innerWidth, window.innerHeight)
+  const samePos =
+    state.rect.left === next.left &&
+    state.rect.top === next.top &&
+    state.rect.width === next.width &&
+    state.rect.height === next.height
+  if (samePos && !options.animate) {
     return
   }
 
-  const shouldAnimate = animate && !sameCorner
-  state.corner = corner
-  state.root.setAttribute("data-bmxt-float-corner", corner)
+  const posOnlyChanged =
+    state.rect.left !== next.left ||
+    state.rect.top !== next.top
+  const sizeChanged =
+    state.rect.width !== next.width ||
+    state.rect.height !== next.height
 
-  if (shouldAnimate) {
-    applyPositionAnimated(state.root, left, top)
+  state.rect = next
+  state.root.style.width = `${Math.round(next.width)}px`
+  state.root.style.height = `${Math.round(next.height)}px`
+
+  if (options.animate && posOnlyChanged && !sizeChanged) {
+    applyPositionAnimated(state.root, next.left, next.top)
     state.suppressAvoidUntilMs = Date.now() + MOVE_MS
     if (state.movingTimer !== null) {
       clearTimeout(state.movingTimer)
     }
     state.movingTimer = setTimeout(() => {
       clearMovingChrome(state)
-      // Re-check obstacles after the move settles (nav may have moved again).
       scheduleAvoidPass(true)
     }, MOVE_MS + 48)
+  } else {
+    if (state.root.hasAttribute("data-bmxt-float-moving") && samePos) {
+      return
+    }
+    applyPositionInstant(state.root, next)
+    clearMovingChrome(state)
+  }
+
+  if (options.persist) {
+    if (options.immediatePersist === true) {
+      persistFloatGeometryNow(next)
+    } else {
+      schedulePersistFloatGeometry(next)
+    }
+  }
+}
+
+function setCorner(state: FloatHostState, corner: FloatCorner, animate: boolean): void {
+  const cornerRect = cornerToRect(
+    corner,
+    window.innerWidth,
+    window.innerHeight,
+    state.rect.width,
+    state.rect.height,
+    FLOAT_VIEWPORT_MARGIN_PX
+  )
+  const sameCorner = state.corner === corner
+  const samePos =
+    state.rect.left === cornerRect.left && state.rect.top === cornerRect.top
+  if (sameCorner && samePos) {
     return
   }
 
-  // Instant path (initial show / hide reset). Do not interrupt an in-flight move
-  // unless the caller explicitly wants a new corner without animation.
-  if (state.root.hasAttribute("data-bmxt-float-moving") && sameCorner) {
-    return
+  state.corner = corner
+  state.root.setAttribute("data-bmxt-float-corner", corner)
+  // Policy B: keep size; overwrite position; persist immediately.
+  commitRect(
+    state,
+    {
+      left: cornerRect.left,
+      top: cornerRect.top,
+      width: state.rect.width,
+      height: state.rect.height
+    },
+    { animate: animate && !sameCorner, persist: true, immediatePersist: true }
+  )
+}
+
+function nearestCornerForRect(rect: FloatRect): FloatCorner {
+  const corners: FloatCorner[] = [
+    "bottom-right",
+    "bottom-left",
+    "top-right",
+    "top-left"
+  ]
+  let best: FloatCorner = FLOAT_DEFAULT_CORNER
+  let bestDist = Number.POSITIVE_INFINITY
+  for (const corner of corners) {
+    const c = cornerToRect(
+      corner,
+      window.innerWidth,
+      window.innerHeight,
+      rect.width,
+      rect.height,
+      FLOAT_VIEWPORT_MARGIN_PX
+    )
+    const dx = c.left - rect.left
+    const dy = c.top - rect.top
+    const dist = dx * dx + dy * dy
+    if (dist < bestDist) {
+      bestDist = dist
+      best = corner
+    }
   }
-  applyPositionInstant(state.root, left, top)
-  clearMovingChrome(state)
+  return best
 }
 
 function reconcileFloatPlacement(animate: boolean): void {
-  if (hostState === null || !hostState.visible) {
+  if (hostState === null || !hostState.visible || !hostState.geometryReady) {
     return
   }
   const state = hostState
   if (animate && Date.now() < state.suppressAvoidUntilMs) {
     return
   }
-  const size = measureFloatSize(state.root)
+  const obstacles = collectObstacleRects()
+  if (obstacles.length === 0) {
+    // No obstacles: keep free-form rect; only clamp to viewport.
+    const clamped = clampFloatGeometry(state.rect, window.innerWidth, window.innerHeight)
+    if (
+      clamped.left !== state.rect.left ||
+      clamped.top !== state.rect.top ||
+      clamped.width !== state.rect.width ||
+      clamped.height !== state.rect.height
+    ) {
+      commitRect(state, clamped, { animate: false, persist: true, immediatePersist: true })
+    }
+    return
+  }
   const next = pickFloatCorner({
     current: state.corner,
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
-    floatWidth: size.width,
-    floatHeight: size.height,
-    obstacles: collectObstacleRects()
+    floatWidth: state.rect.width,
+    floatHeight: state.rect.height,
+    obstacles
   })
   setCorner(state, next, animate)
 }
@@ -285,6 +358,15 @@ function startAvoidWatch(state: FloatHostState): void {
   state.observer = observer
 
   const onResize = (): void => {
+    if (hostState === null) {
+      return
+    }
+    const clamped = clampFloatGeometry(
+      hostState.rect,
+      window.innerWidth,
+      window.innerHeight
+    )
+    commitRect(hostState, clamped, { animate: false, persist: true, immediatePersist: true })
     scheduleAvoidPass(true)
   }
   window.addEventListener("resize", onResize)
@@ -325,8 +407,6 @@ function stopAvoidWatch(state: FloatHostState): void {
 
 function applyHostChrome(root: HTMLDivElement, iframe: HTMLIFrameElement, closeBtn: HTMLButtonElement): void {
   root.style.position = "fixed"
-  root.style.width = "min(520px, calc(100vw - 32px))"
-  root.style.height = "min(360px, calc(100vh - 32px))"
   root.style.zIndex = "2147483646"
   root.style.display = "none"
   root.style.flexDirection = "column"
@@ -336,7 +416,7 @@ function applyHostChrome(root: HTMLDivElement, iframe: HTMLIFrameElement, closeB
   root.style.overflow = "hidden"
   root.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.45)"
   root.style.background = "#0d1117"
-  root.style.willChange = "left, top"
+  root.style.willChange = "left, top, width, height"
   root.style.transition = POSITION_TRANSITION
 
   closeBtn.type = "button"
@@ -395,6 +475,15 @@ function reportFloatVisibilityToSw(
   }
 }
 
+async function hydrateGeometry(state: FloatHostState): Promise<void> {
+  const loaded = await loadFloatGeometryAsync(window.innerWidth, window.innerHeight)
+  state.rect = loaded
+  state.corner = nearestCornerForRect(loaded)
+  state.root.setAttribute("data-bmxt-float-corner", state.corner)
+  applyPositionInstant(state.root, loaded)
+  state.geometryReady = true
+}
+
 function ensureHost(tabId: number | null = null): FloatHostState {
   if (hostState !== null) {
     if (tabId !== null && hostState.tabId !== tabId) {
@@ -421,12 +510,17 @@ function ensureHost(tabId: number | null = null): FloatHostState {
   applyHostChrome(root, iframe, closeBtn)
   iframe.src = floatPageUrl(tabId)
 
+  const initial = defaultFloatGeometry(window.innerWidth, window.innerHeight)
+  applyPositionInstant(root, initial)
+
   const state: FloatHostState = {
     root,
     iframe,
     visible: false,
     tabId,
+    rect: initial,
     corner: FLOAT_DEFAULT_CORNER,
+    geometryReady: false,
     suppressAvoidUntilMs: 0,
     avoidRaf: null,
     pendingAnimate: false,
@@ -467,7 +561,6 @@ function ensureHost(tabId: number | null = null): FloatHostState {
     if (state.root.contains(target)) {
       return
     }
-    // EN: Tab left the float iframe into the host page — pull focus back.
     state.lastKeyWasTab = false
     focusFloatIframe(state)
   }
@@ -479,10 +572,9 @@ function ensureHost(tabId: number | null = null): FloatHostState {
   const mountParent = document.documentElement ?? document.body
   mountParent.appendChild(root)
 
-  const { left, top } = targetLeftTop(root, FLOAT_DEFAULT_CORNER)
-  applyPositionInstant(root, left, top)
   root.setAttribute("data-bmxt-float-corner", FLOAT_DEFAULT_CORNER)
   hostState = state
+  void hydrateGeometry(state)
   return state
 }
 
@@ -508,22 +600,29 @@ function setFloatHostVisible(visible: boolean): boolean {
   state.visible = visible
   state.root.style.display = visible ? "flex" : "none"
   if (visible) {
-    startAvoidWatch(state)
-    // First paint: place instantly, then allow animated moves for later obstacle changes.
-    scheduleAvoidPass(false)
-    // EN: Return keyboard focus to float so nav stays operable after page navigation.
-    queueMicrotask(() => {
-      focusFloatIframe(state)
-    })
-    window.setTimeout(() => {
-      if (hostState === state && state.visible) {
-        focusFloatIframe(state)
+    const applyVisible = (): void => {
+      if (hostState !== state || !state.visible) {
+        return
       }
-    }, 120)
+      startAvoidWatch(state)
+      scheduleAvoidPass(false)
+      queueMicrotask(() => {
+        focusFloatIframe(state)
+      })
+      window.setTimeout(() => {
+        if (hostState === state && state.visible) {
+          focusFloatIframe(state)
+        }
+      }, 120)
+    }
+    if (state.geometryReady) {
+      applyVisible()
+    } else {
+      void hydrateGeometry(state).then(applyVisible)
+    }
   } else {
     stopAvoidWatch(state)
     clearMovingChrome(state)
-    setCorner(state, FLOAT_DEFAULT_CORNER, false)
   }
   return state.visible
 }
@@ -540,4 +639,25 @@ export function applyFloatHostAction(
     return { ok: true, visible: setFloatHostVisible(false) }
   }
   return { ok: true, visible: setFloatHostVisible(!state.visible) }
+}
+
+export function applyFloatGeometryNudge(
+  mode: FloatGeometryNudgeMode,
+  arrow: FloatGeometryArrow
+): BmxtFloatGeometryResponse {
+  const state = ensureHost()
+  if (!state.visible) {
+    return { ok: false, reason: "float_hidden" }
+  }
+  const next = nudgeFloatGeometry(
+    state.rect,
+    mode,
+    arrow,
+    window.innerWidth,
+    window.innerHeight
+  )
+  state.corner = nearestCornerForRect(next)
+  state.root.setAttribute("data-bmxt-float-corner", state.corner)
+  commitRect(state, next, { animate: false, persist: true })
+  return { ok: true }
 }

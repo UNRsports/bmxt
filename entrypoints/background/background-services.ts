@@ -38,6 +38,10 @@ import {
   resolveHostKindForExit
 } from "../../lib/features/bmxt-window/exit-host-policy"
 import type { BmxtHostKind } from "../../lib/features/bmxt-window/bmxt-host-kind"
+import { parseHostSwitchSnapshot, type HostSwitchSnapshot } from "../../lib/features/bmxt-float/host-switch-snapshot"
+import { openOrFocusBmxtWindowAsync } from "./window-state"
+import { sendFloatHostAction } from "../../lib/features/bmxt-float/float-host-control"
+import { setFloatDesiredVisibleOnTab } from "../../lib/features/bmxt-float/float-visible-tabs"
 
 let lastFocusedNormalWindow: number | undefined
 let backgroundServicesRegistered = false
@@ -113,7 +117,8 @@ async function runCommand(
   sessionOrderLength: number,
   sender?: chrome.runtime.MessageSender,
   localeOverride?: UiLocale,
-  hostKind?: BmxtHostKind
+  hostKind?: BmxtHostKind,
+  hostSnapshot?: HostSwitchSnapshot
 ): Promise<RunCmdResult> {
   const trimmed = line.trim()
   if (!trimmed) {
@@ -126,7 +131,15 @@ async function runCommand(
   return runner.start(
     "run-cmd",
     async () =>
-      runCommandBody(trimmed, sessionIdRaw, sessionOrderLength, localeOverride, sender, hostKind),
+      runCommandBody(
+        trimmed,
+        sessionIdRaw,
+        sessionOrderLength,
+        localeOverride,
+        sender,
+        hostKind,
+        hostSnapshot
+      ),
     { meta: { line: trimmed, sessionId: sessionIdRaw ?? "" }, persist: false }
   )
 }
@@ -137,7 +150,8 @@ async function runCommandBody(
   sessionOrderLength: number,
   localeOverride?: UiLocale,
   sender?: chrome.runtime.MessageSender,
-  hostKindRaw?: unknown
+  hostKindRaw?: unknown,
+  hostSnapshot?: HostSwitchSnapshot
 ): Promise<RunCmdResult> {
   const trimmed = line
   if (/^\s*search\b/i.test(trimmed)) {
@@ -176,7 +190,8 @@ async function runCommandBody(
         localeOverride,
         hostKind,
         sender,
-        replaceLog
+        replaceLog,
+        hostSnapshot
       ))
     )
   } catch (e) {
@@ -208,7 +223,8 @@ async function dispatch(
   localeOverride?: UiLocale,
   hostKind: BmxtHostKind = "popup",
   sender?: chrome.runtime.MessageSender,
-  replaceLog?: { value: boolean }
+  replaceLog?: { value: boolean },
+  hostSnapshot?: HostSwitchSnapshot
 ): Promise<string[]> {
   const locale =
     localeOverride ?? (await loadUiSettings()).locale
@@ -217,6 +233,10 @@ async function dispatch(
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
   }
+  const floatTabId =
+    typeof hostSnapshot?.floatTabId === "number"
+      ? hostSnapshot.floatTabId
+      : senderTabId(sender)
   const ctx: DispatchChromeContext = {
     enqueueSessionPatch: (patch) => {
       sessionPatches.push(patch)
@@ -254,7 +274,37 @@ async function dispatch(
     focusInfo,
     resolveTabArg,
     commandSessionId: sessionId,
-    uiLocale: locale
+    uiLocale: locale,
+    hostKind,
+    hostSnapshot,
+    floatTabId,
+    senderTabId: senderTabId(sender),
+    showFloatOnTab: async (tabId: number) => {
+      let visible = await sendFloatHostAction(tabId, "show")
+      if (visible !== true) {
+        await new Promise<void>((resolve) => {
+          setTimeout(() => resolve(), 200)
+        })
+        visible = await sendFloatHostAction(tabId, "show")
+      }
+      if (visible === true) {
+        await setFloatDesiredVisibleOnTab(tabId, true)
+        return true
+      }
+      return false
+    },
+    hideFloatAfterSwitch: async (tabId: number) => {
+      await hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
+    },
+    closePopupAfterSwitch: async () => {
+      exitOutcome.fullClose = true
+      await closeBmxtWindowOnly()
+      void removeAllTerminalSessionsFromStorage()
+      broadcastSessionClearToUi("popup")
+    },
+    openOrFocusPopupAfterSwitch: async () => {
+      await openOrFocusBmxtWindowAsync()
+    }
   }
   return applyChromeEffects(ctx, bundle.effects ?? [])
 }
@@ -392,7 +442,8 @@ export async function runCommandMessage(
   sessionOrderLength?: number,
   sender?: chrome.runtime.MessageSender,
   localeRaw?: string,
-  hostKindRaw?: unknown
+  hostKindRaw?: unknown,
+  hostSnapshotRaw?: unknown
 ): Promise<RunCmdResult> {
   const orderLen =
     typeof sessionOrderLength === "number" && Number.isInteger(sessionOrderLength)
@@ -403,7 +454,8 @@ export async function runCommandMessage(
   const localeOverride =
     localeRaw === "en" || localeRaw === "ja" ? localeRaw : undefined
   const hostKind = resolveHostKindForExit(hostKindRaw, sender)
-  return runCommand(line, sessionId, orderLen, sender, localeOverride, hostKind)
+  const hostSnapshot = parseHostSwitchSnapshot(hostSnapshotRaw) ?? undefined
+  return runCommand(line, sessionId, orderLen, sender, localeOverride, hostKind, hostSnapshot)
 }
 
 export async function runNavControlMessage(message: NavControlRequest): Promise<unknown> {

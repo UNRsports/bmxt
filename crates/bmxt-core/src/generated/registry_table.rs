@@ -41,6 +41,11 @@ pub const COMMANDS: &[CmdMeta] = &[
         usage_primary: "exit",
     },
     CmdMeta {
+        name: "switchwindow",
+        aliases: &[],
+        usage_primary: "switchwindow",
+    },
+    CmdMeta {
         name: "search",
         aliases: &[],
         usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
@@ -282,6 +287,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "close" => false,
         "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
+        "switchwindow" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "group" => false,
         "help" => false,
@@ -307,6 +313,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "close" => &[],
         "dom" => BRANCHES_DOM,
         "exit" => &[],
+        "switchwindow" => &[],
         "search" => BRANCHES_SEARCH,
         "group" => &[],
         "help" => &[],

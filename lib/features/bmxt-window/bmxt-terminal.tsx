@@ -75,6 +75,9 @@ type SessionPaneProps = {
   navArmed: boolean
   setNavArmedForLeaf: (sessionId: string, armed: boolean) => void
   navArmedByLeaf: Record<string, boolean>
+  paneFocusByLeaf: Record<string, PaneFocusTarget>
+  detailBarIdByLeaf: Record<string, DetailBarId | null>
+  modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
   onActivateSession: (sessionId: string) => void
   onSetSessionDisplayName: (sessionId: string, name: string) => void
   appendLogLines: (
@@ -117,6 +120,9 @@ const SessionPaneView = memo(function SessionPaneView({
   navArmed,
   setNavArmedForLeaf,
   navArmedByLeaf,
+  paneFocusByLeaf,
+  detailBarIdByLeaf,
+  modeToolbarOrderByLeaf,
   onActivateSession,
   onSetSessionDisplayName,
   appendLogLines,
@@ -151,6 +157,9 @@ const SessionPaneView = memo(function SessionPaneView({
         sessionLogsById={sessionLogsById}
         sessionListRows={sessionListRows}
         navArmedByLeaf={navArmedByLeaf}
+        paneFocusByLeaf={paneFocusByLeaf}
+        detailBarIdByLeaf={detailBarIdByLeaf}
+        modeToolbarOrderByLeaf={modeToolbarOrderByLeaf}
         onActivateSession={onActivateSession}
         onSetSessionDisplayName={onSetSessionDisplayName}
         appendLogLines={appendLogLines}
@@ -514,6 +523,9 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     setModeToolbarOrderForLeaf,
     setNavArmedForLeaf,
     navArmedByLeaf,
+    paneFocusByLeaf,
+    detailBarIdByLeaf,
+    modeToolbarOrderByLeaf,
     onActivateSession: setActiveSession,
     onSetSessionDisplayName: setSessionDisplayName,
     sessionOrderLength: state.order.length,

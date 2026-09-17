@@ -23,6 +23,7 @@ export type ChromeEffect =
   | { kind: "session_new"; name: string }
   | { kind: "session_next" }
   | { kind: "session_prev" }
+  | { kind: "switch_window" }
   | { kind: "tab_go_back"; tab_ids: number[] }
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }

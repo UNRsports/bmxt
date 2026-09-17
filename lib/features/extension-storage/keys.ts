@@ -109,6 +109,18 @@ export const FLOAT_BROWSE_STATE_BY_TAB_KEY = "bmxt_float_browse_state_by_tab_v1"
  */
 export const FLOAT_PENDING_HANDOFF_KEY = "bmxt_float_pending_handoff_v1"
 
+/**
+ * EN: In-page float host rectangle (left/top/width/height) in `chrome.storage.local`.
+ * JA: サイト上フロートの矩形（左上・幅高）を local に記憶。
+ */
+export const FLOAT_GEOMETRY_KEY = "bmxt_float_geometry_v1"
+
+/**
+ * EN: Sessions/browse waiting for the popup window after `switchwindow` from float.
+ * JA: float から `switchwindow` したあと、ポップアップ窓が読む引き継ぎ。
+ */
+export const POPUP_PENDING_HANDOFF_KEY = "bmxt_popup_pending_handoff_v1"
+
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 

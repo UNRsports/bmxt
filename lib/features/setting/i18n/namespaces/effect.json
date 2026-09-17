@@ -122,5 +122,25 @@
   "effect.closeCurrentWindow.rejectedType": {
     "ja": "error: 通常ウィンドウ以外は閉じられません (windowId={windowId})",
     "en": "error: only normal windows can be closed (windowId={windowId})"
+  },
+  "effect.switchWindow.toFloat": {
+    "ja": "サイト上フロートへ移動しました",
+    "en": "moved to the in-page float"
+  },
+  "effect.switchWindow.toPopup": {
+    "ja": "ポップアップ窓へ移動しました",
+    "en": "moved to the popup window"
+  },
+  "effect.switchWindow.noTarget": {
+    "ja": "移動先のタブがありません（通常ウィンドウでページを開いてください）",
+    "en": "no target tab to move to (focus a normal window with a page)"
+  },
+  "effect.switchWindow.notScriptable": {
+    "ja": "error: このページにはフロートを表示できません（{reason}）",
+    "en": "error: cannot show the float on this page ({reason})"
+  },
+  "effect.switchWindow.floatFailed": {
+    "ja": "error: サイト上フロートを表示できませんでした",
+    "en": "error: could not show the in-page float"
   }
 }

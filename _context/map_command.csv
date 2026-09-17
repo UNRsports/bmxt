@@ -61,6 +61,7 @@ snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapsh
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
 aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page。,
 exit,,,,,exit,Effect: exit_pane。,
+switchwindow,,,,,switchwindow,Effect: switch_window。ポップアップ窓↔サイト上フロート（アクティブ通常タブ）へセッション／ブラウズを移動。,
 session,,,,,session …,単独 `session` + Enter: msgs + promptPrefix `session `。Effect（new/next/prev）または UiAction（list/switch/setting-name）。第二候補に `help`。,語彙: Effect + UiAction
 session,-new,,rest,,session -new [name],Effect: session_new。,
 session,-list,,none,,session -list,ListResult `session.row`。ピッカーは `session -list | browse`。,
@@ -72,7 +73,7 @@ session,-setting-name,,rest,,session -setting-name [name],UiAction `session_sett
 （内部）,inter-command-vocabulary,,,,lib/features/command-line/inter-command/,"閉じたコマンド間語彙の索引。DispatchBundle チャネル、LIST_KIND_TO_BMXT_RULE_KIND、preferredCommandAddPath。テンプレート: manifest/templates/。",語彙再利用優先。0.8.0 規格化
 （内部）,job-runner,,,,lib/features/job/,JobRunner per scope（search-list/dom-list/run-cmd/tab-picker-refresh）。,
 （内部）,terminal-session-state,,,,lib/features/bmxt-window/terminal-sessions/,UI が session 正本。SW は SessionPatch[] のみ。,
-（内部）,bmxt-float,,,,lib/features/bmxt-float/ + entrypoints/bmxt-float/,"サイト内フロート・プロンプト（`hostKind=float`）。ショートカット `toggle-bmxt-float`（既定 Shift+Alt+F）。`SESSION_CLEAR` の `host`: popup|float|all。ポップアップ閉鎖は float を消さない。コマンド履歴（`bmxt_cmd_history`）のみ popup と共有。",0.8.0
+（内部）,bmxt-float,,,,lib/features/bmxt-float/ + entrypoints/bmxt-float/,"サイト内フロート・プロンプト（`hostKind=float`）。ショートカット `toggle-bmxt-float`（既定 Shift+Alt+F）。自由矩形は Shift+Ctrl/Alt+矢印でリサイズ／移動し `bmxt_float_geometry_v1` に記憶。`switchwindow` で popup↔float をログ付き移動。`SESSION_CLEAR` の `host`: popup|float|all。",0.8.4
 （内部）,detail-bar-ctrl-c,,,,lib/features/bmxt-window/detail-bar-focus.ts + use-detail-bar-keyboard.ts,"詳細バー上 **Ctrl+C**: picker 系は browse 列クローズ、nav は disarm（`close-nav-from-detail-bar.ts`）。",0.8.0
 （内部）,host-ui,,,,lib/features/setting/host-ui-mode.ts + lib/features/bmxt-window/extra-keys/,"`hostUiMode` auto|desktop|mobile（`bmxt_ui_settings_v1`）。`resolveHostUiFormFactor` + Android 検出。**mobile**: ExtraKeys・候補タップ確定・外タップ dismiss。**desktop**: 0.8.0 相当のキーボード中心候補閉じ。",0.8.2
 （内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6

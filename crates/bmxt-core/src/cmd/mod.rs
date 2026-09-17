@@ -16,6 +16,7 @@ pub mod search;
 pub mod session;
 pub mod setting;
 pub mod snapshot;
+pub mod switchwindow;
 pub mod tabs;
 pub mod translate;
 
@@ -33,6 +34,7 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "reload" => reload::run(args),
         "dom" => dom::run(args),
         "exit" => exit::run(args),
+        "switchwindow" => switchwindow::run(args),
         "search" => search::run(args),
         "group" => group::run(args),
         "help" => help_cmd::run(args),

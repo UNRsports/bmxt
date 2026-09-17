@@ -10,6 +10,10 @@ import {
   saveFloatTerminalSessionsForTab
 } from "../../bmxt-float/float-terminal-session-storage.ts"
 import {
+  isPopupHandoffReadyMessage,
+  takePendingPopupHandoffOnce
+} from "../../bmxt-float/popup-pending-handoff.ts"
+import {
   applySessionPatch,
   applySessionPatches,
   type ApplySessionPatchContext,
@@ -47,7 +51,7 @@ export function useTerminalSessions(
   const [state, setState] = useState<TerminalSessionsStateV1>(() =>
     createEmptyTerminalSessionsState()
   )
-  const [sessionsReady, setSessionsReady] = useState(hostKind !== "float")
+  const [sessionsReady, setSessionsReady] = useState(false)
   const stateRef = useRef(state)
   stateRef.current = state
   const sessionContextRef = useRef(sessionContext)
@@ -64,33 +68,66 @@ export function useTerminalSessions(
   }, [])
 
   useEffect(() => {
-    if (hostKind !== "float") {
-      setSessionsReady(true)
+    if (hostKind === "float") {
+      let cancelled = false
       persistReadyRef.current = false
-      return
+      setSessionsReady(false)
+      const tabId = floatTabId
+      if (tabId === null) {
+        setSessionsReady(true)
+        return
+      }
+      void loadFloatTerminalSessionsForTab(tabId).then((stored) => {
+        if (cancelled) {
+          return
+        }
+        if (stored !== null) {
+          commitState(stored)
+        }
+        persistReadyRef.current = true
+        setSessionsReady(true)
+      })
+      return () => {
+        cancelled = true
+      }
     }
+
+    // popup: hydrate from switchwindow handoff when present
     let cancelled = false
-    persistReadyRef.current = false
     setSessionsReady(false)
-    const tabId = floatTabId
-    if (tabId === null) {
-      setSessionsReady(true)
-      return
-    }
-    void loadFloatTerminalSessionsForTab(tabId).then((stored) => {
+    void takePendingPopupHandoffOnce().then((payload) => {
       if (cancelled) {
         return
       }
-      if (stored !== null) {
-        commitState(stored)
+      if (payload !== null) {
+        commitState(payload.sessions)
       }
-      persistReadyRef.current = true
       setSessionsReady(true)
     })
     return () => {
       cancelled = true
     }
   }, [commitState, floatTabId, hostKind])
+
+  useEffect(() => {
+    if (hostKind !== "popup") {
+      return
+    }
+    const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
+      message
+    ) => {
+      if (!isPopupHandoffReadyMessage(message)) {
+        return
+      }
+      void takePendingPopupHandoffOnce().then((payload) => {
+        if (payload !== null) {
+          commitState(payload.sessions)
+        }
+      })
+    }
+    chrome.runtime.onMessage.addListener(onRuntimeMessage)
+    return () => chrome.runtime.onMessage.removeListener(onRuntimeMessage)
+  }, [commitState, hostKind])
 
   useEffect(() => {
     if (hostKind !== "float" || !sessionsReady || !persistReadyRef.current) {

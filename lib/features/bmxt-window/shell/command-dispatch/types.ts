@@ -7,12 +7,15 @@ import type { UiLocale } from "../../../setting/locale"
 import type { TranslationPairId } from "../../../translate/translation-pair"
 import type { BmxtHostKind } from "../../bmxt-host-kind"
 import type { CommandBusyProgress, CommandBusyToken } from "../command-busy"
+import type { HostSwitchSnapshot } from "../../../bmxt-float/host-switch-snapshot"
 
 export type CommandDispatchDeps = {
   sessionId: string
   sessionOrderLength: number
   /** EN: Which UI document is running the command (`exit` closes popup vs hides float). */
   hostKind: BmxtHostKind
+  /** EN: Snapshot for host-blind `switch_window` (sessions + browse). */
+  getHostSnapshot: () => HostSwitchSnapshot
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   mode: "normal" | "isearch"
   iSearchMatches: string[]

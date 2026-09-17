@@ -11,6 +11,8 @@ import {
 } from "../../lib/features/bmxt-float/float-host-control"
 import { tryDeliverPendingFloatHandoff } from "../../lib/features/bmxt-float/float-tab-handoff"
 import {
+  BMXT_FLOAT_GEOMETRY_MESSAGE_TYPE,
+  isBmxtFloatGeometryNudgeMessage,
   isBmxtFloatVisibilityMessage
 } from "../../lib/features/bmxt-float/float-host-message"
 import {
@@ -102,7 +104,41 @@ export function setupFloatLaunch(
     void toggleBmxtFloatOnActiveTabAsync()
   })
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isBmxtFloatGeometryNudgeMessage(message)) {
+      const tabId =
+        typeof message.tabId === "number"
+          ? message.tabId
+          : typeof sender.tab?.id === "number"
+            ? sender.tab.id
+            : undefined
+      if (tabId === undefined) {
+        sendResponse({ ok: false, reason: "no_tab" })
+        return true
+      }
+      void chrome.tabs
+        .sendMessage(tabId, {
+          type: BMXT_FLOAT_GEOMETRY_MESSAGE_TYPE,
+          mode: message.mode,
+          arrow: message.arrow,
+          tabId
+        })
+        .then((response) => {
+          try {
+            sendResponse(response ?? { ok: true })
+          } catch {
+            /* port closed */
+          }
+        })
+        .catch(() => {
+          try {
+            sendResponse({ ok: false, reason: "cs_unreachable" })
+          } catch {
+            /* port closed */
+          }
+        })
+      return true
+    }
     if (!isBmxtFloatVisibilityMessage(message)) {
       return false
     }

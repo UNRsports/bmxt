@@ -9,6 +9,11 @@ import {
   loadFloatBrowseStateForTab,
   patchFloatBrowseStateForTab
 } from "../bmxt-float/float-browse-state-storage.ts"
+import {
+  isPopupHandoffReadyMessage,
+  takePendingPopupHandoffOnce,
+  takeRetainedPopupBrowseForUi
+} from "../bmxt-float/popup-pending-handoff.ts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { pruneSessionPickersMap } from "../side-picker/session/session-pickers"
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
@@ -94,45 +99,86 @@ export function useProcessUiPersistence(
     clearTabPickerFoldStateInMemory()
   }, [])
 
+  const applyBrowsePayload = useCallback(
+    (stored: {
+      navArmedByLeaf: Record<string, boolean>
+      paneFocusByLeaf: Record<string, PaneFocusTarget>
+      detailBarIdByLeaf: Record<string, DetailBarId | null>
+      modeToolbarOrderByLeaf: Record<string, ModeToolbarId[]>
+      navActive: boolean
+    }) => {
+      setNavArmedByLeaf(stored.navArmedByLeaf)
+      setPaneFocusByLeaf(stored.paneFocusByLeaf)
+      setDetailBarIdByLeaf(stored.detailBarIdByLeaf)
+      setModeToolbarOrderByLeaf(stored.modeToolbarOrderByLeaf)
+      setRestoredNavActive(stored.navActive)
+    },
+    []
+  )
+
   useEffect(() => {
-    if (hostKind !== "float") {
-      setProcessUiReady(true)
+    if (hostKind === "float") {
+      if (!sessionsReady) {
+        persistReadyRef.current = false
+        setProcessUiReady(false)
+        return
+      }
+      let cancelled = false
       persistReadyRef.current = false
-      return
+      setProcessUiReady(false)
+      const tabId = floatTabId
+      if (tabId === null) {
+        persistReadyRef.current = true
+        setProcessUiReady(true)
+        return
+      }
+      void loadFloatBrowseStateForTab(tabId).then((stored) => {
+        if (cancelled) {
+          return
+        }
+        if (stored !== null) {
+          applyBrowsePayload(stored)
+        }
+        persistReadyRef.current = true
+        setProcessUiReady(true)
+      })
+      return () => {
+        cancelled = true
+      }
     }
-    // EN: Wait for restored session leaf ids — otherwise prune drops navArmed for the real leaf.
+
+    // popup: apply retained browse from switchwindow handoff after sessions hydrate
     if (!sessionsReady) {
-      persistReadyRef.current = false
       setProcessUiReady(false)
       return
     }
-    let cancelled = false
+    const retained = takeRetainedPopupBrowseForUi()
+    if (retained !== null) {
+      applyBrowsePayload(retained)
+    }
     persistReadyRef.current = false
-    setProcessUiReady(false)
-    const tabId = floatTabId
-    if (tabId === null) {
-      persistReadyRef.current = true
-      setProcessUiReady(true)
+    setProcessUiReady(true)
+  }, [applyBrowsePayload, floatTabId, hostKind, sessionsReady])
+
+  useEffect(() => {
+    if (hostKind !== "popup") {
       return
     }
-    void loadFloatBrowseStateForTab(tabId).then((stored) => {
-      if (cancelled) {
+    const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
+      message
+    ) => {
+      if (!isPopupHandoffReadyMessage(message)) {
         return
       }
-      if (stored !== null) {
-        setNavArmedByLeaf(stored.navArmedByLeaf)
-        setPaneFocusByLeaf(stored.paneFocusByLeaf)
-        setDetailBarIdByLeaf(stored.detailBarIdByLeaf)
-        setModeToolbarOrderByLeaf(stored.modeToolbarOrderByLeaf)
-        setRestoredNavActive(stored.navActive)
-      }
-      persistReadyRef.current = true
-      setProcessUiReady(true)
-    })
-    return () => {
-      cancelled = true
+      void takePendingPopupHandoffOnce().then((payload) => {
+        if (payload !== null) {
+          applyBrowsePayload(payload.browse)
+        }
+      })
     }
-  }, [floatTabId, hostKind, sessionsReady])
+    chrome.runtime.onMessage.addListener(onRuntimeMessage)
+    return () => chrome.runtime.onMessage.removeListener(onRuntimeMessage)
+  }, [applyBrowsePayload, hostKind])
 
   useEffect(() => {
     if (hostKind !== "float" || !processUiReady || !persistReadyRef.current) {

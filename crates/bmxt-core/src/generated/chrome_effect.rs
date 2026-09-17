@@ -75,6 +75,8 @@ pub enum ChromeEffect {
     SessionNext,
     #[serde(rename = "session_prev")]
     SessionPrev,
+    #[serde(rename = "switch_window")]
+    SwitchWindow,
     #[serde(rename = "tab_go_back")]
     TabGoBack {
     tab_ids: Vec<i64>,

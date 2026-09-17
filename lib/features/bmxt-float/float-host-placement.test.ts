@@ -62,4 +62,30 @@ describe("float-host-placement", () => {
     const nextRect = cornerToRect(next, 1200, 900, 520, 360, 16)
     assert.equal(rectsOverlap(nextRect, obstacle), false)
   })
+
+  it("policy B: avoidance corner keeps the same float size", () => {
+    const floatWidth = 480
+    const floatHeight = 320
+    const floatAtBr = cornerToRect("bottom-right", 1200, 900, floatWidth, floatHeight, 16)
+    const obstacle = inflateRect(
+      {
+        left: floatAtBr.left + 20,
+        top: floatAtBr.top + 20,
+        width: 60,
+        height: 60
+      },
+      28
+    )
+    const next = pickFloatCorner({
+      current: "bottom-right",
+      viewportWidth: 1200,
+      viewportHeight: 900,
+      floatWidth,
+      floatHeight,
+      obstacles: [obstacle]
+    })
+    const nextRect = cornerToRect(next, 1200, 900, floatWidth, floatHeight, 16)
+    assert.equal(nextRect.width, floatWidth)
+    assert.equal(nextRect.height, floatHeight)
+  })
 })

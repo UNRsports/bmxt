@@ -15,7 +15,8 @@ export type BackgroundServicesModule = {
     sessionOrderLength?: number,
     sender?: chrome.runtime.MessageSender,
     locale?: string,
-    hostKind?: unknown
+    hostKind?: unknown,
+    hostSnapshot?: unknown
   ): Promise<RunCmdResult>
   runNavControlMessage(message: Record<string, unknown>): Promise<unknown>
   removeAllTerminalSessionsFromStorageAsync(): Promise<void>

@@ -1,6 +1,8 @@
 import type { DomListCapture } from "../dom/dom-list-capture"
 import type { SessionPatch } from "../bmxt-window/terminal-sessions/session-patches"
 import type { UiLocale } from "../setting/locale"
+import type { BmxtHostKind } from "../bmxt-window/bmxt-host-kind"
+import type { HostSwitchSnapshot } from "../bmxt-float/host-switch-snapshot"
 
 /** `applyChromeEffects` が Chrome 操作のために使うコールバック。 */
 
@@ -39,4 +41,20 @@ export type DispatchChromeContext = {
   commandSessionId: string
   /** EN: UI display locale from settings picker / storage (defaults to Japanese). */
   uiLocale?: UiLocale
+  /** EN: Which UI host issued RUN_CMD (`switchwindow` / `exit`). */
+  hostKind?: BmxtHostKind
+  /** EN: Sessions/browse snapshot from the UI (host-blind; used by `switch_window`). */
+  hostSnapshot?: HostSwitchSnapshot
+  /** EN: Float iframe hosting tab id. */
+  floatTabId?: number
+  /** EN: Tab id from the message sender when available. */
+  senderTabId?: number
+  /** EN: Show in-page float; returns false when CS unreachable. */
+  showFloatOnTab?: (tabId: number) => Promise<boolean>
+  /** EN: Hide float and clear per-tab sessions after switch to popup. */
+  hideFloatAfterSwitch?: (tabId: number) => Promise<void>
+  /** EN: Close popup window after migrating to float (no SESSION_CLEAR needed on closed UI). */
+  closePopupAfterSwitch?: () => Promise<void>
+  /** EN: Open or focus the BMXt popup after migrating from float. */
+  openOrFocusPopupAfterSwitch?: () => Promise<void>
 }

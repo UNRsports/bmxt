@@ -20,8 +20,17 @@ import { applyTabChipPickToLine, tabChipCompletionZone } from "../../nav/tab-chi
 import { parseNavReloadTabToken } from "../../nav/nav-reload-tab-token"
 import { moveNavReloadTabBlockCaret, deleteNavReloadTabBlockAtCursor, deleteNavReloadTabBlockForwardAtCursor } from "../../nav/nav-reload-tab-token"
 import { lockedPrefixBlocksDelete } from "./prompt-locked-prefix"
+import type { BmxtHostKind } from "../bmxt-host-kind"
+import {
+  BMXT_FLOAT_GEOMETRY_MESSAGE_TYPE,
+  type BmxtFloatGeometryNudgeMessage
+} from "../../bmxt-float/float-host-message"
+import { resolveFloatGeometryNudge } from "../../bmxt-float/float-geometry"
 
 export type UseShellKeyboardOptions = {
+  /** EN: When `float`, Shift+Ctrl/Alt+arrows resize/move the in-page host. */
+  hostKind?: BmxtHostKind
+  floatTabId?: number | null
   navPageTyping: boolean
   navTypingMultiline: boolean
   promptPaneFocused: boolean
@@ -204,6 +213,32 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (options.hostKind === "float" && !e.nativeEvent.isComposing) {
+        const nudge = resolveFloatGeometryNudge(e)
+        if (nudge !== null) {
+          e.preventDefault()
+          e.stopPropagation()
+          const message: BmxtFloatGeometryNudgeMessage = {
+            type: BMXT_FLOAT_GEOMETRY_MESSAGE_TYPE,
+            mode: nudge.mode,
+            arrow: nudge.arrow
+          }
+          if (
+            typeof options.floatTabId === "number" &&
+            Number.isInteger(options.floatTabId) &&
+            options.floatTabId >= 0
+          ) {
+            message.tabId = options.floatTabId
+          }
+          try {
+            void chrome.runtime.sendMessage(message)
+          } catch {
+            /* SW unavailable */
+          }
+          return
+        }
+      }
+
       if (options.navPageTyping) {
         if (e.key === "Tab") {
           e.preventDefault()

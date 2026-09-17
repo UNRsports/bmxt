@@ -24,6 +24,7 @@ import { applySearchSnapshotEffect } from "./effects/search-snapshot"
 import { applySessionNewEffect } from "./effects/session-new"
 import { applySessionNextEffect } from "./effects/session-next"
 import { applySessionPrevEffect } from "./effects/session-prev"
+import { applySwitchWindowEffect } from "./effects/switch-window"
 import { applyTabGoBackEffect } from "./effects/tab-go-back"
 import { applyTabGoForwardEffect } from "./effects/tab-go-forward"
 import { applyTabReloadEffect } from "./effects/tab-reload"
@@ -74,6 +75,8 @@ export async function applyOne(
       return applySessionNextEffect(ctx, e)
     case "session_prev":
       return applySessionPrevEffect(ctx, e)
+    case "switch_window":
+      return applySwitchWindowEffect(ctx, e)
     case "tab_go_back":
       return applyTabGoBackEffect(ctx, e)
     case "tab_go_forward":

@@ -23,8 +23,14 @@ import {
   NAV_OVERLAY_CHANNEL,
   type NavOverlayMessage
 } from "../../lib/features/nav/nav-overlay-inject-fn"
-import { isBmxtFloatHostRequest } from "../../lib/features/bmxt-float/float-host-message"
-import { applyFloatHostAction } from "../../lib/features/bmxt-float/install-float-host"
+import {
+  isBmxtFloatGeometryNudgeMessage,
+  isBmxtFloatHostRequest
+} from "../../lib/features/bmxt-float/float-host-message"
+import {
+  applyFloatGeometryNudge,
+  applyFloatHostAction
+} from "../../lib/features/bmxt-float/install-float-host"
 
 export default defineContentScript({
   matches: ["https://*/*", "http://*/*"],
@@ -40,6 +46,10 @@ export default defineContentScript({
               ? sender.tab.id
               : null
         sendResponse(applyFloatHostAction(raw.action ?? "toggle", tabId))
+        return true
+      }
+      if (isBmxtFloatGeometryNudgeMessage(raw)) {
+        sendResponse(applyFloatGeometryNudge(raw.mode, raw.arrow))
         return true
       }
       if (isPageExtractRequest(raw)) {
