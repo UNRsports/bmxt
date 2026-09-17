@@ -142,5 +142,9 @@
   "effect.switchWindow.floatFailed": {
     "ja": "error: サイト上フロートを表示できませんでした",
     "en": "error: could not show the in-page float"
+  },
+  "effect.switchWindow.mobileBlocked": {
+    "ja": "スマホモードではサイト上フロートへ切り替えできません。setting でホスト UI をデスクトップにするか、PC でお使いください。",
+    "en": "Switching to the in-page float is not available in smartphone mode. Set host UI to desktop in settings, or use BMXt on a PC."
   }
 }

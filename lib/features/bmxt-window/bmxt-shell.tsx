@@ -1044,7 +1044,8 @@ export function BmxtShell({
         paneFocusByLeaf: { ...paneFocusByLeaf },
         detailBarIdByLeaf: { ...detailBarIdByLeaf },
         modeToolbarOrderByLeaf: { ...modeToolbarOrderByLeaf }
-      }
+      },
+      hostUiFormFactor
     }
     if (typeof floatTabId === "number" && Number.isInteger(floatTabId) && floatTabId >= 0) {
       snapshot.floatTabId = floatTabId
@@ -1054,6 +1055,7 @@ export function BmxtShell({
     activeSessionId,
     detailBarIdByLeaf,
     floatTabId,
+    hostUiFormFactor,
     modeToolbarOrderByLeaf,
     navActive,
     navArmedByLeaf,

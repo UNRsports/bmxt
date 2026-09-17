@@ -11,12 +11,15 @@ import {
   parseFloatBrowseState,
   type FloatBrowseStateV1
 } from "./float-browse-state-storage.ts"
+import type { HostUiFormFactor } from "../setting/host-ui-mode.ts"
 
 export type HostSwitchSnapshot = {
   sessions: TerminalSessionsStateV1
   browse: FloatBrowseStateV1
   /** EN: Float host tab id when the command runs in the float iframe. */
   floatTabId?: number
+  /** EN: Effective host UI form factor (blocks popup→float on mobile). */
+  hostUiFormFactor?: HostUiFormFactor
 }
 
 export function isHostSwitchSnapshot(value: unknown): value is HostSwitchSnapshot {
@@ -35,6 +38,11 @@ export function isHostSwitchSnapshot(value: unknown): value is HostSwitchSnapsho
       return false
     }
   }
+  if (o.hostUiFormFactor !== undefined) {
+    if (o.hostUiFormFactor !== "desktop" && o.hostUiFormFactor !== "mobile") {
+      return false
+    }
+  }
   return true
 }
 
@@ -49,6 +57,9 @@ export function parseHostSwitchSnapshot(value: unknown): HostSwitchSnapshot | nu
   }
   if (typeof value.floatTabId === "number") {
     out.floatTabId = value.floatTabId
+  }
+  if (value.hostUiFormFactor === "desktop" || value.hostUiFormFactor === "mobile") {
+    out.hostUiFormFactor = value.hostUiFormFactor
   }
   return out
 }

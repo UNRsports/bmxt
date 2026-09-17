@@ -45,13 +45,15 @@ function resolveSnapshot(ctx: DispatchChromeContext): HostSwitchSnapshot {
     return {
       sessions: snap.sessions,
       browse: snap.browse ?? createEmptyFloatBrowseState(),
-      floatTabId: snap.floatTabId
+      floatTabId: snap.floatTabId,
+      hostUiFormFactor: snap.hostUiFormFactor
     }
   }
   return {
     sessions: emptySessionsFallback(),
     browse: createEmptyFloatBrowseState(),
-    floatTabId: ctx.floatTabId
+    floatTabId: ctx.floatTabId,
+    hostUiFormFactor: ctx.hostSnapshot?.hostUiFormFactor
   }
 }
 
@@ -63,6 +65,9 @@ export async function applySwitchWindowEffect(
   const promptEcho = `> switchwindow`
 
   if (hostKind === "popup") {
+    if (ctx.hostSnapshot?.hostUiFormFactor === "mobile") {
+      return [effectT(ctx, "effect.switchWindow.mobileBlocked")]
+    }
     const tab = await ctx.resolveTabArg(undefined)
     if (!tab?.id) {
       return [effectT(ctx, "effect.switchWindow.noTarget")]
