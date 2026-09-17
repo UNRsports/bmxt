@@ -69,6 +69,7 @@ session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
 session,-setting-name,,rest,,session -setting-name [name],UiAction `session_setting_name`。,
 （内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
+（内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3
 （内部）,inter-command-vocabulary,,,,lib/features/command-line/inter-command/,"閉じたコマンド間語彙の索引。DispatchBundle チャネル、LIST_KIND_TO_BMXT_RULE_KIND、preferredCommandAddPath。テンプレート: manifest/templates/。",語彙再利用優先。0.8.0 規格化
 （内部）,job-runner,,,,lib/features/job/,JobRunner per scope（search-list/dom-list/run-cmd/tab-picker-refresh）。,
 （内部）,terminal-session-state,,,,lib/features/bmxt-window/terminal-sessions/,UI が session 正本。SW は SessionPatch[] のみ。,

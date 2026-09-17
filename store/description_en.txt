@@ -45,6 +45,9 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.8.3:
+- Fixed a caret-handling bug for Japanese text in the prompt that caused the display to disappear
+
 0.8.2:
 - Implemented UI support for smartphone use, now that Chrome extensions are available on Android Vivaldi
 

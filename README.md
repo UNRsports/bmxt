@@ -350,7 +350,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.3`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -906,7 +906,7 @@ prompt / RUN_CMD
 
 **Incomplete `-setting`:** e.g. `tab -setting` / `dom -setting` / `translate -setting` → msgs + prefix; complete apply → UiAction with fields (`tabs_setting` `{ mode }`, `dom_setting` `{ mode }`, `translate_setting` `{ pair }`). Map: **`_context/map_command.csv`**. Inter-command channels: **[Inter-command vocabulary](#inter-command-vocabulary)**.
 
-**Tab / IME fixed tokens:** WASM **`complete(line, cursor)`** (tiers 1–3 from codegen subcommands). `resolveImeTokenPicker` calls it when WASM is ready and applies host filter UX + live overlays.
+**Tab / IME fixed tokens:** WASM **`complete(line, cursor)`** (tiers 1–3 from codegen subcommands). `resolveImeTokenPicker` calls it when WASM is ready and applies host filter UX + live overlays. **Caret offsets (since 0.8.3):** the JS prompt uses **UTF-16** indices; Rust/`complete` uses **UTF-8** byte offsets — the host converts via **`lib/features/bmxt-core/utf16-utf8-offset.ts`** before calling WASM (avoids wiping CJK prompt text).
 
 **Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + **wasm-pack** (`bash scripts/install-wasm-pack.sh`, pins **0.15.0**; see [wasm-pack](https://wasm-bindgen.github.io/wasm-pack/)). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
 
@@ -1276,7 +1276,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.3` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1697,7 +1697,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.3`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -2250,7 +2250,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 
 **不完全 `-setting`:** 例 `tab -setting` / `dom -setting` / `translate -setting` → msgs + prefix；適用完了 → フィールド付き UiAction。対応表: **`_context/map_command.csv`**。コマンド間経路: **[コマンド間語彙](#inter-command-vocabulary-ja)**。
 
-**Tab / IME 固定トークン:** WASM **`complete(line, cursor)`**（codegen `subcommands` の第一〜第三段）。`resolveImeTokenPicker` は WASM 準備後にこれを呼び、ホスト側フィルタ UX とライブオーバーレイを載せる。
+**Tab / IME 固定トークン:** WASM **`complete(line, cursor)`**（codegen `subcommands` の第一〜第三段）。`resolveImeTokenPicker` は WASM 準備後にこれを呼び、ホスト側フィルタ UX とライブオーバーレイを載せる。**キャレットオフセット（0.8.3 以降）:** JS プロンプトは **UTF-16** インデックス、Rust/`complete` は **UTF-8** バイトオフセット — ホストが **`lib/features/bmxt-core/utf16-utf8-offset.ts`** で変換してから WASM に渡す（CJK でプロンプト表示が消える不具合の修正）。
 
 開発: Rust + **`bash scripts/install-wasm-pack.sh`**（wasm-pack **0.15.0** 固定）、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
 
@@ -2582,7 +2582,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.2` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.3` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 
