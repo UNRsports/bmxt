@@ -1,8 +1,10 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
+  computeOverhangRect,
   cornerToRect,
   FLOAT_DEFAULT_CORNER,
+  floatOverlapsAnyObstacle,
   inflateRect,
   pickFloatCorner,
   rectsOverlap
@@ -87,5 +89,29 @@ describe("float-host-placement", () => {
     const nextRect = cornerToRect(next, 1200, 900, floatWidth, floatHeight, 16)
     assert.equal(nextRect.width, floatWidth)
     assert.equal(nextRect.height, floatHeight)
+  })
+
+  it("overhang keeps size and peeks outside the viewport", () => {
+    const home = { left: 600, top: 400, width: 520, height: 360 }
+    const obstacle = inflateRect(
+      { left: 650, top: 450, width: 80, height: 80 },
+      28
+    )
+    const overhang = computeOverhangRect({
+      home,
+      viewportWidth: 1200,
+      viewportHeight: 900,
+      obstacles: [obstacle],
+      peekPx: 40
+    })
+    assert.equal(overhang.width, home.width)
+    assert.equal(overhang.height, home.height)
+    const fullyInside =
+      overhang.left >= 0 &&
+      overhang.top >= 0 &&
+      overhang.left + overhang.width <= 1200 &&
+      overhang.top + overhang.height <= 900
+    assert.equal(fullyInside, false)
+    assert.equal(floatOverlapsAnyObstacle(overhang, [obstacle]), false)
   })
 })

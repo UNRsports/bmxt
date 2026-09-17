@@ -23,6 +23,8 @@ export const FLOAT_CORNER_PREFERENCE: readonly FloatCorner[] = [
 
 export const FLOAT_VIEWPORT_MARGIN_PX = 16
 export const FLOAT_OBSTACLE_PAD_PX = 28
+/** EN: How much of the float stays visible when hanging off-screen during nav avoid. */
+export const FLOAT_OVERHANG_PEEK_PX = 40
 
 export function inflateRect(rect: FloatRect, pad: number): FloatRect {
   return {
@@ -90,9 +92,80 @@ export function totalOverlapWithObstacles(
   return total
 }
 
+export function floatOverlapsAnyObstacle(
+  rect: FloatRect,
+  obstacles: readonly FloatRect[]
+): boolean {
+  for (const obstacle of obstacles) {
+    if (rectsOverlap(rect, obstacle)) {
+      return true
+    }
+  }
+  return false
+}
+
+export type FloatOverhangEdge = "left" | "right" | "top" | "bottom"
+
+/**
+ * EN: Hang the float mostly outside the viewport (peek strip remains) to clear obstacles.
+ *     Size is unchanged. Prefers the edge with the least travel from `home`.
+ * JA: 障害を避けるためフロートをビューポート外へはみ出させる（覗き分は残す）。サイズ不変。
+ */
+export function computeOverhangRect(args: {
+  home: FloatRect
+  viewportWidth: number
+  viewportHeight: number
+  obstacles: readonly FloatRect[]
+  peekPx?: number
+}): FloatRect {
+  const peek = args.peekPx ?? FLOAT_OVERHANG_PEEK_PX
+  const { home, viewportWidth, viewportHeight, obstacles } = args
+  const candidates: { edge: FloatOverhangEdge; rect: FloatRect; travel: number }[] = [
+    {
+      edge: "left",
+      rect: { ...home, left: peek - home.width },
+      travel: Math.abs(home.left - (peek - home.width))
+    },
+    {
+      edge: "right",
+      rect: { ...home, left: viewportWidth - peek },
+      travel: Math.abs(home.left - (viewportWidth - peek))
+    },
+    {
+      edge: "top",
+      rect: { ...home, top: peek - home.height },
+      travel: Math.abs(home.top - (peek - home.height))
+    },
+    {
+      edge: "bottom",
+      rect: { ...home, top: viewportHeight - peek },
+      travel: Math.abs(home.top - (viewportHeight - peek))
+    }
+  ]
+
+  let best = candidates[0]!
+  let bestOverlap = totalOverlapWithObstacles(best.rect, obstacles)
+
+  for (const candidate of candidates) {
+    const overlap = totalOverlapWithObstacles(candidate.rect, obstacles)
+    if (overlap < bestOverlap) {
+      best = candidate
+      bestOverlap = overlap
+      continue
+    }
+    if (overlap === bestOverlap && candidate.travel < best.travel) {
+      best = candidate
+      bestOverlap = overlap
+    }
+  }
+
+  return best.rect
+}
+
 /**
  * EN: Prefer current corner when clear; else preference order; else least overlap.
  * JA: 重ならなければ現在隅を維持。だめなら優先順。全滅なら重なり最小。
+ * @deprecated Prefer overhang avoidance (`computeOverhangRect`) for nav.
  */
 export function pickFloatCorner(args: {
   current: FloatCorner

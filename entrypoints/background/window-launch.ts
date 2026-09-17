@@ -9,8 +9,13 @@ import {
   resetLaunchPerf
 } from "../../lib/features/launch/launch-perf"
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
+import { loadPromptLaunchHostAsync } from "../../lib/features/bmxt-float/prompt-launch-host"
 import { loadBackgroundServicesAsync } from "./load-background-services"
-import { setupFloatLaunch } from "./float-launch"
+import {
+  launchOrToggleFloatFromShortcutAsync,
+  setupFloatLaunch,
+  showFloatOnLaunchTargetAsync
+} from "./float-launch"
 import {
   flushPersistBmxtWindowBounds,
   normalizeBmxtWindowBounds,
@@ -74,7 +79,7 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
 }
 
 /** EN: Shortcut — focus existing window or create immediately (no tabs.query before create). */
-async function launchBmxtFromShortcutAsync(): Promise<void> {
+async function launchBmxtPopupFromShortcutAsync(): Promise<void> {
   void loadBackgroundServicesAsync()
   markLaunchPhase("resolve-window-start")
   const existingId = await resolveBmxtWindowIdFastAsync()
@@ -92,14 +97,36 @@ async function launchBmxtFromShortcutAsync(): Promise<void> {
   }
 }
 
+/**
+ * EN: `launch-bmxt` / toolbar — popup open/focus, or float show/hide when switchwindow chose float.
+ * JA: 起動ショートカット。popup は開く／前面、float モードは表示／非表示トグル（popup は出さない）。
+ */
+async function launchBmxtFromShortcutAsync(): Promise<void> {
+  const host = await loadPromptLaunchHostAsync()
+  if (host === "float") {
+    markLaunchPhase("resolve-window-start")
+    await launchOrToggleFloatFromShortcutAsync()
+    markLaunchPhase("focus-window-done")
+    return
+  }
+  await launchBmxtPopupFromShortcutAsync()
+}
+
 async function resetBmxtFromShortcutAsync(): Promise<void> {
   const services = await loadBackgroundServicesAsync()
+  const host = await loadPromptLaunchHostAsync()
+  if (host === "float") {
+    await services.resetBmxtFromShortcutAsync(async () => {
+      await showFloatOnLaunchTargetAsync()
+    })
+    return
+  }
   await services.resetBmxtFromShortcutAsync(openOrFocusBmxtWindowAsync)
 }
 
 function openOrFocusBmxtWindow(): void {
   void loadBackgroundServicesAsync()
-  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
+  enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
 }
 
 export function setupWindowLaunch(): void {

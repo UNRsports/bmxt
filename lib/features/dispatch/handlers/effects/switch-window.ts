@@ -24,6 +24,7 @@ import {
   broadcastPopupHandoffReady,
   savePendingPopupHandoff
 } from "../../../bmxt-float/popup-pending-handoff"
+import { savePromptLaunchHostAsync } from "../../../bmxt-float/prompt-launch-host"
 
 type E = Extract<ChromeEffect, { kind: "switch_window" }>
 
@@ -89,6 +90,7 @@ export async function applySwitchWindowEffect(
       return [effectT(ctx, "effect.switchWindow.floatFailed")]
     }
 
+    await savePromptLaunchHostAsync("float")
     await ctx.closePopupAfterSwitch?.()
     return []
   }
@@ -110,6 +112,7 @@ export async function applySwitchWindowEffect(
     sessions: snapshot.sessions,
     browse: snapshot.browse
   })
+  await savePromptLaunchHostAsync("popup")
   await ctx.openOrFocusPopupAfterSwitch?.()
   broadcastPopupHandoffReady()
 

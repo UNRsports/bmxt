@@ -1,9 +1,9 @@
 /**
  * EN: Fixed-position iframe host for bmxt-float.html (keeps iframe across hide).
- *     Free-form rect (persisted); auto-moves to a free corner when overlapping nav UI (policy B:
- *     size kept, position overwritten and persisted).
- * JA: bmxt-float.html 用の固定レイヤ。自由矩形を記憶。nav 等と重なると四隅へ退避（方針 B:
- *     サイズ維持・位置上書き＋記憶）。
+ *     Free-form rect (persisted). When overlapping nav UI, hangs mostly off-viewport
+ *     (peek strip); restores the pre-escape home rect when nav clears (Alt OFF).
+ * JA: bmxt-float.html 用の固定レイヤ。自由矩形を記憶。nav と重なるとビューポート外へ
+ *     はみ出して退避し、nav OFF で退避前位置へ戻る。
  */
 
 import type {
@@ -16,9 +16,10 @@ import {
   FLOAT_DEFAULT_CORNER,
   FLOAT_OBSTACLE_PAD_PX,
   FLOAT_VIEWPORT_MARGIN_PX,
+  computeOverhangRect,
   cornerToRect,
+  floatOverlapsAnyObstacle,
   inflateRect,
-  pickFloatCorner,
   type FloatCorner,
   type FloatRect
 } from "./float-host-placement"
@@ -58,6 +59,13 @@ type FloatHostState = {
   rect: FloatRect
   corner: FloatCorner
   geometryReady: boolean
+  /**
+   * EN: User home rect before nav overhang escape (restored when obstacles clear).
+   * JA: nav はみ出し退避前のユーザー位置（障害消失で復帰）。
+   */
+  homeRectBeforeAvoid: FloatRect | null
+  /** EN: True while hanging off-viewport for nav avoidance. */
+  escapedForNav: boolean
   /** EN: Ignore avoid passes until this time (ms since epoch) while a move animates. */
   suppressAvoidUntilMs: number
   avoidRaf: number | null
@@ -176,9 +184,23 @@ function clearMovingChrome(state: FloatHostState): void {
 function commitRect(
   state: FloatHostState,
   rect: FloatRect,
-  options: { animate: boolean; persist: boolean; immediatePersist?: boolean }
+  options: {
+    animate: boolean
+    persist: boolean
+    immediatePersist?: boolean
+    /** EN: Allow left/top outside the viewport (nav overhang). */
+    allowOutside?: boolean
+  }
 ): void {
-  const next = clampFloatGeometry(rect, window.innerWidth, window.innerHeight)
+  const next =
+    options.allowOutside === true
+      ? {
+          left: Math.round(rect.left),
+          top: Math.round(rect.top),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height)
+        }
+      : clampFloatGeometry(rect, window.innerWidth, window.innerHeight)
   const samePos =
     state.rect.left === next.left &&
     state.rect.top === next.top &&
@@ -226,35 +248,62 @@ function commitRect(
   }
 }
 
-function setCorner(state: FloatHostState, corner: FloatCorner, animate: boolean): void {
-  const cornerRect = cornerToRect(
-    corner,
-    window.innerWidth,
-    window.innerHeight,
-    state.rect.width,
-    state.rect.height,
-    FLOAT_VIEWPORT_MARGIN_PX
-  )
-  const sameCorner = state.corner === corner
-  const samePos =
-    state.rect.left === cornerRect.left && state.rect.top === cornerRect.top
-  if (sameCorner && samePos) {
+function reconcileFloatPlacement(animate: boolean): void {
+  if (hostState === null || !hostState.visible || !hostState.geometryReady) {
+    return
+  }
+  const state = hostState
+  if (animate && Date.now() < state.suppressAvoidUntilMs) {
+    return
+  }
+  const obstacles = collectObstacleRects()
+  if (obstacles.length === 0) {
+    if (state.escapedForNav && state.homeRectBeforeAvoid !== null) {
+      const home = state.homeRectBeforeAvoid
+      state.escapedForNav = false
+      state.homeRectBeforeAvoid = null
+      state.root.removeAttribute("data-bmxt-float-nav-escaped")
+      commitRect(state, home, {
+        animate,
+        persist: true,
+        immediatePersist: true
+      })
+      return
+    }
+    const clamped = clampFloatGeometry(state.rect, window.innerWidth, window.innerHeight)
+    if (
+      clamped.left !== state.rect.left ||
+      clamped.top !== state.rect.top ||
+      clamped.width !== state.rect.width ||
+      clamped.height !== state.rect.height
+    ) {
+      commitRect(state, clamped, { animate: false, persist: true, immediatePersist: true })
+    }
     return
   }
 
-  state.corner = corner
-  state.root.setAttribute("data-bmxt-float-corner", corner)
-  // Policy B: keep size; overwrite position; persist immediately.
-  commitRect(
-    state,
-    {
-      left: cornerRect.left,
-      top: cornerRect.top,
-      width: state.rect.width,
-      height: state.rect.height
-    },
-    { animate: animate && !sameCorner, persist: true, immediatePersist: true }
-  )
+  const reference = state.homeRectBeforeAvoid ?? state.rect
+  if (!state.escapedForNav && !floatOverlapsAnyObstacle(state.rect, obstacles)) {
+    return
+  }
+
+  if (!state.escapedForNav) {
+    state.homeRectBeforeAvoid = { ...state.rect }
+    state.escapedForNav = true
+    state.root.setAttribute("data-bmxt-float-nav-escaped", "")
+  }
+
+  const overhang = computeOverhangRect({
+    home: reference,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    obstacles
+  })
+  commitRect(state, overhang, {
+    animate,
+    persist: false,
+    allowOutside: true
+  })
 }
 
 function nearestCornerForRect(rect: FloatRect): FloatCorner {
@@ -284,39 +333,6 @@ function nearestCornerForRect(rect: FloatRect): FloatCorner {
     }
   }
   return best
-}
-
-function reconcileFloatPlacement(animate: boolean): void {
-  if (hostState === null || !hostState.visible || !hostState.geometryReady) {
-    return
-  }
-  const state = hostState
-  if (animate && Date.now() < state.suppressAvoidUntilMs) {
-    return
-  }
-  const obstacles = collectObstacleRects()
-  if (obstacles.length === 0) {
-    // No obstacles: keep free-form rect; only clamp to viewport.
-    const clamped = clampFloatGeometry(state.rect, window.innerWidth, window.innerHeight)
-    if (
-      clamped.left !== state.rect.left ||
-      clamped.top !== state.rect.top ||
-      clamped.width !== state.rect.width ||
-      clamped.height !== state.rect.height
-    ) {
-      commitRect(state, clamped, { animate: false, persist: true, immediatePersist: true })
-    }
-    return
-  }
-  const next = pickFloatCorner({
-    current: state.corner,
-    viewportWidth: window.innerWidth,
-    viewportHeight: window.innerHeight,
-    floatWidth: state.rect.width,
-    floatHeight: state.rect.height,
-    obstacles
-  })
-  setCorner(state, next, animate)
 }
 
 function scheduleAvoidPass(animate: boolean): void {
@@ -359,6 +375,20 @@ function startAvoidWatch(state: FloatHostState): void {
 
   const onResize = (): void => {
     if (hostState === null) {
+      return
+    }
+    if (hostState.escapedForNav && hostState.homeRectBeforeAvoid !== null) {
+      const overhang = computeOverhangRect({
+        home: hostState.homeRectBeforeAvoid,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        obstacles: collectObstacleRects()
+      })
+      commitRect(hostState, overhang, {
+        animate: false,
+        persist: false,
+        allowOutside: true
+      })
       return
     }
     const clamped = clampFloatGeometry(
@@ -521,6 +551,8 @@ function ensureHost(tabId: number | null = null): FloatHostState {
     rect: initial,
     corner: FLOAT_DEFAULT_CORNER,
     geometryReady: false,
+    homeRectBeforeAvoid: null,
+    escapedForNav: false,
     suppressAvoidUntilMs: 0,
     avoidRaf: null,
     pendingAnimate: false,
@@ -649,6 +681,33 @@ export function applyFloatGeometryNudge(
   if (!state.visible) {
     return { ok: false, reason: "float_hidden" }
   }
+
+  if (state.escapedForNav && state.homeRectBeforeAvoid !== null) {
+    const nudgedHome = nudgeFloatGeometry(
+      state.homeRectBeforeAvoid,
+      mode,
+      arrow,
+      window.innerWidth,
+      window.innerHeight
+    )
+    state.homeRectBeforeAvoid = nudgedHome
+    persistFloatGeometryNow(nudgedHome)
+    const overhang = computeOverhangRect({
+      home: nudgedHome,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      obstacles: collectObstacleRects()
+    })
+    state.corner = nearestCornerForRect(nudgedHome)
+    state.root.setAttribute("data-bmxt-float-corner", state.corner)
+    commitRect(state, overhang, {
+      animate: false,
+      persist: false,
+      allowOutside: true
+    })
+    return { ok: true }
+  }
+
   const next = nudgeFloatGeometry(
     state.rect,
     mode,

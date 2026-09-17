@@ -3,6 +3,7 @@
  * JA: サイト上フロートのトグルと、同一タブ遷移後の自動再表示。
  */
 
+import { LAST_NORMAL_WINDOW_KEY } from "../../lib/features/extension-storage/keys"
 import { clearFloatTerminalSessionsForTab } from "../../lib/features/bmxt-float/float-terminal-session-storage"
 import { clearFloatBrowseStateForTab } from "../../lib/features/bmxt-float/float-browse-state-storage"
 import {
@@ -22,10 +23,67 @@ import {
   setFloatDesiredVisibleOnTab
 } from "../../lib/features/bmxt-float/float-visible-tabs"
 import { isScriptablePageUrl } from "../../lib/features/url/is-scriptable-page-url"
+import { BMXT_PAGE, readBmxtWindowIdInMemory } from "./window-state"
 
-async function resolveActiveTabAsync(): Promise<chrome.tabs.Tab | undefined> {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
+async function resolveActiveTabInWindow(
+  windowId: number
+): Promise<chrome.tabs.Tab | undefined> {
+  const tabs = await chrome.tabs.query({ windowId, active: true })
   return tabs[0]
+}
+
+/**
+ * EN: Prefer the last focused normal window's active tab (not the BMXt popup).
+ * JA: 通常ウィンドウのアクティブタブを優先（BMXt ポップアップ窓は使わない）。
+ */
+export async function resolveFloatLaunchTargetTabAsync(): Promise<
+  chrome.tabs.Tab | undefined
+> {
+  const bmxtWindowId = readBmxtWindowIdInMemory()
+
+  try {
+    const stored = await chrome.storage.local.get(LAST_NORMAL_WINDOW_KEY)
+    const normalId = stored[LAST_NORMAL_WINDOW_KEY]
+    if (typeof normalId === "number" && Number.isInteger(normalId)) {
+      try {
+        const win = await chrome.windows.get(normalId)
+        if (win.type === "normal") {
+          const tab = await resolveActiveTabInWindow(normalId)
+          if (tab) {
+            return tab
+          }
+        }
+      } catch {
+        /* window gone */
+      }
+    }
+  } catch {
+    /* storage unavailable */
+  }
+
+  try {
+    const focused = await chrome.windows.getLastFocused({ populate: true })
+    if (
+      focused.type === "normal" &&
+      focused.id !== undefined &&
+      focused.id !== bmxtWindowId
+    ) {
+      return focused.tabs?.find((tab) => tab.active) ?? focused.tabs?.[0]
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+  const tab = tabs[0]
+  if (!tab) {
+    return undefined
+  }
+  const pageUrl = chrome.runtime.getURL(BMXT_PAGE)
+  if (typeof tab.url === "string" && tab.url.startsWith(pageUrl)) {
+    return undefined
+  }
+  return tab
 }
 
 async function applyDesiredVisibility(
@@ -41,7 +99,7 @@ async function applyDesiredVisibility(
 }
 
 export async function toggleBmxtFloatOnActiveTabAsync(): Promise<void> {
-  const tab = await resolveActiveTabAsync()
+  const tab = await resolveFloatLaunchTargetTabAsync()
   if (tab?.id === undefined) {
     return
   }
@@ -53,6 +111,26 @@ export async function toggleBmxtFloatOnActiveTabAsync(): Promise<void> {
     return
   }
   await applyDesiredVisibility(tab.id, visible, false)
+}
+
+/**
+ * EN: Launch-shortcut path when prompt host is float — show or hide (toggle).
+ * JA: 起動先がフロートのときのショートカット（表示／非表示トグル）。
+ */
+export async function launchOrToggleFloatFromShortcutAsync(): Promise<void> {
+  await toggleBmxtFloatOnActiveTabAsync()
+}
+
+/** EN: Always show float on the launch target tab (reset / forced show). */
+export async function showFloatOnLaunchTargetAsync(): Promise<void> {
+  const tab = await resolveFloatLaunchTargetTabAsync()
+  if (tab?.id === undefined) {
+    return
+  }
+  if (!isScriptablePageUrl(tab.url)) {
+    return
+  }
+  await showBmxtFloatOnTabAsync(tab.id)
 }
 
 /** EN: Hide the in-page float prompt on a tab (e.g. `exit` from float host). */
@@ -78,13 +156,11 @@ async function reShowFloatIfDesired(tabId: number, url: string | undefined): Pro
   if (!isScriptablePageUrl(url)) {
     return
   }
-  // EN: Brief delay so the content script can finish injecting after navigation.
   await new Promise<void>((resolve) => {
     setTimeout(() => resolve(), 120)
   })
   const visible = await sendFloatHostAction(tabId, "show")
   if (visible === null) {
-    // EN: Retry once after CS may still be loading.
     await new Promise<void>((resolve) => {
       setTimeout(() => resolve(), 400)
     })

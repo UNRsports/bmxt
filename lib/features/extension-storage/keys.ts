@@ -121,6 +121,12 @@ export const FLOAT_GEOMETRY_KEY = "bmxt_float_geometry_v1"
  */
 export const POPUP_PENDING_HANDOFF_KEY = "bmxt_popup_pending_handoff_v1"
 
+/**
+ * EN: Which host `launch-bmxt` / toolbar open (set by `switchwindow`).
+ * JA: `launch-bmxt`／ツールバー起動先（`switchwindow` で切替）。
+ */
+export const PROMPT_LAUNCH_HOST_KEY = "bmxt_prompt_launch_host_v1"
+
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 
