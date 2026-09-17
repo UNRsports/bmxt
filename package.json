@@ -18,6 +18,7 @@
     "package": "node scripts/build-wasm.mjs && node scripts/build-background-services.mjs && wxt zip",
     "postinstall": "wxt prepare",
     "codegen": "node scripts/codegen/run.mjs",
+    "verify": "node scripts/verify.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
     "verify:host-blind": "node scripts/verify-host-blind.mjs",
     "verify:wasm-boundary": "node scripts/verify-wasm-boundary.mjs",

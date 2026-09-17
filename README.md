@@ -184,11 +184,11 @@ pnpm run build
 
 **Node.js version** — use **`.nvmrc`** (recommended Node for this repo). **`packageManager`** in **`package.json`** pins the pnpm version via Corepack. On first clone, run **`corepack enable`** once so the pinned pnpm version is available.
 
-**CI** (**.github/workflows/ci.yml`**) runs **`pnpm install --frozen-lockfile`**, **`pnpm exec wxt prepare`**, **`pnpm audit --audit-level=critical`**, **`verify:manifest`**, **`check:no-fetch`**, **`check:generated`**, **`pnpm exec tsc --noEmit`**, tests, and **`pnpm run build`**. **`pnpm audit fix --force`** must **not** be used without review.
+**CI** (**.github/workflows/ci.yml`**) runs **`pnpm install --frozen-lockfile`**, **`pnpm exec wxt prepare`**, **`pnpm audit --audit-level=critical`**, then **`pnpm run verify`**. **`pnpm audit fix --force`** must **not** be used without review.
 
 **Known residual audit items** — **`pnpm audit`** may report **high** (and **moderate**) issues in WXT’s build-time toolchain (Vite, esbuild, etc.). These are **not shipped** in the extension bundle; CI gates on **critical** only. Do not “fix” them with **`pnpm audit fix --force`**.
 
-**Local verification (match CI):** **`pnpm run verify:manifest`** → **`pnpm run check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm test`** → **`pnpm run build`**.
+**Local verification (match CI):** **`pnpm run verify`** (same gate as GitHub Actions after install / `wxt prepare` / audit).
 
 **After any dependency change**, run **`pnpm install --frozen-lockfile`**, **`pnpm run build`**, **`pnpm test`**, and **`pnpm audit --audit-level=critical`**, and commit **`package.json`** and **`pnpm-lock.yaml`** together.
 
@@ -1531,11 +1531,11 @@ pnpm run build
 
 **Node.js 版** — **`.nvmrc`** を参照。**`packageManager`** で pnpm 版を固定する。初回 clone 時は **`corepack enable`** を一度実行する。
 
-**CI**（**.github/workflows/ci.yml`**）は **`pnpm install --frozen-lockfile`**、**`pnpm exec wxt prepare`**、**`pnpm audit --audit-level=critical`**、**`verify:manifest`**、**`check:no-fetch`**、**`check:generated`**、**`pnpm exec tsc --noEmit`**、テスト、**`pnpm run build`** を実行する。**`pnpm audit fix --force`** は **使わない**（unsafe dependency bumpsを提案し、危険）。
+**CI**（**.github/workflows/ci.yml`**）は **`pnpm install --frozen-lockfile`**、**`pnpm exec wxt prepare`**、**`pnpm audit --audit-level=critical`**、続けて **`pnpm run verify`** を実行する。**`pnpm audit fix --force`** は **使わない**（unsafe dependency bumpsを提案し、危険）。
 
 **残る audit（high / moderate）** — WXT のビルド専用ツールチェーンに **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。CI は **critical** のみで fail する。**`pnpm audit fix --force`** は安易に使わない。
 
-**ローカル検証（CI と同一）:** **`pnpm run verify:manifest`** → **`pnpm run check:generated`** → **`pnpm exec tsc --noEmit`** → **`pnpm test`** → **`pnpm run build`**。
+**ローカル検証（CI と同一）:** **`pnpm run verify`**（GitHub Actions の install / `wxt prepare` / audit 以降と同じゲート）。
 
 **依存関係を変更したら** **`pnpm install --frozen-lockfile`** → **`pnpm run build`** → **`pnpm test`** → **`pnpm audit --audit-level=critical`** を実行し、**`package.json`** と **`pnpm-lock.yaml`** を **セットでコミット**する。
 

@@ -43,7 +43,7 @@ This repository uses **pnpm** only (`pnpm-lock.yaml`). Do **not** run `npm insta
 - **Install:** `pnpm install --frozen-lockfile` (CI/clone); `pnpm install` only when updating `package.json` and committing the lockfile.
 - **Scripts:** `pnpm run <script>` or `pnpm <script>` when defined.
 - **Binaries:** `pnpm exec <bin>` — not `npx`.
-- **Verification (match CI):** `pnpm run verify:manifest` → `pnpm run check:generated` → `pnpm exec tsc --noEmit` → `pnpm test` → `pnpm run build`.
+- **Verification (match CI):** `pnpm run verify` (manifest → no-fetch → generated → cargo test → build:wasm → tsc → unit → build → e2e).
 - **Node scripts:** call `pnpm run …` or `node scripts/…` directly; never hard-code `npm`.
 
 # Directory organization
