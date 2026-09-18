@@ -6,6 +6,15 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 ## Active
 
+### 0. Test / CI hygiene（次対応・優先）
+
+評価どおり現行 CI は実用レベル。運用スケール前に漏れ防止を先に潰す。
+
+- [x] **① ユニットテストのグロブ化（最優先）** — `package.json` の `test` を `node --experimental-strip-types --test "lib/**/*.test.ts" "scripts/**/*.test.mjs"` に変更。未掲載だったテストを回収（`session-state-ops` を node:test 化、`withoutLogPatches` を軽量モジュールへ移動、node ESM 用に `.ts` 拡張子を補完）
+- [ ] **② E2E ハッピーパスの拡充** — 現状 `e2e/prompt-cjk.spec.ts` のみ。タブ操作・DOM・session・Welcome 等の主要正常系を Playwright で段階追加（ドメインは unit、E2E は統合に寄せる）
+- [ ] **③ カバレッジ可視化** — `c8` または Node `--experimental-test-coverage`。生成物・注入スクリプトは除外。最初は可視化用途（% ゲートは慎重）
+- [ ] **④ Prettier / ESLint を verify へ** — Prettier は依存・`.prettierrc.mjs` あり → `prettier --check` を低コストで追加可。ESLint は未導入のため導入判断・設定設計が必要（既存 `tsc` / `check:no-fetch` / `check:generated` と役割分担）
+
 ### A. `| browse` pipe-only（実装済み — 手元スモーク）
 
 **正規形:** `<list-command> | browse`（例: `tab -list | browse` · `setting -list | browse`）。

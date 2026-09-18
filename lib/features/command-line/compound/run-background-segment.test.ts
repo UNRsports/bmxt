@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import type { SessionPatch } from "../../bmxt-window/terminal-sessions/session-patches.ts"
-import { withoutLogPatches } from "./run-background-segment.ts"
+import { withoutLogPatches } from "./extract-patches-lines.ts"
 
 describe("withoutLogPatches", () => {
   it("drops appendLog and setLog but keeps other patches", () => {

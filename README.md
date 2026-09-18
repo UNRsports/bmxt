@@ -40,6 +40,7 @@
 - [Prompt Key Bindings](#prompt-key-bindings)
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
+  - [Testing](#testing)
   - [pnpm dependencies and security](#pnpm-dependencies)
   - [Project layout (WXT)](#project-layout)
   - [Main Sources](#main-sources)
@@ -188,7 +189,7 @@ pnpm run build
 
 **Known residual audit items** — **`pnpm audit`** may report **high** (and **moderate**) issues in WXT’s build-time toolchain (Vite, esbuild, etc.). These are **not shipped** in the extension bundle; CI gates on **critical** only. Do not “fix” them with **`pnpm audit fix --force`**.
 
-**Local verification (match CI):** **`pnpm run verify`** (same gate as GitHub Actions after install / `wxt prepare` / audit).
+**Local verification (match CI):** **`pnpm run verify`** (same gate as GitHub Actions after install / `wxt prepare` / audit). Details: **[Testing](#testing)**.
 
 **After any dependency change**, run **`pnpm install --frozen-lockfile`**, **`pnpm run build`**, **`pnpm test`**, and **`pnpm audit --audit-level=critical`**, and commit **`package.json`** and **`pnpm-lock.yaml`** together.
 
@@ -1207,6 +1208,21 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 6. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
 7. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
 
+<a id="testing"></a>
+
+### Testing
+
+
+**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E.
+
+| Layer | Command | What it covers |
+|-------|---------|----------------|
+| **TS unit** | **`pnpm test`** | Node.js built-in test runner (`node --experimental-strip-types --test`). Discovers **`lib/**/*.test.ts`** and **`scripts/**/*.test.mjs`** via globs — do **not** list files in **`package.json`**. Place new tests next to the code as **`*.test.ts`**; they run in CI automatically. |
+| **Rust / WASM core** | **`cargo test -p bmxt-core`** | Command parse / registry / compound·pipe plans in **`crates/bmxt-core/`**. |
+| **E2E** | **`pnpm run test:e2e`** (Chromium via **`pnpm run test:e2e:install`**) | Playwright specs under **`e2e/`** (extension UI; currently prompt CJK caret stability). |
+
+**Adding a TypeScript unit test:** create **`lib/features/<feature>/<name>.test.ts`** (or under **`scripts/`** as **`*.test.mjs`**), use **`node:test`** / **`node:assert/strict`**, and run **`pnpm test`**. No **`package.json`** edit is required for discovery.
+
 <a id="project-layout"></a>
 
 ### Project layout (WXT)
@@ -1222,6 +1238,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
 | **`lib/features/`** | Feature modules (see table below) |
 | **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`e2e/`** | Playwright E2E specs (see **[Testing](#testing)**) |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
 | **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
@@ -1386,6 +1403,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [プロンプトのキーバインド](#prompt-key-bindings-ja)
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
+  - [テスト](#testing-ja)
   - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
   - [プロジェクト構成（WXT）](#project-layout-ja)
   - [主なソース](#main-sources-ja)
@@ -1535,7 +1553,7 @@ pnpm run build
 
 **残る audit（high / moderate）** — WXT のビルド専用ツールチェーンに **high** が残ることがある。いずれも **拡張機能バンドルには同梱されない**。CI は **critical** のみで fail する。**`pnpm audit fix --force`** は安易に使わない。
 
-**ローカル検証（CI と同一）:** **`pnpm run verify`**（GitHub Actions の install / `wxt prepare` / audit 以降と同じゲート）。
+**ローカル検証（CI と同一）:** **`pnpm run verify`**（GitHub Actions の install / `wxt prepare` / audit 以降と同じゲート）。詳細は **[テスト](#testing-ja)**。
 
 **依存関係を変更したら** **`pnpm install --frozen-lockfile`** → **`pnpm run build`** → **`pnpm test`** → **`pnpm audit --audit-level=critical`** を実行し、**`package.json`** と **`pnpm-lock.yaml`** を **セットでコミット**する。
 
@@ -2515,6 +2533,21 @@ pnpm run dev
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
 6. **編集後:** WXT の再ビルドが終わったら、拡張機能カードの「再読み込み」（または BMXt タブの再読み込み）で Service Worker と UI に反映させる。
 
+<a id="testing-ja"></a>
+
+### テスト
+
+
+**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E。
+
+| 層 | コマンド | 内容 |
+|----|----------|------|
+| **TS ユニット** | **`pnpm test`** | Node.js 組み込みテストランナー（`node --experimental-strip-types --test`）。**`lib/**/*.test.ts`** と **`scripts/**/*.test.mjs`** を **グロブで自動走査**する（**`package.json` にファイルを直書きしない**）。新テストはコード隣に **`*.test.ts`** を置けば CI に載る。 |
+| **Rust / WASM コア** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** の parse / registry / compound·pipe 計画など。 |
+| **E2E** | **`pnpm run test:e2e`**（初回は **`pnpm run test:e2e:install`**） | **`e2e/`** 配下の Playwright（拡張 UI。現状はプロンプト CJK キャレット安定性）。 |
+
+**TypeScript ユニットテストの追加:** **`lib/features/<feature>/<name>.test.ts`**（または **`scripts/`** 配下の **`*.test.mjs`**）を作り、**`node:test`** / **`node:assert/strict`** で書いて **`pnpm test`**。発見用に **`package.json` を編集する必要はない**。
+
 <a id="project-layout-ja"></a>
 
 ### プロジェクト構成（WXT）
@@ -2528,6 +2561,7 @@ pnpm run dev
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
+| **`e2e/`** | Playwright E2E（**[テスト](#testing-ja)** 参照） |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
 | **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発）, **`*-chrome.zip`**（**`pnpm run package`**） |

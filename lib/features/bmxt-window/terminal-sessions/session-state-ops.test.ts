@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest"
+import assert from "node:assert/strict"
+import { describe, it } from "node:test"
 import {
   appendLinesToSessionState,
   createEmptyTerminalSessionsState,
@@ -11,14 +12,14 @@ describe("session-state-ops", () => {
     const base = createEmptyTerminalSessionsState()
     const sessionId = base.activeId
     const next = appendLinesToSessionState(base, sessionId, ["> tab -list", "hint"])
-    expect(next.order).toEqual(base.order)
-    expect(next.logsById[sessionId]).toEqual(["> tab -list", "hint"])
+    assert.deepEqual(next.order, base.order)
+    assert.deepEqual(next.logsById[sessionId], ["> tab -list", "hint"])
   })
 
   it("exitSessionState on last session marks fullClose", () => {
     const base = createEmptyTerminalSessionsState()
     const result = exitSessionState(base, base.activeId)
-    expect(result.fullClose).toBe(true)
+    assert.equal(result.fullClose, true)
   })
 })
 
@@ -29,7 +30,7 @@ describe("applySessionPatches", () => {
     const next = applySessionPatches(base, [
       { type: "appendLog", sessionId, lines: ["> help", "line"] }
     ])
-    expect(next.order).toEqual(base.order)
-    expect(next.logsById[sessionId]).toEqual(["> help", "line"])
+    assert.deepEqual(next.order, base.order)
+    assert.deepEqual(next.logsById[sessionId], ["> help", "line"])
   })
 })

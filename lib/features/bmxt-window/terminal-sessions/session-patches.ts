@@ -3,7 +3,7 @@
  * JA: RUN_CMD / dispatch が返すセッション patch（UI で適用）。
  */
 
-import { deriveDefaultSessionName } from "../../session/session-summary"
+import { deriveDefaultSessionName } from "../../session/session-summary.ts"
 import {
   appendLinesToSessionState,
   createEmptyTerminalSessionsState,
@@ -15,8 +15,8 @@ import {
   setSessionLinesState,
   switchSessionNextState,
   switchSessionPrevState
-} from "./session-state-ops"
-import type { TerminalSessionsStateV1 } from "./types"
+} from "./session-state-ops.ts"
+import type { TerminalSessionsStateV1 } from "./types.ts"
 
 export type SessionPatch =
   | { type: "appendLog"; sessionId: string; lines: string[] }
