@@ -33,6 +33,9 @@ public/background-services.js
 .nyc_output
 *.lcov
 *.cov
+playwright-report/
+test-results/
+blob-report/
 
 
 # --- TypeScript ---
@@ -57,6 +60,8 @@ lerna-debug.log*
 .env*.local
 !.env.example
 !.env.sample
+.secrets/
+secrets/
 
 
 # --- OS ---
@@ -75,11 +80,35 @@ Desktop.ini
 *.swo
 
 
-# --- Keys & certificates（署名・ストア・HTTPS）---
+# --- Keys & certificates（署名・ストア・HTTPS・SSH）---
+# Policy: do not publish key material by default (including *.pub).
+# If a key must be committed, document that exception explicitly in README (or equivalent).
 *.pem
 *.key
 *.p12
 *.pfx
+*.crt
+*.cer
+*.pub
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+
+
+# --- Credentials JSON（ストア提出・OAuth・クラウド。値は GitHub Secrets 等へ）---
+credentials.json
+client_secret*.json
+service-account*.json
+serviceAccount*.json
+*-credentials.json
+submit-keys.json
+store-credentials.json
+keys.json
+tokens.json
+google-services.json
+GoogleService-Info.plist
+.aws/
 
 
 # --- Rust / Cargo（wasm 含む。再現可能なビルドツリー）---
