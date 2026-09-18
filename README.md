@@ -4,6 +4,7 @@
 
 ## Table of contents
 
+- [Acknowledgements](#acknowledgements)
 - [Introduction](#introduction)
 - [🛠 Seed Project](#seed-project)
 - [📺 Demo Video](#demo-video)
@@ -49,6 +50,17 @@
 - [License](#license)
 - [Roadmap](#roadmap)
 - [日本語](#japanese)
+
+<a id="acknowledgements"></a>
+
+## Acknowledgements
+
+BMXt stands on the work of communities and tools that made keyboard-centric browsing and modern extension development possible.
+
+* Deep gratitude to the **Vim/Neovim community** for modal editing standards that remain unmatched, and to pioneers such as **[Vim](https://www.vim.org/)** and **[Vimium](https://github.com/philc/vimium)** for keyboard-first web navigation.
+* Special thanks to the open-source ecosystems powering this project: **React**, **TypeScript**, **Rust** and **WebAssembly**, **[WXT](https://wxt.dev/)** / **Vite**, and the broader web extension developer community.
+* Thanks also to the **[Chrome Web Store](https://chromewebstore.google.com/)** for providing a place to distribute the extension, and to **[Vivaldi](https://vivaldi.com/)** for making Chrome Web Store extensions usable directly on **Android**.
+* Thanks to **[Cursor](https://cursor.com/)** for serving as an amplifier that helps turn a developer’s ideals into working software.
 
 <a id="introduction"></a>
 
@@ -1350,6 +1362,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 
 ## 目次
 
+- [謝辞](#acknowledgements-ja)
 - [はじめに](#introduction-ja)
 - [🛠 シードプロジェクト](#seed-project-ja)
 - [📺 デモ動画](#demo-video-ja)
@@ -1394,6 +1407,17 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [ストア提出（参考）](#store-submission-ja)
 - [ライセンス](#license-ja)
 - [ロードマップ](#roadmap-ja)
+
+<a id="acknowledgements-ja"></a>
+
+## 謝辞
+
+BMXt は、キーボード中心のブラウジングと現代の拡張開発を可能にしてきたコミュニティとツールの上に立っています。
+
+* いまなお比類ないモーダル編集の標準を築いた **Vim/Neovim コミュニティ**、およびキーボード優先の Web 操作を切り拓いた **[Vim](https://www.vim.org/)** や **[Vimium](https://github.com/philc/vimium)** などに深く感謝します。
+* 本プロジェクトを支えるオープンソースのエコシステム — **React**、**TypeScript**、**Rust** と **WebAssembly**、**[WXT](https://wxt.dev/)** / **Vite**、そして Web 拡張の開発者コミュニティ — にも特別な謝意を表します。
+* 拡張機能の配布の場を提供してくださる **[Chrome ウェブストア](https://chromewebstore.google.com/)**、および同ストアの拡張機能を **Android** 上で直接利用可能にしている **[Vivaldi](https://vivaldi.com/)** にも感謝します。
+* 開発者の理想を実装へつなぐ増幅器として **[Cursor](https://cursor.com/)** にも感謝します。
 
 <a id="introduction-ja"></a>
 
