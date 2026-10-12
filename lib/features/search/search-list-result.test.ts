@@ -31,5 +31,24 @@ describe("buildSearchListResult", () => {
     assert.equal(result.records[0]!.fields.source, "notice")
     assert.match(result.records[0]!.display?.label ?? "", /no history matches/)
   })
+
+  it("serializes pageMatchesJson for picker detail / highlight round-trip", () => {
+    const entries: PickerEntry[] = [
+      {
+        id: "page-1",
+        source: "page",
+        title: "Doc",
+        url: "https://example.com/doc",
+        tabId: 4,
+        windowId: 1,
+        pageMatches: [{ lineNo: 3, snippet: "hello needle here", occurrence: 0, globalOccurrence: 0 }]
+      }
+    ]
+    const result = buildSearchListResult(entries, "needle")
+    assert.equal(result.records[0]!.fields.hitCount, 1)
+    assert.equal(result.records[0]!.fields.windowId, 1)
+    assert.equal(typeof result.records[0]!.fields.pageMatchesJson, "string")
+    assert.match(String(result.records[0]!.fields.pageMatchesJson), /hello needle here/)
+  })
 })
 
