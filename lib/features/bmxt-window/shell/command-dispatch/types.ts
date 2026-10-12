@@ -14,7 +14,7 @@ export type CommandDispatchDeps = {
   sessionOrderLength: number
   /** EN: Which UI document is running the command (`exit` closes popup vs hides float). */
   hostKind: BmxtHostKind
-  /** EN: Snapshot for host-blind `switch_window` (sessions + browse). */
+  /** EN: Snapshot for host-blind `switch_window` (sessions + browse + pickers). */
   getHostSnapshot: () => HostSwitchSnapshot
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   mode: "normal" | "isearch"

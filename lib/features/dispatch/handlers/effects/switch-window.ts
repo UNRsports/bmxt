@@ -1,6 +1,6 @@
 /**
- * EN: Move BMXt UI between popup window and in-page float (sessions + browse).
- * JA: ポップアップ窓とサイト上フロートの間でセッション／ブラウズを移動。
+ * EN: Move BMXt UI between popup window and in-page float (sessions + browse + pickers).
+ * JA: ポップアップ窓とサイト上フロートの間でセッション／ブラウズ／ピッカーを移動。
  */
 
 import type { ChromeEffect } from "../../effect-types"
@@ -9,6 +9,7 @@ import { effectT } from "../effect-i18n"
 import { isScriptablePageUrl, describeNonScriptableReason } from "../../../url/is-scriptable-page-url"
 import {
   appendLinesToHostSnapshot,
+  resolvePickersForHostSwitch,
   type HostSwitchSnapshot
 } from "../../../bmxt-float/host-switch-snapshot"
 import {
@@ -24,7 +25,10 @@ import {
   broadcastPopupHandoffReady,
   savePendingPopupHandoff
 } from "../../../bmxt-float/popup-pending-handoff"
-import { loadFloatPickersForTab } from "../../../bmxt-float/float-pickers-by-tab-storage"
+import {
+  loadFloatPickersForTab,
+  saveFloatPickersForTab
+} from "../../../bmxt-float/float-pickers-by-tab-storage"
 import { savePromptLaunchHostAsync } from "../../../bmxt-float/prompt-launch-host"
 
 type E = Extract<ChromeEffect, { kind: "switch_window" }>
@@ -46,6 +50,7 @@ function resolveSnapshot(ctx: DispatchChromeContext): HostSwitchSnapshot {
     return {
       sessions: snap.sessions,
       browse: snap.browse ?? createEmptyFloatBrowseState(),
+      pickersBySession: snap.pickersBySession ?? {},
       floatTabId: snap.floatTabId,
       hostUiFormFactor: snap.hostUiFormFactor
     }
@@ -53,6 +58,7 @@ function resolveSnapshot(ctx: DispatchChromeContext): HostSwitchSnapshot {
   return {
     sessions: emptySessionsFallback(),
     browse: createEmptyFloatBrowseState(),
+    pickersBySession: {},
     floatTabId: ctx.floatTabId,
     hostUiFormFactor: ctx.hostSnapshot?.hostUiFormFactor
   }
@@ -87,8 +93,10 @@ export async function applySwitchWindowEffect(
       movedLine
     ])
 
+    const pickers = resolvePickersForHostSwitch(ctx.hostSnapshot, null)
     await saveFloatTerminalSessionsForTab(tab.id, snapshot.sessions)
     await saveFloatBrowseStateForTab(tab.id, snapshot.browse)
+    await saveFloatPickersForTab(tab.id, pickers)
     await setFloatDesiredVisibleOnTab(tab.id, true)
 
     const shown = await ctx.showFloatOnTab?.(tab.id)
@@ -114,12 +122,13 @@ export async function applySwitchWindowEffect(
     movedLine
   ])
 
-  const pickersFromFloat =
+  const storagePickers =
     typeof floatTabId === "number" ? await loadFloatPickersForTab(floatTabId) : null
+  const pickers = resolvePickersForHostSwitch(ctx.hostSnapshot, storagePickers)
   await savePendingPopupHandoff({
     sessions: snapshot.sessions,
     browse: snapshot.browse,
-    pickersBySession: pickersFromFloat ?? {}
+    pickersBySession: pickers
   })
   await savePromptLaunchHostAsync("popup")
   await ctx.openOrFocusPopupAfterSwitch?.()

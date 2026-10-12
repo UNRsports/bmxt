@@ -169,7 +169,8 @@ export function useProcessUiPersistence(
       applyBrowsePayload(retained)
     }
     const retainedPickers = takeRetainedPopupPickersForUi()
-    if (retainedPickers !== null && Object.keys(retainedPickers).length > 0) {
+    // EN: null = no handoff; {} = handoff with all columns closed (replace prior UI).
+    if (retainedPickers !== null) {
       setPickersBySession(retainedPickers)
     }
     persistReadyRef.current = false
@@ -187,12 +188,14 @@ export function useProcessUiPersistence(
         return
       }
       void takePendingPopupHandoffOnce().then((payload) => {
-        if (payload !== null) {
-          applyBrowsePayload(payload.browse)
-          if (Object.keys(payload.pickersBySession ?? {}).length > 0) {
-            setPickersBySession(payload.pickersBySession)
-          }
+        if (payload === null) {
+          return
         }
+        applyBrowsePayload(payload.browse)
+        setPickersBySession(payload.pickersBySession ?? {})
+        // EN: Clear mount-path retain so a later remount does not re-apply this handoff.
+        takeRetainedPopupBrowseForUi()
+        takeRetainedPopupPickersForUi()
       })
     }
     chrome.runtime.onMessage.addListener(onRuntimeMessage)

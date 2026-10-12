@@ -43,7 +43,7 @@ export type DispatchChromeContext = {
   uiLocale?: UiLocale
   /** EN: Which UI host issued RUN_CMD (`switchwindow` / `exit`). */
   hostKind?: BmxtHostKind
-  /** EN: Sessions/browse snapshot from the UI (host-blind; used by `switch_window`). */
+  /** EN: Sessions/browse/pickers snapshot from the UI (host-blind; used by `switch_window`). */
   hostSnapshot?: HostSwitchSnapshot
   /** EN: Float iframe hosting tab id. */
   floatTabId?: number

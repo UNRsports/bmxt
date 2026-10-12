@@ -1,9 +1,10 @@
 /**
- * EN: Sessions + browse payload carried on RUN_CMD for host migration (`switchwindow`).
- * JA: `switchwindow` 用に RUN_CMD へ載せるセッション／ブラウズ・スナップショット。
+ * EN: Sessions + browse + pickers payload carried on RUN_CMD for host migration (`switchwindow`).
+ * JA: `switchwindow` 用に RUN_CMD へ載せるセッション／ブラウズ／ピッカー・スナップショット。
  */
 
 import type { TerminalSessionsStateV1 } from "../bmxt-window/terminal-sessions/types.ts"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers.ts"
 import { isTerminalSessionsStateV1 } from "./float-terminal-session-storage.ts"
 import {
   createEmptyFloatBrowseState,
@@ -11,11 +12,18 @@ import {
   parseFloatBrowseState,
   type FloatBrowseStateV1
 } from "./float-browse-state-storage.ts"
+import { parseFloatPickersBySession } from "./float-pickers-by-tab-storage.ts"
 import type { HostUiFormFactor } from "../setting/host-ui-mode.ts"
 
 export type HostSwitchSnapshot = {
   sessions: TerminalSessionsStateV1
   browse: FloatBrowseStateV1
+  /**
+   * EN: Live open picker columns (incl. tab highlight via `initialHi`).
+   * JA: 開いているピッカー列（タブ列ハイライトは `initialHi`）。
+   * Optional on the wire for older RUN_CMD payloads.
+   */
+  pickersBySession?: SessionPickersByLeaf
   /** EN: Float host tab id when the command runs in the float iframe. */
   floatTabId?: number
   /** EN: Effective host UI form factor (blocks popup→float on mobile). */
@@ -32,6 +40,11 @@ export function isHostSwitchSnapshot(value: unknown): value is HostSwitchSnapsho
   }
   if (!isFloatBrowseStateV1(o.browse)) {
     return false
+  }
+  if (o.pickersBySession !== undefined) {
+    if (parseFloatPickersBySession(o.pickersBySession) === null) {
+      return false
+    }
   }
   if (o.floatTabId !== undefined) {
     if (typeof o.floatTabId !== "number" || !Number.isInteger(o.floatTabId) || o.floatTabId < 0) {
@@ -54,6 +67,10 @@ export function parseHostSwitchSnapshot(value: unknown): HostSwitchSnapshot | nu
   const out: HostSwitchSnapshot = {
     sessions: value.sessions,
     browse
+  }
+  // EN: Omit when absent so switch_window can fall back to float picker storage (legacy).
+  if (value.pickersBySession !== undefined) {
+    out.pickersBySession = parseFloatPickersBySession(value.pickersBySession) ?? {}
   }
   if (typeof value.floatTabId === "number") {
     out.floatTabId = value.floatTabId
@@ -86,4 +103,17 @@ export function appendLinesToHostSnapshot(
       }
     }
   }
+}
+
+/**
+ * EN: Prefer live RUN_CMD pickers; use float storage only for legacy payloads without the field.
+ */
+export function resolvePickersForHostSwitch(
+  hostSnapshot: HostSwitchSnapshot | undefined,
+  storageFallback: SessionPickersByLeaf | null | undefined
+): SessionPickersByLeaf {
+  if (hostSnapshot?.pickersBySession !== undefined) {
+    return hostSnapshot.pickersBySession
+  }
+  return storageFallback ?? {}
 }

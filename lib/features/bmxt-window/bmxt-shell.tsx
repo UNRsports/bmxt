@@ -1048,6 +1048,8 @@ export function BmxtShell({
         detailBarIdByLeaf: { ...detailBarIdByLeaf },
         modeToolbarOrderByLeaf: { ...modeToolbarOrderByLeaf }
       },
+      // EN: Live pickers (tab `initialHi` / marks) so switchwindow does not rely on async storage.
+      pickersBySession: getFloatPickersSnapshot?.() ?? {},
       hostUiFormFactor
     }
     if (typeof floatTabId === "number" && Number.isInteger(floatTabId) && floatTabId >= 0) {
@@ -1058,6 +1060,7 @@ export function BmxtShell({
     activeSessionId,
     detailBarIdByLeaf,
     floatTabId,
+    getFloatPickersSnapshot,
     hostUiFormFactor,
     modeToolbarOrderByLeaf,
     navActive,
