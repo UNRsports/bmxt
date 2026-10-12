@@ -24,7 +24,8 @@ export function projectTabPickerEngineToParentState(
   return {
     rows: state.rows,
     showUrl: state.showUrl,
-    initialHi: state.initialHi,
+    // EN: Persist the live highlight so tab-activate float handoff restores browse position.
+    initialHi: state.hi,
     variant: state.variant,
     interactive: interactiveSnapshotFromEngineState(state)
   }

@@ -16,6 +16,7 @@ import type {
   SelectKind
 } from "./tab-picker-overlay-types"
 import { useTabPickerPlainExtensions } from "./use-tab-picker-plain-extensions"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -91,7 +92,10 @@ export function useTabPickerKeyboard({
   isWindowExpanded,
   isGroupExpanded,
   altKeyHeldRef,
-  onExitToDetailBar
+  onExitToDetailBar,
+  floatHostTabId = null,
+  flushFloatPersist,
+  getFloatPickersSnapshot
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -164,6 +168,9 @@ export function useTabPickerKeyboard({
   isGroupExpanded: (windowId: number, groupId: number | null) => boolean
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
+  floatHostTabId?: number | null
+  flushFloatPersist?: () => Promise<void>
+  getFloatPickersSnapshot?: () => SessionPickersByLeaf
 }) {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
@@ -242,7 +249,10 @@ export function useTabPickerKeyboard({
     isWindowExpanded,
     isGroupExpanded,
     altKeyHeldRef,
-    onExitToDetailBar
+    onExitToDetailBar,
+    floatHostTabId,
+    flushFloatPersist,
+    getFloatPickersSnapshot
   })
 
   const { onInputKeyDown } = usePlainPickerKeyboard({

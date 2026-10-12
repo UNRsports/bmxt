@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useRef, type MutableRefObject } from "react"
+import { useCallback, useRef, type MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
-import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
+import {
+  activateTabInBackground,
+  type ActivateTabInBackgroundOptions
+} from "../side-picker/preview/activate-tab-in-background"
+import { requestFloatActivateHandoff } from "../bmxt-float/float-activate-handoff"
 import { markPickerSelfTabActivation } from "../side-picker/preview/picker-self-tab-activation"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 
@@ -18,7 +22,10 @@ export function useSyncChromeTabStripPreview({
   altKeyHeldRef,
   mirrorHiPendingRef,
   isHostPaneFocused,
-  altPreviewTick = 0
+  altPreviewTick = 0,
+  floatHostTabId = null,
+  flushFloatPersist,
+  getFloatPickersSnapshot
 }: {
   hi: number
   visibleRowIndices: number[]
@@ -34,11 +41,28 @@ export function useSyncChromeTabStripPreview({
   isHostPaneFocused: boolean
   /** EN: Bumped on Alt keydown in manual mode to re-run preview without moving hi. */
   altPreviewTick?: number
+  floatHostTabId?: number | null
+  flushFloatPersist?: () => Promise<void>
+  getFloatPickersSnapshot?: ActivateTabInBackgroundOptions["getFloatPickersSnapshot"]
 }) {
   const rowsRef = useRef(rows)
   rowsRef.current = rows
   const appliedActiveTabIdRef = useRef<number | null>(null)
   const previewGenerationRef = useRef(0)
+  const floatHostTabIdRef = useRef(floatHostTabId)
+  floatHostTabIdRef.current = floatHostTabId
+  const flushFloatPersistRef = useRef(flushFloatPersist)
+  flushFloatPersistRef.current = flushFloatPersist
+  const getFloatPickersSnapshotRef = useRef(getFloatPickersSnapshot)
+  getFloatPickersSnapshotRef.current = getFloatPickersSnapshot
+
+  const activateOpts = useCallback((): ActivateTabInBackgroundOptions => {
+    return {
+      floatHostTabId: floatHostTabIdRef.current,
+      flushFloatPersist: flushFloatPersistRef.current,
+      getFloatPickersSnapshot: getFloatPickersSnapshotRef.current
+    }
+  }, [])
 
   const syncChromeTabStripPreview = useCallback(
     async (rowIndex: number, expectedTabId: number, generation: number) => {
@@ -80,7 +104,7 @@ export function useSyncChromeTabStripPreview({
           if (!isCurrent()) {
             return
           }
-          if (!(await activateTabInBackground(row.tabId))) {
+          if (!(await activateTabInBackground(row.tabId, activateOpts()))) {
             return
           }
           if (!isCurrent()) {
@@ -99,7 +123,7 @@ export function useSyncChromeTabStripPreview({
           if (!isCurrent()) {
             return
           }
-          if (!(await activateTabInBackground(row.tabId))) {
+          if (!(await activateTabInBackground(row.tabId, activateOpts()))) {
             return
           }
           if (!isCurrent()) {
@@ -122,7 +146,7 @@ export function useSyncChromeTabStripPreview({
           if (!isCurrent()) {
             return
           }
-          if (!(await activateTabInBackground(row.tabId))) {
+          if (!(await activateTabInBackground(row.tabId, activateOpts()))) {
             return
           }
           if (!isCurrent()) {
@@ -141,6 +165,15 @@ export function useSyncChromeTabStripPreview({
         if (!isCurrent()) {
           return
         }
+        await requestFloatActivateHandoff({
+          fromTabId: floatHostTabIdRef.current,
+          toTabId: row.tabId,
+          flushPersist: flushFloatPersistRef.current,
+          pickersBySession: getFloatPickersSnapshotRef.current?.()
+        })
+        if (!isCurrent()) {
+          return
+        }
         markPickerSelfTabActivation(row.tabId)
         await chrome.tabs.highlight({ windowId: winId, tabs: tabsArg })
         if (!isCurrent()) {
@@ -151,7 +184,7 @@ export function useSyncChromeTabStripPreview({
         /* tab/window may have closed */
       }
     },
-    [markedKind, markedTabIds, setActiveTabId, tabIdToWindowId]
+    [activateOpts, markedKind, markedTabIds, setActiveTabId, tabIdToWindowId]
   )
 
   const rowIndex = visibleRowIndices[hi]

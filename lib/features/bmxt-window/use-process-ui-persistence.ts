@@ -10,6 +10,11 @@ import {
   patchFloatBrowseStateForTab
 } from "../bmxt-float/float-browse-state-storage.ts"
 import {
+  clearFloatPickersForTab,
+  loadFloatPickersForTab,
+  saveFloatPickersForTab
+} from "../bmxt-float/float-pickers-by-tab-storage.ts"
+import {
   isPopupHandoffReadyMessage,
   takePendingPopupHandoffOnce,
   takeRetainedPopupBrowseForUi
@@ -132,12 +137,18 @@ export function useProcessUiPersistence(
         setProcessUiReady(true)
         return
       }
-      void loadFloatBrowseStateForTab(tabId).then((stored) => {
+      void Promise.all([
+        loadFloatBrowseStateForTab(tabId),
+        loadFloatPickersForTab(tabId)
+      ]).then(([stored, pickers]) => {
         if (cancelled) {
           return
         }
         if (stored !== null) {
           applyBrowsePayload(stored)
+        }
+        if (pickers !== null && Object.keys(pickers).length > 0) {
+          setPickersBySession(pickers)
         }
         persistReadyRef.current = true
         setProcessUiReady(true)
@@ -205,6 +216,17 @@ export function useProcessUiPersistence(
   ])
 
   useEffect(() => {
+    if (hostKind !== "float" || !processUiReady || !persistReadyRef.current) {
+      return
+    }
+    const tabId = floatTabIdRef.current
+    if (tabId === null) {
+      return
+    }
+    void saveFloatPickersForTab(tabId, pickersBySession)
+  }, [hostKind, pickersBySession, processUiReady])
+
+  useEffect(() => {
     const onRuntimeMessage: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
       message
     ) => {
@@ -219,6 +241,7 @@ export function useProcessUiPersistence(
         const tabId = floatTabIdRef.current
         if (hostKindRef.current === "float" && tabId !== null) {
           void clearFloatBrowseStateForTab(tabId)
+          void clearFloatPickersForTab(tabId)
         }
       }
     }
@@ -302,11 +325,13 @@ export function useProcessUiPersistence(
       detailBarIdByLeaf,
       modeToolbarOrderByLeaf
     })
+    await saveFloatPickersForTab(tabId, pickersBySession)
   }, [
     detailBarIdByLeaf,
     modeToolbarOrderByLeaf,
     navArmedByLeaf,
-    paneFocusByLeaf
+    paneFocusByLeaf,
+    pickersBySession
   ])
 
   return {

@@ -104,6 +104,12 @@ export const FLOAT_VISIBLE_TAB_IDS_KEY = "bmxt_float_visible_tab_ids_v1"
 export const FLOAT_BROWSE_STATE_BY_TAB_KEY = "bmxt_float_browse_state_by_tab_v1"
 
 /**
+ * EN: Per-tab float open picker columns (`SessionPickersByLeaf`) in `chrome.storage.session`.
+ * JA: タブ別フロートの開いているピッカー列（session ストレージ）。
+ */
+export const FLOAT_PICKERS_BY_TAB_KEY = "bmxt_float_pickers_by_tab_v1"
+
+/**
  * EN: Float sessions/browse waiting for a scriptable tab after close onto a non-scriptable page.
  * JA: 非スクリプト可能ページへ閉じたあとに、利用可能タブまで待つフロート引き継ぎ。
  */

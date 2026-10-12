@@ -176,6 +176,8 @@ type Props = {
   processUiReady?: boolean
   /** EN: Float — flush sessions/browse before `close` removes the host tab. */
   flushFloatPersist?: () => Promise<void>
+  /** EN: Live float pickers for tab-activate handoff (optional; flush also persists). */
+  getFloatPickersSnapshot?: () => import("../side-picker/session/session-pickers").SessionPickersByLeaf
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -225,6 +227,7 @@ export function BmxtShell({
   restoredNavActive = false,
   processUiReady = true,
   flushFloatPersist: flushFloatPersistProp,
+  getFloatPickersSnapshot,
   applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
@@ -1666,6 +1669,9 @@ export function BmxtShell({
           tabsPageActiveMode={tabsPageActiveMode}
           searchPageActiveMode={searchPageActiveMode}
           domPageActiveMode={domPageActiveMode}
+          floatHostTabId={hostKind === "float" ? floatTabId : null}
+          flushFloatPersist={flushFloatPersist}
+          getFloatPickersSnapshot={getFloatPickersSnapshot}
         />
       </div>
     </div>

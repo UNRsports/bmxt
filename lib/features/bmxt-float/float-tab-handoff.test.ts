@@ -30,6 +30,20 @@ describe("float-tab-handoff", () => {
         v: 1,
         payload: {
           sessions: sampleSessions(),
+          browse: createEmptyFloatBrowseState(),
+          pickersBySession: {}
+        }
+      }),
+      true
+    )
+  })
+
+  it("isFloatPendingHandoffV1 accepts legacy pending blobs without pickers", () => {
+    assert.equal(
+      isFloatPendingHandoffV1({
+        v: 1,
+        payload: {
+          sessions: sampleSessions(),
           browse: createEmptyFloatBrowseState()
         }
       }),

@@ -19,6 +19,7 @@ import { useUiSettings } from "../setting/use-ui-settings"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
 import {
   createTabPickerEngineFieldSetter,
   useTabPickerEngineState,
@@ -71,6 +72,9 @@ type Props = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
   onFocusTabIdChange?: (tabId: number | null) => void
+  floatHostTabId?: number | null
+  flushFloatPersist?: () => Promise<void>
+  getFloatPickersSnapshot?: () => SessionPickersByLeaf
 }
 
 export type TabPickerOverlayProps = Props
@@ -117,7 +121,10 @@ export function useTabPickerController({
   isHostPaneFocused,
   pickerInputRef,
   sessionId,
-  onFocusTabIdChange
+  onFocusTabIdChange,
+  floatHostTabId = null,
+  flushFloatPersist,
+  getFloatPickersSnapshot
 }: Props): TabPickerViewProps | null {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
@@ -375,7 +382,10 @@ export function useTabPickerController({
     altKeyHeldRef,
     mirrorHiPendingRef,
     isHostPaneFocused,
-    altPreviewTick
+    altPreviewTick,
+    floatHostTabId,
+    flushFloatPersist,
+    getFloatPickersSnapshot
   })
 
   useEffect(() => {
@@ -472,7 +482,10 @@ export function useTabPickerController({
       setNewTabUrl("")
       setBulkSubMode(null)
     },
-    onPickerHighlightCreatedTab
+    onPickerHighlightCreatedTab,
+    floatHostTabId,
+    flushFloatPersist,
+    getFloatPickersSnapshot
   })
 
   const saveSnapshotsForPickerTabIds = useCallback(
@@ -586,7 +599,10 @@ export function useTabPickerController({
     isWindowExpanded,
     isGroupExpanded,
     altKeyHeldRef,
-    onExitToDetailBar
+    onExitToDetailBar,
+    floatHostTabId,
+    flushFloatPersist,
+    getFloatPickersSnapshot
   })
 
   const headLine = useMemo(

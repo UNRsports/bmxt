@@ -32,9 +32,11 @@ import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
 import { resolvePickerExecutionTabIds } from "./picker-selected-tab-ids"
+import { requestFloatActivateHandoff } from "../bmxt-float/float-activate-handoff"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -67,6 +69,9 @@ export type TabPickerExecutionParams = {
   onNewTabUrlPanelDone?: () => void
   /** URL からタブ作成後、ピッカーでそのタブ行をハイライトする（refresh 前に呼ぶ） */
   onPickerHighlightCreatedTab?: (tabId: number) => void
+  floatHostTabId?: number | null
+  flushFloatPersist?: () => Promise<void>
+  getFloatPickersSnapshot?: () => SessionPickersByLeaf
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
@@ -101,7 +106,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     setFilterQuery,
     setBulkSubMode,
     onNewTabUrlPanelDone,
-    onPickerHighlightCreatedTab
+    onPickerHighlightCreatedTab,
+    floatHostTabId = null,
+    flushFloatPersist,
+    getFloatPickersSnapshot
   } = p
 
   const closeSearch = useCallback(() => {
@@ -130,11 +138,40 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           ? { windowId: plan.windowId }
           : { windowId: plan.windowId, groupId: plan.groupId })
     })
+    if (plan.kind === "activateTab" || plan.kind === "activateFromGroup") {
+      // EN: Handoff before focus so destination float mounts with sessions/pickers.
+      const destTabId =
+        plan.kind === "activateTab"
+          ? plan.tabId
+          : (
+              await chrome.tabs.query({ windowId: plan.windowId }).catch(() => [])
+            ).find((t) =>
+              plan.groupId === null
+                ? t.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE
+                : t.groupId === plan.groupId
+            )?.id
+      if (typeof destTabId === "number") {
+        await requestFloatActivateHandoff({
+          fromTabId: floatHostTabId,
+          toTabId: destTabId,
+          flushPersist: flushFloatPersist,
+          pickersBySession: getFloatPickersSnapshot?.()
+        })
+      }
+    }
     const activeId = await executePickerFocusPlan(plan)
     if (activeId !== null) {
       setActiveTabId(activeId)
     }
-  }, [hi, rows, setActiveTabId, visibleRowIndices])
+  }, [
+    floatHostTabId,
+    flushFloatPersist,
+    getFloatPickersSnapshot,
+    hi,
+    rows,
+    setActiveTabId,
+    visibleRowIndices
+  ])
 
   const executeBulkClose = useCallback(async () => {
     try {

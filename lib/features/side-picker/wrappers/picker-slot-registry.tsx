@@ -67,6 +67,15 @@ export type PickerColumnHostContext = {
   searchLoadingProgressLines?: readonly string[]
   /** EN: Cancel an in-flight `search -list` page scan (Ctrl+C while search picker focused). */
   onCancelSearchInFlight?: () => void
+  /**
+   * EN: When float host, tab id hosting the float — browse/auto activation handoffs the float here.
+   * JA: フロートホスト時のタブ ID。browse／auto 活性化でフロートをこのタブから引き継ぐ。
+   */
+  floatHostTabId?: number | null
+  /** EN: Flush float sessions/browse/pickers before activate handoff. */
+  flushFloatPersist?: () => Promise<void>
+  /** EN: Live pickers snapshot for activate handoff (optional; flush also persists). */
+  getFloatPickersSnapshot?: () => import("../session/session-pickers").SessionPickersByLeaf
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -86,6 +95,9 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           pickerInputRef={ctx.tabPickerInputRef}
           sessionId={ctx.sessionId}
           onFocusTabIdChange={ctx.onTabsPickerFocusTabId}
+          floatHostTabId={ctx.floatHostTabId}
+          flushFloatPersist={ctx.flushFloatPersist}
+          getFloatPickersSnapshot={ctx.getFloatPickersSnapshot}
         />
       </PickerPanelHost>
     ) : null,

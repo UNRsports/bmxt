@@ -6,6 +6,7 @@
 import { FLOAT_PENDING_HANDOFF_KEY, MAX_SESSION_LOG_LINES } from "../extension-storage/keys.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
 import type { TerminalSessionsStateV1 } from "../bmxt-window/terminal-sessions/types.ts"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers.ts"
 import {
   createEmptyFloatBrowseState,
   isFloatBrowseStateV1,
@@ -13,6 +14,11 @@ import {
   saveFloatBrowseStateForTab,
   type FloatBrowseStateV1
 } from "./float-browse-state-storage.ts"
+import {
+  loadFloatPickersForTab,
+  parseFloatPickersBySession,
+  saveFloatPickersForTab
+} from "./float-pickers-by-tab-storage.ts"
 import {
   isTerminalSessionsStateV1,
   loadFloatTerminalSessionsForTab,
@@ -27,6 +33,7 @@ import {
 export type FloatTabHandoffPayload = {
   sessions: TerminalSessionsStateV1
   browse: FloatBrowseStateV1
+  pickersBySession: SessionPickersByLeaf
 }
 
 export type FloatPendingHandoffV1 = {
@@ -60,7 +67,26 @@ export function isFloatPendingHandoffV1(value: unknown): value is FloatPendingHa
   if (!isFloatBrowseStateV1(payload.browse)) {
     return false
   }
+  // EN: pickersBySession is optional for backward-compatible pending blobs.
+  if (
+    payload.pickersBySession !== undefined &&
+    parseFloatPickersBySession(payload.pickersBySession) === null
+  ) {
+    return false
+  }
   return true
+}
+
+function normalizeHandoffPayload(raw: {
+  sessions: TerminalSessionsStateV1
+  browse: FloatBrowseStateV1
+  pickersBySession?: unknown
+}): FloatTabHandoffPayload {
+  return {
+    sessions: raw.sessions,
+    browse: raw.browse,
+    pickersBySession: parseFloatPickersBySession(raw.pickersBySession) ?? {}
+  }
 }
 
 export function appendHandoffLogLines(
@@ -95,12 +121,19 @@ export async function takeFloatHandoffFromTab(
   const desired = isFloatDesiredVisibleOnTab(tabId)
   const sessions = await loadFloatTerminalSessionsForTab(tabId)
   const browse = await loadFloatBrowseStateForTab(tabId)
-  if (!desired && sessions === null && browse === null) {
+  const pickersBySession = (await loadFloatPickersForTab(tabId)) ?? {}
+  if (
+    !desired &&
+    sessions === null &&
+    browse === null &&
+    Object.keys(pickersBySession).length === 0
+  ) {
     return null
   }
   return {
     sessions: sessions ?? emptySessionsFallback(),
-    browse: browse ?? createEmptyFloatBrowseState()
+    browse: browse ?? createEmptyFloatBrowseState(),
+    pickersBySession
   }
 }
 
@@ -111,7 +144,10 @@ export async function loadPendingFloatHandoff(): Promise<FloatPendingHandoffV1 |
     if (!isFloatPendingHandoffV1(value)) {
       return null
     }
-    return value
+    return {
+      v: 1,
+      payload: normalizeHandoffPayload(value.payload)
+    }
   } catch {
     return null
   }
@@ -153,8 +189,10 @@ export async function placeFloatHandoffOnTab(
     await savePendingFloatHandoff(payload)
     return "pending"
   }
-  await saveFloatTerminalSessionsForTab(destTabId, payload.sessions)
-  await saveFloatBrowseStateForTab(destTabId, payload.browse)
+  const normalized = normalizeHandoffPayload(payload)
+  await saveFloatTerminalSessionsForTab(destTabId, normalized.sessions)
+  await saveFloatBrowseStateForTab(destTabId, normalized.browse)
+  await saveFloatPickersForTab(destTabId, normalized.pickersBySession)
   await setFloatDesiredVisibleOnTab(destTabId, true)
   await clearPendingFloatHandoff()
   await showFloat(destTabId)
@@ -179,8 +217,10 @@ export async function tryDeliverPendingFloatHandoff(
   if (!pending) {
     return false
   }
-  await saveFloatTerminalSessionsForTab(tabId, pending.payload.sessions)
-  await saveFloatBrowseStateForTab(tabId, pending.payload.browse)
+  const normalized = normalizeHandoffPayload(pending.payload)
+  await saveFloatTerminalSessionsForTab(tabId, normalized.sessions)
+  await saveFloatBrowseStateForTab(tabId, normalized.browse)
+  await saveFloatPickersForTab(tabId, normalized.pickersBySession)
   await setFloatDesiredVisibleOnTab(tabId, true)
   await clearPendingFloatHandoff()
   await showFloat(tabId)

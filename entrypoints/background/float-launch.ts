@@ -7,10 +7,18 @@ import { LAST_NORMAL_WINDOW_KEY } from "../../lib/features/extension-storage/key
 import { clearFloatTerminalSessionsForTab } from "../../lib/features/bmxt-float/float-terminal-session-storage"
 import { clearFloatBrowseStateForTab } from "../../lib/features/bmxt-float/float-browse-state-storage"
 import {
+  clearFloatPickersForTab,
+  parseFloatPickersBySession
+} from "../../lib/features/bmxt-float/float-pickers-by-tab-storage"
+import {
   sendFloatHostAction,
   showBmxtFloatOnTabAsync
 } from "../../lib/features/bmxt-float/float-host-control"
 import { tryDeliverPendingFloatHandoff } from "../../lib/features/bmxt-float/float-tab-handoff"
+import {
+  isBmxtFloatActivateHandoffMessage,
+  runFloatActivateHandoff
+} from "../../lib/features/bmxt-float/float-activate-handoff"
 import {
   BMXT_FLOAT_GEOMETRY_MESSAGE_TYPE,
   isBmxtFloatGeometryNudgeMessage,
@@ -95,6 +103,7 @@ async function applyDesiredVisibility(
   if (!visible && clearSessions) {
     await clearFloatTerminalSessionsForTab(tabId)
     await clearFloatBrowseStateForTab(tabId)
+    await clearFloatPickersForTab(tabId)
   }
 }
 
@@ -181,6 +190,25 @@ export function setupFloatLaunch(
   })
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isBmxtFloatActivateHandoffMessage(message)) {
+      const livePickers = parseFloatPickersBySession(message.pickersBySession) ?? undefined
+      void runFloatActivateHandoff({
+        fromTabId: message.fromTabId,
+        toTabId: message.toTabId,
+        livePickers,
+        showFloat: showBmxtFloatOnTabAsync,
+        hideFloat: async (tabId) => {
+          await hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
+        }
+      }).then((result) => {
+        try {
+          sendResponse({ ok: true, result })
+        } catch {
+          /* port closed */
+        }
+      })
+      return true
+    }
     if (isBmxtFloatGeometryNudgeMessage(message)) {
       const tabId =
         typeof message.tabId === "number"
@@ -251,5 +279,6 @@ export function setupFloatLaunch(
     void clearFloatDesiredVisibleOnTab(tabId)
     void clearFloatTerminalSessionsForTab(tabId)
     void clearFloatBrowseStateForTab(tabId)
+    void clearFloatPickersForTab(tabId)
   })
 }

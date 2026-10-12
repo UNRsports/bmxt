@@ -31,7 +31,8 @@ export async function applyCloseCurrentTabEffect(
   if (taken) {
     handoff = {
       sessions: appendHandoffLogLines(taken.sessions, ctx.commandSessionId, [doneLine]),
-      browse: taken.browse
+      browse: taken.browse,
+      pickersBySession: taken.pickersBySession
     }
   }
 

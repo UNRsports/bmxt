@@ -76,7 +76,8 @@ export async function loadPendingPopupHandoff(): Promise<PopupPendingHandoffV1 |
       v: 1,
       payload: {
         sessions: value.payload.sessions,
-        browse
+        browse,
+        pickersBySession: value.payload.pickersBySession ?? {}
       }
     }
   } catch {

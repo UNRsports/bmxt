@@ -115,7 +115,8 @@ export async function applySwitchWindowEffect(
 
   await savePendingPopupHandoff({
     sessions: snapshot.sessions,
-    browse: snapshot.browse
+    browse: snapshot.browse,
+    pickersBySession: {}
   })
   await savePromptLaunchHostAsync("popup")
   await ctx.openOrFocusPopupAfterSwitch?.()

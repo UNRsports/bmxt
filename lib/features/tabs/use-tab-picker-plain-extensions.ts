@@ -23,6 +23,8 @@ import {
 } from "./state-machine"
 import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
+import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -106,7 +108,10 @@ export function useTabPickerPlainExtensions({
   isWindowExpanded,
   isGroupExpanded,
   altKeyHeldRef,
-  onExitToDetailBar
+  onExitToDetailBar,
+  floatHostTabId = null,
+  flushFloatPersist,
+  getFloatPickersSnapshot
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -174,6 +179,9 @@ export function useTabPickerPlainExtensions({
   isGroupExpanded: (windowId: number, groupId: number | null) => boolean
   altKeyHeldRef: MutableRefObject<boolean>
   onExitToDetailBar?: () => void
+  floatHostTabId?: number | null
+  flushFloatPersist?: () => Promise<void>
+  getFloatPickersSnapshot?: () => SessionPickersByLeaf
 }): PlainPickerKeyboardExtensions {
   useTabPickerLiveFieldsRevision()
 
@@ -406,7 +414,11 @@ export function useTabPickerPlainExtensions({
           visibleLen: visibleRowIndices.length
         })
         if (decision.activateTabId !== null) {
-          void chrome.tabs.update(decision.activateTabId, { active: true }).catch(() => undefined)
+          void activateTabInBackground(decision.activateTabId, {
+            floatHostTabId,
+            flushFloatPersist,
+            getFloatPickersSnapshot
+          })
         }
         return true
       }

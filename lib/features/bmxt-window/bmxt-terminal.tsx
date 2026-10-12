@@ -90,6 +90,7 @@ type SessionPaneProps = {
   restoredNavActive: boolean
   processUiReady: boolean
   flushFloatPersist: () => Promise<void>
+  getFloatPickersSnapshot: () => import("../side-picker/session/session-pickers").SessionPickersByLeaf
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -132,6 +133,7 @@ const SessionPaneView = memo(function SessionPaneView({
   restoredNavActive,
   processUiReady,
   flushFloatPersist,
+  getFloatPickersSnapshot,
   applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
@@ -169,6 +171,7 @@ const SessionPaneView = memo(function SessionPaneView({
         restoredNavActive={restoredNavActive}
         processUiReady={processUiReady}
         flushFloatPersist={flushFloatPersist}
+        getFloatPickersSnapshot={getFloatPickersSnapshot}
         applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -318,6 +321,11 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     await flushFloatSessionsPersist()
     await flushFloatBrowsePersist()
   }, [flushFloatBrowsePersist, flushFloatSessionsPersist])
+
+  const getFloatPickersSnapshot = useCallback(
+    () => pickersBySessionRef.current,
+    []
+  )
 
   pickersBySessionRef.current = pickersBySession
   navArmedByLeafRef.current = navArmedByLeaf
@@ -535,6 +543,7 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     processUiReady,
     applyRunCmdPatches,
     flushFloatPersist,
+    getFloatPickersSnapshot,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,

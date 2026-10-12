@@ -2,6 +2,7 @@ import type { MutableRefObject } from "react"
 import { TabsUrlListPicker } from "../../tabs/tabs-url-list-picker"
 import { useTabPickerController } from "../../tabs/use-tab-picker-controller"
 import type { TabsPageActiveMode } from "../../tabs/page-active-setting"
+import type { SessionPickersByLeaf } from "../session/session-pickers"
 
 export type TabsPickerWrapperProps = {
   pageActiveMode?: TabsPageActiveMode
@@ -14,6 +15,9 @@ export type TabsPickerWrapperProps = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
   onFocusTabIdChange?: (tabId: number | null) => void
+  floatHostTabId?: number | null
+  flushFloatPersist?: () => Promise<void>
+  getFloatPickersSnapshot?: () => SessionPickersByLeaf
 }
 
 /** EN: Layer ③C — tabs picker subscribes to session engine (Chrome → store → UI). */
