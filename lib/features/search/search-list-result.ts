@@ -5,6 +5,10 @@ import {
   pickerEntrySearchSources,
   searchPickerSummaryLine
 } from "../side-picker/model/picker-entry.ts"
+import {
+  SEARCH_HIT_PAGE_MATCHES_FIELD,
+  serializeSearchPageMatchesField
+} from "./search-page-matches-list-field.ts"
 
 function noticeRecordsFromAdapterLines(
   adapterLines: readonly string[],
@@ -53,17 +57,25 @@ export function buildSearchListResult(
     const sourceLabel = sources.length > 0 ? sources.join(",") : entry.source
     const hitCount = entry.pageMatches?.length ?? 0
     const summary = searchPickerSummaryLine(entry)
+    const pageMatchesJson = serializeSearchPageMatchesField(entry.pageMatches)
+    const fields: ListRecord["fields"] = {
+      index: index + 1,
+      source: sourceLabel,
+      title: entry.title,
+      url: entry.url,
+      tabId: entry.tabId ?? null,
+      hitCount,
+      pattern
+    }
+    if (entry.windowId !== undefined && Number.isFinite(entry.windowId)) {
+      fields.windowId = entry.windowId
+    }
+    if (pageMatchesJson !== null) {
+      fields[SEARCH_HIT_PAGE_MATCHES_FIELD] = pageMatchesJson
+    }
     return {
       kind: "search.hit",
-      fields: {
-        index: index + 1,
-        source: sourceLabel,
-        title: entry.title,
-        url: entry.url,
-        tabId: entry.tabId ?? null,
-        hitCount,
-        pattern
-      },
+      fields,
       display: {
         label: summary,
         detail: entry.url

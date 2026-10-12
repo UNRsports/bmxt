@@ -1,5 +1,9 @@
 import type { ListResult } from "../../command-line/list-output/types.ts"
 import type { PickerEntry, PickerSource } from "../../side-picker/model/picker-entry.ts"
+import {
+  SEARCH_HIT_PAGE_MATCHES_FIELD,
+  parseSearchPageMatchesField
+} from "../../search/search-page-matches-list-field.ts"
 
 const KNOWN_SOURCES: readonly PickerSource[] = [
   "tab",
@@ -19,7 +23,17 @@ function parseSourceToken(raw: string): PickerSource {
   return "history"
 }
 
-/** EN: Build search picker entries from `search.hit` records (snapshot; no live pageMatches). */
+function parsePositiveId(raw: unknown): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
+    return raw
+  }
+  return undefined
+}
+
+/**
+ * EN: Build search picker entries from `search.hit` records.
+ * JA: `search.hit` からピッカー行を復元（`pageMatchesJson` があれば本文ヒットも復元）。
+ */
 export function pickerEntriesFromSearchListResult(listResult: ListResult): {
   entries: PickerEntry[]
   pattern: string
@@ -48,28 +62,33 @@ export function pickerEntriesFromSearchListResult(listResult: ListResult): {
       continue
     }
 
-    const sourceParts = sourceRaw.split(",").map((part) => part.trim()).filter((part) => part.length > 0)
+    const sourceParts = sourceRaw
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0)
     const sources = sourceParts.map(parseSourceToken)
     const primary = sources[0] ?? "history"
-    const tabIdRaw = fields.tabId
-    const tabId =
-      typeof tabIdRaw === "number" && Number.isFinite(tabIdRaw) && tabIdRaw > 0
-        ? tabIdRaw
-        : undefined
+    const tabId = parsePositiveId(fields.tabId)
+    const windowId = parsePositiveId(fields.windowId)
+    const pageMatches = parseSearchPageMatchesField(fields[SEARCH_HIT_PAGE_MATCHES_FIELD])
 
-    entries.push({
+    const entry: PickerEntry = {
       id: `search-${String(fields.index ?? entries.length + 1)}-${String(fields.url)}`,
       source: primary,
       sources: sources.length > 1 ? sources : undefined,
       title: String(fields.title ?? ""),
       url: String(fields.url ?? ""),
-      tabId
-    })
+      tabId,
+      windowId,
+      pageMatches
+    }
+    entries.push(entry)
   }
 
   return {
     entries,
     pattern,
-    emptyResultLines: entries.length === 0 && emptyResultLines.length > 0 ? emptyResultLines : undefined
+    emptyResultLines:
+      entries.length === 0 && emptyResultLines.length > 0 ? emptyResultLines : undefined
   }
 }
