@@ -70,6 +70,20 @@ export function useSyncChromeTabStripPreview({
     }
   }, [])
 
+  /** EN: Move float onto dest even when the browser tab is already active (host mismatch). */
+  const ensureFloatHandoffIfHostMismatch = useCallback(async (destTabId: number) => {
+    const hostId = floatHostTabIdRef.current
+    if (hostId == null || hostId === destTabId) {
+      return
+    }
+    await requestFloatActivateHandoff({
+      fromTabId: hostId,
+      toTabId: destTabId,
+      flushPersist: flushFloatPersistRef.current,
+      pickersBySession: getFloatPickersSnapshotRef.current?.()
+    })
+  }, [])
+
   const syncChromeTabStripPreview = useCallback(
     async (rowIndex: number, expectedTabId: number, generation: number) => {
       const isCurrent = (): boolean => generation === previewGenerationRef.current
@@ -104,6 +118,10 @@ export function useSyncChromeTabStripPreview({
 
         if (markedInWin.length === 0) {
           if (targetTab.active) {
+            await ensureFloatHandoffIfHostMismatch(row.tabId)
+            if (!isCurrent()) {
+              return
+            }
             applyActiveTabId(row.tabId)
             return
           }
@@ -123,6 +141,10 @@ export function useSyncChromeTabStripPreview({
         const hiInMarked = markedInWin.includes(row.tabId)
         if (!hiInMarked) {
           if (targetTab.active) {
+            await ensureFloatHandoffIfHostMismatch(row.tabId)
+            if (!isCurrent()) {
+              return
+            }
             applyActiveTabId(row.tabId)
             return
           }
@@ -146,6 +168,10 @@ export function useSyncChromeTabStripPreview({
 
         if (indices.length === 0) {
           if (targetTab.active) {
+            await ensureFloatHandoffIfHostMismatch(row.tabId)
+            if (!isCurrent()) {
+              return
+            }
             applyActiveTabId(row.tabId)
             return
           }
@@ -201,7 +227,14 @@ export function useSyncChromeTabStripPreview({
         /* tab/window may have closed */
       }
     },
-    [activateOpts, markedKind, markedTabIds, setActiveTabId, tabIdToWindowId]
+    [
+      activateOpts,
+      ensureFloatHandoffIfHostMismatch,
+      markedKind,
+      markedTabIds,
+      setActiveTabId,
+      tabIdToWindowId
+    ]
   )
 
   const rowIndex = visibleRowIndices[hi]

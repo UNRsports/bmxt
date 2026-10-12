@@ -198,6 +198,8 @@ export async function placeFloatHandoffOnTab(
   await clearPendingFloatHandoff()
   const shown = await showFloat(destTabId)
   if (shown === false) {
+    // EN: Roll back dest desired so activate fallback → popup does not leave a ghost float.
+    await setFloatDesiredVisibleOnTab(destTabId, false)
     return "failed"
   }
   return "shown"

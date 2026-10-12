@@ -226,7 +226,9 @@ export function setupFloatLaunch(
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (isBmxtFloatActivateHandoffMessage(message)) {
-      const livePickers = parseFloatPickersBySession(message.pickersBySession) ?? undefined
+      // EN: Always treat UI activate messages as initiated (even with empty pickers) so
+      //     desired-visible loss after extension reload cannot drop the handoff.
+      const livePickers = parseFloatPickersBySession(message.pickersBySession) ?? {}
       void runFloatActivateHandoff({
         fromTabId: message.fromTabId,
         toTabId: message.toTabId,

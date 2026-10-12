@@ -67,7 +67,8 @@ describe("float-activate-handoff", () => {
       take: async () => samplePayload(),
       getTabUrl: async () => "https://example.com",
       place: async () => "shown",
-      hideSource: async () => undefined
+      hideSource: async () => undefined,
+      fallbackToPopup: async () => undefined
     })
     assert.equal(result, "same")
   })
@@ -92,12 +93,18 @@ describe("float-activate-handoff", () => {
         events.push(`url:${tabId}`)
         return "https://dest.example"
       },
+      prepareDest: async (tabId) => {
+        events.push(`prepare:${tabId}`)
+      },
       place: async (_p, dest, url) => {
         events.push(`place:${dest}:${url ?? ""}`)
         return "shown"
       },
       hideSource: async (tabId) => {
         events.push(`hide:${tabId}`)
+      },
+      fallbackToPopup: async () => {
+        events.push("popup")
       }
     })
     assert.equal(result, "shown")
@@ -105,6 +112,7 @@ describe("float-activate-handoff", () => {
       "hydrate",
       "writePickers:10:s1",
       "take:10",
+      "prepare:20",
       "url:20",
       "place:20:https://dest.example",
       "hide:10"
@@ -141,5 +149,58 @@ describe("float-activate-handoff", () => {
       fallbackToPopup: async () => undefined
     })
     assert.equal(result, "switchedToPopup")
+  })
+
+  it("ui-initiated handoff proceeds when desired-visible is false", async () => {
+    const events: string[] = []
+    const result = await handoffFloatAcrossTabActivate(1, 2, {
+      hydrateVisible: async () => undefined,
+      isDesiredVisible: () => false,
+      livePickers: {},
+      take: async () => samplePayload(),
+      getTabUrl: async () => "https://chromewebstore.google.com/",
+      place: async () => "failed",
+      hideSource: async () => {
+        events.push("hide")
+      },
+      fallbackToPopup: async () => {
+        events.push("popup")
+      }
+    })
+    assert.equal(result, "switchedToPopup")
+    assert.deepEqual(events, ["popup", "hide"])
+  })
+
+  it("without livePickers, missing desired-visible is noop", async () => {
+    const result = await handoffFloatAcrossTabActivate(1, 2, {
+      hydrateVisible: async () => undefined,
+      isDesiredVisible: () => false,
+      take: async () => samplePayload(),
+      getTabUrl: async () => "https://example.com",
+      place: async () => "shown",
+      hideSource: async () => undefined,
+      fallbackToPopup: async () => undefined
+    })
+    assert.equal(result, "noop")
+  })
+
+  it("ui-initiated with empty take still falls back to popup", async () => {
+    const events: string[] = []
+    const result = await handoffFloatAcrossTabActivate(1, 2, {
+      hydrateVisible: async () => undefined,
+      isDesiredVisible: () => false,
+      livePickers: { s1: { tabs: null, search: null, dom: null, setting: null } },
+      take: async () => null,
+      getTabUrl: async () => "https://chromewebstore.google.com/detail/x",
+      place: async () => "failed",
+      hideSource: async () => {
+        events.push("hide")
+      },
+      fallbackToPopup: async (payload) => {
+        events.push(`popup:${Object.keys(payload.pickersBySession).join(",")}`)
+      }
+    })
+    assert.equal(result, "switchedToPopup")
+    assert.deepEqual(events, ["popup:s1", "hide"])
   })
 })

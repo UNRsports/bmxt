@@ -4,7 +4,11 @@
  */
 
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers.ts"
+import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
 import { autoSwitchFloatToPopup } from "./float-auto-host-switch.ts"
+import {
+  createEmptyFloatBrowseState
+} from "./float-browse-state-storage.ts"
 import {
   placeFloatHandoffOnTab,
   takeFloatHandoffFromTab,
@@ -15,6 +19,18 @@ import {
   hydrateFloatVisibleTabs,
   isFloatDesiredVisibleOnTab
 } from "./float-visible-tabs.ts"
+import type { TerminalSessionsStateV1 } from "../bmxt-window/terminal-sessions/types.ts"
+
+function emptySessionsForActivateHandoff(): TerminalSessionsStateV1 {
+  const id = `activate_${Date.now()}`
+  return {
+    v: 2,
+    order: [id],
+    activeId: id,
+    logsById: { [id]: [] },
+    namesById: {}
+  }
+}
 
 export type FloatActivateHandoffResult =
   | "same"
@@ -66,6 +82,7 @@ export function isBmxtFloatActivateHandoffMessage(
 
 /**
  * EN: Pure handoff steps (testable). Caller supplies Chrome/storage side effects.
+ * JA: 移動元フロートは必ず OFF。移動先で show できなければ popup 退避（二択）。
  */
 export async function handoffFloatAcrossTabActivate(
   fromTabId: number,
@@ -77,14 +94,19 @@ export async function handoffFloatAcrossTabActivate(
     livePickers?: SessionPickersByLeaf
     take: (tabId: number) => Promise<FloatTabHandoffPayload | null>
     getTabUrl: (tabId: number) => Promise<string | undefined>
+    /** EN: Wake discarded / background dest before inject+show (optional). */
+    prepareDest?: (tabId: number) => Promise<void>
     place: (
       payload: FloatTabHandoffPayload,
       destTabId: number,
       destUrl: string | undefined
     ) => Promise<"shown" | "pending" | "failed">
     hideSource: (tabId: number) => Promise<void>
-    /** EN: When place is pending/failed — move UI to popup instead of dropping the prompt. */
-    fallbackToPopup?: (payload: FloatTabHandoffPayload) => Promise<void>
+    /**
+     * EN: Required for activate path — place pending/failed must open popup (never drop UI).
+     * JA: 活性化引き継ぎでは必須。show 不可時は必ず popup（プロンプト消失禁止）。
+     */
+    fallbackToPopup: (payload: FloatTabHandoffPayload) => Promise<void>
   }
 ): Promise<FloatActivateHandoffResult> {
   if (fromTabId === toTabId) {
@@ -98,7 +120,11 @@ export async function handoffFloatAcrossTabActivate(
   }
 
   await deps.hydrateVisible()
-  if (!deps.isDesiredVisible(fromTabId)) {
+
+  // EN: UI-initiated handoff (livePickers) proceeds even if desired-visible was lost
+  //     after SW restart / extension reload; otherwise require the desired flag.
+  const uiInitiated = deps.livePickers !== undefined
+  if (!uiInitiated && !deps.isDesiredVisible(fromTabId)) {
     return "noop"
   }
 
@@ -106,27 +132,41 @@ export async function handoffFloatAcrossTabActivate(
     await deps.writePickers(fromTabId, deps.livePickers)
   }
 
-  const payload = await deps.take(fromTabId)
+  let payload = await deps.take(fromTabId)
   if (!payload) {
-    return "noop"
+    if (!uiInitiated) {
+      return "noop"
+    }
+    // EN: Extension reload may clear session storage while the float UI is still up —
+    //     still move to dest float or popup so the prompt never disappears.
+    payload = {
+      sessions: emptySessionsForActivateHandoff(),
+      browse: createEmptyFloatBrowseState(),
+      pickersBySession: deps.livePickers ?? {}
+    }
+  }
+
+  if (deps.prepareDest) {
+    await deps.prepareDest(toTabId)
   }
 
   const destUrl = await deps.getTabUrl(toTabId)
-  const result = await deps.place(payload, toTabId, destUrl)
+  let result: "shown" | "pending" | "failed"
+  try {
+    result = await deps.place(payload, toTabId, destUrl)
+  } catch {
+    result = "failed"
+  }
 
   if (result === "shown") {
     await deps.hideSource(fromTabId)
     return "shown"
   }
 
-  if (deps.fallbackToPopup) {
-    await deps.fallbackToPopup(payload)
-    await deps.hideSource(fromTabId)
-    return "switchedToPopup"
-  }
-
+  // EN: pending (non-scriptable park) and failed (inject/show) → popup; source always OFF.
+  await deps.fallbackToPopup(payload)
   await deps.hideSource(fromTabId)
-  return result === "pending" ? "pending" : "noop"
+  return "switchedToPopup"
 }
 
 let activateHandoffChain: Promise<void> = Promise.resolve()
@@ -140,6 +180,43 @@ export function enqueueFloatActivateHandoff(
     () => undefined
   )
   return run
+}
+
+/**
+ * EN: Wake a discarded dest tab so inject/show can run (does not steal focus from source).
+ * JA: discarded 先を起こして注入可能にする（移動元フォーカスは維持）。
+ */
+export async function prepareFloatHandoffDestTab(tabId: number): Promise<void> {
+  if (!Number.isInteger(tabId) || tabId < 0) {
+    return
+  }
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    if (tab.discarded === true) {
+      // EN: Reload discarded tabs in place — activate would tear down the source float UI mid-handoff.
+      await chrome.tabs.reload(tabId)
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          chrome.tabs.onUpdated.removeListener(onUpdated)
+          resolve()
+        }, 2500)
+        const onUpdated = (
+          updatedTabId: number,
+          changeInfo: { status?: string }
+        ): void => {
+          if (updatedTabId !== tabId || changeInfo.status !== "complete") {
+            return
+          }
+          clearTimeout(timeout)
+          chrome.tabs.onUpdated.removeListener(onUpdated)
+          resolve()
+        }
+        chrome.tabs.onUpdated.addListener(onUpdated)
+      })
+    }
+  } catch {
+    /* tab may be gone */
+  }
 }
 
 /**
@@ -171,20 +248,24 @@ export async function runFloatActivateHandoff(args: {
           return undefined
         }
       },
+      prepareDest: prepareFloatHandoffDestTab,
       place: async (payload, destTabId, destUrl) => {
+        // EN: Activate path is binary — never park float-pending on Web Store / chrome://.
+        //     (Tab-close handoff may still use placeFloatHandoffOnTab pending.)
+        if (!isScriptablePageUrl(destUrl)) {
+          return "failed"
+        }
         const placed = await placeFloatHandoffOnTab(
           payload,
           destTabId,
           destUrl,
           args.showFloat
         )
-        if (placed === "pending") {
-          return "pending"
+        if (placed === "shown") {
+          return "shown"
         }
-        if (placed === "failed") {
-          return "failed"
-        }
-        return "shown"
+        // EN: pending/dropped/failed → popup (do not leave UI on float-pending only).
+        return "failed"
       },
       hideSource: args.hideFloat,
       fallbackToPopup: async (payload) => {
@@ -228,7 +309,8 @@ export async function requestFloatActivateHandoff(args: {
       type: BMXT_FLOAT_ACTIVATE_HANDOFF_MESSAGE_TYPE,
       fromTabId,
       toTabId: args.toTabId,
-      pickersBySession: args.pickersBySession
+      // EN: Always send a pickers object so SW treats this as UI-initiated.
+      pickersBySession: args.pickersBySession ?? {}
     } satisfies BmxtFloatActivateHandoffMessage)) as
       | BmxtFloatActivateHandoffResponse
       | undefined
