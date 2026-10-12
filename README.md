@@ -231,7 +231,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). Case-insensitive substring (no regex in v1) |
-| `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel |
+| `search -list … | browse` | Open a search picker column with in-picker progress, **`→` detail** (body **`L{n}`** hits + in-page highlight), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
@@ -375,11 +375,13 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
 - **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**) as **plain** output via **`RUN_CMD`** → **`search_list`** effect (or use **`search -list … | browse`** for the picker column).
 - **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list … | browse`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open http(s) tab **live**. **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive.
+- **`| browse` carries body hits:** `ListResult` **`search.hit`** records keep per-line page matches in **`pageMatchesJson`** (plus `tabId` / `windowId` when known). Opening the picker restores them onto **`PickerEntry.pageMatches`** and re-enriches open tabs (`enrichSearchPickerEntriesFromOpenTabs`) so **`→` detail** and in-page preview have scroll targets. Plain terminal **`search -list`** lines stay summary-only; body hit lists are a **picker** concern.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
-- In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
+- In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits (page body **`L{n}: …`** rows, or title/url fallbacks); otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
+- **In-page highlight (open http(s) tabs):** with the **search** column focused, **`--auto`** page-active runs background preview on **`↑`/`↓`** (and on open); **`--manual`** uses **`Alt`** / **`Alt+↑`/`↓`**. Preview scrolls to the needle and paints hit / jump colors (CSS Highlight API, with DOM-wrap / overlay fallback; open Shadow DOM text is included). Colors: **`setting -list`** → **search-hit-highlight** / **search-jump-highlight**. Failed scrolls show a short picker notice. Reloading the page clears highlights until the next preview.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
-- **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
+- **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column (a second **`→`** on an open-tab row opens detail). Open-tab result rows show **favicons** when available.
 - Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) and may trigger the extension’s **optional host permission** prompt the first time.
 
 <a id="snapshot"></a>
@@ -676,7 +678,7 @@ Several picker columns may be open at once in the same pane. Session state is **
 
 **`PickerEntry` (search)**
 
-Search hits are normalized to **`PickerEntry`** (`url`, `source`, display line) before render. **`[history]`** rows: **`→`** opens the in-picker **open-target** tree; **`Enter`** on a results row dispatches **`open_url_new_tab`** (or in-tab jump when a page hit applies). Implementation: **`lib/features/search/search-open-destination.ts`**, **`open-search-picker-entry.ts`**, wired from **`bmxt-shell.tsx`**.
+Search hits are normalized to **`PickerEntry`** (`url`, `source`, optional **`pageMatches`**, display line) before render. **`pageMatches`** are the subdivided body (or title) hits used by **`→` detail**, **`n`/`N`**, and in-page scroll/highlight; **`search -list … | browse`** restores them from **`search.hit`** **`pageMatchesJson`**. **`[history]`** rows: **`→`** opens the in-picker **open-target** tree; **`Enter`** on a results row dispatches **`open_url_new_tab`** (or in-tab jump when a page hit applies). Implementation: **`lib/features/search/search-open-destination.ts`**, **`open-search-picker-entry.ts`**, **`search-page-matches-list-field.ts`**, **`picker/from-list-result/search-entries.ts`**, wired from **`openPickerFromListResult`**.
 
 **Focus and blue border**
 
@@ -1595,7 +1597,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。部分一致（v1 正規表現なし） |
-| `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
+| `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で本文 **`L{n}`** 詳細＋ページ内ハイライト、または **`[history]`** 開き先ツリー |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose` 用） |
 | `nav -enter` | 当該 BMXt ペインで **nav モード**を起動（**[Nav モード](#nav-mode-ja)**）。ページ上のオーバーレイは **Alt**（詳細バーまたはプロンプト）を押すまで表示しない |
@@ -1987,7 +1989,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **`PickerEntry`（search）**
 
-search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示行）に正規化します。**`[history]`** 行は **`→`** でピッカー内 **開き先** ツリー、結果行の **`Enter`** は **`open_url_new_tab`**（または page ジャンプ）。実装は **`lib/features/search/search-open-destination.ts`**、**`open-search-picker-entry.ts`**、配線は **`bmxt-shell.tsx`**。
+search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 任意の **`pageMatches`**, 表示行）に正規化します。**`pageMatches`** は **`→` 詳細**・**`n`/`N`**・ページ内スクロール／ハイライト用の細分化ヒットで、**`search -list … | browse`** 時に **`search.hit`** の **`pageMatchesJson`** から復元します。**`[history]`** 行は **`→`** でピッカー内 **開き先** ツリー、結果行の **`Enter`** は **`open_url_new_tab`**（または page ジャンプ）。実装は **`lib/features/search/search-open-destination.ts`**、**`open-search-picker-entry.ts`**、**`search-page-matches-list-field.ts`**、**`picker/from-list-result/search-entries.ts`**、配線は **`openPickerFromListResult`**。
 
 **フォーカスと青枠**
 
@@ -2112,11 +2114,13 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
 - **`search -list` のみ**（末尾スペースなし）+ **Enter** → **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** → 横断検索 **`--all`** を **プレーン**出力（**`RUN_CMD`** → **`search_list`**）。ピッカー列は **`search -list … | browse`**。
 - **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`**（プレーン）は **`search.hit`** 行を **`-list` レジストリ**で出力。**`search -list … | browse`** は search ピッカー列を開く。キャッシュ・live 読み取り・snapshot の詳細は英語節 **[`search`](#search-command)** と同様。
+- **`| browse` は本文ヒットを保持する:** `ListResult` の **`search.hit`** に **`pageMatchesJson`**（および既知なら `tabId` / `windowId`）を載せ、ピッカー開時に **`PickerEntry.pageMatches`** へ復元し、開タブは再 enrich する。これにより **`→` 詳細** とページ内プレビューのスクロール先が揃う。プレーン **`search -list`** のログ行は要約のみ（本文ヒット一覧はピッカー側）。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
-- 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
+- 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧**（本文 **`L{n}: …`** など）へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
+- **ページ内ハイライト（開き済み http(s) タブ）:** **search** 列にフォーカスがあるとき、**`--auto`** は **`↑`/`↓`**（および開列時）で背面プレビュー、**`--manual`** は **`Alt`** / **`Alt+↑`/`↓`**。needle へスクロールしヒット／ジャンプ色で強調（CSS Highlight API、DOM wrap / overlay フォールバック、open Shadow DOM 内テキストも含む）。色は **`setting -list`** の **search-hit-highlight** / **search-jump-highlight**。スクロール失敗時はピッカーに短い通知。ページ再読み込みで強調は消え、次のプレビューまで再発火が必要。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
-- **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
+- **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ（開き済み行ならもう一度 **`→`** で詳細）。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
 - パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
 
 <a id="snapshot-ja"></a>
