@@ -4,6 +4,7 @@
  */
 
 import { POPUP_PENDING_HANDOFF_KEY } from "../extension-storage/keys.ts"
+import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers.ts"
 import type { FloatTabHandoffPayload } from "./float-tab-handoff.ts"
 import { isTerminalSessionsStateV1 } from "./float-terminal-session-storage.ts"
 import {
@@ -11,6 +12,7 @@ import {
   parseFloatBrowseState,
   type FloatBrowseStateV1
 } from "./float-browse-state-storage.ts"
+import { parseFloatPickersBySession } from "./float-pickers-by-tab-storage.ts"
 
 export const POPUP_HANDOFF_READY_MESSAGE = "POPUP_HANDOFF_READY" as const
 
@@ -23,17 +25,28 @@ export type PopupHandoffReadyMessage = {
   type: typeof POPUP_HANDOFF_READY_MESSAGE
 }
 
-/** EN: Browse half of the last taken popup handoff (sessions hook consumes first). */
+/** EN: Browse + pickers from the last taken popup handoff (sessions hook consumes first). */
 let retainedPopupBrowse: FloatBrowseStateV1 | null = null
+let retainedPopupPickers: SessionPickersByLeaf | null = null
 
 export function retainPopupBrowseForUi(browse: FloatBrowseStateV1): void {
   retainedPopupBrowse = browse
+}
+
+export function retainPopupPickersForUi(pickers: SessionPickersByLeaf): void {
+  retainedPopupPickers = pickers
 }
 
 export function takeRetainedPopupBrowseForUi(): FloatBrowseStateV1 | null {
   const browse = retainedPopupBrowse
   retainedPopupBrowse = null
   return browse
+}
+
+export function takeRetainedPopupPickersForUi(): SessionPickersByLeaf | null {
+  const pickers = retainedPopupPickers
+  retainedPopupPickers = null
+  return pickers
 }
 
 export function isPopupPendingHandoffV1(value: unknown): value is PopupPendingHandoffV1 {
@@ -72,12 +85,14 @@ export async function loadPendingPopupHandoff(): Promise<PopupPendingHandoffV1 |
     if (browse === null) {
       return null
     }
+    const pickersBySession =
+      parseFloatPickersBySession(value.payload.pickersBySession) ?? {}
     return {
       v: 1,
       payload: {
         sessions: value.payload.sessions,
         browse,
-        pickersBySession: value.payload.pickersBySession ?? {}
+        pickersBySession
       }
     }
   } catch {
@@ -110,6 +125,7 @@ export async function takePendingPopupHandoff(): Promise<FloatTabHandoffPayload 
   }
   await clearPendingPopupHandoff()
   retainPopupBrowseForUi(pending.payload.browse)
+  retainPopupPickersForUi(pending.payload.pickersBySession ?? {})
   return pending.payload
 }
 

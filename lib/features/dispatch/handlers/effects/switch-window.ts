@@ -24,6 +24,7 @@ import {
   broadcastPopupHandoffReady,
   savePendingPopupHandoff
 } from "../../../bmxt-float/popup-pending-handoff"
+import { loadFloatPickersForTab } from "../../../bmxt-float/float-pickers-by-tab-storage"
 import { savePromptLaunchHostAsync } from "../../../bmxt-float/prompt-launch-host"
 
 type E = Extract<ChromeEffect, { kind: "switch_window" }>
@@ -113,10 +114,12 @@ export async function applySwitchWindowEffect(
     movedLine
   ])
 
+  const pickersFromFloat =
+    typeof floatTabId === "number" ? await loadFloatPickersForTab(floatTabId) : null
   await savePendingPopupHandoff({
     sessions: snapshot.sessions,
     browse: snapshot.browse,
-    pickersBySession: {}
+    pickersBySession: pickersFromFloat ?? {}
   })
   await savePromptLaunchHostAsync("popup")
   await ctx.openOrFocusPopupAfterSwitch?.()

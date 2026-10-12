@@ -17,7 +17,8 @@ import {
 import {
   isPopupHandoffReadyMessage,
   takePendingPopupHandoffOnce,
-  takeRetainedPopupBrowseForUi
+  takeRetainedPopupBrowseForUi,
+  takeRetainedPopupPickersForUi
 } from "../bmxt-float/popup-pending-handoff.ts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { pruneSessionPickersMap } from "../side-picker/session/session-pickers"
@@ -158,7 +159,7 @@ export function useProcessUiPersistence(
       }
     }
 
-    // popup: apply retained browse from switchwindow handoff after sessions hydrate
+    // popup: apply retained browse/pickers from switchwindow / auto host handoff
     if (!sessionsReady) {
       setProcessUiReady(false)
       return
@@ -166,6 +167,10 @@ export function useProcessUiPersistence(
     const retained = takeRetainedPopupBrowseForUi()
     if (retained !== null) {
       applyBrowsePayload(retained)
+    }
+    const retainedPickers = takeRetainedPopupPickersForUi()
+    if (retainedPickers !== null && Object.keys(retainedPickers).length > 0) {
+      setPickersBySession(retainedPickers)
     }
     persistReadyRef.current = false
     setProcessUiReady(true)
@@ -184,6 +189,9 @@ export function useProcessUiPersistence(
       void takePendingPopupHandoffOnce().then((payload) => {
         if (payload !== null) {
           applyBrowsePayload(payload.browse)
+          if (Object.keys(payload.pickersBySession ?? {}).length > 0) {
+            setPickersBySession(payload.pickersBySession)
+          }
         }
       })
     }
