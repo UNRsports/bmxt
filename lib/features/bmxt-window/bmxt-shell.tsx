@@ -1672,6 +1672,18 @@ export function BmxtShell({
           floatHostTabId={hostKind === "float" ? floatTabId : null}
           flushFloatPersist={flushFloatPersist}
           getFloatPickersSnapshot={getFloatPickersSnapshot}
+          getPopupReturnPayload={
+            hostKind === "popup"
+              ? () => {
+                  const snap = getHostSnapshot()
+                  return {
+                    sessions: snap.sessions,
+                    browse: snap.browse,
+                    pickersBySession: getFloatPickersSnapshot?.()
+                  }
+                }
+              : undefined
+          }
         />
       </div>
     </div>

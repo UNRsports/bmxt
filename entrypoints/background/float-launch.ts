@@ -16,9 +16,19 @@ import {
 } from "../../lib/features/bmxt-float/float-host-control"
 import { tryDeliverPendingFloatHandoff } from "../../lib/features/bmxt-float/float-tab-handoff"
 import {
+  enqueueFloatActivateHandoff,
   isBmxtFloatActivateHandoffMessage,
   runFloatActivateHandoff
 } from "../../lib/features/bmxt-float/float-activate-handoff"
+import {
+  autoSwitchPopupToFloat,
+  isBmxtPopupTryReturnToFloatMessage,
+  type AutoHostSwitchPayload
+} from "../../lib/features/bmxt-float/float-auto-host-switch"
+import {
+  createEmptyFloatBrowseState,
+  parseFloatBrowseState
+} from "../../lib/features/bmxt-float/float-browse-state-storage"
 import {
   BMXT_FLOAT_GEOMETRY_MESSAGE_TYPE,
   isBmxtFloatGeometryNudgeMessage,
@@ -30,8 +40,19 @@ import {
   isFloatDesiredVisibleOnTab,
   setFloatDesiredVisibleOnTab
 } from "../../lib/features/bmxt-float/float-visible-tabs"
+import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
+import { tEffect } from "../../lib/features/setting/i18n/ns/effect"
+import { getRunLocale } from "../../lib/features/setting/i18n/run-locale"
 import { isScriptablePageUrl } from "../../lib/features/url/is-scriptable-page-url"
-import { BMXT_PAGE, readBmxtWindowIdInMemory } from "./window-state"
+import { loadBackgroundServicesAsync } from "./load-background-services"
+import {
+  BMXT_PAGE,
+  clearBmxtWindowIdInMemory,
+  hydrateBmxtWindowIdFromStorage,
+  openOrFocusBmxtWindowAsync,
+  persistBmxtWindowId,
+  readBmxtWindowIdInMemory
+} from "./window-state"
 
 async function resolveActiveTabInWindow(
   windowId: number
@@ -165,15 +186,29 @@ async function reShowFloatIfDesired(tabId: number, url: string | undefined): Pro
   if (!isScriptablePageUrl(url)) {
     return
   }
-  await new Promise<void>((resolve) => {
-    setTimeout(() => resolve(), 120)
-  })
-  const visible = await sendFloatHostAction(tabId, "show")
-  if (visible === null) {
-    await new Promise<void>((resolve) => {
-      setTimeout(() => resolve(), 400)
-    })
-    await sendFloatHostAction(tabId, "show")
+  await showBmxtFloatOnTabAsync(tabId)
+}
+
+async function closePopupWindowAfterAutoSwitch(): Promise<void> {
+  await hydrateBmxtWindowIdFromStorage()
+  const wid = readBmxtWindowIdInMemory()
+  if (wid !== undefined) {
+    try {
+      await chrome.windows.remove(wid)
+    } catch {
+      /* already closed */
+    }
+    if (readBmxtWindowIdInMemory() === wid) {
+      clearBmxtWindowIdInMemory()
+      void persistBmxtWindowId(undefined)
+    }
+  }
+  broadcastSessionClearToUi("popup")
+  try {
+    const services = await loadBackgroundServicesAsync()
+    await services.removeAllTerminalSessionsFromStorageAsync()
+  } catch {
+    /* services bundle unavailable */
   }
 }
 
@@ -199,10 +234,41 @@ export function setupFloatLaunch(
         showFloat: showBmxtFloatOnTabAsync,
         hideFloat: async (tabId) => {
           await hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
-        }
+        },
+        openOrFocusPopup: openOrFocusBmxtWindowAsync,
+        popupFallbackLogLine: tEffect(
+          "effect.switchWindow.autoToPopup",
+          getRunLocale()
+        )
       }).then((result) => {
         try {
           sendResponse({ ok: true, result })
+        } catch {
+          /* port closed */
+        }
+      })
+      return true
+    }
+    if (isBmxtPopupTryReturnToFloatMessage(message)) {
+      const browse =
+        parseFloatBrowseState(message.browse) ?? createEmptyFloatBrowseState()
+      const pickersBySession =
+        parseFloatPickersBySession(message.pickersBySession) ?? {}
+      const payload: AutoHostSwitchPayload = {
+        sessions: message.sessions,
+        browse,
+        pickersBySession
+      }
+      void enqueueFloatActivateHandoff(async () => {
+        const switched = await autoSwitchPopupToFloat({
+          toTabId: message.toTabId,
+          payload,
+          showFloat: showBmxtFloatOnTabAsync,
+          closePopup: closePopupWindowAfterAutoSwitch,
+          logLine: tEffect("effect.switchWindow.autoToFloat", getRunLocale())
+        })
+        try {
+          sendResponse({ ok: true, switched })
         } catch {
           /* port closed */
         }

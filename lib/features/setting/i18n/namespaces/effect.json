@@ -146,5 +146,13 @@
   "effect.switchWindow.mobileBlocked": {
     "ja": "スマホモードではサイト上フロートへ切り替えできません。setting でホスト UI をデスクトップにするか、PC でお使いください。",
     "en": "Switching to the in-page float is not available in smartphone mode. Set host UI to desktop in settings, or use BMXt on a PC."
+  },
+  "effect.switchWindow.autoToPopup": {
+    "ja": "このタブではフロートを表示できないため、ポップアップ窓へ移しました",
+    "en": "moved to the popup window because the float could not be shown on this tab"
+  },
+  "effect.switchWindow.autoToFloat": {
+    "ja": "フロートを表示できるタブへ移したため、サイト上フロートに戻しました",
+    "en": "returned to the in-page float on a tab that can host it"
   }
 }

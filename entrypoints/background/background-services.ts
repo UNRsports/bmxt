@@ -33,6 +33,7 @@ import {
   readBmxtWindowIdInMemory
 } from "./window-state"
 import { hideBmxtFloatOnTabAsync } from "./float-launch"
+import { showBmxtFloatOnTabAsync } from "../../lib/features/bmxt-float/float-host-control"
 import {
   resolveExitHostAction,
   resolveHostKindForExit
@@ -40,8 +41,6 @@ import {
 import type { BmxtHostKind } from "../../lib/features/bmxt-window/bmxt-host-kind"
 import { parseHostSwitchSnapshot, type HostSwitchSnapshot } from "../../lib/features/bmxt-float/host-switch-snapshot"
 import { openOrFocusBmxtWindowAsync } from "./window-state"
-import { sendFloatHostAction } from "../../lib/features/bmxt-float/float-host-control"
-import { setFloatDesiredVisibleOnTab } from "../../lib/features/bmxt-float/float-visible-tabs"
 
 let lastFocusedNormalWindow: number | undefined
 let backgroundServicesRegistered = false
@@ -280,18 +279,7 @@ async function dispatch(
     floatTabId,
     senderTabId: senderTabId(sender),
     showFloatOnTab: async (tabId: number) => {
-      let visible = await sendFloatHostAction(tabId, "show")
-      if (visible !== true) {
-        await new Promise<void>((resolve) => {
-          setTimeout(() => resolve(), 200)
-        })
-        visible = await sendFloatHostAction(tabId, "show")
-      }
-      if (visible === true) {
-        await setFloatDesiredVisibleOnTab(tabId, true)
-        return true
-      }
-      return false
+      return showBmxtFloatOnTabAsync(tabId)
     },
     hideFloatAfterSwitch: async (tabId: number) => {
       await hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })

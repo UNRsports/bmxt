@@ -76,6 +76,12 @@ export type PickerColumnHostContext = {
   flushFloatPersist?: () => Promise<void>
   /** EN: Live pickers snapshot for activate handoff (optional; flush also persists). */
   getFloatPickersSnapshot?: () => import("../session/session-pickers").SessionPickersByLeaf
+  /** EN: Popup host — payload to try returning to float after tab activate. */
+  getPopupReturnPayload?: () => {
+    sessions: import("../../bmxt-window/terminal-sessions/types").TerminalSessionsStateV1
+    browse: import("../../bmxt-float/float-browse-state-storage").FloatBrowseStateV1
+    pickersBySession?: import("../session/session-pickers").SessionPickersByLeaf
+  }
 }
 
 type SlotRenderer = (ctx: PickerColumnHostContext) => ReactNode
@@ -98,6 +104,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           floatHostTabId={ctx.floatHostTabId}
           flushFloatPersist={ctx.flushFloatPersist}
           getFloatPickersSnapshot={ctx.getFloatPickersSnapshot}
+          getPopupReturnPayload={ctx.getPopupReturnPayload}
         />
       </PickerPanelHost>
     ) : null,

@@ -7,6 +7,7 @@ import {
   type ActivateTabInBackgroundOptions
 } from "../side-picker/preview/activate-tab-in-background"
 import { requestFloatActivateHandoff } from "../bmxt-float/float-activate-handoff"
+import { requestPopupTryReturnToFloat } from "../bmxt-float/request-popup-try-return-to-float"
 import { markPickerSelfTabActivation } from "../side-picker/preview/picker-self-tab-activation"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
 
@@ -25,7 +26,8 @@ export function useSyncChromeTabStripPreview({
   altPreviewTick = 0,
   floatHostTabId = null,
   flushFloatPersist,
-  getFloatPickersSnapshot
+  getFloatPickersSnapshot,
+  getPopupReturnPayload
 }: {
   hi: number
   visibleRowIndices: number[]
@@ -44,6 +46,7 @@ export function useSyncChromeTabStripPreview({
   floatHostTabId?: number | null
   flushFloatPersist?: () => Promise<void>
   getFloatPickersSnapshot?: ActivateTabInBackgroundOptions["getFloatPickersSnapshot"]
+  getPopupReturnPayload?: ActivateTabInBackgroundOptions["getPopupReturnPayload"]
 }) {
   const rowsRef = useRef(rows)
   rowsRef.current = rows
@@ -55,12 +58,15 @@ export function useSyncChromeTabStripPreview({
   flushFloatPersistRef.current = flushFloatPersist
   const getFloatPickersSnapshotRef = useRef(getFloatPickersSnapshot)
   getFloatPickersSnapshotRef.current = getFloatPickersSnapshot
+  const getPopupReturnPayloadRef = useRef(getPopupReturnPayload)
+  getPopupReturnPayloadRef.current = getPopupReturnPayload
 
   const activateOpts = useCallback((): ActivateTabInBackgroundOptions => {
     return {
       floatHostTabId: floatHostTabIdRef.current,
       flushFloatPersist: flushFloatPersistRef.current,
-      getFloatPickersSnapshot: getFloatPickersSnapshotRef.current
+      getFloatPickersSnapshot: getFloatPickersSnapshotRef.current,
+      getPopupReturnPayload: getPopupReturnPayloadRef.current
     }
   }, [])
 
@@ -165,12 +171,14 @@ export function useSyncChromeTabStripPreview({
         if (!isCurrent()) {
           return
         }
-        await requestFloatActivateHandoff({
-          fromTabId: floatHostTabIdRef.current,
-          toTabId: row.tabId,
-          flushPersist: flushFloatPersistRef.current,
-          pickersBySession: getFloatPickersSnapshotRef.current?.()
-        })
+        if (floatHostTabIdRef.current != null) {
+          await requestFloatActivateHandoff({
+            fromTabId: floatHostTabIdRef.current,
+            toTabId: row.tabId,
+            flushPersist: flushFloatPersistRef.current,
+            pickersBySession: getFloatPickersSnapshotRef.current?.()
+          })
+        }
         if (!isCurrent()) {
           return
         }
@@ -180,6 +188,15 @@ export function useSyncChromeTabStripPreview({
           return
         }
         applyActiveTabId(row.tabId)
+        if (floatHostTabIdRef.current == null && getPopupReturnPayloadRef.current) {
+          const payload = getPopupReturnPayloadRef.current()
+          void requestPopupTryReturnToFloat({
+            toTabId: row.tabId,
+            sessions: payload.sessions,
+            browse: payload.browse,
+            pickersBySession: payload.pickersBySession
+          })
+        }
       } catch {
         /* tab/window may have closed */
       }

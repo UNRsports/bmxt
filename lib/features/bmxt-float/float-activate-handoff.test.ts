@@ -72,23 +72,6 @@ describe("float-activate-handoff", () => {
     assert.equal(result, "same")
   })
 
-  it("handoffFloatAcrossTabActivate noops when float is not desired on source", async () => {
-    let placed = false
-    const result = await handoffFloatAcrossTabActivate(1, 2, {
-      hydrateVisible: async () => undefined,
-      isDesiredVisible: () => false,
-      take: async () => samplePayload(),
-      getTabUrl: async () => "https://example.com",
-      place: async () => {
-        placed = true
-        return "shown"
-      },
-      hideSource: async () => undefined
-    })
-    assert.equal(result, "noop")
-    assert.equal(placed, false)
-  })
-
   it("handoffFloatAcrossTabActivate places, then hides source", async () => {
     const events: string[] = []
     const payload = samplePayload()
@@ -128,15 +111,35 @@ describe("float-activate-handoff", () => {
     ])
   })
 
-  it("handoffFloatAcrossTabActivate returns pending when place parks the payload", async () => {
+  it("handoffFloatAcrossTabActivate falls back to popup when place fails", async () => {
+    const events: string[] = []
+    const result = await handoffFloatAcrossTabActivate(1, 2, {
+      hydrateVisible: async () => undefined,
+      isDesiredVisible: () => true,
+      take: async () => samplePayload(),
+      getTabUrl: async () => "https://dest.example",
+      place: async () => "failed",
+      hideSource: async () => {
+        events.push("hide")
+      },
+      fallbackToPopup: async () => {
+        events.push("popup")
+      }
+    })
+    assert.equal(result, "switchedToPopup")
+    assert.deepEqual(events, ["popup", "hide"])
+  })
+
+  it("handoffFloatAcrossTabActivate falls back to popup when place is pending", async () => {
     const result = await handoffFloatAcrossTabActivate(1, 2, {
       hydrateVisible: async () => undefined,
       isDesiredVisible: () => true,
       take: async () => samplePayload(),
       getTabUrl: async () => "chrome://settings",
       place: async () => "pending",
-      hideSource: async () => undefined
+      hideSource: async () => undefined,
+      fallbackToPopup: async () => undefined
     })
-    assert.equal(result, "pending")
+    assert.equal(result, "switchedToPopup")
   })
 })

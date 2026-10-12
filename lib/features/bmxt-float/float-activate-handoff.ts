@@ -4,6 +4,7 @@
  */
 
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers.ts"
+import { autoSwitchFloatToPopup } from "./float-auto-host-switch.ts"
 import {
   placeFloatHandoffOnTab,
   takeFloatHandoffFromTab,
@@ -15,7 +16,12 @@ import {
   isFloatDesiredVisibleOnTab
 } from "./float-visible-tabs.ts"
 
-export type FloatActivateHandoffResult = "same" | "noop" | "shown" | "pending"
+export type FloatActivateHandoffResult =
+  | "same"
+  | "noop"
+  | "shown"
+  | "pending"
+  | "switchedToPopup"
 
 export const BMXT_FLOAT_ACTIVATE_HANDOFF_MESSAGE_TYPE = "BMXT_FLOAT_ACTIVATE_HANDOFF" as const
 
@@ -75,8 +81,10 @@ export async function handoffFloatAcrossTabActivate(
       payload: FloatTabHandoffPayload,
       destTabId: number,
       destUrl: string | undefined
-    ) => Promise<"shown" | "pending">
+    ) => Promise<"shown" | "pending" | "failed">
     hideSource: (tabId: number) => Promise<void>
+    /** EN: When place is pending/failed — move UI to popup instead of dropping the prompt. */
+    fallbackToPopup?: (payload: FloatTabHandoffPayload) => Promise<void>
   }
 ): Promise<FloatActivateHandoffResult> {
   if (fromTabId === toTabId) {
@@ -105,8 +113,20 @@ export async function handoffFloatAcrossTabActivate(
 
   const destUrl = await deps.getTabUrl(toTabId)
   const result = await deps.place(payload, toTabId, destUrl)
+
+  if (result === "shown") {
+    await deps.hideSource(fromTabId)
+    return "shown"
+  }
+
+  if (deps.fallbackToPopup) {
+    await deps.fallbackToPopup(payload)
+    await deps.hideSource(fromTabId)
+    return "switchedToPopup"
+  }
+
   await deps.hideSource(fromTabId)
-  return result
+  return result === "pending" ? "pending" : "noop"
 }
 
 let activateHandoffChain: Promise<void> = Promise.resolve()
@@ -123,14 +143,17 @@ export function enqueueFloatActivateHandoff(
 }
 
 /**
- * EN: SW entry — serialize rapid auto activations; move float from → to.
+ * EN: SW entry — serialize rapid auto activations; move float from → to (or popup on failure).
  */
 export async function runFloatActivateHandoff(args: {
   fromTabId: number
   toTabId: number
   livePickers?: SessionPickersByLeaf
-  showFloat: (tabId: number) => Promise<void>
+  showFloat: (tabId: number) => Promise<boolean>
   hideFloat: (tabId: number) => Promise<void>
+  openOrFocusPopup: () => Promise<void>
+  /** EN: Pre-translated log line when falling back to popup. */
+  popupFallbackLogLine?: string
 }): Promise<FloatActivateHandoffResult> {
   let result: FloatActivateHandoffResult = "noop"
   await enqueueFloatActivateHandoff(async () => {
@@ -158,9 +181,21 @@ export async function runFloatActivateHandoff(args: {
         if (placed === "pending") {
           return "pending"
         }
+        if (placed === "failed") {
+          return "failed"
+        }
         return "shown"
       },
-      hideSource: args.hideFloat
+      hideSource: args.hideFloat,
+      fallbackToPopup: async (payload) => {
+        await autoSwitchFloatToPopup({
+          payload,
+          hideFloatTabIds: [args.fromTabId, args.toTabId],
+          openOrFocusPopup: args.openOrFocusPopup,
+          hideFloat: args.hideFloat,
+          logLine: args.popupFallbackLogLine
+        })
+      }
     })
   })
   return result

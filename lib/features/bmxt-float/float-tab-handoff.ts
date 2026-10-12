@@ -170,16 +170,17 @@ export async function clearPendingFloatHandoff(): Promise<void> {
   }
 }
 
-export type PlaceFloatHandoffResult = "shown" | "pending" | "dropped"
+export type PlaceFloatHandoffResult = "shown" | "pending" | "dropped" | "failed"
 
 /**
  * EN: Write handoff onto a destination tab, or park as pending until a scriptable page appears.
+ * JA: 移動先へ書き込む。show が false のときは `failed`（呼び出し側で popup 退避など）。
  */
 export async function placeFloatHandoffOnTab(
   payload: FloatTabHandoffPayload,
   destTabId: number | null,
   destUrl: string | undefined,
-  showFloat: (tabId: number) => Promise<void>
+  showFloat: (tabId: number) => Promise<boolean | void>
 ): Promise<PlaceFloatHandoffResult> {
   if (destTabId === null || !Number.isInteger(destTabId) || destTabId < 0) {
     await savePendingFloatHandoff(payload)
@@ -195,7 +196,10 @@ export async function placeFloatHandoffOnTab(
   await saveFloatPickersForTab(destTabId, normalized.pickersBySession)
   await setFloatDesiredVisibleOnTab(destTabId, true)
   await clearPendingFloatHandoff()
-  await showFloat(destTabId)
+  const shown = await showFloat(destTabId)
+  if (shown === false) {
+    return "failed"
+  }
   return "shown"
 }
 
@@ -205,7 +209,7 @@ export async function placeFloatHandoffOnTab(
 export async function tryDeliverPendingFloatHandoff(
   tabId: number,
   url: string | undefined,
-  showFloat: (tabId: number) => Promise<void>
+  showFloat: (tabId: number) => Promise<boolean | void>
 ): Promise<boolean> {
   if (!Number.isInteger(tabId) || tabId < 0) {
     return false

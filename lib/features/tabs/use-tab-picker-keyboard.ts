@@ -17,6 +17,8 @@ import type {
 } from "./tab-picker-overlay-types"
 import { useTabPickerPlainExtensions } from "./use-tab-picker-plain-extensions"
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
+import type { FloatBrowseStateV1 } from "../bmxt-float/float-browse-state-storage"
+import type { TerminalSessionsStateV1 } from "../bmxt-window/terminal-sessions/types"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -95,7 +97,8 @@ export function useTabPickerKeyboard({
   onExitToDetailBar,
   floatHostTabId = null,
   flushFloatPersist,
-  getFloatPickersSnapshot
+  getFloatPickersSnapshot,
+  getPopupReturnPayload
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -171,6 +174,11 @@ export function useTabPickerKeyboard({
   floatHostTabId?: number | null
   flushFloatPersist?: () => Promise<void>
   getFloatPickersSnapshot?: () => SessionPickersByLeaf
+  getPopupReturnPayload?: () => {
+    sessions: TerminalSessionsStateV1
+    browse: FloatBrowseStateV1
+    pickersBySession?: SessionPickersByLeaf
+  }
 }) {
   const newTabUrlWindowIdRef = useRef(newTabUrlWindowId)
   const newTabUrlRef = useRef(newTabUrl)
@@ -252,7 +260,8 @@ export function useTabPickerKeyboard({
     onExitToDetailBar,
     floatHostTabId,
     flushFloatPersist,
-    getFloatPickersSnapshot
+    getFloatPickersSnapshot,
+    getPopupReturnPayload
   })
 
   const { onInputKeyDown } = usePlainPickerKeyboard({

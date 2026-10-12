@@ -25,6 +25,8 @@ import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice, SelectKind }
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
 import type { SessionPickersByLeaf } from "../side-picker/session/session-pickers"
+import type { FloatBrowseStateV1 } from "../bmxt-float/float-browse-state-storage"
+import type { TerminalSessionsStateV1 } from "../bmxt-window/terminal-sessions/types"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -111,7 +113,8 @@ export function useTabPickerPlainExtensions({
   onExitToDetailBar,
   floatHostTabId = null,
   flushFloatPersist,
-  getFloatPickersSnapshot
+  getFloatPickersSnapshot,
+  getPopupReturnPayload
 }: {
   rows: TabPickerRow[]
   visibleRowIndices: number[]
@@ -182,6 +185,11 @@ export function useTabPickerPlainExtensions({
   floatHostTabId?: number | null
   flushFloatPersist?: () => Promise<void>
   getFloatPickersSnapshot?: () => SessionPickersByLeaf
+  getPopupReturnPayload?: () => {
+    sessions: TerminalSessionsStateV1
+    browse: FloatBrowseStateV1
+    pickersBySession?: SessionPickersByLeaf
+  }
 }): PlainPickerKeyboardExtensions {
   useTabPickerLiveFieldsRevision()
 
@@ -417,7 +425,8 @@ export function useTabPickerPlainExtensions({
           void activateTabInBackground(decision.activateTabId, {
             floatHostTabId,
             flushFloatPersist,
-            getFloatPickersSnapshot
+            getFloatPickersSnapshot,
+            getPopupReturnPayload
           })
         }
         return true

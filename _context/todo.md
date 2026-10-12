@@ -54,6 +54,43 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
 | list columns | tab / search / dom / setting / session |
 
+### D. Float 表示失敗時: 注入優先 → 選択肢A（実装済み — 手元スモーク）
+
+**背景:** float モードで tabs ピッカー（page-active **auto** 含む）がタブを活性化したとき、移動先に常駐 CS（`bmxt-nav-overlay`）が未注入だと `showBmxtFloatOnTabAsync` が `sendMessage` 失敗を握りつぶし、プロンプトが出ない。
+
+**方針（採用）**
+
+1. **本線:** ページリロードなし。nav と同様に CS 優先 → 失敗時 `chrome.scripting.executeScript` で常駐 CS を注入 → 再 show → 短リトライ
+2. **フォールバック（選択肢A）:** 注入後も show 不可、または非 scriptable なら既存 `switchwindow` 相当で **自動 float→popup**（sessions/browse/pickers を pending handoff）
+3. **復帰:** popup ホストのピッカー活性化で dest が show 可能なら **自動 popup→float** して外部窓を閉じる
+4. **採らない:** 選択肢B（float で auto 禁止）、`tabs.reload` 前提、auto 中の `permissions.request`
+
+| 原因 | リロードなしで直るか |
+|------|----------------------|
+| 拡張有効前から開いていたタブ / 拡張再読込後 | 可（注入） |
+| `document_idle` 前のレース | 可（短リトライ + 注入） |
+| discarded タブ | ほぼ可（活性化後に注入） |
+| `chrome://` / Web Store / PDF 等 | 不可 → A |
+| optional host 未許可で executeScript も拒否 | 不可 → A |
+
+**実装チェック**
+
+- [x] Phase 1 — `showBmxtFloatOnTabAsync`: 成否 boolean + CS inject fallback（`canScriptHttpHostPages`）+ 短リトライ
+- [x] Phase 1 — `runFloatActivateHandoff` / `placeFloatHandoffOnTab` が show 成否を見る
+- [x] Phase 2 — SW ヘルパ `autoSwitchFloatToPopup` / `autoSwitchPopupToFloat`（`switch_window` / popup pending 再利用）
+- [x] Phase 2 — activate handoff 失敗 → 自動 float→popup
+- [x] Phase 2 — popup ピッカー活性化で show 可なら自動 popup→float（serialize・同一タブ連続トグル禁止）
+- [x] Phase 3 — 単体テスト（CS あり / 注入後成功 / 注入不可→A）
+- [x] Phase 3 — i18n ログ1行（自動退避・自動復帰、EN+JA）
+
+**主なファイル:** `lib/features/bmxt-float/float-host-control.ts` · `float-activate-handoff.ts` · `entrypoints/background/float-launch.ts` · `background-services.ts` · `switch-window.ts` · tabs picker activate 経路
+
+**手元スモーク（実装後）**
+
+- [ ] float + auto: CS 未注入の http(s) タブへ移動 → リロードなしでフロートが出る
+- [ ] float + auto: 非 scriptable / 注入不可タブへ移動 → popup に退避しログが出る
+- [ ] popup 退避後、フロート可能なタブへ auto 移動 → float へ復帰し popup が閉じる
+
 ---
 
 ## Archive（ポインタのみ）

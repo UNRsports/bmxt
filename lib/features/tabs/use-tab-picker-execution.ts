@@ -33,6 +33,9 @@ import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
 import { resolvePickerExecutionTabIds } from "./picker-selected-tab-ids"
 import { requestFloatActivateHandoff } from "../bmxt-float/float-activate-handoff"
+import type { FloatBrowseStateV1 } from "../bmxt-float/float-browse-state-storage"
+import { requestPopupTryReturnToFloat } from "../bmxt-float/request-popup-try-return-to-float"
+import type { TerminalSessionsStateV1 } from "../bmxt-window/terminal-sessions/types"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
@@ -72,6 +75,11 @@ export type TabPickerExecutionParams = {
   floatHostTabId?: number | null
   flushFloatPersist?: () => Promise<void>
   getFloatPickersSnapshot?: () => SessionPickersByLeaf
+  getPopupReturnPayload?: () => {
+    sessions: TerminalSessionsStateV1
+    browse: FloatBrowseStateV1
+    pickersBySession?: SessionPickersByLeaf
+  }
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
@@ -109,7 +117,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onPickerHighlightCreatedTab,
     floatHostTabId = null,
     flushFloatPersist,
-    getFloatPickersSnapshot
+    getFloatPickersSnapshot,
+    getPopupReturnPayload
   } = p
 
   const closeSearch = useCallback(() => {
@@ -138,9 +147,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           ? { windowId: plan.windowId }
           : { windowId: plan.windowId, groupId: plan.groupId })
     })
+    let destTabId: number | undefined
     if (plan.kind === "activateTab" || plan.kind === "activateFromGroup") {
       // EN: Handoff before focus so destination float mounts with sessions/pickers.
-      const destTabId =
+      destTabId =
         plan.kind === "activateTab"
           ? plan.tabId
           : (
@@ -150,7 +160,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
                 ? t.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE
                 : t.groupId === plan.groupId
             )?.id
-      if (typeof destTabId === "number") {
+      if (typeof destTabId === "number" && floatHostTabId != null) {
         await requestFloatActivateHandoff({
           fromTabId: floatHostTabId,
           toTabId: destTabId,
@@ -162,11 +172,21 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     const activeId = await executePickerFocusPlan(plan)
     if (activeId !== null) {
       setActiveTabId(activeId)
+      if (floatHostTabId == null && getPopupReturnPayload) {
+        const payload = getPopupReturnPayload()
+        void requestPopupTryReturnToFloat({
+          toTabId: activeId,
+          sessions: payload.sessions,
+          browse: payload.browse,
+          pickersBySession: payload.pickersBySession
+        })
+      }
     }
   }, [
     floatHostTabId,
     flushFloatPersist,
     getFloatPickersSnapshot,
+    getPopupReturnPayload,
     hi,
     rows,
     setActiveTabId,
