@@ -38,6 +38,7 @@ import {
   previewSearchPickerResultsMatchInBackground,
   type SearchPageHighlightColors
 } from "./preview-search-picker-entry"
+import { resolveSearchPickerPageMatchFromMatches } from "./search-picker-page-match"
 import type { SearchPickerListScrollHint } from "./use-search-picker-alt-preview-kit"
 
 const PREVIEW_NOTICE_MS = 3200
@@ -134,19 +135,37 @@ export function useSearchPickerResultsOpenTabNav({
     }, PREVIEW_NOTICE_MS)
   }, [locale])
 
+  const showPreviewScrollFailedNotice = useCallback(() => {
+    if (noticeTimerRef.current !== null) {
+      window.clearTimeout(noticeTimerRef.current)
+    }
+    setPreviewNotice(tSearch("search.picker.previewScrollFailed", locale))
+    noticeTimerRef.current = window.setTimeout(() => {
+      setPreviewNotice(null)
+      noticeTimerRef.current = null
+    }, PREVIEW_NOTICE_MS)
+  }, [locale])
+
   const runPreview = useCallback(async () => {
     const index = hiRef.current
     const entry = entriesRef.current[index]
     if (!entry) {
       return
     }
-    await previewSearchPickerResultsMatchInBackground(
+    const ok = await previewSearchPickerResultsMatchInBackground(
       entry,
       matchHiRef.current,
       patternRef.current,
       highlightColorsRef.current
     )
-  }, [])
+    const { match } = resolveSearchPickerPageMatchFromMatches(
+      entry.pageMatches,
+      matchHiRef.current
+    )
+    if (!ok && match != null && match.lineNo > 0 && patternRef.current.trim() !== "") {
+      showPreviewScrollFailedNotice()
+    }
+  }, [showPreviewScrollFailedNotice])
 
   const onAltKeyDown = useCallback(() => {
     const currentHi = hiRef.current

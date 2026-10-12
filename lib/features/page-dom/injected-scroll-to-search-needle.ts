@@ -30,29 +30,59 @@ function innerTextLines(): string[] {
   return innerTextLinesFromBodyText(document.body?.innerText ?? "")
 }
 
+function appendNeedleRangesFromTextNode(
+  node: Text,
+  needle: string,
+  ranges: Range[]
+): void {
+  const text = node.textContent ?? ""
+  let from = 0
+  while (from < text.length) {
+    const hit = findRawNeedleInHaystack(text, needle, from)
+    if (!hit) {
+      break
+    }
+    const range = document.createRange()
+    range.setStart(node, hit.index)
+    range.setEnd(node, Math.min(hit.index + hit.length, text.length))
+    ranges.push(range)
+    from = hit.index + Math.max(1, hit.length)
+  }
+}
+
+/**
+ * EN: Collect text ranges in light DOM and open shadow roots (innerText includes shadows;
+ *     TreeWalker alone does not pierce them).
+ * JA: light DOM と open shadow 内のテキスト Range を収集（innerText は shadow を含むが
+ *     TreeWalker 単体では貫通しない）。
+ */
+function collectNeedleRangesFromRoot(
+  root: Document | Element | ShadowRoot,
+  needle: string,
+  ranges: Range[]
+): void {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let node: Text | null = walker.nextNode() as Text | null
+  while (node) {
+    appendNeedleRangesFromTextNode(node, needle, ranges)
+    node = walker.nextNode() as Text | null
+  }
+  const hosts = root.querySelectorAll("*")
+  for (let i = 0; i < hosts.length; i += 1) {
+    const shadow = hosts[i]!.shadowRoot
+    if (shadow) {
+      collectNeedleRangesFromRoot(shadow, needle, ranges)
+    }
+  }
+}
+
 function collectNeedleRanges(needle: string): Range[] {
   const trimmed = needle.trim()
   if (!trimmed || !document.body) {
     return []
   }
   const ranges: Range[] = []
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
-  let node: Text | null
-  while ((node = walker.nextNode() as Text | null)) {
-    const text = node.textContent ?? ""
-    let from = 0
-    while (from < text.length) {
-      const hit = findRawNeedleInHaystack(text, trimmed, from)
-      if (!hit) {
-        break
-      }
-      const range = document.createRange()
-      range.setStart(node, hit.index)
-      range.setEnd(node, Math.min(hit.index + hit.length, text.length))
-      ranges.push(range)
-      from = hit.index + Math.max(1, hit.length)
-    }
-  }
+  collectNeedleRangesFromRoot(document.body, trimmed, ranges)
   return ranges
 }
 
