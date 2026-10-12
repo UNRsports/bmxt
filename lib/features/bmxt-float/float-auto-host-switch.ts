@@ -21,7 +21,11 @@ import {
   savePendingPopupHandoff
 } from "./popup-pending-handoff.ts"
 import { savePromptLaunchHostAsync } from "./prompt-launch-host.ts"
-import { setFloatDesiredVisibleOnTab } from "./float-visible-tabs.ts"
+import { hideAllFloatHosts } from "./prompt-host-exclusivity.ts"
+import {
+  listFloatDesiredVisibleTabIds,
+  setFloatDesiredVisibleOnTab
+} from "./float-visible-tabs.ts"
 import {
   clearPendingFloatHandoff,
   type FloatTabHandoffPayload
@@ -117,6 +121,7 @@ export function appendAutoSwitchLogLine(
 
 /**
  * EN: Float cannot show on dest — park sessions in popup pending handoff and open popup.
+ * JA: 全フロートを先に OFF してから popup を開く（同時表示禁止）。
  */
 export async function autoSwitchFloatToPopup(args: {
   payload: FloatTabHandoffPayload | AutoHostSwitchPayload
@@ -137,25 +142,26 @@ export async function autoSwitchFloatToPopup(args: {
 
   await clearPendingFloatHandoff()
   await savePendingPopupHandoff(payload)
+  // EN: Mark popup as owner before any show/re-show can race.
   await savePromptLaunchHostAsync("popup")
+  await hideAllFloatHosts({
+    hideFloat: args.hideFloat,
+    extraTabIds: args.hideFloatTabIds
+  })
   await args.openOrFocusPopup()
   broadcastPopupHandoffReady()
-
-  for (const tabId of args.hideFloatTabIds) {
-    if (typeof tabId === "number" && Number.isInteger(tabId) && tabId >= 0) {
-      await args.hideFloat(tabId)
-    }
-  }
 }
 
 /**
  * EN: Popup can show float on dest — move UI onto the tab and close the popup window.
+ * JA: フロート表示後に popup を閉じ、他タブのフロートも消す（同時表示禁止）。
  */
 export async function autoSwitchPopupToFloat(args: {
   toTabId: number
   payload: AutoHostSwitchPayload
   showFloat: (tabId: number) => Promise<boolean>
   closePopup: () => Promise<void>
+  hideFloat?: (tabId: number) => Promise<void>
   /** EN: Pre-translated log line (caller owns i18n). */
   logLine?: string
 }): Promise<boolean> {
@@ -192,5 +198,13 @@ export async function autoSwitchPopupToFloat(args: {
 
   await savePromptLaunchHostAsync("float")
   await args.closePopup()
+
+  // EN: Only the destination float may remain; clear any other desired hosts.
+  if (args.hideFloat) {
+    const others = listFloatDesiredVisibleTabIds().filter((id) => id !== args.toTabId)
+    for (const tabId of others) {
+      await args.hideFloat(tabId)
+    }
+  }
   return true
 }

@@ -25,6 +25,11 @@ import {
   isBmxtPopupTryReturnToFloatMessage,
   type AutoHostSwitchPayload
 } from "../../lib/features/bmxt-float/float-auto-host-switch"
+import { shouldSuppressFloatWhilePopupOwnsUi } from "../../lib/features/bmxt-float/prompt-host-exclusivity"
+import {
+  loadPromptLaunchHostAsync,
+  savePromptLaunchHostAsync
+} from "../../lib/features/bmxt-float/prompt-launch-host"
 import {
   createEmptyFloatBrowseState,
   parseFloatBrowseState
@@ -51,7 +56,8 @@ import {
   hydrateBmxtWindowIdFromStorage,
   openOrFocusBmxtWindowAsync,
   persistBmxtWindowId,
-  readBmxtWindowIdInMemory
+  readBmxtWindowIdInMemory,
+  resolveBmxtWindowIdFastAsync
 } from "./window-state"
 
 async function resolveActiveTabInWindow(
@@ -141,6 +147,10 @@ export async function toggleBmxtFloatOnActiveTabAsync(): Promise<void> {
     return
   }
   await applyDesiredVisibility(tab.id, visible, false)
+  if (visible === true) {
+    await savePromptLaunchHostAsync("float")
+    await closePopupWindowAfterAutoSwitch()
+  }
 }
 
 /**
@@ -160,7 +170,11 @@ export async function showFloatOnLaunchTargetAsync(): Promise<void> {
   if (!isScriptablePageUrl(tab.url)) {
     return
   }
-  await showBmxtFloatOnTabAsync(tab.id)
+  const shown = await showBmxtFloatOnTabAsync(tab.id)
+  if (shown) {
+    await savePromptLaunchHostAsync("float")
+    await closePopupWindowAfterAutoSwitch()
+  }
 }
 
 /** EN: Hide the in-page float prompt on a tab (e.g. `exit` from float host). */
@@ -175,7 +189,22 @@ export async function hideBmxtFloatOnTabAsync(
 
 export { showBmxtFloatOnTabAsync }
 
+/**
+ * EN: Float must not auto-appear while popup owns the prompt (avoids dual hosts).
+ */
+async function popupOwnsPromptUi(): Promise<boolean> {
+  const preferredHost = await loadPromptLaunchHostAsync()
+  const popupId = await resolveBmxtWindowIdFastAsync()
+  return shouldSuppressFloatWhilePopupOwnsUi({
+    preferredHost,
+    popupWindowOpen: popupId !== undefined
+  })
+}
+
 async function reShowFloatIfDesired(tabId: number, url: string | undefined): Promise<void> {
+  if (await popupOwnsPromptUi()) {
+    return
+  }
   await hydrateFloatVisibleTabs()
   if (await tryDeliverPendingFloatHandoff(tabId, url, showBmxtFloatOnTabAsync)) {
     return
@@ -184,6 +213,9 @@ async function reShowFloatIfDesired(tabId: number, url: string | undefined): Pro
     return
   }
   if (!isScriptablePageUrl(url)) {
+    return
+  }
+  if (await popupOwnsPromptUi()) {
     return
   }
   await showBmxtFloatOnTabAsync(tabId)
@@ -267,6 +299,9 @@ export function setupFloatLaunch(
           payload,
           showFloat: showBmxtFloatOnTabAsync,
           closePopup: closePopupWindowAfterAutoSwitch,
+          hideFloat: async (tabId) => {
+            await hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
+          },
           logLine: tEffect("effect.switchWindow.autoToFloat", getRunLocale())
         })
         try {
@@ -336,7 +371,10 @@ export function setupFloatLaunch(
   })
 
   chrome.tabs.onActivated.addListener((activeInfo) => {
-    void chrome.tabs.get(activeInfo.tabId).then((tab) => {
+    void chrome.tabs.get(activeInfo.tabId).then(async (tab) => {
+      if (await popupOwnsPromptUi()) {
+        return
+      }
       void tryDeliverPendingFloatHandoff(activeInfo.tabId, tab.url, showBmxtFloatOnTabAsync)
     }).catch(() => {
       /* tab may be gone */

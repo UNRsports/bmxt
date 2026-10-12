@@ -34,6 +34,7 @@ import {
 } from "./window-state"
 import { hideBmxtFloatOnTabAsync } from "./float-launch"
 import { showBmxtFloatOnTabAsync } from "../../lib/features/bmxt-float/float-host-control"
+import { hideAllFloatHosts } from "../../lib/features/bmxt-float/prompt-host-exclusivity"
 import {
   resolveExitHostAction,
   resolveHostKindForExit
@@ -291,6 +292,12 @@ async function dispatch(
       broadcastSessionClearToUi("popup")
     },
     openOrFocusPopupAfterSwitch: async () => {
+      // EN: Hide every float before focusing/creating popup — never leave dual hosts.
+      await hideAllFloatHosts({
+        hideFloat: async (tabId) => {
+          await hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
+        }
+      })
       await openOrFocusBmxtWindowAsync()
     }
   }

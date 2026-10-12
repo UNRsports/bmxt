@@ -131,9 +131,12 @@ export async function applySwitchWindowEffect(
     pickersBySession: pickers
   })
   await savePromptLaunchHostAsync("popup")
+  // EN: openOrFocusPopupAfterSwitch hides all floats first (exclusive host).
   await ctx.openOrFocusPopupAfterSwitch?.()
   broadcastPopupHandoffReady()
 
+  // EN: Belt-and-suspenders — ensure the source float tab is cleared even if
+  //     it was not in the desired-visible set at hide-all time.
   if (typeof floatTabId === "number") {
     await ctx.hideFloatAfterSwitch?.(floatTabId)
   }
