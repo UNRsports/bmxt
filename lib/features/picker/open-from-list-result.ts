@@ -29,6 +29,7 @@ import {
 } from "../command-line/compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../command-line/compound/types.ts"
 import { domPickerLinesFromListResult } from "./from-list-result/dom-lines.ts"
+import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs.ts"
 import { pickerEntriesFromSearchListResult } from "./from-list-result/search-entries.ts"
 import { resolvePickerFamily } from "./resolve-family.ts"
 
@@ -58,7 +59,7 @@ export async function openPickerFromListResult(
     case "tabs":
       return openTabsPicker(options.showUrl, deps, locale)
     case "search":
-      return openSearchPicker(listResult, deps, locale)
+      return await openSearchPicker(listResult, deps, locale)
     case "dom":
       return openDomPicker(listResult, deps, locale)
     case "session":
@@ -105,16 +106,19 @@ async function openTabsPicker(
   }
 }
 
-function openSearchPicker(
+async function openSearchPicker(
   listResult: ListResult,
   deps: CommandDispatchDeps,
   locale: UiLocale
-): SegmentOutcome {
+): Promise<SegmentOutcome> {
   const { entries, pattern, emptyResultLines } = pickerEntriesFromSearchListResult(listResult)
+  // EN: Refresh / attach open-tab body hits (globalOccurrence) before highlight / → detail.
+  // JA: ハイライトと → 詳細用に、開タブ本文ヒットを再付与・更新する。
+  const enriched = await enrichSearchPickerEntriesFromOpenTabs(entries, pattern)
   deps.setSearchListPicker(deps.sessionId, {
     phase: "results",
     progressLines: [],
-    entries,
+    entries: enriched,
     pattern,
     emptyResultLines
   })

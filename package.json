@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -40,7 +40,7 @@
   },
   "pnpm": {
     "overrides": {
-      "shell-quote": "1.8.4"
+      "shell-quote": "1.11.0"
     }
   },
   "devDependencies": {

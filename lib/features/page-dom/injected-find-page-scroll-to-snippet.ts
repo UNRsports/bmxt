@@ -23,10 +23,9 @@ export function bmxtFindPageScrollToSnippetInjected(
     return { ok: false }
   }
   const colors = { ...DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS, jumpBg, fg }
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   let seen = 0
-  let node: Text | null
-  while ((node = walker.nextNode() as Text | null)) {
+
+  const tryNode = (node: Text): { ok: boolean } | null => {
     const text = node.textContent ?? ""
     let from = 0
     while (from < text.length) {
@@ -47,6 +46,32 @@ export function bmxtFindPageScrollToSnippetInjected(
       seen += 1
       from = hit.index + Math.max(1, hit.length)
     }
+    return null
   }
-  return { ok: false }
+
+  const walkRoot = (root: Document | Element | ShadowRoot): { ok: boolean } | null => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    let node: Text | null = walker.nextNode() as Text | null
+    while (node) {
+      const hit = tryNode(node)
+      if (hit) {
+        return hit
+      }
+      node = walker.nextNode() as Text | null
+    }
+    const hosts = root.querySelectorAll("*")
+    for (let i = 0; i < hosts.length; i += 1) {
+      const shadow = hosts[i]!.shadowRoot
+      if (!shadow) {
+        continue
+      }
+      const nested = walkRoot(shadow)
+      if (nested) {
+        return nested
+      }
+    }
+    return null
+  }
+
+  return walkRoot(document.body) ?? { ok: false }
 }
