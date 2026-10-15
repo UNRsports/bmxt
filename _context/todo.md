@@ -45,6 +45,40 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
 | list columns | tab / search / dom / setting / session |
 
+### D. Live reload（ページリロード非依存の CS）
+
+**目標:** 導入〜ページ内実行〜拡張更新を、対象ページの再読み込みなしで完遂する。「リロードしないと動かない」誤解による離脱を防ぐ。
+
+**方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| host | `optional_host_permissions` → 必須 `host_permissions`: `http://*/*` · `https://*/*`（`<all_urls>` にはしない） |
+| 注入 | `ensurePageContentScript` + `onInstalled` で既存タブへ manifest CS を `executeScript({ files })` |
+| CS | `bmxt-nav-overlay.content` を再注入時に冪等化（二重 listener / float 防止） |
+| UX | `shell.reloadHint` / `error.reloadHint` をリロード誘導から具体失敗理由へ |
+| 審査 | 外部通信なし + 横断ページ操作の正当性を justification に明記 |
+
+**スコープ外（次フェーズ候補）**
+
+- discarded（休止）タブの自動起こし — 権限では解けない。横断検索の完全性は別課題
+- `<all_urls>` 化
+
+**実装チェック**
+
+- [ ] `wxt.config.ts`: http(s) を `host_permissions` へ移す
+- [ ] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
+- [ ] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
+- [ ] `onInstalled`（install / update）で open tabs へ bulk reinject
+- [ ] content script 冪等化
+- [ ] i18n / optional-host Approve 主経路の縮小 / README 更新
+
+**手元スモーク**
+
+- [ ] 拡張をリロードしたあと、**ページ非リロード**で float / nav / `search -list --page` / `dom -list` が動く
+- [ ] 二重注入しても overlay / float が二重にならない
+- [ ] `chrome://` 等は従来どおり拒否
+
 ---
 
 ## Archive（ポインタのみ）
