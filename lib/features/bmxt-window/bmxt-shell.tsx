@@ -814,7 +814,9 @@ export function BmxtShell({
     setSearchListPicker,
     setModeToolbarOrder,
     setSubCmdPicker,
-    searchListPickerRef
+    searchListPickerRef,
+    beginCommandBusy,
+    endCommandBusy
   })
 
   const { runSnapshotSave } = useSnapshotSaveShell({

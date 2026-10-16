@@ -19,9 +19,11 @@ import { isJobHandleActive, mergeJobIntoDispatchContext, shouldCancelJob, type J
 import type { UiLocale } from "../../setting/locale"
 import { tSearch } from "../../setting/i18n/ns/search"
 import { tError } from "../../setting/i18n/ns/error"
+import { tShell } from "../../setting/i18n/ns/shell"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { activateModeToolbar } from "../mode-toolbar-order"
 import { effectsIncludeSearchPage } from "./bmxt-shell-prompt-helpers"
+import { yieldToUiPaint, type CommandBusyToken } from "./command-busy"
 
 export type UseSearchListShellOptions = {
   sessionId: string
@@ -34,6 +36,8 @@ export type UseSearchListShellOptions = {
   setModeToolbarOrder: React.Dispatch<React.SetStateAction<unknown>>
   setSubCmdPicker: (state: TokenPickerModel | null) => void
   searchListPickerRef: React.MutableRefObject<SearchListPickerState | null>
+  beginCommandBusy: (message: string) => CommandBusyToken
+  endCommandBusy: (token?: CommandBusyToken) => void
 }
 
 /** EN: Search list picker job, progress, and entry-open dispatch. */
@@ -67,6 +71,11 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
         pattern: searchPattern
       })
       options.setModeToolbarOrder((prev) => activateModeToolbar(prev as never, "search"))
+
+      const busyToken = options.beginCommandBusy(
+        tShell("shell.commandBusy.searching", options.uiLocale)
+      )
+      await yieldToUiPaint()
 
       await options.jobRunner.start(
         "search-list",
@@ -149,6 +158,8 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
                 })
               ])
             }
+          } finally {
+            options.endCommandBusy(busyToken)
           }
         },
         { meta: { line: dispatchLine } }
@@ -163,6 +174,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
       return
     }
     options.jobRunner.cancelHandle(job)
+    options.endCommandBusy()
     clearSearchLoadingProgress()
     void options.appendLogLines([
       tSearch("search.cancelledCtrlC", options.uiLocale),

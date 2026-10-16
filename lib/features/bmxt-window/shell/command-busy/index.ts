@@ -17,3 +17,5 @@ export {
   useCommandBusyIndicator,
   type CommandBusyIndicatorApi
 } from "./use-command-busy-indicator.ts"
+
+export { yieldToUiPaint } from "./yield-to-ui-paint.ts"

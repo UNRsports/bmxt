@@ -3,6 +3,7 @@ import {
   clearPrompt,
   recordCommandHistory
 } from "../bmxt-window/shell/command-dispatch/types.ts"
+import { yieldToUiPaint } from "../bmxt-window/shell/command-busy"
 import type { DispatchChromeContext } from "../dispatch"
 import { mergeJobIntoDispatchContext, shouldCancelJob } from "../job"
 import type { UiLocale } from "../setting/locale.ts"
@@ -53,6 +54,8 @@ export async function runSearchListPlainOnUi(
   await deps.appendLogLines([`> ${displayLine}`], "stdout")
 
   const busyToken = deps.beginCommandBusy(tShell("shell.commandBusy.searching", locale))
+  // EN: Paint the locked busy prompt before history/page Chrome work can stall the UI thread.
+  await yieldToUiPaint()
 
   await deps.jobRunner.start(
     "search-list",

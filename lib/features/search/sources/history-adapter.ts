@@ -11,7 +11,7 @@ import {
 import { resolveHistoryEntriesForSearch } from "../cache/search-cache-store"
 
 export async function searchHistoryLines(pattern: string): Promise<string[]> {
-  const items = await resolveHistoryEntriesForSearch()
+  const items = await resolveHistoryEntriesForSearch(pattern)
   const matchAll = !pattern.trim()
   const matches: string[] = []
   let hitCount = 0
