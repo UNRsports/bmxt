@@ -101,11 +101,22 @@ export default defineContentScript({
         return true
       }
       if (isPageExtractRequest(raw)) {
-        if (raw.lengthOnly === true) {
-          sendResponse(bmxtProbePageInnerTextLengthInPage())
-        } else {
-          sendResponse(bmxtExtractPageInnerTextInPage(clampPageExtractMaxChars(raw.maxChars)))
-        }
+        // EN: Return true first, then respond — keeps the listener from blocking the
+        //     message port while `innerText` layout runs (large / busy pages).
+        // JA: 先に true を返し、innerText 取得後に sendResponse（巨大ページでのポート占有を避ける）。
+        const lengthOnly = raw.lengthOnly === true
+        const maxChars = raw.maxChars
+        void Promise.resolve().then(() => {
+          try {
+            if (lengthOnly) {
+              sendResponse(bmxtProbePageInnerTextLengthInPage())
+              return
+            }
+            sendResponse(bmxtExtractPageInnerTextInPage(clampPageExtractMaxChars(maxChars)))
+          } catch {
+            sendResponse(lengthOnly ? 0 : "")
+          }
+        })
         return true
       }
       if (isPageScrollNeedleRequest(raw)) {

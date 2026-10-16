@@ -1,8 +1,13 @@
 /**
  * EN: Ensure the declared content script is present on a tab without a page reload.
  *     Uses required http(s) host_permissions + chrome.scripting.executeScript({ files }).
+ *     For bulk tab body reads (`search -list --page` / `--all`), prefer
+ *     `read-tab-inner-text` (CS message → `executeScript({ func })`) — do not call ensure
+ *     in that hot path; file inject can stall on frozen tabs.
  * JA: ページ再読み込みなしで宣言済み CS をタブへ載せる。
  *     必須 http(s) host_permissions と executeScript({ files }) を使う。
+ *     タブ本文の一括読み取り（search --page / --all）では ensure を使わず
+ *     read-tab-inner-text（CS → executeScript({ func })）を使うこと。
  */
 
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
@@ -157,6 +162,9 @@ export async function reinjectContentScriptsIntoOpenTabs(): Promise<void> {
   } catch {
     return
   }
+  // EN: Bounded concurrency — one frozen tab must not serialize the whole reinject.
+  const CONCURRENCY = 4
+  const ids: number[] = []
   for (const tab of tabs) {
     if (typeof tab.id !== "number" || tab.discarded) {
       continue
@@ -164,6 +172,10 @@ export async function reinjectContentScriptsIntoOpenTabs(): Promise<void> {
     if (!isScriptablePageUrl(tab.url)) {
       continue
     }
-    await injectManifestContentScripts(tab.id)
+    ids.push(tab.id)
+  }
+  for (let i = 0; i < ids.length; i += CONCURRENCY) {
+    const batch = ids.slice(i, i + CONCURRENCY)
+    await Promise.allSettled(batch.map((tabId) => injectManifestContentScripts(tabId)))
   }
 }

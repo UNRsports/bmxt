@@ -22,12 +22,49 @@ import { DEFAULT_UI_LOCALE, type UiLocale } from "../../setting/locale"
 import { tSearch } from "../../setting/i18n/ns/search"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
+/** EN: Hard wall-clock budget per tab (probe + read). Frozen tabs must not stall the scan. */
+const TAB_SCAN_BUDGET_MS = 2500
 
 type SearchPageLongTab = {
   tabId: number
   title: string
   url: string
   length: number
+}
+
+type TabScanRead =
+  | { kind: "long"; length: number }
+  | { kind: "text"; text: string | null }
+
+function withTabScanBudget(work: Promise<TabScanRead>): Promise<TabScanRead> {
+  return new Promise((resolve) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) {
+        return
+      }
+      settled = true
+      resolve({ kind: "text", text: null })
+    }, TAB_SCAN_BUDGET_MS)
+    work.then(
+      (value) => {
+        if (settled) {
+          return
+        }
+        settled = true
+        clearTimeout(timer)
+        resolve(value)
+      },
+      () => {
+        if (settled) {
+          return
+        }
+        settled = true
+        clearTimeout(timer)
+        resolve({ kind: "text", text: null })
+      }
+    )
+  })
 }
 
 export type SearchPageLinesOptions = {
@@ -148,30 +185,46 @@ export async function searchPageLines(
     const title = tab.title ?? ""
     const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
 
-    if (!unlimit) {
-      const bodyLength = await probeOpenTabInnerTextLength(tab)
-      if (shouldCancel?.()) {
-        cancelled = true
-        break
-      }
-      if (bodyLength !== null && bodyLength > MAX_PAGE_TEXT_CHARS) {
-        skippedLong += 1
-        longPages.push({
-          tabId,
-          title: title || "(untitled)",
-          url: url || "(no url)",
-          length: bodyLength
-        })
-        await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
-        continue
-      }
+    // EN: Advance busy UI before the read so a hung tab is visible; log lines stay post-read.
+    if (onProgressInfo) {
+      await onProgressInfo({
+        phase: "tick",
+        tabIndex: tabsChecked,
+        tabTotal,
+        scanned,
+        skipped
+      })
     }
 
-    const text = await readOpenTabInnerText(tab, maxPageTextChars)
+    const scanRead = await withTabScanBudget(
+      (async (): Promise<TabScanRead> => {
+        if (!unlimit) {
+          const bodyLength = await probeOpenTabInnerTextLength(tab)
+          if (bodyLength !== null && bodyLength > MAX_PAGE_TEXT_CHARS) {
+            return { kind: "long", length: bodyLength }
+          }
+        }
+        const body = await readOpenTabInnerText(tab, maxPageTextChars)
+        return { kind: "text", text: body }
+      })()
+    )
     if (shouldCancel?.()) {
       cancelled = true
       break
     }
+
+    if (scanRead.kind === "long") {
+      skippedLong += 1
+      longPages.push({
+        tabId,
+        title: title || "(untitled)",
+        url: url || "(no url)",
+        length: scanRead.length
+      })
+      continue
+    }
+
+    const text = scanRead.text
     const readable = text !== null
 
     if (readable) {
