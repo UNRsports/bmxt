@@ -53,7 +53,7 @@ export type PickerColumnHostContext = {
     matchIndex: number,
     destination?: SearchOpenDestinationRow
   ) => void
-  onDomApprove: () => void
+  onDomRetry: () => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onRefreshDomViewport?: (
     state: Extract<DomListPickerState, { kind: "lines" }>
@@ -119,7 +119,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           keyboardActive={ctx.domPickerKeyboardActive}
           pickerInputRef={ctx.domPickerInputRef}
           sessionId={ctx.sessionId}
-          onApprove={ctx.onDomApprove}
+          onRetry={ctx.onDomRetry}
           onRefreshDomViewport={ctx.onRefreshDomViewport}
           onApplyDomViewportCapture={ctx.onApplyDomViewportCapture}
         />

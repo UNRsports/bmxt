@@ -15,7 +15,7 @@ import help from "./namespaces/help.json"
 import imeToken from "./namespaces/imeToken.json"
 import modeStatus from "./namespaces/modeStatus.json"
 import nav from "./namespaces/nav.json"
-import optionalHost from "./namespaces/optionalHost.json"
+import httpHost from "./namespaces/httpHost.json"
 import picker from "./namespaces/picker.json"
 import plainPicker from "./namespaces/plainPicker.json"
 import prompt from "./namespaces/prompt.json"
@@ -46,7 +46,7 @@ const MERGED = {
   ...imeToken,
   ...modeStatus,
   ...nav,
-  ...optionalHost,
+  ...httpHost,
   ...picker,
   ...plainPicker,
   ...prompt,

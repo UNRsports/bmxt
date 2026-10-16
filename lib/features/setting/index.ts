@@ -66,7 +66,7 @@ export {
   hasMessageKey,
   listMessageKeys,
   navStatusHint,
-  optionalHostDeniedLines,
+  httpHostDeniedLines,
   t,
   getRunLocale,
   setRunLocale,

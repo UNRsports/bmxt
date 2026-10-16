@@ -12,7 +12,7 @@
   "imeToken",
   "modeStatus",
   "nav",
-  "optionalHost",
+  "httpHost",
   "picker",
   "plainPicker",
   "prompt",

@@ -4,7 +4,7 @@
  * JA: SW 経由で nav オーバーレイを制御（ensure で CS 再注入、必要時のみ executeScript）。
  */
 
-import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
+import { canScriptHttpHostPages } from "../extension-permissions/http-host-access"
 import { ensurePageContentScript } from "../page-scripting/ensure-content-script"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import {

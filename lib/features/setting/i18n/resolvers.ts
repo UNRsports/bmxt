@@ -11,7 +11,7 @@ import type { UiSettings } from "../settings"
 import { tDomList } from "./ns/dom-list"
 import { tError } from "./ns/error"
 import { tNav, type NavMessageKey } from "./ns/nav"
-import { tOptionalHost } from "./ns/optional-host"
+import { tHttpHost } from "./ns/http-host"
 import { tSearch } from "./ns/search"
 import { tSetting } from "./ns/setting"
 import { tTabs } from "./ns/tabs"
@@ -114,10 +114,10 @@ export function domStatusHint(locale: UiLocale, pageActiveMode: DomPageActiveMod
   return tDom(pageActiveMode === "auto" ? "dom.status.auto" : "dom.status.manual", locale)
 }
 
-export function optionalHostDeniedLines(locale: UiLocale): string[] {
+export function httpHostDeniedLines(locale: UiLocale): string[] {
   return [
-    tOptionalHost("optionalHost.deniedError", locale),
-    tOptionalHost("optionalHost.deniedHint", locale)
+    tHttpHost("httpHost.deniedError", locale),
+    tHttpHost("httpHost.deniedHint", locale)
   ]
 }
 

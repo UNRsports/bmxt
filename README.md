@@ -371,7 +371,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 ### `dom`
 
 - Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
-- **`dom -list`** + **Enter** (plain, default **`--normal --html`**) runs via **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** plain lines in the session log (full output + scroll; summary footer). **Scriptable http(s)** only; optional host permission may be requested.
+- **`dom -list`** + **Enter** (plain, default **`--normal --html`**) runs via **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** plain lines in the session log (full output + scroll; summary footer). **Scriptable http(s)** only (declared required **`host_permissions`**; if site access was turned off under `chrome://extensions`, re-enable it).
 - **`dom -list … | browse`** + **Enter** opens the DOM picker column (UI path). Bare **`dom -list … | browse`** may show the **`--normal` / `--with` / `--html` / `--react` option menu** before the column opens; see **[How columns open](#picker-ui)**.
 - **`dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`** (with or (plain; use **`<list> | browse`** for the column)) resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and produce DOM rows. **`chrome://`**, the Chrome Web Store, `chrome-extension://`, etc. are rejected with error lines.
 - **`--normal`** (default when omitted) — full DOM tree; **`↑`/`↓`** (or **`j`/`k`**) focus jumpable element rows; the target tab scrolls to the highlighted node (debounced). **`Alt+↑`/`↓`** preview page jump when **`--manual`** page-active is set.
@@ -391,7 +391,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
-- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) and may trigger the extension’s **optional host permission** prompt the first time.
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) using the extension’s declared http(s) **`host_permissions`** (if site access was turned off under `chrome://extensions`, re-enable it).
 
 <a id="snapshot"></a>
 
@@ -429,7 +429,7 @@ Saved snapshots are searchable with **`search -list --snapshot`** (included in *
 | Input | Effect |
 |-------|--------|
 | Bare `nav` + **Enter** | Prints usage and restores the prompt to **`nav `** (continuation; Tab completes **`-enter`** / **`-exit`** only — no short aliases). |
-| **`nav -enter`** | **Arms** nav in this session pane. May request **optional http(s) host permission** (same family as `dom -list`). The page overlay is **not** shown yet. |
+| **`nav -enter`** | **Arms** nav in this session pane. Uses the extension’s declared http(s) **`host_permissions`** (same family as `dom -list`). The page overlay is **not** shown yet. |
 | **`nav -exit`** | **Disarms** nav (clears per-tab position memory and removes overlays). Fails with an error if the overlay is still **ON** — press **Alt** to turn it **OFF** first. |
 
 **After `nav -enter` — Alt toggles overlay ON/OFF**
@@ -1736,7 +1736,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 | 入力 | 動作 |
 |------|------|
 | 単独 `nav` + **Enter** | 利用案内を表示し、プロンプトを **`nav `** に復元（continuation）。Tab 補完は **`-enter`** / **`-exit`** のみ（短縮別名なし）。 |
-| **`nav -enter`** | 当該セッションペインで nav を **起動（armed）**。**オプションの http(s) ホスト権限**を求めることがある（`dom -list` と同系）。この時点ではページ上にオーバーレイは出ない。 |
+| **`nav -enter`** | 当該セッションペインで nav を **起動（armed）**。宣言済みの必須 http(s) **`host_permissions`** を使う（`dom -list` と同系）。この時点ではページ上にオーバーレイは出ない。 |
 | **`nav -exit`** | nav を **完全終了**（タブごとの位置記憶を消し、オーバーレイを除去）。オーバーレイがまだ **ON** のときはエラー — 先に **Alt** で **OFF** にする。 |
 
 **`nav -enter` 後 — Alt でオーバーレイ ON/OFF**
@@ -2104,7 +2104,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
-- **`dom -list`** + **Enter**（プレーン、既定 **`--normal --html`**）は **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** プレーン行をログに出力（フル出力＋スクロール、末尾サマリー）。scriptable な http(s) のみ。オプションのホスト権限を求めることがある。
+- **`dom -list`** + **Enter**（プレーン、既定 **`--normal --html`**）は **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** プレーン行をログに出力（フル出力＋スクロール、末尾サマリー）。scriptable な http(s) のみ（必須 **`host_permissions`**。`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
 - **`dom -list … | browse`** + **Enter** で DOM ピッカー列を開く（UI 経路）。裸の **`dom -list … | browse`** では mode／flavor 未確定時にオプションメニューを表示することがある（**[列の開き方](#picker-ui-ja)**）。
 - **`dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`**は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に DOM 行を取得する。**`chrome://`** 等はエラー行。
 - **`--normal`**（省略時は既定）— 全 DOM ツリー；**`↑`/`↓`**（または **`j`/`k`**）でジャンプ可能行にフォーカス；対象タブが該当ノードへスクロール。**`--manual`** page-active 時は **`Alt+↑`/`↓`** でページジャンププレビュー。
@@ -2123,7 +2123,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
-- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。初回などに **オプションのホスト権限** を求めることがある。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。宣言済みの必須 http(s) **`host_permissions`** を使う（`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
 
 <a id="snapshot-ja"></a>
 

@@ -1,18 +1,16 @@
 /**
- * EN: Mirrors `host_permissions` http(s) patterns in `wxt.config.ts` — keep origins in sync.
- *     Access is required at install; these helpers still cover chrome://extensions site-access Off.
+ * EN: Mirrors required `host_permissions` http(s) patterns in `wxt.config.ts` — keep origins in sync.
+ *     Access is granted at install; these helpers cover chrome://extensions site-access Off.
  * JA: `wxt.config.ts` の必須 host_permissions（http/https）と同一パターンに保つこと。
  *     インストール時に付与されるが、サイトアクセス Off の稀ケース用に残す。
  */
 
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
-import { DEFAULT_UI_LOCALE } from "../setting/locale"
-import { optionalHostDeniedLines } from "../setting/i18n"
+import { httpHostDeniedLines } from "../setting/i18n"
+import { UI_LOCALE_IDS, type UiLocale } from "../setting/locale"
 import { isHttpUrl } from "../url/is-http-url"
 
-export const OPTIONAL_HTTP_HOST_ORIGINS = ["http://*/*", "https://*/*"] as const
-
-export type OptionalHostAccessResult = "granted" | "denied" | "already"
+export const HTTP_HOST_ORIGINS = ["http://*/*", "https://*/*"] as const
 
 async function listHttpTabIdsForProbe(): Promise<number[]> {
   const ids: number[] = []
@@ -50,7 +48,7 @@ async function listHttpTabIdsForProbe(): Promise<number[]> {
  */
 export async function canScriptHttpHostPages(): Promise<boolean> {
   try {
-    const origins = [...OPTIONAL_HTTP_HOST_ORIGINS] as string[]
+    const origins = [...HTTP_HOST_ORIGINS] as string[]
     if (await chrome.permissions.contains({ origins })) {
       return true
     }
@@ -67,28 +65,9 @@ export async function canScriptHttpHostPages(): Promise<boolean> {
 }
 
 /**
- * EN: Request http(s) host access (user-gesture only). Usually already granted via host_permissions.
- * JA: http(s) host 権限を要求（ユーザージェスチャ内）。通常は必須権限で既に付与済み。
+ * EN: First denied-error line for every UI locale (eligibility match after locale-aware emit).
+ * JA: 拒否メッセージ先頭行（全ロケール）— 出力照合用。
  */
-export async function requestOptionalHttpHostAccess(): Promise<boolean> {
-  try {
-    const origins = [...OPTIONAL_HTTP_HOST_ORIGINS] as string[]
-    if (await chrome.permissions.contains({ origins })) {
-      return true
-    }
-    return await chrome.permissions.request({ origins })
-  } catch {
-    return false
-  }
+export function httpHostDeniedErrorLines(): string[] {
+  return UI_LOCALE_IDS.map((locale: UiLocale) => httpHostDeniedLines(locale)[0] ?? "")
 }
-
-/** @deprecated Prefer `canScriptHttpHostPages` / `requestOptionalHttpHostAccess` explicitly. */
-export async function ensureOptionalHttpHostAccess(): Promise<OptionalHostAccessResult> {
-  if (await canScriptHttpHostPages()) {
-    return "already"
-  }
-  return "denied"
-}
-
-/** @deprecated Use `optionalHostDeniedLines(locale)` — kept for eligibility first-line check. */
-export const OPTIONAL_HOST_DENIED_LINES = optionalHostDeniedLines(DEFAULT_UI_LOCALE)

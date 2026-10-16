@@ -49,9 +49,9 @@ export function listDomListFlavorCandidates(prefix: string, line?: string): stri
 }
 
 /**
- * EN: Picker state — DOM lines, or an optional-host permission prompt when http(s) access
- *     was denied and the user can grant it from the picker.
- * JA: ピッカー状態 — DOM 行、または http(s) オプション権限が拒否されたときの許可プロンプト。
+ * EN: Picker state — DOM lines, or a site-access notice when http(s) access is off
+ *     (user re-enables under chrome://extensions, then retries from the picker).
+ * JA: ピッカー状態 — DOM 行、または http(s) サイトアクセス Off 時の案内（再有効化後に再試行）。
  */
 export type DomListPickerState =
   | {

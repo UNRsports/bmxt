@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: July 25, 2026</p>
+          <p class="muted">Last updated: October 16, 2026</p>
         </div>
       </header>
 
@@ -173,9 +173,13 @@
               translation assist on/off and your chosen language pair are persisted locally. The Extension UI
               and service worker are not designed to call <code>fetch()</code> against arbitrary third-party
               HTTPS URLs; <code>connect-src 'self'</code> in the packaged manifest reinforces that (Chrome Web
-              Store delivery and browser updates are separate). Optional <code>http://*/*</code> and
-              <code>https://*/*</code> access is requested <strong>at runtime</strong> only when you run
-              commands that inject into web pages (including the optional float prompt and nav overlay).
+              Store delivery and browser updates are separate). Required <code>http://*/*</code> and
+              <code>https://*/*</code> <strong>host_permissions</strong> are declared in the packaged
+              manifest so the Extension can inject its packaged content script into ordinary http(s) pages
+              (including already-open tabs after install or update, without a page reload). Meaningful page
+              reads and overlays still run only when you issue a command or toggle a related UI host
+              (including the optional float prompt and nav overlay). You can later restrict site access under
+              <code>chrome://extensions</code>.
             </li>
             <li>
               When translation assist is on, text you type may be processed by Chrome’s built-in
@@ -349,24 +353,26 @@
         </p>
         <p>
           For ordinary http(s) pages (not chrome://, extension, or Chrome Web Store pages), the Extension may
-          use the <code>scripting</code> permission together with <strong>optional</strong>
-          <code>http://*/*</code> and <code>https://*/*</code> host access (granted when prompted, or in
-          extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>
-          or toggle a related UI host. Examples: <code>search -list --page</code> (reads visible text from open
-          tabs when you run the command, without persisting page content to extension storage),
-          <code>dom -list</code> (page structure in <code>--normal</code> or viewport-sync
-          <code>--with</code> mode, and scrolling to an element you pick in the list),
-          <code>snapshot -save</code> (saves page text as Markdown with YAML frontmatter to a location you
-          configure in <code>setting -list</code>), <code>nav -enter</code> (a keyboard nav overlay on the
-          active tab for move, click, type, and related actions you control from the Extension UI), and the
-          optional <strong>in-page float prompt</strong> (<code>toggle-bmxt-float</code>, which loads a
+          use the <code>scripting</code> permission together with <strong>required</strong>
+          <code>http://*/*</code> and <code>https://*/*</code> <strong>host_permissions</strong> (declared in
+          the packaged manifest at install; you may later change site access under
+          <code>chrome://extensions</code>) to run small, packaged helper scripts
+          <strong>when you issue a command</strong> or toggle a related UI host. Examples:
+          <code>search -list --page</code> (reads visible text from open tabs when you run the command, without
+          persisting page content to extension storage), <code>dom -list</code> (page structure in
+          <code>--normal</code> or viewport-sync <code>--with</code> mode, and scrolling to an element you pick
+          in the list), <code>snapshot -save</code> (saves page text as Markdown with YAML frontmatter to a
+          location you configure in <code>setting -list</code>), <code>nav -enter</code> (a keyboard nav overlay
+          on the active tab for move, click, type, and related actions you control from the Extension UI), and
+          the optional <strong>in-page float prompt</strong> (<code>toggle-bmxt-float</code>, which loads a
           packaged extension page into the active tab). When translation assist is enabled, text you enter
-          during nav typing in the Extension UI may also be processed as described in section 4.7. Nav may use
-          a lightweight content script registered for http(s) pages, with
-          <code>chrome.scripting.executeScript</code> as a fallback when that script is not loaded. That
-          processing is intended to occur <strong>on your device</strong>; the Extension is not designed to add
-          new persistent stores for those results or to upload page content to UNRsports servers as part of
-          these commands.
+          during nav typing in the Extension UI may also be processed as described in section 4.7. A lightweight
+          content script is registered for http(s) pages so those helpers can run without requiring a page reload
+          after install or update; callers may fall back to
+          <code>chrome.scripting.executeScript</code> when that script is not loaded. That processing is
+          intended to occur <strong>on your device</strong>; the Extension is not designed to add new
+          persistent stores for those results or to upload page content to UNRsports servers as part of these
+          commands.
         </p>
         <h3>4.6 Planned capabilities (still local-only)</h3>
         <p>
@@ -537,9 +543,12 @@
               プレビュー用にセッション内メモリで扱い、入力本文そのものは storage に保存しません。翻訳アシストの
               ON/OFF と言語ペア設定のみがローカルに保存されます。拡張ページ・サービスワーカーから
               <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP
-              （<code>connect-src 'self'</code>）はその補助線です（ストア配信・ブラウザ更新は別）。ページへの
-              スクリプト注入が要るコマンド（任意のフロート・プロンプトや nav オーバーレイを含む）のときだけ、
-              オプションの <code>http://*/*</code> / <code>https://*/*</code> を<strong>実行時</strong>に求めます。
+              （<code>connect-src 'self'</code>）はその補助線です（ストア配信・ブラウザ更新は別）。パッケージ
+              manifest では必須の <code>http://*/*</code> / <code>https://*/*</code>
+              <strong>host_permissions</strong> を宣言し、通常の http(s) ページへ同梱コンテンツスクリプトを注入します
+              （インストール／更新直後の既存タブも含め、ページ再読み込みは不要）。ページ本文の読み取りやオーバーレイなど
+              意味のある処理は、コマンド実行時または関連 UI ホスト（任意のフロート・プロンプトや nav オーバーレイ）の
+              切替時に限ります。後から <code>chrome://extensions</code> でサイトアクセスを制限できます。
             </li>
             <li>
               翻訳アシストが ON のとき、入力テキストは Chrome 内蔵の <strong>Translator API</strong> により
@@ -699,17 +708,18 @@
         </p>
         <p>
           通常の http(s) ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア等を除く）では、
-          ユーザーがコマンドを実行したとき、または関連する UI ホストを切り替えたときに限り、<code>scripting</code>
-          権限と<strong>オプション</strong>の <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは
-          拡張機能の詳細設定で許可されたとき）により、同梱の小さなヘルパースクリプトを実行します。例:
+          <code>scripting</code> 権限とパッケージ manifest で宣言した<strong>必須</strong>の
+          <code>http://*/*</code> / <code>https://*/*</code> <strong>host_permissions</strong>（インストール時に付与。
+          後から <code>chrome://extensions</code> でサイトアクセスを変更可能）により、ユーザーがコマンドを実行したとき、
+          または関連する UI ホストを切り替えたときに、同梱の小さなヘルパースクリプトを実行します。例:
           <code>search -list --page</code>（コマンド実行時に開いているタブの可視テキストを都度読み取り。本文は拡張機能 storage に永続化しない）、<code>dom -list</code>（<code>--normal</code> またはビューポート連動の <code>--with</code> モードでのページ構造一覧と、
           一覧で選んだ要素へのスクロール）、<code>snapshot -save</code>（<code>setting -list</code> で指定した保存先へ
           YAML frontmatter 付き Markdown を保存）、<code>nav -enter</code>（アクティブタブ上のキーボードナビオーバーレイによる
           移動・クリック・入力など、本拡張機能 UI からの操作）、任意の<strong>サイト内フロート・プロンプト</strong>
           （<code>toggle-bmxt-float</code>。同梱の拡張ページをアクティブタブへ読み込み）。翻訳アシストが ON のとき、
-          本拡張機能 UI での nav typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では
-          http(s) 向けの軽量コンテンツスクリプトを用い、未読み込み時は
-          <code>chrome.scripting.executeScript</code> にフォールバックします。これらは
+          本拡張機能 UI での nav typing 入力も 4.7 に記載のとおり処理される場合があります。http(s) 向けの軽量
+          コンテンツスクリプトを登録し、インストール／更新後もページ再読み込みなしでヘルパーを動かせるようにしており、
+          未読み込み時は <code>chrome.scripting.executeScript</code> にフォールバックします。これらは
           <strong>端末上</strong>で行う想定であり、当該結果を新たな永続ストアに蓄えたり、ページ内容を UNRsports の
           サーバーに送信したりする設計にはしていません。
         </p>

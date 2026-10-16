@@ -1,4 +1,4 @@
-/** EN: True for ordinary web pages (scripting / optional host access apply). */
+/** EN: True for ordinary web pages (scripting / required http(s) host_permissions apply). */
 export function isHttpUrl(url: string | undefined): boolean {
   if (!url) {
     return false
