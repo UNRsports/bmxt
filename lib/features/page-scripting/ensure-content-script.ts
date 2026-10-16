@@ -13,12 +13,24 @@ import {
 } from "./cs-ping-message.ts"
 
 const AFTER_INJECT_SETTLE_MS = 50
+const PROBE_TIMEOUT_MS = 1500
+/** EN: File inject can hang on frozen / debugger-paused tabs — always bound it. */
+const INJECT_TIMEOUT_MS = 2000
 const DEFAULT_MATCHES = ["http://*/*", "https://*/*"] as const
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | "timeout"> {
+  return Promise.race([
+    promise.then((v) => v as T | "timeout"),
+    new Promise<"timeout">((resolve) => {
+      setTimeout(() => resolve("timeout"), ms)
+    })
+  ])
 }
 
 type ManifestContentScript = {
@@ -72,9 +84,15 @@ export async function probeContentScript(tabId: number): Promise<boolean> {
     return false
   }
   try {
-    const response = await chrome.tabs.sendMessage<BmxtCsPingRequest, BmxtCsPingResponse>(tabId, {
-      channel: BMXT_CS_PING_CHANNEL
-    })
+    const response = await withTimeout(
+      chrome.tabs.sendMessage<BmxtCsPingRequest, BmxtCsPingResponse>(tabId, {
+        channel: BMXT_CS_PING_CHANNEL
+      }),
+      PROBE_TIMEOUT_MS
+    )
+    if (response === "timeout") {
+      return false
+    }
     return Boolean(response?.ok === true && response.extensionId === chrome.runtime.id)
   } catch {
     return false
@@ -92,11 +110,17 @@ export async function injectManifestContentScripts(tabId: number): Promise<boole
   let anyOk = false
   for (const injection of injections) {
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId, allFrames: injection.allFrames },
-        files: injection.files,
-        injectImmediately: injection.injectImmediately
-      })
+      const result = await withTimeout(
+        chrome.scripting.executeScript({
+          target: { tabId, allFrames: injection.allFrames },
+          files: injection.files,
+          injectImmediately: injection.injectImmediately
+        }),
+        INJECT_TIMEOUT_MS
+      )
+      if (result === "timeout") {
+        continue
+      }
       anyOk = true
     } catch {
       /* discarded, restricted, or race — caller may fall back */

@@ -79,8 +79,10 @@ export default defineContentScript({
       if (!guard || guard.generation !== generation || guard.extensionId !== extensionId) {
         return false
       }
-      // EN: Only same-extension contexts may drive page helpers (defense in depth).
-      if (sender.id !== extensionId) {
+      // EN: Reject other extensions only. `sender.id` may be omitted for same-extension
+      //     `tabs.sendMessage` from the service worker in some Chrome builds — do not treat
+      //     missing id as foreign (that broke ping / search page reads).
+      if (typeof sender.id === "string" && sender.id.length > 0 && sender.id !== extensionId) {
         return false
       }
 

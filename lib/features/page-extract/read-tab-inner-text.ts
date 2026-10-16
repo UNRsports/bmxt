@@ -8,6 +8,8 @@ import {
 } from "./page-extract-message"
 
 const TAB_READ_TIMEOUT_MS = 2500
+/** EN: Cap time spent on full CS file inject during a single tab read. */
+const ENSURE_CS_BUDGET_MS = 3500
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | "timeout"> {
   return Promise.race([
@@ -39,26 +41,7 @@ async function readViaContentScript(
   return null
 }
 
-/**
- * EN: Prefer the registered content script (ensure/re-inject without page reload);
- *     fall back to `executeScript` when host access allows.
- * JA: 常駐 CS を優先（ensure でページ非リロード再注入）。タイムアウト付き。
- */
-export async function readTabInnerText(tabId: number, maxChars: number): Promise<string | null> {
-  const msg: PageExtractRequest = {
-    channel: PAGE_EXTRACT_CHANNEL,
-    maxChars: clampPageExtractMaxChars(maxChars)
-  }
-  const first = await readViaContentScript(tabId, msg)
-  if (typeof first === "string") {
-    return first
-  }
-  if (await ensurePageContentScript(tabId)) {
-    const second = await readViaContentScript(tabId, msg)
-    if (typeof second === "string") {
-      return second
-    }
-  }
+async function extractViaExecuteScript(tabId: number, maxChars: number): Promise<string | null> {
   try {
     const results = await withTimeout(
       chrome.scripting.executeScript({
@@ -77,22 +60,7 @@ export async function readTabInnerText(tabId: number, maxChars: number): Promise
   return null
 }
 
-async function readTabInnerTextLength(tabId: number): Promise<number | null> {
-  const msg: PageExtractRequest = {
-    channel: PAGE_EXTRACT_CHANNEL,
-    maxChars: 0,
-    lengthOnly: true
-  }
-  const first = await readViaContentScript(tabId, msg)
-  if (typeof first === "number") {
-    return first
-  }
-  if (await ensurePageContentScript(tabId)) {
-    const second = await readViaContentScript(tabId, msg)
-    if (typeof second === "number") {
-      return second
-    }
-  }
+async function probeLengthViaExecuteScript(tabId: number): Promise<number | null> {
   try {
     const results = await withTimeout(
       chrome.scripting.executeScript({
@@ -107,6 +75,63 @@ async function readTabInnerTextLength(tabId: number): Promise<number | null> {
     }
   } catch {
     /* host permission or Chrome-blocked page */
+  }
+  return null
+}
+
+async function tryEnsurePageContentScript(tabId: number): Promise<boolean> {
+  const ensured = await withTimeout(ensurePageContentScript(tabId), ENSURE_CS_BUDGET_MS)
+  return ensured === true
+}
+
+/**
+ * EN: Prefer live CS messages; then lightweight `executeScript({ func })` (timed).
+ *     Full CS file inject is last resort and budgeted — frozen tabs must not stall search.
+ * JA: 常駐 CS → 軽量 executeScript({ func }) →（予算付き）CS ファイル注入の順。
+ *     凍ったタブで検索全体が止まらないようにする。
+ */
+export async function readTabInnerText(tabId: number, maxChars: number): Promise<string | null> {
+  const capped = clampPageExtractMaxChars(maxChars)
+  const msg: PageExtractRequest = {
+    channel: PAGE_EXTRACT_CHANNEL,
+    maxChars: capped
+  }
+  const first = await readViaContentScript(tabId, msg)
+  if (typeof first === "string") {
+    return first
+  }
+  const viaFunc = await extractViaExecuteScript(tabId, capped)
+  if (viaFunc !== null) {
+    return viaFunc
+  }
+  if (await tryEnsurePageContentScript(tabId)) {
+    const second = await readViaContentScript(tabId, msg)
+    if (typeof second === "string") {
+      return second
+    }
+  }
+  return null
+}
+
+async function readTabInnerTextLength(tabId: number): Promise<number | null> {
+  const msg: PageExtractRequest = {
+    channel: PAGE_EXTRACT_CHANNEL,
+    maxChars: 0,
+    lengthOnly: true
+  }
+  const first = await readViaContentScript(tabId, msg)
+  if (typeof first === "number") {
+    return first
+  }
+  const viaFunc = await probeLengthViaExecuteScript(tabId)
+  if (viaFunc !== null) {
+    return viaFunc
+  }
+  if (await tryEnsurePageContentScript(tabId)) {
+    const second = await readViaContentScript(tabId, msg)
+    if (typeof second === "number") {
+      return second
+    }
   }
   return null
 }
