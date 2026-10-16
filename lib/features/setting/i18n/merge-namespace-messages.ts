@@ -10,6 +10,7 @@ import domList from "./namespaces/domList.json"
 import domPrompt from "./namespaces/domPrompt.json"
 import effect from "./namespaces/effect.json"
 import error from "./namespaces/error.json"
+import floatHost from "./namespaces/floatHost.json"
 import group from "./namespaces/group.json"
 import help from "./namespaces/help.json"
 import imeToken from "./namespaces/imeToken.json"
@@ -41,6 +42,7 @@ const MERGED = {
   ...domPrompt,
   ...effect,
   ...error,
+  ...floatHost,
   ...group,
   ...help,
   ...imeToken,

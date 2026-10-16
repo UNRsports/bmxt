@@ -33,6 +33,26 @@ html.bmxt-float-page .bmxt-root--terminal {
   min-height: 0;
 }
 
+.bmxt-float-boot-gate {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 1rem 1.1rem;
+  font: 600 13px/1.45 system-ui, sans-serif;
+  color: var(--bmxt-fg, #e6edf3);
+  background: var(--bmxt-bg, #0d1117);
+}
+
+.bmxt-float-boot-gate-title {
+  margin: 0 0 0.5rem;
+  font-size: 14px;
+}
+
+.bmxt-float-boot-gate-body {
+  margin: 0;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
 
 body {
   margin: 0;

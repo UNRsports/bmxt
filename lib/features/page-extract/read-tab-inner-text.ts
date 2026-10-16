@@ -1,4 +1,5 @@
 import { ensurePageContentScript } from "../page-scripting/ensure-content-script"
+import { clampPageExtractMaxChars } from "./page-extract-limits"
 import {
   bmxtExtractPageInnerTextInPage,
   bmxtProbePageInnerTextLengthInPage,
@@ -46,7 +47,7 @@ async function readViaContentScript(
 export async function readTabInnerText(tabId: number, maxChars: number): Promise<string | null> {
   const msg: PageExtractRequest = {
     channel: PAGE_EXTRACT_CHANNEL,
-    maxChars: maxChars
+    maxChars: clampPageExtractMaxChars(maxChars)
   }
   const first = await readViaContentScript(tabId, msg)
   if (typeof first === "string") {

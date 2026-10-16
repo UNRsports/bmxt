@@ -1,8 +1,11 @@
 /**
  * EN: Content script — nav overlay + in-page float prompt host on http(s) pages.
  *     Idempotent on programmatic re-inject after install/update (no page reload).
+ *     Always-on for http(s) by design (required host_permissions); actions stay
+ *     message-driven and same-extension-only (`sender.id` check).
  * JA: 常駐 CS。nav オーバーレイとサイト上フロート・プロンプトを扱う。
  *     インストール／更新後のプログラム再注入でも二重登録しない。
+ *     http(s) 常駐は仕様（必須 host_permissions）。操作はメッセージ駆動かつ同一拡張のみ。
  */
 
 import {
@@ -10,6 +13,7 @@ import {
   bmxtProbePageInnerTextLengthInPage,
   isPageExtractRequest
 } from "../../lib/features/page-extract/page-extract-message"
+import { clampPageExtractMaxChars } from "../../lib/features/page-extract/page-extract-limits"
 import { bmxtFindPageScrollToSnippetInjected } from "../../lib/features/page-dom/injected-find-page-scroll-to-snippet"
 import { bmxtScrollToSearchNeedleInjected } from "../../lib/features/page-dom/injected-scroll-to-search-needle"
 import { bmxtClearSearchNeedleHighlightInjected } from "../../lib/features/page-dom/injected-clear-search-needle"
@@ -75,6 +79,10 @@ export default defineContentScript({
       if (!guard || guard.generation !== generation || guard.extensionId !== extensionId) {
         return false
       }
+      // EN: Only same-extension contexts may drive page helpers (defense in depth).
+      if (sender.id !== extensionId) {
+        return false
+      }
 
       if (isBmxtCsPingRequest(raw)) {
         sendResponse(buildBmxtCsPingResponse())
@@ -94,7 +102,7 @@ export default defineContentScript({
         if (raw.lengthOnly === true) {
           sendResponse(bmxtProbePageInnerTextLengthInPage())
         } else {
-          sendResponse(bmxtExtractPageInnerTextInPage(raw.maxChars))
+          sendResponse(bmxtExtractPageInnerTextInPage(clampPageExtractMaxChars(raw.maxChars)))
         }
         return true
       }

@@ -19,6 +19,11 @@ import {
   isFloatDesiredVisibleOnTab,
   setFloatDesiredVisibleOnTab
 } from "../../lib/features/bmxt-float/float-visible-tabs"
+import {
+  clearFloatLaunchAuthForTab,
+  validateFloatLaunchBoot
+} from "../../lib/features/bmxt-float/float-launch-auth"
+import { isBmxtFloatBootAuthRequest } from "../../lib/features/bmxt-float/float-boot-auth-message"
 import { isScriptablePageUrl } from "../../lib/features/url/is-scriptable-page-url"
 
 async function resolveActiveTabAsync(): Promise<chrome.tabs.Tab | undefined> {
@@ -32,6 +37,9 @@ async function applyDesiredVisibility(
   clearSessions: boolean
 ): Promise<void> {
   await setFloatDesiredVisibleOnTab(tabId, visible)
+  if (!visible) {
+    await clearFloatLaunchAuthForTab(tabId)
+  }
   if (!visible && clearSessions) {
     await clearFloatTerminalSessionsForTab(tabId)
     await clearFloatBrowseStateForTab(tabId)
@@ -102,7 +110,25 @@ export function setupFloatLaunch(
     void toggleBmxtFloatOnActiveTabAsync()
   })
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isBmxtFloatBootAuthRequest(message)) {
+      if (sender.id !== chrome.runtime.id) {
+        try {
+          sendResponse({ ok: false })
+        } catch {
+          /* port closed */
+        }
+        return true
+      }
+      void validateFloatLaunchBoot(message.tabId, message.parentOrigin).then((ok) => {
+        try {
+          sendResponse({ ok })
+        } catch {
+          /* port closed */
+        }
+      })
+      return true
+    }
     if (!isBmxtFloatVisibilityMessage(message)) {
       return false
     }
@@ -137,6 +163,7 @@ export function setupFloatLaunch(
 
   chrome.tabs.onRemoved.addListener((tabId) => {
     void clearFloatDesiredVisibleOnTab(tabId)
+    void clearFloatLaunchAuthForTab(tabId)
     void clearFloatTerminalSessionsForTab(tabId)
     void clearFloatBrowseStateForTab(tabId)
   })
