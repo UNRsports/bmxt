@@ -4,6 +4,7 @@ import {
   type PageClearNeedleRequest,
   type PageScrollNeedleResponse
 } from "../../page-dom/page-scroll-needle-message"
+import { ensurePageContentScript } from "../../page-scripting/ensure-content-script"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 
 async function clearViaContentScript(tabId: number): Promise<boolean> {
@@ -43,6 +44,11 @@ export async function clearSearchPageHighlights(tabId: number): Promise<boolean>
   }
   if (await clearViaContentScript(tabId)) {
     return true
+  }
+  if (await ensurePageContentScript(tabId)) {
+    if (await clearViaContentScript(tabId)) {
+      return true
+    }
   }
   return clearViaExecuteScript(tabId)
 }

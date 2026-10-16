@@ -1,3 +1,4 @@
+import { ensurePageContentScript } from "../page-scripting/ensure-content-script"
 import {
   bmxtExtractPageInnerTextInPage,
   bmxtProbePageInnerTextLengthInPage,
@@ -16,26 +17,46 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | "timeout">
   ])
 }
 
+async function readViaContentScript(
+  tabId: number,
+  msg: PageExtractRequest
+): Promise<string | number | null> {
+  try {
+    const value = await withTimeout(
+      chrome.tabs.sendMessage<PageExtractRequest, string | number>(tabId, msg),
+      TAB_READ_TIMEOUT_MS
+    )
+    if (value === "timeout") {
+      return null
+    }
+    if (typeof value === "string" || typeof value === "number") {
+      return value
+    }
+  } catch {
+    /* content script not loaded on this tab */
+  }
+  return null
+}
+
 /**
- * EN: Prefer the registered content script (works with chrome://extensions “On all sites”);
- *     fall back to `executeScript` when optional host permission is granted.
- * JA: 常駐 CS を優先。タイムアウト付き（ハングで find 全体が無応答にならないようにする）。
+ * EN: Prefer the registered content script (ensure/re-inject without page reload);
+ *     fall back to `executeScript` when host access allows.
+ * JA: 常駐 CS を優先（ensure でページ非リロード再注入）。タイムアウト付き。
  */
 export async function readTabInnerText(tabId: number, maxChars: number): Promise<string | null> {
   const msg: PageExtractRequest = {
     channel: PAGE_EXTRACT_CHANNEL,
     maxChars: maxChars
   }
-  try {
-    const text = await withTimeout(
-      chrome.tabs.sendMessage<PageExtractRequest, string>(tabId, msg),
-      TAB_READ_TIMEOUT_MS
-    )
-    if (text !== "timeout" && typeof text === "string") {
-      return text
+  const first = await readViaContentScript(tabId, msg)
+  if (typeof first === "string") {
+    return first
+  }
+  if (await ensurePageContentScript(tabId)) {
+    const second = await readViaContentScript(tabId, msg)
+    if (typeof second === "string") {
+      return second
     }
-  } catch {
-    /* content script not loaded on this tab */
   }
   try {
     const results = await withTimeout(
@@ -61,16 +82,15 @@ async function readTabInnerTextLength(tabId: number): Promise<number | null> {
     maxChars: 0,
     lengthOnly: true
   }
-  try {
-    const length = await withTimeout(
-      chrome.tabs.sendMessage<PageExtractRequest, number>(tabId, msg),
-      TAB_READ_TIMEOUT_MS
-    )
-    if (length !== "timeout" && typeof length === "number") {
-      return length
+  const first = await readViaContentScript(tabId, msg)
+  if (typeof first === "number") {
+    return first
+  }
+  if (await ensurePageContentScript(tabId)) {
+    const second = await readViaContentScript(tabId, msg)
+    if (typeof second === "number") {
+      return second
     }
-  } catch {
-    /* content script not loaded on this tab */
   }
   try {
     const results = await withTimeout(

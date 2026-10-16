@@ -1,10 +1,10 @@
 {
-  "0.8.4": {
+  "0.8.5": {
     "ja": [
-      "searchコマンドでのピッカー動作を改善"
+      "host_permissions権限によりページリロード不要での動作を実装"
     ],
     "en": [
-      "Improved picker behavior in search commands"
+      ""
     ]
   }
 }

@@ -1,6 +1,8 @@
 /**
  * EN: Content script — nav overlay + in-page float prompt host on http(s) pages.
+ *     Idempotent on programmatic re-inject after install/update (no page reload).
  * JA: 常駐 CS。nav オーバーレイとサイト上フロート・プロンプトを扱う。
+ *     インストール／更新後のプログラム再注入でも二重登録しない。
  */
 
 import {
@@ -25,13 +27,59 @@ import {
 } from "../../lib/features/nav/nav-overlay-inject-fn"
 import { isBmxtFloatHostRequest } from "../../lib/features/bmxt-float/float-host-message"
 import { applyFloatHostAction } from "../../lib/features/bmxt-float/install-float-host"
+import {
+  buildBmxtCsPingResponse,
+  isBmxtCsPingRequest
+} from "../../lib/features/page-scripting/cs-ping-message"
+
+const CS_GUARD_KEY = "__BMXT_NAV_OVERLAY_CS__"
+
+type CsGuard = {
+  generation: number
+  extensionId: string
+  onMessage: (
+    raw: unknown,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => boolean
+}
+
+type GlobalWithCsGuard = typeof globalThis & {
+  [CS_GUARD_KEY]?: CsGuard
+}
 
 export default defineContentScript({
   matches: ["https://*/*", "http://*/*"],
   allFrames: false,
   runAt: "document_idle",
   main() {
-    chrome.runtime.onMessage.addListener((raw, sender, sendResponse) => {
+    const root = globalThis as GlobalWithCsGuard
+    const previous = root[CS_GUARD_KEY]
+    if (previous?.onMessage) {
+      try {
+        chrome.runtime.onMessage.removeListener(previous.onMessage)
+      } catch {
+        /* orphaned extension context — ignore */
+      }
+    }
+
+    const generation = (previous?.generation ?? 0) + 1
+    const extensionId = chrome.runtime.id
+
+    const onMessage = (
+      raw: unknown,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void
+    ): boolean => {
+      const guard = root[CS_GUARD_KEY]
+      if (!guard || guard.generation !== generation || guard.extensionId !== extensionId) {
+        return false
+      }
+
+      if (isBmxtCsPingRequest(raw)) {
+        sendResponse(buildBmxtCsPingResponse())
+        return true
+      }
       if (isBmxtFloatHostRequest(raw)) {
         const tabId =
           typeof raw.tabId === "number"
@@ -110,6 +158,13 @@ export default defineContentScript({
       )
       sendResponse(result)
       return true
-    })
+    }
+
+    root[CS_GUARD_KEY] = {
+      generation,
+      extensionId,
+      onMessage
+    }
+    chrome.runtime.onMessage.addListener(onMessage)
   }
 })

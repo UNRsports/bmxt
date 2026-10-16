@@ -46,11 +46,11 @@ describe("namespace message catalogs", () => {
     const entry = messages["shell.reloadHint"]
     assert.equal(
       entry?.ja,
-      "⚠️タブやサイト内の操作を行う場合は、最初にページをリロードして拡張機能のスクリプトがページ内で有効化するようにしてください。⚠️"
+      "⚠️サイト内操作は http(s) タブへ自動注入されます。chrome:// や休止中のタブなど、拡張が操作できないページでは使えません。⚠️"
     )
     assert.equal(
       entry?.en,
-      "⚠️ To operate on tabs or within a page, reload the page first so the extension scripts are active on that page. ⚠️"
+      "⚠️ In-page actions inject into http(s) tabs automatically. Restricted pages (chrome://, etc.) and discarded tabs cannot be scripted. ⚠️"
     )
   })
 

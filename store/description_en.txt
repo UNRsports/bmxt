@@ -167,7 +167,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `close` / `c` | Close the target tab after y/n confirm; `close <tabId>` / `c <tabId>` closes that id without confirm. Batch: `tab -list \| close` |
 | `dom` | Print available options; Enter alone restores the prompt to `dom ` (trailing space) for the next token |
 | `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | Plain DOM list from active tab (default `--normal --html`); optional substring filter; scriptable http(s) only |
-| `dom -list … | browse` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; may prompt for optional site access |
+| `dom -list … | browse` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; scriptable http(s) only |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `nav` | Print usage; Enter alone restores the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, etc.); **/** incremental attribute jump; identity label `kind:key` |

@@ -33,7 +33,7 @@ export default defineConfig({
       "history",
       "bookmarks"
     ],
-    optional_host_permissions: ["http://*/*", "https://*/*"],
+    host_permissions: ["http://*/*", "https://*/*"],
     content_security_policy: {
       extension_pages:
         "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"

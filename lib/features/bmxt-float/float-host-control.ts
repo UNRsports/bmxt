@@ -3,6 +3,7 @@
  * JA: タブ上フロートの表示／非表示／トグル（SW 用）。
  */
 
+import { ensurePageContentScript } from "../page-scripting/ensure-content-script.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
 import {
   BMXT_FLOAT_MESSAGE_TYPE,
@@ -11,7 +12,7 @@ import {
 } from "./float-host-message.ts"
 import { setFloatDesiredVisibleOnTab } from "./float-visible-tabs.ts"
 
-export async function sendFloatHostAction(
+async function sendFloatMessage(
   tabId: number,
   action: BmxtFloatHostAction
 ): Promise<boolean | null> {
@@ -26,9 +27,22 @@ export async function sendFloatHostAction(
     }
     return response.visible
   } catch {
-    // Content script missing or host permission not granted — no-op.
     return null
   }
+}
+
+export async function sendFloatHostAction(
+  tabId: number,
+  action: BmxtFloatHostAction
+): Promise<boolean | null> {
+  const first = await sendFloatMessage(tabId, action)
+  if (first !== null) {
+    return first
+  }
+  if (!(await ensurePageContentScript(tabId))) {
+    return null
+  }
+  return sendFloatMessage(tabId, action)
 }
 
 export async function showBmxtFloatOnTabAsync(tabId: number): Promise<void> {

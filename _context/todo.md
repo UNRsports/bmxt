@@ -66,12 +66,12 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **実装チェック**
 
-- [ ] `wxt.config.ts`: http(s) を `host_permissions` へ移す
-- [ ] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
-- [ ] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
-- [ ] `onInstalled`（install / update）で open tabs へ bulk reinject
-- [ ] content script 冪等化
-- [ ] i18n / optional-host Approve 主経路の縮小 / README 更新
+- [x] `wxt.config.ts`: http(s) を `host_permissions` へ移す
+- [x] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
+- [x] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
+- [x] `onInstalled`（install / update）で open tabs へ bulk reinject
+- [x] content script 冪等化
+- [x] i18n / optional-host 文言更新 / README 更新
 
 **手元スモーク**
 

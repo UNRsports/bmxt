@@ -155,7 +155,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ### Permissions (`wxt.config.ts` manifest)
 
 
-Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tab`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Host patterns `http://*/*` and `https://*/*` are declared as **`optional_host_permissions`**; the extension requests them **at runtime** when you run commands that inject into web pages (`dom`, `search -list --page`, **`nav -enter`**, and similar). If you deny the prompt, those commands return an error line explaining how to enable access in `chrome://extensions`.
+Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Host patterns `http://*/*` and `https://*/*` are declared as required **`host_permissions`** so install/update can inject the content script into already-open http(s) tabs **without a page reload** (`lib/features/page-scripting/`). If site access is later turned off under `chrome://extensions`, in-page commands explain how to re-enable it.
 
 **Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
@@ -493,7 +493,7 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **j
 **Pages and permissions**
 
 - **Scriptable http(s)** only (`chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
-- After installing or reloading the extension, **reload the target page once** so the WXT **content script** (`entrypoints/bmxt-nav-overlay.content/`) is registered; if the script is not loaded yet, the Service Worker falls back to **`chrome.scripting.executeScript`**.
+- After installing or reloading the extension, open http(s) tabs receive the WXT **content script** (`entrypoints/bmxt-nav-overlay.content/`) via **`onInstalled` reinject** / **`ensurePageContentScript`** — **no page reload required**. If the script is still missing, callers fall back to **`chrome.scripting.executeScript`**.
 - Nav does **not** use the **`debugger`** permission / CDP AOM.
 
 **Implementation**
@@ -1514,7 +1514,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 権限（`wxt.config.ts` の manifest）
 
 
-manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tab`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。ホストパターン **`http://*/*` / `https://*/*`** は **`optional_host_permissions`** とし、ページへ注入するコマンド（`dom`、`search -list --page`、**`nav -enter`** 等）実行時に **実行時** に要求します。拒否した場合はエラー行で `chrome://extensions` での許可方法を案内します。
+manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。ホストパターン **`http://*/*` / `https://*/*`** は必須 **`host_permissions`** とし、インストール／更新時に既に開いている http(s) タブへ **ページ再読み込みなし** でコンテンツスクリプトを注入できます（**`lib/features/page-scripting/`**）。`chrome://extensions` でサイトアクセスを後からオフにした場合は、ページ内コマンドが再有効化の案内を出します。
 
 **データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** **ターミナルセッションの出力とピッカー UI** は BMXt ウィンドウが開いている間 **拡張 UI ページのメモリ**に保持（Service Worker には載せない）。**コマンド履歴**と **UI 設定**は上限付き **`chrome.storage.local`**（**`lib/features/extension-storage/keys.ts`**）。**`bmxt_terminal_sessions_v1`** 等の旧プロセスキーは **終了時の掃除**で削除されうるが、**実行中のログ正本ではない**。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
@@ -1800,7 +1800,7 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 **ページと権限**
 
 - **scriptable な http(s)** のみ（`chrome://`・ウェブストア・`chrome-extension://` 等は拒否）。注入失敗時はステータス帯に短い理由（例: **`site access denied`**）。
-- 拡張のインストール／再読み込み後は、対象ページを **一度再読み込み**して WXT **コンテンツスクリプト**（`entrypoints/bmxt-nav-overlay.content/`）を登録することを推奨。未登録時は Service Worker が **`chrome.scripting.executeScript`** にフォールバック。
+- 拡張のインストール／再読み込み後は、開いている http(s) タブへ **`onInstalled` 再注入** / **`ensurePageContentScript`** で WXT **コンテンツスクリプト**（`entrypoints/bmxt-nav-overlay.content/`）を載せる（**対象ページの再読み込みは不要**）。未注入時は **`chrome.scripting.executeScript`** にフォールバック。
 
 **実装**
 

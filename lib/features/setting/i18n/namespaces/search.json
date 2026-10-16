@@ -92,8 +92,8 @@
     "en": "({count} tab(s) exceeded {limit} chars — body not scanned; see rows below)"
   },
   "search.pageNoTextHint": {
-    "ja": "サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
-    "en": "With site access enabled, reload the pages you want to search (F5), then run search -list --page again."
+    "ja": "本文を読めませんでした。休止中のタブや chrome:// など非対応ページの可能性があります。対象タブを開き直すか、search -list --page を再実行してください。",
+    "en": "Could not read page text. The tab may be discarded or not scriptable (e.g. chrome://). Open or activate the tab, then run search -list --page again."
   },
   "search.pageProgress.done": {
     "ja": "{label} — 完了（読取 {scanned}・スキップ {skipped}・確認 {tabTotal}）",

@@ -1,6 +1,8 @@
 /**
- * EN: Mirrors `optional_host_permissions` in `package.json` — keep origins in sync.
- * JA: `package.json` の optional_host_permissions と同一パターンに保つこと。
+ * EN: Mirrors `host_permissions` http(s) patterns in `wxt.config.ts` — keep origins in sync.
+ *     Access is required at install; these helpers still cover chrome://extensions site-access Off.
+ * JA: `wxt.config.ts` の必須 host_permissions（http/https）と同一パターンに保つこと。
+ *     インストール時に付与されるが、サイトアクセス Off の稀ケース用に残す。
  */
 
 import { readTabInnerText } from "../page-extract/read-tab-inner-text"
@@ -43,8 +45,8 @@ async function listHttpTabIdsForProbe(): Promise<number[]> {
 }
 
 /**
- * EN: True when http(s) tab text can be read (content script and/or `executeScript`).
- * JA: http(s) タブの本文を取得できるか（CS または executeScript）。
+ * EN: True when http(s) tab text can be read (required host_permissions and/or live CS).
+ * JA: http(s) タブの本文を取得できるか（必須 host または常駐 CS）。
  */
 export async function canScriptHttpHostPages(): Promise<boolean> {
   try {
@@ -65,8 +67,8 @@ export async function canScriptHttpHostPages(): Promise<boolean> {
 }
 
 /**
- * EN: Request optional host permission (call only from a user-gesture handler, e.g. dom -list Approve).
- * JA: オプション host 権限を要求（dom -list の許可ボタンなど、ユーザージェスチャ内でのみ呼ぶ）。
+ * EN: Request http(s) host access (user-gesture only). Usually already granted via host_permissions.
+ * JA: http(s) host 権限を要求（ユーザージェスチャ内）。通常は必須権限で既に付与済み。
  */
 export async function requestOptionalHttpHostAccess(): Promise<boolean> {
   try {
