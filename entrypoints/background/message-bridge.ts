@@ -1,8 +1,11 @@
 /**
  * EN: Always-on RUN_CMD / NAV_CONTROL bridge while background-services.js loads.
+ *     Privileged messages accepted only from bmxt.html / bmxt-float.html (not CS).
  * JA: background-services 読込中も RUN_CMD / NAV_CONTROL を受け付ける。
+ *     特権メッセージは bmxt.html / bmxt-float.html からのみ（CS 不可）。
  */
 
+import { isTrustedBmxtUiSender } from "../../lib/features/extension-permissions/trusted-ui-sender"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 
 type RunCmdMessage = {
@@ -54,6 +57,13 @@ export function setupMessageBridge(): void {
   chrome.runtime.onMessage.addListener(
     (message: RunCmdMessage & NavControlMessage, sender, sendResponse) => {
       if (message?.type === "RUN_CMD" && typeof message.line === "string") {
+        if (!isTrustedBmxtUiSender(sender)) {
+          safeSendResponse(sendResponse, {
+            ok: false,
+            error: "untrusted sender"
+          })
+          return true
+        }
         void withBackgroundServices((services) =>
           services.runCommandMessage(
             message.line!,
@@ -74,6 +84,13 @@ export function setupMessageBridge(): void {
         return true
       }
       if (message?.type === "NAV_CONTROL" && typeof message.tabId === "number") {
+        if (!isTrustedBmxtUiSender(sender)) {
+          safeSendResponse(sendResponse, {
+            ok: false,
+            reason: "untrusted-sender"
+          })
+          return true
+        }
         void withBackgroundServices((services) => services.runNavControlMessage(message))
           .then((result) => safeSendResponse(sendResponse, result))
           .catch((e) =>

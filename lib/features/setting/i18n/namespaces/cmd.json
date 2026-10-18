@@ -412,8 +412,8 @@
     "en": "snapshot save failed: {message}"
   },
   "cmd.snapshot.save.notHttp": {
-    "ja": "snapshot save failed: http(s) ページではありません ({url})。tabs ピッカーで Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
-    "en": "snapshot save failed: not an http(s) page ({url}). Highlight a web page in the tabs picker or use snapshot -save <tabId>."
+    "ja": "snapshot save failed: scriptable な https ページではありません ({url})。tabs ピッカーで https の Web ページを選ぶか、snapshot -save <tabId> を指定してください。",
+    "en": "snapshot save failed: not a scriptable https page ({url}). Highlight an https page in the tabs picker or use snapshot -save <tabId>."
   },
   "cmd.snapshot.save.reloadAdvice": {
     "ja": "ヒント: 対象タブの本文を読めませんでした。chrome://extensions でサイトアクセスを確認し、休止中のタブなら起こしてから再試行してください（ページ再読み込みは通常不要です）。",

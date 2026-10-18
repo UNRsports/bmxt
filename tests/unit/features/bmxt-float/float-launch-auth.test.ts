@@ -6,9 +6,9 @@ import {
 } from "../../../../lib/features/bmxt-float/float-launch-auth.ts"
 
 describe("float-launch-auth helpers", () => {
-  it("parses http(s) origins from tab URLs", () => {
+  it("parses https origins from tab URLs (http rejected)", () => {
     assert.equal(parentOriginFromTabUrl("https://example.com/path?q=1"), "https://example.com")
-    assert.equal(parentOriginFromTabUrl("http://localhost:3000/"), "http://localhost:3000")
+    assert.equal(parentOriginFromTabUrl("http://localhost:3000/"), null)
     assert.equal(parentOriginFromTabUrl("chrome://extensions"), null)
     assert.equal(parentOriginFromTabUrl(undefined), null)
   })

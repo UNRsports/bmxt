@@ -1,6 +1,6 @@
 /**
  * EN: Read tab `innerText` for search / page extract.
- *     With required http(s) `host_permissions`, prefer timed `executeScript({ func })`.
+ *     With required https `host_permissions`, prefer timed `executeScript({ func })`.
  *     Content-script messaging is a fallback only when scripting fails fast (not on
  *     timeout) — a hung CS / frozen tab must not be double-attempted, or bulk
  *     `search -list --page` / `--all` stalls.

@@ -1,11 +1,11 @@
 /**
  * EN: Ensure the declared content script is present on a tab without a page reload.
- *     Uses required http(s) host_permissions + chrome.scripting.executeScript({ files }).
+ *     Uses required https host_permissions + chrome.scripting.executeScript({ files }).
  *     For bulk tab body reads (`search -list --page` / `--all`), prefer
  *     `read-tab-inner-text` (CS message → `executeScript({ func })`) — do not call ensure
  *     in that hot path; file inject can stall on frozen tabs.
  * JA: ページ再読み込みなしで宣言済み CS をタブへ載せる。
- *     必須 http(s) host_permissions と executeScript({ files }) を使う。
+ *     必須 https host_permissions と executeScript({ files }) を使う。
  *     タブ本文の一括読み取り（search --page / --all）では ensure を使わず
  *     read-tab-inner-text（CS → executeScript({ func })）を使うこと。
  */
@@ -21,7 +21,7 @@ const AFTER_INJECT_SETTLE_MS = 50
 const PROBE_TIMEOUT_MS = 1500
 /** EN: File inject can hang on frozen / debugger-paused tabs — always bound it. */
 const INJECT_TIMEOUT_MS = 2000
-const DEFAULT_MATCHES = ["http://*/*", "https://*/*"] as const
+const DEFAULT_MATCHES = ["https://*/*"] as const
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {

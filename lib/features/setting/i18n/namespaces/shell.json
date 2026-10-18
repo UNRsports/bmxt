@@ -24,8 +24,8 @@
     "en": "Welcome to BMXt! This program is a test version."
   },
   "shell.reloadHint": {
-    "ja": "⚠️サイト内操作は http(s) タブへ自動注入されます。chrome:// や休止中のタブなど、拡張が操作できないページでは使えません。⚠️",
-    "en": "⚠️ In-page actions inject into http(s) tabs automatically. Restricted pages (chrome://, etc.) and discarded tabs cannot be scripted. ⚠️"
+    "ja": "⚠️サイト内操作は https タブへ自動注入されます。平文 http・chrome://・休止中のタブなどでは使えません。⚠️",
+    "en": "⚠️ In-page actions inject into https tabs automatically. Plain http, chrome://, discarded tabs, and other restricted pages cannot be scripted. ⚠️"
   },
   "shell.extraKeys.toolbar": {
     "ja": "ターミナル補助キー",

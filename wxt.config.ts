@@ -33,7 +33,7 @@ export default defineConfig({
       "history",
       "bookmarks"
     ],
-    host_permissions: ["http://*/*", "https://*/*"],
+    host_permissions: ["https://*/*"],
     content_security_policy: {
       extension_pages:
         "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
@@ -67,7 +67,7 @@ export default defineConfig({
     web_accessible_resources: [
       {
         resources: ["bmxt-float.html"],
-        matches: ["http://*/*", "https://*/*"]
+        matches: ["https://*/*"]
       }
     ],
     action: {

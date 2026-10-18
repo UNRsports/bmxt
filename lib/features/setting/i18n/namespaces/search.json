@@ -92,16 +92,16 @@
     "en": "({count} tab(s) exceeded {limit} chars — body not scanned; see rows below)"
   },
   "search.pageNoTextHint": {
-    "ja": "本文を読めませんでした。休止中のタブや chrome:// など非対応ページの可能性があります。対象タブを開き直すか、search -list --page を再実行してください。",
-    "en": "Could not read page text. The tab may be discarded or not scriptable (e.g. chrome://). Open or activate the tab, then run search -list --page again."
+    "ja": "本文を読めませんでした。休止中のタブ、平文 http、chrome:// など非対応ページの可能性があります。対象タブを開き直すか、search -list --page を再実行してください。",
+    "en": "Could not read page text. The tab may be discarded or not scriptable (plain http, chrome://, etc.). Open or activate the tab, then run search -list --page again."
   },
   "search.pageProgress.done": {
     "ja": "{label} — 完了（読取 {scanned}・スキップ {skipped}・確認 {tabTotal}）",
     "en": "{label} — finished ({scanned} read, {skipped} skipped, {tabTotal} checked)"
   },
   "search.pageProgress.start": {
-    "ja": "{label} — 開いている http(s) タブ {tabTotal} 件の本文を走査中…",
-    "en": "{label} — scanning visible text in {tabTotal} open http(s) tab(s)…"
+    "ja": "{label} — 開いている https タブ {tabTotal} 件の本文を走査中…",
+    "en": "{label} — scanning visible text in {tabTotal} open https tab(s)…"
   },
   "search.pageProgress.tick": {
     "ja": "{label} — {tabIndex}/{tabTotal} タブ確認済み（読取 {scanned}・スキップ {skipped}）",

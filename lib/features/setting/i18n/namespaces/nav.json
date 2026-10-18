@@ -28,8 +28,8 @@
     "en": "error: turn nav off with Alt on the prompt first, then run nav -exit."
   },
   "nav.hostAccessWarning": {
-    "ja": "warning: http(s) のサイトアクセスが無効です — chrome://extensions でサイトアクセスを有効にしてから Alt ON してください。",
-    "en": "warning: http(s) site access is disabled — enable site access under chrome://extensions, then use Alt ON."
+    "ja": "warning: https のサイトアクセスが無効です — chrome://extensions でサイトアクセスを有効にしてから Alt ON してください。",
+    "en": "warning: https site access is disabled — enable site access under chrome://extensions, then use Alt ON."
   },
   "nav.notArmed": {
     "ja": "このペインでは nav は起動していません。",

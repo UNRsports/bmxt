@@ -46,11 +46,11 @@ describe("namespace message catalogs", () => {
     const entry = messages["shell.reloadHint"]
     assert.equal(
       entry?.ja,
-      "⚠️サイト内操作は http(s) タブへ自動注入されます。chrome:// や休止中のタブなど、拡張が操作できないページでは使えません。⚠️"
+      "⚠️サイト内操作は https タブへ自動注入されます。平文 http・chrome://・休止中のタブなどでは使えません。⚠️"
     )
     assert.equal(
       entry?.en,
-      "⚠️ In-page actions inject into http(s) tabs automatically. Restricted pages (chrome://, etc.) and discarded tabs cannot be scripted. ⚠️"
+      "⚠️ In-page actions inject into https tabs automatically. Plain http, chrome://, discarded tabs, and other restricted pages cannot be scripted. ⚠️"
     )
   })
 

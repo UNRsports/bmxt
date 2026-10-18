@@ -10,7 +10,7 @@ describe("ensure-content-script manifest helpers", () => {
     const manifest = {
       content_scripts: [
         {
-          matches: ["https://*/*", "http://*/*"],
+          matches: ["https://*/*"],
           js: ["content-scripts/bmxt-nav-overlay.js"],
           all_frames: false,
           run_at: "document_idle"
@@ -26,17 +26,17 @@ describe("ensure-content-script manifest helpers", () => {
 
   it("defaults matches when content_scripts omit them", () => {
     const matches = listManifestContentScriptMatches({} as chrome.runtime.Manifest)
-    assert.deepEqual(matches, ["http://*/*", "https://*/*"])
+    assert.deepEqual(matches, ["https://*/*"])
   })
 
   it("collects unique match patterns", () => {
     const manifest = {
       content_scripts: [
         { matches: ["https://*/*"], js: ["a.js"] },
-        { matches: ["https://*/*", "http://*/*"], js: ["b.js"] }
+        { matches: ["https://*/*", "https://example.com/*"], js: ["b.js"] }
       ]
     } as chrome.runtime.Manifest
     const matches = listManifestContentScriptMatches(manifest)
-    assert.deepEqual(matches, ["https://*/*", "http://*/*"])
+    assert.deepEqual(matches, ["https://*/*", "https://example.com/*"])
   })
 })

@@ -149,14 +149,14 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav on **desktop** **host-ui**; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field. **mobile** **host-ui** (since **0.8.2**, default on Android / Android Vivaldi): soft key bar plus pointer select / outside-tap dismiss for prompt candidate menus.
 - **State**: **Terminal session logs** (`logsById`, `order`, `activeId`, `namesById`), **open picker columns**, and **pane focus** live in the **BMXt UI page** (React) for the window lifetime — see **[Terminal session state (UI source of truth)](#terminal-session-state)**. **Prompt command history** is stored in **`chrome.storage.local`** (`bmxt_cmd_history`, cap **300** entries). **UI settings**, **page-active** picker prefs, and similar user metadata use other **`chrome.storage.local`** keys (**`lib/features/extension-storage/keys.ts`**).
 - **Background**: Service Worker (`entrypoints/background/index.ts`) opens the window on icon click and handles command execution and tab operations.
-- **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**); **`toggle-bmxt-float`** (default **Shift+Alt+F**) shows or hides the in-page float prompt on the active http(s) tab (independent UI process; shares prompt command history with the popup window).
+- **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**); **`toggle-bmxt-float`** (default **Shift+Alt+F**) shows or hides the in-page float prompt on the active **https** tab (independent UI process; shares prompt command history with the popup window).
 
 <a id="permissions-manifest"></a>
 
 ### Permissions (`wxt.config.ts` manifest)
 
 
-Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Host patterns `http://*/*` and `https://*/*` are declared as required **`host_permissions`** so install/update can inject the content script into already-open http(s) tabs **without a page reload** (`lib/features/page-scripting/`). If site access is later turned off under `chrome://extensions`, in-page commands explain how to re-enable it.
+Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Required **`host_permissions`** are **`https://*/*` only** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`lib/features/page-scripting/`). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) is **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without that host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under `chrome://extensions`, in-page commands explain how to re-enable it.
 
 **Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
@@ -238,12 +238,12 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `tab -nowurl` | Print current tab URL |
 | `tab help` | Show the `tab` manual section |
 | `dom` | Print usage and restore the prompt to `dom ` (trailing space) so you can enter `-list` |
-| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | List DOM nodes from the active tab as plain lines (default **`--normal --html`**); optional case-insensitive substring filter; scriptable http(s) only |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | List DOM nodes from the active tab as plain lines (default **`--normal --html`**); optional case-insensitive substring filter; scriptable **https** only |
 | `dom -list … | browse` | Open a read-only DOM picker column (same picker chrome as `search -list … | browse`); mode **`--normal`** or **`--with`**; flavor **`--html`** or **`--react`** |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). Case-insensitive substring (no regex in v1) |
-| `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open http(s) tab text, and saved snapshots in parallel |
+| `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open **https** tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
@@ -372,7 +372,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 ### `dom`
 
 - Bare `dom` + **Enter** prints the usage block and restores the prompt to **`dom `** so you can type `-list` (same continuation pattern as other first commands with manifest `subcommands`).
-- **`dom -list`** + **Enter** (plain, default **`--normal --html`**) runs via **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** plain lines in the session log (full output + scroll; summary footer). **Scriptable http(s)** only (declared required **`host_permissions`**; if site access was turned off under `chrome://extensions`, re-enable it).
+- **`dom -list`** + **Enter** (plain, default **`--normal --html`**) runs via **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** plain lines in the session log (full output + scroll; summary footer). **Scriptable https** only (declared required **`host_permissions`**; if site access was turned off under `chrome://extensions`, re-enable it).
 - **`dom -list … | browse`** + **Enter** opens the DOM picker column (UI path). Bare **`dom -list … | browse`** may show the **`--normal` / `--with` / `--html` / `--react` option menu** before the column opens; see **[How columns open](#picker-ui)**.
 - **`dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`** (with or (plain; use **`<list> | browse`** for the column)) resolve the **active tab of the last-focused normal browser window**, inject a read-only helper via `chrome.scripting`, and produce DOM rows. **`chrome://`**, the Chrome Web Store, `chrome-extension://`, etc. are rejected with error lines.
 - **`--normal`** (default when omitted) — full DOM tree; **`↑`/`↓`** (or **`j`/`k`**) focus jumpable element rows; the target tab scrolls to the highlighted node (debounced). **`Alt+↑`/`↓`** preview page jump when **`--manual`** page-active is set.
@@ -386,19 +386,19 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
 - **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**) as **plain** output via **`RUN_CMD`** → **`search_list`** effect (or use **`search -list … | browse`** for the picker column).
-- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list … | browse`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open http(s) tab **live**. **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive. **Since 0.8.4:** **`--page`** hits carry subdivided matches via ListResult field **`pageMatchesJson`** (`search-page-matches-list-field.ts`) so the picker can jump/scroll to in-page snippets more reliably.
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list … | browse`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open **https** tab **live**. **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive. **Since 0.8.4:** **`--page`** hits carry subdivided matches via ListResult field **`pageMatchesJson`** (`search-page-matches-list-field.ts`) so the picker can jump/scroll to in-page snippets more reliably.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
 - In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
-- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **http(s)** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) using the extension’s declared http(s) **`host_permissions`** (if site access was turned off under `chrome://extensions`, re-enable it).
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **https** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) using the extension’s declared https **`host_permissions`** (if site access was turned off under `chrome://extensions`, re-enable it).
 
 <a id="snapshot"></a>
 
 ### `snapshot` (`snapshot -save`)
 
-Save an http(s) tab as a **Markdown snapshot** with **YAML frontmatter** (`title`, `url`, `savedAt`, `source: bmxt`) for **Obsidian** and similar tools. The Service Worker **`run`** for **`snapshot`** prints usage only; **`snapshot -save`** is **UI-handled** in **`bmxt-shell.tsx`**.
+Save a scriptable **https** tab as a **Markdown snapshot** with **YAML frontmatter** (`title`, `url`, `savedAt`, `source: bmxt`) for **Obsidian** and similar tools. The Service Worker **`run`** for **`snapshot`** prints usage only; **`snapshot -save`** is **UI-handled** in **`bmxt-shell.tsx`**.
 
 | Input | Effect |
 |-------|--------|
@@ -430,7 +430,7 @@ Saved snapshots are searchable with **`search -list --snapshot`** (included in *
 | Input | Effect |
 |-------|--------|
 | Bare `nav` + **Enter** | Prints usage and restores the prompt to **`nav `** (continuation; Tab completes **`-enter`** / **`-exit`** only — no short aliases). |
-| **`nav -enter`** | **Arms** nav in this session pane. Uses the extension’s declared http(s) **`host_permissions`** (same family as `dom -list`). The page overlay is **not** shown yet. |
+| **`nav -enter`** | **Arms** nav in this session pane. Uses the extension’s declared https **`host_permissions`** (same family as `dom -list`). The page overlay is **not** shown yet. |
 | **`nav -exit`** | **Disarms** nav (clears per-tab position memory and removes overlays). Fails with an error if the overlay is still **ON** — press **Alt** to turn it **OFF** first. |
 
 **After `nav -enter` — Alt toggles overlay ON/OFF**
@@ -493,8 +493,8 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **j
 
 **Pages and permissions**
 
-- **Scriptable http(s)** only (`chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
-- After installing or reloading the extension, open http(s) tabs receive the WXT **content script** (`entrypoints/bmxt-nav-overlay.content/`) via **`onInstalled` reinject** / **`ensurePageContentScript`** — **no page reload required**. If the script is still missing, callers fall back to **`chrome.scripting.executeScript`**.
+- **Scriptable https** only (plain **http://**, `chrome://`, Chrome Web Store, `chrome-extension://`, etc. are rejected). The status strip shows a short error (for example **`site access denied`**) when injection fails.
+- After installing or reloading the extension, open **https** tabs receive the WXT **content script** (`entrypoints/bmxt-nav-overlay.content/`) via **`onInstalled` reinject** / **`ensurePageContentScript`** — **no page reload required**. If the script is still missing, callers fall back to **`chrome.scripting.executeScript`**.
 - Nav does **not** use the **`debugger`** permission / CDP AOM.
 
 **Implementation**
@@ -503,7 +503,7 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **j
 - **`lib/features/bmxt-window/bmxt-shell.tsx`** — handles **`nav -enter` / `nav -exit`** before `RUN_CMD`; wires nav with the detail-bar focus controller.
 - **`lib/features/bmxt-window/shell/usePaneFocusController.ts`** / **`use-detail-bar-keyboard.ts`** — while overlay **ON**, keep focus on the **nav** detail bar; **Alt** toggles from the bar.
 - **`entrypoints/background/index.ts`** — `NAV_CONTROL` message runs inject on the target tab.
-- **`entrypoints/bmxt-nav-overlay.content/`** — content script listener on http(s) pages.
+- **`entrypoints/bmxt-nav-overlay.content/`** — content script listener on https pages.
 
 <a id="translate"></a>
 
@@ -1079,7 +1079,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, external bundle, `bmxt_ui_settings_v1`, `bmxt_ui_settings_storage_v1`); see **[`setting`](#setting)**
 - **`lib/features/session/`** — terminal sessions (`session -list` / `-switch` inline pickers, session bar); see **[`session`](#session)**
 - **`lib/features/job/`** — per-scope **`JobRunner`**, cancel handles, optional in-memory audit log; see **[Job execution](#job-execution)**
-- **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on http(s) pages for nav overlay
+- **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on https pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
 - **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
@@ -1255,7 +1255,7 @@ Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo t
 |------|------|
 | **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
 | **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
-| **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on http(s) pages |
+| **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on https pages |
 | **`public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
 | **`crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
 | **`lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
@@ -1537,14 +1537,14 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**desktop** の **host-ui** では **キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。**mobile** の **host-ui**（**0.8.2** 以降。Android／Android 版 Vivaldi では既定）では補助キーバーに加え、プロンプト候補のタップ確定／外タップで閉じる。
 - **状態**: **ターミナルセッションのログ**（`logsById`、`order`、`activeId`、`namesById`）、**開いているピッカー列**、**ペインフォーカス**は **BMXt UI ページ**（React）が BMXt ウィンドウ存続中の正本 — **[ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)** 参照。**プロンプトのコマンド履歴**は **`chrome.storage.local`**（`bmxt_cmd_history`、上限 **300** 件）。**UI 設定**・**page-active** 等は別の **`chrome.storage.local`** キー（**`lib/features/extension-storage/keys.ts`**）。
 - **バックグラウンド**: Service Worker（`entrypoints/background/index.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
-- **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。**`toggle-bmxt-float`**（既定 **Shift+Alt+F**）でアクティブな http(s) タブ上のサイト内フロート・プロンプトを表示／非表示（ポップアップ窓とは独立プロセス；プロンプトのコマンド履歴のみ共有）。
+- **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。**`toggle-bmxt-float`**（既定 **Shift+Alt+F**）でアクティブな **https** タブ上のサイト内フロート・プロンプトを表示／非表示（ポップアップ窓とは独立プロセス；プロンプトのコマンド履歴のみ共有）。
 
 <a id="permissions-manifest-ja"></a>
 
 ### 権限（`wxt.config.ts` の manifest）
 
 
-manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。ホストパターン **`http://*/*` / `https://*/*`** は必須 **`host_permissions`** とし、インストール／更新時に既に開いている http(s) タブへ **ページ再読み込みなし** でコンテンツスクリプトを注入できます（**`lib/features/page-scripting/`**）。`chrome://extensions` でサイトアクセスを後からオフにした場合は、ページ内コマンドが再有効化の案内を出します。
+manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。必須 **`host_permissions`** は **`https://*/*` のみ**で、インストール／更新時に既に開いている **https** タブへ **ページ再読み込みなし** でコンテンツスクリプトを注入できます（**`lib/features/page-scripting/`**）。ページ内操作（**nav**・**float**・**`dom`**・**`search -list --page`**・**`snapshot -save`**）は **https のみ**。タブを開く・履歴・ブックマーク上の **http://** URL の扱いは従来どおり（ホスト権限は不要）。特権 SW メッセージ **`RUN_CMD`** / **`NAV_CONTROL`** は拡張 UI（**`bmxt.html`** / **`bmxt-float.html`**）からのみ受け付けます（コンテンツスクリプトや他拡張は拒否）。`chrome://extensions` でサイトアクセスを後からオフにした場合は、ページ内コマンドが再有効化の案内を出します。
 
 **データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** **ターミナルセッションの出力とピッカー UI** は BMXt ウィンドウが開いている間 **拡張 UI ページのメモリ**に保持（Service Worker には載せない）。**コマンド履歴**と **UI 設定**は上限付き **`chrome.storage.local`**（**`lib/features/extension-storage/keys.ts`**）。**`bmxt_terminal_sessions_v1`** 等の旧プロセスキーは **終了時の掃除**で削除されうるが、**実行中のログ正本ではない**。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
 
@@ -1626,7 +1626,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `tab -nowurl` | 現在タブの URL を表示。 |
 | `tab help` | `tab` のマニュアル節を表示 |
 | `dom` | 利用案内を表示し、続けて `dom `（末尾スペース付き）へ入力復元（`-list` など第二トークン入力用） |
-| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 **`--normal --html`**）。任意の部分一致フィルタ。scriptable な http(s) のみ |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 **`--normal --html`**）。任意の部分一致フィルタ。scriptable な **https** のみ |
 | `dom -list … | browse` | DOM 読み取り専用ピッカー列（`search -list … | browse` と同系 UI）。mode **`--normal`**／**`--with`**、flavor **`--html`**／**`--react`** |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
@@ -1766,7 +1766,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 | 入力 | 動作 |
 |------|------|
 | 単独 `nav` + **Enter** | 利用案内を表示し、プロンプトを **`nav `** に復元（continuation）。Tab 補完は **`-enter`** / **`-exit`** のみ（短縮別名なし）。 |
-| **`nav -enter`** | 当該セッションペインで nav を **起動（armed）**。宣言済みの必須 http(s) **`host_permissions`** を使う（`dom -list` と同系）。この時点ではページ上にオーバーレイは出ない。 |
+| **`nav -enter`** | 当該セッションペインで nav を **起動（armed）**。宣言済みの必須 https **`host_permissions`** を使う（`dom -list` と同系）。この時点ではページ上にオーバーレイは出ない。 |
 | **`nav -exit`** | nav を **完全終了**（タブごとの位置記憶を消し、オーバーレイを除去）。オーバーレイがまだ **ON** のときはエラー — 先に **Alt** で **OFF** にする。 |
 
 **`nav -enter` 後 — Alt でオーバーレイ ON/OFF**
@@ -1829,8 +1829,8 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 
 **ページと権限**
 
-- **scriptable な http(s)** のみ（`chrome://`・ウェブストア・`chrome-extension://` 等は拒否）。注入失敗時はステータス帯に短い理由（例: **`site access denied`**）。
-- 拡張のインストール／再読み込み後は、開いている http(s) タブへ **`onInstalled` 再注入** / **`ensurePageContentScript`** で WXT **コンテンツスクリプト**（`entrypoints/bmxt-nav-overlay.content/`）を載せる（**対象ページの再読み込みは不要**）。未注入時は **`chrome.scripting.executeScript`** にフォールバック。
+- **scriptable な https** のみ（平文 **http://**・`chrome://`・ウェブストア・`chrome-extension://` 等は拒否）。注入失敗時はステータス帯に短い理由（例: **`site access denied`**）。
+- 拡張のインストール／再読み込み後は、開いている **https** タブへ **`onInstalled` 再注入** / **`ensurePageContentScript`** で WXT **コンテンツスクリプト**（`entrypoints/bmxt-nav-overlay.content/`）を載せる（**対象ページの再読み込みは不要**）。未注入時は **`chrome.scripting.executeScript`** にフォールバック。
 
 **実装**
 
@@ -1838,7 +1838,7 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 - **`lib/features/bmxt-window/bmxt-shell.tsx`** — **`nav -enter` / `nav -exit`** を `RUN_CMD` より前に処理。詳細バーフォーカス制御と接続。
 - **`lib/features/bmxt-window/shell/usePaneFocusController.ts`** / **`use-detail-bar-keyboard.ts`** — オーバーレイ **ON** 中は **nav** 詳細バーにフォーカス固定。**Alt** で切替。
 - **`entrypoints/background/index.ts`** — `NAV_CONTROL` メッセージで対象タブへ注入。
-- **`entrypoints/bmxt-nav-overlay.content/`** — http(s) ページ上のリスナー。
+- **`entrypoints/bmxt-nav-overlay.content/`** — https ページ上のリスナー。
 
 <a id="translate-ja"></a>
 
@@ -2134,7 +2134,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 
 - **`dom` 単体 + Enter** で利用案内を表示し、プロンプトを **`dom `** に戻して第二トークン入力を待つ（manifest の `subcommands` がある第一コマンドと同じ continuation）。
-- **`dom -list`** + **Enter**（プレーン、既定 **`--normal --html`**）は **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** プレーン行をログに出力（フル出力＋スクロール、末尾サマリー）。scriptable な http(s) のみ（必須 **`host_permissions`**。`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
+- **`dom -list`** + **Enter**（プレーン、既定 **`--normal --html`**）は **`RUN_CMD`** → **`dom_list`** effect → **`ListResult`** プレーン行をログに出力（フル出力＋スクロール、末尾サマリー）。scriptable な **https** のみ（必須 **`host_permissions`**。`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
 - **`dom -list … | browse`** + **Enter** で DOM ピッカー列を開く（UI 経路）。裸の **`dom -list … | browse`** では mode／flavor 未確定時にオプションメニューを表示することがある（**[列の開き方](#picker-ui-ja)**）。
 - **`dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>]`**は直前にフォーカスした通常ウィンドウの**アクティブタブ**を対象に DOM 行を取得する。**`chrome://`** 等はエラー行。
 - **`--normal`**（省略時は既定）— 全 DOM ツリー；**`↑`/`↓`**（または **`j`/`k`**）でジャンプ可能行にフォーカス；対象タブが該当ノードへスクロール。**`--manual`** page-active 時は **`Alt+↑`/`↓`** でページジャンププレビュー。
@@ -2153,13 +2153,13 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
-- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **http(s)** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。宣言済みの必須 http(s) **`host_permissions`** を使う（`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **https** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。宣言済みの必須 https **`host_permissions`** を使う（`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
 
 <a id="snapshot-ja"></a>
 
 ### `snapshot`（`snapshot -save`）
 
-http(s) タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / `url` / `savedAt` / `source: bmxt`）として保存し、**Obsidian** 等と連携できる形式にします。Service Worker の **`run`** は usage のみ；**`snapshot -save`** は **`bmxt-shell.tsx`** が UI 処理します。
+scriptable な **https** タブを **YAML frontmatter** 付き **Markdown snapshot**（`title` / `url` / `savedAt` / `source: bmxt`）として保存し、**Obsidian** 等と連携できる形式にします。Service Worker の **`run`** は usage のみ；**`snapshot -save`** は **`bmxt-shell.tsx`** が UI 処理します。
 
 | 入力 | 動作 |
 |------|------|
@@ -2443,7 +2443,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、外部バンドル、`bmxt_ui_settings_v1`、`bmxt_ui_settings_storage_v1`）；**[`setting`](#setting-ja)** 参照
 - **`lib/features/session/`** — ターミナルセッション（`session -list` / `-switch` インライン候補、セッションバー）；**[`session`](#session-ja)** 参照
 - **`lib/features/job/`** — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ；**[ジョブ実行](#job-execution-ja)** 参照
-- **`entrypoints/bmxt-nav-overlay.content/`** — http(s) 向け nav 用 WXT コンテンツスクリプト
+- **`entrypoints/bmxt-nav-overlay.content/`** — https 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — Tab 補完・IME/eligibility 用生成物（Enter continuation の正本は Rust `promptPrefix`）
 - **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyChromeEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
@@ -2604,7 +2604,7 @@ Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行�
 |------|------|
 | **`entrypoints/background/`** | Service Worker（`index.ts`）— ウィンドウ起動・`runDispatch`・Effect |
 | **`entrypoints/bmxt/`** | 拡張 UI ページ → ビルド後 **`bmxt.html`**（`main.tsx` + `index.html`） |
-| **`entrypoints/bmxt-nav-overlay.content/`** | http(s) 向け Nav コンテンツスクリプト |
+| **`entrypoints/bmxt-nav-overlay.content/`** | https 向け Nav コンテンツスクリプト |
 | **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
@@ -2622,7 +2622,7 @@ Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行�
 
 - `entrypoints/bmxt/` — 拡張ページ（`main.tsx` + `index.html`；`BmxtTerminal` をマウント）
 - `entrypoints/background/` — Service Worker
-- `entrypoints/bmxt-nav-overlay.content/` — http(s) 向け content script
+- `entrypoints/bmxt-nav-overlay.content/` — https 向け content script
 - `bmxt-ui.css` — ウィンドウ用スタイル
 - `wxt.config.ts` — manifest オーバーライド
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）

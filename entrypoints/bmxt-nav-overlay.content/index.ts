@@ -1,11 +1,11 @@
 /**
- * EN: Content script — nav overlay + in-page float prompt host on http(s) pages.
+ * EN: Content script — nav overlay + in-page float prompt host on https pages.
  *     Idempotent on programmatic re-inject after install/update (no page reload).
- *     Always-on for http(s) by design (required host_permissions); actions stay
+ *     Always-on for https by design (required host_permissions); actions stay
  *     message-driven and same-extension-only (`sender.id` check).
  * JA: 常駐 CS。nav オーバーレイとサイト上フロート・プロンプトを扱う。
  *     インストール／更新後のプログラム再注入でも二重登録しない。
- *     http(s) 常駐は仕様（必須 host_permissions）。操作はメッセージ駆動かつ同一拡張のみ。
+ *     https 常駐は仕様（必須 host_permissions）。操作はメッセージ駆動かつ同一拡張のみ。
  */
 
 import {
@@ -53,7 +53,7 @@ type GlobalWithCsGuard = typeof globalThis & {
 }
 
 export default defineContentScript({
-  matches: ["https://*/*", "http://*/*"],
+  matches: ["https://*/*"],
   allFrames: false,
   runAt: "document_idle",
   main() {

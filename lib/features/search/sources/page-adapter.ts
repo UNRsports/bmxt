@@ -8,7 +8,7 @@ import {
   probeOpenTabInnerTextLength,
   readOpenTabInnerText
 } from "../../page-extract/read-tab-inner-text"
-import { isHttpUrl } from "../../url/is-http-url"
+import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 import { matchesNeedle } from "../index"
 import { MAX_PAGE_TEXT_CHARS } from "../limits"
 import { collectPageMatchesForTab } from "../search-page-matches"
@@ -135,7 +135,7 @@ export async function searchPageLines(
 
   const all = await chrome.tabs.query({})
   const candidates = all.filter(
-    (t) => !t.discarded && typeof t.id === "number" && isHttpUrl(t.url)
+    (t) => !t.discarded && typeof t.id === "number" && isScriptablePageUrl(t.url)
   )
   candidates.sort((a, b) => {
     const la = (a as { lastAccessed?: number }).lastAccessed ?? 0

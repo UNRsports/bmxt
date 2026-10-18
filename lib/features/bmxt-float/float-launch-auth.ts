@@ -20,8 +20,8 @@ function tabKey(tabId: number): string {
   return String(tabId)
 }
 
-function isHttpOrigin(origin: string): boolean {
-  return origin.startsWith("http://") || origin.startsWith("https://")
+function isHttpsOrigin(origin: string): boolean {
+  return origin.startsWith("https://")
 }
 
 /** EN: Parse http(s) origin from a tab URL (testable). */
@@ -31,7 +31,7 @@ export function parentOriginFromTabUrl(url: string | undefined): string | null {
   }
   try {
     const origin = new URL(url).origin
-    if (!isHttpOrigin(origin)) {
+    if (!isHttpsOrigin(origin)) {
       return null
     }
     return origin
@@ -49,7 +49,7 @@ export function matchesFloatLaunchAuth(
   if (!entry || !parentOrigin || parentOrigin.length === 0) {
     return false
   }
-  if (!isHttpOrigin(parentOrigin)) {
+  if (!isHttpsOrigin(parentOrigin)) {
     return false
   }
   if (nowMs > entry.exp) {
@@ -91,7 +91,7 @@ export async function mintFloatLaunchAuth(
   if (!Number.isInteger(tabId) || tabId < 0) {
     return false
   }
-  if (!isHttpOrigin(parentOrigin)) {
+  if (!isHttpsOrigin(parentOrigin)) {
     return false
   }
   const bag = await readAuthBag()

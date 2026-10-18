@@ -5,7 +5,7 @@ import {
 } from "../page-dom/needle-occurrence"
 import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
 import { MAX_PAGE_TEXT_CHARS } from "./limits"
-import { isHttpUrl } from "../url/is-http-url"
+import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import { collectPageMatchesForTab } from "./search-page-matches"
 import { normalizeUrlForSearchDedup } from "./search-url-dedup"
 
@@ -64,7 +64,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
   const tabs = await chrome.tabs.query({})
   const tabByKey = new Map<string, chrome.tabs.Tab>()
   for (const tab of tabs) {
-    if (tab.discarded || typeof tab.id !== "number" || !isHttpUrl(tab.url)) {
+    if (tab.discarded || typeof tab.id !== "number" || !isScriptablePageUrl(tab.url)) {
       continue
     }
     const key = normalizeUrlForSearchDedup(tab.url)

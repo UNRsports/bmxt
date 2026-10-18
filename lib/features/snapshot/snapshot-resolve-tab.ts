@@ -1,6 +1,6 @@
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab"
 import { getTabPickerEngine } from "../tabs/engine/store"
-import { isHttpUrl } from "../url/is-http-url"
+import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import { pickerHiTabId } from "./snapshot-picker-tab-id"
 
 export type SnapshotTabResolveContext = {
@@ -11,7 +11,7 @@ function isScriptableTab(tab: chrome.tabs.Tab | undefined): tab is chrome.tabs.T
   if (!tab || tab.id === undefined) {
     return false
   }
-  return isHttpUrl(tab.url ?? "")
+  return isScriptablePageUrl(tab.url ?? "")
 }
 
 async function tabById(tabId: number): Promise<chrome.tabs.Tab | undefined> {
@@ -37,7 +37,7 @@ function pickerActiveTabId(sessionId: string | undefined): number | undefined {
 async function findRecentHttpTab(): Promise<chrome.tabs.Tab | undefined> {
   const tabs = await chrome.tabs.query({})
   const candidates = tabs.filter(
-    (t) => !t.discarded && typeof t.id === "number" && isHttpUrl(t.url ?? "")
+    (t) => !t.discarded && typeof t.id === "number" && isScriptablePageUrl(t.url ?? "")
   )
   candidates.sort((a, b) => {
     const la = (a as { lastAccessed?: number }).lastAccessed ?? 0
