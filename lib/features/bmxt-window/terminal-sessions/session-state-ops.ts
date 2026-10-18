@@ -3,9 +3,9 @@
  * JA: ターミナルセッション状態の純粋変換（正本は UI）。
  */
 
-import { MAX_SESSION_LOG_LINES } from "../../extension-storage/keys"
-import { sanitizeSessionName } from "../../session/session-summary"
-import type { TerminalSessionsStateV1 } from "./types"
+import { MAX_SESSION_LOG_LINES } from "../../extension-storage/keys.ts"
+import { sanitizeSessionName } from "../../session/session-summary.ts"
+import type { TerminalSessionsStateV1 } from "./types.ts"
 
 export function trimSessionLog(lines: string[]): string[] {
   return lines.slice(-MAX_SESSION_LOG_LINES)

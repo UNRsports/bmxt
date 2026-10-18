@@ -42,7 +42,7 @@ Task progress:
 - [ ] Key added to correct namespace JSON (EN + JA)
 - [ ] Source uses translator (tCmd / tTabs / tSetting / formatMessage) — not literal string
 - [ ] Placeholders match between locales
-- [ ] messages.test.ts catalog count updated if test asserts size
+- [ ] `tests/unit/features/setting/i18n/messages.test.ts` catalog count updated if test asserts size
 ```
 
 ## Example

@@ -1,11 +1,13 @@
 import { isRunCmdResult } from "../../bmxt-window/terminal-sessions/session-patches.ts"
-import type { SessionPatch } from "../../bmxt-window/terminal-sessions/session-patches.ts"
 import { runCommandFromUiAsync } from "../../bmxt-window/terminal-sessions/session-runtime-client.ts"
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { tError } from "../../setting/i18n/ns/error.ts"
 import { classifyOutcomeFromLines, segmentFailure, segmentSuccess } from "./classify-outcome.ts"
-import { extractLogLinesFromPatches } from "./extract-patches-lines.ts"
+import {
+  extractLogLinesFromPatches,
+  withoutLogPatches
+} from "./extract-patches-lines.ts"
 import type { SegmentOutcome } from "./types.ts"
 
 export type RunBackgroundSegmentOptions = {
@@ -17,17 +19,7 @@ export type RunBackgroundSegmentOptions = {
   suppressLogPatches?: boolean
 }
 
-/** EN: Drop terminal log patches; keep effects / session patches. */
-export function withoutLogPatches(patches: readonly SessionPatch[]): SessionPatch[] {
-  const out: SessionPatch[] = []
-  for (const patch of patches) {
-    if (patch.type === "appendLog" || patch.type === "setLog") {
-      continue
-    }
-    out.push(patch)
-  }
-  return out
-}
+export { withoutLogPatches }
 
 export async function runBackgroundSegment(
   segment: string,

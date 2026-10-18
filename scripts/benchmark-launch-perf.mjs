@@ -18,7 +18,7 @@ const backgroundPath = path.join(outDir, "background.js")
 function runLaunchUnitTests() {
   console.log("== launch unit tests ==")
   execSync(
-    "node --experimental-strip-types --test lib/features/launch/launch-perf.test.ts lib/features/launch/page-boot-perf.test.ts",
+    "node --experimental-strip-types --test tests/unit/features/launch/launch-perf.test.ts tests/unit/features/launch/page-boot-perf.test.ts",
     { cwd: root, stdio: "inherit" }
   )
 }

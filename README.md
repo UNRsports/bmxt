@@ -41,6 +41,7 @@
 - [Prompt Key Bindings](#prompt-key-bindings)
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
+  - [Testing](#testing)
   - [pnpm dependencies and security](#pnpm-dependencies)
   - [Project layout (WXT)](#project-layout)
   - [Main Sources](#main-sources)
@@ -1219,6 +1220,33 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 6. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
 7. **After edits:** When WXT finishes rebuilding, use **Reload** on the extension card (or reload the BMXt tab) so the Service Worker and UI pick up changes.
 
+<a id="testing"></a>
+
+### Testing
+
+
+**JS/TS** automated tests live under **`tests/`** (not under `lib/` or the repo root). See **[`tests/README.md`](tests/README.md)**.
+
+**Rust / WASM tests are intentionally outside `tests/`.** Cargo owns that layout:
+
+| Kind | Location |
+|------|----------|
+| Unit (`#[cfg(test)]`) | **`crates/bmxt-core/src/**/*.rs`** |
+| Integration | **`crates/bmxt-core/tests/`** (discovered next to that package’s **`Cargo.toml`**) |
+
+Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo test -p bmxt-core`** (`pnpm test` does not include them). Details: **[`tests/README.md`](tests/README.md)** § Rust / WASM.
+
+**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E.
+
+| Layer | Command | Location |
+|-------|---------|----------|
+| **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
+| **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test`. |
+| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**. Requires **`pnpm run build`** first; Chromium via **`pnpm run test:e2e:install`**. |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
+
+**Adding a TS unit test:** place it at **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`** and import production code from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
+
 <a id="project-layout"></a>
 
 ### Project layout (WXT)
@@ -1233,6 +1261,7 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 | **`lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
 | **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
 | **`lib/features/`** | Feature modules (see table below) |
+| **`tests/`** | JS/TS tests only — unit, property (fast-check), Playwright E2E (see **[Testing](#testing)**). Rust stays under **`crates/bmxt-core/`**. |
 | **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
@@ -1399,6 +1428,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [プロンプトのキーバインド](#prompt-key-bindings-ja)
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
+  - [テスト](#testing-ja)
   - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
   - [プロジェクト構成（WXT）](#project-layout-ja)
   - [主なソース](#main-sources-ja)
@@ -2539,6 +2569,33 @@ pnpm run dev
 5. **BMXt を開く:** ツールバーの拡張機能アイコンから BMXt ウィンドウを開く。
 6. **編集後:** WXT の再ビルドが終わったら、拡張機能カードの「再読み込み」（または BMXt タブの再読み込み）で Service Worker と UI に反映させる。
 
+<a id="testing-ja"></a>
+
+### テスト
+
+
+**JS/TS** の自動テストはすべて **`tests/`** 配下に置く（`lib/` やリポジトリ直下には置かない）。詳細は **[`tests/README.md`](tests/README.md)**。
+
+**Rust / WASM テストは意図的に `tests/` の外**に置く（Cargo の正本配置）:
+
+| 種類 | 場所 |
+|------|------|
+| ユニット（`#[cfg(test)]`） | **`crates/bmxt-core/src/**/*.rs`** |
+| 統合 | **`crates/bmxt-core/tests/`**（当該パッケージの **`Cargo.toml`** 隣） |
+
+Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行は **`cargo test -p bmxt-core`**（**`pnpm test`** には含まれない）。詳細: **[`tests/README.md`](tests/README.md)** の Rust / WASM 節。
+
+**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E。
+
+| 層 | コマンド | 場所 |
+|----|----------|------|
+| **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
+| **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`。 |
+| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**。事前に **`pnpm run build`**。Chromium は **`pnpm run test:e2e:install`**。 |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
+
+**TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`** に置き、本番コードは **`lib/features/...`** から **`.ts` 付き**で import する。`lib/` 隣へのコロケートはしない。
+
 <a id="project-layout-ja"></a>
 
 ### プロジェクト構成（WXT）
@@ -2551,6 +2608,7 @@ pnpm run dev
 | **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
+| **`tests/`** | JS/TS テストのみ（unit / property / Playwright E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
