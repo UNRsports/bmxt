@@ -1241,7 +1241,7 @@ Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo t
 | Layer | Command | Location |
 |-------|---------|----------|
 | **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
-| **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test`. |
+| **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test` (incl. UTF-16/UTF-8 caret conversion and **TS↔WASM** host entrypoints). |
 | **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**. Requires **`pnpm run build`** first; Chromium via **`pnpm run test:e2e:install`**. |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
 
@@ -2590,7 +2590,7 @@ Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行�
 | 層 | コマンド | 場所 |
 |----|----------|------|
 | **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
-| **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`。 |
+| **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`（UTF-16/UTF-8 キャレット変換と **TS↔WASM** ホスト入口を含む）。 |
 | **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**。事前に **`pnpm run build`**。Chromium は **`pnpm run test:e2e:install`**。 |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
 

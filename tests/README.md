@@ -9,7 +9,7 @@ JA: BMXt の **JS/TS** 自動テストはすべてこのディレクトリ配下
 |------|------|
 | **`unit/features/`** | Node.js `node:test` unit tests. Mirrors `lib/features/` paths. |
 | **`unit/scripts/`** | Unit tests for `scripts/` helpers (`.test.mjs`). |
-| **`property/`** | Property-based tests via **fast-check** + `node:test`. |
+| **`property/`** | Property-based tests via **fast-check** + `node:test` (includes **TS↔WASM boundary** random-input suites). |
 | **`e2e/`** | Playwright extension E2E specs. |
 | **`playwright.config.ts`** | Playwright config (`testDir: ./e2e`). |
 
@@ -38,7 +38,7 @@ pnpm run verify           # full CI gate (includes the above)
 ## Adding tests / テスト追加
 
 - **Unit (TS):** add `tests/unit/features/<same-path-as-lib>/<name>.test.ts` and import production modules from `lib/features/...` with a `.ts` extension.
-- **Property:** add `tests/property/<name>.property.test.ts` using `fast-check` (`fc.assert` / `fc.property`).
+- **Property:** add `tests/property/<name>.property.test.ts` using `fast-check` (`fc.assert` / `fc.property`). Boundary suites: `utf16-utf8-offset.property.test.ts`, `wasm-boundary.property.test.ts` (needs built `lib/wasm/bmxt-core/bmxt_core_bg.wasm`).
 - **E2E:** add `tests/e2e/<name>.spec.ts` (shared fixtures in `fixtures.ts`).
 - **Rust:** add `#[cfg(test)]` modules under `crates/bmxt-core/src/`, or integration files under `crates/bmxt-core/tests/` — **not** under this directory.
 
