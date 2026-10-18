@@ -166,8 +166,8 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `reload` | Reload the target active tab. Batch: `tab -list \| reload` |
 | `close` / `c` | Close the target tab after y/n confirm; `close <tabId>` / `c <tabId>` closes that id without confirm. Batch: `tab -list \| close` |
 | `dom` | Print available options; Enter alone restores the prompt to `dom ` (trailing space) for the next token |
-| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | Plain DOM list from active tab (default `--normal --html`); optional substring filter; scriptable http(s) only |
-| `dom -list … | browse` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; scriptable http(s) only |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | Plain DOM list from active tab (default `--normal --html`); optional substring filter; scriptable https only |
+| `dom -list … | browse` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; scriptable https only |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `nav` | Print usage; Enter alone restores the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, etc.); **/** incremental attribute jump; identity label `kind:key` |
@@ -198,4 +198,4 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `notes` | Show release notes for the current extension version; `notes <version>` for a specific version (e.g. `0.1.1`); `notes --list` lists versions that have entries |
 | `<list-command> | browse` | Open a list as a picker column / inline UI (e.g. `tab -list | browse`); plain `-list` prints to the log |
 
-Shortcuts (chrome://extensions/shortcuts): `launch-bmxt` (default Shift+Alt+C), `reset-bmxt` (default Shift+Alt+R), `toggle-bmxt-float` (default Shift+Alt+F — in-page float prompt on the active http(s) tab).
+Shortcuts (chrome://extensions/shortcuts): `launch-bmxt` (default Shift+Alt+C), `reset-bmxt` (default Shift+Alt+R), `toggle-bmxt-float` (default Shift+Alt+F — in-page float prompt on the active https tab).
