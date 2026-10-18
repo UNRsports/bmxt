@@ -179,9 +179,12 @@
               install or update, without a page reload). In-page scripting (nav, float, <code>dom</code>,
               <code>search -list --page</code>, <code>snapshot -save</code>) is https-only; opening, listing,
               or matching <code>http://</code> URLs in tabs, history, and bookmarks does not require that host
-              grant. Meaningful page reads and overlays still run only when you issue a command or toggle a
-              related UI host (including the optional float prompt and nav overlay). You can later restrict
-              site access under <code>chrome://extensions</code>.
+              grant. Privileged service-worker messages used for command execution and nav control are
+              accepted only from the Extension’s own UI pages (<code>bmxt.html</code> /
+              <code>bmxt-float.html</code>), not from content scripts or other extensions. Meaningful page
+              reads and overlays still run only when you issue a command or toggle a related UI host
+              (including the optional float prompt and nav overlay). You can later restrict site access under
+              <code>chrome://extensions</code>.
             </li>
             <li>
               When translation assist is on, text you type may be processed by Chrome’s built-in
@@ -577,6 +580,8 @@
               （インストール／更新直後の既存タブも含め、ページ再読み込みは不要）。ページ内操作（nav・float・
               <code>dom</code>・<code>search -list --page</code>・<code>snapshot -save</code>）は https のみです。
               タブ・履歴・ブックマーク上の <code>http://</code> URL の開く・一覧・照合には当該ホスト権限は不要です。
+              コマンド実行および nav 制御に用いる特権サービスワーカー・メッセージは、本拡張機能自身の UI ページ
+              （<code>bmxt.html</code> / <code>bmxt-float.html</code>）からのみ受け付け、コンテンツスクリプトや他拡張からの送信は拒否します。
               ページ本文の読み取りやオーバーレイなど意味のある処理は、コマンド実行時または関連 UI ホスト（任意の
               フロート・プロンプトや nav オーバーレイ）の切替時に限ります。後から
               <code>chrome://extensions</code> でサイトアクセスを制限できます。

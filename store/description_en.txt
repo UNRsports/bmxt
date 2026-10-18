@@ -45,6 +45,12 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.8.5:
+- Required host_permissions enable in-page actions without a page reload
+- In-page scripting limited to https (nav / float / dom / search --page / snapshot)
+- RUN_CMD / NAV_CONTROL accepted only from extension UI pages
+- More reliable verification through revised test approach
+
 0.8.4:
 - Improved picker behavior in search commands
 
