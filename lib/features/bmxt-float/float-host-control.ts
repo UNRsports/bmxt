@@ -3,7 +3,12 @@
  * JA: タブ上フロートの表示／非表示／トグル（SW 用）。
  */
 
+import { ensurePageContentScript } from "../page-scripting/ensure-content-script.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
+import {
+  clearFloatLaunchAuthForTab,
+  mintFloatLaunchAuthForTab
+} from "./float-launch-auth.ts"
 import {
   BMXT_FLOAT_MESSAGE_TYPE,
   type BmxtFloatHostAction,
@@ -11,7 +16,7 @@ import {
 } from "./float-host-message.ts"
 import { setFloatDesiredVisibleOnTab } from "./float-visible-tabs.ts"
 
-export async function sendFloatHostAction(
+async function sendFloatMessage(
   tabId: number,
   action: BmxtFloatHostAction
 ): Promise<boolean | null> {
@@ -26,9 +31,40 @@ export async function sendFloatHostAction(
     }
     return response.visible
   } catch {
-    // Content script missing or host permission not granted — no-op.
     return null
   }
+}
+
+async function prepareFloatLaunchAuth(tabId: number, action: BmxtFloatHostAction): Promise<void> {
+  if (action === "hide") {
+    await clearFloatLaunchAuthForTab(tabId)
+    return
+  }
+  // EN: show / toggle may reveal the float — mint parent-origin auth before the CS loads it.
+  await mintFloatLaunchAuthForTab(tabId)
+}
+
+export async function sendFloatHostAction(
+  tabId: number,
+  action: BmxtFloatHostAction
+): Promise<boolean | null> {
+  await prepareFloatLaunchAuth(tabId, action)
+  const first = await sendFloatMessage(tabId, action)
+  if (first !== null) {
+    if (action === "toggle" && first === false) {
+      await clearFloatLaunchAuthForTab(tabId)
+    }
+    return first
+  }
+  if (!(await ensurePageContentScript(tabId))) {
+    return null
+  }
+  await prepareFloatLaunchAuth(tabId, action)
+  const second = await sendFloatMessage(tabId, action)
+  if (action === "toggle" && second === false) {
+    await clearFloatLaunchAuthForTab(tabId)
+  }
+  return second
 }
 
 export async function showBmxtFloatOnTabAsync(tabId: number): Promise<void> {

@@ -62,5 +62,5 @@ Constants: `settings-bundle-layout.ts` (`EXTERNAL_SETTINGS_BUNDLE_DIR`, known im
 
 ## Tests and docs
 
-- **`setting.test.ts`** — extend when changing version or layout constants.
+- **`tests/unit/features/setting/setting.test.ts`** — extend when changing version or layout constants.
 - **README § setting** (EN + JA) — update when behavior or on-disk format changes.

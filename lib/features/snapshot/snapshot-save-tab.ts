@@ -1,6 +1,6 @@
 import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
 import { MAX_PAGE_TEXT_CHARS } from "../search/limits"
-import { isHttpUrl } from "../url/is-http-url"
+import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import { resolveSnapshotTargetTab, type SnapshotTabResolveContext } from "./snapshot-resolve-tab"
 import { saveSnapshot } from "./snapshot-storage"
 import type { SnapshotSaveResult } from "./snapshot-types"
@@ -26,11 +26,11 @@ export async function saveSnapshotFromTab(
     return { ok: false, code: "no_tab", message: "tab not found" }
   }
   const url = tab.url ?? ""
-  if (!isHttpUrl(url)) {
+  if (!isScriptablePageUrl(url)) {
     return {
       ok: false,
       code: "not_scriptable",
-      message: "tab is not an http(s) page",
+      message: "tab is not a scriptable https page",
       url: url || "(no url)"
     }
   }

@@ -24,8 +24,8 @@
     "en": "Welcome to BMXt! This program is a test version."
   },
   "shell.reloadHint": {
-    "ja": "⚠️タブやサイト内の操作を行う場合は、最初にページをリロードして拡張機能のスクリプトがページ内で有効化するようにしてください。⚠️",
-    "en": "⚠️ To operate on tabs or within a page, reload the page first so the extension scripts are active on that page. ⚠️"
+    "ja": "⚠️サイト内操作は https タブへ自動注入されます。平文 http・chrome://・休止中のタブなどでは使えません。⚠️",
+    "en": "⚠️ In-page actions inject into https tabs automatically. Plain http, chrome://, discarded tabs, and other restricted pages cannot be scripted. ⚠️"
   },
   "shell.extraKeys.toolbar": {
     "ja": "ターミナル補助キー",

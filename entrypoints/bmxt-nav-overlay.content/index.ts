@@ -1,6 +1,11 @@
 /**
- * EN: Content script — nav overlay + in-page float prompt host on http(s) pages.
+ * EN: Content script — nav overlay + in-page float prompt host on https pages.
+ *     Idempotent on programmatic re-inject after install/update (no page reload).
+ *     Always-on for https by design (required host_permissions); actions stay
+ *     message-driven and same-extension-only (`sender.id` check).
  * JA: 常駐 CS。nav オーバーレイとサイト上フロート・プロンプトを扱う。
+ *     インストール／更新後のプログラム再注入でも二重登録しない。
+ *     https 常駐は仕様（必須 host_permissions）。操作はメッセージ駆動かつ同一拡張のみ。
  */
 
 import {
@@ -8,6 +13,7 @@ import {
   bmxtProbePageInnerTextLengthInPage,
   isPageExtractRequest
 } from "../../lib/features/page-extract/page-extract-message"
+import { clampPageExtractMaxChars } from "../../lib/features/page-extract/page-extract-limits"
 import { bmxtFindPageScrollToSnippetInjected } from "../../lib/features/page-dom/injected-find-page-scroll-to-snippet"
 import { bmxtScrollToSearchNeedleInjected } from "../../lib/features/page-dom/injected-scroll-to-search-needle"
 import { bmxtClearSearchNeedleHighlightInjected } from "../../lib/features/page-dom/injected-clear-search-needle"
@@ -25,13 +31,65 @@ import {
 } from "../../lib/features/nav/nav-overlay-inject-fn"
 import { isBmxtFloatHostRequest } from "../../lib/features/bmxt-float/float-host-message"
 import { applyFloatHostAction } from "../../lib/features/bmxt-float/install-float-host"
+import {
+  buildBmxtCsPingResponse,
+  isBmxtCsPingRequest
+} from "../../lib/features/page-scripting/cs-ping-message"
+
+const CS_GUARD_KEY = "__BMXT_NAV_OVERLAY_CS__"
+
+type CsGuard = {
+  generation: number
+  extensionId: string
+  onMessage: (
+    raw: unknown,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => boolean
+}
+
+type GlobalWithCsGuard = typeof globalThis & {
+  [CS_GUARD_KEY]?: CsGuard
+}
 
 export default defineContentScript({
-  matches: ["https://*/*", "http://*/*"],
+  matches: ["https://*/*"],
   allFrames: false,
   runAt: "document_idle",
   main() {
-    chrome.runtime.onMessage.addListener((raw, sender, sendResponse) => {
+    const root = globalThis as GlobalWithCsGuard
+    const previous = root[CS_GUARD_KEY]
+    if (previous?.onMessage) {
+      try {
+        chrome.runtime.onMessage.removeListener(previous.onMessage)
+      } catch {
+        /* orphaned extension context — ignore */
+      }
+    }
+
+    const generation = (previous?.generation ?? 0) + 1
+    const extensionId = chrome.runtime.id
+
+    const onMessage = (
+      raw: unknown,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void
+    ): boolean => {
+      const guard = root[CS_GUARD_KEY]
+      if (!guard || guard.generation !== generation || guard.extensionId !== extensionId) {
+        return false
+      }
+      // EN: Reject other extensions only. `sender.id` may be omitted for same-extension
+      //     `tabs.sendMessage` from the service worker in some Chrome builds — do not treat
+      //     missing id as foreign (that broke ping / search page reads).
+      if (typeof sender.id === "string" && sender.id.length > 0 && sender.id !== extensionId) {
+        return false
+      }
+
+      if (isBmxtCsPingRequest(raw)) {
+        sendResponse(buildBmxtCsPingResponse())
+        return true
+      }
       if (isBmxtFloatHostRequest(raw)) {
         const tabId =
           typeof raw.tabId === "number"
@@ -43,11 +101,22 @@ export default defineContentScript({
         return true
       }
       if (isPageExtractRequest(raw)) {
-        if (raw.lengthOnly === true) {
-          sendResponse(bmxtProbePageInnerTextLengthInPage())
-        } else {
-          sendResponse(bmxtExtractPageInnerTextInPage(raw.maxChars))
-        }
+        // EN: Return true first, then respond — keeps the listener from blocking the
+        //     message port while `innerText` layout runs (large / busy pages).
+        // JA: 先に true を返し、innerText 取得後に sendResponse（巨大ページでのポート占有を避ける）。
+        const lengthOnly = raw.lengthOnly === true
+        const maxChars = raw.maxChars
+        void Promise.resolve().then(() => {
+          try {
+            if (lengthOnly) {
+              sendResponse(bmxtProbePageInnerTextLengthInPage())
+              return
+            }
+            sendResponse(bmxtExtractPageInnerTextInPage(clampPageExtractMaxChars(maxChars)))
+          } catch {
+            sendResponse(lengthOnly ? 0 : "")
+          }
+        })
         return true
       }
       if (isPageScrollNeedleRequest(raw)) {
@@ -110,6 +179,13 @@ export default defineContentScript({
       )
       sendResponse(result)
       return true
-    })
+    }
+
+    root[CS_GUARD_KEY] = {
+      generation,
+      extensionId,
+      onMessage
+    }
+    chrome.runtime.onMessage.addListener(onMessage)
   }
 })

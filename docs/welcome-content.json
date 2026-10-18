@@ -3,6 +3,24 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.8.5",
+    "en": [
+      "Required host_permissions enable in-page actions without a page reload",
+      "In-page scripting limited to https (nav / float / dom / search --page / snapshot)",
+      "RUN_CMD / NAV_CONTROL accepted only from extension UI pages",
+      "More reliable verification through revised test approach"
+    ],
+    "ja": [
+      "host_permissions権限によりページリロード不要での動作を実装",
+      "ページ内操作（nav / float / dom / search --page / snapshot）を https のみに限定",
+      "RUN_CMD / NAV_CONTROL の送信元を拡張 UI に限定",
+      "テスト手法見直しによる動作の確実性担保"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.8.4",
     "en": [
       "Improved picker behavior in search commands"

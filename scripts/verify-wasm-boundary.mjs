@@ -9,7 +9,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
-const testFile = join(root, "lib/features/bmxt-core/wasm-boundary.test.ts")
+const testFile = join(root, "tests/unit/features/bmxt-core/wasm-boundary.test.ts")
 
 const result = spawnSync(
   process.execPath,

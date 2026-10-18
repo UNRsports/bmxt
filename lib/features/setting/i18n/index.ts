@@ -25,7 +25,7 @@ export {
   formatUiSettingsSummaryLines,
   navActivateErrorLabel,
   navStatusHint,
-  optionalHostDeniedLines,
+  httpHostDeniedLines,
   searchStatusHint,
   domStatusHint,
   tabsStatusHint,

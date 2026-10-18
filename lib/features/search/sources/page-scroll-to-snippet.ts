@@ -5,6 +5,7 @@ import {
   type PageScrollSnippetRequest,
   type PageScrollSnippetResponse
 } from "../../page-dom/page-scroll-snippet-message"
+import { ensurePageContentScript } from "../../page-scripting/ensure-content-script"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 
 const SCROLL_RETRY_DELAY_MS = 180
@@ -77,6 +78,11 @@ export async function scrollSearchPageToSnippet(
   }
   if (await scrollViaContentScript(tabId, request)) {
     return true
+  }
+  if (await ensurePageContentScript(tabId)) {
+    if (await scrollViaContentScript(tabId, request)) {
+      return true
+    }
   }
   await sleep(SCROLL_RETRY_DELAY_MS)
   if (await scrollViaContentScript(tabId, request)) {

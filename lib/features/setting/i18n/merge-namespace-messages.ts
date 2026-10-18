@@ -10,12 +10,13 @@ import domList from "./namespaces/domList.json"
 import domPrompt from "./namespaces/domPrompt.json"
 import effect from "./namespaces/effect.json"
 import error from "./namespaces/error.json"
+import floatHost from "./namespaces/floatHost.json"
 import group from "./namespaces/group.json"
 import help from "./namespaces/help.json"
 import imeToken from "./namespaces/imeToken.json"
 import modeStatus from "./namespaces/modeStatus.json"
 import nav from "./namespaces/nav.json"
-import optionalHost from "./namespaces/optionalHost.json"
+import httpHost from "./namespaces/httpHost.json"
 import picker from "./namespaces/picker.json"
 import plainPicker from "./namespaces/plainPicker.json"
 import prompt from "./namespaces/prompt.json"
@@ -41,12 +42,13 @@ const MERGED = {
   ...domPrompt,
   ...effect,
   ...error,
+  ...floatHost,
   ...group,
   ...help,
   ...imeToken,
   ...modeStatus,
   ...nav,
-  ...optionalHost,
+  ...httpHost,
   ...picker,
   ...plainPicker,
   ...prompt,

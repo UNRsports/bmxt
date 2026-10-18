@@ -117,6 +117,7 @@ import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
 import { tShell } from "../setting/i18n/ns/shell"
 import { tSearch } from "../setting/i18n/ns/search"
 import { tNav } from "../setting/i18n/ns/nav"
+import { tDomPrompt } from "../setting/i18n/ns/dom-prompt"
 import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolvers"
 import { setRunLocale } from "../setting/i18n/run-locale"
 import { settingTokenForUiLocale } from "../setting/locale"
@@ -813,7 +814,9 @@ export function BmxtShell({
     setSearchListPicker,
     setModeToolbarOrder,
     setSubCmdPicker,
-    searchListPickerRef
+    searchListPickerRef,
+    beginCommandBusy,
+    endCommandBusy
   })
 
   const { runSnapshotSave } = useSnapshotSaveShell({
@@ -1580,14 +1583,14 @@ export function BmxtShell({
           onOpenSearchEntry={(entry, matchIndex, destination) =>
             void onOpenSearchPickerEntry(entry, matchIndex, destination)
           }
-          onDomApprove={() => {
+          onDomRetry={() => {
             if (domListPicker?.kind !== "prompt") {
               return
             }
             const cl = domListPicker.commandLine
             setDomListPicker(sessionId, {
               kind: "lines",
-              lines: ["dom -list — retrying after permission grant…"],
+              lines: [tDomPrompt("domPrompt.retrying", uiSettings.locale)],
               commandLine: cl
             })
             void runDomListAndShow(cl, cl, false)

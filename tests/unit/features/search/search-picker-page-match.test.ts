@@ -1,0 +1,46 @@
+import assert from "node:assert/strict"
+import { describe, it } from "node:test"
+import type { SearchPageMatch } from "../../../../lib/features/side-picker/model/picker-entry.ts"
+import {
+  pageMatchesForDisplay,
+  pickPageMatchForDisplay,
+  resolveSearchPickerPageMatchFromMatches,
+  lineHitIndexForPageMatch
+} from "../../../../lib/features/search/search-picker-page-match.ts"
+
+describe("pageMatchesForDisplay", () => {
+  it("prefers body line hits over title hits", () => {
+    const matches: SearchPageMatch[] = [
+      { lineNo: 0, snippet: "title hit", occurrence: 0 },
+      { lineNo: 3, snippet: "body hit", occurrence: 0 }
+    ]
+    assert.deepEqual(pageMatchesForDisplay(matches), [matches[1]])
+  })
+})
+
+describe("resolveSearchPickerPageMatchFromMatches", () => {
+  const matches: SearchPageMatch[] = [
+    { lineNo: 0, snippet: "title hit", occurrence: 0 },
+    { lineNo: 3, snippet: "body a", occurrence: 0, globalOccurrence: 1 },
+    { lineNo: 8, snippet: "body b", occurrence: 0, globalOccurrence: 2 }
+  ]
+
+  it("maps display matchHi to body hits", () => {
+    assert.equal(pickPageMatchForDisplay(matches, 0)?.snippet, "body a")
+    assert.equal(resolveSearchPickerPageMatchFromMatches(matches, 0).pageMatchIndex, 1)
+    assert.equal(resolveSearchPickerPageMatchFromMatches(matches, 1).pageMatchIndex, 2)
+  })
+})
+
+describe("lineHitIndexForPageMatch", () => {
+  it("counts repeated hits on the same line", () => {
+    const matches: SearchPageMatch[] = [
+      { lineNo: 4, snippet: "first", occurrence: 0, globalOccurrence: 0 },
+      { lineNo: 4, snippet: "second", occurrence: 0, globalOccurrence: 1 },
+      { lineNo: 9, snippet: "other line", occurrence: 0, globalOccurrence: 2 }
+    ]
+    assert.equal(lineHitIndexForPageMatch(matches, 0), 0)
+    assert.equal(lineHitIndexForPageMatch(matches, 1), 1)
+    assert.equal(lineHitIndexForPageMatch(matches, 2), 0)
+  })
+})

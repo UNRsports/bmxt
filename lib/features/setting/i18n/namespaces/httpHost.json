@@ -1,0 +1,10 @@
+{
+  "httpHost.deniedError": {
+    "ja": "error: https のサイトアクセスが無効です（chrome://extensions でオフになっている可能性があります）。",
+    "en": "error: https site access is disabled (it may be turned off under chrome://extensions)."
+  },
+  "httpHost.deniedHint": {
+    "ja": "chrome://extensions の BMXt 詳細で「サイトへのアクセス」をオンにしてから再度実行してください。",
+    "en": "Enable site access for BMXt under chrome://extensions → Details, then try again."
+  }
+}

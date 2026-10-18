@@ -33,9 +33,9 @@ function historyEntryFromItem(it: chrome.history.HistoryItem): HistoryCacheEntry
   }
 }
 
-async function fetchLiveHistoryEntries(): Promise<HistoryCacheEntry[]> {
+async function fetchLiveHistoryEntries(queryText = ""): Promise<HistoryCacheEntry[]> {
   const items = await chrome.history.search({
-    text: "",
+    text: queryText,
     maxResults: MAX_HISTORY_RESULTS,
     startTime: Date.now() - HISTORY_LOOKBACK_MS
   })
@@ -155,9 +155,24 @@ function touchSearchCache(): void {
   ensureSearchCacheBackgroundListeners()
 }
 
-/** EN: Resolve history rows — compare live Chrome data against in-memory cache. */
-export async function resolveHistoryEntriesForSearch(): Promise<HistoryCacheEntry[]> {
+/**
+ * EN: Resolve history rows for search.
+ *     Non-empty `pattern` uses Chrome's `history.search({ text })` (avoids a cold 10k full scan).
+ *     Empty pattern keeps the in-memory cache / full lookback path.
+ * JA: パターンありは Chrome 側 text 絞り込み（コールド時の 1 万件全取得を避ける）。
+ *     空パターンは従来どおりキャッシュ／全件ルックバック。
+ */
+export async function resolveHistoryEntriesForSearch(
+  pattern = ""
+): Promise<HistoryCacheEntry[]> {
   touchSearchCache()
+  const needle = pattern.trim()
+
+  // EN: Pattern query — skip full-cache rebuild; Chrome filters, caller still matchesNeedle.
+  if (needle.length > 0) {
+    return fetchLiveHistoryEntries(needle)
+  }
+
   let state = historyCache
   if (state && historyConfigMatches(state)) {
     const cached = listCachedHistory(state)
@@ -171,7 +186,7 @@ export async function resolveHistoryEntriesForSearch(): Promise<HistoryCacheEntr
     historyCache = state
   }
 
-  const live = await fetchLiveHistoryEntries()
+  const live = await fetchLiveHistoryEntries("")
   for (const row of live) {
     const existing = state.byUrl.get(row.url)
     if (isHistoryCacheEntryFresh(existing, row.url, row.lastVisitTime)) {

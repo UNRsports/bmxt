@@ -1,31 +1,27 @@
 {
-  "domPrompt.approve": {
-    "ja": "許可 (Enter / Y)",
-    "en": "Allow (Enter / Y)"
-  },
-  "domPrompt.approveBusy": {
-    "ja": "要求中…",
-    "en": "Requesting…"
-  },
   "domPrompt.aria": {
-    "ja": "許可ダイアログ",
-    "en": "Permission prompt"
-  },
-  "domPrompt.denied": {
-    "ja": "ブラウザで許可されませんでした。ピッカーを開いたままにします — 再度 Enter で許可、または Esc でプロンプトへ。",
-    "en": "Permission was not granted by the browser; keeping the picker open so you can retry."
+    "ja": "サイトアクセス案内",
+    "en": "Site access notice"
   },
   "domPrompt.headline": {
-    "ja": "dom -list — 許可 / 対象確認 · Enter=許可 / Y · ← detail bar · Esc/N → プロンプト",
-    "en": "dom -list — permission / target check · Enter=Allow / Y · ← detail bar · Esc/N → prompt"
+    "ja": "dom -list — サイトアクセス無効 · Enter=再試行 / Y · ← detail bar · Esc/N → プロンプト",
+    "en": "dom -list — site access disabled · Enter=Retry / Y · ← detail bar · Esc/N → prompt"
   },
   "domPrompt.listAria": {
-    "ja": "権限通知",
-    "en": "Permission notice"
+    "ja": "サイトアクセス通知",
+    "en": "Site access notice"
   },
-  "domPrompt.permissionRequestFailed": {
-    "ja": "error: 許可リクエストに失敗しました — {message}",
-    "en": "error: permission request failed — {message}"
+  "domPrompt.retry": {
+    "ja": "再試行 (Enter / Y)",
+    "en": "Retry (Enter / Y)"
+  },
+  "domPrompt.retryBusy": {
+    "ja": "確認中…",
+    "en": "Checking…"
+  },
+  "domPrompt.retrying": {
+    "ja": "dom -list — サイトアクセスを再確認して再試行中…",
+    "en": "dom -list — rechecking site access and retrying…"
   },
   "domPrompt.return": {
     "ja": "プロンプトへ (Esc / N)",
@@ -34,5 +30,9 @@
   "domPrompt.scrollHint": {
     "ja": "↑↓ / j k でメッセージをスクロール",
     "en": "↑↓ / j k to scroll messages"
+  },
+  "domPrompt.stillDenied": {
+    "ja": "まだサイトアクセスが無効です。chrome://extensions で有効にしてから再度 Enter で再試行、または Esc でプロンプトへ。",
+    "en": "Site access is still disabled. Enable it under chrome://extensions, then press Enter to retry, or Esc to return to the prompt."
   }
 }

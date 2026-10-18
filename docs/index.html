@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: July 25, 2026</p>
+          <p class="muted">Last updated: October 18, 2026</p>
         </div>
       </header>
 
@@ -173,9 +173,18 @@
               translation assist on/off and your chosen language pair are persisted locally. The Extension UI
               and service worker are not designed to call <code>fetch()</code> against arbitrary third-party
               HTTPS URLs; <code>connect-src 'self'</code> in the packaged manifest reinforces that (Chrome Web
-              Store delivery and browser updates are separate). Optional <code>http://*/*</code> and
-              <code>https://*/*</code> access is requested <strong>at runtime</strong> only when you run
-              commands that inject into web pages (including the optional float prompt and nav overlay).
+              Store delivery and browser updates are separate). Required <code>https://*/*</code>
+              <strong>host_permissions</strong> are declared in the packaged manifest so the Extension can
+              inject its packaged content script into ordinary https pages (including already-open tabs after
+              install or update, without a page reload). In-page scripting (nav, float, <code>dom</code>,
+              <code>search -list --page</code>, <code>snapshot -save</code>) is https-only; opening, listing,
+              or matching <code>http://</code> URLs in tabs, history, and bookmarks does not require that host
+              grant. Privileged service-worker messages used for command execution and nav control are
+              accepted only from the Extension’s own UI pages (<code>bmxt.html</code> /
+              <code>bmxt-float.html</code>), not from content scripts or other extensions. Meaningful page
+              reads and overlays still run only when you issue a command or toggle a related UI host
+              (including the optional float prompt and nav overlay). You can later restrict site access under
+              <code>chrome://extensions</code>.
             </li>
             <li>
               When translation assist is on, text you type may be processed by Chrome’s built-in
@@ -268,23 +277,38 @@
             (<code>bmxt_search_picker_settings_v1</code>).
           </li>
           <li>
-            <strong>Search metadata cache</strong> — an in-process memory cache storing titles and URLs from
-            Chrome history and bookmarks to speed
-            <code>search -list --history</code> and <code>search -list --bookmark</code>. The service worker
-            may update this cache proactively when you visit pages, when bookmarks change, and on startup—not
-            only when you run search commands. Does <strong>not</strong> store page body text from
-            <code>search -list --page</code> (that scope reads open tabs live each time you run the command).
-            Cleared from <strong>setting -list → reset-search-cache</strong> or on uninstall; kept across BMXt
-            window close. (Versions before 0.6.9 used a legacy SQLite key <code>bmxt_search_cache_db_v1</code>
-            that is no longer written.)
+            <strong>DOM picker page-active mode</strong> — same preference for the DOM list picker
+            (<code>bmxt_dom_picker_settings_v1</code>).
+          </li>
+          <li>
+            <strong>Token-candidate MRU</strong> — recent prompt token completions to improve the candidate
+            menu order (<code>bmxt_token_candidate_mru_v1</code>).
+          </li>
+          <li>
+            <strong>Search metadata cache</strong> — an <strong>in-process memory</strong> cache in the
+            service worker (not <code>chrome.storage</code>) storing titles and URLs from Chrome history and
+            bookmarks to speed <code>search -list --history</code> and <code>search -list --bookmark</code>.
+            After the first <code>search</code> command in a given service-worker lifetime, the worker may
+            keep that cache warm when you visit pages or when bookmarks change. Does <strong>not</strong>
+            store page body text from <code>search -list --page</code> (that scope reads open tabs live each
+            time you run the command). Survives BMXt window close while the service worker stays alive; lost
+            when the worker restarts or the browser restarts, and removed on uninstall. (Versions before
+            0.6.9 used a legacy SQLite key <code>bmxt_search_cache_db_v1</code> that is no longer written.)
           </li>
           <li>
             <strong>Saved page snapshots</strong> — Markdown files with YAML frontmatter created when you run
             <code>snapshot -save</code> (or from the tab picker). Stored in extension internal storage
             (<code>bmxt_snapshots_v1</code>), under your external settings bundle
-            <code>bmxt-ui-settings/snapshots/</code>), or in an Obsidian vault folder you pick in
-            <code>setting -list</code> (<code>bmxt_snapshot_storage_v1</code>). Searchable with
-            <code>search -list --snapshot</code>. BMXt does not upload snapshots to UNRsports servers.
+            <code>bmxt-ui-settings/snapshots/</code>, or under <code>BMXt/snapshots/</code> in an Obsidian
+            vault folder you pick in <code>setting -list</code> (<code>bmxt_snapshot_storage_v1</code>).
+            Searchable with <code>search -list --snapshot</code>. BMXt does not upload snapshots to UNRsports
+            servers.
+          </li>
+          <li>
+            <strong>External folder handles</strong> — when you choose external UI-settings storage or an
+            Obsidian vault folder via the File System Access API, the Extension may keep the directory handle
+            in a local IndexedDB database (<code>bmxt_settings_fs_handles</code>) so it can reopen that folder
+            on your device without uploading its contents.
           </li>
           <li>
             <strong>Nav learned targets</strong> — after a successful nav activate, short identity keys
@@ -322,18 +346,19 @@
         </ul>
         <p>
           When you close the BMXt window or run <code>exit</code> on the last terminal session, in-memory
-          process-scoped UI state (session logs, open picker columns, tab-picker fold) is discarded; legacy
-          process keys may be cleaned from storage. Command history, UI settings, translation assist
-          preferences, picker page-active settings, search metadata cache (history/bookmark titles and URLs
-          only; not page body), nav learned targets, optional job audit log, custom window display names, and
-          version-tracking keys remain until you clear them (for example
-          <strong>setting -list → reset-search-cache</strong> for the search metadata cache, the
+          process-scoped UI state (session logs, open picker columns, tab-picker fold, and the optional job
+          audit log in the UI) is discarded; legacy process keys may be cleaned from storage. Command history,
+          UI settings, translation assist preferences, picker page-active settings (tabs / search / DOM),
+          token-candidate MRU, nav learned targets, custom window display names, snapshot storage preferences,
+          external folder handles, and version-tracking keys remain until you clear them (for example the
           <code>reset-bmxt</code> shortcut for command history and both popup/float hosts, or uninstalling the
-          Extension).
+          Extension). The search metadata cache is separate: it lives only in service-worker memory and is not
+          a durable <code>chrome.storage</code> store.
         </p>
         <p>
           If you use <code>setting -list</code> to export or import a settings zip, the file is written to or
-          read from a location you choose through the browser’s download or file-picker APIs. BMXt does not
+          read from a location you choose through the browser’s download or file-picker APIs (typically a
+          local blob download or file picker—not the <code>downloads</code> permission). BMXt does not
           upload that file to UNRsports servers.
         </p>
         <p>This storage remains on your device under Chrome’s extension storage rules.</p>
@@ -343,30 +368,35 @@
           If you run supported commands, the Extension may use the <code>history</code> and
           <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
           stores—for example <code>search -list --all</code>, <code>search -list --history</code>, or
-          <code>search -list --bookmark</code>. In addition, the service worker may read history entries and
-          bookmark tree metadata in the background to keep the local search metadata cache up to date (see
-          section 4.4), even when you have not run a search command recently.
+          <code>search -list --bookmark</code>. After the first <code>search</code> command in a given
+          service-worker lifetime, the worker may also register listeners that update the in-memory search
+          metadata cache (see section 4.4) when you visit pages or when bookmarks change.
         </p>
         <p>
-          For ordinary http(s) pages (not chrome://, extension, or Chrome Web Store pages), the Extension may
-          use the <code>scripting</code> permission together with <strong>optional</strong>
-          <code>http://*/*</code> and <code>https://*/*</code> host access (granted when prompted, or in
-          extension settings) to run small, packaged helper scripts <strong>only when you issue a command</strong>
-          or toggle a related UI host. Examples: <code>search -list --page</code> (reads visible text from open
-          tabs when you run the command, without persisting page content to extension storage),
-          <code>dom -list</code> (page structure in <code>--normal</code> or viewport-sync
-          <code>--with</code> mode, and scrolling to an element you pick in the list),
-          <code>snapshot -save</code> (saves page text as Markdown with YAML frontmatter to a location you
-          configure in <code>setting -list</code>), <code>nav -enter</code> (a keyboard nav overlay on the
-          active tab for move, click, type, and related actions you control from the Extension UI), and the
-          optional <strong>in-page float prompt</strong> (<code>toggle-bmxt-float</code>, which loads a
-          packaged extension page into the active tab). When translation assist is enabled, text you enter
-          during nav typing in the Extension UI may also be processed as described in section 4.7. Nav may use
-          a lightweight content script registered for http(s) pages, with
-          <code>chrome.scripting.executeScript</code> as a fallback when that script is not loaded. That
-          processing is intended to occur <strong>on your device</strong>; the Extension is not designed to add
-          new persistent stores for those results or to upload page content to UNRsports servers as part of
-          these commands.
+          For ordinary https pages (not chrome://, extension, Chrome Web Store, or plain
+          <code>http://</code> pages), the Extension may use the <code>scripting</code> permission together
+          with <strong>required</strong> <code>https://*/*</code> <strong>host_permissions</strong> (declared
+          in the packaged manifest at install; you may later change site access under
+          <code>chrome://extensions</code>) to run small, packaged helper scripts
+          <strong>when you issue a command</strong> or toggle a related UI host. Examples:
+          <code>search -list --page</code> (reads visible text from open https tabs when you run the command,
+          without persisting page content to extension storage), <code>dom -list</code> (page structure in
+          <code>--normal</code> or viewport-sync <code>--with</code> mode, and scrolling to an element you pick
+          in the list), <code>snapshot -save</code> (saves page text as Markdown with YAML frontmatter to a
+          location you configure in <code>setting -list</code>), <code>nav -enter</code> (a keyboard nav overlay
+          on the active tab for move, click, type, text selection, copy, save-image via a local browser
+          download, reload, spatial jump, and related activate actions you control from the Extension UI), and
+          the optional <strong>in-page float prompt</strong> (<code>toggle-bmxt-float</code>, which loads a
+          packaged extension page into the active tab). Opening, listing, or matching <code>http://</code> URLs
+          in tabs, history, and bookmarks remains allowed without that host grant. When translation assist is
+          enabled, text you enter during nav typing in the Extension UI may also be processed as described in
+          section 4.7. A lightweight content script is registered for https pages so those helpers can run
+          without requiring a page reload after install or update. Callers use that content script and/or
+          <code>chrome.scripting.executeScript</code> (page-text extract may prefer <code>executeScript</code>;
+          nav and float prefer the content script first). That processing is intended to occur
+          <strong>on your device</strong>; the Extension is not designed to add new persistent stores for those
+          command results (beyond user-initiated snapshots you choose to save) or to upload page content to
+          UNRsports servers as part of these commands.
         </p>
         <h3>4.6 Planned capabilities (still local-only)</h3>
         <p>
@@ -444,6 +474,13 @@
           This privacy policy page is hosted on <strong>GitHub Pages</strong>. Viewing this page involves
           GitHub’s hosting infrastructure; please refer to GitHub’s privacy statement for how GitHub
           processes technical data related to that access.
+        </p>
+        <p>
+          On install or update (and when you run <code>aboutbmxt</code>), the Extension may open the hosted
+          welcome page in a normal browser tab
+          (<code>https://unrsports.github.io/bmxt/welcome.html</code> with query parameters for UI locale and
+          extension version). That navigation uses GitHub Pages like any other tab you open; BMXt does not
+          upload browsing data to UNRsports servers as part of showing welcome content.
         </p>
 
         <h2>8. Legal bases and use limitations</h2>
@@ -537,9 +574,17 @@
               プレビュー用にセッション内メモリで扱い、入力本文そのものは storage に保存しません。翻訳アシストの
               ON/OFF と言語ペア設定のみがローカルに保存されます。拡張ページ・サービスワーカーから
               <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP
-              （<code>connect-src 'self'</code>）はその補助線です（ストア配信・ブラウザ更新は別）。ページへの
-              スクリプト注入が要るコマンド（任意のフロート・プロンプトや nav オーバーレイを含む）のときだけ、
-              オプションの <code>http://*/*</code> / <code>https://*/*</code> を<strong>実行時</strong>に求めます。
+              （<code>connect-src 'self'</code>）はその補助線です（ストア配信・ブラウザ更新は別）。パッケージ
+              manifest では必須の <code>https://*/*</code>
+              <strong>host_permissions</strong> を宣言し、通常の https ページへ同梱コンテンツスクリプトを注入します
+              （インストール／更新直後の既存タブも含め、ページ再読み込みは不要）。ページ内操作（nav・float・
+              <code>dom</code>・<code>search -list --page</code>・<code>snapshot -save</code>）は https のみです。
+              タブ・履歴・ブックマーク上の <code>http://</code> URL の開く・一覧・照合には当該ホスト権限は不要です。
+              コマンド実行および nav 制御に用いる特権サービスワーカー・メッセージは、本拡張機能自身の UI ページ
+              （<code>bmxt.html</code> / <code>bmxt-float.html</code>）からのみ受け付け、コンテンツスクリプトや他拡張からの送信は拒否します。
+              ページ本文の読み取りやオーバーレイなど意味のある処理は、コマンド実行時または関連 UI ホスト（任意の
+              フロート・プロンプトや nav オーバーレイ）の切替時に限ります。後から
+              <code>chrome://extensions</code> でサイトアクセスを制限できます。
             </li>
             <li>
               翻訳アシストが ON のとき、入力テキストは Chrome 内蔵の <strong>Translator API</strong> により
@@ -626,21 +671,36 @@
             （<code>bmxt_search_picker_settings_v1</code>）。
           </li>
           <li>
+            <strong>DOM ピッカーの page-active 設定</strong> — DOM リストピッカー向けの同設定
+            （<code>bmxt_dom_picker_settings_v1</code>）。
+          </li>
+          <li>
+            <strong>トークン候補 MRU</strong> — プロンプトのトークン候補メニューの並びを改善するための最近の候補
+            （<code>bmxt_token_candidate_mru_v1</code>）。
+          </li>
+          <li>
             <strong>検索メタデータキャッシュ</strong> — Chrome の履歴・ブックマークから取得した URL・タイトル等を
-            <code>search -list --history</code> / <code>--bookmark</code> の再走査を速くするため、プロセス内メモリに保持。
-            サービスワーカーは、search コマンドの実行に限らず、
-            ページ訪問時・ブックマーク変更時・起動時にこのキャッシュを<strong>先行的に</strong>更新することがあります。
+            <code>search -list --history</code> / <code>--bookmark</code> の再走査を速くするため、サービスワーカーの
+            <strong>プロセス内メモリ</strong>に保持（<code>chrome.storage</code> には書き込みません）。
+            当該サービスワーカー生存中に初めて <code>search</code> コマンドを実行したあと、ページ訪問時や
+            ブックマーク変更時にキャッシュを温かく保つことがあります。
             <code>search -list --page</code> のページ本文は<strong>保存しない</strong>（コマンド実行のたびに開いている
-            タブから都度読み取り）。
-            <strong>setting -list → reset-search-cache</strong> またはアンインストールで消去。BMXt ウィンドウを閉じても保持。
+            タブから都度読み取り）。BMXt ウィンドウを閉じてもサービスワーカーが生きている間は保持され、
+            ワーカー再起動・ブラウザ再起動・アンインストールで消えます。
             （0.6.9 より前の旧 SQLite キー <code>bmxt_search_cache_db_v1</code> は新規書き込みされません。）
           </li>
           <li>
             <strong>保存済みページ snapshot</strong> — <code>snapshot -save</code>（またはタブピッカー）実行時に
             YAML frontmatter 付き Markdown として保存。拡張機能内 storage（<code>bmxt_snapshots_v1</code>）、
             外部設定バンドル（<code>bmxt-ui-settings/snapshots/</code>）、または
-            <code>setting -list</code> で指定した Obsidian Vault 内（<code>bmxt_snapshot_storage_v1</code>）。
+            <code>setting -list</code> で指定した Obsidian Vault 内の <code>BMXt/snapshots/</code>
+            （<code>bmxt_snapshot_storage_v1</code>）。
             <code>search -list --snapshot</code> で検索可能。UNRsports サーバーへアップロードしません。
+          </li>
+          <li>
+            <strong>外部フォルダのハンドル</strong> — File System Access API で外部 UI 設定保存先または
+            Obsidian Vault フォルダを選んだ場合、端末上の IndexedDB（<code>bmxt_settings_fs_handles</code>）に
+            ディレクトリハンドルを保持し、内容をアップロードせずに同じフォルダを開き直せます。
           </li>
           <li>
             <strong>nav 学習ターゲット</strong> — 成功した activate のあと、ページ origin ごとに短い識別キー
@@ -674,16 +734,18 @@
         </ul>
         <p>
           BMXt ウィンドウを閉じる、または最後のターミナルセッションで <code>exit</code> すると、プロセススコープの
-          UI 状態（セッションログ、開いているピッカー列、タブツリー開閉）はメモリから破棄され、旧プロセス用キーは
-          storage から掃除されることがあります。コマンド履歴、UI 設定、翻訳アシスト設定、ピッカー page-active
-          設定、検索メタデータキャッシュ（履歴／ブックマークの URL・タイトルのみ。<code>--page</code> 本文は含まない）、
-          nav 学習ターゲット、任意のジョブ監査ログ、ウィンドウ表示名、バージョン追跡キーは、
-          <code>reset-bmxt</code> ショートカット（コマンド履歴と popup／float 両ホストのクリア）、setting -list の
-          reset-search-cache（検索メタデータキャッシュ）、拡張機能のアンインストール等で消すまで保持されます。
+          UI 状態（セッションログ、開いているピッカー列、タブツリー開閉、任意のジョブ監査ログ）はメモリから破棄され、
+          旧プロセス用キーは storage から掃除されることがあります。コマンド履歴、UI 設定、翻訳アシスト設定、
+          ピッカー page-active 設定（タブ／search／DOM）、トークン候補 MRU、nav 学習ターゲット、ウィンドウ表示名、
+          snapshot 保存先設定、外部フォルダハンドル、バージョン追跡キーは、
+          <code>reset-bmxt</code> ショートカット（コマンド履歴と popup／float 両ホストのクリア）または拡張機能の
+          アンインストール等で消すまで保持されます。検索メタデータキャッシュは別枠で、サービスワーカーのメモリのみに
+          あり、耐久的な <code>chrome.storage</code> ではありません。
         </p>
         <p>
           <code>setting -list</code> で設定 zip を export／import する場合、ファイルはブラウザのダウンロードまたは
-          ファイル選択 API 経由で、ユーザーが選んだ場所に書き込み／読み込みされます。当方のサーバーへ upload する設計には
+          ファイル選択 API 経由で、ユーザーが選んだ場所に書き込み／読み込みされます（通常はローカルな blob ダウンロードや
+          ファイル選択であり、<code>downloads</code> 権限は使いません）。当方のサーバーへ upload する設計には
           していません。
         </p>
         <p>これらは Chrome の拡張機能ストレージの仕組みのもと、ユーザーの端末内に留まります。</p>
@@ -693,25 +755,29 @@
           対応するコマンドを実行した場合、<code>history</code> および <code>bookmarks</code> 権限により
           Chrome の履歴・ブックマークからタイトルや URL を読み取ることがあります（例:
           <code>search -list --all</code>、<code>search -list --history</code>、
-          <code>search -list --bookmark</code>）。加えて、サービスワーカーは search コマンドを直近に実行していなくても、
-          4.4 に記載の検索メタデータキャッシュを最新に保つため、バックグラウンドで履歴エントリおよびブックマークツリーの
-          メタデータを読み取ることがあります。
+          <code>search -list --bookmark</code>）。当該サービスワーカー生存中に初めて <code>search</code>
+          コマンドを実行したあと、ページ訪問時やブックマーク変更時に、4.4 に記載のメモリ上の検索メタデータキャッシュを
+          更新するリスナーを登録することがあります。
         </p>
         <p>
-          通常の http(s) ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア等を除く）では、
-          ユーザーがコマンドを実行したとき、または関連する UI ホストを切り替えたときに限り、<code>scripting</code>
-          権限と<strong>オプション</strong>の <code>http://*/*</code> / <code>https://*/*</code>（プロンプトまたは
-          拡張機能の詳細設定で許可されたとき）により、同梱の小さなヘルパースクリプトを実行します。例:
-          <code>search -list --page</code>（コマンド実行時に開いているタブの可視テキストを都度読み取り。本文は拡張機能 storage に永続化しない）、<code>dom -list</code>（<code>--normal</code> またはビューポート連動の <code>--with</code> モードでのページ構造一覧と、
+          通常の https ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア、平文
+          <code>http://</code> ページ等を除く）では、<code>scripting</code> 権限とパッケージ manifest で宣言した
+          <strong>必須</strong>の <code>https://*/*</code> <strong>host_permissions</strong>（インストール時に付与。
+          後から <code>chrome://extensions</code> でサイトアクセスを変更可能）により、ユーザーがコマンドを実行したとき、
+          または関連する UI ホストを切り替えたときに、同梱の小さなヘルパースクリプトを実行します。例:
+          <code>search -list --page</code>（コマンド実行時に開いている https タブの可視テキストを都度読み取り。本文は拡張機能 storage に永続化しない）、<code>dom -list</code>（<code>--normal</code> またはビューポート連動の <code>--with</code> モードでのページ構造一覧と、
           一覧で選んだ要素へのスクロール）、<code>snapshot -save</code>（<code>setting -list</code> で指定した保存先へ
           YAML frontmatter 付き Markdown を保存）、<code>nav -enter</code>（アクティブタブ上のキーボードナビオーバーレイによる
-          移動・クリック・入力など、本拡張機能 UI からの操作）、任意の<strong>サイト内フロート・プロンプト</strong>
-          （<code>toggle-bmxt-float</code>。同梱の拡張ページをアクティブタブへ読み込み）。翻訳アシストが ON のとき、
-          本拡張機能 UI での nav typing 入力も 4.7 に記載のとおり処理される場合があります。<code>nav</code> では
-          http(s) 向けの軽量コンテンツスクリプトを用い、未読み込み時は
-          <code>chrome.scripting.executeScript</code> にフォールバックします。これらは
-          <strong>端末上</strong>で行う想定であり、当該結果を新たな永続ストアに蓄えたり、ページ内容を UNRsports の
-          サーバーに送信したりする設計にはしていません。
+          移動・クリック・入力・テキスト選択・コピー・画像のローカル保存・リロード・空間ジャンプ・関連する activate など、
+          本拡張機能 UI からの操作）、任意の<strong>サイト内フロート・プロンプト</strong>
+          （<code>toggle-bmxt-float</code>。同梱の拡張ページをアクティブタブへ読み込み）。タブ・履歴・ブックマーク上の
+          <code>http://</code> URL の開く・一覧・照合には当該ホスト権限は不要です。翻訳アシストが ON のとき、
+          本拡張機能 UI での nav typing 入力も 4.7 に記載のとおり処理される場合があります。https 向けの軽量
+          コンテンツスクリプトを登録し、インストール／更新後もページ再読み込みなしでヘルパーを動かせるようにしており、
+          呼び出し側はコンテンツスクリプトおよび／または <code>chrome.scripting.executeScript</code> を用います
+          （ページ本文の抽出は <code>executeScript</code> を優先する場合があり、nav／float はコンテンツスクリプトを優先します）。
+          これらは <strong>端末上</strong>で行う想定であり、ユーザーが意図して保存する snapshot を除き、当該コマンド結果を
+          新たな永続ストアに蓄えたり、ページ内容を UNRsports のサーバーに送信したりする設計にはしていません。
         </p>
         <h3>4.6 予定機能（引き続き端末内のみ）</h3>
         <p>
@@ -780,6 +846,12 @@
         <p>
           本プライバシーポリシーページは <strong>GitHub Pages</strong> でホストされています。ページ閲覧時に
           GitHub のインフラを経由する点については、GitHub のプライバシーに関する説明をご参照ください。
+        </p>
+        <p>
+          インストール／更新時、および <code>aboutbmxt</code> 実行時には、通常のブラウザタブでホスト済みの
+          ウェルカムページ（<code>https://unrsports.github.io/bmxt/welcome.html</code>。UI 言語と拡張機能バージョンの
+          クエリ付き）を開くことがあります。これは通常のタブ閲覧と同様に GitHub Pages を経由します。ウェルカム表示の
+          ために閲覧データを UNRsports のサーバーへアップロードする設計にはしていません。
         </p>
 
         <h2>8. 利用目的の制限</h2>

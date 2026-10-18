@@ -6,21 +6,22 @@ import {
   useState,
   type MutableRefObject
 } from "react"
-import { OPTIONAL_HTTP_HOST_ORIGINS } from "../extension-permissions/optional-http-hosts"
+import { canScriptHttpHostPages } from "../extension-permissions/http-host-access"
 import { tDomPrompt } from "../setting/i18n/ns/dom-prompt"
 import { useUiSettings } from "../setting/use-ui-settings"
 
 type Props = {
   /** Lines returned by the failing handler (shown verbatim above the buttons). */
   message: string[]
-  /** Approve: request host permission (if missing), then re-run the original command line. */
-  onApprove: () => void
+  /**
+   * EN: Retry — after site access is available again, re-run the original command line.
+   * JA: 再試行 — サイトアクセスが復帰したら元のコマンド行を再実行。
+   */
+  onRetry: () => void
   /** EN: Esc / N — return focus to BMXt prompt; picker column stays open. */
   onReturnToPrompt: () => void
   /** EN: ← — return focus to dom detail bar; picker column stays open. */
   onExitToDetailBar?: () => void
-  /** Notify parent that a permission grant succeeded (so it can re-dispatch). */
-  onPermissionGranted?: () => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
 }
@@ -29,10 +30,9 @@ const ROW_ID_PREFIX = "bmxt-dom-prompt-row"
 
 export function DomPromptRender({
   message,
-  onApprove,
+  onRetry,
   onReturnToPrompt,
   onExitToDetailBar,
-  onPermissionGranted,
   keyboardActive = false,
   pickerInputRef
 }: Props) {
@@ -62,38 +62,27 @@ export function DomPromptRender({
     document.getElementById(`${ROW_ID_PREFIX}-${hi}`)?.scrollIntoView({ block: "nearest" })
   }, [hi])
 
-  const approve = useCallback(() => {
+  const retry = useCallback(() => {
     if (busy) {
       return
     }
     setBusy(true)
+    setExtra([])
     void (async () => {
       try {
-        const origins = [...OPTIONAL_HTTP_HOST_ORIGINS] as string[]
-        const already = await chrome.permissions.contains({ origins })
-        let granted = already
-        if (!already) {
-          granted = await chrome.permissions.request({ origins })
-        }
-        if (granted) {
-          if (onPermissionGranted) {
-            onPermissionGranted()
-          }
-          onApprove()
+        const ok = await canScriptHttpHostPages()
+        if (ok) {
+          onRetry()
           return
         }
-        setExtra([tDomPrompt("domPrompt.denied", locale)])
-      } catch (err) {
-        setExtra([
-          tDomPrompt("domPrompt.permissionRequestFailed", locale, {
-            message: err instanceof Error ? err.message : String(err)
-          })
-        ])
+        setExtra([tDomPrompt("domPrompt.stillDenied", locale)])
+      } catch {
+        setExtra([tDomPrompt("domPrompt.stillDenied", locale)])
       } finally {
         setBusy(false)
       }
     })()
-  }, [busy, onApprove, onPermissionGranted, locale])
+  }, [busy, onRetry, locale])
 
   useEffect(() => {
     if (!keyboardActive) {
@@ -143,7 +132,7 @@ export function DomPromptRender({
       }
       if (e.key === "Enter" || e.key === "y" || e.key === "Y") {
         e.preventDefault()
-        approve()
+        retry()
         return
       }
       if (e.key === "j" || e.key === "ArrowDown") {
@@ -157,7 +146,7 @@ export function DomPromptRender({
         return
       }
     },
-    [keyboardActive, approve, message.length, onExitToDetailBar, onReturnToPrompt]
+    [keyboardActive, retry, message.length, onExitToDetailBar, onReturnToPrompt]
   )
 
   const allLines = [...message, ...(extra.length > 0 ? ["", ...extra] : [])]
@@ -208,7 +197,7 @@ export function DomPromptRender({
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--primary${
             busy ? " bmxt-dom-prompt-action-label--busy" : ""
           }`}>
-          {busy ? tDomPrompt("domPrompt.approveBusy", locale) : tDomPrompt("domPrompt.approve", locale)}
+          {busy ? tDomPrompt("domPrompt.retryBusy", locale) : tDomPrompt("domPrompt.retry", locale)}
         </span>
         <span
           className={`bmxt-dom-prompt-action-label bmxt-dom-prompt-action-label--secondary${

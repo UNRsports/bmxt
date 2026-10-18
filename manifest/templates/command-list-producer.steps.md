@@ -16,7 +16,7 @@ See also: `new-command.checklist.md` → **reuse-list-kinds** / **extend-list-an
 2. Add mapping in `lib/features/command-line/inter-command/vocabulary.ts` (`LIST_KIND_TO_BMXT_RULE_KIND`).
 3. Add kind to `manifest/bmxt-rule.json` (core/optional keys).
 4. Extend `from-list-result.ts` field projection for the new kind.
-5. Update `vocabulary.test.ts` `ALL_LIST_KINDS` if you keep an explicit list there.
+5. Update `tests/unit/features/command-line/inter-command/vocabulary.test.ts` `ALL_LIST_KINDS` if you keep an explicit list there.
 6. i18n, README, `_context/map_command.csv`.
 
 ## Verify

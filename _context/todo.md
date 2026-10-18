@@ -53,7 +53,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 | 項目 | 内容 |
 |------|------|
-| host | `optional_host_permissions` → 必須 `host_permissions`: `http://*/*` · `https://*/*`（`<all_urls>` にはしない） |
+| host | 必須 `host_permissions`: `https://*/*` のみ（`<all_urls>` / 平文 `http://*/*` にはしない。タブ open・履歴・BM の http URL は従来どおり） |
 | 注入 | `ensurePageContentScript` + `onInstalled` で既存タブへ manifest CS を `executeScript({ files })` |
 | CS | `bmxt-nav-overlay.content` を再注入時に冪等化（二重 listener / float 防止） |
 | UX | `shell.reloadHint` / `error.reloadHint` をリロード誘導から具体失敗理由へ |
@@ -64,14 +64,19 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - discarded（休止）タブの自動起こし — 権限では解けない。横断検索の完全性は別課題
 - `<all_urls>` 化
 
+**権限縮小・SW 区画（実装済み）**
+
+- [x] ページ内操作を https のみ（`host_permissions` / CS / `isScriptablePageUrl`）
+- [x] `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` / `bmxt-float.html` のみ（`trusted-ui-sender`）
+
 **実装チェック**
 
-- [ ] `wxt.config.ts`: http(s) を `host_permissions` へ移す
-- [ ] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
-- [ ] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
-- [ ] `onInstalled`（install / update）で open tabs へ bulk reinject
-- [ ] content script 冪等化
-- [ ] i18n / optional-host Approve 主経路の縮小 / README 更新
+- [x] `wxt.config.ts`: https を必須 `host_permissions` へ
+- [x] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
+- [x] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
+- [x] `onInstalled`（install / update）で open tabs へ bulk reinject
+- [x] content script 冪等化
+- [x] i18n / optional-host 文言更新 / README 更新
 
 **手元スモーク**
 

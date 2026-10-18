@@ -2,6 +2,7 @@
 /** JA: dom -list のページ内処理を常駐 CS 経由で実行（import 付きモジュール可）。 */
 
 import type { DomSemanticKind } from "../dom/dom-semantic-kind.ts"
+import { ensurePageContentScript } from "../page-scripting/ensure-content-script.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url.ts"
 import {
   DOM_CLEAR_HIGHLIGHT_CHANNEL,
@@ -20,14 +21,6 @@ import {
 import type { DomSemanticCaptureScope } from "./injected-dom-semantic-entries.ts"
 import type { DomShowMode } from "./injected-dom-show.ts"
 
-const CONTENT_SCRIPT_RETRY_DELAY_MS = 150
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms)
-  })
-}
-
 async function tabUrlOk(tabId: number): Promise<boolean> {
   try {
     const tab = await chrome.tabs.get(tabId)
@@ -41,17 +34,19 @@ async function sendDomInPageMessage<TReq, TRes>(
   tabId: number,
   request: TReq
 ): Promise<TRes | null> {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const result = await chrome.tabs.sendMessage<TReq, TRes>(tabId, request)
-      return result
-    } catch {
-      if (attempt === 0) {
-        await sleep(CONTENT_SCRIPT_RETRY_DELAY_MS)
-      }
-    }
+  try {
+    return await chrome.tabs.sendMessage<TReq, TRes>(tabId, request)
+  } catch {
+    /* content script missing — ensure and retry */
   }
-  return null
+  if (!(await ensurePageContentScript(tabId))) {
+    return null
+  }
+  try {
+    return await chrome.tabs.sendMessage<TReq, TRes>(tabId, request)
+  } catch {
+    return null
+  }
 }
 
 /** EN: Semantic filter — content script only. */

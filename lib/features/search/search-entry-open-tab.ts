@@ -70,7 +70,7 @@ export async function resolveOpenTabForSearchEntry(
   return null
 }
 
-/** EN: True when the entry URL is open in a non-discarded scriptable http(s) tab. */
+/** EN: True when the entry URL is open in a non-discarded scriptable https tab. */
 export async function searchEntryHasOpenTab(entry: PickerEntry): Promise<boolean> {
   return (await resolveOpenTabForSearchEntry(entry)) !== null
 }

@@ -12,7 +12,7 @@ import {
   settingTokenForDomPageActiveMode
 } from "../../dom/page-active-setting"
 import { parseDomListLine } from "../../dom/dom-list-parse"
-import { canScriptHttpHostPages } from "../../extension-permissions/optional-http-hosts"
+import { canScriptHttpHostPages } from "../../extension-permissions/http-host-access"
 import { openPickerFromListResult } from "../../picker/open-from-list-result"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab"
 import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines"

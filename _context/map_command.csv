@@ -71,6 +71,9 @@ session,-setting-name,,rest,,session -setting-name [name],UiAction `session_sett
 （内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3
 （内部）,search-page-picker,,,,lib/features/search/search-page-matches-list-field.ts + search-entries + use-search-picker-results-open-tab-nav + page-dom scroll helpers,"`--page` ヒットの `pageMatchesJson` 受け渡しとピッカーからのページ内ジャンプ／タブ遷移を改善。",0.8.4
+（内部）,page-scripting-host-permissions,,,,lib/features/page-scripting/ + lib/features/extension-permissions/http-host-access.ts + wxt.config.ts host_permissions,"必須 `https://*/*` host_permissions。install/update 時に既存 https タブへ CS 再注入（ページリロード不要）。`ensurePageContentScript` / `isScriptablePageUrl`。",0.8.5
+（内部）,https-only-in-page,,,,lib/features/url/is-scriptable-page-url.ts + nav/float/dom/search --page/snapshot,"ページ内操作（nav / float / dom / search --page / snapshot）は https のみ。http の開く・一覧・照合はホスト権限不要。",0.8.5
+（内部）,trusted-ui-sender,,,,lib/features/extension-permissions/trusted-ui-sender.ts + entrypoints/background/message-bridge.ts,"特権メッセージ `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` / `bmxt-float.html` からのみ受理（CS・他拡張拒否）。",0.8.5
 （内部）,inter-command-vocabulary,,,,lib/features/command-line/inter-command/,"閉じたコマンド間語彙の索引。DispatchBundle チャネル、LIST_KIND_TO_BMXT_RULE_KIND、preferredCommandAddPath。テンプレート: manifest/templates/。",語彙再利用優先。0.8.0 規格化
 （内部）,job-runner,,,,lib/features/job/,JobRunner per scope（search-list/dom-list/run-cmd/tab-picker-refresh）。,
 （内部）,terminal-session-state,,,,lib/features/bmxt-window/terminal-sessions/,UI が session 正本。SW は SessionPatch[] のみ。,

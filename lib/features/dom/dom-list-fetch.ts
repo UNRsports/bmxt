@@ -1,6 +1,6 @@
 import type { ListResult } from "../command-line/list-output/types.ts"
 import { LIST_OUTPUT_SCHEMA } from "../command-line/list-output/types.ts"
-import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts.ts"
+import { canScriptHttpHostPages } from "../extension-permissions/http-host-access.ts"
 import type { DispatchChromeContext } from "../dispatch/dispatch-context.ts"
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab.ts"
 import {
@@ -12,7 +12,7 @@ import {
   domListCaptureFailedLines,
   domListNoTargetLines,
   domListUnscriptableLines,
-  optionalHostDeniedLines
+  httpHostDeniedLines
 } from "../setting/i18n/resolvers.ts"
 import type { DomListCapture } from "./dom-list-capture.ts"
 import { captureDomListForTab } from "./dom-list-capture.ts"
@@ -100,7 +100,7 @@ export async function fetchDomListResultUnified(params: DomListFetchParams): Pro
   }
 
   if (!(await canScriptHttpHostPages())) {
-    const lines = optionalHostDeniedLines(locale)
+    const lines = httpHostDeniedLines(locale)
     notifyCapture(onCapture, lines)
     return domNoticeListResult(lines)
   }

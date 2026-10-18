@@ -28,7 +28,7 @@ Task progress:
 - [ ] Do not rename bundle file/dir names without migration + README
 - [ ] bmxt_ui_settings_v1 treated as partial object; normalize on read
 - [ ] Old zip/external bundles import on newer release; export round-trip valid
-- [ ] Tests in setting.test.ts (and import parsers) updated
+- [ ] Tests in `tests/unit/features/setting/setting.test.ts` (and import parsers) updated
 - [ ] README setting section (EN + JA) updated if on-disk behavior changed
 ```
 

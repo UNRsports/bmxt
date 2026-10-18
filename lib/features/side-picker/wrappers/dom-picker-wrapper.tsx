@@ -13,7 +13,7 @@ export type DomPickerWrapperProps = {
   jumpActiveMode?: DomPageActiveMode
   onReturnToPrompt: () => void
   onExitToDetailBar?: () => void
-  onApprove: () => void
+  onRetry: () => void
   keyboardActive?: boolean
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId?: string
@@ -23,13 +23,13 @@ export type DomPickerWrapperProps = {
   onApplyDomViewportCapture?: (capture: DomListCapture) => void
 }
 
-/** EN: Layer ③B — dom -list (lines vs permission prompt). */
+/** EN: Layer ③B — dom -list (lines vs site-access notice). */
 export function DomPickerWrapper({
   state,
   jumpActiveMode = "auto",
   onReturnToPrompt,
   onExitToDetailBar,
-  onApprove,
+  onRetry,
   keyboardActive = false,
   pickerInputRef,
   sessionId,
@@ -56,7 +56,7 @@ export function DomPickerWrapper({
     return (
       <DomPromptRender
         message={state.message}
-        onApprove={onApprove}
+        onRetry={onRetry}
         onReturnToPrompt={onReturnToPrompt}
         onExitToDetailBar={onExitToDetailBar}
         keyboardActive={keyboardActive}

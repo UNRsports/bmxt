@@ -98,6 +98,12 @@ export const FLOAT_TERMINAL_BY_TAB_KEY = "bmxt_float_terminal_by_tab_v1"
 export const FLOAT_VISIBLE_TAB_IDS_KEY = "bmxt_float_visible_tab_ids_v1"
 
 /**
+ * EN: Per-tab float WAR boot auth (`tabId` → `{ parentOrigin, exp }`) in `chrome.storage.session`.
+ * JA: フロート WAR 起動認可（session ストレージ）。
+ */
+export const FLOAT_LAUNCH_AUTH_KEY = "bmxt_float_launch_auth_v1"
+
+/**
  * EN: Per-tab float nav/process UI browse state in `chrome.storage.session`.
  * JA: タブ別フロートの nav／プロセス UI（session ストレージ）。
  */

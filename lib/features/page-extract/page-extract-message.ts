@@ -12,11 +12,18 @@ export type PageExtractRequest = {
   lengthOnly?: boolean
 }
 
-/** EN: Runs in the page world (content script). Keep free of imports that pull extension APIs. */
+/**
+ * EN: Runs via content script or `executeScript({ func })` — no imports (Chrome serializes the function).
+ *     Callers must pass a positive finite cap from `clampPageExtractMaxChars`.
+ * JA: CS / executeScript 用。import 禁止。呼び出し側で clamp 済みの正の上限を渡すこと。
+ */
 export function bmxtExtractPageInnerTextInPage(max: number): string {
   try {
     const t = document.body?.innerText ?? ""
-    return max > 0 && t.length > max ? t.slice(0, max) : t
+    if (!Number.isFinite(max) || max <= 0) {
+      return ""
+    }
+    return t.length > max ? t.slice(0, max) : t
   } catch {
     return ""
   }
@@ -37,6 +44,9 @@ export function isPageExtractRequest(raw: unknown): raw is PageExtractRequest {
   }
   const o = raw as PageExtractRequest
   if (o.channel !== PAGE_EXTRACT_CHANNEL || typeof o.maxChars !== "number") {
+    return false
+  }
+  if (!Number.isFinite(o.maxChars)) {
     return false
   }
   if (o.lengthOnly !== undefined && typeof o.lengthOnly !== "boolean") {

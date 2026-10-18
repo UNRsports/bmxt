@@ -43,6 +43,12 @@ https://github.com/UNRsports/bmxt/issues
 
 
 ◆バージョン履歴
+0.8.5：
+・host_permissions権限によりページリロード不要での動作を実装
+・ページ内操作（nav / float / dom / search --page / snapshot）を https のみに限定
+・RUN_CMD / NAV_CONTROL の送信元を拡張 UI に限定
+・テスト手法見直しによる動作の確実性担保
+
 0.8.4：
 ・searchコマンドでのピッカー動作を改善
 
@@ -164,8 +170,8 @@ https://github.com/UNRsports/bmxt/issues
 | `reload` | 操作先アクティブタブをリロード。一括: `tab -list \| reload` |
 | `close` / `c` | 操作先タブを閉じる（y/n 確認）。`close <tabId>` / `c <tabId>` は確認なし。一括: `tab -list \| close` |
 | `dom` | 利用案内を表示。単体で Enter すると `dom `（末尾スペース付き）へ入力復元し、続きのトークンを待つ |
-| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 `--normal --html`）。部分一致フィルタ可。scriptable な http(s) のみ |
-| `dom -list … | browse` | DOM 読み取り専用ピッカー列。`--normal`/`--with`、`--html`/`--react` |
+| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | アクティブタブの DOM をプレーン一覧（既定 `--normal --html`）。部分一致フィルタ可。scriptable な https のみ |
+| `dom -list … | browse` | DOM 読み取り専用ピッカー列。`--normal`/`--with`、`--html`/`--react`。scriptable な https のみ |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `nav` | 利用案内を表示。単体で Enter すると `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose`） |
 | `nav -enter` | nav モードを起動（armed）。Alt で対象タブの仮想カーソルオーバーレイ ON/OFF。↑↓←→ 移動、Enter クリック／入力、Ctrl でコンテキストメニュー（テキスト選択・画像保存など）、**/** で属性インクリメンタルジャンプ、識別ラベル `kind:key` |
@@ -196,4 +202,4 @@ https://github.com/UNRsports/bmxt/issues
 | `notes` | 現在の拡張機能バージョンのリリースノートを表示。`notes <version>` で該当版（例: `0.1.1`）。`notes --list` でエントリがある版一覧 |
 | `<list-command> | browse` | 一覧をピッカー列／インライン UI で開く（例: `tab -list | browse`）。プレーン `-list` はログ出力 |
 
-ショートカット（chrome://extensions/shortcuts）: `launch-bmxt`（既定 Shift+Alt+C）、`reset-bmxt`（既定 Shift+Alt+R）、`toggle-bmxt-float`（既定 Shift+Alt+F — アクティブな http(s) タブ上のサイト内フロート・プロンプト）
+ショートカット（chrome://extensions/shortcuts）: `launch-bmxt`（既定 Shift+Alt+C）、`reset-bmxt`（既定 Shift+Alt+R）、`toggle-bmxt-float`（既定 Shift+Alt+F — アクティブな https タブ上のサイト内フロート・プロンプト）

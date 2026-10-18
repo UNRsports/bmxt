@@ -116,7 +116,14 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
 
       // EN: `#t:<id>…` (chip-only) must use host activate / pipe path — not WASM unknown-command.
       if (lineHasCompoundOperator(trimmed) || parseTabChipProducerSegment(trimmed) !== null) {
-        void runCompoundLine(trimmed, deps, commandLocale)
+        void runCompoundLine(trimmed, deps, commandLocale).catch((e) => {
+          const message = e instanceof Error ? e.message : String(e)
+          void deps.appendLogLines([
+            tError("error.dispatchFailed", commandLocale, { message }),
+            tError("error.reloadHint", commandLocale)
+          ])
+          deps.focusPrompt()
+        })
         return
       }
 

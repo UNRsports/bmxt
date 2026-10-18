@@ -1,0 +1,14 @@
+{
+  "floatHost.bootDenied.body": {
+    "ja": "正規のフロート起動（ショートカットまたは拡張からの表示）でのみ開けます。ページへの無断埋め込みは許可されていません。",
+    "en": "Open the float only via the extension shortcut or an in-page show from BMXt. Unauthorized embeds are blocked."
+  },
+  "floatHost.bootDenied.title": {
+    "ja": "フロートを起動できません",
+    "en": "Float could not start"
+  },
+  "floatHost.bootPending": {
+    "ja": "起動を確認しています…",
+    "en": "Checking launch authorization…"
+  }
+}

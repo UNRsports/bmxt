@@ -3,7 +3,10 @@ import {
   clearPrompt,
   recordCommandHistory
 } from "../../bmxt-window/shell/command-dispatch/types.ts"
+import { yieldToUiPaint } from "../../bmxt-window/shell/command-busy"
+import { parseSearchListLine } from "../../search/search-list-parse.ts"
 import type { UiLocale } from "../../setting/locale.ts"
+import { tShell } from "../../setting/i18n/ns/shell.ts"
 import { parseTabChipProducerSegment } from "../pipe/producers/tab-chip-producer.ts"
 import { parseCompoundSegments } from "./parse-compound-segments.ts"
 import { parsePipeSegments } from "./parse-pipe-segments.ts"
@@ -24,6 +27,21 @@ import { runSegment } from "./run-segment.ts"
 import { runPipeChain } from "../pipe/run-pipe-chain.ts"
 import type { CompoundRunResult, SegmentOutcome } from "./types.ts"
 import type { CompoundLogBlock } from "./format-compound-log.ts"
+
+/** EN: True when any compound/pipe stage is `search -list` (input must lock). */
+function compoundInvolvesSearchList(segments: readonly string[]): boolean {
+  for (const text of segments) {
+    const pipeParsed = parsePipeSegments(text)
+    const stages =
+      pipeParsed.ok === true ? pipeParsed.segments : ([text] as readonly string[])
+    for (const stage of stages) {
+      if (parseSearchListLine(stage) !== null) {
+        return true
+      }
+    }
+  }
+  return false
+}
 
 /** EN: Chip-only activate — show move message without `[{segment}]` echo. */
 function formatChipOnlyActivateBlock(outcome: SegmentOutcome): CompoundLogBlock {
@@ -75,60 +93,74 @@ export async function runCompoundLine(
 
   await deps.appendLogLines([`> ${fullLine}`], "stdout")
 
+  const lockSearchInput = compoundInvolvesSearchList(parsed.segments)
+  const busyToken = lockSearchInput
+    ? deps.beginCommandBusy(tShell("shell.commandBusy.searching", locale))
+    : null
+  if (busyToken !== null) {
+    await yieldToUiPaint()
+  }
+
   const results: CompoundRunResult["segments"] = []
   let stoppedAt: number | null = null
   let exitStatus = EXIT_SUCCESS
   let priorExitStatus = EXIT_SUCCESS
 
-  for (let index = 0; index < parsed.segments.length; index += 1) {
-    const text = parsed.segments[index]!
-    const operator = index === 0 ? null : parsed.operators[index - 1]!
-    const shouldRun =
-      operator === null ? true : shouldRunAfterOperator(operator, priorExitStatus)
+  try {
+    for (let index = 0; index < parsed.segments.length; index += 1) {
+      const text = parsed.segments[index]!
+      const operator = index === 0 ? null : parsed.operators[index - 1]!
+      const shouldRun =
+        operator === null ? true : shouldRunAfterOperator(operator, priorExitStatus)
 
-    if (!shouldRun) {
-      await appendCompoundLogBlock(deps, formatSkippedSegmentBlock(text, locale))
-      results.push({
-        index,
-        text,
-        outcome: segmentFailure("cancelled", []),
-        skipped: true
-      })
-      continue
-    }
+      if (!shouldRun) {
+        await appendCompoundLogBlock(deps, formatSkippedSegmentBlock(text, locale))
+        results.push({
+          index,
+          text,
+          outcome: segmentFailure("cancelled", []),
+          skipped: true
+        })
+        continue
+      }
 
-    const pipeParsed = parsePipeSegments(text)
-    if (pipeParsed.ok === false) {
-      const outcome = segmentFailure("parse", [])
-      await appendCompoundLogBlock(deps, formatParseErrorBlock(text, pipeParsed.error, locale))
-      results.push({
-        index,
-        text,
-        outcome,
-        skipped: false
-      })
+      const pipeParsed = parsePipeSegments(text)
+      if (pipeParsed.ok === false) {
+        const outcome = segmentFailure("parse", [])
+        await appendCompoundLogBlock(deps, formatParseErrorBlock(text, pipeParsed.error, locale))
+        results.push({
+          index,
+          text,
+          outcome,
+          skipped: false
+        })
+        priorExitStatus = outcome.exitStatus
+        exitStatus = outcome.exitStatus
+        if (compoundShouldStop(outcome.exitStatus)) {
+          stoppedAt = index
+        }
+        continue
+      }
+
+      const outcome =
+        pipeParsed.segments.length > 1
+          ? await runPipeChain(pipeParsed.segments, deps, locale)
+          : await runSegment(text, deps, locale)
+      await appendCompoundLogBlock(
+        deps,
+        formatOutcomeBlock(text, outcome, locale, pipeParsed.segments.length)
+      )
+      results.push({ index, text, outcome, skipped: false })
       priorExitStatus = outcome.exitStatus
       exitStatus = outcome.exitStatus
+
       if (compoundShouldStop(outcome.exitStatus)) {
         stoppedAt = index
       }
-      continue
     }
-
-    const outcome =
-      pipeParsed.segments.length > 1
-        ? await runPipeChain(pipeParsed.segments, deps, locale)
-        : await runSegment(text, deps, locale)
-    await appendCompoundLogBlock(
-      deps,
-      formatOutcomeBlock(text, outcome, locale, pipeParsed.segments.length)
-    )
-    results.push({ index, text, outcome, skipped: false })
-    priorExitStatus = outcome.exitStatus
-    exitStatus = outcome.exitStatus
-
-    if (compoundShouldStop(outcome.exitStatus)) {
-      stoppedAt = index
+  } finally {
+    if (busyToken !== null) {
+      deps.endCommandBusy(busyToken)
     }
   }
 

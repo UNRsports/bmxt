@@ -6,10 +6,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject
 } from "react"
-import {
-  canScriptHttpHostPages,
-  requestOptionalHttpHostAccess
-} from "../extension-permissions/optional-http-hosts"
 import type { PaneFocusTarget } from "../side-picker/panel/pane-focus-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import { tNav } from "../setting/i18n/ns/nav"
@@ -542,13 +538,9 @@ export function useNavMode({
     const useCenter = useCenterOnNextShowRef.current
     useCenterOnNextShowRef.current = false
     let reason = await syncOverlayForTab(tabId, true, useCenter)
-    if (reason === "permission-denied" && !(await canScriptHttpHostPages())) {
-      const granted = await requestOptionalHttpHostAccess()
-      if (granted) {
-        reason = await syncOverlayForTab(tabId, true, useCenter)
-      }
-    }
     // EN: After navigation CS may still be booting — retry briefly so nav stays usable.
+    //     Site access Off under chrome://extensions cannot be re-granted via permissions.request
+    //     (required host_permissions); the status strip shows site access denied.
     if (reason !== undefined) {
       await new Promise<void>((resolve) => {
         setTimeout(() => resolve(), 200)

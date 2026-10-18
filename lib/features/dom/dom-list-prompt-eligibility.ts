@@ -1,9 +1,13 @@
-import { OPTIONAL_HOST_DENIED_LINES } from "../extension-permissions/optional-http-hosts"
+import { httpHostDeniedErrorLines } from "../extension-permissions/http-host-access"
 
 /**
- * EN: True only when optional http(s) host permission was denied — show approve UI.
- * JA: オプション host 権限拒否時のみ許可プロンプトを出す。
+ * EN: True when output is the http(s) site-access-denied notice — show retry UI.
+ * JA: http(s) サイトアクセス拒否の通知出力のとき再試行 UI を出す。
  */
 export function isDomListPermissionPromptOutput(lines: string[]): boolean {
-  return (lines[0] ?? "") === OPTIONAL_HOST_DENIED_LINES[0]
+  const first = lines[0] ?? ""
+  if (first.length === 0) {
+    return false
+  }
+  return httpHostDeniedErrorLines().includes(first)
 }

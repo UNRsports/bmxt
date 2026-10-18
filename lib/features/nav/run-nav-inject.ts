@@ -1,10 +1,11 @@
 /**
- * EN: Run nav overlay control via the service worker — prefer persistent content script,
- *     fall back to `executeScript` when CS is not loaded.
- * JA: SW 経由で nav オーバーレイを制御（常駐 CS 優先、未注入時のみ executeScript）。
+ * EN: Run nav overlay control via the service worker — prefer persistent content script
+ *     (ensure/re-inject without page reload), fall back to `executeScript` when needed.
+ * JA: SW 経由で nav オーバーレイを制御（ensure で CS 再注入、必要時のみ executeScript）。
  */
 
-import { canScriptHttpHostPages } from "../extension-permissions/optional-http-hosts"
+import { canScriptHttpHostPages } from "../extension-permissions/http-host-access"
+import { ensurePageContentScript } from "../page-scripting/ensure-content-script"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import {
   bmxtNavControlInjected,
@@ -43,10 +44,24 @@ async function ensureHostAccess(): Promise<"ok" | "denied" | "not-scriptable"> {
   return "ok"
 }
 
+async function sendNavViaContentScript(
+  tabId: number,
+  payload: NavOverlayMessage
+): Promise<NavControlResult | null> {
+  try {
+    const viaCs = await chrome.tabs.sendMessage<NavOverlayMessage, NavInjectResult>(tabId, payload)
+    if (viaCs && typeof viaCs === "object" && "ok" in viaCs) {
+      return viaCs
+    }
+  } catch {
+    /* content script not loaded */
+  }
+  return null
+}
+
 /**
- * EN: Prefer the registered content script (works without optional host permission on http(s));
- *     fall back to `executeScript` when CS is not loaded and host access is granted.
- * JA: 常駐 CS を優先（optional host 未許可でも http(s) で可）。CS 未注入時のみ executeScript。
+ * EN: Prefer the registered content script; ensure/re-inject if missing; then func fallback.
+ * JA: 常駐 CS を優先。未注入なら ensure で再注入し、それでもだめなら executeScript(func)。
  */
 export async function runNavControlOnTab(
   tabId: number,
@@ -87,13 +102,16 @@ export async function runNavControlOnTab(
     labelsJson: labels
   }
 
-  try {
-    const viaCs = await chrome.tabs.sendMessage<NavOverlayMessage, NavInjectResult>(tabId, payload)
-    if (viaCs && typeof viaCs === "object" && "ok" in viaCs) {
-      return viaCs
+  const first = await sendNavViaContentScript(tabId, payload)
+  if (first) {
+    return first
+  }
+
+  if (await ensurePageContentScript(tabId)) {
+    const second = await sendNavViaContentScript(tabId, payload)
+    if (second) {
+      return second
     }
-  } catch {
-    /* content script not loaded — fall through */
   }
 
   const gate = await ensureHostAccess()

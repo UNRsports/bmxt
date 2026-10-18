@@ -1,14 +1,12 @@
 /**
- * EN: Conservative check for "pages Chrome refuses to script via chrome.scripting".
- *     Returns true only for ordinary http(s) sites that are NOT the Chrome Web Store
- *     and NOT the legacy `chrome.google.com/webstore`. Other protocols
- *     (chrome://, chrome-extension://, about:, view-source:, file:, data:, devtools:, …)
- *     are treated as non-scriptable up-front so we can show a clear message
- *     instead of bubbling Chrome's runtime exception "… cannot be scripted.".
- * JA: `chrome.scripting` で注入できない代表的なページを **事前に** 判定するための共有ユーティリティ。
- *     通常の http(s) かつ Chrome ウェブストア／旧 webstore でないときだけ true を返す。
- *     その他のプロトコル（`chrome://` 等）は注入不可として扱い、Chrome 実行時例外
- *     「… cannot be scripted.」を呼び出し側で待たずにわかりやすいメッセージを返せる。
+ * EN: Conservative check for "pages Chrome can script via chrome.scripting" under BMXt.
+ *     Required `host_permissions` are https-only; returns true only for ordinary https
+ *     sites that are NOT the Chrome Web Store and NOT the legacy `chrome.google.com/webstore`.
+ *     Plain `http://` and other protocols (chrome://, chrome-extension://, about:,
+ *     view-source:, file:, data:, devtools:, …) are treated as non-scriptable up-front.
+ * JA: BMXt が `chrome.scripting` できるページか（必須 host は https のみ）。
+ *     通常の https かつ Chrome ウェブストア／旧 webstore でないときだけ true。
+ *     平文 `http://` とその他プロトコルは注入不可として事前に弾く。
  */
 
 const NON_SCRIPTABLE_HOSTS = new Set<string>([
@@ -28,7 +26,7 @@ export function isScriptablePageUrl(url: string | undefined): boolean {
   } catch {
     return false
   }
-  if (u.protocol !== "http:" && u.protocol !== "https:") {
+  if (u.protocol !== "https:") {
     return false
   }
   const host = u.hostname.toLowerCase()
@@ -49,12 +47,15 @@ export function describeNonScriptableReason(url: string | undefined): string | n
   } catch {
     return `unparseable URL (${url})`
   }
-  if (u.protocol === "http:" || u.protocol === "https:") {
+  if (u.protocol === "https:") {
     const host = u.hostname.toLowerCase()
     if (NON_SCRIPTABLE_HOSTS.has(host)) {
       return `Chrome Web Store / extensions gallery (${host}) — Chrome forbids extension scripting on this host.`
     }
     return null
+  }
+  if (u.protocol === "http:") {
+    return "protocol http: is not scriptable (BMXt in-page actions require https:)"
   }
   return `protocol ${u.protocol} is not scriptable from an extension`
 }

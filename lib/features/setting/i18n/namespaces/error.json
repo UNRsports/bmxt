@@ -16,7 +16,7 @@
     "en": "unknown error"
   },
   "error.reloadHint": {
-    "ja": "BMXt ウィンドウ / 拡張機能を再読み込みしてください。",
-    "en": "Reload the BMXt window / extension if this persists."
+    "ja": "問題が続く場合は BMXt ウィンドウまたは拡張機能を再読み込みしてください（対象ページの再読み込みは不要です）。",
+    "en": "If this persists, reload the BMXt window or extension (you do not need to reload the target page)."
   }
 }

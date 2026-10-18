@@ -1,0 +1,273 @@
+import { describe, it } from "node:test"
+import assert from "node:assert/strict"
+import { parseAppearanceResetConfirmAnswer } from "../../../../lib/features/setting/parse-appearance-reset-confirm.ts"
+import { parseHexColor, previewHexColor } from "../../../../lib/features/setting/validate-color.ts"
+import { parseUiLocaleSettingToken, settingTokenForUiLocale } from "../../../../lib/features/setting/locale.ts"
+import { parseFontSizePx } from "../../../../lib/features/setting/validate-size.ts"
+import {
+  parseSettingExitListLine,
+  parseSettingIncompleteLine,
+  parseSettingListLine
+} from "../../../../lib/features/setting/setting-list-picker-input.ts"
+import {
+  createSettingListPickerState,
+  settingPickerApplyDraftToMain,
+  settingPickerUpdateDraft
+} from "../../../../lib/features/setting/setting-list-picker-state.ts"
+import { settingMainRowTargetView } from "../../../../lib/features/setting/setting-picker-nav.ts"
+import { buildZipArchive, parseZipArchive } from "../../../../lib/features/setting/zip-store.ts"
+import {
+  EXTERNAL_SETTINGS_BUNDLE_DIR,
+  formatExternalSettingsBundleDisplayName,
+  listKnownBundleImageFileNames
+} from "../../../../lib/features/setting/settings-bundle-layout.ts"
+import {
+  normalizeUiSettingsStorageConfig,
+  type UiSettingsStorageConfig
+} from "../../../../lib/features/setting/settings-storage-mode.ts"
+import type { UiAppearance } from "../../../../lib/features/setting/appearance.ts"
+import { parseSettingsExportJson } from "../../../../lib/features/setting/settings-export.ts"
+
+function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearance {
+  return {
+    fg: patch?.fg ?? null,
+    bgColor: patch?.bgColor ?? null,
+    fontSize: patch?.fontSize ?? null,
+    fontFamily: patch?.fontFamily ?? null,
+    bgImageDataUrl: patch?.bgImageDataUrl ?? null,
+    editPicker: patch?.editPicker ?? false,
+    searchHitHighlightBg: patch?.searchHitHighlightBg ?? null,
+    searchJumpHighlightBg: patch?.searchJumpHighlightBg ?? null,
+    picker: {
+      fg: patch?.picker?.fg ?? null,
+      bgColor: patch?.picker?.bgColor ?? null,
+      fontSize: patch?.picker?.fontSize ?? null,
+      fontFamily: patch?.picker?.fontFamily ?? null,
+      bgImageDataUrl: patch?.picker?.bgImageDataUrl ?? null
+    }
+  }
+}
+
+const SETTINGS_JSON_NAME = "settings.json"
+
+describe("parseAppearanceResetConfirmAnswer", () => {
+  it("accepts y and n", () => {
+    assert.equal(parseAppearanceResetConfirmAnswer("y"), "yes")
+    assert.equal(parseAppearanceResetConfirmAnswer("N"), "no")
+  })
+
+  it("rejects other input", () => {
+    assert.equal(parseAppearanceResetConfirmAnswer("maybe"), "invalid")
+  })
+})
+
+describe("previewHexColor", () => {
+  it("previews partial hex while typing", () => {
+    assert.equal(previewHexColor("#c9d1d9"), "#c9d1d9")
+    assert.equal(previewHexColor("#c9d"), "#cc99dd")
+    assert.equal(previewHexColor("#c9"), "#c90000")
+    assert.equal(previewHexColor("red"), null)
+  })
+})
+
+describe("parseHexColor", () => {
+  it("accepts #rrggbb", () => {
+    assert.equal(parseHexColor("#C9D1D9"), "#c9d1d9")
+  })
+
+  it("expands #rgb", () => {
+    assert.equal(parseHexColor("#abc"), "#aabbcc")
+  })
+
+  it("rejects non-hex", () => {
+    assert.equal(parseHexColor("red"), null)
+    assert.equal(parseHexColor("#gggggg"), null)
+  })
+})
+
+describe("parseSettingsExportJson search highlight colors", () => {
+  it("validates highlight colors from zip JSON", () => {
+    const json = JSON.stringify({
+      version: 2,
+      locale: "en",
+      appearance: {
+        fg: null,
+        bgColor: null,
+        fontSize: null,
+        fontFamily: null,
+        bgImageFile: null,
+        searchHitHighlightBg: "#ffc9dd",
+        searchJumpHighlightBg: '#fff;}body{background:red}/*',
+        editPicker: false,
+        picker: {
+          fg: null,
+          bgColor: null,
+          fontSize: null,
+          fontFamily: null,
+          bgImageFile: null
+        }
+      }
+    })
+    const settings = parseSettingsExportJson(json, new Map())
+    assert.equal(settings.appearance.searchHitHighlightBg, "#ffc9dd")
+    assert.equal(settings.appearance.searchJumpHighlightBg, null)
+  })
+
+  it("rejects invalid highlight colors on storage-shaped normalize path", () => {
+    const json = JSON.stringify({
+      version: 2,
+      locale: "ja",
+      appearance: {
+        fg: null,
+        bgColor: null,
+        fontSize: null,
+        fontFamily: null,
+        bgImageFile: null,
+        searchHitHighlightBg: "red",
+        searchJumpHighlightBg: "#abc",
+        editPicker: false,
+        picker: {
+          fg: null,
+          bgColor: null,
+          fontSize: null,
+          fontFamily: null,
+          bgImageFile: null
+        }
+      }
+    })
+    const settings = parseSettingsExportJson(json, new Map())
+    assert.equal(settings.appearance.searchHitHighlightBg, null)
+    assert.equal(settings.appearance.searchJumpHighlightBg, "#aabbcc")
+  })
+})
+
+describe("locale setting tokens", () => {
+  it("maps --japanese and --english", () => {
+    assert.equal(parseUiLocaleSettingToken("--japanese"), "ja")
+    assert.equal(parseUiLocaleSettingToken("--english"), "en")
+    assert.equal(settingTokenForUiLocale("ja"), "--japanese")
+    assert.equal(settingTokenForUiLocale("en"), "--english")
+  })
+})
+
+describe("parseFontSizePx", () => {
+  it("normalizes size", () => {
+    assert.equal(parseFontSizePx("12"), "12px")
+    assert.equal(parseFontSizePx("12px"), "12px")
+    assert.equal(parseFontSizePx("40"), null)
+  })
+})
+
+describe("setting list picker draft", () => {
+  it("creates draft from committed settings", () => {
+    const state = createSettingListPickerState({
+      locale: "en",
+      hostUiMode: "auto",
+      appearance: testAppearance({
+        fg: "#ffffff",
+        fontSize: "14px"
+      })
+    })
+    assert.equal(state.draft.locale, "en")
+    assert.equal(state.draft.hostUiMode, "auto")
+    assert.equal(state.draft.appearance.fg, "#ffffff")
+    assert.equal(state.draft.appearance.fontSize, "14px")
+  })
+
+  it("updates draft without touching view", () => {
+    const base = createSettingListPickerState({
+      locale: "ja",
+      hostUiMode: "auto",
+      appearance: testAppearance(null)
+    })
+    const next = settingPickerUpdateDraft(
+      { ...base, view: "language" },
+      { locale: "en", appearance: { fg: "#112233" } }
+    )
+    assert.equal(next.view, "language")
+    assert.equal(next.draft.locale, "en")
+    assert.equal(next.draft.appearance.fg, "#112233")
+  })
+
+  it("applies draft and returns to main atomically", () => {
+    const base = createSettingListPickerState({
+      locale: "en",
+      hostUiMode: "desktop",
+      appearance: testAppearance(null)
+    })
+    const next = settingPickerApplyDraftToMain(
+      { ...base, view: "language", editing: true, editDraft: "#ff0000" },
+      { locale: "ja", hostUiMode: "mobile", appearance: { fg: "#aabbcc" } }
+    )
+    assert.equal(next.view, "main")
+    assert.equal(next.editing, false)
+    assert.equal(next.editDraft, "")
+    assert.equal(next.draft.locale, "ja")
+    assert.equal(next.draft.hostUiMode, "mobile")
+    assert.equal(next.draft.appearance.fg, "#aabbcc")
+  })
+  it("maps reset-default to confirm view", () => {
+    assert.equal(settingMainRowTargetView("reset-default"), "resetConfirm")
+  })
+  it("maps host-ui to hostUi view", () => {
+    assert.equal(settingMainRowTargetView("host-ui"), "hostUi")
+  })
+})
+
+describe("setting list input", () => {
+  it("parses -list and -exit -list", () => {
+    assert.equal(parseSettingIncompleteLine("setting"), true)
+    assert.deepEqual(parseSettingListLine("setting -list"), {})
+    assert.equal(parseSettingListLine("setting -list --picker"), null)
+    assert.equal(parseSettingExitListLine("setting -exit -list"), true)
+    assert.equal(parseSettingListLine("setting -language"), null)
+  })
+})
+
+describe("ui settings storage config", () => {
+  it("normalizes storage mode", () => {
+    assert.deepEqual(normalizeUiSettingsStorageConfig(null), {
+      mode: "internal",
+      directoryName: null
+    })
+    assert.deepEqual(
+      normalizeUiSettingsStorageConfig({ mode: "external", directoryName: "bmxt-config" }),
+      { mode: "external", directoryName: "bmxt-config" } satisfies UiSettingsStorageConfig
+    )
+    assert.deepEqual(normalizeUiSettingsStorageConfig({ mode: "bogus" as "internal" }), {
+      mode: "internal",
+      directoryName: null
+    })
+  })
+})
+
+describe("external settings bundle", () => {
+  it("formats nested bundle display name", () => {
+    assert.equal(
+      formatExternalSettingsBundleDisplayName("Documents"),
+      `Documents/${EXTERNAL_SETTINGS_BUNDLE_DIR}`
+    )
+  })
+
+  it("lists known background image file names", () => {
+    const names = listKnownBundleImageFileNames()
+    assert.ok(names.includes("background-image.png"))
+    assert.ok(names.includes("picker-background-image.webp"))
+    assert.equal(names.length, 8)
+  })
+})
+
+describe("zip store", () => {
+  it("round-trips file entries", () => {
+    const json = JSON.stringify({ version: 1, locale: "ja" })
+    const zip = buildZipArchive([
+      { name: SETTINGS_JSON_NAME, data: new TextEncoder().encode(json) },
+      { name: "background-image.png", data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]) }
+    ])
+    const entries = parseZipArchive(zip)
+    assert.equal(entries.length, 2)
+    assert.equal(entries[0]!.name, SETTINGS_JSON_NAME)
+    assert.equal(new TextDecoder().decode(entries[0]!.data), json)
+    assert.equal(entries[1]!.name, "background-image.png")
+  })
+})

@@ -92,16 +92,16 @@
     "en": "({count} tab(s) exceeded {limit} chars — body not scanned; see rows below)"
   },
   "search.pageNoTextHint": {
-    "ja": "サイトアクセスを有効にしている場合は、検索したいページを再読み込み（F5）してから search -list --page を再実行してください。",
-    "en": "With site access enabled, reload the pages you want to search (F5), then run search -list --page again."
+    "ja": "本文を読めませんでした。休止中のタブ、平文 http、chrome:// など非対応ページの可能性があります。対象タブを開き直すか、search -list --page を再実行してください。",
+    "en": "Could not read page text. The tab may be discarded or not scriptable (plain http, chrome://, etc.). Open or activate the tab, then run search -list --page again."
   },
   "search.pageProgress.done": {
     "ja": "{label} — 完了（読取 {scanned}・スキップ {skipped}・確認 {tabTotal}）",
     "en": "{label} — finished ({scanned} read, {skipped} skipped, {tabTotal} checked)"
   },
   "search.pageProgress.start": {
-    "ja": "{label} — 開いている http(s) タブ {tabTotal} 件の本文を走査中…",
-    "en": "{label} — scanning visible text in {tabTotal} open http(s) tab(s)…"
+    "ja": "{label} — 開いている https タブ {tabTotal} 件の本文を走査中…",
+    "en": "{label} — scanning visible text in {tabTotal} open https tab(s)…"
   },
   "search.pageProgress.tick": {
     "ja": "{label} — {tabIndex}/{tabTotal} タブ確認済み（読取 {scanned}・スキップ {skipped}）",
@@ -192,16 +192,16 @@
     "en": "Opened search picker column"
   },
   "search.picker.previewScrollFailed": {
-    "ja": "search — ページ内ジャンプに失敗しました（タブを再読み込みするか、サイトアクセスを確認してください）",
-    "en": "search — in-page jump failed (reload the tab or check site access)"
+    "ja": "search — ページ内ジャンプに失敗しました（サイトアクセスを確認するか、対象ページが scriptable か確認してください）",
+    "en": "search — in-page jump failed (check site access under chrome://extensions, or whether the page is scriptable)"
   },
   "search.picker.starting": {
     "ja": "search — 開始中…",
     "en": "search — starting…"
   },
   "search.scrollToMatch.failed": {
-    "ja": "search — 一致箇所へスクロールできませんでした（タブを再読み込みするか、サイトアクセスを許可してから再試行してください）",
-    "en": "search — could not scroll to match (reload the tab or grant site access, then try again)"
+    "ja": "search — 一致箇所へスクロールできませんでした（chrome://extensions でサイトアクセスを確認してから再試行してください）",
+    "en": "search — could not scroll to match (enable site access under chrome://extensions, then try again)"
   },
   "search.status.auto": {
     "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ",

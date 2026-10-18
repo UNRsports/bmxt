@@ -6,6 +6,7 @@ import {
   type PageScrollNeedleRequest,
   type PageScrollNeedleResponse
 } from "../../page-dom/page-scroll-needle-message"
+import { ensurePageContentScript } from "../../page-scripting/ensure-content-script"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 
 export type ScrollSearchPageToNeedleOptions = {
@@ -120,6 +121,11 @@ export async function scrollSearchPageToNeedle(
   const request = buildScrollRequest(options)
   if (await scrollViaContentScript(tabId, request)) {
     return true
+  }
+  if (await ensurePageContentScript(tabId)) {
+    if (await scrollViaContentScript(tabId, request)) {
+      return true
+    }
   }
   await sleep(SCROLL_RETRY_DELAY_MS)
   if (await scrollViaContentScript(tabId, request)) {

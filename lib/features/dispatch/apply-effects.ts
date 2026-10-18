@@ -5,12 +5,9 @@
 import type { ChromeEffect } from "./effect-types"
 import type { DispatchChromeContext } from "./dispatch-context"
 import { applyOne } from "./handlers/apply-one"
+import { isParallelSearchEffect } from "../search/search-effect-parallel"
 
 export type { DispatchChromeContext } from "./dispatch-context"
-
-function isParallelSearchEffect(e: ChromeEffect): boolean {
-  return e.kind === "search_history" || e.kind === "search_bookmark" || e.kind === "search_page"
-}
 
 export async function applyChromeEffects(
   ctx: DispatchChromeContext,
