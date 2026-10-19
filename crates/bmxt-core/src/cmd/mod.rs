@@ -19,6 +19,8 @@ pub mod snapshot;
 pub mod tabs;
 pub mod translate;
 
+pub mod tutorial;
+
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
@@ -44,6 +46,7 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "snapshot" => snapshot::run(args),
         "browse" => browse::run(args),
         "setting" => setting::run(args),
+        "tutorial" => tutorial::run(args),
         _ => crate::ir::msgs(vec![crate::ir::msg_param(
             "cmd.error.internalUnhandled",
             "command",

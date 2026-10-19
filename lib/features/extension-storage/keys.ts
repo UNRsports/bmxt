@@ -118,5 +118,8 @@ export const FLOAT_PENDING_HANDOFF_KEY = "bmxt_float_pending_handoff_v1"
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 
+/** Interactive tutorial progress (completed / skipped / step index). */
+export const TUTORIAL_PROGRESS_KEY = "bmxt_tutorial_progress_v1"
+
 export const MAX_SESSION_LOG_LINES = 5000
 export const MAX_CMD_HISTORY_LINES = 300

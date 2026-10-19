@@ -95,6 +95,11 @@ export const COMMANDS: readonly CmdMeta[] = [
     name: "setting",
     aliases: [] as const,
     usagePrimary: "setting -list | setting -exit -list | setting help"
+  },
+  {
+    name: "tutorial",
+    aliases: [] as const,
+    usagePrimary: "tutorial | tutorial -start | tutorial -skip | tutorial help"
   }
 ]
 

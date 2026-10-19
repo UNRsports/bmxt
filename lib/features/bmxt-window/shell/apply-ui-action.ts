@@ -339,6 +339,22 @@ function applyNavConfirmClose(ctx: CommandDispatchContext, targetRaw: string): b
   return true
 }
 
+function applyTutorialMode(ctx: CommandDispatchContext, modeRaw: string): boolean {
+  if (modeRaw === "start") {
+    finishCommand(ctx)
+    ctx.deps.startTutorial()
+    void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, tCmd("cmd.tutorial.started", ctx.locale)])
+    return true
+  }
+  if (modeRaw === "skip") {
+    finishCommand(ctx)
+    ctx.deps.skipTutorial()
+    void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, tCmd("cmd.tutorial.skipped", ctx.locale)])
+    return true
+  }
+  return false
+}
+
 function applySetMode(ctx: CommandDispatchContext, featureId: string, modeRaw: string): boolean {
   switch (featureId) {
     case "tabs":
@@ -356,6 +372,8 @@ function applySetMode(ctx: CommandDispatchContext, featureId: string, modeRaw: s
         return applyTranslateSetting(ctx, modeRaw)
       }
       return false
+    case "tutorial":
+      return applyTutorialMode(ctx, modeRaw)
     default:
       return false
   }
@@ -382,6 +400,8 @@ async function applySetModeSegment(
         return applyTranslateSettingSegment(ctx, modeRaw)
       }
       return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
+    case "tutorial":
+      return segmentFailure("usage", [tCmd("cmd.tutorial.usage.line1", ctx.locale)])
     default:
       return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: ctx.trimmed })])
   }

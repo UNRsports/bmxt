@@ -27,6 +27,7 @@ import setting from "./namespaces/setting.json"
 import shell from "./namespaces/shell.json"
 import tabs from "./namespaces/tabs.json"
 import translate from "./namespaces/translate.json"
+import tutorial from "./namespaces/tutorial.json"
 import versionUpgrade from "./namespaces/versionUpgrade.json"
 import welcome from "./namespaces/welcome.json"
 import windows from "./namespaces/windows.json"
@@ -59,6 +60,7 @@ const MERGED = {
   ...shell,
   ...tabs,
   ...translate,
+  ...tutorial,
   ...versionUpgrade,
   ...welcome,
   ...windows

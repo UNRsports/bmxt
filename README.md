@@ -227,6 +227,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 |----------|------|
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
+| `tutorial` | Interactive coach for `tab -list \| browse` (`tutorial` / `tutorial -start` / `tutorial -skip`; auto-starts on first launch) |
 | `clear` | Clear logs |
 | `exit` | Close the **active terminal session**; when it is the **last** session, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `tab` | Show available options, then restore prompt to `tab ` for option input |
@@ -1616,6 +1617,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 |----------|------|
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
+| `tutorial` | `tab -list \| browse` の対話チュートリアル（`tutorial` / `tutorial -start` / `tutorial -skip`；初回起動で自動開始） |
 | `clear` | ログをクリア |
 | `exit` | **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**なら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |

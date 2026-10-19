@@ -19,6 +19,8 @@ export function buildHelpLines(locale: UiLocale): string[] {
       { key: "help.spacer" },
       { key: "help.section.translate" },
       { key: "help.spacer" },
+      { key: "help.section.tutorial" },
+      { key: "help.spacer" },
       { key: "help.section.setting" },
       { key: "help.spacer" },
       { key: "help.section.search" },

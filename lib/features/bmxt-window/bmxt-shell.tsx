@@ -129,6 +129,7 @@ import {
 import { useUiSettings } from "../setting/use-ui-settings"
 import { externalSettingsRecoveryLogLines } from "../setting/external-settings-startup"
 import { useExternalSettingsRecovery } from "../setting/use-external-settings-recovery"
+import { TutorialCoachPanel, useTutorialRuntime } from "../tutorial"
 import {
   useCallback,
   useEffect,
@@ -797,6 +798,21 @@ export function BmxtShell({
     onNavReloadTabMetaUpdated: () => setNavReloadTabMetaRev((n) => n + 1)
   })
 
+  const tutorialTokenPicker =
+    subCmdPicker === null
+      ? null
+      : { tier: subCmdPicker.tier, candidates: subCmdPicker.candidates }
+  const {
+    view: tutorialView,
+    startTutorial,
+    skipTutorial
+  } = useTutorialRuntime({
+    promptLine: line,
+    tokenPicker: tutorialTokenPicker,
+    tabsPickerOpen: tabPicker !== null,
+    enableFirstRunAutoStart: hostKind === "popup"
+  })
+
   const {
     searchLoadingProgressLines,
     showSearchListPatternPlaceholder,
@@ -1091,7 +1107,9 @@ export function BmxtShell({
     onActivateSession,
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
     submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer,
-    navConfirmClosePendingRef
+    navConfirmClosePendingRef,
+    startTutorial,
+    skipTutorial
   })
 
   const getPromptLockedPrefix = useCallback((): string | null => {
@@ -1378,6 +1396,9 @@ export function BmxtShell({
               ))}
             </div>
           </div>
+        ) : null}
+        {tutorialView ? (
+          <TutorialCoachPanel view={tutorialView} onSkip={skipTutorial} />
         ) : null}
         {lines.length > 0 ? <TerminalLogLines lines={lines} /> : null}
         {mode === "isearch" ? (

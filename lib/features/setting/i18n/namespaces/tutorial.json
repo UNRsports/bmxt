@@ -1,0 +1,58 @@
+{
+  "tutorial.coach.stepProgress": {
+    "ja": "ステップ {current} / {total}",
+    "en": "Step {current} / {total}"
+  },
+  "tutorial.coach.skip": {
+    "ja": "スキップ",
+    "en": "Skip"
+  },
+  "tutorial.coach.footer": {
+    "ja": "自由に入力できます。進んだら自動で次のステップへ進みます。再開は `tutorial`、やめるときは `tutorial -skip`。",
+    "en": "Type freely — we advance when you make progress. Restart with `tutorial`, or stop with `tutorial -skip`."
+  },
+  "tutorial.tabListBrowse.title": {
+    "ja": "チュートリアル: tab -list | browse",
+    "en": "Tutorial: tab -list | browse"
+  },
+  "tutorial.tabListBrowse.step.typeTab": {
+    "ja": "プロンプトに `tab` だけ入力してください。候補メニューが開くことを確認します。",
+    "en": "Type only `tab` in the prompt. Confirm that the candidate menu opens."
+  },
+  "tutorial.tabListBrowse.hint.typeTab": {
+    "ja": "`tab` のあと Tab を押すと第二コマンド候補（`-list` など）が開きます。まだ Enter は不要です。",
+    "en": "After `tab`, press Tab to open second-command candidates (such as `-list`). Enter is not needed yet."
+  },
+  "tutorial.tabListBrowse.step.typeList": {
+    "ja": "続けて `-list` を入力（または候補から選択）してください。",
+    "en": "Continue by typing `-list` (or pick it from the candidates)."
+  },
+  "tutorial.tabListBrowse.hint.typeList": {
+    "ja": "行が `tab -list` になれば OK です。スペースの有無は問いません。",
+    "en": "The line should become `tab -list`. A trailing space is fine."
+  },
+  "tutorial.tabListBrowse.step.typePipe": {
+    "ja": "パイプ `|` を入力してください（`tab -list |`）。",
+    "en": "Type the pipe `|` so the line is `tab -list |`."
+  },
+  "tutorial.tabListBrowse.hint.typePipe": {
+    "ja": "`|` のあとにパイプ先候補が出ることがあります。Tab で補完しても構いません。",
+    "en": "Pipe consumers may appear after `|`. Tab completion is fine."
+  },
+  "tutorial.tabListBrowse.step.typeBrowse": {
+    "ja": "`browse` を入力（または候補から選択）し、`tab -list | browse` にしてください。",
+    "en": "Type `browse` (or pick it) so the line is `tab -list | browse`."
+  },
+  "tutorial.tabListBrowse.hint.typeBrowse": {
+    "ja": "これがタブピッカー列を開くための完成形です。",
+    "en": "This is the full command that opens the tab picker column."
+  },
+  "tutorial.tabListBrowse.step.openPicker": {
+    "ja": "Enter を押してタブピッカー列を開いてください。",
+    "en": "Press Enter to open the tab picker column."
+  },
+  "tutorial.tabListBrowse.hint.openPicker": {
+    "ja": "右側（またはピッカー列）にタブ一覧が出れば完了です。",
+    "en": "You are done when the tab list column appears."
+  }
+}

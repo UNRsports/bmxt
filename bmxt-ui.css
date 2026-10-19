@@ -520,6 +520,70 @@ body {
   margin-top: 8px;
 }
 
+.bmxt-tutorial-coach {
+  color: #8b949e;
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #161b22;
+}
+
+.bmxt-tutorial-coach-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bmxt-tutorial-coach-title {
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.bmxt-tutorial-coach-progress {
+  margin-left: 8px;
+  font-weight: 400;
+  color: #8b949e;
+}
+
+.bmxt-tutorial-coach-skip {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: transparent;
+  color: #8b949e;
+  cursor: pointer;
+  font: inherit;
+}
+
+.bmxt-tutorial-coach-skip:hover {
+  color: #c9d1d9;
+  border-color: #8b949e;
+}
+
+.bmxt-tutorial-coach-instruction {
+  color: #e6edf3;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-tutorial-coach-hint {
+  margin-top: 6px;
+  color: #8b949e;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-tutorial-coach-footer {
+  margin-top: 8px;
+  font-size: 0.92em;
+  color: #6e7681;
+}
+
 .bmxt-out-line {
   margin: 0;
   padding: 0;
@@ -1614,7 +1678,8 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-shell .bmxt-out-line,
 .bmxt-shell .bmxt-hint,
 .bmxt-shell .bmxt-isearch,
-.bmxt-version-upgrade {
+.bmxt-version-upgrade,
+.bmxt-tutorial-coach {
   user-select: text;
   cursor: text;
 }
