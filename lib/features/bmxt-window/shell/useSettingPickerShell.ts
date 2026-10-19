@@ -111,6 +111,20 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
+      if (row.id === "ime-candidate-help-on") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { imeCandidateHelp: true })
+        )
+        return
+      }
+      if (row.id === "ime-candidate-help-off") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { imeCandidateHelp: false })
+        )
+        return
+      }
       if (row.id === "host-ui-auto") {
         options.setSettingListPicker(
           options.sessionId,
@@ -137,6 +151,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           options.sessionId,
           settingPickerApplyDraftToMain(current, {
             editPicker: false,
+            imeCandidateHelp: true,
             appearance: {
               fg: null,
               bgColor: null,

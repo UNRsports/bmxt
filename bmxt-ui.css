@@ -1330,11 +1330,17 @@ body {
 .bmxt-subcmd-picker-host {
   max-width: min(420px, calc(100vw - 16px));
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .bmxt-subcmd-picker-host--positioned {
   position: fixed;
   z-index: 50;
+}
+
+/* EN: Host sized to remaining viewport when IME help pane is open. */
+.bmxt-subcmd-picker-host:has(.bmxt-subcmd-picker--with-help) {
+  max-width: none;
 }
 
 .bmxt-subcmd-picker {
@@ -1351,6 +1357,15 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   font-size: 12px;
   line-height: 1.35;
+}
+
+/* EN: Candidate list + Mozc-style help pane fills the host (host ≈ remaining window). */
+.bmxt-subcmd-picker--with-help {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
 }
 
 .bmxt-subcmd-picker-hint {
@@ -1370,11 +1385,44 @@ body {
   color: #8b949e;
 }
 
+.bmxt-subcmd-picker-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+
 .bmxt-subcmd-picker-list {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 7.5em;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.bmxt-subcmd-picker--with-help .bmxt-subcmd-picker-list {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: min(16rem, 36%);
+  border-right: 1px solid #21262d;
+}
+
+.bmxt-subcmd-picker-help-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: #8b949e;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bmxt-subcmd-picker-item {

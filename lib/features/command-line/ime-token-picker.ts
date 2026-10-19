@@ -8,7 +8,9 @@ import {
   listSecondTokenCandidatesByCommand,
   listThirdTokenCandidates
 } from "../builtin-commands/command-subcommands.gen.ts"
+import { COMMANDS } from "../bmxt-core/registry/table.gen.ts"
 import { resolveCanonical } from "../bmxt-core/registry/index.ts"
+import { tHelp, type HelpMessageKey } from "../setting/i18n/ns/help"
 import { tImeToken } from "../setting/i18n/ns/ime-token"
 import type { UiLocale } from "../setting/locale"
 import {
@@ -20,7 +22,10 @@ import {
 import { resolveActiveCommandSegment } from "./compound/active-segment.ts"
 import { resolveActivePipeStage } from "./compound/pipe-stage-spans.ts"
 import { listPipeConsumerCompletionTokens } from "./pipe/consumers/completion-tokens.ts"
-import { applyPipeContinuationCandidates } from "./pipe/pipe-continuation-candidates.ts"
+import {
+  applyPipeContinuationCandidates,
+  isPipeContinuationCandidate
+} from "./pipe/pipe-continuation-candidates.ts"
 import { suppressExactCompletePipeConsumerFirstPicker } from "./pipe/pipe-consumer-first-picker.ts"
 import { stageLineHasPipeProducerFirstCommand } from "./pipe/pipe-producer-first.ts"
 import { shouldInsertTokenPickAtCursor } from "./first-token-insert.ts"
@@ -309,6 +314,210 @@ export function imeTokenPickerHint(tier: ImeTokenTier, locale: UiLocale): string
     case "third":
       return tImeToken("imeToken.hint.third", locale)
   }
+}
+
+/**
+ * EN: Same map as Rust `section_key_for_command` (`help_cmd.rs`) — `\<cmd\> help` manuals.
+ */
+const HELP_SECTION_BY_CANONICAL: Readonly<Record<string, HelpMessageKey>> = {
+  tab: "help.section.tabs",
+  back: "help.section.back",
+  forward: "help.section.forward",
+  reload: "help.section.reload",
+  close: "help.section.close",
+  dom: "help.section.dom",
+  search: "help.section.search",
+  session: "help.section.session",
+  setting: "help.section.setting",
+  translate: "help.section.translate"
+}
+
+function canonicalFirstName(token: string): string {
+  const lower = token.toLowerCase()
+  for (const entry of COMMANDS) {
+    if (entry.name === lower) {
+      return entry.name
+    }
+    for (const alias of entry.aliases) {
+      if (alias.toLowerCase() === lower) {
+        return entry.name
+      }
+    }
+  }
+  return lower
+}
+
+function helpSectionKeyForCommand(canonical: string): HelpMessageKey | null {
+  const key = HELP_SECTION_BY_CANONICAL[canonical]
+  return key ?? null
+}
+
+function tokenizeBeforePickerSlot(line: string, tokenStart: number): string[] {
+  const clamped = Math.min(Math.max(0, tokenStart), Math.max(0, line.length))
+  const active = resolveActiveCommandSegment(line, clamped)
+  const localInSegment = Math.max(0, clamped - active.segmentStart)
+  const stage = resolveActivePipeStage(active.segmentText, localInSegment)
+  const stageText = active.segmentText.slice(stage.stageStart, stage.stageEnd)
+  const localInStage = Math.max(0, localInSegment - stage.stageStart)
+  const before = stageText.slice(0, localInStage).trim()
+  if (before.length === 0) {
+    return []
+  }
+  return before.split(/\s+/).filter((part) => part.length > 0)
+}
+
+function helpPatternTokens(patternSide: string): string[] {
+  const withOptionals = patternSide.replace(/\[([^\]]*)\]/g, " $1 ")
+  const withoutEllipsis = withOptionals.replace(/…/g, " ")
+  const withoutOr = withoutEllipsis.replace(/\s+\|\s+/g, " ")
+  return withoutOr
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+}
+
+function pathMatchesHelpTokens(path: readonly string[], patternTokens: readonly string[]): boolean {
+  if (path.length === 0 || path.length > patternTokens.length) {
+    return false
+  }
+  for (let i = 0; i < path.length; i += 1) {
+    if (patternTokens[i]!.toLowerCase() !== path[i]!.toLowerCase()) {
+      return false
+    }
+  }
+  return true
+}
+
+/** EN: Split a help-section body line into pattern + detail (same text as `help` / `\<cmd\> help`). */
+function splitHelpSectionDetailLine(
+  line: string
+): { pattern: string; detail: string } | null {
+  const trimmed = line.trim()
+  if (trimmed.length === 0) {
+    return null
+  }
+  const em = trimmed.indexOf(" — ")
+  if (em >= 0) {
+    const pattern = trimmed.slice(0, em).trim()
+    const detail = trimmed.slice(em + 3).trim()
+    if (pattern.length === 0 || detail.length === 0) {
+      return null
+    }
+    return { pattern, detail }
+  }
+  const padded = /^(.*?)\s{2,}-\s+(.+)$/.exec(trimmed)
+  if (padded) {
+    const pattern = padded[1]!.trim()
+    const detail = padded[2]!.trim()
+    if (pattern.length === 0 || detail.length === 0) {
+      return null
+    }
+    return { pattern, detail }
+  }
+  const single = /^(.*?)\s+-\s+(.+)$/.exec(trimmed)
+  if (single) {
+    const pattern = single[1]!.trim()
+    const detail = single[2]!.trim()
+    if (pattern.length === 0 || detail.length === 0) {
+      return null
+    }
+    return { pattern, detail }
+  }
+  return null
+}
+
+/**
+ * EN: First command → full `help.section.*` text; second+ → matching body lines only.
+ * JA: 第一は help 節全文、第二以降は該当行のみ（help コマンドと同じ文言）。
+ */
+function resolveHelpSectionTextForPath(
+  path: readonly string[],
+  locale: UiLocale
+): string | undefined {
+  if (path.length === 0) {
+    return undefined
+  }
+  const canonical = canonicalFirstName(path[0]!)
+  const sectionKey = helpSectionKeyForCommand(canonical)
+  if (sectionKey === null) {
+    return undefined
+  }
+  const section = tHelp(sectionKey, locale)
+  if (section === sectionKey || section.length === 0) {
+    return undefined
+  }
+  if (path.length === 1) {
+    return section
+  }
+  const bodyLines = section.split("\n").slice(1)
+  let bestScore = -1
+  const bestLines: string[] = []
+  for (const rawLine of bodyLines) {
+    const split = splitHelpSectionDetailLine(rawLine)
+    if (split === null) {
+      continue
+    }
+    const tokens = helpPatternTokens(split.pattern)
+    if (!pathMatchesHelpTokens(path, tokens)) {
+      continue
+    }
+    const score = (tokens.length === path.length ? 1000 : 0) + tokens.length
+    if (score > bestScore) {
+      bestScore = score
+      bestLines.length = 0
+      bestLines.push(rawLine.trim())
+    } else if (score === bestScore) {
+      bestLines.push(rawLine.trim())
+    }
+  }
+  if (bestLines.length === 0) {
+    return undefined
+  }
+  return bestLines.join("\n")
+}
+
+function candidatePathForHelp(
+  candidate: string,
+  tokensBefore: readonly string[]
+): string[] | null {
+  const trimmed = candidate.trim()
+  if (trimmed.length === 0) {
+    return null
+  }
+  if (isPipeContinuationCandidate(trimmed)) {
+    const match = /^\|\s+(\S+)/.exec(trimmed)
+    if (match === null) {
+      return null
+    }
+    return [canonicalFirstName(match[1]!)]
+  }
+  if (tokensBefore.length === 0) {
+    return [canonicalFirstName(trimmed)]
+  }
+  return [
+    canonicalFirstName(tokensBefore[0]!),
+    ...tokensBefore.slice(1).map((t) => t.toLowerCase()),
+    trimmed.toLowerCase()
+  ]
+}
+
+/**
+ * EN: Mozc-style help texts from `help.section.*` (parallel to candidates; UI shows highlighted only).
+ */
+export function listImeCandidateHelpsFromUsage(
+  candidates: readonly string[],
+  line: string,
+  tokenStart: number,
+  locale: UiLocale
+): (string | undefined)[] {
+  const tokensBefore = tokenizeBeforePickerSlot(line, tokenStart)
+  return candidates.map((candidate) => {
+    const path = candidatePathForHelp(candidate, tokensBefore)
+    if (path === null) {
+      return undefined
+    }
+    return resolveHelpSectionTextForPath(path, locale)
+  })
 }
 
 /** EN: Resolve dropdown candidates for the token under `cursor` (prefix-filtered). */

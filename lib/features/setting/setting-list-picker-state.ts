@@ -7,6 +7,7 @@ export type SettingListPickerView =
   | "main"
   | "language"
   | "editPicker"
+  | "imeCandidateHelp"
   | "hostUi"
   | "fontSize"
   | "pickerFontSize"
@@ -45,6 +46,7 @@ export const DEFAULT_SETTING_LIST_PICKER_NAV: Pick<
 export type SettingDraftPatch = {
   locale?: UiLocale
   editPicker?: boolean
+  imeCandidateHelp?: boolean
   hostUiMode?: HostUiMode
   appearance?: Partial<UiAppearanceLayer>
   picker?: Partial<UiAppearanceLayer>
@@ -56,6 +58,7 @@ export function createSettingListPickerState(committed: UiSettings): SettingList
     draft: {
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
+      imeCandidateHelp: committed.imeCandidateHelp !== false,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
@@ -85,6 +88,9 @@ function applyDraftPatch(
   }
   if (patch.hostUiMode !== undefined) {
     draft = { ...draft, hostUiMode: patch.hostUiMode }
+  }
+  if (patch.imeCandidateHelp !== undefined) {
+    draft = { ...draft, imeCandidateHelp: patch.imeCandidateHelp }
   }
   const nextAppearance = { ...draft.appearance, picker: { ...draft.appearance.picker } }
   if (patch.editPicker !== undefined) {
@@ -127,6 +133,7 @@ export function settingPickerRevertDraft(
     draft: {
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
+      imeCandidateHelp: committed.imeCandidateHelp !== false,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }

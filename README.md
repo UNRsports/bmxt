@@ -601,6 +601,7 @@ When changing UI settings shape or on-disk format in a release:
 |-----|--------|
 | **language** | `--japanese` / `--english` (UI display language) |
 | **edit-picker** | **`on`** — show extra rows to customize picker columns separately; **`off`** — picker columns follow global appearance |
+| **ime-candidate-help** | **`on`** (default) — show usage help beside IME candidate tokens; **`off`** — token column only |
 | **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force layout. **mobile** (since **0.8.2**): soft key bar; prompt candidate menus support tap-to-select and outside-tap dismiss. **desktop**: keyboard-centric candidate close (**Esc** / **↑** at top), matching **0.8.0** |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
@@ -1936,6 +1937,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 |----|------|
 | **language** | `--japanese` / `--english`（UI 表示言語） |
 | **edit-picker** | **`on`** — ピッカー列専用の行を追加；**`off`** — ピッカー列は全体外観に従う |
+| **ime-candidate-help** | **`on`**（既定）— 候補メニュー右に usage ヘルプを表示；**`off`** — トークン列のみ |
 | **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — 強制切替。**mobile**（**0.8.2** 以降）: 補助キーバー、プロンプト候補のタップ確定／外タップで閉じる。**desktop**: **0.8.0** 相当のキーボード中心（**Esc** / 先頭で **↑**） |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |

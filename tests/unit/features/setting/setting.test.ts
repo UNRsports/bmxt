@@ -163,6 +163,7 @@ describe("setting list picker draft", () => {
     const state = createSettingListPickerState({
       locale: "en",
       hostUiMode: "auto",
+      imeCandidateHelp: true,
       appearance: testAppearance({
         fg: "#ffffff",
         fontSize: "14px"
@@ -170,6 +171,7 @@ describe("setting list picker draft", () => {
     })
     assert.equal(state.draft.locale, "en")
     assert.equal(state.draft.hostUiMode, "auto")
+    assert.equal(state.draft.imeCandidateHelp, true)
     assert.equal(state.draft.appearance.fg, "#ffffff")
     assert.equal(state.draft.appearance.fontSize, "14px")
   })
@@ -178,6 +180,7 @@ describe("setting list picker draft", () => {
     const base = createSettingListPickerState({
       locale: "ja",
       hostUiMode: "auto",
+      imeCandidateHelp: true,
       appearance: testAppearance(null)
     })
     const next = settingPickerUpdateDraft(
@@ -193,17 +196,24 @@ describe("setting list picker draft", () => {
     const base = createSettingListPickerState({
       locale: "en",
       hostUiMode: "desktop",
+      imeCandidateHelp: true,
       appearance: testAppearance(null)
     })
     const next = settingPickerApplyDraftToMain(
       { ...base, view: "language", editing: true, editDraft: "#ff0000" },
-      { locale: "ja", hostUiMode: "mobile", appearance: { fg: "#aabbcc" } }
+      {
+        locale: "ja",
+        hostUiMode: "mobile",
+        imeCandidateHelp: false,
+        appearance: { fg: "#aabbcc" }
+      }
     )
     assert.equal(next.view, "main")
     assert.equal(next.editing, false)
     assert.equal(next.editDraft, "")
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.hostUiMode, "mobile")
+    assert.equal(next.draft.imeCandidateHelp, false)
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
   it("maps reset-default to confirm view", () => {
@@ -211,6 +221,9 @@ describe("setting list picker draft", () => {
   })
   it("maps host-ui to hostUi view", () => {
     assert.equal(settingMainRowTargetView("host-ui"), "hostUi")
+  })
+  it("maps ime-candidate-help to imeCandidateHelp view", () => {
+    assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")
   })
 })
 

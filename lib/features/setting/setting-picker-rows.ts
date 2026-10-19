@@ -27,6 +27,9 @@ export type SettingPickerRowId =
   | "edit-picker"
   | "edit-picker-on"
   | "edit-picker-off"
+  | "ime-candidate-help"
+  | "ime-candidate-help-on"
+  | "ime-candidate-help-off"
   | "host-ui"
   | "host-ui-auto"
   | "host-ui-desktop"
@@ -137,13 +140,17 @@ export function settingPickerInitialHi(
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
   snapshotStorageConfig?: SnapshotStorageConfig,
-  hostUiMode: HostUiMode = "auto"
+  hostUiMode: HostUiMode = "auto",
+  imeCandidateHelp = true
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
   }
   if (view === "editPicker") {
     return appearance.editPicker ? 0 : 1
+  }
+  if (view === "imeCandidateHelp") {
+    return imeCandidateHelp ? 0 : 1
   }
   if (view === "hostUi") {
     if (hostUiMode === "desktop") {
@@ -317,7 +324,8 @@ export function buildSettingPickerRows(
   appearance: UiAppearance,
   storageConfig?: UiSettingsStorageConfig,
   snapshotStorageConfig?: SnapshotStorageConfig,
-  hostUiMode: HostUiMode = "auto"
+  hostUiMode: HostUiMode = "auto",
+  imeCandidateHelp = true
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -334,6 +342,19 @@ export function buildSettingPickerRows(
     return [
       { id: "edit-picker-on", line: tSetting("setting.picker.editPickerOn", locale) },
       { id: "edit-picker-off", line: tSetting("setting.picker.editPickerOff", locale) }
+    ]
+  }
+
+  if (view === "imeCandidateHelp") {
+    return [
+      {
+        id: "ime-candidate-help-on",
+        line: tSetting("setting.picker.imeCandidateHelpOn", locale)
+      },
+      {
+        id: "ime-candidate-help-off",
+        line: tSetting("setting.picker.imeCandidateHelpOff", locale)
+      }
     ]
   }
 
@@ -421,6 +442,14 @@ export function buildSettingPickerRows(
         value: appearance.editPicker
           ? tSetting("setting.picker.editPickerStateOn", locale)
           : tSetting("setting.picker.editPickerStateOff", locale)
+      })
+    },
+    {
+      id: "ime-candidate-help",
+      line: tSetting("setting.picker.main.imeCandidateHelp", locale, {
+        value: imeCandidateHelp
+          ? tSetting("setting.picker.imeCandidateHelpStateOn", locale)
+          : tSetting("setting.picker.imeCandidateHelpStateOff", locale)
       })
     },
     {
@@ -595,6 +624,8 @@ export function settingPickerHeadline(
         ? "setting.picker.headline.language"
         : view === "editPicker"
           ? "setting.picker.headline.editPicker"
+          : view === "imeCandidateHelp"
+            ? "setting.picker.headline.imeCandidateHelp"
           : view === "hostUi"
             ? "setting.picker.headline.hostUi"
           : view === "storageMode"

@@ -223,6 +223,10 @@
     "ja": "オン",
     "en": "on"
   },
+  "setting.picker.headline.imeCandidateHelp": {
+    "ja": "setting -list · ime-candidate-help（候補ヘルプ） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · ime-candidate-help · ↑↓ · Enter/→ select · ← list"
+  },
   "setting.picker.hostUiAuto": {
     "ja": "auto — インストール時判定（Android はスマホ）",
     "en": "auto — install-time detect (Android → mobile)"
@@ -331,6 +335,22 @@
     "ja": "設定ピッカー — 変更は下部プレビューに反映 · > 設定を保存して終了 で確定 · ↑↓ · → · ← · Esc → プロンプト",
     "en": "Setting picker — changes preview below · save setting & exit to commit · ↑↓ · → · ← · Esc → prompt"
   },
+  "setting.picker.imeCandidateHelpOff": {
+    "ja": "オフ — 候補メニューにヘルプを出さない",
+    "en": "off — hide help in the candidate menu"
+  },
+  "setting.picker.imeCandidateHelpOn": {
+    "ja": "オン — 候補メニューにヘルプを表示",
+    "en": "on — show help in the candidate menu"
+  },
+  "setting.picker.imeCandidateHelpStateOff": {
+    "ja": "オフ",
+    "en": "off"
+  },
+  "setting.picker.imeCandidateHelpStateOn": {
+    "ja": "オン",
+    "en": "on"
+  },
   "setting.picker.importDraft": {
     "ja": "setting: zip をプレビューに読み込みました（> 設定を保存して終了 で確定）",
     "en": "setting: zip loaded into preview (use save setting & exit to commit)"
@@ -394,6 +414,10 @@
   "setting.picker.main.fontPicker": {
     "ja": "font（ピッカー）: {value}",
     "en": "font (picker): {value}"
+  },
+  "setting.picker.main.imeCandidateHelp": {
+    "ja": "ime-candidate-help（候補メニューのヘルプ）: {value}",
+    "en": "ime-candidate-help: {value}"
   },
   "setting.picker.main.import": {
     "ja": "import — zip から設定を読み込む",
@@ -694,6 +718,10 @@
   "setting.summary.font": {
     "ja": "font: {value}",
     "en": "font: {value}"
+  },
+  "setting.summary.imeCandidateHelp": {
+    "ja": "ime-candidate-help: {value}",
+    "en": "ime-candidate-help: {value}"
   },
   "setting.summary.locale": {
     "ja": "locale: {token}",
