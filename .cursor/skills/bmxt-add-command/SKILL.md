@@ -69,7 +69,7 @@ Task progress:
 
 ## Codegen rules
 
-- **Single source:** `manifest/bmxt-codegen.json` (`commands[]`, `effects[]`, `uiActions[]`). Run **`pnpm run codegen`**. Do **not** hand-edit:
+- **Single source:** `manifest/bmxt-codegen.json` (`commands[]`, `effects[]`, `uiActions[]`). Run **`pnpm run codegen`**. **`check:generated`** compares the working tree to codegen output (**no git** — safe before `git add`). Do **not** hand-edit:
   - `lib/features/bmxt-core/registry/table.gen.ts`
   - `lib/features/dispatch/effect-types.ts`, `ui-action-types.ts`
   - `lib/features/dispatch/handlers/apply-dispatch.gen.ts`

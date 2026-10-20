@@ -4,14 +4,14 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { dirname, join, posix, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const root = join(__dirname, "..", "..")
-const manifestPath = join(root, "manifest", "bmxt-codegen.json")
+export const repoRoot = join(__dirname, "..", "..")
+const manifestPath = join(repoRoot, "manifest", "bmxt-codegen.json")
 
-function loadManifest() {
+export function loadManifest() {
   const raw = readFileSync(manifestPath, "utf8")
   const m = JSON.parse(raw)
   if (m.schemaVersion !== 1) {
@@ -606,73 +606,104 @@ function ensureDir(p) {
   }
 }
 
+/**
+ * EN: Relative paths (from repo root) + expected file bodies from the manifest.
+ * JA: リポジトリルートからの相対パスと、マニフェストから導いた期待本文。
+ *
+ * @param {ReturnType<typeof loadManifest>} m
+ * @returns {{ relPath: string, content: string }[]}
+ */
+export function collectGeneratedOutputs(m) {
+  return [
+    {
+      relPath: posix.join("lib", "features", "bmxt-core", "registry", "table.gen.ts"),
+      content: emitTsRegistryTable(m.commands)
+    },
+    {
+      relPath: posix.join(
+        "lib",
+        "features",
+        "dispatch",
+        "handlers",
+        "apply-dispatch.gen.ts"
+      ),
+      content: emitTsApplyDispatch(m.effects)
+    },
+    {
+      relPath: posix.join("lib", "features", "dispatch", "effect-types.ts"),
+      content: emitTsEffectTypes(m.effects, m.uiActions)
+    },
+    {
+      relPath: posix.join(
+        "lib",
+        "features",
+        "builtin-commands",
+        "completion-fallback.ts"
+      ),
+      content: emitCompletionFallback(m.commands)
+    },
+    {
+      relPath: posix.join(
+        "lib",
+        "features",
+        "builtin-commands",
+        "command-subcommands.gen.ts"
+      ),
+      content: emitTsCommandSubcommands(m.commands)
+    },
+    {
+      relPath: posix.join("crates", "bmxt-core", "src", "generated", "host_effect.rs"),
+      content: emitRustHostEffect(m.effects)
+    },
+    {
+      relPath: posix.join("crates", "bmxt-core", "src", "generated", "ui_action.rs"),
+      content: emitRustUiAction(m.uiActions)
+    },
+    {
+      relPath: posix.join(
+        "crates",
+        "bmxt-core",
+        "src",
+        "generated",
+        "registry_table.rs"
+      ),
+      content: emitRustRegistryTable(m.commands)
+    },
+    {
+      relPath: posix.join("lib", "features", "dispatch", "ui-action-types.ts"),
+      content: emitTsUiActionTypes(m.uiActions)
+    }
+  ]
+}
+
+/**
+ * EN: Write all codegen outputs under `root` (default: repo root).
+ * JA: 生成物を `root`（既定はリポジトリルート）へ書き込む。
+ *
+ * @param {{ relPath: string, content: string }[]} outputs
+ * @param {string} [root]
+ */
+export function writeGeneratedOutputs(outputs, root = repoRoot) {
+  for (const { relPath, content } of outputs) {
+    const abs = join(root, relPath)
+    ensureDir(dirname(abs))
+    writeFileSync(abs, content, "utf8")
+  }
+}
+
 function main() {
   const m = loadManifest()
-
-  const registryDir = join(root, "lib", "features", "bmxt-core", "registry")
-  ensureDir(registryDir)
-
-  writeFileSync(
-    join(registryDir, "table.gen.ts"),
-    emitTsRegistryTable(m.commands),
-    "utf8"
-  )
-
-  const dispatchPath = join(
-    root,
-    "lib",
-    "features",
-    "dispatch",
-    "handlers",
-    "apply-dispatch.gen.ts"
-  )
-  writeFileSync(dispatchPath, emitTsApplyDispatch(m.effects), "utf8")
-
-  writeFileSync(
-    join(root, "lib", "features", "dispatch", "effect-types.ts"),
-    emitTsEffectTypes(m.effects, m.uiActions),
-    "utf8"
-  )
-
-  writeFileSync(
-    join(root, "lib", "features", "builtin-commands", "completion-fallback.ts"),
-    emitCompletionFallback(m.commands),
-    "utf8"
-  )
-
-  writeFileSync(
-    join(root, "lib", "features", "builtin-commands", "command-subcommands.gen.ts"),
-    emitTsCommandSubcommands(m.commands),
-    "utf8"
-  )
-
-  const rustGeneratedDir = join(root, "crates", "bmxt-core", "src", "generated")
-  ensureDir(rustGeneratedDir)
-  writeFileSync(
-    join(rustGeneratedDir, "host_effect.rs"),
-    emitRustHostEffect(m.effects),
-    "utf8"
-  )
-  writeFileSync(
-    join(rustGeneratedDir, "ui_action.rs"),
-    emitRustUiAction(m.uiActions),
-    "utf8"
-  )
-  writeFileSync(
-    join(rustGeneratedDir, "registry_table.rs"),
-    emitRustRegistryTable(m.commands),
-    "utf8"
-  )
-
-  writeFileSync(
-    join(root, "lib", "features", "dispatch", "ui-action-types.ts"),
-    emitTsUiActionTypes(m.uiActions),
-    "utf8"
-  )
-
+  const outputs = collectGeneratedOutputs(m)
+  writeGeneratedOutputs(outputs)
   console.log(
     "codegen ok: registry/table.gen.ts, effect-types, ui-action-types, apply-dispatch.gen, completion-fallback, command-subcommands.gen.ts, crates/bmxt-core/src/generated/{host_effect,ui_action,registry_table}.rs"
   )
 }
 
-main()
+const invokedAsCli =
+  typeof process.argv[1] === "string" &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (invokedAsCli) {
+  main()
+}
