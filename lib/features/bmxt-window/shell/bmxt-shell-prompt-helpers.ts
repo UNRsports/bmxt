@@ -1,4 +1,4 @@
-import type { ChromeEffect } from "../../dispatch/effect-types"
+import type { HostEffect } from "../../dispatch/effect-types"
 import {
   buildSessionSwitchCommandLine,
   parseSessionSwitchWithLine,
@@ -38,7 +38,7 @@ export function shouldKeepSessionSwitchPickerOpen(
 }
 
 /** EN: True when dispatch effects include a page search. */
-export function effectsIncludeSearchPage(effects: ChromeEffect[]): boolean {
+export function effectsIncludeSearchPage(effects: HostEffect[]): boolean {
   return effects.some((e) => e.kind === "search_page")
 }
 

@@ -1,5 +1,5 @@
 use crate::cmd::helpers::{self, normalize_token};
-use crate::ir::{effects, msg_key, msgs, ui, ChromeEffect, DispatchBundle, UiAction};
+use crate::ir::{effects, msg_key, msgs, ui, HostEffect, DispatchBundle, UiAction};
 
 const USAGE_KEYS: &[&str] = &[
     "cmd.search.usage.line1",
@@ -35,7 +35,7 @@ fn run_list(args: &[String]) -> DispatchBundle {
     let Some(dispatch_line) = parse_search_list_line(args) else {
         return msgs_from_keys(USAGE_KEYS);
     };
-    effects(vec![ChromeEffect::SearchList { dispatch_line }])
+    effects(vec![HostEffect::SearchList { dispatch_line }])
 }
 
 fn msgs_from_keys(keys: &[&str]) -> DispatchBundle {

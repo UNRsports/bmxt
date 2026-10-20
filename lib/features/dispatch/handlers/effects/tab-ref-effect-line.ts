@@ -1,7 +1,7 @@
 import type { EffectMessageKey } from "../../../setting/i18n/ns/effect"
 import { encodeTabRefInline } from "../../../command-line/tab-ref-log"
 import { resolveTabFaviconSrc } from "../../../tabs/tab-favicon-url"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
 
 export type TabRefDisplay = {
@@ -33,7 +33,7 @@ export async function resolveTabRefDisplay(
 
 /** EN: Effect log line with plain favicon+title (no chip chrome) in place of `{tab}`. */
 export function tabRefEffectLine(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   key: EffectMessageKey,
   display: TabRefDisplay
 ): string {

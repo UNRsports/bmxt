@@ -1,4 +1,4 @@
-import type { ChromeEffect } from "../dispatch/effect-types"
+import type { HostEffect } from "../dispatch/effect-types"
 
 export type CmdMeta = {
   readonly name: string
@@ -8,12 +8,12 @@ export type CmdMeta = {
 
 export type DispatchJson =
   | { ty: "lines"; lines: string[] }
-  | { ty: "effects"; effects: ChromeEffect[] }
+  | { ty: "effects"; effects: HostEffect[] }
 
 export function linesDispatch(lines: string[]): DispatchJson {
   return { ty: "lines", lines }
 }
 
-export function effectsDispatch(effects: ChromeEffect[]): DispatchJson {
+export function effectsDispatch(effects: HostEffect[]): DispatchJson {
   return { ty: "effects", effects }
 }

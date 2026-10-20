@@ -1,5 +1,5 @@
 use crate::cmd::helpers::{self, normalize_token};
-use crate::ir::{effects, msg_key, msg_param, msgs, ui, ChromeEffect, DispatchBundle, Msg, UiAction};
+use crate::ir::{effects, msg_key, msg_param, msgs, ui, HostEffect, DispatchBundle, Msg, UiAction};
 
 pub const MAX_SESSION_NAME_LEN: usize = 64;
 
@@ -76,7 +76,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
             if !raw.is_empty() && sanitize_session_name(&raw).is_none() {
                 return usage_bundle(vec![msg_key("cmd.session.error.invalidName")]);
             }
-            effects(vec![ChromeEffect::SessionNew { name: raw }])
+            effects(vec![HostEffect::SessionNew { name: raw }])
         }
         "-setting-name" | "-switch" => {
             let raw = raw_name(args);
@@ -100,13 +100,13 @@ pub fn run(args: &[String]) -> DispatchBundle {
             if args.len() > 2 {
                 return usage_bundle(vec![msg_key("cmd.session.error.tooManyArgs")]);
             }
-            effects(vec![ChromeEffect::SessionNext])
+            effects(vec![HostEffect::SessionNext])
         }
         "-prev" => {
             if args.len() > 2 {
                 return usage_bundle(vec![msg_key("cmd.session.error.tooManyArgs")]);
             }
-            effects(vec![ChromeEffect::SessionPrev])
+            effects(vec![HostEffect::SessionPrev])
         }
         "-list" => {
             if args.len() > 2 {

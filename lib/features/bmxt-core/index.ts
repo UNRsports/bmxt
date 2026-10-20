@@ -1,5 +1,5 @@
 /**
- * BMXt コマンドコア — 意味論は Rust/WASM、Chrome API は `lib/features/dispatch` 側。
+ * BMXt コマンドコア — 意味論は Rust/WASM、ホスト API 適用は `lib/features/dispatch` 側。
  */
 
 export { FALLBACK_COMPLETION_CANDIDATES } from "../builtin-commands"

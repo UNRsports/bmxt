@@ -1,6 +1,6 @@
 use crate::cmd::helpers::{self, normalize_token};
 use crate::ir::{
-    effects, msg_key, msg_param, msgs, msgs_with_prompt, ui, ChromeEffect, DispatchBundle, UiAction,
+    effects, msg_key, msg_param, msgs, msgs_with_prompt, ui, HostEffect, DispatchBundle, UiAction,
 };
 use crate::line_parse::strip_invisible_format_chars;
 
@@ -121,7 +121,7 @@ fn run_list(args: &[String]) -> DispatchBundle {
     let Some(parsed) = parse_dom_list_line(&line) else {
         return usage_msgs(msg_key("cmd.dom.error.listUsage"));
     };
-    effects(vec![ChromeEffect::DomList {
+    effects(vec![HostEffect::DomList {
         flavor: parsed.flavor,
         pattern: parsed.pattern,
         picker_mode: parsed.picker_mode,

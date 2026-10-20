@@ -1,12 +1,12 @@
 import { BMXT_WINDOW_ID_KEY } from "../../../extension-storage/keys"
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
 
-type E = Extract<ChromeEffect, { kind: "close_current_window" }>
+type E = Extract<HostEffect, { kind: "close_current_window" }>
 
 export async function applyCloseCurrentWindowEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   _e: E
 ): Promise<string[]> {
   const tab = await ctx.resolveTabArg(undefined)

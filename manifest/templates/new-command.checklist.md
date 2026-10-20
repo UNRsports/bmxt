@@ -13,7 +13,7 @@ Catalogs / code:
 | bmxtRule kinds | `manifest/bmxt-rule.json` |
 | Plain `-list` | `list-output/` + `list-commands/` plugins |
 | Pipe consumers | `lib/features/command-line/pipe/consumers/` |
-| Chrome apply | `lib/features/dispatch/handlers/effects/` |
+| Host effect apply | `lib/features/dispatch/handlers/effects/` |
 | UI apply | `lib/features/bmxt-window/shell/apply-ui-action.ts` |
 | i18n | `lib/features/setting/i18n/namespaces/` (EN+JA) |
 
@@ -21,7 +21,7 @@ Catalogs / code:
 
 ```
 Need Chrome side effect?
-  └─ Existing ChromeEffect covers it? → reuse-effects (command-reuse-effects.example.rs)
+  └─ Existing HostEffect covers it? → reuse-effects (command-reuse-effects.example.rs)
   └─ No → extend-effect (manifest effects[] + handlers/effects/*.ts) THEN Rust run
 
 UI-only (picker / mode / session UI)?

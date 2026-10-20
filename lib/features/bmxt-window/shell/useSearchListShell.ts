@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react"
 import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
-import { applyChromeEffects, type DispatchChromeContext } from "../../dispatch"
+import { applyHostEffects, type DispatchHostContext } from "../../dispatch"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../../search/enrich-search-entries-from-tabs"
 import { openSearchPickerEntry } from "../../search/open-search-picker-entry"
 import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
@@ -124,7 +124,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
                 }
               }
             )
-            const linesOut = await applyChromeEffects(ctx, effects)
+            const linesOut = await applyHostEffects(ctx, effects)
             if (shouldCancelJob(job)) {
               clearSearchLoadingProgress()
               if (linesOut.length > 0) {
@@ -189,7 +189,7 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
       destination?: SearchOpenDestinationRow
     ) => {
       const pattern = options.searchListPickerRef.current?.pattern ?? ""
-      const ctx: DispatchChromeContext = {
+      const ctx: DispatchHostContext = {
         enqueueSessionPatch: () => {},
         clearLog: async () => {},
         exitPane: async () => [],

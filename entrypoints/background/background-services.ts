@@ -4,8 +4,8 @@
  */
 
 import {
-  applyChromeEffects,
-  type DispatchChromeContext
+  applyHostEffects,
+  type DispatchHostContext
 } from "../../lib/features/dispatch"
 import { LAST_NORMAL_WINDOW_KEY } from "../../lib/features/extension-storage/keys"
 import {
@@ -217,7 +217,7 @@ async function dispatch(
   if (bundle.ty === "lines") {
     return bundle.lines ?? []
   }
-  const ctx: DispatchChromeContext = {
+  const ctx: DispatchHostContext = {
     enqueueSessionPatch: (patch) => {
       sessionPatches.push(patch)
     },
@@ -256,7 +256,7 @@ async function dispatch(
     commandSessionId: sessionId,
     uiLocale: locale
   }
-  return applyChromeEffects(ctx, bundle.effects ?? [])
+  return applyHostEffects(ctx, bundle.effects ?? [])
 }
 
 async function listWindows(): Promise<string[]> {

@@ -177,7 +177,7 @@ function emitTsEffectTypes(effects, uiActions) {
  * Do not edit by hand; run \`pnpm run codegen\`.
  */
 
-export type ChromeEffect =
+export type HostEffect =
 ${members.join("\n")}
 
 export type DispatchMsg = { key: string; params?: Record<string, string> }
@@ -188,7 +188,7 @@ ${uiMembers.join("\n")}
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"
   lines?: string[]
-  effects?: ChromeEffect[]
+  effects?: HostEffect[]
   action?: UiActionIR
   msgs?: DispatchMsg[]
   /** EN: Optional prompt restore after msgs (Rust prompt semantic SoT). */
@@ -256,8 +256,8 @@ function emitTsApplyDispatch(effects) {
     " * Do not edit by hand.",
     " */",
     "",
-    'import type { ChromeEffect } from "../effect-types"',
-    'import type { DispatchChromeContext } from "../dispatch-context"'
+    'import type { HostEffect } from "../effect-types"',
+    'import type { DispatchHostContext } from "../dispatch-context"'
   ]
   const sorted = [...effects].sort((a, b) => a.tsHandlerFile.localeCompare(b.tsHandlerFile))
   for (const ef of sorted) {
@@ -267,8 +267,8 @@ function emitTsApplyDispatch(effects) {
   lines.push("")
   lines.push(
     "export async function applyOne(",
-    "  ctx: DispatchChromeContext,",
-    "  e: ChromeEffect",
+    "  ctx: DispatchHostContext,",
+    "  e: HostEffect",
     "): Promise<string[]> {"
   )
   lines.push("  switch (e.kind) {")
@@ -462,7 +462,7 @@ function rustSerdeRename(key) {
   return ""
 }
 
-function emitRustChromeEffect(effects) {
+function emitRustHostEffect(effects) {
   const variants = []
   for (const ef of [...effects].sort((a, b) => a.kind.localeCompare(b.kind))) {
     if (ef.shape === "unit") {
@@ -485,7 +485,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
-pub enum ChromeEffect {
+pub enum HostEffect {
 ${variants.join("\n")}
 }
 `
@@ -649,8 +649,8 @@ function main() {
   const rustGeneratedDir = join(root, "crates", "bmxt-core", "src", "generated")
   ensureDir(rustGeneratedDir)
   writeFileSync(
-    join(rustGeneratedDir, "chrome_effect.rs"),
-    emitRustChromeEffect(m.effects),
+    join(rustGeneratedDir, "host_effect.rs"),
+    emitRustHostEffect(m.effects),
     "utf8"
   )
   writeFileSync(
@@ -671,7 +671,7 @@ function main() {
   )
 
   console.log(
-    "codegen ok: registry/table.gen.ts, effect-types, ui-action-types, apply-dispatch.gen, completion-fallback, command-subcommands.gen.ts, crates/bmxt-core/src/generated/{chrome_effect,ui_action,registry_table}.rs"
+    "codegen ok: registry/table.gen.ts, effect-types, ui-action-types, apply-dispatch.gen, completion-fallback, command-subcommands.gen.ts, crates/bmxt-core/src/generated/{host_effect,ui_action,registry_table}.rs"
   )
 }
 

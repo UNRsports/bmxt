@@ -1,7 +1,7 @@
 use crate::cmd;
 use crate::generated::{all_command_metas, resolve_canonical};
 use crate::ir::{
-    effects, lines, msg_param, msg_with, msgs, ChromeEffect, DispatchBundle,
+    effects, lines, msg_param, msg_with, msgs, HostEffect, DispatchBundle,
 };
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use std::collections::BTreeMap;
@@ -43,19 +43,19 @@ fn try_url_line(trimmed: &str) -> Option<DispatchBundle> {
         if trimmed.ends_with(suf) {
             let inner = trimmed[..trimmed.len() - suf.len()].trim_end();
             if let Some(url) = parse_http_url_candidate(inner) {
-                return Some(effects(vec![ChromeEffect::OpenUrlNewWindow { url }]));
+                return Some(effects(vec![HostEffect::OpenUrlNewWindow { url }]));
             }
         }
     }
     if trimmed.ends_with(" .") {
         let inner = trimmed[..trimmed.len() - 2].trim_end();
         if let Some(url) = parse_http_url_candidate(inner) {
-            return Some(effects(vec![ChromeEffect::NavigateCurrentTab { url }]));
+            return Some(effects(vec![HostEffect::NavigateCurrentTab { url }]));
         }
     }
     if !trimmed.contains(char::is_whitespace) {
         if let Some(url) = parse_http_url_candidate(trimmed) {
-            return Some(effects(vec![ChromeEffect::OpenUrlNewTab { url }]));
+            return Some(effects(vec![HostEffect::OpenUrlNewTab { url }]));
         }
     }
     None

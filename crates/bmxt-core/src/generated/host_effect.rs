@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
-pub enum ChromeEffect {
+pub enum HostEffect {
     #[serde(rename = "clear_log")]
     ClearLog,
     #[serde(rename = "close_current_tab")]

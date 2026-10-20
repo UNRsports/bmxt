@@ -1,12 +1,12 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { createTabInNormalBrowserWindow, parseHttpUrlForEffect } from "../shared"
 import { effectT } from "../effect-i18n"
 
-type E = Extract<ChromeEffect, { kind: "open_url_new_tab" }>
+type E = Extract<HostEffect, { kind: "open_url_new_tab" }>
 
 export async function applyOpenUrlNewTabEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
   const url = parseHttpUrlForEffect(e.url)

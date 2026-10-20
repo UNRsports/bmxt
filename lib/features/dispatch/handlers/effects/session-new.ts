@@ -1,10 +1,10 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 
-type E = Extract<ChromeEffect, { kind: "session_new" }>
+type E = Extract<HostEffect, { kind: "session_new" }>
 
 export async function applySessionNewEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
   const explicit = e.name.trim()

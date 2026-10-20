@@ -1,4 +1,4 @@
-import type { DispatchChromeContext } from "../dispatch/dispatch-context.ts"
+import type { DispatchHostContext } from "../dispatch/dispatch-context.ts"
 import type { CommandDispatchDeps } from "../bmxt-window/shell/command-dispatch/types.ts"
 import type { ListCommandEntry } from "../command-line/list-commands/types.ts"
 import type { UiLocale } from "../setting/locale.ts"
@@ -12,7 +12,7 @@ export type SearchListMatch = {
 function stubSearchDispatchCtx(
   deps: CommandDispatchDeps | undefined,
   locale: UiLocale
-): DispatchChromeContext {
+): DispatchHostContext {
   return {
     enqueueSessionPatch: () => {},
     clearLog: async () => {},

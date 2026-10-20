@@ -340,7 +340,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 **`RUN_CMD` flow (fallback commands — e.g. `close`, `help`, `session -new`):**
 
 1. UI sends **`RUN_CMD`** with `{ line, sessionId, sessionOrderLength }`.
-2. Service Worker runs **`runDispatch`** / **`applyChromeEffects`** (tabs, scripting, etc.).
+2. Service Worker runs **`runDispatch`** / **`applyHostEffects`** (tabs, scripting, etc.).
 3. SW returns **`{ ok: true, patches: SessionPatch[], closeWindow? }`** — no session snapshot push.
 4. UI applies patches locally via **`applyRunCmdPatches`** (`appendLog`, `setLog`, `createSession`, `exitSession`, …).
 
@@ -901,7 +901,7 @@ prompt / RUN_CMD
   → run(line, locale) / classify  (Rust WASM)
   → { ty: lines | effects | ui | msgs }
        msgs → TS expand-msgs (+ optional promptPrefix → setContinuationPrompt)
-       effects → applyChromeEffects (SW) or RUN_CMD round-trip
+       effects → applyHostEffects (SW) or RUN_CMD round-trip
        ui → applyUiAction (React host; opaque kinds only — no grammar re-parse)
 ```
 
@@ -1084,7 +1084,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on https pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
-- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
+- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyHostEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
 
 <a id="job-execution"></a>
 
@@ -1131,7 +1131,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
 - **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Then implement **`run`** using a template under **`manifest/templates/`**.
 - **Manual path:** Add **`commands[]`** row + **`crates/bmxt-core/src/cmd/<module>.rs`** + wire **`cmd/mod.rs`**, then **`pnpm run codegen`** and **`pnpm run build:wasm`**.
-- **Reuse path (prefer):** Return only existing **`ChromeEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
+- **Reuse path (prefer):** Return only existing **`HostEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
 - **Extend path (only if needed):**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
@@ -1153,7 +1153,7 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
 5. Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, then **`pnpm run build`** as needed.
 
-**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
+**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`HostEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
 
 #### Adding a plain `-list` producer (registry plugin)
 
@@ -1730,7 +1730,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 **`RUN_CMD` フロー**（フォールバック — 例: `close`、`help`、`session -new`）:
 
 1. UI が **`RUN_CMD`**（`line`、`sessionId`、`sessionOrderLength`）を送信。
-2. SW が **`runDispatch`** / **`applyChromeEffects`** を実行。
+2. SW が **`runDispatch`** / **`applyHostEffects`** を実行。
 3. SW が **`{ ok: true, patches: SessionPatch[], closeWindow? }`** を返す（`SESSION_SNAPSHOT` 推送なし）。
 4. UI が **`applyRunCmdPatches`** でローカル適用（`appendLog`、`createSession`、`exitSession` 等）。
 
@@ -2450,7 +2450,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 - **`entrypoints/bmxt-nav-overlay.content/`** — https 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — Tab 補完・IME/eligibility 用生成物（Enter continuation の正本は Rust `promptPrefix`）
-- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyChromeEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
+- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyHostEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
 
 manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと **`pnpm run verify:manifest`** / **`pnpm run check:generated`** を実行し、必要なら **`pnpm run build`** してください。
 
@@ -2497,7 +2497,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。第二トークン必須のとき、単独第一トークンの **Enter** は Rust の **`msgs` + `promptPrefix`**（`require_second_token` / `msgs_with_prompt`）で返す — TS 側に Enter continuation を足さない。第二トークンの **Tab** 候補は **`command-subcommands.gen.ts`**（manifest **`subcommands`**）。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 - **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
 - **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
-- **再利用パス（推奨）:** 既存 **`ChromeEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
+- **再利用パス（推奨）:** 既存 **`HostEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
 - **拡張パス（必要なときだけ）:**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**

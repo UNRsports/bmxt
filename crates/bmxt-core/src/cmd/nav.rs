@@ -1,5 +1,5 @@
 use crate::cmd::helpers;
-use crate::ir::{effects, msg_key, msg_param, msgs, ui, ChromeEffect, DispatchBundle, UiAction};
+use crate::ir::{effects, msg_key, msg_param, msgs, ui, HostEffect, DispatchBundle, UiAction};
 
 const USAGE_KEYS: &[&str] = &[
     "cmd.nav.usage.line1",
@@ -21,7 +21,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
         "-exit" => ui(UiAction::NavDisarm),
         "-windowclose" => {
             if args.iter().any(|a| a == "--confirmed") {
-                effects(vec![ChromeEffect::CloseCurrentWindow])
+                effects(vec![HostEffect::CloseCurrentWindow])
             } else {
                 ui(UiAction::NavConfirmClose {
                     target: "window".to_string(),
@@ -65,7 +65,7 @@ mod tests {
         match bundle {
             DispatchBundle::Effects { effects } => {
                 assert_eq!(effects.len(), 1);
-                assert!(matches!(effects[0], ChromeEffect::CloseCurrentWindow));
+                assert!(matches!(effects[0], HostEffect::CloseCurrentWindow));
             }
             other => panic!("unexpected bundle: {other:?}"),
         }

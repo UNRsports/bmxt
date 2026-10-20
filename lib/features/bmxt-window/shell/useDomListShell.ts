@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react"
 import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
-import { applyChromeEffects } from "../../dispatch"
+import { applyHostEffects } from "../../dispatch"
 import type { DomListCapture } from "../../dom/dom-list-capture"
 import { captureDomViewportForTab } from "../../dom/dom-viewport-capture"
 import {
@@ -80,7 +80,7 @@ export function useDomListShell(options: UseDomListShellOptions) {
               },
               job
             )
-            const linesOut = await applyChromeEffects(ctx, bundle.effects ?? [])
+            const linesOut = await applyHostEffects(ctx, bundle.effects ?? [])
             if (shouldCancelJob(job)) {
               return
             }

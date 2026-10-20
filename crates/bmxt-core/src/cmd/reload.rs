@@ -1,9 +1,9 @@
-use crate::ir::{effects, msg_key, msgs, ChromeEffect, DispatchBundle};
+use crate::ir::{effects, msg_key, msgs, HostEffect, DispatchBundle};
 
 /** EN: Bare `reload` → active tab. Numeric ids → pipe/programmatic targets only (no picker). */
 pub fn run(args: &[String]) -> DispatchBundle {
     match parse_optional_tab_ids(args) {
-        Ok(tab_ids) => effects(vec![ChromeEffect::TabReload { tab_ids }]),
+        Ok(tab_ids) => effects(vec![HostEffect::TabReload { tab_ids }]),
         Err(()) => msgs(vec![
             msg_key("cmd.reload.error.badArgs"),
             msg_key("cmd.reload.usage"),
@@ -40,7 +40,7 @@ mod tests {
         let bundle = run(&["reload".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => match &effects[0] {
-                ChromeEffect::TabReload { tab_ids } => assert!(tab_ids.is_empty()),
+                HostEffect::TabReload { tab_ids } => assert!(tab_ids.is_empty()),
                 other => panic!("unexpected effect: {other:?}"),
             },
             other => panic!("unexpected bundle: {other:?}"),
@@ -52,7 +52,7 @@ mod tests {
         let bundle = run(&["reload".into(), "12".into(), "34".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => match &effects[0] {
-                ChromeEffect::TabReload { tab_ids } => assert_eq!(tab_ids, &vec![12, 34]),
+                HostEffect::TabReload { tab_ids } => assert_eq!(tab_ids, &vec![12, 34]),
                 other => panic!("unexpected effect: {other:?}"),
             },
             other => panic!("unexpected bundle: {other:?}"),

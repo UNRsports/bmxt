@@ -1,9 +1,9 @@
-use crate::ir::{effects, msg_key, msgs, ChromeEffect, DispatchBundle};
+use crate::ir::{effects, msg_key, msgs, HostEffect, DispatchBundle};
 
 /** EN: Bare `back` → active tab. Numeric ids → pipe/programmatic targets only (no picker). */
 pub fn run(args: &[String]) -> DispatchBundle {
     match parse_optional_tab_ids(args) {
-        Ok(tab_ids) => effects(vec![ChromeEffect::TabGoBack { tab_ids }]),
+        Ok(tab_ids) => effects(vec![HostEffect::TabGoBack { tab_ids }]),
         Err(()) => msgs(vec![
             msg_key("cmd.back.error.badArgs"),
             msg_key("cmd.back.usage"),
@@ -40,7 +40,7 @@ mod tests {
         let bundle = run(&["back".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => match &effects[0] {
-                ChromeEffect::TabGoBack { tab_ids } => assert!(tab_ids.is_empty()),
+                HostEffect::TabGoBack { tab_ids } => assert!(tab_ids.is_empty()),
                 other => panic!("unexpected effect: {other:?}"),
             },
             other => panic!("unexpected bundle: {other:?}"),
@@ -52,7 +52,7 @@ mod tests {
         let bundle = run(&["back".into(), "12".into(), "34".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => match &effects[0] {
-                ChromeEffect::TabGoBack { tab_ids } => assert_eq!(tab_ids, &vec![12, 34]),
+                HostEffect::TabGoBack { tab_ids } => assert_eq!(tab_ids, &vec![12, 34]),
                 other => panic!("unexpected effect: {other:?}"),
             },
             other => panic!("unexpected bundle: {other:?}"),

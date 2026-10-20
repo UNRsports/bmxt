@@ -1,4 +1,4 @@
-import type { ChromeEffect } from "../dispatch/effect-types"
+import type { HostEffect } from "../dispatch/effect-types"
 import {
   isSearchListScopeToken,
   searchListDefaultEffectScopes,
@@ -11,7 +11,7 @@ function normalizeScopeToken(token: string): string {
   return token.trim().toLowerCase()
 }
 
-export function searchEffectForScope(scope: string, pattern: string): ChromeEffect {
+export function searchEffectForScope(scope: string, pattern: string): HostEffect {
   switch (scope) {
     case "--history":
       return { kind: "search_history", pattern }
@@ -27,7 +27,7 @@ export function searchEffectForScope(scope: string, pattern: string): ChromeEffe
 }
 
 /** EN: Chrome effects for a normalized `search -list …` dispatch line (no `--picker`). */
-export function searchEffectsForDispatchLine(dispatchLine: string): ChromeEffect[] {
+export function searchEffectsForDispatchLine(dispatchLine: string): HostEffect[] {
   const parts = dispatchLine.trim().split(/\s+/).filter((part) => part.length > 0)
   const pattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
   if (parts.length <= 2) {

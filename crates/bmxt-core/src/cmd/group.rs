@@ -1,4 +1,4 @@
-use crate::ir::{effects, msgs, ui, ChromeEffect, DispatchBundle, Msg, UiAction};
+use crate::ir::{effects, msgs, ui, HostEffect, DispatchBundle, Msg, UiAction};
 
 pub fn run(args: &[String]) -> DispatchBundle {
     if args.get(1).map(|s| s.to_ascii_lowercase()).as_deref() != Some("new") {
@@ -15,5 +15,5 @@ pub fn run(args: &[String]) -> DispatchBundle {
     if tab_ids.is_empty() {
         return ui(UiAction::GroupNewFromSelection);
     }
-    effects(vec![ChromeEffect::GroupNew { tab_ids }])
+    effects(vec![HostEffect::GroupNew { tab_ids }])
 }
