@@ -23,7 +23,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build the extension
-        run: pnpm run build
+        run: pnpm run build:chrome
 
       - name: Package the extension into a zip artifact
         run: pnpm run package

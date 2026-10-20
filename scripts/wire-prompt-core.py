@@ -2,7 +2,7 @@
 """Wire useShellPromptCore into bmxt-shell.tsx."""
 from pathlib import Path
 
-SHELL = Path("lib/features/bmxt-window/bmxt-shell.tsx")
+SHELL = Path("shared/lib/features/bmxt-window/bmxt-shell.tsx")
 lines = SHELL.read_text(encoding="utf-8").splitlines(keepends=True)
 
 # Fix broken empty imports from prior script

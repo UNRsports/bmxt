@@ -4,7 +4,7 @@ import {
   inferHostKindFromSender,
   resolveExitHostAction,
   resolveHostKindForExit
-} from "../../../../lib/features/bmxt-window/exit-host-policy.ts"
+} from "../../../../shared/lib/features/bmxt-window/exit-host-policy.ts"
 
 describe("resolveExitHostAction", () => {
   it("exits one session when multiple remain", () => {

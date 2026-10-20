@@ -13,7 +13,7 @@ struct FixtureCase {
 
 fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../scripts/fixtures/dispatch/effects.json")
+        .join("../../../scripts/fixtures/dispatch/effects.json")
 }
 
 fn bundle_to_value(bundle: &DispatchBundle) -> Value {

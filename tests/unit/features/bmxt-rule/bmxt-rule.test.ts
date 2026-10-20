@@ -12,11 +12,23 @@ import {
   parseBmxtRuleStreamJson,
   serializeBmxtRuleStreamJson,
   validateBmxtRuleStream
-} from "../../../../lib/features/bmxt-rule/index.ts"
-import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../lib/features/command-line/list-output/types.ts"
+} from "../../../../shared/lib/features/bmxt-rule/index.ts"
+import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../shared/lib/features/command-line/list-output/types.ts"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const fixturePath = join(__dirname, "..", "..", "..", "..", "lib", "features", "bmxt-rule", "fixtures", "tabs-list.sample.json")
+const fixturePath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "shared",
+  "lib",
+  "features",
+  "bmxt-rule",
+  "fixtures",
+  "tabs-list.sample.json"
+)
 
 describe("bmxtRule entries", () => {
   it("reads entry values by key from extensible arrays", () => {

@@ -5,8 +5,8 @@
 
 import assert from "node:assert/strict"
 import { before, describe, it } from "node:test"
-import { ensureBmxtCoreForTests } from "../../../../lib/features/bmxt-core/test-ensure-wasm.ts"
-import { wasmComplete } from "../../../../lib/features/bmxt-core/wasm-host.ts"
+import { ensureBmxtCoreForTests } from "../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
+import { wasmComplete } from "../../../../shared/lib/features/bmxt-core/wasm-host.ts"
 
 const CJK_LINE = "search -list --all リスト | browse"
 

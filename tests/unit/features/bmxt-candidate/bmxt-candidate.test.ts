@@ -7,7 +7,7 @@ import {
   listBmxtCandidateSegmentContexts,
   validateBmxtCandidateCatalog,
   validateBundledBmxtCandidateCatalog
-} from "../../../../lib/features/bmxt-candidate/index.ts"
+} from "../../../../shared/lib/features/bmxt-candidate/index.ts"
 
 describe("bmxtCandidate catalog", () => {
   it("loads manifest with expected schema id", () => {

@@ -4,8 +4,8 @@ import {
   activateModeToolbar,
   deactivateModeToolbar,
   deriveModeToolbarOrderFromPickers
-} from "../../../../lib/features/bmxt-window/mode-toolbar-order.ts"
-import { EMPTY_SESSION_PICKERS } from "../../../../lib/features/side-picker/session/session-pickers.ts"
+} from "../../../../shared/lib/features/bmxt-window/mode-toolbar-order.ts"
+import { EMPTY_SESSION_PICKERS } from "../../../../shared/lib/features/side-picker/session/session-pickers.ts"
 
 describe("mode-toolbar-order", () => {
   it("activateModeToolbar appends and deduplicates", () => {

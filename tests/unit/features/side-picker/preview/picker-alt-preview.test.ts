@@ -3,12 +3,12 @@ import { describe, it } from "node:test"
 import {
   isPickerAltBlockedChord,
   isPickerAltOnlyChord
-} from "../../../../../lib/features/side-picker/preview/picker-alt-chord.ts"
+} from "../../../../../shared/lib/features/side-picker/preview/picker-alt-chord.ts"
 import {
   isPickerCtrlBlockedChord,
   isPickerCtrlOnlyChord
-} from "../../../../../lib/features/side-picker/preview/picker-ctrl-chord.ts"
-import { shouldRunPickerAltPreview } from "../../../../../lib/features/side-picker/preview/picker-alt-preview-mode.ts"
+} from "../../../../../shared/lib/features/side-picker/preview/picker-ctrl-chord.ts"
+import { shouldRunPickerAltPreview } from "../../../../../shared/lib/features/side-picker/preview/picker-alt-preview-mode.ts"
 
 describe("picker-alt-preview-mode", () => {
   it("auto runs without Alt", () => {

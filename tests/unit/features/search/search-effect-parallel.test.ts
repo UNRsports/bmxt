@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { isParallelSearchEffect } from "../../../../lib/features/search/search-effect-parallel.ts"
+import { isParallelSearchEffect } from "../../../../shared/lib/features/search/search-effect-parallel.ts"
 
 describe("isParallelSearchEffect", () => {
   it("marks history / bookmark / page / snapshot as parallel-safe", () => {

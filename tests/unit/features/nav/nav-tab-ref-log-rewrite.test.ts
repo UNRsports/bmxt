@@ -1,8 +1,8 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { parseTabRefLogSegments } from "../../../../lib/features/command-line/tab-ref-log.ts"
-import { rewriteHashTTokensForLog } from "../../../../lib/features/nav/nav-tab-ref-log-rewrite.ts"
-import type { NavReloadTabChipMeta } from "../../../../lib/features/nav/nav-reload-tab-token.ts"
+import { parseTabRefLogSegments } from "../../../../shared/lib/features/command-line/tab-ref-log.ts"
+import { rewriteHashTTokensForLog } from "../../../../shared/lib/features/nav/nav-tab-ref-log-rewrite.ts"
+import type { NavReloadTabChipMeta } from "../../../../shared/lib/features/nav/nav-reload-tab-token.ts"
 
 describe("rewriteHashTTokensForLog", () => {
   it("rewrites chip-only echo as tab: + chip (no wire id)", () => {

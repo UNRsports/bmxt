@@ -3,8 +3,8 @@ import { describe, it } from "node:test"
 import {
   describeNonScriptableReason,
   isScriptablePageUrl
-} from "../../../../lib/features/url/is-scriptable-page-url.ts"
-import { isHttpUrl } from "../../../../lib/features/url/is-http-url.ts"
+} from "../../../../shared/lib/features/url/is-scriptable-page-url.ts"
+import { isHttpUrl } from "../../../../shared/lib/features/url/is-http-url.ts"
 
 describe("isScriptablePageUrl (https-only in-page)", () => {
   it("accepts ordinary https pages", () => {

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { buildSessionListRows, buildSessionSummary, buildSessionSwitchCommandLine, filterSessionSwitchPickerRows, formatSessionListCandidateLabel, formatSessionSwitchCandidateLabel, deriveDefaultSessionName, lastCommandFromSessionLog, resolveSessionDisplayName, resolveSessionRowByDisplayName, sanitizeSessionName } from "../../../../lib/features/session/session-summary.ts"
+import { buildSessionListRows, buildSessionSummary, buildSessionSwitchCommandLine, filterSessionSwitchPickerRows, formatSessionListCandidateLabel, formatSessionSwitchCandidateLabel, deriveDefaultSessionName, lastCommandFromSessionLog, resolveSessionDisplayName, resolveSessionRowByDisplayName, sanitizeSessionName } from "../../../../shared/lib/features/session/session-summary.ts"
 
 describe("sanitizeSessionName", () => {
   it("accepts trimmed names", () => {

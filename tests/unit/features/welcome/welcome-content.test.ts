@@ -8,7 +8,7 @@ import {
   isRenderableWelcomeImagePath,
   listWelcomeImagePaths,
   resolveHeroImageMaxWidthCss
-} from "../../../../lib/features/welcome/welcome-image-paths.ts"
+} from "../../../../shared/lib/features/welcome/welcome-image-paths.ts"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..")
 const docsRoot = join(root, "docs")

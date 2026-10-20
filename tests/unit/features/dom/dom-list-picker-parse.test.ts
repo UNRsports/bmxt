@@ -4,7 +4,7 @@ import {
   isDomListAwaitingMoreOptionsAtEol,
   listDomListRemainingOptionCandidates,
   matchesDomListOptionFilter
-} from "../../../../lib/features/dom/dom-list-picker-parse.ts"
+} from "../../../../shared/lib/features/dom/dom-list-picker-parse.ts"
 
 describe("listDomListRemainingOptionCandidates", () => {
   it("offers all options after bare dom -list", () => {

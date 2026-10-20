@@ -1,32 +1,32 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { parseAppearanceResetConfirmAnswer } from "../../../../lib/features/setting/parse-appearance-reset-confirm.ts"
-import { parseHexColor, previewHexColor } from "../../../../lib/features/setting/validate-color.ts"
-import { parseUiLocaleSettingToken, settingTokenForUiLocale } from "../../../../lib/features/setting/locale.ts"
-import { parseFontSizePx } from "../../../../lib/features/setting/validate-size.ts"
+import { parseAppearanceResetConfirmAnswer } from "../../../../shared/lib/features/setting/parse-appearance-reset-confirm.ts"
+import { parseHexColor, previewHexColor } from "../../../../shared/lib/features/setting/validate-color.ts"
+import { parseUiLocaleSettingToken, settingTokenForUiLocale } from "../../../../shared/lib/features/setting/locale.ts"
+import { parseFontSizePx } from "../../../../shared/lib/features/setting/validate-size.ts"
 import {
   parseSettingExitListLine,
   parseSettingIncompleteLine,
   parseSettingListLine
-} from "../../../../lib/features/setting/setting-list-picker-input.ts"
+} from "../../../../shared/lib/features/setting/setting-list-picker-input.ts"
 import {
   createSettingListPickerState,
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft
-} from "../../../../lib/features/setting/setting-list-picker-state.ts"
-import { settingMainRowTargetView } from "../../../../lib/features/setting/setting-picker-nav.ts"
-import { buildZipArchive, parseZipArchive } from "../../../../lib/features/setting/zip-store.ts"
+} from "../../../../shared/lib/features/setting/setting-list-picker-state.ts"
+import { settingMainRowTargetView } from "../../../../shared/lib/features/setting/setting-picker-nav.ts"
+import { buildZipArchive, parseZipArchive } from "../../../../shared/lib/features/setting/zip-store.ts"
 import {
   EXTERNAL_SETTINGS_BUNDLE_DIR,
   formatExternalSettingsBundleDisplayName,
   listKnownBundleImageFileNames
-} from "../../../../lib/features/setting/settings-bundle-layout.ts"
+} from "../../../../shared/lib/features/setting/settings-bundle-layout.ts"
 import {
   normalizeUiSettingsStorageConfig,
   type UiSettingsStorageConfig
-} from "../../../../lib/features/setting/settings-storage-mode.ts"
-import type { UiAppearance } from "../../../../lib/features/setting/appearance.ts"
-import { parseSettingsExportJson } from "../../../../lib/features/setting/settings-export.ts"
+} from "../../../../shared/lib/features/setting/settings-storage-mode.ts"
+import type { UiAppearance } from "../../../../shared/lib/features/setting/appearance.ts"
+import { parseSettingsExportJson } from "../../../../shared/lib/features/setting/settings-export.ts"
 
 function testAppearance(patch: Partial<UiAppearance> | null = null): UiAppearance {
   return {

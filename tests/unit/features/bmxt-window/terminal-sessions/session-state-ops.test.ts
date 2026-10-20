@@ -4,8 +4,8 @@ import {
   appendLinesToSessionState,
   createEmptyTerminalSessionsState,
   exitSessionState
-} from "../../../../../lib/features/bmxt-window/terminal-sessions/session-state-ops.ts"
-import { applySessionPatches } from "../../../../../lib/features/bmxt-window/terminal-sessions/session-patches.ts"
+} from "../../../../../shared/lib/features/bmxt-window/terminal-sessions/session-state-ops.ts"
+import { applySessionPatches } from "../../../../../shared/lib/features/bmxt-window/terminal-sessions/session-patches.ts"
 
 describe("session-state-ops", () => {
   it("appendLinesToSessionState keeps session id", () => {

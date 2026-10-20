@@ -5,7 +5,7 @@ import {
   canPreviewSearchPickerSelection,
   listSearchDetailScrollTargetIndices,
   searchPickerPreviewScrollAnimated
-} from "../../../../lib/features/search/search-picker-preview-nav.ts"
+} from "../../../../shared/lib/features/search/search-picker-preview-nav.ts"
 
 describe("adjacentSearchPickerPreviewHi", () => {
   const indices = [2, 5, 10, 11]

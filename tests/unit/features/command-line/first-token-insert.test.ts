@@ -4,7 +4,7 @@ import {
   buildFirstTierPrependPickLine,
   isFirstTierPrependPick,
   shouldInsertTokenPickAtCursor
-} from "../../../../lib/features/command-line/first-token-insert.ts"
+} from "../../../../shared/lib/features/command-line/first-token-insert.ts"
 
 describe("isFirstTierPrependPick", () => {
   it("detects prepend at line start before an existing command", () => {

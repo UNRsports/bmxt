@@ -14,7 +14,7 @@ import {
   sanitizeNavTypingDomValueWithCursor,
   sanitizeNavTypingInsertText,
   stripNewlinesBeyondSnapshot
-} from "../../../../lib/features/nav/nav-prompt-input.ts"
+} from "../../../../shared/lib/features/nav/nav-prompt-input.ts"
 
 describe("nav-prompt-input", () => {
   it("navBeforeInputAction", () => {

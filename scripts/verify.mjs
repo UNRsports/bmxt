@@ -57,7 +57,7 @@ run("cargo", ["test", "-p", "bmxt-core"])
 runPnpm(["build:wasm"])
 run("pnpm", ["exec", "tsc", "--noEmit"])
 runPnpm(["test"])
-runPnpm(["build"])
+runPnpm(["build:chrome"])
 runPnpm(["test:e2e:install"])
 runE2e()
 

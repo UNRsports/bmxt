@@ -1,12 +1,12 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import type { ListRecordKind } from "../../../../../lib/features/command-line/list-output/types.ts"
+import type { ListRecordKind } from "../../../../../shared/lib/features/command-line/list-output/types.ts"
 import {
   DISPATCH_BUNDLE_CHANNELS,
   LIST_KIND_TO_BMXT_RULE_KIND,
   bmxtRuleKindForSearchHitSource,
   preferredCommandAddPath
-} from "../../../../../lib/features/command-line/inter-command/vocabulary.ts"
+} from "../../../../../shared/lib/features/command-line/inter-command/vocabulary.ts"
 
 const ALL_LIST_KINDS: readonly ListRecordKind[] = [
   "tabs.window",

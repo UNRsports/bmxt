@@ -2,8 +2,8 @@ import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
   DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS
-} from "../../../../lib/features/page-dom/injected-needle-highlight.ts"
-import { resolveNeedleHighlightColors } from "../../../../lib/features/page-dom/page-scroll-needle-message.ts"
+} from "../../../../shared/lib/features/page-dom/injected-needle-highlight.ts"
+import { resolveNeedleHighlightColors } from "../../../../shared/lib/features/page-dom/page-scroll-needle-message.ts"
 
 describe("resolveNeedleHighlightColors", () => {
   it("returns defaults when colors are omitted", () => {

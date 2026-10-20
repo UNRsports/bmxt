@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { matchPlainListCommand } from "../../../../../lib/features/command-line/list-commands/registry.ts"
+import { matchPlainListCommand } from "../../../../../shared/lib/features/command-line/list-commands/registry.ts"
 
 describe("list-commands registry", () => {
   it("matches plain tab -list", () => {

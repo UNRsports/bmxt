@@ -6,7 +6,7 @@ import {
   isTabChipTriggerToken,
   matchesTabChipNeedle,
   tabChipCompletionZone
-} from "../../../../lib/features/nav/tab-chip-token.ts"
+} from "../../../../shared/lib/features/nav/tab-chip-token.ts"
 
 describe("tabChipCompletionZone", () => {
   it("detects bare tab:", () => {

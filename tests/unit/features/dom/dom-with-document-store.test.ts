@@ -4,7 +4,7 @@ import {
   bodyEntriesFromCapture,
   findDisplayIndexForPath,
   pathsEqual
-} from "../../../../lib/features/dom/dom-with-document-store.ts"
+} from "../../../../shared/lib/features/dom/dom-with-document-store.ts"
 
 describe("dom-with-document-store", () => {
   it("compares paths for equality", () => {

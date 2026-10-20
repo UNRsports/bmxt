@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   utf16OffsetToUtf8ByteOffset,
   utf8ByteOffsetToUtf16Offset
-} from "../../../../lib/features/bmxt-core/utf16-utf8-offset.ts"
+} from "../../../../shared/lib/features/bmxt-core/utf16-utf8-offset.ts"
 
 describe("utf16OffsetToUtf8ByteOffset", () => {
   it("matches for ASCII", () => {

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..", "..")
-const manifestPath = join(root, "manifest", "bmxt-codegen.json")
+const manifestPath = join(root, "shared", "manifest", "bmxt-codegen.json")
 
 function loadManifest() {
   const raw = readFileSync(manifestPath, "utf8")
@@ -609,7 +609,7 @@ function ensureDir(p) {
 function main() {
   const m = loadManifest()
 
-  const registryDir = join(root, "lib", "features", "bmxt-core", "registry")
+  const registryDir = join(root, "shared", "lib", "features", "bmxt-core", "registry")
   ensureDir(registryDir)
 
   writeFileSync(
@@ -629,24 +629,24 @@ function main() {
   writeFileSync(dispatchPath, emitTsApplyDispatch(m.effects), "utf8")
 
   writeFileSync(
-    join(root, "lib", "features", "dispatch", "effect-types.ts"),
+    join(root, "shared", "lib", "features", "dispatch", "effect-types.ts"),
     emitTsEffectTypes(m.effects, m.uiActions),
     "utf8"
   )
 
   writeFileSync(
-    join(root, "lib", "features", "builtin-commands", "completion-fallback.ts"),
+    join(root, "shared", "lib", "features", "builtin-commands", "completion-fallback.ts"),
     emitCompletionFallback(m.commands),
     "utf8"
   )
 
   writeFileSync(
-    join(root, "lib", "features", "builtin-commands", "command-subcommands.gen.ts"),
+    join(root, "shared", "lib", "features", "builtin-commands", "command-subcommands.gen.ts"),
     emitTsCommandSubcommands(m.commands),
     "utf8"
   )
 
-  const rustGeneratedDir = join(root, "crates", "bmxt-core", "src", "generated")
+  const rustGeneratedDir = join(root, "shared", "crates", "bmxt-core", "src", "generated")
   ensureDir(rustGeneratedDir)
   writeFileSync(
     join(rustGeneratedDir, "chrome_effect.rs"),
@@ -665,7 +665,7 @@ function main() {
   )
 
   writeFileSync(
-    join(root, "lib", "features", "dispatch", "ui-action-types.ts"),
+    join(root, "shared", "lib", "features", "dispatch", "ui-action-types.ts"),
     emitTsUiActionTypes(m.uiActions),
     "utf8"
   )

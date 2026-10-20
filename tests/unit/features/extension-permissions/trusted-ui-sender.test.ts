@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { afterEach, beforeEach, describe, it } from "node:test"
-import { isTrustedBmxtUiSender } from "../../../../lib/features/extension-permissions/trusted-ui-sender.ts"
+import { isTrustedBmxtUiSender } from "../../../../shared/lib/features/extension-permissions/trusted-ui-sender.ts"
 
 const EXT_ID = "abcdefghijklmnopqrstuvwxyzabcdef"
 

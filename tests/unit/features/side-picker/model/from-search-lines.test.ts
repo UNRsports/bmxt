@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { pickerEntriesFromSearchLines } from "../../../../../lib/features/side-picker/model/from-search-lines.ts"
+import { pickerEntriesFromSearchLines } from "../../../../../shared/lib/features/side-picker/model/from-search-lines.ts"
 
 describe("pickerEntriesFromSearchLines", () => {
   it("parses a history block", () => {

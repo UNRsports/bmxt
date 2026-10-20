@@ -10,8 +10,8 @@ import {
   matchPipeContinuationCandidates,
   mergeOptionAndPipeContinuationCandidates,
   stageLineOffersPipeContinuations
-} from "../../../../../lib/features/command-line/pipe/pipe-continuation-candidates.ts"
-import { PIPE_CONSUMER_COMPLETION_IDS } from "../../../../../lib/features/command-line/pipe/consumers/completion-tokens.ts"
+} from "../../../../../shared/lib/features/command-line/pipe/pipe-continuation-candidates.ts"
+import { PIPE_CONSUMER_COMPLETION_IDS } from "../../../../../shared/lib/features/command-line/pipe/consumers/completion-tokens.ts"
 
 describe("listPipeContinuationCandidateTokens", () => {
   it("prefixes each consumer token with '| '", () => {

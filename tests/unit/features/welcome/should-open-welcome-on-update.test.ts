@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { shouldOpenWelcomePageOnUpdate } from "../../../../lib/features/welcome/should-open-welcome-on-update.ts"
+import { shouldOpenWelcomePageOnUpdate } from "../../../../shared/lib/features/welcome/should-open-welcome-on-update.ts"
 
 describe("shouldOpenWelcomePageOnUpdate", () => {
   it("opens on install or update when this version was not yet shown", () => {

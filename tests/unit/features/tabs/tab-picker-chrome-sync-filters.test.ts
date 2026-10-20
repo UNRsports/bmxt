@@ -7,7 +7,7 @@ import {
   shouldPatchUrlOnTabUpdated,
   shouldRebuildRowsOnTabUpdated,
   shouldRefreshOnTabUpdated
-} from "../../../../lib/features/tabs/tab-picker-chrome-sync-filters.ts"
+} from "../../../../shared/lib/features/tabs/tab-picker-chrome-sync-filters.ts"
 
 describe("tab-picker-chrome-sync-filters", () => {
   it("shouldHandleTabUpdated ignores status-only and empty payloads", () => {

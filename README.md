@@ -123,22 +123,30 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 ## Technical Overview
 
 
-The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3): entrypoints under **`entrypoints/`**, static assets under **`public/`** (including **`_locales/`**), manifest overrides in **`wxt.config.ts`**, output under **`.output/`**.
+The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3).
 
-**Layout:** Command **semantics** (parse / registry / options / pipe·compound plans / tabs-picker plans) live in **Rust → WASM** (`crates/bmxt-core/`, packaged under **`lib/wasm/bmxt-core/`**). TypeScript owns Chrome API effects (`lib/features/dispatch/`), content scripts, and React UI (`lib/features/<feature>/`). Thin host glue is in **`lib/features/bmxt-core/`** (`runDispatch`, `ensureBmxtCore`, UiAction apply). See also `.cursorrules`. **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
+**Repository layout (multi-browser):**
+
+| Path | Role |
+|------|------|
+| **`shared/`** | Browser-agnostic source — entrypoints, `lib/`, Rust/`bmxt-core` WASM, `public/`, command `manifest/` |
+| **`hosts/chrome/`** | Chrome MV3 WXT config (**`pnpm run build:chrome`**; **`verify`** / CWS) |
+| **`hosts/firefox/`** | Firefox MV3 WXT config + **[AMO source kit](hosts/firefox/AMO_SOURCE.md)** |
+
+**Layout:** Command **semantics** (parse / registry / options / pipe·compound plans / tabs-picker plans) live in **Rust → WASM** (`shared/crates/bmxt-core/`, packaged under **`shared/lib/wasm/bmxt-core/`**). TypeScript owns host API effects (`shared/lib/features/dispatch/`), content scripts, and React UI (`shared/lib/features/<feature>/`). Thin host glue is in **`shared/lib/features/bmxt-core/`** (`runDispatch`, `ensureBmxtCore`, UiAction apply). See also `.cursorrules` and **[`hosts/README.md`](hosts/README.md)**. **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
-**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Manifest overrides live in **`wxt.config.ts`** (not **`package.json`**). Entrypoints are under **`entrypoints/`**; static assets under **`public/`**; build output under **`.output/`** (dev: **`.output/chrome-mv3-dev`**, prod: **`.output/chrome-mv3`**). Since **0.8.0**, TypeScript is **6.x** and command interpretation runs in a bundled **Rust → WASM** core (`crates/bmxt-core/`).
+**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Host manifests live under **`hosts/*/wxt.config.ts`** (WXT `root` = **`shared/`**). Entrypoints are under **`shared/entrypoints/`**; static assets under **`shared/public/`**; build output under **`.output/`** (Chrome prod: **`.output/chrome-mv3`**, Firefox: **`.output/firefox-mv3`**). Since **0.8.0**, TypeScript is **6.x** and command interpretation runs in a bundled **Rust → WASM** core (`shared/crates/bmxt-core/`).
 
 | Former (Plasmo / npm) | Current (WXT / pnpm) |
 |-----------------------|----------------------|
-| **`tabs/bmxt.tsx`** | **`entrypoints/bmxt/main.tsx`** (+ **`index.html`** → **`bmxt.html`**) |
-| **`background.ts`** (repo root) | **`entrypoints/background/index.ts`** |
-| **`contents/bmxt-nav-overlay.ts`** | **`entrypoints/bmxt-nav-overlay.content/index.ts`** |
-| **`locales/`** | **`public/_locales/`** |
+| **`tabs/bmxt.tsx`** | **`shared/entrypoints/bmxt/main.tsx`** (+ **`index.html`** → **`bmxt.html`**) |
+| **`background.ts`** (repo root) | **`shared/entrypoints/background/index.ts`** |
+| **`contents/bmxt-nav-overlay.ts`** | **`shared/entrypoints/bmxt-nav-overlay.content/index.ts`** |
+| **`locales/`** | **`shared/public/_locales/`** |
 | **`build/chrome-mv3`** | **`.output/chrome-mv3`** |
-| Manifest in **`package.json`** | **`wxt.config.ts`** (+ **`version`** still in **`package.json`**) |
+| Manifest in **`package.json`** | **`hosts/chrome/wxt.config.ts`** / **`hosts/firefox/wxt.config.ts`** (+ **`version`** still in root **`package.json`**) |
 | **`npm ci`** / **`package-lock.json`** | **`pnpm install --frozen-lockfile`** / **`pnpm-lock.yaml`** |
 
 <a id="key-specs"></a>
@@ -153,10 +161,10 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 <a id="permissions-manifest"></a>
 
-### Permissions (`wxt.config.ts` manifest)
+### Permissions (host `wxt.config.ts` manifest)
 
 
-Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. **Since 0.8.5:** required **`host_permissions`** are **`https://*/*` only** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`lib/features/page-scripting/`). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) is **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without that host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under `chrome://extensions`, in-page commands explain how to re-enable it.
+Manifest overrides live in **`hosts/chrome/wxt.config.ts`** / **`hosts/firefox/wxt.config.ts`** (via **`hosts/create-host-wxt-config.ts`**; WXT merges them into the built **`manifest.json`**). Chrome declares **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Firefox omits **`favicon`** and does not set **`commands.*.global`** (unsupported). **Since 0.8.5:** required **`host_permissions`** are **`https://*/*` only** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`shared/lib/features/page-scripting/`). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) is **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without that host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under the browser’s extension settings, in-page commands explain how to re-enable it.
 
 **Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
@@ -1205,16 +1213,16 @@ pnpm run dev
 
 `pnpm run dev` runs **`wxt`**: a watch build that updates **`.output/chrome-mv3-dev`**. Keep the terminal process running while you work.
 
-If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** before reloading the extension so generated TypeScript stays in sync.
+If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** before reloading the extension so generated TypeScript stays in sync.
 
 <a id="development-startup"></a>
 
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
+1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** runs **`wxt prepare -c hosts/chrome/wxt.config.ts`** (generates **`shared/.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
 2. **Rust toolchain (command core):** `rustup target add wasm32-unknown-unknown` and **`bash scripts/install-wasm-pack.sh`** (pinned **wasm-pack 0.15.0**; CI uses the same). Optional local check: **`cargo test -p bmxt-core`**.
-3. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** so TS + Rust generated files match the manifest.
+3. **Codegen (when needed):** After editing **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** so TS + Rust generated files match the manifest.
 4. **Start dev:** From the repo root, run **`pnpm run dev`** (runs **`build:wasm`** then background-services then WXT). Leave this process running; it rebuilds the extension on file changes.
 5. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
 6. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
@@ -1253,21 +1261,21 @@ Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo t
 
 | Path | Role |
 |------|------|
-| **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
-| **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
-| **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on https pages |
-| **`public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
-| **`crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
-| **`lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
-| **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
-| **`lib/features/`** | Feature modules (see table below) |
-| **`tests/`** | JS/TS tests only — unit, property (fast-check), Playwright E2E (see **[Testing](#testing)**). Rust stays under **`crates/bmxt-core/`**. |
-| **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`shared/entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
+| **`shared/entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
+| **`shared/entrypoints/bmxt-nav-overlay.content/`** | Nav content script on https pages |
+| **`shared/public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
+| **`shared/crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
+| **`shared/lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
+| **`hosts/chrome/`**, **`hosts/firefox/`** | Per-browser WXT configs (+ Firefox AMO kit) — see **[`hosts/README.md`](hosts/README.md)** |
+| **`shared/lib/features/`** | Feature modules (see table below) |
+| **`tests/`** | JS/TS tests only — unit, property (fast-check), Playwright E2E (see **[Testing](#testing)**). Rust stays under **`shared/crates/bmxt-core/`**. |
+| **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
-| **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
+| **`.output/`** | Build output (gitignored): **`chrome-mv3`**, **`firefox-mv3`**, zips from **`package`** / **`package:firefox`** |
 
-**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`build:wasm`** → **`build-background-services`** → WXT. **`postinstall`** runs **`wxt prepare`** only. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
+**Build scripts:** **`pnpm run build`** builds **both** Chrome and Firefox (wasm once). Prefer **`build:chrome`** / **`build:firefox`** for a single target. **`package`** is Chrome zip; **`package:firefox`** is Firefox. **`verify`** uses **`build:chrome`** then Chromium e2e. **`postinstall`** runs **`wxt prepare -c hosts/chrome/wxt.config.ts`**. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
 
 <a id="main-sources"></a>
 
@@ -1344,25 +1352,47 @@ If no **`release-notes.json`** entry exists for the current version, placeholder
 ## Production Build
 
 ```bash
-pnpm run build
+pnpm run build              # both → .output/chrome-mv3 + .output/firefox-mv3
+pnpm run build:chrome       # Chrome only → .output/chrome-mv3
+pnpm run build:firefox      # Firefox only → .output/firefox-mv3
 ```
 
+Store zips: **`pnpm run package`** (Chrome) / **`pnpm run package:firefox`** (Firefox).
 
-Artifacts are output under `.output/chrome-mv3`. For store submission zip, you can also run `pnpm run package`.
+### Firefox — load unpacked (temporary)
+
+WXT’s Firefox MV3 **dev** runner is limited; preferred local loop:
+
+1. **`pnpm run build:firefox`**
+2. Firefox → **`about:debugging#/runtime/this-firefox`** → **Load Temporary Add-on…**
+3. Select **`.output/firefox-mv3/manifest.json`**
+4. Open BMXt from the toolbar / shortcut (same as Chrome; `commands.*.global` is Chrome-only)
+
+AMO reviewers: attach **`pnpm run package:amo-source`** output and follow **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** (`gecko.id` **`bmxt@unrsports`**, `strict_min_version` **139.0**).
 
 <a id="store-submission"></a>
 
 ## Store Submission (Reference)
 
 
-Build and package locally:
+**Chrome Web Store** — build and package locally:
 
 ```bash
-pnpm run build
+pnpm run build:chrome
 pnpm run package   # writes .output/*-chrome.zip
 ```
 
-You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build`**, **`pnpm run package`**, and uploads **`.output/*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
+You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build:chrome`**, **`pnpm run package`**, and uploads **`.output/*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
+
+**Firefox (AMO)** — separate path (do not mix into the Chrome submit workflow):
+
+```bash
+pnpm run build:firefox
+pnpm run package:firefox
+pnpm run package:amo-source   # source archive for reviewers
+```
+
+See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**.
 
 <a id="license"></a>
 

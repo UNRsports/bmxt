@@ -6,7 +6,7 @@ import {
   sentenceIndicesInRange,
   splitBufferForHighlight,
   takeNewCompleteSentence
-} from "../../../../lib/features/translate/sentence-boundary.ts"
+} from "../../../../shared/lib/features/translate/sentence-boundary.ts"
 
 describe("takeNewCompleteSentence", () => {
   it("returns null when no closing punctuation", () => {

@@ -12,7 +12,7 @@ import {
   parseNavReloadTabToken,
   snapNavReloadTabBlockCaret,
   truncateNavReloadChipTitle
-} from "../../../../lib/features/nav/nav-reload-tab-token.ts"
+} from "../../../../shared/lib/features/nav/nav-reload-tab-token.ts"
 
 describe("nav-reload-tab-token", () => {
   it("parses and formats #t:<id>", () => {

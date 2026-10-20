@@ -11,7 +11,7 @@ import {
   parseSessionSwitchWithLine,
   parseSessionSwitchByNumberLine,
   resolveSessionSwitchPickerState
-} from "../../../../lib/features/session/session-input.ts"
+} from "../../../../shared/lib/features/session/session-input.ts"
 
 describe("parseSessionListLine", () => {
   it("parses session -list only", () => {

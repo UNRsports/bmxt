@@ -10,10 +10,10 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
-const nodeEmptyShim = join(root, "lib/shims/node-empty.ts")
-const entry = join(root, "entrypoints/background/background-services.ts")
-const outfile = join(root, "public/background-services.js")
-const wasmPublic = join(root, "public/bmxt_core_bg.wasm")
+const nodeEmptyShim = join(root, "shared/lib/shims/node-empty.ts")
+const entry = join(root, "shared/entrypoints/background/background-services.ts")
+const outfile = join(root, "shared/public/background-services.js")
+const wasmPublic = join(root, "shared/public/bmxt_core_bg.wasm")
 
 if (!existsSync(wasmPublic)) {
   console.warn("warning: public/bmxt_core_bg.wasm missing — run pnpm run build:wasm")

@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   resolveActivePipeStage,
   scanPipeStageSpans
-} from "../../../../../lib/features/command-line/compound/pipe-stage-spans.ts"
+} from "../../../../../shared/lib/features/command-line/compound/pipe-stage-spans.ts"
 
 describe("scanPipeStageSpans", () => {
   it("returns a single stage when there is no pipe", () => {

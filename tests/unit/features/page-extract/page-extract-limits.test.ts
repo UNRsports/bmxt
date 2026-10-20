@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   ABSOLUTE_MAX_PAGE_EXTRACT_CHARS,
   clampPageExtractMaxChars
-} from "../../../../lib/features/page-extract/page-extract-limits.ts"
+} from "../../../../shared/lib/features/page-extract/page-extract-limits.ts"
 
 describe("clampPageExtractMaxChars", () => {
   it("rejects non-finite and negative values as empty", () => {

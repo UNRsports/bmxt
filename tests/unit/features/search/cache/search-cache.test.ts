@@ -1,9 +1,9 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { bookmarkTreeRevision } from "../../../../../lib/features/search/cache/bookmark-revision.ts"
-import { isHistoryCacheEntryFresh, isPageTabCacheEntryFresh } from "../../../../../lib/features/search/cache/stale.ts"
-import type { HistoryCacheEntry, PageTabCacheEntry } from "../../../../../lib/features/search/cache/types.ts"
+import { bookmarkTreeRevision } from "../../../../../shared/lib/features/search/cache/bookmark-revision.ts"
+import { isHistoryCacheEntryFresh, isPageTabCacheEntryFresh } from "../../../../../shared/lib/features/search/cache/stale.ts"
+import type { HistoryCacheEntry, PageTabCacheEntry } from "../../../../../shared/lib/features/search/cache/types.ts"
 
 describe("search cache stale detection", () => {
   it("page: misses when URL differs", () => {

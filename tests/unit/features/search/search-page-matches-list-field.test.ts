@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   parseSearchPageMatchesField,
   serializeSearchPageMatchesField
-} from "../../../../lib/features/search/search-page-matches-list-field.ts"
+} from "../../../../shared/lib/features/search/search-page-matches-list-field.ts"
 
 describe("search pageMatches ListResult field", () => {
   it("round-trips body hits including globalOccurrence", () => {

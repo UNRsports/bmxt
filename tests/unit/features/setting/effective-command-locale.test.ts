@@ -1,8 +1,8 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { effectiveCommandLocale } from "../../../../lib/features/setting/effective-command-locale.ts"
-import type { UiSettings } from "../../../../lib/features/setting/settings.ts"
-import type { SettingListPickerState } from "../../../../lib/features/setting/setting-list-picker-state.ts"
+import { effectiveCommandLocale } from "../../../../shared/lib/features/setting/effective-command-locale.ts"
+import type { UiSettings } from "../../../../shared/lib/features/setting/settings.ts"
+import type { SettingListPickerState } from "../../../../shared/lib/features/setting/setting-list-picker-state.ts"
 
 const baseSettings: UiSettings = {
   locale: "ja",

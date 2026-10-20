@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   matchesFloatLaunchAuth,
   parentOriginFromTabUrl
-} from "../../../../lib/features/bmxt-float/float-launch-auth.ts"
+} from "../../../../shared/lib/features/bmxt-float/float-launch-auth.ts"
 
 describe("float-launch-auth helpers", () => {
   it("parses https origins from tab URLs (http rejected)", () => {

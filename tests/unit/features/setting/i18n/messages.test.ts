@@ -3,12 +3,25 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { formatMessage } from "../../../../../lib/features/setting/i18n/format-message.ts"
+import { formatMessage } from "../../../../../shared/lib/features/setting/i18n/format-message.ts"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 function loadNamespaceMessages(): Record<string, Partial<Record<"ja" | "en", string>>> {
-  const dir = join(__dirname, "..", "..", "..", "..", "..", "lib", "features", "setting", "i18n", "namespaces")
+  const dir = join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "..",
+    "..",
+    "shared",
+    "lib",
+    "features",
+    "setting",
+    "i18n",
+    "namespaces"
+  )
   const merged: Record<string, Partial<Record<"ja" | "en", string>>> = {}
   for (const file of readdirSync(dir)) {
     if (!file.endsWith(".json") || file.startsWith("_")) {

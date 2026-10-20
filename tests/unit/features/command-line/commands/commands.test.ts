@@ -1,11 +1,11 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { applyRedirectsToOutcome } from "../../../../../lib/features/command-line/commands/apply-redirect.ts"
+import { applyRedirectsToOutcome } from "../../../../../shared/lib/features/command-line/commands/apply-redirect.ts"
 import {
   isNullRedirectTarget,
   parseRedirects
-} from "../../../../../lib/features/command-line/commands/parse-redirect.ts"
-import { segmentFailure, segmentSuccess } from "../../../../../lib/features/command-line/compound/classify-outcome.ts"
+} from "../../../../../shared/lib/features/command-line/commands/parse-redirect.ts"
+import { segmentFailure, segmentSuccess } from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
 
 /** EN: Kept in sync with `registry.ts` — grammar entries live in WASM (Phase 6). */
 const EXPECTED_COMMAND_ENTRY_IDS = [] as const

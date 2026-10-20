@@ -4,7 +4,7 @@ import {
   appendSearchLoadingProgressLine,
   trimSearchLoadingProgressLines,
   MAX_SEARCH_LOADING_PROGRESS_LINES
-} from "../../../../lib/features/search/search-list-progress.ts"
+} from "../../../../shared/lib/features/search/search-list-progress.ts"
 
 describe("search-list-progress", () => {
   it("keeps only the latest progress rows", () => {

@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   listPipeConsumerCompletionTokens,
   PIPE_CONSUMER_COMPLETION_IDS
-} from "../../../../../../lib/features/command-line/pipe/consumers/completion-tokens.ts"
+} from "../../../../../../shared/lib/features/command-line/pipe/consumers/completion-tokens.ts"
 
 describe("listPipeConsumerCompletionTokens", () => {
   it("lists consumer ids and close alias c", () => {

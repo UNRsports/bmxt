@@ -6,7 +6,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import * as fc from "fast-check"
-import { parseHexColor } from "../../lib/features/setting/validate-color.ts"
+import { parseHexColor } from "../../shared/lib/features/setting/validate-color.ts"
 
 const hexDigit = fc.constantFrom(
   ..."0123456789abcdefABCDEF".split("")

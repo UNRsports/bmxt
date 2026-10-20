@@ -3,9 +3,9 @@ import { describe, it } from "node:test"
 import {
   appendHandoffLogLines,
   isFloatPendingHandoffV1
-} from "../../../../lib/features/bmxt-float/float-tab-handoff.ts"
-import { createEmptyFloatBrowseState } from "../../../../lib/features/bmxt-float/float-browse-state-storage.ts"
-import type { TerminalSessionsStateV1 } from "../../../../lib/features/bmxt-window/terminal-sessions/types.ts"
+} from "../../../../shared/lib/features/bmxt-float/float-tab-handoff.ts"
+import { createEmptyFloatBrowseState } from "../../../../shared/lib/features/bmxt-float/float-browse-state-storage.ts"
+import type { TerminalSessionsStateV1 } from "../../../../shared/lib/features/bmxt-window/terminal-sessions/types.ts"
 
 function sampleSessions(): TerminalSessionsStateV1 {
   return {

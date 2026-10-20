@@ -7,7 +7,7 @@ import {
   listVisibleDetailBars,
   resolveDetailBarFocusTarget,
   resolvePickerColumnOrder
-} from "../../../../lib/features/bmxt-window/detail-bar-focus.ts"
+} from "../../../../shared/lib/features/bmxt-window/detail-bar-focus.ts"
 
 describe("detail bar focus helpers", () => {
   it("computePickerColumnOrder moves focused slot left", () => {

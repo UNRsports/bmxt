@@ -1,10 +1,18 @@
 {
-  "extends": "./.wxt/tsconfig.json",
+  "extends": "./shared/.wxt/tsconfig.json",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "strict": false,
     "types": ["chrome", "node"]
   },
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "include": [
+    "shared/**/*",
+    "shared/.wxt/wxt.d.ts",
+    "shared/.wxt/types/**/*.d.ts",
+    "hosts/**/*",
+    "tests/**/*",
+    "scripts/**/*"
+  ],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.mjs"]
 }

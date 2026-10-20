@@ -4,7 +4,7 @@ import {
   encodeTabRefInline,
   logLineHasTabRef,
   parseTabRefLogSegments
-} from "../../../../lib/features/command-line/tab-ref-log.ts"
+} from "../../../../shared/lib/features/command-line/tab-ref-log.ts"
 
 describe("encodeTabRefInline / parseTabRefLogSegments", () => {
   it("round-trips a single plain chip inside a message", () => {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import {
   buildWelcomePageUrl,
   isValidWelcomeVersionParam
-} from "../../../../lib/features/welcome/welcome-external-url.ts"
+} from "../../../../shared/lib/features/welcome/welcome-external-url.ts"
 
 describe("isValidWelcomeVersionParam", () => {
   it("accepts dotted numeric versions", () => {

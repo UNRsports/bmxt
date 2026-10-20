@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { parseNavEnterLine, parseNavExitLine } from "../../../../lib/features/nav/nav-parse.ts"
+import { parseNavEnterLine, parseNavExitLine } from "../../../../shared/lib/features/nav/nav-parse.ts"
 
 describe("nav-parse", () => {
   it("parseNavEnterLine", () => {

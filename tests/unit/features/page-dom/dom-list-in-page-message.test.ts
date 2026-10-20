@@ -9,7 +9,7 @@ import {
   isDomClickLinkPathRequest,
   isDomScrollToPathRequest,
   isDomSemanticEntriesRequest
-} from "../../../../lib/features/page-dom/dom-list-in-page-message.ts"
+} from "../../../../shared/lib/features/page-dom/dom-list-in-page-message.ts"
 
 describe("dom-list-in-page-message", () => {
   it("accepts semantic entries requests", () => {

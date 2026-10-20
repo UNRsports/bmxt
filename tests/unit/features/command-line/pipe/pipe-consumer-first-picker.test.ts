@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   isCompletePipeConsumerWithoutFurtherTokens,
   suppressExactCompletePipeConsumerFirstPicker
-} from "../../../../../lib/features/command-line/pipe/pipe-consumer-first-picker.ts"
+} from "../../../../../shared/lib/features/command-line/pipe/pipe-consumer-first-picker.ts"
 
 describe("suppressExactCompletePipeConsumerFirstPicker", () => {
   it("returns null when browse is already complete", () => {

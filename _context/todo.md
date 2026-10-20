@@ -71,8 +71,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **実装チェック**
 
-- [x] `wxt.config.ts`: https を必須 `host_permissions` へ
-- [x] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
+- [x] host `wxt.config` / `hosts/create-host-wxt-config.ts`: https を必須 `host_permissions` へ
+- [x] `shared/lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
 - [x] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
 - [x] `onInstalled`（install / update）で open tabs へ bulk reinject
 - [x] content script 冪等化
@@ -83,6 +83,18 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] 拡張をリロードしたあと、**ページ非リロード**で float / nav / `search -list --page` / `dom -list` が動く
 - [ ] 二重注入しても overlay / float が二重にならない
 - [ ] `chrome://` 等は従来どおり拒否
+
+### E. Chrome + Firefox 共有リポジトリ（§5.3 骨格 — 実装済み）
+
+| 項目 | 状態 |
+|------|------|
+| レイアウト | `shared/` + `hosts/chrome/` + `hosts/firefox/` |
+| ビルド | `pnpm run build` → 両方 · `build:chrome` / `build:firefox` → 単体 |
+| AMO | `hosts/firefox/AMO_SOURCE.md` · `pnpm run package:amo-source` |
+| 残 | 手元で FF アンパック窓スモーク · §5.4 専用機能隔離 · §5.6 FF e2e |
+
+- [ ] Firefox: `about:debugging` で窓起動 + 主要コアコマンド手確認
+- [ ] （次）Translator / FSA / favicon を Chrome 側へ隔離（フラグ）
 
 ---
 
@@ -101,4 +113,4 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | §17 | Host IR bmxt-host/2（Phases A–E 完了） |
 | §18–19 | `back`/`forward`/`reload`/`close` + `tab:` チップ — 実装済・スモークは Active C |
 
-**語彙索引:** `lib/features/command-line/inter-command/` · `manifest/templates/` · README アーキテクチャ節。
+**語彙索引:** `shared/lib/features/command-line/inter-command/` · `shared/manifest/templates/` · README アーキテクチャ節 · `hosts/README.md`。

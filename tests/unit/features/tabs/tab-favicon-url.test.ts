@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { buildTabFaviconSrc, isTabFaviconPageUrl } from "../../../../lib/features/tabs/tab-favicon-url.ts"
+import { buildTabFaviconSrc, isTabFaviconPageUrl } from "../../../../shared/lib/features/tabs/tab-favicon-url.ts"
 
 describe("tab-favicon-url", () => {
   it("isTabFaviconPageUrl accepts http(s) only", () => {

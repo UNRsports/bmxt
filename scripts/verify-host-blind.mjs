@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const root = join(__dirname, "..")
-const featuresRoot = join(root, "lib", "features")
+const featuresRoot = join(root, "shared", "lib", "features")
 
 /** EN: Paths relative to lib/features that may mention command tokens (generated / catalogs / parsers used as data). */
 const ALLOW_PATH_PREFIXES = [
@@ -77,15 +77,16 @@ function walk(dir, out) {
 
 const files = []
 walk(featuresRoot, files)
-files.push(join(root, "entrypoints", "background", "background-services.ts"))
+files.push(join(root, "shared", "entrypoints", "background", "background-services.ts"))
 
 const hits = []
 for (const file of files) {
   const rel = relative(root, file).split("\\").join("/")
-  const relFeatures = rel.startsWith("lib/features/")
-    ? rel.slice("lib/features/".length)
+  const featuresPrefix = "shared/lib/features/"
+  const relFeatures = rel.startsWith(featuresPrefix)
+    ? rel.slice(featuresPrefix.length)
     : rel
-  if (rel.startsWith("lib/features/") && isAllowed(relFeatures)) {
+  if (rel.startsWith(featuresPrefix) && isAllowed(relFeatures)) {
     continue
   }
   const text = readFileSync(file, "utf8")

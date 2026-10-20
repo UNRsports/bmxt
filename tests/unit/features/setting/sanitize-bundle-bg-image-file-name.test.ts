@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { sanitizeBundleBgImageFileName } from "../../../../lib/features/setting/sanitize-bundle-bg-image-file-name.ts"
+import { sanitizeBundleBgImageFileName } from "../../../../shared/lib/features/setting/sanitize-bundle-bg-image-file-name.ts"
 
 describe("sanitizeBundleBgImageFileName", () => {
   it("accepts simple bundle file names", () => {

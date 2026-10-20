@@ -4,7 +4,7 @@ import {
   domListLineHasFlavor,
   parseDomListArgsFromTokens,
   parseDomListCommandLine
-} from "../../../../lib/features/dom/parse-dom-list-args.ts"
+} from "../../../../shared/lib/features/dom/parse-dom-list-args.ts"
 
 describe("parseDomListArgsFromTokens", () => {
   it("defaults to normal mode and requires flavor", () => {

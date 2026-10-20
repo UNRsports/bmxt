@@ -5,8 +5,8 @@ import {
   buildPathForElement,
   pathTargetsElement,
   resolveNodeFromPath
-} from "../../../../lib/features/page-dom/injected-dom-path.ts"
-import { bmxtDomSemanticEntriesInjected } from "../../../../lib/features/page-dom/injected-dom-semantic-entries.ts"
+} from "../../../../shared/lib/features/page-dom/injected-dom-path.ts"
+import { bmxtDomSemanticEntriesInjected } from "../../../../shared/lib/features/page-dom/injected-dom-semantic-entries.ts"
 
 type ParsedDom = ReturnType<typeof parseHTML>
 

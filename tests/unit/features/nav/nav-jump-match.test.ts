@@ -5,7 +5,7 @@ import {
   rankNavJumpMatches,
   serializeNavJumpQueryPayload,
   type NavJumpCandidate
-} from "../../../../lib/features/nav/nav-jump-match.ts"
+} from "../../../../shared/lib/features/nav/nav-jump-match.ts"
 
 describe("nav-jump-match", () => {
   const candidates: NavJumpCandidate[] = [

@@ -6,7 +6,7 @@ import {
   createJobHandle,
   isJobHandleActive,
   shouldCancelJob
-} from "../../../../lib/features/job/job-handle.ts"
+} from "../../../../shared/lib/features/job/job-handle.ts"
 
 describe("search-list-job compatibility", () => {
   it("cancels the previous job when a new one starts", () => {

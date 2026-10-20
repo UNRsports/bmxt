@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   parseNavConfirmCloseAnswer,
   parseNavConfirmCloseTarget
-} from "../../../../lib/features/nav/nav-confirm-close.ts"
+} from "../../../../shared/lib/features/nav/nav-confirm-close.ts"
 
 describe("parseNavConfirmCloseTarget", () => {
   it("accepts tab and window", () => {

@@ -48,10 +48,10 @@ This repository uses **pnpm** only (`pnpm-lock.yaml`). Do **not** run `npm insta
 
 # Directory organization
 
-- Keep the repository root minimal; avoid adding new feature implementation files at root.
-- Place feature code under `lib/features/<feature>/` and colocate related UI, parsing, and domain logic there.
-- Keep command **semantics** (`run` / parse / plans) in **`crates/bmxt-core/`** (Rust → WASM); keep the TS host (`runDispatch`, `ensureBmxtCore`, tabs-picker wrappers) in **`lib/features/bmxt-core/`**; keep Chrome API effects in **`lib/features/dispatch/`**, UiAction apply in **`lib/features/bmxt-window/shell/apply-ui-action.ts`**, and reference other feature code from `lib/features/*`.
-- Keep page/extension entry files (for example under `tabs/`) thin; move reusable logic into `lib/features/*`.
+- Top-level layout: **`shared/`** (browser-agnostic), **`hosts/chrome/`** (Chrome WXT), **`hosts/firefox/`** (Firefox WXT + AMO source kit). Keep the repository root minimal.
+- Place feature code under `shared/lib/features/<feature>/` and colocate related UI, parsing, and domain logic there.
+- Keep command **semantics** (`run` / parse / plans) in **`shared/crates/bmxt-core/`** (Rust → WASM); keep the TS host (`runDispatch`, `ensureBmxtCore`, tabs-picker wrappers) in **`shared/lib/features/bmxt-core/`**; keep host API effects in **`shared/lib/features/dispatch/`**, UiAction apply in **`shared/lib/features/bmxt-window/shell/apply-ui-action.ts`**.
+- Entrypoints and static assets live under **`shared/entrypoints/`** and **`shared/public/`**; browser-specific manifest/packaging only under **`hosts/*`**.
 - If backward compatibility is needed, leave a small shim file that re-exports from the new feature path.
 
 # Project skills (domain workflows)
@@ -66,11 +66,11 @@ Detailed BMXt workflows live in **`.cursor/skills/`** (also visible in Cursor Se
 
 ## i18n (summary)
 
-User-visible text = **EN + JA**. Add keys under `lib/features/setting/i18n/namespaces/` (`cmd.json`, `tabs.json`, `setting.json`); resolve via `tCmd`, `tTabs`, `tSetting`. Non-React: `getRunLocale()`. Details: skill **`bmxt-i18n`**.
+User-visible text = **EN + JA**. Add keys under `shared/lib/features/setting/i18n/namespaces/` (`cmd.json`, `tabs.json`, `setting.json`); resolve via `tCmd`, `tTabs`, `tSetting`. Non-React: `getRunLocale()`. Details: skill **`bmxt-i18n`**.
 
 ## Command-line model (summary)
 
-First command → second command; no short aliases for first/second tiers; continuation when second is required. Inter-command handoff uses closed IR only (`DispatchBundle` / `ListResult` / `bmxtRule` / exit status) — see **`lib/features/command-line/inter-command/`** and skill **`bmxt-add-command`**.
+First command → second command; no short aliases for first/second tiers; continuation when second is required. Inter-command handoff uses closed IR only (`DispatchBundle` / `ListResult` / `bmxtRule` / exit status) — see **`shared/lib/features/command-line/inter-command/`** and skill **`bmxt-add-command`**.
 
 ## UI settings (summary)
 

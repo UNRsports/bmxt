@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parseDomListLine } from "../../../../lib/features/dom/dom-list-parse.ts"
+import { parseDomListLine } from "../../../../shared/lib/features/dom/dom-list-parse.ts"
 
 describe("parseDomListLine", () => {
   it("parses plain list", () => {

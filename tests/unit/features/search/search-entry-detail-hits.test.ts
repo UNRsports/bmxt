@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import type { PickerEntry } from "../../../../lib/features/side-picker/model/picker-entry.ts"
-import { listSearchEntryDetailHits } from "../../../../lib/features/search/search-entry-detail-hits.ts"
+import type { PickerEntry } from "../../../../shared/lib/features/side-picker/model/picker-entry.ts"
+import { listSearchEntryDetailHits } from "../../../../shared/lib/features/search/search-entry-detail-hits.ts"
 
 function sampleEntry(overrides: Partial<PickerEntry> = {}): PickerEntry {
   return {

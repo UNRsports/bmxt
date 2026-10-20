@@ -4,7 +4,7 @@ import {
   isBmxtHostKind,
   isBmxtSessionClearHost,
   sessionClearAppliesToHost
-} from "../../../../lib/features/bmxt-window/bmxt-host-kind.ts"
+} from "../../../../shared/lib/features/bmxt-window/bmxt-host-kind.ts"
 
 describe("bmxt-host-kind", () => {
   it("recognizes host kinds and clear hosts", () => {

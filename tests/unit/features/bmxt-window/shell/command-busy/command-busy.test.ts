@@ -10,7 +10,7 @@ import {
   formatCommandBusyFraction,
   formatCommandBusyLabel,
   shouldShowCommandBusy
-} from "../../../../../../lib/features/bmxt-window/shell/command-busy/command-busy.ts"
+} from "../../../../../../shared/lib/features/bmxt-window/shell/command-busy/command-busy.ts"
 
 describe("command-busy", () => {
   it("cycles braille frames by elapsed time", () => {

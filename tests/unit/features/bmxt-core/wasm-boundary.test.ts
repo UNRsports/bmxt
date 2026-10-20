@@ -8,16 +8,16 @@ import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { before, describe, it } from "node:test"
-import { ensureBmxtCoreForTests } from "../../../../lib/features/bmxt-core/test-ensure-wasm.ts"
+import { ensureBmxtCoreForTests } from "../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import {
   wasmComplete,
   wasmParseCompound,
   wasmParsePipe,
   wasmPlanCompound,
   wasmRun
-} from "../../../../lib/features/bmxt-core/wasm-host.ts"
-import { utf16OffsetToUtf8ByteOffset } from "../../../../lib/features/bmxt-core/utf16-utf8-offset.ts"
-import { complete as rawComplete } from "../../../../lib/wasm/bmxt-core/bmxt_core.js"
+} from "../../../../shared/lib/features/bmxt-core/wasm-host.ts"
+import { utf16OffsetToUtf8ByteOffset } from "../../../../shared/lib/features/bmxt-core/utf16-utf8-offset.ts"
+import { complete as rawComplete } from "../../../../shared/lib/wasm/bmxt-core/bmxt_core.js"
 
 const here = dirname(fileURLToPath(import.meta.url))
 const effectsFixturePath = join(here, "..", "..", "..", "..", "scripts", "fixtures", "dispatch", "effects.json")
