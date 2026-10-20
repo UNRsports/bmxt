@@ -8,6 +8,7 @@ import { existsSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { extensionPageUrl } from "../../lib/features/extension-url/extension-page-url.ts"
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..")
 const extensionPath = join(root, ".output", "chrome-mv3")
@@ -88,7 +89,8 @@ export const test = base.extend<ExtensionFixtures>({
       })
     })
     const page = await context.newPage()
-    await page.goto(`chrome-extension://${extensionId}/bmxt.html`, {
+    // EN: Protocol via helper (not hard-coded chrome-extension://) — FF E2E can pass moz.
+    await page.goto(extensionPageUrl({ extensionId, path: "shell" }), {
       waitUntil: "domcontentloaded"
     })
     await page.waitForSelector(".bmxt-prompt-ime", { timeout: 60_000 })

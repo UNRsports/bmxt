@@ -895,6 +895,15 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 
 **Authoritative lists** live in **`manifest/bmxt-codegen.json`** (`commands[]`, `effects[]`, **`uiActions[]`**). **`pnpm run codegen`** regenerates TS metadata (`registry/table.gen.ts`, `effect-types.ts`, `ui-action-types.ts`, `apply-dispatch.gen.ts`, completion helpers) **and** Rust tables (`crates/bmxt-core/src/generated/` including **`ui_action.rs`**). Built-in command **`run`** logic is in **`crates/bmxt-core/src/cmd/*.rs`**. Chrome effects are applied in **`lib/features/dispatch/handlers/effects/`**. Host IR contract: **`bmxt-host/2`** (generic UiAction primitives; see `lib/features/command-line/inter-command/`). Command-name semantic branches in the TS host are gated by **`pnpm run verify:host-blind`**.
 
+**Host / extension URL boundary**
+
+| Layer | Owns |
+|-------|------|
+| **Core (WASM + shared TS)** | `HostEffect` / plans — browser-agnostic |
+| **Host adapters** | `chrome.*` today; Firefox later via the same IR |
+| **Extension page URLs** | **`lib/features/extension-url/`** — `chrome-extension:` **and** `moz-extension:`. Prefer **`chrome.runtime.getURL`** / **`browser.runtime.getURL`** at runtime; use **`extensionPageUrl` / `parseExtensionPageUrl`** in trust checks, E2E, and tests (do **not** hard-code `chrome-extension://…`). |
+| **Privileged SW messages** | **`isTrustedBmxtUiSender`** (`lib/features/extension-permissions/`) — allowlists `bmxt.html` / `bmxt-float.html` on either extension protocol |
+
 **Runtime boundary**
 
 ```
@@ -1262,7 +1271,7 @@ Playwright loads the unpacked MV3 extension (`channel: "chromium"`). Suites unde
 | **Prompt integrity** | `prompt-integrity.spec.ts` | Prompt UI breakage classes (wipe, Tab candidates, history, busy→idle, focus). |
 | **CJK caret** | `prompt-cjk.spec.ts` | Controlled IME line must not wipe on CJK caret motion. |
 
-Shared helpers: **`tests/e2e/helpers/`** (prompt / log / https seed / chrome-state). Add smoke rows in **`command-matrix.ts`**; prefer locale-stable substrings (`usage:`, `error:`). Tag **`needs_https`** when a real https tab is required.
+Shared helpers: **`tests/e2e/helpers/`** (prompt / log / https seed / chrome-state). The BMXt shell URL is opened via **`extensionPageUrl`** from **`lib/features/extension-url/`** (not a hard-coded `chrome-extension://` string). Add smoke rows in **`command-matrix.ts`**; prefer locale-stable substrings (`usage:`, `error:`). Tag **`needs_https`** when a real https tab is required.
 
 #### Layers (reference)
 
@@ -2307,6 +2316,15 @@ scriptable な **https** タブを **YAML frontmatter** 付き **Markdown snapsh
 
 **一覧の真実**は **`manifest/bmxt-codegen.json`**（`commands[]`・`effects[]`・**`uiActions[]`**）です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`・**`ui_action.rs` 含む**）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。Host IR 契約は **`bmxt-host/2`**（`lib/features/command-line/inter-command/`）。TS ホストのコマンド名意味分岐は **`pnpm run verify:host-blind`** で検査します。
 
+**ホスト / 拡張 URL 境界**
+
+| 層 | 担当 |
+|----|------|
+| **コア（WASM + 共有 TS）** | `HostEffect` / 計画 — ブラウザ非依存 |
+| **ホストアダプタ** | 現状 `chrome.*`。将来 Firefox も同一 IR |
+| **拡張ページ URL** | **`lib/features/extension-url/`** — `chrome-extension:` **と** `moz-extension:`。ランタイムは **`chrome.runtime.getURL`** / **`browser.runtime.getURL`** を優先。信頼判定・E2E・テストは **`extensionPageUrl` / `parseExtensionPageUrl`**（**`chrome-extension://…` の直書きはしない**） |
+| **特権 SW メッセージ** | **`isTrustedBmxtUiSender`**（`lib/features/extension-permissions/`）— いずれの拡張プロトコルでも `bmxt.html` / `bmxt-float.html` のみ |
+
 **実行境界:**
 
 ```
@@ -2639,7 +2657,7 @@ Playwright がアンパック MV3 拡張をロードします（`channel: "chrom
 | **プロンプト健全性** | `prompt-integrity.spec.ts` | 行消滅・Tab 候補・履歴・busy→idle・フォーカスなど破綻クラス。 |
 | **CJK キャレット** | `prompt-cjk.spec.ts` | CJK 上のキャレット移動で制御付きプロンプト行が消えないこと。 |
 
-共通ヘルパ: **`tests/e2e/helpers/`**。スモーク行の追加は **`command-matrix.ts`**。アサートは日英で揺らぎにくい文字列（`usage:` / `error:` など）を優先。https タブが必要な行には **`needs_https`** タグ。
+共通ヘルパ: **`tests/e2e/helpers/`**。BMXt シェル URL は **`lib/features/extension-url/`** の **`extensionPageUrl`** 経由（`chrome-extension://` 直書きはしない）。スモーク行の追加は **`command-matrix.ts`**。アサートは日英で揺らぎにくい文字列（`usage:` / `error:` など）を優先。https タブが必要な行には **`needs_https`** タグ。
 
 #### 層の一覧（参照）
 

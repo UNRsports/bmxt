@@ -42,8 +42,8 @@ E2E defaults to **headless** (`channel: "chromium"` + MV3 extension load) so win
 
 - **Unit (TS):** add `tests/unit/features/<same-path-as-lib>/<name>.test.ts` and import production modules from `lib/features/...` with a `.ts` extension.
 - **Property:** add `tests/property/<name>.property.test.ts` using `fast-check` (`fc.assert` / `fc.property`). Boundary suites: `utf16-utf8-offset.property.test.ts`, `wasm-boundary.property.test.ts` (needs built `lib/wasm/bmxt-core/bmxt_core_bg.wasm`).
-- **E2E:** add `tests/e2e/<name>.spec.ts` (shared fixtures in `fixtures.ts`).
-- **E2E command smoke:** add a row to `tests/e2e/command-matrix.ts` (`id`, `line`, `assert`, optional `tags` / `expectContains`). Assertions: `usage` | `log_ok` | `log_or_empty` | `picker` | `cleared`. Prefer locale-stable substrings (`usage:`, `error:`). Tag `needs_https` when content scripts / page tabs are required. Do **not** explode into full flag/compound combinatorics.
+- **E2E:** add `tests/e2e/<name>.spec.ts` (shared fixtures in `fixtures.ts`). Open BMXt pages with **`extensionPageUrl`** from **`lib/features/extension-url/`** (do not hard-code `chrome-extension://`).
+- **E2E command smoke:** add a row to `tests/e2e/command-matrix.ts` (`id`, `line`, `assert`, optional `tags` / `expectContains`). Assertions: `usage` | `log_ok` | `log_or_empty` | `picker` | `cleared` | `help_text`. Prefer locale-stable substrings (`usage:`, `error:`). Tag `needs_https` when content scripts / page tabs are required. Do **not** explode into full flag/compound combinatorics.
 - **E2E prompt integrity:** add cases to `tests/e2e/prompt-integrity.spec.ts` for UI breakage classes (wipe, busy, picker, history, focus) — not command matrices. Reuse `tests/e2e/helpers/`.
 - **Rust:** add `#[cfg(test)]` modules under `crates/bmxt-core/src/`, or integration files under `crates/bmxt-core/tests/` — **not** under this directory.
 

@@ -8,11 +8,15 @@
  *     `sender.tab` は付くのが正常（popup 窓内タブ／フロート iframe）。信頼判定は URL。
  */
 
-const TRUSTED_UI_PATHS = new Set<string>(["/bmxt.html", "/bmxt-float.html"])
+import {
+  isSameExtensionAllowedPageUrl,
+  TRUSTED_BMXT_UI_PATHS
+} from "../extension-url/extension-page-url.ts"
 
 /**
- * EN: True when `sender` is the popup (`bmxt.html`) or float page (`bmxt-float.html`).
- * JA: ポップアップまたはフロート UI からの送信なら true。
+ * EN: True when `sender` is the popup (`bmxt.html`) or float page (`bmxt-float.html`)
+ *     on `chrome-extension:` or `moz-extension:` (same extension id).
+ * JA: ポップアップまたはフロート UI からの送信なら true（Chrome / Firefox 拡張 origin）。
  */
 export function isTrustedBmxtUiSender(sender: chrome.runtime.MessageSender): boolean {
   if (typeof sender.id === "string" && sender.id.length > 0 && sender.id !== chrome.runtime.id) {
@@ -22,17 +26,5 @@ export function isTrustedBmxtUiSender(sender: chrome.runtime.MessageSender): boo
   if (typeof url !== "string" || url.length === 0) {
     return false
   }
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch {
-    return false
-  }
-  if (parsed.protocol !== "chrome-extension:") {
-    return false
-  }
-  if (parsed.hostname !== chrome.runtime.id) {
-    return false
-  }
-  return TRUSTED_UI_PATHS.has(parsed.pathname)
+  return isSameExtensionAllowedPageUrl(url, chrome.runtime.id, TRUSTED_BMXT_UI_PATHS)
 }

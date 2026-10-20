@@ -105,13 +105,13 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 - [x] コア IR の Chrome 由来名を汎用化（`HostEffect` 系）
 - [x] `check:generated` を git 非依存化（`git add` 前に `verify` 可能）
-- [ ] ホスト境界ドキュメント（README / skill）: 「コア = HostEffect」「実装 = `chrome.*` / 将来 `browser.*`」
+- [x] ホスト境界ドキュメント（README）: 「コア = HostEffect」「拡張 URL = `lib/features/extension-url/`」「実装 = `chrome.*` / 将来 `browser.*`」
 - [ ] （任意）コメント・パス名の残り掃除は UI chrome（`side-picker/chrome/`）や実 API ラッパと混同しない範囲に限定
 
 #### 5.2 ブラウザランタイムアダプタ
 
-- [ ] `trusted-ui-sender`: `chrome-extension:` に加え `moz-extension:` を許可（同一拡張 origin）
-- [ ] 拡張 URL / protocol ヘルパ（BMXt ページ・e2e の `chrome-extension://` 仮定を抽象化）
+- [x] `trusted-ui-sender`: `chrome-extension:` に加え `moz-extension:` を許可（同一拡張 origin）
+- [x] 拡張 URL / protocol ヘルパ（`lib/features/extension-url/`）。E2E は `extensionPageUrl` 経由（プロトコル直書きしない）
 - [ ] （任意）`webextension-polyfill` または薄い `browser` 名前空間ラッパ — 全面置換は必須としない
 - [ ] `import.meta.env.BROWSER` / ビルドターゲット別の feature flags
 
