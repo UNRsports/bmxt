@@ -42,6 +42,8 @@
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
   - [Testing](#testing)
+    - [How to run](#testing-how-to-run)
+    - [What E2E covers](#testing-e2e-coverage)
   - [pnpm dependencies and security](#pnpm-dependencies)
   - [Project layout (WXT)](#project-layout)
   - [Main Sources](#main-sources)
@@ -1226,28 +1228,52 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 
 ### Testing
 
+**JS/TS** tests live under **`tests/`** (not under `lib/` or the repo root). Layout details: **[`tests/README.md`](tests/README.md)**.
 
-**JS/TS** automated tests live under **`tests/`** (not under `lib/` or the repo root). See **[`tests/README.md`](tests/README.md)**.
+<a id="testing-how-to-run"></a>
 
-**Rust / WASM tests are intentionally outside `tests/`.** Cargo owns that layout:
+#### How to run
 
-| Kind | Location |
-|------|----------|
-| Unit (`#[cfg(test)]`) | **`crates/bmxt-core/src/**/*.rs`** |
-| Integration | **`crates/bmxt-core/tests/`** (discovered next to that package’s **`Cargo.toml`**) |
+| What | Command | Notes |
+|------|---------|--------|
+| **Unit + property (JS/TS)** | **`pnpm test`** | No browser. Fast. |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | Not included in `pnpm test`. |
+| **E2E (default)** | **`pnpm run build`** → **`pnpm run test:e2e:install`** (once) → **`pnpm run test:e2e`** | Loads **`.output/chrome-mv3`**. **Headless** — no window on the desktop. |
+| **E2E (visible browser)** | **`pnpm run test:e2e:headed`** or **`HEADED=1 pnpm run test:e2e`** | Same suite; Chromium window is shown (debug). |
+| **Full CI gate** | **`pnpm run verify`** | Manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E. |
 
-Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo test -p bmxt-core`** (`pnpm test` does not include them). Details: **[`tests/README.md`](tests/README.md)** § Rust / WASM.
+One-liner after a production build already exists:
 
-**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E.
+```bash
+pnpm run test:e2e:install   # once per machine (Playwright Chromium)
+pnpm run build              # if .output/chrome-mv3 is missing or stale
+pnpm run test:e2e           # headless extension E2E
+```
+
+<a id="testing-e2e-coverage"></a>
+
+#### What E2E covers
+
+Playwright loads the unpacked MV3 extension (`channel: "chromium"`). Suites under **`tests/e2e/`**:
+
+| Suite | File | Purpose |
+|-------|------|---------|
+| **Command smoke** | `commands-smoke.spec.ts` + `command-matrix.ts` | One primary line per major first/second command (wiring). Not full flag/compound combinatorics. |
+| **Prompt integrity** | `prompt-integrity.spec.ts` | Prompt UI breakage classes (wipe, Tab candidates, history, busy→idle, focus). |
+| **CJK caret** | `prompt-cjk.spec.ts` | Controlled IME line must not wipe on CJK caret motion. |
+
+Shared helpers: **`tests/e2e/helpers/`** (prompt / log / https seed / chrome-state). Add smoke rows in **`command-matrix.ts`**; prefer locale-stable substrings (`usage:`, `error:`). Tag **`needs_https`** when a real https tab is required.
+
+#### Layers (reference)
 
 | Layer | Command | Location |
 |-------|---------|----------|
-| **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
-| **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test` (incl. UTF-16/UTF-8 caret conversion and **TS↔WASM** host entrypoints). |
-| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**. Requires **`pnpm run build`** first; Chromium via **`pnpm run test:e2e:install`**. |
-| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
+| **TS unit** | **`pnpm test`** | **`tests/unit/`** |
+| **Property** | (in **`pnpm test`**) | **`tests/property/`** (fast-check; UTF-16/UTF-8 + TS↔WASM) |
+| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`**, config **`tests/playwright.config.ts`** |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only — **not** under **`tests/`** |
 
-**Adding a TS unit test:** place it at **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`** and import production code from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
+**Adding a TS unit test:** **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`**, import from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
 
 <a id="project-layout"></a>
 
@@ -1431,6 +1457,8 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
   - [テスト](#testing-ja)
+    - [実行方法](#testing-how-to-run-ja)
+    - [E2E がカバーすること](#testing-e2e-coverage-ja)
   - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
   - [プロジェクト構成（WXT）](#project-layout-ja)
   - [主なソース](#main-sources-ja)
@@ -2577,29 +2605,52 @@ pnpm run dev
 
 ### テスト
 
+**JS/TS** の自動テストは **`tests/`** 配下（`lib/` やリポジトリ直下には置かない）。構成の詳細は **[`tests/README.md`](tests/README.md)**。
 
-**JS/TS** の自動テストはすべて **`tests/`** 配下に置く（`lib/` やリポジトリ直下には置かない）。詳細は **[`tests/README.md`](tests/README.md)**。
+<a id="testing-how-to-run-ja"></a>
 
-**Rust / WASM テストは意図的に `tests/` の外**に置く（Cargo の正本配置）:
+#### 実行方法
 
-| 種類 | 場所 |
-|------|------|
-| ユニット（`#[cfg(test)]`） | **`crates/bmxt-core/src/**/*.rs`** |
-| 統合 | **`crates/bmxt-core/tests/`**（当該パッケージの **`Cargo.toml`** 隣） |
+| 対象 | コマンド | 補足 |
+|------|----------|------|
+| **ユニット + プロパティ（JS/TS）** | **`pnpm test`** | ブラウザ不要。高速。 |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | `pnpm test` には含まれない。 |
+| **E2E（既定）** | **`pnpm run build`** → **`pnpm run test:e2e:install`**（初回のみ）→ **`pnpm run test:e2e`** | **`.output/chrome-mv3`** をロード。**headless**（画面にウィンドウを出さない）。 |
+| **E2E（画面表示）** | **`pnpm run test:e2e:headed`** または **`HEADED=1 pnpm run test:e2e`** | 同じスイート。デバッグ用に Chromium ウィンドウを表示。 |
+| **CI と同一の全体ゲート** | **`pnpm run verify`** | manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E。 |
 
-Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行は **`cargo test -p bmxt-core`**（**`pnpm test`** には含まれない）。詳細: **[`tests/README.md`](tests/README.md)** の Rust / WASM 節。
+ビルド済みなら次の順で十分です:
 
-**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E。
+```bash
+pnpm run test:e2e:install   # マシン初回のみ（Playwright 用 Chromium）
+pnpm run build              # .output/chrome-mv3 が無い・古いとき
+pnpm run test:e2e           # headless の拡張 E2E
+```
+
+<a id="testing-e2e-coverage-ja"></a>
+
+#### E2E がカバーすること
+
+Playwright がアンパック MV3 拡張をロードします（`channel: "chromium"`）。**`tests/e2e/`**:
+
+| スイート | ファイル | 目的 |
+|----------|----------|------|
+| **コマンド・スモーク** | `commands-smoke.spec.ts` + `command-matrix.ts` | first / 主要 second を各1本（配線確認）。フラグ・compound の完全組合せは対象外。 |
+| **プロンプト健全性** | `prompt-integrity.spec.ts` | 行消滅・Tab 候補・履歴・busy→idle・フォーカスなど破綻クラス。 |
+| **CJK キャレット** | `prompt-cjk.spec.ts` | CJK 上のキャレット移動で制御付きプロンプト行が消えないこと。 |
+
+共通ヘルパ: **`tests/e2e/helpers/`**。スモーク行の追加は **`command-matrix.ts`**。アサートは日英で揺らぎにくい文字列（`usage:` / `error:` など）を優先。https タブが必要な行には **`needs_https`** タグ。
+
+#### 層の一覧（参照）
 
 | 層 | コマンド | 場所 |
 |----|----------|------|
-| **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
-| **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`（UTF-16/UTF-8 キャレット変換と **TS↔WASM** ホスト入口を含む）。 |
-| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**。事前に **`pnpm run build`**。Chromium は **`pnpm run test:e2e:install`**。 |
-| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
+| **TS ユニット** | **`pnpm test`** | **`tests/unit/`** |
+| **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** |
+| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`**、設定 **`tests/playwright.config.ts`** |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（**`tests/` には置かない**） |
 
-**TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`** に置き、本番コードは **`lib/features/...`** から **`.ts` 付き**で import する。`lib/` 隣へのコロケートはしない。
-
+**TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`**、本番コードは **`lib/features/...`** を **`.ts` 付き**で import。`lib/` 隣へのコロケートはしない。
 <a id="project-layout-ja"></a>
 
 ### プロジェクト構成（WXT）

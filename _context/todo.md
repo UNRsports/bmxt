@@ -88,6 +88,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **目標:** 同一リポジトリで Chrome（現行）と Firefox 向けアドオンを並行開発し、可能な範囲でコマンド動作を自動化検証する。完全パリティは目指さず、**コアシェル＋主要コマンド**を共有、Chrome 専用機能は feature flag で分岐する。
 
+**実施順（更新）:** **5.5（Chromium コマンド・スモーク + プロンプト UI 機械検査）を Phase 5 本体（5.2–5.4 / 5.6）より前**に進める。Firefox アダプタは不要なため前倒し可能。コマンドのフラグ／compound **完全組合せは非目標**（unit/WASM + Active 3）。
+
 **前提（調査済み・決定方針）**
 
 | 項目 | 内容 |
@@ -129,15 +131,29 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] favicon — `tab.favIconUrl` 等へフォールバック
 - [ ] コアコマンド（tab / search / dom / nav / session / setting internal / back·forward·reload·close 等）の FF スモーク一覧を定義
 
-#### 5.5 e2e — Chromium（現行 Playwright の拡張）
+#### 5.5 e2e — Chromium（現行 Playwright の拡張）【Phase 5 前倒し】
 
-**方針:** 実拡張ロード（`.output/chrome-mv3`）を維持し、プロンプト IME 以外へコマンド経路を厚くする。
+**方針:** 実拡張ロード（`.output/chrome-mv3`）を維持。二レーン:
 
-- [ ] フィクスチャ: タブ / ウィンドウ /（可能なら）グループ・履歴のシード
-- [ ] ヘルパ: プロンプト入力 → Enter → ログ行 + ブラウザ状態アサート
-- [ ] コマンド行列（manifest の first コマンド＋主要 subcommand）。Chrome 専用は skip タグ
-- [ ] CI 時間・headed 制約の見積り（workers=1 維持可否）
-- [ ] （任意）effect / UiAction 単位のスモークと、フルコマンド行列の段階導入
+1. **コマンド・スモーク** — first＋主要 second を1本ずつ（配線切れ検出）。完全組合せはしない
+2. **プロンプト UI 機械検査** — 行消滅・busy・候補・履歴・フォーカスなど破綻クラス（疎積）
+
+| パス | 内容 |
+|------|------|
+| `tests/e2e/helpers/` | prompt / log / seed / chrome-state |
+| `tests/e2e/command-matrix.ts` | スモーク行の正本 |
+| `tests/e2e/commands-smoke.spec.ts` | コマンド・スモーク |
+| `tests/e2e/prompt-integrity.spec.ts` | プロンプト破綻クラス |
+| `tests/e2e/prompt-cjk.spec.ts` | CJK キャレット回帰（維持） |
+
+- [x] ヘルパ: プロンプト入力 → Enter → busy 解除 + ログ / picker アサート
+- [x] https タブシード（`needs_https` タグ）
+- [x] コマンド・スモーク行列（初期 ~18。段階拡充）
+- [x] プロンプト UI 機械検査（Home/End・picker・history・busy-idle・focus）
+- [ ] フィクスチャ拡充: ウィンドウ / グループ・履歴のシード
+- [x] 既定 headless（`channel: chromium`）。可視化は `HEADED=1` / `test:e2e:headed`
+- [ ] CI 時間・workers=1 維持可否の見積り
+- [ ] （任意）effect / UiAction 単位のスモークと、スモーク行の段階追加
 
 #### 5.6 e2e — Firefox（別ハーネス）
 
@@ -153,10 +169,11 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 | 順 | マイルストーン | 完了の目安 |
 |----|----------------|------------|
+| 0 | **5.5 Chromium スモーク + プロンプト機械検査**（前倒し） | CI でコマンド配線とプロンプト破綻を自動監視 |
 | 1 | 5.1 残り + 5.2 の trust / URL | Chrome 既存挙動を壊さず FF メッセージ経路が理論上通る |
 | 2 | 5.3 で FF パッケージがビルドできる | アンパックで BMXt ウィンドウが開く（主要コマンドは手確認） |
 | 3 | 5.4 で専用機能を隔離 | コアコマンドの FF 手動スモーク表を消化 |
-| 4 | 5.5 で Chromium コマンド e2e を段階追加 | CI で回帰の網が広がる |
+| 4 | 5.5 の拡充（シード・件数） | CI 時間を見ながら行を追加 |
 | 5 | 5.6 で FF スモークハーネス | 「両ブラウザ」は別ジョブとして並立 |
 
 **非目標（明示）**

@@ -12,6 +12,25 @@ import { fileURLToPath } from "node:url"
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..")
 const extensionPath = join(root, ".output", "chrome-mv3")
 
+/**
+ * EN: Default headless so e2e does not steal the desktop. Opt into a visible
+ *     window with `HEADED=1` or `pnpm run test:e2e:headed`.
+ * JA: 既定は headless（デスクトップを占有しない）。可視化は `HEADED=1` /
+ *     `pnpm run test:e2e:headed`。
+ *
+ * EN: `channel: "chromium"` is required for MV3 extensions under headless
+ *     (Playwright docs — not the headless shell).
+ */
+function e2eHeadless(): boolean {
+  if (process.env.HEADED === "1" || process.env.HEADED === "true") {
+    return false
+  }
+  if (process.env.HEADLESS === "0" || process.env.HEADLESS === "false") {
+    return false
+  }
+  return true
+}
+
 export type ExtensionFixtures = {
   context: BrowserContext
   extensionId: string
@@ -28,7 +47,9 @@ export const test = base.extend<ExtensionFixtures>({
     }
     const userDataDir = mkdtempSync(join(tmpdir(), "bmxt-e2e-"))
     const context = await chromium.launchPersistentContext(userDataDir, {
-      headless: false,
+      // EN: Full Chromium build — required for --load-extension in headless.
+      channel: "chromium",
+      headless: e2eHeadless(),
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,
@@ -50,11 +71,28 @@ export const test = base.extend<ExtensionFixtures>({
   },
 
   bmxtPage: async ({ context, extensionId }, use) => {
+    // EN: Skip first-run tutorial so coach overlay does not steal keys / assert noise.
+    let [worker] = context.serviceWorkers()
+    if (!worker) {
+      worker = await context.waitForEvent("serviceworker", { timeout: 60_000 })
+    }
+    await worker.evaluate(async () => {
+      await chrome.storage.local.set({
+        bmxt_tutorial_progress_v1: {
+          schemaVersion: 1,
+          dismissedFirstRun: true,
+          tutorials: {
+            "tab-list-browse": { status: "skipped", stepIndex: 0 }
+          }
+        }
+      })
+    })
     const page = await context.newPage()
     await page.goto(`chrome-extension://${extensionId}/bmxt.html`, {
       waitUntil: "domcontentloaded"
     })
     await page.waitForSelector(".bmxt-prompt-ime", { timeout: 60_000 })
+    await test.expect(page.locator(".bmxt-tutorial-coach")).toHaveCount(0)
     await use(page)
   }
 })
