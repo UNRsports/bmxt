@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { Builder, By, until, type WebDriver, type WebElement } from "selenium-webdriver"
+import { Builder, By, Key, until, type WebDriver, type WebElement } from "selenium-webdriver"
 import chrome from "selenium-webdriver/chrome.js"
 import firefox from "selenium-webdriver/firefox.js"
 import { chromeExtensionIdFromPath } from "./chrome-extension-id.ts"
@@ -254,4 +254,74 @@ export async function pressPromptKey(driver: WebDriver, key: string): Promise<vo
 export async function mirrorText(driver: WebDriver): Promise<string> {
   const mirror = await driver.findElement(By.css(".bmxt-prompt-mirror"))
   return mirror.getText()
+}
+
+/** EN: Dismiss token / session candidate menus so Enter submits the line. */
+export async function dismissPromptPickers(driver: WebDriver): Promise<void> {
+  const ime = await promptIme(driver)
+  for (let i = 0; i < 3; i += 1) {
+    const open = await driver.findElements(
+      By.css(".bmxt-subcmd-picker, .bmxt-session-candidate-panel, [id^='bmxt-session-candidate']")
+    )
+    if (open.length === 0) {
+      break
+    }
+    await ime.sendKeys(Key.ESCAPE)
+  }
+}
+
+/** EN: Replace the controlled prompt line (React onInput), matching Playwright setPromptLine. */
+export async function setPromptLine(driver: WebDriver, line: string): Promise<void> {
+  await focusPrompt(driver)
+  await dismissPromptPickers(driver)
+  await clearAndTypePrompt(driver, line)
+}
+
+/** EN: Wait until the prompt is not in the command-busy lock state. */
+export async function waitPromptIdle(driver: WebDriver, timeoutMs = 60_000): Promise<void> {
+  await driver.wait(async () => {
+    const busy = await driver.findElements(By.css(".bmxt-prompt-line--busy"))
+    if (busy.length > 0) {
+      return false
+    }
+    const ime = await promptIme(driver)
+    const className = (await ime.getAttribute("class")) ?? ""
+    return !className.includes("bmxt-prompt-ime--busy-lock")
+  }, timeoutMs)
+}
+
+/**
+ * EN: Set line, dismiss pickers, press Enter, wait for busy to clear.
+ * JA: 行をセットし候補を閉じてから Enter。busy 解除まで待つ。
+ */
+export async function runPromptLine(driver: WebDriver, line: string): Promise<void> {
+  await setPromptLine(driver, line)
+  await dismissPromptPickers(driver)
+  await pressPromptKey(driver, Key.ENTER)
+  await waitPromptIdle(driver)
+}
+
+/** EN: Move caret left `steps` times without asserting line identity. */
+export async function moveCaretLeft(driver: WebDriver, steps: number): Promise<void> {
+  for (let i = 0; i < steps; i += 1) {
+    await pressPromptKey(driver, Key.ARROW_LEFT)
+  }
+}
+
+/**
+ * EN: Open an https page in the same browser session (content-script host).
+ * JA: 同一ブラウザセッションで https ページを開く（CS 向け）。
+ */
+export async function seedHttpsTab(
+  session: BmxtSession,
+  url: string = "https://example.com/"
+): Promise<void> {
+  const bmxtHandle = await session.driver.getWindowHandle()
+  await session.driver.switchTo().newWindow("tab")
+  await session.driver.get(url)
+  await session.driver.wait(async () => {
+    const current = await session.driver.getCurrentUrl()
+    return current.startsWith("http://") || current.startsWith("https://")
+  }, 60_000)
+  await session.driver.switchTo().window(bmxtHandle)
 }
