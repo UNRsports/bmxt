@@ -30,26 +30,6 @@ function runPnpm(scriptArgs) {
   run("pnpm", ["run", ...scriptArgs])
 }
 
-function hasXvfbRun() {
-  const result = spawnSync("xvfb-run", ["--help"], {
-    cwd: root,
-    stdio: "ignore",
-    env: process.env
-  })
-  return result.status === 0
-}
-
-function runE2e() {
-  const onLinux = process.platform === "linux"
-  const noDisplay = !process.env.DISPLAY || process.env.DISPLAY.length === 0
-  const useXvfb = onLinux && (process.env.CI === "true" || noDisplay) && hasXvfbRun()
-  if (useXvfb) {
-    run("xvfb-run", ["-a", "pnpm", "run", "test:e2e"])
-    return
-  }
-  runPnpm(["test:e2e"])
-}
-
 runPnpm(["verify:manifest"])
 runPnpm(["check:no-fetch"])
 runPnpm(["check:generated"])
@@ -58,7 +38,8 @@ runPnpm(["build:wasm"])
 run("pnpm", ["exec", "tsc", "--noEmit"])
 runPnpm(["test"])
 runPnpm(["build:chrome"])
-runPnpm(["test:e2e:install"])
-runE2e()
+runPnpm(["test:e2e:chrome"])
+runPnpm(["build:firefox"])
+runPnpm(["test:e2e:firefox"])
 
 console.log("\nverify: ok")

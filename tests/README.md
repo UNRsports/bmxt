@@ -10,8 +10,7 @@ JA: BMXt の **JS/TS** 自動テストはすべてこのディレクトリ配下
 | **`unit/features/`** | Node.js `node:test` unit tests. Mirrors `lib/features/` paths. |
 | **`unit/scripts/`** | Unit tests for `scripts/` helpers (`.test.mjs`). |
 | **`property/`** | Property-based tests via **fast-check** + `node:test` (includes **TS↔WASM boundary** random-input suites). |
-| **`e2e/`** | Playwright extension E2E specs. |
-| **`playwright.config.ts`** | Playwright config (`testDir: ./e2e`). |
+| **`e2e/`** | Headless **WebDriver** extension E2E (`selenium-webdriver`). |
 
 ## Rust / WASM (not under this directory) / Rust・WASM（このディレクトリ外）
 
@@ -29,36 +28,33 @@ JA: BMXt の **JS/TS** 自動テストはすべてこのディレクトリ配下
 
 ```bash
 pnpm test                 # JS/TS unit + property (glob under tests/)
-pnpm run test:e2e         # Playwright Chromium (requires pnpm run build:chrome first)
-pnpm run test:e2e:firefox # Playwright Firefox (requires pnpm run build:firefox first)
-pnpm run test:e2e:install # install Chromium + Firefox for Playwright
+pnpm run test:e2e:chrome  # WebDriver Chrome headless (requires pnpm run build:chrome)
+pnpm run test:e2e:firefox # WebDriver Firefox headless (requires pnpm run build:firefox)
+pnpm run test:e2e:all     # Chrome then Firefox
 cargo test -p bmxt-core   # Rust (crates/bmxt-core — not under tests/)
-pnpm run verify           # full CI gate (includes Chromium e2e; not Firefox e2e)
+pnpm run verify           # full CI gate (includes Chrome + Firefox e2e)
 ```
 
-**Firefox e2e notes**
+## E2E (WebDriver) / E2E（WebDriver）
 
-| Layer | Status |
-|-------|--------|
-| Temporary install (RDP via **`playwright-webextext`**) | Supported — `firefox-install.smoke.spec.ts` |
-| Drive **`moz-extension://…/bmxt.html`** (prompt / pickers) | **Not supported** by Playwright Firefox (Juggler) — see [playwright#7297](https://github.com/microsoft/playwright/issues/7297). Shell specs stay Chromium-only. |
+| | Chrome | Firefox |
+|--|--------|---------|
+| Driver | ChromeDriver + **Chrome for Testing** (not branded Chrome) | geckodriver → Marionette (`--allow-system-access`) |
+| Mode | **`--headless=new`** (always) | **`-headless`** (always) |
+| Extension load | `--load-extension` on unpacked `.output/chrome-mv3` | `installAddon(..., temporary)` on `.output/firefox-mv3` |
+| Shell page | `driver.get(chrome-extension://…/bmxt.html)` | Chrome-context `openTrustedLinkIn(moz-extension://…)` (Navigate is blocked) |
 
-- Build: **`pnpm run build:firefox`** → **`.output/firefox-mv3`**
-- Browser pin: Playwright Firefox must be **≥ `strict_min_version` (139.0)** → **`@playwright/test` ≥ 1.54**
 - Host switch: **`BMXT_E2E_BROWSER=chrome|firefox`**
-- **`pnpm run verify`** still runs Chromium e2e only
+- Specs: **`tests/e2e/*.test.ts`** (shared); harness in **`harness.ts`**
+- Drivers are fetched by **Selenium Manager** (no separate `test:e2e:install`)
 
 ## Adding tests / テスト追加
 
 - **Unit (TS):** add `tests/unit/features/<same-path-as-lib>/<name>.test.ts` and import production modules from `lib/features/...` with a `.ts` extension.
 - **Property:** add `tests/property/<name>.property.test.ts` using `fast-check` (`fc.assert` / `fc.property`). Boundary suites: `utf16-utf8-offset.property.test.ts`, `wasm-boundary.property.test.ts` (needs built `lib/wasm/bmxt-core/bmxt_core_bg.wasm`).
-- **E2E:** add `tests/e2e/<name>.spec.ts` (shared fixtures in `fixtures.ts`; run on Chrome and/or Firefox via the scripts above).
+- **E2E:** add `tests/e2e/<name>.test.ts` using **`harness.ts`** (runs on both browsers via the scripts above).
 - **Rust:** add `#[cfg(test)]` modules under `crates/bmxt-core/src/`, or integration files under `crates/bmxt-core/tests/` — **not** under this directory.
 
 Do **not** put `*.test.ts` next to production files under `lib/`.
-Do **not** reintroduce root-level `e2e/` or `playwright.config.ts`.
+Do **not** reintroduce Playwright-based e2e or root-level `playwright.config.ts`.
 Do **not** relocate Cargo tests into this `tests/` directory.
-
-## Generated artifacts / 生成物
-
-Playwright writes **`tests/test-results/`** and (locally) **`tests/playwright-report/`**. These are gitignored — do not commit them. Legacy root **`/test-results/`** is also ignored if an older run created it.

@@ -21,9 +21,6 @@ importers:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: 4.1.1
         version: 4.1.1(prettier@3.2.4)
-      '@playwright/test':
-        specifier: 1.54.1
-        version: 1.54.1
       '@types/chrome':
         specifier: 0.0.258
         version: 0.0.258
@@ -36,6 +33,9 @@ importers:
       '@types/react-dom':
         specifier: 18.2.18
         version: 18.2.18
+      '@types/selenium-webdriver':
+        specifier: 4.1.28
+        version: 4.1.28
       '@wxt-dev/module-react':
         specifier: 1.1.3
         version: 1.1.3(vite@6.4.3(@types/node@20.11.5)(jiti@2.7.0))(wxt@0.20.7(@types/node@20.11.5)(jiti@2.7.0)(rollup@4.62.2))
@@ -48,15 +48,12 @@ importers:
       linkedom:
         specifier: 0.18.5
         version: 0.18.5
-      playwright:
-        specifier: 1.54.1
-        version: 1.54.1
-      playwright-webextext:
-        specifier: 0.0.5
-        version: 0.0.5(@playwright/test@1.54.1)(playwright@1.54.1)
       prettier:
         specifier: 3.2.4
         version: 3.2.4
+      selenium-webdriver:
+        specifier: 4.33.0
+        version: 4.33.0
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -165,6 +162,9 @@ packages:
   '@babel/types@7.29.7':
     resolution: {integrity: sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==}
     engines: {node: '>=6.9.0'}
+
+  '@bazel/runfiles@6.5.0':
+    resolution: {integrity: sha512-RzahvqTkfpY2jsDxo8YItPX+/iZ6hbiikw1YhE0bA9EKBR5Og8Pa6FHn9PO9M0zaXRVsr0GFQLKbB/0rzy9SzA==}
 
   '@devicefarmer/adbkit-logcat@2.1.3':
     resolution: {integrity: sha512-yeaGFjNBc/6+svbDeul1tNHtNChw6h8pSHAt5D+JsedUrMTN7tla7B15WLDyekxsuS2XlZHRxpuC6m92wiwCNw==}
@@ -372,11 +372,6 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@playwright/test@1.54.1':
-    resolution: {integrity: sha512-FS8hQ12acieG2dYSksmLOF7BNxnVf2afRJdCuM1eMSxj6QTSE6G4InGF7oApGgDb65MX7AwMVlIkpru0yZA4Xw==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   '@pnpm/config.env-replace@1.1.0':
     resolution: {integrity: sha512-htyl8TWnKL7K/ESFa1oW2UB5lVDxuF5DpM7tBi6Hu2LNL3mWkIzNLG6N4zoCUP1lCKNxWy/3iu8mS8MvToGd6w==}
     engines: {node: '>=12.22.0'}
@@ -562,8 +557,14 @@ packages:
   '@types/scheduler@0.26.0':
     resolution: {integrity: sha512-WFHp9YUJQ6CKshqoC37iOlHnQSmxNc795UhB26CyBBttrN9svdIrUjl/NjnNmfcwtncN0h/0PPAFWv9ovP8mLA==}
 
+  '@types/selenium-webdriver@4.1.28':
+    resolution: {integrity: sha512-Au7CXegiS7oapbB16zxPToY4Cjzi9UQQMf3W2ZZM8PigMLTGR3iUAHjPUTddyE5g1SBjT/qpmvlsAQLBfNAdKg==}
+
   '@types/webextension-polyfill@0.12.5':
     resolution: {integrity: sha512-uKSAv6LgcVdINmxXMKBuVIcg/2m5JZugoZO8x20g7j2bXJkPIl/lVGQcDlbV+aXAiTyXT2RA5U5mI4IGCDMQeg==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
@@ -1007,11 +1008,6 @@ packages:
   fs-extra@11.3.5:
     resolution: {integrity: sha512-eKpRKAovdpZtR1WopLHxlBWvAgPny3c4gX1G5Jhwmmw4XJj0ifSD5qB5TOo8hmA0wlRKDAOAhEE1yVPgs6Fgcg==}
     engines: {node: '>=14.14'}
-
-  fsevents@2.3.2:
-    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
-    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
-    os: [darwin]
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -1461,28 +1457,6 @@ packages:
   pkg-types@2.3.1:
     resolution: {integrity: sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg==}
 
-  playwright-core@1.54.1:
-    resolution: {integrity: sha512-Nbjs2zjj0htNhzgiy5wu+3w09YetDx5pkrpI/kZotDlDUaYk0HVA5xrBVPdow4SAUIlhgKcJeJg4GRKW6xHusA==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  playwright-webextext@0.0.5:
-    resolution: {integrity: sha512-PhlMiWOfP8UmYTAbzR7uv09Twz+bkLqsgz/8EVcZROq7C6hgepJFYHD+pw4qFLK8mVGNv88N82yTdRdJDDgtdw==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@playwright/test': '>=1.0.0'
-      playwright: '>=1.0.0'
-    peerDependenciesMeta:
-      '@playwright/test':
-        optional: true
-      playwright:
-        optional: true
-
-  playwright@1.54.1:
-    resolution: {integrity: sha512-peWpSwIBmSLi6aW2auvrUtf2DqY16YYcCMO8rTVx486jKmDTJg7UAhyrraP98GB8BoPURZP8+nxO7TSd4cPr5g==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   postcss@8.5.15:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1615,6 +1589,10 @@ packages:
 
   scule@1.3.0:
     resolution: {integrity: sha512-6FtHJEvt+pVMIB9IBY+IcCJ6Z5f1iQnytgyfKMhDKgmzYG+TeH/wx1y3l27rshSbLiSanrR9ffZDrEsmjlQF2g==}
+
+  selenium-webdriver@4.33.0:
+    resolution: {integrity: sha512-5vRhk4iI0B9nYbEitfnCjPDXBfG6o9DNhj5DG2355eQo8idETknhj1tigqqlkHsGephSZwLZqEm/d+3e1stGUA==}
+    engines: {node: '>= 18.20.5'}
 
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
@@ -1896,6 +1874,18 @@ packages:
     resolution: {integrity: sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww==}
     engines: {node: '>=18'}
 
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   wsl-utils@0.1.0:
     resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
     engines: {node: '>=18'}
@@ -2067,6 +2057,8 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
+  '@bazel/runfiles@6.5.0': {}
+
   '@devicefarmer/adbkit-logcat@2.1.3': {}
 
   '@devicefarmer/adbkit-monkey@1.2.1': {}
@@ -2203,10 +2195,6 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
-
-  '@playwright/test@1.54.1':
-    dependencies:
-      playwright: 1.54.1
 
   '@pnpm/config.env-replace@1.1.0': {}
 
@@ -2353,7 +2341,16 @@ snapshots:
 
   '@types/scheduler@0.26.0': {}
 
+  '@types/selenium-webdriver@4.1.28':
+    dependencies:
+      '@types/node': 20.11.5
+      '@types/ws': 8.18.2
+
   '@types/webextension-polyfill@0.12.5': {}
+
+  '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 20.11.5
 
   '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@20.11.5)(jiti@2.7.0))':
     dependencies:
@@ -2786,9 +2783,6 @@ snapshots:
       graceful-fs: 4.2.11
       jsonfile: 6.2.1
       universalify: 2.0.1
-
-  fsevents@2.3.2:
-    optional: true
 
   fsevents@2.3.3:
     optional: true
@@ -3226,19 +3220,6 @@ snapshots:
       exsolve: 1.0.8
       pathe: 2.0.3
 
-  playwright-core@1.54.1: {}
-
-  playwright-webextext@0.0.5(@playwright/test@1.54.1)(playwright@1.54.1):
-    optionalDependencies:
-      '@playwright/test': 1.54.1
-      playwright: 1.54.1
-
-  playwright@1.54.1:
-    dependencies:
-      playwright-core: 1.54.1
-    optionalDependencies:
-      fsevents: 2.3.2
-
   postcss@8.5.15:
     dependencies:
       nanoid: 3.3.14
@@ -3392,6 +3373,16 @@ snapshots:
       loose-envify: 1.4.0
 
   scule@1.3.0: {}
+
+  selenium-webdriver@4.33.0:
+    dependencies:
+      '@bazel/runfiles': 6.5.0
+      jszip: 3.10.1
+      tmp: 0.2.5
+      ws: 8.22.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   semver@6.3.1: {}
 
@@ -3675,6 +3666,8 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 7.2.0
       strip-ansi: 7.2.0
+
+  ws@8.22.0: {}
 
   wsl-utils@0.1.0:
     dependencies:

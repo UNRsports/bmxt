@@ -1244,13 +1244,13 @@ If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`*
 
 Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo test -p bmxt-core`** (`pnpm test` does not include them). Details: **[`tests/README.md`](tests/README.md)** § Rust / WASM.
 
-**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E.
+**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build:chrome`** + WebDriver E2E → **`build:firefox`** + WebDriver E2E.
 
 | Layer | Command | Location |
 |-------|---------|----------|
 | **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
 | **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test` (incl. UTF-16/UTF-8 caret conversion and **TS↔WASM** host entrypoints). |
-| **E2E** | **`pnpm run test:e2e`** / **`test:e2e:firefox`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**. Chrome: **`build:chrome`** then shell specs. Firefox: **`build:firefox`** then install smoke only (Playwright cannot drive `moz-extension://` UI — see **`tests/README.md`**). Browsers: **`pnpm run test:e2e:install`**. |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** (`selenium-webdriver`) under **`tests/e2e/`**. Same shell specs on Chrome and Firefox. See **`tests/README.md`**. |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
 
 **Adding a TS unit test:** place it at **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`** and import production code from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
@@ -1269,7 +1269,7 @@ Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo t
 | **`shared/lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
 | **`hosts/chrome/`**, **`hosts/firefox/`** | Per-browser WXT configs (+ Firefox AMO kit) — see **[`hosts/README.md`](hosts/README.md)** |
 | **`shared/lib/features/`** | Feature modules (see table below) |
-| **`tests/`** | JS/TS tests only — unit, property (fast-check), Playwright E2E (see **[Testing](#testing)**). Rust stays under **`shared/crates/bmxt-core/`**. |
+| **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)**). Rust stays under **`shared/crates/bmxt-core/`**. |
 | **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
@@ -2615,13 +2615,13 @@ pnpm run dev
 
 Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行は **`cargo test -p bmxt-core`**（**`pnpm test`** には含まれない）。詳細: **[`tests/README.md`](tests/README.md)** の Rust / WASM 節。
 
-**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E。
+**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build:chrome`** + WebDriver E2E → **`build:firefox`** + WebDriver E2E。
 
 | 層 | コマンド | 場所 |
 |----|----------|------|
 | **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
 | **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`（UTF-16/UTF-8 キャレット変換と **TS↔WASM** ホスト入口を含む）。 |
-| **E2E** | **`pnpm run test:e2e`** / **`test:e2e:firefox`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**。Chrome は **`build:chrome`** 後にシェル仕様。Firefox は **`build:firefox`** 後にインストール煙テストのみ（Playwright は `moz-extension://` UI を操作不可 — **`tests/README.md`**）。ブラウザ: **`pnpm run test:e2e:install`**。 |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver**（`selenium-webdriver`）を **`tests/e2e/`** で実行。Chrome / Firefox で同一シェル仕様。詳細は **`tests/README.md`**。 |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
 
 **TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`** に置き、本番コードは **`lib/features/...`** から **`.ts` 付き**で import する。`lib/` 隣へのコロケートはしない。
@@ -2638,7 +2638,7 @@ Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行�
 | **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
-| **`tests/`** | JS/TS テストのみ（unit / property / Playwright E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
+| **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
