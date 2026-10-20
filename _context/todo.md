@@ -115,14 +115,34 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] （任意）`webextension-polyfill` または薄い `browser` 名前空間ラッパ — 全面置換は必須としない
 - [ ] `import.meta.env.BROWSER` / ビルドターゲット別の feature flags
 
-#### 5.3 Firefox ビルド・マニフェスト
+#### 5.3 Firefox ビルド・マニフェスト【いま着手してよい】
+
+**位置づけ:** Firefox 版実装の入口。Chromium e2e（§5.5）と拡張 URL / `moz-extension` 信頼判定（§5.2）は済。ここから **パッケージがビルドでき、アンパックで BMXt 窓が開く** までを目標にする。完全パリティ・FF e2e（§5.6）はこの節の完了後。
+
+**実装ポイント（方針）**
+
+| 項目 | 内容 |
+|------|------|
+| 成果物 | WXT **`firefox-mv3`**。固定 **`gecko.id`**（`browser_specific_settings.gecko`）。出力 **`.output/firefox-mv3`** + zip |
+| 開発体験 | WXT 公式の Firefox MV3 **dev** は制限あり → 初期は **`pnpm` build 相当 → about:debugging 等でアンパック手動ロード**。Chrome 同等の hot reload は必須にしない |
+| Chrome 本線 | **`verify` / Chromium e2e を壊さない**。FF は別ターゲット・別提出経路（matrix または分離ジョブ） |
+| コア共有 | `lib/features/*` + Rust/WASM はそのまま。新規のブラウザ分岐は **feature flag / ビルドターゲット**（§5.2 残り・§5.4）に閉じる |
+| 権限 | `favicon` は削除または無視、`commands.*.global` は FF 非対応を文書化。https ホスト権限のユーザー取り消しを前提に ensure CS / エラー文言 |
+| 最低版 | 方針を明記（例: `tabGroups` 利用なら FF ≥139、未満は `group` 劣化） |
+| パリティ外（初期） | Translator / FSA（外部設定・vault）/ Chrome Favicon API → §5.4 で stub・内部 storage・フォールバック |
+| e2e | Playwright に同居させない。§5.6 は **別ハーネス**（`web-ext` 等）。本節では手動スモークで窓＋主要コマンド確認まで |
+| URL | 本番は `runtime.getURL`。信頼判定・将来 FF e2e は **`lib/features/extension-url/`**（`moz-extension:` 済み） |
+| 完了の目安 | アンパックで BMXt ウィンドウが開き、コアコマンド（tab / search / session / setting internal 等）を手確認できる |
+
+**チェックリスト**
 
 - [ ] `wxt` / `package` に Firefox ターゲット（`firefox-mv3`、`gecko.id`、AMO 用メタ）
 - [ ] permissions 差分: `favicon` 削除または無視、`commands.*.global` は FF 非対応を文書化
 - [ ] host permissions UX（ユーザー取り消し）を前提にした ensure CS / エラー文言
 - [ ] 最低 Firefox 版の方針（例: `tabGroups` 利用なら FF ≥139、未満は `group` 劣化）
 - [ ] 出力: `.output/firefox-mv3` + zip。submit ワークフローは Chrome と分離または matrix
-- [ ] 手元: アンパック読み込み手順（WXT FF MV3 dev 制限の回避）
+- [ ] 手元: アンパック読み込み手順（WXT FF MV3 dev 制限の回避）を README に短く追記
+- [ ] スモーク: 窓起動 + 主要コアコマンドの手確認（専用機能は §5.4 で隔離後でも可）
 
 #### 5.4 機能フラグ（Chrome 専用の切り分け）
 
@@ -170,8 +190,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 順 | マイルストーン | 完了の目安 |
 |----|----------------|------------|
 | 0 | **5.5 Chromium スモーク + プロンプト機械検査**（前倒し） | CI でコマンド配線とプロンプト破綻を自動監視 |
-| 1 | 5.1 残り + 5.2 の trust / URL | Chrome 既存挙動を壊さず FF メッセージ経路が理論上通る |
-| 2 | 5.3 で FF パッケージがビルドできる | アンパックで BMXt ウィンドウが開く（主要コマンドは手確認） |
+| 1 | 5.1 / 5.2 trust・URL（済） | `moz-extension` 信頼判定 + `extension-url` ヘルパ |
+| 2 | **5.3 FF ビルド・マニフェスト（次）** | アンパックで BMXt ウィンドウが開く（主要コマンドは手確認）— ポイントは §5.3 表 |
 | 3 | 5.4 で専用機能を隔離 | コアコマンドの FF 手動スモーク表を消化 |
 | 4 | 5.5 の拡充（シード・件数） | CI 時間を見ながら行を追加 |
 | 5 | 5.6 で FF スモークハーネス | 「両ブラウザ」は別ジョブとして並立 |
