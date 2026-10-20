@@ -1,12 +1,16 @@
 /**
  * EN: Prompt E2E — CJK caret motion must not wipe the controlled prompt line.
  * JA: プロンプト E2E — CJK 上のキャレット移動で制御付きプロンプト行が消えないこと。
+ *
+ * Chromium only: Playwright Firefox cannot open/drive `moz-extension://` shell pages.
  */
 
-import { expect, test } from "./fixtures.ts"
+import { expect, isFirefoxE2e, test } from "./fixtures.ts"
 
 const CJK_COMMAND = "search -list --all リスト | browse"
 const ASCII_COMMAND = "search -list --all test | browse"
+
+const describePrompt = isFirefoxE2e() ? test.describe.skip : test.describe
 
 async function focusPrompt(page: import("@playwright/test").Page): Promise<void> {
   const ime = page.locator(".bmxt-prompt-ime").first()
@@ -27,7 +31,7 @@ async function setPromptLine(
   await expect.poll(async () => ime.inputValue()).toBe(line)
 }
 
-test.describe("prompt CJK caret stability", () => {
+describePrompt("prompt CJK caret stability", () => {
   test("ArrowLeft through リスト keeps the full command line", async ({ bmxtPage }) => {
     await setPromptLine(bmxtPage, CJK_COMMAND)
     const ime = bmxtPage.locator(".bmxt-prompt-ime").first()

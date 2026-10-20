@@ -1,8 +1,10 @@
 import { defineConfig, devices } from "@playwright/test"
 
 /**
- * EN: Extension E2E — Chromium persistent context + loaded unpacked build.
- * JA: 拡張 E2E — Chromium 永続コンテキストにアンパックビルドをロード。
+ * EN: Extension E2E — Chromium or Firefox persistent context + loaded unpacked build.
+ * JA: 拡張 E2E — Chromium / Firefox 永続コンテキストにアンパックビルドをロード。
+ * Browser: `BMXT_E2E_BROWSER=chrome|firefox` (see `tests/e2e/fixtures.ts`).
+ * Requires Playwright Firefox ≥139 (matches hosts `strict_min_version`); use `@playwright/test` ≥1.54.
  */
 export default defineConfig({
   testDir: "./e2e",

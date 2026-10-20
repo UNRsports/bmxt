@@ -29,17 +29,30 @@ JA: BMXt の **JS/TS** 自動テストはすべてこのディレクトリ配下
 
 ```bash
 pnpm test                 # JS/TS unit + property (glob under tests/)
-pnpm run test:e2e         # Playwright (requires pnpm run build first)
-pnpm run test:e2e:install # install Chromium for Playwright
+pnpm run test:e2e         # Playwright Chromium (requires pnpm run build:chrome first)
+pnpm run test:e2e:firefox # Playwright Firefox (requires pnpm run build:firefox first)
+pnpm run test:e2e:install # install Chromium + Firefox for Playwright
 cargo test -p bmxt-core   # Rust (crates/bmxt-core — not under tests/)
-pnpm run verify           # full CI gate (includes the above)
+pnpm run verify           # full CI gate (includes Chromium e2e; not Firefox e2e)
 ```
+
+**Firefox e2e notes**
+
+| Layer | Status |
+|-------|--------|
+| Temporary install (RDP via **`playwright-webextext`**) | Supported — `firefox-install.smoke.spec.ts` |
+| Drive **`moz-extension://…/bmxt.html`** (prompt / pickers) | **Not supported** by Playwright Firefox (Juggler) — see [playwright#7297](https://github.com/microsoft/playwright/issues/7297). Shell specs stay Chromium-only. |
+
+- Build: **`pnpm run build:firefox`** → **`.output/firefox-mv3`**
+- Browser pin: Playwright Firefox must be **≥ `strict_min_version` (139.0)** → **`@playwright/test` ≥ 1.54**
+- Host switch: **`BMXT_E2E_BROWSER=chrome|firefox`**
+- **`pnpm run verify`** still runs Chromium e2e only
 
 ## Adding tests / テスト追加
 
 - **Unit (TS):** add `tests/unit/features/<same-path-as-lib>/<name>.test.ts` and import production modules from `lib/features/...` with a `.ts` extension.
 - **Property:** add `tests/property/<name>.property.test.ts` using `fast-check` (`fc.assert` / `fc.property`). Boundary suites: `utf16-utf8-offset.property.test.ts`, `wasm-boundary.property.test.ts` (needs built `lib/wasm/bmxt-core/bmxt_core_bg.wasm`).
-- **E2E:** add `tests/e2e/<name>.spec.ts` (shared fixtures in `fixtures.ts`).
+- **E2E:** add `tests/e2e/<name>.spec.ts` (shared fixtures in `fixtures.ts`; run on Chrome and/or Firefox via the scripts above).
 - **Rust:** add `#[cfg(test)]` modules under `crates/bmxt-core/src/`, or integration files under `crates/bmxt-core/tests/` — **not** under this directory.
 
 Do **not** put `*.test.ts` next to production files under `lib/`.
