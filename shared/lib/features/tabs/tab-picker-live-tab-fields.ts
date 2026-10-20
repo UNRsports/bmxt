@@ -1,6 +1,6 @@
 /** EN: Single source for tab title/url/favicon shown in the picker (decoupled from row rebuilds). */
 
-import { normalizeTabFavIconUrl } from "./tab-favicon-url"
+import { normalizeTabFavIconUrl } from "./tab-favicon-url.ts"
 
 export type TabPickerLiveTabFields = {
   title: string

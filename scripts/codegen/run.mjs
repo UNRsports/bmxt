@@ -1,5 +1,5 @@
 /**
- * 中立マニフェスト `manifest/bmxt-codegen.json` から TypeScript を生成する。
+ * 中立マニフェスト `shared/manifest/bmxt-codegen.json` から TypeScript を生成する。
  * 単一出力: `pnpm run codegen`
  */
 
@@ -620,12 +620,14 @@ function main() {
 
   const dispatchPath = join(
     root,
+    "shared",
     "lib",
     "features",
     "dispatch",
     "handlers",
     "apply-dispatch.gen.ts"
   )
+  ensureDir(dirname(dispatchPath))
   writeFileSync(dispatchPath, emitTsApplyDispatch(m.effects), "utf8")
 
   writeFileSync(
