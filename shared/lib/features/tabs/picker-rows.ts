@@ -146,7 +146,12 @@ export async function buildTabPickerRowsBundle(
     const activeRawTitle = active?.title ?? ""
     const activeRawUrl = active ? tabUrl(active) : ""
     if (activeTabId !== undefined) {
-      seedTabPickerLiveFields(activeTabId, activeRawTitle, activeRawUrl)
+      seedTabPickerLiveFields(
+        activeTabId,
+        activeRawTitle,
+        activeRawUrl,
+        resolveTabFaviconSrc(activeRawUrl, active?.favIconUrl)
+      )
     }
     const windowTitle =
       customName !== undefined ? customName : displayTitle(activeRawTitle, locale)
@@ -181,7 +186,8 @@ export async function buildTabPickerRowsBundle(
       const tabId = t.id!
       const rawTitle = t.title || ""
       const rawUrl = tabUrl(t)
-      seedTabPickerLiveFields(tabId, rawTitle, rawUrl)
+      const faviconSrc = resolveTabFaviconSrc(rawUrl, t.favIconUrl)
+      seedTabPickerLiveFields(tabId, rawTitle, rawUrl, faviconSrc)
       const groupColor =
         key === "none" ? null : normalizeTabGroupColor(groupMeta.get(key)?.color)
       rows.push({
@@ -192,7 +198,7 @@ export async function buildTabPickerRowsBundle(
         groupColor,
         title: rawTitle,
         url: rawUrl,
-        faviconSrc: resolveTabFaviconSrc(rawUrl),
+        faviconSrc,
         active: Boolean(t.active)
       })
     }

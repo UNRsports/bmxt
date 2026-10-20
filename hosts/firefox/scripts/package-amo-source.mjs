@@ -37,6 +37,7 @@ const excludes = [
   "--exclude=*.lcov",
   "--exclude=.cursor",
   "--exclude=shared/public/background-services.js",
+  "--exclude=shared/public/background-services.mjs",
   "--exclude=shared/public/bmxt_core_bg.wasm"
 ]
 

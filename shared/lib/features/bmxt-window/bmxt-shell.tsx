@@ -573,7 +573,7 @@ export function BmxtShell({
           const rawUrl = typeof tab.url === "string" ? tab.url : ""
           navReloadTabMetaRef.current.set(span.tabId, {
             title,
-            faviconSrc: resolveTabFaviconSrc(rawUrl),
+            faviconSrc: resolveTabFaviconSrc(rawUrl, tab.favIconUrl),
             label: title,
             url: rawUrl
           })

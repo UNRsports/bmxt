@@ -10,6 +10,11 @@ export function shouldPatchUrlOnTabUpdated(changeInfo: chrome.tabs.TabChangeInfo
   return changeInfo.url !== undefined
 }
 
+/** EN: Favicon URL field present — patch live favicon (Firefox; Chrome derives from page URL). */
+export function shouldPatchFavIconOnTabUpdated(changeInfo: chrome.tabs.TabChangeInfo): boolean {
+  return changeInfo.favIconUrl !== undefined
+}
+
 /** EN: Structural fields that require rebuilding the full picker row list. */
 export function shouldRebuildRowsOnTabUpdated(changeInfo: chrome.tabs.TabChangeInfo): boolean {
   return (
@@ -24,6 +29,7 @@ export function shouldHandleTabUpdated(changeInfo: chrome.tabs.TabChangeInfo): b
   return (
     shouldPatchTitleOnTabUpdated(changeInfo) ||
     shouldPatchUrlOnTabUpdated(changeInfo) ||
+    shouldPatchFavIconOnTabUpdated(changeInfo) ||
     shouldRebuildRowsOnTabUpdated(changeInfo)
   )
 }
@@ -36,7 +42,9 @@ export function shouldRefreshOnTabUpdated(changeInfo: chrome.tabs.TabChangeInfo)
 /** EN: Display-field change without structural fields (`status` is not structural). */
 export function isTitleOnlyTabUpdate(changeInfo: chrome.tabs.TabChangeInfo): boolean {
   return (
-    (shouldPatchTitleOnTabUpdated(changeInfo) || shouldPatchUrlOnTabUpdated(changeInfo)) &&
+    (shouldPatchTitleOnTabUpdated(changeInfo) ||
+      shouldPatchUrlOnTabUpdated(changeInfo) ||
+      shouldPatchFavIconOnTabUpdated(changeInfo)) &&
     !shouldRebuildRowsOnTabUpdated(changeInfo)
   )
 }

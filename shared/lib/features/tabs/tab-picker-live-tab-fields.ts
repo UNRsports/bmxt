@@ -1,8 +1,11 @@
-/** EN: Single source for tab title/url shown in the picker (decoupled from row rebuilds). */
+/** EN: Single source for tab title/url/favicon shown in the picker (decoupled from row rebuilds). */
+
+import { normalizeTabFavIconUrl } from "./tab-favicon-url"
 
 export type TabPickerLiveTabFields = {
   title: string
   url: string
+  faviconSrc: string | null
 }
 
 const committed = new Map<number, TabPickerLiveTabFields>()
@@ -40,13 +43,18 @@ function commitTabFields(tabId: number): void {
   }
   pending.delete(tabId)
 
-  const prev = committed.get(tabId) ?? { title: "", url: "" }
+  const prev = committed.get(tabId) ?? { title: "", url: "", faviconSrc: null }
   const next: TabPickerLiveTabFields = {
     title: patch.title ?? prev.title,
-    url: patch.url ?? prev.url
+    url: patch.url ?? prev.url,
+    faviconSrc: patch.faviconSrc !== undefined ? patch.faviconSrc : prev.faviconSrc
   }
 
-  if (next.title === prev.title && next.url === prev.url) {
+  if (
+    next.title === prev.title &&
+    next.url === prev.url &&
+    next.faviconSrc === prev.faviconSrc
+  ) {
     return
   }
   committed.set(tabId, next)
@@ -79,7 +87,14 @@ export function applyTabPickerLiveFieldsFromChrome(
   if (changeInfo.url !== undefined) {
     patch.url = changeInfo.url
   }
-  if (patch.title === undefined && patch.url === undefined) {
+  if (changeInfo.favIconUrl !== undefined) {
+    patch.faviconSrc = normalizeTabFavIconUrl(changeInfo.favIconUrl)
+  }
+  if (
+    patch.title === undefined &&
+    patch.url === undefined &&
+    patch.faviconSrc === undefined
+  ) {
     return
   }
 
@@ -92,12 +107,13 @@ export function applyTabPickerLiveFieldsFromChrome(
 export function seedTabPickerLiveFields(
   tabId: number,
   title: string,
-  url: string
+  url: string,
+  faviconSrc: string | null = null
 ): void {
   if (committed.has(tabId) || pending.has(tabId)) {
     return
   }
-  committed.set(tabId, { title, url })
+  committed.set(tabId, { title, url, faviconSrc })
   notify()
 }
 
@@ -142,4 +158,13 @@ export function resolveLiveTabUrl(tabId: number, fallback: string): string {
     return live.url
   }
   return fallback
+}
+
+/** EN: Favicon src from live store (Firefox path); null when unset. */
+export function resolveLiveTabFavicon(tabId: number): string | null {
+  const live = fieldsForTab(tabId)
+  if (live === undefined) {
+    return null
+  }
+  return live.faviconSrc
 }

@@ -27,6 +27,7 @@ dist/
 .wxt/
 shared/.wxt/
 shared/public/background-services.js
+shared/public/background-services.mjs
 
 
 # --- Testing / coverage ---

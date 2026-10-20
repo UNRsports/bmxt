@@ -27,25 +27,31 @@ export function hostPermissionsList(browser: HostBrowser): string[] {
 }
 
 export function hostCommands(browser: HostBrowser) {
+  // Chrome accepts `Shift+Alt+…`. Firefox MDN requires primary modifier first:
+  // Ctrl|Alt|Command|MacCtrl, then optional Shift — e.g. `Alt+Shift+C`.
+  // Same physical keys; string order differs or Gecko ignores the suggestion.
+  const chromeKeys = {
+    launch: { default: "Shift+Alt+C", mac: "Shift+Alt+C" },
+    reset: { default: "Shift+Alt+R", mac: "Shift+Alt+R" },
+    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" }
+  }
+  const firefoxKeys = {
+    launch: { default: "Alt+Shift+C", mac: "Alt+Shift+C" },
+    reset: { default: "Alt+Shift+R", mac: "Alt+Shift+R" },
+    toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" }
+  }
+  const keys = browser === "chrome" ? chromeKeys : firefoxKeys
+
   const launch = {
-    suggested_key: {
-      default: "Shift+Alt+C",
-      mac: "Shift+Alt+C"
-    },
+    suggested_key: keys.launch,
     description: "__MSG_commandLaunchBmxt__"
   }
   const reset = {
-    suggested_key: {
-      default: "Shift+Alt+R",
-      mac: "Shift+Alt+R"
-    },
+    suggested_key: keys.reset,
     description: "__MSG_commandResetBmxt__"
   }
   const toggleFloat = {
-    suggested_key: {
-      default: "Shift+Alt+F",
-      mac: "Shift+Alt+F"
-    },
+    suggested_key: keys.toggleFloat,
     description: "__MSG_commandToggleBmxtFloat__"
   }
 
@@ -57,7 +63,7 @@ export function hostCommands(browser: HostBrowser) {
     }
   }
 
-  // Firefox: `commands.*.global` is not supported — omit the field.
+  // Firefox: `commands.*.global` is not supported — shortcuts work only while Firefox is focused.
   return {
     "launch-bmxt": launch,
     "reset-bmxt": reset,
@@ -65,9 +71,21 @@ export function hostCommands(browser: HostBrowser) {
   }
 }
 
-export const hostContentSecurityPolicy = {
-  extension_pages:
-    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self';"
+/**
+ * EN: Chrome favicons are same-origin (`/_favicon/`). Firefox uses `tabs.Tab.favIconUrl`
+ * (often https:/http:/chrome:/moz-anno:), so img-src must allow those schemes.
+ * JA: Chrome の favicon は同一オリジン。Firefox は `favIconUrl`（https 等）のため img-src を拡張。
+ */
+export function hostContentSecurityPolicy(browser: HostBrowser): {
+  extension_pages: string
+} {
+  const imgSrc =
+    browser === "firefox"
+      ? "img-src 'self' data: blob: https: http: chrome: moz-anno:;"
+      : "img-src 'self' data: blob:;"
+  return {
+    extension_pages: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; ${imgSrc} font-src 'self' data:; worker-src 'self';`
+  }
 }
 
 export const hostIcons = {

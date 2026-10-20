@@ -321,7 +321,7 @@ export async function listNavReloadTabCandidates(
     if (!matchesNavReloadTabNeedle(title, rawUrl, prefix)) {
       continue
     }
-    const faviconSrc = resolveTabFaviconSrc(rawUrl)
+    const faviconSrc = resolveTabFaviconSrc(rawUrl, tab.favIconUrl)
     const insertToken = formatNavReloadTabToken(tab.id)
     out.push({
       insertToken,

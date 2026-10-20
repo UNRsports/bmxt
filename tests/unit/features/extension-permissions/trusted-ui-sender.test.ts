@@ -4,9 +4,20 @@ import { isTrustedBmxtUiSender } from "../../../../shared/lib/features/extension
 
 const EXT_ID = "abcdefghijklmnopqrstuvwxyzabcdef"
 
-function installChromeRuntimeMock(id: string): void {
-  const g = globalThis as typeof globalThis & { chrome?: { runtime: { id: string } } }
-  g.chrome = { runtime: { id } }
+function installChromeRuntimeMock(id: string, pageHost?: string): void {
+  const host = pageHost ?? id
+  const g = globalThis as typeof globalThis & {
+    chrome?: { runtime: { id: string; getURL: (path: string) => string } }
+  }
+  g.chrome = {
+    runtime: {
+      id,
+      getURL: (path: string) => {
+        const normalized = path.startsWith("/") ? path : `/${path}`
+        return `chrome-extension://${host}${normalized}`
+      }
+    }
+  }
 }
 
 describe("isTrustedBmxtUiSender", () => {
@@ -68,5 +79,48 @@ describe("isTrustedBmxtUiSender", () => {
     assert.equal(isTrustedBmxtUiSender({ id: EXT_ID }), false)
     assert.equal(isTrustedBmxtUiSender({ id: EXT_ID, url: "" }), false)
     assert.equal(isTrustedBmxtUiSender({ id: EXT_ID, url: "not a url" }), false)
+  })
+
+  it("accepts moz-extension UI pages (Firefox same-extension origin)", () => {
+    const ok = isTrustedBmxtUiSender({
+      id: EXT_ID,
+      url: `moz-extension://${EXT_ID}/bmxt.html`,
+      tab: { id: 42 } as chrome.tabs.Tab
+    })
+    assert.equal(ok, true)
+  })
+
+  it("accepts moz-extension float page with query", () => {
+    const ok = isTrustedBmxtUiSender({
+      id: EXT_ID,
+      url: `moz-extension://${EXT_ID}/bmxt-float.html?tabId=7`,
+      tab: { id: 7 } as chrome.tabs.Tab,
+      frameId: 1
+    })
+    assert.equal(ok, true)
+  })
+
+  it("accepts Firefox moz-extension host UUID when gecko.id differs from page host", () => {
+    const geckoId = "bmxt@unrsports"
+    const pageUuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    installChromeRuntimeMock(geckoId, pageUuid)
+    const g = globalThis as typeof globalThis & {
+      chrome?: { runtime: { id: string; getURL: (path: string) => string } }
+    }
+    g.chrome = {
+      runtime: {
+        id: geckoId,
+        getURL: (path: string) => {
+          const normalized = path.startsWith("/") ? path : `/${path}`
+          return `moz-extension://${pageUuid}${normalized}`
+        }
+      }
+    }
+    const ok = isTrustedBmxtUiSender({
+      id: geckoId,
+      url: `moz-extension://${pageUuid}/bmxt.html`,
+      tab: { id: 1 } as chrome.tabs.Tab
+    })
+    assert.equal(ok, true)
   })
 })

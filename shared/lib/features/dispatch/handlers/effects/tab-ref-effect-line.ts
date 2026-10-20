@@ -25,9 +25,10 @@ export async function resolveTabRefDisplay(
   }
   const title = (tab?.title ?? "").trim() || "(no title)"
   const url = typeof tab?.url === "string" ? tab.url : ""
+  const favIconUrl = typeof tab?.favIconUrl === "string" ? tab.favIconUrl : null
   return {
     title,
-    faviconSrc: resolveTabFaviconSrc(url)
+    faviconSrc: resolveTabFaviconSrc(url, favIconUrl)
   }
 }
 

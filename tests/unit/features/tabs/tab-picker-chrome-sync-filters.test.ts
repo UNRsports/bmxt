@@ -3,6 +3,7 @@ import { describe, it } from "node:test"
 import {
   isTitleOnlyTabUpdate,
   shouldHandleTabUpdated,
+  shouldPatchFavIconOnTabUpdated,
   shouldPatchTitleOnTabUpdated,
   shouldPatchUrlOnTabUpdated,
   shouldRebuildRowsOnTabUpdated,
@@ -16,6 +17,12 @@ describe("tab-picker-chrome-sync-filters", () => {
     assert.equal(shouldHandleTabUpdated({ status: "complete" }), false)
     assert.equal(shouldHandleTabUpdated({ title: "x" }), true)
     assert.equal(shouldHandleTabUpdated({ url: "https://a" }), true)
+    assert.equal(shouldHandleTabUpdated({ favIconUrl: "https://a/f.ico" }), true)
+  })
+
+  it("shouldPatchFavIconOnTabUpdated matches favIconUrl", () => {
+    assert.equal(shouldPatchFavIconOnTabUpdated({ favIconUrl: "https://a/f.ico" }), true)
+    assert.equal(shouldPatchFavIconOnTabUpdated({ status: "complete" }), false)
   })
 
   it("shouldPatchTitleOnTabUpdated matches any title field", () => {
@@ -41,6 +48,7 @@ describe("tab-picker-chrome-sync-filters", () => {
     assert.equal(isTitleOnlyTabUpdate({ title: "a", status: "complete" }), true)
     assert.equal(isTitleOnlyTabUpdate({ url: "https://a" }), true)
     assert.equal(isTitleOnlyTabUpdate({ title: "a", url: "https://b" }), true)
+    assert.equal(isTitleOnlyTabUpdate({ favIconUrl: "https://a/f.ico" }), true)
     assert.equal(isTitleOnlyTabUpdate({ title: "a", groupId: 1 }), false)
     assert.equal(isTitleOnlyTabUpdate({ status: "complete" }), false)
   })

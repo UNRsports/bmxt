@@ -77,7 +77,7 @@ export function createHostWxtConfig(browser: HostBrowser) {
       default_locale: "en",
       permissions: hostPermissionsList(browser),
       host_permissions: ["https://*/*"],
-      content_security_policy: hostContentSecurityPolicy,
+      content_security_policy: hostContentSecurityPolicy(browser),
       commands: hostCommands(browser),
       web_accessible_resources: [
         {

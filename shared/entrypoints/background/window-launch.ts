@@ -29,7 +29,13 @@ import {
 } from "./window-state"
 
 function setupBmxtWindowBoundsTracking(): void {
-  chrome.windows.onBoundsChanged.addListener((window) => {
+  // Chrome-only: Firefox has no windows.onBoundsChanged (calling addListener throws and
+  // would abort setupWindowLaunch before action/commands listeners register).
+  const onBoundsChanged = chrome.windows.onBoundsChanged
+  if (onBoundsChanged === undefined || typeof onBoundsChanged.addListener !== "function") {
+    return
+  }
+  onBoundsChanged.addListener((window) => {
     void (async () => {
       await hydrateBmxtWindowIdFromStorage()
       const bmxtWindowId = readBmxtWindowIdInMemory()
