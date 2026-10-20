@@ -620,6 +620,7 @@ function main() {
 
   const dispatchPath = join(
     root,
+    "shared",
     "lib",
     "features",
     "dispatch",
