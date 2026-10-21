@@ -46,7 +46,6 @@ https://github.com/UNRsports/bmxt/issues
 0.8.7：
 ・候補メニューへコマンドの説明表示を実装
 ・操作方法を学ぶためのチュートリアルを実装
-・FireFox版をリリース
 
 0.8.5：
 ・host_permissions権限によりページリロード不要での動作を実装

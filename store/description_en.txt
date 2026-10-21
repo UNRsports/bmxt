@@ -48,7 +48,6 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 0.8.7:
 - Implemented command descriptions in the candidate menu
 - Implemented a tutorial for learning how to use BMXt
-- Released the Firefox version
 
 0.8.5:
 - Required host_permissions enable in-page actions without a page reload
