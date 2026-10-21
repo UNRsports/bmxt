@@ -6,7 +6,7 @@ import {
   createJobHandle,
   isJobHandleActive,
   shouldCancelJob
-} from "../../../../lib/features/job/job-handle.ts"
+} from "../../../../shared/lib/features/job/job-handle.ts"
 
 describe("job-handle", () => {
   it("cancels the previous handle when a new one starts", () => {

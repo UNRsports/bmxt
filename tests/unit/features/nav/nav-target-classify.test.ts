@@ -5,7 +5,7 @@ import {
   formatNavTargetLabel,
   stableHrefKey,
   type NavTargetFacts
-} from "../../../../lib/features/nav/nav-target-classify.ts"
+} from "../../../../shared/lib/features/nav/nav-target-classify.ts"
 
 function baseFacts(over: Partial<NavTargetFacts> = {}): NavTargetFacts {
   return {

@@ -3,8 +3,8 @@
  */
 import { before, describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { ensureBmxtCoreForTests } from "../../../../../lib/features/bmxt-core/test-ensure-wasm.ts"
-import { segmentFailure, segmentSuccess } from "../../../../../lib/features/command-line/compound/classify-outcome.ts"
+import { ensureBmxtCoreForTests } from "../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
+import { segmentFailure, segmentSuccess } from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
 import {
   EXIT_FAILURE,
   EXIT_MISUSE,
@@ -14,22 +14,22 @@ import {
   exitStatusForCode,
   isExitSuccess,
   shouldRunAfterOperator
-} from "../../../../../lib/features/command-line/compound/exit-status.ts"
-import { parseCompoundSegments } from "../../../../../lib/features/command-line/compound/parse-compound-segments.ts"
+} from "../../../../../shared/lib/features/command-line/compound/exit-status.ts"
+import { parseCompoundSegments } from "../../../../../shared/lib/features/command-line/compound/parse-compound-segments.ts"
 import {
   decodeLogLine,
   encodeLogLine,
   mergeOutputLines
-} from "../../../../../lib/features/command-line/command-output.ts"
-import { applyRedirectsToOutcome } from "../../../../../lib/features/command-line/commands/apply-redirect.ts"
+} from "../../../../../shared/lib/features/command-line/command-output.ts"
+import { applyRedirectsToOutcome } from "../../../../../shared/lib/features/command-line/commands/apply-redirect.ts"
 import {
   isNullRedirectTarget,
   parseRedirects
-} from "../../../../../lib/features/command-line/commands/parse-redirect.ts"
-import { CLOSE_ACCEPTS_BMXT_RULE_KINDS, isClosePipeConsumer } from "../../../../../lib/features/command-line/pipe/consumers/close-match.ts"
-import { bmxtRuleStreamAcceptsKinds } from "../../../../../lib/features/command-line/pipe/consumers/stream-accepts-kinds.ts"
-import { bmxtRuleStreamFromListResult } from "../../../../../lib/features/bmxt-rule/adapters/from-list-result.ts"
-import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../../lib/features/command-line/list-output/types.ts"
+} from "../../../../../shared/lib/features/command-line/commands/parse-redirect.ts"
+import { CLOSE_ACCEPTS_BMXT_RULE_KINDS, isClosePipeConsumer } from "../../../../../shared/lib/features/command-line/pipe/consumers/close-match.ts"
+import { bmxtRuleStreamAcceptsKinds } from "../../../../../shared/lib/features/command-line/pipe/consumers/stream-accepts-kinds.ts"
+import { bmxtRuleStreamFromListResult } from "../../../../../shared/lib/features/bmxt-rule/adapters/from-list-result.ts"
+import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../../shared/lib/features/command-line/list-output/types.ts"
 
 /** EN: Keep in sync with `commands/registry.ts` — WASM owns grammar (Phase 6). */
 const EXPECTED_COMMAND_ENTRY_IDS = [] as const

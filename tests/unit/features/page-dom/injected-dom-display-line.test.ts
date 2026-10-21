@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { afterEach, describe, it } from "node:test"
 import { parseHTML } from "linkedom"
-import { formatDomElementLine } from "../../../../lib/features/page-dom/injected-dom-display-line.ts"
+import { formatDomElementLine } from "../../../../shared/lib/features/page-dom/injected-dom-display-line.ts"
 
 type ParsedDom = ReturnType<typeof parseHTML>
 

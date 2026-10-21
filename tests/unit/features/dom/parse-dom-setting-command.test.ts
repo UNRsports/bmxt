@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parseDomSettingCommandLine } from "../../../../lib/features/dom/parse-dom-setting-command.ts"
+import { parseDomSettingCommandLine } from "../../../../shared/lib/features/dom/parse-dom-setting-command.ts"
 
 describe("parseDomSettingCommandLine", () => {
   it("returns null for non-dom commands", () => {

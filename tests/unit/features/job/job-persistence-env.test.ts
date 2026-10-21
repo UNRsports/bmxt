@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { isJobSqlitePersistenceAvailable } from "../../../../lib/features/job/job-persistence-env.ts"
+import { isJobSqlitePersistenceAvailable } from "../../../../shared/lib/features/job/job-persistence-env.ts"
 
 describe("job-persistence-env", () => {
   it("is available under Node test (window + document polyfilled by node)", () => {

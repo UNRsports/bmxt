@@ -1,8 +1,8 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { isBrowsePipeConsumer, BROWSE_ACCEPTS_BMXT_RULE_KINDS } from "../../../../lib/features/command-line/pipe/consumers/browse-match.ts"
-import { resolvePickerFamily } from "../../../../lib/features/picker/resolve-family.ts"
-import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../lib/features/command-line/list-output/types.ts"
+import { isBrowsePipeConsumer, BROWSE_ACCEPTS_BMXT_RULE_KINDS } from "../../../../shared/lib/features/command-line/pipe/consumers/browse-match.ts"
+import { resolvePickerFamily } from "../../../../shared/lib/features/picker/resolve-family.ts"
+import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../shared/lib/features/command-line/list-output/types.ts"
 
 describe("browse pipe consumer match", () => {
   it("matches bare browse", () => {

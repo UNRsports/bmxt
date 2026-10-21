@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { scrollPickerListRowIntoView } from "../../../../../lib/features/side-picker/interaction/picker-list-scroll.ts"
+import { scrollPickerListRowIntoView } from "../../../../../shared/lib/features/side-picker/interaction/picker-list-scroll.ts"
 
 describe("scrollPickerListRowIntoView", () => {
   it("scrolls down when row extends below list viewport", () => {

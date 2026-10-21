@@ -5,13 +5,13 @@
 
 import assert from "node:assert/strict"
 import { describe, it, before } from "node:test"
-import { ensureBmxtCoreForTests } from "../../../../../lib/features/bmxt-core/test-ensure-wasm.ts"
+import { ensureBmxtCoreForTests } from "../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import {
   wasmTabsPickerConfirmPlan,
   wasmTabsPickerCreateGroupPlan,
   wasmTabsPickerReduce
-} from "../../../../../lib/features/bmxt-core/wasm-host.ts"
-import { parseWasmJson } from "../../../../../lib/features/bmxt-core/tabs-picker/parse-wasm-json.ts"
+} from "../../../../../shared/lib/features/bmxt-core/wasm-host.ts"
+import { parseWasmJson } from "../../../../../shared/lib/features/bmxt-core/tabs-picker/parse-wasm-json.ts"
 
 const emptyStateJson = JSON.stringify({
   hi: 0,

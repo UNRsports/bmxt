@@ -4,8 +4,8 @@ import {
   assignGlobalOccurrencesToPageMatches,
   findRawNeedleInHaystack,
   globalNeedleOccurrenceForLine
-} from "../../../../lib/features/page-dom/needle-occurrence.ts"
-import type { SearchPageMatch } from "../../../../lib/features/side-picker/model/picker-entry.ts"
+} from "../../../../shared/lib/features/page-dom/needle-occurrence.ts"
+import type { SearchPageMatch } from "../../../../shared/lib/features/side-picker/model/picker-entry.ts"
 
 describe("globalNeedleOccurrenceForLine", () => {
   const lines = [

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { isTerminalSessionsStateV1 } from "../../../../lib/features/bmxt-float/float-terminal-session-storage.ts"
+import { isTerminalSessionsStateV1 } from "../../../../shared/lib/features/bmxt-float/float-terminal-session-storage.ts"
 
 describe("float-terminal-session-storage", () => {
   it("accepts a valid v2 sessions blob", () => {

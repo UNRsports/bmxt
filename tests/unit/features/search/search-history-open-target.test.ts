@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   searchEntryOffersOpenDestination,
   type PickerEntry
-} from "../../../../lib/features/side-picker/model/picker-entry.ts"
+} from "../../../../shared/lib/features/side-picker/model/picker-entry.ts"
 
 function entry(partial: Partial<PickerEntry> & Pick<PickerEntry, "id" | "source" | "title" | "url">): PickerEntry {
   return {

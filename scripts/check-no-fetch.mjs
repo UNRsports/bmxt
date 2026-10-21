@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const roots = [
-  join(root, "entrypoints"),
-  join(root, "lib")
+  join(root, "shared", "entrypoints"),
+  join(root, "shared", "lib")
 ]
 
 const fetchRe = /\bfetch\s*\(/g

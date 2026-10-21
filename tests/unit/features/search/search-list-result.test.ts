@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { buildSearchListResult } from "../../../../lib/features/search/search-list-result.ts"
-import type { PickerEntry } from "../../../../lib/features/side-picker/model/picker-entry.ts"
+import { buildSearchListResult } from "../../../../shared/lib/features/search/search-list-result.ts"
+import type { PickerEntry } from "../../../../shared/lib/features/side-picker/model/picker-entry.ts"
 
 describe("buildSearchListResult", () => {
   it("maps picker entries to search.hit records", () => {

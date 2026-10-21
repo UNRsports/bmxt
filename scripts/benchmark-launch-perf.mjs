@@ -25,7 +25,7 @@ function runLaunchUnitTests() {
 
 function verifyBuiltBackground() {
   console.log("\n== built background checks ==")
-  const wasmPath = path.join(root, "public/bmxt_core_bg.wasm")
+  const wasmPath = path.join(root, "shared/public/bmxt_core_bg.wasm")
   if (!fs.existsSync(wasmPath)) {
     console.error("Missing", wasmPath, "— run pnpm run build:wasm first")
     process.exit(1)

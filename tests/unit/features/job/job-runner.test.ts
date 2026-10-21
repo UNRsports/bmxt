@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { JobRunner } from "../../../../lib/features/job/job-runner.ts"
+import { JobRunner } from "../../../../shared/lib/features/job/job-runner.ts"
 
 describe("JobRunner", () => {
   it("supersedes an in-flight search-list job", async () => {

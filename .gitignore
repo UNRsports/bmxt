@@ -2,14 +2,18 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # --- Dependencies ---
-/node_modules
+# EN: Ignore anywhere (not only repo-root) so nested installs cannot be committed.
+node_modules/
 /.pnp
 .pnp.js
 .pnp.*
 
 
-# --- pnpm ---
+# --- Package managers（this repo is pnpm-only）---
 .pnpm-store/
+package-lock.json
+yarn.lock
+npm-shrinkwrap.json
 # Do not commit registry tokens in .npmrc (save-exact=true is committed)
 
 
@@ -25,7 +29,9 @@ out/
 dist/
 .cache/
 .wxt/
-public/background-services.js
+shared/.wxt/
+shared/public/background-services.js
+shared/public/background-services.mjs
 
 
 # --- Testing / coverage ---
@@ -90,8 +96,8 @@ Desktop.ini
 # --- Rust / Cargo（wasm 含む。再現可能なビルドツリー）---
 **/target/
 
-# Copied by build:wasm for the extension package (canonical: lib/wasm/bmxt-core/)
-/public/bmxt_core_bg.wasm
+# Copied by build:wasm for the extension package (canonical: shared/lib/wasm/bmxt-core/)
+/shared/public/bmxt_core_bg.wasm
 
 
 # --- Rust / LLVM coverage ---
@@ -101,8 +107,10 @@ Desktop.ini
 
 # --- Browser extension ---
 *.crx
+*.xpi
 *.signed.xpi
 web-ext-artifacts/
+# EN: Unsigned/local XPI outside `.output/` (AMO zips stay under ignored `.output/`).
 
 
 # --- Misc packaged artifacts ---

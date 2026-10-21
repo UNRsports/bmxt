@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { tabPickerRowsStructureKey } from "../../../../lib/features/tabs/tab-picker-rows-structure.ts"
+import { tabPickerRowsStructureKey } from "../../../../shared/lib/features/tabs/tab-picker-rows-structure.ts"
 import {
   consumePickerSelfTabActivation as consumeTabPickerSelfActivation,
   markPickerSelfTabActivation as markTabPickerSelfActivation
-} from "../../../../lib/features/side-picker/preview/picker-self-tab-activation.ts"
-import type { TabPickerRow } from "../../../../lib/features/tabs/picker-rows.ts"
+} from "../../../../shared/lib/features/side-picker/preview/picker-self-tab-activation.ts"
+import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
 
 const rows: TabPickerRow[] = [
   {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { tokenizeDomHtmlSnippet } from "../../../../lib/features/dom/dom-html-tokenize.ts"
+import { tokenizeDomHtmlSnippet } from "../../../../shared/lib/features/dom/dom-html-tokenize.ts"
 
 function texts(kind: string, tokens: ReturnType<typeof tokenizeDomHtmlSnippet>): string[] {
   return tokens.filter((t) => t.kind === kind).map((t) => t.text)

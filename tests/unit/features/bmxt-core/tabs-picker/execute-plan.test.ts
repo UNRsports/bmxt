@@ -5,8 +5,8 @@
 
 import assert from "node:assert/strict"
 import { before, describe, it } from "node:test"
-import { ensureBmxtCoreForTests } from "../../../../../lib/features/bmxt-core/test-ensure-wasm.ts"
-import { resolveTabsPickerMovePlan } from "../../../../../lib/features/bmxt-core/tabs-picker/execute-plan-wasm.ts"
+import { ensureBmxtCoreForTests } from "../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
+import { resolveTabsPickerMovePlan } from "../../../../../shared/lib/features/bmxt-core/tabs-picker/execute-plan-wasm.ts"
 
 type MovePlan = {
   targetKind: string

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { isDomListPickerFollowEnabled } from "../../../../lib/features/dom/dom-list-follow-enabled.ts"
-import type { DomListPickerState } from "../../../../lib/features/dom/dom-list-picker-input.ts"
+import { isDomListPickerFollowEnabled } from "../../../../shared/lib/features/dom/dom-list-follow-enabled.ts"
+import type { DomListPickerState } from "../../../../shared/lib/features/dom/dom-list-picker-input.ts"
 
 const linesPicker: DomListPickerState = {
   kind: "lines",

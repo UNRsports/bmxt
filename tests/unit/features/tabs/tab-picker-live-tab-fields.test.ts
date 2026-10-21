@@ -7,7 +7,7 @@ import {
   getTabPickerLiveTabFieldsRevision,
   resolveLiveTabTitle,
   subscribeTabPickerLiveTabFields
-} from "../../../../lib/features/tabs/tab-picker-live-tab-fields.ts"
+} from "../../../../shared/lib/features/tabs/tab-picker-live-tab-fields.ts"
 
 const COMMIT_WAIT_MS = 400
 

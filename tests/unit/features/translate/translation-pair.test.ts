@@ -6,7 +6,7 @@ import {
   pairIdFromSettingToken,
   parseTranslationPairId,
   settingTokenForPairId
-} from "../../../../lib/features/translate/translation-pair.ts"
+} from "../../../../shared/lib/features/translate/translation-pair.ts"
 
 describe("translation-pair", () => {
   it("maps setting tokens to pair ids", () => {

@@ -5,7 +5,7 @@ import {
   nearestCandidateIndexByPoint,
   spatialDirFromDelta,
   type SpatialRect
-} from "../../../../lib/features/page-dom/spatial-element-nav.ts"
+} from "../../../../shared/lib/features/page-dom/spatial-element-nav.ts"
 
 describe("spatial-element-nav", () => {
   const grid: SpatialRect[] = [

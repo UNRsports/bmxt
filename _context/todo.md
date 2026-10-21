@@ -6,7 +6,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 ## Active
 
-### A. `| browse` pipe-only（実装済み — 手元スモーク）
+### 1. `| browse` pipe-only（実装済み — 手元スモーク）
 
 **正規形:** `<list-command> | browse`（例: `tab -list | browse` · `setting -list | browse`）。
 
@@ -26,13 +26,13 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] プレフィックス `browse tab -list` がエラー案内になる
 - [ ] 裸 `browse` が usage のみ
 
-### B. Open product
+### 2. Open product
 
 - [ ] **dom Enter** — ピッカー行 Enter の確定挙動（旧 §7）
 - [ ] （任意）find/dom 系の `PickerListShell` 統合
 - [ ] （任意）`TabPickerOverlay` リネーム掃除
 
-### C. Manual smoke backlog
+### 3. Manual smoke backlog
 
 実装は完了扱い。退行確認のみ。
 
@@ -45,7 +45,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
 | list columns | tab / search / dom / setting / session |
 
-### D. Live reload（ページリロード非依存の CS）
+### 4. Live reload（ページリロード非依存の CS）
 
 **目標:** 導入〜ページ内実行〜拡張更新を、対象ページの再読み込みなしで完遂する。「リロードしないと動かない」誤解による離脱を防ぐ。
 
@@ -71,8 +71,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **実装チェック**
 
-- [x] `wxt.config.ts`: https を必須 `host_permissions` へ
-- [x] `lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
+- [x] host `wxt.config` / `hosts/create-host-wxt-config.ts`: https を必須 `host_permissions` へ
+- [x] `shared/lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
 - [x] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
 - [x] `onInstalled`（install / update）で open tabs へ bulk reinject
 - [x] content script 冪等化
@@ -84,6 +84,22 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] 二重注入しても overlay / float が二重にならない
 - [ ] `chrome://` 等は従来どおり拒否
 
+### E. Chrome + Firefox 共有リポジトリ（§5.3–5.6 — 実装済み）
+
+| 項目 | 状態 |
+|------|------|
+| レイアウト | `shared/` + `hosts/chrome/` + `hosts/firefox/` |
+| ビルド | `pnpm run build` → 両方 · `build:chrome` / `build:firefox` → 単体 |
+| AMO | `hosts/firefox/AMO_SOURCE.md` · `pnpm run package:amo-source` |
+| IR | `HostEffect` / `applyHostEffects`（ワイヤー `kind` 不変） |
+| e2e | WebDriver 統一（`test:e2e:chrome` / `test:e2e:firefox`）。Playwright は廃止 |
+| 残 | 手元で FF アンパック窓スモーク · §5.4 専用機能隔離の仕上げ |
+
+- [x] Chromium / Firefox 共有 WebDriver E2E（command smoke · prompt integrity · CJK）
+- [x] `tutorial` コマンド + コーチ UI（edit20261019 からマージ）
+- [ ] Firefox: `about:debugging` で窓起動 + 主要コアコマンド手確認
+- [ ] （次）Translator / FSA / favicon を Chrome 側へ隔離（フラグ）
+
 ---
 
 ## Archive（ポインタのみ）
@@ -93,12 +109,12 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | §1–7 | side-picker 再構成 → `lib/features/side-picker/` |
 | §8–9 | `ListResult` / `-list` レジストリ（`--picker` は廃止済み） |
 | §10 | BMXt POSIX Profile（README 公開・conformance テスト） |
-| §11 | 旧プレフィックス `picker`/`browse <list>` 時代。**`| browse` に置換**（本 Active A） |
-| §12 | nav インクリメンタル — 実装済・スモークは Active C |
+| §11 | 旧プレフィックス `picker`/`browse <list>` 時代。**`| browse` に置換**（本 Active 1） |
+| §12 | nav インクリメンタル — 実装済・スモークは Active 3 |
 | §13–14 | WASM prompt / complete SoT |
-| §15 | float ホスト — 実装済・スモークは Active C |
+| §15 | float ホスト — 実装済・スモークは Active 3 |
 | §16 | `tab -back` 等 → **§18 で独立 first に置換済み** |
-| §17 | Host IR bmxt-host/2（Phases A–E 完了） |
-| §18–19 | `back`/`forward`/`reload`/`close` + `tab:` チップ — 実装済・スモークは Active C |
+| §17 | Host IR bmxt-host/2（当時 Phases A–E・完了） |
+| §18–19 | `back`/`forward`/`reload`/`close` + `tab:` チップ — 実装済・スモークは Active 3 |
 
-**語彙索引:** `lib/features/command-line/inter-command/` · `manifest/templates/` · README アーキテクチャ節。
+**語彙索引:** `shared/lib/features/command-line/inter-command/` · `shared/manifest/templates/` · README アーキテクチャ節 · `hosts/README.md`。

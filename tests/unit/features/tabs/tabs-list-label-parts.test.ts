@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { plainLabelPartsForTabPickerRow } from "../../../../lib/features/tabs/tabs-list-label-parts.ts"
-import type { TabPickerRow } from "../../../../lib/features/tabs/picker-rows.ts"
+import { plainLabelPartsForTabPickerRow } from "../../../../shared/lib/features/tabs/tabs-list-label-parts.ts"
+import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
 
 describe("plainLabelPartsForTabPickerRow", () => {
   it("uses full-word i18n keys instead of W/G/T abbreviations", () => {

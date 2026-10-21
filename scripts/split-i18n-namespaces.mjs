@@ -12,8 +12,8 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
-const srcPath = process.argv[2] ?? join(root, "lib/features/setting/i18n/messages.monolithic.json")
-const outDir = join(root, "lib/features/setting/i18n/namespaces")
+const srcPath = process.argv[2] ?? join(root, "shared/lib/features/setting/i18n/messages.monolithic.json")
+const outDir = join(root, "shared/lib/features/setting/i18n/namespaces")
 
 const src = JSON.parse(readFileSync(srcPath, "utf8"))
 mkdirSync(outDir, { recursive: true })

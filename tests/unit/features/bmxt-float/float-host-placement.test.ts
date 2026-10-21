@@ -6,7 +6,7 @@ import {
   inflateRect,
   pickFloatCorner,
   rectsOverlap
-} from "../../../../lib/features/bmxt-float/float-host-placement.ts"
+} from "../../../../shared/lib/features/bmxt-float/float-host-placement.ts"
 
 describe("float-host-placement", () => {
   it("maps corners into viewport with margin", () => {

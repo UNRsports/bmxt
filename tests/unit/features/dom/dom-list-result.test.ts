@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { domCaptureToListResult } from "../../../../lib/features/dom/dom-list-result.ts"
+import { domCaptureToListResult } from "../../../../shared/lib/features/dom/dom-list-result.ts"
 
 describe("domCaptureToListResult", () => {
   it("keeps notice-only captures as records for plain output", () => {

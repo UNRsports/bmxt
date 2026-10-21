@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SHELL = ROOT / "lib/features/bmxt-window/bmxt-shell.tsx"
+SHELL = ROOT / "shared/lib/features/bmxt-window/bmxt-shell.tsx"
 
 HOOK_IMPORTS = """import { usePromptPickers } from "./shell/usePromptPickers"
 import { useNavPromptBridge } from "./shell/useNavPromptBridge"

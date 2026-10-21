@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { normalizePickerOpenUrl } from "../../../../../lib/features/side-picker/model/normalize-picker-open-url.ts"
+import { normalizePickerOpenUrl } from "../../../../../shared/lib/features/side-picker/model/normalize-picker-open-url.ts"
 
 describe("normalizePickerOpenUrl", () => {
   it("accepts http(s) URLs", () => {

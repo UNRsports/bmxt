@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { resolveSecondTokenPickerHit } from "../../../../lib/features/command-line/second-token-picker.ts"
+import { resolveSecondTokenPickerHit } from "../../../../shared/lib/features/command-line/second-token-picker.ts"
 
 describe("resolveSecondTokenPickerHit", () => {
   it("offers second heads for complete first command without trailing space", () => {

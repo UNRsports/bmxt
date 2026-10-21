@@ -4,8 +4,8 @@ import { describe, it } from "node:test"
 import {
   mergeSessionsStatePreservingStableRefs,
   sessionsUiSnapshotEqual
-} from "../../../../../lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.ts"
-import type { TerminalSessionsStateV1 } from "../../../../../lib/features/bmxt-window/terminal-sessions/types.ts"
+} from "../../../../../shared/lib/features/bmxt-window/terminal-sessions/sessions-ui-equality.ts"
+import type { TerminalSessionsStateV1 } from "../../../../../shared/lib/features/bmxt-window/terminal-sessions/types.ts"
 
 function baseState(): TerminalSessionsStateV1 {
   return {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { resolveVisibleRailPickers } from "../../../../../lib/features/side-picker/wrappers/use-picker-rail-presence.ts"
+import { resolveVisibleRailPickers } from "../../../../../shared/lib/features/side-picker/wrappers/use-picker-rail-presence.ts"
 
 describe("resolveVisibleRailPickers", () => {
   it("prefers live openPickers when any slot is open", () => {

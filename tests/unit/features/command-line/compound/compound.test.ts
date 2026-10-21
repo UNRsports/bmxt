@@ -1,9 +1,9 @@
 import { before, describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { ensureBmxtCoreForTests } from "../../../../../lib/features/bmxt-core/test-ensure-wasm.ts"
-import { lineHasAndOperator, parseAndSegments } from "../../../../../lib/features/command-line/compound/parse-and-segments.ts"
-import { parseCompoundSegments } from "../../../../../lib/features/command-line/compound/parse-compound-segments.ts"
-import { lineHasPipeOperator, parsePipeSegments } from "../../../../../lib/features/command-line/compound/parse-pipe-segments.ts"
+import { ensureBmxtCoreForTests } from "../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
+import { lineHasAndOperator, parseAndSegments } from "../../../../../shared/lib/features/command-line/compound/parse-and-segments.ts"
+import { parseCompoundSegments } from "../../../../../shared/lib/features/command-line/compound/parse-compound-segments.ts"
+import { lineHasPipeOperator, parsePipeSegments } from "../../../../../shared/lib/features/command-line/compound/parse-pipe-segments.ts"
 
 before(() => {
   ensureBmxtCoreForTests()
@@ -12,7 +12,7 @@ import {
   classifyOutcomeFromLines,
   segmentFailure,
   segmentSuccess
-} from "../../../../../lib/features/command-line/compound/classify-outcome.ts"
+} from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
 import {
   EXIT_FAILURE,
   EXIT_MISUSE,
@@ -22,8 +22,8 @@ import {
   exitStatusForCode,
   isExitSuccess,
   shouldRunAfterOperator
-} from "../../../../../lib/features/command-line/compound/exit-status.ts"
-import { resolveActiveCommandSegment } from "../../../../../lib/features/command-line/compound/active-segment.ts"
+} from "../../../../../shared/lib/features/command-line/compound/exit-status.ts"
+import { resolveActiveCommandSegment } from "../../../../../shared/lib/features/command-line/compound/active-segment.ts"
 
 describe("parseAndSegments", () => {
   it("splits on && outside quotes", () => {

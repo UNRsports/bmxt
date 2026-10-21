@@ -12,7 +12,7 @@ import {
   spanForTrimmedSlice,
   splitBufferForBlockHighlight,
   TRANSLATE_PENDING_TEXT
-} from "../../../../lib/features/translate/translation-segments.ts"
+} from "../../../../shared/lib/features/translate/translation-segments.ts"
 
 describe("spanForTrimmedSlice", () => {
   it("returns null for whitespace-only slice", () => {

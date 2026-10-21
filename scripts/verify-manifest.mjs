@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
-const manifestPath = join(root, "manifest", "bmxt-codegen.json")
-const registryPath = join(root, "crates", "bmxt-core", "src", "generated", "registry_table.rs")
+const manifestPath = join(root, "shared", "manifest", "bmxt-codegen.json")
+const registryPath = join(root, "shared", "crates", "bmxt-core", "src", "generated", "registry_table.rs")
 
 function verifySubcommandHeadsInSource(c, rs, helpCmdSource) {
   if (!Array.isArray(c.subcommands)) {
@@ -54,12 +54,12 @@ function verifyCanonicalInRegistry(c, registry) {
 function main() {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
   const registry = readFileSync(registryPath, "utf8")
-  const helpCmdPath = join(root, "crates", "bmxt-core", "src", "cmd", "help_cmd.rs")
+  const helpCmdPath = join(root, "shared", "crates", "bmxt-core", "src", "cmd", "help_cmd.rs")
   const helpCmdSource = readFileSync(helpCmdPath, "utf8")
   const cmds = manifest.commands
 
   for (const c of cmds) {
-    const p = join(root, "crates", "bmxt-core", "src", "cmd", `${c.module}.rs`)
+    const p = join(root, "shared", "crates", "bmxt-core", "src", "cmd", `${c.module}.rs`)
     let rs
     try {
       rs = readFileSync(p, "utf8")

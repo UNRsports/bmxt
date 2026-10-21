@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/bmxt-core"]
+members = ["shared/crates/bmxt-core"]
 
 [profile.release]
 lto = true

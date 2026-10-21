@@ -18,10 +18,10 @@ import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
-const crateDir = join(root, "crates", "bmxt-core")
-const outDir = join(root, "lib", "wasm", "bmxt-core")
+const crateDir = join(root, "shared", "crates", "bmxt-core")
+const outDir = join(root, "shared", "lib", "wasm", "bmxt-core")
 const wasmSrc = join(outDir, "bmxt_core_bg.wasm")
-const wasmDest = join(root, "public", "bmxt_core_bg.wasm")
+const wasmDest = join(root, "shared", "public", "bmxt_core_bg.wasm")
 const maxKiB = 400
 
 execFileSync(

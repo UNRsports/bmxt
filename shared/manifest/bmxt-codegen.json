@@ -1,0 +1,663 @@
+{
+  "schemaVersion": 1,
+  "commands": [
+    {
+      "module": "clear",
+      "canonicalName": "clear",
+      "aliases": [
+        "cls"
+      ],
+      "usagePrimary": "clear",
+      "subcommands": []
+    },
+    {
+      "module": "back",
+      "canonicalName": "back",
+      "aliases": [],
+      "usagePrimary": "back | … | back",
+      "subcommands": []
+    },
+    {
+      "module": "close",
+      "canonicalName": "close",
+      "aliases": [
+        "c"
+      ],
+      "usagePrimary": "close | close <tabId> | … | close",
+      "subcommands": []
+    },
+    {
+      "module": "dom",
+      "canonicalName": "dom",
+      "aliases": [],
+      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": [
+            "--normal",
+            "--with",
+            "--html",
+            "--react",
+            "--tag"
+          ],
+          "tail": "rest"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": [
+            "-list"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": [
+            "-page-active"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "exit",
+      "canonicalName": "exit",
+      "aliases": [],
+      "usagePrimary": "exit",
+      "subcommands": []
+    },
+    {
+      "module": "search",
+      "canonicalName": "search",
+      "aliases": [],
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": [
+            "--all",
+            "--history",
+            "--bookmark",
+            "--page",
+            "--snapshot",
+            "--unlimit"
+          ],
+          "tail": "rest"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": [
+            "-list"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "group",
+      "canonicalName": "group",
+      "aliases": [],
+      "usagePrimary": "group new",
+      "subcommands": []
+    },
+    {
+      "module": "help_cmd",
+      "canonicalName": "help",
+      "aliases": [
+        "?"
+      ],
+      "usagePrimary": "help",
+      "subcommands": []
+    },
+    {
+      "module": "forward",
+      "canonicalName": "forward",
+      "aliases": [],
+      "usagePrimary": "forward | … | forward",
+      "subcommands": []
+    },
+    {
+      "module": "reload",
+      "canonicalName": "reload",
+      "aliases": [],
+      "usagePrimary": "reload | … | reload",
+      "subcommands": []
+    },
+    {
+      "module": "tabs",
+      "canonicalName": "tab",
+      "aliases": [],
+      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": [
+            "-url"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": [
+            "-list"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": [
+            "-page-active"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "-moveurl",
+          "tail": "rest_http_url"
+        },
+        {
+          "head": "-nowurl",
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "nav",
+      "canonicalName": "nav",
+      "aliases": [],
+      "usagePrimary": "nav -enter | nav -exit | nav -windowclose",
+      "subcommands": [
+        {
+          "head": "-enter",
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "tail": "none"
+        },
+        {
+          "head": "-windowclose",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "translate",
+      "canonicalName": "translate",
+      "aliases": [],
+      "usagePrimary": "translate -on | translate -off | translate -setting | translate help",
+      "subcommands": [
+        {
+          "head": "-on",
+          "tail": "none"
+        },
+        {
+          "head": "-off",
+          "tail": "none"
+        },
+        {
+          "head": "-setting",
+          "trailingTokens": [
+            "--ja-en",
+            "--en-ja"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "aboutbmxt",
+      "canonicalName": "aboutbmxt",
+      "aliases": [],
+      "usagePrimary": "aboutbmxt",
+      "subcommands": []
+    },
+    {
+      "module": "session",
+      "canonicalName": "session",
+      "aliases": [],
+      "usagePrimary": "session -new [name] | session -list | session -switch [name] | session -next | session -prev | session -setting-name [name] | session help",
+      "subcommands": [
+        {
+          "head": "-new",
+          "tail": "rest"
+        },
+        {
+          "head": "-list",
+          "tail": "none"
+        },
+        {
+          "head": "-switch",
+          "tail": "rest"
+        },
+        {
+          "head": "-next",
+          "tail": "none"
+        },
+        {
+          "head": "-prev",
+          "tail": "none"
+        },
+        {
+          "head": "-setting-name",
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "snapshot",
+      "canonicalName": "snapshot",
+      "aliases": [],
+      "usagePrimary": "snapshot -save [<tabId>]",
+      "subcommands": [
+        {
+          "head": "-save",
+          "tail": "rest"
+        }
+      ]
+    },
+    {
+      "module": "browse",
+      "canonicalName": "browse",
+      "aliases": [],
+      "usagePrimary": "<list-command> | browse",
+      "subcommands": []
+    },
+    {
+      "module": "setting",
+      "canonicalName": "setting",
+      "aliases": [],
+      "usagePrimary": "setting -list | setting -exit -list | setting help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "tail": "none"
+        },
+        {
+          "head": "-exit",
+          "trailingTokens": [
+            "-list"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "tutorial",
+      "canonicalName": "tutorial",
+      "aliases": [],
+      "usagePrimary": "tutorial | tutorial -start | tutorial -skip | tutorial help",
+      "subcommands": [
+        {
+          "head": "-start",
+          "tail": "none"
+        },
+        {
+          "head": "-skip",
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    }
+  ],
+  "effects": [
+    {
+      "kind": "clear_log",
+      "rustVariant": "ClearLog",
+      "shape": "unit",
+      "tsHandlerFile": "clear-log",
+      "tsHandlerExport": "applyClearLogEffect"
+    },
+    {
+      "kind": "close_current_tab",
+      "rustVariant": "CloseCurrentTab",
+      "shape": "unit",
+      "tsHandlerFile": "close-current-tab",
+      "tsHandlerExport": "applyCloseCurrentTabEffect"
+    },
+    {
+      "kind": "close_current_window",
+      "rustVariant": "CloseCurrentWindow",
+      "shape": "unit",
+      "tsHandlerFile": "close-current-window",
+      "tsHandlerExport": "applyCloseCurrentWindowEffect"
+    },
+    {
+      "kind": "close_tab",
+      "rustVariant": "CloseTab",
+      "shape": "record",
+      "fields": {
+        "tab_id": "i32"
+      },
+      "tsHandlerFile": "close-tab",
+      "tsHandlerExport": "applyCloseTabEffect"
+    },
+    {
+      "kind": "dom_list",
+      "rustVariant": "DomList",
+      "shape": "record",
+      "fields": {
+        "flavor": "string",
+        "pattern": "string",
+        "pickerMode": "string",
+        "showTag": "string"
+      },
+      "tsHandlerFile": "dom-list",
+      "tsHandlerExport": "applyDomListEffect"
+    },
+    {
+      "kind": "exit_pane",
+      "rustVariant": "ExitPane",
+      "shape": "unit",
+      "tsHandlerFile": "exit-pane",
+      "tsHandlerExport": "applyExitPaneEffect"
+    },
+    {
+      "kind": "search_bookmark",
+      "rustVariant": "SearchBookmark",
+      "shape": "record",
+      "fields": {
+        "pattern": "string"
+      },
+      "tsHandlerFile": "search-bookmark",
+      "tsHandlerExport": "applySearchBookmarkEffect"
+    },
+    {
+      "kind": "search_history",
+      "rustVariant": "SearchHistory",
+      "shape": "record",
+      "fields": {
+        "pattern": "string"
+      },
+      "tsHandlerFile": "search-history",
+      "tsHandlerExport": "applySearchHistoryEffect"
+    },
+    {
+      "kind": "search_page",
+      "rustVariant": "SearchPage",
+      "shape": "record",
+      "fields": {
+        "pattern": "string"
+      },
+      "tsHandlerFile": "search-page",
+      "tsHandlerExport": "applySearchPageEffect"
+    },
+    {
+      "kind": "search_snapshot",
+      "rustVariant": "SearchSnapshot",
+      "shape": "record",
+      "fields": {
+        "pattern": "string"
+      },
+      "tsHandlerFile": "search-snapshot",
+      "tsHandlerExport": "applySearchSnapshotEffect"
+    },
+    {
+      "kind": "group_new",
+      "rustVariant": "GroupNew",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "group-new",
+      "tsHandlerExport": "applyGroupNewEffect"
+    },
+    {
+      "kind": "navigate_current_tab",
+      "rustVariant": "NavigateCurrentTab",
+      "shape": "record",
+      "fields": {
+        "url": "string"
+      },
+      "tsHandlerFile": "navigate-current-tab",
+      "tsHandlerExport": "applyNavigateCurrentTabEffect"
+    },
+    {
+      "kind": "tab_go_back",
+      "rustVariant": "TabGoBack",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "tab-go-back",
+      "tsHandlerExport": "applyTabGoBackEffect"
+    },
+    {
+      "kind": "tab_go_forward",
+      "rustVariant": "TabGoForward",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "tab-go-forward",
+      "tsHandlerExport": "applyTabGoForwardEffect"
+    },
+    {
+      "kind": "tab_reload",
+      "rustVariant": "TabReload",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "tab-reload",
+      "tsHandlerExport": "applyTabReloadEffect"
+    },
+    {
+      "kind": "open_url_new_tab",
+      "rustVariant": "OpenUrlNewTab",
+      "shape": "record",
+      "fields": {
+        "url": "string"
+      },
+      "tsHandlerFile": "open-url-new-tab",
+      "tsHandlerExport": "applyOpenUrlNewTabEffect"
+    },
+    {
+      "kind": "open_url_new_window",
+      "rustVariant": "OpenUrlNewWindow",
+      "shape": "record",
+      "fields": {
+        "url": "string"
+      },
+      "tsHandlerFile": "open-url-new-window",
+      "tsHandlerExport": "applyOpenUrlNewWindowEffect"
+    },
+    {
+      "kind": "open_welcome_page",
+      "rustVariant": "OpenWelcomePage",
+      "shape": "unit",
+      "tsHandlerFile": "open-welcome-page",
+      "tsHandlerExport": "applyOpenWelcomePageEffect"
+    },
+    {
+      "kind": "session_new",
+      "rustVariant": "SessionNew",
+      "shape": "record",
+      "fields": {
+        "name": "string"
+      },
+      "tsHandlerFile": "session-new",
+      "tsHandlerExport": "applySessionNewEffect"
+    },
+    {
+      "kind": "session_next",
+      "rustVariant": "SessionNext",
+      "shape": "unit",
+      "tsHandlerFile": "session-next",
+      "tsHandlerExport": "applySessionNextEffect"
+    },
+    {
+      "kind": "session_prev",
+      "rustVariant": "SessionPrev",
+      "shape": "unit",
+      "tsHandlerFile": "session-prev",
+      "tsHandlerExport": "applySessionPrevEffect"
+    },
+    {
+      "kind": "tabs_move_url",
+      "rustVariant": "TabsMoveUrl",
+      "shape": "record",
+      "fields": {
+        "url": "string"
+      },
+      "tsHandlerFile": "tabs-move-url",
+      "tsHandlerExport": "applyTabsMoveUrlEffect"
+    },
+    {
+      "kind": "search_list",
+      "rustVariant": "SearchList",
+      "shape": "record",
+      "fields": {
+        "dispatch_line": "string"
+      },
+      "tsHandlerFile": "search-list",
+      "tsHandlerExport": "applySearchListEffect"
+    },
+    {
+      "kind": "tabs_nu",
+      "rustVariant": "TabsNu",
+      "shape": "unit",
+      "tsHandlerFile": "tabs-nu",
+      "tsHandlerExport": "applyTabsNuEffect"
+    },
+    {
+      "kind": "tabs_list",
+      "rustVariant": "TabsList",
+      "shape": "record",
+      "fields": {
+        "show_url": "string"
+      },
+      "tsHandlerFile": "tabs-list",
+      "tsHandlerExport": "applyTabsListEffect"
+    }
+  ],
+  "uiActions": [
+    {
+      "kind": "show_help",
+      "rustVariant": "ShowHelp",
+      "shape": "unit"
+    },
+    {
+      "kind": "nav_arm",
+      "rustVariant": "NavArm",
+      "shape": "unit"
+    },
+    {
+      "kind": "nav_disarm",
+      "rustVariant": "NavDisarm",
+      "shape": "unit"
+    },
+    {
+      "kind": "nav_confirm_close",
+      "rustVariant": "NavConfirmClose",
+      "shape": "record",
+      "fields": {
+        "target": "string"
+      }
+    },
+    {
+      "kind": "open_plain_list",
+      "rustVariant": "OpenPlainList",
+      "shape": "record",
+      "fields": {
+        "list_id": "string",
+        "line": "string"
+      }
+    },
+    {
+      "kind": "close_picker",
+      "rustVariant": "ClosePicker",
+      "shape": "record",
+      "fields": {
+        "slot": "string"
+      }
+    },
+    {
+      "kind": "continuation_prompt",
+      "rustVariant": "ContinuationPrompt",
+      "shape": "record",
+      "fields": {
+        "prefix": "string"
+      }
+    },
+    {
+      "kind": "session_switch",
+      "rustVariant": "SessionSwitch",
+      "shape": "record",
+      "fields": {
+        "name": "string"
+      }
+    },
+    {
+      "kind": "session_setting_name",
+      "rustVariant": "SessionSettingName",
+      "shape": "record",
+      "fields": {
+        "name": "string"
+      }
+    },
+    {
+      "kind": "group_new_from_selection",
+      "rustVariant": "GroupNewFromSelection",
+      "shape": "unit"
+    },
+    {
+      "kind": "set_mode",
+      "rustVariant": "SetMode",
+      "shape": "record",
+      "fields": {
+        "feature_id": "string",
+        "mode": "string"
+      }
+    },
+    {
+      "kind": "snapshot_save",
+      "rustVariant": "SnapshotSave",
+      "shape": "record",
+      "fields": {
+        "line": "string"
+      }
+    },
+    {
+      "kind": "open_picker",
+      "rustVariant": "OpenPicker",
+      "shape": "record",
+      "fields": {
+        "list_id": "string",
+        "line": "string",
+        "show_url": "string"
+      }
+    },
+    {
+      "kind": "picker_pass",
+      "rustVariant": "PickerPass",
+      "shape": "unit"
+    }
+  ]
+}

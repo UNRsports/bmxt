@@ -1,17 +1,17 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { buildSnapshotFileName, uniquifySnapshotFileName } from "../../../../lib/features/snapshot/snapshot-filename.ts"
+import { buildSnapshotFileName, uniquifySnapshotFileName } from "../../../../shared/lib/features/snapshot/snapshot-filename.ts"
 import {
   buildSnapshotMarkdown,
   parseSnapshotMarkdownMeta,
   snapshotMarkdownBodyLines
-} from "../../../../lib/features/snapshot/snapshot-markdown.ts"
-import { parseSnapshotSaveLine } from "../../../../lib/features/snapshot/snapshot-save-input.ts"
+} from "../../../../shared/lib/features/snapshot/snapshot-markdown.ts"
+import { parseSnapshotSaveLine } from "../../../../shared/lib/features/snapshot/snapshot-save-input.ts"
 import {
   formatSnapshotVaultDisplayName,
   snapshotVaultRelativePath
-} from "../../../../lib/features/snapshot/snapshot-vault-layout.ts"
-import { normalizeSnapshotStorageConfig } from "../../../../lib/features/snapshot/snapshot-storage-mode.ts"
+} from "../../../../shared/lib/features/snapshot/snapshot-vault-layout.ts"
+import { normalizeSnapshotStorageConfig } from "../../../../shared/lib/features/snapshot/snapshot-storage-mode.ts"
 
 describe("normalizeSnapshotStorageConfig", () => {
   it("defaults to bundled destination", () => {

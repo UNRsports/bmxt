@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { resolveSearchArrowRightTarget } from "../../../../lib/features/search/search-arrow-right-target.ts"
+import { resolveSearchArrowRightTarget } from "../../../../shared/lib/features/search/search-arrow-right-target.ts"
 
 describe("resolveSearchArrowRightTarget", () => {
   it("routes closed-tab history rows to destination even with detail hits", () => {

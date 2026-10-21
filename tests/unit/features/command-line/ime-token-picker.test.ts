@@ -5,7 +5,7 @@ import {
   matchesOptionTokenFilter,
   pickThirdTokenCandidates,
   resolveOptionTokenFilterModes
-} from "../../../../lib/features/command-line/ime-token-match.ts"
+} from "../../../../shared/lib/features/command-line/ime-token-match.ts"
 
 const SETTING_APPEARANCE_FLAGS = [
   "--fg",

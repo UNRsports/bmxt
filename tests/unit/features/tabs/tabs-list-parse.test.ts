@@ -1,6 +1,6 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { parseTabsListLine } from "../../../../lib/features/tabs/tabs-list-parse.ts"
+import { parseTabsListLine } from "../../../../shared/lib/features/tabs/tabs-list-parse.ts"
 
 describe("parseTabsListLine", () => {
   it("parses plain list default", () => {

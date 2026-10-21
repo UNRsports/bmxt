@@ -1,9 +1,9 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../../lib/features/command-line/list-output/types.ts"
-import { buildSearchListResult } from "../../../../../lib/features/search/search-list-result.ts"
-import type { PickerEntry } from "../../../../../lib/features/side-picker/model/picker-entry.ts"
-import { pickerEntriesFromSearchListResult } from "../../../../../lib/features/picker/from-list-result/search-entries.ts"
+import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../../shared/lib/features/command-line/list-output/types.ts"
+import { buildSearchListResult } from "../../../../../shared/lib/features/search/search-list-result.ts"
+import type { PickerEntry } from "../../../../../shared/lib/features/side-picker/model/picker-entry.ts"
+import { pickerEntriesFromSearchListResult } from "../../../../../shared/lib/features/picker/from-list-result/search-entries.ts"
 
 describe("pickerEntriesFromSearchListResult", () => {
   it("restores pageMatches and windowId from buildSearchListResult", () => {

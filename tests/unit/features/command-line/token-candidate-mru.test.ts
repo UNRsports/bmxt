@@ -5,7 +5,7 @@ import {
   rankTokenCandidates,
   resetTokenCandidateMruMemoryCacheForTests,
   seedTokenCandidateMruMemoryForTests
-} from "../../../../lib/features/command-line/token-candidate-mru.ts"
+} from "../../../../shared/lib/features/command-line/token-candidate-mru.ts"
 
 describe("rankTokenCandidates", () => {
   it("sorts alphabetically when MRU is empty", () => {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parseTabChipProducerSegment } from "../../../../../../lib/features/command-line/pipe/producers/tab-chip-producer.ts"
+import { parseTabChipProducerSegment } from "../../../../../../shared/lib/features/command-line/pipe/producers/tab-chip-producer.ts"
 
 describe("parseTabChipProducerSegment", () => {
   it("parses chip ids", () => {

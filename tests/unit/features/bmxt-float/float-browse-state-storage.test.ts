@@ -4,7 +4,7 @@ import {
   createEmptyFloatBrowseState,
   isFloatBrowseStateV1,
   parseFloatBrowseState
-} from "../../../../lib/features/bmxt-float/float-browse-state-storage.ts"
+} from "../../../../shared/lib/features/bmxt-float/float-browse-state-storage.ts"
 
 describe("float-browse-state-storage", () => {
   it("parses a valid browse blob", () => {

@@ -5,7 +5,7 @@ import {
   syncNavSpatialCursorToElement,
   syncNavSpatialSelectionIndex,
   type NavSpatialCandidates
-} from "../../../../lib/features/nav/nav-spatial-in-page.ts"
+} from "../../../../shared/lib/features/nav/nav-spatial-in-page.ts"
 
 describe("nav-spatial-in-page cursor sync", () => {
   it("navSpatialPointerForIndex uses box center", () => {

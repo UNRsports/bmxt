@@ -3,7 +3,7 @@ import { describe, it } from "node:test"
 import {
   listManifestContentScriptInjections,
   listManifestContentScriptMatches
-} from "../../../../lib/features/page-scripting/ensure-content-script.ts"
+} from "../../../../shared/lib/features/page-scripting/ensure-content-script.ts"
 
 describe("ensure-content-script manifest helpers", () => {
   it("lists js injections from content_scripts", () => {

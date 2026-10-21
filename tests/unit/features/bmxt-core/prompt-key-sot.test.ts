@@ -9,16 +9,16 @@ import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join, relative } from "node:path"
 
 const root = join(import.meta.dirname, "..", "..", "..", "..")
-const featuresRoot = join(root, "lib", "features")
+const featuresRoot = join(root, "shared", "lib", "features")
 
 /** Files allowed to call tCmd for Chrome/live outcome mapping (still expand via helpers preferred). */
 const ALLOWLIST_RELATIVE = new Set([
-  "lib/features/bmxt-core/expand-msgs.ts",
-  "lib/features/setting/i18n/ns/cmd.ts",
-  "lib/features/setting/i18n/messages.ts",
+  "shared/lib/features/bmxt-core/expand-msgs.ts",
+  "shared/lib/features/setting/i18n/ns/cmd.ts",
+  "shared/lib/features/setting/i18n/messages.ts",
   "tests/unit/features/setting/i18n/messages.test.ts",
   // Live UI / picker state labels (host-only OK per §14.1) — not prompt grammar SoT
-  "lib/features/bmxt-window/shell/apply-ui-action.ts"
+  "shared/lib/features/bmxt-window/shell/apply-ui-action.ts"
 ])
 
 const TCMD_CMD_RE = /tCmd\s*\(\s*["']cmd\./g

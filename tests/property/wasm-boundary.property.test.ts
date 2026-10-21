@@ -6,7 +6,7 @@
 import assert from "node:assert/strict"
 import { before, describe, it } from "node:test"
 import * as fc from "fast-check"
-import { ensureBmxtCoreForTests } from "../../lib/features/bmxt-core/test-ensure-wasm.ts"
+import { ensureBmxtCoreForTests } from "../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import {
   wasmClassify,
   wasmComplete,
@@ -14,7 +14,7 @@ import {
   wasmParsePipe,
   wasmPlanCompound,
   wasmRun
-} from "../../lib/features/bmxt-core/wasm-host.ts"
+} from "../../shared/lib/features/bmxt-core/wasm-host.ts"
 
 function isWellFormedUtf16(s: string): boolean {
   for (let i = 0; i < s.length; i += 1) {

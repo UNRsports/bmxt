@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * EN: Build background-services.js as a separate IIFE bundle (not inlined into background.js).
- * JA: background-services.js を別 IIFE バンドルとして出力（background.js に含めない）。
+ * EN: Build background-services as IIFE (Chrome SW `importScripts`) and ESM (Firefox).
+ * JA: background-services を IIFE（Chrome SW の importScripts）と ESM（Firefox）の両方で出力。
  */
 
 import esbuild from "esbuild"
@@ -10,23 +10,24 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("..", import.meta.url))
-const nodeEmptyShim = join(root, "lib/shims/node-empty.ts")
-const entry = join(root, "entrypoints/background/background-services.ts")
-const outfile = join(root, "public/background-services.js")
-const wasmPublic = join(root, "public/bmxt_core_bg.wasm")
+const nodeEmptyShim = join(root, "shared/lib/shims/node-empty.ts")
+const entryIife = join(root, "shared/entrypoints/background/background-services.ts")
+const entryEsm = join(
+  root,
+  "shared/entrypoints/background/background-services-esm-entry.ts"
+)
+const outfileIife = join(root, "shared/public/background-services.js")
+const outfileEsm = join(root, "shared/public/background-services.mjs")
+const wasmPublic = join(root, "shared/public/bmxt_core_bg.wasm")
 
 if (!existsSync(wasmPublic)) {
   console.warn("warning: public/bmxt_core_bg.wasm missing — run pnpm run build:wasm")
 }
 
-await esbuild.build({
-  entryPoints: [entry],
+const shared = {
   bundle: true,
-  format: "iife",
-  globalName: "BmxtBackgroundServices",
   platform: "browser",
   target: "es2022",
-  outfile,
   sourcemap: false,
   alias: {
     fs: nodeEmptyShim,
@@ -34,6 +35,22 @@ await esbuild.build({
     crypto: nodeEmptyShim
   },
   logLevel: "info"
+}
+
+await esbuild.build({
+  ...shared,
+  entryPoints: [entryIife],
+  format: "iife",
+  globalName: "BmxtBackgroundServices",
+  outfile: outfileIife
 })
 
-console.log("built", outfile)
+await esbuild.build({
+  ...shared,
+  entryPoints: [entryEsm],
+  format: "esm",
+  outfile: outfileEsm
+})
+
+console.log("built", outfileIife)
+console.log("built", outfileEsm)

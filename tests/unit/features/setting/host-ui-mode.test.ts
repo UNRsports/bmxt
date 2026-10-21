@@ -4,7 +4,7 @@ import {
   normalizeHostUiMode,
   resolveExtraKeysVisible,
   resolveHostUiFormFactor
-} from "../../../../lib/features/setting/host-ui-mode.ts"
+} from "../../../../shared/lib/features/setting/host-ui-mode.ts"
 
 describe("normalizeHostUiMode", () => {
   it("keeps known tokens and defaults invalid to auto", () => {

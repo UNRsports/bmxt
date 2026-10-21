@@ -1,12 +1,12 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import type { SearchPageMatch } from "../../../../lib/features/side-picker/model/picker-entry.ts"
+import type { SearchPageMatch } from "../../../../shared/lib/features/side-picker/model/picker-entry.ts"
 import {
   pageMatchesForDisplay,
   pickPageMatchForDisplay,
   resolveSearchPickerPageMatchFromMatches,
   lineHitIndexForPageMatch
-} from "../../../../lib/features/search/search-picker-page-match.ts"
+} from "../../../../shared/lib/features/search/search-picker-page-match.ts"
 
 describe("pageMatchesForDisplay", () => {
   it("prefers body line hits over title hits", () => {

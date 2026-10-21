@@ -9,7 +9,7 @@ import * as fc from "fast-check"
 import {
   MAX_SESSION_NAME_LEN,
   sanitizeSessionName
-} from "../../lib/features/session/session-summary.ts"
+} from "../../shared/lib/features/session/session-summary.ts"
 
 describe("sanitizeSessionName (property)", () => {
   it("never throws on arbitrary strings", () => {

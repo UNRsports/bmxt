@@ -10,7 +10,7 @@ import {
   searchListEffectScopesForToken,
   searchListPatternFromLine,
   shouldShowSearchListPatternPlaceholder
-} from "../../../../lib/features/search/search-list-picker-parse.ts"
+} from "../../../../shared/lib/features/search/search-list-picker-parse.ts"
 
 describe("isSearchListReadyToRun", () => {
   it("allows scope-only dispatch with empty pattern", () => {

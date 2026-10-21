@@ -5,7 +5,7 @@ import {
   markLaunchPhase,
   readLaunchPerfMarks,
   resetLaunchPerf
-} from "../../../../lib/features/launch/launch-perf.ts"
+} from "../../../../shared/lib/features/launch/launch-perf.ts"
 
 describe("launch perf", () => {
   it("records phases relative to reset origin", () => {

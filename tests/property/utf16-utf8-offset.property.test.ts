@@ -9,7 +9,7 @@ import * as fc from "fast-check"
 import {
   utf16OffsetToUtf8ByteOffset,
   utf8ByteOffsetToUtf16Offset
-} from "../../lib/features/bmxt-core/utf16-utf8-offset.ts"
+} from "../../shared/lib/features/bmxt-core/utf16-utf8-offset.ts"
 
 /** EN: Reject lone UTF-16 surrogates (TextEncoder replaces them; round-trip would fail). */
 function isWellFormedUtf16(s: string): boolean {

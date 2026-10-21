@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { shouldPreserveLogSelectionOnKey } from "../../../../../lib/features/bmxt-window/shell/usePromptTypingFocus.ts"
+import { shouldPreserveLogSelectionOnKey } from "../../../../../shared/lib/features/bmxt-window/shell/usePromptTypingFocus.ts"
 
 describe("shouldPreserveLogSelectionOnKey", () => {
   it("preserves selection when Control is pressed alone", () => {

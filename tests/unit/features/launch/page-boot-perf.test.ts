@@ -6,7 +6,7 @@ import {
   markPageBootPhase,
   readPageBootPerfMarks,
   resetPageBootPerf
-} from "../../../../lib/features/launch/page-boot-perf.ts"
+} from "../../../../shared/lib/features/launch/page-boot-perf.ts"
 
 describe("page boot perf", () => {
   it("records phases relative to reset origin", () => {

@@ -1,9 +1,9 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { formatListPipeLines, formatRecordPipeLine } from "../../../../../lib/features/command-line/list-output/format-pipe.ts"
-import { formatListPlainLines } from "../../../../../lib/features/command-line/list-output/format-plain-lines.ts"
-import type { ListRecord, ListResult } from "../../../../../lib/features/command-line/list-output/types.ts"
-import { LIST_OUTPUT_SCHEMA } from "../../../../../lib/features/command-line/list-output/types.ts"
+import { formatListPipeLines, formatRecordPipeLine } from "../../../../../shared/lib/features/command-line/list-output/format-pipe.ts"
+import { formatListPlainLines } from "../../../../../shared/lib/features/command-line/list-output/format-plain-lines.ts"
+import type { ListRecord, ListResult } from "../../../../../shared/lib/features/command-line/list-output/types.ts"
+import { LIST_OUTPUT_SCHEMA } from "../../../../../shared/lib/features/command-line/list-output/types.ts"
 
 const sampleRecord: ListRecord = {
   kind: "tabs.tab",

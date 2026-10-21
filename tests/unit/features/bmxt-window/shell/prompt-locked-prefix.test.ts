@@ -4,7 +4,7 @@ import {
   answerAfterLockedPrefix,
   clampPromptLockedPrefix,
   lockedPrefixBlocksDelete
-} from "../../../../../lib/features/bmxt-window/shell/prompt-locked-prefix.ts"
+} from "../../../../../shared/lib/features/bmxt-window/shell/prompt-locked-prefix.ts"
 
 const PREFIX = "Close this tab? [y/n]:"
 

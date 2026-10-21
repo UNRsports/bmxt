@@ -6,7 +6,7 @@ import {
   encodeLogLines,
   mergeOutputLines,
   STDERR_LOG_PREFIX
-} from "../../../../lib/features/command-line/command-output.ts"
+} from "../../../../shared/lib/features/command-line/command-output.ts"
 
 describe("encodeLogLine / decodeLogLine", () => {
   it("round-trips stdout without a prefix", () => {

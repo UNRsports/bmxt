@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, "..")
-const manifestPath = join(root, "manifest", "bmxt-codegen.json")
+const manifestPath = join(root, "shared", "manifest", "bmxt-codegen.json")
 
 function usage() {
   console.error(
@@ -43,7 +43,7 @@ function main() {
     process.exit(1)
   }
 
-  const cmdPath = join(root, "crates", "bmxt-core", "src", "cmd", `${moduleName}.rs`)
+  const cmdPath = join(root, "shared", "crates", "bmxt-core", "src", "cmd", `${moduleName}.rs`)
   if (existsSync(cmdPath)) {
     console.error(`file already exists: ${cmdPath}`)
     process.exit(1)
@@ -62,7 +62,7 @@ pub fn run(_args: &[String]) -> DispatchBundle {
 
   writeFileSync(cmdPath, body + "\n", "utf8")
 
-  const modPath = join(root, "crates", "bmxt-core", "src", "cmd", "mod.rs")
+  const modPath = join(root, "shared", "crates", "bmxt-core", "src", "cmd", "mod.rs")
   let modRs = readFileSync(modPath, "utf8")
   if (!modRs.includes(`pub mod ${moduleName};`)) {
     modRs = modRs.replace(

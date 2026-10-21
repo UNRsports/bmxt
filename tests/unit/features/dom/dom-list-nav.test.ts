@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "../../../../lib/features/dom/dom-list-nav.ts"
+import { adjacentDomFocusHi, firstFocusableDomLineIndex } from "../../../../shared/lib/features/dom/dom-list-nav.ts"
 
 describe("dom-list-nav", () => {
   it("finds first focusable line", () => {

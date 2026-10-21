@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import { afterEach, describe, it } from "node:test"
 import { parseHTML } from "linkedom"
-import { buildPathForElement } from "../../../../lib/features/page-dom/injected-dom-path.ts"
-import { bmxtDomClickLinkAtPathInjected } from "../../../../lib/features/page-dom/injected-dom-click-path.ts"
+import { buildPathForElement } from "../../../../shared/lib/features/page-dom/injected-dom-path.ts"
+import { bmxtDomClickLinkAtPathInjected } from "../../../../shared/lib/features/page-dom/injected-dom-click-path.ts"
 
 type ParsedDom = ReturnType<typeof parseHTML>
 

@@ -42,6 +42,8 @@
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
   - [Testing](#testing)
+    - [How to run](#testing-how-to-run)
+    - [What E2E covers](#testing-e2e-coverage)
   - [pnpm dependencies and security](#pnpm-dependencies)
   - [Project layout (WXT)](#project-layout)
   - [Main Sources](#main-sources)
@@ -123,22 +125,30 @@ BMXt is not only an efficiency tool for engineers; it also aims to build reliabl
 ## Technical Overview
 
 
-The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3): entrypoints under **`entrypoints/`**, static assets under **`public/`** (including **`_locales/`**), manifest overrides in **`wxt.config.ts`**, output under **`.output/`**.
+The following is a technical overview. From the toolbar icon, you can open/focus the BMXt window and run tab/window/group operations plus one-line URL navigation from the command line. Built with [WXT](https://wxt.dev/) (Manifest V3).
 
-**Layout:** Command **semantics** (parse / registry / options / pipe·compound plans / tabs-picker plans) live in **Rust → WASM** (`crates/bmxt-core/`, packaged under **`lib/wasm/bmxt-core/`**). TypeScript owns Chrome API effects (`lib/features/dispatch/`), content scripts, and React UI (`lib/features/<feature>/`). Thin host glue is in **`lib/features/bmxt-core/`** (`runDispatch`, `ensureBmxtCore`, UiAction apply). See also `.cursorrules`. **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
+**Repository layout (multi-browser):**
+
+| Path | Role |
+|------|------|
+| **`shared/`** | Browser-agnostic source — entrypoints, `lib/`, Rust/`bmxt-core` WASM, `public/`, command `manifest/` |
+| **`hosts/chrome/`** | Chrome MV3 WXT config (**`pnpm run build:chrome`**; **`verify`** / CWS) |
+| **`hosts/firefox/`** | Firefox MV3 WXT config + **[AMO source kit](hosts/firefox/AMO_SOURCE.md)** |
+
+**Layout:** Command **semantics** (parse / registry / options / pipe·compound plans / tabs-picker plans) live in **Rust → WASM** (`shared/crates/bmxt-core/`, packaged under **`shared/lib/wasm/bmxt-core/`**). TypeScript owns host API effects (`shared/lib/features/dispatch/`), content scripts, and React UI (`shared/lib/features/<feature>/`). Thin host glue is in **`shared/lib/features/bmxt-core/`** (`runDispatch`, `ensureBmxtCore`, UiAction apply). See also `.cursorrules` and **[`hosts/README.md`](hosts/README.md)**. **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
 
 **Command-line conventions** (first/second commands, Tab completion, Enter when a second token is required) are summarized in **[Command-line token model](#command-line-token-model)**.
 
-**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Manifest overrides live in **`wxt.config.ts`** (not **`package.json`**). Entrypoints are under **`entrypoints/`**; static assets under **`public/`**; build output under **`.output/`** (dev: **`.output/chrome-mv3-dev`**, prod: **`.output/chrome-mv3`**). Since **0.8.0**, TypeScript is **6.x** and command interpretation runs in a bundled **Rust → WASM** core (`crates/bmxt-core/`).
+**Toolchain (since 0.6.9):** the extension shell is built with **[WXT](https://wxt.dev/)** and **[pnpm](https://pnpm.io/)** only. Do **not** use **`npm`**, **`npm ci`**, **`npx`**, or **`package-lock.json`** — the lockfile is **`pnpm-lock.yaml`**. Host manifests live under **`hosts/*/wxt.config.ts`** (WXT `root` = **`shared/`**). Entrypoints are under **`shared/entrypoints/`**; static assets under **`shared/public/`**; build output under **`.output/`** (Chrome prod: **`.output/chrome-mv3`**, Firefox: **`.output/firefox-mv3`**). Since **0.8.0**, TypeScript is **6.x** and command interpretation runs in a bundled **Rust → WASM** core (`shared/crates/bmxt-core/`).
 
 | Former (Plasmo / npm) | Current (WXT / pnpm) |
 |-----------------------|----------------------|
-| **`tabs/bmxt.tsx`** | **`entrypoints/bmxt/main.tsx`** (+ **`index.html`** → **`bmxt.html`**) |
-| **`background.ts`** (repo root) | **`entrypoints/background/index.ts`** |
-| **`contents/bmxt-nav-overlay.ts`** | **`entrypoints/bmxt-nav-overlay.content/index.ts`** |
-| **`locales/`** | **`public/_locales/`** |
+| **`tabs/bmxt.tsx`** | **`shared/entrypoints/bmxt/main.tsx`** (+ **`index.html`** → **`bmxt.html`**) |
+| **`background.ts`** (repo root) | **`shared/entrypoints/background/index.ts`** |
+| **`contents/bmxt-nav-overlay.ts`** | **`shared/entrypoints/bmxt-nav-overlay.content/index.ts`** |
+| **`locales/`** | **`shared/public/_locales/`** |
 | **`build/chrome-mv3`** | **`.output/chrome-mv3`** |
-| Manifest in **`package.json`** | **`wxt.config.ts`** (+ **`version`** still in **`package.json`**) |
+| Manifest in **`package.json`** | **`hosts/chrome/wxt.config.ts`** / **`hosts/firefox/wxt.config.ts`** (+ **`version`** still in root **`package.json`**) |
 | **`npm ci`** / **`package-lock.json`** | **`pnpm install --frozen-lockfile`** / **`pnpm-lock.yaml`** |
 
 <a id="key-specs"></a>
@@ -153,10 +163,10 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 
 <a id="permissions-manifest"></a>
 
-### Permissions (`wxt.config.ts` manifest)
+### Permissions (host `wxt.config.ts` manifest)
 
 
-Manifest overrides live in **`wxt.config.ts`** (WXT merges them into the built **`manifest.json`**). Declared permissions: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. **Since 0.8.5:** required **`host_permissions`** are **`https://*/*` only** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`lib/features/page-scripting/`). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) is **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without that host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under `chrome://extensions`, in-page commands explain how to re-enable it.
+Manifest overrides live in **`hosts/chrome/wxt.config.ts`** / **`hosts/firefox/wxt.config.ts`** (via **`hosts/create-host-wxt-config.ts`**; WXT merges them into the built **`manifest.json`**). Chrome declares **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Firefox omits **`favicon`** and does not set **`commands.*.global`** (unsupported). **Since 0.8.5:** required **`host_permissions`** are **`https://*/*` only** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`shared/lib/features/page-scripting/`). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) is **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without that host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under the browser’s extension settings, in-page commands explain how to re-enable it.
 
 **Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
@@ -227,6 +237,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 |----------|------|
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
+| `tutorial` | Interactive coach for `tab -list \| browse` (`tutorial` / `tutorial -start` / `tutorial -skip`; auto-starts on first launch) |
 | `clear` | Clear logs |
 | `exit` | Close the **active terminal session**; when it is the **last** session, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `tab` | Show available options, then restore prompt to `tab ` for option input |
@@ -339,7 +350,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 **`RUN_CMD` flow (fallback commands — e.g. `close`, `help`, `session -new`):**
 
 1. UI sends **`RUN_CMD`** with `{ line, sessionId, sessionOrderLength }`.
-2. Service Worker runs **`runDispatch`** / **`applyChromeEffects`** (tabs, scripting, etc.).
+2. Service Worker runs **`runDispatch`** / **`applyHostEffects`** (tabs, scripting, etc.).
 3. SW returns **`{ ok: true, patches: SessionPatch[], closeWindow? }`** — no session snapshot push.
 4. UI applies patches locally via **`applyRunCmdPatches`** (`appendLog`, `setLog`, `createSession`, `exitSession`, …).
 
@@ -601,6 +612,7 @@ When changing UI settings shape or on-disk format in a release:
 |-----|--------|
 | **language** | `--japanese` / `--english` (UI display language) |
 | **edit-picker** | **`on`** — show extra rows to customize picker columns separately; **`off`** — picker columns follow global appearance |
+| **ime-candidate-help** | **`on`** (default) — show usage help beside IME candidate tokens; **`off`** — token column only |
 | **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force layout. **mobile** (since **0.8.2**): soft key bar; prompt candidate menus support tap-to-select and outside-tap dismiss. **desktop**: keyboard-centric candidate close (**Esc** / **↑** at top), matching **0.8.0** |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
@@ -891,6 +903,15 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 
 **Authoritative lists** live in **`manifest/bmxt-codegen.json`** (`commands[]`, `effects[]`, **`uiActions[]`**). **`pnpm run codegen`** regenerates TS metadata (`registry/table.gen.ts`, `effect-types.ts`, `ui-action-types.ts`, `apply-dispatch.gen.ts`, completion helpers) **and** Rust tables (`crates/bmxt-core/src/generated/` including **`ui_action.rs`**). Built-in command **`run`** logic is in **`crates/bmxt-core/src/cmd/*.rs`**. Chrome effects are applied in **`lib/features/dispatch/handlers/effects/`**. Host IR contract: **`bmxt-host/2`** (generic UiAction primitives; see `lib/features/command-line/inter-command/`). Command-name semantic branches in the TS host are gated by **`pnpm run verify:host-blind`**.
 
+**Host / extension URL boundary**
+
+| Layer | Owns |
+|-------|------|
+| **Core (WASM + shared TS)** | `HostEffect` / plans — browser-agnostic |
+| **Host adapters** | `chrome.*` today; Firefox later via the same IR |
+| **Extension page URLs** | **`lib/features/extension-url/`** — `chrome-extension:` **and** `moz-extension:`. Prefer **`chrome.runtime.getURL`** / **`browser.runtime.getURL`** at runtime; use **`extensionPageUrl` / `parseExtensionPageUrl`** in trust checks, E2E, and tests (do **not** hard-code `chrome-extension://…`). |
+| **Privileged SW messages** | **`isTrustedBmxtUiSender`** (`lib/features/extension-permissions/`) — allowlists `bmxt.html` / `bmxt-float.html` on either extension protocol |
+
 **Runtime boundary**
 
 ```
@@ -899,7 +920,7 @@ prompt / RUN_CMD
   → run(line, locale) / classify  (Rust WASM)
   → { ty: lines | effects | ui | msgs }
        msgs → TS expand-msgs (+ optional promptPrefix → setContinuationPrompt)
-       effects → applyChromeEffects (SW) or RUN_CMD round-trip
+       effects → applyHostEffects (SW) or RUN_CMD round-trip
        ui → applyUiAction (React host; opaque kinds only — no grammar re-parse)
 ```
 
@@ -1082,7 +1103,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on https pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
-- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
+- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyHostEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
 
 <a id="job-execution"></a>
 
@@ -1129,7 +1150,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
 - **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Then implement **`run`** using a template under **`manifest/templates/`**.
 - **Manual path:** Add **`commands[]`** row + **`crates/bmxt-core/src/cmd/<module>.rs`** + wire **`cmd/mod.rs`**, then **`pnpm run codegen`** and **`pnpm run build:wasm`**.
-- **Reuse path (prefer):** Return only existing **`ChromeEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
+- **Reuse path (prefer):** Return only existing **`HostEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
 - **Extend path (only if needed):**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
@@ -1151,7 +1172,7 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
 5. Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, then **`pnpm run build`** as needed.
 
-**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
+**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`HostEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
 
 #### Adding a plain `-list` producer (registry plugin)
 
@@ -1205,16 +1226,16 @@ pnpm run dev
 
 `pnpm run dev` runs **`wxt`**: a watch build that updates **`.output/chrome-mv3-dev`**. Keep the terminal process running while you work.
 
-If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** before reloading the extension so generated TypeScript stays in sync.
+If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** before reloading the extension so generated TypeScript stays in sync.
 
 <a id="development-startup"></a>
 
 ### Development startup (step-by-step)
 
 
-1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** runs **`wxt prepare`** (generates **`.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
+1. **Install JS dependencies:** **`corepack enable`** (first time), then **`pnpm install --frozen-lockfile`** when **`pnpm-lock.yaml`** is present (preferred). Use **`pnpm install`** only when you are updating dependencies and will refresh the lockfile. **postinstall** runs **`wxt prepare -c hosts/chrome/wxt.config.ts`** (generates **`shared/.wxt/types/`**). See **[pnpm dependencies and security](#pnpm-dependencies)**.
 2. **Rust toolchain (command core):** `rustup target add wasm32-unknown-unknown` and **`bash scripts/install-wasm-pack.sh`** (pinned **wasm-pack 0.15.0**; CI uses the same). Optional local check: **`cargo test -p bmxt-core`**.
-3. **Codegen (when needed):** After editing **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** so TS + Rust generated files match the manifest.
+3. **Codegen (when needed):** After editing **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** so TS + Rust generated files match the manifest.
 4. **Start dev:** From the repo root, run **`pnpm run dev`** (runs **`build:wasm`** then background-services then WXT). Leave this process running; it rebuilds the extension on file changes.
 5. **Load in Chrome:** Open `chrome://extensions`, enable **Developer mode**, **Load unpacked**, and select **`.output/chrome-mv3-dev`** (created by WXT dev).
 6. **Open BMXt:** Click the extension toolbar icon to open the BMXt window.
@@ -1224,28 +1245,33 @@ If you change **`manifest/bmxt-codegen.json`**, run **`pnpm run codegen`** befor
 
 ### Testing
 
+**JS/TS** tests live under **`tests/`** (not under `lib/` or the repo root). Layout details: **[`tests/README.md`](tests/README.md)**.
 
-**JS/TS** automated tests live under **`tests/`** (not under `lib/` or the repo root). See **[`tests/README.md`](tests/README.md)**.
+<a id="testing-how-to-run"></a>
 
-**Rust / WASM tests are intentionally outside `tests/`.** Cargo owns that layout:
+#### How to run
 
-| Kind | Location |
-|------|----------|
-| Unit (`#[cfg(test)]`) | **`crates/bmxt-core/src/**/*.rs`** |
-| Integration | **`crates/bmxt-core/tests/`** (discovered next to that package’s **`Cargo.toml`**) |
+| What | Command | Notes |
+|------|---------|--------|
+| **Unit + property (JS/TS)** | **`pnpm test`** | No browser. Fast. |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | Not included in `pnpm test`. |
+| **E2E (Chrome)** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing. Loads **`.output/chrome-mv3`**. |
+| **E2E (Firefox)** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver. Loads **`.output/firefox-mv3`**. |
+| **E2E (both)** | **`pnpm run test:e2e:all`** | Chrome then Firefox (builds required separately or via **`verify`**). |
+| **Full CI gate** | **`pnpm run verify`** | Manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E. |
 
-Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo test -p bmxt-core`** (`pnpm test` does not include them). Details: **[`tests/README.md`](tests/README.md)** § Rust / WASM.
+One-liner after a production build already exists:
 
-**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E.
+**Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build:chrome`** + WebDriver E2E → **`build:firefox`** + WebDriver E2E.
 
 | Layer | Command | Location |
 |-------|---------|----------|
 | **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
 | **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test` (incl. UTF-16/UTF-8 caret conversion and **TS↔WASM** host entrypoints). |
-| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**. Requires **`pnpm run build`** first; Chromium via **`pnpm run test:e2e:install`**. |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** (`selenium-webdriver`) under **`tests/e2e/`**. Same shell specs on Chrome and Firefox. See **`tests/README.md`**. |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
 
-**Adding a TS unit test:** place it at **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`** and import production code from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
+**Adding a TS unit test:** **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`**, import from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
 
 <a id="project-layout"></a>
 
@@ -1253,21 +1279,21 @@ Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo t
 
 | Path | Role |
 |------|------|
-| **`entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
-| **`entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
-| **`entrypoints/bmxt-nav-overlay.content/`** | Nav content script on https pages |
-| **`public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
-| **`crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
-| **`lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
-| **`wxt.config.ts`** | Manifest overrides (permissions, CSP, shortcuts, `web_accessible_resources`) |
-| **`lib/features/`** | Feature modules (see table below) |
-| **`tests/`** | JS/TS tests only — unit, property (fast-check), Playwright E2E (see **[Testing](#testing)**). Rust stays under **`crates/bmxt-core/`**. |
-| **`manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`shared/entrypoints/background/`** | Service Worker (`index.ts`) — window launch, `runDispatch`, effects |
+| **`shared/entrypoints/bmxt/`** | Extension UI page → built as **`bmxt.html`** (`main.tsx` + `index.html`) |
+| **`shared/entrypoints/bmxt-nav-overlay.content/`** | Nav content script on https pages |
+| **`shared/public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
+| **`shared/crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
+| **`shared/lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
+| **`hosts/chrome/`**, **`hosts/firefox/`** | Per-browser WXT configs (+ Firefox AMO kit) — see **[`hosts/README.md`](hosts/README.md)** |
+| **`shared/lib/features/`** | Feature modules (see table below) |
+| **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)**). Rust stays under **`shared/crates/bmxt-core/`**. |
+| **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
-| **`.output/`** | Build output (gitignored): **`chrome-mv3`** (prod), **`chrome-mv3-dev`** (dev), **`*-chrome.zip`** (from **`pnpm run package`**) |
+| **`.output/`** | Build output (gitignored): **`chrome-mv3`**, **`firefox-mv3`**, zips from **`package`** / **`package:chrome`** / **`package:firefox`** (`bmxt-<ver>-chrome.zip`, `bmxt-<ver>-firefox.zip`) |
 
-**Build scripts:** **`pnpm run dev`**, **`build`**, and **`package`** each run **`build:wasm`** → **`build-background-services`** → WXT. **`postinstall`** runs **`wxt prepare`** only. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
+**Build scripts:** **`pnpm run build`** builds **both** Chrome and Firefox (wasm once). Prefer **`build:chrome`** / **`build:firefox`** for a single target. **`package`** zips **both**; **`package:chrome`** / **`package:firefox`** zip one host. **`verify`** uses **`build:chrome`** then Chromium e2e. **`postinstall`** runs **`wxt prepare -c hosts/chrome/wxt.config.ts`**. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
 
 <a id="main-sources"></a>
 
@@ -1344,25 +1370,47 @@ If no **`release-notes.json`** entry exists for the current version, placeholder
 ## Production Build
 
 ```bash
-pnpm run build
+pnpm run build              # both → .output/chrome-mv3 + .output/firefox-mv3
+pnpm run build:chrome       # Chrome only → .output/chrome-mv3
+pnpm run build:firefox      # Firefox only → .output/firefox-mv3
 ```
 
+Store zips: **`pnpm run package`** (Chrome + Firefox) / **`pnpm run package:chrome`** / **`pnpm run package:firefox`** → `.output/bmxt-<version>-{chrome|firefox}.zip`.
 
-Artifacts are output under `.output/chrome-mv3`. For store submission zip, you can also run `pnpm run package`.
+### Firefox — load unpacked (temporary)
+
+WXT’s Firefox MV3 **dev** runner is limited; preferred local loop:
+
+1. **`pnpm run build:firefox`**
+2. Firefox → **`about:debugging#/runtime/this-firefox`** → **Load Temporary Add-on…**
+3. Select **`.output/firefox-mv3/manifest.json`**
+4. Open BMXt from the toolbar, or **Alt+Shift+C** while Firefox is focused (manifest uses Gecko key order; Chrome keeps **Shift+Alt+C**. Firefox has no OS-wide `commands.*.global` — check **about:addons** → gear → **Manage Extension Shortcuts** if it still does not fire)
+
+AMO reviewers: attach **`pnpm run package:amo-source`** output and follow **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** (`gecko.id` **`bmxt@unrsports`**, `strict_min_version` **139.0**).
 
 <a id="store-submission"></a>
 
 ## Store Submission (Reference)
 
 
-Build and package locally:
+**Chrome Web Store** — build and package locally:
 
 ```bash
-pnpm run build
-pnpm run package   # writes .output/*-chrome.zip
+pnpm run build:chrome
+pnpm run package:chrome   # writes .output/bmxt-<version>-chrome.zip
 ```
 
-You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build`**, **`pnpm run package`**, and uploads **`.output/*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
+You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build:chrome`**, **`pnpm run package:chrome`**, and uploads **`.output/bmxt-*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
+
+**Firefox (AMO)** — separate path (do not mix into the Chrome submit workflow):
+
+```bash
+pnpm run build:firefox
+pnpm run package:firefox      # .output/bmxt-<version>-firefox.zip
+pnpm run package:amo-source   # source archive for reviewers
+```
+
+Both hosts at once: **`pnpm run package`**. See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**.
 
 <a id="license"></a>
 
@@ -1429,6 +1477,8 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
   - [テスト](#testing-ja)
+    - [実行方法](#testing-how-to-run-ja)
+    - [E2E がカバーすること](#testing-e2e-coverage-ja)
   - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
   - [プロジェクト構成（WXT）](#project-layout-ja)
   - [主なソース](#main-sources-ja)
@@ -1615,6 +1665,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 |----------|------|
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
+| `tutorial` | `tab -list \| browse` の対話チュートリアル（`tutorial` / `tutorial -start` / `tutorial -skip`；初回起動で自動開始） |
 | `clear` | ログをクリア |
 | `exit` | **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**なら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |
@@ -1727,7 +1778,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 **`RUN_CMD` フロー**（フォールバック — 例: `close`、`help`、`session -new`）:
 
 1. UI が **`RUN_CMD`**（`line`、`sessionId`、`sessionOrderLength`）を送信。
-2. SW が **`runDispatch`** / **`applyChromeEffects`** を実行。
+2. SW が **`runDispatch`** / **`applyHostEffects`** を実行。
 3. SW が **`{ ok: true, patches: SessionPatch[], closeWindow? }`** を返す（`SESSION_SNAPSHOT` 推送なし）。
 4. UI が **`applyRunCmdPatches`** でローカル適用（`appendLog`、`createSession`、`exitSession` 等）。
 
@@ -1936,6 +1987,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 |----|------|
 | **language** | `--japanese` / `--english`（UI 表示言語） |
 | **edit-picker** | **`on`** — ピッカー列専用の行を追加；**`off`** — ピッカー列は全体外観に従う |
+| **ime-candidate-help** | **`on`**（既定）— 候補メニュー右に usage ヘルプを表示；**`off`** — トークン列のみ |
 | **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — 強制切替。**mobile**（**0.8.2** 以降）: 補助キーバー、プロンプト候補のタップ確定／外タップで閉じる。**desktop**: **0.8.0** 相当のキーボード中心（**Esc** / 先頭で **↑**） |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
@@ -2275,6 +2327,15 @@ scriptable な **https** タブを **YAML frontmatter** 付き **Markdown snapsh
 
 **一覧の真実**は **`manifest/bmxt-codegen.json`**（`commands[]`・`effects[]`・**`uiActions[]`**）です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`・**`ui_action.rs` 含む**）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。Host IR 契約は **`bmxt-host/2`**（`lib/features/command-line/inter-command/`）。TS ホストのコマンド名意味分岐は **`pnpm run verify:host-blind`** で検査します。
 
+**ホスト / 拡張 URL 境界**
+
+| 層 | 担当 |
+|----|------|
+| **コア（WASM + 共有 TS）** | `HostEffect` / 計画 — ブラウザ非依存 |
+| **ホストアダプタ** | 現状 `chrome.*`。将来 Firefox も同一 IR |
+| **拡張ページ URL** | **`lib/features/extension-url/`** — `chrome-extension:` **と** `moz-extension:`。ランタイムは **`chrome.runtime.getURL`** / **`browser.runtime.getURL`** を優先。信頼判定・E2E・テストは **`extensionPageUrl` / `parseExtensionPageUrl`**（**`chrome-extension://…` の直書きはしない**） |
+| **特権 SW メッセージ** | **`isTrustedBmxtUiSender`**（`lib/features/extension-permissions/`）— いずれの拡張プロトコルでも `bmxt.html` / `bmxt-float.html` のみ |
+
 **実行境界:**
 
 ```
@@ -2446,7 +2507,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 - **`entrypoints/bmxt-nav-overlay.content/`** — https 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — Tab 補完・IME/eligibility 用生成物（Enter continuation の正本は Rust `promptPrefix`）
-- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyChromeEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
+- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyHostEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
 
 manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと **`pnpm run verify:manifest`** / **`pnpm run check:generated`** を実行し、必要なら **`pnpm run build`** してください。
 
@@ -2493,7 +2554,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。第二トークン必須のとき、単独第一トークンの **Enter** は Rust の **`msgs` + `promptPrefix`**（`require_second_token` / `msgs_with_prompt`）で返す — TS 側に Enter continuation を足さない。第二トークンの **Tab** 候補は **`command-subcommands.gen.ts`**（manifest **`subcommands`**）。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 - **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
 - **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
-- **再利用パス（推奨）:** 既存 **`ChromeEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
+- **再利用パス（推奨）:** 既存 **`HostEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
 - **拡張パス（必要なときだけ）:**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
@@ -2573,25 +2634,30 @@ pnpm run dev
 
 ### テスト
 
+**JS/TS** の自動テストは **`tests/`** 配下（`lib/` やリポジトリ直下には置かない）。構成の詳細は **[`tests/README.md`](tests/README.md)**。
 
-**JS/TS** の自動テストはすべて **`tests/`** 配下に置く（`lib/` やリポジトリ直下には置かない）。詳細は **[`tests/README.md`](tests/README.md)**。
+<a id="testing-how-to-run-ja"></a>
 
-**Rust / WASM テストは意図的に `tests/` の外**に置く（Cargo の正本配置）:
+#### 実行方法
 
-| 種類 | 場所 |
-|------|------|
-| ユニット（`#[cfg(test)]`） | **`crates/bmxt-core/src/**/*.rs`** |
-| 統合 | **`crates/bmxt-core/tests/`**（当該パッケージの **`Cargo.toml`** 隣） |
+| 対象 | コマンド | 補足 |
+|------|----------|------|
+| **ユニット + プロパティ（JS/TS）** | **`pnpm test`** | ブラウザ不要。高速。 |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | `pnpm test` には含まれない。 |
+| **E2E（Chrome）** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing。**`.output/chrome-mv3`** をロード。 |
+| **E2E（Firefox）** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver。**`.output/firefox-mv3`** をロード。 |
+| **E2E（両方）** | **`pnpm run test:e2e:all`** | Chrome → Firefox（ビルドは別途、または **`verify`**）。 |
+| **CI と同一の全体ゲート** | **`pnpm run verify`** | manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E。 |
 
-Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行は **`cargo test -p bmxt-core`**（**`pnpm test`** には含まれない）。詳細: **[`tests/README.md`](tests/README.md)** の Rust / WASM 節。
+ビルド済みなら次の順で十分です:
 
-**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build`** → Playwright E2E。
+**全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build:chrome`** + WebDriver E2E → **`build:firefox`** + WebDriver E2E。
 
 | 層 | コマンド | 場所 |
 |----|----------|------|
 | **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
 | **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`（UTF-16/UTF-8 キャレット変換と **TS↔WASM** ホスト入口を含む）。 |
-| **E2E** | **`pnpm run test:e2e`** | **`tests/e2e/`** + **`tests/playwright.config.ts`**。事前に **`pnpm run build`**。Chromium は **`pnpm run test:e2e:install`**。 |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver**（`selenium-webdriver`）を **`tests/e2e/`** で実行。Chrome / Firefox で同一シェル仕様。詳細は **`tests/README.md`**。 |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
 
 **TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`** に置き、本番コードは **`lib/features/...`** から **`.ts` 付き**で import する。`lib/` 隣へのコロケートはしない。
@@ -2608,11 +2674,11 @@ Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行�
 | **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
-| **`tests/`** | JS/TS テストのみ（unit / property / Playwright E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
+| **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
-| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発）, **`*-chrome.zip`**（**`pnpm run package`**） |
+| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`** / **`firefox-mv3`**, **`bmxt-<ver>-chrome.zip`** / **`bmxt-<ver>-firefox.zip`**（**`package`** / **`package:chrome`** / **`package:firefox`**） |
 
 **ビルドスクリプト:** **`pnpm run dev`** / **`build`** / **`package`** は **`scripts/build-background-services.mjs`** → WXT の順。**`postinstall`** は **`wxt prepare`** のみ。
 
@@ -2695,7 +2761,7 @@ pnpm run build
 ```
 
 
-成果物は `.output/chrome-mv3` 配下に出力されます。ストア提出用に zip する場合は `pnpm run package`（WXT の zipコマンド）も利用できます。
+成果物は `.output/chrome-mv3` / `.output/firefox-mv3` 配下に出力されます。ストア提出用 zip は **`pnpm run package`**（両ホスト）または **`package:chrome`** / **`package:firefox`**（`.output/bmxt-<version>-{chrome|firefox}.zip`）。
 
 <a id="store-submission-ja"></a>
 
@@ -2706,10 +2772,10 @@ pnpm run build
 
 ```bash
 pnpm run build
-pnpm run package   # .output/*-chrome.zip を出力
+pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 ```
 
-[WXT の公開ガイド](https://wxt.dev/guide/essentials/publishing) や [Browser Platform Publish (bpp)](https://bpp.browser.market) で自動提出できます。本リポジトリには **`.github/workflows/submit.yml`**（手動 **`workflow_dispatch`**）があり、**`pnpm run build`** → **`pnpm run package`** のあと **`.output/*-chrome.zip`** を **`PlasmoHQ/bpp@v3`** でアップロードします。ストア認証情報は GitHub secret **`SUBMIT_KEYS`** のみに置き、コミットしないでください。
+[WXT の公開ガイド](https://wxt.dev/guide/essentials/publishing) や [Browser Platform Publish (bpp)](https://bpp.browser.market) で自動提出できます。本リポジトリには **`.github/workflows/submit.yml`**（手動 **`workflow_dispatch`**）があり、**`pnpm run build:chrome`** → **`pnpm run package:chrome`** のあと **`.output/bmxt-*-chrome.zip`** を **`PlasmoHQ/bpp@v3`** でアップロードします。ストア認証情報は GitHub secret **`SUBMIT_KEYS`** のみに置き、コミットしないでください。
 <a id="license-ja"></a>
 
 ## ライセンス

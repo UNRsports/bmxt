@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { excerptAroundNeedle, excerptAroundNeedleWithHighlight } from "../../../../lib/features/search/search-picker-excerpt.ts"
+import { excerptAroundNeedle, excerptAroundNeedleWithHighlight } from "../../../../shared/lib/features/search/search-picker-excerpt.ts"
 
 describe("excerptAroundNeedle", () => {
   it("centers on a case-insensitive needle with ellipsis", () => {
