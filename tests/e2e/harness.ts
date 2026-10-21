@@ -198,7 +198,10 @@ async function launchFirefoxOnce(extensionPath: string): Promise<BmxtSession> {
   }
 }
 
-/** EN: Retry Firefox launch — rapid create/destroy can wedge Marionette prefs. */
+/**
+ * EN: Retry Firefox launch — rapid create/destroy can wedge Marionette prefs.
+ *     Backoff after a failed attempt only (not a correctness timing wait).
+ */
 async function launchFirefox(extensionPath: string): Promise<BmxtSession> {
   const maxAttempts = 3
   let lastError: unknown
@@ -207,6 +210,7 @@ async function launchFirefox(extensionPath: string): Promise<BmxtSession> {
       return await launchFirefoxOnce(extensionPath)
     } catch (err) {
       lastError = err
+      // EN: Post-failure recovery delay before the next launch attempt.
       await new Promise((resolve) => setTimeout(resolve, 750 * attempt))
     }
   }
@@ -301,6 +305,37 @@ async function dismissFirstRunTutorial(driver: WebDriver): Promise<boolean> {
   }
 }
 
+/** EN: Poll until storage shows first-run dismissed (condition wait, not fixed sleep). */
+async function waitTutorialDismissedInStorage(
+  driver: WebDriver,
+  timeoutMs = 15_000
+): Promise<boolean> {
+  try {
+    await driver.wait(async () => {
+      const result = await driver.executeAsyncScript(`
+        const done = arguments[arguments.length - 1];
+        chrome.storage.local
+          .get("bmxt_tutorial_progress_v1")
+          .then((data) => {
+            const progress = data && data.bmxt_tutorial_progress_v1;
+            done(
+              !!(
+                progress &&
+                typeof progress === "object" &&
+                progress.dismissedFirstRun === true
+              )
+            );
+          })
+          .catch(() => done(false));
+      `)
+      return result === true
+    }, timeoutMs)
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function navigateToBmxtShell(session: BmxtSession, pageUrl: string): Promise<void> {
   if (session.browser === "firefox") {
     await openFirefoxExtensionPage(session.driver, pageUrl)
@@ -359,9 +394,10 @@ async function clickTutorialSkipIfPresent(driver: WebDriver): Promise<void> {
 export async function openBmxtPage(session: BmxtSession): Promise<void> {
   const pageUrl = `${session.extensionOrigin}/bmxt.html`
   await navigateToBmxtShell(session, pageUrl)
-  // EN: First-run auto-start may race and overwrite storage; dismiss twice, then reload.
+  // EN: First-run auto-start may race and overwrite storage — write, wait for
+  //     confirmed storage, write again (no fixed sleep), then reload.
   await dismissFirstRunTutorial(session.driver)
-  await new Promise((resolve) => setTimeout(resolve, 250))
+  await waitTutorialDismissedInStorage(session.driver)
   await dismissFirstRunTutorial(session.driver)
   try {
     await reloadBmxtShell(session, pageUrl)
@@ -377,22 +413,64 @@ export async function openBmxtPage(session: BmxtSession): Promise<void> {
 }
 
 /**
- * EN: Between shared-session tests — dismiss pickers and wipe the log so asserts stay isolated.
- * JA: 共有セッションのテスト間で候補を閉じログをクリアし、アサートを隔離する。
+ * EN: Close tab/side pickers. Filter IME is `pointer-events: none` (not WebDriver-clickable);
+ *     focus via script then Escape, or dispatch window keydown for capture listeners.
+ * JA: 列ピッカーを閉じる。filter IME は pointer-events:none のため script で focus→Esc、
+ *     または window の keydown（capture）を dispatch する。
  */
-export async function resetShellBetweenTests(driver: WebDriver): Promise<void> {
-  await dismissPromptPickers(driver)
-  for (let i = 0; i < 4; i += 1) {
+async function dismissOverlayPickers(driver: WebDriver): Promise<void> {
+  for (let i = 0; i < 6; i += 1) {
     const open = await driver.findElements(
       By.css(".bmxt-tab-picker, .bmxt-side-picker, .bmxt-subcmd-picker")
     )
     if (open.length === 0) {
-      break
+      return
     }
-    await pressPromptKey(driver, Key.ESCAPE)
+    await driver.executeScript(`
+      const filter = document.querySelector(".bmxt-tab-picker-filter-ime");
+      if (filter && typeof filter.focus === "function") {
+        filter.focus({ preventScroll: true });
+      }
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          code: "Escape",
+          keyCode: 27,
+          which: 27,
+          bubbles: true,
+          cancelable: true
+        })
+      );
+    `)
+  }
+}
+
+/**
+ * EN: Between shared-session tests — dismiss pickers and wipe the log so asserts stay isolated.
+ *     Shared session is required: Firefox Marionette wedges under per-test relaunch.
+ * JA: 共有セッションのテスト間で候補を閉じログをクリアし、アサートを隔離する。
+ *     Firefox はテストごと再起動で Marionette が不安定なため共有必須。
+ */
+export async function resetShellBetweenTests(driver: WebDriver): Promise<void> {
+  await dismissPromptPickers(driver)
+  await dismissOverlayPickers(driver)
+  try {
+    await driver.wait(async () => {
+      const open = await driver.findElements(
+        By.css(".bmxt-tab-picker, .bmxt-side-picker, .bmxt-subcmd-picker")
+      )
+      return open.length === 0
+    }, 5_000)
+  } catch {
+    /* EN: Best-effort — do not fail the suite on a stuck overlay alone. */
   }
   await runPromptLine(driver, "clear")
   await waitPromptIdle(driver)
+  const line = await promptValue(driver)
+  if (line !== "") {
+    const ime = await focusPrompt(driver)
+    await setPromptValueViaInputEvent(driver, ime, "")
+  }
 }
 
 export async function promptIme(driver: WebDriver): Promise<WebElement> {
