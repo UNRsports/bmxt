@@ -74,6 +74,7 @@ import { useSettingPickerShell } from "./shell/useSettingPickerShell"
 import { usePromptPickers } from "./shell/usePromptPickers"
 import { useNavPromptBridge } from "./shell/useNavPromptBridge"
 import { usePaneFocusController } from "./shell/usePaneFocusController"
+import { shouldFocusPromptIme } from "./shell/should-focus-prompt-ime"
 import { useShellKeyboard } from "./shell/useShellKeyboard"
 import { useShellPromptCore } from "./shell/useShellPromptCore"
 import { usePickerManager } from "./shell/usePickerManager"
@@ -268,6 +269,29 @@ export function BmxtShell({
     }
   }, [uiSettings.locale, scheduleTabPickerRowsRefresh])
   const translateEnabledRef = useRef(false)
+
+  const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
+  const isFocusedPaneRef = useRef(isFocusedPane)
+  const openPickersRef = useRef<readonly PickerSlotId[]>([])
+  const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const settingPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // EN: Sync during render (not useEffect) so rAF focus guards see the latest pane
+  // before paint — e.g. `| browse` activatePaneFocus then compound-end focusPrompt.
+  paneFocusRef.current = paneFocus
+  isFocusedPaneRef.current = isFocusedPane
+
+  const onPaneFocusChangeEager = useCallback(
+    (target: PaneFocusTarget) => {
+      // EN: Update before React re-renders so same-tick focusPrompt rAF sees picker focus.
+      paneFocusRef.current = target
+      onPaneFocusChange(target)
+    },
+    [onPaneFocusChange]
+  )
+
   const {
     tabPicker,
     searchListPicker,
@@ -283,7 +307,7 @@ export function BmxtShell({
     sessionPickers,
     setSessionPickerSlot,
     paneFocus,
-    onPaneFocusChange,
+    onPaneFocusChange: onPaneFocusChangeEager,
     detailBarId,
     onDetailBarIdChange,
     modeToolbarOrder,
@@ -297,18 +321,11 @@ export function BmxtShell({
     settingListPicker !== null ? settingListPicker.draft.hostUiMode : uiSettings.hostUiMode
   const { formFactor: hostUiFormFactor, showExtraKeys } = useHostUiFormFactor(hostUiModeEffective)
 
-  const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
-  const isFocusedPaneRef = useRef(isFocusedPane)
-  const openPickersRef = useRef<readonly PickerSlotId[]>([])
-  const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const settingPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-
   const openPickers = useMemo(
     () => openPickerSlots(sessionPickers),
     [sessionPickers]
   )
+  openPickersRef.current = openPickers
 
   const { railPickers, railExpanded, displaySessionPickers } = usePickerRailPresence(
     openPickers,
@@ -324,13 +341,6 @@ export function BmxtShell({
   const searchPickerKeyboardActive = paneFocus === "search" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
   const settingPickerKeyboardActive = paneFocus === "setting" && isFocusedPane
-
-  useEffect(() => {
-    paneFocusRef.current = paneFocus
-  }, [paneFocus])
-
-  isFocusedPaneRef.current = isFocusedPane
-  openPickersRef.current = openPickers
 
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
@@ -842,6 +852,12 @@ export function BmxtShell({
   })
 
   const focusPromptNow = useCallback(() => {
+    // EN: `| browse` / activatePaneFocus leaves paneFocus on a picker; compound
+    // completion still calls focusPrompt — do not yank the hidden picker IME
+    // (needed for `/` search) back to the prompt while the column stays "focused".
+    if (!shouldFocusPromptIme(paneFocusRef.current)) {
+      return
+    }
     imeRef.current?.focus({ preventScroll: true })
   }, [])
 
@@ -899,7 +915,7 @@ export function BmxtShell({
     sessionId,
     isFocusedPane,
     paneFocus,
-    onPaneFocusChange,
+    onPaneFocusChange: onPaneFocusChangeEager,
     detailBarId,
     setDetailBarId,
     modeToolbarOrder,
