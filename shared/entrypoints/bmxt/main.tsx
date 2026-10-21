@@ -10,11 +10,13 @@ import {
   resetPageBootPerf
 } from "../../lib/features/launch/page-boot-perf"
 import { startVersionUpgradePreflight } from "../../lib/features/bmxt-window/version-upgrade-preflight"
+import { installPopupWindowBoundsPersist } from "../../lib/features/bmxt-window/window-bounds"
 
 resetPageBootPerf()
 installPageBootPerfConsoleHelpers()
 markPageBootPhase("page-script-start")
 startVersionUpgradePreflight()
+installPopupWindowBoundsPersist()
 
 void (async () => {
   const rootEl = document.getElementById("root")

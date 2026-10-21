@@ -11,11 +11,7 @@ import {
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import { setupFloatLaunch } from "./float-launch"
-import {
-  flushPersistBmxtWindowBounds,
-  normalizeBmxtWindowBounds,
-  schedulePersistBmxtWindowBounds
-} from "./window-bounds"
+import { flushPersistBmxtWindowBounds } from "./window-bounds"
 import {
   clearBmxtWindowIdInMemory,
   createBmxtWindowAsync,
@@ -27,29 +23,6 @@ import {
   reconcileDuplicateBmxtWindowsAsync,
   resolveBmxtWindowIdFastAsync
 } from "./window-state"
-
-function setupBmxtWindowBoundsTracking(): void {
-  // Chrome-only: Firefox has no windows.onBoundsChanged (calling addListener throws and
-  // would abort setupWindowLaunch before action/commands listeners register).
-  const onBoundsChanged = chrome.windows.onBoundsChanged
-  if (onBoundsChanged === undefined || typeof onBoundsChanged.addListener !== "function") {
-    return
-  }
-  onBoundsChanged.addListener((window) => {
-    void (async () => {
-      await hydrateBmxtWindowIdFromStorage()
-      const bmxtWindowId = readBmxtWindowIdInMemory()
-      if (bmxtWindowId === undefined || window.id !== bmxtWindowId) {
-        return
-      }
-      const bounds = normalizeBmxtWindowBounds(window.width, window.height)
-      if (bounds === null) {
-        return
-      }
-      schedulePersistBmxtWindowBounds(bounds)
-    })()
-  })
-}
 
 /** EN: Serialize launches so rapid shortcuts do not open multiple windows. */
 let bmxtWindowLaunchChain: Promise<void> = Promise.resolve()
@@ -109,7 +82,9 @@ function openOrFocusBmxtWindow(): void {
 }
 
 export function setupWindowLaunch(): void {
-  setupBmxtWindowBoundsTracking()
+  // EN: Window bounds are persisted from the popup page (resize/pagehide).
+  //     Do not use windows.onBoundsChanged — unsupported on Firefox / flagged by AMO.
+  // JA: 窓サイズはポップアップページ側で保存。onBoundsChanged は Firefox/AMO 非対応。
   setupFloatLaunch(chrome.commands.onCommand)
 
   chrome.windows.onRemoved.addListener((windowId) => {

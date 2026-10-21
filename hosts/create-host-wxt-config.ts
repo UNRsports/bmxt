@@ -34,13 +34,21 @@ function readExtensionVersion(): string {
 
 export function createHostWxtConfig(browser: HostBrowser) {
   const extensionVersion = readExtensionVersion()
+  // EN: AMO requires gecko.data_collection_permissions for new extensions
+  //     (Nov 2025+). BMXt keeps data local (storage / UI memory) and does not
+  //     transmit outside the extension — declare required: ["none"].
+  //     Key name is data_collection_permissions (AMO UI may say "policy").
+  // JA: 新規拡張は data_collection_permissions 必須。BMXt は外部送信なし → none。
   const manifestExtra =
     browser === "firefox"
       ? {
           browser_specific_settings: {
             gecko: {
               id: FIREFOX_GECKO_ID,
-              strict_min_version: FIREFOX_STRICT_MIN_VERSION
+              strict_min_version: FIREFOX_STRICT_MIN_VERSION,
+              data_collection_permissions: {
+                required: ["none"]
+              }
             }
           }
         }

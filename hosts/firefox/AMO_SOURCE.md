@@ -50,6 +50,18 @@ Load unpacked in Firefox: `about:debugging` → This Firefox → Load Temporary 
 
 `browser_specific_settings.gecko.id` is fixed as **`bmxt@unrsports`** (see `hosts/manifest-base.ts`). Confirm before AMO listing if a different id is required.
 
+## Data collection (manifest)
+
+`browser_specific_settings.gecko.data_collection_permissions.required` is **`["none"]`**: BMXt keeps prompt history / UI settings in `chrome.storage.local` and does not transmit data outside the extension.
+
+## Automated validation notes (warnings)
+
+| Finding | Status |
+|---------|--------|
+| Icon size mismatch | Fixed — sized `icon-16/32/48/128.png` match manifest keys |
+| `windows.onBoundsChanged` | Fixed — removed; popup page `resize`/`pagehide` persists bounds |
+| Unsafe `innerHTML` in UI chunk | **Expected** — comes from **react-dom** (not extension-authored DOM injection). BMXt UI does not use `dangerouslySetInnerHTML` or assign `innerHTML` in app code. AMO treats this as a warning for trusted frameworks; submission notes may cite this section. |
+
 ## Minimum Firefox version
 
 `strict_min_version` is **139.0** (tabGroups availability policy). Below that, group-related behavior may degrade in later releases.

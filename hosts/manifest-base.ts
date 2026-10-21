@@ -88,11 +88,12 @@ export function hostContentSecurityPolicy(browser: HostBrowser): {
   }
 }
 
+/** EN: Sized PNGs (pixel size must match key — AMO rejects a single 128 reused as 16/32/48). */
 export const hostIcons = {
-  16: "icon.png",
-  32: "icon.png",
-  48: "icon.png",
-  128: "icon.png"
+  16: "icon-16.png",
+  32: "icon-32.png",
+  48: "icon-48.png",
+  128: "icon-128.png"
 }
 
 /** Fixed Firefox extension ID for AMO / temporary install. Confirm before AMO listing. */
