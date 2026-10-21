@@ -6,7 +6,7 @@
     "version": "0.8.7",
     "en": [
       "Implemented command descriptions in the candidate menu",
-      "Implemented a tutorial for learning how to use BMXt",
+      "Implemented a tutorial for learning how to use BMXt"
     ],
     "ja": [
       "候補メニューへコマンドの説明表示を実装",
