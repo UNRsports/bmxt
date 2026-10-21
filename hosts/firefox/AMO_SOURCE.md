@@ -64,7 +64,10 @@ Load unpacked in Firefox: `about:debugging` → This Firefox → Load Temporary 
 
 ## Minimum Firefox version
 
-`strict_min_version` is **139.0** (tabGroups availability policy). Below that, group-related behavior may degrade in later releases.
+| Key | Value | Reason |
+|-----|-------|--------|
+| `gecko.strict_min_version` | **140.0** | Required with `data_collection_permissions` (desktop consent UI); also covers tabGroups |
+| `gecko_android.strict_min_version` | **142.0** | Android built-in data-collection consent floor |
 
 ## Chrome-only features (not Firefox parity yet)
 

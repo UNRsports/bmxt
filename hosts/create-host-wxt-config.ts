@@ -9,6 +9,7 @@ import { defineConfig } from "wxt"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
+  FIREFOX_ANDROID_STRICT_MIN_VERSION,
   FIREFOX_GECKO_ID,
   FIREFOX_STRICT_MIN_VERSION,
   hostCommands,
@@ -49,6 +50,9 @@ export function createHostWxtConfig(browser: HostBrowser) {
               data_collection_permissions: {
                 required: ["none"]
               }
+            },
+            gecko_android: {
+              strict_min_version: FIREFOX_ANDROID_STRICT_MIN_VERSION
             }
           }
         }

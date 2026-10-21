@@ -99,5 +99,15 @@ export const hostIcons = {
 /** Fixed Firefox extension ID for AMO / temporary install. Confirm before AMO listing. */
 export const FIREFOX_GECKO_ID = "bmxt@unrsports"
 
-/** Minimum Firefox version when relying on tabGroups (degrade below this in later phases). */
-export const FIREFOX_STRICT_MIN_VERSION = "139.0"
+/**
+ * EN: Desktop min must be ≥140 when declaring gecko.data_collection_permissions
+ *     (AMO warning otherwise). tabGroups also needs a recent Gecko; 140 covers both.
+ * JA: data_collection_permissions 宣言時は desktop ≥140 が必要（AMO 警告回避）。
+ */
+export const FIREFOX_STRICT_MIN_VERSION = "140.0"
+
+/**
+ * EN: Android built-in data-collection consent starts at 142; set when shipping Fenix.
+ * JA: Android の組み込み同意 UI は 142 以降。
+ */
+export const FIREFOX_ANDROID_STRICT_MIN_VERSION = "142.0"
