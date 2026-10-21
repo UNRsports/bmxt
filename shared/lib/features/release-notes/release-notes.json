@@ -1,12 +1,10 @@
 {
-  "0.8.7": {
+  "0.8.8": {
     "ja": [
-      "候補メニューへコマンドの説明表示を実装",
-      "操作方法を学ぶためのチュートリアルを実装"
+      "tabコマンドでのピッカー内で絞り込み検索機能動作を修正"
     ],
     "en": [
-      "Implemented command descriptions in the candidate menu",
-      "Implemented a tutorial for learning how to use BMXt"
+      ""
     ]
   }
 }
