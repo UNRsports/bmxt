@@ -46,6 +46,8 @@ pnpm run verify           # full CI gate (includes Chrome + Firefox e2e)
 
 - Host switch: **`BMXT_E2E_BROWSER=chrome|firefox`**
 - Specs: **`tests/e2e/*.test.ts`** (shared); harness in **`harness.ts`**
+- Scripts use **`--test-concurrency=1`** so suites do not launch browsers in parallel
+- Each suite keeps **one** browser session (Firefox Marionette is unstable under per-test relaunch)
 - Drivers are fetched by **Selenium Manager** (no separate `test:e2e:install`)
 - Suites: command smoke (`commands-smoke.test.ts` + `command-matrix.ts`), prompt integrity (`prompt-integrity.test.ts`), CJK caret (`prompt-cjk.test.ts`)
 

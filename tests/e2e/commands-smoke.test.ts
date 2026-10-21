@@ -3,15 +3,19 @@
  * JA: Chromium 拡張 — コマンド・スモーク行列（配線・主要経路）。
  *
  * Ported from edit20261019 Playwright `tests/e2e/commands-smoke.spec.ts`.
+ *
+ * EN: One browser session per suite — Firefox Marionette wedges under per-test launch.
+ * JA: スイートにつき1セッション。Firefox はテストごとの起動で Marionette が不安定になる。
  */
 
 import assert from "node:assert/strict"
-import { afterEach, beforeEach, describe, it } from "node:test"
+import { after, before, describe, it } from "node:test"
 import { By, until } from "selenium-webdriver"
 import { COMMAND_SMOKE_CASES, type SmokeCase } from "./command-matrix.ts"
 import {
   launchBmxtSession,
   openBmxtPage,
+  resetShellBetweenTests,
   runPromptLine,
   seedHttpsTab,
   type BmxtSession
@@ -23,12 +27,6 @@ import {
   readStderrLineTexts,
   waitForOutLine
 } from "./helpers/log.ts"
-
-async function prepareCase(session: BmxtSession, smoke: SmokeCase): Promise<void> {
-  if (smoke.tags?.includes("needs_https")) {
-    await seedHttpsTab(session)
-  }
-}
 
 async function assertSmoke(session: BmxtSession, smoke: SmokeCase): Promise<void> {
   const { driver } = session
@@ -88,13 +86,14 @@ async function assertSmoke(session: BmxtSession, smoke: SmokeCase): Promise<void
 
 describe("command smoke matrix", () => {
   let session: BmxtSession
+  let seededHttps = false
 
-  beforeEach(async () => {
+  before(async () => {
     session = await launchBmxtSession()
     await openBmxtPage(session)
   })
 
-  afterEach(async () => {
+  after(async () => {
     if (session) {
       await session.quit()
     }
@@ -108,12 +107,18 @@ describe("command smoke matrix", () => {
       : false
 
     it(`${smoke.id}: ${smoke.line}`, { skip: skipReason }, async () => {
-      await prepareCase(session, smoke)
-
-      if (smoke.assert === "cleared") {
-        // EN: Seed a log line so clear has something to wipe.
+      // EN: Isolate log/picker state without relaunching the browser.
+      if (smoke.assert !== "cleared") {
+        await resetShellBetweenTests(session.driver)
+      } else {
+        // EN: Seed a log line so clear has something to wipe (reset would clear first).
         await runPromptLine(session.driver, "help")
         await waitForOutLine(session.driver)
+      }
+
+      if (smoke.tags?.includes("needs_https") && !seededHttps) {
+        await seedHttpsTab(session)
+        seededHttps = true
       }
 
       await runPromptLine(session.driver, smoke.line)

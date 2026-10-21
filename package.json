@@ -34,8 +34,8 @@
     "sync:generated-ts": "pnpm run codegen",
     "new:command": "node scripts/scaffold-command.mjs",
     "test:wasm-boundary": "node scripts/verify-wasm-boundary.mjs",
-    "test:e2e:chrome": "BMXT_E2E_BROWSER=chrome node --experimental-strip-types --test-timeout=180000 --test \"tests/e2e/**/*.test.ts\"",
-    "test:e2e:firefox": "BMXT_E2E_BROWSER=firefox node --experimental-strip-types --test-timeout=180000 --test \"tests/e2e/**/*.test.ts\"",
+    "test:e2e:chrome": "BMXT_E2E_BROWSER=chrome node --experimental-strip-types --test-timeout=180000 --test-concurrency=1 --test \"tests/e2e/**/*.test.ts\"",
+    "test:e2e:firefox": "BMXT_E2E_BROWSER=firefox node --experimental-strip-types --test-timeout=180000 --test-concurrency=1 --test \"tests/e2e/**/*.test.ts\"",
     "test:e2e:all": "pnpm run test:e2e:chrome && pnpm run test:e2e:firefox",
     "test": "node --experimental-strip-types --test \"tests/unit/**/*.test.ts\" \"tests/unit/**/*.test.mjs\" \"tests/property/**/*.test.ts\"",
     "benchmark:launch": "node scripts/benchmark-launch-perf.mjs"

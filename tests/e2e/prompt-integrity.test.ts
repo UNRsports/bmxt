@@ -9,10 +9,11 @@
  */
 
 import assert from "node:assert/strict"
-import { afterEach, beforeEach, describe, it } from "node:test"
+import { after, before, describe, it } from "node:test"
 import { By, Key } from "selenium-webdriver"
 import {
   clearAndTypePrompt,
+  dismissPromptPickers,
   focusPrompt,
   launchBmxtSession,
   mirrorText,
@@ -35,19 +36,31 @@ const TAB_INCOMPLETE = "tab "
 describe("prompt UI integrity", () => {
   let session: BmxtSession
 
-  beforeEach(async () => {
+  before(async () => {
     session = await launchBmxtSession()
     await openBmxtPage(session)
   })
 
-  afterEach(async () => {
+  after(async () => {
     if (session) {
       await session.quit()
     }
   })
 
+  async function resetPromptUi(): Promise<void> {
+    await dismissPromptPickers(session.driver)
+    for (let i = 0; i < 3; i += 1) {
+      const open = await session.driver.findElements(By.css(".bmxt-subcmd-picker"))
+      if (open.length === 0) {
+        break
+      }
+      await pressPromptKey(session.driver, Key.ESCAPE)
+    }
+  }
+
   it("Home then End keeps the full ASCII line", async () => {
     const { driver } = session
+    await resetPromptUi()
     await setPromptLine(driver, ASCII_LINE)
     await pressPromptKey(driver, Key.HOME)
     assert.equal(await promptValue(driver), ASCII_LINE)
@@ -59,6 +72,7 @@ describe("prompt UI integrity", () => {
 
   it("ArrowLeft across CJK does not wipe the line (integrity)", async () => {
     const { driver } = session
+    await resetPromptUi()
     await setPromptLine(driver, CJK_LINE)
     const steps = CJK_LINE.length - CJK_LINE.indexOf("リ")
     await moveCaretLeft(driver, steps + 2)
@@ -68,6 +82,7 @@ describe("prompt UI integrity", () => {
   it("Tab after first token opens subcmd picker", async () => {
     // EN: Candidate menu opens on Tab (not auto on type) for second-token tier.
     const { driver } = session
+    await resetPromptUi()
     await focusPrompt(driver)
     await clearAndTypePrompt(driver, TAB_INCOMPLETE)
     assert.equal(await promptValue(driver), TAB_INCOMPLETE)
@@ -80,6 +95,7 @@ describe("prompt UI integrity", () => {
 
   it("ArrowDown in picker moves highlight; Esc dismisses without wiping line", async () => {
     const { driver } = session
+    await resetPromptUi()
     await focusPrompt(driver)
     await clearAndTypePrompt(driver, TAB_INCOMPLETE)
     await pressPromptKey(driver, Key.TAB)
@@ -102,6 +118,7 @@ describe("prompt UI integrity", () => {
 
   it("help Enter returns to idle editable prompt", async () => {
     const { driver } = session
+    await resetPromptUi()
     await runPromptLine(driver, "help")
     await waitPromptIdle(driver)
     const ime = await promptIme(driver)
@@ -116,6 +133,7 @@ describe("prompt UI integrity", () => {
 
   it("history ArrowUp restores last submitted command", async () => {
     const { driver } = session
+    await resetPromptUi()
     await runPromptLine(driver, "help")
     await waitPromptIdle(driver)
     await setPromptLine(driver, "")
@@ -125,6 +143,7 @@ describe("prompt UI integrity", () => {
 
   it("clicking a log line then focusing prompt keeps line editable", async () => {
     const { driver } = session
+    await resetPromptUi()
     await runPromptLine(driver, "help")
     await waitForOutLine(driver)
     const first = (await driver.findElements(By.css(".bmxt-out-line")))[0]
@@ -139,6 +158,7 @@ describe("prompt UI integrity", () => {
 
   it("Backspace at end of ASCII shortens by one, does not wipe", async () => {
     const { driver } = session
+    await resetPromptUi()
     await setPromptLine(driver, ASCII_LINE)
     await pressPromptKey(driver, Key.BACK_SPACE)
     const value = await promptValue(driver)

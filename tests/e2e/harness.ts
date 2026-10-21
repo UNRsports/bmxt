@@ -3,8 +3,7 @@
  * JA: Headless WebDriver ハーネス — Chrome / Firefox 両対応。
  */
 
-import { existsSync, mkdtempSync, readFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Builder, By, Key, until, type WebDriver, type WebElement } from "selenium-webdriver"
@@ -14,6 +13,16 @@ import { chromeExtensionIdFromPath } from "./chrome-extension-id.ts"
 import { resolveFirefoxExtensionUuid } from "./resolve-firefox-extension-uuid.ts"
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..")
+
+/**
+ * EN: Prefer repo-local profile dirs — CI/agent `/tmp` quotas break Chrome prefs writes.
+ * JA: プロファイルはリポジトリ配下へ（`/tmp` のクォータで prefs 書き込みが落ちることがある）。
+ */
+function e2eProfileDir(prefix: string): string {
+  const base = join(root, ".output", "e2e-profiles")
+  mkdirSync(base, { recursive: true })
+  return mkdtempSync(join(base, `${prefix}-`))
+}
 
 export type E2eBrowser = "chrome" | "firefox"
 
@@ -71,6 +80,8 @@ function requireExtensionBuild(browser: E2eBrowser): string {
 const DEFAULT_CHROME_FOR_TESTING_VERSION = "141.0.7390.78"
 
 async function launchChrome(extensionPath: string): Promise<BmxtSession> {
+  // EN: Unique profile avoids "failed to write prefs file" when suites overlap.
+  const userDataDir = e2eProfileDir("chrome")
   const options = new chrome.Options()
   const browserVersion =
     process.env.BMXT_E2E_CHROME_VERSION?.trim() || DEFAULT_CHROME_FOR_TESTING_VERSION
@@ -81,11 +92,22 @@ async function launchChrome(extensionPath: string): Promise<BmxtSession> {
     "--disable-gpu",
     "--no-sandbox",
     "--disable-dev-shm-usage",
+    `--user-data-dir=${userDataDir}`,
     `--disable-extensions-except=${extensionPath}`,
     `--load-extension=${extensionPath}`
   )
 
-  const driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build()
+  let driver: WebDriver
+  try {
+    driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build()
+  } catch (err) {
+    try {
+      rmSync(userDataDir, { recursive: true, force: true })
+    } catch {
+      /* ignore */
+    }
+    throw err
+  }
   const extensionId = chromeExtensionIdFromPath(extensionPath)
   const extensionOrigin = `chrome-extension://${extensionId}`
 
@@ -93,15 +115,24 @@ async function launchChrome(extensionPath: string): Promise<BmxtSession> {
     browser: "chrome",
     driver,
     extensionOrigin,
-    userDataDir: null,
+    userDataDir,
     quit: async () => {
-      await driver.quit()
+      try {
+        await driver.quit()
+      } catch {
+        /* EN: Driver may already be dead. */
+      }
+      try {
+        rmSync(userDataDir, { recursive: true, force: true })
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
 
-async function launchFirefox(extensionPath: string): Promise<BmxtSession> {
-  const userDataDir = mkdtempSync(join(tmpdir(), "bmxt-e2e-firefox-"))
+async function launchFirefoxOnce(extensionPath: string): Promise<BmxtSession> {
+  const userDataDir = e2eProfileDir("firefox")
   const options = new firefox.Options()
   options.addArguments("-headless")
   options.addArguments("-profile", userDataDir)
@@ -112,27 +143,74 @@ async function launchFirefox(extensionPath: string): Promise<BmxtSession> {
   // EN: Required to use Marionette chrome context (open moz-extension:// pages).
   const service = new firefox.ServiceBuilder().addArguments("--allow-system-access")
 
-  const driver = (await new Builder()
-    .forBrowser("firefox")
-    .setFirefoxOptions(options)
-    .setFirefoxService(service)
-    .build()) as firefox.Driver
+  let driver: firefox.Driver
+  try {
+    driver = (await new Builder()
+      .forBrowser("firefox")
+      .setFirefoxOptions(options)
+      .setFirefoxService(service)
+      .build()) as firefox.Driver
+  } catch (err) {
+    try {
+      rmSync(userDataDir, { recursive: true, force: true })
+    } catch {
+      /* EN: Best-effort profile cleanup after failed launch. */
+    }
+    throw err
+  }
 
-  await driver.installAddon(extensionPath, true)
+  try {
+    await driver.installAddon(extensionPath, true)
+    const geckoId = readGeckoId(extensionPath)
+    const uuid = await resolveFirefoxExtensionUuid(userDataDir, geckoId, 60_000)
+    const extensionOrigin = `moz-extension://${uuid}`
 
-  const geckoId = readGeckoId(extensionPath)
-  const uuid = await resolveFirefoxExtensionUuid(userDataDir, geckoId, 60_000)
-  const extensionOrigin = `moz-extension://${uuid}`
-
-  return {
-    browser: "firefox",
-    driver,
-    extensionOrigin,
-    userDataDir,
-    quit: async () => {
+    return {
+      browser: "firefox",
+      driver,
+      extensionOrigin,
+      userDataDir,
+      quit: async () => {
+        try {
+          await driver.quit()
+        } catch {
+          /* EN: Marionette may already be dead after a decode error. */
+        }
+        try {
+          rmSync(userDataDir, { recursive: true, force: true })
+        } catch {
+          /* EN: Best-effort profile cleanup. */
+        }
+      }
+    }
+  } catch (err) {
+    try {
       await driver.quit()
+    } catch {
+      /* ignore */
+    }
+    try {
+      rmSync(userDataDir, { recursive: true, force: true })
+    } catch {
+      /* ignore */
+    }
+    throw err
+  }
+}
+
+/** EN: Retry Firefox launch — rapid create/destroy can wedge Marionette prefs. */
+async function launchFirefox(extensionPath: string): Promise<BmxtSession> {
+  const maxAttempts = 3
+  let lastError: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await launchFirefoxOnce(extensionPath)
+    } catch (err) {
+      lastError = err
+      await new Promise((resolve) => setTimeout(resolve, 750 * attempt))
     }
   }
+  throw lastError
 }
 
 /**
@@ -191,31 +269,35 @@ export async function launchBmxtSession(
 
 /**
  * EN: Skip first-run tutorial coach so it does not steal keys / assert noise.
- * JA: 初回チュートリアルのコーチ UI を閉じ、キー入力やアサートを邪魔しないようにする。
+ *     Returns false on storage/script failure (caller falls back to UI skip).
+ * JA: 初回チュートリアルのコーチ UI を閉じる。storage 失敗時は false（UI skip にフォールバック）。
  */
-async function dismissFirstRunTutorial(driver: WebDriver): Promise<void> {
-  const result = await driver.executeAsyncScript(`
-    const done = arguments[arguments.length - 1];
-    const payload = {
-      bmxt_tutorial_progress_v1: {
-        schemaVersion: 1,
-        dismissedFirstRun: true,
-        tutorials: {
-          "tab-list-browse": { status: "skipped", stepIndex: 0 }
+async function dismissFirstRunTutorial(driver: WebDriver): Promise<boolean> {
+  try {
+    const result = await driver.executeAsyncScript(`
+      const done = arguments[arguments.length - 1];
+      const payload = {
+        bmxt_tutorial_progress_v1: {
+          schemaVersion: 1,
+          dismissedFirstRun: true,
+          tutorials: {
+            "tab-list-browse": { status: "skipped", stepIndex: 0 }
+          }
         }
-      }
-    };
-    chrome.storage.local
-      .set(payload)
-      .then(() => done(true))
-      .catch((err) => {
-        done({ __error: String(err && err.message ? err.message : err) });
-      });
-  `)
-  if (result && typeof result === "object" && "__error" in (result as object)) {
-    throw new Error(
-      `dismissFirstRunTutorial failed: ${(result as { __error: string }).__error}`
-    )
+      };
+      chrome.storage.local
+        .set(payload)
+        .then(() => done(true))
+        .catch((err) => {
+          done({ __error: String(err && err.message ? err.message : err) });
+        });
+    `)
+    if (result && typeof result === "object" && "__error" in (result as object)) {
+      return false
+    }
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -281,12 +363,36 @@ export async function openBmxtPage(session: BmxtSession): Promise<void> {
   await dismissFirstRunTutorial(session.driver)
   await new Promise((resolve) => setTimeout(resolve, 250))
   await dismissFirstRunTutorial(session.driver)
-  await reloadBmxtShell(session, pageUrl)
+  try {
+    await reloadBmxtShell(session, pageUrl)
+  } catch {
+    // EN: Marionette decode errors on reload — fall through to skip-button path.
+    await navigateToBmxtShell(session, pageUrl)
+  }
   await clickTutorialSkipIfPresent(session.driver)
   await session.driver.wait(async () => {
     const coaches = await session.driver.findElements(By.css(".bmxt-tutorial-coach"))
     return coaches.length === 0
   }, 30_000)
+}
+
+/**
+ * EN: Between shared-session tests — dismiss pickers and wipe the log so asserts stay isolated.
+ * JA: 共有セッションのテスト間で候補を閉じログをクリアし、アサートを隔離する。
+ */
+export async function resetShellBetweenTests(driver: WebDriver): Promise<void> {
+  await dismissPromptPickers(driver)
+  for (let i = 0; i < 4; i += 1) {
+    const open = await driver.findElements(
+      By.css(".bmxt-tab-picker, .bmxt-side-picker, .bmxt-subcmd-picker")
+    )
+    if (open.length === 0) {
+      break
+    }
+    await pressPromptKey(driver, Key.ESCAPE)
+  }
+  await runPromptLine(driver, "clear")
+  await waitPromptIdle(driver)
 }
 
 export async function promptIme(driver: WebDriver): Promise<WebElement> {
