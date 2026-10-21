@@ -51,6 +51,12 @@ export function createHostWxtConfig(browser: HostBrowser) {
     // Entrypoints must live under WXT root — use shared/ as the extension source root.
     root: sharedDir,
     outDir: join(repoRoot, ".output"),
+    // EN: Stable zip names — `.output/bmxt-<version>-chrome.zip` / `…-firefox.zip`
+    //     (not package.json `bmxt_demo` → bmxtdemo).
+    zip: {
+      name: "bmxt",
+      artifactTemplate: "{{name}}-{{version}}-{{browser}}.zip"
+    },
     // Firefox defaults to MV2 unless forced; both store targets are MV3.
     manifestVersion: 3,
     vite: () => ({

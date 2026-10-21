@@ -1291,9 +1291,9 @@ One-liner after a production build already exists:
 | **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
-| **`.output/`** | Build output (gitignored): **`chrome-mv3`**, **`firefox-mv3`**, zips from **`package`** / **`package:firefox`** |
+| **`.output/`** | Build output (gitignored): **`chrome-mv3`**, **`firefox-mv3`**, zips from **`package`** / **`package:chrome`** / **`package:firefox`** (`bmxt-<ver>-chrome.zip`, `bmxt-<ver>-firefox.zip`) |
 
-**Build scripts:** **`pnpm run build`** builds **both** Chrome and Firefox (wasm once). Prefer **`build:chrome`** / **`build:firefox`** for a single target. **`package`** is Chrome zip; **`package:firefox`** is Firefox. **`verify`** uses **`build:chrome`** then Chromium e2e. **`postinstall`** runs **`wxt prepare -c hosts/chrome/wxt.config.ts`**. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
+**Build scripts:** **`pnpm run build`** builds **both** Chrome and Firefox (wasm once). Prefer **`build:chrome`** / **`build:firefox`** for a single target. **`package`** zips **both**; **`package:chrome`** / **`package:firefox`** zip one host. **`verify`** uses **`build:chrome`** then Chromium e2e. **`postinstall`** runs **`wxt prepare -c hosts/chrome/wxt.config.ts`**. WASM binary budget: **≤ 400 KiB** (`scripts/build-wasm.mjs` / `benchmark:launch`).
 
 <a id="main-sources"></a>
 
@@ -1375,7 +1375,7 @@ pnpm run build:chrome       # Chrome only → .output/chrome-mv3
 pnpm run build:firefox      # Firefox only → .output/firefox-mv3
 ```
 
-Store zips: **`pnpm run package`** (Chrome) / **`pnpm run package:firefox`** (Firefox).
+Store zips: **`pnpm run package`** (Chrome + Firefox) / **`pnpm run package:chrome`** / **`pnpm run package:firefox`** → `.output/bmxt-<version>-{chrome|firefox}.zip`.
 
 ### Firefox — load unpacked (temporary)
 
@@ -1397,20 +1397,20 @@ AMO reviewers: attach **`pnpm run package:amo-source`** output and follow **[`ho
 
 ```bash
 pnpm run build:chrome
-pnpm run package   # writes .output/*-chrome.zip
+pnpm run package:chrome   # writes .output/bmxt-<version>-chrome.zip
 ```
 
-You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build:chrome`**, **`pnpm run package`**, and uploads **`.output/*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
+You can automate submission with the [WXT publishing guide](https://wxt.dev/guide/essentials/publishing) or [Browser Platform Publish (bpp)](https://bpp.browser.market). This repo includes **`.github/workflows/submit.yml`** (manual **`workflow_dispatch`**) which runs **`pnpm run build:chrome`**, **`pnpm run package:chrome`**, and uploads **`.output/bmxt-*-chrome.zip`** via **`PlasmoHQ/bpp@v3`**. Store credentials belong in the GitHub secret **`SUBMIT_KEYS`** only — never commit them.
 
 **Firefox (AMO)** — separate path (do not mix into the Chrome submit workflow):
 
 ```bash
 pnpm run build:firefox
-pnpm run package:firefox
+pnpm run package:firefox      # .output/bmxt-<version>-firefox.zip
 pnpm run package:amo-source   # source archive for reviewers
 ```
 
-See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**.
+Both hosts at once: **`pnpm run package`**. See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**.
 
 <a id="license"></a>
 
@@ -2678,7 +2678,7 @@ pnpm run dev
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
-| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`**（本番）, **`chrome-mv3-dev`**（開発）, **`*-chrome.zip`**（**`pnpm run package`**） |
+| **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`** / **`firefox-mv3`**, **`bmxt-<ver>-chrome.zip`** / **`bmxt-<ver>-firefox.zip`**（**`package`** / **`package:chrome`** / **`package:firefox`**） |
 
 **ビルドスクリプト:** **`pnpm run dev`** / **`build`** / **`package`** は **`scripts/build-background-services.mjs`** → WXT の順。**`postinstall`** は **`wxt prepare`** のみ。
 
@@ -2761,7 +2761,7 @@ pnpm run build
 ```
 
 
-成果物は `.output/chrome-mv3` 配下に出力されます。ストア提出用に zip する場合は `pnpm run package`（WXT の zipコマンド）も利用できます。
+成果物は `.output/chrome-mv3` / `.output/firefox-mv3` 配下に出力されます。ストア提出用 zip は **`pnpm run package`**（両ホスト）または **`package:chrome`** / **`package:firefox`**（`.output/bmxt-<version>-{chrome|firefox}.zip`）。
 
 <a id="store-submission-ja"></a>
 
@@ -2772,10 +2772,10 @@ pnpm run build
 
 ```bash
 pnpm run build
-pnpm run package   # .output/*-chrome.zip を出力
+pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 ```
 
-[WXT の公開ガイド](https://wxt.dev/guide/essentials/publishing) や [Browser Platform Publish (bpp)](https://bpp.browser.market) で自動提出できます。本リポジトリには **`.github/workflows/submit.yml`**（手動 **`workflow_dispatch`**）があり、**`pnpm run build`** → **`pnpm run package`** のあと **`.output/*-chrome.zip`** を **`PlasmoHQ/bpp@v3`** でアップロードします。ストア認証情報は GitHub secret **`SUBMIT_KEYS`** のみに置き、コミットしないでください。
+[WXT の公開ガイド](https://wxt.dev/guide/essentials/publishing) や [Browser Platform Publish (bpp)](https://bpp.browser.market) で自動提出できます。本リポジトリには **`.github/workflows/submit.yml`**（手動 **`workflow_dispatch`**）があり、**`pnpm run build:chrome`** → **`pnpm run package:chrome`** のあと **`.output/bmxt-*-chrome.zip`** を **`PlasmoHQ/bpp@v3`** でアップロードします。ストア認証情報は GitHub secret **`SUBMIT_KEYS`** のみに置き、コミットしないでください。
 <a id="license-ja"></a>
 
 ## ライセンス

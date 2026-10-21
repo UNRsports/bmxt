@@ -26,10 +26,10 @@ jobs:
         run: pnpm run build:chrome
 
       - name: Package the extension into a zip artifact
-        run: pnpm run package
+        run: pnpm run package:chrome
 
       - name: Browser Platform Publish
         uses: PlasmoHQ/bpp@v3
         with:
           keys: ${{ secrets.SUBMIT_KEYS }}
-          artifact: .output/*-chrome.zip
+          artifact: .output/bmxt-*-chrome.zip

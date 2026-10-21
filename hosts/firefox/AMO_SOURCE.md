@@ -34,6 +34,7 @@ Production zip:
 
 ```bash
 pnpm run package:firefox
+# or both hosts: pnpm run package
 ```
 
 ### Outputs
@@ -41,7 +42,7 @@ pnpm run package:firefox
 | Artifact | Path |
 |----------|------|
 | Unpacked extension | `.output/firefox-mv3/` |
-| Zip (from `package:firefox`) | under `.output/` (WXT zip naming) |
+| Zip (from `package:firefox`) | `.output/bmxt-<version>-firefox.zip` |
 
 Load unpacked in Firefox: `about:debugging` → This Firefox → Load Temporary Add-on → select `.output/firefox-mv3/manifest.json`.
 
