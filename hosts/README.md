@@ -12,8 +12,7 @@ WXT `root` is **`shared/`** for both hosts (entrypoints must live under the WXT 
 pnpm run build            # both → chrome-mv3 + firefox-mv3
 pnpm run build:chrome     # .output/chrome-mv3
 pnpm run build:firefox    # .output/firefox-mv3
-pnpm run package          # both zips → .output/bmxt-<ver>-chrome.zip + …-firefox.zip
-pnpm run package:chrome   # Chrome zip only
-pnpm run package:firefox  # Firefox zip only
-pnpm run package:amo-source
+pnpm run package          # chrome zip + firefox zip + firefox AMO sources tarball
+pnpm run package:chrome   # .output/bmxt-<ver>-chrome.zip
+pnpm run package:firefox  # .output/bmxt-<ver>-firefox.zip + …-firefox-sources.tar.gz
 ```

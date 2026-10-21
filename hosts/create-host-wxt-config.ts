@@ -67,7 +67,11 @@ export function createHostWxtConfig(browser: HostBrowser) {
     //     (not package.json `bmxt_demo` → bmxtdemo).
     zip: {
       name: "bmxt",
-      artifactTemplate: "{{name}}-{{version}}-{{browser}}.zip"
+      artifactTemplate: "{{name}}-{{version}}-{{browser}}.zip",
+      // EN: Do not emit WXT's incomplete Firefox sources.zip — `package:firefox`
+      //     writes a full AMO tarball via hosts/firefox/scripts/package-amo-source.mjs.
+      // JA: WXT の不完全な sources.zip は出さない。審査用は package:firefox 側で作る。
+      zipSources: false
     },
     // Firefox defaults to MV2 unless forced; both store targets are MV3.
     manifestVersion: 3,

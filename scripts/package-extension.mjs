@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * EN: Zip extension host(s) for store submission. Runs wasm + background-services once, then WXT zip.
- * JA: ストア提出用にホストを zip する。wasm と background-services は一度だけ実行し、続けて WXT zip。
+ *     Firefox also packs a full AMO review source tarball (not WXT's incomplete sources.zip).
+ * JA: ストア提出用 zip。Firefox では配布用 zip に加え AMO 審査用ソース tarball も出力する。
  *
  * Usage:
  *   node scripts/package-extension.mjs chrome
@@ -11,12 +12,13 @@
  * Artifacts (under `.output/`, via WXT `zip.name` = `bmxt`):
  *   bmxt-<version>-chrome.zip
  *   bmxt-<version>-firefox.zip
- *   (Firefox also emits bmxt-<version>-sources.zip — WXT default; AMO reviewers use package:amo-source)
+ *   bmxt-<version>-firefox-sources.tar.gz   (Firefox only — AMO source submission)
  */
 
 import { spawnSync } from "node:child_process"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { packageFirefoxAmoSources } from "../hosts/firefox/scripts/package-amo-source.mjs"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const target = process.argv[2]
@@ -61,4 +63,13 @@ if (target === "firefox" || target === "all") {
     "firefox",
     "--mv3"
   ])
+  console.log("\n==> package Firefox AMO sources")
+  try {
+    const archivePath = packageFirefoxAmoSources()
+    console.log("AMO source archive:", archivePath)
+    console.log("Point reviewers at hosts/firefox/AMO_SOURCE.md inside the archive.")
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e))
+    process.exit(1)
+  }
 }

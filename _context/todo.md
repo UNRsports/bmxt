@@ -90,7 +90,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 |------|------|
 | レイアウト | `shared/` + `hosts/chrome/` + `hosts/firefox/` |
 | ビルド | `pnpm run build` → 両方 · `build:chrome` / `build:firefox` → 単体 |
-| AMO | `hosts/firefox/AMO_SOURCE.md` · `pnpm run package:amo-source` |
+| AMO | `hosts/firefox/AMO_SOURCE.md` · `pnpm run package:firefox` → `*-firefox-sources.tar.gz` |
 | IR | `HostEffect` / `applyHostEffects`（ワイヤー `kind` 不変） |
 | e2e | WebDriver 統一（`test:e2e:chrome` / `test:e2e:firefox`）。Playwright は廃止 |
 | 残 | 手元で FF アンパック窓スモーク · §5.4 専用機能隔離の仕上げ |

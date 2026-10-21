@@ -30,7 +30,7 @@ pnpm install --frozen-lockfile
 pnpm run build:firefox
 ```
 
-Production zip:
+Production packages (extension + AMO source):
 
 ```bash
 pnpm run package:firefox
@@ -42,7 +42,8 @@ pnpm run package:firefox
 | Artifact | Path |
 |----------|------|
 | Unpacked extension | `.output/firefox-mv3/` |
-| Zip (from `package:firefox`) | `.output/bmxt-<version>-firefox.zip` |
+| Extension zip (AMO upload) | `.output/bmxt-<version>-firefox.zip` |
+| Source tarball (AMO review) | `.output/bmxt-<version>-firefox-sources.tar.gz` |
 
 Load unpacked in Firefox: `about:debugging` → This Firefox → Load Temporary Add-on → select `.output/firefox-mv3/manifest.json`.
 
@@ -73,12 +74,8 @@ Load unpacked in Firefox: `about:debugging` → This Firefox → Load Temporary 
 
 The same `shared/` tree may contain Chrome-oriented APIs (Translator, File System Access, favicon permission). Firefox builds omit Chrome-only **manifest** permissions (`favicon`, `commands.*.global`). Runtime stubs / feature flags are tracked separately; core shell commands are the Firefox smoke target.
 
-## Source zip for reviewers
+## Source archive for reviewers
 
-From the repository root:
+`pnpm run package:firefox` writes **`.output/bmxt-<version>-firefox-sources.tar.gz`** (full repo inputs needed to reproduce the build; excludes `node_modules`, `.output`, built wasm/js copies under `shared/public/`, etc.). Attach that archive on AMO together with **`bmxt-<version>-firefox.zip`**, and point reviewers at **this file**.
 
-```bash
-pnpm run package:amo-source
-```
-
-This produces a source archive under `.output/` that includes the repo contents needed to run the build above (see script help). Attach that archive on AMO together with the built XPI/zip, and point reviewers at **this file**.
+Do not use any `bmxt-*-sources.zip` left from older WXT defaults — that archive was incomplete for this monorepo layout.

@@ -1386,7 +1386,7 @@ WXT’s Firefox MV3 **dev** runner is limited; preferred local loop:
 3. Select **`.output/firefox-mv3/manifest.json`**
 4. Open BMXt from the toolbar, or **Alt+Shift+C** while Firefox is focused (manifest uses Gecko key order; Chrome keeps **Shift+Alt+C**. Firefox has no OS-wide `commands.*.global` — check **about:addons** → gear → **Manage Extension Shortcuts** if it still does not fire)
 
-AMO reviewers: attach **`pnpm run package:amo-source`** output and follow **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** (`gecko.id` **`bmxt@unrsports`**, `gecko.strict_min_version` **140.0**, `gecko_android.strict_min_version` **142.0**).
+AMO reviewers: attach **`pnpm run package:firefox`** → **`.output/bmxt-<version>-firefox-sources.tar.gz`** and follow **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** (`gecko.id` **`bmxt@unrsports`**, `gecko.strict_min_version` **140.0**, `gecko_android.strict_min_version` **142.0**).
 
 <a id="store-submission"></a>
 
@@ -1406,8 +1406,9 @@ You can automate submission with the [WXT publishing guide](https://wxt.dev/guid
 
 ```bash
 pnpm run build:firefox
-pnpm run package:firefox      # .output/bmxt-<version>-firefox.zip
-pnpm run package:amo-source   # source archive for reviewers
+pnpm run package:firefox
+# → .output/bmxt-<version>-firefox.zip
+# → .output/bmxt-<version>-firefox-sources.tar.gz   (AMO source review)
 ```
 
 Both hosts at once: **`pnpm run package`**. See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**.
