@@ -3,6 +3,20 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.8.7",
+    "en": [
+      "Implemented command descriptions in the candidate menu",
+      "Implemented a tutorial for learning how to use BMXt",
+    ],
+    "ja": [
+      "候補メニューへコマンドの説明表示を実装",
+      "操作方法を学ぶためのチュートリアルを実装"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.8.5",
     "en": [
       "Required host_permissions enable in-page actions without a page reload",

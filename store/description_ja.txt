@@ -43,6 +43,11 @@ https://github.com/UNRsports/bmxt/issues
 
 
 ◆バージョン履歴
+0.8.7：
+・候補メニューへコマンドの説明表示を実装
+・操作方法を学ぶためのチュートリアルを実装
+・FireFox版をリリース
+
 0.8.5：
 ・host_permissions権限によりページリロード不要での動作を実装
 ・ページ内操作（nav / float / dom / search --page / snapshot）を https のみに限定
@@ -155,6 +160,7 @@ https://github.com/UNRsports/bmxt/issues
 |----------|------|
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを新規ブラウザタブで開く |
+| `tutorial` | `tab -list \| browse` の対話チュートリアル（`tutorial` / `tutorial -start` / `tutorial -skip`；初回起動で自動開始） |
 | `clear` | ログをクリア |
 | `exit` | アクティブなターミナルセッションを閉じる。最後の 1 セッションなら BMXt ウィンドウを閉じプロセススコープの状態を消去 |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |

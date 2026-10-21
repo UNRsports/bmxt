@@ -45,6 +45,11 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.8.7:
+- Implemented command descriptions in the candidate menu
+- Implemented a tutorial for learning how to use BMXt
+- Released the Firefox version
+
 0.8.5:
 - Required host_permissions enable in-page actions without a page reload
 - In-page scripting limited to https (nav / float / dom / search --page / snapshot)
@@ -157,6 +162,7 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 |----------|------|
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a new browser tab |
+| `tutorial` | Interactive coach for `tab -list \| browse` (`tutorial` / `tutorial -start` / `tutorial -skip`; auto-starts on first launch) |
 | `clear` | Clear logs |
 | `exit` | Close the active terminal session; when it is the last session, close the BMXt window and clear process-scoped state |
 | `tab` | Show available options, then restore the prompt to `tab ` (with a trailing space) for continued input |

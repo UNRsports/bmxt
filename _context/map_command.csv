@@ -60,9 +60,9 @@ setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
 aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page。,
-tutorial,,,,,tutorial | tutorial -start | tutorial -skip,UiAction set_mode feature_id=tutorial（start/skip）。初回自動開始＋コーチパネル。,
-tutorial,-start,,none,,tutorial -start,既定レッスン（tab -list | browse）を開始。,
-tutorial,-skip,,none,,tutorial -skip,スキップ（dismissedFirstRun）。,
+tutorial,,,,,tutorial | tutorial -start | tutorial -skip,UiAction set_mode feature_id=tutorial（start/skip）。初回自動開始＋コーチパネル。,0.8.7
+tutorial,-start,,none,,tutorial -start,既定レッスン（tab -list | browse）を開始。,0.8.7
+tutorial,-skip,,none,,tutorial -skip,スキップ（dismissedFirstRun）。,0.8.7
 exit,,,,,exit,Effect: exit_pane。,
 session,,,,,session …,単独 `session` + Enter: msgs + promptPrefix `session `。Effect（new/next/prev）または UiAction（list/switch/setting-name）。第二候補に `help`。,語彙: Effect + UiAction
 session,-new,,rest,,session -new [name],Effect: session_new。,
@@ -88,6 +88,8 @@ session,-setting-name,,rest,,session -setting-name [name],UiAction `session_sett
 （内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。`browse` は UI consumer（ListResult 必須）。,
 （内部）,bmxt-rule,,,,lib/features/bmxt-rule/,bmxt-rule/1。カタログ manifest/bmxt-rule.json。,
 （内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。設計・検証カタログ（固定トークン runtime は WASM `complete`）。,
+（内部）,ime-candidate-help,,,,lib/features/bmxt-window/token-picker-panel.tsx + setting imeCandidateHelp,"候補メニュー右にコマンド説明（usage）を表示。`setting` の ime-candidate-help on|off（既定 on）。",0.8.7
+（内部）,firefox-host,,,,hosts/firefox/ + hosts/create-host-wxt-config.ts,"Firefox MV3 ホスト（AMO）。同一 IR（HostEffect / UiAction）。e2e: test:e2e:firefox。",0.8.7
 （内部）,list-output,,,,lib/features/command-line/list-output/,bmxt-list/1。,
 （内部）,list-commands-registry,,,,lib/features/command-line/list-commands/,-list producer レジストリ。,
 （内部）,command-output,,,,lib/features/command-line/command-output.ts,stdout/stderr。,
