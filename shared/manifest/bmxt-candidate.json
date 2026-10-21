@@ -308,6 +308,15 @@
       "zones": []
     },
     {
+      "command": "tutorial",
+      "zones": [
+        {
+          "tier": "second",
+          "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }]
+        }
+      ]
+    },
+    {
       "command": "session",
       "zones": [
         { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },

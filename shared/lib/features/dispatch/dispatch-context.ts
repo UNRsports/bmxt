@@ -2,9 +2,9 @@ import type { DomListCapture } from "../dom/dom-list-capture"
 import type { SessionPatch } from "../bmxt-window/terminal-sessions/session-patches"
 import type { UiLocale } from "../setting/locale"
 
-/** `applyChromeEffects` が Chrome 操作のために使うコールバック。 */
+/** `applyHostEffects` がホスト操作のために使うコールバック。 */
 
-export type DispatchChromeContext = {
+export type DispatchHostContext = {
   /** EN: Collect session mutations for the UI to apply (SW does not own session state). */
   enqueueSessionPatch: (patch: SessionPatch) => void
   clearLog: () => Promise<void>

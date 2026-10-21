@@ -12,6 +12,7 @@ const FULL_HELP_SECTION_KEYS: &[&str] = &[
     "help.section.session",
     "help.section.dom",
     "help.section.translate",
+    "help.section.tutorial",
     "help.section.setting",
     "help.section.search",
     "help.section.url",
@@ -31,6 +32,7 @@ fn section_key_for_command(canonical: &str) -> Option<&'static str> {
         "session" => Some("help.section.session"),
         "setting" => Some("help.section.setting"),
         "translate" => Some("help.section.translate"),
+        "tutorial" => Some("help.section.tutorial"),
         _ => None,
     }
 }

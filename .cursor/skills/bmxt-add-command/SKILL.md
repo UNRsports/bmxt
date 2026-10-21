@@ -25,7 +25,7 @@ Commands communicate only through closed channels — not by calling each other 
 
 Index: `lib/features/command-line/inter-command/`. **Prefer reuse**; extend catalogs only when required.
 
-**Reuse path = Rust only:** If the command can be expressed with existing `ChromeEffect` / `UiAction` / list kinds, implement only in `crates/bmxt-core/src/cmd/*.rs` (+ manifest `commands[]` / codegen / i18n keys). **Do not** add TypeScript executors. Completeness check: `pnpm run verify:host-blind`.
+**Reuse path = Rust only:** If the command can be expressed with existing `HostEffect` / `UiAction` / list kinds, implement only in `crates/bmxt-core/src/cmd/*.rs` (+ manifest `commands[]` / codegen / i18n keys). **Do not** add TypeScript executors. Completeness check: `pnpm run verify:host-blind`.
 
 ## Command-line model (invariants)
 
@@ -69,12 +69,12 @@ Task progress:
 
 ## Codegen rules
 
-- **Single source:** `manifest/bmxt-codegen.json` (`commands[]`, `effects[]`, `uiActions[]`). Run **`pnpm run codegen`**. Do **not** hand-edit:
+- **Single source:** `manifest/bmxt-codegen.json` (`commands[]`, `effects[]`, `uiActions[]`). Run **`pnpm run codegen`**. **`check:generated`** compares the working tree to codegen output (**no git** — safe before `git add`). Do **not** hand-edit:
   - `lib/features/bmxt-core/registry/table.gen.ts`
   - `lib/features/dispatch/effect-types.ts`, `ui-action-types.ts`
   - `lib/features/dispatch/handlers/apply-dispatch.gen.ts`
   - `lib/features/builtin-commands/completion-fallback.ts`, `command-subcommands.gen.ts`
-  - `crates/bmxt-core/src/generated/chrome_effect.rs`, `ui_action.rs`, `registry_table.rs`
+  - `crates/bmxt-core/src/generated/host_effect.rs`, `ui_action.rs`, `registry_table.rs`
 - **`handlers/effects/*.ts`:** Not overwritten by codegen.
 - **`apply-ui-action.ts`:** Hand-written thin executors for generic UiAction kinds only.
 
@@ -84,5 +84,5 @@ Task progress:
 - Inter-command vocabulary: **`lib/features/command-line/inter-command/`**
 - Templates: **`manifest/templates/`**
 - TS host: **`lib/features/bmxt-core/`** (`wasm-host`, `dispatch`, registry metadata)
-- Chrome side effects: **`lib/features/dispatch/handlers/effects/`**
+- Host side effects: **`lib/features/dispatch/handlers/effects/`**
 - UI actions: **`lib/features/bmxt-window/shell/apply-ui-action.ts`**

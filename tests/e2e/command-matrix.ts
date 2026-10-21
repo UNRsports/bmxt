@@ -5,7 +5,6 @@
  *     フラグ／compound 完全組合せではない（`_context/todo.md` §5.5）。
  *
  * Keep rows aligned with `shared/manifest/bmxt-codegen.json` canonical names.
- * Ported from edit20261019 Playwright `tests/e2e/command-matrix.ts`.
  */
 
 export type SmokeAssert =
@@ -31,9 +30,6 @@ export type SmokeCase = {
 /**
  * EN: Initial smoke set (~20). Expand carefully — headed workers=1.
  * JA: 初期スモーク（約20）。headed workers=1 のため慎重に増やす。
- *
- * EN: `tutorial help` omitted — tutorial module is not present on this host tree
- *     (was on edit20261019; dropped in the Firefox/shared layout split).
  */
 export const COMMAND_SMOKE_CASES: SmokeCase[] = [
   { id: "help", line: "help", assert: "log_ok" },
@@ -83,6 +79,12 @@ export const COMMAND_SMOKE_CASES: SmokeCase[] = [
     line: "translate help",
     assert: "help_text",
     expectContains: "translate"
+  },
+  {
+    id: "tutorial-help",
+    line: "tutorial help",
+    assert: "help_text",
+    expectContains: "tutorial"
   },
   {
     id: "tab-list-browse",

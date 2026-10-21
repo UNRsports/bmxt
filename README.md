@@ -42,6 +42,8 @@
 - [Development](#development)
   - [Development startup (step-by-step)](#development-startup)
   - [Testing](#testing)
+    - [How to run](#testing-how-to-run)
+    - [What E2E covers](#testing-e2e-coverage)
   - [pnpm dependencies and security](#pnpm-dependencies)
   - [Project layout (WXT)](#project-layout)
   - [Main Sources](#main-sources)
@@ -235,6 +237,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 |----------|------|
 | `help` / `?` | Show help |
 | `aboutbmxt` | Open the BMXt welcome page in a **new browser tab** (see **[`aboutbmxt`](#aboutbmxt)**) |
+| `tutorial` | Interactive coach for `tab -list \| browse` (`tutorial` / `tutorial -start` / `tutorial -skip`; auto-starts on first launch) |
 | `clear` | Clear logs |
 | `exit` | Close the **active terminal session**; when it is the **last** session, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `tab` | Show available options, then restore prompt to `tab ` for option input |
@@ -347,7 +350,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 **`RUN_CMD` flow (fallback commands — e.g. `close`, `help`, `session -new`):**
 
 1. UI sends **`RUN_CMD`** with `{ line, sessionId, sessionOrderLength }`.
-2. Service Worker runs **`runDispatch`** / **`applyChromeEffects`** (tabs, scripting, etc.).
+2. Service Worker runs **`runDispatch`** / **`applyHostEffects`** (tabs, scripting, etc.).
 3. SW returns **`{ ok: true, patches: SessionPatch[], closeWindow? }`** — no session snapshot push.
 4. UI applies patches locally via **`applyRunCmdPatches`** (`appendLog`, `setLog`, `createSession`, `exitSession`, …).
 
@@ -609,6 +612,7 @@ When changing UI settings shape or on-disk format in a release:
 |-----|--------|
 | **language** | `--japanese` / `--english` (UI display language) |
 | **edit-picker** | **`on`** — show extra rows to customize picker columns separately; **`off`** — picker columns follow global appearance |
+| **ime-candidate-help** | **`on`** (default) — show usage help beside IME candidate tokens; **`off`** — token column only |
 | **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force layout. **mobile** (since **0.8.2**): soft key bar; prompt candidate menus support tap-to-select and outside-tap dismiss. **desktop**: keyboard-centric candidate close (**Esc** / **↑** at top), matching **0.8.0** |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
@@ -899,6 +903,15 @@ If the selection is invalid (tabs only, multiple windows/groups, etc.), an **`er
 
 **Authoritative lists** live in **`manifest/bmxt-codegen.json`** (`commands[]`, `effects[]`, **`uiActions[]`**). **`pnpm run codegen`** regenerates TS metadata (`registry/table.gen.ts`, `effect-types.ts`, `ui-action-types.ts`, `apply-dispatch.gen.ts`, completion helpers) **and** Rust tables (`crates/bmxt-core/src/generated/` including **`ui_action.rs`**). Built-in command **`run`** logic is in **`crates/bmxt-core/src/cmd/*.rs`**. Chrome effects are applied in **`lib/features/dispatch/handlers/effects/`**. Host IR contract: **`bmxt-host/2`** (generic UiAction primitives; see `lib/features/command-line/inter-command/`). Command-name semantic branches in the TS host are gated by **`pnpm run verify:host-blind`**.
 
+**Host / extension URL boundary**
+
+| Layer | Owns |
+|-------|------|
+| **Core (WASM + shared TS)** | `HostEffect` / plans — browser-agnostic |
+| **Host adapters** | `chrome.*` today; Firefox later via the same IR |
+| **Extension page URLs** | **`lib/features/extension-url/`** — `chrome-extension:` **and** `moz-extension:`. Prefer **`chrome.runtime.getURL`** / **`browser.runtime.getURL`** at runtime; use **`extensionPageUrl` / `parseExtensionPageUrl`** in trust checks, E2E, and tests (do **not** hard-code `chrome-extension://…`). |
+| **Privileged SW messages** | **`isTrustedBmxtUiSender`** (`lib/features/extension-permissions/`) — allowlists `bmxt.html` / `bmxt-float.html` on either extension protocol |
+
 **Runtime boundary**
 
 ```
@@ -907,7 +920,7 @@ prompt / RUN_CMD
   → run(line, locale) / classify  (Rust WASM)
   → { ty: lines | effects | ui | msgs }
        msgs → TS expand-msgs (+ optional promptPrefix → setContinuationPrompt)
-       effects → applyChromeEffects (SW) or RUN_CMD round-trip
+       effects → applyHostEffects (SW) or RUN_CMD round-trip
        ui → applyUiAction (React host; opaque kinds only — no grammar re-parse)
 ```
 
@@ -1090,7 +1103,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 - **`entrypoints/bmxt-nav-overlay.content/`** — WXT content script on https pages for nav overlay
 - **`lib/features/dispatch/`** — **`effect-types.ts`** / **`apply-dispatch.gen.ts`** (generated) + hand-written **`handlers/effects/*`**
 - **`lib/features/builtin-commands/`** — generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
-- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyChromeEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
+- **`entrypoints/background/index.ts`** — `RUN_CMD` wrapped in a **`run-cmd`** job (`persist: false`); `runDispatch` → lines / `applyHostEffects` → **`SessionPatch[]`** returned to the UI (`exit` → `exit_pane` patches; last session → `closeWindow` + legacy storage cleanup)
 
 <a id="job-execution"></a>
 
@@ -1137,7 +1150,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
 - **Recommended:** `pnpm run new:command -- <module> <canonical_name> [aliases...]` — scaffolds **`crates/bmxt-core/src/cmd/<module>.rs`**, updates **`commands[]`**, runs **codegen**. Then implement **`run`** using a template under **`manifest/templates/`**.
 - **Manual path:** Add **`commands[]`** row + **`crates/bmxt-core/src/cmd/<module>.rs`** + wire **`cmd/mod.rs`**, then **`pnpm run codegen`** and **`pnpm run build:wasm`**.
-- **Reuse path (prefer):** Return only existing **`ChromeEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
+- **Reuse path (prefer):** Return only existing **`HostEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
 - **Extend path (only if needed):**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
@@ -1159,7 +1172,7 @@ Every command row **must** include **`subcommands`**: use **`[]`** when the comm
 4. If the prompt should Tab-complete **third** fixed tokens after a head, use generated **`listThirdTokenCandidates`** (and add a completion zone in the shell if needed).
 5. Run **`pnpm run verify:manifest`**, **`pnpm run check:generated`**, **`pnpm exec tsc --noEmit`**, then **`pnpm run build`** as needed.
 
-**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`ChromeEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
+**Hand-written browser logic (`handlers/effects/*.ts`) vs codegen:** Those files are **not** regenerated. After you change **`effects[]`** in the manifest and run codegen, **keep the corresponding handler** (`tsHandlerFile` / `tsHandlerExport`) aligned with the generated **`HostEffect`** types and **`apply-dispatch.gen.ts`** imports. For **`-list`** effects, call **`runPlainListForCommandId`** from **`lib/features/command-line/list-commands/`** instead of duplicating format logic.
 
 #### Adding a plain `-list` producer (registry plugin)
 
@@ -1232,17 +1245,22 @@ If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`*
 
 ### Testing
 
+**JS/TS** tests live under **`tests/`** (not under `lib/` or the repo root). Layout details: **[`tests/README.md`](tests/README.md)**.
 
-**JS/TS** automated tests live under **`tests/`** (not under `lib/` or the repo root). See **[`tests/README.md`](tests/README.md)**.
+<a id="testing-how-to-run"></a>
 
-**Rust / WASM tests are intentionally outside `tests/`.** Cargo owns that layout:
+#### How to run
 
-| Kind | Location |
-|------|----------|
-| Unit (`#[cfg(test)]`) | **`crates/bmxt-core/src/**/*.rs`** |
-| Integration | **`crates/bmxt-core/tests/`** (discovered next to that package’s **`Cargo.toml`**) |
+| What | Command | Notes |
+|------|---------|--------|
+| **Unit + property (JS/TS)** | **`pnpm test`** | No browser. Fast. |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | Not included in `pnpm test`. |
+| **E2E (Chrome)** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing. Loads **`.output/chrome-mv3`**. |
+| **E2E (Firefox)** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver. Loads **`.output/firefox-mv3`**. |
+| **E2E (both)** | **`pnpm run test:e2e:all`** | Chrome then Firefox (builds required separately or via **`verify`**). |
+| **Full CI gate** | **`pnpm run verify`** | Manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E. |
 
-Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo test -p bmxt-core`** (`pnpm test` does not include them). Details: **[`tests/README.md`](tests/README.md)** § Rust / WASM.
+One-liner after a production build already exists:
 
 **Full gate (match CI):** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build:chrome`** + WebDriver E2E → **`build:firefox`** + WebDriver E2E.
 
@@ -1253,7 +1271,7 @@ Do **not** move Rust tests into repo-root **`tests/`**. Run them with **`cargo t
 | **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** (`selenium-webdriver`) under **`tests/e2e/`**. Same shell specs on Chrome and Firefox. See **`tests/README.md`**. |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
 
-**Adding a TS unit test:** place it at **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`** and import production code from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
+**Adding a TS unit test:** **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`**, import from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
 
 <a id="project-layout"></a>
 
@@ -1459,6 +1477,8 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 - [開発](#development-ja)
   - [開発時の起動](#development-startup-ja)
   - [テスト](#testing-ja)
+    - [実行方法](#testing-how-to-run-ja)
+    - [E2E がカバーすること](#testing-e2e-coverage-ja)
   - [pnpm 依存関係とセキュリティ](#pnpm-dependencies-ja)
   - [プロジェクト構成（WXT）](#project-layout-ja)
   - [主なソース](#main-sources-ja)
@@ -1645,6 +1665,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 |----------|------|
 | `help` / `?` | ヘルプ |
 | `aboutbmxt` | BMXt ウェルカムページを **新しいブラウザタブ** で開く（**[`aboutbmxt`](#aboutbmxt-ja)** 参照） |
+| `tutorial` | `tab -list \| browse` の対話チュートリアル（`tutorial` / `tutorial -start` / `tutorial -skip`；初回起動で自動開始） |
 | `clear` | ログをクリア |
 | `exit` | **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**なら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |
@@ -1757,7 +1778,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 **`RUN_CMD` フロー**（フォールバック — 例: `close`、`help`、`session -new`）:
 
 1. UI が **`RUN_CMD`**（`line`、`sessionId`、`sessionOrderLength`）を送信。
-2. SW が **`runDispatch`** / **`applyChromeEffects`** を実行。
+2. SW が **`runDispatch`** / **`applyHostEffects`** を実行。
 3. SW が **`{ ok: true, patches: SessionPatch[], closeWindow? }`** を返す（`SESSION_SNAPSHOT` 推送なし）。
 4. UI が **`applyRunCmdPatches`** でローカル適用（`appendLog`、`createSession`、`exitSession` 等）。
 
@@ -1966,6 +1987,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 |----|------|
 | **language** | `--japanese` / `--english`（UI 表示言語） |
 | **edit-picker** | **`on`** — ピッカー列専用の行を追加；**`off`** — ピッカー列は全体外観に従う |
+| **ime-candidate-help** | **`on`**（既定）— 候補メニュー右に usage ヘルプを表示；**`off`** — トークン列のみ |
 | **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — 強制切替。**mobile**（**0.8.2** 以降）: 補助キーバー、プロンプト候補のタップ確定／外タップで閉じる。**desktop**: **0.8.0** 相当のキーボード中心（**Esc** / 先頭で **↑**） |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
@@ -2305,6 +2327,15 @@ scriptable な **https** タブを **YAML frontmatter** 付き **Markdown snapsh
 
 **一覧の真実**は **`manifest/bmxt-codegen.json`**（`commands[]`・`effects[]`・**`uiActions[]`**）です。**`pnpm run codegen`** で TS メタデータ（`table.gen.ts`・`effect-types.ts`・`ui-action-types.ts`・`apply-dispatch.gen.ts`・補完ヘルパ）と Rust 生成物（`crates/bmxt-core/src/generated/`・**`ui_action.rs` 含む**）を再生成します。コマンド意味論の **`run`** は **`crates/bmxt-core/src/cmd/*.rs`**（WASM）、Chrome 副作用は **`lib/features/dispatch/handlers/effects/`**、UI は **`apply-ui-action.ts`**（`UiActionIR`）。Host IR 契約は **`bmxt-host/2`**（`lib/features/command-line/inter-command/`）。TS ホストのコマンド名意味分岐は **`pnpm run verify:host-blind`** で検査します。
 
+**ホスト / 拡張 URL 境界**
+
+| 層 | 担当 |
+|----|------|
+| **コア（WASM + 共有 TS）** | `HostEffect` / 計画 — ブラウザ非依存 |
+| **ホストアダプタ** | 現状 `chrome.*`。将来 Firefox も同一 IR |
+| **拡張ページ URL** | **`lib/features/extension-url/`** — `chrome-extension:` **と** `moz-extension:`。ランタイムは **`chrome.runtime.getURL`** / **`browser.runtime.getURL`** を優先。信頼判定・E2E・テストは **`extensionPageUrl` / `parseExtensionPageUrl`**（**`chrome-extension://…` の直書きはしない**） |
+| **特権 SW メッセージ** | **`isTrustedBmxtUiSender`**（`lib/features/extension-permissions/`）— いずれの拡張プロトコルでも `bmxt.html` / `bmxt-float.html` のみ |
+
 **実行境界:**
 
 ```
@@ -2476,7 +2507,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 - **`entrypoints/bmxt-nav-overlay.content/`** — https 向け nav 用 WXT コンテンツスクリプト
 - **`lib/features/dispatch/`** — 生成ディスパッチ + **`handlers/effects/`**
 - **`lib/features/builtin-commands/`** — Tab 補完・IME/eligibility 用生成物（Enter continuation の正本は Rust `promptPrefix`）
-- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyChromeEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
+- **`entrypoints/background/index.ts`** — **`run-cmd`** ジョブ（**`persist: false`**）で `RUN_CMD` → `runDispatch` / `applyHostEffects` → **`SessionPatch[]`** を UI に返す（`exit` → `exit_pane` patch；最後の 1 セッション → `closeWindow` + 旧 storage 掃除）
 
 manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと **`pnpm run verify:manifest`** / **`pnpm run check:generated`** を実行し、必要なら **`pnpm run build`** してください。
 
@@ -2523,7 +2554,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。第二トークン必須のとき、単独第一トークンの **Enter** は Rust の **`msgs` + `promptPrefix`**（`require_second_token` / `msgs_with_prompt`）で返す — TS 側に Enter continuation を足さない。第二トークンの **Tab** 候補は **`command-subcommands.gen.ts`**（manifest **`subcommands`**）。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 - **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
 - **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
-- **再利用パス（推奨）:** 既存 **`ChromeEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
+- **再利用パス（推奨）:** 既存 **`HostEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
 - **拡張パス（必要なときだけ）:**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
@@ -2603,17 +2634,22 @@ pnpm run dev
 
 ### テスト
 
+**JS/TS** の自動テストは **`tests/`** 配下（`lib/` やリポジトリ直下には置かない）。構成の詳細は **[`tests/README.md`](tests/README.md)**。
 
-**JS/TS** の自動テストはすべて **`tests/`** 配下に置く（`lib/` やリポジトリ直下には置かない）。詳細は **[`tests/README.md`](tests/README.md)**。
+<a id="testing-how-to-run-ja"></a>
 
-**Rust / WASM テストは意図的に `tests/` の外**に置く（Cargo の正本配置）:
+#### 実行方法
 
-| 種類 | 場所 |
-|------|------|
-| ユニット（`#[cfg(test)]`） | **`crates/bmxt-core/src/**/*.rs`** |
-| 統合 | **`crates/bmxt-core/tests/`**（当該パッケージの **`Cargo.toml`** 隣） |
+| 対象 | コマンド | 補足 |
+|------|----------|------|
+| **ユニット + プロパティ（JS/TS）** | **`pnpm test`** | ブラウザ不要。高速。 |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | `pnpm test` には含まれない。 |
+| **E2E（Chrome）** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing。**`.output/chrome-mv3`** をロード。 |
+| **E2E（Firefox）** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver。**`.output/firefox-mv3`** をロード。 |
+| **E2E（両方）** | **`pnpm run test:e2e:all`** | Chrome → Firefox（ビルドは別途、または **`verify`**）。 |
+| **CI と同一の全体ゲート** | **`pnpm run verify`** | manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E。 |
 
-Rust テストをリポジトリ直下の **`tests/`** へ移さない。実行は **`cargo test -p bmxt-core`**（**`pnpm test`** には含まれない）。詳細: **[`tests/README.md`](tests/README.md)** の Rust / WASM 節。
+ビルド済みなら次の順で十分です:
 
 **全体ゲート（CI と同一）:** **`pnpm run verify`** — manifest / no-fetch / generated → **`cargo test -p bmxt-core`** → **`build:wasm`** → **`tsc --noEmit`** → **`pnpm test`** → **`build:chrome`** + WebDriver E2E → **`build:firefox`** + WebDriver E2E。
 

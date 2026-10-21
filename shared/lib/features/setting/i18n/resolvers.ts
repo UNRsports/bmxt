@@ -189,7 +189,7 @@ export function dispatchFailedLine(locale: UiLocale, message: string): string {
 }
 
 export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSettings): string[] {
-  const { locale: uiLoc, appearance, hostUiMode } = settings
+  const { locale: uiLoc, appearance, hostUiMode, imeCandidateHelp } = settings
   const defaultLabel = tSetting("setting.summary.default", locale)
   const token = settingTokenForUiLocale(uiLoc)
   const hostUiLabel =
@@ -198,9 +198,13 @@ export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSetti
       : hostUiMode === "desktop"
         ? tSetting("setting.picker.hostUiStateDesktop", locale)
         : tSetting("setting.picker.hostUiStateAuto", locale)
+  const imeHelpLabel = imeCandidateHelp
+    ? tSetting("setting.picker.imeCandidateHelpStateOn", locale)
+    : tSetting("setting.picker.imeCandidateHelpStateOff", locale)
   return [
     tSetting("setting.summary.locale", locale, { token }),
     tSetting("setting.summary.hostUi", locale, { value: hostUiLabel }),
+    tSetting("setting.summary.imeCandidateHelp", locale, { value: imeHelpLabel }),
     tSetting("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
     tSetting("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
     tSetting("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),

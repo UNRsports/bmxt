@@ -3,9 +3,9 @@
  * JA: 互いに独立で並行実行してよい検索スコープ。
  */
 
-import type { ChromeEffect } from "../dispatch/effect-types.ts"
+import type { HostEffect } from "../dispatch/effect-types.ts"
 
-export function isParallelSearchEffect(e: ChromeEffect): boolean {
+export function isParallelSearchEffect(e: HostEffect): boolean {
   return (
     e.kind === "search_history" ||
     e.kind === "search_bookmark" ||

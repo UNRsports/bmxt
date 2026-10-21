@@ -189,14 +189,104 @@ export async function launchBmxtSession(
   return launchChrome(extensionPath)
 }
 
-export async function openBmxtPage(session: BmxtSession): Promise<void> {
-  const pageUrl = `${session.extensionOrigin}/bmxt.html`
+/**
+ * EN: Skip first-run tutorial coach so it does not steal keys / assert noise.
+ * JA: 初回チュートリアルのコーチ UI を閉じ、キー入力やアサートを邪魔しないようにする。
+ */
+async function dismissFirstRunTutorial(driver: WebDriver): Promise<void> {
+  const result = await driver.executeAsyncScript(`
+    const done = arguments[arguments.length - 1];
+    const payload = {
+      bmxt_tutorial_progress_v1: {
+        schemaVersion: 1,
+        dismissedFirstRun: true,
+        tutorials: {
+          "tab-list-browse": { status: "skipped", stepIndex: 0 }
+        }
+      }
+    };
+    chrome.storage.local
+      .set(payload)
+      .then(() => done(true))
+      .catch((err) => {
+        done({ __error: String(err && err.message ? err.message : err) });
+      });
+  `)
+  if (result && typeof result === "object" && "__error" in (result as object)) {
+    throw new Error(
+      `dismissFirstRunTutorial failed: ${(result as { __error: string }).__error}`
+    )
+  }
+}
+
+async function navigateToBmxtShell(session: BmxtSession, pageUrl: string): Promise<void> {
   if (session.browser === "firefox") {
     await openFirefoxExtensionPage(session.driver, pageUrl)
   } else {
     await session.driver.get(pageUrl)
   }
   await session.driver.wait(until.elementLocated(By.css(".bmxt-prompt-ime")), 60_000)
+}
+
+async function reloadBmxtShell(session: BmxtSession, pageUrl: string): Promise<void> {
+  if (session.browser === "firefox") {
+    // EN: `navigate().refresh()` is unreliable for moz-extension under Marionette.
+    //     Close the current shell tab and open a fresh one via chrome-context.
+    const previous = await session.driver.getWindowHandle()
+    await openFirefoxExtensionPage(session.driver, pageUrl)
+    const handles = await session.driver.getAllWindowHandles()
+    for (const handle of handles) {
+      if (handle === previous) {
+        try {
+          await session.driver.switchTo().window(handle)
+          await session.driver.close()
+        } catch {
+          /* EN: Tab may already be gone. */
+        }
+        break
+      }
+    }
+    await session.driver.wait(async () => {
+      for (const handle of await session.driver.getAllWindowHandles()) {
+        await session.driver.switchTo().window(handle)
+        const current = await session.driver.getCurrentUrl()
+        if (current === pageUrl || current.startsWith(`${pageUrl}?`) || current.startsWith(`${pageUrl}#`)) {
+          return true
+        }
+      }
+      return false
+    }, 60_000)
+  } else {
+    await session.driver.navigate().refresh()
+  }
+  await session.driver.wait(until.elementLocated(By.css(".bmxt-prompt-ime")), 60_000)
+}
+
+async function clickTutorialSkipIfPresent(driver: WebDriver): Promise<void> {
+  const skips = await driver.findElements(By.css(".bmxt-tutorial-coach-skip"))
+  if (skips.length === 0) {
+    return
+  }
+  await skips[0]!.click()
+  await driver.wait(async () => {
+    const coaches = await driver.findElements(By.css(".bmxt-tutorial-coach"))
+    return coaches.length === 0
+  }, 15_000)
+}
+
+export async function openBmxtPage(session: BmxtSession): Promise<void> {
+  const pageUrl = `${session.extensionOrigin}/bmxt.html`
+  await navigateToBmxtShell(session, pageUrl)
+  // EN: First-run auto-start may race and overwrite storage; dismiss twice, then reload.
+  await dismissFirstRunTutorial(session.driver)
+  await new Promise((resolve) => setTimeout(resolve, 250))
+  await dismissFirstRunTutorial(session.driver)
+  await reloadBmxtShell(session, pageUrl)
+  await clickTutorialSkipIfPresent(session.driver)
+  await session.driver.wait(async () => {
+    const coaches = await session.driver.findElements(By.css(".bmxt-tutorial-coach"))
+    return coaches.length === 0
+  }, 30_000)
 }
 
 export async function promptIme(driver: WebDriver): Promise<WebElement> {

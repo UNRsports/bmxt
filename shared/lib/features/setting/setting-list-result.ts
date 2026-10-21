@@ -16,7 +16,8 @@ export function buildSettingListResult(
     uiSettings.appearance,
     undefined,
     undefined,
-    uiSettings.hostUiMode
+    uiSettings.hostUiMode,
+    uiSettings.imeCandidateHelp
   ).filter((row) => !PLAIN_LIST_EXCLUDED_ROW_IDS.has(row.id))
   const records: ListRecord[] = rows.map((row) => ({
     kind: "setting.field",

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub use crate::generated::ChromeEffect;
+pub use crate::generated::HostEffect;
 pub use crate::generated::UiAction;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,7 +17,7 @@ pub enum DispatchBundle {
     #[serde(rename = "lines")]
     Lines { lines: Vec<String> },
     #[serde(rename = "effects")]
-    Effects { effects: Vec<ChromeEffect> },
+    Effects { effects: Vec<HostEffect> },
     #[serde(rename = "ui")]
     Ui { action: UiAction },
     #[serde(rename = "msgs")]
@@ -36,7 +36,7 @@ pub fn lines(lines: Vec<String>) -> DispatchBundle {
     DispatchBundle::Lines { lines }
 }
 
-pub fn effects(effects: Vec<ChromeEffect>) -> DispatchBundle {
+pub fn effects(effects: Vec<HostEffect>) -> DispatchBundle {
     DispatchBundle::Effects { effects }
 }
 

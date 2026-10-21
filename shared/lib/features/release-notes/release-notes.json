@@ -1,16 +1,11 @@
 {
-  "0.8.5": {
+  "0.8.6": {
     "ja": [
-      "host_permissions権限によりページリロード不要での動作を実装",
-      "ページ内操作（nav / float / dom / search --page / snapshot）を https のみに限定",
-      "RUN_CMD / NAV_CONTROL の送信元を拡張 UI に限定",
-      "テスト手法見直しによる動作の確実性担保"
+      "候補メニューへコマンドの説明表示を実装",
+      "操作方法を学ぶためのチュートリアルを実装"
     ],
     "en": [
-      "Required host_permissions enable in-page actions without a page reload",
-      "In-page scripting limited to https (nav / float / dom / search --page / snapshot)",
-      "RUN_CMD / NAV_CONTROL accepted only from extension UI pages",
-      "More reliable verification through revised test approach"
+      ""
     ]
   }
 }

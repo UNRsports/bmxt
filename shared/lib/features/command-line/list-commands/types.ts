@@ -1,5 +1,5 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
-import type { DispatchChromeContext } from "../../dispatch/dispatch-context.ts"
+import type { DispatchHostContext } from "../../dispatch/dispatch-context.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import type { ListResult } from "../list-output/types.ts"
 
@@ -19,7 +19,7 @@ export type ListCommandMatcher = {
 export type ListCommandFetchContext = {
   locale: UiLocale
   /** EN: Service Worker / effect path. */
-  dispatchCtx?: DispatchChromeContext
+  dispatchCtx?: DispatchHostContext
   /** EN: BMXt UI path (`session` / `setting` rows, pipe chain, compound). */
   deps?: CommandDispatchDeps
 }

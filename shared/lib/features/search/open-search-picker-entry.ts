@@ -14,16 +14,16 @@ import {
   openUrlAtSearchDestination,
   type SearchOpenDestinationRow
 } from "./search-open-destination"
-import type { ChromeEffect } from "../dispatch/effect-types"
-import type { DispatchChromeContext } from "../dispatch/dispatch-context"
-import { applyChromeEffects } from "../dispatch"
+import type { HostEffect } from "../dispatch/effect-types"
+import type { DispatchHostContext } from "../dispatch/dispatch-context"
+import { applyHostEffects } from "../dispatch"
 import { tSearch } from "../setting/i18n/ns/search"
 import { DEFAULT_UI_LOCALE } from "../setting/locale"
 
 const TAB_FOCUS_DELAY_MS = 120
 const TAB_LOAD_TIMEOUT_MS = 20000
 
-function scrollFailedLog(ctx: DispatchChromeContext): string {
+function scrollFailedLog(ctx: DispatchHostContext): string {
   return tSearch("search.scrollToMatch.failed", ctx.uiLocale ?? DEFAULT_UI_LOCALE)
 }
 
@@ -129,7 +129,7 @@ async function createTabAndJumpToNeedle(
 export async function openSearchPickerEntry(
   entry: PickerEntry,
   matchIndex: number,
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   appendLogLines: (lines: string[]) => void | Promise<void>,
   searchPattern = "",
   destination?: SearchOpenDestinationRow
@@ -180,12 +180,12 @@ export async function openSearchPickerEntry(
     return
   }
 
-  const effects: ChromeEffect[] = openEntryEffects(entry, "new_tab")
+  const effects: HostEffect[] = openEntryEffects(entry, "new_tab")
   if (effects.length === 0) {
     return
   }
   try {
-    const logLines = await applyChromeEffects(ctx, effects)
+    const logLines = await applyHostEffects(ctx, effects)
     if (logLines.length > 0) {
       await appendLogLines(logLines)
     }

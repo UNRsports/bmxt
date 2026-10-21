@@ -105,6 +105,11 @@ pub const COMMANDS: &[CmdMeta] = &[
         aliases: &[],
         usage_primary: "setting -list | setting -exit -list | setting help",
     },
+    CmdMeta {
+        name: "tutorial",
+        aliases: &[],
+        usage_primary: "tutorial | tutorial -start | tutorial -skip | tutorial help",
+    },
 ];
 
 static BRANCHES_DOM: &[SubcommandBranch] = &[
@@ -255,6 +260,21 @@ static BRANCHES_SETTING: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_TUTORIAL: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-start",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-skip",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -295,6 +315,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
         "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
+        "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
         _ => false,
     }
 }
@@ -320,6 +341,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "snapshot" => BRANCHES_SNAPSHOT,
         "browse" => &[],
         "setting" => BRANCHES_SETTING,
+        "tutorial" => BRANCHES_TUTORIAL,
         _ => &[],
     }
 }

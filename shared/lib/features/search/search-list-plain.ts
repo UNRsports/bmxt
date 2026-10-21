@@ -1,8 +1,8 @@
 import { appendListPlainSummary } from "../command-line/list-output/format-plain-summary.ts"
 import { formatListPlainLines } from "../command-line/list-output/format-plain-lines.ts"
 import type { ListResult } from "../command-line/list-output/types.ts"
-import { applyChromeEffects, type DispatchChromeContext } from "../dispatch"
-import type { ChromeEffect } from "../dispatch/effect-types.ts"
+import { applyHostEffects, type DispatchHostContext } from "../dispatch"
+import type { HostEffect } from "../dispatch/effect-types.ts"
 import type { CommandBusyProgress } from "../bmxt-window/shell/command-busy"
 import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
@@ -23,14 +23,14 @@ import { pickerEntriesFromSearchLines } from "../side-picker/model/from-search-l
 export type SearchListFetchOptions = {
   dispatchLine: string
   locale: UiLocale
-  ctx: DispatchChromeContext
+  ctx: DispatchHostContext
   /** EN: Live progress lines (scope start/done, page scan ticks). */
   onProgress?: (message: string) => Promise<void>
   /** EN: Structured overall progress for the prompt busy standard UI. */
   onBusyProgress?: (progress: CommandBusyProgress) => void | Promise<void>
 }
 
-function scopeLabelForEffect(effect: ChromeEffect, locale: UiLocale): string {
+function scopeLabelForEffect(effect: HostEffect, locale: UiLocale): string {
   switch (effect.kind) {
     case "search_history":
       return tSearch("search.list.scope.history", locale)
@@ -47,12 +47,12 @@ function scopeLabelForEffect(effect: ChromeEffect, locale: UiLocale): string {
 
 function buildEffectCtx(
   options: SearchListFetchOptions,
-  effect: ChromeEffect,
+  effect: HostEffect,
   pageOptions: { unlimit: boolean },
   scopeIndex: number,
   scopeTotal: number,
   emitBusy: (progress: CommandBusyProgress) => Promise<void>
-): DispatchChromeContext {
+): DispatchHostContext {
   const scope = scopeLabelForEffect(effect, options.locale)
   const onSearchPageProgressInfo =
     effect.kind === "search_page"
@@ -84,7 +84,7 @@ function buildEffectCtx(
 
 async function runOneSearchEffect(
   options: SearchListFetchOptions,
-  effect: ChromeEffect,
+  effect: HostEffect,
   pageOptions: { unlimit: boolean },
   scopeIndex: number,
   scopeTotal: number,
@@ -103,7 +103,7 @@ async function runOneSearchEffect(
     detail: scope
   })
   const ctx = buildEffectCtx(options, effect, pageOptions, scopeIndex, scopeTotal, emitBusy)
-  const lines = await applyChromeEffects(ctx, [effect])
+  const lines = await applyHostEffects(ctx, [effect])
   if (options.onProgress) {
     await options.onProgress(
       tSearch("search.list.progress.scopeDone", options.locale, { scope })

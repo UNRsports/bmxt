@@ -163,6 +163,7 @@ export {
   loadUiSettingsInternalCache,
   mirrorUiSettingsToInternalCache,
   applyDefaultUiSettingsToInternalCache,
+  DEFAULT_IME_CANDIDATE_HELP,
   normalizeUiSettings,
   replaceUiSettings,
   resetUiSettingsToDefaultsAndInternal,

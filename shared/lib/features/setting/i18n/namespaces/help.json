@@ -59,6 +59,10 @@
     "ja": "translate（Chrome 組み込み Translator API、ja↔en）:\n  translate            - `-on` / `-off` / `-setting` を表示し、プロンプトを `translate ` に戻して続きを入力。\n  translate -on        - 翻訳アシストを有効化（nav typing 時はプロンプト下に訳プレビュー）。\n  translate -off       - エディタ列を閉じ、アシストを無効化。\n  translate -setting   - 続けて `--ja-en` または `--en-ja`（Tab メニュー）；ペアを storage に保存。",
     "en": "translate (Chrome built-in Translator API, ja↔en):\n  translate            - show -on / -off / -setting, then restore prompt to `translate ` for continuation.\n  translate -on        - enable translation assist (nav typing preview under prompt).\n  translate -off       - close editor column and disable assist.\n  translate -setting   - then `--ja-en` or `--en-ja` (Tab menu); saves pair to storage."
   },
+  "help.section.tutorial": {
+    "ja": "tutorial（対話チュートリアル）:\n  tutorial / tutorial -start  - 既定レッスン（tab -list | browse）を開始。\n  tutorial -skip              - スキップ（初回自動開始も停止）。\n  初回起動時に自動で開始されます（スキップ可）。",
+    "en": "tutorial (interactive coach):\n  tutorial / tutorial -start  - start the default lesson (tab -list | browse).\n  tutorial -skip              - skip (also stops first-run auto-start).\n  Auto-starts on first launch (skippable)."
+  },
   "help.section.url": {
     "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",
     "en": "URL (http/https, typed as a whole line):\n  <url>           - new tab\n  <url> .         - current tab (active tab in focused window)\n  <url> -nw       - new window"

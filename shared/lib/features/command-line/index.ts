@@ -1,5 +1,6 @@
 export {
   imeTokenPickerHint,
+  listImeCandidateHelpsFromUsage,
   resolveImeTokenPicker,
   type ImeTokenPickerModel,
   type ImeTokenTier,

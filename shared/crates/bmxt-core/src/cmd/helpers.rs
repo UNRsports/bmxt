@@ -16,6 +16,7 @@ pub fn unknown_option(command: &str, option: &str, usage_keys: &[&str]) -> Dispa
         "session" => msg_param("cmd.session.error.unknownOption", "option", option),
         "snapshot" => msg_param("cmd.snapshot.error.unknownOption", "option", option),
         "setting" => msg_param("cmd.setting.error.unknownOption", "option", option),
+        "tutorial" => msg_param("cmd.tutorial.error.unknownOption", "option", option),
         _ => msg_param("cmd.error.unknownCommand", "cmdToken", option),
     }];
     for key in usage_keys {

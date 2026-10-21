@@ -11,7 +11,11 @@ import { UI_SETTINGS_KEY } from "../extension-storage/keys"
 import type { UiAppearance } from "./appearance"
 import { DEFAULT_HOST_UI_MODE, type HostUiMode } from "./host-ui-mode.ts"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "./locale"
-import { loadUiSettings, type UiSettings } from "./settings"
+import {
+  DEFAULT_IME_CANDIDATE_HELP,
+  loadUiSettings,
+  type UiSettings
+} from "./settings"
 
 type UiSettingsContextValue = {
   settings: UiSettings
@@ -27,6 +31,7 @@ const UiSettingsContext = createContext<UiSettingsContextValue | null>(null)
 const INITIAL: UiSettings = {
   locale: DEFAULT_UI_LOCALE,
   hostUiMode: DEFAULT_HOST_UI_MODE,
+  imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
   appearance: {
     fg: null,
     bgColor: null,

@@ -53,3 +53,13 @@ export async function expectLogContains(
 export async function waitForOutLine(driver: WebDriver, timeoutMs = 15_000): Promise<void> {
   await driver.wait(async () => (await outLineElements(driver)).length > 0, timeoutMs)
 }
+
+/** EN: No log line contains the substring. */
+export async function expectLogNotContains(driver: WebDriver, substring: string): Promise<void> {
+  const texts = await readOutLineTexts(driver)
+  assert.equal(
+    texts.some((t) => t.includes(substring)),
+    false,
+    `unexpected log substring ${JSON.stringify(substring)} in: ${texts.join(" | ")}`
+  )
+}

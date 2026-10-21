@@ -3,8 +3,8 @@
  * Do not edit by hand.
  */
 
-import type { ChromeEffect } from "../effect-types"
-import type { DispatchChromeContext } from "../dispatch-context"
+import type { HostEffect } from "../effect-types"
+import type { DispatchHostContext } from "../dispatch-context"
 import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseCurrentTabEffect } from "./effects/close-current-tab"
 import { applyCloseCurrentWindowEffect } from "./effects/close-current-window"
@@ -32,8 +32,8 @@ import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
 import { applyTabsNuEffect } from "./effects/tabs-nu"
 
 export async function applyOne(
-  ctx: DispatchChromeContext,
-  e: ChromeEffect
+  ctx: DispatchHostContext,
+  e: HostEffect
 ): Promise<string[]> {
   switch (e.kind) {
     case "clear_log":

@@ -25,6 +25,15 @@ export type TokenPickerModel = {
   candidateLabels?: string[]
   /** EN: Optional structured rows (title wraps; detail on its own line). */
   candidateRows?: TokenPickerCandidateRow[]
+  /**
+   * EN: Help texts from `help.section.*` (parallel to candidates). Pane shows the highlighted row only.
+   * JA: help 節テキスト（候補と並列）。右ペインはハイライト行のみ表示（Mozc 風）。
+   */
+  candidateHelps?: (string | undefined)[]
+  /**
+   * EN: When false, hide the help pane (`setting` ime-candidate-help). Default: show when helps exist.
+   */
+  showCandidateHelp?: boolean
   hi: number
   tier: ImeTokenTier
   /** EN: Stage already has a pipe-producer first command (second/third tier). */
@@ -69,6 +78,16 @@ export function TokenPickerPanel({ model, onPickIndex }: Props) {
   const useRows =
     Array.isArray(model.candidateRows) &&
     model.candidateRows.length === model.candidates.length
+  const helpPaneEnabled =
+    model.showCandidateHelp !== false &&
+    !useRows &&
+    Array.isArray(model.candidateHelps) &&
+    model.candidateHelps.length === model.candidates.length
+  const highlightHelp =
+    helpPaneEnabled && typeof model.candidateHelps?.[hi] === "string"
+      ? model.candidateHelps[hi]
+      : undefined
+  const helpVisible = helpPaneEnabled && typeof highlightHelp === "string" && highlightHelp.length > 0
 
   useLayoutEffect(() => {
     const list = listRef.current
@@ -79,7 +98,10 @@ export function TokenPickerPanel({ model, onPickIndex }: Props) {
   }, [hi, model.candidates.length])
 
   return (
-    <div className="bmxt-subcmd-picker" role="listbox" aria-label={hint}>
+    <div
+      className={`bmxt-subcmd-picker${helpPaneEnabled ? " bmxt-subcmd-picker--with-help" : ""}`}
+      role="listbox"
+      aria-label={hint}>
       <div className="bmxt-subcmd-picker-hint">
         <span>{hint}</span>
         {pipeAvailable ? (
@@ -88,61 +110,70 @@ export function TokenPickerPanel({ model, onPickIndex }: Props) {
           </span>
         ) : null}
       </div>
-      <div ref={listRef} className="bmxt-subcmd-picker-list">
-        {model.candidates.map((c, i) => {
-          const row = useRows ? model.candidateRows![i] : null
-          return (
-            <div
-              key={`${c}-${i}`}
-              id={`${ITEM_ID_PREFIX}-${i}`}
-              role="option"
-              aria-selected={i === model.hi}
-              className={`bmxt-subcmd-picker-item${useRows ? " bmxt-subcmd-picker-item--row" : ""}${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}${pointerSelect ? " bmxt-subcmd-picker-item--pickable" : ""}`}
-              onMouseDown={
-                pointerSelect
-                  ? (e) => {
-                      e.preventDefault()
-                    }
-                  : undefined
-              }
-              onClick={
-                pointerSelect
-                  ? () => {
-                      onPickIndex(i)
-                    }
-                  : undefined
-              }>
-              {row ? (
-                <>
-                  {row.faviconSrc ? (
-                    <img
-                      className="bmxt-subcmd-picker-item-favicon"
-                      src={row.faviconSrc}
-                      alt=""
-                      width={16}
-                      height={16}
-                      decoding="async"
-                      draggable={false}
-                      onError={(e) => {
-                        e.currentTarget.style.visibility = "hidden"
-                      }}
-                    />
-                  ) : (
-                    <span className="bmxt-subcmd-picker-item-favicon-spacer" aria-hidden />
-                  )}
-                  <span className="bmxt-subcmd-picker-item-body">
-                    <span className="bmxt-subcmd-picker-item-title">{row.title}</span>
-                    {row.detail ? (
-                      <span className="bmxt-subcmd-picker-item-detail">{row.detail}</span>
-                    ) : null}
-                  </span>
-                </>
-              ) : (
-                (model.candidateLabels?.[i] ?? c)
-              )}
-            </div>
-          )
-        })}
+      <div className={helpPaneEnabled ? "bmxt-subcmd-picker-body" : undefined}>
+        <div ref={listRef} className="bmxt-subcmd-picker-list">
+          {model.candidates.map((c, i) => {
+            const row = useRows ? model.candidateRows![i] : null
+            return (
+              <div
+                key={`${c}-${i}`}
+                id={`${ITEM_ID_PREFIX}-${i}`}
+                role="option"
+                aria-selected={i === model.hi}
+                className={`bmxt-subcmd-picker-item${useRows ? " bmxt-subcmd-picker-item--row" : ""}${i === model.hi ? " bmxt-subcmd-picker-item--hi" : ""}${pointerSelect ? " bmxt-subcmd-picker-item--pickable" : ""}`}
+                onMouseDown={
+                  pointerSelect
+                    ? (e) => {
+                        e.preventDefault()
+                      }
+                    : undefined
+                }
+                onClick={
+                  pointerSelect
+                    ? () => {
+                        onPickIndex(i)
+                      }
+                    : undefined
+                }>
+                {row ? (
+                  <>
+                    {row.faviconSrc ? (
+                      <img
+                        className="bmxt-subcmd-picker-item-favicon"
+                        src={row.faviconSrc}
+                        alt=""
+                        width={16}
+                        height={16}
+                        decoding="async"
+                        draggable={false}
+                        onError={(e) => {
+                          e.currentTarget.style.visibility = "hidden"
+                        }}
+                      />
+                    ) : (
+                      <span className="bmxt-subcmd-picker-item-favicon-spacer" aria-hidden />
+                    )}
+                    <span className="bmxt-subcmd-picker-item-body">
+                      <span className="bmxt-subcmd-picker-item-title">{row.title}</span>
+                      {row.detail ? (
+                        <span className="bmxt-subcmd-picker-item-detail">{row.detail}</span>
+                      ) : null}
+                    </span>
+                  </>
+                ) : (
+                  (model.candidateLabels?.[i] ?? c)
+                )}
+              </div>
+            )
+          })}
+        </div>
+        {helpPaneEnabled ? (
+          <div
+            className="bmxt-subcmd-picker-help-pane"
+            aria-hidden={!helpVisible}>
+            {helpVisible ? highlightHelp : null}
+          </div>
+        ) : null}
       </div>
     </div>
   )

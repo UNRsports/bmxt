@@ -57,6 +57,8 @@ export type SettingsExportJson = {
   /** EN: Optional; missing → auto. Legacy `extraKeysMode` accepted on import. */
   hostUiMode?: HostUiMode
   extraKeysMode?: unknown
+  /** EN: Optional; missing → true (show IME candidate help). */
+  imeCandidateHelp?: boolean
   appearance: SettingsExportAppearanceV2
 }
 
@@ -125,12 +127,13 @@ function bgImageFileName(
 }
 
 export function buildSettingsExportJson(settings: UiSettings): SettingsExportJson {
-  const { locale, appearance, hostUiMode } = settings
+  const { locale, appearance, hostUiMode, imeCandidateHelp } = settings
   return {
     version: 2,
     exportedAt: new Date().toISOString(),
     locale,
     hostUiMode,
+    imeCandidateHelp,
     appearance: {
       fg: appearance.fg,
       bgColor: appearance.bgColor,
@@ -309,7 +312,8 @@ export function parseSettingsExportJson(
     appearance,
     hostUiMode: normalizeHostUiMode(
       o.hostUiMode !== undefined ? o.hostUiMode : o.extraKeysMode
-    )
+    ),
+    imeCandidateHelp: o.imeCandidateHelp !== false
   }
 }
 

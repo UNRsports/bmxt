@@ -27,7 +27,7 @@
     "verify:manifest": "node scripts/verify-manifest.mjs",
     "verify:host-blind": "node scripts/verify-host-blind.mjs",
     "verify:wasm-boundary": "node scripts/verify-wasm-boundary.mjs",
-    "check:generated": "pnpm run codegen && git diff --exit-code -- shared/manifest/bmxt-codegen.json shared/lib/features/bmxt-core/registry/table.gen.ts shared/lib/features/dispatch/effect-types.ts shared/lib/features/dispatch/ui-action-types.ts shared/lib/features/dispatch/handlers/apply-dispatch.gen.ts shared/lib/features/builtin-commands/completion-fallback.ts shared/lib/features/builtin-commands/command-subcommands.gen.ts shared/crates/bmxt-core/src/generated/chrome_effect.rs shared/crates/bmxt-core/src/generated/ui_action.rs shared/crates/bmxt-core/src/generated/registry_table.rs",
+    "check:generated": "node scripts/check-generated.mjs",
     "check:no-fetch": "node scripts/check-no-fetch.mjs",
     "sync:completion-fallback": "pnpm run codegen",
     "sync:effect-types": "pnpm run codegen",

@@ -1,4 +1,4 @@
-import type { ChromeEffect } from "../../dispatch/effect-types"
+import type { HostEffect } from "../../dispatch/effect-types"
 import type { PickerEntry } from "./picker-entry"
 import { normalizePickerOpenUrl } from "./normalize-picker-open-url"
 
@@ -11,7 +11,7 @@ export type OpenUrlMode = "default" | "new_tab" | "new_window" | "current_tab"
 export function openEntryEffects(
   entry: PickerEntry,
   mode: OpenUrlMode = "new_tab"
-): ChromeEffect[] {
+): HostEffect[] {
   const url = normalizePickerOpenUrl(entry.url)
   if (!url) {
     return []

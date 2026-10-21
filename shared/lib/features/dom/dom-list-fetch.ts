@@ -1,7 +1,7 @@
 import type { ListResult } from "../command-line/list-output/types.ts"
 import { LIST_OUTPUT_SCHEMA } from "../command-line/list-output/types.ts"
 import { canScriptHttpHostPages } from "../extension-permissions/http-host-access.ts"
-import type { DispatchChromeContext } from "../dispatch/dispatch-context.ts"
+import type { DispatchHostContext } from "../dispatch/dispatch-context.ts"
 import { resolveTargetTabForActiveWindow } from "../page-dom/resolve-target-tab.ts"
 import {
   describeNonScriptableReason,
@@ -34,7 +34,7 @@ export type DomListFetchParams = DomListMatch & {
 
 /** EN: Resolve target tab for plain `dom -list` (effect override, then active window). */
 export async function resolveDomListTab(
-  dispatchCtx?: DispatchChromeContext
+  dispatchCtx?: DispatchHostContext
 ): Promise<chrome.tabs.Tab | undefined> {
   if (dispatchCtx?.resolveDomListTargetTabId !== undefined) {
     const tabId = await dispatchCtx.resolveDomListTargetTabId()

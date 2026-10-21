@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
+import {
+  incrementalPickerMatchMode,
+  listImeCandidateHelpsFromUsage,
+  resolveImeTokenPicker
+} from "../../command-line"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isCompleteSecondTokenWithoutFurtherFixedTokens } from "../../command-line/second-token-picker.ts"
 import { isCompletePipeConsumerWithoutFurtherTokens } from "../../command-line/pipe/pipe-consumer-first-picker.ts"
@@ -11,6 +15,7 @@ import {
   type SessionListRow
 } from "../../session"
 import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
+import { useUiSettings } from "../../setting/use-ui-settings"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { useCspDynamicStyle } from "../csp-dynamic-stylesheet"
 import { shouldKeepSessionSwitchPickerOpen, measureFloatingPickerHostPosition } from "./bmxt-shell-prompt-helpers"
@@ -43,6 +48,9 @@ export type UsePromptPickersOptions = {
 
 /** EN: IME / subcmd / session-list floating pickers on the prompt. */
 export function usePromptPickers(options: UsePromptPickersOptions) {
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
+  const showCandidateHelp = uiSettings.imeCandidateHelp !== false
   const completionCandidatesRef = useRef<string[]>([])
   useEffect(() => {
     completionCandidatesRef.current = [...options.localCompletion]
@@ -102,13 +110,29 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     : sessionListPickerOpen
       ? sessionListPickerScopeId
       : null
-  const [subCmdPickerPos, setSubCmdPickerPos] = useState<{ left: number; top: number } | null>(null)
+  const [subCmdPickerPos, setSubCmdPickerPos] = useState<{
+    left: number
+    top: number
+    width?: number
+    height?: number
+  } | null>(null)
+  const fillViewportForHelp =
+    subCmdPicker !== null &&
+    subCmdPicker.showCandidateHelp !== false &&
+    Array.isArray(subCmdPicker.candidateHelps) &&
+    subCmdPicker.candidateHelps.length === subCmdPicker.candidates.length
   useCspDynamicStyle(
     promptPickerOpen && subCmdPickerPos && promptPickerScopeId ? promptPickerScopeId : null,
     subCmdPickerPos
       ? {
           left: `${subCmdPickerPos.left}px`,
-          top: `${subCmdPickerPos.top}px`
+          top: `${subCmdPickerPos.top}px`,
+          ...(typeof subCmdPickerPos.width === "number"
+            ? { width: `${subCmdPickerPos.width}px` }
+            : {}),
+          ...(typeof subCmdPickerPos.height === "number"
+            ? { height: `${subCmdPickerPos.height}px` }
+            : {})
         }
       : null
   )
@@ -331,6 +355,7 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               candidates: [],
               candidateLabels: undefined,
               candidateRows: undefined,
+              candidateHelps: undefined,
               hi: 0
             }
           })
@@ -343,6 +368,12 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         setSubCmdPicker(null)
         return
       }
+      const candidateHelps = listImeCandidateHelpsFromUsage(
+        resolved.candidates,
+        ln,
+        resolved.tokenStart,
+        locale
+      )
       setSubCmdPicker((prev) => {
         const sameSlot =
           prev !== null &&
@@ -358,13 +389,25 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
           tokenStart: resolved.tokenStart,
           tokenEnd: resolved.tokenEnd,
           candidates: resolved.candidates,
+          candidateHelps,
+          showCandidateHelp,
           hi,
           tier: resolved.tier,
           pipeAvailable: resolved.pipeAvailable
         }
       })
     },
-    [openSessionPicker, options.mode, options.navPageTyping, options.navReloadTabMetaRef, options.onNavReloadTabMetaUpdated, options.paneFocusRef, options.sessionNameTypingRef]
+    [
+      locale,
+      openSessionPicker,
+      options.mode,
+      options.navPageTyping,
+      options.navReloadTabMetaRef,
+      options.onNavReloadTabMetaUpdated,
+      options.paneFocusRef,
+      options.sessionNameTypingRef,
+      showCandidateHelp
+    ]
   )
 
   useEffect(() => {
@@ -389,13 +432,20 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     const measure = () => {
       const next = measureFloatingPickerHostPosition(
         options.cursorMirrorCellRef.current,
-        options.subCmdPickerHostRef.current
+        options.subCmdPickerHostRef.current,
+        { fillRemainingViewport: fillViewportForHelp }
       )
       if (!next) {
         return
       }
       setSubCmdPickerPos((prev) => {
-        if (prev && prev.left === next.left && prev.top === next.top) {
+        if (
+          prev &&
+          prev.left === next.left &&
+          prev.top === next.top &&
+          prev.width === next.width &&
+          prev.height === next.height
+        ) {
           return prev
         }
         return next
@@ -412,6 +462,7 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       window.removeEventListener("resize", measure)
     }
   }, [
+    fillViewportForHelp,
     subCmdPickerAnchorEpisode,
     sessionListMenuAnchorEpisode,
     options.line,

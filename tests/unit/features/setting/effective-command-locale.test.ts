@@ -7,6 +7,7 @@ import type { SettingListPickerState } from "../../../../shared/lib/features/set
 const baseSettings: UiSettings = {
   locale: "ja",
   hostUiMode: "auto",
+  imeCandidateHelp: true,
   appearance: {} as UiSettings["appearance"]
 }
 
@@ -17,7 +18,12 @@ describe("effectiveCommandLocale", () => {
 
   it("prefers setting picker draft locale", () => {
     const picker = {
-      draft: { locale: "en", hostUiMode: "auto", appearance: baseSettings.appearance },
+      draft: {
+        locale: "en",
+        hostUiMode: "auto",
+        imeCandidateHelp: true,
+        appearance: baseSettings.appearance
+      },
       view: "main",
       editing: null,
       editDraft: ""

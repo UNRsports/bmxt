@@ -1,10 +1,10 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 
-type E = Extract<ChromeEffect, { kind: "session_next" }>
+type E = Extract<HostEffect, { kind: "session_next" }>
 
 export async function applySessionNextEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   _e: E
 ): Promise<string[]> {
   ctx.enqueueSessionPatch({

@@ -98,6 +98,9 @@ export type CommandDispatchDeps = {
   navConfirmClosePendingRef: React.MutableRefObject<
     import("../../../nav/nav-confirm-close").NavConfirmClosePending | null
   >
+  /** EN: Interactive tutorial (`set_mode` feature_id=tutorial). */
+  startTutorial: (tutorialId?: string) => void
+  skipTutorial: () => void
 }
 
 export type CommandDispatchContext = {

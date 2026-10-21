@@ -23,6 +23,9 @@ import {
   trySaveUiSettingsToExternal
 } from "./settings-external-storage"
 
+/** EN: Default on — show usage help beside IME candidate tokens. */
+export const DEFAULT_IME_CANDIDATE_HELP = true
+
 export type UiSettings = {
   locale: UiLocale
   appearance: UiAppearance
@@ -31,6 +34,18 @@ export type UiSettings = {
    *     `auto` → Android mobile, else desktop; override with `desktop` / `mobile`.
    */
   hostUiMode: HostUiMode
+  /**
+   * EN: When true, IME token picker shows usage help in a right-hand column.
+   * JA: true のとき候補メニュー右に usage ヘルプ列を表示。
+   */
+  imeCandidateHelp: boolean
+}
+
+function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean {
+  if (!("imeCandidateHelp" in raw)) {
+    return DEFAULT_IME_CANDIDATE_HELP
+  }
+  return raw.imeCandidateHelp !== false
 }
 
 function pickHostUiModeFromPartial(raw: Record<string, unknown>): HostUiMode {
@@ -50,14 +65,16 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
     return {
       locale: DEFAULT_UI_LOCALE,
       appearance: normalizeUiAppearance(null),
-      hostUiMode: DEFAULT_HOST_UI_MODE
+      hostUiMode: DEFAULT_HOST_UI_MODE,
+      imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP
     }
   }
   const record = raw as Record<string, unknown>
   return {
     locale: parseUiLocale(raw.locale),
     appearance: normalizeUiAppearance(raw.appearance),
-    hostUiMode: pickHostUiModeFromPartial(record)
+    hostUiMode: pickHostUiModeFromPartial(record),
+    imeCandidateHelp: pickImeCandidateHelpFromPartial(record)
   }
 }
 
@@ -78,7 +95,8 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
   const defaults = normalizeUiSettings({
     locale: DEFAULT_UI_LOCALE,
     appearance: DEFAULT_UI_APPEARANCE,
-    hostUiMode: DEFAULT_HOST_UI_MODE
+    hostUiMode: DEFAULT_HOST_UI_MODE,
+    imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP
   })
   await saveUiSettingsToChromeStorage(defaults)
   await activateInternalUiSettingsStorage()
@@ -94,7 +112,8 @@ export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSetting
   const defaults = normalizeUiSettings({
     locale: DEFAULT_UI_LOCALE,
     appearance: DEFAULT_UI_APPEARANCE,
-    hostUiMode: DEFAULT_HOST_UI_MODE
+    hostUiMode: DEFAULT_HOST_UI_MODE,
+    imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP
   })
   await saveUiSettingsToChromeStorage(defaults)
   return defaults

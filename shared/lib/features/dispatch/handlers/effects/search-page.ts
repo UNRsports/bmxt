@@ -1,12 +1,12 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { searchPageLines } from "../../../search/sources/page-adapter"
 import { DEFAULT_UI_LOCALE } from "../../../setting/locale"
 
-type E = Extract<ChromeEffect, { kind: "search_page" }>
+type E = Extract<HostEffect, { kind: "search_page" }>
 
 export async function applySearchPageEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
   const shouldCancel = ctx.shouldCancelSearchPage ?? ctx.shouldCancel

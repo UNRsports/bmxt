@@ -1,5 +1,5 @@
-use crate::ir::{effects, ChromeEffect, DispatchBundle};
+use crate::ir::{effects, HostEffect, DispatchBundle};
 
 pub fn run(_args: &[String]) -> DispatchBundle {
-    effects(vec![ChromeEffect::ExitPane])
+    effects(vec![HostEffect::ExitPane])
 }

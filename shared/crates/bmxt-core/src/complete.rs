@@ -80,7 +80,7 @@ fn third_token_candidates(canonical: &str, second_lower: &str) -> Vec<String> {
 
 /**
  * EN: Resolve fixed-token candidates for the token under `cursor`.
- * Returns `None` when no fixed-token menu applies (host may add live/Chrome candidates).
+ * Returns `None` when no fixed-token menu applies (host may add live browser candidates).
  */
 pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
     let cursor = clamp_to_char_boundary(line, cursor);

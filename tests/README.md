@@ -47,12 +47,15 @@ pnpm run verify           # full CI gate (includes Chrome + Firefox e2e)
 - Host switch: **`BMXT_E2E_BROWSER=chrome|firefox`**
 - Specs: **`tests/e2e/*.test.ts`** (shared); harness in **`harness.ts`**
 - Drivers are fetched by **Selenium Manager** (no separate `test:e2e:install`)
+- Suites: command smoke (`commands-smoke.test.ts` + `command-matrix.ts`), prompt integrity (`prompt-integrity.test.ts`), CJK caret (`prompt-cjk.test.ts`)
 
 ## Adding tests / テスト追加
 
 - **Unit (TS):** add `tests/unit/features/<same-path-as-lib>/<name>.test.ts` and import production modules from `lib/features/...` with a `.ts` extension.
 - **Property:** add `tests/property/<name>.property.test.ts` using `fast-check` (`fc.assert` / `fc.property`). Boundary suites: `utf16-utf8-offset.property.test.ts`, `wasm-boundary.property.test.ts` (needs built `lib/wasm/bmxt-core/bmxt_core_bg.wasm`).
 - **E2E:** add `tests/e2e/<name>.test.ts` using **`harness.ts`** (runs on both browsers via the scripts above).
+- **E2E command smoke:** add a row to `tests/e2e/command-matrix.ts` (`id`, `line`, `assert`, optional `tags` / `expectContains`). Assertions: `usage` | `log_ok` | `log_or_empty` | `picker` | `cleared` | `help_text`. Prefer locale-stable substrings (`usage:`, `error:`). Tag `needs_https` when content scripts / page tabs are required. Do **not** explode into full flag/compound combinatorics.
+- **E2E prompt integrity:** add cases to `tests/e2e/prompt-integrity.test.ts` for UI breakage classes (wipe, busy, picker, history, focus) — not command matrices. Reuse `tests/e2e/helpers/` and `harness.ts`.
 - **Rust:** add `#[cfg(test)]` modules under `crates/bmxt-core/src/`, or integration files under `crates/bmxt-core/tests/` — **not** under this directory.
 
 Do **not** put `*.test.ts` next to production files under `lib/`.

@@ -1,11 +1,11 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
 
-type E = Extract<ChromeEffect, { kind: "clear_log" }>
+type E = Extract<HostEffect, { kind: "clear_log" }>
 
 export async function applyClearLogEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   _e: E
 ): Promise<string[]> {
   await ctx.clearLog()

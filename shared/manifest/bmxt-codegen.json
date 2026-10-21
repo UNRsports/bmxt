@@ -304,6 +304,26 @@
           "tail": "none"
         }
       ]
+    },
+    {
+      "module": "tutorial",
+      "canonicalName": "tutorial",
+      "aliases": [],
+      "usagePrimary": "tutorial | tutorial -start | tutorial -skip | tutorial help",
+      "subcommands": [
+        {
+          "head": "-start",
+          "tail": "none"
+        },
+        {
+          "head": "-skip",
+          "tail": "none"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
     }
   ],
   "effects": [

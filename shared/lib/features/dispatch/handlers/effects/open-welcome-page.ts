@@ -1,12 +1,12 @@
 import { openWelcomePageTab } from "../../../welcome/open-welcome-page-tab"
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
 
-type E = Extract<ChromeEffect, { kind: "open_welcome_page" }>
+type E = Extract<HostEffect, { kind: "open_welcome_page" }>
 
 export async function applyOpenWelcomePageEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   _e: E
 ): Promise<string[]> {
   await openWelcomePageTab()

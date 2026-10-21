@@ -123,13 +123,15 @@ export function SettingPickerBody({
         state.draft.appearance,
         storageConfig,
         snapshotStorageConfig,
-        state.draft.hostUiMode
+        state.draft.hostUiMode,
+        state.draft.imeCandidateHelp
       ),
     [
       state.view,
       state.draft.locale,
       state.draft.appearance,
       state.draft.hostUiMode,
+      state.draft.imeCandidateHelp,
       storageConfig,
       snapshotStorageConfig
     ]

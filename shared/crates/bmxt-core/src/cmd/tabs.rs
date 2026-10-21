@@ -1,6 +1,6 @@
 use crate::cmd::helpers::{self, normalize_token};
 use crate::ir::{
-    effects, msg_key, msg_param, msgs, msgs_with_prompt, ui, ChromeEffect, DispatchBundle, UiAction,
+    effects, msg_key, msg_param, msgs, msgs_with_prompt, ui, HostEffect, DispatchBundle, UiAction,
 };
 use crate::line_parse::parse_http_url_candidate;
 
@@ -107,7 +107,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
 
     match sub {
         "-list" => match parse_tabs_list_args(args) {
-            Ok(show_url) => effects(vec![ChromeEffect::TabsList {
+            Ok(show_url) => effects(vec![HostEffect::TabsList {
                 show_url: if show_url {
                     "true".to_string()
                 } else {
@@ -129,7 +129,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
             if args.len() > 2 {
                 return usage_msgs(msg_key("cmd.tabs.error.tooManyArgs"));
             }
-            effects(vec![ChromeEffect::TabsNu])
+            effects(vec![HostEffect::TabsNu])
         }
         "-moveurl" => {
             let url_part = args
@@ -146,7 +146,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
             let Some(url) = parse_http_url_candidate(&url_part) else {
                 return usage_msgs(msg_key("cmd.tabs.error.usageMoveurl"));
             };
-            effects(vec![ChromeEffect::TabsMoveUrl { url }])
+            effects(vec![HostEffect::TabsMoveUrl { url }])
         }
         _ => usage_msgs(msg_key("cmd.tabs.error.internalDispatchOutOfSync")),
     }

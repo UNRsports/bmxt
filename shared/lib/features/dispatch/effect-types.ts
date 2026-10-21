@@ -3,7 +3,7 @@
  * Do not edit by hand; run `pnpm run codegen`.
  */
 
-export type ChromeEffect =
+export type HostEffect =
   | { dispatch_line: string; kind: "search_list" }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { kind: "clear_log" }
@@ -51,7 +51,7 @@ export type UiActionIR =
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"
   lines?: string[]
-  effects?: ChromeEffect[]
+  effects?: HostEffect[]
   action?: UiActionIR
   msgs?: DispatchMsg[]
   /** EN: Optional prompt restore after msgs (Rust prompt semantic SoT). */

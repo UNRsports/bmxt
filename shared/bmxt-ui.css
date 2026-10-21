@@ -520,6 +520,70 @@ body {
   margin-top: 8px;
 }
 
+.bmxt-tutorial-coach {
+  color: #8b949e;
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #161b22;
+}
+
+.bmxt-tutorial-coach-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bmxt-tutorial-coach-title {
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.bmxt-tutorial-coach-progress {
+  margin-left: 8px;
+  font-weight: 400;
+  color: #8b949e;
+}
+
+.bmxt-tutorial-coach-skip {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: transparent;
+  color: #8b949e;
+  cursor: pointer;
+  font: inherit;
+}
+
+.bmxt-tutorial-coach-skip:hover {
+  color: #c9d1d9;
+  border-color: #8b949e;
+}
+
+.bmxt-tutorial-coach-instruction {
+  color: #e6edf3;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-tutorial-coach-hint {
+  margin-top: 6px;
+  color: #8b949e;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-tutorial-coach-footer {
+  margin-top: 8px;
+  font-size: 0.92em;
+  color: #6e7681;
+}
+
 .bmxt-out-line {
   margin: 0;
   padding: 0;
@@ -1330,11 +1394,17 @@ body {
 .bmxt-subcmd-picker-host {
   max-width: min(420px, calc(100vw - 16px));
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .bmxt-subcmd-picker-host--positioned {
   position: fixed;
   z-index: 50;
+}
+
+/* EN: Host sized to remaining viewport when IME help pane is open. */
+.bmxt-subcmd-picker-host:has(.bmxt-subcmd-picker--with-help) {
+  max-width: none;
 }
 
 .bmxt-subcmd-picker {
@@ -1351,6 +1421,15 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   font-size: 12px;
   line-height: 1.35;
+}
+
+/* EN: Candidate list + Mozc-style help pane fills the host (host ≈ remaining window). */
+.bmxt-subcmd-picker--with-help {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
 }
 
 .bmxt-subcmd-picker-hint {
@@ -1370,11 +1449,44 @@ body {
   color: #8b949e;
 }
 
+.bmxt-subcmd-picker-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+
 .bmxt-subcmd-picker-list {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 7.5em;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.bmxt-subcmd-picker--with-help .bmxt-subcmd-picker-list {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: min(16rem, 36%);
+  border-right: 1px solid #21262d;
+}
+
+.bmxt-subcmd-picker-help-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: #8b949e;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bmxt-subcmd-picker-item {
@@ -1566,7 +1678,8 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
 .bmxt-shell .bmxt-out-line,
 .bmxt-shell .bmxt-hint,
 .bmxt-shell .bmxt-isearch,
-.bmxt-version-upgrade {
+.bmxt-version-upgrade,
+.bmxt-tutorial-coach {
   user-select: text;
   cursor: text;
 }

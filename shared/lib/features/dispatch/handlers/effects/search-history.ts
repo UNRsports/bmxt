@@ -1,11 +1,11 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { searchHistoryLines } from "../../../search/sources/history-adapter"
 
-type E = Extract<ChromeEffect, { kind: "search_history" }>
+type E = Extract<HostEffect, { kind: "search_history" }>
 
 export async function applySearchHistoryEffect(
-  _ctx: DispatchChromeContext,
+  _ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
   return searchHistoryLines(e.pattern)

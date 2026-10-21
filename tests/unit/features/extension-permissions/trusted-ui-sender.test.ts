@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { afterEach, beforeEach, describe, it } from "node:test"
+import { extensionPageUrl } from "../../../../shared/lib/features/extension-url/extension-page-url.ts"
 import { isTrustedBmxtUiSender } from "../../../../shared/lib/features/extension-permissions/trusted-ui-sender.ts"
 
 const EXT_ID = "abcdefghijklmnopqrstuvwxyzabcdef"
@@ -33,7 +34,7 @@ describe("isTrustedBmxtUiSender", () => {
   it("accepts bmxt.html from a windows.create popup tab (sender.tab present)", () => {
     const ok = isTrustedBmxtUiSender({
       id: EXT_ID,
-      url: `chrome-extension://${EXT_ID}/bmxt.html`,
+      url: extensionPageUrl({ extensionId: EXT_ID, path: "shell" }),
       tab: { id: 42 } as chrome.tabs.Tab
     })
     assert.equal(ok, true)
@@ -42,7 +43,34 @@ describe("isTrustedBmxtUiSender", () => {
   it("accepts bmxt-float.html iframe (query + sender.tab of host page)", () => {
     const ok = isTrustedBmxtUiSender({
       id: EXT_ID,
-      url: `chrome-extension://${EXT_ID}/bmxt-float.html?tabId=7`,
+      url: `${extensionPageUrl({ extensionId: EXT_ID, path: "float" })}?tabId=7`,
+      tab: { id: 7 } as chrome.tabs.Tab,
+      frameId: 1
+    })
+    assert.equal(ok, true)
+  })
+
+  it("accepts moz-extension UI pages (Firefox same-extension origin)", () => {
+    const ok = isTrustedBmxtUiSender({
+      id: EXT_ID,
+      url: extensionPageUrl({
+        extensionId: EXT_ID,
+        path: "shell",
+        protocol: "moz-extension:"
+      }),
+      tab: { id: 1 } as chrome.tabs.Tab
+    })
+    assert.equal(ok, true)
+  })
+
+  it("accepts moz-extension float page with query", () => {
+    const ok = isTrustedBmxtUiSender({
+      id: EXT_ID,
+      url: `${extensionPageUrl({
+        extensionId: EXT_ID,
+        path: "float",
+        protocol: "moz-extension:"
+      })}?tabId=7`,
       tab: { id: 7 } as chrome.tabs.Tab,
       frameId: 1
     })
@@ -62,7 +90,7 @@ describe("isTrustedBmxtUiSender", () => {
   it("rejects other extension ids", () => {
     const ok = isTrustedBmxtUiSender({
       id: "otherxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      url: `chrome-extension://${EXT_ID}/bmxt.html`
+      url: extensionPageUrl({ extensionId: EXT_ID, path: "shell" })
     })
     assert.equal(ok, false)
   })
@@ -70,7 +98,7 @@ describe("isTrustedBmxtUiSender", () => {
   it("rejects non-allowlisted extension pages", () => {
     const ok = isTrustedBmxtUiSender({
       id: EXT_ID,
-      url: `chrome-extension://${EXT_ID}/background-services.js`
+      url: extensionPageUrl({ extensionId: EXT_ID, path: "background-services.js" })
     })
     assert.equal(ok, false)
   })
@@ -81,29 +109,9 @@ describe("isTrustedBmxtUiSender", () => {
     assert.equal(isTrustedBmxtUiSender({ id: EXT_ID, url: "not a url" }), false)
   })
 
-  it("accepts moz-extension UI pages (Firefox same-extension origin)", () => {
-    const ok = isTrustedBmxtUiSender({
-      id: EXT_ID,
-      url: `moz-extension://${EXT_ID}/bmxt.html`,
-      tab: { id: 42 } as chrome.tabs.Tab
-    })
-    assert.equal(ok, true)
-  })
-
-  it("accepts moz-extension float page with query", () => {
-    const ok = isTrustedBmxtUiSender({
-      id: EXT_ID,
-      url: `moz-extension://${EXT_ID}/bmxt-float.html?tabId=7`,
-      tab: { id: 7 } as chrome.tabs.Tab,
-      frameId: 1
-    })
-    assert.equal(ok, true)
-  })
-
   it("accepts Firefox moz-extension host UUID when gecko.id differs from page host", () => {
     const geckoId = "bmxt@unrsports"
     const pageUuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-    installChromeRuntimeMock(geckoId, pageUuid)
     const g = globalThis as typeof globalThis & {
       chrome?: { runtime: { id: string; getURL: (path: string) => string } }
     }

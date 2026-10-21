@@ -1,12 +1,12 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
 import { resolveTabRefDisplay, tabRefEffectLine } from "./tab-ref-effect-line"
 
-type E = Extract<ChromeEffect, { kind: "tab_go_forward" }>
+type E = Extract<HostEffect, { kind: "tab_go_forward" }>
 
 export async function applyTabGoForwardEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
   const lines: string[] = []

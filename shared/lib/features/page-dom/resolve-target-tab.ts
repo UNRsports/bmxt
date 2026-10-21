@@ -8,10 +8,10 @@
  *
  *     This duplicates the background logic on purpose: the picker-direct dispatch path
  *     (`find -list`, `dom -list`) bypasses the SW `RUN_CMD` round-trip, so handlers cannot
- *     rely on `DispatchChromeContext.resolveTabArg` being populated.
+ *     rely on `DispatchHostContext.resolveTabArg` being populated.
  *     background のロジックを意図的に再実装する：picker 直結ディスパッチ経路
  *     （`find -list` / `dom -list`）は SW の `RUN_CMD` を経由しないため、handler 側からは
- *     `DispatchChromeContext.resolveTabArg` が stub のまま渡る。
+ *     `DispatchHostContext.resolveTabArg` が stub のまま渡る。
  */
 
 import { LAST_NORMAL_WINDOW_KEY } from "../extension-storage/keys"

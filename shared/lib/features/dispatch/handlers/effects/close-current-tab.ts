@@ -1,5 +1,5 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import {
   appendHandoffLogLines,
   placeFloatHandoffOnTab,
@@ -10,10 +10,10 @@ import { showBmxtFloatOnTabAsync } from "../../../bmxt-float/float-host-control"
 import { effectT } from "../effect-i18n"
 import { resolveTabRefDisplay, tabRefEffectLine } from "./tab-ref-effect-line"
 
-type E = Extract<ChromeEffect, { kind: "close_current_tab" }>
+type E = Extract<HostEffect, { kind: "close_current_tab" }>
 
 export async function applyCloseCurrentTabEffect(
-  ctx: DispatchChromeContext,
+  ctx: DispatchHostContext,
   _e: E
 ): Promise<string[]> {
   const tab = await ctx.resolveTabArg(undefined)

@@ -1,12 +1,12 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { runPlainListForCommandId } from "../../../command-line/list-commands"
 import type { UiLocale } from "../../../setting/locale"
 import { getRunLocale } from "../../../setting/i18n/run-locale"
 
-type E = Extract<ChromeEffect, { kind: "dom_list" }>
+type E = Extract<HostEffect, { kind: "dom_list" }>
 
-export async function applyDomListEffect(ctx: DispatchChromeContext, e: E): Promise<string[]> {
+export async function applyDomListEffect(ctx: DispatchHostContext, e: E): Promise<string[]> {
   const locale: UiLocale = ctx.uiLocale ?? getRunLocale()
   const pickerMode = e.pickerMode === "with" ? "with" : "normal"
   const showTag = e.showTag === "true" && pickerMode === "with"

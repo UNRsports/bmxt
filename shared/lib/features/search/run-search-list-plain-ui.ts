@@ -4,7 +4,7 @@ import {
   recordCommandHistory
 } from "../bmxt-window/shell/command-dispatch/types.ts"
 import { yieldToUiPaint } from "../bmxt-window/shell/command-busy"
-import type { DispatchChromeContext } from "../dispatch"
+import type { DispatchHostContext } from "../dispatch"
 import { mergeJobIntoDispatchContext, shouldCancelJob } from "../job"
 import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
@@ -21,7 +21,7 @@ function buildSearchDispatchCtx(
   locale: UiLocale,
   dispatchLine: string,
   onProgress: (message: string) => Promise<void>
-): DispatchChromeContext {
+): DispatchHostContext {
   return {
     enqueueSessionPatch: () => {},
     clearLog: async () => {},

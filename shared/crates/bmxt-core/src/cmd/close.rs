@@ -1,8 +1,8 @@
-use crate::ir::{effects, msgs, ui, ChromeEffect, DispatchBundle, Msg, UiAction};
+use crate::ir::{effects, msgs, ui, HostEffect, DispatchBundle, Msg, UiAction};
 
 pub fn run(args: &[String]) -> DispatchBundle {
     if args.iter().any(|a| a == "--confirmed") {
-        return effects(vec![ChromeEffect::CloseCurrentTab]);
+        return effects(vec![HostEffect::CloseCurrentTab]);
     }
 
     if args.len() <= 1 {
@@ -14,7 +14,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
     let id_str = args.get(1).map(String::as_str).unwrap_or("");
     let id = id_str.parse::<i64>();
     match id {
-        Ok(tab_id) if tab_id >= 0 => effects(vec![ChromeEffect::CloseTab { tab_id }]),
+        Ok(tab_id) if tab_id >= 0 => effects(vec![HostEffect::CloseTab { tab_id }]),
         _ => msgs(vec![Msg {
             key: "cmd.close.usage".to_string(),
             params: None,
@@ -43,7 +43,7 @@ mod tests {
         let bundle = run(&["close".into(), "--confirmed".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => {
-                assert!(matches!(effects[0], ChromeEffect::CloseCurrentTab));
+                assert!(matches!(effects[0], HostEffect::CloseCurrentTab));
             }
             other => panic!("unexpected bundle: {other:?}"),
         }
@@ -54,7 +54,7 @@ mod tests {
         let bundle = run(&["close".into(), "42".into()]);
         match bundle {
             DispatchBundle::Effects { effects } => match &effects[0] {
-                ChromeEffect::CloseTab { tab_id } => assert_eq!(*tab_id, 42),
+                HostEffect::CloseTab { tab_id } => assert_eq!(*tab_id, 42),
                 other => panic!("unexpected effect: {other:?}"),
             },
             other => panic!("unexpected bundle: {other:?}"),

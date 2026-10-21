@@ -550,5 +550,29 @@
   "cmd.translate.usage.line3": {
     "ja": "       translate -setting --ja-en | --en-ja  — 翻訳ペアを設定（保存）",
     "en": "       translate -setting --ja-en | --en-ja  — set translation pair (saved)"
+  },
+  "cmd.tutorial.usage.line1": {
+    "ja": "usage: tutorial | tutorial -start | tutorial -skip",
+    "en": "usage: tutorial | tutorial -start | tutorial -skip"
+  },
+  "cmd.tutorial.usage.line2": {
+    "ja": "  tutorial / tutorial -start  — 対話チュートリアルを開始（既定: tab -list | browse）",
+    "en": "  tutorial / tutorial -start  — start the interactive tutorial (default: tab -list | browse)"
+  },
+  "cmd.tutorial.usage.detail": {
+    "ja": "  tutorial -skip  — チュートリアルをスキップ（初回自動開始も止める）",
+    "en": "  tutorial -skip  — skip the tutorial (also stops first-run auto-start)"
+  },
+  "cmd.tutorial.error.unknownOption": {
+    "ja": "error: 不明な tutorial オプション: {option}",
+    "en": "error: unknown tutorial option: {option}"
+  },
+  "cmd.tutorial.started": {
+    "ja": "チュートリアルを開始しました。コーチパネルの指示に従ってください。",
+    "en": "Tutorial started. Follow the coach panel."
+  },
+  "cmd.tutorial.skipped": {
+    "ja": "チュートリアルをスキップしました。再開は `tutorial` です。",
+    "en": "Tutorial skipped. Restart anytime with `tutorial`."
   }
 }

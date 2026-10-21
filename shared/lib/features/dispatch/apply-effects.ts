@@ -1,17 +1,17 @@
 /**
- * Rust が返した Effect を Chrome API で実行し、ターミナルに出す行を返す。
+ * Rust が返した HostEffect をホスト API で実行し、ターミナルに出す行を返す。
  */
 
-import type { ChromeEffect } from "./effect-types"
-import type { DispatchChromeContext } from "./dispatch-context"
+import type { HostEffect } from "./effect-types"
+import type { DispatchHostContext } from "./dispatch-context"
 import { applyOne } from "./handlers/apply-one"
 import { isParallelSearchEffect } from "../search/search-effect-parallel"
 
-export type { DispatchChromeContext } from "./dispatch-context"
+export type { DispatchHostContext } from "./dispatch-context"
 
-export async function applyChromeEffects(
-  ctx: DispatchChromeContext,
-  effects: ChromeEffect[]
+export async function applyHostEffects(
+  ctx: DispatchHostContext,
+  effects: HostEffect[]
 ): Promise<string[]> {
   if (effects.length > 1 && effects.every(isParallelSearchEffect)) {
     const parts = await Promise.all(effects.map((e) => applyOne(ctx, e)))

@@ -1,13 +1,13 @@
-import type { ChromeEffect } from "../../effect-types"
-import type { DispatchChromeContext } from "../../dispatch-context"
+import type { HostEffect } from "../../effect-types"
+import type { DispatchHostContext } from "../../dispatch-context"
 import { runPlainListForCommandId } from "../../../command-line/list-commands"
 import type { UiLocale } from "../../../setting/locale"
 import { getRunLocale } from "../../../setting/i18n/run-locale"
 import { tSearch } from "../../../setting/i18n/ns/search"
 
-type E = Extract<ChromeEffect, { kind: "search_list" }>
+type E = Extract<HostEffect, { kind: "search_list" }>
 
-export async function applySearchListEffect(ctx: DispatchChromeContext, e: E): Promise<string[]> {
+export async function applySearchListEffect(ctx: DispatchHostContext, e: E): Promise<string[]> {
   const locale: UiLocale = ctx.uiLocale ?? getRunLocale()
   try {
     return await runPlainListForCommandId(
