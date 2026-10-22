@@ -942,7 +942,7 @@ prompt / RUN_CMD
 
 **Tab / IME fixed tokens:** WASM **`complete(line, cursor)`** (tiers 1–3 from codegen subcommands). `resolveImeTokenPicker` calls it when WASM is ready and applies host filter UX + live overlays. **Caret offsets (since 0.8.3):** the JS prompt uses **UTF-16** indices; Rust/`complete` uses **UTF-8** byte offsets — the host converts via **`lib/features/bmxt-core/utf16-utf8-offset.ts`** before calling WASM (avoids wiping CJK prompt text).
 
-**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + **wasm-pack** (`bash scripts/install-wasm-pack.sh`, pins **0.15.0**; see [wasm-pack](https://wasm-bindgen.github.io/wasm-pack/)). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
+**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + **wasm-pack** (`bash scripts/install-wasm-pack.sh`, pins **0.15.0**; see [wasm-pack](https://wasm-bindgen.github.io/wasm-pack/)). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **[`scripts/fixtures/dispatch/effects.json`](scripts/fixtures/dispatch/effects.json)** — notes in **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)**.
 
 The tab picker’s **`runTabsPickerReduce`** (and related planners) are WASM-backed wrappers under **`lib/features/bmxt-core/tabs-picker/`** (see **Tab picker — implementation** under **`tab`**).
 
@@ -1131,7 +1131,7 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 
 ### Add a New Built-in Command
 
-Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first). For the full checklist (scaffold, reuse vs extend, verification), see **[Command add procedure](#command-add-procedure)** below.
+Start with **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)** (vocabulary-first). Template index: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**. For the full checklist (scaffold, reuse vs extend, verification), see **[Command add procedure](#command-add-procedure)** below.
 
 
 1. Prefer **reusing** existing Effect / UiAction / list kinds (`manifest/templates/`).
@@ -1144,7 +1144,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 ### Command add procedure
 
 
-- **Vocabulary first:** Follow **[Inter-command vocabulary](#inter-command-vocabulary)**. Start from **`manifest/templates/new-command.checklist.md`** (decision tree + checklists). Examples: **`command-reuse-effects.example.rs`**, **`command-reuse-ui-action.example.rs`**, **`command-list-producer.steps.md`**, **`pipe-consumer.steps.md`**.
+- **Vocabulary first:** Follow **[Inter-command vocabulary](#inter-command-vocabulary)**. Start from **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)** (decision tree + checklists; index **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**). Examples: **`command-reuse-effects.example.rs`**, **`command-reuse-ui-action.example.rs`**, **`command-list-producer.steps.md`**, **`pipe-consumer.steps.md`**.
 - **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens). When a second token is required, **Enter** on the lone first token must return Rust **`msgs` + `promptPrefix`** (`require_second_token` / `msgs_with_prompt`) — do **not** add TS Enter continuation. Second-token **Tab** lists come from generated **`command-subcommands.gen.ts`** (manifest **`subcommands`**). See **[Prompt semantics (Rust SoT)](#prompt-semantics-sot)**.
 
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
@@ -1247,6 +1247,19 @@ If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`*
 
 **JS/TS** tests live under **`tests/`** (not under `lib/` or the repo root). Layout details: **[`tests/README.md`](tests/README.md)**.
 
+**E2E browser lifecycle** (launch unpacked Chrome/Firefox extensions, resolve `extensionOrigin`, open extension pages) uses **[webxdriver](https://github.com/UNRsports/webxdriver)** (`devDependency`, pinned GitHub commit). BMXt-specific helpers (prompt / tutorial / `.bmxt-*` asserts, **`BMXT_E2E_BROWSER`**, `.output/{chrome,firefox}-mv3` paths) stay in **`tests/e2e/harness.ts`**.
+
+**Related docs (scattered READMEs):**
+
+| Doc | Topic |
+|-----|--------|
+| **[`tests/README.md`](tests/README.md)** | Unit / property / E2E layout and how to add tests |
+| **[`hosts/README.md`](hosts/README.md)** | Chrome / Firefox host packages and build/package scripts |
+| **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** | Firefox AMO source kit |
+| **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)** | Golden Effect contracts (`effects.json`) for WASM `run` |
+| **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** | Command-add templates (closed vocabulary) |
+| **[`shared/public/assets/wasm/bmxt-gaze/README.md`](shared/public/assets/wasm/bmxt-gaze/README.md)** | Optional gaze WASM module (build notes) |
+
 <a id="testing-how-to-run"></a>
 
 #### How to run
@@ -1255,8 +1268,8 @@ If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`*
 |------|---------|--------|
 | **Unit + property (JS/TS)** | **`pnpm test`** | No browser. Fast. |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | Not included in `pnpm test`. |
-| **E2E (Chrome)** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing. Loads **`.output/chrome-mv3`**. |
-| **E2E (Firefox)** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver. Loads **`.output/firefox-mv3`**. |
+| **E2E (Chrome)** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing via **webxdriver**. Loads **`.output/chrome-mv3`**. |
+| **E2E (Firefox)** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver via **webxdriver**. Loads **`.output/firefox-mv3`**. |
 | **E2E (both)** | **`pnpm run test:e2e:all`** | Chrome then Firefox (builds required separately or via **`verify`**). |
 | **Full CI gate** | **`pnpm run verify`** | Manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E. |
 
@@ -1268,10 +1281,16 @@ One-liner after a production build already exists:
 |-------|---------|----------|
 | **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
 | **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test` (incl. UTF-16/UTF-8 caret conversion and **TS↔WASM** host entrypoints). |
-| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** (`selenium-webdriver`) under **`tests/e2e/`**. Same shell specs on Chrome and Firefox. See **`tests/README.md`**. |
-| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** under **`tests/e2e/`** (**webxdriver** lifecycle + BMXt `harness.ts`). See **[`tests/README.md`](tests/README.md)**. |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`shared/crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
 
 **Adding a TS unit test:** **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`**, import from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
+
+<a id="testing-e2e-coverage"></a>
+
+#### What E2E covers
+
+Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smoke (`commands-smoke.test.ts` + `command-matrix.ts`), prompt integrity, and CJK caret behavior. Lifecycle details and env vars: **[`tests/README.md`](tests/README.md)**. Effect-level golden contracts (no browser): **[`scripts/fixtures/dispatch/`](scripts/fixtures/dispatch/)** — see **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)**.
 
 <a id="project-layout"></a>
 
@@ -1287,8 +1306,9 @@ One-liner after a production build already exists:
 | **`shared/lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
 | **`hosts/chrome/`**, **`hosts/firefox/`** | Per-browser WXT configs (+ Firefox AMO kit) — see **[`hosts/README.md`](hosts/README.md)** |
 | **`shared/lib/features/`** | Feature modules (see table below) |
-| **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)**). Rust stays under **`shared/crates/bmxt-core/`**. |
-| **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)** and **[`tests/README.md`](tests/README.md)**). Rust stays under **`shared/crates/bmxt-core/`**. |
+| **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**). Templates: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** |
+| **`scripts/fixtures/dispatch/`** | Golden Effect contracts for WASM `run` — **[`README`](scripts/fixtures/dispatch/README.md)** |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
 | **`.output/`** | Build output (gitignored): **`chrome-mv3`**, **`firefox-mv3`**, zips from **`package`** / **`package:chrome`** / **`package:firefox`** (`bmxt-<ver>-chrome.zip`, `bmxt-<ver>-firefox.zip`) |
@@ -1564,7 +1584,9 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[WXT](https://wxt.dev/)（Manifest V3）でビルドしています。エントリは **`entrypoints/`**、静的アセットは **`public/`**（**`_locales/`** 含む）、manifest 上書きは **`wxt.config.ts`**、出力は **`.output/`** です。
 
-**配置:** コマンド意味論（parse / レジストリ / パイプ計画など）は **Rust → WASM**（`crates/bmxt-core/`）。TypeScript は Chrome Effect・content script・React UI と薄いホスト（`lib/features/bmxt-core/` の `runDispatch` / `ensureBmxtCore`、`apply-ui-action`）に徹します（**`.cursorrules`** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
+**リポジトリ配置（マルチブラウザ）:** **`shared/`**（ブラウザ非依存のソース）、**`hosts/chrome/`** / **`hosts/firefox/`**（各ホストの WXT 設定。詳細は **[`hosts/README.md`](hosts/README.md)**、AMO は **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**）。
+
+**配置:** コマンド意味論（parse / レジストリ / パイプ計画など）は **Rust → WASM**（`shared/crates/bmxt-core/`）。TypeScript はホスト Effect・content script・React UI と薄いホスト（`lib/features/bmxt-core/` の `runDispatch` / `ensureBmxtCore`、`apply-ui-action`）に徹します（**`.cursorrules`** と **[`hosts/README.md`](hosts/README.md)** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
@@ -2368,7 +2390,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 
 **Tab / IME 固定トークン:** WASM **`complete(line, cursor)`**（codegen `subcommands` の第一〜第三段）。`resolveImeTokenPicker` は WASM 準備後にこれを呼び、ホスト側フィルタ UX とライブオーバーレイを載せる。**キャレットオフセット（0.8.3 以降）:** JS プロンプトは **UTF-16** インデックス、Rust/`complete` は **UTF-8** バイトオフセット — ホストが **`lib/features/bmxt-core/utf16-utf8-offset.ts`** で変換してから WASM に渡す（CJK でプロンプト表示が消える不具合の修正）。
 
-開発: Rust + **`bash scripts/install-wasm-pack.sh`**（wasm-pack **0.15.0** 固定）、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
+開発: Rust + **`bash scripts/install-wasm-pack.sh`**（wasm-pack **0.15.0** 固定）、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。Golden Effect 契約: **[`scripts/fixtures/dispatch/effects.json`](scripts/fixtures/dispatch/effects.json)**（説明は **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)**）。
 
 タブピッカー計画は WASM 経由の **`runTabsPickerReduce`** 等（詳細は **`tab`** の **タブピッカー — 実装**）。
 
@@ -2538,7 +2560,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 ### 組み込みコマンドの追加
 
-起点は **`manifest/templates/new-command.checklist.md`**（語彙優先）。詳細は **[コマンド追加手順](#command-add-procedure-ja)**。
+起点は **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)**（語彙優先）。テンプレート一覧: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**。詳細は **[コマンド追加手順](#command-add-procedure-ja)**。
 
 
 1. 既存 Effect / UiAction / list kind の**再利用を優先**（`manifest/templates/`）。
@@ -2551,7 +2573,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 ### コマンド追加手順
 
 
-- **語彙優先:** **[コマンド間語彙](#inter-command-vocabulary-ja)** に従う。起点は **`manifest/templates/new-command.checklist.md`**（決定木 + チェックリスト）。例: **`command-reuse-effects.example.rs`**、**`command-reuse-ui-action.example.rs`**、**`command-list-producer.steps.md`**、**`pipe-consumer.steps.md`**。
+- **語彙優先:** **[コマンド間語彙](#inter-command-vocabulary-ja)** に従う。起点は **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)**（決定木 + チェックリスト；一覧は **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**）。例: **`command-reuse-effects.example.rs`**、**`command-reuse-ui-action.example.rs`**、**`command-list-producer.steps.md`**、**`pipe-consumer.steps.md`**。
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。第二トークン必須のとき、単独第一トークンの **Enter** は Rust の **`msgs` + `promptPrefix`**（`require_second_token` / `msgs_with_prompt`）で返す — TS 側に Enter continuation を足さない。第二トークンの **Tab** 候補は **`command-subcommands.gen.ts`**（manifest **`subcommands`**）。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 - **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
 - **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
@@ -2637,6 +2659,19 @@ pnpm run dev
 
 **JS/TS** の自動テストは **`tests/`** 配下（`lib/` やリポジトリ直下には置かない）。構成の詳細は **[`tests/README.md`](tests/README.md)**。
 
+**E2E のブラウザライフサイクル**（アンパック拡張のロード、`extensionOrigin` 解決、拡張ページを開く）は **[webxdriver](https://github.com/UNRsports/webxdriver)**（`devDependency`、GitHub コミット固定）を使います。BMXt 固有（プロンプト／チュートリアル／`.bmxt-*` アサート、**`BMXT_E2E_BROWSER`**、`.output/{chrome,firefox}-mv3` パス）は **`tests/e2e/harness.ts`** に残します。
+
+**関連ドキュメント（散在 README）:**
+
+| ドキュメント | 内容 |
+|--------------|------|
+| **[`tests/README.md`](tests/README.md)** | unit / property / E2E の構成とテスト追加方法 |
+| **[`hosts/README.md`](hosts/README.md)** | Chrome / Firefox ホストと build／package |
+| **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** | Firefox AMO ソースキット |
+| **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)** | WASM `run` 向け Effect の golden 契約（`effects.json`） |
+| **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** | コマンド追加テンプレート（閉じた語彙） |
+| **[`shared/public/assets/wasm/bmxt-gaze/README.md`](shared/public/assets/wasm/bmxt-gaze/README.md)** | 任意の gaze WASM モジュール（ビルド手順） |
+
 <a id="testing-how-to-run-ja"></a>
 
 #### 実行方法
@@ -2645,8 +2680,8 @@ pnpm run dev
 |------|----------|------|
 | **ユニット + プロパティ（JS/TS）** | **`pnpm test`** | ブラウザ不要。高速。 |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | `pnpm test` には含まれない。 |
-| **E2E（Chrome）** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing。**`.output/chrome-mv3`** をロード。 |
-| **E2E（Firefox）** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver。**`.output/firefox-mv3`** をロード。 |
+| **E2E（Chrome）** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing（**webxdriver**）。**`.output/chrome-mv3`** をロード。 |
+| **E2E（Firefox）** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver（**webxdriver**）。**`.output/firefox-mv3`** をロード。 |
 | **E2E（両方）** | **`pnpm run test:e2e:all`** | Chrome → Firefox（ビルドは別途、または **`verify`**）。 |
 | **CI と同一の全体ゲート** | **`pnpm run verify`** | manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E。 |
 
@@ -2658,10 +2693,16 @@ pnpm run dev
 |----|----------|------|
 | **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
 | **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`（UTF-16/UTF-8 キャレット変換と **TS↔WASM** ホスト入口を含む）。 |
-| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver**（`selenium-webdriver`）を **`tests/e2e/`** で実行。Chrome / Firefox で同一シェル仕様。詳細は **`tests/README.md`**。 |
-| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver**（**`tests/e2e/`**、**webxdriver** ライフサイクル + BMXt `harness.ts`）。詳細は **[`tests/README.md`](tests/README.md)**。 |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`shared/crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
 
 **TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`** に置き、本番コードは **`lib/features/...`** から **`.ts` 付き**で import する。`lib/` 隣へのコロケートはしない。
+
+<a id="testing-e2e-coverage-ja"></a>
+
+#### E2E がカバーすること
+
+**`tests/e2e/`** の共有仕様を Chrome / Firefox の両方で実行します（command smoke、`command-matrix.ts`、prompt integrity、CJK キャレット）。ライフサイクルと環境変数は **[`tests/README.md`](tests/README.md)**。ブラウザを使わない Effect の golden 契約は **[`scripts/fixtures/dispatch/`](scripts/fixtures/dispatch/)**（**[`README`](scripts/fixtures/dispatch/README.md)**）。
 
 <a id="project-layout-ja"></a>
 
@@ -2675,8 +2716,10 @@ pnpm run dev
 | **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
-| **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
-| **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
+| **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**・**[`tests/README.md`](tests/README.md)**）。Rust は **`shared/crates/bmxt-core/`** |
+| **`hosts/chrome/`**, **`hosts/firefox/`** | ホスト別 WXT — **[`hosts/README.md`](hosts/README.md)** |
+| **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**）。テンプレート: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** |
+| **`scripts/fixtures/dispatch/`** | WASM `run` 向け Effect golden — **[`README`](scripts/fixtures/dispatch/README.md)** |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
 | **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`** / **`firefox-mv3`**, **`bmxt-<ver>-chrome.zip`** / **`bmxt-<ver>-firefox.zip`**（**`package`** / **`package:chrome`** / **`package:firefox`**） |
