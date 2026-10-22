@@ -45,7 +45,8 @@ pnpm run verify           # full CI gate (includes Chrome + Firefox e2e)
 | Shell page | `driver.get(chrome-extension://…/bmxt.html)` | Chrome-context `openTrustedLinkIn(moz-extension://…)` (Navigate is blocked) |
 
 - Host switch: **`BMXT_E2E_BROWSER=chrome|firefox`**
-- Specs: **`tests/e2e/*.test.ts`** (shared); harness in **`harness.ts`**
+- Specs: **`tests/e2e/*.test.ts`** (shared); BMXt UI helpers in **`harness.ts`**
+- Lifecycle (launch / origin / open·reload extension page): **[webxdriver](https://github.com/UNRsports/webxdriver)** (`launchExtensionSession`, …)
 - Scripts use **`--test-concurrency=1`** so suites do not launch browsers in parallel
 - Each suite keeps **one** browser session (Firefox Marionette is unstable under per-test relaunch)
 - Drivers are fetched by **Selenium Manager** (no separate `test:e2e:install`)

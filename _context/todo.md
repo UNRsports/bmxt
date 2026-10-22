@@ -100,20 +100,19 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] Firefox: `about:debugging` で窓起動 + 主要コアコマンド手確認
 - [ ] （次）Translator / FSA / favicon を Chrome 側へ隔離（フラグ）
 
-### 5. 公開 npm — Chromium + Gecko 拡張 E2E ハーネス（候補）
+### 5. webXdriver — Chromium + Gecko 拡張 E2E ハーネス
 
-**判定（2026-10）:** BMXt の `tests/e2e/harness.ts` ライフサイクル層を **パッケージ化／フォークして公開する意味はある。**  
-市場に「Chrome + Firefox で同じ薄い API で未署名アンパック拡張をロード → `extensionOrigin` 解決 → 拡張ページを開く（`moz-extension://` 含む）」ランナー非依存パッケージはほぼ無い（Playwright は Firefox 拡張スコープ外、WDIO/Selenium は手順ドキュメント止まり、片エンジン専用はあり）。
+**判定（2026-10）:** ライフサイクル層を **[webxdriver](https://github.com/UNRsports/webxdriver)** へ切り出し（public）。BMXt は thin wrapper で消費。
 
 | 項目 | 内容 |
 |------|------|
 | 公開コア | `launchExtensionSession` · origin 解決 · `openExtensionPage` / reload · CFT 固定 · Firefox chrome-context · プロファイル／リトライ · peer `selenium-webdriver` |
 | BMXt に残す | `.bmxt-*` プロンプト／チュートリアル／ログ assert · `BMXT_E2E_*` · `.output/{chrome,firefox}-mv3` パス |
-| BMXt 側 | 公開後は thin wrapper（パッケージ + `openBmxtPage` 等） |
-| 未着手 | 独立リポジトリ or monorepo パッケージ化 · 公開 · BMXt を最初の消費者にする |
+| BMXt 側 | `tests/e2e/harness.ts` が webxdriver + `openBmxtPage` 等 |
+| 残 | npm `0.1.0` 公開（当面は GitHub 依存）· fixture e2e · BMXt verify 受け入れ確認 |
 
-- [ ] （候補）ライフサイクル層を公開 npm へ切り出し／フォーク
-- [ ] （候補）BMXt `harness.ts` を薄くして公開パッケージを消費
+- [x] ライフサイクル層を独立リポ（webxdriver）へ切り出し／public
+- [x] BMXt `harness.ts` を薄くして webxdriver を消費
 
 ---
 

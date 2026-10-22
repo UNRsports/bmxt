@@ -63,6 +63,7 @@
     "prettier": "3.2.4",
     "selenium-webdriver": "4.33.0",
     "typescript": "6.0.3",
+    "webxdriver": "github:UNRsports/webxdriver#9bbc413",
     "wxt": "0.20.7"
   }
 }
