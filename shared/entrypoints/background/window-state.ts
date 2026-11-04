@@ -88,6 +88,51 @@ export async function openOrFocusBmxtWindowAsync(): Promise<void> {
   await createBmxtWindowAsync()
 }
 
+/**
+ * EN: Firefox host — open or focus `bmxt.html` as a normal browser tab
+ *     (Fenix action overlays cannot run the heavy shell module graph).
+ * JA: Firefox は通常タブで bmxt.html を開く／フォーカスする。
+ */
+export async function openOrFocusBmxtShellTabAsync(): Promise<void> {
+  const url = chrome.runtime.getURL(BMXT_PAGE)
+  const existing = await chrome.tabs.query({ url })
+  for (const tab of existing) {
+    if (typeof tab.id !== "number") {
+      continue
+    }
+    await chrome.tabs.update(tab.id, { active: true })
+    if (typeof tab.windowId === "number" && chrome.windows?.update) {
+      try {
+        await chrome.windows.update(tab.windowId, { focused: true })
+      } catch {
+        /* Firefox Android has no windows API */
+      }
+    }
+    return
+  }
+  await chrome.tabs.create({ url })
+}
+
+/** EN: Close every open `bmxt.html` tab (Firefox tab-shell exit). */
+export async function closeBmxtShellTabsAsync(): Promise<void> {
+  const url = chrome.runtime.getURL(BMXT_PAGE)
+  const existing = await chrome.tabs.query({ url })
+  const ids: number[] = []
+  for (const tab of existing) {
+    if (typeof tab.id === "number") {
+      ids.push(tab.id)
+    }
+  }
+  if (ids.length === 0) {
+    return
+  }
+  try {
+    await chrome.tabs.remove(ids)
+  } catch {
+    /* already closed */
+  }
+}
+
 /** EN: Close duplicate if another bmxt.html window existed (SW slept, stale storage). */
 export async function reconcileDuplicateBmxtWindowsAsync(createdWindowId: number): Promise<void> {
   const pageUrl = chrome.runtime.getURL(BMXT_PAGE)

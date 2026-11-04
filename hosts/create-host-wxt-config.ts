@@ -98,14 +98,11 @@ export function createHostWxtConfig(browser: HostBrowser) {
         browser === "firefox"
           ? [
               {
-                name: "bmxt-firefox-overlay-html",
+                name: "bmxt-firefox-extension-html",
                 transformIndexHtml(html: string) {
-                  // EN: Fenix action overlays have resolved root-absolute `/chunks/…`
-                  //     against the wrong base; keep URLs relative to the HTML page.
-                  //     Also drop `crossorigin` (CORS mode is unnecessary for
-                  //     moz-extension same-origin modules and can block loads).
-                  // JA: Fenix オーバーレイでは絶対パス `/chunks` が誤解決されることが
-                  //     あるため相対化する。crossorigin も外す。
+                  // EN: Prefer page-relative asset URLs and drop `crossorigin` on
+                  //     moz-extension pages (CORS mode is unnecessary / can block).
+                  // JA: moz-extension ページは相対アセット＋ crossorigin 除去。
                   return html
                     .replace(/\s+crossorigin(?:="[^"]*")?/g, "")
                     .replace(/(href|src)="\/([^"]+)"/g, '$1="./$2"')
@@ -130,11 +127,10 @@ export function createHostWxtConfig(browser: HostBrowser) {
         }
       ],
       action: {
-        default_icon: hostIcons,
-        // EN: Firefox (desktop + Android) — action overlay loads bmxt.html.
-        //     Chrome keeps windows.create (no default_popup so onClicked fires).
-        // JA: Firefox は action オーバーレイで bmxt.html。Chrome は windows.create。
-        ...(browser === "firefox" ? { default_popup: "bmxt.html" } : {})
+        // EN: No default_popup — `action.onClicked` opens the shell.
+        //     Chrome: popup window. Firefox: normal tab (`bmxt.html`).
+        // JA: default_popup なし。Chrome は popup 窓、Firefox は通常タブ。
+        default_icon: hostIcons
       },
       icons: hostIcons,
       ...manifestExtra

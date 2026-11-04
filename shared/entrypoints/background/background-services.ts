@@ -28,6 +28,7 @@ import type { NavInjectAction } from "../../lib/features/nav/nav-overlay-inject-
 import { ensureSearchCacheBackgroundListeners } from "../../lib/features/search/cache/background-listeners"
 import {
   clearBmxtWindowIdInMemory,
+  closeBmxtShellTabsAsync,
   hydrateBmxtWindowIdFromStorage,
   persistBmxtWindowId,
   readBmxtWindowIdInMemory
@@ -38,6 +39,7 @@ import {
   resolveHostKindForExit
 } from "../../lib/features/bmxt-window/exit-host-policy"
 import type { BmxtHostKind } from "../../lib/features/bmxt-window/bmxt-host-kind"
+import { usesTabShell } from "../../lib/features/bmxt-window/shell-launch-mode"
 
 let lastFocusedNormalWindow: number | undefined
 let backgroundServicesRegistered = false
@@ -62,8 +64,16 @@ async function closeBmxtWindowById(windowId: number): Promise<void> {
   }
 }
 
-/** EN: Close the BMXt popup window only (never a normal browser window from a float tab). */
+/**
+ * EN: Close the BMXt shell host only (Chrome popup window, or Firefox `bmxt.html` tabs).
+ *     Never closes a normal browser window that merely hosts a float.
+ * JA: BMXt シェルだけ閉じる（Chrome は popup 窓、Firefox は bmxt.html タブ）。
+ */
 async function closeBmxtWindowOnly(): Promise<void> {
+  if (usesTabShell()) {
+    await closeBmxtShellTabsAsync()
+    return
+  }
   await hydrateBmxtWindowIdFromStorage()
   const wid = readBmxtWindowIdInMemory()
   if (wid !== undefined) {
