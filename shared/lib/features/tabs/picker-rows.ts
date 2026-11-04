@@ -13,10 +13,10 @@ import {
   resolveLiveTabUrl,
   seedTabPickerLiveFields
 } from "./tab-picker-live-tab-fields"
+import { queryTabGroups, TAB_GROUP_ID_NONE } from "./tab-groups-api"
+import { getAllWindows } from "./windows-api"
 
 export { displayTitle }
-
-const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
 export type TabPickerRow =
   | {
@@ -90,8 +90,8 @@ export async function buildTabPickerRowsBundle(
 ): Promise<TabPickerRowsBundle> {
   const [tabs, groups, winsMeta] = await Promise.all([
     chrome.tabs.query({}),
-    chrome.tabGroups.query({}),
-    chrome.windows.getAll({ populate: false })
+    queryTabGroups({}),
+    getAllWindows({ populate: false })
   ])
   if (tabs.length === 0) {
     return { rows: [], lastNormalWindowId: undefined }

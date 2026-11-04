@@ -1,6 +1,8 @@
 import { BMXT_WINDOW_ID_KEY } from "../../extension-storage/keys"
 import { tTabs } from "../../setting/i18n/ns/tabs"
 import type { UiLocale } from "../../setting/locale"
+import { hasTabGroupsApi, queryTabGroups } from "../tab-groups-api"
+import { getAllWindows, hasWindowsApi } from "../windows-api"
 
 const GROUPING_NOT_SUPPORTED_MESSAGE = "Grouping is not supported by tabs in this window."
 
@@ -41,6 +43,9 @@ export async function callChromeTabGroupsUpdate(
   groupId: number,
   updateProperties: chrome.tabGroups.UpdateProperties
 ): Promise<void> {
+  if (!hasTabGroupsApi()) {
+    throw new Error("tabGroups API is unavailable on this browser")
+  }
   return new Promise((resolve, reject) => {
     chrome.tabGroups.update(groupId, updateProperties, () => {
       const err = readChromeLastError()
@@ -64,7 +69,7 @@ async function findGroupableTargetWindowId(
   locale: UiLocale
 ): Promise<number> {
   const bmxtWinId = await readBmxtWindowId()
-  const normalWins = await chrome.windows.getAll({ windowTypes: ["normal"] })
+  const normalWins = await getAllWindows({ windowTypes: ["normal"] })
 
   const isEligible = (winId: number | undefined): winId is number =>
     winId !== undefined && winId !== sourceWindowId && winId !== bmxtWinId
@@ -73,7 +78,7 @@ async function findGroupableTargetWindowId(
     if (!isEligible(win.id)) {
       continue
     }
-    const groups = await chrome.tabGroups.query({ windowId: win.id })
+    const groups = await queryTabGroups({ windowId: win.id })
     if (groups.length > 0) {
       return win.id
     }
@@ -85,6 +90,9 @@ async function findGroupableTargetWindowId(
     }
   }
 
+  if (!hasWindowsApi()) {
+    throw new Error(tTabs("tabs.picker.error.createGroup.windowOpenFailed", locale))
+  }
   const created = await chrome.windows.create({ focused: true, type: "normal" })
   const wid = created.id
   if (wid === undefined) {

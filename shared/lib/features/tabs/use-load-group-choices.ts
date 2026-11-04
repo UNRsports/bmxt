@@ -4,6 +4,7 @@ import { tTabs } from "../setting/i18n/ns/tabs"
 import { useUiSettings } from "../setting/use-ui-settings"
 import { NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice } from "./tab-picker-overlay-types"
+import { queryTabGroups, TAB_GROUP_ID_NONE } from "./tab-groups-api"
 
 export function useLoadGroupChoicesWhenBulkGroup(
   bulkSubMode: BulkSubMode | null,
@@ -24,13 +25,12 @@ export function useLoadGroupChoicesWhenBulkGroup(
       })
     void (async () => {
       try {
-        const gs = await chrome.tabGroups.query({})
+        const gs = await queryTabGroups({})
         if (cancelled) {
           return
         }
-        const none = chrome.tabGroups.TAB_GROUP_ID_NONE
         const choices: GroupChoice[] = gs
-          .filter((g) => g.id !== undefined && g.id !== none)
+          .filter((g) => g.id !== undefined && g.id !== TAB_GROUP_ID_NONE)
           .map((g) => ({
             id: g.id!,
             windowId: g.windowId ?? 0,

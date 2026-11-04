@@ -6,6 +6,7 @@ import { getPickerRowAtHi } from "./tab-picker-bulk-window"
 import { chromeTabGroupIdsFromMarkedGroupKeys, groupRowKey } from "./tab-picker-keyboard"
 import type { EditPanel } from "./tab-picker-overlay-types"
 import type { SelectKind } from "./tab-picker-overlay-types"
+import { hasTabGroupsApi } from "./tab-groups-api"
 
 export type EditTarget =
   | { kind: "window"; windowId: number }
@@ -116,6 +117,9 @@ export async function loadEditTitleForPanel(panel: EditPanel): Promise<string> {
   }
   if (panel.kind === "groupRename") {
     try {
+      if (!hasTabGroupsApi()) {
+        return ""
+      }
       const g = await chrome.tabGroups.get(panel.groupId)
       return (g.title ?? "").trim()
     } catch {

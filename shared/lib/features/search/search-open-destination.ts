@@ -4,6 +4,8 @@ import { tSearch } from "../setting/i18n/ns/search"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "../setting/locale"
 import { loadPickerChromeContext } from "../tabs/picker-chrome-context"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
+import { queryTabGroups, TAB_GROUP_ID_NONE } from "../tabs/tab-groups-api"
+import { getAllWindows } from "../tabs/windows-api"
 export { searchEntryOffersOpenDestination } from "../side-picker/model/picker-entry"
 
 export type SearchOpenDestinationKind = "new_window" | "window" | "group" | "ungrouped"
@@ -14,8 +16,6 @@ export type SearchOpenDestinationRow = {
   windowId?: number
   groupId?: number
 }
-
-const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
 function formatGroupLabel(g: chrome.tabGroups.TabGroup, locale: UiLocale): string {
   const raw = (g.title || "").trim()
@@ -33,8 +33,8 @@ export async function buildSearchOpenDestinationRows(
 ): Promise<SearchOpenDestinationRow[]> {
   const [tabs, groups, winsMeta] = await Promise.all([
     chrome.tabs.query({}),
-    chrome.tabGroups.query({}),
-    chrome.windows.getAll({ populate: false, windowTypes: ["normal"] })
+    queryTabGroups({}),
+    getAllWindows({ populate: false, windowTypes: ["normal"] })
   ])
 
   const openWindowIds: number[] = []

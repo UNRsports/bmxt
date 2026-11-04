@@ -7,6 +7,8 @@ import {
   applyTabPickerLiveFieldsFromChrome,
   forgetTabPickerLiveFields
 } from "./tab-picker-live-tab-fields"
+import { addTabGroupsChangeListeners } from "./tab-groups-api"
+import { addWindowsLifecycleListeners } from "./windows-api"
 
 /**
  * タブピッカー表示中に tabs / windows / tabGroups の変化を追従する。
@@ -45,13 +47,8 @@ export function useTabPickerChromeSync(
     chrome.tabs.onDetached.addListener(scheduleRefresh)
     chrome.tabs.onReplaced.addListener(scheduleRefresh)
 
-    chrome.windows.onCreated.addListener(scheduleRefresh)
-    chrome.windows.onRemoved.addListener(scheduleRefresh)
-
-    chrome.tabGroups.onCreated.addListener(scheduleRefresh)
-    chrome.tabGroups.onUpdated.addListener(scheduleRefresh)
-    chrome.tabGroups.onRemoved.addListener(scheduleRefresh)
-    chrome.tabGroups.onMoved.addListener(scheduleRefresh)
+    const removeWindowsListeners = addWindowsLifecycleListeners(scheduleRefresh)
+    const removeTabGroupsListeners = addTabGroupsChangeListeners(scheduleRefresh)
 
     return () => {
       chrome.tabs.onCreated.removeListener(scheduleRefresh)
@@ -62,13 +59,8 @@ export function useTabPickerChromeSync(
       chrome.tabs.onDetached.removeListener(scheduleRefresh)
       chrome.tabs.onReplaced.removeListener(scheduleRefresh)
 
-      chrome.windows.onCreated.removeListener(scheduleRefresh)
-      chrome.windows.onRemoved.removeListener(scheduleRefresh)
-
-      chrome.tabGroups.onCreated.removeListener(scheduleRefresh)
-      chrome.tabGroups.onUpdated.removeListener(scheduleRefresh)
-      chrome.tabGroups.onRemoved.removeListener(scheduleRefresh)
-      chrome.tabGroups.onMoved.removeListener(scheduleRefresh)
+      removeWindowsListeners()
+      removeTabGroupsListeners()
     }
   }, [enabled, scheduleRefresh])
 }
