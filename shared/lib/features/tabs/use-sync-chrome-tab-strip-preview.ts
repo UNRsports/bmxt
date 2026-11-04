@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from "react"
 import type { TabPickerRow } from "./picker-rows"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
+import { usesTabShell } from "../bmxt-window/shell-launch-mode"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
 import { markPickerSelfTabActivation } from "../side-picker/preview/picker-self-tab-activation"
 import { usePickerAltPreviewSync } from "../side-picker/preview/use-picker-alt-preview-sync"
@@ -42,6 +43,12 @@ export function useSyncChromeTabStripPreview({
 
   const syncChromeTabStripPreview = useCallback(
     async (rowIndex: number, expectedTabId: number, generation: number) => {
+      // EN: Tab-shell BMXt must stay the active tab — skip strip preview entirely.
+      // JA: タブシェルでは BMXt がアクティブのままである必要がある。プレビューは行わない。
+      if (usesTabShell()) {
+        return
+      }
+
       const isCurrent = (): boolean => generation === previewGenerationRef.current
 
       const row = rowsRef.current[rowIndex]

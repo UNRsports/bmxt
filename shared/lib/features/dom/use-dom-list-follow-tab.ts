@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys"
+import { hasWindowsApi } from "../tabs/windows-api"
 import type { DomListPickerState } from "./dom-list-picker-input"
 
 const FOLLOW_DEBOUNCE_MS = 300
@@ -115,34 +116,41 @@ export function useDomListFollowTab({
       })()
     }
 
-    const onFocusChanged = (windowId: number) => {
-      if (windowId === chrome.windows.WINDOW_ID_NONE) {
-        return
-      }
-      void (async () => {
-        const storage = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
-        const bmxtWid = storage[BMXT_WINDOW_ID_KEY] as number | undefined
-        if (bmxtWid !== undefined && windowId === bmxtWid) {
+    chrome.tabs.onActivated.addListener(onActivated)
+
+    // EN: `windows` is missing on Firefox Android.
+    // JA: Fenix は windows API なし。
+    let onFocusChanged: ((windowId: number) => void) | undefined
+    if (hasWindowsApi()) {
+      onFocusChanged = (windowId: number) => {
+        if (windowId === chrome.windows.WINDOW_ID_NONE) {
           return
         }
-        try {
-          const win = await chrome.windows.get(windowId)
-          if (win.type !== "normal") {
+        void (async () => {
+          const storage = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
+          const bmxtWid = storage[BMXT_WINDOW_ID_KEY] as number | undefined
+          if (bmxtWid !== undefined && windowId === bmxtWid) {
             return
           }
-        } catch {
-          return
-        }
-        queueRefresh()
-      })()
+          try {
+            const win = await chrome.windows.get(windowId)
+            if (win.type !== "normal") {
+              return
+            }
+          } catch {
+            return
+          }
+          queueRefresh()
+        })()
+      }
+      chrome.windows.onFocusChanged.addListener(onFocusChanged)
     }
-
-    chrome.tabs.onActivated.addListener(onActivated)
-    chrome.windows.onFocusChanged.addListener(onFocusChanged)
 
     return () => {
       chrome.tabs.onActivated.removeListener(onActivated)
-      chrome.windows.onFocusChanged.removeListener(onFocusChanged)
+      if (onFocusChanged !== undefined) {
+        chrome.windows.onFocusChanged.removeListener(onFocusChanged)
+      }
       if (debounceRef.current !== null) {
         clearTimeout(debounceRef.current)
         debounceRef.current = null

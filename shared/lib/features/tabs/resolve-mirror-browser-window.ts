@@ -2,6 +2,7 @@ import {
   BMXT_WINDOW_ID_KEY,
   LAST_NORMAL_WINDOW_KEY
 } from "../extension-storage/keys"
+import { hasWindowsApi } from "./windows-api"
 
 /**
  * BMXt を除く「いま追うべき」通常ウィンドウ ID（storage 値は呼び出し側で読み済み）。
@@ -10,17 +11,19 @@ export async function resolveMirrorBrowserWindowIdFromStorage(
   bmxtWid: number | undefined,
   lastNormal: number | undefined
 ): Promise<number | undefined> {
-  try {
-    const lf = await chrome.windows.getLastFocused()
-    if (
-      lf.id !== undefined &&
-      lf.type === "normal" &&
-      (bmxtWid === undefined || lf.id !== bmxtWid)
-    ) {
-      return lf.id
+  if (hasWindowsApi()) {
+    try {
+      const lf = await chrome.windows.getLastFocused()
+      if (
+        lf.id !== undefined &&
+        lf.type === "normal" &&
+        (bmxtWid === undefined || lf.id !== bmxtWid)
+      ) {
+        return lf.id
+      }
+    } catch {
+      /* fall through */
     }
-  } catch {
-    /* fall through */
   }
   if (typeof lastNormal === "number" && Number.isInteger(lastNormal)) {
     return lastNormal

@@ -5,6 +5,7 @@ import { computeTabPickerVisibleRowIndices } from "./tab-picker-fold-state"
 import { consumePickerSelfTabActivation as consumeTabPickerSelfActivation } from "../side-picker/preview/picker-self-tab-activation"
 import { resolveMirrorBrowserWindowId } from "./resolve-mirror-browser-window"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys"
+import { hasWindowsApi } from "./windows-api"
 
 type Reason = "activated" | "focus"
 
@@ -90,7 +91,7 @@ export function useMirrorBrowserActiveTab({
         if (mirror === undefined || windowId !== mirror) {
           return
         }
-      } else {
+      } else if (hasWindowsApi()) {
         try {
           const win = await chrome.windows.get(windowId)
           if (win.type !== "normal") {
@@ -253,36 +254,43 @@ export function useMirrorBrowserActiveTab({
       void handlerRef.current?.(activeInfo.tabId, activeInfo.windowId, "activated")
     }
 
-    const onFocusChanged = (windowId: number) => {
-      if (windowId === chrome.windows.WINDOW_ID_NONE) {
-        return
-      }
-      void (async () => {
-        const storage = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
-        const bmxtWid = storage[BMXT_WINDOW_ID_KEY] as number | undefined
-        if (bmxtWid !== undefined && windowId === bmxtWid) {
-          return
-        }
-        let tabs: chrome.tabs.Tab[]
-        try {
-          tabs = await chrome.tabs.query({ windowId, active: true })
-        } catch {
-          return
-        }
-        const t = tabs[0]
-        if (!t?.id) {
-          return
-        }
-        await handlerRef.current?.(t.id, windowId, "focus")
-      })()
-    }
-
     chrome.tabs.onActivated.addListener(onActivated)
-    chrome.windows.onFocusChanged.addListener(onFocusChanged)
+
+    // EN: `windows` is missing on Firefox Android — only tabs.onActivated there.
+    // JA: Fenix は windows なし。tabs.onActivated のみ。
+    let onFocusChanged: ((windowId: number) => void) | undefined
+    if (hasWindowsApi()) {
+      onFocusChanged = (windowId: number) => {
+        if (windowId === chrome.windows.WINDOW_ID_NONE) {
+          return
+        }
+        void (async () => {
+          const storage = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
+          const bmxtWid = storage[BMXT_WINDOW_ID_KEY] as number | undefined
+          if (bmxtWid !== undefined && windowId === bmxtWid) {
+            return
+          }
+          let tabs: chrome.tabs.Tab[]
+          try {
+            tabs = await chrome.tabs.query({ windowId, active: true })
+          } catch {
+            return
+          }
+          const t = tabs[0]
+          if (!t?.id) {
+            return
+          }
+          await handlerRef.current?.(t.id, windowId, "focus")
+        })()
+      }
+      chrome.windows.onFocusChanged.addListener(onFocusChanged)
+    }
 
     return () => {
       chrome.tabs.onActivated.removeListener(onActivated)
-      chrome.windows.onFocusChanged.removeListener(onFocusChanged)
+      if (onFocusChanged !== undefined) {
+        chrome.windows.onFocusChanged.removeListener(onFocusChanged)
+      }
     }
   }, [enabled])
 }
