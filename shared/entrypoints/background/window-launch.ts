@@ -54,7 +54,7 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
   void bmxtWindowLaunchChain
 }
 
-/** EN: Shortcut — focus existing window or create immediately (no tabs.query before create). */
+/** EN: Shortcut — Chrome popup window, or Firefox shell tab. */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
   void loadBackgroundServicesAsync()
   if (usesTabShell()) {
@@ -88,15 +88,6 @@ async function resetBmxtFromShortcutAsync(): Promise<void> {
   await services.resetBmxtFromShortcutAsync(openOrFocusBmxtWindowAsync)
 }
 
-function openOrFocusBmxtHost(): void {
-  void loadBackgroundServicesAsync()
-  if (usesTabShell()) {
-    enqueueBmxtWindowLaunch(() => openOrFocusBmxtShellTabAsync())
-    return
-  }
-  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
-}
-
 /**
  * EN: Same cleanup as `windows.onRemoved` for the tracked BMXt popup window.
  *     Also used when the shell page unloads (`BMXT_POPUP_SHELL_UNLOAD` / tab close).
@@ -128,10 +119,30 @@ export function setupWindowLaunch(): void {
     })
   }
 
-  // EN: No default_popup — toolbar / Add-ons click fires onClicked (Chrome window, Firefox tab).
-  // JA: default_popup なし。ツールバー／Add-ons クリックで onClicked。
+  if (usesTabShell()) {
+    // EN: Firefox has `default_popup` (trampoline) — onClicked does not fire.
+    //     Toolbar/Add-ons opens the trampoline; shortcuts open the tab directly.
+    // JA: Firefox は default_popup（trampoline）のため onClicked は発火しない。
+    //     ショートカットは直接タブを開く。
+    chrome.commands.onCommand.addListener((command) => {
+      if (command === "launch-bmxt") {
+        resetLaunchPerf()
+        markLaunchPhase("shortcut-received")
+        enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
+        return
+      }
+      if (command === "reset-bmxt") {
+        enqueueBmxtWindowLaunch(() => resetBmxtFromShortcutAsync())
+      }
+    })
+    resetLaunchPerf()
+    markLaunchPhase("sw-listeners-ready")
+    return
+  }
+
   chrome.action.onClicked.addListener(() => {
-    openOrFocusBmxtHost()
+    void loadBackgroundServicesAsync()
+    enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
   })
 
   chrome.commands.onCommand.addListener((command) => {
@@ -146,9 +157,7 @@ export function setupWindowLaunch(): void {
     }
   })
 
-  if (!usesTabShell()) {
-    void hydrateBmxtWindowIdFromStorage()
-  }
+  void hydrateBmxtWindowIdFromStorage()
 
   resetLaunchPerf()
   markLaunchPhase("sw-listeners-ready")

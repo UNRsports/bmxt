@@ -88,6 +88,40 @@ export async function openOrFocusBmxtWindowAsync(): Promise<void> {
   await createBmxtWindowAsync()
 }
 
+function isBmxtShellTabUrl(url: string | undefined): boolean {
+  if (typeof url !== "string" || url.length === 0) {
+    return false
+  }
+  // EN: Match shell only — not float / action trampoline.
+  // JA: シェルタブのみ（float / 起動 trampoline は除外）。
+  try {
+    const parsed = new URL(url)
+    return parsed.pathname === `/${BMXT_PAGE}` || parsed.pathname === BMXT_PAGE
+  } catch {
+    return false
+  }
+}
+
+async function listBmxtShellTabsAsync(): Promise<chrome.tabs.Tab[]> {
+  const exact = chrome.runtime.getURL(BMXT_PAGE)
+  try {
+    const byExact = await chrome.tabs.query({ url: exact })
+    if (byExact.length > 0) {
+      return byExact
+    }
+  } catch {
+    /* fall through — Android may reject some url filters */
+  }
+  try {
+    const byPattern = await chrome.tabs.query({ url: "*://*/bmxt.html" })
+    return byPattern.filter((tab) => isBmxtShellTabUrl(tab.url))
+  } catch {
+    /* fall through */
+  }
+  const all = await chrome.tabs.query({})
+  return all.filter((tab) => isBmxtShellTabUrl(tab.url))
+}
+
 /**
  * EN: Firefox host — open or focus `bmxt.html` as a normal browser tab
  *     (Fenix action overlays cannot run the heavy shell module graph).
@@ -95,7 +129,7 @@ export async function openOrFocusBmxtWindowAsync(): Promise<void> {
  */
 export async function openOrFocusBmxtShellTabAsync(): Promise<void> {
   const url = chrome.runtime.getURL(BMXT_PAGE)
-  const existing = await chrome.tabs.query({ url })
+  const existing = await listBmxtShellTabsAsync()
   for (const tab of existing) {
     if (typeof tab.id !== "number") {
       continue
@@ -115,8 +149,7 @@ export async function openOrFocusBmxtShellTabAsync(): Promise<void> {
 
 /** EN: Close every open `bmxt.html` tab (Firefox tab-shell exit). */
 export async function closeBmxtShellTabsAsync(): Promise<void> {
-  const url = chrome.runtime.getURL(BMXT_PAGE)
-  const existing = await chrome.tabs.query({ url })
+  const existing = await listBmxtShellTabsAsync()
   const ids: number[] = []
   for (const tab of existing) {
     if (typeof tab.id === "number") {

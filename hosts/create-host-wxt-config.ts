@@ -127,10 +127,14 @@ export function createHostWxtConfig(browser: HostBrowser) {
         }
       ],
       action: {
-        // EN: No default_popup — `action.onClicked` opens the shell.
-        //     Chrome: popup window. Firefox: normal tab (`bmxt.html`).
-        // JA: default_popup なし。Chrome は popup 窓、Firefox は通常タブ。
-        default_icon: hostIcons
+        default_icon: hostIcons,
+        // EN: Firefox — tiny trampoline popup. Fenix Add-ons menu needs a
+        //     default_popup to react to taps; the trampoline opens `bmxt.html`
+        //     as a normal tab (heavy shell cannot boot in the action overlay).
+        //     Chrome: no default_popup → `action.onClicked` → windows.create.
+        // JA: Firefox は薄い起動 popup（タップ反応用）→ 通常タブで bmxt.html。
+        //     Chrome は default_popup なしで onClicked → windows.create。
+        ...(browser === "firefox" ? { default_popup: "bmxt-launch.html" } : {})
       },
       icons: hostIcons,
       ...manifestExtra

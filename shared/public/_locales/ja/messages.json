@@ -22,5 +22,13 @@
   "shellBootFailed": {
     "message": "BMXt の起動に失敗しました",
     "description": "シェル起動失敗時に action オーバーレイへ表示する文言。"
+  },
+  "actionPopupLoading": {
+    "message": "BMXt を開いています…",
+    "description": "Firefox 起動ポップアップがシェルタブを開くまでの短い表示。"
+  },
+  "actionPopupLaunchFailed": {
+    "message": "BMXt を開けませんでした",
+    "description": "Firefox 起動ポップアップがシェルタブを開けなかったときの表示。"
   }
 }

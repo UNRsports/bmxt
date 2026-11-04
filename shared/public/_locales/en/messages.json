@@ -22,5 +22,13 @@
   "shellBootFailed": {
     "message": "Failed to start BMXt",
     "description": "Shown in the action overlay when the shell fails to boot."
+  },
+  "actionPopupLoading": {
+    "message": "Opening BMXt…",
+    "description": "Shown briefly in the Firefox action trampoline while opening the shell tab."
+  },
+  "actionPopupLaunchFailed": {
+    "message": "Failed to open BMXt",
+    "description": "Shown in the Firefox action trampoline when opening the shell tab fails."
   }
 }
