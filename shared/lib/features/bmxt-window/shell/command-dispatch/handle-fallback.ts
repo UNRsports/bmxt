@@ -3,6 +3,7 @@ import {
   type SessionPatch
 } from "../../terminal-sessions/session-patches"
 import { runCommandFromUiAsync } from "../../terminal-sessions/session-runtime-client"
+import { closeBmxtShellIfRequested } from "../../close-bmxt-shell"
 import { parseSearchListLine } from "../../../search/search-list-parse"
 import { runSearchListPlainOnUi } from "../../../search/run-search-list-plain-ui"
 import { shouldCancelJob } from "../../../job"
@@ -78,6 +79,7 @@ export function dispatchFallbackCommand(ctx: CommandDispatchContext): void {
           return
         }
         deps.applyRunCmdPatches(patchesWithoutPromptEcho(response.patches))
+        closeBmxtShellIfRequested(response.closeWindow)
       } catch (e) {
         if (shouldCancelJob(job) || !deps.isBusyTokenActive(busyToken)) {
           return

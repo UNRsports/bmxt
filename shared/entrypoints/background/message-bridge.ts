@@ -7,6 +7,8 @@
  */
 
 import { isTrustedBmxtUiSender } from "../../lib/features/extension-permissions/trusted-ui-sender"
+import { isBmxtPopupShellUnloadMessage } from "../../lib/features/bmxt-window/popup-shell-unload"
+import { clearPopupShellProcessStateAsync } from "./window-launch"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 
 type RunCmdMessage = {
@@ -57,6 +59,13 @@ function withBackgroundServices<T>(
 export function setupMessageBridge(): void {
   chrome.runtime.onMessage.addListener(
     (message: RunCmdMessage & NavControlMessage, sender, sendResponse) => {
+      if (isBmxtPopupShellUnloadMessage(message)) {
+        if (!isTrustedBmxtUiSender(sender)) {
+          return false
+        }
+        void clearPopupShellProcessStateAsync()
+        return false
+      }
       if (message?.type === "RUN_CMD" && typeof message.line === "string") {
         if (!isTrustedBmxtUiSender(sender)) {
           safeSendResponse(sendResponse, {

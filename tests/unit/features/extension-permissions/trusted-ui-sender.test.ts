@@ -63,6 +63,18 @@ describe("isTrustedBmxtUiSender", () => {
     assert.equal(ok, true)
   })
 
+  it("accepts Firefox action.default_popup overlay (no sender.tab)", () => {
+    const ok = isTrustedBmxtUiSender({
+      id: EXT_ID,
+      url: extensionPageUrl({
+        extensionId: EXT_ID,
+        path: "shell",
+        protocol: "moz-extension:"
+      })
+    })
+    assert.equal(ok, true)
+  })
+
   it("accepts moz-extension float page with query", () => {
     const ok = isTrustedBmxtUiSender({
       id: EXT_ID,

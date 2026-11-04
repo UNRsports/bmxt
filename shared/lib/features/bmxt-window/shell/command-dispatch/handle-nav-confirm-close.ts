@@ -9,6 +9,7 @@ import {
   type SessionPatch
 } from "../../terminal-sessions/session-patches"
 import { runCommandFromUiAsync } from "../../terminal-sessions/session-runtime-client"
+import { closeBmxtShellIfRequested } from "../../close-bmxt-shell"
 import {
   clearPrompt,
   recordCommandHistory,
@@ -97,6 +98,7 @@ export function tryHandleNavConfirmClose(
       }
       // EN: Popup keeps the result log here; float may already be gone (handoff owns it).
       deps.applyRunCmdPatches(patchesWithoutPromptEcho(response.patches))
+      closeBmxtShellIfRequested(response.closeWindow)
     } catch (e) {
       void deps.appendLogLines(
         [

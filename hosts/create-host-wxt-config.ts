@@ -108,7 +108,13 @@ export function createHostWxtConfig(browser: HostBrowser) {
         }
       ],
       action: {
-        default_icon: hostIcons
+        default_icon: hostIcons,
+        // EN: Firefox (incl. Android/Fenix) — toolbar / Add-ons menu opens bmxt.html
+        //     as an action overlay. Chrome keeps windows.create (no default_popup so
+        //     action.onClicked still fires).
+        // JA: Firefox は action オーバーレイ。Chrome は windows.create のため
+        //     default_popup を付けない（onClicked を維持）。
+        ...(browser === "firefox" ? { default_popup: "bmxt.html" } : {})
       },
       icons: hostIcons,
       ...manifestExtra

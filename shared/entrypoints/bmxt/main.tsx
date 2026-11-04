@@ -10,6 +10,7 @@ import {
   resetPageBootPerf
 } from "../../lib/features/launch/page-boot-perf"
 import { startVersionUpgradePreflight } from "../../lib/features/bmxt-window/version-upgrade-preflight"
+import { installPopupShellUnloadNotify } from "../../lib/features/bmxt-window/popup-shell-unload"
 import { installPopupWindowBoundsPersist } from "../../lib/features/bmxt-window/window-bounds"
 
 resetPageBootPerf()
@@ -17,6 +18,7 @@ installPageBootPerfConsoleHelpers()
 markPageBootPhase("page-script-start")
 startVersionUpgradePreflight()
 installPopupWindowBoundsPersist()
+installPopupShellUnloadNotify()
 
 void (async () => {
   const rootEl = document.getElementById("root")

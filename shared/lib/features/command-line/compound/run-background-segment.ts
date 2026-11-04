@@ -1,3 +1,4 @@
+import { closeBmxtShellIfRequested } from "../../bmxt-window/close-bmxt-shell.ts"
 import { isRunCmdResult } from "../../bmxt-window/terminal-sessions/session-patches.ts"
 import { runCommandFromUiAsync } from "../../bmxt-window/terminal-sessions/session-runtime-client.ts"
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
@@ -49,6 +50,7 @@ export async function runBackgroundSegment(
       ? withoutLogPatches(response.patches)
       : response.patches
     deps.applyRunCmdPatches(patchesToApply)
+    closeBmxtShellIfRequested(response.closeWindow)
     const classified = classifyOutcomeFromLines(lines)
     if (classified.ok === false) {
       return segmentFailure(classified.code, lines, classified.errorMessage)

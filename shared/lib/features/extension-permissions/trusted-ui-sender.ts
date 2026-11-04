@@ -1,11 +1,10 @@
 /**
- * EN: Allowlist for privileged SW messages (`RUN_CMD` / `NAV_CONTROL`).
+ * EN: Allowlist for privileged SW messages (`RUN_CMD` / `NAV_CONTROL` / shell unload).
  *     Only same-extension UI pages may issue them — not content scripts or other extensions.
- *     `sender.tab` is expected: BMXt UI is a `windows.create` popup tab, and float is an
- *     iframe inside a host tab. Trust is URL origin + pathname, not absence of `tab`.
- * JA: 特権 SW メッセージ（`RUN_CMD` / `NAV_CONTROL`）の送信元 allowlist。
- *     同一拡張の UI ページのみ。コンテンツスクリプトや他拡張は拒否。
- *     `sender.tab` は付くのが正常（popup 窓内タブ／フロート iframe）。信頼判定は URL。
+ *     Chrome popup (`windows.create`) and float iframe usually include `sender.tab`.
+ *     Firefox `action.default_popup` overlay often omits `tab` — trust is URL origin + pathname.
+ * JA: 特権 SW メッセージの送信元 allowlist。同一拡張 UI のみ。信頼判定は URL
+ *     （Firefox オーバーレイは sender.tab が無いことがある）。
  */
 
 import {

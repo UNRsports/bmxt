@@ -441,23 +441,27 @@ export function registerBackgroundServices(): void {
   }
   backgroundServicesRegistered = true
 
-  chrome.windows.onFocusChanged.addListener((windowId) => {
-    if (windowId === chrome.windows.WINDOW_ID_NONE) {
-      return
-    }
-    chrome.windows.get(windowId, (win) => {
-      if (chrome.runtime.lastError || !win) {
+  // EN: Firefox Android has no `browser.windows` — skip last-normal-window tracking.
+  // JA: Fenix は windows API なし。最終通常窓の追跡はスキップ。
+  if (chrome.windows?.onFocusChanged) {
+    chrome.windows.onFocusChanged.addListener((windowId) => {
+      if (windowId === chrome.windows.WINDOW_ID_NONE) {
         return
       }
-      if (win.type === "normal") {
-        void hydrateBmxtWindowIdFromStorage().then(() => {
-          if (windowId !== readBmxtWindowIdInMemory()) {
-            rememberNormalWindow(windowId)
-          }
-        })
-      }
+      chrome.windows.get(windowId, (win) => {
+        if (chrome.runtime.lastError || !win) {
+          return
+        }
+        if (win.type === "normal") {
+          void hydrateBmxtWindowIdFromStorage().then(() => {
+            if (windowId !== readBmxtWindowIdInMemory()) {
+              rememberNormalWindow(windowId)
+            }
+          })
+        }
+      })
     })
-  })
+  }
 
   hydrateLastWindowFromStorage()
   void hydrateBmxtWindowIdFromStorage()
