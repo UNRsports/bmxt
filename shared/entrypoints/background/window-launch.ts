@@ -9,7 +9,7 @@ import {
   resetLaunchPerf
 } from "../../lib/features/launch/launch-perf"
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
-import { usesTabShell } from "../../lib/features/bmxt-window/shell-launch-mode"
+import { getCommandsOnCommand, usesTabShell } from "../../lib/features/host-env/index.ts"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import { setupFloatLaunch } from "./float-launch"
 import { flushPersistBmxtWindowBounds } from "./window-bounds"
@@ -54,11 +54,7 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
   void bmxtWindowLaunchChain
 }
 
-function hasCommandsApi(): boolean {
-  return typeof chrome !== "undefined" && chrome.commands !== undefined
-}
-
-/** EN: Shortcut — Chrome popup window, or Firefox shell tab. */
+/** EN: Shortcut / action — popup window, or Firefox SP shell tab. */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
   void loadBackgroundServicesAsync()
   if (usesTabShell()) {
@@ -95,7 +91,7 @@ async function resetBmxtFromShortcutAsync(): Promise<void> {
 /**
  * EN: Same cleanup as `windows.onRemoved` for the tracked BMXt popup window.
  *     Also used when the shell page unloads (`BMXT_POPUP_SHELL_UNLOAD` / tab close).
- * JA: ポップアップ窓削除時と同じ掃除。タブシェル破棄時にも使う。
+ * JA: ポップアップ窓削除時と同じ掃除。タブ破棄時にも使う。
  */
 export async function clearPopupShellProcessStateAsync(): Promise<void> {
   flushPersistBmxtWindowBounds()
@@ -106,11 +102,20 @@ export async function clearPopupShellProcessStateAsync(): Promise<void> {
   await services.removeAllTerminalSessionsFromStorageAsync()
 }
 
+/** EN: Action trampoline (Firefox) asks background to open the correct shell. */
+export function launchBmxtFromActionTrampoline(): void {
+  void loadBackgroundServicesAsync()
+  resetLaunchPerf()
+  markLaunchPhase("shortcut-received")
+  enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
+}
+
 function registerCommandShortcuts(): void {
-  if (!hasCommandsApi()) {
+  const onCommand = getCommandsOnCommand()
+  if (onCommand === undefined) {
     return
   }
-  chrome.commands.onCommand.addListener((command) => {
+  onCommand.addListener((command) => {
     if (command === "launch-bmxt") {
       resetLaunchPerf()
       markLaunchPhase("shortcut-received")
@@ -127,12 +132,8 @@ export function setupWindowLaunch(): void {
   // EN: Window bounds are persisted from the popup page (resize/pagehide).
   //     Do not use windows.onBoundsChanged — unsupported on Firefox / flagged by AMO.
   // JA: 窓サイズはポップアップページ側で保存。onBoundsChanged は Firefox/AMO 非対応。
-  // EN: Pass `commands.onCommand` only when the API exists (missing on Fenix).
-  // JA: commands API があるときだけ渡す（Fenix には無い）。
-  setupFloatLaunch(hasCommandsApi() ? chrome.commands.onCommand : undefined)
+  setupFloatLaunch(getCommandsOnCommand())
 
-  // EN: Firefox Android has no `browser.windows` — skip (tab unload uses pagehide).
-  // JA: Fenix は windows API なし。タブ破棄は pagehide 経由。
   if (chrome.windows?.onRemoved) {
     chrome.windows.onRemoved.addListener((windowId) => {
       if (readBmxtWindowIdInMemory() !== windowId) {
@@ -142,24 +143,17 @@ export function setupWindowLaunch(): void {
     })
   }
 
-  if (usesTabShell()) {
-    // EN: Firefox has `default_popup` (trampoline) — onClicked does not fire.
-    //     Toolbar/Add-ons opens the trampoline; desktop shortcuts open the tab.
-    // JA: Firefox は default_popup（trampoline）のため onClicked は発火しない。
-    registerCommandShortcuts()
-    resetLaunchPerf()
-    markLaunchPhase("sw-listeners-ready")
-    return
+  // EN: Chrome has no default_popup → onClicked. Firefox uses trampoline message instead.
+  // JA: Chrome は onClicked。Firefox は trampoline メッセージ。
+  if (!usesTabShell()) {
+    chrome.action.onClicked.addListener(() => {
+      void loadBackgroundServicesAsync()
+      enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
+    })
+    void hydrateBmxtWindowIdFromStorage()
   }
 
-  chrome.action.onClicked.addListener(() => {
-    void loadBackgroundServicesAsync()
-    enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
-  })
-
   registerCommandShortcuts()
-
-  void hydrateBmxtWindowIdFromStorage()
 
   resetLaunchPerf()
   markLaunchPhase("sw-listeners-ready")

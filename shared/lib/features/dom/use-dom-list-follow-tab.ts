@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react"
 import { BMXT_WINDOW_ID_KEY } from "../extension-storage/keys"
-import { hasWindowsApi } from "../tabs/windows-api"
+import { addMirrorWindowFocusListener, getNormalWindowOrNull } from "../host-env/index.ts"
 import type { DomListPickerState } from "./dom-list-picker-input"
 
 const FOLLOW_DEBOUNCE_MS = 300
@@ -118,39 +118,24 @@ export function useDomListFollowTab({
 
     chrome.tabs.onActivated.addListener(onActivated)
 
-    // EN: `windows` is missing on Firefox Android.
-    // JA: Fenix は windows API なし。
-    let onFocusChanged: ((windowId: number) => void) | undefined
-    if (hasWindowsApi()) {
-      onFocusChanged = (windowId: number) => {
-        if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    const removeFocusListener = addMirrorWindowFocusListener((windowId) => {
+      void (async () => {
+        const storage = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
+        const bmxtWid = storage[BMXT_WINDOW_ID_KEY] as number | undefined
+        if (bmxtWid !== undefined && windowId === bmxtWid) {
           return
         }
-        void (async () => {
-          const storage = await chrome.storage.local.get(BMXT_WINDOW_ID_KEY)
-          const bmxtWid = storage[BMXT_WINDOW_ID_KEY] as number | undefined
-          if (bmxtWid !== undefined && windowId === bmxtWid) {
-            return
-          }
-          try {
-            const win = await chrome.windows.get(windowId)
-            if (win.type !== "normal") {
-              return
-            }
-          } catch {
-            return
-          }
-          queueRefresh()
-        })()
-      }
-      chrome.windows.onFocusChanged.addListener(onFocusChanged)
-    }
+        const win = await getNormalWindowOrNull(windowId)
+        if (win === null) {
+          return
+        }
+        queueRefresh()
+      })()
+    })
 
     return () => {
       chrome.tabs.onActivated.removeListener(onActivated)
-      if (onFocusChanged !== undefined) {
-        chrome.windows.onFocusChanged.removeListener(onFocusChanged)
-      }
+      removeFocusListener()
       if (debounceRef.current !== null) {
         clearTimeout(debounceRef.current)
         debounceRef.current = null

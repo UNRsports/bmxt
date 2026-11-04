@@ -1,8 +1,6 @@
 /**
- * EN: Chrome MV3 host package (`pnpm run build:chrome`; verify / CWS path).
- * JA: Chrome MV3 ホスト（`pnpm run build:chrome`、verify / CWS 経路）。
+ * EN: Chrome host entry — re-exports PC packaging (CWS). SP notes under `sp/`.
+ * JA: Chrome ホスト入口。出荷は PC 設定。SP 注記は `sp/`。
  */
 
-import { createHostWxtConfig } from "../create-host-wxt-config"
-
-export default createHostWxtConfig("chrome")
+export { default } from "./pc/wxt.config"

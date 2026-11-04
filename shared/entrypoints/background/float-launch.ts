@@ -103,8 +103,8 @@ export function setupFloatLaunch(
 ): void {
   void hydrateFloatVisibleTabs()
 
-  // EN: `commands` is unsupported on Firefox Android — skip shortcut wiring.
-  // JA: Fenix は commands 非対応。ショートカット登録はスキップ。
+  // EN: Caller passes `getCommandsOnCommand()` — undefined on SP (no commands API).
+  // JA: 呼び出し側が getCommandsOnCommand() を渡す。SP では undefined。
   if (onCommand !== undefined) {
     onCommand.addListener((command) => {
       if (command !== "toggle-bmxt-float") {

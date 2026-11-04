@@ -7,7 +7,10 @@ Mozilla add-on reviewers need **reviewable source** and **reproducible build ins
 | Path | Role |
 |------|------|
 | `shared/` | Browser-agnostic code (TypeScript features, Rust/`bmxt-core` WASM, entrypoints, public assets, command manifest) |
-| `hosts/firefox/` | Firefox WXT config, gecko id, this document, AMO source zip helper |
+| `shared/lib/features/host-env/` | Runtime PC/SP × shell dispatch (Firefox SP = tab shell only) |
+| `hosts/firefox/pc/` | Firefox PC packaging (`wxt.config.ts`) |
+| `hosts/firefox/sp/` | Firefox SP special-case notes (tab shell; same XPI) |
+| `hosts/firefox/` | Entry `wxt.config.ts`, gecko id, this document, AMO source zip helper |
 | `hosts/chrome/` | Chrome-only packaging (not required to build the Firefox add-on) |
 
 ## Toolchain (pin these)

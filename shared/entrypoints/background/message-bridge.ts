@@ -8,8 +8,13 @@
 
 import { isTrustedBmxtUiSender } from "../../lib/features/extension-permissions/trusted-ui-sender"
 import { isBmxtPopupShellUnloadMessage } from "../../lib/features/bmxt-window/popup-shell-unload"
-import { clearPopupShellProcessStateAsync } from "./window-launch"
+import {
+  clearPopupShellProcessStateAsync,
+  launchBmxtFromActionTrampoline
+} from "./window-launch"
 import { loadBackgroundServicesAsync } from "./load-background-services"
+
+const BMXT_LAUNCH_FROM_ACTION = "BMXT_LAUNCH_FROM_ACTION"
 
 type RunCmdMessage = {
   type?: string
@@ -65,6 +70,16 @@ export function setupMessageBridge(): void {
         }
         void clearPopupShellProcessStateAsync()
         return false
+      }
+      // EN: Firefox action.default_popup trampoline — PC opens popup, SP opens tab.
+      // JA: Firefox trampoline。PC は popup、SP はタブ。
+      if (message?.type === BMXT_LAUNCH_FROM_ACTION) {
+        if (!isTrustedBmxtUiSender(sender)) {
+          return false
+        }
+        launchBmxtFromActionTrampoline()
+        safeSendResponse(sendResponse, { ok: true })
+        return true
       }
       if (message?.type === "RUN_CMD" && typeof message.line === "string") {
         if (!isTrustedBmxtUiSender(sender)) {

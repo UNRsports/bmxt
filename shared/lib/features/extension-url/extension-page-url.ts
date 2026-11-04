@@ -20,14 +20,17 @@ export const DEFAULT_EXTENSION_PAGE_PROTOCOL: ExtensionPageProtocol = "chrome-ex
 /** EN: Canonical UI page pathnames (leading slash, no query). */
 export const BMXT_UI_PAGE_PATHS = {
   shell: "/bmxt.html",
-  float: "/bmxt-float.html"
+  float: "/bmxt-float.html",
+  /** EN: Firefox action trampoline (opens shell; not a command UI). */
+  launch: "/bmxt-launch.html"
 } as const
 
 export type BmxtUiPageKey = keyof typeof BMXT_UI_PAGE_PATHS
 
 export const TRUSTED_BMXT_UI_PATHS: ReadonlySet<string> = new Set<string>([
   BMXT_UI_PAGE_PATHS.shell,
-  BMXT_UI_PAGE_PATHS.float
+  BMXT_UI_PAGE_PATHS.float,
+  BMXT_UI_PAGE_PATHS.launch
 ])
 
 export type ParsedExtensionPageUrl = {
@@ -72,7 +75,7 @@ export function extensionPageUrl(options: {
   const protocol = options.protocol ?? DEFAULT_EXTENSION_PAGE_PROTOCOL
   const pathKey = options.path
   const rawPath =
-    pathKey === "shell" || pathKey === "float"
+    pathKey === "shell" || pathKey === "float" || pathKey === "launch"
       ? BMXT_UI_PAGE_PATHS[pathKey]
       : normalizeExtensionPagePath(pathKey)
   // EN: URL constructor requires the colon form without double slash in protocol arg —

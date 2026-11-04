@@ -123,9 +123,8 @@ async function listBmxtShellTabsAsync(): Promise<chrome.tabs.Tab[]> {
 }
 
 /**
- * EN: Firefox host — open or focus `bmxt.html` as a normal browser tab
- *     (Fenix action overlays cannot run the heavy shell module graph).
- * JA: Firefox は通常タブで bmxt.html を開く／フォーカスする。
+ * EN: Firefox SP tab shell — open or focus `bmxt.html` as a normal browser tab.
+ * JA: Firefox SP タブシェル — bmxt.html を通常タブで開く／フォーカスする。
  */
 export async function openOrFocusBmxtShellTabAsync(): Promise<void> {
   const url = chrome.runtime.getURL(BMXT_PAGE)
