@@ -54,6 +54,20 @@ export function ensureBmxtCoreFromBytes(bytes: Uint8Array): void {
   initialized = true
 }
 
+/**
+ * EN: Prefer `arrayBuffer` + `instantiate` — `instantiateStreaming` fails when
+ *     `moz-extension:` serves `.wasm` without `application/wasm` (seen on Fenix overlays).
+ * JA: Fenix では moz-extension の .wasm MIME が不正なことがあり streaming を避ける。
+ */
+async function initBmxtCoreFromUrl(wasmUrl: string): Promise<void> {
+  const response = await fetch(wasmUrl)
+  if (!response.ok) {
+    throw new Error(`BMXt core WASM fetch failed: HTTP ${response.status}`)
+  }
+  const bytes = await response.arrayBuffer()
+  await init({ module_or_path: bytes })
+}
+
 /** Load and instantiate bmxt-core WASM once per JS realm (extension UI / SW). */
 export async function ensureBmxtCore(): Promise<void> {
   if (initialized) {
@@ -67,9 +81,12 @@ export async function ensureBmxtCore(): Promise<void> {
           "BMXt core WASM: chrome.runtime.getURL unavailable (use ensureBmxtCoreFromBytes in Node tests)"
         )
       }
-      await init({ module_or_path: chromeUrl })
+      await initBmxtCoreFromUrl(chromeUrl)
       initialized = true
-    })()
+    })().catch((error: unknown) => {
+      initPromise = null
+      throw error
+    })
   }
   await initPromise
 }

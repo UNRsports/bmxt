@@ -18,5 +18,9 @@
   "commandToggleBmxtFloat": {
     "message": "現在のページで BMXt フロート・プロンプトを切り替える",
     "description": "アクティブタブ上のサイト内フロート・プロンプトを表示／非表示するグローバルショートカットの説明。"
+  },
+  "shellBootFailed": {
+    "message": "BMXt の起動に失敗しました",
+    "description": "シェル起動失敗時に action オーバーレイへ表示する文言。"
   }
 }

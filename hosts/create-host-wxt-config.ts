@@ -89,8 +89,30 @@ export function createHostWxtConfig(browser: HostBrowser) {
         }
       },
       build: {
-        chunkSizeWarningLimit: 700
-      }
+        chunkSizeWarningLimit: 700,
+        // EN: Avoid Vite's modulepreload polyfill/`__vitePreload` in extension pages.
+        // JA: 拡張ページで Vite の modulepreload / __vitePreload を使わない。
+        modulePreload: false
+      },
+      plugins:
+        browser === "firefox"
+          ? [
+              {
+                name: "bmxt-firefox-overlay-html",
+                transformIndexHtml(html: string) {
+                  // EN: Fenix action overlays have resolved root-absolute `/chunks/…`
+                  //     against the wrong base; keep URLs relative to the HTML page.
+                  //     Also drop `crossorigin` (CORS mode is unnecessary for
+                  //     moz-extension same-origin modules and can block loads).
+                  // JA: Fenix オーバーレイでは絶対パス `/chunks` が誤解決されることが
+                  //     あるため相対化する。crossorigin も外す。
+                  return html
+                    .replace(/\s+crossorigin(?:="[^"]*")?/g, "")
+                    .replace(/(href|src)="\/([^"]+)"/g, '$1="./$2"')
+                }
+              }
+            ]
+          : []
     }),
     manifest: {
       name: "__MSG_extensionName__",
@@ -109,11 +131,9 @@ export function createHostWxtConfig(browser: HostBrowser) {
       ],
       action: {
         default_icon: hostIcons,
-        // EN: Firefox (incl. Android/Fenix) — toolbar / Add-ons menu opens bmxt.html
-        //     as an action overlay. Chrome keeps windows.create (no default_popup so
-        //     action.onClicked still fires).
-        // JA: Firefox は action オーバーレイ。Chrome は windows.create のため
-        //     default_popup を付けない（onClicked を維持）。
+        // EN: Firefox (desktop + Android) — action overlay loads bmxt.html.
+        //     Chrome keeps windows.create (no default_popup so onClicked fires).
+        // JA: Firefox は action オーバーレイで bmxt.html。Chrome は windows.create。
         ...(browser === "firefox" ? { default_popup: "bmxt.html" } : {})
       },
       icons: hostIcons,

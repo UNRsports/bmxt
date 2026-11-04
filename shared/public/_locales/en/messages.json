@@ -18,5 +18,9 @@
   "commandToggleBmxtFloat": {
     "message": "Toggle BMXt float prompt on the current page",
     "description": "Label for the global keyboard shortcut that shows or hides the in-page BMXt float prompt on the active tab."
+  },
+  "shellBootFailed": {
+    "message": "Failed to start BMXt",
+    "description": "Shown in the action overlay when the shell fails to boot."
   }
 }
