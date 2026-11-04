@@ -99,16 +99,20 @@ async function reShowFloatIfDesired(tabId: number, url: string | undefined): Pro
 }
 
 export function setupFloatLaunch(
-  onCommand: typeof chrome.commands.onCommand
+  onCommand?: typeof chrome.commands.onCommand
 ): void {
   void hydrateFloatVisibleTabs()
 
-  onCommand.addListener((command) => {
-    if (command !== "toggle-bmxt-float") {
-      return
-    }
-    void toggleBmxtFloatOnActiveTabAsync()
-  })
+  // EN: `commands` is unsupported on Firefox Android — skip shortcut wiring.
+  // JA: Fenix は commands 非対応。ショートカット登録はスキップ。
+  if (onCommand !== undefined) {
+    onCommand.addListener((command) => {
+      if (command !== "toggle-bmxt-float") {
+        return
+      }
+      void toggleBmxtFloatOnActiveTabAsync()
+    })
+  }
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (isBmxtFloatBootAuthRequest(message)) {

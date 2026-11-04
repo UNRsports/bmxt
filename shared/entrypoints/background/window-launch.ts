@@ -54,6 +54,10 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
   void bmxtWindowLaunchChain
 }
 
+function hasCommandsApi(): boolean {
+  return typeof chrome !== "undefined" && chrome.commands !== undefined
+}
+
 /** EN: Shortcut — Chrome popup window, or Firefox shell tab. */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
   void loadBackgroundServicesAsync()
@@ -102,11 +106,30 @@ export async function clearPopupShellProcessStateAsync(): Promise<void> {
   await services.removeAllTerminalSessionsFromStorageAsync()
 }
 
+function registerCommandShortcuts(): void {
+  if (!hasCommandsApi()) {
+    return
+  }
+  chrome.commands.onCommand.addListener((command) => {
+    if (command === "launch-bmxt") {
+      resetLaunchPerf()
+      markLaunchPhase("shortcut-received")
+      enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
+      return
+    }
+    if (command === "reset-bmxt") {
+      enqueueBmxtWindowLaunch(() => resetBmxtFromShortcutAsync())
+    }
+  })
+}
+
 export function setupWindowLaunch(): void {
   // EN: Window bounds are persisted from the popup page (resize/pagehide).
   //     Do not use windows.onBoundsChanged — unsupported on Firefox / flagged by AMO.
   // JA: 窓サイズはポップアップページ側で保存。onBoundsChanged は Firefox/AMO 非対応。
-  setupFloatLaunch(chrome.commands.onCommand)
+  // EN: Pass `commands.onCommand` only when the API exists (missing on Fenix).
+  // JA: commands API があるときだけ渡す（Fenix には無い）。
+  setupFloatLaunch(hasCommandsApi() ? chrome.commands.onCommand : undefined)
 
   // EN: Firefox Android has no `browser.windows` — skip (tab unload uses pagehide).
   // JA: Fenix は windows API なし。タブ破棄は pagehide 経由。
@@ -121,20 +144,9 @@ export function setupWindowLaunch(): void {
 
   if (usesTabShell()) {
     // EN: Firefox has `default_popup` (trampoline) — onClicked does not fire.
-    //     Toolbar/Add-ons opens the trampoline; shortcuts open the tab directly.
+    //     Toolbar/Add-ons opens the trampoline; desktop shortcuts open the tab.
     // JA: Firefox は default_popup（trampoline）のため onClicked は発火しない。
-    //     ショートカットは直接タブを開く。
-    chrome.commands.onCommand.addListener((command) => {
-      if (command === "launch-bmxt") {
-        resetLaunchPerf()
-        markLaunchPhase("shortcut-received")
-        enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
-        return
-      }
-      if (command === "reset-bmxt") {
-        enqueueBmxtWindowLaunch(() => resetBmxtFromShortcutAsync())
-      }
-    })
+    registerCommandShortcuts()
     resetLaunchPerf()
     markLaunchPhase("sw-listeners-ready")
     return
@@ -145,17 +157,7 @@ export function setupWindowLaunch(): void {
     enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
   })
 
-  chrome.commands.onCommand.addListener((command) => {
-    if (command === "launch-bmxt") {
-      resetLaunchPerf()
-      markLaunchPhase("shortcut-received")
-      enqueueBmxtWindowLaunch(() => launchBmxtFromShortcutAsync())
-      return
-    }
-    if (command === "reset-bmxt") {
-      enqueueBmxtWindowLaunch(() => resetBmxtFromShortcutAsync())
-    }
-  })
+  registerCommandShortcuts()
 
   void hydrateBmxtWindowIdFromStorage()
 

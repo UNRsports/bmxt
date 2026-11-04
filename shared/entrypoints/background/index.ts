@@ -8,8 +8,11 @@ import { setupWindowLaunch } from "./window-launch"
 import { hydrateBmxtWindowIdFromStorage } from "./window-state"
 
 export default defineBackground(() => {
-  setupWindowLaunch()
+  // EN: Register RUN_CMD bridge before other setup — if launch wiring throws on
+  //     Android-missing APIs, the UI must still reach the background.
+  // JA: RUN_CMD ブリッジを先に登録。Android 非対応 API で後続が落ちても通信は残す。
   setupMessageBridge()
+  setupWindowLaunch()
 
   void loadBackgroundServicesAsync().then((services) => {
     services.registerBackgroundServices()
