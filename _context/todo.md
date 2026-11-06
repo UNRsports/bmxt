@@ -114,26 +114,41 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] ライフサイクル層を独立リポ（webxdriver）へ切り出し／public
 - [x] BMXt `harness.ts` を薄くして webxdriver を消費
 
-### 6. ローカル同期（同一 PC → 同一 LAN · Family）
+### 6. ローカル同期（同一 PC → 同一 LAN · Family · コマンドバス）
 
-**目標:** 各ブラウザにユニークな device ID を付け、同一 Family 内の構成員同士で UI 設定・永続プリファレンス・スナップショットを揃え、将来は Family 内横断検索の土台にする。データの預かり先（Google Drive 等）は使わない。第三者サーバなし（同一 PC / 同一 LAN）。
+**目標:** 各ブラウザにユニークな device ID を付け、同一 Family 内の構成員同士で UI 設定・永続プリファレンス・スナップショットを揃える。続けて低遅延の遠隔コマンドバスを載せ、将来は tab picker の移動先に Family メンバーを出し、横断検索・遠隔グループ open の土台にする。平文の預かり先は作らない（ゼロ custody）。
 
 **製品方針（決定済み）**
 
 | 項目 | 内容 |
 |------|------|
 | 信頼圏 | **Family**（共有シード／招待。Brave Sync Chain と同型）。メンバーだけが平文を持つ |
-| 識別 | ブラウザ／プロファイルごとに **ユニーク device ID** + 表示名。接続・名簿・衝突解決のキー |
-| 既定 | ローカルのみ。`connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持 |
-| 除外 | **Google Drive（有料オプション構想も含め本フェーズ対象外）**。インターネット越しの預かり／公開 relay も対象外 |
+| 識別 | ブラウザ／プロファイルごとに **ユニーク device ID** + 表示名。接続・名簿・衝突解決・遠隔宛先のキー |
+| 既定 | ローカル本線（FSA）。`connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を 6a/6c ローカル経路では維持 |
+| 制御面 | native messaging ホストは使わない。低遅延は **FSA シグナリング + WebRTC DataChannel** |
+| Drive | **本実装の必須ではない。** シグナリング箱／オフライン時コマンドキューの差し替え候補（有料オプション視野）。倉庫にしない |
 | 将来像（仕様上の視野） | スマホ BMXt は窓口、PC がハブ／索引。USB・Bluetooth は拡張単体では非現実的 → 必要なら後続でネイティブ補助 |
 
 **輸送（段階）**
 
 | 段 | 範囲 | 手段 | manifest |
 |----|------|------|----------|
-| **6a（先）** | 同一 PC · Chrome ↔ Firefox | FSA 共有作業ディレクトリを正本 | ネットワーク権限追加なし |
-| **6b（続いて）** | 同一 LAN · Family メンバー | device ID で発見・接続（手動／QR で LAN アドレス交換、または PC ハブ名簿）。直結のみ。公開 STUN/relay に依存しない | LAN 向けに必要最小の接続先のみ検討。外部送信なしを維持できる設計を優先。難しければ 6a 完成を優先し 6b を縮小 |
+| **6a（先）** | 同一 PC · Chrome ↔ Firefox | FSA 共有作業ディレクトリを正本（設定・prefs・snapshot・名簿） | ネットワーク権限追加なし |
+| **6b（続いて）** | 同一 LAN · Family メンバー | device ID で発見（手動／QR、または PC ハブ名簿）。直結優先。公開 STUN/relay に依存しない | 必要最小のみ検討。難しければ 6a/6c を優先し 6b を縮小 |
+| **6c** | 同一 PC（→ 同一プロトコルで LAN／遠隔へ拡張可） | **FSA シグナリング + WebRTC コマンドバス**。Drive はシグナリング箱の差し替え候補 | ローカルのみなら外部送信なしを維持。Drive 差し替え時は別途 OAuth / CSP / AMO 宣言（後続） |
+
+**6c: FSA シグナリング + WebRTC コマンドバス**
+
+| 項目 | 内容 |
+|------|------|
+| 原理 | 名刺（SDP offer/answer · ICE）だけ共有箱で交換し、会話本体は Peer 間 DataChannel |
+| シグナリング箱（既定） | FSA 作業ディレクトリ配下の短命ファイル（Family 鍵で署名／暗号、TTL で破棄） |
+| シグナリング箱（候補） | **Google Drive** に同じ封筒を載せる差し替え。平文倉庫にしない。有料オプション視野 |
+| データ面 | WebRTC DataChannel（遠隔コマンド · ack · 将来の横断クエリ） |
+| peer 宿主 | Chrome: offscreen document。Firefox: 拡張ページ（BMXt 窓または専用 peer ページ）。SW 単体では不可 |
+| 相手休眠時 | DataChannel 不可 → FSA（または後続で Drive）のコマンドキューに退避し、起床後に消化 |
+| UX 視野 | `tab` picker の移動先に Family メンバー（例: firefox@desk）。グループ構造を先方 BMXt に開かせる |
+| 非目標（6c） | native messaging ホスト、torrent 本線、常時 TURN 前提の設計 |
 
 **正本・ペイロード**
 
@@ -143,22 +158,23 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - 名簿メタ: `deviceId` · 表示名 · Family 所属 · 最終更新（共有ディレクトリまたは LAN 名簿）
 - 衝突: 簡易 LWW（updatedAt + deviceId）+ 必要ならロックファイル
 
-**横断検索（仕様視野 · 6 では土台まで）**
+**横断検索・遠隔操作（仕様視野）**
 
-- Family 内の任意メンバーの BMXt から、他メンバーのデータをキー（device ID）で参照し横断検索する構想
-- 6a/6b では同期と名簿を先行。クエリ分散／ハブ索引の本実装は土台 API が揃ってから
+- Family 内の任意メンバーの BMXt から、他メンバーを device ID で指定して横断検索／遠隔 open する構想
+- 6a で正本と名簿、6c でコマンドバス。クエリ分散／ハブ索引の本実装はバス API が揃ってから
 
 **コマンド**
 
-- `sync` first（例: `-status` / `-dir` / `-pair` / `-members` / `-pull` / `-push` / `-pause`）
+- `sync` first（例: `-status` / `-dir` / `-pair` / `-members` / `-pull` / `-push` / `-pause` / 接続状態）
 - skill `bmxt-add-command` + i18n EN/JA
 
-**スコープ外**
+**スコープ外（§6 本体）**
 
-- Google Drive / OAuth / `identity` / 有料クラウドオプション
-- インターネット越し P2P（公開 circuit relay · TURN 前提）
+- Drive OAuth 実装・ストア提出・課金（差し替え候補の仕様メモに留め、実装は後続）
+- インターネット越しで常時 TURN／公開 circuit relay 前提の運用
 - USB / Bluetooth 輸送（ブラウザ拡張単体）
-- torrent を同期本線にすること
+- torrent を同期／コマンド本線にすること
+- native messaging ホスト
 
 **実装チェック**
 
@@ -168,7 +184,11 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] **6a:** 作業ディレクトリ選択・永続（`settings-handle-db` 流用可）· collect/apply · 衝突処理 · 単体テスト
 - [ ] **6a:** 同一フォルダを Chrome / Firefox 双方で選び相互反映（手元）
 - [ ] **6b:** LAN 内で device ID によりメンバー発見→接続する仕様確定（QR／手入力を初期案）。実装または明示的延期
-- [ ] `sync` コマンド + i18n + README（EN/JA）。Drive 非対応・ローカル／LAN 限定を明記
+- [ ] **6c:** シグナリング箱アダプタ境界（FSA 実装 + Drive 差し替え用インタフェース）
+- [ ] **6c:** peer 宿主（Chrome offscreen / Firefox 拡張ページ）+ WebRTC DataChannel コマンド／ack
+- [ ] **6c:** 休眠時 FSA コマンドキューフォールバック
+- [ ] **6c:** 手元 — 同一 PC で Chrome→Firefox に遠隔コマンド（例: タブ／グループ open 相当）が低遅延で届く
+- [ ] `sync` コマンド + i18n + README（EN/JA）。既定はローカル、Drive は候補／未実装を明記
 
 ---
 
