@@ -114,6 +114,62 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] ライフサイクル層を独立リポ（webxdriver）へ切り出し／public
 - [x] BMXt `harness.ts` を薄くして webxdriver を消費
 
+### 6. ローカル同期（同一 PC → 同一 LAN · Family）
+
+**目標:** 各ブラウザにユニークな device ID を付け、同一 Family 内の構成員同士で UI 設定・永続プリファレンス・スナップショットを揃え、将来は Family 内横断検索の土台にする。データの預かり先（Google Drive 等）は使わない。第三者サーバなし（同一 PC / 同一 LAN）。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 信頼圏 | **Family**（共有シード／招待。Brave Sync Chain と同型）。メンバーだけが平文を持つ |
+| 識別 | ブラウザ／プロファイルごとに **ユニーク device ID** + 表示名。接続・名簿・衝突解決のキー |
+| 既定 | ローカルのみ。`connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持 |
+| 除外 | **Google Drive（有料オプション構想も含め本フェーズ対象外）**。インターネット越しの預かり／公開 relay も対象外 |
+| 将来像（仕様上の視野） | スマホ BMXt は窓口、PC がハブ／索引。USB・Bluetooth は拡張単体では非現実的 → 必要なら後続でネイティブ補助 |
+
+**輸送（段階）**
+
+| 段 | 範囲 | 手段 | manifest |
+|----|------|------|----------|
+| **6a（先）** | 同一 PC · Chrome ↔ Firefox | FSA 共有作業ディレクトリを正本 | ネットワーク権限追加なし |
+| **6b（続いて）** | 同一 LAN · Family メンバー | device ID で発見・接続（手動／QR で LAN アドレス交換、または PC ハブ名簿）。直結のみ。公開 STUN/relay に依存しない | LAN 向けに必要最小の接続先のみ検討。外部送信なしを維持できる設計を優先。難しければ 6a 完成を優先し 6b を縮小 |
+
+**正本・ペイロード**
+
+- 既存 UI settings bundle（`settings.json` + 画像）を拡張し、prefs allowlist + snapshot 索引/本文を同レイアウト系で扱う
+- prefs allowlist: `bmxt_cmd_history` · MRU · picker settings · translate · nav learned · tutorial 等。windowId / session / bounds は除外
+- snapshot 容量は既存 `MAX_SNAPSHOT_*` を enforce
+- 名簿メタ: `deviceId` · 表示名 · Family 所属 · 最終更新（共有ディレクトリまたは LAN 名簿）
+- 衝突: 簡易 LWW（updatedAt + deviceId）+ 必要ならロックファイル
+
+**横断検索（仕様視野 · 6 では土台まで）**
+
+- Family 内の任意メンバーの BMXt から、他メンバーのデータをキー（device ID）で参照し横断検索する構想
+- 6a/6b では同期と名簿を先行。クエリ分散／ハブ索引の本実装は土台 API が揃ってから
+
+**コマンド**
+
+- `sync` first（例: `-status` / `-dir` / `-pair` / `-members` / `-pull` / `-push` / `-pause`）
+- skill `bmxt-add-command` + i18n EN/JA
+
+**スコープ外**
+
+- Google Drive / OAuth / `identity` / 有料クラウドオプション
+- インターネット越し P2P（公開 circuit relay · TURN 前提）
+- USB / Bluetooth 輸送（ブラウザ拡張単体）
+- torrent を同期本線にすること
+
+**実装チェック**
+
+- [ ] device ID 生成・永続・表示名
+- [ ] Family 作成／参加（シードまたは招待）の最小モデル
+- [ ] `shared/lib/features/sync/`（または setting 延長）に同期モジュール
+- [ ] **6a:** 作業ディレクトリ選択・永続（`settings-handle-db` 流用可）· collect/apply · 衝突処理 · 単体テスト
+- [ ] **6a:** 同一フォルダを Chrome / Firefox 双方で選び相互反映（手元）
+- [ ] **6b:** LAN 内で device ID によりメンバー発見→接続する仕様確定（QR／手入力を初期案）。実装または明示的延期
+- [ ] `sync` コマンド + i18n + README（EN/JA）。Drive 非対応・ローカル／LAN 限定を明記
+
 ---
 
 ## Archive（ポインタのみ）
