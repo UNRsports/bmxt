@@ -29,6 +29,8 @@ export type CommandBusStabilizer = {
   ): Promise<{ ok: boolean; detail: string | null; hits: SyncRemoteSearchHit[] }>
   getState(remoteDeviceId: SyncDeviceId): SyncConnectionState
   listStates(): Array<{ deviceId: SyncDeviceId; state: SyncConnectionState }>
+  /** EN: Drop a tracked device id (e.g. offer placeholder after answer binds the real peer). */
+  discardState(remoteDeviceId: SyncDeviceId): void
   /** EN: Drain FSA command queue for this device (peer wake). */
   drainQueue(): Promise<number>
   onCommand(handler: (command: SyncBusCommand) => void | Promise<void>): void

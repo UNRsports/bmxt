@@ -4,7 +4,7 @@ import type { UiLocale } from "../../setting/locale.ts"
 import { buildTabPickerRowsBundle } from "../../tabs/picker-rows.ts"
 import { tabPickerRowsToListResult } from "../../tabs/tabs-list-result.ts"
 import { loadOrCreateDeviceIdentity } from "../device/device-identity"
-import { getSyncService } from "../facade/sync-service"
+import { getSyncService } from "../facade/sync-service.ts"
 import type { DeviceListScope } from "./device-list-scope"
 import {
   mergeListResults,
@@ -110,16 +110,18 @@ export async function fetchCrossDeviceTabsList(
     }
   }
 
-  // --peers: local + connected remotes
+  // --peers: local + connected remotes (refresh from bound RTC sessions first)
   const parts: ListResult[] = []
   const local = await localTaggedTabs(options.showUrl, options.locale, localTag)
   parts.push(local)
   devicesQueried.push(device.deviceId)
 
-  const status = await service.status()
-  const connectedIds = status.connections
-    .filter((c) => c.state === "connected" && c.deviceId !== device.deviceId)
-    .map((c) => c.deviceId)
+  // EN: Prefer peerHost-bound sessions over a possibly stale commandBus map.
+  const connectedIds = await service.listConnectedPeerDeviceIds()
+  const memberNameById = new Map<string, string>()
+  for (const member of (await service.status()).members) {
+    memberNameById.set(member.deviceId, member.displayName)
+  }
 
   for (const remoteId of connectedIds) {
     devicesQueried.push(remoteId)
@@ -129,8 +131,7 @@ export async function fetchCrossDeviceTabsList(
       notices.push(`sync.list.peerFailed:${remoteId}:${remote.detail ?? ""}`)
       continue
     }
-    const name =
-      status.members.find((m) => m.deviceId === remoteId)?.displayName ?? remoteId
+    const name = memberNameById.get(remoteId) ?? remoteId
     parts.push({
       schema: LIST_OUTPUT_SCHEMA,
       command: "tab",

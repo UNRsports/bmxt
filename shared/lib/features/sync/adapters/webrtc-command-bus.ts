@@ -340,7 +340,13 @@ export function createWebrtcCommandBusStabilizer(
     },
 
     listStates() {
-      return [...states.entries()].map(([deviceId, state]) => ({ deviceId, state }))
+      return [...states.entries()]
+        .filter(([deviceId]) => deviceId !== "pending-offer")
+        .map(([deviceId, state]) => ({ deviceId, state }))
+    },
+
+    discardState(remoteDeviceId) {
+      states.delete(remoteDeviceId)
     },
 
     async drainQueue() {

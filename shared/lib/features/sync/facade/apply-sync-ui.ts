@@ -3,7 +3,7 @@ import type { SegmentOutcome } from "../../command-line/compound/types"
 import type { UiLocale } from "../../setting/locale"
 import { expandSyncLogLines } from "./expand-sync-log"
 import { formatSyncStatusLines } from "./format-status"
-import { getSyncService } from "./sync-service"
+import { getSyncService } from "./sync-service.ts"
 
 export type SyncUiLogSink = {
   locale: UiLocale

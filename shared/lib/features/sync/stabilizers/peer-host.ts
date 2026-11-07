@@ -39,6 +39,8 @@ export type PeerHostStabilizer = {
   applyAnswerHandshake(plain: RtcHandshakePlain): Promise<SyncDeviceId>
   sendCommand(remoteDeviceId: SyncDeviceId, command: SyncBusCommand): Promise<boolean>
   getConnectionState(remoteDeviceId: SyncDeviceId): string
+  /** EN: Remotes that have a bound RTC session (excludes offer placeholder). */
+  listBoundRemoteDeviceIds(): SyncDeviceId[]
   setHandlers(handlers: PeerHostSessionHandlers): void
   closeSession(remoteDeviceId: SyncDeviceId): Promise<void>
 }

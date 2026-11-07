@@ -80,6 +80,8 @@ export type SyncService = {
   listReachablePeers(): Promise<
     Array<{ deviceId: string; displayName: string; rttMs: number | null }>
   >
+  /** EN: Re-sync bus states from bound RTC sessions; return connected peer ids. */
+  listConnectedPeerDeviceIds(): Promise<string[]>
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
 }
 
@@ -107,6 +109,21 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
     return { membership, device }
   }
 
+  async function refreshConnectionStates(selfDeviceId: string): Promise<void> {
+    await ensurePeerDocument()
+    await s.peerHost.ensureReady()
+    s.commandBus.discardState("pending-offer")
+    const ids = new Set<string>([
+      ...s.peerHost.listBoundRemoteDeviceIds(),
+      ...s.commandBus.listStates().map((row) => row.deviceId)
+    ])
+    ids.delete(selfDeviceId)
+    ids.delete("pending-offer")
+    for (const remoteId of ids) {
+      await s.commandBus.connect(remoteId)
+    }
+  }
+
   return {
     async status() {
       await ensureFamily()
@@ -120,6 +137,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       const inviteDoc = await buildInviteForLocalDevice()
       const invite = inviteDoc ? s.discovery.formatInvite(inviteDoc) : null
       await s.commandBus.drainQueue()
+      await refreshConnectionStates(device.deviceId)
       return {
         device,
         family,
@@ -276,6 +294,8 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       } catch {
         return { ok: false, lines: [line("sync.rtc.acceptFailed")] }
       }
+      s.commandBus.discardState("pending-offer")
+      await s.commandBus.connect(accepted.remoteDeviceId)
       await s.discovery.rememberManual({
         deviceId: plain.fromDeviceId,
         displayName: plain.fromDisplayName,
@@ -363,6 +383,8 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       } catch {
         return { ok: false, lines: [line("sync.rtc.acceptFailed")] }
       }
+      s.commandBus.discardState("pending-offer")
+      await s.commandBus.connect(remoteDeviceId)
       await s.discovery.rememberManual({
         deviceId: plain.fromDeviceId,
         displayName: plain.fromDisplayName,
@@ -553,14 +575,27 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
     },
 
+    async listConnectedPeerDeviceIds() {
+      const device = await loadOrCreateDeviceIdentity()
+      await refreshConnectionStates(device.deviceId)
+      return s.commandBus
+        .listStates()
+        .filter(
+          (row) =>
+            row.state === "connected" &&
+            row.deviceId !== device.deviceId &&
+            row.deviceId !== "pending-offer"
+        )
+        .map((row) => row.deviceId)
+    },
+
     async listReachablePeers() {
       const family = await loadFamilyMembership()
       if (family === null) {
         return []
       }
       const device = await loadOrCreateDeviceIdentity()
-      await ensurePeerDocument()
-      await s.peerHost.ensureReady()
+      await refreshConnectionStates(device.deviceId)
       const byId = new Map<string, string>()
       const roster = await loadLocalRoster()
       if (roster !== null) {
@@ -578,12 +613,12 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
           byId.set(discovered.deviceId, discovered.displayName)
         }
       }
-      for (const row of s.commandBus.listStates()) {
-        if (row.deviceId === device.deviceId) {
+      for (const remoteId of s.peerHost.listBoundRemoteDeviceIds()) {
+        if (remoteId === device.deviceId) {
           continue
         }
-        if (row.state === "connected" && !byId.has(row.deviceId)) {
-          byId.set(row.deviceId, row.deviceId)
+        if (!byId.has(remoteId)) {
+          byId.set(remoteId, remoteId)
         }
       }
 
@@ -620,16 +655,33 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
   }
 }
 
-let singleton: SyncService | null = null
+/** EN: Survive duplicate module graphs / HMR so status and --peers share one bus. */
+const SYNC_SERVICE_HOLDER_KEY = "__bmxt_sync_service_holder__" as const
+
+type SyncServiceHolder = { current: SyncService | null }
+
+function syncServiceHolder(): SyncServiceHolder {
+  const globalRef = globalThis as typeof globalThis & {
+    [SYNC_SERVICE_HOLDER_KEY]?: SyncServiceHolder
+  }
+  const existing = globalRef[SYNC_SERVICE_HOLDER_KEY]
+  if (existing !== undefined) {
+    return existing
+  }
+  const created: SyncServiceHolder = { current: null }
+  globalRef[SYNC_SERVICE_HOLDER_KEY] = created
+  return created
+}
 
 export function getSyncService(): SyncService {
-  if (singleton === null) {
-    singleton = createSyncService()
+  const holder = syncServiceHolder()
+  if (holder.current === null) {
+    holder.current = createSyncService()
   }
-  return singleton
+  return holder.current
 }
 
 /** EN: Test hook — replace singleton wiring. */
 export function setSyncServiceForTests(service: SyncService | null): void {
-  singleton = service
+  syncServiceHolder().current = service
 }

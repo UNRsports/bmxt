@@ -19,7 +19,7 @@ export {
   getSyncService,
   setSyncServiceForTests,
   type SyncService
-} from "./facade/sync-service"
+} from "./facade/sync-service.ts"
 export { expandSyncLogLines } from "./facade/expand-sync-log"
 export { formatSyncStatusLines } from "./facade/format-status"
 export { compareLww, shouldAcceptLww } from "./payload/conflict-lww"

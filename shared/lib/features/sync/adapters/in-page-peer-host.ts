@@ -128,6 +128,8 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
       rememberRemote(plain.fromDeviceId, session.sessionId)
       // EN: Rebind connection-state callbacks under the real remote id.
       pendingOfferSessionId = null
+      // EN: Emit under the real device id (earlier ICE events may have used pending-offer).
+      handlers?.onConnectionState(plain.fromDeviceId, session.getConnectionState())
       return plain.fromDeviceId
     },
 
@@ -141,6 +143,10 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
 
     getConnectionState(remoteDeviceId) {
       return sessionForRemote(remoteDeviceId)?.getConnectionState() ?? "new"
+    },
+
+    listBoundRemoteDeviceIds() {
+      return [...sessionIdByRemote.keys()].filter((id) => id !== "pending-offer")
     },
 
     setHandlers(next) {
