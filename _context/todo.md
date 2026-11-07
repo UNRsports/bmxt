@@ -154,14 +154,25 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - 名簿: `chrome.storage.local`（FSA `roster.json` は廃止）
 - prefs / snapshot の横断 LWW は後続（DataChannel 上で転送する構想）
 
-**横断検索・遠隔操作（仕様視野）**
+**いま接続後にできること（6c 初期）**
 
-- Family 内の任意メンバーの BMXt から、他メンバーを device ID で指定して遠隔 open する構想
-- 6c コマンドバスが本線。クエリ分散／ハブ索引は後続
+| 面 | 内容 |
+|----|------|
+| ピア間 | `sync -ping <deviceId>` · `sync -open <deviceId> <url…> [--group <title>]` |
+| ローカル | `sync -status` / `-members` / `-pair` / `-setup` · setting picker の表示名 |
+| 未実装 | 他ブラウザへの `tab` / `search` 横断クエリ · prefs/snapshot 自動同期 · tab picker の Family 宛先 |
+
+**横断 tab / search（実装方針・確認済み）**
+
+- **同一 PC · Chrome ↔ Firefox:** 現状アーキテクチャのままコマンドバスに RPC（例: `tabs_list` / `search_query`）を足せば実装可能。Firebase / STUN / TURN は不要
+- 各側は自ブラウザ API のみ実行し、結果を DataChannel で返す（Chrome が Firefox タブを直接は読めない）
+- **別 PC・別ネット:** DataChannel 本線を維持するなら大枠は **シグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）**。Drive は握手の置き手紙には使えるがコマンド本線向きではない
+- Drive / Firebase の製品採用は未決定（§6 本体では Drive OAuth・常時 TURN はスコープ外のまま）
 
 **コマンド**
 
-- `sync` first（`-status` / `-pair` / `-members` / `-offer` / `-answer` / `-accept` / `-ping` / `-open`）
+- `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-offer` / `-answer` / `-accept` / `-ping` / `-open`）
+- 握手 UX: 推奨 `sync -setup`（プロンプト対話）。setting picker の sync は案内のみ（コード貼付しない）
 - skill `bmxt-add-command` + i18n EN/JA
 
 **スコープ外（§6 本体）**
@@ -179,9 +190,11 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] Family 作成／参加（シードまたは招待）の最小モデル
 - [x] `shared/lib/features/sync/`（スタビライザー境界）に同期モジュール
 - [x] **FSA 同期削除**（workdir / signaling box / pull-push-pause）
-- [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel
+- [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel（host ICE）
 - [x] **6c:** peer 宿主（Chrome offscreen / Firefox `bmxt-peer.html`）+ ping / open
-- [ ] **6c:** 手元 — 同一 PC で Chrome↔Firefox に遠隔コマンドが低遅延で届く
+- [x] **6c:** `sync -setup` プロンプト対話（Family → 役割 → コード貼付）。accept 成功は握手完了（直後 ping 失敗でもセットアップ終了）
+- [ ] **6c:** 手元 — 同一 PC で Chrome↔Firefox に遠隔 open / ping が安定して届く
+- [ ] **後続:** 同一 PC 上の横断 `tab` / `search`（コマンドバス RPC）
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC
 
 ---

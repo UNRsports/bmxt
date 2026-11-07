@@ -273,7 +273,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings (locale, appearance, storage mode summary) |
-| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** workdir/pause/invite/pull/push, export/import zip); appearance/locale apply after **`> save setting`**; sync/storage/snapshot actions apply immediately |
+| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** display name + setup guide, export/import zip); appearance/locale apply after **`> save setting`**; sync/storage/snapshot actions apply immediately |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
@@ -285,14 +285,13 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session -setting-name [name]` | Rename the current session (bare: prompt pre-filled with current display name) |
 | `session <n>` | Switch to terminal session number **n** (1-based) |
 | `sync` | Print usage and restore the prompt to `sync ` (Family local sync — see **[`sync`](#sync)**) |
-| `sync -status` | Device id, Family, workdir, members, WebRTC connection state |
-| `sync -dir` | Pick shared FSA work directory (same PC; no network permission) |
-| `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite / manual discovery |
+| `sync -setup` | Guided prompt dialogue: Family → role → paste handshake codes (recommended) |
+| `sync -status` | Device id, Family, members, WebRTC connection state |
+| `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite |
 | `sync -members` | List Family roster + discovered devices |
-| `sync -pull` / `sync -push` | Pull / push prefs + roster via workdir (LWW) |
-| `sync -pause` | Toggle sync pause |
-| `sync -connect <deviceId>` | FSA signaling + WebRTC DataChannel; ping/ack |
-| `sync -open <deviceId> <url…> [--group <title>]` | Remote tab / group open over the command bus (queue fallback if peer asleep) |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Manual copy-paste WebRTC handshake (`bmxt-rtc1.` Family-sealed) |
+| `sync -ping <deviceId>` | Ping a connected peer over the DataChannel |
+| `sync -open <deviceId> <url…> [--group <title>]` | Remote tab / group open over the command bus (in-memory queue if peer briefly unavailable) |
 | `close` / `c <tabId>` | Close tab by id (no confirm) |
 | `close` / `c` (pipe) | With pipe input from `tab -list`, close every listed tab (see **Pipes** below) |
 | `back` / `forward` / `reload` (pipe) | Same producer → batch history / reload on listed tabs |
@@ -687,21 +686,25 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 <a id="sync"></a>
 
-### `sync` (Family local sync · same PC / LAN · command bus)
+### `sync` (Family local sync · same PC · command bus)
 
-**Goal:** Give each browser profile a unique **device id**, align UI prefs / allowlisted storage / roster inside a **Family** (shared seed / invite — zero custody: members hold plaintext; BMXt never uploads it), then run a low-latency **command bus** for remote tab/group open.
+**Goal:** Give each browser profile a unique **device id**, join a **Family** (shared seed / invite — zero custody: members hold plaintext; BMXt never uploads it), then run a low-latency **WebRTC DataChannel command bus** between peers (same PC today).
 
 | Stage | Scope | Transport |
 |-------|--------|-----------|
-| **6a** | Same PC · Chrome ↔ Firefox | User-picked **FSA work directory** as source of truth (`sync -dir` / `-pull` / `-push`, LWW) |
-| **6b** | Same LAN · Family members | **Manual / QR invite** (`sync -pair`) + roster hub in the workdir; no public STUN |
-| **6c** | Same PC (protocol extends to LAN) | **FSA signaling** + **WebRTC DataChannel** (`sync -connect` / `-open`); sleep → FSA command queue |
+| **6a** | Same PC · Chrome ↔ Firefox | Family invite (`sync -pair` / `-setup`) + roster in `chrome.storage.local` |
+| **6b** | Same LAN · Family members | Manual / QR discovery; direct connect preferred (future) |
+| **6c** | Same PC (protocol can extend later) | **Copy-paste handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
 
-**Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path. **Google Drive** is only a signaling-box **swap seam** (`createDriveSignalingBoxStabilizer`) — **not implemented** (OAuth / CSP / AMO are out of scope).
+**Current capability after connect:** `sync -ping` and `sync -open` on the peer. Cross-browser **`tab` / `search`** over the bus is **not shipped yet**; on the **same PC** it can be added as RPC on this architecture (no Firebase / STUN / TURN). **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
 
-**Module layout:** all sync code lives under **`shared/lib/features/sync/`**. Host UI applies Wasm **`UiAction`** kinds (`sync_status` … `sync_open`) via a thin facade. Cross-cutting I/O goes through **stabilizers** (store / signaling / discovery / peer host / command bus / queue) so adapters stay swappable.
+**Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
-**Chrome** may use an **offscreen** document (`offscreen` permission + `bmxt-offscreen.html`) for WebRTC; **Firefox** uses **`bmxt-peer.html`** (or the open BMXt window). ICE uses **host candidates only** (no public STUN/TURN).
+**UX:** Prefer **`sync -setup`** (prompt dialogue). The setting picker sync panel only shows a setup guide and display-name edit — paste long codes at the prompt, not in the picker.
+
+**Module layout:** **`shared/lib/features/sync/`**. Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue).
+
+**Chrome** may use an **offscreen** document (`offscreen` + `bmxt-offscreen.html`) for WebRTC; **Firefox** uses **`bmxt-peer.html`** (or the open BMXt window). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
 <a id="picker-ui"></a>
 
@@ -1752,7 +1755,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync**・zip 入出力）。外観／言語は **`> save setting`** で確定。sync／storage／snapshot 操作は即時適用 |
+| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync** 表示名＋セットアップ案内・zip 入出力）。外観／言語は **`> save setting`** で確定。sync／storage／snapshot 操作は即時適用 |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
@@ -1763,14 +1766,13 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
 | `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（Family ローカル同期 — **[`sync`](#sync-ja)**） |
-| `sync -status` | device id / Family / 作業ディレクトリ / 接続状態 |
-| `sync -dir` | 同一 PC 共有の FSA 作業ディレクトリを選択（ネットワーク権限なし） |
-| `sync -pair` / `sync -pair <invite>` | Family 招待表示（QR ペイロード）または参加 / 手動発見 |
+| `sync -setup` | プロンプト対話式セットアップ（Family → 役割 → 握手コード貼付・推奨） |
+| `sync -status` | device id / Family / 名簿 / WebRTC 接続状態 |
+| `sync -pair` / `sync -pair <invite>` | Family 招待表示（QR ペイロード）または参加 |
 | `sync -members` | Family 名簿と発見済みデバイス |
-| `sync -pull` / `sync -push` | 作業ディレクトリから取得 / へ書き出し（LWW） |
-| `sync -pause` | 同期一時停止の切替 |
-| `sync -connect <deviceId>` | FSA シグナリング + WebRTC DataChannel、ping/ack |
-| `sync -open <deviceId> <url…> [--group <title>]` | コマンドバス経由の遠隔タブ／グループ open（休眠時は FSA キュー） |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | 手動コピペ WebRTC 握手（`bmxt-rtc1.` Family 封印） |
+| `sync -ping <deviceId>` | 接続済みピアへ DataChannel ping |
+| `sync -open <deviceId> <url…> [--group <title>]` | コマンドバス経由の遠隔タブ／グループ open（一時不通時はメモリキュー） |
 | `session <n>` | ターミナルセッション番号 **n**（1 始まり）へ切り替え |
 | `close` / `c <tabId>` | タブを ID 指定で閉じる（確認なし） |
 | `close` / `c`（パイプ） | `tab -list` のパイプ入力から列挙されたタブをすべて閉じる（**パイプ** 参照） |
@@ -2113,21 +2115,25 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 <a id="sync-ja"></a>
 
-### `sync`（Family ローカル同期 · 同一 PC / LAN · コマンドバス）
+### `sync`（Family ローカル同期 · 同一 PC · コマンドバス）
 
-**目標:** ブラウザ／プロファイルごとにユニークな **device id** を付け、**Family**（共有シード／招待。平文の預かり先は作らない）内で UI prefs・名簿を揃え、続けて低遅延の **コマンドバス**で遠隔タブ／グループ open を載せる。
+**目標:** ブラウザ／プロファイルごとにユニークな **device id** を付け、**Family**（共有シード／招待。平文の預かり先は作らない）に参加し、同一 PC 上のピア間で低遅延の **WebRTC DataChannel コマンドバス**を載せる。
 
 | 段 | 範囲 | 手段 |
 |----|------|------|
-| **6a** | 同一 PC · Chrome ↔ Firefox | ユーザー選択の **FSA 作業ディレクトリ**を正本（`sync -dir` / `-pull` / `-push`、LWW） |
-| **6b** | 同一 LAN · Family | **手入力 / QR 招待**（`sync -pair`）+ 作業ディレクトリ名簿。公開 STUN なし |
-| **6c** | 同一 PC（同一プロトコルで LAN へ拡張可） | **FSA シグナリング** + **WebRTC DataChannel**（`sync -connect` / `-open`）。休眠時は FSA コマンドキュー |
+| **6a** | 同一 PC · Chrome ↔ Firefox | Family 招待（`sync -pair` / `-setup`）+ `chrome.storage.local` 名簿 |
+| **6b** | 同一 LAN · Family | 手入力 / QR 発見。直結優先（将来） |
+| **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
 
-**既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。**Google Drive** はシグナリング箱の **差し替え候補のみ**（`createDriveSignalingBoxStabilizer`）— **未実装**。
+**接続後の現状:** ピアへの `sync -ping` と `sync -open`。ブラウザ横断の **`tab` / `search`** は未実装だが、**同一 PC** なら本アーキテクチャ上のコマンドバス RPC 追加で実装可能（Firebase / STUN / TURN 不要）。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
 
-**配置:** 同期コードは **`shared/lib/features/sync/`** に集約。Wasm **`UiAction`**（`sync_status` …）を薄い facade 経由で適用。I/O は **スタビライザー**（store / signaling / discovery / peer / bus / queue）経由で疎結合。
+**既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
-**Chrome** は **offscreen**（`offscreen` 権限 + `bmxt-offscreen.html`）、**Firefox** は **`bmxt-peer.html`**（または開いている BMXt 窓）。ICE は **ホスト候補のみ**（公開 STUN/TURN なし）。
+**UX:** 推奨は **`sync -setup`**（プロンプト対話）。setting picker の sync は案内と表示名編集のみ（長いコードはピッカーではなくプロンプトへ貼付）。
+
+**配置:** **`shared/lib/features/sync/`**。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。
+
+**Chrome** は **offscreen**（`offscreen` + `bmxt-offscreen.html`）、**Firefox** は **`bmxt-peer.html`**（または開いている BMXt 窓）。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
 
 <a id="picker-ui-ja"></a>
 
