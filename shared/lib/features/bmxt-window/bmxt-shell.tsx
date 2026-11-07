@@ -494,6 +494,9 @@ export function BmxtShell({
   const navConfirmClosePendingRef = useRef<
     import("../nav/nav-confirm-close").NavConfirmClosePending | null
   >(null)
+  const syncSetupPendingRef = useRef<
+    import("../sync/setup/sync-setup-pending").SyncSetupPending | null
+  >(null)
   useEffect(() => {
     navArmedRef.current = navArmed
   }, [navArmed])
@@ -1124,6 +1127,7 @@ export function BmxtShell({
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
     submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer,
     navConfirmClosePendingRef,
+    syncSetupPendingRef,
     startTutorial,
     skipTutorial
   })

@@ -11,11 +11,6 @@ import {
   isSettingPickerDetailView
 } from "./setting-picker-nav"
 import { sanitizeDisplayName } from "../sync/device/device-identity.ts"
-import { compactInviteToken } from "../sync/discovery/invite-codec.ts"
-import {
-  compactRtcHandshakeCode,
-  RTC_HANDSHAKE_PREFIX
-} from "../sync/discovery/rtc-handshake-codec.ts"
 
 export type SettingEditField =
   | "fg"
@@ -27,13 +22,6 @@ export type SettingEditField =
   | "picker-bg-color"
   | "picker-font"
   | "sync-display-name"
-  | "sync-invite-code"
-  | "sync-answer-code"
-  | "sync-accept-code"
-
-const INVITE_PREFIX = "bmxt1."
-const MAX_RTC_CODE_CHARS = 48_000
-const MAX_INVITE_CHARS = 8_192
 
 function mergeLayerEdit(
   appearance: UiAppearance,
@@ -107,12 +95,7 @@ export function resolveSettingPickerPreviewAppearance(
     return appearance
   }
   const field = settingEditFieldForView(state.view)
-  if (
-    field === "sync-display-name" ||
-    field === "sync-invite-code" ||
-    field === "sync-answer-code" ||
-    field === "sync-accept-code"
-  ) {
+  if (field === "sync-display-name") {
     return appearance
   }
   const layer = isSettingPickerDetailView(state.view) ? "picker" : "global"
@@ -126,26 +109,6 @@ export function validateSettingEditValue(field: SettingEditField, raw: string): 
   }
   if (field === "sync-display-name") {
     return sanitizeDisplayName(trimmed)
-  }
-  if (field === "sync-invite-code") {
-    const compact = compactInviteToken(trimmed)
-    if (compact.length < 16 || compact.length > MAX_INVITE_CHARS) {
-      return null
-    }
-    if (!compact.startsWith(INVITE_PREFIX)) {
-      return null
-    }
-    return compact
-  }
-  if (field === "sync-answer-code" || field === "sync-accept-code") {
-    const compact = compactRtcHandshakeCode(trimmed)
-    if (compact.length < 16 || compact.length > MAX_RTC_CODE_CHARS) {
-      return null
-    }
-    if (!compact.startsWith(RTC_HANDSHAKE_PREFIX)) {
-      return null
-    }
-    return compact
   }
   if (field === "fg" || field === "bg-color" || field === "picker-fg" || field === "picker-bg-color") {
     return parseHexColor(trimmed)
@@ -161,15 +124,6 @@ export function settingEditFieldForView(
 ): SettingEditField {
   if (view === "syncDeviceName") {
     return "sync-display-name"
-  }
-  if (view === "syncJoinInvite") {
-    return "sync-invite-code"
-  }
-  if (view === "syncAnswerCode") {
-    return "sync-answer-code"
-  }
-  if (view === "syncAcceptCode") {
-    return "sync-accept-code"
   }
   if (view === "fg" || view === "fgPicker") {
     return view === "fgPicker" ? "picker-fg" : "fg"

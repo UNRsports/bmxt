@@ -81,6 +81,8 @@ pub enum UiAction {
     SyncPing {
     device_id: String,
     },
+    #[serde(rename = "sync_setup")]
+    SyncSetup,
     #[serde(rename = "sync_status")]
     SyncStatus,
 }

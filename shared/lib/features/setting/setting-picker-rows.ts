@@ -61,12 +61,7 @@ export type SettingPickerRowId =
   | "snapshot-vault-pick-dir"
   | "sync"
   | "sync-device-name"
-  | "sync-setup"
-  | "sync-setup-create-family"
-  | "sync-setup-join-family"
-  | "sync-setup-continue"
-  | "sync-setup-start-offer"
-  | "sync-setup-receive-offer"
+  | "sync-setup-guide"
   | "export"
   | "import"
   | "locale-ja"
@@ -422,44 +417,8 @@ export function buildSettingPickerRows(
         })
       },
       {
-        id: "sync-setup",
-        line: tSetting("setting.picker.syncSetupRow", locale)
-      }
-    ]
-  }
-
-  if (view === "syncSetupFamily") {
-    const rows: SettingPickerRow[] = []
-    if (syncSummary?.familyId) {
-      rows.push({
-        id: "sync-setup-continue",
-        line: tSetting("setting.picker.syncSetupContinue", locale, {
-          family: syncSummary.familyId.slice(0, 8)
-        })
-      })
-    }
-    rows.push(
-      {
-        id: "sync-setup-create-family",
-        line: tSetting("setting.picker.syncSetupCreateFamily", locale)
-      },
-      {
-        id: "sync-setup-join-family",
-        line: tSetting("setting.picker.syncSetupJoinFamily", locale)
-      }
-    )
-    return rows
-  }
-
-  if (view === "syncSetupRole") {
-    return [
-      {
-        id: "sync-setup-start-offer",
-        line: tSetting("setting.picker.syncSetupStartOffer", locale)
-      },
-      {
-        id: "sync-setup-receive-offer",
-        line: tSetting("setting.picker.syncSetupReceiveOffer", locale)
+        id: "sync-setup-guide",
+        line: tSetting("setting.picker.syncSetupGuideRow", locale)
       }
     ]
   }
@@ -471,29 +430,6 @@ export function buildSettingPickerRows(
         line: tSetting("setting.picker.detail.syncDeviceName", locale, {
           value: syncSummary?.displayName || "-"
         })
-      }
-    ]
-  }
-
-  if (view === "syncJoinInvite") {
-    return [
-      {
-        id: "sync-setup-join-family",
-        line: tSetting("setting.picker.detail.syncJoinInvite", locale)
-      }
-    ]
-  }
-
-  if (view === "syncAnswerCode" || view === "syncAcceptCode") {
-    return [
-      {
-        id: view === "syncAnswerCode" ? "sync-setup-receive-offer" : "sync-setup-start-offer",
-        line: tSetting(
-          view === "syncAnswerCode"
-            ? "setting.picker.detail.syncAnswerCode"
-            : "setting.picker.detail.syncAcceptCode",
-          locale
-        )
       }
     ]
   }
@@ -740,11 +676,6 @@ export function settingPickerHeadline(
     snapshotStorageMode: "setting.picker.headline.snapshotStorageMode",
     syncPanel: "setting.picker.headline.syncPanel",
     syncDeviceName: "setting.picker.headline.syncDeviceName",
-    syncSetupFamily: "setting.picker.headline.syncSetupFamily",
-    syncSetupRole: "setting.picker.headline.syncSetupRole",
-    syncJoinInvite: "setting.picker.headline.syncJoinInvite",
-    syncAnswerCode: "setting.picker.headline.syncAnswerCode",
-    syncAcceptCode: "setting.picker.headline.syncAcceptCode",
     fontSize: "setting.picker.headline.fontSize",
     pickerFontSize: "setting.picker.headline.pickerFontSize",
     bgImage: "setting.picker.headline.bgImage",
@@ -790,15 +721,6 @@ export function settingPickerEditAriaLabel(
   }
   if (view === "syncDeviceName") {
     return tSetting("setting.picker.editAria.syncDeviceName", locale)
-  }
-  if (view === "syncJoinInvite") {
-    return tSetting("setting.picker.editAria.syncJoinInvite", locale)
-  }
-  if (view === "syncAnswerCode") {
-    return tSetting("setting.picker.editAria.syncAnswerCode", locale)
-  }
-  if (view === "syncAcceptCode") {
-    return tSetting("setting.picker.editAria.syncAcceptCode", locale)
   }
   return tSetting("setting.picker.editAria.generic", locale)
 }

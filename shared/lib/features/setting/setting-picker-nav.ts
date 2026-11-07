@@ -20,12 +20,6 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "syncPanel"
     case "sync-device-name":
       return "syncDeviceName"
-    case "sync-setup":
-      return "syncSetupFamily"
-    case "sync-setup-join-family":
-      return "syncJoinInvite"
-    case "sync-setup-receive-offer":
-      return "syncAnswerCode"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -55,9 +49,7 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     case "storage-pick-dir":
     case "storage-reload":
     case "snapshot-vault-pick-dir":
-    case "sync-setup-create-family":
-    case "sync-setup-continue":
-    case "sync-setup-start-offer":
+    case "sync-setup-guide":
     case "export":
     case "import":
     case "save":
@@ -70,14 +62,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
 
 /** EN: Parent view when leaving a sync sub-flow with ← / Esc. */
 export function settingSyncBackView(view: SettingListPickerView): SettingListPickerView | null {
-  if (view === "syncDeviceName" || view === "syncSetupFamily") {
+  if (view === "syncDeviceName") {
     return "syncPanel"
-  }
-  if (view === "syncSetupRole" || view === "syncJoinInvite") {
-    return "syncSetupFamily"
-  }
-  if (view === "syncAnswerCode" || view === "syncAcceptCode") {
-    return "syncSetupRole"
   }
   return null
 }
@@ -91,8 +77,6 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "storageMode" ||
     view === "snapshotStorageMode" ||
     view === "syncPanel" ||
-    view === "syncSetupFamily" ||
-    view === "syncSetupRole" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||
@@ -108,10 +92,7 @@ export function isSettingGlobalDetailView(view: SettingListPickerView): boolean 
     view === "searchHitHighlight" ||
     view === "searchJumpHighlight" ||
     view === "font" ||
-    view === "syncDeviceName" ||
-    view === "syncJoinInvite" ||
-    view === "syncAnswerCode" ||
-    view === "syncAcceptCode"
+    view === "syncDeviceName"
   )
 }
 

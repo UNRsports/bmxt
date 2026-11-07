@@ -329,8 +329,9 @@
       "module": "sync",
       "canonicalName": "sync",
       "aliases": [],
-      "usagePrimary": "sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
+      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
       "subcommands": [
+        { "head": "-setup", "tail": "none" },
         { "head": "-status", "tail": "none" },
         { "head": "-pair", "tail": "rest" },
         { "head": "-members", "tail": "none" },
@@ -674,6 +675,11 @@
     {
       "kind": "picker_pass",
       "rustVariant": "PickerPass",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_setup",
+      "rustVariant": "SyncSetup",
       "shape": "unit"
     },
     {

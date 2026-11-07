@@ -60,6 +60,7 @@ import {
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
 import { mountTabPickerLoadingColumn } from "./command-dispatch/open-tab-picker-column"
 import { beginNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
+import { beginSyncSetup } from "./command-dispatch/handle-sync-setup"
 import {
   clearPrompt,
   recordCommandHistory,
@@ -214,6 +215,8 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySetMode(ctx, action.feature_id, action.mode)
     case "snapshot_save":
       return applySnapshotSave(ctx, action.line)
+    case "sync_setup":
+      return applySyncSetup(ctx)
     case "sync_status":
       return applySyncStatus(ctx)
     case "sync_pair":
@@ -273,6 +276,8 @@ export async function applyUiActionForSegment(
       return applySetModeSegment(ctx, action.feature_id, action.mode)
     case "snapshot_save":
       return applySnapshotSaveSegment(ctx, action.line)
+    case "sync_setup":
+      return segmentFailure("interactive", [tCmd("cmd.sync.setup.compoundBlocked", ctx.locale)])
     case "sync_status":
       return segmentSuccess(await runSyncStatus(ctx.locale))
     case "sync_pair":
@@ -304,6 +309,11 @@ function syncSink(ctx: CommandDispatchContext) {
     appendLogLines: ctx.deps.appendLogLines,
     focusPrompt: ctx.deps.focusPrompt
   }
+}
+
+function applySyncSetup(ctx: CommandDispatchContext): boolean {
+  beginSyncSetup(ctx)
+  return true
 }
 
 function applySyncStatus(ctx: CommandDispatchContext): boolean {

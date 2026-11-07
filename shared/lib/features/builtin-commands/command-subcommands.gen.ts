@@ -78,6 +78,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "sync": [
+    { head: "-setup", trailingTokens: [] as const, tail: "none" },
     { head: "-status", trailingTokens: [] as const, tail: "none" },
     { head: "-pair", trailingTokens: [] as const, tail: "rest" },
     { head: "-members", trailingTokens: [] as const, tail: "none" },
@@ -194,7 +195,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "sync": {
       const lower = token.toLowerCase()
-      return lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-open" || lower === "-ping" || lower === "help"
+      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-open" || lower === "-ping" || lower === "help"
     }
     default:
       return false

@@ -199,16 +199,6 @@ export function useSettingPickerKeyboard({
     if (state.view === "syncDeviceName") {
       onStateChange(settingPickerGoToView("syncPanel", { ...state, editing: false, editDraft: "" }))
       setHi(0)
-      return true
-    }
-    if (state.view === "syncJoinInvite") {
-      onStateChange(settingPickerGoToView("syncSetupRole", { ...state, editing: false, editDraft: "" }))
-      setHi(0)
-      return true
-    }
-    if (state.view === "syncAnswerCode" || state.view === "syncAcceptCode") {
-      onStateChange(settingPickerGoToView("syncPanel", { ...state, editing: false, editDraft: "" }))
-      setHi(0)
     }
     return true
   }, [callbacks, onStateChange, setHi, state])

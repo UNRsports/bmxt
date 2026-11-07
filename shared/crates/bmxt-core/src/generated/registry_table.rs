@@ -113,7 +113,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "sync",
         aliases: &[],
-        usage_primary: "sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
+        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
     },
 ];
 
@@ -282,6 +282,10 @@ static BRANCHES_TUTORIAL: &[SubcommandBranch] = &[
 
 static BRANCHES_SYNC: &[SubcommandBranch] = &[
     SubcommandBranch {
+        head: "-setup",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
         head: "-status",
         trailing_tokens: &[],
     },
@@ -360,7 +364,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "browse" => false,
         "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
-        "sync" => matches!(lower.as_str(), "-status" | "-pair" | "-members" | "-offer" | "-answer" | "-accept" | "-open" | "-ping" | "help"),
+        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-offer" | "-answer" | "-accept" | "-open" | "-ping" | "help"),
         _ => false,
     }
 }

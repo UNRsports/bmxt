@@ -98,6 +98,10 @@ export type CommandDispatchDeps = {
   navConfirmClosePendingRef: React.MutableRefObject<
     import("../../../nav/nav-confirm-close").NavConfirmClosePending | null
   >
+  /** EN: Pending guided Family / WebRTC handshake (`sync -setup`). */
+  syncSetupPendingRef: React.MutableRefObject<
+    import("../../../sync/setup/sync-setup-pending").SyncSetupPending | null
+  >
   /** EN: Interactive tutorial (`set_mode` feature_id=tutorial). */
   startTutorial: (tutorialId?: string) => void
   skipTutorial: () => void

@@ -575,9 +575,13 @@
     "ja": "チュートリアルをスキップしました。再開は `tutorial` です。",
     "en": "Tutorial skipped. Restart anytime with `tutorial`."
   },
+  "cmd.sync.usage.line0": {
+    "ja": "使い方: sync -setup — 対話式接続セットアップ（推奨・プロンプト上）",
+    "en": "usage: sync -setup — guided connection setup at the prompt (recommended)"
+  },
   "cmd.sync.usage.line1": {
-    "ja": "使い方: sync -status — デバイス / Family / 接続状態",
-    "en": "usage: sync -status — device / Family / connection state"
+    "ja": "  sync -status — デバイス / Family / 接続状態",
+    "en": "  sync -status — device / Family / connection state"
   },
   "cmd.sync.usage.line2": {
     "ja": "  sync -pair [invite] — Family 招待の表示または参加",
@@ -608,8 +612,100 @@
     "en": "  sync -ping <deviceId> — ping a connected peer"
   },
   "cmd.sync.runHint": {
-    "ja": "ヒント: 両ブラウザで sync -pair して同じ Family に入り、一方で -offer、もう一方で -answer、オファー側で -accept します（FSA 不要）。",
-    "en": "Hint: join the same Family with sync -pair on both browsers, then -offer on one side, -answer on the other, -accept on the offerer (no FSA)."
+    "ja": "ヒント: まずは両ブラウザで `sync -setup`（プロンプト対話）。長い握手コードはピッカーではなくプロンプトに貼ってください。",
+    "en": "Hint: start with `sync -setup` on both browsers (prompt dialogue). Paste long handshake codes at the prompt, not in the picker."
+  },
+  "cmd.sync.setup.started": {
+    "ja": "接続セットアップを開始します（途中で cancel で中止）。",
+    "en": "Starting connection setup (type cancel anytime to abort)."
+  },
+  "cmd.sync.setup.cancelHint": {
+    "ja": "中止: cancel / n",
+    "en": "Cancel: cancel / n"
+  },
+  "cmd.sync.setup.cancelled": {
+    "ja": "接続セットアップを中止しました。",
+    "en": "Connection setup cancelled."
+  },
+  "cmd.sync.setup.invalidChoice": {
+    "ja": "入力が無効です。番号またはキーワードで選んでください。",
+    "en": "Invalid input. Choose by number or keyword."
+  },
+  "cmd.sync.setup.invalidInvite": {
+    "ja": "招待コードが無効です。bmxt1. で始まるコードを貼り付けてください。",
+    "en": "Invalid invite. Paste a code that starts with bmxt1."
+  },
+  "cmd.sync.setup.invalidRtcCode": {
+    "ja": "握手コードが無効です。bmxt-rtc1. で始まるコードを貼り付けてください。",
+    "en": "Invalid handshake code. Paste a code that starts with bmxt-rtc1."
+  },
+  "cmd.sync.setup.family.intro": {
+    "ja": "Family を選びます:",
+    "en": "Choose a Family step:"
+  },
+  "cmd.sync.setup.family.create": {
+    "ja": "  1 / create — 新しい Family を作り、招待コードを表示する",
+    "en": "  1 / create — create a new Family and show the invite"
+  },
+  "cmd.sync.setup.family.join": {
+    "ja": "  2 / join — 相手の招待コードを貼って参加する",
+    "en": "  2 / join — paste the peer invite to join"
+  },
+  "cmd.sync.setup.family.continue": {
+    "ja": "  3 / continue — いまの Family のまま続行する",
+    "en": "  3 / continue — keep the current Family"
+  },
+  "cmd.sync.setup.joinPrompt": {
+    "ja": "相手の Family 招待コード（bmxt1.…）を貼り付けて Enter:",
+    "en": "Paste the peer Family invite (bmxt1.…) and press Enter:"
+  },
+  "cmd.sync.setup.backToFamily": {
+    "ja": "Family 選択に戻ります。",
+    "en": "Returning to the Family step."
+  },
+  "cmd.sync.setup.retryFamily": {
+    "ja": "Family の準備に失敗しました。もう一度選んでください。",
+    "en": "Family setup failed. Please choose again."
+  },
+  "cmd.sync.setup.familyReady": {
+    "ja": "Family の準備ができました。次に役割を選びます。",
+    "en": "Family is ready. Next, choose your role."
+  },
+  "cmd.sync.setup.role.intro": {
+    "ja": "役割を選びます:",
+    "en": "Choose your role:"
+  },
+  "cmd.sync.setup.role.offer": {
+    "ja": "  1 / offer — この端末で接続を始める（オファーを作り、相手のアンサーを待つ）",
+    "en": "  1 / offer — start from this device (create offer, wait for answer)"
+  },
+  "cmd.sync.setup.role.answer": {
+    "ja": "  2 / answer — 相手のオファーを受け取る（アンサーを作り相手へ返す）",
+    "en": "  2 / answer — receive the peer offer (create answer and return it)"
+  },
+  "cmd.sync.setup.pasteOffer": {
+    "ja": "相手のオファーコード（bmxt-rtc1.…）をプロンプトに貼り付けて Enter:",
+    "en": "Paste the peer offer code (bmxt-rtc1.…) at the prompt and press Enter:"
+  },
+  "cmd.sync.setup.pasteAnswer": {
+    "ja": "相手のアンサーコード（bmxt-rtc1.…）をプロンプトに貼り付けて Enter:",
+    "en": "Paste the peer answer code (bmxt-rtc1.…) at the prompt and press Enter:"
+  },
+  "cmd.sync.setup.offerReady": {
+    "ja": "上のオファーコードを相手に渡してください。次に相手のアンサーを待ちます。",
+    "en": "Give the offer code above to your peer. Next, wait for their answer."
+  },
+  "cmd.sync.setup.answerReady": {
+    "ja": "上のアンサーコードを相手に渡してください。相手が貼り付けると接続が完了します。",
+    "en": "Give the answer code above to your peer. Connection completes when they paste it."
+  },
+  "cmd.sync.setup.done": {
+    "ja": "接続セットアップが完了しました。状態は sync -status で確認できます。",
+    "en": "Connection setup finished. Check status with sync -status."
+  },
+  "cmd.sync.setup.compoundBlocked": {
+    "ja": "sync -setup は対話式のため、複合コマンドでは使えません。単独で実行してください。",
+    "en": "sync -setup is interactive and cannot run in a compound command. Run it alone."
   },
   "cmd.sync.error.tooManyArgs": {
     "ja": "error: 引数が多すぎます",

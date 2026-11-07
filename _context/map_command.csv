@@ -71,8 +71,9 @@ session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,
 session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
 session,-setting-name,,rest,,session -setting-name [name],UiAction `session_setting_name`。,
-sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（status/dir/pair/members/pull/push/pause/open/connect）。第二候補に `help`。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー
-sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / workdir / 接続。,
+sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/offer/answer/accept/open/ping）。第二候補に `help`。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー
+sync,-setup,,none,,sync -setup,UiAction `sync_setup`。プロンプト対話で Family→役割→握手コード貼付。複合コマンド不可。,
+sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。,
 sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待表示または参加（6b 手動/QR）。,
 sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。,
 sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコード作成（コピペ握手）。,

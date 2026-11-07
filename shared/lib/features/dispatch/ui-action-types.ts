@@ -18,6 +18,7 @@ export type UiActionIR =
   | { kind: "snapshot_save"; line: string }
   | { kind: "open_picker"; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
+  | { kind: "sync_setup" }
   | { kind: "sync_status" }
   | { kind: "sync_pair"; invite: string }
   | { kind: "sync_members" }
