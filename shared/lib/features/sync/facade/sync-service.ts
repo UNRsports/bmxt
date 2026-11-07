@@ -6,6 +6,7 @@ import {
   loadFamilyMembership
 } from "../device/family-membership"
 import { connectRoleForPeer, type SyncConnectRole } from "../bus/connect-role.ts"
+import { clearReachableSyncPeersCache } from "../connect/reachable-peers-cache.ts"
 import {
   clearSyncConnectPending,
   getSyncConnectPending,
@@ -72,6 +73,13 @@ export type SyncService = {
     dispatchLine: string
   ): Promise<{ ok: boolean; detail: string | null; hits: SyncRemoteSearchHit[] }>
   ping(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
+  /**
+   * EN: Roster/discovery peers that currently have a DataChannel and answer ping.
+   * JA: いま DataChannel 接続中で ping 応答がある名簿／発見ピア。
+   */
+  listReachablePeers(): Promise<
+    Array<{ deviceId: string; displayName: string; rttMs: number | null }>
+  >
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
 }
 
@@ -382,6 +390,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         lines.push(line("sync.rtc.pingDeferred"))
       }
       clearSyncConnectPending()
+      clearReachableSyncPeersCache()
       return { ok: true, lines }
     },
 
@@ -532,6 +541,9 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       await s.peerHost.ensureReady()
       const state = await s.commandBus.connect(deviceId)
       const ping = await s.commandBus.ping(deviceId)
+      if (ping.ok) {
+        clearReachableSyncPeersCache()
+      }
       return {
         ok: ping.ok,
         lines: [
@@ -539,6 +551,63 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
           line(`sync.connect.ping:ok=${ping.ok};rtt=${ping.rttMs ?? "n/a"}`)
         ]
       }
+    },
+
+    async listReachablePeers() {
+      const family = await loadFamilyMembership()
+      if (family === null) {
+        return []
+      }
+      const device = await loadOrCreateDeviceIdentity()
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const byId = new Map<string, string>()
+      const roster = await loadLocalRoster()
+      if (roster !== null) {
+        for (const member of roster.members) {
+          if (member.deviceId !== device.deviceId) {
+            byId.set(member.deviceId, member.displayName)
+          }
+        }
+      }
+      for (const discovered of await s.discovery.listKnown()) {
+        if (discovered.deviceId === device.deviceId) {
+          continue
+        }
+        if (!byId.has(discovered.deviceId)) {
+          byId.set(discovered.deviceId, discovered.displayName)
+        }
+      }
+      for (const row of s.commandBus.listStates()) {
+        if (row.deviceId === device.deviceId) {
+          continue
+        }
+        if (row.state === "connected" && !byId.has(row.deviceId)) {
+          byId.set(row.deviceId, row.deviceId)
+        }
+      }
+
+      const reachable: Array<{
+        deviceId: string
+        displayName: string
+        rttMs: number | null
+      }> = []
+      for (const [deviceId, displayName] of byId) {
+        const state = await s.commandBus.connect(deviceId)
+        if (state !== "connected") {
+          continue
+        }
+        const ping = await s.commandBus.ping(deviceId)
+        if (!ping.ok) {
+          continue
+        }
+        reachable.push({
+          deviceId,
+          displayName,
+          rttMs: ping.rttMs
+        })
+      }
+      return reachable
     },
 
     async setDisplayName(name: string) {
