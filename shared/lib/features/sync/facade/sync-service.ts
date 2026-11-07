@@ -5,35 +5,34 @@ import {
   joinFamilyFromInvite,
   loadFamilyMembership
 } from "../device/family-membership"
+import {
+  formatRtcHandshakeCode,
+  parseRtcHandshakeCode,
+  type RtcHandshakePlain
+} from "../discovery/rtc-handshake-codec"
 import { createDefaultSyncStabilizers } from "./default-stabilizers"
 import type { SyncStabilizers } from "../stabilizers"
-import type {
-  SyncDiscoveryRecord,
-  SyncInviteV1,
-  SyncRosterMember,
-  SyncStatusSnapshot
-} from "../types"
+import type { SyncDiscoveryRecord, SyncRosterMember, SyncStatusSnapshot } from "../types"
 import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
+import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
 
 export type SyncService = {
   status(): Promise<SyncStatusSnapshot>
-  pickDir(): Promise<{ ok: boolean; lines: string[] }>
-  /**
-   * EN: After the UI page opens `showDirectoryPicker` under a user gesture.
-   * JA: UI がユーザー操作中に `showDirectoryPicker` したあとにハンドルを渡す。
-   */
-  bindPickedDir(
-    handle: FileSystemDirectoryHandle,
-    directoryName: string
-  ): Promise<{ ok: boolean; lines: string[] }>
   pair(rawInvite: string): Promise<{ ok: boolean; lines: string[] }>
   members(): Promise<{ ok: boolean; lines: string[] }>
-  pull(): Promise<{ ok: boolean; lines: string[] }>
-  push(): Promise<{ ok: boolean; lines: string[] }>
-  pause(): Promise<{ ok: boolean; lines: string[] }>
-  openRemote(deviceId: string, urls: string[], groupTitle: string | null): Promise<{ ok: boolean; lines: string[] }>
-  connect(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
+  /** EN: Create offer code for the other browser to paste. */
+  offer(): Promise<{ ok: boolean; lines: string[] }>
+  /** EN: Accept offer code; return answer code to paste back. */
+  answer(offerCode: string): Promise<{ ok: boolean; lines: string[] }>
+  /** EN: Accept answer code on the offerer side; DataChannel should connect. */
+  accept(answerCode: string): Promise<{ ok: boolean; lines: string[] }>
+  openRemote(
+    deviceId: string,
+    urls: string[],
+    groupTitle: string | null
+  ): Promise<{ ok: boolean; lines: string[] }>
+  ping(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
 }
 
@@ -51,14 +50,23 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
     }
   }
 
+  async function requireFamily() {
+    await ensureFamily()
+    const membership = await loadFamilyMembership()
+    const device = await loadOrCreateDeviceIdentity()
+    if (membership === null) {
+      return null
+    }
+    return { membership, device }
+  }
+
   return {
     async status() {
       await ensureFamily()
       const device = await loadOrCreateDeviceIdentity()
       const family = await loadFamilyMembership()
-      const workdir = await s.store.getWorkdirConfig()
       let members: SyncRosterMember[] = []
-      const roster = await s.store.readRoster()
+      const roster = await loadLocalRoster()
       if (roster) {
         members = roster.members
       }
@@ -68,35 +76,10 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       return {
         device,
         family,
-        workdir,
         members,
         connections: s.commandBus.listStates(),
         invite
       }
-    },
-
-    async pickDir() {
-      const result = await s.store.pickWorkdir()
-      if ("cancelled" in result && result.cancelled) {
-        return { ok: false, lines: [line("sync.dir.cancelled")] }
-      }
-      if (!result.ok) {
-        return { ok: false, lines: [line(`sync.dir.error:${"error" in result ? result.error : "unknown"}`)] }
-      }
-      await ensureFamily()
-      await s.store.pushAll()
-      return { ok: true, lines: [line(`sync.dir.ok:${result.directoryName}`)] }
-    },
-
-    async bindPickedDir(handle: FileSystemDirectoryHandle, directoryName: string) {
-      const result = await s.store.bindWorkdir(handle, directoryName)
-      if (!result.ok) {
-        const code = "error" in result ? result.error : "unknown"
-        return { ok: false, lines: [line(`sync.dir.error:${code}`)] }
-      }
-      await ensureFamily()
-      await s.store.pushAll()
-      return { ok: true, lines: [line(`sync.dir.ok:${result.directoryName}`)] }
     },
 
     async pair(rawInvite: string) {
@@ -122,11 +105,10 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (parsed === null) {
         return { ok: false, lines: [line("sync.pair.invalidInvite")] }
       }
-      const joined = await joinFamilyFromInvite(parsed)
-      if (joined === null) {
+      if ((await joinFamilyFromInvite(parsed)) === null) {
         return { ok: false, lines: [line("sync.pair.joinFailed")] }
       }
-      const record: SyncDiscoveryRecord = {
+      const peer: SyncDiscoveryRecord = {
         deviceId: parsed.fromDeviceId,
         displayName: parsed.fromDisplayName,
         familyId: parsed.familyId,
@@ -134,8 +116,15 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         discoveredAt: new Date().toISOString(),
         source: "manual"
       }
-      await s.discovery.rememberManual(record)
-      await s.store.pushAll()
+      await s.discovery.rememberManual(peer)
+      await upsertLocalRosterMember({
+        deviceId: parsed.fromDeviceId,
+        displayName: parsed.fromDisplayName,
+        browser: "unknown",
+        familyId: parsed.familyId,
+        updatedAt: new Date().toISOString(),
+        endpointHint: null
+      })
       return {
         ok: true,
         lines: [
@@ -147,16 +136,13 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
 
     async members() {
       await ensureFamily()
-      await s.store.pullAll()
-      const roster = await s.store.readRoster()
+      const roster = await loadLocalRoster()
       const known = await s.discovery.listKnown()
-      const lines: string[] = [line("sync.members.header")]
+      const lines = [line("sync.members.header")]
       if (roster) {
         for (const m of roster.members) {
           lines.push(
-            line(
-              `sync.members.row:${m.displayName}|${m.deviceId}|${m.browser}|${m.updatedAt}`
-            )
+            line(`sync.members.row:${m.displayName}|${m.deviceId}|${m.browser}|${m.updatedAt}`)
           )
         }
       }
@@ -172,38 +158,147 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       return { ok: true, lines }
     },
 
-    async pull() {
-      const result = await s.store.pullAll()
-      const drained = await s.commandBus.drainQueue()
-      return {
-        ok: result.prefs || result.roster || result.snapshots || drained > 0,
-        lines: [
-          line(
-            `sync.pull.done:prefs=${result.prefs};roster=${result.roster};snapshots=${result.snapshots};queue=${drained}`
-          )
-        ]
+    async offer() {
+      const ctx = await requireFamily()
+      if (ctx === null) {
+        return { ok: false, lines: [line("sync.pair.noFamily")] }
       }
-    },
-
-    async push() {
-      const result = await s.store.pushAll()
-      return {
-        ok: result.prefs || result.roster || result.snapshots,
-        lines: [
-          line(
-            `sync.push.done:prefs=${result.prefs};roster=${result.roster};snapshots=${result.snapshots}`
-          )
-        ]
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const bundle = await s.peerHost.createOfferHandshake()
+      const plain: RtcHandshakePlain = {
+        v: 1,
+        role: "offer",
+        sessionId: bundle.sessionId,
+        fromDeviceId: ctx.device.deviceId,
+        fromDisplayName: ctx.device.displayName,
+        familyId: ctx.membership.familyId,
+        sdp: bundle.sdp,
+        ice: bundle.ice
       }
-    },
-
-    async pause() {
-      const config = await s.store.getWorkdirConfig()
-      const next = { ...config, paused: !config.paused }
-      await s.store.setWorkdirConfig(next)
+      const code = await formatRtcHandshakeCode({
+        familyId: ctx.membership.familyId,
+        seedB64: ctx.membership.seedB64,
+        fromDeviceId: ctx.device.deviceId,
+        plain
+      })
+      if (code === null) {
+        return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
+      }
       return {
         ok: true,
-        lines: [line(next.paused ? "sync.pause.on" : "sync.pause.off")]
+        lines: [line("sync.rtc.offerCreated"), line(`sync.rtc.code:${code}`)]
+      }
+    },
+
+    async answer(offerCode: string) {
+      const ctx = await requireFamily()
+      if (ctx === null) {
+        return { ok: false, lines: [line("sync.pair.noFamily")] }
+      }
+      const plain = await parseRtcHandshakeCode(offerCode, ctx.membership.seedB64)
+      if (plain === null || plain.role !== "offer") {
+        return { ok: false, lines: [line("sync.rtc.invalidCode")] }
+      }
+      if (plain.familyId !== ctx.membership.familyId) {
+        return { ok: false, lines: [line("sync.rtc.familyMismatch")] }
+      }
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      let accepted: { sessionId: string; sdp: string; ice: string[]; remoteDeviceId: string }
+      try {
+        accepted = await s.peerHost.acceptOfferHandshake(plain)
+      } catch {
+        return { ok: false, lines: [line("sync.rtc.acceptFailed")] }
+      }
+      await s.discovery.rememberManual({
+        deviceId: plain.fromDeviceId,
+        displayName: plain.fromDisplayName,
+        familyId: plain.familyId,
+        endpointHint: null,
+        discoveredAt: new Date().toISOString(),
+        source: "manual"
+      })
+      await upsertLocalRosterMember({
+        deviceId: plain.fromDeviceId,
+        displayName: plain.fromDisplayName,
+        browser: "unknown",
+        familyId: plain.familyId,
+        updatedAt: new Date().toISOString(),
+        endpointHint: null
+      })
+      const answerPlain: RtcHandshakePlain = {
+        v: 1,
+        role: "answer",
+        sessionId: accepted.sessionId,
+        fromDeviceId: ctx.device.deviceId,
+        fromDisplayName: ctx.device.displayName,
+        familyId: ctx.membership.familyId,
+        sdp: accepted.sdp,
+        ice: accepted.ice
+      }
+      const code = await formatRtcHandshakeCode({
+        familyId: ctx.membership.familyId,
+        seedB64: ctx.membership.seedB64,
+        fromDeviceId: ctx.device.deviceId,
+        plain: answerPlain
+      })
+      if (code === null) {
+        return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
+      }
+      return {
+        ok: true,
+        lines: [
+          line("sync.rtc.answerCreated"),
+          line(`sync.rtc.peer:${plain.fromDisplayName}`),
+          line(`sync.rtc.code:${code}`)
+        ]
+      }
+    },
+
+    async accept(answerCode: string) {
+      const ctx = await requireFamily()
+      if (ctx === null) {
+        return { ok: false, lines: [line("sync.pair.noFamily")] }
+      }
+      const plain = await parseRtcHandshakeCode(answerCode, ctx.membership.seedB64)
+      if (plain === null || plain.role !== "answer") {
+        return { ok: false, lines: [line("sync.rtc.invalidCode")] }
+      }
+      if (plain.familyId !== ctx.membership.familyId) {
+        return { ok: false, lines: [line("sync.rtc.familyMismatch")] }
+      }
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      let remoteDeviceId: string
+      try {
+        remoteDeviceId = await s.peerHost.applyAnswerHandshake(plain)
+      } catch {
+        return { ok: false, lines: [line("sync.rtc.acceptFailed")] }
+      }
+      await s.discovery.rememberManual({
+        deviceId: plain.fromDeviceId,
+        displayName: plain.fromDisplayName,
+        familyId: plain.familyId,
+        endpointHint: null,
+        discoveredAt: new Date().toISOString(),
+        source: "manual"
+      })
+      await upsertLocalRosterMember({
+        deviceId: plain.fromDeviceId,
+        displayName: plain.fromDisplayName,
+        browser: "unknown",
+        familyId: plain.familyId,
+        updatedAt: new Date().toISOString(),
+        endpointHint: null
+      })
+      const ping = await s.commandBus.ping(remoteDeviceId)
+      return {
+        ok: ping.ok,
+        lines: [
+          line(`sync.rtc.connected:${plain.fromDisplayName}`),
+          line(`sync.connect.ping:ok=${ping.ok};rtt=${ping.rttMs ?? "n/a"}`)
+        ]
       }
     },
 
@@ -215,9 +310,12 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       const title = sanitizeGroupTitle(groupTitle)
       await ensurePeerDocument()
       await s.peerHost.ensureReady()
-      const state = s.commandBus.getState(deviceId)
+      const state = await s.commandBus.connect(deviceId)
       if (state !== "connected") {
-        await s.commandBus.connect(deviceId)
+        return {
+          ok: false,
+          lines: [line("sync.open.notConnected"), line(`sync.connect.state:${state}`)]
+        }
       }
       const result = await s.commandBus.openTabs(deviceId, safeUrls, title)
       return {
@@ -226,13 +324,13 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
     },
 
-    async connect(deviceId: string) {
+    async ping(deviceId: string) {
       await ensurePeerDocument()
       await s.peerHost.ensureReady()
       const state = await s.commandBus.connect(deviceId)
       const ping = await s.commandBus.ping(deviceId)
       return {
-        ok: true,
+        ok: ping.ok,
         lines: [
           line(`sync.connect.state:${state}`),
           line(`sync.connect.ping:ok=${ping.ok};rtt=${ping.rttMs ?? "n/a"}`)
@@ -245,7 +343,6 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (next === null) {
         return { ok: false, lines: [line("sync.name.invalid")] }
       }
-      await s.store.pushAll()
       return { ok: true, lines: [line(`sync.name.ok:${next.displayName}`)] }
     }
   }
@@ -264,5 +361,3 @@ export function getSyncService(): SyncService {
 export function setSyncServiceForTests(service: SyncService | null): void {
   singleton = service
 }
-
-export type { SyncInviteV1 }

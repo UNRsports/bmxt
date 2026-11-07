@@ -26,6 +26,8 @@ export type SettingListPickerView =
   | "snapshotStorageMode"
   | "syncPanel"
   | "syncDeviceName"
+  | "syncAnswerCode"
+  | "syncAcceptCode"
 
 export type SettingListPickerState = {
   view: SettingListPickerView

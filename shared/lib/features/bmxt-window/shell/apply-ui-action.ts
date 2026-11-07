@@ -47,14 +47,13 @@ import {
 import type { UiActionIR } from "../../dispatch/ui-action-types"
 import {
   applySyncUiLog,
-  runSyncConnect,
-  runSyncDir,
+  runSyncAccept,
+  runSyncAnswer,
   runSyncMembers,
+  runSyncOffer,
   runSyncOpen,
   runSyncPair,
-  runSyncPause,
-  runSyncPull,
-  runSyncPush,
+  runSyncPing,
   runSyncStatus,
   syncUiSegmentOutcome
 } from "../../sync/facade/apply-sync-ui"
@@ -217,22 +216,20 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySnapshotSave(ctx, action.line)
     case "sync_status":
       return applySyncStatus(ctx)
-    case "sync_dir":
-      return applySyncDir(ctx)
     case "sync_pair":
       return applySyncPair(ctx, action.invite)
     case "sync_members":
       return applySyncMembers(ctx)
-    case "sync_pull":
-      return applySyncPull(ctx)
-    case "sync_push":
-      return applySyncPush(ctx)
-    case "sync_pause":
-      return applySyncPause(ctx)
+    case "sync_offer":
+      return applySyncOffer(ctx)
+    case "sync_answer":
+      return applySyncAnswer(ctx, action.code)
+    case "sync_accept":
+      return applySyncAccept(ctx, action.code)
     case "sync_open":
       return applySyncOpen(ctx, action.device_id, action.payload)
-    case "sync_connect":
-      return applySyncConnect(ctx, action.device_id)
+    case "sync_ping":
+      return applySyncPing(ctx, action.device_id)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -278,24 +275,22 @@ export async function applyUiActionForSegment(
       return applySnapshotSaveSegment(ctx, action.line)
     case "sync_status":
       return segmentSuccess(await runSyncStatus(ctx.locale))
-    case "sync_dir":
-      return syncUiSegmentOutcome(ctx.locale, () => runSyncDir())
     case "sync_pair":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncPair(action.invite))
     case "sync_members":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncMembers())
-    case "sync_pull":
-      return syncUiSegmentOutcome(ctx.locale, () => runSyncPull())
-    case "sync_push":
-      return syncUiSegmentOutcome(ctx.locale, () => runSyncPush())
-    case "sync_pause":
-      return syncUiSegmentOutcome(ctx.locale, () => runSyncPause())
+    case "sync_offer":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncOffer())
+    case "sync_answer":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncAnswer(action.code))
+    case "sync_accept":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncAccept(action.code))
     case "sync_open":
       return syncUiSegmentOutcome(ctx.locale, () =>
         runSyncOpen(action.device_id, action.payload)
       )
-    case "sync_connect":
-      return syncUiSegmentOutcome(ctx.locale, () => runSyncConnect(action.device_id))
+    case "sync_ping":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncPing(action.device_id))
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -321,12 +316,6 @@ function applySyncStatus(ctx: CommandDispatchContext): boolean {
   return true
 }
 
-function applySyncDir(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncDir())
-  return true
-}
-
 function applySyncPair(ctx: CommandDispatchContext, invite: string): boolean {
   finishCommand(ctx)
   void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPair(invite))
@@ -339,21 +328,21 @@ function applySyncMembers(ctx: CommandDispatchContext): boolean {
   return true
 }
 
-function applySyncPull(ctx: CommandDispatchContext): boolean {
+function applySyncOffer(ctx: CommandDispatchContext): boolean {
   finishCommand(ctx)
-  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPull())
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncOffer())
   return true
 }
 
-function applySyncPush(ctx: CommandDispatchContext): boolean {
+function applySyncAnswer(ctx: CommandDispatchContext, code: string): boolean {
   finishCommand(ctx)
-  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPush())
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncAnswer(code))
   return true
 }
 
-function applySyncPause(ctx: CommandDispatchContext): boolean {
+function applySyncAccept(ctx: CommandDispatchContext, code: string): boolean {
   finishCommand(ctx)
-  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPause())
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncAccept(code))
   return true
 }
 
@@ -367,9 +356,9 @@ function applySyncOpen(
   return true
 }
 
-function applySyncConnect(ctx: CommandDispatchContext, deviceId: string): boolean {
+function applySyncPing(ctx: CommandDispatchContext, deviceId: string): boolean {
   finishCommand(ctx)
-  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncConnect(deviceId))
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPing(deviceId))
   return true
 }
 

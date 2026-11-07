@@ -104,7 +104,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "sync",
     aliases: [] as const,
-    usagePrimary: "sync -status | sync -dir | sync -pair [invite] | sync -members | sync -pull | sync -push | sync -pause | sync -open <deviceId> <url…> | sync -connect <deviceId> | sync help"
+    usagePrimary: "sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help"
   }
 ]
 

@@ -22,6 +22,8 @@ export type SettingEditField =
   | "picker-bg-color"
   | "picker-font"
   | "sync-display-name"
+  | "sync-answer-code"
+  | "sync-accept-code"
 
 function mergeLayerEdit(
   appearance: UiAppearance,
@@ -95,7 +97,11 @@ export function resolveSettingPickerPreviewAppearance(
     return appearance
   }
   const field = settingEditFieldForView(state.view)
-  if (field === "sync-display-name") {
+  if (
+    field === "sync-display-name" ||
+    field === "sync-answer-code" ||
+    field === "sync-accept-code"
+  ) {
     return appearance
   }
   const layer = isSettingPickerDetailView(state.view) ? "picker" : "global"
@@ -109,6 +115,15 @@ export function validateSettingEditValue(field: SettingEditField, raw: string): 
   }
   if (field === "sync-display-name") {
     return sanitizeDisplayName(trimmed)
+  }
+  if (field === "sync-answer-code" || field === "sync-accept-code") {
+    if (trimmed.length < 16 || trimmed.length > 48_000) {
+      return null
+    }
+    if (!trimmed.startsWith("bmxt-rtc1.")) {
+      return null
+    }
+    return trimmed
   }
   if (field === "fg" || field === "bg-color" || field === "picker-fg" || field === "picker-bg-color") {
     return parseHexColor(trimmed)
@@ -124,6 +139,12 @@ export function settingEditFieldForView(
 ): SettingEditField {
   if (view === "syncDeviceName") {
     return "sync-display-name"
+  }
+  if (view === "syncAnswerCode") {
+    return "sync-answer-code"
+  }
+  if (view === "syncAcceptCode") {
+    return "sync-accept-code"
   }
   if (view === "fg" || view === "fgPicker") {
     return view === "fgPicker" ? "picker-fg" : "fg"

@@ -94,9 +94,6 @@ export function createWebrtcCommandBusStabilizer(
   }
 
   peerHost.setHandlers({
-    onSignal: () => {
-      /* handled inside peer host poll */
-    },
     onCommand: (command) => {
       void handleIncoming(command)
     },
@@ -107,10 +104,11 @@ export function createWebrtcCommandBusStabilizer(
 
   return {
     async connect(remoteDeviceId: SyncDeviceId) {
-      states.set(remoteDeviceId, "signaling")
+      // EN: Handshake must already have established the DataChannel (copy-paste codes).
       await peerHost.ensureReady()
-      await peerHost.createOfferSession(remoteDeviceId)
-      return states.get(remoteDeviceId) ?? "signaling"
+      const mapped = mapPeerState(peerHost.getConnectionState(remoteDeviceId))
+      states.set(remoteDeviceId, mapped)
+      return mapped
     },
 
     async disconnect(remoteDeviceId: SyncDeviceId) {
@@ -176,14 +174,14 @@ export function createWebrtcCommandBusStabilizer(
       if (!sent) {
         await commandQueue.enqueue(remoteDeviceId, command)
         states.set(remoteDeviceId, "queued")
-        return { ok: true, detail: "queued" }
+        return { ok: false, detail: "not_connected" }
       }
       const result = await resultPromise
       return { ok: result.ok, detail: result.detail }
     },
 
     getState(remoteDeviceId) {
-      return states.get(remoteDeviceId) ?? "idle"
+      return states.get(remoteDeviceId) ?? mapPeerState(peerHost.getConnectionState(remoteDeviceId))
     },
 
     listStates() {

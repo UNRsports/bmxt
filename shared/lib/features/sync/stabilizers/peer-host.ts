@@ -1,7 +1,7 @@
-import type { SyncBusCommand, SyncDeviceId, SyncSignalPayload } from "../types"
+import type { RtcHandshakePlain } from "../discovery/rtc-handshake-codec"
+import type { SyncBusCommand, SyncDeviceId } from "../types"
 
 export type PeerHostSessionHandlers = {
-  onSignal: (payload: SyncSignalPayload) => void | Promise<void>
   onCommand: (command: SyncBusCommand) => void | Promise<void>
   onConnectionState: (deviceId: SyncDeviceId, state: string) => void
 }
@@ -13,14 +13,30 @@ export type PeerHostSessionHandlers = {
 export type PeerHostStabilizer = {
   readonly hostKind: "chrome-offscreen" | "firefox-page" | "in-page"
   ensureReady(): Promise<void>
-  createOfferSession(remoteDeviceId: SyncDeviceId): Promise<{ sessionId: string; sdp: string }>
-  acceptOffer(
-    remoteDeviceId: SyncDeviceId,
-    sessionId: string,
+  /**
+   * EN: Create a local offer; ICE is bundled for copy-paste (remote id unknown until answer).
+   * JA: ローカル offer 作成。ICE はコピペ用に同梱（answer まで相手 ID 不明）。
+   */
+  createOfferHandshake(): Promise<{
+    sessionId: string
     sdp: string
-  ): Promise<{ sdp: string }>
-  applyAnswer(sessionId: string, sdp: string): Promise<void>
-  addIceCandidate(sessionId: string, candidate: string): Promise<void>
+    ice: string[]
+  }>
+  /**
+   * EN: Accept a remote offer code payload; returns local answer bundle.
+   * JA: 相手の offer を受理し、ローカル answer 束を返す。
+   */
+  acceptOfferHandshake(plain: RtcHandshakePlain): Promise<{
+    sessionId: string
+    sdp: string
+    ice: string[]
+    remoteDeviceId: SyncDeviceId
+  }>
+  /**
+   * EN: Apply a remote answer code to the pending local offer session.
+   * JA: 保留中のローカル offer に相手の answer を適用。
+   */
+  applyAnswerHandshake(plain: RtcHandshakePlain): Promise<SyncDeviceId>
   sendCommand(remoteDeviceId: SyncDeviceId, command: SyncBusCommand): Promise<boolean>
   getConnectionState(remoteDeviceId: SyncDeviceId): string
   setHandlers(handlers: PeerHostSessionHandlers): void

@@ -1,4 +1,3 @@
-import { looksLikeBraveSync } from "../../setting/detect-brave"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
 
@@ -7,29 +6,6 @@ import type { UiLocale } from "../../setting/locale"
  * JA: facade の機械トークンを二言語ログ行へ展開。
  */
 export function expandSyncLogToken(token: string, locale: UiLocale): string {
-  if (token === "sync.dir.cancelled") {
-    return tCmd("cmd.sync.dir.cancelled", locale)
-  }
-  if (token.startsWith("sync.dir.error:")) {
-    const code = token.slice("sync.dir.error:".length)
-    if (code === "unavailable") {
-      if (looksLikeBraveSync()) {
-        return tCmd("cmd.sync.dir.unavailableBrave", locale)
-      }
-      return tCmd("cmd.sync.dir.unavailable", locale)
-    }
-    if (code === "gesture_required") {
-      return tCmd("cmd.sync.dir.gestureRequired", locale)
-    }
-    if (code === "permission_denied") {
-      return tCmd("cmd.sync.dir.permissionDenied", locale)
-    }
-    return tCmd("cmd.sync.dir.error", locale, { code })
-  }
-  if (token.startsWith("sync.dir.ok:")) {
-    const name = token.slice("sync.dir.ok:".length)
-    return tCmd("cmd.sync.dir.ok", locale, { name })
-  }
   if (token === "sync.pair.created") {
     return tCmd("cmd.sync.pair.created", locale)
   }
@@ -77,20 +53,38 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
       source: source ?? ""
     })
   }
-  if (token.startsWith("sync.pull.done:")) {
-    return tCmd("cmd.sync.pull.done", locale, { detail: token.slice("sync.pull.done:".length) })
+  if (token === "sync.rtc.offerCreated") {
+    return tCmd("cmd.sync.rtc.offerCreated", locale)
   }
-  if (token.startsWith("sync.push.done:")) {
-    return tCmd("cmd.sync.push.done", locale, { detail: token.slice("sync.push.done:".length) })
+  if (token === "sync.rtc.answerCreated") {
+    return tCmd("cmd.sync.rtc.answerCreated", locale)
   }
-  if (token === "sync.pause.on") {
-    return tCmd("cmd.sync.pause.on", locale)
+  if (token === "sync.rtc.encodeFailed") {
+    return tCmd("cmd.sync.rtc.encodeFailed", locale)
   }
-  if (token === "sync.pause.off") {
-    return tCmd("cmd.sync.pause.off", locale)
+  if (token === "sync.rtc.invalidCode") {
+    return tCmd("cmd.sync.rtc.invalidCode", locale)
+  }
+  if (token === "sync.rtc.familyMismatch") {
+    return tCmd("cmd.sync.rtc.familyMismatch", locale)
+  }
+  if (token === "sync.rtc.acceptFailed") {
+    return tCmd("cmd.sync.rtc.acceptFailed", locale)
+  }
+  if (token.startsWith("sync.rtc.code:")) {
+    return tCmd("cmd.sync.rtc.code", locale, { code: token.slice("sync.rtc.code:".length) })
+  }
+  if (token.startsWith("sync.rtc.peer:")) {
+    return tCmd("cmd.sync.rtc.peer", locale, { name: token.slice("sync.rtc.peer:".length) })
+  }
+  if (token.startsWith("sync.rtc.connected:")) {
+    return tCmd("cmd.sync.rtc.connected", locale, { name: token.slice("sync.rtc.connected:".length) })
   }
   if (token === "sync.open.noUrls") {
     return tCmd("cmd.sync.open.noUrls", locale)
+  }
+  if (token === "sync.open.notConnected") {
+    return tCmd("cmd.sync.open.notConnected", locale)
   }
   if (token.startsWith("sync.open.done:")) {
     return tCmd("cmd.sync.open.done", locale, { detail: token.slice("sync.open.done:".length) })

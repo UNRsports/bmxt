@@ -228,7 +228,7 @@ describe("setting list picker draft", () => {
   it("maps sync rows to syncPanel / syncDeviceName / immediate actions", () => {
     assert.equal(settingMainRowTargetView("sync"), "syncPanel")
     assert.equal(settingMainRowTargetView("sync-device-name"), "syncDeviceName")
-    assert.equal(settingMainRowTargetView("sync-pick-dir"), null)
+    assert.equal(settingMainRowTargetView("sync-offer"), null)
     assert.equal(settingMainRowTargetView("sync-pause"), null)
   })
 })

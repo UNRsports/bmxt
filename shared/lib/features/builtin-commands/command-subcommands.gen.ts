@@ -79,14 +79,13 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "sync": [
     { head: "-status", trailingTokens: [] as const, tail: "none" },
-    { head: "-dir", trailingTokens: [] as const, tail: "none" },
     { head: "-pair", trailingTokens: [] as const, tail: "rest" },
     { head: "-members", trailingTokens: [] as const, tail: "none" },
-    { head: "-pull", trailingTokens: [] as const, tail: "none" },
-    { head: "-push", trailingTokens: [] as const, tail: "none" },
-    { head: "-pause", trailingTokens: [] as const, tail: "none" },
+    { head: "-offer", trailingTokens: [] as const, tail: "none" },
+    { head: "-answer", trailingTokens: [] as const, tail: "rest" },
+    { head: "-accept", trailingTokens: [] as const, tail: "rest" },
     { head: "-open", trailingTokens: [] as const, tail: "rest" },
-    { head: "-connect", trailingTokens: [] as const, tail: "rest" },
+    { head: "-ping", trailingTokens: [] as const, tail: "rest" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const
 }
@@ -195,7 +194,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "sync": {
       const lower = token.toLowerCase()
-      return lower === "-status" || lower === "-dir" || lower === "-pair" || lower === "-members" || lower === "-pull" || lower === "-push" || lower === "-pause" || lower === "-open" || lower === "-connect" || lower === "help"
+      return lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-open" || lower === "-ping" || lower === "help"
     }
     default:
       return false

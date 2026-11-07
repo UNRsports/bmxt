@@ -576,48 +576,40 @@
     "en": "Tutorial skipped. Restart anytime with `tutorial`."
   },
   "cmd.sync.usage.line1": {
-    "ja": "usage: sync -status — デバイス / Family / 作業ディレクトリ / 接続状態",
-    "en": "usage: sync -status — device / Family / workdir / connection state"
+    "ja": "使い方: sync -status — デバイス / Family / 接続状態",
+    "en": "usage: sync -status — device / Family / connection state"
   },
   "cmd.sync.usage.line2": {
-    "ja": "  sync -dir — 同一 PC 共有の同期作業ディレクトリを選択（FSA・ネットワーク権限なし）",
-    "en": "  sync -dir — pick same-PC shared sync work directory (FSA; no network permission)"
+    "ja": "  sync -pair [invite] — Family 招待の表示または参加",
+    "en": "  sync -pair [invite] — show or join a Family invite"
   },
   "cmd.sync.usage.line3": {
-    "ja": "  sync -pair — Family 招待トークンを表示（QR 用ペイロード含む）",
-    "en": "  sync -pair — show Family invite token (includes QR payload)"
+    "ja": "  sync -members — Family 名簿 / 発見済みピア",
+    "en": "  sync -members — Family roster / discovered peers"
   },
   "cmd.sync.usage.line4": {
-    "ja": "  sync -pair <invite> — 招待で Family に参加（手入力 / QR 読取文字列）",
-    "en": "  sync -pair <invite> — join Family from invite (typed / QR-decoded string)"
+    "ja": "  sync -offer — WebRTC オファーコードを作成（相手に渡す）",
+    "en": "  sync -offer — create a WebRTC offer code (give to peer)"
   },
   "cmd.sync.usage.line5": {
-    "ja": "  sync -members — Family 名簿と発見済みデバイスを表示",
-    "en": "  sync -members — list Family roster and discovered devices"
+    "ja": "  sync -answer <code> — オファーを受理しアンサーコードを返す",
+    "en": "  sync -answer <code> — accept an offer; print answer code"
   },
   "cmd.sync.usage.line6": {
-    "ja": "  sync -pull / sync -push — 作業ディレクトリから取得 / へ書き出し（LWW）",
-    "en": "  sync -pull / sync -push — pull from / push to workdir (LWW)"
+    "ja": "  sync -accept <code> — アンサーを適用して DataChannel を確立",
+    "en": "  sync -accept <code> — apply answer and establish DataChannel"
   },
   "cmd.sync.usage.line7": {
-    "ja": "  sync -pause — 自動同期の一時停止を切替",
-    "en": "  sync -pause — toggle sync pause"
+    "ja": "  sync -open <deviceId> <url…> — 接続済みピアでタブを開く",
+    "en": "  sync -open <deviceId> <url…> — open tabs on a connected peer"
   },
   "cmd.sync.usage.line8": {
-    "ja": "  sync -connect <deviceId> — FSA シグナリング + WebRTC で接続し ping",
-    "en": "  sync -connect <deviceId> — connect via FSA signaling + WebRTC and ping"
-  },
-  "cmd.sync.usage.line9": {
-    "ja": "  sync -open <deviceId> <url…> [--group <title>] — 遠隔タブ／グループ open",
-    "en": "  sync -open <deviceId> <url…> [--group <title>] — remote tab/group open"
-  },
-  "cmd.sync.usage.line10": {
-    "ja": "  既定はローカル（FSA）。Google Drive シグナリングは差し替え候補・未実装。",
-    "en": "  Default is local (FSA). Google Drive signaling is a swap candidate — not implemented."
+    "ja": "  sync -ping <deviceId> — 接続済みピアへ ping",
+    "en": "  sync -ping <deviceId> — ping a connected peer"
   },
   "cmd.sync.runHint": {
-    "ja": "ヒント: 同一 PC では Chrome / Firefox で同じ作業ディレクトリを選び、`-pair` で Family を揃えてください。",
-    "en": "Hint: on the same PC, pick the same workdir in Chrome and Firefox, then align Family with `-pair`."
+    "ja": "ヒント: 両ブラウザで sync -pair して同じ Family に入り、一方で -offer、もう一方で -answer、オファー側で -accept します（FSA 不要）。",
+    "en": "Hint: join the same Family with sync -pair on both browsers, then -offer on one side, -answer on the other, -accept on the offerer (no FSA)."
   },
   "cmd.sync.error.tooManyArgs": {
     "ja": "error: 引数が多すぎます",
@@ -655,10 +647,6 @@
     "ja": "family: （未作成 — `sync -pair` で作成）",
     "en": "family: (none — create with `sync -pair`)"
   },
-  "cmd.sync.status.workdir": {
-    "ja": "workdir: enabled={enabled} paused={paused} dir={directory} pull={lastPull} push={lastPush}",
-    "en": "workdir: enabled={enabled} paused={paused} dir={directory} pull={lastPull} push={lastPush}"
-  },
   "cmd.sync.status.membersCount": {
     "ja": "members: {count}",
     "en": "members: {count}"
@@ -676,36 +664,8 @@
     "en": "invite: show with `sync -pair` (zero custody — no plaintext vault)"
   },
   "cmd.sync.status.transportHint": {
-    "ja": "transport: FSA 正本 + FSA シグナリング / WebRTC DataChannel（STUN なし・同一 PC/LAN）。Drive は未実装。",
-    "en": "transport: FSA source of truth + FSA signaling / WebRTC DataChannel (no STUN; same PC/LAN). Drive not implemented."
-  },
-  "cmd.sync.dir.cancelled": {
-    "ja": "作業ディレクトリ選択をキャンセルしました。",
-    "en": "Work directory pick cancelled."
-  },
-  "cmd.sync.dir.error": {
-    "ja": "作業ディレクトリを選べませんでした（{code}）。",
-    "en": "Could not pick work directory ({code})."
-  },
-  "cmd.sync.dir.unavailable": {
-    "ja": "この環境ではフォルダ選択（File System Access API）を使えません。Chromium 系の通常ウィンドウで BMXt を開き直してください（Firefox は未対応）。",
-    "en": "Folder picking (File System Access API) is unavailable here. Reopen BMXt in a normal Chromium window (not supported on Firefox)."
-  },
-  "cmd.sync.dir.unavailableBrave": {
-    "ja": "Brave ではフォルダ選択（File System Access API）が既定で無効です。brave://flags/#file-system-access-api を Enabled にして Brave を再起動してください。",
-    "en": "Brave disables folder picking (File System Access API) by default. Set brave://flags/#file-system-access-api to Enabled, then relaunch Brave."
-  },
-  "cmd.sync.dir.gestureRequired": {
-    "ja": "フォルダ選択にはユーザー操作が必要です。もう一度 Enter / → で選んでください。",
-    "en": "Folder picking needs a user gesture. Press Enter / → again to choose a folder."
-  },
-  "cmd.sync.dir.permissionDenied": {
-    "ja": "選択したフォルダへの読み書き許可が得られませんでした。",
-    "en": "Read/write permission was not granted for the selected folder."
-  },
-  "cmd.sync.dir.ok": {
-    "ja": "同期作業ディレクトリを設定しました: {name}",
-    "en": "Sync work directory set: {name}"
+    "ja": "transport: WebRTC DataChannel（host ICE のみ・コピペ握手）。FSA 作業ディレクトリは使いません。",
+    "en": "transport: WebRTC DataChannel (host ICE only · copy-paste handshake). No FSA workdir."
   },
   "cmd.sync.pair.created": {
     "ja": "Family 招待を用意しました。相手の BMXt で `sync -pair <invite>` を実行してください。",
@@ -755,22 +715,6 @@
     "ja": "  (discovered/{source}) {name}  id={deviceId}",
     "en": "  (discovered/{source}) {name}  id={deviceId}"
   },
-  "cmd.sync.pull.done": {
-    "ja": "pull 完了: {detail}",
-    "en": "pull done: {detail}"
-  },
-  "cmd.sync.push.done": {
-    "ja": "push 完了: {detail}",
-    "en": "push done: {detail}"
-  },
-  "cmd.sync.pause.on": {
-    "ja": "同期を一時停止しました。",
-    "en": "Sync paused."
-  },
-  "cmd.sync.pause.off": {
-    "ja": "同期の一時停止を解除しました。",
-    "en": "Sync resumed."
-  },
   "cmd.sync.open.noUrls": {
     "ja": "error: 有効な http(s) URL がありません",
     "en": "error: no valid http(s) URLs"
@@ -794,5 +738,49 @@
   "cmd.sync.name.ok": {
     "ja": "表示名を更新しました: {name}",
     "en": "Display name updated: {name}"
+  },
+  "cmd.sync.error.invalidRtcCode": {
+    "ja": "WebRTC 握手コードが不正です（bmxt-rtc1. で始まる必要があります）。",
+    "en": "Invalid WebRTC handshake code (must start with bmxt-rtc1.)."
+  },
+  "cmd.sync.rtc.offerCreated": {
+    "ja": "オファーコードを作成しました。相手の BMXt で sync -answer <code> を実行してください。",
+    "en": "Offer code created. On the peer BMXt run sync -answer <code>."
+  },
+  "cmd.sync.rtc.answerCreated": {
+    "ja": "アンサーコードを作成しました。オファー側で sync -accept <code> を実行してください。",
+    "en": "Answer code created. On the offerer run sync -accept <code>."
+  },
+  "cmd.sync.rtc.code": {
+    "ja": "{code}",
+    "en": "{code}"
+  },
+  "cmd.sync.rtc.peer": {
+    "ja": "ピア: {name}",
+    "en": "peer: {name}"
+  },
+  "cmd.sync.rtc.connected": {
+    "ja": "DataChannel 接続を確立しました: {name}",
+    "en": "DataChannel connected: {name}"
+  },
+  "cmd.sync.rtc.encodeFailed": {
+    "ja": "握手コードの生成に失敗しました。",
+    "en": "Failed to encode handshake code."
+  },
+  "cmd.sync.rtc.invalidCode": {
+    "ja": "握手コードを解読できませんでした（Family 不一致または破損）。",
+    "en": "Could not decode handshake code (Family mismatch or corrupt)."
+  },
+  "cmd.sync.rtc.familyMismatch": {
+    "ja": "握手コードの Family が一致しません。先に sync -pair で揃えてください。",
+    "en": "Handshake code Family does not match. Align with sync -pair first."
+  },
+  "cmd.sync.rtc.acceptFailed": {
+    "ja": "WebRTC 握手の適用に失敗しました（セッション期限切れの可能性）。もう一度 -offer からやり直してください。",
+    "en": "Failed to apply WebRTC handshake (session may have expired). Start again from -offer."
+  },
+  "cmd.sync.open.notConnected": {
+    "ja": "ピア未接続です。先に -offer / -answer / -accept で DataChannel を確立してください。",
+    "en": "Peer not connected. Establish a DataChannel with -offer / -answer / -accept first."
   }
 }

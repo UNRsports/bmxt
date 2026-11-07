@@ -162,7 +162,11 @@ export function useSettingPickerKeyboard({
   ])
 
   const leaveNonMainView = useCallback((): void => {
-    if (state.view === "syncDeviceName") {
+    if (
+      state.view === "syncDeviceName" ||
+      state.view === "syncAnswerCode" ||
+      state.view === "syncAcceptCode"
+    ) {
       onStateChange(settingPickerGoToView("syncPanel", state))
       setHi(0)
       return
@@ -194,7 +198,11 @@ export function useSettingPickerKeyboard({
       return true
     }
     await callbacks.onApplyEdit(field, value)
-    if (state.view === "syncDeviceName") {
+    if (
+      state.view === "syncDeviceName" ||
+      state.view === "syncAnswerCode" ||
+      state.view === "syncAcceptCode"
+    ) {
       onStateChange(settingPickerGoToView("syncPanel", { ...state, editing: false, editDraft: "" }))
       setHi(0)
     }

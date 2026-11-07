@@ -61,11 +61,10 @@ export type SettingPickerRowId =
   | "snapshot-vault-pick-dir"
   | "sync"
   | "sync-device-name"
-  | "sync-pick-dir"
-  | "sync-pause"
   | "sync-invite"
-  | "sync-pull"
-  | "sync-push"
+  | "sync-offer"
+  | "sync-answer"
+  | "sync-accept"
   | "export"
   | "import"
   | "locale-ja"
@@ -331,20 +330,9 @@ function syncSummaryLabel(syncSummary: SyncPickerSummary | undefined, locale: Ui
   if (!syncSummary || syncSummary.deviceId.length === 0) {
     return tSetting("setting.picker.syncStateLoading", locale)
   }
-  const paused = syncSummary.workdir.paused
-    ? tSetting("setting.picker.syncPausedYes", locale)
-    : tSetting("setting.picker.syncPausedNo", locale)
-  const dir = syncSummary.workdir.directoryName
-  if (dir) {
-    return tSetting("setting.picker.syncStateNamed", locale, {
-      name: syncSummary.displayName,
-      directory: dir,
-      paused
-    })
-  }
-  return tSetting("setting.picker.syncStateNoDir", locale, {
+  return tSetting("setting.picker.syncSummaryRtc", locale, {
     name: syncSummary.displayName,
-    paused
+    connections: String(syncSummary.connectionCount)
   })
 }
 
@@ -424,9 +412,6 @@ export function buildSettingPickerRows(
   }
 
   if (view === "syncPanel") {
-    const pauseLine = syncSummary?.workdir.paused
-      ? tSetting("setting.picker.syncPauseResumeRow", locale)
-      : tSetting("setting.picker.syncPauseRow", locale)
     return [
       {
         id: "sync-device-name",
@@ -435,24 +420,20 @@ export function buildSettingPickerRows(
         })
       },
       {
-        id: "sync-pick-dir",
-        line: tSetting("setting.picker.syncPickDirRow", locale)
-      },
-      {
-        id: "sync-pause",
-        line: pauseLine
-      },
-      {
         id: "sync-invite",
         line: tSetting("setting.picker.syncInviteRow", locale)
       },
       {
-        id: "sync-pull",
-        line: tSetting("setting.picker.syncPullRow", locale)
+        id: "sync-offer",
+        line: tSetting("setting.picker.syncOfferRow", locale)
       },
       {
-        id: "sync-push",
-        line: tSetting("setting.picker.syncPushRow", locale)
+        id: "sync-answer",
+        line: tSetting("setting.picker.syncAnswerRow", locale)
+      },
+      {
+        id: "sync-accept",
+        line: tSetting("setting.picker.syncAcceptRow", locale)
       }
     ]
   }
@@ -464,6 +445,20 @@ export function buildSettingPickerRows(
         line: tSetting("setting.picker.detail.syncDeviceName", locale, {
           value: syncSummary?.displayName || "-"
         })
+      }
+    ]
+  }
+
+  if (view === "syncAnswerCode" || view === "syncAcceptCode") {
+    return [
+      {
+        id: view === "syncAnswerCode" ? "sync-answer" : "sync-accept",
+        line: tSetting(
+          view === "syncAnswerCode"
+            ? "setting.picker.detail.syncAnswerCode"
+            : "setting.picker.detail.syncAcceptCode",
+          locale
+        )
       }
     ]
   }
@@ -700,52 +695,33 @@ export function settingPickerHeadline(
   if (editing && isSettingDetailView(view)) {
     return tSetting("setting.picker.headline.editing", locale)
   }
-  const key: SettingMessageKey =
-    view === "main"
-      ? "setting.picker.headline.main"
-      : view === "language"
-        ? "setting.picker.headline.language"
-        : view === "editPicker"
-          ? "setting.picker.headline.editPicker"
-          : view === "imeCandidateHelp"
-            ? "setting.picker.headline.imeCandidateHelp"
-          : view === "hostUi"
-            ? "setting.picker.headline.hostUi"
-          : view === "storageMode"
-            ? "setting.picker.headline.storageMode"
-            : view === "snapshotStorageMode"
-              ? "setting.picker.headline.snapshotStorageMode"
-              : view === "syncPanel"
-                ? "setting.picker.headline.syncPanel"
-                : view === "syncDeviceName"
-                  ? "setting.picker.headline.syncDeviceName"
-              : view === "fontSize"
-            ? "setting.picker.headline.fontSize"
-            : view === "pickerFontSize"
-              ? "setting.picker.headline.pickerFontSize"
-              : view === "bgImage"
-                ? "setting.picker.headline.bgImage"
-                : view === "pickerBgImage"
-                  ? "setting.picker.headline.pickerBgImage"
-                  : view === "fg"
-                    ? "setting.picker.headline.fg"
-                    : view === "bgColor"
-                      ? "setting.picker.headline.bgColor"
-                      : view === "searchHitHighlight"
-                        ? "setting.picker.headline.searchHitHighlight"
-                        : view === "searchJumpHighlight"
-                          ? "setting.picker.headline.searchJumpHighlight"
-                          : view === "font"
-                        ? "setting.picker.headline.font"
-                        : view === "fgPicker"
-                          ? "setting.picker.headline.fgPicker"
-                          : view === "bgColorPicker"
-                            ? "setting.picker.headline.bgColorPicker"
-                            : view === "fontPicker"
-                              ? "setting.picker.headline.fontPicker"
-                              : view === "resetConfirm"
-                                ? "setting.picker.headline.resetConfirm"
-                                : "setting.picker.headline.main"
+  const byView: Partial<Record<SettingListPickerView, SettingMessageKey>> = {
+    main: "setting.picker.headline.main",
+    language: "setting.picker.headline.language",
+    editPicker: "setting.picker.headline.editPicker",
+    imeCandidateHelp: "setting.picker.headline.imeCandidateHelp",
+    hostUi: "setting.picker.headline.hostUi",
+    storageMode: "setting.picker.headline.storageMode",
+    snapshotStorageMode: "setting.picker.headline.snapshotStorageMode",
+    syncPanel: "setting.picker.headline.syncPanel",
+    syncDeviceName: "setting.picker.headline.syncDeviceName",
+    syncAnswerCode: "setting.picker.headline.syncAnswerCode",
+    syncAcceptCode: "setting.picker.headline.syncAcceptCode",
+    fontSize: "setting.picker.headline.fontSize",
+    pickerFontSize: "setting.picker.headline.pickerFontSize",
+    bgImage: "setting.picker.headline.bgImage",
+    pickerBgImage: "setting.picker.headline.pickerBgImage",
+    fg: "setting.picker.headline.fg",
+    bgColor: "setting.picker.headline.bgColor",
+    searchHitHighlight: "setting.picker.headline.searchHitHighlight",
+    searchJumpHighlight: "setting.picker.headline.searchJumpHighlight",
+    font: "setting.picker.headline.font",
+    fgPicker: "setting.picker.headline.fgPicker",
+    bgColorPicker: "setting.picker.headline.bgColorPicker",
+    fontPicker: "setting.picker.headline.fontPicker",
+    resetConfirm: "setting.picker.headline.resetConfirm"
+  }
+  const key = byView[view] ?? "setting.picker.headline.main"
   return tSetting(key, locale)
 }
 
@@ -776,6 +752,12 @@ export function settingPickerEditAriaLabel(
   }
   if (view === "syncDeviceName") {
     return tSetting("setting.picker.editAria.syncDeviceName", locale)
+  }
+  if (view === "syncAnswerCode") {
+    return tSetting("setting.picker.editAria.syncAnswerCode", locale)
+  }
+  if (view === "syncAcceptCode") {
+    return tSetting("setting.picker.editAria.syncAcceptCode", locale)
   }
   return tSetting("setting.picker.editAria.generic", locale)
 }

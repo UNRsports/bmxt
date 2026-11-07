@@ -1,5 +1,6 @@
 import { bytesToBase64Url, randomBytes } from "../crypto/bytes"
 import type { SyncBusCommand, SyncDeviceId } from "../types"
+import { waitForIceGatheringComplete } from "./wait-ice-gathering.ts"
 
 /** EN: Host-candidate-only RTC — no public STUN/TURN (keeps connect-src / no external send). */
 const RTC_CONFIG: RTCConfiguration = {
@@ -7,9 +8,13 @@ const RTC_CONFIG: RTCConfiguration = {
 }
 
 export type WebrtcSessionCallbacks = {
-  onIceCandidate: (candidateJson: string) => void
   onCommand: (command: SyncBusCommand) => void
   onConnectionState: (state: string) => void
+}
+
+export type WebrtcLocalDescriptionBundle = {
+  sdp: string
+  ice: string[]
 }
 
 function isBusCommand(value: unknown): value is SyncBusCommand {
@@ -26,6 +31,7 @@ export class WebrtcPeerSession {
   private readonly pc: RTCPeerConnection
   private channel: RTCDataChannel | null = null
   private readonly callbacks: WebrtcSessionCallbacks
+  private readonly collectedIce: string[] = []
   private readonly pendingCandidates: string[] = []
 
   constructor(remoteDeviceId: SyncDeviceId, callbacks: WebrtcSessionCallbacks, sessionId?: string) {
@@ -35,7 +41,7 @@ export class WebrtcPeerSession {
     this.pc = new RTCPeerConnection(RTC_CONFIG)
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
-        this.callbacks.onIceCandidate(JSON.stringify(ev.candidate.toJSON()))
+        this.collectedIce.push(JSON.stringify(ev.candidate.toJSON()))
       }
     }
     this.pc.onconnectionstatechange = () => {
@@ -65,23 +71,36 @@ export class WebrtcPeerSession {
     }
   }
 
-  async createOffer(): Promise<string> {
+  private localBundle(): WebrtcLocalDescriptionBundle {
+    const sdp = this.pc.localDescription?.sdp ?? ""
+    return { sdp, ice: [...this.collectedIce] }
+  }
+
+  async createOffer(): Promise<WebrtcLocalDescriptionBundle> {
     this.bindChannel(this.pc.createDataChannel("bmxt-sync", { ordered: true }))
     const offer = await this.pc.createOffer()
     await this.pc.setLocalDescription(offer)
-    return offer.sdp ?? ""
+    await waitForIceGatheringComplete(this.pc)
+    return this.localBundle()
   }
 
-  async acceptOffer(sdp: string): Promise<string> {
+  async acceptOffer(sdp: string, remoteIce: string[]): Promise<WebrtcLocalDescriptionBundle> {
     await this.pc.setRemoteDescription({ type: "offer", sdp })
+    for (const candidateJson of remoteIce) {
+      await this.addIceCandidate(candidateJson)
+    }
     const answer = await this.pc.createAnswer()
     await this.pc.setLocalDescription(answer)
+    await waitForIceGatheringComplete(this.pc)
     await this.flushPendingIce()
-    return answer.sdp ?? ""
+    return this.localBundle()
   }
 
-  async applyAnswer(sdp: string): Promise<void> {
+  async applyAnswer(sdp: string, remoteIce: string[]): Promise<void> {
     await this.pc.setRemoteDescription({ type: "answer", sdp })
+    for (const candidateJson of remoteIce) {
+      await this.addIceCandidate(candidateJson)
+    }
     await this.flushPendingIce()
   }
 

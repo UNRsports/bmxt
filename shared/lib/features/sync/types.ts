@@ -75,14 +75,6 @@ export type SyncSnapshotIndexDocument = {
   meta: SyncLwwMeta
 }
 
-export type SyncWorkdirConfig = {
-  enabled: boolean
-  paused: boolean
-  directoryName: string | null
-  lastPullAt: string | null
-  lastPushAt: string | null
-}
-
 export type SyncConnectionState =
   | "idle"
   | "signaling"
@@ -93,13 +85,12 @@ export type SyncConnectionState =
 export type SyncStatusSnapshot = {
   device: SyncDeviceIdentity
   family: SyncFamilyMembership | null
-  workdir: SyncWorkdirConfig
   members: SyncRosterMember[]
   connections: Array<{ deviceId: SyncDeviceId; state: SyncConnectionState }>
   invite: string | null
 }
 
-/** EN: Wire envelope for FSA signaling / command queue (Family-sealed). */
+/** EN: Wire envelope for Family-sealed handshake / queue payloads. */
 export type SyncSealedEnvelope = {
   version: 1
   familyId: SyncFamilyId

@@ -9,10 +9,6 @@ type NavigatorWithBrave = Navigator & {
   }
 }
 
-/**
- * EN: Sync probe — UA / brave brand hints (fingerprint mode may hide "Brave" in UA).
- * JA: 同期プローブ。UA / brand ヒント（フィンガープリント対策で UA に Brave が無い場合あり）。
- */
 export function looksLikeBraveSync(): boolean {
   if (typeof navigator === "undefined") {
     return false
@@ -38,23 +34,4 @@ export function looksLikeBraveSync(): boolean {
     }
   }
   return false
-}
-
-/**
- * EN: Prefer `navigator.brave.isBrave()` when present (authoritative on Brave).
- * JA: あれば `navigator.brave.isBrave()` を優先（Brave 上の正本）。
- */
-export async function isBraveBrowser(): Promise<boolean> {
-  if (typeof navigator === "undefined") {
-    return false
-  }
-  const nav = navigator as NavigatorWithBrave
-  if (nav.brave !== undefined && typeof nav.brave.isBrave === "function") {
-    try {
-      return await nav.brave.isBrave()
-    } catch {
-      return looksLikeBraveSync()
-    }
-  }
-  return looksLikeBraveSync()
 }

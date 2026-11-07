@@ -21,15 +21,6 @@ export function formatSyncStatusLines(status: SyncStatusSnapshot, locale: UiLoca
     lines.push(tCmd("cmd.sync.status.noFamily", locale))
   }
   lines.push(
-    tCmd("cmd.sync.status.workdir", locale, {
-      enabled: status.workdir.enabled ? "yes" : "no",
-      paused: status.workdir.paused ? "yes" : "no",
-      directory: status.workdir.directoryName ?? "-",
-      lastPull: status.workdir.lastPullAt ?? "-",
-      lastPush: status.workdir.lastPushAt ?? "-"
-    })
-  )
-  lines.push(
     tCmd("cmd.sync.status.membersCount", locale, {
       count: String(status.members.length)
     })

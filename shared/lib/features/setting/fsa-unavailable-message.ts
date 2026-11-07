@@ -3,8 +3,8 @@ import type { UiLocale } from "./locale"
 import { looksLikeBraveSync } from "./detect-brave"
 
 /**
- * EN: Storage / vault picker — Brave needs the File System Access flag.
- * JA: storage / vault ピッカー。Brave は File System Access フラグが必要。
+ * EN: UI settings / vault external folder — Brave needs the File System Access flag.
+ * JA: UI 設定／vault 外部フォルダ。Brave は File System Access フラグが必要。
  */
 export function storageFsaUnavailableLine(locale: UiLocale): string {
   if (looksLikeBraveSync()) {

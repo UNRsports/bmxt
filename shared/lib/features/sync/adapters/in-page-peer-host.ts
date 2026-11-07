@@ -1,11 +1,7 @@
-import { sealJsonPayload, unsealJsonPayload } from "../crypto/family-crypto"
-import { loadOrCreateDeviceIdentity } from "../device/device-identity"
-import { loadFamilyMembership } from "../device/family-membership"
+import type { RtcHandshakePlain } from "../discovery/rtc-handshake-codec"
 import { WebrtcPeerSession } from "../peer/webrtc-session"
 import type { PeerHostSessionHandlers, PeerHostStabilizer } from "../stabilizers/peer-host"
-import type { SignalingBoxStabilizer } from "../stabilizers/signaling-box"
-import type { SyncBusCommand, SyncDeviceId, SyncSignalPayload } from "../types"
-import { SYNC_SIGNAL_TTL_MS } from "../workdir/bundle-layout"
+import type { SyncBusCommand, SyncDeviceId } from "../types"
 
 function detectHostKind(): PeerHostStabilizer["hostKind"] {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
@@ -15,162 +11,128 @@ function detectHostKind(): PeerHostStabilizer["hostKind"] {
   return "in-page"
 }
 
-export function createInPagePeerHostStabilizer(
-  signaling: SignalingBoxStabilizer
-): PeerHostStabilizer {
-  const sessions = new Map<string, WebrtcPeerSession>()
+/**
+ * EN: In-page / Firefox peer-page host — handshake via copy-paste codes (no FSA mailbox).
+ * JA: in-page / Firefox peer ページ宿主。握手はコピペコード（FSA 箱なし）。
+ */
+export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
+  /** EN: sessionId → RTC session */
+  const bySessionId = new Map<string, WebrtcPeerSession>()
+  /** EN: remote device id → sessionId (filled once peer identity is known) */
+  const sessionIdByRemote = new Map<SyncDeviceId, string>()
+  /** EN: Offerer pending session before answer arrives */
+  let pendingOfferSessionId: string | null = null
   let handlers: PeerHostSessionHandlers | null = null
-  let pollTimer: ReturnType<typeof setInterval> | null = null
 
-  async function publishSignal(toDeviceId: SyncDeviceId, payload: SyncSignalPayload): Promise<void> {
-    const membership = await loadFamilyMembership()
-    const device = await loadOrCreateDeviceIdentity()
-    if (membership === null) {
-      return
+  function resolveRemoteForSession(sessionId: string): SyncDeviceId | null {
+    for (const [remote, sid] of sessionIdByRemote) {
+      if (sid === sessionId) {
+        return remote
+      }
     }
-    const envelope = await sealJsonPayload({
-      familyId: membership.familyId,
-      seedB64: membership.seedB64,
-      fromDeviceId: device.deviceId,
-      toDeviceId,
-      kind: "signal",
-      payload,
-      ttlMs: SYNC_SIGNAL_TTL_MS
-    })
-    if (envelope) {
-      await signaling.put(envelope)
-    }
+    return null
   }
 
-  function sessionKey(remoteDeviceId: SyncDeviceId): string {
-    return remoteDeviceId
-  }
-
-  function attachSession(remoteDeviceId: SyncDeviceId, session: WebrtcPeerSession): void {
-    sessions.set(sessionKey(remoteDeviceId), session)
-  }
-
-  function makeCallbacks(remoteDeviceId: SyncDeviceId) {
+  function makeCallbacks(sessionId: string, fallbackRemote: SyncDeviceId) {
     return {
-      onIceCandidate: (candidateJson: string) => {
-        const session = sessions.get(sessionKey(remoteDeviceId))
-        if (!session) {
-          return
-        }
-        void publishSignal(remoteDeviceId, {
-          type: "ice",
-          sessionId: session.sessionId,
-          candidate: candidateJson
-        })
-      },
       onCommand: (command: SyncBusCommand) => {
         void handlers?.onCommand(command)
       },
       onConnectionState: (state: string) => {
-        handlers?.onConnectionState(remoteDeviceId, state)
+        const remote = resolveRemoteForSession(sessionId) ?? fallbackRemote
+        handlers?.onConnectionState(remote, state)
       }
     }
   }
 
-  async function pollSignals(): Promise<void> {
-    const membership = await loadFamilyMembership()
-    const device = await loadOrCreateDeviceIdentity()
-    if (membership === null) {
-      return
+  function rememberRemote(remoteDeviceId: SyncDeviceId, sessionId: string): void {
+    sessionIdByRemote.set(remoteDeviceId, sessionId)
+  }
+
+  function sessionForRemote(remoteDeviceId: SyncDeviceId): WebrtcPeerSession | null {
+    const sessionId = sessionIdByRemote.get(remoteDeviceId)
+    if (!sessionId) {
+      return null
     }
-    const envelopes = await signaling.listFor(device.deviceId)
-    for (const env of envelopes) {
-      if (env.kind !== "signal") {
-        continue
-      }
-      const payload = await unsealJsonPayload<SyncSignalPayload>(env, membership.seedB64)
-      await signaling.remove(env)
-      if (!payload || typeof payload !== "object") {
-        continue
-      }
-      void handlers?.onSignal(payload)
-      if (payload.type === "offer") {
-        const existing = sessions.get(sessionKey(env.fromDeviceId))
-        existing?.close()
-        const session = new WebrtcPeerSession(
-          env.fromDeviceId,
-          makeCallbacks(env.fromDeviceId),
-          payload.sessionId
-        )
-        attachSession(env.fromDeviceId, session)
-        const answerSdp = await session.acceptOffer(payload.sdp)
-        await publishSignal(env.fromDeviceId, {
-          type: "answer",
-          sessionId: payload.sessionId,
-          sdp: answerSdp
-        })
-      } else if (payload.type === "answer") {
-        const session = [...sessions.values()].find((s) => s.sessionId === payload.sessionId)
-        if (session) {
-          await session.applyAnswer(payload.sdp)
-        }
-      } else if (payload.type === "ice") {
-        const session = [...sessions.values()].find((s) => s.sessionId === payload.sessionId)
-        if (session) {
-          await session.addIceCandidate(payload.candidate)
-        }
-      }
-    }
+    return bySessionId.get(sessionId) ?? null
   }
 
   return {
     hostKind: detectHostKind(),
 
     async ensureReady() {
-      if (pollTimer === null) {
-        pollTimer = setInterval(() => {
-          void pollSignals()
-        }, 1500)
+      /* no signaling poll */
+    },
+
+    async createOfferHandshake() {
+      if (pendingOfferSessionId !== null) {
+        bySessionId.get(pendingOfferSessionId)?.close()
+        bySessionId.delete(pendingOfferSessionId)
+        pendingOfferSessionId = null
       }
-      await pollSignals()
-    },
-
-    async createOfferSession(remoteDeviceId: SyncDeviceId) {
-      await this.ensureReady()
-      const existing = sessions.get(sessionKey(remoteDeviceId))
-      existing?.close()
-      const session = new WebrtcPeerSession(remoteDeviceId, makeCallbacks(remoteDeviceId))
-      attachSession(remoteDeviceId, session)
-      const sdp = await session.createOffer()
-      await publishSignal(remoteDeviceId, {
-        type: "offer",
-        sessionId: session.sessionId,
-        sdp
+      // EN: Placeholder remote until answer names the peer.
+      const placeholderRemote = "pending-offer"
+      const session = new WebrtcPeerSession(placeholderRemote, {
+        onCommand: (command) => {
+          void handlers?.onCommand(command)
+        },
+        onConnectionState: (state) => {
+          const remote = resolveRemoteForSession(session.sessionId) ?? placeholderRemote
+          handlers?.onConnectionState(remote, state)
+        }
       })
-      return { sessionId: session.sessionId, sdp }
+      bySessionId.set(session.sessionId, session)
+      pendingOfferSessionId = session.sessionId
+      const bundle = await session.createOffer()
+      return {
+        sessionId: session.sessionId,
+        sdp: bundle.sdp,
+        ice: bundle.ice
+      }
     },
 
-    async acceptOffer(remoteDeviceId, sessionId, sdp) {
-      await this.ensureReady()
-      const session = new WebrtcPeerSession(remoteDeviceId, makeCallbacks(remoteDeviceId), sessionId)
-      attachSession(remoteDeviceId, session)
-      const answer = await session.acceptOffer(sdp)
-      return { sdp: answer }
+    async acceptOfferHandshake(plain: RtcHandshakePlain) {
+      const existingId = sessionIdByRemote.get(plain.fromDeviceId)
+      if (existingId) {
+        bySessionId.get(existingId)?.close()
+        bySessionId.delete(existingId)
+        sessionIdByRemote.delete(plain.fromDeviceId)
+      }
+      const session = new WebrtcPeerSession(
+        plain.fromDeviceId,
+        makeCallbacks(plain.sessionId, plain.fromDeviceId),
+        plain.sessionId
+      )
+      bySessionId.set(session.sessionId, session)
+      rememberRemote(plain.fromDeviceId, session.sessionId)
+      const bundle = await session.acceptOffer(plain.sdp, plain.ice)
+      return {
+        sessionId: session.sessionId,
+        sdp: bundle.sdp,
+        ice: bundle.ice,
+        remoteDeviceId: plain.fromDeviceId
+      }
     },
 
-    async applyAnswer(sessionId, sdp) {
-      const session = [...sessions.values()].find((s) => s.sessionId === sessionId)
+    async applyAnswerHandshake(plain: RtcHandshakePlain) {
+      const session =
+        bySessionId.get(plain.sessionId) ??
+        (pendingOfferSessionId !== null ? bySessionId.get(pendingOfferSessionId) : undefined)
       if (!session) {
         throw new Error("unknown session")
       }
-      await session.applyAnswer(sdp)
-    },
-
-    async addIceCandidate(sessionId, candidate) {
-      const session = [...sessions.values()].find((s) => s.sessionId === sessionId)
-      if (!session) {
-        return
+      if (session.sessionId !== plain.sessionId) {
+        throw new Error("session mismatch")
       }
-      await session.addIceCandidate(candidate)
+      await session.applyAnswer(plain.sdp, plain.ice)
+      rememberRemote(plain.fromDeviceId, session.sessionId)
+      // EN: Rebind connection-state callbacks under the real remote id.
+      pendingOfferSessionId = null
+      return plain.fromDeviceId
     },
 
     async sendCommand(remoteDeviceId, command) {
-      const session = sessions.get(sessionKey(remoteDeviceId))
+      const session = sessionForRemote(remoteDeviceId)
       if (!session) {
         return false
       }
@@ -178,7 +140,7 @@ export function createInPagePeerHostStabilizer(
     },
 
     getConnectionState(remoteDeviceId) {
-      return sessions.get(sessionKey(remoteDeviceId))?.getConnectionState() ?? "new"
+      return sessionForRemote(remoteDeviceId)?.getConnectionState() ?? "new"
     },
 
     setHandlers(next) {
@@ -186,9 +148,13 @@ export function createInPagePeerHostStabilizer(
     },
 
     async closeSession(remoteDeviceId) {
-      const key = sessionKey(remoteDeviceId)
-      sessions.get(key)?.close()
-      sessions.delete(key)
+      const sessionId = sessionIdByRemote.get(remoteDeviceId)
+      if (!sessionId) {
+        return
+      }
+      bySessionId.get(sessionId)?.close()
+      bySessionId.delete(sessionId)
+      sessionIdByRemote.delete(remoteDeviceId)
     }
   }
 }

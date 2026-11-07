@@ -329,17 +329,16 @@
       "module": "sync",
       "canonicalName": "sync",
       "aliases": [],
-      "usagePrimary": "sync -status | sync -dir | sync -pair [invite] | sync -members | sync -pull | sync -push | sync -pause | sync -open <deviceId> <url…> | sync -connect <deviceId> | sync help",
+      "usagePrimary": "sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
       "subcommands": [
         { "head": "-status", "tail": "none" },
-        { "head": "-dir", "tail": "none" },
         { "head": "-pair", "tail": "rest" },
         { "head": "-members", "tail": "none" },
-        { "head": "-pull", "tail": "none" },
-        { "head": "-push", "tail": "none" },
-        { "head": "-pause", "tail": "none" },
+        { "head": "-offer", "tail": "none" },
+        { "head": "-answer", "tail": "rest" },
+        { "head": "-accept", "tail": "rest" },
         { "head": "-open", "tail": "rest" },
-        { "head": "-connect", "tail": "rest" },
+        { "head": "-ping", "tail": "rest" },
         { "head": "help", "tail": "none" }
       ]
     }
@@ -683,11 +682,6 @@
       "shape": "unit"
     },
     {
-      "kind": "sync_dir",
-      "rustVariant": "SyncDir",
-      "shape": "unit"
-    },
-    {
       "kind": "sync_pair",
       "rustVariant": "SyncPair",
       "shape": "record",
@@ -701,19 +695,25 @@
       "shape": "unit"
     },
     {
-      "kind": "sync_pull",
-      "rustVariant": "SyncPull",
+      "kind": "sync_offer",
+      "rustVariant": "SyncOffer",
       "shape": "unit"
     },
     {
-      "kind": "sync_push",
-      "rustVariant": "SyncPush",
-      "shape": "unit"
+      "kind": "sync_answer",
+      "rustVariant": "SyncAnswer",
+      "shape": "record",
+      "fields": {
+        "code": "string"
+      }
     },
     {
-      "kind": "sync_pause",
-      "rustVariant": "SyncPause",
-      "shape": "unit"
+      "kind": "sync_accept",
+      "rustVariant": "SyncAccept",
+      "shape": "record",
+      "fields": {
+        "code": "string"
+      }
     },
     {
       "kind": "sync_open",
@@ -725,8 +725,8 @@
       }
     },
     {
-      "kind": "sync_connect",
-      "rustVariant": "SyncConnect",
+      "kind": "sync_ping",
+      "rustVariant": "SyncPing",
       "shape": "record",
       "fields": {
         "device_id": "string"

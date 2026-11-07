@@ -20,6 +20,10 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "syncPanel"
     case "sync-device-name":
       return "syncDeviceName"
+    case "sync-answer":
+      return "syncAnswerCode"
+    case "sync-accept":
+      return "syncAcceptCode"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -49,11 +53,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     case "storage-pick-dir":
     case "storage-reload":
     case "snapshot-vault-pick-dir":
-    case "sync-pick-dir":
-    case "sync-pause":
     case "sync-invite":
-    case "sync-pull":
-    case "sync-push":
+    case "sync-offer":
     case "export":
     case "import":
     case "save":
@@ -88,7 +89,9 @@ export function isSettingGlobalDetailView(view: SettingListPickerView): boolean 
     view === "searchHitHighlight" ||
     view === "searchJumpHighlight" ||
     view === "font" ||
-    view === "syncDeviceName"
+    view === "syncDeviceName" ||
+    view === "syncAnswerCode" ||
+    view === "syncAcceptCode"
   )
 }
 

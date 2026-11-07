@@ -1,6 +1,4 @@
 export type { SyncStabilizers } from "./stabilizers"
-export type { SyncStoreStabilizer } from "./stabilizers/sync-store"
-export type { SignalingBoxStabilizer } from "./stabilizers/signaling-box"
 export type { DiscoveryStabilizer } from "./stabilizers/discovery"
 export type { PeerHostStabilizer } from "./stabilizers/peer-host"
 export type { CommandBusStabilizer } from "./stabilizers/command-bus"
@@ -27,6 +25,10 @@ export { formatSyncStatusLines } from "./facade/format-status"
 export { compareLww, shouldAcceptLww } from "./payload/conflict-lww"
 export { SYNC_PREFS_ALLOWLIST, isSyncPrefKey } from "./payload/prefs-allowlist"
 export { parseInvite, formatInvite } from "./discovery/invite-codec"
+export {
+  formatRtcHandshakeCode,
+  parseRtcHandshakeCode,
+  RTC_HANDSHAKE_PREFIX
+} from "./discovery/rtc-handshake-codec"
 export { sanitizeRemoteOpenUrls, sanitizeGroupTitle } from "./bus/remote-open-sanitize.ts"
 export { applyRemoteOpenTabs } from "./bus/remote-open.ts"
-export { createDriveSignalingBoxStabilizer } from "./adapters/drive-signaling-box"

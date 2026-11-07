@@ -10,11 +10,10 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.sync.usage.line6",
     "cmd.sync.usage.line7",
     "cmd.sync.usage.line8",
-    "cmd.sync.usage.line9",
-    "cmd.sync.usage.line10",
 ];
 
 const MAX_INVITE_LEN: usize = 4096;
+const MAX_RTC_CODE_LEN: usize = 48_000;
 const MAX_DEVICE_ID_LEN: usize = 64;
 const MAX_OPEN_PAYLOAD_LEN: usize = 8192;
 
@@ -51,6 +50,20 @@ fn sanitize_device_id(raw: &str) -> Option<String> {
     Some(trimmed.to_string())
 }
 
+fn sanitize_rtc_code(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.len() < 16 || trimmed.len() > MAX_RTC_CODE_LEN {
+        return None;
+    }
+    if !trimmed.starts_with("bmxt-rtc1.") {
+        return None;
+    }
+    if trimmed.chars().any(|c| c == '\r' || c == '\n') {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
 pub fn run(args: &[String]) -> DispatchBundle {
     let sub = match helpers::require_second_token("sync", args, USAGE_KEYS) {
         Ok(s) => s,
@@ -63,12 +76,6 @@ pub fn run(args: &[String]) -> DispatchBundle {
                 return usage_bundle(vec![msg_key("cmd.sync.error.tooManyArgs")]);
             }
             ui(UiAction::SyncStatus)
-        }
-        "-dir" => {
-            if args.len() > 2 {
-                return usage_bundle(vec![msg_key("cmd.sync.error.tooManyArgs")]);
-            }
-            ui(UiAction::SyncDir)
         }
         "-pair" => {
             let invite = rest_join(args, 2);
@@ -86,23 +93,29 @@ pub fn run(args: &[String]) -> DispatchBundle {
             }
             ui(UiAction::SyncMembers)
         }
-        "-pull" => {
+        "-offer" => {
             if args.len() > 2 {
                 return usage_bundle(vec![msg_key("cmd.sync.error.tooManyArgs")]);
             }
-            ui(UiAction::SyncPull)
+            ui(UiAction::SyncOffer)
         }
-        "-push" => {
-            if args.len() > 2 {
-                return usage_bundle(vec![msg_key("cmd.sync.error.tooManyArgs")]);
-            }
-            ui(UiAction::SyncPush)
+        "-answer" => {
+            let code = match sanitize_rtc_code(&rest_join(args, 2)) {
+                Some(c) => c,
+                None => {
+                    return usage_bundle(vec![msg_key("cmd.sync.error.invalidRtcCode")]);
+                }
+            };
+            ui(UiAction::SyncAnswer { code })
         }
-        "-pause" => {
-            if args.len() > 2 {
-                return usage_bundle(vec![msg_key("cmd.sync.error.tooManyArgs")]);
-            }
-            ui(UiAction::SyncPause)
+        "-accept" => {
+            let code = match sanitize_rtc_code(&rest_join(args, 2)) {
+                Some(c) => c,
+                None => {
+                    return usage_bundle(vec![msg_key("cmd.sync.error.invalidRtcCode")]);
+                }
+            };
+            ui(UiAction::SyncAccept { code })
         }
         "-open" => {
             if args.len() < 4 {
@@ -123,7 +136,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
                 payload,
             })
         }
-        "-connect" => {
+        "-ping" => {
             let raw = rest_join(args, 2);
             let device_id = match sanitize_device_id(&raw) {
                 Some(id) => id,
@@ -131,7 +144,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
                     return usage_bundle(vec![msg_key("cmd.sync.error.invalidDeviceId")]);
                 }
             };
-            ui(UiAction::SyncConnect { device_id })
+            ui(UiAction::SyncPing { device_id })
         }
         _ => {
             let option = args.get(1).map(|s| s.as_str()).unwrap_or("");
@@ -175,5 +188,11 @@ mod tests {
     fn sanitize_device_id_rejects_spaces() {
         assert!(sanitize_device_id("bad id").is_none());
         assert!(sanitize_device_id("abc-DEF_12").is_some());
+    }
+
+    #[test]
+    fn sanitize_rtc_code_requires_prefix() {
+        assert!(sanitize_rtc_code("nope").is_none());
+        assert!(sanitize_rtc_code("bmxt-rtc1.abcdef0123456789").is_some());
     }
 }

@@ -56,14 +56,18 @@ pub enum UiAction {
     SnapshotSave {
     line: String,
     },
-    #[serde(rename = "sync_connect")]
-    SyncConnect {
-    device_id: String,
+    #[serde(rename = "sync_accept")]
+    SyncAccept {
+    code: String,
     },
-    #[serde(rename = "sync_dir")]
-    SyncDir,
+    #[serde(rename = "sync_answer")]
+    SyncAnswer {
+    code: String,
+    },
     #[serde(rename = "sync_members")]
     SyncMembers,
+    #[serde(rename = "sync_offer")]
+    SyncOffer,
     #[serde(rename = "sync_open")]
     SyncOpen {
     device_id: String,
@@ -73,12 +77,10 @@ pub enum UiAction {
     SyncPair {
     invite: String,
     },
-    #[serde(rename = "sync_pause")]
-    SyncPause,
-    #[serde(rename = "sync_pull")]
-    SyncPull,
-    #[serde(rename = "sync_push")]
-    SyncPush,
+    #[serde(rename = "sync_ping")]
+    SyncPing {
+    device_id: String,
+    },
     #[serde(rename = "sync_status")]
     SyncStatus,
 }

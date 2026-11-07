@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   SYNC_DEVICE_IDENTITY_KEY,
+  SYNC_DISCOVERY_CACHE_KEY,
   SYNC_FAMILY_MEMBERSHIP_KEY,
-  SYNC_WORKDIR_CONFIG_KEY
-} from "../../extension-storage/keys"
+  SYNC_ROSTER_STORAGE_KEY
+} from "../workdir/storage-keys"
 import { loadSyncPickerSummary, type SyncPickerSummary } from "./sync-picker-summary.ts"
 
 const EMPTY: SyncPickerSummary = {
@@ -11,34 +12,25 @@ const EMPTY: SyncPickerSummary = {
   displayName: "",
   browser: "unknown",
   familyId: null,
-  workdir: {
-    enabled: false,
-    paused: false,
-    directoryName: null,
-    lastPullAt: null,
-    lastPushAt: null
-  }
+  connectionCount: 0
 }
 
 export function useSyncPickerSummary(): SyncPickerSummary {
   const [summary, setSummary] = useState<SyncPickerSummary>(EMPTY)
 
-  const reload = useCallback(async () => {
-    try {
-      setSummary(await loadSyncPickerSummary())
-    } catch {
-      setSummary(EMPTY)
+  useEffect(() => {
+    let cancelled = false
+    const refresh = () => {
+      void loadSyncPickerSummary().then((next) => {
+        if (!cancelled) {
+          setSummary(next)
+        }
+      })
     }
-  }, [])
-
-  useEffect(() => {
-    void reload()
-  }, [reload])
-
-  useEffect(() => {
-    const onChange: Parameters<typeof chrome.storage.onChanged.addListener>[0] = (
-      changes,
-      area
+    refresh()
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string
     ) => {
       if (area !== "local") {
         return
@@ -46,14 +38,18 @@ export function useSyncPickerSummary(): SyncPickerSummary {
       if (
         SYNC_DEVICE_IDENTITY_KEY in changes ||
         SYNC_FAMILY_MEMBERSHIP_KEY in changes ||
-        SYNC_WORKDIR_CONFIG_KEY in changes
+        SYNC_DISCOVERY_CACHE_KEY in changes ||
+        SYNC_ROSTER_STORAGE_KEY in changes
       ) {
-        void reload()
+        refresh()
       }
     }
-    chrome.storage.onChanged.addListener(onChange)
-    return () => chrome.storage.onChanged.removeListener(onChange)
-  }, [reload])
+    chrome.storage.onChanged.addListener(onChanged)
+    return () => {
+      cancelled = true
+      chrome.storage.onChanged.removeListener(onChanged)
+    }
+  }, [])
 
   return summary
 }

@@ -64,8 +64,8 @@
     "en": "tutorial (interactive coach):\n  tutorial / tutorial -start  - start the default lesson (tab -list | browse).\n  tutorial -skip              - skip (also stops first-run auto-start).\n  Auto-starts on first launch (skippable)."
   },
   "help.section.sync": {
-    "ja": "sync（同一 PC / 同一 LAN · Family · コマンドバス）:\n  sync -status / -dir / -pair [invite] / -members / -pull / -push / -pause\n  sync -connect <deviceId>  — FSA シグナリング + WebRTC（STUN なし）\n  sync -open <deviceId> <url…> [--group <title>]  — 遠隔タブ／グループ open\n  正本はローカル FSA 作業ディレクトリ。Drive は差し替え候補・未実装。平文の預かり先は作らない。",
-    "en": "sync (same PC / same LAN · Family · command bus):\n  sync -status / -dir / -pair [invite] / -members / -pull / -push / -pause\n  sync -connect <deviceId>  — FSA signaling + WebRTC (no STUN)\n  sync -open <deviceId> <url…> [--group <title>]  — remote tab/group open\n  Source of truth is a local FSA workdir. Drive is a swap candidate — not implemented. Zero custody."
+    "ja": "sync（同一 PC · Family · WebRTC）:\n  sync -status / -pair [invite] / -members\n  sync -offer / -answer <code> / -accept <code>  — コピペ握手（FSA なし）\n  sync -ping <deviceId> / -open <deviceId> <url…>\n  Family 招待で信頼圏を揃え、テキストコードで DataChannel を確立。",
+    "en": "sync (same PC · Family · WebRTC):\n  sync -status / -pair [invite] / -members\n  sync -offer / -answer <code> / -accept <code>  — copy-paste handshake (no FSA)\n  sync -ping <deviceId> / -open <deviceId> <url…>\n  Align Family via invite, then establish DataChannel with text codes."
   },
   "help.section.url": {
     "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",

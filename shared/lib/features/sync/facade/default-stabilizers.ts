@@ -1,26 +1,19 @@
-import { createFsaCommandQueueStabilizer } from "../adapters/fsa-command-queue"
-import { createFsaSignalingBoxStabilizer } from "../adapters/fsa-signaling-box"
-import { createFsaSyncStoreStabilizer } from "../adapters/fsa-sync-store"
 import { createInPagePeerHostStabilizer } from "../adapters/in-page-peer-host"
 import { createManualDiscoveryStabilizer } from "../adapters/manual-discovery"
+import { createMemoryCommandQueueStabilizer } from "../adapters/memory-command-queue"
 import { createWebrtcCommandBusStabilizer } from "../adapters/webrtc-command-bus"
 import type { SyncStabilizers } from "../stabilizers"
 
 /**
- * EN: Default local wiring — FSA store/signaling/queue + in-page WebRTC bus.
- *     Drive adapter exists as a swap seam but is not selected here.
- * JA: 既定配線（FSA + in-page WebRTC）。Drive は差し替え面のみ。
+ * EN: Default wiring — WebRTC DataChannel + copy-paste handshake (no FSA).
+ * JA: 既定配線（WebRTC DataChannel + コピペ握手。FSA なし）。
  */
 export function createDefaultSyncStabilizers(): SyncStabilizers {
-  const store = createFsaSyncStoreStabilizer()
-  const signaling = createFsaSignalingBoxStabilizer()
   const discovery = createManualDiscoveryStabilizer()
-  const peerHost = createInPagePeerHostStabilizer(signaling)
-  const commandQueue = createFsaCommandQueueStabilizer(signaling)
+  const peerHost = createInPagePeerHostStabilizer()
+  const commandQueue = createMemoryCommandQueueStabilizer()
   const commandBus = createWebrtcCommandBusStabilizer(peerHost, commandQueue)
   return {
-    store,
-    signaling,
     discovery,
     peerHost,
     commandBus,

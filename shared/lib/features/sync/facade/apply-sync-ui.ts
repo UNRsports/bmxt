@@ -42,32 +42,6 @@ export async function runSyncStatus(locale: UiLocale): Promise<string[]> {
   return formatSyncStatusLines(status, locale)
 }
 
-export async function runSyncDir(): Promise<{ ok: boolean; lines: string[] }> {
-  const { isFileSystemAccessAvailable } = await import(
-    "../../setting/settings-external-storage.ts"
-  )
-  if (!isFileSystemAccessAvailable()) {
-    return { ok: false, lines: ["sync.dir.error:unavailable"] }
-  }
-  let picked: FileSystemDirectoryHandle
-  try {
-    picked = await window.showDirectoryPicker({
-      id: "bmxt-sync-workdir",
-      mode: "readwrite"
-    })
-  } catch (err) {
-    const name = err instanceof DOMException ? err.name : ""
-    if (name === "AbortError") {
-      return { ok: false, lines: ["sync.dir.cancelled"] }
-    }
-    if (name === "NotAllowedError" || name === "SecurityError") {
-      return { ok: false, lines: ["sync.dir.error:gesture_required"] }
-    }
-    return { ok: false, lines: ["sync.dir.error:pick_failed"] }
-  }
-  return getSyncService().bindPickedDir(picked, picked.name)
-}
-
 export async function runSyncPair(invite: string): Promise<{ ok: boolean; lines: string[] }> {
   return getSyncService().pair(invite)
 }
@@ -76,16 +50,16 @@ export async function runSyncMembers(): Promise<{ ok: boolean; lines: string[] }
   return getSyncService().members()
 }
 
-export async function runSyncPull(): Promise<{ ok: boolean; lines: string[] }> {
-  return getSyncService().pull()
+export async function runSyncOffer(): Promise<{ ok: boolean; lines: string[] }> {
+  return getSyncService().offer()
 }
 
-export async function runSyncPush(): Promise<{ ok: boolean; lines: string[] }> {
-  return getSyncService().push()
+export async function runSyncAnswer(code: string): Promise<{ ok: boolean; lines: string[] }> {
+  return getSyncService().answer(code)
 }
 
-export async function runSyncPause(): Promise<{ ok: boolean; lines: string[] }> {
-  return getSyncService().pause()
+export async function runSyncAccept(code: string): Promise<{ ok: boolean; lines: string[] }> {
+  return getSyncService().accept(code)
 }
 
 export async function runSyncOpen(
@@ -96,8 +70,8 @@ export async function runSyncOpen(
   return getSyncService().openRemote(deviceId, urls, groupTitle)
 }
 
-export async function runSyncConnect(deviceId: string): Promise<{ ok: boolean; lines: string[] }> {
-  return getSyncService().connect(deviceId)
+export async function runSyncPing(deviceId: string): Promise<{ ok: boolean; lines: string[] }> {
+  return getSyncService().ping(deviceId)
 }
 
 export async function applySyncUiLog(
@@ -106,7 +80,7 @@ export async function applySyncUiLog(
   work: () => Promise<{ ok: boolean; lines: string[] }>
 ): Promise<void> {
   const lines = await runAndLog(sink, commandLine, work)
-  await Promise.resolve(sink.appendLogLines(lines))
+  await sink.appendLogLines(lines)
   sink.focusPrompt()
 }
 
@@ -116,8 +90,5 @@ export async function syncUiSegmentOutcome(
 ): Promise<SegmentOutcome> {
   const result = await work()
   const lines = expandSyncLogLines(result.lines, locale)
-  if (result.ok) {
-    return segmentSuccess(lines)
-  }
-  return segmentFailure("runtime", lines, lines[0])
+  return result.ok ? segmentSuccess(lines) : segmentFailure("interactive", lines)
 }

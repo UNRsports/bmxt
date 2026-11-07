@@ -452,56 +452,6 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
-      if (row.id === "sync-pick-dir") {
-        // EN: Same path as storage external — call window.showDirectoryPicker in this UI gesture.
-        // JA: storage 外部保存と同じく、この UI ジェスチャ内で window.showDirectoryPicker を呼ぶ。
-        if (!isFileSystemAccessAvailable()) {
-          await options.appendLogLines([
-            logPrefix,
-            ...expandSyncLogLines(["sync.dir.error:unavailable"], options.uiLocale)
-          ])
-          return
-        }
-        let picked: FileSystemDirectoryHandle
-        try {
-          picked = await window.showDirectoryPicker({
-            id: "bmxt-sync-workdir",
-            mode: "readwrite"
-          })
-        } catch (err) {
-          const name = err instanceof DOMException ? err.name : ""
-          if (name === "AbortError") {
-            await options.appendLogLines([
-              logPrefix,
-              ...expandSyncLogLines(["sync.dir.cancelled"], options.uiLocale)
-            ])
-            return
-          }
-          const code =
-            name === "NotAllowedError" || name === "SecurityError"
-              ? "gesture_required"
-              : "pick_failed"
-          await options.appendLogLines([
-            logPrefix,
-            ...expandSyncLogLines([`sync.dir.error:${code}`], options.uiLocale)
-          ])
-          return
-        }
-        const result = await getSyncService().bindPickedDir(picked, picked.name)
-        await options.appendLogLines([
-          logPrefix,
-          ...expandSyncLogLines(result.lines, options.uiLocale)
-        ])
-        return
-      }
-      if (row.id === "sync-pause") {
-        const result = await getSyncService().pause()
-        await options.appendLogLines([
-          logPrefix,
-          ...expandSyncLogLines(result.lines, options.uiLocale)
-        ])
-        return
-      }
       if (row.id === "sync-invite") {
         const result = await getSyncService().pair("")
         await options.appendLogLines([
@@ -510,16 +460,8 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         ])
         return
       }
-      if (row.id === "sync-pull") {
-        const result = await getSyncService().pull()
-        await options.appendLogLines([
-          logPrefix,
-          ...expandSyncLogLines(result.lines, options.uiLocale)
-        ])
-        return
-      }
-      if (row.id === "sync-push") {
-        const result = await getSyncService().push()
+      if (row.id === "sync-offer") {
+        const result = await getSyncService().offer()
         await options.appendLogLines([
           logPrefix,
           ...expandSyncLogLines(result.lines, options.uiLocale)
@@ -576,6 +518,22 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
     async (field: SettingEditField, value: string) => {
       if (field === "sync-display-name") {
         const result = await getSyncService().setDisplayName(value)
+        await options.appendLogLines([
+          "setting -list",
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
+      if (field === "sync-answer-code") {
+        const result = await getSyncService().answer(value)
+        await options.appendLogLines([
+          "setting -list",
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
+      if (field === "sync-accept-code") {
+        const result = await getSyncService().accept(value)
         await options.appendLogLines([
           "setting -list",
           ...expandSyncLogLines(result.lines, options.uiLocale)
