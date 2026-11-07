@@ -136,23 +136,17 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token === "sync.connect.copyThenWaitPeerAccept") {
     return tCmd("cmd.sync.connect.copyThenWaitPeerAccept", locale)
   }
+  if (token === "sync.connect.pasteAtPrompt") {
+    return tCmd("cmd.sync.connect.pasteAtPrompt", locale)
+  }
   if (token === "sync.connect.copied") {
     return tCmd("cmd.sync.connect.copied", locale)
   }
   if (token === "sync.connect.copyIdle") {
     return tCmd("cmd.sync.connect.copyIdle", locale)
   }
-  if (token === "sync.connect.pasteIdle") {
-    return tCmd("cmd.sync.connect.pasteIdle", locale)
-  }
-  if (token === "sync.connect.clipboardReadFailed") {
-    return tCmd("cmd.sync.connect.clipboardReadFailed", locale)
-  }
   if (token === "sync.connect.clipboardWriteFailed") {
     return tCmd("cmd.sync.connect.clipboardWriteFailed", locale)
-  }
-  if (token === "sync.connect.clipboardNoCode") {
-    return tCmd("cmd.sync.connect.clipboardNoCode", locale)
   }
   if (token === "sync.name.invalid") {
     return tCmd("cmd.sync.name.invalid", locale)

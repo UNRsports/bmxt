@@ -1,4 +1,5 @@
 import { tCmd } from "../../../setting/i18n/ns/cmd"
+import { clearSyncConnectPending } from "../../../sync/connect/sync-connect-pending.ts"
 import { expandSyncLogLines } from "../../../sync/facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../../../sync/facade/sync-picker-summary.ts"
 import { getSyncService } from "../../../sync/facade/sync-service.ts"
@@ -50,6 +51,7 @@ export function beginSyncSetup(ctx: CommandDispatchContext): void {
   ctx.deps.appendCommandToHistory(ctx.trimmed)
   clearPrompt(ctx.deps)
   recordCommandHistory(ctx.deps)
+  clearSyncConnectPending()
   void (async () => {
     const summary = await loadSyncPickerSummary()
     const hasFamily = summary.familyId !== null
@@ -97,6 +99,7 @@ export function tryHandleSyncSetup(ctx: CommandDispatchContext): CommandDispatch
       return
     }
     pendingRef.current = null
+    clearSyncConnectPending()
     await deps.appendLogLines([logPrefix, tCmd("cmd.sync.setup.cancelled", locale)])
     deps.focusPrompt()
   })()
@@ -122,6 +125,7 @@ async function handleFamilyStep(
   }
   if (choice === "cancel") {
     ctx.deps.syncSetupPendingRef.current = null
+    clearSyncConnectPending()
     await ctx.deps.appendLogLines([logPrefix, tCmd("cmd.sync.setup.cancelled", ctx.locale)])
     ctx.deps.focusPrompt()
     return
@@ -222,6 +226,7 @@ async function handleRoleStep(
   }
   if (choice === "cancel") {
     ctx.deps.syncSetupPendingRef.current = null
+    clearSyncConnectPending()
     await ctx.deps.appendLogLines([logPrefix, tCmd("cmd.sync.setup.cancelled", ctx.locale)])
     ctx.deps.focusPrompt()
     return
@@ -265,6 +270,7 @@ async function handlePasteOfferStep(
   const parsed = parseSyncSetupRtcPaste(ctx.trimmed)
   if (parsed.kind === "cancel") {
     ctx.deps.syncSetupPendingRef.current = null
+    clearSyncConnectPending()
     await ctx.deps.appendLogLines([logPrefix, tCmd("cmd.sync.setup.cancelled", ctx.locale)])
     ctx.deps.focusPrompt()
     return
@@ -301,6 +307,7 @@ async function handlePasteAnswerStep(
   const parsed = parseSyncSetupRtcPaste(ctx.trimmed)
   if (parsed.kind === "cancel") {
     ctx.deps.syncSetupPendingRef.current = null
+    clearSyncConnectPending()
     await ctx.deps.appendLogLines([logPrefix, tCmd("cmd.sync.setup.cancelled", ctx.locale)])
     ctx.deps.focusPrompt()
     return

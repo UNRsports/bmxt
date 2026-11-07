@@ -2,19 +2,13 @@ import { useCallback, useEffect, useState } from "react"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
 import { expandSyncLogLines } from "../facade/expand-sync-log"
-import {
-  copySyncHandshakeCode,
-  pasteApplySyncHandshakeCode
-} from "./sync-handshake-actions.ts"
+import { copySyncHandshakeCode } from "./sync-handshake-actions.ts"
 import {
   getSyncConnectPending,
   subscribeSyncConnectPending,
   type SyncConnectPending
 } from "./sync-connect-pending.ts"
-import {
-  isSyncHandshakeCommandMessage,
-  type SyncHandshakeCommandAction
-} from "./sync-handshake-protocol.ts"
+import { isSyncHandshakeCommandMessage } from "./sync-handshake-protocol.ts"
 
 export type SyncHandshakeBarProps = {
   locale: UiLocale
@@ -33,41 +27,43 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
     })
   }, [])
 
-  const runAction = useCallback(
-    async (action: SyncHandshakeCommandAction) => {
-      const result =
-        action === "copy"
-          ? await copySyncHandshakeCode()
-          : await pasteApplySyncHandshakeCode()
-      const expanded = expandSyncLogLines(result.lines, props.locale)
-      await props.appendLogLines(expanded)
-      props.focusPrompt()
-    },
-    [props]
-  )
+  const runCopy = useCallback(async () => {
+    const result = await copySyncHandshakeCode()
+    const expanded = expandSyncLogLines(result.lines, props.locale)
+    await props.appendLogLines(expanded)
+    props.focusPrompt()
+  }, [props])
 
   useEffect(() => {
     const onMessage = (message: unknown) => {
       if (!isSyncHandshakeCommandMessage(message)) {
         return
       }
-      if (getSyncConnectPending() === null) {
+      if (getSyncConnectPending()?.outboundCode == null) {
         return
       }
-      void runAction(message.action)
+      void runCopy()
     }
     chrome.runtime.onMessage.addListener(onMessage)
     return () => {
       chrome.runtime.onMessage.removeListener(onMessage)
     }
-  }, [runAction])
+  }, [runCopy])
 
   if (pending === null) {
     return null
   }
 
   const canCopy = pending.outboundCode !== null
-  const canPaste = pending.awaitingInbound
+  const hint = canCopy
+    ? tCmd("cmd.sync.connect.barHintCopy", props.locale, {
+        name: pending.peerDisplayName,
+        role: pending.role
+      })
+    : tCmd("cmd.sync.connect.barHintPastePrompt", props.locale, {
+        name: pending.peerDisplayName,
+        role: pending.role
+      })
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault()
@@ -78,29 +74,15 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
       className="bmxt-sync-handshake-bar"
       role="toolbar"
       aria-label={tCmd("cmd.sync.connect.barLabel", props.locale)}>
-      <span className="bmxt-sync-handshake-bar-hint">
-        {tCmd("cmd.sync.connect.barHint", props.locale, {
-          name: pending.peerDisplayName,
-          role: pending.role
-        })}
-      </span>
+      <span className="bmxt-sync-handshake-bar-hint">{hint}</span>
       <button
         type="button"
         className="bmxt-sync-handshake-btn"
         disabled={!canCopy}
         aria-label={tCmd("cmd.sync.connect.copyButton", props.locale)}
         onPointerDown={onPointerDown}
-        onClick={() => void runAction("copy")}>
+        onClick={() => void runCopy()}>
         {tCmd("cmd.sync.connect.copyButton", props.locale)}
-      </button>
-      <button
-        type="button"
-        className="bmxt-sync-handshake-btn"
-        disabled={!canPaste}
-        aria-label={tCmd("cmd.sync.connect.pasteButton", props.locale)}
-        onPointerDown={onPointerDown}
-        onClick={() => void runAction("paste")}>
-        {tCmd("cmd.sync.connect.pasteButton", props.locale)}
       </button>
     </div>
   )

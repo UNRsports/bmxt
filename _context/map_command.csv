@@ -76,7 +76,7 @@ sync,-setup,,none,,sync -setup,UiAction `sync_setup`。プロンプト対話で 
 sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。,
 sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待表示または参加（6b 手動/QR）。,
 sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。,
-sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。名簿メンバーへ再握手（deviceId 順で役割自動）。Copy/Paste ボタンと manifest commands ショートカット。,
+sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。名簿メンバーへ再握手（deviceId 順で役割自動）。Copy ボタン／`sync-handshake-copy`。相手はコード本体をプロンプトへ貼付。,
 sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコード作成（コピペ握手）。,
 sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサーコード。,
 sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel 確立。,

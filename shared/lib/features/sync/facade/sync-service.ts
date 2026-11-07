@@ -223,9 +223,20 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (code === null) {
         return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
       }
+      setSyncConnectPending({
+        peerDeviceId: "*",
+        peerDisplayName: "peer",
+        role: "offer",
+        outboundCode: code,
+        awaitingInbound: true
+      })
       return {
         ok: true,
-        lines: [line("sync.rtc.offerCreated"), line(`sync.rtc.code:${code}`)]
+        lines: [
+          line("sync.rtc.offerCreated"),
+          line(`sync.rtc.code:${code}`),
+          line("sync.connect.copyThenWaitAnswer")
+        ]
       }
     },
 
@@ -294,29 +305,26 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (code === null) {
         return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
       }
-      const pending = getSyncConnectPending()
-      if (
-        pending !== null &&
-        pending.role === "answer" &&
-        pending.peerDeviceId === plain.fromDeviceId
-      ) {
-        setSyncConnectPending({
-          peerDeviceId: pending.peerDeviceId,
-          peerDisplayName: pending.peerDisplayName,
-          role: "answer",
-          outboundCode: code,
-          awaitingInbound: false
-        })
+      const prior = getSyncConnectPending()
+      setSyncConnectPending({
+        peerDeviceId: plain.fromDeviceId,
+        peerDisplayName:
+          prior?.peerDisplayName && prior.peerDeviceId === plain.fromDeviceId
+            ? prior.peerDisplayName
+            : plain.fromDisplayName,
+        role: "answer",
+        outboundCode: code,
+        awaitingInbound: false
+      })
+      return {
+        ok: true,
+        lines: [
+          line("sync.rtc.answerCreated"),
+          line(`sync.rtc.peer:${plain.fromDisplayName}`),
+          line(`sync.rtc.code:${code}`),
+          line("sync.connect.copyThenWaitPeerAccept")
+        ]
       }
-      const lines = [
-        line("sync.rtc.answerCreated"),
-        line(`sync.rtc.peer:${plain.fromDisplayName}`),
-        line(`sync.rtc.code:${code}`)
-      ]
-      if (pending !== null && pending.role === "answer") {
-        lines.push(line("sync.connect.copyThenWaitPeerAccept"))
-      }
-      return { ok: true, lines }
     },
 
     async accept(answerCode: string) {

@@ -1,11 +1,11 @@
 /**
- * EN: SW → UI message for manifest `commands` handshake copy/paste shortcuts.
- * JA: 握手コピペ用 manifest commands の SW→UI 通知。
+ * EN: SW → UI message for the manifest handshake *copy* shortcut.
+ * JA: 握手コード *コピー* 用 manifest command の SW→UI 通知。
  */
 
 export const SYNC_HANDSHAKE_COMMAND_MESSAGE = "BMXT_SYNC_HANDSHAKE_COMMAND" as const
 
-export type SyncHandshakeCommandAction = "copy" | "paste"
+export type SyncHandshakeCommandAction = "copy"
 
 export type SyncHandshakeCommandMessage = {
   type: typeof SYNC_HANDSHAKE_COMMAND_MESSAGE
@@ -22,5 +22,5 @@ export function isSyncHandshakeCommandMessage(
   if (o.type !== SYNC_HANDSHAKE_COMMAND_MESSAGE) {
     return false
   }
-  return o.action === "copy" || o.action === "paste"
+  return o.action === "copy"
 }

@@ -8,6 +8,7 @@ import { tError } from "../../setting/i18n/ns/error"
 import { applyUiAction } from "./apply-ui-action"
 import { tryHandleExternalSettingsRecovery } from "./command-dispatch/handle-external-settings-recovery"
 import { tryHandleNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
+import { tryHandleSyncConnectInbound } from "./command-dispatch/handle-sync-connect-inbound"
 import { tryHandleSyncSetup } from "./command-dispatch/handle-sync-setup"
 import { dispatchFallbackCommand } from "./command-dispatch/handle-fallback"
 import {
@@ -95,6 +96,10 @@ export function useCommandDispatch(deps: CommandDispatchDeps) {
     }
 
     if (tryHandleSyncSetup(ctx) === "handled") {
+      return
+    }
+
+    if (tryHandleSyncConnectInbound(ctx) === "handled") {
       return
     }
 

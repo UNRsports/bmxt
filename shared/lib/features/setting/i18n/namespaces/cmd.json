@@ -640,8 +640,8 @@
     "en": "Invalid invite. Paste a code that starts with bmxt1."
   },
   "cmd.sync.setup.invalidRtcCode": {
-    "ja": "握手コードが無効です。bmxt-rtc1. で始まるコードを貼り付けてください。",
-    "en": "Invalid handshake code. Paste a code that starts with bmxt-rtc1."
+    "ja": "握手コードが無効です。bmxt-rtc1. で始まるコード本体だけをプロンプトへ貼り付けてください（コマンド名は不要）。",
+    "en": "Invalid handshake code. Paste only the bmxt-rtc1.… code body at the prompt (no command name)."
   },
   "cmd.sync.setup.family.intro": {
     "ja": "Family を選びます:",
@@ -688,20 +688,20 @@
     "en": "  2 / answer — receive the peer offer (create answer and return it)"
   },
   "cmd.sync.setup.pasteOffer": {
-    "ja": "相手のオファーコード（bmxt-rtc1.…）をプロンプトに貼り付けて Enter:",
-    "en": "Paste the peer offer code (bmxt-rtc1.…) at the prompt and press Enter:"
+    "ja": "相手のオファーコード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer offer code body (bmxt-rtc1.…) at the prompt and press Enter:"
   },
   "cmd.sync.setup.pasteAnswer": {
-    "ja": "相手のアンサーコード（bmxt-rtc1.…）をプロンプトに貼り付けて Enter:",
-    "en": "Paste the peer answer code (bmxt-rtc1.…) at the prompt and press Enter:"
+    "ja": "相手のアンサーコード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer answer code body (bmxt-rtc1.…) at the prompt and press Enter:"
   },
   "cmd.sync.setup.offerReady": {
-    "ja": "上のオファーコードを相手に渡してください。次に相手のアンサーを待ちます。",
-    "en": "Give the offer code above to your peer. Next, wait for their answer."
+    "ja": "Copy（またはショートカット）でオファーをクリップボードへ。相手はプロンプトへ貼付して Enter。次に相手のアンサーを待ちます。",
+    "en": "Copy (or the shortcut) the offer to the clipboard. The peer pastes it at their prompt and presses Enter. Then wait for their answer."
   },
   "cmd.sync.setup.answerReady": {
-    "ja": "上のアンサーコードを相手に渡してください。相手が貼り付けると接続が完了します。",
-    "en": "Give the answer code above to your peer. Connection completes when they paste it."
+    "ja": "Copy（またはショートカット）でアンサーをクリップボードへ。相手はプロンプトへ貼付して Enter すると接続完了です。",
+    "en": "Copy (or the shortcut) the answer to the clipboard. The peer pastes it at their prompt and presses Enter to finish."
   },
   "cmd.sync.setup.done": {
     "ja": "接続セットアップが完了しました。状態は sync -status で確認できます。",
@@ -860,56 +860,48 @@
     "en": "peer: {detail}"
   },
   "cmd.sync.connect.waitOffer": {
-    "ja": "相手のオファーコードを待ちます。Paste ボタン（またはショートカット）でクリップボードから適用してください。",
-    "en": "Waiting for the peer offer code. Use Paste (or the shortcut) to apply from the clipboard."
+    "ja": "相手のオファーコードを待ちます。相手が Copy したコードを、このプロンプトへ貼り付けて Enter してください。",
+    "en": "Waiting for the peer offer. Paste the code they Copied into this prompt and press Enter."
   },
   "cmd.sync.connect.copyThenWaitAnswer": {
-    "ja": "Copy でオファーを渡し、相手のアンサーを Paste で適用してください。",
-    "en": "Copy the offer to your peer, then Paste their answer here."
+    "ja": "Copy（またはショートカット）でオファーを渡し、相手のアンサーコード本体をこのプロンプトへ貼り付けて Enter。",
+    "en": "Copy (or the shortcut) the offer to your peer, then paste their answer code body here and press Enter."
   },
   "cmd.sync.connect.copyThenWaitPeerAccept": {
-    "ja": "Copy でアンサーを相手へ渡してください。相手が適用すると接続が完了します。",
-    "en": "Copy the answer to your peer. Connection completes when they apply it."
+    "ja": "Copy（またはショートカット）でアンサーを相手へ渡してください。相手がプロンプトへ貼ると接続完了です。",
+    "en": "Copy (or the shortcut) the answer to your peer. Connection completes when they paste it at their prompt."
+  },
+  "cmd.sync.connect.pasteAtPrompt": {
+    "ja": "相手の握手コード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer handshake code body (bmxt-rtc1.…) at the prompt and press Enter:"
   },
   "cmd.sync.connect.copied": {
-    "ja": "握手コードをクリップボードへコピーしました。",
-    "en": "Handshake code copied to the clipboard."
+    "ja": "握手コードをクリップボードへコピーしました。相手のプロンプトへ貼ってもらってください。",
+    "en": "Handshake code copied. Have the peer paste it at their prompt."
   },
   "cmd.sync.connect.copyIdle": {
-    "ja": "コピーできる握手コードがありません（先に sync -connect でオファー／アンサーを作成してください）。",
-    "en": "No handshake code to copy (run sync -connect and create an offer/answer first)."
-  },
-  "cmd.sync.connect.pasteIdle": {
-    "ja": "貼付待ちの接続セッションがありません（先に sync -connect <deviceId>）。",
-    "en": "No connect session waiting for paste (run sync -connect <deviceId> first)."
-  },
-  "cmd.sync.connect.clipboardReadFailed": {
-    "ja": "クリップボードを読めませんでした。権限を確認するか、プロンプトへ手動貼付して sync -answer / sync -accept を使ってください。",
-    "en": "Could not read the clipboard. Check permission, or paste manually and use sync -answer / sync -accept."
+    "ja": "コピーできる握手コードがありません（先に sync -setup / sync -connect でコードを作成してください）。",
+    "en": "No handshake code to copy (create one with sync -setup / sync -connect first)."
   },
   "cmd.sync.connect.clipboardWriteFailed": {
     "ja": "クリップボードへ書けませんでした。下のコード行を選択してコピーしてください。",
     "en": "Could not write to the clipboard. Select the code line below and copy it."
   },
-  "cmd.sync.connect.clipboardNoCode": {
-    "ja": "クリップボードに bmxt-rtc1. 握手コードが見つかりません。",
-    "en": "No bmxt-rtc1. handshake code found on the clipboard."
-  },
   "cmd.sync.connect.copyButton": {
     "ja": "Copy",
     "en": "Copy"
   },
-  "cmd.sync.connect.pasteButton": {
-    "ja": "Paste",
-    "en": "Paste"
-  },
   "cmd.sync.connect.barLabel": {
-    "ja": "同期握手のコピー／貼付",
-    "en": "Sync handshake copy / paste"
+    "ja": "同期握手コードのコピー",
+    "en": "Copy sync handshake code"
   },
-  "cmd.sync.connect.barHint": {
-    "ja": "接続中: {name}（{role}）",
-    "en": "Connecting: {name} ({role})"
+  "cmd.sync.connect.barHintCopy": {
+    "ja": "渡すコードあり: {name}（{role}）— Copy して相手へ",
+    "en": "Code ready: {name} ({role}) — Copy for your peer"
+  },
+  "cmd.sync.connect.barHintPastePrompt": {
+    "ja": "受信待ち: {name}（{role}）— 相手のコードをプロンプトへ貼付",
+    "en": "Waiting: {name} ({role}) — paste their code at the prompt"
   },
   "cmd.sync.name.invalid": {
     "ja": "error: 表示名が不正です",
@@ -924,12 +916,12 @@
     "en": "Invalid WebRTC handshake code (must start with bmxt-rtc1.)."
   },
   "cmd.sync.rtc.offerCreated": {
-    "ja": "オファーコードを作成しました。相手の BMXt で sync -answer <code> を実行してください。",
-    "en": "Offer code created. On the peer BMXt run sync -answer <code>."
+    "ja": "オファーコードを作成しました。Copy で渡し、相手はプロンプトへコード本体だけを貼って Enter。",
+    "en": "Offer code created. Copy it; the peer pastes only the code body at their prompt and presses Enter."
   },
   "cmd.sync.rtc.answerCreated": {
-    "ja": "アンサーコードを作成しました。オファー側で sync -accept <code> を実行してください。",
-    "en": "Answer code created. On the offerer run sync -accept <code>."
+    "ja": "アンサーコードを作成しました。Copy で渡し、相手はプロンプトへコード本体だけを貼って Enter。",
+    "en": "Answer code created. Copy it; the peer pastes only the code body at their prompt and presses Enter."
   },
   "cmd.sync.rtc.code": {
     "ja": "{code}",

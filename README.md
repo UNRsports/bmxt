@@ -287,11 +287,11 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session <n>` | Switch to terminal session number **n** (1-based) |
 | `sync` | Print usage and restore the prompt to `sync ` (Family local sync — see **[`sync`](#sync)**) |
 | `sync -setup` | Guided prompt dialogue: Family → role → paste handshake codes (recommended for first join) |
-| `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; Copy/Paste bar + rebindable shortcuts) |
+| `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; Copy bar / shortcut; peer pastes code at prompt) |
 | `sync -status` | Device id, Family, members, WebRTC connection state |
 | `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite |
 | `sync -members` | List Family roster + discovered devices |
-| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Manual copy-paste WebRTC handshake (`bmxt-rtc1.` Family-sealed) |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Advanced CLI handshake (`bmxt-rtc1.`); prefer Copy + paste code body at the peer prompt |
 | `sync -ping <deviceId>` | Ping a connected peer over the DataChannel |
 | `sync -open <deviceId> <url…> [--group <title>]` | Remote tab / group open over the command bus (in-memory queue if peer briefly unavailable) |
 | `… \| sync -open <deviceId>` | Pipe consumer: copy stdin URLs/groups to the peer (same as open, no local close) |
@@ -703,7 +703,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
-**UX:** First Family join: **`sync -setup`** (or `-pair`). After disconnect: both sides **`sync -connect <peerDeviceId>`**, then use the prompt **Copy / Paste** buttons (or `sync-handshake-copy` / `sync-handshake-paste` in the browser’s extension shortcut settings — Chrome allows only 4 suggested keys, so those two have no default there; Firefox suggests Alt+Shift+Y / Alt+Shift+V). The setting picker sync panel only shows a setup guide and display-name edit — paste long codes at the prompt, not in the picker.
+**UX:** First Family join: **`sync -setup`** (or `-pair`). After disconnect: both sides **`sync -connect <peerDeviceId>`**. Put the code on the clipboard with the prompt **Copy** button (or `sync-handshake-copy`, suggested Shift+Alt+Y / Alt+Shift+Y). The peer pastes **only the `bmxt-rtc1.…` code body** at their prompt and presses Enter — no `sync -accept` / `-answer` typing. The setting picker sync panel only shows a setup guide and display-name edit.
 
 **Module layout:** **`shared/lib/features/sync/`**. Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue).
 
@@ -1771,11 +1771,11 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
 | `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（Family ローカル同期 — **[`sync`](#sync-ja)**） |
 | `sync -setup` | プロンプト対話式セットアップ（Family → 役割 → 握手コード貼付・初回推奨） |
-| `sync -connect <deviceId>` | 名簿メンバーへ再握手（役割自動・Copy/Paste バー／変更可能なショートカット） |
+| `sync -connect <deviceId>` | 名簿メンバーへ再握手（役割自動・Copy バー／ショートカット・相手はプロンプト貼付） |
 | `sync -status` | device id / Family / 名簿 / WebRTC 接続状態 |
 | `sync -pair` / `sync -pair <invite>` | Family 招待表示（QR ペイロード）または参加 |
 | `sync -members` | Family 名簿と発見済みデバイス |
-| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | 手動コピペ WebRTC 握手（`bmxt-rtc1.` Family 封印） |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | 上級向け CLI 握手（`bmxt-rtc1.`）。通常は Copy → 相手プロンプトへコード本体貼付 |
 | `sync -ping <deviceId>` | 接続済みピアへ DataChannel ping |
 | `sync -open <deviceId> <url…> [--group <title>]` | コマンドバス経由の遠隔タブ／グループ open（一時不通時はメモリキュー） |
 | `… \| sync -open <deviceId>` | パイプ consumer: stdin の URL／グループをピアへコピー（元は残す） |
@@ -2135,7 +2135,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
-**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。切断後は両側で **`sync -connect <peerDeviceId>`** のあと、プロンプトの **Copy / Paste**（またはブラウザの拡張ショートカット設定の `sync-handshake-copy` / `sync-handshake-paste`。Chrome は suggested_key 上限4のため既定なし、Firefox は Alt+Shift+Y / Alt+Shift+V を提示）。setting picker の sync は案内と表示名編集のみ（長いコードはピッカーではなくプロンプトへ貼付）。
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。切断後は両側で **`sync -connect <peerDeviceId>`**。コードはプロンプトの **Copy**（または `sync-handshake-copy`、既定 Shift+Alt+Y / Alt+Shift+Y）でクリップボードへ。相手は **`bmxt-rtc1.…` コード本体だけ** をプロンプトへ貼って Enter（`sync -accept` / `-answer` の手打ちは不要）。setting picker の sync は案内と表示名編集のみ。
 
 **配置:** **`shared/lib/features/sync/`**。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。
 

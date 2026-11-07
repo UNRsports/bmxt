@@ -90,30 +90,44 @@ export function parseSyncSetupRoleChoice(raw: string): SyncSetupRoleChoice {
   return "invalid"
 }
 
+/**
+ * EN: Accept bare tokens or a full CLI line (`sync -pair …` / log echo).
+ * JA: 素のトークンでも、CLI 行（`sync -pair …` やログエコー）でも受理する。
+ */
 export function parseSyncSetupInvitePaste(raw: string): SyncSetupPasteResult {
   if (isSyncSetupCancel(raw)) {
     return { kind: "cancel" }
   }
   const compact = compactInviteToken(raw)
-  if (compact.length < 16 || compact.length > MAX_INVITE_CHARS) {
+  const prefixAt = compact.indexOf(INVITE_PREFIX)
+  if (prefixAt < 0) {
     return { kind: "invalid" }
   }
-  if (!compact.startsWith(INVITE_PREFIX)) {
+  const token = compact.slice(prefixAt)
+  if (token.length < 16 || token.length > MAX_INVITE_CHARS) {
     return { kind: "invalid" }
   }
-  return { kind: "value", value: compact }
+  return { kind: "value", value: token }
 }
 
+/**
+ * EN: Accept bare `bmxt-rtc1.…` or a CLI line such as `sync -accept bmxt-rtc1.…`
+ *     (whitespace is stripped; the first handshake prefix wins).
+ * JA: 素の `bmxt-rtc1.…` でも `sync -accept bmxt-rtc1.…` のような CLI 行でも受理する
+ *     （空白除去後、最初の握手プレフィックスから採取）。
+ */
 export function parseSyncSetupRtcPaste(raw: string): SyncSetupPasteResult {
   if (isSyncSetupCancel(raw)) {
     return { kind: "cancel" }
   }
   const compact = compactRtcHandshakeCode(raw)
-  if (compact.length < 16 || compact.length > MAX_RTC_CODE_CHARS) {
+  const prefixAt = compact.indexOf(RTC_HANDSHAKE_PREFIX)
+  if (prefixAt < 0) {
     return { kind: "invalid" }
   }
-  if (!compact.startsWith(RTC_HANDSHAKE_PREFIX)) {
+  const code = compact.slice(prefixAt)
+  if (code.length < 16 || code.length > MAX_RTC_CODE_CHARS) {
     return { kind: "invalid" }
   }
-  return { kind: "value", value: compact }
+  return { kind: "value", value: code }
 }

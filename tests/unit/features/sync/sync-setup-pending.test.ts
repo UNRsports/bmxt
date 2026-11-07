@@ -32,6 +32,33 @@ describe("sync-setup-pending parsers", () => {
     }
   })
 
+  it("extracts rtc code from a sync -accept CLI line", () => {
+    const raw = "sync -accept bmxt-rtc1.abcdef0123456789extra"
+    const parsed = parseSyncSetupRtcPaste(raw)
+    assert.equal(parsed.kind, "value")
+    if (parsed.kind === "value") {
+      assert.equal(parsed.value, "bmxt-rtc1.abcdef0123456789extra")
+    }
+  })
+
+  it("extracts rtc code from a sync -answer CLI line with wrapping", () => {
+    const raw = "sync -answer bmxt-rtc1.abcd\n ef0123456789extra"
+    const parsed = parseSyncSetupRtcPaste(raw)
+    assert.equal(parsed.kind, "value")
+    if (parsed.kind === "value") {
+      assert.equal(parsed.value, "bmxt-rtc1.abcdef0123456789extra")
+    }
+  })
+
+  it("extracts invite from a sync -pair CLI line", () => {
+    const raw = "sync -pair bmxt1.abcdefghijklmnop"
+    const parsed = parseSyncSetupInvitePaste(raw)
+    assert.equal(parsed.kind, "value")
+    if (parsed.kind === "value") {
+      assert.equal(parsed.value, "bmxt1.abcdefghijklmnop")
+    }
+  })
+
   it("rejects short invite paste", () => {
     assert.equal(parseSyncSetupInvitePaste("bmxt1.short").kind, "invalid")
   })

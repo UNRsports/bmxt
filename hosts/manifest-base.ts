@@ -33,58 +33,44 @@ export function hostCommands(browser: HostBrowser) {
   // Ctrl|Alt|Command|MacCtrl, then optional Shift — e.g. `Alt+Shift+C`.
   // Same physical keys; string order differs or Gecko ignores the suggestion.
   // Chrome: at most 4 `suggested_key` entries in `commands` (MV3 load fails otherwise).
-  // Handshake copy/paste stay as commands without defaults so users can bind them in
-  // chrome://extensions/shortcuts; Firefox may still ship suggested keys.
+  // Slot 4 = handshake copy only (paste is normal prompt paste — no command).
   const chromeKeys = {
     launch: { default: "Shift+Alt+C", mac: "Shift+Alt+C" },
     reset: { default: "Shift+Alt+R", mac: "Shift+Alt+R" },
-    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" }
+    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" },
+    handshakeCopy: { default: "Shift+Alt+Y", mac: "Shift+Alt+Y" }
   }
   const firefoxKeys = {
     launch: { default: "Alt+Shift+C", mac: "Alt+Shift+C" },
     reset: { default: "Alt+Shift+R", mac: "Alt+Shift+R" },
     toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" },
-    // EN: Yank / paste apply for sync -connect (not global — browser focus is enough).
-    handshakeCopy: { default: "Alt+Shift+Y", mac: "Alt+Shift+Y" },
-    handshakePaste: { default: "Alt+Shift+V", mac: "Alt+Shift+V" }
+    handshakeCopy: { default: "Alt+Shift+Y", mac: "Alt+Shift+Y" }
   }
+  const keys = browser === "chrome" ? chromeKeys : firefoxKeys
 
   const launch = {
-    suggested_key: browser === "chrome" ? chromeKeys.launch : firefoxKeys.launch,
+    suggested_key: keys.launch,
     description: "__MSG_commandLaunchBmxt__"
   }
   const reset = {
-    suggested_key: browser === "chrome" ? chromeKeys.reset : firefoxKeys.reset,
+    suggested_key: keys.reset,
     description: "__MSG_commandResetBmxt__"
   }
   const toggleFloat = {
-    suggested_key:
-      browser === "chrome" ? chromeKeys.toggleFloat : firefoxKeys.toggleFloat,
+    suggested_key: keys.toggleFloat,
     description: "__MSG_commandToggleBmxtFloat__"
   }
-  // EN: Description-only on Chrome (4-shortcut cap). Firefox keeps suggested defaults.
-  const handshakeCopy =
-    browser === "chrome"
-      ? { description: "__MSG_commandSyncHandshakeCopy__" }
-      : {
-          suggested_key: firefoxKeys.handshakeCopy,
-          description: "__MSG_commandSyncHandshakeCopy__"
-        }
-  const handshakePaste =
-    browser === "chrome"
-      ? { description: "__MSG_commandSyncHandshakePaste__" }
-      : {
-          suggested_key: firefoxKeys.handshakePaste,
-          description: "__MSG_commandSyncHandshakePaste__"
-        }
+  const handshakeCopy = {
+    suggested_key: keys.handshakeCopy,
+    description: "__MSG_commandSyncHandshakeCopy__"
+  }
 
   if (browser === "chrome") {
     return {
       "launch-bmxt": { ...launch, global: true },
       "reset-bmxt": { ...reset, global: true },
       "toggle-bmxt-float": { ...toggleFloat, global: true },
-      "sync-handshake-copy": handshakeCopy,
-      "sync-handshake-paste": handshakePaste
+      "sync-handshake-copy": handshakeCopy
     }
   }
 
@@ -93,8 +79,7 @@ export function hostCommands(browser: HostBrowser) {
     "launch-bmxt": launch,
     "reset-bmxt": reset,
     "toggle-bmxt-float": toggleFloat,
-    "sync-handshake-copy": handshakeCopy,
-    "sync-handshake-paste": handshakePaste
+    "sync-handshake-copy": handshakeCopy
   }
 }
 

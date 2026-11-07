@@ -21,10 +21,6 @@
   },
   "commandSyncHandshakeCopy": {
     "message": "Copy pending sync handshake code",
-    "description": "Label for the shortcut that copies the pending Family-sealed WebRTC handshake code during sync -connect."
-  },
-  "commandSyncHandshakePaste": {
-    "message": "Paste and apply sync handshake code",
-    "description": "Label for the shortcut that reads the clipboard and applies a Family-sealed WebRTC handshake code during sync -connect."
+    "description": "Label for the shortcut that copies the pending Family-sealed WebRTC handshake code to the clipboard."
   }
 }

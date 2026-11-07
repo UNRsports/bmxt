@@ -21,10 +21,6 @@
   },
   "commandSyncHandshakeCopy": {
     "message": "保留中の同期握手コードをコピー",
-    "description": "sync -connect 中に保留中の Family 封印 WebRTC 握手コードをコピーするショートカットのラベル。"
-  },
-  "commandSyncHandshakePaste": {
-    "message": "同期握手コードを貼り付けて適用",
-    "description": "sync -connect 中にクリップボードから Family 封印 WebRTC 握手コードを読み取り適用するショートカットのラベル。"
+    "description": "保留中の Family 封印 WebRTC 握手コードをクリップボードへコピーするショートカットのラベル。"
   }
 }
