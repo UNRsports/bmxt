@@ -37,6 +37,8 @@ import {
 import type { UiSettings } from "../../setting/settings"
 import { tSetting } from "../../setting/i18n/ns/setting"
 import { tError } from "../../setting/i18n/ns/error"
+import { expandSyncLogLines } from "../../sync/facade/expand-sync-log.ts"
+import { getSyncService } from "../../sync/facade/sync-service.ts"
 
 export type UseSettingPickerShellOptions = {
   sessionId: string
@@ -442,6 +444,53 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           return
         }
       }
+      if (row.id === "sync-device-name") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("syncDeviceName", current)
+        )
+        return
+      }
+      if (row.id === "sync-pick-dir") {
+        const result = await getSyncService().pickDir()
+        await options.appendLogLines([
+          logPrefix,
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
+      if (row.id === "sync-pause") {
+        const result = await getSyncService().pause()
+        await options.appendLogLines([
+          logPrefix,
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
+      if (row.id === "sync-invite") {
+        const result = await getSyncService().pair("")
+        await options.appendLogLines([
+          logPrefix,
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
+      if (row.id === "sync-pull") {
+        const result = await getSyncService().pull()
+        await options.appendLogLines([
+          logPrefix,
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
+      if (row.id === "sync-push") {
+        const result = await getSyncService().push()
+        await options.appendLogLines([
+          logPrefix,
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
       if (row.id === "export") {
         try {
           const { filename } = await exportUiSettingsZip(current.draft)
@@ -490,6 +539,14 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
 
   const onSettingPickerApplyEdit = useCallback(
     async (field: SettingEditField, value: string) => {
+      if (field === "sync-display-name") {
+        const result = await getSyncService().setDisplayName(value)
+        await options.appendLogLines([
+          "setting -list",
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
       options.setSettingListPicker(options.sessionId, (current) => {
         if (!current) {
           return null

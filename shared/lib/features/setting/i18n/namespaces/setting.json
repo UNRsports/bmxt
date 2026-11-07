@@ -471,6 +471,74 @@
     "ja": "snapshot-vault-pick-dir — Obsidian Vault フォルダを選び直す",
     "en": "snapshot-vault-pick-dir — choose Obsidian vault folder again"
   },
+  "setting.picker.main.sync": {
+    "ja": "sync（Family 同期）: {value}",
+    "en": "sync (Family): {value}"
+  },
+  "setting.picker.syncStateLoading": {
+    "ja": "読み込み中…",
+    "en": "loading…"
+  },
+  "setting.picker.syncStateNamed": {
+    "ja": "{name} · {directory} · {paused}",
+    "en": "{name} · {directory} · {paused}"
+  },
+  "setting.picker.syncStateNoDir": {
+    "ja": "{name} · 作業ディレクトリ未設定 · {paused}",
+    "en": "{name} · no workdir · {paused}"
+  },
+  "setting.picker.syncPausedYes": {
+    "ja": "一時停止中",
+    "en": "paused"
+  },
+  "setting.picker.syncPausedNo": {
+    "ja": "稼働中",
+    "en": "active"
+  },
+  "setting.picker.headline.syncPanel": {
+    "ja": "setting -list · sync · ↑↓ · Enter/→ 実行 · ← 一覧",
+    "en": "setting -list · sync · ↑↓ · Enter/→ run · ← list"
+  },
+  "setting.picker.headline.syncDeviceName": {
+    "ja": "setting -list · sync 表示名 · → 編集 · ← sync",
+    "en": "setting -list · sync display name · → edit · ← sync"
+  },
+  "setting.picker.syncDeviceNameRow": {
+    "ja": "表示名: {name} — 編集",
+    "en": "display name: {name} — edit"
+  },
+  "setting.picker.detail.syncDeviceName": {
+    "ja": "表示名: {value}",
+    "en": "display name: {value}"
+  },
+  "setting.picker.syncPickDirRow": {
+    "ja": "作業ディレクトリを選ぶ（同一 PC 共有・FSA）",
+    "en": "pick sync work directory (same-PC FSA)"
+  },
+  "setting.picker.syncPauseRow": {
+    "ja": "同期を一時停止する",
+    "en": "pause sync"
+  },
+  "setting.picker.syncPauseResumeRow": {
+    "ja": "同期の一時停止を解除する",
+    "en": "resume sync"
+  },
+  "setting.picker.syncInviteRow": {
+    "ja": "Family 招待トークンを表示（相手は sync -pair <invite>）",
+    "en": "show Family invite token (peer: sync -pair <invite>)"
+  },
+  "setting.picker.syncPullRow": {
+    "ja": "作業ディレクトリから pull（LWW）",
+    "en": "pull from work directory (LWW)"
+  },
+  "setting.picker.syncPushRow": {
+    "ja": "作業ディレクトリへ push（LWW）",
+    "en": "push to work directory (LWW)"
+  },
+  "setting.picker.editAria.syncDeviceName": {
+    "ja": "sync 表示名",
+    "en": "sync display name"
+  },
   "setting.picker.headline.snapshotStorageMode": {
     "ja": "setting -list · snapshot 保存先 · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · snapshot storage · ↑↓ · Enter/→ select · ← list"

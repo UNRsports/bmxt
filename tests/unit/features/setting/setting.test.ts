@@ -225,6 +225,12 @@ describe("setting list picker draft", () => {
   it("maps ime-candidate-help to imeCandidateHelp view", () => {
     assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")
   })
+  it("maps sync rows to syncPanel / syncDeviceName / immediate actions", () => {
+    assert.equal(settingMainRowTargetView("sync"), "syncPanel")
+    assert.equal(settingMainRowTargetView("sync-device-name"), "syncDeviceName")
+    assert.equal(settingMainRowTargetView("sync-pick-dir"), null)
+    assert.equal(settingMainRowTargetView("sync-pause"), null)
+  })
 })
 
 describe("setting list input", () => {

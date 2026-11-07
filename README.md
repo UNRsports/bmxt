@@ -273,7 +273,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings (locale, appearance, storage mode summary) |
-| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** workdir/pause/invite/pull/push, export/import zip); appearance/locale apply after **`> save setting`**; sync/storage/snapshot actions apply immediately |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
@@ -1752,7 +1752,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・zip 入出力）。**`> save setting`** で確定 |
+| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync**・zip 入出力）。外観／言語は **`> save setting`** で確定。sync／storage／snapshot 操作は即時適用 |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |

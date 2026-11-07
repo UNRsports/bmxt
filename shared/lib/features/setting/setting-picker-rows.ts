@@ -21,6 +21,7 @@ import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
 import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
 import { formatSnapshotVaultDisplayName } from "../snapshot/snapshot-vault-layout"
+import type { SyncPickerSummary } from "../sync/facade/sync-picker-summary.ts"
 
 export type SettingPickerRowId =
   | "language"
@@ -58,6 +59,13 @@ export type SettingPickerRowId =
   | "snapshot-storage-bundled"
   | "snapshot-storage-vault"
   | "snapshot-vault-pick-dir"
+  | "sync"
+  | "sync-device-name"
+  | "sync-pick-dir"
+  | "sync-pause"
+  | "sync-invite"
+  | "sync-pull"
+  | "sync-push"
   | "export"
   | "import"
   | "locale-ja"
@@ -141,7 +149,8 @@ export function settingPickerInitialHi(
   storageConfig?: UiSettingsStorageConfig,
   snapshotStorageConfig?: SnapshotStorageConfig,
   hostUiMode: HostUiMode = "auto",
-  imeCandidateHelp = true
+  imeCandidateHelp = true,
+  _syncSummary?: SyncPickerSummary
 ): number {
   if (view === "language") {
     return locale === "en" ? 1 : 0
@@ -318,6 +327,27 @@ function snapshotStorageSummaryLabel(
   return tSetting("setting.picker.snapshotStorageBundled", locale)
 }
 
+function syncSummaryLabel(syncSummary: SyncPickerSummary | undefined, locale: UiLocale): string {
+  if (!syncSummary || syncSummary.deviceId.length === 0) {
+    return tSetting("setting.picker.syncStateLoading", locale)
+  }
+  const paused = syncSummary.workdir.paused
+    ? tSetting("setting.picker.syncPausedYes", locale)
+    : tSetting("setting.picker.syncPausedNo", locale)
+  const dir = syncSummary.workdir.directoryName
+  if (dir) {
+    return tSetting("setting.picker.syncStateNamed", locale, {
+      name: syncSummary.displayName,
+      directory: dir,
+      paused
+    })
+  }
+  return tSetting("setting.picker.syncStateNoDir", locale, {
+    name: syncSummary.displayName,
+    paused
+  })
+}
+
 export function buildSettingPickerRows(
   view: SettingListPickerView,
   locale: UiLocale,
@@ -325,7 +355,8 @@ export function buildSettingPickerRows(
   storageConfig?: UiSettingsStorageConfig,
   snapshotStorageConfig?: SnapshotStorageConfig,
   hostUiMode: HostUiMode = "auto",
-  imeCandidateHelp = true
+  imeCandidateHelp = true,
+  syncSummary?: SyncPickerSummary
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
   const resolvedPicker = resolvePickerAppearance(appearance)
@@ -388,6 +419,51 @@ export function buildSettingPickerRows(
       {
         id: "snapshot-storage-vault",
         line: tSetting("setting.picker.snapshotStorageVaultRow", locale)
+      }
+    ]
+  }
+
+  if (view === "syncPanel") {
+    const pauseLine = syncSummary?.workdir.paused
+      ? tSetting("setting.picker.syncPauseResumeRow", locale)
+      : tSetting("setting.picker.syncPauseRow", locale)
+    return [
+      {
+        id: "sync-device-name",
+        line: tSetting("setting.picker.syncDeviceNameRow", locale, {
+          name: syncSummary?.displayName || "-"
+        })
+      },
+      {
+        id: "sync-pick-dir",
+        line: tSetting("setting.picker.syncPickDirRow", locale)
+      },
+      {
+        id: "sync-pause",
+        line: pauseLine
+      },
+      {
+        id: "sync-invite",
+        line: tSetting("setting.picker.syncInviteRow", locale)
+      },
+      {
+        id: "sync-pull",
+        line: tSetting("setting.picker.syncPullRow", locale)
+      },
+      {
+        id: "sync-push",
+        line: tSetting("setting.picker.syncPushRow", locale)
+      }
+    ]
+  }
+
+  if (view === "syncDeviceName") {
+    return [
+      {
+        id: "sync-device-name",
+        line: tSetting("setting.picker.detail.syncDeviceName", locale, {
+          value: syncSummary?.displayName || "-"
+        })
       }
     ]
   }
@@ -583,6 +659,13 @@ export function buildSettingPickerRows(
     })
   }
 
+  rows.push({
+    id: "sync",
+    line: tSetting("setting.picker.main.sync", locale, {
+      value: syncSummaryLabel(syncSummary, locale)
+    })
+  })
+
   rows.push(
     {
       id: "reset-default",
@@ -632,6 +715,10 @@ export function settingPickerHeadline(
             ? "setting.picker.headline.storageMode"
             : view === "snapshotStorageMode"
               ? "setting.picker.headline.snapshotStorageMode"
+              : view === "syncPanel"
+                ? "setting.picker.headline.syncPanel"
+                : view === "syncDeviceName"
+                  ? "setting.picker.headline.syncDeviceName"
               : view === "fontSize"
             ? "setting.picker.headline.fontSize"
             : view === "pickerFontSize"
@@ -686,6 +773,9 @@ export function settingPickerEditAriaLabel(
       view === "fontPicker" ? "setting.picker.editAria.fontPicker" : "setting.picker.editAria.font",
       locale
     )
+  }
+  if (view === "syncDeviceName") {
+    return tSetting("setting.picker.editAria.syncDeviceName", locale)
   }
   return tSetting("setting.picker.editAria.generic", locale)
 }

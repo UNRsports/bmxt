@@ -4,6 +4,7 @@ import { verticalNavDirection } from "../side-picker/interaction/picker-vertical
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
 import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
+import type { SyncPickerSummary } from "../sync/facade/sync-picker-summary.ts"
 import { settingPickerGoToView, type SettingListPickerState } from "./setting-list-picker-state"
 import {
   isArrowLeft,
@@ -41,6 +42,7 @@ export type UseSettingPickerKeyboardOptions = {
   callbacks: SettingPickerKeyboardCallbacks
   storageConfig?: UiSettingsStorageConfig
   snapshotStorageConfig?: SnapshotStorageConfig
+  syncSummary?: SyncPickerSummary
 }
 
 export function useSettingPickerKeyboard({
@@ -53,7 +55,8 @@ export function useSettingPickerKeyboard({
   sessionId,
   callbacks,
   storageConfig,
-  snapshotStorageConfig
+  snapshotStorageConfig,
+  syncSummary
 }: UseSettingPickerKeyboardOptions): {
   onWindowKeydownCapture: (ev: KeyboardEvent) => void
   onInputKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
@@ -124,7 +127,8 @@ export function useSettingPickerKeyboard({
           storageConfig,
           snapshotStorageConfig,
           state.draft.hostUiMode,
-          state.draft.imeCandidateHelp
+          state.draft.imeCandidateHelp,
+          syncSummary
         )
       )
       return
@@ -141,7 +145,6 @@ export function useSettingPickerKeyboard({
     }
   }, [
     callbacks,
-    goMain,
     hi,
     onStateChange,
     rows,
@@ -154,8 +157,18 @@ export function useSettingPickerKeyboard({
     state.draft.hostUiMode,
     state.draft.imeCandidateHelp,
     storageConfig,
-    snapshotStorageConfig
+    snapshotStorageConfig,
+    syncSummary
   ])
+
+  const leaveNonMainView = useCallback((): void => {
+    if (state.view === "syncDeviceName") {
+      onStateChange(settingPickerGoToView("syncPanel", state))
+      setHi(0)
+      return
+    }
+    goMain()
+  }, [goMain, onStateChange, setHi, state])
 
   const handleArrowLeft = useCallback((): void => {
     if (state.editing) {
@@ -163,27 +176,30 @@ export function useSettingPickerKeyboard({
       return
     }
     if (state.view !== "main") {
-      goMain()
+      leaveNonMainView()
     }
-  }, [cancelEditing, goMain, state.editing, state.view])
+  }, [cancelEditing, leaveNonMainView, state.editing, state.view])
 
   const commitEdit = useCallback(async (): Promise<boolean> => {
     if (!state.editing) {
       return false
     }
-    const view = state.view
-    if (view !== "fg" && view !== "bgColor" && view !== "font") {
+    if (!isSettingDetailView(state.view)) {
       return false
     }
-    const field = settingEditFieldForView(view)
+    const field = settingEditFieldForView(state.view)
     const value = validateSettingEditValue(field, state.editDraft)
     if (!value) {
       callbacks.onEditInvalid()
       return true
     }
     await callbacks.onApplyEdit(field, value)
+    if (state.view === "syncDeviceName") {
+      onStateChange(settingPickerGoToView("syncPanel", { ...state, editing: false, editDraft: "" }))
+      setHi(0)
+    }
     return true
-  }, [callbacks, state.editDraft, state.editing, state.view])
+  }, [callbacks, onStateChange, setHi, state])
 
   const applyListChoice = useCallback(async (): Promise<void> => {
     const row = rows[hi]
@@ -272,7 +288,7 @@ export function useSettingPickerKeyboard({
         if (state.view !== "main") {
           ev.preventDefault()
           ev.stopPropagation()
-          goMain()
+          leaveNonMainView()
           return
         }
         ev.preventDefault()
@@ -283,11 +299,11 @@ export function useSettingPickerKeyboard({
     [
       cancelEditing,
       callbacks,
-      goMain,
       handleArrowLeft,
       handleArrowRight,
       handleEnter,
       keyboardActive,
+      leaveNonMainView,
       runVerticalNav,
       sessionId,
       state.editing,
@@ -323,7 +339,7 @@ export function useSettingPickerKeyboard({
           return
         }
         if (state.view !== "main") {
-          goMain()
+          leaveNonMainView()
           return
         }
         callbacks.onReturnToPrompt?.()
@@ -332,9 +348,9 @@ export function useSettingPickerKeyboard({
     [
       callbacks,
       cancelEditing,
-      goMain,
       handleEnter,
       keyboardActive,
+      leaveNonMainView,
       runVerticalNav,
       state.editing,
       state.view

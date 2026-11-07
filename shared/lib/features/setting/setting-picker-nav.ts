@@ -16,6 +16,10 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "storageMode"
     case "snapshot-storage":
       return "snapshotStorageMode"
+    case "sync":
+      return "syncPanel"
+    case "sync-device-name":
+      return "syncDeviceName"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -45,6 +49,11 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     case "storage-pick-dir":
     case "storage-reload":
     case "snapshot-vault-pick-dir":
+    case "sync-pick-dir":
+    case "sync-pause":
+    case "sync-invite":
+    case "sync-pull":
+    case "sync-push":
     case "export":
     case "import":
     case "save":
@@ -63,6 +72,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "hostUi" ||
     view === "storageMode" ||
     view === "snapshotStorageMode" ||
+    view === "syncPanel" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||
@@ -77,7 +87,8 @@ export function isSettingGlobalDetailView(view: SettingListPickerView): boolean 
     view === "bgColor" ||
     view === "searchHitHighlight" ||
     view === "searchJumpHighlight" ||
-    view === "font"
+    view === "font" ||
+    view === "syncDeviceName"
   )
 }
 

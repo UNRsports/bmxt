@@ -21,6 +21,7 @@ import { SettingPickerPreview } from "./setting-picker-preview"
 import { resolveSettingPickerPreviewAppearance } from "./setting-picker-edit"
 import { useUiSettingsStorageConfig } from "./use-ui-settings-storage-config"
 import { useSnapshotStorageConfig } from "../snapshot/use-snapshot-storage-config"
+import { useSyncPickerSummary } from "../sync/facade/use-sync-picker-summary.ts"
 
 export type SettingPickerWrapperProps = {
   state: SettingListPickerState
@@ -49,6 +50,7 @@ export function SettingPickerWrapper({
 }: SettingPickerWrapperProps) {
   const storageConfig = useUiSettingsStorageConfig()
   const snapshotStorageConfig = useSnapshotStorageConfig()
+  const syncSummary = useSyncPickerSummary()
   const { draft } = state
   const locale = draft.locale
   const appearance = draft.appearance
@@ -65,7 +67,8 @@ export function SettingPickerWrapper({
         storageConfig,
         snapshotStorageConfig,
         draft.hostUiMode,
-        draft.imeCandidateHelp
+        draft.imeCandidateHelp,
+        syncSummary
       ),
     [
       state.view,
@@ -74,7 +77,8 @@ export function SettingPickerWrapper({
       storageConfig,
       snapshotStorageConfig,
       draft.hostUiMode,
-      draft.imeCandidateHelp
+      draft.imeCandidateHelp,
+      syncSummary
     ]
   )
   const lines = useMemo(() => rows.map((row) => row.line), [rows])
@@ -104,8 +108,11 @@ export function SettingPickerWrapper({
     if (state.view === "font" || state.view === "fontPicker") {
       return layerValues.fontFamily ?? resolved.fontFamily
     }
+    if (state.view === "syncDeviceName") {
+      return syncSummary.displayName
+    }
     return ""
-  }, [appearance, state.view])
+  }, [appearance, state.view, syncSummary.displayName])
 
   const keyboardCallbacks = useMemo(
     () => ({
@@ -141,6 +148,7 @@ export function SettingPickerWrapper({
       preview={preview}
       storageConfig={storageConfig}
       snapshotStorageConfig={snapshotStorageConfig}
+      syncSummary={syncSummary}
     />
   )
 }
