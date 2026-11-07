@@ -35,12 +35,17 @@ export function hostCommands(browser: HostBrowser) {
   const chromeKeys = {
     launch: { default: "Shift+Alt+C", mac: "Shift+Alt+C" },
     reset: { default: "Shift+Alt+R", mac: "Shift+Alt+R" },
-    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" }
+    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" },
+    // EN: Yank / paste apply for sync -connect codes (not global — BMXt / browser focus).
+    handshakeCopy: { default: "Alt+Shift+Y", mac: "Alt+Shift+Y" },
+    handshakePaste: { default: "Alt+Shift+V", mac: "Alt+Shift+V" }
   }
   const firefoxKeys = {
     launch: { default: "Alt+Shift+C", mac: "Alt+Shift+C" },
     reset: { default: "Alt+Shift+R", mac: "Alt+Shift+R" },
-    toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" }
+    toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" },
+    handshakeCopy: { default: "Alt+Shift+Y", mac: "Alt+Shift+Y" },
+    handshakePaste: { default: "Alt+Shift+V", mac: "Alt+Shift+V" }
   }
   const keys = browser === "chrome" ? chromeKeys : firefoxKeys
 
@@ -56,12 +61,23 @@ export function hostCommands(browser: HostBrowser) {
     suggested_key: keys.toggleFloat,
     description: "__MSG_commandToggleBmxtFloat__"
   }
+  // EN: Not global — enough when BMXt UI (or browser) is focused; user-rebindable in browser settings.
+  const handshakeCopy = {
+    suggested_key: keys.handshakeCopy,
+    description: "__MSG_commandSyncHandshakeCopy__"
+  }
+  const handshakePaste = {
+    suggested_key: keys.handshakePaste,
+    description: "__MSG_commandSyncHandshakePaste__"
+  }
 
   if (browser === "chrome") {
     return {
       "launch-bmxt": { ...launch, global: true },
       "reset-bmxt": { ...reset, global: true },
-      "toggle-bmxt-float": { ...toggleFloat, global: true }
+      "toggle-bmxt-float": { ...toggleFloat, global: true },
+      "sync-handshake-copy": handshakeCopy,
+      "sync-handshake-paste": handshakePaste
     }
   }
 
@@ -69,7 +85,9 @@ export function hostCommands(browser: HostBrowser) {
   return {
     "launch-bmxt": launch,
     "reset-bmxt": reset,
-    "toggle-bmxt-float": toggleFloat
+    "toggle-bmxt-float": toggleFloat,
+    "sync-handshake-copy": handshakeCopy,
+    "sync-handshake-paste": handshakePaste
   }
 }
 

@@ -20,23 +20,52 @@ function stringScalar(value: ListFieldValue | undefined, fallback = ""): string 
   return String(value)
 }
 
+function isRemoteRecord(record: ListRecord): boolean {
+  return record.fields.remote === true
+}
+
+function operableTabId(record: ListRecord): BmxtRuleScalar | null {
+  if (isRemoteRecord(record)) {
+    return null
+  }
+  return toScalar(record.fields.tabId) ?? null
+}
+
+function deviceFields(record: ListRecord): Record<string, BmxtRuleScalar> {
+  const out: Record<string, BmxtRuleScalar> = {}
+  const deviceId = record.fields.deviceId
+  if (typeof deviceId === "string" && deviceId.length > 0) {
+    out.deviceId = deviceId
+  }
+  const deviceName = record.fields.deviceName
+  if (typeof deviceName === "string" && deviceName.length > 0) {
+    out.deviceName = deviceName
+  }
+  if (isRemoteRecord(record)) {
+    out.remote = true
+  }
+  return out
+}
+
 function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
   switch (record.kind) {
     case "tabs.tab":
       return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.tab"], {
         url: stringScalar(record.fields.url),
         pageTitle: stringScalar(record.fields.title),
-        tabId: toScalar(record.fields.tabId) ?? null,
+        tabId: operableTabId(record),
         windowId: toScalar(record.fields.windowId) ?? null,
         groupId: toScalar(record.fields.groupId) ?? null,
-        active: toScalar(record.fields.active) ?? false
+        active: toScalar(record.fields.active) ?? false,
+        ...deviceFields(record)
       })
     case "tabs.window":
       return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.window"], {
         pageTitle: stringScalar(record.fields.title),
         windowId: toScalar(record.fields.windowId) ?? null,
         focused: toScalar(record.fields.focused) ?? false,
-        url: ""
+        url: "",
+        ...deviceFields(record)
       })
     case "tabs.group":
       return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.group"], {
@@ -44,7 +73,8 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         label: stringScalar(record.fields.label),
         windowId: toScalar(record.fields.windowId) ?? null,
         groupId: toScalar(record.fields.groupId) ?? null,
-        url: ""
+        url: "",
+        ...deviceFields(record)
       })
     case "search.hit": {
       const source = stringScalar(record.fields.source, "search")
@@ -54,9 +84,10 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         pageTitle: stringScalar(record.fields.title),
         index: toScalar(record.fields.index) ?? null,
         source,
-        tabId: toScalar(record.fields.tabId) ?? null,
+        tabId: operableTabId(record),
         hitCount: toScalar(record.fields.hitCount) ?? 0,
-        pattern: stringScalar(record.fields.pattern)
+        pattern: stringScalar(record.fields.pattern),
+        ...deviceFields(record)
       }
       return bmxtRuleRecord(kind, fields)
     }

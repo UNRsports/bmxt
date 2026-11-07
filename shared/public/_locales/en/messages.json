@@ -18,5 +18,13 @@
   "commandToggleBmxtFloat": {
     "message": "Toggle BMXt float prompt on the current page",
     "description": "Label for the global keyboard shortcut that shows or hides the in-page BMXt float prompt on the active tab."
+  },
+  "commandSyncHandshakeCopy": {
+    "message": "Copy pending sync handshake code",
+    "description": "Label for the shortcut that copies the pending Family-sealed WebRTC handshake code during sync -connect."
+  },
+  "commandSyncHandshakePaste": {
+    "message": "Paste and apply sync handshake code",
+    "description": "Label for the shortcut that reads the clipboard and applies a Family-sealed WebRTC handshake code during sync -connect."
   }
 }

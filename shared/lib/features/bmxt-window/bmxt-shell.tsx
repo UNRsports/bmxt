@@ -54,6 +54,7 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
+import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
   deleteNavReloadTabBlockAtCursor,
@@ -1474,6 +1475,11 @@ export function BmxtShell({
           onPickTokenIndex={onPickTokenIndex}
           onPickSessionIndex={onPickSessionIndex}
           onDismissOutside={onDismissOutside}
+        />
+        <SyncHandshakeBar
+          locale={uiSettings.locale}
+          appendLogLines={appendLogLines}
+          focusPrompt={focusPrompt}
         />
         {showExtraKeys ? (
           <ExtraKeysBar

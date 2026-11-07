@@ -74,7 +74,7 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [--device <id>|--peers] [<pattern>] | search -exit -list | search help",
       "subcommands": [
         {
           "head": "-list",
@@ -84,7 +84,9 @@
             "--bookmark",
             "--page",
             "--snapshot",
-            "--unlimit"
+            "--unlimit",
+            "--device",
+            "--peers"
           ],
           "tail": "rest"
         },
@@ -135,14 +137,16 @@
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
+      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": [
-            "-url"
+            "-url",
+            "--device",
+            "--peers"
           ],
-          "tail": "none"
+          "tail": "rest"
         },
         {
           "head": "-exit",
@@ -329,12 +333,13 @@
       "module": "sync",
       "canonicalName": "sync",
       "aliases": [],
-      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
+      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
       "subcommands": [
         { "head": "-setup", "tail": "none" },
         { "head": "-status", "tail": "none" },
         { "head": "-pair", "tail": "rest" },
         { "head": "-members", "tail": "none" },
+        { "head": "-connect", "tail": "rest" },
         { "head": "-offer", "tail": "none" },
         { "head": "-answer", "tail": "rest" },
         { "head": "-accept", "tail": "rest" },
@@ -569,7 +574,9 @@
       "rustVariant": "TabsList",
       "shape": "record",
       "fields": {
-        "show_url": "string"
+        "show_url": "string",
+        "device_scope": "string",
+        "device_id": "string"
       },
       "tsHandlerFile": "tabs-list",
       "tsHandlerExport": "applyTabsListEffect"
@@ -728,6 +735,14 @@
       "fields": {
         "device_id": "string",
         "payload": "string"
+      }
+    },
+    {
+      "kind": "sync_connect",
+      "rustVariant": "SyncConnect",
+      "shape": "record",
+      "fields": {
+        "device_id": "string"
       }
     },
     {

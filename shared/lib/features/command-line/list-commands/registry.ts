@@ -26,7 +26,7 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
       if (parsed === null) {
         return null
       }
-      return { showUrl: parsed.showUrl }
+      return { showUrl: parsed.showUrl, scope: parsed.scope }
     }
   },
   {
@@ -79,7 +79,11 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
       if (parsed === null) {
         return null
       }
-      return { dispatchLine: parsed.dispatchLine }
+      return {
+        dispatchLine: parsed.dispatchLine,
+        peerDispatchLine: parsed.peerDispatchLine,
+        scope: parsed.scope
+      }
     }
   }
 ] as const

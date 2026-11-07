@@ -122,6 +122,42 @@ export type SyncSignalPayload =
       candidate: string
     }
 
+/** EN: Portable tab-list rows over the command bus (IDs are peer-local). */
+export type SyncRemoteTabRow =
+  | {
+      kind: "window"
+      windowId: number
+      title: string
+      focused: boolean
+    }
+  | {
+      kind: "group"
+      windowId: number
+      groupId: number | null
+      label: string
+    }
+  | {
+      kind: "tab"
+      tabId: number
+      windowId: number
+      groupId: number | null
+      title: string
+      url: string
+      active: boolean
+    }
+
+/** EN: Portable search hit over the command bus. */
+export type SyncRemoteSearchHit = {
+  index: number
+  source: string
+  title: string
+  url: string
+  tabId: number | null
+  hitCount: number
+  pattern: string
+  windowId: number | null
+}
+
 export type SyncBusCommand =
   | {
       type: "ping"
@@ -150,6 +186,36 @@ export type SyncBusCommand =
       from: SyncDeviceId
       ok: boolean
       detail: string | null
+    }
+  | {
+      type: "tabs_list"
+      id: string
+      from: SyncDeviceId
+      showUrl: boolean
+    }
+  | {
+      type: "tabs_list_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      rows: SyncRemoteTabRow[]
+    }
+  | {
+      type: "search_query"
+      id: string
+      from: SyncDeviceId
+      dispatchLine: string
+    }
+  | {
+      type: "search_query_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      hits: SyncRemoteSearchHit[]
     }
 
 export type SyncInviteV1 = {

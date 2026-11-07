@@ -49,6 +49,7 @@ import {
   applySyncUiLog,
   runSyncAccept,
   runSyncAnswer,
+  runSyncConnect,
   runSyncMembers,
   runSyncOffer,
   runSyncOpen,
@@ -223,6 +224,8 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySyncPair(ctx, action.invite)
     case "sync_members":
       return applySyncMembers(ctx)
+    case "sync_connect":
+      return applySyncConnect(ctx, action.device_id)
     case "sync_offer":
       return applySyncOffer(ctx)
     case "sync_answer":
@@ -284,6 +287,8 @@ export async function applyUiActionForSegment(
       return syncUiSegmentOutcome(ctx.locale, () => runSyncPair(action.invite))
     case "sync_members":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncMembers())
+    case "sync_connect":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncConnect(action.device_id))
     case "sync_offer":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncOffer())
     case "sync_answer":
@@ -335,6 +340,12 @@ function applySyncPair(ctx: CommandDispatchContext, invite: string): boolean {
 function applySyncMembers(ctx: CommandDispatchContext): boolean {
   finishCommand(ctx)
   void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncMembers())
+  return true
+}
+
+function applySyncConnect(ctx: CommandDispatchContext, deviceId: string): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncConnect(deviceId))
   return true
 }
 

@@ -3,8 +3,17 @@ import { loadOrCreateDeviceIdentity } from "../device/device-identity"
 import type { CommandBusStabilizer } from "../stabilizers/command-bus"
 import type { CommandQueueStabilizer } from "../stabilizers/command-queue"
 import type { PeerHostStabilizer } from "../stabilizers/peer-host"
-import type { SyncBusCommand, SyncConnectionState, SyncDeviceId } from "../types"
+import type {
+  SyncBusCommand,
+  SyncConnectionState,
+  SyncDeviceId,
+  SyncRemoteSearchHit,
+  SyncRemoteTabRow
+} from "../types"
 import { applyRemoteOpenTabs } from "../bus/remote-open"
+import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
+import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
+import { SYNC_REMOTE_QUERY_TIMEOUT_MS } from "../bus/remote-query-limits"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 
 function mapPeerState(raw: string): SyncConnectionState {
@@ -20,25 +29,65 @@ function mapPeerState(raw: string): SyncConnectionState {
   return "idle"
 }
 
+type PendingOpen = {
+  kind: "open"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
+type PendingAck = {
+  kind: "ack"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
+type PendingTabsList = {
+  kind: "tabs_list"
+  at: number
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    rows: SyncRemoteTabRow[]
+    rttMs: number | null
+  }) => void
+}
+
+type PendingSearch = {
+  kind: "search_query"
+  at: number
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    hits: SyncRemoteSearchHit[]
+    rttMs: number | null
+  }) => void
+}
+
+type PendingWaiter = PendingOpen | PendingAck | PendingTabsList | PendingSearch
+
 export function createWebrtcCommandBusStabilizer(
   peerHost: PeerHostStabilizer,
   commandQueue: CommandQueueStabilizer
 ): CommandBusStabilizer {
   const states = new Map<SyncDeviceId, SyncConnectionState>()
   let commandHandler: ((command: SyncBusCommand) => void | Promise<void>) | null = null
-  const pendingAcks = new Map<
-    string,
-    {
-      resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
-      at: number
+  const pending = new Map<string, PendingWaiter>()
+
+  async function replyTo(
+    remoteDeviceId: SyncDeviceId,
+    command: SyncBusCommand
+  ): Promise<void> {
+    const sent = await peerHost.sendCommand(remoteDeviceId, command)
+    if (!sent) {
+      await commandQueue.enqueue(remoteDeviceId, command)
     }
-  >()
+  }
 
   async function handleIncoming(command: SyncBusCommand): Promise<void> {
     if (command.type === "ack") {
-      const waiter = pendingAcks.get(command.replyTo)
-      if (waiter) {
-        pendingAcks.delete(command.replyTo)
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "ack") {
+        pending.delete(command.replyTo)
         waiter.resolve({
           ok: true,
           detail: null,
@@ -54,10 +103,7 @@ export function createWebrtcCommandBusStabilizer(
         from: device.deviceId,
         at: Date.now()
       }
-      const sent = await peerHost.sendCommand(command.from, ack)
-      if (!sent) {
-        await commandQueue.enqueue(command.from, ack)
-      }
+      await replyTo(command.from, ack)
     } else if (command.type === "open_tabs") {
       const result = await applyRemoteOpenTabs({
         urls: command.urls,
@@ -73,17 +119,65 @@ export function createWebrtcCommandBusStabilizer(
         ok: result.ok,
         detail: result.detail
       }
-      const sent = await peerHost.sendCommand(command.from, reply)
-      if (!sent) {
-        await commandQueue.enqueue(command.from, reply)
-      }
+      await replyTo(command.from, reply)
     } else if (command.type === "open_tabs_result") {
-      const waiter = pendingAcks.get(command.replyTo)
-      if (waiter) {
-        pendingAcks.delete(command.replyTo)
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "open") {
+        pending.delete(command.replyTo)
         waiter.resolve({
           ok: command.ok,
           detail: command.detail,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "tabs_list") {
+      const result = await applyRemoteTabsList({ locale: getRunLocale() })
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "tabs_list_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        rows: result.rows
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "tabs_list_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "tabs_list") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          rows: command.rows,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "search_query") {
+      const result = await applyRemoteSearchQuery({
+        dispatchLine: command.dispatchLine,
+        locale: getRunLocale()
+      })
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "search_query_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        hits: result.hits
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "search_query_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "search_query") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          hits: command.hits,
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
       }
@@ -101,6 +195,25 @@ export function createWebrtcCommandBusStabilizer(
       states.set(deviceId, mapPeerState(state))
     }
   })
+
+  function armTimeout(id: string, timeoutMs: number): void {
+    setTimeout(() => {
+      const waiter = pending.get(id)
+      if (!waiter) {
+        return
+      }
+      pending.delete(id)
+      if (waiter.kind === "tabs_list") {
+        waiter.resolve({ ok: false, detail: "timeout", rows: [], rttMs: null })
+        return
+      }
+      if (waiter.kind === "search_query") {
+        waiter.resolve({ ok: false, detail: "timeout", hits: [], rttMs: null })
+        return
+      }
+      waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
+    }, timeoutMs)
+  }
 
   return {
     async connect(remoteDeviceId: SyncDeviceId) {
@@ -130,13 +243,8 @@ export function createWebrtcCommandBusStabilizer(
         detail: string | null
         rttMs: number | null
       }>((resolve) => {
-        pendingAcks.set(id, { resolve, at: Date.now() })
-        setTimeout(() => {
-          if (pendingAcks.has(id)) {
-            pendingAcks.delete(id)
-            resolve({ ok: false, detail: "timeout", rttMs: null })
-          }
-        }, 8000)
+        pending.set(id, { kind: "ack", resolve, at: Date.now() })
+        armTimeout(id, 8000)
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
@@ -162,13 +270,8 @@ export function createWebrtcCommandBusStabilizer(
         detail: string | null
         rttMs: number | null
       }>((resolve) => {
-        pendingAcks.set(id, { resolve, at: Date.now() })
-        setTimeout(() => {
-          if (pendingAcks.has(id)) {
-            pendingAcks.delete(id)
-            resolve({ ok: false, detail: "timeout", rttMs: null })
-          }
-        }, 15_000)
+        pending.set(id, { kind: "open", resolve, at: Date.now() })
+        armTimeout(id, 15_000)
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
@@ -178,6 +281,58 @@ export function createWebrtcCommandBusStabilizer(
       }
       const result = await resultPromise
       return { ok: result.ok, detail: result.detail }
+    },
+
+    async listTabs(remoteDeviceId, showUrl) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "tabs_list",
+        id,
+        from: device.deviceId,
+        showUrl
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        rows: SyncRemoteTabRow[]
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "tabs_list", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        return { ok: false, detail: "not_connected", rows: [] }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, rows: result.rows }
+    },
+
+    async searchQuery(remoteDeviceId, dispatchLine) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "search_query",
+        id,
+        from: device.deviceId,
+        dispatchLine
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        hits: SyncRemoteSearchHit[]
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "search_query", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        return { ok: false, detail: "not_connected", hits: [] }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, hits: result.hits }
     },
 
     getState(remoteDeviceId) {

@@ -242,8 +242,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `clear` | Clear logs |
 | `exit` | Close the **active terminal session**; when it is the **last** session, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `tab` | Show available options, then restore prompt to `tab ` for option input |
-| `tab -list [-url]` | List open tabs as a plain tree (IDs included); `-url` adds URLs |
+| `tab -list [-url] [--device <id>\|--peers]` | List open tabs as a plain tree (IDs included); `-url` adds URLs; `--peers` merges connected Family peers |
 | `tab -list [-url] | browse` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
+| `tab -list \| sync -open <deviceId>` | Copy listed tabs (group titles preserved) to a connected peer |
 | `tab -exit -list` | Close tab picker column in this session (including `group new` picker) |
 | `tab -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved in `chrome.storage.local` |
 | `tab -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
@@ -254,7 +255,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `dom -list … | browse` | Open a read-only DOM picker column (same picker chrome as `search -list … | browse`); mode **`--normal`** or **`--with`**; flavor **`--html`** or **`--react`** |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). Case-insensitive substring (no regex in v1) |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). `--peers` merges connected Family peers. Case-insensitive substring (no regex in v1) |
 | `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open **https** tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
@@ -285,13 +286,15 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session -setting-name [name]` | Rename the current session (bare: prompt pre-filled with current display name) |
 | `session <n>` | Switch to terminal session number **n** (1-based) |
 | `sync` | Print usage and restore the prompt to `sync ` (Family local sync — see **[`sync`](#sync)**) |
-| `sync -setup` | Guided prompt dialogue: Family → role → paste handshake codes (recommended) |
+| `sync -setup` | Guided prompt dialogue: Family → role → paste handshake codes (recommended for first join) |
+| `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; Copy/Paste bar + rebindable shortcuts) |
 | `sync -status` | Device id, Family, members, WebRTC connection state |
 | `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite |
 | `sync -members` | List Family roster + discovered devices |
 | `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Manual copy-paste WebRTC handshake (`bmxt-rtc1.` Family-sealed) |
 | `sync -ping <deviceId>` | Ping a connected peer over the DataChannel |
 | `sync -open <deviceId> <url…> [--group <title>]` | Remote tab / group open over the command bus (in-memory queue if peer briefly unavailable) |
+| `… \| sync -open <deviceId>` | Pipe consumer: copy stdin URLs/groups to the peer (same as open, no local close) |
 | `close` / `c <tabId>` | Close tab by id (no confirm) |
 | `close` / `c` (pipe) | With pipe input from `tab -list`, close every listed tab (see **Pipes** below) |
 | `back` / `forward` / `reload` (pipe) | Same producer → batch history / reload on listed tabs |
@@ -696,11 +699,11 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **6b** | Same LAN · Family members | Manual / QR discovery; direct connect preferred (future) |
 | **6c** | Same PC (protocol can extend later) | **Copy-paste handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
 
-**Current capability after connect:** `sync -ping` and `sync -open` on the peer. Cross-browser **`tab` / `search`** over the bus is **not shipped yet**; on the **same PC** it can be added as RPC on this architecture (no Firebase / STUN / TURN). **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
+**Current capability after connect:** `sync -ping` and `sync -open` on the peer; cross-browser **`tab -list` / `search -list`** via `--device <id>` / `--peers` (DataChannel RPC); copy send with `tab -list | sync -open <deviceId>` (group titles preserved). **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
 
 **Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
-**UX:** Prefer **`sync -setup`** (prompt dialogue). The setting picker sync panel only shows a setup guide and display-name edit — paste long codes at the prompt, not in the picker.
+**UX:** First Family join: **`sync -setup`** (or `-pair`). After disconnect: both sides **`sync -connect <peerDeviceId>`**, then use the prompt **Copy / Paste** buttons (or browser-rebindable `sync-handshake-copy` / `sync-handshake-paste` shortcuts). The setting picker sync panel only shows a setup guide and display-name edit — paste long codes at the prompt, not in the picker.
 
 **Module layout:** **`shared/lib/features/sync/`**. Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue).
 
@@ -1724,8 +1727,9 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `clear` | ログをクリア |
 | `exit` | **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**なら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |
-| `tab -list [-url]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL 行付き） |
+| `tab -list [-url] [--device <id>\|--peers]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL）。`--peers` は接続ピア横断 |
 | `tab -list [-url] | browse` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応 |
+| `tab -list \| sync -open <deviceId>` | 一覧タブをグループ維持でピアへコピー送信 |
 | `tab -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
 | `tab -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。`chrome.storage.local` に保存 |
 | `tab -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
@@ -1736,7 +1740,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `dom -list … | browse` | DOM 読み取り専用ピッカー列（`search -list … | browse` と同系 UI）。mode **`--normal`**／**`--with`**、flavor **`--html`**／**`--react`** |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。部分一致（v1 正規表現なし） |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。`--peers` は接続ピア横断。部分一致（v1 正規表現なし） |
 | `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose` 用） |
@@ -1766,13 +1770,15 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
 | `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（Family ローカル同期 — **[`sync`](#sync-ja)**） |
-| `sync -setup` | プロンプト対話式セットアップ（Family → 役割 → 握手コード貼付・推奨） |
+| `sync -setup` | プロンプト対話式セットアップ（Family → 役割 → 握手コード貼付・初回推奨） |
+| `sync -connect <deviceId>` | 名簿メンバーへ再握手（役割自動・Copy/Paste バー／変更可能なショートカット） |
 | `sync -status` | device id / Family / 名簿 / WebRTC 接続状態 |
 | `sync -pair` / `sync -pair <invite>` | Family 招待表示（QR ペイロード）または参加 |
 | `sync -members` | Family 名簿と発見済みデバイス |
 | `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | 手動コピペ WebRTC 握手（`bmxt-rtc1.` Family 封印） |
 | `sync -ping <deviceId>` | 接続済みピアへ DataChannel ping |
 | `sync -open <deviceId> <url…> [--group <title>]` | コマンドバス経由の遠隔タブ／グループ open（一時不通時はメモリキュー） |
+| `… \| sync -open <deviceId>` | パイプ consumer: stdin の URL／グループをピアへコピー（元は残す） |
 | `session <n>` | ターミナルセッション番号 **n**（1 始まり）へ切り替え |
 | `close` / `c <tabId>` | タブを ID 指定で閉じる（確認なし） |
 | `close` / `c`（パイプ） | `tab -list` のパイプ入力から列挙されたタブをすべて閉じる（**パイプ** 参照） |
@@ -2125,11 +2131,11 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **6b** | 同一 LAN · Family | 手入力 / QR 発見。直結優先（将来） |
 | **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
 
-**接続後の現状:** ピアへの `sync -ping` と `sync -open`。ブラウザ横断の **`tab` / `search`** は未実装だが、**同一 PC** なら本アーキテクチャ上のコマンドバス RPC 追加で実装可能（Firebase / STUN / TURN 不要）。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
+**接続後の現状:** ピアへの `sync -ping` / `sync -open`。横断 **`tab -list` / `search -list`**（`--device` / `--peers`）と `tab -list | sync -open <deviceId>`（グループ維持のコピー送信）。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
 
 **既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
-**UX:** 推奨は **`sync -setup`**（プロンプト対話）。setting picker の sync は案内と表示名編集のみ（長いコードはピッカーではなくプロンプトへ貼付）。
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。切断後は両側で **`sync -connect <peerDeviceId>`** のあと、プロンプトの **Copy / Paste**（またはブラウザで変更可能な `sync-handshake-copy` / `sync-handshake-paste`）。setting picker の sync は案内と表示名編集のみ（長いコードはピッカーではなくプロンプトへ貼付）。
 
 **配置:** **`shared/lib/features/sync/`**。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。
 

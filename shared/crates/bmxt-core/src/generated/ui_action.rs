@@ -64,6 +64,10 @@ pub enum UiAction {
     SyncAnswer {
     code: String,
     },
+    #[serde(rename = "sync_connect")]
+    SyncConnect {
+    device_id: String,
+    },
     #[serde(rename = "sync_members")]
     SyncMembers,
     #[serde(rename = "sync_offer")]

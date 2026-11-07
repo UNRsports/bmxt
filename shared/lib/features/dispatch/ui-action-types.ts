@@ -26,4 +26,5 @@ export type UiActionIR =
   | { kind: "sync_answer"; code: string }
   | { kind: "sync_accept"; code: string }
   | { kind: "sync_open"; device_id: string; payload: string }
+  | { kind: "sync_connect"; device_id: string }
   | { kind: "sync_ping"; device_id: string }

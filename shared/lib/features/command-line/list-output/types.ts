@@ -35,5 +35,9 @@ export type ListResult = {
   meta?: {
     sourceTabId?: number
     truncatedCapture?: boolean
+    /** EN: Comma-separated device ids queried for cross-device -list. */
+    devicesQueried?: string
+    /** EN: Comma-separated device ids that failed during cross-device -list. */
+    devicesFailed?: string
   }
 }

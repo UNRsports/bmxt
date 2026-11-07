@@ -228,8 +228,8 @@
     "en": "Search list picker is opened with: search -list … | browse"
   },
   "cmd.search.usage.line1": {
-    "ja": "usage: search -list [<pattern>]   — 検索結果をプレーン一覧（既定は --all 相当）",
-    "en": "usage: search -list [<pattern>]   — plain search hits (default scopes = --all)"
+    "ja": "usage: search -list [--device <id>|--peers] [<pattern>] — 検索結果をプレーン一覧（既定は --all 相当）",
+    "en": "usage: search -list [--device <id>|--peers] [<pattern>] — plain search hits (default scopes = --all)"
   },
   "cmd.search.usage.line2": {
     "ja": "       search -list … — プレーン出力。列 UI: search -list … | browse",
@@ -484,8 +484,8 @@
     "en": "tab -setting is handled from the BMXt prompt with: tab -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tab -list [-url]   — タブ列挙（`-url` は URL）。列 UI は `tab -list | browse`",
-    "en": "usage: tab -list [-url]   — list tabs (-url: URLs). Column UI: `tab -list | browse`"
+    "ja": "usage: tab -list [-url] [--device <id>|--peers] — タブ列挙（`-url` は URL）。列 UI は `| browse`",
+    "en": "usage: tab -list [-url] [--device <id>|--peers] — list tabs (-url: URLs). Column UI: `| browse`"
   },
   "cmd.tabs.usage.line2": {
     "ja": "       tab -exit -list — この BMXt ペインのタブピッカーを閉じる",
@@ -590,6 +590,10 @@
   "cmd.sync.usage.line3": {
     "ja": "  sync -members — Family 名簿 / 発見済みピア",
     "en": "  sync -members — Family roster / discovered peers"
+  },
+  "cmd.sync.usage.line3b": {
+    "ja": "  sync -connect <deviceId> — 名簿メンバーへ再握手（役割自動・コピペ）",
+    "en": "  sync -connect <deviceId> — reconnect to a roster member (auto role · copy-paste)"
   },
   "cmd.sync.usage.line4": {
     "ja": "  sync -offer — WebRTC オファーコードを作成（相手に渡す）",
@@ -823,6 +827,14 @@
     "ja": "遠隔 open: {detail}",
     "en": "remote open: {detail}"
   },
+  "cmd.sync.list.noConnectedPeers": {
+    "ja": "接続中の Family ピアがありません（`sync -status` を確認）。ローカルのみ表示します。",
+    "en": "No connected Family peers (`sync -status`). Showing local results only."
+  },
+  "cmd.sync.list.peerFailed": {
+    "ja": "ピア一覧に失敗: {deviceId} ({detail})",
+    "en": "Peer list failed: {deviceId} ({detail})"
+  },
   "cmd.sync.connect.state": {
     "ja": "接続状態: {state}",
     "en": "connection state: {state}"
@@ -830,6 +842,74 @@
   "cmd.sync.connect.ping": {
     "ja": "ping: {detail}",
     "en": "ping: {detail}"
+  },
+  "cmd.sync.connect.badDeviceId": {
+    "ja": "error: deviceId が不正です（自分自身は指定できません）",
+    "en": "error: invalid deviceId (cannot target yourself)"
+  },
+  "cmd.sync.connect.unknownMember": {
+    "ja": "error: 名簿／発見キャッシュにない deviceId です。先に sync -pair / sync -members を確認してください。",
+    "en": "error: deviceId is not in the roster or discovery cache. Check sync -pair / sync -members first."
+  },
+  "cmd.sync.connect.role": {
+    "ja": "役割: {role}（deviceId 順で自動決定）",
+    "en": "role: {role} (auto from deviceId order)"
+  },
+  "cmd.sync.connect.peer": {
+    "ja": "相手: {detail}",
+    "en": "peer: {detail}"
+  },
+  "cmd.sync.connect.waitOffer": {
+    "ja": "相手のオファーコードを待ちます。Paste ボタン（またはショートカット）でクリップボードから適用してください。",
+    "en": "Waiting for the peer offer code. Use Paste (or the shortcut) to apply from the clipboard."
+  },
+  "cmd.sync.connect.copyThenWaitAnswer": {
+    "ja": "Copy でオファーを渡し、相手のアンサーを Paste で適用してください。",
+    "en": "Copy the offer to your peer, then Paste their answer here."
+  },
+  "cmd.sync.connect.copyThenWaitPeerAccept": {
+    "ja": "Copy でアンサーを相手へ渡してください。相手が適用すると接続が完了します。",
+    "en": "Copy the answer to your peer. Connection completes when they apply it."
+  },
+  "cmd.sync.connect.copied": {
+    "ja": "握手コードをクリップボードへコピーしました。",
+    "en": "Handshake code copied to the clipboard."
+  },
+  "cmd.sync.connect.copyIdle": {
+    "ja": "コピーできる握手コードがありません（先に sync -connect でオファー／アンサーを作成してください）。",
+    "en": "No handshake code to copy (run sync -connect and create an offer/answer first)."
+  },
+  "cmd.sync.connect.pasteIdle": {
+    "ja": "貼付待ちの接続セッションがありません（先に sync -connect <deviceId>）。",
+    "en": "No connect session waiting for paste (run sync -connect <deviceId> first)."
+  },
+  "cmd.sync.connect.clipboardReadFailed": {
+    "ja": "クリップボードを読めませんでした。権限を確認するか、プロンプトへ手動貼付して sync -answer / sync -accept を使ってください。",
+    "en": "Could not read the clipboard. Check permission, or paste manually and use sync -answer / sync -accept."
+  },
+  "cmd.sync.connect.clipboardWriteFailed": {
+    "ja": "クリップボードへ書けませんでした。下のコード行を選択してコピーしてください。",
+    "en": "Could not write to the clipboard. Select the code line below and copy it."
+  },
+  "cmd.sync.connect.clipboardNoCode": {
+    "ja": "クリップボードに bmxt-rtc1. 握手コードが見つかりません。",
+    "en": "No bmxt-rtc1. handshake code found on the clipboard."
+  },
+  "cmd.sync.connect.copyButton": {
+    "ja": "Copy",
+    "en": "Copy"
+  },
+  "cmd.sync.connect.pasteButton": {
+    "ja": "Paste",
+    "en": "Paste"
+  },
+  "cmd.sync.connect.barLabel": {
+    "ja": "同期握手のコピー／貼付",
+    "en": "Sync handshake copy / paste"
+  },
+  "cmd.sync.connect.barHint": {
+    "ja": "接続中: {name}（{role}）",
+    "en": "Connecting: {name} ({role})"
   },
   "cmd.sync.name.invalid": {
     "ja": "error: 表示名が不正です",
@@ -883,8 +963,12 @@
     "ja": "WebRTC 握手の適用に失敗しました（セッション期限切れの可能性）。もう一度 -offer からやり直してください。",
     "en": "Failed to apply WebRTC handshake (session may have expired). Start again from -offer."
   },
+  "cmd.sync.rtc.wrongAddressee": {
+    "ja": "この握手コードの宛先は別の deviceId です。",
+    "en": "This handshake code is addressed to a different deviceId."
+  },
   "cmd.sync.open.notConnected": {
-    "ja": "ピア未接続です。先に -offer / -answer / -accept で DataChannel を確立してください。",
-    "en": "Peer not connected. Establish a DataChannel with -offer / -answer / -accept first."
+    "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
+    "en": "Peer not connected. Establish a DataChannel with sync -connect <deviceId> (or -offer / -answer / -accept) first."
   }
 }

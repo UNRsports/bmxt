@@ -80,4 +80,30 @@ describe("rtc-handshake-codec", () => {
     const parsed = await parseRtcHandshakeCode(code!, b.seedB64)
     assert.equal(parsed, null)
   })
+
+  it("round-trips toDeviceId on connect-style codes", async () => {
+    const { familyId, seedB64 } = generateFamilySeed()
+    const code = await formatRtcHandshakeCode({
+      familyId,
+      seedB64,
+      fromDeviceId: "deviceOfferer01",
+      toDeviceId: "deviceAnswerer1",
+      ttlMs: 5 * 60 * 1000,
+      plain: {
+        v: 1,
+        role: "offer",
+        sessionId: "sessionConnect1",
+        fromDeviceId: "deviceOfferer01",
+        fromDisplayName: "chrome@test",
+        familyId,
+        toDeviceId: "deviceAnswerer1",
+        sdp: "v=0\r\n",
+        ice: []
+      }
+    })
+    assert.ok(code)
+    const parsed = await parseRtcHandshakeCode(code!, seedB64)
+    assert.ok(parsed)
+    assert.equal(parsed!.toDeviceId, "deviceAnswerer1")
+  })
 })

@@ -159,8 +159,10 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 面 | 内容 |
 |----|------|
 | ピア間 | `sync -ping <deviceId>` · `sync -open <deviceId> <url…> [--group <title>]` |
-| ローカル | `sync -status` / `-members` / `-pair` / `-setup` · setting picker の表示名 |
-| 未実装 | 他ブラウザへの `tab` / `search` 横断クエリ · prefs/snapshot 自動同期 · tab picker の Family 宛先 |
+| ローカル | `sync -status` / `-members` / `-pair` / `-setup` / `-connect` · setting picker の表示名 |
+| ピア横断 | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| sync -open <id>`（コピー） |
+| 再握手 | `sync -connect <deviceId>`（役割自動）+ Copy/Paste バー / manifest commands ショートカット |
+| 未実装 | prefs/snapshot 自動同期 · tab picker の Family 宛先 UI |
 
 **横断 tab / search（実装方針・確認済み）**
 
@@ -171,8 +173,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **コマンド**
 
-- `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-offer` / `-answer` / `-accept` / `-ping` / `-open`）
-- 握手 UX: 推奨 `sync -setup`（プロンプト対話）。setting picker の sync は案内のみ（コード貼付しない）
+- `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-connect` / `-offer` / `-answer` / `-accept` / `-ping` / `-open`）
+- 握手 UX: 初回 `sync -setup`；切断後 `sync -connect` + Copy/Paste（ショートカットはブラウザ設定で変更可）。setting picker の sync は案内のみ（コード貼付しない）
 - skill `bmxt-add-command` + i18n EN/JA
 
 **スコープ外（§6 本体）**
@@ -193,8 +195,11 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel（host ICE）
 - [x] **6c:** peer 宿主（Chrome offscreen / Firefox `bmxt-peer.html`）+ ping / open
 - [x] **6c:** `sync -setup` プロンプト対話（Family → 役割 → コード貼付）。accept 成功は握手完了（直後 ping 失敗でもセットアップ終了）
-- [ ] **6c:** 手元 — 同一 PC で Chrome↔Firefox に遠隔 open / ping が安定して届く
-- [ ] **後続:** 同一 PC 上の横断 `tab` / `search`（コマンドバス RPC）
+- [x] **6c:** `sync -connect <deviceId>`（役割自動）+ Copy/Paste バー / manifest commands ショートカット
+- [ ] **6c:** 手元 — 同一 PC で Chrome↔Firefox に遠隔 open / ping が安定して届く（`-connect` 往復含む）
+- [x] **6c:** 同一 PC 横断 `tab` / `search`（コマンドバス RPC · `--device` / `--peers`）
+- [x] **6c:** `tab -list \| sync -open <deviceId>` グループ単位コピー送信
+- [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| sync -open` を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC
 
 ---

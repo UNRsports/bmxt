@@ -16,7 +16,7 @@ import {
 } from "./search-open-destination"
 import type { HostEffect } from "../dispatch/effect-types"
 import type { DispatchHostContext } from "../dispatch/dispatch-context"
-import { applyHostEffects } from "../dispatch"
+import { applyHostEffects } from "../dispatch/apply-effects"
 import { tSearch } from "../setting/i18n/ns/search"
 import { DEFAULT_UI_LOCALE } from "../setting/locale"
 

@@ -1088,6 +1088,47 @@ body {
   padding-bottom: 6px;
 }
 
+.bmxt-sync-handshake-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 6px;
+  padding: 4px 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bmxt-sync-handshake-bar-hint {
+  opacity: 0.85;
+  font-size: 0.85em;
+  margin-right: 4px;
+}
+
+.bmxt-sync-handshake-btn {
+  box-sizing: border-box;
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+  margin: 0;
+  border: 1px solid rgba(201, 209, 217, 0.28);
+  border-radius: 4px;
+  background: rgba(22, 27, 34, 0.92);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bmxt-sync-handshake-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bmxt-sync-handshake-btn:not(:disabled):active {
+  background: rgba(48, 54, 61, 0.95);
+}
+
 .bmxt-extra-keys {
   display: flex;
   flex-wrap: wrap;

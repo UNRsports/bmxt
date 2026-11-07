@@ -26,15 +26,55 @@ fn norm_tabs_flag(arg: &str) -> Option<&'static str> {
     }
 }
 
-fn parse_tabs_list_args(args: &[String]) -> Result<bool, ()> {
+struct TabsListArgs {
+    show_url: bool,
+    device_scope: String,
+    device_id: String,
+}
+
+fn parse_tabs_list_args(args: &[String]) -> Result<TabsListArgs, ()> {
     let mut show_url = false;
-    for token in args.iter().skip(2) {
-        match normalize_token(token).as_str() {
-            "-url" => show_url = true,
-            _ => return Err(()),
+    let mut device_scope = "local".to_string();
+    let mut device_id = String::new();
+    let mut i = 2usize;
+    while i < args.len() {
+        let token = normalize_token(&args[i]);
+        if token == "-url" {
+            show_url = true;
+            i += 1;
+            continue;
         }
+        if token == "--peers" {
+            if device_scope != "local" {
+                return Err(());
+            }
+            device_scope = "peers".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--device" {
+            if device_scope != "local" {
+                return Err(());
+            }
+            let Some(id) = args.get(i + 1) else {
+                return Err(());
+            };
+            let trimmed = id.trim();
+            if trimmed.is_empty() || trimmed.starts_with('-') {
+                return Err(());
+            }
+            device_scope = "device".to_string();
+            device_id = trimmed.to_string();
+            i += 2;
+            continue;
+        }
+        return Err(());
     }
-    Ok(show_url)
+    Ok(TabsListArgs {
+        show_url,
+        device_scope,
+        device_id,
+    })
 }
 
 fn usage_msgs(extra: crate::ir::Msg) -> DispatchBundle {
@@ -107,12 +147,14 @@ pub fn run(args: &[String]) -> DispatchBundle {
 
     match sub {
         "-list" => match parse_tabs_list_args(args) {
-            Ok(show_url) => effects(vec![HostEffect::TabsList {
-                show_url: if show_url {
+            Ok(parsed) => effects(vec![HostEffect::TabsList {
+                show_url: if parsed.show_url {
                     "true".to_string()
                 } else {
                     "false".to_string()
                 },
+                device_scope: parsed.device_scope,
+                device_id: parsed.device_id,
             }]),
             Err(()) => usage_msgs(msg_key("cmd.tabs.error.invalidListUsage")),
         },

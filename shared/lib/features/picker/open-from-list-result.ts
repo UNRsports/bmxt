@@ -32,6 +32,10 @@ import { domPickerLinesFromListResult } from "./from-list-result/dom-lines.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-entries-from-tabs.ts"
 import { pickerEntriesFromSearchListResult } from "./from-list-result/search-entries.ts"
 import { resolvePickerFamily } from "./resolve-family.ts"
+import {
+  listResultHasDeviceTaggedTabs,
+  tabPickerRowsFromListResult
+} from "./from-list-result/tabs-rows.ts"
 
 export type OpenPickerOptions = {
   showUrl: boolean
@@ -57,7 +61,7 @@ export async function openPickerFromListResult(
 
   switch (resolved.family) {
     case "tabs":
-      return openTabsPicker(options.showUrl, deps, locale)
+      return openTabsPicker(listResult, options.showUrl, deps, locale)
     case "search":
       return await openSearchPicker(listResult, deps, locale)
     case "dom":
@@ -76,6 +80,7 @@ export async function openPickerFromListResult(
 }
 
 async function openTabsPicker(
+  listResult: ListResult,
   showUrl: boolean,
   deps: CommandDispatchDeps,
   locale: UiLocale
@@ -83,10 +88,17 @@ async function openTabsPicker(
   deps.setTabPicker(deps.sessionId, mountTabPickerLoadingColumn(deps.sessionId, showUrl))
   deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "tabs"))
   try {
-    const { rows, lastNormalWindowId } = await buildTabPickerRowsBundle(
-      showUrl,
-      deps.uiSettings.locale
-    )
+    const useHydrated = listResultHasDeviceTaggedTabs(listResult)
+    let rows
+    let lastNormalWindowId: number | undefined
+    if (useHydrated) {
+      rows = tabPickerRowsFromListResult(listResult)
+      lastNormalWindowId = undefined
+    } else {
+      const bundle = await buildTabPickerRowsBundle(showUrl, deps.uiSettings.locale)
+      rows = bundle.rows
+      lastNormalWindowId = bundle.lastNormalWindowId
+    }
     const initialHi = resolveInitialTabPickerHighlightIndex(rows, lastNormalWindowId)
     const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
     deps.setTabPicker(
@@ -94,7 +106,10 @@ async function openTabsPicker(
       openTabPickerEngineForSession(deps.sessionId, { rows, showUrl, initialHi })
     )
     deps.activatePaneFocus("tabs")
-    return segmentSuccess([tTabs("tabs.picker.hint", locale, { token: pageActiveToken })])
+    const hint = useHydrated
+      ? tTabs("tabs.picker.hintCrossDevice", locale, { token: pageActiveToken })
+      : tTabs("tabs.picker.hint", locale, { token: pageActiveToken })
+    return segmentSuccess([hint])
   } catch (e) {
     if (deps.tabPickerRef.current?.rows.length === 0) {
       closeTabPickerEngineForSession(deps.sessionId)

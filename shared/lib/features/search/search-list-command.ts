@@ -2,11 +2,15 @@ import type { DispatchHostContext } from "../dispatch/dispatch-context.ts"
 import type { CommandDispatchDeps } from "../bmxt-window/shell/command-dispatch/types.ts"
 import type { ListCommandEntry } from "../command-line/list-commands/types.ts"
 import type { UiLocale } from "../setting/locale.ts"
+import type { DeviceListScope } from "../sync/bus/device-list-scope.ts"
+import { fetchCrossDeviceSearchList } from "../sync/bus/fetch-cross-device-search.ts"
 import { parseSearchListLine } from "./search-list-parse.ts"
 import { fetchSearchListResult, formatSearchListPlainLines } from "./search-list-plain.ts"
 
 export type SearchListMatch = {
   dispatchLine: string
+  peerDispatchLine: string
+  scope: DeviceListScope
 }
 
 function stubSearchDispatchCtx(
@@ -34,7 +38,11 @@ export const searchListCommand: ListCommandEntry<SearchListMatch> = {
     if (parsed === null) {
       return null
     }
-    return { dispatchLine: parsed.dispatchLine }
+    return {
+      dispatchLine: parsed.dispatchLine,
+      peerDispatchLine: parsed.peerDispatchLine,
+      scope: parsed.scope
+    }
   },
   async fetchListResult(match, ctx) {
     const onProgress =
@@ -44,14 +52,29 @@ export const searchListCommand: ListCommandEntry<SearchListMatch> = {
           }
         : undefined
     const dispatchCtx = ctx.dispatchCtx ?? stubSearchDispatchCtx(ctx.deps, ctx.locale)
-    return fetchSearchListResult({
+    if (match.scope.kind === "local") {
+      return fetchSearchListResult({
+        dispatchLine: match.peerDispatchLine,
+        ctx: dispatchCtx,
+        locale: ctx.locale,
+        onProgress
+      })
+    }
+    const fetched = await fetchCrossDeviceSearchList({
       dispatchLine: match.dispatchLine,
+      scope: match.scope,
       ctx: dispatchCtx,
       locale: ctx.locale,
       onProgress
     })
+    return fetched.result
   },
-  formatPlainLines(result, locale) {
-    return formatSearchListPlainLines(result, locale)
+  formatPlainLines(result, locale, match) {
+    const body = formatSearchListPlainLines(result, locale)
+    if (match.scope.kind === "local") {
+      return body
+    }
+    // EN: Notices are expanded at effect/plain run time when available; keep format pure here.
+    return body
   }
 }

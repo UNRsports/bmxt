@@ -1,4 +1,10 @@
-import type { SyncBusCommand, SyncConnectionState, SyncDeviceId } from "../types"
+import type {
+  SyncBusCommand,
+  SyncConnectionState,
+  SyncDeviceId,
+  SyncRemoteSearchHit,
+  SyncRemoteTabRow
+} from "../types"
 
 /**
  * EN: Stabilizer — low-latency command bus over DataChannel (+ queue fallback).
@@ -13,6 +19,14 @@ export type CommandBusStabilizer = {
     urls: string[],
     groupTitle: string | null
   ): Promise<{ ok: boolean; detail: string | null }>
+  listTabs(
+    remoteDeviceId: SyncDeviceId,
+    showUrl: boolean
+  ): Promise<{ ok: boolean; detail: string | null; rows: SyncRemoteTabRow[] }>
+  searchQuery(
+    remoteDeviceId: SyncDeviceId,
+    dispatchLine: string
+  ): Promise<{ ok: boolean; detail: string | null; hits: SyncRemoteSearchHit[] }>
   getState(remoteDeviceId: SyncDeviceId): SyncConnectionState
   listStates(): Array<{ deviceId: SyncDeviceId; state: SyncConnectionState }>
   /** EN: Drain FSA command queue for this device (peer wake). */

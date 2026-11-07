@@ -43,7 +43,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "search",
         aliases: &[],
-        usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
+        usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [--device <id>|--peers] [<pattern>] | search -exit -list | search help",
     },
     CmdMeta {
         name: "group",
@@ -68,7 +68,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "tab",
         aliases: &[],
-        usage_primary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
+        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
     },
     CmdMeta {
         name: "nav",
@@ -113,7 +113,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "sync",
         aliases: &[],
-        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
+        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
     },
 ];
 
@@ -139,7 +139,7 @@ static BRANCHES_DOM: &[SubcommandBranch] = &[
 static BRANCHES_SEARCH: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-list",
-        trailing_tokens: &["--all", "--history", "--bookmark", "--page", "--snapshot", "--unlimit"],
+        trailing_tokens: &["--all", "--history", "--bookmark", "--page", "--snapshot", "--unlimit", "--device", "--peers"],
     },
     SubcommandBranch {
         head: "-exit",
@@ -154,7 +154,7 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
 static BRANCHES_TAB: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-list",
-        trailing_tokens: &["-url"],
+        trailing_tokens: &["-url", "--device", "--peers"],
     },
     SubcommandBranch {
         head: "-exit",
@@ -298,6 +298,10 @@ static BRANCHES_SYNC: &[SubcommandBranch] = &[
         trailing_tokens: &[],
     },
     SubcommandBranch {
+        head: "-connect",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
         head: "-offer",
         trailing_tokens: &[],
     },
@@ -364,7 +368,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "browse" => false,
         "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
-        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-offer" | "-answer" | "-accept" | "-open" | "-ping" | "help"),
+        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-open" | "-ping" | "help"),
         _ => false,
     }
 }

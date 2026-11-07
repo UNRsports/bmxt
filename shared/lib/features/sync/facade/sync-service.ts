@@ -5,17 +5,45 @@ import {
   joinFamilyFromInvite,
   loadFamilyMembership
 } from "../device/family-membership"
+import { connectRoleForPeer, type SyncConnectRole } from "../bus/connect-role.ts"
+import {
+  clearSyncConnectPending,
+  getSyncConnectPending,
+  setSyncConnectPending
+} from "../connect/sync-connect-pending.ts"
 import {
   formatRtcHandshakeCode,
   parseRtcHandshakeCode,
+  RTC_HANDSHAKE_TTL_MS_CONNECT,
   type RtcHandshakePlain
 } from "../discovery/rtc-handshake-codec"
 import { createDefaultSyncStabilizers } from "./default-stabilizers"
 import type { SyncStabilizers } from "../stabilizers"
-import type { SyncDiscoveryRecord, SyncRosterMember, SyncStatusSnapshot } from "../types"
+import type {
+  SyncDiscoveryRecord,
+  SyncRemoteSearchHit,
+  SyncRemoteTabRow,
+  SyncRosterMember,
+  SyncStatusSnapshot
+} from "../types"
 import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
 import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
+
+export type SyncConnectSession = {
+  peerDeviceId: string
+  peerDisplayName: string
+  role: SyncConnectRole
+  outboundCode: string | null
+  awaitingInbound: boolean
+}
+
+export type SyncConnectResult = {
+  ok: boolean
+  lines: string[]
+  alreadyConnected?: boolean
+  session?: SyncConnectSession
+}
 
 export type SyncService = {
   status(): Promise<SyncStatusSnapshot>
@@ -27,11 +55,21 @@ export type SyncService = {
   answer(offerCode: string): Promise<{ ok: boolean; lines: string[] }>
   /** EN: Accept answer code on the offerer side; DataChannel should connect. */
   accept(answerCode: string): Promise<{ ok: boolean; lines: string[] }>
+  /** EN: Reconnect to a roster member without -setup wizard. */
+  connect(deviceId: string): Promise<SyncConnectResult>
   openRemote(
     deviceId: string,
     urls: string[],
     groupTitle: string | null
   ): Promise<{ ok: boolean; lines: string[] }>
+  listRemoteTabs(
+    deviceId: string,
+    showUrl: boolean
+  ): Promise<{ ok: boolean; detail: string | null; rows: SyncRemoteTabRow[] }>
+  searchRemote(
+    deviceId: string,
+    dispatchLine: string
+  ): Promise<{ ok: boolean; detail: string | null; hits: SyncRemoteSearchHit[] }>
   ping(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
 }
@@ -203,6 +241,13 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (plain.familyId !== ctx.membership.familyId) {
         return { ok: false, lines: [line("sync.rtc.familyMismatch")] }
       }
+      if (
+        typeof plain.toDeviceId === "string" &&
+        plain.toDeviceId !== "*" &&
+        plain.toDeviceId !== ctx.device.deviceId
+      ) {
+        return { ok: false, lines: [line("sync.rtc.wrongAddressee")] }
+      }
       await ensurePeerDocument()
       await s.peerHost.ensureReady()
       let accepted: { sessionId: string; sdp: string; ice: string[]; remoteDeviceId: string }
@@ -234,6 +279,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         fromDeviceId: ctx.device.deviceId,
         fromDisplayName: ctx.device.displayName,
         familyId: ctx.membership.familyId,
+        toDeviceId: plain.fromDeviceId,
         sdp: accepted.sdp,
         ice: accepted.ice
       }
@@ -241,19 +287,36 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         familyId: ctx.membership.familyId,
         seedB64: ctx.membership.seedB64,
         fromDeviceId: ctx.device.deviceId,
+        toDeviceId: plain.fromDeviceId,
+        ttlMs: RTC_HANDSHAKE_TTL_MS_CONNECT,
         plain: answerPlain
       })
       if (code === null) {
         return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
       }
-      return {
-        ok: true,
-        lines: [
-          line("sync.rtc.answerCreated"),
-          line(`sync.rtc.peer:${plain.fromDisplayName}`),
-          line(`sync.rtc.code:${code}`)
-        ]
+      const pending = getSyncConnectPending()
+      if (
+        pending !== null &&
+        pending.role === "answer" &&
+        pending.peerDeviceId === plain.fromDeviceId
+      ) {
+        setSyncConnectPending({
+          peerDeviceId: pending.peerDeviceId,
+          peerDisplayName: pending.peerDisplayName,
+          role: "answer",
+          outboundCode: code,
+          awaitingInbound: false
+        })
       }
+      const lines = [
+        line("sync.rtc.answerCreated"),
+        line(`sync.rtc.peer:${plain.fromDisplayName}`),
+        line(`sync.rtc.code:${code}`)
+      ]
+      if (pending !== null && pending.role === "answer") {
+        lines.push(line("sync.connect.copyThenWaitPeerAccept"))
+      }
+      return { ok: true, lines }
     },
 
     async accept(answerCode: string) {
@@ -267,6 +330,13 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
       if (plain.familyId !== ctx.membership.familyId) {
         return { ok: false, lines: [line("sync.rtc.familyMismatch")] }
+      }
+      if (
+        typeof plain.toDeviceId === "string" &&
+        plain.toDeviceId !== "*" &&
+        plain.toDeviceId !== ctx.device.deviceId
+      ) {
+        return { ok: false, lines: [line("sync.rtc.wrongAddressee")] }
       }
       await ensurePeerDocument()
       await s.peerHost.ensureReady()
@@ -302,7 +372,107 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (!ping.ok) {
         lines.push(line("sync.rtc.pingDeferred"))
       }
+      clearSyncConnectPending()
       return { ok: true, lines }
+    },
+
+    async connect(deviceId: string): Promise<SyncConnectResult> {
+      const ctx = await requireFamily()
+      if (ctx === null) {
+        return { ok: false, lines: [line("sync.pair.noFamily")] }
+      }
+      const trimmed = deviceId.trim()
+      if (trimmed.length === 0 || trimmed === ctx.device.deviceId) {
+        return { ok: false, lines: [line("sync.connect.badDeviceId")] }
+      }
+      const roster = await loadLocalRoster()
+      const member = roster?.members.find((m) => m.deviceId === trimmed) ?? null
+      const discovered = (await s.discovery.listKnown()).find((d) => d.deviceId === trimmed)
+      if (member === null && discovered === undefined) {
+        return { ok: false, lines: [line("sync.connect.unknownMember")] }
+      }
+      const peerDisplayName =
+        member?.displayName ?? discovered?.displayName ?? trimmed
+
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const state = await s.commandBus.connect(trimmed)
+      if (state === "connected") {
+        clearSyncConnectPending()
+        const ping = await s.commandBus.ping(trimmed)
+        return {
+          ok: ping.ok,
+          alreadyConnected: true,
+          lines: [
+            line(`sync.rtc.connected:${peerDisplayName}`),
+            line(`sync.connect.ping:ok=${ping.ok};rtt=${ping.rttMs ?? "n/a"}`)
+          ]
+        }
+      }
+
+      const role = connectRoleForPeer(ctx.device.deviceId, trimmed)
+      if (role === "answer") {
+        const session = {
+          peerDeviceId: trimmed,
+          peerDisplayName,
+          role: "answer" as const,
+          outboundCode: null,
+          awaitingInbound: true
+        }
+        setSyncConnectPending(session)
+        return {
+          ok: true,
+          session,
+          lines: [
+            line(`sync.connect.role:answer`),
+            line(`sync.connect.peer:${peerDisplayName}|${trimmed}`),
+            line("sync.connect.waitOffer")
+          ]
+        }
+      }
+
+      const bundle = await s.peerHost.createOfferHandshake()
+      const plain: RtcHandshakePlain = {
+        v: 1,
+        role: "offer",
+        sessionId: bundle.sessionId,
+        fromDeviceId: ctx.device.deviceId,
+        fromDisplayName: ctx.device.displayName,
+        familyId: ctx.membership.familyId,
+        toDeviceId: trimmed,
+        sdp: bundle.sdp,
+        ice: bundle.ice
+      }
+      const code = await formatRtcHandshakeCode({
+        familyId: ctx.membership.familyId,
+        seedB64: ctx.membership.seedB64,
+        fromDeviceId: ctx.device.deviceId,
+        toDeviceId: trimmed,
+        ttlMs: RTC_HANDSHAKE_TTL_MS_CONNECT,
+        plain
+      })
+      if (code === null) {
+        return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
+      }
+      const session = {
+        peerDeviceId: trimmed,
+        peerDisplayName,
+        role: "offer" as const,
+        outboundCode: code,
+        awaitingInbound: true
+      }
+      setSyncConnectPending(session)
+      return {
+        ok: true,
+        session,
+        lines: [
+          line(`sync.connect.role:offer`),
+          line(`sync.connect.peer:${peerDisplayName}|${trimmed}`),
+          line("sync.rtc.offerCreated"),
+          line(`sync.rtc.code:${code}`),
+          line("sync.connect.copyThenWaitAnswer")
+        ]
+      }
     },
 
     async openRemote(deviceId: string, urls: string[], groupTitle: string | null) {
@@ -325,6 +495,26 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         ok: result.ok,
         lines: [line(`sync.open.done:ok=${result.ok};detail=${result.detail ?? ""}`)]
       }
+    },
+
+    async listRemoteTabs(deviceId: string, showUrl: boolean) {
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const state = await s.commandBus.connect(deviceId)
+      if (state !== "connected") {
+        return { ok: false, detail: `not_connected:${state}`, rows: [] }
+      }
+      return s.commandBus.listTabs(deviceId, showUrl)
+    },
+
+    async searchRemote(deviceId: string, dispatchLine: string) {
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const state = await s.commandBus.connect(deviceId)
+      if (state !== "connected") {
+        return { ok: false, detail: `not_connected:${state}`, hits: [] }
+      }
+      return s.commandBus.searchQuery(deviceId, dispatchLine)
     },
 
     async ping(deviceId: string) {

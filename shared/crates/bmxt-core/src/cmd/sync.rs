@@ -6,6 +6,7 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.sync.usage.line1",
     "cmd.sync.usage.line2",
     "cmd.sync.usage.line3",
+    "cmd.sync.usage.line3b",
     "cmd.sync.usage.line4",
     "cmd.sync.usage.line5",
     "cmd.sync.usage.line6",
@@ -110,6 +111,16 @@ pub fn run(args: &[String]) -> DispatchBundle {
                 return usage_bundle(vec![msg_key("cmd.sync.error.tooManyArgs")]);
             }
             ui(UiAction::SyncMembers)
+        }
+        "-connect" => {
+            let raw = rest_join(args, 2);
+            let device_id = match sanitize_device_id(&raw) {
+                Some(id) => id,
+                None => {
+                    return usage_bundle(vec![msg_key("cmd.sync.error.invalidDeviceId")]);
+                }
+            };
+            ui(UiAction::SyncConnect { device_id })
         }
         "-offer" => {
             if args.len() > 2 {

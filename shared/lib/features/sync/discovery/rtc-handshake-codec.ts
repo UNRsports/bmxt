@@ -13,9 +13,16 @@ export type RtcHandshakePlain = {
   fromDeviceId: SyncDeviceId
   fromDisplayName: string
   familyId: SyncFamilyId
+  /** EN: Optional addressee for reconnect codes; omit or "*" = any Family member. */
+  toDeviceId?: SyncDeviceId
   sdp: string
   ice: string[]
 }
+
+/** EN: Default TTL for manual / setup handshake codes (30 minutes). */
+export const RTC_HANDSHAKE_TTL_MS_DEFAULT = 30 * 60 * 1000
+/** EN: Shorter TTL for sync -connect reconnect codes (5 minutes). */
+export const RTC_HANDSHAKE_TTL_MS_CONNECT = 5 * 60 * 1000
 
 const MAX_CODE_CHARS = 48_000
 const MAX_SDP_CHARS = 32_000
@@ -45,6 +52,11 @@ function isHandshakePlain(value: unknown): value is RtcHandshakePlain {
   if (typeof o.familyId !== "string" || o.familyId.length < 8) {
     return false
   }
+  if (o.toDeviceId !== undefined) {
+    if (typeof o.toDeviceId !== "string" || o.toDeviceId.length < 8) {
+      return false
+    }
+  }
   if (typeof o.sdp !== "string" || o.sdp.length === 0 || o.sdp.length > MAX_SDP_CHARS) {
     return false
   }
@@ -68,15 +80,22 @@ export async function formatRtcHandshakeCode(args: {
   seedB64: string
   fromDeviceId: SyncDeviceId
   plain: RtcHandshakePlain
+  /** EN: Envelope addressee; defaults to plain.toDeviceId or "*". */
+  toDeviceId?: SyncDeviceId | "*"
+  ttlMs?: number
 }): Promise<string | null> {
+  const toDeviceId =
+    args.toDeviceId ??
+    (typeof args.plain.toDeviceId === "string" ? args.plain.toDeviceId : "*")
+  const ttlMs = args.ttlMs ?? RTC_HANDSHAKE_TTL_MS_DEFAULT
   const envelope = await sealJsonPayload({
     familyId: args.familyId,
     seedB64: args.seedB64,
     fromDeviceId: args.fromDeviceId,
-    toDeviceId: "*",
+    toDeviceId,
     kind: "signal",
     payload: args.plain,
-    ttlMs: 30 * 60 * 1000
+    ttlMs
   })
   if (envelope === null) {
     return null

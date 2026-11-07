@@ -71,6 +71,9 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token === "sync.rtc.acceptFailed") {
     return tCmd("cmd.sync.rtc.acceptFailed", locale)
   }
+  if (token === "sync.rtc.wrongAddressee") {
+    return tCmd("cmd.sync.rtc.wrongAddressee", locale)
+  }
   if (token.startsWith("sync.rtc.code:")) {
     return tCmd("cmd.sync.rtc.code", locale, { code: token.slice("sync.rtc.code:".length) })
   }
@@ -92,11 +95,64 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token.startsWith("sync.open.done:")) {
     return tCmd("cmd.sync.open.done", locale, { detail: token.slice("sync.open.done:".length) })
   }
+  if (token === "sync.list.noConnectedPeers") {
+    return tCmd("cmd.sync.list.noConnectedPeers", locale)
+  }
+  if (token.startsWith("sync.list.peerFailed:")) {
+    const rest = token.slice("sync.list.peerFailed:".length)
+    const split = rest.indexOf(":")
+    const deviceId = split >= 0 ? rest.slice(0, split) : rest
+    const detail = split >= 0 ? rest.slice(split + 1) : ""
+    return tCmd("cmd.sync.list.peerFailed", locale, { deviceId, detail })
+  }
   if (token.startsWith("sync.connect.state:")) {
     return tCmd("cmd.sync.connect.state", locale, { state: token.slice("sync.connect.state:".length) })
   }
   if (token.startsWith("sync.connect.ping:")) {
     return tCmd("cmd.sync.connect.ping", locale, { detail: token.slice("sync.connect.ping:".length) })
+  }
+  if (token === "sync.connect.badDeviceId") {
+    return tCmd("cmd.sync.connect.badDeviceId", locale)
+  }
+  if (token === "sync.connect.unknownMember") {
+    return tCmd("cmd.sync.connect.unknownMember", locale)
+  }
+  if (token.startsWith("sync.connect.role:")) {
+    return tCmd("cmd.sync.connect.role", locale, {
+      role: token.slice("sync.connect.role:".length)
+    })
+  }
+  if (token.startsWith("sync.connect.peer:")) {
+    return tCmd("cmd.sync.connect.peer", locale, {
+      detail: token.slice("sync.connect.peer:".length)
+    })
+  }
+  if (token === "sync.connect.waitOffer") {
+    return tCmd("cmd.sync.connect.waitOffer", locale)
+  }
+  if (token === "sync.connect.copyThenWaitAnswer") {
+    return tCmd("cmd.sync.connect.copyThenWaitAnswer", locale)
+  }
+  if (token === "sync.connect.copyThenWaitPeerAccept") {
+    return tCmd("cmd.sync.connect.copyThenWaitPeerAccept", locale)
+  }
+  if (token === "sync.connect.copied") {
+    return tCmd("cmd.sync.connect.copied", locale)
+  }
+  if (token === "sync.connect.copyIdle") {
+    return tCmd("cmd.sync.connect.copyIdle", locale)
+  }
+  if (token === "sync.connect.pasteIdle") {
+    return tCmd("cmd.sync.connect.pasteIdle", locale)
+  }
+  if (token === "sync.connect.clipboardReadFailed") {
+    return tCmd("cmd.sync.connect.clipboardReadFailed", locale)
+  }
+  if (token === "sync.connect.clipboardWriteFailed") {
+    return tCmd("cmd.sync.connect.clipboardWriteFailed", locale)
+  }
+  if (token === "sync.connect.clipboardNoCode") {
+    return tCmd("cmd.sync.connect.clipboardNoCode", locale)
   }
   if (token === "sync.name.invalid") {
     return tCmd("cmd.sync.name.invalid", locale)

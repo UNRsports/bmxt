@@ -74,6 +74,13 @@ export async function runSyncPing(deviceId: string): Promise<{ ok: boolean; line
   return getSyncService().ping(deviceId)
 }
 
+export async function runSyncConnect(
+  deviceId: string
+): Promise<{ ok: boolean; lines: string[] }> {
+  const result = await getSyncService().connect(deviceId)
+  return { ok: result.ok, lines: result.lines }
+}
+
 export async function applySyncUiLog(
   sink: SyncUiLogSink,
   commandLine: string,

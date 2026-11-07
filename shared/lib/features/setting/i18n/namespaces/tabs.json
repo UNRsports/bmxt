@@ -283,6 +283,10 @@
     "ja": "Tab picker — page-active {token} · ↑↓ 移動 · Alt+↑↓ プレビュー（manual） · Enter ジャンプ · Esc → prompt",
     "en": "Tab picker — page-active {token} · ↑↓ move · Alt+↑↓ preview (manual) · Enter jump · Esc → prompt"
   },
+  "tabs.picker.hintCrossDevice": {
+    "ja": "Tab picker（横断）— page-active {token} · リモート行はローカル操作不可 · Enter はローカルのみ · Esc → prompt",
+    "en": "Tab picker (cross-device) — page-active {token} · remote rows are non-operable locally · Enter local only · Esc → prompt"
+  },
   "tabs.picker.inputAria.keys": {
     "ja": "タブピッカーのキー操作",
     "en": "Tab picker key input"

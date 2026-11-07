@@ -14,7 +14,8 @@ export const PIPE_CONSUMER_COMPLETION_IDS = [
   "back",
   "forward",
   "reload",
-  "close"
+  "close",
+  "sync"
 ] as const
 
 /**

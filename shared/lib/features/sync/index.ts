@@ -32,3 +32,8 @@ export {
 } from "./discovery/rtc-handshake-codec"
 export { sanitizeRemoteOpenUrls, sanitizeGroupTitle } from "./bus/remote-open-sanitize.ts"
 export { applyRemoteOpenTabs } from "./bus/remote-open.ts"
+export {
+  parseDeviceListScopeTokens,
+  stripDeviceScopeFromSearchDispatchLine,
+  type DeviceListScope
+} from "./bus/device-list-scope.ts"

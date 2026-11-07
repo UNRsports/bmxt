@@ -11,6 +11,7 @@ import {
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import { setupFloatLaunch } from "./float-launch"
+import { setupSyncHandshakeCommands } from "./sync-handshake-commands"
 import { flushPersistBmxtWindowBounds } from "./window-bounds"
 import {
   clearBmxtWindowIdInMemory,
@@ -86,6 +87,7 @@ export function setupWindowLaunch(): void {
   //     Do not use windows.onBoundsChanged — unsupported on Firefox / flagged by AMO.
   // JA: 窓サイズはポップアップページ側で保存。onBoundsChanged は Firefox/AMO 非対応。
   setupFloatLaunch(chrome.commands.onCommand)
+  setupSyncHandshakeCommands(chrome.commands.onCommand)
 
   chrome.windows.onRemoved.addListener((windowId) => {
     if (readBmxtWindowIdInMemory() !== windowId) {
