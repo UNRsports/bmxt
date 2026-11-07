@@ -225,11 +225,12 @@ describe("setting list picker draft", () => {
   it("maps ime-candidate-help to imeCandidateHelp view", () => {
     assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")
   })
-  it("maps sync rows to syncPanel / syncDeviceName / immediate actions", () => {
+  it("maps sync rows to syncPanel / setup wizard views", () => {
     assert.equal(settingMainRowTargetView("sync"), "syncPanel")
     assert.equal(settingMainRowTargetView("sync-device-name"), "syncDeviceName")
-    assert.equal(settingMainRowTargetView("sync-offer"), null)
-    assert.equal(settingMainRowTargetView("sync-pause"), null)
+    assert.equal(settingMainRowTargetView("sync-setup"), "syncSetupFamily")
+    assert.equal(settingMainRowTargetView("sync-setup-create-family"), null)
+    assert.equal(settingMainRowTargetView("sync-setup-receive-offer"), "syncAnswerCode")
   })
 })
 

@@ -487,6 +487,18 @@
     "ja": "setting -list · sync 表示名 · → 編集 · ← sync",
     "en": "setting -list · sync display name · → edit · ← sync"
   },
+  "setting.picker.headline.syncSetupFamily": {
+    "ja": "接続セットアップ · Family · ↑↓ · Enter/→ · ← sync",
+    "en": "connection setup · Family · ↑↓ · Enter/→ · ← sync"
+  },
+  "setting.picker.headline.syncSetupRole": {
+    "ja": "接続セットアップ · 役割 · ↑↓ · Enter/→ · ← Family",
+    "en": "connection setup · role · ↑↓ · Enter/→ · ← Family"
+  },
+  "setting.picker.headline.syncJoinInvite": {
+    "ja": "接続セットアップ · 招待を貼付 · Enter 実行 · ← Family",
+    "en": "connection setup · paste invite · Enter run · ← Family"
+  },
   "setting.picker.syncDeviceNameRow": {
     "ja": "表示名: {name} — 編集",
     "en": "display name: {name} — edit"
@@ -495,13 +507,61 @@
     "ja": "表示名: {value}",
     "en": "display name: {value}"
   },
-  "setting.picker.syncInviteRow": {
-    "ja": "Family 招待トークンを表示（相手は sync -pair <invite>）",
-    "en": "show Family invite token (peer: sync -pair <invite>)"
+  "setting.picker.syncSetupRow": {
+    "ja": "接続セットアップを開始（対話式）",
+    "en": "Start connection setup (guided)"
+  },
+  "setting.picker.syncSetupCreateFamily": {
+    "ja": "新しい Family を作り、招待コードを表示する",
+    "en": "Create a new Family and show the invite code"
+  },
+  "setting.picker.syncSetupJoinFamily": {
+    "ja": "相手の招待コードを貼って Family に参加する",
+    "en": "Paste the peer invite code to join their Family"
+  },
+  "setting.picker.syncSetupContinue": {
+    "ja": "この Family で続行（{family}…）",
+    "en": "Continue with this Family ({family}…)"
+  },
+  "setting.picker.syncSetupStartOffer": {
+    "ja": "この端末で接続を始める（オファーを作り、相手のアンサーを待つ）",
+    "en": "Start from this device (create offer, then wait for peer answer)"
+  },
+  "setting.picker.syncSetupReceiveOffer": {
+    "ja": "相手のオファーを受け取る（アンサーを作り相手へ返す）",
+    "en": "Receive peer offer (create answer and send it back)"
+  },
+  "setting.picker.detail.syncJoinInvite": {
+    "ja": "相手の Family 招待コードを貼り付け",
+    "en": "Paste the peer Family invite code"
+  },
+  "setting.picker.syncSetup.familyReadyHint": {
+    "ja": "次へ: 役割を選びます（オファー側 / 受け取り側）",
+    "en": "Next: choose your role (offer side / receive side)"
+  },
+  "setting.picker.syncSetup.offerHint": {
+    "ja": "上のオファーコードを相手に渡してください。次に相手のアンサーコードを貼り付けます。",
+    "en": "Give the offer code above to your peer. Next, paste their answer code."
+  },
+  "setting.picker.syncSetup.receiveOfferHint": {
+    "ja": "相手のオファーコードを貼り付けて Enter してください。",
+    "en": "Paste the peer offer code and press Enter."
+  },
+  "setting.picker.syncSetup.answerHint": {
+    "ja": "上のアンサーコードを相手に渡してください。相手が貼り付けると接続が完了します。",
+    "en": "Give the answer code above to your peer. Connection completes when they paste it."
+  },
+  "setting.picker.syncSetup.acceptDoneHint": {
+    "ja": "接続処理を受け付けました。ステータスは sync サマリーで確認できます。",
+    "en": "Accept submitted. Check the sync summary for connection status."
   },
   "setting.picker.editAria.syncDeviceName": {
     "ja": "sync 表示名",
     "en": "sync display name"
+  },
+  "setting.picker.editAria.syncJoinInvite": {
+    "ja": "Family 招待コード",
+    "en": "Family invite code"
   },
   "setting.picker.headline.snapshotStorageMode": {
     "ja": "setting -list · snapshot 保存先 · ↑↓ · Enter/→ 選択 · ← 一覧",
@@ -799,18 +859,6 @@
     "ja": "{name} · 接続 {connections}",
     "en": "{name} · connected {connections}"
   },
-  "setting.picker.syncOfferRow": {
-    "ja": "オファーコードを作る（相手に渡す）",
-    "en": "Create offer code (give to peer)"
-  },
-  "setting.picker.syncAnswerRow": {
-    "ja": "オファーコードを貼り付けてアンサーを作る",
-    "en": "Paste offer code to create answer"
-  },
-  "setting.picker.syncAcceptRow": {
-    "ja": "アンサーコードを貼り付けて接続する",
-    "en": "Paste answer code to connect"
-  },
   "setting.picker.detail.syncAnswerCode": {
     "ja": "相手のオファーコードを貼り付け",
     "en": "Paste the peer offer code"
@@ -820,12 +868,12 @@
     "en": "Paste the peer answer code"
   },
   "setting.picker.headline.syncAnswerCode": {
-    "ja": "setting -list · sync · オファー貼付 · Enter 実行 · ← 戻る",
-    "en": "setting -list · sync · paste offer · Enter run · ← back"
+    "ja": "接続セットアップ · オファー貼付 · Enter 実行 · ← 役割",
+    "en": "connection setup · paste offer · Enter run · ← role"
   },
   "setting.picker.headline.syncAcceptCode": {
-    "ja": "setting -list · sync · アンサー貼付 · Enter 実行 · ← 戻る",
-    "en": "setting -list · sync · paste answer · Enter run · ← back"
+    "ja": "接続セットアップ · アンサー貼付 · Enter 実行 · ← 役割",
+    "en": "connection setup · paste answer · Enter run · ← role"
   },
   "setting.picker.editAria.syncAnswerCode": {
     "ja": "オファーコード",

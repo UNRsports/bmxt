@@ -26,6 +26,9 @@ export type SettingListPickerView =
   | "snapshotStorageMode"
   | "syncPanel"
   | "syncDeviceName"
+  | "syncSetupFamily"
+  | "syncSetupRole"
+  | "syncJoinInvite"
   | "syncAnswerCode"
   | "syncAcceptCode"
 

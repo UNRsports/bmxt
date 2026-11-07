@@ -142,7 +142,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 項目 | 内容 |
 |------|------|
 | 原理 | 名刺（SDP offer/answer · ICE 同梱）を Family 封印テキストコードでコピペ交換し、会話本体は Peer 間 DataChannel |
-| 握手 UX | `sync -offer` → 相手 `sync -answer <code>` → オファー側 `sync -accept <code>`（Brave Sync 風） |
+| 握手 UX | CLI: `sync -offer` → 相手 `sync -answer <code>` → オファー側 `sync -accept <code>`。設定 picker は対話式「接続セットアップ」（Family → 役割 → 貼付） |
 | データ面 | WebRTC DataChannel（遠隔コマンド · ack · 将来の横断クエリ） |
 | peer 宿主 | Chrome: offscreen document。Firefox: 拡張ページ（BMXt 窓または専用 peer ページ）。SW 単体では不可 |
 | 相手休眠時 | DataChannel 不可 → メモリキューのみ（永続箱なし）。双方オンライン時に再握手 |

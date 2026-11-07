@@ -20,6 +20,20 @@ describe("sync invite codec", () => {
     assert.deepEqual(parsed, invite)
   })
 
+  it("parses tokens with terminal-wrapped whitespace", () => {
+    const { familyId, seedB64 } = generateFamilySeed()
+    const invite: SyncInviteV1 = {
+      version: 1,
+      familyId,
+      seedB64,
+      fromDeviceId: "devABCDEF",
+      fromDisplayName: "chrome@desk"
+    }
+    const token = formatInvite(invite)
+    const wrapped = `${token.slice(0, 24)}\n ${token.slice(24)}`
+    assert.deepEqual(parseInvite(wrapped), invite)
+  })
+
   it("rejects garbage", () => {
     assert.equal(parseInvite(""), null)
     assert.equal(parseInvite("bmxt1.!!!"), null)

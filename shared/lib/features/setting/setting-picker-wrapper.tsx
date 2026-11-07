@@ -111,7 +111,11 @@ export function SettingPickerWrapper({
     if (state.view === "syncDeviceName") {
       return syncSummary.displayName
     }
-    if (state.view === "syncAnswerCode" || state.view === "syncAcceptCode") {
+    if (
+      state.view === "syncJoinInvite" ||
+      state.view === "syncAnswerCode" ||
+      state.view === "syncAcceptCode"
+    ) {
       return ""
     }
     return ""

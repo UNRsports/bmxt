@@ -452,20 +452,72 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
-      if (row.id === "sync-invite") {
+      if (row.id === "sync-setup") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("syncSetupFamily", current)
+        )
+        return
+      }
+      if (row.id === "sync-setup-continue") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("syncSetupRole", current)
+        )
+        return
+      }
+      if (row.id === "sync-setup-create-family") {
         const result = await getSyncService().pair("")
         await options.appendLogLines([
           logPrefix,
-          ...expandSyncLogLines(result.lines, options.uiLocale)
+          ...expandSyncLogLines(result.lines, options.uiLocale),
+          tSetting("setting.picker.syncSetup.familyReadyHint", options.uiLocale)
         ])
+        if (result.ok) {
+          options.setSettingListPicker(
+            options.sessionId,
+            settingPickerGoToView("syncSetupRole", current)
+          )
+        }
         return
       }
-      if (row.id === "sync-offer") {
+      if (row.id === "sync-setup-join-family") {
+        options.setSettingListPicker(options.sessionId, {
+          ...settingPickerGoToView("syncJoinInvite", current),
+          editing: true,
+          editDraft: ""
+        })
+        return
+      }
+      if (row.id === "sync-setup-start-offer") {
         const result = await getSyncService().offer()
         await options.appendLogLines([
           logPrefix,
           ...expandSyncLogLines(result.lines, options.uiLocale)
         ])
+        if (!result.ok) {
+          return
+        }
+        await options.appendLogLines([
+          tSetting("setting.picker.syncSetup.offerHint", options.uiLocale)
+        ])
+        options.setSettingListPicker(options.sessionId, {
+          ...settingPickerGoToView("syncAcceptCode", current),
+          editing: true,
+          editDraft: ""
+        })
+        return
+      }
+      if (row.id === "sync-setup-receive-offer") {
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.picker.syncSetup.receiveOfferHint", options.uiLocale)
+        ])
+        options.setSettingListPicker(options.sessionId, {
+          ...settingPickerGoToView("syncAnswerCode", current),
+          editing: true,
+          editDraft: ""
+        })
         return
       }
       if (row.id === "export") {
@@ -524,12 +576,30 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         ])
         return
       }
+      if (field === "sync-invite-code") {
+        const result = await getSyncService().pair(value)
+        await options.appendLogLines([
+          "setting -list",
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        if (result.ok) {
+          await options.appendLogLines([
+            tSetting("setting.picker.syncSetup.familyReadyHint", options.uiLocale)
+          ])
+        }
+        return
+      }
       if (field === "sync-answer-code") {
         const result = await getSyncService().answer(value)
         await options.appendLogLines([
           "setting -list",
           ...expandSyncLogLines(result.lines, options.uiLocale)
         ])
+        if (result.ok) {
+          await options.appendLogLines([
+            tSetting("setting.picker.syncSetup.answerHint", options.uiLocale)
+          ])
+        }
         return
       }
       if (field === "sync-accept-code") {
@@ -538,6 +608,11 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           "setting -list",
           ...expandSyncLogLines(result.lines, options.uiLocale)
         ])
+        if (result.ok) {
+          await options.appendLogLines([
+            tSetting("setting.picker.syncSetup.acceptDoneHint", options.uiLocale)
+          ])
+        }
         return
       }
       options.setSettingListPicker(options.sessionId, (current) => {

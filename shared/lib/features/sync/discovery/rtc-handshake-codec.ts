@@ -89,11 +89,16 @@ export async function formatRtcHandshakeCode(args: {
   return code
 }
 
+/** EN: Strip whitespace so terminal-wrapped paste still parses. */
+export function compactRtcHandshakeCode(raw: string): string {
+  return raw.replace(/\s+/g, "")
+}
+
 export async function parseRtcHandshakeCode(
   raw: string,
   seedB64: string
 ): Promise<RtcHandshakePlain | null> {
-  const trimmed = raw.trim()
+  const trimmed = compactRtcHandshakeCode(raw)
   if (!trimmed.startsWith(RTC_HANDSHAKE_PREFIX)) {
     return null
   }

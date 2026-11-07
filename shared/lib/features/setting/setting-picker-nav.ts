@@ -20,10 +20,12 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "syncPanel"
     case "sync-device-name":
       return "syncDeviceName"
-    case "sync-answer":
+    case "sync-setup":
+      return "syncSetupFamily"
+    case "sync-setup-join-family":
+      return "syncJoinInvite"
+    case "sync-setup-receive-offer":
       return "syncAnswerCode"
-    case "sync-accept":
-      return "syncAcceptCode"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -53,8 +55,9 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     case "storage-pick-dir":
     case "storage-reload":
     case "snapshot-vault-pick-dir":
-    case "sync-invite":
-    case "sync-offer":
+    case "sync-setup-create-family":
+    case "sync-setup-continue":
+    case "sync-setup-start-offer":
     case "export":
     case "import":
     case "save":
@@ -63,6 +66,20 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     default:
       return null
   }
+}
+
+/** EN: Parent view when leaving a sync sub-flow with ← / Esc. */
+export function settingSyncBackView(view: SettingListPickerView): SettingListPickerView | null {
+  if (view === "syncDeviceName" || view === "syncSetupFamily") {
+    return "syncPanel"
+  }
+  if (view === "syncSetupRole" || view === "syncJoinInvite") {
+    return "syncSetupFamily"
+  }
+  if (view === "syncAnswerCode" || view === "syncAcceptCode") {
+    return "syncSetupRole"
+  }
+  return null
 }
 
 export function isSettingListSubView(view: SettingListPickerView): boolean {
@@ -74,6 +91,8 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "storageMode" ||
     view === "snapshotStorageMode" ||
     view === "syncPanel" ||
+    view === "syncSetupFamily" ||
+    view === "syncSetupRole" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||
@@ -90,6 +109,7 @@ export function isSettingGlobalDetailView(view: SettingListPickerView): boolean 
     view === "searchJumpHighlight" ||
     view === "font" ||
     view === "syncDeviceName" ||
+    view === "syncJoinInvite" ||
     view === "syncAnswerCode" ||
     view === "syncAcceptCode"
   )

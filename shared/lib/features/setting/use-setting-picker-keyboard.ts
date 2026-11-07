@@ -11,7 +11,8 @@ import {
   isArrowRight,
   isSettingDetailView,
   isSettingListSubView,
-  settingMainRowTargetView
+  settingMainRowTargetView,
+  settingSyncBackView
 } from "./setting-picker-nav"
 import type { SettingPickerRow } from "./setting-picker-rows"
 import { settingPickerAllowsVerticalNav, settingPickerInitialHi } from "./setting-picker-rows"
@@ -162,12 +163,9 @@ export function useSettingPickerKeyboard({
   ])
 
   const leaveNonMainView = useCallback((): void => {
-    if (
-      state.view === "syncDeviceName" ||
-      state.view === "syncAnswerCode" ||
-      state.view === "syncAcceptCode"
-    ) {
-      onStateChange(settingPickerGoToView("syncPanel", state))
+    const syncBack = settingSyncBackView(state.view)
+    if (syncBack !== null) {
+      onStateChange(settingPickerGoToView(syncBack, state))
       setHi(0)
       return
     }
@@ -198,11 +196,17 @@ export function useSettingPickerKeyboard({
       return true
     }
     await callbacks.onApplyEdit(field, value)
-    if (
-      state.view === "syncDeviceName" ||
-      state.view === "syncAnswerCode" ||
-      state.view === "syncAcceptCode"
-    ) {
+    if (state.view === "syncDeviceName") {
+      onStateChange(settingPickerGoToView("syncPanel", { ...state, editing: false, editDraft: "" }))
+      setHi(0)
+      return true
+    }
+    if (state.view === "syncJoinInvite") {
+      onStateChange(settingPickerGoToView("syncSetupRole", { ...state, editing: false, editDraft: "" }))
+      setHi(0)
+      return true
+    }
+    if (state.view === "syncAnswerCode" || state.view === "syncAcceptCode") {
       onStateChange(settingPickerGoToView("syncPanel", { ...state, editing: false, editDraft: "" }))
       setHi(0)
     }

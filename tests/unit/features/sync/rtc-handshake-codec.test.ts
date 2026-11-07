@@ -34,6 +34,30 @@ describe("rtc-handshake-codec", () => {
     assert.equal(parsed!.sessionId, "sessionBBBBBBBB")
   })
 
+  it("parses codes with terminal-wrapped whitespace", async () => {
+    const { familyId, seedB64 } = generateFamilySeed()
+    const code = await formatRtcHandshakeCode({
+      familyId,
+      seedB64,
+      fromDeviceId: "deviceAAAAAAAA",
+      plain: {
+        v: 1,
+        role: "offer",
+        sessionId: "sessionDDDDDDDD",
+        fromDeviceId: "deviceAAAAAAAA",
+        fromDisplayName: "chrome@test",
+        familyId,
+        sdp: "v=0\r\n",
+        ice: []
+      }
+    })
+    assert.ok(code)
+    const wrapped = `${code!.slice(0, 40)}\n  ${code!.slice(40)}`
+    const parsed = await parseRtcHandshakeCode(wrapped, seedB64)
+    assert.ok(parsed)
+    assert.equal(parsed!.sessionId, "sessionDDDDDDDD")
+  })
+
   it("rejects codes sealed with a different Family seed", async () => {
     const a = generateFamilySeed()
     const b = generateFamilySeed()

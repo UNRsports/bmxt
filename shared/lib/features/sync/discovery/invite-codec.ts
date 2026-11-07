@@ -24,8 +24,13 @@ export function formatInvite(invite: SyncInviteV1): string {
   return INVITE_PREFIX + bytesToBase64Url(utf8Encode(json))
 }
 
+/** EN: Strip whitespace so terminal-wrapped paste still parses. */
+export function compactInviteToken(raw: string): string {
+  return raw.replace(/\s+/g, "")
+}
+
 export function parseInvite(raw: string): SyncInviteV1 | null {
-  const trimmed = raw.trim()
+  const trimmed = compactInviteToken(raw)
   if (!trimmed.startsWith(INVITE_PREFIX)) {
     return null
   }
