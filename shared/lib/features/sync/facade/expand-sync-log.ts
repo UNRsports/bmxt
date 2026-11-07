@@ -80,6 +80,9 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token.startsWith("sync.rtc.connected:")) {
     return tCmd("cmd.sync.rtc.connected", locale, { name: token.slice("sync.rtc.connected:".length) })
   }
+  if (token === "sync.rtc.pingDeferred") {
+    return tCmd("cmd.sync.rtc.pingDeferred", locale)
+  }
   if (token === "sync.open.noUrls") {
     return tCmd("cmd.sync.open.noUrls", locale)
   }

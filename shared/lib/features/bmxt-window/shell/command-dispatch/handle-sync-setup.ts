@@ -318,6 +318,14 @@ async function handlePasteAnswerStep(
   const result = await getSyncService().accept(parsed.value)
   await appendExpanded(ctx, logPrefix, result.lines)
   if (!result.ok) {
+    // EN: Re-pasting a spent answer code cannot succeed; end the wizard instead of looping.
+    const spent = result.lines.includes("sync.rtc.acceptFailed")
+    if (spent) {
+      ctx.deps.syncSetupPendingRef.current = null
+      await ctx.deps.appendLogLines([tCmd("cmd.sync.setup.acceptRetryHint", ctx.locale)])
+      ctx.deps.focusPrompt()
+      return
+    }
     await ctx.deps.appendLogLines([
       tCmd("cmd.sync.setup.pasteAnswer", ctx.locale),
       tCmd("cmd.sync.setup.cancelHint", ctx.locale)

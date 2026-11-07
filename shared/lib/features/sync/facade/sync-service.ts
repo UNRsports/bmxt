@@ -292,14 +292,17 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         updatedAt: new Date().toISOString(),
         endpointHint: null
       })
+      // EN: Handshake success is enough to finish setup. Ping may fail briefly
+      // right after the DataChannel opens; treat it as diagnostics only.
       const ping = await s.commandBus.ping(remoteDeviceId)
-      return {
-        ok: ping.ok,
-        lines: [
-          line(`sync.rtc.connected:${plain.fromDisplayName}`),
-          line(`sync.connect.ping:ok=${ping.ok};rtt=${ping.rttMs ?? "n/a"}`)
-        ]
+      const lines = [
+        line(`sync.rtc.connected:${plain.fromDisplayName}`),
+        line(`sync.connect.ping:ok=${ping.ok};rtt=${ping.rttMs ?? "n/a"}`)
+      ]
+      if (!ping.ok) {
+        lines.push(line("sync.rtc.pingDeferred"))
       }
+      return { ok: true, lines }
     },
 
     async openRemote(deviceId: string, urls: string[], groupTitle: string | null) {

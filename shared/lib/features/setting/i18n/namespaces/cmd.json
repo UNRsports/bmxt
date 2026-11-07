@@ -703,6 +703,10 @@
     "ja": "接続セットアップが完了しました。状態は sync -status で確認できます。",
     "en": "Connection setup finished. Check status with sync -status."
   },
+  "cmd.sync.setup.acceptRetryHint": {
+    "ja": "同じアンサーの再貼付はできません。接続済みなら sync -status を確認し、未接続なら両側で sync -setup からやり直してください。",
+    "en": "The same answer cannot be pasted again. If already connected, check sync -status; otherwise restart sync -setup on both sides."
+  },
   "cmd.sync.setup.compoundBlocked": {
     "ja": "sync -setup は対話式のため、複合コマンドでは使えません。単独で実行してください。",
     "en": "sync -setup is interactive and cannot run in a compound command. Run it alone."
@@ -858,6 +862,10 @@
   "cmd.sync.rtc.connected": {
     "ja": "DataChannel 接続を確立しました: {name}",
     "en": "DataChannel connected: {name}"
+  },
+  "cmd.sync.rtc.pingDeferred": {
+    "ja": "直後の ping は未応答でも接続自体は完了しています。必要なら後で sync -ping を試してください。",
+    "en": "Immediate ping may fail even though the channel is up. Try sync -ping later if needed."
   },
   "cmd.sync.rtc.encodeFailed": {
     "ja": "握手コードの生成に失敗しました。",
