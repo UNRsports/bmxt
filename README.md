@@ -703,7 +703,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
-**UX:** First Family join: **`sync -setup`** (or `-pair`). After disconnect: both sides **`sync -connect <peerDeviceId>`**, then use the prompt **Copy / Paste** buttons (or browser-rebindable `sync-handshake-copy` / `sync-handshake-paste` shortcuts). The setting picker sync panel only shows a setup guide and display-name edit — paste long codes at the prompt, not in the picker.
+**UX:** First Family join: **`sync -setup`** (or `-pair`). After disconnect: both sides **`sync -connect <peerDeviceId>`**, then use the prompt **Copy / Paste** buttons (or `sync-handshake-copy` / `sync-handshake-paste` in the browser’s extension shortcut settings — Chrome allows only 4 suggested keys, so those two have no default there; Firefox suggests Alt+Shift+Y / Alt+Shift+V). The setting picker sync panel only shows a setup guide and display-name edit — paste long codes at the prompt, not in the picker.
 
 **Module layout:** **`shared/lib/features/sync/`**. Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue).
 
@@ -2135,7 +2135,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
-**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。切断後は両側で **`sync -connect <peerDeviceId>`** のあと、プロンプトの **Copy / Paste**（またはブラウザで変更可能な `sync-handshake-copy` / `sync-handshake-paste`）。setting picker の sync は案内と表示名編集のみ（長いコードはピッカーではなくプロンプトへ貼付）。
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。切断後は両側で **`sync -connect <peerDeviceId>`** のあと、プロンプトの **Copy / Paste**（またはブラウザの拡張ショートカット設定の `sync-handshake-copy` / `sync-handshake-paste`。Chrome は suggested_key 上限4のため既定なし、Firefox は Alt+Shift+Y / Alt+Shift+V を提示）。setting picker の sync は案内と表示名編集のみ（長いコードはピッカーではなくプロンプトへ貼付）。
 
 **配置:** **`shared/lib/features/sync/`**。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。
 
