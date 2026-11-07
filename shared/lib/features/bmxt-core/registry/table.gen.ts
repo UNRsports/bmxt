@@ -100,6 +100,11 @@ export const COMMANDS: readonly CmdMeta[] = [
     name: "tutorial",
     aliases: [] as const,
     usagePrimary: "tutorial | tutorial -start | tutorial -skip | tutorial help"
+  },
+  {
+    name: "sync",
+    aliases: [] as const,
+    usagePrimary: "sync -status | sync -dir | sync -pair [invite] | sync -members | sync -pull | sync -push | sync -pause | sync -open <deviceId> <url…> | sync -connect <deviceId> | sync help"
   }
 ]
 

@@ -178,17 +178,17 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **実装チェック**
 
-- [ ] device ID 生成・永続・表示名
-- [ ] Family 作成／参加（シードまたは招待）の最小モデル
-- [ ] `shared/lib/features/sync/`（または setting 延長）に同期モジュール
-- [ ] **6a:** 作業ディレクトリ選択・永続（`settings-handle-db` 流用可）· collect/apply · 衝突処理 · 単体テスト
+- [x] device ID 生成・永続・表示名
+- [x] Family 作成／参加（シードまたは招待）の最小モデル
+- [x] `shared/lib/features/sync/`（スタビライザー境界）に同期モジュール
+- [x] **6a:** 作業ディレクトリ選択・永続（IDB handle 枠）· collect/apply · 衝突処理 · 単体テスト
 - [ ] **6a:** 同一フォルダを Chrome / Firefox 双方で選び相互反映（手元）
-- [ ] **6b:** LAN 内で device ID によりメンバー発見→接続する仕様確定（QR／手入力を初期案）。実装または明示的延期
-- [ ] **6c:** シグナリング箱アダプタ境界（FSA 実装 + Drive 差し替え用インタフェース）
-- [ ] **6c:** peer 宿主（Chrome offscreen / Firefox 拡張ページ）+ WebRTC DataChannel コマンド／ack
-- [ ] **6c:** 休眠時 FSA コマンドキューフォールバック
+- [x] **6b:** LAN 内で device ID によりメンバー発見→接続（QR／手入力 + 名簿ハブ）。公開 STUN なし
+- [x] **6c:** シグナリング箱アダプタ境界（FSA 実装 + Drive 差し替え用インタフェース）
+- [x] **6c:** peer 宿主（Chrome offscreen / Firefox `bmxt-peer.html`）+ WebRTC DataChannel コマンド／ack
+- [x] **6c:** 休眠時 FSA コマンドキューフォールバック
 - [ ] **6c:** 手元 — 同一 PC で Chrome→Firefox に遠隔コマンド（例: タブ／グループ open 相当）が低遅延で届く
-- [ ] `sync` コマンド + i18n + README（EN/JA）。既定はローカル、Drive は候補／未実装を明記
+- [x] `sync` コマンド + i18n + README（EN/JA）。既定はローカル、Drive は候補／未実装を明記
 
 ---
 

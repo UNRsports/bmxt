@@ -324,6 +324,24 @@
           "tail": "none"
         }
       ]
+    },
+    {
+      "module": "sync",
+      "canonicalName": "sync",
+      "aliases": [],
+      "usagePrimary": "sync -status | sync -dir | sync -pair [invite] | sync -members | sync -pull | sync -push | sync -pause | sync -open <deviceId> <url…> | sync -connect <deviceId> | sync help",
+      "subcommands": [
+        { "head": "-status", "tail": "none" },
+        { "head": "-dir", "tail": "none" },
+        { "head": "-pair", "tail": "rest" },
+        { "head": "-members", "tail": "none" },
+        { "head": "-pull", "tail": "none" },
+        { "head": "-push", "tail": "none" },
+        { "head": "-pause", "tail": "none" },
+        { "head": "-open", "tail": "rest" },
+        { "head": "-connect", "tail": "rest" },
+        { "head": "help", "tail": "none" }
+      ]
     }
   ],
   "effects": [
@@ -658,6 +676,61 @@
       "kind": "picker_pass",
       "rustVariant": "PickerPass",
       "shape": "unit"
+    },
+    {
+      "kind": "sync_status",
+      "rustVariant": "SyncStatus",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_dir",
+      "rustVariant": "SyncDir",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_pair",
+      "rustVariant": "SyncPair",
+      "shape": "record",
+      "fields": {
+        "invite": "string"
+      }
+    },
+    {
+      "kind": "sync_members",
+      "rustVariant": "SyncMembers",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_pull",
+      "rustVariant": "SyncPull",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_push",
+      "rustVariant": "SyncPush",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_pause",
+      "rustVariant": "SyncPause",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_open",
+      "rustVariant": "SyncOpen",
+      "shape": "record",
+      "fields": {
+        "device_id": "string",
+        "payload": "string"
+      }
+    },
+    {
+      "kind": "sync_connect",
+      "rustVariant": "SyncConnect",
+      "shape": "record",
+      "fields": {
+        "device_id": "string"
+      }
     }
   ]
 }

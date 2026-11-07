@@ -110,6 +110,11 @@ pub const COMMANDS: &[CmdMeta] = &[
         aliases: &[],
         usage_primary: "tutorial | tutorial -start | tutorial -skip | tutorial help",
     },
+    CmdMeta {
+        name: "sync",
+        aliases: &[],
+        usage_primary: "sync -status | sync -dir | sync -pair [invite] | sync -members | sync -pull | sync -push | sync -pause | sync -open <deviceId> <url…> | sync -connect <deviceId> | sync help",
+    },
 ];
 
 static BRANCHES_DOM: &[SubcommandBranch] = &[
@@ -275,6 +280,49 @@ static BRANCHES_TUTORIAL: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_SYNC: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-status",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-dir",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-pair",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-members",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-pull",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-push",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-pause",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-open",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-connect",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -316,6 +364,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "browse" => false,
         "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
+        "sync" => matches!(lower.as_str(), "-status" | "-dir" | "-pair" | "-members" | "-pull" | "-push" | "-pause" | "-open" | "-connect" | "help"),
         _ => false,
     }
 }
@@ -342,6 +391,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "browse" => &[],
         "setting" => BRANCHES_SETTING,
         "tutorial" => BRANCHES_TUTORIAL,
+        "sync" => BRANCHES_SYNC,
         _ => &[],
     }
 }

@@ -45,6 +45,19 @@ import {
   type TranslationPairId
 } from "../../translate"
 import type { UiActionIR } from "../../dispatch/ui-action-types"
+import {
+  applySyncUiLog,
+  runSyncConnect,
+  runSyncDir,
+  runSyncMembers,
+  runSyncOpen,
+  runSyncPair,
+  runSyncPause,
+  runSyncPull,
+  runSyncPush,
+  runSyncStatus,
+  syncUiSegmentOutcome
+} from "../../sync/facade/apply-sync-ui"
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
 import { mountTabPickerLoadingColumn } from "./command-dispatch/open-tab-picker-column"
 import { beginNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
@@ -202,6 +215,24 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySetMode(ctx, action.feature_id, action.mode)
     case "snapshot_save":
       return applySnapshotSave(ctx, action.line)
+    case "sync_status":
+      return applySyncStatus(ctx)
+    case "sync_dir":
+      return applySyncDir(ctx)
+    case "sync_pair":
+      return applySyncPair(ctx, action.invite)
+    case "sync_members":
+      return applySyncMembers(ctx)
+    case "sync_pull":
+      return applySyncPull(ctx)
+    case "sync_push":
+      return applySyncPush(ctx)
+    case "sync_pause":
+      return applySyncPause(ctx)
+    case "sync_open":
+      return applySyncOpen(ctx, action.device_id, action.payload)
+    case "sync_connect":
+      return applySyncConnect(ctx, action.device_id)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -245,11 +276,101 @@ export async function applyUiActionForSegment(
       return applySetModeSegment(ctx, action.feature_id, action.mode)
     case "snapshot_save":
       return applySnapshotSaveSegment(ctx, action.line)
+    case "sync_status":
+      return segmentSuccess(await runSyncStatus(ctx.locale))
+    case "sync_dir":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncDir())
+    case "sync_pair":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncPair(action.invite))
+    case "sync_members":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncMembers())
+    case "sync_pull":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncPull())
+    case "sync_push":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncPush())
+    case "sync_pause":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncPause())
+    case "sync_open":
+      return syncUiSegmentOutcome(ctx.locale, () =>
+        runSyncOpen(action.device_id, action.payload)
+      )
+    case "sync_connect":
+      return syncUiSegmentOutcome(ctx.locale, () => runSyncConnect(action.device_id))
     default: {
       const _exhaustive: never = action
       return _exhaustive
     }
   }
+}
+
+function syncSink(ctx: CommandDispatchContext) {
+  return {
+    locale: ctx.locale,
+    appendLogLines: ctx.deps.appendLogLines,
+    focusPrompt: ctx.deps.focusPrompt
+  }
+}
+
+function applySyncStatus(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const lines = await runSyncStatus(ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+function applySyncDir(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncDir())
+  return true
+}
+
+function applySyncPair(ctx: CommandDispatchContext, invite: string): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPair(invite))
+  return true
+}
+
+function applySyncMembers(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncMembers())
+  return true
+}
+
+function applySyncPull(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPull())
+  return true
+}
+
+function applySyncPush(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPush())
+  return true
+}
+
+function applySyncPause(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPause())
+  return true
+}
+
+function applySyncOpen(
+  ctx: CommandDispatchContext,
+  deviceId: string,
+  payload: string
+): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncOpen(deviceId, payload))
+  return true
+}
+
+function applySyncConnect(ctx: CommandDispatchContext, deviceId: string): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncConnect(deviceId))
+  return true
 }
 
 function applyShowHelp(ctx: CommandDispatchContext): boolean {

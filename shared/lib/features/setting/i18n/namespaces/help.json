@@ -63,6 +63,10 @@
     "ja": "tutorial（対話チュートリアル）:\n  tutorial / tutorial -start  - 既定レッスン（tab -list | browse）を開始。\n  tutorial -skip              - スキップ（初回自動開始も停止）。\n  初回起動時に自動で開始されます（スキップ可）。",
     "en": "tutorial (interactive coach):\n  tutorial / tutorial -start  - start the default lesson (tab -list | browse).\n  tutorial -skip              - skip (also stops first-run auto-start).\n  Auto-starts on first launch (skippable)."
   },
+  "help.section.sync": {
+    "ja": "sync（同一 PC / 同一 LAN · Family · コマンドバス）:\n  sync -status / -dir / -pair [invite] / -members / -pull / -push / -pause\n  sync -connect <deviceId>  — FSA シグナリング + WebRTC（STUN なし）\n  sync -open <deviceId> <url…> [--group <title>]  — 遠隔タブ／グループ open\n  正本はローカル FSA 作業ディレクトリ。Drive は差し替え候補・未実装。平文の預かり先は作らない。",
+    "en": "sync (same PC / same LAN · Family · command bus):\n  sync -status / -dir / -pair [invite] / -members / -pull / -push / -pause\n  sync -connect <deviceId>  — FSA signaling + WebRTC (no STUN)\n  sync -open <deviceId> <url…> [--group <title>]  — remote tab/group open\n  Source of truth is a local FSA workdir. Drive is a swap candidate — not implemented. Zero custody."
+  },
   "help.section.url": {
     "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",
     "en": "URL (http/https, typed as a whole line):\n  <url>           - new tab\n  <url> .         - current tab (active tab in focused window)\n  <url> -nw       - new window"

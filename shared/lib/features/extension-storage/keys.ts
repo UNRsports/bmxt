@@ -121,5 +121,17 @@ export const JOB_DB_KEY = "bmxt_job_db_v1"
 /** Interactive tutorial progress (completed / skipped / step index). */
 export const TUTORIAL_PROGRESS_KEY = "bmxt_tutorial_progress_v1"
 
+/** Family sync: per-browser device identity (`shared/lib/features/sync/`). */
+export const SYNC_DEVICE_IDENTITY_KEY = "bmxt_sync_device_v1"
+
+/** Family sync: membership (familyId + local seed; zero custody). */
+export const SYNC_FAMILY_MEMBERSHIP_KEY = "bmxt_sync_family_v1"
+
+/** Family sync: FSA workdir mode metadata (handle lives in IndexedDB). */
+export const SYNC_WORKDIR_CONFIG_KEY = "bmxt_sync_workdir_v1"
+
+/** Family sync: manual/QR discovery cache. */
+export const SYNC_DISCOVERY_CACHE_KEY = "bmxt_sync_discovery_v1"
+
 export const MAX_SESSION_LOG_LINES = 5000
 export const MAX_CMD_HISTORY_LINES = 300

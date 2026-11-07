@@ -574,5 +574,209 @@
   "cmd.tutorial.skipped": {
     "ja": "チュートリアルをスキップしました。再開は `tutorial` です。",
     "en": "Tutorial skipped. Restart anytime with `tutorial`."
+  },
+  "cmd.sync.usage.line1": {
+    "ja": "usage: sync -status — デバイス / Family / 作業ディレクトリ / 接続状態",
+    "en": "usage: sync -status — device / Family / workdir / connection state"
+  },
+  "cmd.sync.usage.line2": {
+    "ja": "  sync -dir — 同一 PC 共有の同期作業ディレクトリを選択（FSA・ネットワーク権限なし）",
+    "en": "  sync -dir — pick same-PC shared sync work directory (FSA; no network permission)"
+  },
+  "cmd.sync.usage.line3": {
+    "ja": "  sync -pair — Family 招待トークンを表示（QR 用ペイロード含む）",
+    "en": "  sync -pair — show Family invite token (includes QR payload)"
+  },
+  "cmd.sync.usage.line4": {
+    "ja": "  sync -pair <invite> — 招待で Family に参加（手入力 / QR 読取文字列）",
+    "en": "  sync -pair <invite> — join Family from invite (typed / QR-decoded string)"
+  },
+  "cmd.sync.usage.line5": {
+    "ja": "  sync -members — Family 名簿と発見済みデバイスを表示",
+    "en": "  sync -members — list Family roster and discovered devices"
+  },
+  "cmd.sync.usage.line6": {
+    "ja": "  sync -pull / sync -push — 作業ディレクトリから取得 / へ書き出し（LWW）",
+    "en": "  sync -pull / sync -push — pull from / push to workdir (LWW)"
+  },
+  "cmd.sync.usage.line7": {
+    "ja": "  sync -pause — 自動同期の一時停止を切替",
+    "en": "  sync -pause — toggle sync pause"
+  },
+  "cmd.sync.usage.line8": {
+    "ja": "  sync -connect <deviceId> — FSA シグナリング + WebRTC で接続し ping",
+    "en": "  sync -connect <deviceId> — connect via FSA signaling + WebRTC and ping"
+  },
+  "cmd.sync.usage.line9": {
+    "ja": "  sync -open <deviceId> <url…> [--group <title>] — 遠隔タブ／グループ open",
+    "en": "  sync -open <deviceId> <url…> [--group <title>] — remote tab/group open"
+  },
+  "cmd.sync.usage.line10": {
+    "ja": "  既定はローカル（FSA）。Google Drive シグナリングは差し替え候補・未実装。",
+    "en": "  Default is local (FSA). Google Drive signaling is a swap candidate — not implemented."
+  },
+  "cmd.sync.runHint": {
+    "ja": "ヒント: 同一 PC では Chrome / Firefox で同じ作業ディレクトリを選び、`-pair` で Family を揃えてください。",
+    "en": "Hint: on the same PC, pick the same workdir in Chrome and Firefox, then align Family with `-pair`."
+  },
+  "cmd.sync.error.tooManyArgs": {
+    "ja": "error: 引数が多すぎます",
+    "en": "error: too many arguments"
+  },
+  "cmd.sync.error.unknownOption": {
+    "ja": "error: 不明な sync オプション: {option}",
+    "en": "error: unknown sync option: {option}"
+  },
+  "cmd.sync.error.inviteTooLong": {
+    "ja": "error: 招待トークンが長すぎます",
+    "en": "error: invite token is too long"
+  },
+  "cmd.sync.error.invalidInvite": {
+    "ja": "error: 招待トークンが不正です",
+    "en": "error: invalid invite token"
+  },
+  "cmd.sync.error.invalidDeviceId": {
+    "ja": "error: deviceId が不正です",
+    "en": "error: invalid deviceId"
+  },
+  "cmd.sync.error.openUsage": {
+    "ja": "error: usage: sync -open <deviceId> <url…> [--group <title>]",
+    "en": "error: usage: sync -open <deviceId> <url…> [--group <title>]"
+  },
+  "cmd.sync.status.device": {
+    "ja": "device: {name} ({browser}) id={deviceId}",
+    "en": "device: {name} ({browser}) id={deviceId}"
+  },
+  "cmd.sync.status.family": {
+    "ja": "family: {familyId}",
+    "en": "family: {familyId}"
+  },
+  "cmd.sync.status.noFamily": {
+    "ja": "family: （未作成 — `sync -pair` で作成）",
+    "en": "family: (none — create with `sync -pair`)"
+  },
+  "cmd.sync.status.workdir": {
+    "ja": "workdir: enabled={enabled} paused={paused} dir={directory} pull={lastPull} push={lastPush}",
+    "en": "workdir: enabled={enabled} paused={paused} dir={directory} pull={lastPull} push={lastPush}"
+  },
+  "cmd.sync.status.membersCount": {
+    "ja": "members: {count}",
+    "en": "members: {count}"
+  },
+  "cmd.sync.status.connectionsEmpty": {
+    "ja": "connections: （なし — `sync -connect <deviceId>`）",
+    "en": "connections: (none — `sync -connect <deviceId>`)"
+  },
+  "cmd.sync.status.connection": {
+    "ja": "connection: {deviceId} → {state}",
+    "en": "connection: {deviceId} → {state}"
+  },
+  "cmd.sync.status.inviteHint": {
+    "ja": "invite: `sync -pair` で表示（平文の預かり先は作りません）",
+    "en": "invite: show with `sync -pair` (zero custody — no plaintext vault)"
+  },
+  "cmd.sync.status.transportHint": {
+    "ja": "transport: FSA 正本 + FSA シグナリング / WebRTC DataChannel（STUN なし・同一 PC/LAN）。Drive は未実装。",
+    "en": "transport: FSA source of truth + FSA signaling / WebRTC DataChannel (no STUN; same PC/LAN). Drive not implemented."
+  },
+  "cmd.sync.dir.cancelled": {
+    "ja": "作業ディレクトリ選択をキャンセルしました。",
+    "en": "Work directory pick cancelled."
+  },
+  "cmd.sync.dir.error": {
+    "ja": "作業ディレクトリを選べませんでした（{code}）。",
+    "en": "Could not pick work directory ({code})."
+  },
+  "cmd.sync.dir.ok": {
+    "ja": "同期作業ディレクトリを設定しました: {name}",
+    "en": "Sync work directory set: {name}"
+  },
+  "cmd.sync.pair.created": {
+    "ja": "Family 招待を用意しました。相手の BMXt で `sync -pair <invite>` を実行してください。",
+    "en": "Family invite ready. On the peer BMXt run `sync -pair <invite>`."
+  },
+  "cmd.sync.pair.noFamily": {
+    "ja": "Family を作成できませんでした。",
+    "en": "Could not create Family."
+  },
+  "cmd.sync.pair.invalidInvite": {
+    "ja": "招待トークンを解析できませんでした。",
+    "en": "Could not parse invite token."
+  },
+  "cmd.sync.pair.joinFailed": {
+    "ja": "Family への参加に失敗しました。",
+    "en": "Failed to join Family."
+  },
+  "cmd.sync.pair.invite": {
+    "ja": "invite: {invite}",
+    "en": "invite: {invite}"
+  },
+  "cmd.sync.pair.qr": {
+    "ja": "qr-payload: {payload}",
+    "en": "qr-payload: {payload}"
+  },
+  "cmd.sync.pair.joined": {
+    "ja": "Family に参加しました: {familyId}",
+    "en": "Joined Family: {familyId}"
+  },
+  "cmd.sync.pair.peer": {
+    "ja": "発見: {name}（名簿 / 手動キャッシュへ記録）",
+    "en": "Discovered: {name} (recorded in roster / manual cache)"
+  },
+  "cmd.sync.members.header": {
+    "ja": "Family メンバー:",
+    "en": "Family members:"
+  },
+  "cmd.sync.members.empty": {
+    "ja": "（メンバーなし — `-dir` と `-push` のあと再表示）",
+    "en": "(no members — try again after `-dir` and `-push`)"
+  },
+  "cmd.sync.members.row": {
+    "ja": "  {name}  id={deviceId}  {browser}  updated={updatedAt}",
+    "en": "  {name}  id={deviceId}  {browser}  updated={updatedAt}"
+  },
+  "cmd.sync.members.discovered": {
+    "ja": "  (discovered/{source}) {name}  id={deviceId}",
+    "en": "  (discovered/{source}) {name}  id={deviceId}"
+  },
+  "cmd.sync.pull.done": {
+    "ja": "pull 完了: {detail}",
+    "en": "pull done: {detail}"
+  },
+  "cmd.sync.push.done": {
+    "ja": "push 完了: {detail}",
+    "en": "push done: {detail}"
+  },
+  "cmd.sync.pause.on": {
+    "ja": "同期を一時停止しました。",
+    "en": "Sync paused."
+  },
+  "cmd.sync.pause.off": {
+    "ja": "同期の一時停止を解除しました。",
+    "en": "Sync resumed."
+  },
+  "cmd.sync.open.noUrls": {
+    "ja": "error: 有効な http(s) URL がありません",
+    "en": "error: no valid http(s) URLs"
+  },
+  "cmd.sync.open.done": {
+    "ja": "遠隔 open: {detail}",
+    "en": "remote open: {detail}"
+  },
+  "cmd.sync.connect.state": {
+    "ja": "接続状態: {state}",
+    "en": "connection state: {state}"
+  },
+  "cmd.sync.connect.ping": {
+    "ja": "ping: {detail}",
+    "en": "ping: {detail}"
+  },
+  "cmd.sync.name.invalid": {
+    "ja": "error: 表示名が不正です",
+    "en": "error: invalid display name"
+  },
+  "cmd.sync.name.ok": {
+    "ja": "表示名を更新しました: {name}",
+    "en": "Display name updated: {name}"
   }
 }

@@ -18,7 +18,10 @@ const ALLOWLIST_RELATIVE = new Set([
   "shared/lib/features/setting/i18n/messages.ts",
   "tests/unit/features/setting/i18n/messages.test.ts",
   // Live UI / picker state labels (host-only OK per §14.1) — not prompt grammar SoT
-  "shared/lib/features/bmxt-window/shell/apply-ui-action.ts"
+  "shared/lib/features/bmxt-window/shell/apply-ui-action.ts",
+  // Family sync log expansion (UiAction host path — not WASM prompt grammar SoT)
+  "shared/lib/features/sync/facade/expand-sync-log.ts",
+  "shared/lib/features/sync/facade/format-status.ts"
 ])
 
 const TCMD_CMD_RE = /tCmd\s*\(\s*["']cmd\./g
