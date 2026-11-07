@@ -1,11 +1,46 @@
 import { SYNC_BUNDLE_ROOT_DIR } from "./bundle-layout"
 import { loadSyncWorkdirHandle } from "./handle-db"
 
+type ShowDirectoryPickerFn = (options?: {
+  id?: string
+  mode?: "read" | "readwrite"
+}) => Promise<FileSystemDirectoryHandle>
+
+type DirectoryPickerHost = {
+  showDirectoryPicker?: ShowDirectoryPickerFn
+}
+
+/**
+ * EN: Chromium File System Access — same detect path as UI settings external storage.
+ * JA: Chromium FSA。UI 設定の外部保存と同じ検出経路。
+ */
 export function isFileSystemAccessAvailable(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.showDirectoryPicker === "function"
-  )
+  if (typeof globalThis === "undefined") {
+    return false
+  }
+  // EN: Prefer `in` (Chrome docs) then confirm callable — matches settings-external-storage.
+  // JA: Chrome 公式の `in` 検出のあと、呼び出し可能かを確認（settings 外部保存と同じ）。
+  if (!("showDirectoryPicker" in globalThis)) {
+    return false
+  }
+  const host = globalThis as typeof globalThis & DirectoryPickerHost
+  return typeof host.showDirectoryPicker === "function"
+}
+
+/**
+ * EN: Return a host-bound picker (avoids Illegal invocation if the method is extracted).
+ * JA: ホストに bind したピッカーを返す（メソッド取り出し時の Illegal invocation を避ける）。
+ */
+export function getShowDirectoryPicker(): ShowDirectoryPickerFn | undefined {
+  if (!isFileSystemAccessAvailable()) {
+    return undefined
+  }
+  const host = globalThis as typeof globalThis & DirectoryPickerHost
+  const fn = host.showDirectoryPicker
+  if (typeof fn !== "function") {
+    return undefined
+  }
+  return (options) => fn.call(host, options)
 }
 
 export async function verifyDirectoryPermission(

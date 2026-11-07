@@ -1,3 +1,4 @@
+import { looksLikeBraveSync } from "../../setting/detect-brave"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
 
@@ -11,6 +12,18 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   }
   if (token.startsWith("sync.dir.error:")) {
     const code = token.slice("sync.dir.error:".length)
+    if (code === "unavailable") {
+      if (looksLikeBraveSync()) {
+        return tCmd("cmd.sync.dir.unavailableBrave", locale)
+      }
+      return tCmd("cmd.sync.dir.unavailable", locale)
+    }
+    if (code === "gesture_required") {
+      return tCmd("cmd.sync.dir.gestureRequired", locale)
+    }
+    if (code === "permission_denied") {
+      return tCmd("cmd.sync.dir.permissionDenied", locale)
+    }
     return tCmd("cmd.sync.dir.error", locale, { code })
   }
   if (token.startsWith("sync.dir.ok:")) {

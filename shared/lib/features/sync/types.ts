@@ -7,7 +7,7 @@ export type SyncDeviceId = string
 
 export type SyncFamilyId = string
 
-export type SyncBrowserKind = "chrome" | "firefox" | "unknown"
+export type SyncBrowserKind = "chrome" | "brave" | "firefox" | "unknown"
 
 export type SyncDeviceIdentity = {
   deviceId: SyncDeviceId

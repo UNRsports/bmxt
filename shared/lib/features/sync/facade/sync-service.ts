@@ -19,6 +19,14 @@ import { ensurePeerDocument } from "../peer/ensure-peer-document"
 export type SyncService = {
   status(): Promise<SyncStatusSnapshot>
   pickDir(): Promise<{ ok: boolean; lines: string[] }>
+  /**
+   * EN: After the UI page opens `showDirectoryPicker` under a user gesture.
+   * JA: UI がユーザー操作中に `showDirectoryPicker` したあとにハンドルを渡す。
+   */
+  bindPickedDir(
+    handle: FileSystemDirectoryHandle,
+    directoryName: string
+  ): Promise<{ ok: boolean; lines: string[] }>
   pair(rawInvite: string): Promise<{ ok: boolean; lines: string[] }>
   members(): Promise<{ ok: boolean; lines: string[] }>
   pull(): Promise<{ ok: boolean; lines: string[] }>
@@ -74,6 +82,17 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
       if (!result.ok) {
         return { ok: false, lines: [line(`sync.dir.error:${"error" in result ? result.error : "unknown"}`)] }
+      }
+      await ensureFamily()
+      await s.store.pushAll()
+      return { ok: true, lines: [line(`sync.dir.ok:${result.directoryName}`)] }
+    },
+
+    async bindPickedDir(handle: FileSystemDirectoryHandle, directoryName: string) {
+      const result = await s.store.bindWorkdir(handle, directoryName)
+      if (!result.ok) {
+        const code = "error" in result ? result.error : "unknown"
+        return { ok: false, lines: [line(`sync.dir.error:${code}`)] }
       }
       await ensureFamily()
       await s.store.pushAll()

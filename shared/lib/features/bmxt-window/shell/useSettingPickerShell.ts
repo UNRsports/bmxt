@@ -22,6 +22,7 @@ import {
   repickSnapshotVaultDirectory
 } from "../../snapshot/snapshot-vault-persistence"
 import { formatSnapshotVaultDisplayName } from "../../snapshot/snapshot-vault-layout"
+import { storageFsaUnavailableLine } from "../../setting/fsa-unavailable-message"
 import {
   activateExternalUiSettingsStorage,
   activateInternalUiSettingsStorage,
@@ -241,7 +242,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -300,7 +301,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -345,7 +346,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -388,7 +389,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -452,7 +453,41 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         return
       }
       if (row.id === "sync-pick-dir") {
-        const result = await getSyncService().pickDir()
+        // EN: Same path as storage external — call window.showDirectoryPicker in this UI gesture.
+        // JA: storage 外部保存と同じく、この UI ジェスチャ内で window.showDirectoryPicker を呼ぶ。
+        if (!isFileSystemAccessAvailable()) {
+          await options.appendLogLines([
+            logPrefix,
+            ...expandSyncLogLines(["sync.dir.error:unavailable"], options.uiLocale)
+          ])
+          return
+        }
+        let picked: FileSystemDirectoryHandle
+        try {
+          picked = await window.showDirectoryPicker({
+            id: "bmxt-sync-workdir",
+            mode: "readwrite"
+          })
+        } catch (err) {
+          const name = err instanceof DOMException ? err.name : ""
+          if (name === "AbortError") {
+            await options.appendLogLines([
+              logPrefix,
+              ...expandSyncLogLines(["sync.dir.cancelled"], options.uiLocale)
+            ])
+            return
+          }
+          const code =
+            name === "NotAllowedError" || name === "SecurityError"
+              ? "gesture_required"
+              : "pick_failed"
+          await options.appendLogLines([
+            logPrefix,
+            ...expandSyncLogLines([`sync.dir.error:${code}`], options.uiLocale)
+          ])
+          return
+        }
+        const result = await getSyncService().bindPickedDir(picked, picked.name)
         await options.appendLogLines([
           logPrefix,
           ...expandSyncLogLines(result.lines, options.uiLocale)

@@ -17,6 +17,14 @@ export type SyncStoreStabilizer = {
     | { ok: false; cancelled: true }
     | { ok: false; cancelled?: false; error: string }
   >
+  /**
+   * EN: Persist a directory already picked in the UI page (user-gesture safe).
+   * JA: UI ページで既に選んだディレクトリを永続化（ユーザー操作ジェスチャ内で pick 済み）。
+   */
+  bindWorkdir(
+    handle: FileSystemDirectoryHandle,
+    directoryName: string
+  ): Promise<{ ok: true; directoryName: string } | { ok: false; error: string }>
   hasWorkdir(): Promise<boolean>
   collectPrefs(): Promise<SyncPrefsDocument>
   applyPrefs(doc: SyncPrefsDocument): Promise<{ applied: number; skipped: number }>

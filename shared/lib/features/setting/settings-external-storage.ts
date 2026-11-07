@@ -38,10 +38,16 @@ export type PickUiSettingsDirectoryResult =
   | { ok: false; cancelled?: false; error: ExternalStorageErrorCode; message: string }
 
 export function isFileSystemAccessAvailable(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.showDirectoryPicker === "function"
-  )
+  if (typeof globalThis === "undefined") {
+    return false
+  }
+  if (!("showDirectoryPicker" in globalThis)) {
+    return false
+  }
+  const host = globalThis as typeof globalThis & {
+    showDirectoryPicker?: unknown
+  }
+  return typeof host.showDirectoryPicker === "function"
 }
 
 async function verifyDirectoryPermission(

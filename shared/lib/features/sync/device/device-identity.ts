@@ -5,9 +5,35 @@ import { SYNC_DEVICE_IDENTITY_KEY } from "../workdir/storage-keys"
 const MAX_DISPLAY_NAME_LEN = 64
 
 function detectBrowser(): SyncBrowserKind {
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
+  if (typeof navigator === "undefined") {
+    return "unknown"
+  }
+  const ua = navigator.userAgent
   if (/Firefox\//.test(ua)) {
     return "firefox"
+  }
+  // EN: Brave before Chrome — UA often still contains Chrome/.
+  // JA: Brave を Chrome より先に判定（UA に Chrome/ が残ることが多い）。
+  const nav = navigator as Navigator & {
+    brave?: { isBrave?: () => Promise<boolean> }
+  }
+  if (nav.brave !== undefined && typeof nav.brave.isBrave === "function") {
+    return "brave"
+  }
+  if (/Brave/i.test(ua)) {
+    return "brave"
+  }
+  const brands = (
+    navigator as Navigator & {
+      userAgentData?: { brands?: Array<{ brand: string }> }
+    }
+  ).userAgentData?.brands
+  if (Array.isArray(brands)) {
+    for (const entry of brands) {
+      if (typeof entry.brand === "string" && /Brave/i.test(entry.brand)) {
+        return "brave"
+      }
+    }
   }
   if (/Chrome\//.test(ua) || /Chromium\//.test(ua) || /Edg\//.test(ua)) {
     return "chrome"
@@ -19,6 +45,9 @@ function defaultDisplayName(browser: SyncBrowserKind, deviceId: string): string 
   const short = deviceId.slice(0, 6)
   if (browser === "firefox") {
     return `firefox@${short}`
+  }
+  if (browser === "brave") {
+    return `brave@${short}`
   }
   if (browser === "chrome") {
     return `chrome@${short}`

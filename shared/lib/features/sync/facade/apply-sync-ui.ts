@@ -43,7 +43,29 @@ export async function runSyncStatus(locale: UiLocale): Promise<string[]> {
 }
 
 export async function runSyncDir(): Promise<{ ok: boolean; lines: string[] }> {
-  return getSyncService().pickDir()
+  const { isFileSystemAccessAvailable } = await import(
+    "../../setting/settings-external-storage.ts"
+  )
+  if (!isFileSystemAccessAvailable()) {
+    return { ok: false, lines: ["sync.dir.error:unavailable"] }
+  }
+  let picked: FileSystemDirectoryHandle
+  try {
+    picked = await window.showDirectoryPicker({
+      id: "bmxt-sync-workdir",
+      mode: "readwrite"
+    })
+  } catch (err) {
+    const name = err instanceof DOMException ? err.name : ""
+    if (name === "AbortError") {
+      return { ok: false, lines: ["sync.dir.cancelled"] }
+    }
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      return { ok: false, lines: ["sync.dir.error:gesture_required"] }
+    }
+    return { ok: false, lines: ["sync.dir.error:pick_failed"] }
+  }
+  return getSyncService().bindPickedDir(picked, picked.name)
 }
 
 export async function runSyncPair(invite: string): Promise<{ ok: boolean; lines: string[] }> {

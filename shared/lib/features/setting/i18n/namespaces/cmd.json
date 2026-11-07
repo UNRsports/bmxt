@@ -687,6 +687,22 @@
     "ja": "作業ディレクトリを選べませんでした（{code}）。",
     "en": "Could not pick work directory ({code})."
   },
+  "cmd.sync.dir.unavailable": {
+    "ja": "この環境ではフォルダ選択（File System Access API）を使えません。Chromium 系の通常ウィンドウで BMXt を開き直してください（Firefox は未対応）。",
+    "en": "Folder picking (File System Access API) is unavailable here. Reopen BMXt in a normal Chromium window (not supported on Firefox)."
+  },
+  "cmd.sync.dir.unavailableBrave": {
+    "ja": "Brave ではフォルダ選択（File System Access API）が既定で無効です。brave://flags/#file-system-access-api を Enabled にして Brave を再起動してください。",
+    "en": "Brave disables folder picking (File System Access API) by default. Set brave://flags/#file-system-access-api to Enabled, then relaunch Brave."
+  },
+  "cmd.sync.dir.gestureRequired": {
+    "ja": "フォルダ選択にはユーザー操作が必要です。もう一度 Enter / → で選んでください。",
+    "en": "Folder picking needs a user gesture. Press Enter / → again to choose a folder."
+  },
+  "cmd.sync.dir.permissionDenied": {
+    "ja": "選択したフォルダへの読み書き許可が得られませんでした。",
+    "en": "Read/write permission was not granted for the selected folder."
+  },
   "cmd.sync.dir.ok": {
     "ja": "同期作業ディレクトリを設定しました: {name}",
     "en": "Sync work directory set: {name}"

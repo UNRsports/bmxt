@@ -647,6 +647,10 @@
     "ja": "setting: この環境では File System Access API を利用できません",
     "en": "setting: File System Access API is unavailable in this environment"
   },
+  "setting.storage.unavailableBrave": {
+    "ja": "setting: Brave では File System Access API が既定で無効です。brave://flags/#file-system-access-api を Enabled にして Brave を再起動してください",
+    "en": "setting: Brave disables File System Access by default. Set brave://flags/#file-system-access-api to Enabled, then relaunch Brave"
+  },
   "setting.storage.recovery.warning": {
     "ja": "setting: 外部保存先（{location}）の設定バンドルに不足があります",
     "en": "setting: external settings bundle at {location} is incomplete"

@@ -23,7 +23,7 @@ import {
 import { loadSyncWorkdirConfig, saveSyncWorkdirConfig } from "../workdir/config"
 import {
   ensureSyncBundleRoot,
-  isFileSystemAccessAvailable,
+  getShowDirectoryPicker,
   readJsonFile,
   resolveReadableSyncRoot,
   resolveWritableSyncRoot,
@@ -33,6 +33,24 @@ import {
 import { saveSyncWorkdirHandle } from "../workdir/handle-db"
 
 const DIRECTORY_PICKER_ID = "bmxt-sync-workdir"
+
+async function persistPickedWorkdir(
+  picked: FileSystemDirectoryHandle,
+  directoryName: string
+): Promise<{ ok: true; directoryName: string } | { ok: false; error: string }> {
+  if (!(await verifyDirectoryPermission(picked, true))) {
+    return { ok: false, error: "permission_denied" }
+  }
+  await saveSyncWorkdirHandle(picked)
+  await ensureSyncBundleRoot(picked)
+  const prev = await loadSyncWorkdirConfig()
+  await saveSyncWorkdirConfig({
+    ...prev,
+    enabled: true,
+    directoryName
+  })
+  return { ok: true, directoryName }
+}
 
 function emptyPrefs(familyId: string, deviceId: string): SyncPrefsDocument {
   const now = new Date().toISOString()
@@ -96,12 +114,13 @@ export function createFsaSyncStoreStabilizer(): SyncStoreStabilizer {
     },
 
     async pickWorkdir() {
-      if (!isFileSystemAccessAvailable()) {
+      const showDirectoryPicker = getShowDirectoryPicker()
+      if (!showDirectoryPicker) {
         return { ok: false as const, error: "unavailable" }
       }
       let picked: FileSystemDirectoryHandle
       try {
-        picked = await window.showDirectoryPicker({
+        picked = await showDirectoryPicker({
           id: DIRECTORY_PICKER_ID,
           mode: "readwrite"
         })
@@ -110,21 +129,18 @@ export function createFsaSyncStoreStabilizer(): SyncStoreStabilizer {
         if (name === "AbortError") {
           return { ok: false as const, cancelled: true }
         }
+        // EN: NotAllowedError often means the user-gesture was lost before the picker opened.
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          return { ok: false as const, error: "gesture_required" }
+        }
         return { ok: false as const, error: "pick_failed" }
       }
-      if (!(await verifyDirectoryPermission(picked, true))) {
-        return { ok: false as const, error: "permission_denied" }
-      }
-      await saveSyncWorkdirHandle(picked)
-      await ensureSyncBundleRoot(picked)
-      const directoryName = picked.name
-      const prev = await loadSyncWorkdirConfig()
-      await saveSyncWorkdirConfig({
-        ...prev,
-        enabled: true,
-        directoryName
-      })
-      return { ok: true as const, directoryName }
+      return persistPickedWorkdir(picked, picked.name)
+    },
+
+    async bindWorkdir(handle: FileSystemDirectoryHandle, directoryName: string) {
+      const name = directoryName.trim().length > 0 ? directoryName.trim() : handle.name
+      return persistPickedWorkdir(handle, name)
     },
 
     async hasWorkdir() {
