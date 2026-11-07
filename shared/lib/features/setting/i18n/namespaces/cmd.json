@@ -843,6 +843,10 @@
     "ja": "ピア一覧に失敗: {deviceId} ({detail})",
     "en": "Peer list failed: {deviceId} ({detail})"
   },
+  "cmd.sync.list.requiresUiHost": {
+    "ja": "error: ピア横断の一覧は BMXt ウィンドウ上でのみ実行できます（接続中の DataChannel を参照できません）。",
+    "en": "error: cross-device lists must run in the BMXt window (cannot see the live sync DataChannel)."
+  },
   "cmd.sync.connect.state": {
     "ja": "接続状態: {state}",
     "en": "connection state: {state}"

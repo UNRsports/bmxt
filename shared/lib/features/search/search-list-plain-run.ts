@@ -4,7 +4,6 @@ import type { DispatchHostContext } from "../dispatch/dispatch-context.ts"
 import type { UiLocale } from "../setting/locale.ts"
 import type { DeviceListScope } from "../sync/bus/device-list-scope.ts"
 import { fetchCrossDeviceSearchList } from "../sync/bus/fetch-cross-device-search.ts"
-import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import { fetchSearchListResult, formatSearchListPlainLines } from "./search-list-plain.ts"
 
 export type SearchListPlainRunMatch = {
@@ -13,7 +12,7 @@ export type SearchListPlainRunMatch = {
   scope: DeviceListScope
 }
 
-/** EN: Plain run with cross-device notices prepended. */
+/** EN: Plain run with cross-device notices prepended (via ListResult.meta.syncNotices). */
 export async function runSearchListPlainWithNotices(
   match: SearchListPlainRunMatch,
   ctx: DispatchHostContext,
@@ -36,6 +35,5 @@ export async function runSearchListPlainWithNotices(
     locale,
     onProgress
   })
-  const notices = expandSyncLogLines(fetched.notices, locale)
-  return [...notices, ...formatSearchListPlainLines(fetched.result, locale)]
+  return formatSearchListPlainLines(fetched.result, locale)
 }

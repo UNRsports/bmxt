@@ -32,7 +32,8 @@ function stubSearchDispatchCtx(
 export const searchListCommand: ListCommandEntry<SearchListMatch> = {
   id: "search",
   command: "search",
-  runtime: "service_worker",
+  // EN: UI-owned when peers are involved — WebRTC SyncService lives in the BMXt page.
+  runtime: "ui",
   matchPlain(segment) {
     const parsed = parseSearchListLine(segment)
     if (parsed === null) {
@@ -69,12 +70,7 @@ export const searchListCommand: ListCommandEntry<SearchListMatch> = {
     })
     return fetched.result
   },
-  formatPlainLines(result, locale, match) {
-    const body = formatSearchListPlainLines(result, locale)
-    if (match.scope.kind === "local") {
-      return body
-    }
-    // EN: Notices are expanded at effect/plain run time when available; keep format pure here.
-    return body
+  formatPlainLines(result, locale, _match) {
+    return formatSearchListPlainLines(result, locale)
   }
 }

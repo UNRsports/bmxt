@@ -32,31 +32,30 @@ export async function fetchTabsListResult(options: TabsListFetchOptions): Promis
 export async function fetchTabsListResultWithNotices(
   options: TabsListFetchOptions
 ): Promise<{ result: ListResult; noticeLines: string[] }> {
-  const scope = options.scope ?? { kind: "local" }
-  if (scope.kind === "local") {
-    const result = await fetchTabsListResult(options)
-    return { result, noticeLines: [] }
+  const result = await fetchTabsListResult(options)
+  const noticeLines = syncNoticeLinesFromResult(result, options.locale)
+  return { result, noticeLines }
+}
+
+function syncNoticeLinesFromResult(result: ListResult, locale: UiLocale): string[] {
+  const raw = result.meta?.syncNotices
+  if (raw === undefined || raw.trim().length === 0) {
+    return []
   }
-  const fetched = await fetchCrossDeviceTabsList({
-    showUrl: options.showUrl,
-    locale: options.locale,
-    scope
-  })
-  return {
-    result: fetched.result,
-    noticeLines: expandSyncLogLines(fetched.notices, options.locale)
-  }
+  const tokens = raw.split("\n").filter((token) => token.length > 0)
+  return expandSyncLogLines(tokens, locale)
 }
 
 export function formatTabsListPlainLines(result: ListResult, locale: UiLocale, showUrl: boolean): string[] {
+  const notices = syncNoticeLinesFromResult(result, locale)
   if (result.records.length === 0) {
-    return [tTabs("tabs.picker.empty", locale)]
+    return [...notices, tTabs("tabs.picker.empty", locale)]
   }
   const body = formatListPlainLines(result, { showUrl })
-  return appendListPlainSummary(body, result.records.length, locale)
+  return [...notices, ...appendListPlainSummary(body, result.records.length, locale)]
 }
 
 export async function runTabsListPlain(options: TabsListFetchOptions): Promise<string[]> {
-  const { result, noticeLines } = await fetchTabsListResultWithNotices(options)
-  return [...noticeLines, ...formatTabsListPlainLines(result, options.locale, options.showUrl)]
+  const { result } = await fetchTabsListResultWithNotices(options)
+  return formatTabsListPlainLines(result, options.locale, options.showUrl)
 }

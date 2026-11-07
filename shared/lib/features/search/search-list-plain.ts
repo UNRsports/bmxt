@@ -6,6 +6,7 @@ import type { HostEffect } from "../dispatch/effect-types.ts"
 import type { CommandBusyProgress } from "../bmxt-window/shell/command-busy"
 import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
+import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
 import { isParallelSearchEffect } from "./search-effect-parallel.ts"
 import { searchEffectsForDispatchLine } from "./search-list-effects.ts"
@@ -189,13 +190,26 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   return buildSearchListResult(entries, pattern, linesOut)
 }
 
+function syncNoticeLinesFromResult(result: ListResult, locale: UiLocale): string[] {
+  const raw = result.meta?.syncNotices
+  if (raw === undefined || raw.trim().length === 0) {
+    return []
+  }
+  const tokens = raw.split("\n").filter((token) => token.length > 0)
+  return expandSyncLogLines(tokens, locale)
+}
+
 export function formatSearchListPlainLines(result: ListResult, locale: UiLocale): string[] {
+  const notices = syncNoticeLinesFromResult(result, locale)
   if (result.records.length === 0) {
-    return [tSearch("search.list.empty", locale)]
+    return [...notices, tSearch("search.list.empty", locale)]
   }
   const body = formatListPlainLines(result)
   const hitCount = result.records.filter((record) => record.fields.source !== "notice").length
-  return appendListPlainSummary(body, hitCount > 0 ? hitCount : result.records.length, locale)
+  return [
+    ...notices,
+    ...appendListPlainSummary(body, hitCount > 0 ? hitCount : result.records.length, locale)
+  ]
 }
 
 export async function runSearchListPlain(options: SearchListFetchOptions): Promise<string[]> {

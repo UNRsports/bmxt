@@ -91,7 +91,8 @@ export async function fetchCrossDeviceSearchList(
           records: [],
           meta: {
             devicesQueried: devicesQueried.join(","),
-            devicesFailed: devicesFailed.join(",")
+            devicesFailed: devicesFailed.join(","),
+            syncNotices: notices.join("\n")
           }
         },
         meta: { devicesQueried, devicesFailed },
@@ -110,7 +111,18 @@ export async function fetchCrossDeviceSearchList(
           deviceId: remoteId,
           deviceName: name,
           remote: true
-        })
+        }),
+        meta:
+          notices.length > 0
+            ? {
+                devicesQueried: devicesQueried.join(","),
+                devicesFailed: devicesFailed.join(","),
+                syncNotices: notices.join("\n")
+              }
+            : {
+                devicesQueried: devicesQueried.join(","),
+                devicesFailed: devicesFailed.join(",")
+              }
       },
       meta: { devicesQueried, devicesFailed },
       notices
@@ -156,7 +168,8 @@ export async function fetchCrossDeviceSearchList(
   return {
     result: mergeListResults("search", "-list", parts, {
       devicesQueried: devicesQueried.join(","),
-      devicesFailed: devicesFailed.join(",")
+      devicesFailed: devicesFailed.join(","),
+      syncNotices: notices.length > 0 ? notices.join("\n") : undefined
     }),
     meta: { devicesQueried, devicesFailed },
     notices

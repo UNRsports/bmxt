@@ -19,6 +19,7 @@ import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-
 import { resolveSessionRowByDisplayName } from "../../session"
 import { parseSnapshotSaveLine } from "../../snapshot/snapshot-save-input"
 import { parseSearchListLine } from "../../search/search-list-parse"
+import { parseTabsListLine } from "../../tabs/tabs-list-parse"
 import { tDom } from "../../setting/i18n/ns/dom"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import { tError } from "../../setting/i18n/ns/error"
@@ -114,8 +115,13 @@ function buildPlainListMatch(listId: ListCommandId, line: string): ListMatchResu
     case "session":
     case "setting":
       return { ok: true, match: {} }
-    case "tabs":
-      return { ok: true, match: { showUrl: false } }
+    case "tabs": {
+      const parsed = parseTabsListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { showUrl: parsed.showUrl, scope: parsed.scope } }
+    }
     case "dom": {
       const parsed = parseDomListLine(line)
       if (parsed === null) {
@@ -136,7 +142,14 @@ function buildPlainListMatch(listId: ListCommandId, line: string): ListMatchResu
       if (parsed === null) {
         return { ok: false, errorLine: line }
       }
-      return { ok: true, match: { dispatchLine: parsed.dispatchLine } }
+      return {
+        ok: true,
+        match: {
+          dispatchLine: parsed.dispatchLine,
+          peerDispatchLine: parsed.peerDispatchLine,
+          scope: parsed.scope
+        }
+      }
     }
     default: {
       const _exhaustive: never = listId
@@ -154,8 +167,19 @@ function buildPickerListMatch(
     case "session":
     case "setting":
       return { ok: true, match: {} }
-    case "tabs":
-      return { ok: true, match: { showUrl: showUrlRaw === "true" } }
+    case "tabs": {
+      const parsed = parseTabsListLine(line)
+      if (parsed !== null) {
+        return {
+          ok: true,
+          match: {
+            showUrl: showUrlRaw === "true" || parsed.showUrl,
+            scope: parsed.scope
+          }
+        }
+      }
+      return { ok: true, match: { showUrl: showUrlRaw === "true", scope: { kind: "local" } } }
+    }
     case "dom": {
       const parsed = parseDomListLine(line)
       if (parsed === null) {
@@ -176,7 +200,14 @@ function buildPickerListMatch(
       if (parsed === null) {
         return { ok: false, errorLine: line }
       }
-      return { ok: true, match: { dispatchLine: parsed.dispatchLine } }
+      return {
+        ok: true,
+        match: {
+          dispatchLine: parsed.dispatchLine,
+          peerDispatchLine: parsed.peerDispatchLine,
+          scope: parsed.scope
+        }
+      }
     }
     default: {
       const _exhaustive: never = listId

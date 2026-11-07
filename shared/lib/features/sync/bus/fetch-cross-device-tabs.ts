@@ -82,7 +82,8 @@ export async function fetchCrossDeviceTabsList(
           records: [],
           meta: {
             devicesQueried: devicesQueried.join(","),
-            devicesFailed: devicesFailed.join(",")
+            devicesFailed: devicesFailed.join(","),
+            syncNotices: notices.join("\n")
           }
         },
         meta: { devicesQueried, devicesFailed },
@@ -103,7 +104,18 @@ export async function fetchCrossDeviceTabsList(
         schema: LIST_OUTPUT_SCHEMA,
         command: "tab",
         subcommand: "-list",
-        records
+        records,
+        meta:
+          notices.length > 0
+            ? {
+                devicesQueried: devicesQueried.join(","),
+                devicesFailed: devicesFailed.join(","),
+                syncNotices: notices.join("\n")
+              }
+            : {
+                devicesQueried: devicesQueried.join(","),
+                devicesFailed: devicesFailed.join(",")
+              }
       },
       meta: { devicesQueried, devicesFailed },
       notices
@@ -151,7 +163,8 @@ export async function fetchCrossDeviceTabsList(
   return {
     result: mergeListResults("tab", "-list", parts, {
       devicesQueried: devicesQueried.join(","),
-      devicesFailed: devicesFailed.join(",")
+      devicesFailed: devicesFailed.join(","),
+      syncNotices: notices.length > 0 ? notices.join("\n") : undefined
     }),
     meta: { devicesQueried, devicesFailed },
     notices

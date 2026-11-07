@@ -26,21 +26,13 @@ fn norm_tabs_flag(arg: &str) -> Option<&'static str> {
     }
 }
 
-struct TabsListArgs {
-    show_url: bool,
-    device_scope: String,
-    device_id: String,
-}
-
-fn parse_tabs_list_args(args: &[String]) -> Result<TabsListArgs, ()> {
-    let mut show_url = false;
-    let mut device_scope = "local".to_string();
-    let mut device_id = String::new();
+/// EN: Validate `tab -list` flags; host parses scope from the echoed line.
+fn parse_tabs_list_args(args: &[String]) -> Result<(), ()> {
+    let mut device_scope = "local";
     let mut i = 2usize;
     while i < args.len() {
         let token = normalize_token(&args[i]);
         if token == "-url" {
-            show_url = true;
             i += 1;
             continue;
         }
@@ -48,7 +40,7 @@ fn parse_tabs_list_args(args: &[String]) -> Result<TabsListArgs, ()> {
             if device_scope != "local" {
                 return Err(());
             }
-            device_scope = "peers".to_string();
+            device_scope = "peers";
             i += 1;
             continue;
         }
@@ -63,18 +55,13 @@ fn parse_tabs_list_args(args: &[String]) -> Result<TabsListArgs, ()> {
             if trimmed.is_empty() || trimmed.starts_with('-') {
                 return Err(());
             }
-            device_scope = "device".to_string();
-            device_id = trimmed.to_string();
+            device_scope = "device";
             i += 2;
             continue;
         }
         return Err(());
     }
-    Ok(TabsListArgs {
-        show_url,
-        device_scope,
-        device_id,
-    })
+    Ok(())
 }
 
 fn usage_msgs(extra: crate::ir::Msg) -> DispatchBundle {
@@ -146,16 +133,13 @@ pub fn run(args: &[String]) -> DispatchBundle {
     };
 
     match sub {
+        // EN: Plain tab -list runs on the BMXt UI (same document as WebRTC sync).
+        // JA: plain tab -list は WebRTC sync と同じ BMXt UI ドキュメントで実行する。
         "-list" => match parse_tabs_list_args(args) {
-            Ok(parsed) => effects(vec![HostEffect::TabsList {
-                show_url: if parsed.show_url {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                },
-                device_scope: parsed.device_scope,
-                device_id: parsed.device_id,
-            }]),
+            Ok(()) => ui(UiAction::OpenPlainList {
+                list_id: "tabs".to_string(),
+                line: args.join(" "),
+            }),
             Err(()) => usage_msgs(msg_key("cmd.tabs.error.invalidListUsage")),
         },
         "-exit" => {

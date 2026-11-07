@@ -11,7 +11,8 @@ export type TabsListMatch = {
 export const tabsListCommand: ListCommandEntry<TabsListMatch> = {
   id: "tabs",
   command: "tab",
-  runtime: "service_worker",
+  // EN: Must run on BMXt UI — Family WebRTC DataChannel lives in that document.
+  runtime: "ui",
   matchPlain(segment) {
     const parsed = parseTabsListLine(segment)
     if (parsed === null) {

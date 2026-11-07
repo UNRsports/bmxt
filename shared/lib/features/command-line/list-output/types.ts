@@ -39,5 +39,10 @@ export type ListResult = {
     devicesQueried?: string
     /** EN: Comma-separated device ids that failed during cross-device -list. */
     devicesFailed?: string
+    /**
+     * EN: Newline-separated sync notice tokens (`sync.list.*`) for plain-line expansion.
+     * JA: plain 展開用の sync notice トークン（改行区切りの `sync.list.*`）。
+     */
+    syncNotices?: string
   }
 }
