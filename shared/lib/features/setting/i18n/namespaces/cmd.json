@@ -636,8 +636,8 @@
     "en": "Invalid input. Choose by number or keyword."
   },
   "cmd.sync.setup.invalidInvite": {
-    "ja": "招待コードが無効です。bmxt1. で始まるコードを貼り付けてください。",
-    "en": "Invalid invite. Paste a code that starts with bmxt1."
+    "ja": "招待コードが無効です。bmxt1. で始まるコード本体だけをプロンプトへ貼り付けてください（コマンド名は不要）。",
+    "en": "Invalid invite. Paste only the bmxt1.… code body at the prompt (no command name)."
   },
   "cmd.sync.setup.invalidRtcCode": {
     "ja": "握手コードが無効です。bmxt-rtc1. で始まるコード本体だけをプロンプトへ貼り付けてください（コマンド名は不要）。",
@@ -660,8 +660,8 @@
     "en": "  3 / continue — keep the current Family"
   },
   "cmd.sync.setup.joinPrompt": {
-    "ja": "相手の Family 招待コード（bmxt1.…）を貼り付けて Enter:",
-    "en": "Paste the peer Family invite (bmxt1.…) and press Enter:"
+    "ja": "相手の Family 招待コード本体（bmxt1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer Family invite body (bmxt1.…) at the prompt and press Enter:"
   },
   "cmd.sync.setup.backToFamily": {
     "ja": "Family 選択に戻ります。",
@@ -672,8 +672,12 @@
     "en": "Family setup failed. Please choose again."
   },
   "cmd.sync.setup.familyReady": {
-    "ja": "Family の準備ができました。次に役割を選びます。",
-    "en": "Family is ready. Next, choose your role."
+    "ja": "Family を作成しました。先に Copy（またはショートカット）で招待を相手へ渡し、相手が参加してから役割を選んでください。",
+    "en": "Family created. Copy (or the shortcut) the invite to your peer first; after they join, choose roles."
+  },
+  "cmd.sync.setup.familyReadyJoined": {
+    "ja": "Family に参加しました。次に役割を選びます。",
+    "en": "Joined the Family. Next, choose your role."
   },
   "cmd.sync.setup.role.intro": {
     "ja": "役割を選びます:",
@@ -772,8 +776,12 @@
     "en": "transport: WebRTC DataChannel (host ICE only · copy-paste handshake). No FSA workdir."
   },
   "cmd.sync.pair.created": {
-    "ja": "Family 招待を用意しました。相手の BMXt で `sync -pair <invite>` を実行してください。",
-    "en": "Family invite ready. On the peer BMXt run `sync -pair <invite>`."
+    "ja": "Family 招待を用意しました。Copy（またはショートカット）でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",
+    "en": "Family invite ready. Copy (or the shortcut) it to the clipboard; the peer pastes at their prompt or sync -setup join step."
+  },
+  "cmd.sync.pair.useCopy": {
+    "ja": "招待はログに全文を出しません。下の Copy ボタン（またはショートカット）を使ってください。",
+    "en": "The invite is not printed in full here. Use the Copy button below (or the shortcut)."
   },
   "cmd.sync.pair.noFamily": {
     "ja": "Family を作成できませんでした。",
@@ -879,29 +887,41 @@
     "ja": "握手コードをクリップボードへコピーしました。相手のプロンプトへ貼ってもらってください。",
     "en": "Handshake code copied. Have the peer paste it at their prompt."
   },
+  "cmd.sync.connect.copiedInvite": {
+    "ja": "Family 招待をクリップボードへコピーしました。相手のプロンプトへ貼ってもらってください。",
+    "en": "Family invite copied. Have the peer paste it at their prompt."
+  },
   "cmd.sync.connect.copyIdle": {
-    "ja": "コピーできる握手コードがありません（先に sync -setup / sync -connect でコードを作成してください）。",
-    "en": "No handshake code to copy (create one with sync -setup / sync -connect first)."
+    "ja": "コピーできるコードがありません（先に sync -setup / sync -pair / sync -connect で作成してください）。",
+    "en": "No code to copy (create one with sync -setup / sync -pair / sync -connect first)."
   },
   "cmd.sync.connect.clipboardWriteFailed": {
-    "ja": "クリップボードへ書けませんでした。下のコード行を選択してコピーしてください。",
-    "en": "Could not write to the clipboard. Select the code line below and copy it."
+    "ja": "クリップボードへ書けませんでした。下のコード行を選択してコピーしてください（通常は不要）。",
+    "en": "Could not write to the clipboard. Select the code line below as a last resort."
   },
   "cmd.sync.connect.copyButton": {
     "ja": "Copy",
     "en": "Copy"
   },
   "cmd.sync.connect.barLabel": {
-    "ja": "同期握手コードのコピー",
-    "en": "Copy sync handshake code"
+    "ja": "同期コードのコピー（招待／握手）",
+    "en": "Copy sync code (invite / handshake)"
   },
   "cmd.sync.connect.barHintCopy": {
-    "ja": "渡すコードあり: {name}（{role}）— Copy して相手へ",
-    "en": "Code ready: {name} ({role}) — Copy for your peer"
+    "ja": "渡す握手コードあり: {name}（{role}）— Copy して相手へ",
+    "en": "Handshake ready: {name} ({role}) — Copy for your peer"
+  },
+  "cmd.sync.connect.barHintCopyInvite": {
+    "ja": "Family 招待の準備完了 — Copy して相手へ渡す",
+    "en": "Family invite ready — Copy for your peer"
   },
   "cmd.sync.connect.barHintPastePrompt": {
     "ja": "受信待ち: {name}（{role}）— 相手のコードをプロンプトへ貼付",
     "en": "Waiting: {name} ({role}) — paste their code at the prompt"
+  },
+  "cmd.sync.connect.barHintPasteInvite": {
+    "ja": "Family 招待の受信待ち — 相手が Copy した bmxt1.… をプロンプトへ貼付",
+    "en": "Waiting for Family invite — paste the bmxt1.… they Copied at the prompt"
   },
   "cmd.sync.name.invalid": {
     "ja": "error: 表示名が不正です",

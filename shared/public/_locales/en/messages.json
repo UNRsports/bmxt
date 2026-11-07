@@ -20,7 +20,7 @@
     "description": "Label for the global keyboard shortcut that shows or hides the in-page BMXt float prompt on the active tab."
   },
   "commandSyncHandshakeCopy": {
-    "message": "Copy pending sync handshake code",
-    "description": "Label for the shortcut that copies the pending Family-sealed WebRTC handshake code to the clipboard."
+    "message": "Copy pending sync code (Family invite or handshake)",
+    "description": "Label for the shortcut that copies the pending Family invite or WebRTC handshake code to the clipboard."
   }
 }

@@ -703,7 +703,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
-**UX:** First Family join: **`sync -setup`** (or `-pair`). After disconnect: both sides **`sync -connect <peerDeviceId>`**. Put the code on the clipboard with the prompt **Copy** button (or `sync-handshake-copy`, suggested Shift+Alt+Y / Alt+Shift+Y). The peer pastes **only the `bmxt-rtc1.…` code body** at their prompt and presses Enter — no `sync -accept` / `-answer` typing. The setting picker sync panel only shows a setup guide and display-name edit.
+**UX:** First Family join: **`sync -setup`** (or `-pair`). **Copy** (button or `sync-handshake-copy`) puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard — codes are not dumped for manual selection. The peer pastes **only the code body** at their prompt and presses Enter. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same Copy → paste flow. The setting picker sync panel only shows a setup guide and display-name edit.
 
 **Module layout:** **`shared/lib/features/sync/`**. Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue).
 
@@ -2135,7 +2135,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
-**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。切断後は両側で **`sync -connect <peerDeviceId>`**。コードはプロンプトの **Copy**（または `sync-handshake-copy`、既定 Shift+Alt+Y / Alt+Shift+Y）でクリップボードへ。相手は **`bmxt-rtc1.…` コード本体だけ** をプロンプトへ貼って Enter（`sync -accept` / `-answer` の手打ちは不要）。setting picker の sync は案内と表示名編集のみ。
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。**Copy**（ボタン／`sync-handshake-copy`）で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ（ログへの全文ダンプはしない）。相手は **コード本体だけ** をプロンプトへ貼って Enter。切断後は両側 **`sync -connect <peerDeviceId>`** で同じ Copy → 貼付。setting picker の sync は案内と表示名編集のみ。
 
 **配置:** **`shared/lib/features/sync/`**。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。
 

@@ -31,6 +31,7 @@ import { ensurePeerDocument } from "../peer/ensure-peer-document"
 import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
 
 export type SyncConnectSession = {
+  kind: "handshake"
   peerDeviceId: string
   peerDisplayName: string
   role: SyncConnectRole
@@ -129,14 +130,17 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
           return { ok: false, lines: [line("sync.pair.noFamily")] }
         }
         const token = s.discovery.formatInvite(invite)
-        const qr = s.discovery.formatInviteQrPayload(invite)
+        setSyncConnectPending({
+          kind: "invite",
+          peerDeviceId: "*",
+          peerDisplayName: "Family",
+          role: null,
+          outboundCode: token,
+          awaitingInbound: false
+        })
         return {
           ok: true,
-          lines: [
-            line("sync.pair.created"),
-            line(`sync.pair.invite:${token}`),
-            line(`sync.pair.qr:${qr}`)
-          ]
+          lines: [line("sync.pair.created"), line("sync.pair.useCopy")]
         }
       }
       const parsed = s.discovery.parseInvite(trimmed)
@@ -224,6 +228,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
       }
       setSyncConnectPending({
+        kind: "handshake",
         peerDeviceId: "*",
         peerDisplayName: "peer",
         role: "offer",
@@ -232,11 +237,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       })
       return {
         ok: true,
-        lines: [
-          line("sync.rtc.offerCreated"),
-          line(`sync.rtc.code:${code}`),
-          line("sync.connect.copyThenWaitAnswer")
-        ]
+        lines: [line("sync.rtc.offerCreated"), line("sync.connect.copyThenWaitAnswer")]
       }
     },
 
@@ -307,6 +308,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
       const prior = getSyncConnectPending()
       setSyncConnectPending({
+        kind: "handshake",
         peerDeviceId: plain.fromDeviceId,
         peerDisplayName:
           prior?.peerDisplayName && prior.peerDeviceId === plain.fromDeviceId
@@ -321,7 +323,6 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         lines: [
           line("sync.rtc.answerCreated"),
           line(`sync.rtc.peer:${plain.fromDisplayName}`),
-          line(`sync.rtc.code:${code}`),
           line("sync.connect.copyThenWaitPeerAccept")
         ]
       }
@@ -420,10 +421,11 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
 
       const role = connectRoleForPeer(ctx.device.deviceId, trimmed)
       if (role === "answer") {
-        const session = {
+        const session: SyncConnectSession = {
+          kind: "handshake",
           peerDeviceId: trimmed,
           peerDisplayName,
-          role: "answer" as const,
+          role: "answer",
           outboundCode: null,
           awaitingInbound: true
         }
@@ -462,10 +464,11 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (code === null) {
         return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
       }
-      const session = {
+      const session: SyncConnectSession = {
+        kind: "handshake",
         peerDeviceId: trimmed,
         peerDisplayName,
-        role: "offer" as const,
+        role: "offer",
         outboundCode: code,
         awaitingInbound: true
       }
@@ -477,7 +480,6 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
           line(`sync.connect.role:offer`),
           line(`sync.connect.peer:${peerDisplayName}|${trimmed}`),
           line("sync.rtc.offerCreated"),
-          line(`sync.rtc.code:${code}`),
           line("sync.connect.copyThenWaitAnswer")
         ]
       }

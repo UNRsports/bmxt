@@ -1,5 +1,8 @@
 import { tCmd } from "../../../setting/i18n/ns/cmd"
-import { clearSyncConnectPending } from "../../../sync/connect/sync-connect-pending.ts"
+import {
+  clearSyncConnectPending,
+  setSyncConnectPending
+} from "../../../sync/connect/sync-connect-pending.ts"
 import { expandSyncLogLines } from "../../../sync/facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../../../sync/facade/sync-picker-summary.ts"
 import { getSyncService } from "../../../sync/facade/sync-service.ts"
@@ -132,6 +135,14 @@ async function handleFamilyStep(
   }
   if (choice === "join") {
     ctx.deps.syncSetupPendingRef.current = { step: "joinInvite", hasFamily: pending.hasFamily }
+    setSyncConnectPending({
+      kind: "invite",
+      peerDeviceId: "*",
+      peerDisplayName: "Family",
+      role: null,
+      outboundCode: null,
+      awaitingInbound: true
+    })
     await ctx.deps.appendLogLines([
       logPrefix,
       tCmd("cmd.sync.setup.joinPrompt", ctx.locale),
@@ -201,9 +212,10 @@ async function handleJoinInviteStep(
     ctx.deps.focusPrompt()
     return
   }
+  clearSyncConnectPending()
   ctx.deps.syncSetupPendingRef.current = { step: "role", hasFamily: true }
   await ctx.deps.appendLogLines([
-    tCmd("cmd.sync.setup.familyReady", ctx.locale),
+    tCmd("cmd.sync.setup.familyReadyJoined", ctx.locale),
     ...rolePromptLines(ctx.locale)
   ])
   ctx.deps.focusPrompt()
@@ -236,6 +248,14 @@ async function handleRoleStep(
       step: "pasteOffer",
       hasFamily: pending.hasFamily
     }
+    setSyncConnectPending({
+      kind: "handshake",
+      peerDeviceId: "*",
+      peerDisplayName: "peer",
+      role: "answer",
+      outboundCode: null,
+      awaitingInbound: true
+    })
     await ctx.deps.appendLogLines([
       logPrefix,
       tCmd("cmd.sync.setup.pasteOffer", ctx.locale),

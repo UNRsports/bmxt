@@ -174,7 +174,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 **コマンド**
 
 - `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-connect` / `-offer` / `-answer` / `-accept` / `-ping` / `-open`）
-- 握手 UX: 初回 `sync -setup`；切断後 `sync -connect`。Copy（ボタン／`sync-handshake-copy`）→ 相手はプロンプトへ `bmxt-rtc1.…` 本体だけ貼付。ペースト用拡張ショートカットは無し。setting picker の sync は案内のみ
+- 握手 UX: 初回 `sync -setup`；切断後 `sync -connect`。Copy（ボタン／`sync-handshake-copy`）で Family 招待・握手コードをクリップボードへ（ログ全文選択は本線にしない）→ 相手はプロンプトへ本体だけ貼付。ペースト用拡張ショートカットは無し
 - skill `bmxt-add-command` + i18n EN/JA
 
 **スコープ外（§6 本体）**

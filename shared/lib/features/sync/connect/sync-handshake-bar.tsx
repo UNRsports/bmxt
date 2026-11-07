@@ -16,6 +16,25 @@ export type SyncHandshakeBarProps = {
   focusPrompt: () => void
 }
 
+function hintForPending(pending: SyncConnectPending, locale: UiLocale): string {
+  if (pending.outboundCode !== null) {
+    if (pending.kind === "invite") {
+      return tCmd("cmd.sync.connect.barHintCopyInvite", locale)
+    }
+    return tCmd("cmd.sync.connect.barHintCopy", locale, {
+      name: pending.peerDisplayName,
+      role: pending.role ?? "handshake"
+    })
+  }
+  if (pending.kind === "invite") {
+    return tCmd("cmd.sync.connect.barHintPasteInvite", locale)
+  }
+  return tCmd("cmd.sync.connect.barHintPastePrompt", locale, {
+    name: pending.peerDisplayName,
+    role: pending.role ?? "handshake"
+  })
+}
+
 export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
   const [pending, setPending] = useState<SyncConnectPending | null>(() =>
     getSyncConnectPending()
@@ -60,22 +79,15 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
   }
 
   const canCopy = pending.outboundCode !== null
-  const hint = canCopy
-    ? tCmd("cmd.sync.connect.barHintCopy", props.locale, {
-        name: pending.peerDisplayName,
-        role: pending.role
-      })
-    : tCmd("cmd.sync.connect.barHintPastePrompt", props.locale, {
-        name: pending.peerDisplayName,
-        role: pending.role
-      })
 
   return (
     <div
       className="bmxt-sync-handshake-bar"
       role="toolbar"
       aria-label={tCmd("cmd.sync.connect.barLabel", props.locale)}>
-      <span className="bmxt-sync-handshake-bar-hint">{hint}</span>
+      <span className="bmxt-sync-handshake-bar-hint">
+        {hintForPending(pending, props.locale)}
+      </span>
       <button
         type="button"
         className="bmxt-sync-handshake-btn"

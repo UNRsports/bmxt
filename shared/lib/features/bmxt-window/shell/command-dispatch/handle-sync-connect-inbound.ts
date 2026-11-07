@@ -33,7 +33,12 @@ export function tryHandleSyncConnectInbound(
   ctx: CommandDispatchContext
 ): CommandDispatchResult {
   const pending = getSyncConnectPending()
-  if (pending === null || !pending.awaitingInbound) {
+  if (
+    pending === null ||
+    !pending.awaitingInbound ||
+    pending.kind !== "handshake" ||
+    pending.role === null
+  ) {
     return "not_handled"
   }
 

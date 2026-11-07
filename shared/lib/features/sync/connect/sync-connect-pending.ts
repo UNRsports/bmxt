@@ -1,13 +1,18 @@
 import type { SyncConnectRole } from "../bus/connect-role.ts"
 import type { SyncDeviceId } from "../types.ts"
 
+/** EN: What the Copy bar / shortcut currently holds for the peer. */
+export type SyncOutboundCodeKind = "invite" | "handshake"
+
 export type SyncConnectPending = {
-  peerDeviceId: SyncDeviceId
+  kind: SyncOutboundCodeKind
+  peerDeviceId: SyncDeviceId | "*"
   peerDisplayName: string
-  role: SyncConnectRole
-  /** EN: Code we produced for the peer to paste (offer or answer). */
+  /** EN: Handshake role; null while an invite is the outbound payload. */
+  role: SyncConnectRole | null
+  /** EN: Code we produced for the peer (Family invite or RTC handshake). */
   outboundCode: string | null
-  /** EN: Waiting for the peer's code (answerer waits for offer; offerer waits for answer). */
+  /** EN: Waiting for the peer's code at the prompt (invite join or RTC paste). */
   awaitingInbound: boolean
 }
 

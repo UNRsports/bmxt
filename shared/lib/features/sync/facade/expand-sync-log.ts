@@ -18,6 +18,9 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token === "sync.pair.joinFailed") {
     return tCmd("cmd.sync.pair.joinFailed", locale)
   }
+  if (token === "sync.pair.useCopy") {
+    return tCmd("cmd.sync.pair.useCopy", locale)
+  }
   if (token.startsWith("sync.pair.invite:")) {
     return tCmd("cmd.sync.pair.invite", locale, { invite: token.slice("sync.pair.invite:".length) })
   }
@@ -141,6 +144,9 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   }
   if (token === "sync.connect.copied") {
     return tCmd("cmd.sync.connect.copied", locale)
+  }
+  if (token === "sync.connect.copiedInvite") {
+    return tCmd("cmd.sync.connect.copiedInvite", locale)
   }
   if (token === "sync.connect.copyIdle") {
     return tCmd("cmd.sync.connect.copyIdle", locale)
