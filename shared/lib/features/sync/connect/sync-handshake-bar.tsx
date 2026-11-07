@@ -50,6 +50,11 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
     }
   }, [runCopy])
 
+  // EN: Keep focus on the prompt IME — must be declared before any early return (Rules of Hooks).
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault()
+  }, [])
+
   if (pending === null) {
     return null
   }
@@ -64,10 +69,6 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
         name: pending.peerDisplayName,
         role: pending.role
       })
-
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault()
-  }, [])
 
   return (
     <div
