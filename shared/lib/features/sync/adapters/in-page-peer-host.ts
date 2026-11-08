@@ -108,6 +108,35 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
       }
     },
 
+    async createDirectedOfferHandshake(remoteDeviceId: SyncDeviceId) {
+      // EN: Mesh path — bind remote immediately; leave manual pending-offer untouched.
+      // JA: メッシュ経路。remote を即バインドし、手動 pending-offer には触れない。
+      const trimmed = remoteDeviceId.trim()
+      if (trimmed.length === 0 || trimmed === "pending-offer") {
+        throw new Error("invalid remote for directed offer")
+      }
+      dropRemoteSession(trimmed)
+      let sessionIdHolder = ""
+      const session = new WebrtcPeerSession(trimmed, {
+        onCommand: (command) => {
+          void handlers?.onCommand(command)
+        },
+        onConnectionState: (state) => {
+          const remote = resolveRemoteForSession(sessionIdHolder) ?? trimmed
+          handlers?.onConnectionState(remote, state)
+        }
+      })
+      sessionIdHolder = session.sessionId
+      bySessionId.set(session.sessionId, session)
+      rememberRemote(trimmed, session.sessionId)
+      const bundle = await session.createOffer()
+      return {
+        sessionId: session.sessionId,
+        sdp: bundle.sdp,
+        ice: bundle.ice
+      }
+    },
+
     async acceptOfferHandshake(plain: RtcHandshakePlain) {
       // EN: Explicit re-handshake for this peer — replace any prior session to the same remote.
       // JA: 同一 peer への明示的再握手。旧セッションだけ差し替える。
@@ -148,7 +177,9 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
       }
       await session.applyAnswer(plain.sdp, plain.ice)
       rememberRemote(plain.fromDeviceId, session.sessionId)
-      pendingOfferSessionId = null
+      if (pendingOfferSessionId === session.sessionId) {
+        pendingOfferSessionId = null
+      }
       // EN: Emit under the real device id (earlier ICE events may have used pending-offer).
       handlers?.onConnectionState(plain.fromDeviceId, session.getConnectionState())
       return plain.fromDeviceId

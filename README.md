@@ -709,6 +709,8 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
+**Mesh:** User-facing connect stays “handshake with any one live Family member.” After that link is up, BMXt **automatically completes a full mesh** (in-band `mesh_peers` / `mesh_signal` over existing DataChannels) so every prompt can reach every other connected peer directly — no hub relay for tab ops.
+
 <a id="picker-ui"></a>
 
 ### Picker UI (side columns)
@@ -2140,6 +2142,8 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 **配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** など。
 
 **peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
+
+**メッシュ:** 接続 UX は「Family 内の生きている誰か1台と握手」のまま。直結後は既存 DataChannel 上の in-band（`mesh_peers` / `mesh_signal`）で **フルメッシュを自動補完**し、どのプロンプトからも他の接続済み peer へ直接届ける（タブ操作のハブ中継はしない）。
 
 <a id="picker-ui-ja"></a>
 

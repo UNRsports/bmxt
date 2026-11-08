@@ -237,6 +237,32 @@ export type SyncBusCommand =
       ok: boolean
       detail: string | null
     }
+  | {
+      /** EN: Announce other live DataChannel peers so the receiver can mesh. */
+      type: "mesh_peers"
+      id: string
+      from: SyncDeviceId
+      peers: Array<{ deviceId: SyncDeviceId; displayName: string }>
+    }
+  | {
+      /**
+       * EN: One-hop relay of a directed WebRTC offer/answer for mesh completion.
+       * JA: メッシュ補完用の directed offer/answer を1ホップ中継する。
+       */
+      type: "mesh_signal"
+      id: string
+      from: SyncDeviceId
+      /** EN: Final destination of this signal. */
+      targetDeviceId: SyncDeviceId
+      /** EN: Device that created the SDP (offer/answer originator). */
+      originDeviceId: SyncDeviceId
+      originDisplayName: string
+      familyId: SyncFamilyId
+      role: "offer" | "answer"
+      sessionId: string
+      sdp: string
+      ice: string[]
+    }
 
 /** EN: Peer-local tab mutations requested over the command bus. */
 export type SyncTabsOp =

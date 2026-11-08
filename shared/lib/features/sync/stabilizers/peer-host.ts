@@ -23,6 +23,15 @@ export type PeerHostStabilizer = {
     ice: string[]
   }>
   /**
+   * EN: Mesh directed offer bound to a known remote (does not use pending-offer slot).
+   * JA: 既知 remote 向けメッシュ offer（pending-offer スロットを使わない）。
+   */
+  createDirectedOfferHandshake(remoteDeviceId: SyncDeviceId): Promise<{
+    sessionId: string
+    sdp: string
+    ice: string[]
+  }>
+  /**
    * EN: Apply remote offer; return local answer bundle + remote device id from plain.
    * JA: 相手 offer を適用し、ローカル answer と plain 上の相手 device id を返す。
    */
@@ -33,8 +42,8 @@ export type PeerHostStabilizer = {
     remoteDeviceId: SyncDeviceId
   }>
   /**
-   * EN: Apply remote answer on the pending offer session.
-   * JA: 保留中 offer セッションへ相手 answer を適用。
+   * EN: Apply remote answer on the matching session (manual pending or directed mesh).
+   * JA: 対応セッションへ相手 answer を適用（手動 pending またはメッシュ directed）。
    */
   applyAnswerHandshake(plain: RtcHandshakePlain): Promise<SyncDeviceId>
   sendCommand(remoteDeviceId: SyncDeviceId, command: SyncBusCommand): Promise<boolean>

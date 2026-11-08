@@ -145,6 +145,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 握手 UX | 推奨: ウィザード `sync -setup` / `sync -connect`（Family → 役割 → COPY / 貼付）。手動 CLI も可。設定 picker は案内のみ（貼付しない） |
 | データ面 | WebRTC DataChannel（遠隔コマンド · ack · 将来の横断クエリ） |
 | peer 宿主 | **BMXt プロンプト窓のみ**（Chrome/Firefox 共通）。offscreen / 専用 peer タブは使わない。SW 単体では不可。窓を閉じる／明示再握手までトンネル堅持 |
+| メッシュ | 手動握手は誰か1台とだけで可。直結後に `mesh_peers` / `mesh_signal` で兄弟直結を自動補完（タブ操作はハブ中継しない） |
 | 相手休眠時 | DataChannel 不可 → メモリキューのみ（永続箱なし）。双方オンライン時に再握手 |
 | UX 視野 | `tab` picker の移動先に Family メンバー（例: firefox@desk） |
 | 非目標（6c） | native messaging、FSA 作業ディレクトリ、torrent 本線、常時 TURN |

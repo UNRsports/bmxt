@@ -30,6 +30,7 @@ import type {
 } from "../types"
 import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
+import { installAutoMesh } from "../mesh/auto-mesh.ts"
 import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
 import {
   clearSyncLinkConnecting,
@@ -106,6 +107,11 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
   ensureSyncLinkBridge({
     commandBus: s.commandBus,
     peerHost: s.peerHost,
+    discovery: s.discovery
+  })
+  installAutoMesh({
+    peerHost: s.peerHost,
+    commandBus: s.commandBus,
     discovery: s.discovery
   })
 
