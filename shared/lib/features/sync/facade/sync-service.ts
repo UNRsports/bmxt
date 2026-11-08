@@ -142,9 +142,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
     ])
     ids.delete(selfDeviceId)
     ids.delete("pending-offer")
-    for (const remoteId of ids) {
-      await s.commandBus.connect(remoteId)
-    }
+    await Promise.all([...ids].map((remoteId) => s.commandBus.connect(remoteId)))
   }
 
   return {

@@ -39,12 +39,13 @@ describe("tab-favicon-url", () => {
     assert.equal(normalizeTabFavIconUrl(undefined), null)
   })
 
-  it("portableRemoteFavIconUrl keeps cross-browser URLs and drops extension-local ones", () => {
+  it("portableRemoteFavIconUrl keeps cross-browser URLs and drops extension-local / data URIs", () => {
     assert.equal(
       portableRemoteFavIconUrl("https://example.com/favicon.ico"),
       "https://example.com/favicon.ico"
     )
-    assert.equal(portableRemoteFavIconUrl("data:image/png;base64,abc"), "data:image/png;base64,abc")
+    // EN: data: favicons (common on Firefox) must not cross the DataChannel — size blow-up.
+    assert.equal(portableRemoteFavIconUrl("data:image/png;base64,abc"), null)
     assert.equal(
       portableRemoteFavIconUrl(
         "chrome-extension://id/_favicon/?pageUrl=https%3A%2F%2Fexample.com&size=16"

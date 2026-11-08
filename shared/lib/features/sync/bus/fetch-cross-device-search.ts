@@ -134,15 +134,34 @@ export async function fetchCrossDeviceSearchList(
   parts.push(local)
   devicesQueried.push(device.deviceId)
 
-  const connectedIds = await service.listConnectedPeerDeviceIds()
+  const status = await service.status()
   const memberNameById = new Map<string, string>()
-  for (const member of (await service.status()).members) {
+  for (const member of status.members) {
     memberNameById.set(member.deviceId, member.displayName)
   }
+  const connectedIds = status.connections
+    .filter(
+      (row) =>
+        row.state === "connected" &&
+        row.deviceId !== device.deviceId &&
+        row.deviceId !== "pending-offer"
+    )
+    .map((row) => row.deviceId)
 
-  for (const remoteId of connectedIds) {
+  const remoteSettled = await Promise.allSettled(
+    connectedIds.map(async (remoteId) => {
+      const remote = await service.searchRemote(remoteId, peerLine)
+      return { remoteId, remote }
+    })
+  )
+
+  for (const settled of remoteSettled) {
+    if (settled.status !== "fulfilled") {
+      notices.push("sync.list.peerFailed:unknown:rejected")
+      continue
+    }
+    const { remoteId, remote } = settled.value
     devicesQueried.push(remoteId)
-    const remote = await service.searchRemote(remoteId, peerLine)
     if (!remote.ok) {
       devicesFailed.push(remoteId)
       notices.push(`sync.list.peerFailed:${remoteId}:${remote.detail ?? ""}`)

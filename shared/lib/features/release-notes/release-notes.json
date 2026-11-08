@@ -5,14 +5,16 @@
       "webRTCによる別プロセス間の連携機能を実装",
       "sync トンネル宿主をプロンプト窓に一本化（専用タブ／offscreen 廃止、明示再握手まで維持）",
       "リモート tab -list に可搬 favIconUrl を載せ、Firefox 側でも相手タブのファビコンを表示",
-      "Family sync を自動メッシュ化（誰か1台と握手すれば兄弟とも直結）"
+      "Family sync を自動メッシュ化（誰か1台と握手すれば兄弟とも直結）",
+      "tab -list --peers: Firefox 巨大 data: favicon による取得失敗を修正し、peer 問い合わせを並列化"
     ],
     "en": [
       "Fix tab-picker filter search",
       "Cross-process browser ops via WebRTC sync",
       "Host the sync tunnel only in the prompt window (no peer tab/offscreen; hold until re-handshake)",
       "Ship portable favIconUrl on remote tab -list so Firefox can show peer favicons",
-      "Auto-mesh Family sync (handshake with any one peer; siblings link directly)"
+      "Auto-mesh Family sync (handshake with any one peer; siblings link directly)",
+      "Fix tab -list --peers Firefox fetch (drop huge data: favicons) and parallelize peer queries"
     ]
   }
 }

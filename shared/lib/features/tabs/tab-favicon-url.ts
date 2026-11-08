@@ -62,9 +62,13 @@ export function normalizeTabFavIconUrl(favIconUrl: string | null | undefined): s
 
 /**
  * EN: Favicon URL safe to ship over WebRTC to another browser.
- *     Drops peer-local extension `/_favicon/` and moz-/chrome-extension URLs.
+ *     Drops peer-local extension `/_favicon/`, moz-/chrome-extension URLs, and
+ *     `data:image/…` (Firefox often embeds large base64 favicons that blow the
+ *     ~200KB DataChannel message cap and make tabs_list_result silently drop).
  * JA: 別ブラウザへ WebRTC で送ってよいファビコン URL。
- *     peer ローカルの `/_favicon/` や拡張オリジン URL は捨てる。
+ *     peer ローカルの `/_favicon/`・拡張オリジン、および `data:image/…`
+ *     （Firefox の巨大 base64 が DataChannel ~200KB 上限を超え tabs_list_result が
+ *     黙って落ちる）は捨てる。受信側 Chrome は pageUrl から `/_favicon/` を再解決できる。
  */
 export function portableRemoteFavIconUrl(
   favIconUrl: string | null | undefined
@@ -73,10 +77,10 @@ export function portableRemoteFavIconUrl(
   if (normalized === null) {
     return null
   }
-  if (/^(chrome-extension:|moz-extension:)/i.test(normalized)) {
+  if (/^(chrome-extension:|moz-extension:|data:)/i.test(normalized)) {
     return null
   }
-  if (/^(https?:|data:image\/|blob:|chrome:|moz-anno:)/i.test(normalized)) {
+  if (/^(https?:|blob:|chrome:|moz-anno:)/i.test(normalized)) {
     return normalized
   }
   return null

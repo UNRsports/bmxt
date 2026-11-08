@@ -122,22 +122,40 @@ export async function fetchCrossDeviceTabsList(
     }
   }
 
-  // --peers: local + connected remotes (refresh from bound RTC sessions first)
+  // --peers: local + connected remotes (one status refresh; peer RPCs in parallel)
   const parts: ListResult[] = []
   const local = await localTaggedTabs(options.showUrl, options.locale, localTag)
   parts.push(local)
   devicesQueried.push(device.deviceId)
 
-  // EN: Prefer peerHost-bound sessions over a possibly stale commandBus map.
-  const connectedIds = await service.listConnectedPeerDeviceIds()
+  const status = await service.status()
   const memberNameById = new Map<string, string>()
-  for (const member of (await service.status()).members) {
+  for (const member of status.members) {
     memberNameById.set(member.deviceId, member.displayName)
   }
+  const connectedIds = status.connections
+    .filter(
+      (row) =>
+        row.state === "connected" &&
+        row.deviceId !== device.deviceId &&
+        row.deviceId !== "pending-offer"
+    )
+    .map((row) => row.deviceId)
 
-  for (const remoteId of connectedIds) {
+  const remoteSettled = await Promise.allSettled(
+    connectedIds.map(async (remoteId) => {
+      const remote = await service.listRemoteTabs(remoteId, options.showUrl)
+      return { remoteId, remote }
+    })
+  )
+
+  for (const settled of remoteSettled) {
+    if (settled.status !== "fulfilled") {
+      notices.push("sync.list.peerFailed:unknown:rejected")
+      continue
+    }
+    const { remoteId, remote } = settled.value
     devicesQueried.push(remoteId)
-    const remote = await service.listRemoteTabs(remoteId, options.showUrl)
     if (!remote.ok) {
       devicesFailed.push(remoteId)
       notices.push(`sync.list.peerFailed:${remoteId}:${remote.detail ?? ""}`)

@@ -167,6 +167,26 @@ export function createWebrtcCommandBusStabilizer(
     } else if (command.type === "tabs_list") {
       const result = await applyRemoteTabsList({ locale: getRunLocale() })
       const device = await loadOrCreateDeviceIdentity()
+      let rows = result.rows
+      // EN: Defense — if serialized reply would exceed the DataChannel receive cap, drop favicons.
+      // JA: 防御。シリアライズ結果が DataChannel 受信上限を超えそうなら favicon を落とす。
+      const probe: SyncBusCommand = {
+        type: "tabs_list_result",
+        id: "probe",
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        rows
+      }
+      if (JSON.stringify(probe).length > 180_000) {
+        rows = rows.map((row) => {
+          if (row.kind !== "tab") {
+            return row
+          }
+          return { ...row, favIconUrl: null }
+        })
+      }
       const reply: SyncBusCommand = {
         type: "tabs_list_result",
         id: bytesToBase64Url(randomBytes(8)),
@@ -174,7 +194,7 @@ export function createWebrtcCommandBusStabilizer(
         from: device.deviceId,
         ok: result.ok,
         detail: result.detail,
-        rows: result.rows
+        rows
       }
       await replyTo(command.from, reply)
     } else if (command.type === "tabs_list_result") {
@@ -359,6 +379,7 @@ export function createWebrtcCommandBusStabilizer(
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
+        pending.delete(id)
         return { ok: false, detail: "not_connected", rows: [] }
       }
       const result = await resultPromise
@@ -385,6 +406,7 @@ export function createWebrtcCommandBusStabilizer(
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
+        pending.delete(id)
         return { ok: false, detail: "not_connected", hits: [] }
       }
       const result = await resultPromise
@@ -410,6 +432,7 @@ export function createWebrtcCommandBusStabilizer(
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
+        pending.delete(id)
         return { ok: false, detail: "not_connected" }
       }
       const result = await resultPromise
