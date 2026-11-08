@@ -8,11 +8,13 @@ import type {
   SyncConnectionState,
   SyncDeviceId,
   SyncRemoteSearchHit,
-  SyncRemoteTabRow
+  SyncRemoteTabRow,
+  SyncTabsOp
 } from "../types"
 import { applyRemoteOpenTabs } from "../bus/remote-open"
 import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
 import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
+import { applyRemoteTabsOps } from "../bus/apply-remote-tabs-ops.ts"
 import { SYNC_REMOTE_QUERY_TIMEOUT_MS } from "../bus/remote-query-limits"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 
@@ -63,7 +65,18 @@ type PendingSearch = {
   }) => void
 }
 
-type PendingWaiter = PendingOpen | PendingAck | PendingTabsList | PendingSearch
+type PendingTabsOps = {
+  kind: "tabs_ops"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
+type PendingWaiter =
+  | PendingOpen
+  | PendingAck
+  | PendingTabsList
+  | PendingSearch
+  | PendingTabsOps
 
 export function createWebrtcCommandBusStabilizer(
   peerHost: PeerHostStabilizer,
@@ -185,6 +198,28 @@ export function createWebrtcCommandBusStabilizer(
         hits: result.hits
       }
       await replyTo(command.from, reply)
+    } else if (command.type === "tabs_ops") {
+      const result = await applyRemoteTabsOps(command.op)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "tabs_ops_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "tabs_ops_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "tabs_ops") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
     } else if (command.type === "search_query_result") {
       const waiter = pending.get(command.replyTo)
       if (waiter && waiter.kind === "search_query") {
@@ -348,6 +383,31 @@ export function createWebrtcCommandBusStabilizer(
       }
       const result = await resultPromise
       return { ok: result.ok, detail: result.detail, hits: result.hits }
+    },
+
+    async tabsOps(remoteDeviceId, op: SyncTabsOp) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "tabs_ops",
+        id,
+        from: device.deviceId,
+        op
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "tabs_ops", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        return { ok: false, detail: "not_connected" }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail }
     },
 
     getState(remoteDeviceId) {

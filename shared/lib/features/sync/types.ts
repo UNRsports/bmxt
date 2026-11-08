@@ -217,6 +217,56 @@ export type SyncBusCommand =
       detail: string | null
       hits: SyncRemoteSearchHit[]
     }
+  | {
+      type: "tabs_ops"
+      id: string
+      from: SyncDeviceId
+      op: SyncTabsOp
+    }
+  | {
+      type: "tabs_ops_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+    }
+
+/** EN: Peer-local tab mutations requested over the command bus. */
+export type SyncTabsOp =
+  | {
+      kind: "move"
+      tabIds: number[]
+      windowId: number
+      /** EN: Absolute index, or -1 for end-of-window when beforeTabId is null. */
+      index: number
+      /** EN: When set, move immediately before this peer-local tab id (index ignored). */
+      beforeTabId: number | null
+      groupId: number | null
+      ungroup: boolean
+      groupAfter: boolean
+    }
+  | {
+      kind: "activate"
+      tabId: number
+      windowId: number
+    }
+  | {
+      kind: "close_tabs"
+      tabIds: number[]
+    }
+  | {
+      kind: "close_windows"
+      windowIds: number[]
+    }
+  | {
+      kind: "reload"
+      tabIds: number[]
+    }
+  | {
+      kind: "focus_window"
+      windowId: number
+    }
 
 export type SyncInviteV1 = {
   version: 1

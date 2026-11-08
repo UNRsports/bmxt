@@ -33,6 +33,7 @@ import { enrichSearchPickerEntriesFromOpenTabs } from "../search/enrich-search-e
 import { pickerEntriesFromSearchListResult } from "./from-list-result/search-entries.ts"
 import { resolvePickerFamily } from "./resolve-family.ts"
 import {
+  deviceListScopeFromTabsListResult,
   listResultHasDeviceTaggedTabs,
   tabPickerRowsFromListResult
 } from "./from-list-result/tabs-rows.ts"
@@ -91,6 +92,7 @@ async function openTabsPicker(
     const useHydrated = listResultHasDeviceTaggedTabs(listResult)
     let rows
     let lastNormalWindowId: number | undefined
+    let listScope = deviceListScopeFromTabsListResult(listResult)
     if (useHydrated) {
       rows = tabPickerRowsFromListResult(listResult)
       lastNormalWindowId = undefined
@@ -98,12 +100,18 @@ async function openTabsPicker(
       const bundle = await buildTabPickerRowsBundle(showUrl, deps.uiSettings.locale)
       rows = bundle.rows
       lastNormalWindowId = bundle.lastNormalWindowId
+      listScope = { kind: "local" }
     }
     const initialHi = resolveInitialTabPickerHighlightIndex(rows, lastNormalWindowId)
     const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
     deps.setTabPicker(
       deps.sessionId,
-      openTabPickerEngineForSession(deps.sessionId, { rows, showUrl, initialHi })
+      openTabPickerEngineForSession(deps.sessionId, {
+        rows,
+        showUrl,
+        listScope,
+        initialHi
+      })
     )
     deps.activatePaneFocus("tabs")
     const hint = useHydrated

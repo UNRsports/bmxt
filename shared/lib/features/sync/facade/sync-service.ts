@@ -25,7 +25,8 @@ import type {
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
   SyncRosterMember,
-  SyncStatusSnapshot
+  SyncStatusSnapshot,
+  SyncTabsOp
 } from "../types"
 import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
@@ -79,6 +80,10 @@ export type SyncService = {
     deviceId: string,
     dispatchLine: string
   ): Promise<{ ok: boolean; detail: string | null; hits: SyncRemoteSearchHit[] }>
+  tabsOps(
+    deviceId: string,
+    op: SyncTabsOp
+  ): Promise<{ ok: boolean; detail: string | null }>
   ping(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
   /**
    * EN: Roster/discovery peers that currently have a DataChannel and answer ping.
@@ -584,6 +589,16 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         return { ok: false, detail: `not_connected:${state}`, hits: [] }
       }
       return s.commandBus.searchQuery(deviceId, dispatchLine)
+    },
+
+    async tabsOps(deviceId: string, op: SyncTabsOp) {
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const state = await s.commandBus.connect(deviceId)
+      if (state !== "connected") {
+        return { ok: false, detail: `not_connected:${state}` }
+      }
+      return s.commandBus.tabsOps(deviceId, op)
     },
 
     async ping(deviceId: string) {

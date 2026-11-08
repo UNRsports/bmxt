@@ -14,7 +14,10 @@ const rows: TabPickerRow[] = [
     windowTitle: "Old active",
     usesActiveTabTitle: true,
     label: " [ウィンドウ] Old active",
-    focused: true
+    focused: true,
+    deviceId: null,
+    remote: false,
+    peerWindowId: null
   },
   {
     kind: "tab",
@@ -25,7 +28,12 @@ const rows: TabPickerRow[] = [
     title: "Old active",
     url: "https://example.com",
     faviconSrc: null,
-    active: true
+    active: true,
+    deviceId: null,
+    remote: false,
+    peerTabId: null,
+    peerWindowId: null,
+    peerGroupId: null
   },
   {
     kind: "tab",
@@ -36,7 +44,12 @@ const rows: TabPickerRow[] = [
     title: "Background",
     url: "https://mail.example.com",
     faviconSrc: null,
-    active: false
+    active: false,
+    deviceId: null,
+    remote: false,
+    peerTabId: null,
+    peerWindowId: null,
+    peerGroupId: null
   }
 ]
 

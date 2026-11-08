@@ -3,7 +3,8 @@ import type {
   SyncConnectionState,
   SyncDeviceId,
   SyncRemoteSearchHit,
-  SyncRemoteTabRow
+  SyncRemoteTabRow,
+  SyncTabsOp
 } from "../types"
 
 /**
@@ -27,6 +28,10 @@ export type CommandBusStabilizer = {
     remoteDeviceId: SyncDeviceId,
     dispatchLine: string
   ): Promise<{ ok: boolean; detail: string | null; hits: SyncRemoteSearchHit[] }>
+  tabsOps(
+    remoteDeviceId: SyncDeviceId,
+    op: SyncTabsOp
+  ): Promise<{ ok: boolean; detail: string | null }>
   getState(remoteDeviceId: SyncDeviceId): SyncConnectionState
   listStates(): Array<{ deviceId: SyncDeviceId; state: SyncConnectionState }>
   /** EN: Drop a tracked device id (e.g. offer placeholder after answer binds the real peer). */

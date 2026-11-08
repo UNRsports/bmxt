@@ -162,7 +162,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | ローカル | `sync -status` / `-members` / `-pair` / `-setup` / `-connect` · setting picker の表示名 |
 | ピア横断 | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| sync -open <id>`（コピー） |
 | 再握手 | `sync -connect <deviceId>`（役割自動）+ Copy バー／`sync-handshake-copy`。相手はプロンプトへコード本体を貼付 |
-| 未実装 | prefs/snapshot 自動同期 · tab picker の Family 宛先 UI |
+| 未実装 | prefs/snapshot 自動同期 · tab picker の Family 宛先 UI · リモート group/new-window |
+| 実装済（横断） | `--peers`/`--device` ピッカーから remote 行の移動・閉じる・Enter・reload を DataChannel `tabs_ops` で相手へ |
 
 **横断 tab / search（実装方針・確認済み）**
 

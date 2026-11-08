@@ -5,6 +5,7 @@ import { getTabPickerEngine } from "./store"
 const FALLBACK_STATE: TabPickerEngineState = {
   rows: [],
   showUrl: false,
+  listScope: { kind: "local" },
   variant: "default",
   initialHi: 0,
   anchorTabId: null,
