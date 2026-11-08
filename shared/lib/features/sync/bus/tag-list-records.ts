@@ -83,18 +83,22 @@ export function remoteTabRowsToListRecords(
       })
       continue
     }
+    const tabFields: ListRecord["fields"] = {
+      tabId: row.tabId,
+      windowId: row.windowId,
+      groupId: row.groupId,
+      title: row.title,
+      url: row.url,
+      active: row.active
+    }
+    // EN: Optional portable https favicon — omit when absent (older peers / stripped wire).
+    // JA: 任意の可搬 https favicon。無ければ省略（旧 peer / ワイヤ整形で落ちた場合）。
+    if (typeof row.favIconUrl === "string" && row.favIconUrl.length > 0) {
+      tabFields.favIconUrl = row.favIconUrl
+    }
     records.push({
       kind: "tabs.tab",
-      fields: {
-        tabId: row.tabId,
-        windowId: row.windowId,
-        groupId: row.groupId,
-        title: row.title,
-        url: row.url,
-        active: row.active,
-        // EN: Optional — older peers omit; receivers treat missing as null.
-        favIconUrl: row.favIconUrl ?? null
-      },
+      fields: tabFields,
       display: {
         indent: 2,
         label: row.title,

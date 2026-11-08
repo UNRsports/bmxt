@@ -6,7 +6,11 @@ import { SYNC_REMOTE_TABS_MAX_ROWS } from "./remote-query-limits.ts"
 
 /**
  * EN: Build portable tab rows for a remote tabs_list RPC on this browser.
+ *     Shapes host-local tab metadata into the BMXt sync wire schema (subtractive):
+ *     only fields peers need, with favicons extracted via portable allowlist.
  * JA: 受信した tabs_list 用に、このブラウザのタブ行をポータブル化する。
+ *     宿主ローカルのタブ情報を BMXt sync ワイヤ型へ引き算整形する
+ *     （peer が必要とするフィールドのみ。favicon は可搬 allowlist で抽出）。
  */
 export async function applyRemoteTabsList(options: {
   locale: UiLocale
@@ -16,8 +20,8 @@ export async function applyRemoteTabsList(options: {
       buildTabPickerRowsBundle(false, options.locale),
       chrome.tabs.query({})
     ])
-    // EN: Raw tabs.Tab.favIconUrl — not Chrome's local `/_favicon/` proxy URL.
-    // JA: 生の tabs.Tab.favIconUrl（Chrome ローカル `/_favicon/` ではない）。
+    // EN: Raw tabs.Tab.favIconUrl — not a host-local `/_favicon/` proxy URL.
+    // JA: 生の tabs.Tab.favIconUrl（宿主ローカルの `/_favicon/` ではない）。
     const rawFavIconByTabId = new Map<number, string | null>()
     for (const tab of rawTabs) {
       if (typeof tab.id !== "number") {
@@ -52,16 +56,31 @@ export async function applyRemoteTabsList(options: {
         })
         continue
       }
-      rows.push({
-        kind: "tab",
-        tabId: row.tabId,
-        windowId: row.windowId,
-        groupId: row.groupId,
-        title: row.title,
-        url: row.url,
-        active: row.active,
-        favIconUrl: rawFavIconByTabId.get(row.tabId) ?? null
-      })
+      const favIconUrl = rawFavIconByTabId.get(row.tabId) ?? null
+      // EN: Omit null favIconUrl — keep the wire compact; receivers treat missing as null.
+      // JA: null の favIconUrl は省略してワイヤをコンパクトに。受信側は欠落を null 扱い。
+      if (favIconUrl === null) {
+        rows.push({
+          kind: "tab",
+          tabId: row.tabId,
+          windowId: row.windowId,
+          groupId: row.groupId,
+          title: row.title,
+          url: row.url,
+          active: row.active
+        })
+      } else {
+        rows.push({
+          kind: "tab",
+          tabId: row.tabId,
+          windowId: row.windowId,
+          groupId: row.groupId,
+          title: row.title,
+          url: row.url,
+          active: row.active,
+          favIconUrl
+        })
+      }
     }
     return { ok: true, detail: `rows=${rows.length}`, rows }
   } catch (err) {

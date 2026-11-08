@@ -54,7 +54,7 @@ describe("remoteTabRowsToListRecords", () => {
     )
   })
 
-  it("treats missing favIconUrl from older peers as null", () => {
+  it("omits favIconUrl when absent from older peers or stripped wire", () => {
     const tagged = remoteTabRowsToListRecords(
       [
         {
@@ -69,6 +69,6 @@ describe("remoteTabRowsToListRecords", () => {
       ],
       { deviceId: "chrome1", deviceName: "chrome@desk", remote: true }
     )
-    assert.equal(tagged[0]!.fields.favIconUrl, null)
+    assert.equal(tagged[0]!.fields.favIconUrl, undefined)
   })
 })

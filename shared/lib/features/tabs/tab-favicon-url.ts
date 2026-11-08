@@ -3,6 +3,12 @@
 
 export const TAB_FAVICON_PX = 16
 
+/**
+ * EN: Max character length for a portable favicon URL on the sync wire.
+ * JA: sync ワイヤに載せる可搬 favicon URL の最大文字長。
+ */
+export const PORTABLE_REMOTE_FAVICON_MAX_CHARS = 2048
+
 export function isTabFaviconPageUrl(url: string): boolean {
   return /^https?:\/\//i.test(url.trim())
 }
@@ -61,29 +67,55 @@ export function normalizeTabFavIconUrl(favIconUrl: string | null | undefined): s
 }
 
 /**
- * EN: Favicon URL safe to ship over WebRTC to another browser.
- *     Drops peer-local extension `/_favicon/`, moz-/chrome-extension URLs, and
- *     `data:image/…` (Firefox often embeds large base64 favicons that blow the
- *     ~200KB DataChannel message cap and make tabs_list_result silently drop).
- * JA: 別ブラウザへ WebRTC で送ってよいファビコン URL。
- *     peer ローカルの `/_favicon/`・拡張オリジン、および `data:image/…`
- *     （Firefox の巨大 base64 が DataChannel ~200KB 上限を超え tabs_list_result が
- *     黙って落ちる）は捨てる。受信側 Chrome は pageUrl から `/_favicon/` を再解決できる。
+ * EN: Extract a favicon URL safe for the BMXt sync wire (browser-agnostic).
+ *     Allowlist only — bare `https:` within {@link PORTABLE_REMOTE_FAVICON_MAX_CHARS}.
+ *     Known wrappers such as `moz-anno:favicon:https:…` are unwrapped to the inner
+ *     `https:` URL. Everything else (`data:`, `blob:`, extension-local, `http:`,
+ *     `chrome:`, …) is dropped. Receivers with a favicon API may still resolve
+ *     from page URL when this field is omitted.
+ * JA: BMXt sync ワイヤ向けにファビコン URL を抽出する（ブラウザ非依存）。
+ *     allowlist のみ — {@link PORTABLE_REMOTE_FAVICON_MAX_CHARS} 以内の素の `https:`。
+ *     `moz-anno:favicon:https:…` 等の既知ラッパは内側の `https:` に展開する。
+ *     それ以外（`data:` / `blob:` / 拡張ローカル / `http:` / `chrome:` など）は落とす。
+ *     受信側に favicon API があれば、省略時は page URL から再解決できる。
  */
 export function portableRemoteFavIconUrl(
   favIconUrl: string | null | undefined
 ): string | null {
-  const normalized = normalizeTabFavIconUrl(favIconUrl)
-  if (normalized === null) {
+  if (typeof favIconUrl !== "string") {
     return null
   }
-  if (/^(chrome-extension:|moz-extension:|data:)/i.test(normalized)) {
+  const trimmed = favIconUrl.trim()
+  if (trimmed === "") {
     return null
   }
-  if (/^(https?:|blob:|chrome:|moz-anno:)/i.test(normalized)) {
-    return normalized
+
+  let candidate: string | null = null
+  if (/^https:\/\//i.test(trimmed)) {
+    candidate = trimmed
+  } else {
+    const mozAnnoMatch = /^moz-anno:favicon:(https:\/\/\S+)/i.exec(trimmed)
+    if (mozAnnoMatch !== null) {
+      const inner = mozAnnoMatch[1]
+      if (typeof inner === "string" && inner.length > 0) {
+        candidate = inner
+      }
+    }
   }
-  return null
+
+  if (candidate === null) {
+    return null
+  }
+  if (candidate.length > PORTABLE_REMOTE_FAVICON_MAX_CHARS) {
+    return null
+  }
+  if (!/^https:\/\//i.test(candidate)) {
+    return null
+  }
+  if (/^(javascript:|vbscript:|data:)/i.test(candidate)) {
+    return null
+  }
+  return candidate
 }
 
 export function buildTabFaviconSrc(

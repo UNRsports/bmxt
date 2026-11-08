@@ -145,9 +145,12 @@ export type SyncRemoteTabRow =
       url: string
       active: boolean
       /**
-       * EN: Portable favicon URL for Firefox receivers (https / data:image / …).
-       *     Optional for older peers; null/omit when unknown. Never a peer-local `/_favicon/` URL.
-       * JA: Firefox 受信向けの可搬ファビコン URL。旧 peer は省略可。不明時は null。peer ローカル `/_favicon/` は載せない。
+       * EN: Portable favicon URL on the sync wire (`https:` only after extraction).
+       *     Optional for older peers; omit when unknown. Never host-local `/_favicon/`,
+       *     `data:`, `blob:`, or extension-origin URLs.
+       * JA: sync ワイヤ上の可搬ファビコン URL（抽出後は `https:` のみ）。
+       *     旧 peer 向けに省略可。不明時は載せるな。宿主ローカル `/_favicon/`・
+       *     `data:`・`blob:`・拡張オリジンは載せない。
        */
       favIconUrl?: string | null
     }

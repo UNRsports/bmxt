@@ -137,10 +137,10 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
       const windowId = synthWindow(deviceId ?? "local", peerWindowId, remote)
       const groupId = synthGroup(deviceId ?? "local", peerWindowId, peerGroupId, remote)
       const tabId = remote ? allocSynthetic() : peerTabIdRaw
-      // EN: Remote rows carry portable favIconUrl over WebRTC; local rows keep null here
-      //     (live picker path resolves favicons separately).
-      // JA: リモート行は WebRTC の可搬 favIconUrl を使う。ローカル行はここは null
-      //     （live picker 側で解決）。
+      // EN: Remote rows use portable https favIconUrl from the sync wire; local rows
+      //     keep null here (live picker path resolves favicons separately).
+      // JA: リモート行は sync ワイヤの可搬 https favIconUrl を使う。ローカル行は
+      //     ここは null（live picker 側で解決）。
       const remoteFavIconSrc = remote
         ? portableRemoteFavIconUrl(
             typeof record.fields.favIconUrl === "string" ? record.fields.favIconUrl : null

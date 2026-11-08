@@ -168,23 +168,35 @@ export function createWebrtcCommandBusStabilizer(
       const result = await applyRemoteTabsList({ locale: getRunLocale() })
       const device = await loadOrCreateDeviceIdentity()
       let rows = result.rows
-      // EN: Defense — if serialized reply would exceed the DataChannel receive cap, drop favicons.
-      // JA: 防御。シリアライズ結果が DataChannel 受信上限を超えそうなら favicon を落とす。
-      const probe: SyncBusCommand = {
+      // EN: Defense — if UTF-8 wire size would exceed the DataChannel receive soft cap,
+      //     drop optional favIconUrl fields (title/url rows stay).
+      // JA: 防御。UTF-8 ワイヤ長が DataChannel 受信ソフト上限を超えそうなら、
+      //     任意の favIconUrl だけ落とす（title/url 行は残す）。
+      const utf8ByteLength = (text: string): number => new TextEncoder().encode(text).length
+      const buildProbe = (probeRows: SyncRemoteTabRow[]): SyncBusCommand => ({
         type: "tabs_list_result",
         id: "probe",
         replyTo: command.id,
         from: device.deviceId,
         ok: result.ok,
         detail: result.detail,
-        rows
-      }
-      if (JSON.stringify(probe).length > 180_000) {
+        rows: probeRows
+      })
+      const WIRE_SOFT_CAP_BYTES = 180_000
+      if (utf8ByteLength(JSON.stringify(buildProbe(rows))) > WIRE_SOFT_CAP_BYTES) {
         rows = rows.map((row) => {
           if (row.kind !== "tab") {
             return row
           }
-          return { ...row, favIconUrl: null }
+          return {
+            kind: "tab" as const,
+            tabId: row.tabId,
+            windowId: row.windowId,
+            groupId: row.groupId,
+            title: row.title,
+            url: row.url,
+            active: row.active
+          }
         })
       }
       const reply: SyncBusCommand = {

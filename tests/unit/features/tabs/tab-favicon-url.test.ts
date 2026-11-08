@@ -5,6 +5,7 @@ import {
   isTabFaviconPageUrl,
   manifestHasFaviconPermission,
   normalizeTabFavIconUrl,
+  PORTABLE_REMOTE_FAVICON_MAX_CHARS,
   portableRemoteFavIconUrl,
   resolveTabFaviconSrc
 } from "../../../../shared/lib/features/tabs/tab-favicon-url.ts"
@@ -39,13 +40,21 @@ describe("tab-favicon-url", () => {
     assert.equal(normalizeTabFavIconUrl(undefined), null)
   })
 
-  it("portableRemoteFavIconUrl keeps cross-browser URLs and drops extension-local / data URIs", () => {
+  it("portableRemoteFavIconUrl extracts https only and drops non-portable forms", () => {
     assert.equal(
       portableRemoteFavIconUrl("https://example.com/favicon.ico"),
       "https://example.com/favicon.ico"
     )
-    // EN: data: favicons (common on Firefox) must not cross the DataChannel — size blow-up.
+    // EN: Unwrap known annotation wrappers to the inner https URL.
+    assert.equal(
+      portableRemoteFavIconUrl("moz-anno:favicon:https://example.com/f.ico"),
+      "https://example.com/f.ico"
+    )
+    // EN: Subtractive allowlist — host-local / embedded / non-https forms never ride the wire.
+    assert.equal(portableRemoteFavIconUrl("http://example.com/favicon.ico"), null)
     assert.equal(portableRemoteFavIconUrl("data:image/png;base64,abc"), null)
+    assert.equal(portableRemoteFavIconUrl("blob:https://example.com/uuid"), null)
+    assert.equal(portableRemoteFavIconUrl("chrome://favicon/https://example.com"), null)
     assert.equal(
       portableRemoteFavIconUrl(
         "chrome-extension://id/_favicon/?pageUrl=https%3A%2F%2Fexample.com&size=16"
@@ -53,7 +62,17 @@ describe("tab-favicon-url", () => {
       null
     )
     assert.equal(portableRemoteFavIconUrl("moz-extension://id/icon.png"), null)
+    assert.equal(portableRemoteFavIconUrl("safari-extension://id/icon.png"), null)
     assert.equal(portableRemoteFavIconUrl("javascript:alert(1)"), null)
+    assert.equal(portableRemoteFavIconUrl(""), null)
+    assert.equal(portableRemoteFavIconUrl(undefined), null)
+  })
+
+  it("portableRemoteFavIconUrl rejects overlong https URLs", () => {
+    const overlong = `https://example.com/${"a".repeat(PORTABLE_REMOTE_FAVICON_MAX_CHARS)}`
+    assert.equal(portableRemoteFavIconUrl(overlong), null)
+    const ok = `https://example.com/${"a".repeat(64)}`
+    assert.equal(portableRemoteFavIconUrl(ok), ok)
   })
 
   it("manifestHasFaviconPermission reads permission list", () => {
