@@ -55,6 +55,9 @@ import {
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
 import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
+import { getSyncService } from "../sync/facade/sync-service"
+import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
+import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { SyncWizardPanel } from "../sync/wizard"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
@@ -117,6 +120,7 @@ import {
   type TranslationPairId
 } from "../translate"
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
+import { tCmd } from "../setting/i18n/ns/cmd"
 import { tShell } from "../setting/i18n/ns/shell"
 import { tSearch } from "../setting/i18n/ns/search"
 import { tNav } from "../setting/i18n/ns/nav"
@@ -270,6 +274,10 @@ export function BmxtShell({
       scheduleTabPickerRowsRefresh()
     }
   }, [uiSettings.locale, scheduleTabPickerRowsRefresh])
+  // EN: Ensure WebRTC command-bus → sync link status bridge is subscribed for this window.
+  useEffect(() => {
+    getSyncService()
+  }, [])
   const translateEnabledRef = useRef(false)
 
   const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
@@ -371,14 +379,29 @@ export function BmxtShell({
     endCommandBusy,
     isBusyTokenActive
   } = useCommandBusyIndicator()
+  const syncLinkStatus = useSyncLinkStatus()
+  const syncConnecting = syncLinkStatus.connecting
   const isCommandBusyRef = useRef(false)
+  const syncConnectingRef = useRef(false)
   useEffect(() => {
     isCommandBusyRef.current = isCommandBusy
   }, [isCommandBusy])
+  useEffect(() => {
+    syncConnectingRef.current = syncConnecting
+  }, [syncConnecting])
+  const promptInputLocked = isCommandBusy || syncConnecting
+  const promptBusyLabel = syncConnecting
+    ? tCmd("cmd.sync.link.connecting", uiSettings.locale)
+    : commandBusyLabel
+  const promptShowBusyAnim = syncConnecting ? true : showCommandBusy
 
   const cancelCommandBusy = useCallback(() => {
     const hadSearch = isJobHandleActive(jobRunner.getActive("search-list"))
     const hadRunCmd = isJobHandleActive(jobRunner.getActive("run-cmd"))
+    // EN: Tunnel establishing is not cancellable via Ctrl+C — wait for DataChannel.
+    if (syncConnectingRef.current && !hadSearch && !hadRunCmd && !isCommandBusyRef.current) {
+      return
+    }
     if (!hadSearch && !hadRunCmd && !isCommandBusyRef.current) {
       return
     }
@@ -1357,7 +1380,7 @@ export function BmxtShell({
     dismissImeTokenPicker,
     cancelSearchPageScan,
     cancelCommandBusy,
-    isCommandBusy: () => isCommandBusyRef.current,
+    isCommandBusy: () => isCommandBusyRef.current || syncConnectingRef.current,
     closeSessionNameTyping,
     closeSessionListPicker,
     applySessionSwitchPick,
@@ -1454,9 +1477,9 @@ export function BmxtShell({
           navTypingMultiline={navTypingMultiline}
           sessionNameTyping={sessionNameTyping}
           showSearchListPatternPlaceholder={showSearchListPatternPlaceholder}
-          isCommandBusy={isCommandBusy}
-          showCommandBusy={showCommandBusy}
-          commandBusyLabel={commandBusyLabel}
+          isCommandBusy={promptInputLocked}
+          showCommandBusy={promptShowBusyAnim}
+          commandBusyLabel={promptBusyLabel}
           mirror={mirror}
           uiLocale={uiSettings.locale}
           imeRef={imeRef}
@@ -1487,6 +1510,7 @@ export function BmxtShell({
           appendLogLines={appendLogLines}
           focusPrompt={focusPrompt}
         />
+        <SyncLinkStatusBar locale={uiSettings.locale} />
         {showExtraKeys ? (
           <ExtraKeysBar
             locale={uiSettings.locale}

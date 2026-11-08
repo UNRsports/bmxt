@@ -30,6 +30,13 @@ import type {
 import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
 import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
+import {
+  clearSyncLinkConnecting,
+  ensureSyncLinkBridge,
+  markSyncLinkConnecting,
+  refreshSyncLinkStatusFromBus,
+  waitForSyncLinkConnected
+} from "../link/sync-link-bridge.ts"
 
 export type SyncConnectSession = {
   kind: "handshake"
@@ -91,6 +98,11 @@ function line(text: string): string {
 
 export function createSyncService(stabilizers: SyncStabilizers = createDefaultSyncStabilizers()): SyncService {
   const s = stabilizers
+  ensureSyncLinkBridge({
+    commandBus: s.commandBus,
+    peerHost: s.peerHost,
+    discovery: s.discovery
+  })
 
   async function ensureFamily(): Promise<void> {
     const existing = await loadFamilyMembership()
@@ -346,6 +358,13 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         outboundCode: code,
         awaitingInbound: false
       })
+      // EN: Answer side waits for the offerer to apply the answer — tunnel comes up next.
+      markSyncLinkConnecting(plain.fromDisplayName)
+      void waitForSyncLinkConnected(plain.fromDeviceId).then((ok) => {
+        if (!ok) {
+          clearSyncLinkConnecting()
+        }
+      })
       return {
         ok: true,
         lines: [
@@ -377,10 +396,12 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
       await ensurePeerDocument()
       await s.peerHost.ensureReady()
+      markSyncLinkConnecting(plain.fromDisplayName)
       let remoteDeviceId: string
       try {
         remoteDeviceId = await s.peerHost.applyAnswerHandshake(plain)
       } catch {
+        clearSyncLinkConnecting()
         return { ok: false, lines: [line("sync.rtc.acceptFailed")] }
       }
       s.commandBus.discardState("pending-offer")
@@ -401,6 +422,11 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         updatedAt: new Date().toISOString(),
         endpointHint: null
       })
+      const linked = await waitForSyncLinkConnected(remoteDeviceId)
+      if (!linked) {
+        clearSyncLinkConnecting()
+        return { ok: false, lines: [line("sync.rtc.acceptFailed")] }
+      }
       // EN: Handshake success is enough to finish setup. Ping may fail briefly
       // right after the DataChannel opens; treat it as diagnostics only.
       const ping = await s.commandBus.ping(remoteDeviceId)
@@ -413,6 +439,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
       clearSyncConnectPending()
       clearReachableSyncPeersCache()
+      await refreshSyncLinkStatusFromBus()
       return { ok: true, lines }
     },
 
@@ -439,6 +466,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       const state = await s.commandBus.connect(trimmed)
       if (state === "connected") {
         clearSyncConnectPending()
+        await refreshSyncLinkStatusFromBus()
         const ping = await s.commandBus.ping(trimmed)
         return {
           ok: ping.ok,

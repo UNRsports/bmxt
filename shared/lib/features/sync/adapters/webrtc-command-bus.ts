@@ -70,8 +70,23 @@ export function createWebrtcCommandBusStabilizer(
   commandQueue: CommandQueueStabilizer
 ): CommandBusStabilizer {
   const states = new Map<SyncDeviceId, SyncConnectionState>()
+  const stateListeners = new Set<() => void>()
   let commandHandler: ((command: SyncBusCommand) => void | Promise<void>) | null = null
   const pending = new Map<string, PendingWaiter>()
+
+  function notifyStates(): void {
+    for (const listener of stateListeners) {
+      listener()
+    }
+  }
+
+  function setMappedState(remoteDeviceId: SyncDeviceId, mapped: SyncConnectionState): void {
+    const prev = states.get(remoteDeviceId)
+    states.set(remoteDeviceId, mapped)
+    if (prev !== mapped) {
+      notifyStates()
+    }
+  }
 
   async function replyTo(
     remoteDeviceId: SyncDeviceId,
@@ -192,7 +207,7 @@ export function createWebrtcCommandBusStabilizer(
       void handleIncoming(command)
     },
     onConnectionState: (deviceId, state) => {
-      states.set(deviceId, mapPeerState(state))
+      setMappedState(deviceId, mapPeerState(state))
     }
   })
 
@@ -220,13 +235,13 @@ export function createWebrtcCommandBusStabilizer(
       // EN: Handshake must already have established the DataChannel (copy-paste codes).
       await peerHost.ensureReady()
       const mapped = mapPeerState(peerHost.getConnectionState(remoteDeviceId))
-      states.set(remoteDeviceId, mapped)
+      setMappedState(remoteDeviceId, mapped)
       return mapped
     },
 
     async disconnect(remoteDeviceId: SyncDeviceId) {
       await peerHost.closeSession(remoteDeviceId)
-      states.set(remoteDeviceId, "disconnected")
+      setMappedState(remoteDeviceId, "disconnected")
     },
 
     async ping(remoteDeviceId: SyncDeviceId) {
@@ -249,7 +264,7 @@ export function createWebrtcCommandBusStabilizer(
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
         await commandQueue.enqueue(remoteDeviceId, command)
-        states.set(remoteDeviceId, "queued")
+        setMappedState(remoteDeviceId, "queued")
       }
       const result = await resultPromise
       return { ok: result.ok, rttMs: result.rttMs }
@@ -276,7 +291,7 @@ export function createWebrtcCommandBusStabilizer(
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
         await commandQueue.enqueue(remoteDeviceId, command)
-        states.set(remoteDeviceId, "queued")
+        setMappedState(remoteDeviceId, "queued")
         return { ok: false, detail: "not_connected" }
       }
       const result = await resultPromise
@@ -346,7 +361,18 @@ export function createWebrtcCommandBusStabilizer(
     },
 
     discardState(remoteDeviceId) {
+      if (!states.has(remoteDeviceId)) {
+        return
+      }
       states.delete(remoteDeviceId)
+      notifyStates()
+    },
+
+    subscribeStates(listener) {
+      stateListeners.add(listener)
+      return () => {
+        stateListeners.delete(listener)
+      }
     },
 
     async drainQueue() {

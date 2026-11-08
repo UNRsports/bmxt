@@ -1134,5 +1134,17 @@
   "cmd.sync.wizard.copiedInvite": {
     "ja": "Family 招待をコピーしました。",
     "en": "Family invite copied."
+  },
+  "cmd.sync.link.connecting": {
+    "ja": "接続中...",
+    "en": "Connecting..."
+  },
+  "cmd.sync.link.statusLabel": {
+    "ja": "同期接続中のブラウザ",
+    "en": "Synced browsers"
+  },
+  "cmd.sync.link.statusConnected": {
+    "ja": "sync {names}",
+    "en": "sync {names}"
   }
 }
