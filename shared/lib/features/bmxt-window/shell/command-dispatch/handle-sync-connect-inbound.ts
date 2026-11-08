@@ -13,6 +13,7 @@ import {
   isSyncSetupCancel,
   parseSyncSetupRtcPaste
 } from "../../../sync/setup/sync-setup-pending.ts"
+import { isSyncWizardOpen } from "../../../sync/wizard/sync-wizard-state.ts"
 import {
   clearPrompt,
   recordCommandHistory,
@@ -26,12 +27,17 @@ function looksLikeHandshakePaste(raw: string): boolean {
 }
 
 /**
- * EN: While sync -connect awaits a peer code, accept a bare `bmxt-rtc1.…` paste at the prompt.
- * JA: sync -connect の待ち中は、プロンプトへの素の `bmxt-rtc1.…` 貼付を受理する。
+ * EN: Fallback when the wizard is closed but a connect pending still awaits paste.
+ *     Primary path is the sync wizard textarea.
+ * JA: ウィザードが閉じているが connect pending が残っているときのフォールバック。
+ *     本線は sync ウィザードの貼付欄。
  */
 export function tryHandleSyncConnectInbound(
   ctx: CommandDispatchContext
 ): CommandDispatchResult {
+  if (isSyncWizardOpen()) {
+    return "not_handled"
+  }
   const pending = getSyncConnectPending()
   if (
     pending === null ||

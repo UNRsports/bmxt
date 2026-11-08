@@ -55,6 +55,7 @@ import {
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
 import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
+import { SyncWizardPanel } from "../sync/wizard"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
   deleteNavReloadTabBlockAtCursor,
@@ -1421,6 +1422,11 @@ export function BmxtShell({
         {tutorialView ? (
           <TutorialCoachPanel view={tutorialView} onSkip={skipTutorial} />
         ) : null}
+        <SyncWizardPanel
+          locale={uiSettings.locale}
+          appendLogLines={appendLogLines}
+          focusPrompt={focusPrompt}
+        />
         {lines.length > 0 ? <TerminalLogLines lines={lines} /> : null}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">

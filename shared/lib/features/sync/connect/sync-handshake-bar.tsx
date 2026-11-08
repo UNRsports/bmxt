@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
 import { expandSyncLogLines } from "../facade/expand-sync-log"
+import { isSyncWizardOpen, subscribeSyncWizard } from "../wizard/sync-wizard-state.ts"
 import { copySyncHandshakeCode } from "./sync-handshake-actions.ts"
 import {
   getSyncConnectPending,
@@ -39,10 +40,17 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
   const [pending, setPending] = useState<SyncConnectPending | null>(() =>
     getSyncConnectPending()
   )
+  const [wizardOpen, setWizardOpen] = useState(() => isSyncWizardOpen())
 
   useEffect(() => {
     return subscribeSyncConnectPending(() => {
       setPending(getSyncConnectPending())
+    })
+  }, [])
+
+  useEffect(() => {
+    return subscribeSyncWizard(() => {
+      setWizardOpen(isSyncWizardOpen())
     })
   }, [])
 
@@ -54,6 +62,10 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
   }, [props])
 
   useEffect(() => {
+    // EN: Wizard panel owns the shortcut while open.
+    if (wizardOpen) {
+      return
+    }
     const onMessage = (message: unknown) => {
       if (!isSyncHandshakeCommandMessage(message)) {
         return
@@ -67,14 +79,14 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
     return () => {
       chrome.runtime.onMessage.removeListener(onMessage)
     }
-  }, [runCopy])
+  }, [runCopy, wizardOpen])
 
   // EN: Keep focus on the prompt IME — must be declared before any early return (Rules of Hooks).
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault()
   }, [])
 
-  if (pending === null) {
+  if (wizardOpen || pending === null) {
     return null
   }
 

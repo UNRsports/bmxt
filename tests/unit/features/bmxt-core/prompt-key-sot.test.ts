@@ -19,9 +19,17 @@ const ALLOWLIST_RELATIVE = new Set([
   "tests/unit/features/setting/i18n/messages.test.ts",
   // Live UI / picker state labels (host-only OK per §14.1) — not prompt grammar SoT
   "shared/lib/features/bmxt-window/shell/apply-ui-action.ts",
-  // Family sync log expansion (UiAction host path — not WASM prompt grammar SoT)
+  "shared/lib/features/bmxt-window/shell/command-dispatch/handle-sync-setup.ts",
+  "shared/lib/features/bmxt-window/shell/command-dispatch/handle-sync-connect-inbound.ts",
+  // Family sync log expansion / handshake UI (UiAction host path — not WASM prompt grammar SoT)
   "shared/lib/features/sync/facade/expand-sync-log.ts",
-  "shared/lib/features/sync/facade/format-status.ts"
+  "shared/lib/features/sync/facade/format-status.ts",
+  "shared/lib/features/sync/connect/sync-handshake-bar.tsx",
+  "shared/lib/features/sync/wizard/sync-wizard-controller.ts",
+  "shared/lib/features/sync/wizard/sync-wizard-panel.tsx",
+  // Cross-device list host errors (UI window only — not WASM prompt grammar SoT)
+  "shared/lib/features/dispatch/handlers/effects/search-list.ts",
+  "shared/lib/features/dispatch/handlers/effects/tabs-list.ts"
 ])
 
 const TCMD_CMD_RE = /tCmd\s*\(\s*["']cmd\./g

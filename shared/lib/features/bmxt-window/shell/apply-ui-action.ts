@@ -50,7 +50,6 @@ import {
   applySyncUiLog,
   runSyncAccept,
   runSyncAnswer,
-  runSyncConnect,
   runSyncMembers,
   runSyncOffer,
   runSyncOpen,
@@ -59,6 +58,7 @@ import {
   runSyncStatus,
   syncUiSegmentOutcome
 } from "../../sync/facade/apply-sync-ui"
+import { openSyncWizardConnect } from "../../sync/wizard/sync-wizard-controller.ts"
 import { activateModeToolbar, deactivateModeToolbar } from "../mode-toolbar-order"
 import { mountTabPickerLoadingColumn } from "./command-dispatch/open-tab-picker-column"
 import { beginNavConfirmClose } from "./command-dispatch/handle-nav-confirm-close"
@@ -319,7 +319,7 @@ export async function applyUiActionForSegment(
     case "sync_members":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncMembers())
     case "sync_connect":
-      return syncUiSegmentOutcome(ctx.locale, () => runSyncConnect(action.device_id))
+      return segmentFailure("interactive", [tCmd("cmd.sync.connect.compoundBlocked", ctx.locale)])
     case "sync_offer":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncOffer())
     case "sync_answer":
@@ -376,7 +376,7 @@ function applySyncMembers(ctx: CommandDispatchContext): boolean {
 
 function applySyncConnect(ctx: CommandDispatchContext, deviceId: string): boolean {
   finishCommand(ctx)
-  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncConnect(deviceId))
+  void openSyncWizardConnect(syncSink(ctx), ctx.trimmed, deviceId)
   return true
 }
 
