@@ -91,7 +91,9 @@ export function remoteTabRowsToListRecords(
         groupId: row.groupId,
         title: row.title,
         url: row.url,
-        active: row.active
+        active: row.active,
+        // EN: Optional — older peers omit; receivers treat missing as null.
+        favIconUrl: row.favIconUrl ?? null
       },
       display: {
         indent: 2,

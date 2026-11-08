@@ -3,6 +3,7 @@
 import type { ListResult } from "../../command-line/list-output/types.ts"
 import type { TabPickerRow } from "../../tabs/picker-rows.ts"
 import type { DeviceListScope } from "../../sync/bus/device-list-scope.ts"
+import { portableRemoteFavIconUrl } from "../../tabs/tab-favicon-url.ts"
 
 function numberField(value: unknown, fallback: number): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -136,6 +137,15 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
       const windowId = synthWindow(deviceId ?? "local", peerWindowId, remote)
       const groupId = synthGroup(deviceId ?? "local", peerWindowId, peerGroupId, remote)
       const tabId = remote ? allocSynthetic() : peerTabIdRaw
+      // EN: Remote rows carry portable favIconUrl over WebRTC; local rows keep null here
+      //     (live picker path resolves favicons separately).
+      // JA: リモート行は WebRTC の可搬 favIconUrl を使う。ローカル行はここは null
+      //     （live picker 側で解決）。
+      const remoteFavIconSrc = remote
+        ? portableRemoteFavIconUrl(
+            typeof record.fields.favIconUrl === "string" ? record.fields.favIconUrl : null
+          )
+        : null
       rows.push({
         kind: "tab",
         tabId,
@@ -144,7 +154,7 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
         groupColor: null,
         title: stringField(record.display?.label, stringField(record.fields.title)),
         url: stringField(record.fields.url),
-        faviconSrc: null,
+        faviconSrc: remoteFavIconSrc,
         active: remote ? false : boolField(record.fields.active),
         deviceId,
         remote,

@@ -5,6 +5,7 @@ import {
   isTabFaviconPageUrl,
   manifestHasFaviconPermission,
   normalizeTabFavIconUrl,
+  portableRemoteFavIconUrl,
   resolveTabFaviconSrc
 } from "../../../../shared/lib/features/tabs/tab-favicon-url.ts"
 
@@ -36,6 +37,22 @@ describe("tab-favicon-url", () => {
     assert.equal(normalizeTabFavIconUrl("javascript:alert(1)"), null)
     assert.equal(normalizeTabFavIconUrl(""), null)
     assert.equal(normalizeTabFavIconUrl(undefined), null)
+  })
+
+  it("portableRemoteFavIconUrl keeps cross-browser URLs and drops extension-local ones", () => {
+    assert.equal(
+      portableRemoteFavIconUrl("https://example.com/favicon.ico"),
+      "https://example.com/favicon.ico"
+    )
+    assert.equal(portableRemoteFavIconUrl("data:image/png;base64,abc"), "data:image/png;base64,abc")
+    assert.equal(
+      portableRemoteFavIconUrl(
+        "chrome-extension://id/_favicon/?pageUrl=https%3A%2F%2Fexample.com&size=16"
+      ),
+      null
+    )
+    assert.equal(portableRemoteFavIconUrl("moz-extension://id/icon.png"), null)
+    assert.equal(portableRemoteFavIconUrl("javascript:alert(1)"), null)
   })
 
   it("manifestHasFaviconPermission reads permission list", () => {

@@ -60,6 +60,28 @@ export function normalizeTabFavIconUrl(favIconUrl: string | null | undefined): s
   return null
 }
 
+/**
+ * EN: Favicon URL safe to ship over WebRTC to another browser.
+ *     Drops peer-local extension `/_favicon/` and moz-/chrome-extension URLs.
+ * JA: 別ブラウザへ WebRTC で送ってよいファビコン URL。
+ *     peer ローカルの `/_favicon/` や拡張オリジン URL は捨てる。
+ */
+export function portableRemoteFavIconUrl(
+  favIconUrl: string | null | undefined
+): string | null {
+  const normalized = normalizeTabFavIconUrl(favIconUrl)
+  if (normalized === null) {
+    return null
+  }
+  if (/^(chrome-extension:|moz-extension:)/i.test(normalized)) {
+    return null
+  }
+  if (/^(https?:|data:image\/|blob:|chrome:|moz-anno:)/i.test(normalized)) {
+    return normalized
+  }
+  return null
+}
+
 export function buildTabFaviconSrc(
   pageUrl: string,
   getExtensionUrl: (path: string) => string
