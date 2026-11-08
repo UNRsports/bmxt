@@ -2,10 +2,13 @@
   "0.8.8": {
     "ja": [
       "tabコマンドでのピッカー内で絞り込み検索機能動作を修正",
-      "webRTCによる別プロセス間の連携機能を実装"
+      "webRTCによる別プロセス間の連携機能を実装",
+      "sync トンネル宿主をプロンプト窓に一本化（専用タブ／offscreen 廃止、明示再握手まで維持）"
     ],
     "en": [
-      ""
+      "Fix tab-picker filter search",
+      "Cross-process browser ops via WebRTC sync",
+      "Host the sync tunnel only in the prompt window (no peer tab/offscreen; hold until re-handshake)"
     ]
   }
 }

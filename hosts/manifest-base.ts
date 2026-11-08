@@ -19,12 +19,12 @@ const sharedPermissions = [
 export function hostPermissionsList(browser: HostBrowser): string[] {
   if (browser === "chrome") {
     // Chrome: favicon API + windows permission (required for chrome.windows.create popup).
-    // `offscreen` hosts WebRTC DataChannel for Family sync command bus (6c).
-    return ["favicon", ...sharedPermissions, "windows", "offscreen"]
+    // Family sync WebRTC lives in the BMXt prompt window only (no offscreen host).
+    return ["favicon", ...sharedPermissions, "windows"]
   }
   // Firefox: no `favicon` permission; `windows` is not a valid Gecko permission string
   // (browser.windows still works under the WebExtensions API without declaring it).
-  // Peer host uses extension page `bmxt-peer.html` instead of offscreen.
+  // Family sync WebRTC lives in the BMXt prompt window only (no dedicated peer tab).
   return [...sharedPermissions]
 }
 

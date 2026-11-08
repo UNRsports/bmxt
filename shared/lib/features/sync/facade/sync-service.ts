@@ -483,6 +483,10 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         }
       }
 
+      // EN: Explicit reconnect — drop only this peer's prior (failed/zombie) session.
+      // JA: 明示的再接続。この peer の旧（失敗／ゾンビ）セッションだけ落とす。
+      await s.peerHost.closeSession(trimmed)
+
       const role = connectRoleForPeer(ctx.device.deviceId, trimmed)
       if (role === "answer") {
         const session: SyncConnectSession = {

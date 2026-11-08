@@ -3,17 +3,9 @@ import { WebrtcPeerSession } from "../peer/webrtc-session"
 import type { PeerHostSessionHandlers, PeerHostStabilizer } from "../stabilizers/peer-host"
 import type { SyncBusCommand, SyncDeviceId } from "../types"
 
-function detectHostKind(): PeerHostStabilizer["hostKind"] {
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
-  if (/Firefox\//.test(ua)) {
-    return "firefox-page"
-  }
-  return "in-page"
-}
-
 /**
- * EN: In-page / Firefox peer-page host — handshake via copy-paste codes (no FSA mailbox).
- * JA: in-page / Firefox peer ページ宿主。握手はコピペコード（FSA 箱なし）。
+ * EN: Prompt-window peer host — handshake via copy-paste codes (no offscreen / peer tab).
+ * JA: プロンプト窓 peer 宿主。握手はコピペコード（offscreen / peer タブなし）。
  */
 export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
   /** EN: sessionId → RTC session */
@@ -57,17 +49,42 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
     return bySessionId.get(sessionId) ?? null
   }
 
+  /**
+   * EN: Drop a bound remote session without touching other live tunnels.
+   * JA: 他の生存トンネルに触れず、指定 remote のセッションだけ捨てる。
+   */
+  function dropRemoteSession(remoteDeviceId: SyncDeviceId): void {
+    const sessionId = sessionIdByRemote.get(remoteDeviceId)
+    if (!sessionId) {
+      return
+    }
+    bySessionId.get(sessionId)?.close()
+    bySessionId.delete(sessionId)
+    sessionIdByRemote.delete(remoteDeviceId)
+    if (pendingOfferSessionId === sessionId) {
+      pendingOfferSessionId = null
+    }
+  }
+
   return {
-    hostKind: detectHostKind(),
+    hostKind: "in-page",
 
     async ensureReady() {
-      /* no signaling poll */
+      /* EN: Prompt document is already the host — nothing to open. */
     },
 
     async createOfferHandshake() {
+      // EN: Replace only an unanswered pending offer. Live tunnels to other peers stay up.
+      // JA: 未回答の pending offer だけ差し替え。他ピアの生存トンネルは維持する。
       if (pendingOfferSessionId !== null) {
-        bySessionId.get(pendingOfferSessionId)?.close()
+        const pending = bySessionId.get(pendingOfferSessionId)
+        pending?.close()
         bySessionId.delete(pendingOfferSessionId)
+        for (const [remote, sid] of sessionIdByRemote) {
+          if (sid === pendingOfferSessionId) {
+            sessionIdByRemote.delete(remote)
+          }
+        }
         pendingOfferSessionId = null
       }
       // EN: Placeholder remote until answer names the peer.
@@ -92,12 +109,9 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
     },
 
     async acceptOfferHandshake(plain: RtcHandshakePlain) {
-      const existingId = sessionIdByRemote.get(plain.fromDeviceId)
-      if (existingId) {
-        bySessionId.get(existingId)?.close()
-        bySessionId.delete(existingId)
-        sessionIdByRemote.delete(plain.fromDeviceId)
-      }
+      // EN: Explicit re-handshake for this peer — replace any prior session to the same remote.
+      // JA: 同一 peer への明示的再握手。旧セッションだけ差し替える。
+      dropRemoteSession(plain.fromDeviceId)
       const session = new WebrtcPeerSession(
         plain.fromDeviceId,
         makeCallbacks(plain.sessionId, plain.fromDeviceId),
@@ -124,9 +138,16 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
       if (session.sessionId !== plain.sessionId) {
         throw new Error("session mismatch")
       }
+      // EN: If this answer names a peer that still has an older live/zombie session, drop it.
+      // JA: answer が指す peer に古いセッションが残っていれば捨ててから結び直す。
+      const priorId = sessionIdByRemote.get(plain.fromDeviceId)
+      if (priorId !== undefined && priorId !== session.sessionId) {
+        bySessionId.get(priorId)?.close()
+        bySessionId.delete(priorId)
+        sessionIdByRemote.delete(plain.fromDeviceId)
+      }
       await session.applyAnswer(plain.sdp, plain.ice)
       rememberRemote(plain.fromDeviceId, session.sessionId)
-      // EN: Rebind connection-state callbacks under the real remote id.
       pendingOfferSessionId = null
       // EN: Emit under the real device id (earlier ICE events may have used pending-offer).
       handlers?.onConnectionState(plain.fromDeviceId, session.getConnectionState())
@@ -154,13 +175,7 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
     },
 
     async closeSession(remoteDeviceId) {
-      const sessionId = sessionIdByRemote.get(remoteDeviceId)
-      if (!sessionId) {
-        return
-      }
-      bySessionId.get(sessionId)?.close()
-      bySessionId.delete(sessionId)
-      sessionIdByRemote.delete(remoteDeviceId)
+      dropRemoteSession(remoteDeviceId)
     }
   }
 }

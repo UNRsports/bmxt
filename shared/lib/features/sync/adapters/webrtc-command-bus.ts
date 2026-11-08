@@ -25,7 +25,13 @@ function mapPeerState(raw: string): SyncConnectionState {
   if (raw === "connecting" || raw === "checking") {
     return "signaling"
   }
-  if (raw === "disconnected" || raw === "failed" || raw === "closed") {
+  // EN: Transient "disconnected" still holds the PC — surface as signaling so UI does not
+  //     treat the tunnel as gone until failed/closed (explicit reconnect replaces the session).
+  // JA: 一時的な disconnected でも PC は保持。failed/closed までトンネル消失扱いしない。
+  if (raw === "disconnected") {
+    return "signaling"
+  }
+  if (raw === "failed" || raw === "closed") {
     return "disconnected"
   }
   return "idle"

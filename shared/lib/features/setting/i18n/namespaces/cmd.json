@@ -772,8 +772,8 @@
     "en": "invite: show with `sync -pair` (zero custody — no plaintext vault)"
   },
   "cmd.sync.status.transportHint": {
-    "ja": "transport: WebRTC DataChannel（host ICE のみ・コピペ握手）。FSA 作業ディレクトリは使いません。",
-    "en": "transport: WebRTC DataChannel (host ICE only · copy-paste handshake). No FSA workdir."
+    "ja": "transport: WebRTC DataChannel（プロンプト窓宿主・host ICE のみ・コピペ握手）。窓を閉じる／明示再握手まで維持。FSA 作業ディレクトリは使いません。",
+    "en": "transport: WebRTC DataChannel (prompt-window host · host ICE only · copy-paste handshake). Held until the window closes or you re-handshake. No FSA workdir."
   },
   "cmd.sync.pair.created": {
     "ja": "Family 招待を用意しました。Copy（またはショートカット）でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",

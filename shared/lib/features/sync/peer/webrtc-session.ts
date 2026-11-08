@@ -45,7 +45,21 @@ export class WebrtcPeerSession {
       }
     }
     this.pc.onconnectionstatechange = () => {
+      // EN: Report only — never auto-close. Tunnel stays until explicit closeSession / window close.
+      // JA: 状態通知のみ。自動 close しない。明示切断またはプロンプト閉鎖まで堅持。
       this.callbacks.onConnectionState(this.pc.connectionState)
+    }
+    this.pc.oniceconnectionstatechange = () => {
+      // EN: Transient ICE disconnect — attempt restart without tearing the session down.
+      // JA: ICE の一時断ではセッションを壊さず restart を試す。
+      if (this.pc.iceConnectionState !== "disconnected") {
+        return
+      }
+      try {
+        this.pc.restartIce()
+      } catch {
+        /* EN: restartIce unsupported or failed — keep PC open for possible recovery. */
+      }
     }
     this.pc.ondatachannel = (ev) => {
       this.bindChannel(ev.channel)

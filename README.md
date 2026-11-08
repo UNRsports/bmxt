@@ -707,7 +707,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`**.
 
-**Chrome** may use an **offscreen** document (`offscreen` + `bmxt-offscreen.html`) for WebRTC; **Firefox** uses **`bmxt-peer.html`** (or the open BMXt window). ICE uses **host candidates only** (no public STUN/TURN on the local path).
+**Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
 <a id="picker-ui"></a>
 
@@ -2139,7 +2139,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** など。
 
-**Chrome** は **offscreen**（`offscreen` + `bmxt-offscreen.html`）、**Firefox** は **`bmxt-peer.html`**（または開いている BMXt 窓）。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
+**peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
 
 <a id="picker-ui-ja"></a>
 

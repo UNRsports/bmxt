@@ -144,7 +144,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 原理 | 名刺（SDP offer/answer · ICE 同梱）を Family 封印テキストコードでコピペ交換し、会話本体は Peer 間 DataChannel |
 | 握手 UX | 推奨: ウィザード `sync -setup` / `sync -connect`（Family → 役割 → COPY / 貼付）。手動 CLI も可。設定 picker は案内のみ（貼付しない） |
 | データ面 | WebRTC DataChannel（遠隔コマンド · ack · 将来の横断クエリ） |
-| peer 宿主 | Chrome: offscreen document。Firefox: 拡張ページ（BMXt 窓または専用 peer ページ）。SW 単体では不可 |
+| peer 宿主 | **BMXt プロンプト窓のみ**（Chrome/Firefox 共通）。offscreen / 専用 peer タブは使わない。SW 単体では不可。窓を閉じる／明示再握手までトンネル堅持 |
 | 相手休眠時 | DataChannel 不可 → メモリキューのみ（永続箱なし）。双方オンライン時に再握手 |
 | UX 視野 | `tab` picker の移動先に Family メンバー（例: firefox@desk） |
 | 非目標（6c） | native messaging、FSA 作業ディレクトリ、torrent 本線、常時 TURN |
@@ -196,7 +196,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] `shared/lib/features/sync/`（スタビライザー境界）に同期モジュール
 - [x] **FSA 同期削除**（workdir / signaling box / pull-push-pause）
 - [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel（host ICE）
-- [x] **6c:** peer 宿主（Chrome offscreen / Firefox `bmxt-peer.html`）+ ping / open
+- [x] **6c:** peer 宿主（プロンプト窓一本化）+ ping / open
 - [x] **6c:** `sync -setup` ウィザード（Family → 役割 → COPY / 貼付）。accept 成功は握手完了（直後 ping 失敗でもセットアップ終了）
 - [x] **6c:** `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`）
 - [x] **6c:** 接続中ピア名ステータス行 + トンネル開通中「接続中...」入力ロック（双方）

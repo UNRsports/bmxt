@@ -5,8 +5,8 @@ import { createWebrtcCommandBusStabilizer } from "../adapters/webrtc-command-bus
 import type { SyncStabilizers } from "../stabilizers"
 
 /**
- * EN: Default wiring — WebRTC DataChannel + copy-paste handshake (no FSA).
- * JA: 既定配線（WebRTC DataChannel + コピペ握手。FSA なし）。
+ * EN: Default wiring — prompt-window WebRTC DataChannel + copy-paste handshake (no FSA).
+ * JA: 既定配線（プロンプト窓 WebRTC DataChannel + コピペ握手。FSA なし）。
  */
 export function createDefaultSyncStabilizers(): SyncStabilizers {
   const discovery = createManualDiscoveryStabilizer()

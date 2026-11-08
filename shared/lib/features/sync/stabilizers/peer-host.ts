@@ -7,15 +7,15 @@ export type PeerHostSessionHandlers = {
 }
 
 /**
- * EN: Stabilizer — document that owns RTCPeerConnection (Chrome offscreen / Firefox page).
- * JA: RTCPeerConnection を持つ peer 宿主スタビライザー。
+ * EN: Stabilizer — BMXt prompt document that owns RTCPeerConnection / DataChannel.
+ * JA: プロンプト窓上で RTCPeerConnection / DataChannel を持つ peer 宿主スタビライザー。
  */
 export type PeerHostStabilizer = {
-  readonly hostKind: "chrome-offscreen" | "firefox-page" | "in-page"
+  readonly hostKind: "in-page"
   ensureReady(): Promise<void>
   /**
-   * EN: Create a local offer; ICE is bundled for copy-paste (remote id unknown until answer).
-   * JA: ローカル offer 作成。ICE はコピペ用に同梱（answer まで相手 ID 不明）。
+   * EN: Create local offer + gather ICE; returns session id for the answer code.
+   * JA: ローカル offer 作成と ICE 収集。answer コード用の session id を返す。
    */
   createOfferHandshake(): Promise<{
     sessionId: string
@@ -23,8 +23,8 @@ export type PeerHostStabilizer = {
     ice: string[]
   }>
   /**
-   * EN: Accept a remote offer code payload; returns local answer bundle.
-   * JA: 相手の offer を受理し、ローカル answer 束を返す。
+   * EN: Apply remote offer; return local answer bundle + remote device id from plain.
+   * JA: 相手 offer を適用し、ローカル answer と plain 上の相手 device id を返す。
    */
   acceptOfferHandshake(plain: RtcHandshakePlain): Promise<{
     sessionId: string
@@ -33,14 +33,17 @@ export type PeerHostStabilizer = {
     remoteDeviceId: SyncDeviceId
   }>
   /**
-   * EN: Apply a remote answer code to the pending local offer session.
-   * JA: 保留中のローカル offer に相手の answer を適用。
+   * EN: Apply remote answer on the pending offer session.
+   * JA: 保留中 offer セッションへ相手 answer を適用。
    */
   applyAnswerHandshake(plain: RtcHandshakePlain): Promise<SyncDeviceId>
   sendCommand(remoteDeviceId: SyncDeviceId, command: SyncBusCommand): Promise<boolean>
   getConnectionState(remoteDeviceId: SyncDeviceId): string
-  /** EN: Remotes that have a bound RTC session (excludes offer placeholder). */
   listBoundRemoteDeviceIds(): SyncDeviceId[]
   setHandlers(handlers: PeerHostSessionHandlers): void
+  /**
+   * EN: Explicit tear-down only (user reconnect / disconnect). Never call on transient ICE blips.
+   * JA: 明示切断のみ（再握手・disconnect）。ICE の一時断では呼ばない。
+   */
   closeSession(remoteDeviceId: SyncDeviceId): Promise<void>
 }

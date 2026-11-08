@@ -20,9 +20,7 @@ export const DEFAULT_EXTENSION_PAGE_PROTOCOL: ExtensionPageProtocol = "chrome-ex
 /** EN: Canonical UI page pathnames (leading slash, no query). */
 export const BMXT_UI_PAGE_PATHS = {
   shell: "/bmxt.html",
-  float: "/bmxt-float.html",
-  peer: "/bmxt-peer.html",
-  offscreen: "/bmxt-offscreen.html"
+  float: "/bmxt-float.html"
 } as const
 
 export type BmxtUiPageKey = keyof typeof BMXT_UI_PAGE_PATHS

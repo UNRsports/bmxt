@@ -56,6 +56,7 @@ import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
 import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
 import { getSyncService } from "../sync/facade/sync-service"
+import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
 import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
 import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { SyncWizardPanel } from "../sync/wizard"
@@ -274,9 +275,13 @@ export function BmxtShell({
       scheduleTabPickerRowsRefresh()
     }
   }, [uiSettings.locale, scheduleTabPickerRowsRefresh])
-  // EN: Ensure WebRTC command-bus → sync link status bridge is subscribed for this window.
+  // EN: Prompt window owns the Family sync tunnel — wire SyncService + keep-alive hold.
+  // JA: プロンプト窓が Family sync トンネルの宿主。SyncService 配線とキープアライブ。
   useEffect(() => {
     getSyncService()
+    startSyncTunnelHold(async () => {
+      await getSyncService().status()
+    })
   }, [])
   const translateEnabledRef = useRef(false)
 

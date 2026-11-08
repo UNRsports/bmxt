@@ -64,8 +64,8 @@
     "en": "tutorial (interactive coach):\n  tutorial / tutorial -start  - start the default lesson (tab -list | browse).\n  tutorial -skip              - skip (also stops first-run auto-start).\n  Auto-starts on first launch (skippable)."
   },
   "help.section.sync": {
-    "ja": "sync（同一 PC · Family · WebRTC）:\n  sync -status / -pair [invite] / -members\n  sync -offer / -answer <code> / -accept <code>  — コピペ握手（FSA なし）\n  sync -ping <deviceId> / -open <deviceId> <url…>\n  Family 招待で信頼圏を揃え、テキストコードで DataChannel を確立。",
-    "en": "sync (same PC · Family · WebRTC):\n  sync -status / -pair [invite] / -members\n  sync -offer / -answer <code> / -accept <code>  — copy-paste handshake (no FSA)\n  sync -ping <deviceId> / -open <deviceId> <url…>\n  Align Family via invite, then establish DataChannel with text codes."
+    "ja": "sync（同一 PC · Family · WebRTC · プロンプト窓宿主）:\n  sync -status / -pair [invite] / -members\n  sync -offer / -answer <code> / -accept <code>  — コピペ握手（FSA なし）\n  sync -ping <deviceId> / -open <deviceId> <url…>\n  Family 招待で信頼圏を揃え、プロンプト窓上の DataChannel を確立（窓を閉じる／明示再握手まで維持）。",
+    "en": "sync (same PC · Family · WebRTC · prompt-window host):\n  sync -status / -pair [invite] / -members\n  sync -offer / -answer <code> / -accept <code>  — copy-paste handshake (no FSA)\n  sync -ping <deviceId> / -open <deviceId> <url…>\n  Align Family via invite, then establish a DataChannel in the prompt window (held until the window closes or you re-handshake)."
   },
   "help.section.url": {
     "ja": "URL（http/https、行全体として入力）:\n  <url>           - 新規タブ\n  <url> .         - 現在のタブ（フォーカス中ウィンドウのアクティブタブ）\n  <url> -nw       - 新規ウィンドウ",
