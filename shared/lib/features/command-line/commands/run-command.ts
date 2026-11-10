@@ -1,9 +1,10 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
-import { segmentFailure } from "../compound/classify-outcome.ts"
+import { segmentFailure, segmentSuccess } from "../compound/classify-outcome.ts"
 import { dispatchSegmentUiOutcome } from "../compound/apply-segment-bundle.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tCompound } from "../../setting/i18n/ns/compound.ts"
+import { matchPlainListCommand, tryRunPlainListCommand } from "../list-commands/index.ts"
 import { applyRedirectsToOutcome } from "./apply-redirect.ts"
 import { isNullRedirectTarget, parseRedirects } from "./parse-redirect.ts"
 import { BACKGROUND_COMMAND_ENTRY } from "./registry.ts"
@@ -98,7 +99,16 @@ async function dispatchSegment(
     return uiOutcome
   }
 
+  // EN: List commands marked runtime=ui (tab/search peer scopes) must not hit SW RUN_CMD.
+  // JA: runtime=ui の一覧（tab/search のピア横断）は SW の RUN_CMD に落とさない。
   if (bundle.ty === "effects") {
+    const matched = matchPlainListCommand(commandText)
+    if (matched !== null && matched.entry.runtime === "ui") {
+      const lines = await tryRunPlainListCommand(commandText, { locale, deps })
+      if (lines !== null) {
+        return segmentSuccess(lines)
+      }
+    }
     const background = await BACKGROUND_COMMAND_ENTRY.tryRun(commandText, deps, locale, options)
     if (background !== null) {
       return background

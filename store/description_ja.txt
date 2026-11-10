@@ -43,6 +43,10 @@ https://github.com/UNRsports/bmxt/issues
 
 
 ◆バージョン履歴
+0.9.0：
+・tabコマンドでのピッカー内で絞り込み検索機能動作を修正
+・webRTCによる別プロセス間の連携機能を実装
+
 0.8.7：
 ・候補メニューへコマンドの説明表示を実装
 ・操作方法を学ぶためのチュートリアルを実装
@@ -163,8 +167,10 @@ https://github.com/UNRsports/bmxt/issues
 | `clear` | ログをクリア |
 | `exit` | アクティブなターミナルセッションを閉じる。最後の 1 セッションなら BMXt ウィンドウを閉じプロセススコープの状態を消去 |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |
-| `tab -list [-url]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL 行付き） |
+| `tab -list [-url] [--device <id>\|--peers]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL 行付き）。`--peers` は接続ピア横断 |
 | `tab -list [-url] | browse` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応。`/` でタイトル検索、Enter でハイライト、`n` でジャンプ |
+| `tab -list \| tab -send <deviceId> [--close]` | 一覧タブをグループ維持でピアへコピー。`--close` は open 成功したローカル送信元だけ閉じる |
+| `tab -send <deviceId> <url…> [--group <title>] [--close]` | 接続 Family ピアへ URL 送信。`--close` は成功したローカル元を閉じる |
 | `tab -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
 | `tab -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。設定は保存される |
 | `tab -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https） |
@@ -183,13 +189,13 @@ https://github.com/UNRsports/bmxt/issues
 | `nav -exit` | nav を完全終了（事前に Alt でオーバーレイ OFF） |
 | `nav -windowclose` | 操作先タブが含まれるウィンドウを閉じる（y/n 確認。BMXt 窓は閉じない） |
 | `search` | 利用案内を表示。単体で Enter すると `search `（末尾スペース付き）へ入力復元 |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は `--all` 相当） |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は `--all` 相当）。`--peers` は接続ピア横断 |
 | `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | search ピッカー列を閉じる（検索中ならキャンセル） |
 | `group new` / `group new <tabId> …` | タブグループ作成 — タブ ID なしは対話的タブピッカー、ID 列挙ありは非対話 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `setting -list | browse` | 設定ピッカー列を開く。`> save setting` で確定 |
+| `setting -list | browse` | 設定ピッカー列を開く（UI 言語・外観・保存先・snapshot 保存先・Family sync 表示名＋セットアップ案内・zip 入出力）。外観／言語は `> save setting` で確定 |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は setting の snapshot 保存先設定に従う |
 | `setting -exit -list` | 設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（1 BMXt ウィンドウ内の tmux 風ターミナルセッション） |
@@ -200,6 +206,14 @@ https://github.com/UNRsports/bmxt/issues
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更 |
 | `session <n>` | ターミナルセッション番号 n（1 始まり）へ切り替え |
+| `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（WebRTC DataChannel による Family ローカル同期） |
+| `sync -setup` | ウィザードでセットアップ（Family → 役割 → COPY / 貼付・初回推奨） |
+| `sync -connect <deviceId>` | 名簿メンバーへ再握手（役割自動・同じウィザードの COPY / 貼付） |
+| `sync -status` | device id / Family / 名簿 / WebRTC 接続状態 |
+| `sync -pair` / `sync -pair <invite>` | Family 招待表示（QR ペイロード）または参加 |
+| `sync -members` | Family 名簿と発見済みデバイス |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | 上級向け CLI 握手（`bmxt-rtc1.`）。通常は setup/connect ウィザードの COPY / 貼付 |
+| `sync -ping <deviceId>` | 接続済みピアへ DataChannel ping |
 | `translate` | 利用案内を表示し、続けて `translate ` へ入力復元 |
 | `translate -on` | 翻訳アシストを有効化（nav typing 時のプロンプト下プレビュー） |
 | `translate -off` | 翻訳アシストを無効化 |

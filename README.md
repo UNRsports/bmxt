@@ -23,6 +23,7 @@
   - [`translate` (`translate -on` / `translate -off` / `translate -setting`)](#translate)
   - [`setting` (`setting -list` / `setting -exit -list`)](#setting)
   - [`session` (terminal sessions)](#session)
+  - [`sync` (Family local sync)](#sync)
   - [`tab` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tab -list | browse` / `tab -list -url | browse`)](#tabs-tab-picker)
@@ -241,8 +242,10 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `clear` | Clear logs |
 | `exit` | Close the **active terminal session**; when it is the **last** session, close the BMXt window and **end the BMXt process** (all persisted process state is cleared — see [BMXt process lifecycle](#bmxt-process-lifecycle)) |
 | `tab` | Show available options, then restore prompt to `tab ` for option input |
-| `tab -list [-url]` | List open tabs as a plain tree (IDs included); `-url` adds URLs |
+| `tab -list [-url] [--device <id>\|--peers]` | List open tabs as a plain tree (IDs included); `-url` adds URLs; `--peers` merges connected Family peers |
 | `tab -list [-url] | browse` | Open tab picker column; supports search, multi-select marker `#`, and bulk modes |
+| `tab -list \| tab -send <deviceId> [--close]` | Copy listed tabs (group titles preserved) to a connected peer; `--close` closes only successfully opened **local** source tabs |
+| `tab -send <deviceId> <url…> [--group <title>] [--close]` | Send URLs to a connected Family peer (command bus); `--close` closes successful local sources |
 | `tab -exit -list` | Close tab picker column in this session (including `group new` picker) |
 | `tab -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved in `chrome.storage.local` |
 | `tab -moveurl <url>` | Focus matching URL tab or open new tab (http/https) |
@@ -253,7 +256,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `dom -list … | browse` | Open a read-only DOM picker column (same picker chrome as `search -list … | browse`); mode **`--normal`** or **`--with`**; flavor **`--html`** or **`--react`** |
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). Case-insensitive substring (no regex in v1) |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). `--peers` merges connected Family peers. Case-insensitive substring (no regex in v1) |
 | `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open **https** tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
@@ -272,7 +275,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings (locale, appearance, storage mode summary) |
-| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, export/import zip); changes apply only after **`> save setting`** in the picker |
+| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** display name + setup guide, export/import zip); appearance/locale apply after **`> save setting`**; sync/storage/snapshot actions apply immediately |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
@@ -283,6 +286,14 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session (bare: prompt pre-filled with current display name) |
 | `session <n>` | Switch to terminal session number **n** (1-based) |
+| `sync` | Print usage and restore the prompt to `sync ` (Family local sync — see **[`sync`](#sync)**; **since 0.9.0**) |
+| `sync -setup` | Guided **wizard**: Family → role → COPY / paste handshake codes (recommended for first join) |
+| `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; same wizard COPY / paste) |
+| `sync -status` | Device id, Family, members, WebRTC connection state |
+| `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite |
+| `sync -members` | List Family roster + discovered devices |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Advanced CLI handshake (`bmxt-rtc1.`); prefer the setup/connect wizard COPY + paste |
+| `sync -ping <deviceId>` | Ping a connected peer over the DataChannel |
 | `close` / `c <tabId>` | Close tab by id (no confirm) |
 | `close` / `c` (pipe) | With pipe input from `tab -list`, close every listed tab (see **Pipes** below) |
 | `back` / `forward` / `reload` (pipe) | Same producer → batch history / reload on listed tabs |
@@ -374,7 +385,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -675,6 +686,34 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Implementation:** **`lib/features/session/`** (`session-input.ts`, `session-summary.ts`, `session-list-candidate-panel.tsx`, `session-bar.tsx`), UI in **`bmxt-shell.tsx`** / **`bmxt-terminal.tsx`**, effects **`session_new`** / **`session_next`** / **`session_prev`** in **`lib/features/dispatch/handlers/effects/`**.
 
+<a id="sync"></a>
+
+### `sync` (Family local sync · same PC · command bus)
+
+**Since 0.9.0.**
+
+**Goal:** Give each browser profile a unique **device id**, join a **Family** (shared seed / invite — zero custody: members hold plaintext; BMXt never uploads it), then run a low-latency **WebRTC DataChannel command bus** between peers (same PC today).
+
+| Stage | Scope | Transport |
+|-------|--------|-----------|
+| **6a** | Same PC · Chrome ↔ Firefox | Family invite (`sync -pair` / `-setup`) + roster in `chrome.storage.local` |
+| **6b** | Same LAN · Family members | Manual / QR discovery; direct connect preferred (future) |
+| **6c** | Same PC (protocol can extend later) | **Copy-paste handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
+
+**Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** via `--device <id>` / `--peers` (DataChannel RPC); send with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
+
+**Family list refresh (`tabs_changed`):** After a successful Family tab mutation (`open_tabs` / `tabs_ops`, and local `--close` when used), BMXt broadcasts a lightweight **`tabs_changed`** signal to **all currently connected** Family peers (including notifying the sender). The payload carries **`first`** — a **first-command selection code** (today always **`tab`**; missing `first` from an older peer is treated as **`tab`**). A peer refreshes an open picker only when that code matches (tab picker reacts to **`first: "tab"`** only). Disconnected peers are not notified; they re-pull on the next `--peers` / `--device` list.
+
+**Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
+
+**UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** (button or `sync-handshake-copy`) puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow. The setting picker sync panel only shows a setup guide and display-name edit.
+
+**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
+
+**Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
+
+**Mesh:** User-facing connect stays “handshake with any one live Family member.” After that link is up, BMXt **automatically completes a full mesh** (in-band `mesh_peers` / `mesh_signal` over existing DataChannels) so every prompt can reach every other connected peer directly — no hub relay for tab ops.
+
 <a id="picker-ui"></a>
 
 ### Picker UI (side columns)
@@ -942,7 +981,7 @@ prompt / RUN_CMD
 
 **Tab / IME fixed tokens:** WASM **`complete(line, cursor)`** (tiers 1–3 from codegen subcommands). `resolveImeTokenPicker` calls it when WASM is ready and applies host filter UX + live overlays. **Caret offsets (since 0.8.3):** the JS prompt uses **UTF-16** indices; Rust/`complete` uses **UTF-8** byte offsets — the host converts via **`lib/features/bmxt-core/utf16-utf8-offset.ts`** before calling WASM (avoids wiping CJK prompt text).
 
-**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + **wasm-pack** (`bash scripts/install-wasm-pack.sh`, pins **0.15.0**; see [wasm-pack](https://wasm-bindgen.github.io/wasm-pack/)). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **`scripts/fixtures/dispatch/effects.json`**.
+**Develop Rust/WASM:** install stable Rust + `wasm32-unknown-unknown` + **wasm-pack** (`bash scripts/install-wasm-pack.sh`, pins **0.15.0**; see [wasm-pack](https://wasm-bindgen.github.io/wasm-pack/)). Then **`pnpm run build:wasm`** (also runs before `dev` / `build` / `package`). Unit tests: **`cargo test -p bmxt-core`**. Golden Effect contracts: **[`scripts/fixtures/dispatch/effects.json`](scripts/fixtures/dispatch/effects.json)** — notes in **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)**.
 
 The tab picker’s **`runTabsPickerReduce`** (and related planners) are WASM-backed wrappers under **`lib/features/bmxt-core/tabs-picker/`** (see **Tab picker — implementation** under **`tab`**).
 
@@ -1131,7 +1170,7 @@ Long-running or cancelable work runs through **`lib/features/job/`** — a **`Jo
 
 ### Add a New Built-in Command
 
-Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first). For the full checklist (scaffold, reuse vs extend, verification), see **[Command add procedure](#command-add-procedure)** below.
+Start with **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)** (vocabulary-first). Template index: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**. For the full checklist (scaffold, reuse vs extend, verification), see **[Command add procedure](#command-add-procedure)** below.
 
 
 1. Prefer **reusing** existing Effect / UiAction / list kinds (`manifest/templates/`).
@@ -1144,7 +1183,7 @@ Start with **`manifest/templates/new-command.checklist.md`** (vocabulary-first).
 ### Command add procedure
 
 
-- **Vocabulary first:** Follow **[Inter-command vocabulary](#inter-command-vocabulary)**. Start from **`manifest/templates/new-command.checklist.md`** (decision tree + checklists). Examples: **`command-reuse-effects.example.rs`**, **`command-reuse-ui-action.example.rs`**, **`command-list-producer.steps.md`**, **`pipe-consumer.steps.md`**.
+- **Vocabulary first:** Follow **[Inter-command vocabulary](#inter-command-vocabulary)**. Start from **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)** (decision tree + checklists; index **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**). Examples: **`command-reuse-effects.example.rs`**, **`command-reuse-ui-action.example.rs`**, **`command-list-producer.steps.md`**, **`pipe-consumer.steps.md`**.
 - **Command-line token model:** When adding or changing commands, follow **[Command-line token model (first / second commands)](#command-line-token-model)** and **`.cursorrules`** (first → second ordering, **no** short aliases for first/second tokens). When a second token is required, **Enter** on the lone first token must return Rust **`msgs` + `promptPrefix`** (`require_second_token` / `msgs_with_prompt`) — do **not** add TS Enter continuation. Second-token **Tab** lists come from generated **`command-subcommands.gen.ts`** (manifest **`subcommands`**). See **[Prompt semantics (Rust SoT)](#prompt-semantics-sot)**.
 
 - **Single source of truth:** **`manifest/bmxt-codegen.json`**. Do **not** edit generated files by hand: **`registry/table.gen.ts`**, **`effect-types.ts`**, **`ui-action-types.ts`**, **`apply-dispatch.gen.ts`**, completion helpers, **`crates/bmxt-core/src/generated/*.rs`**. Regenerate with **`pnpm run codegen`**.
@@ -1247,6 +1286,19 @@ If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`*
 
 **JS/TS** tests live under **`tests/`** (not under `lib/` or the repo root). Layout details: **[`tests/README.md`](tests/README.md)**.
 
+**E2E browser lifecycle** (launch unpacked Chrome/Firefox extensions, resolve `extensionOrigin`, open extension pages) uses **[webxdriver](https://github.com/UNRsports/webxdriver)** (`devDependency`, pinned GitHub commit). BMXt-specific helpers (prompt / tutorial / `.bmxt-*` asserts, **`BMXT_E2E_BROWSER`**, `.output/{chrome,firefox}-mv3` paths) stay in **`tests/e2e/harness.ts`**.
+
+**Related docs (scattered READMEs):**
+
+| Doc | Topic |
+|-----|--------|
+| **[`tests/README.md`](tests/README.md)** | Unit / property / E2E layout and how to add tests |
+| **[`hosts/README.md`](hosts/README.md)** | Chrome / Firefox host packages and build/package scripts |
+| **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** | Firefox AMO source kit |
+| **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)** | Golden Effect contracts (`effects.json`) for WASM `run` |
+| **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** | Command-add templates (closed vocabulary) |
+| **[`shared/public/assets/wasm/bmxt-gaze/README.md`](shared/public/assets/wasm/bmxt-gaze/README.md)** | Optional gaze WASM module (build notes) |
+
 <a id="testing-how-to-run"></a>
 
 #### How to run
@@ -1255,8 +1307,8 @@ If you change **`shared/manifest/bmxt-codegen.json`**, run **`pnpm run codegen`*
 |------|---------|--------|
 | **Unit + property (JS/TS)** | **`pnpm test`** | No browser. Fast. |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | Not included in `pnpm test`. |
-| **E2E (Chrome)** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing. Loads **`.output/chrome-mv3`**. |
-| **E2E (Firefox)** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver. Loads **`.output/firefox-mv3`**. |
+| **E2E (Chrome)** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing via **webxdriver**. Loads **`.output/chrome-mv3`**. |
+| **E2E (Firefox)** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver via **webxdriver**. Loads **`.output/firefox-mv3`**. |
 | **E2E (both)** | **`pnpm run test:e2e:all`** | Chrome then Firefox (builds required separately or via **`verify`**). |
 | **Full CI gate** | **`pnpm run verify`** | Manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E. |
 
@@ -1268,10 +1320,16 @@ One-liner after a production build already exists:
 |-------|---------|----------|
 | **TS unit** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`. Globs: `tests/unit/**/*.test.ts`, `tests/unit/**/*.test.mjs`. |
 | **Property** | (included in **`pnpm test`**) | **`tests/property/`** — **fast-check** + `node:test` (incl. UTF-16/UTF-8 caret conversion and **TS↔WASM** host entrypoints). |
-| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** (`selenium-webdriver`) under **`tests/e2e/`**. Same shell specs on Chrome and Firefox. See **`tests/README.md`**. |
-| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver** under **`tests/e2e/`** (**webxdriver** lifecycle + BMXt `harness.ts`). See **[`tests/README.md`](tests/README.md)**. |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`shared/crates/bmxt-core/`** only (Cargo convention; **not** under **`tests/`**). |
 
 **Adding a TS unit test:** **`tests/unit/features/<same-path-as-lib>/<name>.test.ts`**, import from **`lib/features/...`** with a **`.ts`** extension. Do **not** colocate `*.test.ts` under `lib/`.
+
+<a id="testing-e2e-coverage"></a>
+
+#### What E2E covers
+
+Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smoke (`commands-smoke.test.ts` + `command-matrix.ts`), prompt integrity, and CJK caret behavior. Lifecycle details and env vars: **[`tests/README.md`](tests/README.md)**. Effect-level golden contracts (no browser): **[`scripts/fixtures/dispatch/`](scripts/fixtures/dispatch/)** — see **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)**.
 
 <a id="project-layout"></a>
 
@@ -1287,8 +1345,9 @@ One-liner after a production build already exists:
 | **`shared/lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
 | **`hosts/chrome/`**, **`hosts/firefox/`** | Per-browser WXT configs (+ Firefox AMO kit) — see **[`hosts/README.md`](hosts/README.md)** |
 | **`shared/lib/features/`** | Feature modules (see table below) |
-| **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)**). Rust stays under **`shared/crates/bmxt-core/`**. |
-| **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**) |
+| **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)** and **[`tests/README.md`](tests/README.md)**). Rust stays under **`shared/crates/bmxt-core/`**. |
+| **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**). Templates: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** |
+| **`scripts/fixtures/dispatch/`** | Golden Effect contracts for WASM `run` — **[`README`](scripts/fixtures/dispatch/README.md)** |
 | **`pnpm-lock.yaml`** | Lockfile — install with **`pnpm install --frozen-lockfile`** |
 | **`docs/`** | GitHub Pages — privacy policy (`index.html`), welcome page (`welcome.html`, `welcome-content.json`, `welcome/` images) |
 | **`.output/`** | Build output (gitignored): **`chrome-mv3`**, **`firefox-mv3`**, zips from **`package`** / **`package:chrome`** / **`package:firefox`** (`bmxt-<ver>-chrome.zip`, `bmxt-<ver>-firefox.zip`) |
@@ -1343,7 +1402,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1459,6 +1518,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [`translate`（`translate -on` / `translate -off` / `translate -setting`）](#translate-ja)
   - [`setting`（`setting -list` / `setting -exit -list`）](#setting-ja)
   - [`session`（ターミナルセッション）](#session-ja)
+  - [`sync`（Family ローカル同期）](#sync-ja)
   - [`tab`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tab -list | browse` / `tab -list -url | browse`）](#tabs-tab-picker-ja)
@@ -1564,7 +1624,9 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[WXT](https://wxt.dev/)（Manifest V3）でビルドしています。エントリは **`entrypoints/`**、静的アセットは **`public/`**（**`_locales/`** 含む）、manifest 上書きは **`wxt.config.ts`**、出力は **`.output/`** です。
 
-**配置:** コマンド意味論（parse / レジストリ / パイプ計画など）は **Rust → WASM**（`crates/bmxt-core/`）。TypeScript は Chrome Effect・content script・React UI と薄いホスト（`lib/features/bmxt-core/` の `runDispatch` / `ensureBmxtCore`、`apply-ui-action`）に徹します（**`.cursorrules`** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
+**リポジトリ配置（マルチブラウザ）:** **`shared/`**（ブラウザ非依存のソース）、**`hosts/chrome/`** / **`hosts/firefox/`**（各ホストの WXT 設定。詳細は **[`hosts/README.md`](hosts/README.md)**、AMO は **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**）。
+
+**配置:** コマンド意味論（parse / レジストリ / パイプ計画など）は **Rust → WASM**（`shared/crates/bmxt-core/`）。TypeScript はホスト Effect・content script・React UI と薄いホスト（`lib/features/bmxt-core/` の `runDispatch` / `ensureBmxtCore`、`apply-ui-action`）に徹します（**`.cursorrules`** と **[`hosts/README.md`](hosts/README.md)** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
 
 **コマンドラインの約束事**（第一・第二コマンド、Tab 補完、第二必須時の Enter 挙動）は **[コマンドラインのトークン仕様](#command-line-token-model-ja)** にまとめています。
 
@@ -1670,8 +1732,10 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `clear` | ログをクリア |
 | `exit` | **アクティブなターミナルセッション**を閉じる。**最後の 1 セッション**なら BMXt ウィンドウを閉じ **BMXt プロセスを終了**（永続化されたプロセス状態をすべて消去 — **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照） |
 | `tab` | 利用可能オプションを表示し、続けて `tab `（末尾スペース付き）へ入力復元 |
-| `tab -list [-url]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL 行付き） |
+| `tab -list [-url] [--device <id>\|--peers]` | 開いているタブを ID 付きプレーン一覧（`-url` で URL）。`--peers` は接続ピア横断 |
 | `tab -list [-url] | browse` | タブピッカー列を開き、検索・複数選択 `#`・バルクモードに対応 |
+| `tab -list \| tab -send <deviceId> [--close]` | 一覧タブをグループ維持でピアへコピー。`--close` は open 成功した**ローカル**送信元だけ閉じる |
+| `tab -send <deviceId> <url…> [--group <title>] [--close]` | 接続 Family ピアへ URL 送信。`--close` は成功したローカル元を閉じる |
 | `tab -exit -list` | 当該セッションのタブピッカー列を閉じる（`group new` 含む） |
 | `tab -setting -page-active --auto \| --manual` | タブピッカー：ハイライト移動時のタブ自動アクティブ化を切替（`--auto` 既定、`--manual` は Alt+↑↓）。`chrome.storage.local` に保存 |
 | `tab -moveurl <url>` | 指定 URL タブがあれば前面化、なければ新規タブを開く（http/https）。 |
@@ -1682,7 +1746,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `dom -list … | browse` | DOM 読み取り専用ピッカー列（`search -list … | browse` と同系 UI）。mode **`--normal`**／**`--with`**、flavor **`--html`**／**`--react`** |
 | `dom -exit -list` | 当該セッションの DOM ピッカー列を閉じる |
 | `search` | 利用案内を表示し、続けて `search ` へ入力復元（`-list`） |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。部分一致（v1 正規表現なし） |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。`--peers` は接続ピア横断。部分一致（v1 正規表現なし） |
 | `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]`** 開き先ツリー |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose` 用） |
@@ -1701,7 +1765,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・zip 入出力）。**`> save setting`** で確定 |
+| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync** 表示名＋セットアップ案内・zip 入出力）。外観／言語は **`> save setting`** で確定。sync／storage／snapshot 操作は即時適用 |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
@@ -1711,6 +1775,14 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session -switch [name]` | 表示名によるインライン候補（入力で絞り込み · **Enter** で `session -switch <name>` を挿入 · もう一度 **Enter** で実行）。`session -switch <name>` 直打ちも可 |
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
+| `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（Family ローカル同期 — **[`sync`](#sync-ja)**；**0.9.0 以降**） |
+| `sync -setup` | **ウィザード**でセットアップ（Family → 役割 → COPY / 貼付・初回推奨） |
+| `sync -connect <deviceId>` | 名簿メンバーへ再握手（役割自動・同じウィザードの COPY / 貼付） |
+| `sync -status` | device id / Family / 名簿 / WebRTC 接続状態 |
+| `sync -pair` / `sync -pair <invite>` | Family 招待表示（QR ペイロード）または参加 |
+| `sync -members` | Family 名簿と発見済みデバイス |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | 上級向け CLI 握手（`bmxt-rtc1.`）。通常は setup/connect ウィザードの COPY / 貼付 |
+| `sync -ping <deviceId>` | 接続済みピアへ DataChannel ping |
 | `session <n>` | ターミナルセッション番号 **n**（1 始まり）へ切り替え |
 | `close` / `c <tabId>` | タブを ID 指定で閉じる（確認なし） |
 | `close` / `c`（パイプ） | `tab -list` のパイプ入力から列挙されたタブをすべて閉じる（**パイプ** 参照） |
@@ -1803,7 +1875,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -2050,6 +2122,34 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 **パフォーマンス（切り替え／作成）:** **アクティブ**なセッションと **一度でも表示した** セッションだけがフル **`BmxtShell`** をマウントする。未訪問のバックグラウンドセッションは軽量プレースホルダーのみ。切り替え時は **`activeId`** を楽観的に更新し、変更のないログ配列は再利用して非アクティブペインの再描画を抑える（**`sessions-ui-equality.ts`**）。1 セッションの重いピッカー処理が別セッションのプロンプト入力をブロックしない（セッション id ごとの job runner — **[ジョブ実行](#job-execution-ja)** 参照）。
 
 **実装:** **`lib/features/session/`**（`session-input.ts`、`session-summary.ts`、`session-list-candidate-panel.tsx`、`session-bar.tsx`）、UI は **`bmxt-shell.tsx`** / **`bmxt-terminal.tsx`**、Effect は **`session_new`** / **`session_next`** / **`session_prev`**（**`lib/features/dispatch/handlers/effects/`**）。
+
+<a id="sync-ja"></a>
+
+### `sync`（Family ローカル同期 · 同一 PC · コマンドバス）
+
+**0.9.0 以降。**
+
+**目標:** ブラウザ／プロファイルごとにユニークな **device id** を付け、**Family**（共有シード／招待。平文の預かり先は作らない）に参加し、同一 PC 上のピア間で低遅延の **WebRTC DataChannel コマンドバス**を載せる。
+
+| 段 | 範囲 | 手段 |
+|----|------|------|
+| **6a** | 同一 PC · Chrome ↔ Firefox | Family 招待（`sync -pair` / `-setup`）+ `chrome.storage.local` 名簿 |
+| **6b** | 同一 LAN · Family | 手入力 / QR 発見。直結優先（将来） |
+| **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
+
+**接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（`--device` / `--peers`）。送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
+
+**Family 一覧追従（`tabs_changed`）:** Family 経由のタブ変更（`open_tabs` / `tabs_ops`、および `--close` によるローカル閉じ）が成功すると、**いま接続中の全 Family ピア**へ軽量シグナル **`tabs_changed`** を广播する（送信元自身の購読者にも通知）。ペイロードの **`first`** は **第一コマンド選別符号**（現状は常に **`tab`**。旧ピアが欠落させたら **`tab`** 扱い）。受信側は符号が一致する開中 picker だけを再取得する（tab picker は **`first: "tab"`** のみ反応）。未接続ピアには届かない（次の `--peers` / `--device` 一覧で再取得）。
+
+**既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
+
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY**（ボタン／`sync-handshake-copy`）で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。切断後は両側 **`sync -connect <peerDeviceId>`** で同じウィザード往復。setting picker の sync は案内と表示名編集のみ。
+
+**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
+
+**peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
+
+**メッシュ:** 接続 UX は「Family 内の生きている誰か1台と握手」のまま。直結後は既存 DataChannel 上の in-band（`mesh_peers` / `mesh_signal`）で **フルメッシュを自動補完**し、どのプロンプトからも他の接続済み peer へ直接届ける（タブ操作のハブ中継はしない）。
 
 <a id="picker-ui-ja"></a>
 
@@ -2368,7 +2468,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 
 **Tab / IME 固定トークン:** WASM **`complete(line, cursor)`**（codegen `subcommands` の第一〜第三段）。`resolveImeTokenPicker` は WASM 準備後にこれを呼び、ホスト側フィルタ UX とライブオーバーレイを載せる。**キャレットオフセット（0.8.3 以降）:** JS プロンプトは **UTF-16** インデックス、Rust/`complete` は **UTF-8** バイトオフセット — ホストが **`lib/features/bmxt-core/utf16-utf8-offset.ts`** で変換してから WASM に渡す（CJK でプロンプト表示が消える不具合の修正）。
 
-開発: Rust + **`bash scripts/install-wasm-pack.sh`**（wasm-pack **0.15.0** 固定）、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。
+開発: Rust + **`bash scripts/install-wasm-pack.sh`**（wasm-pack **0.15.0** 固定）、**`pnpm run build:wasm`**、**`cargo test -p bmxt-core`**。Golden Effect 契約: **[`scripts/fixtures/dispatch/effects.json`](scripts/fixtures/dispatch/effects.json)**（説明は **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)**）。
 
 タブピッカー計画は WASM 経由の **`runTabsPickerReduce`** 等（詳細は **`tab`** の **タブピッカー — 実装**）。
 
@@ -2538,7 +2638,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 
 ### 組み込みコマンドの追加
 
-起点は **`manifest/templates/new-command.checklist.md`**（語彙優先）。詳細は **[コマンド追加手順](#command-add-procedure-ja)**。
+起点は **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)**（語彙優先）。テンプレート一覧: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**。詳細は **[コマンド追加手順](#command-add-procedure-ja)**。
 
 
 1. 既存 Effect / UiAction / list kind の**再利用を優先**（`manifest/templates/`）。
@@ -2551,7 +2651,7 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 ### コマンド追加手順
 
 
-- **語彙優先:** **[コマンド間語彙](#inter-command-vocabulary-ja)** に従う。起点は **`manifest/templates/new-command.checklist.md`**（決定木 + チェックリスト）。例: **`command-reuse-effects.example.rs`**、**`command-reuse-ui-action.example.rs`**、**`command-list-producer.steps.md`**、**`pipe-consumer.steps.md`**。
+- **語彙優先:** **[コマンド間語彙](#inter-command-vocabulary-ja)** に従う。起点は **[`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)**（決定木 + チェックリスト；一覧は **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)**）。例: **`command-reuse-effects.example.rs`**、**`command-reuse-ui-action.example.rs`**、**`command-list-producer.steps.md`**、**`pipe-consumer.steps.md`**。
 - **コマンドラインのトークン仕様:** 追加・変更時は **[コマンドラインのトークン仕様（第一・第二コマンド）](#command-line-token-model-ja)** と **`.cursorrules`** に従う。第二トークン必須のとき、単独第一トークンの **Enter** は Rust の **`msgs` + `promptPrefix`**（`require_second_token` / `msgs_with_prompt`）で返す — TS 側に Enter continuation を足さない。第二トークンの **Tab** 候補は **`command-subcommands.gen.ts`**（manifest **`subcommands`**）。詳細: **[プロンプト意味の正本（Rust）](#prompt-semantics-sot-ja)**。
 - **真実のデータは 1 箇所:** **`manifest/bmxt-codegen.json`**。生成物は手編集しない（**`pnpm run codegen`**）。
 - **手順（推奨）:** **`pnpm run new:command -- <module> <canonical_name> [aliases...]`** — **`crates/bmxt-core/src/cmd/<module>.rs`** と manifest を更新し codegen。続けて **`manifest/templates/`** の例で **`run`** を実装。
@@ -2637,6 +2737,19 @@ pnpm run dev
 
 **JS/TS** の自動テストは **`tests/`** 配下（`lib/` やリポジトリ直下には置かない）。構成の詳細は **[`tests/README.md`](tests/README.md)**。
 
+**E2E のブラウザライフサイクル**（アンパック拡張のロード、`extensionOrigin` 解決、拡張ページを開く）は **[webxdriver](https://github.com/UNRsports/webxdriver)**（`devDependency`、GitHub コミット固定）を使います。BMXt 固有（プロンプト／チュートリアル／`.bmxt-*` アサート、**`BMXT_E2E_BROWSER`**、`.output/{chrome,firefox}-mv3` パス）は **`tests/e2e/harness.ts`** に残します。
+
+**関連ドキュメント（散在 README）:**
+
+| ドキュメント | 内容 |
+|--------------|------|
+| **[`tests/README.md`](tests/README.md)** | unit / property / E2E の構成とテスト追加方法 |
+| **[`hosts/README.md`](hosts/README.md)** | Chrome / Firefox ホストと build／package |
+| **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** | Firefox AMO ソースキット |
+| **[`scripts/fixtures/dispatch/README.md`](scripts/fixtures/dispatch/README.md)** | WASM `run` 向け Effect の golden 契約（`effects.json`） |
+| **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** | コマンド追加テンプレート（閉じた語彙） |
+| **[`shared/public/assets/wasm/bmxt-gaze/README.md`](shared/public/assets/wasm/bmxt-gaze/README.md)** | 任意の gaze WASM モジュール（ビルド手順） |
+
 <a id="testing-how-to-run-ja"></a>
 
 #### 実行方法
@@ -2645,8 +2758,8 @@ pnpm run dev
 |------|----------|------|
 | **ユニット + プロパティ（JS/TS）** | **`pnpm test`** | ブラウザ不要。高速。 |
 | **Rust / WASM** | **`cargo test -p bmxt-core`** | `pnpm test` には含まれない。 |
-| **E2E（Chrome）** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing。**`.output/chrome-mv3`** をロード。 |
-| **E2E（Firefox）** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver。**`.output/firefox-mv3`** をロード。 |
+| **E2E（Chrome）** | **`pnpm run build:chrome`** → **`pnpm run test:e2e:chrome`** | Headless WebDriver + Chrome for Testing（**webxdriver**）。**`.output/chrome-mv3`** をロード。 |
+| **E2E（Firefox）** | **`pnpm run build:firefox`** → **`pnpm run test:e2e:firefox`** | Headless WebDriver + geckodriver（**webxdriver**）。**`.output/firefox-mv3`** をロード。 |
 | **E2E（両方）** | **`pnpm run test:e2e:all`** | Chrome → Firefox（ビルドは別途、または **`verify`**）。 |
 | **CI と同一の全体ゲート** | **`pnpm run verify`** | manifest / codegen / Rust / WASM / `tsc` / unit / **build** / E2E。 |
 
@@ -2658,10 +2771,16 @@ pnpm run dev
 |----|----------|------|
 | **TS ユニット** | **`pnpm test`** | **`tests/unit/`** — Node.js `node:test` / `node:assert`。グロブ: `tests/unit/**/*.test.ts`、`tests/unit/**/*.test.mjs`。 |
 | **プロパティ** |（**`pnpm test`** に含む） | **`tests/property/`** — **fast-check** + `node:test`（UTF-16/UTF-8 キャレット変換と **TS↔WASM** ホスト入口を含む）。 |
-| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver**（`selenium-webdriver`）を **`tests/e2e/`** で実行。Chrome / Firefox で同一シェル仕様。詳細は **`tests/README.md`**。 |
-| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
+| **E2E** | **`pnpm run test:e2e:chrome`** / **`test:e2e:firefox`** / **`test:e2e:all`** | Headless **WebDriver**（**`tests/e2e/`**、**webxdriver** ライフサイクル + BMXt `harness.ts`）。詳細は **[`tests/README.md`](tests/README.md)**。 |
+| **Rust / WASM** | **`cargo test -p bmxt-core`** | **`shared/crates/bmxt-core/`** のみ（Cargo 慣例。**`tests/` には置かない**）。 |
 
 **TS ユニットの追加:** **`tests/unit/features/<lib と同じパス>/<name>.test.ts`** に置き、本番コードは **`lib/features/...`** から **`.ts` 付き**で import する。`lib/` 隣へのコロケートはしない。
+
+<a id="testing-e2e-coverage-ja"></a>
+
+#### E2E がカバーすること
+
+**`tests/e2e/`** の共有仕様を Chrome / Firefox の両方で実行します（command smoke、`command-matrix.ts`、prompt integrity、CJK キャレット）。ライフサイクルと環境変数は **[`tests/README.md`](tests/README.md)**。ブラウザを使わない Effect の golden 契約は **[`scripts/fixtures/dispatch/`](scripts/fixtures/dispatch/)**（**[`README`](scripts/fixtures/dispatch/README.md)**）。
 
 <a id="project-layout-ja"></a>
 
@@ -2675,8 +2794,10 @@ pnpm run dev
 | **`public/`** | 静的アセット（そのまま同梱）: **`_locales/`**, **`icon.png`**, **`background-services.js`** |
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
-| **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**）。Rust は **`crates/bmxt-core/`** |
-| **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**） |
+| **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**・**[`tests/README.md`](tests/README.md)**）。Rust は **`shared/crates/bmxt-core/`** |
+| **`hosts/chrome/`**, **`hosts/firefox/`** | ホスト別 WXT — **[`hosts/README.md`](hosts/README.md)** |
+| **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**）。テンプレート: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** |
+| **`scripts/fixtures/dispatch/`** | WASM `run` 向け Effect golden — **[`README`](scripts/fixtures/dispatch/README.md)** |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
 | **`docs/`** | GitHub Pages — プライバシーポリシー（`index.html`）、ウェルカム（`welcome.html`, `welcome-content.json`, `welcome/` 画像） |
 | **`.output/`** | ビルド出力（gitignore）: **`chrome-mv3`** / **`firefox-mv3`**, **`bmxt-<ver>-chrome.zip`** / **`bmxt-<ver>-firefox.zip`**（**`package`** / **`package:chrome`** / **`package:firefox`**） |
@@ -2731,7 +2852,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 

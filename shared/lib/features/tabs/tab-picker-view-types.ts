@@ -46,6 +46,11 @@ export type TabPickerViewProps = {
   searchMode: boolean
   filterQuery: string
   setFilterQuery: Dispatch<SetStateAction<string>>
+  commandMode: boolean
+  commandBuffer: string
+  setCommandBuffer: Dispatch<SetStateAction<string>>
+  commandListingHint: boolean
+  moveCloseAfter: boolean
   isHostPaneFocused: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
 }

@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react"
 import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
-import { applyHostEffects, type DispatchHostContext } from "../../dispatch"
+import type { DispatchHostContext } from "../../dispatch/dispatch-context"
+import { applyHostEffects } from "../../dispatch/apply-effects"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../../search/enrich-search-entries-from-tabs"
 import { openSearchPickerEntry } from "../../search/open-search-picker-entry"
 import type { SearchOpenDestinationRow } from "../../search/search-open-destination"

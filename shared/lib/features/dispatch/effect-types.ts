@@ -4,6 +4,7 @@
  */
 
 export type HostEffect =
+  | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
   | { dispatch_line: string; kind: "search_list" }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { kind: "clear_log" }
@@ -26,7 +27,6 @@ export type HostEffect =
   | { kind: "tab_go_back"; tab_ids: number[] }
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
-  | { kind: "tabs_list"; show_url: string }
   | { kind: "tabs_move_url"; url: string }
   | { kind: "tabs_nu" }
 
@@ -47,6 +47,16 @@ export type UiActionIR =
   | { kind: "snapshot_save"; line: string }
   | { kind: "open_picker"; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
+  | { kind: "sync_setup" }
+  | { kind: "sync_status" }
+  | { kind: "sync_pair"; invite: string }
+  | { kind: "sync_members" }
+  | { kind: "sync_offer" }
+  | { kind: "sync_answer"; code: string }
+  | { kind: "sync_accept"; code: string }
+  | { kind: "sync_open"; device_id: string; payload: string }
+  | { kind: "sync_connect"; device_id: string }
+  | { kind: "sync_ping"; device_id: string }
 
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"

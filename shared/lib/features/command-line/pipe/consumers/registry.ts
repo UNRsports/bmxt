@@ -9,6 +9,7 @@ import { closePipeConsumer } from "./close-from-stream.ts"
 import { backPipeConsumer } from "./back-from-stream.ts"
 import { forwardPipeConsumer } from "./forward-from-stream.ts"
 import { reloadPipeConsumer } from "./reload-from-stream.ts"
+import { tabSendPipeConsumer } from "./tab-send-from-stream.ts"
 import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
 import type { PipeConsumerEntry, PipeConsumerRunContext } from "./types.ts"
 
@@ -24,7 +25,8 @@ export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
   backPipeConsumer,
   forwardPipeConsumer,
   reloadPipeConsumer,
-  closePipeConsumer
+  closePipeConsumer,
+  tabSendPipeConsumer
 ]
 
 export function matchPipeConsumer(segment: string): PipeConsumerEntry | null {

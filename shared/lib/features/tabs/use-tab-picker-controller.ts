@@ -29,6 +29,7 @@ import {
 const INACTIVE_ENGINE_STATE: TabPickerEngineState = {
   rows: [],
   showUrl: false,
+  listScope: { kind: "local" },
   variant: "default",
   initialHi: 0,
   anchorTabId: null,
@@ -39,6 +40,7 @@ const INACTIVE_ENGINE_STATE: TabPickerEngineState = {
   markedWindowIds: [],
   markedGroupKeys: [],
   bulkSubMode: null,
+  moveCloseAfter: false,
   filterQuery: "",
   searchMode: false,
   hlSearchPattern: "",
@@ -85,6 +87,7 @@ function useEngineFieldSetters(dispatch: TabPickerEngineDispatch) {
       setMarkedWindowIds: createTabPickerEngineFieldSetter(dispatch, "markedWindowIds"),
       setMarkedGroupKeys: createTabPickerEngineFieldSetter(dispatch, "markedGroupKeys"),
       setBulkSubMode: createTabPickerEngineFieldSetter(dispatch, "bulkSubMode"),
+      setMoveCloseAfter: createTabPickerEngineFieldSetter(dispatch, "moveCloseAfter"),
       setFilterQuery: createTabPickerEngineFieldSetter(dispatch, "filterQuery"),
       setSearchMode: createTabPickerEngineFieldSetter(dispatch, "searchMode"),
       setHlSearchPattern: createTabPickerEngineFieldSetter(dispatch, "hlSearchPattern"),
@@ -167,6 +170,7 @@ export function useTabPickerController({
     markedWindowIds,
     markedGroupKeys,
     bulkSubMode,
+    moveCloseAfter,
     filterQuery,
     searchMode,
     hlSearchPattern,
@@ -195,6 +199,7 @@ export function useTabPickerController({
     setMarkedWindowIds,
     setMarkedGroupKeys,
     setBulkSubMode,
+    setMoveCloseAfter,
     setFilterQuery,
     setSearchMode,
     setHlSearchPattern,
@@ -330,6 +335,14 @@ export function useTabPickerController({
 
   useLoadGroupChoicesWhenBulkGroup(bulkSubMode, setGroupChoices, setGroupPickIndex)
 
+  const prevBulkForCloseRef = useRef<BulkSubMode | null>(null)
+  useEffect(() => {
+    if (prevBulkForCloseRef.current === "move" && bulkSubMode !== "move") {
+      setMoveCloseAfter(false)
+    }
+    prevBulkForCloseRef.current = bulkSubMode
+  }, [bulkSubMode, setMoveCloseAfter])
+
   const markedCount = pickerMarkedCount(
     markedKind,
     markedTabIds,
@@ -449,6 +462,7 @@ export function useTabPickerController({
     markedWindowIds,
     markedGroupKeys,
     bulkSubMode,
+    moveCloseAfter,
     variant,
     selectedTabIds,
     groupChoices,
@@ -545,6 +559,7 @@ export function useTabPickerController({
     hlSearchPattern,
     setHlSearchPattern,
     setBulkSubMode,
+    setMoveCloseAfter,
     setGroupNewPhase,
     setNewGroupTitle,
     setNewGroupColorIndex,
@@ -673,6 +688,11 @@ export function useTabPickerController({
     searchMode,
     filterQuery,
     setFilterQuery,
+    commandMode,
+    commandBuffer,
+    setCommandBuffer,
+    commandListingHint,
+    moveCloseAfter,
     isHostPaneFocused,
     inputRef
   }

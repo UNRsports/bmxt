@@ -1,3 +1,4 @@
+import { PickerCommandFooter } from "../side-picker/chrome/picker-command-footer"
 import { PickerListShell } from "../side-picker/chrome/picker-list-shell"
 import { PickerSearchFooter } from "../side-picker/chrome/picker-search-footer"
 import { tPlainPicker } from "../setting/i18n/ns/plain-picker"
@@ -14,6 +15,7 @@ import {
 } from "./tab-picker-panels"
 import { TabPickerRowList } from "./tab-picker-row-list"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
+import { TAB_PICKER_COMMAND_COMPLETIONS } from "./tab-picker-overlay-constants"
 
 export type { TabPickerViewProps } from "./tab-picker-view-types"
 
@@ -65,6 +67,10 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     searchMode,
     filterQuery,
     setFilterQuery,
+    commandMode,
+    commandBuffer,
+    setCommandBuffer,
+    commandListingHint,
     isHostPaneFocused,
     inputRef
   } = props
@@ -119,14 +125,16 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
         headline={headLine}
         keyboardActive={isHostPaneFocused}
         searchMode={searchMode}
-        commandMode={false}
+        commandMode={commandMode}
         filterQuery={filterQuery}
-        commandBuffer=""
+        commandBuffer={commandBuffer}
         setInputEl={setInputEl}
         onInputKeyDown={onInputKeyDown}
         onInputChange={(value) => {
           if (searchMode) {
             setFilterQuery(value)
+          } else if (commandMode) {
+            setCommandBuffer(value)
           }
         }}
         onCompositionEndSearch={
@@ -135,7 +143,9 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
         inputAriaLabel={
           searchMode
             ? tPlainPicker("plainPicker.searchHint", locale)
-            : tTabs("tabs.picker.inputAria.keys", locale)
+            : commandMode
+              ? tTabs("tabs.picker.inputAria.command", locale)
+              : tTabs("tabs.picker.inputAria.keys", locale)
         }
         listAriaLabel={tTabs("tabs.picker.listAria", locale)}
         listAriaMultiselectable
@@ -164,7 +174,16 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
         }
         extraFooter={extraFooter}
         searchFooter={searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
-        commandFooter={null}
+        commandFooter={
+          commandMode ? (
+            <PickerCommandFooter
+              commandBuffer={commandBuffer}
+              showListingHint={commandListingHint}
+              listingHintText={TAB_PICKER_COMMAND_COMPLETIONS.join("  ")}
+              ambiguousPlaceholder={null}
+            />
+          ) : null
+        }
         inputRef={inputRef}
       />
       {actionMenuPanel !== null ? (

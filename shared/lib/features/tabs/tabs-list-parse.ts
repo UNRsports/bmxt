@@ -1,7 +1,13 @@
 /** EN: Parse `tab -list` line tokens without Chrome / completion dependencies. */
 
+import {
+  parseDeviceListScopeTokens,
+  type DeviceListScope
+} from "../sync/bus/device-list-scope.ts"
+
 export type TabsListLineOptions = {
   showUrl: boolean
+  scope: DeviceListScope
 }
 
 function normalizeToken(token: string): string {
@@ -9,8 +15,8 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: Parse `tab -list [-url]` — full line must match (no extra args).
- * JA: 第三トークン以降は `-url` のみ。
+ * EN: Parse `tab -list [-url] [--device <id>|--peers]` — full line must match.
+ * JA: 第三トークン以降は `-url` / `--device` / `--peers` のみ。
  */
 export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
   const parts = trimmed.trim().split(/\s+/).filter((part) => part.length > 0)
@@ -24,9 +30,14 @@ export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
     return null
   }
 
+  const scoped = parseDeviceListScopeTokens(parts.slice(2))
+  if (!scoped.ok) {
+    return null
+  }
+
   let showUrl = false
-  for (let index = 2; index < parts.length; index += 1) {
-    const token = normalizeToken(parts[index]!)
+  for (const tokenRaw of scoped.rest) {
+    const token = normalizeToken(tokenRaw)
     if (token === "-url") {
       showUrl = true
       continue
@@ -34,5 +45,5 @@ export function parseTabsListLine(trimmed: string): TabsListLineOptions | null {
     return null
   }
 
-  return { showUrl }
+  return { showUrl, scope: scoped.scope }
 }

@@ -1,12 +1,12 @@
 {
-  "0.8.7": {
+  "0.9.0": {
     "ja": [
-      "候補メニューへコマンドの説明表示を実装",
-      "操作方法を学ぶためのチュートリアルを実装"
+      "tabコマンドでのピッカー内で絞り込み検索機能動作を修正",
+      "webRTCによる別プロセス間の連携機能を実装"
     ],
     "en": [
-      "Implemented command descriptions in the candidate menu",
-      "Implemented a tutorial for learning how to use BMXt"
+      "Fixed filter-search behavior in the tab command picker",
+      "Implemented cross-process collaboration via WebRTC"
     ]
   }
 }

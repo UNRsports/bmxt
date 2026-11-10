@@ -24,6 +24,7 @@ import {
 } from "../side-picker/plain/plain-text-picker-virtual"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
 import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
+import type { SyncPickerSummary } from "../sync/facade/sync-picker-summary.ts"
 import type { SettingListPickerState } from "./setting-list-picker-state"
 import type { SettingPickerRow } from "./setting-picker-rows"
 import { settingPickerEditAriaLabel, settingPickerInitialHi } from "./setting-picker-rows"
@@ -76,6 +77,7 @@ export type SettingPickerBodyProps = {
   preview?: ReactNode
   storageConfig?: UiSettingsStorageConfig
   snapshotStorageConfig?: SnapshotStorageConfig
+  syncSummary?: SyncPickerSummary
 }
 
 export function SettingPickerBody({
@@ -93,7 +95,8 @@ export function SettingPickerBody({
   statusLines = [],
   preview = null,
   storageConfig,
-  snapshotStorageConfig
+  snapshotStorageConfig,
+  syncSummary
 }: SettingPickerBodyProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const setInputEl = useCallback(
@@ -124,7 +127,8 @@ export function SettingPickerBody({
         storageConfig,
         snapshotStorageConfig,
         state.draft.hostUiMode,
-        state.draft.imeCandidateHelp
+        state.draft.imeCandidateHelp,
+        syncSummary
       ),
     [
       state.view,
@@ -133,7 +137,8 @@ export function SettingPickerBody({
       state.draft.hostUiMode,
       state.draft.imeCandidateHelp,
       storageConfig,
-      snapshotStorageConfig
+      snapshotStorageConfig,
+      syncSummary
     ]
   )
 
@@ -230,7 +235,8 @@ export function SettingPickerBody({
       onReturnToPrompt
     },
     storageConfig,
-    snapshotStorageConfig
+    snapshotStorageConfig,
+    syncSummary
   })
 
   useLayoutEffect(() => {

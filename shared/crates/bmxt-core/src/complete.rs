@@ -239,6 +239,8 @@ mod tests {
         let hit = complete_line(line, line.len()).expect("hit");
         assert_eq!(hit.tier, "third");
         assert!(hit.candidates.iter().any(|c| c == "-url"));
+        assert!(hit.candidates.iter().any(|c| c == "--device"));
+        assert!(hit.candidates.iter().any(|c| c == "--peers"));
     }
 
     #[test]

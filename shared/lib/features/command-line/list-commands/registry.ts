@@ -20,13 +20,14 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
   {
     id: "tabs",
     command: "tab",
-    runtime: "service_worker",
+    // EN: UI-owned — sync peer queries share the in-page WebRTC SyncService.
+    runtime: "ui",
     matchPlain(segment) {
       const parsed = parseTabsListLine(segment)
       if (parsed === null) {
         return null
       }
-      return { showUrl: parsed.showUrl }
+      return { showUrl: parsed.showUrl, scope: parsed.scope }
     }
   },
   {
@@ -73,13 +74,18 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
   {
     id: "search",
     command: "search",
-    runtime: "service_worker",
+    // EN: UI-owned — peer search shares the in-page WebRTC SyncService.
+    runtime: "ui",
     matchPlain(segment) {
       const parsed = parseSearchListLine(segment)
       if (parsed === null) {
         return null
       }
-      return { dispatchLine: parsed.dispatchLine }
+      return {
+        dispatchLine: parsed.dispatchLine,
+        peerDispatchLine: parsed.peerDispatchLine,
+        scope: parsed.scope
+      }
     }
   }
 ] as const

@@ -3,6 +3,20 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.9.0",
+    "en": [
+      "Fixed filter-search behavior in the tab command picker",
+      "Implemented cross-process collaboration via WebRTC"
+    ],
+    "ja": [
+      "tabコマンドでのピッカー内で絞り込み検索機能動作を修正",
+      "webRTCによる別プロセス間の連携機能を実装"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.8.7",
     "en": [
       "Implemented command descriptions in the candidate menu",

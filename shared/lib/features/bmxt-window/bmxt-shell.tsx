@@ -54,6 +54,12 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
+import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
+import { getSyncService } from "../sync/facade/sync-service"
+import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
+import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
+import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
+import { SyncWizardPanel } from "../sync/wizard"
 import { useCommandDispatch } from "./shell/useCommandDispatch"
 import {
   deleteNavReloadTabBlockAtCursor,
@@ -74,6 +80,7 @@ import { useSettingPickerShell } from "./shell/useSettingPickerShell"
 import { usePromptPickers } from "./shell/usePromptPickers"
 import { useNavPromptBridge } from "./shell/useNavPromptBridge"
 import { usePaneFocusController } from "./shell/usePaneFocusController"
+import { shouldFocusPromptIme } from "./shell/should-focus-prompt-ime"
 import { useShellKeyboard } from "./shell/useShellKeyboard"
 import { useShellPromptCore } from "./shell/useShellPromptCore"
 import { usePickerManager } from "./shell/usePickerManager"
@@ -114,6 +121,7 @@ import {
   type TranslationPairId
 } from "../translate"
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
+import { tCmd } from "../setting/i18n/ns/cmd"
 import { tShell } from "../setting/i18n/ns/shell"
 import { tSearch } from "../setting/i18n/ns/search"
 import { tNav } from "../setting/i18n/ns/nav"
@@ -267,7 +275,38 @@ export function BmxtShell({
       scheduleTabPickerRowsRefresh()
     }
   }, [uiSettings.locale, scheduleTabPickerRowsRefresh])
+  // EN: Prompt window owns the Family sync tunnel — wire SyncService + keep-alive hold.
+  // JA: プロンプト窓が Family sync トンネルの宿主。SyncService 配線とキープアライブ。
+  useEffect(() => {
+    getSyncService()
+    startSyncTunnelHold(async () => {
+      await getSyncService().status()
+    })
+  }, [])
   const translateEnabledRef = useRef(false)
+
+  const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
+  const isFocusedPaneRef = useRef(isFocusedPane)
+  const openPickersRef = useRef<readonly PickerSlotId[]>([])
+  const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const settingPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // EN: Sync during render (not useEffect) so rAF focus guards see the latest pane
+  // before paint — e.g. `| browse` activatePaneFocus then compound-end focusPrompt.
+  paneFocusRef.current = paneFocus
+  isFocusedPaneRef.current = isFocusedPane
+
+  const onPaneFocusChangeEager = useCallback(
+    (target: PaneFocusTarget) => {
+      // EN: Update before React re-renders so same-tick focusPrompt rAF sees picker focus.
+      paneFocusRef.current = target
+      onPaneFocusChange(target)
+    },
+    [onPaneFocusChange]
+  )
+
   const {
     tabPicker,
     searchListPicker,
@@ -283,7 +322,7 @@ export function BmxtShell({
     sessionPickers,
     setSessionPickerSlot,
     paneFocus,
-    onPaneFocusChange,
+    onPaneFocusChange: onPaneFocusChangeEager,
     detailBarId,
     onDetailBarIdChange,
     modeToolbarOrder,
@@ -297,18 +336,11 @@ export function BmxtShell({
     settingListPicker !== null ? settingListPicker.draft.hostUiMode : uiSettings.hostUiMode
   const { formFactor: hostUiFormFactor, showExtraKeys } = useHostUiFormFactor(hostUiModeEffective)
 
-  const paneFocusRef = useRef<PaneFocusTarget>(paneFocus)
-  const isFocusedPaneRef = useRef(isFocusedPane)
-  const openPickersRef = useRef<readonly PickerSlotId[]>([])
-  const tabPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const settingPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
-
   const openPickers = useMemo(
     () => openPickerSlots(sessionPickers),
     [sessionPickers]
   )
+  openPickersRef.current = openPickers
 
   const { railPickers, railExpanded, displaySessionPickers } = usePickerRailPresence(
     openPickers,
@@ -324,13 +356,6 @@ export function BmxtShell({
   const searchPickerKeyboardActive = paneFocus === "search" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
   const settingPickerKeyboardActive = paneFocus === "setting" && isFocusedPane
-
-  useEffect(() => {
-    paneFocusRef.current = paneFocus
-  }, [paneFocus])
-
-  isFocusedPaneRef.current = isFocusedPane
-  openPickersRef.current = openPickers
 
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
@@ -359,14 +384,29 @@ export function BmxtShell({
     endCommandBusy,
     isBusyTokenActive
   } = useCommandBusyIndicator()
+  const syncLinkStatus = useSyncLinkStatus()
+  const syncConnecting = syncLinkStatus.connecting
   const isCommandBusyRef = useRef(false)
+  const syncConnectingRef = useRef(false)
   useEffect(() => {
     isCommandBusyRef.current = isCommandBusy
   }, [isCommandBusy])
+  useEffect(() => {
+    syncConnectingRef.current = syncConnecting
+  }, [syncConnecting])
+  const promptInputLocked = isCommandBusy || syncConnecting
+  const promptBusyLabel = syncConnecting
+    ? tCmd("cmd.sync.link.connecting", uiSettings.locale)
+    : commandBusyLabel
+  const promptShowBusyAnim = syncConnecting ? true : showCommandBusy
 
   const cancelCommandBusy = useCallback(() => {
     const hadSearch = isJobHandleActive(jobRunner.getActive("search-list"))
     const hadRunCmd = isJobHandleActive(jobRunner.getActive("run-cmd"))
+    // EN: Tunnel establishing is not cancellable via Ctrl+C — wait for DataChannel.
+    if (syncConnectingRef.current && !hadSearch && !hadRunCmd && !isCommandBusyRef.current) {
+      return
+    }
     if (!hadSearch && !hadRunCmd && !isCommandBusyRef.current) {
       return
     }
@@ -483,6 +523,9 @@ export function BmxtShell({
   const navActiveRef = useRef(false)
   const navConfirmClosePendingRef = useRef<
     import("../nav/nav-confirm-close").NavConfirmClosePending | null
+  >(null)
+  const syncSetupPendingRef = useRef<
+    import("../sync/setup/sync-setup-pending").SyncSetupPending | null
   >(null)
   useEffect(() => {
     navArmedRef.current = navArmed
@@ -842,6 +885,12 @@ export function BmxtShell({
   })
 
   const focusPromptNow = useCallback(() => {
+    // EN: `| browse` / activatePaneFocus leaves paneFocus on a picker; compound
+    // completion still calls focusPrompt — do not yank the hidden picker IME
+    // (needed for `/` search) back to the prompt while the column stays "focused".
+    if (!shouldFocusPromptIme(paneFocusRef.current)) {
+      return
+    }
     imeRef.current?.focus({ preventScroll: true })
   }, [])
 
@@ -899,7 +948,7 @@ export function BmxtShell({
     sessionId,
     isFocusedPane,
     paneFocus,
-    onPaneFocusChange,
+    onPaneFocusChange: onPaneFocusChangeEager,
     detailBarId,
     setDetailBarId,
     modeToolbarOrder,
@@ -1108,6 +1157,7 @@ export function BmxtShell({
     externalSettingsRecoveryPendingRef: externalSettingsRecovery.pendingRef,
     submitExternalSettingsRecoveryAnswer: externalSettingsRecovery.submitRecoveryAnswer,
     navConfirmClosePendingRef,
+    syncSetupPendingRef,
     startTutorial,
     skipTutorial
   })
@@ -1335,7 +1385,7 @@ export function BmxtShell({
     dismissImeTokenPicker,
     cancelSearchPageScan,
     cancelCommandBusy,
-    isCommandBusy: () => isCommandBusyRef.current,
+    isCommandBusy: () => isCommandBusyRef.current || syncConnectingRef.current,
     closeSessionNameTyping,
     closeSessionListPicker,
     applySessionSwitchPick,
@@ -1400,6 +1450,11 @@ export function BmxtShell({
         {tutorialView ? (
           <TutorialCoachPanel view={tutorialView} onSkip={skipTutorial} />
         ) : null}
+        <SyncWizardPanel
+          locale={uiSettings.locale}
+          appendLogLines={appendLogLines}
+          focusPrompt={focusPrompt}
+        />
         {lines.length > 0 ? <TerminalLogLines lines={lines} /> : null}
         {mode === "isearch" ? (
           <div className="bmxt-isearch">
@@ -1427,9 +1482,9 @@ export function BmxtShell({
           navTypingMultiline={navTypingMultiline}
           sessionNameTyping={sessionNameTyping}
           showSearchListPatternPlaceholder={showSearchListPatternPlaceholder}
-          isCommandBusy={isCommandBusy}
-          showCommandBusy={showCommandBusy}
-          commandBusyLabel={commandBusyLabel}
+          isCommandBusy={promptInputLocked}
+          showCommandBusy={promptShowBusyAnim}
+          commandBusyLabel={promptBusyLabel}
           mirror={mirror}
           uiLocale={uiSettings.locale}
           imeRef={imeRef}
@@ -1455,6 +1510,12 @@ export function BmxtShell({
           onPickSessionIndex={onPickSessionIndex}
           onDismissOutside={onDismissOutside}
         />
+        <SyncHandshakeBar
+          locale={uiSettings.locale}
+          appendLogLines={appendLogLines}
+          focusPrompt={focusPrompt}
+        />
+        <SyncLinkStatusBar locale={uiSettings.locale} />
         {showExtraKeys ? (
           <ExtraKeysBar
             locale={uiSettings.locale}

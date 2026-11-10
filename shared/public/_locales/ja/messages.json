@@ -18,5 +18,9 @@
   "commandToggleBmxtFloat": {
     "message": "現在のページで BMXt フロート・プロンプトを切り替える",
     "description": "アクティブタブ上のサイト内フロート・プロンプトを表示／非表示するグローバルショートカットの説明。"
+  },
+  "commandSyncHandshakeCopy": {
+    "message": "保留中の同期コードをコピー（Family 招待／握手）",
+    "description": "保留中の Family 招待または WebRTC 握手コードをクリップボードへコピーするショートカットのラベル。"
   }
 }

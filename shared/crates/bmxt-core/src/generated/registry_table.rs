@@ -43,7 +43,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "search",
         aliases: &[],
-        usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
+        usage_primary: "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [--device <id>|--peers] [<pattern>] | search -exit -list | search help",
     },
     CmdMeta {
         name: "group",
@@ -68,7 +68,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "tab",
         aliases: &[],
-        usage_primary: "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
+        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
     },
     CmdMeta {
         name: "nav",
@@ -110,6 +110,11 @@ pub const COMMANDS: &[CmdMeta] = &[
         aliases: &[],
         usage_primary: "tutorial | tutorial -start | tutorial -skip | tutorial help",
     },
+    CmdMeta {
+        name: "sync",
+        aliases: &[],
+        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+    },
 ];
 
 static BRANCHES_DOM: &[SubcommandBranch] = &[
@@ -134,7 +139,7 @@ static BRANCHES_DOM: &[SubcommandBranch] = &[
 static BRANCHES_SEARCH: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-list",
-        trailing_tokens: &["--all", "--history", "--bookmark", "--page", "--snapshot", "--unlimit"],
+        trailing_tokens: &["--all", "--history", "--bookmark", "--page", "--snapshot", "--unlimit", "--device", "--peers"],
     },
     SubcommandBranch {
         head: "-exit",
@@ -149,7 +154,7 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
 static BRANCHES_TAB: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-list",
-        trailing_tokens: &["-url"],
+        trailing_tokens: &["-url", "--device", "--peers"],
     },
     SubcommandBranch {
         head: "-exit",
@@ -165,6 +170,10 @@ static BRANCHES_TAB: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-nowurl",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-send",
         trailing_tokens: &[],
     },
     SubcommandBranch {
@@ -275,6 +284,49 @@ static BRANCHES_TUTORIAL: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_SYNC: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-setup",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-status",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-pair",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-members",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-connect",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-offer",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-answer",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-accept",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-ping",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -307,7 +359,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "help" => false,
         "forward" => false,
         "reload" => false,
-        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "help"),
+        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "-send" | "help"),
         "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
         "aboutbmxt" => false,
@@ -316,6 +368,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "browse" => false,
         "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
+        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
         _ => false,
     }
 }
@@ -342,6 +395,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "browse" => &[],
         "setting" => BRANCHES_SETTING,
         "tutorial" => BRANCHES_TUTORIAL,
+        "sync" => BRANCHES_SYNC,
         _ => &[],
     }
 }

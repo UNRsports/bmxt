@@ -16,6 +16,10 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "storageMode"
     case "snapshot-storage":
       return "snapshotStorageMode"
+    case "sync":
+      return "syncPanel"
+    case "sync-device-name":
+      return "syncDeviceName"
     case "fg":
       return "fg"
     case "fg-picker":
@@ -45,6 +49,7 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     case "storage-pick-dir":
     case "storage-reload":
     case "snapshot-vault-pick-dir":
+    case "sync-setup-guide":
     case "export":
     case "import":
     case "save":
@@ -55,6 +60,14 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
   }
 }
 
+/** EN: Parent view when leaving a sync sub-flow with ← / Esc. */
+export function settingSyncBackView(view: SettingListPickerView): SettingListPickerView | null {
+  if (view === "syncDeviceName") {
+    return "syncPanel"
+  }
+  return null
+}
+
 export function isSettingListSubView(view: SettingListPickerView): boolean {
   return (
     view === "language" ||
@@ -63,6 +76,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "hostUi" ||
     view === "storageMode" ||
     view === "snapshotStorageMode" ||
+    view === "syncPanel" ||
     view === "fontSize" ||
     view === "pickerFontSize" ||
     view === "bgImage" ||
@@ -77,7 +91,8 @@ export function isSettingGlobalDetailView(view: SettingListPickerView): boolean 
     view === "bgColor" ||
     view === "searchHitHighlight" ||
     view === "searchJumpHighlight" ||
-    view === "font"
+    view === "font" ||
+    view === "syncDeviceName"
   )
 }
 

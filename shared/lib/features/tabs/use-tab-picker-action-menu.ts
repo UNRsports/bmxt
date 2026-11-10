@@ -323,7 +323,8 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
         markedTabIds: markedSlice.markedTabIds,
         markedWindowIds: markedSlice.markedWindowIds,
         markedGroupKeys: markedSlice.markedGroupKeys,
-        bulkSubMode: nextBulkSubMode
+        bulkSubMode: nextBulkSubMode,
+        moveCloseAfter: false
       })
     })
 

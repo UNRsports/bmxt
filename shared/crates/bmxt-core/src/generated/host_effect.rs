@@ -89,6 +89,8 @@ pub enum HostEffect {
     },
     #[serde(rename = "tabs_list")]
     TabsList {
+    device_id: String,
+    device_scope: String,
     show_url: String,
     },
     #[serde(rename = "tabs_move_url")]

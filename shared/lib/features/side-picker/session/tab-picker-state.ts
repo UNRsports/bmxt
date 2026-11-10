@@ -1,3 +1,4 @@
+import type { DeviceListScope } from "../../sync/bus/device-list-scope"
 import type { TabPickerRow } from "../../tabs/picker-rows"
 import type { SelectKind } from "../../tabs/tab-picker-overlay-types"
 
@@ -15,6 +16,8 @@ export type TabPickerInteractiveSnapshot = {
 export type TabPickerState = {
   rows: TabPickerRow[]
   showUrl: boolean
+  /** EN: Cross-device refresh scope; omit/local = chrome.tabs rebuild only. */
+  listScope?: DeviceListScope
   initialHi: number
   variant?: "default" | "groupNew"
   interactive?: TabPickerInteractiveSnapshot

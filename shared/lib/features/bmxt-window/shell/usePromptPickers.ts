@@ -27,6 +27,12 @@ import {
   listTabChipCandidates,
   tabChipCompletionZone
 } from "../../nav/tab-chip-token"
+import {
+  filterReachableSyncPeers,
+  labelReachableSyncPeer,
+  scanReachableSyncPeers
+} from "../../sync/connect/scan-reachable-peers.ts"
+import { syncPeerDeviceCompletionZone } from "../../sync/connect/sync-peer-completion-zone.ts"
 
 export type UsePromptPickersOptions = {
   sessionId: string
@@ -161,6 +167,7 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
   }, [])
 
   const navReloadPickGenRef = useRef(0)
+  const syncPeerPickGenRef = useRef(0)
 
   const closePromptPickerUi = useCallback(() => {
     allowEmptyFirstPickerSyncRef.current = false
@@ -297,6 +304,56 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               candidates,
               candidateLabels,
               candidateRows,
+              hi: 0,
+              tier: "third"
+            }
+          })
+        })
+        return
+      }
+
+      const syncPeerZone = syncPeerDeviceCompletionZone(ln, pos)
+      if (syncPeerZone !== null) {
+        if (imeTokenPickerDismissedRef.current) {
+          setSubCmdPicker(null)
+          return
+        }
+        const pickerAlreadyOpenForPeers = subCmdPickerRef.current !== null
+        const matchMode = incrementalPickerMatchMode(
+          pickerAlreadyOpenForPeers || tabPickerOpenRequestRef.current
+        )
+        const gen = ++syncPeerPickGenRef.current
+        void scanReachableSyncPeers().then((peers) => {
+          if (gen !== syncPeerPickGenRef.current) {
+            return
+          }
+          const filtered = filterReachableSyncPeers(peers, syncPeerZone.prefix, matchMode)
+          if (filtered.length === 0) {
+            setSubCmdPicker(null)
+            return
+          }
+          setSubCmdPicker((prev) => {
+            const candidates = filtered.map((p) => p.deviceId)
+            const candidateLabels = filtered.map((p) => labelReachableSyncPeer(p))
+            const sameSlot =
+              prev !== null &&
+              prev.tokenStart === syncPeerZone.tokenStart &&
+              prev.tokenEnd === syncPeerZone.tokenEnd &&
+              prev.tier === "third" &&
+              prev.candidates.length === candidates.length &&
+              prev.candidates.every((c, i) => c === candidates[i])
+            if (sameSlot && prev) {
+              return {
+                ...prev,
+                candidateLabels,
+                hi: Math.min(prev.hi, candidates.length - 1)
+              }
+            }
+            return {
+              tokenStart: syncPeerZone.tokenStart,
+              tokenEnd: syncPeerZone.tokenEnd,
+              candidates,
+              candidateLabels,
               hi: 0,
               tier: "third"
             }

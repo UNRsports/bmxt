@@ -10,6 +10,7 @@ import {
   isSettingDetailView,
   isSettingPickerDetailView
 } from "./setting-picker-nav"
+import { sanitizeDisplayName } from "../sync/device/device-identity.ts"
 
 export type SettingEditField =
   | "fg"
@@ -20,6 +21,7 @@ export type SettingEditField =
   | "picker-fg"
   | "picker-bg-color"
   | "picker-font"
+  | "sync-display-name"
 
 function mergeLayerEdit(
   appearance: UiAppearance,
@@ -93,6 +95,9 @@ export function resolveSettingPickerPreviewAppearance(
     return appearance
   }
   const field = settingEditFieldForView(state.view)
+  if (field === "sync-display-name") {
+    return appearance
+  }
   const layer = isSettingPickerDetailView(state.view) ? "picker" : "global"
   return mergeLayerEdit(appearance, layer, field, state.editDraft)
 }
@@ -101,6 +106,9 @@ export function validateSettingEditValue(field: SettingEditField, raw: string): 
   const trimmed = raw.trim()
   if (trimmed.length === 0) {
     return null
+  }
+  if (field === "sync-display-name") {
+    return sanitizeDisplayName(trimmed)
   }
   if (field === "fg" || field === "bg-color" || field === "picker-fg" || field === "picker-bg-color") {
     return parseHexColor(trimmed)
@@ -114,6 +122,9 @@ export function validateSettingEditValue(field: SettingEditField, raw: string): 
 export function settingEditFieldForView(
   view: SettingListPickerState["view"]
 ): SettingEditField {
+  if (view === "syncDeviceName") {
+    return "sync-display-name"
+  }
   if (view === "fg" || view === "fgPicker") {
     return view === "fgPicker" ? "picker-fg" : "fg"
   }

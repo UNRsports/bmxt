@@ -18,6 +18,11 @@ export { displayTitle }
 
 const TAB_GROUP_ID_NONE = chrome.tabGroups.TAB_GROUP_ID_NONE
 
+/**
+ * EN: Cross-device rows use synthetic picker-local ids (negative) so marks never collide
+ * with local chrome.tabs ids. Peer-local ids live in peer* fields for DataChannel ops.
+ * JA: 横断行はピッカー内合成 id（負）でローカル tabId 衝突を避け、peer* に相手側実 id を持つ。
+ */
 export type TabPickerRow =
   | {
       kind: "window"
@@ -26,6 +31,9 @@ export type TabPickerRow =
       windowTitle: string
       usesActiveTabTitle: boolean
       focused: boolean
+      deviceId: string | null
+      remote: boolean
+      peerWindowId: number | null
     }
   | {
       kind: "group"
@@ -33,6 +41,10 @@ export type TabPickerRow =
       groupId: number | null
       label: string
       color: NewGroupPaletteColor
+      deviceId: string | null
+      remote: boolean
+      peerWindowId: number | null
+      peerGroupId: number | null
     }
   | {
       kind: "tab"
@@ -44,6 +56,11 @@ export type TabPickerRow =
       url: string
       faviconSrc: string | null
       active: boolean
+      deviceId: string | null
+      remote: boolean
+      peerTabId: number | null
+      peerWindowId: number | null
+      peerGroupId: number | null
     }
 
 function groupKey(tab: chrome.tabs.Tab): number | "none" {
@@ -164,7 +181,10 @@ export async function buildTabPickerRowsBundle(
         star: tracked ? "*" : " ",
         title: windowTitle
       }),
-      focused: tracked
+      focused: tracked,
+      deviceId: null,
+      remote: false,
+      peerWindowId: null
     })
 
     let prevKey: number | "none" | undefined
@@ -178,7 +198,11 @@ export async function buildTabPickerRowsBundle(
             windowId: wid,
             groupId: key,
             label: formatGroupLabel(meta, locale),
-            color: normalizeTabGroupColor(meta?.color)
+            color: normalizeTabGroupColor(meta?.color),
+            deviceId: null,
+            remote: false,
+            peerWindowId: null,
+            peerGroupId: null
           })
         }
         prevKey = key
@@ -199,7 +223,12 @@ export async function buildTabPickerRowsBundle(
         title: rawTitle,
         url: rawUrl,
         faviconSrc,
-        active: Boolean(t.active)
+        active: Boolean(t.active),
+        deviceId: null,
+        remote: false,
+        peerTabId: null,
+        peerWindowId: null,
+        peerGroupId: null
       })
     }
   }

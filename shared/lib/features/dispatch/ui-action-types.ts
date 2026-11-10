@@ -18,3 +18,13 @@ export type UiActionIR =
   | { kind: "snapshot_save"; line: string }
   | { kind: "open_picker"; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
+  | { kind: "sync_setup" }
+  | { kind: "sync_status" }
+  | { kind: "sync_pair"; invite: string }
+  | { kind: "sync_members" }
+  | { kind: "sync_offer" }
+  | { kind: "sync_answer"; code: string }
+  | { kind: "sync_accept"; code: string }
+  | { kind: "sync_open"; device_id: string; payload: string }
+  | { kind: "sync_connect"; device_id: string }
+  | { kind: "sync_ping"; device_id: string }

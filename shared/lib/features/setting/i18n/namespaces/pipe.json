@@ -31,6 +31,18 @@
     "ja": "error: 未対応のパイプ先コマンド: {stage}",
     "en": "error: unsupported pipe consumer: {stage}"
   },
+  "pipe.tabSend.badArgs": {
+    "ja": "error: パイプ右辺は `tab -send <deviceId> [--close]` です（URL は stdin から）",
+    "en": "error: pipe consumer is `tab -send <deviceId> [--close]` (URLs come from stdin)"
+  },
+  "pipe.tabSend.noUrls": {
+    "ja": "error: パイプ入力に送信できる URL がありません",
+    "en": "error: no sendable URLs in the pipe stream"
+  },
+  "pipe.tabSend.closeLocalOnly": {
+    "ja": "error: `--close` はローカルタブのみ対象です（リモート行を含めないでください）",
+    "en": "error: `--close` applies to local tabs only (do not include remote rows)"
+  },
   "pipe.browse.noListResult": {
     "ja": "error: browse には `-list` 列挙の ListResult が必要です（例: tab -list | browse）",
     "en": "error: browse requires a `-list` ListResult (e.g. tab -list | browse)"

@@ -1,67 +1,45 @@
 /**
- * EN: Headless WebDriver harness — Chrome (ChromeDriver) + Firefox (geckodriver/Marionette).
- * JA: Headless WebDriver ハーネス — Chrome / Firefox 両対応。
+ * EN: BMXt E2E harness — product UI helpers on top of webXdriver lifecycle.
+ * JA: BMXt E2E ハーネス — webXdriver ライフサイクル上の製品 UI ヘルパー。
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { Builder, By, Key, until, type WebDriver, type WebElement } from "selenium-webdriver"
-import chrome from "selenium-webdriver/chrome.js"
-import firefox from "selenium-webdriver/firefox.js"
-import { chromeExtensionIdFromPath } from "./chrome-extension-id.ts"
-import { resolveFirefoxExtensionUuid } from "./resolve-firefox-extension-uuid.ts"
+import { By, Key, until, type WebDriver, type WebElement } from "selenium-webdriver"
+import {
+  launchExtensionSession,
+  openExtensionPage,
+  readGeckoId,
+  reloadExtensionPage,
+  resolveE2eBrowser as resolveWebxBrowser,
+  type E2eBrowser,
+  type ExtensionSession
+} from "webxdriver"
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..")
 
+export type { E2eBrowser }
+
+/** EN: BMXt session is the webXdriver extension session (same shape + extensionPath). */
+export type BmxtSession = ExtensionSession
+
 /**
- * EN: Prefer repo-local profile dirs — CI/agent `/tmp` quotas break Chrome prefs writes.
- * JA: プロファイルはリポジトリ配下へ（`/tmp` のクォータで prefs 書き込みが落ちることがある）。
+ * EN: Prefer `BMXT_E2E_BROWSER` for backward compatibility with existing scripts/CI.
+ * JA: 既存スクリプト／CI 互換のため `BMXT_E2E_BROWSER` を優先する。
  */
-function e2eProfileDir(prefix: string): string {
-  const base = join(root, ".output", "e2e-profiles")
-  mkdirSync(base, { recursive: true })
-  return mkdtempSync(join(base, `${prefix}-`))
-}
-
-export type E2eBrowser = "chrome" | "firefox"
-
-export type BmxtSession = {
-  browser: E2eBrowser
-  driver: WebDriver
-  extensionOrigin: string
-  userDataDir: string | null
-  quit: () => Promise<void>
-}
-
 export function resolveE2eBrowser(): E2eBrowser {
-  const raw = (process.env.BMXT_E2E_BROWSER ?? "chrome").trim().toLowerCase()
-  if (raw === "firefox" || raw === "gecko") {
-    return "firefox"
-  }
-  if (raw === "chrome" || raw === "chromium") {
-    return "chrome"
-  }
-  throw new Error(
-    `Unsupported BMXT_E2E_BROWSER=${JSON.stringify(process.env.BMXT_E2E_BROWSER)} (use chrome|firefox)`
-  )
+  return resolveWebxBrowser({
+    envKey: "BMXT_E2E_BROWSER",
+    defaultBrowser: "chrome"
+  })
 }
 
 export function extensionOutputPath(browser: E2eBrowser): string {
   return join(root, ".output", browser === "firefox" ? "firefox-mv3" : "chrome-mv3")
 }
 
-export function readGeckoId(extensionPath: string): string {
-  const raw = readFileSync(join(extensionPath, "manifest.json"), "utf8")
-  const manifest = JSON.parse(raw) as {
-    browser_specific_settings?: { gecko?: { id?: unknown } }
-  }
-  const id = manifest.browser_specific_settings?.gecko?.id
-  if (typeof id !== "string" || id.trim() === "") {
-    throw new Error(`Missing browser_specific_settings.gecko.id in ${extensionPath}`)
-  }
-  return id
-}
+export { readGeckoId }
 
 function requireExtensionBuild(browser: E2eBrowser): string {
   const extensionPath = extensionOutputPath(browser)
@@ -72,199 +50,26 @@ function requireExtensionBuild(browser: E2eBrowser): string {
   return extensionPath
 }
 
-/**
- * EN: Branded Chrome 137+ dropped `--load-extension`. Pin Chrome for Testing via Selenium Manager.
- * JA: ブランド版 Chrome 137+ は `--load-extension` 不可。Selenium Manager で Chrome for Testing を固定。
- * Override: `BMXT_E2E_CHROME_VERSION` (default keeps extensions + headless=new).
- */
-const DEFAULT_CHROME_FOR_TESTING_VERSION = "141.0.7390.78"
-
-async function launchChrome(extensionPath: string): Promise<BmxtSession> {
-  // EN: Unique profile avoids "failed to write prefs file" when suites overlap.
-  const userDataDir = e2eProfileDir("chrome")
-  const options = new chrome.Options()
-  const browserVersion =
-    process.env.BMXT_E2E_CHROME_VERSION?.trim() || DEFAULT_CHROME_FOR_TESTING_VERSION
-  options.setBrowserVersion(browserVersion)
-  // EN: New headless supports extensions; Chrome for Testing keeps --load-extension.
-  options.addArguments(
-    "--headless=new",
-    "--disable-gpu",
-    "--no-sandbox",
-    "--disable-dev-shm-usage",
-    `--user-data-dir=${userDataDir}`,
-    `--disable-extensions-except=${extensionPath}`,
-    `--load-extension=${extensionPath}`
-  )
-
-  let driver: WebDriver
-  try {
-    driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build()
-  } catch (err) {
-    try {
-      rmSync(userDataDir, { recursive: true, force: true })
-    } catch {
-      /* ignore */
-    }
-    throw err
-  }
-  const extensionId = chromeExtensionIdFromPath(extensionPath)
-  const extensionOrigin = `chrome-extension://${extensionId}`
-
-  return {
-    browser: "chrome",
-    driver,
-    extensionOrigin,
-    userDataDir,
-    quit: async () => {
-      try {
-        await driver.quit()
-      } catch {
-        /* EN: Driver may already be dead. */
-      }
-      try {
-        rmSync(userDataDir, { recursive: true, force: true })
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-}
-
-async function launchFirefoxOnce(extensionPath: string): Promise<BmxtSession> {
-  const userDataDir = e2eProfileDir("firefox")
-  const options = new firefox.Options()
-  options.addArguments("-headless")
-  options.addArguments("-profile", userDataDir)
-  options.setPreference("xpinstall.signatures.required", false)
-  options.setPreference("extensions.autoDisableScopes", 0)
-  options.setPreference("devtools.debugger.remote-enabled", true)
-
-  // EN: Required to use Marionette chrome context (open moz-extension:// pages).
-  const service = new firefox.ServiceBuilder().addArguments("--allow-system-access")
-
-  let driver: firefox.Driver
-  try {
-    driver = (await new Builder()
-      .forBrowser("firefox")
-      .setFirefoxOptions(options)
-      .setFirefoxService(service)
-      .build()) as firefox.Driver
-  } catch (err) {
-    try {
-      rmSync(userDataDir, { recursive: true, force: true })
-    } catch {
-      /* EN: Best-effort profile cleanup after failed launch. */
-    }
-    throw err
-  }
-
-  try {
-    await driver.installAddon(extensionPath, true)
-    const geckoId = readGeckoId(extensionPath)
-    const uuid = await resolveFirefoxExtensionUuid(userDataDir, geckoId, 60_000)
-    const extensionOrigin = `moz-extension://${uuid}`
-
-    return {
-      browser: "firefox",
-      driver,
-      extensionOrigin,
-      userDataDir,
-      quit: async () => {
-        try {
-          await driver.quit()
-        } catch {
-          /* EN: Marionette may already be dead after a decode error. */
-        }
-        try {
-          rmSync(userDataDir, { recursive: true, force: true })
-        } catch {
-          /* EN: Best-effort profile cleanup. */
-        }
-      }
-    }
-  } catch (err) {
-    try {
-      await driver.quit()
-    } catch {
-      /* ignore */
-    }
-    try {
-      rmSync(userDataDir, { recursive: true, force: true })
-    } catch {
-      /* ignore */
-    }
-    throw err
-  }
-}
-
-/** EN: Retry Firefox launch — rapid create/destroy can wedge Marionette prefs. */
-async function launchFirefox(extensionPath: string): Promise<BmxtSession> {
-  const maxAttempts = 3
-  let lastError: unknown
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      return await launchFirefoxOnce(extensionPath)
-    } catch (err) {
-      lastError = err
-      await new Promise((resolve) => setTimeout(resolve, 750 * attempt))
-    }
-  }
-  throw lastError
-}
-
-/**
- * EN: Marionette blocks `driver.get(moz-extension://…)`. Open via chrome-context trusted navigation.
- * JA: Marionette は `driver.get(moz-extension://…)` を拒否するため、chrome コンテキストで開く。
- */
-async function openFirefoxExtensionPage(driver: WebDriver, url: string): Promise<void> {
-  const fx = driver as firefox.Driver
-  await fx.setContext(firefox.Context.CHROME)
-  try {
-    await fx.executeScript(
-      `
-      const pageUrl = arguments[0];
-      const win = Services.wm.getMostRecentWindow("navigator:browser");
-      if (!win) {
-        throw new Error("no navigator:browser window");
-      }
-      if (typeof win.openTrustedLinkIn === "function") {
-        win.openTrustedLinkIn(pageUrl, "tab");
-        return;
-      }
-      if (win.gBrowser && typeof win.gBrowser.addTrustedTab === "function") {
-        win.gBrowser.addTrustedTab(pageUrl);
-        return;
-      }
-      throw new Error("no trusted tab opener available");
-      `,
-      url
-    )
-  } finally {
-    await fx.setContext(firefox.Context.CONTENT)
-  }
-
-  await driver.wait(async () => {
-    for (const handle of await driver.getAllWindowHandles()) {
-      await driver.switchTo().window(handle)
-      const current = await driver.getCurrentUrl()
-      if (current === url || current.startsWith(`${url}?`) || current.startsWith(`${url}#`)) {
-        return true
-      }
-    }
-    return false
-  }, 60_000)
-}
-
-/** EN: Launch headless browser with the unpacked host build loaded. */
+/** EN: Launch headless browser with the unpacked host build loaded (via webXdriver). */
 export async function launchBmxtSession(
   browser: E2eBrowser = resolveE2eBrowser()
 ): Promise<BmxtSession> {
   const extensionPath = requireExtensionBuild(browser)
-  if (browser === "firefox") {
-    return launchFirefox(extensionPath)
+  const chromeVersion = process.env.BMXT_E2E_CHROME_VERSION?.trim()
+  const options: {
+    browser: E2eBrowser
+    extensionPath: string
+    profileBaseDir: string
+    chromeVersion?: string
+  } = {
+    browser,
+    extensionPath,
+    profileBaseDir: join(root, ".output", "e2e-profiles")
   }
-  return launchChrome(extensionPath)
+  if (chromeVersion) {
+    options.chromeVersion = chromeVersion
+  }
+  return launchExtensionSession(options)
 }
 
 /**
@@ -301,47 +106,49 @@ async function dismissFirstRunTutorial(driver: WebDriver): Promise<boolean> {
   }
 }
 
-async function navigateToBmxtShell(session: BmxtSession, pageUrl: string): Promise<void> {
-  if (session.browser === "firefox") {
-    await openFirefoxExtensionPage(session.driver, pageUrl)
-  } else {
-    await session.driver.get(pageUrl)
+/** EN: Poll until storage shows first-run dismissed (condition wait, not fixed sleep). */
+async function waitTutorialDismissedInStorage(
+  driver: WebDriver,
+  timeoutMs = 15_000
+): Promise<boolean> {
+  try {
+    await driver.wait(async () => {
+      const result = await driver.executeAsyncScript(`
+        const done = arguments[arguments.length - 1];
+        chrome.storage.local
+          .get("bmxt_tutorial_progress_v1")
+          .then((data) => {
+            const progress = data && data.bmxt_tutorial_progress_v1;
+            done(
+              !!(
+                progress &&
+                typeof progress === "object" &&
+                progress.dismissedFirstRun === true
+              )
+            );
+          })
+          .catch(() => done(false));
+      `)
+      return result === true
+    }, timeoutMs)
+    return true
+  } catch {
+    return false
   }
-  await session.driver.wait(until.elementLocated(By.css(".bmxt-prompt-ime")), 60_000)
+}
+
+async function waitBmxtPromptReady(driver: WebDriver): Promise<void> {
+  await driver.wait(until.elementLocated(By.css(".bmxt-prompt-ime")), 60_000)
+}
+
+async function navigateToBmxtShell(session: BmxtSession, pageUrl: string): Promise<void> {
+  await openExtensionPage(session, pageUrl)
+  await waitBmxtPromptReady(session.driver)
 }
 
 async function reloadBmxtShell(session: BmxtSession, pageUrl: string): Promise<void> {
-  if (session.browser === "firefox") {
-    // EN: `navigate().refresh()` is unreliable for moz-extension under Marionette.
-    //     Close the current shell tab and open a fresh one via chrome-context.
-    const previous = await session.driver.getWindowHandle()
-    await openFirefoxExtensionPage(session.driver, pageUrl)
-    const handles = await session.driver.getAllWindowHandles()
-    for (const handle of handles) {
-      if (handle === previous) {
-        try {
-          await session.driver.switchTo().window(handle)
-          await session.driver.close()
-        } catch {
-          /* EN: Tab may already be gone. */
-        }
-        break
-      }
-    }
-    await session.driver.wait(async () => {
-      for (const handle of await session.driver.getAllWindowHandles()) {
-        await session.driver.switchTo().window(handle)
-        const current = await session.driver.getCurrentUrl()
-        if (current === pageUrl || current.startsWith(`${pageUrl}?`) || current.startsWith(`${pageUrl}#`)) {
-          return true
-        }
-      }
-      return false
-    }, 60_000)
-  } else {
-    await session.driver.navigate().refresh()
-  }
-  await session.driver.wait(until.elementLocated(By.css(".bmxt-prompt-ime")), 60_000)
+  await reloadExtensionPage(session, pageUrl)
+  await waitBmxtPromptReady(session.driver)
 }
 
 async function clickTutorialSkipIfPresent(driver: WebDriver): Promise<void> {
@@ -359,9 +166,10 @@ async function clickTutorialSkipIfPresent(driver: WebDriver): Promise<void> {
 export async function openBmxtPage(session: BmxtSession): Promise<void> {
   const pageUrl = `${session.extensionOrigin}/bmxt.html`
   await navigateToBmxtShell(session, pageUrl)
-  // EN: First-run auto-start may race and overwrite storage; dismiss twice, then reload.
+  // EN: First-run auto-start may race and overwrite storage — write, wait for
+  //     confirmed storage, write again (no fixed sleep), then reload.
   await dismissFirstRunTutorial(session.driver)
-  await new Promise((resolve) => setTimeout(resolve, 250))
+  await waitTutorialDismissedInStorage(session.driver)
   await dismissFirstRunTutorial(session.driver)
   try {
     await reloadBmxtShell(session, pageUrl)
@@ -377,22 +185,64 @@ export async function openBmxtPage(session: BmxtSession): Promise<void> {
 }
 
 /**
- * EN: Between shared-session tests — dismiss pickers and wipe the log so asserts stay isolated.
- * JA: 共有セッションのテスト間で候補を閉じログをクリアし、アサートを隔離する。
+ * EN: Close tab/side pickers. Filter IME is `pointer-events: none` (not WebDriver-clickable);
+ *     focus via script then Escape, or dispatch window keydown for capture listeners.
+ * JA: 列ピッカーを閉じる。filter IME は pointer-events:none のため script で focus→Esc、
+ *     または window の keydown（capture）を dispatch する。
  */
-export async function resetShellBetweenTests(driver: WebDriver): Promise<void> {
-  await dismissPromptPickers(driver)
-  for (let i = 0; i < 4; i += 1) {
+async function dismissOverlayPickers(driver: WebDriver): Promise<void> {
+  for (let i = 0; i < 6; i += 1) {
     const open = await driver.findElements(
       By.css(".bmxt-tab-picker, .bmxt-side-picker, .bmxt-subcmd-picker")
     )
     if (open.length === 0) {
-      break
+      return
     }
-    await pressPromptKey(driver, Key.ESCAPE)
+    await driver.executeScript(`
+      const filter = document.querySelector(".bmxt-tab-picker-filter-ime");
+      if (filter && typeof filter.focus === "function") {
+        filter.focus({ preventScroll: true });
+      }
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          code: "Escape",
+          keyCode: 27,
+          which: 27,
+          bubbles: true,
+          cancelable: true
+        })
+      );
+    `)
+  }
+}
+
+/**
+ * EN: Between shared-session tests — dismiss pickers and wipe the log so asserts stay isolated.
+ *     Shared session is required: Firefox Marionette wedges under per-test relaunch.
+ * JA: 共有セッションのテスト間で候補を閉じログをクリアし、アサートを隔離する。
+ *     Firefox はテストごと再起動で Marionette が不安定なため共有必須。
+ */
+export async function resetShellBetweenTests(driver: WebDriver): Promise<void> {
+  await dismissPromptPickers(driver)
+  await dismissOverlayPickers(driver)
+  try {
+    await driver.wait(async () => {
+      const open = await driver.findElements(
+        By.css(".bmxt-tab-picker, .bmxt-side-picker, .bmxt-subcmd-picker")
+      )
+      return open.length === 0
+    }, 5_000)
+  } catch {
+    /* EN: Best-effort — do not fail the suite on a stuck overlay alone. */
   }
   await runPromptLine(driver, "clear")
   await waitPromptIdle(driver)
+  const line = await promptValue(driver)
+  if (line !== "") {
+    const ime = await focusPrompt(driver)
+    await setPromptValueViaInputEvent(driver, ime, "")
+  }
 }
 
 export async function promptIme(driver: WebDriver): Promise<WebElement> {

@@ -1,3 +1,4 @@
+import type { DeviceListScope } from "../../sync/bus/device-list-scope"
 import type { TabPickerRow } from "../picker-rows"
 import type {
   ActionMenuPanel,
@@ -12,6 +13,8 @@ import type { PickerReducerEvent } from "../state-machine"
 export type TabPickerEngineState = {
   rows: TabPickerRow[]
   showUrl: boolean
+  /** EN: When not local, row refresh re-fetches via sync bus instead of chrome.tabs only. */
+  listScope: DeviceListScope
   variant: "default" | "groupNew"
   initialHi: number
   anchorTabId: number | null
@@ -22,6 +25,8 @@ export type TabPickerEngineState = {
   markedWindowIds: number[]
   markedGroupKeys: string[]
   bulkSubMode: BulkSubMode | null
+  /** EN: When move targets a Family peer, close local tabs after successful open. */
+  moveCloseAfter: boolean
   filterQuery: string
   searchMode: boolean
   hlSearchPattern: string

@@ -24,6 +24,7 @@ export function projectTabPickerEngineToParentState(
   return {
     rows: state.rows,
     showUrl: state.showUrl,
+    listScope: state.listScope,
     initialHi: state.initialHi,
     variant: state.variant,
     interactive: interactiveSnapshotFromEngineState(state)

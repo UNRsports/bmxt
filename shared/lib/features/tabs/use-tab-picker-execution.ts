@@ -35,6 +35,14 @@ import { resolvePickerExecutionTabIds } from "./picker-selected-tab-ids"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
+import {
+  buildRemoteMoveOp,
+  classifyPickerSelection
+} from "./remote-picker-ops.ts"
+import { runRemoteTabsOp } from "./run-remote-tabs-op.ts"
+import { sendSelectedTabsToFamilyPeer } from "./family-move-dest.ts"
+import { resolveFamilySendDestination } from "./resolve-family-send-dest.ts"
+import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -46,6 +54,7 @@ export type TabPickerExecutionParams = {
   markedWindowIds: number[]
   markedGroupKeys: string[]
   bulkSubMode: BulkSubMode | null
+  moveCloseAfter: boolean
   variant: "default" | "groupNew"
   selectedTabIds: number[]
   groupChoices: GroupChoice[]
@@ -82,6 +91,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     markedWindowIds,
     markedGroupKeys,
     bulkSubMode,
+    moveCloseAfter,
     variant,
     selectedTabIds,
     groupChoices,
@@ -130,6 +140,30 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           ? { windowId: plan.windowId }
           : { windowId: plan.windowId, groupId: plan.groupId })
     })
+
+    if (plan.kind === "activateTab") {
+      const row = rows.find((r) => r.kind === "tab" && r.tabId === plan.tabId)
+      if (row && row.kind === "tab" && row.remote && row.deviceId && row.peerTabId !== null && row.peerWindowId !== null) {
+        await runRemoteTabsOp(row.deviceId, {
+          kind: "activate",
+          tabId: row.peerTabId,
+          windowId: row.peerWindowId
+        })
+        setActiveTabId(row.tabId)
+        return
+      }
+    }
+    if (plan.kind === "focusWindow") {
+      const row = rows.find((r) => r.kind === "window" && r.windowId === plan.windowId)
+      if (row && row.kind === "window" && row.remote && row.deviceId && row.peerWindowId !== null) {
+        await runRemoteTabsOp(row.deviceId, {
+          kind: "focus_window",
+          windowId: row.peerWindowId
+        })
+        return
+      }
+    }
+
     const activeId = await executePickerFocusPlan(plan)
     if (activeId !== null) {
       setActiveTabId(activeId)
@@ -137,21 +171,92 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
   }, [hi, rows, setActiveTabId, visibleRowIndices])
 
   const executeBulkClose = useCallback(async () => {
+    const classified = classifyPickerSelection(rows, selectedTabIds, markedWindowIds)
     try {
-      await executeCloseAction({
-        markedKind,
-        markedWindowIds,
-        selectedTabIds
-      })
+      if (classified.kind === "remote") {
+        if (markedKind === "window" && classified.peerWindowIds.length > 0) {
+          await runRemoteTabsOp(classified.deviceId, {
+            kind: "close_windows",
+            windowIds: classified.peerWindowIds
+          })
+        } else if (classified.peerTabIds.length > 0) {
+          await runRemoteTabsOp(classified.deviceId, {
+            kind: "close_tabs",
+            tabIds: classified.peerTabIds
+          })
+        }
+      } else if (classified.kind === "local") {
+        await executeCloseAction({
+          markedKind,
+          markedWindowIds: classified.windowIds,
+          selectedTabIds: classified.tabIds
+        })
+      } else if (classified.kind === "mixed") {
+        await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
+      }
     } catch {
       /* ignore */
     }
     clearMarkedViaReducer()
     await onRefreshRows?.()
-  }, [clearMarkedViaReducer, markedKind, markedWindowIds, onRefreshRows, selectedTabIds])
+  }, [
+    clearMarkedViaReducer,
+    locale,
+    markedKind,
+    markedWindowIds,
+    onAppendLog,
+    onRefreshRows,
+    rows,
+    selectedTabIds
+  ])
+
+  const executeFamilySendAtDest = useCallback(
+    async (destHi: number, tabIds: number[], closeAfter: boolean): Promise<boolean> => {
+      const dest = resolveFamilySendDestination(rows, visibleRowIndices, destHi)
+      if (dest === null) {
+        return false
+      }
+      const classified = classifyPickerSelection(rows, tabIds)
+      if (classified.kind === "mixed") {
+        await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
+        return true
+      }
+      if (classified.kind === "remote") {
+        // EN: Same-device remote reorder stays on tabs_ops (caller continues).
+        // JA: 同一リモート内の並べ替えは tabs_ops 本線（呼び出し側が続行）。
+        if (classified.deviceId === dest.deviceId) {
+          return false
+        }
+        await onAppendLog?.([tTabs("tabs.picker.remote.familyLocalOnly", locale)])
+        return true
+      }
+      if (classified.kind !== "local") {
+        return false
+      }
+      const result = await sendSelectedTabsToFamilyPeer({
+        deviceId: dest.deviceId,
+        rows,
+        selectedTabIds: classified.tabIds,
+        closeAfter,
+        peerWindowId: dest.peerWindowId
+      })
+      await onAppendLog?.(expandSyncLogLines(result.lines, locale))
+      return true
+    },
+    [locale, onAppendLog, rows, visibleRowIndices]
+  )
 
   const executeBulkMove = useCallback(async () => {
-    if (visibleRowIndices.length === 0 || selectedTabIds.length === 0) {
+    if (selectedTabIds.length === 0) {
+      return
+    }
+    const handled = await executeFamilySendAtDest(moveDestHi, selectedTabIds, moveCloseAfter)
+    if (handled) {
+      clearMarkedViaReducer()
+      await onRefreshRows?.()
+      return
+    }
+    if (visibleRowIndices.length === 0) {
       return
     }
     const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
@@ -167,8 +272,27 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (toMove.length === 0) {
       return
     }
+    const classified = classifyPickerSelection(rows, toMove)
     try {
-      await executeMoveAction({ plan, selectedTabIds: toMove })
+      if (classified.kind === "remote") {
+        const op = buildRemoteMoveOp(rows, classified.peerTabIds, plan)
+        if (op === null) {
+          await onAppendLog?.([tTabs("tabs.picker.remote.moveTargetMismatch", locale)])
+        } else {
+          const result = await runRemoteTabsOp(classified.deviceId, op)
+          if (!result.ok) {
+            await onAppendLog?.([
+              tTabs("tabs.picker.remote.opFailed", locale, {
+                detail: result.detail ?? ""
+              })
+            ])
+          }
+        }
+      } else if (classified.kind === "local") {
+        await executeMoveAction({ plan, selectedTabIds: classified.tabIds })
+      } else if (classified.kind === "mixed") {
+        await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
+      }
     } catch {
       /* ignore */
     }
@@ -176,15 +300,18 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     await onRefreshRows?.()
   }, [
     clearMarkedViaReducer,
+    executeFamilySendAtDest,
+    locale,
     markedKind,
     markedGroupKeys,
+    moveCloseAfter,
     moveDestHi,
+    onAppendLog,
     onRefreshRows,
     rows,
     selectedTabIds,
-      locale
-    ]
-  )
+    visibleRowIndices
+  ])
 
   const executeBulkGroup = useCallback(async () => {
     if (selectedTabIds.length === 0) {
@@ -423,6 +550,17 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         selectedTabIds: execTabIds
       }
       if (intent === "executeMove") {
+        const familyHandled = await executeFamilySendAtDest(
+          snapshot.moveDestHi,
+          execTabIds,
+          moveCloseAfter
+        )
+        if (familyHandled) {
+          clearMarkedViaReducer()
+          setBulkSubMode(null)
+          await onRefreshRows?.()
+          return
+        }
         const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
         const target = resolvePickerTarget(snapshot.moveDestHi, targetRows)
         if (!target) {
@@ -468,7 +606,55 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         }
       }
       try {
-        await EXECUTION_REGISTRY[intent](ctx)
+        const classified = classifyPickerSelection(
+          rows,
+          execTabIds,
+          intent === "executeClose" ? execMarkedWindowIds : []
+        )
+        if (classified.kind === "mixed") {
+          await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
+          setBulkSubMode(null)
+          return
+        }
+        if (classified.kind === "remote") {
+          if (intent === "executeMove" && ctx.movePlan) {
+            const op = buildRemoteMoveOp(rows, classified.peerTabIds, ctx.movePlan)
+            if (op === null) {
+              await onAppendLog?.([tTabs("tabs.picker.remote.moveTargetMismatch", locale)])
+              setBulkSubMode(null)
+              return
+            }
+            const result = await runRemoteTabsOp(classified.deviceId, op)
+            if (!result.ok) {
+              await onAppendLog?.([
+                tTabs("tabs.picker.remote.opFailed", locale, { detail: result.detail ?? "" })
+              ])
+            }
+          } else if (intent === "executeClose") {
+            if (execMarkedKind === "window" && classified.peerWindowIds.length > 0) {
+              await runRemoteTabsOp(classified.deviceId, {
+                kind: "close_windows",
+                windowIds: classified.peerWindowIds
+              })
+            } else if (classified.peerTabIds.length > 0) {
+              await runRemoteTabsOp(classified.deviceId, {
+                kind: "close_tabs",
+                tabIds: classified.peerTabIds
+              })
+            }
+          } else if (intent === "executeReload" && classified.peerTabIds.length > 0) {
+            await runRemoteTabsOp(classified.deviceId, {
+              kind: "reload",
+              tabIds: classified.peerTabIds
+            })
+          } else if (intent === "executeGroup" || intent === "executeNewWindow") {
+            await onAppendLog?.([tTabs("tabs.picker.remote.opUnsupported", locale)])
+            setBulkSubMode(null)
+            return
+          }
+        } else {
+          await EXECUTION_REGISTRY[intent](ctx)
+        }
       } catch {
         setBulkSubMode(null)
         return
@@ -485,8 +671,11 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     },
     [
       clearMarkedViaReducer,
+      executeFamilySendAtDest,
       groupChoices,
       groupPickIndex,
+      moveCloseAfter,
+      newGroupTabIdsRef,
       onAppendLog,
       onRefreshRows,
       rows,

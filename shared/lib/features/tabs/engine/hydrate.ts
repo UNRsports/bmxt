@@ -7,6 +7,7 @@ export function createInitialTabPickerEngineState(
     rows: TabPickerEngineState["rows"]
     showUrl: boolean
     initialHi: number
+    listScope?: TabPickerEngineState["listScope"]
     variant?: TabPickerEngineState["variant"]
     interactive?: TabPickerState["interactive"]
   }
@@ -28,6 +29,7 @@ export function createInitialTabPickerEngineState(
   return {
     rows: input.rows,
     showUrl: input.showUrl,
+    listScope: input.listScope ?? { kind: "local" },
     variant: input.variant ?? "default",
     initialHi: input.initialHi,
     anchorTabId,
@@ -38,6 +40,7 @@ export function createInitialTabPickerEngineState(
     markedWindowIds: [...interactive.markedWindowIds],
     markedGroupKeys: [...interactive.markedGroupKeys],
     bulkSubMode: null,
+    moveCloseAfter: false,
     filterQuery: "",
     searchMode: false,
     hlSearchPattern: interactive.hlSearchPattern,
@@ -62,6 +65,7 @@ export function hydrateTabPickerEngineState(picker: TabPickerState): TabPickerEn
   return createInitialTabPickerEngineState({
     rows: picker.rows,
     showUrl: picker.showUrl,
+    listScope: picker.listScope,
     initialHi: picker.initialHi,
     variant: picker.variant,
     interactive: picker.interactive

@@ -99,6 +99,7 @@ export {
 export {
   EMPTY_SESSION_PICKERS,
   anyLeafHasPickerOpen,
+  anyLeafHasTabPickerOpen,
   anySessionPickerOpen,
   openPickerSlots,
   pruneSessionPickersMap,

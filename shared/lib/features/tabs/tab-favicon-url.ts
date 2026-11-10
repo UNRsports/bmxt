@@ -3,6 +3,12 @@
 
 export const TAB_FAVICON_PX = 16
 
+/**
+ * EN: Max character length for a portable favicon URL on the sync wire.
+ * JA: sync ワイヤに載せる可搬 favicon URL の最大文字長。
+ */
+export const PORTABLE_REMOTE_FAVICON_MAX_CHARS = 2048
+
 export function isTabFaviconPageUrl(url: string): boolean {
   return /^https?:\/\//i.test(url.trim())
 }
@@ -58,6 +64,58 @@ export function normalizeTabFavIconUrl(favIconUrl: string | null | undefined): s
     return trimmed
   }
   return null
+}
+
+/**
+ * EN: Extract a favicon URL safe for the BMXt sync wire (browser-agnostic).
+ *     Allowlist only — bare `https:` within {@link PORTABLE_REMOTE_FAVICON_MAX_CHARS}.
+ *     Known wrappers such as `moz-anno:favicon:https:…` are unwrapped to the inner
+ *     `https:` URL. Everything else (`data:`, `blob:`, extension-local, `http:`,
+ *     `chrome:`, …) is dropped. Receivers with a favicon API may still resolve
+ *     from page URL when this field is omitted.
+ * JA: BMXt sync ワイヤ向けにファビコン URL を抽出する（ブラウザ非依存）。
+ *     allowlist のみ — {@link PORTABLE_REMOTE_FAVICON_MAX_CHARS} 以内の素の `https:`。
+ *     `moz-anno:favicon:https:…` 等の既知ラッパは内側の `https:` に展開する。
+ *     それ以外（`data:` / `blob:` / 拡張ローカル / `http:` / `chrome:` など）は落とす。
+ *     受信側に favicon API があれば、省略時は page URL から再解決できる。
+ */
+export function portableRemoteFavIconUrl(
+  favIconUrl: string | null | undefined
+): string | null {
+  if (typeof favIconUrl !== "string") {
+    return null
+  }
+  const trimmed = favIconUrl.trim()
+  if (trimmed === "") {
+    return null
+  }
+
+  let candidate: string | null = null
+  if (/^https:\/\//i.test(trimmed)) {
+    candidate = trimmed
+  } else {
+    const mozAnnoMatch = /^moz-anno:favicon:(https:\/\/\S+)/i.exec(trimmed)
+    if (mozAnnoMatch !== null) {
+      const inner = mozAnnoMatch[1]
+      if (typeof inner === "string" && inner.length > 0) {
+        candidate = inner
+      }
+    }
+  }
+
+  if (candidate === null) {
+    return null
+  }
+  if (candidate.length > PORTABLE_REMOTE_FAVICON_MAX_CHARS) {
+    return null
+  }
+  if (!/^https:\/\//i.test(candidate)) {
+    return null
+  }
+  if (/^(javascript:|vbscript:|data:)/i.test(candidate)) {
+    return null
+  }
+  return candidate
 }
 
 export function buildTabFaviconSrc(

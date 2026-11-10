@@ -100,6 +100,119 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] Firefox: `about:debugging` で窓起動 + 主要コアコマンド手確認
 - [ ] （次）Translator / FSA / favicon を Chrome 側へ隔離（フラグ）
 
+### 5. webXdriver — Chromium + Gecko 拡張 E2E ハーネス
+
+**判定（2026-10）:** ライフサイクル層を **[webxdriver](https://github.com/UNRsports/webxdriver)** へ切り出し（public）。BMXt は thin wrapper で消費。
+
+| 項目 | 内容 |
+|------|------|
+| 公開コア | `launchExtensionSession` · origin 解決 · `openExtensionPage` / reload · CFT 固定 · Firefox chrome-context · プロファイル／リトライ · peer `selenium-webdriver` |
+| BMXt に残す | `.bmxt-*` プロンプト／チュートリアル／ログ assert · `BMXT_E2E_*` · `.output/{chrome,firefox}-mv3` パス |
+| BMXt 側 | `tests/e2e/harness.ts` が webxdriver + `openBmxtPage` 等 |
+| 残 | npm `0.1.0` 公開（当面は GitHub 依存）· fixture e2e · BMXt verify 受け入れ確認 |
+
+- [x] ライフサイクル層を独立リポ（webxdriver）へ切り出し／public
+- [x] BMXt `harness.ts` を薄くして webxdriver を消費
+
+### 6. ローカル同期（同一 PC → 同一 LAN · Family · コマンドバス）
+
+**目標:** 各ブラウザにユニークな device ID を付け、同一 Family 内の構成員同士で UI 設定・永続プリファレンス・スナップショットを揃える。続けて低遅延の遠隔コマンドバスを載せ、将来は tab picker の移動先に Family メンバーを出し、横断検索・遠隔グループ open の土台にする。平文の預かり先は作らない（ゼロ custody）。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 信頼圏 | **Family**（共有シード／招待。Brave Sync Chain と同型）。メンバーだけが平文を持つ |
+| 識別 | ブラウザ／プロファイルごとに **ユニーク device ID** + 表示名。接続・名簿・衝突解決・遠隔宛先のキー |
+| 既定 | ローカル本線（WebRTC DataChannel + コピペ握手）。`connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持 |
+| 制御面 | native messaging ホストは使わない。低遅延は **WebRTC DataChannel**（握手は Family 封印テキストコード） |
+| Drive / FSA | **同期本線から外す。** Firefox が FSA ピッカー非対応のため、作業ディレクトリ共有は廃止 |
+| 将来像（仕様上の視野） | スマホ BMXt は窓口、PC がハブ／索引。USB・Bluetooth は拡張単体では非現実的 → 必要なら後続でネイティブ補助 |
+
+**輸送（段階）**
+
+| 段 | 範囲 | 手段 | manifest |
+|----|------|------|----------|
+| **6a（改）** | 同一 PC · Chrome ↔ Firefox | Family 招待（`-pair`）+ 名簿（`chrome.storage`） | ネットワーク権限追加なし |
+| **6b（続いて）** | 同一 LAN · Family メンバー | device ID で発見（手動／QR、または PC ハブ名簿）。直結優先。公開 STUN/relay に依存しない | 必要最小のみ検討 |
+| **6c** | 同一 PC（→ LAN／遠隔へ拡張可） | **コピペ握手 + WebRTC DataChannel**（host ICE のみ） | 外部送信なしを維持 |
+
+**6c: コピペ握手 + WebRTC コマンドバス**
+
+| 項目 | 内容 |
+|------|------|
+| 原理 | 名刺（SDP offer/answer · ICE 同梱）を Family 封印テキストコードでコピペ交換し、会話本体は Peer 間 DataChannel |
+| 握手 UX | 推奨: ウィザード `sync -setup` / `sync -connect`（Family → 役割 → COPY / 貼付）。手動 CLI も可。設定 picker は案内のみ（貼付しない） |
+| データ面 | WebRTC DataChannel（遠隔コマンド · ack · 将来の横断クエリ） |
+| peer 宿主 | **BMXt プロンプト窓のみ**（Chrome/Firefox 共通）。offscreen / 専用 peer タブは使わない。SW 単体では不可。窓を閉じる／明示再握手までトンネル堅持 |
+| メッシュ | 手動握手は誰か1台とだけで可。直結後に `mesh_peers` / `mesh_signal` で兄弟直結を自動補完（タブ操作はハブ中継しない） |
+| 相手休眠時 | DataChannel 不可 → メモリキューのみ（永続箱なし）。双方オンライン時に再握手 |
+| UX 視野 | `tab` picker `:move` 宛先に Family メンバー（例: firefox@desk）。既定 copy、`move --close` で移動相当 |
+| 非目標（6c） | native messaging、FSA 作業ディレクトリ、torrent 本線、常時 TURN |
+
+**名簿・将来の prefs**
+
+- 名簿: `chrome.storage.local`（FSA `roster.json` は廃止）
+- prefs / snapshot の横断 LWW は後続（DataChannel 上で転送する構想）
+
+**いま接続後にできること（6c 初期）**
+
+| 面 | 内容 |
+|----|------|
+| ピア間 | `sync -ping <deviceId>`（接続確認）。タブ送信は `tab -send` |
+| ローカル | `sync -status` / `-members` / `-pair` / `-setup` / `-connect` · setting picker の表示名 |
+| ピア横断（一覧） | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| tab -send <id>`（コピー） · `| tab -send <id> --close` |
+| ピア横断（操作） | `tab -list --peers\|--device … \| browse` → remote 行の移動・閉じる・Enter・reload（`tabs_ops`）。グループ作成／新窓は未対応 |
+| Family 送信 | `tab -send` · picker `:move` でリモート窓／タブ／グループ宛（既定 copy、`move --close`） |
+| Family 一覧追従 | `tabs_changed` 广播。ペイロード: `first`（第一コマンド選別符号・現状 `"tab"`；欠落は `"tab"`）+ `reason`（`open_tabs` / `tabs_ops` / `local_close`）。接続中 A/B/C へ配信し、符号一致の開中 picker のみ再取得（未接続は対象外） |
+| 接続 UI | プロンプト下の接続ピア名ステータス行 · トンネル開通中は双方「接続中...」＋入力ロック |
+| 再握手 | `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`） |
+| 未実装 | prefs/snapshot 自動同期 · リモート group/new-window |
+
+**横断 tab / search（実装方針・確認済み）**
+
+- **同一 PC · Chrome ↔ Firefox:** コマンドバス RPC（`tabs_list` / `search_query` / **`tabs_ops`** / `open_tabs`）+ 在庫変更广播 **`tabs_changed`**（`first` / `reason`）。Firebase / STUN / TURN は不要
+- 各側は自ブラウザ API のみ実行し、結果・操作を DataChannel で返す（Chrome が Firefox タブを直接は読めない）
+- **一覧追従:** 送信成功／受信適用／`--close` 後に接続中ピアへ `tabs_changed`。購読側は `first` で機械選別（tab picker は `"tab"` のみ）
+- **別 PC・別ネット:** DataChannel 本線を維持するなら大枠は **シグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）**。Drive は握手の置き手紙には使えるがコマンド本線向きではない
+- Drive / Firebase の製品採用は未決定（§6 本体では Drive OAuth・常時 TURN はスコープ外のまま）
+
+**コマンド**
+
+- `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-connect` / `-offer` / `-answer` / `-accept` / `-ping`）。タブ送信は `tab -send`（旧 `sync -open` は廃止）
+- 握手 UX: 初回 `sync -setup`；切断後 `sync -connect`。専用ウィザード（`shared/lib/features/sync/wizard/`）で COPY / 貼付。ログ全文選択は本線にしない。ショートカット `sync-handshake-copy` はウィザード／バーから利用
+- 接続表示: `shared/lib/features/sync/link/`（ステータス行 · connecting ロック）
+- skill `bmxt-add-command` + i18n EN/JA
+
+**スコープ外（§6 本体）**
+
+- FSA 作業ディレクトリ同期
+- Drive OAuth / ストア提出 / 課金
+- インターネット越しで常時 TURN／公開 circuit relay 前提の運用
+- USB / Bluetooth 輸送（ブラウザ拡張単体）
+- torrent を同期／コマンド本線にすること
+- native messaging ホスト
+
+**実装チェック**
+
+- [x] device ID 生成・永続・表示名
+- [x] Family 作成／参加（シードまたは招待）の最小モデル
+- [x] `shared/lib/features/sync/`（スタビライザー境界）に同期モジュール
+- [x] **FSA 同期削除**（workdir / signaling box / pull-push-pause）
+- [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel（host ICE）
+- [x] **6c:** peer 宿主（プロンプト窓一本化）+ ping / open
+- [x] **6c:** `sync -setup` ウィザード（Family → 役割 → COPY / 貼付）。accept 成功は握手完了（直後 ping 失敗でもセットアップ終了）
+- [x] **6c:** `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`）
+- [x] **6c:** 接続中ピア名ステータス行 + トンネル開通中「接続中...」入力ロック（双方）
+- [ ] **6c:** 手元 — 同一 PC で Chrome↔Firefox に遠隔 open / ping が安定して届く（`-connect` 往復含む）
+- [x] **6c:** 同一 PC 横断 `tab` / `search`（コマンドバス RPC · `--device` / `--peers`）
+- [x] **6c:** `tab -send` / `tab -list \| tab -send <deviceId>` グループ単位コピー送信（`sync -open` 廃止）
+- [x] **6c:** 横断 tab picker 操作（`tabs_ops` · move/close/activate/reload）。remote group/new-window は未対応
+- [x] **6c:** picker `:move` でリモート窓宛 Family 送信（copy 既定 / `move --close`；短縮 `m` なし）
+- [x] **6c:** Family `tabs_changed` 广播（`first` 第一コマンド符号 + `reason`）→ 接続メンバーの該当開中 picker を再取得
+- [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛 · `tabs_changed` 追従を Chrome↔Firefox で確認
+- [x] `sync` コマンド + i18n。既定はローカル WebRTC（接続設定のみ）
+
 ---
 
 ## Archive（ポインタのみ）

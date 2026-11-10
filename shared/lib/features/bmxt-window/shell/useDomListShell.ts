@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react"
 import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
-import { applyHostEffects } from "../../dispatch"
+import { applyHostEffects } from "../../dispatch/apply-effects"
 import type { DomListCapture } from "../../dom/dom-list-capture"
 import { captureDomViewportForTab } from "../../dom/dom-viewport-capture"
 import {

@@ -1088,6 +1088,240 @@ body {
   padding-bottom: 6px;
 }
 
+.bmxt-sync-wizard {
+  margin: 10px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+.bmxt-sync-wizard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.bmxt-sync-wizard-title {
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.bmxt-sync-wizard-cancel {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: transparent;
+  color: #8b949e;
+  cursor: pointer;
+  font: inherit;
+}
+
+.bmxt-sync-wizard-cancel:hover:not(:disabled) {
+  color: #c9d1d9;
+  border-color: #8b949e;
+}
+
+.bmxt-sync-wizard-banner {
+  margin-bottom: 8px;
+  color: #8b949e;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-sync-wizard-busy {
+  margin-bottom: 8px;
+  color: #8b949e;
+  font-size: 0.92em;
+}
+
+.bmxt-sync-wizard-lead {
+  margin: 0 0 10px;
+  color: #e6edf3;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bmxt-sync-wizard-lead--follow {
+  margin-top: 14px;
+}
+
+.bmxt-sync-wizard-code {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 10rem;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #010409;
+  color: #c9d1d9;
+  font: inherit;
+  font-size: 0.82em;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.bmxt-sync-wizard-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bmxt-sync-wizard-choice,
+.bmxt-sync-wizard-primary,
+.bmxt-sync-wizard-secondary,
+.bmxt-sync-wizard-copy {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.25rem;
+  margin: 0 0 8px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(201, 209, 217, 0.35);
+  border-radius: 4px;
+  background: #161b22;
+  color: #e6edf3;
+  font: inherit;
+  font-size: 0.95em;
+  line-height: 1.25;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bmxt-sync-wizard-copy {
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-color: rgba(201, 209, 217, 0.55);
+}
+
+.bmxt-sync-wizard-primary {
+  text-align: center;
+}
+
+.bmxt-sync-wizard-secondary {
+  text-align: center;
+  background: transparent;
+  color: #8b949e;
+  border-color: #30363d;
+}
+
+.bmxt-sync-wizard-choice:disabled,
+.bmxt-sync-wizard-primary:disabled,
+.bmxt-sync-wizard-secondary:disabled,
+.bmxt-sync-wizard-copy:disabled,
+.bmxt-sync-wizard-cancel:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bmxt-sync-wizard-choice:not(:disabled):active,
+.bmxt-sync-wizard-primary:not(:disabled):active,
+.bmxt-sync-wizard-copy:not(:disabled):active {
+  background: rgba(48, 54, 61, 0.95);
+}
+
+.bmxt-sync-wizard-paste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bmxt-sync-wizard-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #010409;
+  color: #c9d1d9;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.35;
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.bmxt-sync-wizard-textarea:focus {
+  outline: 1px solid #58a6ff;
+  outline-offset: 0;
+}
+
+.bmxt-sync-link-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  margin: 2px 0 6px;
+  padding: 2px 0;
+  color: #8b949e;
+  font-size: 0.82em;
+  line-height: 1.3;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bmxt-sync-link-status-mark {
+  opacity: 0.7;
+}
+
+.bmxt-sync-link-status-body {
+  color: #c9d1d9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.bmxt-sync-handshake-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 6px;
+  padding: 4px 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bmxt-sync-handshake-bar-hint {
+  opacity: 0.85;
+  font-size: 0.85em;
+  margin-right: 4px;
+}
+
+.bmxt-sync-handshake-btn {
+  box-sizing: border-box;
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+  margin: 0;
+  border: 1px solid rgba(201, 209, 217, 0.28);
+  border-radius: 4px;
+  background: rgba(22, 27, 34, 0.92);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bmxt-sync-handshake-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.bmxt-sync-handshake-btn:not(:disabled):active {
+  background: rgba(48, 54, 61, 0.95);
+}
+
 .bmxt-extra-keys {
   display: flex;
   flex-wrap: wrap;

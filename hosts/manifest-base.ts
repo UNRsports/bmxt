@@ -19,10 +19,12 @@ const sharedPermissions = [
 export function hostPermissionsList(browser: HostBrowser): string[] {
   if (browser === "chrome") {
     // Chrome: favicon API + windows permission (required for chrome.windows.create popup).
+    // Family sync WebRTC lives in the BMXt prompt window only (no offscreen host).
     return ["favicon", ...sharedPermissions, "windows"]
   }
   // Firefox: no `favicon` permission; `windows` is not a valid Gecko permission string
   // (browser.windows still works under the WebExtensions API without declaring it).
+  // Family sync WebRTC lives in the BMXt prompt window only (no dedicated peer tab).
   return [...sharedPermissions]
 }
 
@@ -30,15 +32,19 @@ export function hostCommands(browser: HostBrowser) {
   // Chrome accepts `Shift+Alt+…`. Firefox MDN requires primary modifier first:
   // Ctrl|Alt|Command|MacCtrl, then optional Shift — e.g. `Alt+Shift+C`.
   // Same physical keys; string order differs or Gecko ignores the suggestion.
+  // Chrome: at most 4 `suggested_key` entries in `commands` (MV3 load fails otherwise).
+  // Slot 4 = handshake copy only (paste is normal prompt paste — no command).
   const chromeKeys = {
     launch: { default: "Shift+Alt+C", mac: "Shift+Alt+C" },
     reset: { default: "Shift+Alt+R", mac: "Shift+Alt+R" },
-    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" }
+    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" },
+    handshakeCopy: { default: "Shift+Alt+Y", mac: "Shift+Alt+Y" }
   }
   const firefoxKeys = {
     launch: { default: "Alt+Shift+C", mac: "Alt+Shift+C" },
     reset: { default: "Alt+Shift+R", mac: "Alt+Shift+R" },
-    toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" }
+    toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" },
+    handshakeCopy: { default: "Alt+Shift+Y", mac: "Alt+Shift+Y" }
   }
   const keys = browser === "chrome" ? chromeKeys : firefoxKeys
 
@@ -54,12 +60,17 @@ export function hostCommands(browser: HostBrowser) {
     suggested_key: keys.toggleFloat,
     description: "__MSG_commandToggleBmxtFloat__"
   }
+  const handshakeCopy = {
+    suggested_key: keys.handshakeCopy,
+    description: "__MSG_commandSyncHandshakeCopy__"
+  }
 
   if (browser === "chrome") {
     return {
       "launch-bmxt": { ...launch, global: true },
       "reset-bmxt": { ...reset, global: true },
-      "toggle-bmxt-float": { ...toggleFloat, global: true }
+      "toggle-bmxt-float": { ...toggleFloat, global: true },
+      "sync-handshake-copy": handshakeCopy
     }
   }
 
@@ -67,7 +78,8 @@ export function hostCommands(browser: HostBrowser) {
   return {
     "launch-bmxt": launch,
     "reset-bmxt": reset,
-    "toggle-bmxt-float": toggleFloat
+    "toggle-bmxt-float": toggleFloat,
+    "sync-handshake-copy": handshakeCopy
   }
 }
 

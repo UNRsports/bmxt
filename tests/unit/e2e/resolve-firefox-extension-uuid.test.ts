@@ -3,9 +3,9 @@ import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, it } from "node:test"
-import { resolveFirefoxExtensionUuid } from "../../../tests/e2e/resolve-firefox-extension-uuid.ts"
+import { resolveFirefoxExtensionUuid } from "webxdriver"
 
-describe("resolveFirefoxExtensionUuid", () => {
+describe("resolveFirefoxExtensionUuid (via webxdriver)", () => {
   it("reads gecko.id → UUID from prefs.js", async () => {
     const dir = mkdtempSync(join(tmpdir(), "bmxt-uuid-"))
     const uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"

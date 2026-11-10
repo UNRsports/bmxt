@@ -40,9 +40,10 @@ export const NEW_GROUP_LIST_SENTINEL = -1
 
 import type { ActionMenuItemId, GroupEditMenuActionId, SelectKind } from "./tab-picker-overlay-types"
 
-/** `:` コマンドモードの Tab 補完候補（レガシー; tabs ピッカーでは → メニューに移行） */
+/** `:` コマンドモードの Tab 補完候補 */
 export const TAB_PICKER_COMMAND_COMPLETIONS = [
   "move",
+  "move --close",
   "close",
   "group",
   "newwindow",

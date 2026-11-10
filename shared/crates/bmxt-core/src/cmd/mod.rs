@@ -21,6 +21,8 @@ pub mod translate;
 
 pub mod tutorial;
 
+pub mod sync;
+
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
@@ -47,6 +49,7 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "browse" => browse::run(args),
         "setting" => setting::run(args),
         "tutorial" => tutorial::run(args),
+        "sync" => sync::run(args),
         _ => crate::ir::msgs(vec![crate::ir::msg_param(
             "cmd.error.internalUnhandled",
             "command",

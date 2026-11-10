@@ -56,4 +56,37 @@ pub enum UiAction {
     SnapshotSave {
     line: String,
     },
+    #[serde(rename = "sync_accept")]
+    SyncAccept {
+    code: String,
+    },
+    #[serde(rename = "sync_answer")]
+    SyncAnswer {
+    code: String,
+    },
+    #[serde(rename = "sync_connect")]
+    SyncConnect {
+    device_id: String,
+    },
+    #[serde(rename = "sync_members")]
+    SyncMembers,
+    #[serde(rename = "sync_offer")]
+    SyncOffer,
+    #[serde(rename = "sync_open")]
+    SyncOpen {
+    device_id: String,
+    payload: String,
+    },
+    #[serde(rename = "sync_pair")]
+    SyncPair {
+    invite: String,
+    },
+    #[serde(rename = "sync_ping")]
+    SyncPing {
+    device_id: String,
+    },
+    #[serde(rename = "sync_setup")]
+    SyncSetup,
+    #[serde(rename = "sync_status")]
+    SyncStatus,
 }

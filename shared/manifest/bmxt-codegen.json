@@ -74,7 +74,7 @@
       "module": "search",
       "canonicalName": "search",
       "aliases": [],
-      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [<pattern>] | search -exit -list | search help",
+      "usagePrimary": "search -list [--all|--history|--bookmark|--page|--snapshot] [--unlimit] [--device <id>|--peers] [<pattern>] | search -exit -list | search help",
       "subcommands": [
         {
           "head": "-list",
@@ -84,7 +84,9 @@
             "--bookmark",
             "--page",
             "--snapshot",
-            "--unlimit"
+            "--unlimit",
+            "--device",
+            "--peers"
           ],
           "tail": "rest"
         },
@@ -135,14 +137,16 @@
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
+      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": [
-            "-url"
+            "-url",
+            "--device",
+            "--peers"
           ],
-          "tail": "none"
+          "tail": "rest"
         },
         {
           "head": "-exit",
@@ -165,6 +169,10 @@
         {
           "head": "-nowurl",
           "tail": "none"
+        },
+        {
+          "head": "-send",
+          "tail": "rest"
         },
         {
           "head": "help",
@@ -323,6 +331,24 @@
           "head": "help",
           "tail": "none"
         }
+      ]
+    },
+    {
+      "module": "sync",
+      "canonicalName": "sync",
+      "aliases": [],
+      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+      "subcommands": [
+        { "head": "-setup", "tail": "none" },
+        { "head": "-status", "tail": "none" },
+        { "head": "-pair", "tail": "rest" },
+        { "head": "-members", "tail": "none" },
+        { "head": "-connect", "tail": "rest" },
+        { "head": "-offer", "tail": "none" },
+        { "head": "-answer", "tail": "rest" },
+        { "head": "-accept", "tail": "rest" },
+        { "head": "-ping", "tail": "rest" },
+        { "head": "help", "tail": "none" }
       ]
     }
   ],
@@ -551,7 +577,9 @@
       "rustVariant": "TabsList",
       "shape": "record",
       "fields": {
-        "show_url": "string"
+        "show_url": "string",
+        "device_scope": "string",
+        "device_id": "string"
       },
       "tsHandlerFile": "tabs-list",
       "tsHandlerExport": "applyTabsListEffect"
@@ -658,6 +686,75 @@
       "kind": "picker_pass",
       "rustVariant": "PickerPass",
       "shape": "unit"
+    },
+    {
+      "kind": "sync_setup",
+      "rustVariant": "SyncSetup",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_status",
+      "rustVariant": "SyncStatus",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_pair",
+      "rustVariant": "SyncPair",
+      "shape": "record",
+      "fields": {
+        "invite": "string"
+      }
+    },
+    {
+      "kind": "sync_members",
+      "rustVariant": "SyncMembers",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_offer",
+      "rustVariant": "SyncOffer",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_answer",
+      "rustVariant": "SyncAnswer",
+      "shape": "record",
+      "fields": {
+        "code": "string"
+      }
+    },
+    {
+      "kind": "sync_accept",
+      "rustVariant": "SyncAccept",
+      "shape": "record",
+      "fields": {
+        "code": "string"
+      }
+    },
+    {
+      "kind": "sync_open",
+      "rustVariant": "SyncOpen",
+      "shape": "record",
+      "fields": {
+        "device_id": "string",
+        "payload": "string"
+      }
+    },
+    {
+      "kind": "sync_connect",
+      "rustVariant": "SyncConnect",
+      "shape": "record",
+      "fields": {
+        "device_id": "string"
+      }
+    },
+    {
+      "kind": "sync_ping",
+      "rustVariant": "SyncPing",
+      "shape": "record",
+      "fields": {
+        "device_id": "string"
+      }
     }
   ]
 }

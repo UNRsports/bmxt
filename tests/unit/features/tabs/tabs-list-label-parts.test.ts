@@ -12,14 +12,21 @@ describe("plainLabelPartsForTabPickerRow", () => {
         label: "ignored picker label",
         windowTitle: "Win",
         usesActiveTabTitle: true,
-        focused: true
+        focused: true,
+        deviceId: null,
+        remote: false,
+        peerWindowId: null
       },
       {
         kind: "group",
         windowId: 1,
         groupId: 2,
         label: "【Work】",
-        color: "blue"
+        color: "blue",
+        deviceId: null,
+        remote: false,
+        peerWindowId: null,
+        peerGroupId: null
       },
       {
         kind: "tab",
@@ -30,7 +37,12 @@ describe("plainLabelPartsForTabPickerRow", () => {
         title: "Tab",
         url: "https://example.com",
         faviconSrc: null,
-        active: true
+        active: true,
+        deviceId: null,
+        remote: false,
+        peerTabId: null,
+        peerWindowId: null,
+        peerGroupId: null
       }
     ]
 

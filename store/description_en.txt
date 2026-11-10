@@ -45,6 +45,10 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 
 
 ◆Version history
+0.9.0:
+- Fixed filter-search behavior in the tab command picker
+- Implemented cross-process collaboration via WebRTC
+
 0.8.7:
 - Implemented command descriptions in the candidate menu
 - Implemented a tutorial for learning how to use BMXt
@@ -165,8 +169,10 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `clear` | Clear logs |
 | `exit` | Close the active terminal session; when it is the last session, close the BMXt window and clear process-scoped state |
 | `tab` | Show available options, then restore the prompt to `tab ` (with a trailing space) for continued input |
-| `tab -list [-url]` | List open tabs as plain tree (IDs included); `-url` adds URLs |
+| `tab -list [-url] [--device <id>\|--peers]` | List open tabs as plain tree (IDs included); `-url` adds URLs; `--peers` merges connected Family peers |
 | `tab -list [-url] | browse` | Open tab picker column; search, multi-select `#`, bulk modes; `/` searches titles, Enter highlights, `n` jumps matches |
+| `tab -list \| tab -send <deviceId> [--close]` | Copy listed tabs (group titles preserved) to a connected peer; `--close` closes only successfully opened local source tabs |
+| `tab -send <deviceId> <url…> [--group <title>] [--close]` | Send URLs to a connected Family peer (command bus); `--close` closes successful local sources |
 | `tab -exit -list` | Close tab picker column in this session (including `group new` picker) |
 | `tab -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved setting |
 | `tab -moveurl <url>` | Focus a tab with the given URL or open a new tab (http/https) |
@@ -185,13 +191,13 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `nav -exit` | Fully disarm nav (turn the overlay **OFF** with **Alt** first) |
 | `nav -windowclose` | Close the window that contains the target tab after y/n confirm (never the BMXt window) |
 | `search` | Print available options; Enter alone restores the prompt to `search ` for `-list` |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [<pattern>]` | Plain search hit list (default scopes = `--all`). Case-insensitive substring (no regex in v1) |
+| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | Plain search hit list (default scopes = `--all`). `--peers` merges connected Family peers. Case-insensitive substring (no regex in v1) |
 | `search -list … | browse` | Search picker column; in-picker progress; detail view and `[history]` open-target tree |
 | `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
 | `group new` / `group new <tabId> …` | Create a tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings |
-| `setting -list | browse` | Open settings picker column; commit with `> save setting` |
+| `setting -list | browse` | Open settings picker column (UI locale, appearance, storage, snapshot storage, Family sync display name + setup guide, export/import zip); commit appearance/locale with `> save setting` |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows setting snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (tmux-style terminal sessions in one BMXt window) |
@@ -202,6 +208,14 @@ BMXt is an experimental / trial implementation. UNRsports (the developer) is not
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session |
 | `session <n>` | Switch to terminal session number n (1-based) |
+| `sync` | Print usage and restore the prompt to `sync ` (Family local sync via WebRTC DataChannel) |
+| `sync -setup` | Guided wizard: Family → role → COPY / paste handshake codes (recommended for first join) |
+| `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; same wizard COPY / paste) |
+| `sync -status` | Device id, Family, members, WebRTC connection state |
+| `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite |
+| `sync -members` | List Family roster + discovered devices |
+| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Advanced CLI handshake (`bmxt-rtc1.`); prefer the setup/connect wizard COPY + paste |
+| `sync -ping <deviceId>` | Ping a connected peer over the DataChannel |
 | `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
 | `translate -on` | Enable translation assist (nav typing preview under the prompt) |
 | `translate -off` | Disable translation assist |

@@ -19,11 +19,19 @@
   },
   {
     "line": "tab -list",
-    "expect": { "ty": "effects", "effects": [{ "kind": "tabs_list", "show_url": "false" }] }
+    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list" } }
   },
   {
     "line": "tab -list -url",
-    "expect": { "ty": "effects", "effects": [{ "kind": "tabs_list", "show_url": "true" }] }
+    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list -url" } }
+  },
+  {
+    "line": "tab -list --peers",
+    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list --peers" } }
+  },
+  {
+    "line": "tab -list --device peerDev1 -url",
+    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list --device peerDev1 -url" } }
   },
   { "line": "tab -nowurl", "expect": { "ty": "effects", "effects": [{ "kind": "tabs_nu" }] } },
   {

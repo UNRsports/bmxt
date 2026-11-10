@@ -22,6 +22,7 @@ import {
   repickSnapshotVaultDirectory
 } from "../../snapshot/snapshot-vault-persistence"
 import { formatSnapshotVaultDisplayName } from "../../snapshot/snapshot-vault-layout"
+import { storageFsaUnavailableLine } from "../../setting/fsa-unavailable-message"
 import {
   activateExternalUiSettingsStorage,
   activateInternalUiSettingsStorage,
@@ -37,6 +38,8 @@ import {
 import type { UiSettings } from "../../setting/settings"
 import { tSetting } from "../../setting/i18n/ns/setting"
 import { tError } from "../../setting/i18n/ns/error"
+import { expandSyncLogLines } from "../../sync/facade/expand-sync-log.ts"
+import { getSyncService } from "../../sync/facade/sync-service.ts"
 
 export type UseSettingPickerShellOptions = {
   sessionId: string
@@ -239,7 +242,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -298,7 +301,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -343,7 +346,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -386,7 +389,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         if (!isFileSystemAccessAvailable()) {
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.unavailable", options.uiLocale)
+            storageFsaUnavailableLine(options.uiLocale)
           ])
           return
         }
@@ -442,6 +445,23 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           return
         }
       }
+      if (row.id === "sync-device-name") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerGoToView("syncDeviceName", current)
+        )
+        return
+      }
+      if (row.id === "sync-setup-guide") {
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.picker.syncSetupGuide.line1", options.uiLocale),
+          tSetting("setting.picker.syncSetupGuide.line2", options.uiLocale),
+          tSetting("setting.picker.syncSetupGuide.line3", options.uiLocale),
+          tSetting("setting.picker.syncSetupGuide.line4", options.uiLocale)
+        ])
+        return
+      }
       if (row.id === "export") {
         try {
           const { filename } = await exportUiSettingsZip(current.draft)
@@ -490,6 +510,14 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
 
   const onSettingPickerApplyEdit = useCallback(
     async (field: SettingEditField, value: string) => {
+      if (field === "sync-display-name") {
+        const result = await getSyncService().setDisplayName(value)
+        await options.appendLogLines([
+          "setting -list",
+          ...expandSyncLogLines(result.lines, options.uiLocale)
+        ])
+        return
+      }
       options.setSettingListPicker(options.sessionId, (current) => {
         if (!current) {
           return null

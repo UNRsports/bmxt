@@ -167,7 +167,7 @@ describe("WASM boundary — run / dispatch fixtures via TS host", () => {
 
   it("parses wasmRun JSON for clear / tab -list", () => {
     assert.equal(parseBundleTy(wasmRun("clear", "en")), "effects")
-    assert.equal(parseBundleTy(wasmRun("tab -list", "en")), "effects")
+    assert.equal(parseBundleTy(wasmRun("tab -list", "en")), "ui")
   })
 })
 

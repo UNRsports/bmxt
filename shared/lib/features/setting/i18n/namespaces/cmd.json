@@ -228,8 +228,8 @@
     "en": "Search list picker is opened with: search -list … | browse"
   },
   "cmd.search.usage.line1": {
-    "ja": "usage: search -list [<pattern>]   — 検索結果をプレーン一覧（既定は --all 相当）",
-    "en": "usage: search -list [<pattern>]   — plain search hits (default scopes = --all)"
+    "ja": "usage: search -list [--device <id>|--peers] [<pattern>] — 検索結果をプレーン一覧（既定は --all 相当）",
+    "en": "usage: search -list [--device <id>|--peers] [<pattern>] — plain search hits (default scopes = --all)"
   },
   "cmd.search.usage.line2": {
     "ja": "       search -list … — プレーン出力。列 UI: search -list … | browse",
@@ -484,8 +484,8 @@
     "en": "tab -setting is handled from the BMXt prompt with: tab -setting -page-active --auto or --manual"
   },
   "cmd.tabs.usage.line1": {
-    "ja": "usage: tab -list [-url]   — タブ列挙（`-url` は URL）。列 UI は `tab -list | browse`",
-    "en": "usage: tab -list [-url]   — list tabs (-url: URLs). Column UI: `tab -list | browse`"
+    "ja": "usage: tab -list [-url] [--device <id>|--peers] — タブ列挙（`-url` は URL）。列 UI は `| browse`",
+    "en": "usage: tab -list [-url] [--device <id>|--peers] — list tabs (-url: URLs). Column UI: `| browse`"
   },
   "cmd.tabs.usage.line2": {
     "ja": "       tab -exit -list — この BMXt ペインのタブピッカーを閉じる",
@@ -502,6 +502,18 @@
   "cmd.tabs.usage.line5": {
     "ja": "       tab -nowurl       — 現在のタブ URL を表示",
     "en": "       tab -nowurl       — show current tab URL"
+  },
+  "cmd.tabs.usage.line6": {
+    "ja": "       tab -send <deviceId> <url…> [--group <title>] [--close] — 接続ピアへタブ送信（--close は成功分の元を閉じる）",
+    "en": "       tab -send <deviceId> <url…> [--group <title>] [--close] — send tabs to a connected peer (--close closes successful sources)"
+  },
+  "cmd.tabs.error.sendUsage": {
+    "ja": "error: usage: tab -send <deviceId> <url…> [--group <title>] [--close]",
+    "en": "error: usage: tab -send <deviceId> <url…> [--group <title>] [--close]"
+  },
+  "cmd.tabs.error.invalidDeviceId": {
+    "ja": "error: deviceId が不正です",
+    "en": "error: invalid deviceId"
   },
   "cmd.translate.error.internal": {
     "ja": "error: 不明な translate オプション (internal): {option}",
@@ -574,5 +586,585 @@
   "cmd.tutorial.skipped": {
     "ja": "チュートリアルをスキップしました。再開は `tutorial` です。",
     "en": "Tutorial skipped. Restart anytime with `tutorial`."
+  },
+  "cmd.sync.usage.line0": {
+    "ja": "使い方: sync -setup — ウィザードで接続セットアップ（推奨）",
+    "en": "usage: sync -setup — connection setup wizard (recommended)"
+  },
+  "cmd.sync.usage.line1": {
+    "ja": "  sync -status — デバイス / Family / 接続状態",
+    "en": "  sync -status — device / Family / connection state"
+  },
+  "cmd.sync.usage.line2": {
+    "ja": "  sync -pair [invite] — Family 招待の表示または参加",
+    "en": "  sync -pair [invite] — show or join a Family invite"
+  },
+  "cmd.sync.usage.line3": {
+    "ja": "  sync -members — Family 名簿 / 発見済みピア",
+    "en": "  sync -members — Family roster / discovered peers"
+  },
+  "cmd.sync.usage.line3b": {
+    "ja": "  sync -connect <deviceId> — 名簿メンバーへ再握手（役割自動・ウィザード）",
+    "en": "  sync -connect <deviceId> — reconnect to a roster member (auto role · wizard)"
+  },
+  "cmd.sync.usage.line4": {
+    "ja": "  sync -offer — WebRTC オファーコードを作成（相手に渡す）",
+    "en": "  sync -offer — create a WebRTC offer code (give to peer)"
+  },
+  "cmd.sync.usage.line5": {
+    "ja": "  sync -answer <code> — オファーを受理しアンサーコードを返す",
+    "en": "  sync -answer <code> — accept an offer; print answer code"
+  },
+  "cmd.sync.usage.line6": {
+    "ja": "  sync -accept <code> — アンサーを適用して DataChannel を確立",
+    "en": "  sync -accept <code> — apply answer and establish DataChannel"
+  },
+  "cmd.sync.usage.line7": {
+    "ja": "  sync -ping <deviceId> — 接続済みピアへ ping",
+    "en": "  sync -ping <deviceId> — ping a connected peer"
+  },
+  "cmd.sync.usage.line8": {
+    "ja": "  タブ送信は `tab -send <deviceId> …`（パイプ: `tab -list | tab -send <deviceId> [--close]`）",
+    "en": "  Tab send: `tab -send <deviceId> …` (pipe: `tab -list | tab -send <deviceId> [--close]`)"
+  },
+  "cmd.sync.error.openMovedToTabSend": {
+    "ja": "error: `sync -open` は廃止しました。`tab -send <deviceId> …` を使ってください。",
+    "en": "error: `sync -open` was removed. Use `tab -send <deviceId> …` instead."
+  },
+  "cmd.sync.runHint": {
+    "ja": "ヒント: まずは両ブラウザで `sync -setup`（ウィザード）。長い握手コードはウィザードの COPY / 貼付欄を使ってください。",
+    "en": "Hint: start with `sync -setup` on both browsers (wizard). Use the wizard COPY / paste fields for long handshake codes."
+  },
+  "cmd.sync.setup.started": {
+    "ja": "接続セットアップを開始します（途中で cancel で中止）。",
+    "en": "Starting connection setup (type cancel anytime to abort)."
+  },
+  "cmd.sync.setup.cancelHint": {
+    "ja": "中止: cancel / n",
+    "en": "Cancel: cancel / n"
+  },
+  "cmd.sync.setup.cancelled": {
+    "ja": "接続セットアップを中止しました。",
+    "en": "Connection setup cancelled."
+  },
+  "cmd.sync.setup.invalidChoice": {
+    "ja": "入力が無効です。番号またはキーワードで選んでください。",
+    "en": "Invalid input. Choose by number or keyword."
+  },
+  "cmd.sync.setup.invalidInvite": {
+    "ja": "招待コードが無効です。bmxt1. で始まるコード本体だけをプロンプトへ貼り付けてください（コマンド名は不要）。",
+    "en": "Invalid invite. Paste only the bmxt1.… code body at the prompt (no command name)."
+  },
+  "cmd.sync.setup.invalidRtcCode": {
+    "ja": "握手コードが無効です。bmxt-rtc1. で始まるコード本体だけをプロンプトへ貼り付けてください（コマンド名は不要）。",
+    "en": "Invalid handshake code. Paste only the bmxt-rtc1.… code body at the prompt (no command name)."
+  },
+  "cmd.sync.setup.family.intro": {
+    "ja": "Family を選びます:",
+    "en": "Choose a Family step:"
+  },
+  "cmd.sync.setup.family.create": {
+    "ja": "  1 / create — 新しい Family を作り、招待コードを表示する",
+    "en": "  1 / create — create a new Family and show the invite"
+  },
+  "cmd.sync.setup.family.join": {
+    "ja": "  2 / join — 相手の招待コードを貼って参加する",
+    "en": "  2 / join — paste the peer invite to join"
+  },
+  "cmd.sync.setup.family.continue": {
+    "ja": "  3 / continue — いまの Family のまま続行する",
+    "en": "  3 / continue — keep the current Family"
+  },
+  "cmd.sync.setup.joinPrompt": {
+    "ja": "相手の Family 招待コード本体（bmxt1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer Family invite body (bmxt1.…) at the prompt and press Enter:"
+  },
+  "cmd.sync.setup.backToFamily": {
+    "ja": "Family 選択に戻ります。",
+    "en": "Returning to the Family step."
+  },
+  "cmd.sync.setup.retryFamily": {
+    "ja": "Family の準備に失敗しました。もう一度選んでください。",
+    "en": "Family setup failed. Please choose again."
+  },
+  "cmd.sync.setup.familyReady": {
+    "ja": "Family を作成しました。先に Copy（またはショートカット）で招待を相手へ渡し、相手が参加してから役割を選んでください。",
+    "en": "Family created. Copy (or the shortcut) the invite to your peer first; after they join, choose roles."
+  },
+  "cmd.sync.setup.familyReadyJoined": {
+    "ja": "Family に参加しました。次に役割を選びます。",
+    "en": "Joined the Family. Next, choose your role."
+  },
+  "cmd.sync.setup.role.intro": {
+    "ja": "役割を選びます:",
+    "en": "Choose your role:"
+  },
+  "cmd.sync.setup.role.offer": {
+    "ja": "  1 / offer — この端末で接続を始める（オファーを作り、相手のアンサーを待つ）",
+    "en": "  1 / offer — start from this device (create offer, wait for answer)"
+  },
+  "cmd.sync.setup.role.answer": {
+    "ja": "  2 / answer — 相手のオファーを受け取る（アンサーを作り相手へ返す）",
+    "en": "  2 / answer — receive the peer offer (create answer and return it)"
+  },
+  "cmd.sync.setup.pasteOffer": {
+    "ja": "相手のオファーコード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer offer code body (bmxt-rtc1.…) at the prompt and press Enter:"
+  },
+  "cmd.sync.setup.pasteAnswer": {
+    "ja": "相手のアンサーコード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer answer code body (bmxt-rtc1.…) at the prompt and press Enter:"
+  },
+  "cmd.sync.setup.offerReady": {
+    "ja": "Copy（またはショートカット）でオファーをクリップボードへ。相手はプロンプトへ貼付して Enter。次に相手のアンサーを待ちます。",
+    "en": "Copy (or the shortcut) the offer to the clipboard. The peer pastes it at their prompt and presses Enter. Then wait for their answer."
+  },
+  "cmd.sync.setup.answerReady": {
+    "ja": "Copy（またはショートカット）でアンサーをクリップボードへ。相手はプロンプトへ貼付して Enter すると接続完了です。",
+    "en": "Copy (or the shortcut) the answer to the clipboard. The peer pastes it at their prompt and presses Enter to finish."
+  },
+  "cmd.sync.setup.done": {
+    "ja": "接続セットアップが完了しました。状態は sync -status で確認できます。",
+    "en": "Connection setup finished. Check status with sync -status."
+  },
+  "cmd.sync.setup.acceptRetryHint": {
+    "ja": "同じアンサーの再貼付はできません。接続済みなら sync -status を確認し、未接続なら両側で sync -setup からやり直してください。",
+    "en": "The same answer cannot be pasted again. If already connected, check sync -status; otherwise restart sync -setup on both sides."
+  },
+  "cmd.sync.setup.compoundBlocked": {
+    "ja": "sync -setup は対話式のため、複合コマンドでは使えません。単独で実行してください。",
+    "en": "sync -setup is interactive and cannot run in a compound command. Run it alone."
+  },
+  "cmd.sync.error.tooManyArgs": {
+    "ja": "error: 引数が多すぎます",
+    "en": "error: too many arguments"
+  },
+  "cmd.sync.error.unknownOption": {
+    "ja": "error: 不明な sync オプション: {option}",
+    "en": "error: unknown sync option: {option}"
+  },
+  "cmd.sync.error.inviteTooLong": {
+    "ja": "error: 招待トークンが長すぎます",
+    "en": "error: invite token is too long"
+  },
+  "cmd.sync.error.invalidInvite": {
+    "ja": "error: 招待トークンが不正です",
+    "en": "error: invalid invite token"
+  },
+  "cmd.sync.error.invalidDeviceId": {
+    "ja": "error: deviceId が不正です",
+    "en": "error: invalid deviceId"
+  },
+  "cmd.sync.error.openUsage": {
+    "ja": "error: usage: sync -open <deviceId> <url…> [--group <title>] [--close]",
+    "en": "error: usage: sync -open <deviceId> <url…> [--group <title>] [--close]"
+  },
+  "cmd.sync.status.device": {
+    "ja": "device: {name} ({browser}) id={deviceId}",
+    "en": "device: {name} ({browser}) id={deviceId}"
+  },
+  "cmd.sync.status.family": {
+    "ja": "family: {familyId}",
+    "en": "family: {familyId}"
+  },
+  "cmd.sync.status.noFamily": {
+    "ja": "family: （未作成 — `sync -pair` で作成）",
+    "en": "family: (none — create with `sync -pair`)"
+  },
+  "cmd.sync.status.membersCount": {
+    "ja": "members: {count}",
+    "en": "members: {count}"
+  },
+  "cmd.sync.status.connectionsEmpty": {
+    "ja": "connections: （なし — `sync -connect <deviceId>`）",
+    "en": "connections: (none — `sync -connect <deviceId>`)"
+  },
+  "cmd.sync.status.connection": {
+    "ja": "connection: {deviceId} → {state}",
+    "en": "connection: {deviceId} → {state}"
+  },
+  "cmd.sync.status.inviteHint": {
+    "ja": "invite: `sync -pair` で表示（平文の預かり先は作りません）",
+    "en": "invite: show with `sync -pair` (zero custody — no plaintext vault)"
+  },
+  "cmd.sync.status.transportHint": {
+    "ja": "transport: WebRTC DataChannel（プロンプト窓宿主・host ICE のみ・コピペ握手）。窓を閉じる／明示再握手まで維持。FSA 作業ディレクトリは使いません。",
+    "en": "transport: WebRTC DataChannel (prompt-window host · host ICE only · copy-paste handshake). Held until the window closes or you re-handshake. No FSA workdir."
+  },
+  "cmd.sync.pair.created": {
+    "ja": "Family 招待を用意しました。Copy（またはショートカット）でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",
+    "en": "Family invite ready. Copy (or the shortcut) it to the clipboard; the peer pastes at their prompt or sync -setup join step."
+  },
+  "cmd.sync.pair.useCopy": {
+    "ja": "招待はログに全文を出しません。下の Copy ボタン（またはショートカット）を使ってください。",
+    "en": "The invite is not printed in full here. Use the Copy button below (or the shortcut)."
+  },
+  "cmd.sync.pair.noFamily": {
+    "ja": "Family を作成できませんでした。",
+    "en": "Could not create Family."
+  },
+  "cmd.sync.pair.invalidInvite": {
+    "ja": "招待トークンを解析できませんでした。",
+    "en": "Could not parse invite token."
+  },
+  "cmd.sync.pair.joinFailed": {
+    "ja": "Family への参加に失敗しました。",
+    "en": "Failed to join Family."
+  },
+  "cmd.sync.pair.invite": {
+    "ja": "invite: {invite}",
+    "en": "invite: {invite}"
+  },
+  "cmd.sync.pair.qr": {
+    "ja": "qr-payload: {payload}",
+    "en": "qr-payload: {payload}"
+  },
+  "cmd.sync.pair.joined": {
+    "ja": "Family に参加しました: {familyId}",
+    "en": "Joined Family: {familyId}"
+  },
+  "cmd.sync.pair.peer": {
+    "ja": "発見: {name}（名簿 / 手動キャッシュへ記録）",
+    "en": "Discovered: {name} (recorded in roster / manual cache)"
+  },
+  "cmd.sync.members.header": {
+    "ja": "Family メンバー:",
+    "en": "Family members:"
+  },
+  "cmd.sync.members.empty": {
+    "ja": "（メンバーなし — `-dir` と `-push` のあと再表示）",
+    "en": "(no members — try again after `-dir` and `-push`)"
+  },
+  "cmd.sync.members.row": {
+    "ja": "  {name}  id={deviceId}  {browser}  updated={updatedAt}",
+    "en": "  {name}  id={deviceId}  {browser}  updated={updatedAt}"
+  },
+  "cmd.sync.members.discovered": {
+    "ja": "  (discovered/{source}) {name}  id={deviceId}",
+    "en": "  (discovered/{source}) {name}  id={deviceId}"
+  },
+  "cmd.sync.open.noUrls": {
+    "ja": "error: 有効な http(s) URL がありません",
+    "en": "error: no valid http(s) URLs"
+  },
+  "cmd.sync.open.done": {
+    "ja": "遠隔 open: {detail}",
+    "en": "remote open: {detail}"
+  },
+  "cmd.sync.open.closed": {
+    "ja": "送信元で閉じたタブ: {count}",
+    "en": "closed source tabs: {count}"
+  },
+  "cmd.sync.list.noConnectedPeers": {
+    "ja": "接続中の Family ピアがありません（`sync -status` を確認）。ローカルのみ表示します。",
+    "en": "No connected Family peers (`sync -status`). Showing local results only."
+  },
+  "cmd.sync.list.peerFailed": {
+    "ja": "ピア一覧に失敗: {deviceId} ({detail})",
+    "en": "Peer list failed: {deviceId} ({detail})"
+  },
+  "cmd.sync.list.requiresUiHost": {
+    "ja": "error: ピア横断の一覧は BMXt ウィンドウ上でのみ実行できます（接続中の DataChannel を参照できません）。",
+    "en": "error: cross-device lists must run in the BMXt window (cannot see the live sync DataChannel)."
+  },
+  "cmd.sync.connect.state": {
+    "ja": "接続状態: {state}",
+    "en": "connection state: {state}"
+  },
+  "cmd.sync.connect.ping": {
+    "ja": "ping: {detail}",
+    "en": "ping: {detail}"
+  },
+  "cmd.sync.connect.badDeviceId": {
+    "ja": "error: deviceId が不正です（自分自身は指定できません）",
+    "en": "error: invalid deviceId (cannot target yourself)"
+  },
+  "cmd.sync.connect.unknownMember": {
+    "ja": "error: 名簿／発見キャッシュにない deviceId です。先に sync -pair / sync -members を確認してください。",
+    "en": "error: deviceId is not in the roster or discovery cache. Check sync -pair / sync -members first."
+  },
+  "cmd.sync.connect.role": {
+    "ja": "役割: {role}（deviceId 順で自動決定）",
+    "en": "role: {role} (auto from deviceId order)"
+  },
+  "cmd.sync.connect.peer": {
+    "ja": "相手: {detail}",
+    "en": "peer: {detail}"
+  },
+  "cmd.sync.connect.waitOffer": {
+    "ja": "相手のオファーコードを待ちます。相手が Copy したコードを、このプロンプトへ貼り付けて Enter してください。",
+    "en": "Waiting for the peer offer. Paste the code they Copied into this prompt and press Enter."
+  },
+  "cmd.sync.connect.copyThenWaitAnswer": {
+    "ja": "Copy（またはショートカット）でオファーを渡し、相手のアンサーコード本体をこのプロンプトへ貼り付けて Enter。",
+    "en": "Copy (or the shortcut) the offer to your peer, then paste their answer code body here and press Enter."
+  },
+  "cmd.sync.connect.copyThenWaitPeerAccept": {
+    "ja": "Copy（またはショートカット）でアンサーを相手へ渡してください。相手がプロンプトへ貼ると接続完了です。",
+    "en": "Copy (or the shortcut) the answer to your peer. Connection completes when they paste it at their prompt."
+  },
+  "cmd.sync.connect.pasteAtPrompt": {
+    "ja": "相手の握手コード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
+    "en": "Paste only the peer handshake code body (bmxt-rtc1.…) at the prompt and press Enter:"
+  },
+  "cmd.sync.connect.copied": {
+    "ja": "握手コードをクリップボードへコピーしました。相手のプロンプトへ貼ってもらってください。",
+    "en": "Handshake code copied. Have the peer paste it at their prompt."
+  },
+  "cmd.sync.connect.copiedInvite": {
+    "ja": "Family 招待をクリップボードへコピーしました。相手のプロンプトへ貼ってもらってください。",
+    "en": "Family invite copied. Have the peer paste it at their prompt."
+  },
+  "cmd.sync.connect.copyIdle": {
+    "ja": "コピーできるコードがありません（先に sync -setup / sync -pair / sync -connect で作成してください）。",
+    "en": "No code to copy (create one with sync -setup / sync -pair / sync -connect first)."
+  },
+  "cmd.sync.connect.clipboardWriteFailed": {
+    "ja": "クリップボードへ書けませんでした。下のコード行を選択してコピーしてください（通常は不要）。",
+    "en": "Could not write to the clipboard. Select the code line below as a last resort."
+  },
+  "cmd.sync.connect.copyButton": {
+    "ja": "Copy",
+    "en": "Copy"
+  },
+  "cmd.sync.connect.barLabel": {
+    "ja": "同期コードのコピー（招待／握手）",
+    "en": "Copy sync code (invite / handshake)"
+  },
+  "cmd.sync.connect.barHintCopy": {
+    "ja": "渡す握手コードあり: {name}（{role}）— Copy して相手へ",
+    "en": "Handshake ready: {name} ({role}) — Copy for your peer"
+  },
+  "cmd.sync.connect.barHintCopyInvite": {
+    "ja": "Family 招待の準備完了 — Copy して相手へ渡す",
+    "en": "Family invite ready — Copy for your peer"
+  },
+  "cmd.sync.connect.barHintPastePrompt": {
+    "ja": "受信待ち: {name}（{role}）— 相手のコードをプロンプトへ貼付",
+    "en": "Waiting: {name} ({role}) — paste their code at the prompt"
+  },
+  "cmd.sync.connect.barHintPasteInvite": {
+    "ja": "Family 招待の受信待ち — 相手が Copy した bmxt1.… をプロンプトへ貼付",
+    "en": "Waiting for Family invite — paste the bmxt1.… they Copied at the prompt"
+  },
+  "cmd.sync.name.invalid": {
+    "ja": "error: 表示名が不正です",
+    "en": "error: invalid display name"
+  },
+  "cmd.sync.name.ok": {
+    "ja": "表示名を更新しました: {name}",
+    "en": "Display name updated: {name}"
+  },
+  "cmd.sync.error.invalidRtcCode": {
+    "ja": "WebRTC 握手コードが不正です（bmxt-rtc1. で始まる必要があります）。",
+    "en": "Invalid WebRTC handshake code (must start with bmxt-rtc1.)."
+  },
+  "cmd.sync.rtc.offerCreated": {
+    "ja": "オファーコードを作成しました。Copy で渡し、相手はプロンプトへコード本体だけを貼って Enter。",
+    "en": "Offer code created. Copy it; the peer pastes only the code body at their prompt and presses Enter."
+  },
+  "cmd.sync.rtc.answerCreated": {
+    "ja": "アンサーコードを作成しました。Copy で渡し、相手はプロンプトへコード本体だけを貼って Enter。",
+    "en": "Answer code created. Copy it; the peer pastes only the code body at their prompt and presses Enter."
+  },
+  "cmd.sync.rtc.code": {
+    "ja": "{code}",
+    "en": "{code}"
+  },
+  "cmd.sync.rtc.peer": {
+    "ja": "ピア: {name}",
+    "en": "peer: {name}"
+  },
+  "cmd.sync.rtc.connected": {
+    "ja": "DataChannel 接続を確立しました: {name}",
+    "en": "DataChannel connected: {name}"
+  },
+  "cmd.sync.rtc.pingDeferred": {
+    "ja": "直後の ping は未応答でも接続自体は完了しています。必要なら後で sync -ping を試してください。",
+    "en": "Immediate ping may fail even though the channel is up. Try sync -ping later if needed."
+  },
+  "cmd.sync.rtc.encodeFailed": {
+    "ja": "握手コードの生成に失敗しました。",
+    "en": "Failed to encode handshake code."
+  },
+  "cmd.sync.rtc.invalidCode": {
+    "ja": "握手コードを解読できませんでした（Family 不一致または破損）。",
+    "en": "Could not decode handshake code (Family mismatch or corrupt)."
+  },
+  "cmd.sync.rtc.familyMismatch": {
+    "ja": "握手コードの Family が一致しません。先に sync -pair で揃えてください。",
+    "en": "Handshake code Family does not match. Align with sync -pair first."
+  },
+  "cmd.sync.rtc.acceptFailed": {
+    "ja": "WebRTC 握手の適用に失敗しました（セッション期限切れの可能性）。もう一度 -offer からやり直してください。",
+    "en": "Failed to apply WebRTC handshake (session may have expired). Start again from -offer."
+  },
+  "cmd.sync.rtc.wrongAddressee": {
+    "ja": "この握手コードの宛先は別の deviceId です。",
+    "en": "This handshake code is addressed to a different deviceId."
+  },
+  "cmd.sync.open.notConnected": {
+    "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
+    "en": "Peer not connected. Establish a DataChannel with sync -connect <deviceId> (or -offer / -answer / -accept) first."
+  },
+  "cmd.sync.connect.compoundBlocked": {
+    "ja": "sync -connect は対話ウィザードのため、複合コマンドでは使えません。単独で実行してください。",
+    "en": "sync -connect opens an interactive wizard and cannot run in a compound command. Run it alone."
+  },
+  "cmd.sync.wizard.openedSetup": {
+    "ja": "接続セットアップウィザードを開きました。",
+    "en": "Opened the connection setup wizard."
+  },
+  "cmd.sync.wizard.titleSetup": {
+    "ja": "sync セットアップ",
+    "en": "sync setup"
+  },
+  "cmd.sync.wizard.titleConnect": {
+    "ja": "sync 再接続",
+    "en": "sync reconnect"
+  },
+  "cmd.sync.wizard.cancel": {
+    "ja": "中止",
+    "en": "Cancel"
+  },
+  "cmd.sync.wizard.close": {
+    "ja": "閉じる",
+    "en": "Close"
+  },
+  "cmd.sync.wizard.back": {
+    "ja": "戻る",
+    "en": "Back"
+  },
+  "cmd.sync.wizard.submit": {
+    "ja": "確定",
+    "en": "Submit"
+  },
+  "cmd.sync.wizard.busy": {
+    "ja": "処理中…",
+    "en": "Working…"
+  },
+  "cmd.sync.wizard.codeLabel": {
+    "ja": "同期コード",
+    "en": "Sync code"
+  },
+  "cmd.sync.wizard.choiceCreateFamily": {
+    "ja": "新しい Family を作る",
+    "en": "Create a new Family"
+  },
+  "cmd.sync.wizard.choiceJoinFamily": {
+    "ja": "招待コードで参加する",
+    "en": "Join with an invite code"
+  },
+  "cmd.sync.wizard.choiceContinueFamily": {
+    "ja": "いまの Family のまま続行",
+    "en": "Continue with the current Family"
+  },
+  "cmd.sync.wizard.choiceOffer": {
+    "ja": "この端末から接続を始める（オファー）",
+    "en": "Start from this device (offer)"
+  },
+  "cmd.sync.wizard.choiceAnswer": {
+    "ja": "相手のオファーを受け取る（アンサー）",
+    "en": "Receive the peer offer (answer)"
+  },
+  "cmd.sync.wizard.leadPasteInvite": {
+    "ja": "相手の Family 招待コード（bmxt1.…）を貼り付けてください。",
+    "en": "Paste the peer Family invite (bmxt1.…)."
+  },
+  "cmd.sync.wizard.leadCopyInvite": {
+    "ja": "招待コードを COPY して相手へ渡し、相手が参加したら続行してください。",
+    "en": "COPY the invite for your peer. Continue after they join."
+  },
+  "cmd.sync.wizard.leadCopyOffer": {
+    "ja": "オファーコードを COPY して相手へ渡してください。",
+    "en": "COPY the offer code and send it to your peer."
+  },
+  "cmd.sync.wizard.leadCopyOfferNamed": {
+    "ja": "{name} へのオファーです。COPY して相手へ渡してください。",
+    "en": "Offer for {name}. COPY it and send it to your peer."
+  },
+  "cmd.sync.wizard.leadPasteOffer": {
+    "ja": "相手のオファーコード（bmxt-rtc1.…）を貼り付けてください。",
+    "en": "Paste the peer offer code (bmxt-rtc1.…)."
+  },
+  "cmd.sync.wizard.leadPasteOfferNamed": {
+    "ja": "{name} からのオファーコード（bmxt-rtc1.…）を貼り付けてください。",
+    "en": "Paste the offer code from {name} (bmxt-rtc1.…)."
+  },
+  "cmd.sync.wizard.leadPasteAnswer": {
+    "ja": "相手が作ったアンサーコードをここに貼り付けて確定してください。",
+    "en": "Paste the answer code your peer created, then submit."
+  },
+  "cmd.sync.wizard.leadCopyAnswer": {
+    "ja": "アンサーコードを COPY して相手へ渡してください。相手が貼ると接続完了です。",
+    "en": "COPY the answer for your peer. Connection finishes when they paste it."
+  },
+  "cmd.sync.wizard.pasteInvitePlaceholder": {
+    "ja": "bmxt1.…",
+    "en": "bmxt1.…"
+  },
+  "cmd.sync.wizard.pasteRtcPlaceholder": {
+    "ja": "bmxt-rtc1.…",
+    "en": "bmxt-rtc1.…"
+  },
+  "cmd.sync.wizard.continueToRole": {
+    "ja": "役割選択へ進む",
+    "en": "Continue to role"
+  },
+  "cmd.sync.wizard.bannerPasteInvite": {
+    "ja": "招待コードの貼付待ち",
+    "en": "Waiting for invite paste"
+  },
+  "cmd.sync.wizard.bannerCopyInvite": {
+    "ja": "招待の準備完了 — COPY して相手へ",
+    "en": "Invite ready — COPY for your peer"
+  },
+  "cmd.sync.wizard.bannerPasteOffer": {
+    "ja": "{name} のオファー待ち",
+    "en": "Waiting for offer from {name}"
+  },
+  "cmd.sync.wizard.bannerPasteOfferGeneric": {
+    "ja": "相手オファーの貼付待ち",
+    "en": "Waiting for peer offer"
+  },
+  "cmd.sync.wizard.bannerCopyOffer": {
+    "ja": "{name} 向けオファー — COPY のあとアンサー待ち",
+    "en": "Offer for {name} — COPY, then wait for answer"
+  },
+  "cmd.sync.wizard.bannerCopyOfferGeneric": {
+    "ja": "オファー準備完了 — COPY のあとアンサー待ち",
+    "en": "Offer ready — COPY, then wait for answer"
+  },
+  "cmd.sync.wizard.bannerCopyAnswer": {
+    "ja": "アンサー準備完了 — COPY して相手へ",
+    "en": "Answer ready — COPY for your peer"
+  },
+  "cmd.sync.wizard.invalidInvite": {
+    "ja": "招待コードが無効です。bmxt1. で始まるコード本体だけを貼ってください。",
+    "en": "Invalid invite. Paste only the bmxt1.… code body."
+  },
+  "cmd.sync.wizard.invalidRtcCode": {
+    "ja": "握手コードが無効です。bmxt-rtc1. で始まるコード本体だけを貼ってください。",
+    "en": "Invalid handshake code. Paste only the bmxt-rtc1.… code body."
+  },
+  "cmd.sync.wizard.copied": {
+    "ja": "握手コードをコピーしました。",
+    "en": "Handshake code copied."
+  },
+  "cmd.sync.wizard.copiedInvite": {
+    "ja": "Family 招待をコピーしました。",
+    "en": "Family invite copied."
+  },
+  "cmd.sync.link.connecting": {
+    "ja": "接続中...",
+    "en": "Connecting..."
+  },
+  "cmd.sync.link.statusLabel": {
+    "ja": "同期接続中のブラウザ",
+    "en": "Synced browsers"
+  },
+  "cmd.sync.link.statusConnected": {
+    "ja": "sync {names}",
+    "en": "sync {names}"
   }
 }

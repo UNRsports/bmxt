@@ -1,7 +1,7 @@
 {
   "name": "bmxt_demo",
   "displayName": "__MSG_extensionName__",
-  "version": "0.8.7",
+  "version": "0.9.0",
   "license": "Apache-2.0",
   "description": "__MSG_extensionDescription__",
   "author": "UNRsports",
@@ -63,6 +63,7 @@
     "prettier": "3.2.4",
     "selenium-webdriver": "4.33.0",
     "typescript": "6.0.3",
+    "webxdriver": "github:UNRsports/webxdriver#9bbc413",
     "wxt": "0.20.7"
   }
 }
