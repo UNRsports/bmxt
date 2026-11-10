@@ -1,226 +1,64 @@
-◆Introduction
-
-We are conducting an experiment to fundamentally rethink browser operation, without relying on AI or other technologies, and completing the process entirely locally.
+BMXt is a keyboard-first command UI for managing tabs, tab groups, and windows in your browser.
 
 Have you ever experienced any of the following?
 
-・Using the mouse to operate the browser is cumbersome.
+Mouse operation feels cumbersome
+You keep tabs open without meaning to
+Finding or organizing the tab you need is hard
 
-・You keep many tabs open because you feel anxious about not being able to see things immediately if they're not open.
+When that happens, try classic command-line style operation.
 
-・Even with many tabs open, finding what you're looking for and managing them is difficult.
+◆What you can do
 
-The author has always felt dissatisfied with these points during their work, and more precisely, decided to realize their desire for "efficient browsing from a perspective other than tabs!"
+・Use the prompt to list, search, group, move, reload, and close tabs, and more
+・Search history, bookmarks, open page text, and other browser data
+・Optional local sync between profiles you connect on the same PC
+・Japanese / English UI locale and appearance settings
 
-◆Development Methodology
+The above is only part of what this extension can do.
+Development continues, with ongoing review and addition of features.
 
-Fortunately, in this age where "coding is easy" thanks to AI, all code generation is done by AI, and development is being carried out through rapid trial and error.
-
-However, the most important thing we prioritize is the following:
-
-1) The extension must operate entirely locally.
-We strictly adhere to using only libraries, including external LLMs (AI) via APIs, etc., that are always contained within packages.
-
-2) No AI Used
-You might be thinking, "But it's made with AI!", and that's a valid point. However, as mentioned in the "◆Introduction," we are committed to "not using LLM for the extension's operation."
-The programs included in the extension operate and process data purely mechanically, and we strive for high precision and completeness as a "tool" by correcting any bugs.
-
-◆About the Developer
-
-This extension is currently being developed by one person.
-They always maintain strong guidelines, specifications, and their own aesthetics, and do not engage in development that relies solely on AI. However, it is also true that they have concerns about using unfamiliar languages and frameworks with the help of AI.
-
-For this reason, this extension is a "demo," and while it is free to use, please understand that it may always contain some bugs, and use it at your own risk.
-
-We would also appreciate any feedback you may have after trying it out. Please send it to the address below.
-
+◆Privacy
+The BMXt extension processes data entirely on your PC.
+The developer does not collect your data or send information to servers operated for profiling.
+See the privacy policy for details.
 
 ◆Feedback
-- Feedback and wishes from using the extension
 https://github.com/UNRsports/bmxt/issues
 
-
 ◆Disclaimer
-BMXt is an experimental / trial implementation. UNRsports (the developer) is not liable for any incidents, loss, or damage arising from your use of the extension. You use BMXt at your own discretion and risk.
+This program is an experimental / trial build and may contain bugs. UNRsports (the developer) is not liable for any incidents, loss, or damage arising from your use of the extension. You use it at your own discretion and risk.
 
+◆Getting started
+Launch with the `launch-bmxt` shortcut (default Shift+Alt+C), then try `tutorial` or `tab -list | browse`.
 
 ◆Version history
 0.9.0:
 - Fixed filter-search behavior in the tab command picker
-- Implemented cross-process collaboration via WebRTC
+- Added local cross-profile collaboration via optional Family sync
 
 0.8.7:
-- Implemented command descriptions in the candidate menu
-- Implemented a tutorial for learning how to use BMXt
+- Command descriptions in the candidate menu
+- Tutorial for learning basic tab picker use
 
 0.8.5:
-- Required host_permissions enable in-page actions without a page reload
-- In-page scripting limited to https (nav / float / dom / search --page / snapshot)
-- RUN_CMD / NAV_CONTROL accepted only from extension UI pages
-- More reliable verification through revised test approach
+- In-page actions without a page reload (required host access for https)
+- In-page scripting limited to https pages
+- Privileged commands accepted only from extension UI pages
 
 0.8.4:
 - Improved picker behavior in search commands
 
 0.8.3:
-- Fixed a caret-handling bug for Japanese text in the prompt that caused the display to disappear
+- Fixed Japanese caret handling in the prompt
 
 0.8.2:
-- Implemented UI support for smartphone use, now that Chrome extensions are available on Android Vivaldi
+- UI adjustments for smaller screens / phone-sized layouts
 
 0.8.0:
-- Improved the in-tab float prompt so you can use it alongside the popup window
-- Standardized inter-command and candidate-menu specifications, with matching refactoring
-- Renamed the picker command to browse
-- Detail bars (tab and others) can now be closed with Ctrl+C
-- Upgraded to TypeScript 6 and applied minor code fixes
-- nav: show identity label (kind:key) under the cursor; incremental attribute jump with /; learn origins after successful activate
-- Started implementing direct tab operations via independent commands (tab, back, reload, and related) without relying on browse
-- Internal: moved the command-interpretation core to Rust/WASM; UI focuses on display and browser API execution
-- Renamed tabs to tab. Moved history, reload, and tab close from nav to tab (nav keeps -enter/-exit/-windowclose)
+- In-tab float prompt alongside the popup window
+- Renamed picker command to browse; renamed tabs to tab
+- Direct tab commands (back, reload, close, and related)
+- Nav identity label and incremental attribute jump
 
-0.7.5:
-- Adjusted tabs mode picker behavior
-- Added selectable export destinations for setting data
-- Implemented snapshot: save web pages as Markdown to a directory of your choice
-- Refactored the dom picker: existing behavior is `--normal`; added `--with` with fixes and improvements
-- Added support for running multiple commands with `&&`
-
-0.6.9:
-- Externalized the welcome page to reduce package size
-- Migrated the framework from Plasmo to WXT and package management from npm to pnpm
-- Revised tabs mode picker interaction for a more intuitive flow with less hand and eye movement
-- Repository-wide refactoring as part of the framework migration
-- Removed WASM-based SQLite, which had been causing performance degradation
-
-0.6.0:
-- Changed the extension window to a dedicated popup window without a tab bar
-- Implemented SQLite caching for search mode alongside the search refresh and job-based execution model
-
-0.5.6:
-- Audited remaining bilingual UI after locale switching and applied locale rules consistently
-- UI adjustments in tabs mode
-- Removed the split command to save screen space; implemented session switching UI via the session command
-
-0.5.3:
-- Split extension shortcuts into launch and reset
-- Implemented the setting command to customize, save, and load extension appearance
-- Added favicon display in tabs mode and fixed display issues around tab titles
-- Revised picker interaction across commands for a more intuitive flow with less hand and eye movement
-- Updated related interaction systems to match the new picker model
-- Major overhaul of search mode
-
-0.4.6:
-- Fixed an issue where new tab groups could not be created in tabs mode
-
-0.4.5:
-- Cleaned up dependencies (pnpm + WXT)
-- Renamed find to search (mode) with enhancements — subdivide results and jump directly to each element
-- Tab picker: expand/collapse window and tab group tree rows
-- Added tabs -setting -page-active (--auto / --manual) to toggle automatic tab activation on highlight
-
-0.4.1:
-- Miscellaneous internal fixes
-- Fixed a bug affecting text input in nav mode
-- Removed the translation side picker; translate assist is now prompt preview and nav typing only
-
-0.4.0:
-- Fixed bugs in nav mode behavior
-- Added translation assist (`translate -on` / `translate -off`)
-- Adjusted Tab completion menu behavior
-- Fixed welcome page open behavior
-
-0.3.8:
-- Show a welcome page on install and when the extension version is upgraded
-- Fixed tabs mode filtering so keyboard focus no longer jumps to the list unexpectedly
-- Revised mouse interaction: text in the prompt and log can be selected while keeping keyboard-first operation as the default
-- Improved in-browser cross-search (`search`)
-- Improved Tab completion menu behavior
-
-0.3.5:
-- Removed Rust to reduce package size
-- Added the `:edit` subcommand in tabs mode for editing tab groups and window names
-- Implemented IME-style input assistance while typing commands
-- Moved list pickers for all commands to side columns beside the terminal and revised picker interaction (`Esc` returns to the prompt; close a column with `<cmd> -exit -list`)
-- DOM list picker: focus rows with ↑/↓ and scroll the target page to the matching element
-- Added nav mode: virtual cursor overlay on the active tab (`nav -enter`; Alt toggles ON/OFF; arrows move; Enter click/type; Ctrl context menu for text selection, image save, and reload)
-
-
-0.2.1:
-- Added the `dom` command so you can inspect the page source.
-- Added the `search` command to search across internal data such as history, bookmarks, and open tabs.
-
-0.1.1:
-- Clarified command behavior rules
-- Added an assist menu while typing commands (type "tabs" and press Enter to try it)
-- In tabs mode, "/" search: type a phrase and press Enter to highlight matches; press n to jump between them
-
-0.0.9:
-- Tab name search and highlight reset in tabs mode now follow Vim-style behavior (clear highlighted matches with :nohlsearch)
-- Improved how release notes are specified and shown
-
-◆Commands
-
-| Command | Description |
-|----------|------|
-| `help` / `?` | Show help |
-| `aboutbmxt` | Open the BMXt welcome page in a new browser tab |
-| `tutorial` | Interactive coach for `tab -list \| browse` (`tutorial` / `tutorial -start` / `tutorial -skip`; auto-starts on first launch) |
-| `clear` | Clear logs |
-| `exit` | Close the active terminal session; when it is the last session, close the BMXt window and clear process-scoped state |
-| `tab` | Show available options, then restore the prompt to `tab ` (with a trailing space) for continued input |
-| `tab -list [-url] [--device <id>\|--peers]` | List open tabs as plain tree (IDs included); `-url` adds URLs; `--peers` merges connected Family peers |
-| `tab -list [-url] | browse` | Open tab picker column; search, multi-select `#`, bulk modes; `/` searches titles, Enter highlights, `n` jumps matches |
-| `tab -list \| tab -send <deviceId> [--close]` | Copy listed tabs (group titles preserved) to a connected peer; `--close` closes only successfully opened local source tabs |
-| `tab -send <deviceId> <url…> [--group <title>] [--close]` | Send URLs to a connected Family peer (command bus); `--close` closes successful local sources |
-| `tab -exit -list` | Close tab picker column in this session (including `group new` picker) |
-| `tab -setting -page-active --auto \| --manual` | Tab picker: toggle whether moving the highlight auto-activates the tab (`--auto` default; `--manual` uses Alt+↑↓); saved setting |
-| `tab -moveurl <url>` | Focus a tab with the given URL or open a new tab (http/https) |
-| `tab -nowurl` | Show the current tab’s URL |
-| `tab help` | Show the `tab` manual section |
-| `back` | History back on the target active tab. Batch: `tab -list \| back` |
-| `forward` | History forward on the target active tab. Batch: `tab -list \| forward` |
-| `reload` | Reload the target active tab. Batch: `tab -list \| reload` |
-| `close` / `c` | Close the target tab after y/n confirm; `close <tabId>` / `c <tabId>` closes that id without confirm. Batch: `tab -list \| close` |
-| `dom` | Print available options; Enter alone restores the prompt to `dom ` (trailing space) for the next token |
-| `dom -list [--normal\|--with] [--html\|--react] [--tag] [<pattern>]` | Plain DOM list from active tab (default `--normal --html`); optional substring filter; scriptable https only |
-| `dom -list … | browse` | Read-only DOM picker column; `--normal`/`--with`, `--html`/`--react`; scriptable https only |
-| `dom -exit -list` | Close DOM list picker column in this session |
-| `nav` | Print usage; Enter alone restores the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
-| `nav -enter` | Arm nav mode; **Alt** toggles the virtual cursor overlay on the target tab; arrows move; **Enter** click/type; **Ctrl** opens a context menu (text selection, save image, etc.); **/** incremental attribute jump; identity label `kind:key` |
-| `nav -exit` | Fully disarm nav (turn the overlay **OFF** with **Alt** first) |
-| `nav -windowclose` | Close the window that contains the target tab after y/n confirm (never the BMXt window) |
-| `search` | Print available options; Enter alone restores the prompt to `search ` for `-list` |
-| `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | Plain search hit list (default scopes = `--all`). `--peers` merges connected Family peers. Case-insensitive substring (no regex in v1) |
-| `search -list … | browse` | Search picker column; in-picker progress; detail view and `[history]` open-target tree |
-| `search -exit -list` | Close the search list picker column (cancels an in-flight search if running) |
-| `group new` / `group new <tabId> …` | Create a tab group — interactive tab picker when no tab ids, or non-interactive with explicit ids |
-| `setting` | Print usage and restore the prompt to `setting ` for `-list` |
-| `setting -list` | Plain list of current UI settings |
-| `setting -list | browse` | Open settings picker column (UI locale, appearance, storage, snapshot storage, Family sync display name + setup guide, export/import zip); commit appearance/locale with `> save setting` |
-| `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows setting snapshot storage |
-| `setting -exit -list` | Close the settings picker column in this session |
-| `session` | Print usage and restore the prompt to `session ` for second tokens (tmux-style terminal sessions in one BMXt window) |
-| `session -new [name]` | Create a new terminal session and switch to it; optional display name |
-| `session -list` | Plain list of terminal sessions |
-| `session -list | browse` | Inline session picker on the prompt (↑↓ · Enter / 1–9) |
-| `session -switch [name]` | Inline session picker by display name (type to filter · Enter inserts `session -switch <name>` · Enter again runs switch) |
-| `session -next` / `session -prev` | Cycle the active terminal session |
-| `session -setting-name [name]` | Rename the current session |
-| `session <n>` | Switch to terminal session number n (1-based) |
-| `sync` | Print usage and restore the prompt to `sync ` (Family local sync via WebRTC DataChannel) |
-| `sync -setup` | Guided wizard: Family → role → COPY / paste handshake codes (recommended for first join) |
-| `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; same wizard COPY / paste) |
-| `sync -status` | Device id, Family, members, WebRTC connection state |
-| `sync -pair` / `sync -pair <invite>` | Show Family invite (QR payload) or join from invite |
-| `sync -members` | List Family roster + discovered devices |
-| `sync -offer` / `sync -answer <code>` / `sync -accept <code>` | Advanced CLI handshake (`bmxt-rtc1.`); prefer the setup/connect wizard COPY + paste |
-| `sync -ping <deviceId>` | Ping a connected peer over the DataChannel |
-| `translate` | Print usage and restore the prompt to `translate ` for `-on`, `-off`, or `-setting` |
-| `translate -on` | Enable translation assist (nav typing preview under the prompt) |
-| `translate -off` | Disable translation assist |
-| `translate -setting --ja-en` / `--en-ja` | Save the translation pair for nav typing assist |
-| `notes` | Show release notes for the current extension version; `notes <version>` for a specific version (e.g. `0.1.1`); `notes --list` lists versions that have entries |
-| `<list-command> | browse` | Open a list as a picker column / inline UI (e.g. `tab -list | browse`); plain `-list` prints to the log |
-
-Shortcuts (chrome://extensions/shortcuts): `launch-bmxt` (default Shift+Alt+C), `reset-bmxt` (default Shift+Alt+R), `toggle-bmxt-float` (default Shift+Alt+F — in-page float prompt on the active https tab).
+Older releases: https://github.com/UNRsports/bmxt
