@@ -286,7 +286,7 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `session -next` / `session -prev` | Cycle the active terminal session |
 | `session -setting-name [name]` | Rename the current session (bare: prompt pre-filled with current display name) |
 | `session <n>` | Switch to terminal session number **n** (1-based) |
-| `sync` | Print usage and restore the prompt to `sync ` (Family local sync — see **[`sync`](#sync)**) |
+| `sync` | Print usage and restore the prompt to `sync ` (Family local sync — see **[`sync`](#sync)**; **since 0.9.0**) |
 | `sync -setup` | Guided **wizard**: Family → role → COPY / paste handshake codes (recommended for first join) |
 | `sync -connect <deviceId>` | Reconnect to a roster member (auto offer/answer role; same wizard COPY / paste) |
 | `sync -status` | Device id, Family, members, WebRTC connection state |
@@ -385,7 +385,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 **Page content** is served from the repo’s **`docs/`** tree (GitHub Pages). Edit **`docs/welcome-content.json`** only (version history, optional **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`** per entry; images under **`docs/welcome/`**). The extension does not bundle this file—it opens the hosted **`welcome.html`** URL.
 
-**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
+**Related behavior (not this command):** on extension **install** or **update**, **`openWelcomePageOnUpdateIfNeeded`** opens the same URL **once per version** in a **normal tab** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`**). For manual preview: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0`** — see **[Version upgrade banner & release notes](#version-upgrade-banner)**.
 
 **Implementation:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**, effect handler **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**, URL builder **`lib/features/welcome/welcome-external-url.ts`**, tab opener **`lib/features/welcome/open-welcome-page-tab.ts`**.
 
@@ -690,6 +690,8 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 ### `sync` (Family local sync · same PC · command bus)
 
+**Since 0.9.0.**
+
 **Goal:** Give each browser profile a unique **device id**, join a **Family** (shared seed / invite — zero custody: members hold plaintext; BMXt never uploads it), then run a low-latency **WebRTC DataChannel command bus** between peers (same PC today).
 
 | Stage | Scope | Transport |
@@ -700,11 +702,13 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** via `--device <id>` / `--peers` (DataChannel RPC); send with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
 
+**Family list refresh (`tabs_changed`):** After a successful Family tab mutation (`open_tabs` / `tabs_ops`, and local `--close` when used), BMXt broadcasts a lightweight **`tabs_changed`** signal to **all currently connected** Family peers (including notifying the sender). The payload carries **`first`** — a **first-command selection code** (today always **`tab`**; missing `first` from an older peer is treated as **`tab`**). A peer refreshes an open picker only when that code matches (tab picker reacts to **`first: "tab"`** only). Disconnected peers are not notified; they re-pull on the next `--peers` / `--device` list.
+
 **Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
 **UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** (button or `sync-handshake-copy`) puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow. The setting picker sync panel only shows a setup guide and display-name edit.
 
-**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`**.
+**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
 
 **Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
@@ -1398,7 +1402,7 @@ In development mode, edits trigger rebuilds. Reload the extension to verify upda
 
 When Chrome reports **`install`** or **`update`**, **`entrypoints/background/index.ts`** calls **`openWelcomePageOnUpdateIfNeeded`**, which opens **`https://unrsports.github.io/bmxt/welcome.html`** **once per version** via **`openWelcomePageTab`** (tracked by **`LAST_SEEN_WELCOME_VERSION_KEY`** in `lib/features/extension-storage/keys.ts`). The page loads **`docs/welcome-content.json`** from GitHub Pages.
 
-**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
+**Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
 **In-window upgrade block** (first BMXt open after upgrade)
 
@@ -1771,7 +1775,7 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `session -switch [name]` | 表示名によるインライン候補（入力で絞り込み · **Enter** で `session -switch <name>` を挿入 · もう一度 **Enter** で実行）。`session -switch <name>` 直打ちも可 |
 | `session -next` / `session -prev` | アクティブなターミナルセッションを循環 |
 | `session -setting-name [name]` | 現在セッションの表示名を変更（裸コマンドは現在名をプロンプトに事前入力） |
-| `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（Family ローカル同期 — **[`sync`](#sync-ja)**） |
+| `sync` | 利用案内を表示し、続けて `sync ` へ入力復元（Family ローカル同期 — **[`sync`](#sync-ja)**；**0.9.0 以降**） |
 | `sync -setup` | **ウィザード**でセットアップ（Family → 役割 → COPY / 貼付・初回推奨） |
 | `sync -connect <deviceId>` | 名簿メンバーへ再握手（役割自動・同じウィザードの COPY / 貼付） |
 | `sync -status` | device id / Family / 名簿 / WebRTC 接続状態 |
@@ -1871,7 +1875,7 @@ BMXt ウィンドウが開いている間、**拡張 UI ページがターミナ
 
 **ページ内容**はリポジトリの **`docs/`**（GitHub Pages）のみが正本です。**`docs/welcome-content.json`** を編集します（バージョン履歴、任意の **`heroImage`** / **`heroImageMaxWidth`** / **`additionalImages`**；画像は **`docs/welcome/`**）。拡張機能はこの JSON を同梱せず、ホストされた **`welcome.html`** の URL を開きます。
 
-**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
+**関連（本コマンド以外）:** 拡張機能 **インストール** または **更新** 時は **`openWelcomePageOnUpdateIfNeeded`** が同じ URL を **バージョンごとに 1 回** **通常タブ** で開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。手動プレビュー: **`https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0`** — 詳細は **[バージョンアップバナーとリリースノート](#version-upgrade-banner-ja)**。
 
 **実装:** **`lib/features/bmxt-core/cmd/aboutbmxt.ts`**、Effect **`lib/features/dispatch/handlers/effects/open-welcome-page.ts`**、URL 組み立て **`lib/features/welcome/welcome-external-url.ts`**、タブ起動 **`lib/features/welcome/open-welcome-page-tab.ts`**。
 
@@ -2123,6 +2127,8 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 ### `sync`（Family ローカル同期 · 同一 PC · コマンドバス）
 
+**0.9.0 以降。**
+
 **目標:** ブラウザ／プロファイルごとにユニークな **device id** を付け、**Family**（共有シード／招待。平文の預かり先は作らない）に参加し、同一 PC 上のピア間で低遅延の **WebRTC DataChannel コマンドバス**を載せる。
 
 | 段 | 範囲 | 手段 |
@@ -2133,11 +2139,13 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（`--device` / `--peers`）。送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
 
+**Family 一覧追従（`tabs_changed`）:** Family 経由のタブ変更（`open_tabs` / `tabs_ops`、および `--close` によるローカル閉じ）が成功すると、**いま接続中の全 Family ピア**へ軽量シグナル **`tabs_changed`** を广播する（送信元自身の購読者にも通知）。ペイロードの **`first`** は **第一コマンド選別符号**（現状は常に **`tab`**。旧ピアが欠落させたら **`tab`** 扱い）。受信側は符号が一致する開中 picker だけを再取得する（tab picker は **`first: "tab"`** のみ反応）。未接続ピアには届かない（次の `--peers` / `--device` 一覧で再取得）。
+
 **既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
 **UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY**（ボタン／`sync-handshake-copy`）で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。切断後は両側 **`sync -connect <peerDeviceId>`** で同じウィザード往復。setting picker の sync は案内と表示名編集のみ。
 
-**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** など。
+**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
 
 **peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
 
@@ -2844,7 +2852,7 @@ pnpm run dev
 
 Chrome が **`install`** または **`update`** を報告したとき、**`entrypoints/background/index.ts`** が **`openWelcomePageOnUpdateIfNeeded`** を呼び、**`openWelcomePageTab`** で **`https://unrsports.github.io/bmxt/welcome.html`** を **バージョンごとに 1 回** 開きます（**`LAST_SEEN_WELCOME_VERSION_KEY`** で記録）。ページは GitHub Pages 上の **`docs/welcome-content.json`** を読み込みます。
 
-**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.8.7` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
+**手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 

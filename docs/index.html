@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: October 18, 2026</p>
+          <p class="muted">Last updated: November 10, 2026</p>
         </div>
       </header>
 
@@ -148,10 +148,11 @@
               BMXt is a <strong>local productivity tool</strong>: a command-style UI for tabs, tab groups,
               browser windows, and related tasks you initiate (including optional page inspection, search
               across history or bookmarks or open pages, an optional keyboard nav overlay, an optional in-page
-              float prompt, optional UI locale, host-ui, and appearance settings via <code>setting -list</code>, and
-              optional translation assist when you run <code>translate -on</code>). Command interpretation runs
-              locally via a <strong>bundled</strong> Rust/WebAssembly module; the UI and Chrome API effects run
-              in TypeScript on your device.
+              float prompt, optional UI locale, host-ui, and appearance settings via <code>setting -list</code>,
+              optional translation assist when you run <code>translate -on</code>, and optional
+              <strong>Family local sync</strong> when you run <code>sync</code> commands). Command interpretation
+              runs locally via a <strong>bundled</strong> Rust/WebAssembly module; the UI and Chrome API effects
+              run in TypeScript on your device.
             </li>
             <li>
               We do <strong>not</strong> sell your personal information. We do <strong>not</strong> run
@@ -190,6 +191,12 @@
               When translation assist is on, text you type may be processed by Chrome’s built-in
               <strong>Translator API</strong> on your device (Japanese ↔ English). BMXt does not send that
               text to UNRsports servers for translation.
+            </li>
+            <li>
+              Optional <strong>Family local sync</strong> (<code>sync</code>) uses a user-initiated
+              copy/paste handshake and a <strong>WebRTC DataChannel</strong> between browser profiles you
+              connect (host ICE candidates only; no public STUN/TURN). Peer-to-peer command traffic stays
+              between those peers; BMXt does not operate a sync relay on UNRsports servers (see section 4.8).
             </li>
           </ul>
         </div>
@@ -343,6 +350,17 @@
             <code>translate -off</code> is active and your saved language pair
             (<code>--ja-en</code> / <code>--en-ja</code>; <code>bmxt_typing_translate_v1</code>).
           </li>
+          <li>
+            <strong>Tutorial progress</strong> — whether the first-run coach was started or skipped
+            (<code>bmxt_tutorial_progress_v1</code>).
+          </li>
+          <li>
+            <strong>Family sync identity and roster</strong> — local device id, Family membership seed /
+            invite material, member roster, and discovery cache used by optional <code>sync</code> commands
+            (<code>bmxt_sync_device_v1</code>, <code>bmxt_sync_family_v1</code>, <code>bmxt_sync_roster_v1</code>,
+            <code>bmxt_sync_discovery_v1</code>). Remains on your device until you clear related data or
+            uninstall. See section 4.8.
+          </li>
         </ul>
         <p>
           When you close the BMXt window or run <code>exit</code> on the last terminal session, in-memory
@@ -350,10 +368,11 @@
           audit log in the UI) is discarded; legacy process keys may be cleaned from storage. Command history,
           UI settings, translation assist preferences, picker page-active settings (tabs / search / DOM),
           token-candidate MRU, nav learned targets, custom window display names, snapshot storage preferences,
-          external folder handles, and version-tracking keys remain until you clear them (for example the
-          <code>reset-bmxt</code> shortcut for command history and both popup/float hosts, or uninstalling the
-          Extension). The search metadata cache is separate: it lives only in service-worker memory and is not
-          a durable <code>chrome.storage</code> store.
+          external folder handles, tutorial progress, Family sync identity/roster keys, and version-tracking
+          keys remain until you clear them (for example the <code>reset-bmxt</code> shortcut for command
+          history and both popup/float hosts, or uninstalling the Extension). The search metadata cache is
+          separate: it lives only in service-worker memory and is not a durable <code>chrome.storage</code>
+          store.
         </p>
         <p>
           If you use <code>setting -list</code> to export or import a settings zip, the file is written to or
@@ -425,6 +444,46 @@
           supported desktop Chrome version (138 or newer) and availability of the ja↔en pair on your device.
         </p>
 
+        <h3>4.8 Family local sync (optional WebRTC command bus)</h3>
+        <p>
+          If you run <code>sync</code> commands (for example <code>sync -setup</code>,
+          <code>sync -pair</code>, <code>sync -connect</code>, <code>sync -offer</code> /
+          <code>sync -answer</code> / <code>sync -accept</code>, <code>sync -ping</code>), or related
+          cross-peer commands such as <code>tab -list --peers</code>, <code>search -list --peers</code>, or
+          <code>tab -send</code>, the Extension may:
+        </p>
+        <ul>
+          <li>
+            Create and store a local <strong>device identity</strong> and optional <strong>Family</strong>
+            membership / roster / discovery cache in <code>chrome.storage.local</code> (keys listed in
+            section 4.4). Family invite material is held as plaintext on participating devices; BMXt does
+            not upload that material to UNRsports servers.
+          </li>
+          <li>
+            Use the system <strong>clipboard</strong> when you choose COPY in the sync wizard (or related
+            UI) so you can paste handshake codes (<code>bmxt1.…</code> / <code>bmxt-rtc1.…</code>) into
+            another BMXt profile you control.
+          </li>
+          <li>
+            Establish a <strong>WebRTC DataChannel</strong> between those peers using
+            <strong>host ICE candidates only</strong> (no public STUN or TURN servers configured by BMXt).
+            This keeps the packaged <code>connect-src 'self'</code> model for ordinary
+            <code>fetch()</code> while allowing browser-local peer connectivity you initiate.
+          </li>
+          <li>
+            Exchange <strong>command-bus payloads you initiate</strong> over that channel—for example ping,
+            remote tab/search list results, tab open/send, and picker ops on remote rows. Those payloads may
+            include tab titles, URLs, and related metadata already available to each peer’s extension
+            instance. Traffic is peer-to-peer between the profiles you connect; BMXt does not operate a
+            UNRsports sync relay for this feature.
+          </li>
+        </ul>
+        <p>
+          Family sync is optional and user-initiated. Closing the BMXt window ends in-memory peer sessions;
+          stored identity / Family / roster keys remain on device as described in section 4.4 until cleared
+          or uninstalled.
+        </p>
+
         <h2>5. Extension code</h2>
         <p>
           Official builds implement Chrome API effects and the React UI in <strong>TypeScript</strong>, and
@@ -455,15 +514,20 @@
 
         <h2>7. Data transmission and third parties</h2>
         <p>
-          BMXt does not transmit your tab list, tab metadata, command history, session log, or text you submit
-          for translation assist to servers operated by UNRsports for collection or profiling as part of using
-          the Extension.
+          BMXt does not transmit your tab list, tab metadata, command history, session log, Family sync
+          identity, or text you submit for translation assist to servers operated by UNRsports for collection
+          or profiling as part of using the Extension.
         </p>
         <p>
           When translation assist is enabled, Chrome’s built-in Translator API may process text you enter as
           described in section 4.7. BMXt does not receive copies of that processing on UNRsports servers. How
           Chrome handles on-device AI models, language-pack downloads, and any related telemetry is governed by
           Google’s policies for Chrome, not by the Extension’s own code.
+        </p>
+        <p>
+          When you enable Family local sync, peer-to-peer WebRTC DataChannel traffic may carry command-bus
+          payloads between BMXt profiles you connect, as described in section 4.8. That traffic is not sent to
+          UNRsports servers as a sync service. BMXt configures host ICE only (no public STUN/TURN of its own).
         </p>
         <p>
           When you use the Extension, your browser or operating system may still communicate with Google,
@@ -488,9 +552,9 @@
         <p>
           We process the information described above solely to provide the Extension’s stated functionality
           (managing tabs, groups, and windows; optional page inspection, search, nav overlay, in-page float
-          prompt, UI locale, host-ui, and appearance settings, and translation assist through user-initiated commands)
-          and to maintain minimal local UI state. We do not use this information for creditworthiness, lending
-          decisions, or unrelated profiling.
+          prompt, UI locale, host-ui, and appearance settings; translation assist; and optional Family local
+          sync through user-initiated commands) and to maintain minimal local UI state. We do not use this
+          information for creditworthiness, lending decisions, or unrelated profiling.
         </p>
 
         <h2>9. Children’s privacy</h2>
@@ -552,7 +616,8 @@
               BMXt は、タブ・タブグループ・ブラウザウィンドウ等を<strong>専用のコマンド UI
               から操作する</strong>ローカル向け生産性ツールです（ページ構造の参照・履歴／ブックマーク／ページ内検索、
               任意のキーボードナビオーバーレイ、任意のサイト内フロート・プロンプト、<code>setting -list</code> による
-              UI 言語・host-ui・外観設定、<code>translate -on</code> 実行時の任意の翻訳アシストなど、ユーザーが起動した機能を含みます）。
+              UI 言語・host-ui・外観設定、<code>translate -on</code> 実行時の任意の翻訳アシスト、
+              <code>sync</code> コマンドによる任意の <strong>Family ローカル同期</strong>など、ユーザーが起動した機能を含みます）。
               コマンド解釈は<strong>同梱</strong>の Rust/WebAssembly モジュールで端末上に実行し、UI と Chrome API 効果は
               TypeScript で端末上に実行します。
             </li>
@@ -590,6 +655,12 @@
             <li>
               翻訳アシストが ON のとき、入力テキストは Chrome 内蔵の <strong>Translator API</strong> により
               端末上で処理されます（日本語 ↔ 英語）。当方のサーバーへ翻訳目的で送信することはありません。
+            </li>
+            <li>
+              任意の <strong>Family ローカル同期</strong>（<code>sync</code>）は、ユーザー開始のコピペ握手と、
+              接続したブラウザ／プロファイル間の <strong>WebRTC DataChannel</strong>（host ICE のみ・公開
+              STUN/TURN なし）を用います。ピア間のコマンド通信は接続した端末同士に留まり、UNRsports の同期
+              リレーは運用しません（4.8 節参照）。
             </li>
           </ul>
         </div>
@@ -732,16 +803,26 @@
             <strong>翻訳アシスト設定</strong> — <code>translate -on</code> / <code>translate -off</code> の状態と
             保存した言語ペア（<code>--ja-en</code> / <code>--en-ja</code>；<code>bmxt_typing_translate_v1</code>）。
           </li>
+          <li>
+            <strong>チュートリアル進捗</strong> — 初回コーチの開始／スキップ状態
+            （<code>bmxt_tutorial_progress_v1</code>）。
+          </li>
+          <li>
+            <strong>Family 同期の identity／名簿</strong> — 任意の <code>sync</code> 用の端末 device id、Family
+            参加情報、名簿、発見キャッシュ（<code>bmxt_sync_device_v1</code>、<code>bmxt_sync_family_v1</code>、
+            <code>bmxt_sync_roster_v1</code>、<code>bmxt_sync_discovery_v1</code>）。関連データの消去または
+            アンインストールまで端末内に保持。詳細は 4.8 節。
+          </li>
         </ul>
         <p>
           BMXt ウィンドウを閉じる、または最後のターミナルセッションで <code>exit</code> すると、プロセススコープの
           UI 状態（セッションログ、開いているピッカー列、タブツリー開閉、任意のジョブ監査ログ）はメモリから破棄され、
           旧プロセス用キーは storage から掃除されることがあります。コマンド履歴、UI 設定、翻訳アシスト設定、
           ピッカー page-active 設定（タブ／search／DOM）、トークン候補 MRU、nav 学習ターゲット、ウィンドウ表示名、
-          snapshot 保存先設定、外部フォルダハンドル、バージョン追跡キーは、
-          <code>reset-bmxt</code> ショートカット（コマンド履歴と popup／float 両ホストのクリア）または拡張機能の
-          アンインストール等で消すまで保持されます。検索メタデータキャッシュは別枠で、サービスワーカーのメモリのみに
-          あり、耐久的な <code>chrome.storage</code> ではありません。
+          snapshot 保存先設定、外部フォルダハンドル、チュートリアル進捗、Family 同期の identity／名簿キー、
+          バージョン追跡キーは、<code>reset-bmxt</code> ショートカット（コマンド履歴と popup／float 両ホストの
+          クリア）または拡張機能のアンインストール等で消すまで保持されます。検索メタデータキャッシュは別枠で、
+          サービスワーカーのメモリのみにあり、耐久的な <code>chrome.storage</code> ではありません。
         </p>
         <p>
           <code>setting -list</code> で設定 zip を export／import する場合、ファイルはブラウザのダウンロードまたは
@@ -804,6 +885,43 @@
           Chrome（138 以降）および端末上で ja↔en ペアが利用可能であることが必要です。
         </p>
 
+        <h3>4.8 Family ローカル同期（任意の WebRTC コマンドバス）</h3>
+        <p>
+          <code>sync</code> コマンド（例: <code>sync -setup</code>、<code>sync -pair</code>、
+          <code>sync -connect</code>、<code>sync -offer</code> / <code>sync -answer</code> /
+          <code>sync -accept</code>、<code>sync -ping</code>）、または関連する横断コマンド
+          （<code>tab -list --peers</code>、<code>search -list --peers</code>、<code>tab -send</code> 等）を
+          実行した場合、本拡張機能は次を行うことがあります。
+        </p>
+        <ul>
+          <li>
+            端末上に <strong>device identity</strong> および任意の <strong>Family</strong> 参加情報／名簿／
+            発見キャッシュを <code>chrome.storage.local</code> に作成・保存する（キーは 4.4 節）。Family
+            招待素材は参加端末上に平文で保持され、UNRsports サーバーへアップロードしません。
+          </li>
+          <li>
+            同期ウィザード等でユーザーが COPY を選んだとき、システム <strong>クリップボード</strong> に
+            握手コード（<code>bmxt1.…</code> / <code>bmxt-rtc1.…</code>）を載せ、別の BMXt プロファイルへ
+            貼り付けられるようにする。
+          </li>
+          <li>
+            それらのピア間で <strong>WebRTC DataChannel</strong> を確立する（BMXt が設定する ICE は
+            <strong>host 候補のみ</strong>。公開 STUN／TURN は使わない）。通常の <code>fetch()</code> 向け
+            <code>connect-src 'self'</code> を維持しつつ、ユーザーが開始したブラウザ／プロファイル間の
+            ローカル接続を可能にします。
+          </li>
+          <li>
+            そのチャネル上で<strong>ユーザーが開始した</strong>コマンドバス・ペイロード（ping、遠隔の
+            tab／search 一覧、タブ送信、リモート行への picker 操作など）をやりとりする。ペイロードには各ピアの
+            拡張機能が既に扱えるタブタイトル・URL 等のメタデータが含まれることがあります。通信は接続した
+            プロファイル同士のピアツーピアであり、UNRsports の同期リレーは運用しません。
+          </li>
+        </ul>
+        <p>
+          Family 同期は任意かつユーザー開始です。BMXt ウィンドウを閉じるとメモリ上のピアセッションは終了し、
+          identity／Family／名簿キーは 4.4 節のとおり端末内に残ります（消去またはアンインストールまで）。
+        </p>
+
         <h2>5. 拡張機能のコード</h2>
         <p>
           公式ビルドでは、Chrome API 効果と React UI を <strong>TypeScript</strong> で、コマンド解釈（parse・
@@ -831,13 +949,19 @@
 
         <h2>7. データの送信と第三者</h2>
         <p>
-          本拡張機能の利用に際し、タブ一覧・タブに関するメタデータ・コマンド履歴・セッションログ、および翻訳アシストに
-          入力したテキストを、UNRsports が収集・プロファイル目的で運用するサーバーに送信することはありません。
+          本拡張機能の利用に際し、タブ一覧・タブに関するメタデータ・コマンド履歴・セッションログ、Family 同期の
+          identity、および翻訳アシストに入力したテキストを、UNRsports が収集・プロファイル目的で運用するサーバーに
+          送信することはありません。
         </p>
         <p>
           翻訳アシストが ON のとき、4.7 に記載のとおり Chrome 内蔵 Translator API が入力テキストを端末上で処理する場合が
           あります。当方のサーバーはその処理結果を受け取りません。端末内 AI モデル・言語パックのダウンロードおよび関連する
           テレメトリの取り扱いは、本拡張機能のコードではなく Google の Chrome に関するポリシーに従います。
+        </p>
+        <p>
+          Family ローカル同期を有効にした場合、4.8 節のとおり接続した BMXt プロファイル間で WebRTC DataChannel による
+          コマンドバス通信が発生することがあります。この通信は UNRsports の同期サービスへ送るものではありません。
+          BMXt が設定する ICE は host 候補のみです（公開 STUN／TURN は自前で使いません）。
         </p>
         <p>
           一方で、ブラウザや OS の動作として、Google・Mozilla 等のサービスとの通信が発生する場合があります
@@ -858,8 +982,9 @@
         <h2>8. 利用目的の制限</h2>
         <p>
           上記の情報は、本拡張機能が明示する機能（ユーザーが開始したタブ・グループ・ウィンドウの管理、任意のページ参照・
-          検索・ナビオーバーレイ・サイト内フロート・プロンプト・UI 言語／host-ui／外観設定・翻訳アシスト）および最小限の UI
-          状態の維持のためにのみ用います。与信・融資の判断、これらと無関係なプロファイル目的には用いません。
+          検索・ナビオーバーレイ・サイト内フロート・プロンプト・UI 言語／host-ui／外観設定・翻訳アシスト・任意の Family
+          ローカル同期）および最小限の UI 状態の維持のためにのみ用います。与信・融資の判断、これらと無関係なプロファイル
+          目的には用いません。
         </p>
 
         <h2>9. 児童のプライバシー</h2>

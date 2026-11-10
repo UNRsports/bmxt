@@ -23,7 +23,7 @@ dom,-setting,-page-active,none,,dom -setting -page-active --auto | --manual,不�
 dom,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
 dom,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。mode=manual。,
 search,,,,,search …,単独 `search` + Enter: msgs + promptPrefix `search `。第二候補に `help`。,
-search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [--device <id>|--peers] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map
+search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [--device <id>|--peers] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map。0.9.0: `--device`/`--peers`
 search,-list,--all,rest,,（同上）,scope `--all`。,
 search,-list,--history,rest,,（同上）,scope `--history`。,
 search,-list,--bookmark,rest,,（同上）,scope `--bookmark`。,
@@ -34,7 +34,7 @@ group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `g
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
 tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`（browse 非依存の直接操作）。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化
-tab,-list,,rest,,tab -list [-url] [--device <id>|--peers] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `tab -list | browse`。パイプ時 page.window/group/open。`| tab -send <id>` でグループ維持コピー送信。,語彙: ListResult→bmxtRule
+tab,-list,,rest,,tab -list [-url] [--device <id>|--peers] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `tab -list | browse`。パイプ時 page.window/group/open。`| tab -send <id>` でグループ維持コピー送信。,語彙: ListResult→bmxtRule。0.9.0: `--device`/`--peers` + ピッカー絞り込み修正
 tab,-setting,,none,,tab -setting | tab -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
 tab,-setting,-page-active,none,,tab -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tab -setting -page-active `。,
 tab,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
@@ -71,17 +71,20 @@ session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,
 session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
 session,-setting-name,,rest,,session -setting-name [name],UiAction `session_setting_name`。,
-sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/connect/offer/answer/accept/open/ping）。第二候補に `help`。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー
-sync,-setup,,none,,sync -setup,UiAction `sync_setup`。プロンプト対話で Family→役割→握手コード貼付。複合コマンド不可。,
-sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。,
-sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待表示または参加（6b 手動/QR）。,
-sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。,
-sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。名簿メンバーへ再握手（deviceId 順で役割自動）。Copy ボタン／`sync-handshake-copy`。相手はコード本体をプロンプトへ貼付。Tab で ping 確認済みの接続中ピア候補。,
-sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコード作成（コピペ握手）。,
-sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサーコード。,
-sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel 確立。,
-sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。,
-tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。,
+sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/connect/offer/answer/accept/open/ping）。第二候補に `help`。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー。0.9.0
+sync,-setup,,none,,sync -setup,UiAction `sync_setup`。プロンプト対話で Family→役割→握手コード貼付。複合コマンド不可。,0.9.0
+sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。,0.9.0
+sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待表示または参加（6b 手動/QR）。,0.9.0
+sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。,0.9.0
+sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。名簿メンバーへ再握手（deviceId 順で役割自動）。Copy ボタン／`sync-handshake-copy`。相手はコード本体をプロンプトへ貼付。Tab で ping 確認済みの接続中ピア候補。,0.9.0
+sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコード作成（コピペ握手）。,0.9.0
+sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサーコード。,0.9.0
+sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel 確立。,0.9.0
+sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。,0.9.0
+tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。,0.9.0
+（内部）,family-webrtc-sync,,,,lib/features/sync/ + peer/webrtc-session.ts,"Family ローカル同期。device id / Family / roster / discovery を chrome.storage.local。コピペ握手（host ICE のみ・STUN/TURN なし）+ WebRTC DataChannel コマンドバス。横断 tab/search・tab -send。",0.9.0
+（内部）,tab-picker-filter-search,,,,lib/features/tabs/tab-picker-search-visibility.ts + tab-picker-fold-state.ts + side-picker/search/,"tab コマンドピッカー内の絞り込み検索動作を修正。",0.9.0
+
 （内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3
 （内部）,search-page-picker,,,,lib/features/search/search-page-matches-list-field.ts + search-entries + use-search-picker-results-open-tab-nav + page-dom scroll helpers,"`--page` ヒットの `pageMatchesJson` 受け渡しとピッカーからのページ内ジャンプ／タブ遷移を改善。",0.8.4

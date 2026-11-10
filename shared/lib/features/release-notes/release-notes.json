@@ -1,20 +1,12 @@
 {
-  "0.8.8": {
+  "0.9.0": {
     "ja": [
       "tabコマンドでのピッカー内で絞り込み検索機能動作を修正",
-      "webRTCによる別プロセス間の連携機能を実装",
-      "sync トンネル宿主をプロンプト窓に一本化（専用タブ／offscreen 廃止、明示再握手まで維持）",
-      "リモート tab -list に可搬 favIconUrl を載せ、Firefox 側でも相手タブのファビコンを表示",
-      "Family sync を自動メッシュ化（誰か1台と握手すれば兄弟とも直結）",
-      "tab -list --peers: 可搬 favicon を https 抽出の汎用整形にし、peer 問い合わせを並列化"
+      "webRTCによる別プロセス間の連携機能を実装"
     ],
     "en": [
-      "Fix tab-picker filter search",
-      "Cross-process browser ops via WebRTC sync",
-      "Host the sync tunnel only in the prompt window (no peer tab/offscreen; hold until re-handshake)",
-      "Ship portable favIconUrl on remote tab -list so Firefox can show peer favicons",
-      "Auto-mesh Family sync (handshake with any one peer; siblings link directly)",
-      "Shape peer tab favicons via https-only portable extraction; parallelize --peers queries"
+      "Fixed filter-search behavior in the tab command picker",
+      "Implemented cross-process collaboration via WebRTC"
     ]
   }
 }

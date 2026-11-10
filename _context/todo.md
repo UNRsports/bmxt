@@ -164,21 +164,22 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | ピア横断（一覧） | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| tab -send <id>`（コピー） · `| tab -send <id> --close` |
 | ピア横断（操作） | `tab -list --peers\|--device … \| browse` → remote 行の移動・閉じる・Enter・reload（`tabs_ops`）。グループ作成／新窓は未対応 |
 | Family 送信 | `tab -send` · picker `:move` でリモート窓／タブ／グループ宛（既定 copy、`move --close`） |
-| Family 一覧追従 | `tabs_changed` 广播（`first`=第一コマンド符号。A→B 送信後、接続中メンバーの該当 picker を再取得） |
+| Family 一覧追従 | `tabs_changed` 广播。ペイロード: `first`（第一コマンド選別符号・現状 `"tab"`；欠落は `"tab"`）+ `reason`（`open_tabs` / `tabs_ops` / `local_close`）。接続中 A/B/C へ配信し、符号一致の開中 picker のみ再取得（未接続は対象外） |
 | 接続 UI | プロンプト下の接続ピア名ステータス行 · トンネル開通中は双方「接続中...」＋入力ロック |
 | 再握手 | `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`） |
 | 未実装 | prefs/snapshot 自動同期 · リモート group/new-window |
 
 **横断 tab / search（実装方針・確認済み）**
 
-- **同一 PC · Chrome ↔ Firefox:** コマンドバス RPC（`tabs_list` / `search_query` / **`tabs_ops`** / `open_tabs`）。Firebase / STUN / TURN は不要
+- **同一 PC · Chrome ↔ Firefox:** コマンドバス RPC（`tabs_list` / `search_query` / **`tabs_ops`** / `open_tabs`）+ 在庫変更广播 **`tabs_changed`**（`first` / `reason`）。Firebase / STUN / TURN は不要
 - 各側は自ブラウザ API のみ実行し、結果・操作を DataChannel で返す（Chrome が Firefox タブを直接は読めない）
+- **一覧追従:** 送信成功／受信適用／`--close` 後に接続中ピアへ `tabs_changed`。購読側は `first` で機械選別（tab picker は `"tab"` のみ）
 - **別 PC・別ネット:** DataChannel 本線を維持するなら大枠は **シグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）**。Drive は握手の置き手紙には使えるがコマンド本線向きではない
 - Drive / Firebase の製品採用は未決定（§6 本体では Drive OAuth・常時 TURN はスコープ外のまま）
 
 **コマンド**
 
-- `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-connect` / `-offer` / `-answer` / `-accept` / `-ping` / `-open`）
+- `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-connect` / `-offer` / `-answer` / `-accept` / `-ping`）。タブ送信は `tab -send`（旧 `sync -open` は廃止）
 - 握手 UX: 初回 `sync -setup`；切断後 `sync -connect`。専用ウィザード（`shared/lib/features/sync/wizard/`）で COPY / 貼付。ログ全文選択は本線にしない。ショートカット `sync-handshake-copy` はウィザード／バーから利用
 - 接続表示: `shared/lib/features/sync/link/`（ステータス行 · connecting ロック）
 - skill `bmxt-add-command` + i18n EN/JA
@@ -208,8 +209,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c:** `tab -send` / `tab -list \| tab -send <deviceId>` グループ単位コピー送信（`sync -open` 廃止）
 - [x] **6c:** 横断 tab picker 操作（`tabs_ops` · move/close/activate/reload）。remote group/new-window は未対応
 - [x] **6c:** picker `:move` でリモート窓宛 Family 送信（copy 既定 / `move --close`；短縮 `m` なし）
-- [x] **6c:** Family `tabs_changed` 广播 → 開いている tab picker を接続メンバー全体で再取得
-- [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛を Chrome↔Firefox で確認
+- [x] **6c:** Family `tabs_changed` 广播（`first` 第一コマンド符号 + `reason`）→ 接続メンバーの該当開中 picker を再取得
+- [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛 · `tabs_changed` 追従を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC（接続設定のみ）
 
 ---
