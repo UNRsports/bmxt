@@ -4,6 +4,8 @@ import { sanitizeGroupTitle } from "../../../sync/bus/remote-open-sanitize.ts"
 export type SyncOpenUrlBatch = {
   groupTitle: string | null
   urls: string[]
+  /** EN: Parallel to `urls`; local tab ids only (remote rows are null). */
+  tabIds: Array<number | null>
 }
 
 function entryValue(record: BmxtRuleRecord, key: string): string | number | boolean | null {
@@ -42,10 +44,23 @@ function labelFromGroup(record: BmxtRuleRecord): string | null {
 /**
  * EN: Walk stream in order; page.group sets current title; URL-bearing kinds append to batch.
  */
+function tabIdFromRecord(record: BmxtRuleRecord): number | null {
+  const remote = entryValue(record, "remote")
+  if (remote === true) {
+    return null
+  }
+  const tabId = entryValue(record, "tabId")
+  if (typeof tabId === "number" && Number.isFinite(tabId)) {
+    return tabId
+  }
+  return null
+}
+
 export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUrlBatch[] {
   const batches: SyncOpenUrlBatch[] = []
   let currentTitle: string | null = null
   let currentUrls: string[] = []
+  let currentTabIds: Array<number | null> = []
 
   const flush = (): void => {
     if (currentUrls.length === 0) {
@@ -53,9 +68,11 @@ export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUr
     }
     batches.push({
       groupTitle: sanitizeGroupTitle(currentTitle),
-      urls: [...currentUrls]
+      urls: [...currentUrls],
+      tabIds: [...currentTabIds]
     })
     currentUrls = []
+    currentTabIds = []
   }
 
   for (const record of stream.records) {
@@ -74,9 +91,23 @@ export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUr
       const url = urlFromRecord(record)
       if (url !== null) {
         currentUrls.push(url)
+        currentTabIds.push(tabIdFromRecord(record))
       }
     }
   }
   flush()
   return batches
+}
+
+/** EN: True when any URL-bearing record is marked remote. */
+export function streamHasRemotePageOpen(stream: BmxtRuleStream): boolean {
+  for (const record of stream.records) {
+    if (record.kind !== "page.open") {
+      continue
+    }
+    if (entryValue(record, "remote") === true) {
+      return true
+    }
+  }
+  return false
 }

@@ -40,6 +40,7 @@ export function createInitialTabPickerEngineState(
     markedWindowIds: [...interactive.markedWindowIds],
     markedGroupKeys: [...interactive.markedGroupKeys],
     bulkSubMode: null,
+    moveCloseAfter: false,
     filterQuery: "",
     searchMode: false,
     hlSearchPattern: interactive.hlSearchPattern,

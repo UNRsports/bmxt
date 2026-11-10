@@ -72,7 +72,7 @@ export type SyncService = {
     deviceId: string,
     urls: string[],
     groupTitle: string | null
-  ): Promise<{ ok: boolean; lines: string[] }>
+  ): Promise<{ ok: boolean; lines: string[]; openedUrls: string[] }>
   listRemoteTabs(
     deviceId: string,
     showUrl: boolean
@@ -560,7 +560,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
     async openRemote(deviceId: string, urls: string[], groupTitle: string | null) {
       const safeUrls = sanitizeRemoteOpenUrls(urls)
       if (safeUrls.length === 0) {
-        return { ok: false, lines: [line("sync.open.noUrls")] }
+        return { ok: false, lines: [line("sync.open.noUrls")], openedUrls: [] }
       }
       const title = sanitizeGroupTitle(groupTitle)
       await ensurePeerDocument()
@@ -569,13 +569,15 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       if (state !== "connected") {
         return {
           ok: false,
-          lines: [line("sync.open.notConnected"), line(`sync.connect.state:${state}`)]
+          lines: [line("sync.open.notConnected"), line(`sync.connect.state:${state}`)],
+          openedUrls: []
         }
       }
       const result = await s.commandBus.openTabs(deviceId, safeUrls, title)
       return {
         ok: result.ok,
-        lines: [line(`sync.open.done:ok=${result.ok};detail=${result.detail ?? ""}`)]
+        lines: [line(`sync.open.done:ok=${result.ok};detail=${result.detail ?? ""}`)],
+        openedUrls: result.openedUrls
       }
     },
 

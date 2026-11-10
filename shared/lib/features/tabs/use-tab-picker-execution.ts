@@ -40,6 +40,12 @@ import {
   classifyPickerSelection,
   runRemoteTabsOp
 } from "./remote-picker-ops.ts"
+import {
+  familyPeerAtMoveDest,
+  listFamilyMovePeers,
+  sendSelectedTabsToFamilyPeer
+} from "./family-move-dest.ts"
+import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -51,6 +57,7 @@ export type TabPickerExecutionParams = {
   markedWindowIds: number[]
   markedGroupKeys: string[]
   bulkSubMode: BulkSubMode | null
+  moveCloseAfter: boolean
   variant: "default" | "groupNew"
   selectedTabIds: number[]
   groupChoices: GroupChoice[]
@@ -87,6 +94,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     markedWindowIds,
     markedGroupKeys,
     bulkSubMode,
+    moveCloseAfter,
     variant,
     selectedTabIds,
     groupChoices,
@@ -205,8 +213,45 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     selectedTabIds
   ])
 
+  const executeFamilySendAtDest = useCallback(
+    async (destHi: number, tabIds: number[], closeAfter: boolean): Promise<boolean> => {
+      const peers = listFamilyMovePeers()
+      const peer = familyPeerAtMoveDest(destHi, visibleRowIndices.length, peers)
+      if (peer === null) {
+        return false
+      }
+      const classified = classifyPickerSelection(rows, tabIds)
+      if (classified.kind === "mixed") {
+        await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
+        return true
+      }
+      if (classified.kind !== "local") {
+        await onAppendLog?.([tTabs("tabs.picker.remote.familyLocalOnly", locale)])
+        return true
+      }
+      const result = await sendSelectedTabsToFamilyPeer({
+        deviceId: peer.deviceId,
+        rows,
+        selectedTabIds: classified.tabIds,
+        closeAfter
+      })
+      await onAppendLog?.(expandSyncLogLines(result.lines, locale))
+      return true
+    },
+    [locale, onAppendLog, rows, visibleRowIndices.length]
+  )
+
   const executeBulkMove = useCallback(async () => {
-    if (visibleRowIndices.length === 0 || selectedTabIds.length === 0) {
+    if (selectedTabIds.length === 0) {
+      return
+    }
+    const handled = await executeFamilySendAtDest(moveDestHi, selectedTabIds, moveCloseAfter)
+    if (handled) {
+      clearMarkedViaReducer()
+      await onRefreshRows?.()
+      return
+    }
+    if (visibleRowIndices.length === 0) {
       return
     }
     const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
@@ -250,9 +295,11 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     await onRefreshRows?.()
   }, [
     clearMarkedViaReducer,
+    executeFamilySendAtDest,
     locale,
     markedKind,
     markedGroupKeys,
+    moveCloseAfter,
     moveDestHi,
     onAppendLog,
     onRefreshRows,
@@ -498,6 +545,17 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         selectedTabIds: execTabIds
       }
       if (intent === "executeMove") {
+        const familyHandled = await executeFamilySendAtDest(
+          snapshot.moveDestHi,
+          execTabIds,
+          moveCloseAfter
+        )
+        if (familyHandled) {
+          clearMarkedViaReducer()
+          setBulkSubMode(null)
+          await onRefreshRows?.()
+          return
+        }
         const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
         const target = resolvePickerTarget(snapshot.moveDestHi, targetRows)
         if (!target) {
@@ -608,8 +666,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     },
     [
       clearMarkedViaReducer,
+      executeFamilySendAtDest,
       groupChoices,
       groupPickIndex,
+      moveCloseAfter,
       newGroupTabIdsRef,
       onAppendLog,
       onRefreshRows,

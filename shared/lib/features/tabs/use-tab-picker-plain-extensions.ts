@@ -23,6 +23,9 @@ import {
 } from "./state-machine"
 import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
+import { filterTabPickerCommandCompletions } from "./tab-picker-overlay-constants"
+import { parsePickerCommand } from "./parse-picker-command"
+import { listFamilyMovePeers, moveDestLen } from "./family-move-dest"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -67,6 +70,7 @@ export function useTabPickerPlainExtensions({
   setHi,
   setHlSearchPattern,
   setBulkSubMode,
+  setMoveCloseAfter,
   setGroupNewPhase,
   setNewGroupTitle,
   setNewGroupColorIndex,
@@ -134,6 +138,7 @@ export function useTabPickerPlainExtensions({
   setHi: Dispatch<SetStateAction<number>>
   setHlSearchPattern: Dispatch<SetStateAction<string>>
   setBulkSubMode: Dispatch<SetStateAction<BulkSubMode | null>>
+  setMoveCloseAfter: Dispatch<SetStateAction<boolean>>
   setGroupNewPhase: Dispatch<SetStateAction<"tabs" | "meta">>
   setNewGroupTitle: Dispatch<SetStateAction<string>>
   setNewGroupColorIndex: Dispatch<SetStateAction<number>>
@@ -181,6 +186,44 @@ export function useTabPickerPlainExtensions({
   const newTabUrlRef = useRef(newTabUrl)
   newTabUrlWindowIdRef.current = newTabUrlWindowId
   newTabUrlRef.current = newTabUrl
+
+  const onCommandEnter = useCallback(
+    (buffer: string): boolean => {
+      const parsed = parsePickerCommand(buffer)
+      if (parsed.kind === "nohlsearch") {
+        clearCommandMode()
+        setHlSearchPattern("")
+        closeSearch()
+        return true
+      }
+      if (parsed.kind !== "bulk") {
+        clearCommandMode()
+        return true
+      }
+      if (parsed.mode === "edit") {
+        clearCommandMode()
+        void openEditFromPicker()
+        return true
+      }
+      // EN: Set close flag before mode so the bulkSubMode effect cannot wipe it.
+      setMoveCloseAfter(parsed.mode === "move" ? parsed.closeAfter : false)
+      setBulkSubMode(parsed.mode)
+      clearCommandMode()
+      return true
+    },
+    [
+      clearCommandMode,
+      closeSearch,
+      openEditFromPicker,
+      setBulkSubMode,
+      setHlSearchPattern,
+      setMoveCloseAfter
+    ]
+  )
+
+  const onCommandEmptyEnter = useCallback(() => {
+    setCommandListingHint(true)
+  }, [setCommandListingHint])
 
   const onCaptureBefore = useCallback(
     (e: KeyboardEvent): boolean => {
@@ -370,13 +413,14 @@ export function useTabPickerPlainExtensions({
 
       if (bulkSubMode === "move") {
         pickerStopEvent(e)
-        if (visibleRowIndices.length === 0) {
+        const destLen = moveDestLen(visibleRowIndices.length, listFamilyMovePeers().length)
+        if (destLen === 0) {
           return true
         }
         if (navDir === "down") {
-          applyReducedState({ kind: "moveDest", delta: 1, visibleLen: visibleRowIndices.length })
+          applyReducedState({ kind: "moveDest", delta: 1, visibleLen: destLen })
         } else {
-          applyReducedState({ kind: "moveDest", delta: -1, visibleLen: visibleRowIndices.length })
+          applyReducedState({ kind: "moveDest", delta: -1, visibleLen: destLen })
         }
         return true
       }
@@ -706,6 +750,7 @@ export function useTabPickerPlainExtensions({
       if (bulkSubMode !== null) {
         stop()
         setBulkSubMode(null)
+        setMoveCloseAfter(false)
         return true
       }
       return false
@@ -725,6 +770,7 @@ export function useTabPickerPlainExtensions({
       newTabUrlWindowId,
       searchMode,
       setBulkSubMode,
+      setMoveCloseAfter,
       setGroupNewPhase,
       setNewTabUrl,
       setNewTabUrlWindowId,
@@ -821,6 +867,9 @@ export function useTabPickerPlainExtensions({
     (): PlainPickerKeyboardExtensions => ({
       onCaptureBefore,
       customVerticalNav,
+      filterCommandCompletions: filterTabPickerCommandCompletions,
+      onCommandEmptyEnter,
+      onCommandEnter,
       isSearchJumpEnabled: () =>
         !searchMode &&
         !commandMode &&
@@ -856,6 +905,8 @@ export function useTabPickerPlainExtensions({
       hlSearchPattern,
       newTabUrlWindowId,
       onCaptureBefore,
+      onCommandEmptyEnter,
+      onCommandEnter,
       onEsc,
       onInputAfterPlain,
       onNormalEnter,

@@ -19,7 +19,7 @@ export type CommandBusStabilizer = {
     remoteDeviceId: SyncDeviceId,
     urls: string[],
     groupTitle: string | null
-  ): Promise<{ ok: boolean; detail: string | null }>
+  ): Promise<{ ok: boolean; detail: string | null; openedUrls: string[] }>
   listTabs(
     remoteDeviceId: SyncDeviceId,
     showUrl: boolean

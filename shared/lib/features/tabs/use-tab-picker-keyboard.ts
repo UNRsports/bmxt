@@ -50,6 +50,7 @@ export function useTabPickerKeyboard({
   hlSearchPattern,
   setHlSearchPattern,
   setBulkSubMode,
+  setMoveCloseAfter,
   setGroupNewPhase,
   setNewGroupTitle,
   setNewGroupColorIndex,
@@ -122,6 +123,7 @@ export function useTabPickerKeyboard({
   hlSearchPattern: string
   setHlSearchPattern: Dispatch<SetStateAction<string>>
   setBulkSubMode: Dispatch<SetStateAction<BulkSubMode | null>>
+  setMoveCloseAfter: Dispatch<SetStateAction<boolean>>
   setGroupNewPhase: Dispatch<SetStateAction<"tabs" | "meta">>
   setNewGroupTitle: Dispatch<SetStateAction<string>>
   setNewGroupColorIndex: Dispatch<SetStateAction<number>>
@@ -203,6 +205,7 @@ export function useTabPickerKeyboard({
     setHi,
     setHlSearchPattern,
     setBulkSubMode,
+    setMoveCloseAfter,
     setGroupNewPhase,
     setNewGroupTitle,
     setNewGroupColorIndex,
@@ -249,7 +252,7 @@ export function useTabPickerKeyboard({
     lineCount: visibleRowIndices.length,
     keyboardActive: isHostPaneFocused,
     sessionId,
-    enableCommandMode: false,
+    enableCommandMode: true,
     onReturnToPrompt,
     onConfirmLineIndex: () => {
       void confirmSelection()

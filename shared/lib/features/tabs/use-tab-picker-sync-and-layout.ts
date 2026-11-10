@@ -9,6 +9,7 @@ import { tabPickerVisibleHiIndicesMatching } from "./picker-rows"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
 import { scrollPickerListRowIntoView } from "../side-picker/interaction/picker-list-scroll"
+import { getSyncLinkStatus } from "../sync/link/sync-link-status"
 
 type PickerGroupChoice = { id: number; windowId: number; label: string }
 
@@ -233,12 +234,12 @@ export function useTabPickerSyncAndLayoutEffects({
   ])
 
   useEffect(() => {
-    if (
-      bulkSubMode === "move" &&
-      prevBulkSubModeRef.current !== "move" &&
-      visibleRowIndices.length > 0
-    ) {
-      setMoveDestHi(Math.min(hi, visibleRowIndices.length - 1))
+    if (bulkSubMode === "move" && prevBulkSubModeRef.current !== "move") {
+      const familyCount = getSyncLinkStatus().connectedPeers.length
+      const destLen = visibleRowIndices.length + familyCount
+      if (destLen > 0) {
+        setMoveDestHi(Math.min(hi, Math.max(0, destLen - 1)))
+      }
     }
     prevBulkSubModeRef.current = bulkSubMode
   }, [bulkSubMode, hi, visibleRowIndices.length, prevBulkSubModeRef, setMoveDestHi])

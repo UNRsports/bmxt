@@ -608,8 +608,8 @@
     "en": "  sync -accept <code> — apply answer and establish DataChannel"
   },
   "cmd.sync.usage.line7": {
-    "ja": "  sync -open <deviceId> <url…> — 接続済みピアでタブを開く",
-    "en": "  sync -open <deviceId> <url…> — open tabs on a connected peer"
+    "ja": "  sync -open <deviceId> <url…> [--group <title>] [--close] — 接続済みピアでタブを開く（--close は成功分の元タブを閉じる）",
+    "en": "  sync -open <deviceId> <url…> [--group <title>] [--close] — open tabs on a connected peer (--close closes successful local sources)"
   },
   "cmd.sync.usage.line8": {
     "ja": "  sync -ping <deviceId> — 接続済みピアへ ping",
@@ -740,8 +740,8 @@
     "en": "error: invalid deviceId"
   },
   "cmd.sync.error.openUsage": {
-    "ja": "error: usage: sync -open <deviceId> <url…> [--group <title>]",
-    "en": "error: usage: sync -open <deviceId> <url…> [--group <title>]"
+    "ja": "error: usage: sync -open <deviceId> <url…> [--group <title>] [--close]",
+    "en": "error: usage: sync -open <deviceId> <url…> [--group <title>] [--close]"
   },
   "cmd.sync.status.device": {
     "ja": "device: {name} ({browser}) id={deviceId}",
@@ -834,6 +834,10 @@
   "cmd.sync.open.done": {
     "ja": "遠隔 open: {detail}",
     "en": "remote open: {detail}"
+  },
+  "cmd.sync.open.closed": {
+    "ja": "送信元で閉じたタブ: {count}",
+    "en": "closed source tabs: {count}"
   },
   "cmd.sync.list.noConnectedPeers": {
     "ja": "接続中の Family ピアがありません（`sync -status` を確認）。ローカルのみ表示します。",

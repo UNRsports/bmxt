@@ -98,6 +98,11 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token.startsWith("sync.open.done:")) {
     return tCmd("cmd.sync.open.done", locale, { detail: token.slice("sync.open.done:".length) })
   }
+  if (token.startsWith("sync.open.closed:")) {
+    return tCmd("cmd.sync.open.closed", locale, {
+      count: token.slice("sync.open.closed:".length)
+    })
+  }
   if (token === "sync.list.noConnectedPeers") {
     return tCmd("cmd.sync.list.noConnectedPeers", locale)
   }

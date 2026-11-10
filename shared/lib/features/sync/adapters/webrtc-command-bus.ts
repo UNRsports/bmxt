@@ -40,7 +40,12 @@ function mapPeerState(raw: string): SyncConnectionState {
 type PendingOpen = {
   kind: "open"
   at: number
-  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    openedUrls: string[]
+    rttMs: number | null
+  }) => void
 }
 
 type PendingAck = {
@@ -151,7 +156,8 @@ export function createWebrtcCommandBusStabilizer(
         replyTo: command.id,
         from: device.deviceId,
         ok: result.ok,
-        detail: result.detail
+        detail: result.detail,
+        openedUrls: result.openedUrls
       }
       await replyTo(command.from, reply)
     } else if (command.type === "open_tabs_result") {
@@ -161,6 +167,7 @@ export function createWebrtcCommandBusStabilizer(
         waiter.resolve({
           ok: command.ok,
           detail: command.detail,
+          openedUrls: Array.isArray(command.openedUrls) ? command.openedUrls : [],
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
       }
@@ -299,6 +306,15 @@ export function createWebrtcCommandBusStabilizer(
         waiter.resolve({ ok: false, detail: "timeout", hits: [], rttMs: null })
         return
       }
+      if (waiter.kind === "open") {
+        waiter.resolve({
+          ok: false,
+          detail: "timeout",
+          openedUrls: [],
+          rttMs: null
+        })
+        return
+      }
       waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
     }, timeoutMs)
   }
@@ -356,6 +372,7 @@ export function createWebrtcCommandBusStabilizer(
       const resultPromise = new Promise<{
         ok: boolean
         detail: string | null
+        openedUrls: string[]
         rttMs: number | null
       }>((resolve) => {
         pending.set(id, { kind: "open", resolve, at: Date.now() })
@@ -365,10 +382,10 @@ export function createWebrtcCommandBusStabilizer(
       if (!sent) {
         await commandQueue.enqueue(remoteDeviceId, command)
         setMappedState(remoteDeviceId, "queued")
-        return { ok: false, detail: "not_connected" }
+        return { ok: false, detail: "not_connected", openedUrls: [] }
       }
       const result = await resultPromise
-      return { ok: result.ok, detail: result.detail }
+      return { ok: result.ok, detail: result.detail, openedUrls: result.openedUrls }
     },
 
     async listTabs(remoteDeviceId, showUrl) {

@@ -195,6 +195,8 @@ export type SyncBusCommand =
       from: SyncDeviceId
       ok: boolean
       detail: string | null
+      /** EN: URLs that were successfully opened on the peer (for --close mapping). */
+      openedUrls: string[]
     }
   | {
       type: "tabs_list"

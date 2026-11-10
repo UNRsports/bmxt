@@ -303,9 +303,41 @@
     "ja": "error: この操作はリモートタブではまだ未対応です。",
     "en": "error: this operation is not yet supported for remote tabs."
   },
+  "tabs.picker.remote.familyLocalOnly": {
+    "ja": "error: Family 宛の送信はローカルタブのみ選べます。",
+    "en": "error: Family send accepts local tabs only."
+  },
+  "tabs.picker.family.destList": {
+    "ja": "Family 宛先",
+    "en": "Family destinations"
+  },
+  "tabs.picker.family.destRow": {
+    "ja": "Family · {name}（{mode}）",
+    "en": "Family · {name} ({mode})"
+  },
+  "tabs.picker.family.modeCopy": {
+    "ja": "コピー",
+    "en": "copy"
+  },
+  "tabs.picker.family.modeClose": {
+    "ja": "移動",
+    "en": "move"
+  },
+  "tabs.picker.family.hintCopy": {
+    "ja": "Enter: {name} へコピー",
+    "en": "Enter: copy to {name}"
+  },
+  "tabs.picker.family.hintClose": {
+    "ja": "Enter: {name} へコピー後、送信元を閉じる",
+    "en": "Enter: copy to {name}, then close source tabs"
+  },
   "tabs.picker.inputAria.keys": {
     "ja": "タブピッカーのキー操作",
     "en": "Tab picker key input"
+  },
+  "tabs.picker.inputAria.command": {
+    "ja": "タブピッカーのコマンド入力",
+    "en": "Tab picker command input"
   },
   "tabs.picker.listAria": {
     "ja": "タブ",

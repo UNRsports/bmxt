@@ -1,6 +1,12 @@
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
 import type { UiLocale } from "../../setting/locale"
+import {
+  closeLocalTabsByIds,
+  resolveLocalTabIdsByUrls,
+  tabIdsForOpenedUrls
+} from "../bus/close-local-after-open.ts"
+import { parseOpenPayload } from "../bus/parse-open-payload.ts"
 import { expandSyncLogLines } from "./expand-sync-log"
 import { formatSyncStatusLines } from "./format-status"
 import { getSyncService } from "./sync-service.ts"
@@ -9,22 +15,6 @@ export type SyncUiLogSink = {
   locale: UiLocale
   appendLogLines: (lines: string[]) => void | Promise<void>
   focusPrompt: () => void
-}
-
-function parseOpenPayload(payload: string): { urls: string[]; groupTitle: string | null } {
-  const parts = payload.trim().split(/\s+/).filter((p) => p.length > 0)
-  let groupTitle: string | null = null
-  const urls: string[] = []
-  for (let i = 0; i < parts.length; i += 1) {
-    const part = parts[i]!
-    if (part === "--group" && i + 1 < parts.length) {
-      groupTitle = parts[i + 1]!
-      i += 1
-      continue
-    }
-    urls.push(part)
-  }
-  return { urls, groupTitle }
 }
 
 async function runAndLog(
@@ -66,8 +56,18 @@ export async function runSyncOpen(
   deviceId: string,
   payload: string
 ): Promise<{ ok: boolean; lines: string[] }> {
-  const { urls, groupTitle } = parseOpenPayload(payload)
-  return getSyncService().openRemote(deviceId, urls, groupTitle)
+  const { urls, groupTitle, closeAfter } = parseOpenPayload(payload)
+  const result = await getSyncService().openRemote(deviceId, urls, groupTitle)
+  if (!closeAfter || result.openedUrls.length === 0) {
+    return { ok: result.ok, lines: result.lines }
+  }
+  const sources = await resolveLocalTabIdsByUrls(result.openedUrls)
+  const toClose = tabIdsForOpenedUrls(sources, result.openedUrls)
+  const closed = await closeLocalTabsByIds(toClose)
+  return {
+    ok: result.ok,
+    lines: [...result.lines, `sync.open.closed:${closed}`]
+  }
 }
 
 export async function runSyncPing(deviceId: string): Promise<{ ok: boolean; lines: string[] }> {

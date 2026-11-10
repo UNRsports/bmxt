@@ -1,4 +1,4 @@
-/** EN: Match `sync -open <deviceId>` as a pipe consumer. */
+/** EN: Match `sync -open <deviceId> [--close]` as a pipe consumer. */
 
 export const SYNC_OPEN_ACCEPTS_BMXT_RULE_KINDS = [
   "page.open",
@@ -11,6 +11,7 @@ export const SYNC_OPEN_ACCEPTS_BMXT_RULE_KINDS = [
 
 export type SyncOpenPipeMatch = {
   deviceId: string
+  closeAfter: boolean
 }
 
 function normalizeToken(token: string): string {
@@ -18,12 +19,12 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: True when the pipe-right segment is `sync -open <deviceId>` (no extra URL args).
- * JA: パイプ右辺が `sync -open <deviceId>`（URL 引数なし）のとき真。
+ * EN: True when the pipe-right segment is `sync -open <deviceId> [--close]` (no URL args).
+ * JA: パイプ右辺が `sync -open <deviceId> [--close]`（URL 引数なし）のとき真。
  */
 export function parseSyncOpenPipeConsumer(segment: string): SyncOpenPipeMatch | null {
   const parts = segment.trim().split(/\s+/).filter((part) => part.length > 0)
-  if (parts.length !== 3) {
+  if (parts.length !== 3 && parts.length !== 4) {
     return null
   }
   if (normalizeToken(parts[0]!) !== "sync") {
@@ -36,7 +37,14 @@ export function parseSyncOpenPipeConsumer(segment: string): SyncOpenPipeMatch | 
   if (deviceId.length === 0 || deviceId.startsWith("-")) {
     return null
   }
-  return { deviceId }
+  let closeAfter = false
+  if (parts.length === 4) {
+    if (parts[3] !== "--close") {
+      return null
+    }
+    closeAfter = true
+  }
+  return { deviceId, closeAfter }
 }
 
 export function isSyncOpenPipeConsumer(segment: string): boolean {

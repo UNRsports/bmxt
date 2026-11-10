@@ -147,7 +147,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | peer 宿主 | **BMXt プロンプト窓のみ**（Chrome/Firefox 共通）。offscreen / 専用 peer タブは使わない。SW 単体では不可。窓を閉じる／明示再握手までトンネル堅持 |
 | メッシュ | 手動握手は誰か1台とだけで可。直結後に `mesh_peers` / `mesh_signal` で兄弟直結を自動補完（タブ操作はハブ中継しない） |
 | 相手休眠時 | DataChannel 不可 → メモリキューのみ（永続箱なし）。双方オンライン時に再握手 |
-| UX 視野 | `tab` picker の移動先に Family メンバー（例: firefox@desk） |
+| UX 視野 | `tab` picker `:move` 宛先に Family メンバー（例: firefox@desk）。既定 copy、`move --close` で移動相当 |
 | 非目標（6c） | native messaging、FSA 作業ディレクトリ、torrent 本線、常時 TURN |
 
 **名簿・将来の prefs**
@@ -161,11 +161,12 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 |----|------|
 | ピア間 | `sync -ping <deviceId>` · `sync -open <deviceId> <url…> [--group <title>]` |
 | ローカル | `sync -status` / `-members` / `-pair` / `-setup` / `-connect` · setting picker の表示名 |
-| ピア横断（一覧） | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| sync -open <id>`（コピー） |
+| ピア横断（一覧） | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| sync -open <id>`（コピー） · `| sync -open <id> --close`（成功分だけ送信元 close＝移動） |
 | ピア横断（操作） | `tab -list --peers\|--device … \| browse` → remote 行の移動・閉じる・Enter・reload（`tabs_ops`）。グループ作成／新窓は未対応 |
+| Family 送信 | tab picker `:move` 宛先に接続ピア。既定 copy、`move --close` で成功分だけローカル close |
 | 接続 UI | プロンプト下の接続ピア名ステータス行 · トンネル開通中は双方「接続中...」＋入力ロック |
 | 再握手 | `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`） |
-| 未実装 | prefs/snapshot 自動同期 · tab picker の Family 宛先 UI · リモート group/new-window |
+| 未実装 | prefs/snapshot 自動同期 · リモート group/new-window |
 
 **横断 tab / search（実装方針・確認済み）**
 
@@ -205,7 +206,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c:** 同一 PC 横断 `tab` / `search`（コマンドバス RPC · `--device` / `--peers`）
 - [x] **6c:** `tab -list \| sync -open <deviceId>` グループ単位コピー送信
 - [x] **6c:** 横断 tab picker 操作（`tabs_ops` · move/close/activate/reload）。remote group/new-window は未対応
-- [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| sync -open` · `--peers \| browse` 操作を Chrome↔Firefox で確認
+- [x] **6c:** Family 宛 `sync -open [--close]` + picker `:move` Family 宛先（copy 既定 / `move --close`）
+- [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| sync -open` / `--close` · `--peers \| browse` · picker Family 宛を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC
 
 ---

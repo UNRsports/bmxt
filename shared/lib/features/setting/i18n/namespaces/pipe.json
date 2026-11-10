@@ -32,12 +32,16 @@
     "en": "error: unsupported pipe consumer: {stage}"
   },
   "pipe.syncOpen.badArgs": {
-    "ja": "error: パイプ右辺は `sync -open <deviceId>` です（URL は stdin から）",
-    "en": "error: pipe consumer is `sync -open <deviceId>` (URLs come from stdin)"
+    "ja": "error: パイプ右辺は `sync -open <deviceId> [--close]` です（URL は stdin から）",
+    "en": "error: pipe consumer is `sync -open <deviceId> [--close]` (URLs come from stdin)"
   },
   "pipe.syncOpen.noUrls": {
     "ja": "error: パイプ入力に送信できる URL がありません",
     "en": "error: no sendable URLs in the pipe stream"
+  },
+  "pipe.syncOpen.closeLocalOnly": {
+    "ja": "error: `--close` はローカルタブのみ対象です（リモート行を含めないでください）",
+    "en": "error: `--close` applies to local tabs only (do not include remote rows)"
   },
   "pipe.browse.noListResult": {
     "ja": "error: browse には `-list` 列挙の ListResult が必要です（例: tab -list | browse）",

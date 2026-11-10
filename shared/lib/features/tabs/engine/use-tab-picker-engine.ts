@@ -16,6 +16,7 @@ const FALLBACK_STATE: TabPickerEngineState = {
   markedWindowIds: [],
   markedGroupKeys: [],
   bulkSubMode: null,
+  moveCloseAfter: false,
   filterQuery: "",
   searchMode: false,
   hlSearchPattern: "",
