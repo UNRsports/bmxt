@@ -41,6 +41,10 @@ export function anyLeafHasPickerOpen(map: SessionPickersByLeaf): boolean {
   return Object.values(map).some(anySessionPickerOpen)
 }
 
+export function anyLeafHasTabPickerOpen(map: SessionPickersByLeaf): boolean {
+  return Object.values(map).some((pickers) => pickers.tabs !== null)
+}
+
 export function openPickerSlots(pickers: SessionPickerState): PickerSlotId[] {
   const open: PickerSlotId[] = []
   if (pickers.tabs !== null) {

@@ -164,6 +164,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | ピア横断（一覧） | `tab -list` / `search -list` の `--device <id>` / `--peers` · `tab -list \| tab -send <id>`（コピー） · `| tab -send <id> --close` |
 | ピア横断（操作） | `tab -list --peers\|--device … \| browse` → remote 行の移動・閉じる・Enter・reload（`tabs_ops`）。グループ作成／新窓は未対応 |
 | Family 送信 | `tab -send` · picker `:move` でリモート窓／タブ／グループ宛（既定 copy、`move --close`） |
+| Family 一覧追従 | `tabs_changed` 广播（`first`=第一コマンド符号。A→B 送信後、接続中メンバーの該当 picker を再取得） |
 | 接続 UI | プロンプト下の接続ピア名ステータス行 · トンネル開通中は双方「接続中...」＋入力ロック |
 | 再握手 | `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`） |
 | 未実装 | prefs/snapshot 自動同期 · リモート group/new-window |
@@ -207,6 +208,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c:** `tab -send` / `tab -list \| tab -send <deviceId>` グループ単位コピー送信（`sync -open` 廃止）
 - [x] **6c:** 横断 tab picker 操作（`tabs_ops` · move/close/activate/reload）。remote group/new-window は未対応
 - [x] **6c:** picker `:move` でリモート窓宛 Family 送信（copy 既定 / `move --close`；短縮 `m` なし）
+- [x] **6c:** Family `tabs_changed` 广播 → 開いている tab picker を接続メンバー全体で再取得
 - [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC（接続設定のみ）
 

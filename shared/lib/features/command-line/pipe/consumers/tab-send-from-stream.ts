@@ -66,6 +66,9 @@ export async function runTabSendFromBmxtRuleStream(
     const toClose = tabIdsForOpenedUrls(allSources, allOpened)
     const closed = await closeLocalTabsByIds(toClose)
     lines.push(...expandSyncLogLines([`sync.open.closed:${closed}`], locale))
+    if (closed > 0) {
+      await service.announceTabsChanged("local_close", "tab")
+    }
   }
   return allOk ? segmentSuccess(lines) : segmentFailure("runtime", lines)
 }

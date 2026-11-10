@@ -102,6 +102,9 @@ export async function sendSelectedTabsToFamilyPeer(options: {
     const toClose = tabIdsForOpenedUrls(allSources, allOpened)
     closed = await closeLocalTabsByIds(toClose)
     lines.push(`sync.open.closed:${closed}`)
+    if (closed > 0) {
+      await service.announceTabsChanged("local_close", "tab")
+    }
   }
   return { ok: allOk, lines, closed }
 }

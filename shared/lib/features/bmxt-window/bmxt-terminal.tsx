@@ -4,9 +4,11 @@ import {
   setTabPickerEngineProjectedChangeHandler
 } from "../tabs/engine"
 import { useTabPickerChromeSync } from "../tabs/use-tab-picker-chrome-sync"
+import { useTabPickerFamilySync } from "../tabs/use-tab-picker-family-sync.ts"
 import { setTabPickerFoldActiveSession, pruneTabPickerFoldSessions } from "../tabs/tab-picker-fold-state"
 import {
   anyLeafHasPickerOpen,
+  anyLeafHasTabPickerOpen,
   sessionPickersOrEmpty,
   setSessionPickerSlot as applySessionPickerSlot,
   type PickerSlotId,
@@ -449,7 +451,12 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     () => anyLeafHasPickerOpen(pickersBySession),
     [pickersBySession]
   )
+  const anyTabPickerOpen = useMemo(
+    () => anyLeafHasTabPickerOpen(pickersBySession),
+    [pickersBySession]
+  )
   useTabPickerChromeSync(scheduleTabPickerRowsRefresh, anyPickerOpen)
+  useTabPickerFamilySync(scheduleTabPickerRowsRefresh, anyTabPickerOpen)
 
   useEffect(() => {
     reconcileTabPickerEngines(pickersBySession)

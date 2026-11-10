@@ -29,8 +29,11 @@ import type {
   SyncRemoteTabRow,
   SyncRosterMember,
   SyncStatusSnapshot,
-  SyncTabsOp
+  SyncTabsOp,
+  TabsChangedReason,
+  TabsChangedSignal
 } from "../types"
+import type { FamilySignalFirstCommand } from "../bus/family-signal-first.ts"
 import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
 import { installAutoMesh } from "../mesh/auto-mesh.ts"
@@ -99,6 +102,17 @@ export type SyncService = {
   >
   /** EN: Re-sync bus states from bound RTC sessions; return connected peer ids. */
   listConnectedPeerDeviceIds(): Promise<string[]>
+  /**
+   * EN: Broadcast tabs_changed to connected Family peers (and self subscribers).
+   * JA: 接続中 Family へ tabs_changed を广播（自端末の購読者も含む）。
+   * @param first First-command selection code (default `"tab"`).
+   */
+  announceTabsChanged(
+    reason: TabsChangedReason,
+    first?: FamilySignalFirstCommand
+  ): Promise<void>
+  /** EN: Subscribe to Family / local tabs_changed signals for open picker refresh. */
+  subscribeTabsChanged(listener: (signal: TabsChangedSignal) => void): () => void
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
 }
 
@@ -705,6 +719,14 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         })
       }
       return reachable
+    },
+
+    async announceTabsChanged(reason: TabsChangedReason, first?: FamilySignalFirstCommand) {
+      await s.commandBus.announceTabsChanged(reason, first)
+    },
+
+    subscribeTabsChanged(listener) {
+      return s.commandBus.subscribeTabsChanged(listener)
     },
 
     async setDisplayName(name: string) {

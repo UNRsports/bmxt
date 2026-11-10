@@ -167,6 +167,19 @@ export type SyncRemoteSearchHit = {
   windowId: number | null
 }
 
+/** EN: Why a Family tabs_changed signal was emitted (refresh hint only). */
+export type TabsChangedReason = "open_tabs" | "tabs_ops" | "local_close"
+
+/**
+ * EN: Payload delivered to local subscribers of tabs_changed (after wire normalize).
+ * JA: tabs_changed のローカル購読者へ渡すペイロード（ワイヤ正規化後）。
+ */
+export type TabsChangedSignal = {
+  reason: TabsChangedReason
+  /** EN: First-command selection code (e.g. `"tab"`). */
+  first: string
+}
+
 export type SyncBusCommand =
   | {
       type: "ping"
@@ -243,6 +256,22 @@ export type SyncBusCommand =
       from: SyncDeviceId
       ok: boolean
       detail: string | null
+    }
+  | {
+      /**
+       * EN: Lightweight Family broadcast — inventory changed; peers refresh matching open pickers.
+       * JA: 軽量 Family 广播。在庫が変わったので、符号に合う開いている picker を再取得する。
+       */
+      type: "tabs_changed"
+      id: string
+      from: SyncDeviceId
+      at: number
+      reason: TabsChangedReason
+      /**
+       * EN: First-command selection code (`tab`, later `search`, …). Older peers may omit → treat as `tab`.
+       * JA: 第一コマンド選別符号。旧ピア欠落時は `tab` 扱い。
+       */
+      first: string
     }
   | {
       /** EN: Announce other live DataChannel peers so the receiver can mesh. */

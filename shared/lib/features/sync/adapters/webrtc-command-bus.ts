@@ -9,12 +9,20 @@ import type {
   SyncDeviceId,
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
-  SyncTabsOp
+  SyncTabsOp,
+  TabsChangedReason,
+  TabsChangedSignal
 } from "../types"
 import { applyRemoteOpenTabs } from "../bus/remote-open"
 import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
 import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
 import { applyRemoteTabsOps } from "../bus/apply-remote-tabs-ops.ts"
+import {
+  FAMILY_SIGNAL_FIRST_DEFAULT_TAB,
+  buildTabsChangedSignal,
+  listTabsChangedAnnounceTargets
+} from "../bus/tabs-changed-announce.ts"
+import type { FamilySignalFirstCommand } from "../bus/family-signal-first.ts"
 import { SYNC_REMOTE_QUERY_TIMEOUT_MS } from "../bus/remote-query-limits"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 
@@ -95,12 +103,47 @@ export function createWebrtcCommandBusStabilizer(
 ): CommandBusStabilizer {
   const states = new Map<SyncDeviceId, SyncConnectionState>()
   const stateListeners = new Set<() => void>()
+  const tabsChangedListeners = new Set<(signal: TabsChangedSignal) => void>()
   let commandHandler: ((command: SyncBusCommand) => void | Promise<void>) | null = null
   const pending = new Map<string, PendingWaiter>()
 
   function notifyStates(): void {
     for (const listener of stateListeners) {
       listener()
+    }
+  }
+
+  function notifyTabsChanged(signal: TabsChangedSignal): void {
+    for (const listener of tabsChangedListeners) {
+      listener(signal)
+    }
+  }
+
+  async function announceTabsChanged(
+    reason: TabsChangedReason,
+    first: FamilySignalFirstCommand = FAMILY_SIGNAL_FIRST_DEFAULT_TAB
+  ): Promise<void> {
+    const signal = buildTabsChangedSignal({ reason, first })
+    if (signal === null) {
+      return
+    }
+    const device = await loadOrCreateDeviceIdentity()
+    const command: SyncBusCommand = {
+      type: "tabs_changed",
+      id: bytesToBase64Url(randomBytes(8)),
+      from: device.deviceId,
+      at: Date.now(),
+      reason: signal.reason,
+      first: signal.first
+    }
+    notifyTabsChanged(signal)
+    const targets = listTabsChangedAnnounceTargets(device.deviceId, [
+      ...states.entries()
+    ].map(([deviceId, state]) => ({ deviceId, state })))
+    for (const remoteDeviceId of targets) {
+      // EN: Ephemeral signal — do not enqueue if the peer is mid-disconnect.
+      // JA: 一時シグナル。切断中ピアへはキューしない。
+      void peerHost.sendCommand(remoteDeviceId, command)
     }
   }
 
@@ -161,6 +204,9 @@ export function createWebrtcCommandBusStabilizer(
         openedUrls: result.openedUrls
       }
       await replyTo(command.from, reply)
+      if (result.ok) {
+        await announceTabsChanged("open_tabs", FAMILY_SIGNAL_FIRST_DEFAULT_TAB)
+      }
     } else if (command.type === "open_tabs_result") {
       const waiter = pending.get(command.replyTo)
       if (waiter && waiter.kind === "open") {
@@ -256,6 +302,9 @@ export function createWebrtcCommandBusStabilizer(
         detail: result.detail
       }
       await replyTo(command.from, reply)
+      if (result.ok) {
+        await announceTabsChanged("tabs_ops", FAMILY_SIGNAL_FIRST_DEFAULT_TAB)
+      }
     } else if (command.type === "tabs_ops_result") {
       const waiter = pending.get(command.replyTo)
       if (waiter && waiter.kind === "tabs_ops") {
@@ -276,6 +325,14 @@ export function createWebrtcCommandBusStabilizer(
           hits: command.hits,
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
+      }
+    } else if (command.type === "tabs_changed") {
+      const signal = buildTabsChangedSignal({
+        reason: command.reason,
+        first: "first" in command ? command.first : undefined
+      })
+      if (signal !== null) {
+        notifyTabsChanged(signal)
       }
     }
     if (commandHandler) {
@@ -387,6 +444,9 @@ export function createWebrtcCommandBusStabilizer(
         return { ok: false, detail: "not_connected", openedUrls: [] }
       }
       const result = await resultPromise
+      if (result.ok) {
+        await announceTabsChanged("open_tabs", FAMILY_SIGNAL_FIRST_DEFAULT_TAB)
+      }
       return { ok: result.ok, detail: result.detail, openedUrls: result.openedUrls }
     },
 
@@ -467,8 +527,13 @@ export function createWebrtcCommandBusStabilizer(
         return { ok: false, detail: "not_connected" }
       }
       const result = await resultPromise
+      if (result.ok) {
+        await announceTabsChanged("tabs_ops", FAMILY_SIGNAL_FIRST_DEFAULT_TAB)
+      }
       return { ok: result.ok, detail: result.detail }
     },
+
+    announceTabsChanged,
 
     getState(remoteDeviceId) {
       return states.get(remoteDeviceId) ?? mapPeerState(peerHost.getConnectionState(remoteDeviceId))
@@ -492,6 +557,13 @@ export function createWebrtcCommandBusStabilizer(
       stateListeners.add(listener)
       return () => {
         stateListeners.delete(listener)
+      }
+    },
+
+    subscribeTabsChanged(listener) {
+      tabsChangedListeners.add(listener)
+      return () => {
+        tabsChangedListeners.delete(listener)
       }
     },
 

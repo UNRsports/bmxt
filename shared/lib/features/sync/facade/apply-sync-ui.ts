@@ -64,6 +64,9 @@ export async function runSyncOpen(
   const sources = await resolveLocalTabIdsByUrls(result.openedUrls)
   const toClose = tabIdsForOpenedUrls(sources, result.openedUrls)
   const closed = await closeLocalTabsByIds(toClose)
+  if (closed > 0) {
+    await getSyncService().announceTabsChanged("local_close", "tab")
+  }
   return {
     ok: result.ok,
     lines: [...result.lines, `sync.open.closed:${closed}`]
