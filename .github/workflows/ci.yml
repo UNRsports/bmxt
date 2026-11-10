@@ -4,18 +4,25 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# EN: Cancel superseded PR runs only. Never cancel in-progress main/master verify
+#     (rapid pushes / merge races otherwise surface as "The operation was canceled."
+#     mid `wxt build`, with no successor green run).
+# JA: PR の追い越しのみキャンセル。main/master の verify は中断しない
+#     （連続 push / merge 競合で `wxt build` 中に "The operation was canceled." となり、
+#     後続の成功 run が残らないことがある）。
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
