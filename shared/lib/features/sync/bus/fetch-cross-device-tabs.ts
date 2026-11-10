@@ -3,7 +3,7 @@ import { LIST_OUTPUT_SCHEMA } from "../../command-line/list-output/types.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { buildTabPickerRowsBundle } from "../../tabs/picker-rows.ts"
 import { tabPickerRowsToListResult } from "../../tabs/tabs-list-result.ts"
-import { loadOrCreateDeviceIdentity } from "../device/device-identity"
+import { loadOrCreateDeviceIdentity } from "../device/device-identity.ts"
 import { getSyncService } from "../facade/sync-service.ts"
 import type { DeviceListScope } from "./device-list-scope"
 import {

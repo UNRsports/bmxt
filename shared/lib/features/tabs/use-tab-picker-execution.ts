@@ -37,9 +37,9 @@ import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 import {
   buildRemoteMoveOp,
-  classifyPickerSelection,
-  runRemoteTabsOp
+  classifyPickerSelection
 } from "./remote-picker-ops.ts"
+import { runRemoteTabsOp } from "./run-remote-tabs-op.ts"
 import { sendSelectedTabsToFamilyPeer } from "./family-move-dest.ts"
 import { resolveFamilySendDestination } from "./resolve-family-send-dest.ts"
 import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"

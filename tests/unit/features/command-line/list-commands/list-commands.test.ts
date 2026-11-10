@@ -12,7 +12,10 @@ describe("list-commands registry", () => {
   it("matches tab -list -url", () => {
     const matched = matchPlainListCommand("tab -list -url")
     assert.notEqual(matched, null)
-    assert.deepEqual(matched!.match, { showUrl: true })
+    assert.deepEqual(matched!.match, {
+      showUrl: true,
+      scope: { kind: "local" }
+    })
   })
 
   it("rejects unknown tokens on tab -list", () => {

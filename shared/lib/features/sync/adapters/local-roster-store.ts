@@ -1,4 +1,4 @@
-import { loadOrCreateDeviceIdentity } from "../device/device-identity"
+import { loadOrCreateDeviceIdentity } from "../device/device-identity.ts"
 import { loadFamilyMembership } from "../device/family-membership"
 import type { SyncRosterDocument, SyncRosterMember } from "../types"
 import { SYNC_ROSTER_STORAGE_KEY } from "../workdir/storage-keys"

@@ -1,7 +1,7 @@
 import { generateFamilySeed, parseSeedB64 } from "../crypto/family-crypto"
 import type { SyncFamilyMembership, SyncInviteV1 } from "../types"
 import { SYNC_FAMILY_MEMBERSHIP_KEY } from "../workdir/storage-keys"
-import { loadOrCreateDeviceIdentity } from "./device-identity"
+import { loadOrCreateDeviceIdentity } from "./device-identity.ts"
 
 function isMembership(value: unknown): value is SyncFamilyMembership {
   if (value === null || typeof value !== "object") {

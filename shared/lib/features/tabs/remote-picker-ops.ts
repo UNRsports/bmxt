@@ -1,4 +1,3 @@
-import { getSyncService } from "../sync/facade/sync-service.ts"
 import type { SyncTabsOp } from "../sync/types.ts"
 import type { TabPickerRow } from "./picker-rows.ts"
 
@@ -189,11 +188,4 @@ export function buildRemoteMoveOp(
     }
   }
   return null
-}
-
-export async function runRemoteTabsOp(
-  deviceId: string,
-  op: SyncTabsOp
-): Promise<{ ok: boolean; detail: string | null }> {
-  return getSyncService().tabsOps(deviceId, op)
 }

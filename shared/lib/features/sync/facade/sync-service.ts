@@ -1,4 +1,7 @@
-import { loadOrCreateDeviceIdentity, setDeviceDisplayName } from "../device/device-identity"
+import {
+  loadOrCreateDeviceIdentity,
+  setDeviceDisplayName
+} from "../device/device-identity.ts"
 import {
   buildInviteForLocalDevice,
   createFamilyMembership,

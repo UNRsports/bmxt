@@ -1,5 +1,5 @@
 import { bytesToBase64Url, randomBytes } from "../crypto/bytes"
-import { loadOrCreateDeviceIdentity } from "../device/device-identity"
+import { loadOrCreateDeviceIdentity } from "../device/device-identity.ts"
 import type { CommandBusStabilizer } from "../stabilizers/command-bus"
 import type { CommandQueueStabilizer } from "../stabilizers/command-queue"
 import type { PeerHostStabilizer } from "../stabilizers/peer-host"
