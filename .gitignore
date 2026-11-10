@@ -116,3 +116,4 @@ web-ext-artifacts/
 
 # --- Misc packaged artifacts ---
 *.tgz
+bmxt.code-workspace
