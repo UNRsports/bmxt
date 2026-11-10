@@ -1,6 +1,6 @@
 /**
- * EN: Parse `sync -open` trailing payload (`urls… [--group title] [--close]`).
- * JA: `sync -open` の trailing payload を解釈する。
+ * EN: Parse `tab -send` / SyncOpen trailing payload (`urls… [--group title] [--close]`).
+ * JA: `tab -send` / SyncOpen の trailing payload を解釈する。
  */
 
 export type ParsedOpenPayload = {

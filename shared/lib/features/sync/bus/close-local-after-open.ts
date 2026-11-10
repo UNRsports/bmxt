@@ -66,7 +66,7 @@ export async function closeLocalTabsByIds(tabIds: readonly number[]): Promise<nu
 }
 
 /**
- * EN: Look up one local tab id per URL (lowest id) for bare `sync -open … --close`.
+ * EN: Look up one local tab id per URL (lowest id) for bare `tab -send … --close`.
  * JA: 素の CLI `--close` 用に URL ごと最低 id のローカルタブを探す。
  */
 export async function resolveLocalTabIdsByUrls(

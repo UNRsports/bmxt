@@ -59,7 +59,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "tab",
     aliases: [] as const,
-    usagePrimary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help"
+    usagePrimary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help"
   },
   {
     name: "nav",
@@ -104,7 +104,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "sync",
     aliases: [] as const,
-    usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help"
+    usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
   }
 ]
 

@@ -503,6 +503,18 @@
     "ja": "       tab -nowurl       — 現在のタブ URL を表示",
     "en": "       tab -nowurl       — show current tab URL"
   },
+  "cmd.tabs.usage.line6": {
+    "ja": "       tab -send <deviceId> <url…> [--group <title>] [--close] — 接続ピアへタブ送信（--close は成功分の元を閉じる）",
+    "en": "       tab -send <deviceId> <url…> [--group <title>] [--close] — send tabs to a connected peer (--close closes successful sources)"
+  },
+  "cmd.tabs.error.sendUsage": {
+    "ja": "error: usage: tab -send <deviceId> <url…> [--group <title>] [--close]",
+    "en": "error: usage: tab -send <deviceId> <url…> [--group <title>] [--close]"
+  },
+  "cmd.tabs.error.invalidDeviceId": {
+    "ja": "error: deviceId が不正です",
+    "en": "error: invalid deviceId"
+  },
   "cmd.translate.error.internal": {
     "ja": "error: 不明な translate オプション (internal): {option}",
     "en": "error: unknown translate option (internal): {option}"
@@ -608,12 +620,16 @@
     "en": "  sync -accept <code> — apply answer and establish DataChannel"
   },
   "cmd.sync.usage.line7": {
-    "ja": "  sync -open <deviceId> <url…> [--group <title>] [--close] — 接続済みピアでタブを開く（--close は成功分の元タブを閉じる）",
-    "en": "  sync -open <deviceId> <url…> [--group <title>] [--close] — open tabs on a connected peer (--close closes successful local sources)"
-  },
-  "cmd.sync.usage.line8": {
     "ja": "  sync -ping <deviceId> — 接続済みピアへ ping",
     "en": "  sync -ping <deviceId> — ping a connected peer"
+  },
+  "cmd.sync.usage.line8": {
+    "ja": "  タブ送信は `tab -send <deviceId> …`（パイプ: `tab -list | tab -send <deviceId> [--close]`）",
+    "en": "  Tab send: `tab -send <deviceId> …` (pipe: `tab -list | tab -send <deviceId> [--close]`)"
+  },
+  "cmd.sync.error.openMovedToTabSend": {
+    "ja": "error: `sync -open` は廃止しました。`tab -send <deviceId> …` を使ってください。",
+    "en": "error: `sync -open` was removed. Use `tab -send <deviceId> …` instead."
   },
   "cmd.sync.runHint": {
     "ja": "ヒント: まずは両ブラウザで `sync -setup`（ウィザード）。長い握手コードはウィザードの COPY / 貼付欄を使ってください。",

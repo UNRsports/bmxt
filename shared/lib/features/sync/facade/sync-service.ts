@@ -71,7 +71,8 @@ export type SyncService = {
   openRemote(
     deviceId: string,
     urls: string[],
-    groupTitle: string | null
+    groupTitle: string | null,
+    windowId?: number | null
   ): Promise<{ ok: boolean; lines: string[]; openedUrls: string[] }>
   listRemoteTabs(
     deviceId: string,
@@ -557,7 +558,12 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       }
     },
 
-    async openRemote(deviceId: string, urls: string[], groupTitle: string | null) {
+    async openRemote(
+      deviceId: string,
+      urls: string[],
+      groupTitle: string | null,
+      windowId: number | null = null
+    ) {
       const safeUrls = sanitizeRemoteOpenUrls(urls)
       if (safeUrls.length === 0) {
         return { ok: false, lines: [line("sync.open.noUrls")], openedUrls: [] }
@@ -573,7 +579,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
           openedUrls: []
         }
       }
-      const result = await s.commandBus.openTabs(deviceId, safeUrls, title)
+      const result = await s.commandBus.openTabs(deviceId, safeUrls, title, windowId)
       return {
         ok: result.ok,
         lines: [line(`sync.open.done:ok=${result.ok};detail=${result.detail ?? ""}`)],

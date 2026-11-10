@@ -1,6 +1,6 @@
-/** EN: Match `sync -open <deviceId> [--close]` as a pipe consumer. */
+/** EN: Match `tab -send <deviceId> [--close]` as a pipe consumer. */
 
-export const SYNC_OPEN_ACCEPTS_BMXT_RULE_KINDS = [
+export const TAB_SEND_ACCEPTS_BMXT_RULE_KINDS = [
   "page.open",
   "page.group",
   "bookmark",
@@ -9,7 +9,7 @@ export const SYNC_OPEN_ACCEPTS_BMXT_RULE_KINDS = [
   "search.hit"
 ] as const
 
-export type SyncOpenPipeMatch = {
+export type TabSendPipeMatch = {
   deviceId: string
   closeAfter: boolean
 }
@@ -19,18 +19,18 @@ function normalizeToken(token: string): string {
 }
 
 /**
- * EN: True when the pipe-right segment is `sync -open <deviceId> [--close]` (no URL args).
- * JA: パイプ右辺が `sync -open <deviceId> [--close]`（URL 引数なし）のとき真。
+ * EN: True when the pipe-right segment is `tab -send <deviceId> [--close]` (no URL args).
+ * JA: パイプ右辺が `tab -send <deviceId> [--close]`（URL 引数なし）のとき真。
  */
-export function parseSyncOpenPipeConsumer(segment: string): SyncOpenPipeMatch | null {
+export function parseTabSendPipeConsumer(segment: string): TabSendPipeMatch | null {
   const parts = segment.trim().split(/\s+/).filter((part) => part.length > 0)
   if (parts.length !== 3 && parts.length !== 4) {
     return null
   }
-  if (normalizeToken(parts[0]!) !== "sync") {
+  if (normalizeToken(parts[0]!) !== "tab") {
     return null
   }
-  if (normalizeToken(parts[1]!) !== "-open") {
+  if (normalizeToken(parts[1]!) !== "-send") {
     return null
   }
   const deviceId = parts[2]!.trim()
@@ -47,6 +47,6 @@ export function parseSyncOpenPipeConsumer(segment: string): SyncOpenPipeMatch | 
   return { deviceId, closeAfter }
 }
 
-export function isSyncOpenPipeConsumer(segment: string): boolean {
-  return parseSyncOpenPipeConsumer(segment) !== null
+export function isTabSendPipeConsumer(segment: string): boolean {
+  return parseTabSendPipeConsumer(segment) !== null
 }

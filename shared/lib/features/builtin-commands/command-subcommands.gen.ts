@@ -40,6 +40,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
+    { head: "-send", trailingTokens: [] as const, tail: "rest" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "nav": [
@@ -86,7 +87,6 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-offer", trailingTokens: [] as const, tail: "none" },
     { head: "-answer", trailingTokens: [] as const, tail: "rest" },
     { head: "-accept", trailingTokens: [] as const, tail: "rest" },
-    { head: "-open", trailingTokens: [] as const, tail: "rest" },
     { head: "-ping", trailingTokens: [] as const, tail: "rest" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const
@@ -164,7 +164,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "tab": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "help"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "-send" || lower === "help"
     }
     case "nav": {
       const lower = token.toLowerCase()
@@ -196,7 +196,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "sync": {
       const lower = token.toLowerCase()
-      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-open" || lower === "-ping" || lower === "help"
+      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
     }
     default:
       return false

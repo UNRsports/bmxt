@@ -187,6 +187,8 @@ export type SyncBusCommand =
       from: SyncDeviceId
       urls: string[]
       groupTitle: string | null
+      /** EN: Optional peer-local window id (older peers ignore). */
+      windowId: number | null
     }
   | {
       type: "open_tabs_result"

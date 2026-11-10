@@ -16,7 +16,6 @@ import { useTabPickerActionMenu } from "./use-tab-picker-action-menu"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
 import { useUiSettings } from "../setting/use-ui-settings"
-import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { useTrackedWindowDisplay } from "./use-tracked-window-display"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
@@ -125,8 +124,6 @@ export function useTabPickerController({
 }: Props): TabPickerViewProps | null {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
-  const syncLinkStatus = useSyncLinkStatus()
-  const familyPeers = syncLinkStatus.connectedPeers
   const engineApi = useTabPickerEngineState(sessionId)
   useTabPickerLiveFieldsRevision()
 
@@ -696,7 +693,6 @@ export function useTabPickerController({
     setCommandBuffer,
     commandListingHint,
     moveCloseAfter,
-    familyPeers,
     isHostPaneFocused,
     inputRef
   }

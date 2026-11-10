@@ -137,7 +137,7 @@
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab help",
+      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
       "subcommands": [
         {
           "head": "-list",
@@ -169,6 +169,10 @@
         {
           "head": "-nowurl",
           "tail": "none"
+        },
+        {
+          "head": "-send",
+          "tail": "rest"
         },
         {
           "head": "help",
@@ -333,7 +337,7 @@
       "module": "sync",
       "canonicalName": "sync",
       "aliases": [],
-      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -open <deviceId> <url…> | sync -ping <deviceId> | sync help",
+      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
       "subcommands": [
         { "head": "-setup", "tail": "none" },
         { "head": "-status", "tail": "none" },
@@ -343,7 +347,6 @@
         { "head": "-offer", "tail": "none" },
         { "head": "-answer", "tail": "rest" },
         { "head": "-accept", "tail": "rest" },
-        { "head": "-open", "tail": "rest" },
         { "head": "-ping", "tail": "rest" },
         { "head": "help", "tail": "none" }
       ]

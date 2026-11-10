@@ -6,7 +6,7 @@ export type ParsedPickerCommand =
   | { kind: "unknown" }
 
 const ALIASES: Record<string, BulkSubMode> = {
-  m: "move",
+  // EN: `move` has no short alias (`m` removed). Other legacy shorts remain for now.
   move: "move",
   c: "close",
   close: "close",
@@ -20,7 +20,7 @@ const ALIASES: Record<string, BulkSubMode> = {
 }
 
 /**
- * EN: Parse `:` command buffer (`move`, `m --close`, `nohlsearch`, …).
+ * EN: Parse `:` command buffer (`move`, `move --close`, `nohlsearch`, …).
  * JA: `:` コマンドバッファを解釈する。
  */
 export function parsePickerCommand(buffer: string): ParsedPickerCommand {

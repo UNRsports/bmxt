@@ -10,10 +10,14 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.tabs.usage.line3",
     "cmd.tabs.usage.line4",
     "cmd.tabs.usage.line5",
+    "cmd.tabs.usage.line6",
 ];
 
 /** EN: Host fills this param from live UI state before expand-msgs. */
 const HOST_PAGE_ACTIVE_TOKEN: &str = "__HOST_PAGE_ACTIVE__";
+
+const MAX_DEVICE_ID_LEN: usize = 64;
+const MAX_SEND_PAYLOAD_LEN: usize = 8192;
 
 fn norm_tabs_flag(arg: &str) -> Option<&'static str> {
     match normalize_token(arg).as_str() {
@@ -22,8 +26,23 @@ fn norm_tabs_flag(arg: &str) -> Option<&'static str> {
         "-setting" => Some("-setting"),
         "-moveurl" => Some("-moveurl"),
         "-nowurl" => Some("-nowurl"),
+        "-send" => Some("-send"),
         _ => None,
     }
+}
+
+fn sanitize_device_id(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.len() > MAX_DEVICE_ID_LEN {
+        return None;
+    }
+    if !trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 /// EN: Validate `tab -list` flags; host parses scope from the echoed line.
@@ -173,6 +192,33 @@ pub fn run(args: &[String]) -> DispatchBundle {
                 return usage_msgs(msg_key("cmd.tabs.error.usageMoveurl"));
             };
             effects(vec![HostEffect::TabsMoveUrl { url }])
+        }
+        "-send" => {
+            if args.len() < 4 {
+                return usage_msgs(msg_key("cmd.tabs.error.sendUsage"));
+            }
+            let device_id = match sanitize_device_id(&args[2]) {
+                Some(id) => id,
+                None => {
+                    return usage_msgs(msg_key("cmd.tabs.error.invalidDeviceId"));
+                }
+            };
+            let payload = args
+                .iter()
+                .skip(3)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .trim()
+                .to_string();
+            if payload.is_empty() || payload.len() > MAX_SEND_PAYLOAD_LEN {
+                return usage_msgs(msg_key("cmd.tabs.error.sendUsage"));
+            }
+            // EN: Reuse SyncOpen host action (DataChannel open_tabs + optional --close).
+            ui(UiAction::SyncOpen {
+                device_id,
+                payload,
+            })
         }
         _ => usage_msgs(msg_key("cmd.tabs.error.internalDispatchOutOfSync")),
     }

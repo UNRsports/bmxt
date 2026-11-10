@@ -3,28 +3,35 @@ import { describe, it } from "node:test"
 import { BMXT_RULE_SCHEMA } from "../../../../shared/lib/features/bmxt-rule/types.ts"
 import { bmxtRuleProducer, bmxtRuleRecord } from "../../../../shared/lib/features/bmxt-rule/entries.ts"
 import { urlBatchesFromBmxtRuleStream } from "../../../../shared/lib/features/command-line/pipe/consumers/sync-open-batches.ts"
-import { parseSyncOpenPipeConsumer } from "../../../../shared/lib/features/command-line/pipe/consumers/sync-open-match.ts"
+import { parseTabSendPipeConsumer } from "../../../../shared/lib/features/command-line/pipe/consumers/tab-send-match.ts"
 import { tabIdsForOpenedUrls } from "../../../../shared/lib/features/sync/bus/close-local-after-open.ts"
 import { parseOpenPayload } from "../../../../shared/lib/features/sync/bus/parse-open-payload.ts"
+import { parsePickerCommand } from "../../../../shared/lib/features/tabs/parse-picker-command.ts"
+import { resolveFamilySendDestination } from "../../../../shared/lib/features/tabs/resolve-family-send-dest.ts"
+import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
 
-describe("parseSyncOpenPipeConsumer", () => {
-  it("accepts sync -open <deviceId>", () => {
-    assert.deepEqual(parseSyncOpenPipeConsumer("sync -open peer1"), {
+describe("parseTabSendPipeConsumer", () => {
+  it("accepts tab -send <deviceId>", () => {
+    assert.deepEqual(parseTabSendPipeConsumer("tab -send peer1"), {
       deviceId: "peer1",
       closeAfter: false
     })
   })
 
-  it("accepts sync -open <deviceId> --close", () => {
-    assert.deepEqual(parseSyncOpenPipeConsumer("sync -open peer1 --close"), {
+  it("accepts tab -send <deviceId> --close", () => {
+    assert.deepEqual(parseTabSendPipeConsumer("tab -send peer1 --close"), {
       deviceId: "peer1",
       closeAfter: true
     })
   })
 
+  it("rejects legacy sync -open pipe form", () => {
+    assert.equal(parseTabSendPipeConsumer("sync -open peer1"), null)
+  })
+
   it("rejects urls on the right-hand side", () => {
-    assert.equal(parseSyncOpenPipeConsumer("sync -open peer1 https://example.com"), null)
-    assert.equal(parseSyncOpenPipeConsumer("sync -open"), null)
+    assert.equal(parseTabSendPipeConsumer("tab -send peer1 https://example.com"), null)
+    assert.equal(parseTabSendPipeConsumer("tab -send"), null)
   })
 })
 
@@ -80,5 +87,64 @@ describe("urlBatchesFromBmxtRuleStream", () => {
       urls: ["https://c.example/"],
       tabIds: [3]
     })
+  })
+})
+
+describe("parsePickerCommand", () => {
+  it("accepts move and move --close only", () => {
+    assert.deepEqual(parsePickerCommand("move"), {
+      kind: "bulk",
+      mode: "move",
+      closeAfter: false
+    })
+    assert.deepEqual(parsePickerCommand("move --close"), {
+      kind: "bulk",
+      mode: "move",
+      closeAfter: true
+    })
+  })
+
+  it("rejects short alias m", () => {
+    assert.equal(parsePickerCommand("m").kind, "unknown")
+    assert.equal(parsePickerCommand("m --close").kind, "unknown")
+  })
+})
+
+describe("resolveFamilySendDestination", () => {
+  it("resolves remote window destination", () => {
+    const rows: TabPickerRow[] = [
+      {
+        kind: "window",
+        windowId: -1,
+        label: "Firefox",
+        windowTitle: "Firefox",
+        usesActiveTabTitle: false,
+        focused: false,
+        deviceId: "peer-ff",
+        remote: true,
+        peerWindowId: 42
+      }
+    ]
+    assert.deepEqual(resolveFamilySendDestination(rows, [0], 0), {
+      deviceId: "peer-ff",
+      peerWindowId: 42
+    })
+  })
+
+  it("ignores local window destination", () => {
+    const rows: TabPickerRow[] = [
+      {
+        kind: "window",
+        windowId: 1,
+        label: "Chrome",
+        windowTitle: "Chrome",
+        usesActiveTabTitle: false,
+        focused: true,
+        deviceId: null,
+        remote: false,
+        peerWindowId: null
+      }
+    ]
+    assert.equal(resolveFamilySendDestination(rows, [0], 0), null)
   })
 })

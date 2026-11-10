@@ -5,28 +5,12 @@ import {
 } from "../sync/bus/close-local-after-open.ts"
 import { pairLocalSourcesForOpen } from "../sync/bus/pair-sources-for-open.ts"
 import { getSyncService } from "../sync/facade/sync-service.ts"
-import type { SyncLinkPeer } from "../sync/link/sync-link-status.ts"
-import { getSyncLinkStatus } from "../sync/link/sync-link-status.ts"
 import type { TabPickerRow } from "./picker-rows.ts"
 
-export function listFamilyMovePeers(): SyncLinkPeer[] {
-  return getSyncLinkStatus().connectedPeers
-}
-
-export function moveDestLen(visibleRowCount: number, familyPeerCount: number): number {
-  return visibleRowCount + familyPeerCount
-}
-
-export function familyPeerAtMoveDest(
-  moveDestHi: number,
-  visibleRowCount: number,
-  peers: readonly SyncLinkPeer[]
-): SyncLinkPeer | null {
-  if (moveDestHi < visibleRowCount) {
-    return null
-  }
-  return peers[moveDestHi - visibleRowCount] ?? null
-}
+export {
+  resolveFamilySendDestination,
+  type FamilySendDestination
+} from "./resolve-family-send-dest.ts"
 
 /**
  * EN: Build open batches from selected local tab rows (group titles preserved in tree order).
@@ -85,6 +69,7 @@ export async function sendSelectedTabsToFamilyPeer(options: {
   rows: readonly TabPickerRow[]
   selectedTabIds: readonly number[]
   closeAfter: boolean
+  peerWindowId?: number | null
 }): Promise<{ ok: boolean; lines: string[]; closed: number }> {
   const batches = openBatchesFromSelectedLocalTabs(options.rows, options.selectedTabIds)
   if (batches.length === 0) {
@@ -95,10 +80,16 @@ export async function sendSelectedTabsToFamilyPeer(options: {
   let allOk = true
   const allOpened: string[] = []
   const allSources = []
+  const windowId = options.peerWindowId ?? null
   for (const batch of batches) {
     const sources = pairLocalSourcesForOpen(batch.urls, batch.tabIds)
     allSources.push(...sources)
-    const result = await service.openRemote(options.deviceId, batch.urls, batch.groupTitle)
+    const result = await service.openRemote(
+      options.deviceId,
+      batch.urls,
+      batch.groupTitle,
+      windowId
+    )
     lines.push(...result.lines)
     allOpened.push(...result.openedUrls)
     if (!result.ok) {

@@ -51,7 +51,6 @@ export type TabPickerViewProps = {
   setCommandBuffer: Dispatch<SetStateAction<string>>
   commandListingHint: boolean
   moveCloseAfter: boolean
-  familyPeers: Array<{ deviceId: string; displayName: string }>
   isHostPaneFocused: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
 }

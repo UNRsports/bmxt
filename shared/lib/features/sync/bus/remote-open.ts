@@ -4,11 +4,22 @@ import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "./remote-open-saniti
 
 export { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "./remote-open-sanitize.ts"
 
-async function createTab(url: string): Promise<chrome.tabs.Tab | null> {
+async function createTab(url: string, windowId: number | null): Promise<chrome.tabs.Tab | null> {
   try {
+    if (windowId !== null) {
+      return await chrome.tabs.create({ url, windowId, active: false })
+    }
     return await chrome.tabs.create({ url, active: false })
   } catch {
-    return null
+    if (windowId === null) {
+      return null
+    }
+    // EN: Fall back when the peer window id is stale.
+    try {
+      return await chrome.tabs.create({ url, active: false })
+    } catch {
+      return null
+    }
   }
 }
 
@@ -20,15 +31,20 @@ export async function applyRemoteOpenTabs(options: {
   urls: string[]
   groupTitle: string | null
   locale: UiLocale
+  windowId?: number | null
 }): Promise<{ ok: boolean; detail: string; openedUrls: string[] }> {
   const urls = sanitizeRemoteOpenUrls(options.urls)
   if (urls.length === 0) {
     return { ok: false, detail: "no_valid_urls", openedUrls: [] }
   }
+  const windowId =
+    typeof options.windowId === "number" && Number.isFinite(options.windowId)
+      ? options.windowId
+      : null
   const tabIds: number[] = []
   const openedUrls: string[] = []
   for (const url of urls) {
-    const tab = await createTab(url)
+    const tab = await createTab(url, windowId)
     if (tab?.id !== undefined) {
       tabIds.push(tab.id)
       openedUrls.push(url)

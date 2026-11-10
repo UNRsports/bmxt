@@ -20,30 +20,30 @@ import {
   urlBatchesFromBmxtRuleStream
 } from "./sync-open-batches.ts"
 import {
-  isSyncOpenPipeConsumer,
-  parseSyncOpenPipeConsumer,
-  SYNC_OPEN_ACCEPTS_BMXT_RULE_KINDS
-} from "./sync-open-match.ts"
+  isTabSendPipeConsumer,
+  parseTabSendPipeConsumer,
+  TAB_SEND_ACCEPTS_BMXT_RULE_KINDS
+} from "./tab-send-match.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
 export { urlBatchesFromBmxtRuleStream } from "./sync-open-batches.ts"
 
-export async function runSyncOpenFromBmxtRuleStream(
+export async function runTabSendFromBmxtRuleStream(
   stream: BmxtRuleStream,
   _deps: CommandDispatchDeps,
   locale: UiLocale,
   segment: string
 ): Promise<SegmentOutcome> {
-  const matched = parseSyncOpenPipeConsumer(segment)
+  const matched = parseTabSendPipeConsumer(segment)
   if (matched === null) {
-    return segmentFailure("runtime", [tPipe("pipe.syncOpen.badArgs", locale)])
+    return segmentFailure("runtime", [tPipe("pipe.tabSend.badArgs", locale)])
   }
   if (matched.closeAfter && streamHasRemotePageOpen(stream)) {
-    return segmentFailure("runtime", [tPipe("pipe.syncOpen.closeLocalOnly", locale)])
+    return segmentFailure("runtime", [tPipe("pipe.tabSend.closeLocalOnly", locale)])
   }
   const batches = urlBatchesFromBmxtRuleStream(stream)
   if (batches.length === 0) {
-    return segmentFailure("runtime", [tPipe("pipe.syncOpen.noUrls", locale)])
+    return segmentFailure("runtime", [tPipe("pipe.tabSend.noUrls", locale)])
   }
 
   const service = getSyncService()
@@ -70,10 +70,10 @@ export async function runSyncOpenFromBmxtRuleStream(
   return allOk ? segmentSuccess(lines) : segmentFailure("runtime", lines)
 }
 
-export const syncOpenPipeConsumer: PipeConsumerEntry = {
-  id: "sync",
-  match: isSyncOpenPipeConsumer,
-  acceptsKinds: SYNC_OPEN_ACCEPTS_BMXT_RULE_KINDS,
+export const tabSendPipeConsumer: PipeConsumerEntry = {
+  id: "tab-send",
+  match: isTabSendPipeConsumer,
+  acceptsKinds: TAB_SEND_ACCEPTS_BMXT_RULE_KINDS,
   run: (stream, deps, locale, segment, _context) =>
-    runSyncOpenFromBmxtRuleStream(stream, deps, locale, segment)
+    runTabSendFromBmxtRuleStream(stream, deps, locale, segment)
 }

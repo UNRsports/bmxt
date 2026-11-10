@@ -17,7 +17,6 @@ const USAGE_KEYS: &[&str] = &[
 const MAX_INVITE_LEN: usize = 8192;
 const MAX_RTC_CODE_LEN: usize = 48_000;
 const MAX_DEVICE_ID_LEN: usize = 64;
-const MAX_OPEN_PAYLOAD_LEN: usize = 8192;
 
 fn compact_token(raw: &str) -> String {
     raw.chars().filter(|c| !c.is_whitespace()).collect()
@@ -147,23 +146,8 @@ pub fn run(args: &[String]) -> DispatchBundle {
             ui(UiAction::SyncAccept { code })
         }
         "-open" => {
-            if args.len() < 4 {
-                return usage_bundle(vec![msg_key("cmd.sync.error.openUsage")]);
-            }
-            let device_id = match sanitize_device_id(&args[2]) {
-                Some(id) => id,
-                None => {
-                    return usage_bundle(vec![msg_key("cmd.sync.error.invalidDeviceId")]);
-                }
-            };
-            let payload = rest_join(args, 3);
-            if payload.is_empty() || payload.len() > MAX_OPEN_PAYLOAD_LEN {
-                return usage_bundle(vec![msg_key("cmd.sync.error.openUsage")]);
-            }
-            ui(UiAction::SyncOpen {
-                device_id,
-                payload,
-            })
+            // EN: Tab send moved to `tab -send` — keep a pointer for muscle memory.
+            usage_bundle(vec![msg_key("cmd.sync.error.openMovedToTabSend")])
         }
         "-ping" => {
             let raw = rest_join(args, 2);

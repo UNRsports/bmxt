@@ -147,7 +147,8 @@ export function createWebrtcCommandBusStabilizer(
       const result = await applyRemoteOpenTabs({
         urls: command.urls,
         groupTitle: command.groupTitle,
-        locale: getRunLocale()
+        locale: getRunLocale(),
+        windowId: command.windowId ?? null
       })
       const device = await loadOrCreateDeviceIdentity()
       const reply: SyncBusCommand = {
@@ -359,7 +360,7 @@ export function createWebrtcCommandBusStabilizer(
       return { ok: result.ok, rttMs: result.rttMs }
     },
 
-    async openTabs(remoteDeviceId, urls, groupTitle) {
+    async openTabs(remoteDeviceId, urls, groupTitle, windowId = null) {
       const device = await loadOrCreateDeviceIdentity()
       const id = bytesToBase64Url(randomBytes(8))
       const command: SyncBusCommand = {
@@ -367,7 +368,8 @@ export function createWebrtcCommandBusStabilizer(
         id,
         from: device.deviceId,
         urls,
-        groupTitle
+        groupTitle,
+        windowId: windowId ?? null
       }
       const resultPromise = new Promise<{
         ok: boolean

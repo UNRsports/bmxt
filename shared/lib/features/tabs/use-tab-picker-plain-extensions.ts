@@ -25,7 +25,6 @@ import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice, SelectKind }
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import { filterTabPickerCommandCompletions } from "./tab-picker-overlay-constants"
 import { parsePickerCommand } from "./parse-picker-command"
-import { listFamilyMovePeers, moveDestLen } from "./family-move-dest"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -413,14 +412,21 @@ export function useTabPickerPlainExtensions({
 
       if (bulkSubMode === "move") {
         pickerStopEvent(e)
-        const destLen = moveDestLen(visibleRowIndices.length, listFamilyMovePeers().length)
-        if (destLen === 0) {
+        if (visibleRowIndices.length === 0) {
           return true
         }
         if (navDir === "down") {
-          applyReducedState({ kind: "moveDest", delta: 1, visibleLen: destLen })
+          applyReducedState({
+            kind: "moveDest",
+            delta: 1,
+            visibleLen: visibleRowIndices.length
+          })
         } else {
-          applyReducedState({ kind: "moveDest", delta: -1, visibleLen: destLen })
+          applyReducedState({
+            kind: "moveDest",
+            delta: -1,
+            visibleLen: visibleRowIndices.length
+          })
         }
         return true
       }

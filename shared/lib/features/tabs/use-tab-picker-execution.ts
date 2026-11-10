@@ -40,11 +40,8 @@ import {
   classifyPickerSelection,
   runRemoteTabsOp
 } from "./remote-picker-ops.ts"
-import {
-  familyPeerAtMoveDest,
-  listFamilyMovePeers,
-  sendSelectedTabsToFamilyPeer
-} from "./family-move-dest.ts"
+import { sendSelectedTabsToFamilyPeer } from "./family-move-dest.ts"
+import { resolveFamilySendDestination } from "./resolve-family-send-dest.ts"
 import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 
 export type TabPickerExecutionParams = {
@@ -215,9 +212,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
 
   const executeFamilySendAtDest = useCallback(
     async (destHi: number, tabIds: number[], closeAfter: boolean): Promise<boolean> => {
-      const peers = listFamilyMovePeers()
-      const peer = familyPeerAtMoveDest(destHi, visibleRowIndices.length, peers)
-      if (peer === null) {
+      const dest = resolveFamilySendDestination(rows, visibleRowIndices, destHi)
+      if (dest === null) {
         return false
       }
       const classified = classifyPickerSelection(rows, tabIds)
@@ -225,20 +221,29 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
         return true
       }
-      if (classified.kind !== "local") {
+      if (classified.kind === "remote") {
+        // EN: Same-device remote reorder stays on tabs_ops (caller continues).
+        // JA: 同一リモート内の並べ替えは tabs_ops 本線（呼び出し側が続行）。
+        if (classified.deviceId === dest.deviceId) {
+          return false
+        }
         await onAppendLog?.([tTabs("tabs.picker.remote.familyLocalOnly", locale)])
         return true
       }
+      if (classified.kind !== "local") {
+        return false
+      }
       const result = await sendSelectedTabsToFamilyPeer({
-        deviceId: peer.deviceId,
+        deviceId: dest.deviceId,
         rows,
         selectedTabIds: classified.tabIds,
-        closeAfter
+        closeAfter,
+        peerWindowId: dest.peerWindowId
       })
       await onAppendLog?.(expandSyncLogLines(result.lines, locale))
       return true
     },
-    [locale, onAppendLog, rows, visibleRowIndices.length]
+    [locale, onAppendLog, rows, visibleRowIndices]
   )
 
   const executeBulkMove = useCallback(async () => {
