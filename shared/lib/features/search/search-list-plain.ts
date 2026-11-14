@@ -181,6 +181,9 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
         return { scopeIndex, lines }
       })
     )
+    if (options.ctx.shouldCancel?.()) {
+      return buildSearchListResult([], pattern, [])
+    }
     settled.sort((a, b) => a.scopeIndex - b.scopeIndex)
     for (const part of settled) {
       appendScopeLines(part.lines)
@@ -192,6 +195,9 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     })
   } else {
     for (let scopeIndex = 0; scopeIndex < effects.length; scopeIndex += 1) {
+      if (options.ctx.shouldCancel?.()) {
+        break
+      }
       const effect = effects[scopeIndex]!
       const lines = await runOneSearchEffect(
         options,
@@ -211,11 +217,18 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     }
   }
 
+  if (options.ctx.shouldCancel?.()) {
+    return buildSearchListResult([], pattern, [])
+  }
+
   const parsed = pickerEntriesFromSearchLines(linesOut)
   const maxPageTextChars = pageOptions.unlimit ? 0 : undefined
   const entries = options.forRemoteWire
     ? parsed
     : await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
+  if (options.ctx.shouldCancel?.()) {
+    return buildSearchListResult([], pattern, [])
+  }
   return buildSearchListResult(entries, pattern, linesOut)
 }
 

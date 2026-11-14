@@ -4,6 +4,7 @@
  */
 
 import { resolveHistoryEntriesForSearch } from "../cache/search-cache-store.ts"
+import { pollSearchCancel, type SearchShouldCancel } from "../cooperative-cancel.ts"
 import { linesForSearchElement } from "../search-format.ts"
 import { HISTORY_LOOKBACK_DAYS, MAX_HISTORY_RESULTS } from "../limits.ts"
 import { matchesNeedle } from "../matcher.ts"
@@ -36,12 +37,25 @@ function historyCapNotices(options: {
   return notices
 }
 
-export async function searchHistoryLines(pattern: string): Promise<string[]> {
+export async function searchHistoryLines(
+  pattern: string,
+  shouldCancel?: SearchShouldCancel
+): Promise<string[]> {
+  if (shouldCancel?.()) {
+    return []
+  }
   const resolved = await resolveHistoryEntriesForSearch(pattern)
+  if (shouldCancel?.()) {
+    return []
+  }
   const matchAll = !pattern.trim()
   const matches: string[] = []
   let hitCount = 0
-  for (const it of resolved.entries) {
+  for (let index = 0; index < resolved.entries.length; index += 1) {
+    if (await pollSearchCancel(shouldCancel, index)) {
+      return []
+    }
+    const it = resolved.entries[index]!
     const title = it.title ?? ""
     const url = it.url ?? ""
     const blob = `${title} ${url}`
@@ -55,6 +69,10 @@ export async function searchHistoryLines(pattern: string): Promise<string[]> {
         url: url || "(no url)"
       })
     )
+  }
+
+  if (shouldCancel?.()) {
+    return []
   }
 
   const notices = historyCapNotices({

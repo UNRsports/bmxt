@@ -17,7 +17,6 @@ export function mergeJobIntoDispatchContext(
   return {
     ...ctx,
     shouldCancel,
-    shouldCancelSearchPage: shouldCancel,
     onSearchPageProgress: progress?.onSearchPageProgress ?? ctx.onSearchPageProgress,
     searchPageProgressLabel: progress?.searchPageProgressLabel ?? ctx.searchPageProgressLabel
   }

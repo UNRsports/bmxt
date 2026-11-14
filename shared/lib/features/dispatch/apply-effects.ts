@@ -25,6 +25,11 @@ export async function applyHostEffects(
         return applyOne(ctx, e)
       })
     )
+    // EN: Parent cancel discards sibling results — partial scope hits must not surface.
+    // JA: 親キャンセル時は兄弟スコープの部分結果も捨てる。
+    if (ctx.shouldCancel?.()) {
+      return []
+    }
     return parts.flat()
   }
   const out: string[] = []
@@ -34,6 +39,9 @@ export async function applyHostEffects(
     }
     // eslint-disable-next-line no-await-in-loop
     out.push(...(await applyOne(ctx, e)))
+  }
+  if (ctx.shouldCancel?.()) {
+    return []
   }
   return out
 }

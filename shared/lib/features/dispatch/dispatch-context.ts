@@ -31,10 +31,12 @@ export type DispatchHostContext = {
   onSearchPageProgressInfo?: (progress: import("../search/sources/page-progress").SearchPageProgress) => void | Promise<void>
   /** EN: Label prefix for progress lines (e.g. `search -list --page`). */
   searchPageProgressLabel?: string
-  /** EN: Generic cooperative cancel for long-running effects (job runner). */
+  /**
+   * EN: Parent-job cooperative cancel. All long-running search (and other) effects
+   *     must honor this — options inherit the first-command job flag.
+   * JA: 親ジョブの協調キャンセル。長時間 effect はすべてこれを見る（第一コマンドのフラグを継承）。
+   */
   shouldCancel?: () => boolean
-  /** EN: When true, `search_page` stops after the current tab (Ctrl+C / search -exit -list). */
-  shouldCancelSearchPage?: () => boolean
   /** `RUN_CMD` を出したペイン（split / exit のスコープ）。 */
   commandSessionId: string
   /** EN: UI display locale from settings picker / storage (defaults to Japanese). */
