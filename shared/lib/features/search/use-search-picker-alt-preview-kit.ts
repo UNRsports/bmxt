@@ -70,7 +70,11 @@ export type UseSearchPickerAltPreviewKitResult = {
   previewNotice: string | null
 }
 
-/** EN: Detail view — Ctrl+↑↓ open-tab rows; Alt manual preview; auto preview on ↑↓. */
+/**
+ * EN: Detail view — j/k lists all hits in the picker; Alt+↑↓ / Enter preview or jump.
+ *     Never auto-paints the page DOM on every row (avoids GitHub-scale freezes).
+ * JA: 詳細は j/k で候補を一覧。Alt+↑↓ / Enter でプレビュー／ジャンプ。行ごとに DOM を触らない。
+ */
 export function useSearchPickerAltPreviewKit({
   enabled,
   isHostPaneFocused,
@@ -83,7 +87,7 @@ export function useSearchPickerAltPreviewKit({
   detailEntry,
   detailHits = [],
   highlightColors,
-  pageActiveMode = "auto",
+  pageActiveMode: _pageActiveMode = "auto",
   listScrollHintRef: listScrollHintRefOption,
   baseExtensions
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
@@ -202,10 +206,13 @@ export function useSearchPickerAltPreviewKit({
     void runPreviewWithNotice()
   }, [runPreviewWithNotice])
 
+  // EN: Detail always behaves like manual page-active: j/k only moves the list;
+  //     Alt+↑↓ / Enter touch the page. Auto mode would re-highlight the DOM per row.
+  // JA: 詳細は常に manual 相当。j/k は一覧のみ。Alt+↑↓ / Enter でページを触る。
   usePickerAltKeyTracking({
     enabled,
     altKeyHeldRef,
-    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
+    bumpPreviewTickOnAltDown: true,
     setAltPreviewTick,
     onAltKeyDown
   })
@@ -219,7 +226,7 @@ export function useSearchPickerAltPreviewKit({
   usePickerAltPreviewSync({
     enabled: enabled && lineCount > 0,
     isHostPaneFocused,
-    mode: pageActiveMode,
+    mode: "manual",
     altKeyHeldRef,
     altPreviewTick,
     previewKey,
@@ -266,9 +273,8 @@ export function useSearchPickerAltPreviewKit({
         }
         hiRef.current = nextHi
         setHi(nextHi)
-        if (pageActiveMode === "auto") {
-          void runPreviewWithNotice(nextHi)
-        }
+        // EN: Ctrl+↑↓ jumps among previewable rows without painting the page (use Alt/Enter).
+        // JA: Ctrl+↑↓ はプレビュー可能な行へ移動するだけ（DOM は Alt / Enter）。
         return true
       }
 
@@ -306,11 +312,6 @@ export function useSearchPickerAltPreviewKit({
           : Math.max(currentHi - 1, 0)
       hiRef.current = nextHi
       setHi(nextHi)
-      if (pageActiveMode === "auto") {
-        if (canPreviewCurrentSelection(nextHi)) {
-          void runPreviewWithNotice(nextHi)
-        }
-      }
       return true
     },
     [
@@ -318,7 +319,6 @@ export function useSearchPickerAltPreviewKit({
       commandMode,
       enabled,
       lineCount,
-      pageActiveMode,
       runPreviewWithNotice,
       searchMode,
       setHi,

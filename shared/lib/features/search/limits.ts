@@ -27,6 +27,13 @@ export const MAX_BOOKMARK_ROWS = 5000
 /** EN: Max characters of innerText read per tab; 0 = no truncation. JA: タブ innerText 上限（0 は切り詰めなし）。 */
 export const MAX_PAGE_TEXT_CHARS = 500_000
 
+/**
+ * EN: Prefix length when a page exceeds `MAX_PAGE_TEXT_CHARS` (or enrich timed reads).
+ *     Keeps tab budgets / executeScript timeouts from dropping all body hits.
+ * JA: `MAX_PAGE_TEXT_CHARS` 超（または enrich の時間制約）時に走査する先頭長。
+ */
+export const PAGE_SCAN_PREFIX_CHARS = 120_000
+
 /** EN: Max page-body match objects kept per tab. JA: タブあたり本文マッチ上限。 */
 export const MAX_MATCHES_PER_TAB = 500
 
@@ -35,6 +42,15 @@ export const MAX_SERIALIZED_PAGE_MATCHES = 200
 
 /** EN: Max plain lines accumulated across search scopes. JA: 全スコープ合計の行バッファ上限。 */
 export const MAX_SEARCH_LINES_OUT = 60_000
+
+/**
+ * EN: Fair per-scope share of `MAX_SEARCH_LINES_OUT` so history cannot drop page hits.
+ * JA: 履歴がページヒットを押し出さないよう、スコープごとの公平枠。
+ */
+export function maxSearchLinesPerScope(scopeCount: number): number {
+  const n = Math.max(1, scopeCount)
+  return Math.max(4_000, Math.floor(MAX_SEARCH_LINES_OUT / n))
+}
 
 /** EN: Max history/bookmark entries enriched from open tabs. JA: 開タブ本文で enrich する最大件数。 */
 export const MAX_ENRICH_OPEN_TAB_ENTRIES = 50

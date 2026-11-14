@@ -8,7 +8,7 @@ import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
 import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
-import { MAX_SEARCH_LINES_OUT } from "./limits.ts"
+import { MAX_SEARCH_LINES_OUT, maxSearchLinesPerScope } from "./limits.ts"
 import { isParallelSearchEffect } from "./search-effect-parallel.ts"
 import { searchEffectsForDispatchLine } from "./search-list-effects.ts"
 import { buildSearchListResult } from "./search-list-result.ts"
@@ -140,8 +140,20 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   await emitBusy({ kind: "fraction", current: 0, total: scopeTotal })
 
   const linesOut: string[] = []
+  const perScopeCap = maxSearchLinesPerScope(effects.length)
   const canParallel =
     effects.length > 1 && effects.every((effect) => isParallelSearchEffect(effect))
+
+  const appendScopeLines = (lines: readonly string[]): void => {
+    let taken = 0
+    for (const line of lines) {
+      if (taken >= perScopeCap || linesOut.length >= MAX_SEARCH_LINES_OUT) {
+        break
+      }
+      linesOut.push(line)
+      taken += 1
+    }
+  }
 
   if (canParallel) {
     // EN: Run history / bookmark / page / snapshot together — cold history must not
@@ -162,15 +174,7 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     )
     settled.sort((a, b) => a.scopeIndex - b.scopeIndex)
     for (const part of settled) {
-      for (const line of part.lines) {
-        if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
-          break
-        }
-        linesOut.push(line)
-      }
-      if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
-        break
-      }
+      appendScopeLines(part.lines)
     }
     await emitBusy({
       kind: "fraction",
@@ -188,21 +192,13 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
         scopeTotal,
         emitBusy
       )
-      for (const line of lines) {
-        if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
-          break
-        }
-        linesOut.push(line)
-      }
+      appendScopeLines(lines)
       await emitBusy({
         kind: "fraction",
         current: scopeIndex + 1,
         total: scopeTotal,
         detail: scopeLabelForEffect(effect, options.locale)
       })
-      if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
-        break
-      }
     }
   }
 

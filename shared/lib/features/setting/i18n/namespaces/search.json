@@ -93,16 +93,16 @@
     "en": "(Untitled group) [{color}]"
   },
   "search.pageLongSkipped.rerunHint": {
-    "ja": "全文を走査するには search -list --page --unlimit [<pattern>] を再実行してください。",
-    "en": "To scan full page text, rerun search -list --page --unlimit [<pattern>]."
+    "ja": "さらに後ろまで走査するには search -list --page --unlimit [<pattern>] を再実行してください。",
+    "en": "To scan beyond the truncated prefix, rerun search -list --page --unlimit [<pattern>]."
   },
   "search.pageLongSkipped.row": {
-    "ja": "  tab {tabId} · {title} · {url} · ~{length} chars",
-    "en": "  tab {tabId} · {title} · {url} · ~{length} chars"
+    "ja": "  tab {tabId} · {title} · {url} · ~{length} chars（先頭のみ走査）",
+    "en": "  tab {tabId} · {title} · {url} · ~{length} chars (prefix scanned)"
   },
   "search.pageLongSkipped.summary": {
-    "ja": "（{count} 件のタブが {limit} 文字を超えたため本文を走査しませんでした）",
-    "en": "({count} tab(s) exceeded {limit} chars — body not scanned; see rows below)"
+    "ja": "（{count} 件のタブが {limit} 文字超のため、先頭のみ走査しました）",
+    "en": "({count} tab(s) exceeded {limit} chars — scanned a prefix only; see rows below)"
   },
   "search.pageNoTextHint": {
     "ja": "本文を読めませんでした。休止中のタブ、平文 http、chrome:// など非対応ページの可能性があります。対象タブを開き直すか、search -list --page を再実行してください。",
@@ -217,8 +217,8 @@
     "en": "search — could not scroll to match (enable site access under chrome://extensions, then try again)"
   },
   "search.status.auto": {
-    "ja": "↑↓ でハイライト移動時にページ内プレビュー（背面） · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ",
-    "en": "↑↓ in-page preview on highlight (background) · Ctrl+↑↓ open-tab rows only · Enter jump"
+    "ja": "結果一覧: ↑↓ で背面プレビュー · 詳細一覧: ↑↓ は候補のみ（Alt+↑↓ でページ内） · Enter ジャンプ",
+    "en": "Results: ↑↓ background preview · Detail: ↑↓ lists hits only (Alt+↑↓ in-page) · Enter jump"
   },
   "search.status.manual": {
     "ja": "Alt+↑↓ でページ内プレビュー · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ · Alt で page-active 切替",

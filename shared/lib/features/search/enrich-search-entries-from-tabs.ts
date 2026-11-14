@@ -4,7 +4,7 @@ import {
   innerTextLinesFromBodyText
 } from "../page-dom/needle-occurrence"
 import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
-import { MAX_ENRICH_OPEN_TAB_ENTRIES, MAX_PAGE_TEXT_CHARS } from "./limits.ts"
+import { MAX_ENRICH_OPEN_TAB_ENTRIES, PAGE_SCAN_PREFIX_CHARS } from "./limits.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import { collectPageMatchesForTab } from "./search-page-matches"
 import { normalizeUrlForSearchDedup } from "./search-url-dedup"
@@ -77,7 +77,14 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
     return entries
   }
 
-  const readMaxChars = maxPageTextChars ?? MAX_PAGE_TEXT_CHARS
+  // EN: Default to a timed-safe prefix — full MAX_PAGE_TEXT_CHARS often times out on GitHub.
+  // JA: 既定は時間内に収まる先頭長。MAX_PAGE_TEXT_CHARS 全量は GitHub でタイムアウトしがち。
+  const readMaxChars =
+    maxPageTextChars === 0
+      ? 0
+      : maxPageTextChars !== undefined
+        ? maxPageTextChars
+        : PAGE_SCAN_PREFIX_CHARS
 
   const out: PickerEntry[] = []
   let enrichedCount = 0

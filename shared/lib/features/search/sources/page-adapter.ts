@@ -10,7 +10,7 @@ import {
 } from "../../page-extract/read-tab-inner-text"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 import { matchesNeedle } from "../index"
-import { MAX_PAGE_TEXT_CHARS } from "../limits"
+import { MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
 import { collectPageMatchesForTab } from "../search-page-matches"
 import { linesForSearchPageTab } from "./page-find-blocks"
 import {
@@ -22,8 +22,12 @@ import { DEFAULT_UI_LOCALE, type UiLocale } from "../../setting/locale"
 import { tSearch } from "../../setting/i18n/ns/search"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
-/** EN: Hard wall-clock budget per tab (probe + read). Frozen tabs must not stall the scan. */
-const TAB_SCAN_BUDGET_MS = 2500
+/**
+ * EN: Hard wall-clock budget per tab (probe + read + optional smaller retry).
+ *     Must cover ~1.2s probe + ~1.2s read (+ optional 80k retry) without starving body hits.
+ * JA: タブあたりの壁時計上限（probe + 読取 + 短い再試行）。本文ヒットを落とさない長さにする。
+ */
+const TAB_SCAN_BUDGET_MS = 4200
 
 type SearchPageLongTab = {
   tabId: number
@@ -33,8 +37,7 @@ type SearchPageLongTab = {
 }
 
 type TabScanRead =
-  | { kind: "long"; length: number }
-  | { kind: "text"; text: string | null }
+  | { kind: "text"; text: string | null; truncatedLong?: boolean; length?: number }
 
 function withTabScanBudget(work: Promise<TabScanRead>): Promise<TabScanRead> {
   return new Promise((resolve) => {
@@ -198,14 +201,21 @@ export async function searchPageLines(
 
     const scanRead = await withTabScanBudget(
       (async (): Promise<TabScanRead> => {
+        let truncatedLong = false
+        let length: number | undefined
+        let readChars = maxPageTextChars
         if (!unlimit) {
           const bodyLength = await probeOpenTabInnerTextLength(tab)
           if (bodyLength !== null && bodyLength > MAX_PAGE_TEXT_CHARS) {
-            return { kind: "long", length: bodyLength }
+            truncatedLong = true
+            length = bodyLength
+            // EN: Long GitHub-scale pages time out on a 500k slice — scan a shorter prefix.
+            // JA: GitHub 級の長いページは 500k 読取でタイムアウトするため短い先頭だけ走査する。
+            readChars = PAGE_SCAN_PREFIX_CHARS
           }
         }
-        const body = await readOpenTabInnerText(tab, maxPageTextChars)
-        return { kind: "text", text: body }
+        const body = await readOpenTabInnerText(tab, readChars)
+        return { kind: "text", text: body, truncatedLong, length }
       })()
     )
     if (shouldCancel?.()) {
@@ -213,7 +223,7 @@ export async function searchPageLines(
       break
     }
 
-    if (scanRead.kind === "long") {
+    if (scanRead.truncatedLong && scanRead.length !== undefined) {
       skippedLong += 1
       longPages.push({
         tabId,
@@ -221,7 +231,8 @@ export async function searchPageLines(
         url: url || "(no url)",
         length: scanRead.length
       })
-      continue
+      // EN: Still scan the truncated prefix so page hits are not dropped entirely.
+      // JA: 先頭切り詰め分は走査し、ページヒットを丸ごと落とさない。
     }
 
     const text = scanRead.text
@@ -281,7 +292,7 @@ export async function searchPageLines(
   await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
 
   if (cancelled) {
-    const summary = `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped${skippedLong > 0 ? `, ${skippedLong} long page(s) skipped` : ""})`
+    const summary = `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped${skippedLong > 0 ? `, ${skippedLong} long page(s) truncated` : ""})`
     if (out.length === 0 && longPages.length === 0) {
       return [summary]
     }
@@ -312,7 +323,7 @@ export async function searchPageLines(
 
   const pageCount = out.filter((l) => l === "[page]").length
   const lineHitCount = out.filter((l) => l.startsWith("L")).length
-  const longSuffix = skippedLong > 0 ? `, ${skippedLong} long page(s) skipped` : ""
+  const longSuffix = skippedLong > 0 ? `, ${skippedLong} long page(s) truncated` : ""
   out.unshift(
     `(${matchAll ? scanned : pageCount} page(s), ${lineHitCount} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}${longSuffix}; ${tabTotal} tab(s) checked)`
   )
