@@ -17,12 +17,16 @@ let previewSessionNeedle = ""
 /** EN: Coalesce concurrent full Range collects for the same tab+needle (huge DOMs). */
 let previewWarmInFlight: Promise<boolean> | null = null
 let previewWarmKey = ""
+/** EN: Serialize page paints; skip superseded preview generations (stale yellow jump). */
+let previewScrollGeneration = 0
+let previewScrollTail: Promise<void> = Promise.resolve()
 
 export function resetSearchPickerPageHighlightSession(): void {
   previewSessionTabId = null
   previewSessionNeedle = ""
   previewWarmInFlight = null
   previewWarmKey = ""
+  previewScrollGeneration += 1
 }
 
 function previewSessionKey(tabId: number, needle: string): string {
@@ -71,7 +75,7 @@ function previewScrollOptions(
   }
 }
 
-async function scrollToPageMatch(
+async function scrollToPageMatchUnqueued(
   tabId: number,
   match: SearchPageMatch,
   pageMatchIndex: number,
@@ -138,6 +142,39 @@ async function scrollToPageMatch(
       previewWarmInFlight = null
     }
   }
+}
+
+/**
+ * EN: Queue preview paints so a slower older jump cannot overwrite a newer highlight.
+ * JA: 古いプレビューが新しい黄ハイライトを上書きしないよう直列化する。
+ */
+async function scrollToPageMatch(
+  tabId: number,
+  match: SearchPageMatch,
+  pageMatchIndex: number,
+  matches: SearchPageMatch[] | undefined,
+  searchPattern: string,
+  highlightColors: SearchPageHighlightColors
+): Promise<boolean> {
+  const generation = ++previewScrollGeneration
+  const run = previewScrollTail.then(async () => {
+    if (generation !== previewScrollGeneration) {
+      return false
+    }
+    return scrollToPageMatchUnqueued(
+      tabId,
+      match,
+      pageMatchIndex,
+      matches,
+      searchPattern,
+      highlightColors
+    )
+  })
+  previewScrollTail = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
 }
 
 async function previewPageMatchInOpenTab(

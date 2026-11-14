@@ -49,7 +49,11 @@ export function serializeSearchPageMatchesField(
       snippet: m.snippet,
       occurrence: m.occurrence
     }
-    if (m.globalOccurrence !== undefined && Number.isFinite(m.globalOccurrence)) {
+    if (
+      m.globalOccurrence !== undefined &&
+      Number.isFinite(m.globalOccurrence) &&
+      m.globalOccurrence >= 0
+    ) {
       row.globalOccurrence = m.globalOccurrence
     }
     return row

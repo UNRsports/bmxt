@@ -36,6 +36,16 @@ describe("bmxtCollectPageNeedleMatchesInPage", () => {
     assert.ok(result.matches.some((m) => m.lineNo === 0 && /bmxt/i.test(m.snippet)))
   })
 
+  it("does not let title consume body globalOccurrence slots", () => {
+    const result = bmxtCollectPageNeedleMatchesInPage("bmxt", 50, 50_000)
+    const title = result.matches.find((m) => m.lineNo === 0)
+    const body = result.matches.filter((m) => m.lineNo > 0)
+    assert.ok(title)
+    assert.equal(title!.globalOccurrence, -1)
+    assert.equal(body[0]?.globalOccurrence, 0)
+    assert.equal(body[1]?.globalOccurrence, 1)
+  })
+
   it("respects maxMatches", () => {
     const result = bmxtCollectPageNeedleMatchesInPage("bmxt", 2, 50_000)
     assert.ok(result.matches.length <= 2)

@@ -93,8 +93,12 @@ function normalizeCollectResult(raw: unknown): CollectTabPageMatchesResult | nul
           ? Math.max(0, Math.floor(m.occurrence))
           : 0
     }
-    if (typeof m.globalOccurrence === "number" && Number.isFinite(m.globalOccurrence)) {
-      match.globalOccurrence = Math.max(0, Math.floor(m.globalOccurrence))
+    if (
+      typeof m.globalOccurrence === "number" &&
+      Number.isFinite(m.globalOccurrence) &&
+      m.globalOccurrence >= 0
+    ) {
+      match.globalOccurrence = Math.floor(m.globalOccurrence)
     }
     matches.push(match)
   }

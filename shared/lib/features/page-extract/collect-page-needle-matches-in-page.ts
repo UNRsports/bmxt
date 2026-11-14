@@ -58,9 +58,9 @@ export function bmxtCollectPageNeedleMatchesInPage(
 
     const matches: InPageNeedleMatch[] = []
     const occurrence = new Map<string, number>()
-    let nextGlobal = 0
+    let nextBodyGlobal = 0
 
-    const pushMatch = (lineNo: number, snippetRaw: string): void => {
+    const pushMatch = (lineNo: number, snippetRaw: string, globalOccurrence: number): void => {
       if (matches.length >= matchCap) {
         return
       }
@@ -75,13 +75,14 @@ export function bmxtCollectPageNeedleMatchesInPage(
         lineNo,
         snippet,
         occurrence: occ,
-        globalOccurrence: nextGlobal
+        globalOccurrence
       })
-      nextGlobal += 1
     }
 
+    // EN: Title is not in document.body Ranges — do not consume body globalOccurrence slots.
+    // JA: タイトルは body Range に含まれない。body の globalOccurrence をずらさない。
     if (title.trim().length > 0 && title.toLowerCase().includes(lowerNeedle)) {
-      pushMatch(0, title)
+      pushMatch(0, title, -1)
     }
 
     if (text.length === 0 || !text.toLowerCase().includes(lowerNeedle)) {
@@ -120,7 +121,8 @@ export function bmxtCollectPageNeedleMatchesInPage(
             snippet = `${snippet}…`
           }
         }
-        pushMatch(lineNo, snippet)
+        pushMatch(lineNo, snippet, nextBodyGlobal)
+        nextBodyGlobal += 1
         hitOnLine += 1
         from = at + Math.max(1, needle.length)
       }
@@ -139,7 +141,7 @@ export function bmxtCollectPageNeedleMatchesInPage(
         if (end < text.length) {
           snippet = `${snippet}…`
         }
-        pushMatch(1, snippet)
+        pushMatch(1, snippet, nextBodyGlobal)
       }
     }
 

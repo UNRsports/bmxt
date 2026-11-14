@@ -67,9 +67,18 @@ export function collectPageMatchesForTab(
 
   const bodyLines = text !== null ? innerTextLinesFromBodyText(text) : []
 
+  // EN: Title is not a body Range — keep body globalOccurrence 0-based for in-page scroll.
+  // JA: タイトルは body Range ではない。ページ内スクロール用に body の globalOccurrence を 0 始まりに保つ。
   if (title.trim().length > 0 && matchesNeedle(title, needle)) {
-    pushLineMatch(matches, occurrence, 0, title, nextGlobalOccurrence)
-    nextGlobalOccurrence += 1
+    const trimmedTitle = title.trim()
+    const key = trimmedTitle.toLowerCase()
+    const occ = occurrence.get(key) ?? 0
+    occurrence.set(key, occ + 1)
+    matches.push({
+      lineNo: 0,
+      snippet: trimmedTitle,
+      occurrence: occ
+    })
   }
 
   if (text !== null && matchesNeedle(text, needle)) {
