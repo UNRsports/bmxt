@@ -6,8 +6,20 @@
 /** EN: Max chrome.history.search rows per find --history. JA: find --history の最大件数。 */
 export const MAX_HISTORY_RESULTS = 10000
 
-/** EN: How far back history.search spans (ms). JA: 履歴検索の遡及期間（ミリ秒）。 */
+/**
+ * EN: Lookback when listing history without a keyword (browse-all).
+ * JA: キーワードなしで履歴を一覧するときの遡及期間。
+ */
 export const HISTORY_LOOKBACK_MS = 90 * 24 * 60 * 60 * 1000
+
+/** EN: Calendar days matching `HISTORY_LOOKBACK_MS` (for notices). */
+export const HISTORY_LOOKBACK_DAYS = 90
+
+/**
+ * EN: `chrome.history.search` startTime for keyword queries (0 = all available history).
+ * JA: キーワード検索時の startTime（0 = ブラウザが持つ全履歴）。
+ */
+export const HISTORY_PATTERN_START_TIME_MS = 0
 
 /** EN: Max flattened bookmark rows. JA: ブックマーク走査の最大行数。 */
 export const MAX_BOOKMARK_ROWS = 5000

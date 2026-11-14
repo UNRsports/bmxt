@@ -38,28 +38,51 @@ function noticeRecordsFromAdapterLines(
   return records
 }
 
+/** EN: Leading free-form notice lines before the first `[history]` / … scope block. */
+export function leadingSearchAdapterNoticeLines(adapterLines: readonly string[]): string[] {
+  const leadingNotices: string[] = []
+  for (const line of adapterLines) {
+    const trimmed = line.trim()
+    if (trimmed.length === 0) {
+      continue
+    }
+    if (/^\[(history|bookmark|page|snapshot)\]$/i.test(trimmed)) {
+      break
+    }
+    leadingNotices.push(line)
+  }
+  return leadingNotices
+}
+
 export function buildSearchListResult(
   entries: readonly PickerEntry[],
   pattern: string,
   adapterLines: readonly string[] = []
 ): ListResult {
+  const leadingNotices = leadingSearchAdapterNoticeLines(adapterLines)
+
   if (entries.length === 0) {
     return {
       schema: LIST_OUTPUT_SCHEMA,
       command: "search",
       subcommand: "-list",
-      records: noticeRecordsFromAdapterLines(adapterLines, pattern)
+      records: noticeRecordsFromAdapterLines(
+        leadingNotices.length > 0 ? leadingNotices : adapterLines,
+        pattern
+      )
     }
   }
 
+  const noticeRecords = noticeRecordsFromAdapterLines(leadingNotices, pattern)
   const records: ListRecord[] = entries.map((entry, index) => {
     const sources = pickerEntrySearchSources(entry)
     const sourceLabel = sources.length > 0 ? sources.join(",") : entry.source
     const hitCount = entry.pageMatches?.length ?? 0
     const summary = searchPickerSummaryLine(entry)
     const pageMatchesJson = serializeSearchPageMatchesField(entry.pageMatches)
+    const displayIndex = noticeRecords.length + index + 1
     const fields: ListRecord["fields"] = {
-      index: index + 1,
+      index: displayIndex,
       source: sourceLabel,
       title: entry.title,
       url: entry.url,
@@ -82,7 +105,7 @@ export function buildSearchListResult(
       },
       pipeLine: [
         "search.hit",
-        `index=${index + 1}`,
+        `index=${displayIndex}`,
         `source=${sourceLabel}`,
         `title=${JSON.stringify(entry.title)}`,
         `url=${JSON.stringify(entry.url)}`,
@@ -97,6 +120,6 @@ export function buildSearchListResult(
     schema: LIST_OUTPUT_SCHEMA,
     command: "search",
     subcommand: "-list",
-    records
+    records: [...noticeRecords, ...records]
   }
 }

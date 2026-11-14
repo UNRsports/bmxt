@@ -2,7 +2,10 @@ import type { ListResult } from "../../command-line/list-output/types.ts"
 import { LIST_OUTPUT_SCHEMA } from "../../command-line/list-output/types.ts"
 import type { DispatchHostContext } from "../../dispatch/dispatch-context.ts"
 import { MAX_AGGREGATED_SEARCH_ENTRIES } from "../../search/limits.ts"
+import { remoteSearchNoticeRecords } from "../../search/peer/remote-search-detail-notices.ts"
 import { fetchSearchListResult } from "../../search/search-list-plain.ts"
+import { searchListPatternFromLine } from "../../search/search-list-picker-parse.ts"
+import { normalizeSearchPattern } from "../../search/search-format.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { loadOrCreateDeviceIdentity } from "../device/device-identity.ts"
 import { getSyncService } from "../facade/sync-service.ts"
@@ -149,15 +152,18 @@ export async function fetchCrossDeviceSearchList(
     const status = await service.status()
     const name =
       status.members.find((m) => m.deviceId === remoteId)?.displayName ?? remoteId
+    const pattern = normalizeSearchPattern(searchListPatternFromLine(peerLine))
+    const remoteNotices = remoteSearchNoticeRecords(remote.detail, pattern)
+    const hitRecords = remoteSearchHitsToListRecords(remote.hits, {
+      deviceId: remoteId,
+      deviceName: name,
+      remote: true
+    })
     const trimmed = trimAggregatedResult({
       schema: LIST_OUTPUT_SCHEMA,
       command: "search",
       subcommand: "-list",
-      records: remoteSearchHitsToListRecords(remote.hits, {
-        deviceId: remoteId,
-        deviceName: name,
-        remote: true
-      }),
+      records: [...remoteNotices, ...hitRecords],
       meta:
         notices.length > 0
           ? {
@@ -223,15 +229,20 @@ export async function fetchCrossDeviceSearchList(
       continue
     }
     const name = memberNameById.get(remoteId) ?? remoteId
+    const pattern = normalizeSearchPattern(searchListPatternFromLine(peerLine))
+    const remoteNotices = remoteSearchNoticeRecords(remote.detail, pattern)
     parts.push({
       schema: LIST_OUTPUT_SCHEMA,
       command: "search",
       subcommand: "-list",
-      records: remoteSearchHitsToListRecords(remote.hits, {
-        deviceId: remoteId,
-        deviceName: name,
-        remote: true
-      })
+      records: [
+        ...remoteNotices,
+        ...remoteSearchHitsToListRecords(remote.hits, {
+          deviceId: remoteId,
+          deviceName: name,
+          remote: true
+        })
+      ]
     })
   }
 

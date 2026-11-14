@@ -7,6 +7,19 @@
     "ja": "（検索結果なし）",
     "en": "(no search hits)"
   },
+  "search.history.notice.browseCapped": {
+    "ja": "仕様により、キーワードなしの履歴一覧は直近 {days} 日・最大 {max} 件までに限られます。",
+    "en": "By design, listing history without a keyword is limited to the last {days} days and at most {max} rows."
+  },
+  "search.history.notice.patternCapped": {
+    "ja": "仕様により、履歴の一致はブラウザ API 上限のため直近の最大 {max} 件までに限られます。",
+    "en": "By design, matching history rows are limited to the most recent {max} hits (browser API cap)."
+  },
+  "search.history.notice.noMatches": {
+    "ja": "（履歴に一致なし — パターンは大文字小文字を区別しない部分一致。空パターンですべて）",
+    "en": "(no history matches — pattern is case-insensitive substring, or empty pattern for all)"
+  },
+
   "search.list.error.failed": {
     "ja": "error: 検索に失敗しました: {message}",
     "en": "error: search failed: {message}"

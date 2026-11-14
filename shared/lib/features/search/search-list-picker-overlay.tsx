@@ -176,6 +176,16 @@ export function SearchListPickerOverlay({
     return [tSearch("search.picker.noMatches", locale)]
   }, [loading, progressLines, entries.length, emptyResultLines, locale])
 
+  const resultNoticeLines = useMemo((): string[] => {
+    if (loading || entries.length === 0) {
+      return []
+    }
+    if (!emptyResultLines || emptyResultLines.length === 0) {
+      return []
+    }
+    return emptyResultLines
+  }, [emptyResultLines, entries.length, loading])
+
   const enterDestinationForEntry = useCallback(
     async (
       entry: PickerEntry,
@@ -467,6 +477,7 @@ export function SearchListPickerOverlay({
       pattern={pattern}
       statusLines={statusLines}
       statusOnly={loading || entries.length === 0}
+      bannerLines={resultNoticeLines}
       matchHi={matchHi}
       pickerView={pickerView}
       detailHits={detailHits}

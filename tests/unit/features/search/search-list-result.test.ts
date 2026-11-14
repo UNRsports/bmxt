@@ -32,6 +32,28 @@ describe("buildSearchListResult", () => {
     assert.match(result.records[0]!.display?.label ?? "", /no history matches/)
   })
 
+  it("prepends leading adapter notices when hits exist", () => {
+    const entries: PickerEntry[] = [
+      {
+        id: "history-0",
+        source: "history",
+        title: "Example",
+        url: "https://example.com/"
+      }
+    ]
+    const result = buildSearchListResult(entries, "", [
+      "By design, listing history without a keyword is limited.",
+      "[history]",
+      "title: Example",
+      "url: https://example.com/",
+      ""
+    ])
+    assert.equal(result.records.length, 2)
+    assert.equal(result.records[0]!.fields.source, "notice")
+    assert.equal(result.records[1]!.fields.source, "history")
+    assert.equal(result.records[1]!.fields.index, 2)
+  })
+
   it("serializes pageMatchesJson for picker detail / highlight round-trip", () => {
     const entries: PickerEntry[] = [
       {

@@ -62,6 +62,8 @@ export type SearchListPickerBodyProps = {
   /** EN: Status lines while loading or when there are no openable rows. */
   statusLines?: string[]
   statusOnly?: boolean
+  /** EN: Cap / lookback notices shown above results when hits exist. */
+  bannerLines?: string[]
   matchHi?: number
   pickerView?: SearchListPickerView
   detailHits?: SearchEntryDetailHit[]
@@ -222,6 +224,7 @@ export function SearchListPickerBody({
   pattern,
   statusLines = [],
   statusOnly = false,
+  bannerLines = [],
   matchHi = 0,
   pickerView = "results",
   detailHits = [],
@@ -743,6 +746,16 @@ export function SearchListPickerBody({
         />
       ) : null}
       <div className="bmxt-tab-picker-head">{headline}</div>
+      {!statusOnly && bannerLines.length > 0
+        ? bannerLines.map((line, i) => (
+            <div
+              key={`banner-${i}`}
+              className="bmxt-tab-picker-head bmxt-search-picker-preview-notice"
+              role="status">
+              {line}
+            </div>
+          ))
+        : null}
       {previewNotice ? (
         <div className="bmxt-tab-picker-head bmxt-search-picker-preview-notice" role="status">
           {previewNotice}

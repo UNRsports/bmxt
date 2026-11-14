@@ -42,8 +42,16 @@ export async function applyRemoteSearchQuery(options: {
     })
     const hits: SyncRemoteSearchHit[] = []
     let truncated = false
+    const localNotices: string[] = []
     for (const record of result.records) {
       if (record.kind !== "search.hit") {
+        continue
+      }
+      if (String(record.fields.source ?? "") === "notice") {
+        const label = String(record.display?.label ?? record.fields.title ?? "").trim()
+        if (label.length > 0) {
+          localNotices.push(label)
+        }
         continue
       }
       if (hits.length >= SEARCH_REMOTE_MAX_HITS_PER_PEER) {
@@ -72,10 +80,15 @@ export async function applyRemoteSearchQuery(options: {
         })
       )
     }
-    const detail = truncated
-      ? `truncated=${SEARCH_REMOTE_MAX_HITS_PER_PEER}`
-      : `hits=${hits.length}`
-    return { ok: true, detail, hits }
+    const detailParts: string[] = [
+      truncated
+        ? `truncated=${SEARCH_REMOTE_MAX_HITS_PER_PEER}`
+        : `hits=${hits.length}`
+    ]
+    if (localNotices.length > 0) {
+      detailParts.push(`notices=${localNotices.join("|")}`)
+    }
+    return { ok: true, detail: detailParts.join(";"), hits }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { ok: false, detail: message.slice(0, 200), hits: [] }

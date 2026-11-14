@@ -228,11 +228,20 @@ export function formatSearchListPlainLines(result: ListResult, locale: UiLocale)
   if (result.records.length === 0) {
     return [...notices, tSearch("search.list.empty", locale)]
   }
-  const body = formatListPlainLines(result)
-  const hitCount = result.records.filter((record) => record.fields.source !== "notice").length
+  const noticeRecords = result.records.filter((record) => record.fields.source === "notice")
+  const hitRecords = result.records.filter((record) => record.fields.source !== "notice")
+  const noticeLabels = noticeRecords.map((record) =>
+    String(record.display?.label ?? record.fields.title ?? "")
+  )
+  const body = formatListPlainLines({
+    ...result,
+    records: hitRecords
+  })
+  const hitCount = hitRecords.length
   return [
     ...notices,
-    ...appendListPlainSummary(body, hitCount > 0 ? hitCount : result.records.length, locale)
+    ...noticeLabels.filter((line) => line.trim().length > 0),
+    ...appendListPlainSummary(body, hitCount > 0 ? hitCount : 0, locale)
   ]
 }
 

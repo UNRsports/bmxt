@@ -3,6 +3,7 @@ import { ensureBmxtCore, runDispatch } from "../../bmxt-core"
 import type { DispatchHostContext } from "../../dispatch/dispatch-context"
 import { applyHostEffects } from "../../dispatch/apply-effects"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../../search/enrich-search-entries-from-tabs"
+import { leadingSearchAdapterNoticeLines } from "../../search/search-list-result"
 import { openSearchPickerEntry } from "../../search/open-search-picker-entry"
 import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
 import {
@@ -140,8 +141,13 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
               return
             }
             clearSearchLoadingProgress()
+            const leadingNotices = leadingSearchAdapterNoticeLines(linesOut)
             const emptyResultLines =
-              entries.length === 0 ? linesOut.filter((l) => l.trim().length > 0) : undefined
+              leadingNotices.length > 0
+                ? leadingNotices
+                : entries.length === 0
+                  ? linesOut.filter((l) => l.trim().length > 0)
+                  : undefined
             options.setSearchListPicker(options.sessionId, {
               phase: "results",
               progressLines: [],

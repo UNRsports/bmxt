@@ -55,6 +55,9 @@ export type SearchListPickerState = {
   entries: PickerEntry[]
   /** EN: Normalized pattern from the dispatch line (`search -list …`). */
   pattern: string
-  /** EN: When search completes with zero openable rows, show these lines instead. */
+  /**
+   * EN: Cap / empty notices — shown as status when no hits, or as a banner above hits.
+   * JA: 上限／空結果の notice。ヒットなしは status、ありは一覧上のバナー。
+   */
   emptyResultLines?: string[]
 }
