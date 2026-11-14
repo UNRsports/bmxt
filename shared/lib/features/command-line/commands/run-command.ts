@@ -104,6 +104,12 @@ async function dispatchSegment(
   if (bundle.ty === "effects") {
     const matched = matchPlainListCommand(commandText)
     if (matched !== null && matched.entry.runtime === "ui") {
+      // EN: Pipe producer defers the real fetch to `attachBmxtRuleStreamToOutcome`
+      //     so search runs once under the parent job (Ctrl+C reaches shouldCancel).
+      // JA: パイプ左辺は attach 側で一度だけ fetch する（親ジョブの Ctrl+C が届く）。
+      if (options?.suppressLogPatches === true) {
+        return segmentSuccess([])
+      }
       const lines = await tryRunPlainListCommand(commandText, { locale, deps })
       if (lines !== null) {
         return segmentSuccess(lines)

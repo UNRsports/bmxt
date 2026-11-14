@@ -4,6 +4,7 @@ import {
   recordCommandHistory
 } from "../../bmxt-window/shell/command-dispatch/types.ts"
 import { yieldToUiPaint } from "../../bmxt-window/shell/command-busy"
+import { shouldCancelJob } from "../../job"
 import { parseSearchListLine } from "../../search/search-list-parse.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { tShell } from "../../setting/i18n/ns/shell.ts"
@@ -106,8 +107,13 @@ export async function runCompoundLine(
   let exitStatus = EXIT_SUCCESS
   let priorExitStatus = EXIT_SUCCESS
 
-  try {
+  const runSegments = async (): Promise<void> => {
     for (let index = 0; index < parsed.segments.length; index += 1) {
+      if (shouldCancelJob(deps.jobRunner.getActive("search-list"))) {
+        stoppedAt = index
+        exitStatus = segmentFailure("cancelled", []).exitStatus
+        break
+      }
       const text = parsed.segments[index]!
       const operator = index === 0 ? null : parsed.operators[index - 1]!
       const shouldRun =
@@ -146,6 +152,19 @@ export async function runCompoundLine(
         pipeParsed.segments.length > 1
           ? await runPipeChain(pipeParsed.segments, deps, locale)
           : await runSegment(text, deps, locale)
+      if (shouldCancelJob(deps.jobRunner.getActive("search-list"))) {
+        const cancelledOutcome = segmentFailure("cancelled", [])
+        results.push({
+          index,
+          text,
+          outcome: cancelledOutcome,
+          skipped: false
+        })
+        priorExitStatus = cancelledOutcome.exitStatus
+        exitStatus = cancelledOutcome.exitStatus
+        stoppedAt = index
+        break
+      }
       await appendCompoundLogBlock(
         deps,
         formatOutcomeBlock(text, outcome, locale, pipeParsed.segments.length)
@@ -157,6 +176,25 @@ export async function runCompoundLine(
       if (compoundShouldStop(outcome.exitStatus)) {
         stoppedAt = index
       }
+    }
+  }
+
+  try {
+    // EN: Parent `search-list` job — Ctrl+C cancels the whole compound/pipe search tree.
+    // JA: 親 search-list ジョブ。Ctrl+C で compound/pipe の search ツリー全体を止める。
+    if (lockSearchInput) {
+      await deps.jobRunner.start(
+        "search-list",
+        async (job) => {
+          if (shouldCancelJob(job)) {
+            return
+          }
+          await runSegments()
+        },
+        { meta: { line: fullLine } }
+      )
+    } else {
+      await runSegments()
     }
   } finally {
     if (busyToken !== null) {
