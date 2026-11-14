@@ -13,6 +13,7 @@ import {
   bmxtProbePageInnerTextLengthInPage,
   isPageExtractRequest
 } from "../../lib/features/page-extract/page-extract-message"
+import { bmxtCollectPageNeedleMatchesInPage } from "../../lib/features/page-extract/collect-page-needle-matches-in-page"
 import { clampPageExtractMaxChars } from "../../lib/features/page-extract/page-extract-limits"
 import { bmxtFindPageScrollToSnippetInjected } from "../../lib/features/page-dom/injected-find-page-scroll-to-snippet"
 import { bmxtScrollToSearchNeedleInjected } from "../../lib/features/page-dom/injected-scroll-to-search-needle"
@@ -105,16 +106,32 @@ export default defineContentScript({
         //     message port while `innerText` layout runs (large / busy pages).
         // JA: 先に true を返し、innerText 取得後に sendResponse（巨大ページでのポート占有を避ける）。
         const lengthOnly = raw.lengthOnly === true
+        const collectMatches = raw.collectMatches === true
         const maxChars = raw.maxChars
+        const needle = typeof raw.needle === "string" ? raw.needle : ""
+        const maxMatches =
+          typeof raw.maxMatches === "number" && Number.isFinite(raw.maxMatches)
+            ? raw.maxMatches
+            : 500
         void Promise.resolve().then(() => {
           try {
             if (lengthOnly) {
               sendResponse(bmxtProbePageInnerTextLengthInPage())
               return
             }
+            if (collectMatches) {
+              sendResponse(
+                bmxtCollectPageNeedleMatchesInPage(
+                  needle,
+                  maxMatches,
+                  clampPageExtractMaxChars(maxChars)
+                )
+              )
+              return
+            }
             sendResponse(bmxtExtractPageInnerTextInPage(clampPageExtractMaxChars(maxChars)))
           } catch {
-            sendResponse(lengthOnly ? 0 : "")
+            sendResponse(lengthOnly ? 0 : collectMatches ? null : "")
           }
         })
         return true

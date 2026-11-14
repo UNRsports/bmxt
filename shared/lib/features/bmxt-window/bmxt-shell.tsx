@@ -400,6 +400,8 @@ export function BmxtShell({
     : commandBusyLabel
   const promptShowBusyAnim = syncConnecting ? true : showCommandBusy
 
+  const clearSearchLoadingProgressRef = useRef<() => void>(() => {})
+
   const cancelCommandBusy = useCallback(() => {
     const hadSearch = isJobHandleActive(jobRunner.getActive("search-list"))
     const hadRunCmd = isJobHandleActive(jobRunner.getActive("run-cmd"))
@@ -412,6 +414,9 @@ export function BmxtShell({
     }
     if (hadSearch) {
       jobRunner.cancel("search-list")
+      // EN: Stop loading progress paint immediately (scan loop exits on next cancel poll).
+      // JA: 進捗表示を即止め（走査ループは次の cancel ポーリングで抜ける）。
+      clearSearchLoadingProgressRef.current()
     }
     if (hadRunCmd) {
       jobRunner.cancel("run-cmd")
@@ -877,6 +882,7 @@ export function BmxtShell({
     beginCommandBusy,
     endCommandBusy
   })
+  clearSearchLoadingProgressRef.current = clearSearchLoadingProgress
 
   const { runSnapshotSave } = useSnapshotSaveShell({
     sessionId,

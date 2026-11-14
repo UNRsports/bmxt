@@ -1,9 +1,9 @@
 /**
- * EN: Runs via `executeScript({ func })` / content script — no imports (Chrome serializes the fn).
- *     Collects title + body line hits in-page and returns a compact match list (no full innerText
- *     transfer to the extension process).
- * JA: CS / executeScript 用（import 禁止）。ページ内でタイトル／本文ヒットを集め、
- *     マッチ配列だけ返す（innerText 全文を拡張側へ運ばない）。
+ * EN: Runs via `executeScript({ func })` / content script — no imports and no free
+ *     variables (Chrome serializes only the function body; module consts are NOT available).
+ *     Collects title + body line hits in-page and returns a compact match list.
+ * JA: CS / executeScript 用。import・外スコープ定数禁止（Chrome は関数本体だけ送る）。
+ *     ページ内でタイトル／本文ヒットを集め、マッチ配列だけ返す。
  */
 
 export type InPageNeedleMatch = {
@@ -20,9 +20,6 @@ export type InPageNeedleMatchCollectResult = {
   matches: InPageNeedleMatch[]
 }
 
-const SNIPPET_CONTEXT = 48
-const SNIPPET_MAX = 500
-
 /**
  * EN: In-page collector. Callers pass positive finite caps from clamp helpers.
  * JA: ページ内コレクタ。呼び出し側で有限の正の上限を渡すこと。
@@ -32,6 +29,10 @@ export function bmxtCollectPageNeedleMatchesInPage(
   maxMatches: number,
   maxTextChars: number
 ): InPageNeedleMatchCollectResult {
+  // EN: All locals must live inside this function — executeScript cannot close over module scope.
+  // JA: すべて関数内ローカル。executeScript はモジュールスコープを閉じ込めない。
+  const snippetContext = 48
+  const snippetMax = 500
   const empty: InPageNeedleMatchCollectResult = {
     title: "",
     bodyLength: 0,
@@ -63,7 +64,7 @@ export function bmxtCollectPageNeedleMatchesInPage(
       if (matches.length >= matchCap) {
         return
       }
-      const snippet = snippetRaw.trim().slice(0, SNIPPET_MAX)
+      const snippet = snippetRaw.trim().slice(0, snippetMax)
       if (!snippet) {
         return
       }
@@ -106,11 +107,11 @@ export function bmxtCollectPageNeedleMatchesInPage(
           break
         }
         let snippet: string
-        if (hitOnLine === 0 && line.length <= SNIPPET_MAX) {
+        if (hitOnLine === 0 && line.length <= snippetMax) {
           snippet = line.trim()
         } else {
-          const start = Math.max(0, at - SNIPPET_CONTEXT)
-          const end = Math.min(line.length, at + needle.length + SNIPPET_CONTEXT)
+          const start = Math.max(0, at - snippetContext)
+          const end = Math.min(line.length, at + needle.length + snippetContext)
           snippet = line.slice(start, end).trim()
           if (start > 0) {
             snippet = `…${snippet}`

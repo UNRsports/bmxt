@@ -128,10 +128,9 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
             )
             const linesOut = await applyHostEffects(ctx, effects)
             if (shouldCancelJob(job)) {
+              // EN: Do not dump partial/cancelled adapter lines into the terminal log.
+              // JA: 中断後に走査の部分結果をログへ流し込まない。
               clearSearchLoadingProgress()
-              if (linesOut.length > 0) {
-                await options.appendLogLines(linesOut)
-              }
               return
             }
             const parsed = pickerEntriesFromSearchLines(linesOut)

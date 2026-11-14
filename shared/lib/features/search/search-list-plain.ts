@@ -97,11 +97,17 @@ async function runOneSearchEffect(
   scopeTotal: number,
   emitBusy: (progress: CommandBusyProgress) => Promise<void>
 ): Promise<string[]> {
+  if (options.ctx.shouldCancel?.()) {
+    return []
+  }
   const scope = scopeLabelForEffect(effect, options.locale)
   if (options.onProgress) {
     await options.onProgress(
       tSearch("search.list.progress.scope", options.locale, { scope })
     )
+  }
+  if (options.ctx.shouldCancel?.()) {
+    return []
   }
   await emitBusy({
     kind: "fraction",
@@ -111,6 +117,9 @@ async function runOneSearchEffect(
   })
   const ctx = buildEffectCtx(options, effect, pageOptions, scopeIndex, scopeTotal, emitBusy)
   const lines = await applyHostEffects(ctx, [effect])
+  if (options.ctx.shouldCancel?.()) {
+    return []
+  }
   if (options.onProgress) {
     await options.onProgress(
       tSearch("search.list.progress.scopeDone", options.locale, { scope })
