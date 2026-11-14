@@ -139,7 +139,15 @@ function SearchDetailPickerRow({
       <div className="bmxt-search-picker-field">
         <div className="bmxt-search-picker-field-label">{fieldLabel}</div>
         <div className="bmxt-search-picker-text">
-          <SearchPickerHighlight text={hit.displayText} needle={highlightNeedle} />
+          <SearchPickerHighlight
+            text={hit.displayText}
+            needle={highlightNeedle}
+            activeOccurrence={
+              highlightNeedle.trim() !== ""
+                ? (hit.highlightOccurrence ?? 0)
+                : undefined
+            }
+          />
         </div>
       </div>
     </div>
