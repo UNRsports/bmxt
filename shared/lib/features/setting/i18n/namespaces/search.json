@@ -157,8 +157,8 @@
     "en": "search -list · open target · ↑↓ · j/k · ← back · Enter open · Esc → back · Esc×2 → prompt"
   },
   "search.picker.headline.detail": {
-    "ja": "search -list · 詳細 · ↑↓ · j/k · Ctrl+↑↓ 開タブヒット · Alt+↑↓ プレビュー（manual） · ← 戻る · Enter ジャンプ · Esc → 戻る · Esc×2 → prompt",
-    "en": "search -list · detail · ↑↓ · j/k · Ctrl+↑↓ open-tab hits · Alt+↑↓ preview (manual) · ← back · Enter jump · Esc → back · Esc×2 → prompt"
+    "ja": "search -list · 詳細 · ↑↓ · j/k · Ctrl+↑↓ 開タブヒット · Alt+↑↓（manual） · ← 戻る · Enter ジャンプ · Esc → 戻る · Esc×2 → prompt",
+    "en": "search -list · detail · ↑↓ · j/k · Ctrl+↑↓ open-tab hits · Alt+↑↓ (manual) · ← back · Enter jump · Esc → back · Esc×2 → prompt"
   },
   "search.picker.headline.list": {
     "ja": "search -list · ↑↓ · j/k · Ctrl+↑↓ 開タブ行のみ · → 詳細 / 開き先 · Enter 開く · n/N · ← · Esc → prompt",
@@ -217,8 +217,8 @@
     "en": "search — could not scroll to match (enable site access under chrome://extensions, then try again)"
   },
   "search.status.auto": {
-    "ja": "結果一覧: ↑↓ で背面プレビュー · 詳細一覧: ↑↓ は候補のみ（Alt+↑↓ でページ内） · Enter ジャンプ",
-    "en": "Results: ↑↓ background preview · Detail: ↑↓ lists hits only (Alt+↑↓ in-page) · Enter jump"
+    "ja": "結果一覧・詳細: ↑↓ で背面／ページ内プレビュー · Enter ジャンプ",
+    "en": "Results & detail: ↑↓ background / in-page preview · Enter jump"
   },
   "search.status.manual": {
     "ja": "Alt+↑↓ でページ内プレビュー · Ctrl+↑↓ で開タブ行のみ · Enter でジャンプ · Alt で page-active 切替",

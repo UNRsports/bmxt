@@ -14,10 +14,23 @@ export type SearchPageHighlightColors = BmxtNeedleHighlightColorsPayload
 
 let previewSessionTabId: number | null = null
 let previewSessionNeedle = ""
+/** EN: Coalesce concurrent full Range collects for the same tab+needle (huge DOMs). */
+let previewWarmInFlight: Promise<boolean> | null = null
+let previewWarmKey = ""
 
 export function resetSearchPickerPageHighlightSession(): void {
   previewSessionTabId = null
   previewSessionNeedle = ""
+  previewWarmInFlight = null
+  previewWarmKey = ""
+}
+
+function previewSessionKey(tabId: number, needle: string): string {
+  return `${tabId}\0${needle}`
+}
+
+function isPreviewSessionReady(tabId: number, needle: string): boolean {
+  return previewSessionTabId === tabId && previewSessionNeedle === needle
 }
 
 function pickPageMatchAtIndex(
@@ -71,36 +84,60 @@ async function scrollToPageMatch(
     return false
   }
 
-  const sameTabAndNeedle =
-    previewSessionTabId === tabId && previewSessionNeedle === needle && previewSessionTabId !== null
-  const activeOnly = sameTabAndNeedle
-
   const markPreviewSession = () => {
     previewSessionTabId = tabId
     previewSessionNeedle = needle
   }
 
-  const scrolled = await scrollSearchPageToNeedle(
-    tabId,
-    previewScrollOptions(match, pageMatchIndex, matches, searchPattern, highlightColors, activeOnly)
-  )
-  if (scrolled) {
-    markPreviewSession()
-    return true
+  const runScroll = (activeOnly: boolean): Promise<boolean> => {
+    return scrollSearchPageToNeedle(
+      tabId,
+      previewScrollOptions(match, pageMatchIndex, matches, searchPattern, highlightColors, activeOnly)
+    )
   }
 
-  if (activeOnly) {
-    const retried = await scrollSearchPageToNeedle(
-      tabId,
-      previewScrollOptions(match, pageMatchIndex, matches, searchPattern, highlightColors, false)
-    )
-    if (retried) {
+  if (isPreviewSessionReady(tabId, needle)) {
+    const scrolled = await runScroll(true)
+    if (scrolled) {
+      return true
+    }
+    // EN: Content-script session may have been cleared — rebuild once.
+    const rebuilt = await runScroll(false)
+    if (rebuilt) {
       markPreviewSession()
     }
-    return retried
+    return rebuilt
   }
 
-  return false
+  const key = previewSessionKey(tabId, needle)
+
+  // EN: Wait for an in-flight full collect, then jump with cached ranges (activeOnly).
+  if (previewWarmInFlight !== null && previewWarmKey === key) {
+    await previewWarmInFlight
+    if (isPreviewSessionReady(tabId, needle)) {
+      const afterWarm = await runScroll(true)
+      if (afterWarm) {
+        return true
+      }
+    }
+  }
+
+  previewWarmKey = key
+  const warmPromise = (async (): Promise<boolean> => {
+    const scrolled = await runScroll(false)
+    if (scrolled) {
+      markPreviewSession()
+    }
+    return scrolled
+  })()
+  previewWarmInFlight = warmPromise
+  try {
+    return await warmPromise
+  } finally {
+    if (previewWarmInFlight === warmPromise) {
+      previewWarmInFlight = null
+    }
+  }
 }
 
 async function previewPageMatchInOpenTab(
@@ -115,17 +152,22 @@ async function previewPageMatchInOpenTab(
     return false
   }
 
+  const needle = searchPattern.trim()
+  const skipActivateDelay =
+    needle.length > 0 && isPreviewSessionReady(resolved.tabId, needle)
+
   const activated = await activateTabInBackground(resolved.tabId)
   if (!activated) {
     return false
   }
 
-  const needle = searchPattern.trim()
   if (!match || !needle || match.lineNo <= 0) {
     return true
   }
 
-  await sleep(PREVIEW_TAB_ACTIVATE_DELAY_MS)
+  if (!skipActivateDelay) {
+    await sleep(PREVIEW_TAB_ACTIVATE_DELAY_MS)
+  }
   return scrollToPageMatch(
     resolved.tabId,
     match,
@@ -195,10 +237,6 @@ export async function clearSearchPickerPageHighlightsForEntry(entry: PickerEntry
   resetSearchPickerPageHighlightSession()
   if (!resolved) {
     return false
-  }
-  if (previewSessionTabId === resolved.tabId) {
-    previewSessionTabId = null
-    previewSessionNeedle = ""
   }
   return clearSearchPageHighlights(resolved.tabId)
 }

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -38,8 +39,14 @@ import {
 } from "./search-picker-preview-nav"
 import { listSearchDetailPreviewTargetIndices } from "./search-picker-preview-targets"
 import type { SearchPageActiveMode } from "./page-active-setting"
+import {
+  SEARCH_DETAIL_AUTO_PREVIEW_DEBOUNCE_MS,
+  SEARCH_DETAIL_MANUAL_PREVIEW_DEBOUNCE_MS
+} from "./search-detail-preview-config"
 
 const PREVIEW_NOTICE_MS = 3200
+
+export { SEARCH_DETAIL_AUTO_PREVIEW_DEBOUNCE_MS } from "./search-detail-preview-config"
 
 export type SearchPickerListScrollHint = {
   animated: boolean
@@ -71,9 +78,10 @@ export type UseSearchPickerAltPreviewKitResult = {
 }
 
 /**
- * EN: Detail view — j/k lists all hits in the picker; Alt+↑↓ / Enter preview or jump.
- *     Never auto-paints the page DOM on every row (avoids GitHub-scale freezes).
- * JA: 詳細は j/k で候補を一覧。Alt+↑↓ / Enter でプレビュー／ジャンプ。行ごとに DOM を触らない。
+ * EN: Detail view — j/k lists hits; `--auto` previews on highlight (debounced,
+ *     session-warm + activeOnly). `--manual` uses Alt+↑↓ / Enter.
+ * JA: 詳細は j/k で候補一覧。`--auto` はハイライト移動でプレビュー（debounce・
+ *     セッション温め後は activeOnly）。`--manual` は Alt+↑↓ / Enter。
  */
 export function useSearchPickerAltPreviewKit({
   enabled,
@@ -87,7 +95,7 @@ export function useSearchPickerAltPreviewKit({
   detailEntry,
   detailHits = [],
   highlightColors,
-  pageActiveMode: _pageActiveMode = "auto",
+  pageActiveMode = "auto",
   listScrollHintRef: listScrollHintRefOption,
   baseExtensions
 }: UseSearchPickerAltPreviewKitOptions): UseSearchPickerAltPreviewKitResult {
@@ -101,6 +109,7 @@ export function useSearchPickerAltPreviewKit({
   const [previewTargetsReady, setPreviewTargetsReady] = useState(false)
   const [previewNotice, setPreviewNotice] = useState<string | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
+  const previewGenerationRef = useRef(0)
   const patternRef = useRef(pattern)
   const hiRef = useRef(hi)
   const detailEntryRef = useRef(detailEntry)
@@ -113,6 +122,13 @@ export function useSearchPickerAltPreviewKit({
   detailHitsRef.current = detailHits
   previewTargetIndicesRef.current = previewTargetIndices
   highlightColorsRef.current = highlightColors
+
+  const detailWarmKey = useMemo(() => {
+    if (!detailEntry) {
+      return ""
+    }
+    return `${detailEntry.id}:${pattern}:${detailEntry.tabId ?? ""}:${detailEntry.url}`
+  }, [detailEntry, pattern])
 
   useEffect(() => {
     if (!enabled) {
@@ -170,32 +186,38 @@ export function useSearchPickerAltPreviewKit({
   )
 
   const runPreview = useCallback(
-    async (rowIndex?: number): Promise<boolean> => {
+    async (rowIndex?: number): Promise<"ok" | "fail" | "stale"> => {
       const entry = detailEntryRef.current
       const hits = detailHitsRef.current
       const index = rowIndex ?? hiRef.current
       const hit = hits[index]
       if (!entry || !hit) {
-        return false
+        return "fail"
       }
-      return previewSearchPickerDetailHitInBackground(
+      const generation = ++previewGenerationRef.current
+      const ok = await previewSearchPickerDetailHitInBackground(
         entry,
         hit,
         patternRef.current,
         highlightColorsRef.current
       )
+      if (generation !== previewGenerationRef.current) {
+        return "stale"
+      }
+      return ok ? "ok" : "fail"
     },
     []
   )
 
   const runPreviewWithNotice = useCallback(
     async (rowIndex?: number) => {
-      if (!canPreviewCurrentSelection(rowIndex ?? hiRef.current)) {
+      const index = rowIndex ?? hiRef.current
+      if (!canPreviewCurrentSelection(index)) {
         showNoPreviewTargetNotice()
         return
       }
-      const ok = await runPreview(rowIndex)
-      if (!ok) {
+      const result = await runPreview(index)
+      if (result === "fail") {
         showPreviewScrollFailedNotice()
       }
     },
@@ -206,13 +228,10 @@ export function useSearchPickerAltPreviewKit({
     void runPreviewWithNotice()
   }, [runPreviewWithNotice])
 
-  // EN: Detail always behaves like manual page-active: j/k only moves the list;
-  //     Alt+↑↓ / Enter touch the page. Auto mode would re-highlight the DOM per row.
-  // JA: 詳細は常に manual 相当。j/k は一覧のみ。Alt+↑↓ / Enter でページを触る。
   usePickerAltKeyTracking({
     enabled,
     altKeyHeldRef,
-    bumpPreviewTickOnAltDown: true,
+    bumpPreviewTickOnAltDown: pageActiveMode === "manual",
     setAltPreviewTick,
     onAltKeyDown
   })
@@ -226,12 +245,46 @@ export function useSearchPickerAltPreviewKit({
   usePickerAltPreviewSync({
     enabled: enabled && lineCount > 0,
     isHostPaneFocused,
-    mode: "manual",
+    mode: pageActiveMode,
     altKeyHeldRef,
     altPreviewTick,
     previewKey,
-    runPreview: () => runPreviewWithNotice()
+    isBlocked: () => !canPreviewCurrentSelection(hiRef.current),
+    runPreview: () => runPreviewWithNotice(),
+    debounceMs:
+      pageActiveMode === "auto"
+        ? SEARCH_DETAIL_AUTO_PREVIEW_DEBOUNCE_MS
+        : SEARCH_DETAIL_MANUAL_PREVIEW_DEBOUNCE_MS
   })
+
+  const detailWarmedKeyRef = useRef("")
+  // EN: Warm the in-page Range session once per detail entry when --auto.
+  useLayoutEffect(() => {
+    if (!enabled) {
+      detailWarmedKeyRef.current = ""
+      return
+    }
+    if (
+      lineCount === 0 ||
+      pageActiveMode !== "auto" ||
+      !isHostPaneFocused ||
+      detailWarmKey.length === 0
+    ) {
+      return
+    }
+    if (detailWarmedKeyRef.current === detailWarmKey) {
+      return
+    }
+    detailWarmedKeyRef.current = detailWarmKey
+    void runPreviewWithNotice()
+  }, [
+    detailWarmKey,
+    enabled,
+    isHostPaneFocused,
+    lineCount,
+    pageActiveMode,
+    runPreviewWithNotice
+  ])
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
@@ -273,8 +326,9 @@ export function useSearchPickerAltPreviewKit({
         }
         hiRef.current = nextHi
         setHi(nextHi)
-        // EN: Ctrl+↑↓ jumps among previewable rows without painting the page (use Alt/Enter).
-        // JA: Ctrl+↑↓ はプレビュー可能な行へ移動するだけ（DOM は Alt / Enter）。
+        if (pageActiveMode === "auto") {
+          void runPreviewWithNotice(nextHi)
+        }
         return true
       }
 
@@ -319,6 +373,8 @@ export function useSearchPickerAltPreviewKit({
       commandMode,
       enabled,
       lineCount,
+      listScrollHintRef,
+      pageActiveMode,
       runPreviewWithNotice,
       searchMode,
       setHi,
