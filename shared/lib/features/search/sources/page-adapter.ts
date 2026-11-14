@@ -4,14 +4,10 @@
  */
 
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
-import {
-  probeOpenTabInnerTextLength,
-  readOpenTabInnerText
-} from "../../page-extract/read-tab-inner-text"
+import { collectPageMatchesFromOpenTab } from "../../page-extract/collect-tab-page-matches"
+import { readOpenTabInnerText } from "../../page-extract/read-tab-inner-text"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
-import { matchesNeedle } from "../index"
-import { MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
-import { collectPageMatchesForTab } from "../search-page-matches"
+import { MAX_MATCHES_PER_TAB, MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
 import { linesForSearchPageTab } from "./page-find-blocks"
 import {
   formatSearchPageProgress,
@@ -23,11 +19,10 @@ import { tSearch } from "../../setting/i18n/ns/search"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
 /**
- * EN: Hard wall-clock budget per tab (probe + read + optional smaller retry).
- *     Must cover ~1.2s probe + ~1.2s read (+ optional 80k retry) without starving body hits.
- * JA: タブあたりの壁時計上限（probe + 読取 + 短い再試行）。本文ヒットを落とさない長さにする。
+ * EN: Hard wall-clock budget per tab (in-page match collect or empty-pattern preview read).
+ * JA: タブあたりの壁時計上限（ページ内マッチ収集／空パターンのプレビュー読取）。
  */
-const TAB_SCAN_BUDGET_MS = 4200
+const TAB_SCAN_BUDGET_MS = 4500
 
 type SearchPageLongTab = {
   tabId: number
@@ -36,10 +31,21 @@ type SearchPageLongTab = {
   length: number
 }
 
-type TabScanRead =
-  | { kind: "text"; text: string | null; truncatedLong?: boolean; length?: number }
+type TabScanOutcome =
+  | {
+      kind: "matches"
+      matches: SearchPageMatch[]
+      truncatedLong: boolean
+      length?: number
+      ok: boolean
+    }
+  | {
+      kind: "preview"
+      text: string | null
+      ok: boolean
+    }
 
-function withTabScanBudget(work: Promise<TabScanRead>): Promise<TabScanRead> {
+function withTabScanBudget(work: Promise<TabScanOutcome>): Promise<TabScanOutcome> {
   return new Promise((resolve) => {
     let settled = false
     const timer = setTimeout(() => {
@@ -47,7 +53,7 @@ function withTabScanBudget(work: Promise<TabScanRead>): Promise<TabScanRead> {
         return
       }
       settled = true
-      resolve({ kind: "text", text: null })
+      resolve({ kind: "matches", matches: [], truncatedLong: false, ok: false })
     }, TAB_SCAN_BUDGET_MS)
     work.then(
       (value) => {
@@ -64,7 +70,7 @@ function withTabScanBudget(work: Promise<TabScanRead>): Promise<TabScanRead> {
         }
         settled = true
         clearTimeout(timer)
-        resolve({ kind: "text", text: null })
+        resolve({ kind: "matches", matches: [], truncatedLong: false, ok: false })
       }
     )
   })
@@ -112,7 +118,9 @@ export async function searchPageLines(
   options: SearchPageLinesOptions = {}
 ): Promise<string[]> {
   const unlimit = options.unlimit === true
-  const maxPageTextChars = unlimit ? 0 : MAX_PAGE_TEXT_CHARS
+  // EN: Default to a timed-safe prefix; `--unlimit` lifts the scan cap.
+  // JA: 既定は時間内に収まる先頭長。`--unlimit` で上限を外す。
+  const maxPageTextChars = unlimit ? 0 : PAGE_SCAN_PREFIX_CHARS
   const onProgressInfo = options.onProgressInfo
   const emit = async (p: SearchPageProgress) => {
     if (onProgressInfo) {
@@ -199,23 +207,29 @@ export async function searchPageLines(
       })
     }
 
-    const scanRead = await withTabScanBudget(
-      (async (): Promise<TabScanRead> => {
-        let truncatedLong = false
-        let length: number | undefined
-        let readChars = maxPageTextChars
-        if (!unlimit) {
-          const bodyLength = await probeOpenTabInnerTextLength(tab)
-          if (bodyLength !== null && bodyLength > MAX_PAGE_TEXT_CHARS) {
-            truncatedLong = true
-            length = bodyLength
-            // EN: Long GitHub-scale pages time out on a 500k slice — scan a shorter prefix.
-            // JA: GitHub 級の長いページは 500k 読取でタイムアウトするため短い先頭だけ走査する。
-            readChars = PAGE_SCAN_PREFIX_CHARS
-          }
+    const outcome = await withTabScanBudget(
+      (async (): Promise<TabScanOutcome> => {
+        if (matchAll) {
+          const body = await readOpenTabInnerText(tab, maxPageTextChars || PAGE_SCAN_PREFIX_CHARS)
+          return { kind: "preview", text: body, ok: body !== null }
         }
-        const body = await readOpenTabInnerText(tab, readChars)
-        return { kind: "text", text: body, truncatedLong, length }
+        const collected = await collectPageMatchesFromOpenTab(tab, pattern, {
+          maxMatches: MAX_MATCHES_PER_TAB,
+          maxTextChars: maxPageTextChars
+        })
+        if (collected === null) {
+          return { kind: "matches", matches: [], truncatedLong: false, ok: false }
+        }
+        const truncatedLong =
+          collected.truncated ||
+          (!unlimit && collected.bodyLength > MAX_PAGE_TEXT_CHARS)
+        return {
+          kind: "matches",
+          matches: collected.matches,
+          truncatedLong,
+          length: collected.bodyLength,
+          ok: true
+        }
       })()
     )
     if (shouldCancel?.()) {
@@ -223,22 +237,18 @@ export async function searchPageLines(
       break
     }
 
-    if (scanRead.truncatedLong && scanRead.length !== undefined) {
+    if (outcome.kind === "matches" && outcome.truncatedLong && outcome.length !== undefined) {
       skippedLong += 1
       longPages.push({
         tabId,
         title: title || "(untitled)",
         url: url || "(no url)",
-        length: scanRead.length
+        length: outcome.length
       })
-      // EN: Still scan the truncated prefix so page hits are not dropped entirely.
-      // JA: 先頭切り詰め分は走査し、ページヒットを丸ごと落とさない。
     }
 
-    const text = scanRead.text
-    const readable = text !== null
-
-    if (readable) {
+    const ok = outcome.ok
+    if (ok) {
       scanned += 1
     } else {
       skipped += 1
@@ -246,10 +256,10 @@ export async function searchPageLines(
     await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
 
     if (matchAll) {
-      if (!readable) {
+      if (outcome.kind !== "preview" || outcome.text === null) {
         continue
       }
-      const previewLines = text!
+      const previewLines = outcome.text
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
@@ -274,8 +284,7 @@ export async function searchPageLines(
       continue
     }
 
-    const tabMatches = collectPageMatchesForTab(title, text, pattern)
-    if (tabMatches.length === 0) {
+    if (outcome.kind !== "matches" || outcome.matches.length === 0) {
       continue
     }
     out.push(
@@ -284,7 +293,7 @@ export async function searchPageLines(
         windowId,
         title: title || "(untitled)",
         url: url || "(no url)",
-        matches: tabMatches
+        matches: outcome.matches
       })
     )
   }
@@ -322,7 +331,7 @@ export async function searchPageLines(
   }
 
   const pageCount = out.filter((l) => l === "[page]").length
-  const lineHitCount = out.filter((l) => l.startsWith("L")).length
+  const lineHitCount = out.filter((l) => l.startsWith("match: L") || l.startsWith("line: L")).length
   const longSuffix = skippedLong > 0 ? `, ${skippedLong} long page(s) truncated` : ""
   out.unshift(
     `(${matchAll ? scanned : pageCount} page(s), ${lineHitCount} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}${longSuffix}; ${tabTotal} tab(s) checked)`

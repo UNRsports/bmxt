@@ -29,6 +29,7 @@ import { listSearchEntryDetailHits } from "./search-entry-detail-hits"
 import { searchEntryHasOpenTab } from "./search-entry-open-tab"
 import { clearSearchPickerPageHighlightsForEntry } from "./preview-search-picker-entry"
 import { pageMatchesForDisplay } from "./search-picker-page-match"
+import { refreshSearchEntryPageMatches } from "./refresh-entry-page-matches"
 import {
   SearchListPickerBody,
   type SearchListPickerView
@@ -97,6 +98,10 @@ export function SearchListPickerOverlay({
     useState<DestinationReturnView>("results")
   const [resultsHi, setResultsHi] = useState(0)
   const [matchHi, setMatchHi] = useState(0)
+  /** EN: Detail may replace pageMatches after a live in-tab re-collect. */
+  const [detailEntryOverride, setDetailEntryOverride] = useState<PickerEntry | undefined>(
+    undefined
+  )
   const [destinationEntry, setDestinationEntry] = useState<PickerEntry | undefined>(undefined)
   const [destinationMatchIndex, setDestinationMatchIndex] = useState(0)
   const [destinationRows, setDestinationRows] = useState<SearchOpenDestinationRow[]>([])
@@ -137,7 +142,11 @@ export function SearchListPickerOverlay({
     setMatchHi(0)
   }, [])
 
-  const detailEntry = pickerView === "detail" ? entries[detailEntryIndex] : undefined
+  const detailEntryBase = pickerView === "detail" ? entries[detailEntryIndex] : undefined
+  const detailEntry =
+    detailEntryOverride && detailEntryBase && detailEntryOverride.id === detailEntryBase.id
+      ? detailEntryOverride
+      : detailEntryBase
   const detailHits = useMemo(() => {
     if (!detailEntry) {
       return []
@@ -146,13 +155,24 @@ export function SearchListPickerOverlay({
   }, [detailEntry, pattern])
 
   useEffect(() => {
-    if (pickerView !== "detail" || !detailEntry) {
+    if (pickerView !== "detail" || !detailEntryBase) {
+      setDetailEntryOverride(undefined)
       return
     }
+    let cancelled = false
+    const base = detailEntryBase
+    setDetailEntryOverride(undefined)
+    void refreshSearchEntryPageMatches(base, pattern).then((next) => {
+      if (cancelled || next === base) {
+        return
+      }
+      setDetailEntryOverride(next)
+    })
     return () => {
-      void clearSearchPickerPageHighlightsForEntry(detailEntry)
+      cancelled = true
+      void clearSearchPickerPageHighlightsForEntry(base)
     }
-  }, [detailEntry, pickerView])
+  }, [detailEntryBase, pickerView, pattern])
 
   const resultsListKey = useMemo(() => {
     if (entries.length === 0) {
@@ -247,6 +267,7 @@ export function SearchListPickerOverlay({
         }
 
         if (target === "detail") {
+          setDetailEntryOverride(undefined)
           setDetailEntryIndex(resultsIndex)
           setPickerView("detail")
           return
