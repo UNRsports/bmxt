@@ -4,6 +4,9 @@ import {
   type PickerAltPreviewMode
 } from "./picker-alt-preview-mode"
 
+/** EN: Coalesce rapid j/k preview into the page (heavy DOMs). */
+export const PICKER_ALT_PREVIEW_DEBOUNCE_MS = 100
+
 export type UsePickerAltPreviewSyncOptions = {
   enabled: boolean
   isHostPaneFocused: boolean
@@ -15,6 +18,8 @@ export type UsePickerAltPreviewSyncOptions = {
   /** EN: When true, skip preview (checked on each effect run). */
   isBlocked?: () => boolean
   runPreview: () => void | Promise<void>
+  /** EN: Debounce before injecting into the page (default 100ms). */
+  debounceMs?: number
 }
 
 /**
@@ -29,7 +34,8 @@ export function usePickerAltPreviewSync({
   altPreviewTick = 0,
   previewKey,
   isBlocked,
-  runPreview
+  runPreview,
+  debounceMs = PICKER_ALT_PREVIEW_DEBOUNCE_MS
 }: UsePickerAltPreviewSyncOptions): void {
   const lastPreviewKeyRef = useRef("")
   const previewGenerationRef = useRef(0)
@@ -59,16 +65,33 @@ export function usePickerAltPreviewSync({
     if (lastPreviewKeyRef.current === previewKey) {
       return
     }
-    lastPreviewKeyRef.current = previewKey
+
     const generation = ++previewGenerationRef.current
-    void Promise.resolve(runPreviewRef.current()).then(() => {
+    const timer = window.setTimeout(() => {
       if (generation !== previewGenerationRef.current) {
         return
       }
-    })
+      if (isBlockedRef.current?.()) {
+        return
+      }
+      if (!shouldRunPickerAltPreview(mode, altKeyHeldRef.current)) {
+        return
+      }
+      lastPreviewKeyRef.current = previewKey
+      void Promise.resolve(runPreviewRef.current()).then(() => {
+        if (generation !== previewGenerationRef.current) {
+          return
+        }
+      })
+    }, Math.max(0, debounceMs))
+
+    return () => {
+      window.clearTimeout(timer)
+    }
   }, [
     altKeyHeldRef,
     altPreviewTick,
+    debounceMs,
     enabled,
     isHostPaneFocused,
     isBlocked,

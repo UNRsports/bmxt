@@ -9,6 +9,7 @@
 import {
   applyBmxtSearchNeedleHighlightSession,
   DEFAULT_BMXT_NEEDLE_HIGHLIGHT_COLORS,
+  MAX_INPAGE_HIT_HIGHLIGHT_RANGES,
   type BmxtNeedleHighlightColors
 } from "./injected-needle-highlight"
 import {
@@ -19,6 +20,12 @@ import {
 
 let sessionNeedle = ""
 let sessionRanges: Range[] = []
+
+/**
+ * EN: Stop collecting needle Ranges beyond this (DOM walk cost on large pages).
+ * JA: この件数を超える Range 収集は打ち切る（大規模ページの DOM 走査コスト対策）。
+ */
+export const MAX_INPAGE_NEEDLE_RANGES = 500
 
 /** EN: Reset cached ranges (detail picker closed or pattern changed). */
 export function resetBmxtSearchNeedleSession(): void {
@@ -33,11 +40,18 @@ function innerTextLines(): string[] {
 function appendNeedleRangesFromTextNode(
   node: Text,
   needle: string,
-  ranges: Range[]
+  ranges: Range[],
+  maxRanges: number
 ): void {
+  if (ranges.length >= maxRanges) {
+    return
+  }
   const text = node.textContent ?? ""
   let from = 0
   while (from < text.length) {
+    if (ranges.length >= maxRanges) {
+      return
+    }
     const hit = findRawNeedleInHaystack(text, needle, from)
     if (!hit) {
       break
@@ -59,30 +73,40 @@ function appendNeedleRangesFromTextNode(
 function collectNeedleRangesFromRoot(
   root: Document | Element | ShadowRoot,
   needle: string,
-  ranges: Range[]
+  ranges: Range[],
+  maxRanges: number
 ): void {
+  if (ranges.length >= maxRanges) {
+    return
+  }
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
   let node: Text | null = walker.nextNode() as Text | null
   while (node) {
-    appendNeedleRangesFromTextNode(node, needle, ranges)
+    if (ranges.length >= maxRanges) {
+      return
+    }
+    appendNeedleRangesFromTextNode(node, needle, ranges, maxRanges)
     node = walker.nextNode() as Text | null
   }
   const hosts = root.querySelectorAll("*")
   for (let i = 0; i < hosts.length; i += 1) {
+    if (ranges.length >= maxRanges) {
+      return
+    }
     const shadow = hosts[i]!.shadowRoot
     if (shadow) {
-      collectNeedleRangesFromRoot(shadow, needle, ranges)
+      collectNeedleRangesFromRoot(shadow, needle, ranges, maxRanges)
     }
   }
 }
 
-function collectNeedleRanges(needle: string): Range[] {
+function collectNeedleRanges(needle: string, maxRanges = MAX_INPAGE_NEEDLE_RANGES): Range[] {
   const trimmed = needle.trim()
   if (!trimmed || !document.body) {
     return []
   }
   const ranges: Range[] = []
-  collectNeedleRangesFromRoot(document.body, trimmed, ranges)
+  collectNeedleRangesFromRoot(document.body, trimmed, ranges, maxRanges)
   return ranges
 }
 
@@ -91,9 +115,16 @@ function collectNeedleRangesInInnerTextOrder(needle: string): Range[] {
   if (!trimmed || !document.body) {
     return []
   }
-  const domRanges = collectNeedleRanges(trimmed)
+  const domRanges = collectNeedleRanges(trimmed, MAX_INPAGE_NEEDLE_RANGES)
   if (domRanges.length === 0) {
     return []
+  }
+
+  // EN: Full innerText reorder is O(lines × ranges) and freezes GitHub-sized pages.
+  //     Above the paint cap, keep document order and rely on globalOccurrence / snippet.
+  // JA: 全行再整列は O(行×Range) で GitHub 級を固める。塗布上限超では document 順のまま。
+  if (domRanges.length > MAX_INPAGE_HIT_HIGHLIGHT_RANGES) {
+    return domRanges
   }
 
   const lines = innerTextLines()
@@ -101,8 +132,14 @@ function collectNeedleRangesInInnerTextOrder(needle: string): Range[] {
   const claimed = new Set<Range>()
 
   for (const line of lines) {
+    if (ordered.length >= MAX_INPAGE_NEEDLE_RANGES) {
+      break
+    }
     let from = 0
     while (from < line.length) {
+      if (ordered.length >= MAX_INPAGE_NEEDLE_RANGES) {
+        break
+      }
       const hit = findRawNeedleInHaystack(line, trimmed, from)
       if (!hit) {
         break
@@ -130,6 +167,9 @@ function collectNeedleRangesInInnerTextOrder(needle: string): Range[] {
   }
 
   for (const range of domRanges) {
+    if (ordered.length >= MAX_INPAGE_NEEDLE_RANGES) {
+      break
+    }
     if (!claimed.has(range)) {
       ordered.push(range)
     }
