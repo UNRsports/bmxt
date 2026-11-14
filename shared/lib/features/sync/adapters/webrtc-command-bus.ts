@@ -23,8 +23,20 @@ import {
   listTabsChangedAnnounceTargets
 } from "../bus/tabs-changed-announce.ts"
 import type { FamilySignalFirstCommand } from "../bus/family-signal-first.ts"
-import { SYNC_REMOTE_QUERY_TIMEOUT_MS } from "../bus/remote-query-limits"
+import {
+  SYNC_REMOTE_QUERY_TIMEOUT_MS,
+  WIRE_SOFT_CAP_BYTES
+} from "../bus/remote-query-limits"
+import {
+  packRemoteSearchHitsIntoChunks,
+  shrinkHitsForSearchWire,
+  utf8ByteLength
+} from "../../search/peer/remote-search-hit-pack.ts"
+import { SEARCH_REMOTE_MAX_HITS_PER_PEER } from "../../search/peer/remote-search-wire-limits.ts"
 import { getRunLocale } from "../../setting/i18n/run-locale"
+
+/** EN: Allow multi-chunk search streams longer than a single RPC round-trip. */
+const SEARCH_STREAM_TIMEOUT_MS = 60_000
 
 function mapPeerState(raw: string): SyncConnectionState {
   if (raw === "connected") {
@@ -76,6 +88,9 @@ type PendingTabsList = {
 type PendingSearch = {
   kind: "search_query"
   at: number
+  hits: SyncRemoteSearchHit[]
+  nextSeq: number
+  timeoutId: ReturnType<typeof setTimeout> | null
   resolve: (value: {
     ok: boolean
     detail: string | null
@@ -161,8 +176,30 @@ export function createWebrtcCommandBusStabilizer(
   ): Promise<void> {
     const sent = await peerHost.sendCommand(remoteDeviceId, command)
     if (!sent) {
+      // EN: Never enqueue search payloads — they are large and unsafe to retry as one blob.
+      // JA: search ペイロードはキューしない（大きく、単発再送が危険なため）。
+      if (
+        command.type === "search_query_result" ||
+        command.type === "search_query_chunk"
+      ) {
+        return
+      }
       await commandQueue.enqueue(remoteDeviceId, command)
     }
+  }
+
+  async function replySearchChunk(
+    remoteDeviceId: SyncDeviceId,
+    command: SyncBusCommand
+  ): Promise<boolean> {
+    const budgetOk = await peerHost.waitForSendBudget(
+      remoteDeviceId,
+      SEARCH_STREAM_TIMEOUT_MS
+    )
+    if (!budgetOk) {
+      return false
+    }
+    return peerHost.sendCommand(remoteDeviceId, command)
   }
 
   async function handleIncoming(command: SyncBusCommand): Promise<void> {
@@ -226,7 +263,6 @@ export function createWebrtcCommandBusStabilizer(
       //     drop optional favIconUrl fields (title/url rows stay).
       // JA: 防御。UTF-8 ワイヤ長が DataChannel 受信ソフト上限を超えそうなら、
       //     任意の favIconUrl だけ落とす（title/url 行は残す）。
-      const utf8ByteLength = (text: string): number => new TextEncoder().encode(text).length
       const buildProbe = (probeRows: SyncRemoteTabRow[]): SyncBusCommand => ({
         type: "tabs_list_result",
         id: "probe",
@@ -236,7 +272,6 @@ export function createWebrtcCommandBusStabilizer(
         detail: result.detail,
         rows: probeRows
       })
-      const WIRE_SOFT_CAP_BYTES = 180_000
       if (utf8ByteLength(JSON.stringify(buildProbe(rows))) > WIRE_SOFT_CAP_BYTES) {
         rows = rows.map((row) => {
           if (row.kind !== "tab") {
@@ -280,16 +315,60 @@ export function createWebrtcCommandBusStabilizer(
         locale: getRunLocale()
       })
       const device = await loadOrCreateDeviceIdentity()
-      const reply: SyncBusCommand = {
-        type: "search_query_result",
-        id: bytesToBase64Url(randomBytes(8)),
-        replyTo: command.id,
-        from: device.deviceId,
-        ok: result.ok,
-        detail: result.detail,
-        hits: result.hits
+      const chunks = packRemoteSearchHitsIntoChunks(result.hits)
+      // EN: Prefer chunk stream; fall back to a soft-capped single result for empty/tiny sets.
+      // JA: チャンクストリームを優先。空／極小は soft cap 済み単発結果でも可。
+      if (chunks.length === 1 && chunks[0]!.hits.length <= 50) {
+        const shrunk = shrinkHitsForSearchWire(chunks[0]!.hits)
+        const detail =
+          shrunk.detailSuffix !== null
+            ? `${result.detail};${shrunk.detailSuffix}`
+            : result.detail
+        const reply: SyncBusCommand = {
+          type: "search_query_result",
+          id: bytesToBase64Url(randomBytes(8)),
+          replyTo: command.id,
+          from: device.deviceId,
+          ok: result.ok,
+          detail,
+          hits: shrunk.hits
+        }
+        await replyTo(command.from, reply)
+      } else {
+        let sendOk = true
+        for (const chunk of chunks) {
+          const reply: SyncBusCommand = {
+            type: "search_query_chunk",
+            id: bytesToBase64Url(randomBytes(8)),
+            replyTo: command.id,
+            from: device.deviceId,
+            ok: result.ok,
+            detail: result.detail,
+            seq: chunk.seq,
+            eof: chunk.eof,
+            hits: chunk.hits
+          }
+          const ok = await replySearchChunk(command.from, reply)
+          if (!ok) {
+            sendOk = false
+            break
+          }
+        }
+        if (!sendOk) {
+          const fail: SyncBusCommand = {
+            type: "search_query_chunk",
+            id: bytesToBase64Url(randomBytes(8)),
+            replyTo: command.id,
+            from: device.deviceId,
+            ok: false,
+            detail: "send_budget_exhausted",
+            seq: chunks.length,
+            eof: true,
+            hits: []
+          }
+          await replySearchChunk(command.from, fail)
+        }
       }
-      await replyTo(command.from, reply)
     } else if (command.type === "tabs_ops") {
       const result = await applyRemoteTabsOps(command.op)
       const device = await loadOrCreateDeviceIdentity()
@@ -318,6 +397,9 @@ export function createWebrtcCommandBusStabilizer(
     } else if (command.type === "search_query_result") {
       const waiter = pending.get(command.replyTo)
       if (waiter && waiter.kind === "search_query") {
+        if (waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
         pending.delete(command.replyTo)
         waiter.resolve({
           ok: command.ok,
@@ -325,6 +407,45 @@ export function createWebrtcCommandBusStabilizer(
           hits: command.hits,
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
+      }
+    } else if (command.type === "search_query_chunk") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "search_query") {
+        if (command.seq === waiter.nextSeq) {
+          for (const hit of command.hits) {
+            if (waiter.hits.length >= SEARCH_REMOTE_MAX_HITS_PER_PEER) {
+              break
+            }
+            waiter.hits.push(hit)
+          }
+          waiter.nextSeq += 1
+        }
+        if (waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
+        if (command.eof || !command.ok) {
+          pending.delete(command.replyTo)
+          waiter.resolve({
+            ok: command.ok,
+            detail: command.detail,
+            hits: waiter.hits,
+            rttMs: Math.max(0, Date.now() - waiter.at)
+          })
+        } else {
+          waiter.timeoutId = setTimeout(() => {
+            const still = pending.get(command.replyTo)
+            if (!still || still.kind !== "search_query") {
+              return
+            }
+            pending.delete(command.replyTo)
+            still.resolve({
+              ok: false,
+              detail: "timeout",
+              hits: still.hits,
+              rttMs: null
+            })
+          }, SEARCH_STREAM_TIMEOUT_MS)
+        }
       }
     } else if (command.type === "tabs_changed") {
       const signal = buildTabsChangedSignal({
@@ -350,7 +471,7 @@ export function createWebrtcCommandBusStabilizer(
   })
 
   function armTimeout(id: string, timeoutMs: number): void {
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       const waiter = pending.get(id)
       if (!waiter) {
         return
@@ -361,7 +482,12 @@ export function createWebrtcCommandBusStabilizer(
         return
       }
       if (waiter.kind === "search_query") {
-        waiter.resolve({ ok: false, detail: "timeout", hits: [], rttMs: null })
+        waiter.resolve({
+          ok: false,
+          detail: "timeout",
+          hits: waiter.hits,
+          rttMs: null
+        })
         return
       }
       if (waiter.kind === "open") {
@@ -375,6 +501,10 @@ export function createWebrtcCommandBusStabilizer(
       }
       waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
     }, timeoutMs)
+    const waiter = pending.get(id)
+    if (waiter && waiter.kind === "search_query") {
+      waiter.timeoutId = timeoutId
+    }
   }
 
   return {
@@ -492,11 +622,22 @@ export function createWebrtcCommandBusStabilizer(
         hits: SyncRemoteSearchHit[]
         rttMs: number | null
       }>((resolve) => {
-        pending.set(id, { kind: "search_query", resolve, at: Date.now() })
-        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+        pending.set(id, {
+          kind: "search_query",
+          resolve,
+          at: Date.now(),
+          hits: [],
+          nextSeq: 0,
+          timeoutId: null
+        })
+        armTimeout(id, SEARCH_STREAM_TIMEOUT_MS)
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
+        const waiter = pending.get(id)
+        if (waiter && waiter.kind === "search_query" && waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
         pending.delete(id)
         return { ok: false, detail: "not_connected", hits: [] }
       }

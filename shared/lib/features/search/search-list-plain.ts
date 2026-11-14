@@ -8,6 +8,7 @@ import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
 import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
+import { MAX_SEARCH_LINES_OUT } from "./limits.ts"
 import { isParallelSearchEffect } from "./search-effect-parallel.ts"
 import { searchEffectsForDispatchLine } from "./search-list-effects.ts"
 import { buildSearchListResult } from "./search-list-result.ts"
@@ -29,6 +30,11 @@ export type SearchListFetchOptions = {
   onProgress?: (message: string) => Promise<void>
   /** EN: Structured overall progress for the prompt busy standard UI. */
   onBusyProgress?: (progress: CommandBusyProgress) => void | Promise<void>
+  /**
+   * EN: Peer DataChannel path — skip open-tab enrich (wire hits are title/url only).
+   * JA: ピア DataChannel 経路。開タブ enrich を省略（ワイヤ hit は title/url のみ）。
+   */
+  forRemoteWire?: boolean
 }
 
 function scopeLabelForEffect(effect: HostEffect, locale: UiLocale): string {
@@ -156,7 +162,15 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     )
     settled.sort((a, b) => a.scopeIndex - b.scopeIndex)
     for (const part of settled) {
-      linesOut.push(...part.lines)
+      for (const line of part.lines) {
+        if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
+          break
+        }
+        linesOut.push(line)
+      }
+      if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
+        break
+      }
     }
     await emitBusy({
       kind: "fraction",
@@ -174,19 +188,29 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
         scopeTotal,
         emitBusy
       )
-      linesOut.push(...lines)
+      for (const line of lines) {
+        if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
+          break
+        }
+        linesOut.push(line)
+      }
       await emitBusy({
         kind: "fraction",
         current: scopeIndex + 1,
         total: scopeTotal,
         detail: scopeLabelForEffect(effect, options.locale)
       })
+      if (linesOut.length >= MAX_SEARCH_LINES_OUT) {
+        break
+      }
     }
   }
 
   const parsed = pickerEntriesFromSearchLines(linesOut)
   const maxPageTextChars = pageOptions.unlimit ? 0 : undefined
-  const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
+  const entries = options.forRemoteWire
+    ? parsed
+    : await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
   return buildSearchListResult(entries, pattern, linesOut)
 }
 

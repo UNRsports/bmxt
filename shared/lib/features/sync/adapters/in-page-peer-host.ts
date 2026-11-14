@@ -193,6 +193,14 @@ export function createInPagePeerHostStabilizer(): PeerHostStabilizer {
       return session.sendCommand(command)
     },
 
+    async waitForSendBudget(remoteDeviceId, timeoutMs) {
+      const session = sessionForRemote(remoteDeviceId)
+      if (!session) {
+        return false
+      }
+      return session.waitForSendBudget(timeoutMs)
+    },
+
     getConnectionState(remoteDeviceId) {
       return sessionForRemote(remoteDeviceId)?.getConnectionState() ?? "new"
     },

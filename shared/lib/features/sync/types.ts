@@ -244,6 +244,21 @@ export type SyncBusCommand =
       hits: SyncRemoteSearchHit[]
     }
   | {
+      /**
+       * EN: Ordered search hit fragment (eof closes the stream for replyTo).
+       * JA: 順序付き search ヒット断片（eof で replyTo のストリーム終了）。
+       */
+      type: "search_query_chunk"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      seq: number
+      eof: boolean
+      hits: SyncRemoteSearchHit[]
+    }
+  | {
       type: "tabs_ops"
       id: string
       from: SyncDeviceId

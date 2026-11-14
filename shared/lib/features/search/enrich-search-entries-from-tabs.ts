@@ -4,7 +4,7 @@ import {
   innerTextLinesFromBodyText
 } from "../page-dom/needle-occurrence"
 import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
-import { MAX_PAGE_TEXT_CHARS } from "./limits"
+import { MAX_ENRICH_OPEN_TAB_ENTRIES, MAX_PAGE_TEXT_CHARS } from "./limits.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import { collectPageMatchesForTab } from "./search-page-matches"
 import { normalizeUrlForSearchDedup } from "./search-url-dedup"
@@ -80,6 +80,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
   const readMaxChars = maxPageTextChars ?? MAX_PAGE_TEXT_CHARS
 
   const out: PickerEntry[] = []
+  let enrichedCount = 0
   for (const entry of entries) {
     const key = normalizeUrlForSearchDedup(entry.url)
     const tab = tabByKey.get(key)
@@ -88,9 +89,15 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
       continue
     }
 
+    if (enrichedCount >= MAX_ENRICH_OPEN_TAB_ENTRIES) {
+      out.push(entry)
+      continue
+    }
+
     const hasBodyHits = (entry.pageMatches ?? []).some((m) => m.lineNo > 0)
     if (hasBodyHits) {
       const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab, needle, readMaxChars)
+      enrichedCount += 1
       out.push({
         ...entry,
         tabId: entry.tabId ?? tab.id,
@@ -117,6 +124,7 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
         needle
       )
     )
+    enrichedCount += 1
     out.push({
       ...entry,
       sources: mergeSources(entry),

@@ -47,6 +47,11 @@ export type PeerHostStabilizer = {
    */
   applyAnswerHandshake(plain: RtcHandshakePlain): Promise<SyncDeviceId>
   sendCommand(remoteDeviceId: SyncDeviceId, command: SyncBusCommand): Promise<boolean>
+  /**
+   * EN: Wait for DataChannel send budget (bufferedAmount backpressure).
+   * JA: DataChannel 送信予算待ち（bufferedAmount 背圧）。
+   */
+  waitForSendBudget(remoteDeviceId: SyncDeviceId, timeoutMs?: number): Promise<boolean>
   getConnectionState(remoteDeviceId: SyncDeviceId): string
   listBoundRemoteDeviceIds(): SyncDeviceId[]
   setHandlers(handlers: PeerHostSessionHandlers): void

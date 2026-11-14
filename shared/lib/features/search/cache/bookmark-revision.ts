@@ -1,4 +1,5 @@
-import type { BookmarkCacheEntry } from "./types"
+import { MAX_BOOKMARK_ROWS } from "../limits.ts"
+import type { BookmarkCacheEntry } from "./types.ts"
 
 function walkBookmarkTree(
   nodes: chrome.bookmarks.BookmarkTreeNode[],
@@ -27,7 +28,7 @@ function walkBookmarkTree(
 /** EN: Fingerprint the bookmark tree — any structural or date change invalidates cache. */
 export function bookmarkTreeRevision(tree: chrome.bookmarks.BookmarkTreeNode[]): string {
   const parts: string[] = []
-  walkBookmarkTree(tree, parts, [], Number.MAX_SAFE_INTEGER)
+  walkBookmarkTree(tree, parts, [], MAX_BOOKMARK_ROWS)
   return parts.join("|")
 }
 

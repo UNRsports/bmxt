@@ -38,6 +38,7 @@ import { SearchPickerBreadcrumb } from "./search-picker-breadcrumb"
 import { pickPageMatchForDisplay } from "./search-picker-page-match"
 import { SearchOpenDestinationPickerRow } from "./search-open-destination-picker-row"
 import type { SearchOpenDestinationRow } from "./search-open-destination"
+import { filterSearchPickerEntries } from "./peer/filter-search-picker-entries"
 import { resolveSearchHighlightAppearance } from "../setting/appearance"
 import { useUiSettings } from "../setting/use-ui-settings"
 import type { SearchPageActiveMode } from "./page-active-setting"
@@ -265,30 +266,62 @@ export function SearchListPickerBody({
 
   const inDetailView = pickerView === "detail" && detailEntry != null
   const inDestinationView = pickerView === "destination"
+  const resultsFilterQuery = searchMode ? filterQuery : hlSearchPattern
+  const visibleEntries = useMemo(() => {
+    if (statusOnly || inDetailView || inDestinationView) {
+      return entries
+    }
+    if (resultsFilterQuery.trim() === "") {
+      return entries
+    }
+    return filterSearchPickerEntries(entries, resultsFilterQuery)
+  }, [
+    entries,
+    inDestinationView,
+    inDetailView,
+    resultsFilterQuery,
+    statusOnly
+  ])
   const virtualItemCount = statusOnly
     ? 0
     : inDestinationView
       ? destinationRows.length
       : inDetailView
         ? detailHits.length
-        : entries.length
+        : visibleEntries.length
   const useVirtualResults =
     !statusOnly &&
     !inDetailView &&
     !inDestinationView &&
-    entries.length >= PLAIN_PICKER_VIRTUALIZE_MIN
+    visibleEntries.length >= PLAIN_PICKER_VIRTUALIZE_MIN
   const useVirtualDetail =
     inDetailView && detailEntry != null && detailHits.length >= PLAIN_PICKER_VIRTUALIZE_MIN
   const useVirtual = useVirtualResults || useVirtualDetail
   const effectiveRowHeight =
     rowHeight ??
     (useVirtualDetail ? SEARCH_PICKER_DETAIL_ROW_HEIGHT_FALLBACK : SEARCH_PICKER_ROW_HEIGHT_FALLBACK)
+  const visibleEntriesRef = useRef(visibleEntries)
+  const entriesRef = useRef(entries)
+  visibleEntriesRef.current = visibleEntries
+  entriesRef.current = entries
   const setHi = useCallback(
     (action: SetStateAction<number>) => {
       setHiState((prev) => {
         const next = typeof action === "function" ? action(prev) : action
         if (!inDetailView && !inDestinationView) {
-          onHiChange?.(next)
+          const visible = visibleEntriesRef.current
+          const sourceEntries = entriesRef.current
+          if (visible.length > 0) {
+            const entry = visible[next]
+            if (entry) {
+              const originalIndex = sourceEntries.findIndex((row) => row.id === entry.id)
+              onHiChange?.(originalIndex >= 0 ? originalIndex : next)
+            } else {
+              onHiChange?.(next)
+            }
+          } else {
+            onHiChange?.(next)
+          }
         }
         return next
       })
@@ -301,7 +334,7 @@ export function SearchListPickerBody({
       ? destinationRows.length
       : inDetailView
         ? detailHits.length
-        : entries.length
+        : visibleEntries.length
   const matchLines = useMemo(
     () =>
       statusOnly
@@ -310,8 +343,16 @@ export function SearchListPickerBody({
           ? destinationRows.map((r) => r.label)
           : inDetailView
             ? detailHits.map((h) => h.displayText)
-            : entries.map((e) => e.title),
-    [destinationRows, detailHits, entries, inDestinationView, inDetailView, statusLines, statusOnly]
+            : visibleEntries.map((e) => `${e.title}\n${e.url}`),
+    [
+      destinationRows,
+      detailHits,
+      inDestinationView,
+      inDetailView,
+      statusLines,
+      statusOnly,
+      visibleEntries
+    ]
   )
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
   const rowHighlightNeedle =
@@ -370,14 +411,25 @@ export function SearchListPickerBody({
     if (h > 0) {
       setRowHeight(h)
     }
-  }, [detailHits.length, entries.length, inDetailView, useVirtual])
+  }, [detailHits.length, entries.length, inDetailView, useVirtual, visibleEntries.length])
 
   useEffect(() => {
     if (lineCount === 0) {
+      setHi(0)
       return
     }
     setHi((h) => Math.min(Math.max(0, h), lineCount - 1))
-  }, [lineCount])
+  }, [lineCount, setHi])
+
+  useEffect(() => {
+    if (statusOnly || inDetailView || inDestinationView) {
+      return
+    }
+    if (resultsFilterQuery.trim() === "") {
+      return
+    }
+    setHi(0)
+  }, [inDestinationView, inDetailView, resultsFilterQuery, setHi, statusOnly])
 
   useLayoutEffect(() => {
     if ((inDetailView || inDestinationView) && subviewHiRef) {
@@ -402,7 +454,11 @@ export function SearchListPickerBody({
   const listScrollHintRef = useRef<SearchPickerListScrollHint | null>(null)
 
   const resultsOpenTabNavEnabled =
-    keyboardActive && !statusOnly && !inDetailView && !inDestinationView && entries.length > 0
+    keyboardActive &&
+    !statusOnly &&
+    !inDetailView &&
+    !inDestinationView &&
+    visibleEntries.length > 0
 
   const {
     mergedExtensions: resultsNavExtensions,
@@ -410,7 +466,7 @@ export function SearchListPickerBody({
   } = useSearchPickerResultsOpenTabNav({
     enabled: resultsOpenTabNavEnabled,
     isHostPaneFocused: keyboardActive,
-    entries,
+    entries: visibleEntries,
     pattern,
     matchHi,
     hi,
@@ -526,11 +582,29 @@ export function SearchListPickerBody({
     }
   }, [keyboardActive])
 
+  const confirmResultsLineIndex = useCallback(
+    (index: number) => {
+      if (!onConfirmLineIndex) {
+        return
+      }
+      const entry = visibleEntries[index]
+      if (!entry) {
+        return
+      }
+      const originalIndex = entries.findIndex((row) => row.id === entry.id)
+      if (originalIndex < 0) {
+        return
+      }
+      onConfirmLineIndex(originalIndex)
+    },
+    [entries, onConfirmLineIndex, visibleEntries]
+  )
+
   const confirmLineIndex = inDestinationView
     ? onConfirmDestination
     : inDetailView
       ? onConfirmDetailHit
-      : onConfirmLineIndex
+      : confirmResultsLineIndex
 
   const { onInputKeyDown } = usePlainPickerKeyboard({
     lineCount: statusOnly ? 0 : lineCount,
@@ -568,7 +642,7 @@ export function SearchListPickerBody({
   const renderResultsRows = (start: number, end: number): ReactNode[] => {
     const slice: ReactNode[] = []
     for (let i = start; i < end; i++) {
-      const entry = entries[i]
+      const entry = visibleEntries[i]
       if (!entry) {
         continue
       }
@@ -789,7 +863,7 @@ export function SearchListPickerBody({
             </div>
           </div>
         ) : (
-          renderResultsRows(0, entries.length)
+          renderResultsRows(0, visibleEntries.length)
         )}
       </div>
       {searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
