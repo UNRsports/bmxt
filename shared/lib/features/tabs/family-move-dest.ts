@@ -1,10 +1,10 @@
-import type { SyncOpenUrlBatch } from "../command-line/pipe/consumers/sync-open-batches.ts"
 import {
   closeLocalTabsByIds,
   tabIdsForOpenedUrls
 } from "../sync/bus/close-local-after-open.ts"
 import { pairLocalSourcesForOpen } from "../sync/bus/pair-sources-for-open.ts"
 import { getSyncService } from "../sync/facade/sync-service.ts"
+import { openBatchesFromSelectedLocalTabs } from "./open-batches-from-selected-local-tabs.ts"
 import type { TabPickerRow } from "./picker-rows.ts"
 
 export {
@@ -12,57 +12,7 @@ export {
   type FamilySendDestination
 } from "./resolve-family-send-dest.ts"
 
-/**
- * EN: Build open batches from selected local tab rows (group titles preserved in tree order).
- * JA: 選択ローカルタブからグループ名付き open バッチを作る。
- */
-export function openBatchesFromSelectedLocalTabs(
-  rows: readonly TabPickerRow[],
-  selectedTabIds: readonly number[]
-): SyncOpenUrlBatch[] {
-  const selected = new Set(selectedTabIds)
-  const batches: SyncOpenUrlBatch[] = []
-  let currentTitle: string | null = null
-  let currentUrls: string[] = []
-  let currentTabIds: Array<number | null> = []
-
-  const flush = (): void => {
-    if (currentUrls.length === 0) {
-      return
-    }
-    batches.push({
-      groupTitle: currentTitle,
-      urls: [...currentUrls],
-      tabIds: [...currentTabIds]
-    })
-    currentUrls = []
-    currentTabIds = []
-  }
-
-  for (const row of rows) {
-    if (row.kind === "window") {
-      flush()
-      currentTitle = null
-      continue
-    }
-    if (row.kind === "group") {
-      flush()
-      currentTitle = row.label.trim().length > 0 ? row.label.trim() : null
-      continue
-    }
-    if (row.kind !== "tab" || row.remote || !selected.has(row.tabId)) {
-      continue
-    }
-    const url = row.url.trim()
-    if (url.length === 0) {
-      continue
-    }
-    currentUrls.push(url)
-    currentTabIds.push(row.tabId)
-  }
-  flush()
-  return batches
-}
+export { openBatchesFromSelectedLocalTabs } from "./open-batches-from-selected-local-tabs.ts"
 
 export async function sendSelectedTabsToFamilyPeer(options: {
   deviceId: string
@@ -88,7 +38,8 @@ export async function sendSelectedTabsToFamilyPeer(options: {
       options.deviceId,
       batch.urls,
       batch.groupTitle,
-      windowId
+      windowId,
+      batch.groupColor
     )
     lines.push(...result.lines)
     allOpened.push(...result.openedUrls)

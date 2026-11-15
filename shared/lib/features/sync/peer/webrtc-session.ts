@@ -1,4 +1,5 @@
 import { bytesToBase64Url, randomBytes } from "../crypto/bytes"
+import { SEARCH_WIRE_BUFFERED_AMOUNT_HIGH } from "../../search/peer/remote-search-wire-limits.ts"
 import type { SyncBusCommand, SyncDeviceId } from "../types"
 import { waitForIceGatheringComplete } from "./wait-ice-gathering.ts"
 
@@ -6,6 +7,9 @@ import { waitForIceGatheringComplete } from "./wait-ice-gathering.ts"
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: []
 }
+
+/** EN: Reject inbound DataChannel text above this UTF-16 length (defense). */
+const INBOUND_MESSAGE_MAX_CHARS = 200_000
 
 export type WebrtcSessionCallbacks = {
   onCommand: (command: SyncBusCommand) => void
@@ -69,10 +73,11 @@ export class WebrtcPeerSession {
   private bindChannel(channel: RTCDataChannel): void {
     this.channel = channel
     channel.binaryType = "arraybuffer"
+    channel.bufferedAmountLowThreshold = SEARCH_WIRE_BUFFERED_AMOUNT_HIGH
     channel.onmessage = (ev) => {
       try {
         const text = typeof ev.data === "string" ? ev.data : ""
-        if (text.length === 0 || text.length > 200_000) {
+        if (text.length === 0 || text.length > INBOUND_MESSAGE_MAX_CHARS) {
           return
         }
         const parsed: unknown = JSON.parse(text)
@@ -144,12 +149,53 @@ export class WebrtcPeerSession {
     if (!this.channel || this.channel.readyState !== "open") {
       return false
     }
+    if (this.channel.bufferedAmount > SEARCH_WIRE_BUFFERED_AMOUNT_HIGH) {
+      return false
+    }
     try {
       this.channel.send(JSON.stringify(command))
       return true
     } catch {
       return false
     }
+  }
+
+  /**
+   * EN: Wait until bufferedAmount is at/below the high-water mark (or timeout).
+   * JA: bufferedAmount が高水位以下になるまで待つ（またはタイムアウト）。
+   */
+  waitForSendBudget(timeoutMs = 20_000): Promise<boolean> {
+    const channel = this.channel
+    if (!channel || channel.readyState !== "open") {
+      return Promise.resolve(false)
+    }
+    if (channel.bufferedAmount <= SEARCH_WIRE_BUFFERED_AMOUNT_HIGH) {
+      return Promise.resolve(true)
+    }
+    channel.bufferedAmountLowThreshold = SEARCH_WIRE_BUFFERED_AMOUNT_HIGH
+    return new Promise((resolve) => {
+      let settled = false
+      const finish = (ok: boolean): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        channel.removeEventListener("bufferedamountlow", onLow)
+        clearTimeout(timer)
+        resolve(ok)
+      }
+      const onLow = (): void => {
+        finish(channel.bufferedAmount <= SEARCH_WIRE_BUFFERED_AMOUNT_HIGH)
+      }
+      const timer = setTimeout(() => {
+        finish(channel.bufferedAmount <= SEARCH_WIRE_BUFFERED_AMOUNT_HIGH)
+      }, timeoutMs)
+      channel.addEventListener("bufferedamountlow", onLow)
+    })
+  }
+
+  getBufferedAmount(): number {
+    return this.channel?.bufferedAmount ?? 0
   }
 
   getConnectionState(): string {

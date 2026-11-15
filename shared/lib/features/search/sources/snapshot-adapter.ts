@@ -1,6 +1,7 @@
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
 import { snapshotMarkdownBodyLines } from "../../snapshot/snapshot-markdown"
 import { listSnapshotDocumentsForSearch } from "../../snapshot/snapshot-storage"
+import { pollSearchCancel, type SearchShouldCancel } from "../cooperative-cancel"
 import { linesForSearchElement, matchesNeedle } from "../index"
 
 const SNIPPET_MAX = 500
@@ -12,14 +13,18 @@ function lineMatches(pattern: string, line: string, matchAll: boolean): boolean 
   return matchesNeedle(line, pattern)
 }
 
-function buildSnapshotMatches(
+async function buildSnapshotMatches(
   markdown: string,
   pattern: string,
-  matchAll: boolean
-): SearchPageMatch[] {
+  matchAll: boolean,
+  shouldCancel?: SearchShouldCancel
+): Promise<SearchPageMatch[] | null> {
   const lines = snapshotMarkdownBodyLines(markdown)
   const matches: SearchPageMatch[] = []
   for (let i = 0; i < lines.length; i += 1) {
+    if (await pollSearchCancel(shouldCancel, i)) {
+      return null
+    }
     const line = lines[i] ?? ""
     if (!lineMatches(pattern, line, matchAll)) {
       continue
@@ -38,14 +43,30 @@ function buildSnapshotMatches(
 }
 
 /** EN: Search saved Markdown snapshots (internal or external per settings storage mode). */
-export async function searchSnapshotLines(pattern: string): Promise<string[]> {
+export async function searchSnapshotLines(
+  pattern: string,
+  shouldCancel?: SearchShouldCancel
+): Promise<string[]> {
+  if (shouldCancel?.()) {
+    return []
+  }
   const docs = await listSnapshotDocumentsForSearch()
+  if (shouldCancel?.()) {
+    return []
+  }
   const matchAll = !pattern.trim()
   const matches: string[] = []
   let hitCount = 0
 
-  for (const doc of docs) {
-    const lineHits = buildSnapshotMatches(doc.markdown, pattern, matchAll)
+  for (let docIndex = 0; docIndex < docs.length; docIndex += 1) {
+    if (await pollSearchCancel(shouldCancel, docIndex)) {
+      return []
+    }
+    const doc = docs[docIndex]!
+    const lineHits = await buildSnapshotMatches(doc.markdown, pattern, matchAll, shouldCancel)
+    if (lineHits === null) {
+      return []
+    }
     if (!matchAll && lineHits.length === 0) {
       const blob = `${doc.meta.title} ${doc.meta.url} ${doc.path}`
       if (!matchesNeedle(blob, pattern)) {
@@ -104,6 +125,9 @@ export async function searchSnapshotLines(pattern: string): Promise<string[]> {
     matches.push(...block)
   }
 
+  if (shouldCancel?.()) {
+    return []
+  }
   if (matches.length === 0) {
     return ["(no snapshot matches — pattern is case-insensitive substring, or empty pattern for all)"]
   }

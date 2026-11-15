@@ -84,10 +84,10 @@ export class JobRunner {
     }
     cancelJobHandle(job)
     this.recordFinished(job, "cancelled")
-    const entry = this.activeByKind.get(job.kind)
-    if (entry?.handle === job) {
-      this.activeByKind.delete(job.kind)
-    }
+    // EN: Keep the cancelled handle in `activeByKind` until `start()` finally clears it.
+    //     Callers must keep reading `shouldCancelJob(getActive())` during wind-down.
+    // JA: cancelled ハンドルは start() の finally まで残す。
+    //     巻き戻し中も getActive()+shouldCancelJob で中断を読めるようにする。
     this.parallelActive.get(job.kind)?.delete(job.id)
   }
 

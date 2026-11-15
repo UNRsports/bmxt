@@ -4,6 +4,7 @@ import type { ListResult } from "../../command-line/list-output/types.ts"
 import type { TabPickerRow } from "../../tabs/picker-rows.ts"
 import type { DeviceListScope } from "../../sync/bus/device-list-scope.ts"
 import { portableRemoteFavIconUrl } from "../../tabs/tab-favicon-url.ts"
+import { normalizeTabGroupColor } from "../../tabs/tab-picker-overlay-constants.ts"
 
 function numberField(value: unknown, fallback: number): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -112,12 +113,16 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
       const peerWindowId = numberField(record.fields.windowId, -1)
       const windowId = synthWindow(deviceId ?? "local", peerWindowId, remote)
       const groupId = synthGroup(deviceId ?? "local", peerWindowId, peerGroupId, remote)
+      const rawTitle = stringField(record.fields.title)
       rows.push({
         kind: "group",
         windowId,
         groupId,
         label: stringField(record.display?.label, stringField(record.fields.label)),
-        color: "grey",
+        title: rawTitle,
+        color: normalizeTabGroupColor(
+          typeof record.fields.color === "string" ? record.fields.color : undefined
+        ),
         deviceId,
         remote,
         peerWindowId: remote ? peerWindowId : null,

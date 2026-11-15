@@ -1,4 +1,5 @@
 import type { SearchPageMatch } from "../side-picker/model/picker-entry.ts"
+import { MAX_SERIALIZED_PAGE_MATCHES } from "./limits.ts"
 
 /** EN: ListResult field key for serialized `pageMatches` (JSON string; scalar fields only). */
 export const SEARCH_HIT_PAGE_MATCHES_FIELD = "pageMatchesJson"
@@ -38,13 +39,21 @@ export function serializeSearchPageMatchesField(
   if (!matches || matches.length === 0) {
     return null
   }
-  const payload = matches.map((m) => {
+  const limited =
+    matches.length > MAX_SERIALIZED_PAGE_MATCHES
+      ? matches.slice(0, MAX_SERIALIZED_PAGE_MATCHES)
+      : matches
+  const payload = limited.map((m) => {
     const row: Record<string, number | string> = {
       lineNo: m.lineNo,
       snippet: m.snippet,
       occurrence: m.occurrence
     }
-    if (m.globalOccurrence !== undefined && Number.isFinite(m.globalOccurrence)) {
+    if (
+      m.globalOccurrence !== undefined &&
+      Number.isFinite(m.globalOccurrence) &&
+      m.globalOccurrence >= 0
+    ) {
       row.globalOccurrence = m.globalOccurrence
     }
     return row

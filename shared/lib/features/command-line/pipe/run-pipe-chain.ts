@@ -2,6 +2,7 @@ import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispat
 import type { UiLocale } from "../../setting/locale.ts"
 import { bmxtRuleStreamFromListResult } from "../../bmxt-rule/index.ts"
 import { bmxtRuleStreamFromTabIds } from "../../bmxt-rule/adapters/from-tab-ids.ts"
+import { shouldCancelJob } from "../../job"
 import { classifyCompoundEligibility } from "../compound/classify-eligibility.ts"
 import {
   segmentFailure,
@@ -20,6 +21,10 @@ import {
 import type { ListResult } from "../list-output/types.ts"
 import { tryRunPipeConsumer } from "./consumers/index.ts"
 import { parseTabChipProducerSegment } from "./producers/tab-chip-producer.ts"
+
+function isSearchListCancelled(deps: CommandDispatchDeps): boolean {
+  return shouldCancelJob(deps.jobRunner.getActive("search-list"))
+}
 
 function showUrlFromListMatch(match: MatchedListCommand | null): boolean {
   if (match === null) {
@@ -93,6 +98,9 @@ export async function runPipeChain(
   const allStderr: string[] = []
 
   for (let index = 0; index < stages.length; index += 1) {
+    if (isSearchListCancelled(deps)) {
+      return prependAccumulated(segmentFailure("cancelled", []), allStdout, allStderr)
+    }
     const stage = stages[index]!.trim()
     const eligibility = classifyPipeStageEligibility(stage, locale, index, deps)
     if (eligibility.eligible === false) {
@@ -106,6 +114,9 @@ export async function runPipeChain(
           allStdout,
           allStderr
         )
+      }
+      if (isSearchListCancelled(deps)) {
+        return prependAccumulated(segmentFailure("cancelled", []), allStdout, allStderr)
       }
       const consumerOutcome = await tryRunPipeConsumer(stage, bmxtRuleStream, deps, locale, {
         listResult,
@@ -160,6 +171,9 @@ export async function runPipeChain(
     const listMatch = matchPlainListCommand(stage)
     showUrl = showUrlFromListMatch(listMatch)
     const enriched = await attachBmxtRuleStreamToOutcome(stage, outcome, deps, locale)
+    if (isSearchListCancelled(deps)) {
+      return prependAccumulated(segmentFailure("cancelled", []), allStdout, allStderr)
+    }
     bmxtRuleStream = enriched.bmxtRuleStream
     listResult = enriched.listResult
     if (stages.length > 1 && bmxtRuleStream === undefined) {

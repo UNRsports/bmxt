@@ -33,6 +33,9 @@ export function tabPickerRowsToListResult(
         fields: {
           windowId: row.windowId,
           groupId: groupIdField(row.groupId),
+          // EN: Raw chrome title for sync/pipe; display.label keeps UI wrappers.
+          title: row.title,
+          color: row.color,
           label: row.label
         },
         display

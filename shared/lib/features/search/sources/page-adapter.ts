@@ -4,14 +4,10 @@
  */
 
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
-import {
-  probeOpenTabInnerTextLength,
-  readOpenTabInnerText
-} from "../../page-extract/read-tab-inner-text"
+import { collectPageMatchesFromOpenTab } from "../../page-extract/collect-tab-page-matches"
+import { readOpenTabInnerText } from "../../page-extract/read-tab-inner-text"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
-import { matchesNeedle } from "../index"
-import { MAX_PAGE_TEXT_CHARS } from "../limits"
-import { collectPageMatchesForTab } from "../search-page-matches"
+import { MAX_MATCHES_PER_TAB, MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
 import { linesForSearchPageTab } from "./page-find-blocks"
 import {
   formatSearchPageProgress,
@@ -22,8 +18,11 @@ import { DEFAULT_UI_LOCALE, type UiLocale } from "../../setting/locale"
 import { tSearch } from "../../setting/i18n/ns/search"
 
 const MAX_EMPTY_PREVIEW_LINES = 24
-/** EN: Hard wall-clock budget per tab (probe + read). Frozen tabs must not stall the scan. */
-const TAB_SCAN_BUDGET_MS = 2500
+/**
+ * EN: Hard wall-clock budget per tab (in-page match collect or empty-pattern preview read).
+ * JA: タブあたりの壁時計上限（ページ内マッチ収集／空パターンのプレビュー読取）。
+ */
+const TAB_SCAN_BUDGET_MS = 4500
 
 type SearchPageLongTab = {
   tabId: number
@@ -32,36 +31,51 @@ type SearchPageLongTab = {
   length: number
 }
 
-type TabScanRead =
-  | { kind: "long"; length: number }
-  | { kind: "text"; text: string | null }
+type TabScanOutcome =
+  | {
+      kind: "matches"
+      matches: SearchPageMatch[]
+      truncatedLong: boolean
+      length?: number
+      ok: boolean
+    }
+  | {
+      kind: "preview"
+      text: string | null
+      ok: boolean
+    }
 
-function withTabScanBudget(work: Promise<TabScanRead>): Promise<TabScanRead> {
+function withTabScanBudget(
+  work: Promise<TabScanOutcome>,
+  shouldCancel?: () => boolean
+): Promise<TabScanOutcome> {
   return new Promise((resolve) => {
     let settled = false
-    const timer = setTimeout(() => {
+    const finish = (value: TabScanOutcome): void => {
       if (settled) {
         return
       }
       settled = true
-      resolve({ kind: "text", text: null })
+      clearTimeout(timer)
+      clearInterval(cancelPoll)
+      resolve(value)
+    }
+    const timer = setTimeout(() => {
+      finish({ kind: "matches", matches: [], truncatedLong: false, ok: false })
     }, TAB_SCAN_BUDGET_MS)
+    // EN: Stop waiting as soon as Ctrl+C flips the job flag (executeScript itself cannot abort).
+    // JA: Ctrl+C でフラグが立ったら待ちを打ち切る（executeScript 自体は中断不可）。
+    const cancelPoll = setInterval(() => {
+      if (shouldCancel?.()) {
+        finish({ kind: "matches", matches: [], truncatedLong: false, ok: false })
+      }
+    }, 80)
     work.then(
       (value) => {
-        if (settled) {
-          return
-        }
-        settled = true
-        clearTimeout(timer)
-        resolve(value)
+        finish(value)
       },
       () => {
-        if (settled) {
-          return
-        }
-        settled = true
-        clearTimeout(timer)
-        resolve({ kind: "text", text: null })
+        finish({ kind: "matches", matches: [], truncatedLong: false, ok: false })
       }
     )
   })
@@ -109,9 +123,14 @@ export async function searchPageLines(
   options: SearchPageLinesOptions = {}
 ): Promise<string[]> {
   const unlimit = options.unlimit === true
-  const maxPageTextChars = unlimit ? 0 : MAX_PAGE_TEXT_CHARS
+  // EN: Default to a timed-safe prefix; `--unlimit` lifts the scan cap.
+  // JA: 既定は時間内に収まる先頭長。`--unlimit` で上限を外す。
+  const maxPageTextChars = unlimit ? 0 : PAGE_SCAN_PREFIX_CHARS
   const onProgressInfo = options.onProgressInfo
   const emit = async (p: SearchPageProgress) => {
+    if (shouldCancel?.()) {
+      return
+    }
     if (onProgressInfo) {
       await onProgressInfo(p)
     }
@@ -186,7 +205,7 @@ export async function searchPageLines(
     const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
 
     // EN: Advance busy UI before the read so a hung tab is visible; log lines stay post-read.
-    if (onProgressInfo) {
+    if (!shouldCancel?.() && onProgressInfo) {
       await onProgressInfo({
         phase: "tick",
         tabIndex: tabsChecked,
@@ -195,39 +214,54 @@ export async function searchPageLines(
         skipped
       })
     }
+    if (shouldCancel?.()) {
+      cancelled = true
+      break
+    }
 
-    const scanRead = await withTabScanBudget(
-      (async (): Promise<TabScanRead> => {
-        if (!unlimit) {
-          const bodyLength = await probeOpenTabInnerTextLength(tab)
-          if (bodyLength !== null && bodyLength > MAX_PAGE_TEXT_CHARS) {
-            return { kind: "long", length: bodyLength }
-          }
+    const outcome = await withTabScanBudget(
+      (async (): Promise<TabScanOutcome> => {
+        if (matchAll) {
+          const body = await readOpenTabInnerText(tab, maxPageTextChars || PAGE_SCAN_PREFIX_CHARS)
+          return { kind: "preview", text: body, ok: body !== null }
         }
-        const body = await readOpenTabInnerText(tab, maxPageTextChars)
-        return { kind: "text", text: body }
-      })()
+        const collected = await collectPageMatchesFromOpenTab(tab, pattern, {
+          maxMatches: MAX_MATCHES_PER_TAB,
+          maxTextChars: maxPageTextChars
+        })
+        if (collected === null) {
+          return { kind: "matches", matches: [], truncatedLong: false, ok: false }
+        }
+        const truncatedLong =
+          collected.truncated ||
+          (!unlimit && collected.bodyLength > MAX_PAGE_TEXT_CHARS)
+        return {
+          kind: "matches",
+          matches: collected.matches,
+          truncatedLong,
+          length: collected.bodyLength,
+          ok: true
+        }
+      })(),
+      shouldCancel
     )
     if (shouldCancel?.()) {
       cancelled = true
       break
     }
 
-    if (scanRead.kind === "long") {
+    if (outcome.kind === "matches" && outcome.truncatedLong && outcome.length !== undefined) {
       skippedLong += 1
       longPages.push({
         tabId,
         title: title || "(untitled)",
         url: url || "(no url)",
-        length: scanRead.length
+        length: outcome.length
       })
-      continue
     }
 
-    const text = scanRead.text
-    const readable = text !== null
-
-    if (readable) {
+    const ok = outcome.ok
+    if (ok) {
       scanned += 1
     } else {
       skipped += 1
@@ -235,10 +269,10 @@ export async function searchPageLines(
     await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
 
     if (matchAll) {
-      if (!readable) {
+      if (outcome.kind !== "preview" || outcome.text === null) {
         continue
       }
-      const previewLines = text!
+      const previewLines = outcome.text
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
@@ -263,8 +297,7 @@ export async function searchPageLines(
       continue
     }
 
-    const tabMatches = collectPageMatchesForTab(title, text, pattern)
-    if (tabMatches.length === 0) {
+    if (outcome.kind !== "matches" || outcome.matches.length === 0) {
       continue
     }
     out.push(
@@ -273,27 +306,18 @@ export async function searchPageLines(
         windowId,
         title: title || "(untitled)",
         url: url || "(no url)",
-        matches: tabMatches
+        matches: outcome.matches
       })
     )
   }
 
-  await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
-
   if (cancelled) {
-    const summary = `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped${skippedLong > 0 ? `, ${skippedLong} long page(s) skipped` : ""})`
-    if (out.length === 0 && longPages.length === 0) {
-      return [summary]
-    }
-    if (out.length === 0) {
-      out.push(summary)
-      appendLongPageNotices(out, longPages, uiLocale)
-      return out
-    }
-    out.unshift(summary)
-    appendLongPageNotices(out, longPages, uiLocale)
-    return out
+    // EN: Do not emit "done"/tick after Ctrl+C — progress UI must stay quiet.
+    // JA: Ctrl+C 後に完了・tick 進捗を出さない。
+    return [`(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped)`]
   }
+
+  await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
 
   if (scanned === 0 && tabs.length > 0 && longPages.length === 0) {
     return [
@@ -311,8 +335,8 @@ export async function searchPageLines(
   }
 
   const pageCount = out.filter((l) => l === "[page]").length
-  const lineHitCount = out.filter((l) => l.startsWith("L")).length
-  const longSuffix = skippedLong > 0 ? `, ${skippedLong} long page(s) skipped` : ""
+  const lineHitCount = out.filter((l) => l.startsWith("match: L") || l.startsWith("line: L")).length
+  const longSuffix = skippedLong > 0 ? `, ${skippedLong} long page(s) truncated` : ""
   out.unshift(
     `(${matchAll ? scanned : pageCount} page(s), ${lineHitCount} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}${longSuffix}; ${tabTotal} tab(s) checked)`
   )

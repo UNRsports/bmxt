@@ -1,8 +1,14 @@
 import type { BmxtRuleRecord, BmxtRuleStream } from "../../../bmxt-rule/types.ts"
-import { sanitizeGroupTitle } from "../../../sync/bus/remote-open-sanitize.ts"
+import {
+  sanitizeGroupColor,
+  sanitizeGroupTitle
+} from "../../../sync/bus/remote-open-sanitize.ts"
+import type { NewGroupPaletteColor } from "../../../tabs/tab-picker-overlay-constants.ts"
 
 export type SyncOpenUrlBatch = {
   groupTitle: string | null
+  /** EN: Source tab group color; null when the batch is ungrouped. */
+  groupColor: NewGroupPaletteColor | null
   urls: string[]
   /** EN: Parallel to `urls`; local tab ids only (remote rows are null). */
   tabIds: Array<number | null>
@@ -29,20 +35,46 @@ function urlFromRecord(record: BmxtRuleRecord): string | null {
   return trimmed
 }
 
-function labelFromGroup(record: BmxtRuleRecord): string | null {
+/**
+ * EN: Prefer raw `title` from list/sync; fall back to label without UI wrappers.
+ * JA: list/sync の生 `title` を優先。なければ UI 装飾を除いた label。
+ */
+function rawTitleFromGroup(record: BmxtRuleRecord): string | null {
+  const title = entryValue(record, "title")
+  if (typeof title === "string") {
+    const trimmed = title.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
   const label = entryValue(record, "label")
   if (typeof label === "string" && label.trim().length > 0) {
-    return label.trim()
+    return stripUiGroupWrappers(label.trim())
   }
-  const title = entryValue(record, "pageTitle")
-  if (typeof title === "string" && title.trim().length > 0) {
-    return title.trim()
+  const pageTitle = entryValue(record, "pageTitle")
+  if (typeof pageTitle === "string" && pageTitle.trim().length > 0) {
+    return stripUiGroupWrappers(pageTitle.trim())
   }
   return null
 }
 
+function stripUiGroupWrappers(raw: string): string | null {
+  const wrapped = /^【([\s\S]+)】$/.exec(raw)
+  if (wrapped !== null && wrapped[1] !== undefined) {
+    const inner = wrapped[1].trim()
+    return inner.length > 0 ? inner : null
+  }
+  return raw
+}
+
+function colorFromGroup(record: BmxtRuleRecord): NewGroupPaletteColor | null {
+  const color = entryValue(record, "color")
+  if (typeof color !== "string") {
+    return null
+  }
+  return sanitizeGroupColor(color)
+}
+
 /**
- * EN: Walk stream in order; page.group sets current title; URL-bearing kinds append to batch.
+ * EN: Walk stream in order; page.group sets current title/color; URL-bearing kinds append.
  */
 function tabIdFromRecord(record: BmxtRuleRecord): number | null {
   const remote = entryValue(record, "remote")
@@ -56,9 +88,16 @@ function tabIdFromRecord(record: BmxtRuleRecord): number | null {
   return null
 }
 
+type CurrentGroupMeta = {
+  title: string | null
+  color: NewGroupPaletteColor | null
+  /** EN: True after a page.group row (even untitled with color only). */
+  active: boolean
+}
+
 export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUrlBatch[] {
   const batches: SyncOpenUrlBatch[] = []
-  let currentTitle: string | null = null
+  let currentGroup: CurrentGroupMeta = { title: null, color: null, active: false }
   let currentUrls: string[] = []
   let currentTabIds: Array<number | null> = []
 
@@ -66,8 +105,16 @@ export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUr
     if (currentUrls.length === 0) {
       return
     }
+    const grouped = currentGroup.active
+    const groupTitle = grouped ? sanitizeGroupTitle(currentGroup.title) : null
+    // EN: Untitled groups need a color so the peer still creates a group.
+    // JA: 無題グループは peer 側でグループ化するトリガとして色が必要。
+    const groupColor = grouped
+      ? currentGroup.color ?? (groupTitle === null ? "grey" : null)
+      : null
     batches.push({
-      groupTitle: sanitizeGroupTitle(currentTitle),
+      groupTitle,
+      groupColor,
       urls: [...currentUrls],
       tabIds: [...currentTabIds]
     })
@@ -78,7 +125,13 @@ export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUr
   for (const record of stream.records) {
     if (record.kind === "page.group") {
       flush()
-      currentTitle = labelFromGroup(record)
+      const color = colorFromGroup(record)
+      currentGroup = {
+        title: rawTitleFromGroup(record),
+        color,
+        // EN: page.group always starts a group batch (color may be null for older streams).
+        active: true
+      }
       continue
     }
     if (

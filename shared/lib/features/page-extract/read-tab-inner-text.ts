@@ -139,6 +139,8 @@ async function probeLengthViaContentScript(tabId: number): Promise<Timed<number>
  *     After any timeout, give up on this tab — do not stack another chrome.* call.
  * JA: scripting 優先。即失敗時のみ CS。タイムアウト後は当該タブを打ち切る。
  */
+const FALLBACK_READ_CHARS = 80_000
+
 export async function readTabInnerText(tabId: number, maxChars: number): Promise<string | null> {
   const capped = clampPageExtractMaxChars(maxChars)
 
@@ -147,6 +149,14 @@ export async function readTabInnerText(tabId: number, maxChars: number): Promise
     return viaScript.value
   }
   if (viaScript.status === "timeout") {
+    // EN: Heavy pages (e.g. GitHub) may time out on a full slice — retry a smaller prefix.
+    // JA: GitHub など重いページは全量でタイムアウトし得るため、短い先頭で再試行する。
+    if (capped > FALLBACK_READ_CHARS) {
+      const small = await extractViaExecuteScript(tabId, FALLBACK_READ_CHARS)
+      if (small.status === "ok") {
+        return small.value
+      }
+    }
     return null
   }
 

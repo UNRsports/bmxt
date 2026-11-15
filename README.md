@@ -301,9 +301,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **Compound commands (`&&` / `||` / `;`):** Join multiple commands on one line with **`&&`**, **`||`**, or **`;`** (quoted regions and `\&&` / `\||` / `\;` escapes are respected). Segments run **left to right** with shell-style short-circuit: **`&&`** runs the next segment only after exit status **0**, **`||`** only after a non-zero status, **`;`** always. Each segment returns a numeric **exit status** (0 = success; usage/parse = 2; unknown command = 127; other failures = 1). Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`<list> | browse` after any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
 
-**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **producer** and a consumer with **`|`**. Producers: plain **`tab -list`** (and other `-list` commands), or **`#t:<id>…` tab chips** built with **`tab:`** / **`tab::{needle}`** (see below). Example: **`tab -list | close`** or **`#t:12 #t:34 | back`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**). Consumers: **`back`**, **`forward`**, **`reload`**, **`close`** / **`c`** (accept **`page.open`**). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**.
+**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **producer** and a consumer with **`|`**. Producers: plain **`tab -list`** (and other `-list` commands), or **`#t:<id>…` tab chips** built with **`tab:`** / **`tab::{needle}`** (see below). Example: **`tab -list | close`** or **`#t:12 #t:34 | back`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**). Consumers (see **`pipe/consumers/registry.ts`**): **`browse`** (picker from producer **`ListResult`**), **`back`**, **`forward`**, **`reload`**, **`close`** / **`c`** (accept **`page.open`**), and **`tab -send <deviceId>`** (Family). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**.
 
-**Tab chips (`tab:`):** Type **`tab:`** to open open-tab candidates (favicon + title). Pick inserts a **`#t:<id>`** chip and **closes** the menu. **Enter** with exactly one chip activates that tab and focuses its window; two or more chips without a pipe is an error (use **`|`** for batch ops). Type a **Space** before Enter to reopen candidates and pick more tabs for a pipe. After **`|`**, press **Tab** for pipe consumers (**`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**). **`tab:{needle}`** (or plain text after Space) filters by title; **`tab::{needle}`** filters by URL. Then pipe: **`#t:… | back`** / **`reload`** / etc. A trailing incomplete **`tab:`** is stripped when the pipe runs.
+**Tab chips (`tab:`):** Type **`tab:`** to open open-tab candidates (favicon + title). Pick inserts a **`#t:<id>`** chip and **closes** the menu. **Enter** with exactly one chip activates that tab and focuses its window; two or more chips without a pipe is an error (use **`|`** for batch ops). Type a **Space** before Enter to reopen candidates and pick more tabs for a pipe. After **`|`**, press **Tab** for pipe consumers (**`browse`** / **`back`** / **`forward`** / **`reload`** / **`close`** / **`c`** / **`tab`**). **`tab:{needle}`** (or plain text after Space) filters by title; **`tab::{needle}`** filters by URL. Then pipe: **`#t:… | back`** / **`reload`** / etc. A trailing incomplete **`tab:`** is stripped when the pipe runs.
 
 **Redirects (`>` / `>>` / `2>` / `2>>`):** Within a segment, redirect **stdout** (`>` / `>>`) or **stderr** (`2>` / `2>>`) to a **null sink** only: **`null`** or **`/dev/null`** (quoted regions and `\>` escapes are respected). The redirected channel is discarded from the terminal log. Other targets are rejected (exit status **2**). OS file paths are out of scope.
 
@@ -411,6 +411,7 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 - **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list … | browse`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open **https** tab **live**. **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive. **Since 0.8.4:** **`--page`** hits carry subdivided matches via ListResult field **`pageMatchesJson`** (`search-page-matches-list-field.ts`) so the picker can jump/scroll to in-page snippets more reliably.
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
 - In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
+- **`--auto` page-active:** **`↑` / `↓`** (and **`j` / `k`**) preview open-tab result rows and detail in-page hits on highlight move (detail uses a longer debounce and reuses a warmed Range session so GitHub-scale DOMs stay responsive). **`Enter`** still jumps / brings the tab forward.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
@@ -1038,7 +1039,7 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 | `session -list` | UI → `tryRunPlainListCommand` | UI inline picker |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI settings picker column |
 
-**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (**`back`**, **`forward`**, **`reload`**, **`close`** on **`page.open`** records, with kind-compatibility checks).
+**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (**`browse`**, **`back`**, **`forward`**, **`reload`**, **`close`**, **`tab -send`**; kind-compatibility checks — navigation/close act on **`page.open`**; **`browse`** also needs the producer **`ListResult`**).
 
 <a id="bmxt-rule"></a>
 
@@ -1074,6 +1075,12 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 | **`bookmark`** | Bookmark | `url`, `pageTitle`, `dateAdded`, … |
 | **`history`** | History visit | `url`, `pageTitle`, `lastVisitTime`, … |
 | **`markdown.file`** | Saved snapshot | `url`, `pageTitle`, `fileName`, `savedAt`, … |
+| **`search.hit`** | Search hit (may remap by source) | `url`, `pageTitle`, `source`, … |
+| **`dom.node`** / **`dom.notice`** | DOM list rows | tag/path/notice fields, … |
+| **`session.row`** | Terminal session | session id / display name, … |
+| **`setting.field`** | UI settings row | field id / value, … |
+
+Canonical catalog: **`manifest/bmxt-rule.json`** (and **`LIST_KIND_TO_BMXT_RULE_KIND`** in **`inter-command/vocabulary.ts`**).
 
 **Runtime:** pipe stages pass **`BmxtRuleStream` in memory** (same shape as JSON). NDJSON projection is for fixtures, export, and tests (`lib/features/bmxt-rule/fixtures/`). **Plain `-list`** still prints human-oriented lines (**`bmxt-list/1`**); only **multi-stage `|`** uses bmxtRule between commands. Legacy **`ListResult`** remains for picker and plain formatters; adapters live in **`lib/features/bmxt-rule/adapters/from-list-result.ts`** and per-feature helpers (e.g. **`tabs-bmxt-rule.ts`**).
 
@@ -1092,7 +1099,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 | **Command zones** | Per-command tier bindings (manifest static tokens + runtime providers) |
 | **Data sources** | Browser/UI facts commands may read for dynamic candidates |
 
-**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tab -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (`back` / `forward` / `reload` / `close` / `c`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
+**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tab -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (`browse` / `back` / `forward` / `reload` / `close` / `c` / `tab`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
 
 **Runtime data sources** (commands declare which they use in `commands[].zones`):
 
@@ -1192,9 +1199,9 @@ Start with **[`shared/manifest/templates/new-command.checklist.md`](shared/manif
 - **Reuse path (prefer):** Return only existing **`HostEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
 - **Extend path (only if needed):**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
-  - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
+  - **UiAction:** `uiActions[]` → codegen → **`crates/bmxt-core/src/generated/ui_action.rs`** / **`ui-action-types.ts`** + hand-written **`apply-ui-action.ts`** (`ir.rs` only re-exports generated `UiAction`; do **not** edit the enum there)
   - **List / pipe kinds:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer registry
-- **Checks:** **`verify:manifest`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
+- **Checks:** **`verify:manifest`**, **`verify:host-blind`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
 - **Compound / pipe:** Planning is WASM; the host loop is **`command-line/`** (`runDispatch` per segment → UiAction apply or background `RUN_CMD`). Pipe handoff is **bmxtRule** only (not command-name coupling).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
@@ -1364,6 +1371,7 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 - `lib/features/side-picker/` — Shared side-column picker UI (panels, keyboard kernel, wrappers)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
 - `lib/features/welcome/` — Welcome tab URL builder and update hook (opens hosted **`docs/welcome.html`**; content lives under **`docs/`** only)
+- `lib/features/support/` — In-window support links (official site / NotebookLM manual; friendly labels; open in a normal browser tab)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
 - `crates/bmxt-core/` — Rust command core (`src/cmd/*.rs`, compound/pipe, tabs_picker); WASM exports
@@ -1404,11 +1412,24 @@ When Chrome reports **`install`** or **`update`**, **`entrypoints/background/ind
 
 **Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
+**In-window welcome hint** (empty session log, and again with the upgrade block)
+
+When the active session log is **empty** (typical fresh BMXt open), the terminal shows a **welcome hint** above the prompt: welcome copy, the `help` hint, **support links**, and the https injection notice (`shell.reloadHint` / i18n). The same hint also appears above the **version upgrade** block when that block is shown.
+
+**Support links** (friendly labels only; raw URLs are **not** shown in the UI). Click opens a **normal browser tab** (not the BMXt popup window) via allowlisted URLs in **`lib/features/support/`**:
+
+| Label (JA) | Destination |
+|------------|-------------|
+| **👉️公式サイト** | `https://bmxt.diozy.net/` |
+| **👉️マニュアルサポート（notebookLM）** | NotebookLM notebook (`https://notebook.google.com/notebook/…`) |
+
+EN labels: **👉️ Official site** / **👉️ Manual support (NotebookLM)**. Distinct from **`aboutbmxt`** (GitHub Pages welcome history).
+
 **In-window upgrade block** (first BMXt open after upgrade)
 
 When the extension **`version`** in **`package.json`** (and the built manifest) **does not match** the value stored in **`chrome.storage.local`** under **`bmxt_last_seen_extension_version`** (**`LAST_SEEN_EXTENSION_VERSION_KEY`**), the BMXt window shows **once**, on the **first open after that upgrade**:
 
-1. The usual **welcome** copy (unchanged).
+1. The usual **welcome** hint (including support links).
 2. A **version upgrade** block with the version number and bilingual release notes from **`release-notes.json`**.
 
 Existing **session log** lines are still rendered **below** that block.
@@ -1422,7 +1443,7 @@ Existing **session log** lines are still rendered **below** that block.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
 
-**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-external-url.ts`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-external-url.ts`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window welcome / support links — **`lib/features/support/`** (`ShellSupportLinks`, allowlisted URLs → **`createTabInNormalBrowserWindow`**), i18n **`shell.support.*`**. In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-hint a`, `.bmxt-version-upgrade*`).
 
 <a id="production-build"></a>
 
@@ -1791,9 +1812,9 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **複合コマンド（`&&` / `||` / `;`）:** 1 行に **`&&`**・**`||`**・**`;`** で複数コマンドを並べる（クォート内と `\&&` / `\||` / `\;` は演算子にしない）。**左から順**に実行し、シェル同様に短絡する（**`&&`** は終了状態 **0** のときのみ次へ、**`||`** は非 0 のときのみ、**`;`** は常に）。各セグメントは数値の **exit status** を返す（0 = 成功、usage/parse = 2、不明コマンド = 127、その他失敗 = 1）。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`<list> | browse`、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。ピッカー列は **`<list> | browse`** で開く。
 
-**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **producer** と consumer を **`|`** で連結。producer: プレーン **`tab -list`**（他 `-list` も可）、または **`tab:`** / **`tab::{語句}`** で選んだ **`#t:<id>…` チップ**。例: **`tab -list | close`**、**`#t:12 #t:34 | back`**。段間は **`bmxtRule`**（**`bmxt-rule/1`**）。consumer: **`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**（**`page.open`**）。種別不一致・未対応は終了状態 **1** と **stderr**。
+**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **producer** と consumer を **`|`** で連結。producer: プレーン **`tab -list`**（他 `-list` も可）、または **`tab:`** / **`tab::{語句}`** で選んだ **`#t:<id>…` チップ**。例: **`tab -list | close`**、**`#t:12 #t:34 | back`**。段間は **`bmxtRule`**（**`bmxt-rule/1`**）。consumer（**`pipe/consumers/registry.ts`**）: **`browse`**（producer の **`ListResult`** からピッカー）、**`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**（**`page.open`**）、**`tab -send <deviceId>`**（Family）。種別不一致・未対応は終了状態 **1** と **stderr**。
 
-**タブチップ（`tab:`）:** **`tab:`** で開いているタブ候補（ファビコン＋タイトル）。選択で **`#t:<id>`** チップに置換し、**候補は閉じる**。チップが1つのとき **Enter** でそのタブをアクティブ（ウィンドウもフォーカス）。2つ以上でパイプなしの Enter はエラー（一括操作は **`|`**）。追加選択は Enter 前に **半角スペース** で候補再表示。**`|` のあと Tab** でパイプ先候補（**`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**）。タイトル絞込は **`tab:{語句}`** またはスペース後の語句、URL は **`tab::{語句}`**。その後 **`#t:… | back`** / **`reload`** などでパイプ。末尾の未完成 **`tab:`** はパイプ実行時に無視される。
+**タブチップ（`tab:`）:** **`tab:`** で開いているタブ候補（ファビコン＋タイトル）。選択で **`#t:<id>`** チップに置換し、**候補は閉じる**。チップが1つのとき **Enter** でそのタブをアクティブ（ウィンドウもフォーカス）。2つ以上でパイプなしの Enter はエラー（一括操作は **`|`**）。追加選択は Enter 前に **半角スペース** で候補再表示。**`|` のあと Tab** でパイプ先候補（**`browse`** / **`back`** / **`forward`** / **`reload`** / **`close`** / **`c`** / **`tab`**）。タイトル絞込は **`tab:{語句}`** またはスペース後の語句、URL は **`tab::{語句}`**。その後 **`#t:… | back`** / **`reload`** などでパイプ。末尾の未完成 **`tab:`** はパイプ実行時に無視される。
 
 **リダイレクト（`>` / `>>` / `2>` / `2>>`）:** セグメント内で **stdout**（`>` / `>>`）または **stderr**（`2>` / `2>>`）を **null シンク**（**`null`** または **`/dev/null`**）へだけ向けられる（クォート内と `\>` は演算子にしない）。向けたチャネルはターミナルログから捨てる。それ以外のターゲットは拒否（終了状態 **2**）。OS パスへの書き込みは対象外。
 
@@ -2303,6 +2324,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 - **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`**（プレーン）は **`search.hit`** 行を **`-list` レジストリ**で出力。**`search -list … | browse`** は search ピッカー列を開く。キャッシュ・live 読み取り・snapshot の詳細は英語節 **[`search`](#search-command)** と同様。**0.8.4 以降:** **`--page`** ヒットは ListResult の **`pageMatchesJson`**（`search-page-matches-list-field.ts`）で細分化マッチを渡し、ピッカーからのページ内ジャンプ／スクロールを安定化。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
 - 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
+- **`--auto` page-active:** **`↑` / `↓`**（および **`j` / `k`**）で開き済み結果行と詳細のページ内ヒットをハイライト移動時にプレビュー（詳細は debounce を長くし、温めた Range セッションを再利用して GitHub 級 DOM でも固まりにくくする）。**`Enter`** は従来どおりジャンプ／前面化。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
@@ -2525,7 +2547,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | `session -list` | UI → `tryRunPlainListCommand` | UI インライン候補 |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI 設定ピッカー列 |
 
-**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（**`page.open`** に対する **`back`** / **`forward`** / **`reload`** / **`close`**、種別互換チェック付き）。
+**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（**`browse`** / **`back`** / **`forward`** / **`reload`** / **`close`** / **`tab -send`**。種別互換チェック付き — ナビ／close は **`page.open`**；**`browse`** は producer の **`ListResult`** も必要）。
 
 <a id="bmxt-rule-ja"></a>
 
@@ -2542,6 +2564,12 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | **`bookmark`** | ブックマーク | `url`, `pageTitle`, `dateAdded`, … |
 | **`history`** | 履歴 | `url`, `pageTitle`, `lastVisitTime`, … |
 | **`markdown.file`** | 保存済み snapshot | `url`, `pageTitle`, `fileName`, `savedAt`, … |
+| **`search.hit`** | 検索ヒット（source で remap あり） | `url`, `pageTitle`, `source`, … |
+| **`dom.node`** / **`dom.notice`** | DOM 一覧行 | tag / path / notice など |
+| **`session.row`** | ターミナルセッション | session id / 表示名など |
+| **`setting.field`** | UI 設定行 | field id / value など |
+
+正本カタログ: **`manifest/bmxt-rule.json`**（および **`inter-command/vocabulary.ts`** の **`LIST_KIND_TO_BMXT_RULE_KIND`**）。
 
 **ランタイム:** パイプ段はメモリ上の **`BmxtRuleStream`**（JSON と同型）を渡します。NDJSON は fixture・export・テスト用（**`lib/features/bmxt-rule/fixtures/`**）。**単独 `-list`** は従来どおり人間向けプレーン行（**`bmxt-list/1`**）；**複数段 `|`** のときだけ段間で bmxtRule を使います。ピッカー／プレーン整形用の **`ListResult`** は残し、**`lib/features/bmxt-rule/adapters/from-list-result.ts`** および feature 別ヘルパ（例: **`tabs-bmxt-rule.ts`**）で変換します。
 
@@ -2560,7 +2588,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | **Command zones** | コマンド別 tier 結び付け（manifest 固定トークン + runtime provider） |
 | **Data sources** | コマンドが参照してよいブラウザ／UI 事実 |
 
-**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tab -list`）、**stage 1+** は **`registry.pipeConsumers`**（`back` / `forward` / `reload` / `close` / `c`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
+**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tab -list`）、**stage 1+** は **`registry.pipeConsumers`**（`browse` / `back` / `forward` / `reload` / `close` / `c` / `tab`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
 
 **ランタイム data source**（`commands[].zones` で宣言）:
 
@@ -2658,9 +2686,9 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **再利用パス（推奨）:** 既存 **`HostEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
 - **拡張パス（必要なときだけ）:**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
-  - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
+  - **UiAction:** `uiActions[]` → codegen → **`crates/bmxt-core/src/generated/ui_action.rs`** / **`ui-action-types.ts`** + 手書き **`apply-ui-action.ts`**（`ir.rs` は生成 `UiAction` の re-export のみ。enum をそこに足さない）
   - **List / pipe kind:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer
-- **検証:** **`verify:manifest`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
+- **検証:** **`verify:manifest`** / **`verify:host-blind`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
 - **compound / pipe:** 計画は WASM、実行ループは **`command-line/`**。パイプ段間は **bmxtRule のみ**（コマンド名直結禁止）。
 
 各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`crates/bmxt-core/src/cmd/<module>.rs`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`**）。例外として第二トークン **`help`**（コマンド別マニュアル）は **`help_cmd.rs`** で中央処理する。`head` は通常 `-` 始まりだが、マニュアル用のリテラル **`help`** を許可する。
@@ -2817,6 +2845,7 @@ pnpm run dev
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック（ホストされた **`docs/welcome.html`** を開く；コンテンツは **`docs/`** のみ）
+- `lib/features/support/` — ウィンドウ内サポートリンク（公式サイト / NotebookLM マニュアル；表示名のみ；通常ブラウザタブで開く）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
 - `crates/bmxt-core/` — Rust/WASM コマンドコア；`lib/features/bmxt-core/` — TS ホスト（`wasm-host` / `dispatch` / tabs-picker ラッパ）
@@ -2854,11 +2883,24 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 
 **手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
+**ウィンドウ内ウェルカムヒント**（セッションログが空のとき。アップグレードブロック表示時も併記）
+
+アクティブセッションのログが **空** のとき（典型的には BMXt を新規に開いた直後）、プロンプト上に **ウェルカムヒント** を出します。内容はウェルカム文言、`help` 案内、**サポートリンク**、https 注入の注意（`shell.reloadHint` / i18n）。**バージョンアップ** ブロックがある場合も、その **上** に同じヒントを出します。
+
+**サポートリンク**（わかりやすい表示のみ。UI に生 URL は出さない）。クリックで **通常ブラウザ窓の新規タブ** を開く（BMXt ポップアップ窓内ではない）。許可 URL は **`lib/features/support/`** に固定:
+
+| 表示（JA） | 行き先 |
+|------------|--------|
+| **👉️公式サイト** | `https://bmxt.diozy.net/` |
+| **👉️マニュアルサポート（notebookLM）** | NotebookLM（`https://notebook.google.com/notebook/…`） |
+
+EN 表示: **👉️ Official site** / **👉️ Manual support (NotebookLM)**。**`aboutbmxt`**（GitHub Pages のウェルカム履歴）とは別経路。
+
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 
 拡張機能の **`version`**（**`package.json`**／ビルド後の manifest）が、**`chrome.storage.local`** の **`bmxt_last_seen_extension_version`**（**`LAST_SEEN_EXTENSION_VERSION_KEY`**）と **一致しない** とき、BMXt を開いた **そのバージョンへアップデートしたあとの初回だけ**、次を表示します。
 
-1. 既存どおりの **ウェルカム** 文言（内容は変更しない運用）。
+1. 上記の **ウェルカム** ヒント（サポートリンクを含む）。
 2. **バージョンアップ** 見出しと、**`release-notes.json`** の日英変更説明。
 
 既存の **セッションログ** は、その **下** に続きます。
@@ -2872,7 +2914,7 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 
 **`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
 
-**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-external-url.ts`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
+**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-external-url.ts`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内サポートリンク — **`lib/features/support/`**（`ShellSupportLinks`、許可 URL → **`createTabInNormalBrowserWindow`**）、i18n **`shell.support.*`**。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-hint a`、`.bmxt-version-upgrade*`）。
 
 <a id="production-build-ja"></a>
 

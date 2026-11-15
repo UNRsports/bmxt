@@ -12,6 +12,12 @@ export const BMXT_SEARCH_JUMP_HIGHLIGHT_NAME = "bmxt-search-jump"
 const STYLE_ID = "bmxt-search-needle-highlight-style"
 export const DEFAULT_NEEDLE_HIGHLIGHT_MS = 8000
 
+/**
+ * EN: Cap CSS Highlight hit ranges painted at once (GitHub-scale DOMs freeze above this).
+ * JA: 一度に塗るヒット Range 上限（GitHub 級 DOM ではこれ以上で固まりやすい）。
+ */
+export const MAX_INPAGE_HIT_HIGHLIGHT_RANGES = 48
+
 export const DEFAULT_SEARCH_HIT_HIGHLIGHT_BG = "#ffc9dd"
 export const DEFAULT_SEARCH_JUMP_HIGHLIGHT_BG = "#ffdb4d"
 export const DEFAULT_SEARCH_HIGHLIGHT_FG = "#0d1117"
@@ -141,13 +147,19 @@ export function clearBmxtNeedleHighlights(): void {
   })
 }
 
-function scrollRangeIntoView(range: Range): void {
+function scrollRangeIntoView(range: Range, smooth = false): void {
   const el =
     range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
       ? (range.commonAncestorContainer as Element)
       : range.commonAncestorContainer.parentElement
   try {
-    el?.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" })
+    el?.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      // EN: Preview j/k must not stack smooth scrolls on heavy pages.
+      // JA: プレビューの j/k で重いページに smooth スクロールを積み上げない。
+      behavior: smooth ? "smooth" : "auto"
+    })
   } catch {
     el?.scrollIntoView()
   }
@@ -302,20 +314,25 @@ export function applyBmxtSearchNeedleHighlightSession(
 
   if (!options?.activeOnly) {
     clearBmxtNeedleHighlights()
-    scrollRangeIntoView(activeRange)
-    const hitRanges = allRanges.length > 0 ? [...allRanges] : [activeRange]
-    if (!applyNamedCssHighlight(BMXT_SEARCH_HIT_HIGHLIGHT_NAME, ...hitRanges)) {
-      return applyBmxtNeedleHighlight(activeRange, options?.persistMs ?? 0, colors)
+    scrollRangeIntoView(activeRange, false)
+    // EN: Painting every match on large pages (e.g. GitHub) freezes the tab — cap or skip.
+    // JA: 大規模ページで全一致を塗るとタブが固まるため、上限を超えたらジャンプ色のみ。
+    const paintAllHits =
+      allRanges.length > 0 && allRanges.length <= MAX_INPAGE_HIT_HIGHLIGHT_RANGES
+    if (paintAllHits) {
+      if (!applyNamedCssHighlight(BMXT_SEARCH_HIT_HIGHLIGHT_NAME, ...allRanges)) {
+        return applyBmxtNeedleHighlight(activeRange, options?.persistMs ?? 0, colors)
+      }
     }
     if (!applyNamedCssHighlight(BMXT_SEARCH_JUMP_HIGHLIGHT_NAME, activeRange)) {
-      return false
+      return applyBmxtNeedleHighlight(activeRange, options?.persistMs ?? 0, colors)
     }
     scheduleClearTimer(options?.persistMs ?? 0)
     return true
   }
 
   cancelClearTimer()
-  scrollRangeIntoView(activeRange)
+  scrollRangeIntoView(activeRange, false)
   if (!applyNamedCssHighlight(BMXT_SEARCH_JUMP_HIGHLIGHT_NAME, activeRange)) {
     return applyBmxtNeedleHighlight(activeRange, 0, colors)
   }

@@ -67,15 +67,25 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         url: "",
         ...deviceFields(record)
       })
-    case "tabs.group":
-      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.group"], {
-        pageTitle: stringScalar(record.fields.label),
-        label: stringScalar(record.fields.label),
+    case "tabs.group": {
+      const rawTitle = stringScalar(record.fields.title)
+      const displayLabel = stringScalar(record.fields.label)
+      const titleForRule = rawTitle.length > 0 ? rawTitle : displayLabel
+      const colorRaw = toScalar(record.fields.color)
+      const fields: Record<string, BmxtRuleScalar> = {
+        pageTitle: titleForRule,
+        label: displayLabel,
+        title: rawTitle,
         windowId: toScalar(record.fields.windowId) ?? null,
         groupId: toScalar(record.fields.groupId) ?? null,
         url: "",
         ...deviceFields(record)
-      })
+      }
+      if (typeof colorRaw === "string" && colorRaw.length > 0) {
+        fields.color = colorRaw
+      }
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["tabs.group"], fields)
+    }
     case "search.hit": {
       const source = stringScalar(record.fields.source, "search")
       const kind = bmxtRuleKindForSearchHitSource(source)

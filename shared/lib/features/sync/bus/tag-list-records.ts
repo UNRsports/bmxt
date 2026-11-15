@@ -69,13 +69,20 @@ export function remoteTabRowsToListRecords(
       continue
     }
     if (row.kind === "group") {
+      const groupFields: ListRecord["fields"] = {
+        windowId: row.windowId,
+        groupId: row.groupId,
+        label: row.label
+      }
+      if (typeof row.title === "string") {
+        groupFields.title = row.title
+      }
+      if (typeof row.color === "string" && row.color.length > 0) {
+        groupFields.color = row.color
+      }
       records.push({
         kind: "tabs.group",
-        fields: {
-          windowId: row.windowId,
-          groupId: row.groupId,
-          label: row.label
-        },
+        fields: groupFields,
         display: {
           indent: 1,
           label: row.label

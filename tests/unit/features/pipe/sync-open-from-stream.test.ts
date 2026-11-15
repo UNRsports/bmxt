@@ -7,6 +7,7 @@ import { parseTabSendPipeConsumer } from "../../../../shared/lib/features/comman
 import { tabIdsForOpenedUrls } from "../../../../shared/lib/features/sync/bus/close-local-after-open.ts"
 import { parseOpenPayload } from "../../../../shared/lib/features/sync/bus/parse-open-payload.ts"
 import { parsePickerCommand } from "../../../../shared/lib/features/tabs/parse-picker-command.ts"
+import { openBatchesFromSelectedLocalTabs } from "../../../../shared/lib/features/tabs/open-batches-from-selected-local-tabs.ts"
 import { resolveFamilySendDestination } from "../../../../shared/lib/features/tabs/resolve-family-send-dest.ts"
 import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
 
@@ -63,15 +64,27 @@ describe("tabIdsForOpenedUrls", () => {
 })
 
 describe("urlBatchesFromBmxtRuleStream", () => {
-  it("groups urls by preceding page.group label", () => {
+  it("groups urls by preceding page.group raw title and color", () => {
     const stream = {
       schema: BMXT_RULE_SCHEMA,
       producer: bmxtRuleProducer({ command: "tab", subcommand: "-list" }),
       records: [
-        bmxtRuleRecord("page.group", { label: "Work", pageTitle: "Work", url: "" }),
+        bmxtRuleRecord("page.group", {
+          label: "【Work】",
+          title: "Work",
+          pageTitle: "Work",
+          color: "blue",
+          url: ""
+        }),
         bmxtRuleRecord("page.open", { url: "https://a.example/", pageTitle: "A", tabId: 1 }),
         bmxtRuleRecord("page.open", { url: "https://b.example/", pageTitle: "B", tabId: 2 }),
-        bmxtRuleRecord("page.group", { label: "Play", pageTitle: "Play", url: "" }),
+        bmxtRuleRecord("page.group", {
+          label: "【Play】",
+          title: "Play",
+          pageTitle: "Play",
+          color: "red",
+          url: ""
+        }),
         bmxtRuleRecord("page.open", { url: "https://c.example/", pageTitle: "C", tabId: 3 })
       ]
     }
@@ -79,14 +92,106 @@ describe("urlBatchesFromBmxtRuleStream", () => {
     assert.equal(batches.length, 2)
     assert.deepEqual(batches[0], {
       groupTitle: "Work",
+      groupColor: "blue",
       urls: ["https://a.example/", "https://b.example/"],
       tabIds: [1, 2]
     })
     assert.deepEqual(batches[1], {
       groupTitle: "Play",
+      groupColor: "red",
       urls: ["https://c.example/"],
       tabIds: [3]
     })
+  })
+
+  it("strips UI wrappers when only label is present", () => {
+    const stream = {
+      schema: BMXT_RULE_SCHEMA,
+      producer: bmxtRuleProducer({ command: "tab", subcommand: "-list" }),
+      records: [
+        bmxtRuleRecord("page.group", { label: "【Legacy】", pageTitle: "【Legacy】", url: "" }),
+        bmxtRuleRecord("page.open", { url: "https://a.example/", pageTitle: "A", tabId: 1 })
+      ]
+    }
+    const batches = urlBatchesFromBmxtRuleStream(stream)
+    assert.deepEqual(batches[0], {
+      groupTitle: "Legacy",
+      groupColor: null,
+      urls: ["https://a.example/"],
+      tabIds: [1]
+    })
+  })
+
+  it("defaults untitled group color to grey so peer still groups", () => {
+    const stream = {
+      schema: BMXT_RULE_SCHEMA,
+      producer: bmxtRuleProducer({ command: "tab", subcommand: "-list" }),
+      records: [
+        bmxtRuleRecord("page.group", { label: "", title: "", pageTitle: "", url: "" }),
+        bmxtRuleRecord("page.open", { url: "https://a.example/", pageTitle: "A", tabId: 1 })
+      ]
+    }
+    const batches = urlBatchesFromBmxtRuleStream(stream)
+    assert.deepEqual(batches[0], {
+      groupTitle: null,
+      groupColor: "grey",
+      urls: ["https://a.example/"],
+      tabIds: [1]
+    })
+  })
+})
+
+describe("openBatchesFromSelectedLocalTabs", () => {
+  it("uses raw title and color, not UI label wrappers", () => {
+    const rows: TabPickerRow[] = [
+      {
+        kind: "window",
+        windowId: 1,
+        label: "Win",
+        windowTitle: "Win",
+        usesActiveTabTitle: false,
+        focused: true,
+        deviceId: null,
+        remote: false,
+        peerWindowId: null
+      },
+      {
+        kind: "group",
+        windowId: 1,
+        groupId: 2,
+        label: "【Work】",
+        title: "Work",
+        color: "cyan",
+        deviceId: null,
+        remote: false,
+        peerWindowId: null,
+        peerGroupId: null
+      },
+      {
+        kind: "tab",
+        tabId: 10,
+        windowId: 1,
+        groupId: 2,
+        groupColor: "cyan",
+        title: "A",
+        url: "https://a.example/",
+        faviconSrc: null,
+        active: false,
+        deviceId: null,
+        remote: false,
+        peerTabId: null,
+        peerWindowId: null,
+        peerGroupId: null
+      }
+    ]
+    assert.deepEqual(openBatchesFromSelectedLocalTabs(rows, [10]), [
+      {
+        groupTitle: "Work",
+        groupColor: "cyan",
+        urls: ["https://a.example/"],
+        tabIds: [10]
+      }
+    ])
   })
 })
 

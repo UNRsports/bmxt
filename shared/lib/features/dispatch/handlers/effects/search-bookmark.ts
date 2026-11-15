@@ -5,8 +5,8 @@ import { searchBookmarkLines } from "../../../search/sources/bookmark-adapter"
 type E = Extract<HostEffect, { kind: "search_bookmark" }>
 
 export async function applySearchBookmarkEffect(
-  _ctx: DispatchHostContext,
+  ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
-  return searchBookmarkLines(e.pattern)
+  return searchBookmarkLines(e.pattern, ctx.shouldCancel)
 }

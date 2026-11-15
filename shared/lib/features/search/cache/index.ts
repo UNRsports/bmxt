@@ -6,6 +6,7 @@ export {
   removePageCacheTab,
   resolveBookmarkEntriesForSearch,
   resolveHistoryEntriesForSearch,
+  type HistorySearchResolution,
   upsertHistoryCacheOnVisit
 } from "./search-cache-store"
 

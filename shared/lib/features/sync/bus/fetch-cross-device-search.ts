@@ -1,13 +1,18 @@
 import type { ListResult } from "../../command-line/list-output/types.ts"
 import { LIST_OUTPUT_SCHEMA } from "../../command-line/list-output/types.ts"
 import type { DispatchHostContext } from "../../dispatch/dispatch-context.ts"
+import { MAX_AGGREGATED_SEARCH_ENTRIES } from "../../search/limits.ts"
+import { remoteSearchNoticeRecords } from "../../search/peer/remote-search-detail-notices.ts"
 import { fetchSearchListResult } from "../../search/search-list-plain.ts"
+import { searchListPatternFromLine } from "../../search/search-list-picker-parse.ts"
+import { normalizeSearchPattern } from "../../search/search-format.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { loadOrCreateDeviceIdentity } from "../device/device-identity.ts"
 import { getSyncService } from "../facade/sync-service.ts"
 import type { DeviceListScope } from "./device-list-scope"
 import { stripDeviceScopeFromSearchDispatchLine } from "./device-list-scope"
 import type { CrossDeviceFetchMeta } from "./fetch-cross-device-tabs"
+import { SYNC_REMOTE_QUERY_TIMEOUT_MS } from "./remote-query-limits"
 import {
   mergeListResults,
   remoteSearchHitsToListRecords,
@@ -37,6 +42,47 @@ async function localTaggedSearch(
   return {
     ...local,
     records: tagListRecords(local.records, tag)
+  }
+}
+
+function raceSearchRemote(
+  searchRemote: (
+    remoteId: string,
+    peerLine: string
+  ) => Promise<{ ok: boolean; detail: string | null; hits: import("../types.ts").SyncRemoteSearchHit[] }>,
+  remoteId: string,
+  peerLine: string
+): Promise<{ ok: boolean; detail: string | null; hits: import("../types.ts").SyncRemoteSearchHit[] }> {
+  return new Promise((resolve) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) {
+        return
+      }
+      settled = true
+      resolve({ ok: false, detail: "peer_timeout", hits: [] })
+    }, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+    void searchRemote(remoteId, peerLine).then((remote) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      clearTimeout(timer)
+      resolve(remote)
+    })
+  })
+}
+
+function trimAggregatedResult(result: ListResult): { result: ListResult; truncated: boolean } {
+  if (result.records.length <= MAX_AGGREGATED_SEARCH_ENTRIES) {
+    return { result, truncated: false }
+  }
+  return {
+    result: {
+      ...result,
+      records: result.records.slice(0, MAX_AGGREGATED_SEARCH_ENTRIES)
+    },
+    truncated: true
   }
 }
 
@@ -79,7 +125,11 @@ export async function fetchCrossDeviceSearchList(
   if (options.scope.kind === "device") {
     const remoteId = options.scope.deviceId
     devicesQueried.push(remoteId)
-    const remote = await service.searchRemote(remoteId, peerLine)
+    const remote = await raceSearchRemote(
+      (id, line) => service.searchRemote(id, line),
+      remoteId,
+      peerLine
+    )
     if (!remote.ok) {
       devicesFailed.push(remoteId)
       notices.push(`sync.list.peerFailed:${remoteId}:${remote.detail ?? ""}`)
@@ -102,28 +152,35 @@ export async function fetchCrossDeviceSearchList(
     const status = await service.status()
     const name =
       status.members.find((m) => m.deviceId === remoteId)?.displayName ?? remoteId
+    const pattern = normalizeSearchPattern(searchListPatternFromLine(peerLine))
+    const remoteNotices = remoteSearchNoticeRecords(remote.detail, pattern)
+    const hitRecords = remoteSearchHitsToListRecords(remote.hits, {
+      deviceId: remoteId,
+      deviceName: name,
+      remote: true
+    })
+    const trimmed = trimAggregatedResult({
+      schema: LIST_OUTPUT_SCHEMA,
+      command: "search",
+      subcommand: "-list",
+      records: [...remoteNotices, ...hitRecords],
+      meta:
+        notices.length > 0
+          ? {
+              devicesQueried: devicesQueried.join(","),
+              devicesFailed: devicesFailed.join(","),
+              syncNotices: notices.join("\n")
+            }
+          : {
+              devicesQueried: devicesQueried.join(","),
+              devicesFailed: devicesFailed.join(",")
+            }
+    })
+    if (trimmed.truncated) {
+      notices.push(`sync.list.aggregatedTruncated:${MAX_AGGREGATED_SEARCH_ENTRIES}`)
+    }
     return {
-      result: {
-        schema: LIST_OUTPUT_SCHEMA,
-        command: "search",
-        subcommand: "-list",
-        records: remoteSearchHitsToListRecords(remote.hits, {
-          deviceId: remoteId,
-          deviceName: name,
-          remote: true
-        }),
-        meta:
-          notices.length > 0
-            ? {
-                devicesQueried: devicesQueried.join(","),
-                devicesFailed: devicesFailed.join(","),
-                syncNotices: notices.join("\n")
-              }
-            : {
-                devicesQueried: devicesQueried.join(","),
-                devicesFailed: devicesFailed.join(",")
-              }
-      },
+      result: trimmed.result,
       meta: { devicesQueried, devicesFailed },
       notices
     }
@@ -150,7 +207,11 @@ export async function fetchCrossDeviceSearchList(
 
   const remoteSettled = await Promise.allSettled(
     connectedIds.map(async (remoteId) => {
-      const remote = await service.searchRemote(remoteId, peerLine)
+      const remote = await raceSearchRemote(
+        (id, line) => service.searchRemote(id, line),
+        remoteId,
+        peerLine
+      )
       return { remoteId, remote }
     })
   )
@@ -168,15 +229,20 @@ export async function fetchCrossDeviceSearchList(
       continue
     }
     const name = memberNameById.get(remoteId) ?? remoteId
+    const pattern = normalizeSearchPattern(searchListPatternFromLine(peerLine))
+    const remoteNotices = remoteSearchNoticeRecords(remote.detail, pattern)
     parts.push({
       schema: LIST_OUTPUT_SCHEMA,
       command: "search",
       subcommand: "-list",
-      records: remoteSearchHitsToListRecords(remote.hits, {
-        deviceId: remoteId,
-        deviceName: name,
-        remote: true
-      })
+      records: [
+        ...remoteNotices,
+        ...remoteSearchHitsToListRecords(remote.hits, {
+          deviceId: remoteId,
+          deviceName: name,
+          remote: true
+        })
+      ]
     })
   }
 
@@ -184,12 +250,27 @@ export async function fetchCrossDeviceSearchList(
     notices.push("sync.list.noConnectedPeers")
   }
 
+  const merged = mergeListResults("search", "-list", parts, {
+    devicesQueried: devicesQueried.join(","),
+    devicesFailed: devicesFailed.join(","),
+    syncNotices: notices.length > 0 ? notices.join("\n") : undefined
+  })
+  const trimmed = trimAggregatedResult(merged)
+  if (trimmed.truncated) {
+    notices.push(`sync.list.aggregatedTruncated:${MAX_AGGREGATED_SEARCH_ENTRIES}`)
+    const meta = {
+      ...(trimmed.result.meta ?? {}),
+      syncNotices: notices.join("\n")
+    }
+    return {
+      result: { ...trimmed.result, meta },
+      meta: { devicesQueried, devicesFailed },
+      notices
+    }
+  }
+
   return {
-    result: mergeListResults("search", "-list", parts, {
-      devicesQueried: devicesQueried.join(","),
-      devicesFailed: devicesFailed.join(","),
-      syncNotices: notices.length > 0 ? notices.join("\n") : undefined
-    }),
+    result: trimmed.result,
     meta: { devicesQueried, devicesFailed },
     notices
   }

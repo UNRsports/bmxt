@@ -1,6 +1,9 @@
 import type { PickerEntry } from "../side-picker/model/picker-entry.ts"
 import { matchesNeedle } from "./matcher.ts"
-import { excerptAroundNeedle } from "./search-picker-excerpt.ts"
+import {
+  excerptAroundNeedleWithHighlight,
+  SEARCH_PICKER_TEXT_CONTEXT_CHARS
+} from "./search-picker-excerpt.ts"
 
 /** EN: One searchable hit row inside the search picker detail view. */
 export type SearchEntryDetailHit = {
@@ -9,6 +12,11 @@ export type SearchEntryDetailHit = {
   displayText: string
   /** EN: Index into `entry.pageMatches` when the hit came from page scan. */
   pageMatchIndex?: number
+  /**
+   * EN: 0-based needle occurrence inside `displayText` to mark exclusively.
+   * JA: `displayText` 内でこの行が担当する needle 出現（0 始まり）のみ強調する。
+   */
+  highlightOccurrence?: number
   /** EN: Body line hits can scroll in-tab when `tabId` is present. */
   canScrollTo: boolean
 }
@@ -26,7 +34,51 @@ function pushUniqueTitleOrUrl(
   if (duplicate) {
     return
   }
-  hits.push({ field, displayText: trimmed, canScrollTo: false })
+  hits.push({
+    field,
+    displayText: trimmed,
+    highlightOccurrence: 0,
+    canScrollTo: false
+  })
+}
+
+function countNeedleOccurrences(haystack: string, needle: string): number {
+  const lower = haystack.toLowerCase()
+  const nLower = needle.toLowerCase()
+  if (!nLower) {
+    return 0
+  }
+  let from = 0
+  let count = 0
+  while (from < haystack.length) {
+    const idx = lower.indexOf(nLower, from)
+    if (idx < 0) {
+      break
+    }
+    count += 1
+    from = idx + Math.max(1, needle.length)
+  }
+  return count
+}
+
+/**
+ * EN: Map same-line hit index onto an occurrence index inside `snippet`
+ *     (windows may drop earlier hits on the line).
+ * JA: 同一行ヒット番号を snippet 内の出現インデックスへ写す（先頭が切れている場合あり）。
+ */
+export function occurrenceIndexInSnippet(
+  snippet: string,
+  needle: string,
+  lineHitIndex: number
+): number {
+  const n = countNeedleOccurrences(snippet, needle)
+  if (n <= 0) {
+    return 0
+  }
+  if (lineHitIndex < 0) {
+    return 0
+  }
+  return Math.min(lineHitIndex, n - 1)
 }
 
 /**
@@ -46,6 +98,7 @@ export function listSearchEntryDetailHits(
   const matches = entry.pageMatches ?? []
   const hits: SearchEntryDetailHit[] = []
   const bodyMatchCount = matches.filter((m) => m.lineNo > 0).length
+  const lineHitCounts = new Map<number, number>()
 
   if (matches.length > 0) {
     for (let i = 0; i < matches.length; i++) {
@@ -54,11 +107,22 @@ export function listSearchEntryDetailHits(
         continue
       }
       if (m.lineNo > 0) {
-        const excerpt = excerptAroundNeedle(m.snippet, needle)
+        const hitOnLine = lineHitCounts.get(m.lineNo) ?? 0
+        lineHitCounts.set(m.lineNo, hitOnLine + 1)
+        const occurrenceInSnippet = occurrenceIndexInSnippet(m.snippet, needle, hitOnLine)
+        const excerpt = excerptAroundNeedleWithHighlight(
+          m.snippet,
+          needle,
+          SEARCH_PICKER_TEXT_CONTEXT_CHARS,
+          occurrenceInSnippet
+        )
+        const prefix = `L${m.lineNo}: `
+        const needlesInPrefix = countNeedleOccurrences(prefix, needle)
         hits.push({
           field: "text",
-          displayText: `L${m.lineNo}: ${excerpt}`,
+          displayText: `${prefix}${excerpt.text}`,
           pageMatchIndex: i,
+          highlightOccurrence: needlesInPrefix + excerpt.highlightOccurrence,
           canScrollTo: entry.tabId != null
         })
         continue
@@ -68,6 +132,7 @@ export function listSearchEntryDetailHits(
         field: "title",
         displayText: titleText,
         pageMatchIndex: i,
+        highlightOccurrence: 0,
         canScrollTo: entry.tabId != null
       })
     }

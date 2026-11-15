@@ -3,10 +3,15 @@
  * JA: `search -list` 用の履歴・ブックマークキャッシュ（メモリのみ、SQLite なし）。
  */
 
-import { HISTORY_LOOKBACK_MS, MAX_BOOKMARK_ROWS, MAX_HISTORY_RESULTS } from "../limits"
-import { bookmarkTreeRevision, flattenBookmarkTreeWithRevision } from "./bookmark-revision"
-import { isHistoryCacheEntryFresh } from "./stale"
-import type { BookmarkCacheEntry, HistoryCacheEntry } from "./types"
+import {
+  HISTORY_LOOKBACK_MS,
+  HISTORY_PATTERN_START_TIME_MS,
+  MAX_BOOKMARK_ROWS,
+  MAX_HISTORY_RESULTS
+} from "../limits.ts"
+import { bookmarkTreeRevision, flattenBookmarkTreeWithRevision } from "./bookmark-revision.ts"
+import { isHistoryCacheEntryFresh } from "./stale.ts"
+import type { BookmarkCacheEntry, HistoryCacheEntry } from "./types.ts"
 
 const HISTORY_PROBE_MAX = 32
 const HISTORY_PROBE_WINDOW_MS = 60_000
@@ -16,6 +21,19 @@ type HistoryCacheState = {
   maxResults: number
   maxLastVisit: number
   byUrl: Map<string, HistoryCacheEntry>
+}
+
+/** EN: History rows plus whether the browser API cap / lookback window applied. */
+export type HistorySearchResolution = {
+  entries: HistoryCacheEntry[]
+  /** EN: True when the API returned exactly maxResults (likely truncated). */
+  hitMaxResults: boolean
+  /**
+   * EN: Lookback window for browse-all; `null` means keyword search from epoch (all available).
+   * JA: 一覧時の遡及窓。`null` はキーワード検索で epoch 起算（取得可能な全期間）。
+   */
+  lookbackMs: number | null
+  maxResults: number
 }
 
 let historyCache: HistoryCacheState | null = null
@@ -33,11 +51,14 @@ function historyEntryFromItem(it: chrome.history.HistoryItem): HistoryCacheEntry
   }
 }
 
-async function fetchLiveHistoryEntries(queryText = ""): Promise<HistoryCacheEntry[]> {
+async function fetchLiveHistoryEntries(
+  queryText: string,
+  startTime: number
+): Promise<HistoryCacheEntry[]> {
   const items = await chrome.history.search({
     text: queryText,
     maxResults: MAX_HISTORY_RESULTS,
-    startTime: Date.now() - HISTORY_LOOKBACK_MS
+    startTime
   })
   const out: HistoryCacheEntry[] = []
   for (const it of items) {
@@ -157,27 +178,38 @@ function touchSearchCache(): void {
 
 /**
  * EN: Resolve history rows for search.
- *     Non-empty `pattern` uses Chrome's `history.search({ text })` (avoids a cold 10k full scan).
- *     Empty pattern keeps the in-memory cache / full lookback path.
- * JA: パターンありは Chrome 側 text 絞り込み（コールド時の 1 万件全取得を避ける）。
- *     空パターンは従来どおりキャッシュ／全件ルックバック。
+ *     Non-empty `pattern` uses Chrome's `history.search({ text })` from epoch (all available).
+ *     Empty pattern keeps the in-memory cache / finite lookback path.
+ * JA: パターンありは Chrome 側 text 絞り込み＋全期間（epoch 起算）。
+ *     空パターンは従来どおりキャッシュ／有限ルックバック。
  */
 export async function resolveHistoryEntriesForSearch(
   pattern = ""
-): Promise<HistoryCacheEntry[]> {
+): Promise<HistorySearchResolution> {
   touchSearchCache()
   const needle = pattern.trim()
 
-  // EN: Pattern query — skip full-cache rebuild; Chrome filters, caller still matchesNeedle.
+  // EN: Pattern query — skip full-cache rebuild; Chrome filters across all available history.
   if (needle.length > 0) {
-    return fetchLiveHistoryEntries(needle)
+    const entries = await fetchLiveHistoryEntries(needle, HISTORY_PATTERN_START_TIME_MS)
+    return {
+      entries,
+      hitMaxResults: entries.length >= MAX_HISTORY_RESULTS,
+      lookbackMs: null,
+      maxResults: MAX_HISTORY_RESULTS
+    }
   }
 
   let state = historyCache
   if (state && historyConfigMatches(state)) {
     const cached = listCachedHistory(state)
     if (cached.length > 0 && !(await historyProbeNeedsFullRefresh(state))) {
-      return cached
+      return {
+        entries: cached,
+        hitMaxResults: cached.length >= MAX_HISTORY_RESULTS,
+        lookbackMs: HISTORY_LOOKBACK_MS,
+        maxResults: MAX_HISTORY_RESULTS
+      }
     }
   }
 
@@ -186,7 +218,7 @@ export async function resolveHistoryEntriesForSearch(
     historyCache = state
   }
 
-  const live = await fetchLiveHistoryEntries("")
+  const live = await fetchLiveHistoryEntries("", Date.now() - HISTORY_LOOKBACK_MS)
   for (const row of live) {
     const existing = state.byUrl.get(row.url)
     if (isHistoryCacheEntryFresh(existing, row.url, row.lastVisitTime)) {
@@ -195,7 +227,13 @@ export async function resolveHistoryEntriesForSearch(
     state.byUrl.set(row.url, row)
   }
   syncHistoryConfigMeta(state)
-  return listCachedHistory(state)
+  const entries = listCachedHistory(state)
+  return {
+    entries,
+    hitMaxResults: entries.length >= MAX_HISTORY_RESULTS || live.length >= MAX_HISTORY_RESULTS,
+    lookbackMs: HISTORY_LOOKBACK_MS,
+    maxResults: MAX_HISTORY_RESULTS
+  }
 }
 
 /** EN: Background `history.onVisited` — upsert in-memory cache when active. */

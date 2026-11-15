@@ -5,8 +5,8 @@ import { searchHistoryLines } from "../../../search/sources/history-adapter"
 type E = Extract<HostEffect, { kind: "search_history" }>
 
 export async function applySearchHistoryEffect(
-  _ctx: DispatchHostContext,
+  ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
-  return searchHistoryLines(e.pattern)
+  return searchHistoryLines(e.pattern, ctx.shouldCancel)
 }

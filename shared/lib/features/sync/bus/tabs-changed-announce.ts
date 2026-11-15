@@ -37,10 +37,23 @@ export function listTabsChangedAnnounceTargets(
 }
 
 export function normalizeTabsChangedReason(value: unknown): TabsChangedReason {
-  if (value === "open_tabs" || value === "tabs_ops" || value === "local_close") {
+  if (
+    value === "open_tabs" ||
+    value === "tabs_ops" ||
+    value === "local_close" ||
+    value === "local_inventory"
+  ) {
     return value
   }
   return "tabs_ops"
+}
+
+/**
+ * EN: True when at least one connected Family peer should receive inventory refresh.
+ * JA: 在庫追従を送るべき接続中 Family ピアが1台以上あるとき true。
+ */
+export function shouldAnnounceLocalInventoryToPeers(targetCount: number): boolean {
+  return Number.isFinite(targetCount) && targetCount >= 1
 }
 
 /**

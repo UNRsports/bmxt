@@ -39,7 +39,10 @@ export type TabPickerRow =
       kind: "group"
       windowId: number
       groupId: number | null
+      /** EN: UI display label (may wrap title with 【】). Not for sync wire titles. */
       label: string
+      /** EN: Raw chrome.tabGroups title (empty string when untitled). */
+      title: string
       color: NewGroupPaletteColor
       deviceId: string | null
       remote: boolean
@@ -198,6 +201,7 @@ export async function buildTabPickerRowsBundle(
             windowId: wid,
             groupId: key,
             label: formatGroupLabel(meta, locale),
+            title: (meta?.title || "").trim(),
             color: normalizeTabGroupColor(meta?.color),
             deviceId: null,
             remote: false,

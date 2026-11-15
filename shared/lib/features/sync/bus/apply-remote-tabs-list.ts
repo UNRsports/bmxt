@@ -52,7 +52,9 @@ export async function applyRemoteTabsList(options: {
           kind: "group",
           windowId: row.windowId,
           groupId: row.groupId,
-          label: row.label
+          label: row.label,
+          title: row.title,
+          color: row.color
         })
         continue
       }

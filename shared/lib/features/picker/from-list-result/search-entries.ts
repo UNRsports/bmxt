@@ -88,7 +88,8 @@ export function pickerEntriesFromSearchListResult(listResult: ListResult): {
   return {
     entries,
     pattern,
-    emptyResultLines:
-      entries.length === 0 && emptyResultLines.length > 0 ? emptyResultLines : undefined
+    // EN: Cap / lookback notices also apply when there are openable hits.
+    // JA: 件数・遡及の notice はヒットがある場合も返す。
+    emptyResultLines: emptyResultLines.length > 0 ? emptyResultLines : undefined
   }
 }

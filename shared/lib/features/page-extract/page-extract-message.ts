@@ -10,6 +10,15 @@ export type PageExtractRequest = {
   maxChars: number
   /** EN: When true, return innerText length only (number). JA: true のとき文字数のみ返す。 */
   lengthOnly?: boolean
+  /**
+   * EN: When true, collect needle matches in-page (returns match payload, not plain text).
+   * JA: true のときページ内で needle マッチを集め、テキストではなくマッチ配列を返す。
+   */
+  collectMatches?: boolean
+  /** EN: Search needle for `collectMatches`. JA: `collectMatches` 用の検索語。 */
+  needle?: string
+  /** EN: Max matches for `collectMatches`. JA: `collectMatches` の上限件数。 */
+  maxMatches?: number
 }
 
 /**
@@ -50,6 +59,15 @@ export function isPageExtractRequest(raw: unknown): raw is PageExtractRequest {
     return false
   }
   if (o.lengthOnly !== undefined && typeof o.lengthOnly !== "boolean") {
+    return false
+  }
+  if (o.collectMatches !== undefined && typeof o.collectMatches !== "boolean") {
+    return false
+  }
+  if (o.needle !== undefined && typeof o.needle !== "string") {
+    return false
+  }
+  if (o.maxMatches !== undefined && typeof o.maxMatches !== "number") {
     return false
   }
   return true

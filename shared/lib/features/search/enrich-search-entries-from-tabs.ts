@@ -1,12 +1,7 @@
 import type { PickerEntry, PickerSource, SearchPageMatch } from "../side-picker/model/picker-entry"
-import {
-  assignGlobalOccurrencesToPageMatches,
-  innerTextLinesFromBodyText
-} from "../page-dom/needle-occurrence"
-import { readOpenTabInnerText } from "../page-extract/read-tab-inner-text"
-import { MAX_PAGE_TEXT_CHARS } from "./limits"
+import { collectPageMatchesFromOpenTab } from "../page-extract/collect-tab-page-matches"
+import { MAX_ENRICH_OPEN_TAB_ENTRIES, MAX_MATCHES_PER_TAB, PAGE_SCAN_PREFIX_CHARS } from "./limits.ts"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
-import { collectPageMatchesForTab } from "./search-page-matches"
 import { normalizeUrlForSearchDedup } from "./search-url-dedup"
 
 const SEARCH_SOURCES: PickerSource[] = ["history", "bookmark", "page"]
@@ -27,29 +22,26 @@ function assignSnippetOccurrences(matches: SearchPageMatch[]): SearchPageMatch[]
   })
 }
 
-async function refreshPageMatchGlobalsFromTab(
-  entry: PickerEntry,
-  tab: chrome.tabs.Tab,
-  needle: string,
-  readMaxChars: number
-): Promise<SearchPageMatch[] | undefined> {
-  const matches = entry.pageMatches
-  if (!matches || matches.length === 0) {
-    return undefined
+function preferRicherMatches(
+  current: SearchPageMatch[] | undefined,
+  next: SearchPageMatch[]
+): SearchPageMatch[] {
+  const curBody = (current ?? []).filter((m) => m.lineNo > 0).length
+  const nextBody = next.filter((m) => m.lineNo > 0).length
+  if (nextBody > curBody) {
+    return assignSnippetOccurrences(next)
   }
-  const text = await readOpenTabInnerText(tab, readMaxChars)
-  if (text === null) {
-    return matches
+  if (nextBody === curBody && next.length > (current?.length ?? 0)) {
+    return assignSnippetOccurrences(next)
   }
-  const bodyLines = innerTextLinesFromBodyText(text)
-  return assignSnippetOccurrences(
-    assignGlobalOccurrencesToPageMatches(matches, bodyLines, needle)
-  )
+  return current ?? next
 }
 
 /**
  * EN: Attach page body hits to history/bookmark rows when the same URL is open in a tab.
+ *     Uses in-tab match collection (compact rows) — not a full innerText transfer.
  * JA: 履歴／ブックマーク行に、同一 URL の開タブ本文ヒットを後付けする。
+ *     本文全文ではなくタブ内マッチ収集を使う。
  */
 export async function enrichSearchPickerEntriesFromOpenTabs(
   entries: PickerEntry[],
@@ -77,9 +69,15 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
     return entries
   }
 
-  const readMaxChars = maxPageTextChars ?? MAX_PAGE_TEXT_CHARS
+  const readMaxChars =
+    maxPageTextChars === 0
+      ? 0
+      : maxPageTextChars !== undefined
+        ? maxPageTextChars
+        : PAGE_SCAN_PREFIX_CHARS
 
   const out: PickerEntry[] = []
+  let enrichedCount = 0
   for (const entry of entries) {
     const key = normalizeUrlForSearchDedup(entry.url)
     const tab = tabByKey.get(key)
@@ -88,42 +86,35 @@ export async function enrichSearchPickerEntriesFromOpenTabs(
       continue
     }
 
-    const hasBodyHits = (entry.pageMatches ?? []).some((m) => m.lineNo > 0)
-    if (hasBodyHits) {
-      const pageMatches = await refreshPageMatchGlobalsFromTab(entry, tab, needle, readMaxChars)
-      out.push({
-        ...entry,
-        tabId: entry.tabId ?? tab.id,
-        windowId: entry.windowId ?? tab.windowId,
-        pageMatches: pageMatches ?? entry.pageMatches
-      })
+    if (enrichedCount >= MAX_ENRICH_OPEN_TAB_ENTRIES) {
+      out.push(entry)
       continue
     }
 
-    const text = await readOpenTabInnerText(tab, readMaxChars)
-    const pageMatches = collectPageMatchesForTab(tab.title ?? "", text, needle)
-    const bodyMatches = pageMatches.filter((m) => m.lineNo > 0)
+    const collected = await collectPageMatchesFromOpenTab(tab, needle, {
+      maxMatches: MAX_MATCHES_PER_TAB,
+      maxTextChars: readMaxChars
+    })
+    if (collected === null || collected.matches.length === 0) {
+      out.push(entry)
+      continue
+    }
+
+    const bodyMatches = collected.matches.filter((m) => m.lineNo > 0)
     if (bodyMatches.length === 0) {
       out.push(entry)
       continue
     }
 
     const windowId = typeof tab.windowId === "number" ? tab.windowId : undefined
-    const bodyLines = innerTextLinesFromBodyText(text ?? "")
-    const combined = assignSnippetOccurrences(
-      assignGlobalOccurrencesToPageMatches(
-        [...(entry.pageMatches ?? []), ...pageMatches],
-        bodyLines,
-        needle
-      )
-    )
+    enrichedCount += 1
     out.push({
       ...entry,
       sources: mergeSources(entry),
       source: "page",
       tabId: tab.id,
       windowId,
-      pageMatches: combined,
+      pageMatches: preferRicherMatches(entry.pageMatches, collected.matches),
       id: `page-tab-${tab.id}`
     })
   }

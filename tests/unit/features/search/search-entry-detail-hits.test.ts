@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import type { PickerEntry } from "../../../../shared/lib/features/side-picker/model/picker-entry.ts"
-import { listSearchEntryDetailHits } from "../../../../shared/lib/features/search/search-entry-detail-hits.ts"
+import {
+  listSearchEntryDetailHits,
+  occurrenceIndexInSnippet
+} from "../../../../shared/lib/features/search/search-entry-detail-hits.ts"
+import { splitTextHighlightSegments } from "../../../../shared/lib/features/side-picker/search/picker-search-needle.ts"
 
 function sampleEntry(overrides: Partial<PickerEntry> = {}): PickerEntry {
   return {
@@ -53,4 +57,41 @@ describe("listSearchEntryDetailHits", () => {
       ["title", "url"]
     )
   })
+
+  it("marks only one needle per same-line multi-hit detail row", () => {
+    const line =
+      "UI — lib/features/bmxt-window/ (BmxtTerminal) entrypoints/bmxt/main.tsx"
+    const entry = sampleEntry({
+      source: "page",
+      pageMatches: [
+        { lineNo: 298, snippet: line, occurrence: 0, globalOccurrence: 0 },
+        { lineNo: 298, snippet: line, occurrence: 1, globalOccurrence: 1 },
+        { lineNo: 298, snippet: line, occurrence: 2, globalOccurrence: 2 }
+      ]
+    })
+    const hits = listSearchEntryDetailHits(entry, "bmxt")
+    assert.equal(hits.length, 3)
+    for (let i = 0; i < hits.length; i++) {
+      const hit = hits[i]!
+      assert.equal(hit.highlightOccurrence, i)
+      const segments = splitTextHighlightSegments(
+        hit.displayText,
+        "bmxt",
+        hit.highlightOccurrence
+      )
+      const marked = segments.filter((s) => s.match)
+      assert.equal(marked.length, 1, `row ${i} should mark exactly one needle`)
+    }
+  })
 })
+
+describe("occurrenceIndexInSnippet", () => {
+  it("clamps when the snippet window dropped earlier same-line hits", () => {
+    assert.equal(occurrenceIndexInSnippet("bmxt only", "bmxt", 2), 0)
+    assert.equal(
+      occurrenceIndexInSnippet("bmxt-window BmxtTerminal bmxt/main", "bmxt", 1),
+      1
+    )
+  })
+})
+

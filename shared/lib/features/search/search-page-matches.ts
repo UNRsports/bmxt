@@ -1,5 +1,6 @@
 import type { SearchPageMatch } from "../side-picker/model/picker-entry"
 import { findRawNeedleInHaystack, innerTextLinesFromBodyText } from "../page-dom/needle-occurrence"
+import { MAX_MATCHES_PER_TAB } from "./limits.ts"
 import { matchesNeedle } from "./matcher"
 import { excerptAroundNeedle } from "./search-picker-excerpt"
 
@@ -66,14 +67,26 @@ export function collectPageMatchesForTab(
 
   const bodyLines = text !== null ? innerTextLinesFromBodyText(text) : []
 
+  // EN: Title is not a body Range — keep body globalOccurrence 0-based for in-page scroll.
+  // JA: タイトルは body Range ではない。ページ内スクロール用に body の globalOccurrence を 0 始まりに保つ。
   if (title.trim().length > 0 && matchesNeedle(title, needle)) {
-    pushLineMatch(matches, occurrence, 0, title, nextGlobalOccurrence)
-    nextGlobalOccurrence += 1
+    const trimmedTitle = title.trim()
+    const key = trimmedTitle.toLowerCase()
+    const occ = occurrence.get(key) ?? 0
+    occurrence.set(key, occ + 1)
+    matches.push({
+      lineNo: 0,
+      snippet: trimmedTitle,
+      occurrence: occ
+    })
   }
 
   if (text !== null && matchesNeedle(text, needle)) {
     let lineNo = 0
-    for (const line of bodyLines) {
+    outer: for (const line of bodyLines) {
+      if (matches.length >= MAX_MATCHES_PER_TAB) {
+        break
+      }
       lineNo += 1
       if (!matchesNeedle(line, needle)) {
         continue
@@ -81,6 +94,9 @@ export function collectPageMatchesForTab(
       let from = 0
       let hitOnLine = 0
       while (from < line.length) {
+        if (matches.length >= MAX_MATCHES_PER_TAB) {
+          break outer
+        }
         const hit = findRawNeedleInHaystack(line, needle, from)
         if (!hit) {
           break
@@ -97,7 +113,7 @@ export function collectPageMatchesForTab(
     }
 
     const bodyLineCount = matches.filter((m) => m.lineNo > 0).length
-    if (bodyLineCount === 0) {
+    if (bodyLineCount === 0 && matches.length < MAX_MATCHES_PER_TAB) {
       const snippet = excerptAroundNeedle(text, needle, BODY_SNIPPET_CONTEXT)
       if (snippet.trim().length > 0) {
         pushLineMatch(matches, occurrence, 1, snippet, nextGlobalOccurrence)

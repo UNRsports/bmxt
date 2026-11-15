@@ -134,7 +134,12 @@ export type SyncRemoteTabRow =
       kind: "group"
       windowId: number
       groupId: number | null
+      /** EN: Display label (may include UI wrappers). Prefer `title` when present. */
       label: string
+      /** EN: Raw chrome.tabGroups title (empty when untitled). Optional for older peers. */
+      title?: string
+      /** EN: chrome.tabGroups.Color enum string. Optional for older peers. */
+      color?: string
     }
   | {
       kind: "tab"
@@ -168,7 +173,12 @@ export type SyncRemoteSearchHit = {
 }
 
 /** EN: Why a Family tabs_changed signal was emitted (refresh hint only). */
-export type TabsChangedReason = "open_tabs" | "tabs_ops" | "local_close"
+export type TabsChangedReason =
+  | "open_tabs"
+  | "tabs_ops"
+  | "local_close"
+  /** EN: Local Chrome inventory changed (close / create / move / group) while peers are connected. */
+  | "local_inventory"
 
 /**
  * EN: Payload delivered to local subscribers of tabs_changed (after wire normalize).
@@ -199,7 +209,14 @@ export type SyncBusCommand =
       id: string
       from: SyncDeviceId
       urls: string[]
+      /** EN: Raw group title; null when ungrouped or untitled (pair with groupColor). */
       groupTitle: string | null
+      /**
+       * EN: chrome.tabGroups.Color when recreating a group (including untitled).
+       *     null/omit = ungrouped batch, or title-only for older CLI `--group`.
+       * JA: グループ再現時の色（無題含む）。null/省略は非グループ、または旧 `--group` のみ。
+       */
+      groupColor?: string | null
       /** EN: Optional peer-local window id (older peers ignore). */
       windowId: number | null
     }
@@ -241,6 +258,21 @@ export type SyncBusCommand =
       from: SyncDeviceId
       ok: boolean
       detail: string | null
+      hits: SyncRemoteSearchHit[]
+    }
+  | {
+      /**
+       * EN: Ordered search hit fragment (eof closes the stream for replyTo).
+       * JA: 順序付き search ヒット断片（eof で replyTo のストリーム終了）。
+       */
+      type: "search_query_chunk"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      seq: number
+      eof: boolean
       hits: SyncRemoteSearchHit[]
     }
   | {

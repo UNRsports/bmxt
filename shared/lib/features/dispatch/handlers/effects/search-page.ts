@@ -9,12 +9,11 @@ export async function applySearchPageEffect(
   ctx: DispatchHostContext,
   e: E
 ): Promise<string[]> {
-  const shouldCancel = ctx.shouldCancelSearchPage ?? ctx.shouldCancel
   return searchPageLines(
     e.pattern,
     ctx.onSearchPageProgress,
     ctx.searchPageProgressLabel ?? "search -list --page",
-    shouldCancel,
+    ctx.shouldCancel,
     ctx.uiLocale ?? DEFAULT_UI_LOCALE,
     {
       unlimit: ctx.searchPageUnlimit === true,

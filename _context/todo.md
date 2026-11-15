@@ -31,6 +31,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] **dom Enter** — ピッカー行 Enter の確定挙動（旧 §7）
 - [ ] （任意）find/dom 系の `PickerListShell` 統合
 - [ ] （任意）`TabPickerOverlay` リネーム掃除
+- [x] ウェルカムにサポートリンク（公式サイト · NotebookLM）— `lib/features/support/` · README（version-upgrade-banner 節）反映
 
 ### 3. Manual smoke backlog
 
@@ -44,6 +45,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | `tab:` チップ | 複数選択 → パイプ |
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
 | list columns | tab / search / dom / setting / session |
+| support links | 空ログのウェルカムに公式サイト / NotebookLM 表示名が出る · クリックで通常タブ（BMXt 窓外）· URL 文字列は出さない |
 
 ### 4. Live reload（ページリロード非依存の CS）
 
@@ -212,6 +214,56 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c:** Family `tabs_changed` 广播（`first` 第一コマンド符号 + `reason`）→ 接続メンバーの該当開中 picker を再取得
 - [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛 · `tabs_changed` 追従を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC（接続設定のみ）
+
+### 7. Picker = コマンド構築 UI（CUI 同等化）
+
+**目標:** search / DOM / session / setting（および tab の残ギャップ）を、**typed コマンド／パイプだけで picker と同等に操作できる**ようにする。picker は GUI として「ユーザに代わってコマンド構文やパイプを組み立て、`submitLine` / `runDispatch` に再入場する」存在に揃え、Chrome／host API の直実行を持たない。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 意味論・副作用 | コマンド／パイプのみが実行する（閉じた語彙: `ListResult` → `bmxtRule` → pipe consumer / `HostEffect` / `UiAction`） |
+| picker | 同じ行を組み立てて `submitLine` するだけ。並列の実行 API を増やさない |
+| `\| browse` | GUI 入口として残す（消さない）。plain `-list` は従来どおりターミナル |
+| FSA／ファイル選択 | コマンドが chooser を起動するところまでが上限（ジェスチャ必須。型打ちだけでディレクトリは選べない） |
+
+**安全な進行順（必須）**
+
+1. **新コマンドで同等操作を先に用意**（pipe consumer / subcommand。既存 picker 直実行は触らない）
+2. **同じ入力で CUI と picker の結果を突き合わせ**（観測可能な副作用・ログ・フォーカス）
+3. **一致を確認してから** picker Enter を `submitLine` に切替
+4. **直実行を削除**（二重経路を残さない）
+
+**進めないこと:** コマンド面が揃う前に picker 直実行を消す／置き換える。
+
+**family ギャップ（作用 → 想定 surface）**
+
+| Family | CUI 現状 | 不足（例） | 備考 |
+|--------|----------|------------|------|
+| **session** | `-switch` / `-next` / `-prev` / `-new` / `-setting-name` あり | list Enter → `session -switch <name>` の `submitLine` 再入場 | 最も近い。雛形 |
+| **search** | `-list` はログ可 | `search -list … \| open` / `\| jump`（新タブ・窓・グループは flag） | ヒット open / ページ内 jump が picker 直実行 |
+| **dom** | `-list`・`-setting` は CUI 可 | `dom -list … \| jump`（`dom.node` path） | jump / link activate が picker 直実行 |
+| **setting** | `-list` 読み取り専用 | `setting -set …` + `-save` / `-cancel` | 現状 UI 編集が本線（README）。FSA はジェスチャ上限 |
+| **tab**（参考） | close / reload / nav / `#t:` パイプ可 | move / group / newWindow / edit 等の残 bulk | picker 計画 + host 実行が厚い |
+
+**実装チェック（段階）**
+
+- [ ] **7a 追加:** session 以外で不足している pipe consumer / subcommand を語彙再利用で追加（`manifest/templates/` · skill `bmxt-add-command`）。picker は未変更
+- [ ] **7a:** search `\| open` / `\| jump` · dom `\| jump` · setting `-set`/`-save`（必要な Effect / UiAction のみ extend）
+- [ ] **7b 突合:** 各作用について「typed 行」と「現行 picker Enter」の副作用を突き合わせ（ログ差分・フォーカス方針を文書化）
+- [ ] **7c 切替:** 一致した family から picker Enter → 行組み立て → `submitLine`（session を最初の雛形に）
+- [ ] **7d 削除:** 直実行パス削除。二重経路禁止。`map_command.csv` / README / i18n 更新
+- [ ] **7e（任意・後続）:** tab 残 bulk（move / group / newWindow 等）を同じ進行順で
+
+**手元スモーク（7c 以降）**
+
+- [ ] 各 family: plain `-list` と `… \| browse` の入口が従来どおり
+- [ ] 同じ作用を typed のみ / picker Enter のみで実行し、結果が一致する
+- [ ] picker 操作後に history / ログへ想定どおりコマンド行が残る（方針どおり）
+- [ ] 直実行モジュールに残存呼び出しがない（grep / テスト）
+
+**参照:** 本会話の整理 · `shared/lib/features/command-line/inter-command/` · `shared/lib/features/picker/open-from-list-result.ts` · pipe consumers（`browse` / `close` 等）· skill `bmxt-add-command`
 
 ---
 

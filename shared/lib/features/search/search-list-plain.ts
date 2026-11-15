@@ -8,6 +8,7 @@ import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
 import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
+import { MAX_SEARCH_LINES_OUT, maxSearchLinesPerScope } from "./limits.ts"
 import { isParallelSearchEffect } from "./search-effect-parallel.ts"
 import { searchEffectsForDispatchLine } from "./search-list-effects.ts"
 import { buildSearchListResult } from "./search-list-result.ts"
@@ -29,6 +30,11 @@ export type SearchListFetchOptions = {
   onProgress?: (message: string) => Promise<void>
   /** EN: Structured overall progress for the prompt busy standard UI. */
   onBusyProgress?: (progress: CommandBusyProgress) => void | Promise<void>
+  /**
+   * EN: Peer DataChannel path — skip open-tab enrich (wire hits are title/url only).
+   * JA: ピア DataChannel 経路。開タブ enrich を省略（ワイヤ hit は title/url のみ）。
+   */
+  forRemoteWire?: boolean
 }
 
 function scopeLabelForEffect(effect: HostEffect, locale: UiLocale): string {
@@ -91,11 +97,17 @@ async function runOneSearchEffect(
   scopeTotal: number,
   emitBusy: (progress: CommandBusyProgress) => Promise<void>
 ): Promise<string[]> {
+  if (options.ctx.shouldCancel?.()) {
+    return []
+  }
   const scope = scopeLabelForEffect(effect, options.locale)
   if (options.onProgress) {
     await options.onProgress(
       tSearch("search.list.progress.scope", options.locale, { scope })
     )
+  }
+  if (options.ctx.shouldCancel?.()) {
+    return []
   }
   await emitBusy({
     kind: "fraction",
@@ -105,6 +117,9 @@ async function runOneSearchEffect(
   })
   const ctx = buildEffectCtx(options, effect, pageOptions, scopeIndex, scopeTotal, emitBusy)
   const lines = await applyHostEffects(ctx, [effect])
+  if (options.ctx.shouldCancel?.()) {
+    return []
+  }
   if (options.onProgress) {
     await options.onProgress(
       tSearch("search.list.progress.scopeDone", options.locale, { scope })
@@ -134,8 +149,20 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   await emitBusy({ kind: "fraction", current: 0, total: scopeTotal })
 
   const linesOut: string[] = []
+  const perScopeCap = maxSearchLinesPerScope(effects.length)
   const canParallel =
     effects.length > 1 && effects.every((effect) => isParallelSearchEffect(effect))
+
+  const appendScopeLines = (lines: readonly string[]): void => {
+    let taken = 0
+    for (const line of lines) {
+      if (taken >= perScopeCap || linesOut.length >= MAX_SEARCH_LINES_OUT) {
+        break
+      }
+      linesOut.push(line)
+      taken += 1
+    }
+  }
 
   if (canParallel) {
     // EN: Run history / bookmark / page / snapshot together — cold history must not
@@ -154,9 +181,12 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
         return { scopeIndex, lines }
       })
     )
+    if (options.ctx.shouldCancel?.()) {
+      return buildSearchListResult([], pattern, [])
+    }
     settled.sort((a, b) => a.scopeIndex - b.scopeIndex)
     for (const part of settled) {
-      linesOut.push(...part.lines)
+      appendScopeLines(part.lines)
     }
     await emitBusy({
       kind: "fraction",
@@ -165,6 +195,9 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     })
   } else {
     for (let scopeIndex = 0; scopeIndex < effects.length; scopeIndex += 1) {
+      if (options.ctx.shouldCancel?.()) {
+        break
+      }
       const effect = effects[scopeIndex]!
       const lines = await runOneSearchEffect(
         options,
@@ -174,7 +207,7 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
         scopeTotal,
         emitBusy
       )
-      linesOut.push(...lines)
+      appendScopeLines(lines)
       await emitBusy({
         kind: "fraction",
         current: scopeIndex + 1,
@@ -184,9 +217,18 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     }
   }
 
+  if (options.ctx.shouldCancel?.()) {
+    return buildSearchListResult([], pattern, [])
+  }
+
   const parsed = pickerEntriesFromSearchLines(linesOut)
   const maxPageTextChars = pageOptions.unlimit ? 0 : undefined
-  const entries = await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
+  const entries = options.forRemoteWire
+    ? parsed
+    : await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
+  if (options.ctx.shouldCancel?.()) {
+    return buildSearchListResult([], pattern, [])
+  }
   return buildSearchListResult(entries, pattern, linesOut)
 }
 
@@ -204,11 +246,20 @@ export function formatSearchListPlainLines(result: ListResult, locale: UiLocale)
   if (result.records.length === 0) {
     return [...notices, tSearch("search.list.empty", locale)]
   }
-  const body = formatListPlainLines(result)
-  const hitCount = result.records.filter((record) => record.fields.source !== "notice").length
+  const noticeRecords = result.records.filter((record) => record.fields.source === "notice")
+  const hitRecords = result.records.filter((record) => record.fields.source !== "notice")
+  const noticeLabels = noticeRecords.map((record) =>
+    String(record.display?.label ?? record.fields.title ?? "")
+  )
+  const body = formatListPlainLines({
+    ...result,
+    records: hitRecords
+  })
+  const hitCount = hitRecords.length
   return [
     ...notices,
-    ...appendListPlainSummary(body, hitCount > 0 ? hitCount : result.records.length, locale)
+    ...noticeLabels.filter((line) => line.trim().length > 0),
+    ...appendListPlainSummary(body, hitCount > 0 ? hitCount : 0, locale)
   ]
 }
 
