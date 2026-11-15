@@ -301,9 +301,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **Compound commands (`&&` / `||` / `;`):** Join multiple commands on one line with **`&&`**, **`||`**, or **`;`** (quoted regions and `\&&` / `\||` / `\;` escapes are respected). Segments run **left to right** with shell-style short-circuit: **`&&`** runs the next segment only after exit status **0**, **`||`** only after a non-zero status, **`;`** always. Each segment returns a numeric **exit status** (0 = success; usage/parse = 2; unknown command = 127; other failures = 1). Continuation-only inputs (e.g. bare `dom`) and interactive pickers (`<list> | browse` after any `-list`, bare `session -switch`, bare `session -setting-name`) cannot be used inside a compound line.
 
-**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **producer** and a consumer with **`|`**. Producers: plain **`tab -list`** (and other `-list` commands), or **`#t:<id>…` tab chips** built with **`tab:`** / **`tab::{needle}`** (see below). Example: **`tab -list | close`** or **`#t:12 #t:34 | back`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**). Consumers: **`back`**, **`forward`**, **`reload`**, **`close`** / **`c`** (accept **`page.open`**). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**.
+**Pipes (`|`):** Within each list-operator segment (or on a standalone line), chain a **producer** and a consumer with **`|`**. Producers: plain **`tab -list`** (and other `-list` commands), or **`#t:<id>…` tab chips** built with **`tab:`** / **`tab::{needle}`** (see below). Example: **`tab -list | close`** or **`#t:12 #t:34 | back`**. Between stages BMXt passes a **`bmxtRule`** stream (**`bmxt-rule/1`**). Consumers (see **`pipe/consumers/registry.ts`**): **`browse`** (picker from producer **`ListResult`**), **`back`**, **`forward`**, **`reload`**, **`close`** / **`c`** (accept **`page.open`**), and **`tab -send <deviceId>`** (Family). Kind mismatches and unsupported consumers fail with exit status **1** on **stderr**.
 
-**Tab chips (`tab:`):** Type **`tab:`** to open open-tab candidates (favicon + title). Pick inserts a **`#t:<id>`** chip and **closes** the menu. **Enter** with exactly one chip activates that tab and focuses its window; two or more chips without a pipe is an error (use **`|`** for batch ops). Type a **Space** before Enter to reopen candidates and pick more tabs for a pipe. After **`|`**, press **Tab** for pipe consumers (**`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**). **`tab:{needle}`** (or plain text after Space) filters by title; **`tab::{needle}`** filters by URL. Then pipe: **`#t:… | back`** / **`reload`** / etc. A trailing incomplete **`tab:`** is stripped when the pipe runs.
+**Tab chips (`tab:`):** Type **`tab:`** to open open-tab candidates (favicon + title). Pick inserts a **`#t:<id>`** chip and **closes** the menu. **Enter** with exactly one chip activates that tab and focuses its window; two or more chips without a pipe is an error (use **`|`** for batch ops). Type a **Space** before Enter to reopen candidates and pick more tabs for a pipe. After **`|`**, press **Tab** for pipe consumers (**`browse`** / **`back`** / **`forward`** / **`reload`** / **`close`** / **`c`** / **`tab`**). **`tab:{needle}`** (or plain text after Space) filters by title; **`tab::{needle}`** filters by URL. Then pipe: **`#t:… | back`** / **`reload`** / etc. A trailing incomplete **`tab:`** is stripped when the pipe runs.
 
 **Redirects (`>` / `>>` / `2>` / `2>>`):** Within a segment, redirect **stdout** (`>` / `>>`) or **stderr** (`2>` / `2>>`) to a **null sink** only: **`null`** or **`/dev/null`** (quoted regions and `\>` escapes are respected). The redirected channel is discarded from the terminal log. Other targets are rejected (exit status **2**). OS file paths are out of scope.
 
@@ -1039,7 +1039,7 @@ token line → matcher (registry) → ListResult (bmxt-list/1) → plain lines (
 | `session -list` | UI → `tryRunPlainListCommand` | UI inline picker |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI settings picker column |
 
-**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (**`back`**, **`forward`**, **`reload`**, **`close`** on **`page.open`** records, with kind-compatibility checks).
+**Pipes:** `lib/features/command-line/pipe/run-pipe-chain.ts` fetches **`ListResult`**, converts it to **`bmxtRule`** (`bmxtRuleStreamFromListResult`), and passes **`BmxtRuleStream`** between segments. Consumers are registered in **`pipe/consumers/registry.ts`** (**`browse`**, **`back`**, **`forward`**, **`reload`**, **`close`**, **`tab -send`**; kind-compatibility checks — navigation/close act on **`page.open`**; **`browse`** also needs the producer **`ListResult`**).
 
 <a id="bmxt-rule"></a>
 
@@ -1075,6 +1075,12 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 | **`bookmark`** | Bookmark | `url`, `pageTitle`, `dateAdded`, … |
 | **`history`** | History visit | `url`, `pageTitle`, `lastVisitTime`, … |
 | **`markdown.file`** | Saved snapshot | `url`, `pageTitle`, `fileName`, `savedAt`, … |
+| **`search.hit`** | Search hit (may remap by source) | `url`, `pageTitle`, `source`, … |
+| **`dom.node`** / **`dom.notice`** | DOM list rows | tag/path/notice fields, … |
+| **`session.row`** | Terminal session | session id / display name, … |
+| **`setting.field`** | UI settings row | field id / value, … |
+
+Canonical catalog: **`manifest/bmxt-rule.json`** (and **`LIST_KIND_TO_BMXT_RULE_KIND`** in **`inter-command/vocabulary.ts`**).
 
 **Runtime:** pipe stages pass **`BmxtRuleStream` in memory** (same shape as JSON). NDJSON projection is for fixtures, export, and tests (`lib/features/bmxt-rule/fixtures/`). **Plain `-list`** still prints human-oriented lines (**`bmxt-list/1`**); only **multi-stage `|`** uses bmxtRule between commands. Legacy **`ListResult`** remains for picker and plain formatters; adapters live in **`lib/features/bmxt-rule/adapters/from-list-result.ts`** and per-feature helpers (e.g. **`tabs-bmxt-rule.ts`**).
 
@@ -1093,7 +1099,7 @@ Each record uses an **extensible entry array** — attributes are `[key, value]`
 | **Command zones** | Per-command tier bindings (manifest static tokens + runtime providers) |
 | **Data sources** | Browser/UI facts commands may read for dynamic candidates |
 
-**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tab -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (`back` / `forward` / `reload` / `close` / `c`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
+**Compound & pipe:** After a **list operator** (`&&`, `||`, `;`), the **active compound segment** resets to **first-tier** commands (same as a new line). After **`|`** inside a segment, **pipe stage 0** follows normal command zones (e.g. `tab -list`); **pipe stage 1+** shows **`registry.pipeConsumers`** (`browse` / `back` / `forward` / `reload` / `close` / `c` / `tab`). Tab on an empty tail after an operator opens the menu (`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`).
 
 **Runtime data sources** (commands declare which they use in `commands[].zones`):
 
@@ -1193,9 +1199,9 @@ Start with **[`shared/manifest/templates/new-command.checklist.md`](shared/manif
 - **Reuse path (prefer):** Return only existing **`HostEffect`** / **`UiAction`** / list kinds — **no new TS executor**. Update i18n + README + **`_context/map_command.csv`**.
 - **Extend path (only if needed):**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
-  - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
+  - **UiAction:** `uiActions[]` → codegen → **`crates/bmxt-core/src/generated/ui_action.rs`** / **`ui-action-types.ts`** + hand-written **`apply-ui-action.ts`** (`ir.rs` only re-exports generated `UiAction`; do **not** edit the enum there)
   - **List / pipe kinds:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer registry
-- **Checks:** **`verify:manifest`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
+- **Checks:** **`verify:manifest`**, **`verify:host-blind`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
 - **Compound / pipe:** Planning is WASM; the host loop is **`command-line/`** (`runDispatch` per segment → UiAction apply or background `RUN_CMD`). Pipe handoff is **bmxtRule** only (not command-name coupling).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
@@ -1806,9 +1812,9 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **複合コマンド（`&&` / `||` / `;`）:** 1 行に **`&&`**・**`||`**・**`;`** で複数コマンドを並べる（クォート内と `\&&` / `\||` / `\;` は演算子にしない）。**左から順**に実行し、シェル同様に短絡する（**`&&`** は終了状態 **0** のときのみ次へ、**`||`** は非 0 のときのみ、**`;`** は常に）。各セグメントは数値の **exit status** を返す（0 = 成功、usage/parse = 2、不明コマンド = 127、その他失敗 = 1）。continuation のみの入力（裸の `dom` 等）や対話ピッカー（`<list> | browse`、裸の `session -switch`、裸の `session -setting-name`）は compound 行に含められない。ピッカー列は **`<list> | browse`** で開く。
 
-**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **producer** と consumer を **`|`** で連結。producer: プレーン **`tab -list`**（他 `-list` も可）、または **`tab:`** / **`tab::{語句}`** で選んだ **`#t:<id>…` チップ**。例: **`tab -list | close`**、**`#t:12 #t:34 | back`**。段間は **`bmxtRule`**（**`bmxt-rule/1`**）。consumer: **`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**（**`page.open`**）。種別不一致・未対応は終了状態 **1** と **stderr**。
+**パイプ（`|`）:** 各リスト演算子セグメント内（または単独行）で **producer** と consumer を **`|`** で連結。producer: プレーン **`tab -list`**（他 `-list` も可）、または **`tab:`** / **`tab::{語句}`** で選んだ **`#t:<id>…` チップ**。例: **`tab -list | close`**、**`#t:12 #t:34 | back`**。段間は **`bmxtRule`**（**`bmxt-rule/1`**）。consumer（**`pipe/consumers/registry.ts`**）: **`browse`**（producer の **`ListResult`** からピッカー）、**`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**（**`page.open`**）、**`tab -send <deviceId>`**（Family）。種別不一致・未対応は終了状態 **1** と **stderr**。
 
-**タブチップ（`tab:`）:** **`tab:`** で開いているタブ候補（ファビコン＋タイトル）。選択で **`#t:<id>`** チップに置換し、**候補は閉じる**。チップが1つのとき **Enter** でそのタブをアクティブ（ウィンドウもフォーカス）。2つ以上でパイプなしの Enter はエラー（一括操作は **`|`**）。追加選択は Enter 前に **半角スペース** で候補再表示。**`|` のあと Tab** でパイプ先候補（**`back`** / **`forward`** / **`reload`** / **`close`** / **`c`**）。タイトル絞込は **`tab:{語句}`** またはスペース後の語句、URL は **`tab::{語句}`**。その後 **`#t:… | back`** / **`reload`** などでパイプ。末尾の未完成 **`tab:`** はパイプ実行時に無視される。
+**タブチップ（`tab:`）:** **`tab:`** で開いているタブ候補（ファビコン＋タイトル）。選択で **`#t:<id>`** チップに置換し、**候補は閉じる**。チップが1つのとき **Enter** でそのタブをアクティブ（ウィンドウもフォーカス）。2つ以上でパイプなしの Enter はエラー（一括操作は **`|`**）。追加選択は Enter 前に **半角スペース** で候補再表示。**`|` のあと Tab** でパイプ先候補（**`browse`** / **`back`** / **`forward`** / **`reload`** / **`close`** / **`c`** / **`tab`**）。タイトル絞込は **`tab:{語句}`** またはスペース後の語句、URL は **`tab::{語句}`**。その後 **`#t:… | back`** / **`reload`** などでパイプ。末尾の未完成 **`tab:`** はパイプ実行時に無視される。
 
 **リダイレクト（`>` / `>>` / `2>` / `2>>`）:** セグメント内で **stdout**（`>` / `>>`）または **stderr**（`2>` / `2>>`）を **null シンク**（**`null`** または **`/dev/null`**）へだけ向けられる（クォート内と `\>` は演算子にしない）。向けたチャネルはターミナルログから捨てる。それ以外のターゲットは拒否（終了状態 **2**）。OS パスへの書き込みは対象外。
 
@@ -2541,7 +2547,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | `session -list` | UI → `tryRunPlainListCommand` | UI インライン候補 |
 | `setting -list` | UI → `tryRunPlainListCommand` | UI 設定ピッカー列 |
 
-**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（**`page.open`** に対する **`back`** / **`forward`** / **`reload`** / **`close`**、種別互換チェック付き）。
+**パイプ:** `lib/features/command-line/pipe/run-pipe-chain.ts` が **`ListResult`** を取得し **`bmxtRule`**（`bmxtRuleStreamFromListResult`）に変換してセグメント間受け渡し。consumer は **`pipe/consumers/registry.ts`** に登録（**`browse`** / **`back`** / **`forward`** / **`reload`** / **`close`** / **`tab -send`**。種別互換チェック付き — ナビ／close は **`page.open`**；**`browse`** は producer の **`ListResult`** も必要）。
 
 <a id="bmxt-rule-ja"></a>
 
@@ -2558,6 +2564,12 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | **`bookmark`** | ブックマーク | `url`, `pageTitle`, `dateAdded`, … |
 | **`history`** | 履歴 | `url`, `pageTitle`, `lastVisitTime`, … |
 | **`markdown.file`** | 保存済み snapshot | `url`, `pageTitle`, `fileName`, `savedAt`, … |
+| **`search.hit`** | 検索ヒット（source で remap あり） | `url`, `pageTitle`, `source`, … |
+| **`dom.node`** / **`dom.notice`** | DOM 一覧行 | tag / path / notice など |
+| **`session.row`** | ターミナルセッション | session id / 表示名など |
+| **`setting.field`** | UI 設定行 | field id / value など |
+
+正本カタログ: **`manifest/bmxt-rule.json`**（および **`inter-command/vocabulary.ts`** の **`LIST_KIND_TO_BMXT_RULE_KIND`**）。
 
 **ランタイム:** パイプ段はメモリ上の **`BmxtRuleStream`**（JSON と同型）を渡します。NDJSON は fixture・export・テスト用（**`lib/features/bmxt-rule/fixtures/`**）。**単独 `-list`** は従来どおり人間向けプレーン行（**`bmxt-list/1`**）；**複数段 `|`** のときだけ段間で bmxtRule を使います。ピッカー／プレーン整形用の **`ListResult`** は残し、**`lib/features/bmxt-rule/adapters/from-list-result.ts`** および feature 別ヘルパ（例: **`tabs-bmxt-rule.ts`**）で変換します。
 
@@ -2576,7 +2588,7 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 | **Command zones** | コマンド別 tier 結び付け（manifest 固定トークン + runtime provider） |
 | **Data sources** | コマンドが参照してよいブラウザ／UI 事実 |
 
-**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tab -list`）、**stage 1+** は **`registry.pipeConsumers`**（`back` / `forward` / `reload` / `close` / `c`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
+**複合・パイプ:** **リスト演算子**（`&&` / `||` / `;`）の直後は **active compound segment** が **第一 tier** にリセット（新行と同様）。セグメント内の **`|`** では **pipe stage 0** は通常のコマンド zone（例: `tab -list`）、**stage 1+** は **`registry.pipeConsumers`**（`browse` / `back` / `forward` / `reload` / `close` / `c` / `tab`）。演算子直後の空 tail で Tab を押すとメニューを開く（`scanCompoundSegmentSpans` + `resolveActiveCommandSegment`）。
 
 **ランタイム data source**（`commands[].zones` で宣言）:
 
@@ -2674,9 +2686,9 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
 - **再利用パス（推奨）:** 既存 **`HostEffect`** / **`UiAction`** / list kind のみ返す — **新しい TS 実行器は書かない**。i18n・README・**`_context/map_command.csv`** を更新。
 - **拡張パス（必要なときだけ）:**
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
-  - **UiAction:** `crates/bmxt-core/src/ir.rs` + codegen + **`apply-ui-action.ts`**
+  - **UiAction:** `uiActions[]` → codegen → **`crates/bmxt-core/src/generated/ui_action.rs`** / **`ui-action-types.ts`** + 手書き **`apply-ui-action.ts`**（`ir.rs` は生成 `UiAction` の re-export のみ。enum をそこに足さない）
   - **List / pipe kind:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer
-- **検証:** **`verify:manifest`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
+- **検証:** **`verify:manifest`** / **`verify:host-blind`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
 - **compound / pipe:** 計画は WASM、実行ループは **`command-line/`**。パイプ段間は **bmxtRule のみ**（コマンド名直結禁止）。
 
 各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`crates/bmxt-core/src/cmd/<module>.rs`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`**）。例外として第二トークン **`help`**（コマンド別マニュアル）は **`help_cmd.rs`** で中央処理する。`head` は通常 `-` 始まりだが、マニュアル用のリテラル **`help`** を許可する。
