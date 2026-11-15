@@ -22,6 +22,7 @@ describe("plainLabelPartsForTabPickerRow", () => {
         windowId: 1,
         groupId: 2,
         label: "【Work】",
+        title: "Work",
         color: "blue",
         deviceId: null,
         remote: false,

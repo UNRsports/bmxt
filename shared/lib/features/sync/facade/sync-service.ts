@@ -34,7 +34,11 @@ import type {
   TabsChangedSignal
 } from "../types"
 import type { FamilySignalFirstCommand } from "../bus/family-signal-first.ts"
-import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "../bus/remote-open-sanitize.ts"
+import {
+  sanitizeGroupColor,
+  sanitizeGroupTitle,
+  sanitizeRemoteOpenUrls
+} from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
 import { installAutoMesh } from "../mesh/auto-mesh.ts"
 import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
@@ -78,7 +82,8 @@ export type SyncService = {
     deviceId: string,
     urls: string[],
     groupTitle: string | null,
-    windowId?: number | null
+    windowId?: number | null,
+    groupColor?: string | null
   ): Promise<{ ok: boolean; lines: string[]; openedUrls: string[] }>
   listRemoteTabs(
     deviceId: string,
@@ -579,13 +584,15 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       deviceId: string,
       urls: string[],
       groupTitle: string | null,
-      windowId: number | null = null
+      windowId: number | null = null,
+      groupColor: string | null = null
     ) {
       const safeUrls = sanitizeRemoteOpenUrls(urls)
       if (safeUrls.length === 0) {
         return { ok: false, lines: [line("sync.open.noUrls")], openedUrls: [] }
       }
       const title = sanitizeGroupTitle(groupTitle)
+      const color = sanitizeGroupColor(groupColor)
       await ensurePeerDocument()
       await s.peerHost.ensureReady()
       const state = await s.commandBus.connect(deviceId)
@@ -596,7 +603,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
           openedUrls: []
         }
       }
-      const result = await s.commandBus.openTabs(deviceId, safeUrls, title, windowId)
+      const result = await s.commandBus.openTabs(deviceId, safeUrls, title, windowId, color)
       return {
         ok: result.ok,
         lines: [line(`sync.open.done:ok=${result.ok};detail=${result.detail ?? ""}`)],

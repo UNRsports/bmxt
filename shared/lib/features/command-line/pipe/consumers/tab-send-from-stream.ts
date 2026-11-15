@@ -53,7 +53,13 @@ export async function runTabSendFromBmxtRuleStream(
   const allSources: LocalOpenSource[] = []
   for (const batch of batches) {
     const sources = pairLocalSourcesForOpen(batch.urls, batch.tabIds)
-    const result = await service.openRemote(matched.deviceId, batch.urls, batch.groupTitle)
+    const result = await service.openRemote(
+      matched.deviceId,
+      batch.urls,
+      batch.groupTitle,
+      null,
+      batch.groupColor
+    )
     lines.push(...expandSyncLogLines(result.lines, locale))
     allSources.push(...sources)
     allOpened.push(...result.openedUrls)

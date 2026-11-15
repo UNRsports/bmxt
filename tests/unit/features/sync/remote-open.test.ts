@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
+  sanitizeGroupColor,
   sanitizeGroupTitle,
   sanitizeRemoteOpenUrls
 } from "../../../../shared/lib/features/sync/bus/remote-open-sanitize.ts"
@@ -21,5 +22,12 @@ describe("sync remote open sanitize", () => {
     assert.equal(sanitizeGroupTitle("ok"), "ok")
     assert.equal(sanitizeGroupTitle("bad\ntitle"), null)
     assert.equal(sanitizeGroupTitle(""), null)
+  })
+
+  it("accepts only chrome.tabGroups.Color enum values", () => {
+    assert.equal(sanitizeGroupColor("blue"), "blue")
+    assert.equal(sanitizeGroupColor("orange"), "orange")
+    assert.equal(sanitizeGroupColor("navy"), null)
+    assert.equal(sanitizeGroupColor(null), null)
   })
 })

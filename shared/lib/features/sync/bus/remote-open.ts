@@ -1,8 +1,17 @@
 import { groupTabsResilient } from "../../tabs/controller/chrome-tab-groups.ts"
 import type { UiLocale } from "../../setting/locale.ts"
-import { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "./remote-open-sanitize.ts"
+import type { NewGroupPaletteColor } from "../../tabs/tab-picker-overlay-constants.ts"
+import {
+  sanitizeGroupColor,
+  sanitizeGroupTitle,
+  sanitizeRemoteOpenUrls
+} from "./remote-open-sanitize.ts"
 
-export { sanitizeGroupTitle, sanitizeRemoteOpenUrls } from "./remote-open-sanitize.ts"
+export {
+  sanitizeGroupColor,
+  sanitizeGroupTitle,
+  sanitizeRemoteOpenUrls
+} from "./remote-open-sanitize.ts"
 
 async function createTab(url: string, windowId: number | null): Promise<chrome.tabs.Tab | null> {
   try {
@@ -25,11 +34,14 @@ async function createTab(url: string, windowId: number | null): Promise<chrome.t
 
 /**
  * EN: Apply a remote open_tabs command on this browser (local side effect).
+ *     Groups when title and/or color is present (untitled source groups send color only).
  * JA: 受信した open_tabs をこのブラウザで実行する。
+ *     title または color があればグループ化（無題グループは color のみ送る）。
  */
 export async function applyRemoteOpenTabs(options: {
   urls: string[]
   groupTitle: string | null
+  groupColor?: string | null
   locale: UiLocale
   windowId?: number | null
 }): Promise<{ ok: boolean; detail: string; openedUrls: string[] }> {
@@ -54,13 +66,26 @@ export async function applyRemoteOpenTabs(options: {
     return { ok: false, detail: "create_failed", openedUrls: [] }
   }
   const title = sanitizeGroupTitle(options.groupTitle)
-  if (title !== null && tabIds.length >= 1) {
+  const color = sanitizeGroupColor(options.groupColor ?? null)
+  if ((title !== null || color !== null) && tabIds.length >= 1) {
     try {
       const groupId = await groupTabsResilient(tabIds, options.locale)
-      await chrome.tabGroups.update(groupId, { title })
+      const update: chrome.tabGroups.UpdateProperties = {}
+      if (title !== null) {
+        update.title = title
+      }
+      if (color !== null) {
+        update.color = color as chrome.tabGroups.UpdateProperties["color"]
+      }
+      if (Object.keys(update).length > 0) {
+        await chrome.tabGroups.update(groupId, update)
+      }
+      // EN: Detail is machine-oriented for peers/logs; do not surface groupId in UI copy.
+      // JA: detail はピア／ログ向け。UI 文言に groupId を出さない。
+      const colorPart: NewGroupPaletteColor | "none" = color ?? "none"
       return {
         ok: true,
-        detail: `opened=${tabIds.length};group=${groupId}`,
+        detail: `opened=${tabIds.length};grouped;color=${colorPart}`,
         openedUrls
       }
     } catch {

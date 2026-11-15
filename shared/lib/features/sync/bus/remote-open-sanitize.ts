@@ -1,3 +1,7 @@
+import {
+  NEW_GROUP_COLORS,
+  type NewGroupPaletteColor
+} from "../../tabs/tab-picker-overlay-constants.ts"
 import { parseOpenHttpUrl } from "../../url/parse-open-http-url.ts"
 
 const MAX_URLS = 20
@@ -17,8 +21,8 @@ export function sanitizeRemoteOpenUrls(urls: string[]): string[] {
   return out
 }
 
-export function sanitizeGroupTitle(raw: string | null): string | null {
-  if (raw === null) {
+export function sanitizeGroupTitle(raw: string | null | undefined): string | null {
+  if (raw === null || raw === undefined) {
     return null
   }
   const trimmed = raw.trim()
@@ -32,4 +36,19 @@ export function sanitizeGroupTitle(raw: string | null): string | null {
     }
   }
   return trimmed
+}
+
+/**
+ * EN: Accept only chrome.tabGroups.Color enum strings (exact match on peer).
+ * JA: chrome.tabGroups.Color の列挙のみ通す（peer 側で同色をそのまま設定可能）。
+ */
+export function sanitizeGroupColor(raw: string | null | undefined): NewGroupPaletteColor | null {
+  if (raw === null || raw === undefined) {
+    return null
+  }
+  const trimmed = raw.trim()
+  if ((NEW_GROUP_COLORS as readonly string[]).includes(trimmed)) {
+    return trimmed as NewGroupPaletteColor
+  }
+  return null
 }
