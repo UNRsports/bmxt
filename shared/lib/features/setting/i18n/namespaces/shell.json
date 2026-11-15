@@ -27,6 +27,14 @@
     "ja": "⚠️サイト内操作は https タブへ自動注入されます。平文 http・chrome://・休止中のタブなどでは使えません。⚠️",
     "en": "⚠️ In-page actions inject into https tabs automatically. Plain http, chrome://, discarded tabs, and other restricted pages cannot be scripted. ⚠️"
   },
+  "shell.support.officialSite": {
+    "ja": "👉️公式サイト",
+    "en": "👉️ Official site"
+  },
+  "shell.support.manualNotebook": {
+    "ja": "👉️マニュアルサポート（notebookLM）",
+    "en": "👉️ Manual support (NotebookLM)"
+  },
   "shell.extraKeys.toolbar": {
     "ja": "ターミナル補助キー",
     "en": "Terminal extra keys"

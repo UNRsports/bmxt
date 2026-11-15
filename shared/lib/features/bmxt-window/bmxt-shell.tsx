@@ -123,6 +123,7 @@ import {
 import { TRANSLATION_PAIR_IDS } from "../translate/translation-pair"
 import { tCmd } from "../setting/i18n/ns/cmd"
 import { tShell } from "../setting/i18n/ns/shell"
+import { ShellSupportLinks } from "../support"
 import { tSearch } from "../setting/i18n/ns/search"
 import { tNav } from "../setting/i18n/ns/nav"
 import { tDomPrompt } from "../setting/i18n/ns/dom-prompt"
@@ -1436,6 +1437,8 @@ export function BmxtShell({
             {tShell("shell.welcome", uiSettings.locale)}
             <br />
             {tShell("shell.helpHint", uiSettings.locale)}
+            <br />
+            <ShellSupportLinks locale={uiSettings.locale} />
             <br />
             <br />
             {tShell("shell.reloadHint", uiSettings.locale)}
