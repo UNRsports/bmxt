@@ -173,7 +173,12 @@ export type SyncRemoteSearchHit = {
 }
 
 /** EN: Why a Family tabs_changed signal was emitted (refresh hint only). */
-export type TabsChangedReason = "open_tabs" | "tabs_ops" | "local_close"
+export type TabsChangedReason =
+  | "open_tabs"
+  | "tabs_ops"
+  | "local_close"
+  /** EN: Local Chrome inventory changed (close / create / move / group) while peers are connected. */
+  | "local_inventory"
 
 /**
  * EN: Payload delivered to local subscribers of tabs_changed (after wire normalize).

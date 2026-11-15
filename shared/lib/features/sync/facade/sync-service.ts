@@ -40,6 +40,7 @@ import {
   sanitizeRemoteOpenUrls
 } from "../bus/remote-open-sanitize.ts"
 import { ensurePeerDocument } from "../peer/ensure-peer-document"
+import { installLocalInventoryAnnounce } from "../bus/local-inventory-announce.ts"
 import { installAutoMesh } from "../mesh/auto-mesh.ts"
 import { loadLocalRoster, upsertLocalRosterMember } from "../adapters/local-roster-store"
 import {
@@ -136,6 +137,9 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
     peerHost: s.peerHost,
     commandBus: s.commandBus,
     discovery: s.discovery
+  })
+  installLocalInventoryAnnounce({
+    commandBus: s.commandBus
   })
 
   async function ensureFamily(): Promise<void> {

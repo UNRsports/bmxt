@@ -4,7 +4,9 @@ import {
   buildTabsChangedSignal,
   familySignalTargetsTabPicker,
   listTabsChangedAnnounceTargets,
-  normalizeFamilySignalFirstCommand
+  normalizeFamilySignalFirstCommand,
+  normalizeTabsChangedReason,
+  shouldAnnounceLocalInventoryToPeers
 } from "../../../../shared/lib/features/sync/bus/tabs-changed-announce.ts"
 
 describe("listTabsChangedAnnounceTargets", () => {
@@ -63,5 +65,19 @@ describe("buildTabsChangedSignal / familySignalTargetsTabPicker", () => {
   it("treats omitted first as tab", () => {
     const signal = buildTabsChangedSignal({ reason: "local_close", first: undefined })
     assert.deepEqual(signal, { reason: "local_close", first: "tab" })
+  })
+
+  it("accepts local_inventory reason", () => {
+    const signal = buildTabsChangedSignal({ reason: "local_inventory", first: "tab" })
+    assert.deepEqual(signal, { reason: "local_inventory", first: "tab" })
+    assert.equal(normalizeTabsChangedReason("local_inventory"), "local_inventory")
+  })
+})
+
+describe("shouldAnnounceLocalInventoryToPeers", () => {
+  it("requires at least one connected peer target", () => {
+    assert.equal(shouldAnnounceLocalInventoryToPeers(0), false)
+    assert.equal(shouldAnnounceLocalInventoryToPeers(1), true)
+    assert.equal(shouldAnnounceLocalInventoryToPeers(3), true)
   })
 })
