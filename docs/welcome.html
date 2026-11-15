@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!--
-      Release notes body: docs/welcome-content.json (newest first; includes 0.9.0).
-      Preview: welcome.html?lang=ja&v=0.9.0  |  omit v for full history.
+      Release notes body: docs/welcome-content.json (newest first; includes 0.9.1).
+      Preview: welcome.html?lang=ja&v=0.9.1  |  omit v for full history.
     -->
     <title>BMXt — Welcome</title>
     <link rel="icon" type="image/png" href="icon.png" />
@@ -81,19 +81,26 @@
         min-height: var(--touch-min);
         padding: 0.25rem 0.35rem;
       }
-      .hero {
+      .hero,
+      .hero-extra {
         margin: 0 0 2rem;
-        text-align: center;
-      }
-      .hero img,
-      .hero-extra img {
         max-width: 100%;
-        height: auto;
-        border-radius: 8px;
-        border: 1px solid var(--border);
+        text-align: center;
       }
       .hero-extra {
         margin-top: 1rem;
+        margin-bottom: 0;
+      }
+      .hero img,
+      .hero-extra img {
+        display: block;
+        box-sizing: border-box;
+        width: auto;
+        max-width: 100%;
+        height: auto;
+        margin-inline: auto;
+        border-radius: 8px;
+        border: 1px solid var(--border);
       }
       h2.version {
         font-size: 1.1rem;
@@ -374,13 +381,17 @@
           return
         }
 
+        // EN: Cap preferred width without overriding container fit (inline max-width alone
+        // would beat stylesheet max-width:100% and overflow narrow windows).
         const heroMaxWidth = resolveHeroImageMaxWidthCss(entry?.heroImageMaxWidth)
-        const heroStyle = heroMaxWidth ? ` style="max-width:${heroMaxWidth}"` : ""
+        const heroStyle = heroMaxWidth
+          ? ` style="max-width:min(${heroMaxWidth}, 100%)"`
+          : ""
         const parts = []
 
         if (heroPath) {
           parts.push(
-            `<figure class="hero"><img src="${escapeHtml(heroPath)}" alt="${escapeHtml(copy.heroAlt)}"${heroStyle} loading="eager" /></figure>`
+            `<figure class="hero"${heroStyle}><img src="${escapeHtml(heroPath)}" alt="${escapeHtml(copy.heroAlt)}" loading="eager" /></figure>`
           )
         }
 

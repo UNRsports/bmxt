@@ -23,7 +23,7 @@ dom,-setting,-page-active,none,,dom -setting -page-active --auto | --manual,不�
 dom,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
 dom,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。mode=manual。,
 search,,,,,search …,単独 `search` + Enter: msgs + promptPrefix `search `。第二候補に `help`。,
-search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [--device <id>|--peers] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map。0.9.0: `--device`/`--peers`
+search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [--device <id>|--peers] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map。0.9.0: `--device`/`--peers`。0.9.1: 検索結果表示（ハイライト／ジャンプ）を修正・調整
 search,-list,--all,rest,,（同上）,scope `--all`。,
 search,-list,--history,rest,,（同上）,scope `--history`。,
 search,-list,--bookmark,rest,,（同上）,scope `--bookmark`。,
@@ -81,9 +81,12 @@ sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコー
 sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサーコード。,0.9.0
 sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel 確立。,0.9.0
 sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。,0.9.0
-tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。,0.9.0
+tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。グループ維持は title/color をピアへ渡す。,0.9.0。0.9.1: プロファイル間タブ移動時のグループ維持を調整
 （内部）,family-webrtc-sync,,,,lib/features/sync/ + peer/webrtc-session.ts,"Family ローカル同期。device id / Family / roster / discovery を chrome.storage.local。コピペ握手（host ICE のみ・STUN/TURN なし）+ WebRTC DataChannel コマンドバス。横断 tab/search・tab -send。",0.9.0
 （内部）,tab-picker-filter-search,,,,lib/features/tabs/tab-picker-search-visibility.ts + tab-picker-fold-state.ts + side-picker/search/,"tab コマンドピッカー内の絞り込み検索動作を修正。",0.9.0
+（内部）,search-result-display,,,,lib/features/search/,"search コマンドの検索結果表示（リスト側ハイライトとページ内ジャンプの整合）を修正・調整。",0.9.1
+（内部）,sync-group-preserve,,,,lib/features/sync/bus/remote-open.ts + webrtc-command-bus.ts,"sync／tab -send によるプロファイル間タブ移動でグループ（title/color）を維持する仕様を調整。",0.9.1
+（内部）,shell-support-links,,,,lib/features/support/,"プロンプト開始時（空ログ／アップグレードブロック時）に公式サイトとサポート LLM（NotebookLM）へのリンクを表示。許可 URL のみ通常タブで開く。",0.9.1
 
 （内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3

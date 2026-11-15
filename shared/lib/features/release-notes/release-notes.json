@@ -6,7 +6,9 @@
       "プロンプト開始時に公式サイトとサポートLLMへのリンクを表示する仕様を追加"
     ],
     "en": [
-      ""
+      "Fixed and adjusted how search command results are displayed",
+      "Adjusted group preservation when moving tabs between profiles via sync",
+      "Added links to the official site and support LLM when the prompt starts"
     ]
   }
 }
