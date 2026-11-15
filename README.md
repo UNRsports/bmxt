@@ -1365,6 +1365,7 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 - `lib/features/side-picker/` — Shared side-column picker UI (panels, keyboard kernel, wrappers)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
 - `lib/features/welcome/` — Welcome tab URL builder and update hook (opens hosted **`docs/welcome.html`**; content lives under **`docs/`** only)
+- `lib/features/support/` — In-window support links (official site / NotebookLM manual; friendly labels; open in a normal browser tab)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
 - `crates/bmxt-core/` — Rust command core (`src/cmd/*.rs`, compound/pipe, tabs_picker); WASM exports
@@ -1405,11 +1406,24 @@ When Chrome reports **`install`** or **`update`**, **`entrypoints/background/ind
 
 **Manual / preview URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` shows entries through that version. Query **`lang`**: `ja` or `en`. Query **`v`**: semver cap (invalid values are ignored). Omit **`v`** to show the full history. **`aboutbmxt`** and auto-open on update pass **`lang`** from UI settings and **`v`** from the installed manifest version.
 
+**In-window welcome hint** (empty session log, and again with the upgrade block)
+
+When the active session log is **empty** (typical fresh BMXt open), the terminal shows a **welcome hint** above the prompt: welcome copy, the `help` hint, **support links**, and the https injection notice (`shell.reloadHint` / i18n). The same hint also appears above the **version upgrade** block when that block is shown.
+
+**Support links** (friendly labels only; raw URLs are **not** shown in the UI). Click opens a **normal browser tab** (not the BMXt popup window) via allowlisted URLs in **`lib/features/support/`**:
+
+| Label (JA) | Destination |
+|------------|-------------|
+| **👉️公式サイト** | `https://bmxt.diozy.net/` |
+| **👉️マニュアルサポート（notebookLM）** | NotebookLM notebook (`https://notebook.google.com/notebook/…`) |
+
+EN labels: **👉️ Official site** / **👉️ Manual support (NotebookLM)**. Distinct from **`aboutbmxt`** (GitHub Pages welcome history).
+
 **In-window upgrade block** (first BMXt open after upgrade)
 
 When the extension **`version`** in **`package.json`** (and the built manifest) **does not match** the value stored in **`chrome.storage.local`** under **`bmxt_last_seen_extension_version`** (**`LAST_SEEN_EXTENSION_VERSION_KEY`**), the BMXt window shows **once**, on the **first open after that upgrade**:
 
-1. The usual **welcome** copy (unchanged).
+1. The usual **welcome** hint (including support links).
 2. A **version upgrade** block with the version number and bilingual release notes from **`release-notes.json`**.
 
 Existing **session log** lines are still rendered **below** that block.
@@ -1423,7 +1437,7 @@ Existing **session log** lines are still rendered **below** that block.
 
 If no **`release-notes.json`** entry exists for the current version, placeholder copy is shown that points maintainers at that file.
 
-**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-external-url.ts`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-version-upgrade*`).
+**Implementation:** welcome tab — **`open-welcome-page-tab.ts`**, **`open-welcome-on-update.ts`**, **`welcome-external-url.ts`**. **`aboutbmxt`** — **`cmd/aboutbmxt.ts`**, **`handlers/effects/open-welcome-page.ts`** (same **`openWelcomePageTab`**). In-window welcome / support links — **`lib/features/support/`** (`ShellSupportLinks`, allowlisted URLs → **`createTabInNormalBrowserWindow`**), i18n **`shell.support.*`**. In-window banner — **`use-version-upgrade-banner.ts`**; **`bmxt-terminal.tsx`** waits until the check finishes before rendering the shell (avoids a flash of log-only UI); **`bmxt-shell.tsx`** renders the blocks; styles in **`bmxt-ui.css`** (`.bmxt-hint a`, `.bmxt-version-upgrade*`).
 
 <a id="production-build"></a>
 
@@ -2819,6 +2833,7 @@ pnpm run dev
 - `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック（ホストされた **`docs/welcome.html`** を開く；コンテンツは **`docs/`** のみ）
+- `lib/features/support/` — ウィンドウ内サポートリンク（公式サイト / NotebookLM マニュアル；表示名のみ；通常ブラウザタブで開く）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
 - `crates/bmxt-core/` — Rust/WASM コマンドコア；`lib/features/bmxt-core/` — TS ホスト（`wasm-host` / `dispatch` / tabs-picker ラッパ）
@@ -2856,11 +2871,24 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 
 **手動・プレビュー URL:** `https://unrsports.github.io/bmxt/welcome.html?lang=ja&v=0.9.0` でその版までのエントリを表示。クエリ **`lang`**: `ja` または `en`。クエリ **`v`**: 表示上限の semver（不正値は無視）。**`v`** を省略すると全履歴。**`aboutbmxt`** と更新時の自動表示は、UI 設定の **`lang`** と manifest の **`v`** を付与します。
 
+**ウィンドウ内ウェルカムヒント**（セッションログが空のとき。アップグレードブロック表示時も併記）
+
+アクティブセッションのログが **空** のとき（典型的には BMXt を新規に開いた直後）、プロンプト上に **ウェルカムヒント** を出します。内容はウェルカム文言、`help` 案内、**サポートリンク**、https 注入の注意（`shell.reloadHint` / i18n）。**バージョンアップ** ブロックがある場合も、その **上** に同じヒントを出します。
+
+**サポートリンク**（わかりやすい表示のみ。UI に生 URL は出さない）。クリックで **通常ブラウザ窓の新規タブ** を開く（BMXt ポップアップ窓内ではない）。許可 URL は **`lib/features/support/`** に固定:
+
+| 表示（JA） | 行き先 |
+|------------|--------|
+| **👉️公式サイト** | `https://bmxt.diozy.net/` |
+| **👉️マニュアルサポート（notebookLM）** | NotebookLM（`https://notebook.google.com/notebook/…`） |
+
+EN 表示: **👉️ Official site** / **👉️ Manual support (NotebookLM)**。**`aboutbmxt`**（GitHub Pages のウェルカム履歴）とは別経路。
+
 **ウィンドウ内のアップグレードブロック**（アップデート後、BMXt を初めて開いたとき）
 
 拡張機能の **`version`**（**`package.json`**／ビルド後の manifest）が、**`chrome.storage.local`** の **`bmxt_last_seen_extension_version`**（**`LAST_SEEN_EXTENSION_VERSION_KEY`**）と **一致しない** とき、BMXt を開いた **そのバージョンへアップデートしたあとの初回だけ**、次を表示します。
 
-1. 既存どおりの **ウェルカム** 文言（内容は変更しない運用）。
+1. 上記の **ウェルカム** ヒント（サポートリンクを含む）。
 2. **バージョンアップ** 見出しと、**`release-notes.json`** の日英変更説明。
 
 既存の **セッションログ** は、その **下** に続きます。
@@ -2874,7 +2902,7 @@ Chrome が **`install`** または **`update`** を報告したとき、**`entry
 
 **`release-notes.json`** に該当キーが無い場合は、メンテ向けプレースホルダが表示されます。
 
-**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-external-url.ts`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-version-upgrade*`）。
+**実装:** ウェルカムタブ — **`open-welcome-page-tab.ts`**、**`open-welcome-on-update.ts`**、**`welcome-external-url.ts`**。**`aboutbmxt`** — **`cmd/aboutbmxt.ts`**、**`handlers/effects/open-welcome-page.ts`**（同一 **`openWelcomePageTab`**）。ウィンドウ内サポートリンク — **`lib/features/support/`**（`ShellSupportLinks`、許可 URL → **`createTabInNormalBrowserWindow`**）、i18n **`shell.support.*`**。ウィンドウ内バナー — **`use-version-upgrade-banner.ts`**、描画待ち **`bmxt-terminal.tsx`**、UI **`bmxt-shell.tsx`**、スタイル **`bmxt-ui.css`**（`.bmxt-hint a`、`.bmxt-version-upgrade*`）。
 
 <a id="production-build-ja"></a>
 

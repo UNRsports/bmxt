@@ -31,6 +31,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] **dom Enter** — ピッカー行 Enter の確定挙動（旧 §7）
 - [ ] （任意）find/dom 系の `PickerListShell` 統合
 - [ ] （任意）`TabPickerOverlay` リネーム掃除
+- [x] ウェルカムにサポートリンク（公式サイト · NotebookLM）— `lib/features/support/` · README（version-upgrade-banner 節）反映
 
 ### 3. Manual smoke backlog
 
@@ -44,6 +45,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | `tab:` チップ | 複数選択 → パイプ |
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
 | list columns | tab / search / dom / setting / session |
+| support links | 空ログのウェルカムに公式サイト / NotebookLM 表示名が出る · クリックで通常タブ（BMXt 窓外）· URL 文字列は出さない |
 
 ### 4. Live reload（ページリロード非依存の CS）
 
