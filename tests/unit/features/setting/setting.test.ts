@@ -164,6 +164,7 @@ describe("setting list picker draft", () => {
       locale: "en",
       hostUiMode: "auto",
       imeCandidateHelp: true,
+      searchLegendMode: "text",
       appearance: testAppearance({
         fg: "#ffffff",
         fontSize: "14px"
@@ -172,6 +173,7 @@ describe("setting list picker draft", () => {
     assert.equal(state.draft.locale, "en")
     assert.equal(state.draft.hostUiMode, "auto")
     assert.equal(state.draft.imeCandidateHelp, true)
+    assert.equal(state.draft.searchLegendMode, "text")
     assert.equal(state.draft.appearance.fg, "#ffffff")
     assert.equal(state.draft.appearance.fontSize, "14px")
   })
@@ -181,6 +183,7 @@ describe("setting list picker draft", () => {
       locale: "ja",
       hostUiMode: "auto",
       imeCandidateHelp: true,
+      searchLegendMode: "text",
       appearance: testAppearance(null)
     })
     const next = settingPickerUpdateDraft(
@@ -197,6 +200,7 @@ describe("setting list picker draft", () => {
       locale: "en",
       hostUiMode: "desktop",
       imeCandidateHelp: true,
+      searchLegendMode: "text",
       appearance: testAppearance(null)
     })
     const next = settingPickerApplyDraftToMain(
@@ -205,6 +209,7 @@ describe("setting list picker draft", () => {
         locale: "ja",
         hostUiMode: "mobile",
         imeCandidateHelp: false,
+        searchLegendMode: "text_emoji",
         appearance: { fg: "#aabbcc" }
       }
     )
@@ -214,6 +219,7 @@ describe("setting list picker draft", () => {
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.hostUiMode, "mobile")
     assert.equal(next.draft.imeCandidateHelp, false)
+    assert.equal(next.draft.searchLegendMode, "text_emoji")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
   it("maps reset-default to confirm view", () => {
@@ -224,6 +230,9 @@ describe("setting list picker draft", () => {
   })
   it("maps ime-candidate-help to imeCandidateHelp view", () => {
     assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")
+  })
+  it("maps search-legend to searchLegend view", () => {
+    assert.equal(settingMainRowTargetView("search-legend"), "searchLegend")
   })
   it("maps sync rows to syncPanel / device name / guide action", () => {
     assert.equal(settingMainRowTargetView("sync"), "syncPanel")

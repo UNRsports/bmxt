@@ -16,6 +16,11 @@ import {
   type UiLocale
 } from "./locale"
 import {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  normalizeSearchLegendMode,
+  type SearchLegendMode
+} from "./search-legend-mode.ts"
+import {
   activateInternalUiSettingsStorage,
   clearExternalUiSettingsStorage,
   loadUiSettingsFromDirectory,
@@ -39,6 +44,11 @@ export type UiSettings = {
    * JA: true のとき候補メニュー右に usage ヘルプ列を表示。
    */
   imeCandidateHelp: boolean
+  /**
+   * EN: Search picker / `search -list` scope legend style (text / emoji / both).
+   * JA: 検索ピッカーおよび `search -list` のスコープ凡例表示（テキスト／絵文字／併用）。
+   */
+  searchLegendMode: SearchLegendMode
 }
 
 function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean {
@@ -46,6 +56,13 @@ function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean 
     return DEFAULT_IME_CANDIDATE_HELP
   }
   return raw.imeCandidateHelp !== false
+}
+
+function pickSearchLegendModeFromPartial(raw: Record<string, unknown>): SearchLegendMode {
+  if (!("searchLegendMode" in raw)) {
+    return DEFAULT_SEARCH_LEGEND_MODE
+  }
+  return normalizeSearchLegendMode(raw.searchLegendMode)
 }
 
 function pickHostUiModeFromPartial(raw: Record<string, unknown>): HostUiMode {
@@ -66,7 +83,8 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
       locale: DEFAULT_UI_LOCALE,
       appearance: normalizeUiAppearance(null),
       hostUiMode: DEFAULT_HOST_UI_MODE,
-      imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP
+      imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+      searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
     }
   }
   const record = raw as Record<string, unknown>
@@ -74,7 +92,8 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
     locale: parseUiLocale(raw.locale),
     appearance: normalizeUiAppearance(raw.appearance),
     hostUiMode: pickHostUiModeFromPartial(record),
-    imeCandidateHelp: pickImeCandidateHelpFromPartial(record)
+    imeCandidateHelp: pickImeCandidateHelpFromPartial(record),
+    searchLegendMode: pickSearchLegendModeFromPartial(record)
   }
 }
 
@@ -96,7 +115,8 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
     locale: DEFAULT_UI_LOCALE,
     appearance: DEFAULT_UI_APPEARANCE,
     hostUiMode: DEFAULT_HOST_UI_MODE,
-    imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP
+    imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+    searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)
   await activateInternalUiSettingsStorage()
@@ -113,7 +133,8 @@ export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSetting
     locale: DEFAULT_UI_LOCALE,
     appearance: DEFAULT_UI_APPEARANCE,
     hostUiMode: DEFAULT_HOST_UI_MODE,
-    imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP
+    imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+    searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)
   return defaults

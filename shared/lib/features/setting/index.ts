@@ -183,6 +183,18 @@ export {
   type HostUiFormFactor,
   type HostUiMode
 } from "./host-ui-mode.ts"
+export {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  SEARCH_LEGEND_MODE_TOKENS,
+  SEARCH_SCOPE_ICONS,
+  formatSearchLegendLabel,
+  formatSearchLegendScopeToken,
+  isSearchLegendMode,
+  isSearchLegendScope,
+  normalizeSearchLegendMode,
+  type SearchLegendMode,
+  type SearchLegendScope
+} from "./search-legend-mode.ts"
 export { buildAppearancePatch } from "./appearance"
 export { UiSettingsProvider, useUiLocale, useUiSettings } from "./use-ui-settings"
 export { parseHexColor, previewHexColor } from "./validate-color"

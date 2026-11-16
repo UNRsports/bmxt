@@ -128,6 +128,27 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
+      if (row.id === "search-legend-text") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { searchLegendMode: "text" })
+        )
+        return
+      }
+      if (row.id === "search-legend-emoji") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { searchLegendMode: "emoji" })
+        )
+        return
+      }
+      if (row.id === "search-legend-text-emoji") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { searchLegendMode: "text_emoji" })
+        )
+        return
+      }
       if (row.id === "host-ui-auto") {
         options.setSettingListPicker(
           options.sessionId,
@@ -155,6 +176,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           settingPickerApplyDraftToMain(current, {
             editPicker: false,
             imeCandidateHelp: true,
+            searchLegendMode: "text",
             appearance: {
               fg: null,
               bgColor: null,

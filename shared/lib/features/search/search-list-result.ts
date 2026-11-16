@@ -1,5 +1,9 @@
 import type { ListRecord, ListResult } from "../command-line/list-output/types.ts"
 import { LIST_OUTPUT_SCHEMA } from "../command-line/list-output/types.ts"
+import {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  type SearchLegendMode
+} from "../setting/search-legend-mode.ts"
 import type { PickerEntry } from "../side-picker/model/picker-entry.ts"
 import {
   pickerEntrySearchSources,
@@ -57,7 +61,8 @@ export function leadingSearchAdapterNoticeLines(adapterLines: readonly string[])
 export function buildSearchListResult(
   entries: readonly PickerEntry[],
   pattern: string,
-  adapterLines: readonly string[] = []
+  adapterLines: readonly string[] = [],
+  legendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE
 ): ListResult {
   const leadingNotices = leadingSearchAdapterNoticeLines(adapterLines)
 
@@ -78,7 +83,7 @@ export function buildSearchListResult(
     const sources = pickerEntrySearchSources(entry)
     const sourceLabel = sources.length > 0 ? sources.join(",") : entry.source
     const hitCount = entry.pageMatches?.length ?? 0
-    const summary = searchPickerSummaryLine(entry)
+    const summary = searchPickerSummaryLine(entry, legendMode)
     const pageMatchesJson = serializeSearchPageMatchesField(entry.pageMatches)
     const displayIndex = noticeRecords.length + index + 1
     const fields: ListRecord["fields"] = {

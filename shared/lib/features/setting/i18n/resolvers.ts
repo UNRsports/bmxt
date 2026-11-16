@@ -189,7 +189,7 @@ export function dispatchFailedLine(locale: UiLocale, message: string): string {
 }
 
 export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSettings): string[] {
-  const { locale: uiLoc, appearance, hostUiMode, imeCandidateHelp } = settings
+  const { locale: uiLoc, appearance, hostUiMode, imeCandidateHelp, searchLegendMode } = settings
   const defaultLabel = tSetting("setting.summary.default", locale)
   const token = settingTokenForUiLocale(uiLoc)
   const hostUiLabel =
@@ -201,10 +201,17 @@ export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSetti
   const imeHelpLabel = imeCandidateHelp
     ? tSetting("setting.picker.imeCandidateHelpStateOn", locale)
     : tSetting("setting.picker.imeCandidateHelpStateOff", locale)
+  const searchLegendLabel =
+    searchLegendMode === "emoji"
+      ? tSetting("setting.picker.searchLegendStateEmoji", locale)
+      : searchLegendMode === "text_emoji"
+        ? tSetting("setting.picker.searchLegendStateTextEmoji", locale)
+        : tSetting("setting.picker.searchLegendStateText", locale)
   return [
     tSetting("setting.summary.locale", locale, { token }),
     tSetting("setting.summary.hostUi", locale, { value: hostUiLabel }),
     tSetting("setting.summary.imeCandidateHelp", locale, { value: imeHelpLabel }),
+    tSetting("setting.summary.searchLegend", locale, { value: searchLegendLabel }),
     tSetting("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
     tSetting("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
     tSetting("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),

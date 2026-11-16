@@ -18,6 +18,10 @@ import {
 import type { HostUiMode } from "./host-ui-mode.ts"
 import type { SettingListPickerView } from "./setting-list-picker-state"
 import { isSettingDetailView, isSettingListSubView } from "./setting-picker-nav"
+import {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  type SearchLegendMode
+} from "./search-legend-mode.ts"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
 import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
 import { formatSnapshotVaultDisplayName } from "../snapshot/snapshot-vault-layout"
@@ -31,6 +35,10 @@ export type SettingPickerRowId =
   | "ime-candidate-help"
   | "ime-candidate-help-on"
   | "ime-candidate-help-off"
+  | "search-legend"
+  | "search-legend-text"
+  | "search-legend-emoji"
+  | "search-legend-text-emoji"
   | "host-ui"
   | "host-ui-auto"
   | "host-ui-desktop"
@@ -127,6 +135,16 @@ export function fontSizePickerIndexForValue(fontSize: string): number {
   return index
 }
 
+function searchLegendModeStateLabel(mode: SearchLegendMode, locale: UiLocale): string {
+  if (mode === "emoji") {
+    return tSetting("setting.picker.searchLegendStateEmoji", locale)
+  }
+  if (mode === "text_emoji") {
+    return tSetting("setting.picker.searchLegendStateTextEmoji", locale)
+  }
+  return tSetting("setting.picker.searchLegendStateText", locale)
+}
+
 function hostUiModeStateLabel(mode: HostUiMode, locale: UiLocale): string {
   if (mode === "mobile") {
     return tSetting("setting.picker.hostUiStateMobile", locale)
@@ -146,6 +164,7 @@ export function settingPickerInitialHi(
   snapshotStorageConfig?: SnapshotStorageConfig,
   hostUiMode: HostUiMode = "auto",
   imeCandidateHelp = true,
+  searchLegendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE,
   _syncSummary?: SyncPickerSummary
 ): number {
   if (view === "language") {
@@ -156,6 +175,15 @@ export function settingPickerInitialHi(
   }
   if (view === "imeCandidateHelp") {
     return imeCandidateHelp ? 0 : 1
+  }
+  if (view === "searchLegend") {
+    if (searchLegendMode === "emoji") {
+      return 1
+    }
+    if (searchLegendMode === "text_emoji") {
+      return 2
+    }
+    return 0
   }
   if (view === "hostUi") {
     if (hostUiMode === "desktop") {
@@ -341,6 +369,7 @@ export function buildSettingPickerRows(
   snapshotStorageConfig?: SnapshotStorageConfig,
   hostUiMode: HostUiMode = "auto",
   imeCandidateHelp = true,
+  searchLegendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE,
   syncSummary?: SyncPickerSummary
 ): SettingPickerRow[] {
   const resolvedGlobal = resolveTerminalAppearance(appearance)
@@ -370,6 +399,23 @@ export function buildSettingPickerRows(
       {
         id: "ime-candidate-help-off",
         line: tSetting("setting.picker.imeCandidateHelpOff", locale)
+      }
+    ]
+  }
+
+  if (view === "searchLegend") {
+    return [
+      {
+        id: "search-legend-text",
+        line: tSetting("setting.picker.searchLegendText", locale)
+      },
+      {
+        id: "search-legend-emoji",
+        line: tSetting("setting.picker.searchLegendEmoji", locale)
+      },
+      {
+        id: "search-legend-text-emoji",
+        line: tSetting("setting.picker.searchLegendTextEmoji", locale)
       }
     ]
   }
@@ -492,6 +538,12 @@ export function buildSettingPickerRows(
         value: imeCandidateHelp
           ? tSetting("setting.picker.imeCandidateHelpStateOn", locale)
           : tSetting("setting.picker.imeCandidateHelpStateOff", locale)
+      })
+    },
+    {
+      id: "search-legend",
+      line: tSetting("setting.picker.main.searchLegend", locale, {
+        value: searchLegendModeStateLabel(searchLegendMode, locale)
       })
     },
     {
@@ -671,6 +723,7 @@ export function settingPickerHeadline(
     language: "setting.picker.headline.language",
     editPicker: "setting.picker.headline.editPicker",
     imeCandidateHelp: "setting.picker.headline.imeCandidateHelp",
+    searchLegend: "setting.picker.headline.searchLegend",
     hostUi: "setting.picker.headline.hostUi",
     storageMode: "setting.picker.headline.storageMode",
     snapshotStorageMode: "setting.picker.headline.snapshotStorageMode",
