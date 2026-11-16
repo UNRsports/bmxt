@@ -294,10 +294,22 @@
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list | setting -exit -list | setting help",
+      "usagePrimary": "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
       "subcommands": [
         {
           "head": "-list",
+          "tail": "none"
+        },
+        {
+          "head": "-set",
+          "tail": "rest"
+        },
+        {
+          "head": "-save",
+          "tail": "none"
+        },
+        {
+          "head": "-cancel",
           "tail": "none"
         },
         {
@@ -339,17 +351,61 @@
       "aliases": [],
       "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
       "subcommands": [
-        { "head": "-setup", "tail": "none" },
-        { "head": "-status", "tail": "none" },
-        { "head": "-pair", "tail": "rest" },
-        { "head": "-members", "tail": "none" },
-        { "head": "-connect", "tail": "rest" },
-        { "head": "-offer", "tail": "none" },
-        { "head": "-answer", "tail": "rest" },
-        { "head": "-accept", "tail": "rest" },
-        { "head": "-ping", "tail": "rest" },
-        { "head": "help", "tail": "none" }
+        {
+          "head": "-setup",
+          "tail": "none"
+        },
+        {
+          "head": "-status",
+          "tail": "none"
+        },
+        {
+          "head": "-pair",
+          "tail": "rest"
+        },
+        {
+          "head": "-members",
+          "tail": "none"
+        },
+        {
+          "head": "-connect",
+          "tail": "rest"
+        },
+        {
+          "head": "-offer",
+          "tail": "none"
+        },
+        {
+          "head": "-answer",
+          "tail": "rest"
+        },
+        {
+          "head": "-accept",
+          "tail": "rest"
+        },
+        {
+          "head": "-ping",
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
       ]
+    },
+    {
+      "module": "open",
+      "canonicalName": "open",
+      "aliases": [],
+      "usagePrimary": "open <url> | open --window <url> | <list-command> | open",
+      "subcommands": []
+    },
+    {
+      "module": "jump",
+      "canonicalName": "jump",
+      "aliases": [],
+      "usagePrimary": "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump",
+      "subcommands": []
     }
   ],
   "effects": [
@@ -754,6 +810,39 @@
       "shape": "record",
       "fields": {
         "device_id": "string"
+      }
+    },
+    {
+      "kind": "jump_target",
+      "rustVariant": "JumpTarget",
+      "shape": "record",
+      "fields": {
+        "tab_id": "i32",
+        "path": "string",
+        "needle": "string",
+        "line": "i32",
+        "match_index": "i32",
+        "url": "string",
+        "activate_link": "i32"
+      }
+    },
+    {
+      "kind": "setting_save",
+      "rustVariant": "SettingSave",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_cancel",
+      "rustVariant": "SettingCancel",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_set",
+      "rustVariant": "SettingSet",
+      "shape": "record",
+      "fields": {
+        "key": "string",
+        "value": "string"
       }
     }
   ]

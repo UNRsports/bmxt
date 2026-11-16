@@ -767,6 +767,18 @@
     "ja": "setting: 設定を保存しました",
     "en": "setting: settings saved"
   },
+  "setting.cui.pickerRequired": {
+    "ja": "setting: 先に `setting -list | browse` で設定列を開いてください",
+    "en": "setting: open the settings column with `setting -list | browse` first"
+  },
+  "setting.cui.setUnknown": {
+    "ja": "setting: 未知または無効なキーです: {key}",
+    "en": "setting: unknown or invalid key: {key}"
+  },
+  "setting.cui.setApplied": {
+    "ja": "setting: 下書きを更新しました ({key}={value})",
+    "en": "setting: draft updated ({key}={value})"
+  },
   "setting.prompt.editBgColor": {
     "ja": "背景色 (hex、現在 {current}):",
     "en": "Background color (hex, current {current}):"

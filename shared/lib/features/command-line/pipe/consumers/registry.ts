@@ -8,6 +8,8 @@ import { browsePipeConsumer } from "./browse-from-list.ts"
 import { closePipeConsumer } from "./close-from-stream.ts"
 import { backPipeConsumer } from "./back-from-stream.ts"
 import { forwardPipeConsumer } from "./forward-from-stream.ts"
+import { jumpPipeConsumer } from "./jump-from-stream.ts"
+import { openPipeConsumer } from "./open-from-stream.ts"
 import { reloadPipeConsumer } from "./reload-from-stream.ts"
 import { tabSendPipeConsumer } from "./tab-send-from-stream.ts"
 import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
@@ -22,6 +24,8 @@ export {
 /** EN: Registered pipe consumers (right-hand side of `|`). */
 export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
   browsePipeConsumer,
+  openPipeConsumer,
+  jumpPipeConsumer,
   backPipeConsumer,
   forwardPipeConsumer,
   reloadPipeConsumer,

@@ -18,6 +18,7 @@ import { urlListCommandListingHint } from "../side-picker/interaction/url-list-c
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import { plainPickerLineHighlightSegments } from "../side-picker/search/plain-picker-search"
 import { scrollDomPickerListToHi } from "./dom-picker-list-scroll"
+import { buildDomJumpCommandLine } from "../picker/build-picker-command-line"
 import { jumpDomListTargetToPath } from "./dom-scroll-to-path"
 import { useDomPickerJumpPreview } from "./use-dom-picker-jump-preview"
 import type { DomPageActiveMode } from "./page-active-setting"
@@ -52,6 +53,8 @@ export type DomListPickerBodyProps = {
   sessionId?: string
   onRefreshViewport?: () => Promise<DomListCapture | null>
   onViewportCapture?: (capture: DomListCapture) => void
+  /** EN: Prefer typed `jump --tab … --path …` via submitLine when provided. */
+  onSubmitJumpCommand?: (line: string) => void
 }
 
 type DomListPickerBodyRouterProps = DomListPickerBodyProps
@@ -83,7 +86,8 @@ function DomListPickerBodyNormal({
   onExitToDetailBar,
   keyboardActive = false,
   pickerInputRef,
-  sessionId
+  sessionId,
+  onSubmitJumpCommand
 }: DomListPickerBodyProps) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
@@ -122,8 +126,12 @@ function DomListPickerBodyNormal({
     if (path == null || tabId === undefined) {
       return
     }
+    if (onSubmitJumpCommand && focusWindow) {
+      onSubmitJumpCommand(buildDomJumpCommandLine(tabId, path, false))
+      return
+    }
     await jumpDomListTargetToPath(tabId, path, { focusWindow })
-  }, [])
+  }, [onSubmitJumpCommand])
 
   const onConfirmLineIndex = useCallback(
     (index: number) => {

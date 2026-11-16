@@ -16,6 +16,16 @@ pub enum UiAction {
     },
     #[serde(rename = "group_new_from_selection")]
     GroupNewFromSelection,
+    #[serde(rename = "jump_target")]
+    JumpTarget {
+    activate_link: i64,
+    line: i64,
+    match_index: i64,
+    needle: String,
+    path: String,
+    tab_id: i64,
+    url: String,
+    },
     #[serde(rename = "nav_arm")]
     NavArm,
     #[serde(rename = "nav_confirm_close")]
@@ -49,6 +59,15 @@ pub enum UiAction {
     SetMode {
     feature_id: String,
     mode: String,
+    },
+    #[serde(rename = "setting_cancel")]
+    SettingCancel,
+    #[serde(rename = "setting_save")]
+    SettingSave,
+    #[serde(rename = "setting_set")]
+    SettingSet {
+    key: String,
+    value: String,
     },
     #[serde(rename = "show_help")]
     ShowHelp,

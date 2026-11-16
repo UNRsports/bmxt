@@ -862,6 +862,12 @@ export function BmxtShell({
     enableFirstRunAutoStart: hostKind === "popup"
   })
 
+  const submitLineRef = useRef<() => void>(() => {})
+  const submitConstructedLineRef = useRef<(line: string) => void>(() => {})
+  const submitConstructedLineEarly = useCallback((nextLine: string) => {
+    submitConstructedLineRef.current(nextLine)
+  }, [])
+
   const {
     searchLoadingProgressLines,
     showSearchListPatternPlaceholder,
@@ -881,7 +887,8 @@ export function BmxtShell({
     setSubCmdPicker,
     searchListPickerRef,
     beginCommandBusy,
-    endCommandBusy
+    endCommandBusy,
+    submitConstructedLine: submitConstructedLineEarly
   })
   clearSearchLoadingProgressRef.current = clearSearchLoadingProgress
 
@@ -904,40 +911,6 @@ export function BmxtShell({
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => focusPromptNow())
   }, [focusPromptNow])
-
-  const {
-    closeSessionNameTyping,
-    openSessionNameTyping,
-    saveSessionDisplayName,
-    closeSessionListPicker,
-    switchSessionFromListPicker,
-    applySessionSwitchPick
-  } = useSessionPromptActions({
-    sessionId,
-    sessionListRows,
-    uiLocale: uiSettings.locale,
-    appendCommandToHistory,
-    appendLogLines,
-    onActivateSession,
-    onSetSessionDisplayName,
-    focusPrompt,
-    setSubCmdPicker,
-    setLine,
-    setCursorPos,
-    setHistNavIndex,
-    tabPressSeqRef,
-    lineRef,
-    imeRef,
-    currentSessionDisplayNameRef,
-    sessionListPickerDismissedRef,
-    sessionListRowsRef,
-    sessionListPickerRowsRef,
-    sessionPickerVariantRef,
-    setSessionListPickerHi,
-    setSessionPickerVariant,
-    setSessionNameTyping,
-    sessionNameTypingRef
-  })
 
   const {
     promptPaneFocused,
@@ -1026,10 +999,10 @@ export function BmxtShell({
     sessionId,
     uiLocale: uiSettings.locale,
     appendLogLines,
-    replaceUiSettingsState,
     closeSettingPickerColumn,
     setSettingListPicker,
-    settingListPickerRef
+    settingListPickerRef,
+    submitConstructedLine: submitConstructedLineEarly
   })
 
   useEffect(() => {
@@ -1080,6 +1053,55 @@ export function BmxtShell({
     const pos = Math.max(0, Math.min(cursor, nextLine.length))
     ta.setSelectionRange(pos, pos)
   }, [])
+
+  const submitConstructedLine = useCallback(
+    (nextLine: string) => {
+      lineRef.current = nextLine
+      setLine(nextLine)
+      setCursorPos(nextLine.length)
+      syncPromptDom(nextLine, nextLine.length)
+      queueMicrotask(() => {
+        submitLineRef.current()
+      })
+    },
+    [setCursorPos, setLine, syncPromptDom]
+  )
+  submitConstructedLineRef.current = submitConstructedLine
+
+  const {
+    closeSessionNameTyping,
+    openSessionNameTyping,
+    saveSessionDisplayName,
+    closeSessionListPicker,
+    switchSessionFromListPicker,
+    applySessionSwitchPick
+  } = useSessionPromptActions({
+    sessionId,
+    sessionListRows,
+    uiLocale: uiSettings.locale,
+    appendCommandToHistory,
+    appendLogLines,
+    onActivateSession,
+    onSetSessionDisplayName,
+    focusPrompt,
+    setSubCmdPicker,
+    setLine,
+    setCursorPos,
+    setHistNavIndex,
+    tabPressSeqRef,
+    lineRef,
+    imeRef,
+    currentSessionDisplayNameRef,
+    sessionListPickerDismissedRef,
+    sessionListRowsRef,
+    sessionListPickerRowsRef,
+    sessionPickerVariantRef,
+    setSessionListPickerHi,
+    setSessionPickerVariant,
+    setSessionNameTyping,
+    sessionNameTypingRef,
+    submitConstructedLine
+  })
 
   const flushFloatPersist = useCallback(async () => {
     if (flushFloatPersistProp) {
@@ -1147,6 +1169,8 @@ export function BmxtShell({
     teardownNav,
     clearSearchLoadingProgress,
     closeSettingPickerColumn,
+    replaceUiSettingsState,
+    submitConstructedLine,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
@@ -1168,6 +1192,7 @@ export function BmxtShell({
     startTutorial,
     skipTutorial
   })
+  submitLineRef.current = submitLine
 
   const getPromptLockedPrefix = useCallback((): string | null => {
     // EN: Close confirm uses log + free y/n (not a locked prompt prefix).
@@ -1686,6 +1711,7 @@ export function BmxtShell({
             })
             void runDomListAndShow(cl, cl, false)
           }}
+          onSubmitDomJumpCommand={submitConstructedLineEarly}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
           onRefreshDomViewport={(state) => refreshDomViewportForPicker(state)}
           onApplyDomViewportCapture={(capture) => {

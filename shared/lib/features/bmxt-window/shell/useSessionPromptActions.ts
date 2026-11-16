@@ -34,6 +34,8 @@ export type UseSessionPromptActionsOptions = {
   setSessionPickerVariant: React.Dispatch<React.SetStateAction<SessionCandidatePanelVariant | null>>
   setSessionNameTyping: React.Dispatch<React.SetStateAction<boolean>>
   sessionNameTypingRef: React.MutableRefObject<boolean>
+  /** EN: Set prompt to a constructed line and re-enter command dispatch. */
+  submitConstructedLine: (line: string) => void
 }
 
 /** EN: Session list / name prompt actions (switch picker, rename). */
@@ -111,38 +113,27 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
     (commandLine: string, pickHi: number) => {
       const rows = options.sessionListPickerRowsRef.current
       const row = rows[pickHi]
-      const variant = options.sessionPickerVariantRef.current
-      const logCommandLine =
-        commandLine.trim().length > 0 ? commandLine.trim() : "session -list | browse"
-      options.sessionListPickerDismissedRef.current = false
+      const allRows = options.sessionListRowsRef.current
+      options.sessionListPickerDismissedRef.current = true
       options.setSessionListPickerHi(null)
       options.setSessionPickerVariant(null)
-      options.appendCommandToHistory(logCommandLine)
-      options.setLine("")
-      options.setCursorPos(0)
-      options.lineRef.current = ""
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
-      void (async () => {
-        const logLines = [`> ${logCommandLine}`]
-        if (!row) {
-          logLines.push(
-            tSession("session.number.invalid", options.uiLocale, {
-              n: String(pickHi + 1),
-              max: String(rows.length)
-            })
-          )
-        } else {
-          logLines.push(
-            variant === "switch"
-              ? tSession("session.switch.switched", options.uiLocale, { name: row.displayName })
-              : tSession("session.number.switched", options.uiLocale, { n: String(row.index) })
-          )
-          await options.onActivateSession(row.sessionId)
-        }
-        await options.appendLogLines(logLines)
+      if (!row) {
+        const logCommandLine =
+          commandLine.trim().length > 0 ? commandLine.trim() : "session -list | browse"
+        void options.appendLogLines([
+          `> ${logCommandLine}`,
+          tSession("session.number.invalid", options.uiLocale, {
+            n: String(pickHi + 1),
+            max: String(rows.length)
+          })
+        ])
         options.focusPrompt()
-      })()
+        return
+      }
+      const nextLine = buildSessionSwitchCommandLine(row, allRows)
+      options.submitConstructedLine(nextLine)
     },
     [options]
   )
@@ -158,13 +149,10 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       options.sessionListPickerDismissedRef.current = true
       options.setSessionListPickerHi(null)
       options.setSessionPickerVariant(null)
-      const nextLine = buildSessionSwitchCommandLine(row, allRows)
-      options.lineRef.current = nextLine
-      options.setLine(nextLine)
-      options.setCursorPos(nextLine.length)
       options.setHistNavIndex(-1)
       options.tabPressSeqRef.current = 0
-      options.focusPrompt()
+      const nextLine = buildSessionSwitchCommandLine(row, allRows)
+      options.submitConstructedLine(nextLine)
     },
     [options]
   )

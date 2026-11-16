@@ -70,6 +70,13 @@ import {
   type CommandDispatchContext
 } from "./command-dispatch/types"
 import { parseNavConfirmCloseTarget } from "../../nav/nav-confirm-close"
+import { runJumpTargetAction } from "../../command-line/pipe/consumers/jump-from-stream"
+import {
+  applySettingCancelCui,
+  applySettingSaveCui,
+  applySettingSetCui,
+  ensureSettingDraftState
+} from "../../setting/setting-cui-apply"
 
 function finishCommand(ctx: CommandDispatchContext): void {
   ctx.deps.appendCommandToHistory(ctx.trimmed)
@@ -267,6 +274,14 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySyncOpen(ctx, action.device_id, action.payload)
     case "sync_ping":
       return applySyncPing(ctx, action.device_id)
+    case "jump_target":
+      return applyJumpTarget(ctx, action)
+    case "setting_save":
+      return applySettingSave(ctx)
+    case "setting_cancel":
+      return applySettingCancel(ctx)
+    case "setting_set":
+      return applySettingSet(ctx, action.key, action.value)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -332,11 +347,157 @@ export async function applyUiActionForSegment(
       )
     case "sync_ping":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncPing(action.device_id))
+    case "jump_target":
+      return runJumpTargetAction({
+        tabId: action.tab_id,
+        path: action.path,
+        needle: action.needle,
+        line: action.line,
+        matchIndex: action.match_index,
+        url: action.url,
+        activateLink: action.activate_link === 1,
+        locale: ctx.locale
+      })
+    case "setting_save":
+      return applySettingSaveSegment(ctx)
+    case "setting_cancel":
+      return applySettingCancelSegment(ctx)
+    case "setting_set":
+      return applySettingSetSegment(ctx, action.key, action.value)
     default: {
       const _exhaustive: never = action
       return _exhaustive
     }
   }
+}
+
+function applyJumpTarget(
+  ctx: CommandDispatchContext,
+  action: Extract<UiActionIR, { kind: "jump_target" }>
+): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const outcome = await runJumpTargetAction({
+      tabId: action.tab_id,
+      path: action.path,
+      needle: action.needle,
+      line: action.line,
+      matchIndex: action.match_index,
+      url: action.url,
+      activateLink: action.activate_link === 1,
+      locale: ctx.locale
+    })
+    const lines = [...outcome.stdout, ...outcome.stderr]
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+function applySettingSave(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await applySettingSaveCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.locale,
+      ctx.deps.replaceUiSettingsState,
+      (locale) => tSetting("setting.picker.saved", locale),
+      (locale) => tSetting("setting.storage.externalWriteFailed", locale)
+    )
+    if (result.ok) {
+      ctx.deps.closeSettingPickerColumn()
+    }
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingSaveSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await applySettingSaveCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.locale,
+    ctx.deps.replaceUiSettingsState,
+    (locale) => tSetting("setting.picker.saved", locale),
+    (locale) => tSetting("setting.storage.externalWriteFailed", locale)
+  )
+  if (!result.ok) {
+    return segmentFailure("runtime", [
+      tSetting("setting.cui.pickerRequired", ctx.locale),
+      ...result.lines
+    ])
+  }
+  ctx.deps.closeSettingPickerColumn()
+  return segmentSuccess(result.lines)
+}
+
+function applySettingCancel(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  const result = applySettingCancelCui(
+    ctx.deps.settingListPickerRef.current,
+    tSetting("setting.picker.cancelled", ctx.locale)
+  )
+  ctx.deps.closeSettingPickerColumn()
+  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+  ctx.deps.focusPrompt()
+  return true
+}
+
+async function applySettingCancelSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = applySettingCancelCui(
+    ctx.deps.settingListPickerRef.current,
+    tSetting("setting.picker.cancelled", ctx.locale)
+  )
+  ctx.deps.closeSettingPickerColumn()
+  return segmentSuccess(result.lines)
+}
+
+function applySettingSet(
+  ctx: CommandDispatchContext,
+  key: string,
+  value: string
+): boolean {
+  finishCommand(ctx)
+  const base = ensureSettingDraftState(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings
+  )
+  const result = applySettingSetCui(
+    base,
+    key,
+    value,
+    tSetting("setting.cui.setUnknown", ctx.locale, { key }),
+    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
+  )
+  if (result.ok && result.nextDraft) {
+    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  }
+  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+  ctx.deps.focusPrompt()
+  return true
+}
+
+async function applySettingSetSegment(
+  ctx: CommandDispatchContext,
+  key: string,
+  value: string
+): Promise<SegmentOutcome> {
+  const base = ensureSettingDraftState(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings
+  )
+  const result = applySettingSetCui(
+    base,
+    key,
+    value,
+    tSetting("setting.cui.setUnknown", ctx.locale, { key }),
+    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
+  )
+  if (!result.ok || result.nextDraft === undefined) {
+    return segmentFailure("usage", result.lines)
+  }
+  ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  return segmentSuccess(result.lines)
 }
 
 function syncSink(ctx: CommandDispatchContext) {

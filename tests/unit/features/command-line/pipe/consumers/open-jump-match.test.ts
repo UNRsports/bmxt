@@ -1,0 +1,32 @@
+import assert from "node:assert/strict"
+import { describe, it } from "node:test"
+import {
+  isJumpPipeConsumer,
+  JUMP_ACCEPTS_BMXT_RULE_KINDS
+} from "../../../../../../shared/lib/features/command-line/pipe/consumers/jump-match.ts"
+import {
+  isOpenPipeConsumer,
+  OPEN_ACCEPTS_BMXT_RULE_KINDS,
+  parseOpenPipeSegment
+} from "../../../../../../shared/lib/features/command-line/pipe/consumers/open-match.ts"
+import { PIPE_CONSUMER_COMPLETION_IDS } from "../../../../../../shared/lib/features/command-line/pipe/consumers/completion-tokens.ts"
+
+describe("open / jump pipe match (§7)", () => {
+  it("matches bare open and --window", () => {
+    assert.equal(isOpenPipeConsumer("open"), true)
+    assert.deepEqual(parseOpenPipeSegment("open --window"), { window: true })
+    assert.equal(isOpenPipeConsumer("open https://x"), false)
+    assert.ok(OPEN_ACCEPTS_BMXT_RULE_KINDS.includes("search.hit"))
+  })
+
+  it("matches bare jump", () => {
+    assert.equal(isJumpPipeConsumer("jump"), true)
+    assert.equal(isJumpPipeConsumer("jump --tab 1"), false)
+    assert.ok(JUMP_ACCEPTS_BMXT_RULE_KINDS.includes("dom.node"))
+  })
+
+  it("registers open and jump in completion ids", () => {
+    assert.ok(PIPE_CONSUMER_COMPLETION_IDS.includes("open"))
+    assert.ok(PIPE_CONSUMER_COMPLETION_IDS.includes("jump"))
+  })
+})

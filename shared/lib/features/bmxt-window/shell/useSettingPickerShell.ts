@@ -11,7 +11,6 @@ import {
   settingPickerGoToView,
   type SettingListPickerState
 } from "../../setting/setting-list-picker-state"
-import { replaceUiSettings } from "../../setting/settings"
 import { migrateSnapshotsToExternalBundleWithLog } from "../../snapshot/snapshot-external-migration"
 import { migrateSnapshotsToVaultWithLog } from "../../snapshot/snapshot-vault-migration"
 import { loadSnapshotStorageConfig } from "../../snapshot/snapshot-storage-config"
@@ -45,7 +44,6 @@ export type UseSettingPickerShellOptions = {
   sessionId: string
   uiLocale: UiSettings["locale"]
   appendLogLines: (lines: string[]) => void | Promise<void>
-  replaceUiSettingsState: (settings: UiSettings) => void
   closeSettingPickerColumn: () => void
   setSettingListPicker: (
     sessionId: string,
@@ -55,6 +53,7 @@ export type UseSettingPickerShellOptions = {
       | ((prev: SettingListPickerState | null) => SettingListPickerState | null)
   ) => void
   settingListPickerRef: React.MutableRefObject<SettingListPickerState | null>
+  submitConstructedLine: (line: string) => void
 }
 
 /** EN: Setting list picker row actions, edit apply, and state updates. */
@@ -74,22 +73,11 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         return
       }
       if (row.id === "save") {
-        const draft = current.draft
-        const { externalWriteFailed } = await replaceUiSettings(draft)
-        options.replaceUiSettingsState(draft)
-        options.closeSettingPickerColumn()
-        const lines = [logPrefix, tSetting("setting.picker.saved", options.uiLocale)]
-        if (externalWriteFailed) {
-          lines.push(
-            tSetting("setting.storage.externalWriteFailed", options.uiLocale)
-          )
-        }
-        await options.appendLogLines(lines)
+        options.submitConstructedLine("setting -save")
         return
       }
       if (row.id === "cancel") {
-        options.closeSettingPickerColumn()
-        await options.appendLogLines([logPrefix, tSetting("setting.picker.cancelled", options.uiLocale)])
+        options.submitConstructedLine("setting -cancel")
         return
       }
       if (row.id === "locale-ja" || row.id === "locale-en") {

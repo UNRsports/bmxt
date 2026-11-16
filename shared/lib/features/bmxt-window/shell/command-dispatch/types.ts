@@ -75,6 +75,10 @@ export type CommandDispatchDeps = {
   teardownNav: () => Promise<void>
   clearSearchLoadingProgress: () => void
   closeSettingPickerColumn: () => void
+  /** EN: Commit UI settings into React state after `setting -save` / CUI apply. */
+  replaceUiSettingsState: (settings: import("../../../setting/settings").UiSettings) => void
+  /** EN: Picker-built line → set prompt + re-enter dispatch (same as typed Enter). */
+  submitConstructedLine: (line: string) => void
   setTabPicker: (sessionId: string, state: any) => void
   setSearchListPicker: (sessionId: string, state: any) => void
   setDomListPicker: (sessionId: string, state: any) => void

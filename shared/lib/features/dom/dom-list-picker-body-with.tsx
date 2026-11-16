@@ -53,6 +53,7 @@ import {
 } from "./dom-with-document-store"
 import type { DomTreeEntry } from "./dom-list-capture"
 import { DomHtmlSnippetView } from "./dom-html-snippet-view"
+import { buildDomJumpCommandLine } from "../picker/build-picker-command-line"
 import type { DomListPickerBodyProps } from "./dom-list-picker-body"
 
 const ROW_ID_PREFIX = "bmxt-dom-row"
@@ -166,7 +167,8 @@ export function DomListPickerBodyWith({
   pickerInputRef,
   sessionId,
   onRefreshViewport,
-  onViewportCapture
+  onViewportCapture,
+  onSubmitJumpCommand
 }: DomListPickerBodyWithProps) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
@@ -337,8 +339,12 @@ export function DomListPickerBodyWith({
     if (path == null || tabId === undefined) {
       return
     }
+    if (onSubmitJumpCommand && focusWindow) {
+      onSubmitJumpCommand(buildDomJumpCommandLine(tabId, path, false))
+      return
+    }
     await jumpDomListTargetToPath(tabId, path, { focusWindow, persistHighlight: true })
-  }, [])
+  }, [onSubmitJumpCommand])
 
   const onConfirmLineIndex = useCallback(
     (index: number) => {
@@ -354,12 +360,16 @@ export function DomListPickerBodyWith({
         withViewRef.current === "semanticFilter" &&
         activeSemanticKindRef.current === "link"
       ) {
+        if (onSubmitJumpCommand) {
+          onSubmitJumpCommand(buildDomJumpCommandLine(tabId, path, true))
+          return
+        }
         void activateDomListLinkAtPath(tabId, path, { focusWindow: true })
         return
       }
       void jumpToRow(index, true)
     },
-    [jumpToRow]
+    [jumpToRow, onSubmitJumpCommand]
   )
 
   const rowKinds = useMemo(

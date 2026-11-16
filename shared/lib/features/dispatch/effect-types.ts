@@ -57,6 +57,10 @@ export type UiActionIR =
   | { kind: "sync_open"; device_id: string; payload: string }
   | { kind: "sync_connect"; device_id: string }
   | { kind: "sync_ping"; device_id: string }
+  | { kind: "jump_target"; activate_link: number; line: number; match_index: number; needle: string; path: string; tab_id: number; url: string }
+  | { kind: "setting_save" }
+  | { kind: "setting_cancel" }
+  | { kind: "setting_set"; key: string; value: string }
 
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"

@@ -103,7 +103,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "setting",
         aliases: &[],
-        usage_primary: "setting -list | setting -exit -list | setting help",
+        usage_primary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
     },
     CmdMeta {
         name: "tutorial",
@@ -114,6 +114,16 @@ pub const COMMANDS: &[CmdMeta] = &[
         name: "sync",
         aliases: &[],
         usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+    },
+    CmdMeta {
+        name: "open",
+        aliases: &[],
+        usage_primary: "open <url> | open --window <url> | <list-command> | open",
+    },
+    CmdMeta {
+        name: "jump",
+        aliases: &[],
+        usage_primary: "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump",
     },
 ];
 
@@ -260,6 +270,18 @@ static BRANCHES_SETTING: &[SubcommandBranch] = &[
         trailing_tokens: &[],
     },
     SubcommandBranch {
+        head: "-set",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-save",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-cancel",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
         head: "-exit",
         trailing_tokens: &["-list"],
     },
@@ -366,9 +388,11 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
-        "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
+        "setting" => matches!(lower.as_str(), "-list" | "-set" | "-save" | "-cancel" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
         "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
+        "open" => false,
+        "jump" => false,
         _ => false,
     }
 }
@@ -396,6 +420,8 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "setting" => BRANCHES_SETTING,
         "tutorial" => BRANCHES_TUTORIAL,
         "sync" => BRANCHES_SYNC,
+        "open" => &[],
+        "jump" => &[],
         _ => &[],
     }
 }

@@ -47,6 +47,26 @@
     "ja": "error: browse には `-list` 列挙の ListResult が必要です（例: tab -list | browse）",
     "en": "error: browse requires a `-list` ListResult (e.g. tab -list | browse)"
   },
+  "pipe.open.noUrls": {
+    "ja": "error: パイプ入力に開ける URL がありません",
+    "en": "error: pipe input has no openable URLs"
+  },
+  "pipe.jump.noTargets": {
+    "ja": "error: パイプ入力にジャンプ対象（tabId / path）がありません",
+    "en": "error: pipe input has no jump targets (tabId / path)"
+  },
+  "pipe.jump.failed": {
+    "ja": "error: タブ {tabId} へのジャンプに失敗しました",
+    "en": "error: jump to tab {tabId} failed"
+  },
+  "pipe.jump.scrollFailed": {
+    "ja": "error: タブ {tabId} で検索語へのスクロールに失敗しました",
+    "en": "error: scroll to search needle failed on tab {tabId}"
+  },
+  "pipe.jump.badPath": {
+    "ja": "error: `--path` は `0.1.2` 形式の数字パスである必要があります",
+    "en": "error: `--path` must be a dotted numeric path like `0.1.2`"
+  },
   "pipe.tabChip.activateFailed": {
     "ja": "error: タブをアクティブにできませんでした",
     "en": "error: could not activate tab"

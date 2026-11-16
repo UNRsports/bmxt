@@ -94,7 +94,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "setting",
     aliases: [] as const,
-    usagePrimary: "setting -list | setting -exit -list | setting help"
+    usagePrimary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help"
   },
   {
     name: "tutorial",
@@ -105,6 +105,16 @@ export const COMMANDS: readonly CmdMeta[] = [
     name: "sync",
     aliases: [] as const,
     usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
+  },
+  {
+    name: "open",
+    aliases: [] as const,
+    usagePrimary: "open <url> | open --window <url> | <list-command> | open"
+  },
+  {
+    name: "jump",
+    aliases: [] as const,
+    usagePrimary: "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump"
   }
 ]
 

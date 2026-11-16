@@ -70,6 +70,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "browse": [] as const,
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-set", trailingTokens: [] as const, tail: "rest" },
+    { head: "-save", trailingTokens: [] as const, tail: "none" },
+    { head: "-cancel", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
@@ -89,7 +92,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-accept", trailingTokens: [] as const, tail: "rest" },
     { head: "-ping", trailingTokens: [] as const, tail: "rest" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
-  ] as const
+  ] as const,
+  "open": [] as const,
+  "jump": [] as const
 }
 
 export function getSubcommandBranches(canonicalName: string): readonly CommandSubcommandBranch[] {
@@ -188,7 +193,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "setting": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "help"
+      return lower === "-list" || lower === "-set" || lower === "-save" || lower === "-cancel" || lower === "-exit" || lower === "help"
     }
     case "tutorial": {
       const lower = token.toLowerCase()
@@ -198,6 +203,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
     }
+    case "open":
+      return false
+    case "jump":
+      return false
     default:
       return false
   }

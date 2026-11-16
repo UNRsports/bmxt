@@ -54,6 +54,8 @@ export type PickerColumnHostContext = {
     destination?: SearchOpenDestinationRow
   ) => void
   onDomRetry: () => void
+  /** EN: Dom picker Enter → `jump --tab … --path …` via submitLine. */
+  onSubmitDomJumpCommand?: (line: string) => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onRefreshDomViewport?: (
     state: Extract<DomListPickerState, { kind: "lines" }>
@@ -122,6 +124,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           onRetry={ctx.onDomRetry}
           onRefreshDomViewport={ctx.onRefreshDomViewport}
           onApplyDomViewportCapture={ctx.onApplyDomViewportCapture}
+          onSubmitJumpCommand={ctx.onSubmitDomJumpCommand}
         />
       </PickerPanelHost>
     ) : null,

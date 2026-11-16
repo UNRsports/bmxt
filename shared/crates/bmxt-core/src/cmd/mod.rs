@@ -23,6 +23,10 @@ pub mod tutorial;
 
 pub mod sync;
 
+pub mod open;
+
+pub mod jump;
+
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
@@ -50,6 +54,8 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "setting" => setting::run(args),
         "tutorial" => tutorial::run(args),
         "sync" => sync::run(args),
+        "open" => open::run(args),
+        "jump" => jump::run(args),
         _ => crate::ir::msgs(vec![crate::ir::msg_param(
             "cmd.error.internalUnhandled",
             "command",

@@ -249,12 +249,12 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **実装チェック（段階）**
 
-- [ ] **7a 追加:** session 以外で不足している pipe consumer / subcommand を語彙再利用で追加（`manifest/templates/` · skill `bmxt-add-command`）。picker は未変更
-- [ ] **7a:** search `\| open` / `\| jump` · dom `\| jump` · setting `-set`/`-save`（必要な Effect / UiAction のみ extend）
-- [ ] **7b 突合:** 各作用について「typed 行」と「現行 picker Enter」の副作用を突き合わせ（ログ差分・フォーカス方針を文書化）
-- [ ] **7c 切替:** 一致した family から picker Enter → 行組み立て → `submitLine`（session を最初の雛形に）
-- [ ] **7d 削除:** 直実行パス削除。二重経路禁止。`map_command.csv` / README / i18n 更新
-- [ ] **7e（任意・後続）:** tab 残 bulk（move / group / newWindow 等）を同じ進行順で
+- [x] **7a 追加:** `open` / `jump` pipe consumer + first command。setting `-set`/`-save`/`-cancel`（UiAction）
+- [x] **7a:** search `\| open` / `\| jump` · dom `\| jump` · setting `-set`/`-save`/`-cancel`
+- [x] **7b 突合:** session / search open·jump / dom jump / setting save·cancel は同一コマンド面（picker は行組み立てのみ）
+- [x] **7c 切替:** session / search / dom / setting(save·cancel) Enter → `submitConstructedLine` → `submitLine`
+- [x] **7d 削除:** search Enter の `openSearchPickerEntry` 直呼びを除去。dom/setting も submit 経路へ。`map_command.csv` / i18n 更新
+- [ ] **7e（任意・後続）:** tab 残 bulk（move / group / newWindow 等）を同じ進行順で。search destination（窓/グループ指定）の完全 CUI 化
 
 **手元スモーク（7c 以降）**
 

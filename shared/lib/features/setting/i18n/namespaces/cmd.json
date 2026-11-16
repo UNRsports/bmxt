@@ -199,6 +199,42 @@
     "ja": "  単体の `browse` では何も開きません。列を開くには `<list-command> | browse` を使います。",
     "en": "  Bare `browse` does not open a column. Open a column with `<list-command> | browse`."
   },
+  "cmd.open.usage.line1": {
+    "ja": "usage: open <url> | open --window <url>",
+    "en": "usage: open <url> | open --window <url>"
+  },
+  "cmd.open.usage.line2": {
+    "ja": "  または `<list-command> | open`（パイプ入力の URL をまとめて開く）",
+    "en": "  Or `<list-command> | open` (open every URL from pipe stdin)"
+  },
+  "cmd.open.usage.line3": {
+    "ja": "  例: open https://example.com · search -list foo | open · search -list foo | open --window",
+    "en": "  Examples: open https://example.com · search -list foo | open · search -list foo | open --window"
+  },
+  "cmd.open.usage.line4": {
+    "ja": "  単体の `open` では何も開きません。URL かパイプ右辺として使います。",
+    "en": "  Bare `open` does nothing. Pass a URL or use it as a pipe consumer."
+  },
+  "cmd.jump.usage.line1": {
+    "ja": "usage: jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) [--link]",
+    "en": "usage: jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) [--link]"
+  },
+  "cmd.jump.usage.line2": {
+    "ja": "  または `<list-command> | jump`（page.open / search.hit / dom.node をジャンプ）",
+    "en": "  Or `<list-command> | jump` (jump page.open / search.hit / dom.node records)"
+  },
+  "cmd.jump.usage.line3": {
+    "ja": "  例: jump --tab 12 --path 0.1.2 · dom -list | jump · search -list foo | jump",
+    "en": "  Examples: jump --tab 12 --path 0.1.2 · dom -list | jump · search -list foo | jump"
+  },
+  "cmd.jump.usage.line4": {
+    "ja": "  単体の `jump` では何もしません。`--tab` 付きかパイプ右辺として使います。",
+    "en": "  Bare `jump` does nothing. Pass `--tab …` or use it as a pipe consumer."
+  },
+  "cmd.jump.error.needTab": {
+    "ja": "error: jump には {hint} が必要です",
+    "en": "error: jump requires {hint}"
+  },
   "cmd.search.error.exitListUsage": {
     "ja": "error: usage: search -exit -list",
     "en": "error: usage: search -exit -list"
@@ -380,8 +416,20 @@
     "en": "       setting -list | browse     — open settings picker column"
   },
   "cmd.setting.usage.line3": {
+    "ja": "       setting -set <key> <value> — 下書きへ反映（locale / edit-picker / …）",
+    "en": "       setting -set <key> <value> — apply to draft (locale / edit-picker / …)"
+  },
+  "cmd.setting.usage.line4": {
+    "ja": "       setting -save | setting -cancel — 下書きを保存 / 破棄して列を閉じる",
+    "en": "       setting -save | setting -cancel — save / discard draft and close column"
+  },
+  "cmd.setting.usage.line5": {
     "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
     "en": "       setting -exit -list — close settings picker in this BMXt pane"
+  },
+  "cmd.setting.error.setUsage": {
+    "ja": "error: usage: setting -set <key> <value>",
+    "en": "error: usage: setting -set <key> <value>"
   },
   "cmd.snapshot.error.internal": {
     "ja": "error: 不明な snapshot オプション (internal): {option}",

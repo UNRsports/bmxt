@@ -106,7 +106,8 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         pageTitle: stringScalar(record.display?.label ?? record.fields.line),
         index: toScalar(record.fields.index) ?? null,
         path: stringScalar(record.fields.path),
-        line: stringScalar(record.fields.line)
+        line: stringScalar(record.fields.line),
+        tabId: operableTabId(record)
       })
     case "dom.notice":
       return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["dom.notice"], {
