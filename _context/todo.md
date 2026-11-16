@@ -168,7 +168,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | Family 送信 | `tab -send` · picker `:move` でリモート窓／タブ／グループ宛（既定 copy、`move --close`） |
 | Family 一覧追従 | `tabs_changed` 广播。ペイロード: `first`（第一コマンド選別符号・現状 `"tab"`；欠落は `"tab"`）+ `reason`（`open_tabs` / `tabs_ops` / `local_close`）。接続中 A/B/C へ配信し、符号一致の開中 picker のみ再取得（未接続は対象外） |
 | 接続 UI | プロンプト下の接続ピア名ステータス行 · トンネル開通中は双方「接続中...」＋入力ロック |
-| 再握手 | `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`） |
+| 再握手 | `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付 |
 | 未実装 | prefs/snapshot 自動同期 · リモート group/new-window |
 
 **横断 tab / search（実装方針・確認済み）**
@@ -182,7 +182,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 **コマンド**
 
 - `sync` first（`-setup` / `-status` / `-pair` / `-members` / `-connect` / `-offer` / `-answer` / `-accept` / `-ping`）。タブ送信は `tab -send`（旧 `sync -open` は廃止）
-- 握手 UX: 初回 `sync -setup`；切断後 `sync -connect`。専用ウィザード（`shared/lib/features/sync/wizard/`）で COPY / 貼付。ログ全文選択は本線にしない。ショートカット `sync-handshake-copy` はウィザード／バーから利用
+- 握手 UX: 初回 `sync -setup`；切断後 `sync -connect`。専用ウィザード（`shared/lib/features/sync/wizard/`）で COPY / 貼付。ログ全文選択は本線にしない。握手完了でウィザード自動クローズ
 - 接続表示: `shared/lib/features/sync/link/`（ステータス行 · connecting ロック）
 - skill `bmxt-add-command` + i18n EN/JA
 
@@ -204,7 +204,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel（host ICE）
 - [x] **6c:** peer 宿主（プロンプト窓一本化）+ ping / open
 - [x] **6c:** `sync -setup` ウィザード（Family → 役割 → COPY / 貼付）。accept 成功は握手完了（直後 ping 失敗でもセットアップ終了）
-- [x] **6c:** `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付（`sync-handshake-copy`）
+- [x] **6c:** `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付
 - [x] **6c:** 接続中ピア名ステータス行 + トンネル開通中「接続中...」入力ロック（双方）
 - [ ] **6c:** 手元 — 同一 PC で Chrome↔Firefox に遠隔 open / ping が安定して届く（`-connect` 往復含む）
 - [x] **6c:** 同一 PC 横断 `tab` / `search`（コマンドバス RPC · `--device` / `--peers`）

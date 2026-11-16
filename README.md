@@ -160,7 +160,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 - **Input**: Prompt line is rendered with a transparent `textarea` + mirror layer. Supports Japanese IME composition/commit. **Keyboard-first** interaction drives commands, picker focus, and nav on **desktop** **host-ui**; the **mouse** can still **select and copy** displayed text in the log, prompt mirror, picker lists, hints, and the version-upgrade block (`user-select: text` in **`bmxt-ui.css`**). Clicks on picker rows activate a column without moving filter typing focus away from the tab picker search field. **mobile** **host-ui** (since **0.8.2**, default on Android / Android Vivaldi): soft key bar plus pointer select / outside-tap dismiss for prompt candidate menus.
 - **State**: **Terminal session logs** (`logsById`, `order`, `activeId`, `namesById`), **open picker columns**, and **pane focus** live in the **BMXt UI page** (React) for the window lifetime — see **[Terminal session state (UI source of truth)](#terminal-session-state)**. **Prompt command history** is stored in **`chrome.storage.local`** (`bmxt_cmd_history`, cap **300** entries). **UI settings**, **page-active** picker prefs, and similar user metadata use other **`chrome.storage.local`** keys (**`lib/features/extension-storage/keys.ts`**).
 - **Background**: Service Worker (`entrypoints/background/index.ts`) opens the window on icon click and handles command execution and tab operations.
-- **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**); **`toggle-bmxt-float`** (default **Shift+Alt+F**) shows or hides the in-page float prompt on the active **https** tab (independent UI process; shares prompt command history with the popup window).
+- **Global shortcuts** (configurable under `chrome://extensions/shortcuts`): **`launch-bmxt`** (default **Shift+Alt+C**) opens BMXt or focuses an existing window; **`reset-bmxt`** (default **Shift+Alt+R**) clears process-scoped session state **and** command history, then opens or focuses BMXt (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**).
 
 <a id="permissions-manifest"></a>
 
@@ -708,7 +708,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
 
-**UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** (button or `sync-handshake-copy`) puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow. The setting picker sync panel only shows a setup guide and display-name edit.
+**UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. When the handshake completes, the wizard closes automatically. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow. The setting picker sync panel only shows a setup guide and display-name edit.
 
 **Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
 
@@ -1672,7 +1672,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 - **入力**: プロンプト行は **透明な `textarea` + 下層ミラー** で描画。日本語 IME（変換・確定）に対応。**desktop** の **host-ui** では **キーボード中心**でコマンド・ピッカー・nav を操作しつつ、ログ・プロンプトミラー・ピッカー一覧・ヒント・バージョンアップブロックなどは **マウスで範囲選択・コピー**可能（**`bmxt-ui.css`** の `user-select: text`）。タブピッカーでは `/` 絞り込み中も **フィルタ入力にフォーカスが残り**、一覧が入力フォーカスを奪わない。**mobile** の **host-ui**（**0.8.2** 以降。Android／Android 版 Vivaldi では既定）では補助キーバーに加え、プロンプト候補のタップ確定／外タップで閉じる。
 - **状態**: **ターミナルセッションのログ**（`logsById`、`order`、`activeId`、`namesById`）、**開いているピッカー列**、**ペインフォーカス**は **BMXt UI ページ**（React）が BMXt ウィンドウ存続中の正本 — **[ターミナルセッション状態（UI が正本）](#terminal-session-state-ja)** 参照。**プロンプトのコマンド履歴**は **`chrome.storage.local`**（`bmxt_cmd_history`、上限 **300** 件）。**UI 設定**・**page-active** 等は別の **`chrome.storage.local`** キー（**`lib/features/extension-storage/keys.ts`**）。
 - **バックグラウンド**: Service Worker（`entrypoints/background/index.ts`）がアイコンクリックでウィンドウを開き、コマンド実行・タブ操作を処理します。
-- **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。**`toggle-bmxt-float`**（既定 **Shift+Alt+F**）でアクティブな **https** タブ上のサイト内フロート・プロンプトを表示／非表示（ポップアップ窓とは独立プロセス；プロンプトのコマンド履歴のみ共有）。
+- **グローバルショートカット**（`chrome://extensions/shortcuts` で変更可）: **`launch-bmxt`**（既定 **Shift+Alt+C**）で BMXt を開く／既存ウィンドウを最前面へ。**`reset-bmxt`**（既定 **Shift+Alt+R**）でプロセススコープのセッション状態 **と** コマンド履歴を消去してから BMXt を開く／最前面へ（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** 参照）。
 
 <a id="permissions-manifest-ja"></a>
 
@@ -2166,7 +2166,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
 
-**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY**（ボタン／`sync-handshake-copy`）で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。切断後は両側 **`sync -connect <peerDeviceId>`** で同じウィザード往復。setting picker の sync は案内と表示名編集のみ。
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY** で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。握手完了でウィザードは自動で閉じる。切断後は両側 **`sync -connect <peerDeviceId>`** で同じウィザード往復。setting picker の sync は案内と表示名編集のみ。
 
 **配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
 

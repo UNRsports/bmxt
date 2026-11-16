@@ -8,6 +8,7 @@ import { copySyncHandshakeCode } from "../connect/sync-handshake-actions.ts"
 import { expandSyncLogLines } from "../facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../facade/sync-picker-summary.ts"
 import { getSyncService } from "../facade/sync-service.ts"
+import { waitForSyncLinkConnected } from "../link/sync-link-bridge.ts"
 import {
   parseSyncSetupInvitePaste,
   parseSyncSetupRtcPaste
@@ -286,16 +287,31 @@ export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Pro
       return
     }
     const pending = getSyncConnectPending()
+    const peerDeviceId =
+      pending && pending.peerDeviceId !== "*"
+        ? pending.peerDeviceId
+        : current.peerDeviceId
     patchSyncWizardState({
       busy: false,
       step: "showAnswer",
       peerDisplayName: pending?.peerDisplayName ?? current.peerDisplayName,
-      peerDeviceId:
-        pending && pending.peerDeviceId !== "*"
-          ? pending.peerDeviceId
-          : current.peerDeviceId,
+      peerDeviceId,
       banner: tCmd("cmd.sync.wizard.bannerCopyAnswer", sink.locale)
     })
+    // EN: Answer side finishes when the offerer accepts and the DataChannel maps connected.
+    if (typeof peerDeviceId === "string" && peerDeviceId.length > 0) {
+      void waitForSyncLinkConnected(peerDeviceId).then(async (ok) => {
+        if (!ok) {
+          return
+        }
+        const wizard = getSyncWizardState()
+        if (!wizard.open) {
+          return
+        }
+        await sink.appendLogLines([tCmd("cmd.sync.setup.done", sink.locale)])
+        wizardFinish(sink)
+      })
+    }
     return
   }
 
@@ -321,11 +337,8 @@ export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Pro
   }
   clearSyncConnectPending()
   await sink.appendLogLines(expanded)
-  patchSyncWizardState({
-    busy: false,
-    step: "done",
-    banner: tCmd("cmd.sync.setup.done", sink.locale)
-  })
+  await sink.appendLogLines([tCmd("cmd.sync.setup.done", sink.locale)])
+  wizardFinish(sink)
 }
 
 export async function wizardCopyOutbound(

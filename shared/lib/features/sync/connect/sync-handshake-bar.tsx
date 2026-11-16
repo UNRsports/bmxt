@@ -9,7 +9,6 @@ import {
   subscribeSyncConnectPending,
   type SyncConnectPending
 } from "./sync-connect-pending.ts"
-import { isSyncHandshakeCommandMessage } from "./sync-handshake-protocol.ts"
 
 export type SyncHandshakeBarProps = {
   locale: UiLocale
@@ -60,26 +59,6 @@ export function SyncHandshakeBar(props: SyncHandshakeBarProps) {
     await props.appendLogLines(expanded)
     props.focusPrompt()
   }, [props])
-
-  useEffect(() => {
-    // EN: Wizard panel owns the shortcut while open.
-    if (wizardOpen) {
-      return
-    }
-    const onMessage = (message: unknown) => {
-      if (!isSyncHandshakeCommandMessage(message)) {
-        return
-      }
-      if (getSyncConnectPending()?.outboundCode == null) {
-        return
-      }
-      void runCopy()
-    }
-    chrome.runtime.onMessage.addListener(onMessage)
-    return () => {
-      chrome.runtime.onMessage.removeListener(onMessage)
-    }
-  }, [runCopy, wizardOpen])
 
   // EN: Keep focus on the prompt IME — must be declared before any early return (Rules of Hooks).
   const onPointerDown = useCallback((e: React.PointerEvent) => {

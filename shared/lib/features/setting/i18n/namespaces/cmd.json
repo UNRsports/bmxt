@@ -768,8 +768,8 @@
     "en": "Family setup failed. Please choose again."
   },
   "cmd.sync.setup.familyReady": {
-    "ja": "Family を作成しました。先に Copy（またはショートカット）で招待を相手へ渡し、相手が参加してから役割を選んでください。",
-    "en": "Family created. Copy (or the shortcut) the invite to your peer first; after they join, choose roles."
+    "ja": "Family を作成しました。先に Copy で招待を相手へ渡し、相手が参加してから役割を選んでください。",
+    "en": "Family created. Copy the invite to your peer first; after they join, choose roles."
   },
   "cmd.sync.setup.familyReadyJoined": {
     "ja": "Family に参加しました。次に役割を選びます。",
@@ -796,12 +796,12 @@
     "en": "Paste only the peer answer code body (bmxt-rtc1.…) at the prompt and press Enter:"
   },
   "cmd.sync.setup.offerReady": {
-    "ja": "Copy（またはショートカット）でオファーをクリップボードへ。相手はプロンプトへ貼付して Enter。次に相手のアンサーを待ちます。",
-    "en": "Copy (or the shortcut) the offer to the clipboard. The peer pastes it at their prompt and presses Enter. Then wait for their answer."
+    "ja": "Copy でオファーをクリップボードへ。相手はプロンプトへ貼付して Enter。次に相手のアンサーを待ちます。",
+    "en": "Copy the offer to the clipboard. The peer pastes it at their prompt and presses Enter. Then wait for their answer."
   },
   "cmd.sync.setup.answerReady": {
-    "ja": "Copy（またはショートカット）でアンサーをクリップボードへ。相手はプロンプトへ貼付して Enter すると接続完了です。",
-    "en": "Copy (or the shortcut) the answer to the clipboard. The peer pastes it at their prompt and presses Enter to finish."
+    "ja": "Copy でアンサーをクリップボードへ。相手はプロンプトへ貼付して Enter すると接続完了です。",
+    "en": "Copy the answer to the clipboard. The peer pastes it at their prompt and presses Enter to finish."
   },
   "cmd.sync.setup.done": {
     "ja": "接続セットアップが完了しました。状態は sync -status で確認できます。",
@@ -872,12 +872,12 @@
     "en": "transport: WebRTC DataChannel (prompt-window host · host ICE only · copy-paste handshake). Held until the window closes or you re-handshake. No FSA workdir."
   },
   "cmd.sync.pair.created": {
-    "ja": "Family 招待を用意しました。Copy（またはショートカット）でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",
-    "en": "Family invite ready. Copy (or the shortcut) it to the clipboard; the peer pastes at their prompt or sync -setup join step."
+    "ja": "Family 招待を用意しました。Copy でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",
+    "en": "Family invite ready. Copy it to the clipboard; the peer pastes at their prompt or sync -setup join step."
   },
   "cmd.sync.pair.useCopy": {
-    "ja": "招待はログに全文を出しません。下の Copy ボタン（またはショートカット）を使ってください。",
-    "en": "The invite is not printed in full here. Use the Copy button below (or the shortcut)."
+    "ja": "招待はログに全文を出しません。下の Copy ボタンを使ってください。",
+    "en": "The invite is not printed in full here. Use the Copy button below."
   },
   "cmd.sync.pair.noFamily": {
     "ja": "Family を作成できませんでした。",
@@ -976,12 +976,12 @@
     "en": "Waiting for the peer offer. Paste the code they Copied into this prompt and press Enter."
   },
   "cmd.sync.connect.copyThenWaitAnswer": {
-    "ja": "Copy（またはショートカット）でオファーを渡し、相手のアンサーコード本体をこのプロンプトへ貼り付けて Enter。",
-    "en": "Copy (or the shortcut) the offer to your peer, then paste their answer code body here and press Enter."
+    "ja": "Copy でオファーを渡し、相手のアンサーコード本体をこのプロンプトへ貼り付けて Enter。",
+    "en": "Copy the offer to your peer, then paste their answer code body here and press Enter."
   },
   "cmd.sync.connect.copyThenWaitPeerAccept": {
-    "ja": "Copy（またはショートカット）でアンサーを相手へ渡してください。相手がプロンプトへ貼ると接続完了です。",
-    "en": "Copy (or the shortcut) the answer to your peer. Connection completes when they paste it at their prompt."
+    "ja": "Copy でアンサーを相手へ渡してください。相手がプロンプトへ貼ると接続完了です。",
+    "en": "Copy the answer to your peer. Connection completes when they paste it at their prompt."
   },
   "cmd.sync.connect.pasteAtPrompt": {
     "ja": "相手の握手コード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
-import { isSyncHandshakeCommandMessage } from "../connect/sync-handshake-protocol.ts"
 import {
   cancelSyncWizard,
   closeSyncWizardQuiet,
@@ -108,29 +107,6 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
     [props.locale, props.appendLogLines, props.focusPrompt]
   )
 
-  const runCopy = useCallback(async () => {
-    await wizardCopyOutbound(sink)
-  }, [sink])
-
-  useEffect(() => {
-    if (!state.open) {
-      return
-    }
-    const onMessage = (message: unknown) => {
-      if (!isSyncHandshakeCommandMessage(message)) {
-        return
-      }
-      if (pending?.outboundCode == null) {
-        return
-      }
-      void runCopy()
-    }
-    chrome.runtime.onMessage.addListener(onMessage)
-    return () => {
-      chrome.runtime.onMessage.removeListener(onMessage)
-    }
-  }, [state.open, pending?.outboundCode, runCopy])
-
   if (!state.open) {
     return null
   }
@@ -195,7 +171,7 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
           type="button"
           className="bmxt-sync-wizard-copy"
           disabled={busy || outbound === null}
-          onClick={() => void runCopy()}>
+          onClick={() => void wizardCopyOutbound(sink)}>
           {tCmd("cmd.sync.connect.copyButton", locale)}
         </button>
         <button
@@ -243,7 +219,7 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
           type="button"
           className="bmxt-sync-wizard-copy"
           disabled={busy || outbound === null}
-          onClick={() => void runCopy()}>
+          onClick={() => void wizardCopyOutbound(sink)}>
           {tCmd("cmd.sync.connect.copyButton", locale)}
         </button>
         <p className="bmxt-sync-wizard-lead bmxt-sync-wizard-lead--follow">
@@ -286,7 +262,7 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
           type="button"
           className="bmxt-sync-wizard-copy"
           disabled={busy || outbound === null}
-          onClick={() => void runCopy()}>
+          onClick={() => void wizardCopyOutbound(sink)}>
           {tCmd("cmd.sync.connect.copyButton", locale)}
         </button>
         <button
