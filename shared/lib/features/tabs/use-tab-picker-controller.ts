@@ -73,6 +73,7 @@ type Props = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
   onFocusTabIdChange?: (tabId: number | null) => void
+  submitConstructedLine?: (line: string) => void
 }
 
 export type TabPickerOverlayProps = Props
@@ -120,7 +121,8 @@ export function useTabPickerController({
   isHostPaneFocused,
   pickerInputRef,
   sessionId,
-  onFocusTabIdChange
+  onFocusTabIdChange,
+  submitConstructedLine
 }: Props): TabPickerViewProps | null {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
@@ -486,7 +488,8 @@ export function useTabPickerController({
       setNewTabUrl("")
       setBulkSubMode(null)
     },
-    onPickerHighlightCreatedTab
+    onPickerHighlightCreatedTab,
+    submitConstructedLine
   })
 
   const saveSnapshotsForPickerTabIds = useCallback(

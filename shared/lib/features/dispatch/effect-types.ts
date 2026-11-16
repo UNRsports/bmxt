@@ -7,6 +7,9 @@ export type HostEffect =
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
   | { dispatch_line: string; kind: "search_list" }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
+  | { group_id: number; kind: "group_add"; tab_ids: number[] }
+  | { group_id: number; kind: "open_url_into_group"; url: string; window_id: number }
+  | { group_id: number; kind: "tabs_move"; tab_ids: number[]; window_id: number }
   | { kind: "clear_log" }
   | { kind: "close_current_tab" }
   | { kind: "close_current_window" }
@@ -14,6 +17,7 @@ export type HostEffect =
   | { kind: "exit_pane" }
   | { kind: "group_new"; tab_ids: number[] }
   | { kind: "navigate_current_tab"; url: string }
+  | { kind: "open_url_into_window"; url: string; window_id: number }
   | { kind: "open_url_new_tab"; url: string }
   | { kind: "open_url_new_window"; url: string }
   | { kind: "open_welcome_page" }
@@ -28,6 +32,7 @@ export type HostEffect =
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
   | { kind: "tabs_move_url"; url: string }
+  | { kind: "tabs_new_window"; tab_ids: number[] }
   | { kind: "tabs_nu" }
 
 export type DispatchMsg = { key: string; params?: Record<string, string> }

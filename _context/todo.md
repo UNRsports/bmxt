@@ -28,7 +28,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 ### 2. Open product
 
-- [ ] **dom Enter** — ピッカー行 Enter の確定挙動（旧 §7）
+- [x] **dom Enter** — ピッカー行 Enter → `jump …` を `submitConstructedLine`（§7c）
 - [ ] （任意）find/dom 系の `PickerListShell` 統合
 - [ ] （任意）`TabPickerOverlay` リネーム掃除
 - [x] ウェルカムにサポートリンク（公式サイト · NotebookLM）— `lib/features/support/` · README（version-upgrade-banner 節）反映
@@ -242,10 +242,10 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | Family | CUI 現状 | 不足（例） | 備考 |
 |--------|----------|------------|------|
 | **session** | `-switch` / `-next` / `-prev` / `-new` / `-setting-name` あり | list Enter → `session -switch <name>` の `submitLine` 再入場 | 最も近い。雛形 |
-| **search** | `-list` はログ可 | `search -list … \| open` / `\| jump`（新タブ・窓・グループは flag） | ヒット open / ページ内 jump が picker 直実行 |
+| **search** | `-list` + `\| open` / `\| jump` + `--into-window` / `--into-group` | （残任意なし・本線完了） | picker Enter は同形行を submit |
 | **dom** | `-list`・`-setting` は CUI 可 | `dom -list … \| jump`（`dom.node` path） | jump / link activate が picker 直実行 |
 | **setting** | `-list` 読み取り専用 | `setting -set …` + `-save` / `-cancel` | 現状 UI 編集が本線（README）。FSA はジェスチャ上限 |
-| **tab**（参考） | close / reload / nav / `#t:` パイプ可 | move / group / newWindow / edit 等の残 bulk | picker 計画 + host 実行が厚い |
+| **tab**（参考） | close / reload / nav / `#t:` / `move` / `new-window` / `group add` パイプ可 | `:edit` / plain Enter focus 等（任意） | 7e で bulk 本線は CUI 化済み |
 
 **実装チェック（段階）**
 
@@ -254,7 +254,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **7b 突合:** session / search open·jump / dom jump / setting save·cancel は同一コマンド面（picker は行組み立てのみ）
 - [x] **7c 切替:** session / search / dom / setting(save·cancel) Enter → `submitConstructedLine` → `submitLine`
 - [x] **7d 削除:** search Enter の `openSearchPickerEntry` 直呼びを除去。dom/setting も submit 経路へ。`map_command.csv` / i18n 更新
-- [ ] **7e（任意・後続）:** tab 残 bulk（move / group / newWindow 等）を同じ進行順で。search destination（窓/グループ指定）の完全 CUI 化
+- [x] **7e:** tab bulk（`move` / `group add` / `new-window`）+ search destination（`open --into-window` / `--into-group`）。picker は `submitConstructedLine`。`:edit` / plain Enter focus は任意後続
 
 **手元スモーク（7c 以降）**
 

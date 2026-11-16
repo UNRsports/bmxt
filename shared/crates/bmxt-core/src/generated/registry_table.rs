@@ -48,7 +48,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "group",
         aliases: &[],
-        usage_primary: "group new",
+        usage_primary: "group new [tabId…] | group add <groupId> <tabId…>",
     },
     CmdMeta {
         name: "help",
@@ -118,12 +118,22 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "open",
         aliases: &[],
-        usage_primary: "open <url> | open --window <url> | <list-command> | open",
+        usage_primary: "open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | <list> | open",
     },
     CmdMeta {
         name: "jump",
         aliases: &[],
         usage_primary: "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump",
+    },
+    CmdMeta {
+        name: "move",
+        aliases: &[],
+        usage_primary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>",
+    },
+    CmdMeta {
+        name: "new-window",
+        aliases: &[],
+        usage_primary: "new-window <tabId…> | … | new-window",
     },
 ];
 
@@ -157,6 +167,17 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_GROUP: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "new",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "add",
         trailing_tokens: &[],
     },
 ];
@@ -377,7 +398,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
-        "group" => false,
+        "group" => matches!(lower.as_str(), "new" | "add"),
         "help" => false,
         "forward" => false,
         "reload" => false,
@@ -393,6 +414,8 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
         "open" => false,
         "jump" => false,
+        "move" => false,
+        "new-window" => false,
         _ => false,
     }
 }
@@ -406,7 +429,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "dom" => BRANCHES_DOM,
         "exit" => &[],
         "search" => BRANCHES_SEARCH,
-        "group" => &[],
+        "group" => BRANCHES_GROUP,
         "help" => &[],
         "forward" => &[],
         "reload" => &[],
@@ -422,6 +445,8 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "sync" => BRANCHES_SYNC,
         "open" => &[],
         "jump" => &[],
+        "move" => &[],
+        "new-window" => &[],
         _ => &[],
     }
 }

@@ -1712,6 +1712,7 @@ export function BmxtShell({
             void runDomListAndShow(cl, cl, false)
           }}
           onSubmitDomJumpCommand={submitConstructedLineEarly}
+          submitConstructedLine={submitConstructedLineEarly}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
           onRefreshDomViewport={(state) => refreshDomViewportForPicker(state)}
           onApplyDomViewportCapture={(capture) => {

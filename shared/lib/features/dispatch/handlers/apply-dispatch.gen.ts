@@ -11,8 +11,11 @@ import { applyCloseCurrentWindowEffect } from "./effects/close-current-window"
 import { applyCloseTabEffect } from "./effects/close-tab"
 import { applyDomListEffect } from "./effects/dom-list"
 import { applyExitPaneEffect } from "./effects/exit-pane"
+import { applyGroupAddEffect } from "./effects/group-add"
 import { applyGroupNewEffect } from "./effects/group-new"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
+import { applyOpenUrlIntoGroupEffect } from "./effects/open-url-into-group"
+import { applyOpenUrlIntoWindowEffect } from "./effects/open-url-into-window"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
 import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
@@ -28,7 +31,9 @@ import { applyTabGoBackEffect } from "./effects/tab-go-back"
 import { applyTabGoForwardEffect } from "./effects/tab-go-forward"
 import { applyTabReloadEffect } from "./effects/tab-reload"
 import { applyTabsListEffect } from "./effects/tabs-list"
+import { applyTabsMoveEffect } from "./effects/tabs-move"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
+import { applyTabsNewWindowEffect } from "./effects/tabs-new-window"
 import { applyTabsNuEffect } from "./effects/tabs-nu"
 
 export async function applyOne(
@@ -48,10 +53,16 @@ export async function applyOne(
       return applyDomListEffect(ctx, e)
     case "exit_pane":
       return applyExitPaneEffect(ctx, e)
+    case "group_add":
+      return applyGroupAddEffect(ctx, e)
     case "group_new":
       return applyGroupNewEffect(ctx, e)
     case "navigate_current_tab":
       return applyNavigateCurrentTabEffect(ctx, e)
+    case "open_url_into_group":
+      return applyOpenUrlIntoGroupEffect(ctx, e)
+    case "open_url_into_window":
+      return applyOpenUrlIntoWindowEffect(ctx, e)
     case "open_url_new_tab":
       return applyOpenUrlNewTabEffect(ctx, e)
     case "open_url_new_window":
@@ -82,8 +93,12 @@ export async function applyOne(
       return applyTabReloadEffect(ctx, e)
     case "tabs_list":
       return applyTabsListEffect(ctx, e)
+    case "tabs_move":
+      return applyTabsMoveEffect(ctx, e)
     case "tabs_move_url":
       return applyTabsMoveUrlEffect(ctx, e)
+    case "tabs_new_window":
+      return applyTabsNewWindowEffect(ctx, e)
     case "tabs_nu":
       return applyTabsNuEffect(ctx, e)
     default: {

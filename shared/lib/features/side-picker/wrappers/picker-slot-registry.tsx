@@ -56,6 +56,8 @@ export type PickerColumnHostContext = {
   onDomRetry: () => void
   /** EN: Dom picker Enter → `jump --tab … --path …` via submitLine. */
   onSubmitDomJumpCommand?: (line: string) => void
+  /** EN: Tab bulk move/group/new-window → typed line via submitLine. */
+  submitConstructedLine?: (line: string) => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onRefreshDomViewport?: (
     state: Extract<DomListPickerState, { kind: "lines" }>
@@ -88,6 +90,7 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           pickerInputRef={ctx.tabPickerInputRef}
           sessionId={ctx.sessionId}
           onFocusTabIdChange={ctx.onTabsPickerFocusTabId}
+          submitConstructedLine={ctx.submitConstructedLine}
         />
       </PickerPanelHost>
     ) : null,

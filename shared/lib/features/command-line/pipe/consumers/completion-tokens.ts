@@ -13,6 +13,8 @@ export const PIPE_CONSUMER_COMPLETION_IDS = [
   "browse",
   "open",
   "jump",
+  "move",
+  "new-window",
   "back",
   "forward",
   "reload",

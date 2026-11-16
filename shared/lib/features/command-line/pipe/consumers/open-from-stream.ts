@@ -13,7 +13,8 @@ import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
 import {
   isOpenPipeConsumer,
   OPEN_ACCEPTS_BMXT_RULE_KINDS,
-  parseOpenPipeSegment
+  parseOpenPipeSegment,
+  type OpenPipeFlags
 } from "./open-match.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
@@ -38,6 +39,31 @@ function urlsFromBmxtRuleStream(stream: BmxtRuleStream): string[] {
   return out
 }
 
+function effectsForUrls(urls: string[], flags: OpenPipeFlags): HostEffect[] {
+  return urls.map((url) => {
+    switch (flags.mode) {
+      case "new_window":
+        return { kind: "open_url_new_window", url } as const
+      case "into_window":
+        return {
+          kind: "open_url_into_window",
+          url,
+          window_id: flags.windowId
+        } as const
+      case "into_group":
+        return {
+          kind: "open_url_into_group",
+          url,
+          window_id: flags.windowId,
+          group_id: flags.groupId
+        } as const
+      case "new_tab":
+      default:
+        return { kind: "open_url_new_tab", url } as const
+    }
+  })
+}
+
 export async function runOpenFromBmxtRuleStream(
   stream: BmxtRuleStream,
   deps: CommandDispatchDeps,
@@ -55,12 +81,6 @@ export async function runOpenFromBmxtRuleStream(
     return segmentFailure("runtime", [tPipe("pipe.open.noUrls", locale)])
   }
 
-  const effects: HostEffect[] = urls.map((url) =>
-    flags.window
-      ? ({ kind: "open_url_new_window", url } as const)
-      : ({ kind: "open_url_new_tab", url } as const)
-  )
-
   try {
     const logLines = await applyHostEffects(
       {
@@ -73,7 +93,7 @@ export async function runOpenFromBmxtRuleStream(
         commandSessionId: deps.sessionId,
         uiLocale: locale
       },
-      effects
+      effectsForUrls(urls, flags)
     )
     return segmentSuccess(logLines)
   } catch (e) {

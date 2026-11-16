@@ -39,7 +39,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "group",
     aliases: [] as const,
-    usagePrimary: "group new"
+    usagePrimary: "group new [tabId…] | group add <groupId> <tabId…>"
   },
   {
     name: "help",
@@ -109,12 +109,22 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "open",
     aliases: [] as const,
-    usagePrimary: "open <url> | open --window <url> | <list-command> | open"
+    usagePrimary: "open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | <list> | open"
   },
   {
     name: "jump",
     aliases: [] as const,
     usagePrimary: "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump"
+  },
+  {
+    name: "move",
+    aliases: [] as const,
+    usagePrimary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>"
+  },
+  {
+    name: "new-window",
+    aliases: [] as const,
+    usagePrimary: "new-window <tabId…> | … | new-window"
   }
 ]
 

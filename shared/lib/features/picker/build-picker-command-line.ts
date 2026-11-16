@@ -23,7 +23,7 @@ export function buildSessionSwitchSubmitLine(
   return buildSessionSwitchCommandLine(row, allRows)
 }
 
-/** EN: Open a search hit URL (optional `--window`). */
+/** EN: Open a search hit URL (window / group / new-window flags). */
 export function buildSearchOpenCommandLine(
   entry: PickerEntry,
   destination?: SearchOpenDestinationRow
@@ -32,10 +32,58 @@ export function buildSearchOpenCommandLine(
   if (url === undefined) {
     return null
   }
-  if (destination?.kind === "new_window") {
-    return `open --window ${shellQuote(url)}`
+  const quoted = shellQuote(url)
+  if (destination === undefined) {
+    return `open ${quoted}`
   }
-  return `open ${shellQuote(url)}`
+  if (destination.kind === "new_window") {
+    return `open --window ${quoted}`
+  }
+  if (destination.kind === "group" && destination.groupId !== undefined && destination.windowId !== undefined) {
+    return `open --into-group ${destination.groupId} --window-id ${destination.windowId} ${quoted}`
+  }
+  if (
+    (destination.kind === "window" || destination.kind === "ungrouped") &&
+    destination.windowId !== undefined
+  ) {
+    return `open --into-window ${destination.windowId} ${quoted}`
+  }
+  return `open ${quoted}`
+}
+
+/** EN: `#t:… | move --window <id>` / `--group` / `--ungroup`. */
+export function buildTabMoveCommandLine(
+  tabIds: readonly number[],
+  opts: { windowId: number; groupId?: number; ungroup?: boolean }
+): string | null {
+  if (tabIds.length === 0 || opts.windowId < 0) {
+    return null
+  }
+  const chips = tabIds.map((id) => `#t:${id}`).join(" ")
+  if (opts.ungroup) {
+    return `${chips} | move --ungroup --window ${opts.windowId}`
+  }
+  if (opts.groupId !== undefined && opts.groupId >= 0) {
+    return `${chips} | move --group ${opts.groupId} --window ${opts.windowId}`
+  }
+  return `${chips} | move --window ${opts.windowId}`
+}
+
+export function buildTabNewWindowCommandLine(tabIds: readonly number[]): string | null {
+  if (tabIds.length === 0) {
+    return null
+  }
+  return `${tabIds.map((id) => `#t:${id}`).join(" ")} | new-window`
+}
+
+export function buildTabGroupAddCommandLine(
+  tabIds: readonly number[],
+  groupId: number
+): string | null {
+  if (tabIds.length === 0 || groupId < 0) {
+    return null
+  }
+  return `group add ${groupId} ${tabIds.join(" ")}`
 }
 
 /**

@@ -51,6 +51,14 @@
     "ja": "error: パイプ入力に開ける URL がありません",
     "en": "error: pipe input has no openable URLs"
   },
+  "pipe.move.noTabs": {
+    "ja": "error: パイプ入力に移動対象のタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tabs to move"
+  },
+  "pipe.newWindow.noTabs": {
+    "ja": "error: パイプ入力に新ウィンドウへ移すタブ（page.open）がありません",
+    "en": "error: pipe input has no page.open tabs for new-window"
+  },
   "pipe.jump.noTargets": {
     "ja": "error: パイプ入力にジャンプ対象（tabId / path）がありません",
     "en": "error: pipe input has no jump targets (tabId / path)"

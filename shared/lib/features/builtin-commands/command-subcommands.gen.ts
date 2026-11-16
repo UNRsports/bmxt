@@ -30,7 +30,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
-  "group": [] as const,
+  "group": [
+    { head: "new", trailingTokens: [] as const, tail: "rest" },
+    { head: "add", trailingTokens: [] as const, tail: "rest" }
+  ] as const,
   "help": [] as const,
   "forward": [] as const,
   "reload": [] as const,
@@ -94,7 +97,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "open": [] as const,
-  "jump": [] as const
+  "jump": [] as const,
+  "move": [] as const,
+  "new-window": [] as const
 }
 
 export function getSubcommandBranches(canonicalName: string): readonly CommandSubcommandBranch[] {
@@ -159,8 +164,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-list" || lower === "-exit" || lower === "help"
     }
-    case "group":
-      return false
+    case "group": {
+      const lower = token.toLowerCase()
+      return lower === "new" || lower === "add"
+    }
     case "help":
       return false
     case "forward":
@@ -206,6 +213,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     case "open":
       return false
     case "jump":
+      return false
+    case "move":
+      return false
+    case "new-window":
       return false
     default:
       return false

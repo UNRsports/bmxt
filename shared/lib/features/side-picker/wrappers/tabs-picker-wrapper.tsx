@@ -14,6 +14,7 @@ export type TabsPickerWrapperProps = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
   onFocusTabIdChange?: (tabId: number | null) => void
+  submitConstructedLine?: (line: string) => void
 }
 
 /** EN: Layer ③C — tabs picker subscribes to session engine (Chrome → store → UI). */

@@ -79,9 +79,15 @@ function validateCommandsSubcommands(commands) {
       if (!br || typeof br !== "object") {
         throw new Error(`commands[].module=${c.module}: invalid subcommand branch`)
       }
-      if (typeof br.head !== "string" || !(br.head.startsWith("-") || br.head === "help")) {
+      // EN: Prefer `-list`-style heads; allow `help` and bare literals (`group new` / `group add`).
+      const headOk =
+        typeof br.head === "string" &&
+        (br.head.startsWith("-") ||
+          br.head === "help" ||
+          /^[a-z][a-z0-9]*$/.test(br.head))
+      if (!headOk) {
         throw new Error(
-          `commands[].module=${c.module}: each subcommand needs string "head" starting with "-" or literal "help" (got ${JSON.stringify(br?.head)})`
+          `commands[].module=${c.module}: each subcommand needs string "head" starting with "-", literal "help", or bare [a-z][a-z0-9]* (got ${JSON.stringify(br?.head)})`
         )
       }
       const hl = br.head.toLowerCase()

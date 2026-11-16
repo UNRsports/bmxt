@@ -104,12 +104,40 @@
     "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."
   },
   "cmd.group.usage.line": {
-    "ja": "usage: group new | group new <tabId> [tabId ...]",
-    "en": "usage: group new | group new <tabId> [tabId ...]"
+    "ja": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…",
+    "en": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…"
   },
   "cmd.group.usage.nonInteractive": {
-    "ja": "Non-interactive: group new <tabId> [tabId ...]",
-    "en": "Non-interactive: group new <tabId> [tabId ...]"
+    "ja": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…",
+    "en": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…"
+  },
+  "cmd.move.usage.line1": {
+    "ja": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]",
+    "en": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]"
+  },
+  "cmd.move.usage.line2": {
+    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`",
+    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`"
+  },
+  "cmd.move.usage.line3": {
+    "ja": "  例: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1",
+    "en": "  Examples: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1"
+  },
+  "cmd.move.usage.line4": {
+    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。",
+    "en": "  As a pipe consumer, moves every page.open tab id from stdin."
+  },
+  "cmd.newWindow.usage.line1": {
+    "ja": "usage: new-window <tabId> [tabId…] | … | new-window",
+    "en": "usage: new-window <tabId> [tabId…] | … | new-window"
+  },
+  "cmd.newWindow.usage.line2": {
+    "ja": "  例: new-window 12 34 · #t:12 #t:34 | new-window",
+    "en": "  Examples: new-window 12 34 · #t:12 #t:34 | new-window"
+  },
+  "cmd.newWindow.usage.line3": {
+    "ja": "  パイプ右辺は page.open のタブを新しいウィンドウへ移します。",
+    "en": "  As a pipe consumer, moves page.open tabs into a new window."
   },
   "cmd.nav.enter.detail": {
     "ja": "BMXt プロンプトで `nav -enter` を実行し、コマンドライン上で Alt でページカーソルを切り替えます。",
@@ -200,12 +228,12 @@
     "en": "  Bare `browse` does not open a column. Open a column with `<list-command> | browse`."
   },
   "cmd.open.usage.line1": {
-    "ja": "usage: open <url> | open --window <url>",
-    "en": "usage: open <url> | open --window <url>"
+    "ja": "usage: open <url> | open --window <url> | open --into-window <id> <url>",
+    "en": "usage: open <url> | open --window <url> | open --into-window <id> <url>"
   },
   "cmd.open.usage.line2": {
-    "ja": "  または `<list-command> | open`（パイプ入力の URL をまとめて開く）",
-    "en": "  Or `<list-command> | open` (open every URL from pipe stdin)"
+    "ja": "  または open --into-group <gid> --window-id <wid> <url> · `<list-command> | open …`",
+    "en": "  Or open --into-group <gid> --window-id <wid> <url> · `<list-command> | open …`"
   },
   "cmd.open.usage.line3": {
     "ja": "  例: open https://example.com · search -list foo | open · search -list foo | open --window",
@@ -214,6 +242,10 @@
   "cmd.open.usage.line4": {
     "ja": "  単体の `open` では何も開きません。URL かパイプ右辺として使います。",
     "en": "  Bare `open` does nothing. Pass a URL or use it as a pipe consumer."
+  },
+  "cmd.open.usage.line5": {
+    "ja": "  search の窓／グループ指定 open は `--into-window` / `--into-group` と同等です。",
+    "en": "  Search destination open uses `--into-window` / `--into-group` (same as the picker)."
   },
   "cmd.jump.usage.line1": {
     "ja": "usage: jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) [--link]",
