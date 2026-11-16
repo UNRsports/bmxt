@@ -1,4 +1,5 @@
 import { buildHelpLines } from "../../bmxt-core/registry/help"
+import { clearCandidateMenuSuppressedUntilTab } from "../../command-line/candidate-menu-open-policy.ts"
 import {
   fetchListResultById,
   runPlainListForCommandId,
@@ -799,6 +800,8 @@ async function applyDomSettingSegment(
 function applySessionSwitch(ctx: CommandDispatchContext, name: string): boolean {
   if (name.trim().length === 0) {
     ctx.deps.sessionListPickerDismissedRef.current = false
+    ctx.deps.imeTokenPickerDismissedRef.current = false
+    clearCandidateMenuSuppressedUntilTab()
     ctx.deps.syncImeTokenPicker(ctx.deps.lineRef.current, ctx.deps.lineRef.current.length)
     ctx.deps.focusPrompt()
     return true

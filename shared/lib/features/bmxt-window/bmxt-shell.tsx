@@ -1040,9 +1040,8 @@ export function BmxtShell({
   }, [appendLogLines, externalSettingsRecovery, isFocusedPane])
 
   const openSessionListPicker = useCallback(() => {
-    sessionListPickerDismissedRef.current = false
     openSessionPicker("list")
-  }, [openSessionPicker, sessionListPickerDismissedRef])
+  }, [openSessionPicker])
 
   const syncPromptDom = useCallback((nextLine: string, cursor: number) => {
     const ta = imeRef.current

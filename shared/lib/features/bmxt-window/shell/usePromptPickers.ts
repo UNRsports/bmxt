@@ -4,6 +4,11 @@ import {
   listImeCandidateHelpsFromUsage,
   resolveImeTokenPicker
 } from "../../command-line"
+import {
+  clearCandidateMenuSuppressedUntilTab,
+  isCandidateMenuSuppressedUntilTab,
+  markCandidateMenuSuppressedUntilTab
+} from "../../command-line/candidate-menu-open-policy.ts"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isCompleteSecondTokenWithoutFurtherFixedTokens } from "../../command-line/second-token-picker.ts"
 import { isCompletePipeConsumerWithoutFurtherTokens } from "../../command-line/pipe/pipe-consumer-first-picker.ts"
@@ -163,7 +168,11 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     allowEmptyFirstPickerSyncRef.current = false
     tabPickerOpenRequestRef.current = false
     imeTokenPickerDismissedRef.current = true
+    sessionListPickerDismissedRef.current = true
+    markCandidateMenuSuppressedUntilTab()
     setSubCmdPicker(null)
+    setSessionListPickerHi(null)
+    setSessionPickerVariant(null)
   }, [])
 
   const navReloadPickGenRef = useRef(0)
@@ -180,6 +189,9 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
   const openSessionPicker = useCallback((variant: SessionCandidatePanelVariant) => {
     setSubCmdPicker(null)
     allowEmptyFirstPickerSyncRef.current = false
+    sessionListPickerDismissedRef.current = false
+    imeTokenPickerDismissedRef.current = false
+    clearCandidateMenuSuppressedUntilTab()
     const rows = sessionListRowsRef.current
     setSessionPickerVariant(variant)
     setSessionListPickerHi((prev) => {
@@ -213,6 +225,23 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         setSessionListPickerHi(null)
         return
       }
+      const tabOpenRequested = tabPickerOpenRequestRef.current
+      // EN: After Esc, stay closed across sessions until Tab (or an intentional open) clears the gate.
+      if (isCandidateMenuSuppressedUntilTab() && !tabOpenRequested) {
+        imeTokenPickerDismissedRef.current = true
+        sessionListPickerDismissedRef.current = true
+        allowEmptyFirstPickerSyncRef.current = false
+        tabPickerOpenRequestRef.current = false
+        setSubCmdPicker(null)
+        setSessionListPickerHi(null)
+        setSessionPickerVariant(null)
+        return
+      }
+      if (tabOpenRequested) {
+        imeTokenPickerDismissedRef.current = false
+        sessionListPickerDismissedRef.current = false
+        clearCandidateMenuSuppressedUntilTab()
+      }
       const active = resolveActiveCommandSegment(ln, pos)
       const segmentLine = ln.slice(active.segmentStart, active.segmentEnd)
       const segmentCursor = active.localCursor
@@ -224,13 +253,13 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
           setSubCmdPicker(null)
           setSessionListPickerHi(null)
           setSessionPickerVariant(null)
-          sessionListPickerDismissedRef.current = true
           return
         }
-        sessionListPickerDismissedRef.current = false
         setSubCmdPicker(null)
         const namePrefix = switchState.namePrefix
-        const matchMode = incrementalPickerMatchMode(sessionListPickerHiRef.current !== null)
+        const matchMode = incrementalPickerMatchMode(
+          sessionListPickerHiRef.current !== null || tabOpenRequested
+        )
         const filtered = filterSessionSwitchPickerRows(allRows, namePrefix, matchMode)
         setSessionPickerVariant("switch")
         setSessionListPickerHi((prev) => {
@@ -247,15 +276,16 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
           const activeIdx = filtered.findIndex((r) => r.isActive)
           return activeIdx >= 0 ? activeIdx : 0
         })
+        tabPickerOpenRequestRef.current = false
+        allowEmptyFirstPickerSyncRef.current = false
         return
       }
-      sessionListPickerDismissedRef.current = false
       setSessionListPickerHi(null)
       setSessionPickerVariant(null)
 
       const tabChipZone = tabChipCompletionZone(ln, pos)
       if (tabChipZone !== null) {
-        if (imeTokenPickerDismissedRef.current) {
+        if (imeTokenPickerDismissedRef.current && !tabOpenRequested) {
           setSubCmdPicker(null)
           return
         }
@@ -362,20 +392,20 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         return
       }
 
-      if (imeTokenPickerDismissedRef.current) {
+      if (imeTokenPickerDismissedRef.current && !tabOpenRequested) {
         setSubCmdPicker(null)
         allowEmptyFirstPickerSyncRef.current = false
         tabPickerOpenRequestRef.current = false
         return
       }
       const pickerAlreadyOpen = subCmdPickerRef.current !== null
-      const tabOpenRequested = tabPickerOpenRequestRef.current
       const emptyFirstTab = allowEmptyFirstPickerSyncRef.current
       const resolved = resolveImeTokenPicker(ln, pos, completionCandidatesRef.current, {
         emptyFirstPrefixShowsAll: pickerAlreadyOpen || tabOpenRequested || emptyFirstTab,
         candidateMatch: incrementalPickerMatchMode(pickerAlreadyOpen)
       })
       // EN: Auto-open when `-list` is complete and `| browse`… are available (no Tab required).
+      //     Still blocked after Esc until Tab via `isCandidateMenuSuppressedUntilTab` above.
       const autoOpenPipeContinuation =
         resolved !== null &&
         resolved.prefix.length === 0 &&
@@ -533,6 +563,11 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
 
   const closeSessionListPicker = useCallback(() => {
     sessionListPickerDismissedRef.current = true
+    imeTokenPickerDismissedRef.current = true
+    markCandidateMenuSuppressedUntilTab()
+    allowEmptyFirstPickerSyncRef.current = false
+    tabPickerOpenRequestRef.current = false
+    setSubCmdPicker(null)
     setSessionListPickerHi(null)
     setSessionPickerVariant(null)
   }, [])

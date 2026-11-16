@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react"
 import type { TokenPickerModel } from "../token-picker-panel"
+import { markCandidateMenuSuppressedUntilTab } from "../../command-line/candidate-menu-open-policy.ts"
 import {
   buildSessionSwitchCommandLine,
   sanitizeSessionName,
@@ -104,8 +105,10 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
 
   const closeSessionListPicker = useCallback(() => {
     options.sessionListPickerDismissedRef.current = true
+    markCandidateMenuSuppressedUntilTab()
     options.setSessionListPickerHi(null)
     options.setSessionPickerVariant(null)
+    options.setSubCmdPicker(null)
     options.focusPrompt()
   }, [options])
 

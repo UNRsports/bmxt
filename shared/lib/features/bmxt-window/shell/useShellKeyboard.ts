@@ -1,5 +1,9 @@
 import { useCallback } from "react"
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
+import {
+  clearCandidateMenuSuppressedUntilTab,
+  isCandidateMenuSuppressedUntilTab
+} from "../../command-line/candidate-menu-open-policy.ts"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isJobHandleActive, type BmxtJobHandle } from "../../job"
 import { listTabsMoveUrlCandidates, tabsMoveUrlCompletionZone } from "../../tabs/input"
@@ -95,6 +99,8 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
     (idx: number) => {
       options.allowEmptyFirstPickerSyncRef.current = false
       options.imeTokenPickerDismissedRef.current = false
+      options.sessionListPickerDismissedRef.current = false
+      clearCandidateMenuSuppressedUntilTab()
       const s = options.subCmdPickerRef.current
       if (!s) {
         return
@@ -497,6 +503,7 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         }
         options.imeTokenPickerDismissedRef.current = false
         options.sessionListPickerDismissedRef.current = false
+        clearCandidateMenuSuppressedUntilTab()
         const curLn = options.lineRef.current
         const pos = options.cursorRef.current
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
@@ -712,10 +719,12 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         !options.sessionNameTypingRef.current
       ) {
         e.preventDefault()
-        // EN: Prefer offering `| browse`… once before bare submit. After Esc dismiss, submit as-is.
+        // EN: Prefer offering `| browse`… once before bare submit. After Esc dismiss, submit as-is
+        //     until Tab explicitly reopens candidates.
         if (
           options.subCmdPickerRef.current === null &&
-          !options.imeTokenPickerDismissedRef.current
+          !options.imeTokenPickerDismissedRef.current &&
+          !isCandidateMenuSuppressedUntilTab()
         ) {
           const line = options.lineRef.current
           const pos = options.cursorRef.current
