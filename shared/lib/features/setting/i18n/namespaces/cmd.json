@@ -1235,6 +1235,34 @@
     "ja": "Family 招待をコピーしました。",
     "en": "Family invite copied."
   },
+  "cmd.sync.wizard.saveFileButton": {
+    "ja": "ファイルに保存",
+    "en": "Save file"
+  },
+  "cmd.sync.wizard.openFileButton": {
+    "ja": "ファイルを開く",
+    "en": "Open file"
+  },
+  "cmd.sync.wizard.savedFile": {
+    "ja": "{name} を保存しました。相手側で開いてください。",
+    "en": "Saved {name}. Open it on the other browser."
+  },
+  "cmd.sync.wizard.saveFileFailed": {
+    "ja": "握手ファイルを保存できませんでした。",
+    "en": "Could not save the handshake file."
+  },
+  "cmd.sync.wizard.invalidHandshakeFile": {
+    "ja": "握手ファイルが無効です。bmxt-offer.json / bmxt-answer.json（または bmxt-rtc1. コード）を選んでください。",
+    "en": "Invalid handshake file. Choose bmxt-offer.json / bmxt-answer.json (or a bmxt-rtc1. code)."
+  },
+  "cmd.sync.wizard.wrongHandshakeFileRole": {
+    "ja": "ファイルの種類が違います。{expected} が必要ですが {actual} でした。",
+    "en": "Wrong handshake file kind. Expected {expected}, got {actual}."
+  },
+  "cmd.sync.wizard.openFileFailed": {
+    "ja": "ファイルを読めませんでした。",
+    "en": "Could not read the file."
+  },
   "cmd.sync.link.connecting": {
     "ja": "接続中...",
     "en": "Connecting..."

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useMemo, useRef, useState, type ReactNode } from "react"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
 import {
@@ -9,12 +9,15 @@ import {
   wizardContinueAfterInvite,
   wizardCopyOutbound,
   wizardFinish,
+  wizardLoadRtcFile,
+  wizardSaveOutboundHandshakeFile,
   wizardSubmitInvite,
   wizardSubmitRtc,
   type SyncWizardLogSink
 } from "./sync-wizard-controller.ts"
 import { useSyncConnectPending, useSyncWizardState } from "./use-sync-wizard.ts"
 import type { SyncWizardState } from "./sync-wizard-state.ts"
+import { patchSyncWizardState } from "./sync-wizard-state.ts"
 
 export type SyncWizardPanelProps = {
   locale: UiLocale
@@ -94,6 +97,82 @@ function PasteForm(props: {
   )
 }
 
+function HandshakeOutboundActions(props: {
+  locale: UiLocale
+  disabled: boolean
+  onCopy: () => void
+  onSaveFile: () => void
+}): ReactNode {
+  return (
+    <div className="bmxt-sync-wizard-actions">
+      <button
+        type="button"
+        className="bmxt-sync-wizard-copy"
+        disabled={props.disabled}
+        onClick={props.onCopy}>
+        {tCmd("cmd.sync.connect.copyButton", props.locale)}
+      </button>
+      <button
+        type="button"
+        className="bmxt-sync-wizard-secondary"
+        disabled={props.disabled}
+        onClick={props.onSaveFile}>
+        {tCmd("cmd.sync.wizard.saveFileButton", props.locale)}
+      </button>
+    </div>
+  )
+}
+
+function HandshakeFileOpenButton(props: {
+  locale: UiLocale
+  disabled: boolean
+  onText: (text: string) => void
+  onReadFailed: () => void
+}): ReactNode {
+  const inputRef = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <input
+        ref={inputRef}
+        className="bmxt-sync-wizard-file-input"
+        type="file"
+        accept="application/json,.json,text/plain,.txt"
+        tabIndex={-1}
+        disabled={props.disabled}
+        onChange={(e) => {
+          const input = e.currentTarget
+          const file = input.files?.[0]
+          input.value = ""
+          if (file === undefined) {
+            return
+          }
+          const reader = new FileReader()
+          reader.onload = () => {
+            if (typeof reader.result !== "string") {
+              props.onReadFailed()
+              return
+            }
+            props.onText(reader.result)
+          }
+          reader.onerror = () => {
+            props.onReadFailed()
+          }
+          reader.readAsText(file)
+        }}
+      />
+      <button
+        type="button"
+        className="bmxt-sync-wizard-secondary"
+        disabled={props.disabled}
+        onClick={() => {
+          inputRef.current?.click()
+        }}>
+        {tCmd("cmd.sync.wizard.openFileButton", props.locale)}
+      </button>
+    </>
+  )
+}
+
 export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
   const state = useSyncWizardState()
   const pending = useSyncConnectPending()
@@ -113,6 +192,12 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
 
   const busy = state.busy
   const outbound = pending?.outboundCode ?? null
+
+  const onRtcFileReadFailed = (): void => {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.openFileFailed", locale)
+    })
+  }
 
   let body: ReactNode = null
 
@@ -215,16 +300,23 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
             : tCmd("cmd.sync.wizard.leadCopyOffer", locale)}
         </p>
         {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <button
-          type="button"
-          className="bmxt-sync-wizard-copy"
+        <HandshakeOutboundActions
+          locale={locale}
           disabled={busy || outbound === null}
-          onClick={() => void wizardCopyOutbound(sink)}>
-          {tCmd("cmd.sync.connect.copyButton", locale)}
-        </button>
+          onCopy={() => void wizardCopyOutbound(sink)}
+          onSaveFile={() => {
+            wizardSaveOutboundHandshakeFile(sink)
+          }}
+        />
         <p className="bmxt-sync-wizard-lead bmxt-sync-wizard-lead--follow">
           {tCmd("cmd.sync.wizard.leadPasteAnswer", locale)}
         </p>
+        <HandshakeFileOpenButton
+          locale={locale}
+          disabled={busy}
+          onText={(text) => void wizardLoadRtcFile(sink, text)}
+          onReadFailed={onRtcFileReadFailed}
+        />
         <PasteForm
           locale={locale}
           disabled={busy}
@@ -244,6 +336,12 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
               })
             : tCmd("cmd.sync.wizard.leadPasteOffer", locale)}
         </p>
+        <HandshakeFileOpenButton
+          locale={locale}
+          disabled={busy}
+          onText={(text) => void wizardLoadRtcFile(sink, text)}
+          onReadFailed={onRtcFileReadFailed}
+        />
         <PasteForm
           locale={locale}
           disabled={busy}
@@ -258,13 +356,14 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       <>
         <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyAnswer", locale)}</p>
         {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <button
-          type="button"
-          className="bmxt-sync-wizard-copy"
+        <HandshakeOutboundActions
+          locale={locale}
           disabled={busy || outbound === null}
-          onClick={() => void wizardCopyOutbound(sink)}>
-          {tCmd("cmd.sync.connect.copyButton", locale)}
-        </button>
+          onCopy={() => void wizardCopyOutbound(sink)}
+          onSaveFile={() => {
+            wizardSaveOutboundHandshakeFile(sink)
+          }}
+        />
         <button
           type="button"
           className="bmxt-sync-wizard-primary"

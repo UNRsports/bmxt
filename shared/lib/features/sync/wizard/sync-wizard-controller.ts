@@ -5,6 +5,11 @@ import {
   getSyncConnectPending
 } from "../connect/sync-connect-pending.ts"
 import { copySyncHandshakeCode } from "../connect/sync-handshake-actions.ts"
+import {
+  downloadRtcHandshakeFile,
+  parseRtcHandshakeFileText,
+  type RtcHandshakeFileRole
+} from "../discovery/rtc-handshake-file.ts"
 import { expandSyncLogLines } from "../facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../facade/sync-picker-summary.ts"
 import { getSyncService } from "../facade/sync-service.ts"
@@ -18,8 +23,35 @@ import {
   getSyncWizardState,
   patchSyncWizardState,
   setSyncWizardState,
-  type SyncWizardState
+  type SyncWizardState,
+  type SyncWizardStep
 } from "./sync-wizard-state.ts"
+
+function expectedInboundRtcRole(step: SyncWizardStep): RtcHandshakeFileRole | null {
+  if (step === "pasteOffer") {
+    return "offer"
+  }
+  if (step === "showOffer") {
+    return "answer"
+  }
+  return null
+}
+
+function outboundHandshakeRole(
+  step: SyncWizardStep,
+  pendingRole: RtcHandshakeFileRole | null | undefined
+): RtcHandshakeFileRole | null {
+  if (pendingRole === "offer" || pendingRole === "answer") {
+    return pendingRole
+  }
+  if (step === "showOffer") {
+    return "offer"
+  }
+  if (step === "showAnswer") {
+    return "answer"
+  }
+  return null
+}
 
 export type SyncWizardLogSink = {
   locale: UiLocale
@@ -368,6 +400,82 @@ export async function wizardCopyOutbound(
     banner: expanded[0] ?? tCmd("cmd.sync.connect.clipboardWriteFailed", sink.locale)
   })
   return { ok: false }
+}
+
+/**
+ * EN: Download the pending RTC handshake as bmxt-offer.json / bmxt-answer.json.
+ * JA: 保留中の RTC 握手を bmxt-offer.json / bmxt-answer.json としてダウンロード。
+ */
+export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: boolean } {
+  const current = getSyncWizardState()
+  if (!current.open || current.busy) {
+    return { ok: false }
+  }
+  const pending = getSyncConnectPending()
+  if (pending === null || pending.kind !== "handshake" || pending.outboundCode === null) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
+    })
+    return { ok: false }
+  }
+  const role = outboundHandshakeRole(current.step, pending.role)
+  if (role === null) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
+    })
+    return { ok: false }
+  }
+  const saved = downloadRtcHandshakeFile({
+    role,
+    code: pending.outboundCode
+  })
+  if (!saved) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
+    })
+    return { ok: false }
+  }
+  patchSyncWizardState({
+    banner: tCmd("cmd.sync.wizard.savedFile", sink.locale, {
+      name: role === "offer" ? "bmxt-offer.json" : "bmxt-answer.json"
+    })
+  })
+  return { ok: true }
+}
+
+/**
+ * EN: Load an offer/answer handshake file and continue the RTC wizard step.
+ * JA: offer/answer 握手ファイルを読み込み、RTC ウィザード工程を続行する。
+ */
+export async function wizardLoadRtcFile(
+  sink: SyncWizardLogSink,
+  fileText: string
+): Promise<void> {
+  const current = getSyncWizardState()
+  if (!current.open || current.busy) {
+    return
+  }
+  const expectedRole = expectedInboundRtcRole(current.step)
+  if (expectedRole === null) {
+    return
+  }
+  const parsed = parseRtcHandshakeFileText(fileText)
+  if (!parsed.ok) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.invalidHandshakeFile", sink.locale)
+    })
+    return
+  }
+  if (parsed.role !== null && parsed.role !== expectedRole) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.wrongHandshakeFileRole", sink.locale, {
+        expected: expectedRole,
+        actual: parsed.role
+      })
+    })
+    return
+  }
+  await wizardSubmitRtc(sink, parsed.code)
 }
 
 export function wizardFinish(sink: SyncWizardLogSink): void {

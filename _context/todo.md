@@ -251,7 +251,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 ファイル I/O 改善は **1 回の手動握手の体感**を軽くするもので、**手動回数の下限（新規台数）は変えられない**。
 
-- [ ] **6c UX:** ウィザードに handshake ファイル保存（blob download）と読み込み（`input type=file`）を追加し clipboard と併存
+- [x] **6c UX:** ウィザードに handshake ファイル保存（blob download）と読み込み（`input type=file`）を追加し clipboard と併存
 - [ ] **6c UX:** Chrome ↔ Firefox でファイル保存→読込だけで握手完了できることを確認（clipboard 経路も維持）
 
 ### 7. Picker = コマンド構築 UI（CUI 同等化）
