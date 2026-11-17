@@ -5,6 +5,7 @@ export {
   buildRtcHandshakeFileDocument,
   buildRtcHandshakeFileJson,
   downloadRtcHandshakeFile,
+  formatRtcHandshakeFileStamp,
   parseRtcHandshakeFileText,
   rtcHandshakeFileName,
   type RtcHandshakeFileDocument,

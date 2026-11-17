@@ -1252,8 +1252,8 @@
     "en": "Could not save the handshake file."
   },
   "cmd.sync.wizard.invalidHandshakeFile": {
-    "ja": "握手ファイルが無効です。bmxt-offer.json / bmxt-answer.json（または bmxt-rtc1. コード）を選んでください。",
-    "en": "Invalid handshake file. Choose bmxt-offer.json / bmxt-answer.json (or a bmxt-rtc1. code)."
+    "ja": "握手ファイルが無効です。bmxt-*-offer.json / bmxt-*-answer.json（または bmxt-rtc1. コード）を選んでください。",
+    "en": "Invalid handshake file. Choose a bmxt-*-offer.json / bmxt-*-answer.json ticket (or a bmxt-rtc1. code)."
   },
   "cmd.sync.wizard.wrongHandshakeFileRole": {
     "ja": "ファイルの種類が違います。{expected} が必要ですが {actual} でした。",

@@ -4,6 +4,7 @@ import { generateFamilySeed } from "../../../../shared/lib/features/sync/crypto/
 import { formatRtcHandshakeCode } from "../../../../shared/lib/features/sync/handshake/common/rtc-handshake-codec.ts"
 import {
   buildRtcHandshakeFileJson,
+  formatRtcHandshakeFileStamp,
   parseRtcHandshakeFileText,
   rtcHandshakeFileName,
   RTC_HANDSHAKE_FILE_KIND,
@@ -32,9 +33,14 @@ async function sampleOfferCode(): Promise<string> {
 }
 
 describe("rtc-handshake-file", () => {
-  it("names offer and answer files", () => {
-    assert.equal(rtcHandshakeFileName("offer"), "bmxt-offer.json")
-    assert.equal(rtcHandshakeFileName("answer"), "bmxt-answer.json")
+  it("names offer and answer files with a sortable timestamp", () => {
+    const at = new Date(2026, 10, 17, 11, 42, 5)
+    assert.equal(formatRtcHandshakeFileStamp(at), "20261117-114205")
+    assert.equal(rtcHandshakeFileName("offer", at), "bmxt-20261117-114205-offer.json")
+    assert.equal(rtcHandshakeFileName("answer", at), "bmxt-20261117-114205-answer.json")
+    assert.ok(
+      rtcHandshakeFileName("offer", at) < rtcHandshakeFileName("offer", new Date(2026, 10, 17, 11, 42, 6))
+    )
   })
 
   it("round-trips a structured offer JSON file", async () => {

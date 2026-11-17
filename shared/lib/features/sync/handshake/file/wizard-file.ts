@@ -45,8 +45,8 @@ function outboundHandshakeRole(
 }
 
 /**
- * EN: Download the pending RTC handshake as bmxt-offer.json / bmxt-answer.json.
- * JA: 保留中の RTC 握手を bmxt-offer.json / bmxt-answer.json としてダウンロード。
+ * EN: Download the pending RTC handshake as a timestamped ticket file.
+ * JA: 保留中の RTC 握手をタイムスタンプ付きチケットファイルとしてダウンロード。
  */
 export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: boolean } {
   const current = getSyncWizardState()
@@ -67,11 +67,11 @@ export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: 
     })
     return { ok: false }
   }
-  const saved = downloadRtcHandshakeFile({
+  const filename = downloadRtcHandshakeFile({
     role,
     code: pending.outboundCode
   })
-  if (!saved) {
+  if (filename === null) {
     patchSyncWizardState({
       banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
     })
@@ -79,7 +79,7 @@ export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: 
   }
   patchSyncWizardState({
     banner: tCmd("cmd.sync.wizard.savedFile", sink.locale, {
-      name: role === "offer" ? "bmxt-offer.json" : "bmxt-answer.json"
+      name: filename
     })
   })
   return { ok: true }
