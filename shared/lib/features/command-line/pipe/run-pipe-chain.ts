@@ -146,7 +146,7 @@ export async function runPipeChain(
     // EN: Synthetic producer — `#t:<id>…` chips (optional trailing `tab:`) → page.open stream.
     const chipIds = parseTabChipProducerSegment(stage)
     if (chipIds !== null) {
-      bmxtRuleStream = bmxtRuleStreamFromTabIds(chipIds)
+      bmxtRuleStream = await bmxtRuleStreamFromTabIds(chipIds)
       listResult = undefined
       showUrl = false
       if (stages.length === 1) {
