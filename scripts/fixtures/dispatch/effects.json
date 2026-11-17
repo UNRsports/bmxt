@@ -108,14 +108,30 @@
     "line": "search -list",
     "expect": {
       "ty": "effects",
-      "effects": [{ "kind": "search_list", "dispatch_line": "search -list --all" }]
+      "effects": [
+        {
+          "kind": "search_list",
+          "dispatch_line": "search -list --all",
+          "peer_dispatch_line": "search -list --all",
+          "device_scope": "local",
+          "device_id": ""
+        }
+      ]
     }
   },
   {
     "line": "search -list --page foo",
     "expect": {
       "ty": "effects",
-      "effects": [{ "kind": "search_list", "dispatch_line": "search -list --page foo" }]
+      "effects": [
+        {
+          "kind": "search_list",
+          "dispatch_line": "search -list --page foo",
+          "peer_dispatch_line": "search -list --page foo",
+          "device_scope": "local",
+          "device_id": ""
+        }
+      ]
     }
   },
   {
@@ -156,6 +172,7 @@
     "line": "unknowncmd",
     "expect": {
       "ty": "msgs",
+      "exitStatus": 127,
       "msgs": [{ "key": "cmd.error.unknownCommand", "params": { "cmdToken": "unknowncmd" } }]
     }
   }

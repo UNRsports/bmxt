@@ -200,6 +200,8 @@ export type DispatchBundle = {
   msgs?: DispatchMsg[]
   /** EN: Optional prompt restore after msgs (Rust prompt semantic SoT). */
   promptPrefix?: string
+  /** EN: Plan-time exit status from Rust (0 success; omitted when 0 on the wire). */
+  exitStatus?: number
 }
 `
   return header.endsWith("\n") ? header : header + "\n"

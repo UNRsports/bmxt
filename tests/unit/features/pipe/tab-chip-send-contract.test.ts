@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { afterEach, describe, it } from "node:test"
+import { ensureBmxtCoreForTests } from "../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import {
   bmxtRuleStreamFromResolvedTabs,
   bmxtRuleStreamFromTabIds,
@@ -10,6 +11,8 @@ import {
   pageOpenRecordsMissingUrl
 } from "../../../../shared/lib/features/command-line/pipe/consumers/tab-chip-send-contract.ts"
 import { urlBatchesFromBmxtRuleStream } from "../../../../shared/lib/features/command-line/pipe/consumers/sync-open-batches.ts"
+
+ensureBmxtCoreForTests()
 
 const sampleTabs: ResolvedChipTab[] = [
   {
