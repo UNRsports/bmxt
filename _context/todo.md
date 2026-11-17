@@ -215,6 +215,45 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛 · `tabs_changed` 追従を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC（接続設定のみ）
 
+**6c 続: 握手 UX 手間削減（検討・方針・未実装）**
+
+目的は無操作ではない。**現行のコピペ往復より体感手間を減らす**こと（同一 PC · Chrome ↔ Firefox）。
+
+| 項目 | 内容 |
+|------|------|
+| 情報下限 | Non-Trickle 済み。渡す実体は **offer 1 + answer 1**。ICE の第 3 往復は不要。減らせるのは長い文字列の選択・コピー・貼付コスト |
+| 現行 COPY | 全文選択不要（`shared/lib/features/sync/connect/sync-handshake-actions.ts`）。残るのはブラウザ切替＋貼付 |
+| 手動 1 接続 | ハブが offer を COPY → 新規が貼付、新規が answer を COPY → ハブが貼付（**2 往復**）。「3 往復」は Trickle 前提の旧イメージで現行プロトコルとは不一致 |
+| 兄弟直結 | `mesh_peers` / `mesh_signal` 自動補完。追加コピペ **0 回**（DataChannel 上で SDP+ICE をハブ経由リレー） |
+| 6 台メッシュ | 星型で手動 **5 セット**（各新規↔ハブ）。フルメッシュ残りは自動。1 つの offer ファイルを 5 台が読んで全員接続、は **不可**（SDP は 1 `RTCPeerConnection` に束縛） |
+
+**採る案（未実装）:** ウィザードに「ファイルで渡す」を clipboard と併存。
+
+- 保存: blob download（settings export と同型）で `bmxt-offer.json` / `bmxt-answer.json`（中身は封印 `bmxt-rtc1.*` または同等 JSON）
+- 読み込み: `<input type="file" accept="application/json,.json">`（Firefox 可。`showOpenFilePicker` 非依存）
+- clipboard COPY／貼付は残す。Non-Trickle・codec・peer host は触らない（輸送 UI のみ）
+- 追加権限なし（`downloads` / 新規 FSA ディレクトリは不要）
+- 変更想定: `shared/lib/features/sync/wizard/` · ファイル用の薄いヘルパ（codec 傍）· i18n EN/JA
+
+**採らない案**
+
+- Downloads 無操作監視／自動 answer 書き出し（非対称・`downloads` 権限・FSA 初回許可・ファイル名衝突。手間削減に必須でない）
+- FSA signaling box の復活（6c 非目標。Firefox がディレクトリ監視不可）
+- 開始ブラウザの **1 ファイル**を残り N 台が読むだけの一括接続（WebRTC 制約）
+
+**一括へ寄せる将来案（別タスク・未採択）**
+
+| 案 | 内容 | 限界 |
+|----|------|------|
+| ハブが N 個の offer をまとめたバンドルを配る | 各参加者が自分用スロットの answer を返す | なお N 本の answer 回収が必要。1 ファイル読込だけでは不足 |
+| 既存 DataChannel 経由の `mesh_signal` のみ | 既に実装済み | 最初のエッジは手動が必要 |
+| 外部シグナリングサーバ | 真の一括 join | zero-custody / no-fetch 方針と相反 |
+
+ファイル I/O 改善は **1 回の手動握手の体感**を軽くするもので、**手動回数の下限（新規台数）は変えられない**。
+
+- [ ] **6c UX:** ウィザードに handshake ファイル保存（blob download）と読み込み（`input type=file`）を追加し clipboard と併存
+- [ ] **6c UX:** Chrome ↔ Firefox でファイル保存→読込だけで握手完了できることを確認（clipboard 経路も維持）
+
 ### 7. Picker = コマンド構築 UI（CUI 同等化）
 
 **目標:** search / DOM / session / setting（および tab の残ギャップ）を、**typed コマンド／パイプだけで picker と同等に操作できる**ようにする。picker は GUI として「ユーザに代わってコマンド構文やパイプを組み立て、`submitLine` / `runDispatch` に再入場する」存在に揃え、Chrome／host API の直実行を持たない。
