@@ -68,6 +68,7 @@ import {
   type NavReloadTabChipMeta
 } from "../nav/nav-reload-tab-token"
 import { lockedPrefixBlocksDelete } from "./shell/prompt-locked-prefix"
+import { ensureNavReloadTabChipMetaForTexts } from "../nav/ensure-nav-reload-tab-chip-meta"
 import { rewriteHashTTokensInLogLines } from "../nav/nav-tab-ref-log-rewrite"
 import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url"
 import { useLogScroll } from "./shell/useLogScroll"
@@ -250,10 +251,13 @@ export function BmxtShell({
   const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
   const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
   const appendLogLines = useCallback(
-    (
+    async (
       newLines: string[],
       channel?: import("../command-line/command-output.ts").LogChannel
     ) => {
+      // EN: Resolve `#t:<id>` faces before rewrite so picker Family-send logs are not bare "Tab".
+      // JA: 書き換え前に `#t:<id>` 表示を解決し、picker Family 送信ログが「タブ」だけにならないようにする。
+      await ensureNavReloadTabChipMetaForTexts(newLines, navReloadTabMetaRef.current)
       const pendingTitle = tNav("nav.reload.chipPending", uiSettings.locale)
       const rewritten = rewriteHashTTokensInLogLines(
         newLines,
