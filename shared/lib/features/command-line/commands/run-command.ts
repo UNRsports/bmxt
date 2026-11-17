@@ -5,6 +5,8 @@ import { dispatchSegmentUiOutcome } from "../compound/apply-segment-bundle.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tCompound } from "../../setting/i18n/ns/compound.ts"
 import { matchPlainListCommand, tryRunPlainListCommand } from "../list-commands/index.ts"
+import { listPlanFromSearchListEffect } from "../list-commands/list-plan-from-ir.ts"
+import { fetchAndFormatPlainListById } from "../list-commands/run-plain.ts"
 import { applyRedirectsToOutcome } from "./apply-redirect.ts"
 import { isNullRedirectTarget, parseRedirects } from "./parse-redirect.ts"
 import { BACKGROUND_COMMAND_ENTRY } from "./registry.ts"
@@ -102,11 +104,21 @@ async function dispatchSegment(
   // EN: List commands marked runtime=ui (tab/search peer scopes) must not hit SW RUN_CMD.
   // JA: runtime=ui の一覧（tab/search のピア横断）は SW の RUN_CMD に落とさない。
   if (bundle.ty === "effects") {
+    const searchEffect = bundle.effects?.find((e) => e.kind === "search_list")
+    if (searchEffect !== undefined && searchEffect.kind === "search_list") {
+      const listPlan = listPlanFromSearchListEffect(searchEffect)
+      // EN: Pipe producer defers fetch to attach (Ctrl+C on parent job).
+      if (options?.suppressLogPatches === true) {
+        return segmentSuccess([], undefined, undefined, listPlan)
+      }
+      const lines = await fetchAndFormatPlainListById(listPlan.listId, listPlan.match, {
+        locale,
+        deps
+      })
+      return segmentSuccess(lines, undefined, undefined, listPlan)
+    }
     const matched = matchPlainListCommand(commandText)
     if (matched !== null && matched.entry.runtime === "ui") {
-      // EN: Pipe producer defers the real fetch to `attachBmxtRuleStreamToOutcome`
-      //     so search runs once under the parent job (Ctrl+C reaches shouldCancel).
-      // JA: パイプ左辺は attach 側で一度だけ fetch する（親ジョブの Ctrl+C が届く）。
       if (options?.suppressLogPatches === true) {
         return segmentSuccess([])
       }

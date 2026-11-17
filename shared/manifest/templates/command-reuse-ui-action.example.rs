@@ -18,5 +18,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
         list_id: "tabs".to_string(),
         line: line.trim().to_string(),
         show_url: "false".to_string(),
+        device_scope: "local".to_string(),
+        device_id: String::new(),
     })
 }

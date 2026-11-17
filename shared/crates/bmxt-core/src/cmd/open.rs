@@ -147,7 +147,7 @@ mod tests {
             "https://example.com".into(),
         ]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::OpenUrlIntoWindow { url, window_id } => {
                     assert_eq!(url, "https://example.com");
                     assert_eq!(*window_id, 3);
@@ -169,7 +169,7 @@ mod tests {
             "https://example.com".into(),
         ]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::OpenUrlIntoGroup {
                     url,
                     window_id,

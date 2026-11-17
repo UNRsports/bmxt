@@ -6,6 +6,7 @@ import {
   type ListCommandFetchContext,
   type ListCommandId
 } from "../../command-line/list-commands"
+import { listPlanFromOpenPlainList } from "../../command-line/list-commands/list-plan-from-ir"
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
 import {
@@ -238,9 +239,9 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
     case "nav_confirm_close":
       return applyNavConfirmClose(ctx, action.target)
     case "open_plain_list":
-      return applyOpenPlainList(ctx, action.list_id, action.line)
+      return applyOpenPlainList(ctx, action)
     case "open_picker":
-      return applyOpenPicker(ctx, action.list_id, action.line, action.show_url)
+      return applyOpenPicker(ctx, action)
     case "close_picker":
       return applyClosePicker(ctx, action.slot)
     case "continuation_prompt":
@@ -309,9 +310,9 @@ export async function applyUiActionForSegment(
     case "nav_confirm_close":
       return segmentFailure("interactive", [tCmd("cmd.nav.confirm.compoundBlocked", ctx.locale)])
     case "open_plain_list":
-      return applyOpenPlainListSegment(ctx, action.list_id, action.line)
+      return applyOpenPlainListSegment(ctx, action)
     case "open_picker":
-      return applyOpenPickerSegment(ctx, action.list_id, action.line, action.show_url)
+      return applyOpenPickerSegment(ctx, action)
     case "close_picker":
       return applyClosePickerSegment(ctx, action.slot)
     case "continuation_prompt":
@@ -1063,18 +1064,35 @@ async function applySnapshotSaveSegment(
   return segmentFailure("runtime", lines, lines[0])
 }
 
+function resolveOpenPlainListPlan(
+  action: Extract<UiActionIR, { kind: "open_plain_list" }>
+): { listId: ListCommandId; match: unknown; listPlan: NonNullable<ReturnType<typeof listPlanFromOpenPlainList>> } | null {
+  const fromIr = listPlanFromOpenPlainList(action)
+  if (fromIr !== null) {
+    return { listId: fromIr.listId, match: fromIr.match, listPlan: fromIr }
+  }
+  // EN: Legacy fallback for list_ids not yet stamped (dom via open_plain_list unused today).
+  const listId = parseListCommandId(action.list_id)
+  if (listId === null) {
+    return null
+  }
+  const matchResult = buildPlainListMatch(listId, action.line)
+  if (matchResult.ok === false) {
+    return null
+  }
+  return {
+    listId,
+    match: matchResult.match,
+    listPlan: { listId, match: matchResult.match, showUrl: false }
+  }
+}
+
 function applyOpenPlainList(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string
+  action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): boolean {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return false
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPlainListMatch(listId, line)
-  if (matchResult.ok === false) {
+  const resolved = resolveOpenPlainListPlan(action)
+  if (resolved === null) {
     return false
   }
   finishCommand(ctx)
@@ -1083,8 +1101,8 @@ function applyOpenPlainList(
     const busyToken = ctx.deps.beginCommandBusy(tShell("shell.commandBusy.working", ctx.locale))
     try {
       const lines = await runPlainListForCommandId(
-        listId,
-        matchResult.match,
+        resolved.listId,
+        resolved.match,
         listFetchContext(ctx)
       )
       if (ctx.deps.isBusyTokenActive(busyToken)) {
@@ -1108,44 +1126,62 @@ function applyOpenPlainList(
 
 async function applyOpenPlainListSegment(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string
+  action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): Promise<SegmentOutcome> {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return segmentFailure("unknown", [`error: unknown list: ${listIdRaw}`])
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPlainListMatch(listId, line)
-  if (matchResult.ok === false) {
-    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: line })])
+  const resolved = resolveOpenPlainListPlan(action)
+  if (resolved === null) {
+    return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
   }
   try {
     const lines = await runPlainListForCommandId(
-      listId,
-      matchResult.match,
+      resolved.listId,
+      resolved.match,
       listFetchContext(ctx)
     )
-    return segmentSuccess(lines)
+    return segmentSuccess(lines, undefined, undefined, resolved.listPlan)
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     return segmentFailure("runtime", [tError("error.generic", ctx.locale, { message })], message)
   }
 }
 
+function resolveOpenPickerPlan(
+  action: Extract<UiActionIR, { kind: "open_picker" }>
+): { listId: ListCommandId; match: unknown; showUrl: boolean } | null {
+  const fromIr = listPlanFromOpenPlainList({
+    list_id: action.list_id,
+    show_url: action.show_url,
+    device_scope: action.device_scope,
+    device_id: action.device_id
+  })
+  if (fromIr !== null) {
+    return {
+      listId: fromIr.listId,
+      match: fromIr.match,
+      showUrl: action.show_url === "true" || fromIr.showUrl
+    }
+  }
+  const listId = parseListCommandId(action.list_id)
+  if (listId === null) {
+    return null
+  }
+  const matchResult = buildPickerListMatch(listId, action.line, action.show_url)
+  if (matchResult.ok === false) {
+    return null
+  }
+  return {
+    listId,
+    match: matchResult.match,
+    showUrl: listId === "tabs" ? action.show_url === "true" : false
+  }
+}
+
 function applyOpenPicker(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string,
-  showUrlRaw: string
+  action: Extract<UiActionIR, { kind: "open_picker" }>
 ): boolean {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return false
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPickerListMatch(listId, line, showUrlRaw)
-  if (matchResult.ok === false) {
+  const resolved = resolveOpenPickerPlan(action)
+  if (resolved === null) {
     return false
   }
   recordOnly(ctx)
@@ -1155,17 +1191,16 @@ function applyOpenPicker(
     const busyToken = ctx.deps.beginCommandBusy(tShell("shell.commandBusy.working", ctx.locale))
     try {
       const listResult = await fetchListResultById(
-        listId,
-        matchResult.match,
+        resolved.listId,
+        resolved.match,
         listFetchContext(ctx)
       )
       if (!ctx.deps.isBusyTokenActive(busyToken)) {
         return
       }
-      const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
       const outcome = await openPickerFromListResult(
         listResult,
-        { showUrl },
+        { showUrl: resolved.showUrl },
         ctx.deps,
         ctx.locale
       )
@@ -1198,27 +1233,24 @@ function applyOpenPicker(
 
 async function applyOpenPickerSegment(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string,
-  showUrlRaw: string
+  action: Extract<UiActionIR, { kind: "open_picker" }>
 ): Promise<SegmentOutcome> {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return segmentFailure("unknown", [`error: unknown list: ${listIdRaw}`])
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPickerListMatch(listId, line, showUrlRaw)
-  if (matchResult.ok === false) {
-    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: line })])
+  const resolved = resolveOpenPickerPlan(action)
+  if (resolved === null) {
+    return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
   }
   try {
     const listResult = await fetchListResultById(
-      listId,
-      matchResult.match,
+      resolved.listId,
+      resolved.match,
       listFetchContext(ctx)
     )
-    const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
-    return openPickerFromListResult(listResult, { showUrl }, ctx.deps, ctx.locale)
+    return openPickerFromListResult(
+      listResult,
+      { showUrl: resolved.showUrl },
+      ctx.deps,
+      ctx.locale
+    )
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     return segmentFailure("runtime", [tError("error.generic", ctx.locale, { message })], message)

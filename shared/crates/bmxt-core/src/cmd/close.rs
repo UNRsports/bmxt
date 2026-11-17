@@ -33,6 +33,7 @@ mod tests {
         match bundle {
             DispatchBundle::Ui {
                 action: UiAction::NavConfirmClose { target },
+                ..
             } => assert_eq!(target, "tab"),
             other => panic!("unexpected bundle: {other:?}"),
         }
@@ -42,7 +43,7 @@ mod tests {
     fn confirmed_emits_close_current() {
         let bundle = run(&["close".into(), "--confirmed".into()]);
         match bundle {
-            DispatchBundle::Effects { effects } => {
+            DispatchBundle::Effects { effects, .. } => {
                 assert!(matches!(effects[0], HostEffect::CloseCurrentTab));
             }
             other => panic!("unexpected bundle: {other:?}"),
@@ -53,7 +54,7 @@ mod tests {
     fn numeric_id_emits_close_tab() {
         let bundle = run(&["close".into(), "42".into()]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::CloseTab { tab_id } => assert_eq!(*tab_id, 42),
                 other => panic!("unexpected effect: {other:?}"),
             },

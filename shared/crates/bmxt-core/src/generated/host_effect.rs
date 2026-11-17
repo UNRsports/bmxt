@@ -73,7 +73,10 @@ pub enum HostEffect {
     },
     #[serde(rename = "search_list")]
     SearchList {
+    device_id: String,
+    device_scope: String,
     dispatch_line: String,
+    peer_dispatch_line: String,
     },
     #[serde(rename = "search_page")]
     SearchPage {

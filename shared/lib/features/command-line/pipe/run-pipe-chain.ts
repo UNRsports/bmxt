@@ -14,6 +14,7 @@ import { runSegment } from "../compound/run-segment.ts"
 import type { SegmentOutcome } from "../compound/types.ts"
 import { tPipe } from "../../setting/i18n/ns/pipe.ts"
 import {
+  fetchListResultById,
   fetchListResultForCommand,
   matchPlainListCommand,
   type MatchedListCommand
@@ -45,6 +46,19 @@ export async function attachBmxtRuleStreamToOutcome(
 ): Promise<SegmentOutcome> {
   if (!isExitSuccess(outcome.exitStatus)) {
     return outcome
+  }
+  // EN: Prefer structured listPlan from WASM IR (no line re-parse).
+  if (outcome.listPlan !== undefined) {
+    try {
+      const listResult = await fetchListResultById(outcome.listPlan.listId, outcome.listPlan.match, {
+        locale,
+        deps
+      })
+      const bmxtRuleStream = bmxtRuleStreamFromListResult(listResult)
+      return { ...outcome, listResult, bmxtRuleStream }
+    } catch {
+      return outcome
+    }
   }
   const match = matchPlainListCommand(segment)
   if (match === null) {
@@ -168,8 +182,12 @@ export async function runPipeChain(
     }
     allStderr.push(...outcome.stderr)
 
-    const listMatch = matchPlainListCommand(stage)
-    showUrl = showUrlFromListMatch(listMatch)
+    if (outcome.listPlan !== undefined) {
+      showUrl = outcome.listPlan.showUrl
+    } else {
+      const listMatch = matchPlainListCommand(stage)
+      showUrl = showUrlFromListMatch(listMatch)
+    }
     const enriched = await attachBmxtRuleStreamToOutcome(stage, outcome, deps, locale)
     if (isSearchListCancelled(deps)) {
       return prependAccumulated(segmentFailure("cancelled", []), allStdout, allStderr)

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { before, describe, it } from "node:test"
+import { ensureBmxtCoreForTests } from "../../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import {
   isJumpPipeConsumer,
   JUMP_ACCEPTS_BMXT_RULE_KINDS
@@ -10,6 +11,10 @@ import {
   parseOpenPipeSegment
 } from "../../../../../../shared/lib/features/command-line/pipe/consumers/open-match.ts"
 import { PIPE_CONSUMER_COMPLETION_IDS } from "../../../../../../shared/lib/features/command-line/pipe/consumers/completion-tokens.ts"
+
+before(() => {
+  ensureBmxtCoreForTests()
+})
 
 describe("open / jump pipe match (§7)", () => {
   it("matches bare open and destination flags", () => {

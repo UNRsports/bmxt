@@ -62,5 +62,6 @@ mod tests {
         let raw = serde_json::to_string(&err).unwrap();
         assert!(raw.contains(r#""promptPrefix":"tab ""#), "{raw}");
         assert!(raw.contains("cmd.common.availableOptions"), "{raw}");
+        assert!(raw.contains(r#""exitStatus":2"#), "{raw}");
     }
 }

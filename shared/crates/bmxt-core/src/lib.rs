@@ -6,6 +6,7 @@ pub mod dispatch;
 mod generated;
 pub mod ir;
 mod line_parse;
+mod pipe_consumer;
 mod tabs_picker;
 
 use wasm_bindgen::prelude::*;
@@ -14,7 +15,7 @@ use wasm_bindgen::prelude::*;
 pub fn run(line: &str, _locale: &str) -> String {
     serde_json::to_string(&dispatch::run_line(line)).unwrap_or_else(|e| {
         format!(
-            r#"{{"ty":"lines","lines":["error: dispatch failed ({})","Reload the BMXt window / extension if this persists."]}}"#,
+            r#"{{"ty":"lines","lines":["error: dispatch failed ({})","Reload the BMXt window / extension if this persists."],"exitStatus":1}}"#,
             e
         )
     })
@@ -104,6 +105,12 @@ pub fn compound_segment_eligibility(segment: &str) -> String {
     compound_eligibility::classify_segment_json(segment)
 }
 
+/** EN: Pipe RHS consumer id (+ flags), or JSON `null`. */
+#[wasm_bindgen]
+pub fn classify_pipe_consumer(segment: &str) -> String {
+    pipe_consumer::classify_pipe_consumer_json(segment)
+}
+
 #[cfg(test)]
 mod wasm_api_tests {
     use super::*;
@@ -127,5 +134,13 @@ mod wasm_api_tests {
         let raw = compound_segment_eligibility("tab");
         let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
         assert_eq!(v["kind"], "continuation");
+    }
+
+    #[test]
+    fn classify_pipe_consumer_json_export() {
+        let raw = classify_pipe_consumer("browse");
+        let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(v["id"], "browse");
+        assert_eq!(classify_pipe_consumer("not-a-consumer"), "null");
     }
 }

@@ -15,6 +15,7 @@ import { openPipeConsumer } from "./open-from-stream.ts"
 import { reloadPipeConsumer } from "./reload-from-stream.ts"
 import { tabSendPipeConsumer } from "./tab-send-from-stream.ts"
 import { bmxtRuleStreamAcceptsKinds } from "./stream-accepts-kinds.ts"
+import { pipeConsumerId } from "./classify.ts"
 import type { PipeConsumerEntry, PipeConsumerRunContext } from "./types.ts"
 
 export { bmxtRuleStreamAcceptsKinds, tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
@@ -38,9 +39,12 @@ export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
 ]
 
 export function matchPipeConsumer(segment: string): PipeConsumerEntry | null {
-  const trimmed = segment.trim()
+  const id = pipeConsumerId(segment.trim())
+  if (id === null) {
+    return null
+  }
   for (const entry of PIPE_CONSUMER_ENTRIES) {
-    if (entry.match(trimmed)) {
+    if (entry.id === id) {
       return entry
     }
   }

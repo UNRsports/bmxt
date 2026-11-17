@@ -36,14 +36,19 @@ pub enum UiAction {
     NavDisarm,
     #[serde(rename = "open_picker")]
     OpenPicker {
+    device_id: String,
+    device_scope: String,
     line: String,
     list_id: String,
     show_url: String,
     },
     #[serde(rename = "open_plain_list")]
     OpenPlainList {
+    device_id: String,
+    device_scope: String,
     line: String,
     list_id: String,
+    show_url: String,
     },
     #[serde(rename = "picker_pass")]
     PickerPass,

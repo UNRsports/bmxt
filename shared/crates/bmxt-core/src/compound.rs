@@ -1,12 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-pub const EXIT_SUCCESS: i32 = 0;
-#[allow(dead_code)]
-pub const EXIT_FAILURE: i32 = 1;
-#[allow(dead_code)]
-pub const EXIT_MISUSE: i32 = 2;
-#[allow(dead_code)]
-pub const EXIT_NOT_FOUND: i32 = 127;
+// EN: Re-export for wasm / host callers (not all used inside this module).
+#[allow(unused_imports)]
+pub use crate::ir::{EXIT_FAILURE, EXIT_MISUSE, EXIT_NOT_FOUND, EXIT_SUCCESS};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

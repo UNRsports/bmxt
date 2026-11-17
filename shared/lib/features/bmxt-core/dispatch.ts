@@ -5,9 +5,19 @@ import type { UiLocale } from "../setting/locale"
 import { expandDispatchMsgs } from "./expand-msgs"
 import { isBmxtCoreReady, wasmRun } from "./wasm-host"
 
+/** EN: Align with Rust `EXIT_FAILURE` / compound exit-status (avoid importing command-line). */
+const EXIT_FAILURE = 1
+
 export type RunDispatchOptions = {
   /** EN: Optional enrichment of msgs params (host live state) before expand. */
   enrichMsgs?: (msgs: DispatchMsg[]) => DispatchMsg[]
+}
+
+function readExitStatus(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+  return undefined
 }
 
 function normalizeBundle(
@@ -18,29 +28,46 @@ function normalizeBundle(
   if (bundle.ty === "msgs") {
     const rawMsgs = bundle.msgs ?? []
     const msgs = enrichMsgs ? enrichMsgs(rawMsgs) : rawMsgs
+    const exitStatus = readExitStatus(bundle.exitStatus)
     return {
       ty: "lines",
       lines: expandDispatchMsgs(msgs, locale),
-      promptPrefix: bundle.promptPrefix
+      promptPrefix: bundle.promptPrefix,
+      // EN: Preserve Rust plan-time status across msgs → lines expand.
+      ...(exitStatus !== undefined ? { exitStatus } : {})
     }
   }
   return bundle
 }
 
 export function parseDispatchJson(raw: string): DispatchBundle {
-  const o = JSON.parse(raw) as DispatchBundle
+  const o = JSON.parse(raw) as DispatchBundle & { exitStatus?: unknown }
+  const exitStatus = readExitStatus(o.exitStatus)
   switch (o.ty) {
     case "lines":
-      return { ty: "lines", lines: o.lines ?? [] }
+      return {
+        ty: "lines",
+        lines: o.lines ?? [],
+        ...(exitStatus !== undefined ? { exitStatus } : {})
+      }
     case "effects":
-      return { ty: "effects", effects: o.effects ?? [] }
+      return {
+        ty: "effects",
+        effects: o.effects ?? [],
+        ...(exitStatus !== undefined ? { exitStatus } : {})
+      }
     case "ui":
-      return { ty: "ui", action: o.action ?? { kind: "picker_pass" } }
+      return {
+        ty: "ui",
+        action: o.action ?? { kind: "picker_pass" },
+        ...(exitStatus !== undefined ? { exitStatus } : {})
+      }
     case "msgs":
       return {
         ty: "msgs",
         msgs: o.msgs ?? [],
-        promptPrefix: o.promptPrefix
+        promptPrefix: o.promptPrefix,
+        ...(exitStatus !== undefined ? { exitStatus } : {})
       }
     default:
       throw new Error(`BMXt: unknown dispatch ty ${(o as { ty?: string }).ty}`)
@@ -81,7 +108,8 @@ export function runDispatch(
       lines: [
         tError("error.dispatchFailed", loc, { message }),
         tError("error.reloadHint", loc)
-      ]
+      ],
+      exitStatus: EXIT_FAILURE
     }
   }
 }

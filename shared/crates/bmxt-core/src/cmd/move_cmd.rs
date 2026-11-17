@@ -100,7 +100,7 @@ mod tests {
             "11".into(),
         ]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::TabsMove {
                     tab_ids,
                     window_id,

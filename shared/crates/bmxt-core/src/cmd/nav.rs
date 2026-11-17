@@ -50,6 +50,7 @@ mod tests {
         match bundle {
             DispatchBundle::Ui {
                 action: UiAction::NavConfirmClose { target },
+                ..
             } => assert_eq!(target, "window"),
             other => panic!("unexpected bundle: {other:?}"),
         }
@@ -63,7 +64,7 @@ mod tests {
             "--confirmed".into(),
         ]);
         match bundle {
-            DispatchBundle::Effects { effects } => {
+            DispatchBundle::Effects { effects, .. } => {
                 assert_eq!(effects.len(), 1);
                 assert!(matches!(effects[0], HostEffect::CloseCurrentWindow));
             }

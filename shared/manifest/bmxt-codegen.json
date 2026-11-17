@@ -689,7 +689,10 @@
       "rustVariant": "SearchList",
       "shape": "record",
       "fields": {
-        "dispatch_line": "string"
+        "dispatch_line": "string",
+        "peer_dispatch_line": "string",
+        "device_scope": "string",
+        "device_id": "string"
       },
       "tsHandlerFile": "search-list",
       "tsHandlerExport": "applySearchListEffect"
@@ -744,7 +747,10 @@
       "shape": "record",
       "fields": {
         "list_id": "string",
-        "line": "string"
+        "line": "string",
+        "show_url": "string",
+        "device_scope": "string",
+        "device_id": "string"
       }
     },
     {
@@ -808,7 +814,9 @@
       "fields": {
         "list_id": "string",
         "line": "string",
-        "show_url": "string"
+        "show_url": "string",
+        "device_scope": "string",
+        "device_id": "string"
       }
     },
     {

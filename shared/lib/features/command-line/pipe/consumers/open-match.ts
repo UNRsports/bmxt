@@ -1,4 +1,6 @@
-/** EN: `open` / `open --window` / `open --into-window` / `open --into-group` as pipe consumers. */
+/** EN: `open` / destination flags as pipe consumers — judgment via WASM. */
+
+import { classifyPipeConsumer, type OpenPipeMode } from "./classify.ts"
 
 export const OPEN_ACCEPTS_BMXT_RULE_KINDS = [
   "page.open",
@@ -14,58 +16,39 @@ export type OpenPipeFlags =
   | { mode: "into_window"; windowId: number }
   | { mode: "into_group"; windowId: number; groupId: number }
 
+function flagsFromMode(
+  mode: OpenPipeMode,
+  windowId: number | undefined,
+  groupId: number | undefined
+): OpenPipeFlags | null {
+  switch (mode) {
+    case "new_tab":
+      return { mode: "new_tab" }
+    case "new_window":
+      return { mode: "new_window" }
+    case "into_window": {
+      if (typeof windowId !== "number") {
+        return null
+      }
+      return { mode: "into_window", windowId }
+    }
+    case "into_group": {
+      if (typeof windowId !== "number" || typeof groupId !== "number") {
+        return null
+      }
+      return { mode: "into_group", windowId, groupId }
+    }
+    default:
+      return null
+  }
+}
+
 export function parseOpenPipeSegment(segment: string): OpenPipeFlags | null {
-  const parts = segment.trim().split(/\s+/).filter((p) => p.length > 0)
-  if (parts.length === 0 || parts[0]!.toLowerCase() !== "open") {
+  const classified = classifyPipeConsumer(segment)
+  if (classified === null || classified.id !== "open") {
     return null
   }
-  let mode: OpenPipeFlags = { mode: "new_tab" }
-  let i = 1
-  while (i < parts.length) {
-    const token = parts[i]!
-    if (token === "--window") {
-      mode = { mode: "new_window" }
-      i += 1
-      continue
-    }
-    if (token === "--into-window") {
-      const id = Number.parseInt(parts[i + 1] ?? "", 10)
-      if (!Number.isFinite(id) || id < 0) {
-        return null
-      }
-      mode = { mode: "into_window", windowId: id }
-      i += 2
-      continue
-    }
-    if (token === "--into-group") {
-      const groupId = Number.parseInt(parts[i + 1] ?? "", 10)
-      if (!Number.isFinite(groupId) || groupId < 0) {
-        return null
-      }
-      i += 2
-      let windowId = -1
-      if (parts[i] === "--window-id") {
-        windowId = Number.parseInt(parts[i + 1] ?? "", 10)
-        i += 2
-      }
-      if (!Number.isFinite(windowId) || windowId < 0) {
-        return null
-      }
-      mode = { mode: "into_group", windowId, groupId }
-      continue
-    }
-    if (token === "--window-id") {
-      // EN: Allow `--window-id` before `--into-group`.
-      const windowId = Number.parseInt(parts[i + 1] ?? "", 10)
-      i += 2
-      if (mode.mode === "into_group") {
-        mode = { mode: "into_group", windowId, groupId: mode.groupId }
-      }
-      continue
-    }
-    return null
-  }
-  return mode
+  return flagsFromMode(classified.mode, classified.windowId, classified.groupId)
 }
 
 export function isOpenPipeConsumer(segment: string): boolean {

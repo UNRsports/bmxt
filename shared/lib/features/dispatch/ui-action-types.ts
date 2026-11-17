@@ -8,7 +8,7 @@ export type UiActionIR =
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
   | { kind: "nav_confirm_close"; target: string }
-  | { kind: "open_plain_list"; line: string; list_id: string }
+  | { kind: "open_plain_list"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "close_picker"; slot: string }
   | { kind: "continuation_prompt"; prefix: string }
   | { kind: "session_switch"; name: string }
@@ -16,7 +16,7 @@ export type UiActionIR =
   | { kind: "group_new_from_selection" }
   | { kind: "set_mode"; feature_id: string; mode: string }
   | { kind: "snapshot_save"; line: string }
-  | { kind: "open_picker"; line: string; list_id: string; show_url: string }
+  | { kind: "open_picker"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
   | { kind: "sync_setup" }
   | { kind: "sync_status" }

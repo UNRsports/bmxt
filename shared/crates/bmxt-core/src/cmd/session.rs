@@ -115,6 +115,9 @@ pub fn run(args: &[String]) -> DispatchBundle {
             ui(UiAction::OpenPlainList {
                 list_id: "session".to_string(),
                 line: "session -list".to_string(),
+                show_url: "false".to_string(),
+                device_scope: "local".to_string(),
+                device_id: String::new(),
             })
         }
         _ => usage_bundle(vec![msg_key("cmd.session.error.internal")]),

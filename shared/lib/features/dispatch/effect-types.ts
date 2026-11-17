@@ -4,8 +4,8 @@
  */
 
 export type HostEffect =
+  | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
-  | { dispatch_line: string; kind: "search_list" }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { group_id: number; kind: "group_add"; tab_ids: number[] }
   | { group_id: number; kind: "open_url_into_group"; url: string; window_id: number }
@@ -42,7 +42,7 @@ export type UiActionIR =
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
   | { kind: "nav_confirm_close"; target: string }
-  | { kind: "open_plain_list"; line: string; list_id: string }
+  | { kind: "open_plain_list"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "close_picker"; slot: string }
   | { kind: "continuation_prompt"; prefix: string }
   | { kind: "session_switch"; name: string }
@@ -50,7 +50,7 @@ export type UiActionIR =
   | { kind: "group_new_from_selection" }
   | { kind: "set_mode"; feature_id: string; mode: string }
   | { kind: "snapshot_save"; line: string }
-  | { kind: "open_picker"; line: string; list_id: string; show_url: string }
+  | { kind: "open_picker"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
   | { kind: "sync_setup" }
   | { kind: "sync_status" }

@@ -7,10 +7,10 @@
  * Extending a catalog requires codegen + a thin TS executor; new *commands* that reuse catalogs need Rust only.
  *
  * Layers (do not bypass with ad-hoc command-name coupling):
- * 1. DispatchBundle — Rust → host (lines | effects | ui | msgs)
+ * 1. DispatchBundle — Rust → host (lines | effects | ui | msgs + plan-time `exitStatus`)
  * 2. ListResult (bmxt-list/1) — plain `-list` / picker projection
  * 3. BmxtRuleStream (bmxt-rule/1) — pipe `|` stage handoff
- * 4. Compound exit status — `&&` / `||` / `;` sequencing
+ * 4. Compound exit status — `&&` / `||` / `;` sequencing (prefer bundle `exitStatus`)
  *
  * Grep policy (TS host): codegen switches, i18n keys, and executor ids (`list_id` / effect `kind` /
  * overlay id) may appear. Canonical command-name semantic branches are forbidden (`pnpm run verify:host-blind`).

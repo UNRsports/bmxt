@@ -9,33 +9,98 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.search.usage.quotes",
 ];
 
-fn normalize_search_list_dispatch_line(trimmed: &str) -> String {
-    let parts: Vec<&str> = trimmed.trim().split_whitespace().collect();
+struct SearchListPlan {
+    dispatch_line: String,
+    peer_dispatch_line: String,
+    device_scope: String,
+    device_id: String,
+}
+
+fn normalize_search_list_peer_line(parts: &[String]) -> String {
     if parts.len() == 2
-        && parts[0].eq_ignore_ascii_case("search")
-        && parts[1].eq_ignore_ascii_case("-list")
+        && normalize_token(&parts[0]) == "search"
+        && normalize_token(&parts[1]) == "-list"
     {
         return "search -list --all".to_string();
     }
-    trimmed.trim().to_string()
+    parts.join(" ")
 }
 
-fn parse_search_list_line(args: &[String]) -> Option<String> {
+/// EN: Parse `search -list` + `--device`/`--peers` into a structured plan (Rust SoT).
+fn parse_search_list_plan(args: &[String]) -> Option<SearchListPlan> {
     if args.len() < 2 {
         return None;
     }
     if normalize_token(&args[0]) != "search" || normalize_token(&args[1]) != "-list" {
         return None;
     }
-    let kept: Vec<String> = args.to_vec();
-    Some(normalize_search_list_dispatch_line(&kept.join(" ")))
+
+    let mut device_scope = "local".to_string();
+    let mut device_id = String::new();
+    let mut rest: Vec<String> = Vec::new();
+    let mut i = 2usize;
+    while i < args.len() {
+        let token = normalize_token(&args[i]);
+        if token == "--peers" {
+            if device_scope != "local" {
+                return None;
+            }
+            device_scope = "peers".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--device" {
+            if device_scope != "local" {
+                return None;
+            }
+            let Some(id) = args.get(i + 1) else {
+                return None;
+            };
+            let trimmed = id.trim();
+            if trimmed.is_empty() || trimmed.starts_with('-') {
+                return None;
+            }
+            device_scope = "device".to_string();
+            device_id = trimmed.to_string();
+            i += 2;
+            continue;
+        }
+        rest.push(args[i].clone());
+        i += 1;
+    }
+
+    let mut peer_parts = vec!["search".to_string(), "-list".to_string()];
+    peer_parts.extend(rest.iter().cloned());
+    let peer_dispatch_line = normalize_search_list_peer_line(&peer_parts);
+
+    let mut dispatch_parts = vec!["search".to_string(), "-list".to_string()];
+    if device_scope == "peers" {
+        dispatch_parts.push("--peers".to_string());
+    } else if device_scope == "device" {
+        dispatch_parts.push("--device".to_string());
+        dispatch_parts.push(device_id.clone());
+    }
+    dispatch_parts.extend(rest);
+    let dispatch_line = normalize_search_list_peer_line(&dispatch_parts);
+
+    Some(SearchListPlan {
+        dispatch_line,
+        peer_dispatch_line,
+        device_scope,
+        device_id,
+    })
 }
 
 fn run_list(args: &[String]) -> DispatchBundle {
-    let Some(dispatch_line) = parse_search_list_line(args) else {
+    let Some(plan) = parse_search_list_plan(args) else {
         return msgs_from_keys(USAGE_KEYS);
     };
-    effects(vec![HostEffect::SearchList { dispatch_line }])
+    effects(vec![HostEffect::SearchList {
+        dispatch_line: plan.dispatch_line,
+        peer_dispatch_line: plan.peer_dispatch_line,
+        device_scope: plan.device_scope,
+        device_id: plan.device_id,
+    }])
 }
 
 fn msgs_from_keys(keys: &[&str]) -> DispatchBundle {
@@ -65,5 +130,42 @@ pub fn run(args: &[String]) -> DispatchBundle {
             })
         }
         _ => msgs_from_keys(USAGE_KEYS),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{DispatchBundle, EXIT_MISUSE};
+
+    #[test]
+    fn list_rejects_incomplete_device() {
+        match run(&["search".into(), "-list".into(), "--device".into()]) {
+            DispatchBundle::Msgs { exit_status, .. } => {
+                assert_eq!(exit_status, EXIT_MISUSE);
+            }
+            other => panic!("expected msgs, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_emits_structured_local_plan() {
+        match run(&["search".into(), "-list".into(), "foo".into()]) {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
+                HostEffect::SearchList {
+                    dispatch_line,
+                    peer_dispatch_line,
+                    device_scope,
+                    device_id,
+                } => {
+                    assert_eq!(device_scope, "local");
+                    assert!(device_id.is_empty());
+                    assert!(dispatch_line.contains("foo"));
+                    assert!(peer_dispatch_line.contains("foo"));
+                }
+                other => panic!("unexpected effect: {other:?}"),
+            },
+            other => panic!("expected effects, got {other:?}"),
+        }
     }
 }

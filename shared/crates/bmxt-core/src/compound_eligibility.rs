@@ -27,15 +27,19 @@ fn classify_bundle(bundle: &DispatchBundle) -> CompoundSegmentKind {
         } if !prefix.is_empty() => CompoundSegmentKind::Continuation,
         DispatchBundle::Ui {
             action: UiAction::ContinuationPrompt { .. },
+            ..
         } => CompoundSegmentKind::Continuation,
         DispatchBundle::Ui {
             action: UiAction::SessionSwitch { name },
+            ..
         } if name.trim().is_empty() => CompoundSegmentKind::Interactive,
         DispatchBundle::Ui {
             action: UiAction::SessionSettingName { name },
+            ..
         } if name.trim().is_empty() => CompoundSegmentKind::Interactive,
         DispatchBundle::Ui {
             action: UiAction::NavConfirmClose { .. },
+            ..
         } => CompoundSegmentKind::Interactive,
         _ => CompoundSegmentKind::Eligible,
     }

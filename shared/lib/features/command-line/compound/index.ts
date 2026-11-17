@@ -41,7 +41,10 @@ export {
 export { classifyCompoundEligibility } from "./classify-eligibility.ts"
 export {
   classifyOutcomeFromLines,
+  segmentCodeFromExitStatus,
   segmentFailure,
+  segmentOutcomeFromExitStatus,
+  segmentOutcomeFromLines,
   segmentSuccess,
   withMergedLines
 } from "./classify-outcome.ts"

@@ -1,8 +1,13 @@
-import { describe, it } from "node:test"
+import { describe, it, before } from "node:test"
 import assert from "node:assert/strict"
+import { ensureBmxtCoreForTests } from "../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import { isBrowsePipeConsumer, BROWSE_ACCEPTS_BMXT_RULE_KINDS } from "../../../../shared/lib/features/command-line/pipe/consumers/browse-match.ts"
 import { resolvePickerFamily } from "../../../../shared/lib/features/picker/resolve-family.ts"
 import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../shared/lib/features/command-line/list-output/types.ts"
+
+before(() => {
+  ensureBmxtCoreForTests()
+})
 
 describe("browse pipe consumer match", () => {
   it("matches bare browse", () => {

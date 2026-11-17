@@ -1,4 +1,6 @@
-/** EN: Bare `browse` as a pipe consumer (right of `|`). */
+/** EN: Bare `browse` as a pipe consumer (right of `|`) — judgment via WASM. */
+
+import { classifyPipeConsumer } from "./classify.ts"
 
 export const BROWSE_ACCEPTS_BMXT_RULE_KINDS = [
   "page.open",
@@ -15,5 +17,5 @@ export const BROWSE_ACCEPTS_BMXT_RULE_KINDS = [
 ] as const
 
 export function isBrowsePipeConsumer(segment: string): boolean {
-  return segment.trim().toLowerCase() === "browse"
+  return classifyPipeConsumer(segment)?.id === "browse"
 }

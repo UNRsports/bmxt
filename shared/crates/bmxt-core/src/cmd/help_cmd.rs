@@ -1,5 +1,5 @@
 use crate::cmd::helpers::normalize_token;
-use crate::ir::{msg_key, msgs, ui, DispatchBundle, Msg, UiAction};
+use crate::ir::{msg_key, msgs_ok, ui, DispatchBundle, Msg, UiAction};
 
 /** EN: Ordered full-help section keys (host expands via expand-msgs). */
 const FULL_HELP_SECTION_KEYS: &[&str] = &[
@@ -55,7 +55,7 @@ fn full_help_msgs() -> Vec<Msg> {
 }
 
 pub fn run(_args: &[String]) -> DispatchBundle {
-    msgs(full_help_msgs())
+    msgs_ok(full_help_msgs())
 }
 
 /**
@@ -68,9 +68,9 @@ pub fn try_section_help(canonical: &str, args: &[String]) -> Option<DispatchBund
         return None;
     }
     if let Some(key) = section_key_for_command(canonical) {
-        return Some(msgs(vec![msg_key(key)]));
+        return Some(msgs_ok(vec![msg_key(key)]));
     }
-    Some(msgs(full_help_msgs()))
+    Some(msgs_ok(full_help_msgs()))
 }
 
 /** EN: Kept for UiAction IR completeness; prefer `run` msgs path. */

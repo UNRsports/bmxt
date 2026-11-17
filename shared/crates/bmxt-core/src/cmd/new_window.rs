@@ -35,7 +35,7 @@ mod tests {
     fn ids_emit_new_window() {
         let bundle = run(&["new-window".into(), "1".into(), "2".into()]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::TabsNewWindow { tab_ids } => assert_eq!(tab_ids, &vec![1, 2]),
                 other => panic!("unexpected: {other:?}"),
             },

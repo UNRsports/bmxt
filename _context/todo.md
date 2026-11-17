@@ -365,11 +365,11 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **チェックリスト**
 
-- [ ] **8.1:** `DispatchBundle.exitStatus`（+任意 `code`）· Rust stamp · TS 伝播 · 行スクレイプ撤去
-- [ ] **8.2:** 構造化 list plan · パイプ左辺 / `OpenPlainList` の再パース撤去
-- [ ] **8.3:** パイプ RHS を WASM 分類 · `*-match.ts` 撤去
-- [ ] **8.4:** `verify:host-blind` 厳格化 · 残骸掃除
-- [x] **暫定:** パイプ左辺 usage の成功誤判定を `segmentOutcomeFromLines` で抑止（Phase 1 で置換）
+- [x] **8.1:** `DispatchBundle.exitStatus` · Rust stamp（usage=2 / unknown=127 / ok=0）· TS `normalizeBundle` 伝播 · WASM lines は status 優先（行スクレイプは SW 等のフォールバック）
+- [x] **8.2:** 構造化 list plan · パイプ左辺 / `OpenPlainList` の再パース撤去（`listPlanFromOpenPlainList` / search_list fields）
+- [x] **8.3:** パイプ RHS を WASM 分類（`classify_pipe_consumer`）· `*-match.ts` は WASM ラッパのみ · `matchPipeConsumer` は id 照合
+- [x] **8.4:** `verify:host-blind` にパイプ RHS 判定パターン追加 · list allowlist は legacy fallback 用に当面維持
+- [x] **暫定→8.1:** パイプ左辺 usage は `exitStatus` で失敗（`segmentOutcomeFromLines(lines, exitStatus)`）
 - [x] **暫定:** 単一 compound セグメントの冗長 `[{segment}]` エコー抑制（Family send ログ重複）
 
 **参照:** 本会話の見積もり · `shared/crates/bmxt-core/src/ir.rs` · `shared/lib/features/command-line/compound/classify-outcome.ts` · `scripts/verify-host-blind.mjs`

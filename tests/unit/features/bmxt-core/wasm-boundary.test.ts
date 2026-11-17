@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url"
 import { before, describe, it } from "node:test"
 import { ensureBmxtCoreForTests } from "../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import {
+  wasmClassifyPipeConsumer,
   wasmComplete,
   wasmParseCompound,
   wasmParsePipe,
@@ -188,5 +189,23 @@ describe("WASM boundary — compound / pipe with non-ASCII", () => {
     const raw = wasmPlanCompound(MIXED_LINE)
     assert.equal(typeof raw, "string")
     assert.ok(raw.length > 0)
+  })
+})
+
+describe("WASM boundary — pipe consumer classify", () => {
+  it("classifies bare browse / close alias / tab-send", () => {
+    const browse = JSON.parse(wasmClassifyPipeConsumer("browse")) as { id: string }
+    assert.equal(browse.id, "browse")
+    const closeAlias = JSON.parse(wasmClassifyPipeConsumer("c")) as { id: string }
+    assert.equal(closeAlias.id, "close")
+    const send = JSON.parse(wasmClassifyPipeConsumer("tab -send peer1 --close")) as {
+      id: string
+      deviceId: string
+      closeAfter: boolean
+    }
+    assert.equal(send.id, "tab-send")
+    assert.equal(send.deviceId, "peer1")
+    assert.equal(send.closeAfter, true)
+    assert.equal(wasmClassifyPipeConsumer("not-a-consumer"), "null")
   })
 })

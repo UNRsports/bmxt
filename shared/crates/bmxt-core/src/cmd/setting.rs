@@ -19,6 +19,9 @@ pub fn run(args: &[String]) -> DispatchBundle {
         "-list" => ui(UiAction::OpenPlainList {
             list_id: "setting".to_string(),
             line: "setting -list".to_string(),
+            show_url: "false".to_string(),
+            device_scope: "local".to_string(),
+            device_id: String::new(),
         }),
         "-exit" => ui(UiAction::ClosePicker {
             slot: "setting".to_string(),

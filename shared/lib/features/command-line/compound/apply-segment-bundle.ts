@@ -6,7 +6,7 @@ import { applyUiActionForSegment } from "../../bmxt-window/shell/apply-ui-action
 import { enrichHostMsgParams } from "../../bmxt-window/shell/enrich-host-msg-params"
 import { setContinuationPrompt } from "../../bmxt-window/shell/command-dispatch/types"
 import type { UiLocale } from "../../setting/locale"
-import { segmentSuccess } from "./classify-outcome"
+import { segmentOutcomeFromLines } from "./classify-outcome"
 import type { SegmentOutcome } from "./types"
 
 /**
@@ -44,7 +44,12 @@ export async function dispatchSegmentUiOutcome(
     if (bundle.promptPrefix !== undefined && bundle.promptPrefix.length > 0) {
       setContinuationPrompt(deps, bundle.promptPrefix)
     }
-    return { bundle, uiOutcome: segmentSuccess(bundle.lines ?? []) }
+    // EN: Prefer Rust `exitStatus`; fall back to line scrape only when absent.
+    // JA: Rust `exitStatus` 優先。無いときのみ行スクレイプ。
+    return {
+      bundle,
+      uiOutcome: segmentOutcomeFromLines(bundle.lines ?? [], bundle.exitStatus)
+    }
   }
   const uiOutcome = await applySegmentBundle(bundle, segment, deps, locale)
   return { bundle, uiOutcome }

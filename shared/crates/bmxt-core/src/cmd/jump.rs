@@ -109,6 +109,7 @@ mod tests {
                         activate_link,
                         ..
                     },
+                ..
             } => {
                 assert_eq!(tab_id, 12);
                 assert_eq!(path, "0.1.2");

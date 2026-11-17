@@ -11,6 +11,7 @@ before(() => {
 import {
   classifyOutcomeFromLines,
   segmentFailure,
+  segmentOutcomeFromLines,
   segmentSuccess
 } from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
 import {
@@ -183,6 +184,15 @@ describe("classifyOutcomeFromLines", () => {
     assert.equal(out.code, "runtime")
   })
 
+  it("detects invalid tab -list usage (pipe producer regression)", () => {
+    const out = classifyOutcomeFromLines([
+      "error: invalid tab -list usage",
+      "usage: tab -list [-url] [--device <id>|--peers]"
+    ])
+    assert.equal(out.ok, false)
+    assert.equal(out.code, "runtime")
+  })
+
   it("detects unknown command lines", () => {
     const out = classifyOutcomeFromLines(['error: unknown command: "foo" was entered.'])
     assert.equal(out.ok, false)
@@ -192,6 +202,38 @@ describe("classifyOutcomeFromLines", () => {
   it("treats normal output as success", () => {
     const out = classifyOutcomeFromLines(["https://example.com/"])
     assert.equal(out.ok, true)
+  })
+})
+
+describe("segmentOutcomeFromLines", () => {
+  it("maps usage/error lines to failure on stderr (not success)", () => {
+    const lines = [
+      "error: invalid tab -list usage",
+      "usage: tab -list [-url] [--device <id>|--peers]"
+    ]
+    const out = segmentOutcomeFromLines(lines)
+    assert.equal(out.ok, false)
+    assert.equal(isExitSuccess(out.exitStatus), false)
+    assert.deepEqual(out.stdout, [])
+    assert.deepEqual(out.stderr, lines)
+  })
+
+  it("prefers Rust exitStatus over display-text scrape", () => {
+    const lines = ["help text without error prefix"]
+    const fail = segmentOutcomeFromLines(lines, EXIT_MISUSE)
+    assert.equal(fail.ok, false)
+    assert.equal(fail.exitStatus, EXIT_MISUSE)
+    assert.deepEqual(fail.stderr, lines)
+    const ok = segmentOutcomeFromLines(["error: looks like failure"], EXIT_SUCCESS)
+    assert.equal(ok.ok, true)
+    assert.deepEqual(ok.stdout, ["error: looks like failure"])
+  })
+
+  it("maps plain lines to success on stdout", () => {
+    const out = segmentOutcomeFromLines(["https://example.com/"])
+    assert.equal(out.ok, true)
+    assert.deepEqual(out.stdout, ["https://example.com/"])
+    assert.deepEqual(out.stderr, [])
   })
 })
 
