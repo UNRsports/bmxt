@@ -38,15 +38,38 @@ function pushUngroupedMarker(records: BmxtRuleRecord[]): void {
  * EN: Pure builder used by tests and by the tabs-API resolver.
  * JA: テストと tabs API 解決の両方から使う純粋ビルダ。
  */
+/**
+ * EN: Drop unresolved / empty-URL chip tabs before building the stream.
+ *     Producers must never emit `page.open` with an empty url for tab-send.
+ * JA: 未解決・空 URL のチップタブはストリームに入れない。
+ *     tab-send 向けに空 url の page.open を生産しない。
+ */
+export function filterResolvedChipTabsWithUrl(
+  tabs: readonly ResolvedChipTab[]
+): ResolvedChipTab[] {
+  const out: ResolvedChipTab[] = []
+  for (const tab of tabs) {
+    if (typeof tab.url !== "string" || tab.url.trim().length === 0) {
+      continue
+    }
+    out.push({
+      ...tab,
+      url: tab.url.trim()
+    })
+  }
+  return out
+}
+
 export function bmxtRuleStreamFromResolvedTabs(
   tabs: readonly ResolvedChipTab[]
 ): BmxtRuleStream {
+  const usable = filterResolvedChipTabsWithUrl(tabs)
   const records: BmxtRuleRecord[] = []
   let i = 0
   let previousWasGrouped = false
 
-  while (i < tabs.length) {
-    const head = tabs[i]
+  while (i < usable.length) {
+    const head = usable[i]
     if (head === undefined) {
       break
     }
@@ -62,8 +85,8 @@ export function bmxtRuleStreamFromResolvedTabs(
         })
       )
       previousWasGrouped = true
-      while (i < tabs.length) {
-        const tab = tabs[i]
+      while (i < usable.length) {
+        const tab = usable[i]
         if (tab === undefined || tab.groupId !== groupId) {
           break
         }
@@ -83,8 +106,8 @@ export function bmxtRuleStreamFromResolvedTabs(
       pushUngroupedMarker(records)
       previousWasGrouped = false
     }
-    while (i < tabs.length) {
-      const tab = tabs[i]
+    while (i < usable.length) {
+      const tab = usable[i]
       if (tab === undefined || tab.groupId >= 0) {
         break
       }

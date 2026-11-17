@@ -38,6 +38,31 @@ describe("bmxtRuleStreamFromResolvedTabs", () => {
     ])
   })
 
+  it("never emits page.open with an empty url", () => {
+    const stream = bmxtRuleStreamFromResolvedTabs([
+      {
+        tabId: 1,
+        url: "",
+        pageTitle: "Empty",
+        groupId: -1,
+        groupTitle: null,
+        groupColor: null
+      },
+      {
+        tabId: 2,
+        url: "https://ok.example/",
+        pageTitle: "OK",
+        groupId: -1,
+        groupTitle: null,
+        groupColor: null
+      }
+    ])
+    assert.equal(stream.records.length, 1)
+    assert.equal(stream.records[0]?.kind, "page.open")
+    const batches = urlBatchesFromBmxtRuleStream(stream)
+    assert.deepEqual(batches[0]?.urls, ["https://ok.example/"])
+  })
+
   it("preserves group batches and clears group for following ungrouped tabs", () => {
     const tabs: ResolvedChipTab[] = [
       {

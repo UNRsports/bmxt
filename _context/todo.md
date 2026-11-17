@@ -262,6 +262,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **6c UX:** ウィザードに handshake ファイル保存（blob download）と読み込み（`input type=file`）を追加し clipboard と併存
 - [x] **6c UX:** 握手輸送を `handshake/{common,clipboard,file}` に分割（廃止可能な境界）
 - [ ] **6c UX:** Chrome ↔ Firefox でファイル保存→読込だけで握手完了できることを確認（clipboard 経路も維持）
+- [x] **回帰防止:** `#t:… | tab -send` 契約テスト（空 URL page.open 禁止・tabs.get 解決）
 
 ### 7. Picker = コマンド構築 UI（CUI 同等化）
 
