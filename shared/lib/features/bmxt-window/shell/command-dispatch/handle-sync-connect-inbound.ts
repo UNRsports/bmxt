@@ -1,18 +1,16 @@
 import { tCmd } from "../../../setting/i18n/ns/cmd"
-import {
-  clearSyncConnectPending,
-  getSyncConnectPending
-} from "../../../sync/connect/sync-connect-pending.ts"
 import { expandSyncLogLines } from "../../../sync/facade/expand-sync-log.ts"
 import { getSyncService } from "../../../sync/facade/sync-service.ts"
 import {
+  clearSyncConnectPending,
+  getSyncConnectPending
+} from "../../../sync/handshake/common/sync-connect-pending.ts"
+import {
   compactRtcHandshakeCode,
   RTC_HANDSHAKE_PREFIX
-} from "../../../sync/discovery/rtc-handshake-codec.ts"
-import {
-  isSyncSetupCancel,
-  parseSyncSetupRtcPaste
-} from "../../../sync/setup/sync-setup-pending.ts"
+} from "../../../sync/handshake/common/rtc-handshake-codec.ts"
+import { parseSyncSetupRtcPaste } from "../../../sync/handshake/clipboard/rtc-paste.ts"
+import { isSyncSetupCancel } from "../../../sync/setup/sync-setup-pending.ts"
 import { isSyncWizardOpen } from "../../../sync/wizard/sync-wizard-state.ts"
 import {
   clearPrompt,

@@ -215,25 +215,33 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [ ] **手元:** `tab -list --peers` · `search -list --peers` · `| tab -send` / `--close` · `--peers \| browse` · picker リモート窓宛 · `tabs_changed` 追従を Chrome↔Firefox で確認
 - [x] `sync` コマンド + i18n。既定はローカル WebRTC（接続設定のみ）
 
-**6c 続: 握手 UX 手間削減（検討・方針・未実装）**
+**6c 続: 握手 UX 手間削減（方針・実装済み／手元確認残り）**
 
 目的は無操作ではない。**現行のコピペ往復より体感手間を減らす**こと（同一 PC · Chrome ↔ Firefox）。
+
+握手輸送は `shared/lib/features/sync/handshake/` に分割（各ディレクトリを独立に廃止可能）:
+
+| ディレクトリ | 役割 |
+|------|------|
+| `handshake/common/` | 封印 codec · connect pending（両輸送の前提） |
+| `handshake/clipboard/` | COPY バー · テキスト貼付パース · ウィザード COPY |
+| `handshake/file/` | チケット JSON（`bmxt-offer.json` / `bmxt-answer.json`）· 保存／開く UI |
+
+ウィザード本体（`sync/wizard/`）はオーケストレーションのみ。旧パス（`discovery/rtc-handshake-*` · `connect/sync-handshake-*` · `connect/sync-connect-pending`）は薄い re-export シム。
 
 | 項目 | 内容 |
 |------|------|
 | 情報下限 | Non-Trickle 済み。渡す実体は **offer 1 + answer 1**。ICE の第 3 往復は不要。減らせるのは長い文字列の選択・コピー・貼付コスト |
-| 現行 COPY | 全文選択不要（`shared/lib/features/sync/connect/sync-handshake-actions.ts`）。残るのはブラウザ切替＋貼付 |
+| 現行 COPY | 全文選択不要（`handshake/clipboard/sync-handshake-actions.ts`）。残るのはブラウザ切替＋貼付 |
 | 手動 1 接続 | ハブが offer を COPY → 新規が貼付、新規が answer を COPY → ハブが貼付（**2 往復**）。「3 往復」は Trickle 前提の旧イメージで現行プロトコルとは不一致 |
 | 兄弟直結 | `mesh_peers` / `mesh_signal` 自動補完。追加コピペ **0 回**（DataChannel 上で SDP+ICE をハブ経由リレー） |
 | 6 台メッシュ | 星型で手動 **5 セット**（各新規↔ハブ）。フルメッシュ残りは自動。1 つの offer ファイルを 5 台が読んで全員接続、は **不可**（SDP は 1 `RTCPeerConnection` に束縛） |
 
-**採る案（未実装）:** ウィザードに「ファイルで渡す」を clipboard と併存。
+**ファイル輸送（実装済み）:** ウィザードに「ファイルで渡す」を clipboard と併存。
 
-- 保存: blob download（settings export と同型）で `bmxt-offer.json` / `bmxt-answer.json`（中身は封印 `bmxt-rtc1.*` または同等 JSON）
+- 保存: blob download で `bmxt-offer.json` / `bmxt-answer.json`（中身は封印 `bmxt-rtc1.*`）
 - 読み込み: `<input type="file" accept="application/json,.json">`（Firefox 可。`showOpenFilePicker` 非依存）
-- clipboard COPY／貼付は残す。Non-Trickle・codec・peer host は触らない（輸送 UI のみ）
-- 追加権限なし（`downloads` / 新規 FSA ディレクトリは不要）
-- 変更想定: `shared/lib/features/sync/wizard/` · ファイル用の薄いヘルパ（codec 傍）· i18n EN/JA
+- clipboard COPY／貼付は残す。追加権限なし（`downloads` / 新規 FSA ディレクトリは不要）
 
 **採らない案**
 
@@ -252,6 +260,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 ファイル I/O 改善は **1 回の手動握手の体感**を軽くするもので、**手動回数の下限（新規台数）は変えられない**。
 
 - [x] **6c UX:** ウィザードに handshake ファイル保存（blob download）と読み込み（`input type=file`）を追加し clipboard と併存
+- [x] **6c UX:** 握手輸送を `handshake/{common,clipboard,file}` に分割（廃止可能な境界）
 - [ ] **6c UX:** Chrome ↔ Firefox でファイル保存→読込だけで握手完了できることを確認（clipboard 経路も維持）
 
 ### 7. Picker = コマンド構築 UI（CUI 同等化）

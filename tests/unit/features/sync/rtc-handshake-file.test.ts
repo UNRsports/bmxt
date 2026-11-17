@@ -1,14 +1,14 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { generateFamilySeed } from "../../../../shared/lib/features/sync/crypto/family-crypto.ts"
-import { formatRtcHandshakeCode } from "../../../../shared/lib/features/sync/discovery/rtc-handshake-codec.ts"
+import { formatRtcHandshakeCode } from "../../../../shared/lib/features/sync/handshake/common/rtc-handshake-codec.ts"
 import {
   buildRtcHandshakeFileJson,
   parseRtcHandshakeFileText,
   rtcHandshakeFileName,
   RTC_HANDSHAKE_FILE_KIND,
   RTC_HANDSHAKE_FILE_VERSION
-} from "../../../../shared/lib/features/sync/discovery/rtc-handshake-file.ts"
+} from "../../../../shared/lib/features/sync/handshake/file/rtc-handshake-file.ts"
 
 async function sampleOfferCode(): Promise<string> {
   const { familyId, seedB64 } = generateFamilySeed()

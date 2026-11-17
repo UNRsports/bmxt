@@ -8,7 +8,7 @@ import {
   getSyncConnectPending,
   subscribeSyncConnectPending,
   type SyncConnectPending
-} from "../connect/sync-connect-pending.ts"
+} from "../handshake/common/sync-connect-pending.ts"
 
 export function useSyncWizardState(): SyncWizardState {
   const [state, setState] = useState<SyncWizardState>(() => getSyncWizardState())

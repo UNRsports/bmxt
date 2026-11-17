@@ -14,13 +14,13 @@ import {
   clearSyncConnectPending,
   getSyncConnectPending,
   setSyncConnectPending
-} from "../connect/sync-connect-pending.ts"
+} from "../handshake/common/sync-connect-pending.ts"
 import {
   formatRtcHandshakeCode,
   parseRtcHandshakeCode,
   RTC_HANDSHAKE_TTL_MS_CONNECT,
   type RtcHandshakePlain
-} from "../discovery/rtc-handshake-codec"
+} from "../handshake/common/rtc-handshake-codec.ts"
 import { createDefaultSyncStabilizers } from "./default-stabilizers"
 import type { SyncStabilizers } from "../stabilizers"
 import type {

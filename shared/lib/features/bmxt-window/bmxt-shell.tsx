@@ -54,7 +54,7 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
-import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
+import { SyncHandshakeBar } from "../sync/handshake/clipboard/sync-handshake-bar.tsx"
 import { getSyncService } from "../sync/facade/sync-service"
 import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
 import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"

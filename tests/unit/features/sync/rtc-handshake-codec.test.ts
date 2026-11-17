@@ -5,7 +5,7 @@ import {
   formatRtcHandshakeCode,
   parseRtcHandshakeCode,
   RTC_HANDSHAKE_PREFIX
-} from "../../../../shared/lib/features/sync/discovery/rtc-handshake-codec.ts"
+} from "../../../../shared/lib/features/sync/handshake/common/rtc-handshake-codec.ts"
 
 describe("rtc-handshake-codec", () => {
   it("round-trips a Family-sealed offer code", async () => {

@@ -1,63 +1,37 @@
 import { tCmd } from "../../setting/i18n/ns/cmd"
-import type { UiLocale } from "../../setting/locale"
 import {
   clearSyncConnectPending,
   getSyncConnectPending
-} from "../connect/sync-connect-pending.ts"
-import { copySyncHandshakeCode } from "../connect/sync-handshake-actions.ts"
-import {
-  downloadRtcHandshakeFile,
-  parseRtcHandshakeFileText,
-  type RtcHandshakeFileRole
-} from "../discovery/rtc-handshake-file.ts"
+} from "../handshake/common/sync-connect-pending.ts"
 import { expandSyncLogLines } from "../facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../facade/sync-picker-summary.ts"
 import { getSyncService } from "../facade/sync-service.ts"
-import { waitForSyncLinkConnected } from "../link/sync-link-bridge.ts"
-import {
-  parseSyncSetupInvitePaste,
-  parseSyncSetupRtcPaste
-} from "../setup/sync-setup-pending.ts"
+import { parseSyncSetupInvitePaste } from "../setup/sync-setup-pending.ts"
 import {
   closeSyncWizardState,
   getSyncWizardState,
   patchSyncWizardState,
   setSyncWizardState,
-  type SyncWizardState,
-  type SyncWizardStep
+  type SyncWizardState
 } from "./sync-wizard-state.ts"
+import type { SyncWizardLogSink } from "./sync-wizard-types.ts"
+import {
+  cancelSyncWizard,
+  wizardFinish,
+  wizardSubmitRtc
+} from "./sync-wizard-submit-rtc.ts"
 
-function expectedInboundRtcRole(step: SyncWizardStep): RtcHandshakeFileRole | null {
-  if (step === "pasteOffer") {
-    return "offer"
-  }
-  if (step === "showOffer") {
-    return "answer"
-  }
-  return null
-}
-
-function outboundHandshakeRole(
-  step: SyncWizardStep,
-  pendingRole: RtcHandshakeFileRole | null | undefined
-): RtcHandshakeFileRole | null {
-  if (pendingRole === "offer" || pendingRole === "answer") {
-    return pendingRole
-  }
-  if (step === "showOffer") {
-    return "offer"
-  }
-  if (step === "showAnswer") {
-    return "answer"
-  }
-  return null
-}
-
-export type SyncWizardLogSink = {
-  locale: UiLocale
-  appendLogLines: (lines: string[]) => void | Promise<void>
-  focusPrompt: () => void
-}
+export type { SyncWizardLogSink } from "./sync-wizard-types.ts"
+export {
+  cancelSyncWizard,
+  wizardFinish,
+  wizardSubmitRtc
+} from "./sync-wizard-submit-rtc.ts"
+export { wizardCopyOutbound } from "../handshake/clipboard/wizard-clipboard.ts"
+export {
+  wizardLoadRtcFile,
+  wizardSaveOutboundHandshakeFile
+} from "../handshake/file/wizard-file.ts"
 
 async function appendShort(
   sink: SyncWizardLogSink,
@@ -149,13 +123,6 @@ export async function openSyncWizardConnect(
       name: session.peerDisplayName
     })
   })
-}
-
-export function cancelSyncWizard(sink: SyncWizardLogSink): void {
-  clearSyncConnectPending()
-  closeSyncWizardState()
-  void sink.appendLogLines([tCmd("cmd.sync.setup.cancelled", sink.locale)])
-  sink.focusPrompt()
 }
 
 export function closeSyncWizardQuiet(sink: SyncWizardLogSink): void {
@@ -283,205 +250,6 @@ export async function wizardChooseRole(
     step: "showOffer",
     banner: tCmd("cmd.sync.wizard.bannerCopyOfferGeneric", sink.locale)
   })
-}
-
-export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Promise<void> {
-  const current = getSyncWizardState()
-  if (!current.open || current.busy) {
-    return
-  }
-  if (current.step !== "pasteOffer" && current.step !== "showOffer") {
-    return
-  }
-  const parsed = parseSyncSetupRtcPaste(raw)
-  if (parsed.kind === "cancel") {
-    cancelSyncWizard(sink)
-    return
-  }
-  if (parsed.kind === "invalid") {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidRtcCode", sink.locale)
-    })
-    return
-  }
-
-  const asAnswerSide = current.step === "pasteOffer"
-  patchSyncWizardState({ busy: true, banner: null })
-
-  if (asAnswerSide) {
-    const result = await getSyncService().answer(parsed.value)
-    if (!result.ok) {
-      const expanded = expandSyncLogLines(result.lines, sink.locale)
-      patchSyncWizardState({
-        busy: false,
-        banner: expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale)
-      })
-      return
-    }
-    const pending = getSyncConnectPending()
-    const peerDeviceId =
-      pending && pending.peerDeviceId !== "*"
-        ? pending.peerDeviceId
-        : current.peerDeviceId
-    patchSyncWizardState({
-      busy: false,
-      step: "showAnswer",
-      peerDisplayName: pending?.peerDisplayName ?? current.peerDisplayName,
-      peerDeviceId,
-      banner: tCmd("cmd.sync.wizard.bannerCopyAnswer", sink.locale)
-    })
-    // EN: Answer side finishes when the offerer accepts and the DataChannel maps connected.
-    if (typeof peerDeviceId === "string" && peerDeviceId.length > 0) {
-      void waitForSyncLinkConnected(peerDeviceId).then(async (ok) => {
-        if (!ok) {
-          return
-        }
-        const wizard = getSyncWizardState()
-        if (!wizard.open) {
-          return
-        }
-        await sink.appendLogLines([tCmd("cmd.sync.setup.done", sink.locale)])
-        wizardFinish(sink)
-      })
-    }
-    return
-  }
-
-  const result = await getSyncService().accept(parsed.value)
-  const expanded = expandSyncLogLines(result.lines, sink.locale)
-  if (!result.ok) {
-    const spent = result.lines.includes("sync.rtc.acceptFailed")
-    if (spent) {
-      clearSyncConnectPending()
-      patchSyncWizardState({
-        busy: false,
-        step: "done",
-        banner: tCmd("cmd.sync.setup.acceptRetryHint", sink.locale)
-      })
-      await sink.appendLogLines(expanded)
-      return
-    }
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale)
-    })
-    return
-  }
-  clearSyncConnectPending()
-  await sink.appendLogLines(expanded)
-  await sink.appendLogLines([tCmd("cmd.sync.setup.done", sink.locale)])
-  wizardFinish(sink)
-}
-
-export async function wizardCopyOutbound(
-  sink: SyncWizardLogSink
-): Promise<{ ok: boolean }> {
-  const result = await copySyncHandshakeCode()
-  if (result.ok) {
-    patchSyncWizardState({
-      banner: tCmd(
-        getSyncConnectPending()?.kind === "invite"
-          ? "cmd.sync.wizard.copiedInvite"
-          : "cmd.sync.wizard.copied",
-        sink.locale
-      )
-    })
-    return { ok: true }
-  }
-  const expanded = expandSyncLogLines(result.lines, sink.locale)
-  // EN: Clipboard failure may include a last-resort dump token — keep that in the log only.
-  const dump = result.lines.find(
-    (t) => t.startsWith("sync.rtc.code:") || t.startsWith("sync.pair.invite:")
-  )
-  if (dump !== undefined) {
-    await sink.appendLogLines(expanded)
-  }
-  patchSyncWizardState({
-    banner: expanded[0] ?? tCmd("cmd.sync.connect.clipboardWriteFailed", sink.locale)
-  })
-  return { ok: false }
-}
-
-/**
- * EN: Download the pending RTC handshake as bmxt-offer.json / bmxt-answer.json.
- * JA: 保留中の RTC 握手を bmxt-offer.json / bmxt-answer.json としてダウンロード。
- */
-export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: boolean } {
-  const current = getSyncWizardState()
-  if (!current.open || current.busy) {
-    return { ok: false }
-  }
-  const pending = getSyncConnectPending()
-  if (pending === null || pending.kind !== "handshake" || pending.outboundCode === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
-    return { ok: false }
-  }
-  const role = outboundHandshakeRole(current.step, pending.role)
-  if (role === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
-    return { ok: false }
-  }
-  const saved = downloadRtcHandshakeFile({
-    role,
-    code: pending.outboundCode
-  })
-  if (!saved) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
-    return { ok: false }
-  }
-  patchSyncWizardState({
-    banner: tCmd("cmd.sync.wizard.savedFile", sink.locale, {
-      name: role === "offer" ? "bmxt-offer.json" : "bmxt-answer.json"
-    })
-  })
-  return { ok: true }
-}
-
-/**
- * EN: Load an offer/answer handshake file and continue the RTC wizard step.
- * JA: offer/answer 握手ファイルを読み込み、RTC ウィザード工程を続行する。
- */
-export async function wizardLoadRtcFile(
-  sink: SyncWizardLogSink,
-  fileText: string
-): Promise<void> {
-  const current = getSyncWizardState()
-  if (!current.open || current.busy) {
-    return
-  }
-  const expectedRole = expectedInboundRtcRole(current.step)
-  if (expectedRole === null) {
-    return
-  }
-  const parsed = parseRtcHandshakeFileText(fileText)
-  if (!parsed.ok) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidHandshakeFile", sink.locale)
-    })
-    return
-  }
-  if (parsed.role !== null && parsed.role !== expectedRole) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.wrongHandshakeFileRole", sink.locale, {
-        expected: expectedRole,
-        actual: parsed.role
-      })
-    })
-    return
-  }
-  await wizardSubmitRtc(sink, parsed.code)
-}
-
-export function wizardFinish(sink: SyncWizardLogSink): void {
-  clearSyncConnectPending()
-  closeSyncWizardState()
-  sink.focusPrompt()
 }
 
 /** EN: Outbound code currently held for COPY (invite or handshake). */
