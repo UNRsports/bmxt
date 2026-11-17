@@ -1,6 +1,6 @@
 /**
- * EN: Wizard actions that use the handshake ticket-file transport.
- * JA: 握手チケットファイル輸送を使うウィザード操作。
+ * EN: Wizard actions that use the ticket-file transport (invite + RTC).
+ * JA: チケットファイル輸送（招待 + RTC）を使うウィザード操作。
  */
 
 import { tCmd } from "../../../setting/i18n/ns/cmd"
@@ -9,9 +9,14 @@ import {
   patchSyncWizardState,
   type SyncWizardStep
 } from "../../wizard/sync-wizard-state.ts"
+import { wizardSubmitInvite } from "../../wizard/sync-wizard-submit-invite.ts"
 import { wizardSubmitRtc } from "../../wizard/sync-wizard-submit-rtc.ts"
 import type { SyncWizardLogSink } from "../../wizard/sync-wizard-types.ts"
 import { getSyncConnectPending } from "../common/sync-connect-pending.ts"
+import {
+  downloadFamilyInviteFile,
+  parseFamilyInviteFileText
+} from "./invite-file.ts"
 import {
   downloadRtcHandshakeFile,
   parseRtcHandshakeFileText,
@@ -42,6 +47,59 @@ function outboundHandshakeRole(
     return "answer"
   }
   return null
+}
+
+/**
+ * EN: Download the pending Family invite as a timestamped ticket file.
+ * JA: 保留中の Family 招待をタイムスタンプ付きチケットファイルとしてダウンロード。
+ */
+export function wizardSaveOutboundInviteFile(sink: SyncWizardLogSink): { ok: boolean } {
+  const current = getSyncWizardState()
+  if (!current.open || current.busy) {
+    return { ok: false }
+  }
+  const pending = getSyncConnectPending()
+  if (pending === null || pending.kind !== "invite" || pending.outboundCode === null) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
+    })
+    return { ok: false }
+  }
+  const filename = downloadFamilyInviteFile({ code: pending.outboundCode })
+  if (filename === null) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
+    })
+    return { ok: false }
+  }
+  patchSyncWizardState({
+    banner: tCmd("cmd.sync.wizard.savedFile", sink.locale, {
+      name: filename
+    })
+  })
+  return { ok: true }
+}
+
+/**
+ * EN: Load a Family invite ticket and continue the join step.
+ * JA: Family 招待チケットを読み込み、参加工程を続行する。
+ */
+export async function wizardLoadInviteFile(
+  sink: SyncWizardLogSink,
+  fileText: string
+): Promise<void> {
+  const current = getSyncWizardState()
+  if (!current.open || current.busy || current.step !== "joinInvite") {
+    return
+  }
+  const parsed = parseFamilyInviteFileText(fileText)
+  if (!parsed.ok) {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.invalidInviteFile", sink.locale)
+    })
+    return
+  }
+  await wizardSubmitInvite(sink, parsed.code)
 }
 
 /**

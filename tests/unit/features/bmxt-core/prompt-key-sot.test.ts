@@ -32,6 +32,7 @@ const ALLOWLIST_RELATIVE = new Set([
   "shared/lib/features/sync/wizard/sync-wizard-controller.ts",
   "shared/lib/features/sync/wizard/sync-wizard-panel.tsx",
   "shared/lib/features/sync/wizard/sync-wizard-submit-rtc.ts",
+  "shared/lib/features/sync/wizard/sync-wizard-submit-invite.ts",
   "shared/lib/features/sync/link/sync-link-status-bar.tsx",
   // Cross-device list host errors (UI window only — not WASM prompt grammar SoT)
   "shared/lib/features/dispatch/handlers/effects/search-list.ts",

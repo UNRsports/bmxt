@@ -7,8 +7,10 @@ import {
   HandshakeOutboundActions
 } from "../handshake/file/wizard-file-ui.tsx"
 import {
+  wizardLoadInviteFile,
   wizardLoadRtcFile,
-  wizardSaveOutboundHandshakeFile
+  wizardSaveOutboundHandshakeFile,
+  wizardSaveOutboundInviteFile
 } from "../handshake/file/wizard-file.ts"
 import {
   cancelSyncWizard,
@@ -161,6 +163,12 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
     body = (
       <>
         <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadPasteInvite", locale)}</p>
+        <HandshakeFileOpenButton
+          locale={locale}
+          disabled={busy}
+          onText={(text) => void wizardLoadInviteFile(sink, text)}
+          onReadFailed={onRtcFileReadFailed}
+        />
         <PasteForm
           locale={locale}
           disabled={busy}
@@ -182,13 +190,14 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       <>
         <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyInvite", locale)}</p>
         {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <button
-          type="button"
-          className="bmxt-sync-wizard-copy"
+        <HandshakeOutboundActions
+          locale={locale}
           disabled={busy || outbound === null}
-          onClick={() => void wizardCopyOutbound(sink)}>
-          {tCmd("cmd.sync.connect.copyButton", locale)}
-        </button>
+          onCopy={() => void wizardCopyOutbound(sink)}
+          onSaveFile={() => {
+            wizardSaveOutboundInviteFile(sink)
+          }}
+        />
         <button
           type="button"
           className="bmxt-sync-wizard-primary"

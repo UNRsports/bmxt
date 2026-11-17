@@ -225,7 +225,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 |------|------|
 | `handshake/common/` | 封印 codec · connect pending（両輸送の前提） |
 | `handshake/clipboard/` | COPY バー · テキスト貼付パース · ウィザード COPY |
-| `handshake/file/` | チケット JSON（`bmxt-YYYYMMDD-HHMMSS-offer|answer.json`）· 保存／開く UI |
+| `handshake/file/` | チケット JSON（`…-invite|offer|answer.json`）· 保存／開く UI |
 
 ウィザード本体（`sync/wizard/`）はオーケストレーションのみ。旧パス（`discovery/rtc-handshake-*` · `connect/sync-handshake-*` · `connect/sync-connect-pending`）は薄い re-export シム。
 
@@ -239,7 +239,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **ファイル輸送（実装済み）:** ウィザードに「ファイルで渡す」を clipboard と併存。
 
-- 保存: blob download で `bmxt-YYYYMMDD-HHMMSS-offer.json` / `…-answer.json`（中身は封印 `bmxt-rtc1.*`。時刻付きで整列しやすい）
+- 保存: blob download で `bmxt-YYYYMMDD-HHMMSS-{invite|offer|answer}.json`（招待は `bmxt1.*`、握手は封印 `bmxt-rtc1.*`。時刻付きで整列しやすい）
 - 読み込み: `<input type="file" accept="application/json,.json">`（Firefox 可。`showOpenFilePicker` 非依存）
 - clipboard COPY／貼付は残す。追加権限なし（`downloads` / 新規 FSA ディレクトリは不要）
 

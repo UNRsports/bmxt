@@ -1255,6 +1255,10 @@
     "ja": "握手ファイルが無効です。bmxt-*-offer.json / bmxt-*-answer.json（または bmxt-rtc1. コード）を選んでください。",
     "en": "Invalid handshake file. Choose a bmxt-*-offer.json / bmxt-*-answer.json ticket (or a bmxt-rtc1. code)."
   },
+  "cmd.sync.wizard.invalidInviteFile": {
+    "ja": "招待ファイルが無効です。bmxt-*-invite.json（または bmxt1. トークン）を選んでください。",
+    "en": "Invalid invite file. Choose a bmxt-*-invite.json ticket (or a bmxt1. token)."
+  },
   "cmd.sync.wizard.wrongHandshakeFileRole": {
     "ja": "ファイルの種類が違います。{expected} が必要ですが {actual} でした。",
     "en": "Wrong handshake file kind. Expected {expected}, got {actual}."

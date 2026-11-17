@@ -6,7 +6,6 @@ import {
 import { expandSyncLogLines } from "../facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../facade/sync-picker-summary.ts"
 import { getSyncService } from "../facade/sync-service.ts"
-import { parseSyncSetupInvitePaste } from "../setup/sync-setup-pending.ts"
 import {
   closeSyncWizardState,
   getSyncWizardState,
@@ -15,6 +14,7 @@ import {
   type SyncWizardState
 } from "./sync-wizard-state.ts"
 import type { SyncWizardLogSink } from "./sync-wizard-types.ts"
+import { wizardSubmitInvite } from "./sync-wizard-submit-invite.ts"
 import {
   cancelSyncWizard,
   wizardFinish,
@@ -27,10 +27,13 @@ export {
   wizardFinish,
   wizardSubmitRtc
 } from "./sync-wizard-submit-rtc.ts"
+export { wizardSubmitInvite } from "./sync-wizard-submit-invite.ts"
 export { wizardCopyOutbound } from "../handshake/clipboard/wizard-clipboard.ts"
 export {
+  wizardLoadInviteFile,
   wizardLoadRtcFile,
-  wizardSaveOutboundHandshakeFile
+  wizardSaveOutboundHandshakeFile,
+  wizardSaveOutboundInviteFile
 } from "../handshake/file/wizard-file.ts"
 
 async function appendShort(
@@ -167,44 +170,6 @@ export async function wizardChooseFamily(
     step: "showInvite",
     hasFamily: true,
     banner: tCmd("cmd.sync.wizard.bannerCopyInvite", sink.locale)
-  })
-}
-
-export async function wizardSubmitInvite(sink: SyncWizardLogSink, raw: string): Promise<void> {
-  const current = getSyncWizardState()
-  if (!current.open || current.step !== "joinInvite" || current.busy) {
-    return
-  }
-  const parsed = parseSyncSetupInvitePaste(raw)
-  if (parsed.kind === "cancel") {
-    patchSyncWizardState({
-      step: "family",
-      banner: null
-    })
-    return
-  }
-  if (parsed.kind === "invalid") {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidInvite", sink.locale)
-    })
-    return
-  }
-  patchSyncWizardState({ busy: true, banner: null })
-  const result = await getSyncService().pair(parsed.value)
-  if (!result.ok) {
-    const expanded = expandSyncLogLines(result.lines, sink.locale)
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.pair.joinFailed", sink.locale)
-    })
-    return
-  }
-  clearSyncConnectPending()
-  patchSyncWizardState({
-    busy: false,
-    step: "role",
-    hasFamily: true,
-    banner: tCmd("cmd.sync.setup.familyReadyJoined", sink.locale)
   })
 }
 
