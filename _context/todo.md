@@ -314,6 +314,66 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **参照:** 本会話の整理 · `shared/lib/features/command-line/inter-command/` · `shared/lib/features/picker/open-from-list-result.ts` · pipe consumers（`browse` / `close` 等）· skill `bmxt-add-command`
 
+### 8. Host-blind 徹底（Rust=判定 / TS=表示専門）
+
+**設計 SoT:** `_context/map_command.csv` · `inter-command/vocabulary.ts`（bmxt-host/2）· `verify:host-blind`。  
+**意図:** Rust がコマンド意味論（成否・usage・plan）、TS は paint / Chrome effects / opaque UiAction / i18n expand のみ。
+
+**きっかけ（観測）**
+
+- `tab -list --device | browse`（`--device` に id 無し）が本物の usage ではなく `pipe.error.notProducer` に化けた
+- 原因: WASM `msgs`→`lines` を TS が無条件成功扱い → パイプ左辺 stdout 抑制 → stream 無しで notProducer
+- 暫定修正済み: `segmentOutcomeFromLines`（表示行の `error:` / `usage:` スクレイプ）。**設計復帰ではない**（Phase 1 で撤去対象）
+
+**現状のズレ（規模感）**
+
+| カテゴリ | 規模感 | 代表 |
+|---------|--------|------|
+| A. 一覧文法の二重パース | ~700 LOC / ~11 modules | `tabs-list-parse.ts` · `search-list-parse.ts` · `list-commands/registry.ts`（Rust `cmd/*.rs` と二重） |
+| B. パイプ RHS トークン文法 | ~590 LOC / ~13 modules | `pipe/consumers/*-match.ts` |
+| C. 表示文字列からの成否判定 | ~280 LOC / 系統的 | `classify-outcome.ts` · `apply-segment-bundle.ts` |
+| D. シェル対話パーサ混在 | ~560 LOC / 要選別 | `*-setting` / exit-list / nav 等 |
+
+`verify:host-blind` は list パーサを allowlist しており、パイプ matcher・行スクレイプはほぼ未監視。
+
+**ホストに残してよいもの:** UiAction/effect の kind 実行、Chrome API、i18n expand、ListResult 取得・整形、実行時失敗（タブ API / WebRTC / cancel）。
+
+**進め方（パーサ削除を IR 拡張より先にしない）**
+
+| Phase | 内容 | 工数 |
+|-------|------|------|
+| **1** | `DispatchBundle` に計画時 `exitStatus`（必要なら `code`）。Rust helpers が stamp。`normalizeBundle` が `msgs→lines` でも保持。ホストは status 優先。`classifyOutcomeFromLines` は legacy→削除 | **3〜5 日**（~15–25 files · `build:wasm` · codegen カタログ変更なし） |
+| **2** | 構造化 list plan（`open_plain_list` / `search_list` の line エコー再パース撤去）。`run-pipe-chain` / `apply-ui-action` は plan から fetch。`matchPlainListCommand` を判定経路から外す | **5〜8 日**（Phase 1 後） |
+| **3** | パイプ RHS を WASM 分類（consumer id + flags）。TS `*-match.ts` 撤去。bare / pipe `tab -send` 文法を Rust 単一化 | **6〜10 日** |
+| **4** | `verify:host-blind` 厳格化（list allowlist 縮小 · matcher 新設禁止）· 判定経路パーサ削除 · シェル対話パーサは UiAction 済みから縮小 | **3〜5 日** |
+
+**合計**
+
+| 到達点 | Phase | 工数 |
+|--------|-------|------|
+| 成否を Rust が返す（usage→notProducer の設計的根治） | 1 | 約 0.5〜1 人週 |
+| Enter / パイプ左辺が host-blind | 1–2 | 約 2〜2.5 人週 |
+| パイプ含む意味論をほぼ Rust 専有 | 1–4 | 約 3.5〜6 人週 |
+
+削除・置換対象の TS 意味論層: 約 **1.5〜2.5 kLOC** + Rust IR/emitter + テスト。中〜大規模（IR 進化必須）。
+
+**後回し（やらない）**
+
+- Chrome/WebRTC 実行時失敗をすべて Rust 判定（ホストしか観測できない）
+- IME 候補 UI の全ロジックを Rust 化
+- シェル対話パーサの一括削除を Phase 1 と同時
+
+**チェックリスト**
+
+- [ ] **8.1:** `DispatchBundle.exitStatus`（+任意 `code`）· Rust stamp · TS 伝播 · 行スクレイプ撤去
+- [ ] **8.2:** 構造化 list plan · パイプ左辺 / `OpenPlainList` の再パース撤去
+- [ ] **8.3:** パイプ RHS を WASM 分類 · `*-match.ts` 撤去
+- [ ] **8.4:** `verify:host-blind` 厳格化 · 残骸掃除
+- [x] **暫定:** パイプ左辺 usage の成功誤判定を `segmentOutcomeFromLines` で抑止（Phase 1 で置換）
+- [x] **暫定:** 単一 compound セグメントの冗長 `[{segment}]` エコー抑制（Family send ログ重複）
+
+**参照:** 本会話の見積もり · `shared/crates/bmxt-core/src/ir.rs` · `shared/lib/features/command-line/compound/classify-outcome.ts` · `scripts/verify-host-blind.mjs`
+
 ---
 
 ## Archive（ポインタのみ）
