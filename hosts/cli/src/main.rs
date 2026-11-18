@@ -5,9 +5,9 @@ mod handshake;
 mod mesh_plan;
 mod msgs;
 mod paste;
+mod shell;
 mod tui;
 
-use std::io::{self, Write};
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
@@ -17,6 +17,7 @@ use clap::{Parser, Subcommand};
 use crate::adapter::CliHostAdapter;
 use crate::bus::BusClient;
 use crate::config::CliConfig;
+use crate::shell::{PromptShell, ReadOutcome};
 
 #[derive(Debug, Parser)]
 #[command(name = "bmxt", about = "BMXt terminal peer (Family WebRTC command bus)")]
@@ -237,20 +238,30 @@ async fn wait_connected(
 }
 
 async fn command_repl(cfg: &CliConfig, client: &BusClient) -> Result<()> {
-    println!("BMXt CLI — same command grammar as the extension prompt.");
-    println!("Examples: tab -list --peers | browse · sync -status · sync -ping <deviceId> · help · quit");
+    println!("BMXt CLI — extension command grammar + line editor.");
+    println!("↑↓ history · Tab candidates · examples: tab -list --peers | browse · sync -status · help · quit");
     let adapter = CliHostAdapter { cfg, client };
+    let mut shell = PromptShell::open()?;
     let mut continuation: Option<String> = None;
     loop {
         let prompt = match &continuation {
-            Some(prefix) => format!("{prefix}"),
+            Some(prefix) => prefix.clone(),
             None => "bmxt> ".to_string(),
         };
-        print!("{prompt}");
-        io::stdout().flush()?;
-        let mut line = String::new();
-        io::stdin().read_line(&mut line)?;
-        let typed = line.trim_end_matches(['\r', '\n']).to_string();
+        // EN: rustyline is sync; multi-thread runtime allows blocking here.
+        let outcome = tokio::task::block_in_place(|| shell.read_line(&prompt))?;
+        let typed = match outcome {
+            ReadOutcome::Line(s) => s,
+            ReadOutcome::Interrupt => {
+                continuation = None;
+                println!("^C");
+                continue;
+            }
+            ReadOutcome::Eof => {
+                client.close_all().await;
+                break;
+            }
+        };
         let full = match &continuation {
             Some(prefix) => format!("{prefix}{typed}"),
             None => typed,
@@ -261,10 +272,10 @@ async fn command_repl(cfg: &CliConfig, client: &BusClient) -> Result<()> {
             continue;
         }
         if trimmed == "quit" || trimmed == "exit" {
+            shell.remember(trimmed);
             client.close_all().await;
             break;
         }
-        // EN: Tiny aliases that map to extension grammar (muscle memory from early CLI).
         let line = match trimmed {
             "ping" => {
                 let peers = client.list_connected().await;
@@ -278,6 +289,7 @@ async fn command_repl(cfg: &CliConfig, client: &BusClient) -> Result<()> {
             }
             other => other.to_string(),
         };
+        shell.remember(&line);
         match adapter.run_line(&line).await {
             Ok(outcome) => {
                 continuation = outcome.prompt_prefix;

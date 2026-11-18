@@ -70,7 +70,6 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
     }
 }
 
-#[cfg(feature = "wasm")]
 pub fn all_completion_tokens() -> Vec<String> {
     let mut tokens = Vec::new();
     for meta in crate::generated::all_command_metas() {

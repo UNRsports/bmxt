@@ -97,18 +97,7 @@ impl<'a> CliHostAdapter<'a> {
         match consumer {
             PipeConsumerClass::Browse => {
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
-                if rows.is_empty() {
-                    println!("(empty list)");
-                    return Ok(RunOutcome {
-                        exit_status: EXIT_SUCCESS,
-                        prompt_prefix: None,
-                    });
-                }
-                tui::run_tab_picker(&rows)?;
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                self.run_picker_and_maybe_activate(&rows).await
             }
             PipeConsumerClass::Close => {
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
@@ -357,11 +346,7 @@ impl<'a> CliHostAdapter<'a> {
                 let rows = self
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
-                tui::run_tab_picker(&rows)?;
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                self.run_picker_and_maybe_activate(&rows).await
             }
             UiAction::SyncStatus => {
                 let peers = self.client.list_connected().await;
@@ -443,6 +428,37 @@ impl<'a> CliHostAdapter<'a> {
                 );
                 Ok(RunOutcome {
                     exit_status: EXIT_MISUSE,
+                    prompt_prefix: None,
+                })
+            }
+        }
+    }
+
+    async fn run_picker_and_maybe_activate(
+        &self,
+        rows: &[SyncRemoteTabRow],
+    ) -> Result<RunOutcome> {
+        match tui::run_tab_picker(rows)? {
+            None => Ok(RunOutcome {
+                exit_status: EXIT_SUCCESS,
+                prompt_prefix: None,
+            }),
+            Some(sel) => {
+                self.client
+                    .tabs_ops(
+                        &self.cfg.device_id,
+                        SyncTabsOp::Activate {
+                            tab_id: sel.tab_id,
+                            window_id: sel.window_id,
+                        },
+                    )
+                    .await?;
+                println!(
+                    "activated tab {} win={} — {} {}",
+                    sel.tab_id, sel.window_id, sel.title, sel.url
+                );
+                Ok(RunOutcome {
+                    exit_status: EXIT_SUCCESS,
                     prompt_prefix: None,
                 })
             }

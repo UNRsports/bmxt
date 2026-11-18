@@ -1,9 +1,9 @@
 //! EN: Command core. Extension builds with default `wasm`; CLI uses `default-features = false`.
+//! JA: 拡張は default `wasm`。CLI は default-features = false（complete はネイティブでも利用可）。
 #![cfg_attr(not(feature = "wasm"), allow(dead_code, unused_imports))]
 
 mod cmd;
-#[cfg(feature = "wasm")]
-mod complete;
+pub mod complete;
 pub mod compound;
 pub mod compound_eligibility;
 pub mod dispatch;
@@ -14,6 +14,7 @@ pub mod pipe_consumer;
 #[cfg(feature = "wasm")]
 mod tabs_picker;
 
+pub use complete::{complete_line, CompleteHit};
 pub use dispatch::run_line;
 pub use ir::{DispatchBundle, HostEffect, Msg, UiAction};
 
