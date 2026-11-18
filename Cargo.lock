@@ -251,6 +251,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
+ "bmxt-core",
  "bmxt-family",
  "bmxt-peer-rtc",
  "bmxt-sync-wire",

@@ -12,6 +12,7 @@ name = "bmxt"
 path = "src/main.rs"
 
 [dependencies]
+bmxt-core = { path = "../../shared/crates/bmxt-core", default-features = false }
 bmxt-family = { path = "../../shared/crates/bmxt-family" }
 bmxt-peer-rtc = { path = "../../shared/crates/bmxt-peer-rtc" }
 bmxt-sync-wire = { path = "../../shared/crates/bmxt-sync-wire" }

@@ -511,8 +511,8 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 - [x] **10.1 共有クレート:** `bmxt-sync-wire` · `bmxt-family`（workspace members）
 - [x] **10.2 輸送 + 最小 CLI:** `bmxt-peer-rtc` + `hosts/cli`（`bmxt`）。`status` / `sync-setup` / `sync-pair` / `sync-connect` / REPL `ping`。**手元:** 拡張との握手→ping は下記スモーク
 - [x] **10.3 バス RPC:** REPL `tabs` / `open` / `close` / `activate` / `search`（chunk 収集）。タイムアウト `SYNC_REMOTE_QUERY_TIMEOUT_MS`
-- [ ] **10.4a core 分割:** `bmxt-core` 純 rlib + `bmxt-core-wasm` Facade（**ping 手元確認後**。拡張ビルド影響あり）
-- [ ] **10.4b CliHostAdapter:** `HostEffect` → 遠隔 RPC 写像。ローカルのみ help／sync／clear。`nav`／`dom` 連動は明示エラー
+- [x] **10.4a core 分割（実用形）:** `bmxt-core` に `wasm` feature（default on）。CLI は `default-features = false` で純 rlib 利用。拡張 wasm-pack は従来どおり default。専用 `bmxt-core-wasm` クレート分離は任意の後続
+- [x] **10.4b CliHostAdapter:** REPL が拡張と同じ文法（`tab -list --peers | browse` 等）。`HostEffect`／`UiAction` → 遠隔 RPC。`nav`／`dom`／握手系は明示案内。msgs は共有 EN i18n
 - [x] **10.4c TUI picker MVP（初期）:** REPL `tui` → ratatui 一覧（`↑↓` `/` Enter Esc）。フル列レイアウト・tabs_picker reducer 接続は後続
 - [x] **10.5 配布手順:** `hosts/cli/README.md` · `hosts/README.md` 追記。`cargo build --release -p bmxt-cli` → `target/release/bmxt`。Linux 一次
 

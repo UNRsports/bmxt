@@ -1,11 +1,22 @@
 use anyhow::{anyhow, Result};
 use bmxt_family::{
-    format_rtc_handshake_code, parse_invite, parse_rtc_handshake_code, format_invite, InviteV1,
+    format_invite, format_rtc_handshake_code, parse_invite, parse_rtc_handshake_code, InviteV1,
     RtcHandshakePlain, RtcHandshakeRole, RTC_HANDSHAKE_TTL_MS_DEFAULT,
 };
 use bmxt_peer_rtc::{LocalDescriptionBundle, PeerSession};
 
 use crate::config::CliConfig;
+
+pub struct AppliedAnswer {
+    pub remote_device_id: String,
+    pub remote_display_name: String,
+}
+
+pub struct AcceptedOffer {
+    pub answer_code: String,
+    pub remote_device_id: String,
+    pub remote_display_name: String,
+}
 
 pub fn print_invite(cfg: &CliConfig) -> Result<String> {
     let (family_id, seed_b64) = cfg.require_family()?;
@@ -61,7 +72,7 @@ pub async fn accept_offer_code(
     cfg: &CliConfig,
     session: &PeerSession,
     code: &str,
-) -> Result<String> {
+) -> Result<AcceptedOffer> {
     let (family_id, seed_b64) = cfg.require_family()?;
     let plain = parse_rtc_handshake_code(code, seed_b64).map_err(|e| anyhow!(e))?;
     if plain.role != RtcHandshakeRole::Offer {
@@ -80,7 +91,7 @@ pub async fn accept_offer_code(
         ice: bundle.ice,
     };
     let now = chrono::Utc::now().timestamp_millis();
-    format_rtc_handshake_code(
+    let answer_code = format_rtc_handshake_code(
         family_id,
         seed_b64,
         &cfg.device_id,
@@ -89,15 +100,27 @@ pub async fn accept_offer_code(
         RTC_HANDSHAKE_TTL_MS_DEFAULT,
         now,
     )
-    .map_err(|e| anyhow!(e))
+    .map_err(|e| anyhow!(e))?;
+    Ok(AcceptedOffer {
+        answer_code,
+        remote_device_id: plain.from_device_id,
+        remote_display_name: plain.from_display_name,
+    })
 }
 
-pub async fn apply_answer_code(cfg: &CliConfig, session: &PeerSession, code: &str) -> Result<()> {
+pub async fn apply_answer_code(
+    cfg: &CliConfig,
+    session: &PeerSession,
+    code: &str,
+) -> Result<AppliedAnswer> {
     let (_family_id, seed_b64) = cfg.require_family()?;
     let plain = parse_rtc_handshake_code(code, seed_b64).map_err(|e| anyhow!(e))?;
     if plain.role != RtcHandshakeRole::Answer {
         return Err(anyhow!("expected answer handshake code"));
     }
     session.apply_answer(&plain.sdp, &plain.ice).await?;
-    Ok(())
+    Ok(AppliedAnswer {
+        remote_device_id: plain.from_device_id,
+        remote_display_name: plain.from_display_name,
+    })
 }

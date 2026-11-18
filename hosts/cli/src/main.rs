@@ -1,17 +1,20 @@
+mod adapter;
 mod bus;
 mod config;
 mod handshake;
+mod mesh_plan;
+mod msgs;
 mod paste;
 mod tui;
 
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use bmxt_peer_rtc::PeerSession;
-use bmxt_sync_wire::SyncTabsOp;
 use clap::{Parser, Subcommand};
 
+use crate::adapter::CliHostAdapter;
 use crate::bus::BusClient;
 use crate::config::CliConfig;
 
@@ -41,7 +44,7 @@ enum Commands {
     /// Answer role: paste offer code, print answer
     #[command(name = "sync-answer")]
     SyncAnswer { offer_code: String },
-    /// Interactive connect (offer or answer) then optional REPL
+    /// Interactive connect (offer or answer) then command REPL (same grammar as extension)
     #[command(name = "sync-connect")]
     SyncConnect {
         #[arg(long)]
@@ -57,7 +60,7 @@ enum Commands {
         #[arg(long)]
         session: Option<PathBuf>,
     },
-    /// Open TUI picker against a connected peer (sync-connect --tui)
+    /// Open TUI demo without a live session
     Tui,
 }
 
@@ -87,71 +90,28 @@ async fn main() -> Result<()> {
             println!("Joined Family {}", cfg.family_id.as_deref().unwrap_or(""));
         }
         Commands::SyncOffer { to } => {
-            cfg.require_family()?;
-            let (session, mut events) = PeerSession::create(to.clone(), None).await?;
-            let (code, _) = handshake::make_offer_code(&cfg, &session).await?;
-            let offer_path = paste::write_handshake_ticket("offer", &code)?;
-            println!("=== OFFER file ===\n{}\n", offer_path.display());
-            println!("{code}\n");
-            let answer = paste::read_handshake_paste(
-                "ANSWER path (recommended): @/path/to/bmxt-*-answer.json\n> ",
-            )?;
-            handshake::apply_answer_code(&cfg, &session, &answer).await?;
-            println!("Answer applied. Waiting for DataChannel…");
-            wait_connected(&session, &mut events).await?;
-            println!("Connected to {to}. Starting bus REPL (ping / tabs / quit).");
-            let mut client = BusClient::new(session, events);
-            bus_repl(&cfg, &mut client).await?;
+            let client = connect_as_offer(&cfg, to).await?;
+            command_repl(&cfg, &client).await?;
         }
         Commands::SyncAnswer { offer_code } => {
-            cfg.require_family()?;
-            let (session, mut events) =
-                PeerSession::create("offer-origin".into(), None).await?;
-            let answer = handshake::accept_offer_code(&cfg, &session, &offer_code).await?;
-            println!("=== ANSWER (paste back into BMXt) ===\n{answer}\n");
-            println!("Waiting for DataChannel…");
-            wait_connected(&session, &mut events).await?;
-            println!("Connected. Starting bus REPL.");
-            let mut client = BusClient::new(session, events);
-            bus_repl(&cfg, &mut client).await?;
+            let client = connect_as_answer(&cfg, &offer_code).await?;
+            command_repl(&cfg, &client).await?;
         }
         Commands::SyncConnect { offer, to } => {
             cfg.require_family()?;
-            if offer {
-                let (session, mut events) = PeerSession::create(to.clone(), None).await?;
-                let (code, _) = handshake::make_offer_code(&cfg, &session).await?;
-                let offer_path = paste::write_handshake_ticket("offer", &code)?;
-                println!("=== OFFER (file — prefer this over pasting) ===");
-                println!("{}", offer_path.display());
-                println!("Open this file in the BMXt wizard (ファイルで渡す / Open), or paste bare code.\n");
-                println!("{code}\n");
-                let answer = paste::read_handshake_paste(
-                    "ANSWER path (recommended): @/path/to/bmxt-*-answer.json\n> ",
-                )?;
-                handshake::apply_answer_code(&cfg, &session, &answer).await?;
-                wait_connected(&session, &mut events).await?;
-                let mut client = BusClient::new(session, events);
-                bus_repl(&cfg, &mut client).await?;
+            let client = if offer {
+                connect_as_offer(&cfg, to).await?
             } else {
                 let offer_code = paste::read_handshake_paste(
                     "OFFER path (recommended): @/path/to/bmxt-*-offer.json\n> ",
                 )?;
-                let (session, mut events) =
-                    PeerSession::create("offer-origin".into(), None).await?;
-                let answer =
-                    handshake::accept_offer_code(&cfg, &session, &offer_code).await?;
-                let answer_path = paste::write_handshake_ticket("answer", &answer)?;
-                println!("=== ANSWER (file) ===");
-                println!("{}", answer_path.display());
-                println!("{answer}\n");
-                wait_connected(&session, &mut events).await?;
-                let mut client = BusClient::new(session, events);
-                bus_repl(&cfg, &mut client).await?;
-            }
+                connect_as_answer(&cfg, &offer_code).await?
+            };
+            command_repl(&cfg, &client).await?;
         }
         Commands::TabList { .. } => {
             return Err(anyhow!(
-                "tab-list requires a live session — use: bmxt sync-connect --offer (or without --offer)"
+                "tab-list requires a live session — use: bmxt sync-connect --offer, then `tab -list`"
             ));
         }
         Commands::Tui => {
@@ -161,19 +121,78 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+async fn connect_as_offer(cfg: &CliConfig, to: String) -> Result<BusClient> {
+    cfg.require_family()?;
+    let (family_id, _) = cfg.require_family()?;
+    let (session, mut events) = PeerSession::create(to, None).await?;
+    let (code, _) = handshake::make_offer_code(cfg, &session).await?;
+    let offer_path = paste::write_handshake_ticket("offer", &code)?;
+    println!("=== OFFER (file — prefer this over pasting) ===");
+    println!("{}", offer_path.display());
+    println!("Open this file in the BMXt wizard (ファイルで渡す / Open), or paste bare code.\n");
+    println!("{code}\n");
+    let answer = paste::read_handshake_paste(
+        "ANSWER path (recommended): @/path/to/bmxt-*-answer.json\n> ",
+    )?;
+    let applied = handshake::apply_answer_code(cfg, &session, &answer).await?;
+    let early = wait_connected(&session, &mut events).await?;
+    println!(
+        "Connected to {} ({}). Command REPL (extension grammar)…",
+        applied.remote_display_name, applied.remote_device_id
+    );
+    Ok(BusClient::start(
+        cfg.device_id.clone(),
+        cfg.display_name.clone(),
+        family_id.to_string(),
+        session,
+        events,
+        applied.remote_device_id,
+        applied.remote_display_name,
+        early,
+    )
+    .await)
+}
+
+async fn connect_as_answer(cfg: &CliConfig, offer_code: &str) -> Result<BusClient> {
+    cfg.require_family()?;
+    let (family_id, _) = cfg.require_family()?;
+    let (session, mut events) = PeerSession::create("offer-origin".into(), None).await?;
+    let accepted = handshake::accept_offer_code(cfg, &session, offer_code).await?;
+    let answer_path = paste::write_handshake_ticket("answer", &accepted.answer_code)?;
+    println!("=== ANSWER (file) ===");
+    println!("{}", answer_path.display());
+    println!("{}\n", accepted.answer_code);
+    let early = wait_connected(&session, &mut events).await?;
+    println!(
+        "Connected to {} ({}). Command REPL (extension grammar)…",
+        accepted.remote_display_name, accepted.remote_device_id
+    );
+    Ok(BusClient::start(
+        cfg.device_id.clone(),
+        cfg.display_name.clone(),
+        family_id.to_string(),
+        session,
+        events,
+        accepted.remote_device_id,
+        accepted.remote_display_name,
+        early,
+    )
+    .await)
+}
+
 async fn wait_connected(
     session: &bmxt_peer_rtc::PeerSession,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<bmxt_peer_rtc::PeerSessionEvent>,
-) -> Result<()> {
+) -> Result<Vec<bmxt_peer_rtc::PeerSessionEvent>> {
     use bmxt_peer_rtc::PeerSessionEvent;
-    // EN: ICE "connected" is not enough — ping needs an open DataChannel (SCTP).
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
     let mut last_ice = String::from("unknown");
     let mut last_pc = String::from("unknown");
+    let mut buffered: Vec<PeerSessionEvent> = Vec::new();
     while tokio::time::Instant::now() < deadline {
         if session.data_channel_is_open().await {
             eprintln!("datachannel: open");
-            return Ok(());
+            return Ok(buffered);
         }
         match tokio::time::timeout(std::time::Duration::from_millis(250), events.recv()).await {
             Ok(Some(PeerSessionEvent::ConnectionState(state))) => {
@@ -184,6 +203,7 @@ async fn wait_connected(
                         "connection {state} (ice={last_ice}). Keep the BMXt prompt window open; retry sync-connect."
                     ));
                 }
+                buffered.push(PeerSessionEvent::ConnectionState(state));
             }
             Ok(Some(PeerSessionEvent::IceConnectionState(state))) => {
                 eprintln!("ice: {state}");
@@ -193,14 +213,19 @@ async fn wait_connected(
                         "ICE {state}. Same-PC host candidates should match; retry with a fresh offer/answer pair."
                     ));
                 }
+                buffered.push(PeerSessionEvent::IceConnectionState(state));
             }
             Ok(Some(PeerSessionEvent::DataChannelOpen)) => {
                 eprintln!("datachannel: open");
-                return Ok(());
+                buffered.push(PeerSessionEvent::DataChannelOpen);
+                return Ok(buffered);
             }
-            Ok(Some(PeerSessionEvent::Command(_))) => {
-                eprintln!("datachannel: traffic");
-                return Ok(());
+            Ok(Some(PeerSessionEvent::Command(cmd))) => {
+                buffered.push(PeerSessionEvent::Command(cmd));
+                if session.data_channel_is_open().await {
+                    eprintln!("datachannel: open (with early bus traffic)");
+                    return Ok(buffered);
+                }
             }
             Ok(None) => return Err(anyhow!("event channel closed")),
             Err(_) => continue,
@@ -211,123 +236,57 @@ async fn wait_connected(
     ))
 }
 
-async fn bus_repl(cfg: &CliConfig, client: &mut BusClient) -> Result<()> {
-    println!("Commands: ping | tabs [--url] | open <url> | close <tabId> | activate <tabId> <windowId> | search <line> | tui | quit");
+async fn command_repl(cfg: &CliConfig, client: &BusClient) -> Result<()> {
+    println!("BMXt CLI — same command grammar as the extension prompt.");
+    println!("Examples: tab -list --peers | browse · sync -status · sync -ping <deviceId> · help · quit");
+    let adapter = CliHostAdapter { cfg, client };
+    let mut continuation: Option<String> = None;
     loop {
-        print!("bmxt> ");
+        let prompt = match &continuation {
+            Some(prefix) => format!("{prefix}"),
+            None => "bmxt> ".to_string(),
+        };
+        print!("{prompt}");
         io::stdout().flush()?;
         let mut line = String::new();
         io::stdin().read_line(&mut line)?;
-        let line = line.trim();
-        if line.is_empty() {
+        let typed = line.trim_end_matches(['\r', '\n']).to_string();
+        let full = match &continuation {
+            Some(prefix) => format!("{prefix}{typed}"),
+            None => typed,
+        };
+        let trimmed = full.trim();
+        if trimmed.is_empty() {
+            continuation = None;
             continue;
         }
-        if line == "quit" || line == "exit" {
-            client.session.close().await;
+        if trimmed == "quit" || trimmed == "exit" {
+            client.close_all().await;
             break;
         }
-        if line == "ping" {
-            let ack = client.ping(&cfg.device_id).await.context("ping")?;
-            println!("ack: {ack:?}");
-            continue;
-        }
-        if line == "tui" {
-            let rows = client.tabs_list(&cfg.device_id, true).await?;
-            tui::run_tab_picker(&rows)?;
-            continue;
-        }
-        if line == "tabs" || line.starts_with("tabs ") {
-            let show_url = line.contains("--url");
-            let rows = client.tabs_list(&cfg.device_id, show_url).await?;
-            for row in rows {
-                println!("{}", format_row(&row, show_url));
+        // EN: Tiny aliases that map to extension grammar (muscle memory from early CLI).
+        let line = match trimmed {
+            "ping" => {
+                let peers = client.list_connected().await;
+                if let Some((id, _)) = peers.first() {
+                    format!("sync -ping {id}")
+                } else {
+                    eprintln!("error: no connected peers");
+                    continuation = None;
+                    continue;
+                }
             }
-            continue;
-        }
-        if let Some(url) = line.strip_prefix("open ") {
-            let opened = client
-                .open_tabs(&cfg.device_id, vec![url.trim().to_string()], None)
-                .await?;
-            println!("opened: {opened:?}");
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("close ") {
-            let tab_id: i64 = rest.trim().parse().context("tab id")?;
-            client
-                .tabs_ops(
-                    &cfg.device_id,
-                    SyncTabsOp::CloseTabs {
-                        tab_ids: vec![tab_id],
-                    },
-                )
-                .await?;
-            println!("ok");
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("activate ") {
-            let mut parts = rest.split_whitespace();
-            let tab_id: i64 = parts.next().unwrap_or("").parse().context("tab id")?;
-            let window_id: i64 = parts.next().unwrap_or("").parse().context("window id")?;
-            client
-                .tabs_ops(
-                    &cfg.device_id,
-                    SyncTabsOp::Activate { tab_id, window_id },
-                )
-                .await?;
-            println!("ok");
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("search ") {
-            let hits = client
-                .search_query(&cfg.device_id, rest.trim().to_string())
-                .await?;
-            for hit in hits.iter().take(50) {
-                println!(
-                    "[{}] {} — {}",
-                    hit.source, hit.title, hit.url
-                );
+            other => other.to_string(),
+        };
+        match adapter.run_line(&line).await {
+            Ok(outcome) => {
+                continuation = outcome.prompt_prefix;
             }
-            println!("({} hits)", hits.len());
-            continue;
+            Err(err) => {
+                eprintln!("error: {err:#}");
+                continuation = None;
+            }
         }
-        println!("unknown command");
     }
     Ok(())
-}
-
-fn format_row(row: &bmxt_sync_wire::SyncRemoteTabRow, show_url: bool) -> String {
-    use bmxt_sync_wire::SyncRemoteTabRow::*;
-    match row {
-        Window {
-            window_id,
-            title,
-            focused,
-        } => format!("window {window_id} {} {title}", if *focused { "*" } else { " " }),
-        Group {
-            window_id,
-            group_id,
-            label,
-            ..
-        } => format!("  group {group_id:?} win={window_id} {label}"),
-        Tab {
-            tab_id,
-            window_id,
-            title,
-            url,
-            active,
-            ..
-        } => {
-            if show_url {
-                format!(
-                    "    tab {tab_id} win={window_id} {} {title} {url}",
-                    if *active { "*" } else { " " }
-                )
-            } else {
-                format!(
-                    "    tab {tab_id} win={window_id} {} {title}",
-                    if *active { "*" } else { " " }
-                )
-            }
-        }
-    }
 }
