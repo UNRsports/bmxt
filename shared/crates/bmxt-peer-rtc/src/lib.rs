@@ -4,5 +4,5 @@
 mod session;
 
 pub use session::{
-    PeerRtcError, PeerSession, PeerSessionEvent, LocalDescriptionBundle, SessionId,
+    LocalDescriptionBundle, PeerRtcError, PeerSession, PeerSessionEvent, SessionId,
 };

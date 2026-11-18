@@ -35,6 +35,15 @@ fn unseal_committed_handshake_fixture() {
         serde_json::to_value(&plain).expect("plain json"),
         doc.plain
     );
+
+    // EN: JSON ticket wrapper (browser file transport) must also parse.
+    let ticket = format!(
+        "{{\n  \"v\": 1,\n  \"kind\": \"bmxt-rtc-handshake\",\n  \"role\": \"offer\",\n  \"code\": \"{}\"\n}}\n",
+        doc.handshake_code
+    );
+    let from_ticket =
+        parse_rtc_handshake_code(&ticket, &doc.seed_b64).expect("parse ticket wrapper");
+    assert_eq!(from_ticket.session_id, plain.session_id);
 }
 
 #[test]

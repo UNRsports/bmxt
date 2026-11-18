@@ -1,6 +1,7 @@
 mod bus;
 mod config;
 mod handshake;
+mod paste;
 mod tui;
 
 use std::io::{self, Write};
@@ -89,12 +90,13 @@ async fn main() -> Result<()> {
             cfg.require_family()?;
             let (session, mut events) = PeerSession::create(to.clone(), None).await?;
             let (code, _) = handshake::make_offer_code(&cfg, &session).await?;
-            println!("=== OFFER (paste into BMXt sync wizard) ===\n{code}\n");
-            print!("Paste ANSWER code, then Enter:\n> ");
-            io::stdout().flush()?;
-            let mut answer = String::new();
-            io::stdin().read_line(&mut answer)?;
-            handshake::apply_answer_code(&cfg, &session, answer.trim()).await?;
+            let offer_path = paste::write_handshake_ticket("offer", &code)?;
+            println!("=== OFFER file ===\n{}\n", offer_path.display());
+            println!("{code}\n");
+            let answer = paste::read_handshake_paste(
+                "ANSWER path (recommended): @/path/to/bmxt-*-answer.json\n> ",
+            )?;
+            handshake::apply_answer_code(&cfg, &session, &answer).await?;
             println!("Answer applied. Waiting for DataChannel…");
             wait_connected(&mut events).await?;
             println!("Connected to {to}. Starting bus REPL (ping / tabs / quit).");
@@ -118,25 +120,30 @@ async fn main() -> Result<()> {
             if offer {
                 let (session, mut events) = PeerSession::create(to.clone(), None).await?;
                 let (code, _) = handshake::make_offer_code(&cfg, &session).await?;
-                println!("=== OFFER ===\n{code}\n");
-                print!("Paste ANSWER:\n> ");
-                io::stdout().flush()?;
-                let mut answer = String::new();
-                io::stdin().read_line(&mut answer)?;
-                handshake::apply_answer_code(&cfg, &session, answer.trim()).await?;
+                let offer_path = paste::write_handshake_ticket("offer", &code)?;
+                println!("=== OFFER (file — prefer this over pasting) ===");
+                println!("{}", offer_path.display());
+                println!("Open this file in the BMXt wizard (ファイルで渡す / Open), or paste bare code.\n");
+                println!("{code}\n");
+                let answer = paste::read_handshake_paste(
+                    "ANSWER path (recommended): @/path/to/bmxt-*-answer.json\n> ",
+                )?;
+                handshake::apply_answer_code(&cfg, &session, &answer).await?;
                 wait_connected(&mut events).await?;
                 let mut client = BusClient::new(session, events);
                 bus_repl(&cfg, &mut client).await?;
             } else {
-                print!("Paste OFFER:\n> ");
-                io::stdout().flush()?;
-                let mut offer_code = String::new();
-                io::stdin().read_line(&mut offer_code)?;
+                let offer_code = paste::read_handshake_paste(
+                    "OFFER path (recommended): @/path/to/bmxt-*-offer.json\n> ",
+                )?;
                 let (session, mut events) =
                     PeerSession::create("offer-origin".into(), None).await?;
                 let answer =
-                    handshake::accept_offer_code(&cfg, &session, offer_code.trim()).await?;
-                println!("=== ANSWER ===\n{answer}\n");
+                    handshake::accept_offer_code(&cfg, &session, &offer_code).await?;
+                let answer_path = paste::write_handshake_ticket("answer", &answer)?;
+                println!("=== ANSWER (file) ===");
+                println!("{}", answer_path.display());
+                println!("{answer}\n");
                 wait_connected(&mut events).await?;
                 let mut client = BusClient::new(session, events);
                 bus_repl(&cfg, &mut client).await?;
@@ -157,27 +164,48 @@ async fn main() -> Result<()> {
 async fn wait_connected(
     events: &mut tokio::sync::mpsc::UnboundedReceiver<bmxt_peer_rtc::PeerSessionEvent>,
 ) -> Result<()> {
+    use bmxt_peer_rtc::PeerSessionEvent;
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
+    let mut last_ice = String::from("unknown");
     while tokio::time::Instant::now() < deadline {
         match tokio::time::timeout(std::time::Duration::from_secs(1), events.recv()).await {
-            Ok(Some(bmxt_peer_rtc::PeerSessionEvent::ConnectionState(state))) => {
+            Ok(Some(PeerSessionEvent::ConnectionState(state))) => {
                 eprintln!("connection: {state}");
                 if state == "connected" {
                     return Ok(());
                 }
                 if state == "failed" || state == "closed" {
-                    return Err(anyhow!("connection {state}"));
+                    return Err(anyhow!(
+                        "connection {state} (ice={last_ice}). Keep the BMXt prompt window open; retry sync-connect."
+                    ));
                 }
             }
-            Ok(Some(bmxt_peer_rtc::PeerSessionEvent::Command(_))) => {
-                // EN: Channel may deliver before state string settles.
+            Ok(Some(PeerSessionEvent::IceConnectionState(state))) => {
+                eprintln!("ice: {state}");
+                last_ice = state.clone();
+                if state == "connected" || state == "completed" {
+                    return Ok(());
+                }
+                if state == "failed" {
+                    return Err(anyhow!(
+                        "ICE {state}. Same-PC host candidates should match; retry with a fresh offer/answer pair."
+                    ));
+                }
+            }
+            Ok(Some(PeerSessionEvent::DataChannelOpen)) => {
+                eprintln!("datachannel: open");
+                return Ok(());
+            }
+            Ok(Some(PeerSessionEvent::Command(_))) => {
                 return Ok(());
             }
             Ok(None) => return Err(anyhow!("event channel closed")),
             Err(_) => continue,
         }
     }
-    Err(anyhow!("timed out waiting for connected"))
+    Err(anyhow!(
+        "timed out waiting for connected (last ice={last_ice})"
+    ))
 }
 
 async fn bus_repl(cfg: &CliConfig, client: &mut BusClient) -> Result<()> {

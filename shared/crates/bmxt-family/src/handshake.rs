@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::b64::{base64url_to_bytes, bytes_to_base64url};
+use crate::b64::{base64url_looks_corrupted, base64url_to_bytes, bytes_to_base64url};
 use crate::envelope::{SealKind, SealedEnvelope};
 use crate::seal::{seal_json_payload, unseal_json_payload, FamilyError};
 
@@ -73,6 +73,50 @@ pub fn compact_rtc_handshake_code(raw: &str) -> String {
     raw.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
+/**
+ * EN: Extract a bare `bmxt-rtc1.` code from pasted text (bare code or JSON ticket wrapper).
+ *     JSON tickets match extension `parseRtcHandshakeFileText` (`code` field).
+ * JA: 貼付テキスト（素のコードまたは JSON チケットの `code`）から `bmxt-rtc1.` を取り出す。
+ */
+pub fn extract_rtc_handshake_code(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.starts_with('{') {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) {
+            if let Some(code) = value.get("code").and_then(|v| v.as_str()) {
+                return normalize_bare_handshake_code(code);
+            }
+        }
+    }
+    normalize_bare_handshake_code(trimmed)
+}
+
+fn normalize_bare_handshake_code(raw: &str) -> Option<String> {
+    let compact = compact_rtc_handshake_code(raw);
+    if !compact.starts_with(RTC_HANDSHAKE_PREFIX) {
+        // EN: Allow leading junk only when not a JSON object (already handled above).
+        let prefix_at = compact.find(RTC_HANDSHAKE_PREFIX)?;
+        let code = &compact[prefix_at..];
+        // EN: Stop at first non-base64url char after prefix body (guards accidental trailing JSON).
+        let body = &code[RTC_HANDSHAKE_PREFIX.len()..];
+        let end = body
+            .chars()
+            .position(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+            .unwrap_or(body.len());
+        let code = format!("{RTC_HANDSHAKE_PREFIX}{}", &body[..end]);
+        if code.len() < 16 || code.len() > MAX_CODE_CHARS {
+            return None;
+        }
+        return Some(code);
+    }
+    if compact.len() < 16 || compact.len() > MAX_CODE_CHARS {
+        return None;
+    }
+    Some(compact)
+}
+
 pub fn format_rtc_handshake_code(
     family_id: &str,
     seed_b64: &str,
@@ -109,7 +153,7 @@ pub fn parse_rtc_handshake_code(
     raw: &str,
     seed_b64: &str,
 ) -> Result<RtcHandshakePlain, FamilyError> {
-    let trimmed = compact_rtc_handshake_code(raw);
+    let trimmed = extract_rtc_handshake_code(raw).ok_or(FamilyError::InvalidEnvelope)?;
     if !trimmed.starts_with(RTC_HANDSHAKE_PREFIX) {
         return Err(FamilyError::InvalidEnvelope);
     }
@@ -120,8 +164,14 @@ pub fn parse_rtc_handshake_code(
     if body.is_empty() {
         return Err(FamilyError::InvalidEnvelope);
     }
-    let bytes = base64url_to_bytes(body).ok_or(FamilyError::InvalidEnvelope)?;
-    let envelope: SealedEnvelope = serde_json::from_slice(&bytes)?;
+    if base64url_looks_corrupted(body) {
+        return Err(FamilyError::CorruptedPaste);
+    }
+    let bytes = base64url_to_bytes(body).ok_or(FamilyError::CorruptedPaste)?;
+    let envelope: SealedEnvelope = serde_json::from_slice(&bytes).map_err(|e| {
+        // EN: Surface JSON shape problems distinctly from seal failures.
+        FamilyError::Json(e)
+    })?;
     if envelope.version != 1
         || envelope.family_id.is_empty()
         || envelope.from_device_id.is_empty()

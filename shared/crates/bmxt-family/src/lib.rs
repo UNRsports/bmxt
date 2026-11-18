@@ -7,12 +7,12 @@ mod handshake;
 mod invite;
 mod seal;
 
-pub use b64::{bytes_to_base64url, base64url_to_bytes};
+pub use b64::{base64url_looks_corrupted, base64url_to_bytes, bytes_to_base64url};
 pub use envelope::{SealedEnvelope, SealKind};
 pub use handshake::{
-    compact_rtc_handshake_code, format_rtc_handshake_code, parse_rtc_handshake_code,
-    RtcHandshakePlain, RtcHandshakeRole, RTC_HANDSHAKE_PREFIX, RTC_HANDSHAKE_TTL_MS_CONNECT,
-    RTC_HANDSHAKE_TTL_MS_DEFAULT,
+    compact_rtc_handshake_code, extract_rtc_handshake_code, format_rtc_handshake_code,
+    parse_rtc_handshake_code, RtcHandshakePlain, RtcHandshakeRole, RTC_HANDSHAKE_PREFIX,
+    RTC_HANDSHAKE_TTL_MS_CONNECT, RTC_HANDSHAKE_TTL_MS_DEFAULT,
 };
 pub use invite::{format_invite, parse_invite, InviteV1, INVITE_PREFIX};
 pub use seal::{

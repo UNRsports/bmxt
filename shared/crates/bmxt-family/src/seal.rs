@@ -21,10 +21,16 @@ pub enum FamilyError {
     InvalidSeed,
     #[error("invalid ttl")]
     InvalidTtl,
-    #[error("crypto failure")]
+    #[error("crypto failure (wrong Family seed, or corrupted ciphertext)")]
     Crypto,
-    #[error("invalid envelope")]
+    #[error(
+        "invalid envelope (need bare bmxt-rtc1. code, or JSON ticket containing it; multi-line paste must end with an empty line)"
+    )]
     InvalidEnvelope,
+    #[error(
+        "handshake paste looks corrupted (terminal often mangles long bmxt-rtc1. strings). Use a JSON ticket file instead: @/path/to/bmxt-*-answer.json"
+    )]
+    CorruptedPaste,
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
 }

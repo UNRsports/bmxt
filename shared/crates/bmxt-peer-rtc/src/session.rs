@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use bmxt_sync_wire::{SyncBusCommand, DATA_CHANNEL_LABEL, WIRE_SOFT_CAP_BYTES};
-use bytes::Bytes;
 use rand::RngCore;
-use serde_json::Value;
+use serde_json::{json, Value};
 use thiserror::Error;
 use tokio::sync::{mpsc, Mutex};
 use webrtc::api::interceptor_registry::register_default_interceptors;
@@ -17,6 +16,7 @@ use webrtc::interceptor::registry::Registry;
 use webrtc::peer_connection::configuration::RTCConfiguration;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
+use webrtc::Error as WebrtcError;
 
 pub type SessionId = String;
 
@@ -32,8 +32,8 @@ pub enum PeerRtcError {
     Json(#[from] serde_json::Error),
 }
 
-impl From<webrtc::Error> for PeerRtcError {
-    fn from(value: webrtc::Error) -> Self {
+impl From<WebrtcError> for PeerRtcError {
+    fn from(value: WebrtcError) -> Self {
         PeerRtcError::Webrtc(value.to_string())
     }
 }
@@ -47,6 +47,8 @@ pub struct LocalDescriptionBundle {
 #[derive(Debug, Clone)]
 pub enum PeerSessionEvent {
     ConnectionState(String),
+    IceConnectionState(String),
+    DataChannelOpen,
     Command(SyncBusCommand),
 }
 
@@ -65,9 +67,32 @@ fn new_session_id() -> String {
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
+/** EN: Browser peers expect a non-empty sdpMid (usually `"0"` for the data m-line). */
+fn normalize_ice_candidate_json(raw: &str) -> String {
+    let Ok(mut value) = serde_json::from_str::<Value>(raw) else {
+        return raw.to_string();
+    };
+    let Some(obj) = value.as_object_mut() else {
+        return raw.to_string();
+    };
+    let mid_empty = match obj.get("sdpMid") {
+        None => true,
+        Some(Value::Null) => true,
+        Some(Value::String(s)) => s.is_empty(),
+        Some(_) => false,
+    };
+    if mid_empty {
+        obj.insert("sdpMid".to_string(), json!("0"));
+    }
+    serde_json::to_string(&value).unwrap_or_else(|_| raw.to_string())
+}
+
+fn sdp_has_candidates(sdp: &str) -> bool {
+    sdp.lines().any(|line| line.starts_with("a=candidate:"))
+}
+
 async fn build_peer_connection() -> Result<Arc<RTCPeerConnection>, PeerRtcError> {
     let mut media = MediaEngine::default();
-    // EN: DataChannel-only — no media codecs required, but register defaults for interceptor setup.
     media.register_default_codecs()?;
     let mut registry = Registry::new();
     registry = register_default_interceptors(registry, &mut media)?;
@@ -103,7 +128,8 @@ impl PeerSession {
                     if let Some(c) = candidate {
                         if let Ok(json) = c.to_json() {
                             if let Ok(text) = serde_json::to_string(&json) {
-                                ice_buf.lock().await.push(text);
+                                let normalized = normalize_ice_candidate_json(&text);
+                                ice_buf.lock().await.push(normalized);
                             }
                         }
                     }
@@ -117,6 +143,16 @@ impl PeerSession {
                 let events = events.clone();
                 Box::pin(async move {
                     let _ = events.send(PeerSessionEvent::ConnectionState(state.to_string()));
+                })
+            }));
+        }
+
+        {
+            let events = tx.clone();
+            pc.on_ice_connection_state_change(Box::new(move |state| {
+                let events = events.clone();
+                Box::pin(async move {
+                    let _ = events.send(PeerSessionEvent::IceConnectionState(state.to_string()));
                 })
             }));
         }
@@ -182,9 +218,7 @@ impl PeerSession {
     ) -> Result<LocalDescriptionBundle, PeerRtcError> {
         let offer = RTCSessionDescription::offer(sdp.to_string())?;
         self.pc.set_remote_description(offer).await?;
-        for candidate_json in remote_ice {
-            self.add_ice_candidate(candidate_json).await?;
-        }
+        self.apply_remote_ice(sdp, remote_ice).await?;
         let answer = self.pc.create_answer(None).await?;
         self.pc.set_local_description(answer).await?;
         self.wait_ice_gathering().await?;
@@ -194,8 +228,21 @@ impl PeerSession {
     pub async fn apply_answer(&self, sdp: &str, remote_ice: &[String]) -> Result<(), PeerRtcError> {
         let answer = RTCSessionDescription::answer(sdp.to_string())?;
         self.pc.set_remote_description(answer).await?;
+        self.apply_remote_ice(sdp, remote_ice).await?;
+        Ok(())
+    }
+
+    async fn apply_remote_ice(&self, sdp: &str, remote_ice: &[String]) -> Result<(), PeerRtcError> {
+        // EN: After ICE gathering, SDP already embeds a=candidate lines (non-trickle).
+        //     Re-adding the same candidates via addIceCandidate can fail the native stack.
+        if sdp_has_candidates(sdp) {
+            return Ok(());
+        }
         for candidate_json in remote_ice {
-            self.add_ice_candidate(candidate_json).await?;
+            let normalized = normalize_ice_candidate_json(candidate_json);
+            if let Err(err) = self.add_ice_candidate(&normalized).await {
+                eprintln!("warn: skip ICE candidate: {err}");
+            }
         }
         Ok(())
     }
@@ -207,7 +254,6 @@ impl PeerSession {
     }
 
     async fn wait_ice_gathering(&self) -> Result<(), PeerRtcError> {
-        // EN: webrtc-rs returns an mpsc Receiver that fires once gathering completes.
         let mut rx = self.pc.gathering_complete_promise().await;
         let _ = rx.recv().await;
         Ok(())
@@ -240,6 +286,15 @@ async fn bind_channel(
         let mut guard = slot.lock().await;
         *guard = Some(Arc::clone(&dc));
     }
+    {
+        let events = events.clone();
+        dc.on_open(Box::new(move || {
+            let events = events.clone();
+            Box::pin(async move {
+                let _ = events.send(PeerSessionEvent::DataChannelOpen);
+            })
+        }));
+    }
     dc.on_message(Box::new(move |msg| {
         let events = events.clone();
         Box::pin(async move {
@@ -256,11 +311,9 @@ async fn bind_channel(
                     let _ = events.send(PeerSessionEvent::Command(cmd));
                 }
                 Err(_) => {
-                    // EN: Ignore malformed; also tolerate unknown JSON with type/id only if needed later.
                     let _: Result<Value, _> = serde_json::from_str(&text);
                 }
             }
         })
     }));
-    let _ = Bytes::new();
 }

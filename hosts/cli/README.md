@@ -33,6 +33,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 3. Handshake:
    - CLI offers: `bmxt sync-connect --offer` → paste offer into BMXt wizard → paste answer back into CLI
    - Or CLI answers: `bmxt sync-connect` → paste offer from BMXt → paste answer into BMXt
+   - **Prefer files:** `sync-connect --offer` writes `~/.config/bmxt/bmxt-*-offer.json`. In BMXt use ファイルで渡す / Open, then save the answer JSON and pass `@/path/to/bmxt-*-answer.json` to the CLI. Long bare `bmxt-rtc1.…` pastes often corrupt in the terminal.
 4. REPL: `ping` · `tabs` · `tabs --url` · `open <url>` · `close <tabId>` · `activate <tabId> <windowId>` · `search <dispatchLine>` · `tui` · `quit`
 
 ## Layout

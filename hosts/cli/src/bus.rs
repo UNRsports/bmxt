@@ -34,6 +34,12 @@ impl BusClient {
                             return Err(anyhow!("peer connection {state}"));
                         }
                     }
+                    Some(PeerSessionEvent::IceConnectionState(state)) => {
+                        if state == "failed" {
+                            return Err(anyhow!("ICE {state}"));
+                        }
+                    }
+                    Some(PeerSessionEvent::DataChannelOpen) => {}
                     None => return Err(anyhow!("event channel closed")),
                 }
             }
