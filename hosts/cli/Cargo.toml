@@ -1,0 +1,28 @@
+[package]
+name = "bmxt-cli"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.78"
+description = "BMXt terminal peer (Family WebRTC command bus client)"
+license = "Apache-2.0"
+publish = false
+
+[[bin]]
+name = "bmxt"
+path = "src/main.rs"
+
+[dependencies]
+bmxt-family = { path = "../../shared/crates/bmxt-family" }
+bmxt-peer-rtc = { path = "../../shared/crates/bmxt-peer-rtc" }
+bmxt-sync-wire = { path = "../../shared/crates/bmxt-sync-wire" }
+clap = { version = "4", features = ["derive"] }
+crossterm = "0.28"
+dirs = "5"
+ratatui = "0.29"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "io-util", "io-std"] }
+anyhow = "1"
+rand = "0.8"
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }

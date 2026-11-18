@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["shared/crates/bmxt-core"]
+members = [
+  "shared/crates/bmxt-core",
+  "shared/crates/bmxt-family",
+  "shared/crates/bmxt-sync-wire",
+  "shared/crates/bmxt-peer-rtc",
+  "hosts/cli",
+]
 
 [profile.release]
 lto = true

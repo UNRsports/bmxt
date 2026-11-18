@@ -1,10 +1,11 @@
-# Host packages (Chrome / Firefox)
+# Host packages (Chrome / Firefox / CLI)
 
 | Path | Role |
 |------|------|
 | [`../shared/`](../shared/) | Shared extension source (entrypoints, `lib/`, Rust/WASM, public assets, command manifest) |
 | [`chrome/`](chrome/) | Chrome MV3 WXT config (`pnpm run build:chrome`; `verify` / CWS) |
 | [`firefox/`](firefox/) | Firefox MV3 WXT config + [AMO source kit](firefox/AMO_SOURCE.md) |
+| [`cli/`](cli/) | Terminal Family peer (`bmxt` binary; WebRTC DataChannel → extension). See [`cli/README.md`](cli/README.md) · `_context/todo.md` §10 |
 
 WXT `root` is **`shared/`** for both hosts (entrypoints must live under the WXT project root). Browser-specific packaging stays under `hosts/*`.
 

@@ -507,14 +507,14 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 **実装チェック（段階）**
 
-- [ ] **10.0 契約固定:** `SyncBusCommand` / `bmxt-rtc1.` / family-crypto の fixture と契約メモ。TS 生成 fixture を後続 Rust が読めること
-- [ ] **10.1 共有クレート:** `bmxt-sync-wire` · `bmxt-family`。TS fixture ↔ Rust round-trip（handshake plain + ping/ack）
-- [ ] **10.2 輸送 + 最小 CLI:** `bmxt-peer-rtc` + `hosts/cli`。`sync -setup` / `-connect` / `-status` / `-ping`。同一 PC で拡張と握手し ping→ack
-- [ ] **10.3 バス RPC:** `tabs_list` / `tabs_ops` / `open_tabs` / `search_query`（chunk 含む）。stdout 表形式。タイムアウトは拡張 `remote-query-limits` に合わせる
-- [ ] **10.4a core 分割:** `bmxt-core` 純 rlib + `bmxt-core-wasm` Facade（**ping 通過後**に実施。拡張ビルド影響あり）
+- [x] **10.0 契約固定:** `_context/cli-peer/CONTRACT.md` + fixtures（`scripts/cli-peer/gen-family-fixtures.mjs`）。Rust unseal / invite / ping·ack 緑
+- [x] **10.1 共有クレート:** `bmxt-sync-wire` · `bmxt-family`（workspace members）
+- [x] **10.2 輸送 + 最小 CLI:** `bmxt-peer-rtc` + `hosts/cli`（`bmxt`）。`status` / `sync-setup` / `sync-pair` / `sync-connect` / REPL `ping`。**手元:** 拡張との握手→ping は下記スモーク
+- [x] **10.3 バス RPC:** REPL `tabs` / `open` / `close` / `activate` / `search`（chunk 収集）。タイムアウト `SYNC_REMOTE_QUERY_TIMEOUT_MS`
+- [ ] **10.4a core 分割:** `bmxt-core` 純 rlib + `bmxt-core-wasm` Facade（**ping 手元確認後**。拡張ビルド影響あり）
 - [ ] **10.4b CliHostAdapter:** `HostEffect` → 遠隔 RPC 写像。ローカルのみ help／sync／clear。`nav`／`dom` 連動は明示エラー
-- [ ] **10.4c TUI picker MVP:** ログ+プロンプト \| tab \| search。キーは `↑↓` `/` `:` `#` `Esc` Enter。tabs_picker reducer 再利用。見た目パリティは追わない
-- [ ] **10.5 配布:** `cargo build --release -p bmxt-cli` 単一バイナリ。PATH 配置手順。README に peer 宿主・非目標を明記。Linux 一次、macOS／Windows は後続
+- [x] **10.4c TUI picker MVP（初期）:** REPL `tui` → ratatui 一覧（`↑↓` `/` Enter Esc）。フル列レイアウト・tabs_picker reducer 接続は後続
+- [x] **10.5 配布手順:** `hosts/cli/README.md` · `hosts/README.md` 追記。`cargo build --release -p bmxt-cli` → `target/release/bmxt`。Linux 一次
 
 **推奨着手順**
 
@@ -528,7 +528,7 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 - [ ] 名簿／表示で terminal device を拒否していないことの確認
 - [ ] 契約 fixture を CI（`pnpm` / `cargo`）両側に接続
-- [ ] README / `hosts/README.md` に `hosts/cli` を追記
+- [x] `hosts/README.md` / `hosts/cli/README.md` に CLI host を追記
 
 **スコープ外（明示）**
 
