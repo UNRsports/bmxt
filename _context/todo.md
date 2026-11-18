@@ -374,6 +374,94 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **参照:** 本会話の見積もり · `shared/crates/bmxt-core/src/ir.rs` · `shared/lib/features/command-line/compound/classify-outcome.ts` · `scripts/verify-host-blind.mjs`
 
+### 9. Bookmark / History 操作一通り + Family 送信 + バックアップ
+
+**目標:** 専用 first command `bookmark` / `history` でローカル CRUD・ディレクトリバックアップを揃え、Family 向け送信は `--open` / `--save` / `--both` で「タブとして開く」「相手側にブックマーク保存」「両方」を選択可能にする。既存の `search -list --bookmark|--history [--device|--peers]` と `open_tabs` は再利用する。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 送信意味 | **開く + 相手側に保存**。CLI / ピッカーで `--open` / `--save` / `--both` を選択 |
+| 既定モード | 省略時は **`--open`**（現行 `tab -send` と同等）。明示で `--save` / `--both` |
+| ローカル | 書き込み（BM 作成・削除・移動・フォルダ、履歴 URL/範囲削除） |
+| コマンド面 | 専用 `bookmark` / `history`。`search -list --bookmark|--history` は横断検索のまま維持 |
+| `tab -send` | URL オープン専用のまま残す。BM 保存は `bookmark -send`（二重実装しない） |
+| バックアップ | ローカルディレクトリ（FSAAPI）+ zip ポータブル。主形式は版付き JSON |
+| 履歴 peer 削除 | **スコープ外**（破壊的）。peer は一覧・バックアップ復元の対象のみ |
+| 履歴 restore | `chrome.history` に任意挿入 API が無い → DB 書き戻しなし。一覧読み込み / `--as-bookmarks` 導線。msgs で明示 |
+
+**現状との差分**
+
+| ある | ない |
+|------|------|
+| `search -list --bookmark|--history [--device|--peers]` · `| browse` / `| open` / `| tab -send`（URL） · 権限 `bookmarks`/`history` · `search-cache-store` | `bookmarkId` 伝播 · mutate HostEffect · peer `bookmarks.create` RPC · 専用コマンド · ディレクトリバックアップ |
+
+**コマンド面（canonical）**
+
+`bookmark`:
+
+| 形 | 意味 |
+|----|------|
+| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | ツリー／フラット一覧。ローカル tree は新 Effect。`--peers` は当面 `search_query` 経路に寄せる |
+| `bookmark -add <url> [--title …] [--parent <id>]` | 作成 |
+| `bookmark -folder <title> [--parent <id>]` | フォルダ作成 |
+| `bookmark -remove <id…>` / `… \| bookmark -remove` | 削除（id 必須） |
+| `bookmark -move <id…> --parent <id> [--index n]` / pipe | 移動 |
+| `bookmark -send <deviceId> [--open\|--save\|--both] [--parent <id>] [--group <title>]` / pipe | Family 送信 |
+| `bookmark -backup` / `bookmark -restore` | バックアップ／復元 |
+| `bookmark help` | usage |
+
+`history`:
+
+| 形 | 意味 |
+|----|------|
+| `history -list [<pattern>] [--device\|--peers]` | 既存 history 検索経路へ寄せる plain list |
+| `history -delete <url…>` / pipe | URL 削除 |
+| `history -delete-range --from <iso> --to <iso>` | 範囲削除 |
+| `history -backup` / `history -restore` | エクスポート／一覧復元（DB 書き戻しなし） |
+| `history help` | usage |
+
+**データ流**
+
+- Producers: `search -list` scopes / `bookmark -list` / `history -list` → `ListResult` → `bmxtRule`（`bookmark` / `history` / `bookmark.folder`）
+- Local HostEffects: `bookmark_create` / `_folder` / `_remove` / `_move` · `history_delete_url` / `_range`
+- Family RPC: 既存 `open_tabs` + 新 `bookmarks_import`
+- Backup UiAction: FSAAPI / zip（`shared/lib/features/backup/`）
+
+**バックアップ形式（決定）**
+
+```
+bmxt-browser-backup/
+  manifest.json   # schemaVersion:1, kind, exportedAt, sourceDeviceId
+  bookmarks.json  # フルツリー（restore は新規 create）
+  history.json    # { url, title, lastVisitTime, visitCount }[]（件数キャップ）
+```
+
+**実装チェック（段階）**
+
+- [ ] **9.0 語彙土台:** キャッシュに `bookmarkId` / folder 判定を保持（`bookmark-revision.ts`）。adapter / ListResult / `from-list-result` で optionalKeys を埋める。`bmxt-rule.json` に `bookmark.folder`。picker の open-destination を bookmark 行にも開放
+- [ ] **9.1 ローカル CRUD:** codegen effects（上記）+ handlers + Rust `cmd/bookmark.rs` / `history.rs`。pipe `| bookmark -remove` / `-move` · `| history -delete`。入力検証必須
+- [ ] **9.2 Family 送信:** RPC `bookmarks_import` → `bookmarks_import_result` · `applyRemoteBookmarksImport`。UiAction `sync_bookmark_send { device_id, mode, payload }`（mode: `open|save|both`）。`--open`→`open_tabs` · `--save`→import · `--both`→両方（片方失敗でも msgs）。ピッカー Family 宛 3 択
+- [ ] **9.3 バックアップ:** `shared/lib/features/backup/`（settings/snapshot の FSA・handle IDB・zip を参照）。`bookmark -backup/-restore` · `history -backup/-restore`（履歴は一覧/`--as-bookmarks`）
+- [ ] **9.4 文書・検証:** i18n EN+JA · `map_command.csv` / README · `codegen` → `build:wasm` → `verify:manifest` → `verify:host-blind` → `check:generated` → `cargo test -p bmxt-core` → `tsc` → unit → build
+
+**手元スモーク**
+
+- [ ] ローカル: BM 作成／フォルダ／削除／移動 · 履歴 URL/範囲削除
+- [ ] `search -list --bookmark … | bookmark -send <id> --open|--save|--both`
+- [ ] Chrome↔Firefox peer で開く／保存／両方
+- [ ] `bookmark -backup` / `-restore` · `history -backup` / `-restore`（履歴は DB 非書き戻しを msgs で確認）
+
+**スコープ外（明示）**
+
+- peer 上の履歴削除
+- 履歴 DB への完全書き戻し（Chrome API 非対応）
+- peer 上での BM 削除／移動（必要なら次フェーズ `bookmarks_ops`）
+- Netscape HTML を主形式にすること（任意 interop は後回し可）
+
+**参照:** plan `bookmark_history_ops` · skill `bmxt-add-command` · `shared/lib/features/search/cache/` · `shared/lib/features/sync/` · `shared/manifest/bmxt-rule.json`
+
 ---
 
 ## Archive（ポインタのみ）
