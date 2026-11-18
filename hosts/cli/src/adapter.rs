@@ -13,36 +13,67 @@ use bmxt_sync_wire::{SyncRemoteTabRow, SyncTabsOp};
 
 use crate::bus::BusClient;
 use crate::config::CliConfig;
+use crate::connect;
+use crate::handshake;
 use crate::msgs::expand_msgs;
 use crate::tui;
 
 pub struct CliHostAdapter<'a> {
-    pub cfg: &'a CliConfig,
-    pub client: &'a BusClient,
+    pub cfg: &'a mut CliConfig,
+    pub client: Option<&'a BusClient>,
 }
 
 pub struct RunOutcome {
     pub exit_status: i32,
     pub prompt_prefix: Option<String>,
+    pub new_client: Option<BusClient>,
+}
+
+impl RunOutcome {
+    pub fn status(exit_status: i32) -> Self {
+        Self {
+            exit_status,
+            prompt_prefix: None,
+            new_client: None,
+        }
+    }
+
+    pub fn with_prefix(exit_status: i32, prefix: Option<String>) -> Self {
+        Self {
+            exit_status,
+            prompt_prefix: prefix,
+            new_client: None,
+        }
+    }
+
+    pub fn connected(client: BusClient) -> Self {
+        Self {
+            exit_status: EXIT_SUCCESS,
+            prompt_prefix: None,
+            new_client: Some(client),
+        }
+    }
 }
 
 impl<'a> CliHostAdapter<'a> {
-    pub async fn run_line(&self, line: &str) -> Result<RunOutcome> {
+    fn require_client(&self) -> Result<&'a BusClient> {
+        self.client.ok_or_else(|| {
+            anyhow!(
+                "not connected — run `sync -offer` or `sync -accept` (Enter/:pick), or start with `bmxt sync-connect`"
+            )
+        })
+    }
+
+    pub async fn run_line(&mut self, line: &str) -> Result<RunOutcome> {
         let trimmed = line.trim();
         if trimmed.is_empty() {
-            return Ok(RunOutcome {
-                exit_status: EXIT_SUCCESS,
-                prompt_prefix: None,
-            });
+            return Ok(RunOutcome::status(EXIT_SUCCESS));
         }
 
         match plan_compound_line(trimmed) {
             CompoundPlanResult::Err { error, .. } => {
                 eprintln!("{}", format_parse_error(error));
-                Ok(RunOutcome {
-                    exit_status: EXIT_MISUSE,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_MISUSE))
             }
             CompoundPlanResult::Ok(plan) => {
                 let mut last_status = EXIT_SUCCESS;
@@ -64,20 +95,14 @@ impl<'a> CliHostAdapter<'a> {
                         prompt_prefix = outcome.prompt_prefix;
                     }
                 }
-                Ok(RunOutcome {
-                    exit_status: last_status,
-                    prompt_prefix,
-                })
+                Ok(RunOutcome::with_prefix(last_status, prompt_prefix))
             }
         }
     }
 
-    async fn run_pipe(&self, segments: &[String]) -> Result<RunOutcome> {
+    async fn run_pipe(&mut self, segments: &[String]) -> Result<RunOutcome> {
         if segments.is_empty() {
-            return Ok(RunOutcome {
-                exit_status: EXIT_MISUSE,
-                prompt_prefix: None,
-            });
+            return Ok(RunOutcome::status(EXIT_MISUSE));
         }
         if segments.len() == 1 {
             return self.apply_bundle(run_line(&segments[0])).await;
@@ -87,10 +112,7 @@ impl<'a> CliHostAdapter<'a> {
         let consumer_seg = segments[1..].join(" ");
         let Some(consumer) = classify_pipe_consumer(&consumer_seg) else {
             eprintln!("error: unknown pipe consumer: {consumer_seg}");
-            return Ok(RunOutcome {
-                exit_status: EXIT_MISUSE,
-                prompt_prefix: None,
-            });
+            return Ok(RunOutcome::status(EXIT_MISUSE));
         };
 
         let producer_bundle = run_line(producer);
@@ -104,64 +126,46 @@ impl<'a> CliHostAdapter<'a> {
                 let tab_ids = tab_ids_from_rows(&rows);
                 if tab_ids.is_empty() {
                     eprintln!("error: no tab ids in pipe list for close");
-                    return Ok(RunOutcome {
-                        exit_status: EXIT_FAILURE,
-                        prompt_prefix: None,
-                    });
+                    return Ok(RunOutcome::status(EXIT_FAILURE));
                 }
-                self.client
+                self.require_client()?
                     .tabs_ops(
                         &self.cfg.device_id,
                         SyncTabsOp::CloseTabs { tab_ids },
                     )
                     .await?;
                 println!("ok");
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             PipeConsumerClass::Open { .. } => {
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
                 let urls = urls_from_rows(&rows);
                 if urls.is_empty() {
                     eprintln!("error: no urls in pipe list for open");
-                    return Ok(RunOutcome {
-                        exit_status: EXIT_FAILURE,
-                        prompt_prefix: None,
-                    });
+                    return Ok(RunOutcome::status(EXIT_FAILURE));
                 }
                 let opened = self
-                    .client
+                    .require_client()?
                     .open_tabs(&self.cfg.device_id, urls, None)
                     .await?;
                 println!("opened: {opened:?}");
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             other => {
                 eprintln!("error: pipe consumer not supported on CLI yet: {other:?}");
-                Ok(RunOutcome {
-                    exit_status: EXIT_MISUSE,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_MISUSE))
             }
         }
     }
 
-    async fn apply_bundle(&self, bundle: DispatchBundle) -> Result<RunOutcome> {
+    async fn apply_bundle(&mut self, bundle: DispatchBundle) -> Result<RunOutcome> {
         let exit_status = bundle.exit_status();
         match bundle {
             DispatchBundle::Lines { lines, .. } => {
                 for line in lines {
                     println!("{line}");
                 }
-                Ok(RunOutcome {
-                    exit_status,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(exit_status))
             }
             DispatchBundle::Msgs {
                 msgs,
@@ -171,19 +175,13 @@ impl<'a> CliHostAdapter<'a> {
                 for line in expand_msgs(&msgs) {
                     println!("{line}");
                 }
-                Ok(RunOutcome {
-                    exit_status,
-                    prompt_prefix,
-                })
+                Ok(RunOutcome::with_prefix(exit_status, prompt_prefix))
             }
             DispatchBundle::Effects { effects, .. } => {
                 for effect in effects {
                     self.apply_effect(effect).await?;
                 }
-                Ok(RunOutcome {
-                    exit_status,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(exit_status))
             }
             DispatchBundle::Ui { action, .. } => self.apply_ui(action).await,
         }
@@ -202,14 +200,14 @@ impl<'a> CliHostAdapter<'a> {
             | HostEffect::TabsMoveUrl { url }
             | HostEffect::OpenUrlIntoGroup { url, .. } => {
                 let opened = self
-                    .client
+                    .require_client()?
                     .open_tabs(&self.cfg.device_id, vec![url], None)
                     .await?;
                 println!("opened: {opened:?}");
                 Ok(())
             }
             HostEffect::CloseTab { tab_id } => {
-                self.client
+                self.require_client()?
                     .tabs_ops(
                         &self.cfg.device_id,
                         SyncTabsOp::CloseTabs {
@@ -224,7 +222,7 @@ impl<'a> CliHostAdapter<'a> {
                 "close current tab/window needs a browser host — use `tab -list | close` or `close <tabId>`"
             )),
             HostEffect::TabReload { tab_ids } => {
-                self.client
+                self.require_client()?
                     .tabs_ops(&self.cfg.device_id, SyncTabsOp::Reload { tab_ids })
                     .await?;
                 println!("ok");
@@ -258,7 +256,7 @@ impl<'a> CliHostAdapter<'a> {
                 } else {
                     peer_dispatch_line
                 };
-                let hits = self.client.search_query(&self.cfg.device_id, line).await?;
+                let hits = self.require_client()?.search_query(&self.cfg.device_id, line).await?;
                 for hit in hits.iter().take(50) {
                     println!("[{}] {} — {}", hit.source, hit.title, hit.url);
                 }
@@ -276,7 +274,7 @@ impl<'a> CliHostAdapter<'a> {
         }
     }
 
-    async fn apply_ui(&self, action: UiAction) -> Result<RunOutcome> {
+    async fn apply_ui(&mut self, action: UiAction) -> Result<RunOutcome> {
         match action {
             UiAction::ShowHelp => {
                 // EN: Prefer msgs from `help` (avoid ShowHelp → help → ShowHelp loops).
@@ -291,15 +289,9 @@ impl<'a> CliHostAdapter<'a> {
                         println!("help");
                     }
                 }
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
-            UiAction::ContinuationPrompt { prefix } => Ok(RunOutcome {
-                exit_status: EXIT_SUCCESS,
-                prompt_prefix: Some(prefix),
-            }),
+            UiAction::ContinuationPrompt { prefix } => Ok(RunOutcome::with_prefix(EXIT_SUCCESS, Some(prefix))),
             UiAction::OpenPlainList {
                 list_id,
                 show_url,
@@ -311,20 +303,14 @@ impl<'a> CliHostAdapter<'a> {
                     eprintln!(
                         "error: list `{list_id}` on CLI is limited to tabs for now"
                     );
-                    return Ok(RunOutcome {
-                        exit_status: EXIT_MISUSE,
-                        prompt_prefix: None,
-                    });
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
                 let show = show_url == "true";
                 let rows = self
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
                 print_tab_rows(&rows, show);
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::OpenPicker {
                 list_id,
@@ -337,10 +323,7 @@ impl<'a> CliHostAdapter<'a> {
                     eprintln!(
                         "error: picker `{list_id}` on CLI is limited to tabs for now"
                     );
-                    return Ok(RunOutcome {
-                        exit_status: EXIT_MISUSE,
-                        prompt_prefix: None,
-                    });
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
                 let show = show_url == "true";
                 let rows = self
@@ -349,87 +332,118 @@ impl<'a> CliHostAdapter<'a> {
                 self.run_picker_and_maybe_activate(&rows).await
             }
             UiAction::SyncStatus => {
-                let peers = self.client.list_connected().await;
                 println!("deviceId:    {}", self.cfg.device_id);
                 println!("displayName: {}", self.cfg.display_name);
                 println!(
                     "familyId:    {}",
                     self.cfg.family_id.as_deref().unwrap_or("(none)")
                 );
-                if peers.is_empty() {
-                    println!("peers:       (none connected)");
-                } else {
-                    println!("peers:");
-                    for (id, name) in peers {
-                        println!("  {name}\t{id}");
+                match self.client {
+                    None => {
+                        println!("peers:       (not connected — sync -offer / sync -accept)");
+                    }
+                    Some(client) => {
+                        let peers = client.list_connected().await;
+                        if peers.is_empty() {
+                            println!("peers:       (none connected)");
+                        } else {
+                            println!("peers:");
+                            for (id, name) in peers {
+                                println!("  {name}\t{id}");
+                            }
+                        }
                     }
                 }
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SyncMembers => {
-                let peers = self.client.list_connected().await;
+                let Some(client) = self.client else {
+                    println!("(not connected)");
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
+                };
+                let peers = client.list_connected().await;
                 for (id, name) in peers {
                     println!("{name}\t{id}");
                 }
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SyncPing { device_id } => {
-                let connected = self.client.list_connected().await;
+                let client = self.require_client()?;
+                let connected = client.list_connected().await;
                 if !connected.iter().any(|(id, _)| id == &device_id) {
                     return Err(anyhow!(
                         "not connected to {device_id} — run `sync -status` / `sync -members`"
                     ));
                 }
-                let ack = self
-                    .client
-                    .ping_one(&self.cfg.device_id, &device_id)
-                    .await?;
+                let ack = client.ping_one(&self.cfg.device_id, &device_id).await?;
                 println!("ack[{device_id}]: {ack:?}");
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
-            UiAction::SyncSetup | UiAction::SyncPair { .. } => {
-                eprintln!(
-                    "use outside REPL: `bmxt sync-setup` / `bmxt sync-pair '<invite>'` (Family join)"
+            UiAction::SyncSetup => {
+                self.cfg.ensure_family()?;
+                let invite = handshake::print_invite(self.cfg)?;
+                println!("Family ready.");
+                println!("Invite (give to browser BMXt / peer):\n{invite}");
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::SyncPair { invite } => {
+                if invite.trim().is_empty() {
+                    return Ok(RunOutcome::with_prefix(
+                        EXIT_SUCCESS,
+                        Some("sync -pair ".to_string()),
+                    ));
+                }
+                handshake::apply_invite(self.cfg, &invite)?;
+                println!(
+                    "Joined Family {}",
+                    self.cfg.family_id.as_deref().unwrap_or("")
                 );
-                Ok(RunOutcome {
-                    exit_status: EXIT_MISUSE,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
-            UiAction::SyncOffer
-            | UiAction::SyncAnswer { .. }
-            | UiAction::SyncAccept { .. }
-            | UiAction::SyncConnect { .. } => {
+            UiAction::SyncConnect { device_id } => {
+                if self.client.is_none() {
+                    eprintln!(
+                        "not connected yet — run `sync -offer` or `sync -accept` (no device id needed for first peer)"
+                    );
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                }
+                let connected = self.require_client()?.list_connected().await;
+                if connected.iter().any(|(id, _)| id == &device_id) {
+                    println!("already connected to {device_id}");
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
+                }
                 eprintln!(
-                    "handshake stays on `bmxt sync-connect` (or wizard in the BMXt prompt window)"
+                    "not connected to {device_id}. Additional Family peers join via mesh when online"
                 );
-                Ok(RunOutcome {
-                    exit_status: EXIT_MISUSE,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_MISUSE))
             }
-            UiAction::ClosePicker { .. } | UiAction::PickerPass => Ok(RunOutcome {
-                exit_status: EXIT_SUCCESS,
-                prompt_prefix: None,
-            }),
+            UiAction::SyncOffer => {
+                if self.client.is_some() {
+                    eprintln!(
+                        "already connected — additional Family peers join via mesh when online"
+                    );
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                }
+                let client = connect::connect_as_offer(self.cfg, "pending-peer".into()).await?;
+                Ok(RunOutcome::connected(client))
+            }
+            UiAction::SyncAnswer { code } | UiAction::SyncAccept { code } => {
+                if self.client.is_some() {
+                    eprintln!(
+                        "already connected — additional Family peers join via mesh when online"
+                    );
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                }
+                let client = connect::connect_as_answer(self.cfg, &code).await?;
+                Ok(RunOutcome::connected(client))
+            }
+            UiAction::ClosePicker { .. } | UiAction::PickerPass => Ok(RunOutcome::status(EXIT_SUCCESS)),
             other => {
                 eprintln!(
                     "error: ui action not supported on CLI: {}",
                     ui_kind(&other)
                 );
-                Ok(RunOutcome {
-                    exit_status: EXIT_MISUSE,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_MISUSE))
             }
         }
     }
@@ -439,12 +453,9 @@ impl<'a> CliHostAdapter<'a> {
         rows: &[SyncRemoteTabRow],
     ) -> Result<RunOutcome> {
         match tui::run_tab_picker(rows)? {
-            None => Ok(RunOutcome {
-                exit_status: EXIT_SUCCESS,
-                prompt_prefix: None,
-            }),
+            None => Ok(RunOutcome::status(EXIT_SUCCESS)),
             Some(sel) => {
-                self.client
+                self.require_client()?
                     .tabs_ops(
                         &self.cfg.device_id,
                         SyncTabsOp::Activate {
@@ -457,10 +468,7 @@ impl<'a> CliHostAdapter<'a> {
                     "activated tab {} win={} — {} {}",
                     sel.tab_id, sel.window_id, sel.title, sel.url
                 );
-                Ok(RunOutcome {
-                    exit_status: EXIT_SUCCESS,
-                    prompt_prefix: None,
-                })
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
         }
     }
@@ -521,7 +529,7 @@ impl<'a> CliHostAdapter<'a> {
     ) -> Result<Vec<SyncRemoteTabRow>> {
         match device_scope {
             "device" if !device_id.is_empty() => {
-                let bundles = self.client.tabs_all(&self.cfg.device_id, show_url).await?;
+                let bundles = self.require_client()?.tabs_all(&self.cfg.device_id, show_url).await?;
                 let mut out = Vec::new();
                 for (id, name, rows) in bundles {
                     if id == device_id {
@@ -540,7 +548,7 @@ impl<'a> CliHostAdapter<'a> {
             }
             "peers" | "" | "local" => {
                 // EN: CLI has no local browser inventory — peers/local → all connected browsers.
-                let bundles = self.client.tabs_all(&self.cfg.device_id, show_url).await?;
+                let bundles = self.require_client()?.tabs_all(&self.cfg.device_id, show_url).await?;
                 let mut out = Vec::new();
                 for (_id, name, rows) in bundles {
                     out.push(SyncRemoteTabRow::Window {

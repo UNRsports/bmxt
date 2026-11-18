@@ -1,5 +1,5 @@
-//! EN: Interactive prompt — history (↑↓), line editing, Tab completion from bmxt-core.
-//! JA: 対話プロンプト。履歴・行編集・bmxt-core Tab 補完。
+//! EN: Interactive prompt — history (↑↓), grey remainder completion hints, Tab apply.
+//! JA: 対話プロンプト。履歴・灰色の残り補完ヒント・Tab 適用。
 
 use std::borrow::Cow;
 use std::path::PathBuf;
@@ -9,7 +9,7 @@ use bmxt_core::complete_line;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
-use rustyline::hint::{Hinter, HistoryHinter};
+use rustyline::hint::{Hint, Hinter};
 use rustyline::history::DefaultHistory;
 use rustyline::validate::Validator;
 use rustyline::{
@@ -22,18 +22,75 @@ pub enum ReadOutcome {
     Eof,
 }
 
+/**
+ * EN: Inline hint — grey remainder after the typed prefix; same text is inserted on apply.
+ * JA: インラインヒント。入力済み接頭辞の後ろに灰色の残りを表示し、適用時も同じ残りを挿入。
+ */
+struct BmxtHint {
+    display: String,
+    completion: String,
+}
+
+impl Hint for BmxtHint {
+    fn display(&self) -> &str {
+        &self.display
+    }
+
+    fn completion(&self) -> Option<&str> {
+        Some(&self.completion)
+    }
+}
+
 struct BmxtHelper {
-    hinter: HistoryHinter,
     highlighter: MatchingBracketHighlighter,
 }
 
 impl BmxtHelper {
     fn new() -> Self {
         Self {
-            hinter: HistoryHinter {},
             highlighter: MatchingBracketHighlighter::new(),
         }
     }
+}
+
+/** EN: Prefer shortest then ASCII-case-insensitive order (stable primary suggestion). */
+fn pick_primary_candidate(candidates: &[String]) -> Option<&str> {
+    candidates
+        .iter()
+        .min_by(|a, b| {
+            a.len()
+                .cmp(&b.len())
+                .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
+        })
+        .map(String::as_str)
+}
+
+/**
+ * EN: Build grey remainder hint from `complete_line` when the cursor is at EOL.
+ *     Example: line `sync -se` → display/completion `tup` (shown grey after typed text).
+ * JA: カーソルが行末のとき `complete_line` から灰色の残りヒントを作る。
+ */
+fn completion_remainder_hint(line: &str, pos: usize) -> Option<BmxtHint> {
+    if line.is_empty() || pos < line.len() {
+        return None;
+    }
+    let hit = complete_line(line, pos)?;
+    let candidate = pick_primary_candidate(&hit.candidates)?;
+    let typed = &line[hit.token_start..pos];
+    let typed_lower = typed.to_ascii_lowercase();
+    let cand_lower = candidate.to_ascii_lowercase();
+    if !cand_lower.starts_with(&typed_lower) {
+        return None;
+    }
+    let typed_chars = typed.chars().count();
+    let remainder: String = candidate.chars().skip(typed_chars).collect();
+    if remainder.is_empty() {
+        return None;
+    }
+    Some(BmxtHint {
+        display: remainder.clone(),
+        completion: remainder,
+    })
 }
 
 impl Completer for BmxtHelper {
@@ -48,8 +105,14 @@ impl Completer for BmxtHelper {
         let Some(hit) = complete_line(line, pos) else {
             return Ok((pos, Vec::new()));
         };
-        let pairs = hit
-            .candidates
+        let mut candidates = hit.candidates;
+        // EN: Same primary ordering as the grey hint so Tab applies what was shown.
+        candidates.sort_by(|a, b| {
+            a.len()
+                .cmp(&b.len())
+                .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
+        });
+        let pairs = candidates
             .into_iter()
             .map(|token| Pair {
                 display: token.clone(),
@@ -61,16 +124,17 @@ impl Completer for BmxtHelper {
 }
 
 impl Hinter for BmxtHelper {
-    type Hint = String;
+    type Hint = BmxtHint;
 
-    fn hint(&self, line: &str, pos: usize, ctx: &RlContext<'_>) -> Option<String> {
-        self.hinter.hint(line, pos, ctx)
+    fn hint(&self, line: &str, pos: usize, _ctx: &RlContext<'_>) -> Option<BmxtHint> {
+        completion_remainder_hint(line, pos)
     }
 }
 
 impl Highlighter for BmxtHelper {
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
-        self.highlighter.highlight_hint(hint)
+        // EN: Bright black (grey) so the remainder stays visually secondary.
+        Cow::Owned(format!("\x1b[90m{hint}\x1b[39m"))
     }
 
     fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {
@@ -95,7 +159,8 @@ impl PromptShell {
     pub fn open() -> Result<Self> {
         let config = Config::builder()
             .history_ignore_space(true)
-            .completion_type(CompletionType::List)
+            // EN: Tab applies the next full candidate (same primary as the grey hint).
+            .completion_type(CompletionType::Circular)
             .color_mode(ColorMode::Enabled)
             .auto_add_history(false)
             .build();
@@ -131,5 +196,30 @@ impl PromptShell {
         }
         let _ = self.editor.add_history_entry(trimmed);
         let _ = self.editor.append_history(&self.history_path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hint_shows_remainder_for_sync_setup() {
+        let line = "sync -se";
+        let hint = completion_remainder_hint(line, line.len()).expect("hint");
+        assert_eq!(hint.display, "tup");
+        assert_eq!(hint.completion, "tup");
+    }
+
+    #[test]
+    fn hint_none_when_cursor_not_at_eol() {
+        let line = "sync -se";
+        assert!(completion_remainder_hint(line, 4).is_none());
+    }
+
+    #[test]
+    fn hint_none_when_token_already_complete() {
+        let line = "sync -setup";
+        assert!(completion_remainder_hint(line, line.len()).is_none());
     }
 }
