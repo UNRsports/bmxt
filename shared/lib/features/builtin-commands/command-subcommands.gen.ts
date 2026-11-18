@@ -98,7 +98,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   ] as const,
   "bookmark": [
     { head: "-list", trailingTokens: ["--folder","--device","--peers"] as const, tail: "rest" },
-    { head: "-add", trailingTokens: [] as const, tail: "rest" },
+    { head: "-add", trailingTokens: ["--title","--parent","--force","--skip-dup"] as const, tail: "rest" },
     { head: "-folder", trailingTokens: [] as const, tail: "rest" },
     { head: "-remove", trailingTokens: [] as const, tail: "rest" },
     { head: "-move", trailingTokens: [] as const, tail: "rest" },

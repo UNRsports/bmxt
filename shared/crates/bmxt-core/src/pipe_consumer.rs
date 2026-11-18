@@ -56,6 +56,14 @@ pub enum PipeConsumerClass {
     },
     #[serde(rename = "bookmark-remove")]
     BookmarkRemove,
+    #[serde(rename = "bookmark-add")]
+    BookmarkAdd {
+        #[serde(rename = "parentId", skip_serializing_if = "Option::is_none")]
+        parent_id: Option<String>,
+        /// "" | "force" | "skip"
+        #[serde(rename = "dupMode")]
+        dup_mode: String,
+    },
     #[serde(rename = "bookmark-move")]
     BookmarkMove {
         #[serde(rename = "parentId")]
@@ -253,6 +261,43 @@ fn parse_bookmark_remove(parts: &[String]) -> Option<PipeConsumerClass> {
     Some(PipeConsumerClass::BookmarkRemove)
 }
 
+fn parse_bookmark_add(parts: &[String]) -> Option<PipeConsumerClass> {
+    if parts.len() < 2 || normalize_token(&parts[0]) != "bookmark" || parts[1] != "-add" {
+        return None;
+    }
+    let mut parent_id: Option<String> = None;
+    let mut dup_mode = String::new();
+    let mut i = 2usize;
+    while i < parts.len() {
+        match parts[i].as_str() {
+            "--parent" => {
+                let id = parts.get(i + 1)?.trim().to_string();
+                if id.is_empty() || id.starts_with('-') {
+                    return None;
+                }
+                parent_id = Some(id);
+                i += 2;
+            }
+            "--force" => {
+                if !dup_mode.is_empty() {
+                    return None;
+                }
+                dup_mode = "force".to_string();
+                i += 1;
+            }
+            "--skip-dup" => {
+                if !dup_mode.is_empty() {
+                    return None;
+                }
+                dup_mode = "skip".to_string();
+                i += 1;
+            }
+            _ => return None,
+        }
+    }
+    Some(PipeConsumerClass::BookmarkAdd { parent_id, dup_mode })
+}
+
 fn parse_bookmark_move(parts: &[String]) -> Option<PipeConsumerClass> {
     if parts.len() < 4 || normalize_token(&parts[0]) != "bookmark" || parts[1] != "-move" {
         return None;
@@ -359,6 +404,9 @@ pub fn classify_pipe_consumer(segment: &str) -> Option<PipeConsumerClass> {
         return Some(c);
     }
     if let Some(c) = parse_bookmark_remove(&parts) {
+        return Some(c);
+    }
+    if let Some(c) = parse_bookmark_add(&parts) {
         return Some(c);
     }
     if let Some(c) = parse_bookmark_move(&parts) {

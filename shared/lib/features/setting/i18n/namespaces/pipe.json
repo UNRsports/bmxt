@@ -91,6 +91,14 @@
     "ja": "error: パイプ入力に削除対象のブックマーク（bookmark / bookmark.folder）がありません",
     "en": "error: pipe input has no bookmark records to remove"
   },
+  "pipe.bookmarkAdd.badArgs": {
+    "ja": "error: パイプ右辺は `bookmark -add [--parent <id>] [--force|--skip-dup]` です",
+    "en": "error: pipe consumer is `bookmark -add [--parent <id>] [--force|--skip-dup]`"
+  },
+  "pipe.bookmarkAdd.noUrls": {
+    "ja": "error: パイプ入力に追加できる URL（page.open など）がありません",
+    "en": "error: pipe input has no URLs to bookmark (e.g. page.open)"
+  },
   "pipe.bookmarkMove.noBookmarks": {
     "ja": "error: パイプ入力に移動対象のブックマーク（bookmark / bookmark.folder）がありません",
     "en": "error: pipe input has no bookmark records to move"

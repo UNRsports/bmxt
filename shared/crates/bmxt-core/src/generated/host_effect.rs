@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub enum HostEffect {
     #[serde(rename = "bookmark_create")]
     BookmarkCreate {
+    dup_mode: String,
     parent_id: String,
     title: String,
     url: String,

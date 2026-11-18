@@ -7,6 +7,10 @@
     "ja": "tabs: page-active を {token} に設定しました",
     "en": "tabs: page-active set to {token}"
   },
+  "tabs.picker.actionMenu.bookmark": {
+    "ja": "ブックマーク",
+    "en": "Bookmark"
+  },
   "tabs.picker.actionMenu.close": {
     "ja": "閉じる",
     "en": "Close"
@@ -42,6 +46,114 @@
   "tabs.picker.actionMenuTitle": {
     "ja": "操作メニュー",
     "en": "Action menu"
+  },
+  "tabs.picker.bookmark.panelTitle": {
+    "ja": "ブックマークに追加",
+    "en": "Add bookmark"
+  },
+  "tabs.picker.bookmark.panelTitleMulti": {
+    "ja": "{count} 件のタブをブックマークに追加",
+    "en": "Add {count} tabs to bookmarks"
+  },
+  "tabs.picker.bookmark.folderLabel": {
+    "ja": "フォルダ（↑↓）",
+    "en": "Folder (↑↓)"
+  },
+  "tabs.picker.bookmark.titleLabel": {
+    "ja": "タイトル",
+    "en": "Title"
+  },
+  "tabs.picker.bookmark.urlLabel": {
+    "ja": "URL",
+    "en": "URL"
+  },
+  "tabs.picker.bookmark.newFolderOption": {
+    "ja": "＋ 新しいフォルダ（名前を入力）",
+    "en": "＋ New folder (enter name)"
+  },
+  "tabs.picker.bookmark.newFolderName": {
+    "ja": "新しいフォルダ名",
+    "en": "New folder name"
+  },
+  "tabs.picker.bookmark.newFolderSummary": {
+    "ja": "新しいフォルダ: {name}",
+    "en": "New folder: {name}"
+  },
+  "tabs.picker.bookmark.loadingFolders": {
+    "ja": "(読み込み中…)",
+    "en": "(loading…)"
+  },
+  "tabs.picker.bookmark.noFolders": {
+    "ja": "(フォルダがありません)",
+    "en": "(no folders)"
+  },
+  "tabs.picker.bookmark.unnamedFolder": {
+    "ja": "(無名フォルダ id:{id})",
+    "en": "(unnamed folder id:{id})"
+  },
+  "tabs.picker.bookmark.dupTitle": {
+    "ja": "次の URL はすでにブックマークされています:",
+    "en": "These URLs are already bookmarked:"
+  },
+  "tabs.picker.bookmark.dupHint": {
+    "ja": "y / Enter: そのまま追加 · n: 重複をスキップ · Esc: 編集に戻る",
+    "en": "y / Enter: add anyway · n: skip duplicates · Esc: back to edit"
+  },
+  "tabs.picker.bookmark.error.invalidUrl": {
+    "ja": "URL が正しくありません（http / https のみ）: {url}",
+    "en": "Invalid URL (http / https only): {url}"
+  },
+  "tabs.picker.bookmark.error.urlTooLong": {
+    "ja": "URL が長すぎます: {url}",
+    "en": "URL is too long: {url}"
+  },
+  "tabs.picker.bookmark.error.noFolder": {
+    "ja": "追加先のフォルダを選んでください。",
+    "en": "Choose a destination folder."
+  },
+  "tabs.picker.bookmark.error.folderName": {
+    "ja": "フォルダ名は 1〜512 文字で入力してください。",
+    "en": "Folder name must be 1–512 characters."
+  },
+  "tabs.picker.bookmark.error.folderLoad": {
+    "ja": "フォルダ一覧を読み込めませんでした: {message}",
+    "en": "Could not load bookmark folders: {message}"
+  },
+  "tabs.picker.bookmark.error.createFolder": {
+    "ja": "フォルダを作成できませんでした: {message}",
+    "en": "Could not create folder: {message}"
+  },
+  "tabs.picker.bookmark.error.generic": {
+    "ja": "ブックマークの処理に失敗しました: {message}",
+    "en": "Bookmark operation failed: {message}"
+  },
+  "tabs.picker.bookmark.noTargets": {
+    "ja": "error: ブックマークするタブがありません。",
+    "en": "error: no tabs to bookmark."
+  },
+  "tabs.picker.bookmark.localOnly": {
+    "ja": "error: ブックマークへの追加はローカルタブのみ対応しています。",
+    "en": "error: adding to bookmarks supports local tabs only."
+  },
+  "tabs.picker.bookmark.noValidUrls": {
+    "ja": "error: http / https の URL を持つタブがありません。",
+    "en": "error: no tabs with an http / https URL."
+  },
+  "tabs.picker.bookmark.done": {
+    "ja": "bookmark: {count} 件を「{folder}」に追加しました",
+    "en": "bookmark: added {count} to \"{folder}\""
+  },
+  "tabs.picker.bookmark.skippedDup": {
+    "ja": "bookmark: 重複 {count} 件をスキップしました",
+    "en": "bookmark: skipped {count} duplicate(s)"
+  },
+  "tabs.picker.bookmark.skippedInvalid": {
+    "ja": "{count} 件のタブは URL が http / https ではないためスキップします",
+    "en": "{count} tab(s) skipped: URL is not http / https"
+  },
+  "tabs.picker.bookmark.failed": {
+    "ja": "error: ブックマークを作成できませんでした（{message}）",
+    "en": "error: could not create bookmark ({message})"
   },
   "tabs.picker.closed": {
     "ja": "Tab picker を閉じました。",
@@ -218,6 +330,26 @@
   "tabs.picker.headline.actionMenu": {
     "ja": "Tab picker — [MENU] ↑↓ 操作選択 · Enter 実行 · ← 一覧へ · {common}",
     "en": "Tab picker — [MENU] ↑↓ pick action · Enter run · ← back to list · {common}"
+  },
+  "tabs.picker.headline.bookmarkFolder": {
+    "ja": "Tab picker — [BOOKMARK] ↑↓ フォルダ選択 · Enter 次へ · Esc キャンセル",
+    "en": "Tab picker — [BOOKMARK] ↑↓ pick folder · Enter next · Esc cancel"
+  },
+  "tabs.picker.headline.bookmarkNewFolder": {
+    "ja": "Tab picker — [BOOKMARK] 新しいフォルダ名 · Enter 次へ · Esc フォルダ一覧へ",
+    "en": "Tab picker — [BOOKMARK] new folder name · Enter next · Esc back to folders"
+  },
+  "tabs.picker.headline.bookmarkEditSingle": {
+    "ja": "Tab picker — [BOOKMARK] Tab タイトル↔URL↔フォルダ · フォルダ上で ↑↓ · Enter 追加 · Esc キャンセル",
+    "en": "Tab picker — [BOOKMARK] Tab title↔URL↔folder · ↑↓ on folder · Enter add · Esc cancel"
+  },
+  "tabs.picker.headline.bookmarkEditMulti": {
+    "ja": "Tab picker — [BOOKMARK] ↑↓ / Tab タイトル移動 · Enter 追加 · Esc 戻る",
+    "en": "Tab picker — [BOOKMARK] ↑↓ / Tab move between titles · Enter add · Esc back"
+  },
+  "tabs.picker.headline.bookmarkDup": {
+    "ja": "Tab picker — [BOOKMARK] 重複 URL · y / Enter そのまま追加 · n 重複をスキップ · Esc 編集へ",
+    "en": "Tab picker — [BOOKMARK] duplicate URL · y / Enter add anyway · n skip duplicates · Esc back"
   },
   "tabs.picker.headline.close": {
     "ja": "Tab picker — [CLOSE] Enter でウィンドウを閉じる / タブを閉じる · {common}",

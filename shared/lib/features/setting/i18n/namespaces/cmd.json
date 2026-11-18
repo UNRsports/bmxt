@@ -1288,20 +1288,24 @@
     "en": "usage: bookmark -list [--folder <id>] [--device <id>|--peers]"
   },
   "cmd.bookmark.usage.line2": {
-    "ja": "  bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>]",
-    "en": "  bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>]"
+    "ja": "  bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup]",
+    "en": "  bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup]"
   },
   "cmd.bookmark.usage.line3": {
-    "ja": "  bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]",
-    "en": "  bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]"
+    "ja": "  bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]",
+    "en": "  bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]"
   },
   "cmd.bookmark.usage.line4": {
     "ja": "  bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…>",
     "en": "  bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…>"
   },
   "cmd.bookmark.usage.line5": {
-    "ja": "  bookmark -backup | bookmark -restore | … | bookmark -remove | … | bookmark -send …",
-    "en": "  bookmark -backup | bookmark -restore | … | bookmark -remove | … | bookmark -send …"
+    "ja": "  bookmark -backup | bookmark -restore | … | tab -list | bookmark -add [--parent <id>]",
+    "en": "  bookmark -backup | bookmark -restore | … | tab -list | bookmark -add [--parent <id>]"
+  },
+  "cmd.bookmark.usage.line6": {
+    "ja": "  同一 URL がある場合は --force（追加）または --skip-dup（スキップ）。--parent はフォルダ id（Tab で候補）。",
+    "en": "  On duplicate URL use --force (add) or --skip-dup (skip). --parent is a folder id (Tab candidates)."
   },
   "cmd.history.error.unknownOption": {
     "ja": "error: 不明な history オプション: {option}",

@@ -362,6 +362,18 @@
       "zones": []
     },
     {
+      "command": "bookmark",
+      "zones": [
+        { "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] },
+        {
+          "when": { "second": "-add" },
+          "tier": "third",
+          "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.trailingTokens" }]
+        }
+      ],
+      "notes": "`--parent` folder-id cycling is host-side (bookmarkParentCompletionZone), not a catalog dataSource yet."
+    },
+    {
       "command": "setting",
       "zones": [{ "tier": "second", "sources": [{ "kind": "manifest.static", "from": "manifest.subcommands.head" }] }]
     }

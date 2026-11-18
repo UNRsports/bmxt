@@ -93,6 +93,9 @@ export function useTabPickerPlainExtensions({
     hlSearchPattern,
   editPanel,
   actionMenuPanel,
+  bookmarkPanelOpen,
+  openBookmarkFromPicker,
+  handleBookmarkKeydown,
   openActionMenuFromPicker,
   closeActionMenu,
   confirmActionMenuPick,
@@ -161,6 +164,10 @@ export function useTabPickerPlainExtensions({
   hlSearchPattern: string
   editPanel: EditPanel | null
   actionMenuPanel: ActionMenuPanel | null
+  /** EN: True while the bookmark add panel is open (all picker keys are routed to it). */
+  bookmarkPanelOpen: boolean
+  openBookmarkFromPicker: () => void
+  handleBookmarkKeydown: (e: KeyboardEvent) => boolean
   openActionMenuFromPicker: () => void
   closeActionMenu: () => void
   confirmActionMenuPick: () => void | Promise<void>
@@ -195,6 +202,11 @@ export function useTabPickerPlainExtensions({
         closeSearch()
         return true
       }
+      if (parsed.kind === "bookmark") {
+        clearCommandMode()
+        openBookmarkFromPicker()
+        return true
+      }
       if (parsed.kind !== "bulk") {
         clearCommandMode()
         return true
@@ -213,6 +225,7 @@ export function useTabPickerPlainExtensions({
     [
       clearCommandMode,
       closeSearch,
+      openBookmarkFromPicker,
       openEditFromPicker,
       setBulkSubMode,
       setHlSearchPattern,
@@ -226,6 +239,10 @@ export function useTabPickerPlainExtensions({
 
   const onCaptureBefore = useCallback(
     (e: KeyboardEvent): boolean => {
+      // EN: Bookmark panel owns every key while open (fields, folder list, confirm).
+      if (bookmarkPanelOpen) {
+        return handleBookmarkKeydown(e)
+      }
       if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         const ev = e as KeyboardEvent & { isComposing?: boolean }
         if (!ev.isComposing && isJkVerticalNavKey(e)) {
@@ -348,6 +365,7 @@ export function useTabPickerPlainExtensions({
     },
     [
       actionMenuPanel,
+      bookmarkPanelOpen,
       bulkSubMode,
       closeActionMenu,
       collapseAtRow,
@@ -356,6 +374,7 @@ export function useTabPickerPlainExtensions({
       expandAtRow,
       groupMetaTitleRef,
       groupNewPhase,
+      handleBookmarkKeydown,
       hi,
       isGroupExpanded,
       isWindowExpanded,
@@ -371,6 +390,11 @@ export function useTabPickerPlainExtensions({
 
   const customVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
+      if (bookmarkPanelOpen) {
+        // EN: Defensive — bookmark panel keys are consumed in onCaptureBefore.
+        pickerStopEvent(e)
+        return true
+      }
       if (isJkVerticalNavKey(e)) {
         pickerStopEvent(e)
         return true
@@ -549,6 +573,7 @@ export function useTabPickerPlainExtensions({
       actionMenuPanel,
       applyReducedState,
       applyReducedStateSequence,
+      bookmarkPanelOpen,
       bulkSubMode,
       cycleActionMenuPick,
       cycleGroupMenuPick,
@@ -572,6 +597,11 @@ export function useTabPickerPlainExtensions({
       const ev = e as KeyboardEvent & { isComposing?: boolean }
       if (ev.isComposing || e.key !== "Enter" || e.shiftKey) {
         return false
+      }
+
+      if (bookmarkPanelOpen) {
+        pickerStopEvent(e)
+        return true
       }
 
       if (newTabUrlWindowIdRef.current !== null) {
@@ -671,6 +701,7 @@ export function useTabPickerPlainExtensions({
     },
     [
       actionMenuPanel,
+      bookmarkPanelOpen,
       bulkSubMode,
       confirmActionMenuPick,
       confirmSelection,
@@ -710,6 +741,11 @@ export function useTabPickerPlainExtensions({
       const stop = () => {
         e.preventDefault()
         e.stopPropagation()
+      }
+      if (bookmarkPanelOpen) {
+        // EN: Defensive — Esc is normally consumed by the bookmark key handler.
+        stop()
+        return true
       }
       if (newTabUrlWindowId !== null) {
         stop()
@@ -765,6 +801,7 @@ export function useTabPickerPlainExtensions({
       actionMenuPanel,
       applyReducedState,
       backFromGroupRename,
+      bookmarkPanelOpen,
       bulkSubMode,
       closeActionMenu,
       closeEdit,
@@ -800,7 +837,8 @@ export function useTabPickerPlainExtensions({
           groupNewPhase === "meta" ||
           newTabUrlWindowId !== null ||
           editPanel !== null ||
-          actionMenuPanel !== null
+          actionMenuPanel !== null ||
+          bookmarkPanelOpen
         ) {
           e.preventDefault()
           return true
@@ -843,7 +881,8 @@ export function useTabPickerPlainExtensions({
         (groupNewPhase === "meta" ||
           newTabUrlWindowId !== null ||
           editPanel !== null ||
-          actionMenuPanel !== null)
+          actionMenuPanel !== null ||
+          bookmarkPanelOpen)
       ) {
         e.preventDefault()
         e.stopPropagation()
@@ -855,6 +894,7 @@ export function useTabPickerPlainExtensions({
     [
       actionMenuPanel,
       applyReducedState,
+      bookmarkPanelOpen,
       commandMode,
       editPanel,
       executeCreateNewGroup,
@@ -883,6 +923,7 @@ export function useTabPickerPlainExtensions({
         newTabUrlWindowId === null &&
         editPanel === null &&
         actionMenuPanel === null &&
+        !bookmarkPanelOpen &&
         bulkSubMode !== "move" &&
         bulkSubMode !== "group" &&
         hlSearchPattern !== "",
@@ -895,15 +936,18 @@ export function useTabPickerPlainExtensions({
         groupNewPhase === "meta" ||
         newTabUrlWindowId !== null ||
         editPanel !== null ||
-        actionMenuPanel !== null,
+        actionMenuPanel !== null ||
+        bookmarkPanelOpen,
       blockPlainTyping: () =>
         groupNewPhase === "meta" ||
         newTabUrlWindowId !== null ||
         editPanel !== null ||
-        actionMenuPanel !== null
+        actionMenuPanel !== null ||
+        bookmarkPanelOpen
     }),
     [
       actionMenuPanel,
+      bookmarkPanelOpen,
       bulkSubMode,
       customVerticalNav,
       editPanel,

@@ -26,6 +26,7 @@ export type PipeConsumerClass =
     }
   | { id: "move"; windowId: number; groupId: number; ungroup: boolean }
   | { id: "bookmark-remove" }
+  | { id: "bookmark-add"; parentId: string | null; dupMode: string }
   | { id: "bookmark-move"; parentId: string; index: number | null }
   | { id: "bookmark-send"; deviceId: string; mode: BookmarkSendMode; parentId: string | null; groupTitle: string | null }
   | { id: "history-delete" }
@@ -42,6 +43,7 @@ const KNOWN_IDS = new Set([
   "open",
   "move",
   "bookmark-remove",
+  "bookmark-add",
   "bookmark-move",
   "bookmark-send",
   "history-delete"
@@ -108,6 +110,11 @@ function parseClass(raw: unknown): PipeConsumerClass | null {
     }
     case "bookmark-remove":
       return { id: "bookmark-remove" }
+    case "bookmark-add": {
+      const parentId = typeof o.parentId === "string" ? o.parentId : null
+      const dupMode = typeof o.dupMode === "string" ? o.dupMode : ""
+      return { id: "bookmark-add", parentId, dupMode }
+    }
     case "bookmark-move": {
       if (typeof o.parentId !== "string") {
         return null
@@ -149,6 +156,31 @@ function parseTsFallbackConsumer(segment: string): PipeConsumerClass | null {
   // bookmark -remove (bare)
   if (first === "bookmark" && parts.length === 2 && parts[1] === "-remove") {
     return { id: "bookmark-remove" }
+  }
+
+  // bookmark -add [--parent <id>] [--force|--skip-dup]
+  if (first === "bookmark" && parts.length >= 2 && parts[1] === "-add") {
+    let parentId: string | null = null
+    let dupMode = ""
+    for (let i = 2; i < parts.length; i++) {
+      if (parts[i] === "--parent" && parts[i + 1] !== undefined) {
+        parentId = parts[i + 1]!
+        i++
+      } else if (parts[i] === "--force") {
+        if (dupMode.length > 0) {
+          return null
+        }
+        dupMode = "force"
+      } else if (parts[i] === "--skip-dup") {
+        if (dupMode.length > 0) {
+          return null
+        }
+        dupMode = "skip"
+      } else {
+        return null
+      }
+    }
+    return { id: "bookmark-add", parentId, dupMode }
   }
 
   // bookmark -move --parent <id> [--index n]

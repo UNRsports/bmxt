@@ -49,6 +49,7 @@ export const TAB_PICKER_COMMAND_COMPLETIONS = [
   "newwindow",
   "newtab",
   "edit",
+  "bookmark",
   "nohlsearch"
 ] as const
 
@@ -64,6 +65,7 @@ export const ACTION_MENU_ITEMS_FOR_TAB = [
   { id: "group" as const, messageKey: "tabs.picker.actionMenu.group" as const },
   { id: "newWindow" as const, messageKey: "tabs.picker.actionMenu.newWindow" as const },
   { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const },
+  { id: "bookmark" as const, messageKey: "tabs.picker.actionMenu.bookmark" as const },
   { id: "snapshot" as const, messageKey: "tabs.picker.actionMenu.snapshot" as const }
 ] as const
 
@@ -72,6 +74,7 @@ export const ACTION_MENU_ITEMS_FOR_WINDOW = [
   { id: "newTab" as const, messageKey: "tabs.picker.actionMenu.newTab" as const },
   { id: "edit" as const, messageKey: "tabs.picker.actionMenu.edit" as const },
   { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const },
+  { id: "bookmark" as const, messageKey: "tabs.picker.actionMenu.bookmark" as const },
   { id: "snapshot" as const, messageKey: "tabs.picker.actionMenu.snapshot" as const }
 ] as const
 
@@ -81,6 +84,7 @@ export const ACTION_MENU_ITEMS_FOR_GROUP = [
   { id: "newWindow" as const, messageKey: "tabs.picker.actionMenu.newWindow" as const },
   { id: "edit" as const, messageKey: "tabs.picker.actionMenu.edit" as const },
   { id: "reload" as const, messageKey: "tabs.picker.actionMenu.reload" as const },
+  { id: "bookmark" as const, messageKey: "tabs.picker.actionMenu.bookmark" as const },
   { id: "snapshot" as const, messageKey: "tabs.picker.actionMenu.snapshot" as const }
 ] as const
 
@@ -94,6 +98,7 @@ export type ActionMenuItemDef = {
     | "tabs.picker.actionMenu.newTab"
     | "tabs.picker.actionMenu.edit"
     | "tabs.picker.actionMenu.reload"
+    | "tabs.picker.actionMenu.bookmark"
     | "tabs.picker.actionMenu.snapshot"
 }
 
@@ -121,16 +126,24 @@ export const TAB_PICKER_COMMANDS_FOR_TAB = [
   "close",
   "group",
   "newwindow",
+  "bookmark",
   "nohlsearch"
 ] as const
 
-export const TAB_PICKER_COMMANDS_FOR_WINDOW = ["close", "newtab", "edit", "nohlsearch"] as const
+export const TAB_PICKER_COMMANDS_FOR_WINDOW = [
+  "close",
+  "newtab",
+  "edit",
+  "bookmark",
+  "nohlsearch"
+] as const
 
 export const TAB_PICKER_COMMANDS_FOR_GROUP = [
   "move",
   "close",
   "newwindow",
   "edit",
+  "bookmark",
   "nohlsearch"
 ] as const
 

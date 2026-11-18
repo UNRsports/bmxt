@@ -13,6 +13,10 @@ import { useTabPickerKeyboard } from "./use-tab-picker-keyboard"
 import type { BulkSubMode } from "./tab-picker-overlay-types"
 import { useTabPickerEdit } from "./use-tab-picker-edit"
 import { useTabPickerActionMenu } from "./use-tab-picker-action-menu"
+import { useTabPickerBookmark } from "./use-tab-picker-bookmark"
+import { tTabs } from "../setting/i18n/ns/tabs"
+import type { UiLocale } from "../setting/locale"
+import type { BookmarkPanel } from "./tab-picker-overlay-types"
 import type { TabPickerViewProps } from "./tab-picker-view-types"
 import type { TabsPageActiveMode } from "./page-active-setting"
 import { useUiSettings } from "../setting/use-ui-settings"
@@ -57,7 +61,23 @@ const INACTIVE_ENGINE_STATE: TabPickerEngineState = {
   newTabUrl: "",
   editPanel: null,
   editTitle: "",
-  actionMenuPanel: null
+  actionMenuPanel: null,
+  bookmarkPanel: null
+}
+
+function bookmarkPanelHeadline(panel: BookmarkPanel, locale: UiLocale): string {
+  switch (panel.phase) {
+    case "folderPick":
+      return tTabs("tabs.picker.headline.bookmarkFolder", locale)
+    case "newFolder":
+      return tTabs("tabs.picker.headline.bookmarkNewFolder", locale)
+    case "dupConfirm":
+      return tTabs("tabs.picker.headline.bookmarkDup", locale)
+    case "itemEdit":
+      return panel.mode === "single"
+        ? tTabs("tabs.picker.headline.bookmarkEditSingle", locale)
+        : tTabs("tabs.picker.headline.bookmarkEditMulti", locale)
+  }
 }
 
 const noopEngineDispatch: TabPickerEngineDispatch = () => {}
@@ -141,6 +161,7 @@ export function useTabPickerController({
   )
   const editPanelRef = useRef<HTMLDivElement>(null)
   const actionMenuPanelRef = useRef<HTMLDivElement>(null)
+  const bookmarkPanelRef = useRef<HTMLDivElement>(null)
   const groupMetaTitleRef = useRef<HTMLInputElement>(null)
   const groupMetaColorStripRef = useRef<HTMLDivElement>(null)
   const newGroupTabIdsRef = useRef<number[]>([])
@@ -189,7 +210,8 @@ export function useTabPickerController({
     newTabUrl,
     editPanel,
     editTitle,
-    actionMenuPanel
+    actionMenuPanel,
+    bookmarkPanel
   } = state
 
   const setters = useEngineFieldSetters(dispatch)
@@ -332,6 +354,7 @@ export function useTabPickerController({
     editPanelRef,
     actionMenuPanel,
     actionMenuPanelRef,
+    bookmarkPanelOpen: bookmarkPanel !== null,
     setAnchorTabId
   })
 
@@ -358,7 +381,8 @@ export function useTabPickerController({
     groupNewPhase !== "tabs" ||
     newTabUrlWindowId !== null ||
     commandMode ||
-    actionMenuPanel !== null
+    actionMenuPanel !== null ||
+    bookmarkPanel !== null
 
   useMirrorBrowserActiveTab({
     enabled: variant === "default",
@@ -508,6 +532,29 @@ export function useTabPickerController({
   )
 
   const {
+    openBookmarkPanelForTargets,
+    openBookmarkFromPicker,
+    handleBookmarkKeydown,
+    onBookmarkItemTitleChange,
+    onBookmarkItemUrlChange,
+    onBookmarkNewFolderNameChange
+  } = useTabPickerBookmark({
+    rows,
+    visibleRowIndices,
+    hi,
+    markedKind,
+    markedTabIds,
+    markedWindowIds,
+    markedGroupKeys,
+    bookmarkPanel,
+    bookmarkPanelRef,
+    inputRef,
+    dispatch,
+    clearMarkedViaReducer,
+    onAppendLog
+  })
+
+  const {
     openActionMenuFromPicker,
     closeActionMenu,
     cycleActionMenuPick,
@@ -528,6 +575,7 @@ export function useTabPickerController({
     setNewTabUrlWindowId,
     setNewTabUrl,
     openEditFromPicker,
+    openBookmarkPanelForTargets,
     runSnapshotSaveForTabIds: saveSnapshotsForPickerTabIds,
     runExecutionIntentForSnapshot
   })
@@ -588,6 +636,9 @@ export function useTabPickerController({
     sessionId,
     editPanel,
     actionMenuPanel,
+    bookmarkPanelOpen: bookmarkPanel !== null,
+    openBookmarkFromPicker,
+    handleBookmarkKeydown,
     openActionMenuFromPicker,
     closeActionMenu,
     confirmActionMenuPick,
@@ -607,20 +658,21 @@ export function useTabPickerController({
     onExitToDetailBar
   })
 
-  const headLine = useMemo(
-    () =>
-      resolvePickerHeadline(
-        {
-          bulkSubMode,
-          groupNewPhase,
-          variant,
-          editPanelKind: editPanel?.kind ?? null,
-          actionMenuOpen: actionMenuPanel !== null
-        },
-        locale
-      ),
-    [actionMenuPanel, bulkSubMode, editPanel?.kind, groupNewPhase, locale, variant]
-  )
+  const headLine = useMemo(() => {
+    if (bookmarkPanel !== null) {
+      return bookmarkPanelHeadline(bookmarkPanel, locale)
+    }
+    return resolvePickerHeadline(
+      {
+        bulkSubMode,
+        groupNewPhase,
+        variant,
+        editPanelKind: editPanel?.kind ?? null,
+        actionMenuOpen: actionMenuPanel !== null
+      },
+      locale
+    )
+  }, [actionMenuPanel, bookmarkPanel, bulkSubMode, editPanel?.kind, groupNewPhase, locale, variant])
 
   const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
 
@@ -680,6 +732,11 @@ export function useTabPickerController({
     editPanel,
     actionMenuPanel,
     actionMenuPanelRef,
+    bookmarkPanel,
+    bookmarkPanelRef,
+    onBookmarkItemTitleChange,
+    onBookmarkItemUrlChange,
+    onBookmarkNewFolderNameChange,
     groupMetaColorStripRef,
     newGroupTitle,
     setNewGroupTitle,

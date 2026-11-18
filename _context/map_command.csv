@@ -38,7 +38,7 @@ help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キ�
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
 bookmark,,,,,bookmark …,単独 `bookmark` + Enter: msgs + promptPrefix。CRUD・Family 送信・バックアップ。,§9
 bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],無 folder: Effect `search_list`（`--bookmark`）。`--folder`: Effect `bookmark_list`（ローカル）。,--peers は search_query 経路
-bookmark,-add,,rest,,bookmark -add <url> [--title …] [--parent <id>],Effect `bookmark_create`。,
+bookmark,-add,,rest,,bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup],Effect `bookmark_create`（dup_mode）。`--parent` はフォルダ id（Tab 候補）。パイプ: `page.open | bookmark -add`。,
 bookmark,-folder,,rest,,bookmark -folder <title> [--parent <id>],Effect `bookmark_create_folder`。,
 bookmark,-remove,,rest,,bookmark -remove <id…> | … | bookmark -remove,Effect `bookmark_remove`。パイプ: bookmark / bookmark.folder（id）。,
 bookmark,-move,,rest,,bookmark -move <id…> --parent <id> [--index n] | … | bookmark -move --parent …,Effect `bookmark_move`。,

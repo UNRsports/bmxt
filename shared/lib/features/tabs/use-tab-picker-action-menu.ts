@@ -7,6 +7,7 @@ import {
 import type {
   ActionMenuItemId,
   ActionMenuPanel,
+  ActionMenuTabTarget,
   BulkSubMode,
   SelectKind
 } from "./tab-picker-overlay-types"
@@ -103,6 +104,8 @@ export type TabPickerActionMenuParams = {
   setNewTabUrlWindowId: (windowId: number | null) => void
   setNewTabUrl: (url: string) => void
   openEditFromPicker: (snapshot?: EditPickerSnapshot) => void | Promise<void>
+  /** EN: Enter the bookmark add flow for the menu's resolved tab targets. */
+  openBookmarkPanelForTargets: (targets: readonly ActionMenuTabTarget[]) => void
   runSnapshotSaveForTabIds: (tabIds: readonly number[]) => Promise<void>
   runExecutionIntentForSnapshot: (
     intent: ExecutionIntent,
@@ -128,6 +131,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     setNewTabUrlWindowId,
     setNewTabUrl,
     openEditFromPicker,
+    openBookmarkPanelForTargets,
     runSnapshotSaveForTabIds,
     runExecutionIntentForSnapshot
   } = p
@@ -203,6 +207,13 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     }
 
     const row = getPickerRowAtHi(rows, visibleRowIndices, hi)
+
+    if (actionId === "bookmark") {
+      // EN: Bookmark flow has its own panel; targets (window/group expanded to tabs) come from the menu.
+      closeActionMenu()
+      openBookmarkPanelForTargets(actionMenuPanel.tabTargets)
+      return
+    }
 
     if (actionId === "edit") {
       const baseSlice = pickerSliceFromParams({
@@ -338,6 +349,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
   }, [
     actionMenuPanel,
     bulkSubMode,
+    closeActionMenu,
     dispatch,
     hi,
     markedCount,
@@ -346,6 +358,7 @@ export function useTabPickerActionMenu(p: TabPickerActionMenuParams) {
     markedTabIds,
     markedWindowIds,
     moveDestHi,
+    openBookmarkPanelForTargets,
     openEditFromPicker,
     runSnapshotSaveForTabIds,
     runExecutionIntentForSnapshot,

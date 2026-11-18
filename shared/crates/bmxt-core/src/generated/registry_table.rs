@@ -118,7 +118,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "bookmark",
         aliases: &[],
-        usage_primary: "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help",
+        usage_primary: "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help",
     },
     CmdMeta {
         name: "history",
@@ -387,7 +387,7 @@ static BRANCHES_BOOKMARK: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-add",
-        trailing_tokens: &[],
+        trailing_tokens: &["--title", "--parent", "--force", "--skip-dup"],
     },
     SubcommandBranch {
         head: "-folder",

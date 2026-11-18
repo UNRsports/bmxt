@@ -2,6 +2,7 @@ import type { BulkSubMode } from "./tab-picker-overlay-types"
 
 export type ParsedPickerCommand =
   | { kind: "bulk"; mode: BulkSubMode; closeAfter: boolean }
+  | { kind: "bookmark" }
   | { kind: "nohlsearch" }
   | { kind: "unknown" }
 
@@ -37,6 +38,13 @@ export function parsePickerCommand(buffer: string): ParsedPickerCommand {
       return { kind: "unknown" }
     }
     return { kind: "bulk", mode: "edit", closeAfter: false }
+  }
+  // EN: `bookmark` opens the add-to-bookmarks panel (not a BulkSubMode); `bm` matches other legacy shorts.
+  if (parts[0] === "bookmark" || parts[0] === "bm") {
+    if (parts.length !== 1) {
+      return { kind: "unknown" }
+    }
+    return { kind: "bookmark" }
   }
   const mode = ALIASES[parts[0]!]
   if (mode === undefined) {

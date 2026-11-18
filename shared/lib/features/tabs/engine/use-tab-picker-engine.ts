@@ -33,7 +33,8 @@ const FALLBACK_STATE: TabPickerEngineState = {
   newTabUrl: "",
   editPanel: null,
   editTitle: "",
-  actionMenuPanel: null
+  actionMenuPanel: null,
+  bookmarkPanel: null
 }
 
 function noopSubscribe(): () => void {

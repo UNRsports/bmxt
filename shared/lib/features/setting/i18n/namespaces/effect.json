@@ -215,6 +215,18 @@
     "ja": "error: 無効な parentId: {parentId}",
     "en": "error: invalid parentId: {parentId}"
   },
+  "effect.bookmarkCreate.rejectedDupMode": {
+    "ja": "error: 無効な重複モード: {mode}（--force または --skip-dup）",
+    "en": "error: invalid dup mode: {mode} (use --force or --skip-dup)"
+  },
+  "effect.bookmarkCreate.dupExists": {
+    "ja": "error: 同じ URL のブックマークがあります: {id} — {title} ({url})。追加は --force、スキップは --skip-dup",
+    "en": "error: bookmark already exists for URL: {id} — {title} ({url}). Use --force to add or --skip-dup to skip"
+  },
+  "effect.bookmarkCreate.skippedDup": {
+    "ja": "重複のためスキップ: {id} — {title} ({url})",
+    "en": "skipped duplicate: {id} — {title} ({url})"
+  },
   "effect.bookmarkCreate.ok": {
     "ja": "ブックマーク作成: {id} — {title} ({url})",
     "en": "created bookmark: {id} — {title} ({url})"

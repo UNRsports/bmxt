@@ -6,6 +6,10 @@ import {
 } from "../../command-line/candidate-menu-open-policy.ts"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isJobHandleActive, type BmxtJobHandle } from "../../job"
+import {
+  listBookmarkParentCompletionValues,
+  bookmarkParentCompletionZone
+} from "../../bookmark/parent-completion"
 import { listTabsMoveUrlCandidates, tabsMoveUrlCompletionZone } from "../../tabs/input"
 import type { SessionCandidatePanelVariant } from "../../session"
 import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
@@ -521,6 +525,26 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
             options.setHistNavIndex(-1)
             options.setLine(newLine)
             options.setCursorPos(muZone.urlStart + rep.length)
+          })()
+          return
+        }
+        const parentZone = bookmarkParentCompletionZone(curLn, pos)
+        if (parentZone) {
+          void (async () => {
+            const cands = await listBookmarkParentCompletionValues(parentZone.prefix)
+            if (cands.length === 0) {
+              return
+            }
+            const idx = options.tabPressSeqRef.current % cands.length
+            options.tabPressSeqRef.current += 1
+            const rep = cands[idx]!
+            const newLine =
+              curLn.slice(0, parentZone.valueStart) +
+              rep +
+              curLn.slice(parentZone.tokenEnd)
+            options.setHistNavIndex(-1)
+            options.setLine(newLine)
+            options.setCursorPos(parentZone.valueStart + rep.length)
           })()
           return
         }

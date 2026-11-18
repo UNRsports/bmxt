@@ -5,6 +5,7 @@ import { segmentFailure } from "../../compound/classify-outcome.ts"
 import type { SegmentOutcome } from "../../compound/types.ts"
 import { tPipe } from "../../../setting/i18n/ns/pipe.ts"
 import { browsePipeConsumer } from "./browse-from-list.ts"
+import { bookmarkAddPipeConsumer } from "./bookmark-add-from-stream.ts"
 import { bookmarkMovePipeConsumer } from "./bookmark-move-from-stream.ts"
 import { bookmarkRemovePipeConsumer } from "./bookmark-remove-from-stream.ts"
 import { bookmarkSendPipeConsumer } from "./bookmark-send-from-stream.ts"
@@ -47,6 +48,7 @@ export const PIPE_CONSUMER_ENTRIES: readonly PipeConsumerEntry[] = [
   closePipeConsumer,
   tabSendPipeConsumer,
   bookmarkRemovePipeConsumer,
+  bookmarkAddPipeConsumer,
   bookmarkMovePipeConsumer,
   bookmarkSendPipeConsumer,
   historyDeletePipeConsumer

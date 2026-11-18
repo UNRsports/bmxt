@@ -8,6 +8,7 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.bookmark.usage.line3",
     "cmd.bookmark.usage.line4",
     "cmd.bookmark.usage.line5",
+    "cmd.bookmark.usage.line6",
 ];
 
 const MAX_ID_LEN: usize = 64;
@@ -146,6 +147,8 @@ fn run_add(args: &[String]) -> DispatchBundle {
     let mut url: Option<String> = None;
     let mut title = String::new();
     let mut parent_id = String::new();
+    // EN: "" = refuse duplicates (suggest flags); "force" | "skip"
+    let mut dup_mode = String::new();
     let mut i = 2usize;
     while i < args.len() {
         let token = args[i].as_str();
@@ -163,6 +166,22 @@ fn run_add(args: &[String]) -> DispatchBundle {
             };
             parent_id = id;
             i += 2;
+            continue;
+        }
+        if token == "--force" {
+            if !dup_mode.is_empty() {
+                return usage();
+            }
+            dup_mode = "force".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--skip-dup" {
+            if !dup_mode.is_empty() {
+                return usage();
+            }
+            dup_mode = "skip".to_string();
+            i += 1;
             continue;
         }
         if token.starts_with('-') {
@@ -184,6 +203,7 @@ fn run_add(args: &[String]) -> DispatchBundle {
         url,
         title,
         parent_id,
+        dup_mode,
     }])
 }
 

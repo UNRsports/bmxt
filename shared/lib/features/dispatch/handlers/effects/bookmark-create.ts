@@ -1,26 +1,12 @@
 import type { HostEffect } from "../../effect-types"
 import type { DispatchHostContext } from "../../dispatch-context"
+import { findBookmarksByUrl, sanitizeBookmarkParentId } from "../../../bookmark/folders"
 import { effectT } from "../effect-i18n"
 import { parseHttpUrlForEffect } from "../shared"
 
 type E = Extract<HostEffect, { kind: "bookmark_create" }>
 
 const MAX_TITLE = 512
-const MAX_PARENT = 64
-
-function sanitizeParentId(raw: string): string | null {
-  const trimmed = raw.trim()
-  if (trimmed.length === 0) {
-    return null
-  }
-  if (trimmed.length > MAX_PARENT) {
-    return null
-  }
-  if (![...trimmed].every((c) => /[A-Za-z0-9_-]/.test(c))) {
-    return null
-  }
-  return trimmed
-}
 
 export async function applyBookmarkCreateEffect(
   ctx: DispatchHostContext,
@@ -32,10 +18,39 @@ export async function applyBookmarkCreateEffect(
   }
   const title = e.title.trim().slice(0, MAX_TITLE)
   const parentRaw = e.parent_id.trim()
-  const parentId = parentRaw.length === 0 ? undefined : sanitizeParentId(parentRaw)
+  const parentId = parentRaw.length === 0 ? undefined : sanitizeBookmarkParentId(parentRaw)
   if (parentRaw.length > 0 && parentId === null) {
     return [effectT(ctx, "effect.bookmarkCreate.rejectedParent", { parentId: parentRaw })]
   }
+
+  const dupMode = e.dup_mode.trim().toLowerCase()
+  if (dupMode !== "" && dupMode !== "force" && dupMode !== "skip") {
+    return [effectT(ctx, "effect.bookmarkCreate.rejectedDupMode", { mode: e.dup_mode })]
+  }
+
+  if (dupMode !== "force") {
+    const existing = await findBookmarksByUrl(url)
+    if (existing.length > 0) {
+      const head = existing[0]!
+      if (dupMode === "skip") {
+        return [
+          effectT(ctx, "effect.bookmarkCreate.skippedDup", {
+            id: head.bookmarkId,
+            url,
+            title: head.title.length > 0 ? head.title : url
+          })
+        ]
+      }
+      return [
+        effectT(ctx, "effect.bookmarkCreate.dupExists", {
+          id: head.bookmarkId,
+          url,
+          title: head.title.length > 0 ? head.title : url
+        })
+      ]
+    }
+  }
+
   try {
     const created = await chrome.bookmarks.create({
       url,
