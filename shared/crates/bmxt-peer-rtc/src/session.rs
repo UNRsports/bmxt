@@ -10,6 +10,7 @@ use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::MediaEngine;
 use webrtc::api::APIBuilder;
 use webrtc::data_channel::data_channel_init::RTCDataChannelInit;
+use webrtc::data_channel::data_channel_state::RTCDataChannelState;
 use webrtc::data_channel::RTCDataChannel;
 use webrtc::ice_transport::ice_candidate::RTCIceCandidateInit;
 use webrtc::interceptor::registry::Registry;
@@ -259,17 +260,36 @@ impl PeerSession {
         Ok(())
     }
 
+    pub async fn data_channel_is_open(&self) -> bool {
+        let guard = self.channel.lock().await;
+        match guard.as_ref() {
+            Some(dc) => dc.ready_state() == RTCDataChannelState::Open,
+            None => false,
+        }
+    }
+
     pub async fn send_command(&self, command: &SyncBusCommand) -> Result<(), PeerRtcError> {
         let text = command.to_text()?;
         if text.len() > WIRE_SOFT_CAP_BYTES {
             return Err(PeerRtcError::Wire(bmxt_sync_wire::WireError::TooLarge));
         }
-        let guard = self.channel.lock().await;
-        let Some(dc) = guard.as_ref() else {
-            return Err(PeerRtcError::ChannelClosed);
-        };
-        dc.send_text(text).await?;
-        Ok(())
+        // EN: Brief wait — ICE can report connected before SCTP/DataChannel is open.
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            {
+                let guard = self.channel.lock().await;
+                if let Some(dc) = guard.as_ref() {
+                    if dc.ready_state() == RTCDataChannelState::Open {
+                        dc.send_text(text).await?;
+                        return Ok(());
+                    }
+                }
+            }
+            if tokio::time::Instant::now() >= deadline {
+                return Err(PeerRtcError::ChannelClosed);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
     }
 
     pub async fn close(&self) {
@@ -294,6 +314,10 @@ async fn bind_channel(
                 let _ = events.send(PeerSessionEvent::DataChannelOpen);
             })
         }));
+    }
+    // EN: If open already fired before on_open was registered, emit now.
+    if dc.ready_state() == RTCDataChannelState::Open {
+        let _ = events.send(PeerSessionEvent::DataChannelOpen);
     }
     dc.on_message(Box::new(move |msg| {
         let events = events.clone();

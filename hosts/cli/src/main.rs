@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
             )?;
             handshake::apply_answer_code(&cfg, &session, &answer).await?;
             println!("Answer applied. Waiting for DataChannel…");
-            wait_connected(&mut events).await?;
+            wait_connected(&session, &mut events).await?;
             println!("Connected to {to}. Starting bus REPL (ping / tabs / quit).");
             let mut client = BusClient::new(session, events);
             bus_repl(&cfg, &mut client).await?;
@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
             let answer = handshake::accept_offer_code(&cfg, &session, &offer_code).await?;
             println!("=== ANSWER (paste back into BMXt) ===\n{answer}\n");
             println!("Waiting for DataChannel…");
-            wait_connected(&mut events).await?;
+            wait_connected(&session, &mut events).await?;
             println!("Connected. Starting bus REPL.");
             let mut client = BusClient::new(session, events);
             bus_repl(&cfg, &mut client).await?;
@@ -129,7 +129,7 @@ async fn main() -> Result<()> {
                     "ANSWER path (recommended): @/path/to/bmxt-*-answer.json\n> ",
                 )?;
                 handshake::apply_answer_code(&cfg, &session, &answer).await?;
-                wait_connected(&mut events).await?;
+                wait_connected(&session, &mut events).await?;
                 let mut client = BusClient::new(session, events);
                 bus_repl(&cfg, &mut client).await?;
             } else {
@@ -144,7 +144,7 @@ async fn main() -> Result<()> {
                 println!("=== ANSWER (file) ===");
                 println!("{}", answer_path.display());
                 println!("{answer}\n");
-                wait_connected(&mut events).await?;
+                wait_connected(&session, &mut events).await?;
                 let mut client = BusClient::new(session, events);
                 bus_repl(&cfg, &mut client).await?;
             }
@@ -162,18 +162,23 @@ async fn main() -> Result<()> {
 }
 
 async fn wait_connected(
+    session: &bmxt_peer_rtc::PeerSession,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<bmxt_peer_rtc::PeerSessionEvent>,
 ) -> Result<()> {
     use bmxt_peer_rtc::PeerSessionEvent;
+    // EN: ICE "connected" is not enough — ping needs an open DataChannel (SCTP).
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
     let mut last_ice = String::from("unknown");
+    let mut last_pc = String::from("unknown");
     while tokio::time::Instant::now() < deadline {
-        match tokio::time::timeout(std::time::Duration::from_secs(1), events.recv()).await {
+        if session.data_channel_is_open().await {
+            eprintln!("datachannel: open");
+            return Ok(());
+        }
+        match tokio::time::timeout(std::time::Duration::from_millis(250), events.recv()).await {
             Ok(Some(PeerSessionEvent::ConnectionState(state))) => {
                 eprintln!("connection: {state}");
-                if state == "connected" {
-                    return Ok(());
-                }
+                last_pc = state.clone();
                 if state == "failed" || state == "closed" {
                     return Err(anyhow!(
                         "connection {state} (ice={last_ice}). Keep the BMXt prompt window open; retry sync-connect."
@@ -183,9 +188,6 @@ async fn wait_connected(
             Ok(Some(PeerSessionEvent::IceConnectionState(state))) => {
                 eprintln!("ice: {state}");
                 last_ice = state.clone();
-                if state == "connected" || state == "completed" {
-                    return Ok(());
-                }
                 if state == "failed" {
                     return Err(anyhow!(
                         "ICE {state}. Same-PC host candidates should match; retry with a fresh offer/answer pair."
@@ -197,6 +199,7 @@ async fn wait_connected(
                 return Ok(());
             }
             Ok(Some(PeerSessionEvent::Command(_))) => {
+                eprintln!("datachannel: traffic");
                 return Ok(());
             }
             Ok(None) => return Err(anyhow!("event channel closed")),
@@ -204,7 +207,7 @@ async fn wait_connected(
         }
     }
     Err(anyhow!(
-        "timed out waiting for connected (last ice={last_ice})"
+        "timed out waiting for DataChannel open (pc={last_pc}, ice={last_ice})"
     ))
 }
 
