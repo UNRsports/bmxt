@@ -32,3 +32,8 @@ export type UiActionIR =
   | { kind: "setting_save" }
   | { kind: "setting_cancel" }
   | { kind: "setting_set"; key: string; value: string }
+  | { kind: "sync_bookmark_send"; device_id: string; mode: string; payload: string }
+  | { kind: "bookmark_backup" }
+  | { kind: "bookmark_restore"; as_bookmarks: string }
+  | { kind: "history_backup" }
+  | { kind: "history_restore"; as_bookmarks: string }

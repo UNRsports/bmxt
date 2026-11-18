@@ -36,6 +36,21 @@ move,,,,,move --window <id> [tabId…] | move --group <gid> --window <id> [tabId
 new-window,,,,,new-window <tabId…> | … | new-window,Effect `tabs_new_window`。パイプ右辺は page.open。,§7e。タブピッカー new-window も同形行を submit
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
+bookmark,,,,,bookmark …,単独 `bookmark` + Enter: msgs + promptPrefix。CRUD・Family 送信・バックアップ。,§9
+bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],無 folder: Effect `search_list`（`--bookmark`）。`--folder`: Effect `bookmark_list`（ローカル）。,--peers は search_query 経路
+bookmark,-add,,rest,,bookmark -add <url> [--title …] [--parent <id>],Effect `bookmark_create`。,
+bookmark,-folder,,rest,,bookmark -folder <title> [--parent <id>],Effect `bookmark_create_folder`。,
+bookmark,-remove,,rest,,bookmark -remove <id…> | … | bookmark -remove,Effect `bookmark_remove`。パイプ: bookmark / bookmark.folder（id）。,
+bookmark,-move,,rest,,bookmark -move <id…> --parent <id> [--index n] | … | bookmark -move --parent …,Effect `bookmark_move`。,
+bookmark,-send,,rest,,bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…> | … | bookmark -send …,UiAction `sync_bookmark_send`。`--open`→open_tabs · `--save`→bookmarks_import · `--both`→両方（省略=`--open`）。,
+bookmark,-backup,,none,,bookmark -backup,UiAction `bookmark_backup`（ZIP 版付き JSON）。,
+bookmark,-restore,,rest,,bookmark -restore,UiAction `bookmark_restore`（bookmarks.create で再構築）。,
+history,,,,,history …,単独 `history` + Enter: msgs + promptPrefix。一覧・削除・バックアップ。,§9
+history,-list,,rest,,history -list [<pattern>] [--device <id>|--peers],Effect `search_list`（`--history`）。,
+history,-delete,,rest,,history -delete <url…> | … | history -delete,Effect `history_delete_url`。,
+history,-delete-range,,rest,,history -delete-range --from <iso|ms> --to <iso|ms>,Effect `history_delete_range`。,
+history,-backup,,none,,history -backup,UiAction `history_backup`（ZIP）。DB 書き戻し不可。,
+history,-restore,,rest,,history -restore [--as-bookmarks],UiAction `history_restore`。一覧読込または BM 化。,
 open,,,,,open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | … | open …,HostEffect `open_url_new_tab` / `open_url_new_window` / `open_url_into_window` / `open_url_into_group`。パイプ右辺は stdin URL。,§7/7e。search destination も同フラグ
 jump,,,,,jump --tab <id> (--path|--needle…) | … | jump,UiAction `jump_target`。パイプ右辺は page.open / search.hit / dom.node。,§7。dom / search ピッカー Enter も同形行を submit
 tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`（browse 非依存の直接操作）。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化

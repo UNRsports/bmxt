@@ -7,6 +7,7 @@ export const BROWSE_ACCEPTS_BMXT_RULE_KINDS = [
   "page.window",
   "page.group",
   "bookmark",
+  "bookmark.folder",
   "history",
   "markdown.file",
   "search.hit",

@@ -107,6 +107,16 @@ export const COMMANDS: readonly CmdMeta[] = [
     usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
   },
   {
+    name: "bookmark",
+    aliases: [] as const,
+    usagePrimary: "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help"
+  },
+  {
+    name: "history",
+    aliases: [] as const,
+    usagePrimary: "history -list [<pattern>] [--device <id>|--peers] | history -delete <url…> | history -delete-range --from <iso> --to <iso> | history -backup | history -restore [--as-bookmarks] | history help"
+  },
+  {
     name: "open",
     aliases: [] as const,
     usagePrimary: "open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | <list> | open"

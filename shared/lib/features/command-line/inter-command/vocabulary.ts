@@ -47,6 +47,11 @@ export type StaticListKind = Exclude<ListRecordKind, "search.hit">
 export function bmxtRuleKindForSearchHitSource(source: string): string {
   const normalized = source.toLowerCase()
   if (normalized.includes("bookmark")) {
+    // EN: bookmark.folder sources (e.g. "bookmark.folder") must resolve before generic "bookmark".
+    // JA: "bookmark.folder" を含むソースは汎用 "bookmark" より先に解決する。
+    if (normalized.includes("folder")) {
+      return "bookmark.folder"
+    }
     return "bookmark"
   }
   if (normalized.includes("history")) {

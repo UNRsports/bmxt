@@ -5,6 +5,11 @@
 
 import type { HostEffect } from "../effect-types"
 import type { DispatchHostContext } from "../dispatch-context"
+import { applyBookmarkCreateEffect } from "./effects/bookmark-create"
+import { applyBookmarkCreateFolderEffect } from "./effects/bookmark-create-folder"
+import { applyBookmarkListEffect } from "./effects/bookmark-list"
+import { applyBookmarkMoveEffect } from "./effects/bookmark-move"
+import { applyBookmarkRemoveEffect } from "./effects/bookmark-remove"
 import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseCurrentTabEffect } from "./effects/close-current-tab"
 import { applyCloseCurrentWindowEffect } from "./effects/close-current-window"
@@ -13,6 +18,8 @@ import { applyDomListEffect } from "./effects/dom-list"
 import { applyExitPaneEffect } from "./effects/exit-pane"
 import { applyGroupAddEffect } from "./effects/group-add"
 import { applyGroupNewEffect } from "./effects/group-new"
+import { applyHistoryDeleteRangeEffect } from "./effects/history-delete-range"
+import { applyHistoryDeleteUrlEffect } from "./effects/history-delete-url"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
 import { applyOpenUrlIntoGroupEffect } from "./effects/open-url-into-group"
 import { applyOpenUrlIntoWindowEffect } from "./effects/open-url-into-window"
@@ -41,6 +48,16 @@ export async function applyOne(
   e: HostEffect
 ): Promise<string[]> {
   switch (e.kind) {
+    case "bookmark_create":
+      return applyBookmarkCreateEffect(ctx, e)
+    case "bookmark_create_folder":
+      return applyBookmarkCreateFolderEffect(ctx, e)
+    case "bookmark_list":
+      return applyBookmarkListEffect(ctx, e)
+    case "bookmark_move":
+      return applyBookmarkMoveEffect(ctx, e)
+    case "bookmark_remove":
+      return applyBookmarkRemoveEffect(ctx, e)
     case "clear_log":
       return applyClearLogEffect(ctx, e)
     case "close_current_tab":
@@ -57,6 +74,10 @@ export async function applyOne(
       return applyGroupAddEffect(ctx, e)
     case "group_new":
       return applyGroupNewEffect(ctx, e)
+    case "history_delete_range":
+      return applyHistoryDeleteRangeEffect(ctx, e)
+    case "history_delete_url":
+      return applyHistoryDeleteUrlEffect(ctx, e)
     case "navigate_current_tab":
       return applyNavigateCurrentTabEffect(ctx, e)
     case "open_url_into_group":

@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum UiAction {
+    #[serde(rename = "bookmark_backup")]
+    BookmarkBackup,
+    #[serde(rename = "bookmark_restore")]
+    BookmarkRestore {
+    as_bookmarks: String,
+    },
     #[serde(rename = "close_picker")]
     ClosePicker {
     slot: String,
@@ -16,6 +22,12 @@ pub enum UiAction {
     },
     #[serde(rename = "group_new_from_selection")]
     GroupNewFromSelection,
+    #[serde(rename = "history_backup")]
+    HistoryBackup,
+    #[serde(rename = "history_restore")]
+    HistoryRestore {
+    as_bookmarks: String,
+    },
     #[serde(rename = "jump_target")]
     JumpTarget {
     activate_link: i64,
@@ -87,6 +99,12 @@ pub enum UiAction {
     #[serde(rename = "sync_answer")]
     SyncAnswer {
     code: String,
+    },
+    #[serde(rename = "sync_bookmark_send")]
+    SyncBookmarkSend {
+    device_id: String,
+    mode: String,
+    payload: String,
     },
     #[serde(rename = "sync_connect")]
     SyncConnect {

@@ -29,7 +29,14 @@
       "domain": "bookmark",
       "description": "Bookmark entry",
       "coreKeys": ["url", "pageTitle"],
-      "optionalKeys": ["dateAdded", "bookmarkId"]
+      "optionalKeys": ["dateAdded", "bookmarkId", "parentId"]
+    },
+    {
+      "id": "bookmark.folder",
+      "domain": "bookmark",
+      "description": "Bookmark folder",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["bookmarkId", "parentId", "url"]
     },
     {
       "id": "history",

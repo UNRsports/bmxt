@@ -5,17 +5,24 @@
 
 export type HostEffect =
   | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
+  | { device_id: string; device_scope: string; folder_id: string; kind: "bookmark_list" }
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
+  | { end_ms: string; kind: "history_delete_range"; start_ms: string }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { group_id: number; kind: "group_add"; tab_ids: number[] }
   | { group_id: number; kind: "open_url_into_group"; url: string; window_id: number }
   | { group_id: number; kind: "tabs_move"; tab_ids: number[]; window_id: number }
+  | { ids: string; index: string; kind: "bookmark_move"; parent_id: string }
+  | { ids: string; kind: "bookmark_remove" }
+  | { kind: "bookmark_create"; parent_id: string; title: string; url: string }
+  | { kind: "bookmark_create_folder"; parent_id: string; title: string }
   | { kind: "clear_log" }
   | { kind: "close_current_tab" }
   | { kind: "close_current_window" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }
   | { kind: "group_new"; tab_ids: number[] }
+  | { kind: "history_delete_url"; urls: string }
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_into_window"; url: string; window_id: number }
   | { kind: "open_url_new_tab"; url: string }
@@ -66,6 +73,11 @@ export type UiActionIR =
   | { kind: "setting_save" }
   | { kind: "setting_cancel" }
   | { kind: "setting_set"; key: string; value: string }
+  | { kind: "sync_bookmark_send"; device_id: string; mode: string; payload: string }
+  | { kind: "bookmark_backup" }
+  | { kind: "bookmark_restore"; as_bookmarks: string }
+  | { kind: "history_backup" }
+  | { kind: "history_restore"; as_bookmarks: string }
 
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"

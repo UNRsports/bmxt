@@ -5,6 +5,7 @@
 export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "aboutbmxt",
   "back",
+  "bookmark",
   "browse",
   "clear",
   "close",
@@ -13,6 +14,7 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "forward",
   "group",
   "help",
+  "history",
   "jump",
   "move",
   "nav",

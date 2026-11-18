@@ -440,11 +440,11 @@ bmxt-browser-backup/
 
 **実装チェック（段階）**
 
-- [ ] **9.0 語彙土台:** キャッシュに `bookmarkId` / folder 判定を保持（`bookmark-revision.ts`）。adapter / ListResult / `from-list-result` で optionalKeys を埋める。`bmxt-rule.json` に `bookmark.folder`。picker の open-destination を bookmark 行にも開放
-- [ ] **9.1 ローカル CRUD:** codegen effects（上記）+ handlers + Rust `cmd/bookmark.rs` / `history.rs`。pipe `| bookmark -remove` / `-move` · `| history -delete`。入力検証必須
-- [ ] **9.2 Family 送信:** RPC `bookmarks_import` → `bookmarks_import_result` · `applyRemoteBookmarksImport`。UiAction `sync_bookmark_send { device_id, mode, payload }`（mode: `open|save|both`）。`--open`→`open_tabs` · `--save`→import · `--both`→両方（片方失敗でも msgs）。ピッカー Family 宛 3 択
-- [ ] **9.3 バックアップ:** `shared/lib/features/backup/`（settings/snapshot の FSA・handle IDB・zip を参照）。`bookmark -backup/-restore` · `history -backup/-restore`（履歴は一覧/`--as-bookmarks`）
-- [ ] **9.4 文書・検証:** i18n EN+JA · `map_command.csv` / README · `codegen` → `build:wasm` → `verify:manifest` → `verify:host-blind` → `check:generated` → `cargo test -p bmxt-core` → `tsc` → unit → build
+- [x] **9.0 語彙土台:** キャッシュに `bookmarkId` / folder 判定を保持（`bookmark-revision.ts`）。adapter / ListResult / `from-list-result` で optionalKeys を埋める。`bmxt-rule.json` に `bookmark.folder`。picker の open-destination を bookmark 行にも開放
+- [x] **9.1 ローカル CRUD:** codegen effects（上記）+ handlers + Rust `cmd/bookmark.rs` / `history_cmd.rs`。pipe `| bookmark -remove` / `-move` · `| history -delete`。入力検証必須
+- [x] **9.2 Family 送信:** RPC `bookmarks_import` → `bookmarks_import_result` · `applyRemoteBookmarksImport`。UiAction `sync_bookmark_send { device_id, mode, payload }`（mode: `open|save|both`）。`--open`→`open_tabs` · `--save`→import · `--both`→両方（片方失敗でも msgs）
+- [x] **9.3 バックアップ:** `shared/lib/features/backup/`（zip 版付き JSON）。`bookmark -backup/-restore` · `history -backup/-restore`（履歴は一覧/`--as-bookmarks`）
+- [x] **9.4 文書・検証:** i18n EN+JA · `map_command.csv` / README · `codegen` → `build:wasm` → `verify:manifest` → `verify:host-blind` → `check:generated` → `cargo test -p bmxt-core` → `tsc` → unit
 
 **手元スモーク**
 

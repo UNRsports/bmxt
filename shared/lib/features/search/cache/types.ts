@@ -7,6 +7,8 @@ export type HistoryCacheEntry = {
   title: string
   /** `chrome.history.HistoryItem.lastVisitTime` */
   lastVisitTime: number
+  /** `chrome.history.HistoryItem.visitCount` when known. */
+  visitCount: number
 }
 
 export type SearchHistoryCachePayload = {
@@ -20,9 +22,15 @@ export type SearchHistoryCachePayload = {
 }
 
 export type BookmarkCacheEntry = {
+  /** `chrome.bookmarks.BookmarkTreeNode.id` */
+  bookmarkId: string
+  /** Parent folder id when known; empty for roots. */
+  parentId: string
   title: string
+  /** Empty when this entry is a folder. */
   url: string
   dateAdded: number
+  isFolder: boolean
 }
 
 export type SearchBookmarkCachePayload = {

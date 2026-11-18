@@ -26,17 +26,26 @@ export async function searchBookmarkLines(
       return []
     }
     const b = flat[index]!
+    if (b.isFolder) {
+      continue
+    }
     const blob = `${b.title} ${b.url}`
     if (!matchAll && !matchesNeedle(blob, pattern)) {
       continue
     }
     hitCount += 1
-    matches.push(
-      ...linesForSearchElement("bookmark", {
-        title: b.title || "(untitled)",
-        url: b.url
-      })
-    )
+    const fields: Record<string, string> = {
+      title: b.title || "(untitled)",
+      url: b.url,
+      bookmarkId: b.bookmarkId
+    }
+    if (b.parentId.length > 0) {
+      fields.parentId = b.parentId
+    }
+    if (b.dateAdded > 0) {
+      fields.dateAdded = String(b.dateAdded)
+    }
+    matches.push(...linesForSearchElement("bookmark", fields))
   }
   if (shouldCancel?.()) {
     return []

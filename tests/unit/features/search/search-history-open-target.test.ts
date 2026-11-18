@@ -37,14 +37,14 @@ describe("searchEntryOffersOpenDestination", () => {
     assert.equal(searchEntryOffersOpenDestination(row), true)
   })
 
-  it("returns false for bookmark-only rows", () => {
+  it("returns true for bookmark-only rows", () => {
     const row = entry({
       id: "b1",
       source: "bookmark",
       title: "Example",
       url: "https://example.com"
     })
-    assert.equal(searchEntryOffersOpenDestination(row), false)
+    assert.equal(searchEntryOffersOpenDestination(row), true)
   })
 
   it("returns false for page-only rows", () => {

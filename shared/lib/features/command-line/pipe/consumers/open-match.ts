@@ -5,6 +5,7 @@ import { classifyPipeConsumer, type OpenPipeMode } from "./classify.ts"
 export const OPEN_ACCEPTS_BMXT_RULE_KINDS = [
   "page.open",
   "bookmark",
+  "bookmark.folder",
   "history",
   "markdown.file",
   "search.hit"

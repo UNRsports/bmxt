@@ -98,6 +98,15 @@ export type SyncService = {
     deviceId: string,
     op: SyncTabsOp
   ): Promise<{ ok: boolean; detail: string | null }>
+  /**
+   * EN: Send bookmarks_import to a remote device (creates bookmarks there).
+   * JA: リモートデバイスへ bookmarks_import を送信してブックマークを作成させる。
+   */
+  importBookmarks(
+    deviceId: string,
+    parentId: string | null,
+    items: Array<{ url: string; title: string }>
+  ): Promise<{ ok: boolean; lines: string[]; created: number }>
   ping(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
   /**
    * EN: Roster/discovery peers that currently have a DataChannel and answer ping.
@@ -643,6 +652,31 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         return { ok: false, detail: `not_connected:${state}` }
       }
       return s.commandBus.tabsOps(deviceId, op)
+    },
+
+    async importBookmarks(
+      deviceId: string,
+      parentId: string | null,
+      items: Array<{ url: string; title: string }>
+    ) {
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const state = await s.commandBus.connect(deviceId)
+      if (state !== "connected") {
+        return {
+          ok: false,
+          lines: [line("sync.open.notConnected"), line(`sync.connect.state:${state}`)],
+          created: 0
+        }
+      }
+      const result = await s.commandBus.importBookmarks(deviceId, parentId, items)
+      return {
+        ok: result.ok,
+        lines: [
+          line(`sync.bookmarksImport.done:ok=${result.ok};created=${result.created};detail=${result.detail ?? ""}`)
+        ],
+        created: result.created
+      }
     },
 
     async ping(deviceId: string) {

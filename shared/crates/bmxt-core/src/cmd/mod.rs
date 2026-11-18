@@ -23,6 +23,10 @@ pub mod tutorial;
 
 pub mod sync;
 
+pub mod bookmark;
+
+pub mod history_cmd;
+
 pub mod open;
 
 pub mod jump;
@@ -58,6 +62,8 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "setting" => setting::run(args),
         "tutorial" => tutorial::run(args),
         "sync" => sync::run(args),
+        "bookmark" => bookmark::run(args),
+        "history" => history_cmd::run(args),
         "open" => open::run(args),
         "jump" => jump::run(args),
         "move" => move_cmd::run(args),

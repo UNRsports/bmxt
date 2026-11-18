@@ -54,6 +54,28 @@ pub enum PipeConsumerClass {
         group_id: i32,
         ungroup: bool,
     },
+    #[serde(rename = "bookmark-remove")]
+    BookmarkRemove,
+    #[serde(rename = "bookmark-move")]
+    BookmarkMove {
+        #[serde(rename = "parentId")]
+        parent_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        index: Option<i32>,
+    },
+    #[serde(rename = "bookmark-send")]
+    BookmarkSend {
+        #[serde(rename = "deviceId")]
+        device_id: String,
+        /// "open" | "save" | "both"
+        mode: String,
+        #[serde(rename = "parentId", skip_serializing_if = "Option::is_none")]
+        parent_id: Option<String>,
+        #[serde(rename = "groupTitle", skip_serializing_if = "Option::is_none")]
+        group_title: Option<String>,
+    },
+    #[serde(rename = "history-delete")]
+    HistoryDelete,
 }
 
 fn split_tokens(segment: &str) -> Vec<String> {
@@ -221,6 +243,84 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
     })
 }
 
+fn parse_bookmark_remove(parts: &[String]) -> Option<PipeConsumerClass> {
+    if parts.len() != 2 {
+        return None;
+    }
+    if normalize_token(&parts[0]) != "bookmark" || parts[1] != "-remove" {
+        return None;
+    }
+    Some(PipeConsumerClass::BookmarkRemove)
+}
+
+fn parse_bookmark_move(parts: &[String]) -> Option<PipeConsumerClass> {
+    if parts.len() < 4 || normalize_token(&parts[0]) != "bookmark" || parts[1] != "-move" {
+        return None;
+    }
+    let mut parent_id: Option<String> = None;
+    let mut index: Option<i32> = None;
+    let mut i = 2usize;
+    while i < parts.len() {
+        if parts[i] == "--parent" {
+            parent_id = Some(parts.get(i + 1)?.to_string());
+            i += 2;
+        } else if parts[i] == "--index" {
+            let n = parts.get(i + 1)?.parse::<i32>().ok()?;
+            if n < 0 { return None; }
+            index = Some(n);
+            i += 2;
+        } else {
+            return None;
+        }
+    }
+    Some(PipeConsumerClass::BookmarkMove {
+        parent_id: parent_id?,
+        index,
+    })
+}
+
+fn parse_bookmark_send(parts: &[String]) -> Option<PipeConsumerClass> {
+    if parts.len() < 3 || normalize_token(&parts[0]) != "bookmark" || parts[1] != "-send" {
+        return None;
+    }
+    let device_id = parts[2].trim().to_string();
+    if device_id.is_empty() || device_id.starts_with('-') {
+        return None;
+    }
+    let mut mode = "open".to_string();
+    let mut parent_id: Option<String> = None;
+    let mut group_title: Option<String> = None;
+    let mut i = 3usize;
+    while i < parts.len() {
+        match parts[i].as_str() {
+            "--open" => { mode = "open".to_string(); i += 1; }
+            "--save" => { mode = "save".to_string(); i += 1; }
+            "--both" => { mode = "both".to_string(); i += 1; }
+            "--parent" => {
+                parent_id = Some(parts.get(i + 1)?.to_string());
+                i += 2;
+            }
+            "--group" => {
+                let title = parts.get(i + 1..)?.join(" ");
+                group_title = if title.is_empty() { None } else { Some(title) };
+                break;
+            }
+            _ => return None,
+        }
+    }
+    Some(PipeConsumerClass::BookmarkSend { device_id, mode, parent_id, group_title })
+}
+
+fn parse_history_delete(parts: &[String]) -> Option<PipeConsumerClass> {
+    if parts.len() != 2 {
+        return None;
+    }
+    if normalize_token(&parts[0]) != "history" || parts[1] != "-delete" {
+        return None;
+    }
+    Some(PipeConsumerClass::HistoryDelete)
+}
+
 /** EN: Classify a pipe RHS segment into a consumer id (+ flags), or `None`. */
 pub fn classify_pipe_consumer(segment: &str) -> Option<PipeConsumerClass> {
     let parts = split_tokens(segment);
@@ -256,6 +356,18 @@ pub fn classify_pipe_consumer(segment: &str) -> Option<PipeConsumerClass> {
         return Some(c);
     }
     if let Some(c) = parse_tab_send(&parts) {
+        return Some(c);
+    }
+    if let Some(c) = parse_bookmark_remove(&parts) {
+        return Some(c);
+    }
+    if let Some(c) = parse_bookmark_move(&parts) {
+        return Some(c);
+    }
+    if let Some(c) = parse_bookmark_send(&parts) {
+        return Some(c);
+    }
+    if let Some(c) = parse_history_delete(&parts) {
         return Some(c);
     }
     None

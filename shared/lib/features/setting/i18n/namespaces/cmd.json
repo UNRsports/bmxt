@@ -1278,5 +1278,49 @@
   "cmd.sync.link.statusConnected": {
     "ja": "sync {names}",
     "en": "sync {names}"
+  },
+  "cmd.bookmark.error.unknownOption": {
+    "ja": "error: 不明な bookmark オプション: {option}",
+    "en": "error: unknown bookmark option: {option}"
+  },
+  "cmd.bookmark.usage.line1": {
+    "ja": "usage: bookmark -list [--folder <id>] [--device <id>|--peers]",
+    "en": "usage: bookmark -list [--folder <id>] [--device <id>|--peers]"
+  },
+  "cmd.bookmark.usage.line2": {
+    "ja": "  bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>]",
+    "en": "  bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>]"
+  },
+  "cmd.bookmark.usage.line3": {
+    "ja": "  bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]",
+    "en": "  bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]"
+  },
+  "cmd.bookmark.usage.line4": {
+    "ja": "  bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…>",
+    "en": "  bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…>"
+  },
+  "cmd.bookmark.usage.line5": {
+    "ja": "  bookmark -backup | bookmark -restore | … | bookmark -remove | … | bookmark -send …",
+    "en": "  bookmark -backup | bookmark -restore | … | bookmark -remove | … | bookmark -send …"
+  },
+  "cmd.history.error.unknownOption": {
+    "ja": "error: 不明な history オプション: {option}",
+    "en": "error: unknown history option: {option}"
+  },
+  "cmd.history.usage.line1": {
+    "ja": "usage: history -list [<pattern>] [--device <id>|--peers]",
+    "en": "usage: history -list [<pattern>] [--device <id>|--peers]"
+  },
+  "cmd.history.usage.line2": {
+    "ja": "  history -delete <url…> | history -delete-range --from <iso|ms> --to <iso|ms>",
+    "en": "  history -delete <url…> | history -delete-range --from <iso|ms> --to <iso|ms>"
+  },
+  "cmd.history.usage.line3": {
+    "ja": "  history -backup | history -restore [--as-bookmarks]",
+    "en": "  history -backup | history -restore [--as-bookmarks]"
+  },
+  "cmd.history.usage.line4": {
+    "ja": "  履歴 DB への書き戻しは不可。restore は一覧読み込みまたは BM 化。",
+    "en": "  History DB rewrite is unsupported; restore loads a list or creates bookmarks."
   }
 }

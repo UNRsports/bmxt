@@ -99,6 +99,26 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         pattern: stringScalar(record.fields.pattern),
         ...deviceFields(record)
       }
+      const bookmarkId = toScalar(record.fields.bookmarkId)
+      if (typeof bookmarkId === "string" && bookmarkId.length > 0) {
+        fields.bookmarkId = bookmarkId
+      }
+      const parentId = toScalar(record.fields.parentId)
+      if (typeof parentId === "string" && parentId.length > 0) {
+        fields.parentId = parentId
+      }
+      const dateAdded = toScalar(record.fields.dateAdded)
+      if (typeof dateAdded === "number" && Number.isFinite(dateAdded)) {
+        fields.dateAdded = dateAdded
+      }
+      const lastVisitTime = toScalar(record.fields.lastVisitTime)
+      if (typeof lastVisitTime === "number" && Number.isFinite(lastVisitTime)) {
+        fields.lastVisitTime = lastVisitTime
+      }
+      const visitCount = toScalar(record.fields.visitCount)
+      if (typeof visitCount === "number" && Number.isFinite(visitCount)) {
+        fields.visitCount = visitCount
+      }
       return bmxtRuleRecord(kind, fields)
     }
     case "dom.node":

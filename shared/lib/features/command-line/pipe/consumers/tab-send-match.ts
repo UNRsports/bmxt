@@ -6,6 +6,7 @@ export const TAB_SEND_ACCEPTS_BMXT_RULE_KINDS = [
   "page.open",
   "page.group",
   "bookmark",
+  "bookmark.folder",
   "history",
   "markdown.file",
   "search.hit"

@@ -6,6 +6,33 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum HostEffect {
+    #[serde(rename = "bookmark_create")]
+    BookmarkCreate {
+    parent_id: String,
+    title: String,
+    url: String,
+    },
+    #[serde(rename = "bookmark_create_folder")]
+    BookmarkCreateFolder {
+    parent_id: String,
+    title: String,
+    },
+    #[serde(rename = "bookmark_list")]
+    BookmarkList {
+    device_id: String,
+    device_scope: String,
+    folder_id: String,
+    },
+    #[serde(rename = "bookmark_move")]
+    BookmarkMove {
+    ids: String,
+    index: String,
+    parent_id: String,
+    },
+    #[serde(rename = "bookmark_remove")]
+    BookmarkRemove {
+    ids: String,
+    },
     #[serde(rename = "clear_log")]
     ClearLog,
     #[serde(rename = "close_current_tab")]
@@ -37,6 +64,15 @@ pub enum HostEffect {
     #[serde(rename = "group_new")]
     GroupNew {
     tab_ids: Vec<i64>,
+    },
+    #[serde(rename = "history_delete_range")]
+    HistoryDeleteRange {
+    end_ms: String,
+    start_ms: String,
+    },
+    #[serde(rename = "history_delete_url")]
+    HistoryDeleteUrl {
+    urls: String,
     },
     #[serde(rename = "navigate_current_tab")]
     NavigateCurrentTab {

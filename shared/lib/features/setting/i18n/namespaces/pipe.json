@@ -86,5 +86,25 @@
   "pipe.tabChip.multiActivateForbidden": {
     "ja": "error: タブ移動は一つのタブを指定してください。複数のタブ指定後は「|（パイプ）」による接続で他コマンドにより一括操作をする前提となります",
     "en": "error: activate one tab only. After selecting multiple tabs, connect with `|` (pipe) to batch other commands"
+  },
+  "pipe.bookmarkRemove.noBookmarks": {
+    "ja": "error: パイプ入力に削除対象のブックマーク（bookmark / bookmark.folder）がありません",
+    "en": "error: pipe input has no bookmark records to remove"
+  },
+  "pipe.bookmarkMove.noBookmarks": {
+    "ja": "error: パイプ入力に移動対象のブックマーク（bookmark / bookmark.folder）がありません",
+    "en": "error: pipe input has no bookmark records to move"
+  },
+  "pipe.bookmarkSend.badArgs": {
+    "ja": "error: パイプ右辺は `bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>]` です",
+    "en": "error: pipe consumer is `bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>]`"
+  },
+  "pipe.bookmarkSend.noUrls": {
+    "ja": "error: パイプ入力に送信できるブックマーク URL がありません",
+    "en": "error: no sendable bookmark URLs in the pipe stream"
+  },
+  "pipe.historyDelete.noUrls": {
+    "ja": "error: パイプ入力に削除対象の履歴 URL がありません",
+    "en": "error: pipe input has no history URLs to delete"
   }
 }

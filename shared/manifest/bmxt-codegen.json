@@ -397,6 +397,87 @@
       ]
     },
     {
+      "module": "bookmark",
+      "canonicalName": "bookmark",
+      "aliases": [],
+      "usagePrimary": "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["--folder", "--device", "--peers"],
+          "tail": "rest"
+        },
+        {
+          "head": "-add",
+          "tail": "rest"
+        },
+        {
+          "head": "-folder",
+          "tail": "rest"
+        },
+        {
+          "head": "-remove",
+          "tail": "rest"
+        },
+        {
+          "head": "-move",
+          "tail": "rest"
+        },
+        {
+          "head": "-send",
+          "tail": "rest"
+        },
+        {
+          "head": "-backup",
+          "tail": "none"
+        },
+        {
+          "head": "-restore",
+          "trailingTokens": ["--as-bookmarks"],
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "history_cmd",
+      "canonicalName": "history",
+      "aliases": [],
+      "usagePrimary": "history -list [<pattern>] [--device <id>|--peers] | history -delete <url…> | history -delete-range --from <iso> --to <iso> | history -backup | history -restore [--as-bookmarks] | history help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["--device", "--peers"],
+          "tail": "rest"
+        },
+        {
+          "head": "-delete",
+          "tail": "rest"
+        },
+        {
+          "head": "-delete-range",
+          "trailingTokens": ["--from", "--to"],
+          "tail": "rest"
+        },
+        {
+          "head": "-backup",
+          "tail": "none"
+        },
+        {
+          "head": "-restore",
+          "trailingTokens": ["--as-bookmarks"],
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
       "module": "open",
       "canonicalName": "open",
       "aliases": [],
@@ -698,6 +779,84 @@
       "tsHandlerExport": "applySearchListEffect"
     },
     {
+      "kind": "bookmark_create",
+      "rustVariant": "BookmarkCreate",
+      "shape": "record",
+      "fields": {
+        "url": "string",
+        "title": "string",
+        "parent_id": "string"
+      },
+      "tsHandlerFile": "bookmark-create",
+      "tsHandlerExport": "applyBookmarkCreateEffect"
+    },
+    {
+      "kind": "bookmark_create_folder",
+      "rustVariant": "BookmarkCreateFolder",
+      "shape": "record",
+      "fields": {
+        "title": "string",
+        "parent_id": "string"
+      },
+      "tsHandlerFile": "bookmark-create-folder",
+      "tsHandlerExport": "applyBookmarkCreateFolderEffect"
+    },
+    {
+      "kind": "bookmark_remove",
+      "rustVariant": "BookmarkRemove",
+      "shape": "record",
+      "fields": {
+        "ids": "string"
+      },
+      "tsHandlerFile": "bookmark-remove",
+      "tsHandlerExport": "applyBookmarkRemoveEffect"
+    },
+    {
+      "kind": "bookmark_move",
+      "rustVariant": "BookmarkMove",
+      "shape": "record",
+      "fields": {
+        "ids": "string",
+        "parent_id": "string",
+        "index": "string"
+      },
+      "tsHandlerFile": "bookmark-move",
+      "tsHandlerExport": "applyBookmarkMoveEffect"
+    },
+    {
+      "kind": "bookmark_list",
+      "rustVariant": "BookmarkList",
+      "shape": "record",
+      "fields": {
+        "folder_id": "string",
+        "device_scope": "string",
+        "device_id": "string"
+      },
+      "tsHandlerFile": "bookmark-list",
+      "tsHandlerExport": "applyBookmarkListEffect"
+    },
+    {
+      "kind": "history_delete_url",
+      "rustVariant": "HistoryDeleteUrl",
+      "shape": "record",
+      "fields": {
+        "urls": "string"
+      },
+      "tsHandlerFile": "history-delete-url",
+      "tsHandlerExport": "applyHistoryDeleteUrlEffect"
+    },
+    {
+      "kind": "history_delete_range",
+      "rustVariant": "HistoryDeleteRange",
+      "shape": "record",
+      "fields": {
+        "start_ms": "string",
+        "end_ms": "string"
+      },
+      "tsHandlerFile": "history-delete-range",
+      "tsHandlerExport": "applyHistoryDeleteRangeEffect"
+    },
+    {
       "kind": "tabs_nu",
       "rustVariant": "TabsNu",
       "shape": "unit",
@@ -924,6 +1083,42 @@
       "fields": {
         "key": "string",
         "value": "string"
+      }
+    },
+    {
+      "kind": "sync_bookmark_send",
+      "rustVariant": "SyncBookmarkSend",
+      "shape": "record",
+      "fields": {
+        "device_id": "string",
+        "mode": "string",
+        "payload": "string"
+      }
+    },
+    {
+      "kind": "bookmark_backup",
+      "rustVariant": "BookmarkBackup",
+      "shape": "unit"
+    },
+    {
+      "kind": "bookmark_restore",
+      "rustVariant": "BookmarkRestore",
+      "shape": "record",
+      "fields": {
+        "as_bookmarks": "string"
+      }
+    },
+    {
+      "kind": "history_backup",
+      "rustVariant": "HistoryBackup",
+      "shape": "unit"
+    },
+    {
+      "kind": "history_restore",
+      "rustVariant": "HistoryRestore",
+      "shape": "record",
+      "fields": {
+        "as_bookmarks": "string"
       }
     }
   ]

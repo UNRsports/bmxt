@@ -306,6 +306,28 @@ export type SyncBusCommand =
       first: string
     }
   | {
+      /**
+       * EN: Import a list of http(s) bookmarks into the local bookmark tree.
+       * JA: http(s) ブックマークリストをローカルブックマークツリーへ取り込む。
+       */
+      type: "bookmarks_import"
+      id: string
+      from: SyncDeviceId
+      /** EN: Destination folder id; null = Bookmarks Bar root. */
+      parentId: string | null
+      items: Array<{ url: string; title: string }>
+    }
+  | {
+      type: "bookmarks_import_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      /** EN: Number of bookmarks successfully created. */
+      created: number
+    }
+  | {
       /** EN: Announce other live DataChannel peers so the receiver can mesh. */
       type: "mesh_peers"
       id: string

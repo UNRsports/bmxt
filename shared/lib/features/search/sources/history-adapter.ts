@@ -63,12 +63,17 @@ export async function searchHistoryLines(
       continue
     }
     hitCount += 1
-    matches.push(
-      ...linesForSearchElement("history", {
-        title: title || "(no title)",
-        url: url || "(no url)"
-      })
-    )
+    const fields: Record<string, string> = {
+      title: title || "(no title)",
+      url: url || "(no url)"
+    }
+    if (it.lastVisitTime > 0) {
+      fields.lastVisitTime = String(it.lastVisitTime)
+    }
+    if (it.visitCount > 0) {
+      fields.visitCount = String(it.visitCount)
+    }
+    matches.push(...linesForSearchElement("history", fields))
   }
 
   if (shouldCancel?.()) {

@@ -79,6 +79,15 @@ import {
   applySettingSetCui,
   ensureSettingDraftState
 } from "../../setting/setting-cui-apply"
+import {
+  exportBookmarkBackup,
+  restoreBookmarksFromFile
+} from "../../backup/bookmark-backup.ts"
+import {
+  exportHistoryBackup,
+  restoreHistoryFromFile
+} from "../../backup/history-backup.ts"
+import { importRemoteBookmarks } from "../../sync/bus/remote-bookmarks-import.ts"
 
 function finishCommand(ctx: CommandDispatchContext): void {
   ctx.deps.appendCommandToHistory(ctx.trimmed)
@@ -284,6 +293,16 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySettingCancel(ctx)
     case "setting_set":
       return applySettingSet(ctx, action.key, action.value)
+    case "sync_bookmark_send":
+      return applySyncBookmarkSend(ctx, action.device_id, action.mode, action.payload)
+    case "bookmark_backup":
+      return applyBookmarkBackup(ctx)
+    case "bookmark_restore":
+      return applyBookmarkRestore(ctx, action.as_bookmarks)
+    case "history_backup":
+      return applyHistoryBackup(ctx)
+    case "history_restore":
+      return applyHistoryRestore(ctx, action.as_bookmarks)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -366,6 +385,16 @@ export async function applyUiActionForSegment(
       return applySettingCancelSegment(ctx)
     case "setting_set":
       return applySettingSetSegment(ctx, action.key, action.value)
+    case "sync_bookmark_send":
+      return applySyncBookmarkSendSegment(ctx, action.device_id, action.mode, action.payload)
+    case "bookmark_backup":
+      return applyBookmarkBackupSegment(ctx)
+    case "bookmark_restore":
+      return applyBookmarkRestoreSegment(ctx, action.as_bookmarks)
+    case "history_backup":
+      return applyHistoryBackupSegment(ctx)
+    case "history_restore":
+      return applyHistoryRestoreSegment(ctx, action.as_bookmarks)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -1332,4 +1361,219 @@ function applyContinuationPrompt(ctx: CommandDispatchContext, prefix: string): b
   setContinuationPrompt(ctx.deps, prefix)
   ctx.deps.setSubCmdPicker(null)
   return true
+}
+
+// ---- bookmark-send ----
+
+function parseBookmarkSendPayload(payload: string): {
+  urls: string[]
+  groupTitle: string | null
+  parentId: string | null
+} {
+  const parts = payload.trim().split(/\s+/).filter((p) => p.length > 0)
+  let groupTitle: string | null = null
+  let parentId: string | null = null
+  const urls: string[] = []
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i]!
+    if (part === "--group" && i + 1 < parts.length) {
+      groupTitle = parts[i + 1]!
+      i += 1
+      continue
+    }
+    if (part === "--parent" && i + 1 < parts.length) {
+      parentId = parts[i + 1]!
+      i += 1
+      continue
+    }
+    urls.push(part)
+  }
+  return { urls, groupTitle, parentId }
+}
+
+function applySyncBookmarkSend(
+  ctx: CommandDispatchContext,
+  deviceId: string,
+  mode: string,
+  payload: string
+): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () =>
+    runSyncBookmarkSend(deviceId, mode, payload)
+  )
+  return true
+}
+
+async function applySyncBookmarkSendSegment(
+  ctx: CommandDispatchContext,
+  deviceId: string,
+  mode: string,
+  payload: string
+): Promise<SegmentOutcome> {
+  return syncUiSegmentOutcome(ctx.locale, () =>
+    runSyncBookmarkSend(deviceId, mode, payload)
+  )
+}
+
+async function runSyncBookmarkSend(
+  deviceId: string,
+  mode: string,
+  payload: string
+): Promise<{ ok: boolean; lines: string[] }> {
+  const { urls, groupTitle, parentId } = parseBookmarkSendPayload(payload)
+  if (urls.length === 0) {
+    return { ok: false, lines: ["sync.bookmarkSend.noUrls"] }
+  }
+  const items = urls.map((url) => ({ url, title: url }))
+
+  const shouldOpen = mode === "open" || mode === "both"
+  const shouldSave = mode === "save" || mode === "both"
+
+  const lines: string[] = []
+  let ok = true
+
+  if (shouldOpen) {
+    const { getSyncService: getService } = await import("../../sync/facade/sync-service.ts")
+    const result = await getService().openRemote(deviceId, urls, groupTitle)
+    lines.push(...result.lines)
+    if (!result.ok) {
+      ok = false
+    }
+  }
+  if (shouldSave) {
+    const importResult = await importRemoteBookmarks(deviceId, parentId, items)
+    lines.push(...importResult.lines)
+    if (!importResult.ok) {
+      ok = false
+    }
+  }
+  return { ok, lines }
+}
+
+// ---- bookmark-backup / bookmark-restore ----
+
+function applyBookmarkBackup(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    try {
+      const result = await exportBookmarkBackup()
+      logLines.push(`bookmark.backup.ok:file=${result.filename};count=${result.nodeCount}`)
+    } catch (e) {
+      logLines.push(`bookmark.backup.error:${e instanceof Error ? e.message : String(e)}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyBookmarkBackupSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  try {
+    const result = await exportBookmarkBackup()
+    return segmentSuccess([`bookmark.backup.ok:file=${result.filename};count=${result.nodeCount}`])
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return segmentFailure("runtime", [`bookmark.backup.error:${message}`])
+  }
+}
+
+function applyBookmarkRestore(ctx: CommandDispatchContext, _asBookmarks: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    const result = await restoreBookmarksFromFile()
+    if (!result.ok) {
+      if ("cancelled" in result && result.cancelled) {
+        logLines.push("bookmark.restore.cancelled")
+      } else if ("error" in result) {
+        logLines.push(`bookmark.restore.error:${result.error}`)
+      }
+    } else {
+      logLines.push(`bookmark.restore.ok:created=${result.created}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyBookmarkRestoreSegment(
+  ctx: CommandDispatchContext,
+  _asBookmarks: string
+): Promise<SegmentOutcome> {
+  const result = await restoreBookmarksFromFile()
+  if (!result.ok) {
+    if ("cancelled" in result && result.cancelled) {
+      return segmentFailure("interactive", ["bookmark.restore.cancelled"])
+    }
+    return segmentFailure("runtime", ["error" in result ? `bookmark.restore.error:${result.error}` : "bookmark.restore.failed"])
+  }
+  return segmentSuccess([`bookmark.restore.ok:created=${result.created}`])
+}
+
+// ---- history-backup / history-restore ----
+
+function applyHistoryBackup(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    try {
+      const result = await exportHistoryBackup()
+      logLines.push(`history.backup.ok:file=${result.filename};count=${result.itemCount}`)
+    } catch (e) {
+      logLines.push(`history.backup.error:${e instanceof Error ? e.message : String(e)}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyHistoryBackupSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  try {
+    const result = await exportHistoryBackup()
+    return segmentSuccess([`history.backup.ok:file=${result.filename};count=${result.itemCount}`])
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return segmentFailure("runtime", [`history.backup.error:${message}`])
+  }
+}
+
+function historyRestoreMode(asBookmarks: string): "url" | "as-bookmarks" {
+  return asBookmarks.trim() === "1" ? "as-bookmarks" : "url"
+}
+
+function applyHistoryRestore(ctx: CommandDispatchContext, asBookmarks: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    const result = await restoreHistoryFromFile(historyRestoreMode(asBookmarks))
+    if (!result.ok) {
+      if ("cancelled" in result && result.cancelled) {
+        logLines.push("history.restore.cancelled")
+      } else if ("error" in result) {
+        logLines.push(`history.restore.error:${result.error}`)
+      }
+    } else {
+      logLines.push(`history.restore.ok:restored=${result.restored}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyHistoryRestoreSegment(
+  ctx: CommandDispatchContext,
+  asBookmarks: string
+): Promise<SegmentOutcome> {
+  const result = await restoreHistoryFromFile(historyRestoreMode(asBookmarks))
+  if (!result.ok) {
+    if ("cancelled" in result && result.cancelled) {
+      return segmentFailure("interactive", ["history.restore.cancelled"])
+    }
+    return segmentFailure("runtime", ["error" in result ? `history.restore.error:${result.error}` : "history.restore.failed"])
+  }
+  return segmentSuccess([`history.restore.ok:restored=${result.restored}`])
 }

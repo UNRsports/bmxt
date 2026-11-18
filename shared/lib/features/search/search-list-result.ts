@@ -101,6 +101,33 @@ export function buildSearchListResult(
     if (pageMatchesJson !== null) {
       fields[SEARCH_HIT_PAGE_MATCHES_FIELD] = pageMatchesJson
     }
+    const meta = entry.meta
+    if (meta) {
+      if (typeof meta.bookmarkId === "string" && meta.bookmarkId.length > 0) {
+        fields.bookmarkId = meta.bookmarkId
+      }
+      if (typeof meta.parentId === "string" && meta.parentId.length > 0) {
+        fields.parentId = meta.parentId
+      }
+      if (typeof meta.dateAdded === "string" && meta.dateAdded.length > 0) {
+        const n = Number.parseInt(meta.dateAdded, 10)
+        if (Number.isFinite(n)) {
+          fields.dateAdded = n
+        }
+      }
+      if (typeof meta.lastVisitTime === "string" && meta.lastVisitTime.length > 0) {
+        const n = Number.parseFloat(meta.lastVisitTime)
+        if (Number.isFinite(n)) {
+          fields.lastVisitTime = n
+        }
+      }
+      if (typeof meta.visitCount === "string" && meta.visitCount.length > 0) {
+        const n = Number.parseInt(meta.visitCount, 10)
+        if (Number.isFinite(n)) {
+          fields.visitCount = n
+        }
+      }
+    }
     return {
       kind: "search.hit",
       fields,

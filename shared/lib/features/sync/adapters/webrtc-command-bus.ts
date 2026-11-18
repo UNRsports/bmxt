@@ -17,6 +17,7 @@ import { applyRemoteOpenTabs } from "../bus/remote-open"
 import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
 import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
 import { applyRemoteTabsOps } from "../bus/apply-remote-tabs-ops.ts"
+import { applyRemoteBookmarksImport } from "../bus/remote-bookmarks-import.ts"
 import {
   FAMILY_SIGNAL_FIRST_DEFAULT_TAB,
   buildTabsChangedSignal,
@@ -105,12 +106,19 @@ type PendingTabsOps = {
   resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
 }
 
+type PendingBookmarksImport = {
+  kind: "bookmarks_import"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; created: number; rttMs: number | null }) => void
+}
+
 type PendingWaiter =
   | PendingOpen
   | PendingAck
   | PendingTabsList
   | PendingSearch
   | PendingTabsOps
+  | PendingBookmarksImport
 
 export function createWebrtcCommandBusStabilizer(
   peerHost: PeerHostStabilizer,
@@ -448,6 +456,33 @@ export function createWebrtcCommandBusStabilizer(
           }, SEARCH_STREAM_TIMEOUT_MS)
         }
       }
+    } else if (command.type === "bookmarks_import") {
+      const result = await applyRemoteBookmarksImport(
+        command.parentId,
+        Array.isArray(command.items) ? command.items : []
+      )
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "bookmarks_import_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        created: result.created
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "bookmarks_import_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "bookmarks_import") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          created: typeof command.created === "number" ? command.created : 0,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
     } else if (command.type === "tabs_changed") {
       const signal = buildTabsChangedSignal({
         reason: command.reason,
@@ -498,6 +533,10 @@ export function createWebrtcCommandBusStabilizer(
           openedUrls: [],
           rttMs: null
         })
+        return
+      }
+      if (waiter.kind === "bookmarks_import") {
+        waiter.resolve({ ok: false, detail: "timeout", created: 0, rttMs: null })
         return
       }
       waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
@@ -674,6 +713,34 @@ export function createWebrtcCommandBusStabilizer(
         await announceTabsChanged("tabs_ops", FAMILY_SIGNAL_FIRST_DEFAULT_TAB)
       }
       return { ok: result.ok, detail: result.detail }
+    },
+
+    async importBookmarks(remoteDeviceId, parentId, items) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "bookmarks_import",
+        id,
+        from: device.deviceId,
+        parentId,
+        items
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        created: number
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "bookmarks_import", resolve, at: Date.now() })
+        armTimeout(id, 15_000)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected", created: 0 }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, created: result.created }
     },
 
     announceTabsChanged,

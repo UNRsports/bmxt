@@ -259,8 +259,15 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `dom -exit -list` | Close DOM list picker column in this session |
 | `search` | Print usage and restore the prompt to `search ` for `-list` |
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). `--peers` merges connected Family peers. Case-insensitive substring (no regex in v1) |
-| `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open **https** tab text, and saved snapshots in parallel |
+| `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]` / `[bookmark]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open **https** tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
+| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | List bookmarks (no folder → `search -list --bookmark` path; `--folder` → local tree). Peer scopes reuse Family `search_query` |
+| `bookmark -add` / `-folder` / `-remove` / `-move` | Create URL or folder; remove/move by bookmark id (pipe: `… \| bookmark -remove` / `… \| bookmark -move --parent <id>`) |
+| `bookmark -send <deviceId> [--open\|--save\|--both]` | Family send: open tabs (`open_tabs`), save as bookmarks (`bookmarks_import`), or both (default **`--open`**) |
+| `bookmark -backup` / `-restore` | ZIP backup / restore of the bookmark tree (versioned JSON under `bmxt-browser-backup/`) |
+| `history -list [<pattern>] [--device <id>\|--peers]` | History list via `search -list --history` path |
+| `history -delete` / `-delete-range` | Delete history by URL(s) or time range (`--from` / `--to` ISO or epoch ms); pipe: `… \| history -delete` |
+| `history -backup` / `-restore [--as-bookmarks]` | ZIP export; restore cannot rewrite Chrome history DB — loads list or creates bookmarks |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
 | `nav -enter` | Arm **nav mode** in this BMXt pane (see **[Nav mode](#nav-mode)**); does not show the page overlay until you press **Alt** (detail bar or prompt) |
 | `nav -exit` | Disarm nav mode (turn Alt overlay **off** first) |
