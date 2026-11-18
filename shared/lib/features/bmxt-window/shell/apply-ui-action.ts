@@ -88,6 +88,7 @@ import {
   restoreHistoryFromFile
 } from "../../backup/history-backup.ts"
 import { importRemoteBookmarks } from "../../sync/bus/remote-bookmarks-import.ts"
+import { getSyncService } from "../../sync/facade/sync-service.ts"
 
 function finishCommand(ctx: CommandDispatchContext): void {
   ctx.deps.appendCommandToHistory(ctx.trimmed)
@@ -1433,8 +1434,7 @@ async function runSyncBookmarkSend(
   let ok = true
 
   if (shouldOpen) {
-    const { getSyncService: getService } = await import("../../sync/facade/sync-service.ts")
-    const result = await getService().openRemote(deviceId, urls, groupTitle)
+    const result = await getSyncService().openRemote(deviceId, urls, groupTitle)
     lines.push(...result.lines)
     if (!result.ok) {
       ok = false

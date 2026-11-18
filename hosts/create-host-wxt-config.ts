@@ -88,7 +88,53 @@ export function createHostWxtConfig(browser: HostBrowser) {
           crypto: nodeEmptyShim
         }
       },
+      plugins: [
+        {
+          // EN: WXT background builds set inlineDynamicImports (no manualChunks).
+          //     Apply feature splits only to multi-chunk UI / content builds.
+          // JA: background は inlineDynamicImports のため manualChunks 不可。
+          //     UI など複数 chunk ビルドにだけ feature 分割を適用する。
+          name: "bmxt-split-large-feature-chunks",
+          outputOptions(options) {
+            if (options.inlineDynamicImports) {
+              return options
+            }
+            return {
+              ...options,
+              manualChunks(id) {
+                const normalized = id.replace(/\\/g, "/")
+                if (normalized.includes("/node_modules/")) {
+                  if (
+                    normalized.includes("/react-dom/") ||
+                    normalized.includes("/scheduler/") ||
+                    /\/react\//.test(normalized)
+                  ) {
+                    return "vendor-react"
+                  }
+                  return "vendor"
+                }
+                if (normalized.includes("/lib/features/setting/i18n/")) {
+                  return "feature-i18n"
+                }
+                // EN: sync/tabs/search/side-picker cross-import; one chunk avoids circular splits.
+                // JA: sync/tabs/search/side-picker は相互 import するため同一 chunk にまとめる。
+                if (
+                  normalized.includes("/lib/features/sync/") ||
+                  normalized.includes("/lib/features/tabs/") ||
+                  normalized.includes("/lib/features/side-picker/") ||
+                  normalized.includes("/lib/features/search/")
+                ) {
+                  return "feature-browser"
+                }
+                return undefined
+              }
+            }
+          }
+        }
+      ],
       build: {
+        // EN: Keep the Rollup size warning; feature chunks above keep each file under it.
+        // JA: サイズ警告閾値は維持。上記 feature 分割で各ファイルを閾値未満に保つ。
         chunkSizeWarningLimit: 700
       }
     }),
