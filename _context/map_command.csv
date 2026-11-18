@@ -79,16 +79,16 @@ session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,
 session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
 session,-setting-name,,rest,,session -setting-name [name],UiAction `session_setting_name`。,
-sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/connect/offer/answer/accept/open/ping）。第二候補に `help`。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー。0.9.0
-sync,-setup,,none,,sync -setup,UiAction `sync_setup`。プロンプト対話で Family→役割→握手コード貼付。複合コマンド不可。,0.9.0
-sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。,0.9.0
-sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待表示または参加（6b 手動/QR）。,0.9.0
-sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。,0.9.0
-sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。名簿メンバーへ再握手（deviceId 順で役割自動）。Copy ボタン／`sync-handshake-copy`。相手はコード本体をプロンプトへ貼付。Tab で ping 確認済みの接続中ピア候補。,0.9.0
-sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコード作成（コピペ握手）。,0.9.0
-sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサーコード。,0.9.0
-sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel 確立。,0.9.0
-sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。,0.9.0
+sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/connect/offer/answer/accept/open/ping）。第二候補に `help`。拡張と CLI REPL で同一 IR（`bmxt-core`）。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー。CLI: `hosts/cli` CliHostAdapter。0.9.0 / §10
+sync,-setup,,none,,sync -setup,UiAction `sync_setup`。拡張: ウィザードで Family→役割→握手。CLI: Family ensure + invite 表示（複合不可）。,0.9.0 / §10
+sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。CLI 未接続時もローカル device/Family を表示。,0.9.0 / §10
+sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待参加。空なら continuation `sync -pair `。CLI も同形。,0.9.0 / §10
+sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。CLI は接続済みピア一覧。,0.9.0 / §10
+sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。拡張: 名簿メンバーへ再握手。CLI: 既接続なら ok、未接続なら mesh / 初回は `sync -offer`・`sync -accept` 案内（OS の `bmxt sync-connect` は clap・本表の first トークンではない）。,0.9.0 / §10
+sync,-offer,,none,,sync -offer,UiAction `sync_offer`。拡張: ウィザード／コピペ。CLI 未接続: offer チケット＋answer 待受→BusClient。既接続時は mesh 案内。,0.9.0 / §10
+sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサー。CLI 未接続: `connect_as_answer`。コード無しは REPL ショートカット `sync -answer` → `:pick`／貼付。,0.9.0 / §10
+sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel。CLI は `-answer` と同系（未接続時の初回握手）。,0.9.0 / §10
+sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。CLI も同（未接続はエラー）。裸 `ping` は CLI エイリアスのみ。,0.9.0 / §10
 tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。グループ維持は title/color をピアへ渡す。,0.9.0。0.9.1: プロファイル間タブ移動時のグループ維持を調整
 （内部）,family-webrtc-sync,,,,lib/features/sync/ + peer/webrtc-session.ts,"Family ローカル同期。device id / Family / roster / discovery を chrome.storage.local。コピペ握手（host ICE のみ・STUN/TURN なし）+ WebRTC DataChannel コマンドバス。横断 tab/search・tab -send。",0.9.0
 （内部）,tab-picker-filter-search,,,,lib/features/tabs/tab-picker-search-visibility.ts + tab-picker-fold-state.ts + side-picker/search/,"tab コマンドピッカー内の絞り込み検索動作を修正。",0.9.0
@@ -115,6 +115,7 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。設計・検証カタログ（固定トークン runtime は WASM `complete`）。,
 （内部）,ime-candidate-help,,,,lib/features/bmxt-window/token-picker-panel.tsx + setting imeCandidateHelp,"候補メニュー右にコマンド説明（usage）を表示。`setting` の ime-candidate-help on|off（既定 on）。",0.8.7
 （内部）,firefox-host,,,,hosts/firefox/ + hosts/create-host-wxt-config.ts,"Firefox MV3 ホスト（AMO）。同一 IR（HostEffect / UiAction）。e2e: test:e2e:firefox。",0.8.7
+（内部）,cli-host,,,,hosts/cli/,"端末 Family peer（`bmxt`）。同一プロンプト文法は `bmxt-core`（`default-features = false`）+ CliHostAdapter → DataChannel RPC / ローカル sync。直接起動 `bmxt`/`bmxt repl`（`bmxt*>`）。接続: REPL `sync -offer`/`-accept` または clap `bmxt sync-connect`（argv は本表の first ではない）。握手 JSON・`:pick`（zenity/kdialog）・OSC-8。行編集: 灰色 remainder ヒント · Tab 適用 · Enter 実行。mesh は拡張と同系。nav/dom オーバーレイ対象外。",§10 / todo
 （内部）,list-output,,,,lib/features/command-line/list-output/,bmxt-list/1。,
 （内部）,list-commands-registry,,,,lib/features/command-line/list-commands/,-list producer レジストリ。,
 （内部）,command-output,,,,lib/features/command-line/command-output.ts,stdout/stderr。,

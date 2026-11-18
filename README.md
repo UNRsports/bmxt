@@ -24,6 +24,7 @@
   - [`setting` (`setting -list` / `setting -exit -list`)](#setting)
   - [`session` (terminal sessions)](#session)
   - [`sync` (Family local sync)](#sync)
+  - [Terminal CLI peer (`hosts/cli`)](#terminal-cli-peer)
   - [`tab` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tab -list | browse` / `tab -list -url | browse`)](#tabs-tab-picker)
@@ -135,6 +136,7 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 | **`shared/`** | Browser-agnostic source — entrypoints, `lib/`, Rust/`bmxt-core` WASM, `public/`, command `manifest/` |
 | **`hosts/chrome/`** | Chrome MV3 WXT config (**`pnpm run build:chrome`**; **`verify`** / CWS) |
 | **`hosts/firefox/`** | Firefox MV3 WXT config + **[AMO source kit](hosts/firefox/AMO_SOURCE.md)** |
+| **`hosts/cli/`** | Terminal Family peer (`bmxt` binary; WebRTC DataChannel) — **[Terminal CLI peer](#terminal-cli-peer)** · [`hosts/cli/README.md`](hosts/cli/README.md) |
 
 **Layout:** Command **semantics** (parse / registry / options / pipe·compound plans / tabs-picker plans) live in **Rust → WASM** (`shared/crates/bmxt-core/`, packaged under **`shared/lib/wasm/bmxt-core/`**). TypeScript owns host API effects (`shared/lib/features/dispatch/`), content scripts, and React UI (`shared/lib/features/<feature>/`). Thin host glue is in **`shared/lib/features/bmxt-core/`** (`runDispatch`, `ensureBmxtCore`, UiAction apply). See also `.cursorrules` and **[`hosts/README.md`](hosts/README.md)**. **Terminal sessions** (tmux-style: one visible, several in the background) share one BMXt window — see **[`session`](#session)**. List pickers open as **side columns** beside the terminal in the same session pane (**[Picker UI](#picker-ui)**).
 
@@ -715,6 +717,24 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 **Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
 **Mesh:** User-facing connect stays “handshake with any one live Family member.” After that link is up, BMXt **automatically completes a full mesh** (in-band `mesh_peers` / `mesh_signal` over existing DataChannels) so every prompt can reach every other connected peer directly — no hub relay for tab ops.
+
+<a id="terminal-cli-peer"></a>
+
+### Terminal CLI peer (`hosts/cli`)
+
+**Status (todo §10):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP.
+
+| Topic | Current behavior |
+|-------|------------------|
+| **Direct start** | `bmxt` or `bmxt repl` opens an offline REPL (`bmxt*>`). Local commands work immediately (`sync -setup` / `-pair` / `-status`, `help`). |
+| **Connect** | `bmxt sync-connect [--offer]`, or from the offline REPL: `sync -offer` / `sync -accept` (Enter / `:pick` opens a GUI file dialog via `zenity` or `kdialog`). After connect the prompt becomes `bmxt>`. |
+| **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; path printed as an OSC-8 `file://` link when the terminal supports it. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
+| **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
+| **Line editor** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints** (e.g. typed `sync -se` + grey `tup`); **Tab** applies the candidate; **Enter** runs the current buffer. |
+| **Mesh** | First peer via handshake; additional Family peers join automatically over in-band mesh (same as extension). |
+| **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
+
+**Out of scope for this host:** `nav` / `dom` page overlays, native messaging, public STUN/TURN on the default path. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md).
 
 <a id="picker-ui"></a>
 
@@ -1351,7 +1371,7 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 | **`shared/public/`** | Static assets: **`_locales/`**, **`icon.png`**, **`background-services.js`**, **`bmxt_core_bg.wasm`** (from **`build:wasm`**) |
 | **`shared/crates/bmxt-core/`** | Rust/WASM command core (parse, registry, cmd `run`, compound/pipe plan, tabs-picker plan) |
 | **`shared/lib/wasm/bmxt-core/`** | wasm-pack glue (`bmxt_core.js` + `.wasm`) |
-| **`hosts/chrome/`**, **`hosts/firefox/`** | Per-browser WXT configs (+ Firefox AMO kit) — see **[`hosts/README.md`](hosts/README.md)** |
+| **`hosts/chrome/`**, **`hosts/firefox/`**, **`hosts/cli/`** | Per-browser WXT configs (+ Firefox AMO kit) and the terminal Family peer — see **[`hosts/README.md`](hosts/README.md)** · **[Terminal CLI peer](#terminal-cli-peer)** |
 | **`shared/lib/features/`** | Feature modules (see table below) |
 | **`tests/`** | JS/TS tests only — unit, property (fast-check), headless WebDriver E2E (see **[Testing](#testing)** and **[`tests/README.md`](tests/README.md)**). Rust stays under **`shared/crates/bmxt-core/`**. |
 | **`shared/manifest/bmxt-codegen.json`** | Command registry + Effect schema (single source; run **`pnpm run codegen`**). Templates: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** |
@@ -1510,6 +1530,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 3. Add history and bookmark operations
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
+6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer is usable (direct start, in-REPL sync, grey Tab hints, mesh); polish packaging / same-PC smoke and keep grammar parity with the extension (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10)
 
 ---
 
@@ -1541,6 +1562,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [`setting`（`setting -list` / `setting -exit -list`）](#setting-ja)
   - [`session`（ターミナルセッション）](#session-ja)
   - [`sync`（Family ローカル同期）](#sync-ja)
+  - [端末 CLI peer（`hosts/cli`）](#terminal-cli-peer-ja)
   - [`tab`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tab -list | browse` / `tab -list -url | browse`）](#tabs-tab-picker-ja)
@@ -1646,7 +1668,7 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 
 以下は技術仕様の概要です。ツールバーの拡張アイコンから BMXt ウィンドウを開き（既に開いていれば前面へ）、タブ・ウィンドウ・タブグループの操作や URL 一行ナビゲーションをコマンドラインから行えます。[WXT](https://wxt.dev/)（Manifest V3）でビルドしています。エントリは **`entrypoints/`**、静的アセットは **`public/`**（**`_locales/`** 含む）、manifest 上書きは **`wxt.config.ts`**、出力は **`.output/`** です。
 
-**リポジトリ配置（マルチブラウザ）:** **`shared/`**（ブラウザ非依存のソース）、**`hosts/chrome/`** / **`hosts/firefox/`**（各ホストの WXT 設定。詳細は **[`hosts/README.md`](hosts/README.md)**、AMO は **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**）。
+**リポジトリ配置（マルチブラウザ）:** **`shared/`**（ブラウザ非依存のソース）、**`hosts/chrome/`** / **`hosts/firefox/`**（各ホストの WXT 設定）、**`hosts/cli/`**（端末 Family peer）。詳細は **[`hosts/README.md`](hosts/README.md)**、AMO は **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**、CLI 現状は **[端末 CLI peer](#terminal-cli-peer-ja)**。
 
 **配置:** コマンド意味論（parse / レジストリ / パイプ計画など）は **Rust → WASM**（`shared/crates/bmxt-core/`）。TypeScript はホスト Effect・content script・React UI と薄いホスト（`lib/features/bmxt-core/` の `runDispatch` / `ensureBmxtCore`、`apply-ui-action`）に徹します（**`.cursorrules`** と **[`hosts/README.md`](hosts/README.md)** も参照）。**ターミナルセッション**（tmux 風・1 つ表示・複数バックグラウンド）は 1 つの BMXt ウィンドウ内で共有 — **[`session`](#session-ja)** 参照。リストピッカーは同一ペイン内でターミナルの右に **横並び列** として開きます（**[ピッカー UI](#picker-ui-ja)**）。
 
@@ -2173,6 +2195,24 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 **peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
 
 **メッシュ:** 接続 UX は「Family 内の生きている誰か1台と握手」のまま。直結後は既存 DataChannel 上の in-band（`mesh_peers` / `mesh_signal`）で **フルメッシュを自動補完**し、どのプロンプトからも他の接続済み peer へ直接届ける（タブ操作のハブ中継はしない）。
+
+<a id="terminal-cli-peer-ja"></a>
+
+### 端末 CLI peer（`hosts/cli`）
+
+**現状（todo §10）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。
+
+| 項目 | 現状 |
+|------|------|
+| **直接起動** | `bmxt` または `bmxt repl` で未接続 REPL（`bmxt*>`）。`sync -setup` / `-pair` / `-status` · `help` などローカル操作はそのまま可。 |
+| **接続** | `bmxt sync-connect [--offer]`、または未接続 REPL 内の `sync -offer` / `sync -accept`（Enter / `:pick` で `zenity` / `kdialog` の GUI ファイル選択）。接続後プロンプトは `bmxt>`。 |
+| **握手ファイル** | `~/.config/bmxt/` 配下の offer/answer JSON。対応端末では OSC-8 の `file://` リンク表示。素の `bmxt-rtc1.` 貼付より `@path.json` 推奨。 |
+| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は `default-features = false` で WASM なし）。例: `tab -list --peers \| browse` · `sync -ping <deviceId>` · ピア上での URL オープン。 |
+| **行編集** | rustyline 履歴（`↑↓` · `~/.config/bmxt/history`）。**灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）。**Tab** で適用、**Enter** で現バッファを実行。 |
+| **メッシュ** | 最初の peer は握手。以降の Family peer は拡張と同様に in-band メッシュで自動接続。 |
+| **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`（release は `cargo build --release -p bmxt-cli`）。 |
+
+**この host の対象外:** `nav` / `dom` のページオーバーレイ、ネイティブメッセージング、既定経路での公開 STUN/TURN。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md)。
 
 <a id="picker-ui-ja"></a>
 
@@ -2825,7 +2865,7 @@ pnpm run dev
 | **`wxt.config.ts`** | manifest 上書き（権限・CSP・ショートカット・`web_accessible_resources`） |
 | **`lib/features/`** | 機能モジュール（下表参照） |
 | **`tests/`** | JS/TS テストのみ（unit / property / headless WebDriver E2E。**[テスト](#testing-ja)**・**[`tests/README.md`](tests/README.md)**）。Rust は **`shared/crates/bmxt-core/`** |
-| **`hosts/chrome/`**, **`hosts/firefox/`** | ホスト別 WXT — **[`hosts/README.md`](hosts/README.md)** |
+| **`hosts/chrome/`**, **`hosts/firefox/`**, **`hosts/cli/`** | ホスト別 WXT と端末 Family peer — **[`hosts/README.md`](hosts/README.md)** · **[端末 CLI peer](#terminal-cli-peer-ja)** |
 | **`manifest/bmxt-codegen.json`** | コマンドレジストリ + Effect スキーマ（単一ソース。**`pnpm run codegen`**）。テンプレート: **[`shared/manifest/templates/README.md`](shared/manifest/templates/README.md)** |
 | **`scripts/fixtures/dispatch/`** | WASM `run` 向け Effect golden — **[`README`](scripts/fixtures/dispatch/README.md)** |
 | **`pnpm-lock.yaml`** | lockfile — **`pnpm install --frozen-lockfile`** でインストール |
@@ -2958,3 +2998,4 @@ pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 3. 履歴、ブックマーク操作
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
+6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer は利用可能（直接起動 · REPL 内 sync · 灰色 Tab ヒント · メッシュ）。配布／同一 PC スモークの磨き込みと拡張との文法パリティ維持（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10）
