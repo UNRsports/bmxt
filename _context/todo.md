@@ -462,6 +462,91 @@ bmxt-browser-backup/
 
 **参照:** plan `bookmark_history_ops` · skill `bmxt-add-command` · `shared/lib/features/search/cache/` · `shared/lib/features/sync/` · `shared/manifest/bmxt-rule.json`
 
+### 10. 端末版 BMXt（Rust CLI peer · Family DataChannel）
+
+**目標:** PC ローカル端末（一次: Linux）から、拡張版 BMXt と同じ Family／WebRTC DataChannel コマンドバスで peer ブラウザを操作する。導入は **Rust 単一バイナリ**。複数モニタに散らばったブラウジングを、ブラウザ切替なしに一つの CUI 司令塔へ集約する。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 役割 | CLI は Family の **device（ネイティブ peer）**。ブラウザ API は持たない。操作は拡張のプロンプト窓 peer が実行 |
+| 制御面 | **native messaging 不使用**（§6 と同じ）。本線は WebRTC DataChannel + `bmxt-rtc1.` コピペ握手 |
+| 初版輸送 | 同一 PC · **host ICE のみ**（§6c 延長）。常時 TURN／クラウドシグナリングは後続 |
+| 言語 | 端末製品は **Rust のみ**。拡張側の `RTCPeerConnection` 宿主は TS のまま |
+| UI | **ratatui + crossterm**。tab／search リスト picker から。`nav`／`dom` ページオーバーレイは非目標 |
+| 配置 | モノレポ `hosts/cli` + `shared/crates/*`。既存 `bmxt-core` とは **クレート境界で区別** |
+| ブランチ | **一本の作業ブランチ**で実装段階（下記 10.0–10.5）を順に進める。長期の `cli` 専用分岐は作らない。共有契約は小さく本流へ載せ、CLI 固有は同ブランチ上で積む |
+
+**アーキテクチャ（要約）**
+
+```
+hosts/cli (binary)
+  → bmxt-core (純 rlib) / CliHostAdapter
+  → bmxt-sync-wire · bmxt-family
+  → bmxt-peer-rtc (native WebRTC)
+       ⇄ DataChannel SyncBusCommand
+BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
+```
+
+| Crate / path | 役割 |
+|--------------|------|
+| `shared/crates/bmxt-sync-wire` | `SyncBusCommand` serde・サイズ上限・検証 |
+| `shared/crates/bmxt-family` | device id · Family seed · seal/unseal · `bmxt-rtc1.` / `bmxt1.` 互換 |
+| `shared/crates/bmxt-peer-rtc` | ネイティブ WebRTC · DataChannel |
+| `shared/crates/bmxt-core` | 純 rlib 化（parse／plans／tabs_picker） |
+| `shared/crates/bmxt-core-wasm` | 現行 `wasm-bindgen` Facade（拡張がリンク） |
+| `hosts/cli` | binary（仮名 `bmxt`）。設定 `~/.config/bmxt/` |
+
+**拡張との契約**
+
+- ワイヤ正本: `shared/lib/features/sync/types.ts` の `SyncBusCommand`（初版は破壊変更しない）
+- 握手・封印: `rtc-handshake-codec` / `family-crypto` と **バイト／JSON 互換**（fixture で両側緑）
+- peer 宿主は現状どおり **プロンプト窓**（窓クローズ＝切断）
+- CLI device 表示例: `terminal@<host>`。名簿が terminal device を拒否しないことを確認
+
+**実装チェック（段階）**
+
+- [ ] **10.0 契約固定:** `SyncBusCommand` / `bmxt-rtc1.` / family-crypto の fixture と契約メモ。TS 生成 fixture を後続 Rust が読めること
+- [ ] **10.1 共有クレート:** `bmxt-sync-wire` · `bmxt-family`。TS fixture ↔ Rust round-trip（handshake plain + ping/ack）
+- [ ] **10.2 輸送 + 最小 CLI:** `bmxt-peer-rtc` + `hosts/cli`。`sync -setup` / `-connect` / `-status` / `-ping`。同一 PC で拡張と握手し ping→ack
+- [ ] **10.3 バス RPC:** `tabs_list` / `tabs_ops` / `open_tabs` / `search_query`（chunk 含む）。stdout 表形式。タイムアウトは拡張 `remote-query-limits` に合わせる
+- [ ] **10.4a core 分割:** `bmxt-core` 純 rlib + `bmxt-core-wasm` Facade（**ping 通過後**に実施。拡張ビルド影響あり）
+- [ ] **10.4b CliHostAdapter:** `HostEffect` → 遠隔 RPC 写像。ローカルのみ help／sync／clear。`nav`／`dom` 連動は明示エラー
+- [ ] **10.4c TUI picker MVP:** ログ+プロンプト \| tab \| search。キーは `↑↓` `/` `:` `#` `Esc` Enter。tabs_picker reducer 再利用。見た目パリティは追わない
+- [ ] **10.5 配布:** `cargo build --release -p bmxt-cli` 単一バイナリ。PATH 配置手順。README に peer 宿主・非目標を明記。Linux 一次、macOS／Windows は後続
+
+**推奨着手順**
+
+1. 10.0 → 10.1（契約）
+2. 10.2（握手 + ping）← ここで「端末→ブラウザ」が実在
+3. 10.3（tabs／search RPC）
+4. 10.4c tab picker 先行。10.4a／10.4b はコマンド行パリティが必要になったら
+5. 10.5 配布
+
+**拡張側の追随（必要時のみ・小さく）**
+
+- [ ] 名簿／表示で terminal device を拒否していないことの確認
+- [ ] 契約 fixture を CI（`pnpm` / `cargo`）両側に接続
+- [ ] README / `hosts/README.md` に `hosts/cli` を追記
+
+**スコープ外（明示）**
+
+- native messaging / CDP / Playwright
+- 常時 TURN・クラウドシグナリング（§6b／遠隔段）
+- CLI 単体での `nav`／`dom` ページオーバーレイ
+- 拡張内 WebRTC スタックの Rust 置換（ブラウザ `RTCPeerConnection` 維持）
+- React 版 picker の見た目完全一致
+
+**手元スモーク（段階通過時）**
+
+- [ ] 同一 PC: CLI ↔ Chrome（または Firefox）プロンプト窓で `bmxt-rtc1.` 握手 → `sync -ping`
+- [ ] CLI から `tabs_list`／タブ閉じ・アクティブ化・URL open
+- [ ] TUI: `tab -list --peers \| browse` 相当で列が開き Enter で遠隔操作
+- [ ] プロンプト窓を閉じるとトンネルが落ち、CLI が切断を検知する
+
+**参照:** plan `rust_cli_bmxt` · §6（Family／6c バス）· `shared/lib/features/sync/` · `shared/crates/bmxt-core/` · skill `bmxt-add-command`
+
 ---
 
 ## Archive（ポインタのみ）
