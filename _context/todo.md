@@ -651,6 +651,66 @@ REPL line
 
 **参照:** plan `cli_setting_i18n` · §10 · §11 · skill `bmxt-i18n` · skill `bmxt-ui-settings` · `hosts/cli/` · `shared/lib/features/setting/`
 
+### 13. BMXtCLI — ワンショット実行（LLM / 非対話）
+
+**目標:** LLM エージェントやシェルスクリプトが、対話 REPL なしで **1 行（または少数行）の BMXt 文法**を実行し、stdout / stderr と **数値 exit status** を受け取れるようにする。拡張プロンプトと同じ `bmxt-core` 意味を保つ。
+
+**現状（未対応）**
+
+| 項目 | 内容 |
+|------|------|
+| 入口 | clap は `status` / `sync-*` / `repl` 等のみ。文法コマンドは **REPL 内 `CliHostAdapter::run_line` のみ** |
+| 接続 | タブ操作等は Family DataChannel 必須。localhost ドア（§11）は **常駐 CLI プロセス**が宿主 |
+| 対話依存 | 握手の code/file 確認（§12 周辺）等が stdin 待ち。非対話では事前設定必須 |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 入口 | `bmxt exec -- '<line>'`（および任意で複数 `--` 引数／stdin 1 行モード）。短別名 `-c` は後続でも可 |
+| 実行核 | 既存 `CliHostAdapter::run_line` をそのまま呼ぶ（新文法・別パーサは作らない） |
+| 接続モデル | **常駐前提（推奨）:** 先に `bmxt` / `bmxt repl`（ドア展開済み）を動かし、`exec` は同一マシンの常駐へ **コマンドだけ送って終了**。ワンショットプロセス単体で WebRTC を張り直して即切断する経路は非推奨（LLM 多段呼び出しに向かない） |
+| IPC | 常駐 ↔ `exec` は **loopback のみ**（既存ドアポート近傍、または Unix domain socket）。Family 封印／ローカル認証の要否は 13.0 で契約固定 |
+| 非対話ルール | `exec` 中は握手 ask / zenity 等を **禁止**。未接続・未設定は明確な stderr + 非 0 exit。`handshake-delivery` 等は事前 `setting` / `config.json` で済ませる |
+| 出力 | stdout = コマンド結果行、stderr = 診断。exit = `bmxt-core` の exit status をプロセス終了コードへ伝播 |
+| スコープ外（当面） | TUI / `| browse` ピッカー、対話 handshake ウィザード、常駐なしでの完全自己完結 peer 起動 |
+
+**アーキテクチャ（要約）**
+
+```
+常駐: bmxt repl (+ localhost door §11)
+         ↑ loopback IPC（契約は 13.0）
+ワンショット: bmxt exec -- 'tab -list --peers'
+         → CliHostAdapter::run_line（常駐側）
+         → stdout / stderr / exit
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `hosts/cli/src/main.rs` | clap `exec` / `-c` |
+| `hosts/cli/src/adapter.rs` | 既存 `run_line`（変更は最小） |
+| `hosts/cli/src/door.rs` または新規 IPC モジュール | 常駐へのコマンド投入 |
+| `_context/cli-peer/CONTRACT.md` | exec IPC 契約・非対話制約 |
+
+**実装チェック（段階）**
+
+- [ ] **13.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定
+- [ ] **13.1 常駐側:** ドアまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
+- [ ] **13.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
+- [ ] **13.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
+- [ ] **13.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
+- [ ] **13.5（任意）:** stdin 複数行バッチ · JSON 結果ラッパ · `-c` 別名
+
+**手元スモーク**
+
+- [ ] 常駐 `bmxt` + ブラウザ peer 接続済み → `bmxt exec -- 'sync -status'` が非 0 でなく終わる
+- [ ] `bmxt exec -- 'tab -list --peers'` が REPL と同じ一覧を stdout に出し、プロセスが終了する
+- [ ] 常駐なしで `exec` → 明確なエラー + 非 0（ハングしない）
+- [ ] `exec` 中に code/file の対話プロンプトが出ない
+- [ ] 不正行で misuse 相当の exit になる
+
+**参照:** §10 · §11 · §12 · `hosts/cli/` · `hosts/cli/src/adapter.rs` · `_context/cli-peer/CONTRACT.md`
+
 ---
 
 ## Archive（ポインタのみ）
