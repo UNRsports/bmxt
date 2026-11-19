@@ -6,24 +6,6 @@ use std::process::Command;
 use anyhow::{anyhow, Result};
 use bmxt_family::extract_rtc_handshake_code;
 
-/** EN: Write a browser-compatible handshake JSON ticket; returns absolute path. */
-pub fn write_handshake_ticket(role: &str, code: &str) -> Result<PathBuf> {
-    let dir = dirs::config_dir()
-        .ok_or_else(|| anyhow!("no config dir"))?
-        .join("bmxt");
-    fs::create_dir_all(&dir)?;
-    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
-    let path = dir.join(format!("bmxt-{stamp}-{role}.json"));
-    let doc = serde_json::json!({
-        "v": 1,
-        "kind": "bmxt-rtc-handshake",
-        "role": role,
-        "code": code,
-    });
-    fs::write(&path, format!("{}\n", serde_json::to_string_pretty(&doc)?))?;
-    Ok(path)
-}
-
 /**
  * EN: Print a path as an OSC-8 terminal hyperlink (`file://…`) when the terminal supports it.
  *     Clicking opens the file (or its folder) — it does **not** open a file-picker dialog.

@@ -26,8 +26,10 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 
 ## Config
 
-`~/.config/bmxt/config.json` — device id, display name (`terminal@…`), Family seed.  
+`~/.config/bmxt/config.json` — device id, display name (`terminal@…`), Family seed, optional **`handshakeDelivery`** (`code`|`file`) and **`handshakeTicketDir`**.  
 Command history: `~/.config/bmxt/history`.
+
+Outbound sync tickets (`sync -setup` invite · `sync -offer` / `-accept` answer): on first use the CLI asks **code vs file**; file mode confirms a directory and remembers it. Change later with `setting -set handshake-delivery …` / `setting -set handshake-ticket-dir …` (or `handshake-delivery ask` to be prompted again).
 
 **UI settings (BMXtCLI):** `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`  
 (extension export–compatible v2 layout; independent of `chrome.storage` / FSA). Override directory with `BMXT_CLI_UI_SETTINGS_DIR`. Locale priority: **committed `settings.locale` → env (`LANG` / `LC_*`) → `en`**.
@@ -111,8 +113,10 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 
 ## 設定
 
-`~/.config/bmxt/config.json` — device id · 表示名（`terminal@…`）· Family シード。  
+`~/.config/bmxt/config.json` — device id · 表示名（`terminal@…`）· Family シード · 任意の **`handshakeDelivery`**（`code`|`file`）と **`handshakeTicketDir`**。  
 コマンド履歴: `~/.config/bmxt/history`。
+
+送信チケット（`sync -setup` 招待 · `sync -offer` / `-accept` の answer）: 初回は **コード表示かファイル保存か** を尋ね、ファイル時は保存先を確認して記憶する。後から `setting -set handshake-delivery …` / `setting -set handshake-ticket-dir …`（再質問は `handshake-delivery ask`）。
 
 **UI 設定（BMXtCLI）:** `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`  
 （拡張 export と同形の v2。`chrome.storage` / FSA とは独立）。ディレクトリ上書きは `BMXT_CLI_UI_SETTINGS_DIR`。locale 優先順: **committed `settings.locale` → env（`LANG` / `LC_*`）→ `en`**。

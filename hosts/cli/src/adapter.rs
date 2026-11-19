@@ -318,7 +318,7 @@ impl<'a> CliHostAdapter<'a> {
                         .setting_draft
                         .as_ref()
                         .unwrap_or(&committed);
-                    ui_settings_host::print_setting_list(view);
+                    ui_settings_host::print_setting_list(view, self.cfg);
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
                 if list_id != "tabs" {
@@ -360,6 +360,10 @@ impl<'a> CliHostAdapter<'a> {
                 self.run_picker_and_maybe_activate(&rows).await
             }
             UiAction::SettingSet { key, value } => {
+                if ui_settings_host::try_apply_cli_sync_setting(self.cfg, &key, &value)?.is_some()
+                {
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
+                }
                 let committed = ui_settings_host::load_committed()?;
                 let ok = ui_settings_host::apply_set_to_draft(
                     self.setting_draft,
@@ -438,8 +442,8 @@ impl<'a> CliHostAdapter<'a> {
             UiAction::SyncSetup => {
                 self.cfg.ensure_family()?;
                 let invite = handshake::print_invite(self.cfg)?;
-                println!("Family ready.");
-                println!("Invite (give to browser BMXt / peer):\n{invite}");
+                println!("{}", t_cli("cmd.cli.handshake.familyReady", &[]));
+                crate::handshake_delivery::deliver_outbound_code(self.cfg, "invite", &invite)?;
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SyncPair { invite } => {

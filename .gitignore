@@ -101,6 +101,7 @@ Desktop.ini
 # Do not use bare `**/bmxt-ui-settings/` — that would hide crate `shared/crates/bmxt-ui-settings/`.
 bmxt-*-offer.json
 bmxt-*-answer.json
+bmxt-*-invite.json
 **/bmxt-cli-ui-settings/
 /bmxt-ui-settings/
 **/bmxt-ui-settings/settings.json

@@ -4,6 +4,7 @@ mod config;
 mod connect;
 mod door;
 mod handshake;
+mod handshake_delivery;
 mod mesh_plan;
 mod msgs;
 mod paste;
@@ -100,6 +101,13 @@ async fn main() -> Result<()> {
                 println!("uiSettings:  {}", path.display());
             }
             println!("locale:      {}", msgs::cli_locale());
+            println!(
+                "handshake:   delivery={} ticketDir={}",
+                cfg.handshake_delivery.as_deref().unwrap_or("ask"),
+                cfg.handshake_ticket_dir
+                    .as_deref()
+                    .unwrap_or("(default ~/.config/bmxt)")
+            );
             println!("transport:   WebRTC DataChannel (host ICE, bmxt-rtc1.)");
             println!(
                 "localhost:   http://127.0.0.1:{}/ (Family-sealed door; when Family joined)",
@@ -109,27 +117,27 @@ async fn main() -> Result<()> {
         Some(Commands::SyncSetup) => {
             cfg.ensure_family()?;
             let invite = handshake::print_invite(&cfg)?;
-            println!("Family ready.");
-            println!("Invite (give to browser BMXt / peer):\n{invite}");
+            println!("{}", msgs::t_cli("cmd.cli.handshake.familyReady", &[]));
+            handshake_delivery::deliver_outbound_code(&mut cfg, "invite", &invite)?;
         }
         Some(Commands::SyncPair { invite }) => {
             handshake::apply_invite(&mut cfg, &invite)?;
             println!("Joined Family {}", cfg.family_id.as_deref().unwrap_or(""));
         }
         Some(Commands::SyncOffer { to }) => {
-            let client = connect::connect_as_offer(&cfg, to).await?;
+            let client = connect::connect_as_offer(&mut cfg, to).await?;
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
         }
         Some(Commands::SyncAnswer { offer_code }) => {
-            let client = connect::connect_as_answer(&cfg, &offer_code).await?;
+            let client = connect::connect_as_answer(&mut cfg, &offer_code).await?;
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
         }
         Some(Commands::SyncConnect { offer, to }) => {
             cfg.require_family()?;
             let client = if offer {
-                connect::connect_as_offer(&cfg, to).await?
+                connect::connect_as_offer(&mut cfg, to).await?
             } else {
-                connect::connect_as_answer_interactive(&cfg).await?
+                connect::connect_as_answer_interactive(&mut cfg).await?
             };
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
         }

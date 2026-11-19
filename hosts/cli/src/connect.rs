@@ -9,7 +9,7 @@ use crate::config::CliConfig;
 use crate::handshake;
 use crate::paste;
 
-pub async fn connect_as_offer(cfg: &CliConfig, to: String) -> Result<BusClient> {
+pub async fn connect_as_offer(cfg: &mut CliConfig, to: String) -> Result<BusClient> {
     let (family_id, _) = cfg.require_family()?;
     let hub = BusClient::create_hub(
         cfg.device_id.clone(),
@@ -21,18 +21,19 @@ pub async fn connect_as_offer(cfg: &CliConfig, to: String) -> Result<BusClient> 
     Ok(hub)
 }
 
-pub async fn connect_as_offer_onto(cfg: &CliConfig, hub: &BusClient, to: String) -> Result<()> {
+pub async fn connect_as_offer_onto(
+    cfg: &mut CliConfig,
+    hub: &BusClient,
+    to: String,
+) -> Result<()> {
     cfg.require_family()?;
     let (session, mut events) = PeerSession::create(to, None).await?;
     let (code, _) = handshake::make_offer_code(cfg, &session).await?;
-    let offer_path = paste::write_handshake_ticket("offer", &code)?;
-    println!("=== OFFER (file — prefer this over pasting) ===");
-    paste::print_path_hyperlink(&offer_path);
-    println!("Open this file in the BMXt wizard (ファイルで渡す / Open), or paste bare code.\n");
-    println!("{code}\n");
-    let answer = paste::read_handshake_paste(
-        "ANSWER: @path.json · Enter/:pick for GUI dialog · or bare bmxt-rtc1. paste\n> ",
-    )?;
+    crate::handshake_delivery::deliver_outbound_code(cfg, "offer", &code)?;
+    let answer = paste::read_handshake_paste(&crate::msgs::t_cli(
+        "cmd.cli.handshake.pasteAnswerPrompt",
+        &[],
+    ))?;
     let applied = handshake::apply_answer_code(cfg, &session, &answer).await?;
     let early = wait_connected_brief(&session, &mut events, 60).await?;
     println!(
@@ -50,7 +51,7 @@ pub async fn connect_as_offer_onto(cfg: &CliConfig, hub: &BusClient, to: String)
     Ok(())
 }
 
-pub async fn connect_as_answer(cfg: &CliConfig, offer_code: &str) -> Result<BusClient> {
+pub async fn connect_as_answer(cfg: &mut CliConfig, offer_code: &str) -> Result<BusClient> {
     let (family_id, _) = cfg.require_family()?;
     let hub = BusClient::create_hub(
         cfg.device_id.clone(),
@@ -63,17 +64,14 @@ pub async fn connect_as_answer(cfg: &CliConfig, offer_code: &str) -> Result<BusC
 }
 
 pub async fn connect_as_answer_onto(
-    cfg: &CliConfig,
+    cfg: &mut CliConfig,
     hub: &BusClient,
     offer_code: &str,
 ) -> Result<()> {
     cfg.require_family()?;
     let (session, mut events) = PeerSession::create("offer-origin".into(), None).await?;
     let accepted = handshake::accept_offer_code(cfg, &session, offer_code).await?;
-    let answer_path = paste::write_handshake_ticket("answer", &accepted.answer_code)?;
-    println!("=== ANSWER (file) ===");
-    paste::print_path_hyperlink(&answer_path);
-    println!("{}\n", accepted.answer_code);
+    crate::handshake_delivery::deliver_outbound_code(cfg, "answer", &accepted.answer_code)?;
     let early = wait_connected_brief(&session, &mut events, 60).await?;
     println!(
         "Connected to {} ({}).",
@@ -91,17 +89,22 @@ pub async fn connect_as_answer_onto(
 }
 
 /** EN: Interactive answer role — paste / `:pick` offer, then connect. */
-pub async fn connect_as_answer_interactive(cfg: &CliConfig) -> Result<BusClient> {
-    let offer_code = paste::read_handshake_paste(
-        "OFFER: @path.json · Enter/:pick for GUI dialog · or bare bmxt-rtc1. paste\n> ",
-    )?;
+pub async fn connect_as_answer_interactive(cfg: &mut CliConfig) -> Result<BusClient> {
+    let offer_code = paste::read_handshake_paste(&crate::msgs::t_cli(
+        "cmd.cli.handshake.pasteOfferPrompt",
+        &[],
+    ))?;
     connect_as_answer(cfg, &offer_code).await
 }
 
-pub async fn connect_as_answer_interactive_onto(cfg: &CliConfig, hub: &BusClient) -> Result<()> {
-    let offer_code = paste::read_handshake_paste(
-        "OFFER: @path.json · Enter/:pick for GUI dialog · or bare bmxt-rtc1. paste\n> ",
-    )?;
+pub async fn connect_as_answer_interactive_onto(
+    cfg: &mut CliConfig,
+    hub: &BusClient,
+) -> Result<()> {
+    let offer_code = paste::read_handshake_paste(&crate::msgs::t_cli(
+        "cmd.cli.handshake.pasteOfferPrompt",
+        &[],
+    ))?;
     connect_as_answer_onto(cfg, hub, &offer_code).await
 }
 

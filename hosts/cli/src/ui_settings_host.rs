@@ -45,12 +45,68 @@ pub fn save_committed(settings: &UiSettings) -> Result<()> {
     Ok(())
 }
 
-pub fn print_setting_list(settings: &UiSettings) {
+pub fn print_setting_list(settings: &UiSettings, cfg: &crate::config::CliConfig) {
     println!("{}", t_cli("setting.list.notice.showing", &[]));
     println!("{}", t_cli("setting.list.notice.useBrowse", &[]));
     println!("{}", t_cli("cmd.cli.setting.useSetSave", &[]));
     for line in format_setting_list_lines(settings) {
         println!("{line}");
+    }
+    let delivery = cfg
+        .handshake_delivery
+        .as_deref()
+        .unwrap_or("ask");
+    let ticket_dir = cfg
+        .handshake_ticket_dir
+        .as_deref()
+        .unwrap_or("(default ~/.config/bmxt)");
+    println!("handshake-delivery\t{delivery}");
+    println!("handshake-ticket-dir\t{ticket_dir}");
+}
+
+/**
+ * EN: CLI-only sync prefs on `CliConfig` (immediate save; not UI settings draft).
+ * JA: CLI 専用の sync 設定（即時保存。UI settings 下書きではない）。
+ */
+pub fn try_apply_cli_sync_setting(
+    cfg: &mut crate::config::CliConfig,
+    key: &str,
+    value: &str,
+) -> Result<Option<()>> {
+    let k = key.trim().to_ascii_lowercase();
+    match k.as_str() {
+        "handshake-delivery" => {
+            match crate::handshake_delivery::set_delivery_mode(cfg, value)? {
+                crate::handshake_delivery::DeliverySettingResult::AskNextTime => {
+                    println!("{}", t_cli("cmd.cli.handshake.deliveryAskNext", &[]));
+                }
+                crate::handshake_delivery::DeliverySettingResult::Mode(mode) => {
+                    println!(
+                        "{}",
+                        t_cli(
+                            "cmd.cli.handshake.deliveryRemembered",
+                            &[(
+                                "mode",
+                                crate::handshake_delivery::delivery_token(mode)
+                            )]
+                        )
+                    );
+                }
+            }
+            Ok(Some(()))
+        }
+        "handshake-ticket-dir" => {
+            let dir = crate::handshake_delivery::set_ticket_dir(cfg, value)?;
+            println!(
+                "{}",
+                t_cli(
+                    "cmd.cli.handshake.ticketDirRemembered",
+                    &[("dir", &dir.display().to_string())]
+                )
+            );
+            Ok(Some(()))
+        }
+        _ => Ok(None),
     }
 }
 

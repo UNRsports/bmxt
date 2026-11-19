@@ -1203,6 +1203,62 @@
     "ja": "error: CLI 未対応の UI アクション: {kind}",
     "en": "error: ui action not supported on CLI: {kind}"
   },
+  "cmd.cli.handshake.familyReady": {
+    "ja": "Family 準備完了。",
+    "en": "Family ready."
+  },
+  "cmd.cli.handshake.askDelivery": {
+    "ja": "握手／招待の渡し方を選んでください（初回のみ記憶します）。",
+    "en": "Choose how to pass handshake / invite codes (remembered after the first choice)."
+  },
+  "cmd.cli.handshake.askDeliveryPrompt": {
+    "ja": "[1] code = 端末にコード表示  /  [2] file = ファイル保存  > ",
+    "en": "[1] code = print code  /  [2] file = save ticket file  > "
+  },
+  "cmd.cli.handshake.askDeliveryRetry": {
+    "ja": "code / file（または 1 / 2）で答えてください。",
+    "en": "Answer with code / file (or 1 / 2)."
+  },
+  "cmd.cli.handshake.deliveryRemembered": {
+    "ja": "握手の渡し方を記憶しました: {mode}",
+    "en": "Remembered handshake delivery: {mode}"
+  },
+  "cmd.cli.handshake.deliveryAskNext": {
+    "ja": "次回の sync で渡し方を再度尋ねます（handshake-delivery = ask）。",
+    "en": "Will ask delivery mode again on the next sync (handshake-delivery = ask)."
+  },
+  "cmd.cli.handshake.askTicketDir": {
+    "ja": "チケット保存先ディレクトリ（Enter で現状: {dir}）",
+    "en": "Ticket save directory (Enter to keep: {dir})"
+  },
+  "cmd.cli.handshake.askTicketDirPrompt": {
+    "ja": "ディレクトリ > ",
+    "en": "directory > "
+  },
+  "cmd.cli.handshake.ticketDirRemembered": {
+    "ja": "チケット保存先を記憶しました: {dir}",
+    "en": "Remembered ticket directory: {dir}"
+  },
+  "cmd.cli.handshake.codeHeader": {
+    "ja": "=== {role}（コード表示） ===",
+    "en": "=== {role} (code) ==="
+  },
+  "cmd.cli.handshake.fileHeader": {
+    "ja": "=== {role}（ファイル） ===",
+    "en": "=== {role} (file) ==="
+  },
+  "cmd.cli.handshake.fileHint": {
+    "ja": "BMXt ウィザードの「ファイルで渡す / Open」でこのファイルを開くか、相手に渡してください。",
+    "en": "Open this file in the BMXt wizard (ファイルで渡す / Open), or share it with the peer."
+  },
+  "cmd.cli.handshake.pasteAnswerPrompt": {
+    "ja": "ANSWER: @path.json · Enter/:pick で GUI · または bmxt-rtc1. を貼付\n> ",
+    "en": "ANSWER: @path.json · Enter/:pick for GUI · or bare bmxt-rtc1. paste\n> "
+  },
+  "cmd.cli.handshake.pasteOfferPrompt": {
+    "ja": "OFFER: @path.json · Enter/:pick で GUI · または bmxt-rtc1. を貼付\n> ",
+    "en": "OFFER: @path.json · Enter/:pick for GUI · or bare bmxt-rtc1. paste\n> "
+  },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
     "en": "Peer not connected. Establish a DataChannel with sync -connect <deviceId> (or -offer / -answer / -accept) first."

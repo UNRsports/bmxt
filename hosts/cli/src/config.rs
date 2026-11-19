@@ -15,6 +15,14 @@ pub struct CliConfig {
     pub seed_b64: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    /// EN: Remembered outbound handshake delivery: `code` | `file`. Missing → ask.
+    /// JA: 送信握手の配送方法の記憶。`code` | `file`。未設定なら毎回尋ねる。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handshake_delivery: Option<String>,
+    /// EN: Remembered directory for handshake / invite ticket files.
+    /// JA: 握手・招待チケットの保存先ディレクトリ。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handshake_ticket_dir: Option<String>,
 }
 
 impl CliConfig {
@@ -46,6 +54,8 @@ impl CliConfig {
             seed_b64: None,
             created_at: now.clone(),
             updated_at: now,
+            handshake_delivery: None,
+            handshake_ticket_dir: None,
         };
         cfg.save()?;
         Ok(cfg)
