@@ -773,15 +773,17 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **Direct start** | `bmxt` or `bmxt repl` opens a REPL. With Family joined, CLI also serves a **localhost door** on `http://127.0.0.1:17653/` (binds **127.0.0.1 only**, Family-sealed `GET /v1/hello` · `POST /v1/handshake/offer`). |
 | **Auto-connect** | Open the BMXt prompt in each browser — sealed handshake to the CLI door retries in the background (todo §11). Impostor localhost servers without the Family seed are ignored. Clipboard / file remain full fallbacks. |
 | **Prompt** | Family ready → **`BMXt>`** (accepting commands). Not in a Family → **`BMXt*>`**. |
-| **Door status logs** | ICE / connection / DataChannel lines are followed by a short i18n “door up” hint (`LANG=ja*` → Japanese). When the last peer tunnel drops, a longer “still listening / type at BMXt>” banner is printed. |
+| **Connection logs** | Normal scrollback lines (`connection` / `datachannel` / `connected: …`). While `BMXt>` is waiting, async logs go through rustyline’s **ExternalPrinter** so the prompt and caret redraw afterward. ICE `checking` noise is suppressed. |
+| **Peer drop vs exit** | Last peer tunnel closes while the REPL stays up → i18n “peer closed; listener keeps running” (`LANG=ja*` → Japanese). **`quit` / `exit` / EOF** ends the **`bmxt` process** (no “still listening” claim). |
 | **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). |
 | **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
 | **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
-| **Line editor** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. |
+| **Line editor / Tab** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. After a list producer `-list`, Tab offers **`\| browse`** (and other pipe consumers). After a typed **`\|`**, Tab completes bare consumer names (`browse`, `close`, …). |
+| **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. |
 | **Mesh** | First peer via door or manual handshake; additional Family peers join over in-band mesh (CLI acts as introducer; tab ops are not hub-relayed). |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
 
-**Cold start (same PC):** (1) join the same Family on CLI + browsers · (2) start `bmxt` · (3) open each BMXt prompt window → sealed auto-reconnect. Stop the door with REPL **`quit`**.
+**Cold start (same PC):** (1) join the same Family on CLI + browsers · (2) start `bmxt` · (3) open each BMXt prompt window → sealed auto-reconnect. Stop the process with REPL **`quit`** / **`exit`**.
 
 **Out of scope for this host:** `nav` / `dom` page overlays, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11.
 
@@ -2266,18 +2268,20 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 | 項目 | 現状 |
 |------|------|
-| **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（**127.0.0.1 のみ** bind · Family 封印 `GET /v1/hello` · `POST /v1/handshake/offer`）。 |
-| **自動接続** | 各ブラウザで BMXt プロンプトを開くと、封印握手で CLI 玄関へバックグラウンド再接続（todo §11）。Family シード無しの偽 localhost は無視。コピペ／ファイルはフォールバックとして存続。 |
+| **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 待ち受け** `http://127.0.0.1:17653/`（**127.0.0.1 のみ** bind · Family 封印 `GET /v1/hello` · `POST /v1/handshake/offer`）。 |
+| **自動接続** | 各ブラウザで BMXt プロンプトを開くと、封印握手で CLI 待ち受けへバックグラウンド再接続（todo §11）。Family シード無しの偽 localhost は無視。コピペ／ファイルはフォールバックとして存続。 |
 | **プロンプト** | Family 準備済み → **`BMXt>`**（コマンド受付）。未参加 → **`BMXt*>`**。 |
-| **玄関ステータスログ** | ICE / connection / DataChannel の各行の直後に短い i18n「玄関稼働中」案内（`LANG=ja*` なら日本語）。最後のピア切断時は「継続待ち受け / BMXt> で入力」の長い案内も出す。 |
+| **接続ログ** | 通常のスクロール行（`connection` / `datachannel` / `connected: …`）。`BMXt>` 待ち中の非同期ログは rustyline の **ExternalPrinter** 経由で出し、プロンプトとキャレットを描き直す。ICE `checking` は抑制。 |
+| **ピア切断と終了** | REPL 継続中に最後のピアが切れたときのみ「ピア切断・待ち受け継続」案内（`LANG=ja*` なら日本語）。**`quit` / `exit` / EOF** で **`bmxt` プロセス自体が終了**（「待ち受け継続」は出さない）。 |
 | **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。 |
 | **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
 | **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
-| **行編集** | rustyline · 灰色ヒント · Tab / Enter。 |
-| **メッシュ** | 最初の peer は玄関または手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
+| **行編集 / Tab** | rustyline · 灰色ヒント · Tab / Enter。list プロデューサーの `-list` 後は **`\| browse`** 等を候補化。既に **`\|`** を打った右辺では `browse` / `close` など consumer 名を補完。 |
+| **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。 |
+| **メッシュ** | 最初の peer は待ち受けまたは手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
 | **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
 
-**コールドスタート（同一 PC）:** (1) CLI と各ブラウザで同じ Family に参加 · (2) `bmxt` 起動 · (3) 各 BMXt プロンプト窓を開く → 封印自動再接続。玄関停止は REPL **`quit`**。
+**コールドスタート（同一 PC）:** (1) CLI と各ブラウザで同じ Family に参加 · (2) `bmxt` 起動 · (3) 各 BMXt プロンプト窓を開く → 封印自動再接続。停止は REPL **`quit`** / **`exit`**。
 
 **この host の対象外:** `nav` / `dom` のページオーバーレイ、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11。
 
