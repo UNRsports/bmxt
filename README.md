@@ -171,11 +171,11 @@ The following is a technical overview. From the toolbar icon, you can open/focus
 ### Permissions (host `wxt.config.ts` manifest)
 
 
-Manifest overrides live in **`hosts/chrome/wxt.config.ts`** / **`hosts/firefox/wxt.config.ts`** (via **`hosts/create-host-wxt-config.ts`**; WXT merges them into the built **`manifest.json`**). Chrome declares **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Firefox omits **`favicon`** and does not set **`commands.*.global`** (unsupported). **Since 0.8.5:** required **`host_permissions`** are **`https://*/*` only** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`shared/lib/features/page-scripting/`). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) is **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without that host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under the browser’s extension settings, in-page commands explain how to re-enable it.
+Manifest overrides live in **`hosts/chrome/wxt.config.ts`** / **`hosts/firefox/wxt.config.ts`** (via **`hosts/create-host-wxt-config.ts`**; WXT merges them into the built **`manifest.json`**). Chrome declares **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, and **`bookmarks`**. Firefox omits **`favicon`** and does not set **`commands.*.global`** (unsupported). **Since 0.8.5:** required **`host_permissions`** include **`https://*/*`** so install/update can inject the content script into already-open **https** tabs **without a page reload** (`shared/lib/features/page-scripting/`). **Todo §11:** also **`http://127.0.0.1:17653/*`** and **`http://localhost:17653/*`** for the CLI Family-sealed localhost door only (not general `http://` page scripting). In-page scripting (**nav**, **float**, **`dom`**, **`search -list --page`**, **`snapshot -save`**) remains **https-only**; opening / listing / matching **http://** URLs in tabs, history, and bookmarks stays allowed without a broad http host grant. Privileged Service Worker messages **`RUN_CMD`** and **`NAV_CONTROL`** are accepted only from the extension UI pages **`bmxt.html`** / **`bmxt-float.html`** (not from content scripts or other extensions). If site access is later turned off under the browser’s extension settings, in-page commands explain how to re-enable it.
 
-**Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** to guard that policy, and the packaged manifest’s **Content Security Policy** (including **`connect-src 'self'`**) is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
+**Data handling (aligned with the privacy policy and store text):** **Terminal session output and picker UI** stay in the **BMXt UI page memory** while the window is open (not in the Service Worker). **Prompt command history** and **UI settings** use capped **`chrome.storage.local`** fields (**`lib/features/extension-storage/keys.ts`**). Legacy keys such as **`bmxt_terminal_sessions_v1`** may still be **removed on process exit** for cleanup but are **not** the runtime source of truth for logs. The extension page and service worker are not designed to call **`fetch()`** against arbitrary third-party HTTPS URLs; CI runs **`pnpm run check:no-fetch`** (allowlist: **`shared/lib/features/sync/handshake/localhost/`** only) to guard that policy, and the packaged manifest’s **Content Security Policy** is an additional guardrail—Chrome Web Store delivery and browser updates are separate.
 
-The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self' 'wasm-unsafe-eval'`** (WASM compile), **`connect-src 'self'`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`wxt.config.ts`** for the exact string.
+The manifest sets **`content_security_policy.extension_pages`** with **`default-src 'self'`**, **`script-src 'self' 'wasm-unsafe-eval'`** (WASM compile), **`connect-src 'self' http://127.0.0.1:17653 http://localhost:17653`**, **`object-src 'self'`**, **`style-src 'self'`**, **`img-src 'self' data: blob:`**, **`font-src 'self' data:`**, and **`worker-src 'self'`**. Extension UI uses external CSS and Constructable Stylesheets for dynamic layout (no `'unsafe-inline'`). See **`hosts/manifest-base.ts`** / host **`wxt.config.ts`** for the exact string.
 
 <a id="reproducible-builds"></a>
 
@@ -745,15 +745,16 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 |-------|--------|-----------|
 | **6a** | Same PC · Chrome ↔ Firefox | Family invite (`sync -pair` / `-setup`) + roster in `chrome.storage.local` |
 | **6b** | Same LAN · Family members | Manual / QR discovery; direct connect preferred (future) |
-| **6c** | Same PC (protocol can extend later) | **Copy-paste handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
+| **6c** | Same PC (protocol can extend later) | **Copy-paste / file handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
+| **§11 (CLI door)** | Same PC · CLI running | **Localhost HTTP door** `http://127.0.0.1:17653/` (loopback only, Family-sealed hello + offer/answer). Extension auto-retries when the BMXt prompt opens. Clipboard / file stay full fallbacks. |
 
 **Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** (and **`bookmark -list` / `history -list`** via the same search scopes) with `--device <id>` / `--peers` (DataChannel RPC); send URLs with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; send bookmarks with **`bookmark -send <deviceId> [--open|--save|--both]`** (open tabs and/or **`bookmarks_import`** on the peer); tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
 
 **Family list refresh (`tabs_changed`):** After a successful Family tab mutation (`open_tabs` / `tabs_ops`, and local `--close` when used), BMXt broadcasts a lightweight **`tabs_changed`** signal to **all currently connected** Family peers (including notifying the sender). The payload carries **`first`** — a **first-command selection code** (today always **`tab`**; missing `first` from an older peer is treated as **`tab`**). A peer refreshes an open picker only when that code matches (tab picker reacts to **`first: "tab"`** only). Disconnected peers are not notified; they re-pull on the next `--peers` / `--device` list.
 
-**Default is local.** `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` stay intact on the local path.
+**Default is local.** Arbitrary third-party `fetch` stays forbidden (`check:no-fetch`, except the allowlisted **localhost door client**). CSP **`connect-src`** is **`'self'`** plus the fixed CLI door origins only (`http://127.0.0.1:17653` · `http://localhost:17653`). Firefox **`data_collection_permissions: none`** stays. In-page scripting (**nav** / **float** / **`dom`** / **`search --page`**) remains **https-only** — general `http://` DOM is still not scriptable; the door host grant is handshake-only.
 
-**UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. When the handshake completes, the wizard closes automatically. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow. The setting picker sync panel only shows a setup guide and display-name edit.
+**UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. When the handshake completes, the wizard closes automatically. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow, **or** reopen the BMXt prompt while the CLI door is up for sealed auto-reconnect. The setting picker sync panel only shows a setup guide and display-name edit.
 
 **Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`, **`sync_bookmark_send`**) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
 
@@ -769,16 +770,20 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 | Topic | Current behavior |
 |-------|------------------|
-| **Direct start** | `bmxt` or `bmxt repl` opens a REPL. With Family joined, CLI also serves a **localhost door** on `http://127.0.0.1:17653/` (loopback only, Family-sealed). |
-| **Auto-connect** | Open the BMXt prompt in each browser — sealed handshake to the CLI door retries in the background (todo §11). Clipboard / file remain full fallbacks. |
-| **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). Family-ready prompt is **`BMXt>`**. |
+| **Direct start** | `bmxt` or `bmxt repl` opens a REPL. With Family joined, CLI also serves a **localhost door** on `http://127.0.0.1:17653/` (binds **127.0.0.1 only**, Family-sealed `GET /v1/hello` · `POST /v1/handshake/offer`). |
+| **Auto-connect** | Open the BMXt prompt in each browser — sealed handshake to the CLI door retries in the background (todo §11). Impostor localhost servers without the Family seed are ignored. Clipboard / file remain full fallbacks. |
+| **Prompt** | Family ready → **`BMXt>`** (accepting commands). Not in a Family → **`BMXt*>`**. |
+| **Door status logs** | ICE / connection / DataChannel lines are followed by a short i18n “door up” hint (`LANG=ja*` → Japanese). When the last peer tunnel drops, a longer “still listening / type at BMXt>” banner is printed. |
+| **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). |
 | **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
 | **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
 | **Line editor** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. |
-| **Mesh** | First peer via door or manual handshake; additional Family peers join over in-band mesh. |
+| **Mesh** | First peer via door or manual handshake; additional Family peers join over in-band mesh (CLI acts as introducer; tab ops are not hub-relayed). |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
 
-**Out of scope for this host:** `nav` / `dom` page overlays, native messaging, public STUN/TURN on the default path. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md).
+**Cold start (same PC):** (1) join the same Family on CLI + browsers · (2) start `bmxt` · (3) open each BMXt prompt window → sealed auto-reconnect. Stop the door with REPL **`quit`**.
+
+**Out of scope for this host:** `nav` / `dom` page overlays, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11.
 
 <a id="picker-ui"></a>
 
@@ -1577,7 +1582,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 3. ~~Add history and bookmark operations~~ — **done** (`bookmark` / `history` commands, Family `--open|--save|--both`, ZIP backup; see **[`bookmark`](#bookmark-command)** · **[`history`](#history-command)** · todo §9)
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
-6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer is usable (direct start, in-REPL sync, grey Tab hints, mesh); polish packaging / same-PC smoke and keep grammar parity with the extension (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10)
+6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + **localhost door auto-handshake** (todo §11); polish packaging / same-PC smoke and keep grammar parity with the extension (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10 / §11)
 
 ---
 
@@ -1750,11 +1755,11 @@ BMXt は、エンジニア向けの効率ツールであるとともに、**で�
 ### 権限（`wxt.config.ts` の manifest）
 
 
-manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。**0.8.5 以降:** 必須 **`host_permissions`** は **`https://*/*` のみ**で、インストール／更新時に既に開いている **https** タブへ **ページ再読み込みなし** でコンテンツスクリプトを注入できます（**`lib/features/page-scripting/`**）。ページ内操作（**nav**・**float**・**`dom`**・**`search -list --page`**・**`snapshot -save`**）は **https のみ**。タブを開く・履歴・ブックマーク上の **http://** URL の扱いは従来どおり（ホスト権限は不要）。特権 SW メッセージ **`RUN_CMD`** / **`NAV_CONTROL`** は拡張 UI（**`bmxt.html`** / **`bmxt-float.html`**）からのみ受け付けます（コンテンツスクリプトや他拡張は拒否）。`chrome://extensions` でサイトアクセスを後からオフにした場合は、ページ内コマンドが再有効化の案内を出します。
+manifest の上書きは **`wxt.config.ts`** にあります（WXT がビルド時に **`manifest.json`** にマージします）。宣言している権限: **`favicon`**, **`tabs`**, **`tabGroups`**, **`storage`**, **`unlimitedStorage`**, **`windows`**, **`scripting`**, **`history`**, **`bookmarks`**。**0.8.5 以降:** 必須 **`host_permissions`** に **`https://*/*`** を含め、インストール／更新時に既に開いている **https** タブへ **ページ再読み込みなし** でコンテンツスクリプトを注入できます（**`lib/features/page-scripting/`**）。**todo §11:** CLI Family 封印 localhost 玄関用に **`http://127.0.0.1:17653/*`** · **`http://localhost:17653/*`** も追加（一般 `http://` ページ操作には使わない）。ページ内操作（**nav**・**float**・**`dom`**・**`search -list --page`**・**`snapshot -save`**）は **https のみ**。タブを開く・履歴・ブックマーク上の **http://** URL の扱いは従来どおり。特権 SW メッセージ **`RUN_CMD`** / **`NAV_CONTROL`** は拡張 UI（**`bmxt.html`** / **`bmxt-float.html`**）からのみ受け付けます（コンテンツスクリプトや他拡張は拒否）。`chrome://extensions` でサイトアクセスを後からオフにした場合は、ページ内コマンドが再有効化の案内を出します。
 
-**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** **ターミナルセッションの出力とピッカー UI** は BMXt ウィンドウが開いている間 **拡張 UI ページのメモリ**に保持（Service Worker には載せない）。**コマンド履歴**と **UI 設定**は上限付き **`chrome.storage.local`**（**`lib/features/extension-storage/keys.ts`**）。**`bmxt_terminal_sessions_v1`** 等の旧プロセスキーは **終了時の掃除**で削除されうるが、**実行中のログ正本ではない**。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`** で CI からも固定し、manifest の **CSP**（**`connect-src 'self'`** 等）は補助線です（ストア配信・ブラウザ更新は別）。
+**データの扱い（プライバシーポリシー・ストア説明と揃えた一文）:** **ターミナルセッションの出力とピッカー UI** は BMXt ウィンドウが開いている間 **拡張 UI ページのメモリ**に保持（Service Worker には載せない）。**コマンド履歴**と **UI 設定**は上限付き **`chrome.storage.local`**（**`lib/features/extension-storage/keys.ts`**）。**`bmxt_terminal_sessions_v1`** 等の旧プロセスキーは **終了時の掃除**で削除されうるが、**実行中のログ正本ではない**。拡張ページ・SW から **`fetch()`** で任意の第三者 HTTPS に取りに行く設計にはしておらず、**`pnpm run check:no-fetch`**（allowlist: **`shared/lib/features/sync/handshake/localhost/`** のみ）で CI からも固定し、manifest の **CSP** は補助線です（ストア配信・ブラウザ更新は別）。
 
-**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self' 'wasm-unsafe-eval'`**（WASM コンパイル）、**`connect-src 'self'`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`wxt.config.ts`** を参照してください。
+**`content_security_policy.extension_pages`** では **`default-src 'self'`**、**`script-src 'self' 'wasm-unsafe-eval'`**（WASM コンパイル）、**`connect-src 'self' http://127.0.0.1:17653 http://localhost:17653`**、**`object-src 'self'`**、**`style-src 'self'`**、**`img-src 'self' data: blob:`**、**`font-src 'self' data:`**、**`worker-src 'self'`** を宣言しています。拡張 UI の動的レイアウトは外部 CSS と Constructable Stylesheet で行い、`'unsafe-inline'` は使いません。正確な文字列は **`hosts/manifest-base.ts`** / ホスト **`wxt.config.ts`** を参照してください。
 
 <a id="reproducible-builds-ja"></a>
 
@@ -2236,15 +2241,16 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 |----|------|------|
 | **6a** | 同一 PC · Chrome ↔ Firefox | Family 招待（`sync -pair` / `-setup`）+ `chrome.storage.local` 名簿 |
 | **6b** | 同一 LAN · Family | 手入力 / QR 発見。直結優先（将来） |
-| **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
+| **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ／ファイル握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
+| **§11（CLI 玄関）** | 同一 PC · CLI 起動時 | **localhost HTTP 玄関** `http://127.0.0.1:17653/`（loopback のみ・Family 封印 hello + offer/answer）。BMXt プロンプト起動で拡張が自動リトライ。コピペ／ファイルはフォールバックとして存続 |
 
 **接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（および同じ search スコープ経由の **`bookmark -list` / `history -list`**）を `--device` / `--peers` で。URL 送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。ブックマーク送信は **`bookmark -send <deviceId> [--open|--save|--both]`**（タブ open および／またはピア側 **`bookmarks_import`**）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
 
 **Family 一覧追従（`tabs_changed`）:** Family 経由のタブ変更（`open_tabs` / `tabs_ops`、および `--close` によるローカル閉じ）が成功すると、**いま接続中の全 Family ピア**へ軽量シグナル **`tabs_changed`** を广播する（送信元自身の購読者にも通知）。ペイロードの **`first`** は **第一コマンド選別符号**（現状は常に **`tab`**。旧ピアが欠落させたら **`tab`** 扱い）。受信側は符号が一致する開中 picker だけを再取得する（tab picker は **`first: "tab"`** のみ反応）。未接続ピアには届かない（次の `--peers` / `--device` 一覧で再取得）。
 
-**既定はローカル。** ローカル経路では `connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持。
+**既定はローカル。** 任意第三者への `fetch` は禁止（`check:no-fetch`。例外は allowlist された **localhost 玄関クライアント**のみ）。CSP **`connect-src`** は **`'self'`** に加え CLI 玄関の固定オリジンのみ（`http://127.0.0.1:17653` · `http://localhost:17653`）。Firefox **`data_collection_permissions: none`** は維持。ページ内操作（**nav** / **float** / **`dom`** / **`search --page`**）は従来どおり **https のみ**（一般 `http://` DOM は不可。玄関用 host は握手専用）。
 
-**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY** で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。握手完了でウィザードは自動で閉じる。切断後は両側 **`sync -connect <peerDeviceId>`** で同じウィザード往復。setting picker の sync は案内と表示名編集のみ。
+**UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY** で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。握手完了でウィザードは自動で閉じる。切断後は両側 **`sync -connect <peerDeviceId>`** のウィザード往復、**または** CLI 玄関起動中に BMXt プロンプトを開き直して封印自動再接続。setting picker の sync は案内と表示名編集のみ。
 
 **配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`、**`sync_bookmark_send`**）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
 
@@ -2260,16 +2266,20 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 | 項目 | 現状 |
 |------|------|
-| **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（loopback のみ・Family 封印）も起動。 |
-| **自動接続** | 各ブラウザで BMXt プロンプトを開くと、封印握手で CLI 玄関へバックグラウンド再接続（todo §11）。コピペ／ファイルはフォールバックとして存続。 |
-| **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。Family 準備済みのプロンプトは **`BMXt>`**。 |
+| **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（**127.0.0.1 のみ** bind · Family 封印 `GET /v1/hello` · `POST /v1/handshake/offer`）。 |
+| **自動接続** | 各ブラウザで BMXt プロンプトを開くと、封印握手で CLI 玄関へバックグラウンド再接続（todo §11）。Family シード無しの偽 localhost は無視。コピペ／ファイルはフォールバックとして存続。 |
+| **プロンプト** | Family 準備済み → **`BMXt>`**（コマンド受付）。未参加 → **`BMXt*>`**。 |
+| **玄関ステータスログ** | ICE / connection / DataChannel の各行の直後に短い i18n「玄関稼働中」案内（`LANG=ja*` なら日本語）。最後のピア切断時は「継続待ち受け / BMXt> で入力」の長い案内も出す。 |
+| **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。 |
 | **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
 | **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
 | **行編集** | rustyline · 灰色ヒント · Tab / Enter。 |
-| **メッシュ** | 最初の peer は玄関または手動握手。以降は in-band メッシュ。 |
+| **メッシュ** | 最初の peer は玄関または手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
 | **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
 
-**この host の対象外:** `nav` / `dom` のページオーバーレイ、ネイティブメッセージング、既定経路での公開 STUN/TURN。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md)。
+**コールドスタート（同一 PC）:** (1) CLI と各ブラウザで同じ Family に参加 · (2) `bmxt` 起動 · (3) 各 BMXt プロンプト窓を開く → 封印自動再接続。玄関停止は REPL **`quit`**。
+
+**この host の対象外:** `nav` / `dom` のページオーバーレイ、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11。
 
 <a id="picker-ui-ja"></a>
 
@@ -3091,4 +3101,4 @@ pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 3. ~~履歴、ブックマーク操作~~ — **完了**（`bookmark` / `history` コマンド、Family `--open|--save|--both`、ZIP バックアップ。**[`bookmark`](#bookmark-command-ja)** · **[`history`](#history-command-ja)** · todo §9）
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
-6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer は利用可能（直接起動 · REPL 内 sync · 灰色 Tab ヒント · メッシュ）。配布／同一 PC スモークの磨き込みと拡張との文法パリティ維持（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10）
+6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + **localhost 玄関の自動握手**（todo §11）。配布／同一 PC スモークの磨き込みと拡張との文法パリティ維持（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10 / §11）
