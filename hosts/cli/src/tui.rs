@@ -12,8 +12,18 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 use std::io::stdout;
 
+/** EN: Tab list row tagged with the Family peer that owns the Chrome/Firefox inventory. */
+#[derive(Debug, Clone)]
+pub struct PeerTabRow {
+    pub peer_device_id: String,
+    pub peer_display_name: String,
+    pub row: SyncRemoteTabRow,
+}
+
 #[derive(Debug, Clone)]
 pub struct PickerSelection {
+    /** EN: Family device that owns this tab (required for tabs_ops routing). */
+    pub peer_device_id: String,
     pub tab_id: i64,
     pub window_id: i64,
     pub title: String,
@@ -29,8 +39,8 @@ pub fn run_demo_tui() -> Result<()> {
  * EN: Interactive list. Enter on a tab row returns selection; Esc/q cancels (`None`).
  * JA: 対話一覧。タブ行 Enter で選択、Esc/q でキャンセル。
  */
-pub fn run_tab_picker(rows: &[SyncRemoteTabRow]) -> Result<Option<PickerSelection>> {
-    let entries: Vec<PickerEntry> = rows.iter().filter_map(PickerEntry::from_row).collect();
+pub fn run_tab_picker(rows: &[PeerTabRow]) -> Result<Option<PickerSelection>> {
+    let entries: Vec<PickerEntry> = rows.iter().filter_map(PickerEntry::from_peer_row).collect();
     if entries.is_empty() {
         println!("(empty list)");
         return Ok(None);
@@ -164,8 +174,9 @@ struct PickerEntry {
 }
 
 impl PickerEntry {
-    fn from_row(row: &SyncRemoteTabRow) -> Option<Self> {
-        match row {
+    fn from_peer_row(peer_row: &PeerTabRow) -> Option<Self> {
+        let peer = peer_row.peer_device_id.as_str();
+        match &peer_row.row {
             SyncRemoteTabRow::Window {
                 window_id,
                 title,
@@ -195,10 +206,12 @@ impl PickerEntry {
                 ..
             } => Some(Self {
                 label: format!(
-                    "    T {tab_id} {} {title}  {url}",
-                    if *active { "*" } else { " " }
+                    "    T {tab_id} {} [{}] {title}  {url}",
+                    if *active { "*" } else { " " },
+                    peer_row.peer_display_name
                 ),
                 tab: Some(PickerSelection {
+                    peer_device_id: peer.to_string(),
                     tab_id: *tab_id,
                     window_id: *window_id,
                     title: title.clone(),

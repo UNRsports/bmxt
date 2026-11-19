@@ -123,17 +123,21 @@ impl<'a> CliHostAdapter<'a> {
             }
             PipeConsumerClass::Close => {
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
-                let tab_ids = tab_ids_from_rows(&rows);
-                if tab_ids.is_empty() {
+                let by_peer = tab_ids_by_peer(&rows);
+                if by_peer.is_empty() {
                     eprintln!("error: no tab ids in pipe list for close");
                     return Ok(RunOutcome::status(EXIT_FAILURE));
                 }
-                self.require_client()?
-                    .tabs_ops(
-                        &self.cfg.device_id,
-                        SyncTabsOp::CloseTabs { tab_ids },
-                    )
-                    .await?;
+                let client = self.require_client()?;
+                for (peer, tab_ids) in by_peer {
+                    client
+                        .tabs_ops_on(
+                            &self.cfg.device_id,
+                            &peer,
+                            SyncTabsOp::CloseTabs { tab_ids },
+                        )
+                        .await?;
+                }
                 println!("ok");
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
@@ -240,7 +244,7 @@ impl<'a> CliHostAdapter<'a> {
                 let rows = self
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
-                print_tab_rows(&rows, show);
+                print_peer_tab_rows(&rows, show);
                 Ok(())
             }
             HostEffect::SearchList {
@@ -309,7 +313,7 @@ impl<'a> CliHostAdapter<'a> {
                 let rows = self
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
-                print_tab_rows(&rows, show);
+                print_peer_tab_rows(&rows, show);
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::OpenPicker {
@@ -458,14 +462,15 @@ impl<'a> CliHostAdapter<'a> {
 
     async fn run_picker_and_maybe_activate(
         &self,
-        rows: &[SyncRemoteTabRow],
+        rows: &[tui::PeerTabRow],
     ) -> Result<RunOutcome> {
         match tui::run_tab_picker(rows)? {
             None => Ok(RunOutcome::status(EXIT_SUCCESS)),
             Some(sel) => {
                 self.require_client()?
-                    .tabs_ops(
+                    .tabs_ops_on(
                         &self.cfg.device_id,
+                        &sel.peer_device_id,
                         SyncTabsOp::Activate {
                             tab_id: sel.tab_id,
                             window_id: sel.window_id,
@@ -473,8 +478,8 @@ impl<'a> CliHostAdapter<'a> {
                     )
                     .await?;
                 println!(
-                    "activated tab {} win={} — {} {}",
-                    sel.tab_id, sel.window_id, sel.title, sel.url
+                    "activated tab {} win={} on {} — {} {}",
+                    sel.tab_id, sel.window_id, sel.peer_device_id, sel.title, sel.url
                 );
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
@@ -484,7 +489,7 @@ impl<'a> CliHostAdapter<'a> {
     async fn materialize_tab_rows(
         &self,
         bundle: &DispatchBundle,
-    ) -> Result<Vec<SyncRemoteTabRow>> {
+    ) -> Result<Vec<tui::PeerTabRow>> {
         match bundle {
             DispatchBundle::Ui {
                 action:
@@ -534,19 +539,14 @@ impl<'a> CliHostAdapter<'a> {
         device_scope: &str,
         device_id: &str,
         show_url: bool,
-    ) -> Result<Vec<SyncRemoteTabRow>> {
+    ) -> Result<Vec<tui::PeerTabRow>> {
         match device_scope {
             "device" if !device_id.is_empty() => {
                 let bundles = self.require_client()?.tabs_all(&self.cfg.device_id, show_url).await?;
                 let mut out = Vec::new();
                 for (id, name, rows) in bundles {
                     if id == device_id {
-                        out.push(SyncRemoteTabRow::Window {
-                            window_id: -1,
-                            title: format!("── {name} ──"),
-                            focused: false,
-                        });
-                        out.extend(rows);
+                        push_peer_section(&mut out, &id, &name, rows);
                     }
                 }
                 if out.is_empty() {
@@ -558,18 +558,37 @@ impl<'a> CliHostAdapter<'a> {
                 // EN: CLI has no local browser inventory — peers/local → all connected browsers.
                 let bundles = self.require_client()?.tabs_all(&self.cfg.device_id, show_url).await?;
                 let mut out = Vec::new();
-                for (_id, name, rows) in bundles {
-                    out.push(SyncRemoteTabRow::Window {
-                        window_id: -1,
-                        title: format!("── {name} ──"),
-                        focused: false,
-                    });
-                    out.extend(rows);
+                for (id, name, rows) in bundles {
+                    push_peer_section(&mut out, &id, &name, rows);
                 }
                 Ok(out)
             }
             other => Err(anyhow!("unknown device_scope: {other}")),
         }
+    }
+}
+
+fn push_peer_section(
+    out: &mut Vec<tui::PeerTabRow>,
+    peer_id: &str,
+    peer_name: &str,
+    rows: Vec<SyncRemoteTabRow>,
+) {
+    out.push(tui::PeerTabRow {
+        peer_device_id: peer_id.to_string(),
+        peer_display_name: peer_name.to_string(),
+        row: SyncRemoteTabRow::Window {
+            window_id: -1,
+            title: format!("── {peer_name} ──"),
+            focused: false,
+        },
+    });
+    for row in rows {
+        out.push(tui::PeerTabRow {
+            peer_device_id: peer_id.to_string(),
+            peer_display_name: peer_name.to_string(),
+            row,
+        });
     }
 }
 
@@ -581,20 +600,23 @@ fn format_parse_error(error: ParseSegmentError) -> String {
     }
 }
 
-fn tab_ids_from_rows(rows: &[SyncRemoteTabRow]) -> Vec<i64> {
-    let mut ids = Vec::new();
-    for row in rows {
-        if let SyncRemoteTabRow::Tab { tab_id, .. } = row {
-            ids.push(*tab_id);
+/** EN: Group tab ids by owning peer — tab ids are not globally unique across browsers. */
+fn tab_ids_by_peer(rows: &[tui::PeerTabRow]) -> Vec<(String, Vec<i64>)> {
+    let mut map: std::collections::BTreeMap<String, Vec<i64>> = std::collections::BTreeMap::new();
+    for peer_row in rows {
+        if let SyncRemoteTabRow::Tab { tab_id, .. } = &peer_row.row {
+            map.entry(peer_row.peer_device_id.clone())
+                .or_default()
+                .push(*tab_id);
         }
     }
-    ids
+    map.into_iter().collect()
 }
 
-fn urls_from_rows(rows: &[SyncRemoteTabRow]) -> Vec<String> {
+fn urls_from_rows(rows: &[tui::PeerTabRow]) -> Vec<String> {
     let mut urls = Vec::new();
-    for row in rows {
-        if let SyncRemoteTabRow::Tab { url, .. } = row {
+    for peer_row in rows {
+        if let SyncRemoteTabRow::Tab { url, .. } = &peer_row.row {
             if !url.is_empty() {
                 urls.push(url.clone());
             }
@@ -603,9 +625,9 @@ fn urls_from_rows(rows: &[SyncRemoteTabRow]) -> Vec<String> {
     urls
 }
 
-fn print_tab_rows(rows: &[SyncRemoteTabRow], show_url: bool) {
-    for row in rows {
-        println!("{}", format_row(row, show_url));
+fn print_peer_tab_rows(rows: &[tui::PeerTabRow], show_url: bool) {
+    for peer_row in rows {
+        println!("{}", format_row(&peer_row.row, show_url));
     }
 }
 

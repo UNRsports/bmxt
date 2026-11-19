@@ -303,12 +303,19 @@ impl BusClient {
             .ok_or_else(|| anyhow!("no connected peers"))
     }
 
-    pub async fn tabs_ops(&self, from: &str, op: SyncTabsOp) -> Result<()> {
-        let remote = self.first_remote().await?;
+    /**
+     * EN: Run tabs_ops on a specific peer (tab ids are per-browser — never guess first_remote).
+     * JA: 指定 peer へ tabs_ops（tab id はブラウザごと。first_remote 推測はしない）。
+     */
+    pub async fn tabs_ops_on(&self, from: &str, remote: &str, op: SyncTabsOp) -> Result<()> {
+        let remote = remote.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("tabs_ops: empty remote device id"));
+        }
         let id = new_id("ops");
         let resp = self
             .request_on(
-                &remote,
+                remote,
                 SyncBusCommand::TabsOps {
                     id,
                     from: from.to_string(),
@@ -325,6 +332,12 @@ impl BusClient {
             }
             other => Err(anyhow!("unexpected reply: {other:?}")),
         }
+    }
+
+    /** EN: Legacy helper — prefer `tabs_ops_on` when the owning peer is known. */
+    pub async fn tabs_ops(&self, from: &str, op: SyncTabsOp) -> Result<()> {
+        let remote = self.first_remote().await?;
+        self.tabs_ops_on(from, &remote, op).await
     }
 
     pub async fn open_tabs(
