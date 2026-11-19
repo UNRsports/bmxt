@@ -418,21 +418,29 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_MISUSE))
             }
             UiAction::SyncOffer => {
-                if self.client.is_some() {
-                    eprintln!(
-                        "already connected — additional Family peers join via mesh when online"
-                    );
-                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                if let Some(client) = self.client {
+                    if !client.list_connected().await.is_empty() {
+                        eprintln!(
+                            "already connected — additional Family peers join via mesh when online"
+                        );
+                        return Ok(RunOutcome::status(EXIT_MISUSE));
+                    }
+                    connect::connect_as_offer_onto(self.cfg, client, "pending-peer".into()).await?;
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
                 let client = connect::connect_as_offer(self.cfg, "pending-peer".into()).await?;
                 Ok(RunOutcome::connected(client))
             }
             UiAction::SyncAnswer { code } | UiAction::SyncAccept { code } => {
-                if self.client.is_some() {
-                    eprintln!(
-                        "already connected — additional Family peers join via mesh when online"
-                    );
-                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                if let Some(client) = self.client {
+                    if !client.list_connected().await.is_empty() {
+                        eprintln!(
+                            "already connected — additional Family peers join via mesh when online"
+                        );
+                        return Ok(RunOutcome::status(EXIT_MISUSE));
+                    }
+                    connect::connect_as_answer_onto(self.cfg, client, &code).await?;
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
                 let client = connect::connect_as_answer(self.cfg, &code).await?;
                 Ok(RunOutcome::connected(client))
@@ -672,6 +680,13 @@ fn effect_kind(effect: &HostEffect) -> &'static str {
         HostEffect::TabsMoveUrl { .. } => "tabs_move_url",
         HostEffect::TabsNewWindow { .. } => "tabs_new_window",
         HostEffect::TabsNu => "tabs_nu",
+        HostEffect::BookmarkCreate { .. } => "bookmark_create",
+        HostEffect::BookmarkCreateFolder { .. } => "bookmark_create_folder",
+        HostEffect::BookmarkList { .. } => "bookmark_list",
+        HostEffect::BookmarkMove { .. } => "bookmark_move",
+        HostEffect::BookmarkRemove { .. } => "bookmark_remove",
+        HostEffect::HistoryDeleteRange { .. } => "history_delete_range",
+        HostEffect::HistoryDeleteUrl { .. } => "history_delete_url",
     }
 }
 
@@ -705,5 +720,10 @@ fn ui_kind(action: &UiAction) -> &'static str {
         UiAction::SyncPing { .. } => "sync_ping",
         UiAction::SyncSetup => "sync_setup",
         UiAction::SyncStatus => "sync_status",
+        UiAction::BookmarkBackup => "bookmark_backup",
+        UiAction::BookmarkRestore { .. } => "bookmark_restore",
+        UiAction::HistoryBackup => "history_backup",
+        UiAction::HistoryRestore { .. } => "history_restore",
+        UiAction::SyncBookmarkSend { .. } => "sync_bookmark_send",
     }
 }

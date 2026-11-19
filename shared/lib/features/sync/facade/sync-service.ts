@@ -28,6 +28,7 @@ import type {
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
   SyncRosterMember,
+  SyncSealedEnvelope,
   SyncStatusSnapshot,
   SyncTabsOp,
   TabsChangedReason,
@@ -50,6 +51,8 @@ import {
   refreshSyncLinkStatusFromBus,
   waitForSyncLinkConnected
 } from "../link/sync-link-bridge.ts"
+import { doorFetch } from "../handshake/localhost/door-fetch.ts"
+import { unsealDoorHello } from "../handshake/localhost/door-hello.ts"
 
 export type SyncConnectSession = {
   kind: "handshake"
@@ -129,6 +132,11 @@ export type SyncService = {
   /** EN: Subscribe to Family / local tabs_changed signals for open picker refresh. */
   subscribeTabsChanged(listener: (signal: TabsChangedSignal) => void): () => void
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
+  /**
+   * EN: Auto-handshake via CLI localhost door (Family-sealed). No-op when door down / already linked.
+   * JA: CLI localhost 玄関での自動握手（Family 封印）。玄関停止・接続済みなら no-op。
+   */
+  tryLocalhostDoor(): Promise<{ ok: boolean; lines: string[]; skipped?: boolean }>
 }
 
 function line(text: string): string {
@@ -181,7 +189,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
     await Promise.all([...ids].map((remoteId) => s.commandBus.connect(remoteId)))
   }
 
-  return {
+  const api: SyncService = {
     async status() {
       await ensureFamily()
       const device = await loadOrCreateDeviceIdentity()
@@ -774,6 +782,126 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       return s.commandBus.subscribeTabsChanged(listener)
     },
 
+    async tryLocalhostDoor(): Promise<{ ok: boolean; lines: string[]; skipped?: boolean }> {
+      const membership = await loadFamilyMembership()
+      if (membership === null) {
+        return { ok: false, skipped: true, lines: [line("sync.door.noFamily")] }
+      }
+      const device = await loadOrCreateDeviceIdentity()
+      let helloRes: Response
+      try {
+        helloRes = await doorFetch("/v1/hello", { method: "GET" })
+      } catch {
+        return { ok: false, skipped: true, lines: [line("sync.door.unreachable")] }
+      }
+      if (!helloRes.ok) {
+        return { ok: false, skipped: true, lines: [line("sync.door.unreachable")] }
+      }
+      let helloJson: { envelope?: SyncSealedEnvelope }
+      try {
+        helloJson = (await helloRes.json()) as { envelope?: SyncSealedEnvelope }
+      } catch {
+        return { ok: false, skipped: true, lines: [line("sync.door.badHello")] }
+      }
+      if (helloJson.envelope === undefined) {
+        return { ok: false, skipped: true, lines: [line("sync.door.badHello")] }
+      }
+      const hello = await unsealDoorHello(
+        helloJson.envelope,
+        membership.seedB64,
+        membership.familyId
+      )
+      if (hello === null) {
+        return { ok: false, skipped: true, lines: [line("sync.door.ignored")] }
+      }
+      if (hello.deviceId === device.deviceId) {
+        return { ok: false, skipped: true, lines: [line("sync.door.self")] }
+      }
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const busState = await s.commandBus.connect(hello.deviceId)
+      if (busState === "connected") {
+        return {
+          ok: true,
+          skipped: true,
+          lines: [line(`sync.door.already:${hello.displayName}`)]
+        }
+      }
+      await s.peerHost.closeSession(hello.deviceId)
+      markSyncLinkConnecting(hello.displayName)
+      let offerCode: string
+      try {
+        const bundle = await s.peerHost.createOfferHandshake()
+        const plain: RtcHandshakePlain = {
+          v: 1,
+          role: "offer",
+          sessionId: bundle.sessionId,
+          fromDeviceId: device.deviceId,
+          fromDisplayName: device.displayName,
+          familyId: membership.familyId,
+          toDeviceId: hello.deviceId,
+          sdp: bundle.sdp,
+          ice: bundle.ice
+        }
+        const code = await formatRtcHandshakeCode({
+          familyId: membership.familyId,
+          seedB64: membership.seedB64,
+          fromDeviceId: device.deviceId,
+          toDeviceId: hello.deviceId,
+          ttlMs: RTC_HANDSHAKE_TTL_MS_CONNECT,
+          plain
+        })
+        if (code === null) {
+          clearSyncLinkConnecting()
+          return { ok: false, lines: [line("sync.rtc.encodeFailed")] }
+        }
+        offerCode = code
+      } catch {
+        clearSyncLinkConnecting()
+        return { ok: false, lines: [line("sync.door.offerFailed")] }
+      }
+      let answerRes: Response
+      try {
+        answerRes = await doorFetch("/v1/handshake/offer", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ sealedOffer: offerCode })
+        })
+      } catch {
+        clearSyncLinkConnecting()
+        return { ok: false, lines: [line("sync.door.unreachable")] }
+      }
+      if (answerRes.status === 401 || answerRes.status === 403) {
+        clearSyncLinkConnecting()
+        return { ok: false, skipped: true, lines: [line("sync.door.ignored")] }
+      }
+      if (!answerRes.ok) {
+        clearSyncLinkConnecting()
+        return { ok: false, lines: [line("sync.door.handshakeFailed")] }
+      }
+      let answerJson: { sealedAnswer?: string }
+      try {
+        answerJson = (await answerRes.json()) as { sealedAnswer?: string }
+      } catch {
+        clearSyncLinkConnecting()
+        return { ok: false, lines: [line("sync.door.handshakeFailed")] }
+      }
+      const sealedAnswer = answerJson.sealedAnswer?.trim() ?? ""
+      if (sealedAnswer.length === 0) {
+        clearSyncLinkConnecting()
+        return { ok: false, lines: [line("sync.door.handshakeFailed")] }
+      }
+      const accepted = await api.accept(sealedAnswer)
+      if (!accepted.ok) {
+        clearSyncLinkConnecting()
+        return accepted
+      }
+      return {
+        ok: true,
+        lines: [line(`sync.door.connected:${hello.displayName}`), ...accepted.lines]
+      }
+    },
+
     async setDisplayName(name: string) {
       const next = await setDeviceDisplayName(name)
       if (next === null) {
@@ -782,6 +910,7 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
       return { ok: true, lines: [line(`sync.name.ok:${next.displayName}`)] }
     }
   }
+  return api
 }
 
 /** EN: Survive duplicate module graphs / HMR so status and --peers share one bus. */

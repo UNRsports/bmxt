@@ -547,6 +547,59 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 **参照:** plan `rust_cli_bmxt` · §6（Family／6c バス）· `shared/lib/features/sync/` · `shared/crates/bmxt-core/` · skill `bmxt-add-command`
 
+### 11. localhost HTTP 玄関（自動握手 · CLI door）
+
+**目標:** 同一 PC で CLI を常設エントリ（表玄関）にし、各ブラウザの BMXt プロンプト起動だけで Family DataChannel を再接続する。ブラウザ同士は既存 **mesh**（裏玄関）で直結。コピペ／ファイル握手は **フォールバックとしてすべて残す**。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 輸送 | CLI が **loopback のみ**（`127.0.0.1` / `localhost`）で HTTP 玄関を listen。固定ポート **17653** |
+| 認証 | 握手・hello は **Family 封印必須**（`bmxt-rtc1.` / sealed envelope）。シード無しの偽 localhost は拡張が無視 |
+| CSP | `connect-src` に **当該 loopback ポートのみ**追加。一般インターネットへの fetch は禁止のまま（`check:no-fetch` は localhost クライアントのみ許可） |
+| host_permissions | `http://127.0.0.1:17653/*` · `http://localhost:17653/*` を必須に追加 |
+| 一般 http DOM | **引き続き不可**（`isScriptablePageUrl` は https のみ。localhost を nav/dom/search 対象にしない） |
+| Native messaging | **引き続き不使用** |
+| フォールバック | `sync -setup` / `-connect` / `-offer` / `-answer` / `-accept` · clipboard · ファイルチケットは現状どおり |
+| 役割 | CLI = 表玄関（introducer）。本線コマンドは WebRTC DataChannel。タブ操作のハブ中継はしない |
+
+**コールドスタート（到達点）**
+
+1. CLI 起動（Family 参加済み）→ 玄関サーバ展開  
+2. 各ブラウザで BMXt プロンプト窓を開く  
+3. 拡張が hello 封印を検証 → offer を POST → answer を apply → DC 開通  
+4. mesh でブラウザ同士を自動直結  
+
+初回の Family／CLI 参加（シード・招待）は従来どおり手動。WebRTC はプロセスまたぎ保持不可のため「自動再握手」になる。
+
+**API（契約概要）**
+
+| メソッド | パス | 内容 |
+|----------|------|------|
+| `GET` | `/` | 人向け案内 HTML（任意） |
+| `GET` | `/v1/hello` | Family 封印ドアカード（偽サーバ排除） |
+| `POST` | `/v1/handshake/offer` | body: `{ sealedOffer: "bmxt-rtc1.…" }` → `{ sealedAnswer: "bmxt-rtc1.…" }` |
+
+**実装チェック**
+
+- [x] **11.0** `_context/cli-peer/CONTRACT.md` · todo 本節 · 固定ポート定数の両側共有
+- [x] **11.1** CLI: loopback HTTP door（hello + offer→answer）· `BusClient` 複数 peer attach · REPL 常時玄関
+- [x] **11.2** 拡張: host_permissions + `connect-src` ピンポイント · `handshake/localhost/` クライアント（封印検証）
+- [x] **11.3** プロンプト起動時オートリトライ再接続 · 接続済みなら no-op · 失敗時は黙ってフォールバック可能
+- [x] **11.4** i18n（EN+JA）· README / hosts/cli README · `check:no-fetch` allowlist
+- [ ] **手元:** CLI 起動 → Chrome/Firefox で BMXt 窓のみ → ping / mesh。コピペ経路も退行なし
+
+**スコープ外**
+
+- ローカル CA / HTTPS CLI  
+- Native messaging  
+- `http://*/*` 全面解禁  
+- クラウドシグナリング / STUN/TURN  
+- プロンプト窓を開かずに SW だけで peer 宿主化  
+
+**参照:** §6c · §10 · `shared/lib/features/sync/handshake/` · `hosts/cli/`
+
 ---
 
 ## Archive（ポインタのみ）

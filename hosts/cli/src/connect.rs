@@ -10,8 +10,19 @@ use crate::handshake;
 use crate::paste;
 
 pub async fn connect_as_offer(cfg: &CliConfig, to: String) -> Result<BusClient> {
-    cfg.require_family()?;
     let (family_id, _) = cfg.require_family()?;
+    let hub = BusClient::create_hub(
+        cfg.device_id.clone(),
+        cfg.display_name.clone(),
+        family_id.to_string(),
+    )
+    .await;
+    connect_as_offer_onto(cfg, &hub, to).await?;
+    Ok(hub)
+}
+
+pub async fn connect_as_offer_onto(cfg: &CliConfig, hub: &BusClient, to: String) -> Result<()> {
+    cfg.require_family()?;
     let (session, mut events) = PeerSession::create(to, None).await?;
     let (code, _) = handshake::make_offer_code(cfg, &session).await?;
     let offer_path = paste::write_handshake_ticket("offer", &code)?;
@@ -23,49 +34,60 @@ pub async fn connect_as_offer(cfg: &CliConfig, to: String) -> Result<BusClient> 
         "ANSWER: @path.json · Enter/:pick for GUI dialog · or bare bmxt-rtc1. paste\n> ",
     )?;
     let applied = handshake::apply_answer_code(cfg, &session, &answer).await?;
-    let early = wait_connected(&session, &mut events).await?;
+    let early = wait_connected_brief(&session, &mut events, 60).await?;
     println!(
         "Connected to {} ({}).",
         applied.remote_display_name, applied.remote_device_id
     );
-    Ok(BusClient::start(
-        cfg.device_id.clone(),
-        cfg.display_name.clone(),
-        family_id.to_string(),
+    hub.attach_peer(
         session,
         events,
         applied.remote_device_id,
         applied.remote_display_name,
         early,
     )
-    .await)
+    .await;
+    Ok(())
 }
 
 pub async fn connect_as_answer(cfg: &CliConfig, offer_code: &str) -> Result<BusClient> {
-    cfg.require_family()?;
     let (family_id, _) = cfg.require_family()?;
+    let hub = BusClient::create_hub(
+        cfg.device_id.clone(),
+        cfg.display_name.clone(),
+        family_id.to_string(),
+    )
+    .await;
+    connect_as_answer_onto(cfg, &hub, offer_code).await?;
+    Ok(hub)
+}
+
+pub async fn connect_as_answer_onto(
+    cfg: &CliConfig,
+    hub: &BusClient,
+    offer_code: &str,
+) -> Result<()> {
+    cfg.require_family()?;
     let (session, mut events) = PeerSession::create("offer-origin".into(), None).await?;
     let accepted = handshake::accept_offer_code(cfg, &session, offer_code).await?;
     let answer_path = paste::write_handshake_ticket("answer", &accepted.answer_code)?;
     println!("=== ANSWER (file) ===");
     paste::print_path_hyperlink(&answer_path);
     println!("{}\n", accepted.answer_code);
-    let early = wait_connected(&session, &mut events).await?;
+    let early = wait_connected_brief(&session, &mut events, 60).await?;
     println!(
         "Connected to {} ({}).",
         accepted.remote_display_name, accepted.remote_device_id
     );
-    Ok(BusClient::start(
-        cfg.device_id.clone(),
-        cfg.display_name.clone(),
-        family_id.to_string(),
+    hub.attach_peer(
         session,
         events,
         accepted.remote_device_id,
         accepted.remote_display_name,
         early,
     )
-    .await)
+    .await;
+    Ok(())
 }
 
 /** EN: Interactive answer role — paste / `:pick` offer, then connect. */
@@ -76,11 +98,20 @@ pub async fn connect_as_answer_interactive(cfg: &CliConfig) -> Result<BusClient>
     connect_as_answer(cfg, &offer_code).await
 }
 
-async fn wait_connected(
+pub async fn connect_as_answer_interactive_onto(cfg: &CliConfig, hub: &BusClient) -> Result<()> {
+    let offer_code = paste::read_handshake_paste(
+        "OFFER: @path.json · Enter/:pick for GUI dialog · or bare bmxt-rtc1. paste\n> ",
+    )?;
+    connect_as_answer_onto(cfg, hub, &offer_code).await
+}
+
+/** EN: Wait until the DataChannel opens (or fail). Used by manual connect and localhost door. */
+pub async fn wait_connected_brief(
     session: &PeerSession,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<PeerSessionEvent>,
+    timeout_secs: u64,
 ) -> Result<Vec<PeerSessionEvent>> {
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
     let mut last_ice = String::from("unknown");
     let mut last_pc = String::from("unknown");
     let mut buffered: Vec<PeerSessionEvent> = Vec::new();

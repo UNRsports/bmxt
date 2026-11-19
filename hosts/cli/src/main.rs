@@ -2,6 +2,7 @@ mod adapter;
 mod bus;
 mod config;
 mod connect;
+mod door;
 mod handshake;
 mod mesh_plan;
 mod msgs;
@@ -10,6 +11,7 @@ mod shell;
 mod tui;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
@@ -88,6 +90,10 @@ async fn main() -> Result<()> {
             );
             println!("config:      {}", CliConfig::config_path()?.display());
             println!("transport:   WebRTC DataChannel (host ICE, bmxt-rtc1.)");
+            println!(
+                "localhost:   http://127.0.0.1:{}/ (Family-sealed door; when Family joined)",
+                door::DOOR_PORT
+            );
         }
         Some(Commands::SyncSetup) => {
             cfg.ensure_family()?;
@@ -101,11 +107,11 @@ async fn main() -> Result<()> {
         }
         Some(Commands::SyncOffer { to }) => {
             let client = connect::connect_as_offer(&cfg, to).await?;
-            command_repl(&mut cfg, Some(client)).await?;
+            command_repl(&mut cfg, Some(Arc::new(client))).await?;
         }
         Some(Commands::SyncAnswer { offer_code }) => {
             let client = connect::connect_as_answer(&cfg, &offer_code).await?;
-            command_repl(&mut cfg, Some(client)).await?;
+            command_repl(&mut cfg, Some(Arc::new(client))).await?;
         }
         Some(Commands::SyncConnect { offer, to }) => {
             cfg.require_family()?;
@@ -114,7 +120,7 @@ async fn main() -> Result<()> {
             } else {
                 connect::connect_as_answer_interactive(&cfg).await?
             };
-            command_repl(&mut cfg, Some(client)).await?;
+            command_repl(&mut cfg, Some(Arc::new(client))).await?;
         }
         Some(Commands::TabList { .. }) => {
             return Err(anyhow!(
@@ -128,29 +134,69 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn command_repl(cfg: &mut CliConfig, mut client: Option<BusClient>) -> Result<()> {
-    if client.is_some() {
+async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<Option<Arc<BusClient>>> {
+    if let Some(hub) = seed {
+        if cfg.family_id.is_some() && cfg.seed_b64.is_some() {
+            if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&hub)).await {
+                eprintln!("localhost door: {err:#}");
+            }
+        }
+        return Ok(Some(hub));
+    }
+    if cfg.family_id.is_none() || cfg.seed_b64.is_none() {
+        return Ok(None);
+    }
+    let (family_id, _) = cfg.require_family()?;
+    let hub = Arc::new(
+        BusClient::create_hub(
+            cfg.device_id.clone(),
+            cfg.display_name.clone(),
+            family_id.to_string(),
+        )
+        .await,
+    );
+    if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&hub)).await {
+        eprintln!("localhost door: {err:#}");
+    }
+    Ok(Some(hub))
+}
+
+async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Result<()> {
+    let mut hub = ensure_hub(cfg, seed).await?;
+    let has_peers = match &hub {
+        Some(h) => !h.list_connected().await.is_empty(),
+        None => false,
+    };
+    if has_peers {
         println!("BMXt CLI — connected. Extension command grammar + line editor.");
         println!(
             "↑↓ history · grey hint · Tab apply · Enter run · e.g. tab -list --peers | browse · help · quit"
         );
-    } else {
-        println!("BMXt CLI — direct start (not connected yet).");
+    } else if hub.is_some() {
+        println!("BMXt CLI — Family ready · localhost door on :{}.", door::DOOR_PORT);
         println!(
-            "Local: sync -setup · sync -pair · sync -status · help · quit"
+            "Browsers: open BMXt prompt for sealed auto-connect. Fallback: sync -offer / sync -accept"
         );
+        println!("Editing: grey remainder hint · Tab applies · Enter runs · help · quit");
+    } else {
+        println!("BMXt CLI — direct start (not in a Family yet).");
+        println!("Local: sync -setup · sync -pair · sync -status · help · quit");
         println!(
-            "Connect: sync -offer  |  sync -accept (Enter/:pick for offer file)  |  or relaunch `bmxt sync-connect`"
+            "Then: browsers auto-connect via localhost door, or sync -offer / sync -accept"
         );
         println!("Editing: grey remainder hint · Tab applies · Enter runs");
     }
     let mut shell = PromptShell::open()?;
     let mut continuation: Option<String> = None;
     loop {
+        let connected = match &hub {
+            Some(h) => !h.list_connected().await.is_empty(),
+            None => false,
+        };
         let prompt = match &continuation {
             Some(prefix) => prefix.clone(),
             None => {
-                if client.is_some() {
+                if connected {
                     "bmxt> ".to_string()
                 } else {
                     "bmxt*> ".to_string()
@@ -167,8 +213,8 @@ async fn command_repl(cfg: &mut CliConfig, mut client: Option<BusClient>) -> Res
                 continue;
             }
             ReadOutcome::Eof => {
-                if let Some(c) = client.take() {
-                    c.close_all().await;
+                if let Some(h) = hub.take() {
+                    h.close_all().await;
                 }
                 break;
             }
@@ -184,52 +230,75 @@ async fn command_repl(cfg: &mut CliConfig, mut client: Option<BusClient>) -> Res
         }
         if trimmed == "quit" || trimmed == "exit" {
             shell.remember(trimmed);
-            if let Some(c) = client.take() {
-                c.close_all().await;
+            if let Some(h) = hub.take() {
+                h.close_all().await;
             }
             break;
         }
 
-        // EN: Offline shortcuts — accept/answer/connect without rtc code → interactive paste/:pick.
-        if client.is_none() {
-            let offline_connect = match trimmed {
-                "sync -accept" | "sync -answer" | "sync -connect" => {
-                    Some(connect::connect_as_answer_interactive(&*cfg).await)
-                }
-                other if other == "sync -offer" || other.starts_with("sync -offer ") => {
-                    Some(connect::connect_as_offer(cfg, "pending-peer".into()).await)
-                }
-                _ => None,
-            };
-            if let Some(result) = offline_connect {
-                shell.remember(trimmed);
-                match result {
-                    Ok(c) => {
-                        client = Some(c);
+        // EN: After sync-setup / sync-pair, stand up the door hub if missing.
+        if hub.is_none() && (trimmed.starts_with("sync -setup") || trimmed.starts_with("sync -pair"))
+        {
+            // fall through to adapter first, then refresh hub below
+        }
+
+        // EN: Manual handshake fallback onto the shared hub (or create hub).
+        if trimmed == "sync -accept"
+            || trimmed == "sync -answer"
+            || trimmed == "sync -connect"
+            || trimmed == "sync -offer"
+            || trimmed.starts_with("sync -offer ")
+        {
+            shell.remember(trimmed);
+            if hub.is_none() {
+                match ensure_hub(cfg, None).await {
+                    Ok(Some(h)) => hub = Some(h),
+                    Ok(None) => {
+                        eprintln!("error: join a Family first (sync -setup / sync -pair)");
                         continuation = None;
-                        println!("Connected. Prompt is now bmxt> — try `sync -status` / `tab -list`.");
+                        continue;
                     }
                     Err(err) => {
                         eprintln!("error: {err:#}");
                         continuation = None;
+                        continue;
                     }
                 }
-                continue;
             }
+            let Some(h) = hub.as_ref() else {
+                continuation = None;
+                continue;
+            };
+            let result = if trimmed == "sync -offer" || trimmed.starts_with("sync -offer ") {
+                connect::connect_as_offer_onto(cfg, h.as_ref(), "pending-peer".into()).await
+            } else {
+                connect::connect_as_answer_interactive_onto(cfg, h.as_ref()).await
+            };
+            match result {
+                Ok(()) => {
+                    continuation = None;
+                    println!("Connected. Prompt is now bmxt> — try `sync -status` / `tab -list`.");
+                }
+                Err(err) => {
+                    eprintln!("error: {err:#}");
+                    continuation = None;
+                }
+            }
+            continue;
         }
 
         let line = match trimmed {
             "ping" => {
-                let Some(c) = client.as_ref() else {
-                    eprintln!("error: not connected — run `sync -offer` or `sync -accept`");
+                let Some(h) = hub.as_ref() else {
+                    eprintln!("error: not connected — open BMXt in a browser, or sync -offer / sync -accept");
                     continuation = None;
                     continue;
                 };
-                let peers = c.list_connected().await;
+                let peers = h.list_connected().await;
                 if let Some((id, _)) = peers.first() {
                     format!("sync -ping {id}")
                 } else {
-                    eprintln!("error: no connected peers");
+                    eprintln!("error: no connected peers (waiting for browser door connect?)");
                     continuation = None;
                     continue;
                 }
@@ -240,13 +309,34 @@ async fn command_repl(cfg: &mut CliConfig, mut client: Option<BusClient>) -> Res
 
         let mut adapter = CliHostAdapter {
             cfg: &mut *cfg,
-            client: client.as_ref(),
+            client: hub.as_ref().map(|h| h.as_ref()),
         };
         match adapter.run_line(&line).await {
             Ok(outcome) => {
                 if let Some(c) = outcome.new_client {
-                    client = Some(c);
+                    // EN: Adapter may still return a fresh hub from older paths — prefer shared.
+                    if hub.is_none() {
+                        let arc = Arc::new(c);
+                        if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&arc)).await {
+                            eprintln!("localhost door: {err:#}");
+                        }
+                        hub = Some(arc);
+                    }
                     println!("Connected. Prompt is now bmxt> — try `sync -status` / `tab -list`.");
+                }
+                // EN: Family may have been created by sync -setup / -pair in this line.
+                if hub.is_none() && cfg.family_id.is_some() && cfg.seed_b64.is_some() {
+                    match ensure_hub(cfg, None).await {
+                        Ok(Some(h)) => {
+                            hub = Some(h);
+                            println!(
+                                "localhost door listening on http://127.0.0.1:{}/",
+                                door::DOOR_PORT
+                            );
+                        }
+                        Ok(None) => {}
+                        Err(err) => eprintln!("localhost door: {err:#}"),
+                    }
                 }
                 continuation = outcome.prompt_prefix;
             }

@@ -144,7 +144,12 @@ export function createHostWxtConfig(browser: HostBrowser) {
       version: extensionVersion,
       default_locale: "en",
       permissions: hostPermissionsList(browser),
-      host_permissions: ["https://*/*"],
+      // EN: https for in-page scripting; loopback door port for CLI sealed handshake only (todo §11).
+      host_permissions: [
+        "https://*/*",
+        "http://127.0.0.1:17653/*",
+        "http://localhost:17653/*"
+      ],
       content_security_policy: hostContentSecurityPolicy(browser),
       commands: hostCommands(browser),
       web_accessible_resources: [

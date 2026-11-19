@@ -57,6 +57,7 @@ import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
 import { SyncHandshakeBar } from "../sync/handshake/clipboard/sync-handshake-bar.tsx"
 import { getSyncService } from "../sync/facade/sync-service"
 import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
+import { startLocalhostDoorReconnect } from "../sync/handshake/localhost/start-localhost-door-reconnect.ts"
 import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
 import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { SyncWizardPanel } from "../sync/wizard"
@@ -287,6 +288,8 @@ export function BmxtShell({
     startSyncTunnelHold(async () => {
       await getSyncService().status()
     })
+    // EN: Family-sealed auto-reconnect via CLI localhost door (clipboard/file remain fallback).
+    startLocalhostDoorReconnect()
   }, [])
   const translateEnabledRef = useRef(false)
 

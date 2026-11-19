@@ -56,6 +56,34 @@ impl BusClient {
      * EN: Take the first live session (after sync-connect) and start mesh + inbound servicing.
      * JA: sync-connect 後の最初のセッションを受け取り、メッシュと inbound 処理を開始する。
      */
+    /**
+     * EN: Empty hub (localhost door may attach peers before any manual handshake).
+     * JA: 空ハブ（手動握手前に localhost 玄関が peer を attach しうる）。
+     */
+    pub async fn create_hub(self_id: String, display_name: String, family_id: String) -> Self {
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
+        let inner = Arc::new(Mutex::new(HubInner {
+            self_id,
+            display_name,
+            family_id,
+            by_remote: HashMap::new(),
+            remote_by_session: HashMap::new(),
+            connected: HashSet::new(),
+            display_by_remote: HashMap::new(),
+            pending_rpc: HashMap::new(),
+            relay_by_remote: HashMap::new(),
+            offer_busy_until: HashMap::new(),
+            last_connected_key: String::new(),
+            event_tx,
+        }));
+        let client = Self {
+            inner: Arc::clone(&inner),
+        };
+        tokio::spawn(dispatch_loop(Arc::clone(&inner), event_rx));
+        client
+    }
+
+    #[allow(dead_code)] // EN: Convenience when constructing a hub with the first peer already live.
     pub async fn start(
         self_id: String,
         display_name: String,
@@ -66,38 +94,50 @@ impl BusClient {
         remote_display_name: String,
         early_events: Vec<PeerSessionEvent>,
     ) -> Self {
-        let (event_tx, event_rx) = mpsc::unbounded_channel();
-        let remote = remote_device_id.trim().to_string();
-        let mut by_remote = HashMap::new();
-        let mut remote_by_session = HashMap::new();
-        let session = Arc::new(session);
-        remote_by_session.insert(session.session_id.clone(), remote.clone());
-        by_remote.insert(remote.clone(), Arc::clone(&session));
+        let client = Self::create_hub(self_id, display_name, family_id).await;
+        client
+            .attach_peer(
+                session,
+                events,
+                remote_device_id,
+                remote_display_name,
+                early_events,
+            )
+            .await;
+        client
+    }
 
-        let mut display_by_remote = HashMap::new();
+    /**
+     * EN: Register a live (or soon-live) peer session on this hub.
+     * JA: 本ハブに生存（または直後に開く）peer セッションを登録する。
+     */
+    pub async fn attach_peer(
+        &self,
+        session: PeerSession,
+        events: mpsc::UnboundedReceiver<PeerSessionEvent>,
+        remote_device_id: String,
+        remote_display_name: String,
+        early_events: Vec<PeerSessionEvent>,
+    ) {
+        let remote = remote_device_id.trim().to_string();
+        if remote.is_empty() {
+            return;
+        }
+        let session = Arc::new(session);
         let name = if remote_display_name.trim().is_empty() {
             remote.clone()
         } else {
             remote_display_name.trim().to_string()
         };
-        display_by_remote.insert(remote.clone(), name);
-
-        let inner = Arc::new(Mutex::new(HubInner {
-            self_id,
-            display_name,
-            family_id,
-            by_remote,
-            remote_by_session,
-            connected: HashSet::new(),
-            display_by_remote,
-            pending_rpc: HashMap::new(),
-            relay_by_remote: HashMap::new(),
-            offer_busy_until: HashMap::new(),
-            last_connected_key: String::new(),
-            event_tx: event_tx.clone(),
-        }));
-
-        // EN: Replay events buffered during wait_connected (may include mesh_peers).
+        let event_tx = {
+            let mut guard = self.inner.lock().await;
+            guard
+                .remote_by_session
+                .insert(session.session_id.clone(), remote.clone());
+            guard.by_remote.insert(remote.clone(), Arc::clone(&session));
+            guard.display_by_remote.insert(remote.clone(), name);
+            guard.event_tx.clone()
+        };
         for event in early_events {
             let _ = event_tx.send(TaggedEvent {
                 via_remote: remote.clone(),
@@ -105,20 +145,19 @@ impl BusClient {
             });
         }
         spawn_forwarder(remote.clone(), events, event_tx);
-        let client = Self {
-            inner: Arc::clone(&inner),
-        };
-        tokio::spawn(dispatch_loop(Arc::clone(&inner), event_rx));
-        // EN: Seed connected set from the already-open DataChannel.
         {
-            let mut guard = inner.lock().await;
+            let mut guard = self.inner.lock().await;
             if session.data_channel_is_open().await {
                 guard.connected.insert(remote.clone());
             }
             drop(guard);
         }
-        on_connected_set_changed(Arc::clone(&inner)).await;
-        client
+        on_connected_set_changed(Arc::clone(&self.inner)).await;
+    }
+
+    pub async fn is_connected_to(&self, remote_device_id: &str) -> bool {
+        let guard = self.inner.lock().await;
+        guard.connected.contains(remote_device_id.trim())
     }
 
     pub async fn close_all(&self) {

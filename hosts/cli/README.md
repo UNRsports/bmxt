@@ -31,15 +31,10 @@ Command history: `~/.config/bmxt/history`.
 ## Quick start (same PC · host ICE)
 
 1. Install / open **BMXt extension** and keep the **prompt window** open (peer host).
-2. **Direct start** (no handshake yet): `bmxt` or `bmxt repl` → prompt `bmxt*>`. Local commands work immediately (`sync -setup`, `sync -pair`, `sync -status`, `help`). Connect later with `sync -offer` / `sync -accept` (Enter/`:pick` for offer file). After connect the prompt becomes `bmxt>`.
-3. Or start already connected: `bmxt sync-connect [--offer]` (same handshake as below).
-4. Join the same Family:
-   - Browser: `sync -setup` / invite
-   - CLI (outside or **inside** REPL): `bmxt sync-setup` / `sync -setup`, or `bmxt sync-pair '<bmxt1.…>'` / `sync -pair …`
-5. Handshake (subcommand **or** from inside a direct-start REPL):
-   - CLI offers: `bmxt sync-connect --offer` or REPL `sync -offer` → paste offer into BMXt wizard → paste answer back into CLI
-   - Or CLI answers: `bmxt sync-connect` or REPL `sync -accept` → paste offer from BMXt → paste answer into BMXt
-   - **Prefer files:** offer writes `~/.config/bmxt/bmxt-*-offer.json` (clickable `file://` OSC-8 link when the terminal supports it). In BMXt use ファイルで渡す / Open, then at the CLI answer prompt use `@/path/to/bmxt-*-answer.json`, **Enter / `:pick`** for a GUI dialog (`zenity` or `kdialog`), or a bare `bmxt-rtc1.…` paste (long bare pastes often corrupt).
+2. Join the **same Family** on CLI and each browser (`sync -setup` / `sync -pair`).
+3. **Direct start:** `bmxt` or `bmxt repl` → when Family is joined, CLI opens a **localhost door** on `http://127.0.0.1:17653/` (loopback only, Family-sealed). Open the BMXt prompt in each browser — sealed **auto-reconnect** runs in the background.
+4. **Fallback handshake** (clipboard / file) still works: `sync -offer` / `sync -accept` (Enter/`:pick`), or `bmxt sync-connect [--offer]`. Prefer ticket files under `~/.config/bmxt/`.
+5. After any peer connects the prompt becomes `bmxt>`. Extra browsers mesh automatically after the first CLI link.
 6. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
    - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates)
@@ -102,15 +97,10 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 ## クイックスタート（同一 PC · host ICE）
 
 1. **BMXt 拡張**を入れ、**プロンプト窓**を開いたままにする（peer 宿主）。
-2. **直接起動**（まだ握手しない）: `bmxt` または `bmxt repl` → プロンプト `bmxt*>`。ローカル操作（`sync -setup` · `sync -pair` · `sync -status` · `help`）はそのまま可。あとから `sync -offer` / `sync -accept`（Enter / `:pick` で offer ファイル選択）で接続。接続後は `bmxt>`。
-3. 最初から接続して起動: `bmxt sync-connect [--offer]`（下記と同じ握手）。
-4. 同じ Family に参加:
-   - ブラウザ: `sync -setup` / 招待
-   - CLI（外でも **REPL 内でも**）: `bmxt sync-setup` / `sync -setup`、または `bmxt sync-pair '<bmxt1.…>'` / `sync -pair …`
-5. 握手（サブコマンド **または** 直接起動 REPL 内）:
-   - CLI が offer: `bmxt sync-connect --offer` または REPL `sync -offer` → BMXt ウィザードへ offer → answer を CLI へ
-   - CLI が answer: `bmxt sync-connect` または REPL `sync -accept` → BMXt の offer を受け → answer を BMXt へ
-   - **ファイル推奨:** offer は `~/.config/bmxt/bmxt-*-offer.json`（対応端末では OSC-8 の `file://` リンク）。BMXt では「ファイルで渡す / Open」。CLI の answer プロンプトでは `@/path/to/….json`、**Enter / `:pick`**（`zenity` / `kdialog`）、または素の `bmxt-rtc1.…`（長い素貼付は端末で化けやすい）。
+2. CLI と各ブラウザで **同じ Family** に参加（`sync -setup` / `sync -pair`）。
+3. **直接起動:** `bmxt` または `bmxt repl` → Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（loopback のみ・Family 封印）。各ブラウザで BMXt プロンプトを開くと封印 **自動再接続**が走る。
+4. **フォールバック握手**（コピペ／ファイル）も従来どおり: `sync -offer` / `sync -accept`（Enter / `:pick`）、または `bmxt sync-connect [--offer]`。`~/.config/bmxt/` のチケット推奨。
+5. いずれかの peer 接続後はプロンプト `bmxt>`。追加ブラウザは CLI 経由の mesh で自動直結。
 6. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
    - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で activate）

@@ -765,16 +765,17 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 ### Terminal CLI peer (`hosts/cli`)
 
-**Status (todo §10):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP.
+**Status (todo §10 / §11):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP.
 
 | Topic | Current behavior |
 |-------|------------------|
-| **Direct start** | `bmxt` or `bmxt repl` opens an offline REPL (`bmxt*>`). Local commands work immediately (`sync -setup` / `-pair` / `-status`, `help`). |
-| **Connect** | `bmxt sync-connect [--offer]`, or from the offline REPL: `sync -offer` / `sync -accept` (Enter / `:pick` opens a GUI file dialog via `zenity` or `kdialog`). After connect the prompt becomes `bmxt>`. |
-| **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; path printed as an OSC-8 `file://` link when the terminal supports it. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
+| **Direct start** | `bmxt` or `bmxt repl` opens a REPL. With Family joined, CLI also serves a **localhost door** on `http://127.0.0.1:17653/` (loopback only, Family-sealed). |
+| **Auto-connect** | Open the BMXt prompt in each browser — sealed handshake to the CLI door retries in the background (todo §11). Clipboard / file remain full fallbacks. |
+| **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). After connect the prompt becomes `bmxt>`. |
+| **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
 | **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
-| **Line editor** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints** (e.g. typed `sync -se` + grey `tup`); **Tab** applies the candidate; **Enter** runs the current buffer. |
-| **Mesh** | First peer via handshake; additional Family peers join automatically over in-band mesh (same as extension). |
+| **Line editor** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. |
+| **Mesh** | First peer via door or manual handshake; additional Family peers join over in-band mesh. |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
 
 **Out of scope for this host:** `nav` / `dom` page overlays, native messaging, public STUN/TURN on the default path. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md).
@@ -2255,17 +2256,18 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 ### 端末 CLI peer（`hosts/cli`）
 
-**現状（todo §10）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。
+**現状（todo §10 / §11）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。
 
 | 項目 | 現状 |
 |------|------|
-| **直接起動** | `bmxt` または `bmxt repl` で未接続 REPL（`bmxt*>`）。`sync -setup` / `-pair` / `-status` · `help` などローカル操作はそのまま可。 |
-| **接続** | `bmxt sync-connect [--offer]`、または未接続 REPL 内の `sync -offer` / `sync -accept`（Enter / `:pick` で `zenity` / `kdialog` の GUI ファイル選択）。接続後プロンプトは `bmxt>`。 |
-| **握手ファイル** | `~/.config/bmxt/` 配下の offer/answer JSON。対応端末では OSC-8 の `file://` リンク表示。素の `bmxt-rtc1.` 貼付より `@path.json` 推奨。 |
-| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は `default-features = false` で WASM なし）。例: `tab -list --peers \| browse` · `sync -ping <deviceId>` · ピア上での URL オープン。 |
-| **行編集** | rustyline 履歴（`↑↓` · `~/.config/bmxt/history`）。**灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）。**Tab** で適用、**Enter** で現バッファを実行。 |
-| **メッシュ** | 最初の peer は握手。以降の Family peer は拡張と同様に in-band メッシュで自動接続。 |
-| **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`（release は `cargo build --release -p bmxt-cli`）。 |
+| **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（loopback のみ・Family 封印）も起動。 |
+| **自動接続** | 各ブラウザで BMXt プロンプトを開くと、封印握手で CLI 玄関へバックグラウンド再接続（todo §11）。コピペ／ファイルはフォールバックとして存続。 |
+| **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。接続後は `bmxt>`。 |
+| **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
+| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
+| **行編集** | rustyline · 灰色ヒント · Tab / Enter。 |
+| **メッシュ** | 最初の peer は玄関または手動握手。以降は in-band メッシュ。 |
+| **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
 
 **この host の対象外:** `nav` / `dom` のページオーバーレイ、ネイティブメッセージング、既定経路での公開 STUN/TURN。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md)。
 
