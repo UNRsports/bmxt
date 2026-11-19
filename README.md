@@ -771,7 +771,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 |-------|------------------|
 | **Direct start** | `bmxt` or `bmxt repl` opens a REPL. With Family joined, CLI also serves a **localhost door** on `http://127.0.0.1:17653/` (loopback only, Family-sealed). |
 | **Auto-connect** | Open the BMXt prompt in each browser — sealed handshake to the CLI door retries in the background (todo §11). Clipboard / file remain full fallbacks. |
-| **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). After connect the prompt becomes `bmxt>`. |
+| **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). Family-ready prompt is **`BMXt>`**. |
 | **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
 | **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
 | **Line editor** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. |
@@ -2262,7 +2262,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 |------|------|
 | **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（loopback のみ・Family 封印）も起動。 |
 | **自動接続** | 各ブラウザで BMXt プロンプトを開くと、封印握手で CLI 玄関へバックグラウンド再接続（todo §11）。コピペ／ファイルはフォールバックとして存続。 |
-| **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。接続後は `bmxt>`。 |
+| **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。Family 準備済みのプロンプトは **`BMXt>`**。 |
 | **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
 | **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
 | **行編集** | rustyline · 灰色ヒント · Tab / Enter。 |

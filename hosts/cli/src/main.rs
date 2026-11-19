@@ -189,17 +189,16 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
     let mut shell = PromptShell::open()?;
     let mut continuation: Option<String> = None;
     loop {
-        let connected = match &hub {
-            Some(h) => !h.list_connected().await.is_empty(),
-            None => false,
-        };
+        // EN: `BMXt>` = accepting commands (Family ready and/or peers linked).
+        //     `BMXt*>` = not in a Family yet (local setup only).
+        // JA: `BMXt>` = コマンド受付中（Family 準備済み／peer 接続）。`BMXt*>` = 未参加。
         let prompt = match &continuation {
             Some(prefix) => prefix.clone(),
             None => {
-                if connected {
-                    "bmxt> ".to_string()
+                if hub.is_some() {
+                    "BMXt> ".to_string()
                 } else {
-                    "bmxt*> ".to_string()
+                    "BMXt*> ".to_string()
                 }
             }
         };
@@ -277,7 +276,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
             match result {
                 Ok(()) => {
                     continuation = None;
-                    println!("Connected. Prompt is now bmxt> — try `sync -status` / `tab -list`.");
+                    println!("Connected. Prompt is BMXt> — try `sync -status` / `tab -list`.");
                 }
                 Err(err) => {
                     eprintln!("error: {err:#}");
@@ -322,7 +321,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                         }
                         hub = Some(arc);
                     }
-                    println!("Connected. Prompt is now bmxt> — try `sync -status` / `tab -list`.");
+                    println!("Connected. Prompt is BMXt> — try `sync -status` / `tab -list`.");
                 }
                 // EN: Family may have been created by sync -setup / -pair in this line.
                 if hub.is_none() && cfg.family_id.is_some() && cfg.seed_b64.is_some() {

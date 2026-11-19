@@ -34,7 +34,7 @@ Command history: `~/.config/bmxt/history`.
 2. Join the **same Family** on CLI and each browser (`sync -setup` / `sync -pair`).
 3. **Direct start:** `bmxt` or `bmxt repl` → when Family is joined, CLI opens a **localhost door** on `http://127.0.0.1:17653/` (loopback only, Family-sealed). Open the BMXt prompt in each browser — sealed **auto-reconnect** runs in the background.
 4. **Fallback handshake** (clipboard / file) still works: `sync -offer` / `sync -accept` (Enter/`:pick`), or `bmxt sync-connect [--offer]`. Prefer ticket files under `~/.config/bmxt/`.
-5. After any peer connects the prompt becomes `bmxt>`. Extra browsers mesh automatically after the first CLI link.
+5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
 6. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
    - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates)
@@ -100,7 +100,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 2. CLI と各ブラウザで **同じ Family** に参加（`sync -setup` / `sync -pair`）。
 3. **直接起動:** `bmxt` または `bmxt repl` → Family 参加済みなら **localhost 玄関** `http://127.0.0.1:17653/`（loopback のみ・Family 封印）。各ブラウザで BMXt プロンプトを開くと封印 **自動再接続**が走る。
 4. **フォールバック握手**（コピペ／ファイル）も従来どおり: `sync -offer` / `sync -accept`（Enter / `:pick`）、または `bmxt sync-connect [--offer]`。`~/.config/bmxt/` のチケット推奨。
-5. いずれかの peer 接続後はプロンプト `bmxt>`。追加ブラウザは CLI 経由の mesh で自動直結。
+5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
 6. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
    - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で activate）
