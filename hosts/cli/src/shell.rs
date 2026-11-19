@@ -244,6 +244,19 @@ impl PromptShell {
         let _ = self.editor.add_history_entry(trimmed);
         let _ = self.editor.append_history(&self.history_path);
     }
+
+    /**
+     * EN: Printer for async bus/door logs while readline owns the TTY.
+     *     After each print, rustyline redraws `BMXt>` so the caret stays visible.
+     */
+    pub fn install_repl_log_printer(&mut self) -> Result<()> {
+        let printer = self
+            .editor
+            .create_external_printer()
+            .context("rustyline external printer")?;
+        crate::repl_log::install(printer);
+        Ok(())
+    }
 }
 
 #[cfg(test)]

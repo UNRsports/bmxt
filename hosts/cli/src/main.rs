@@ -7,6 +7,7 @@ mod handshake;
 mod mesh_plan;
 mod msgs;
 mod paste;
+mod repl_log;
 mod shell;
 mod tui;
 
@@ -181,13 +182,6 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         );
         println!("{}", t_cli("cmd.cli.banner.familyReadyHint", &[]));
         println!("{}", t_cli("cmd.cli.banner.editing", &[]));
-        println!(
-            "{}",
-            t_cli(
-                "cmd.cli.door.stillListening",
-                &[("port", &door::DOOR_PORT.to_string())]
-            )
-        );
     } else {
         println!("{}", t_cli("cmd.cli.banner.noFamily", &[]));
         println!("{}", t_cli("cmd.cli.banner.noFamilyHint", &[]));
@@ -195,6 +189,10 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         println!("{}", t_cli("cmd.cli.banner.editing", &[]));
     }
     let mut shell = PromptShell::open()?;
+    // EN: Async bus/door logs use ExternalPrinter so BMXt> + caret redraw after each line.
+    if let Err(err) = shell.install_repl_log_printer() {
+        eprintln!("warn: external printer unavailable ({err:#}); using stderr logs");
+    }
     let mut continuation: Option<String> = None;
     loop {
         // EN: `BMXt>` = accepting commands (Family ready and/or peers linked).
@@ -220,6 +218,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                 continue;
             }
             ReadOutcome::Eof => {
+                repl_log::uninstall();
                 if let Some(h) = hub.take() {
                     h.close_all().await;
                 }
@@ -237,6 +236,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         }
         if trimmed == "quit" || trimmed == "exit" {
             shell.remember(trimmed);
+            repl_log::uninstall();
             if let Some(h) = hub.take() {
                 h.close_all().await;
             }

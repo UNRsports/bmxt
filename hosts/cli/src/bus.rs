@@ -14,7 +14,6 @@ use bmxt_sync_wire::{
 use rand::RngCore;
 use tokio::sync::{mpsc, oneshot, Mutex};
 
-use crate::door::DOOR_PORT;
 use crate::mesh_plan::{peers_to_announce, peers_to_offer_mesh, MeshPeerAnnounce};
 use crate::msgs::t_cli;
 
@@ -47,6 +46,8 @@ struct HubInner {
     offer_busy_until: HashMap<String, Instant>,
     last_connected_key: String,
     event_tx: mpsc::UnboundedSender<TaggedEvent>,
+    /** EN: True after `close_all` — do not claim the listener is still running. */
+    shutting_down: bool,
 }
 
 #[derive(Clone)]
@@ -78,6 +79,7 @@ impl BusClient {
             offer_busy_until: HashMap::new(),
             last_connected_key: String::new(),
             event_tx,
+            shutting_down: false,
         }));
         let client = Self {
             inner: Arc::clone(&inner),
@@ -165,7 +167,9 @@ impl BusClient {
 
     pub async fn close_all(&self) {
         let sessions: Vec<Arc<PeerSession>> = {
-            let guard = self.inner.lock().await;
+            let mut guard = self.inner.lock().await;
+            // EN: Exit/quit path — closed events must not print "listener keeps running".
+            guard.shutting_down = true;
             guard.by_remote.values().cloned().collect()
         };
         for session in sessions {
@@ -471,13 +475,6 @@ fn spawn_forwarder(
     });
 }
 
-fn print_door_alive_hint() {
-    eprintln!(
-        "{}",
-        t_cli("cmd.cli.door.alive", &[("port", &DOOR_PORT.to_string())])
-    );
-}
-
 async fn dispatch_loop(
     inner: Arc<Mutex<HubInner>>,
     mut events: mpsc::UnboundedReceiver<TaggedEvent>,
@@ -485,13 +482,20 @@ async fn dispatch_loop(
     while let Some(tagged) = events.recv().await {
         match tagged.event {
             PeerSessionEvent::ConnectionState(state) => {
-                eprintln!("connection[{}]: {state}", tagged.via_remote);
-                print_door_alive_hint();
+                // EN: Skip checking/connecting noise; ExternalPrinter keeps BMXt> caret.
+                if state == "connected" || state == "failed" || state == "closed" {
+                    crate::repl_log::line(&format!(
+                        "connection[{}]: {state}",
+                        tagged.via_remote
+                    ));
+                }
                 let mut changed = false;
                 let mut drop_session: Option<Arc<PeerSession>> = None;
                 let mut became_idle = false;
+                let shutting_down;
                 {
                     let mut guard = inner.lock().await;
+                    shutting_down = guard.shutting_down;
                     if state == "connected" {
                         changed = guard.connected.insert(tagged.via_remote.clone());
                     } else if state == "failed" || state == "closed" || state == "disconnected" {
@@ -509,33 +513,27 @@ async fn dispatch_loop(
                 if let Some(session) = drop_session {
                     session.close().await;
                 }
-                if became_idle {
-                    eprintln!(
-                        "{}",
-                        t_cli(
-                            "cmd.cli.door.peerTunnelClosed",
-                            &[("detail", state.as_str())]
-                        )
-                    );
-                    eprintln!(
-                        "{}",
-                        t_cli(
-                            "cmd.cli.door.stillListening",
-                            &[("port", &DOOR_PORT.to_string())]
-                        )
-                    );
+                // EN: Only when peers drop while the REPL stays up — not on quit/exit.
+                if became_idle && !shutting_down {
+                    crate::repl_log::line(&t_cli(
+                        "cmd.cli.door.peerTunnelClosed",
+                        &[("detail", state.as_str())],
+                    ));
                 }
                 if changed {
                     on_connected_set_changed(Arc::clone(&inner)).await;
                 }
             }
             PeerSessionEvent::IceConnectionState(state) => {
-                eprintln!("ice[{}]: {state}", tagged.via_remote);
-                print_door_alive_hint();
+                if state == "closed" || state == "failed" || state == "disconnected" {
+                    crate::repl_log::line(&format!("ice[{}]: {state}", tagged.via_remote));
+                }
             }
             PeerSessionEvent::DataChannelOpen => {
-                eprintln!("datachannel[{}]: open", tagged.via_remote);
-                print_door_alive_hint();
+                crate::repl_log::line(&format!(
+                    "datachannel[{}]: open",
+                    tagged.via_remote
+                ));
                 let changed = {
                     let mut guard = inner.lock().await;
                     guard.connected.insert(tagged.via_remote.clone())
@@ -769,10 +767,10 @@ async fn on_connected_set_changed(inner: Arc<Mutex<HubInner>>) {
     if !key_changed || newcomers.is_empty() {
         return;
     }
-    eprintln!(
+    crate::repl_log::line(&format!(
         "mesh: connected set changed; newcomers={}",
         newcomers.join(",")
-    );
+    ));
     tokio::time::sleep(Duration::from_millis(150)).await;
     for newbie in &newcomers {
         announce_to_neighbor(Arc::clone(&inner), newbie).await;

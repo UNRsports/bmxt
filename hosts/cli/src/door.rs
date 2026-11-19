@@ -114,7 +114,7 @@ pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     );
     tokio::spawn(async move {
         if let Err(err) = axum::serve(listener, app).await {
-            eprintln!("localhost door stopped: {err}");
+            crate::repl_log::line(&format!("localhost listener stopped: {err}"));
         }
     });
     Ok(())
@@ -205,24 +205,14 @@ async fn handshake_offer(
             Ok(early) => {
                 hub.attach_peer(session, events, remote_id.clone(), remote_name.clone(), early)
                     .await;
-                eprintln!("localhost door: connected to {remote_name} ({remote_id})");
-                eprintln!(
-                    "{}",
-                    t_cli(
-                        "cmd.cli.door.alive",
-                        &[("port", &DOOR_PORT.to_string())]
-                    )
-                );
+                crate::repl_log::line(&format!(
+                    "connected: {remote_name} ({remote_id})"
+                ));
             }
             Err(err) => {
-                eprintln!("localhost door: DataChannel wait failed for {remote_id}: {err}");
-                eprintln!(
-                    "{}",
-                    t_cli(
-                        "cmd.cli.door.stillListening",
-                        &[("port", &DOOR_PORT.to_string())]
-                    )
-                );
+                crate::repl_log::line(&format!(
+                    "connect failed for {remote_id}: {err}"
+                ));
                 session.close().await;
             }
         }

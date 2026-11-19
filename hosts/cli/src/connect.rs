@@ -105,7 +105,11 @@ pub async fn connect_as_answer_interactive_onto(cfg: &CliConfig, hub: &BusClient
     connect_as_answer_onto(cfg, hub, &offer_code).await
 }
 
-/** EN: Wait until the DataChannel opens (or fail). Used by manual connect and localhost door. */
+/**
+ * EN: Wait until the DataChannel opens (or fail). Skip ICE checking spam; log
+ *     open/fail via `repl_log` so ExternalPrinter restores the BMXt> caret.
+ * JA: DataChannel 確立待ち。ICE checking は省略し、open/fail のみ repl_log へ。
+ */
 pub async fn wait_connected_brief(
     session: &PeerSession,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<PeerSessionEvent>,
@@ -117,22 +121,23 @@ pub async fn wait_connected_brief(
     let mut buffered: Vec<PeerSessionEvent> = Vec::new();
     while tokio::time::Instant::now() < deadline {
         if session.data_channel_is_open().await {
-            eprintln!("datachannel: open");
+            crate::repl_log::line("datachannel: open");
             return Ok(buffered);
         }
         match tokio::time::timeout(std::time::Duration::from_millis(250), events.recv()).await {
             Ok(Some(PeerSessionEvent::ConnectionState(state))) => {
-                eprintln!("connection: {state}");
                 last_pc = state.clone();
                 if state == "failed" || state == "closed" {
                     return Err(anyhow!(
                         "connection {state} (ice={last_ice}). Keep the BMXt prompt window open; retry sync-connect."
                     ));
                 }
+                if state == "connected" {
+                    crate::repl_log::line(&format!("connection: {state}"));
+                }
                 buffered.push(PeerSessionEvent::ConnectionState(state));
             }
             Ok(Some(PeerSessionEvent::IceConnectionState(state))) => {
-                eprintln!("ice: {state}");
                 last_ice = state.clone();
                 if state == "failed" {
                     return Err(anyhow!(
@@ -142,14 +147,14 @@ pub async fn wait_connected_brief(
                 buffered.push(PeerSessionEvent::IceConnectionState(state));
             }
             Ok(Some(PeerSessionEvent::DataChannelOpen)) => {
-                eprintln!("datachannel: open");
+                crate::repl_log::line("datachannel: open");
                 buffered.push(PeerSessionEvent::DataChannelOpen);
                 return Ok(buffered);
             }
             Ok(Some(PeerSessionEvent::Command(cmd))) => {
                 buffered.push(PeerSessionEvent::Command(cmd));
                 if session.data_channel_is_open().await {
-                    eprintln!("datachannel: open (with early bus traffic)");
+                    crate::repl_log::line("datachannel: open");
                     return Ok(buffered);
                 }
             }

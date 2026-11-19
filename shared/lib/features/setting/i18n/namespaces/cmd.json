@@ -1120,12 +1120,12 @@
     "en": "localhost door: auto-connected to {name}."
   },
   "cmd.cli.banner.familyReady": {
-    "ja": "BMXt CLI — Family 準備済み · localhost 玄関 :{port}",
-    "en": "BMXt CLI — Family ready · localhost door on :{port}"
+    "ja": "BMXt CLI — Family 準備済み · 待ち受け :{port}",
+    "en": "BMXt CLI — Family ready · listening :{port}"
   },
   "cmd.cli.banner.familyReadyHint": {
-    "ja": "ブラウザで BMXt プロンプトを開くと封印自動接続します。フォールバック: sync -offer / sync -accept",
-    "en": "Open the BMXt prompt in a browser for sealed auto-connect. Fallback: sync -offer / sync -accept"
+    "ja": "ブラウザで BMXt プロンプトを開くと自動接続します。フォールバック: sync -offer / sync -accept",
+    "en": "Open the BMXt prompt in a browser for auto-connect. Fallback: sync -offer / sync -accept"
   },
   "cmd.cli.banner.editing": {
     "ja": "編集: 灰色ヒント · Tab で適用 · Enter で実行 · help · quit",
@@ -1148,24 +1148,36 @@
     "en": "Local: sync -setup · sync -pair · sync -status · help · quit"
   },
   "cmd.cli.banner.noFamilyNext": {
-    "ja": "その後: ブラウザが localhost 玄関で自動接続、または sync -offer / sync -accept",
-    "en": "Then: browsers auto-connect via localhost door, or sync -offer / sync -accept"
+    "ja": "その後: ブラウザが自動接続、または sync -offer / sync -accept",
+    "en": "Then: browsers auto-connect, or sync -offer / sync -accept"
   },
   "cmd.cli.door.stillListening": {
-    "ja": "localhost 玄関は起動中です（http://127.0.0.1:{port}/ · Family 封印）。プロンプト BMXt> でコマンドを入力できます（終了は quit）。",
-    "en": "localhost door is still running (http://127.0.0.1:{port}/ · Family-sealed). Type a command at BMXt> (quit to stop)."
+    "ja": "待ち受け継続中（http://127.0.0.1:{port}/）。BMXt> でコマンド入力（終了は quit）。",
+    "en": "Still listening (http://127.0.0.1:{port}/). Type at BMXt> (quit to stop)."
   },
   "cmd.cli.door.alive": {
-    "ja": "[玄関稼働中 :{port}] コマンドは BMXt> で入力（終了は quit）",
-    "en": "[door up :{port}] type at BMXt> (quit to stop)"
+    "ja": "[:{port} 稼働] BMXt> で入力（終了は quit）",
+    "en": "[:{port} up] type at BMXt> (quit to stop)"
   },
   "cmd.cli.door.peerTunnelClosed": {
-    "ja": "ピアとのトンネルが閉じました（{detail}）。玄関サーバは継続中です。",
-    "en": "Peer tunnel closed ({detail}). The door server keeps running."
+    "ja": "ピア接続が閉じました（{detail}）。待ち受けは継続中です。",
+    "en": "Peer link closed ({detail}). Listener keeps running."
   },
   "cmd.cli.door.listening": {
-    "ja": "localhost 玄関を待ち受け中: http://127.0.0.1:{port}/（Family 封印）",
-    "en": "localhost door listening on http://127.0.0.1:{port}/ (Family-sealed)"
+    "ja": "待ち受け開始: http://127.0.0.1:{port}/",
+    "en": "Listening on http://127.0.0.1:{port}/"
+  },
+  "cmd.cli.status.bar": {
+    "ja": ":{port} 稼働 · {peers} · quit",
+    "en": ":{port} up · {peers} · quit"
+  },
+  "cmd.cli.status.noPeers": {
+    "ja": "(未接続)",
+    "en": "(no peers)"
+  },
+  "cmd.cli.status.offline": {
+    "ja": "オフライン · quit",
+    "en": "offline · quit"
   },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",

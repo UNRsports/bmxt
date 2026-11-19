@@ -109,8 +109,8 @@ fn is_pipe_producer_first(canonical: &str) -> bool {
         .any(|name| name.eq_ignore_ascii_case(canonical))
 }
 
-/** EN: Display tokens like `| browse` (canonical name + aliases). */
-fn list_pipe_continuation_candidate_tokens() -> Vec<String> {
+/** EN: Bare pipe-consumer names (+ aliases), same order as PIPE_CONSUMER_COMPLETION_IDS. */
+fn list_pipe_consumer_names() -> Vec<String> {
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for id in PIPE_CONSUMER_COMPLETION_IDS {
@@ -124,13 +124,85 @@ fn list_pipe_continuation_candidate_tokens() -> Vec<String> {
             None => vec![*id],
         };
         for name in names {
-            let token = format!("| {name}");
-            if seen.insert(token.clone()) {
-                out.push(token);
+            if seen.insert(name.to_string()) {
+                out.push(name.to_string());
             }
         }
     }
     out
+}
+
+/** EN: Display tokens like `| browse` (canonical name + aliases). */
+fn list_pipe_continuation_candidate_tokens() -> Vec<String> {
+    list_pipe_consumer_names()
+        .into_iter()
+        .map(|name| format!("| {name}"))
+        .collect()
+}
+
+/**
+ * EN: Complete the first token of the pipe RHS (`… | b` → `browse`), extension-aligned.
+ * JA: パイプ右辺の第一トークン補完（`… | b` → `browse`）。
+ */
+fn complete_pipe_rhs(line: &str, cursor: usize, pipe_at: usize) -> Option<CompleteHit> {
+    let after_bar = pipe_at + 1;
+    let bytes = line.as_bytes();
+    let mut rhs_start = after_bar;
+    while rhs_start < bytes.len() && is_ascii_whitespace(bytes[rhs_start]) {
+        rhs_start += 1;
+    }
+    // EN: Cursor still on `|` or in spaces before the consumer — offer all consumers.
+    if cursor <= rhs_start {
+        let names = list_pipe_consumer_names();
+        if names.is_empty() {
+            return None;
+        }
+        return Some(CompleteHit {
+            token_start: rhs_start,
+            token_end: rhs_start,
+            prefix: String::new(),
+            candidates: names,
+            tier: "first".to_string(),
+        });
+    }
+
+    let rhs = &line[rhs_start..];
+    let local_cursor = cursor.saturating_sub(rhs_start).min(rhs.len());
+    let (l, r) = word_bounds(rhs, local_cursor);
+    let tokens_before: Vec<&str> = if rhs[..l].trim().is_empty() {
+        Vec::new()
+    } else {
+        rhs[..l].trim().split_whitespace().collect()
+    };
+    // EN: Only the consumer first token is fixed-complete here (flags are free-form).
+    if !tokens_before.is_empty() {
+        return None;
+    }
+    let prefix = rhs[l..local_cursor].to_string();
+    let names = list_pipe_consumer_names();
+    let cands = if prefix.is_empty() {
+        names
+    } else {
+        prefix_filter(&names, &prefix)
+    };
+    if cands.is_empty() {
+        return None;
+    }
+    // EN: Exact complete consumer at EOL — no further fixed tokens.
+    if cands.len() == 1
+        && cands[0].eq_ignore_ascii_case(&rhs[l..r])
+        && local_cursor >= r
+        && cursor >= line.len()
+    {
+        return None;
+    }
+    Some(CompleteHit {
+        token_start: rhs_start + l,
+        token_end: rhs_start + r,
+        prefix,
+        candidates: cands,
+        tier: "first".to_string(),
+    })
 }
 
 fn is_pipe_continuation_candidate(token: &str) -> bool {
@@ -490,8 +562,7 @@ fn first_pipe_byte_index(line: &str) -> Option<usize> {
 /**
  * EN: Resolve fixed-token candidates for the token under `cursor`, then merge
  *     `| browse`… when the stage is a list producer with `-list` (extension-aligned).
- *     Once the cursor is on/after a real `|` pipe, left-stage continuations are not merged
- *     (RHS uses consumer-name completion separately in the extension host).
+ *     On/after `|`, complete bare pipe-consumer names (`browse`, `close`, …).
  * Returns `None` when no fixed-token menu applies (host may add live browser candidates).
  */
 pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
@@ -499,8 +570,7 @@ pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
     let hit = complete_line_fixed(line, cursor);
     if let Some(pipe_at) = first_pipe_byte_index(line) {
         if cursor >= pipe_at {
-            // EN: On/after `|` — do not synthesize left-stage `| browse` tokens.
-            return hit;
+            return complete_pipe_rhs(line, cursor, pipe_at);
         }
         let stage = &line[..pipe_at];
         return apply_pipe_continuation_candidates(hit, stage, cursor);
@@ -588,11 +658,25 @@ mod tests {
     }
 
     #[test]
-    fn no_left_stage_pipe_merge_once_bar_is_present() {
-        let line = "tab -list |";
+    fn completes_pipe_rhs_consumer_after_bar() {
+        let line = "tab -list --peers | b";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert!(hit.candidates.iter().any(|c| c == "browse"));
+        assert!(!hit.candidates.iter().any(|c| c.starts_with("| ")));
+    }
+
+    #[test]
+    fn completes_pipe_rhs_all_when_bar_only() {
+        let line = "tab -list | ";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert!(hit.candidates.iter().any(|c| c == "browse"));
+        assert!(hit.candidates.iter().any(|c| c == "close"));
+    }
+
+    #[test]
+    fn no_hit_when_pipe_rhs_consumer_already_complete() {
+        let line = "tab -list | browse";
         assert!(complete_line(line, line.len()).is_none());
-        let line2 = "tab -list | browse";
-        assert!(complete_line(line2, line2.len()).is_none());
     }
 
     #[test]
