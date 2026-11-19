@@ -1,5 +1,5 @@
-//! EN: Family seal / invite / RTC handshake codes shared with the extension contract.
-//! JA: 拡張契約と共有する Family 封印・招待・RTC 握手コード。
+//! EN: Family auth (sealed envelope) / invite / RTC connection codes shared with the extension contract.
+//! JA: 拡張契約と共有する Family 認証（sealed envelope）・招待・RTC 接続コード。
 
 mod b64;
 mod envelope;

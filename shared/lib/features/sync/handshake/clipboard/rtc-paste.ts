@@ -1,6 +1,6 @@
 /**
- * EN: Clipboard / text-paste parsing for Family-sealed RTC handshake codes.
- * JA: Family 封印 RTC 握手コードの clipboard／テキスト貼付パース。
+ * EN: Clipboard / text-paste parsing for Family-authenticated RTC connection codes.
+ * JA: Family 認証付き RTC 接続コードの clipboard／テキスト貼付パース。
  */
 
 import {

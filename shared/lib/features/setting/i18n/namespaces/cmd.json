@@ -1084,40 +1084,40 @@
     "en": "This handshake code is addressed to a different deviceId."
   },
   "cmd.sync.door.noFamily": {
-    "ja": "localhost 玄関: まだ Family に参加していません（sync -setup / -pair）。",
-    "en": "localhost door: not in a Family yet (sync -setup / -pair)."
+    "ja": "localhost 待ち受け: まだ Family に参加していません（sync -setup / -pair）。",
+    "en": "localhost listener: not in a Family yet (sync -setup / -pair)."
   },
   "cmd.sync.door.unreachable": {
-    "ja": "localhost 玄関: CLI が起動していないか、ポート 17653 に届きません。",
-    "en": "localhost door: CLI is not running or port 17653 is unreachable."
+    "ja": "localhost 待ち受け: CLI が起動していないか、ポート 17653 に届きません。",
+    "en": "localhost listener: CLI is not running or port 17653 is unreachable."
   },
   "cmd.sync.door.badHello": {
-    "ja": "localhost 玄関: hello 応答が不正です。",
-    "en": "localhost door: invalid hello response."
+    "ja": "localhost 待ち受け: hello 応答が不正です。",
+    "en": "localhost listener: invalid hello response."
   },
   "cmd.sync.door.ignored": {
-    "ja": "localhost 玄関: Family 封印を検証できないため無視しました（偽サーバの可能性）。",
-    "en": "localhost door: ignored (could not verify Family seal — possible impostor)."
+    "ja": "localhost 待ち受け: Family 参加情報による認証に失敗したため無視しました（無関係なサービスの可能性）。",
+    "en": "localhost listener: ignored (Family membership verification failed — possible unrelated service)."
   },
   "cmd.sync.door.self": {
-    "ja": "localhost 玄関: 自分自身の device です。",
-    "en": "localhost door: that device is this profile."
+    "ja": "localhost 待ち受け: 自分自身の device です。",
+    "en": "localhost listener: that device is this profile."
   },
   "cmd.sync.door.offerFailed": {
-    "ja": "localhost 玄関: offer の作成に失敗しました。",
-    "en": "localhost door: failed to create offer."
+    "ja": "localhost 待ち受け: offer の作成に失敗しました。",
+    "en": "localhost listener: failed to create offer."
   },
   "cmd.sync.door.handshakeFailed": {
-    "ja": "localhost 玄関: 自動握手に失敗しました。コピペ／ファイルにフォールバックできます。",
-    "en": "localhost door: auto-handshake failed. Clipboard/file fallback remains available."
+    "ja": "localhost 待ち受け: 自動接続に失敗しました。コピペ／ファイルにフォールバックできます。",
+    "en": "localhost listener: auto-connect failed. Clipboard/file fallback remains available."
   },
   "cmd.sync.door.already": {
-    "ja": "localhost 玄関: すでに {name} に接続済みです。",
-    "en": "localhost door: already connected to {name}."
+    "ja": "localhost 待ち受け: すでに {name} に接続済みです。",
+    "en": "localhost listener: already connected to {name}."
   },
   "cmd.sync.door.connected": {
-    "ja": "localhost 玄関: {name} と自動接続しました。",
-    "en": "localhost door: auto-connected to {name}."
+    "ja": "localhost 待ち受け: {name} と自動接続しました。",
+    "en": "localhost listener: auto-connected to {name}."
   },
   "cmd.cli.banner.familyReady": {
     "ja": "BMXt CLI — Family 準備済み · 待ち受け :{port}",

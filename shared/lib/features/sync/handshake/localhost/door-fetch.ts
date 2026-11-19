@@ -1,7 +1,7 @@
 /**
- * EN: Loopback-only fetch for the CLI door (todo §11).
+ * EN: Loopback-only fetch for the CLI localhost listener (todo §11).
  *     Call sites must stay under handshake/localhost/; check:no-fetch allowlists this dir.
- * JA: CLI 玄関専用の loopback fetch（todo §11）。
+ * JA: CLI localhost 待ち受け専用の loopback fetch（todo §11）。
  *     呼び出しは handshake/localhost/ 内のみ。check:no-fetch がこのディレクトリを許可。
  */
 
@@ -24,8 +24,8 @@ function assertDoorUrl(url: string): void {
 }
 
 /**
- * EN: fetch() restricted to the BMXt localhost door origins.
- * JA: BMXt localhost 玄関オリジンに限定した fetch()。
+ * EN: fetch() restricted to the BMXt localhost listener origins.
+ * JA: BMXt localhost 待ち受けオリジンに限定した fetch()。
  */
 export async function doorFetch(
   path: string,
@@ -35,7 +35,7 @@ export async function doorFetch(
   assertDoorUrl(url)
   return fetch(url, {
     ...init,
-    // EN: Never send credentials; door is loopback + Family seal.
+    // EN: Never send credentials; listener is loopback + Family membership auth.
     credentials: "omit",
     cache: "no-store"
   })

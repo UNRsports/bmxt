@@ -133,8 +133,8 @@ export type SyncService = {
   subscribeTabsChanged(listener: (signal: TabsChangedSignal) => void): () => void
   setDisplayName(name: string): Promise<{ ok: boolean; lines: string[] }>
   /**
-   * EN: Auto-handshake via CLI localhost door (Family-sealed). No-op when door down / already linked.
-   * JA: CLI localhost 玄関での自動握手（Family 封印）。玄関停止・接続済みなら no-op。
+   * EN: Auto-connect via CLI localhost listener (Family-authenticated). No-op when listener down / already linked.
+   * JA: CLI localhost 待ち受けでの自動接続（Family 認証付き）。待ち受け停止・接続済みなら no-op。
    */
   tryLocalhostDoor(): Promise<{ ok: boolean; lines: string[]; skipped?: boolean }>
 }

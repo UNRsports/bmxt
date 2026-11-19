@@ -1,6 +1,6 @@
 /**
- * EN: Fixed loopback door shared with hosts/cli (todo §11 / CONTRACT).
- * JA: hosts/cli と共有する固定 loopback 玄関（todo §11 / CONTRACT）。
+ * EN: Fixed loopback listener shared with hosts/cli (todo §11 / CONTRACT).
+ * JA: hosts/cli と共有する固定 loopback 待ち受け（todo §11 / CONTRACT）。
  */
 
 export const LOCALHOST_DOOR_PORT = 17653 as const

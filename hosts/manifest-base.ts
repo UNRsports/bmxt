@@ -79,8 +79,8 @@ export function hostContentSecurityPolicy(browser: HostBrowser): {
       ? "img-src 'self' data: blob: https: http: chrome: moz-anno:;"
       : "img-src 'self' data: blob:;"
   return {
-    // EN: connect-src keeps 'self' plus the fixed CLI localhost door only (todo §11).
-    // JA: connect-src は 'self' と固定 CLI localhost 玄関のみ（todo §11）。
+    // EN: connect-src keeps 'self' plus the fixed CLI localhost listener only (todo §11).
+    // JA: connect-src は 'self' と固定 CLI localhost 待ち受けのみ（todo §11）。
     extension_pages: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' http://127.0.0.1:17653 http://localhost:17653; style-src 'self'; ${imgSrc} font-src 'self' data:; worker-src 'self';`
   }
 }

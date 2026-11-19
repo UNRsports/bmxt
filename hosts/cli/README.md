@@ -47,7 +47,7 @@ Same grammar as the extension (`bmxt-core`):
 
 1. Install / open **BMXt extension** and keep the **prompt window** open (peer host).
 2. Join the **same Family** on CLI and each browser (`sync -setup` / `sync -pair`).
-3. **Direct start:** `bmxt` or `bmxt repl` → when Family is joined, CLI opens a **localhost door** on `http://127.0.0.1:17653/` (loopback only, Family-sealed). Open the BMXt prompt in each browser — sealed **auto-reconnect** runs in the background.
+3. **Direct start:** `bmxt` or `bmxt repl` → when Family is joined, CLI opens a **localhost HTTP listener** on `http://127.0.0.1:17653/` (loopback only, Family-authenticated). Open the BMXt prompt in each browser — Family-authenticated **auto-reconnect** runs in the background.
 4. **Fallback handshake** (clipboard / file) still works: `sync -offer` / `sync -accept` (Enter/`:pick`), or `bmxt sync-connect [--offer]`. Prefer ticket files under `~/.config/bmxt/`.
 5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
 6. Connection events print as normal log lines; while `BMXt>` is waiting, logs use rustyline’s external printer so the prompt and caret redraw afterward.
@@ -67,7 +67,7 @@ Same grammar as the extension (`bmxt-core`):
 | Path | Role |
 |------|------|
 | `hosts/cli` | `bmxt` binary (this package) |
-| `shared/crates/bmxt-family` | Family seal / invite / `bmxt-rtc1.` |
+| `shared/crates/bmxt-family` | Family auth (sealed envelope) / invite / `bmxt-rtc1.` |
 | `shared/crates/bmxt-sync-wire` | `SyncBusCommand` |
 | `shared/crates/bmxt-peer-rtc` | Native WebRTC (host ICE) |
 | `shared/crates/bmxt-core` | Shared command grammar (`default-features = false` for CLI) |
@@ -134,7 +134,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 
 1. **BMXt 拡張**を入れ、**プロンプト窓**を開いたままにする（peer 宿主）。
 2. CLI と各ブラウザで **同じ Family** に参加（`sync -setup` / `sync -pair`）。
-3. **直接起動:** `bmxt` または `bmxt repl` → Family 参加済みなら **localhost 待ち受け** `http://127.0.0.1:17653/`（loopback のみ・Family 封印）。各ブラウザで BMXt プロンプトを開くと **自動再接続**が走る。
+3. **直接起動:** `bmxt` または `bmxt repl` → Family 参加済みなら **localhost HTTP 待ち受け** `http://127.0.0.1:17653/`（loopback のみ・Family 認証付き）。各ブラウザで BMXt プロンプトを開くと **自動再接続**が走る。
 4. **フォールバック握手**（コピペ／ファイル）も従来どおり: `sync -offer` / `sync -accept`（Enter / `:pick`）、または `bmxt sync-connect [--offer]`。`~/.config/bmxt/` のチケット推奨。
 5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
 6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中は rustyline の external printer 経由で出し、ログ後にプロンプトとキャレットを描き直す。
@@ -154,7 +154,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 | パス | 役割 |
 |------|------|
 | `hosts/cli` | `bmxt` バイナリ（本パッケージ） |
-| `shared/crates/bmxt-family` | Family seal / 招待 / `bmxt-rtc1.` |
+| `shared/crates/bmxt-family` | Family 認証（sealed envelope）/ 招待 / `bmxt-rtc1.` |
 | `shared/crates/bmxt-sync-wire` | `SyncBusCommand` |
 | `shared/crates/bmxt-peer-rtc` | ネイティブ WebRTC（host ICE） |
 | `shared/crates/bmxt-core` | 共有コマンド文法（CLI は `default-features = false`） |

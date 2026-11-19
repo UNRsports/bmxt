@@ -1,6 +1,6 @@
 /**
- * EN: Prompt-window hook — retry CLI localhost door until linked or give up quietly.
- * JA: プロンプト窓フック。CLI localhost 玄関へ静かにリトライ。
+ * EN: Prompt-window hook — retry CLI localhost listener until linked or give up quietly.
+ * JA: プロンプト窓フック。CLI localhost 待ち受けへ静かにリトライ。
  */
 
 import { getSyncService } from "../../facade/sync-service.ts"

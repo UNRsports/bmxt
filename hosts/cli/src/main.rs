@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
             );
             println!("transport:   WebRTC DataChannel (host ICE, bmxt-rtc1.)");
             println!(
-                "localhost:   http://127.0.0.1:{}/ (Family-sealed door; when Family joined)",
+                "localhost:   http://127.0.0.1:{}/ (Family-authenticated listener; when Family joined)",
                 door::DOOR_PORT
             );
         }
@@ -157,7 +157,7 @@ async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<Opt
     if let Some(hub) = seed {
         if cfg.family_id.is_some() && cfg.seed_b64.is_some() {
             if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&hub)).await {
-                eprintln!("localhost door: {err:#}");
+                eprintln!("localhost listener: {err:#}");
             }
         }
         return Ok(Some(hub));
@@ -175,7 +175,7 @@ async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<Opt
         .await,
     );
     if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&hub)).await {
-        eprintln!("localhost door: {err:#}");
+        eprintln!("localhost listener: {err:#}");
     }
     Ok(Some(hub))
 }
@@ -206,7 +206,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         println!("{}", t_cli("cmd.cli.banner.editing", &[]));
     }
     let mut shell = PromptShell::open()?;
-    // EN: Async bus/door logs use ExternalPrinter so BMXt> + caret redraw after each line.
+    // EN: Async bus/listener logs use ExternalPrinter so BMXt> + caret redraw after each line.
     if let Err(err) = shell.install_repl_log_printer() {
         eprintln!("warn: external printer unavailable ({err:#}); using stderr logs");
     }
@@ -261,7 +261,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
             break;
         }
 
-        // EN: After sync-setup / sync-pair, stand up the door hub if missing.
+        // EN: After sync-setup / sync-pair, stand up the localhost listener hub if missing.
         if hub.is_none() && (trimmed.starts_with("sync -setup") || trimmed.starts_with("sync -pair"))
         {
             // fall through to adapter first, then refresh hub below
@@ -323,7 +323,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                 if let Some((id, _)) = peers.first() {
                     format!("sync -ping {id}")
                 } else {
-                    eprintln!("error: no connected peers (waiting for browser door connect?)");
+                    eprintln!("error: no connected peers (waiting for browser localhost connect?)");
                     continuation = None;
                     continue;
                 }
@@ -344,7 +344,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                     if hub.is_none() {
                         let arc = Arc::new(c);
                         if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&arc)).await {
-                            eprintln!("localhost door: {err:#}");
+                            eprintln!("localhost listener: {err:#}");
                         }
                         hub = Some(arc);
                     }
@@ -356,12 +356,12 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                         Ok(Some(h)) => {
                             hub = Some(h);
                             println!(
-                                "localhost door listening on http://127.0.0.1:{}/",
+                                "localhost listener listening on http://127.0.0.1:{}/",
                                 door::DOOR_PORT
                             );
                         }
                         Ok(None) => {}
-                        Err(err) => eprintln!("localhost door: {err:#}"),
+                        Err(err) => eprintln!("localhost listener: {err:#}"),
                     }
                 }
                 continuation = outcome.prompt_prefix;

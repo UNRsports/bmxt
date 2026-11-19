@@ -1,5 +1,5 @@
-//! EN: Loopback HTTP “front door” for Family-sealed auto-handshake (todo §11).
-//! JA: Family 封印オート握手用 loopback HTTP 表玄関（todo §11）。
+//! EN: Loopback HTTP listener for Family-authenticated auto-connect (todo §11).
+//! JA: Family 認証付き自動接続用 loopback HTTP 待ち受け（todo §11）。
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -29,17 +29,17 @@ const DOOR_HTML: &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>BMXt door</title>
+  <title>BMXt localhost listener</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 36rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
     code { background: #f2f2f2; padding: 0.1em 0.35em; }
   </style>
 </head>
 <body>
-  <h1>BMXt localhost door</h1>
-  <p>Family-sealed handshake endpoint for the BMXt extension (loopback only).</p>
-  <p>Open the BMXt prompt window in each browser; sealed auto-reconnect uses this door.</p>
-  <p>Manual clipboard / file handshake remains available as fallback.</p>
+  <h1>BMXt localhost listener</h1>
+  <p>Family-authenticated connection endpoint for the BMXt extension (loopback only).</p>
+  <p>Open the BMXt prompt window in each browser; Family-authenticated auto-reconnect uses this listener.</p>
+  <p>Manual clipboard / file connection setup remains available as fallback.</p>
   <p><code>GET /v1/hello</code> · <code>POST /v1/handshake/offer</code></p>
 </body>
 </html>"#;
@@ -85,8 +85,8 @@ struct ErrorBody {
 }
 
 /**
- * EN: Bind 127.0.0.1 only and serve the sealed door (does not block the REPL).
- * JA: 127.0.0.1 のみ bind し封印玄関を serve（REPL はブロックしない）。
+ * EN: Bind 127.0.0.1 only and serve the localhost listener (does not block the REPL).
+ * JA: 127.0.0.1 のみ bind し localhost 待ち受けを serve（REPL はブロックしない）。
  */
 pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     cfg.require_family()?;
@@ -104,7 +104,7 @@ pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], DOOR_PORT));
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| anyhow!("localhost door bind {addr}: {e}"))?;
+        .map_err(|e| anyhow!("localhost listener bind {addr}: {e}"))?;
     eprintln!(
         "{}",
         t_cli(

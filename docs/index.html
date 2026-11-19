@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: November 15, 2026</p>
+          <p class="muted">Last updated: November 19, 2026</p>
         </div>
       </header>
 
@@ -173,15 +173,20 @@
               translation previews stays in session memory and is not saved to storage as typed content; only
               translation assist on/off and your chosen language pair are persisted locally. The Extension UI
               and service worker are not designed to call <code>fetch()</code> against arbitrary third-party
-              HTTPS URLs; <code>connect-src 'self'</code> in the packaged manifest reinforces that (Chrome Web
-              Store delivery and browser updates are separate). Required <code>https://*/*</code>
-              <strong>host_permissions</strong> are declared in the packaged manifest so the Extension can
-              inject its packaged content script into ordinary https pages (including already-open tabs after
-              install or update, without a page reload). In-page scripting (nav, float, <code>dom</code>,
-              <code>search -list --page</code>, <code>snapshot -save</code>) is https-only; opening, listing,
-              or matching <code>http://</code> URLs in tabs, history, and bookmarks does not require that host
-              grant. Privileged service-worker messages used for command execution and nav control are
-              accepted only from the Extension’s own UI pages (<code>bmxt.html</code> /
+              HTTPS URLs. Packaged CSP <code>connect-src</code> is <code>'self'</code> plus fixed loopback
+              origins used only for optional local connection to a BMXt CLI process on the same PC
+              (<code>http://127.0.0.1:17653</code> · <code>http://localhost:17653</code>; Chrome Web Store
+              delivery and browser updates are separate). Required <strong>host_permissions</strong> in the
+              packaged manifest include <code>https://*/*</code> so the Extension can inject its packaged
+              content script into ordinary https pages (including already-open tabs after install or update,
+              without a page reload), and <code>http://127.0.0.1:17653/*</code> ·
+              <code>http://localhost:17653/*</code> so the Extension can complete a Family-authenticated
+              connection setup with a local BMXt CLI process on the same PC only (not general
+              <code>http://</code> page scripting). In-page scripting (nav, float, <code>dom</code>,
+              <code>search -list --page</code>, <code>snapshot -save</code>) remains https-only; opening,
+              listing, or matching <code>http://</code> URLs in tabs, history, and bookmarks does not require
+              the https host grant. Privileged service-worker messages used for command execution and nav
+              control are accepted only from the Extension’s own UI pages (<code>bmxt.html</code> /
               <code>bmxt-float.html</code>), not from content scripts or other extensions. Meaningful page
               reads and overlays still run only when you issue a command or toggle a related UI host
               (including the optional float prompt and nav overlay). You can later restrict site access under
@@ -194,8 +199,9 @@
             </li>
             <li>
               Optional <strong>Family local sync</strong> (<code>sync</code>) uses a user-initiated
-              copy/paste handshake and a <strong>WebRTC DataChannel</strong> between browser profiles you
-              connect (host ICE candidates only; no public STUN/TURN). Peer-to-peer command traffic stays
+              copy/paste (or file) connection setup and/or an optional <strong>localhost HTTP listener</strong>
+              on a BMXt CLI process on the same PC, then a <strong>WebRTC DataChannel</strong> between peers
+              you connect (host ICE candidates only; no public STUN/TURN). Peer-to-peer command traffic stays
               between those peers; BMXt does not operate a sync relay on UNRsports servers (see section 4.8).
             </li>
           </ul>
@@ -215,10 +221,10 @@
           initiate.
         </p>
         <p>
-          The Extension also uses the <code>favicon</code> permission so tab and search picker rows can show
-          site favicons derived from page URLs Chrome already exposes to the Extension. Favicons are resolved
-          and displayed locally; BMXt does not upload favicon requests or tab metadata to UNRsports servers
-          for this purpose.
+          The Extension also uses the <code>favicon</code> permission so tab and search picker rows, and
+          processing-result lines in the BMXt terminal log, can show site favicons derived from page URLs
+          Chrome already exposes to the Extension. Favicons are resolved and displayed locally; BMXt does not
+          upload favicon requests or tab metadata to UNRsports servers for this purpose.
         </p>
         <h3>4.2 Tab groups</h3>
         <p>
@@ -460,15 +466,27 @@
             not upload that material to UNRsports servers.
           </li>
           <li>
-            Use the system <strong>clipboard</strong> when you choose COPY in the sync wizard (or related
-            UI) so you can paste handshake codes (<code>bmxt1.…</code> / <code>bmxt-rtc1.…</code>) into
-            another BMXt profile you control.
+            Use the system <strong>clipboard</strong> (or file tickets) when you choose COPY in the sync
+            wizard (or related UI) so you can paste connection codes (<code>bmxt1.…</code> /
+            <code>bmxt-rtc1.…</code>) into another BMXt profile you control. Clipboard / file remain full
+            fallbacks when the localhost HTTP listener is unused or unavailable.
+          </li>
+          <li>
+            Optionally contact a <strong>localhost HTTP listener</strong> served by a BMXt CLI process on the
+            <strong>same PC</strong> (<code>http://127.0.0.1:17653</code> / <code>http://localhost:17653</code>;
+            loopback bind only) to complete a Family-authenticated hello and offer/answer exchange when you
+            open the BMXt prompt. That path uses the fixed loopback <strong>host_permissions</strong> and CSP
+            <code>connect-src</code> entries above; <code>fetch()</code> is limited to those origins and is
+            not a general internet or general <code>http://</code> page grant. Responses that fail Family
+            membership verification are ignored (unrelated localhost services are not accepted). Command
+            traffic after connect still uses the WebRTC DataChannel described next—not the HTTP listener as a
+            command relay.
           </li>
           <li>
             Establish a <strong>WebRTC DataChannel</strong> between those peers using
             <strong>host ICE candidates only</strong> (no public STUN or TURN servers configured by BMXt).
-            This keeps the packaged <code>connect-src 'self'</code> model for ordinary
-            <code>fetch()</code> while allowing browser-local peer connectivity you initiate.
+            Ordinary third-party <code>fetch()</code> remains out of scope; packaged
+            <code>connect-src</code> stays <code>'self'</code> plus the fixed localhost-listener origins only.
           </li>
           <li>
             Exchange <strong>command-bus payloads you initiate</strong> over that channel—for example ping,
@@ -494,10 +512,11 @@
           (<code>'self'</code>). BMXt does <strong>not</strong> download WebAssembly from the network for this
           purpose. The packaged Content Security Policy includes <code>script-src 'self' 'wasm-unsafe-eval'</code>
           so the browser may compile and instantiate that local module; this is <strong>not</strong> a
-          permission to fetch or run remote scripts, and it does not relax <code>connect-src 'self'</code>.
-          Search metadata caching uses in-process memory only (see section 4.4). (An earlier series removed
-          bundled WASM in version 0.3.5 for package size; current releases again ship a local WASM command
-          core.)
+          permission to fetch or run remote scripts. Packaged <code>connect-src</code> remains
+          <code>'self'</code> plus the fixed CLI localhost-listener loopback origins only (see section 4.8)—not
+          a general internet grant. Search metadata caching uses in-process memory only (see section 4.4).
+          (An earlier series removed bundled WASM in version 0.3.5 for package size; current releases again
+          ship a local WASM command core.)
         </p>
 
         <h2>6. Remote code</h2>
@@ -509,7 +528,9 @@
         <p class="muted">
           The packaged manifest’s Content Security Policy (including <code>connect-src</code>) is an extra
           guardrail alongside that design; local WXT development may allow localhost script and WebSocket
-          endpoints in the same policy string.
+          endpoints in the same policy string. The production <code>connect-src</code> loopback entries for
+          the CLI localhost listener are for connection setup only and are distinct from WXT’s development
+          allowances.
         </p>
 
         <h2>7. Data transmission and third parties</h2>
@@ -528,6 +549,8 @@
           When you enable Family local sync, peer-to-peer WebRTC DataChannel traffic may carry command-bus
           payloads between BMXt profiles you connect, as described in section 4.8. That traffic is not sent to
           UNRsports servers as a sync service. BMXt configures host ICE only (no public STUN/TURN of its own).
+          Optional localhost hello / offer / answer exchanges stay on the same PC (loopback HTTP to a local
+          BMXt CLI process) and are not sent to UNRsports servers.
         </p>
         <p>
           When you use the Extension, your browser or operating system may still communicate with Google,
@@ -648,13 +671,17 @@
               設定など）を <code>chrome.storage.local</code> に書き込みます。翻訳アシスト用の nav typing 入力は
               プレビュー用にセッション内メモリで扱い、入力本文そのものは storage に保存しません。翻訳アシストの
               ON/OFF と言語ペア設定のみがローカルに保存されます。拡張ページ・サービスワーカーから
-              <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ manifest の CSP
-              （<code>connect-src 'self'</code>）はその補助線です（ストア配信・ブラウザ更新は別）。パッケージ
-              manifest では必須の <code>https://*/*</code>
-              <strong>host_permissions</strong> を宣言し、通常の https ページへ同梱コンテンツスクリプトを注入します
-              （インストール／更新直後の既存タブも含め、ページ再読み込みは不要）。ページ内操作（nav・float・
+              <code>fetch()</code> で任意の第三者 HTTPS に取りに行く設計にはしておらず、パッケージ CSP の
+              <code>connect-src</code> は <code>'self'</code> に加え、同一 PC 上の BMXt CLI への任意の
+              ローカル接続に使う固定 loopback オリジンのみ（<code>http://127.0.0.1:17653</code> ·
+              <code>http://localhost:17653</code>）です（ストア配信・ブラウザ更新は別）。パッケージ
+              manifest の必須 <strong>host_permissions</strong> には、通常の https ページへ同梱コンテンツ
+              スクリプトを注入するための <code>https://*/*</code>（インストール／更新直後の既存タブも含め、
+              ページ再読み込みは不要）に加え、同一 PC 上の BMXt CLI と Family 認証付きで接続を確立するためだけの
+              <code>http://127.0.0.1:17653/*</code> · <code>http://localhost:17653/*</code> があります
+              （一般の <code>http://</code> ページ操作には使いません）。ページ内操作（nav・float・
               <code>dom</code>・<code>search -list --page</code>・<code>snapshot -save</code>）は https のみです。
-              タブ・履歴・ブックマーク上の <code>http://</code> URL の開く・一覧・照合には当該ホスト権限は不要です。
+              タブ・履歴・ブックマーク上の <code>http://</code> URL の開く・一覧・照合には https 向けホスト権限は不要です。
               コマンド実行および nav 制御に用いる特権サービスワーカー・メッセージは、本拡張機能自身の UI ページ
               （<code>bmxt.html</code> / <code>bmxt-float.html</code>）からのみ受け付け、コンテンツスクリプトや他拡張からの送信は拒否します。
               ページ本文の読み取りやオーバーレイなど意味のある処理は、コマンド実行時または関連 UI ホスト（任意の
@@ -666,10 +693,11 @@
               端末上で処理されます（日本語 ↔ 英語）。当方のサーバーへ翻訳目的で送信することはありません。
             </li>
             <li>
-              任意の <strong>Family ローカル同期</strong>（<code>sync</code>）は、ユーザー開始のコピペ握手と、
-              接続したブラウザ／プロファイル間の <strong>WebRTC DataChannel</strong>（host ICE のみ・公開
-              STUN/TURN なし）を用います。ピア間のコマンド通信は接続した端末同士に留まり、UNRsports の同期
-              リレーは運用しません（4.8 節参照）。
+              任意の <strong>Family ローカル同期</strong>（<code>sync</code>）は、ユーザー開始のコピペ（または
+              ファイル）による接続確立、および／または同一 PC 上の BMXt CLI の任意の
+              <strong>localhost HTTP 待ち受け</strong>と、接続したピア間の
+              <strong>WebRTC DataChannel</strong>（host ICE のみ・公開 STUN/TURN なし）を用います。ピア間の
+              コマンド通信は接続した端末同士に留まり、UNRsports の同期リレーは運用しません（4.8 節参照）。
             </li>
           </ul>
         </div>
@@ -685,9 +713,9 @@
           端末上で実現するためにのみ用います。
         </p>
         <p>
-          また <code>favicon</code> 権限により、タブ／search ピッカー行にサイトのファビコンを表示します（Chrome
-          が拡張機能に開示しているページ URL から解決）。ファビコンは端末上で取得・表示され、当方のサーバーへ
-          タブメタデータやファビコン要求を送信する設計にはしていません。
+          また <code>favicon</code> 権限により、タブ／search ピッカー行および BMXt ターミナルの処理結果行に
+          サイトのファビコンを表示します（Chrome が拡張機能に開示しているページ URL から解決）。ファビコンは
+          端末上で取得・表示され、当方のサーバーへタブメタデータやファビコン要求を送信する設計にはしていません。
         </p>
 
         <h3>4.2 タブグループ</h3>
@@ -909,15 +937,27 @@
             招待素材は参加端末上に平文で保持され、UNRsports サーバーへアップロードしません。
           </li>
           <li>
-            同期ウィザード等でユーザーが COPY を選んだとき、システム <strong>クリップボード</strong> に
-            握手コード（<code>bmxt1.…</code> / <code>bmxt-rtc1.…</code>）を載せ、別の BMXt プロファイルへ
-            貼り付けられるようにする。
+            同期ウィザード等でユーザーが COPY を選んだとき、システム <strong>クリップボード</strong>（または
+            ファイル）に接続コード（<code>bmxt1.…</code> / <code>bmxt-rtc1.…</code>）を載せ、別の
+            BMXt プロファイルへ貼り付けられるようにする。localhost HTTP 待ち受けを使わない／使えない場合の
+            フォールバックとしても、コピペ／ファイルは存続します。
+          </li>
+          <li>
+            任意で、<strong>同一 PC</strong> 上の BMXt CLI が開いている
+            <strong>localhost HTTP 待ち受け</strong>
+            （<code>http://127.0.0.1:17653</code> / <code>http://localhost:17653</code>。loopback のみ bind）へ、
+            BMXt プロンプト起動時に Family 認証付きの hello および offer／answer による接続確立を行う。上記の
+            固定 loopback <strong>host_permissions</strong> と CSP <code>connect-src</code> のみを用い、
+            <code>fetch()</code> はそれらのオリジンに限定する（一般インターネットや一般
+            <code>http://</code> ページへの許可ではない）。Family 参加情報による認証に失敗した応答は無視する
+            （無関係な localhost サービスは受理しない）。接続後のコマンド通信は次項の WebRTC DataChannel であり、
+            この HTTP 待ち受けをコマンド中継には使わない。
           </li>
           <li>
             それらのピア間で <strong>WebRTC DataChannel</strong> を確立する（BMXt が設定する ICE は
-            <strong>host 候補のみ</strong>。公開 STUN／TURN は使わない）。通常の <code>fetch()</code> 向け
-            <code>connect-src 'self'</code> を維持しつつ、ユーザーが開始したブラウザ／プロファイル間の
-            ローカル接続を可能にします。
+            <strong>host 候補のみ</strong>。公開 STUN／TURN は使わない）。任意の第三者向け
+            <code>fetch()</code> は対象外のまま、パッケージ <code>connect-src</code> は <code>'self'</code>
+            に加え localhost 待ち受けの固定オリジンのみです。
           </li>
           <li>
             そのチャネル上で<strong>ユーザーが開始した</strong>コマンドバス・ペイロード（ping、遠隔の
@@ -940,8 +980,9 @@
           拡張機能自身のオリジン（<code>'self'</code>）から読み込みます。この目的でネットワークから
           WebAssembly を取得することはありません。パッケージ CSP の
           <code>script-src 'self' 'wasm-unsafe-eval'</code> は、その<strong>端末内モジュール</strong>のコンパイル／
-          インスタンス化を許可するためのものであり、リモートスクリプトの取得・実行を許すものではなく、
-          <code>connect-src 'self'</code> を緩和するものでもありません。検索メタデータキャッシュは
+          インスタンス化を許可するためのものであり、リモートスクリプトの取得・実行を許すものではありません。
+          パッケージ <code>connect-src</code> は <code>'self'</code> に加え CLI の localhost 待ち受け用の固定
+          loopback オリジンのみです（4.8 節。一般インターネットへの許可ではない）。検索メタデータキャッシュは
           プロセス内メモリのみを使用します（4.4 節参照）。（過去の系列では 0.3.5 で同梱 WASM を廃止しましたが、
           現行リリースは再びローカルな WASM コマンドコアを同梱します。）
         </p>
@@ -954,6 +995,7 @@
         <p class="muted">
           パッケージ manifest の CSP（<code>connect-src</code> 等）はその設計に沿った補助線です。ローカルで
           WXT 開発する場合、同一ポリシー文字列内で localhost のスクリプト・WebSocket を許可しています。
+          本番の CLI 待ち受け向け loopback <code>connect-src</code> は接続確立専用であり、WXT 開発用の許可とは別です。
         </p>
 
         <h2>7. データの送信と第三者</h2>
@@ -970,7 +1012,9 @@
         <p>
           Family ローカル同期を有効にした場合、4.8 節のとおり接続した BMXt プロファイル間で WebRTC DataChannel による
           コマンドバス通信が発生することがあります。この通信は UNRsports の同期サービスへ送るものではありません。
-          BMXt が設定する ICE は host 候補のみです（公開 STUN／TURN は自前で使いません）。
+          BMXt が設定する ICE は host 候補のみです（公開 STUN／TURN は自前で使いません）。任意の localhost
+          待ち受けによる hello／offer／answer 交換は同一 PC 内（ローカル BMXt CLI への loopback HTTP）に留まり、
+          UNRsports サーバーへは送りません。
         </p>
         <p>
           一方で、ブラウザや OS の動作として、Google・Mozilla 等のサービスとの通信が発生する場合があります

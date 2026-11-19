@@ -90,7 +90,7 @@ export type SyncStatusSnapshot = {
   invite: string | null
 }
 
-/** EN: Wire envelope for Family-sealed handshake / queue payloads. */
+/** EN: Wire envelope for Family-authenticated connection / invite payloads. */
 export type SyncSealedEnvelope = {
   version: 1
   familyId: SyncFamilyId

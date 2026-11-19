@@ -61,8 +61,8 @@ impl BusClient {
      * JA: sync-connect 後の最初のセッションを受け取り、メッシュと inbound 処理を開始する。
      */
     /**
-     * EN: Empty hub (localhost door may attach peers before any manual handshake).
-     * JA: 空ハブ（手動握手前に localhost 玄関が peer を attach しうる）。
+     * EN: Empty hub (localhost listener may attach peers before any manual connection setup).
+     * JA: 空ハブ（手動接続前に localhost 待ち受けが peer を attach しうる）。
      */
     pub async fn create_hub(self_id: String, display_name: String, family_id: String) -> Self {
         let (event_tx, event_rx) = mpsc::unbounded_channel();

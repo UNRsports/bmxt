@@ -127,7 +127,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 信頼圏 | **Family**（共有シード／招待。Brave Sync Chain と同型）。メンバーだけが平文を持つ |
 | 識別 | ブラウザ／プロファイルごとに **ユニーク device ID** + 表示名。接続・名簿・衝突解決・遠隔宛先のキー |
 | 既定 | ローカル本線（WebRTC DataChannel + コピペ握手）。`connect-src 'self'` / `check:no-fetch` / Firefox `data_collection_permissions: none` を維持 |
-| 制御面 | native messaging ホストは使わない。低遅延は **WebRTC DataChannel**（握手は Family 封印テキストコード） |
+| 制御面 | native messaging ホストは使わない。低遅延は **WebRTC DataChannel**（接続確立は Family 認証付きテキストコード） |
 | Drive / FSA | **同期本線から外す。** Firefox が FSA ピッカー非対応のため、作業ディレクトリ共有は廃止 |
 | 将来像（仕様上の視野） | スマホ BMXt は窓口、PC がハブ／索引。USB・Bluetooth は拡張単体では非現実的 → 必要なら後続でネイティブ補助 |
 
@@ -143,7 +143,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 | 項目 | 内容 |
 |------|------|
-| 原理 | 名刺（SDP offer/answer · ICE 同梱）を Family 封印テキストコードでコピペ交換し、会話本体は Peer 間 DataChannel |
+| 原理 | 名刺（SDP offer/answer · ICE 同梱）を Family 認証付きテキストコードでコピペ交換し、会話本体は Peer 間 DataChannel |
 | 握手 UX | 推奨: ウィザード `sync -setup` / `sync -connect`（Family → 役割 → COPY / 貼付）。手動 CLI も可。設定 picker は案内のみ（貼付しない） |
 | データ面 | WebRTC DataChannel（遠隔コマンド · ack · 将来の横断クエリ） |
 | peer 宿主 | **BMXt プロンプト窓のみ**（Chrome/Firefox 共通）。offscreen / 専用 peer タブは使わない。SW 単体では不可。窓を閉じる／明示再握手までトンネル堅持 |
@@ -201,7 +201,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] Family 作成／参加（シードまたは招待）の最小モデル
 - [x] `shared/lib/features/sync/`（スタビライザー境界）に同期モジュール
 - [x] **FSA 同期削除**（workdir / signaling box / pull-push-pause）
-- [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 封印）+ WebRTC DataChannel（host ICE）
+- [x] **6c:** コピペ握手（`bmxt-rtc1.` Family 認証付き）+ WebRTC DataChannel（host ICE）
 - [x] **6c:** peer 宿主（プロンプト窓一本化）+ ping / open
 - [x] **6c:** `sync -setup` ウィザード（Family → 役割 → COPY / 貼付）。accept 成功は握手完了（直後 ping 失敗でもセットアップ終了）
 - [x] **6c:** `sync -connect <deviceId>`（役割自動）+ ウィザード COPY／貼付
@@ -223,7 +223,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 | ディレクトリ | 役割 |
 |------|------|
-| `handshake/common/` | 封印 codec · connect pending（両輸送の前提） |
+| `handshake/common/` | Family 認証 codec · connect pending（両輸送の前提） |
 | `handshake/clipboard/` | COPY バー · テキスト貼付パース · ウィザード COPY |
 | `handshake/file/` | チケット JSON（`…-invite|offer|answer.json`）· 保存／開く UI |
 
@@ -239,7 +239,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 
 **ファイル輸送（実装済み）:** ウィザードに「ファイルで渡す」を clipboard と併存。
 
-- 保存: blob download で `bmxt-YYYYMMDD-HHMMSS-{invite|offer|answer}.json`（招待は `bmxt1.*`、握手は封印 `bmxt-rtc1.*`。時刻付きで整列しやすい）
+- 保存: blob download で `bmxt-YYYYMMDD-HHMMSS-{invite|offer|answer}.json`（招待は `bmxt1.*`、接続コードは Family 認証付き `bmxt-rtc1.*`。時刻付きで整列しやすい）
 - 読み込み: `<input type="file" accept="application/json,.json">`（Firefox 可。`showOpenFilePicker` 非依存）
 - clipboard COPY／貼付は残す。追加権限なし（`downloads` / 新規 FSA ディレクトリは不要）
 
@@ -501,7 +501,7 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 **拡張との契約**
 
 - ワイヤ正本: `shared/lib/features/sync/types.ts` の `SyncBusCommand`（初版は破壊変更しない）
-- 握手・封印: `rtc-handshake-codec` / `family-crypto` と **バイト／JSON 互換**（fixture で両側緑）
+- 接続確立・Family 認証: `rtc-handshake-codec` / `family-crypto` と **バイト／JSON 互換**（fixture で両側緑）
 - peer 宿主は現状どおり **プロンプト窓**（窓クローズ＝切断）
 - CLI device 表示例: `terminal@<host>`。名簿が terminal device を拒否しないことを確認
 
@@ -547,28 +547,28 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 **参照:** plan `rust_cli_bmxt` · §6（Family／6c バス）· `shared/lib/features/sync/` · `shared/crates/bmxt-core/` · skill `bmxt-add-command`
 
-### 11. localhost HTTP 玄関（自動握手 · CLI door）
+### 11. localhost HTTP 待ち受け（自動接続 · CLI listener）
 
-**目標:** 同一 PC で CLI を常設エントリ（表玄関）にし、各ブラウザの BMXt プロンプト起動だけで Family DataChannel を再接続する。ブラウザ同士は既存 **mesh**（裏玄関）で直結。コピペ／ファイル握手は **フォールバックとしてすべて残す**。
+**目標:** 同一 PC で CLI を常設エントリにし、各ブラウザの BMXt プロンプト起動だけで Family DataChannel を再接続する。ブラウザ同士は既存 **mesh** で直結。コピペ／ファイルによる接続確立は **フォールバックとしてすべて残す**。
 
 **製品方針（決定済み）**
 
 | 項目 | 内容 |
 |------|------|
-| 輸送 | CLI が **loopback のみ**（`127.0.0.1` / `localhost`）で HTTP 玄関を listen。固定ポート **17653** |
-| 認証 | 握手・hello は **Family 封印必須**（`bmxt-rtc1.` / sealed envelope）。シード無しの偽 localhost は拡張が無視 |
+| 輸送 | CLI が **loopback のみ**（`127.0.0.1` / `localhost`）で HTTP 待ち受けを listen。固定ポート **17653** |
+| 認証 | 接続確立・hello は **Family 認証必須**（`bmxt-rtc1.` / sealed envelope）。参加情報無しの無関係な localhost は拡張が無視 |
 | CSP | `connect-src` に **当該 loopback ポートのみ**追加。一般インターネットへの fetch は禁止のまま（`check:no-fetch` は localhost クライアントのみ許可） |
 | host_permissions | `http://127.0.0.1:17653/*` · `http://localhost:17653/*` を必須に追加 |
 | 一般 http DOM | **引き続き不可**（`isScriptablePageUrl` は https のみ。localhost を nav/dom/search 対象にしない） |
 | Native messaging | **引き続き不使用** |
 | フォールバック | `sync -setup` / `-connect` / `-offer` / `-answer` / `-accept` · clipboard · ファイルチケットは現状どおり |
-| 役割 | CLI = 表玄関（introducer）。本線コマンドは WebRTC DataChannel。タブ操作のハブ中継はしない |
+| 役割 | CLI = introducer（常設エントリ）。本線コマンドは WebRTC DataChannel。タブ操作のハブ中継はしない |
 
 **コールドスタート（到達点）**
 
-1. CLI 起動（Family 参加済み）→ 玄関サーバ展開  
+1. CLI 起動（Family 参加済み）→ localhost 待ち受け開始  
 2. 各ブラウザで BMXt プロンプト窓を開く  
-3. 拡張が hello 封印を検証 → offer を POST → answer を apply → DC 開通  
+3. 拡張が hello を Family 認証 → offer を POST → answer を apply → DC 開通  
 4. mesh でブラウザ同士を自動直結  
 
 初回の Family／CLI 参加（シード・招待）は従来どおり手動。WebRTC はプロセスまたぎ保持不可のため「自動再握手」になる。
@@ -578,14 +578,14 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 | メソッド | パス | 内容 |
 |----------|------|------|
 | `GET` | `/` | 人向け案内 HTML（任意） |
-| `GET` | `/v1/hello` | Family 封印ドアカード（偽サーバ排除） |
+| `GET` | `/v1/hello` | Family 認証付き hello（無関係なサービスの排除） |
 | `POST` | `/v1/handshake/offer` | body: `{ sealedOffer: "bmxt-rtc1.…" }` → `{ sealedAnswer: "bmxt-rtc1.…" }` |
 
 **実装チェック**
 
 - [x] **11.0** `_context/cli-peer/CONTRACT.md` · todo 本節 · 固定ポート定数の両側共有
-- [x] **11.1** CLI: loopback HTTP door（hello + offer→answer）· `BusClient` 複数 peer attach · REPL 常時玄関
-- [x] **11.2** 拡張: host_permissions + `connect-src` ピンポイント · `handshake/localhost/` クライアント（封印検証）
+- [x] **11.1** CLI: loopback HTTP listener（hello + offer→answer）· `BusClient` 複数 peer attach · REPL 常時待ち受け
+- [x] **11.2** 拡張: host_permissions + `connect-src` ピンポイント · `handshake/localhost/` クライアント（Family 認証）
 - [x] **11.3** プロンプト起動時オートリトライ再接続 · 接続済みなら no-op · 失敗時は黙ってフォールバック可能
 - [x] **11.4** i18n（EN+JA）· README / hosts/cli README · `check:no-fetch` allowlist
 - [ ] **手元:** CLI 起動 → Chrome/Firefox で BMXt 窓のみ → ping / mesh。コピペ経路も退行なし
@@ -660,7 +660,7 @@ REPL line
 | 項目 | 内容 |
 |------|------|
 | 入口 | clap は `status` / `sync-*` / `repl` 等のみ。文法コマンドは **REPL 内 `CliHostAdapter::run_line` のみ** |
-| 接続 | タブ操作等は Family DataChannel 必須。localhost ドア（§11）は **常駐 CLI プロセス**が宿主 |
+| 接続 | タブ操作等は Family DataChannel 必須。localhost 待ち受け（§11）は **常駐 CLI プロセス**が宿主 |
 | 対話依存 | 握手の code/file 確認（§12 周辺）等が stdin 待ち。非対話では事前設定必須 |
 
 **製品方針（決定済み）**
@@ -669,8 +669,8 @@ REPL line
 |------|------|
 | 入口 | `bmxt exec -- '<line>'`（および任意で複数 `--` 引数／stdin 1 行モード）。短別名 `-c` は後続でも可 |
 | 実行核 | 既存 `CliHostAdapter::run_line` をそのまま呼ぶ（新文法・別パーサは作らない） |
-| 接続モデル | **常駐前提（推奨）:** 先に `bmxt` / `bmxt repl`（ドア展開済み）を動かし、`exec` は同一マシンの常駐へ **コマンドだけ送って終了**。ワンショットプロセス単体で WebRTC を張り直して即切断する経路は非推奨（LLM 多段呼び出しに向かない） |
-| IPC | 常駐 ↔ `exec` は **loopback のみ**（既存ドアポート近傍、または Unix domain socket）。Family 封印／ローカル認証の要否は 13.0 で契約固定 |
+| 接続モデル | **常駐前提（推奨）:** 先に `bmxt` / `bmxt repl`（localhost 待ち受け起動済み）を動かし、`exec` は同一マシンの常駐へ **コマンドだけ送って終了**。ワンショットプロセス単体で WebRTC を張り直して即切断する経路は非推奨（LLM 多段呼び出しに向かない） |
+| IPC | 常駐 ↔ `exec` は **loopback のみ**（既存待ち受けポート近傍、または Unix domain socket）。Family 認証／ローカル認証の要否は 13.0 で契約固定 |
 | 非対話ルール | `exec` 中は握手 ask / zenity 等を **禁止**。未接続・未設定は明確な stderr + 非 0 exit。`handshake-delivery` 等は事前 `setting` / `config.json` で済ませる |
 | 出力 | stdout = コマンド結果行、stderr = 診断。exit = `bmxt-core` の exit status をプロセス終了コードへ伝播 |
 | スコープ外（当面） | TUI / `| browse` ピッカー、対話 handshake ウィザード、常駐なしでの完全自己完結 peer 起動 |
@@ -678,7 +678,7 @@ REPL line
 **アーキテクチャ（要約）**
 
 ```
-常駐: bmxt repl (+ localhost door §11)
+常駐: bmxt repl (+ localhost listener §11)
          ↑ loopback IPC（契約は 13.0）
 ワンショット: bmxt exec -- 'tab -list --peers'
          → CliHostAdapter::run_line（常駐側）
@@ -695,7 +695,7 @@ REPL line
 **実装チェック（段階）**
 
 - [ ] **13.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定
-- [ ] **13.1 常駐側:** ドアまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
+- [ ] **13.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
 - [ ] **13.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
 - [ ] **13.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
 - [ ] **13.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）

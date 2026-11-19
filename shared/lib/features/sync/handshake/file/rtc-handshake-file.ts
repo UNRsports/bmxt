@@ -1,7 +1,7 @@
 /**
- * EN: File transport for Family-sealed RTC handshake codes (offer / answer).
+ * EN: File transport for Family-authenticated RTC connection codes (offer / answer).
  *     Clipboard remains the primary path; this is an optional Save / Open alternative.
- * JA: Family 封印 RTC 握手コード（offer / answer）のファイル輸送。
+ * JA: Family 認証付き RTC 接続コード（offer / answer）のファイル輸送。
  *     clipboard 本線に加え、任意の保存／読み込み手段。
  */
 

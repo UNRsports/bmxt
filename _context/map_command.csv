@@ -110,8 +110,11 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,search-result-display,,,,lib/features/search/,"search コマンドの検索結果表示（リスト側ハイライトとページ内ジャンプの整合）を修正・調整。",0.9.1
 （内部）,sync-group-preserve,,,,lib/features/sync/bus/remote-open.ts + webrtc-command-bus.ts,"sync／tab -send によるプロファイル間タブ移動でグループ（title/color）を維持する仕様を調整。",0.9.1
 （内部）,shell-support-links,,,,lib/features/support/,"プロンプト開始時（空ログ／アップグレードブロック時）に公式サイトとサポート LLM（NotebookLM）へのリンクを表示。許可 URL のみ通常タブで開く。",0.9.1
+（内部）,effect-result-icons,,,,lib/features/dispatch/handlers/effects/tab-ref-effect-line.ts + nav/nav-tab-ref-log-rewrite.ts + command-line/tab-ref-log.ts + bmxt-window/terminal-log-lines.tsx,"処理結果ログにファビコン等のアイコンを表示するよう修正。",0.9.4
+（内部）,ui-detail-behavior,,,,lib/features/bmxt-window/ + related,"UIの細部動作を見直し。",0.9.4
+（内部）,command-processing-spec,,,,crates/bmxt-core（pipe_consumer 等）+ lib/features/bmxt-core/ + command-line/,"内部のコマンド処理仕様を見直し（Rust/TS 役割分担の徹底等）。",0.9.4
 
-（内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
+（内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了。0.9.4: 役割分担見直しと連動
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3
 （内部）,search-page-picker,,,,lib/features/search/search-page-matches-list-field.ts + search-entries + use-search-picker-results-open-tab-nav + page-dom scroll helpers,"`--page` ヒットの `pageMatchesJson` 受け渡しとピッカーからのページ内ジャンプ／タブ遷移を改善。",0.8.4
 （内部）,page-scripting-host-permissions,,,,lib/features/page-scripting/ + lib/features/extension-permissions/http-host-access.ts + wxt.config.ts host_permissions,"必須 `https://*/*` host_permissions。install/update 時に既存 https タブへ CS 再注入（ページリロード不要）。`ensurePageContentScript` / `isScriptablePageUrl`。",0.8.5

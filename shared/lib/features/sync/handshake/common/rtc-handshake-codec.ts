@@ -73,7 +73,7 @@ function isHandshakePlain(value: unknown): value is RtcHandshakePlain {
 
 /**
  * EN: Family-seal a WebRTC offer/answer into a copy-pasteable text code (Brave-like).
- * JA: WebRTC offer/answer を Family 封印し、コピペ用テキストコードにする（Brave 風）。
+ * JA: WebRTC offer/answer を Family 認証で保護し、コピペ用テキストコードにする（Brave 風）。
  */
 export async function formatRtcHandshakeCode(args: {
   familyId: SyncFamilyId

@@ -3,6 +3,22 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.9.4",
+    "en": [
+      "Fixed processing results to display icons",
+      "Reviewed UI detail behavior",
+      "Reviewed internal command processing specifications"
+    ],
+    "ja": [
+      "処理結果にアイコンを表示するように修正",
+      "UIの細部動作見直し",
+      "内部のコマンド処理仕様を見直し"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.9.1",
     "en": [
       "Fixed and adjusted how search command results are displayed",

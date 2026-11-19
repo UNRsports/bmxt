@@ -288,7 +288,7 @@ export function BmxtShell({
     startSyncTunnelHold(async () => {
       await getSyncService().status()
     })
-    // EN: Family-sealed auto-reconnect via CLI localhost door (clipboard/file remain fallback).
+    // EN: Family-authenticated auto-reconnect via CLI localhost listener (clipboard/file remain fallback).
     startLocalhostDoorReconnect()
   }, [])
   const translateEnabledRef = useRef(false)

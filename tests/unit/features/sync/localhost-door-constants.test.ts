@@ -6,7 +6,7 @@ import {
   LOCALHOST_DOOR_PORT
 } from "../../../../shared/lib/features/sync/handshake/localhost/door-constants.ts"
 
-describe("localhost door constants", () => {
+describe("localhost listener constants", () => {
   it("uses fixed port 17653 and loopback-only host permissions", () => {
     assert.equal(LOCALHOST_DOOR_PORT, 17653)
     assert.equal(LOCALHOST_DOOR_BASE_URL, "http://127.0.0.1:17653")

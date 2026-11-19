@@ -1,6 +1,6 @@
 /**
- * EN: Unseal / validate CLI door hello (Family seal — ignore impostor localhost).
- * JA: CLI 玄関 hello の封印解除・検証（偽 localhost は無視）。
+ * EN: Unseal / validate CLI localhost hello (Family membership — ignore unrelated localhost).
+ * JA: CLI localhost hello の Family 認証（無関係な localhost は無視）。
  */
 
 import {

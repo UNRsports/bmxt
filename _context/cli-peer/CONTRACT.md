@@ -8,7 +8,7 @@ SoT for the terminal BMXt peer. Initial version does **not** break wire fields.
 |------|--------|
 | Path | WebRTC DataChannel, ordered, label `bmxt-sync` |
 | ICE | Host candidates only (`iceServers: []`) on local path |
-| Signaling | **Primary (todo §11):** CLI loopback HTTP door `http://127.0.0.1:17653` (Family-sealed hello + `bmxt-rtc1.` offer/answer). **Fallback:** copy-paste / file tickets (unchanged) |
+| Signaling | **Primary (todo §11):** CLI loopback HTTP listener `http://127.0.0.1:17653` (Family-authenticated hello + `bmxt-rtc1.` offer/answer). **Fallback:** copy-paste / file tickets (unchanged) |
 | Door bind | `127.0.0.1` only · port **17653** · `GET /v1/hello` · `POST /v1/handshake/offer` |
 | Peer host (extension) | BMXt prompt window only |
 | Native messaging | Forbidden |

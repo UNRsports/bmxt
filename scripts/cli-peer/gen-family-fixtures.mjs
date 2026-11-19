@@ -1,6 +1,6 @@
 /**
- * EN: Generate Family seal fixtures matching shared/lib/features/sync/crypto/family-crypto.ts.
- * JA: family-crypto.ts と同じ封印アルゴリズムでフィクスチャを生成する。
+ * EN: Generate Family auth (seal) fixtures matching shared/lib/features/sync/crypto/family-crypto.ts.
+ * JA: family-crypto.ts と同じ Family 認証（seal）アルゴリズムでフィクスチャを生成する。
  *
  * Usage: node scripts/cli-peer/gen-family-fixtures.mjs
  */

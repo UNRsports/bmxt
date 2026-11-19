@@ -33,6 +33,11 @@ https://github.com/UNRsports/bmxt/issues
 `launch-bmxt` ショートカット（既定 Shift+Alt+C）で起動し、`tutorial` または `tab -list | browse` を試してください。
 
 ◆バージョン履歴
+0.9.4：
+・処理結果にアイコンを表示するように修正
+・UIの細部動作見直し
+・内部のコマンド処理仕様を見直し
+
 0.9.1：
 ・searchコマンドの検索結果表示動作を修正・調整
 ・sync機能によるプロファイル間タブ移動にてグループを維持する仕様を調整
