@@ -6,7 +6,7 @@
 import { tCmd } from "../../../setting/i18n/ns/cmd"
 import {
   getSyncWizardState,
-  patchSyncWizardState,
+  setSyncWizardBanner,
   type SyncWizardStep
 } from "../../wizard/sync-wizard-state.ts"
 import { wizardSubmitInvite } from "../../wizard/sync-wizard-submit-invite.ts"
@@ -60,23 +60,20 @@ export function wizardSaveOutboundInviteFile(sink: SyncWizardLogSink): { ok: boo
   }
   const pending = getSyncConnectPending()
   if (pending === null || pending.kind !== "invite" || pending.outboundCode === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.saveFileFailed", sink.locale), "warning")
     return { ok: false }
   }
   const filename = downloadFamilyInviteFile({ code: pending.outboundCode })
   if (filename === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.saveFileFailed", sink.locale), "warning")
     return { ok: false }
   }
-  patchSyncWizardState({
-    banner: tCmd("cmd.sync.wizard.savedFile", sink.locale, {
+  setSyncWizardBanner(
+    tCmd("cmd.sync.wizard.savedFile", sink.locale, {
       name: filename
-    })
-  })
+    }),
+    "info"
+  )
   return { ok: true }
 }
 
@@ -94,9 +91,7 @@ export async function wizardLoadInviteFile(
   }
   const parsed = parseFamilyInviteFileText(fileText)
   if (!parsed.ok) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidInviteFile", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.invalidInviteFile", sink.locale), "warning")
     return
   }
   await wizardSubmitInvite(sink, parsed.code)
@@ -113,16 +108,12 @@ export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: 
   }
   const pending = getSyncConnectPending()
   if (pending === null || pending.kind !== "handshake" || pending.outboundCode === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.saveFileFailed", sink.locale), "warning")
     return { ok: false }
   }
   const role = outboundHandshakeRole(current.step, pending.role)
   if (role === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.saveFileFailed", sink.locale), "warning")
     return { ok: false }
   }
   const filename = downloadRtcHandshakeFile({
@@ -130,16 +121,15 @@ export function wizardSaveOutboundHandshakeFile(sink: SyncWizardLogSink): { ok: 
     code: pending.outboundCode
   })
   if (filename === null) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.saveFileFailed", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.saveFileFailed", sink.locale), "warning")
     return { ok: false }
   }
-  patchSyncWizardState({
-    banner: tCmd("cmd.sync.wizard.savedFile", sink.locale, {
+  setSyncWizardBanner(
+    tCmd("cmd.sync.wizard.savedFile", sink.locale, {
       name: filename
-    })
-  })
+    }),
+    "info"
+  )
   return { ok: true }
 }
 
@@ -161,18 +151,17 @@ export async function wizardLoadRtcFile(
   }
   const parsed = parseRtcHandshakeFileText(fileText)
   if (!parsed.ok) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidHandshakeFile", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.invalidHandshakeFile", sink.locale), "warning")
     return
   }
   if (parsed.role !== null && parsed.role !== expectedRole) {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.wrongHandshakeFileRole", sink.locale, {
+    setSyncWizardBanner(
+      tCmd("cmd.sync.wizard.wrongHandshakeFileRole", sink.locale, {
         expected: expectedRole,
         actual: parsed.role
-      })
-    })
+      }),
+      "warning"
+    )
     return
   }
   await wizardSubmitRtc(sink, parsed.code)

@@ -3,8 +3,9 @@ import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
 import { wizardCopyOutbound } from "../handshake/clipboard/wizard-clipboard.ts"
 import {
+  HandshakeCopyButton,
   HandshakeFileOpenButton,
-  HandshakeOutboundActions
+  HandshakeSaveFileButton
 } from "../handshake/file/wizard-file-ui.tsx"
 import {
   wizardLoadInviteFile,
@@ -19,13 +20,18 @@ import {
   wizardChooseRole,
   wizardContinueAfterInvite,
   wizardFinish,
+  wizardGoBack,
   wizardSubmitInvite,
   wizardSubmitRtc,
   type SyncWizardLogSink
 } from "./sync-wizard-controller.ts"
+import { wizardCanGoBack } from "./sync-wizard-nav.ts"
 import { useSyncConnectPending, useSyncWizardState } from "./use-sync-wizard.ts"
-import type { SyncWizardState } from "./sync-wizard-state.ts"
-import { patchSyncWizardState } from "./sync-wizard-state.ts"
+import type {
+  SyncWizardHandshakeTransport,
+  SyncWizardState
+} from "./sync-wizard-state.ts"
+import { patchSyncWizardState, setSyncWizardBanner } from "./sync-wizard-state.ts"
 
 export type SyncWizardPanelProps = {
   locale: UiLocale
@@ -40,10 +46,46 @@ function titleFor(state: SyncWizardState, locale: UiLocale): string {
   return tCmd("cmd.sync.wizard.titleSetup", locale)
 }
 
-function CodeBlock(props: { code: string; locale: UiLocale }): ReactNode {
+function maskTokenText(code: string): string {
+  if (code.length === 0) {
+    return ""
+  }
+  return "*".repeat(code.length)
+}
+
+function TokenRevealCheckbox(props: {
+  locale: UiLocale
+  checked: boolean
+  disabled: boolean
+  onChange: (checked: boolean) => void
+}): ReactNode {
   return (
-    <pre className="bmxt-sync-wizard-code" tabIndex={0} aria-label={tCmd("cmd.sync.wizard.codeLabel", props.locale)}>
-      {props.code}
+    <label className="bmxt-sync-wizard-reveal">
+      <input
+        type="checkbox"
+        checked={props.checked}
+        disabled={props.disabled}
+        onChange={(e) => {
+          props.onChange(e.target.checked)
+        }}
+      />
+      <span>{tCmd("cmd.sync.wizard.showTokenText", props.locale)}</span>
+    </label>
+  )
+}
+
+function CodeBlock(props: {
+  code: string
+  locale: UiLocale
+  reveal: boolean
+}): ReactNode {
+  const display = props.reveal ? props.code : maskTokenText(props.code)
+  return (
+    <pre
+      className="bmxt-sync-wizard-code"
+      tabIndex={0}
+      aria-label={tCmd("cmd.sync.wizard.codeLabel", props.locale)}>
+      {display}
     </pre>
   )
 }
@@ -68,6 +110,110 @@ function ChoiceButtons(props: {
   )
 }
 
+function TransportChooser(props: {
+  locale: UiLocale
+  disabled: boolean
+}): ReactNode {
+  return (
+    <>
+      <p className="bmxt-sync-wizard-lead">
+        {tCmd("cmd.sync.wizard.transport.intro", props.locale)}
+      </p>
+      <ChoiceButtons
+        disabled={props.disabled}
+        choices={[
+          {
+            id: "clipboard",
+            label: tCmd("cmd.sync.wizard.transport.choiceClipboard", props.locale),
+            onClick: () => {
+              patchSyncWizardState({ handshakeTransport: "clipboard" })
+            }
+          },
+          {
+            id: "file",
+            label: tCmd("cmd.sync.wizard.transport.choiceFile", props.locale),
+            onClick: () => {
+              patchSyncWizardState({ handshakeTransport: "file" })
+            }
+          }
+        ]}
+      />
+    </>
+  )
+}
+
+function ChangeTransportButton(props: {
+  locale: UiLocale
+  disabled: boolean
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className="bmxt-sync-wizard-secondary"
+      disabled={props.disabled}
+      onClick={() => {
+        patchSyncWizardState({ handshakeTransport: null })
+      }}>
+      {tCmd("cmd.sync.wizard.transport.change", props.locale)}
+    </button>
+  )
+}
+
+function WizardBackButton(props: {
+  locale: UiLocale
+  disabled: boolean
+  onBack: () => void
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className="bmxt-sync-wizard-secondary"
+      disabled={props.disabled}
+      onClick={props.onBack}>
+      {tCmd("cmd.sync.wizard.back", props.locale)}
+    </button>
+  )
+}
+
+function isAllAsterisks(text: string): boolean {
+  if (text.length === 0) {
+    return false
+  }
+  for (let i = 0; i < text.length; i += 1) {
+    if (text.charAt(i) !== "*") {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * EN: Keep the real token in state; when masked, the textarea shows only `*` glyphs.
+ * Paste / replace-all still updates the real value; reveal toggles plain text.
+ */
+function applyMaskedTextareaInput(previousReal: string, nextDisplay: string): string {
+  if (nextDisplay.length === 0) {
+    return ""
+  }
+  if (previousReal.length === 0) {
+    return nextDisplay
+  }
+  const previousMask = maskTokenText(previousReal)
+  if (nextDisplay === previousMask) {
+    return previousReal
+  }
+  if (isAllAsterisks(nextDisplay) && nextDisplay.length < previousMask.length) {
+    return previousReal.slice(0, nextDisplay.length)
+  }
+  if (nextDisplay.startsWith(previousMask) && nextDisplay.length > previousMask.length) {
+    return previousReal + nextDisplay.slice(previousMask.length)
+  }
+  if (!isAllAsterisks(nextDisplay)) {
+    return nextDisplay
+  }
+  return previousReal
+}
+
 function PasteForm(props: {
   locale: UiLocale
   disabled: boolean
@@ -76,6 +222,8 @@ function PasteForm(props: {
   onSubmit: (value: string) => void
 }): ReactNode {
   const [value, setValue] = useState("")
+  const [reveal, setReveal] = useState(false)
+  const displayValue = reveal ? value : maskTokenText(value)
   return (
     <form
       className="bmxt-sync-wizard-paste"
@@ -85,7 +233,7 @@ function PasteForm(props: {
       }}>
       <textarea
         className="bmxt-sync-wizard-textarea"
-        value={value}
+        value={displayValue}
         disabled={props.disabled}
         placeholder={tCmd(props.placeholderKey, props.locale)}
         rows={5}
@@ -93,7 +241,27 @@ function PasteForm(props: {
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
-        onChange={(e) => setValue(e.target.value)}
+        onPaste={(e) => {
+          if (reveal) {
+            return
+          }
+          e.preventDefault()
+          const pasted = e.clipboardData.getData("text")
+          setValue(pasted)
+        }}
+        onChange={(e) => {
+          if (reveal) {
+            setValue(e.target.value)
+            return
+          }
+          setValue(applyMaskedTextareaInput(value, e.target.value))
+        }}
+      />
+      <TokenRevealCheckbox
+        locale={props.locale}
+        checked={reveal}
+        disabled={props.disabled}
+        onChange={setReveal}
       />
       <button
         type="submit"
@@ -103,6 +271,97 @@ function PasteForm(props: {
       </button>
     </form>
   )
+}
+
+function OutboundClipboardBlock(props: {
+  locale: UiLocale
+  disabled: boolean
+  outbound: string | null
+  onCopy: () => void
+}): ReactNode {
+  const [reveal, setReveal] = useState(false)
+  return (
+    <>
+      {props.outbound !== null ? (
+        <CodeBlock code={props.outbound} locale={props.locale} reveal={reveal} />
+      ) : null}
+      <TokenRevealCheckbox
+        locale={props.locale}
+        checked={reveal}
+        disabled={props.disabled || props.outbound === null}
+        onChange={setReveal}
+      />
+      <div className="bmxt-sync-wizard-actions">
+        <HandshakeCopyButton
+          locale={props.locale}
+          disabled={props.disabled || props.outbound === null}
+          onCopy={props.onCopy}
+        />
+      </div>
+    </>
+  )
+}
+
+function OutboundFileBlock(props: {
+  locale: UiLocale
+  disabled: boolean
+  outbound: string | null
+  onSaveFile: () => void
+}): ReactNode {
+  return (
+    <div className="bmxt-sync-wizard-actions">
+      <HandshakeSaveFileButton
+        locale={props.locale}
+        disabled={props.disabled || props.outbound === null}
+        onSaveFile={props.onSaveFile}
+      />
+    </div>
+  )
+}
+
+function InboundClipboardBlock(props: {
+  locale: UiLocale
+  disabled: boolean
+  placeholderKey: "cmd.sync.wizard.pasteInvitePlaceholder" | "cmd.sync.wizard.pasteRtcPlaceholder"
+  submitLabel: string
+  onSubmit: (value: string) => void
+}): ReactNode {
+  return (
+    <PasteForm
+      locale={props.locale}
+      disabled={props.disabled}
+      placeholderKey={props.placeholderKey}
+      submitLabel={props.submitLabel}
+      onSubmit={props.onSubmit}
+    />
+  )
+}
+
+function InboundFileBlock(props: {
+  locale: UiLocale
+  disabled: boolean
+  onText: (text: string) => void
+  onReadFailed: () => void
+}): ReactNode {
+  return (
+    <HandshakeFileOpenButton
+      locale={props.locale}
+      disabled={props.disabled}
+      onText={props.onText}
+      onReadFailed={props.onReadFailed}
+    />
+  )
+}
+
+function requireTransport(
+  transport: SyncWizardHandshakeTransport,
+  locale: UiLocale,
+  busy: boolean
+): ReactNode | null {
+  if (transport !== null) {
+    return null
+  }
+  return <TransportChooser locale={locale} disabled={busy} />
 }
 
 export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
@@ -124,11 +383,10 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
 
   const busy = state.busy
   const outbound = pending?.outboundCode ?? null
+  const transport = state.handshakeTransport
 
   const onRtcFileReadFailed = (): void => {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.openFileFailed", locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.openFileFailed", locale), "warning")
   }
 
   let body: ReactNode = null
@@ -160,53 +418,88 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       </>
     )
   } else if (state.step === "joinInvite") {
-    body = (
-      <>
-        <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadPasteInvite", locale)}</p>
-        <HandshakeFileOpenButton
-          locale={locale}
-          disabled={busy}
-          onText={(text) => void wizardLoadInviteFile(sink, text)}
-          onReadFailed={onRtcFileReadFailed}
-        />
-        <PasteForm
-          locale={locale}
-          disabled={busy}
-          placeholderKey="cmd.sync.wizard.pasteInvitePlaceholder"
-          submitLabel={tCmd("cmd.sync.wizard.submit", locale)}
-          onSubmit={(v) => void wizardSubmitInvite(sink, v)}
-        />
-        <button
-          type="button"
-          className="bmxt-sync-wizard-secondary"
-          disabled={busy}
-          onClick={() => void wizardSubmitInvite(sink, "cancel")}>
-          {tCmd("cmd.sync.wizard.back", locale)}
-        </button>
-      </>
-    )
+    const chooser = requireTransport(transport, locale, busy)
+    if (chooser !== null) {
+      body = chooser
+    } else if (transport === "clipboard") {
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadPasteInvite", locale)}</p>
+          <InboundClipboardBlock
+            locale={locale}
+            disabled={busy}
+            placeholderKey="cmd.sync.wizard.pasteInvitePlaceholder"
+            submitLabel={tCmd("cmd.sync.wizard.submit", locale)}
+            onSubmit={(v) => void wizardSubmitInvite(sink, v)}
+          />
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    } else {
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">
+            {tCmd("cmd.sync.wizard.leadOpenInviteFile", locale)}
+          </p>
+          <InboundFileBlock
+            locale={locale}
+            disabled={busy}
+            onText={(text) => void wizardLoadInviteFile(sink, text)}
+            onReadFailed={onRtcFileReadFailed}
+          />
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    }
   } else if (state.step === "showInvite") {
-    body = (
-      <>
-        <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyInvite", locale)}</p>
-        {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <HandshakeOutboundActions
-          locale={locale}
-          disabled={busy || outbound === null}
-          onCopy={() => void wizardCopyOutbound(sink)}
-          onSaveFile={() => {
-            wizardSaveOutboundInviteFile(sink)
-          }}
-        />
-        <button
-          type="button"
-          className="bmxt-sync-wizard-primary"
-          disabled={busy}
-          onClick={() => wizardContinueAfterInvite()}>
-          {tCmd("cmd.sync.wizard.continueToRole", locale)}
-        </button>
-      </>
-    )
+    const chooser = requireTransport(transport, locale, busy)
+    if (chooser !== null) {
+      body = chooser
+    } else if (transport === "clipboard") {
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyInvite", locale)}</p>
+          <OutboundClipboardBlock
+            locale={locale}
+            disabled={busy}
+            outbound={outbound}
+            onCopy={() => void wizardCopyOutbound(sink)}
+          />
+          <button
+            type="button"
+            className="bmxt-sync-wizard-primary"
+            disabled={busy}
+            onClick={() => wizardContinueAfterInvite()}>
+            {tCmd("cmd.sync.wizard.continueToRole", locale)}
+          </button>
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    } else {
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">
+            {tCmd("cmd.sync.wizard.leadSaveInviteFile", locale)}
+          </p>
+          <OutboundFileBlock
+            locale={locale}
+            disabled={busy}
+            outbound={outbound}
+            onSaveFile={() => {
+              wizardSaveOutboundInviteFile(sink)
+            }}
+          />
+          <button
+            type="button"
+            className="bmxt-sync-wizard-primary"
+            disabled={busy}
+            onClick={() => wizardContinueAfterInvite()}>
+            {tCmd("cmd.sync.wizard.continueToRole", locale)}
+          </button>
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    }
   } else if (state.step === "role") {
     body = (
       <>
@@ -229,93 +522,178 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       </>
     )
   } else if (state.step === "showOffer") {
-    body = (
-      <>
-        <p className="bmxt-sync-wizard-lead">
-          {state.peerDisplayName !== null
-            ? tCmd("cmd.sync.wizard.leadCopyOfferNamed", locale, {
-                name: state.peerDisplayName
-              })
-            : tCmd("cmd.sync.wizard.leadCopyOffer", locale)}
-        </p>
-        {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <HandshakeOutboundActions
-          locale={locale}
-          disabled={busy || outbound === null}
-          onCopy={() => void wizardCopyOutbound(sink)}
-          onSaveFile={() => {
-            wizardSaveOutboundHandshakeFile(sink)
-          }}
-        />
-        <p className="bmxt-sync-wizard-lead bmxt-sync-wizard-lead--follow">
-          {tCmd("cmd.sync.wizard.leadPasteAnswer", locale)}
-        </p>
-        <HandshakeFileOpenButton
-          locale={locale}
-          disabled={busy}
-          onText={(text) => void wizardLoadRtcFile(sink, text)}
-          onReadFailed={onRtcFileReadFailed}
-        />
-        <PasteForm
-          locale={locale}
-          disabled={busy}
-          placeholderKey="cmd.sync.wizard.pasteRtcPlaceholder"
-          submitLabel={tCmd("cmd.sync.wizard.submit", locale)}
-          onSubmit={(v) => void wizardSubmitRtc(sink, v)}
-        />
-      </>
-    )
+    const chooser = requireTransport(transport, locale, busy)
+    if (chooser !== null) {
+      body = chooser
+    } else if (transport === "clipboard") {
+      const leadCopy =
+        state.peerDisplayName !== null
+          ? tCmd("cmd.sync.wizard.leadCopyOfferNamed", locale, {
+              name: state.peerDisplayName
+            })
+          : tCmd("cmd.sync.wizard.leadCopyOffer", locale)
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{leadCopy}</p>
+          <OutboundClipboardBlock
+            locale={locale}
+            disabled={busy}
+            outbound={outbound}
+            onCopy={() => void wizardCopyOutbound(sink)}
+          />
+          <p className="bmxt-sync-wizard-lead bmxt-sync-wizard-lead--follow">
+            {tCmd("cmd.sync.wizard.leadPasteAnswer", locale)}
+          </p>
+          <InboundClipboardBlock
+            locale={locale}
+            disabled={busy}
+            placeholderKey="cmd.sync.wizard.pasteRtcPlaceholder"
+            submitLabel={tCmd("cmd.sync.wizard.submit", locale)}
+            onSubmit={(v) => void wizardSubmitRtc(sink, v)}
+          />
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    } else {
+      const leadSave =
+        state.peerDisplayName !== null
+          ? tCmd("cmd.sync.wizard.leadSaveOfferFileNamed", locale, {
+              name: state.peerDisplayName
+            })
+          : tCmd("cmd.sync.wizard.leadSaveOfferFile", locale)
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{leadSave}</p>
+          <OutboundFileBlock
+            locale={locale}
+            disabled={busy}
+            outbound={outbound}
+            onSaveFile={() => {
+              wizardSaveOutboundHandshakeFile(sink)
+            }}
+          />
+          <p className="bmxt-sync-wizard-lead bmxt-sync-wizard-lead--follow">
+            {tCmd("cmd.sync.wizard.leadOpenAnswerFile", locale)}
+          </p>
+          <InboundFileBlock
+            locale={locale}
+            disabled={busy}
+            onText={(text) => void wizardLoadRtcFile(sink, text)}
+            onReadFailed={onRtcFileReadFailed}
+          />
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    }
   } else if (state.step === "pasteOffer") {
-    body = (
-      <>
-        <p className="bmxt-sync-wizard-lead">
-          {state.peerDisplayName !== null
-            ? tCmd("cmd.sync.wizard.leadPasteOfferNamed", locale, {
-                name: state.peerDisplayName
-              })
-            : tCmd("cmd.sync.wizard.leadPasteOffer", locale)}
-        </p>
-        <HandshakeFileOpenButton
-          locale={locale}
-          disabled={busy}
-          onText={(text) => void wizardLoadRtcFile(sink, text)}
-          onReadFailed={onRtcFileReadFailed}
-        />
-        <PasteForm
-          locale={locale}
-          disabled={busy}
-          placeholderKey="cmd.sync.wizard.pasteRtcPlaceholder"
-          submitLabel={tCmd("cmd.sync.wizard.submit", locale)}
-          onSubmit={(v) => void wizardSubmitRtc(sink, v)}
-        />
-      </>
-    )
+    const chooser = requireTransport(transport, locale, busy)
+    if (chooser !== null) {
+      body = chooser
+    } else if (transport === "clipboard") {
+      const leadPaste =
+        state.peerDisplayName !== null
+          ? tCmd("cmd.sync.wizard.leadPasteOfferNamed", locale, {
+              name: state.peerDisplayName
+            })
+          : tCmd("cmd.sync.wizard.leadPasteOffer", locale)
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{leadPaste}</p>
+          <InboundClipboardBlock
+            locale={locale}
+            disabled={busy}
+            placeholderKey="cmd.sync.wizard.pasteRtcPlaceholder"
+            submitLabel={tCmd("cmd.sync.wizard.submit", locale)}
+            onSubmit={(v) => void wizardSubmitRtc(sink, v)}
+          />
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    } else {
+      const leadOpen =
+        state.peerDisplayName !== null
+          ? tCmd("cmd.sync.wizard.leadOpenOfferFileNamed", locale, {
+              name: state.peerDisplayName
+            })
+          : tCmd("cmd.sync.wizard.leadOpenOfferFile", locale)
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{leadOpen}</p>
+          <InboundFileBlock
+            locale={locale}
+            disabled={busy}
+            onText={(text) => void wizardLoadRtcFile(sink, text)}
+            onReadFailed={onRtcFileReadFailed}
+          />
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    }
   } else if (state.step === "showAnswer") {
-    body = (
-      <>
-        <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyAnswer", locale)}</p>
-        {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <HandshakeOutboundActions
-          locale={locale}
-          disabled={busy || outbound === null}
-          onCopy={() => void wizardCopyOutbound(sink)}
-          onSaveFile={() => {
-            wizardSaveOutboundHandshakeFile(sink)
-          }}
-        />
-        <button
-          type="button"
-          className="bmxt-sync-wizard-primary"
-          disabled={busy}
-          onClick={() => wizardFinish(sink)}>
-          {tCmd("cmd.sync.wizard.close", locale)}
-        </button>
-      </>
-    )
+    const chooser = requireTransport(transport, locale, busy)
+    if (chooser !== null) {
+      body = chooser
+    } else if (transport === "clipboard") {
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyAnswer", locale)}</p>
+          <OutboundClipboardBlock
+            locale={locale}
+            disabled={busy}
+            outbound={outbound}
+            onCopy={() => void wizardCopyOutbound(sink)}
+          />
+          <button
+            type="button"
+            className="bmxt-sync-wizard-primary"
+            disabled={busy}
+            onClick={() => wizardFinish(sink)}>
+            {tCmd("cmd.sync.wizard.close", locale)}
+          </button>
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    } else {
+      body = (
+        <>
+          <p className="bmxt-sync-wizard-lead">
+            {tCmd("cmd.sync.wizard.leadSaveAnswerFile", locale)}
+          </p>
+          <OutboundFileBlock
+            locale={locale}
+            disabled={busy}
+            outbound={outbound}
+            onSaveFile={() => {
+              wizardSaveOutboundHandshakeFile(sink)
+            }}
+          />
+          <button
+            type="button"
+            className="bmxt-sync-wizard-primary"
+            disabled={busy}
+            onClick={() => wizardFinish(sink)}>
+            {tCmd("cmd.sync.wizard.close", locale)}
+          </button>
+          <ChangeTransportButton locale={locale} disabled={busy} />
+        </>
+      )
+    }
   } else if (state.step === "done") {
+    const doneIsWarning = state.bannerKind === "warning" && state.banner !== null
     body = (
       <>
-        <p className="bmxt-sync-wizard-lead">
+        <p
+          className={
+            doneIsWarning
+              ? "bmxt-sync-wizard-banner bmxt-sync-wizard-banner--warning"
+              : "bmxt-sync-wizard-lead"
+          }
+          role={doneIsWarning ? "alert" : undefined}>
+          {doneIsWarning ? (
+            <span className="bmxt-sync-wizard-banner-label">
+              {tCmd("cmd.sync.wizard.warningLabel", locale)}
+            </span>
+          ) : null}
           {state.banner ?? tCmd("cmd.sync.setup.done", locale)}
         </p>
         <button
@@ -327,6 +705,9 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       </>
     )
   }
+
+  const showBanner = state.banner !== null && state.step !== "done"
+  const bannerIsWarning = showBanner && state.bannerKind === "warning"
 
   return (
     <div
@@ -352,8 +733,19 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
             : tCmd("cmd.sync.wizard.cancel", locale)}
         </button>
       </div>
-      {state.banner !== null && state.step !== "done" ? (
-        <div className="bmxt-sync-wizard-banner" role="status">
+      {showBanner ? (
+        <div
+          className={
+            bannerIsWarning
+              ? "bmxt-sync-wizard-banner bmxt-sync-wizard-banner--warning"
+              : "bmxt-sync-wizard-banner"
+          }
+          role={bannerIsWarning ? "alert" : "status"}>
+          {bannerIsWarning ? (
+            <span className="bmxt-sync-wizard-banner-label">
+              {tCmd("cmd.sync.wizard.warningLabel", locale)}
+            </span>
+          ) : null}
           {state.banner}
         </div>
       ) : null}
@@ -362,7 +754,18 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
           {tCmd("cmd.sync.wizard.busy", locale)}
         </div>
       ) : null}
-      <div className="bmxt-sync-wizard-body">{body}</div>
+      <div className="bmxt-sync-wizard-body">
+        {body}
+        {wizardCanGoBack(state) ? (
+          <WizardBackButton
+            locale={locale}
+            disabled={busy}
+            onBack={() => {
+              wizardGoBack(sink)
+            }}
+          />
+        ) : null}
+      </div>
     </div>
   )
 }

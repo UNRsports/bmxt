@@ -18,7 +18,7 @@ import { waitForSyncLinkConnected } from "../link/sync-link-bridge.ts"
 import {
   closeSyncWizardState,
   getSyncWizardState,
-  patchSyncWizardState
+  setSyncWizardBanner
 } from "./sync-wizard-state.ts"
 import type { SyncWizardLogSink } from "./sync-wizard-types.ts"
 
@@ -49,23 +49,22 @@ export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Pro
     return
   }
   if (parsed.kind === "invalid") {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidRtcCode", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.invalidRtcCode", sink.locale), "warning")
     return
   }
 
   const asAnswerSide = current.step === "pasteOffer"
-  patchSyncWizardState({ busy: true, banner: null })
+  setSyncWizardBanner(null, "info", { busy: true })
 
   if (asAnswerSide) {
     const result = await getSyncService().answer(parsed.value)
     if (!result.ok) {
       const expanded = expandSyncLogLines(result.lines, sink.locale)
-      patchSyncWizardState({
-        busy: false,
-        banner: expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale)
-      })
+      setSyncWizardBanner(
+        expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale),
+        "warning",
+        { busy: false }
+      )
       return
     }
     const pending = getSyncConnectPending()
@@ -73,12 +72,11 @@ export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Pro
       pending && pending.peerDeviceId !== "*"
         ? pending.peerDeviceId
         : current.peerDeviceId
-    patchSyncWizardState({
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.bannerCopyAnswer", sink.locale), "info", {
       busy: false,
       step: "showAnswer",
       peerDisplayName: pending?.peerDisplayName ?? current.peerDisplayName,
-      peerDeviceId,
-      banner: tCmd("cmd.sync.wizard.bannerCopyAnswer", sink.locale)
+      peerDeviceId
     })
     // EN: Answer side finishes when the offerer accepts and the DataChannel maps connected.
     if (typeof peerDeviceId === "string" && peerDeviceId.length > 0) {
@@ -103,18 +101,18 @@ export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Pro
     const spent = result.lines.includes("sync.rtc.acceptFailed")
     if (spent) {
       clearSyncConnectPending()
-      patchSyncWizardState({
+      setSyncWizardBanner(tCmd("cmd.sync.setup.acceptRetryHint", sink.locale), "warning", {
         busy: false,
-        step: "done",
-        banner: tCmd("cmd.sync.setup.acceptRetryHint", sink.locale)
+        step: "done"
       })
       await sink.appendLogLines(expanded)
       return
     }
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale)
-    })
+    setSyncWizardBanner(
+      expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale),
+      "warning",
+      { busy: false }
+    )
     return
   }
   clearSyncConnectPending()

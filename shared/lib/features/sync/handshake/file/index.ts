@@ -34,6 +34,8 @@ export {
 } from "./wizard-file.ts"
 
 export {
+  HandshakeCopyButton,
   HandshakeFileOpenButton,
-  HandshakeOutboundActions
+  HandshakeOutboundActions,
+  HandshakeSaveFileButton
 } from "./wizard-file-ui.tsx"

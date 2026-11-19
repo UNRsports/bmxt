@@ -52,6 +52,38 @@ export function HandshakeFileOpenButton(props: {
   )
 }
 
+export function HandshakeCopyButton(props: {
+  locale: UiLocale
+  disabled: boolean
+  onCopy: () => void
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className="bmxt-sync-wizard-copy"
+      disabled={props.disabled}
+      onClick={props.onCopy}>
+      {tCmd("cmd.sync.connect.copyButton", props.locale)}
+    </button>
+  )
+}
+
+export function HandshakeSaveFileButton(props: {
+  locale: UiLocale
+  disabled: boolean
+  onSaveFile: () => void
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className="bmxt-sync-wizard-secondary"
+      disabled={props.disabled}
+      onClick={props.onSaveFile}>
+      {tCmd("cmd.sync.wizard.saveFileButton", props.locale)}
+    </button>
+  )
+}
+
 export function HandshakeOutboundActions(props: {
   locale: UiLocale
   disabled: boolean
@@ -60,20 +92,16 @@ export function HandshakeOutboundActions(props: {
 }): ReactNode {
   return (
     <div className="bmxt-sync-wizard-actions">
-      <button
-        type="button"
-        className="bmxt-sync-wizard-copy"
+      <HandshakeCopyButton
+        locale={props.locale}
         disabled={props.disabled}
-        onClick={props.onCopy}>
-        {tCmd("cmd.sync.connect.copyButton", props.locale)}
-      </button>
-      <button
-        type="button"
-        className="bmxt-sync-wizard-secondary"
+        onCopy={props.onCopy}
+      />
+      <HandshakeSaveFileButton
+        locale={props.locale}
         disabled={props.disabled}
-        onClick={props.onSaveFile}>
-        {tCmd("cmd.sync.wizard.saveFileButton", props.locale)}
-      </button>
+        onSaveFile={props.onSaveFile}
+      />
     </div>
   )
 }

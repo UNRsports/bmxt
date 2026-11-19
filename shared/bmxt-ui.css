@@ -1134,6 +1134,22 @@ body {
   word-break: break-word;
 }
 
+.bmxt-sync-wizard-banner--warning {
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #d29922;
+  border-radius: 4px;
+  background: rgba(210, 153, 34, 0.14);
+  color: #e3b341;
+}
+
+.bmxt-sync-wizard-banner-label {
+  display: block;
+  margin-bottom: 0.25em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .bmxt-sync-wizard-busy {
   margin-bottom: 8px;
   color: #8b949e;
@@ -1279,6 +1295,22 @@ body {
 .bmxt-sync-wizard-textarea:focus {
   outline: 1px solid #58a6ff;
   outline-offset: 0;
+}
+
+.bmxt-sync-wizard-reveal {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0;
+  color: #8b949e;
+  font-size: 0.9em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bmxt-sync-wizard-reveal input {
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .bmxt-sync-link-status {

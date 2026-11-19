@@ -10,9 +10,14 @@ import {
   closeSyncWizardState,
   getSyncWizardState,
   patchSyncWizardState,
+  setSyncWizardBanner,
   setSyncWizardState,
   type SyncWizardState
 } from "./sync-wizard-state.ts"
+import {
+  wizardBackClearsPending,
+  wizardPreviousStep
+} from "./sync-wizard-nav.ts"
 import type { SyncWizardLogSink } from "./sync-wizard-types.ts"
 import { wizardSubmitInvite } from "./sync-wizard-submit-invite.ts"
 import {
@@ -20,6 +25,8 @@ import {
   wizardFinish,
   wizardSubmitRtc
 } from "./sync-wizard-submit-rtc.ts"
+
+export { wizardCanGoBack } from "./sync-wizard-nav.ts"
 
 export type { SyncWizardLogSink } from "./sync-wizard-types.ts"
 export {
@@ -49,18 +56,26 @@ async function appendShort(
   }
 }
 
-function openState(partial: Omit<SyncWizardState, "open" | "busy" | "banner"> & {
-  banner?: string | null
-}): void {
+function openState(
+  partial: Omit<
+    SyncWizardState,
+    "open" | "busy" | "banner" | "bannerKind" | "handshakeTransport"
+  > & {
+    banner?: string | null
+  }
+): void {
+  const banner = partial.banner ?? null
   setSyncWizardState({
     open: true,
     busy: false,
-    banner: partial.banner ?? null,
+    banner,
+    bannerKind: "info",
     mode: partial.mode,
     step: partial.step,
     hasFamily: partial.hasFamily,
     peerDisplayName: partial.peerDisplayName,
-    peerDeviceId: partial.peerDeviceId
+    peerDeviceId: partial.peerDeviceId,
+    handshakeTransport: null
   })
 }
 
@@ -89,7 +104,7 @@ export async function openSyncWizardConnect(
   commandLine: string,
   deviceId: string
 ): Promise<void> {
-  patchSyncWizardState({ busy: true, banner: null })
+  setSyncWizardBanner(null, "info", { busy: true })
   const result = await getSyncService().connect(deviceId)
   await appendShort(sink, commandLine, result.lines)
   if (!result.ok || result.alreadyConnected === true) {
@@ -142,34 +157,30 @@ export async function wizardChooseFamily(
     return
   }
   if (choice === "join") {
-    patchSyncWizardState({
-      step: "joinInvite",
-      banner: tCmd("cmd.sync.wizard.bannerPasteInvite", sink.locale)
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.bannerPasteInvite", sink.locale), "info", {
+      step: "joinInvite"
     })
     return
   }
   if (choice === "continue") {
-    patchSyncWizardState({
+    setSyncWizardBanner(null, "info", {
       step: "role",
-      hasFamily: true,
-      banner: null
+      hasFamily: true
     })
     return
   }
-  patchSyncWizardState({ busy: true, banner: null })
+  setSyncWizardBanner(null, "info", { busy: true })
   const result = await getSyncService().pair("")
   if (!result.ok) {
-    patchSyncWizardState({
-      busy: false,
-      banner: tCmd("cmd.sync.setup.retryFamily", sink.locale)
+    setSyncWizardBanner(tCmd("cmd.sync.setup.retryFamily", sink.locale), "warning", {
+      busy: false
     })
     return
   }
-  patchSyncWizardState({
+  setSyncWizardBanner(tCmd("cmd.sync.wizard.bannerCopyInvite", sink.locale), "info", {
     busy: false,
     step: "showInvite",
-    hasFamily: true,
-    banner: tCmd("cmd.sync.wizard.bannerCopyInvite", sink.locale)
+    hasFamily: true
   })
 }
 
@@ -179,9 +190,8 @@ export function wizardContinueAfterInvite(): void {
     return
   }
   clearSyncConnectPending()
-  patchSyncWizardState({
-    step: "role",
-    banner: null
+  setSyncWizardBanner(null, "info", {
+    step: "role"
   })
 }
 
@@ -194,30 +204,63 @@ export async function wizardChooseRole(
     return
   }
   if (choice === "answer") {
-    patchSyncWizardState({
-      step: "pasteOffer",
-      banner: tCmd("cmd.sync.wizard.bannerPasteOfferGeneric", sink.locale)
-    })
+    setSyncWizardBanner(
+      tCmd("cmd.sync.wizard.bannerPasteOfferGeneric", sink.locale),
+      "info",
+      { step: "pasteOffer" }
+    )
     return
   }
-  patchSyncWizardState({ busy: true, banner: null })
+  setSyncWizardBanner(null, "info", { busy: true })
   const result = await getSyncService().offer()
   if (!result.ok) {
     const expanded = expandSyncLogLines(result.lines, sink.locale)
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.rtc.encodeFailed", sink.locale)
-    })
+    setSyncWizardBanner(
+      expanded[0] ?? tCmd("cmd.sync.rtc.encodeFailed", sink.locale),
+      "warning",
+      { busy: false }
+    )
     return
   }
-  patchSyncWizardState({
+  setSyncWizardBanner(tCmd("cmd.sync.wizard.bannerCopyOfferGeneric", sink.locale), "info", {
     busy: false,
-    step: "showOffer",
-    banner: tCmd("cmd.sync.wizard.bannerCopyOfferGeneric", sink.locale)
+    step: "showOffer"
   })
 }
 
 /** EN: Outbound code currently held for COPY (invite or handshake). */
 export function wizardOutboundCode(): string | null {
   return getSyncConnectPending()?.outboundCode ?? null
+}
+
+/**
+ * EN: Return to the previous choice step (family / role / pasteOffer), clearing outbound pending.
+ * JA: 直前の選択肢へ戻る。保持中の outbound 握手コードは破棄する。
+ */
+export function wizardGoBack(sink: SyncWizardLogSink): void {
+  const current = getSyncWizardState()
+  const previous = wizardPreviousStep(current)
+  if (previous === null) {
+    return
+  }
+
+  if (wizardBackClearsPending(current.step)) {
+    clearSyncConnectPending()
+  }
+
+  let banner: string | null = null
+  if (previous === "pasteOffer") {
+    if (current.mode === "connect" && current.peerDisplayName !== null) {
+      banner = tCmd("cmd.sync.wizard.bannerPasteOffer", sink.locale, {
+        name: current.peerDisplayName
+      })
+    } else {
+      banner = tCmd("cmd.sync.wizard.bannerPasteOfferGeneric", sink.locale)
+    }
+  }
+
+  setSyncWizardBanner(banner, "info", {
+    step: previous,
+    busy: false
+  })
 }

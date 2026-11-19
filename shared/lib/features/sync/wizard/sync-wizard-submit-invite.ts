@@ -8,7 +8,10 @@ import { clearSyncConnectPending } from "../handshake/common/sync-connect-pendin
 import { expandSyncLogLines } from "../facade/expand-sync-log.ts"
 import { getSyncService } from "../facade/sync-service.ts"
 import { parseSyncSetupInvitePaste } from "../setup/sync-setup-pending.ts"
-import { getSyncWizardState, patchSyncWizardState } from "./sync-wizard-state.ts"
+import {
+  getSyncWizardState,
+  setSyncWizardBanner
+} from "./sync-wizard-state.ts"
 import type { SyncWizardLogSink } from "./sync-wizard-types.ts"
 
 export async function wizardSubmitInvite(sink: SyncWizardLogSink, raw: string): Promise<void> {
@@ -18,33 +21,30 @@ export async function wizardSubmitInvite(sink: SyncWizardLogSink, raw: string): 
   }
   const parsed = parseSyncSetupInvitePaste(raw)
   if (parsed.kind === "cancel") {
-    patchSyncWizardState({
-      step: "family",
-      banner: null
+    setSyncWizardBanner(null, "info", {
+      step: "family"
     })
     return
   }
   if (parsed.kind === "invalid") {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidInvite", sink.locale)
-    })
+    setSyncWizardBanner(tCmd("cmd.sync.wizard.invalidInvite", sink.locale), "warning")
     return
   }
-  patchSyncWizardState({ busy: true, banner: null })
+  setSyncWizardBanner(null, "info", { busy: true })
   const result = await getSyncService().pair(parsed.value)
   if (!result.ok) {
     const expanded = expandSyncLogLines(result.lines, sink.locale)
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.pair.joinFailed", sink.locale)
-    })
+    setSyncWizardBanner(
+      expanded[0] ?? tCmd("cmd.sync.pair.joinFailed", sink.locale),
+      "warning",
+      { busy: false }
+    )
     return
   }
   clearSyncConnectPending()
-  patchSyncWizardState({
+  setSyncWizardBanner(tCmd("cmd.sync.setup.familyReadyJoined", sink.locale), "info", {
     busy: false,
     step: "role",
-    hasFamily: true,
-    banner: tCmd("cmd.sync.setup.familyReadyJoined", sink.locale)
+    hasFamily: true
   })
 }

@@ -7,7 +7,7 @@ import { tCmd } from "../../../setting/i18n/ns/cmd"
 import { expandSyncLogLines } from "../../facade/expand-sync-log.ts"
 import {
   getSyncWizardState,
-  patchSyncWizardState
+  setSyncWizardBanner
 } from "../../wizard/sync-wizard-state.ts"
 import type { SyncWizardLogSink } from "../../wizard/sync-wizard-types.ts"
 import { getSyncConnectPending } from "../common/sync-connect-pending.ts"
@@ -22,14 +22,15 @@ export async function wizardCopyOutbound(
   }
   const result = await copySyncHandshakeCode()
   if (result.ok) {
-    patchSyncWizardState({
-      banner: tCmd(
+    setSyncWizardBanner(
+      tCmd(
         getSyncConnectPending()?.kind === "invite"
           ? "cmd.sync.wizard.copiedInvite"
           : "cmd.sync.wizard.copied",
         sink.locale
-      )
-    })
+      ),
+      "info"
+    )
     return { ok: true }
   }
   const expanded = expandSyncLogLines(result.lines, sink.locale)
@@ -40,8 +41,9 @@ export async function wizardCopyOutbound(
   if (dump !== undefined) {
     await sink.appendLogLines(expanded)
   }
-  patchSyncWizardState({
-    banner: expanded[0] ?? tCmd("cmd.sync.connect.clipboardWriteFailed", sink.locale)
-  })
+  setSyncWizardBanner(
+    expanded[0] ?? tCmd("cmd.sync.connect.clipboardWriteFailed", sink.locale),
+    "warning"
+  )
   return { ok: false }
 }

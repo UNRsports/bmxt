@@ -1395,13 +1395,17 @@
     "ja": "アンサー準備完了 — COPY して相手へ",
     "en": "Answer ready — COPY for your peer"
   },
+  "cmd.sync.wizard.warningLabel": {
+    "ja": "警告",
+    "en": "Warning"
+  },
   "cmd.sync.wizard.invalidInvite": {
-    "ja": "招待コードが無効です。bmxt1. で始まるコード本体だけを貼ってください。",
-    "en": "Invalid invite. Paste only the bmxt1.… code body."
+    "ja": "招待トークンが無効です。bmxt1. で始まるコード本体だけを貼り直してください。",
+    "en": "The invite token is invalid. Paste only the bmxt1.… code body and try again."
   },
   "cmd.sync.wizard.invalidRtcCode": {
-    "ja": "握手コードが無効です。bmxt-rtc1. で始まるコード本体だけを貼ってください。",
-    "en": "Invalid handshake code. Paste only the bmxt-rtc1.… code body."
+    "ja": "握手トークンが無効です。bmxt-rtc1. で始まるコード本体だけを貼り直してください。",
+    "en": "The handshake token is invalid. Paste only the bmxt-rtc1.… code body and try again."
   },
   "cmd.sync.wizard.copied": {
     "ja": "握手コードをコピーしました。",
@@ -1424,24 +1428,76 @@
     "en": "Saved {name}. Open it on the other browser."
   },
   "cmd.sync.wizard.saveFileFailed": {
-    "ja": "握手ファイルを保存できませんでした。",
-    "en": "Could not save the handshake file."
+    "ja": "握手ファイルを保存できませんでした。もう一度試してください。",
+    "en": "Could not save the handshake file. Please try again."
   },
   "cmd.sync.wizard.invalidHandshakeFile": {
-    "ja": "握手ファイルが無効です。bmxt-*-offer.json / bmxt-*-answer.json（または bmxt-rtc1. コード）を選んでください。",
-    "en": "Invalid handshake file. Choose a bmxt-*-offer.json / bmxt-*-answer.json ticket (or a bmxt-rtc1. code)."
+    "ja": "握手ファイル（トークン）が無効です。bmxt-*-offer.json / bmxt-*-answer.json（または bmxt-rtc1. コード）を選び直してください。",
+    "en": "The handshake file (token) is invalid. Choose a bmxt-*-offer.json / bmxt-*-answer.json ticket (or a bmxt-rtc1. code)."
   },
   "cmd.sync.wizard.invalidInviteFile": {
-    "ja": "招待ファイルが無効です。bmxt-*-invite.json（または bmxt1. トークン）を選んでください。",
-    "en": "Invalid invite file. Choose a bmxt-*-invite.json ticket (or a bmxt1. token)."
+    "ja": "招待ファイル（トークン）が無効です。bmxt-*-invite.json（または bmxt1. トークン）を選び直してください。",
+    "en": "The invite file (token) is invalid. Choose a bmxt-*-invite.json ticket (or a bmxt1. token)."
   },
   "cmd.sync.wizard.wrongHandshakeFileRole": {
-    "ja": "ファイルの種類が違います。{expected} が必要ですが {actual} でした。",
-    "en": "Wrong handshake file kind. Expected {expected}, got {actual}."
+    "ja": "ファイルの種類が違います。{expected} が必要ですが {actual} でした。正しいファイルを選び直してください。",
+    "en": "Wrong handshake file kind. Expected {expected}, got {actual}. Choose the correct file."
   },
   "cmd.sync.wizard.openFileFailed": {
-    "ja": "ファイルを読めませんでした。",
-    "en": "Could not read the file."
+    "ja": "ファイルを読めませんでした。別のファイルを選ぶか、もう一度試してください。",
+    "en": "Could not read the file. Choose another file or try again."
+  },
+  "cmd.sync.wizard.transport.intro": {
+    "ja": "手動でのトークン交換方法を選んでください。",
+    "en": "Choose how you will exchange the token manually."
+  },
+  "cmd.sync.wizard.transport.choiceClipboard": {
+    "ja": "コピペ方式（クリップボードで渡す）",
+    "en": "Copy and paste (clipboard)"
+  },
+  "cmd.sync.wizard.transport.choiceFile": {
+    "ja": "ファイル読み書き方式（ファイルで渡す）",
+    "en": "File read/write (save and open a file)"
+  },
+  "cmd.sync.wizard.transport.change": {
+    "ja": "交換方法を変更",
+    "en": "Change exchange method"
+  },
+  "cmd.sync.wizard.showTokenText": {
+    "ja": "トークンテキストを表示する",
+    "en": "Show token text"
+  },
+  "cmd.sync.wizard.leadSaveInviteFile": {
+    "ja": "招待ファイルを保存して相手へ渡してください。相手が参加したら続行してください。",
+    "en": "Save the invite file and give it to your peer. Continue after they join."
+  },
+  "cmd.sync.wizard.leadOpenInviteFile": {
+    "ja": "相手の Family 招待ファイル（または bmxt1.…）を開いてください。",
+    "en": "Open the peer Family invite file (or a bmxt1.… token)."
+  },
+  "cmd.sync.wizard.leadSaveOfferFile": {
+    "ja": "オファーファイルを保存して相手へ渡してください。",
+    "en": "Save the offer file and send it to your peer."
+  },
+  "cmd.sync.wizard.leadSaveOfferFileNamed": {
+    "ja": "{name} へのオファーです。ファイルを保存して相手へ渡してください。",
+    "en": "Offer for {name}. Save the file and send it to your peer."
+  },
+  "cmd.sync.wizard.leadOpenOfferFile": {
+    "ja": "相手のオファーファイル（または bmxt-rtc1.…）を開いてください。",
+    "en": "Open the peer offer file (or a bmxt-rtc1.… token)."
+  },
+  "cmd.sync.wizard.leadOpenOfferFileNamed": {
+    "ja": "{name} からのオファーファイル（または bmxt-rtc1.…）を開いてください。",
+    "en": "Open the offer file from {name} (or a bmxt-rtc1.… token)."
+  },
+  "cmd.sync.wizard.leadOpenAnswerFile": {
+    "ja": "相手が作ったアンサーファイルを開いて確定してください。",
+    "en": "Open the answer file your peer created, then continue."
+  },
+  "cmd.sync.wizard.leadSaveAnswerFile": {
+    "ja": "アンサーファイルを保存して相手へ渡してください。相手が開くと接続完了です。",
+    "en": "Save the answer file for your peer. Connection finishes when they open it."
   },
   "cmd.sync.link.connecting": {
     "ja": "接続中...",
