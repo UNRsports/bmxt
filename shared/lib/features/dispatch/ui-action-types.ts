@@ -8,7 +8,7 @@ export type UiActionIR =
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
   | { kind: "nav_confirm_close"; target: string }
-  | { kind: "open_plain_list"; line: string; list_id: string }
+  | { kind: "open_plain_list"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "close_picker"; slot: string }
   | { kind: "continuation_prompt"; prefix: string }
   | { kind: "session_switch"; name: string }
@@ -16,7 +16,7 @@ export type UiActionIR =
   | { kind: "group_new_from_selection" }
   | { kind: "set_mode"; feature_id: string; mode: string }
   | { kind: "snapshot_save"; line: string }
-  | { kind: "open_picker"; line: string; list_id: string; show_url: string }
+  | { kind: "open_picker"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
   | { kind: "sync_setup" }
   | { kind: "sync_status" }
@@ -28,3 +28,12 @@ export type UiActionIR =
   | { kind: "sync_open"; device_id: string; payload: string }
   | { kind: "sync_connect"; device_id: string }
   | { kind: "sync_ping"; device_id: string }
+  | { kind: "jump_target"; activate_link: number; line: number; match_index: number; needle: string; path: string; tab_id: number; url: string }
+  | { kind: "setting_save" }
+  | { kind: "setting_cancel" }
+  | { kind: "setting_set"; key: string; value: string }
+  | { kind: "sync_bookmark_send"; device_id: string; mode: string; payload: string }
+  | { kind: "bookmark_backup" }
+  | { kind: "bookmark_restore"; as_bookmarks: string }
+  | { kind: "history_backup" }
+  | { kind: "history_restore"; as_bookmarks: string }

@@ -39,7 +39,7 @@ mod tests {
     fn bare_emits_empty_tab_ids() {
         let bundle = run(&["forward".into()]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::TabGoForward { tab_ids } => assert!(tab_ids.is_empty()),
                 other => panic!("unexpected effect: {other:?}"),
             },
@@ -51,7 +51,7 @@ mod tests {
     fn parses_numeric_ids() {
         let bundle = run(&["forward".into(), "7".into()]);
         match bundle {
-            DispatchBundle::Effects { effects } => match &effects[0] {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::TabGoForward { tab_ids } => assert_eq!(tab_ids, &vec![7]),
                 other => panic!("unexpected effect: {other:?}"),
             },

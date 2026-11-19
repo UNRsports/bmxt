@@ -11,6 +11,90 @@
     "ja": "グループ {groupId} を作成しました",
     "en": "created group {groupId}"
   },
+  "effect.groupAdd.done": {
+    "ja": "グループ {groupId} に {count} タブを追加しました",
+    "en": "added {count} tab(s) to group {groupId}"
+  },
+  "effect.groupAdd.error": {
+    "ja": "error: グループ追加に失敗しました — {reason}",
+    "en": "error: group add failed — {reason}"
+  },
+  "effect.groupAdd.invalidGroup": {
+    "ja": "error: 無効なグループ ID です: {groupId}",
+    "en": "error: invalid group id: {groupId}"
+  },
+  "effect.groupAdd.noTabs": {
+    "ja": "error: グループに追加するタブがありません",
+    "en": "error: no tabs to add to the group"
+  },
+  "effect.openUrlIntoWindow.opened": {
+    "ja": "ウィンドウ {windowId} にタブ {tabId} を開きました: {url}",
+    "en": "opened tab {tabId} in window {windowId}: {url}"
+  },
+  "effect.openUrlIntoWindow.failed": {
+    "ja": "error: ウィンドウ {windowId} へ開けませんでした",
+    "en": "error: could not open into window {windowId}"
+  },
+  "effect.openUrlIntoWindow.invalid": {
+    "ja": "error: 無効なウィンドウ ID です: {windowId}",
+    "en": "error: invalid window id: {windowId}"
+  },
+  "effect.openUrlIntoWindow.error": {
+    "ja": "error: ウィンドウへの open に失敗 — {reason}",
+    "en": "error: open into window failed — {reason}"
+  },
+  "effect.openUrlIntoGroup.opened": {
+    "ja": "グループ {groupId} にタブ {tabId} を開きました: {url}",
+    "en": "opened tab {tabId} in group {groupId}: {url}"
+  },
+  "effect.openUrlIntoGroup.failed": {
+    "ja": "error: グループ {groupId} へ開けませんでした",
+    "en": "error: could not open into group {groupId}"
+  },
+  "effect.openUrlIntoGroup.invalid": {
+    "ja": "error: 無効なウィンドウ/グループ ID です: {windowId}/{groupId}",
+    "en": "error: invalid window/group id: {windowId}/{groupId}"
+  },
+  "effect.openUrlIntoGroup.groupFailed": {
+    "ja": "error: グループ割り当てに失敗 — {reason}",
+    "en": "error: failed to assign group — {reason}"
+  },
+  "effect.openUrlIntoGroup.error": {
+    "ja": "error: グループへの open に失敗 — {reason}",
+    "en": "error: open into group failed — {reason}"
+  },
+  "effect.tabsMove.done": {
+    "ja": "{count} タブをウィンドウ {windowId} へ移動しました (group={groupId})",
+    "en": "moved {count} tab(s) to window {windowId} (group={groupId})"
+  },
+  "effect.tabsMove.error": {
+    "ja": "error: タブ移動に失敗 — {reason}",
+    "en": "error: tab move failed — {reason}"
+  },
+  "effect.tabsMove.invalidWindow": {
+    "ja": "error: 無効なウィンドウ ID です: {windowId}",
+    "en": "error: invalid window id: {windowId}"
+  },
+  "effect.tabsMove.noTabs": {
+    "ja": "error: 移動するタブがありません",
+    "en": "error: no tabs to move"
+  },
+  "effect.tabsNewWindow.done": {
+    "ja": "{count} タブを新しいウィンドウ {windowId} へ移しました",
+    "en": "moved {count} tab(s) into new window {windowId}"
+  },
+  "effect.tabsNewWindow.error": {
+    "ja": "error: 新ウィンドウ作成に失敗 — {reason}",
+    "en": "error: new window failed — {reason}"
+  },
+  "effect.tabsNewWindow.failed": {
+    "ja": "error: 新しいウィンドウを作成できませんでした",
+    "en": "error: could not create a new window"
+  },
+  "effect.tabsNewWindow.noTabs": {
+    "ja": "error: 新ウィンドウへ移すタブがありません",
+    "en": "error: no tabs for new window"
+  },
   "effect.navigateTab.done": {
     "ja": "タブ {tabId} を移動しました: {url}",
     "en": "navigated tab {tabId}: {url}"
@@ -122,5 +206,121 @@
   "effect.closeCurrentWindow.rejectedType": {
     "ja": "error: 通常ウィンドウ以外は閉じられません (windowId={windowId})",
     "en": "error: only normal windows can be closed (windowId={windowId})"
+  },
+  "effect.bookmarkCreate.rejectedUrl": {
+    "ja": "error: 無効な URL のためブックマーク作成をスキップしました: {url}",
+    "en": "error: skipped bookmark create for invalid URL: {url}"
+  },
+  "effect.bookmarkCreate.rejectedParent": {
+    "ja": "error: 無効な parentId: {parentId}",
+    "en": "error: invalid parentId: {parentId}"
+  },
+  "effect.bookmarkCreate.rejectedDupMode": {
+    "ja": "error: 無効な重複モード: {mode}（--force または --skip-dup）",
+    "en": "error: invalid dup mode: {mode} (use --force or --skip-dup)"
+  },
+  "effect.bookmarkCreate.dupExists": {
+    "ja": "error: 同じ URL のブックマークがあります: {id} — {title} ({url})。追加は --force、スキップは --skip-dup",
+    "en": "error: bookmark already exists for URL: {id} — {title} ({url}). Use --force to add or --skip-dup to skip"
+  },
+  "effect.bookmarkCreate.skippedDup": {
+    "ja": "重複のためスキップ: {id} — {title} ({url})",
+    "en": "skipped duplicate: {id} — {title} ({url})"
+  },
+  "effect.bookmarkCreate.ok": {
+    "ja": "ブックマーク作成: {id} — {title} ({url})",
+    "en": "created bookmark: {id} — {title} ({url})"
+  },
+  "effect.bookmarkCreate.failed": {
+    "ja": "error: ブックマーク作成に失敗しました — {message}",
+    "en": "error: bookmark create failed — {message}"
+  },
+  "effect.bookmarkCreateFolder.rejectedTitle": {
+    "ja": "error: フォルダタイトルが空です",
+    "en": "error: folder title is empty"
+  },
+  "effect.bookmarkCreateFolder.rejectedParent": {
+    "ja": "error: 無効な parentId: {parentId}",
+    "en": "error: invalid parentId: {parentId}"
+  },
+  "effect.bookmarkCreateFolder.ok": {
+    "ja": "フォルダ作成: {id} — {title}",
+    "en": "created folder: {id} — {title}"
+  },
+  "effect.bookmarkCreateFolder.failed": {
+    "ja": "error: フォルダ作成に失敗しました — {message}",
+    "en": "error: bookmark folder create failed — {message}"
+  },
+  "effect.bookmarkRemove.rejectedIds": {
+    "ja": "error: 削除対象の ID が無効か多すぎます",
+    "en": "error: invalid or too many bookmark IDs to remove"
+  },
+  "effect.bookmarkRemove.failedOne": {
+    "ja": "error: ブックマーク {id} の削除に失敗しました — {message}",
+    "en": "error: failed to remove bookmark {id} — {message}"
+  },
+  "effect.bookmarkRemove.ok": {
+    "ja": "{count} 件のブックマークを削除しました",
+    "en": "removed {count} bookmark(s)"
+  },
+  "effect.bookmarkMove.rejectedIds": {
+    "ja": "error: 移動対象の ID が無効か多すぎます",
+    "en": "error: invalid or too many bookmark IDs to move"
+  },
+  "effect.bookmarkMove.rejectedParent": {
+    "ja": "error: 無効な移動先 parentId: {parentId}",
+    "en": "error: invalid destination parentId: {parentId}"
+  },
+  "effect.bookmarkMove.rejectedIndex": {
+    "ja": "error: 無効なインデックス: {index}",
+    "en": "error: invalid index: {index}"
+  },
+  "effect.bookmarkMove.failedOne": {
+    "ja": "error: ブックマーク {id} の移動に失敗しました — {message}",
+    "en": "error: failed to move bookmark {id} — {message}"
+  },
+  "effect.bookmarkMove.ok": {
+    "ja": "{count} 件のブックマークを移動しました",
+    "en": "moved {count} bookmark(s)"
+  },
+  "effect.bookmarkList.requiresLocalOrSearch": {
+    "ja": "error: bookmark -list はローカルスコープのみ対応しています",
+    "en": "error: bookmark -list supports local scope only"
+  },
+  "effect.bookmarkList.rejectedFolder": {
+    "ja": "error: 無効なフォルダ ID: {folderId}",
+    "en": "error: invalid folder id: {folderId}"
+  },
+  "effect.bookmarkList.failed": {
+    "ja": "error: ブックマーク一覧の取得に失敗しました — {message}",
+    "en": "error: bookmark list failed — {message}"
+  },
+  "effect.historyDeleteUrl.rejected": {
+    "ja": "error: 削除対象の URL が空か多すぎます",
+    "en": "error: empty or too many URLs to delete from history"
+  },
+  "effect.historyDeleteUrl.rejectedUrl": {
+    "ja": "error: 無効な URL: {url}",
+    "en": "error: invalid URL: {url}"
+  },
+  "effect.historyDeleteUrl.failedOne": {
+    "ja": "error: 履歴 {url} の削除に失敗しました — {message}",
+    "en": "error: failed to delete history URL {url} — {message}"
+  },
+  "effect.historyDeleteUrl.ok": {
+    "ja": "{count} 件の履歴 URL を削除しました",
+    "en": "deleted {count} history URL(s)"
+  },
+  "effect.historyDeleteRange.rejected": {
+    "ja": "error: 無効な日時範囲です",
+    "en": "error: invalid time range"
+  },
+  "effect.historyDeleteRange.ok": {
+    "ja": "履歴を削除しました ({start} ～ {end})",
+    "en": "deleted history in range ({start} to {end})"
+  },
+  "effect.historyDeleteRange.failed": {
+    "ja": "error: 履歴範囲削除に失敗しました — {message}",
+    "en": "error: history range delete failed — {message}"
   }
 }

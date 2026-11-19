@@ -227,6 +227,10 @@
     "ja": "setting -list · ime-candidate-help（候補ヘルプ） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · ime-candidate-help · ↑↓ · Enter/→ select · ← list"
   },
+  "setting.picker.headline.searchLegend": {
+    "ja": "setting -list · search-legend（検索凡例） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · search-legend · ↑↓ · Enter/→ select · ← list"
+  },
   "setting.picker.hostUiAuto": {
     "ja": "auto — インストール時判定（Android はスマホ）",
     "en": "auto — install-time detect (Android → mobile)"
@@ -351,6 +355,30 @@
     "ja": "オン",
     "en": "on"
   },
+  "setting.picker.searchLegendText": {
+    "ja": "テキストのみ — [history] など（既定）",
+    "en": "text only — [history], etc. (default)"
+  },
+  "setting.picker.searchLegendEmoji": {
+    "ja": "絵文字のみ — [⏱️] など",
+    "en": "emoji only — [⏱️], etc."
+  },
+  "setting.picker.searchLegendTextEmoji": {
+    "ja": "テキストと絵文字 — [⏱️ history] など",
+    "en": "text and emoji — [⏱️ history], etc."
+  },
+  "setting.picker.searchLegendStateText": {
+    "ja": "テキストのみ",
+    "en": "text only"
+  },
+  "setting.picker.searchLegendStateEmoji": {
+    "ja": "絵文字のみ",
+    "en": "emoji only"
+  },
+  "setting.picker.searchLegendStateTextEmoji": {
+    "ja": "テキストと絵文字",
+    "en": "text and emoji"
+  },
   "setting.picker.importDraft": {
     "ja": "setting: zip をプレビューに読み込みました（> 設定を保存して終了 で確定）",
     "en": "setting: zip loaded into preview (use save setting & exit to commit)"
@@ -418,6 +446,10 @@
   "setting.picker.main.imeCandidateHelp": {
     "ja": "ime-candidate-help（候補メニューのヘルプ）: {value}",
     "en": "ime-candidate-help: {value}"
+  },
+  "setting.picker.main.searchLegend": {
+    "ja": "search-legend（検索結果の凡例）: {value}",
+    "en": "search-legend: {value}"
   },
   "setting.picker.main.import": {
     "ja": "import — zip から設定を読み込む",
@@ -735,6 +767,18 @@
     "ja": "setting: 設定を保存しました",
     "en": "setting: settings saved"
   },
+  "setting.cui.pickerRequired": {
+    "ja": "setting: 先に `setting -list | browse` で設定列を開いてください",
+    "en": "setting: open the settings column with `setting -list | browse` first"
+  },
+  "setting.cui.setUnknown": {
+    "ja": "setting: 未知または無効なキーです: {key}",
+    "en": "setting: unknown or invalid key: {key}"
+  },
+  "setting.cui.setApplied": {
+    "ja": "setting: 下書きを更新しました ({key}={value})",
+    "en": "setting: draft updated ({key}={value})"
+  },
   "setting.prompt.editBgColor": {
     "ja": "背景色 (hex、現在 {current}):",
     "en": "Background color (hex, current {current}):"
@@ -774,6 +818,10 @@
   "setting.summary.imeCandidateHelp": {
     "ja": "ime-candidate-help: {value}",
     "en": "ime-candidate-help: {value}"
+  },
+  "setting.summary.searchLegend": {
+    "ja": "search-legend: {value}",
+    "en": "search-legend: {value}"
   },
   "setting.summary.locale": {
     "ja": "locale: {token}",

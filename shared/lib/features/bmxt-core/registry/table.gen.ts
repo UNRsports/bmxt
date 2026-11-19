@@ -39,7 +39,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "group",
     aliases: [] as const,
-    usagePrimary: "group new"
+    usagePrimary: "group new [tabId…] | group add <groupId> <tabId…>"
   },
   {
     name: "help",
@@ -94,7 +94,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "setting",
     aliases: [] as const,
-    usagePrimary: "setting -list | setting -exit -list | setting help"
+    usagePrimary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help"
   },
   {
     name: "tutorial",
@@ -105,6 +105,36 @@ export const COMMANDS: readonly CmdMeta[] = [
     name: "sync",
     aliases: [] as const,
     usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
+  },
+  {
+    name: "bookmark",
+    aliases: [] as const,
+    usagePrimary: "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help"
+  },
+  {
+    name: "history",
+    aliases: [] as const,
+    usagePrimary: "history -list [<pattern>] [--device <id>|--peers] | history -delete <url…> | history -delete-range --from <iso> --to <iso> | history -backup | history -restore [--as-bookmarks] | history help"
+  },
+  {
+    name: "open",
+    aliases: [] as const,
+    usagePrimary: "open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | <list> | open"
+  },
+  {
+    name: "jump",
+    aliases: [] as const,
+    usagePrimary: "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump"
+  },
+  {
+    name: "move",
+    aliases: [] as const,
+    usagePrimary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>"
+  },
+  {
+    name: "new-window",
+    aliases: [] as const,
+    usagePrimary: "new-window <tabId…> | … | new-window"
   }
 ]
 

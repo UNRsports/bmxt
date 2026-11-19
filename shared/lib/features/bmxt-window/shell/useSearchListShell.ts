@@ -4,7 +4,10 @@ import type { DispatchHostContext } from "../../dispatch/dispatch-context"
 import { applyHostEffects } from "../../dispatch/apply-effects"
 import { enrichSearchPickerEntriesFromOpenTabs } from "../../search/enrich-search-entries-from-tabs"
 import { leadingSearchAdapterNoticeLines } from "../../search/search-list-result"
-import { openSearchPickerEntry } from "../../search/open-search-picker-entry"
+import {
+  buildSearchJumpCommandLine,
+  buildSearchOpenCommandLine
+} from "../../picker/build-picker-command-line"
 import type { SearchOpenDestinationRow } from "../../search/search-open-destination"
 import {
   normalizeSearchListDispatchLine,
@@ -40,6 +43,7 @@ export type UseSearchListShellOptions = {
   searchListPickerRef: React.MutableRefObject<SearchListPickerState | null>
   beginCommandBusy: (message: string) => CommandBusyToken
   endCommandBusy: (token?: CommandBusyToken) => void
+  submitConstructedLine: (line: string) => void
 }
 
 /** EN: Search list picker job, progress, and entry-open dispatch. */
@@ -195,24 +199,14 @@ export function useSearchListShell(options: UseSearchListShellOptions) {
       destination?: SearchOpenDestinationRow
     ) => {
       const pattern = options.searchListPickerRef.current?.pattern ?? ""
-      const ctx: DispatchHostContext = {
-        enqueueSessionPatch: () => {},
-        clearLog: async () => {},
-        exitPane: async () => [],
-        listWindows: async () => [],
-        focusInfo: async () => [],
-        resolveTabArg: async () => undefined,
-        commandSessionId: options.sessionId,
-        uiLocale: options.uiLocale
+      const line =
+        destination !== undefined
+          ? buildSearchOpenCommandLine(entry, destination)
+          : buildSearchJumpCommandLine(entry, matchIndex, pattern)
+      if (line === null) {
+        return
       }
-      await openSearchPickerEntry(
-        entry,
-        matchIndex,
-        ctx,
-        (lines) => options.appendLogLines(lines),
-        pattern,
-        destination
-      )
+      options.submitConstructedLine(line)
     },
     [options]
   )

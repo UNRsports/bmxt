@@ -1,10 +1,12 @@
 import { buildHelpLines } from "../../bmxt-core/registry/help"
+import { clearCandidateMenuSuppressedUntilTab } from "../../command-line/candidate-menu-open-policy.ts"
 import {
   fetchListResultById,
   runPlainListForCommandId,
   type ListCommandFetchContext,
   type ListCommandId
 } from "../../command-line/list-commands"
+import { listPlanFromOpenPlainList } from "../../command-line/list-commands/list-plan-from-ir"
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
 import {
@@ -70,6 +72,23 @@ import {
   type CommandDispatchContext
 } from "./command-dispatch/types"
 import { parseNavConfirmCloseTarget } from "../../nav/nav-confirm-close"
+import { runJumpTargetAction } from "../../command-line/pipe/consumers/jump-from-stream"
+import {
+  applySettingCancelCui,
+  applySettingSaveCui,
+  applySettingSetCui,
+  ensureSettingDraftState
+} from "../../setting/setting-cui-apply"
+import {
+  exportBookmarkBackup,
+  restoreBookmarksFromFile
+} from "../../backup/bookmark-backup.ts"
+import {
+  exportHistoryBackup,
+  restoreHistoryFromFile
+} from "../../backup/history-backup.ts"
+import { importRemoteBookmarks } from "../../sync/bus/remote-bookmarks-import.ts"
+import { getSyncService } from "../../sync/facade/sync-service.ts"
 
 function finishCommand(ctx: CommandDispatchContext): void {
   ctx.deps.appendCommandToHistory(ctx.trimmed)
@@ -230,9 +249,9 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
     case "nav_confirm_close":
       return applyNavConfirmClose(ctx, action.target)
     case "open_plain_list":
-      return applyOpenPlainList(ctx, action.list_id, action.line)
+      return applyOpenPlainList(ctx, action)
     case "open_picker":
-      return applyOpenPicker(ctx, action.list_id, action.line, action.show_url)
+      return applyOpenPicker(ctx, action)
     case "close_picker":
       return applyClosePicker(ctx, action.slot)
     case "continuation_prompt":
@@ -267,6 +286,24 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySyncOpen(ctx, action.device_id, action.payload)
     case "sync_ping":
       return applySyncPing(ctx, action.device_id)
+    case "jump_target":
+      return applyJumpTarget(ctx, action)
+    case "setting_save":
+      return applySettingSave(ctx)
+    case "setting_cancel":
+      return applySettingCancel(ctx)
+    case "setting_set":
+      return applySettingSet(ctx, action.key, action.value)
+    case "sync_bookmark_send":
+      return applySyncBookmarkSend(ctx, action.device_id, action.mode, action.payload)
+    case "bookmark_backup":
+      return applyBookmarkBackup(ctx)
+    case "bookmark_restore":
+      return applyBookmarkRestore(ctx, action.as_bookmarks)
+    case "history_backup":
+      return applyHistoryBackup(ctx)
+    case "history_restore":
+      return applyHistoryRestore(ctx, action.as_bookmarks)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -293,9 +330,9 @@ export async function applyUiActionForSegment(
     case "nav_confirm_close":
       return segmentFailure("interactive", [tCmd("cmd.nav.confirm.compoundBlocked", ctx.locale)])
     case "open_plain_list":
-      return applyOpenPlainListSegment(ctx, action.list_id, action.line)
+      return applyOpenPlainListSegment(ctx, action)
     case "open_picker":
-      return applyOpenPickerSegment(ctx, action.list_id, action.line, action.show_url)
+      return applyOpenPickerSegment(ctx, action)
     case "close_picker":
       return applyClosePickerSegment(ctx, action.slot)
     case "continuation_prompt":
@@ -332,11 +369,167 @@ export async function applyUiActionForSegment(
       )
     case "sync_ping":
       return syncUiSegmentOutcome(ctx.locale, () => runSyncPing(action.device_id))
+    case "jump_target":
+      return runJumpTargetAction({
+        tabId: action.tab_id,
+        path: action.path,
+        needle: action.needle,
+        line: action.line,
+        matchIndex: action.match_index,
+        url: action.url,
+        activateLink: action.activate_link === 1,
+        locale: ctx.locale
+      })
+    case "setting_save":
+      return applySettingSaveSegment(ctx)
+    case "setting_cancel":
+      return applySettingCancelSegment(ctx)
+    case "setting_set":
+      return applySettingSetSegment(ctx, action.key, action.value)
+    case "sync_bookmark_send":
+      return applySyncBookmarkSendSegment(ctx, action.device_id, action.mode, action.payload)
+    case "bookmark_backup":
+      return applyBookmarkBackupSegment(ctx)
+    case "bookmark_restore":
+      return applyBookmarkRestoreSegment(ctx, action.as_bookmarks)
+    case "history_backup":
+      return applyHistoryBackupSegment(ctx)
+    case "history_restore":
+      return applyHistoryRestoreSegment(ctx, action.as_bookmarks)
     default: {
       const _exhaustive: never = action
       return _exhaustive
     }
   }
+}
+
+function applyJumpTarget(
+  ctx: CommandDispatchContext,
+  action: Extract<UiActionIR, { kind: "jump_target" }>
+): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const outcome = await runJumpTargetAction({
+      tabId: action.tab_id,
+      path: action.path,
+      needle: action.needle,
+      line: action.line,
+      matchIndex: action.match_index,
+      url: action.url,
+      activateLink: action.activate_link === 1,
+      locale: ctx.locale
+    })
+    const lines = [...outcome.stdout, ...outcome.stderr]
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+function applySettingSave(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await applySettingSaveCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.locale,
+      ctx.deps.replaceUiSettingsState,
+      (locale) => tSetting("setting.picker.saved", locale),
+      (locale) => tSetting("setting.storage.externalWriteFailed", locale)
+    )
+    if (result.ok) {
+      ctx.deps.closeSettingPickerColumn()
+    }
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingSaveSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await applySettingSaveCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.locale,
+    ctx.deps.replaceUiSettingsState,
+    (locale) => tSetting("setting.picker.saved", locale),
+    (locale) => tSetting("setting.storage.externalWriteFailed", locale)
+  )
+  if (!result.ok) {
+    return segmentFailure("runtime", [
+      tSetting("setting.cui.pickerRequired", ctx.locale),
+      ...result.lines
+    ])
+  }
+  ctx.deps.closeSettingPickerColumn()
+  return segmentSuccess(result.lines)
+}
+
+function applySettingCancel(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  const result = applySettingCancelCui(
+    ctx.deps.settingListPickerRef.current,
+    tSetting("setting.picker.cancelled", ctx.locale)
+  )
+  ctx.deps.closeSettingPickerColumn()
+  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+  ctx.deps.focusPrompt()
+  return true
+}
+
+async function applySettingCancelSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = applySettingCancelCui(
+    ctx.deps.settingListPickerRef.current,
+    tSetting("setting.picker.cancelled", ctx.locale)
+  )
+  ctx.deps.closeSettingPickerColumn()
+  return segmentSuccess(result.lines)
+}
+
+function applySettingSet(
+  ctx: CommandDispatchContext,
+  key: string,
+  value: string
+): boolean {
+  finishCommand(ctx)
+  const base = ensureSettingDraftState(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings
+  )
+  const result = applySettingSetCui(
+    base,
+    key,
+    value,
+    tSetting("setting.cui.setUnknown", ctx.locale, { key }),
+    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
+  )
+  if (result.ok && result.nextDraft) {
+    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  }
+  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+  ctx.deps.focusPrompt()
+  return true
+}
+
+async function applySettingSetSegment(
+  ctx: CommandDispatchContext,
+  key: string,
+  value: string
+): Promise<SegmentOutcome> {
+  const base = ensureSettingDraftState(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings
+  )
+  const result = applySettingSetCui(
+    base,
+    key,
+    value,
+    tSetting("setting.cui.setUnknown", ctx.locale, { key }),
+    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
+  )
+  if (!result.ok || result.nextDraft === undefined) {
+    return segmentFailure("usage", result.lines)
+  }
+  ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  return segmentSuccess(result.lines)
 }
 
 function syncSink(ctx: CommandDispatchContext) {
@@ -638,6 +831,8 @@ async function applyDomSettingSegment(
 function applySessionSwitch(ctx: CommandDispatchContext, name: string): boolean {
   if (name.trim().length === 0) {
     ctx.deps.sessionListPickerDismissedRef.current = false
+    ctx.deps.imeTokenPickerDismissedRef.current = false
+    clearCandidateMenuSuppressedUntilTab()
     ctx.deps.syncImeTokenPicker(ctx.deps.lineRef.current, ctx.deps.lineRef.current.length)
     ctx.deps.focusPrompt()
     return true
@@ -899,18 +1094,35 @@ async function applySnapshotSaveSegment(
   return segmentFailure("runtime", lines, lines[0])
 }
 
+function resolveOpenPlainListPlan(
+  action: Extract<UiActionIR, { kind: "open_plain_list" }>
+): { listId: ListCommandId; match: unknown; listPlan: NonNullable<ReturnType<typeof listPlanFromOpenPlainList>> } | null {
+  const fromIr = listPlanFromOpenPlainList(action)
+  if (fromIr !== null) {
+    return { listId: fromIr.listId, match: fromIr.match, listPlan: fromIr }
+  }
+  // EN: Legacy fallback for list_ids not yet stamped (dom via open_plain_list unused today).
+  const listId = parseListCommandId(action.list_id)
+  if (listId === null) {
+    return null
+  }
+  const matchResult = buildPlainListMatch(listId, action.line)
+  if (matchResult.ok === false) {
+    return null
+  }
+  return {
+    listId,
+    match: matchResult.match,
+    listPlan: { listId, match: matchResult.match, showUrl: false }
+  }
+}
+
 function applyOpenPlainList(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string
+  action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): boolean {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return false
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPlainListMatch(listId, line)
-  if (matchResult.ok === false) {
+  const resolved = resolveOpenPlainListPlan(action)
+  if (resolved === null) {
     return false
   }
   finishCommand(ctx)
@@ -919,8 +1131,8 @@ function applyOpenPlainList(
     const busyToken = ctx.deps.beginCommandBusy(tShell("shell.commandBusy.working", ctx.locale))
     try {
       const lines = await runPlainListForCommandId(
-        listId,
-        matchResult.match,
+        resolved.listId,
+        resolved.match,
         listFetchContext(ctx)
       )
       if (ctx.deps.isBusyTokenActive(busyToken)) {
@@ -944,44 +1156,62 @@ function applyOpenPlainList(
 
 async function applyOpenPlainListSegment(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string
+  action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): Promise<SegmentOutcome> {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return segmentFailure("unknown", [`error: unknown list: ${listIdRaw}`])
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPlainListMatch(listId, line)
-  if (matchResult.ok === false) {
-    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: line })])
+  const resolved = resolveOpenPlainListPlan(action)
+  if (resolved === null) {
+    return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
   }
   try {
     const lines = await runPlainListForCommandId(
-      listId,
-      matchResult.match,
+      resolved.listId,
+      resolved.match,
       listFetchContext(ctx)
     )
-    return segmentSuccess(lines)
+    return segmentSuccess(lines, undefined, undefined, resolved.listPlan)
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     return segmentFailure("runtime", [tError("error.generic", ctx.locale, { message })], message)
   }
 }
 
+function resolveOpenPickerPlan(
+  action: Extract<UiActionIR, { kind: "open_picker" }>
+): { listId: ListCommandId; match: unknown; showUrl: boolean } | null {
+  const fromIr = listPlanFromOpenPlainList({
+    list_id: action.list_id,
+    show_url: action.show_url,
+    device_scope: action.device_scope,
+    device_id: action.device_id
+  })
+  if (fromIr !== null) {
+    return {
+      listId: fromIr.listId,
+      match: fromIr.match,
+      showUrl: action.show_url === "true" || fromIr.showUrl
+    }
+  }
+  const listId = parseListCommandId(action.list_id)
+  if (listId === null) {
+    return null
+  }
+  const matchResult = buildPickerListMatch(listId, action.line, action.show_url)
+  if (matchResult.ok === false) {
+    return null
+  }
+  return {
+    listId,
+    match: matchResult.match,
+    showUrl: listId === "tabs" ? action.show_url === "true" : false
+  }
+}
+
 function applyOpenPicker(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string,
-  showUrlRaw: string
+  action: Extract<UiActionIR, { kind: "open_picker" }>
 ): boolean {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return false
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPickerListMatch(listId, line, showUrlRaw)
-  if (matchResult.ok === false) {
+  const resolved = resolveOpenPickerPlan(action)
+  if (resolved === null) {
     return false
   }
   recordOnly(ctx)
@@ -991,17 +1221,16 @@ function applyOpenPicker(
     const busyToken = ctx.deps.beginCommandBusy(tShell("shell.commandBusy.working", ctx.locale))
     try {
       const listResult = await fetchListResultById(
-        listId,
-        matchResult.match,
+        resolved.listId,
+        resolved.match,
         listFetchContext(ctx)
       )
       if (!ctx.deps.isBusyTokenActive(busyToken)) {
         return
       }
-      const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
       const outcome = await openPickerFromListResult(
         listResult,
-        { showUrl },
+        { showUrl: resolved.showUrl },
         ctx.deps,
         ctx.locale
       )
@@ -1034,27 +1263,24 @@ function applyOpenPicker(
 
 async function applyOpenPickerSegment(
   ctx: CommandDispatchContext,
-  listIdRaw: string,
-  lineFromAction: string,
-  showUrlRaw: string
+  action: Extract<UiActionIR, { kind: "open_picker" }>
 ): Promise<SegmentOutcome> {
-  const listId = parseListCommandId(listIdRaw)
-  if (listId === null) {
-    return segmentFailure("unknown", [`error: unknown list: ${listIdRaw}`])
-  }
-  const line = resolveListLine(ctx, lineFromAction)
-  const matchResult = buildPickerListMatch(listId, line, showUrlRaw)
-  if (matchResult.ok === false) {
-    return segmentFailure("usage", [tError("error.generic", ctx.locale, { message: line })])
+  const resolved = resolveOpenPickerPlan(action)
+  if (resolved === null) {
+    return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
   }
   try {
     const listResult = await fetchListResultById(
-      listId,
-      matchResult.match,
+      resolved.listId,
+      resolved.match,
       listFetchContext(ctx)
     )
-    const showUrl = listId === "tabs" ? showUrlRaw === "true" : false
-    return openPickerFromListResult(listResult, { showUrl }, ctx.deps, ctx.locale)
+    return openPickerFromListResult(
+      listResult,
+      { showUrl: resolved.showUrl },
+      ctx.deps,
+      ctx.locale
+    )
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     return segmentFailure("runtime", [tError("error.generic", ctx.locale, { message })], message)
@@ -1136,4 +1362,218 @@ function applyContinuationPrompt(ctx: CommandDispatchContext, prefix: string): b
   setContinuationPrompt(ctx.deps, prefix)
   ctx.deps.setSubCmdPicker(null)
   return true
+}
+
+// ---- bookmark-send ----
+
+function parseBookmarkSendPayload(payload: string): {
+  urls: string[]
+  groupTitle: string | null
+  parentId: string | null
+} {
+  const parts = payload.trim().split(/\s+/).filter((p) => p.length > 0)
+  let groupTitle: string | null = null
+  let parentId: string | null = null
+  const urls: string[] = []
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i]!
+    if (part === "--group" && i + 1 < parts.length) {
+      groupTitle = parts[i + 1]!
+      i += 1
+      continue
+    }
+    if (part === "--parent" && i + 1 < parts.length) {
+      parentId = parts[i + 1]!
+      i += 1
+      continue
+    }
+    urls.push(part)
+  }
+  return { urls, groupTitle, parentId }
+}
+
+function applySyncBookmarkSend(
+  ctx: CommandDispatchContext,
+  deviceId: string,
+  mode: string,
+  payload: string
+): boolean {
+  finishCommand(ctx)
+  void applySyncUiLog(syncSink(ctx), ctx.trimmed, () =>
+    runSyncBookmarkSend(deviceId, mode, payload)
+  )
+  return true
+}
+
+async function applySyncBookmarkSendSegment(
+  ctx: CommandDispatchContext,
+  deviceId: string,
+  mode: string,
+  payload: string
+): Promise<SegmentOutcome> {
+  return syncUiSegmentOutcome(ctx.locale, () =>
+    runSyncBookmarkSend(deviceId, mode, payload)
+  )
+}
+
+async function runSyncBookmarkSend(
+  deviceId: string,
+  mode: string,
+  payload: string
+): Promise<{ ok: boolean; lines: string[] }> {
+  const { urls, groupTitle, parentId } = parseBookmarkSendPayload(payload)
+  if (urls.length === 0) {
+    return { ok: false, lines: ["sync.bookmarkSend.noUrls"] }
+  }
+  const items = urls.map((url) => ({ url, title: url }))
+
+  const shouldOpen = mode === "open" || mode === "both"
+  const shouldSave = mode === "save" || mode === "both"
+
+  const lines: string[] = []
+  let ok = true
+
+  if (shouldOpen) {
+    const result = await getSyncService().openRemote(deviceId, urls, groupTitle)
+    lines.push(...result.lines)
+    if (!result.ok) {
+      ok = false
+    }
+  }
+  if (shouldSave) {
+    const importResult = await importRemoteBookmarks(deviceId, parentId, items)
+    lines.push(...importResult.lines)
+    if (!importResult.ok) {
+      ok = false
+    }
+  }
+  return { ok, lines }
+}
+
+// ---- bookmark-backup / bookmark-restore ----
+
+function applyBookmarkBackup(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    try {
+      const result = await exportBookmarkBackup()
+      logLines.push(`bookmark.backup.ok:file=${result.filename};count=${result.nodeCount}`)
+    } catch (e) {
+      logLines.push(`bookmark.backup.error:${e instanceof Error ? e.message : String(e)}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyBookmarkBackupSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  try {
+    const result = await exportBookmarkBackup()
+    return segmentSuccess([`bookmark.backup.ok:file=${result.filename};count=${result.nodeCount}`])
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return segmentFailure("runtime", [`bookmark.backup.error:${message}`])
+  }
+}
+
+function applyBookmarkRestore(ctx: CommandDispatchContext, _asBookmarks: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    const result = await restoreBookmarksFromFile()
+    if (!result.ok) {
+      if ("cancelled" in result && result.cancelled) {
+        logLines.push("bookmark.restore.cancelled")
+      } else if ("error" in result) {
+        logLines.push(`bookmark.restore.error:${result.error}`)
+      }
+    } else {
+      logLines.push(`bookmark.restore.ok:created=${result.created}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyBookmarkRestoreSegment(
+  ctx: CommandDispatchContext,
+  _asBookmarks: string
+): Promise<SegmentOutcome> {
+  const result = await restoreBookmarksFromFile()
+  if (!result.ok) {
+    if ("cancelled" in result && result.cancelled) {
+      return segmentFailure("interactive", ["bookmark.restore.cancelled"])
+    }
+    return segmentFailure("runtime", ["error" in result ? `bookmark.restore.error:${result.error}` : "bookmark.restore.failed"])
+  }
+  return segmentSuccess([`bookmark.restore.ok:created=${result.created}`])
+}
+
+// ---- history-backup / history-restore ----
+
+function applyHistoryBackup(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    try {
+      const result = await exportHistoryBackup()
+      logLines.push(`history.backup.ok:file=${result.filename};count=${result.itemCount}`)
+    } catch (e) {
+      logLines.push(`history.backup.error:${e instanceof Error ? e.message : String(e)}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyHistoryBackupSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  try {
+    const result = await exportHistoryBackup()
+    return segmentSuccess([`history.backup.ok:file=${result.filename};count=${result.itemCount}`])
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return segmentFailure("runtime", [`history.backup.error:${message}`])
+  }
+}
+
+function historyRestoreMode(asBookmarks: string): "url" | "as-bookmarks" {
+  return asBookmarks.trim() === "1" ? "as-bookmarks" : "url"
+}
+
+function applyHistoryRestore(ctx: CommandDispatchContext, asBookmarks: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const logLines = [`> ${ctx.trimmed}`]
+    const result = await restoreHistoryFromFile(historyRestoreMode(asBookmarks))
+    if (!result.ok) {
+      if ("cancelled" in result && result.cancelled) {
+        logLines.push("history.restore.cancelled")
+      } else if ("error" in result) {
+        logLines.push(`history.restore.error:${result.error}`)
+      }
+    } else {
+      logLines.push(`history.restore.ok:restored=${result.restored}`)
+    }
+    await ctx.deps.appendLogLines(logLines)
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applyHistoryRestoreSegment(
+  ctx: CommandDispatchContext,
+  asBookmarks: string
+): Promise<SegmentOutcome> {
+  const result = await restoreHistoryFromFile(historyRestoreMode(asBookmarks))
+  if (!result.ok) {
+    if ("cancelled" in result && result.cancelled) {
+      return segmentFailure("interactive", ["history.restore.cancelled"])
+    }
+    return segmentFailure("runtime", ["error" in result ? `history.restore.error:${result.error}` : "history.restore.failed"])
+  }
+  return segmentSuccess([`history.restore.ok:restored=${result.restored}`])
 }

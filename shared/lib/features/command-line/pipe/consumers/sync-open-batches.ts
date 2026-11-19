@@ -125,6 +125,12 @@ export function urlBatchesFromBmxtRuleStream(stream: BmxtRuleStream): SyncOpenUr
   for (const record of stream.records) {
     if (record.kind === "page.group") {
       flush()
+      // EN: Chip streams mark the end of a group run with `ungrouped: true`.
+      // JA: チップストリームはグループ連続の終わりを `ungrouped: true` で示す。
+      if (entryValue(record, "ungrouped") === true) {
+        currentGroup = { title: null, color: null, active: false }
+        continue
+      }
       const color = colorFromGroup(record)
       currentGroup = {
         title: rawTitleFromGroup(record),

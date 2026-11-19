@@ -104,12 +104,40 @@
     "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."
   },
   "cmd.group.usage.line": {
-    "ja": "usage: group new | group new <tabId> [tabId ...]",
-    "en": "usage: group new | group new <tabId> [tabId ...]"
+    "ja": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…",
+    "en": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…"
   },
   "cmd.group.usage.nonInteractive": {
-    "ja": "Non-interactive: group new <tabId> [tabId ...]",
-    "en": "Non-interactive: group new <tabId> [tabId ...]"
+    "ja": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…",
+    "en": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…"
+  },
+  "cmd.move.usage.line1": {
+    "ja": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]",
+    "en": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]"
+  },
+  "cmd.move.usage.line2": {
+    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`",
+    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`"
+  },
+  "cmd.move.usage.line3": {
+    "ja": "  例: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1",
+    "en": "  Examples: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1"
+  },
+  "cmd.move.usage.line4": {
+    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。",
+    "en": "  As a pipe consumer, moves every page.open tab id from stdin."
+  },
+  "cmd.newWindow.usage.line1": {
+    "ja": "usage: new-window <tabId> [tabId…] | … | new-window",
+    "en": "usage: new-window <tabId> [tabId…] | … | new-window"
+  },
+  "cmd.newWindow.usage.line2": {
+    "ja": "  例: new-window 12 34 · #t:12 #t:34 | new-window",
+    "en": "  Examples: new-window 12 34 · #t:12 #t:34 | new-window"
+  },
+  "cmd.newWindow.usage.line3": {
+    "ja": "  パイプ右辺は page.open のタブを新しいウィンドウへ移します。",
+    "en": "  As a pipe consumer, moves page.open tabs into a new window."
   },
   "cmd.nav.enter.detail": {
     "ja": "BMXt プロンプトで `nav -enter` を実行し、コマンドライン上で Alt でページカーソルを切り替えます。",
@@ -198,6 +226,46 @@
   "cmd.browse.usage.line4": {
     "ja": "  単体の `browse` では何も開きません。列を開くには `<list-command> | browse` を使います。",
     "en": "  Bare `browse` does not open a column. Open a column with `<list-command> | browse`."
+  },
+  "cmd.open.usage.line1": {
+    "ja": "usage: open <url> | open --window <url> | open --into-window <id> <url>",
+    "en": "usage: open <url> | open --window <url> | open --into-window <id> <url>"
+  },
+  "cmd.open.usage.line2": {
+    "ja": "  または open --into-group <gid> --window-id <wid> <url> · `<list-command> | open …`",
+    "en": "  Or open --into-group <gid> --window-id <wid> <url> · `<list-command> | open …`"
+  },
+  "cmd.open.usage.line3": {
+    "ja": "  例: open https://example.com · search -list foo | open · search -list foo | open --window",
+    "en": "  Examples: open https://example.com · search -list foo | open · search -list foo | open --window"
+  },
+  "cmd.open.usage.line4": {
+    "ja": "  単体の `open` では何も開きません。URL かパイプ右辺として使います。",
+    "en": "  Bare `open` does nothing. Pass a URL or use it as a pipe consumer."
+  },
+  "cmd.open.usage.line5": {
+    "ja": "  search の窓／グループ指定 open は `--into-window` / `--into-group` と同等です。",
+    "en": "  Search destination open uses `--into-window` / `--into-group` (same as the picker)."
+  },
+  "cmd.jump.usage.line1": {
+    "ja": "usage: jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) [--link]",
+    "en": "usage: jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) [--link]"
+  },
+  "cmd.jump.usage.line2": {
+    "ja": "  または `<list-command> | jump`（page.open / search.hit / dom.node をジャンプ）",
+    "en": "  Or `<list-command> | jump` (jump page.open / search.hit / dom.node records)"
+  },
+  "cmd.jump.usage.line3": {
+    "ja": "  例: jump --tab 12 --path 0.1.2 · dom -list | jump · search -list foo | jump",
+    "en": "  Examples: jump --tab 12 --path 0.1.2 · dom -list | jump · search -list foo | jump"
+  },
+  "cmd.jump.usage.line4": {
+    "ja": "  単体の `jump` では何もしません。`--tab` 付きかパイプ右辺として使います。",
+    "en": "  Bare `jump` does nothing. Pass `--tab …` or use it as a pipe consumer."
+  },
+  "cmd.jump.error.needTab": {
+    "ja": "error: jump には {hint} が必要です",
+    "en": "error: jump requires {hint}"
   },
   "cmd.search.error.exitListUsage": {
     "ja": "error: usage: search -exit -list",
@@ -380,8 +448,20 @@
     "en": "       setting -list | browse     — open settings picker column"
   },
   "cmd.setting.usage.line3": {
+    "ja": "       setting -set <key> <value> — 下書きへ反映（locale / edit-picker / …）",
+    "en": "       setting -set <key> <value> — apply to draft (locale / edit-picker / …)"
+  },
+  "cmd.setting.usage.line4": {
+    "ja": "       setting -save | setting -cancel — 下書きを保存 / 破棄して列を閉じる",
+    "en": "       setting -save | setting -cancel — save / discard draft and close column"
+  },
+  "cmd.setting.usage.line5": {
     "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
     "en": "       setting -exit -list — close settings picker in this BMXt pane"
+  },
+  "cmd.setting.error.setUsage": {
+    "ja": "error: usage: setting -set <key> <value>",
+    "en": "error: usage: setting -set <key> <value>"
   },
   "cmd.snapshot.error.internal": {
     "ja": "error: 不明な snapshot オプション (internal): {option}",
@@ -688,8 +768,8 @@
     "en": "Family setup failed. Please choose again."
   },
   "cmd.sync.setup.familyReady": {
-    "ja": "Family を作成しました。先に Copy（またはショートカット）で招待を相手へ渡し、相手が参加してから役割を選んでください。",
-    "en": "Family created. Copy (or the shortcut) the invite to your peer first; after they join, choose roles."
+    "ja": "Family を作成しました。先に Copy で招待を相手へ渡し、相手が参加してから役割を選んでください。",
+    "en": "Family created. Copy the invite to your peer first; after they join, choose roles."
   },
   "cmd.sync.setup.familyReadyJoined": {
     "ja": "Family に参加しました。次に役割を選びます。",
@@ -716,12 +796,12 @@
     "en": "Paste only the peer answer code body (bmxt-rtc1.…) at the prompt and press Enter:"
   },
   "cmd.sync.setup.offerReady": {
-    "ja": "Copy（またはショートカット）でオファーをクリップボードへ。相手はプロンプトへ貼付して Enter。次に相手のアンサーを待ちます。",
-    "en": "Copy (or the shortcut) the offer to the clipboard. The peer pastes it at their prompt and presses Enter. Then wait for their answer."
+    "ja": "Copy でオファーをクリップボードへ。相手はプロンプトへ貼付して Enter。次に相手のアンサーを待ちます。",
+    "en": "Copy the offer to the clipboard. The peer pastes it at their prompt and presses Enter. Then wait for their answer."
   },
   "cmd.sync.setup.answerReady": {
-    "ja": "Copy（またはショートカット）でアンサーをクリップボードへ。相手はプロンプトへ貼付して Enter すると接続完了です。",
-    "en": "Copy (or the shortcut) the answer to the clipboard. The peer pastes it at their prompt and presses Enter to finish."
+    "ja": "Copy でアンサーをクリップボードへ。相手はプロンプトへ貼付して Enter すると接続完了です。",
+    "en": "Copy the answer to the clipboard. The peer pastes it at their prompt and presses Enter to finish."
   },
   "cmd.sync.setup.done": {
     "ja": "接続セットアップが完了しました。状態は sync -status で確認できます。",
@@ -792,12 +872,12 @@
     "en": "transport: WebRTC DataChannel (prompt-window host · host ICE only · copy-paste handshake). Held until the window closes or you re-handshake. No FSA workdir."
   },
   "cmd.sync.pair.created": {
-    "ja": "Family 招待を用意しました。Copy（またはショートカット）でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",
-    "en": "Family invite ready. Copy (or the shortcut) it to the clipboard; the peer pastes at their prompt or sync -setup join step."
+    "ja": "Family 招待を用意しました。Copy でクリップボードへ載せ、相手はプロンプト／`sync -setup` の参加へ貼ってください。",
+    "en": "Family invite ready. Copy it to the clipboard; the peer pastes at their prompt or sync -setup join step."
   },
   "cmd.sync.pair.useCopy": {
-    "ja": "招待はログに全文を出しません。下の Copy ボタン（またはショートカット）を使ってください。",
-    "en": "The invite is not printed in full here. Use the Copy button below (or the shortcut)."
+    "ja": "招待はログに全文を出しません。下の Copy ボタンを使ってください。",
+    "en": "The invite is not printed in full here. Use the Copy button below."
   },
   "cmd.sync.pair.noFamily": {
     "ja": "Family を作成できませんでした。",
@@ -896,12 +976,12 @@
     "en": "Waiting for the peer offer. Paste the code they Copied into this prompt and press Enter."
   },
   "cmd.sync.connect.copyThenWaitAnswer": {
-    "ja": "Copy（またはショートカット）でオファーを渡し、相手のアンサーコード本体をこのプロンプトへ貼り付けて Enter。",
-    "en": "Copy (or the shortcut) the offer to your peer, then paste their answer code body here and press Enter."
+    "ja": "Copy でオファーを渡し、相手のアンサーコード本体をこのプロンプトへ貼り付けて Enter。",
+    "en": "Copy the offer to your peer, then paste their answer code body here and press Enter."
   },
   "cmd.sync.connect.copyThenWaitPeerAccept": {
-    "ja": "Copy（またはショートカット）でアンサーを相手へ渡してください。相手がプロンプトへ貼ると接続完了です。",
-    "en": "Copy (or the shortcut) the answer to your peer. Connection completes when they paste it at their prompt."
+    "ja": "Copy でアンサーを相手へ渡してください。相手がプロンプトへ貼ると接続完了です。",
+    "en": "Copy the answer to your peer. Connection completes when they paste it at their prompt."
   },
   "cmd.sync.connect.pasteAtPrompt": {
     "ja": "相手の握手コード本体（bmxt-rtc1.…）だけをプロンプトへ貼り付けて Enter:",
@@ -1002,6 +1082,182 @@
   "cmd.sync.rtc.wrongAddressee": {
     "ja": "この握手コードの宛先は別の deviceId です。",
     "en": "This handshake code is addressed to a different deviceId."
+  },
+  "cmd.sync.door.noFamily": {
+    "ja": "localhost 待ち受け: まだ Family に参加していません（sync -setup / -pair）。",
+    "en": "localhost listener: not in a Family yet (sync -setup / -pair)."
+  },
+  "cmd.sync.door.unreachable": {
+    "ja": "localhost 待ち受け: CLI が起動していないか、ポート 17653 に届きません。",
+    "en": "localhost listener: CLI is not running or port 17653 is unreachable."
+  },
+  "cmd.sync.door.badHello": {
+    "ja": "localhost 待ち受け: hello 応答が不正です。",
+    "en": "localhost listener: invalid hello response."
+  },
+  "cmd.sync.door.ignored": {
+    "ja": "localhost 待ち受け: Family 参加情報による認証に失敗したため無視しました（無関係なサービスの可能性）。",
+    "en": "localhost listener: ignored (Family membership verification failed — possible unrelated service)."
+  },
+  "cmd.sync.door.self": {
+    "ja": "localhost 待ち受け: 自分自身の device です。",
+    "en": "localhost listener: that device is this profile."
+  },
+  "cmd.sync.door.offerFailed": {
+    "ja": "localhost 待ち受け: offer の作成に失敗しました。",
+    "en": "localhost listener: failed to create offer."
+  },
+  "cmd.sync.door.handshakeFailed": {
+    "ja": "localhost 待ち受け: 自動接続に失敗しました。コピペ／ファイルにフォールバックできます。",
+    "en": "localhost listener: auto-connect failed. Clipboard/file fallback remains available."
+  },
+  "cmd.sync.door.already": {
+    "ja": "localhost 待ち受け: すでに {name} に接続済みです。",
+    "en": "localhost listener: already connected to {name}."
+  },
+  "cmd.sync.door.connected": {
+    "ja": "localhost 待ち受け: {name} と自動接続しました。",
+    "en": "localhost listener: auto-connected to {name}."
+  },
+  "cmd.cli.banner.familyReady": {
+    "ja": "BMXt CLI — Family 準備済み · 待ち受け :{port}",
+    "en": "BMXt CLI — Family ready · listening :{port}"
+  },
+  "cmd.cli.banner.familyReadyHint": {
+    "ja": "ブラウザで BMXt プロンプトを開くと自動接続します。フォールバック: sync -offer / sync -accept",
+    "en": "Open the BMXt prompt in a browser for auto-connect. Fallback: sync -offer / sync -accept"
+  },
+  "cmd.cli.banner.editing": {
+    "ja": "編集: 灰色ヒント · Tab で適用 · Enter で実行 · help · quit",
+    "en": "Editing: grey remainder hint · Tab applies · Enter runs · help · quit"
+  },
+  "cmd.cli.banner.connected": {
+    "ja": "BMXt CLI — 接続済み。拡張と同じコマンド文法 + 行編集。",
+    "en": "BMXt CLI — connected. Extension command grammar + line editor."
+  },
+  "cmd.cli.banner.connectedHint": {
+    "ja": "↑↓ 履歴 · 灰色ヒント · Tab 適用 · Enter 実行 · 例: tab -list --peers | browse · help · quit",
+    "en": "↑↓ history · grey hint · Tab apply · Enter run · e.g. tab -list --peers | browse · help · quit"
+  },
+  "cmd.cli.banner.noFamily": {
+    "ja": "BMXt CLI — 直接起動（まだ Family 未参加）。",
+    "en": "BMXt CLI — direct start (not in a Family yet)."
+  },
+  "cmd.cli.banner.noFamilyHint": {
+    "ja": "ローカル: sync -setup · sync -pair · sync -status · help · quit",
+    "en": "Local: sync -setup · sync -pair · sync -status · help · quit"
+  },
+  "cmd.cli.banner.noFamilyNext": {
+    "ja": "その後: ブラウザが自動接続、または sync -offer / sync -accept",
+    "en": "Then: browsers auto-connect, or sync -offer / sync -accept"
+  },
+  "cmd.cli.door.stillListening": {
+    "ja": "待ち受け継続中（http://127.0.0.1:{port}/）。BMXt> でコマンド入力（終了は quit）。",
+    "en": "Still listening (http://127.0.0.1:{port}/). Type at BMXt> (quit to stop)."
+  },
+  "cmd.cli.door.alive": {
+    "ja": "[:{port} 稼働] BMXt> で入力（終了は quit）",
+    "en": "[:{port} up] type at BMXt> (quit to stop)"
+  },
+  "cmd.cli.door.peerTunnelClosed": {
+    "ja": "ピア接続が閉じました（{detail}）。待ち受けは継続中です。",
+    "en": "Peer link closed ({detail}). Listener keeps running."
+  },
+  "cmd.cli.door.listening": {
+    "ja": "待ち受け開始: http://127.0.0.1:{port}/",
+    "en": "Listening on http://127.0.0.1:{port}/"
+  },
+  "cmd.cli.status.bar": {
+    "ja": ":{port} 稼働 · {peers} · quit",
+    "en": ":{port} up · {peers} · quit"
+  },
+  "cmd.cli.status.noPeers": {
+    "ja": "(未接続)",
+    "en": "(no peers)"
+  },
+  "cmd.cli.status.offline": {
+    "ja": "オフライン · quit",
+    "en": "offline · quit"
+  },
+  "cmd.cli.setting.browseUnsupported": {
+    "ja": "error: CLI では `setting -list | browse` は未対応です。`setting -set` / `setting -save` を使うか、拡張の BMXt 窓で設定してください。",
+    "en": "error: `setting -list | browse` is not supported on CLI. Use `setting -set` / `setting -save`, or change settings in the BMXt browser window."
+  },
+  "cmd.cli.setting.useSetSave": {
+    "ja": "変更: setting -set <key> <value> → setting -save（破棄: setting -cancel）",
+    "en": "Change: setting -set <key> <value> → setting -save (discard: setting -cancel)"
+  },
+  "cmd.cli.setting.noDraft": {
+    "ja": "error: 保存する下書きがありません。先に `setting -set <key> <value>` を実行してください。",
+    "en": "error: no draft to save. Run `setting -set <key> <value>` first."
+  },
+  "cmd.cli.error.listLimited": {
+    "ja": "error: CLI の一覧 `{listId}` は tabs / setting のみ対応です",
+    "en": "error: list `{listId}` on CLI is limited to tabs / setting for now"
+  },
+  "cmd.cli.error.pickerLimited": {
+    "ja": "error: CLI のピッカー `{listId}` は tabs のみ対応です",
+    "en": "error: picker `{listId}` on CLI is limited to tabs for now"
+  },
+  "cmd.cli.error.uiUnsupported": {
+    "ja": "error: CLI 未対応の UI アクション: {kind}",
+    "en": "error: ui action not supported on CLI: {kind}"
+  },
+  "cmd.cli.handshake.familyReady": {
+    "ja": "Family 準備完了。",
+    "en": "Family ready."
+  },
+  "cmd.cli.handshake.askDelivery": {
+    "ja": "握手／招待の渡し方を選んでください（初回のみ記憶します）。",
+    "en": "Choose how to pass handshake / invite codes (remembered after the first choice)."
+  },
+  "cmd.cli.handshake.askDeliveryPrompt": {
+    "ja": "[1] code = 端末にコード表示  /  [2] file = ファイル保存  > ",
+    "en": "[1] code = print code  /  [2] file = save ticket file  > "
+  },
+  "cmd.cli.handshake.askDeliveryRetry": {
+    "ja": "code / file（または 1 / 2）で答えてください。",
+    "en": "Answer with code / file (or 1 / 2)."
+  },
+  "cmd.cli.handshake.deliveryRemembered": {
+    "ja": "握手の渡し方を記憶しました: {mode}",
+    "en": "Remembered handshake delivery: {mode}"
+  },
+  "cmd.cli.handshake.deliveryAskNext": {
+    "ja": "次回の sync で渡し方を再度尋ねます（handshake-delivery = ask）。",
+    "en": "Will ask delivery mode again on the next sync (handshake-delivery = ask)."
+  },
+  "cmd.cli.handshake.askTicketDir": {
+    "ja": "チケット保存先ディレクトリ（Enter で現状: {dir}）",
+    "en": "Ticket save directory (Enter to keep: {dir})"
+  },
+  "cmd.cli.handshake.askTicketDirPrompt": {
+    "ja": "ディレクトリ > ",
+    "en": "directory > "
+  },
+  "cmd.cli.handshake.ticketDirRemembered": {
+    "ja": "チケット保存先を記憶しました: {dir}",
+    "en": "Remembered ticket directory: {dir}"
+  },
+  "cmd.cli.handshake.codeHeader": {
+    "ja": "=== {role}（コード表示） ===",
+    "en": "=== {role} (code) ==="
+  },
+  "cmd.cli.handshake.fileHeader": {
+    "ja": "=== {role}（ファイル） ===",
+    "en": "=== {role} (file) ==="
+  },
+  "cmd.cli.handshake.fileHint": {
+    "ja": "BMXt ウィザードの「ファイルで渡す / Open」でこのファイルを開くか、相手に渡してください。",
+    "en": "Open this file in the BMXt wizard (ファイルで渡す / Open), or share it with the peer."
+  },
+  "cmd.cli.handshake.pasteAnswerPrompt": {
+    "ja": "ANSWER: @path.json · Enter/:pick で GUI · または bmxt-rtc1. を貼付\n> ",
+    "en": "ANSWER: @path.json · Enter/:pick for GUI · or bare bmxt-rtc1. paste\n> "
+  },
+  "cmd.cli.handshake.pasteOfferPrompt": {
+    "ja": "OFFER: @path.json · Enter/:pick で GUI · または bmxt-rtc1. を貼付\n> ",
+    "en": "OFFER: @path.json · Enter/:pick for GUI · or bare bmxt-rtc1. paste\n> "
   },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
@@ -1155,6 +1411,38 @@
     "ja": "Family 招待をコピーしました。",
     "en": "Family invite copied."
   },
+  "cmd.sync.wizard.saveFileButton": {
+    "ja": "ファイルに保存",
+    "en": "Save file"
+  },
+  "cmd.sync.wizard.openFileButton": {
+    "ja": "ファイルを開く",
+    "en": "Open file"
+  },
+  "cmd.sync.wizard.savedFile": {
+    "ja": "{name} を保存しました。相手側で開いてください。",
+    "en": "Saved {name}. Open it on the other browser."
+  },
+  "cmd.sync.wizard.saveFileFailed": {
+    "ja": "握手ファイルを保存できませんでした。",
+    "en": "Could not save the handshake file."
+  },
+  "cmd.sync.wizard.invalidHandshakeFile": {
+    "ja": "握手ファイルが無効です。bmxt-*-offer.json / bmxt-*-answer.json（または bmxt-rtc1. コード）を選んでください。",
+    "en": "Invalid handshake file. Choose a bmxt-*-offer.json / bmxt-*-answer.json ticket (or a bmxt-rtc1. code)."
+  },
+  "cmd.sync.wizard.invalidInviteFile": {
+    "ja": "招待ファイルが無効です。bmxt-*-invite.json（または bmxt1. トークン）を選んでください。",
+    "en": "Invalid invite file. Choose a bmxt-*-invite.json ticket (or a bmxt1. token)."
+  },
+  "cmd.sync.wizard.wrongHandshakeFileRole": {
+    "ja": "ファイルの種類が違います。{expected} が必要ですが {actual} でした。",
+    "en": "Wrong handshake file kind. Expected {expected}, got {actual}."
+  },
+  "cmd.sync.wizard.openFileFailed": {
+    "ja": "ファイルを読めませんでした。",
+    "en": "Could not read the file."
+  },
   "cmd.sync.link.connecting": {
     "ja": "接続中...",
     "en": "Connecting..."
@@ -1166,5 +1454,53 @@
   "cmd.sync.link.statusConnected": {
     "ja": "sync {names}",
     "en": "sync {names}"
+  },
+  "cmd.bookmark.error.unknownOption": {
+    "ja": "error: 不明な bookmark オプション: {option}",
+    "en": "error: unknown bookmark option: {option}"
+  },
+  "cmd.bookmark.usage.line1": {
+    "ja": "usage: bookmark -list [--folder <id>] [--device <id>|--peers]",
+    "en": "usage: bookmark -list [--folder <id>] [--device <id>|--peers]"
+  },
+  "cmd.bookmark.usage.line2": {
+    "ja": "  bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup]",
+    "en": "  bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup]"
+  },
+  "cmd.bookmark.usage.line3": {
+    "ja": "  bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]",
+    "en": "  bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n]"
+  },
+  "cmd.bookmark.usage.line4": {
+    "ja": "  bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…>",
+    "en": "  bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…>"
+  },
+  "cmd.bookmark.usage.line5": {
+    "ja": "  bookmark -backup | bookmark -restore | … | tab -list | bookmark -add [--parent <id>]",
+    "en": "  bookmark -backup | bookmark -restore | … | tab -list | bookmark -add [--parent <id>]"
+  },
+  "cmd.bookmark.usage.line6": {
+    "ja": "  同一 URL がある場合は --force（追加）または --skip-dup（スキップ）。--parent はフォルダ id（Tab で候補）。",
+    "en": "  On duplicate URL use --force (add) or --skip-dup (skip). --parent is a folder id (Tab candidates)."
+  },
+  "cmd.history.error.unknownOption": {
+    "ja": "error: 不明な history オプション: {option}",
+    "en": "error: unknown history option: {option}"
+  },
+  "cmd.history.usage.line1": {
+    "ja": "usage: history -list [<pattern>] [--device <id>|--peers]",
+    "en": "usage: history -list [<pattern>] [--device <id>|--peers]"
+  },
+  "cmd.history.usage.line2": {
+    "ja": "  history -delete <url…> | history -delete-range --from <iso|ms> --to <iso|ms>",
+    "en": "  history -delete <url…> | history -delete-range --from <iso|ms> --to <iso|ms>"
+  },
+  "cmd.history.usage.line3": {
+    "ja": "  history -backup | history -restore [--as-bookmarks]",
+    "en": "  history -backup | history -restore [--as-bookmarks]"
+  },
+  "cmd.history.usage.line4": {
+    "ja": "  履歴 DB への書き戻しは不可。restore は一覧読み込みまたは BM 化。",
+    "en": "  History DB rewrite is unsupported; restore loads a list or creates bookmarks."
   }
 }

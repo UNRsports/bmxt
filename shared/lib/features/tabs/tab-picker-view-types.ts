@@ -1,6 +1,12 @@
 import type { Dispatch, RefObject, SetStateAction } from "react"
 import type { TabPickerRow } from "./picker-rows"
-import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice } from "./tab-picker-overlay-types"
+import type {
+  ActionMenuPanel,
+  BookmarkPanel,
+  BulkSubMode,
+  EditPanel,
+  GroupChoice
+} from "./tab-picker-overlay-types"
 
 export type TabPickerViewProps = {
   headLine: string
@@ -35,6 +41,11 @@ export type TabPickerViewProps = {
   editPanel: EditPanel | null
   actionMenuPanel: ActionMenuPanel | null
   actionMenuPanelRef: RefObject<HTMLDivElement | null>
+  bookmarkPanel: BookmarkPanel | null
+  bookmarkPanelRef: RefObject<HTMLDivElement | null>
+  onBookmarkItemTitleChange: (index: number, value: string) => void
+  onBookmarkItemUrlChange: (index: number, value: string) => void
+  onBookmarkNewFolderNameChange: (value: string) => void
   groupMetaColorStripRef: RefObject<HTMLDivElement | null>
   newGroupTitle: string
   setNewGroupTitle: Dispatch<SetStateAction<string>>

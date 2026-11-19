@@ -1,3 +1,9 @@
+import {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  formatSearchLegendLabel,
+  type SearchLegendMode
+} from "../../setting/search-legend-mode.ts"
+
 export type PickerSource = "tab" | "history" | "bookmark" | "page" | "snapshot"
 
 /** EN: One innerText line hit inside an open tab (`search -list --page`). */
@@ -37,29 +43,39 @@ export function pickerEntrySearchSources(entry: PickerEntry): PickerSource[] {
   return []
 }
 
-/** EN: True when a search row should offer the in-picker open-target tree (`[history]`). */
+/** EN: True when a search row should offer the in-picker open-target tree. */
 export function searchEntryOffersOpenDestination(entry: PickerEntry): boolean {
-  return pickerEntrySearchSources(entry).includes("history")
+  const sources = pickerEntrySearchSources(entry)
+  return sources.includes("history") || sources.includes("bookmark")
 }
 
-/** EN: Picker row prefix for search results, e.g. `[history, page]`. */
-export function searchPickerSourceLabel(entry: PickerEntry): string {
+/** EN: Picker row prefix for search results, e.g. `[history, page]` or `[⏱️ history]`. */
+export function searchPickerSourceLabel(
+  entry: PickerEntry,
+  legendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE
+): string {
   const sources = pickerEntrySearchSources(entry)
   if (sources.length === 0) {
-    return `[${entry.source}]`
+    return formatSearchLegendLabel([entry.source], legendMode)
   }
-  return `[${sources.join(", ")}]`
+  return formatSearchLegendLabel(sources, legendMode)
 }
 
-export function entryDisplayLine(entry: PickerEntry): string {
-  return searchPickerSummaryLine(entry)
+export function entryDisplayLine(
+  entry: PickerEntry,
+  legendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE
+): string {
+  return searchPickerSummaryLine(entry, legendMode)
 }
 
 /** EN: One picker row per tab; hit count only (detail shown in headline while cycling n/N). */
-export function searchPickerSummaryLine(entry: PickerEntry): string {
+export function searchPickerSummaryLine(
+  entry: PickerEntry,
+  legendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE
+): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
-  const label = searchPickerSourceLabel(entry)
+  const label = searchPickerSourceLabel(entry, legendMode)
   const base =
     url && !url.startsWith("(no ")
       ? `${label} ${title} — ${url}`
@@ -89,10 +105,14 @@ export function searchPickerMatchDetail(entry: PickerEntry, matchHi = 0): string
 }
 
 /** EN: Picker row text; `matchHi` selects which page hit snippet to show. */
-export function searchPickerDisplayLine(entry: PickerEntry, matchHi = 0): string {
+export function searchPickerDisplayLine(
+  entry: PickerEntry,
+  matchHi = 0,
+  legendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE
+): string {
   const title = entry.title.trim() || "(no title)"
   const url = entry.url.trim()
-  const label = searchPickerSourceLabel(entry)
+  const label = searchPickerSourceLabel(entry, legendMode)
   const base =
     url && !url.startsWith("(no ")
       ? `${label} ${title} — ${url}`

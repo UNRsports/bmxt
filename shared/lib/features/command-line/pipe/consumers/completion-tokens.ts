@@ -11,11 +11,17 @@ import { cmdByName } from "../../../bmxt-core/registry/table.gen.ts"
 /** EN: Canonical pipe consumer command names (same order as PIPE_CONSUMER_ENTRIES). */
 export const PIPE_CONSUMER_COMPLETION_IDS = [
   "browse",
+  "open",
+  "jump",
+  "move",
+  "new-window",
   "back",
   "forward",
   "reload",
   "close",
-  "tab"
+  "tab",
+  "bookmark",
+  "history"
 ] as const
 
 /**

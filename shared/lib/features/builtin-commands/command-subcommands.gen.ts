@@ -30,7 +30,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
-  "group": [] as const,
+  "group": [
+    { head: "new", trailingTokens: [] as const, tail: "rest" },
+    { head: "add", trailingTokens: [] as const, tail: "rest" }
+  ] as const,
   "help": [] as const,
   "forward": [] as const,
   "reload": [] as const,
@@ -70,6 +73,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "browse": [] as const,
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
+    { head: "-set", trailingTokens: [] as const, tail: "rest" },
+    { head: "-save", trailingTokens: [] as const, tail: "none" },
+    { head: "-cancel", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
@@ -89,7 +95,30 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-accept", trailingTokens: [] as const, tail: "rest" },
     { head: "-ping", trailingTokens: [] as const, tail: "rest" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
-  ] as const
+  ] as const,
+  "bookmark": [
+    { head: "-list", trailingTokens: ["--folder","--device","--peers"] as const, tail: "rest" },
+    { head: "-add", trailingTokens: ["--title","--parent","--force","--skip-dup"] as const, tail: "rest" },
+    { head: "-folder", trailingTokens: [] as const, tail: "rest" },
+    { head: "-remove", trailingTokens: [] as const, tail: "rest" },
+    { head: "-move", trailingTokens: [] as const, tail: "rest" },
+    { head: "-send", trailingTokens: [] as const, tail: "rest" },
+    { head: "-backup", trailingTokens: [] as const, tail: "none" },
+    { head: "-restore", trailingTokens: ["--as-bookmarks"] as const, tail: "rest" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
+  ] as const,
+  "history": [
+    { head: "-list", trailingTokens: ["--device","--peers"] as const, tail: "rest" },
+    { head: "-delete", trailingTokens: [] as const, tail: "rest" },
+    { head: "-delete-range", trailingTokens: ["--from","--to"] as const, tail: "rest" },
+    { head: "-backup", trailingTokens: [] as const, tail: "none" },
+    { head: "-restore", trailingTokens: ["--as-bookmarks"] as const, tail: "rest" },
+    { head: "help", trailingTokens: [] as const, tail: "none" }
+  ] as const,
+  "open": [] as const,
+  "jump": [] as const,
+  "move": [] as const,
+  "new-window": [] as const
 }
 
 export function getSubcommandBranches(canonicalName: string): readonly CommandSubcommandBranch[] {
@@ -154,8 +183,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-list" || lower === "-exit" || lower === "help"
     }
-    case "group":
-      return false
+    case "group": {
+      const lower = token.toLowerCase()
+      return lower === "new" || lower === "add"
+    }
     case "help":
       return false
     case "forward":
@@ -188,7 +219,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "setting": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "help"
+      return lower === "-list" || lower === "-set" || lower === "-save" || lower === "-cancel" || lower === "-exit" || lower === "help"
     }
     case "tutorial": {
       const lower = token.toLowerCase()
@@ -198,6 +229,22 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
     }
+    case "bookmark": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "-add" || lower === "-folder" || lower === "-remove" || lower === "-move" || lower === "-send" || lower === "-backup" || lower === "-restore" || lower === "help"
+    }
+    case "history": {
+      const lower = token.toLowerCase()
+      return lower === "-list" || lower === "-delete" || lower === "-delete-range" || lower === "-backup" || lower === "-restore" || lower === "help"
+    }
+    case "open":
+      return false
+    case "jump":
+      return false
+    case "move":
+      return false
+    case "new-window":
+      return false
     default:
       return false
   }

@@ -2,6 +2,7 @@ import type { DeviceListScope } from "../../sync/bus/device-list-scope"
 import type { TabPickerRow } from "../picker-rows"
 import type {
   ActionMenuPanel,
+  BookmarkPanel,
   BulkSubMode,
   EditPanel,
   GroupChoice,
@@ -44,6 +45,8 @@ export type TabPickerEngineState = {
   editPanel: EditPanel | null
   editTitle: string
   actionMenuPanel: ActionMenuPanel | null
+  /** EN: Bookmark add panel (action menu / `:bookmark`); null when closed. */
+  bookmarkPanel: BookmarkPanel | null
 }
 
 export type TabPickerEngineAction =

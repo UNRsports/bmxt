@@ -329,7 +329,9 @@ const HELP_SECTION_BY_CANONICAL: Readonly<Record<string, HelpMessageKey>> = {
   search: "help.section.search",
   session: "help.section.session",
   setting: "help.section.setting",
-  translate: "help.section.translate"
+  sync: "help.section.sync",
+  translate: "help.section.translate",
+  tutorial: "help.section.tutorial"
 }
 
 function canonicalFirstName(token: string): string {

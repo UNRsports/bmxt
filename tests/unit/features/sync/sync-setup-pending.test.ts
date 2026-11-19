@@ -1,10 +1,10 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import { parseSyncSetupRtcPaste } from "../../../../shared/lib/features/sync/handshake/clipboard/rtc-paste.ts"
 import {
   parseSyncSetupFamilyChoice,
   parseSyncSetupInvitePaste,
-  parseSyncSetupRoleChoice,
-  parseSyncSetupRtcPaste
+  parseSyncSetupRoleChoice
 } from "../../../../shared/lib/features/sync/setup/sync-setup-pending.ts"
 
 describe("sync-setup-pending parsers", () => {

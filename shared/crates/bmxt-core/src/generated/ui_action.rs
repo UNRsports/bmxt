@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum UiAction {
+    #[serde(rename = "bookmark_backup")]
+    BookmarkBackup,
+    #[serde(rename = "bookmark_restore")]
+    BookmarkRestore {
+    as_bookmarks: String,
+    },
     #[serde(rename = "close_picker")]
     ClosePicker {
     slot: String,
@@ -16,6 +22,22 @@ pub enum UiAction {
     },
     #[serde(rename = "group_new_from_selection")]
     GroupNewFromSelection,
+    #[serde(rename = "history_backup")]
+    HistoryBackup,
+    #[serde(rename = "history_restore")]
+    HistoryRestore {
+    as_bookmarks: String,
+    },
+    #[serde(rename = "jump_target")]
+    JumpTarget {
+    activate_link: i64,
+    line: i64,
+    match_index: i64,
+    needle: String,
+    path: String,
+    tab_id: i64,
+    url: String,
+    },
     #[serde(rename = "nav_arm")]
     NavArm,
     #[serde(rename = "nav_confirm_close")]
@@ -26,14 +48,19 @@ pub enum UiAction {
     NavDisarm,
     #[serde(rename = "open_picker")]
     OpenPicker {
+    device_id: String,
+    device_scope: String,
     line: String,
     list_id: String,
     show_url: String,
     },
     #[serde(rename = "open_plain_list")]
     OpenPlainList {
+    device_id: String,
+    device_scope: String,
     line: String,
     list_id: String,
+    show_url: String,
     },
     #[serde(rename = "picker_pass")]
     PickerPass,
@@ -50,6 +77,15 @@ pub enum UiAction {
     feature_id: String,
     mode: String,
     },
+    #[serde(rename = "setting_cancel")]
+    SettingCancel,
+    #[serde(rename = "setting_save")]
+    SettingSave,
+    #[serde(rename = "setting_set")]
+    SettingSet {
+    key: String,
+    value: String,
+    },
     #[serde(rename = "show_help")]
     ShowHelp,
     #[serde(rename = "snapshot_save")]
@@ -63,6 +99,12 @@ pub enum UiAction {
     #[serde(rename = "sync_answer")]
     SyncAnswer {
     code: String,
+    },
+    #[serde(rename = "sync_bookmark_send")]
+    SyncBookmarkSend {
+    device_id: String,
+    mode: String,
+    payload: String,
     },
     #[serde(rename = "sync_connect")]
     SyncConnect {

@@ -29,7 +29,7 @@ export {
   formatRtcHandshakeCode,
   parseRtcHandshakeCode,
   RTC_HANDSHAKE_PREFIX
-} from "./discovery/rtc-handshake-codec"
+} from "./handshake/common/rtc-handshake-codec.ts"
 export { sanitizeRemoteOpenUrls, sanitizeGroupTitle } from "./bus/remote-open-sanitize.ts"
 export { applyRemoteOpenTabs } from "./bus/remote-open.ts"
 export {

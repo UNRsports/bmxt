@@ -19,19 +19,59 @@
   },
   {
     "line": "tab -list",
-    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list" } }
+    "expect": {
+      "ty": "ui",
+      "action": {
+        "kind": "open_plain_list",
+        "list_id": "tabs",
+        "line": "tab -list",
+        "show_url": "false",
+        "device_scope": "local",
+        "device_id": ""
+      }
+    }
   },
   {
     "line": "tab -list -url",
-    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list -url" } }
+    "expect": {
+      "ty": "ui",
+      "action": {
+        "kind": "open_plain_list",
+        "list_id": "tabs",
+        "line": "tab -list -url",
+        "show_url": "true",
+        "device_scope": "local",
+        "device_id": ""
+      }
+    }
   },
   {
     "line": "tab -list --peers",
-    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list --peers" } }
+    "expect": {
+      "ty": "ui",
+      "action": {
+        "kind": "open_plain_list",
+        "list_id": "tabs",
+        "line": "tab -list --peers",
+        "show_url": "false",
+        "device_scope": "peers",
+        "device_id": ""
+      }
+    }
   },
   {
     "line": "tab -list --device peerDev1 -url",
-    "expect": { "ty": "ui", "action": { "kind": "open_plain_list", "list_id": "tabs", "line": "tab -list --device peerDev1 -url" } }
+    "expect": {
+      "ty": "ui",
+      "action": {
+        "kind": "open_plain_list",
+        "list_id": "tabs",
+        "line": "tab -list --device peerDev1 -url",
+        "show_url": "true",
+        "device_scope": "device",
+        "device_id": "peerDev1"
+      }
+    }
   },
   { "line": "tab -nowurl", "expect": { "ty": "effects", "effects": [{ "kind": "tabs_nu" }] } },
   {
@@ -68,14 +108,30 @@
     "line": "search -list",
     "expect": {
       "ty": "effects",
-      "effects": [{ "kind": "search_list", "dispatch_line": "search -list --all" }]
+      "effects": [
+        {
+          "kind": "search_list",
+          "dispatch_line": "search -list --all",
+          "peer_dispatch_line": "search -list --all",
+          "device_scope": "local",
+          "device_id": ""
+        }
+      ]
     }
   },
   {
     "line": "search -list --page foo",
     "expect": {
       "ty": "effects",
-      "effects": [{ "kind": "search_list", "dispatch_line": "search -list --page foo" }]
+      "effects": [
+        {
+          "kind": "search_list",
+          "dispatch_line": "search -list --page foo",
+          "peer_dispatch_line": "search -list --page foo",
+          "device_scope": "local",
+          "device_id": ""
+        }
+      ]
     }
   },
   {
@@ -116,6 +172,7 @@
     "line": "unknowncmd",
     "expect": {
       "ty": "msgs",
+      "exitStatus": 127,
       "msgs": [{ "key": "cmd.error.unknownCommand", "params": { "cmdToken": "unknowncmd" } }]
     }
   }

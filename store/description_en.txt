@@ -33,6 +33,11 @@ This program is an experimental / trial build and may contain bugs. UNRsports (t
 Launch with the `launch-bmxt` shortcut (default Shift+Alt+C), then try `tutorial` or `tab -list | browse`.
 
 ◆Version history
+0.9.4:
+- Fixed processing results to display icons
+- Reviewed UI detail behavior
+- Reviewed internal command processing specifications
+
 0.9.1:
 - Fixed and adjusted how search command results are displayed
 - Adjusted group preservation when moving tabs between profiles via sync

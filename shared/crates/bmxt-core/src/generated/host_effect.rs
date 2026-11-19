@@ -6,6 +6,34 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum HostEffect {
+    #[serde(rename = "bookmark_create")]
+    BookmarkCreate {
+    dup_mode: String,
+    parent_id: String,
+    title: String,
+    url: String,
+    },
+    #[serde(rename = "bookmark_create_folder")]
+    BookmarkCreateFolder {
+    parent_id: String,
+    title: String,
+    },
+    #[serde(rename = "bookmark_list")]
+    BookmarkList {
+    device_id: String,
+    device_scope: String,
+    folder_id: String,
+    },
+    #[serde(rename = "bookmark_move")]
+    BookmarkMove {
+    ids: String,
+    index: String,
+    parent_id: String,
+    },
+    #[serde(rename = "bookmark_remove")]
+    BookmarkRemove {
+    ids: String,
+    },
     #[serde(rename = "clear_log")]
     ClearLog,
     #[serde(rename = "close_current_tab")]
@@ -29,13 +57,38 @@ pub enum HostEffect {
     },
     #[serde(rename = "exit_pane")]
     ExitPane,
+    #[serde(rename = "group_add")]
+    GroupAdd {
+    group_id: i64,
+    tab_ids: Vec<i64>,
+    },
     #[serde(rename = "group_new")]
     GroupNew {
     tab_ids: Vec<i64>,
     },
+    #[serde(rename = "history_delete_range")]
+    HistoryDeleteRange {
+    end_ms: String,
+    start_ms: String,
+    },
+    #[serde(rename = "history_delete_url")]
+    HistoryDeleteUrl {
+    urls: String,
+    },
     #[serde(rename = "navigate_current_tab")]
     NavigateCurrentTab {
     url: String,
+    },
+    #[serde(rename = "open_url_into_group")]
+    OpenUrlIntoGroup {
+    group_id: i64,
+    url: String,
+    window_id: i64,
+    },
+    #[serde(rename = "open_url_into_window")]
+    OpenUrlIntoWindow {
+    url: String,
+    window_id: i64,
     },
     #[serde(rename = "open_url_new_tab")]
     OpenUrlNewTab {
@@ -57,7 +110,10 @@ pub enum HostEffect {
     },
     #[serde(rename = "search_list")]
     SearchList {
+    device_id: String,
+    device_scope: String,
     dispatch_line: String,
+    peer_dispatch_line: String,
     },
     #[serde(rename = "search_page")]
     SearchPage {
@@ -93,9 +149,19 @@ pub enum HostEffect {
     device_scope: String,
     show_url: String,
     },
+    #[serde(rename = "tabs_move")]
+    TabsMove {
+    group_id: i64,
+    tab_ids: Vec<i64>,
+    window_id: i64,
+    },
     #[serde(rename = "tabs_move_url")]
     TabsMoveUrl {
     url: String,
+    },
+    #[serde(rename = "tabs_new_window")]
+    TabsNewWindow {
+    tab_ids: Vec<i64>,
     },
     #[serde(rename = "tabs_nu")]
     TabsNu,

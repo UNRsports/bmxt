@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { tCmd } from "../../setting/i18n/ns/cmd"
 import type { UiLocale } from "../../setting/locale"
-import { isSyncHandshakeCommandMessage } from "../connect/sync-handshake-protocol.ts"
+import { wizardCopyOutbound } from "../handshake/clipboard/wizard-clipboard.ts"
+import {
+  HandshakeFileOpenButton,
+  HandshakeOutboundActions
+} from "../handshake/file/wizard-file-ui.tsx"
+import {
+  wizardLoadInviteFile,
+  wizardLoadRtcFile,
+  wizardSaveOutboundHandshakeFile,
+  wizardSaveOutboundInviteFile
+} from "../handshake/file/wizard-file.ts"
 import {
   cancelSyncWizard,
   closeSyncWizardQuiet,
   wizardChooseFamily,
   wizardChooseRole,
   wizardContinueAfterInvite,
-  wizardCopyOutbound,
   wizardFinish,
   wizardSubmitInvite,
   wizardSubmitRtc,
@@ -16,6 +25,7 @@ import {
 } from "./sync-wizard-controller.ts"
 import { useSyncConnectPending, useSyncWizardState } from "./use-sync-wizard.ts"
 import type { SyncWizardState } from "./sync-wizard-state.ts"
+import { patchSyncWizardState } from "./sync-wizard-state.ts"
 
 export type SyncWizardPanelProps = {
   locale: UiLocale
@@ -108,35 +118,18 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
     [props.locale, props.appendLogLines, props.focusPrompt]
   )
 
-  const runCopy = useCallback(async () => {
-    await wizardCopyOutbound(sink)
-  }, [sink])
-
-  useEffect(() => {
-    if (!state.open) {
-      return
-    }
-    const onMessage = (message: unknown) => {
-      if (!isSyncHandshakeCommandMessage(message)) {
-        return
-      }
-      if (pending?.outboundCode == null) {
-        return
-      }
-      void runCopy()
-    }
-    chrome.runtime.onMessage.addListener(onMessage)
-    return () => {
-      chrome.runtime.onMessage.removeListener(onMessage)
-    }
-  }, [state.open, pending?.outboundCode, runCopy])
-
   if (!state.open) {
     return null
   }
 
   const busy = state.busy
   const outbound = pending?.outboundCode ?? null
+
+  const onRtcFileReadFailed = (): void => {
+    patchSyncWizardState({
+      banner: tCmd("cmd.sync.wizard.openFileFailed", locale)
+    })
+  }
 
   let body: ReactNode = null
 
@@ -170,6 +163,12 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
     body = (
       <>
         <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadPasteInvite", locale)}</p>
+        <HandshakeFileOpenButton
+          locale={locale}
+          disabled={busy}
+          onText={(text) => void wizardLoadInviteFile(sink, text)}
+          onReadFailed={onRtcFileReadFailed}
+        />
         <PasteForm
           locale={locale}
           disabled={busy}
@@ -191,13 +190,14 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       <>
         <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyInvite", locale)}</p>
         {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <button
-          type="button"
-          className="bmxt-sync-wizard-copy"
+        <HandshakeOutboundActions
+          locale={locale}
           disabled={busy || outbound === null}
-          onClick={() => void runCopy()}>
-          {tCmd("cmd.sync.connect.copyButton", locale)}
-        </button>
+          onCopy={() => void wizardCopyOutbound(sink)}
+          onSaveFile={() => {
+            wizardSaveOutboundInviteFile(sink)
+          }}
+        />
         <button
           type="button"
           className="bmxt-sync-wizard-primary"
@@ -239,16 +239,23 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
             : tCmd("cmd.sync.wizard.leadCopyOffer", locale)}
         </p>
         {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <button
-          type="button"
-          className="bmxt-sync-wizard-copy"
+        <HandshakeOutboundActions
+          locale={locale}
           disabled={busy || outbound === null}
-          onClick={() => void runCopy()}>
-          {tCmd("cmd.sync.connect.copyButton", locale)}
-        </button>
+          onCopy={() => void wizardCopyOutbound(sink)}
+          onSaveFile={() => {
+            wizardSaveOutboundHandshakeFile(sink)
+          }}
+        />
         <p className="bmxt-sync-wizard-lead bmxt-sync-wizard-lead--follow">
           {tCmd("cmd.sync.wizard.leadPasteAnswer", locale)}
         </p>
+        <HandshakeFileOpenButton
+          locale={locale}
+          disabled={busy}
+          onText={(text) => void wizardLoadRtcFile(sink, text)}
+          onReadFailed={onRtcFileReadFailed}
+        />
         <PasteForm
           locale={locale}
           disabled={busy}
@@ -268,6 +275,12 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
               })
             : tCmd("cmd.sync.wizard.leadPasteOffer", locale)}
         </p>
+        <HandshakeFileOpenButton
+          locale={locale}
+          disabled={busy}
+          onText={(text) => void wizardLoadRtcFile(sink, text)}
+          onReadFailed={onRtcFileReadFailed}
+        />
         <PasteForm
           locale={locale}
           disabled={busy}
@@ -282,13 +295,14 @@ export function SyncWizardPanel(props: SyncWizardPanelProps): ReactNode {
       <>
         <p className="bmxt-sync-wizard-lead">{tCmd("cmd.sync.wizard.leadCopyAnswer", locale)}</p>
         {outbound !== null ? <CodeBlock code={outbound} locale={locale} /> : null}
-        <button
-          type="button"
-          className="bmxt-sync-wizard-copy"
+        <HandshakeOutboundActions
+          locale={locale}
           disabled={busy || outbound === null}
-          onClick={() => void runCopy()}>
-          {tCmd("cmd.sync.connect.copyButton", locale)}
-        </button>
+          onCopy={() => void wizardCopyOutbound(sink)}
+          onSaveFile={() => {
+            wizardSaveOutboundHandshakeFile(sink)
+          }}
+        />
         <button
           type="button"
           className="bmxt-sync-wizard-primary"

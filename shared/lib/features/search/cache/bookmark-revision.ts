@@ -9,17 +9,32 @@ function walkBookmarkTree(
 ): void {
   for (const n of nodes) {
     revisionParts.push(`${n.id}:${n.dateAdded ?? 0}:${n.dateGroupModified ?? 0}`)
+    const parentId = typeof n.parentId === "string" ? n.parentId : ""
+    const title = n.title ?? ""
+    const dateAdded = n.dateAdded ?? 0
     if (n.url) {
       revisionParts.push(`u:${n.url.length}`)
       if (flat.length < maxRows) {
         flat.push({
-          title: n.title ?? "",
+          bookmarkId: n.id,
+          parentId,
+          title,
           url: n.url,
-          dateAdded: n.dateAdded ?? 0
+          dateAdded,
+          isFolder: false
         })
       }
-    }
-    if (n.children?.length) {
+    } else if (n.children !== undefined) {
+      if (flat.length < maxRows) {
+        flat.push({
+          bookmarkId: n.id,
+          parentId,
+          title,
+          url: "",
+          dateAdded,
+          isFolder: true
+        })
+      }
       walkBookmarkTree(n.children, revisionParts, flat, maxRows)
     }
   }
@@ -32,7 +47,7 @@ export function bookmarkTreeRevision(tree: chrome.bookmarks.BookmarkTreeNode[]):
   return parts.join("|")
 }
 
-/** EN: One pass — revision string + capped flat bookmark rows. */
+/** EN: One pass — revision string + capped flat bookmark rows (urls + folders). */
 export function flattenBookmarkTreeWithRevision(
   tree: chrome.bookmarks.BookmarkTreeNode[],
   maxRows: number

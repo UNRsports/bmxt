@@ -7,10 +7,10 @@
  * Extending a catalog requires codegen + a thin TS executor; new *commands* that reuse catalogs need Rust only.
  *
  * Layers (do not bypass with ad-hoc command-name coupling):
- * 1. DispatchBundle — Rust → host (lines | effects | ui | msgs)
+ * 1. DispatchBundle — Rust → host (lines | effects | ui | msgs + plan-time `exitStatus`)
  * 2. ListResult (bmxt-list/1) — plain `-list` / picker projection
  * 3. BmxtRuleStream (bmxt-rule/1) — pipe `|` stage handoff
- * 4. Compound exit status — `&&` / `||` / `;` sequencing
+ * 4. Compound exit status — `&&` / `||` / `;` sequencing (prefer bundle `exitStatus`)
  *
  * Grep policy (TS host): codegen switches, i18n keys, and executor ids (`list_id` / effect `kind` /
  * overlay id) may appear. Canonical command-name semantic branches are forbidden (`pnpm run verify:host-blind`).
@@ -47,6 +47,11 @@ export type StaticListKind = Exclude<ListRecordKind, "search.hit">
 export function bmxtRuleKindForSearchHitSource(source: string): string {
   const normalized = source.toLowerCase()
   if (normalized.includes("bookmark")) {
+    // EN: bookmark.folder sources (e.g. "bookmark.folder") must resolve before generic "bookmark".
+    // JA: "bookmark.folder" を含むソースは汎用 "bookmark" より先に解決する。
+    if (normalized.includes("folder")) {
+      return "bookmark.folder"
+    }
     return "bookmark"
   }
   if (normalized.includes("history")) {

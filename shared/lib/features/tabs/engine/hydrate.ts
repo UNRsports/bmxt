@@ -57,7 +57,8 @@ export function createInitialTabPickerEngineState(
     newTabUrl: "",
     editPanel: null,
     editTitle: "",
-    actionMenuPanel: null
+    actionMenuPanel: null,
+    bookmarkPanel: null
   }
 }
 

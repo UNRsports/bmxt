@@ -18,6 +18,8 @@ pub fn unknown_option(command: &str, option: &str, usage_keys: &[&str]) -> Dispa
         "setting" => msg_param("cmd.setting.error.unknownOption", "option", option),
         "tutorial" => msg_param("cmd.tutorial.error.unknownOption", "option", option),
         "sync" => msg_param("cmd.sync.error.unknownOption", "option", option),
+        "bookmark" => msg_param("cmd.bookmark.error.unknownOption", "option", option),
+        "history" => msg_param("cmd.history.error.unknownOption", "option", option),
         _ => msg_param("cmd.error.unknownCommand", "cmdToken", option),
     }];
     for key in usage_keys {
@@ -62,5 +64,6 @@ mod tests {
         let raw = serde_json::to_string(&err).unwrap();
         assert!(raw.contains(r#""promptPrefix":"tab ""#), "{raw}");
         assert!(raw.contains("cmd.common.availableOptions"), "{raw}");
+        assert!(raw.contains(r#""exitStatus":2"#), "{raw}");
     }
 }

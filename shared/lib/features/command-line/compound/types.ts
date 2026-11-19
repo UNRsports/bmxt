@@ -29,6 +29,11 @@ export type SegmentOutcome = {
   listResult?: import("../list-output/types.ts").ListResult
   /** EN: Inter-command stream (`bmxt-rule/1`) for pipe consumers. */
   bmxtRuleStream?: import("../../bmxt-rule/types.ts").BmxtRuleStream
+  /**
+   * EN: Structured list plan from WASM IR (pipe producer attach without re-parsing the line).
+   * JA: WASM IR 由来の一覧計画（パイプ左辺で行再パースしない）。
+   */
+  listPlan?: import("../list-commands/list-plan-from-ir.ts").ListPlan
 }
 
 export type ParseAndSegmentsResult =

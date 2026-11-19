@@ -33,18 +33,13 @@ export function hostCommands(browser: HostBrowser) {
   // Ctrl|Alt|Command|MacCtrl, then optional Shift — e.g. `Alt+Shift+C`.
   // Same physical keys; string order differs or Gecko ignores the suggestion.
   // Chrome: at most 4 `suggested_key` entries in `commands` (MV3 load fails otherwise).
-  // Slot 4 = handshake copy only (paste is normal prompt paste — no command).
   const chromeKeys = {
     launch: { default: "Shift+Alt+C", mac: "Shift+Alt+C" },
-    reset: { default: "Shift+Alt+R", mac: "Shift+Alt+R" },
-    toggleFloat: { default: "Shift+Alt+F", mac: "Shift+Alt+F" },
-    handshakeCopy: { default: "Shift+Alt+Y", mac: "Shift+Alt+Y" }
+    reset: { default: "Shift+Alt+R", mac: "Shift+Alt+R" }
   }
   const firefoxKeys = {
     launch: { default: "Alt+Shift+C", mac: "Alt+Shift+C" },
-    reset: { default: "Alt+Shift+R", mac: "Alt+Shift+R" },
-    toggleFloat: { default: "Alt+Shift+F", mac: "Alt+Shift+F" },
-    handshakeCopy: { default: "Alt+Shift+Y", mac: "Alt+Shift+Y" }
+    reset: { default: "Alt+Shift+R", mac: "Alt+Shift+R" }
   }
   const keys = browser === "chrome" ? chromeKeys : firefoxKeys
 
@@ -56,30 +51,18 @@ export function hostCommands(browser: HostBrowser) {
     suggested_key: keys.reset,
     description: "__MSG_commandResetBmxt__"
   }
-  const toggleFloat = {
-    suggested_key: keys.toggleFloat,
-    description: "__MSG_commandToggleBmxtFloat__"
-  }
-  const handshakeCopy = {
-    suggested_key: keys.handshakeCopy,
-    description: "__MSG_commandSyncHandshakeCopy__"
-  }
 
   if (browser === "chrome") {
     return {
       "launch-bmxt": { ...launch, global: true },
-      "reset-bmxt": { ...reset, global: true },
-      "toggle-bmxt-float": { ...toggleFloat, global: true },
-      "sync-handshake-copy": handshakeCopy
+      "reset-bmxt": { ...reset, global: true }
     }
   }
 
   // Firefox: `commands.*.global` is not supported — shortcuts work only while Firefox is focused.
   return {
     "launch-bmxt": launch,
-    "reset-bmxt": reset,
-    "toggle-bmxt-float": toggleFloat,
-    "sync-handshake-copy": handshakeCopy
+    "reset-bmxt": reset
   }
 }
 
@@ -96,7 +79,9 @@ export function hostContentSecurityPolicy(browser: HostBrowser): {
       ? "img-src 'self' data: blob: https: http: chrome: moz-anno:;"
       : "img-src 'self' data: blob:;"
   return {
-    extension_pages: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'; style-src 'self'; ${imgSrc} font-src 'self' data:; worker-src 'self';`
+    // EN: connect-src keeps 'self' plus the fixed CLI localhost listener only (todo §11).
+    // JA: connect-src は 'self' と固定 CLI localhost 待ち受けのみ（todo §11）。
+    extension_pages: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' http://127.0.0.1:17653 http://localhost:17653; style-src 'self'; ${imgSrc} font-src 'self' data:; worker-src 'self';`
   }
 }
 

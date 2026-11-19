@@ -54,6 +54,20 @@ const SUSPICIOUS = [
   /\/\^\\s\*\(close\|c\)\\s\*\$\/i/
 ]
 
+/**
+ * EN: Pipe RHS token judgment must stay in Rust (`classify_pipe_consumer`).
+ * Scoped to `command-line/pipe/` so IME insert UX (e.g. browse → `| browse`) is not flagged.
+ */
+const PIPE_RHS_SUSPICIOUS = [
+  /\.toLowerCase\(\)\s*(?:===|==)\s*["'](?:browse|jump|new-window|back|forward|reload)["']/,
+  /normalizeToken\(parts\[0\]!\)\s*!==\s*["'](?:tab|open|move)["']/,
+  /parts\[0\]!\.toLowerCase\(\)\s*!==\s*["'](?:open|move)["']/,
+  /c\.name\s*!==\s*["'](?:close|back|forward|reload)["']/
+]
+
+const PIPE_RHS_PREFIX = "command-line/pipe/"
+const PIPE_RHS_CLASSIFY_ALLOW = "command-line/pipe/consumers/classify.ts"
+
 function isAllowed(relPosix) {
   return ALLOW_PATH_PREFIXES.some(
     (p) => relPosix === p || relPosix.startsWith(p) || relPosix.endsWith(p)
@@ -93,6 +107,16 @@ for (const file of files) {
   for (const re of SUSPICIOUS) {
     if (re.test(text)) {
       hits.push(`${rel} matches ${re}`)
+    }
+  }
+  if (
+    relFeatures.startsWith(PIPE_RHS_PREFIX) &&
+    relFeatures !== PIPE_RHS_CLASSIFY_ALLOW
+  ) {
+    for (const re of PIPE_RHS_SUSPICIOUS) {
+      if (re.test(text)) {
+        hits.push(`${rel} matches pipe-RHS ${re}`)
+      }
     }
   }
 }

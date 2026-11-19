@@ -1,17 +1,11 @@
 import { tCmd } from "../../setting/i18n/ns/cmd"
-import type { UiLocale } from "../../setting/locale"
 import {
   clearSyncConnectPending,
   getSyncConnectPending
-} from "../connect/sync-connect-pending.ts"
-import { copySyncHandshakeCode } from "../connect/sync-handshake-actions.ts"
+} from "../handshake/common/sync-connect-pending.ts"
 import { expandSyncLogLines } from "../facade/expand-sync-log.ts"
 import { loadSyncPickerSummary } from "../facade/sync-picker-summary.ts"
 import { getSyncService } from "../facade/sync-service.ts"
-import {
-  parseSyncSetupInvitePaste,
-  parseSyncSetupRtcPaste
-} from "../setup/sync-setup-pending.ts"
 import {
   closeSyncWizardState,
   getSyncWizardState,
@@ -19,12 +13,28 @@ import {
   setSyncWizardState,
   type SyncWizardState
 } from "./sync-wizard-state.ts"
+import type { SyncWizardLogSink } from "./sync-wizard-types.ts"
+import { wizardSubmitInvite } from "./sync-wizard-submit-invite.ts"
+import {
+  cancelSyncWizard,
+  wizardFinish,
+  wizardSubmitRtc
+} from "./sync-wizard-submit-rtc.ts"
 
-export type SyncWizardLogSink = {
-  locale: UiLocale
-  appendLogLines: (lines: string[]) => void | Promise<void>
-  focusPrompt: () => void
-}
+export type { SyncWizardLogSink } from "./sync-wizard-types.ts"
+export {
+  cancelSyncWizard,
+  wizardFinish,
+  wizardSubmitRtc
+} from "./sync-wizard-submit-rtc.ts"
+export { wizardSubmitInvite } from "./sync-wizard-submit-invite.ts"
+export { wizardCopyOutbound } from "../handshake/clipboard/wizard-clipboard.ts"
+export {
+  wizardLoadInviteFile,
+  wizardLoadRtcFile,
+  wizardSaveOutboundHandshakeFile,
+  wizardSaveOutboundInviteFile
+} from "../handshake/file/wizard-file.ts"
 
 async function appendShort(
   sink: SyncWizardLogSink,
@@ -118,13 +128,6 @@ export async function openSyncWizardConnect(
   })
 }
 
-export function cancelSyncWizard(sink: SyncWizardLogSink): void {
-  clearSyncConnectPending()
-  closeSyncWizardState()
-  void sink.appendLogLines([tCmd("cmd.sync.setup.cancelled", sink.locale)])
-  sink.focusPrompt()
-}
-
 export function closeSyncWizardQuiet(sink: SyncWizardLogSink): void {
   closeSyncWizardState()
   sink.focusPrompt()
@@ -170,44 +173,6 @@ export async function wizardChooseFamily(
   })
 }
 
-export async function wizardSubmitInvite(sink: SyncWizardLogSink, raw: string): Promise<void> {
-  const current = getSyncWizardState()
-  if (!current.open || current.step !== "joinInvite" || current.busy) {
-    return
-  }
-  const parsed = parseSyncSetupInvitePaste(raw)
-  if (parsed.kind === "cancel") {
-    patchSyncWizardState({
-      step: "family",
-      banner: null
-    })
-    return
-  }
-  if (parsed.kind === "invalid") {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidInvite", sink.locale)
-    })
-    return
-  }
-  patchSyncWizardState({ busy: true, banner: null })
-  const result = await getSyncService().pair(parsed.value)
-  if (!result.ok) {
-    const expanded = expandSyncLogLines(result.lines, sink.locale)
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.pair.joinFailed", sink.locale)
-    })
-    return
-  }
-  clearSyncConnectPending()
-  patchSyncWizardState({
-    busy: false,
-    step: "role",
-    hasFamily: true,
-    banner: tCmd("cmd.sync.setup.familyReadyJoined", sink.locale)
-  })
-}
-
 export function wizardContinueAfterInvite(): void {
   const current = getSyncWizardState()
   if (!current.open || current.step !== "showInvite" || current.busy) {
@@ -250,117 +215,6 @@ export async function wizardChooseRole(
     step: "showOffer",
     banner: tCmd("cmd.sync.wizard.bannerCopyOfferGeneric", sink.locale)
   })
-}
-
-export async function wizardSubmitRtc(sink: SyncWizardLogSink, raw: string): Promise<void> {
-  const current = getSyncWizardState()
-  if (!current.open || current.busy) {
-    return
-  }
-  if (current.step !== "pasteOffer" && current.step !== "showOffer") {
-    return
-  }
-  const parsed = parseSyncSetupRtcPaste(raw)
-  if (parsed.kind === "cancel") {
-    cancelSyncWizard(sink)
-    return
-  }
-  if (parsed.kind === "invalid") {
-    patchSyncWizardState({
-      banner: tCmd("cmd.sync.wizard.invalidRtcCode", sink.locale)
-    })
-    return
-  }
-
-  const asAnswerSide = current.step === "pasteOffer"
-  patchSyncWizardState({ busy: true, banner: null })
-
-  if (asAnswerSide) {
-    const result = await getSyncService().answer(parsed.value)
-    if (!result.ok) {
-      const expanded = expandSyncLogLines(result.lines, sink.locale)
-      patchSyncWizardState({
-        busy: false,
-        banner: expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale)
-      })
-      return
-    }
-    const pending = getSyncConnectPending()
-    patchSyncWizardState({
-      busy: false,
-      step: "showAnswer",
-      peerDisplayName: pending?.peerDisplayName ?? current.peerDisplayName,
-      peerDeviceId:
-        pending && pending.peerDeviceId !== "*"
-          ? pending.peerDeviceId
-          : current.peerDeviceId,
-      banner: tCmd("cmd.sync.wizard.bannerCopyAnswer", sink.locale)
-    })
-    return
-  }
-
-  const result = await getSyncService().accept(parsed.value)
-  const expanded = expandSyncLogLines(result.lines, sink.locale)
-  if (!result.ok) {
-    const spent = result.lines.includes("sync.rtc.acceptFailed")
-    if (spent) {
-      clearSyncConnectPending()
-      patchSyncWizardState({
-        busy: false,
-        step: "done",
-        banner: tCmd("cmd.sync.setup.acceptRetryHint", sink.locale)
-      })
-      await sink.appendLogLines(expanded)
-      return
-    }
-    patchSyncWizardState({
-      busy: false,
-      banner: expanded[0] ?? tCmd("cmd.sync.setup.invalidRtcCode", sink.locale)
-    })
-    return
-  }
-  clearSyncConnectPending()
-  await sink.appendLogLines(expanded)
-  patchSyncWizardState({
-    busy: false,
-    step: "done",
-    banner: tCmd("cmd.sync.setup.done", sink.locale)
-  })
-}
-
-export async function wizardCopyOutbound(
-  sink: SyncWizardLogSink
-): Promise<{ ok: boolean }> {
-  const result = await copySyncHandshakeCode()
-  if (result.ok) {
-    patchSyncWizardState({
-      banner: tCmd(
-        getSyncConnectPending()?.kind === "invite"
-          ? "cmd.sync.wizard.copiedInvite"
-          : "cmd.sync.wizard.copied",
-        sink.locale
-      )
-    })
-    return { ok: true }
-  }
-  const expanded = expandSyncLogLines(result.lines, sink.locale)
-  // EN: Clipboard failure may include a last-resort dump token — keep that in the log only.
-  const dump = result.lines.find(
-    (t) => t.startsWith("sync.rtc.code:") || t.startsWith("sync.pair.invite:")
-  )
-  if (dump !== undefined) {
-    await sink.appendLogLines(expanded)
-  }
-  patchSyncWizardState({
-    banner: expanded[0] ?? tCmd("cmd.sync.connect.clipboardWriteFailed", sink.locale)
-  })
-  return { ok: false }
-}
-
-export function wizardFinish(sink: SyncWizardLogSink): void {
-  clearSyncConnectPending()
-  closeSyncWizardState()
-  sink.focusPrompt()
 }
 
 /** EN: Outbound code currently held for COPY (invite or handshake). */

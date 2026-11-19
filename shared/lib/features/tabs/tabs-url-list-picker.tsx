@@ -6,6 +6,7 @@ import { tTabs } from "../setting/i18n/ns/tabs"
 import { useUiSettings } from "../setting/use-ui-settings"
 import {
   TabPickerActionMenuPanel,
+  TabPickerBookmarkPanel,
   TabPickerEditGroupMenuPanel,
   TabPickerEditGroupRenamePanel,
   TabPickerEditWindowRenamePanel,
@@ -56,6 +57,11 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     editPanel,
     actionMenuPanel,
     actionMenuPanelRef,
+    bookmarkPanel,
+    bookmarkPanelRef,
+    onBookmarkItemTitleChange,
+    onBookmarkItemUrlChange,
+    onBookmarkNewFolderNameChange,
     groupMetaColorStripRef,
     newGroupTitle,
     setNewGroupTitle,
@@ -78,7 +84,15 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
   const extraFooter =
     actionMenuPanel !== null
       ? null
-      : bulkSubMode === "group" && variant === "default" && groupNewPhase !== "meta" ? (
+      : bookmarkPanel !== null ? (
+      <TabPickerBookmarkPanel
+        panelRef={bookmarkPanelRef}
+        panel={bookmarkPanel}
+        onItemTitleChange={onBookmarkItemTitleChange}
+        onItemUrlChange={onBookmarkItemUrlChange}
+        onNewFolderNameChange={onBookmarkNewFolderNameChange}
+      />
+    ) : bulkSubMode === "group" && variant === "default" && groupNewPhase !== "meta" ? (
       <TabPickerGroupTargetPanel
         panelRef={groupPanelRef}
         groupChoices={groupChoices}

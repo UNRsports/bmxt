@@ -27,6 +27,7 @@ import {
   PLAIN_PICKER_VIRTUALIZE_MIN,
   scrollTopForPlainPickerIndex
 } from "../side-picker/plain/plain-text-picker-virtual"
+import type { SearchLegendMode } from "../setting/search-legend-mode"
 import { searchPickerSourceLabel, type PickerEntry } from "../side-picker/model/picker-entry"
 import { useSearchPickerAltPreviewKit } from "./use-search-picker-alt-preview-kit"
 import { useSearchPickerResultsOpenTabNav } from "./use-search-picker-results-open-tab-nav"
@@ -117,13 +118,15 @@ function SearchDetailPickerRow({
   hit,
   hi,
   highlightNeedle,
-  entry
+  entry,
+  legendMode
 }: {
   index: number
   hit: SearchEntryDetailHit
   hi: number
   highlightNeedle: string
   entry: PickerEntry
+  legendMode: SearchLegendMode
 }): ReactNode {
   const hiRow = index === hi
   const fieldLabel = `${hit.field}:`
@@ -134,7 +137,9 @@ function SearchDetailPickerRow({
       aria-selected={hiRow}
       className={`bmxt-search-picker-row${hiRow ? " bmxt-search-picker-row--hi" : ""}`}>
       {index === 0 ? (
-        <div className="bmxt-search-picker-scope">{searchPickerSourceLabel(entry)}</div>
+        <div className="bmxt-search-picker-scope">
+          {searchPickerSourceLabel(entry, legendMode)}
+        </div>
       ) : null}
       <div className="bmxt-search-picker-field">
         <div className="bmxt-search-picker-field-label">{fieldLabel}</div>
@@ -160,7 +165,8 @@ function SearchListPickerRow({
   hi,
   pattern,
   highlightNeedle,
-  matchHi
+  matchHi,
+  legendMode
 }: {
   index: number
   entry: PickerEntry
@@ -168,6 +174,7 @@ function SearchListPickerRow({
   pattern: string
   highlightNeedle: string
   matchHi: number
+  legendMode: SearchLegendMode
 }): ReactNode {
   const hiRow = index === hi
   const pageMatch = pickPageMatchForDisplay(entry.pageMatches, hiRow ? matchHi : 0)
@@ -194,7 +201,9 @@ function SearchListPickerRow({
       role="option"
       aria-selected={hiRow}
       className={`bmxt-search-picker-row${hiRow ? " bmxt-search-picker-row--hi" : ""}`}>
-      <div className="bmxt-search-picker-scope">{searchPickerSourceLabel(entry)}</div>
+      <div className="bmxt-search-picker-scope">
+        {searchPickerSourceLabel(entry, legendMode)}
+      </div>
       <div className="bmxt-search-picker-field">
         <div className="bmxt-search-picker-field-label">title:</div>
         <div className="bmxt-search-picker-title">
@@ -457,6 +466,7 @@ export function SearchListPickerBody({
 
   const { settings } = useUiSettings()
   const locale = settings.locale
+  const legendMode = settings.searchLegendMode
   const searchHighlightColors = useMemo(
     () => resolveSearchHighlightAppearance(settings.appearance),
     [settings.appearance]
@@ -666,6 +676,7 @@ export function SearchListPickerBody({
           pattern={pattern}
           highlightNeedle={rowHighlightNeedle}
           matchHi={matchHi}
+          legendMode={legendMode}
         />
       )
     }
@@ -690,6 +701,7 @@ export function SearchListPickerBody({
           hi={hi}
           highlightNeedle={rowHighlightNeedle}
           entry={detailEntry}
+          legendMode={legendMode}
         />
       )
     }
@@ -870,6 +882,7 @@ export function SearchListPickerBody({
                 hi={hi}
                 highlightNeedle={rowHighlightNeedle}
                 entry={detailEntry}
+                legendMode={legendMode}
               />
             ))
           )

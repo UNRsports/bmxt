@@ -5,6 +5,7 @@ export const BMXT_RULE_KINDS = [
   "page.window",
   "page.group",
   "bookmark",
+  "bookmark.folder",
   "history",
   "markdown.file",
   "search.hit",

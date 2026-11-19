@@ -1,0 +1,10 @@
+{
+  "invite": {
+    "version": 1,
+    "familyId": "ZmFtaWx5LWlkLTE2Ynl0ZSE",
+    "seedB64": "ASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4mrze8",
+    "fromDeviceId": "ZGV2aWNlLWFhYS1ieXRlcyE",
+    "fromDisplayName": "terminal@sessAB"
+  },
+  "inviteCode": "bmxt1.eyJ2ZXJzaW9uIjoxLCJmYW1pbHlJZCI6IlptRnRhV3g1TFdsa0xURTJZbmwwWlNFIiwic2VlZEI2NCI6IkFTTkZaNG1yemU4QkkwVm5pYXZON3dFalJXZUpxODN2QVNORlo0bXJ6ZTgiLCJmcm9tRGV2aWNlSWQiOiJaR1YyYVdObExXRmhZUzFpZVhSbGN5RSIsImZyb21EaXNwbGF5TmFtZSI6InRlcm1pbmFsQHNlc3NBQiJ9"
+}

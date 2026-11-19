@@ -48,7 +48,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "group",
         aliases: &[],
-        usage_primary: "group new",
+        usage_primary: "group new [tabId…] | group add <groupId> <tabId…>",
     },
     CmdMeta {
         name: "help",
@@ -103,7 +103,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "setting",
         aliases: &[],
-        usage_primary: "setting -list | setting -exit -list | setting help",
+        usage_primary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
     },
     CmdMeta {
         name: "tutorial",
@@ -114,6 +114,36 @@ pub const COMMANDS: &[CmdMeta] = &[
         name: "sync",
         aliases: &[],
         usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+    },
+    CmdMeta {
+        name: "bookmark",
+        aliases: &[],
+        usage_primary: "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help",
+    },
+    CmdMeta {
+        name: "history",
+        aliases: &[],
+        usage_primary: "history -list [<pattern>] [--device <id>|--peers] | history -delete <url…> | history -delete-range --from <iso> --to <iso> | history -backup | history -restore [--as-bookmarks] | history help",
+    },
+    CmdMeta {
+        name: "open",
+        aliases: &[],
+        usage_primary: "open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | <list> | open",
+    },
+    CmdMeta {
+        name: "jump",
+        aliases: &[],
+        usage_primary: "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump",
+    },
+    CmdMeta {
+        name: "move",
+        aliases: &[],
+        usage_primary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>",
+    },
+    CmdMeta {
+        name: "new-window",
+        aliases: &[],
+        usage_primary: "new-window <tabId…> | … | new-window",
     },
 ];
 
@@ -147,6 +177,17 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_GROUP: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "new",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "add",
         trailing_tokens: &[],
     },
 ];
@@ -260,6 +301,18 @@ static BRANCHES_SETTING: &[SubcommandBranch] = &[
         trailing_tokens: &[],
     },
     SubcommandBranch {
+        head: "-set",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-save",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-cancel",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
         head: "-exit",
         trailing_tokens: &["-list"],
     },
@@ -327,6 +380,72 @@ static BRANCHES_SYNC: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_BOOKMARK: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &["--folder", "--device", "--peers"],
+    },
+    SubcommandBranch {
+        head: "-add",
+        trailing_tokens: &["--title", "--parent", "--force", "--skip-dup"],
+    },
+    SubcommandBranch {
+        head: "-folder",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-remove",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-move",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-send",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-backup",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-restore",
+        trailing_tokens: &["--as-bookmarks"],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_HISTORY: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-list",
+        trailing_tokens: &["--device", "--peers"],
+    },
+    SubcommandBranch {
+        head: "-delete",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-delete-range",
+        trailing_tokens: &["--from", "--to"],
+    },
+    SubcommandBranch {
+        head: "-backup",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-restore",
+        trailing_tokens: &["--as-bookmarks"],
+    },
+    SubcommandBranch {
+        head: "help",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -355,7 +474,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
-        "group" => false,
+        "group" => matches!(lower.as_str(), "new" | "add"),
         "help" => false,
         "forward" => false,
         "reload" => false,
@@ -366,9 +485,15 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
-        "setting" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
+        "setting" => matches!(lower.as_str(), "-list" | "-set" | "-save" | "-cancel" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
         "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
+        "bookmark" => matches!(lower.as_str(), "-list" | "-add" | "-folder" | "-remove" | "-move" | "-send" | "-backup" | "-restore" | "help"),
+        "history" => matches!(lower.as_str(), "-list" | "-delete" | "-delete-range" | "-backup" | "-restore" | "help"),
+        "open" => false,
+        "jump" => false,
+        "move" => false,
+        "new-window" => false,
         _ => false,
     }
 }
@@ -382,7 +507,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "dom" => BRANCHES_DOM,
         "exit" => &[],
         "search" => BRANCHES_SEARCH,
-        "group" => &[],
+        "group" => BRANCHES_GROUP,
         "help" => &[],
         "forward" => &[],
         "reload" => &[],
@@ -396,6 +521,12 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "setting" => BRANCHES_SETTING,
         "tutorial" => BRANCHES_TUTORIAL,
         "sync" => BRANCHES_SYNC,
+        "bookmark" => BRANCHES_BOOKMARK,
+        "history" => BRANCHES_HISTORY,
+        "open" => &[],
+        "jump" => &[],
+        "move" => &[],
+        "new-window" => &[],
         _ => &[],
     }
 }

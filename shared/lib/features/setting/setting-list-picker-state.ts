@@ -1,6 +1,11 @@
 import type { UiAppearance, UiAppearanceLayer } from "./appearance"
 import { DEFAULT_HOST_UI_MODE, type HostUiMode } from "./host-ui-mode.ts"
 import type { UiLocale } from "./locale"
+import {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  normalizeSearchLegendMode,
+  type SearchLegendMode
+} from "./search-legend-mode.ts"
 import type { UiSettings } from "./settings"
 
 export type SettingListPickerView =
@@ -8,6 +13,7 @@ export type SettingListPickerView =
   | "language"
   | "editPicker"
   | "imeCandidateHelp"
+  | "searchLegend"
   | "hostUi"
   | "fontSize"
   | "pickerFontSize"
@@ -49,6 +55,7 @@ export type SettingDraftPatch = {
   locale?: UiLocale
   editPicker?: boolean
   imeCandidateHelp?: boolean
+  searchLegendMode?: SearchLegendMode
   hostUiMode?: HostUiMode
   appearance?: Partial<UiAppearanceLayer>
   picker?: Partial<UiAppearanceLayer>
@@ -61,6 +68,9 @@ export function createSettingListPickerState(committed: UiSettings): SettingList
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: committed.imeCandidateHelp !== false,
+      searchLegendMode: normalizeSearchLegendMode(
+        committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
+      ),
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
@@ -93,6 +103,12 @@ function applyDraftPatch(
   }
   if (patch.imeCandidateHelp !== undefined) {
     draft = { ...draft, imeCandidateHelp: patch.imeCandidateHelp }
+  }
+  if (patch.searchLegendMode !== undefined) {
+    draft = {
+      ...draft,
+      searchLegendMode: normalizeSearchLegendMode(patch.searchLegendMode)
+    }
   }
   const nextAppearance = { ...draft.appearance, picker: { ...draft.appearance.picker } }
   if (patch.editPicker !== undefined) {
@@ -136,6 +152,9 @@ export function settingPickerRevertDraft(
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: committed.imeCandidateHelp !== false,
+      searchLegendMode: normalizeSearchLegendMode(
+        committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
+      ),
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }

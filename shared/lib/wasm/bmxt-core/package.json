@@ -1,7 +1,7 @@
 {
   "name": "bmxt-core",
   "type": "module",
-  "description": "BMXt command core (parse / registry / plans) compiled to WASM",
+  "description": "BMXt command core (parse / registry / plans); WASM via feature `wasm`",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "files": [

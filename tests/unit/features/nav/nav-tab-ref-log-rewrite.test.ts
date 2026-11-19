@@ -100,4 +100,37 @@ describe("rewriteHashTTokensForLog", () => {
       }
     ])
   })
+
+  it("includes url on chips for tab -send pipe echoes when meta is present", () => {
+    const meta = new Map<number, NavReloadTabChipMeta>([
+      [
+        1,
+        {
+          title: "Welcome",
+          faviconSrc: null,
+          label: "Welcome",
+          url: "https://welcome.example/"
+        }
+      ]
+    ])
+    const out = rewriteHashTTokensForLog(
+      "> #t:1 | tab -send peerDeviceAbc",
+      meta,
+      "Tab"
+    )
+    assert.equal(out.includes("#t:"), false)
+    assert.deepEqual(parseTabRefLogSegments(out), [
+      { kind: "text", text: "> " },
+      {
+        kind: "tabRef",
+        meta: {
+          title: "Welcome",
+          faviconSrc: null,
+          appearance: "chip",
+          url: "https://welcome.example/"
+        }
+      },
+      { kind: "text", text: " | tab -send peerDeviceAbc" }
+    ])
+  })
 })

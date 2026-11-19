@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react"
 import type { MutableRefObject } from "react"
+import { useUiSettings } from "../../setting/use-ui-settings"
 import { entryDisplayLine, type PickerEntry } from "../model/picker-entry"
 import { PlainTextPickerBody } from "../plain/plain-text-picker-body"
 
@@ -23,7 +24,12 @@ export function UrlListPickerWrapper({
   pickerInputRef,
   sessionId
 }: UrlListPickerWrapperProps) {
-  const lines = useMemo(() => entries.map(entryDisplayLine), [entries])
+  const { settings } = useUiSettings()
+  const legendMode = settings.searchLegendMode
+  const lines = useMemo(
+    () => entries.map((entry) => entryDisplayLine(entry, legendMode)),
+    [entries, legendMode]
+  )
 
   const onConfirmLineIndex = useCallback(
     (index: number) => {

@@ -21,6 +21,7 @@ export type DomPickerWrapperProps = {
     state: Extract<DomListPickerState, { kind: "lines" }>
   ) => Promise<DomListCapture | null>
   onApplyDomViewportCapture?: (capture: DomListCapture) => void
+  onSubmitJumpCommand?: (line: string) => void
 }
 
 /** EN: Layer ③B — dom -list (lines vs site-access notice). */
@@ -34,7 +35,8 @@ export function DomPickerWrapper({
   pickerInputRef,
   sessionId,
   onRefreshDomViewport,
-  onApplyDomViewportCapture
+  onApplyDomViewportCapture,
+  onSubmitJumpCommand
 }: DomPickerWrapperProps) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
@@ -87,6 +89,7 @@ export function DomPickerWrapper({
       sessionId={sessionId}
       onRefreshViewport={pickerMode === "with" ? refreshViewport : undefined}
       onViewportCapture={pickerMode === "with" ? applyCapture : undefined}
+      onSubmitJumpCommand={onSubmitJumpCommand}
     />
   )
 }

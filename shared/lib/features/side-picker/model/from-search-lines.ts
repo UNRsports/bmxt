@@ -79,6 +79,11 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
     let title = ""
     let url = ""
     let fieldPath = ""
+    let bookmarkId = ""
+    let parentId = ""
+    let dateAdded = ""
+    let lastVisitTime = ""
+    let visitCount = ""
     let tabId: number | undefined
     let windowId: number | undefined
     const pageMatches: SearchPageMatch[] = []
@@ -92,6 +97,16 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
           url = field.value
         } else if (field.key === "path") {
           fieldPath = field.value
+        } else if (field.key === "bookmarkid") {
+          bookmarkId = field.value.trim()
+        } else if (field.key === "parentid") {
+          parentId = field.value.trim()
+        } else if (field.key === "dateadded") {
+          dateAdded = field.value.trim()
+        } else if (field.key === "lastvisittime") {
+          lastVisitTime = field.value.trim()
+        } else if (field.key === "visitcount") {
+          visitCount = field.value.trim()
         } else if (field.key === "tabid") {
           const n = Number.parseInt(field.value, 10)
           if (Number.isFinite(n)) {
@@ -123,9 +138,30 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
     const entryId =
       scope === "page" && tabId != null
         ? `page-tab-${tabId}`
-        : scope === "snapshot"
-          ? `snapshot-${entries.length}-${trimmedUrl}`
-          : `${scope}-${entries.length}-${trimmedUrl}`
+        : scope === "bookmark" && bookmarkId.length > 0
+          ? `bookmark-${bookmarkId}`
+          : scope === "snapshot"
+            ? `snapshot-${entries.length}-${trimmedUrl}`
+            : `${scope}-${entries.length}-${trimmedUrl}`
+    const meta: Record<string, string> = {}
+    if (scope === "snapshot" && fieldPath) {
+      meta.path = fieldPath
+    }
+    if (bookmarkId.length > 0) {
+      meta.bookmarkId = bookmarkId
+    }
+    if (parentId.length > 0) {
+      meta.parentId = parentId
+    }
+    if (dateAdded.length > 0) {
+      meta.dateAdded = dateAdded
+    }
+    if (lastVisitTime.length > 0) {
+      meta.lastVisitTime = lastVisitTime
+    }
+    if (visitCount.length > 0) {
+      meta.visitCount = visitCount
+    }
     entries.push({
       id: entryId,
       source: scope,
@@ -135,10 +171,7 @@ export function pickerEntriesFromSearchLines(lines: string[]): PickerEntry[] {
       tabId: scope === "page" ? tabId : undefined,
       windowId: scope === "page" ? windowId : undefined,
       pageMatches: normalizedMatches,
-      meta:
-        scope === "snapshot" && fieldPath
-          ? { path: fieldPath }
-          : undefined
+      meta: Object.keys(meta).length > 0 ? meta : undefined
     })
     i++
   }

@@ -94,6 +94,25 @@ Desktop.ini
 *.pfx
 
 
+# --- BMXtCLI / Family local secrets（通常は ~/.config/bmxt/。作業ツリーへコピー・上書きした場合の防御）---
+# EN: Family seed lives in config.json; handshake tickets carry sealed rtc codes.
+# JA: Family seed は config.json。握手チケットは封印 rtc コードを含む。
+# Do not ignore intentional fixtures under `_context/cli-peer/fixtures/` or `**/tests/fixtures/`.
+# Do not use bare `**/bmxt-ui-settings/` — that would hide crate `shared/crates/bmxt-ui-settings/`.
+bmxt-*-offer.json
+bmxt-*-answer.json
+bmxt-*-invite.json
+**/bmxt-cli-ui-settings/
+/bmxt-ui-settings/
+**/bmxt-ui-settings/settings.json
+**/bmxt-ui-settings/background-image.*
+**/bmxt-ui-settings/picker-background-image.*
+settings.json.tmp
+bmxt-backup-*.zip
+# EN: Accidental drop of live CLI identity into the repo root (fixtures use other names).
+/config.json
+
+
 # --- Rust / Cargo（wasm 含む。再現可能なビルドツリー）---
 **/target/
 

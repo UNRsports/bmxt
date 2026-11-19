@@ -50,6 +50,7 @@ export function useTabPickerSyncAndLayoutEffects({
   editPanelRef,
   actionMenuPanel,
   actionMenuPanelRef,
+  bookmarkPanelOpen,
   setAnchorTabId
 }: {
   initialHi: number
@@ -90,6 +91,8 @@ export function useTabPickerSyncAndLayoutEffects({
   editPanelRef: RefObject<HTMLDivElement | null>
   actionMenuPanel: ActionMenuPanel | null
   actionMenuPanelRef: RefObject<HTMLDivElement | null>
+  /** EN: Bookmark panel manages its own field focus; do not steal it back to the picker textarea. */
+  bookmarkPanelOpen: boolean
   setAnchorTabId: (tabId: number | null) => void
 }): { groupPanelRef: RefObject<HTMLDivElement | null> } {
   const groupPanelRef = useRef<HTMLDivElement>(null)
@@ -249,6 +252,9 @@ export function useTabPickerSyncAndLayoutEffects({
       groupMetaTitleRef.current?.blur()
       return
     }
+    if (bookmarkPanelOpen) {
+      return
+    }
     if (
       groupNewPhase === "meta" ||
       newTabUrlWindowId !== null ||
@@ -261,6 +267,7 @@ export function useTabPickerSyncAndLayoutEffects({
     }
     inputRef.current?.focus({ preventScroll: true })
   }, [
+    bookmarkPanelOpen,
     editPanel,
     groupNewPhase,
     newTabUrlWindowId,

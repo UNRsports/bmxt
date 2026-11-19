@@ -1,0 +1,7 @@
+{
+  "type": "ack",
+  "id": "ack-fixture-001",
+  "replyTo": "ping-fixture-001",
+  "from": "ZGV2aWNlLWFhYS1ieXRlcyE",
+  "at": 1768478400012
+}

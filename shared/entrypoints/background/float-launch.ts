@@ -1,6 +1,6 @@
 /**
- * EN: Toggle the in-page float prompt; re-show after same-tab navigations.
- * JA: サイト上フロートのトグルと、同一タブ遷移後の自動再表示。
+ * EN: In-page float prompt host — visibility messages, handoff, re-show after navigations.
+ * JA: サイト上フロートの表示制御・引き継ぎ・同一タブ遷移後の自動再表示。
  */
 
 import { clearFloatTerminalSessionsForTab } from "../../lib/features/bmxt-float/float-terminal-session-storage"
@@ -26,11 +26,6 @@ import {
 import { isBmxtFloatBootAuthRequest } from "../../lib/features/bmxt-float/float-boot-auth-message"
 import { isScriptablePageUrl } from "../../lib/features/url/is-scriptable-page-url"
 
-async function resolveActiveTabAsync(): Promise<chrome.tabs.Tab | undefined> {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
-  return tabs[0]
-}
-
 async function applyDesiredVisibility(
   tabId: number,
   visible: boolean,
@@ -44,21 +39,6 @@ async function applyDesiredVisibility(
     await clearFloatTerminalSessionsForTab(tabId)
     await clearFloatBrowseStateForTab(tabId)
   }
-}
-
-export async function toggleBmxtFloatOnActiveTabAsync(): Promise<void> {
-  const tab = await resolveActiveTabAsync()
-  if (tab?.id === undefined) {
-    return
-  }
-  if (!isScriptablePageUrl(tab.url)) {
-    return
-  }
-  const visible = await sendFloatHostAction(tab.id, "toggle")
-  if (visible === null) {
-    return
-  }
-  await applyDesiredVisibility(tab.id, visible, false)
 }
 
 /** EN: Hide the in-page float prompt on a tab (e.g. `exit` from float host). */
@@ -98,17 +78,8 @@ async function reShowFloatIfDesired(tabId: number, url: string | undefined): Pro
   }
 }
 
-export function setupFloatLaunch(
-  onCommand: typeof chrome.commands.onCommand
-): void {
+export function setupFloatLaunch(): void {
   void hydrateFloatVisibleTabs()
-
-  onCommand.addListener((command) => {
-    if (command !== "toggle-bmxt-float") {
-      return
-    }
-    void toggleBmxtFloatOnActiveTabAsync()
-  })
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (isBmxtFloatBootAuthRequest(message)) {

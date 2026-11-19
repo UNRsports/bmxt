@@ -25,9 +25,14 @@ const ALLOWLIST_RELATIVE = new Set([
   // Family sync log expansion / handshake UI (UiAction host path — not WASM prompt grammar SoT)
   "shared/lib/features/sync/facade/expand-sync-log.ts",
   "shared/lib/features/sync/facade/format-status.ts",
-  "shared/lib/features/sync/connect/sync-handshake-bar.tsx",
+  "shared/lib/features/sync/handshake/clipboard/sync-handshake-bar.tsx",
+  "shared/lib/features/sync/handshake/clipboard/wizard-clipboard.ts",
+  "shared/lib/features/sync/handshake/file/wizard-file.ts",
+  "shared/lib/features/sync/handshake/file/wizard-file-ui.tsx",
   "shared/lib/features/sync/wizard/sync-wizard-controller.ts",
   "shared/lib/features/sync/wizard/sync-wizard-panel.tsx",
+  "shared/lib/features/sync/wizard/sync-wizard-submit-rtc.ts",
+  "shared/lib/features/sync/wizard/sync-wizard-submit-invite.ts",
   "shared/lib/features/sync/link/sync-link-status-bar.tsx",
   // Cross-device list host errors (UI window only — not WASM prompt grammar SoT)
   "shared/lib/features/dispatch/handlers/effects/search-list.ts",

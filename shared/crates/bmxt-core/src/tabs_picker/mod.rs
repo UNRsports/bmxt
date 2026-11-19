@@ -5,5 +5,3 @@ pub mod model;
 pub mod reducer;
 pub mod target;
 pub mod validate;
-
-pub use reducer::reduce_json;

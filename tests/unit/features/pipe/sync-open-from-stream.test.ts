@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { before, describe, it } from "node:test"
+import { ensureBmxtCoreForTests } from "../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
 import { BMXT_RULE_SCHEMA } from "../../../../shared/lib/features/bmxt-rule/types.ts"
 import { bmxtRuleProducer, bmxtRuleRecord } from "../../../../shared/lib/features/bmxt-rule/entries.ts"
 import { urlBatchesFromBmxtRuleStream } from "../../../../shared/lib/features/command-line/pipe/consumers/sync-open-batches.ts"
@@ -10,6 +11,10 @@ import { parsePickerCommand } from "../../../../shared/lib/features/tabs/parse-p
 import { openBatchesFromSelectedLocalTabs } from "../../../../shared/lib/features/tabs/open-batches-from-selected-local-tabs.ts"
 import { resolveFamilySendDestination } from "../../../../shared/lib/features/tabs/resolve-family-send-dest.ts"
 import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
+
+before(() => {
+  ensureBmxtCoreForTests()
+})
 
 describe("parseTabSendPipeConsumer", () => {
   it("accepts tab -send <deviceId>", () => {

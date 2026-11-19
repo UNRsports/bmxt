@@ -20,6 +20,20 @@ describe("buildSearchListResult", () => {
     assert.equal(result.records[0]!.kind, "search.hit")
     assert.equal(result.records[0]!.fields.source, "history")
     assert.match(result.records[0]!.display?.label ?? "", /Example/)
+    assert.match(result.records[0]!.display?.label ?? "", /^\[history\]/)
+  })
+
+  it("embeds emoji legend when mode is emoji", () => {
+    const entries: PickerEntry[] = [
+      {
+        id: "history-0",
+        source: "history",
+        title: "Example",
+        url: "https://example.com/"
+      }
+    ]
+    const result = buildSearchListResult(entries, "ex", [], "emoji")
+    assert.match(result.records[0]!.display?.label ?? "", /^\[⏱️\]/)
   })
 
   it("keeps adapter notice lines when there are no openable hits", () => {

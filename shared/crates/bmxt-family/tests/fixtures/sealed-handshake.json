@@ -1,0 +1,29 @@
+{
+  "seedB64": "ASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4mrze8",
+  "familyId": "ZmFtaWx5LWlkLTE2Ynl0ZSE",
+  "fromDeviceId": "ZGV2aWNlLWFhYS1ieXRlcyE",
+  "envelope": {
+    "version": 1,
+    "familyId": "ZmFtaWx5LWlkLTE2Ynl0ZSE",
+    "fromDeviceId": "ZGV2aWNlLWFhYS1ieXRlcyE",
+    "toDeviceId": "*",
+    "kind": "signal",
+    "createdAt": "2026-01-15T12:00:00.000Z",
+    "expiresAt": "2026-01-15T12:30:00.000Z",
+    "ciphertextB64": "1z3-3ITretABUvUPgC2DWc5bret7n_Bkv6f8fDFqVxaMt_zjKbVkr0NJKy1AymfXQjAOz2prTdqqiCbscvZXEzD9Tg5yaRiQvH5gTm-LrOQiqrO_UFQYxKDDzkZrn5d337Fq4yIio-OIMiL7yuSQUyf5a4PxIg7BjVrVcjhS4Mw27alaWIOWscHuLJvU3dcen7VAP3qVmv_CBiR2rWvKGciR4zVfoOm15Sw5fh7VgP-b5gd0YGkGkForUn6T2vrcVRuEbpY8JtiW2VGNDJx3_aDzNzjQhctCak7jXzQWGIVMgwtXdHKAS5tKEZkEJLI8pyxaqugITfWDmoTw76XegZot2w8F08MOddyOBdmvonPRb_VS8Qn6-qKMGdYfu94hFUBEznvMqHYif8-QVs5qfeTvE7n7xZAZyRJ2k6UpIKujfPqcVkXlIs5M8IkFnv-S-DuZrLO-IpFWnKU",
+    "ivB64": "ABEiM0RVZneImaq7"
+  },
+  "plain": {
+    "v": 1,
+    "role": "offer",
+    "sessionId": "sessABCDEF12",
+    "fromDeviceId": "ZGV2aWNlLWFhYS1ieXRlcyE",
+    "fromDisplayName": "terminal@sessAB",
+    "familyId": "ZmFtaWx5LWlkLTE2Ynl0ZSE",
+    "sdp": "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n",
+    "ice": [
+      "{\"candidate\":\"candidate:1 1 udp 1 127.0.0.1 9 typ host\",\"sdpMid\":\"0\",\"sdpMLineIndex\":0}"
+    ]
+  },
+  "handshakeCode": "bmxt-rtc1.eyJ2ZXJzaW9uIjoxLCJmYW1pbHlJZCI6IlptRnRhV3g1TFdsa0xURTJZbmwwWlNFIiwiZnJvbURldmljZUlkIjoiWkdWMmFXTmxMV0ZoWVMxaWVYUmxjeUUiLCJ0b0RldmljZUlkIjoiKiIsImtpbmQiOiJzaWduYWwiLCJjcmVhdGVkQXQiOiIyMDI2LTAxLTE1VDEyOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTAxLTE1VDEyOjMwOjAwLjAwMFoiLCJjaXBoZXJ0ZXh0QjY0IjoiMXozLTNJVHJldEFCVXZVUGdDMkRXYzVicmV0N25fQmt2NmY4ZkRGcVZ4YU10X3pqS2JWa3IwTkpLeTFBeW1mWFFqQU96MnByVGRxcWlDYnNjdlpYRXpEOVRnNXlhUmlRdkg1Z1RtLUxyT1FpcXJPX1VGUVl4S0REemtacm41ZDMzN0ZxNHlJaW8tT0lNaUw3eXVTUVV5ZjVhNFB4SWc3QmpWclZjamhTNE13MjdhbGFXSU9Xc2NIdUxKdlUzZGNlbjdWQVAzcVZtdl9DQmlSMnJXdktHY2lSNHpWZm9PbTE1U3c1Zmg3VmdQLWI1Z2QwWUdrR2tGb3JVbjZUMnZyY1ZSdUVicFk4SnRpVzJWR05ESngzX2FEek56alFoY3RDYWs3alh6UVdHSVZNZ3d0WGRIS0FTNXRLRVprRUpMSThweXhhcXVnSVRmV0Rtb1R3NzZYZWdab3QydzhGMDhNT2RkeU9CZG12b25QUmJfVlM4UW42LXFLTUdkWWZ1OTRoRlVCRXpudk1xSFlpZjgtUVZzNXFmZVR2RTduN3haQVp5UkoyazZVcElLdWpmUHFjVmtYbElzNU04SWtGbnYtUy1EdVpyTE8tSXBGV25LVSIsIml2QjY0IjoiQUJFaU0wUlZabmVJbWFxNyJ9"
+}

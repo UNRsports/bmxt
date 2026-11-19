@@ -47,10 +47,15 @@ async function main() {
   }
   const hits = []
   for (const abs of files) {
+    const rel = relative(root, abs)
+    // EN: Only the localhost listener client may call fetch (loopback URL-guarded; todo §11).
+    if (rel.replace(/\\/g, "/").includes("shared/lib/features/sync/handshake/localhost/")) {
+      continue
+    }
     const text = await readFile(abs, "utf8")
     fetchRe.lastIndex = 0
     if (fetchRe.test(text)) {
-      hits.push(relative(root, abs))
+      hits.push(rel)
     }
   }
   if (hits.length > 0) {

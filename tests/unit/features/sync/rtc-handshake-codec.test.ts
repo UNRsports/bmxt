@@ -5,10 +5,10 @@ import {
   formatRtcHandshakeCode,
   parseRtcHandshakeCode,
   RTC_HANDSHAKE_PREFIX
-} from "../../../../shared/lib/features/sync/discovery/rtc-handshake-codec.ts"
+} from "../../../../shared/lib/features/sync/handshake/common/rtc-handshake-codec.ts"
 
 describe("rtc-handshake-codec", () => {
-  it("round-trips a Family-sealed offer code", async () => {
+  it("round-trips a Family-authenticated offer code", async () => {
     const { familyId, seedB64 } = generateFamilySeed()
     const code = await formatRtcHandshakeCode({
       familyId,

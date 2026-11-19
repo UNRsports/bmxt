@@ -1,7 +1,15 @@
 import { useCallback } from "react"
 import { incrementalPickerMatchMode, resolveImeTokenPicker } from "../../command-line"
+import {
+  clearCandidateMenuSuppressedUntilTab,
+  isCandidateMenuSuppressedUntilTab
+} from "../../command-line/candidate-menu-open-policy.ts"
 import { resolveActiveCommandSegment } from "../../command-line/compound/active-segment.ts"
 import { isJobHandleActive, type BmxtJobHandle } from "../../job"
+import {
+  listBookmarkParentCompletionValues,
+  bookmarkParentCompletionZone
+} from "../../bookmark/parent-completion"
 import { listTabsMoveUrlCandidates, tabsMoveUrlCompletionZone } from "../../tabs/input"
 import type { SessionCandidatePanelVariant } from "../../session"
 import type { PaneFocusTarget } from "../../side-picker/panel/pane-focus-nav"
@@ -95,6 +103,8 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
     (idx: number) => {
       options.allowEmptyFirstPickerSyncRef.current = false
       options.imeTokenPickerDismissedRef.current = false
+      options.sessionListPickerDismissedRef.current = false
+      clearCandidateMenuSuppressedUntilTab()
       const s = options.subCmdPickerRef.current
       if (!s) {
         return
@@ -497,6 +507,7 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         }
         options.imeTokenPickerDismissedRef.current = false
         options.sessionListPickerDismissedRef.current = false
+        clearCandidateMenuSuppressedUntilTab()
         const curLn = options.lineRef.current
         const pos = options.cursorRef.current
         const muZone = tabsMoveUrlCompletionZone(curLn, pos)
@@ -514,6 +525,26 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
             options.setHistNavIndex(-1)
             options.setLine(newLine)
             options.setCursorPos(muZone.urlStart + rep.length)
+          })()
+          return
+        }
+        const parentZone = bookmarkParentCompletionZone(curLn, pos)
+        if (parentZone) {
+          void (async () => {
+            const cands = await listBookmarkParentCompletionValues(parentZone.prefix)
+            if (cands.length === 0) {
+              return
+            }
+            const idx = options.tabPressSeqRef.current % cands.length
+            options.tabPressSeqRef.current += 1
+            const rep = cands[idx]!
+            const newLine =
+              curLn.slice(0, parentZone.valueStart) +
+              rep +
+              curLn.slice(parentZone.tokenEnd)
+            options.setHistNavIndex(-1)
+            options.setLine(newLine)
+            options.setCursorPos(parentZone.valueStart + rep.length)
           })()
           return
         }
@@ -712,10 +743,12 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         !options.sessionNameTypingRef.current
       ) {
         e.preventDefault()
-        // EN: Prefer offering `| browse`… once before bare submit. After Esc dismiss, submit as-is.
+        // EN: Prefer offering `| browse`… once before bare submit. After Esc dismiss, submit as-is
+        //     until Tab explicitly reopens candidates.
         if (
           options.subCmdPickerRef.current === null &&
-          !options.imeTokenPickerDismissedRef.current
+          !options.imeTokenPickerDismissedRef.current &&
+          !isCandidateMenuSuppressedUntilTab()
         ) {
           const line = options.lineRef.current
           const pos = options.cursorRef.current

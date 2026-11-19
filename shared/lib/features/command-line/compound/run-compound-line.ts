@@ -14,7 +14,7 @@ import { parsePipeSegments } from "./parse-pipe-segments.ts"
 import { appendCompoundLogBlock } from "./append-compound-log.ts"
 import {
   formatParseErrorBlock,
-  formatSegmentBlock,
+  formatSegmentOutcomeBlock,
   formatSkippedSegmentBlock
 } from "./format-compound-log.ts"
 import {
@@ -56,7 +56,8 @@ function formatOutcomeBlock(
   text: string,
   outcome: SegmentOutcome,
   locale: UiLocale,
-  pipeStageCount: number
+  pipeStageCount: number,
+  compoundSegmentCount: number
 ): CompoundLogBlock {
   if (
     pipeStageCount === 1 &&
@@ -68,7 +69,9 @@ function formatOutcomeBlock(
   if (outcome.ok && outcome.stdout.length === 0 && outcome.stderr.length === 0) {
     return { stdout: [], stderr: [] }
   }
-  return formatSegmentBlock(text, outcome, locale)
+  // EN: Single compound segment already echoed as `> line` — skip redundant `[{segment}]`
+  // (e.g. picker `#t:… | tab -send …` would otherwise show the chip list twice).
+  return formatSegmentOutcomeBlock(text, outcome, locale, compoundSegmentCount)
 }
 
 export async function runCompoundLine(
@@ -167,7 +170,13 @@ export async function runCompoundLine(
       }
       await appendCompoundLogBlock(
         deps,
-        formatOutcomeBlock(text, outcome, locale, pipeParsed.segments.length)
+        formatOutcomeBlock(
+          text,
+          outcome,
+          locale,
+          pipeParsed.segments.length,
+          parsed.segments.length
+        )
       )
       results.push({ index, text, outcome, skipped: false })
       priorExitStatus = outcome.exitStatus

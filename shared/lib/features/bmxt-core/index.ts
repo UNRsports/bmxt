@@ -10,6 +10,7 @@ export {
   ensureBmxtCoreFromBytes,
   isBmxtCoreReady,
   wasmClassify,
+  wasmClassifyPipeConsumer,
   wasmComplete,
   wasmCompletionTokens,
   wasmCompoundSegmentEligibility,

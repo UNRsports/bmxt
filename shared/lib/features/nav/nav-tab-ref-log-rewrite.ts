@@ -118,9 +118,12 @@ export function rewriteHashTTokensForLog(
     return chipCommand
   }
 
+  // EN: Pipe Family send (`#t:… | tab -send …`) keeps the consumer text; show title+url on chips.
+  // JA: パイプ Family 送信は右辺を残し、チップには title+url を出す。
+  const includeUrl = /\btab\s+-send\b/i.test(text)
   return text.replace(HASH_T_TOKEN_RE, (_match, idStr: string) => {
     const tabId = Number(idStr)
-    return encodeChipRef(tabId, metaById, pendingTitle, false)
+    return encodeChipRef(tabId, metaById, pendingTitle, includeUrl)
   })
 }
 

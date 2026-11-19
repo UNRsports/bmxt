@@ -6,6 +6,12 @@ import type { HostEffect } from "../dispatch/effect-types.ts"
 import type { CommandBusyProgress } from "../bmxt-window/shell/command-busy"
 import type { UiLocale } from "../setting/locale.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
+import {
+  DEFAULT_SEARCH_LEGEND_MODE,
+  normalizeSearchLegendMode,
+  type SearchLegendMode
+} from "../setting/search-legend-mode.ts"
+import { loadUiSettings } from "../setting/settings.ts"
 import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
 import { MAX_SEARCH_LINES_OUT, maxSearchLinesPerScope } from "./limits.ts"
@@ -35,6 +41,11 @@ export type SearchListFetchOptions = {
    * JA: ピア DataChannel 経路。開タブ enrich を省略（ワイヤ hit は title/url のみ）。
    */
   forRemoteWire?: boolean
+  /**
+   * EN: Scope legend style for plain `-list` labels. When omitted, loads from UI settings.
+   * JA: プレーン `-list` ラベルの凡例形式。省略時は UI 設定から読み込む。
+   */
+  searchLegendMode?: SearchLegendMode
 }
 
 function scopeLabelForEffect(effect: HostEffect, locale: UiLocale): string {
@@ -128,6 +139,20 @@ async function runOneSearchEffect(
   return lines
 }
 
+async function resolveSearchLegendMode(
+  options: SearchListFetchOptions
+): Promise<SearchLegendMode> {
+  if (options.searchLegendMode !== undefined) {
+    return normalizeSearchLegendMode(options.searchLegendMode)
+  }
+  try {
+    const settings = await loadUiSettings()
+    return normalizeSearchLegendMode(settings.searchLegendMode)
+  } catch {
+    return DEFAULT_SEARCH_LEGEND_MODE
+  }
+}
+
 export async function fetchSearchListResult(options: SearchListFetchOptions): Promise<ListResult> {
   const dispatchLine = normalizeSearchListDispatchLine(options.dispatchLine)
   const pattern = normalizeSearchPattern(searchListPatternFromLine(dispatchLine))
@@ -136,6 +161,7 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   const onProgress = options.onProgress
   const onBusyProgress = options.onBusyProgress
   const scopeTotal = Math.max(1, effects.length)
+  const legendMode = await resolveSearchLegendMode(options)
 
   const emitBusy = async (progress: CommandBusyProgress): Promise<void> => {
     if (onBusyProgress) {
@@ -182,7 +208,7 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
       })
     )
     if (options.ctx.shouldCancel?.()) {
-      return buildSearchListResult([], pattern, [])
+      return buildSearchListResult([], pattern, [], legendMode)
     }
     settled.sort((a, b) => a.scopeIndex - b.scopeIndex)
     for (const part of settled) {
@@ -218,7 +244,7 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   }
 
   if (options.ctx.shouldCancel?.()) {
-    return buildSearchListResult([], pattern, [])
+    return buildSearchListResult([], pattern, [], legendMode)
   }
 
   const parsed = pickerEntriesFromSearchLines(linesOut)
@@ -227,9 +253,9 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
     ? parsed
     : await enrichSearchPickerEntriesFromOpenTabs(parsed, pattern, maxPageTextChars)
   if (options.ctx.shouldCancel?.()) {
-    return buildSearchListResult([], pattern, [])
+    return buildSearchListResult([], pattern, [], legendMode)
   }
-  return buildSearchListResult(entries, pattern, linesOut)
+  return buildSearchListResult(entries, pattern, linesOut, legendMode)
 }
 
 function syncNoticeLinesFromResult(result: ListResult, locale: UiLocale): string[] {

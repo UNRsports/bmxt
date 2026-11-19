@@ -11,6 +11,7 @@ import { UI_SETTINGS_KEY } from "../extension-storage/keys"
 import type { UiAppearance } from "./appearance"
 import { DEFAULT_HOST_UI_MODE, type HostUiMode } from "./host-ui-mode.ts"
 import { DEFAULT_UI_LOCALE, type UiLocale } from "./locale"
+import { DEFAULT_SEARCH_LEGEND_MODE } from "./search-legend-mode.ts"
 import {
   DEFAULT_IME_CANDIDATE_HELP,
   loadUiSettings,
@@ -32,6 +33,7 @@ const INITIAL: UiSettings = {
   locale: DEFAULT_UI_LOCALE,
   hostUiMode: DEFAULT_HOST_UI_MODE,
   imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+  searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE,
   appearance: {
     fg: null,
     bgColor: null,

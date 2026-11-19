@@ -86,6 +86,37 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token.startsWith("sync.rtc.connected:")) {
     return tCmd("cmd.sync.rtc.connected", locale, { name: token.slice("sync.rtc.connected:".length) })
   }
+  if (token === "sync.door.noFamily") {
+    return tCmd("cmd.sync.door.noFamily", locale)
+  }
+  if (token === "sync.door.unreachable") {
+    return tCmd("cmd.sync.door.unreachable", locale)
+  }
+  if (token === "sync.door.badHello") {
+    return tCmd("cmd.sync.door.badHello", locale)
+  }
+  if (token === "sync.door.ignored") {
+    return tCmd("cmd.sync.door.ignored", locale)
+  }
+  if (token === "sync.door.self") {
+    return tCmd("cmd.sync.door.self", locale)
+  }
+  if (token === "sync.door.offerFailed") {
+    return tCmd("cmd.sync.door.offerFailed", locale)
+  }
+  if (token === "sync.door.handshakeFailed") {
+    return tCmd("cmd.sync.door.handshakeFailed", locale)
+  }
+  if (token.startsWith("sync.door.already:")) {
+    return tCmd("cmd.sync.door.already", locale, {
+      name: token.slice("sync.door.already:".length)
+    })
+  }
+  if (token.startsWith("sync.door.connected:")) {
+    return tCmd("cmd.sync.door.connected", locale, {
+      name: token.slice("sync.door.connected:".length)
+    })
+  }
   if (token === "sync.rtc.pingDeferred") {
     return tCmd("cmd.sync.rtc.pingDeferred", locale)
   }

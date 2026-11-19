@@ -4,6 +4,11 @@
 export function classify(line: string, locale: string): string;
 
 /**
+ * EN: Pipe RHS consumer id (+ flags), or JSON `null`.
+ */
+export function classify_pipe_consumer(segment: string): string;
+
+/**
  * EN: Fixed-token completion for tiers 1–3; JSON object or `null`.
  */
 export function complete(line: string, cursor: number): string;
@@ -46,6 +51,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly classify: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly classify_pipe_consumer: (a: number, b: number, c: number) => void;
     readonly complete: (a: number, b: number, c: number, d: number) => void;
     readonly completion_tokens: (a: number) => void;
     readonly compound_segment_eligibility: (a: number, b: number, c: number) => void;

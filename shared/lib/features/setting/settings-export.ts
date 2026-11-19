@@ -8,6 +8,10 @@ import {
 } from "./appearance.ts"
 import { normalizeHostUiMode, type HostUiMode } from "./host-ui-mode.ts"
 import type { UiLocale } from "./locale.ts"
+import {
+  normalizeSearchLegendMode,
+  type SearchLegendMode
+} from "./search-legend-mode.ts"
 import type { UiSettings } from "./settings.ts"
 import { parseHexColor } from "./validate-color.ts"
 import { parseFontFamily } from "./validate-font.ts"
@@ -59,6 +63,8 @@ export type SettingsExportJson = {
   extraKeysMode?: unknown
   /** EN: Optional; missing → true (show IME candidate help). */
   imeCandidateHelp?: boolean
+  /** EN: Optional; missing → text (bracket text only). */
+  searchLegendMode?: SearchLegendMode
   appearance: SettingsExportAppearanceV2
 }
 
@@ -127,13 +133,14 @@ function bgImageFileName(
 }
 
 export function buildSettingsExportJson(settings: UiSettings): SettingsExportJson {
-  const { locale, appearance, hostUiMode, imeCandidateHelp } = settings
+  const { locale, appearance, hostUiMode, imeCandidateHelp, searchLegendMode } = settings
   return {
     version: 2,
     exportedAt: new Date().toISOString(),
     locale,
     hostUiMode,
     imeCandidateHelp,
+    searchLegendMode,
     appearance: {
       fg: appearance.fg,
       bgColor: appearance.bgColor,
@@ -313,7 +320,8 @@ export function parseSettingsExportJson(
     hostUiMode: normalizeHostUiMode(
       o.hostUiMode !== undefined ? o.hostUiMode : o.extraKeysMode
     ),
-    imeCandidateHelp: o.imeCandidateHelp !== false
+    imeCandidateHelp: o.imeCandidateHelp !== false,
+    searchLegendMode: normalizeSearchLegendMode(o.searchLegendMode)
   }
 }
 

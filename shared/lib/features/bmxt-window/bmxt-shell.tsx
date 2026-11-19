@@ -54,9 +54,10 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
-import { SyncHandshakeBar } from "../sync/connect/sync-handshake-bar"
+import { SyncHandshakeBar } from "../sync/handshake/clipboard/sync-handshake-bar.tsx"
 import { getSyncService } from "../sync/facade/sync-service"
 import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
+import { startLocalhostDoorReconnect } from "../sync/handshake/localhost/start-localhost-door-reconnect.ts"
 import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
 import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { SyncWizardPanel } from "../sync/wizard"
@@ -68,6 +69,7 @@ import {
   type NavReloadTabChipMeta
 } from "../nav/nav-reload-tab-token"
 import { lockedPrefixBlocksDelete } from "./shell/prompt-locked-prefix"
+import { ensureNavReloadTabChipMetaForTexts } from "../nav/ensure-nav-reload-tab-chip-meta"
 import { rewriteHashTTokensInLogLines } from "../nav/nav-tab-ref-log-rewrite"
 import { resolveTabFaviconSrc } from "../tabs/tab-favicon-url"
 import { useLogScroll } from "./shell/useLogScroll"
@@ -250,10 +252,13 @@ export function BmxtShell({
   const navReloadTabMetaRef = useRef<Map<number, NavReloadTabChipMeta>>(new Map())
   const [navReloadTabMetaRev, setNavReloadTabMetaRev] = useState(0)
   const appendLogLines = useCallback(
-    (
+    async (
       newLines: string[],
       channel?: import("../command-line/command-output.ts").LogChannel
     ) => {
+      // EN: Resolve `#t:<id>` faces before rewrite so picker Family-send logs are not bare "Tab".
+      // JA: 書き換え前に `#t:<id>` 表示を解決し、picker Family 送信ログが「タブ」だけにならないようにする。
+      await ensureNavReloadTabChipMetaForTexts(newLines, navReloadTabMetaRef.current)
       const pendingTitle = tNav("nav.reload.chipPending", uiSettings.locale)
       const rewritten = rewriteHashTTokensInLogLines(
         newLines,
@@ -283,6 +288,8 @@ export function BmxtShell({
     startSyncTunnelHold(async () => {
       await getSyncService().status()
     })
+    // EN: Family-authenticated auto-reconnect via CLI localhost listener (clipboard/file remain fallback).
+    startLocalhostDoorReconnect()
   }, [])
   const translateEnabledRef = useRef(false)
 
@@ -862,6 +869,12 @@ export function BmxtShell({
     enableFirstRunAutoStart: hostKind === "popup"
   })
 
+  const submitLineRef = useRef<() => void>(() => {})
+  const submitConstructedLineRef = useRef<(line: string) => void>(() => {})
+  const submitConstructedLineEarly = useCallback((nextLine: string) => {
+    submitConstructedLineRef.current(nextLine)
+  }, [])
+
   const {
     searchLoadingProgressLines,
     showSearchListPatternPlaceholder,
@@ -881,7 +894,8 @@ export function BmxtShell({
     setSubCmdPicker,
     searchListPickerRef,
     beginCommandBusy,
-    endCommandBusy
+    endCommandBusy,
+    submitConstructedLine: submitConstructedLineEarly
   })
   clearSearchLoadingProgressRef.current = clearSearchLoadingProgress
 
@@ -904,40 +918,6 @@ export function BmxtShell({
   const focusPrompt = useCallback(() => {
     requestAnimationFrame(() => focusPromptNow())
   }, [focusPromptNow])
-
-  const {
-    closeSessionNameTyping,
-    openSessionNameTyping,
-    saveSessionDisplayName,
-    closeSessionListPicker,
-    switchSessionFromListPicker,
-    applySessionSwitchPick
-  } = useSessionPromptActions({
-    sessionId,
-    sessionListRows,
-    uiLocale: uiSettings.locale,
-    appendCommandToHistory,
-    appendLogLines,
-    onActivateSession,
-    onSetSessionDisplayName,
-    focusPrompt,
-    setSubCmdPicker,
-    setLine,
-    setCursorPos,
-    setHistNavIndex,
-    tabPressSeqRef,
-    lineRef,
-    imeRef,
-    currentSessionDisplayNameRef,
-    sessionListPickerDismissedRef,
-    sessionListRowsRef,
-    sessionListPickerRowsRef,
-    sessionPickerVariantRef,
-    setSessionListPickerHi,
-    setSessionPickerVariant,
-    setSessionNameTyping,
-    sessionNameTypingRef
-  })
 
   const {
     promptPaneFocused,
@@ -1026,10 +1006,10 @@ export function BmxtShell({
     sessionId,
     uiLocale: uiSettings.locale,
     appendLogLines,
-    replaceUiSettingsState,
     closeSettingPickerColumn,
     setSettingListPicker,
-    settingListPickerRef
+    settingListPickerRef,
+    submitConstructedLine: submitConstructedLineEarly
   })
 
   useEffect(() => {
@@ -1067,9 +1047,8 @@ export function BmxtShell({
   }, [appendLogLines, externalSettingsRecovery, isFocusedPane])
 
   const openSessionListPicker = useCallback(() => {
-    sessionListPickerDismissedRef.current = false
     openSessionPicker("list")
-  }, [openSessionPicker, sessionListPickerDismissedRef])
+  }, [openSessionPicker])
 
   const syncPromptDom = useCallback((nextLine: string, cursor: number) => {
     const ta = imeRef.current
@@ -1080,6 +1059,55 @@ export function BmxtShell({
     const pos = Math.max(0, Math.min(cursor, nextLine.length))
     ta.setSelectionRange(pos, pos)
   }, [])
+
+  const submitConstructedLine = useCallback(
+    (nextLine: string) => {
+      lineRef.current = nextLine
+      setLine(nextLine)
+      setCursorPos(nextLine.length)
+      syncPromptDom(nextLine, nextLine.length)
+      queueMicrotask(() => {
+        submitLineRef.current()
+      })
+    },
+    [setCursorPos, setLine, syncPromptDom]
+  )
+  submitConstructedLineRef.current = submitConstructedLine
+
+  const {
+    closeSessionNameTyping,
+    openSessionNameTyping,
+    saveSessionDisplayName,
+    closeSessionListPicker,
+    switchSessionFromListPicker,
+    applySessionSwitchPick
+  } = useSessionPromptActions({
+    sessionId,
+    sessionListRows,
+    uiLocale: uiSettings.locale,
+    appendCommandToHistory,
+    appendLogLines,
+    onActivateSession,
+    onSetSessionDisplayName,
+    focusPrompt,
+    setSubCmdPicker,
+    setLine,
+    setCursorPos,
+    setHistNavIndex,
+    tabPressSeqRef,
+    lineRef,
+    imeRef,
+    currentSessionDisplayNameRef,
+    sessionListPickerDismissedRef,
+    sessionListRowsRef,
+    sessionListPickerRowsRef,
+    sessionPickerVariantRef,
+    setSessionListPickerHi,
+    setSessionPickerVariant,
+    setSessionNameTyping,
+    sessionNameTypingRef,
+    submitConstructedLine
+  })
 
   const flushFloatPersist = useCallback(async () => {
     if (flushFloatPersistProp) {
@@ -1147,6 +1175,8 @@ export function BmxtShell({
     teardownNav,
     clearSearchLoadingProgress,
     closeSettingPickerColumn,
+    replaceUiSettingsState,
+    submitConstructedLine,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
@@ -1168,6 +1198,7 @@ export function BmxtShell({
     startTutorial,
     skipTutorial
   })
+  submitLineRef.current = submitLine
 
   const getPromptLockedPrefix = useCallback((): string | null => {
     // EN: Close confirm uses log + free y/n (not a locked prompt prefix).
@@ -1686,6 +1717,8 @@ export function BmxtShell({
             })
             void runDomListAndShow(cl, cl, false)
           }}
+          onSubmitDomJumpCommand={submitConstructedLineEarly}
+          submitConstructedLine={submitConstructedLineEarly}
           onTabsPickerFocusTabId={onTabsPickerFocusTabId}
           onRefreshDomViewport={(state) => refreshDomViewportForPicker(state)}
           onApplyDomViewportCapture={(capture) => {

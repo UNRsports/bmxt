@@ -1,7 +1,7 @@
 use crate::cmd;
 use crate::generated::{all_command_metas, resolve_canonical};
 use crate::ir::{
-    effects, lines, msg_param, msg_with, msgs, HostEffect, DispatchBundle,
+    effects, lines, msg_param, msg_with, msgs_not_found, HostEffect, DispatchBundle,
 };
 use crate::line_parse::{parse_http_url_candidate, tokenize};
 use std::collections::BTreeMap;
@@ -25,7 +25,7 @@ fn suggest_command_names(token: &str) -> Vec<&'static str> {
 fn unknown_command_msgs(cmd_token: &str) -> DispatchBundle {
     let suggestions = suggest_command_names(cmd_token);
     if suggestions.is_empty() {
-        return msgs(vec![msg_param(
+        return msgs_not_found(vec![msg_param(
             "cmd.error.unknownCommand",
             "cmdToken",
             cmd_token,
@@ -34,7 +34,7 @@ fn unknown_command_msgs(cmd_token: &str) -> DispatchBundle {
     let mut params = BTreeMap::new();
     params.insert("cmdToken".to_string(), cmd_token.to_string());
     params.insert("suggestions".to_string(), suggestions.join(", "));
-    msgs(vec![msg_with("cmd.error.unknownCommandSuggest", params)])
+    msgs_not_found(vec![msg_with("cmd.error.unknownCommandSuggest", params)])
 }
 
 fn try_url_line(trimmed: &str) -> Option<DispatchBundle> {
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn empty_line_returns_empty_lines() {
         match run_line("   ") {
-            DispatchBundle::Lines { lines } => assert!(lines.is_empty()),
+            DispatchBundle::Lines { lines, .. } => assert!(lines.is_empty()),
             other => panic!("expected lines, got {other:?}"),
         }
     }
@@ -96,8 +96,13 @@ mod tests {
     #[test]
     fn unknown_command_returns_msg() {
         match run_line("notacommand") {
-            DispatchBundle::Msgs { msgs, .. } => {
+            DispatchBundle::Msgs {
+                msgs,
+                exit_status,
+                ..
+            } => {
                 assert_eq!(msgs[0].key, "cmd.error.unknownCommand");
+                assert_eq!(exit_status, crate::ir::EXIT_NOT_FOUND);
             }
             other => panic!("expected msgs, got {other:?}"),
         }
@@ -106,11 +111,26 @@ mod tests {
     #[test]
     fn unknown_command_prefix_suggests_registry_match() {
         match run_line("ta") {
-            DispatchBundle::Msgs { msgs, .. } => {
+            DispatchBundle::Msgs {
+                msgs,
+                exit_status,
+                ..
+            } => {
                 assert_eq!(msgs[0].key, "cmd.error.unknownCommandSuggest");
                 let params = msgs[0].params.as_ref().expect("params");
                 assert_eq!(params.get("cmdToken").map(String::as_str), Some("ta"));
                 assert_eq!(params.get("suggestions").map(String::as_str), Some("tab"));
+                assert_eq!(exit_status, crate::ir::EXIT_NOT_FOUND);
+            }
+            other => panic!("expected msgs, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn invalid_tab_list_device_stamps_misuse() {
+        match run_line("tab -list --device") {
+            DispatchBundle::Msgs { exit_status, .. } => {
+                assert_eq!(exit_status, crate::ir::EXIT_MISUSE);
             }
             other => panic!("expected msgs, got {other:?}"),
         }

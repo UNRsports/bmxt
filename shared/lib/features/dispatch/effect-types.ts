@@ -4,16 +4,27 @@
  */
 
 export type HostEffect =
+  | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
+  | { device_id: string; device_scope: string; folder_id: string; kind: "bookmark_list" }
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
-  | { dispatch_line: string; kind: "search_list" }
+  | { dup_mode: string; kind: "bookmark_create"; parent_id: string; title: string; url: string }
+  | { end_ms: string; kind: "history_delete_range"; start_ms: string }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
+  | { group_id: number; kind: "group_add"; tab_ids: number[] }
+  | { group_id: number; kind: "open_url_into_group"; url: string; window_id: number }
+  | { group_id: number; kind: "tabs_move"; tab_ids: number[]; window_id: number }
+  | { ids: string; index: string; kind: "bookmark_move"; parent_id: string }
+  | { ids: string; kind: "bookmark_remove" }
+  | { kind: "bookmark_create_folder"; parent_id: string; title: string }
   | { kind: "clear_log" }
   | { kind: "close_current_tab" }
   | { kind: "close_current_window" }
   | { kind: "close_tab"; tab_id: number }
   | { kind: "exit_pane" }
   | { kind: "group_new"; tab_ids: number[] }
+  | { kind: "history_delete_url"; urls: string }
   | { kind: "navigate_current_tab"; url: string }
+  | { kind: "open_url_into_window"; url: string; window_id: number }
   | { kind: "open_url_new_tab"; url: string }
   | { kind: "open_url_new_window"; url: string }
   | { kind: "open_welcome_page" }
@@ -28,6 +39,7 @@ export type HostEffect =
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
   | { kind: "tabs_move_url"; url: string }
+  | { kind: "tabs_new_window"; tab_ids: number[] }
   | { kind: "tabs_nu" }
 
 export type DispatchMsg = { key: string; params?: Record<string, string> }
@@ -37,7 +49,7 @@ export type UiActionIR =
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
   | { kind: "nav_confirm_close"; target: string }
-  | { kind: "open_plain_list"; line: string; list_id: string }
+  | { kind: "open_plain_list"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "close_picker"; slot: string }
   | { kind: "continuation_prompt"; prefix: string }
   | { kind: "session_switch"; name: string }
@@ -45,7 +57,7 @@ export type UiActionIR =
   | { kind: "group_new_from_selection" }
   | { kind: "set_mode"; feature_id: string; mode: string }
   | { kind: "snapshot_save"; line: string }
-  | { kind: "open_picker"; line: string; list_id: string; show_url: string }
+  | { kind: "open_picker"; device_id: string; device_scope: string; line: string; list_id: string; show_url: string }
   | { kind: "picker_pass" }
   | { kind: "sync_setup" }
   | { kind: "sync_status" }
@@ -57,6 +69,15 @@ export type UiActionIR =
   | { kind: "sync_open"; device_id: string; payload: string }
   | { kind: "sync_connect"; device_id: string }
   | { kind: "sync_ping"; device_id: string }
+  | { kind: "jump_target"; activate_link: number; line: number; match_index: number; needle: string; path: string; tab_id: number; url: string }
+  | { kind: "setting_save" }
+  | { kind: "setting_cancel" }
+  | { kind: "setting_set"; key: string; value: string }
+  | { kind: "sync_bookmark_send"; device_id: string; mode: string; payload: string }
+  | { kind: "bookmark_backup" }
+  | { kind: "bookmark_restore"; as_bookmarks: string }
+  | { kind: "history_backup" }
+  | { kind: "history_restore"; as_bookmarks: string }
 
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"
@@ -66,4 +87,6 @@ export type DispatchBundle = {
   msgs?: DispatchMsg[]
   /** EN: Optional prompt restore after msgs (Rust prompt semantic SoT). */
   promptPrefix?: string
+  /** EN: Plan-time exit status from Rust (0 success; omitted when 0 on the wire). */
+  exitStatus?: number
 }

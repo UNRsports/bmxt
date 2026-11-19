@@ -5,6 +5,7 @@
 
 import init, {
   classify,
+  classify_pipe_consumer,
   complete,
   completion_tokens,
   compound_segment_eligibility,
@@ -152,6 +153,12 @@ export function wasmComplete(line: string, cursor: number): string {
 export function wasmCompoundSegmentEligibility(segment: string): string {
   assertReady()
   return compound_segment_eligibility(segment)
+}
+
+/** EN: Pipe RHS consumer classification JSON, or `"null"`. */
+export function wasmClassifyPipeConsumer(segment: string): string {
+  assertReady()
+  return classify_pipe_consumer(segment)
 }
 
 export function wasmTabsPickerReduce(stateJson: string, eventJson: string): string {

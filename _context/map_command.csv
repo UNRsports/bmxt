@@ -31,8 +31,28 @@ search,-list,--page,rest,,（同上）,scope `--page`。,
 search,-list,--snapshot,rest,,（同上）,scope `--snapshot`。,
 search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
 group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
+group,add,,,,group add <groupId> <tabId…>,Effect `group_add`。既存グループへタブ追加。,§7e。タブピッカー group 選択 Enter も同形行を submit
+move,,,,,move --window <id> [tabId…] | move --group <gid> --window <id> [tabId…] | move --ungroup --window <id> [tabId…] | … | move …,Effect `tabs_move`。パイプ右辺は page.open。,§7e。タブピッカー :move は typed 行を submit
+new-window,,,,,new-window <tabId…> | … | new-window,Effect `tabs_new_window`。パイプ右辺は page.open。,§7e。タブピッカー new-window も同形行を submit
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
+bookmark,,,,,bookmark …,単独 `bookmark` + Enter: msgs + promptPrefix。CRUD・Family 送信・バックアップ。,§9
+bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],無 folder: Effect `search_list`（`--bookmark`）。`--folder`: Effect `bookmark_list`（ローカル）。,--peers は search_query 経路
+bookmark,-add,,rest,,bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup],Effect `bookmark_create`（dup_mode）。`--parent` はフォルダ id（Tab 候補）。パイプ: `page.open | bookmark -add`。,
+bookmark,-folder,,rest,,bookmark -folder <title> [--parent <id>],Effect `bookmark_create_folder`。,
+bookmark,-remove,,rest,,bookmark -remove <id…> | … | bookmark -remove,Effect `bookmark_remove`。パイプ: bookmark / bookmark.folder（id）。,
+bookmark,-move,,rest,,bookmark -move <id…> --parent <id> [--index n] | … | bookmark -move --parent …,Effect `bookmark_move`。,
+bookmark,-send,,rest,,bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] <url…> | … | bookmark -send …,UiAction `sync_bookmark_send`。`--open`→open_tabs · `--save`→bookmarks_import · `--both`→両方（省略=`--open`）。,
+bookmark,-backup,,none,,bookmark -backup,UiAction `bookmark_backup`（ZIP 版付き JSON）。,
+bookmark,-restore,,rest,,bookmark -restore,UiAction `bookmark_restore`（bookmarks.create で再構築）。,
+history,,,,,history …,単独 `history` + Enter: msgs + promptPrefix。一覧・削除・バックアップ。,§9
+history,-list,,rest,,history -list [<pattern>] [--device <id>|--peers],Effect `search_list`（`--history`）。,
+history,-delete,,rest,,history -delete <url…> | … | history -delete,Effect `history_delete_url`。,
+history,-delete-range,,rest,,history -delete-range --from <iso|ms> --to <iso|ms>,Effect `history_delete_range`。,
+history,-backup,,none,,history -backup,UiAction `history_backup`（ZIP）。DB 書き戻し不可。,
+history,-restore,,rest,,history -restore [--as-bookmarks],UiAction `history_restore`。一覧読込または BM 化。,
+open,,,,,open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | … | open …,HostEffect `open_url_new_tab` / `open_url_new_window` / `open_url_into_window` / `open_url_into_group`。パイプ右辺は stdin URL。,§7/7e。search destination も同フラグ
+jump,,,,,jump --tab <id> (--path|--needle…) | … | jump,UiAction `jump_target`。パイプ右辺は page.open / search.hit / dom.node。,§7。dom / search ピッカー Enter も同形行を submit
 tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`（browse 非依存の直接操作）。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化
 tab,-list,,rest,,tab -list [-url] [--device <id>|--peers] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `tab -list | browse`。パイプ時 page.window/group/open。`| tab -send <id>` でグループ維持コピー送信。,語彙: ListResult→bmxtRule。0.9.0: `--device`/`--peers` + ピッカー絞り込み修正
 tab,-setting,,none,,tab -setting | tab -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
@@ -56,6 +76,9 @@ translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAct
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
 setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
 setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き。locale / appearance / **host-ui** / storage 等）。ピッカーは `setting -list | browse`。,0.8.2: host-ui（auto|desktop|mobile）
+setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。下書きへ locale / edit-picker / ime-candidate-help / search-legend / host-ui。,§7 CUI
+setting,-save,,none,,setting -save,UiAction `setting_save`。下書きを永続化して列を閉じる。ピッカー Save 行も同コマンドを submit。,§7
+setting,-cancel,,none,,setting -cancel,UiAction `setting_cancel`。下書き破棄して列を閉じる。,§7
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
@@ -71,24 +94,27 @@ session,-switch,,rest,,session -switch [name],UiAction `session_switch`。,
 session,-next,,none,,session -next,Effect: session_next。,
 session,-prev,,none,,session -prev,Effect: session_prev。,
 session,-setting-name,,rest,,session -setting-name [name],UiAction `session_setting_name`。,
-sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/connect/offer/answer/accept/open/ping）。第二候補に `help`。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー。0.9.0
-sync,-setup,,none,,sync -setup,UiAction `sync_setup`。プロンプト対話で Family→役割→握手コード貼付。複合コマンド不可。,0.9.0
-sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。,0.9.0
-sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待表示または参加（6b 手動/QR）。,0.9.0
-sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。,0.9.0
-sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。名簿メンバーへ再握手（deviceId 順で役割自動）。Copy ボタン／`sync-handshake-copy`。相手はコード本体をプロンプトへ貼付。Tab で ping 確認済みの接続中ピア候補。,0.9.0
-sync,-offer,,none,,sync -offer,UiAction `sync_offer`。WebRTC オファーコード作成（コピペ握手）。,0.9.0
-sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサーコード。,0.9.0
-sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel 確立。,0.9.0
-sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。,0.9.0
+sync,,,,,sync …,単独 `sync` + Enter: msgs + promptPrefix `sync `。UiAction（setup/status/pair/members/connect/offer/answer/accept/open/ping）。第二候補に `help`。拡張と CLI REPL で同一 IR（`bmxt-core`）。,語彙: UiAction。実装 `lib/features/sync/` + スタビライザー。CLI: `hosts/cli` CliHostAdapter。0.9.0 / §10
+sync,-setup,,none,,sync -setup,UiAction `sync_setup`。拡張: ウィザードで Family→役割→握手。CLI: Family ensure + invite 表示（複合不可）。,0.9.0 / §10
+sync,-status,,none,,sync -status,UiAction `sync_status`。device / Family / 接続。CLI 未接続時もローカル device/Family を表示。,0.9.0 / §10
+sync,-pair,,rest,,sync -pair [invite],UiAction `sync_pair`。招待参加。空なら continuation `sync -pair `。CLI も同形。,0.9.0 / §10
+sync,-members,,none,,sync -members,UiAction `sync_members`。名簿 + 発見キャッシュ。CLI は接続済みピア一覧。,0.9.0 / §10
+sync,-connect,,rest,,sync -connect <deviceId>,UiAction `sync_connect`。拡張: 名簿メンバーへ再握手。CLI: 既接続なら ok、未接続なら mesh / 初回は `sync -offer`・`sync -accept` 案内（OS の `bmxt sync-connect` は clap・本表の first トークンではない）。,0.9.0 / §10
+sync,-offer,,none,,sync -offer,UiAction `sync_offer`。拡張: ウィザード／コピペ。CLI 未接続: offer チケット＋answer 待受→BusClient。既接続時は mesh 案内。,0.9.0 / §10
+sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサー。CLI 未接続: `connect_as_answer`。コード無しは REPL ショートカット `sync -answer` → `:pick`／貼付。,0.9.0 / §10
+sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel。CLI は `-answer` と同系（未接続時の初回握手）。,0.9.0 / §10
+sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。CLI も同（未接続はエラー）。裸 `ping` は CLI エイリアスのみ。,0.9.0 / §10
 tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。グループ維持は title/color をピアへ渡す。,0.9.0。0.9.1: プロファイル間タブ移動時のグループ維持を調整
 （内部）,family-webrtc-sync,,,,lib/features/sync/ + peer/webrtc-session.ts,"Family ローカル同期。device id / Family / roster / discovery を chrome.storage.local。コピペ握手（host ICE のみ・STUN/TURN なし）+ WebRTC DataChannel コマンドバス。横断 tab/search・tab -send。",0.9.0
 （内部）,tab-picker-filter-search,,,,lib/features/tabs/tab-picker-search-visibility.ts + tab-picker-fold-state.ts + side-picker/search/,"tab コマンドピッカー内の絞り込み検索動作を修正。",0.9.0
 （内部）,search-result-display,,,,lib/features/search/,"search コマンドの検索結果表示（リスト側ハイライトとページ内ジャンプの整合）を修正・調整。",0.9.1
 （内部）,sync-group-preserve,,,,lib/features/sync/bus/remote-open.ts + webrtc-command-bus.ts,"sync／tab -send によるプロファイル間タブ移動でグループ（title/color）を維持する仕様を調整。",0.9.1
 （内部）,shell-support-links,,,,lib/features/support/,"プロンプト開始時（空ログ／アップグレードブロック時）に公式サイトとサポート LLM（NotebookLM）へのリンクを表示。許可 URL のみ通常タブで開く。",0.9.1
+（内部）,effect-result-icons,,,,lib/features/dispatch/handlers/effects/tab-ref-effect-line.ts + nav/nav-tab-ref-log-rewrite.ts + command-line/tab-ref-log.ts + bmxt-window/terminal-log-lines.tsx,"処理結果ログにファビコン等のアイコンを表示するよう修正。",0.9.4
+（内部）,ui-detail-behavior,,,,lib/features/bmxt-window/ + related,"UIの細部動作を見直し。",0.9.4
+（内部）,command-processing-spec,,,,crates/bmxt-core（pipe_consumer 等）+ lib/features/bmxt-core/ + command-line/,"内部のコマンド処理仕様を見直し（Rust/TS 役割分担の徹底等）。",0.9.4
 
-（内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了
+（内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了。0.9.4: 役割分担見直しと連動
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3
 （内部）,search-page-picker,,,,lib/features/search/search-page-matches-list-field.ts + search-entries + use-search-picker-results-open-tab-nav + page-dom scroll helpers,"`--page` ヒットの `pageMatchesJson` 受け渡しとピッカーからのページ内ジャンプ／タブ遷移を改善。",0.8.4
 （内部）,page-scripting-host-permissions,,,,lib/features/page-scripting/ + lib/features/extension-permissions/http-host-access.ts + wxt.config.ts host_permissions,"必須 `https://*/*` host_permissions。install/update 時に既存 https タブへ CS 再注入（ページリロード不要）。`ensurePageContentScript` / `isScriptablePageUrl`。",0.8.5
@@ -102,11 +128,12 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,host-ui,,,,lib/features/setting/host-ui-mode.ts + lib/features/bmxt-window/extra-keys/,"`hostUiMode` auto|desktop|mobile（`bmxt_ui_settings_v1`）。`resolveHostUiFormFactor` + Android 検出。**mobile**: ExtraKeys・候補タップ確定・外タップ dismiss。**desktop**: 0.8.0 相当のキーボード中心候補閉じ。",0.8.2
 （内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6
 （内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status。segment の promptPrefix もホスト適用。,
-（内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。`browse` は UI consumer（ListResult 必須）。,
+（内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。`browse` は UI consumer（ListResult 必須）。`open` / `jump` も pipe consumer（§7 CUI 同等化）。,
 （内部）,bmxt-rule,,,,lib/features/bmxt-rule/,bmxt-rule/1。カタログ manifest/bmxt-rule.json。,
 （内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。設計・検証カタログ（固定トークン runtime は WASM `complete`）。,
 （内部）,ime-candidate-help,,,,lib/features/bmxt-window/token-picker-panel.tsx + setting imeCandidateHelp,"候補メニュー右にコマンド説明（usage）を表示。`setting` の ime-candidate-help on|off（既定 on）。",0.8.7
 （内部）,firefox-host,,,,hosts/firefox/ + hosts/create-host-wxt-config.ts,"Firefox MV3 ホスト（AMO）。同一 IR（HostEffect / UiAction）。e2e: test:e2e:firefox。",0.8.7
+（内部）,cli-host,,,,hosts/cli/,"端末 Family peer（`bmxt`）。同一プロンプト文法は `bmxt-core`（`default-features = false`）+ CliHostAdapter → DataChannel RPC / ローカル sync。直接起動 `bmxt`/`bmxt repl`（`bmxt*>`）。接続: REPL `sync -offer`/`-accept` または clap `bmxt sync-connect`（argv は本表の first ではない）。握手 JSON・`:pick`（zenity/kdialog）・OSC-8。行編集: 灰色 remainder ヒント · Tab 適用 · Enter 実行。mesh は拡張と同系。nav/dom オーバーレイ対象外。",§10 / todo
 （内部）,list-output,,,,lib/features/command-line/list-output/,bmxt-list/1。,
 （内部）,list-commands-registry,,,,lib/features/command-line/list-commands/,-list producer レジストリ。,
 （内部）,command-output,,,,lib/features/command-line/command-output.ts,stdout/stderr。,

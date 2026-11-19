@@ -14,7 +14,7 @@
       "module": "back",
       "canonicalName": "back",
       "aliases": [],
-      "usagePrimary": "back | … | back",
+      "usagePrimary": "back | \u2026 | back",
       "subcommands": []
     },
     {
@@ -23,7 +23,7 @@
       "aliases": [
         "c"
       ],
-      "usagePrimary": "close | close <tabId> | … | close",
+      "usagePrimary": "close | close <tabId> | \u2026 | close",
       "subcommands": []
     },
     {
@@ -107,8 +107,11 @@
       "module": "group",
       "canonicalName": "group",
       "aliases": [],
-      "usagePrimary": "group new",
-      "subcommands": []
+      "usagePrimary": "group new [tabId…] | group add <groupId> <tabId…>",
+      "subcommands": [
+        { "head": "new", "tail": "rest" },
+        { "head": "add", "tail": "rest" }
+      ]
     },
     {
       "module": "help_cmd",
@@ -123,21 +126,21 @@
       "module": "forward",
       "canonicalName": "forward",
       "aliases": [],
-      "usagePrimary": "forward | … | forward",
+      "usagePrimary": "forward | \u2026 | forward",
       "subcommands": []
     },
     {
       "module": "reload",
       "canonicalName": "reload",
       "aliases": [],
-      "usagePrimary": "reload | … | reload",
+      "usagePrimary": "reload | \u2026 | reload",
       "subcommands": []
     },
     {
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
+      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url\u2026> [--group <title>] [--close] | tab help",
       "subcommands": [
         {
           "head": "-list",
@@ -294,10 +297,22 @@
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list | setting -exit -list | setting help",
+      "usagePrimary": "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
       "subcommands": [
         {
           "head": "-list",
+          "tail": "none"
+        },
+        {
+          "head": "-set",
+          "tail": "rest"
+        },
+        {
+          "head": "-save",
+          "tail": "none"
+        },
+        {
+          "head": "-cancel",
           "tail": "none"
         },
         {
@@ -339,17 +354,157 @@
       "aliases": [],
       "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
       "subcommands": [
-        { "head": "-setup", "tail": "none" },
-        { "head": "-status", "tail": "none" },
-        { "head": "-pair", "tail": "rest" },
-        { "head": "-members", "tail": "none" },
-        { "head": "-connect", "tail": "rest" },
-        { "head": "-offer", "tail": "none" },
-        { "head": "-answer", "tail": "rest" },
-        { "head": "-accept", "tail": "rest" },
-        { "head": "-ping", "tail": "rest" },
-        { "head": "help", "tail": "none" }
+        {
+          "head": "-setup",
+          "tail": "none"
+        },
+        {
+          "head": "-status",
+          "tail": "none"
+        },
+        {
+          "head": "-pair",
+          "tail": "rest"
+        },
+        {
+          "head": "-members",
+          "tail": "none"
+        },
+        {
+          "head": "-connect",
+          "tail": "rest"
+        },
+        {
+          "head": "-offer",
+          "tail": "none"
+        },
+        {
+          "head": "-answer",
+          "tail": "rest"
+        },
+        {
+          "head": "-accept",
+          "tail": "rest"
+        },
+        {
+          "head": "-ping",
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
       ]
+    },
+    {
+      "module": "bookmark",
+      "canonicalName": "bookmark",
+      "aliases": [],
+      "usagePrimary": "bookmark -list [--folder <id>] [--device <id>|--peers] | bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup] | bookmark -folder <title> [--parent <id>] | bookmark -remove <id…> | bookmark -move <id…> --parent <id> [--index n] | bookmark -send <deviceId> [--open|--save|--both] [--parent <id>] [--group <title>] | bookmark -backup | bookmark -restore | bookmark help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["--folder", "--device", "--peers"],
+          "tail": "rest"
+        },
+        {
+          "head": "-add",
+          "trailingTokens": ["--title", "--parent", "--force", "--skip-dup"],
+          "tail": "rest"
+        },
+        {
+          "head": "-folder",
+          "tail": "rest"
+        },
+        {
+          "head": "-remove",
+          "tail": "rest"
+        },
+        {
+          "head": "-move",
+          "tail": "rest"
+        },
+        {
+          "head": "-send",
+          "tail": "rest"
+        },
+        {
+          "head": "-backup",
+          "tail": "none"
+        },
+        {
+          "head": "-restore",
+          "trailingTokens": ["--as-bookmarks"],
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "history_cmd",
+      "canonicalName": "history",
+      "aliases": [],
+      "usagePrimary": "history -list [<pattern>] [--device <id>|--peers] | history -delete <url…> | history -delete-range --from <iso> --to <iso> | history -backup | history -restore [--as-bookmarks] | history help",
+      "subcommands": [
+        {
+          "head": "-list",
+          "trailingTokens": ["--device", "--peers"],
+          "tail": "rest"
+        },
+        {
+          "head": "-delete",
+          "tail": "rest"
+        },
+        {
+          "head": "-delete-range",
+          "trailingTokens": ["--from", "--to"],
+          "tail": "rest"
+        },
+        {
+          "head": "-backup",
+          "tail": "none"
+        },
+        {
+          "head": "-restore",
+          "trailingTokens": ["--as-bookmarks"],
+          "tail": "rest"
+        },
+        {
+          "head": "help",
+          "tail": "none"
+        }
+      ]
+    },
+    {
+      "module": "open",
+      "canonicalName": "open",
+      "aliases": [],
+      "usagePrimary": "open <url> | open --window <url> | open --into-window <id> <url> | open --into-group <gid> --window-id <wid> <url> | <list> | open",
+      "subcommands": []
+    },
+    {
+      "module": "jump",
+      "canonicalName": "jump",
+      "aliases": [],
+      "usagePrimary": "jump --tab <tabId> (--path <path> | --needle <text> [--line <n>]) | <list-command> | jump",
+      "subcommands": []
+    },
+    {
+      "module": "move_cmd",
+      "canonicalName": "move",
+      "aliases": [],
+      "usagePrimary": "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>",
+      "subcommands": []
+    },
+    {
+      "module": "new_window",
+      "canonicalName": "new-window",
+      "aliases": [],
+      "usagePrimary": "new-window <tabId…> | … | new-window",
+      "subcommands": []
     }
   ],
   "effects": [
@@ -453,6 +608,62 @@
       },
       "tsHandlerFile": "group-new",
       "tsHandlerExport": "applyGroupNewEffect"
+    },
+    {
+      "kind": "open_url_into_window",
+      "rustVariant": "OpenUrlIntoWindow",
+      "shape": "record",
+      "fields": {
+        "url": "string",
+        "window_id": "i32"
+      },
+      "tsHandlerFile": "open-url-into-window",
+      "tsHandlerExport": "applyOpenUrlIntoWindowEffect"
+    },
+    {
+      "kind": "open_url_into_group",
+      "rustVariant": "OpenUrlIntoGroup",
+      "shape": "record",
+      "fields": {
+        "url": "string",
+        "window_id": "i32",
+        "group_id": "i32"
+      },
+      "tsHandlerFile": "open-url-into-group",
+      "tsHandlerExport": "applyOpenUrlIntoGroupEffect"
+    },
+    {
+      "kind": "tabs_move",
+      "rustVariant": "TabsMove",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32",
+        "window_id": "i32",
+        "group_id": "i32"
+      },
+      "tsHandlerFile": "tabs-move",
+      "tsHandlerExport": "applyTabsMoveEffect"
+    },
+    {
+      "kind": "tabs_new_window",
+      "rustVariant": "TabsNewWindow",
+      "shape": "record",
+      "fields": {
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "tabs-new-window",
+      "tsHandlerExport": "applyTabsNewWindowEffect"
+    },
+    {
+      "kind": "group_add",
+      "rustVariant": "GroupAdd",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32",
+        "tab_ids": "vec_i32"
+      },
+      "tsHandlerFile": "group-add",
+      "tsHandlerExport": "applyGroupAddEffect"
     },
     {
       "kind": "navigate_current_tab",
@@ -560,10 +771,92 @@
       "rustVariant": "SearchList",
       "shape": "record",
       "fields": {
-        "dispatch_line": "string"
+        "dispatch_line": "string",
+        "peer_dispatch_line": "string",
+        "device_scope": "string",
+        "device_id": "string"
       },
       "tsHandlerFile": "search-list",
       "tsHandlerExport": "applySearchListEffect"
+    },
+    {
+      "kind": "bookmark_create",
+      "rustVariant": "BookmarkCreate",
+      "shape": "record",
+      "fields": {
+        "url": "string",
+        "title": "string",
+        "parent_id": "string",
+        "dup_mode": "string"
+      },
+      "tsHandlerFile": "bookmark-create",
+      "tsHandlerExport": "applyBookmarkCreateEffect"
+    },
+    {
+      "kind": "bookmark_create_folder",
+      "rustVariant": "BookmarkCreateFolder",
+      "shape": "record",
+      "fields": {
+        "title": "string",
+        "parent_id": "string"
+      },
+      "tsHandlerFile": "bookmark-create-folder",
+      "tsHandlerExport": "applyBookmarkCreateFolderEffect"
+    },
+    {
+      "kind": "bookmark_remove",
+      "rustVariant": "BookmarkRemove",
+      "shape": "record",
+      "fields": {
+        "ids": "string"
+      },
+      "tsHandlerFile": "bookmark-remove",
+      "tsHandlerExport": "applyBookmarkRemoveEffect"
+    },
+    {
+      "kind": "bookmark_move",
+      "rustVariant": "BookmarkMove",
+      "shape": "record",
+      "fields": {
+        "ids": "string",
+        "parent_id": "string",
+        "index": "string"
+      },
+      "tsHandlerFile": "bookmark-move",
+      "tsHandlerExport": "applyBookmarkMoveEffect"
+    },
+    {
+      "kind": "bookmark_list",
+      "rustVariant": "BookmarkList",
+      "shape": "record",
+      "fields": {
+        "folder_id": "string",
+        "device_scope": "string",
+        "device_id": "string"
+      },
+      "tsHandlerFile": "bookmark-list",
+      "tsHandlerExport": "applyBookmarkListEffect"
+    },
+    {
+      "kind": "history_delete_url",
+      "rustVariant": "HistoryDeleteUrl",
+      "shape": "record",
+      "fields": {
+        "urls": "string"
+      },
+      "tsHandlerFile": "history-delete-url",
+      "tsHandlerExport": "applyHistoryDeleteUrlEffect"
+    },
+    {
+      "kind": "history_delete_range",
+      "rustVariant": "HistoryDeleteRange",
+      "shape": "record",
+      "fields": {
+        "start_ms": "string",
+        "end_ms": "string"
+      },
+      "tsHandlerFile": "history-delete-range",
+      "tsHandlerExport": "applyHistoryDeleteRangeEffect"
     },
     {
       "kind": "tabs_nu",
@@ -615,7 +908,10 @@
       "shape": "record",
       "fields": {
         "list_id": "string",
-        "line": "string"
+        "line": "string",
+        "show_url": "string",
+        "device_scope": "string",
+        "device_id": "string"
       }
     },
     {
@@ -679,7 +975,9 @@
       "fields": {
         "list_id": "string",
         "line": "string",
-        "show_url": "string"
+        "show_url": "string",
+        "device_scope": "string",
+        "device_id": "string"
       }
     },
     {
@@ -754,6 +1052,75 @@
       "shape": "record",
       "fields": {
         "device_id": "string"
+      }
+    },
+    {
+      "kind": "jump_target",
+      "rustVariant": "JumpTarget",
+      "shape": "record",
+      "fields": {
+        "tab_id": "i32",
+        "path": "string",
+        "needle": "string",
+        "line": "i32",
+        "match_index": "i32",
+        "url": "string",
+        "activate_link": "i32"
+      }
+    },
+    {
+      "kind": "setting_save",
+      "rustVariant": "SettingSave",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_cancel",
+      "rustVariant": "SettingCancel",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_set",
+      "rustVariant": "SettingSet",
+      "shape": "record",
+      "fields": {
+        "key": "string",
+        "value": "string"
+      }
+    },
+    {
+      "kind": "sync_bookmark_send",
+      "rustVariant": "SyncBookmarkSend",
+      "shape": "record",
+      "fields": {
+        "device_id": "string",
+        "mode": "string",
+        "payload": "string"
+      }
+    },
+    {
+      "kind": "bookmark_backup",
+      "rustVariant": "BookmarkBackup",
+      "shape": "unit"
+    },
+    {
+      "kind": "bookmark_restore",
+      "rustVariant": "BookmarkRestore",
+      "shape": "record",
+      "fields": {
+        "as_bookmarks": "string"
+      }
+    },
+    {
+      "kind": "history_backup",
+      "rustVariant": "HistoryBackup",
+      "shape": "unit"
+    },
+    {
+      "kind": "history_restore",
+      "rustVariant": "HistoryRestore",
+      "shape": "record",
+      "fields": {
+        "as_bookmarks": "string"
       }
     }
   ]

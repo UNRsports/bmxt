@@ -47,7 +47,8 @@ function historyEntryFromItem(it: chrome.history.HistoryItem): HistoryCacheEntry
   return {
     url,
     title: it.title ?? "",
-    lastVisitTime: it.lastVisitTime ?? 0
+    lastVisitTime: it.lastVisitTime ?? 0,
+    visitCount: typeof it.visitCount === "number" ? it.visitCount : 0
   }
 }
 

@@ -45,13 +45,23 @@ fn sanitize_device_id(raw: &str) -> Option<String> {
     Some(trimmed.to_string())
 }
 
-/// EN: Validate `tab -list` flags; host parses scope from the echoed line.
-fn parse_tabs_list_args(args: &[String]) -> Result<(), ()> {
-    let mut device_scope = "local";
+/// EN: Parsed `tab -list` plan fields (Rust SoT — host must not re-tokenize the line).
+struct TabsListPlan {
+    show_url: bool,
+    device_scope: String,
+    device_id: String,
+}
+
+/// EN: Validate and extract `tab -list` flags into a structured plan.
+fn parse_tabs_list_args(args: &[String]) -> Result<TabsListPlan, ()> {
+    let mut show_url = false;
+    let mut device_scope = "local".to_string();
+    let mut device_id = String::new();
     let mut i = 2usize;
     while i < args.len() {
         let token = normalize_token(&args[i]);
         if token == "-url" {
+            show_url = true;
             i += 1;
             continue;
         }
@@ -59,7 +69,7 @@ fn parse_tabs_list_args(args: &[String]) -> Result<(), ()> {
             if device_scope != "local" {
                 return Err(());
             }
-            device_scope = "peers";
+            device_scope = "peers".to_string();
             i += 1;
             continue;
         }
@@ -74,13 +84,18 @@ fn parse_tabs_list_args(args: &[String]) -> Result<(), ()> {
             if trimmed.is_empty() || trimmed.starts_with('-') {
                 return Err(());
             }
-            device_scope = "device";
+            device_scope = "device".to_string();
+            device_id = trimmed.to_string();
             i += 2;
             continue;
         }
         return Err(());
     }
-    Ok(())
+    Ok(TabsListPlan {
+        show_url,
+        device_scope,
+        device_id,
+    })
 }
 
 fn usage_msgs(extra: crate::ir::Msg) -> DispatchBundle {
@@ -155,9 +170,16 @@ pub fn run(args: &[String]) -> DispatchBundle {
         // EN: Plain tab -list runs on the BMXt UI (same document as WebRTC sync).
         // JA: plain tab -list は WebRTC sync と同じ BMXt UI ドキュメントで実行する。
         "-list" => match parse_tabs_list_args(args) {
-            Ok(()) => ui(UiAction::OpenPlainList {
+            Ok(plan) => ui(UiAction::OpenPlainList {
                 list_id: "tabs".to_string(),
                 line: args.join(" "),
+                show_url: if plan.show_url {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                },
+                device_scope: plan.device_scope,
+                device_id: plan.device_id,
             }),
             Err(()) => usage_msgs(msg_key("cmd.tabs.error.invalidListUsage")),
         },
@@ -221,5 +243,79 @@ pub fn run(args: &[String]) -> DispatchBundle {
             })
         }
         _ => usage_msgs(msg_key("cmd.tabs.error.internalDispatchOutOfSync")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::DispatchBundle;
+
+    fn is_usage_msgs(bundle: &DispatchBundle) -> bool {
+        matches!(bundle, DispatchBundle::Msgs { .. })
+    }
+
+    #[test]
+    fn list_accepts_bare_peers_and_device() {
+        assert!(matches!(
+            run(&["tab".into(), "-list".into()]),
+            DispatchBundle::Ui {
+                action: UiAction::OpenPlainList { .. },
+                ..
+            }
+        ));
+        assert!(matches!(
+            run(&["tab".into(), "-list".into(), "--peers".into()]),
+            DispatchBundle::Ui {
+                action: UiAction::OpenPlainList { .. },
+                ..
+            }
+        ));
+        assert!(matches!(
+            run(&[
+                "tab".into(),
+                "-list".into(),
+                "--device".into(),
+                "abc123".into()
+            ]),
+            DispatchBundle::Ui {
+                action: UiAction::OpenPlainList { .. },
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn list_rejects_incomplete_device_and_conflicts() {
+        assert!(is_usage_msgs(&run(&[
+            "tab".into(),
+            "-list".into(),
+            "--device".into()
+        ])));
+        assert!(is_usage_msgs(&run(&[
+            "tab".into(),
+            "-list".into(),
+            "--device".into(),
+            "--peers".into()
+        ])));
+        assert!(is_usage_msgs(&run(&[
+            "tab".into(),
+            "-list".into(),
+            "--device".into(),
+            "x".into(),
+            "--peers".into()
+        ])));
+        assert!(is_usage_msgs(&run(&[
+            "tab".into(),
+            "-list".into(),
+            "--peers".into(),
+            "--device".into(),
+            "x".into()
+        ])));
+        assert!(is_usage_msgs(&run(&[
+            "tab".into(),
+            "-list".into(),
+            "--foo".into()
+        ])));
     }
 }

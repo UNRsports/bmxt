@@ -1,4 +1,4 @@
-import type { RtcHandshakePlain } from "../discovery/rtc-handshake-codec"
+import type { RtcHandshakePlain } from "../handshake/common/rtc-handshake-codec.ts"
 import type { SyncBusCommand, SyncDeviceId } from "../types"
 
 export type PeerHostSessionHandlers = {

@@ -76,6 +76,9 @@ export function useTabPickerKeyboard({
   sessionId,
   editPanel,
   actionMenuPanel,
+  bookmarkPanelOpen,
+  openBookmarkFromPicker,
+  handleBookmarkKeydown,
   openActionMenuFromPicker,
   closeActionMenu,
   confirmActionMenuPick,
@@ -149,6 +152,9 @@ export function useTabPickerKeyboard({
   sessionId: string
   editPanel: EditPanel | null
   actionMenuPanel: ActionMenuPanel | null
+  bookmarkPanelOpen: boolean
+  openBookmarkFromPicker: () => void
+  handleBookmarkKeydown: (e: KeyboardEvent) => boolean
   openActionMenuFromPicker: () => void
   closeActionMenu: () => void
   confirmActionMenuPick: () => void | Promise<void>
@@ -229,6 +235,9 @@ export function useTabPickerKeyboard({
     hlSearchPattern,
     editPanel,
     actionMenuPanel,
+    bookmarkPanelOpen,
+    openBookmarkFromPicker,
+    handleBookmarkKeydown,
     openActionMenuFromPicker,
     closeActionMenu,
     confirmActionMenuPick,
