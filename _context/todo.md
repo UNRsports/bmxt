@@ -600,6 +600,57 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 **参照:** §6c · §10 · `shared/lib/features/sync/handshake/` · `hosts/cli/`
 
+### 12. BMXtCLI — i18n / `setting` コマンドパリティ
+
+**目標:** 端末版 CLI（`hosts/cli` · バイナリ `bmxt`）でも拡張と同じく **EN/JA i18n** と、可能な限り同じ **`setting` CUI**（`-list` / `-set` / `-save` / `-cancel`）を使えるようにする。ブラウザ UI（`| browse` ピッカー・FSA・chrome.storage）は持たず、ディスク上の CLI 専用ストアで完結する。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| ストア | 拡張の `chrome.storage` / FSA とは **独立**。CLI 専用ディレクトリに拡張 export と同形の **`settings.json` v2** |
+| ディレクトリ | **`~/.config/bmxt/bmxt-cli-ui-settings/`**（BMXtCLI の UI 設定だと一目で分かる名前。Family 用 `~/.config/bmxt/config.json` とは別） |
+| バンドル | 拡張の `bmxt-ui-settings/` と **同レイアウト**（`settings.json` + 任意の背景画像）。後から zip/dir で拡張と行き来可能 |
+| コマンド意味 | 既存 `bmxt-core` の `setting` UiAction をそのまま適用（新文法は作らない） |
+| locale 優先順 | **committed `settings.locale` → env（`LC_ALL` / `LC_MESSAGES` / `LANG`）→ `en`** |
+| スコープ外（当面） | `setting -list \| browse` ピッカー、FSA / IndexedDB、snapshot vault UI、Family sync 案内行、appearance ライブプレビュー |
+
+**アーキテクチャ（要約）**
+
+```
+REPL line
+  → bmxt-core run_line → UiAction setting_*
+  → CliHostAdapter（draft インメモリ）
+  → ~/.config/bmxt/bmxt-cli-ui-settings/settings.json
+  → ランタイム locale → msgs.rs（共有 i18n JSON）
+```
+
+| Path / crate | 役割 |
+|--------------|------|
+| `shared/crates/bmxt-ui-settings`（新規） | `settings.json` v2 の load/save/normalize（拡張 TS と意味揃え） |
+| `hosts/cli/src/msgs.rs` | namespace 拡充 · ランタイム locale |
+| `hosts/cli/src/adapter.rs` | `SettingSet` / `SettingSave` / `SettingCancel` / `OpenPlainList(setting)` |
+| `shared/lib/features/setting/setting-cui-apply.ts` | 拡張側 `host-ui` `-set` を `auto`/`desktop`/`mobile` に修正（両ホスト一致） |
+
+**実装チェック（段階）**
+
+- [ ] **12.0 契約:** 本節 + ディレクトリ名 `bmxt-cli-ui-settings` 固定。plan / README にパスを明記
+- [ ] **12.1 i18n + locale 永続:** `bmxt-ui-settings` クレート · locale 優先順 · `setting.json` 等 namespace 拡充 · adapter/main の直書き英語を `t_cli` 化 · Rust 単体テスト
+- [ ] **12.2 `setting` CUI（スカラー）:** `-list` 印刷 · `-set` draft · `-save` / `-cancel` / `-exit` · キー `locale` / `edit-picker` / `ime-candidate-help` / `search-legend` / `host-ui`（CLI は値保存のみ）· `| browse` は非対応 msgs
+- [ ] **12.3 拡張追随:** `setting-cui-apply` の `host-ui` を現行ドメイン（`auto`/`desktop`/`mobile`）へ修正 · unit 更新
+- [ ] **12.4 ドキュメント:** `hosts/cli/README.md` · root README Terminal CLI 節 · 本節チェック更新
+- [ ] **12.5（後続）appearance / export-import:** 色・フォント・画像パス · 拡張と同形 zip/dir 往復。任意で `BMXT_CLI_UI_SETTINGS_DIR` 上書き
+
+**手元スモーク**
+
+- [ ] `setting -list` が `bmxt-cli-ui-settings` の committed 値を印刷する
+- [ ] `setting -set locale en` → `-save` 後、msgs / バナーが英語になる（再起動後も維持）
+- [ ] `-set` 後 `-cancel` で破棄されディスクに書かれない
+- [ ] `setting -list | browse` が CLI 非対応案内になる（tabs の browse は退行なし）
+- [ ] 拡張側 `setting -set host-ui desktop` が通る（12.3）
+
+**参照:** plan `cli_setting_i18n` · §10 · §11 · skill `bmxt-i18n` · skill `bmxt-ui-settings` · `hosts/cli/` · `shared/lib/features/setting/`
+
 ---
 
 ## Archive（ポインタのみ）
