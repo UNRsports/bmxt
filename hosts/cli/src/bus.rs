@@ -14,7 +14,9 @@ use bmxt_sync_wire::{
 use rand::RngCore;
 use tokio::sync::{mpsc, oneshot, Mutex};
 
+use crate::door::DOOR_PORT;
 use crate::mesh_plan::{peers_to_announce, peers_to_offer_mesh, MeshPeerAnnounce};
+use crate::msgs::t_cli;
 
 const MAX_MESH_PEERS: usize = 32;
 const MESH_OFFER_BUSY_TTL: Duration = Duration::from_secs(60);
@@ -455,6 +457,13 @@ fn spawn_forwarder(
     });
 }
 
+fn print_door_alive_hint() {
+    eprintln!(
+        "{}",
+        t_cli("cmd.cli.door.alive", &[("port", &DOOR_PORT.to_string())])
+    );
+}
+
 async fn dispatch_loop(
     inner: Arc<Mutex<HubInner>>,
     mut events: mpsc::UnboundedReceiver<TaggedEvent>,
@@ -463,8 +472,10 @@ async fn dispatch_loop(
         match tagged.event {
             PeerSessionEvent::ConnectionState(state) => {
                 eprintln!("connection[{}]: {state}", tagged.via_remote);
+                print_door_alive_hint();
                 let mut changed = false;
                 let mut drop_session: Option<Arc<PeerSession>> = None;
+                let mut became_idle = false;
                 {
                     let mut guard = inner.lock().await;
                     if state == "connected" {
@@ -478,10 +489,27 @@ async fn dispatch_loop(
                                 drop_session = Some(session);
                             }
                         }
+                        became_idle = changed && guard.connected.is_empty();
                     }
                 }
                 if let Some(session) = drop_session {
                     session.close().await;
+                }
+                if became_idle {
+                    eprintln!(
+                        "{}",
+                        t_cli(
+                            "cmd.cli.door.peerTunnelClosed",
+                            &[("detail", state.as_str())]
+                        )
+                    );
+                    eprintln!(
+                        "{}",
+                        t_cli(
+                            "cmd.cli.door.stillListening",
+                            &[("port", &DOOR_PORT.to_string())]
+                        )
+                    );
                 }
                 if changed {
                     on_connected_set_changed(Arc::clone(&inner)).await;
@@ -489,8 +517,11 @@ async fn dispatch_loop(
             }
             PeerSessionEvent::IceConnectionState(state) => {
                 eprintln!("ice[{}]: {state}", tagged.via_remote);
+                print_door_alive_hint();
             }
             PeerSessionEvent::DataChannelOpen => {
+                eprintln!("datachannel[{}]: open", tagged.via_remote);
+                print_door_alive_hint();
                 let changed = {
                     let mut guard = inner.lock().await;
                     guard.connected.insert(tagged.via_remote.clone())

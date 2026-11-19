@@ -19,6 +19,7 @@ use crate::bus::BusClient;
 use crate::config::CliConfig;
 use crate::connect::wait_connected_brief;
 use crate::handshake;
+use crate::msgs::t_cli;
 
 /// EN: Fixed loopback port shared with the extension (CONTRACT / todo §11).
 pub const DOOR_PORT: u16 = 17653;
@@ -104,7 +105,13 @@ pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .map_err(|e| anyhow!("localhost door bind {addr}: {e}"))?;
-    eprintln!("localhost door listening on http://127.0.0.1:{DOOR_PORT}/ (Family-sealed)");
+    eprintln!(
+        "{}",
+        t_cli(
+            "cmd.cli.door.listening",
+            &[("port", &DOOR_PORT.to_string())]
+        )
+    );
     tokio::spawn(async move {
         if let Err(err) = axum::serve(listener, app).await {
             eprintln!("localhost door stopped: {err}");
@@ -199,9 +206,23 @@ async fn handshake_offer(
                 hub.attach_peer(session, events, remote_id.clone(), remote_name.clone(), early)
                     .await;
                 eprintln!("localhost door: connected to {remote_name} ({remote_id})");
+                eprintln!(
+                    "{}",
+                    t_cli(
+                        "cmd.cli.door.alive",
+                        &[("port", &DOOR_PORT.to_string())]
+                    )
+                );
             }
             Err(err) => {
                 eprintln!("localhost door: DataChannel wait failed for {remote_id}: {err}");
+                eprintln!(
+                    "{}",
+                    t_cli(
+                        "cmd.cli.door.stillListening",
+                        &[("port", &DOOR_PORT.to_string())]
+                    )
+                );
                 session.close().await;
             }
         }

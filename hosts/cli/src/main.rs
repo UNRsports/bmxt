@@ -19,6 +19,7 @@ use clap::{Parser, Subcommand};
 use crate::adapter::CliHostAdapter;
 use crate::bus::BusClient;
 use crate::config::CliConfig;
+use crate::msgs::t_cli;
 use crate::shell::{PromptShell, ReadOutcome};
 
 #[derive(Debug, Parser)]
@@ -168,23 +169,30 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         None => false,
     };
     if has_peers {
-        println!("BMXt CLI — connected. Extension command grammar + line editor.");
-        println!(
-            "↑↓ history · grey hint · Tab apply · Enter run · e.g. tab -list --peers | browse · help · quit"
-        );
+        println!("{}", t_cli("cmd.cli.banner.connected", &[]));
+        println!("{}", t_cli("cmd.cli.banner.connectedHint", &[]));
     } else if hub.is_some() {
-        println!("BMXt CLI — Family ready · localhost door on :{}.", door::DOOR_PORT);
         println!(
-            "Browsers: open BMXt prompt for sealed auto-connect. Fallback: sync -offer / sync -accept"
+            "{}",
+            t_cli(
+                "cmd.cli.banner.familyReady",
+                &[("port", &door::DOOR_PORT.to_string())]
+            )
         );
-        println!("Editing: grey remainder hint · Tab applies · Enter runs · help · quit");
+        println!("{}", t_cli("cmd.cli.banner.familyReadyHint", &[]));
+        println!("{}", t_cli("cmd.cli.banner.editing", &[]));
+        println!(
+            "{}",
+            t_cli(
+                "cmd.cli.door.stillListening",
+                &[("port", &door::DOOR_PORT.to_string())]
+            )
+        );
     } else {
-        println!("BMXt CLI — direct start (not in a Family yet).");
-        println!("Local: sync -setup · sync -pair · sync -status · help · quit");
-        println!(
-            "Then: browsers auto-connect via localhost door, or sync -offer / sync -accept"
-        );
-        println!("Editing: grey remainder hint · Tab applies · Enter runs");
+        println!("{}", t_cli("cmd.cli.banner.noFamily", &[]));
+        println!("{}", t_cli("cmd.cli.banner.noFamilyHint", &[]));
+        println!("{}", t_cli("cmd.cli.banner.noFamilyNext", &[]));
+        println!("{}", t_cli("cmd.cli.banner.editing", &[]));
     }
     let mut shell = PromptShell::open()?;
     let mut continuation: Option<String> = None;
