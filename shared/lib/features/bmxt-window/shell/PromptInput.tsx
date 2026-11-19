@@ -19,6 +19,8 @@ type PromptInputProps = {
   mode: "normal" | "isearch"
   line: string
   cursorPos: number
+  /** EN: Selection start; equals cursorPos when collapsed. */
+  selectionStart: number
   isComposing: boolean
   promptPaneFocused: boolean
   navPageTyping: boolean
@@ -66,6 +68,7 @@ export function PromptInput({
   mode,
   line,
   cursorPos,
+  selectionStart,
   isComposing,
   promptPaneFocused,
   navPageTyping,
@@ -149,7 +152,9 @@ export function PromptInput({
     }
   }, [promptPaneFocused, imeRef])
 
-  const caretActive = promptPaneFocused && imeDomFocused
+  // EN: Hide the mirror caret while a range is selected so the native highlight is clear.
+  const caretActive =
+    promptPaneFocused && imeDomFocused && selectionStart === cursorPos
   const promptFieldRef = useRef<HTMLDivElement>(null)
   const promptMirrorRef = useRef<HTMLDivElement>(null)
 

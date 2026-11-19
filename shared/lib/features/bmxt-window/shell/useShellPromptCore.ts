@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { promptMirrorSegments } from "../../nav/nav-prompt-input"
 import {
   ensureBmxtCore,
@@ -19,10 +19,46 @@ export type UseShellPromptCoreOptions = {
 export function useShellPromptCore(options: UseShellPromptCoreOptions) {
   const [mode, setMode] = useState<ShellPromptMode>("normal")
   const [line, setLine] = useState("")
-  const [cursorPos, setCursorPos] = useState(0)
+  /** EN: Caret / selection end (DOM selectionEnd; >= selectionStart). */
+  const [cursorPos, setCursorPosState] = useState(0)
+  /** EN: Selection start; equals cursorPos when the caret is collapsed. */
+  const [selectionStart, setSelectionStart] = useState(0)
+  /** EN: Keep Shift+Arrow direction across controlled re-renders. */
+  const [selectionDirection, setSelectionDirection] = useState<
+    "forward" | "backward" | "none"
+  >("none")
   const [isComposing, setIsComposing] = useState(false)
   const [compositionAnchor, setCompositionAnchor] = useState(0)
   const [localCompletion, setLocalCompletion] = useState<string[]>(options.completionCandidates)
+
+  /**
+   * EN: Move the caret and collapse any range selection (default for edits / navigation).
+   * JA: キャレット移動と同時に範囲選択を解除する（編集・移動の既定）。
+   */
+  const setCursorPos = useCallback((pos: number) => {
+    setCursorPosState(pos)
+    setSelectionStart(pos)
+    setSelectionDirection("none")
+  }, [])
+
+  /**
+   * EN: Restore a textarea selection range (mouse drag / Shift+Arrow / Ctrl+A).
+   * JA: テキストエリアの範囲選択を保持する（ドラッグ / Shift+矢印 / Ctrl+A）。
+   */
+  const setPromptSelection = useCallback(
+    (
+      start: number,
+      end: number,
+      direction: "forward" | "backward" | "none" = "none"
+    ) => {
+      const a = Math.max(0, start)
+      const b = Math.max(0, end)
+      setSelectionStart(Math.min(a, b))
+      setCursorPosState(Math.max(a, b))
+      setSelectionDirection(a === b ? "none" : direction)
+    },
+    []
+  )
 
   const [histNavIndex, setHistNavIndex] = useState(-1)
   const [histDraft, setHistDraft] = useState("")
@@ -92,10 +128,18 @@ export function useShellPromptCore(options: UseShellPromptCoreOptions) {
     if (!ta || isComposing) {
       return
     }
-    if (ta.selectionStart !== cursorPos || ta.selectionEnd !== cursorPos) {
-      ta.setSelectionRange(cursorPos, cursorPos)
+    const start = Math.max(0, Math.min(selectionStart, line.length))
+    const end = Math.max(0, Math.min(cursorPos, line.length))
+    const directionMismatch =
+      start !== end && ta.selectionDirection !== selectionDirection
+    if (
+      ta.selectionStart !== start ||
+      ta.selectionEnd !== end ||
+      directionMismatch
+    ) {
+      ta.setSelectionRange(start, end, selectionDirection)
     }
-  }, [line, cursorPos, isComposing])
+  }, [line, cursorPos, selectionStart, selectionDirection, isComposing])
 
   const mirror = useMemo(
     () => promptMirrorSegments(line, cursorPos, isComposing, compositionAnchor),
@@ -110,7 +154,9 @@ export function useShellPromptCore(options: UseShellPromptCoreOptions) {
     line,
     setLine,
     cursorPos,
+    selectionStart,
     setCursorPos,
+    setPromptSelection,
     isComposing,
     setIsComposing,
     compositionAnchor,

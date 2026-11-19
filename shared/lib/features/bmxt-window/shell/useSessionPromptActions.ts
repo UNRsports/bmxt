@@ -22,6 +22,11 @@ export type UseSessionPromptActionsOptions = {
   setSubCmdPicker: (state: TokenPickerModel | null) => void
   setLine: (line: string) => void
   setCursorPos: (pos: number) => void
+  setPromptSelection: (
+    start: number,
+    end: number,
+    direction?: "forward" | "backward" | "none"
+  ) => void
   setHistNavIndex: (index: number) => void
   tabPressSeqRef: React.MutableRefObject<number>
   lineRef: React.MutableRefObject<string>
@@ -63,14 +68,20 @@ export function useSessionPromptActions(options: UseSessionPromptActionsOptions)
       const name = options.currentSessionDisplayNameRef.current
       options.setSessionNameTyping(true)
       options.setLine(name)
-      options.setCursorPos(name.length)
       options.lineRef.current = name
+      if (name.length > 0) {
+        options.setPromptSelection(0, name.length)
+      } else {
+        options.setCursorPos(0)
+      }
       void options.appendLogLines([`> ${commandLine}`])
       queueMicrotask(() => {
         const ta = options.imeRef.current
         if (ta) {
           ta.focus({ preventScroll: true })
-          ta.setSelectionRange(0, name.length)
+          if (name.length > 0) {
+            ta.setSelectionRange(0, name.length)
+          }
         }
       })
     },

@@ -42,6 +42,12 @@ export type UseNavPromptBridgeOptions = {
   setISearchCycle: (cycle: number) => void
   setLine: (line: string) => void
   setCursorPos: (pos: number) => void
+  /** EN: Keep a non-collapsed prompt selection (drag / Shift+Arrow / select-all). */
+  setPromptSelection: (
+    start: number,
+    end: number,
+    direction?: "forward" | "backward" | "none"
+  ) => void
   setIsComposing: (composing: boolean) => void
   setCompositionAnchor: (anchor: number) => void
   syncImeTokenPicker: (line: string, pos: number) => void
@@ -286,17 +292,30 @@ export function useNavPromptBridge(options: UseNavPromptBridgeOptions) {
       return
     }
     const locked = options.getPromptLockedPrefix()
-    let rawPos = ta.selectionEnd
     let value = ta.value
+    let rawStart = ta.selectionStart
+    let rawEnd = ta.selectionEnd
     if (locked !== null && locked.length > 0) {
-      const clamped = clampPromptLockedPrefix(value, rawPos, locked)
-      if (clamped.line !== value) {
-        value = clamped.line
+      const clampedEnd = clampPromptLockedPrefix(value, rawEnd, locked)
+      if (clampedEnd.line !== value) {
+        value = clampedEnd.line
         ta.value = value
       }
-      rawPos = clamped.cursor
+      const lockedMin = locked.length
+      rawStart = Math.max(lockedMin, Math.min(rawStart, value.length))
+      rawEnd = Math.max(lockedMin, Math.min(clampedEnd.cursor, value.length))
     }
-    const pos = snapNavReloadTabBlockCaret(value, rawPos)
+    // EN: Preserve range selections for copy/paste across browsers; only snap collapsed carets.
+    if (rawStart !== rawEnd) {
+      const direction = ta.selectionDirection
+      if (rawStart !== ta.selectionStart || rawEnd !== ta.selectionEnd) {
+        ta.setSelectionRange(rawStart, rawEnd, direction)
+      }
+      options.setPromptSelection(rawStart, rawEnd, direction)
+      options.syncImeTokenPicker(value, rawEnd)
+      return
+    }
+    const pos = snapNavReloadTabBlockCaret(value, rawEnd)
     const lockedMin = locked?.length ?? 0
     const finalPos = Math.max(lockedMin, pos)
     if (finalPos !== ta.selectionStart || finalPos !== ta.selectionEnd) {

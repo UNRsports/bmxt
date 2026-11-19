@@ -571,7 +571,9 @@ export function BmxtShell({
     line,
     setLine,
     cursorPos,
+    selectionStart,
     setCursorPos,
+    setPromptSelection,
     isComposing,
     setIsComposing,
     compositionAnchor,
@@ -1093,6 +1095,7 @@ export function BmxtShell({
     setSubCmdPicker,
     setLine,
     setCursorPos,
+    setPromptSelection,
     setHistNavIndex,
     tabPressSeqRef,
     lineRef,
@@ -1236,6 +1239,7 @@ export function BmxtShell({
     setISearchCycle,
     setLine,
     setCursorPos,
+    setPromptSelection,
     setIsComposing,
     setCompositionAnchor,
     syncImeTokenPicker,
@@ -1516,6 +1520,7 @@ export function BmxtShell({
           mode={mode}
           line={line}
           cursorPos={cursorPos}
+          selectionStart={selectionStart}
           isComposing={isComposing}
           promptPaneFocused={promptPaneFocused}
           navPageTyping={navPageTyping}

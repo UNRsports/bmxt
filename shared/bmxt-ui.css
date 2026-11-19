@@ -1497,7 +1497,9 @@ body {
 }
 
 .bmxt-prompt-ime::selection {
-  background: rgba(88, 166, 255, 0.35);
+  /* EN: Text is color:transparent; keep a clear highlight for drag / Shift+Arrow copy. */
+  background: rgba(88, 166, 255, 0.55);
+  color: transparent;
 }
 
 .bmxt-prompt-composition {

@@ -644,6 +644,7 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         !e.altKey &&
         !e.metaKey &&
         !e.ctrlKey &&
+        !e.shiftKey &&
         options.mode === "normal" &&
         options.promptPaneFocused &&
         !options.navPageTyping
@@ -709,6 +710,7 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
         !e.altKey &&
         !e.metaKey &&
         !e.ctrlKey &&
+        !e.shiftKey &&
         options.mode === "normal" &&
         options.promptPaneFocused &&
         !options.navPageTyping &&
