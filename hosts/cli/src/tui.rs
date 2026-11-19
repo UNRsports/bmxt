@@ -1,5 +1,5 @@
-//! EN: Terminal tab picker (ratatui) — ↑↓ / filter, Enter selects a tab.
-//! JA: 端末タブ picker。↑↓・/ フィルタ、Enter で選択。
+//! EN: Terminal tab picker (ratatui) — ↑↓ / filter, Enter activates, q/Esc closes.
+//! JA: 端末タブ picker。↑↓・/ フィルタ、Enter で activate、q/Esc で閉じる。
 
 use anyhow::Result;
 use bmxt_sync_wire::SyncRemoteTabRow;
@@ -36,24 +36,29 @@ pub fn run_demo_tui() -> Result<()> {
 }
 
 /**
- * EN: Interactive list. Enter on a tab row returns selection; Esc/q cancels (`None`).
- * JA: 対話一覧。タブ行 Enter で選択、Esc/q でキャンセル。
+ * EN: Interactive list. Enter activates via `on_activate` but keeps the picker open.
+ *     Esc/q closes explicitly (`Ok(())`). Window/group rows are not selectable.
+ * JA: 対話一覧。Enter で activate（picker は開いたまま）。Esc/q で明示的に閉じる。
  */
-pub fn run_tab_picker(rows: &[PeerTabRow]) -> Result<Option<PickerSelection>> {
+pub fn run_tab_picker<F>(rows: &[PeerTabRow], mut on_activate: F) -> Result<()>
+where
+    F: FnMut(&PickerSelection) -> Result<()>,
+{
     let entries: Vec<PickerEntry> = rows.iter().filter_map(PickerEntry::from_peer_row).collect();
     if entries.is_empty() {
         println!("(empty list)");
-        return Ok(None);
+        return Ok(());
     }
 
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
-    let result = (|| -> Result<Option<PickerSelection>> {
+    let result = (|| -> Result<()> {
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
         let mut state = ListState::default();
         state.select(Some(0));
         let mut filter = String::new();
         let mut searching = false;
+        let mut status = String::from("↑↓ move · / filter · Enter activate · q/Esc close");
 
         loop {
             let filtered: Vec<usize> = entries
@@ -99,7 +104,7 @@ pub fn run_tab_picker(rows: &[PeerTabRow]) -> Result<Option<PickerSelection>> {
                 let footer = if searching {
                     format!("/{filter}_")
                 } else {
-                    "↑↓ move · / filter · Enter activate · q/Esc cancel".into()
+                    status.clone()
                 };
                 frame.render_widget(
                     Paragraph::new(footer).block(Block::default().borders(Borders::ALL)),
@@ -132,7 +137,7 @@ pub fn run_tab_picker(rows: &[PeerTabRow]) -> Result<Option<PickerSelection>> {
                 continue;
             }
             match key.code {
-                KeyCode::Char('q') | KeyCode::Esc => return Ok(None),
+                KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
                 KeyCode::Char('/') => {
                     searching = true;
                     filter.clear();
@@ -153,7 +158,24 @@ pub fn run_tab_picker(rows: &[PeerTabRow]) -> Result<Option<PickerSelection>> {
                     if let Some(fi) = state.selected() {
                         if let Some(entry_idx) = filtered.get(fi) {
                             if let Some(tab) = &entries[*entry_idx].tab {
-                                return Ok(Some(tab.clone()));
+                                match on_activate(tab) {
+                                    Ok(()) => {
+                                        status = if tab.url.is_empty() {
+                                            format!(
+                                                "activated {} — {} · q/Esc close",
+                                                tab.tab_id, tab.title
+                                            )
+                                        } else {
+                                            format!(
+                                                "activated {} — {} {} · q/Esc close",
+                                                tab.tab_id, tab.title, tab.url
+                                            )
+                                        };
+                                    }
+                                    Err(err) => {
+                                        status = format!("error: {err} · q/Esc close");
+                                    }
+                                }
                             }
                         }
                     }

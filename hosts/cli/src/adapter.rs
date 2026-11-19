@@ -464,26 +464,28 @@ impl<'a> CliHostAdapter<'a> {
         &self,
         rows: &[tui::PeerTabRow],
     ) -> Result<RunOutcome> {
-        match tui::run_tab_picker(rows)? {
-            None => Ok(RunOutcome::status(EXIT_SUCCESS)),
-            Some(sel) => {
-                self.require_client()?
-                    .tabs_ops_on(
-                        &self.cfg.device_id,
-                        &sel.peer_device_id,
-                        SyncTabsOp::Activate {
-                            tab_id: sel.tab_id,
-                            window_id: sel.window_id,
-                        },
-                    )
-                    .await?;
-                println!(
-                    "activated tab {} win={} on {} — {} {}",
-                    sel.tab_id, sel.window_id, sel.peer_device_id, sel.title, sel.url
-                );
-                Ok(RunOutcome::status(EXIT_SUCCESS))
-            }
-        }
+        let client = self.require_client()?.clone();
+        let device_id = self.cfg.device_id.clone();
+        // EN: ratatui is sync; activate over the bus without leaving the picker open.
+        // JA: ratatui は同期。picker を閉じずにバス経由で activate する。
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            tui::run_tab_picker(rows, |sel| {
+                handle.block_on(async {
+                    client
+                        .tabs_ops_on(
+                            &device_id,
+                            &sel.peer_device_id,
+                            SyncTabsOp::Activate {
+                                tab_id: sel.tab_id,
+                                window_id: sel.window_id,
+                            },
+                        )
+                        .await
+                })
+            })
+        })?;
+        Ok(RunOutcome::status(EXIT_SUCCESS))
     }
 
     async fn materialize_tab_rows(

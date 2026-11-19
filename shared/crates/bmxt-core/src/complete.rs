@@ -1,7 +1,10 @@
 //! Fixed-token Tab / IME completion (first–third tiers) from the generated registry.
+//! EN: Also merges `| browse`… pipe-continuation candidates (same policy as extension TS).
 
 use crate::cmd::all_completion_tokens;
-use crate::generated::{is_second_token, resolve_canonical, subcommand_branches};
+use crate::generated::{
+    all_command_metas, is_second_token, resolve_canonical, subcommand_branches,
+};
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -78,12 +81,247 @@ fn third_token_candidates(canonical: &str, second_lower: &str) -> Vec<String> {
     Vec::new()
 }
 
+/** EN: First commands whose `-list` can feed `| browse`… (aligned with PICKER_LIST_PRODUCER_TOKENS). */
+const PIPE_PRODUCER_FIRST: &[&str] = &["tab", "dom", "session", "setting", "search"];
+
 /**
- * EN: Resolve fixed-token candidates for the token under `cursor`.
- * Returns `None` when no fixed-token menu applies (host may add live browser candidates).
+ * EN: Pipe consumer completion ids (aligned with PIPE_CONSUMER_COMPLETION_IDS in TS).
+ * JA: パイプ右辺候補 id（TS の PIPE_CONSUMER_COMPLETION_IDS と揃える）。
  */
-pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
-    let cursor = clamp_to_char_boundary(line, cursor);
+const PIPE_CONSUMER_COMPLETION_IDS: &[&str] = &[
+    "browse",
+    "open",
+    "jump",
+    "move",
+    "new-window",
+    "back",
+    "forward",
+    "reload",
+    "close",
+    "tab",
+    "bookmark",
+    "history",
+];
+
+fn is_pipe_producer_first(canonical: &str) -> bool {
+    PIPE_PRODUCER_FIRST
+        .iter()
+        .any(|name| name.eq_ignore_ascii_case(canonical))
+}
+
+/** EN: Display tokens like `| browse` (canonical name + aliases). */
+fn list_pipe_continuation_candidate_tokens() -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for id in PIPE_CONSUMER_COMPLETION_IDS {
+        let meta = all_command_metas().iter().find(|m| m.name == *id);
+        let names: Vec<&str> = match meta {
+            Some(m) => {
+                let mut names = vec![m.name];
+                names.extend(m.aliases.iter().copied());
+                names
+            }
+            None => vec![*id],
+        };
+        for name in names {
+            let token = format!("| {name}");
+            if seen.insert(token.clone()) {
+                out.push(token);
+            }
+        }
+    }
+    out
+}
+
+fn is_pipe_continuation_candidate(token: &str) -> bool {
+    let t = token.trim();
+    t.starts_with('|')
+        && t.chars()
+            .nth(1)
+            .is_some_and(|c| c.is_ascii_whitespace())
+        && t.split_whitespace().nth(1).is_some()
+}
+
+fn stage_line_offers_pipe_continuations(stage_line: &str) -> bool {
+    let parts: Vec<&str> = stage_line.split_whitespace().collect();
+    if parts.len() < 2 {
+        return false;
+    }
+    let Some(canonical) = resolve_canonical(parts[0]) else {
+        return false;
+    };
+    if !is_pipe_producer_first(canonical) {
+        return false;
+    }
+    parts[1].eq_ignore_ascii_case("-list")
+}
+
+fn is_cursor_on_complete_list_second(stage_line: &str, cursor: usize) -> bool {
+    let (l, r) = word_bounds(stage_line, cursor);
+    let left = &stage_line[..l];
+    let tokens_before: Vec<&str> = if left.trim().is_empty() {
+        Vec::new()
+    } else {
+        left.trim().split_whitespace().collect()
+    };
+    if tokens_before.len() != 1 {
+        return false;
+    }
+    let Some(canonical) = resolve_canonical(tokens_before[0]) else {
+        return false;
+    };
+    if !is_pipe_producer_first(canonical) {
+        return false;
+    }
+    let word = &stage_line[l..r];
+    word.eq_ignore_ascii_case("-list") && cursor >= r
+}
+
+/**
+ * EN: True when the cursor may accept `| browse`… after a list producer `-list`
+ *     (third+ token zone, trailing space after `-list`, or complete `-list` at EOL).
+ */
+fn is_pipe_continuation_offer_zone(stage_line: &str, cursor: usize) -> bool {
+    if !stage_line_offers_pipe_continuations(stage_line) {
+        return false;
+    }
+    let (l, r) = word_bounds(stage_line, cursor);
+    let left = &stage_line[..l];
+    let tokens_before: Vec<&str> = if left.trim().is_empty() {
+        Vec::new()
+    } else {
+        left.trim().split_whitespace().collect()
+    };
+
+    if tokens_before.len() >= 2 && tokens_before[1].eq_ignore_ascii_case("-list") {
+        return true;
+    }
+
+    if tokens_before.len() == 1 {
+        if let Some(canonical) = resolve_canonical(tokens_before[0]) {
+            if is_pipe_producer_first(canonical) {
+                let word = &stage_line[l..r];
+                if !word.eq_ignore_ascii_case("-list") {
+                    return false;
+                }
+                if cursor < r {
+                    return false;
+                }
+                let after = &stage_line[r..];
+                if !after.is_empty() && !after.chars().all(|c| c.is_ascii_whitespace()) {
+                    return false;
+                }
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn match_pipe_continuation_candidates(candidates: &[String], prefix: &str) -> Vec<String> {
+    if prefix.starts_with('-') {
+        return Vec::new();
+    }
+    if prefix.is_empty() {
+        return candidates.to_vec();
+    }
+    let p = prefix.split_whitespace().collect::<Vec<_>>().join(" ");
+    let p = p.to_ascii_lowercase();
+    let p_after_pipe = p.trim_start_matches('|').trim_start();
+    candidates
+        .iter()
+        .filter(|candidate| {
+            let cl = candidate.to_ascii_lowercase();
+            let name = cl.trim_start_matches('|').trim_start();
+            if cl.starts_with(&p) {
+                return true;
+            }
+            if p.starts_with('|') {
+                return name.starts_with(p_after_pipe);
+            }
+            name.starts_with(&p)
+        })
+        .cloned()
+        .collect()
+}
+
+fn merge_option_and_pipe_continuation(option_candidates: &[String], prefix: &str) -> Vec<String> {
+    let pipe_filtered =
+        match_pipe_continuation_candidates(&list_pipe_continuation_candidate_tokens(), prefix);
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for token in option_candidates.iter().chain(pipe_filtered.iter()) {
+        if seen.insert(token.clone()) {
+            out.push(token.clone());
+        }
+    }
+    out
+}
+
+/**
+ * EN: Merge `| browse`… into third-tier picks on list producers (extension-aligned).
+ * JA: list プロデューサーの第三段に `| browse` 等を載せる（拡張と同じ判定）。
+ */
+fn apply_pipe_continuation_candidates(
+    hit: Option<CompleteHit>,
+    stage_line: &str,
+    cursor: usize,
+) -> Option<CompleteHit> {
+    if !stage_line_offers_pipe_continuations(stage_line) {
+        return hit;
+    }
+
+    let on_complete_list_word = is_cursor_on_complete_list_second(stage_line, cursor);
+    let mut effective = hit;
+    if on_complete_list_word {
+        if let Some(ref h) = effective {
+            if h.tier == "second" {
+                effective = None;
+            }
+        }
+    }
+
+    if let Some(ref h) = effective {
+        if h.tier != "third" {
+            return effective;
+        }
+    }
+
+    let in_offer_zone = is_pipe_continuation_offer_zone(stage_line, cursor);
+    let merge_existing_third = effective
+        .as_ref()
+        .is_some_and(|h| h.tier == "third");
+    if !in_offer_zone && !merge_existing_third {
+        return effective;
+    }
+
+    let (l, r) = word_bounds(stage_line, cursor);
+    let (prefix, token_start, token_end) = if let Some(ref h) = effective {
+        (h.prefix.clone(), h.token_start, h.token_end)
+    } else if on_complete_list_word {
+        (String::new(), stage_line.len(), stage_line.len())
+    } else {
+        (stage_line[l..cursor].to_string(), l, r)
+    };
+
+    let option_candidates = effective
+        .as_ref()
+        .map(|h| h.candidates.as_slice())
+        .unwrap_or(&[]);
+    let merged = merge_option_and_pipe_continuation(option_candidates, &prefix);
+    if merged.is_empty() {
+        return None;
+    }
+    Some(CompleteHit {
+        token_start,
+        token_end,
+        prefix,
+        candidates: merged,
+        tier: "third".to_string(),
+    })
+}
+
+fn complete_line_fixed(line: &str, cursor: usize) -> Option<CompleteHit> {
     let (l, r) = word_bounds(line, cursor);
     let left = &line[..l];
     let tokens_before: Vec<&str> = if left.trim().is_empty() {
@@ -198,6 +436,83 @@ pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
     None
 }
 
+/**
+ * EN: First unquoted single `|` (pipe), not `||`. Byte index of the bar.
+ * JA: クォート外の単独 `|`（`||` は除外）。バーのバイト位置。
+ */
+fn first_pipe_byte_index(line: &str) -> Option<usize> {
+    let bytes = line.as_bytes();
+    let mut i = 0;
+    let mut in_single = false;
+    let mut in_double = false;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if in_single {
+            if b == b'\'' {
+                in_single = false;
+            }
+            i += 1;
+            continue;
+        }
+        if in_double {
+            if b == b'\\' && i + 1 < bytes.len() {
+                i += 2;
+                continue;
+            }
+            if b == b'"' {
+                in_double = false;
+            }
+            i += 1;
+            continue;
+        }
+        match b {
+            b'\'' => {
+                in_single = true;
+                i += 1;
+            }
+            b'"' => {
+                in_double = true;
+                i += 1;
+            }
+            b'|' => {
+                if i + 1 < bytes.len() && bytes[i + 1] == b'|' {
+                    i += 2;
+                    continue;
+                }
+                return Some(i);
+            }
+            _ => i += 1,
+        }
+    }
+    None
+}
+
+/**
+ * EN: Resolve fixed-token candidates for the token under `cursor`, then merge
+ *     `| browse`… when the stage is a list producer with `-list` (extension-aligned).
+ *     Once the cursor is on/after a real `|` pipe, left-stage continuations are not merged
+ *     (RHS uses consumer-name completion separately in the extension host).
+ * Returns `None` when no fixed-token menu applies (host may add live browser candidates).
+ */
+pub fn complete_line(line: &str, cursor: usize) -> Option<CompleteHit> {
+    let cursor = clamp_to_char_boundary(line, cursor);
+    let hit = complete_line_fixed(line, cursor);
+    if let Some(pipe_at) = first_pipe_byte_index(line) {
+        if cursor >= pipe_at {
+            // EN: On/after `|` — do not synthesize left-stage `| browse` tokens.
+            return hit;
+        }
+        let stage = &line[..pipe_at];
+        return apply_pipe_continuation_candidates(hit, stage, cursor);
+    }
+    apply_pipe_continuation_candidates(hit, line, cursor)
+}
+
+/** EN: True when `token` is a pipe-continuation menu candidate (`| browse`, …). */
+pub fn is_pipe_continuation_token(token: &str) -> bool {
+    is_pipe_continuation_candidate(token)
+}
+
 pub fn complete_json(line: &str, cursor: usize) -> String {
     match complete_line(line, cursor) {
         Some(hit) => serde_json::to_string(&hit).unwrap_or_else(|_| "null".to_string()),
@@ -241,6 +556,51 @@ mod tests {
         assert!(hit.candidates.iter().any(|c| c == "-url"));
         assert!(hit.candidates.iter().any(|c| c == "--device"));
         assert!(hit.candidates.iter().any(|c| c == "--peers"));
+        assert!(hit.candidates.iter().any(|c| c == "| browse"));
+    }
+
+    #[test]
+    fn offers_pipe_continuation_after_tab_list_peers() {
+        let line = "tab -list --peers ";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert_eq!(hit.tier, "third");
+        assert!(hit.candidates.iter().any(|c| c == "| browse"));
+        assert!(hit.candidates.iter().any(|c| c == "| close"));
+        assert!(hit.candidates.iter().any(|c| c == "| c"));
+    }
+
+    #[test]
+    fn offers_pipe_continuation_for_setting_list_at_eol() {
+        let line = "setting -list";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert_eq!(hit.tier, "third");
+        assert_eq!(hit.token_start, line.len());
+        assert!(hit.candidates.iter().any(|c| c == "| browse"));
+        assert!(!hit.candidates.iter().any(|c| c == "-list"));
+    }
+
+    #[test]
+    fn match_pipe_continuation_filters_pipe_prefix() {
+        let all = list_pipe_continuation_candidate_tokens();
+        let filtered = match_pipe_continuation_candidates(&all, "|");
+        assert!(filtered.iter().all(|c| c.starts_with("| ")));
+        assert!(filtered.iter().any(|c| c == "| browse"));
+    }
+
+    #[test]
+    fn no_left_stage_pipe_merge_once_bar_is_present() {
+        let line = "tab -list |";
+        assert!(complete_line(line, line.len()).is_none());
+        let line2 = "tab -list | browse";
+        assert!(complete_line(line2, line2.len()).is_none());
+    }
+
+    #[test]
+    fn no_pipe_continuation_while_typing_dash_option() {
+        let line = "tab -list -u";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert!(hit.candidates.iter().any(|c| c == "-url"));
+        assert!(!hit.candidates.iter().any(|c| is_pipe_continuation_token(c)));
     }
 
     #[test]
@@ -275,10 +635,10 @@ mod tests {
     fn does_not_panic_on_mid_utf8_cursor_inside_cjk() {
         let line = "search -list --all リスト | browse";
         // EN: JS UTF-16 indexes 20/21 land mid-character if mistaken for UTF-8 bytes.
-        assert!(complete_line(line, 20).is_none());
-        assert!(complete_line(line, 21).is_none());
+        let _ = complete_line(line, 20);
+        let _ = complete_line(line, 21);
         let json = complete_json(line, 20);
-        assert_eq!(json, "null");
+        assert!(json == "null" || json.starts_with('{'));
     }
 
     #[test]
@@ -286,7 +646,12 @@ mod tests {
         let line = "search -list --all リスト | browse";
         let start_of_pattern = "search -list --all ".len();
         assert!(line.is_char_boundary(start_of_pattern));
-        assert!(complete_line(line, start_of_pattern).is_none());
+        // EN: Still on producer stage — `| browse`… may appear (extension offer zone).
+        let hit = complete_line(line, start_of_pattern);
+        if let Some(h) = hit {
+            assert!(h.candidates.iter().any(|c| c == "| browse"));
+        }
+        // EN: Cursor on RHS after `|` — no left-stage pipe-continuation merge.
         assert!(complete_line(line, line.len()).is_none());
     }
 }

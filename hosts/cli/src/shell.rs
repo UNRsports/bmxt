@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use bmxt_core::complete_line;
+use bmxt_core::{complete_line, is_pipe_continuation_token};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
@@ -53,16 +53,49 @@ impl BmxtHelper {
     }
 }
 
-/** EN: Prefer shortest then ASCII-case-insensitive order (stable primary suggestion). */
+/** EN: Prefer shortest non-pipe; if only pipe, prefer `| browse` then shortest. */
 fn pick_primary_candidate(candidates: &[String]) -> Option<&str> {
-    candidates
+    let non_pipe: Vec<&String> = candidates
         .iter()
+        .filter(|c| !is_pipe_continuation_token(c))
+        .collect();
+    let pool: Vec<&String> = if !non_pipe.is_empty() {
+        non_pipe
+    } else if let Some(browse) = candidates
+        .iter()
+        .find(|c| c.eq_ignore_ascii_case("| browse"))
+    {
+        return Some(browse.as_str());
+    } else {
+        candidates.iter().collect()
+    };
+    pool.into_iter()
         .min_by(|a, b| {
             a.len()
                 .cmp(&b.len())
                 .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
         })
         .map(String::as_str)
+}
+
+/**
+ * EN: When appending `| browse` at EOL with no trailing space, rustyline must insert a
+ *     leading space so the line becomes `… -list | browse` (extension pick-line policy).
+ */
+fn completion_replacement(line: &str, token_start: usize, candidate: &str) -> String {
+    if !is_pipe_continuation_token(candidate) {
+        return candidate.to_string();
+    }
+    let needs_space = token_start > 0
+        && !line[..token_start]
+            .chars()
+            .next_back()
+            .is_some_and(|c| c.is_ascii_whitespace());
+    if needs_space {
+        format!(" {candidate}")
+    } else {
+        candidate.to_string()
+    }
 }
 
 /**
@@ -76,14 +109,22 @@ fn completion_remainder_hint(line: &str, pos: usize) -> Option<BmxtHint> {
     }
     let hit = complete_line(line, pos)?;
     let candidate = pick_primary_candidate(&hit.candidates)?;
+    let replacement = completion_replacement(line, hit.token_start, candidate);
     let typed = &line[hit.token_start..pos];
     let typed_lower = typed.to_ascii_lowercase();
-    let cand_lower = candidate.to_ascii_lowercase();
-    if !cand_lower.starts_with(&typed_lower) {
+    let repl_lower = replacement.to_ascii_lowercase();
+    if !repl_lower.starts_with(&typed_lower) {
+        // EN: Pipe append with leading space — typed prefix is empty; show full replacement.
+        if typed.is_empty() && is_pipe_continuation_token(candidate) {
+            return Some(BmxtHint {
+                display: replacement.clone(),
+                completion: replacement,
+            });
+        }
         return None;
     }
     let typed_chars = typed.chars().count();
-    let remainder: String = candidate.chars().skip(typed_chars).collect();
+    let remainder: String = replacement.chars().skip(typed_chars).collect();
     if remainder.is_empty() {
         return None;
     }
@@ -106,17 +147,23 @@ impl Completer for BmxtHelper {
             return Ok((pos, Vec::new()));
         };
         let mut candidates = hit.candidates;
-        // EN: Same primary ordering as the grey hint so Tab applies what was shown.
-        candidates.sort_by(|a, b| {
-            a.len()
-                .cmp(&b.len())
-                .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
-        });
+        let has_pipe = candidates.iter().any(|c| is_pipe_continuation_token(c));
+        // EN: Preserve options-before-pipe order when continuations are present.
+        if !has_pipe {
+            candidates.sort_by(|a, b| {
+                a.len()
+                    .cmp(&b.len())
+                    .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
+            });
+        }
         let pairs = candidates
             .into_iter()
-            .map(|token| Pair {
-                display: token.clone(),
-                replacement: token,
+            .map(|token| {
+                let replacement = completion_replacement(line, hit.token_start, &token);
+                Pair {
+                    display: token,
+                    replacement,
+                }
             })
             .collect();
         Ok((hit.token_start, pairs))
@@ -221,5 +268,26 @@ mod tests {
     fn hint_none_when_token_already_complete() {
         let line = "sync -setup";
         assert!(completion_remainder_hint(line, line.len()).is_none());
+    }
+
+    #[test]
+    fn pipe_continuation_replacement_inserts_leading_space() {
+        let line = "tab -list";
+        let repl = completion_replacement(line, line.len(), "| browse");
+        assert_eq!(repl, " | browse");
+    }
+
+    #[test]
+    fn pipe_continuation_replacement_keeps_existing_space() {
+        let line = "tab -list ";
+        let repl = completion_replacement(line, line.len(), "| browse");
+        assert_eq!(repl, "| browse");
+    }
+
+    #[test]
+    fn complete_line_offers_browse_after_peers() {
+        let line = "tab -list --peers ";
+        let hit = complete_line(line, line.len()).expect("hit");
+        assert!(hit.candidates.iter().any(|c| c == "| browse"));
     }
 }

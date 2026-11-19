@@ -37,7 +37,7 @@ Command history: `~/.config/bmxt/history`.
 5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
 6. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
    - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates)
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates, stays open until q/Esc)
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - First peer: `sync -offer` / `sync -accept` (or `bmxt sync-connect`); extra peers join via mesh
    - `https://example.com` (open on a connected peer) · `help` · `quit`
@@ -103,7 +103,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
 6. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
    - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で activate）
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で activate、q/Esc まで開いたまま）
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - 最初の peer: `sync -offer` / `sync -accept`（または `bmxt sync-connect`）。追加 peer はメッシュ
    - `https://example.com`（接続ピアで開く）· `help` · `quit`

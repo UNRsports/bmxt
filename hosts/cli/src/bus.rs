@@ -49,6 +49,7 @@ struct HubInner {
     event_tx: mpsc::UnboundedSender<TaggedEvent>,
 }
 
+#[derive(Clone)]
 pub struct BusClient {
     inner: Arc<Mutex<HubInner>>,
 }

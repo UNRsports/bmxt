@@ -14,7 +14,7 @@ pub mod pipe_consumer;
 #[cfg(feature = "wasm")]
 mod tabs_picker;
 
-pub use complete::{complete_line, CompleteHit};
+pub use complete::{complete_line, is_pipe_continuation_token, CompleteHit};
 pub use dispatch::run_line;
 pub use ir::{DispatchBundle, HostEffect, Msg, UiAction};
 
