@@ -330,6 +330,8 @@ const HELP_SECTION_BY_CANONICAL: Readonly<Record<string, HelpMessageKey>> = {
   session: "help.section.session",
   setting: "help.section.setting",
   sync: "help.section.sync",
+  bookmark: "help.section.bookmark",
+  history: "help.section.history",
   translate: "help.section.translate",
   tutorial: "help.section.tutorial"
 }
