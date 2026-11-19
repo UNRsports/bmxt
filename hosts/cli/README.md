@@ -20,6 +20,7 @@ Tests (no WebRTC):
 
 ```bash
 cargo test -p bmxt-cli
+cargo test -p bmxt-ui-settings
 cargo test -p bmxt-family -p bmxt-sync-wire
 ```
 
@@ -27,6 +28,18 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 
 `~/.config/bmxt/config.json` — device id, display name (`terminal@…`), Family seed.  
 Command history: `~/.config/bmxt/history`.
+
+**UI settings (BMXtCLI):** `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`  
+(extension export–compatible v2 layout; independent of `chrome.storage` / FSA). Override directory with `BMXT_CLI_UI_SETTINGS_DIR`. Locale priority: **committed `settings.locale` → env (`LANG` / `LC_*`) → `en`**.
+
+### `setting` on CLI
+
+Same grammar as the extension (`bmxt-core`):
+
+- `setting -list` — print committed (or draft) scalar fields
+- `setting -set <key> <value>` — patch in-memory draft (`locale` · `edit-picker` · `ime-candidate-help` · `search-legend` · `host-ui`)
+- `setting -save` / `setting -cancel` — commit draft to disk / discard
+- `setting -list | browse` — **not supported** on CLI (use `-set`/`-save` or the browser window)
 
 ## Quick start (same PC · host ICE)
 
@@ -44,6 +57,7 @@ Command history: `~/.config/bmxt/history`.
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - First peer: `sync -offer` / `sync -accept` (or `bmxt sync-connect`); extra peers join via mesh
    - `https://example.com` (open on a connected peer) · `help` · `quit`
+   - `setting -list` · `setting -set locale en` · `setting -save`
    - Alias: bare `ping` → `sync -ping` against the first connected peer
 
 ## Layout
@@ -55,12 +69,14 @@ Command history: `~/.config/bmxt/history`.
 | `shared/crates/bmxt-sync-wire` | `SyncBusCommand` |
 | `shared/crates/bmxt-peer-rtc` | Native WebRTC (host ICE) |
 | `shared/crates/bmxt-core` | Shared command grammar (`default-features = false` for CLI) |
+| `shared/crates/bmxt-ui-settings` | CLI `settings.json` v2 load/save/normalize |
 
-Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md). Product checklist: `_context/todo.md` §10. Root overview: [Terminal CLI peer](../../README.md#terminal-cli-peer).
+Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md). Product checklist: `_context/todo.md` §10 / §12. Root overview: [Terminal CLI peer](../../README.md#terminal-cli-peer).
 
 ## Out of scope (this host)
 
 - `nav` / `dom` page overlays
+- `setting -list | browse` picker / FSA / chrome.storage mirror
 - Native messaging / CDP / Playwright
 - Public STUN/TURN on the default path
 - Replacing the extension’s in-page `RTCPeerConnection`
@@ -89,6 +105,7 @@ cargo build --release -p bmxt-cli
 
 ```bash
 cargo test -p bmxt-cli
+cargo test -p bmxt-ui-settings
 cargo test -p bmxt-family -p bmxt-sync-wire
 ```
 
@@ -96,6 +113,18 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 
 `~/.config/bmxt/config.json` — device id · 表示名（`terminal@…`）· Family シード。  
 コマンド履歴: `~/.config/bmxt/history`。
+
+**UI 設定（BMXtCLI）:** `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`  
+（拡張 export と同形の v2。`chrome.storage` / FSA とは独立）。ディレクトリ上書きは `BMXT_CLI_UI_SETTINGS_DIR`。locale 優先順: **committed `settings.locale` → env（`LANG` / `LC_*`）→ `en`**。
+
+### CLI の `setting`
+
+拡張と同じ文法（`bmxt-core`）:
+
+- `setting -list` — committed（または下書き）スカラーを印刷
+- `setting -set <key> <value>` — インメモリ下書き（`locale` · `edit-picker` · `ime-candidate-help` · `search-legend` · `host-ui`）
+- `setting -save` / `setting -cancel` — ディスクへ保存 / 破棄
+- `setting -list | browse` — **CLI 非対応**（`-set`/`-save` か拡張窓を使う）
 
 ## クイックスタート（同一 PC · host ICE）
 
@@ -113,6 +142,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - 最初の peer: `sync -offer` / `sync -accept`（または `bmxt sync-connect`）。追加 peer はメッシュ
    - `https://example.com`（接続ピアで開く）· `help` · `quit`
+   - `setting -list` · `setting -set locale en` · `setting -save`
    - 別名: 裸の `ping` → 先頭の接続ピアへ `sync -ping`
 
 ## 配置
@@ -124,12 +154,14 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 | `shared/crates/bmxt-sync-wire` | `SyncBusCommand` |
 | `shared/crates/bmxt-peer-rtc` | ネイティブ WebRTC（host ICE） |
 | `shared/crates/bmxt-core` | 共有コマンド文法（CLI は `default-features = false`） |
+| `shared/crates/bmxt-ui-settings` | CLI `settings.json` v2 の load/save/normalize |
 
-契約: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)。製品チェックリスト: `_context/todo.md` §10。概要: [端末 CLI peer](../../README.md#terminal-cli-peer-ja)。
+契約: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)。製品チェックリスト: `_context/todo.md` §10 / §12。概要: [端末 CLI peer](../../README.md#terminal-cli-peer-ja)。
 
 ## この host の対象外
 
 - `nav` / `dom` のページオーバーレイ
+- `setting -list | browse` ピッカー / FSA / chrome.storage ミラー
 - ネイティブメッセージング / CDP / Playwright
 - 既定経路での公開 STUN/TURN
 - 拡張のページ内 `RTCPeerConnection` の置き換え

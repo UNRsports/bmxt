@@ -11,16 +11,21 @@ use bmxt_core::pipe_consumer::{classify_pipe_consumer, PipeConsumerClass};
 use bmxt_core::run_line;
 use bmxt_sync_wire::{SyncRemoteTabRow, SyncTabsOp};
 
+use bmxt_ui_settings::UiSettings;
+
 use crate::bus::BusClient;
 use crate::config::CliConfig;
 use crate::connect;
 use crate::handshake;
-use crate::msgs::expand_msgs;
+use crate::msgs::{expand_msgs, t_cli};
 use crate::tui;
+use crate::ui_settings_host;
 
 pub struct CliHostAdapter<'a> {
     pub cfg: &'a mut CliConfig,
     pub client: Option<&'a BusClient>,
+    /// EN: In-memory `setting -set` draft until `-save` / `-cancel`.
+    pub setting_draft: &'a mut Option<UiSettings>,
 }
 
 pub struct RunOutcome {
@@ -118,6 +123,10 @@ impl<'a> CliHostAdapter<'a> {
         let producer_bundle = run_line(producer);
         match consumer {
             PipeConsumerClass::Browse => {
+                if is_setting_list_bundle(&producer_bundle) {
+                    eprintln!("{}", t_cli("cmd.cli.setting.browseUnsupported", &[]));
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                }
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
                 self.run_picker_and_maybe_activate(&rows).await
             }
@@ -303,9 +312,19 @@ impl<'a> CliHostAdapter<'a> {
                 device_id,
                 ..
             } => {
+                if list_id == "setting" {
+                    let committed = ui_settings_host::load_committed()?;
+                    let view = self
+                        .setting_draft
+                        .as_ref()
+                        .unwrap_or(&committed);
+                    ui_settings_host::print_setting_list(view);
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
+                }
                 if list_id != "tabs" {
                     eprintln!(
-                        "error: list `{list_id}` on CLI is limited to tabs for now"
+                        "{}",
+                        t_cli("cmd.cli.error.listLimited", &[("listId", &list_id)])
                     );
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
@@ -323,9 +342,14 @@ impl<'a> CliHostAdapter<'a> {
                 device_id,
                 ..
             } => {
+                if list_id == "setting" {
+                    eprintln!("{}", t_cli("cmd.cli.setting.browseUnsupported", &[]));
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                }
                 if list_id != "tabs" {
                     eprintln!(
-                        "error: picker `{list_id}` on CLI is limited to tabs for now"
+                        "{}",
+                        t_cli("cmd.cli.error.pickerLimited", &[("listId", &list_id)])
                     );
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
@@ -334,6 +358,34 @@ impl<'a> CliHostAdapter<'a> {
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
                 self.run_picker_and_maybe_activate(&rows).await
+            }
+            UiAction::SettingSet { key, value } => {
+                let committed = ui_settings_host::load_committed()?;
+                let ok = ui_settings_host::apply_set_to_draft(
+                    self.setting_draft,
+                    &committed,
+                    &key,
+                    &value,
+                )?;
+                Ok(RunOutcome::status(if ok {
+                    EXIT_SUCCESS
+                } else {
+                    EXIT_MISUSE
+                }))
+            }
+            UiAction::SettingSave => {
+                let Some(draft) = self.setting_draft.take() else {
+                    eprintln!("{}", t_cli("cmd.cli.setting.noDraft", &[]));
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                };
+                ui_settings_host::save_committed(&draft)?;
+                println!("{}", t_cli("setting.picker.saved", &[]));
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::SettingCancel => {
+                *self.setting_draft = None;
+                println!("{}", t_cli("setting.picker.cancelled", &[]));
+                Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SyncStatus => {
                 println!("deviceId:    {}", self.cfg.device_id);
@@ -449,11 +501,21 @@ impl<'a> CliHostAdapter<'a> {
                 let client = connect::connect_as_answer(self.cfg, &code).await?;
                 Ok(RunOutcome::connected(client))
             }
-            UiAction::ClosePicker { .. } | UiAction::PickerPass => Ok(RunOutcome::status(EXIT_SUCCESS)),
+            UiAction::ClosePicker { slot, .. } => {
+                if slot == "setting" {
+                    *self.setting_draft = None;
+                    println!("{}", t_cli("setting.picker.closed", &[]));
+                }
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::PickerPass => Ok(RunOutcome::status(EXIT_SUCCESS)),
             other => {
                 eprintln!(
-                    "error: ui action not supported on CLI: {}",
-                    ui_kind(&other)
+                    "{}",
+                    t_cli(
+                        "cmd.cli.error.uiUnsupported",
+                        &[("kind", ui_kind(&other))]
+                    )
                 );
                 Ok(RunOutcome::status(EXIT_MISUSE))
             }
@@ -712,6 +774,17 @@ fn effect_kind(effect: &HostEffect) -> &'static str {
         HostEffect::HistoryDeleteRange { .. } => "history_delete_range",
         HostEffect::HistoryDeleteUrl { .. } => "history_delete_url",
     }
+}
+
+fn is_setting_list_bundle(bundle: &DispatchBundle) -> bool {
+    matches!(
+        bundle,
+        DispatchBundle::Ui {
+            action: UiAction::OpenPlainList { list_id, .. }
+                | UiAction::OpenPicker { list_id, .. },
+            ..
+        } if list_id == "setting"
+    )
 }
 
 fn ui_kind(action: &UiAction) -> &'static str {

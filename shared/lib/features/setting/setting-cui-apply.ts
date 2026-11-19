@@ -2,64 +2,17 @@ import {
   createSettingListPickerState,
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft,
-  type SettingDraftPatch,
   type SettingListPickerState
 } from "./setting-list-picker-state.ts"
 import { replaceUiSettings, type UiSettings } from "./settings.ts"
-import { normalizeSearchLegendMode } from "./search-legend-mode.ts"
-import { DEFAULT_HOST_UI_MODE, type HostUiMode } from "./host-ui-mode.ts"
+import { settingSetPatchFromArgs } from "./setting-set-args.ts"
 import type { UiLocale } from "./locale.ts"
+
+export { settingSetPatchFromArgs } from "./setting-set-args.ts"
 
 export type SettingCuiApplyResult =
   | { ok: true; lines: string[]; nextDraft?: SettingListPickerState }
   | { ok: false; lines: string[] }
-
-function parseBoolToken(value: string): boolean | null {
-  const lower = value.trim().toLowerCase()
-  if (lower === "on" || lower === "true" || lower === "1") {
-    return true
-  }
-  if (lower === "off" || lower === "false" || lower === "0") {
-    return false
-  }
-  return null
-}
-
-/** EN: Map `setting -set <key> <value>` onto a draft patch (closed key set). */
-export function settingSetPatchFromArgs(
-  key: string,
-  value: string
-): SettingDraftPatch | null {
-  const k = key.trim().toLowerCase()
-  const v = value.trim()
-  if (k === "locale") {
-    if (v === "ja" || v === "en") {
-      return { locale: v }
-    }
-    return null
-  }
-  if (k === "edit-picker") {
-    const b = parseBoolToken(v)
-    return b === null ? null : { editPicker: b }
-  }
-  if (k === "ime-candidate-help") {
-    const b = parseBoolToken(v)
-    return b === null ? null : { imeCandidateHelp: b }
-  }
-  if (k === "search-legend") {
-    return { searchLegendMode: normalizeSearchLegendMode(v) }
-  }
-  if (k === "host-ui") {
-    if (v === "popup" || v === "float" || v === "both") {
-      return { hostUiMode: v as HostUiMode }
-    }
-    if (v === "default") {
-      return { hostUiMode: DEFAULT_HOST_UI_MODE }
-    }
-    return null
-  }
-  return null
-}
 
 export async function applySettingSaveCui(
   current: SettingListPickerState | null,

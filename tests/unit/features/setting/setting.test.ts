@@ -14,6 +14,7 @@ import {
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft
 } from "../../../../shared/lib/features/setting/setting-list-picker-state.ts"
+import { settingSetPatchFromArgs } from "../../../../shared/lib/features/setting/setting-set-args.ts"
 import { settingMainRowTargetView } from "../../../../shared/lib/features/setting/setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "../../../../shared/lib/features/setting/zip-store.ts"
 import {
@@ -227,6 +228,13 @@ describe("setting list picker draft", () => {
   })
   it("maps host-ui to hostUi view", () => {
     assert.equal(settingMainRowTargetView("host-ui"), "hostUi")
+  })
+  it("setting -set host-ui accepts auto/desktop/mobile", () => {
+    assert.deepEqual(settingSetPatchFromArgs("host-ui", "auto"), { hostUiMode: "auto" })
+    assert.deepEqual(settingSetPatchFromArgs("host-ui", "desktop"), { hostUiMode: "desktop" })
+    assert.deepEqual(settingSetPatchFromArgs("host-ui", "mobile"), { hostUiMode: "mobile" })
+    assert.deepEqual(settingSetPatchFromArgs("host-ui", "default"), { hostUiMode: "auto" })
+    assert.equal(settingSetPatchFromArgs("host-ui", "popup"), null)
   })
   it("maps ime-candidate-help to imeCandidateHelp view", () => {
     assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")

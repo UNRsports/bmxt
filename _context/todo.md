@@ -634,11 +634,11 @@ REPL line
 
 **実装チェック（段階）**
 
-- [ ] **12.0 契約:** 本節 + ディレクトリ名 `bmxt-cli-ui-settings` 固定。plan / README にパスを明記
-- [ ] **12.1 i18n + locale 永続:** `bmxt-ui-settings` クレート · locale 優先順 · `setting.json` 等 namespace 拡充 · adapter/main の直書き英語を `t_cli` 化 · Rust 単体テスト
-- [ ] **12.2 `setting` CUI（スカラー）:** `-list` 印刷 · `-set` draft · `-save` / `-cancel` / `-exit` · キー `locale` / `edit-picker` / `ime-candidate-help` / `search-legend` / `host-ui`（CLI は値保存のみ）· `| browse` は非対応 msgs
-- [ ] **12.3 拡張追随:** `setting-cui-apply` の `host-ui` を現行ドメイン（`auto`/`desktop`/`mobile`）へ修正 · unit 更新
-- [ ] **12.4 ドキュメント:** `hosts/cli/README.md` · root README Terminal CLI 節 · 本節チェック更新
+- [x] **12.0 契約:** 本節 + ディレクトリ名 `bmxt-cli-ui-settings` 固定。plan / README にパスを明記
+- [x] **12.1 i18n + locale 永続:** `bmxt-ui-settings` クレート · locale 優先順 · `setting.json` 等 namespace 拡充 · adapter/main の直書き英語を `t_cli` 化 · Rust 単体テスト
+- [x] **12.2 `setting` CUI（スカラー）:** `-list` 印刷 · `-set` draft · `-save` / `-cancel` / `-exit` · キー `locale` / `edit-picker` / `ime-candidate-help` / `search-legend` / `host-ui`（CLI は値保存のみ）· `| browse` は非対応 msgs
+- [x] **12.3 拡張追随:** `setting-cui-apply` の `host-ui` を現行ドメイン（`auto`/`desktop`/`mobile`）へ修正 · unit 更新
+- [x] **12.4 ドキュメント:** `hosts/cli/README.md` · root README Terminal CLI 節 · 本節チェック更新
 - [ ] **12.5（後続）appearance / export-import:** 色・フォント・画像パス · 拡張と同形 zip/dir 往復。任意で `BMXT_CLI_UI_SETTINGS_DIR` 上書き
 
 **手元スモーク**

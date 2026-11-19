@@ -2,13 +2,14 @@
 //! JA: 共有 i18n（EN + JA）で msgs / CLI 案内を展開する。
 
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use bmxt_core::ir::Msg;
 use serde_json::Value;
 
 static EN_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
 static JA_MAP: OnceLock<HashMap<String, String>> = OnceLock::new();
+static RUNTIME_LOCALE: OnceLock<Mutex<String>> = OnceLock::new();
 
 const NAMESPACE_JSON: &[&str] = &[
     include_str!("../../../shared/lib/features/setting/i18n/namespaces/cmd.json"),
@@ -18,6 +19,10 @@ const NAMESPACE_JSON: &[&str] = &[
     include_str!("../../../shared/lib/features/setting/i18n/namespaces/compound.json"),
     include_str!("../../../shared/lib/features/setting/i18n/namespaces/tabs.json"),
     include_str!("../../../shared/lib/features/setting/i18n/namespaces/search.json"),
+    include_str!("../../../shared/lib/features/setting/i18n/namespaces/setting.json"),
+    include_str!("../../../shared/lib/features/setting/i18n/namespaces/listOutput.json"),
+    include_str!("../../../shared/lib/features/setting/i18n/namespaces/common.json"),
+    include_str!("../../../shared/lib/features/setting/i18n/namespaces/shell.json"),
 ];
 
 fn load_locale_map(locale: &str) -> HashMap<String, String> {
@@ -46,11 +51,15 @@ fn ja_map() -> &'static HashMap<String, String> {
     JA_MAP.get_or_init(|| load_locale_map("ja"))
 }
 
+fn runtime_locale_lock() -> &'static Mutex<String> {
+    RUNTIME_LOCALE.get_or_init(|| Mutex::new(String::new()))
+}
+
 /**
- * EN: Prefer Japanese when LANG / LC_ALL / LC_MESSAGES starts with `ja`.
- * JA: LANG / LC_ALL / LC_MESSAGES が `ja` 始まりなら日本語。
+ * EN: Locale from env: `ja*` → ja, else en when any LANG/LC_* is set.
+ * JA: 環境変数から locale を決める。
  */
-pub fn cli_locale() -> &'static str {
+pub fn locale_from_env() -> &'static str {
     for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Ok(val) = std::env::var(key) {
             let lower = val.to_ascii_lowercase();
@@ -63,6 +72,40 @@ pub fn cli_locale() -> &'static str {
         }
     }
     "en"
+}
+
+/**
+ * EN: Resolve locale: committed settings → env → en.
+ * JA: 優先順: committed settings → env → en。
+ */
+pub fn resolve_cli_locale(settings_locale: Option<&str>) -> String {
+    if let Some(locale) = settings_locale {
+        if locale == "ja" || locale == "en" {
+            return locale.to_string();
+        }
+    }
+    locale_from_env().to_string()
+}
+
+/** EN: Install runtime locale used by `t_cli` / `expand_msgs` (call at process start / after save). */
+pub fn set_runtime_locale(locale: &str) {
+    let normalized = if locale == "ja" { "ja" } else { "en" };
+    if let Ok(mut guard) = runtime_locale_lock().lock() {
+        *guard = normalized.to_string();
+    }
+}
+
+/**
+ * EN: Active CLI locale (runtime override, else env).
+ * JA: 実行中の CLI locale（ランタイム上書き、なければ env）。
+ */
+pub fn cli_locale() -> String {
+    if let Ok(guard) = runtime_locale_lock().lock() {
+        if !guard.is_empty() {
+            return guard.clone();
+        }
+    }
+    locale_from_env().to_string()
 }
 
 fn active_map() -> &'static HashMap<String, String> {
@@ -81,7 +124,7 @@ fn apply_params(template: &str, params: &[(&str, &str)]) -> String {
     out
 }
 
-/** EN: Translate one cmd.* / help.* key for CLI stderr/stdout banners. */
+/** EN: Translate one cmd.* / help.* / setting.* key for CLI stderr/stdout banners. */
 pub fn t_cli(key: &str, params: &[(&str, &str)]) -> String {
     let map = active_map();
     let template = map
@@ -115,4 +158,23 @@ pub fn expand_msgs(msgs: &[Msg]) -> Vec<String> {
         lines.push(line);
     }
     lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_prefers_settings_over_env() {
+        assert_eq!(resolve_cli_locale(Some("en")), "en");
+        assert_eq!(resolve_cli_locale(Some("ja")), "ja");
+    }
+
+    #[test]
+    fn runtime_locale_updates_active_map() {
+        set_runtime_locale("en");
+        assert_eq!(cli_locale(), "en");
+        set_runtime_locale("ja");
+        assert_eq!(cli_locale(), "ja");
+    }
 }

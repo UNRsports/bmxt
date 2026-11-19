@@ -10,6 +10,7 @@ mod paste;
 mod repl_log;
 mod shell;
 mod tui;
+mod ui_settings_host;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -79,6 +80,10 @@ enum Commands {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     let mut cfg = CliConfig::load_or_create()?;
+    if let Err(err) = ui_settings_host::bootstrap_locale() {
+        eprintln!("warn: ui settings locale bootstrap failed ({err:#})");
+        msgs::set_runtime_locale(&msgs::locale_from_env());
+    }
     match cli.command {
         None | Some(Commands::Repl) => {
             command_repl(&mut cfg, None).await?;
@@ -91,6 +96,10 @@ async fn main() -> Result<()> {
                 cfg.family_id.as_deref().unwrap_or("(none)")
             );
             println!("config:      {}", CliConfig::config_path()?.display());
+            if let Ok(path) = ui_settings_host::settings_json_path() {
+                println!("uiSettings:  {}", path.display());
+            }
+            println!("locale:      {}", msgs::cli_locale());
             println!("transport:   WebRTC DataChannel (host ICE, bmxt-rtc1.)");
             println!(
                 "localhost:   http://127.0.0.1:{}/ (Family-sealed door; when Family joined)",
@@ -193,6 +202,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
     if let Err(err) = shell.install_repl_log_printer() {
         eprintln!("warn: external printer unavailable ({err:#}); using stderr logs");
     }
+    let mut setting_draft: Option<bmxt_ui_settings::UiSettings> = None;
     let mut continuation: Option<String> = None;
     loop {
         // EN: `BMXt>` = accepting commands (Family ready and/or peers linked).
@@ -317,6 +327,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         let mut adapter = CliHostAdapter {
             cfg: &mut *cfg,
             client: hub.as_ref().map(|h| h.as_ref()),
+            setting_draft: &mut setting_draft,
         };
         match adapter.run_line(&line).await {
             Ok(outcome) => {
