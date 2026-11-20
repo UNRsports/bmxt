@@ -318,7 +318,11 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 
 **Redirects (`>` / `>>` / `2>` / `2>>`):** Within a segment, redirect **stdout** (`>` / `>>`) or **stderr** (`2>` / `2>>`) to a **null sink** only: **`null`** or **`/dev/null`** (quoted regions and `\>` escapes are respected). The redirected channel is discarded from the terminal log. Other targets are rejected (exit status **2**). OS file paths are out of scope.
 
-**BMXt POSIX Profile:** BMXt is **not** a full IEEE Std 1003.1 shell. The interactive terminal follows a documented profile: argv-style segments, numeric exit status (**0 / 1 / 2 / 127**), stdout/stderr channels (stderr lines render in a distinct color), `|` with a producer/consumer registry, list operators **`&&` / `||` / `;`**, null-sink redirects, and a single **`CommandEntry`** registry for compound/pipe segment dispatch (`lib/features/command-line/commands/`). Background commands fall through to Service Worker **`RUN_CMD`** (effects remain Chrome adapters). **The Terminal CLI peer (`bmxt` / `bmxt exec`) uses the same I/O meaning** (completion buffer of UTF-8 lines → OS FDs or IPC); see todo §13 / §14 and [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md). Delivery is a **completion buffer** today (not true incremental streaming). Out of scope: job control, subshells, command substitution, OS file path redirects, and external process launch.
+**BMXt POSIX Profile:** BMXt is **not** a full IEEE Std 1003.1 shell. The interactive terminal follows a documented profile: argv-style segments, numeric exit status (**0 / 1 / 2 / 127** · `EXIT_*` constants only), stdout/stderr channels (stderr lines render in a distinct color), `|` with a **closed** producer/consumer registry + **`bmxtRule`**, list operators **`&&` / `||` / `;`**, null-sink redirects, and a single **`CommandEntry`** registry for compound/pipe segment dispatch (`lib/features/command-line/commands/`). Background commands fall through to Service Worker **`RUN_CMD`** (effects remain Chrome adapters; `SessionPatch.appendLog` may carry `channel`). **The Terminal CLI peer (`bmxt` / `bmxt exec`) uses the same I/O meaning** (completion buffer of UTF-8 lines → OS FDs or IPC); see todo §13–§15 and [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md). Delivery is a **completion buffer** today (not true incremental streaming).
+
+**Profile discipline (todo §15 — required when adding commands):** (1) exit via `EXIT_*` only · (2) success → stdout, diagnostics → stderr · (3) browse / TUI / handshake ask only under **Interactive** · (4) CLI command output via **`CommandIo`** (`pnpm run check:cli-command-io`) · (5) pipes = closed consumers / `bmxtRule` only. Checklist: [`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md) · skill `bmxt-add-command`.
+
+Out of scope: job control, subshells, command substitution, OS file path redirects, and external process launch.
 
 **Note — `clear` vs `exit` vs closing the window:** `clear` only clears the **on-screen log of the active terminal session**; the BMXt window and other in-memory session/picker state stay as they are. **Closing the BMXt window** (× button) or **`exit`** on the **last** session closes the window and **discards** all UI-held session logs and picker state (legacy **`chrome.storage.local`** process keys are cleaned up by the Service Worker). **Command history is kept** unless you use the **`reset-bmxt`** shortcut. **`exit`** with **multiple sessions** removes only the active session and switches to another. See **[BMXt process lifecycle](#bmxt-process-lifecycle)** and **[Terminal session state](#terminal-session-state)**.
 
@@ -766,12 +770,12 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 ### Terminal CLI peer (`hosts/cli`)
 
-**Status (todo §10–§14):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP. Shares the **BMXt POSIX Profile** I/O contract with the extension (todo §13).
+**Status (todo §10–§15):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP. Shares the **BMXt POSIX Profile** I/O contract with the extension (todo §13); oneshot **`bmxt exec`** (todo §14); Profile gates when adding commands (todo §15).
 
 | Topic | Current behavior |
 |-------|------------------|
-| **Direct start** | `bmxt` or `bmxt repl` opens a REPL. With Family joined, CLI also serves a **localhost HTTP listener** on `http://127.0.0.1:17653/` (binds **127.0.0.1 only**, Family-authenticated `GET /v1/hello` · `POST /v1/handshake/offer` · `POST /v1/exec`). |
-| **One-shot (`exec`)** | With a resident REPL listening, `bmxt exec -- 'sync -status'` / `bmxt exec -- 'tab -list --peers'` runs NonInteractive on the resident, prints **stdout/stderr**, and exits with the Profile status (LLM / scripts). No resident → clear error, exit **1**, no hang. |
+| **Direct start** | `bmxt` or `bmxt repl` opens a REPL (**Interactive** · `CommandIo` → process FDs). With Family joined, CLI also serves a **localhost HTTP listener** on `http://127.0.0.1:17653/` (binds **127.0.0.1 only**, Family-authenticated `GET /v1/hello` · `POST /v1/handshake/offer` · `POST /v1/exec`). |
+| **One-shot (`exec`)** | With a resident REPL listening, `bmxt exec -- 'sync -status'` / `bmxt exec -- 'tab -list --peers'` runs **NonInteractive** on the resident (`POST /v1/exec`), prints **stdout/stderr**, and exits with the Profile status (LLM / scripts). No `| browse` / handshake ask / zenity. No resident → clear error, exit **1**, no hang. |
 | **Auto-connect** | Open the BMXt prompt in each browser — Family-authenticated connection setup to the CLI localhost listener retries in the background (todo §11). Unrelated localhost services that fail Family membership verification are ignored. Clipboard / file remain full fallbacks. |
 | **Prompt** | Family ready → **`BMXt>`** (accepting commands). Not in a Family → **`BMXt*>`**. |
 | **Connection logs** | Normal scrollback lines (`connection` / `datachannel` / `connected: …`). While `BMXt>` is waiting, async logs go through rustyline’s **ExternalPrinter** so the prompt and caret redraw afterward. ICE `checking` noise is suppressed. |
@@ -796,7 +800,7 @@ bmxt exec -- 'tab -list --peers'
 echo $?  # Profile exit: 0 / 1 / 2 / 127
 ```
 
-**Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§14.
+**Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§15.
 
 <a id="picker-ui"></a>
 
@@ -1223,9 +1227,10 @@ Canonical catalog: **`manifest/bmxt-rule.json`** (and **`LIST_KIND_TO_BMXT_RULE_
 - **`manifest/templates/`** — new-command checklist and reuse / list / pipe templates
 - **`lib/features/command-line/list-commands/`** — **`-list` producer registry** and unified plain runner (`tryRunPlainListCommand`)
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** registry (`runCommand`), null-sink redirects, plain-list composition
-- **`lib/features/command-line/command-output.ts`** — stdout/stderr channels and session-log encoding
-- **`lib/features/command-line/pipe/`** — **`|`** pipe chains (`run-pipe-chain.ts`, **`pipe/consumers/`** registry)
-- **`lib/features/command-line/compound/`** — list operators **`&&` / `||` / `;`**, exit status, sequential execution
+- **`lib/features/command-line/command-output.ts`** — stdout/stderr channels and session-log encoding (Rust mirror: **`bmxt_core::CommandOutput`**)
+- **`hosts/cli/src/command_io.rs`** — CLI aggregated sink + **`InteractionMode`** (Interactive REPL / NonInteractive `exec`)
+- **`lib/features/command-line/pipe/`** — **`|`** pipe chains (`run-pipe-chain.ts`, **`pipe/consumers/`** registry · closed vocabulary)
+- **`lib/features/command-line/compound/`** — list operators **`&&` / `||` / `;`**, exit status (`EXIT_*`), sequential execution
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
 - **`lib/features/translate/`** — translation assist (`translate -on` / `-off` / `-setting`, nav typing commit); see **[`translate`](#translate)**
 - **`lib/features/setting/`** — UI locale and appearance (`setting -list`, export/import zip, external bundle, `bmxt_ui_settings_v1`, `bmxt_ui_settings_storage_v1`); see **[`setting`](#setting)**
@@ -1286,7 +1291,8 @@ Start with **[`shared/manifest/templates/new-command.checklist.md`](shared/manif
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `uiActions[]` → codegen → **`crates/bmxt-core/src/generated/ui_action.rs`** / **`ui-action-types.ts`** + hand-written **`apply-ui-action.ts`** (`ir.rs` only re-exports generated `UiAction`; do **not** edit the enum there)
   - **List / pipe kinds:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer registry
-- **Checks:** **`verify:manifest`**, **`verify:host-blind`**, **`check:generated`**, **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
+- **Checks:** **`verify:manifest`**, **`verify:host-blind`**, **`check:generated`**, **`check:cli-command-io`** (todo §15.4), **`cargo test -p bmxt-core`**, **`build:wasm`**, **`tsc`**, **`pnpm test`**, **`pnpm run build`**.
+- **BMXt POSIX Profile (todo §15):** Use **`EXIT_*`** only; route success → stdout / diagnostics → stderr; keep browse / ask Interactive-only; CLI results via **`CommandIo`**; pipes = closed consumers + **`bmxtRule`**. See the **BMXt POSIX Profile** paragraph under Built-in Commands and [`new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md).
 - **Compound / pipe:** Planning is WASM; the host loop is **`command-line/`** (`runDispatch` per segment → UiAction apply or background `RUN_CMD`). Pipe handoff is **bmxtRule** only (not command-name coupling).
 
 #### Manifest `commands[].subcommands` (second / third tokens)
@@ -1475,9 +1481,10 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 - `manifest/templates/` — new-command templates (checklist, reuse examples)
 - `lib/features/command-line/list-commands/` — `-list` producer registry (`*-list-command.ts` plugins, `tryRunPlainListCommand`)
 - `lib/features/command-line/commands/` — `CommandEntry` registry (`runCommand`), null-sink redirects
-- `lib/features/command-line/command-output.ts` — stdout/stderr channels and session-log encoding
-- `lib/features/command-line/pipe/` — pipe (`|`) chains and consumer registry
-- `lib/features/command-line/compound/` — list operators (`&&` / `||` / `;`), exit status, sequential execution
+- `lib/features/command-line/command-output.ts` — stdout/stderr channels and session-log encoding (Rust: `bmxt_core::CommandOutput`)
+- `hosts/cli/src/command_io.rs` — CLI `CommandIo` + `InteractionMode` (Interactive / NonInteractive `exec`)
+- `lib/features/command-line/pipe/` — pipe (`|`) chains and closed consumer registry
+- `lib/features/command-line/compound/` — list operators (`&&` / `||` / `;`), exit status (`EXIT_*`), sequential execution
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
 - `lib/features/nav/` — Nav overlay feature package
 - `lib/features/translate/` — Translation assist (`translate -on` / `-off` / `-setting`, `translation-pair.ts`)
@@ -1595,7 +1602,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 3. ~~Add history and bookmark operations~~ — **done** (`bookmark` / `history` commands, Family `--open|--save|--both`, ZIP backup; see **[`bookmark`](#bookmark-command)** · **[`history`](#history-command)** · todo §9)
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
-6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + **localhost listener auto-connect** (todo §11); polish packaging / same-PC smoke and keep grammar parity with the extension (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10 / §11)
+6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + localhost auto-connect + **`bmxt exec`** oneshot + Profile I/O gates (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10–§15); polish packaging / same-PC smoke
 
 ---
 
@@ -1915,7 +1922,11 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 
 **リダイレクト（`>` / `>>` / `2>` / `2>>`）:** セグメント内で **stdout**（`>` / `>>`）または **stderr**（`2>` / `2>>`）を **null シンク**（**`null`** または **`/dev/null`**）へだけ向けられる（クォート内と `\>` は演算子にしない）。向けたチャネルはターミナルログから捨てる。それ以外のターゲットは拒否（終了状態 **2**）。OS パスへの書き込みは対象外。
 
-**BMXt POSIX Profile:** BMXt は IEEE Std 1003.1 シェルの完全実装ではない。対話ターミナルは文書化されたプロファイルに従う（argv 風セグメント、数値 exit status **0 / 1 / 2 / 127**、stdout/stderr チャネル、producer/consumer レジストリ付き `|`、リスト演算子 **`&&` / `||` / `;`**、null シンクリダイレクト、compound/pipe 用 **`CommandEntry`** レジストリ）。background コマンドは Service Worker **`RUN_CMD`** にフォールバック（effect は Chrome アダプタ）。**端末 CLI（`bmxt` / `bmxt exec`）も同一の I/O 意味**（UTF-8 行の完了バッファ → OS FD / IPC）。todo §13 / §14 · [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md)。配信は当面完了バッファ（真のインクリメンタルは対象外）。対象外: ジョブ制御、サブシェル、コマンド置換、OS パス redirect、外部プロセス起動。
+**BMXt POSIX Profile:** BMXt は IEEE Std 1003.1 シェルの完全実装ではない。対話ターミナルは文書化されたプロファイルに従う（argv 風セグメント、数値 exit status **0 / 1 / 2 / 127** · `EXIT_*` 定数のみ、stdout/stderr チャネル、**閉じた** producer/consumer レジストリ + **`bmxtRule`** 付き `|`、リスト演算子 **`&&` / `||` / `;`**、null シンクリダイレクト、compound/pipe 用 **`CommandEntry`** レジストリ）。background コマンドは Service Worker **`RUN_CMD`** にフォールバック（`SessionPatch.appendLog` は `channel` 可）。**端末 CLI（`bmxt` / `bmxt exec`）も同一の I/O 意味**（UTF-8 行の完了バッファ → OS FD / IPC）。todo §13–§15 · [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md)。配信は当面完了バッファ。
+
+**追加時の規律（todo §15）:** (1) exit は `EXIT_*` のみ · (2) 成功→stdout / 診断→stderr · (3) browse / TUI / ask は **Interactive** のみ · (4) CLI は **`CommandIo`**（`pnpm run check:cli-command-io`）· (5) パイプは閉じた consumer / `bmxtRule` のみ。チェックリスト: [`shared/manifest/templates/new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md)。
+
+対象外: ジョブ制御、サブシェル、コマンド置換、OS パス redirect、外部プロセス起動。
 
 **補足 — `clear` と `exit` とウィンドウを閉じる操作:** `clear` は **アクティブなターミナルセッションの画面ログだけ**を消します。**BMXt ウィンドウを閉じる**（×）または **最後の 1 セッション**で **`exit`** すると、**UI 上のセッション／ピッカー状態を破棄**し、Service Worker が **旧プロセス用 storage キーを掃除**します。**コマンド履歴は保持**され、**`reset-bmxt`** ショートカットを使ったときだけ消えます。**`exit`**（複数セッション）はアクティブなセッションだけを除去し、別セッションへ切り替えます。詳細は **[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)** と **[ターミナルセッション状態](#terminal-session-state-ja)**。
 
@@ -2275,12 +2286,12 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 ### 端末 CLI peer（`hosts/cli`）
 
-**現状（todo §10–§14）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。拡張と同一の **BMXt POSIX Profile** I/O 契約（todo §13）。常駐 REPL へ `bmxt exec -- '…'` でワンショット実行（todo §14 · `POST /v1/exec`）。
+**現状（todo §10–§15）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。拡張と同一の **BMXt POSIX Profile** I/O（todo §13）· **`bmxt exec`** ワンショット（todo §14）· 追加時ゲート（todo §15）。
 
 | 項目 | 現状 |
 |------|------|
-| **直接起動** | `bmxt` / `bmxt repl`。Family 参加済みなら **localhost 待ち受け** `http://127.0.0.1:17653/`（**127.0.0.1 のみ** bind · Family 認証付き `GET /v1/hello` · `POST /v1/handshake/offer` · `POST /v1/exec`）。 |
-| **ワンショット（exec）** | 常駐 REPL 待ち受け中に `bmxt exec -- 'sync -status'` 等。常駐側 NonInteractive で実行し **stdout/stderr** を印刷、Profile の exit で終了。未常駐は明確なエラー + exit **1**（ハングしない）。 |
+| **直接起動** | `bmxt` / `bmxt repl`（**Interactive** · `CommandIo` → プロセス FD）。Family 参加済みなら **localhost 待ち受け** `http://127.0.0.1:17653/`（**127.0.0.1 のみ** bind · Family 認証付き `GET /v1/hello` · `POST /v1/handshake/offer` · `POST /v1/exec`）。 |
+| **ワンショット（exec）** | 常駐 REPL 待ち受け中に `bmxt exec -- 'sync -status'` 等。常駐側 **NonInteractive**（`POST /v1/exec`）で実行し **stdout/stderr** を印刷、Profile の exit で終了。`| browse` / 握手 ask / zenity は禁止。未常駐は明確なエラー + exit **1**（ハングしない）。 |
 | **自動接続** | 各ブラウザで BMXt プロンプトを開くと、Family 認証付きで CLI 待ち受けへバックグラウンド再接続（todo §11）。Family 参加情報による認証に失敗した無関係な localhost サービスは無視。コピペ／ファイルはフォールバックとして存続。 |
 | **プロンプト** | Family 準備済み → **`BMXt>`**（コマンド受付）。未参加 → **`BMXt*>`**。 |
 | **接続ログ** | 通常のスクロール行（`connection` / `datachannel` / `connected: …`）。`BMXt>` 待ち中の非同期ログは rustyline の **ExternalPrinter** 経由で出し、プロンプトとキャレットを描き直す。ICE `checking` は抑制。 |
@@ -2305,7 +2316,7 @@ bmxt exec -- 'tab -list --peers'
 echo $?  # Profile exit: 0 / 1 / 2 / 127
 ```
 
-**この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§14。
+**この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§15。
 
 <a id="picker-ui-ja"></a>
 
@@ -2795,9 +2806,10 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 - **`manifest/templates/`** — 新コマンド checklist / 再利用例
 - **`lib/features/command-line/list-commands/`** — **`-list` producer レジストリ**（`tryRunPlainListCommand`）
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト、plain-list 合成
-- **`lib/features/command-line/command-output.ts`** — stdout/stderr チャネルとセッションログ符号化
-- **`lib/features/command-line/pipe/`** — パイプ（`|`）チェーン（**`pipe/consumers/`** レジストリ）
-- **`lib/features/command-line/compound/`** — リスト演算子 **`&&` / `||` / `;`**、exit status、逐次実行
+- **`lib/features/command-line/command-output.ts`** — stdout/stderr チャネルとセッションログ符号化（Rust: **`bmxt_core::CommandOutput`**）
+- **`hosts/cli/src/command_io.rs`** — CLI 集約シンク + **`InteractionMode`**（Interactive REPL / NonInteractive `exec`）
+- **`lib/features/command-line/pipe/`** — パイプ（`|`）チェーン（**`pipe/consumers/`** レジストリ · 閉じた語彙）
+- **`lib/features/command-line/compound/`** — リスト演算子 **`&&` / `||` / `;`**、exit status（`EXIT_*`）、逐次実行
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
 - **`lib/features/translate/`** — 翻訳アシスト（**[`translate`](#translate-ja)**）
 - **`lib/features/setting/`** — UI 言語・外観（`setting -list`、zip 入出力、外部バンドル、`bmxt_ui_settings_v1`、`bmxt_ui_settings_storage_v1`）；**[`setting`](#setting-ja)** 参照
@@ -2858,7 +2870,8 @@ manifest やコマンド実装を変えたら **`pnpm run codegen`** のあと *
   - **Effect:** `effects[]` → codegen → **`handlers/effects/<tsHandlerFile>.ts`**
   - **UiAction:** `uiActions[]` → codegen → **`crates/bmxt-core/src/generated/ui_action.rs`** / **`ui-action-types.ts`** + 手書き **`apply-ui-action.ts`**（`ir.rs` は生成 `UiAction` の re-export のみ。enum をそこに足さない）
   - **List / pipe kind:** `list-output/types.ts` + **`inter-command/vocabulary.ts`** + **`manifest/bmxt-rule.json`** + adapter / consumer
-- **検証:** **`verify:manifest`** / **`verify:host-blind`** / **`check:generated`** / **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
+- **検証:** **`verify:manifest`** / **`verify:host-blind`** / **`check:generated`** / **`check:cli-command-io`**（todo §15.4）/ **`cargo test -p bmxt-core`** / **`build:wasm`** / **`tsc`** / **`pnpm test`** / **`pnpm run build`**。
+- **BMXt POSIX Profile（todo §15）:** **`EXIT_*`** のみ · 成功→stdout / 診断→stderr · browse / ask は Interactive のみ · CLI は **`CommandIo`** · パイプは閉じた consumer + **`bmxtRule`**。Built-in Commands の Profile 節と [`new-command.checklist.md`](shared/manifest/templates/new-command.checklist.md) を参照。
 - **compound / pipe:** 計画は WASM、実行ループは **`command-line/`**。パイプ段間は **bmxtRule のみ**（コマンド名直結禁止）。
 
 各 **`commands[]`** 行に **`subcommands`** を必ず含める。dispatch は **`crates/bmxt-core/src/cmd/<module>.rs`** に書き、各 **`head`** を manifest と**同一の文字列リテラル**で参照する（**`pnpm run verify:manifest`**）。例外として第二トークン **`help`**（コマンド別マニュアル）は **`help_cmd.rs`** で中央処理する。`head` は通常 `-` 始まりだが、マニュアル用のリテラル **`help`** を許可する。
@@ -3031,9 +3044,10 @@ pnpm run dev
 - `manifest/templates/` — 新コマンドテンプレート
 - `lib/features/command-line/list-commands/` — **`-list` producer レジストリ**（`*-list-command.ts` プラグイン、`tryRunPlainListCommand`）
 - `lib/features/command-line/commands/` — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト
-- `lib/features/command-line/command-output.ts` — stdout/stderr チャネルとセッションログ符号化
-- `lib/features/command-line/pipe/` — パイプ（`|`）チェーンと consumer レジストリ
-- `lib/features/command-line/compound/` — リスト演算子（`&&` / `||` / `;`）、exit status、逐次実行
+- `lib/features/command-line/command-output.ts` — stdout/stderr チャネルとセッションログ符号化（Rust: `bmxt_core::CommandOutput`）
+- `hosts/cli/src/command_io.rs` — CLI `CommandIo` + `InteractionMode`（Interactive / NonInteractive `exec`）
+- `lib/features/command-line/pipe/` — パイプ（`|`）チェーンと閉じた consumer レジストリ
+- `lib/features/command-line/compound/` — リスト演算子（`&&` / `||` / `;`）、exit status（`EXIT_*`）、逐次実行
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
 - `lib/features/nav/` — Nav オーバーレイ機能パッケージ
 - `lib/features/translate/` — 翻訳アシスト（`translate -on` / `-off` / `-setting`、`translation-pair.ts`）
@@ -3127,4 +3141,4 @@ pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 3. ~~履歴、ブックマーク操作~~ — **完了**（`bookmark` / `history` コマンド、Family `--open|--save|--both`、ZIP バックアップ。**[`bookmark`](#bookmark-command-ja)** · **[`history`](#history-command-ja)** · todo §9）
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
-6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + **localhost 待ち受けの自動接続**（todo §11）。配布／同一 PC スモークの磨き込みと拡張との文法パリティ維持（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10 / §11）
+6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + localhost 自動接続 + **`bmxt exec`** ワンショット + Profile I/O ゲート（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10–§15）。配布／同一 PC スモークの磨き込み

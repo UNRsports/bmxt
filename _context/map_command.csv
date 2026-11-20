@@ -1,9 +1,10 @@
 # Engine: command semantics = crates/bmxt-core (Rust/WASM); TS = paint host + Chrome effects + opaque UiAction apply + i18n expand-msgs.
-# Prompt semantics SoT = Rust (usage/error keys, msgs.promptPrefix Enter continuation, incomplete -setting plans). See README § Prompt semantics / _context/todo.md §14.
+# Prompt semantics SoT = Rust (usage/error keys, msgs.promptPrefix Enter continuation, incomplete -setting plans). See README § Prompt semantics / _context/todo.md (Archive WASM §13–14).
 # Status: Phase A–D done (WASM complete + compound eligibility; bmxt-candidate = design/validate catalog; help/browse/snapshot keys via msgs/expand-msgs).
 # Enter must not invent continuation in TS (continuationPromptAfterLoneFirstToken = IME helpers only).
 # Inter-command vocabulary (closed): DispatchBundle | ListResult(bmxt-list/1) | BmxtRuleStream(bmxt-rule/1) | exit status — see lib/features/command-line/inter-command/ and manifest/templates/.
-# Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required.
+# BMXt POSIX Profile I/O (todo §13–§15): stdout/stderr/exit completion buffer; CLI CommandIo + InteractionMode; bmxt exec POST /v1/exec; gates = EXIT_* only · channel routing · Interactive-only UI · check:cli-command-io · closed pipe consumers. Contract: _context/cli-peer/CONTRACT.md.
+# Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required; follow Profile gates (todo §15).
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
 close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`（パイプ内部）。タブ候補 UI なし。,pipe consumer は語彙 `acceptsKinds` で接続。0.8.0: tab/nav 配下から独立 first
 back,,,,,back | … | back,引数なし=操作先アクティブ即時。Effect `tab_go_back` { tab_ids: [] }。パイプ右辺 `back` は page.open → 内部で `back <tabId>`。タブ候補 UI なし。,独立 first。0.8.0: tab/nav 配下から独立。複数指定はパイプのみ（左辺は `tab -list` または `tab:` チップ `#t:…`）
@@ -127,17 +128,21 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,detail-bar-ctrl-c,,,,lib/features/bmxt-window/detail-bar-focus.ts + use-detail-bar-keyboard.ts,"詳細バー上 **Ctrl+C**: picker 系は browse 列クローズ、nav は disarm（`close-nav-from-detail-bar.ts`）。",0.8.0
 （内部）,host-ui,,,,lib/features/setting/host-ui-mode.ts + lib/features/bmxt-window/extra-keys/,"`hostUiMode` auto|desktop|mobile（`bmxt_ui_settings_v1`）。`resolveHostUiFormFactor` + Android 検出。**mobile**: ExtraKeys・候補タップ確定・外タップ dismiss。**desktop**: 0.8.0 相当のキーボード中心候補閉じ。",0.8.2
 （内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6
-（内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status。segment の promptPrefix もホスト適用。,
-（内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→consumer（acceptsKinds）。`browse` は UI consumer（ListResult 必須）。`open` / `jump` も pipe consumer（§7 CUI 同等化）。,
+（内部）,compound-commands,,,,lib/features/command-line/compound/,&& || ; 。分割 WASM・実行 TS。exit status（EXIT_*）。segment の promptPrefix もホスト適用。,§13 / §15
+（内部）,pipe-commands,,,,lib/features/command-line/pipe/,| : ListResult→bmxtRule→閉じた consumer（acceptsKinds）。未知 consumer は misuse。`browse` は UI consumer（ListResult 必須・CLI NonInteractive 禁止）。`open` / `jump` も pipe consumer（§7 CUI 同等化）。,§13 / §15.5
 （内部）,bmxt-rule,,,,lib/features/bmxt-rule/,bmxt-rule/1。カタログ manifest/bmxt-rule.json。,
 （内部）,bmxt-candidate,,,,lib/features/bmxt-candidate/,bmxt-candidate/1。設計・検証カタログ（固定トークン runtime は WASM `complete`）。,
 （内部）,ime-candidate-help,,,,lib/features/bmxt-window/token-picker-panel.tsx + setting imeCandidateHelp,"候補メニュー右にコマンド説明（usage）を表示。`setting` の ime-candidate-help on|off（既定 on）。",0.8.7
 （内部）,firefox-host,,,,hosts/firefox/ + hosts/create-host-wxt-config.ts,"Firefox MV3 ホスト（AMO）。同一 IR（HostEffect / UiAction）。e2e: test:e2e:firefox。",0.8.7
-（内部）,cli-host,,,,hosts/cli/,"端末 Family peer（`bmxt`）。同一プロンプト文法は `bmxt-core`（`default-features = false`）+ CliHostAdapter → DataChannel RPC / ローカル sync。直接起動 `bmxt`/`bmxt repl`（`bmxt*>`）。接続: REPL `sync -offer`/`-accept` または clap `bmxt sync-connect`（argv は本表の first ではない）。握手 JSON・`:pick`（zenity/kdialog）・OSC-8。行編集: 灰色 remainder ヒント · Tab 適用 · Enter 実行。mesh は拡張と同系。nav/dom オーバーレイ対象外。",§10 / todo
+（内部）,cli-host,,,,hosts/cli/,"端末 Family peer（`bmxt`）。同一プロンプト文法は `bmxt-core`（`default-features = false`）+ CliHostAdapter → DataChannel RPC / ローカル sync。直接起動 `bmxt`/`bmxt repl`（Interactive · CommandIo）。Family 参加時 door :17653（hello / handshake / exec）。接続: REPL `sync -offer`/`-accept` または clap `bmxt sync-connect`（argv は本表の first ではない）。握手 JSON・`:pick`（zenity/kdialog）・OSC-8。行編集: 灰色 remainder ヒント · Tab 適用 · Enter 実行。mesh は拡張と同系。nav/dom オーバーレイ対象外。",§10–§15 / todo
+（内部）,bmxt-exec,,,,hosts/cli/src/exec_client.rs + door.rs /v1/exec,"ワンショット `bmxt exec -- '<line>'`。常駐 door へ POST → NonInteractive run_line → クライアント OS stdout/stderr + exit 伝播。未常駐は exit 1・ハングなし。browse / ask / zenity 禁止。",§14
+（内部）,cli-command-io,,,,hosts/cli/src/command_io.rs,"CLI コマンド結果の完了バッファ。InteractionMode::Interactive（REPL flush）/ NonInteractive（exec IPC）。adapter 経路は直 println! 禁止（`pnpm run check:cli-command-io`）。",§13 / §15.4
+（内部）,cli-peer-contract,,,,_context/cli-peer/CONTRACT.md,"CLI↔拡張 + POSIX I/O + exec IPC + 追加時 5 規律の契約正本。",§10 / §13–§15
 （内部）,list-output,,,,lib/features/command-line/list-output/,bmxt-list/1。,
 （内部）,list-commands-registry,,,,lib/features/command-line/list-commands/,-list producer レジストリ。,
-（内部）,command-output,,,,lib/features/command-line/command-output.ts,stdout/stderr。,
-（内部）,exit-status,,,,lib/features/command-line/compound/exit-status.ts,0/1/2/127。,
+（内部）,command-output,,,,lib/features/command-line/command-output.ts + crates/bmxt-core/src/command_output.rs,"stdout/stderr チャネル · encodeLogLine · Rust `CommandOutput` ミラー。SessionPatch.appendLog.channel。",§13
+（内部）,exit-status,,,,lib/features/command-line/compound/exit-status.ts + bmxt_core::ir,"EXIT_SUCCESS/FAILURE/MISUSE/NOT_FOUND = 0/1/2/127。マジックナンバー禁止（todo §15.1）。",§13 / §15
 （内部）,command-entry-registry,,,,lib/features/command-line/commands/,runCommand 入口。COMMAND_ENTRIES 空（WASM）。,
-（内部）,posix-conformance,,,,lib/features/command-line/conformance/,POSIX Profile テスト。,
-（内部）,command-templates,,,,manifest/templates/,新コマンド checklist・reuse 例・list/pipe steps。scaffold が案内。,
+（内部）,posix-conformance,,,,tests/unit/.../posix-profile.test.ts + hosts/cli posix_io_tests,"Profile conformance（exit・チャネル・pipe 閉じ語彙・redirect）。CLI NonInteractive ガード。",§13 / §15
+（内部）,posix-profile-gates,,,,scripts/check-cli-command-io.mjs + skill bmxt-add-command + new-command.checklist.md,"追加時 5 規律の機械ゲート（CI `check:cli-command-io` · skill/checklist）。",§15
+（内部）,command-templates,,,,manifest/templates/,新コマンド checklist・reuse 例・list/pipe steps・Profile gates。scaffold が案内。,
