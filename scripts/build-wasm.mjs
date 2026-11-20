@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * EN: Build bmxt-core WASM via wasm-pack; copy binary to public/ for extension packaging.
- * JA: wasm-pack で bmxt-core をビルドし、拡張梱包用に public/ へ .wasm をコピーする。
+ * EN: Build bmxt-core WASM via wasm-pack into shared/lib/wasm/bmxt-core/ (gitignored);
+ *     copy binary to shared/public/ for extension packaging (also gitignored).
+ * JA: wasm-pack で bmxt-core を shared/lib/wasm/bmxt-core/（gitignore）へ出力し、
+ *     拡張梱包用に shared/public/ へ .wasm をコピーする（こちらも gitignore）。
  */
 
 import { execFileSync } from "node:child_process"
