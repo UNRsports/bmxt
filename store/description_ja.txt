@@ -33,6 +33,9 @@ https://github.com/UNRsports/bmxt/issues
 `launch-bmxt` ショートカット（既定 Shift+Alt+C）で起動し、`tutorial` または `tab -list | browse` を試してください。
 
 ◆バージョン履歴
+0.9.5：
+・UIの細部動作と内部のコマンドや連携処理の仕様を見直し
+
 0.9.4：
 ・処理結果にアイコンを表示するように修正
 ・UIの細部動作見直し

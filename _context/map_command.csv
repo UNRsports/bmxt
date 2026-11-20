@@ -114,6 +114,7 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,effect-result-icons,,,,lib/features/dispatch/handlers/effects/tab-ref-effect-line.ts + nav/nav-tab-ref-log-rewrite.ts + command-line/tab-ref-log.ts + bmxt-window/terminal-log-lines.tsx,"処理結果ログにファビコン等のアイコンを表示するよう修正。",0.9.4
 （内部）,ui-detail-behavior,,,,lib/features/bmxt-window/ + related,"UIの細部動作を見直し。",0.9.4
 （内部）,command-processing-spec,,,,crates/bmxt-core（pipe_consumer 等）+ lib/features/bmxt-core/ + command-line/,"内部のコマンド処理仕様を見直し（Rust/TS 役割分担の徹底等）。",0.9.4
+（内部）,ui-command-collab-spec,,,,lib/features/bmxt-window/ + lib/features/bmxt-core/ + lib/features/sync/ + related,"UIの細部動作と内部のコマンドや連携処理の仕様を見直し。",0.9.5
 
 （内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了。0.9.4: 役割分担見直しと連動
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3

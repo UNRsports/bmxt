@@ -3,6 +3,18 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.9.5",
+    "en": [
+      "Reviewed UI detail behavior and internal command and collaboration processing specifications"
+    ],
+    "ja": [
+      "UIの細部動作と内部のコマンドや連携処理の仕様を見直し"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.9.4",
     "en": [
       "Fixed processing results to display icons",

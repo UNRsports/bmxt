@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: November 19, 2026</p>
+          <p class="muted">Last updated: November 20, 2026</p>
         </div>
       </header>
 
@@ -392,11 +392,33 @@
         <p>
           If you run supported commands, the Extension may use the <code>history</code> and
           <code>bookmarks</code> permissions to read titles and URLs from Chrome’s history and bookmark
-          stores—for example <code>search -list --all</code>, <code>search -list --history</code>, or
-          <code>search -list --bookmark</code>. After the first <code>search</code> command in a given
+          stores—for example <code>search -list --all</code>, <code>search -list --history</code>,
+          <code>search -list --bookmark</code>, <code>history -list</code>, or
+          <code>bookmark -list</code>. After the first <code>search</code> command in a given
           service-worker lifetime, the worker may also register listeners that update the in-memory search
           metadata cache (see section 4.4) when you visit pages or when bookmarks change.
         </p>
+        <p>
+          The same permissions also cover <strong>user-initiated write / delete / backup</strong> commands that
+          change browser data only on your device (or on a Family peer you choose—see section 4.8):
+        </p>
+        <ul>
+          <li>
+            <strong>Bookmarks</strong> — <code>bookmark -add</code>, <code>bookmark -folder</code>,
+            <code>bookmark -remove</code>, and <code>bookmark -move</code> create, remove, or move bookmarks
+            and folders through Chrome’s bookmarks API. <code>bookmark -backup</code> /
+            <code>bookmark -restore</code> export or re-import a versioned JSON tree inside a local ZIP
+            (<code>bmxt-browser-backup/</code>) via the browser’s download or file-picker APIs (no
+            <code>downloads</code> permission; not uploaded to UNRsports servers).
+          </li>
+          <li>
+            <strong>History</strong> — <code>history -delete</code> and
+            <code>history -delete-range</code> delete selected browsing-history entries or a time range through
+            Chrome’s history API. <code>history -backup</code> / <code>history -restore</code> write or read a
+            local ZIP backup the same way (restore may list entries or optionally recreate them as bookmarks
+            with <code>--as-bookmarks</code>; BMXt does not write entries back into Chrome’s history database).
+          </li>
+        </ul>
         <p>
           For ordinary https pages (not chrome://, extension, Chrome Web Store, or plain
           <code>http://</code> pages), the Extension may use the <code>scripting</code> permission together
@@ -426,11 +448,12 @@
         <h3>4.6 Planned capabilities (still local-only)</h3>
         <p>
           Future releases may add further <strong>user-initiated</strong> features that continue to run
-          entirely on your device through Chrome APIs already covered above: deleting selected browsing-history
-          entries; creating, editing, or deleting bookmarks and bookmark folders; and toggling visibility of
+          entirely on your device through Chrome APIs already covered above—for example toggling visibility of
           specific DOM elements on pages where you have granted appropriate script access. We do not intend
           these additions to introduce UNRsports-operated remote collection of that data for their core
           behavior. When shipped, we will update this policy, release notes, and store disclosures as needed.
+          (Bookmark and history create / delete / backup commands described in section 4.5 are already
+          shipped.)
         </p>
         <h3>4.7 Translation assist (Chrome built-in Translator API)</h3>
         <p>
@@ -455,8 +478,9 @@
           If you run <code>sync</code> commands (for example <code>sync -setup</code>,
           <code>sync -pair</code>, <code>sync -connect</code>, <code>sync -offer</code> /
           <code>sync -answer</code> / <code>sync -accept</code>, <code>sync -ping</code>), or related
-          cross-peer commands such as <code>tab -list --peers</code>, <code>search -list --peers</code>, or
-          <code>tab -send</code>, the Extension may:
+          cross-peer commands such as <code>tab -list --peers</code>, <code>search -list --peers</code>,
+          <code>bookmark -list --peers</code>, <code>history -list --peers</code>,
+          <code>tab -send</code>, or <code>bookmark -send</code>, the Extension may:
         </p>
         <ul>
           <li>
@@ -490,10 +514,13 @@
           </li>
           <li>
             Exchange <strong>command-bus payloads you initiate</strong> over that channel—for example ping,
-            remote tab/search list results, tab open/send, and picker ops on remote rows. Those payloads may
-            include tab titles, URLs, and related metadata already available to each peer’s extension
-            instance. Traffic is peer-to-peer between the profiles you connect; BMXt does not operate a
-            UNRsports sync relay for this feature.
+            remote tab/search/bookmark/history list results, tab open/send, bookmark send
+            (<code>bookmark -send</code> with <code>--open</code> / <code>--save</code> /
+            <code>--both</code>, which may open tabs and/or run <code>bookmarks_import</code> on the peer),
+            and picker ops on remote rows. Those payloads may include tab or bookmark titles, URLs, optional
+            portable favicon URLs, and related metadata already available to each peer’s extension instance.
+            Traffic is peer-to-peer between the profiles you connect; BMXt does not operate a UNRsports sync
+            relay for this feature.
           </li>
         </ul>
         <p>
@@ -874,10 +901,32 @@
           対応するコマンドを実行した場合、<code>history</code> および <code>bookmarks</code> 権限により
           Chrome の履歴・ブックマークからタイトルや URL を読み取ることがあります（例:
           <code>search -list --all</code>、<code>search -list --history</code>、
-          <code>search -list --bookmark</code>）。当該サービスワーカー生存中に初めて <code>search</code>
+          <code>search -list --bookmark</code>、<code>history -list</code>、
+          <code>bookmark -list</code>）。当該サービスワーカー生存中に初めて <code>search</code>
           コマンドを実行したあと、ページ訪問時やブックマーク変更時に、4.4 に記載のメモリ上の検索メタデータキャッシュを
           更新するリスナーを登録することがあります。
         </p>
+        <p>
+          同権限は、端末上（または 4.8 節の Family ピア上）のブラウザデータのみを変更する
+          <strong>ユーザー開始の書き込み／削除／バックアップ</strong>コマンドにも用います。
+        </p>
+        <ul>
+          <li>
+            <strong>ブックマーク</strong> — <code>bookmark -add</code>、<code>bookmark -folder</code>、
+            <code>bookmark -remove</code>、<code>bookmark -move</code> で Chrome の bookmarks API 経由に
+            ブックマーク／フォルダを作成・削除・移動します。<code>bookmark -backup</code> /
+            <code>bookmark -restore</code> は版付き JSON ツリーをローカル ZIP
+            （<code>bmxt-browser-backup/</code>）として export／再 import します（ブラウザのダウンロードまたは
+            ファイル選択 API。<code>downloads</code> 権限なし。UNRsports サーバーへはアップロードしません）。
+          </li>
+          <li>
+            <strong>履歴</strong> — <code>history -delete</code> および
+            <code>history -delete-range</code> で Chrome の history API 経由に選択した履歴エントリまたは
+            期間を削除します。<code>history -backup</code> / <code>history -restore</code> も同様に
+            ローカル ZIP を書き込み／読み込みます（リストアは一覧読込、または
+            <code>--as-bookmarks</code> によるブックマーク化。Chrome の履歴 DB への書き戻しは行いません）。
+          </li>
+        </ul>
         <p>
           通常の https ページ（<code>chrome://</code>、拡張機能ページ、Chrome ウェブストア、平文
           <code>http://</code> ページ等を除く）では、<code>scripting</code> 権限とパッケージ manifest で宣言した
@@ -901,10 +950,10 @@
         <h3>4.6 予定機能（引き続き端末内のみ）</h3>
         <p>
           将来のバージョンでは、上記と同じ Chrome API を用い、引き続き<strong>ユーザーが開始した操作</strong>の範囲で
-          端末内のみで完結する機能を追加する予定です。例: 閲覧履歴から特定エントリの削除、ブックマークおよびフォルダの
-          新規作成・編集・削除、スクリプトアクセスを許可したページにおける特定 DOM 要素の表示／非表示の切り替え。
-          これらの中核動作として、当該データを UNRsports のサーバーに収集目的で送る仕組みを新設する意図はありません。
-          実装時には本ポリシー、リリースノート、ストア上の説明を必要に応じて更新します。
+          端末内のみで完結する機能を追加する予定です。例: スクリプトアクセスを許可したページにおける特定 DOM
+          要素の表示／非表示の切り替え。これらの中核動作として、当該データを UNRsports のサーバーに収集目的で送る
+          仕組みを新設する意図はありません。実装時には本ポリシー、リリースノート、ストア上の説明を必要に応じて
+          更新します。（4.5 節に記載のブックマーク／履歴の作成・削除・バックアップは既に実装済みです。）
         </p>
         <h3>4.7 翻訳アシスト（Chrome 内蔵 Translator API）</h3>
         <p>
@@ -927,8 +976,9 @@
           <code>sync</code> コマンド（例: <code>sync -setup</code>、<code>sync -pair</code>、
           <code>sync -connect</code>、<code>sync -offer</code> / <code>sync -answer</code> /
           <code>sync -accept</code>、<code>sync -ping</code>）、または関連する横断コマンド
-          （<code>tab -list --peers</code>、<code>search -list --peers</code>、<code>tab -send</code> 等）を
-          実行した場合、本拡張機能は次を行うことがあります。
+          （<code>tab -list --peers</code>、<code>search -list --peers</code>、
+          <code>bookmark -list --peers</code>、<code>history -list --peers</code>、
+          <code>tab -send</code>、<code>bookmark -send</code> 等）を実行した場合、本拡張機能は次を行うことがあります。
         </p>
         <ul>
           <li>
@@ -961,9 +1011,12 @@
           </li>
           <li>
             そのチャネル上で<strong>ユーザーが開始した</strong>コマンドバス・ペイロード（ping、遠隔の
-            tab／search 一覧、タブ送信、リモート行への picker 操作など）をやりとりする。ペイロードには各ピアの
-            拡張機能が既に扱えるタブタイトル・URL 等のメタデータが含まれることがあります。通信は接続した
-            プロファイル同士のピアツーピアであり、UNRsports の同期リレーは運用しません。
+            tab／search／bookmark／history 一覧、タブ送信、<code>bookmark -send</code>
+            （<code>--open</code> / <code>--save</code> / <code>--both</code>。ピア側でタブ open および／または
+            <code>bookmarks_import</code>）、リモート行への picker 操作など）をやりとりする。ペイロードには各ピアの
+            拡張機能が既に扱えるタブ／ブックマークのタイトル・URL、任意の可搬ファビコン URL 等のメタデータが
+            含まれることがあります。通信は接続したプロファイル同士のピアツーピアであり、UNRsports の同期リレーは
+            運用しません。
           </li>
         </ul>
         <p>
