@@ -698,11 +698,11 @@ BMXt grammar line
 
 **実装チェック（段階）**
 
-- [ ] **13.0 契約:** 本節 · stdout/stderr/exit 表 · 非対話時のチャネル規則 · 「完了バッファで足りる／インクリメンタルは後日」を `CONTRACT.md` に固定
-- [ ] **13.1 拡張:** セグメント完了時は stdout/stderr/exit を一次情報にする · `appendLogLines` / `SessionPatch` でチャネルを落とさない · `lines` は表示投影のまま
-- [ ] **13.2 CLI:** コマンド出力をバッファ集約してから sink · REPL=`Interactive` · インフラログとコマンド stderr を分離（§14 の NonInteractive 前提）
-- [ ] **13.3 conformance:** 成功一覧 → stdout・exit 0 / usage・parse → stderr・exit 2 / 未知 → 127 / 失敗で stdout を汚さない、を拡張 unit + CLI 側で検証
-- [ ] **13.4 ドキュメント:** README BMXt POSIX Profile に「CLI も同一意味」· 本節と §14 の前後関係を明記
+- [x] **13.0 契約:** 本節 · stdout/stderr/exit 表 · 非対話時のチャネル規則 · 「完了バッファで足りる／インクリメンタルは後日」を `CONTRACT.md` に固定
+- [x] **13.1 拡張:** セグメント完了時は stdout/stderr/exit を一次情報にする · `appendLogLines` / `SessionPatch` でチャネルを落とさない · `lines` は表示投影のまま
+- [x] **13.2 CLI:** コマンド出力をバッファ集約してから sink · REPL=`Interactive` · インフラログとコマンド stderr を分離（§14 の NonInteractive 前提）
+- [x] **13.3 conformance:** 成功一覧 → stdout・exit 0 / usage・parse → stderr・exit 2 / 未知 → 127 / 失敗で stdout を汚さない、を拡張 unit + CLI 側で検証
+- [x] **13.4 ドキュメント:** README BMXt POSIX Profile に「CLI も同一意味」· 本節と §14 の前後関係を明記
 
 **手元スモーク**
 
@@ -771,11 +771,11 @@ BMXt grammar line
 
 **実装チェック（段階）**
 
-- [ ] **14.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定（§13.0 の I/O 表を参照）
-- [ ] **14.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
-- [ ] **14.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
-- [ ] **14.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
-- [ ] **14.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
+- [x] **14.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定（§13.0 の I/O 表を参照）
+- [x] **14.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
+- [x] **14.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
+- [x] **14.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
+- [x] **14.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
 - [ ] **14.5（任意）:** stdin 複数行バッチ · JSON 結果ラッパ · `-c` 別名
 
 **手元スモーク**

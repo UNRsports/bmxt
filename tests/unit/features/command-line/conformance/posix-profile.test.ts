@@ -4,7 +4,11 @@
 import { before, describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { ensureBmxtCoreForTests } from "../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
-import { segmentFailure, segmentSuccess } from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
+import {
+  segmentFailure,
+  segmentOutcomeFromExitStatus,
+  segmentSuccess
+} from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
 import {
   EXIT_FAILURE,
   EXIT_MISUSE,
@@ -73,6 +77,17 @@ describe("BMXt POSIX Profile — stdout/stderr (P3)", () => {
       text: "usage: tab -list",
       channel: "stderr"
     })
+  })
+
+  it("keeps failure diagnostics off stdout when exitStatus is stamped", () => {
+    const misuse = segmentOutcomeFromExitStatus(["usage: tab -list"], EXIT_MISUSE)
+    assert.deepEqual(misuse.stdout, [])
+    assert.deepEqual(misuse.stderr, ["usage: tab -list"])
+    assert.equal(misuse.exitStatus, EXIT_MISUSE)
+
+    const unknown = segmentOutcomeFromExitStatus(["unknown command: xyz"], EXIT_NOT_FOUND)
+    assert.deepEqual(unknown.stdout, [])
+    assert.equal(unknown.exitStatus, EXIT_NOT_FOUND)
   })
 })
 

@@ -1,19 +1,24 @@
 mod adapter;
 mod bus;
+mod command_io;
 mod config;
 mod connect;
 mod door;
+mod exec_client;
 mod handshake;
 mod handshake_delivery;
 mod mesh_plan;
 mod msgs;
 mod paste;
+#[cfg(test)]
+mod posix_io_tests;
 mod repl_log;
 mod shell;
 mod tui;
 mod ui_settings_host;
 
 use std::path::PathBuf;
+use std::process::ExitCode;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -21,6 +26,7 @@ use clap::{Parser, Subcommand};
 
 use crate::adapter::CliHostAdapter;
 use crate::bus::BusClient;
+use crate::command_io::{CommandIo, InteractionMode};
 use crate::config::CliConfig;
 use crate::msgs::t_cli;
 use crate::shell::{PromptShell, ReadOutcome};
@@ -75,10 +81,16 @@ enum Commands {
     },
     /// Open TUI demo without a live session
     Tui,
+    /// One-shot grammar line against a resident `bmxt` / `bmxt repl` (todo §14)
+    Exec {
+        /// EN: Grammar tokens after `--` (joined with spaces). If empty, read one stdin line.
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        line: Vec<String>,
+    },
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<ExitCode> {
     let cli = Cli::parse();
     let mut cfg = CliConfig::load_or_create()?;
     if let Err(err) = ui_settings_host::bootstrap_locale() {
@@ -88,6 +100,7 @@ async fn main() -> Result<()> {
     match cli.command {
         None | Some(Commands::Repl) => {
             command_repl(&mut cfg, None).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::Status) => {
             println!("deviceId:    {}", cfg.device_id);
@@ -113,24 +126,29 @@ async fn main() -> Result<()> {
                 "localhost:   http://127.0.0.1:{}/ (Family-authenticated listener; when Family joined)",
                 door::DOOR_PORT
             );
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncSetup) => {
             cfg.ensure_family()?;
             let invite = handshake::print_invite(&cfg)?;
             println!("{}", msgs::t_cli("cmd.cli.handshake.familyReady", &[]));
             handshake_delivery::deliver_outbound_code(&mut cfg, "invite", &invite)?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncPair { invite }) => {
             handshake::apply_invite(&mut cfg, &invite)?;
             println!("Joined Family {}", cfg.family_id.as_deref().unwrap_or(""));
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncOffer { to }) => {
             let client = connect::connect_as_offer(&mut cfg, to).await?;
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncAnswer { offer_code }) => {
             let client = connect::connect_as_answer(&mut cfg, &offer_code).await?;
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncConnect { offer, to }) => {
             cfg.require_family()?;
@@ -140,17 +158,22 @@ async fn main() -> Result<()> {
                 connect::connect_as_answer_interactive(&mut cfg).await?
             };
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::TabList { .. }) => {
-            return Err(anyhow!(
+            Err(anyhow!(
                 "tab-list requires a live session — use: bmxt sync-connect --offer, then `tab -list`"
-            ));
+            ))
         }
         Some(Commands::Tui) => {
             tui::run_demo_tui()?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Some(Commands::Exec { line }) => {
+            let grammar = exec_client::resolve_exec_line(&line)?;
+            exec_client::run_exec(&grammar).await
         }
     }
-    Ok(())
 }
 
 async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<Option<Arc<BusClient>>> {
@@ -336,6 +359,8 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
             cfg: &mut *cfg,
             client: hub.as_ref().map(|h| h.as_ref()),
             setting_draft: &mut setting_draft,
+            mode: InteractionMode::Interactive,
+            io: CommandIo::new(),
         };
         match adapter.run_line(&line).await {
             Ok(outcome) => {

@@ -73,7 +73,24 @@ Same grammar as the extension (`bmxt-core`):
 | `shared/crates/bmxt-core` | Shared command grammar (`default-features = false` for CLI) |
 | `shared/crates/bmxt-ui-settings` | CLI `settings.json` v2 load/save/normalize |
 
-Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md). Product checklist: `_context/todo.md` §10 / §12. Root overview: [Terminal CLI peer](../../README.md#terminal-cli-peer).
+Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md). Product checklist: `_context/todo.md` §10 / §12–§14. Root overview: [Terminal CLI peer](../../README.md#terminal-cli-peer).
+
+## POSIX I/O + `bmxt exec` (todo §13 / §14)
+
+Same **BMXt POSIX Profile** as the extension: stdout = results, stderr = diagnostics, exit = `0` / `1` / `2` / `127` (completion buffer). REPL is **Interactive**; `exec` is **NonInteractive** (no ask / zenity / `| browse`).
+
+```bash
+# Terminal A — resident (Family joined → door on :17653)
+bmxt
+
+# Terminal B — oneshot (LLM / scripts)
+bmxt exec -- 'sync -status'
+bmxt exec -- 'tab -list --peers'
+bmxt exec -- 'help'          # local grammar; no peer required once door is up
+# no resident → stderr + exit 1 (does not hang)
+```
+
+IPC: `POST http://127.0.0.1:17653/v1/exec` with `{ "line": "…" }` → `{ stdout, stderr, exitStatus }`.
 
 ## Out of scope (this host)
 
@@ -82,6 +99,7 @@ Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)
 - Native messaging / CDP / Playwright
 - Public STUN/TURN on the default path
 - Replacing the extension’s in-page `RTCPeerConnection`
+- True incremental chunk delivery over exec IPC (buffered oneshot only)
 
 ---
 
@@ -160,7 +178,19 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 | `shared/crates/bmxt-core` | 共有コマンド文法（CLI は `default-features = false`） |
 | `shared/crates/bmxt-ui-settings` | CLI `settings.json` v2 の load/save/normalize |
 
-契約: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)。製品チェックリスト: `_context/todo.md` §10 / §12。概要: [端末 CLI peer](../../README.md#terminal-cli-peer-ja)。
+契約: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)。製品チェックリスト: `_context/todo.md` §10 / §12–§14。概要: [端末 CLI peer](../../README.md#terminal-cli-peer-ja)。
+
+## POSIX I/O + `bmxt exec`（todo §13 / §14）
+
+拡張と同じ **BMXt POSIX Profile**（stdout=結果 · stderr=診断 · exit=`0`/`1`/`2`/`127` · 完了バッファ）。REPL は **Interactive**、`exec` は **NonInteractive**（ask / zenity / `| browse` 禁止）。
+
+```bash
+bmxt
+bmxt exec -- 'sync -status'
+bmxt exec -- 'tab -list --peers'
+```
+
+IPC: `POST http://127.0.0.1:17653/v1/exec`。
 
 ## この host の対象外
 
@@ -169,3 +199,4 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 - ネイティブメッセージング / CDP / Playwright
 - 既定経路での公開 STUN/TURN
 - 拡張のページ内 `RTCPeerConnection` の置き換え
+- exec IPC の真のインクリメンタル配信（バッファ・ワンショットのみ）

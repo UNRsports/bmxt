@@ -1259,6 +1259,26 @@
     "ja": "OFFER: @path.json · Enter/:pick で GUI · または bmxt-rtc1. を貼付\n> ",
     "en": "OFFER: @path.json · Enter/:pick for GUI · or bare bmxt-rtc1. paste\n> "
   },
+  "cmd.cli.exec.residentMissing": {
+    "ja": "常駐 bmxt に接続できません。先に `bmxt` / `bmxt repl` を起動し Family 参加済みにしてください（localhost:17653）。",
+    "en": "Cannot reach a resident bmxt. Start `bmxt` / `bmxt repl` with Family joined first (localhost:17653)."
+  },
+  "cmd.cli.exec.emptyLine": {
+    "ja": "実行する行が空です。例: bmxt exec -- 'sync -status'",
+    "en": "Empty exec line. Example: bmxt exec -- 'sync -status'"
+  },
+  "cmd.cli.exec.lineTooLong": {
+    "ja": "exec 行が長すぎます（上限 200000 バイト）。",
+    "en": "Exec line too long (max 200000 bytes)."
+  },
+  "cmd.cli.exec.browseForbidden": {
+    "ja": "非対話 exec では `| browse` / ピッカーは使えません。REPL で実行するか、一覧コマンドのみにしてください。",
+    "en": "`| browse` / pickers are not allowed in non-interactive exec. Use the REPL, or run a list-only command."
+  },
+  "cmd.cli.exec.handshakeForbidden": {
+    "ja": "非対話 exec では握手・配送の対話（ask / zenity）は禁止です。事前に `setting` / REPL で済ませてください。",
+    "en": "Interactive handshake / delivery (ask / zenity) is forbidden in non-interactive exec. Configure via `setting` / REPL first."
+  },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
     "en": "Peer not connected. Establish a DataChannel with sync -connect <deviceId> (or -offer / -answer / -accept) first."

@@ -3,6 +3,10 @@
  * JA: RUN_CMD / dispatch が返すセッション patch（UI で適用）。
  */
 
+import {
+  encodeLogLines,
+  type LogChannel
+} from "../../command-line/command-output.ts"
 import { deriveDefaultSessionName } from "../../session/session-summary.ts"
 import {
   appendLinesToSessionState,
@@ -19,7 +23,13 @@ import {
 import type { TerminalSessionsStateV1 } from "./types.ts"
 
 export type SessionPatch =
-  | { type: "appendLog"; sessionId: string; lines: string[] }
+  | {
+      type: "appendLog"
+      sessionId: string
+      lines: string[]
+      /** EN: When set, lines are encoded for that channel before append. */
+      channel?: LogChannel
+    }
   | { type: "setLog"; sessionId: string; lines: string[] }
   | { type: "setActive"; sessionId: string }
   | {
@@ -79,8 +89,13 @@ export function applySessionPatch(
   const deriveName = ctx.deriveNewSessionName ?? defaultNewSessionName
 
   switch (patch.type) {
-    case "appendLog":
-      return appendLinesToSessionState(state, patch.sessionId, patch.lines)
+    case "appendLog": {
+      const encoded =
+        patch.channel === undefined
+          ? patch.lines
+          : encodeLogLines(patch.lines, patch.channel)
+      return appendLinesToSessionState(state, patch.sessionId, encoded)
+    }
     case "setLog":
       return setSessionLinesState(state, patch.sessionId, patch.lines)
     case "setActive": {

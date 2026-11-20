@@ -1,5 +1,5 @@
-//! EN: Loopback HTTP listener for Family-authenticated auto-connect (todo §11).
-//! JA: Family 認証付き自動接続用 loopback HTTP 待ち受け（todo §11）。
+//! EN: Loopback HTTP listener for Family-authenticated auto-connect (todo §11) + exec (todo §14).
+//! JA: Family 認証付き自動接続（todo §11）と exec（todo §14）用 loopback HTTP 待ち受け。
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -10,12 +10,15 @@ use axum::http::{HeaderValue, Method, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use bmxt_core::ir::EXIT_FAILURE;
 use bmxt_family::{seal_json_payload, SealKind};
 use bmxt_peer_rtc::PeerSession;
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
+use crate::adapter::CliHostAdapter;
 use crate::bus::BusClient;
+use crate::command_io::{CommandIo, InteractionMode};
 use crate::config::CliConfig;
 use crate::connect::wait_connected_brief;
 use crate::handshake;
@@ -40,9 +43,11 @@ const DOOR_HTML: &str = r#"<!DOCTYPE html>
   <p>Family-authenticated connection endpoint for the BMXt extension (loopback only).</p>
   <p>Open the BMXt prompt window in each browser; Family-authenticated auto-reconnect uses this listener.</p>
   <p>Manual clipboard / file connection setup remains available as fallback.</p>
-  <p><code>GET /v1/hello</code> · <code>POST /v1/handshake/offer</code></p>
+  <p><code>GET /v1/hello</code> · <code>POST /v1/handshake/offer</code> · <code>POST /v1/exec</code></p>
 </body>
 </html>"#;
+
+const MAX_EXEC_LINE_BYTES: usize = 200_000;
 
 #[derive(Clone)]
 struct DoorState {
@@ -84,6 +89,19 @@ struct ErrorBody {
     error: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct ExecRequest {
+    line: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExecResponse {
+    stdout: Vec<String>,
+    stderr: Vec<String>,
+    exit_status: i32,
+}
+
 /**
  * EN: Bind 127.0.0.1 only and serve the localhost listener (does not block the REPL).
  * JA: 127.0.0.1 のみ bind し localhost 待ち受けを serve（REPL はブロックしない）。
@@ -99,6 +117,7 @@ pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
         .route("/", get(index_html))
         .route("/v1/hello", get(hello))
         .route("/v1/handshake/offer", post(handshake_offer))
+        .route("/v1/exec", post(exec_line))
         .layer(cors)
         .with_state(state);
     let addr = SocketAddr::from(([127, 0, 0, 1], DOOR_PORT));
@@ -222,6 +241,63 @@ async fn handshake_offer(
         StatusCode::OK,
         Json(AnswerResponse {
             sealed_answer,
+        }),
+    )
+        .into_response()
+}
+
+/**
+ * EN: NonInteractive oneshot — run one grammar line on the resident hub (todo §14).
+ * JA: 非対話ワンショット。常駐 hub 上で文法 1 行を実行する（todo §14）。
+ */
+async fn exec_line(State(state): State<DoorState>, Json(req): Json<ExecRequest>) -> Response {
+    let line = req.line.trim();
+    if line.is_empty() {
+        return json_err(StatusCode::BAD_REQUEST, t_cli("cmd.cli.exec.emptyLine", &[]));
+    }
+    if line.len() > MAX_EXEC_LINE_BYTES {
+        return json_err(StatusCode::BAD_REQUEST, t_cli("cmd.cli.exec.lineTooLong", &[]));
+    }
+
+    let mut cfg = match CliConfig::load_or_create() {
+        Ok(c) => c,
+        Err(err) => {
+            return json_err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("load config: {err}"),
+            );
+        }
+    };
+    let mut setting_draft = None;
+    let mut adapter = CliHostAdapter {
+        cfg: &mut cfg,
+        client: Some(state.hub.as_ref()),
+        setting_draft: &mut setting_draft,
+        mode: InteractionMode::NonInteractive,
+        io: CommandIo::new(),
+    };
+
+    let outcome = match adapter.run_line(line).await {
+        Ok(o) => o,
+        Err(err) => {
+            return (
+                StatusCode::OK,
+                Json(ExecResponse {
+                    stdout: Vec::new(),
+                    stderr: vec![format!("error: {err:#}")],
+                    exit_status: EXIT_FAILURE,
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    (
+        StatusCode::OK,
+        Json(ExecResponse {
+            stdout: outcome.output.stdout,
+            stderr: outcome.output.stderr,
+            exit_status: outcome.exit_status,
         }),
     )
         .into_response()

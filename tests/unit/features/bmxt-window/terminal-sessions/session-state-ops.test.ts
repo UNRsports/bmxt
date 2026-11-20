@@ -1,6 +1,10 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
+  decodeLogLine,
+  STDERR_LOG_PREFIX
+} from "../../../../../shared/lib/features/command-line/command-output.ts"
+import {
   appendLinesToSessionState,
   createEmptyTerminalSessionsState,
   exitSessionState
@@ -32,5 +36,19 @@ describe("applySessionPatches", () => {
     ])
     assert.deepEqual(next.order, base.order)
     assert.deepEqual(next.logsById[sessionId], ["> help", "line"])
+  })
+
+  it("encodes appendLog channel so stderr is not dropped", () => {
+    const base = createEmptyTerminalSessionsState()
+    const sessionId = base.activeId
+    const next = applySessionPatches(base, [
+      { type: "appendLog", sessionId, lines: ["usage: tab -list"], channel: "stderr" }
+    ])
+    const stored = next.logsById[sessionId]?.[0] ?? ""
+    assert.equal(stored.startsWith(STDERR_LOG_PREFIX), true)
+    assert.deepEqual(decodeLogLine(stored), {
+      text: "usage: tab -list",
+      channel: "stderr"
+    })
   })
 })
