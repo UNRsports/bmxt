@@ -86,8 +86,10 @@ bmxt
 # Terminal B — oneshot (LLM / scripts)
 bmxt exec -- 'sync -status'
 bmxt exec -- 'tab -list --peers'
+bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
 bmxt exec -- 'help'          # local grammar; no peer required once door is up
 # no resident → stderr + exit 1 (does not hang)
+# `--close` on CLI is skipped (no local browser tabs); remote open still runs
 ```
 
 IPC: `POST http://127.0.0.1:17653/v1/exec` with `{ "line": "…" }` → `{ stdout, stderr, exitStatus }`.
@@ -190,9 +192,10 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 bmxt
 bmxt exec -- 'sync -status'
 bmxt exec -- 'tab -list --peers'
+bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
 ```
 
-IPC: `POST http://127.0.0.1:17653/v1/exec`。
+IPC: `POST http://127.0.0.1:17653/v1/exec`。CLI の `--close` はローカルタブがないため無視（相手側 open は実行）。
 
 **エージェント（Gemini CLI 等）:** `bmxt exec` は **CLI サブコマンド**（新プロセス → HTTP POST）であり、**シェル組み込み `exec` でも常駐 TTY へのアタッチでもない**。通常のシェルツールで上記のフル argv を実行すること。root README **BMXtCLI を LLM で使う** を参照。
 

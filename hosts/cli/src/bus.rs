@@ -345,22 +345,61 @@ impl BusClient {
         self.tabs_ops_on(from, &remote, op).await
     }
 
-    pub async fn open_tabs(
+    /**
+     * EN: Resolve a connected peer by exact device id or unique id prefix.
+     * JA: 接続中 peer を device id 完全一致、または一意な id 接頭辞で解決する。
+     */
+    pub async fn resolve_remote_id(&self, needle: &str) -> Result<String> {
+        let needle = needle.trim();
+        if needle.is_empty() {
+            return Err(anyhow!("empty device id"));
+        }
+        let peers = self.list_connected().await;
+        if let Some((id, _)) = peers.iter().find(|(id, _)| id == needle) {
+            return Ok(id.clone());
+        }
+        let prefix_hits: Vec<&(String, String)> = peers
+            .iter()
+            .filter(|(id, _)| id.starts_with(needle))
+            .collect();
+        match prefix_hits.as_slice() {
+            [(id, _)] => Ok(id.clone()),
+            [] => Err(anyhow!("not connected to {needle}")),
+            many => {
+                let ids: Vec<&str> = many.iter().map(|(id, _)| id.as_str()).collect();
+                Err(anyhow!(
+                    "ambiguous device id prefix {needle:?} matches: {}",
+                    ids.join(", ")
+                ))
+            }
+        }
+    }
+
+    /**
+     * EN: open_tabs on a specific peer (optional group title / window).
+     * JA: 指定 peer へ open_tabs（任意のグループ名 / window）。
+     */
+    pub async fn open_tabs_on(
         &self,
         from: &str,
+        remote_id: &str,
         urls: Vec<String>,
+        group_title: Option<String>,
         window_id: Option<i64>,
-    ) -> Result<Vec<String>> {
-        let remote = self.first_remote().await?;
+    ) -> Result<(Vec<String>, Option<String>)> {
+        let remote = remote_id.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("open_tabs: empty remote device id"));
+        }
         let id = new_id("open");
         let resp = self
             .request_on(
-                &remote,
+                remote,
                 SyncBusCommand::OpenTabs {
                     id,
                     from: from.to_string(),
                     urls,
-                    group_title: None,
+                    group_title,
                     group_color: None,
                     window_id,
                 },
@@ -376,10 +415,23 @@ impl BusClient {
                 if !ok {
                     return Err(anyhow!(detail.unwrap_or_else(|| "open_tabs failed".into())));
                 }
-                Ok(opened_urls)
+                Ok((opened_urls, detail))
             }
             other => Err(anyhow!("unexpected reply: {other:?}")),
         }
+    }
+
+    pub async fn open_tabs(
+        &self,
+        from: &str,
+        urls: Vec<String>,
+        window_id: Option<i64>,
+    ) -> Result<Vec<String>> {
+        let remote = self.first_remote().await?;
+        let (opened, _) = self
+            .open_tabs_on(from, &remote, urls, None, window_id)
+            .await?;
+        Ok(opened)
     }
 
     pub async fn search_query(

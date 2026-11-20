@@ -9,6 +9,7 @@ mod handshake;
 mod handshake_delivery;
 mod mesh_plan;
 mod msgs;
+mod open_payload;
 mod paste;
 #[cfg(test)]
 mod posix_io_tests;

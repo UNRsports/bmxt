@@ -815,6 +815,7 @@ Model: **one resident process + many oneshot clients** — same idea as **`docke
 # Quote the grammar line so the shell does not treat `|` as a pipe.
 ./path/to/bmxt exec -- 'sync -status'
 ./path/to/bmxt exec -- 'tab -list --peers'
+./path/to/bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
 ./path/to/bmxt exec -- 'help'
 echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 ```
@@ -2367,6 +2368,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 # 文法行は必ず引用符で囲む（シェルが `|` をパイプと解釈しないように）。
 ./path/to/bmxt exec -- 'sync -status'
 ./path/to/bmxt exec -- 'tab -list --peers'
+./path/to/bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
 ./path/to/bmxt exec -- 'help'
 echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマンド
 ```

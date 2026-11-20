@@ -20,6 +20,7 @@ use crate::config::CliConfig;
 use crate::connect;
 use crate::handshake;
 use crate::msgs::{expand_msgs, t_cli};
+use crate::open_payload::parse_open_payload;
 use crate::tui;
 use crate::ui_settings_host;
 
@@ -483,15 +484,15 @@ impl<'a> CliHostAdapter<'a> {
             }
             UiAction::SyncPing { device_id } => {
                 let client = self.require_client()?;
-                let connected = client.list_connected().await;
-                if !connected.iter().any(|(id, _)| id == &device_id) {
-                    return Err(anyhow!(
-                        "not connected to {device_id} — run `sync -status` / `sync -members`"
-                    ));
-                }
-                let ack = client.ping_one(&self.cfg.device_id, &device_id).await?;
-                self.out(format!("ack[{device_id}]: {ack:?}"));
+                let remote = client.resolve_remote_id(&device_id).await.map_err(|err| {
+                    anyhow!("{err:#} — run `sync -status` / `sync -members`")
+                })?;
+                let ack = client.ping_one(&self.cfg.device_id, &remote).await?;
+                self.out(format!("ack[{remote}]: {ack:?}"));
                 Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::SyncOpen { device_id, payload } => {
+                self.apply_sync_open(&device_id, &payload).await
             }
             UiAction::SyncSetup => {
                 if !self.mode.allows_interactive_ui() {
@@ -581,6 +582,58 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_MISUSE))
             }
         }
+    }
+
+    /**
+     * EN: `tab -send` / SyncOpen — DataChannel open_tabs on the target peer.
+     * JA: `tab -send` / SyncOpen。対象 peer へ DataChannel open_tabs。
+     */
+    async fn apply_sync_open(&mut self, device_id: &str, payload: &str) -> Result<RunOutcome> {
+        let parsed = parse_open_payload(payload);
+        if parsed.urls.is_empty() {
+            self.err(t_cli("cmd.sync.open.noUrls", &[]));
+            return Ok(RunOutcome::status(EXIT_MISUSE));
+        }
+        let client = self.require_client()?;
+        let remote = match client.resolve_remote_id(device_id).await {
+            Ok(id) => id,
+            Err(err) => {
+                let detail = format!("{err:#}");
+                if detail.contains("ambiguous") {
+                    self.err(format!("error: {detail}"));
+                } else {
+                    self.err(t_cli("cmd.sync.open.notConnected", &[]));
+                }
+                return Ok(RunOutcome::status(EXIT_FAILURE));
+            }
+        };
+        let url_count = parsed.urls.len();
+        let (opened, detail) = client
+            .open_tabs_on(
+                &self.cfg.device_id,
+                &remote,
+                parsed.urls,
+                parsed.group_title,
+                None,
+            )
+            .await?;
+        let detail_text = detail.unwrap_or_default();
+        self.out(t_cli(
+            "cmd.sync.open.done",
+            &[(
+                "detail",
+                &format!(
+                    "ok=true;peer={remote};requested={url_count};opened={};detail={detail_text}",
+                    opened.len()
+                ),
+            )],
+        ));
+        if parsed.close_after {
+            // EN: CLI has no local browser tabs — --close cannot close sources here.
+            // JA: CLI にローカルブラウザタブはないため --close で送信元を閉じられない。
+            self.err(t_cli("cmd.cli.sync.open.closeSkipped", &[]));
+        }
+        Ok(RunOutcome::status(EXIT_SUCCESS))
     }
 
     async fn run_picker_and_maybe_activate(

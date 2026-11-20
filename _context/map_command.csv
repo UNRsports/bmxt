@@ -105,7 +105,7 @@ sync,-offer,,none,,sync -offer,UiAction `sync_offer`。拡張: ウィザード�
 sync,-answer,,rest,,sync -answer <code>,UiAction `sync_answer`。オファー受理→アンサー。CLI 未接続: `connect_as_answer`。コード無しは REPL ショートカット `sync -answer` → `:pick`／貼付。,0.9.0 / §10
 sync,-accept,,rest,,sync -accept <code>,UiAction `sync_accept`。アンサー適用→DataChannel。CLI は `-answer` と同系（未接続時の初回握手）。,0.9.0 / §10
 sync,-ping,,rest,,sync -ping <deviceId>,UiAction `sync_ping`。接続済みピアへ ping。CLI も同（未接続はエラー）。裸 `ping` は CLI エイリアスのみ。,0.9.0 / §10
-tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。グループ維持は title/color をピアへ渡す。,0.9.0。0.9.1: プロファイル間タブ移動時のグループ維持を調整
+tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | … | tab -send <deviceId> [--close],UiAction `sync_open`（ホスト再利用）またはパイプ consumer。遠隔タブ／グループ送信（コピー。`--close` で成功分のローカル元 close）。グループ維持は title/color をピアへ渡す。CLI/`bmxt exec` も `open_tabs_on` で対応（`--close` は CLI では無視）。,0.9.0。0.9.1: グループ維持。CLI SyncOpen 配線
 （内部）,family-webrtc-sync,,,,lib/features/sync/ + peer/webrtc-session.ts,"Family ローカル同期。device id / Family / roster / discovery を chrome.storage.local。コピペ握手（host ICE のみ・STUN/TURN なし）+ WebRTC DataChannel コマンドバス。横断 tab/search・tab -send。",0.9.0
 （内部）,tab-picker-filter-search,,,,lib/features/tabs/tab-picker-search-visibility.ts + tab-picker-fold-state.ts + side-picker/search/,"tab コマンドピッカー内の絞り込み検索動作を修正。",0.9.0
 （内部）,search-result-display,,,,lib/features/search/,"search コマンドの検索結果表示（リスト側ハイライトとページ内ジャンプの整合）を修正・調整。",0.9.1
