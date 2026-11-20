@@ -786,7 +786,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **UI settings / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json` (export v2 layout). Locale: committed → env → `en`. REPL: `setting -list` / `-set` / `-save` / `-cancel` (todo §12). `| browse` for settings is CLI-only unsupported. |
 | **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
 | **Line editor / Tab** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. After a list producer `-list`, Tab offers **`\| browse`** (and other pipe consumers). After a typed **`\|`**, Tab completes bare consumer names (`browse`, `close`, …). |
-| **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. |
+| **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. Open picker **follows Family `tabs_changed`** (same `first: "tab"` rule as the extension) and re-fetches the list while preserving selection when possible. |
 | **Mesh** | First peer via localhost listener or manual connection setup; additional Family peers join over in-band mesh (CLI acts as introducer; tab ops are not hub-relayed). |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
 
@@ -2339,7 +2339,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **UI 設定 / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`（export v2 同形）。locale: committed → env → `en`。REPL: `setting -list` / `-set` / `-save` / `-cancel`（todo §12）。設定の `| browse` は CLI 非対応。 |
 | **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
 | **行編集 / Tab** | rustyline · 灰色ヒント · Tab / Enter。list プロデューサーの `-list` 後は **`\| browse`** 等を候補化。既に **`\|`** を打った右辺では `browse` / `close` など consumer 名を補完。 |
-| **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。 |
+| **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。開中は Family **`tabs_changed`**（拡張と同じ `first: "tab"`）で一覧を再取得し、可能なら選択位置を維持。 |
 | **メッシュ** | 最初の peer は待ち受けまたは手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
 | **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
 

@@ -179,8 +179,13 @@ impl<'a> CliHostAdapter<'a> {
                     self.err(t_cli("cmd.cli.setting.browseUnsupported", &[]));
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
-                let rows = self.materialize_tab_rows(&producer_bundle).await?;
-                self.run_picker_and_maybe_activate(&rows).await
+                let (scope, device_id, show_url) =
+                    tabs_list_query_from_bundle(&producer_bundle)?;
+                let rows = self
+                    .fetch_tabs_scope(&scope, &device_id, show_url)
+                    .await?;
+                self.run_picker_and_maybe_activate(rows, &scope, &device_id, show_url)
+                    .await
             }
             PipeConsumerClass::Close => {
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
@@ -408,7 +413,8 @@ impl<'a> CliHostAdapter<'a> {
                 let rows = self
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
-                self.run_picker_and_maybe_activate(&rows).await
+                self.run_picker_and_maybe_activate(rows, &device_scope, &device_id, show)
+                    .await
             }
             UiAction::SettingSet { key, value } => {
                 if let Some(lines) =
@@ -638,28 +644,70 @@ impl<'a> CliHostAdapter<'a> {
 
     async fn run_picker_and_maybe_activate(
         &self,
-        rows: &[tui::PeerTabRow],
+        rows: Vec<tui::PeerTabRow>,
+        list_scope: &str,
+        list_device_id: &str,
+        show_url: bool,
     ) -> Result<RunOutcome> {
         let client = self.require_client()?.clone();
-        let device_id = self.cfg.device_id.clone();
-        // EN: ratatui is sync; activate over the bus without leaving the picker open.
-        // JA: ratatui は同期。picker を閉じずにバス経由で activate する。
+        let self_device_id = self.cfg.device_id.clone();
+        let list_scope = list_scope.to_string();
+        let list_device_id = list_device_id.to_string();
+        let mut tabs_changed_rx = client.subscribe_tabs_changed();
+        // EN: ratatui is sync; activate / refresh over the bus without leaving the picker.
+        // JA: ratatui は同期。picker を閉じずにバス経由で activate / 再取得する。
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            tui::run_tab_picker(rows, |sel| {
-                handle.block_on(async {
-                    client
-                        .tabs_ops_on(
-                            &device_id,
-                            &sel.peer_device_id,
-                            SyncTabsOp::Activate {
-                                tab_id: sel.tab_id,
-                                window_id: sel.window_id,
-                            },
+            tui::run_tab_picker(
+                rows,
+                |sel| {
+                    handle.block_on(async {
+                        client
+                            .tabs_ops_on(
+                                &self_device_id,
+                                &sel.peer_device_id,
+                                SyncTabsOp::Activate {
+                                    tab_id: sel.tab_id,
+                                    window_id: sel.window_id,
+                                },
+                            )
+                            .await
+                    })
+                },
+                || {
+                    let mut saw_tab_signal = false;
+                    loop {
+                        match tabs_changed_rx.try_recv() {
+                            Ok(notice) => {
+                                if notice.targets_tab_picker() {
+                                    saw_tab_signal = true;
+                                }
+                            }
+                            Err(tokio::sync::broadcast::error::TryRecvError::Empty) => break,
+                            Err(tokio::sync::broadcast::error::TryRecvError::Lagged(_)) => {
+                                saw_tab_signal = true;
+                            }
+                            Err(tokio::sync::broadcast::error::TryRecvError::Closed) => break,
+                        }
+                    }
+                    if !saw_tab_signal {
+                        return tui::PickerRefresh::Idle;
+                    }
+                    match handle.block_on(async {
+                        fetch_tabs_scope_for_client(
+                            &client,
+                            &self_device_id,
+                            &list_scope,
+                            &list_device_id,
+                            show_url,
                         )
                         .await
-                })
-            })
+                    }) {
+                        Ok(new_rows) => tui::PickerRefresh::Updated(new_rows),
+                        Err(err) => tui::PickerRefresh::Failed(format!("{err:#}")),
+                    }
+                },
+            )
         })?;
         Ok(RunOutcome::status(EXIT_SUCCESS))
     }
@@ -718,31 +766,100 @@ impl<'a> CliHostAdapter<'a> {
         device_id: &str,
         show_url: bool,
     ) -> Result<Vec<tui::PeerTabRow>> {
-        match device_scope {
-            "device" if !device_id.is_empty() => {
-                let bundles = self.require_client()?.tabs_all(&self.cfg.device_id, show_url).await?;
-                let mut out = Vec::new();
-                for (id, name, rows) in bundles {
-                    if id == device_id {
-                        push_peer_section(&mut out, &id, &name, rows);
-                    }
+        fetch_tabs_scope_for_client(
+            self.require_client()?,
+            &self.cfg.device_id,
+            device_scope,
+            device_id,
+            show_url,
+        )
+        .await
+    }
+}
+
+/**
+ * EN: Extract tabs list query (scope / device / showUrl) from a producer DispatchBundle.
+ * JA: producer の DispatchBundle から tabs 一覧クエリ（scope / device / showUrl）を取り出す。
+ */
+fn tabs_list_query_from_bundle(bundle: &DispatchBundle) -> Result<(String, String, bool)> {
+    match bundle {
+        DispatchBundle::Ui {
+            action:
+                UiAction::OpenPlainList {
+                    list_id,
+                    show_url,
+                    device_scope,
+                    device_id,
+                    ..
                 }
-                if out.is_empty() {
-                    return Err(anyhow!("not connected to device {device_id}"));
+                | UiAction::OpenPicker {
+                    list_id,
+                    show_url,
+                    device_scope,
+                    device_id,
+                    ..
+                },
+            ..
+        } if list_id == "tabs" => Ok((
+            device_scope.clone(),
+            device_id.clone(),
+            show_url == "true",
+        )),
+        DispatchBundle::Effects { effects, .. } => {
+            for effect in effects {
+                if let HostEffect::TabsList {
+                    device_id,
+                    device_scope,
+                    show_url,
+                } = effect
+                {
+                    return Ok((
+                        device_scope.clone(),
+                        device_id.clone(),
+                        show_url == "true",
+                    ));
                 }
-                Ok(out)
             }
-            "peers" | "" | "local" => {
-                // EN: CLI has no local browser inventory — peers/local → all connected browsers.
-                let bundles = self.require_client()?.tabs_all(&self.cfg.device_id, show_url).await?;
-                let mut out = Vec::new();
-                for (id, name, rows) in bundles {
+            Err(anyhow!("pipe producer did not yield a tabs list query"))
+        }
+        other => Err(anyhow!(
+            "pipe producer must be a tabs list plan, got {:?}",
+            std::mem::discriminant(other)
+        )),
+    }
+}
+
+async fn fetch_tabs_scope_for_client(
+    client: &BusClient,
+    self_device_id: &str,
+    device_scope: &str,
+    device_id: &str,
+    show_url: bool,
+) -> Result<Vec<tui::PeerTabRow>> {
+    match device_scope {
+        "device" if !device_id.is_empty() => {
+            let bundles = client.tabs_all(self_device_id, show_url).await?;
+            let mut out = Vec::new();
+            for (id, name, rows) in bundles {
+                if id == device_id {
                     push_peer_section(&mut out, &id, &name, rows);
                 }
-                Ok(out)
             }
-            other => Err(anyhow!("unknown device_scope: {other}")),
+            if out.is_empty() {
+                return Err(anyhow!("not connected to device {device_id}"));
+            }
+            Ok(out)
         }
+        "peers" | "" | "local" => {
+            // EN: CLI has no local browser inventory — peers/local → all connected browsers.
+            let bundles = client.tabs_all(self_device_id, show_url).await?;
+            let mut out = Vec::new();
+            for (id, name, rows) in bundles {
+                push_peer_section(&mut out, &id, &name, rows);
+            }
+            Ok(out)
+        }
+        other => Err(anyhow!("unknown device_scope: {other}")),
     }
 }
 

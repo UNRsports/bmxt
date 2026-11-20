@@ -1231,6 +1231,14 @@
     "ja": "warn: CLI にはローカルタブがないため `--close` は無視しました（相手側への open は完了）。",
     "en": "warn: `--close` skipped on CLI (no local browser tabs); remote open still completed."
   },
+  "cmd.cli.picker.help": {
+    "ja": "↑↓ 移動 · / 絞り込み · Enter で activate · q/Esc で閉じる（タブ変化は自動更新）",
+    "en": "↑↓ move · / filter · Enter activate · q/Esc close (list follows tab changes)"
+  },
+  "cmd.cli.picker.refreshed": {
+    "ja": "一覧を更新しました · ↑↓ 移動 · / 絞り込み · Enter · q/Esc",
+    "en": "list refreshed · ↑↓ move · / filter · Enter · q/Esc"
+  },
   "cmd.cli.handshake.familyReady": {
     "ja": "Family 準備完了。",
     "en": "Family ready."

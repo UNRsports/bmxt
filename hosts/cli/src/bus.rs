@@ -12,7 +12,7 @@ use bmxt_sync_wire::{
     MeshPeerEntry, SyncBusCommand, SyncRemoteTabRow, SyncTabsOp, SYNC_REMOTE_QUERY_TIMEOUT_MS,
 };
 use rand::RngCore;
-use tokio::sync::{mpsc, oneshot, Mutex};
+use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
 
 use crate::mesh_plan::{peers_to_announce, peers_to_offer_mesh, MeshPeerAnnounce};
 use crate::msgs::t_cli;
@@ -20,6 +20,28 @@ use crate::msgs::t_cli;
 const MAX_MESH_PEERS: usize = 32;
 const MESH_OFFER_BUSY_TTL: Duration = Duration::from_secs(60);
 const CLI_NO_BROWSER: &str = "cli has no browser host";
+/** EN: Same default as extension `FAMILY_SIGNAL_FIRST_DEFAULT_TAB`. */
+const TABS_CHANGED_FIRST_TAB: &str = "tab";
+const TABS_CHANGED_BROADCAST_CAP: usize = 64;
+
+/**
+ * EN: Inbound Family `tabs_changed` notice for open CLI pickers.
+ * JA: 開いている CLI picker 向けの inbound Family `tabs_changed` 通知。
+ */
+#[derive(Debug, Clone)]
+pub struct TabsChangedNotice {
+    /** EN: Signaling peer device id (diagnostics / future filter). */
+    #[allow(dead_code)]
+    pub from: String,
+    pub first: String,
+}
+
+impl TabsChangedNotice {
+    /** EN: True when a tab-command picker should refresh (extension parity). */
+    pub fn targets_tab_picker(&self) -> bool {
+        self.first == TABS_CHANGED_FIRST_TAB
+    }
+}
 
 struct TaggedEvent {
     via_remote: String,
@@ -46,6 +68,7 @@ struct HubInner {
     offer_busy_until: HashMap<String, Instant>,
     last_connected_key: String,
     event_tx: mpsc::UnboundedSender<TaggedEvent>,
+    tabs_changed_tx: broadcast::Sender<TabsChangedNotice>,
     /** EN: True after `close_all` — do not claim the listener is still running. */
     shutting_down: bool,
 }
@@ -53,6 +76,7 @@ struct HubInner {
 #[derive(Clone)]
 pub struct BusClient {
     inner: Arc<Mutex<HubInner>>,
+    tabs_changed_tx: broadcast::Sender<TabsChangedNotice>,
 }
 
 impl BusClient {
@@ -66,6 +90,7 @@ impl BusClient {
      */
     pub async fn create_hub(self_id: String, display_name: String, family_id: String) -> Self {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
+        let (tabs_changed_tx, _) = broadcast::channel(TABS_CHANGED_BROADCAST_CAP);
         let inner = Arc::new(Mutex::new(HubInner {
             self_id,
             display_name,
@@ -79,13 +104,23 @@ impl BusClient {
             offer_busy_until: HashMap::new(),
             last_connected_key: String::new(),
             event_tx,
+            tabs_changed_tx: tabs_changed_tx.clone(),
             shutting_down: false,
         }));
         let client = Self {
             inner: Arc::clone(&inner),
+            tabs_changed_tx,
         };
         tokio::spawn(dispatch_loop(Arc::clone(&inner), event_rx));
         client
+    }
+
+    /**
+     * EN: Subscribe to inbound Family `tabs_changed` (for live tab picker refresh).
+     * JA: inbound Family `tabs_changed` を購読する（tab picker ライブ更新用）。
+     */
+    pub fn subscribe_tabs_changed(&self) -> broadcast::Receiver<TabsChangedNotice> {
+        self.tabs_changed_tx.subscribe()
     }
 
     #[allow(dead_code)] // EN: Convenience when constructing a hub with the first peer already live.
@@ -665,7 +700,23 @@ async fn handle_command(inner: Arc<Mutex<HubInner>>, via_remote: &str, cmd: Sync
         SyncBusCommand::MeshSignal { .. } => {
             handle_mesh_signal(inner, via_remote, cmd).await;
         }
-        SyncBusCommand::TabsChanged { .. } => {}
+        SyncBusCommand::TabsChanged { from, first, .. } => {
+            let notice = TabsChangedNotice {
+                from,
+                first: if first.trim().is_empty() {
+                    TABS_CHANGED_FIRST_TAB.to_string()
+                } else {
+                    first
+                },
+            };
+            if notice.targets_tab_picker() {
+                let tx = {
+                    let guard = inner.lock().await;
+                    guard.tabs_changed_tx.clone()
+                };
+                let _ = tx.send(notice);
+            }
+        }
         _ => {}
     }
 }
