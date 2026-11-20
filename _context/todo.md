@@ -651,7 +651,84 @@ REPL line
 
 **参照:** plan `cli_setting_i18n` · §10 · §11 · skill `bmxt-i18n` · skill `bmxt-ui-settings` · `hosts/cli/` · `shared/lib/features/setting/`
 
-### 13. BMXtCLI — ワンショット実行（LLM / 非対話）
+### 13. POSIX 実行契約（拡張 + CLI · LLM ワンショットの土台）
+
+**目標:** LLM ワンショット（§14 `bmxt exec`）の前段として、拡張と CLI のコマンド実行 I/O を **BMXt POSIX Profile** で揃え、機械可読な **stdout / stderr / 数値 exit** を同じ意味表にする。契約上は POSIX 風の **バイトストリーム（UTF-8・改行区切りが既定）のスナップショット** として記述する。配信は当面 **完了バッファ** で足りる。
+
+**現状（ギャップ）**
+
+| 層 | 拡張 | CLI |
+|----|------|-----|
+| exit | P1（0 / 1 / 2 / 127）・`exit-status.ts` / core 定数あり | 同定数は使うが経路ごとにばらつき |
+| stdout / stderr | `CommandOutput` / `SegmentOutcome` / `encodeLogLine` あり。適用が `lines`（merged）寄り・`channel` 任意になりがち | `println!` / `eprintln!` 散在。結果と診断の境界が契約化されていない |
+| 実行結果 | `SegmentOutcome` ≈ `CommandOutput` | `RunOutcome { exit_status }` + 副作用 print |
+| 非対話 | N/A（UI 対話） | handshake / TUI が混在し得る（§14 で禁止する前提の整理が未了） |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 主目的 | **§14 LLM ワンショットの土台**。拡張・CLI が同じ I/O 意味を語れること |
+| モデル | 1 実行 = `stdout`（結果）+ `stderr`（診断）+ 終端後の `exit`（0/1/2/127） |
+| 正本 | 既存拡張 Profile（`command-output.ts` · `exit-status.ts` · `SegmentOutcome` · `posix-profile` conformance · README Profile 節）を種とし、CLI を同じ意味論へ寄せる |
+| 配信 | **完了バッファ**（配列／一括 sink）。真のインクリメンタル配信は **本節スコープ外・後日**（下記） |
+| 拡張の深さ | チャネル一次情報化と patch 整合まで。大規模 Writer フレームワークや全コマンド改装はしない |
+| CLI | コマンド結果を集約してから OS FD / REPL print へ。`Interactive`（REPL）と `NonInteractive`（§14 exec）を分離。インフラ `eprintln!` をコマンド stderr に混ぜない |
+| スコープ外（本節） | WASM `run` の chunk 化、SW MessagePort 逐次、DataChannel chunk プロトコル、端末ログのライブ追記 UX、NDJSON 第一出力、OS パス redirect、外部プロセス起動 |
+
+**アーキテクチャ（要約）**
+
+```
+BMXt grammar line
+  → bmxt-core（文法 / DispatchBundle / exit）
+  → ホスト実行結果 { stdout[], stderr[], exit }
+       ├─ 拡張: encodeLogLine → session log（表示投影）
+       └─ CLI: 集約バッファ → OS stdout/stderr（REPL print も同シンク）
+  → §14 bmxt exec が CLI シンクを消費
+```
+
+| Path | 役割 |
+|------|------|
+| `shared/lib/features/command-line/command-output.ts` | `CommandOutput` / `LogChannel` / encode |
+| `shared/lib/features/command-line/compound/exit-status.ts` | exit 定数表 |
+| `shared/lib/features/command-line/compound/types.ts` | `SegmentOutcome`（stdout/stderr 一次 · `lines` は投影） |
+| `tests/unit/features/command-line/conformance/posix-profile.test.ts` | Profile conformance |
+| `hosts/cli/src/adapter.rs` | 結果集約 · Interactive / NonInteractive |
+| `_context/cli-peer/CONTRACT.md` | ホスト横断 I/O 契約（§14 IPC と併記） |
+
+**実装チェック（段階）**
+
+- [ ] **13.0 契約:** 本節 · stdout/stderr/exit 表 · 非対話時のチャネル規則 · 「完了バッファで足りる／インクリメンタルは後日」を `CONTRACT.md` に固定
+- [ ] **13.1 拡張:** セグメント完了時は stdout/stderr/exit を一次情報にする · `appendLogLines` / `SessionPatch` でチャネルを落とさない · `lines` は表示投影のまま
+- [ ] **13.2 CLI:** コマンド出力をバッファ集約してから sink · REPL=`Interactive` · インフラログとコマンド stderr を分離（§14 の NonInteractive 前提）
+- [ ] **13.3 conformance:** 成功一覧 → stdout・exit 0 / usage・parse → stderr・exit 2 / 未知 → 127 / 失敗で stdout を汚さない、を拡張 unit + CLI 側で検証
+- [ ] **13.4 ドキュメント:** README BMXt POSIX Profile に「CLI も同一意味」· 本節と §14 の前後関係を明記
+
+**手元スモーク**
+
+- [ ] 拡張: usage / 未知コマンドが stderr 色（または同等チャネル）で出る · compound / pipe / `| browse` が退行しない
+- [ ] CLI REPL: `tab -list` 等の結果が従来どおり見え、handshake / `| browse` が Interactive で動く
+- [ ] CLI: 意図的に stderr へ出した診断が結果行と FD 上で分離できる（またはテストで同等を確認）
+
+**後日（参考 · 本節の完了条件に含めない）— 真のインクリメンタル配信**
+
+大容量一覧・長い search 等向け。完了バッファ契約の **同じ口**（stdout/stderr/exit）のまま、中身だけ逐次化する。
+
+| 候補順 | 内容 |
+|--------|------|
+| 1 | §14 exec IPC のチャンク転送（常駐 → exec クライアント） |
+| 2 | DataChannel の tabs/search chunk |
+| 3 | 拡張端末の逐次ログ |
+| 4 | パイプ `BmxtRuleStream` の lazy / NDJSON 投影 |
+| 5 | WASM 境界のストリーム化（最後・または見送り） |
+
+消費側が完了待ちバッファする限り LLM 体感は変わらない点、短いコマンドでは投資対効果が低い点に注意。
+
+**参照:** plan `posix_i_o_foundation` · Archive 旧 §10（Profile 公開）· §14 · `shared/lib/features/command-line/` · `hosts/cli/src/adapter.rs` · `_context/cli-peer/CONTRACT.md`
+
+### 14. BMXtCLI — ワンショット実行（LLM / 非対話）
+
+**前提:** §13（POSIX 実行契約）で拡張・CLI の stdout/stderr/exit 意味が揃っていること。
 
 **目標:** LLM エージェントやシェルスクリプトが、対話 REPL なしで **1 行（または少数行）の BMXt 文法**を実行し、stdout / stderr と **数値 exit status** を受け取れるようにする。拡張プロンプトと同じ `bmxt-core` 意味を保つ。
 
@@ -670,36 +747,36 @@ REPL line
 | 入口 | `bmxt exec -- '<line>'`（および任意で複数 `--` 引数／stdin 1 行モード）。短別名 `-c` は後続でも可 |
 | 実行核 | 既存 `CliHostAdapter::run_line` をそのまま呼ぶ（新文法・別パーサは作らない） |
 | 接続モデル | **常駐前提（推奨）:** 先に `bmxt` / `bmxt repl`（localhost 待ち受け起動済み）を動かし、`exec` は同一マシンの常駐へ **コマンドだけ送って終了**。ワンショットプロセス単体で WebRTC を張り直して即切断する経路は非推奨（LLM 多段呼び出しに向かない） |
-| IPC | 常駐 ↔ `exec` は **loopback のみ**（既存待ち受けポート近傍、または Unix domain socket）。Family 認証／ローカル認証の要否は 13.0 で契約固定 |
+| IPC | 常駐 ↔ `exec` は **loopback のみ**（既存待ち受けポート近傍、または Unix domain socket）。Family 認証／ローカル認証の要否は 14.0 で契約固定 |
 | 非対話ルール | `exec` 中は握手 ask / zenity 等を **禁止**。未接続・未設定は明確な stderr + 非 0 exit。`handshake-delivery` 等は事前 `setting` / `config.json` で済ませる |
-| 出力 | stdout = コマンド結果行、stderr = 診断。exit = `bmxt-core` の exit status をプロセス終了コードへ伝播 |
-| スコープ外（当面） | TUI / `| browse` ピッカー、対話 handshake ウィザード、常駐なしでの完全自己完結 peer 起動 |
+| 出力 | §13 契約どおり stdout = コマンド結果行、stderr = 診断。exit = `bmxt-core` の exit status をプロセス終了コードへ伝播（当面は完了バッファ） |
+| スコープ外（当面） | TUI / `| browse` ピッカー、対話 handshake ウィザード、常駐なしでの完全自己完結 peer 起動、真のインクリメンタル配信（§13 後日） |
 
 **アーキテクチャ（要約）**
 
 ```
 常駐: bmxt repl (+ localhost listener §11)
-         ↑ loopback IPC（契約は 13.0）
+         ↑ loopback IPC（契約は 14.0）
 ワンショット: bmxt exec -- 'tab -list --peers'
-         → CliHostAdapter::run_line（常駐側）
+         → CliHostAdapter::run_line（常駐側 · NonInteractive · §13 シンク）
          → stdout / stderr / exit
 ```
 
 | Path（想定） | 役割 |
 |--------------|------|
 | `hosts/cli/src/main.rs` | clap `exec` / `-c` |
-| `hosts/cli/src/adapter.rs` | 既存 `run_line`（変更は最小） |
+| `hosts/cli/src/adapter.rs` | 既存 `run_line`（§13 の集約シンクを再利用） |
 | `hosts/cli/src/door.rs` または新規 IPC モジュール | 常駐へのコマンド投入 |
 | `_context/cli-peer/CONTRACT.md` | exec IPC 契約・非対話制約 |
 
 **実装チェック（段階）**
 
-- [ ] **13.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定
-- [ ] **13.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
-- [ ] **13.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
-- [ ] **13.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
-- [ ] **13.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
-- [ ] **13.5（任意）:** stdin 複数行バッチ · JSON 結果ラッパ · `-c` 別名
+- [ ] **14.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定（§13.0 の I/O 表を参照）
+- [ ] **14.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
+- [ ] **14.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
+- [ ] **14.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
+- [ ] **14.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
+- [ ] **14.5（任意）:** stdin 複数行バッチ · JSON 結果ラッパ · `-c` 別名
 
 **手元スモーク**
 
@@ -709,7 +786,7 @@ REPL line
 - [ ] `exec` 中に code/file の対話プロンプトが出ない
 - [ ] 不正行で misuse 相当の exit になる
 
-**参照:** §10 · §11 · §12 · `hosts/cli/` · `hosts/cli/src/adapter.rs` · `_context/cli-peer/CONTRACT.md`
+**参照:** §10 · §11 · §12 · §13 · `hosts/cli/` · `hosts/cli/src/adapter.rs` · `_context/cli-peer/CONTRACT.md`
 
 ---
 
